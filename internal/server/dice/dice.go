@@ -181,7 +181,8 @@ func RollAction(request ActionRequest) (ActionResult, error) {
 		Seed: request.Seed,
 	})
 	if err != nil {
-		return ActionResult{}, err
+		// This should be unreachable: the DiceSpec is hardcoded and always valid.
+		panic(err)
 	}
 
 	hope := rollResult.Rolls[0].Results[0]
