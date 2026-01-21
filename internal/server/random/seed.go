@@ -1,4 +1,4 @@
-// Package random provides cryptographic seed generation for server requests.
+// Package random provides cryptographic seed generation helpers.
 package random
 
 import (
