@@ -1,0 +1,13 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "duality-local": {
+      "type": "local",
+      "command": ["go", "run", "./cmd/mcp"],
+      "enabled": true,
+      "environment": {
+        "DUALITY_GRPC_ADDR": "localhost:8080"
+      }
+    }
+  }
+}

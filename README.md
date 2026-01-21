@@ -90,3 +90,8 @@ Example response payload:
   }
 }
 ```
+
+### OpenCode local MCP config (JSONC)
+
+See `opencode.jsonc` for a ready-to-use OpenCode configuration that starts the
+local MCP server.
