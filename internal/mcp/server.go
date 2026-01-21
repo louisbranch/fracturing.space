@@ -27,42 +27,42 @@ type Server struct {
 
 // ActionRollResult represents the MCP tool output for an action roll.
 type ActionRollResult struct {
-	Hope       int    `json:"hope"`
-	Fear       int    `json:"fear"`
-	Total      int    `json:"total"`
-	Modifier   int    `json:"modifier"`
-	Outcome    string `json:"outcome"`
-	Difficulty *int   `json:"difficulty,omitempty"`
+	Hope       int    `json:"hope" jsonschema:"hope die result"`
+	Fear       int    `json:"fear" jsonschema:"fear die result"`
+	Total      int    `json:"total" jsonschema:"sum of dice and modifier"`
+	Modifier   int    `json:"modifier" jsonschema:"modifier applied to the total"`
+	Outcome    string `json:"outcome" jsonschema:"categorized roll outcome"`
+	Difficulty *int   `json:"difficulty,omitempty" jsonschema:"difficulty target, if provided"`
 }
 
 // ActionRollInput represents the MCP tool input for an action roll.
 type ActionRollInput struct {
-	Modifier   int  `json:"modifier"`
-	Difficulty *int `json:"difficulty"`
+	Modifier   int  `json:"modifier" jsonschema:"modifier applied to the roll"`
+	Difficulty *int `json:"difficulty" jsonschema:"optional difficulty target"`
 }
 
 // RollDiceSpec represents an MCP die specification for a roll.
 type RollDiceSpec struct {
-	Sides int `json:"sides"`
-	Count int `json:"count"`
+	Sides int `json:"sides" jsonschema:"number of sides for the die"`
+	Count int `json:"count" jsonschema:"number of dice to roll"`
 }
 
 // RollDiceInput represents the MCP tool input for rolling dice.
 type RollDiceInput struct {
-	Dice []RollDiceSpec `json:"dice"`
+	Dice []RollDiceSpec `json:"dice" jsonschema:"dice specifications to roll"`
 }
 
 // RollDiceRoll represents the results for a single dice spec.
 type RollDiceRoll struct {
-	Sides   int   `json:"sides"`
-	Results []int `json:"results"`
-	Total   int   `json:"total"`
+	Sides   int   `json:"sides" jsonschema:"number of sides for the die"`
+	Results []int `json:"results" jsonschema:"individual roll results"`
+	Total   int   `json:"total" jsonschema:"sum of the roll results"`
 }
 
 // RollDiceResult represents the MCP tool output for rolling dice.
 type RollDiceResult struct {
-	Rolls []RollDiceRoll `json:"rolls"`
-	Total int            `json:"total"`
+	Rolls []RollDiceRoll `json:"rolls" jsonschema:"results for each dice spec"`
+	Total int            `json:"total" jsonschema:"sum of all roll totals"`
 }
 
 // New creates a configured MCP server that connects to the gRPC dice service.
