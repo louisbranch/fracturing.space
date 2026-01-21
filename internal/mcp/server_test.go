@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	pb "github.com/louisbranch/duality-protocol/api/gen/go/duality/v1"
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
 )
 
@@ -31,26 +31,6 @@ func (f *fakeDiceRollClient) ActionRoll(ctx context.Context, req *pb.ActionRollR
 func (f *fakeDiceRollClient) RollDice(ctx context.Context, req *pb.RollDiceRequest, opts ...grpc.CallOption) (*pb.RollDiceResponse, error) {
 	f.lastRollDiceRequest = req
 	return f.rollDiceResponse, f.rollDiceErr
-}
-
-// newCallToolRequest builds a tool call request with arguments.
-func newCallToolRequest(args map[string]any) mcp.CallToolRequest {
-	return mcp.CallToolRequest{
-		Params: mcp.CallToolParams{
-			Name:      "duality_action_roll",
-			Arguments: args,
-		},
-	}
-}
-
-// newRollDiceCallToolRequest builds a roll dice tool call request with arguments.
-func newRollDiceCallToolRequest(args map[string]any) mcp.CallToolRequest {
-	return mcp.CallToolRequest{
-		Params: mcp.CallToolParams{
-			Name:      "roll_dice",
-			Arguments: args,
-		},
-	}
 }
 
 // TestGRPCAddressPrefersEnv ensures env configuration overrides defaults.
@@ -104,15 +84,15 @@ func TestActionRollHandlerRejectsNegativeDifficulty(t *testing.T) {
 	client := &fakeDiceRollClient{}
 	handler := actionRollHandler(client)
 
-	result, err := handler(context.Background(), newCallToolRequest(map[string]any{
-		"modifier":   1,
-		"difficulty": -1,
-	}))
-	if err != nil {
-		t.Fatalf("expected nil error, got %v", err)
+	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, ActionRollInput{
+		Modifier:   1,
+		Difficulty: intPointer(-1),
+	})
+	if err == nil {
+		t.Fatal("expected error")
 	}
-	if result == nil || !result.IsError {
-		t.Fatal("expected error result")
+	if result != nil {
+		t.Fatal("expected nil result on error")
 	}
 	if client.lastRequest != nil {
 		t.Fatal("expected no gRPC call on invalid input")
@@ -124,14 +104,12 @@ func TestActionRollHandlerReturnsClientError(t *testing.T) {
 	client := &fakeDiceRollClient{err: errors.New("boom")}
 	handler := actionRollHandler(client)
 
-	result, err := handler(context.Background(), newCallToolRequest(map[string]any{
-		"modifier": 2,
-	}))
-	if err != nil {
-		t.Fatalf("expected nil error, got %v", err)
+	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, ActionRollInput{Modifier: 2})
+	if err == nil {
+		t.Fatal("expected error")
 	}
-	if result == nil || !result.IsError {
-		t.Fatal("expected error result")
+	if result != nil {
+		t.Fatal("expected nil result on error")
 	}
 }
 
@@ -144,14 +122,12 @@ func TestActionRollHandlerHandlesMissingDice(t *testing.T) {
 	}
 	handler := actionRollHandler(client)
 
-	result, err := handler(context.Background(), newCallToolRequest(map[string]any{
-		"modifier": 1,
-	}))
-	if err != nil {
-		t.Fatalf("expected nil error, got %v", err)
+	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, ActionRollInput{Modifier: 1})
+	if err == nil {
+		t.Fatal("expected error")
 	}
-	if result == nil || !result.IsError {
-		t.Fatal("expected error result")
+	if result != nil {
+		t.Fatal("expected nil result on error")
 	}
 }
 
@@ -171,15 +147,15 @@ func TestActionRollHandlerMapsRequestAndResponse(t *testing.T) {
 	}
 	handler := actionRollHandler(client)
 
-	result, err := handler(context.Background(), newCallToolRequest(map[string]any{
-		"modifier":   7,
-		"difficulty": 7,
-	}))
+	result, output, err := handler(context.Background(), &mcp.CallToolRequest{}, ActionRollInput{
+		Modifier:   7,
+		Difficulty: intPointer(7),
+	})
 	if err != nil {
-		t.Fatalf("expected nil error, got %v", err)
+		t.Fatalf("expected no error, got %v", err)
 	}
-	if result == nil || result.IsError {
-		t.Fatal("expected success result")
+	if result != nil {
+		t.Fatal("expected nil result on success")
 	}
 	if client.lastRequest == nil {
 		t.Fatal("expected gRPC request")
@@ -191,21 +167,17 @@ func TestActionRollHandlerMapsRequestAndResponse(t *testing.T) {
 		t.Fatalf("expected difficulty 7, got %v", client.lastRequest.Difficulty)
 	}
 
-	structured, ok := result.StructuredContent.(ActionRollResult)
-	if !ok {
-		t.Fatalf("expected ActionRollResult, got %T", result.StructuredContent)
+	if output.Hope != 4 || output.Fear != 6 || output.Total != 17 {
+		t.Fatalf("unexpected dice output: %+v", output)
 	}
-	if structured.Hope != 4 || structured.Fear != 6 || structured.Total != 17 {
-		t.Fatalf("unexpected dice output: %+v", structured)
+	if output.Modifier != 7 {
+		t.Fatalf("expected modifier 7, got %d", output.Modifier)
 	}
-	if structured.Modifier != 7 {
-		t.Fatalf("expected modifier 7, got %d", structured.Modifier)
+	if output.Outcome != pb.Outcome_SUCCESS_WITH_HOPE.String() {
+		t.Fatalf("expected outcome %q, got %q", pb.Outcome_SUCCESS_WITH_HOPE.String(), output.Outcome)
 	}
-	if structured.Outcome != pb.Outcome_SUCCESS_WITH_HOPE.String() {
-		t.Fatalf("expected outcome %q, got %q", pb.Outcome_SUCCESS_WITH_HOPE.String(), structured.Outcome)
-	}
-	if structured.Difficulty == nil || *structured.Difficulty != 7 {
-		t.Fatalf("expected difficulty 7, got %v", structured.Difficulty)
+	if output.Difficulty == nil || *output.Difficulty != 7 {
+		t.Fatalf("expected difficulty 7, got %v", output.Difficulty)
 	}
 }
 
@@ -214,14 +186,12 @@ func TestRollDiceHandlerRejectsMissingDice(t *testing.T) {
 	client := &fakeDiceRollClient{}
 	handler := rollDiceHandler(client)
 
-	result, err := handler(context.Background(), newRollDiceCallToolRequest(map[string]any{
-		"dice": []map[string]any{},
-	}))
-	if err != nil {
-		t.Fatalf("expected nil error, got %v", err)
+	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, RollDiceInput{})
+	if err == nil {
+		t.Fatal("expected error")
 	}
-	if result == nil || !result.IsError {
-		t.Fatal("expected error result")
+	if result != nil {
+		t.Fatal("expected nil result on error")
 	}
 	if client.lastRollDiceRequest != nil {
 		t.Fatal("expected no gRPC call on invalid input")
@@ -233,14 +203,14 @@ func TestRollDiceHandlerRejectsInvalidDice(t *testing.T) {
 	client := &fakeDiceRollClient{}
 	handler := rollDiceHandler(client)
 
-	result, err := handler(context.Background(), newRollDiceCallToolRequest(map[string]any{
-		"dice": []map[string]any{{"sides": -1, "count": 2}},
-	}))
-	if err != nil {
-		t.Fatalf("expected nil error, got %v", err)
+	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, RollDiceInput{
+		Dice: []RollDiceSpec{{Sides: -1, Count: 2}},
+	})
+	if err == nil {
+		t.Fatal("expected error")
 	}
-	if result == nil || !result.IsError {
-		t.Fatal("expected error result")
+	if result != nil {
+		t.Fatal("expected nil result on error")
 	}
 	if client.lastRollDiceRequest != nil {
 		t.Fatal("expected no gRPC call on invalid input")
@@ -252,14 +222,14 @@ func TestRollDiceHandlerReturnsClientError(t *testing.T) {
 	client := &fakeDiceRollClient{rollDiceErr: errors.New("boom")}
 	handler := rollDiceHandler(client)
 
-	result, err := handler(context.Background(), newRollDiceCallToolRequest(map[string]any{
-		"dice": []map[string]any{{"sides": 6, "count": 1}},
-	}))
-	if err != nil {
-		t.Fatalf("expected nil error, got %v", err)
+	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, RollDiceInput{
+		Dice: []RollDiceSpec{{Sides: 6, Count: 1}},
+	})
+	if err == nil {
+		t.Fatal("expected error")
 	}
-	if result == nil || !result.IsError {
-		t.Fatal("expected error result")
+	if result != nil {
+		t.Fatal("expected nil result on error")
 	}
 }
 
@@ -275,14 +245,14 @@ func TestRollDiceHandlerMapsRequestAndResponse(t *testing.T) {
 
 	handler := rollDiceHandler(client)
 
-	result, err := handler(context.Background(), newRollDiceCallToolRequest(map[string]any{
-		"dice": []map[string]any{{"sides": 6, "count": 2}, {"sides": 8, "count": 1}},
-	}))
+	result, output, err := handler(context.Background(), &mcp.CallToolRequest{}, RollDiceInput{
+		Dice: []RollDiceSpec{{Sides: 6, Count: 2}, {Sides: 8, Count: 1}},
+	})
 	if err != nil {
-		t.Fatalf("expected nil error, got %v", err)
+		t.Fatalf("expected no error, got %v", err)
 	}
-	if result == nil || result.IsError {
-		t.Fatal("expected success result")
+	if result != nil {
+		t.Fatal("expected nil result on success")
 	}
 	if client.lastRollDiceRequest == nil {
 		t.Fatal("expected gRPC request")
@@ -297,20 +267,21 @@ func TestRollDiceHandlerMapsRequestAndResponse(t *testing.T) {
 		t.Fatalf("unexpected second dice spec: %+v", client.lastRollDiceRequest.Dice[1])
 	}
 
-	structured, ok := result.StructuredContent.(RollDiceResult)
-	if !ok {
-		t.Fatalf("expected RollDiceResult, got %T", result.StructuredContent)
+	if output.Total != 11 {
+		t.Fatalf("expected total 11, got %d", output.Total)
 	}
-	if structured.Total != 11 {
-		t.Fatalf("expected total 11, got %d", structured.Total)
+	if len(output.Rolls) != 2 {
+		t.Fatalf("expected 2 rolls, got %d", len(output.Rolls))
 	}
-	if len(structured.Rolls) != 2 {
-		t.Fatalf("expected 2 rolls, got %d", len(structured.Rolls))
+	if output.Rolls[0].Sides != 6 || output.Rolls[0].Total != 7 {
+		t.Fatalf("unexpected first roll: %+v", output.Rolls[0])
 	}
-	if structured.Rolls[0].Sides != 6 || structured.Rolls[0].Total != 7 {
-		t.Fatalf("unexpected first roll: %+v", structured.Rolls[0])
+	if output.Rolls[1].Sides != 8 || output.Rolls[1].Total != 4 {
+		t.Fatalf("unexpected second roll: %+v", output.Rolls[1])
 	}
-	if structured.Rolls[1].Sides != 8 || structured.Rolls[1].Total != 4 {
-		t.Fatalf("unexpected second roll: %+v", structured.Rolls[1])
-	}
+}
+
+// intPointer returns an int pointer for test inputs.
+func intPointer(value int) *int {
+	return &value
 }
