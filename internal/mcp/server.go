@@ -8,8 +8,7 @@ import (
 	"time"
 
 	pb "github.com/louisbranch/duality-protocol/api/gen/go/duality/v1"
-	"github.com/mark3labs/mcp-go/mcp"
-	"github.com/mark3labs/mcp-go/server"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -23,7 +22,7 @@ const (
 
 // Server hosts the MCP server.
 type Server struct {
-	mcpServer *server.MCPServer
+	mcpServer *mcp.Server
 }
 
 // ActionRollResult represents the MCP tool output for an action roll.
@@ -68,11 +67,7 @@ type RollDiceResult struct {
 
 // New creates a configured MCP server that connects to the gRPC dice service.
 func New(addr string) (*Server, error) {
-	mcpServer := server.NewMCPServer(
-		serverName,
-		serverVersion,
-		server.WithToolCapabilities(false),
-	)
+	mcpServer := mcp.NewServer(&mcp.Implementation{Name: serverName, Version: serverVersion}, nil)
 
 	grpcAddr := grpcAddress(addr)
 	grpcClient, err := newDiceRollClient(grpcAddr)
@@ -80,8 +75,8 @@ func New(addr string) (*Server, error) {
 		return nil, fmt.Errorf("connect to gRPC server at %s: %w", grpcAddr, err)
 	}
 
-	mcpServer.AddTool(actionRollTool(), actionRollHandler(grpcClient))
-	mcpServer.AddTool(rollDiceTool(), rollDiceHandler(grpcClient))
+	mcp.AddTool(mcpServer, actionRollTool(), actionRollHandler(grpcClient))
+	mcp.AddTool(mcpServer, rollDiceTool(), rollDiceHandler(grpcClient))
 
 	return &Server{mcpServer: mcpServer}, nil
 }
@@ -91,51 +86,34 @@ func (s *Server) Serve() error {
 	if s == nil || s.mcpServer == nil {
 		return fmt.Errorf("MCP server is not configured")
 	}
-	if err := server.ServeStdio(s.mcpServer); err != nil {
+	if err := s.mcpServer.Run(context.Background(), &mcp.StdioTransport{}); err != nil {
 		return fmt.Errorf("serve MCP: %w", err)
 	}
 	return nil
 }
 
 // actionRollTool defines the MCP tool schema for action rolls.
-func actionRollTool() mcp.Tool {
-	return mcp.NewTool(
-		"duality_action_roll",
-		mcp.WithDescription("Rolls Duality dice for an action"),
-		mcp.WithNumber("modifier",
-			mcp.Description("Additive modifier applied to the dice total"),
-			mcp.DefaultNumber(0),
-		),
-		mcp.WithNumber("difficulty",
-			mcp.Description("Optional difficulty target for success"),
-			mcp.Min(0),
-		),
-		mcp.WithInputSchema[ActionRollInput](),
-		mcp.WithOutputSchema[ActionRollResult](),
-	)
+func actionRollTool() *mcp.Tool {
+	return &mcp.Tool{
+		Name:        "duality_action_roll",
+		Description: "Rolls Duality dice for an action",
+	}
 }
 
 // rollDiceTool defines the MCP tool schema for rolling dice.
-func rollDiceTool() mcp.Tool {
-	return mcp.NewTool(
-		"roll_dice",
-		mcp.WithDescription("Rolls arbitrary dice pools"),
-		mcp.WithInputSchema[RollDiceInput](),
-		mcp.WithOutputSchema[RollDiceResult](),
-	)
+func rollDiceTool() *mcp.Tool {
+	return &mcp.Tool{
+		Name:        "roll_dice",
+		Description: "Rolls arbitrary dice pools",
+	}
 }
 
 // actionRollHandler executes a duality action roll.
-func actionRollHandler(client pb.DiceRollServiceClient) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		var input ActionRollInput
-		if err := request.BindArguments(&input); err != nil {
-			return mcp.NewToolResultErrorFromErr("invalid action roll arguments", err), nil
-		}
-
+func actionRollHandler(client pb.DiceRollServiceClient) mcp.ToolHandlerFor[ActionRollInput, ActionRollResult] {
+	return func(ctx context.Context, _ *mcp.CallToolRequest, input ActionRollInput) (*mcp.CallToolResult, ActionRollResult, error) {
 		modifier := input.Modifier
 		if input.Difficulty != nil && *input.Difficulty < 0 {
-			return mcp.NewToolResultError("difficulty must be non-negative"), nil
+			return nil, ActionRollResult{}, fmt.Errorf("difficulty must be non-negative")
 		}
 
 		var difficulty *int32
@@ -152,10 +130,10 @@ func actionRollHandler(client pb.DiceRollServiceClient) func(context.Context, mc
 			Difficulty: difficulty,
 		})
 		if err != nil {
-			return mcp.NewToolResultErrorFromErr("action roll failed", err), nil
+			return nil, ActionRollResult{}, fmt.Errorf("action roll failed: %w", err)
 		}
 		if response.GetDuality() == nil {
-			return mcp.NewToolResultError("action roll response missing dice"), nil
+			return nil, ActionRollResult{}, fmt.Errorf("action roll response missing dice")
 		}
 
 		result := ActionRollResult{
@@ -170,25 +148,21 @@ func actionRollHandler(client pb.DiceRollServiceClient) func(context.Context, mc
 			result.Difficulty = &value
 		}
 
-		return mcp.NewToolResultStructuredOnly(result), nil
+		return nil, result, nil
 	}
 }
 
 // rollDiceHandler executes a generic dice roll.
-func rollDiceHandler(client pb.DiceRollServiceClient) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		var input RollDiceInput
-		if err := request.BindArguments(&input); err != nil {
-			return mcp.NewToolResultErrorFromErr("invalid dice roll arguments", err), nil
-		}
+func rollDiceHandler(client pb.DiceRollServiceClient) mcp.ToolHandlerFor[RollDiceInput, RollDiceResult] {
+	return func(ctx context.Context, _ *mcp.CallToolRequest, input RollDiceInput) (*mcp.CallToolResult, RollDiceResult, error) {
 		if len(input.Dice) == 0 {
-			return mcp.NewToolResultError("at least one die must be provided"), nil
+			return nil, RollDiceResult{}, fmt.Errorf("at least one die must be provided")
 		}
 
 		diceSpecs := make([]*pb.DiceSpec, 0, len(input.Dice))
 		for _, spec := range input.Dice {
 			if spec.Sides <= 0 || spec.Count <= 0 {
-				return mcp.NewToolResultError("dice must have positive sides and count"), nil
+				return nil, RollDiceResult{}, fmt.Errorf("dice must have positive sides and count")
 			}
 			diceSpecs = append(diceSpecs, &pb.DiceSpec{
 				Sides: int32(spec.Sides),
@@ -203,10 +177,10 @@ func rollDiceHandler(client pb.DiceRollServiceClient) func(context.Context, mcp.
 			Dice: diceSpecs,
 		})
 		if err != nil {
-			return mcp.NewToolResultErrorFromErr("dice roll failed", err), nil
+			return nil, RollDiceResult{}, fmt.Errorf("dice roll failed: %w", err)
 		}
 		if response == nil {
-			return mcp.NewToolResultError("dice roll response is missing"), nil
+			return nil, RollDiceResult{}, fmt.Errorf("dice roll response is missing")
 		}
 
 		rolls := make([]RollDiceRoll, 0, len(response.GetRolls()))
@@ -223,7 +197,7 @@ func rollDiceHandler(client pb.DiceRollServiceClient) func(context.Context, mcp.
 			Total: int(response.GetTotal()),
 		}
 
-		return mcp.NewToolResultStructuredOnly(result), nil
+		return nil, result, nil
 	}
 }
 
