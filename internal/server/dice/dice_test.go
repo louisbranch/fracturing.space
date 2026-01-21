@@ -75,12 +75,21 @@ func TestRollDiceRejectsMissingDice(t *testing.T) {
 
 // TestRollDiceRejectsInvalidDiceSpec ensures invalid dice specs are rejected.
 func TestRollDiceRejectsInvalidDiceSpec(t *testing.T) {
-	_, err := RollDice(RollRequest{
-		Dice: []DiceSpec{{Sides: 0, Count: 2}},
-		Seed: 2,
-	})
-	if !errors.Is(err, ErrInvalidDiceSpec) {
-		t.Fatalf("RollDice error = %v, want %v", err, ErrInvalidDiceSpec)
+	tcs := []DiceSpec{
+		{Sides: 0, Count: 2},
+		{Sides: -1, Count: 2},
+		{Sides: 6, Count: 0},
+		{Sides: 6, Count: -1},
+	}
+
+	for _, tc := range tcs {
+		_, err := RollDice(RollRequest{
+			Dice: []DiceSpec{tc},
+			Seed: 2,
+		})
+		if !errors.Is(err, ErrInvalidDiceSpec) {
+			t.Fatalf("RollDice(%+v) error = %v, want %v", tc, err, ErrInvalidDiceSpec)
+		}
 	}
 }
 
