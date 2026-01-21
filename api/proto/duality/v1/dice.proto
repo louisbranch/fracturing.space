@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package duality.v1;
+
+option go_package = "github.com/louisbranch/duality-engine/api/gen/go/duality/v1;dualityv1";
+
+service DiceRollService {
+  // Daggerheart-style action roll:
+  // roll Hope d12 + Fear d12 + modifier, compare to optional difficulty.
+  rpc ActionRoll(ActionRollRequest) returns (ActionRollResponse);
+}
+
+message ActionRollRequest {
+  // Additive modifier applied after summing the two d12s.
+  int32 modifier = 1;
+
+  // If omitted, the server returns a roll outcome (Hope/Fear/Crit) but does not
+  // classify as success/failure.
+  optional int32 difficulty = 2;
+}
+
+message ActionRollResponse {
+  DualityDice duality = 1;
+
+  // total = hope_d12 + fear_d12 + modifier
+  int32 total = 2;
+
+  // Echoed back if provided in the request.
+  optional int32 difficulty = 3;
+
+  Outcome outcome = 4;
+}
+
+message DualityDice {
+  int32 hope_d12 = 1; // 1..12
+  int32 fear_d12 = 2; // 1..12
+}
+
+enum Outcome {
+  OUTCOME_UNSPECIFIED = 0;
+
+  // No difficulty provided: just classify the roll by the higher die (or crit).
+  ROLL_WITH_HOPE = 1;
+  ROLL_WITH_FEAR = 2;
+
+  // Difficulty provided: success/failure flavored by higher die (or crit).
+  SUCCESS_WITH_HOPE = 3;
+  SUCCESS_WITH_FEAR = 4;
+  FAILURE_WITH_HOPE = 5;
+  FAILURE_WITH_FEAR = 6;
+
+  // Matching duality dice.
+  CRITICAL_SUCCESS = 7;
+}
+
