@@ -246,10 +246,6 @@ func grpcAddress(fallback string) string {
 
 // intSlice converts a slice of int32 to a slice of int.
 func intSlice(values []int32) []int {
-	if len(values) == 0 {
-		return nil
-	}
-
 	converted := make([]int, len(values))
 	for i, value := range values {
 		converted[i] = int(value)
