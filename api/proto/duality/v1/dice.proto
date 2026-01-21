@@ -6,8 +6,11 @@ option go_package = "github.com/louisbranch/duality-engine/api/gen/go/duality/v1
 
 service DiceRollService {
   // Daggerheart-style action roll:
-  // roll Hope d12 + Fear d12 + modifier, compare to optional difficulty.
+  // roll Hope d12 + Fear d12, apply modifier, compare to optional difficulty.
   rpc ActionRoll(ActionRollRequest) returns (ActionRollResponse);
+
+  // Deterministically evaluate a duality outcome from known dice.
+  rpc DualityOutcome(DualityOutcomeRequest) returns (DualityOutcomeResponse);
 
   // Roll arbitrary dice sets and return the individual results.
   rpc RollDice(RollDiceRequest) returns (RollDiceResponse);
@@ -23,20 +26,48 @@ message ActionRollRequest {
 }
 
 message ActionRollResponse {
-  DualityDice duality = 1;
-
-  // total = hope_d12 + fear_d12 + modifier
-  int32 total = 2;
+  int32 hope = 1;
+  int32 fear = 2;
+  int32 modifier = 3;
 
   // Echoed back if provided in the request.
-  optional int32 difficulty = 3;
+  optional int32 difficulty = 4;
 
-  Outcome outcome = 4;
+  // total = hope + fear + modifier
+  int32 total = 5;
+  bool is_crit = 6;
+  bool meets_difficulty = 7;
+  Outcome outcome = 8;
 }
 
 message DualityDice {
   int32 hope_d12 = 1; // 1..12
   int32 fear_d12 = 2; // 1..12
+}
+
+message DualityOutcomeRequest {
+  int32 hope = 1;
+  int32 fear = 2;
+  int32 modifier = 3;
+
+  // If omitted, the server returns a roll outcome (Hope/Fear/Crit) but does not
+  // classify as success/failure.
+  optional int32 difficulty = 4;
+}
+
+message DualityOutcomeResponse {
+  int32 hope = 1;
+  int32 fear = 2;
+  int32 modifier = 3;
+
+  // Echoed back if provided in the request.
+  optional int32 difficulty = 4;
+
+  // total = hope + fear + modifier
+  int32 total = 5;
+  bool is_crit = 6;
+  bool meets_difficulty = 7;
+  Outcome outcome = 8;
 }
 
 message RollDiceRequest {

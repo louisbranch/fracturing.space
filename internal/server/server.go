@@ -85,15 +85,59 @@ func (s *Server) ActionRoll(ctx context.Context, in *pb.ActionRollRequest) (*pb.
 	}
 
 	response := &pb.ActionRollResponse{
-		Duality: &pb.DualityDice{
-			HopeD12: int32(result.Hope),
-			FearD12: int32(result.Fear),
-		},
-		Total:   int32(result.Total),
-		Outcome: outcomeToProto(result.Outcome),
+		Hope:            int32(result.Hope),
+		Fear:            int32(result.Fear),
+		Modifier:        int32(result.Modifier),
+		Total:           int32(result.Total),
+		IsCrit:          result.IsCrit,
+		MeetsDifficulty: result.MeetsDifficulty,
+		Outcome:         outcomeToProto(result.Outcome),
 	}
+	if result.Difficulty != nil {
+		value := int32(*result.Difficulty)
+		response.Difficulty = &value
+	}
+
+	return response, nil
+}
+
+// DualityOutcome evaluates a deterministic duality outcome request.
+func (s *Server) DualityOutcome(ctx context.Context, in *pb.DualityOutcomeRequest) (*pb.DualityOutcomeResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "duality outcome request is required")
+	}
+
+	var difficulty *int
 	if in.Difficulty != nil {
-		response.Difficulty = in.Difficulty
+		value := int(*in.Difficulty)
+		difficulty = &value
+	}
+
+	result, err := dice.EvaluateOutcome(dice.OutcomeRequest{
+		Hope:       int(in.GetHope()),
+		Fear:       int(in.GetFear()),
+		Modifier:   int(in.GetModifier()),
+		Difficulty: difficulty,
+	})
+	if err != nil {
+		if errors.Is(err, dice.ErrInvalidDifficulty) || errors.Is(err, dice.ErrInvalidDualityDie) {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+		return nil, status.Errorf(codes.Internal, "failed to evaluate outcome: %v", err)
+	}
+
+	response := &pb.DualityOutcomeResponse{
+		Hope:            int32(result.Hope),
+		Fear:            int32(result.Fear),
+		Modifier:        int32(result.Modifier),
+		Total:           int32(result.Total),
+		IsCrit:          result.IsCrit,
+		MeetsDifficulty: result.MeetsDifficulty,
+		Outcome:         outcomeToProto(result.Outcome),
+	}
+	if result.Difficulty != nil {
+		value := int32(*result.Difficulty)
+		response.Difficulty = &value
 	}
 
 	return response, nil

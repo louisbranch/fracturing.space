@@ -13,18 +13,27 @@ import (
 
 // fakeDiceRollClient implements DiceRollServiceClient for tests.
 type fakeDiceRollClient struct {
-	response            *pb.ActionRollResponse
-	rollDiceResponse    *pb.RollDiceResponse
-	err                 error
-	rollDiceErr         error
-	lastRequest         *pb.ActionRollRequest
-	lastRollDiceRequest *pb.RollDiceRequest
+	response                  *pb.ActionRollResponse
+	rollDiceResponse          *pb.RollDiceResponse
+	dualityOutcomeResponse    *pb.DualityOutcomeResponse
+	err                       error
+	rollDiceErr               error
+	dualityOutcomeErr         error
+	lastRequest               *pb.ActionRollRequest
+	lastRollDiceRequest       *pb.RollDiceRequest
+	lastDualityOutcomeRequest *pb.DualityOutcomeRequest
 }
 
 // ActionRoll records the request and returns the configured response.
 func (f *fakeDiceRollClient) ActionRoll(ctx context.Context, req *pb.ActionRollRequest, opts ...grpc.CallOption) (*pb.ActionRollResponse, error) {
 	f.lastRequest = req
 	return f.response, f.err
+}
+
+// DualityOutcome records the request and returns the configured response.
+func (f *fakeDiceRollClient) DualityOutcome(ctx context.Context, req *pb.DualityOutcomeRequest, opts ...grpc.CallOption) (*pb.DualityOutcomeResponse, error) {
+	f.lastDualityOutcomeRequest = req
+	return f.dualityOutcomeResponse, f.dualityOutcomeErr
 }
 
 // RollDice records the request and returns the configured response.
@@ -113,36 +122,19 @@ func TestActionRollHandlerReturnsClientError(t *testing.T) {
 	}
 }
 
-// TestActionRollHandlerHandlesMissingDice ensures missing dice results in an error result.
-func TestActionRollHandlerHandlesMissingDice(t *testing.T) {
-	client := &fakeDiceRollClient{
-		response: &pb.ActionRollResponse{
-			Outcome: pb.Outcome_OUTCOME_UNSPECIFIED,
-		},
-	}
-	handler := actionRollHandler(client)
-
-	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, ActionRollInput{Modifier: 1})
-	if err == nil {
-		t.Fatal("expected error")
-	}
-	if result != nil {
-		t.Fatal("expected nil result on error")
-	}
-}
-
 // TestActionRollHandlerMapsRequestAndResponse ensures inputs and outputs are mapped consistently.
 func TestActionRollHandlerMapsRequestAndResponse(t *testing.T) {
 	difficulty := int32(7)
 	client := &fakeDiceRollClient{
 		response: &pb.ActionRollResponse{
-			Duality: &pb.DualityDice{
-				HopeD12: 4,
-				FearD12: 6,
-			},
-			Total:      17,
-			Difficulty: &difficulty,
-			Outcome:    pb.Outcome_SUCCESS_WITH_HOPE,
+			Hope:            4,
+			Fear:            6,
+			Modifier:        7,
+			Total:           17,
+			IsCrit:          false,
+			MeetsDifficulty: true,
+			Difficulty:      &difficulty,
+			Outcome:         pb.Outcome_SUCCESS_WITH_FEAR,
 		},
 	}
 	handler := actionRollHandler(client)
@@ -173,11 +165,121 @@ func TestActionRollHandlerMapsRequestAndResponse(t *testing.T) {
 	if output.Modifier != 7 {
 		t.Fatalf("expected modifier 7, got %d", output.Modifier)
 	}
-	if output.Outcome != pb.Outcome_SUCCESS_WITH_HOPE.String() {
-		t.Fatalf("expected outcome %q, got %q", pb.Outcome_SUCCESS_WITH_HOPE.String(), output.Outcome)
+	if output.IsCrit {
+		t.Fatal("expected is_crit false")
+	}
+	if !output.MeetsDifficulty {
+		t.Fatal("expected meets_difficulty true")
+	}
+	if output.Outcome != pb.Outcome_SUCCESS_WITH_FEAR.String() {
+		t.Fatalf("expected outcome %q, got %q", pb.Outcome_SUCCESS_WITH_FEAR.String(), output.Outcome)
 	}
 	if output.Difficulty == nil || *output.Difficulty != 7 {
 		t.Fatalf("expected difficulty 7, got %v", output.Difficulty)
+	}
+}
+
+// TestDualityOutcomeHandlerRejectsInvalidDice ensures invalid dice return errors.
+func TestDualityOutcomeHandlerRejectsInvalidDice(t *testing.T) {
+	client := &fakeDiceRollClient{}
+	handler := dualityOutcomeHandler(client)
+
+	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, DualityOutcomeInput{
+		Hope: 0,
+		Fear: 12,
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if result != nil {
+		t.Fatal("expected nil result on error")
+	}
+	if client.lastDualityOutcomeRequest != nil {
+		t.Fatal("expected no gRPC call on invalid input")
+	}
+}
+
+// TestDualityOutcomeHandlerRejectsNegativeDifficulty ensures invalid difficulty returns errors.
+func TestDualityOutcomeHandlerRejectsNegativeDifficulty(t *testing.T) {
+	client := &fakeDiceRollClient{}
+	handler := dualityOutcomeHandler(client)
+
+	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, DualityOutcomeInput{
+		Hope:       6,
+		Fear:       5,
+		Difficulty: intPointer(-1),
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if result != nil {
+		t.Fatal("expected nil result on error")
+	}
+	if client.lastDualityOutcomeRequest != nil {
+		t.Fatal("expected no gRPC call on invalid input")
+	}
+}
+
+// TestDualityOutcomeHandlerReturnsClientError ensures gRPC errors are returned as tool errors.
+func TestDualityOutcomeHandlerReturnsClientError(t *testing.T) {
+	client := &fakeDiceRollClient{dualityOutcomeErr: errors.New("boom")}
+	handler := dualityOutcomeHandler(client)
+
+	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, DualityOutcomeInput{
+		Hope:     6,
+		Fear:     5,
+		Modifier: 1,
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if result != nil {
+		t.Fatal("expected nil result on error")
+	}
+}
+
+// TestDualityOutcomeHandlerMapsRequestAndResponse ensures inputs and outputs map consistently.
+func TestDualityOutcomeHandlerMapsRequestAndResponse(t *testing.T) {
+	difficulty := int32(10)
+	client := &fakeDiceRollClient{dualityOutcomeResponse: &pb.DualityOutcomeResponse{
+		Hope:            10,
+		Fear:            4,
+		Modifier:        1,
+		Total:           15,
+		IsCrit:          false,
+		MeetsDifficulty: true,
+		Difficulty:      &difficulty,
+		Outcome:         pb.Outcome_SUCCESS_WITH_HOPE,
+	}}
+
+	handler := dualityOutcomeHandler(client)
+
+	result, output, err := handler(context.Background(), &mcp.CallToolRequest{}, DualityOutcomeInput{
+		Hope:       10,
+		Fear:       4,
+		Modifier:   1,
+		Difficulty: intPointer(10),
+	})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if result != nil {
+		t.Fatal("expected nil result on success")
+	}
+	if client.lastDualityOutcomeRequest == nil {
+		t.Fatal("expected gRPC request")
+	}
+	if client.lastDualityOutcomeRequest.GetHope() != 10 || client.lastDualityOutcomeRequest.GetFear() != 4 {
+		t.Fatalf("unexpected dice in request: %+v", client.lastDualityOutcomeRequest)
+	}
+	if output.Total != 15 {
+		t.Fatalf("expected total 15, got %d", output.Total)
+	}
+	if output.MeetsDifficulty != true {
+		t.Fatal("expected meets_difficulty true")
+	}
+	if output.Outcome != pb.Outcome_SUCCESS_WITH_HOPE.String() {
+		t.Fatalf("expected outcome %q, got %q", pb.Outcome_SUCCESS_WITH_HOPE.String(), output.Outcome)
 	}
 }
 

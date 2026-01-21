@@ -68,6 +68,56 @@ func TestActionRollSeedFailure(t *testing.T) {
 	assertStatusCode(t, err, codes.Internal)
 }
 
+func TestDualityOutcomeRejectsNilRequest(t *testing.T) {
+	server := newTestServer(42)
+
+	_, err := server.DualityOutcome(context.Background(), nil)
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestDualityOutcomeRejectsInvalidDice(t *testing.T) {
+	server := newTestServer(42)
+
+	_, err := server.DualityOutcome(context.Background(), &pb.DualityOutcomeRequest{
+		Hope: 0,
+		Fear: 12,
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestDualityOutcomeRejectsNegativeDifficulty(t *testing.T) {
+	server := newTestServer(42)
+
+	negative := int32(-1)
+	_, err := server.DualityOutcome(context.Background(), &pb.DualityOutcomeRequest{
+		Hope:       6,
+		Fear:       5,
+		Difficulty: &negative,
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestDualityOutcomeReturnsResults(t *testing.T) {
+	server := newTestServer(42)
+
+	difficulty := int32(10)
+	response, err := server.DualityOutcome(context.Background(), &pb.DualityOutcomeRequest{
+		Hope:       10,
+		Fear:       4,
+		Modifier:   1,
+		Difficulty: &difficulty,
+	})
+	if err != nil {
+		t.Fatalf("DualityOutcome returned error: %v", err)
+	}
+	assertOutcomeResponse(t, response, dice.OutcomeRequest{
+		Hope:       10,
+		Fear:       4,
+		Modifier:   1,
+		Difficulty: intPointer(&difficulty),
+	})
+}
+
 func TestRollDiceRejectsNilRequest(t *testing.T) {
 	server := newTestServer(42)
 
@@ -143,9 +193,6 @@ func assertResponseMatches(t *testing.T, response *pb.ActionRollResponse, seed i
 	if response == nil {
 		t.Fatal("ActionRoll response is nil")
 	}
-	if response.Duality == nil {
-		t.Fatal("ActionRoll duality dice is nil")
-	}
 
 	result, err := dice.RollAction(dice.ActionRequest{
 		Modifier:   int(modifier),
@@ -156,11 +203,20 @@ func assertResponseMatches(t *testing.T, response *pb.ActionRollResponse, seed i
 		t.Fatalf("RollAction returned error: %v", err)
 	}
 
-	if response.Duality.GetHopeD12() != int32(result.Hope) || response.Duality.GetFearD12() != int32(result.Fear) {
-		t.Fatalf("ActionRoll duality dice = (%d, %d), want (%d, %d)", response.Duality.GetHopeD12(), response.Duality.GetFearD12(), result.Hope, result.Fear)
+	if response.GetHope() != int32(result.Hope) || response.GetFear() != int32(result.Fear) {
+		t.Fatalf("ActionRoll dice = (%d, %d), want (%d, %d)", response.GetHope(), response.GetFear(), result.Hope, result.Fear)
+	}
+	if response.GetModifier() != int32(result.Modifier) {
+		t.Fatalf("ActionRoll modifier = %d, want %d", response.GetModifier(), result.Modifier)
 	}
 	if response.Total != int32(result.Total) {
 		t.Fatalf("ActionRoll total = %d, want %d", response.Total, result.Total)
+	}
+	if response.IsCrit != result.IsCrit {
+		t.Fatalf("ActionRoll is_crit = %t, want %t", response.IsCrit, result.IsCrit)
+	}
+	if response.MeetsDifficulty != result.MeetsDifficulty {
+		t.Fatalf("ActionRoll meets_difficulty = %t, want %t", response.MeetsDifficulty, result.MeetsDifficulty)
 	}
 	if response.Outcome != outcomeToProto(result.Outcome) {
 		t.Fatalf("ActionRoll outcome = %v, want %v", response.Outcome, outcomeToProto(result.Outcome))
@@ -170,6 +226,45 @@ func assertResponseMatches(t *testing.T, response *pb.ActionRollResponse, seed i
 	}
 	if difficulty != nil && response.Difficulty != nil && *response.Difficulty != *difficulty {
 		t.Fatalf("ActionRoll difficulty = %d, want %d", *response.Difficulty, *difficulty)
+	}
+}
+
+// assertOutcomeResponse validates duality outcome response fields against expectations.
+func assertOutcomeResponse(t *testing.T, response *pb.DualityOutcomeResponse, request dice.OutcomeRequest) {
+	t.Helper()
+
+	if response == nil {
+		t.Fatal("DualityOutcome response is nil")
+	}
+
+	result, err := dice.EvaluateOutcome(request)
+	if err != nil {
+		t.Fatalf("EvaluateOutcome returned error: %v", err)
+	}
+
+	if response.GetHope() != int32(result.Hope) || response.GetFear() != int32(result.Fear) {
+		t.Fatalf("DualityOutcome dice = (%d, %d), want (%d, %d)", response.GetHope(), response.GetFear(), result.Hope, result.Fear)
+	}
+	if response.GetModifier() != int32(result.Modifier) {
+		t.Fatalf("DualityOutcome modifier = %d, want %d", response.GetModifier(), result.Modifier)
+	}
+	if response.Total != int32(result.Total) {
+		t.Fatalf("DualityOutcome total = %d, want %d", response.Total, result.Total)
+	}
+	if response.IsCrit != result.IsCrit {
+		t.Fatalf("DualityOutcome is_crit = %t, want %t", response.IsCrit, result.IsCrit)
+	}
+	if response.MeetsDifficulty != result.MeetsDifficulty {
+		t.Fatalf("DualityOutcome meets_difficulty = %t, want %t", response.MeetsDifficulty, result.MeetsDifficulty)
+	}
+	if response.Outcome != outcomeToProto(result.Outcome) {
+		t.Fatalf("DualityOutcome outcome = %v, want %v", response.Outcome, outcomeToProto(result.Outcome))
+	}
+	if request.Difficulty != nil && response.Difficulty == nil {
+		t.Fatal("DualityOutcome difficulty is nil, want value")
+	}
+	if request.Difficulty != nil && response.Difficulty != nil && *response.Difficulty != int32(*request.Difficulty) {
+		t.Fatalf("DualityOutcome difficulty = %d, want %d", *response.Difficulty, *request.Difficulty)
 	}
 }
 

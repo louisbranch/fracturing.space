@@ -99,76 +99,92 @@ func TestRollAction(t *testing.T) {
 	}
 
 	tcs := []struct {
-		wantOutcome Outcome
-		seed        int64
-		modifier    int
-		difficulty  *int
-		wantHope    int
-		wantFear    int
-		wantTotal   int
+		wantOutcome         Outcome
+		seed                int64
+		modifier            int
+		difficulty          *int
+		wantHope            int
+		wantFear            int
+		wantTotal           int
+		wantIsCrit          bool
+		wantMeetsDifficulty bool
 	}{
 		{
-			wantOutcome: OutcomeCriticalSuccess,
-			seed:        0,
-			modifier:    0,
-			difficulty:  nil,
-			wantHope:    7,
-			wantFear:    7,
-			wantTotal:   14,
+			wantOutcome:         OutcomeCriticalSuccess,
+			seed:                0,
+			modifier:            0,
+			difficulty:          nil,
+			wantHope:            7,
+			wantFear:            7,
+			wantTotal:           14,
+			wantIsCrit:          true,
+			wantMeetsDifficulty: false,
 		},
 		{
-			wantOutcome: OutcomeRollWithHope,
-			seed:        1,
-			modifier:    0,
-			difficulty:  nil,
-			wantHope:    6,
-			wantFear:    4,
-			wantTotal:   10,
+			wantOutcome:         OutcomeRollWithHope,
+			seed:                1,
+			modifier:            0,
+			difficulty:          nil,
+			wantHope:            6,
+			wantFear:            4,
+			wantTotal:           10,
+			wantIsCrit:          false,
+			wantMeetsDifficulty: false,
 		},
 		{
-			wantOutcome: OutcomeRollWithFear,
-			seed:        3,
-			modifier:    0,
-			difficulty:  nil,
-			wantHope:    5,
-			wantFear:    6,
-			wantTotal:   11,
+			wantOutcome:         OutcomeRollWithFear,
+			seed:                3,
+			modifier:            0,
+			difficulty:          nil,
+			wantHope:            5,
+			wantFear:            6,
+			wantTotal:           11,
+			wantIsCrit:          false,
+			wantMeetsDifficulty: false,
 		},
 		{
-			wantOutcome: OutcomeSuccessWithHope,
-			seed:        1,
-			modifier:    0,
-			difficulty:  diff(9),
-			wantHope:    6,
-			wantFear:    4,
-			wantTotal:   10,
+			wantOutcome:         OutcomeSuccessWithHope,
+			seed:                1,
+			modifier:            0,
+			difficulty:          diff(9),
+			wantHope:            6,
+			wantFear:            4,
+			wantTotal:           10,
+			wantIsCrit:          false,
+			wantMeetsDifficulty: true,
 		},
 		{
-			wantOutcome: OutcomeSuccessWithFear,
-			seed:        3,
-			modifier:    0,
-			difficulty:  diff(10),
-			wantHope:    5,
-			wantFear:    6,
-			wantTotal:   11,
+			wantOutcome:         OutcomeSuccessWithFear,
+			seed:                3,
+			modifier:            0,
+			difficulty:          diff(10),
+			wantHope:            5,
+			wantFear:            6,
+			wantTotal:           11,
+			wantIsCrit:          false,
+			wantMeetsDifficulty: true,
 		},
 		{
-			wantOutcome: OutcomeFailureWithHope,
-			seed:        1,
-			modifier:    -1,
-			difficulty:  diff(10),
-			wantHope:    6,
-			wantFear:    4,
-			wantTotal:   9,
+			wantOutcome:         OutcomeFailureWithHope,
+			seed:                1,
+			modifier:            -1,
+			difficulty:          diff(10),
+			wantHope:            6,
+			wantFear:            4,
+			wantTotal:           9,
+			wantIsCrit:          false,
+			wantMeetsDifficulty: false,
 		},
 		{
-			wantOutcome: OutcomeFailureWithFear,
-			seed:        3,
-			modifier:    -2,
-			difficulty:  diff(10),
-			wantHope:    5,
-			wantFear:    6,
-			wantTotal:   9,
+			wantOutcome:         OutcomeFailureWithFear,
+			seed:                3,
+			modifier:            -2,
+			difficulty:          diff(10),
+			wantHope:            5,
+			wantFear:            6,
+			wantTotal:           9,
+			wantIsCrit:          false,
+			wantMeetsDifficulty: false,
 		},
 	}
 
@@ -181,8 +197,8 @@ func TestRollAction(t *testing.T) {
 		if err != nil {
 			t.Fatalf("RollAction returned error: %v", err)
 		}
-		if result.Hope != tc.wantHope || result.Fear != tc.wantFear || result.Total != tc.wantTotal || result.Outcome != tc.wantOutcome {
-			t.Errorf("RollAction(%d, %v) = (%d, %d, %d, %v), want (%d, %d, %d, %v)", tc.modifier, tc.difficulty, result.Hope, result.Fear, result.Total, result.Outcome, tc.wantHope, tc.wantFear, tc.wantTotal, tc.wantOutcome)
+		if result.Hope != tc.wantHope || result.Fear != tc.wantFear || result.Total != tc.wantTotal || result.Outcome != tc.wantOutcome || result.IsCrit != tc.wantIsCrit || result.MeetsDifficulty != tc.wantMeetsDifficulty {
+			t.Errorf("RollAction(%d, %v) = (%d, %d, %d, %v, %t, %t), want (%d, %d, %d, %v, %t, %t)", tc.modifier, tc.difficulty, result.Hope, result.Fear, result.Total, result.Outcome, result.IsCrit, result.MeetsDifficulty, tc.wantHope, tc.wantFear, tc.wantTotal, tc.wantOutcome, tc.wantIsCrit, tc.wantMeetsDifficulty)
 		}
 	}
 }
@@ -197,4 +213,109 @@ func TestRollActionRejectsNegativeDifficulty(t *testing.T) {
 	if !errors.Is(err, ErrInvalidDifficulty) {
 		t.Fatalf("RollAction error = %v, want %v", err, ErrInvalidDifficulty)
 	}
+}
+
+func TestEvaluateOutcome(t *testing.T) {
+	tcs := []struct {
+		name                string
+		request             OutcomeRequest
+		wantOutcome         Outcome
+		wantTotal           int
+		wantIsCrit          bool
+		wantMeetsDifficulty bool
+	}{
+		{
+			name: "critical overrides difficulty",
+			request: OutcomeRequest{
+				Hope:       7,
+				Fear:       7,
+				Modifier:   0,
+				Difficulty: intPtr(12),
+			},
+			wantOutcome:         OutcomeCriticalSuccess,
+			wantTotal:           14,
+			wantIsCrit:          true,
+			wantMeetsDifficulty: true,
+		},
+		{
+			name: "success with hope",
+			request: OutcomeRequest{
+				Hope:       10,
+				Fear:       4,
+				Modifier:   1,
+				Difficulty: intPtr(10),
+			},
+			wantOutcome:         OutcomeSuccessWithHope,
+			wantTotal:           15,
+			wantIsCrit:          false,
+			wantMeetsDifficulty: true,
+		},
+		{
+			name: "failure with fear",
+			request: OutcomeRequest{
+				Hope:       2,
+				Fear:       8,
+				Modifier:   0,
+				Difficulty: intPtr(11),
+			},
+			wantOutcome:         OutcomeFailureWithFear,
+			wantTotal:           10,
+			wantIsCrit:          false,
+			wantMeetsDifficulty: false,
+		},
+		{
+			name: "roll with hope",
+			request: OutcomeRequest{
+				Hope:     9,
+				Fear:     2,
+				Modifier: 0,
+			},
+			wantOutcome:         OutcomeRollWithHope,
+			wantTotal:           11,
+			wantIsCrit:          false,
+			wantMeetsDifficulty: false,
+		},
+		{
+			name: "roll with fear",
+			request: OutcomeRequest{
+				Hope:     3,
+				Fear:     11,
+				Modifier: 0,
+			},
+			wantOutcome:         OutcomeRollWithFear,
+			wantTotal:           14,
+			wantIsCrit:          false,
+			wantMeetsDifficulty: false,
+		},
+	}
+
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := EvaluateOutcome(tc.request)
+			if err != nil {
+				t.Fatalf("EvaluateOutcome returned error: %v", err)
+			}
+			if result.Total != tc.wantTotal || result.Outcome != tc.wantOutcome || result.IsCrit != tc.wantIsCrit || result.MeetsDifficulty != tc.wantMeetsDifficulty {
+				t.Fatalf("EvaluateOutcome = (%d, %v, %t, %t), want (%d, %v, %t, %t)", result.Total, result.Outcome, result.IsCrit, result.MeetsDifficulty, tc.wantTotal, tc.wantOutcome, tc.wantIsCrit, tc.wantMeetsDifficulty)
+			}
+		})
+	}
+}
+
+func TestEvaluateOutcomeRejectsInvalidDice(t *testing.T) {
+	_, err := EvaluateOutcome(OutcomeRequest{Hope: 0, Fear: 12})
+	if !errors.Is(err, ErrInvalidDualityDie) {
+		t.Fatalf("EvaluateOutcome error = %v, want %v", err, ErrInvalidDualityDie)
+	}
+}
+
+func TestEvaluateOutcomeRejectsNegativeDifficulty(t *testing.T) {
+	_, err := EvaluateOutcome(OutcomeRequest{Hope: 6, Fear: 5, Difficulty: intPtr(-1)})
+	if !errors.Is(err, ErrInvalidDifficulty) {
+		t.Fatalf("EvaluateOutcome error = %v, want %v", err, ErrInvalidDifficulty)
+	}
+}
+
+func intPtr(value int) *int {
+	return &value
 }

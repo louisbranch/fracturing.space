@@ -27,12 +27,14 @@ type Server struct {
 
 // ActionRollResult represents the MCP tool output for an action roll.
 type ActionRollResult struct {
-	Hope       int    `json:"hope" jsonschema:"hope die result"`
-	Fear       int    `json:"fear" jsonschema:"fear die result"`
-	Total      int    `json:"total" jsonschema:"sum of dice and modifier"`
-	Modifier   int    `json:"modifier" jsonschema:"modifier applied to the total"`
-	Outcome    string `json:"outcome" jsonschema:"categorized roll outcome"`
-	Difficulty *int   `json:"difficulty,omitempty" jsonschema:"difficulty target, if provided"`
+	Hope            int    `json:"hope" jsonschema:"hope die result"`
+	Fear            int    `json:"fear" jsonschema:"fear die result"`
+	Modifier        int    `json:"modifier" jsonschema:"modifier applied to the total"`
+	Difficulty      *int   `json:"difficulty,omitempty" jsonschema:"difficulty target, if provided"`
+	Total           int    `json:"total" jsonschema:"sum of dice and modifier"`
+	IsCrit          bool   `json:"is_crit" jsonschema:"whether the roll is a critical success"`
+	MeetsDifficulty bool   `json:"meets_difficulty" jsonschema:"whether total meets difficulty"`
+	Outcome         string `json:"outcome" jsonschema:"categorized roll outcome"`
 }
 
 // ActionRollInput represents the MCP tool input for an action roll.
@@ -40,6 +42,17 @@ type ActionRollInput struct {
 	Modifier   int  `json:"modifier" jsonschema:"modifier applied to the roll"`
 	Difficulty *int `json:"difficulty" jsonschema:"optional difficulty target"`
 }
+
+// DualityOutcomeInput represents the MCP tool input for deterministic outcomes.
+type DualityOutcomeInput struct {
+	Hope       int  `json:"hope" jsonschema:"hope die result"`
+	Fear       int  `json:"fear" jsonschema:"fear die result"`
+	Modifier   int  `json:"modifier" jsonschema:"modifier applied to the roll"`
+	Difficulty *int `json:"difficulty" jsonschema:"optional difficulty target"`
+}
+
+// DualityOutcomeResult represents the MCP tool output for deterministic outcomes.
+type DualityOutcomeResult = ActionRollResult
 
 // RollDiceSpec represents an MCP die specification for a roll.
 type RollDiceSpec struct {
@@ -76,6 +89,7 @@ func New(addr string) (*Server, error) {
 	}
 
 	mcp.AddTool(mcpServer, actionRollTool(), actionRollHandler(grpcClient))
+	mcp.AddTool(mcpServer, dualityOutcomeTool(), dualityOutcomeHandler(grpcClient))
 	mcp.AddTool(mcpServer, rollDiceTool(), rollDiceHandler(grpcClient))
 
 	return &Server{mcpServer: mcpServer}, nil
@@ -108,6 +122,14 @@ func rollDiceTool() *mcp.Tool {
 	}
 }
 
+// dualityOutcomeTool defines the MCP tool schema for deterministic outcomes.
+func dualityOutcomeTool() *mcp.Tool {
+	return &mcp.Tool{
+		Name:        "duality_outcome",
+		Description: "Evaluates a duality outcome from known dice",
+	}
+}
+
 // actionRollHandler executes a duality action roll.
 func actionRollHandler(client pb.DiceRollServiceClient) mcp.ToolHandlerFor[ActionRollInput, ActionRollResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input ActionRollInput) (*mcp.CallToolResult, ActionRollResult, error) {
@@ -132,16 +154,62 @@ func actionRollHandler(client pb.DiceRollServiceClient) mcp.ToolHandlerFor[Actio
 		if err != nil {
 			return nil, ActionRollResult{}, fmt.Errorf("action roll failed: %w", err)
 		}
-		if response.GetDuality() == nil {
-			return nil, ActionRollResult{}, fmt.Errorf("action roll response missing dice")
-		}
 
 		result := ActionRollResult{
-			Hope:     int(response.GetDuality().GetHopeD12()),
-			Fear:     int(response.GetDuality().GetFearD12()),
-			Total:    int(response.GetTotal()),
-			Modifier: modifier,
-			Outcome:  response.GetOutcome().String(),
+			Hope:            int(response.GetHope()),
+			Fear:            int(response.GetFear()),
+			Modifier:        int(response.GetModifier()),
+			Total:           int(response.GetTotal()),
+			IsCrit:          response.GetIsCrit(),
+			MeetsDifficulty: response.GetMeetsDifficulty(),
+			Outcome:         response.GetOutcome().String(),
+		}
+		if response.Difficulty != nil {
+			value := int(response.GetDifficulty())
+			result.Difficulty = &value
+		}
+
+		return nil, result, nil
+	}
+}
+
+// dualityOutcomeHandler executes a deterministic outcome evaluation.
+func dualityOutcomeHandler(client pb.DiceRollServiceClient) mcp.ToolHandlerFor[DualityOutcomeInput, DualityOutcomeResult] {
+	return func(ctx context.Context, _ *mcp.CallToolRequest, input DualityOutcomeInput) (*mcp.CallToolResult, DualityOutcomeResult, error) {
+		if input.Hope < 1 || input.Hope > 12 || input.Fear < 1 || input.Fear > 12 {
+			return nil, DualityOutcomeResult{}, fmt.Errorf("hope and fear must be between 1 and 12")
+		}
+		if input.Difficulty != nil && *input.Difficulty < 0 {
+			return nil, DualityOutcomeResult{}, fmt.Errorf("difficulty must be non-negative")
+		}
+
+		var difficulty *int32
+		if input.Difficulty != nil {
+			value := int32(*input.Difficulty)
+			difficulty = &value
+		}
+
+		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+
+		response, err := client.DualityOutcome(runCtx, &pb.DualityOutcomeRequest{
+			Hope:       int32(input.Hope),
+			Fear:       int32(input.Fear),
+			Modifier:   int32(input.Modifier),
+			Difficulty: difficulty,
+		})
+		if err != nil {
+			return nil, DualityOutcomeResult{}, fmt.Errorf("duality outcome failed: %w", err)
+		}
+
+		result := DualityOutcomeResult{
+			Hope:            int(response.GetHope()),
+			Fear:            int(response.GetFear()),
+			Modifier:        int(response.GetModifier()),
+			Total:           int(response.GetTotal()),
+			IsCrit:          response.GetIsCrit(),
+			MeetsDifficulty: response.GetMeetsDifficulty(),
+			Outcome:         response.GetOutcome().String(),
 		}
 		if response.Difficulty != nil {
 			value := int(response.GetDifficulty())

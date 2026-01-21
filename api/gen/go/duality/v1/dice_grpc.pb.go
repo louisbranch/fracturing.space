@@ -19,8 +19,9 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	DiceRollService_ActionRoll_FullMethodName = "/duality.v1.DiceRollService/ActionRoll"
-	DiceRollService_RollDice_FullMethodName   = "/duality.v1.DiceRollService/RollDice"
+	DiceRollService_ActionRoll_FullMethodName     = "/duality.v1.DiceRollService/ActionRoll"
+	DiceRollService_DualityOutcome_FullMethodName = "/duality.v1.DiceRollService/DualityOutcome"
+	DiceRollService_RollDice_FullMethodName       = "/duality.v1.DiceRollService/RollDice"
 )
 
 // DiceRollServiceClient is the client API for DiceRollService service.
@@ -28,8 +29,10 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type DiceRollServiceClient interface {
 	// Daggerheart-style action roll:
-	// roll Hope d12 + Fear d12 + modifier, compare to optional difficulty.
+	// roll Hope d12 + Fear d12, apply modifier, compare to optional difficulty.
 	ActionRoll(ctx context.Context, in *ActionRollRequest, opts ...grpc.CallOption) (*ActionRollResponse, error)
+	// Deterministically evaluate a duality outcome from known dice.
+	DualityOutcome(ctx context.Context, in *DualityOutcomeRequest, opts ...grpc.CallOption) (*DualityOutcomeResponse, error)
 	// Roll arbitrary dice sets and return the individual results.
 	RollDice(ctx context.Context, in *RollDiceRequest, opts ...grpc.CallOption) (*RollDiceResponse, error)
 }
@@ -52,6 +55,16 @@ func (c *diceRollServiceClient) ActionRoll(ctx context.Context, in *ActionRollRe
 	return out, nil
 }
 
+func (c *diceRollServiceClient) DualityOutcome(ctx context.Context, in *DualityOutcomeRequest, opts ...grpc.CallOption) (*DualityOutcomeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DualityOutcomeResponse)
+	err := c.cc.Invoke(ctx, DiceRollService_DualityOutcome_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *diceRollServiceClient) RollDice(ctx context.Context, in *RollDiceRequest, opts ...grpc.CallOption) (*RollDiceResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(RollDiceResponse)
@@ -67,8 +80,10 @@ func (c *diceRollServiceClient) RollDice(ctx context.Context, in *RollDiceReques
 // for forward compatibility.
 type DiceRollServiceServer interface {
 	// Daggerheart-style action roll:
-	// roll Hope d12 + Fear d12 + modifier, compare to optional difficulty.
+	// roll Hope d12 + Fear d12, apply modifier, compare to optional difficulty.
 	ActionRoll(context.Context, *ActionRollRequest) (*ActionRollResponse, error)
+	// Deterministically evaluate a duality outcome from known dice.
+	DualityOutcome(context.Context, *DualityOutcomeRequest) (*DualityOutcomeResponse, error)
 	// Roll arbitrary dice sets and return the individual results.
 	RollDice(context.Context, *RollDiceRequest) (*RollDiceResponse, error)
 	mustEmbedUnimplementedDiceRollServiceServer()
@@ -83,6 +98,9 @@ type UnimplementedDiceRollServiceServer struct{}
 
 func (UnimplementedDiceRollServiceServer) ActionRoll(context.Context, *ActionRollRequest) (*ActionRollResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ActionRoll not implemented")
+}
+func (UnimplementedDiceRollServiceServer) DualityOutcome(context.Context, *DualityOutcomeRequest) (*DualityOutcomeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DualityOutcome not implemented")
 }
 func (UnimplementedDiceRollServiceServer) RollDice(context.Context, *RollDiceRequest) (*RollDiceResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RollDice not implemented")
@@ -126,6 +144,24 @@ func _DiceRollService_ActionRoll_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _DiceRollService_DualityOutcome_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DualityOutcomeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DiceRollServiceServer).DualityOutcome(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DiceRollService_DualityOutcome_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DiceRollServiceServer).DualityOutcome(ctx, req.(*DualityOutcomeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _DiceRollService_RollDice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RollDiceRequest)
 	if err := dec(in); err != nil {
@@ -154,6 +190,10 @@ var DiceRollService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ActionRoll",
 			Handler:    _DiceRollService_ActionRoll_Handler,
+		},
+		{
+			MethodName: "DualityOutcome",
+			Handler:    _DiceRollService_DualityOutcome_Handler,
 		},
 		{
 			MethodName: "RollDice",
