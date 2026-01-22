@@ -4,7 +4,7 @@ GEN_GO_DIR := api/gen/go
 PROTO_FILES := \
 	$(PROTO_DIR)/duality/v1/dice.proto
 
-.PHONY: all proto clean
+.PHONY: all proto clean run
 
 all: proto
 
@@ -20,4 +20,14 @@ proto:
 
 clean:
 	rm -rf $(GEN_GO_DIR)
+
+run:
+	@bash -euo pipefail -c '\
+	  cleanup() { kill -- -$$; } ; trap cleanup EXIT INT TERM; \
+	  go run ./cmd/server 2>&1 & \
+	  echo "waiting for port 8080..."; \
+	  until nc -z 127.0.0.1 8080; do sleep 0.2; done; \
+	  go run ./cmd/mcp 2>&1 & \
+	  wait \
+	'
 
