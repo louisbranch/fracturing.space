@@ -26,6 +26,17 @@ Clients can be:
 - a web UI for humans
 - anything else that can call gRPC
 
+## Run locally
+
+Start the gRPC server and MCP bridge together:
+
+```sh
+make run
+```
+
+This runs the gRPC server on `localhost:8080`, waits for it to accept
+connections, and then starts the MCP server on stdio.
+
 ## MCP (stdio)
 
 The MCP server communicates over stdio using JSON-RPC. Run it locally and point
