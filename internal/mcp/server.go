@@ -54,6 +54,47 @@ type DualityOutcomeInput struct {
 // DualityOutcomeResult represents the MCP tool output for deterministic outcomes.
 type DualityOutcomeResult = ActionRollResult
 
+// DualityExplainInput represents the MCP tool input for explanations.
+type DualityExplainInput struct {
+	Hope       int     `json:"hope" jsonschema:"hope die result"`
+	Fear       int     `json:"fear" jsonschema:"fear die result"`
+	Modifier   int     `json:"modifier" jsonschema:"modifier applied to the roll"`
+	Difficulty *int    `json:"difficulty" jsonschema:"optional difficulty target"`
+	RequestID  *string `json:"request_id,omitempty" jsonschema:"optional correlation identifier"`
+}
+
+// DualityExplainIntermediates represents derived evaluation values.
+type DualityExplainIntermediates struct {
+	BaseTotal       int  `json:"base_total" jsonschema:"sum of hope and fear"`
+	Total           int  `json:"total" jsonschema:"sum of base total and modifier"`
+	IsCrit          bool `json:"is_crit" jsonschema:"whether the roll is a critical success"`
+	MeetsDifficulty bool `json:"meets_difficulty" jsonschema:"whether total meets difficulty"`
+	HopeGtFear      bool `json:"hope_gt_fear" jsonschema:"whether hope exceeds fear"`
+	FearGtHope      bool `json:"fear_gt_hope" jsonschema:"whether fear exceeds hope"`
+}
+
+// DualityExplainStep represents a deterministic evaluation step.
+type DualityExplainStep struct {
+	Code    string         `json:"code" jsonschema:"stable step identifier"`
+	Message string         `json:"message" jsonschema:"human-readable step description"`
+	Data    map[string]any `json:"data" jsonschema:"structured step payload"`
+}
+
+// DualityExplainResult represents the MCP tool output for explanations.
+type DualityExplainResult struct {
+	Hope            int                         `json:"hope" jsonschema:"hope die result"`
+	Fear            int                         `json:"fear" jsonschema:"fear die result"`
+	Modifier        int                         `json:"modifier" jsonschema:"modifier applied to the roll"`
+	Difficulty      *int                        `json:"difficulty,omitempty" jsonschema:"difficulty target, if provided"`
+	Total           int                         `json:"total" jsonschema:"sum of dice and modifier"`
+	IsCrit          bool                        `json:"is_crit" jsonschema:"whether the roll is a critical success"`
+	MeetsDifficulty bool                        `json:"meets_difficulty" jsonschema:"whether total meets difficulty"`
+	Outcome         string                      `json:"outcome" jsonschema:"categorized roll outcome"`
+	RulesVersion    string                      `json:"rules_version" jsonschema:"semantic ruleset version"`
+	Intermediates   DualityExplainIntermediates `json:"intermediates" jsonschema:"derived evaluation values"`
+	Steps           []DualityExplainStep        `json:"steps" jsonschema:"ordered evaluation steps"`
+}
+
 // DualityProbabilityInput represents the MCP tool input for probabilities.
 type DualityProbabilityInput struct {
 	Modifier   int `json:"modifier" jsonschema:"modifier applied to the roll"`
@@ -126,6 +167,7 @@ func New(addr string) (*Server, error) {
 
 	mcp.AddTool(mcpServer, actionRollTool(), actionRollHandler(grpcClient))
 	mcp.AddTool(mcpServer, dualityOutcomeTool(), dualityOutcomeHandler(grpcClient))
+	mcp.AddTool(mcpServer, dualityExplainTool(), dualityExplainHandler(grpcClient))
 	mcp.AddTool(mcpServer, dualityProbabilityTool(), dualityProbabilityHandler(grpcClient))
 	mcp.AddTool(mcpServer, rulesVersionTool(), rulesVersionHandler(grpcClient))
 	mcp.AddTool(mcpServer, rollDiceTool(), rollDiceHandler(grpcClient))
@@ -165,6 +207,14 @@ func dualityOutcomeTool() *mcp.Tool {
 	return &mcp.Tool{
 		Name:        "duality_outcome",
 		Description: "Evaluates a duality outcome from known dice",
+	}
+}
+
+// dualityExplainTool defines the MCP tool schema for explanations.
+func dualityExplainTool() *mcp.Tool {
+	return &mcp.Tool{
+		Name:        "duality_explain",
+		Description: "Explains a duality outcome from known dice",
 	}
 }
 
@@ -258,6 +308,82 @@ func dualityOutcomeHandler(client pb.DiceRollServiceClient) mcp.ToolHandlerFor[D
 		if response.Difficulty != nil {
 			value := int(response.GetDifficulty())
 			result.Difficulty = &value
+		}
+
+		return nil, result, nil
+	}
+}
+
+// dualityExplainHandler executes a deterministic explanation request.
+func dualityExplainHandler(client pb.DiceRollServiceClient) mcp.ToolHandlerFor[DualityExplainInput, DualityExplainResult] {
+	return func(ctx context.Context, _ *mcp.CallToolRequest, input DualityExplainInput) (*mcp.CallToolResult, DualityExplainResult, error) {
+		modifier := input.Modifier
+
+		var difficulty *int32
+		if input.Difficulty != nil {
+			value := int32(*input.Difficulty)
+			difficulty = &value
+		}
+
+		var requestID *string
+		if input.RequestID != nil {
+			requestID = input.RequestID
+		}
+
+		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+
+		response, err := client.DualityExplain(runCtx, &pb.DualityExplainRequest{
+			Hope:       int32(input.Hope),
+			Fear:       int32(input.Fear),
+			Modifier:   int32(modifier),
+			Difficulty: difficulty,
+			RequestId:  requestID,
+		})
+		if err != nil {
+			return nil, DualityExplainResult{}, fmt.Errorf("duality explain failed: %w", err)
+		}
+		if response == nil {
+			return nil, DualityExplainResult{}, fmt.Errorf("duality explain response is missing")
+		}
+		if response.GetIntermediates() == nil {
+			return nil, DualityExplainResult{}, fmt.Errorf("duality explain intermediates are missing")
+		}
+
+		result := DualityExplainResult{
+			Hope:            int(response.GetHope()),
+			Fear:            int(response.GetFear()),
+			Modifier:        int(response.GetModifier()),
+			Total:           int(response.GetTotal()),
+			IsCrit:          response.GetIsCrit(),
+			MeetsDifficulty: response.GetMeetsDifficulty(),
+			Outcome:         response.GetOutcome().String(),
+			RulesVersion:    response.GetRulesVersion(),
+			Intermediates: DualityExplainIntermediates{
+				BaseTotal:       int(response.GetIntermediates().GetBaseTotal()),
+				Total:           int(response.GetIntermediates().GetTotal()),
+				IsCrit:          response.GetIntermediates().GetIsCrit(),
+				MeetsDifficulty: response.GetIntermediates().GetMeetsDifficulty(),
+				HopeGtFear:      response.GetIntermediates().GetHopeGtFear(),
+				FearGtHope:      response.GetIntermediates().GetFearGtHope(),
+			},
+			Steps: make([]DualityExplainStep, 0, len(response.GetSteps())),
+		}
+		if response.Difficulty != nil {
+			value := int(response.GetDifficulty())
+			result.Difficulty = &value
+		}
+
+		for _, step := range response.GetSteps() {
+			data := map[string]any{}
+			if step.GetData() != nil {
+				data = step.GetData().AsMap()
+			}
+			result.Steps = append(result.Steps, DualityExplainStep{
+				Code:    step.GetCode(),
+				Message: step.GetMessage(),
+				Data:    data,
+			})
 		}
 
 		return nil, result, nil

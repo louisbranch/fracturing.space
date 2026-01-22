@@ -14,6 +14,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // Server hosts the gRPC dice roll service.
@@ -143,6 +144,70 @@ func (s *Server) DualityOutcome(ctx context.Context, in *pb.DualityOutcomeReques
 	return response, nil
 }
 
+// DualityExplain provides a deterministic explanation for a duality outcome.
+func (s *Server) DualityExplain(ctx context.Context, in *pb.DualityExplainRequest) (*pb.DualityExplainResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "duality explain request is required")
+	}
+
+	var difficulty *int
+	if in.Difficulty != nil {
+		value := int(*in.Difficulty)
+		difficulty = &value
+	}
+
+	result, err := dice.ExplainOutcome(dice.OutcomeRequest{
+		Hope:       int(in.GetHope()),
+		Fear:       int(in.GetFear()),
+		Modifier:   int(in.GetModifier()),
+		Difficulty: difficulty,
+	})
+	if err != nil {
+		if errors.Is(err, dice.ErrInvalidDifficulty) || errors.Is(err, dice.ErrInvalidDualityDie) {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+		return nil, status.Errorf(codes.Internal, "failed to explain outcome: %v", err)
+	}
+
+	response := &pb.DualityExplainResponse{
+		Hope:            int32(result.Hope),
+		Fear:            int32(result.Fear),
+		Modifier:        int32(result.Modifier),
+		Total:           int32(result.Total),
+		IsCrit:          result.IsCrit,
+		MeetsDifficulty: result.MeetsDifficulty,
+		Outcome:         outcomeToProto(result.Outcome),
+		RulesVersion:    result.RulesVersion,
+		Intermediates: &pb.Intermediates{
+			BaseTotal:       int32(result.Intermediates.BaseTotal),
+			Total:           int32(result.Intermediates.Total),
+			IsCrit:          result.Intermediates.IsCrit,
+			MeetsDifficulty: result.Intermediates.MeetsDifficulty,
+			HopeGtFear:      result.Intermediates.HopeGtFear,
+			FearGtHope:      result.Intermediates.FearGtHope,
+		},
+		Steps: make([]*pb.ExplainStep, 0, len(result.Steps)),
+	}
+	if result.Difficulty != nil {
+		value := int32(*result.Difficulty)
+		response.Difficulty = &value
+	}
+
+	for _, step := range result.Steps {
+		data, err := stepDataToStruct(step.Data)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "failed to encode step %s: %v", step.Code, err)
+		}
+		response.Steps = append(response.Steps, &pb.ExplainStep{
+			Code:    step.Code,
+			Message: step.Message,
+			Data:    data,
+		})
+	}
+
+	return response, nil
+}
+
 // DualityProbability computes outcome probabilities for duality dice.
 func (s *Server) DualityProbability(ctx context.Context, in *pb.DualityProbabilityRequest) (*pb.DualityProbabilityResponse, error) {
 	if in == nil {
@@ -199,6 +264,64 @@ func (s *Server) RulesVersion(ctx context.Context, in *pb.RulesVersionRequest) (
 		DifficultyRule: metadata.DifficultyRule,
 		Outcomes:       outcomes,
 	}, nil
+}
+
+func stepDataToStruct(data map[string]any) (*structpb.Struct, error) {
+	if data == nil {
+		return &structpb.Struct{}, nil
+	}
+
+	converted := make(map[string]any, len(data))
+	for key, value := range data {
+		convertedValue, err := normalizeStructValue(value)
+		if err != nil {
+			return nil, fmt.Errorf("invalid value for %q: %w", key, err)
+		}
+		converted[key] = convertedValue
+	}
+
+	return structpb.NewStruct(converted)
+}
+
+func normalizeStructValue(value any) (any, error) {
+	switch typed := value.(type) {
+	case nil:
+		return nil, errors.New("nil values are not supported")
+	case int:
+		return int64(typed), nil
+	case int32:
+		return int64(typed), nil
+	case int64:
+		return typed, nil
+	case float64:
+		return typed, nil
+	case bool:
+		return typed, nil
+	case string:
+		return typed, nil
+	case map[string]any:
+		converted := make(map[string]any, len(typed))
+		for key, item := range typed {
+			convertedItem, err := normalizeStructValue(item)
+			if err != nil {
+				return nil, fmt.Errorf("invalid nested value for %q: %w", key, err)
+			}
+			converted[key] = convertedItem
+		}
+		return converted, nil
+	case []any:
+		converted := make([]any, 0, len(typed))
+		for _, item := range typed {
+			convertedItem, err := normalizeStructValue(item)
+			if err != nil {
+				return nil, err
+			}
+			converted = append(converted, convertedItem)
+		}
+		return converted, nil
+	default:
+		return nil, fmt.Errorf("unsupported type %T", value)
+	}
 }
 
 // RollDice handles generic dice roll requests.

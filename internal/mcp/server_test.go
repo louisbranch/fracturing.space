@@ -10,6 +10,7 @@ import (
 	pb "github.com/louisbranch/duality-protocol/api/gen/go/duality/v1"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // fakeDiceRollClient implements DiceRollServiceClient for tests.
@@ -17,16 +18,19 @@ type fakeDiceRollClient struct {
 	response                      *pb.ActionRollResponse
 	rollDiceResponse              *pb.RollDiceResponse
 	dualityOutcomeResponse        *pb.DualityOutcomeResponse
+	dualityExplainResponse        *pb.DualityExplainResponse
 	dualityProbabilityResponse    *pb.DualityProbabilityResponse
 	rulesVersionResponse          *pb.RulesVersionResponse
 	err                           error
 	rollDiceErr                   error
 	dualityOutcomeErr             error
+	dualityExplainErr             error
 	dualityProbabilityErr         error
 	rulesVersionErr               error
 	lastRequest                   *pb.ActionRollRequest
 	lastRollDiceRequest           *pb.RollDiceRequest
 	lastDualityOutcomeRequest     *pb.DualityOutcomeRequest
+	lastDualityExplainRequest     *pb.DualityExplainRequest
 	lastDualityProbabilityRequest *pb.DualityProbabilityRequest
 	lastRulesVersionRequest       *pb.RulesVersionRequest
 }
@@ -41,6 +45,12 @@ func (f *fakeDiceRollClient) ActionRoll(ctx context.Context, req *pb.ActionRollR
 func (f *fakeDiceRollClient) DualityOutcome(ctx context.Context, req *pb.DualityOutcomeRequest, opts ...grpc.CallOption) (*pb.DualityOutcomeResponse, error) {
 	f.lastDualityOutcomeRequest = req
 	return f.dualityOutcomeResponse, f.dualityOutcomeErr
+}
+
+// DualityExplain records the request and returns the configured response.
+func (f *fakeDiceRollClient) DualityExplain(ctx context.Context, req *pb.DualityExplainRequest, opts ...grpc.CallOption) (*pb.DualityExplainResponse, error) {
+	f.lastDualityExplainRequest = req
+	return f.dualityExplainResponse, f.dualityExplainErr
 }
 
 // DualityProbability records the request and returns the configured response.
@@ -308,6 +318,98 @@ func TestDualityOutcomeHandlerMapsRequestAndResponse(t *testing.T) {
 	}
 	if output.Outcome != pb.Outcome_SUCCESS_WITH_HOPE.String() {
 		t.Fatalf("expected outcome %q, got %q", pb.Outcome_SUCCESS_WITH_HOPE.String(), output.Outcome)
+	}
+}
+
+// TestDualityExplainHandlerReturnsClientError ensures gRPC errors are returned as tool errors.
+func TestDualityExplainHandlerReturnsClientError(t *testing.T) {
+	client := &fakeDiceRollClient{dualityExplainErr: errors.New("boom")}
+	handler := dualityExplainHandler(client)
+
+	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, DualityExplainInput{
+		Hope:     6,
+		Fear:     5,
+		Modifier: 1,
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if result != nil {
+		t.Fatal("expected nil result on error")
+	}
+}
+
+// TestDualityExplainHandlerMapsRequestAndResponse ensures inputs and outputs map consistently.
+func TestDualityExplainHandlerMapsRequestAndResponse(t *testing.T) {
+	difficulty := int32(10)
+	stepData, err := structpb.NewStruct(map[string]any{"base_total": int64(14)})
+	if err != nil {
+		t.Fatalf("expected step data, got %v", err)
+	}
+	client := &fakeDiceRollClient{dualityExplainResponse: &pb.DualityExplainResponse{
+		Hope:            10,
+		Fear:            4,
+		Modifier:        1,
+		Total:           15,
+		IsCrit:          false,
+		MeetsDifficulty: true,
+		Difficulty:      &difficulty,
+		Outcome:         pb.Outcome_SUCCESS_WITH_HOPE,
+		RulesVersion:    "1.0.0",
+		Intermediates: &pb.Intermediates{
+			BaseTotal:       14,
+			Total:           15,
+			IsCrit:          false,
+			MeetsDifficulty: true,
+			HopeGtFear:      true,
+			FearGtHope:      false,
+		},
+		Steps: []*pb.ExplainStep{{
+			Code:    "SUM_DICE",
+			Message: "Sum Hope and Fear dice",
+			Data:    stepData,
+		}},
+	}}
+
+	requestID := "trace-123"
+	handler := dualityExplainHandler(client)
+
+	result, output, err := handler(context.Background(), &mcp.CallToolRequest{}, DualityExplainInput{
+		Hope:       10,
+		Fear:       4,
+		Modifier:   1,
+		Difficulty: intPointer(10),
+		RequestID:  &requestID,
+	})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if result != nil {
+		t.Fatal("expected nil result on success")
+	}
+	if client.lastDualityExplainRequest == nil {
+		t.Fatal("expected gRPC request")
+	}
+	if client.lastDualityExplainRequest.GetHope() != 10 || client.lastDualityExplainRequest.GetFear() != 4 {
+		t.Fatalf("unexpected dice in request: %+v", client.lastDualityExplainRequest)
+	}
+	if output.Total != 15 {
+		t.Fatalf("expected total 15, got %d", output.Total)
+	}
+	if output.RulesVersion != "1.0.0" {
+		t.Fatalf("expected rules version %q, got %q", "1.0.0", output.RulesVersion)
+	}
+	if output.Intermediates.BaseTotal != 14 {
+		t.Fatalf("expected base_total 14, got %d", output.Intermediates.BaseTotal)
+	}
+	if len(output.Steps) != 1 {
+		t.Fatalf("expected 1 step, got %d", len(output.Steps))
+	}
+	if output.Steps[0].Code != "SUM_DICE" {
+		t.Fatalf("expected step code %q, got %q", "SUM_DICE", output.Steps[0].Code)
+	}
+	if stepValue := output.Steps[0].Data["base_total"]; stepValue != 14.0 {
+		t.Fatalf("expected base_total 14, got %v", stepValue)
 	}
 }
 

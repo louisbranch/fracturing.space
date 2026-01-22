@@ -4,6 +4,8 @@ import (
 	"errors"
 	"math/rand"
 	"testing"
+
+	"github.com/louisbranch/duality-protocol/internal/server/testutil"
 )
 
 // TestRollDiceReturnsResults ensures roll results are deterministic and aggregated.
@@ -313,6 +315,54 @@ func TestEvaluateOutcomeRejectsNegativeDifficulty(t *testing.T) {
 	_, err := EvaluateOutcome(OutcomeRequest{Hope: 6, Fear: 5, Difficulty: intPtr(-1)})
 	if !errors.Is(err, ErrInvalidDifficulty) {
 		t.Fatalf("EvaluateOutcome error = %v, want %v", err, ErrInvalidDifficulty)
+	}
+}
+
+func TestExplainOutcomeProvidesSteps(t *testing.T) {
+	difficulty := 10
+	request := OutcomeRequest{
+		Hope:       10,
+		Fear:       4,
+		Modifier:   1,
+		Difficulty: &difficulty,
+	}
+
+	result, err := ExplainOutcome(request)
+	if err != nil {
+		t.Fatalf("ExplainOutcome returned error: %v", err)
+	}
+
+	expected, err := EvaluateOutcome(request)
+	if err != nil {
+		t.Fatalf("EvaluateOutcome returned error: %v", err)
+	}
+	if result.Outcome != expected.Outcome || result.Total != expected.Total || result.IsCrit != expected.IsCrit || result.MeetsDifficulty != expected.MeetsDifficulty {
+		t.Fatalf("ExplainOutcome result mismatch with EvaluateOutcome")
+	}
+	if result.RulesVersion != RulesVersion().RulesVersion {
+		t.Fatalf("ExplainOutcome rules version = %q, want %q", result.RulesVersion, RulesVersion().RulesVersion)
+	}
+	if result.Intermediates.BaseTotal != 14 {
+		t.Fatalf("ExplainOutcome base_total = %d, want 14", result.Intermediates.BaseTotal)
+	}
+	if result.Intermediates.Total != 15 {
+		t.Fatalf("ExplainOutcome total = %d, want 15", result.Intermediates.Total)
+	}
+	if !result.Intermediates.HopeGtFear || result.Intermediates.FearGtHope {
+		t.Fatalf("ExplainOutcome hope/fear comparison mismatch")
+	}
+	if len(result.Steps) != 5 {
+		t.Fatalf("ExplainOutcome steps = %d, want 5", len(result.Steps))
+	}
+
+	wantCodes := []string{"SUM_DICE", "APPLY_MODIFIER", "CHECK_CRIT", "CHECK_DIFFICULTY", "SELECT_OUTCOME"}
+	for i, code := range wantCodes {
+		if result.Steps[i].Code != code {
+			t.Fatalf("ExplainOutcome step %d code = %q, want %q", i, result.Steps[i].Code, code)
+		}
+	}
+	if got := testutil.StructInt(t, result.Steps[0].Data, "base_total"); got != 14 {
+		t.Fatalf("ExplainOutcome step SUM_DICE base_total = %d, want 14", got)
 	}
 }
 

@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package duality.v1;
 
+import "google/protobuf/struct.proto";
+
 option go_package = "github.com/louisbranch/duality-engine/api/gen/go/duality/v1;dualityv1";
 
 service DiceRollService {
@@ -11,6 +13,9 @@ service DiceRollService {
 
   // Deterministically evaluate a duality outcome from known dice.
   rpc DualityOutcome(DualityOutcomeRequest) returns (DualityOutcomeResponse);
+
+  // Provide a deterministic explanation for a duality outcome.
+  rpc DualityExplain(DualityExplainRequest) returns (DualityExplainResponse);
 
   // Compute probabilities for duality outcomes across all dice pairs.
   rpc DualityProbability(DualityProbabilityRequest) returns (DualityProbabilityResponse);
@@ -74,6 +79,52 @@ message DualityOutcomeResponse {
   bool is_crit = 6;
   bool meets_difficulty = 7;
   Outcome outcome = 8;
+}
+
+message DualityExplainRequest {
+  int32 hope = 1;
+  int32 fear = 2;
+  int32 modifier = 3;
+
+  // If omitted, the server returns a roll outcome (Hope/Fear/Crit) but does not
+  // classify as success/failure.
+  optional int32 difficulty = 4;
+
+  // Optional correlation identifier for callers.
+  optional string request_id = 5;
+}
+
+message DualityExplainResponse {
+  int32 hope = 1;
+  int32 fear = 2;
+  int32 modifier = 3;
+
+  // Echoed back if provided in the request.
+  optional int32 difficulty = 4;
+
+  // total = hope + fear + modifier
+  int32 total = 5;
+  bool is_crit = 6;
+  bool meets_difficulty = 7;
+  Outcome outcome = 8;
+  string rules_version = 9;
+  Intermediates intermediates = 10;
+  repeated ExplainStep steps = 11;
+}
+
+message Intermediates {
+  int32 base_total = 1;
+  int32 total = 2;
+  bool is_crit = 3;
+  bool meets_difficulty = 4;
+  bool hope_gt_fear = 5;
+  bool fear_gt_hope = 6;
+}
+
+message ExplainStep {
+  string code = 1;
+  string message = 2;
+  google.protobuf.Struct data = 3;
 }
 
 message DualityProbabilityRequest {

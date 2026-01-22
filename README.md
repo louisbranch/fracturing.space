@@ -53,6 +53,7 @@ DUALITY_GRPC_ADDR=localhost:8080 go run ./cmd/mcp
 
 - `duality_action_roll`: rolls Duality dice and returns the outcome with the roll context.
 - `duality_outcome`: evaluates a deterministic outcome from known Hope/Fear dice without rolling.
+- `duality_explain`: returns a deterministic explanation for a known Hope/Fear outcome.
 - `duality_probability`: computes exact outcome counts across all duality dice combinations.
 - `duality_rules_version`: returns the ruleset semantics used for Duality roll evaluation.
 - `roll_dice`: rolls arbitrary dice pools and returns the individual results.
