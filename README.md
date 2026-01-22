@@ -53,6 +53,7 @@ DUALITY_GRPC_ADDR=localhost:8080 go run ./cmd/mcp
 
 - `duality_action_roll`: rolls Duality dice and returns the outcome with the roll context.
 - `duality_outcome`: evaluates a deterministic outcome from known Hope/Fear dice without rolling.
+- `duality_probability`: computes exact outcome counts across all duality dice combinations.
 - `roll_dice`: rolls arbitrary dice pools and returns the individual results.
 
 ### Example tool call (JSON-RPC over stdio)

@@ -54,6 +54,27 @@ type DualityOutcomeInput struct {
 // DualityOutcomeResult represents the MCP tool output for deterministic outcomes.
 type DualityOutcomeResult = ActionRollResult
 
+// DualityProbabilityInput represents the MCP tool input for probabilities.
+type DualityProbabilityInput struct {
+	Modifier   int `json:"modifier" jsonschema:"modifier applied to the roll"`
+	Difficulty int `json:"difficulty" jsonschema:"difficulty target"`
+}
+
+// ProbabilityOutcomeCount represents a counted outcome for probabilities.
+type ProbabilityOutcomeCount struct {
+	Outcome int `json:"outcome" jsonschema:"numeric outcome enum value"`
+	Count   int `json:"count" jsonschema:"number of outcomes"`
+}
+
+// DualityProbabilityResult represents the MCP tool output for probabilities.
+type DualityProbabilityResult struct {
+	TotalOutcomes int                       `json:"total_outcomes" jsonschema:"total number of outcomes"`
+	CritCount     int                       `json:"crit_count" jsonschema:"number of critical outcomes"`
+	SuccessCount  int                       `json:"success_count" jsonschema:"number of success outcomes"`
+	FailureCount  int                       `json:"failure_count" jsonschema:"number of failure outcomes"`
+	OutcomeCounts []ProbabilityOutcomeCount `json:"outcome_counts" jsonschema:"counts per outcome"`
+}
+
 // RollDiceSpec represents an MCP die specification for a roll.
 type RollDiceSpec struct {
 	Sides int `json:"sides" jsonschema:"number of sides for the die"`
@@ -90,6 +111,7 @@ func New(addr string) (*Server, error) {
 
 	mcp.AddTool(mcpServer, actionRollTool(), actionRollHandler(grpcClient))
 	mcp.AddTool(mcpServer, dualityOutcomeTool(), dualityOutcomeHandler(grpcClient))
+	mcp.AddTool(mcpServer, dualityProbabilityTool(), dualityProbabilityHandler(grpcClient))
 	mcp.AddTool(mcpServer, rollDiceTool(), rollDiceHandler(grpcClient))
 
 	return &Server{mcpServer: mcpServer}, nil
@@ -127,6 +149,14 @@ func dualityOutcomeTool() *mcp.Tool {
 	return &mcp.Tool{
 		Name:        "duality_outcome",
 		Description: "Evaluates a duality outcome from known dice",
+	}
+}
+
+// dualityProbabilityTool defines the MCP tool schema for probabilities.
+func dualityProbabilityTool() *mcp.Tool {
+	return &mcp.Tool{
+		Name:        "duality_probability",
+		Description: "Computes outcome probabilities across duality dice",
 	}
 }
 
@@ -214,6 +244,47 @@ func dualityOutcomeHandler(client pb.DiceRollServiceClient) mcp.ToolHandlerFor[D
 		if response.Difficulty != nil {
 			value := int(response.GetDifficulty())
 			result.Difficulty = &value
+		}
+
+		return nil, result, nil
+	}
+}
+
+// dualityProbabilityHandler executes the deterministic probability evaluation.
+func dualityProbabilityHandler(client pb.DiceRollServiceClient) mcp.ToolHandlerFor[DualityProbabilityInput, DualityProbabilityResult] {
+	return func(ctx context.Context, _ *mcp.CallToolRequest, input DualityProbabilityInput) (*mcp.CallToolResult, DualityProbabilityResult, error) {
+		if input.Difficulty < 0 {
+			return nil, DualityProbabilityResult{}, fmt.Errorf("difficulty must be non-negative")
+		}
+
+		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+
+		response, err := client.DualityProbability(runCtx, &pb.DualityProbabilityRequest{
+			Modifier:   int32(input.Modifier),
+			Difficulty: int32(input.Difficulty),
+		})
+		if err != nil {
+			return nil, DualityProbabilityResult{}, fmt.Errorf("duality probability failed: %w", err)
+		}
+		if response == nil {
+			return nil, DualityProbabilityResult{}, fmt.Errorf("duality probability response is missing")
+		}
+
+		counts := make([]ProbabilityOutcomeCount, 0, len(response.GetOutcomeCounts()))
+		for _, count := range response.GetOutcomeCounts() {
+			counts = append(counts, ProbabilityOutcomeCount{
+				Outcome: int(count.GetOutcome()),
+				Count:   int(count.GetCount()),
+			})
+		}
+
+		result := DualityProbabilityResult{
+			TotalOutcomes: int(response.GetTotalOutcomes()),
+			CritCount:     int(response.GetCritCount()),
+			SuccessCount:  int(response.GetSuccessCount()),
+			FailureCount:  int(response.GetFailureCount()),
+			OutcomeCounts: counts,
 		}
 
 		return nil, result, nil

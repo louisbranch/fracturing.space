@@ -143,6 +143,40 @@ func (s *Server) DualityOutcome(ctx context.Context, in *pb.DualityOutcomeReques
 	return response, nil
 }
 
+// DualityProbability computes outcome probabilities for duality dice.
+func (s *Server) DualityProbability(ctx context.Context, in *pb.DualityProbabilityRequest) (*pb.DualityProbabilityResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "duality probability request is required")
+	}
+
+	result, err := dice.DualityProbability(dice.ProbabilityRequest{
+		Modifier:   int(in.GetModifier()),
+		Difficulty: int(in.GetDifficulty()),
+	})
+	if err != nil {
+		if errors.Is(err, dice.ErrInvalidDifficulty) {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+		return nil, status.Errorf(codes.Internal, "failed to compute probability: %v", err)
+	}
+
+	response := &pb.DualityProbabilityResponse{
+		TotalOutcomes: int32(result.TotalOutcomes),
+		CritCount:     int32(result.CritCount),
+		SuccessCount:  int32(result.SuccessCount),
+		FailureCount:  int32(result.FailureCount),
+		OutcomeCounts: make([]*pb.OutcomeCount, 0, len(result.OutcomeCounts)),
+	}
+	for _, count := range result.OutcomeCounts {
+		response.OutcomeCounts = append(response.OutcomeCounts, &pb.OutcomeCount{
+			Outcome: outcomeToProto(count.Outcome),
+			Count:   int32(count.Count),
+		})
+	}
+
+	return response, nil
+}
+
 // RollDice handles generic dice roll requests.
 func (s *Server) RollDice(ctx context.Context, in *pb.RollDiceRequest) (*pb.RollDiceResponse, error) {
 	if in == nil {

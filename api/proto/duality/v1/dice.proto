@@ -12,6 +12,9 @@ service DiceRollService {
   // Deterministically evaluate a duality outcome from known dice.
   rpc DualityOutcome(DualityOutcomeRequest) returns (DualityOutcomeResponse);
 
+  // Compute probabilities for duality outcomes across all dice pairs.
+  rpc DualityProbability(DualityProbabilityRequest) returns (DualityProbabilityResponse);
+
   // Roll arbitrary dice sets and return the individual results.
   rpc RollDice(RollDiceRequest) returns (RollDiceResponse);
 }
@@ -68,6 +71,24 @@ message DualityOutcomeResponse {
   bool is_crit = 6;
   bool meets_difficulty = 7;
   Outcome outcome = 8;
+}
+
+message DualityProbabilityRequest {
+  int32 modifier = 1;
+  int32 difficulty = 2;
+}
+
+message DualityProbabilityResponse {
+  int32 total_outcomes = 1;
+  int32 crit_count = 2;
+  int32 success_count = 3;
+  int32 failure_count = 4;
+  repeated OutcomeCount outcome_counts = 5;
+}
+
+message OutcomeCount {
+  Outcome outcome = 1;
+  int32 count = 2;
 }
 
 message RollDiceRequest {

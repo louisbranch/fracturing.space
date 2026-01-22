@@ -13,15 +13,18 @@ import (
 
 // fakeDiceRollClient implements DiceRollServiceClient for tests.
 type fakeDiceRollClient struct {
-	response                  *pb.ActionRollResponse
-	rollDiceResponse          *pb.RollDiceResponse
-	dualityOutcomeResponse    *pb.DualityOutcomeResponse
-	err                       error
-	rollDiceErr               error
-	dualityOutcomeErr         error
-	lastRequest               *pb.ActionRollRequest
-	lastRollDiceRequest       *pb.RollDiceRequest
-	lastDualityOutcomeRequest *pb.DualityOutcomeRequest
+	response                      *pb.ActionRollResponse
+	rollDiceResponse              *pb.RollDiceResponse
+	dualityOutcomeResponse        *pb.DualityOutcomeResponse
+	dualityProbabilityResponse    *pb.DualityProbabilityResponse
+	err                           error
+	rollDiceErr                   error
+	dualityOutcomeErr             error
+	dualityProbabilityErr         error
+	lastRequest                   *pb.ActionRollRequest
+	lastRollDiceRequest           *pb.RollDiceRequest
+	lastDualityOutcomeRequest     *pb.DualityOutcomeRequest
+	lastDualityProbabilityRequest *pb.DualityProbabilityRequest
 }
 
 // ActionRoll records the request and returns the configured response.
@@ -34,6 +37,12 @@ func (f *fakeDiceRollClient) ActionRoll(ctx context.Context, req *pb.ActionRollR
 func (f *fakeDiceRollClient) DualityOutcome(ctx context.Context, req *pb.DualityOutcomeRequest, opts ...grpc.CallOption) (*pb.DualityOutcomeResponse, error) {
 	f.lastDualityOutcomeRequest = req
 	return f.dualityOutcomeResponse, f.dualityOutcomeErr
+}
+
+// DualityProbability records the request and returns the configured response.
+func (f *fakeDiceRollClient) DualityProbability(ctx context.Context, req *pb.DualityProbabilityRequest, opts ...grpc.CallOption) (*pb.DualityProbabilityResponse, error) {
+	f.lastDualityProbabilityRequest = req
+	return f.dualityProbabilityResponse, f.dualityProbabilityErr
 }
 
 // RollDice records the request and returns the configured response.
@@ -280,6 +289,84 @@ func TestDualityOutcomeHandlerMapsRequestAndResponse(t *testing.T) {
 	}
 	if output.Outcome != pb.Outcome_SUCCESS_WITH_HOPE.String() {
 		t.Fatalf("expected outcome %q, got %q", pb.Outcome_SUCCESS_WITH_HOPE.String(), output.Outcome)
+	}
+}
+
+// TestDualityProbabilityHandlerRejectsNegativeDifficulty ensures invalid difficulty returns errors.
+func TestDualityProbabilityHandlerRejectsNegativeDifficulty(t *testing.T) {
+	client := &fakeDiceRollClient{}
+	handler := dualityProbabilityHandler(client)
+
+	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, DualityProbabilityInput{
+		Modifier:   1,
+		Difficulty: -1,
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if result != nil {
+		t.Fatal("expected nil result on error")
+	}
+	if client.lastDualityProbabilityRequest != nil {
+		t.Fatal("expected no gRPC call on invalid input")
+	}
+}
+
+// TestDualityProbabilityHandlerReturnsClientError ensures gRPC errors are returned as tool errors.
+func TestDualityProbabilityHandlerReturnsClientError(t *testing.T) {
+	client := &fakeDiceRollClient{dualityProbabilityErr: errors.New("boom")}
+	handler := dualityProbabilityHandler(client)
+
+	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, DualityProbabilityInput{
+		Modifier:   0,
+		Difficulty: 10,
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if result != nil {
+		t.Fatal("expected nil result on error")
+	}
+}
+
+// TestDualityProbabilityHandlerMapsRequestAndResponse ensures inputs and outputs map consistently.
+func TestDualityProbabilityHandlerMapsRequestAndResponse(t *testing.T) {
+	client := &fakeDiceRollClient{dualityProbabilityResponse: &pb.DualityProbabilityResponse{
+		TotalOutcomes: 144,
+		CritCount:     12,
+		SuccessCount:  70,
+		FailureCount:  74,
+		OutcomeCounts: []*pb.OutcomeCount{
+			{Outcome: pb.Outcome_CRITICAL_SUCCESS, Count: 12},
+			{Outcome: pb.Outcome_SUCCESS_WITH_HOPE, Count: 34},
+			{Outcome: pb.Outcome_SUCCESS_WITH_FEAR, Count: 24},
+			{Outcome: pb.Outcome_FAILURE_WITH_HOPE, Count: 40},
+			{Outcome: pb.Outcome_FAILURE_WITH_FEAR, Count: 34},
+		},
+	}}
+	handler := dualityProbabilityHandler(client)
+
+	result, output, err := handler(context.Background(), &mcp.CallToolRequest{}, DualityProbabilityInput{
+		Modifier:   1,
+		Difficulty: 10,
+	})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if result != nil {
+		t.Fatal("expected nil result on success")
+	}
+	if client.lastDualityProbabilityRequest == nil {
+		t.Fatal("expected gRPC request")
+	}
+	if output.TotalOutcomes != 144 {
+		t.Fatalf("expected total 144, got %d", output.TotalOutcomes)
+	}
+	if output.CritCount != 12 {
+		t.Fatalf("expected crit 12, got %d", output.CritCount)
+	}
+	if len(output.OutcomeCounts) != 5 {
+		t.Fatalf("expected 5 outcome counts, got %d", len(output.OutcomeCounts))
 	}
 }
 

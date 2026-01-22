@@ -118,6 +118,37 @@ func TestDualityOutcomeReturnsResults(t *testing.T) {
 	})
 }
 
+func TestDualityProbabilityRejectsNilRequest(t *testing.T) {
+	server := newTestServer(42)
+
+	_, err := server.DualityProbability(context.Background(), nil)
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestDualityProbabilityRejectsNegativeDifficulty(t *testing.T) {
+	server := newTestServer(42)
+
+	negative := int32(-1)
+	_, err := server.DualityProbability(context.Background(), &pb.DualityProbabilityRequest{
+		Modifier:   1,
+		Difficulty: negative,
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestDualityProbabilityReturnsCounts(t *testing.T) {
+	server := newTestServer(42)
+
+	response, err := server.DualityProbability(context.Background(), &pb.DualityProbabilityRequest{
+		Modifier:   0,
+		Difficulty: 10,
+	})
+	if err != nil {
+		t.Fatalf("DualityProbability returned error: %v", err)
+	}
+	assertProbabilityResponse(t, response, dice.ProbabilityRequest{Modifier: 0, Difficulty: 10})
+}
+
 func TestRollDiceRejectsNilRequest(t *testing.T) {
 	server := newTestServer(42)
 
@@ -265,6 +296,46 @@ func assertOutcomeResponse(t *testing.T, response *pb.DualityOutcomeResponse, re
 	}
 	if request.Difficulty != nil && response.Difficulty != nil && *response.Difficulty != int32(*request.Difficulty) {
 		t.Fatalf("DualityOutcome difficulty = %d, want %d", *response.Difficulty, *request.Difficulty)
+	}
+}
+
+// assertProbabilityResponse validates duality probability response fields against expectations.
+func assertProbabilityResponse(t *testing.T, response *pb.DualityProbabilityResponse, request dice.ProbabilityRequest) {
+	t.Helper()
+
+	if response == nil {
+		t.Fatal("DualityProbability response is nil")
+	}
+
+	result, err := dice.DualityProbability(request)
+	if err != nil {
+		t.Fatalf("DualityProbability returned error: %v", err)
+	}
+
+	if response.TotalOutcomes != int32(result.TotalOutcomes) {
+		t.Fatalf("DualityProbability total_outcomes = %d, want %d", response.TotalOutcomes, result.TotalOutcomes)
+	}
+	if response.CritCount != int32(result.CritCount) {
+		t.Fatalf("DualityProbability crit_count = %d, want %d", response.CritCount, result.CritCount)
+	}
+	if response.SuccessCount != int32(result.SuccessCount) {
+		t.Fatalf("DualityProbability success_count = %d, want %d", response.SuccessCount, result.SuccessCount)
+	}
+	if response.FailureCount != int32(result.FailureCount) {
+		t.Fatalf("DualityProbability failure_count = %d, want %d", response.FailureCount, result.FailureCount)
+	}
+	if len(response.GetOutcomeCounts()) != len(result.OutcomeCounts) {
+		t.Fatalf("DualityProbability outcome count len = %d, want %d", len(response.GetOutcomeCounts()), len(result.OutcomeCounts))
+	}
+
+	for i, count := range response.GetOutcomeCounts() {
+		want := result.OutcomeCounts[i]
+		if count.Outcome != outcomeToProto(want.Outcome) {
+			t.Fatalf("DualityProbability outcome[%d] = %v, want %v", i, count.Outcome, outcomeToProto(want.Outcome))
+		}
+		if count.Count != int32(want.Count) {
+			t.Fatalf("DualityProbability count[%d] = %d, want %d", i, count.Count, want.Count)
+		}
 	}
 }
 

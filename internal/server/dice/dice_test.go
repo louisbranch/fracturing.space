@@ -316,6 +316,50 @@ func TestEvaluateOutcomeRejectsNegativeDifficulty(t *testing.T) {
 	}
 }
 
+func TestDualityProbabilityCounts(t *testing.T) {
+	result, err := DualityProbability(ProbabilityRequest{Modifier: 0, Difficulty: 10})
+	if err != nil {
+		t.Fatalf("DualityProbability returned error: %v", err)
+	}
+	if result.TotalOutcomes != 144 {
+		t.Fatalf("total outcomes = %d, want 144", result.TotalOutcomes)
+	}
+	if result.CritCount != 12 {
+		t.Fatalf("crit count = %d, want 12", result.CritCount)
+	}
+	if result.SuccessCount+result.FailureCount != result.TotalOutcomes {
+		t.Fatalf("success+failure = %d, want %d", result.SuccessCount+result.FailureCount, result.TotalOutcomes)
+	}
+	countSum := 0
+	for _, count := range result.OutcomeCounts {
+		countSum += count.Count
+	}
+	if countSum != result.TotalOutcomes {
+		t.Fatalf("outcome count sum = %d, want %d", countSum, result.TotalOutcomes)
+	}
+}
+
+func TestDualityProbabilityCritsConstant(t *testing.T) {
+	first, err := DualityProbability(ProbabilityRequest{Modifier: -2, Difficulty: 8})
+	if err != nil {
+		t.Fatalf("DualityProbability returned error: %v", err)
+	}
+	second, err := DualityProbability(ProbabilityRequest{Modifier: 5, Difficulty: 18})
+	if err != nil {
+		t.Fatalf("DualityProbability returned error: %v", err)
+	}
+	if first.CritCount != second.CritCount {
+		t.Fatalf("crit count changed: %d vs %d", first.CritCount, second.CritCount)
+	}
+}
+
+func TestDualityProbabilityRejectsNegativeDifficulty(t *testing.T) {
+	_, err := DualityProbability(ProbabilityRequest{Modifier: 0, Difficulty: -1})
+	if !errors.Is(err, ErrInvalidDifficulty) {
+		t.Fatalf("DualityProbability error = %v, want %v", err, ErrInvalidDifficulty)
+	}
+}
+
 func intPtr(value int) *int {
 	return &value
 }
