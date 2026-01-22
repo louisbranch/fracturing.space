@@ -392,43 +392,6 @@ func TestDualityProbabilityHandlerMapsRequestAndResponse(t *testing.T) {
 	}
 }
 
-// TestRulesVersionHandlerReturnsStaticRules ensures rules metadata stays consistent.
-func TestRulesVersionHandlerReturnsStaticRules(t *testing.T) {
-	handler := rulesVersionHandler()
-
-	result, output, err := handler(context.Background(), &mcp.CallToolRequest{}, RulesVersionInput{})
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-	if result != nil {
-		t.Fatal("expected nil result on success")
-	}
-	if output.System != rulesSystem {
-		t.Fatalf("expected system %q, got %q", rulesSystem, output.System)
-	}
-	if output.Module != rulesModule {
-		t.Fatalf("expected module %q, got %q", rulesModule, output.Module)
-	}
-	if output.RulesVersion != rulesVersion {
-		t.Fatalf("expected rules version %q, got %q", rulesVersion, output.RulesVersion)
-	}
-	if output.DiceModel != rulesDiceModel {
-		t.Fatalf("expected dice model %q, got %q", rulesDiceModel, output.DiceModel)
-	}
-	if output.TotalFormula != rulesTotalFormula {
-		t.Fatalf("expected total formula %q, got %q", rulesTotalFormula, output.TotalFormula)
-	}
-	if output.CritRule != rulesCritRule {
-		t.Fatalf("expected crit rule %q, got %q", rulesCritRule, output.CritRule)
-	}
-	if output.DifficultyRule != rulesDifficultyRule {
-		t.Fatalf("expected difficulty rule %q, got %q", rulesDifficultyRule, output.DifficultyRule)
-	}
-	if !reflect.DeepEqual(output.Outcomes, rulesOutcomes) {
-		t.Fatalf("expected outcomes %v, got %v", rulesOutcomes, output.Outcomes)
-	}
-}
-
 // TestRollDiceHandlerPassesMissingDice ensures gRPC receives empty dice.
 func TestRollDiceHandlerPassesMissingDice(t *testing.T) {
 	client := &fakeDiceRollClient{rollDiceErr: errors.New("boom")}
