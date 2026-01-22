@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"errors"
+	"reflect"
 	"testing"
 
 	pb "github.com/louisbranch/duality-protocol/api/gen/go/duality/v1"
@@ -147,6 +148,56 @@ func TestDualityProbabilityReturnsCounts(t *testing.T) {
 		t.Fatalf("DualityProbability returned error: %v", err)
 	}
 	assertProbabilityResponse(t, response, dice.ProbabilityRequest{Modifier: 0, Difficulty: 10})
+}
+
+func TestRulesVersionRejectsNilRequest(t *testing.T) {
+	server := newTestServer(42)
+
+	_, err := server.RulesVersion(context.Background(), nil)
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestRulesVersionReturnsMetadata(t *testing.T) {
+	server := newTestServer(42)
+
+	response, err := server.RulesVersion(context.Background(), &pb.RulesVersionRequest{})
+	if err != nil {
+		t.Fatalf("RulesVersion returned error: %v", err)
+	}
+	if response == nil {
+		t.Fatal("RulesVersion response is nil")
+	}
+
+	metadata := dice.RulesVersion()
+	if response.System != metadata.System {
+		t.Fatalf("RulesVersion system = %q, want %q", response.System, metadata.System)
+	}
+	if response.Module != metadata.Module {
+		t.Fatalf("RulesVersion module = %q, want %q", response.Module, metadata.Module)
+	}
+	if response.RulesVersion != metadata.RulesVersion {
+		t.Fatalf("RulesVersion rules_version = %q, want %q", response.RulesVersion, metadata.RulesVersion)
+	}
+	if response.DiceModel != metadata.DiceModel {
+		t.Fatalf("RulesVersion dice_model = %q, want %q", response.DiceModel, metadata.DiceModel)
+	}
+	if response.TotalFormula != metadata.TotalFormula {
+		t.Fatalf("RulesVersion total_formula = %q, want %q", response.TotalFormula, metadata.TotalFormula)
+	}
+	if response.CritRule != metadata.CritRule {
+		t.Fatalf("RulesVersion crit_rule = %q, want %q", response.CritRule, metadata.CritRule)
+	}
+	if response.DifficultyRule != metadata.DifficultyRule {
+		t.Fatalf("RulesVersion difficulty_rule = %q, want %q", response.DifficultyRule, metadata.DifficultyRule)
+	}
+
+	expectedOutcomes := make([]pb.Outcome, 0, len(metadata.Outcomes))
+	for _, outcome := range metadata.Outcomes {
+		expectedOutcomes = append(expectedOutcomes, outcomeToProto(outcome))
+	}
+	if !reflect.DeepEqual(response.Outcomes, expectedOutcomes) {
+		t.Fatalf("RulesVersion outcomes = %v, want %v", response.Outcomes, expectedOutcomes)
+	}
 }
 
 func TestRollDiceRejectsNilRequest(t *testing.T) {

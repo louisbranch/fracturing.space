@@ -597,6 +597,142 @@ func (x *DualityProbabilityResponse) GetOutcomeCounts() []*OutcomeCount {
 	return nil
 }
 
+type RulesVersionRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RulesVersionRequest) Reset() {
+	*x = RulesVersionRequest{}
+	mi := &file_duality_v1_dice_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RulesVersionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RulesVersionRequest) ProtoMessage() {}
+
+func (x *RulesVersionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_duality_v1_dice_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RulesVersionRequest.ProtoReflect.Descriptor instead.
+func (*RulesVersionRequest) Descriptor() ([]byte, []int) {
+	return file_duality_v1_dice_proto_rawDescGZIP(), []int{7}
+}
+
+type RulesVersionResponse struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	System         string                 `protobuf:"bytes,1,opt,name=system,proto3" json:"system,omitempty"`
+	Module         string                 `protobuf:"bytes,2,opt,name=module,proto3" json:"module,omitempty"`
+	RulesVersion   string                 `protobuf:"bytes,3,opt,name=rules_version,json=rulesVersion,proto3" json:"rules_version,omitempty"`
+	DiceModel      string                 `protobuf:"bytes,4,opt,name=dice_model,json=diceModel,proto3" json:"dice_model,omitempty"`
+	TotalFormula   string                 `protobuf:"bytes,5,opt,name=total_formula,json=totalFormula,proto3" json:"total_formula,omitempty"`
+	CritRule       string                 `protobuf:"bytes,6,opt,name=crit_rule,json=critRule,proto3" json:"crit_rule,omitempty"`
+	DifficultyRule string                 `protobuf:"bytes,7,opt,name=difficulty_rule,json=difficultyRule,proto3" json:"difficulty_rule,omitempty"`
+	Outcomes       []Outcome              `protobuf:"varint,8,rep,packed,name=outcomes,proto3,enum=duality.v1.Outcome" json:"outcomes,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *RulesVersionResponse) Reset() {
+	*x = RulesVersionResponse{}
+	mi := &file_duality_v1_dice_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RulesVersionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RulesVersionResponse) ProtoMessage() {}
+
+func (x *RulesVersionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_duality_v1_dice_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RulesVersionResponse.ProtoReflect.Descriptor instead.
+func (*RulesVersionResponse) Descriptor() ([]byte, []int) {
+	return file_duality_v1_dice_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *RulesVersionResponse) GetSystem() string {
+	if x != nil {
+		return x.System
+	}
+	return ""
+}
+
+func (x *RulesVersionResponse) GetModule() string {
+	if x != nil {
+		return x.Module
+	}
+	return ""
+}
+
+func (x *RulesVersionResponse) GetRulesVersion() string {
+	if x != nil {
+		return x.RulesVersion
+	}
+	return ""
+}
+
+func (x *RulesVersionResponse) GetDiceModel() string {
+	if x != nil {
+		return x.DiceModel
+	}
+	return ""
+}
+
+func (x *RulesVersionResponse) GetTotalFormula() string {
+	if x != nil {
+		return x.TotalFormula
+	}
+	return ""
+}
+
+func (x *RulesVersionResponse) GetCritRule() string {
+	if x != nil {
+		return x.CritRule
+	}
+	return ""
+}
+
+func (x *RulesVersionResponse) GetDifficultyRule() string {
+	if x != nil {
+		return x.DifficultyRule
+	}
+	return ""
+}
+
+func (x *RulesVersionResponse) GetOutcomes() []Outcome {
+	if x != nil {
+		return x.Outcomes
+	}
+	return nil
+}
+
 type OutcomeCount struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Outcome       Outcome                `protobuf:"varint,1,opt,name=outcome,proto3,enum=duality.v1.Outcome" json:"outcome,omitempty"`
@@ -607,7 +743,7 @@ type OutcomeCount struct {
 
 func (x *OutcomeCount) Reset() {
 	*x = OutcomeCount{}
-	mi := &file_duality_v1_dice_proto_msgTypes[7]
+	mi := &file_duality_v1_dice_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -619,7 +755,7 @@ func (x *OutcomeCount) String() string {
 func (*OutcomeCount) ProtoMessage() {}
 
 func (x *OutcomeCount) ProtoReflect() protoreflect.Message {
-	mi := &file_duality_v1_dice_proto_msgTypes[7]
+	mi := &file_duality_v1_dice_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -632,7 +768,7 @@ func (x *OutcomeCount) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OutcomeCount.ProtoReflect.Descriptor instead.
 func (*OutcomeCount) Descriptor() ([]byte, []int) {
-	return file_duality_v1_dice_proto_rawDescGZIP(), []int{7}
+	return file_duality_v1_dice_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *OutcomeCount) GetOutcome() Outcome {
@@ -659,7 +795,7 @@ type RollDiceRequest struct {
 
 func (x *RollDiceRequest) Reset() {
 	*x = RollDiceRequest{}
-	mi := &file_duality_v1_dice_proto_msgTypes[8]
+	mi := &file_duality_v1_dice_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -671,7 +807,7 @@ func (x *RollDiceRequest) String() string {
 func (*RollDiceRequest) ProtoMessage() {}
 
 func (x *RollDiceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_duality_v1_dice_proto_msgTypes[8]
+	mi := &file_duality_v1_dice_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -684,7 +820,7 @@ func (x *RollDiceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RollDiceRequest.ProtoReflect.Descriptor instead.
 func (*RollDiceRequest) Descriptor() ([]byte, []int) {
-	return file_duality_v1_dice_proto_rawDescGZIP(), []int{8}
+	return file_duality_v1_dice_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *RollDiceRequest) GetDice() []*DiceSpec {
@@ -705,7 +841,7 @@ type RollDiceResponse struct {
 
 func (x *RollDiceResponse) Reset() {
 	*x = RollDiceResponse{}
-	mi := &file_duality_v1_dice_proto_msgTypes[9]
+	mi := &file_duality_v1_dice_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -717,7 +853,7 @@ func (x *RollDiceResponse) String() string {
 func (*RollDiceResponse) ProtoMessage() {}
 
 func (x *RollDiceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_duality_v1_dice_proto_msgTypes[9]
+	mi := &file_duality_v1_dice_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -730,7 +866,7 @@ func (x *RollDiceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RollDiceResponse.ProtoReflect.Descriptor instead.
 func (*RollDiceResponse) Descriptor() ([]byte, []int) {
-	return file_duality_v1_dice_proto_rawDescGZIP(), []int{9}
+	return file_duality_v1_dice_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *RollDiceResponse) GetRolls() []*DiceRoll {
@@ -757,7 +893,7 @@ type DiceSpec struct {
 
 func (x *DiceSpec) Reset() {
 	*x = DiceSpec{}
-	mi := &file_duality_v1_dice_proto_msgTypes[10]
+	mi := &file_duality_v1_dice_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -769,7 +905,7 @@ func (x *DiceSpec) String() string {
 func (*DiceSpec) ProtoMessage() {}
 
 func (x *DiceSpec) ProtoReflect() protoreflect.Message {
-	mi := &file_duality_v1_dice_proto_msgTypes[10]
+	mi := &file_duality_v1_dice_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -782,7 +918,7 @@ func (x *DiceSpec) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DiceSpec.ProtoReflect.Descriptor instead.
 func (*DiceSpec) Descriptor() ([]byte, []int) {
-	return file_duality_v1_dice_proto_rawDescGZIP(), []int{10}
+	return file_duality_v1_dice_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *DiceSpec) GetSides() int32 {
@@ -810,7 +946,7 @@ type DiceRoll struct {
 
 func (x *DiceRoll) Reset() {
 	*x = DiceRoll{}
-	mi := &file_duality_v1_dice_proto_msgTypes[11]
+	mi := &file_duality_v1_dice_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -822,7 +958,7 @@ func (x *DiceRoll) String() string {
 func (*DiceRoll) ProtoMessage() {}
 
 func (x *DiceRoll) ProtoReflect() protoreflect.Message {
-	mi := &file_duality_v1_dice_proto_msgTypes[11]
+	mi := &file_duality_v1_dice_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -835,7 +971,7 @@ func (x *DiceRoll) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DiceRoll.ProtoReflect.Descriptor instead.
 func (*DiceRoll) Descriptor() ([]byte, []int) {
-	return file_duality_v1_dice_proto_rawDescGZIP(), []int{11}
+	return file_duality_v1_dice_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *DiceRoll) GetSides() int32 {
@@ -917,7 +1053,18 @@ const file_duality_v1_dice_proto_rawDesc = "" +
 	"crit_count\x18\x02 \x01(\x05R\tcritCount\x12#\n" +
 	"\rsuccess_count\x18\x03 \x01(\x05R\fsuccessCount\x12#\n" +
 	"\rfailure_count\x18\x04 \x01(\x05R\ffailureCount\x12?\n" +
-	"\x0eoutcome_counts\x18\x05 \x03(\v2\x18.duality.v1.OutcomeCountR\routcomeCounts\"S\n" +
+	"\x0eoutcome_counts\x18\x05 \x03(\v2\x18.duality.v1.OutcomeCountR\routcomeCounts\"\x15\n" +
+	"\x13RulesVersionRequest\"\xa6\x02\n" +
+	"\x14RulesVersionResponse\x12\x16\n" +
+	"\x06system\x18\x01 \x01(\tR\x06system\x12\x16\n" +
+	"\x06module\x18\x02 \x01(\tR\x06module\x12#\n" +
+	"\rrules_version\x18\x03 \x01(\tR\frulesVersion\x12\x1d\n" +
+	"\n" +
+	"dice_model\x18\x04 \x01(\tR\tdiceModel\x12#\n" +
+	"\rtotal_formula\x18\x05 \x01(\tR\ftotalFormula\x12\x1b\n" +
+	"\tcrit_rule\x18\x06 \x01(\tR\bcritRule\x12'\n" +
+	"\x0fdifficulty_rule\x18\a \x01(\tR\x0edifficultyRule\x12/\n" +
+	"\boutcomes\x18\b \x03(\x0e2\x13.duality.v1.OutcomeR\boutcomes\"S\n" +
 	"\fOutcomeCount\x12-\n" +
 	"\aoutcome\x18\x01 \x01(\x0e2\x13.duality.v1.OutcomeR\aoutcome\x12\x14\n" +
 	"\x05count\x18\x02 \x01(\x05R\x05count\";\n" +
@@ -941,12 +1088,13 @@ const file_duality_v1_dice_proto_rawDesc = "" +
 	"\x11SUCCESS_WITH_FEAR\x10\x04\x12\x15\n" +
 	"\x11FAILURE_WITH_HOPE\x10\x05\x12\x15\n" +
 	"\x11FAILURE_WITH_FEAR\x10\x06\x12\x14\n" +
-	"\x10CRITICAL_SUCCESS\x10\a2\xe3\x02\n" +
+	"\x10CRITICAL_SUCCESS\x10\a2\xb6\x03\n" +
 	"\x0fDiceRollService\x12K\n" +
 	"\n" +
 	"ActionRoll\x12\x1d.duality.v1.ActionRollRequest\x1a\x1e.duality.v1.ActionRollResponse\x12W\n" +
 	"\x0eDualityOutcome\x12!.duality.v1.DualityOutcomeRequest\x1a\".duality.v1.DualityOutcomeResponse\x12c\n" +
-	"\x12DualityProbability\x12%.duality.v1.DualityProbabilityRequest\x1a&.duality.v1.DualityProbabilityResponse\x12E\n" +
+	"\x12DualityProbability\x12%.duality.v1.DualityProbabilityRequest\x1a&.duality.v1.DualityProbabilityResponse\x12Q\n" +
+	"\fRulesVersion\x12\x1f.duality.v1.RulesVersionRequest\x1a .duality.v1.RulesVersionResponse\x12E\n" +
 	"\bRollDice\x12\x1b.duality.v1.RollDiceRequest\x1a\x1c.duality.v1.RollDiceResponseBGZEgithub.com/louisbranch/duality-engine/api/gen/go/duality/v1;dualityv1b\x06proto3"
 
 var (
@@ -962,7 +1110,7 @@ func file_duality_v1_dice_proto_rawDescGZIP() []byte {
 }
 
 var file_duality_v1_dice_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_duality_v1_dice_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_duality_v1_dice_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_duality_v1_dice_proto_goTypes = []any{
 	(Outcome)(0),                       // 0: duality.v1.Outcome
 	(*ActionRollRequest)(nil),          // 1: duality.v1.ActionRollRequest
@@ -972,32 +1120,37 @@ var file_duality_v1_dice_proto_goTypes = []any{
 	(*DualityOutcomeResponse)(nil),     // 5: duality.v1.DualityOutcomeResponse
 	(*DualityProbabilityRequest)(nil),  // 6: duality.v1.DualityProbabilityRequest
 	(*DualityProbabilityResponse)(nil), // 7: duality.v1.DualityProbabilityResponse
-	(*OutcomeCount)(nil),               // 8: duality.v1.OutcomeCount
-	(*RollDiceRequest)(nil),            // 9: duality.v1.RollDiceRequest
-	(*RollDiceResponse)(nil),           // 10: duality.v1.RollDiceResponse
-	(*DiceSpec)(nil),                   // 11: duality.v1.DiceSpec
-	(*DiceRoll)(nil),                   // 12: duality.v1.DiceRoll
+	(*RulesVersionRequest)(nil),        // 8: duality.v1.RulesVersionRequest
+	(*RulesVersionResponse)(nil),       // 9: duality.v1.RulesVersionResponse
+	(*OutcomeCount)(nil),               // 10: duality.v1.OutcomeCount
+	(*RollDiceRequest)(nil),            // 11: duality.v1.RollDiceRequest
+	(*RollDiceResponse)(nil),           // 12: duality.v1.RollDiceResponse
+	(*DiceSpec)(nil),                   // 13: duality.v1.DiceSpec
+	(*DiceRoll)(nil),                   // 14: duality.v1.DiceRoll
 }
 var file_duality_v1_dice_proto_depIdxs = []int32{
 	0,  // 0: duality.v1.ActionRollResponse.outcome:type_name -> duality.v1.Outcome
 	0,  // 1: duality.v1.DualityOutcomeResponse.outcome:type_name -> duality.v1.Outcome
-	8,  // 2: duality.v1.DualityProbabilityResponse.outcome_counts:type_name -> duality.v1.OutcomeCount
-	0,  // 3: duality.v1.OutcomeCount.outcome:type_name -> duality.v1.Outcome
-	11, // 4: duality.v1.RollDiceRequest.dice:type_name -> duality.v1.DiceSpec
-	12, // 5: duality.v1.RollDiceResponse.rolls:type_name -> duality.v1.DiceRoll
-	1,  // 6: duality.v1.DiceRollService.ActionRoll:input_type -> duality.v1.ActionRollRequest
-	4,  // 7: duality.v1.DiceRollService.DualityOutcome:input_type -> duality.v1.DualityOutcomeRequest
-	6,  // 8: duality.v1.DiceRollService.DualityProbability:input_type -> duality.v1.DualityProbabilityRequest
-	9,  // 9: duality.v1.DiceRollService.RollDice:input_type -> duality.v1.RollDiceRequest
-	2,  // 10: duality.v1.DiceRollService.ActionRoll:output_type -> duality.v1.ActionRollResponse
-	5,  // 11: duality.v1.DiceRollService.DualityOutcome:output_type -> duality.v1.DualityOutcomeResponse
-	7,  // 12: duality.v1.DiceRollService.DualityProbability:output_type -> duality.v1.DualityProbabilityResponse
-	10, // 13: duality.v1.DiceRollService.RollDice:output_type -> duality.v1.RollDiceResponse
-	10, // [10:14] is the sub-list for method output_type
-	6,  // [6:10] is the sub-list for method input_type
-	6,  // [6:6] is the sub-list for extension type_name
-	6,  // [6:6] is the sub-list for extension extendee
-	0,  // [0:6] is the sub-list for field type_name
+	10, // 2: duality.v1.DualityProbabilityResponse.outcome_counts:type_name -> duality.v1.OutcomeCount
+	0,  // 3: duality.v1.RulesVersionResponse.outcomes:type_name -> duality.v1.Outcome
+	0,  // 4: duality.v1.OutcomeCount.outcome:type_name -> duality.v1.Outcome
+	13, // 5: duality.v1.RollDiceRequest.dice:type_name -> duality.v1.DiceSpec
+	14, // 6: duality.v1.RollDiceResponse.rolls:type_name -> duality.v1.DiceRoll
+	1,  // 7: duality.v1.DiceRollService.ActionRoll:input_type -> duality.v1.ActionRollRequest
+	4,  // 8: duality.v1.DiceRollService.DualityOutcome:input_type -> duality.v1.DualityOutcomeRequest
+	6,  // 9: duality.v1.DiceRollService.DualityProbability:input_type -> duality.v1.DualityProbabilityRequest
+	8,  // 10: duality.v1.DiceRollService.RulesVersion:input_type -> duality.v1.RulesVersionRequest
+	11, // 11: duality.v1.DiceRollService.RollDice:input_type -> duality.v1.RollDiceRequest
+	2,  // 12: duality.v1.DiceRollService.ActionRoll:output_type -> duality.v1.ActionRollResponse
+	5,  // 13: duality.v1.DiceRollService.DualityOutcome:output_type -> duality.v1.DualityOutcomeResponse
+	7,  // 14: duality.v1.DiceRollService.DualityProbability:output_type -> duality.v1.DualityProbabilityResponse
+	9,  // 15: duality.v1.DiceRollService.RulesVersion:output_type -> duality.v1.RulesVersionResponse
+	12, // 16: duality.v1.DiceRollService.RollDice:output_type -> duality.v1.RollDiceResponse
+	12, // [12:17] is the sub-list for method output_type
+	7,  // [7:12] is the sub-list for method input_type
+	7,  // [7:7] is the sub-list for extension type_name
+	7,  // [7:7] is the sub-list for extension extendee
+	0,  // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_duality_v1_dice_proto_init() }
@@ -1015,7 +1168,7 @@ func file_duality_v1_dice_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_duality_v1_dice_proto_rawDesc), len(file_duality_v1_dice_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   12,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -15,6 +15,9 @@ service DiceRollService {
   // Compute probabilities for duality outcomes across all dice pairs.
   rpc DualityProbability(DualityProbabilityRequest) returns (DualityProbabilityResponse);
 
+  // Return ruleset metadata for Duality roll interpretation.
+  rpc RulesVersion(RulesVersionRequest) returns (RulesVersionResponse);
+
   // Roll arbitrary dice sets and return the individual results.
   rpc RollDice(RollDiceRequest) returns (RollDiceResponse);
 }
@@ -84,6 +87,19 @@ message DualityProbabilityResponse {
   int32 success_count = 3;
   int32 failure_count = 4;
   repeated OutcomeCount outcome_counts = 5;
+}
+
+message RulesVersionRequest {}
+
+message RulesVersionResponse {
+  string system = 1;
+  string module = 2;
+  string rules_version = 3;
+  string dice_model = 4;
+  string total_formula = 5;
+  string crit_rule = 6;
+  string difficulty_rule = 7;
+  repeated Outcome outcomes = 8;
 }
 
 message OutcomeCount {

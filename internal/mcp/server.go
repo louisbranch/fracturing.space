@@ -75,6 +75,21 @@ type DualityProbabilityResult struct {
 	OutcomeCounts []ProbabilityOutcomeCount `json:"outcome_counts" jsonschema:"counts per outcome"`
 }
 
+// RulesVersionInput represents the MCP tool input for ruleset metadata.
+type RulesVersionInput struct{}
+
+// RulesVersionResult represents the MCP tool output for ruleset metadata.
+type RulesVersionResult struct {
+	System         string   `json:"system" jsonschema:"game system name"`
+	Module         string   `json:"module" jsonschema:"ruleset module name"`
+	RulesVersion   string   `json:"rules_version" jsonschema:"semantic ruleset version"`
+	DiceModel      string   `json:"dice_model" jsonschema:"dice model description"`
+	TotalFormula   string   `json:"total_formula" jsonschema:"total calculation expression"`
+	CritRule       string   `json:"crit_rule" jsonschema:"critical success rule"`
+	DifficultyRule string   `json:"difficulty_rule" jsonschema:"difficulty handling rule"`
+	Outcomes       []string `json:"outcomes" jsonschema:"supported outcome enums"`
+}
+
 // RollDiceSpec represents an MCP die specification for a roll.
 type RollDiceSpec struct {
 	Sides int `json:"sides" jsonschema:"number of sides for the die"`
@@ -112,6 +127,7 @@ func New(addr string) (*Server, error) {
 	mcp.AddTool(mcpServer, actionRollTool(), actionRollHandler(grpcClient))
 	mcp.AddTool(mcpServer, dualityOutcomeTool(), dualityOutcomeHandler(grpcClient))
 	mcp.AddTool(mcpServer, dualityProbabilityTool(), dualityProbabilityHandler(grpcClient))
+	mcp.AddTool(mcpServer, rulesVersionTool(), rulesVersionHandler(grpcClient))
 	mcp.AddTool(mcpServer, rollDiceTool(), rollDiceHandler(grpcClient))
 
 	return &Server{mcpServer: mcpServer}, nil
@@ -157,6 +173,14 @@ func dualityProbabilityTool() *mcp.Tool {
 	return &mcp.Tool{
 		Name:        "duality_probability",
 		Description: "Computes outcome probabilities across duality dice",
+	}
+}
+
+// rulesVersionTool defines the MCP tool schema for ruleset metadata.
+func rulesVersionTool() *mcp.Tool {
+	return &mcp.Tool{
+		Name:        "duality_rules_version",
+		Description: "Describes the Duality ruleset semantics",
 	}
 }
 
@@ -274,6 +298,38 @@ func dualityProbabilityHandler(client pb.DiceRollServiceClient) mcp.ToolHandlerF
 		}
 
 		return nil, result, nil
+	}
+}
+
+// rulesVersionHandler returns static ruleset metadata from the gRPC service.
+func rulesVersionHandler(client pb.DiceRollServiceClient) mcp.ToolHandlerFor[RulesVersionInput, RulesVersionResult] {
+	return func(ctx context.Context, _ *mcp.CallToolRequest, _ RulesVersionInput) (*mcp.CallToolResult, RulesVersionResult, error) {
+		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+
+		response, err := client.RulesVersion(runCtx, &pb.RulesVersionRequest{})
+		if err != nil {
+			return nil, RulesVersionResult{}, fmt.Errorf("rules version failed: %w", err)
+		}
+		if response == nil {
+			return nil, RulesVersionResult{}, fmt.Errorf("rules version response is missing")
+		}
+
+		outcomes := make([]string, 0, len(response.GetOutcomes()))
+		for _, outcome := range response.GetOutcomes() {
+			outcomes = append(outcomes, outcome.String())
+		}
+
+		return nil, RulesVersionResult{
+			System:         response.GetSystem(),
+			Module:         response.GetModule(),
+			RulesVersion:   response.GetRulesVersion(),
+			DiceModel:      response.GetDiceModel(),
+			TotalFormula:   response.GetTotalFormula(),
+			CritRule:       response.GetCritRule(),
+			DifficultyRule: response.GetDifficultyRule(),
+			Outcomes:       outcomes,
+		}, nil
 	}
 }
 

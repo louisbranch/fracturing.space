@@ -177,6 +177,30 @@ func (s *Server) DualityProbability(ctx context.Context, in *pb.DualityProbabili
 	return response, nil
 }
 
+// RulesVersion returns ruleset metadata for Duality roll interpretation.
+func (s *Server) RulesVersion(ctx context.Context, in *pb.RulesVersionRequest) (*pb.RulesVersionResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "rules version request is required")
+	}
+
+	metadata := dice.RulesVersion()
+	outcomes := make([]pb.Outcome, 0, len(metadata.Outcomes))
+	for _, outcome := range metadata.Outcomes {
+		outcomes = append(outcomes, outcomeToProto(outcome))
+	}
+
+	return &pb.RulesVersionResponse{
+		System:         metadata.System,
+		Module:         metadata.Module,
+		RulesVersion:   metadata.RulesVersion,
+		DiceModel:      metadata.DiceModel,
+		TotalFormula:   metadata.TotalFormula,
+		CritRule:       metadata.CritRule,
+		DifficultyRule: metadata.DifficultyRule,
+		Outcomes:       outcomes,
+	}, nil
+}
+
 // RollDice handles generic dice roll requests.
 func (s *Server) RollDice(ctx context.Context, in *pb.RollDiceRequest) (*pb.RollDiceResponse, error) {
 	if in == nil {
