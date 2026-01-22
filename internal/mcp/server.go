@@ -18,32 +18,7 @@ const (
 	serverName = "Duality Engine MCP"
 	// serverVersion identifies the MCP server version.
 	serverVersion = "0.1.0"
-	// rulesSystem identifies the ruleset game system name.
-	rulesSystem = "Daggerheart"
-	// rulesModule identifies the ruleset module name.
-	rulesModule = "Duality"
-	// rulesVersion identifies the semantic ruleset version.
-	rulesVersion = "1.0.0"
-	// rulesDiceModel describes the dice model used for rolls.
-	rulesDiceModel = "2d12"
-	// rulesTotalFormula describes how totals are computed.
-	rulesTotalFormula = "hope + fear + modifier"
-	// rulesCritRule describes the critical success rule.
-	rulesCritRule = "critical success on matching hope/fear; overrides difficulty"
-	// rulesDifficultyRule describes difficulty handling.
-	rulesDifficultyRule = "difficulty optional; total >= difficulty succeeds; critical success always succeeds"
 )
-
-// rulesOutcomes lists the supported outcome enums for Duality rolls.
-var rulesOutcomes = []string{
-	"CRITICAL_SUCCESS",
-	"SUCCESS_WITH_HOPE",
-	"SUCCESS_WITH_FEAR",
-	"FAILURE_WITH_HOPE",
-	"FAILURE_WITH_FEAR",
-	"ROLL_WITH_HOPE",
-	"ROLL_WITH_FEAR",
-}
 
 // Server hosts the MCP server.
 type Server struct {
@@ -152,7 +127,7 @@ func New(addr string) (*Server, error) {
 	mcp.AddTool(mcpServer, actionRollTool(), actionRollHandler(grpcClient))
 	mcp.AddTool(mcpServer, dualityOutcomeTool(), dualityOutcomeHandler(grpcClient))
 	mcp.AddTool(mcpServer, dualityProbabilityTool(), dualityProbabilityHandler(grpcClient))
-	mcp.AddTool(mcpServer, rulesVersionTool(), rulesVersionHandler())
+	mcp.AddTool(mcpServer, rulesVersionTool(), rulesVersionHandler(grpcClient))
 	mcp.AddTool(mcpServer, rollDiceTool(), rollDiceHandler(grpcClient))
 
 	return &Server{mcpServer: mcpServer}, nil
@@ -326,20 +301,33 @@ func dualityProbabilityHandler(client pb.DiceRollServiceClient) mcp.ToolHandlerF
 	}
 }
 
-// rulesVersionHandler returns static ruleset metadata.
-func rulesVersionHandler() mcp.ToolHandlerFor[RulesVersionInput, RulesVersionResult] {
-	return func(_ context.Context, _ *mcp.CallToolRequest, _ RulesVersionInput) (*mcp.CallToolResult, RulesVersionResult, error) {
-		outcomes := make([]string, len(rulesOutcomes))
-		copy(outcomes, rulesOutcomes)
+// rulesVersionHandler returns static ruleset metadata from the gRPC service.
+func rulesVersionHandler(client pb.DiceRollServiceClient) mcp.ToolHandlerFor[RulesVersionInput, RulesVersionResult] {
+	return func(ctx context.Context, _ *mcp.CallToolRequest, _ RulesVersionInput) (*mcp.CallToolResult, RulesVersionResult, error) {
+		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+
+		response, err := client.RulesVersion(runCtx, &pb.RulesVersionRequest{})
+		if err != nil {
+			return nil, RulesVersionResult{}, fmt.Errorf("rules version failed: %w", err)
+		}
+		if response == nil {
+			return nil, RulesVersionResult{}, fmt.Errorf("rules version response is missing")
+		}
+
+		outcomes := make([]string, 0, len(response.GetOutcomes()))
+		for _, outcome := range response.GetOutcomes() {
+			outcomes = append(outcomes, outcome.String())
+		}
 
 		return nil, RulesVersionResult{
-			System:         rulesSystem,
-			Module:         rulesModule,
-			RulesVersion:   rulesVersion,
-			DiceModel:      rulesDiceModel,
-			TotalFormula:   rulesTotalFormula,
-			CritRule:       rulesCritRule,
-			DifficultyRule: rulesDifficultyRule,
+			System:         response.GetSystem(),
+			Module:         response.GetModule(),
+			RulesVersion:   response.GetRulesVersion(),
+			DiceModel:      response.GetDiceModel(),
+			TotalFormula:   response.GetTotalFormula(),
+			CritRule:       response.GetCritRule(),
+			DifficultyRule: response.GetDifficultyRule(),
 			Outcomes:       outcomes,
 		}, nil
 	}

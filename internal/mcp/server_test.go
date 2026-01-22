@@ -18,14 +18,17 @@ type fakeDiceRollClient struct {
 	rollDiceResponse              *pb.RollDiceResponse
 	dualityOutcomeResponse        *pb.DualityOutcomeResponse
 	dualityProbabilityResponse    *pb.DualityProbabilityResponse
+	rulesVersionResponse          *pb.RulesVersionResponse
 	err                           error
 	rollDiceErr                   error
 	dualityOutcomeErr             error
 	dualityProbabilityErr         error
+	rulesVersionErr               error
 	lastRequest                   *pb.ActionRollRequest
 	lastRollDiceRequest           *pb.RollDiceRequest
 	lastDualityOutcomeRequest     *pb.DualityOutcomeRequest
 	lastDualityProbabilityRequest *pb.DualityProbabilityRequest
+	lastRulesVersionRequest       *pb.RulesVersionRequest
 }
 
 // ActionRoll records the request and returns the configured response.
@@ -44,6 +47,12 @@ func (f *fakeDiceRollClient) DualityOutcome(ctx context.Context, req *pb.Duality
 func (f *fakeDiceRollClient) DualityProbability(ctx context.Context, req *pb.DualityProbabilityRequest, opts ...grpc.CallOption) (*pb.DualityProbabilityResponse, error) {
 	f.lastDualityProbabilityRequest = req
 	return f.dualityProbabilityResponse, f.dualityProbabilityErr
+}
+
+// RulesVersion records the request and returns the configured response.
+func (f *fakeDiceRollClient) RulesVersion(ctx context.Context, req *pb.RulesVersionRequest, opts ...grpc.CallOption) (*pb.RulesVersionResponse, error) {
+	f.lastRulesVersionRequest = req
+	return f.rulesVersionResponse, f.rulesVersionErr
 }
 
 // RollDice records the request and returns the configured response.
@@ -526,6 +535,74 @@ func TestRollDiceHandlerMapsRequestAndResponse(t *testing.T) {
 	}
 	if output.Rolls[1].Sides != 8 || output.Rolls[1].Total != 4 {
 		t.Fatalf("unexpected second roll: %+v", output.Rolls[1])
+	}
+}
+
+// TestRulesVersionHandlerMapsResponse ensures metadata is passed through.
+func TestRulesVersionHandlerMapsResponse(t *testing.T) {
+	client := &fakeDiceRollClient{rulesVersionResponse: &pb.RulesVersionResponse{
+		System:         "Daggerheart",
+		Module:         "Duality",
+		RulesVersion:   "1.0.0",
+		DiceModel:      "2d12",
+		TotalFormula:   "hope + fear + modifier",
+		CritRule:       "critical success on matching hope/fear; overrides difficulty",
+		DifficultyRule: "difficulty optional; total >= difficulty succeeds; critical success always succeeds",
+		Outcomes: []pb.Outcome{
+			pb.Outcome_ROLL_WITH_HOPE,
+			pb.Outcome_ROLL_WITH_FEAR,
+			pb.Outcome_SUCCESS_WITH_HOPE,
+			pb.Outcome_SUCCESS_WITH_FEAR,
+			pb.Outcome_FAILURE_WITH_HOPE,
+			pb.Outcome_FAILURE_WITH_FEAR,
+			pb.Outcome_CRITICAL_SUCCESS,
+		},
+	}}
+	handler := rulesVersionHandler(client)
+
+	result, output, err := handler(context.Background(), &mcp.CallToolRequest{}, RulesVersionInput{})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if result != nil {
+		t.Fatal("expected nil result on success")
+	}
+	if client.lastRulesVersionRequest == nil {
+		t.Fatal("expected gRPC request")
+	}
+
+	expectedOutcomes := []string{
+		pb.Outcome_ROLL_WITH_HOPE.String(),
+		pb.Outcome_ROLL_WITH_FEAR.String(),
+		pb.Outcome_SUCCESS_WITH_HOPE.String(),
+		pb.Outcome_SUCCESS_WITH_FEAR.String(),
+		pb.Outcome_FAILURE_WITH_HOPE.String(),
+		pb.Outcome_FAILURE_WITH_FEAR.String(),
+		pb.Outcome_CRITICAL_SUCCESS.String(),
+	}
+	if !reflect.DeepEqual(output.Outcomes, expectedOutcomes) {
+		t.Fatalf("expected outcomes %v, got %v", expectedOutcomes, output.Outcomes)
+	}
+	if output.System != client.rulesVersionResponse.System {
+		t.Fatalf("expected system %q, got %q", client.rulesVersionResponse.System, output.System)
+	}
+	if output.Module != client.rulesVersionResponse.Module {
+		t.Fatalf("expected module %q, got %q", client.rulesVersionResponse.Module, output.Module)
+	}
+	if output.RulesVersion != client.rulesVersionResponse.RulesVersion {
+		t.Fatalf("expected rules version %q, got %q", client.rulesVersionResponse.RulesVersion, output.RulesVersion)
+	}
+	if output.DiceModel != client.rulesVersionResponse.DiceModel {
+		t.Fatalf("expected dice model %q, got %q", client.rulesVersionResponse.DiceModel, output.DiceModel)
+	}
+	if output.TotalFormula != client.rulesVersionResponse.TotalFormula {
+		t.Fatalf("expected total formula %q, got %q", client.rulesVersionResponse.TotalFormula, output.TotalFormula)
+	}
+	if output.CritRule != client.rulesVersionResponse.CritRule {
+		t.Fatalf("expected crit rule %q, got %q", client.rulesVersionResponse.CritRule, output.CritRule)
+	}
+	if output.DifficultyRule != client.rulesVersionResponse.DifficultyRule {
+		t.Fatalf("expected difficulty rule %q, got %q", client.rulesVersionResponse.DifficultyRule, output.DifficultyRule)
 	}
 }
 

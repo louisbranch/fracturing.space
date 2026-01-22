@@ -55,6 +55,40 @@ var ErrInvalidDiceSpec = errors.New("dice must have positive sides and count")
 // ErrInvalidDualityDie indicates hope or fear dice are outside the 1-12 range.
 var ErrInvalidDualityDie = errors.New("duality dice must be between 1 and 12")
 
+// RulesMetadata captures the ruleset semantics for duality roll interpretation.
+type RulesMetadata struct {
+	System         string
+	Module         string
+	RulesVersion   string
+	DiceModel      string
+	TotalFormula   string
+	CritRule       string
+	DifficultyRule string
+	Outcomes       []Outcome
+}
+
+// RulesVersion returns the static ruleset metadata for the Duality system.
+func RulesVersion() RulesMetadata {
+	return RulesMetadata{
+		System:         "Daggerheart",
+		Module:         "Duality",
+		RulesVersion:   "1.0.0",
+		DiceModel:      "2d12",
+		TotalFormula:   "hope + fear + modifier",
+		CritRule:       "critical success on matching hope/fear; overrides difficulty",
+		DifficultyRule: "difficulty optional; total >= difficulty succeeds; critical success always succeeds",
+		Outcomes: []Outcome{
+			OutcomeRollWithHope,
+			OutcomeRollWithFear,
+			OutcomeSuccessWithHope,
+			OutcomeSuccessWithFear,
+			OutcomeFailureWithHope,
+			OutcomeFailureWithFear,
+			OutcomeCriticalSuccess,
+		},
+	}
+}
+
 // DiceSpec describes a die to roll and how many times to roll it.
 type DiceSpec struct {
 	Sides int
