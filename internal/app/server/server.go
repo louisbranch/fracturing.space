@@ -7,7 +7,9 @@ import (
 	"log"
 	"net"
 
+	campaignpb "github.com/louisbranch/duality-protocol/api/gen/go/campaign/v1"
 	pb "github.com/louisbranch/duality-protocol/api/gen/go/duality/v1"
+	campaignservice "github.com/louisbranch/duality-protocol/internal/campaign/service"
 	"github.com/louisbranch/duality-protocol/internal/random"
 	transportgrpc "github.com/louisbranch/duality-protocol/internal/transport/grpc"
 	"google.golang.org/grpc"
@@ -27,8 +29,10 @@ func New(port int) (*Server, error) {
 	}
 
 	grpcServer := grpc.NewServer()
-	service := transportgrpc.NewDualityService(random.NewSeed)
-	pb.RegisterDualityServiceServer(grpcServer, service)
+	dualityService := transportgrpc.NewDualityService(random.NewSeed)
+	campaignService := campaignservice.NewCampaignService()
+	pb.RegisterDualityServiceServer(grpcServer, dualityService)
+	campaignpb.RegisterCampaignServiceServer(grpcServer, campaignService)
 
 	return &Server{
 		listener:   listener,

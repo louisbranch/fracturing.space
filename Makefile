@@ -3,6 +3,7 @@ GEN_GO_DIR := api/gen/go
 COVER_EXCLUDE_REGEX := api/gen/
 
 PROTO_FILES := \
+	$(PROTO_DIR)/campaign/v1/campaign.proto \
 	$(PROTO_DIR)/duality/v1/duality.proto
 
 .PHONY: all proto clean run cover

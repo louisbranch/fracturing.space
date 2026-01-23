@@ -1,0 +1,94 @@
+package service
+
+import (
+	"context"
+	"errors"
+	"time"
+
+	campaignpb "github.com/louisbranch/duality-protocol/api/gen/go/campaign/v1"
+	"github.com/louisbranch/duality-protocol/internal/campaign/domain"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
+)
+
+// CampaignService implements the CampaignService gRPC API.
+type CampaignService struct {
+	campaignpb.UnimplementedCampaignServiceServer
+	clock       func() time.Time
+	idGenerator func() (string, error)
+}
+
+// NewCampaignService creates a CampaignService with default dependencies.
+func NewCampaignService() *CampaignService {
+	return &CampaignService{
+		clock:       time.Now,
+		idGenerator: domain.NewCampaignID,
+	}
+}
+
+// CreateCampaign creates a new campaign metadata record.
+func (s *CampaignService) CreateCampaign(ctx context.Context, in *campaignpb.CreateCampaignRequest) (*campaignpb.CreateCampaignResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "create campaign request is required")
+	}
+
+	campaign, err := domain.CreateCampaign(domain.CreateCampaignInput{
+		Name:        in.GetName(),
+		GmMode:      gmModeFromProto(in.GetGmMode()),
+		PlayerSlots: int(in.GetPlayerSlots()),
+		ThemePrompt: in.GetThemePrompt(),
+	}, s.clock, s.idGenerator)
+	if err != nil {
+		if errors.Is(err, domain.ErrEmptyName) || errors.Is(err, domain.ErrInvalidGmMode) || errors.Is(err, domain.ErrInvalidPlayerSlots) {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+		return nil, status.Errorf(codes.Internal, "create campaign: %v", err)
+	}
+
+	// TODO: Persist campaign metadata to key "campaign/{campaign_id}" once storage is available.
+	// TODO: Persist session state to key "session/{campaign_id}/{session_id}" when sessions exist.
+	// TODO: Persist GM state to key "gm/{campaign_id}/{session_id}" when GM state is added.
+
+	response := &campaignpb.CreateCampaignResponse{
+		Campaign: &campaignpb.Campaign{
+			Id:          campaign.ID,
+			Name:        campaign.Name,
+			GmMode:      gmModeToProto(campaign.GmMode),
+			PlayerSlots: int32(campaign.PlayerSlots),
+			ThemePrompt: campaign.ThemePrompt,
+			CreatedAt:   timestamppb.New(campaign.CreatedAt),
+			UpdatedAt:   timestamppb.New(campaign.UpdatedAt),
+		},
+	}
+
+	return response, nil
+}
+
+// gmModeFromProto maps a protobuf GM mode to the domain representation.
+func gmModeFromProto(mode campaignpb.GmMode) domain.GmMode {
+	switch mode {
+	case campaignpb.GmMode_HUMAN:
+		return domain.GmModeHuman
+	case campaignpb.GmMode_AI:
+		return domain.GmModeAI
+	case campaignpb.GmMode_HYBRID:
+		return domain.GmModeHybrid
+	default:
+		return domain.GmModeUnspecified
+	}
+}
+
+// gmModeToProto maps a domain GM mode to the protobuf representation.
+func gmModeToProto(mode domain.GmMode) campaignpb.GmMode {
+	switch mode {
+	case domain.GmModeHuman:
+		return campaignpb.GmMode_HUMAN
+	case domain.GmModeAI:
+		return campaignpb.GmMode_AI
+	case domain.GmModeHybrid:
+		return campaignpb.GmMode_HYBRID
+	default:
+		return campaignpb.GmMode_GM_MODE_UNSPECIFIED
+	}
+}
