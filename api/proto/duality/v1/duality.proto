@@ -6,7 +6,7 @@ import "google/protobuf/struct.proto";
 
 option go_package = "github.com/louisbranch/duality-engine/api/gen/go/duality/v1;dualityv1";
 
-service DiceRollService {
+service DualityService {
   // Daggerheart-style action roll:
   // roll Hope d12 + Fear d12, apply modifier, compare to optional difficulty.
   rpc ActionRoll(ActionRollRequest) returns (ActionRollResponse);

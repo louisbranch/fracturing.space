@@ -10,6 +10,8 @@ It provides explicit, auditable mechanical outcomes via a gRPC API.
 
 Duality Engine exposes a gRPC service that resolves "action rolls" using Duality Dice:
 
+The API is defined in `api/proto/duality/v1/duality.proto` and exposes the `DualityService`.
+
 - roll Hope d12 and Fear d12
 - compute totals with a modifier
 - optionally compare against a difficulty

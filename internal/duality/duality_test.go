@@ -1,11 +1,11 @@
-package dice
+package duality
 
 import (
 	"errors"
 	"math/rand"
 	"testing"
 
-	"github.com/louisbranch/duality-protocol/internal/server/testutil"
+	"github.com/louisbranch/duality-protocol/internal/testutil"
 )
 
 // TestRollDiceReturnsResults ensures roll results are deterministic and aggregated.

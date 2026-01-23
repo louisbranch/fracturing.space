@@ -13,7 +13,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-// fakeDiceRollClient implements DiceRollServiceClient for tests.
+// fakeDiceRollClient implements DualityServiceClient for tests.
 type fakeDiceRollClient struct {
 	response                      *pb.ActionRollResponse
 	rollDiceResponse              *pb.RollDiceResponse

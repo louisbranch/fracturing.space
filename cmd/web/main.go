@@ -1,4 +1,4 @@
-// Package main implements a client for  service.
+// Package main implements a client for the Duality service.
 package main
 
 import (
@@ -24,7 +24,7 @@ func main() {
 		log.Fatalf("did not connect: %v", err)
 	}
 	defer conn.Close()
-	c := pb.NewDiceRollServiceClient(conn)
+	c := pb.NewDualityServiceClient(conn)
 
 	// Contact the server and print out its response.
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)

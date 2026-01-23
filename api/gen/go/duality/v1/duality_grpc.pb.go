@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.6.0
 // - protoc             v3.21.12
-// source: duality/v1/dice.proto
+// source: duality/v1/duality.proto
 
 package dualityv1
 
@@ -19,18 +19,18 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	DiceRollService_ActionRoll_FullMethodName         = "/duality.v1.DiceRollService/ActionRoll"
-	DiceRollService_DualityOutcome_FullMethodName     = "/duality.v1.DiceRollService/DualityOutcome"
-	DiceRollService_DualityExplain_FullMethodName     = "/duality.v1.DiceRollService/DualityExplain"
-	DiceRollService_DualityProbability_FullMethodName = "/duality.v1.DiceRollService/DualityProbability"
-	DiceRollService_RulesVersion_FullMethodName       = "/duality.v1.DiceRollService/RulesVersion"
-	DiceRollService_RollDice_FullMethodName           = "/duality.v1.DiceRollService/RollDice"
+	DualityService_ActionRoll_FullMethodName         = "/duality.v1.DualityService/ActionRoll"
+	DualityService_DualityOutcome_FullMethodName     = "/duality.v1.DualityService/DualityOutcome"
+	DualityService_DualityExplain_FullMethodName     = "/duality.v1.DualityService/DualityExplain"
+	DualityService_DualityProbability_FullMethodName = "/duality.v1.DualityService/DualityProbability"
+	DualityService_RulesVersion_FullMethodName       = "/duality.v1.DualityService/RulesVersion"
+	DualityService_RollDice_FullMethodName           = "/duality.v1.DualityService/RollDice"
 )
 
-// DiceRollServiceClient is the client API for DiceRollService service.
+// DualityServiceClient is the client API for DualityService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type DiceRollServiceClient interface {
+type DualityServiceClient interface {
 	// Daggerheart-style action roll:
 	// roll Hope d12 + Fear d12, apply modifier, compare to optional difficulty.
 	ActionRoll(ctx context.Context, in *ActionRollRequest, opts ...grpc.CallOption) (*ActionRollResponse, error)
@@ -46,78 +46,78 @@ type DiceRollServiceClient interface {
 	RollDice(ctx context.Context, in *RollDiceRequest, opts ...grpc.CallOption) (*RollDiceResponse, error)
 }
 
-type diceRollServiceClient struct {
+type dualityServiceClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewDiceRollServiceClient(cc grpc.ClientConnInterface) DiceRollServiceClient {
-	return &diceRollServiceClient{cc}
+func NewDualityServiceClient(cc grpc.ClientConnInterface) DualityServiceClient {
+	return &dualityServiceClient{cc}
 }
 
-func (c *diceRollServiceClient) ActionRoll(ctx context.Context, in *ActionRollRequest, opts ...grpc.CallOption) (*ActionRollResponse, error) {
+func (c *dualityServiceClient) ActionRoll(ctx context.Context, in *ActionRollRequest, opts ...grpc.CallOption) (*ActionRollResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ActionRollResponse)
-	err := c.cc.Invoke(ctx, DiceRollService_ActionRoll_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, DualityService_ActionRoll_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *diceRollServiceClient) DualityOutcome(ctx context.Context, in *DualityOutcomeRequest, opts ...grpc.CallOption) (*DualityOutcomeResponse, error) {
+func (c *dualityServiceClient) DualityOutcome(ctx context.Context, in *DualityOutcomeRequest, opts ...grpc.CallOption) (*DualityOutcomeResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(DualityOutcomeResponse)
-	err := c.cc.Invoke(ctx, DiceRollService_DualityOutcome_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, DualityService_DualityOutcome_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *diceRollServiceClient) DualityExplain(ctx context.Context, in *DualityExplainRequest, opts ...grpc.CallOption) (*DualityExplainResponse, error) {
+func (c *dualityServiceClient) DualityExplain(ctx context.Context, in *DualityExplainRequest, opts ...grpc.CallOption) (*DualityExplainResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(DualityExplainResponse)
-	err := c.cc.Invoke(ctx, DiceRollService_DualityExplain_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, DualityService_DualityExplain_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *diceRollServiceClient) DualityProbability(ctx context.Context, in *DualityProbabilityRequest, opts ...grpc.CallOption) (*DualityProbabilityResponse, error) {
+func (c *dualityServiceClient) DualityProbability(ctx context.Context, in *DualityProbabilityRequest, opts ...grpc.CallOption) (*DualityProbabilityResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(DualityProbabilityResponse)
-	err := c.cc.Invoke(ctx, DiceRollService_DualityProbability_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, DualityService_DualityProbability_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *diceRollServiceClient) RulesVersion(ctx context.Context, in *RulesVersionRequest, opts ...grpc.CallOption) (*RulesVersionResponse, error) {
+func (c *dualityServiceClient) RulesVersion(ctx context.Context, in *RulesVersionRequest, opts ...grpc.CallOption) (*RulesVersionResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(RulesVersionResponse)
-	err := c.cc.Invoke(ctx, DiceRollService_RulesVersion_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, DualityService_RulesVersion_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *diceRollServiceClient) RollDice(ctx context.Context, in *RollDiceRequest, opts ...grpc.CallOption) (*RollDiceResponse, error) {
+func (c *dualityServiceClient) RollDice(ctx context.Context, in *RollDiceRequest, opts ...grpc.CallOption) (*RollDiceResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(RollDiceResponse)
-	err := c.cc.Invoke(ctx, DiceRollService_RollDice_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, DualityService_RollDice_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// DiceRollServiceServer is the server API for DiceRollService service.
-// All implementations must embed UnimplementedDiceRollServiceServer
+// DualityServiceServer is the server API for DualityService service.
+// All implementations must embed UnimplementedDualityServiceServer
 // for forward compatibility.
-type DiceRollServiceServer interface {
+type DualityServiceServer interface {
 	// Daggerheart-style action roll:
 	// roll Hope d12 + Fear d12, apply modifier, compare to optional difficulty.
 	ActionRoll(context.Context, *ActionRollRequest) (*ActionRollResponse, error)
@@ -131,195 +131,195 @@ type DiceRollServiceServer interface {
 	RulesVersion(context.Context, *RulesVersionRequest) (*RulesVersionResponse, error)
 	// Roll arbitrary dice sets and return the individual results.
 	RollDice(context.Context, *RollDiceRequest) (*RollDiceResponse, error)
-	mustEmbedUnimplementedDiceRollServiceServer()
+	mustEmbedUnimplementedDualityServiceServer()
 }
 
-// UnimplementedDiceRollServiceServer must be embedded to have
+// UnimplementedDualityServiceServer must be embedded to have
 // forward compatible implementations.
 //
 // NOTE: this should be embedded by value instead of pointer to avoid a nil
 // pointer dereference when methods are called.
-type UnimplementedDiceRollServiceServer struct{}
+type UnimplementedDualityServiceServer struct{}
 
-func (UnimplementedDiceRollServiceServer) ActionRoll(context.Context, *ActionRollRequest) (*ActionRollResponse, error) {
+func (UnimplementedDualityServiceServer) ActionRoll(context.Context, *ActionRollRequest) (*ActionRollResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ActionRoll not implemented")
 }
-func (UnimplementedDiceRollServiceServer) DualityOutcome(context.Context, *DualityOutcomeRequest) (*DualityOutcomeResponse, error) {
+func (UnimplementedDualityServiceServer) DualityOutcome(context.Context, *DualityOutcomeRequest) (*DualityOutcomeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DualityOutcome not implemented")
 }
-func (UnimplementedDiceRollServiceServer) DualityExplain(context.Context, *DualityExplainRequest) (*DualityExplainResponse, error) {
+func (UnimplementedDualityServiceServer) DualityExplain(context.Context, *DualityExplainRequest) (*DualityExplainResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DualityExplain not implemented")
 }
-func (UnimplementedDiceRollServiceServer) DualityProbability(context.Context, *DualityProbabilityRequest) (*DualityProbabilityResponse, error) {
+func (UnimplementedDualityServiceServer) DualityProbability(context.Context, *DualityProbabilityRequest) (*DualityProbabilityResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DualityProbability not implemented")
 }
-func (UnimplementedDiceRollServiceServer) RulesVersion(context.Context, *RulesVersionRequest) (*RulesVersionResponse, error) {
+func (UnimplementedDualityServiceServer) RulesVersion(context.Context, *RulesVersionRequest) (*RulesVersionResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RulesVersion not implemented")
 }
-func (UnimplementedDiceRollServiceServer) RollDice(context.Context, *RollDiceRequest) (*RollDiceResponse, error) {
+func (UnimplementedDualityServiceServer) RollDice(context.Context, *RollDiceRequest) (*RollDiceResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RollDice not implemented")
 }
-func (UnimplementedDiceRollServiceServer) mustEmbedUnimplementedDiceRollServiceServer() {}
-func (UnimplementedDiceRollServiceServer) testEmbeddedByValue()                         {}
+func (UnimplementedDualityServiceServer) mustEmbedUnimplementedDualityServiceServer() {}
+func (UnimplementedDualityServiceServer) testEmbeddedByValue()                        {}
 
-// UnsafeDiceRollServiceServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to DiceRollServiceServer will
+// UnsafeDualityServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to DualityServiceServer will
 // result in compilation errors.
-type UnsafeDiceRollServiceServer interface {
-	mustEmbedUnimplementedDiceRollServiceServer()
+type UnsafeDualityServiceServer interface {
+	mustEmbedUnimplementedDualityServiceServer()
 }
 
-func RegisterDiceRollServiceServer(s grpc.ServiceRegistrar, srv DiceRollServiceServer) {
-	// If the following call panics, it indicates UnimplementedDiceRollServiceServer was
+func RegisterDualityServiceServer(s grpc.ServiceRegistrar, srv DualityServiceServer) {
+	// If the following call panics, it indicates UnimplementedDualityServiceServer was
 	// embedded by pointer and is nil.  This will cause panics if an
 	// unimplemented method is ever invoked, so we test this at initialization
 	// time to prevent it from happening at runtime later due to I/O.
 	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
 		t.testEmbeddedByValue()
 	}
-	s.RegisterService(&DiceRollService_ServiceDesc, srv)
+	s.RegisterService(&DualityService_ServiceDesc, srv)
 }
 
-func _DiceRollService_ActionRoll_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _DualityService_ActionRoll_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ActionRollRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(DiceRollServiceServer).ActionRoll(ctx, in)
+		return srv.(DualityServiceServer).ActionRoll(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: DiceRollService_ActionRoll_FullMethodName,
+		FullMethod: DualityService_ActionRoll_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DiceRollServiceServer).ActionRoll(ctx, req.(*ActionRollRequest))
+		return srv.(DualityServiceServer).ActionRoll(ctx, req.(*ActionRollRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _DiceRollService_DualityOutcome_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _DualityService_DualityOutcome_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(DualityOutcomeRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(DiceRollServiceServer).DualityOutcome(ctx, in)
+		return srv.(DualityServiceServer).DualityOutcome(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: DiceRollService_DualityOutcome_FullMethodName,
+		FullMethod: DualityService_DualityOutcome_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DiceRollServiceServer).DualityOutcome(ctx, req.(*DualityOutcomeRequest))
+		return srv.(DualityServiceServer).DualityOutcome(ctx, req.(*DualityOutcomeRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _DiceRollService_DualityExplain_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _DualityService_DualityExplain_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(DualityExplainRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(DiceRollServiceServer).DualityExplain(ctx, in)
+		return srv.(DualityServiceServer).DualityExplain(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: DiceRollService_DualityExplain_FullMethodName,
+		FullMethod: DualityService_DualityExplain_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DiceRollServiceServer).DualityExplain(ctx, req.(*DualityExplainRequest))
+		return srv.(DualityServiceServer).DualityExplain(ctx, req.(*DualityExplainRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _DiceRollService_DualityProbability_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _DualityService_DualityProbability_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(DualityProbabilityRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(DiceRollServiceServer).DualityProbability(ctx, in)
+		return srv.(DualityServiceServer).DualityProbability(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: DiceRollService_DualityProbability_FullMethodName,
+		FullMethod: DualityService_DualityProbability_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DiceRollServiceServer).DualityProbability(ctx, req.(*DualityProbabilityRequest))
+		return srv.(DualityServiceServer).DualityProbability(ctx, req.(*DualityProbabilityRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _DiceRollService_RulesVersion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _DualityService_RulesVersion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RulesVersionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(DiceRollServiceServer).RulesVersion(ctx, in)
+		return srv.(DualityServiceServer).RulesVersion(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: DiceRollService_RulesVersion_FullMethodName,
+		FullMethod: DualityService_RulesVersion_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DiceRollServiceServer).RulesVersion(ctx, req.(*RulesVersionRequest))
+		return srv.(DualityServiceServer).RulesVersion(ctx, req.(*RulesVersionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _DiceRollService_RollDice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _DualityService_RollDice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RollDiceRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(DiceRollServiceServer).RollDice(ctx, in)
+		return srv.(DualityServiceServer).RollDice(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: DiceRollService_RollDice_FullMethodName,
+		FullMethod: DualityService_RollDice_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DiceRollServiceServer).RollDice(ctx, req.(*RollDiceRequest))
+		return srv.(DualityServiceServer).RollDice(ctx, req.(*RollDiceRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-// DiceRollService_ServiceDesc is the grpc.ServiceDesc for DiceRollService service.
+// DualityService_ServiceDesc is the grpc.ServiceDesc for DualityService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var DiceRollService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "duality.v1.DiceRollService",
-	HandlerType: (*DiceRollServiceServer)(nil),
+var DualityService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "duality.v1.DualityService",
+	HandlerType: (*DualityServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
 			MethodName: "ActionRoll",
-			Handler:    _DiceRollService_ActionRoll_Handler,
+			Handler:    _DualityService_ActionRoll_Handler,
 		},
 		{
 			MethodName: "DualityOutcome",
-			Handler:    _DiceRollService_DualityOutcome_Handler,
+			Handler:    _DualityService_DualityOutcome_Handler,
 		},
 		{
 			MethodName: "DualityExplain",
-			Handler:    _DiceRollService_DualityExplain_Handler,
+			Handler:    _DualityService_DualityExplain_Handler,
 		},
 		{
 			MethodName: "DualityProbability",
-			Handler:    _DiceRollService_DualityProbability_Handler,
+			Handler:    _DualityService_DualityProbability_Handler,
 		},
 		{
 			MethodName: "RulesVersion",
-			Handler:    _DiceRollService_RulesVersion_Handler,
+			Handler:    _DualityService_RulesVersion_Handler,
 		},
 		{
 			MethodName: "RollDice",
-			Handler:    _DiceRollService_RollDice_Handler,
+			Handler:    _DualityService_RollDice_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "duality/v1/dice.proto",
+	Metadata: "duality/v1/duality.proto",
 }

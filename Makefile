@@ -2,7 +2,7 @@ PROTO_DIR := api/proto
 GEN_GO_DIR := api/gen/go
 
 PROTO_FILES := \
-	$(PROTO_DIR)/duality/v1/dice.proto
+	$(PROTO_DIR)/duality/v1/duality.proto
 
 .PHONY: all proto clean run
 
@@ -30,4 +30,3 @@ run:
 	  go run ./cmd/mcp 2>&1 & \
 	  wait \
 	'
-

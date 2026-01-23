@@ -4,7 +4,7 @@ import (
 	"flag"
 	"log"
 
-	"github.com/louisbranch/duality-protocol/internal/server"
+	"github.com/louisbranch/duality-protocol/internal/app/server"
 )
 
 var (

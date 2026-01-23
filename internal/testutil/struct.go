@@ -1,4 +1,4 @@
-// Package testutil provides shared helpers for server tests.
+// Package testutil provides shared helpers for tests.
 package testutil
 
 import "testing"

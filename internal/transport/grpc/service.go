@@ -1,59 +1,30 @@
-// Package server provides the gRPC server for dice rolls.
-package server
+package grpc
 
 import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
-	"net"
 
 	pb "github.com/louisbranch/duality-protocol/api/gen/go/duality/v1"
-	"github.com/louisbranch/duality-protocol/internal/server/dice"
-	"github.com/louisbranch/duality-protocol/internal/server/random"
-	"google.golang.org/grpc"
+	"github.com/louisbranch/duality-protocol/internal/duality"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-// Server hosts the gRPC dice roll service.
-type Server struct {
-	pb.UnimplementedDiceRollServiceServer
-	listener net.Listener
-	grpc     *grpc.Server
+// DualityService implements the Duality gRPC API.
+type DualityService struct {
+	pb.UnimplementedDualityServiceServer
 	seedFunc func() (int64, error) // Generates per-request random seeds.
 }
 
-// New creates a configured gRPC server listening on the provided port.
-func New(port int) (*Server, error) {
-	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
-	if err != nil {
-		return nil, fmt.Errorf("listen on port %d: %w", port, err)
-	}
-
-	grpcServer := grpc.NewServer()
-	server := &Server{
-		listener: listener,
-		grpc:     grpcServer,
-		seedFunc: random.NewSeed,
-	}
-	pb.RegisterDiceRollServiceServer(grpcServer, server)
-
-	return server, nil
-}
-
-// Serve starts the gRPC server and blocks until it stops.
-func (s *Server) Serve() error {
-	log.Printf("server listening at %v", s.listener.Addr())
-	if err := s.grpc.Serve(s.listener); err != nil {
-		return fmt.Errorf("serve gRPC: %w", err)
-	}
-	return nil
+// NewDualityService creates a configured gRPC handler with a seed generator.
+func NewDualityService(seedFunc func() (int64, error)) *DualityService {
+	return &DualityService{seedFunc: seedFunc}
 }
 
 // ActionRoll handles action roll requests.
-func (s *Server) ActionRoll(ctx context.Context, in *pb.ActionRollRequest) (*pb.ActionRollResponse, error) {
+func (s *DualityService) ActionRoll(ctx context.Context, in *pb.ActionRollRequest) (*pb.ActionRollResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "action roll request is required")
 	}
@@ -73,13 +44,13 @@ func (s *Server) ActionRoll(ctx context.Context, in *pb.ActionRollRequest) (*pb.
 		difficulty = &value
 	}
 
-	result, err := dice.RollAction(dice.ActionRequest{
+	result, err := duality.RollAction(duality.ActionRequest{
 		Modifier:   int(in.GetModifier()),
 		Difficulty: difficulty,
 		Seed:       seed,
 	})
 	if err != nil {
-		if errors.Is(err, dice.ErrInvalidDifficulty) {
+		if errors.Is(err, duality.ErrInvalidDifficulty) {
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
 		return nil, status.Errorf(codes.Internal, "failed to roll action: %v", err)
@@ -103,7 +74,7 @@ func (s *Server) ActionRoll(ctx context.Context, in *pb.ActionRollRequest) (*pb.
 }
 
 // DualityOutcome evaluates a deterministic duality outcome request.
-func (s *Server) DualityOutcome(ctx context.Context, in *pb.DualityOutcomeRequest) (*pb.DualityOutcomeResponse, error) {
+func (s *DualityService) DualityOutcome(ctx context.Context, in *pb.DualityOutcomeRequest) (*pb.DualityOutcomeResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "duality outcome request is required")
 	}
@@ -114,14 +85,14 @@ func (s *Server) DualityOutcome(ctx context.Context, in *pb.DualityOutcomeReques
 		difficulty = &value
 	}
 
-	result, err := dice.EvaluateOutcome(dice.OutcomeRequest{
+	result, err := duality.EvaluateOutcome(duality.OutcomeRequest{
 		Hope:       int(in.GetHope()),
 		Fear:       int(in.GetFear()),
 		Modifier:   int(in.GetModifier()),
 		Difficulty: difficulty,
 	})
 	if err != nil {
-		if errors.Is(err, dice.ErrInvalidDifficulty) || errors.Is(err, dice.ErrInvalidDualityDie) {
+		if errors.Is(err, duality.ErrInvalidDifficulty) || errors.Is(err, duality.ErrInvalidDualityDie) {
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
 		return nil, status.Errorf(codes.Internal, "failed to evaluate outcome: %v", err)
@@ -145,7 +116,7 @@ func (s *Server) DualityOutcome(ctx context.Context, in *pb.DualityOutcomeReques
 }
 
 // DualityExplain provides a deterministic explanation for a duality outcome.
-func (s *Server) DualityExplain(ctx context.Context, in *pb.DualityExplainRequest) (*pb.DualityExplainResponse, error) {
+func (s *DualityService) DualityExplain(ctx context.Context, in *pb.DualityExplainRequest) (*pb.DualityExplainResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "duality explain request is required")
 	}
@@ -156,14 +127,14 @@ func (s *Server) DualityExplain(ctx context.Context, in *pb.DualityExplainReques
 		difficulty = &value
 	}
 
-	result, err := dice.ExplainOutcome(dice.OutcomeRequest{
+	result, err := duality.ExplainOutcome(duality.OutcomeRequest{
 		Hope:       int(in.GetHope()),
 		Fear:       int(in.GetFear()),
 		Modifier:   int(in.GetModifier()),
 		Difficulty: difficulty,
 	})
 	if err != nil {
-		if errors.Is(err, dice.ErrInvalidDifficulty) || errors.Is(err, dice.ErrInvalidDualityDie) {
+		if errors.Is(err, duality.ErrInvalidDifficulty) || errors.Is(err, duality.ErrInvalidDualityDie) {
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
 		return nil, status.Errorf(codes.Internal, "failed to explain outcome: %v", err)
@@ -209,17 +180,17 @@ func (s *Server) DualityExplain(ctx context.Context, in *pb.DualityExplainReques
 }
 
 // DualityProbability computes outcome probabilities for duality dice.
-func (s *Server) DualityProbability(ctx context.Context, in *pb.DualityProbabilityRequest) (*pb.DualityProbabilityResponse, error) {
+func (s *DualityService) DualityProbability(ctx context.Context, in *pb.DualityProbabilityRequest) (*pb.DualityProbabilityResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "duality probability request is required")
 	}
 
-	result, err := dice.DualityProbability(dice.ProbabilityRequest{
+	result, err := duality.DualityProbability(duality.ProbabilityRequest{
 		Modifier:   int(in.GetModifier()),
 		Difficulty: int(in.GetDifficulty()),
 	})
 	if err != nil {
-		if errors.Is(err, dice.ErrInvalidDifficulty) {
+		if errors.Is(err, duality.ErrInvalidDifficulty) {
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
 		return nil, status.Errorf(codes.Internal, "failed to compute probability: %v", err)
@@ -243,12 +214,12 @@ func (s *Server) DualityProbability(ctx context.Context, in *pb.DualityProbabili
 }
 
 // RulesVersion returns ruleset metadata for Duality roll interpretation.
-func (s *Server) RulesVersion(ctx context.Context, in *pb.RulesVersionRequest) (*pb.RulesVersionResponse, error) {
+func (s *DualityService) RulesVersion(ctx context.Context, in *pb.RulesVersionRequest) (*pb.RulesVersionResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "rules version request is required")
 	}
 
-	metadata := dice.RulesVersion()
+	metadata := duality.RulesVersion()
 	outcomes := make([]pb.Outcome, 0, len(metadata.Outcomes))
 	for _, outcome := range metadata.Outcomes {
 		outcomes = append(outcomes, outcomeToProto(outcome))
@@ -264,6 +235,54 @@ func (s *Server) RulesVersion(ctx context.Context, in *pb.RulesVersionRequest) (
 		DifficultyRule: metadata.DifficultyRule,
 		Outcomes:       outcomes,
 	}, nil
+}
+
+// RollDice handles generic dice roll requests.
+func (s *DualityService) RollDice(ctx context.Context, in *pb.RollDiceRequest) (*pb.RollDiceResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "dice roll request is required")
+	}
+	if s.seedFunc == nil {
+		return nil, status.Error(codes.Internal, "seed generator is not configured")
+	}
+
+	seed, err := s.seedFunc()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to generate seed: %v", err)
+	}
+
+	request := duality.RollRequest{
+		Dice: make([]duality.DiceSpec, 0, len(in.GetDice())),
+		Seed: seed,
+	}
+	for _, spec := range in.GetDice() {
+		request.Dice = append(request.Dice, duality.DiceSpec{
+			Sides: int(spec.GetSides()),
+			Count: int(spec.GetCount()),
+		})
+	}
+
+	result, err := duality.RollDice(request)
+	if err != nil {
+		if errors.Is(err, duality.ErrMissingDice) || errors.Is(err, duality.ErrInvalidDiceSpec) {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+		return nil, status.Errorf(codes.Internal, "failed to roll dice: %v", err)
+	}
+
+	response := &pb.RollDiceResponse{
+		Rolls: make([]*pb.DiceRoll, 0, len(result.Rolls)),
+		Total: int32(result.Total),
+	}
+	for _, roll := range result.Rolls {
+		response.Rolls = append(response.Rolls, &pb.DiceRoll{
+			Sides:   int32(roll.Sides),
+			Results: int32Slice(roll.Results),
+			Total:   int32(roll.Total),
+		})
+	}
+
+	return response, nil
 }
 
 func stepDataToStruct(data map[string]any) (*structpb.Struct, error) {
@@ -324,70 +343,22 @@ func normalizeStructValue(value any) (any, error) {
 	}
 }
 
-// RollDice handles generic dice roll requests.
-func (s *Server) RollDice(ctx context.Context, in *pb.RollDiceRequest) (*pb.RollDiceResponse, error) {
-	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "dice roll request is required")
-	}
-	if s.seedFunc == nil {
-		return nil, status.Error(codes.Internal, "seed generator is not configured")
-	}
-
-	seed, err := s.seedFunc()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to generate seed: %v", err)
-	}
-
-	request := dice.RollRequest{
-		Dice: make([]dice.DiceSpec, 0, len(in.GetDice())),
-		Seed: seed,
-	}
-	for _, spec := range in.GetDice() {
-		request.Dice = append(request.Dice, dice.DiceSpec{
-			Sides: int(spec.GetSides()),
-			Count: int(spec.GetCount()),
-		})
-	}
-
-	result, err := dice.RollDice(request)
-	if err != nil {
-		if errors.Is(err, dice.ErrMissingDice) || errors.Is(err, dice.ErrInvalidDiceSpec) {
-			return nil, status.Error(codes.InvalidArgument, err.Error())
-		}
-		return nil, status.Errorf(codes.Internal, "failed to roll dice: %v", err)
-	}
-
-	response := &pb.RollDiceResponse{
-		Rolls: make([]*pb.DiceRoll, 0, len(result.Rolls)),
-		Total: int32(result.Total),
-	}
-	for _, roll := range result.Rolls {
-		response.Rolls = append(response.Rolls, &pb.DiceRoll{
-			Sides:   int32(roll.Sides),
-			Results: int32Slice(roll.Results),
-			Total:   int32(roll.Total),
-		})
-	}
-
-	return response, nil
-}
-
 // outcomeToProto maps dice outcomes to the protobuf outcome enum.
-func outcomeToProto(outcome dice.Outcome) pb.Outcome {
+func outcomeToProto(outcome duality.Outcome) pb.Outcome {
 	switch outcome {
-	case dice.OutcomeRollWithHope:
+	case duality.OutcomeRollWithHope:
 		return pb.Outcome_ROLL_WITH_HOPE
-	case dice.OutcomeRollWithFear:
+	case duality.OutcomeRollWithFear:
 		return pb.Outcome_ROLL_WITH_FEAR
-	case dice.OutcomeSuccessWithHope:
+	case duality.OutcomeSuccessWithHope:
 		return pb.Outcome_SUCCESS_WITH_HOPE
-	case dice.OutcomeSuccessWithFear:
+	case duality.OutcomeSuccessWithFear:
 		return pb.Outcome_SUCCESS_WITH_FEAR
-	case dice.OutcomeFailureWithHope:
+	case duality.OutcomeFailureWithHope:
 		return pb.Outcome_FAILURE_WITH_HOPE
-	case dice.OutcomeFailureWithFear:
+	case duality.OutcomeFailureWithFear:
 		return pb.Outcome_FAILURE_WITH_FEAR
-	case dice.OutcomeCriticalSuccess:
+	case duality.OutcomeCriticalSuccess:
 		return pb.Outcome_CRITICAL_SUCCESS
 	default:
 		return pb.Outcome_OUTCOME_UNSPECIFIED

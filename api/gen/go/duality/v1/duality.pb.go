@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.11
 // 	protoc        v3.21.12
-// source: duality/v1/dice.proto
+// source: duality/v1/duality.proto
 
 package dualityv1
 
@@ -73,11 +73,11 @@ func (x Outcome) String() string {
 }
 
 func (Outcome) Descriptor() protoreflect.EnumDescriptor {
-	return file_duality_v1_dice_proto_enumTypes[0].Descriptor()
+	return file_duality_v1_duality_proto_enumTypes[0].Descriptor()
 }
 
 func (Outcome) Type() protoreflect.EnumType {
-	return &file_duality_v1_dice_proto_enumTypes[0]
+	return &file_duality_v1_duality_proto_enumTypes[0]
 }
 
 func (x Outcome) Number() protoreflect.EnumNumber {
@@ -86,7 +86,7 @@ func (x Outcome) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use Outcome.Descriptor instead.
 func (Outcome) EnumDescriptor() ([]byte, []int) {
-	return file_duality_v1_dice_proto_rawDescGZIP(), []int{0}
+	return file_duality_v1_duality_proto_rawDescGZIP(), []int{0}
 }
 
 type ActionRollRequest struct {
@@ -102,7 +102,7 @@ type ActionRollRequest struct {
 
 func (x *ActionRollRequest) Reset() {
 	*x = ActionRollRequest{}
-	mi := &file_duality_v1_dice_proto_msgTypes[0]
+	mi := &file_duality_v1_duality_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -114,7 +114,7 @@ func (x *ActionRollRequest) String() string {
 func (*ActionRollRequest) ProtoMessage() {}
 
 func (x *ActionRollRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_duality_v1_dice_proto_msgTypes[0]
+	mi := &file_duality_v1_duality_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -127,7 +127,7 @@ func (x *ActionRollRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ActionRollRequest.ProtoReflect.Descriptor instead.
 func (*ActionRollRequest) Descriptor() ([]byte, []int) {
-	return file_duality_v1_dice_proto_rawDescGZIP(), []int{0}
+	return file_duality_v1_duality_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *ActionRollRequest) GetModifier() int32 {
@@ -162,7 +162,7 @@ type ActionRollResponse struct {
 
 func (x *ActionRollResponse) Reset() {
 	*x = ActionRollResponse{}
-	mi := &file_duality_v1_dice_proto_msgTypes[1]
+	mi := &file_duality_v1_duality_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -174,7 +174,7 @@ func (x *ActionRollResponse) String() string {
 func (*ActionRollResponse) ProtoMessage() {}
 
 func (x *ActionRollResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_duality_v1_dice_proto_msgTypes[1]
+	mi := &file_duality_v1_duality_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -187,7 +187,7 @@ func (x *ActionRollResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ActionRollResponse.ProtoReflect.Descriptor instead.
 func (*ActionRollResponse) Descriptor() ([]byte, []int) {
-	return file_duality_v1_dice_proto_rawDescGZIP(), []int{1}
+	return file_duality_v1_duality_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *ActionRollResponse) GetHope() int32 {
@@ -256,7 +256,7 @@ type DualityDice struct {
 
 func (x *DualityDice) Reset() {
 	*x = DualityDice{}
-	mi := &file_duality_v1_dice_proto_msgTypes[2]
+	mi := &file_duality_v1_duality_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -268,7 +268,7 @@ func (x *DualityDice) String() string {
 func (*DualityDice) ProtoMessage() {}
 
 func (x *DualityDice) ProtoReflect() protoreflect.Message {
-	mi := &file_duality_v1_dice_proto_msgTypes[2]
+	mi := &file_duality_v1_duality_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -281,7 +281,7 @@ func (x *DualityDice) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DualityDice.ProtoReflect.Descriptor instead.
 func (*DualityDice) Descriptor() ([]byte, []int) {
-	return file_duality_v1_dice_proto_rawDescGZIP(), []int{2}
+	return file_duality_v1_duality_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *DualityDice) GetHopeD12() int32 {
@@ -312,7 +312,7 @@ type DualityOutcomeRequest struct {
 
 func (x *DualityOutcomeRequest) Reset() {
 	*x = DualityOutcomeRequest{}
-	mi := &file_duality_v1_dice_proto_msgTypes[3]
+	mi := &file_duality_v1_duality_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -324,7 +324,7 @@ func (x *DualityOutcomeRequest) String() string {
 func (*DualityOutcomeRequest) ProtoMessage() {}
 
 func (x *DualityOutcomeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_duality_v1_dice_proto_msgTypes[3]
+	mi := &file_duality_v1_duality_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -337,7 +337,7 @@ func (x *DualityOutcomeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DualityOutcomeRequest.ProtoReflect.Descriptor instead.
 func (*DualityOutcomeRequest) Descriptor() ([]byte, []int) {
-	return file_duality_v1_dice_proto_rawDescGZIP(), []int{3}
+	return file_duality_v1_duality_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *DualityOutcomeRequest) GetHope() int32 {
@@ -386,7 +386,7 @@ type DualityOutcomeResponse struct {
 
 func (x *DualityOutcomeResponse) Reset() {
 	*x = DualityOutcomeResponse{}
-	mi := &file_duality_v1_dice_proto_msgTypes[4]
+	mi := &file_duality_v1_duality_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -398,7 +398,7 @@ func (x *DualityOutcomeResponse) String() string {
 func (*DualityOutcomeResponse) ProtoMessage() {}
 
 func (x *DualityOutcomeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_duality_v1_dice_proto_msgTypes[4]
+	mi := &file_duality_v1_duality_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -411,7 +411,7 @@ func (x *DualityOutcomeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DualityOutcomeResponse.ProtoReflect.Descriptor instead.
 func (*DualityOutcomeResponse) Descriptor() ([]byte, []int) {
-	return file_duality_v1_dice_proto_rawDescGZIP(), []int{4}
+	return file_duality_v1_duality_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *DualityOutcomeResponse) GetHope() int32 {
@@ -486,7 +486,7 @@ type DualityExplainRequest struct {
 
 func (x *DualityExplainRequest) Reset() {
 	*x = DualityExplainRequest{}
-	mi := &file_duality_v1_dice_proto_msgTypes[5]
+	mi := &file_duality_v1_duality_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -498,7 +498,7 @@ func (x *DualityExplainRequest) String() string {
 func (*DualityExplainRequest) ProtoMessage() {}
 
 func (x *DualityExplainRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_duality_v1_dice_proto_msgTypes[5]
+	mi := &file_duality_v1_duality_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -511,7 +511,7 @@ func (x *DualityExplainRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DualityExplainRequest.ProtoReflect.Descriptor instead.
 func (*DualityExplainRequest) Descriptor() ([]byte, []int) {
-	return file_duality_v1_dice_proto_rawDescGZIP(), []int{5}
+	return file_duality_v1_duality_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *DualityExplainRequest) GetHope() int32 {
@@ -570,7 +570,7 @@ type DualityExplainResponse struct {
 
 func (x *DualityExplainResponse) Reset() {
 	*x = DualityExplainResponse{}
-	mi := &file_duality_v1_dice_proto_msgTypes[6]
+	mi := &file_duality_v1_duality_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -582,7 +582,7 @@ func (x *DualityExplainResponse) String() string {
 func (*DualityExplainResponse) ProtoMessage() {}
 
 func (x *DualityExplainResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_duality_v1_dice_proto_msgTypes[6]
+	mi := &file_duality_v1_duality_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -595,7 +595,7 @@ func (x *DualityExplainResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DualityExplainResponse.ProtoReflect.Descriptor instead.
 func (*DualityExplainResponse) Descriptor() ([]byte, []int) {
-	return file_duality_v1_dice_proto_rawDescGZIP(), []int{6}
+	return file_duality_v1_duality_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *DualityExplainResponse) GetHope() int32 {
@@ -689,7 +689,7 @@ type Intermediates struct {
 
 func (x *Intermediates) Reset() {
 	*x = Intermediates{}
-	mi := &file_duality_v1_dice_proto_msgTypes[7]
+	mi := &file_duality_v1_duality_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -701,7 +701,7 @@ func (x *Intermediates) String() string {
 func (*Intermediates) ProtoMessage() {}
 
 func (x *Intermediates) ProtoReflect() protoreflect.Message {
-	mi := &file_duality_v1_dice_proto_msgTypes[7]
+	mi := &file_duality_v1_duality_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -714,7 +714,7 @@ func (x *Intermediates) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Intermediates.ProtoReflect.Descriptor instead.
 func (*Intermediates) Descriptor() ([]byte, []int) {
-	return file_duality_v1_dice_proto_rawDescGZIP(), []int{7}
+	return file_duality_v1_duality_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *Intermediates) GetBaseTotal() int32 {
@@ -770,7 +770,7 @@ type ExplainStep struct {
 
 func (x *ExplainStep) Reset() {
 	*x = ExplainStep{}
-	mi := &file_duality_v1_dice_proto_msgTypes[8]
+	mi := &file_duality_v1_duality_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -782,7 +782,7 @@ func (x *ExplainStep) String() string {
 func (*ExplainStep) ProtoMessage() {}
 
 func (x *ExplainStep) ProtoReflect() protoreflect.Message {
-	mi := &file_duality_v1_dice_proto_msgTypes[8]
+	mi := &file_duality_v1_duality_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -795,7 +795,7 @@ func (x *ExplainStep) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExplainStep.ProtoReflect.Descriptor instead.
 func (*ExplainStep) Descriptor() ([]byte, []int) {
-	return file_duality_v1_dice_proto_rawDescGZIP(), []int{8}
+	return file_duality_v1_duality_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ExplainStep) GetCode() string {
@@ -829,7 +829,7 @@ type DualityProbabilityRequest struct {
 
 func (x *DualityProbabilityRequest) Reset() {
 	*x = DualityProbabilityRequest{}
-	mi := &file_duality_v1_dice_proto_msgTypes[9]
+	mi := &file_duality_v1_duality_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -841,7 +841,7 @@ func (x *DualityProbabilityRequest) String() string {
 func (*DualityProbabilityRequest) ProtoMessage() {}
 
 func (x *DualityProbabilityRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_duality_v1_dice_proto_msgTypes[9]
+	mi := &file_duality_v1_duality_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -854,7 +854,7 @@ func (x *DualityProbabilityRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DualityProbabilityRequest.ProtoReflect.Descriptor instead.
 func (*DualityProbabilityRequest) Descriptor() ([]byte, []int) {
-	return file_duality_v1_dice_proto_rawDescGZIP(), []int{9}
+	return file_duality_v1_duality_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *DualityProbabilityRequest) GetModifier() int32 {
@@ -884,7 +884,7 @@ type DualityProbabilityResponse struct {
 
 func (x *DualityProbabilityResponse) Reset() {
 	*x = DualityProbabilityResponse{}
-	mi := &file_duality_v1_dice_proto_msgTypes[10]
+	mi := &file_duality_v1_duality_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -896,7 +896,7 @@ func (x *DualityProbabilityResponse) String() string {
 func (*DualityProbabilityResponse) ProtoMessage() {}
 
 func (x *DualityProbabilityResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_duality_v1_dice_proto_msgTypes[10]
+	mi := &file_duality_v1_duality_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -909,7 +909,7 @@ func (x *DualityProbabilityResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DualityProbabilityResponse.ProtoReflect.Descriptor instead.
 func (*DualityProbabilityResponse) Descriptor() ([]byte, []int) {
-	return file_duality_v1_dice_proto_rawDescGZIP(), []int{10}
+	return file_duality_v1_duality_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *DualityProbabilityResponse) GetTotalOutcomes() int32 {
@@ -955,7 +955,7 @@ type RulesVersionRequest struct {
 
 func (x *RulesVersionRequest) Reset() {
 	*x = RulesVersionRequest{}
-	mi := &file_duality_v1_dice_proto_msgTypes[11]
+	mi := &file_duality_v1_duality_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -967,7 +967,7 @@ func (x *RulesVersionRequest) String() string {
 func (*RulesVersionRequest) ProtoMessage() {}
 
 func (x *RulesVersionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_duality_v1_dice_proto_msgTypes[11]
+	mi := &file_duality_v1_duality_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -980,7 +980,7 @@ func (x *RulesVersionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RulesVersionRequest.ProtoReflect.Descriptor instead.
 func (*RulesVersionRequest) Descriptor() ([]byte, []int) {
-	return file_duality_v1_dice_proto_rawDescGZIP(), []int{11}
+	return file_duality_v1_duality_proto_rawDescGZIP(), []int{11}
 }
 
 type RulesVersionResponse struct {
@@ -999,7 +999,7 @@ type RulesVersionResponse struct {
 
 func (x *RulesVersionResponse) Reset() {
 	*x = RulesVersionResponse{}
-	mi := &file_duality_v1_dice_proto_msgTypes[12]
+	mi := &file_duality_v1_duality_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1011,7 +1011,7 @@ func (x *RulesVersionResponse) String() string {
 func (*RulesVersionResponse) ProtoMessage() {}
 
 func (x *RulesVersionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_duality_v1_dice_proto_msgTypes[12]
+	mi := &file_duality_v1_duality_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1024,7 +1024,7 @@ func (x *RulesVersionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RulesVersionResponse.ProtoReflect.Descriptor instead.
 func (*RulesVersionResponse) Descriptor() ([]byte, []int) {
-	return file_duality_v1_dice_proto_rawDescGZIP(), []int{12}
+	return file_duality_v1_duality_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *RulesVersionResponse) GetSystem() string {
@@ -1093,7 +1093,7 @@ type OutcomeCount struct {
 
 func (x *OutcomeCount) Reset() {
 	*x = OutcomeCount{}
-	mi := &file_duality_v1_dice_proto_msgTypes[13]
+	mi := &file_duality_v1_duality_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1105,7 +1105,7 @@ func (x *OutcomeCount) String() string {
 func (*OutcomeCount) ProtoMessage() {}
 
 func (x *OutcomeCount) ProtoReflect() protoreflect.Message {
-	mi := &file_duality_v1_dice_proto_msgTypes[13]
+	mi := &file_duality_v1_duality_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1118,7 +1118,7 @@ func (x *OutcomeCount) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OutcomeCount.ProtoReflect.Descriptor instead.
 func (*OutcomeCount) Descriptor() ([]byte, []int) {
-	return file_duality_v1_dice_proto_rawDescGZIP(), []int{13}
+	return file_duality_v1_duality_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *OutcomeCount) GetOutcome() Outcome {
@@ -1145,7 +1145,7 @@ type RollDiceRequest struct {
 
 func (x *RollDiceRequest) Reset() {
 	*x = RollDiceRequest{}
-	mi := &file_duality_v1_dice_proto_msgTypes[14]
+	mi := &file_duality_v1_duality_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1157,7 +1157,7 @@ func (x *RollDiceRequest) String() string {
 func (*RollDiceRequest) ProtoMessage() {}
 
 func (x *RollDiceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_duality_v1_dice_proto_msgTypes[14]
+	mi := &file_duality_v1_duality_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1170,7 +1170,7 @@ func (x *RollDiceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RollDiceRequest.ProtoReflect.Descriptor instead.
 func (*RollDiceRequest) Descriptor() ([]byte, []int) {
-	return file_duality_v1_dice_proto_rawDescGZIP(), []int{14}
+	return file_duality_v1_duality_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *RollDiceRequest) GetDice() []*DiceSpec {
@@ -1191,7 +1191,7 @@ type RollDiceResponse struct {
 
 func (x *RollDiceResponse) Reset() {
 	*x = RollDiceResponse{}
-	mi := &file_duality_v1_dice_proto_msgTypes[15]
+	mi := &file_duality_v1_duality_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1203,7 +1203,7 @@ func (x *RollDiceResponse) String() string {
 func (*RollDiceResponse) ProtoMessage() {}
 
 func (x *RollDiceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_duality_v1_dice_proto_msgTypes[15]
+	mi := &file_duality_v1_duality_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1216,7 +1216,7 @@ func (x *RollDiceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RollDiceResponse.ProtoReflect.Descriptor instead.
 func (*RollDiceResponse) Descriptor() ([]byte, []int) {
-	return file_duality_v1_dice_proto_rawDescGZIP(), []int{15}
+	return file_duality_v1_duality_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *RollDiceResponse) GetRolls() []*DiceRoll {
@@ -1243,7 +1243,7 @@ type DiceSpec struct {
 
 func (x *DiceSpec) Reset() {
 	*x = DiceSpec{}
-	mi := &file_duality_v1_dice_proto_msgTypes[16]
+	mi := &file_duality_v1_duality_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1255,7 +1255,7 @@ func (x *DiceSpec) String() string {
 func (*DiceSpec) ProtoMessage() {}
 
 func (x *DiceSpec) ProtoReflect() protoreflect.Message {
-	mi := &file_duality_v1_dice_proto_msgTypes[16]
+	mi := &file_duality_v1_duality_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1268,7 +1268,7 @@ func (x *DiceSpec) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DiceSpec.ProtoReflect.Descriptor instead.
 func (*DiceSpec) Descriptor() ([]byte, []int) {
-	return file_duality_v1_dice_proto_rawDescGZIP(), []int{16}
+	return file_duality_v1_duality_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *DiceSpec) GetSides() int32 {
@@ -1296,7 +1296,7 @@ type DiceRoll struct {
 
 func (x *DiceRoll) Reset() {
 	*x = DiceRoll{}
-	mi := &file_duality_v1_dice_proto_msgTypes[17]
+	mi := &file_duality_v1_duality_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1308,7 +1308,7 @@ func (x *DiceRoll) String() string {
 func (*DiceRoll) ProtoMessage() {}
 
 func (x *DiceRoll) ProtoReflect() protoreflect.Message {
-	mi := &file_duality_v1_dice_proto_msgTypes[17]
+	mi := &file_duality_v1_duality_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1321,7 +1321,7 @@ func (x *DiceRoll) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DiceRoll.ProtoReflect.Descriptor instead.
 func (*DiceRoll) Descriptor() ([]byte, []int) {
-	return file_duality_v1_dice_proto_rawDescGZIP(), []int{17}
+	return file_duality_v1_duality_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *DiceRoll) GetSides() int32 {
@@ -1345,11 +1345,11 @@ func (x *DiceRoll) GetTotal() int32 {
 	return 0
 }
 
-var File_duality_v1_dice_proto protoreflect.FileDescriptor
+var File_duality_v1_duality_proto protoreflect.FileDescriptor
 
-const file_duality_v1_dice_proto_rawDesc = "" +
+const file_duality_v1_duality_proto_rawDesc = "" +
 	"\n" +
-	"\x15duality/v1/dice.proto\x12\n" +
+	"\x18duality/v1/duality.proto\x12\n" +
 	"duality.v1\x1a\x1cgoogle/protobuf/struct.proto\"c\n" +
 	"\x11ActionRollRequest\x12\x1a\n" +
 	"\bmodifier\x18\x01 \x01(\x05R\bmodifier\x12#\n" +
@@ -1479,8 +1479,8 @@ const file_duality_v1_dice_proto_rawDesc = "" +
 	"\x11SUCCESS_WITH_FEAR\x10\x04\x12\x15\n" +
 	"\x11FAILURE_WITH_HOPE\x10\x05\x12\x15\n" +
 	"\x11FAILURE_WITH_FEAR\x10\x06\x12\x14\n" +
-	"\x10CRITICAL_SUCCESS\x10\a2\x8f\x04\n" +
-	"\x0fDiceRollService\x12K\n" +
+	"\x10CRITICAL_SUCCESS\x10\a2\x8e\x04\n" +
+	"\x0eDualityService\x12K\n" +
 	"\n" +
 	"ActionRoll\x12\x1d.duality.v1.ActionRollRequest\x1a\x1e.duality.v1.ActionRollResponse\x12W\n" +
 	"\x0eDualityOutcome\x12!.duality.v1.DualityOutcomeRequest\x1a\".duality.v1.DualityOutcomeResponse\x12W\n" +
@@ -1490,20 +1490,20 @@ const file_duality_v1_dice_proto_rawDesc = "" +
 	"\bRollDice\x12\x1b.duality.v1.RollDiceRequest\x1a\x1c.duality.v1.RollDiceResponseBGZEgithub.com/louisbranch/duality-engine/api/gen/go/duality/v1;dualityv1b\x06proto3"
 
 var (
-	file_duality_v1_dice_proto_rawDescOnce sync.Once
-	file_duality_v1_dice_proto_rawDescData []byte
+	file_duality_v1_duality_proto_rawDescOnce sync.Once
+	file_duality_v1_duality_proto_rawDescData []byte
 )
 
-func file_duality_v1_dice_proto_rawDescGZIP() []byte {
-	file_duality_v1_dice_proto_rawDescOnce.Do(func() {
-		file_duality_v1_dice_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_duality_v1_dice_proto_rawDesc), len(file_duality_v1_dice_proto_rawDesc)))
+func file_duality_v1_duality_proto_rawDescGZIP() []byte {
+	file_duality_v1_duality_proto_rawDescOnce.Do(func() {
+		file_duality_v1_duality_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_duality_v1_duality_proto_rawDesc), len(file_duality_v1_duality_proto_rawDesc)))
 	})
-	return file_duality_v1_dice_proto_rawDescData
+	return file_duality_v1_duality_proto_rawDescData
 }
 
-var file_duality_v1_dice_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_duality_v1_dice_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
-var file_duality_v1_dice_proto_goTypes = []any{
+var file_duality_v1_duality_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_duality_v1_duality_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
+var file_duality_v1_duality_proto_goTypes = []any{
 	(Outcome)(0),                       // 0: duality.v1.Outcome
 	(*ActionRollRequest)(nil),          // 1: duality.v1.ActionRollRequest
 	(*ActionRollResponse)(nil),         // 2: duality.v1.ActionRollResponse
@@ -1525,7 +1525,7 @@ var file_duality_v1_dice_proto_goTypes = []any{
 	(*DiceRoll)(nil),                   // 18: duality.v1.DiceRoll
 	(*structpb.Struct)(nil),            // 19: google.protobuf.Struct
 }
-var file_duality_v1_dice_proto_depIdxs = []int32{
+var file_duality_v1_duality_proto_depIdxs = []int32{
 	0,  // 0: duality.v1.ActionRollResponse.outcome:type_name -> duality.v1.Outcome
 	0,  // 1: duality.v1.DualityOutcomeResponse.outcome:type_name -> duality.v1.Outcome
 	0,  // 2: duality.v1.DualityExplainResponse.outcome:type_name -> duality.v1.Outcome
@@ -1537,18 +1537,18 @@ var file_duality_v1_dice_proto_depIdxs = []int32{
 	0,  // 8: duality.v1.OutcomeCount.outcome:type_name -> duality.v1.Outcome
 	17, // 9: duality.v1.RollDiceRequest.dice:type_name -> duality.v1.DiceSpec
 	18, // 10: duality.v1.RollDiceResponse.rolls:type_name -> duality.v1.DiceRoll
-	1,  // 11: duality.v1.DiceRollService.ActionRoll:input_type -> duality.v1.ActionRollRequest
-	4,  // 12: duality.v1.DiceRollService.DualityOutcome:input_type -> duality.v1.DualityOutcomeRequest
-	6,  // 13: duality.v1.DiceRollService.DualityExplain:input_type -> duality.v1.DualityExplainRequest
-	10, // 14: duality.v1.DiceRollService.DualityProbability:input_type -> duality.v1.DualityProbabilityRequest
-	12, // 15: duality.v1.DiceRollService.RulesVersion:input_type -> duality.v1.RulesVersionRequest
-	15, // 16: duality.v1.DiceRollService.RollDice:input_type -> duality.v1.RollDiceRequest
-	2,  // 17: duality.v1.DiceRollService.ActionRoll:output_type -> duality.v1.ActionRollResponse
-	5,  // 18: duality.v1.DiceRollService.DualityOutcome:output_type -> duality.v1.DualityOutcomeResponse
-	7,  // 19: duality.v1.DiceRollService.DualityExplain:output_type -> duality.v1.DualityExplainResponse
-	11, // 20: duality.v1.DiceRollService.DualityProbability:output_type -> duality.v1.DualityProbabilityResponse
-	13, // 21: duality.v1.DiceRollService.RulesVersion:output_type -> duality.v1.RulesVersionResponse
-	16, // 22: duality.v1.DiceRollService.RollDice:output_type -> duality.v1.RollDiceResponse
+	1,  // 11: duality.v1.DualityService.ActionRoll:input_type -> duality.v1.ActionRollRequest
+	4,  // 12: duality.v1.DualityService.DualityOutcome:input_type -> duality.v1.DualityOutcomeRequest
+	6,  // 13: duality.v1.DualityService.DualityExplain:input_type -> duality.v1.DualityExplainRequest
+	10, // 14: duality.v1.DualityService.DualityProbability:input_type -> duality.v1.DualityProbabilityRequest
+	12, // 15: duality.v1.DualityService.RulesVersion:input_type -> duality.v1.RulesVersionRequest
+	15, // 16: duality.v1.DualityService.RollDice:input_type -> duality.v1.RollDiceRequest
+	2,  // 17: duality.v1.DualityService.ActionRoll:output_type -> duality.v1.ActionRollResponse
+	5,  // 18: duality.v1.DualityService.DualityOutcome:output_type -> duality.v1.DualityOutcomeResponse
+	7,  // 19: duality.v1.DualityService.DualityExplain:output_type -> duality.v1.DualityExplainResponse
+	11, // 20: duality.v1.DualityService.DualityProbability:output_type -> duality.v1.DualityProbabilityResponse
+	13, // 21: duality.v1.DualityService.RulesVersion:output_type -> duality.v1.RulesVersionResponse
+	16, // 22: duality.v1.DualityService.RollDice:output_type -> duality.v1.RollDiceResponse
 	17, // [17:23] is the sub-list for method output_type
 	11, // [11:17] is the sub-list for method input_type
 	11, // [11:11] is the sub-list for extension type_name
@@ -1556,33 +1556,33 @@ var file_duality_v1_dice_proto_depIdxs = []int32{
 	0,  // [0:11] is the sub-list for field type_name
 }
 
-func init() { file_duality_v1_dice_proto_init() }
-func file_duality_v1_dice_proto_init() {
-	if File_duality_v1_dice_proto != nil {
+func init() { file_duality_v1_duality_proto_init() }
+func file_duality_v1_duality_proto_init() {
+	if File_duality_v1_duality_proto != nil {
 		return
 	}
-	file_duality_v1_dice_proto_msgTypes[0].OneofWrappers = []any{}
-	file_duality_v1_dice_proto_msgTypes[1].OneofWrappers = []any{}
-	file_duality_v1_dice_proto_msgTypes[3].OneofWrappers = []any{}
-	file_duality_v1_dice_proto_msgTypes[4].OneofWrappers = []any{}
-	file_duality_v1_dice_proto_msgTypes[5].OneofWrappers = []any{}
-	file_duality_v1_dice_proto_msgTypes[6].OneofWrappers = []any{}
+	file_duality_v1_duality_proto_msgTypes[0].OneofWrappers = []any{}
+	file_duality_v1_duality_proto_msgTypes[1].OneofWrappers = []any{}
+	file_duality_v1_duality_proto_msgTypes[3].OneofWrappers = []any{}
+	file_duality_v1_duality_proto_msgTypes[4].OneofWrappers = []any{}
+	file_duality_v1_duality_proto_msgTypes[5].OneofWrappers = []any{}
+	file_duality_v1_duality_proto_msgTypes[6].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_duality_v1_dice_proto_rawDesc), len(file_duality_v1_dice_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_duality_v1_duality_proto_rawDesc), len(file_duality_v1_duality_proto_rawDesc)),
 			NumEnums:      1,
 			NumMessages:   18,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_duality_v1_dice_proto_goTypes,
-		DependencyIndexes: file_duality_v1_dice_proto_depIdxs,
-		EnumInfos:         file_duality_v1_dice_proto_enumTypes,
-		MessageInfos:      file_duality_v1_dice_proto_msgTypes,
+		GoTypes:           file_duality_v1_duality_proto_goTypes,
+		DependencyIndexes: file_duality_v1_duality_proto_depIdxs,
+		EnumInfos:         file_duality_v1_duality_proto_enumTypes,
+		MessageInfos:      file_duality_v1_duality_proto_msgTypes,
 	}.Build()
-	File_duality_v1_dice_proto = out.File
-	file_duality_v1_dice_proto_goTypes = nil
-	file_duality_v1_dice_proto_depIdxs = nil
+	File_duality_v1_duality_proto = out.File
+	file_duality_v1_duality_proto_goTypes = nil
+	file_duality_v1_duality_proto_depIdxs = nil
 }

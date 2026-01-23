@@ -160,7 +160,7 @@ func New(addr string) (*Server, error) {
 	mcpServer := mcp.NewServer(&mcp.Implementation{Name: serverName, Version: serverVersion}, nil)
 
 	grpcAddr := grpcAddress(addr)
-	grpcClient, err := newDiceRollClient(grpcAddr)
+	grpcClient, err := newDualityClient(grpcAddr)
 	if err != nil {
 		return nil, fmt.Errorf("connect to gRPC server at %s: %w", grpcAddr, err)
 	}
@@ -235,7 +235,7 @@ func rulesVersionTool() *mcp.Tool {
 }
 
 // actionRollHandler executes a duality action roll.
-func actionRollHandler(client pb.DiceRollServiceClient) mcp.ToolHandlerFor[ActionRollInput, ActionRollResult] {
+func actionRollHandler(client pb.DualityServiceClient) mcp.ToolHandlerFor[ActionRollInput, ActionRollResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input ActionRollInput) (*mcp.CallToolResult, ActionRollResult, error) {
 		modifier := input.Modifier
 
@@ -275,7 +275,7 @@ func actionRollHandler(client pb.DiceRollServiceClient) mcp.ToolHandlerFor[Actio
 }
 
 // dualityOutcomeHandler executes a deterministic outcome evaluation.
-func dualityOutcomeHandler(client pb.DiceRollServiceClient) mcp.ToolHandlerFor[DualityOutcomeInput, DualityOutcomeResult] {
+func dualityOutcomeHandler(client pb.DualityServiceClient) mcp.ToolHandlerFor[DualityOutcomeInput, DualityOutcomeResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input DualityOutcomeInput) (*mcp.CallToolResult, DualityOutcomeResult, error) {
 		var difficulty *int32
 		if input.Difficulty != nil {
@@ -315,7 +315,7 @@ func dualityOutcomeHandler(client pb.DiceRollServiceClient) mcp.ToolHandlerFor[D
 }
 
 // dualityExplainHandler executes a deterministic explanation request.
-func dualityExplainHandler(client pb.DiceRollServiceClient) mcp.ToolHandlerFor[DualityExplainInput, DualityExplainResult] {
+func dualityExplainHandler(client pb.DualityServiceClient) mcp.ToolHandlerFor[DualityExplainInput, DualityExplainResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input DualityExplainInput) (*mcp.CallToolResult, DualityExplainResult, error) {
 		modifier := input.Modifier
 
@@ -391,7 +391,7 @@ func dualityExplainHandler(client pb.DiceRollServiceClient) mcp.ToolHandlerFor[D
 }
 
 // dualityProbabilityHandler executes the deterministic probability evaluation.
-func dualityProbabilityHandler(client pb.DiceRollServiceClient) mcp.ToolHandlerFor[DualityProbabilityInput, DualityProbabilityResult] {
+func dualityProbabilityHandler(client pb.DualityServiceClient) mcp.ToolHandlerFor[DualityProbabilityInput, DualityProbabilityResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input DualityProbabilityInput) (*mcp.CallToolResult, DualityProbabilityResult, error) {
 		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
@@ -428,7 +428,7 @@ func dualityProbabilityHandler(client pb.DiceRollServiceClient) mcp.ToolHandlerF
 }
 
 // rulesVersionHandler returns static ruleset metadata from the gRPC service.
-func rulesVersionHandler(client pb.DiceRollServiceClient) mcp.ToolHandlerFor[RulesVersionInput, RulesVersionResult] {
+func rulesVersionHandler(client pb.DualityServiceClient) mcp.ToolHandlerFor[RulesVersionInput, RulesVersionResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, _ RulesVersionInput) (*mcp.CallToolResult, RulesVersionResult, error) {
 		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
@@ -460,7 +460,7 @@ func rulesVersionHandler(client pb.DiceRollServiceClient) mcp.ToolHandlerFor[Rul
 }
 
 // rollDiceHandler executes a generic dice roll.
-func rollDiceHandler(client pb.DiceRollServiceClient) mcp.ToolHandlerFor[RollDiceInput, RollDiceResult] {
+func rollDiceHandler(client pb.DualityServiceClient) mcp.ToolHandlerFor[RollDiceInput, RollDiceResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input RollDiceInput) (*mcp.CallToolResult, RollDiceResult, error) {
 		diceSpecs := make([]*pb.DiceSpec, 0, len(input.Dice))
 		for _, spec := range input.Dice {
@@ -501,13 +501,13 @@ func rollDiceHandler(client pb.DiceRollServiceClient) mcp.ToolHandlerFor[RollDic
 	}
 }
 
-// newDiceRollClient connects to the gRPC dice service.
-func newDiceRollClient(addr string) (pb.DiceRollServiceClient, error) {
+// newDualityClient connects to the gRPC Duality service.
+func newDualityClient(addr string) (pb.DualityServiceClient, error) {
 	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, err
 	}
-	return pb.NewDiceRollServiceClient(conn), nil
+	return pb.NewDualityServiceClient(conn), nil
 }
 
 // grpcAddress resolves the gRPC address from env or defaults.
