@@ -8,7 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	appmcp "github.com/louisbranch/duality-engine/internal/app/mcp"
+	"github.com/louisbranch/duality-engine/internal/app/mcp"
 )
 
 // main starts the MCP server on stdio.
@@ -19,7 +19,7 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	if err := appmcp.Run(ctx, *addrFlag); err != nil {
+	if err := mcp.Run(ctx, *addrFlag); err != nil {
 		log.Fatalf("failed to serve MCP: %v", err)
 	}
 }
