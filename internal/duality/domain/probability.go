@@ -1,4 +1,4 @@
-package duality
+package domain
 
 // DualityProbability computes outcome counts across all d12 pairs.
 func DualityProbability(request ProbabilityRequest) (ProbabilityResult, error) {

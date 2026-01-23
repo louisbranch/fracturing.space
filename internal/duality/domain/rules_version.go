@@ -1,4 +1,4 @@
-package duality
+package domain
 
 // RulesVersion returns the static ruleset metadata for the Duality system.
 func RulesVersion() RulesMetadata {

@@ -1,4 +1,4 @@
-package duality
+package domain
 
 import "math/rand"
 

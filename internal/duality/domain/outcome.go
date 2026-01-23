@@ -1,4 +1,4 @@
-package duality
+package domain
 
 // EvaluateOutcome deterministically resolves an action roll outcome.
 func EvaluateOutcome(request OutcomeRequest) (OutcomeResult, error) {

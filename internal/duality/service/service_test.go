@@ -1,4 +1,4 @@
-package grpc
+package service
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	pb "github.com/louisbranch/duality-engine/api/gen/go/duality/v1"
-	"github.com/louisbranch/duality-engine/internal/duality"
+	"github.com/louisbranch/duality-engine/internal/duality/domain"
 	"github.com/louisbranch/duality-engine/internal/testutil"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -112,7 +112,7 @@ func TestDualityOutcomeReturnsResults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DualityOutcome returned error: %v", err)
 	}
-	assertOutcomeResponse(t, response, duality.OutcomeRequest{
+	assertOutcomeResponse(t, response, domain.OutcomeRequest{
 		Hope:       10,
 		Fear:       4,
 		Modifier:   1,
@@ -141,7 +141,7 @@ func TestDualityExplainReturnsExplanation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DualityExplain returned error: %v", err)
 	}
-	assertExplainResponse(t, response, duality.OutcomeRequest{
+	assertExplainResponse(t, response, domain.OutcomeRequest{
 		Hope:       10,
 		Fear:       4,
 		Modifier:   1,
@@ -177,7 +177,7 @@ func TestDualityProbabilityReturnsCounts(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DualityProbability returned error: %v", err)
 	}
-	assertProbabilityResponse(t, response, duality.ProbabilityRequest{Modifier: 0, Difficulty: 10})
+	assertProbabilityResponse(t, response, domain.ProbabilityRequest{Modifier: 0, Difficulty: 10})
 }
 
 func TestRulesVersionRejectsNilRequest(t *testing.T) {
@@ -198,7 +198,7 @@ func TestRulesVersionReturnsMetadata(t *testing.T) {
 		t.Fatal("RulesVersion response is nil")
 	}
 
-	metadata := duality.RulesVersion()
+	metadata := domain.RulesVersion()
 	if response.System != metadata.System {
 		t.Fatalf("RulesVersion system = %q, want %q", response.System, metadata.System)
 	}
@@ -266,7 +266,7 @@ func TestRollDiceReturnsResults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("RollDice returned error: %v", err)
 	}
-	assertRollDiceResponse(t, response, seed, []duality.DiceSpec{{Sides: 6, Count: 2}, {Sides: 8, Count: 1}})
+	assertRollDiceResponse(t, response, seed, []domain.DiceSpec{{Sides: 6, Count: 2}, {Sides: 8, Count: 1}})
 }
 
 func TestRollDiceSeedFailure(t *testing.T) {
@@ -306,7 +306,7 @@ func assertResponseMatches(t *testing.T, response *pb.ActionRollResponse, seed i
 		t.Fatal("ActionRoll response is nil")
 	}
 
-	result, err := duality.RollAction(duality.ActionRequest{
+	result, err := domain.RollAction(domain.ActionRequest{
 		Modifier:   int(modifier),
 		Difficulty: intPointer(difficulty),
 		Seed:       seed,
@@ -342,14 +342,14 @@ func assertResponseMatches(t *testing.T, response *pb.ActionRollResponse, seed i
 }
 
 // assertOutcomeResponse validates duality outcome response fields against expectations.
-func assertOutcomeResponse(t *testing.T, response *pb.DualityOutcomeResponse, request duality.OutcomeRequest) {
+func assertOutcomeResponse(t *testing.T, response *pb.DualityOutcomeResponse, request domain.OutcomeRequest) {
 	t.Helper()
 
 	if response == nil {
 		t.Fatal("DualityOutcome response is nil")
 	}
 
-	result, err := duality.EvaluateOutcome(request)
+	result, err := domain.EvaluateOutcome(request)
 	if err != nil {
 		t.Fatalf("EvaluateOutcome returned error: %v", err)
 	}
@@ -381,14 +381,14 @@ func assertOutcomeResponse(t *testing.T, response *pb.DualityOutcomeResponse, re
 }
 
 // assertExplainResponse validates duality explain response fields against expectations.
-func assertExplainResponse(t *testing.T, response *pb.DualityExplainResponse, request duality.OutcomeRequest) {
+func assertExplainResponse(t *testing.T, response *pb.DualityExplainResponse, request domain.OutcomeRequest) {
 	t.Helper()
 
 	if response == nil {
 		t.Fatal("DualityExplain response is nil")
 	}
 
-	result, err := duality.ExplainOutcome(request)
+	result, err := domain.ExplainOutcome(request)
 	if err != nil {
 		t.Fatalf("ExplainOutcome returned error: %v", err)
 	}
@@ -458,14 +458,14 @@ func assertExplainResponse(t *testing.T, response *pb.DualityExplainResponse, re
 }
 
 // assertProbabilityResponse validates duality probability response fields against expectations.
-func assertProbabilityResponse(t *testing.T, response *pb.DualityProbabilityResponse, request duality.ProbabilityRequest) {
+func assertProbabilityResponse(t *testing.T, response *pb.DualityProbabilityResponse, request domain.ProbabilityRequest) {
 	t.Helper()
 
 	if response == nil {
 		t.Fatal("DualityProbability response is nil")
 	}
 
-	result, err := duality.DualityProbability(request)
+	result, err := domain.DualityProbability(request)
 	if err != nil {
 		t.Fatalf("DualityProbability returned error: %v", err)
 	}
@@ -498,14 +498,14 @@ func assertProbabilityResponse(t *testing.T, response *pb.DualityProbabilityResp
 }
 
 // assertRollDiceResponse validates roll dice response fields against expectations.
-func assertRollDiceResponse(t *testing.T, response *pb.RollDiceResponse, seed int64, specs []duality.DiceSpec) {
+func assertRollDiceResponse(t *testing.T, response *pb.RollDiceResponse, seed int64, specs []domain.DiceSpec) {
 	t.Helper()
 
 	if response == nil {
 		t.Fatal("RollDice response is nil")
 	}
 
-	result, err := duality.RollDice(duality.RollRequest{
+	result, err := domain.RollDice(domain.RollRequest{
 		Dice: specs,
 		Seed: seed,
 	})
