@@ -42,6 +42,9 @@ make run
 This runs the gRPC server on `localhost:8080`, waits for it to accept
 connections, and then starts the MCP server on stdio.
 
+The campaign store uses a local BoltDB file and defaults to `data/duality.db`.
+Override the path with `DUALITY_DB_PATH`.
+
 ## MCP (stdio)
 
 The MCP server communicates over stdio using JSON-RPC. Run it locally and point

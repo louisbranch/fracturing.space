@@ -7,6 +7,7 @@ import (
 
 	campaignpb "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1"
 	"github.com/louisbranch/duality-engine/internal/campaign/domain"
+	"github.com/louisbranch/duality-engine/internal/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -15,13 +16,15 @@ import (
 // CampaignService implements the CampaignService gRPC API.
 type CampaignService struct {
 	campaignpb.UnimplementedCampaignServiceServer
+	store       storage.CampaignStore
 	clock       func() time.Time
 	idGenerator func() (string, error)
 }
 
 // NewCampaignService creates a CampaignService with default dependencies.
-func NewCampaignService() *CampaignService {
+func NewCampaignService(store storage.CampaignStore) *CampaignService {
 	return &CampaignService{
+		store:       store,
 		clock:       time.Now,
 		idGenerator: domain.NewCampaignID,
 	}
@@ -31,6 +34,10 @@ func NewCampaignService() *CampaignService {
 func (s *CampaignService) CreateCampaign(ctx context.Context, in *campaignpb.CreateCampaignRequest) (*campaignpb.CreateCampaignResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "create campaign request is required")
+	}
+
+	if s.store == nil {
+		return nil, status.Error(codes.Internal, "campaign store is not configured")
 	}
 
 	campaign, err := domain.CreateCampaign(domain.CreateCampaignInput{
@@ -45,8 +52,10 @@ func (s *CampaignService) CreateCampaign(ctx context.Context, in *campaignpb.Cre
 		}
 		return nil, status.Errorf(codes.Internal, "create campaign: %v", err)
 	}
+	if err := s.store.Put(ctx, campaign); err != nil {
+		return nil, status.Errorf(codes.Internal, "persist campaign: %v", err)
+	}
 
-	// TODO: Persist campaign metadata to key "campaign/{campaign_id}" once storage is available.
 	// TODO: Persist session state to key "session/{campaign_id}/{session_id}" when sessions exist.
 	// TODO: Persist GM state to key "gm/{campaign_id}/{session_id}" when GM state is added.
 	// TODO: Consider removing warnings from the gRPC response when the API stabilizes.

@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"net"
+	"path/filepath"
 	"strconv"
 	"testing"
 	"time"
@@ -15,6 +16,7 @@ import (
 
 // TestServeStopsOnContext verifies the server serves and stops on cancel.
 func TestServeStopsOnContext(t *testing.T) {
+	setTempDBPath(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -61,6 +63,7 @@ func TestServeStopsOnContext(t *testing.T) {
 
 // TestHealthCheckReportsServing ensures gRPC health checks report SERVING.
 func TestHealthCheckReportsServing(t *testing.T) {
+	setTempDBPath(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -113,6 +116,7 @@ func TestHealthCheckReportsServing(t *testing.T) {
 
 // TestRunPortInUse verifies Run returns an error when the port is occupied.
 func TestRunPortInUse(t *testing.T) {
+	setTempDBPath(t)
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("listen: %v", err)
@@ -135,6 +139,7 @@ func TestRunPortInUse(t *testing.T) {
 
 // TestServeReturnsOnCancel verifies Serve returns promptly on cancel without connections.
 func TestServeReturnsOnCancel(t *testing.T) {
+	setTempDBPath(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -162,6 +167,7 @@ func TestServeReturnsOnCancel(t *testing.T) {
 
 // TestServeReturnsErrorOnClosedListener verifies Serve reports listener errors.
 func TestServeReturnsErrorOnClosedListener(t *testing.T) {
+	setTempDBPath(t)
 	grpcServer, err := New(0)
 	if err != nil {
 		t.Fatalf("new server: %v", err)
@@ -189,4 +195,10 @@ func normalizeAddress(t *testing.T, addr string) string {
 		host = "127.0.0.1"
 	}
 	return net.JoinHostPort(host, port)
+}
+
+func setTempDBPath(t *testing.T) {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "duality.db")
+	t.Setenv("DUALITY_DB_PATH", path)
 }

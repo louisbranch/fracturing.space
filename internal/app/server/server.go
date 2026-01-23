@@ -6,12 +6,15 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
+	"path/filepath"
 
 	campaignpb "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1"
 	pb "github.com/louisbranch/duality-engine/api/gen/go/duality/v1"
 	campaignservice "github.com/louisbranch/duality-engine/internal/campaign/service"
 	dualityservice "github.com/louisbranch/duality-engine/internal/duality/service"
 	"github.com/louisbranch/duality-engine/internal/random"
+	storagebbolt "github.com/louisbranch/duality-engine/internal/storage/bbolt"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	grpc_health_v1 "google.golang.org/grpc/health/grpc_health_v1"
@@ -22,6 +25,7 @@ type Server struct {
 	listener   net.Listener
 	grpcServer *grpc.Server
 	health     *health.Server
+	store      *storagebbolt.Store
 }
 
 // New creates a configured gRPC server listening on the provided port.
@@ -30,10 +34,15 @@ func New(port int) (*Server, error) {
 	if err != nil {
 		return nil, fmt.Errorf("listen on port %d: %w", port, err)
 	}
+	store, err := openCampaignStore()
+	if err != nil {
+		_ = listener.Close()
+		return nil, err
+	}
 
 	grpcServer := grpc.NewServer()
 	dualityService := dualityservice.NewDualityService(random.NewSeed)
-	campaignService := campaignservice.NewCampaignService()
+	campaignService := campaignservice.NewCampaignService(store)
 	healthServer := health.NewServer()
 	pb.RegisterDualityServiceServer(grpcServer, dualityService)
 	campaignpb.RegisterCampaignServiceServer(grpcServer, campaignService)
@@ -46,6 +55,7 @@ func New(port int) (*Server, error) {
 		listener:   listener,
 		grpcServer: grpcServer,
 		health:     healthServer,
+		store:      store,
 	}, nil
 }
 
@@ -63,6 +73,7 @@ func (s *Server) Serve(ctx context.Context) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
+	defer s.closeStore()
 
 	log.Printf("server listening at %v", s.listener.Addr())
 	serveErr := make(chan error, 1)
@@ -87,5 +98,31 @@ func (s *Server) Serve(ctx context.Context) error {
 		return handleErr(err)
 	case err := <-serveErr:
 		return handleErr(err)
+	}
+}
+
+func openCampaignStore() (*storagebbolt.Store, error) {
+	path := os.Getenv("DUALITY_DB_PATH")
+	if path == "" {
+		path = filepath.Join("data", "duality.db")
+	}
+	if dir := filepath.Dir(path); dir != "." {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return nil, fmt.Errorf("create storage dir: %w", err)
+		}
+	}
+	store, err := storagebbolt.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("open campaign store: %w", err)
+	}
+	return store, nil
+}
+
+func (s *Server) closeStore() {
+	if s == nil || s.store == nil {
+		return
+	}
+	if err := s.store.Close(); err != nil {
+		log.Printf("close campaign store: %v", err)
 	}
 }

@@ -7,13 +7,31 @@ import (
 	"time"
 
 	campaignpb "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1"
+	"github.com/louisbranch/duality-engine/internal/campaign/domain"
+	"github.com/louisbranch/duality-engine/internal/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
+type fakeCampaignStore struct {
+	putCampaign domain.Campaign
+	putErr      error
+}
+
+func (f *fakeCampaignStore) Put(ctx context.Context, campaign domain.Campaign) error {
+	f.putCampaign = campaign
+	return f.putErr
+}
+
+func (f *fakeCampaignStore) Get(ctx context.Context, id string) (domain.Campaign, error) {
+	return domain.Campaign{}, storage.ErrNotFound
+}
+
 func TestCreateCampaignSuccess(t *testing.T) {
 	fixedTime := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
+	store := &fakeCampaignStore{}
 	service := &CampaignService{
+		store: store,
 		clock: func() time.Time {
 			return fixedTime
 		},
@@ -55,6 +73,9 @@ func TestCreateCampaignSuccess(t *testing.T) {
 	if response.Campaign.UpdatedAt.AsTime() != fixedTime {
 		t.Fatalf("expected updated_at %v, got %v", fixedTime, response.Campaign.UpdatedAt.AsTime())
 	}
+	if store.putCampaign.ID != "camp-123" {
+		t.Fatalf("expected stored id camp-123, got %q", store.putCampaign.ID)
+	}
 }
 
 func TestCreateCampaignValidationErrors(t *testing.T) {
@@ -89,6 +110,7 @@ func TestCreateCampaignValidationErrors(t *testing.T) {
 	}
 
 	service := &CampaignService{
+		store:       &fakeCampaignStore{},
 		clock:       time.Now,
 		idGenerator: func() (string, error) { return "camp-1", nil },
 	}
@@ -111,7 +133,7 @@ func TestCreateCampaignValidationErrors(t *testing.T) {
 }
 
 func TestCreateCampaignNilRequest(t *testing.T) {
-	service := NewCampaignService()
+	service := NewCampaignService(&fakeCampaignStore{})
 
 	_, err := service.CreateCampaign(context.Background(), nil)
 	if err == nil {
@@ -128,6 +150,7 @@ func TestCreateCampaignNilRequest(t *testing.T) {
 
 func TestCreateCampaignIDGenerationFailure(t *testing.T) {
 	service := &CampaignService{
+		store: &fakeCampaignStore{},
 		clock: time.Now,
 		idGenerator: func() (string, error) {
 			return "", errors.New("boom")
@@ -137,6 +160,58 @@ func TestCreateCampaignIDGenerationFailure(t *testing.T) {
 	_, err := service.CreateCampaign(context.Background(), &campaignpb.CreateCampaignRequest{
 		Name:        "Campaign",
 		GmMode:      campaignpb.GmMode_HUMAN,
+		PlayerSlots: 2,
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	st, ok := status.FromError(err)
+	if !ok {
+		t.Fatalf("expected grpc status error, got %v", err)
+	}
+	if st.Code() != codes.Internal {
+		t.Fatalf("expected internal error, got %v", st.Code())
+	}
+}
+
+func TestCreateCampaignStoreFailure(t *testing.T) {
+	store := &fakeCampaignStore{putErr: errors.New("boom")}
+	service := &CampaignService{
+		store: store,
+		clock: time.Now,
+		idGenerator: func() (string, error) {
+			return "camp-123", nil
+		},
+	}
+
+	_, err := service.CreateCampaign(context.Background(), &campaignpb.CreateCampaignRequest{
+		Name:        "Campaign",
+		GmMode:      campaignpb.GmMode_HUMAN,
+		PlayerSlots: 2,
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	st, ok := status.FromError(err)
+	if !ok {
+		t.Fatalf("expected grpc status error, got %v", err)
+	}
+	if st.Code() != codes.Internal {
+		t.Fatalf("expected internal error, got %v", st.Code())
+	}
+}
+
+func TestCreateCampaignMissingStore(t *testing.T) {
+	service := &CampaignService{
+		clock: time.Now,
+		idGenerator: func() (string, error) {
+			return "camp-123", nil
+		},
+	}
+
+	_, err := service.CreateCampaign(context.Background(), &campaignpb.CreateCampaignRequest{
+		Name:        "Campaign",
+		GmMode:      campaignpb.GmMode_AI,
 		PlayerSlots: 2,
 	})
 	if err == nil {
