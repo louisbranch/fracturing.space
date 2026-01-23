@@ -1,5 +1,6 @@
 PROTO_DIR := api/proto
 GEN_GO_DIR := api/gen/go
+COVER_EXCLUDE_REGEX := api/gen/
 
 PROTO_FILES := \
 	$(PROTO_DIR)/duality/v1/duality.proto
@@ -32,6 +33,7 @@ run:
 	'
 
 cover:
-	go test -v -coverpkg=./... -coverprofile=coverage.out ./...
+	go test -v -coverpkg=./... -coverprofile=coverage.raw ./...
+	awk -v exclude='$(COVER_EXCLUDE_REGEX)' 'NR==1 || $$1 !~ exclude' coverage.raw > coverage.out
 	go tool cover -func coverage.out
 	go tool cover -html=coverage.out -o coverage.html
