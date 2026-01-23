@@ -19,3 +19,8 @@ func registerDualityTools(mcpServer *mcp.Server, client dualityv1.DualityService
 func registerCampaignTools(mcpServer *mcp.Server, client campaignpb.CampaignServiceClient) {
 	mcp.AddTool(mcpServer, domain.CampaignCreateTool(), domain.CampaignCreateHandler(client))
 }
+
+// registerCampaignResources registers readable campaign MCP resources.
+func registerCampaignResources(mcpServer *mcp.Server, client campaignpb.CampaignServiceClient) {
+	mcpServer.AddResource(domain.CampaignListResource(), domain.CampaignListResourceHandler(client))
+}

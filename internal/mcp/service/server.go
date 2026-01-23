@@ -59,6 +59,7 @@ func New(grpcAddr string) (*Server, error) {
 	campaignClient := campaignpb.NewCampaignServiceClient(conn)
 	registerDualityTools(mcpServer, dualityClient)
 	registerCampaignTools(mcpServer, campaignClient)
+	registerCampaignResources(mcpServer, campaignClient)
 
 	return &Server{mcpServer: mcpServer, conn: conn}, nil
 }

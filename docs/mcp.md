@@ -23,11 +23,13 @@ For an OpenCode client configuration, see `opencode.jsonc`.
 
 ## Resources
 
-These are planned MCP resources that will expand what the client can ask the
-MCP server to retrieve or manage.
+- `campaigns://list`: JSON listing of campaign metadata records (id, name, gm_mode,
+  player_slots, theme_prompt, created_at, updated_at).
 
-- Campaign metadata fields: `name`, `gm_mode` (HUMAN, AI, HYBRID), `player_slots`, `theme_prompt`.
-- Campaign listing and lookup (by id).
+Planned MCP resources that will expand what the client can ask the MCP server to
+retrieve or manage:
+
+- Campaign lookup by id.
 - Session state, GM state, and actor records for active campaigns.
 - Event streams for campaign timelines.
 - MCP services: `duality.v1.DualityService` and `campaign.v1.CampaignService` over gRPC.
