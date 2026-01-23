@@ -1,6 +1,7 @@
 # Duality Engine
 
-Duality Engine is a small, server-authoritative mechanics service for Daggerheart-style Duality Dice resolution.
+Duality Engine is a small, server-authoritative mechanics service
+compatible with the Daggerheart Duality Dice system.
 
 It is not a narrative engine.
 It does not generate lore, scenes, or roleplay.
@@ -85,3 +86,28 @@ Example response payload (structured content fields):
 
 See `opencode.jsonc` for a ready-to-use OpenCode configuration that starts the
 local MCP server.
+
+---
+
+## Attribution
+
+This project uses material from the Daggerheart System Reference Document (SRD).
+
+Daggerheart is © 2025 Critical Role LLC.
+Used under the Darrington Press Community Gaming License.
+
+## Disclaimer
+
+Duality Engine is an independent, fan-made project.
+
+It is not affiliated with, endorsed by, or sponsored by Critical Role LLC
+or Darrington Press.
+
+Daggerheart is a trademark of Critical Role LLC.
+
+## SRD Content
+
+This repository does not include Daggerheart SRD content.
+
+Users are responsible for providing any SRD-derived data
+in accordance with the Darrington Press Community Gaming License.
