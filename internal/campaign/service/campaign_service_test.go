@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	campaignpb "github.com/louisbranch/duality-protocol/api/gen/go/campaign/v1"
+	campaignpb "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

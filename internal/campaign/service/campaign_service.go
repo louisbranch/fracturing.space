@@ -5,8 +5,8 @@ import (
 	"errors"
 	"time"
 
-	campaignpb "github.com/louisbranch/duality-protocol/api/gen/go/campaign/v1"
-	"github.com/louisbranch/duality-protocol/internal/campaign/domain"
+	campaignpb "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1"
+	"github.com/louisbranch/duality-engine/internal/campaign/domain"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"

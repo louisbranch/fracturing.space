@@ -7,11 +7,11 @@ import (
 	"log"
 	"net"
 
-	campaignpb "github.com/louisbranch/duality-protocol/api/gen/go/campaign/v1"
-	pb "github.com/louisbranch/duality-protocol/api/gen/go/duality/v1"
-	campaignservice "github.com/louisbranch/duality-protocol/internal/campaign/service"
-	"github.com/louisbranch/duality-protocol/internal/random"
-	transportgrpc "github.com/louisbranch/duality-protocol/internal/transport/grpc"
+	campaignpb "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1"
+	pb "github.com/louisbranch/duality-engine/api/gen/go/duality/v1"
+	campaignservice "github.com/louisbranch/duality-engine/internal/campaign/service"
+	"github.com/louisbranch/duality-engine/internal/random"
+	transportgrpc "github.com/louisbranch/duality-engine/internal/transport/grpc"
 	"google.golang.org/grpc"
 )
 

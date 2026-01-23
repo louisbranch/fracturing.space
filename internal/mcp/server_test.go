@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	pb "github.com/louisbranch/duality-protocol/api/gen/go/duality/v1"
+	pb "github.com/louisbranch/duality-engine/api/gen/go/duality/v1"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/structpb"

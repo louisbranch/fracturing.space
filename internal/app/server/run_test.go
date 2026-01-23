@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	pb "github.com/louisbranch/duality-protocol/api/gen/go/duality/v1"
+	pb "github.com/louisbranch/duality-engine/api/gen/go/duality/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
