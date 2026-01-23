@@ -103,6 +103,8 @@ If the project structure evolves, update this file to match the real tooling.
 - For security-sensitive flows (auth, crypto, token validation), add short rationale comments explaining the threat being mitigated.
 - Keep README short and task focused.
 - Document env vars in `README` or `docs/`.
+- Update `docs/` when user-facing features, MCP tools, or configuration change.
+- Keep `docs/index.md` and README links current as documentation grows.
 
 ### Documentation Checklist (all code changes)
 - Add/update doc comments for any new or modified identifiers (exported or not).
