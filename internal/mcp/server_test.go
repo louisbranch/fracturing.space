@@ -6,6 +6,7 @@ import (
 	"errors"
 	"reflect"
 	"testing"
+	"time"
 
 	pb "github.com/louisbranch/duality-protocol/api/gen/go/duality/v1"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -33,6 +34,14 @@ type fakeDualityClient struct {
 	lastDualityExplainRequest     *pb.DualityExplainRequest
 	lastDualityProbabilityRequest *pb.DualityProbabilityRequest
 	lastRulesVersionRequest       *pb.RulesVersionRequest
+}
+
+// failingTransport returns a connection error for tests.
+type failingTransport struct{}
+
+// Connect returns the configured error for tests.
+func (f failingTransport) Connect(context.Context) (mcp.Connection, error) {
+	return nil, errors.New("transport failure")
 }
 
 // ActionRoll records the request and returns the configured response.
@@ -99,10 +108,89 @@ func TestServeRequiresConfiguredServer(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := tt.server.Serve(); err == nil {
+			if err := tt.server.Serve(context.Background()); err == nil {
 				t.Fatal("expected error")
 			}
 		})
+	}
+}
+
+// TestServeStopsOnContext ensures Serve exits when the context is cancelled.
+func TestServeStopsOnContext(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	server, err := New("localhost:8080")
+	if err != nil {
+		t.Fatalf("new server: %v", err)
+	}
+
+	serverTransport, clientTransport := mcp.NewInMemoryTransports()
+	serveErr := make(chan error, 1)
+	go func() {
+		serveErr <- server.serveWithTransport(ctx, serverTransport)
+	}()
+
+	client := mcp.NewClient(&mcp.Implementation{Name: "client", Version: "v0.0.1"}, nil)
+	clientCtx, clientCancel := context.WithTimeout(context.Background(), time.Second)
+	defer clientCancel()
+	clientSession, err := client.Connect(clientCtx, clientTransport, nil)
+	if err != nil {
+		t.Fatalf("connect client: %v", err)
+	}
+	defer clientSession.Close()
+
+	cancel()
+
+	select {
+	case err := <-serveErr:
+		if err != nil {
+			t.Fatalf("serve returned error: %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("server did not stop after cancel")
+	}
+}
+
+// TestRunStopsOnContext ensures Run exits when the context is cancelled.
+func TestRunStopsOnContext(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	serverTransport, clientTransport := mcp.NewInMemoryTransports()
+	serveErr := make(chan error, 1)
+	go func() {
+		serveErr <- runWithTransport(ctx, "localhost:8080", serverTransport)
+	}()
+
+	client := mcp.NewClient(&mcp.Implementation{Name: "client", Version: "v0.0.1"}, nil)
+	clientCtx, clientCancel := context.WithTimeout(context.Background(), time.Second)
+	defer clientCancel()
+	clientSession, err := client.Connect(clientCtx, clientTransport, nil)
+	if err != nil {
+		t.Fatalf("connect client: %v", err)
+	}
+	defer clientSession.Close()
+
+	cancel()
+
+	select {
+	case err := <-serveErr:
+		if err != nil {
+			t.Fatalf("run returned error: %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("run did not stop after cancel")
+	}
+}
+
+// TestRunReturnsTransportError ensures Run reports transport failures.
+func TestRunReturnsTransportError(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	if err := runWithTransport(ctx, "localhost:8080", failingTransport{}); err == nil {
+		t.Fatal("expected transport error")
 	}
 }
 

@@ -3,6 +3,7 @@ package mcp
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -175,15 +176,40 @@ func New(addr string) (*Server, error) {
 	return &Server{mcpServer: mcpServer}, nil
 }
 
-// Serve starts the MCP server on stdio.
-func (s *Server) Serve() error {
+// Run creates and serves the MCP server until the context ends.
+func Run(ctx context.Context, addr string) error {
+	return runWithTransport(ctx, addr, &mcp.StdioTransport{})
+}
+
+// Serve starts the MCP server on stdio and blocks until it stops or the context ends.
+func (s *Server) Serve(ctx context.Context) error {
+	return s.serveWithTransport(ctx, &mcp.StdioTransport{})
+}
+
+// serveWithTransport starts the MCP server using the provided transport.
+func (s *Server) serveWithTransport(ctx context.Context, transport mcp.Transport) error {
 	if s == nil || s.mcpServer == nil {
 		return fmt.Errorf("MCP server is not configured")
 	}
-	if err := s.mcpServer.Run(context.Background(), &mcp.StdioTransport{}); err != nil {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if err := s.mcpServer.Run(ctx, transport); err != nil {
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			return nil
+		}
 		return fmt.Errorf("serve MCP: %w", err)
 	}
 	return nil
+}
+
+// runWithTransport creates a server and serves it over the provided transport.
+func runWithTransport(ctx context.Context, addr string, transport mcp.Transport) error {
+	mcpServer, err := New(addr)
+	if err != nil {
+		return err
+	}
+	return mcpServer.serveWithTransport(ctx, transport)
 }
 
 // actionRollTool defines the MCP tool schema for action rolls.
