@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"log"
 
@@ -13,11 +14,7 @@ var (
 
 func main() {
 	flag.Parse()
-	grpcServer, err := server.New(*port)
-	if err != nil {
-		log.Fatalf("failed to initialize server: %v", err)
-	}
-	if err := grpcServer.Serve(); err != nil {
+	if err := server.Run(context.Background(), *port); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
 }

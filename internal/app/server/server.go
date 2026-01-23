@@ -1,6 +1,8 @@
 package server
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -34,11 +36,39 @@ func New(port int) (*Server, error) {
 	}, nil
 }
 
-// Serve starts the gRPC server and blocks until it stops.
-func (s *Server) Serve() error {
+// Run creates and serves a gRPC server until the context ends.
+func Run(ctx context.Context, port int) error {
+	grpcServer, err := New(port)
+	if err != nil {
+		return err
+	}
+	return grpcServer.Serve(ctx)
+}
+
+// Serve starts the gRPC server and blocks until it stops or the context ends.
+func (s *Server) Serve(ctx context.Context) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	log.Printf("server listening at %v", s.listener.Addr())
-	if err := s.grpcServer.Serve(s.listener); err != nil {
+	serveErr := make(chan error, 1)
+	go func() {
+		serveErr <- s.grpcServer.Serve(s.listener)
+	}()
+
+	select {
+	case <-ctx.Done():
+		s.grpcServer.GracefulStop()
+		err := <-serveErr
+		if err == nil || errors.Is(err, grpc.ErrServerStopped) {
+			return nil
+		}
+		return fmt.Errorf("serve gRPC: %w", err)
+	case err := <-serveErr:
+		if err == nil || errors.Is(err, grpc.ErrServerStopped) {
+			return nil
+		}
 		return fmt.Errorf("serve gRPC: %w", err)
 	}
-	return nil
 }
