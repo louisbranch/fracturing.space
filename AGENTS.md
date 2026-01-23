@@ -132,6 +132,7 @@ If the project structure evolves, update this file to match the real tooling.
 - Keep one intent per PR; split unrelated changes.
 - Avoid reformatting unrelated code.
 - Do not introduce new files unless required.
+- Do not push new commits to branches from closed or merged PRs; open a new branch and PR instead.
 - Mention any missing tests or tooling in summaries.
 - Run `go test ./...` when a task is complete.
 - If tests pass, create a commit unless the user says otherwise.
