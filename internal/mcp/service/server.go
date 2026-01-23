@@ -4,13 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"os"
+	"time"
 
 	campaignpb "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1"
 	dualityv1 "github.com/louisbranch/duality-engine/api/gen/go/duality/v1"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	grpc_health_v1 "google.golang.org/grpc/health/grpc_health_v1"
 )
 
 const (
@@ -124,6 +127,13 @@ func runWithTransport(ctx context.Context, grpcAddr string, transport mcp.Transp
 	if err != nil {
 		return err
 	}
+	if err := mcpServer.waitForHealth(ctx); err != nil {
+		closeErr := mcpServer.Close()
+		if closeErr != nil {
+			return fmt.Errorf("wait for gRPC health: %v; close gRPC connection: %w", err, closeErr)
+		}
+		return err
+	}
 	return mcpServer.serveWithTransport(ctx, transport)
 }
 
@@ -142,4 +152,40 @@ func grpcAddress(fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func (s *Server) waitForHealth(ctx context.Context) error {
+	if s == nil || s.conn == nil {
+		return fmt.Errorf("gRPC connection is not configured")
+	}
+
+	healthClient := grpc_health_v1.NewHealthClient(s.conn)
+	backoff := 200 * time.Millisecond
+	for {
+		callCtx, cancel := context.WithTimeout(ctx, time.Second)
+		response, err := healthClient.Check(callCtx, &grpc_health_v1.HealthCheckRequest{Service: ""})
+		cancel()
+		if err == nil && response.GetStatus() == grpc_health_v1.HealthCheckResponse_SERVING {
+			log.Printf("gRPC health check is SERVING")
+			return nil
+		}
+		if err != nil {
+			log.Printf("waiting for gRPC health: %v", err)
+		} else {
+			log.Printf("waiting for gRPC health: status %s", response.GetStatus().String())
+		}
+
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("wait for gRPC health: %w", ctx.Err())
+		case <-time.After(backoff):
+		}
+
+		if backoff < time.Second {
+			backoff *= 2
+			if backoff > time.Second {
+				backoff = time.Second
+			}
+		}
+	}
 }
