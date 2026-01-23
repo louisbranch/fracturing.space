@@ -37,6 +37,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Configure git identity
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
       - name: Download coverage artifact
         uses: actions/download-artifact@v4
         with:
@@ -68,8 +72,6 @@ jobs:
             echo "No changes to coverage badge."
             exit 0
           fi
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
           git add coverage.svg
           git commit -m "chore: update coverage badge"
           for attempt in 1 2 3; do
