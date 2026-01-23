@@ -44,9 +44,12 @@ type fakeDualityClient struct {
 
 // fakeCampaignClient implements CampaignServiceClient for tests.
 type fakeCampaignClient struct {
-	response    *campaignpb.CreateCampaignResponse
-	err         error
-	lastRequest *campaignpb.CreateCampaignRequest
+	response        *campaignpb.CreateCampaignResponse
+	listResponse    *campaignpb.ListCampaignsResponse
+	err             error
+	listErr         error
+	lastRequest     *campaignpb.CreateCampaignRequest
+	lastListRequest *campaignpb.ListCampaignsRequest
 }
 
 // failingTransport returns a connection error for tests.
@@ -97,6 +100,12 @@ func (f *fakeDualityClient) RollDice(ctx context.Context, req *pb.RollDiceReques
 func (f *fakeCampaignClient) CreateCampaign(ctx context.Context, req *campaignpb.CreateCampaignRequest, opts ...grpc.CallOption) (*campaignpb.CreateCampaignResponse, error) {
 	f.lastRequest = req
 	return f.response, f.err
+}
+
+// ListCampaigns records the request and returns the configured response.
+func (f *fakeCampaignClient) ListCampaigns(ctx context.Context, req *campaignpb.ListCampaignsRequest, opts ...grpc.CallOption) (*campaignpb.ListCampaignsResponse, error) {
+	f.lastListRequest = req
+	return f.listResponse, f.listErr
 }
 
 // TestGRPCAddressPrefersEnv ensures env configuration overrides defaults.

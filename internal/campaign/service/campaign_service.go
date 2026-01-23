@@ -13,6 +13,11 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+const (
+	defaultListCampaignsPageSize = 10
+	maxListCampaignsPageSize     = 10
+)
+
 // CampaignService implements the CampaignService gRPC API.
 type CampaignService struct {
 	campaignpb.UnimplementedCampaignServiceServer
@@ -70,6 +75,52 @@ func (s *CampaignService) CreateCampaign(ctx context.Context, in *campaignpb.Cre
 			CreatedAt:   timestamppb.New(campaign.CreatedAt),
 			UpdatedAt:   timestamppb.New(campaign.UpdatedAt),
 		},
+	}
+
+	return response, nil
+}
+
+// ListCampaigns returns a page of campaign metadata records.
+func (s *CampaignService) ListCampaigns(ctx context.Context, in *campaignpb.ListCampaignsRequest) (*campaignpb.ListCampaignsResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "list campaigns request is required")
+	}
+
+	if s.store == nil {
+		return nil, status.Error(codes.Internal, "campaign store is not configured")
+	}
+
+	pageSize := int(in.GetPageSize())
+	if pageSize <= 0 {
+		pageSize = defaultListCampaignsPageSize
+	}
+	if pageSize > maxListCampaignsPageSize {
+		pageSize = maxListCampaignsPageSize
+	}
+
+	page, err := s.store.List(ctx, pageSize, in.GetPageToken())
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "list campaigns: %v", err)
+	}
+
+	response := &campaignpb.ListCampaignsResponse{
+		NextPageToken: page.NextPageToken,
+	}
+	if len(page.Campaigns) == 0 {
+		return response, nil
+	}
+
+	response.Campaigns = make([]*campaignpb.Campaign, 0, len(page.Campaigns))
+	for _, campaign := range page.Campaigns {
+		response.Campaigns = append(response.Campaigns, &campaignpb.Campaign{
+			Id:          campaign.ID,
+			Name:        campaign.Name,
+			GmMode:      gmModeToProto(campaign.GmMode),
+			PlayerSlots: int32(campaign.PlayerSlots),
+			ThemePrompt: campaign.ThemePrompt,
+			CreatedAt:   timestamppb.New(campaign.CreatedAt),
+			UpdatedAt:   timestamppb.New(campaign.UpdatedAt),
+		})
 	}
 
 	return response, nil

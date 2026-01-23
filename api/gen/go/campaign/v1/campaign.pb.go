@@ -198,6 +198,113 @@ func (x *CreateCampaignResponse) GetWarnings() []string {
 	return nil
 }
 
+type ListCampaignsRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The maximum number of campaigns to return.
+	// If zero, the server defaults to 10. The server clamps values above 10 to 10.
+	PageSize int32 `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// A page token received from a prior ListCampaignsResponse.
+	PageToken     string `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListCampaignsRequest) Reset() {
+	*x = ListCampaignsRequest{}
+	mi := &file_campaign_v1_campaign_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListCampaignsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListCampaignsRequest) ProtoMessage() {}
+
+func (x *ListCampaignsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_campaign_v1_campaign_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListCampaignsRequest.ProtoReflect.Descriptor instead.
+func (*ListCampaignsRequest) Descriptor() ([]byte, []int) {
+	return file_campaign_v1_campaign_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *ListCampaignsRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListCampaignsRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+type ListCampaignsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Campaigns     []*Campaign            `protobuf:"bytes,1,rep,name=campaigns,proto3" json:"campaigns,omitempty"`
+	NextPageToken string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListCampaignsResponse) Reset() {
+	*x = ListCampaignsResponse{}
+	mi := &file_campaign_v1_campaign_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListCampaignsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListCampaignsResponse) ProtoMessage() {}
+
+func (x *ListCampaignsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_campaign_v1_campaign_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListCampaignsResponse.ProtoReflect.Descriptor instead.
+func (*ListCampaignsResponse) Descriptor() ([]byte, []int) {
+	return file_campaign_v1_campaign_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *ListCampaignsResponse) GetCampaigns() []*Campaign {
+	if x != nil {
+		return x.Campaigns
+	}
+	return nil
+}
+
+func (x *ListCampaignsResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
 type Campaign struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -213,7 +320,7 @@ type Campaign struct {
 
 func (x *Campaign) Reset() {
 	*x = Campaign{}
-	mi := &file_campaign_v1_campaign_proto_msgTypes[2]
+	mi := &file_campaign_v1_campaign_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -225,7 +332,7 @@ func (x *Campaign) String() string {
 func (*Campaign) ProtoMessage() {}
 
 func (x *Campaign) ProtoReflect() protoreflect.Message {
-	mi := &file_campaign_v1_campaign_proto_msgTypes[2]
+	mi := &file_campaign_v1_campaign_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -238,7 +345,7 @@ func (x *Campaign) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Campaign.ProtoReflect.Descriptor instead.
 func (*Campaign) Descriptor() ([]byte, []int) {
-	return file_campaign_v1_campaign_proto_rawDescGZIP(), []int{2}
+	return file_campaign_v1_campaign_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *Campaign) GetId() string {
@@ -302,7 +409,14 @@ const file_campaign_v1_campaign_proto_rawDesc = "" +
 	"\ftheme_prompt\x18\x04 \x01(\tR\vthemePrompt\"g\n" +
 	"\x16CreateCampaignResponse\x121\n" +
 	"\bcampaign\x18\x01 \x01(\v2\x15.campaign.v1.CampaignR\bcampaign\x12\x1a\n" +
-	"\bwarnings\x18\x02 \x03(\tR\bwarnings\"\x98\x02\n" +
+	"\bwarnings\x18\x02 \x03(\tR\bwarnings\"R\n" +
+	"\x14ListCampaignsRequest\x12\x1b\n" +
+	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x02 \x01(\tR\tpageToken\"t\n" +
+	"\x15ListCampaignsResponse\x123\n" +
+	"\tcampaigns\x18\x01 \x03(\v2\x15.campaign.v1.CampaignR\tcampaigns\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\x98\x02\n" +
 	"\bCampaign\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12,\n" +
@@ -318,9 +432,10 @@ const file_campaign_v1_campaign_proto_rawDesc = "" +
 	"\x05HUMAN\x10\x01\x12\x06\n" +
 	"\x02AI\x10\x02\x12\n" +
 	"\n" +
-	"\x06HYBRID\x10\x032l\n" +
+	"\x06HYBRID\x10\x032\xc4\x01\n" +
 	"\x0fCampaignService\x12Y\n" +
-	"\x0eCreateCampaign\x12\".campaign.v1.CreateCampaignRequest\x1a#.campaign.v1.CreateCampaignResponseBIZGgithub.com/louisbranch/duality-engine/api/gen/go/campaign/v1;campaignv1b\x06proto3"
+	"\x0eCreateCampaign\x12\".campaign.v1.CreateCampaignRequest\x1a#.campaign.v1.CreateCampaignResponse\x12V\n" +
+	"\rListCampaigns\x12!.campaign.v1.ListCampaignsRequest\x1a\".campaign.v1.ListCampaignsResponseBIZGgithub.com/louisbranch/duality-engine/api/gen/go/campaign/v1;campaignv1b\x06proto3"
 
 var (
 	file_campaign_v1_campaign_proto_rawDescOnce sync.Once
@@ -335,27 +450,32 @@ func file_campaign_v1_campaign_proto_rawDescGZIP() []byte {
 }
 
 var file_campaign_v1_campaign_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_campaign_v1_campaign_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_campaign_v1_campaign_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_campaign_v1_campaign_proto_goTypes = []any{
 	(GmMode)(0),                    // 0: campaign.v1.GmMode
 	(*CreateCampaignRequest)(nil),  // 1: campaign.v1.CreateCampaignRequest
 	(*CreateCampaignResponse)(nil), // 2: campaign.v1.CreateCampaignResponse
-	(*Campaign)(nil),               // 3: campaign.v1.Campaign
-	(*timestamppb.Timestamp)(nil),  // 4: google.protobuf.Timestamp
+	(*ListCampaignsRequest)(nil),   // 3: campaign.v1.ListCampaignsRequest
+	(*ListCampaignsResponse)(nil),  // 4: campaign.v1.ListCampaignsResponse
+	(*Campaign)(nil),               // 5: campaign.v1.Campaign
+	(*timestamppb.Timestamp)(nil),  // 6: google.protobuf.Timestamp
 }
 var file_campaign_v1_campaign_proto_depIdxs = []int32{
 	0, // 0: campaign.v1.CreateCampaignRequest.gm_mode:type_name -> campaign.v1.GmMode
-	3, // 1: campaign.v1.CreateCampaignResponse.campaign:type_name -> campaign.v1.Campaign
-	0, // 2: campaign.v1.Campaign.gm_mode:type_name -> campaign.v1.GmMode
-	4, // 3: campaign.v1.Campaign.created_at:type_name -> google.protobuf.Timestamp
-	4, // 4: campaign.v1.Campaign.updated_at:type_name -> google.protobuf.Timestamp
-	1, // 5: campaign.v1.CampaignService.CreateCampaign:input_type -> campaign.v1.CreateCampaignRequest
-	2, // 6: campaign.v1.CampaignService.CreateCampaign:output_type -> campaign.v1.CreateCampaignResponse
-	6, // [6:7] is the sub-list for method output_type
-	5, // [5:6] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	5, // 1: campaign.v1.CreateCampaignResponse.campaign:type_name -> campaign.v1.Campaign
+	5, // 2: campaign.v1.ListCampaignsResponse.campaigns:type_name -> campaign.v1.Campaign
+	0, // 3: campaign.v1.Campaign.gm_mode:type_name -> campaign.v1.GmMode
+	6, // 4: campaign.v1.Campaign.created_at:type_name -> google.protobuf.Timestamp
+	6, // 5: campaign.v1.Campaign.updated_at:type_name -> google.protobuf.Timestamp
+	1, // 6: campaign.v1.CampaignService.CreateCampaign:input_type -> campaign.v1.CreateCampaignRequest
+	3, // 7: campaign.v1.CampaignService.ListCampaigns:input_type -> campaign.v1.ListCampaignsRequest
+	2, // 8: campaign.v1.CampaignService.CreateCampaign:output_type -> campaign.v1.CreateCampaignResponse
+	4, // 9: campaign.v1.CampaignService.ListCampaigns:output_type -> campaign.v1.ListCampaignsResponse
+	8, // [8:10] is the sub-list for method output_type
+	6, // [6:8] is the sub-list for method input_type
+	6, // [6:6] is the sub-list for extension type_name
+	6, // [6:6] is the sub-list for extension extendee
+	0, // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_campaign_v1_campaign_proto_init() }
@@ -369,7 +489,7 @@ func file_campaign_v1_campaign_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_campaign_v1_campaign_proto_rawDesc), len(file_campaign_v1_campaign_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   3,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

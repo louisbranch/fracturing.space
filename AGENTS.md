@@ -52,6 +52,7 @@ If the project structure evolves, update this file to match the real tooling.
 - Always run `gofmt` (or `goimports`) on edited files.
 - Keep line length reasonable; break long expressions.
 - Prefer early returns to reduce nesting.
+- Avoid inline `if err := ...` blocks for multi-line bodies; assign the error and check it after unless the block is very small.
 
 ## Naming Conventions
 - Use `camelCase` for locals and parameters.

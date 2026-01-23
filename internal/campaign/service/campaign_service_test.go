@@ -16,6 +16,10 @@ import (
 type fakeCampaignStore struct {
 	putCampaign domain.Campaign
 	putErr      error
+	listPage    storage.CampaignPage
+	listErr     error
+	listSize    int
+	listToken   string
 }
 
 func (f *fakeCampaignStore) Put(ctx context.Context, campaign domain.Campaign) error {
@@ -25,6 +29,12 @@ func (f *fakeCampaignStore) Put(ctx context.Context, campaign domain.Campaign) e
 
 func (f *fakeCampaignStore) Get(ctx context.Context, id string) (domain.Campaign, error) {
 	return domain.Campaign{}, storage.ErrNotFound
+}
+
+func (f *fakeCampaignStore) List(ctx context.Context, pageSize int, pageToken string) (storage.CampaignPage, error) {
+	f.listSize = pageSize
+	f.listToken = pageToken
+	return f.listPage, f.listErr
 }
 
 func TestCreateCampaignSuccess(t *testing.T) {
@@ -213,6 +223,136 @@ func TestCreateCampaignMissingStore(t *testing.T) {
 		Name:        "Campaign",
 		GmMode:      campaignpb.GmMode_AI,
 		PlayerSlots: 2,
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	st, ok := status.FromError(err)
+	if !ok {
+		t.Fatalf("expected grpc status error, got %v", err)
+	}
+	if st.Code() != codes.Internal {
+		t.Fatalf("expected internal error, got %v", st.Code())
+	}
+}
+
+func TestListCampaignsDefaults(t *testing.T) {
+	fixedTime := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
+	store := &fakeCampaignStore{
+		listPage: storage.CampaignPage{
+			Campaigns: []domain.Campaign{
+				{
+					ID:          "camp-10",
+					Name:        "Wayfarers",
+					GmMode:      domain.GmModeAI,
+					PlayerSlots: 3,
+					ThemePrompt: "windswept",
+					CreatedAt:   fixedTime,
+					UpdatedAt:   fixedTime,
+				},
+			},
+			NextPageToken: "camp-11",
+		},
+	}
+	service := NewCampaignService(store)
+
+	response, err := service.ListCampaigns(context.Background(), &campaignpb.ListCampaignsRequest{})
+	if err != nil {
+		t.Fatalf("list campaigns: %v", err)
+	}
+	if response == nil {
+		t.Fatal("expected response")
+	}
+	if store.listSize != defaultListCampaignsPageSize {
+		t.Fatalf("expected default page size %d, got %d", defaultListCampaignsPageSize, store.listSize)
+	}
+	if response.NextPageToken != "camp-11" {
+		t.Fatalf("expected next page token, got %q", response.NextPageToken)
+	}
+	if len(response.Campaigns) != 1 {
+		t.Fatalf("expected 1 campaign, got %d", len(response.Campaigns))
+	}
+	if response.Campaigns[0].Id != "camp-10" {
+		t.Fatalf("expected id camp-10, got %q", response.Campaigns[0].Id)
+	}
+	if response.Campaigns[0].GmMode != campaignpb.GmMode_AI {
+		t.Fatalf("expected gm mode AI, got %v", response.Campaigns[0].GmMode)
+	}
+	if response.Campaigns[0].CreatedAt.AsTime() != fixedTime {
+		t.Fatalf("expected created_at %v, got %v", fixedTime, response.Campaigns[0].CreatedAt.AsTime())
+	}
+}
+
+func TestListCampaignsClampPageSize(t *testing.T) {
+	store := &fakeCampaignStore{listPage: storage.CampaignPage{}}
+	service := NewCampaignService(store)
+
+	_, err := service.ListCampaigns(context.Background(), &campaignpb.ListCampaignsRequest{
+		PageSize: 25,
+	})
+	if err != nil {
+		t.Fatalf("list campaigns: %v", err)
+	}
+	if store.listSize != maxListCampaignsPageSize {
+		t.Fatalf("expected max page size %d, got %d", maxListCampaignsPageSize, store.listSize)
+	}
+}
+
+func TestListCampaignsPassesToken(t *testing.T) {
+	store := &fakeCampaignStore{listPage: storage.CampaignPage{}}
+	service := NewCampaignService(store)
+
+	_, err := service.ListCampaigns(context.Background(), &campaignpb.ListCampaignsRequest{
+		PageSize:  1,
+		PageToken: "next",
+	})
+	if err != nil {
+		t.Fatalf("list campaigns: %v", err)
+	}
+	if store.listToken != "next" {
+		t.Fatalf("expected page token next, got %q", store.listToken)
+	}
+}
+
+func TestListCampaignsNilRequest(t *testing.T) {
+	service := NewCampaignService(&fakeCampaignStore{})
+
+	_, err := service.ListCampaigns(context.Background(), nil)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	st, ok := status.FromError(err)
+	if !ok {
+		t.Fatalf("expected grpc status error, got %v", err)
+	}
+	if st.Code() != codes.InvalidArgument {
+		t.Fatalf("expected invalid argument, got %v", st.Code())
+	}
+}
+
+func TestListCampaignsStoreFailure(t *testing.T) {
+	service := NewCampaignService(&fakeCampaignStore{listErr: errors.New("boom")})
+
+	_, err := service.ListCampaigns(context.Background(), &campaignpb.ListCampaignsRequest{
+		PageSize: 1,
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	st, ok := status.FromError(err)
+	if !ok {
+		t.Fatalf("expected grpc status error, got %v", err)
+	}
+	if st.Code() != codes.Internal {
+		t.Fatalf("expected internal error, got %v", st.Code())
+	}
+}
+
+func TestListCampaignsMissingStore(t *testing.T) {
+	service := &CampaignService{}
+
+	_, err := service.ListCampaigns(context.Background(), &campaignpb.ListCampaignsRequest{
+		PageSize: 1,
 	})
 	if err == nil {
 		t.Fatal("expected error")

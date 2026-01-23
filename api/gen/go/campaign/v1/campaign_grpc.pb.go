@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	CampaignService_CreateCampaign_FullMethodName = "/campaign.v1.CampaignService/CreateCampaign"
+	CampaignService_ListCampaigns_FullMethodName  = "/campaign.v1.CampaignService/ListCampaigns"
 )
 
 // CampaignServiceClient is the client API for CampaignService service.
@@ -28,6 +29,8 @@ const (
 type CampaignServiceClient interface {
 	// Create a new campaign metadata record.
 	CreateCampaign(ctx context.Context, in *CreateCampaignRequest, opts ...grpc.CallOption) (*CreateCampaignResponse, error)
+	// List campaign metadata records.
+	ListCampaigns(ctx context.Context, in *ListCampaignsRequest, opts ...grpc.CallOption) (*ListCampaignsResponse, error)
 }
 
 type campaignServiceClient struct {
@@ -48,12 +51,24 @@ func (c *campaignServiceClient) CreateCampaign(ctx context.Context, in *CreateCa
 	return out, nil
 }
 
+func (c *campaignServiceClient) ListCampaigns(ctx context.Context, in *ListCampaignsRequest, opts ...grpc.CallOption) (*ListCampaignsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListCampaignsResponse)
+	err := c.cc.Invoke(ctx, CampaignService_ListCampaigns_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CampaignServiceServer is the server API for CampaignService service.
 // All implementations must embed UnimplementedCampaignServiceServer
 // for forward compatibility.
 type CampaignServiceServer interface {
 	// Create a new campaign metadata record.
 	CreateCampaign(context.Context, *CreateCampaignRequest) (*CreateCampaignResponse, error)
+	// List campaign metadata records.
+	ListCampaigns(context.Context, *ListCampaignsRequest) (*ListCampaignsResponse, error)
 	mustEmbedUnimplementedCampaignServiceServer()
 }
 
@@ -66,6 +81,9 @@ type UnimplementedCampaignServiceServer struct{}
 
 func (UnimplementedCampaignServiceServer) CreateCampaign(context.Context, *CreateCampaignRequest) (*CreateCampaignResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateCampaign not implemented")
+}
+func (UnimplementedCampaignServiceServer) ListCampaigns(context.Context, *ListCampaignsRequest) (*ListCampaignsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListCampaigns not implemented")
 }
 func (UnimplementedCampaignServiceServer) mustEmbedUnimplementedCampaignServiceServer() {}
 func (UnimplementedCampaignServiceServer) testEmbeddedByValue()                         {}
@@ -106,6 +124,24 @@ func _CampaignService_CreateCampaign_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CampaignService_ListCampaigns_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListCampaignsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CampaignServiceServer).ListCampaigns(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CampaignService_ListCampaigns_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CampaignServiceServer).ListCampaigns(ctx, req.(*ListCampaignsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // CampaignService_ServiceDesc is the grpc.ServiceDesc for CampaignService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -116,6 +152,10 @@ var CampaignService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateCampaign",
 			Handler:    _CampaignService_CreateCampaign_Handler,
+		},
+		{
+			MethodName: "ListCampaigns",
+			Handler:    _CampaignService_ListCampaigns_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

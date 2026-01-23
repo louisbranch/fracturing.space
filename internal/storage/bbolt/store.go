@@ -113,6 +113,62 @@ func (s *Store) Get(ctx context.Context, id string) (domain.Campaign, error) {
 	return campaign, nil
 }
 
+// List returns a page of campaign records ordered by storage key.
+func (s *Store) List(ctx context.Context, pageSize int, pageToken string) (storage.CampaignPage, error) {
+	if err := ctx.Err(); err != nil {
+		return storage.CampaignPage{}, err
+	}
+	if s == nil || s.db == nil {
+		return storage.CampaignPage{}, fmt.Errorf("storage is not configured")
+	}
+	if pageSize <= 0 {
+		return storage.CampaignPage{}, fmt.Errorf("page size must be greater than zero")
+	}
+
+	page := storage.CampaignPage{}
+	var lastKey string
+	viewErr := s.db.View(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket([]byte(campaignBucket))
+		if bucket == nil {
+			return fmt.Errorf("campaign bucket is missing")
+		}
+
+		cursor := bucket.Cursor()
+		var key, payload []byte
+		if pageToken == "" {
+			key, payload = cursor.First()
+		} else {
+			key, payload = cursor.Seek([]byte(pageToken))
+			if key != nil && string(key) == pageToken {
+				key, payload = cursor.Next()
+			}
+		}
+
+		for key != nil && len(page.Campaigns) < pageSize {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+			var campaign domain.Campaign
+			if err := json.Unmarshal(payload, &campaign); err != nil {
+				return fmt.Errorf("unmarshal campaign: %w", err)
+			}
+			page.Campaigns = append(page.Campaigns, campaign)
+			lastKey = string(key)
+			key, payload = cursor.Next()
+		}
+
+		if key != nil && len(page.Campaigns) > 0 {
+			page.NextPageToken = lastKey
+		}
+		return nil
+	})
+	if viewErr != nil {
+		return storage.CampaignPage{}, viewErr
+	}
+
+	return page, nil
+}
+
 func (s *Store) ensureBuckets() error {
 	return s.db.Update(func(tx *bbolt.Tx) error {
 		_, err := tx.CreateBucketIfNotExists([]byte(campaignBucket))

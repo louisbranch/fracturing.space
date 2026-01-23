@@ -132,3 +132,104 @@ func TestCampaignStoreGetCanceledContext(t *testing.T) {
 		t.Fatal("expected error")
 	}
 }
+
+func TestCampaignStoreListPagination(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "duality.db")
+	store, err := Open(path)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer store.Close()
+
+	now := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
+	campaigns := []domain.Campaign{
+		{
+			ID:          "camp-1",
+			Name:        "A",
+			GmMode:      domain.GmModeAI,
+			PlayerSlots: 2,
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		},
+		{
+			ID:          "camp-2",
+			Name:        "B",
+			GmMode:      domain.GmModeHuman,
+			PlayerSlots: 3,
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		},
+		{
+			ID:          "camp-3",
+			Name:        "C",
+			GmMode:      domain.GmModeHybrid,
+			PlayerSlots: 4,
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		},
+	}
+
+	for _, campaign := range campaigns {
+		if err := store.Put(context.Background(), campaign); err != nil {
+			t.Fatalf("put campaign: %v", err)
+		}
+	}
+
+	page, err := store.List(context.Background(), 2, "")
+	if err != nil {
+		t.Fatalf("list campaigns: %v", err)
+	}
+	if len(page.Campaigns) != 2 {
+		t.Fatalf("expected 2 campaigns, got %d", len(page.Campaigns))
+	}
+	if page.Campaigns[0].ID != "camp-1" {
+		t.Fatalf("expected first id camp-1, got %q", page.Campaigns[0].ID)
+	}
+	if page.NextPageToken != "camp-2" {
+		t.Fatalf("expected next page token camp-2, got %q", page.NextPageToken)
+	}
+
+	page, err = store.List(context.Background(), 2, page.NextPageToken)
+	if err != nil {
+		t.Fatalf("list campaigns: %v", err)
+	}
+	if len(page.Campaigns) != 1 {
+		t.Fatalf("expected 1 campaign, got %d", len(page.Campaigns))
+	}
+	if page.Campaigns[0].ID != "camp-3" {
+		t.Fatalf("expected id camp-3, got %q", page.Campaigns[0].ID)
+	}
+	if page.NextPageToken != "" {
+		t.Fatalf("expected empty next page token, got %q", page.NextPageToken)
+	}
+}
+
+func TestCampaignStoreListInvalidPageSize(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "duality.db")
+	store, err := Open(path)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer store.Close()
+
+	_, err = store.List(context.Background(), 0, "")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestCampaignStoreListCanceledContext(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "duality.db")
+	store, err := Open(path)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer store.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, err = store.List(ctx, 1, "")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}

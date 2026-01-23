@@ -9,6 +9,9 @@ option go_package = "github.com/louisbranch/duality-engine/api/gen/go/campaign/v
 service CampaignService {
   // Create a new campaign metadata record.
   rpc CreateCampaign(CreateCampaignRequest) returns (CreateCampaignResponse);
+
+  // List campaign metadata records.
+  rpc ListCampaigns(ListCampaignsRequest) returns (ListCampaignsResponse);
 }
 
 message CreateCampaignRequest {
@@ -28,6 +31,20 @@ message CreateCampaignRequest {
 message CreateCampaignResponse {
   Campaign campaign = 1;
   repeated string warnings = 2;
+}
+
+message ListCampaignsRequest {
+  // The maximum number of campaigns to return.
+  // If zero, the server defaults to 10. The server clamps values above 10 to 10.
+  int32 page_size = 1;
+
+  // A page token received from a prior ListCampaignsResponse.
+  string page_token = 2;
+}
+
+message ListCampaignsResponse {
+  repeated Campaign campaigns = 1;
+  string next_page_token = 2;
 }
 
 message Campaign {
