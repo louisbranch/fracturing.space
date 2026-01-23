@@ -13,12 +13,15 @@ import (
 	dualityservice "github.com/louisbranch/duality-engine/internal/duality/service"
 	"github.com/louisbranch/duality-engine/internal/random"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/health"
+	grpc_health_v1 "google.golang.org/grpc/health/grpc_health_v1"
 )
 
 // Server hosts the Duality gRPC server.
 type Server struct {
 	listener   net.Listener
 	grpcServer *grpc.Server
+	health     *health.Server
 }
 
 // New creates a configured gRPC server listening on the provided port.
@@ -31,12 +34,18 @@ func New(port int) (*Server, error) {
 	grpcServer := grpc.NewServer()
 	dualityService := dualityservice.NewDualityService(random.NewSeed)
 	campaignService := campaignservice.NewCampaignService()
+	healthServer := health.NewServer()
 	pb.RegisterDualityServiceServer(grpcServer, dualityService)
 	campaignpb.RegisterCampaignServiceServer(grpcServer, campaignService)
+	grpc_health_v1.RegisterHealthServer(grpcServer, healthServer)
+	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus("duality.v1.DualityService", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus("campaign.v1.CampaignService", grpc_health_v1.HealthCheckResponse_SERVING)
 
 	return &Server{
 		listener:   listener,
 		grpcServer: grpcServer,
+		health:     healthServer,
 	}, nil
 }
 
@@ -70,6 +79,9 @@ func (s *Server) Serve(ctx context.Context) error {
 
 	select {
 	case <-ctx.Done():
+		if s.health != nil {
+			s.health.Shutdown()
+		}
 		s.grpcServer.GracefulStop()
 		err := <-serveErr
 		return handleErr(err)
