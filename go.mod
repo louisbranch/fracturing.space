@@ -1,4 +1,4 @@
-module github.com/louisbranch/duality-protocol
+module github.com/louisbranch/duality-engine
 
 go 1.25.6
 

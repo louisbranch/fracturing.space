@@ -6,9 +6,9 @@ import (
 	"reflect"
 	"testing"
 
-	pb "github.com/louisbranch/duality-protocol/api/gen/go/duality/v1"
-	"github.com/louisbranch/duality-protocol/internal/duality"
-	"github.com/louisbranch/duality-protocol/internal/testutil"
+	pb "github.com/louisbranch/duality-engine/api/gen/go/duality/v1"
+	"github.com/louisbranch/duality-engine/internal/duality"
+	"github.com/louisbranch/duality-engine/internal/testutil"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

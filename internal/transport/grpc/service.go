@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	pb "github.com/louisbranch/duality-protocol/api/gen/go/duality/v1"
-	"github.com/louisbranch/duality-protocol/internal/duality"
+	pb "github.com/louisbranch/duality-engine/api/gen/go/duality/v1"
+	"github.com/louisbranch/duality-engine/internal/duality"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/structpb"
