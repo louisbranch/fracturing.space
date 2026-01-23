@@ -1,4 +1,4 @@
-package duality
+package domain
 
 // ExplainOutcome returns a deterministic explanation for the provided outcome request.
 func ExplainOutcome(request OutcomeRequest) (ExplainResult, error) {

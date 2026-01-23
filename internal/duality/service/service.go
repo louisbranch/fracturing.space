@@ -1,4 +1,4 @@
-package grpc
+package service
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	pb "github.com/louisbranch/duality-engine/api/gen/go/duality/v1"
-	"github.com/louisbranch/duality-engine/internal/duality"
+	"github.com/louisbranch/duality-engine/internal/duality/domain"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -44,13 +44,13 @@ func (s *DualityService) ActionRoll(ctx context.Context, in *pb.ActionRollReques
 		difficulty = &value
 	}
 
-	result, err := duality.RollAction(duality.ActionRequest{
+	result, err := domain.RollAction(domain.ActionRequest{
 		Modifier:   int(in.GetModifier()),
 		Difficulty: difficulty,
 		Seed:       seed,
 	})
 	if err != nil {
-		if errors.Is(err, duality.ErrInvalidDifficulty) {
+		if errors.Is(err, domain.ErrInvalidDifficulty) {
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
 		return nil, status.Errorf(codes.Internal, "failed to roll action: %v", err)
@@ -85,14 +85,14 @@ func (s *DualityService) DualityOutcome(ctx context.Context, in *pb.DualityOutco
 		difficulty = &value
 	}
 
-	result, err := duality.EvaluateOutcome(duality.OutcomeRequest{
+	result, err := domain.EvaluateOutcome(domain.OutcomeRequest{
 		Hope:       int(in.GetHope()),
 		Fear:       int(in.GetFear()),
 		Modifier:   int(in.GetModifier()),
 		Difficulty: difficulty,
 	})
 	if err != nil {
-		if errors.Is(err, duality.ErrInvalidDifficulty) || errors.Is(err, duality.ErrInvalidDualityDie) {
+		if errors.Is(err, domain.ErrInvalidDifficulty) || errors.Is(err, domain.ErrInvalidDualityDie) {
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
 		return nil, status.Errorf(codes.Internal, "failed to evaluate outcome: %v", err)
@@ -127,14 +127,14 @@ func (s *DualityService) DualityExplain(ctx context.Context, in *pb.DualityExpla
 		difficulty = &value
 	}
 
-	result, err := duality.ExplainOutcome(duality.OutcomeRequest{
+	result, err := domain.ExplainOutcome(domain.OutcomeRequest{
 		Hope:       int(in.GetHope()),
 		Fear:       int(in.GetFear()),
 		Modifier:   int(in.GetModifier()),
 		Difficulty: difficulty,
 	})
 	if err != nil {
-		if errors.Is(err, duality.ErrInvalidDifficulty) || errors.Is(err, duality.ErrInvalidDualityDie) {
+		if errors.Is(err, domain.ErrInvalidDifficulty) || errors.Is(err, domain.ErrInvalidDualityDie) {
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
 		return nil, status.Errorf(codes.Internal, "failed to explain outcome: %v", err)
@@ -185,12 +185,12 @@ func (s *DualityService) DualityProbability(ctx context.Context, in *pb.DualityP
 		return nil, status.Error(codes.InvalidArgument, "duality probability request is required")
 	}
 
-	result, err := duality.DualityProbability(duality.ProbabilityRequest{
+	result, err := domain.DualityProbability(domain.ProbabilityRequest{
 		Modifier:   int(in.GetModifier()),
 		Difficulty: int(in.GetDifficulty()),
 	})
 	if err != nil {
-		if errors.Is(err, duality.ErrInvalidDifficulty) {
+		if errors.Is(err, domain.ErrInvalidDifficulty) {
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
 		return nil, status.Errorf(codes.Internal, "failed to compute probability: %v", err)
@@ -219,7 +219,7 @@ func (s *DualityService) RulesVersion(ctx context.Context, in *pb.RulesVersionRe
 		return nil, status.Error(codes.InvalidArgument, "rules version request is required")
 	}
 
-	metadata := duality.RulesVersion()
+	metadata := domain.RulesVersion()
 	outcomes := make([]pb.Outcome, 0, len(metadata.Outcomes))
 	for _, outcome := range metadata.Outcomes {
 		outcomes = append(outcomes, outcomeToProto(outcome))
@@ -251,20 +251,20 @@ func (s *DualityService) RollDice(ctx context.Context, in *pb.RollDiceRequest) (
 		return nil, status.Errorf(codes.Internal, "failed to generate seed: %v", err)
 	}
 
-	request := duality.RollRequest{
-		Dice: make([]duality.DiceSpec, 0, len(in.GetDice())),
+	request := domain.RollRequest{
+		Dice: make([]domain.DiceSpec, 0, len(in.GetDice())),
 		Seed: seed,
 	}
 	for _, spec := range in.GetDice() {
-		request.Dice = append(request.Dice, duality.DiceSpec{
+		request.Dice = append(request.Dice, domain.DiceSpec{
 			Sides: int(spec.GetSides()),
 			Count: int(spec.GetCount()),
 		})
 	}
 
-	result, err := duality.RollDice(request)
+	result, err := domain.RollDice(request)
 	if err != nil {
-		if errors.Is(err, duality.ErrMissingDice) || errors.Is(err, duality.ErrInvalidDiceSpec) {
+		if errors.Is(err, domain.ErrMissingDice) || errors.Is(err, domain.ErrInvalidDiceSpec) {
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
 		return nil, status.Errorf(codes.Internal, "failed to roll dice: %v", err)
@@ -344,21 +344,21 @@ func normalizeStructValue(value any) (any, error) {
 }
 
 // outcomeToProto maps dice outcomes to the protobuf outcome enum.
-func outcomeToProto(outcome duality.Outcome) pb.Outcome {
+func outcomeToProto(outcome domain.Outcome) pb.Outcome {
 	switch outcome {
-	case duality.OutcomeRollWithHope:
+	case domain.OutcomeRollWithHope:
 		return pb.Outcome_ROLL_WITH_HOPE
-	case duality.OutcomeRollWithFear:
+	case domain.OutcomeRollWithFear:
 		return pb.Outcome_ROLL_WITH_FEAR
-	case duality.OutcomeSuccessWithHope:
+	case domain.OutcomeSuccessWithHope:
 		return pb.Outcome_SUCCESS_WITH_HOPE
-	case duality.OutcomeSuccessWithFear:
+	case domain.OutcomeSuccessWithFear:
 		return pb.Outcome_SUCCESS_WITH_FEAR
-	case duality.OutcomeFailureWithHope:
+	case domain.OutcomeFailureWithHope:
 		return pb.Outcome_FAILURE_WITH_HOPE
-	case duality.OutcomeFailureWithFear:
+	case domain.OutcomeFailureWithFear:
 		return pb.Outcome_FAILURE_WITH_FEAR
-	case duality.OutcomeCriticalSuccess:
+	case domain.OutcomeCriticalSuccess:
 		return pb.Outcome_CRITICAL_SUCCESS
 	default:
 		return pb.Outcome_OUTCOME_UNSPECIFIED
