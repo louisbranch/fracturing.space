@@ -10,6 +10,7 @@ import (
 	pb "github.com/louisbranch/duality-engine/api/gen/go/duality/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	grpc_health_v1 "google.golang.org/grpc/health/grpc_health_v1"
 )
 
 // TestServeStopsOnContext verifies the server serves and stops on cancel.
@@ -27,15 +28,7 @@ func TestServeStopsOnContext(t *testing.T) {
 		serveErr <- grpcServer.Serve(ctx)
 	}()
 
-	addr := grpcServer.listener.Addr().String()
-	host, port, err := net.SplitHostPort(addr)
-	if err != nil {
-		t.Fatalf("split address %q: %v", addr, err)
-	}
-	if host == "" || host == "0.0.0.0" || host == "::" {
-		host = "127.0.0.1"
-	}
-	addr = net.JoinHostPort(host, port)
+	addr := normalizeAddress(t, grpcServer.listener.Addr().String())
 
 	conn, err := grpc.NewClient(
 		addr,
@@ -52,6 +45,58 @@ func TestServeStopsOnContext(t *testing.T) {
 	defer callCancel()
 	if _, err := client.ActionRoll(callCtx, &pb.ActionRollRequest{}); err != nil {
 		t.Fatalf("action roll: %v", err)
+	}
+
+	cancel()
+
+	select {
+	case err := <-serveErr:
+		if err != nil {
+			t.Fatalf("serve returned error: %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("server did not stop in time")
+	}
+}
+
+// TestHealthCheckReportsServing ensures gRPC health checks report SERVING.
+func TestHealthCheckReportsServing(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	grpcServer, err := New(0)
+	if err != nil {
+		t.Fatalf("new server: %v", err)
+	}
+
+	serveErr := make(chan error, 1)
+	go func() {
+		serveErr <- grpcServer.Serve(ctx)
+	}()
+
+	addr := normalizeAddress(t, grpcServer.listener.Addr().String())
+	conn, err := grpc.NewClient(
+		addr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDefaultCallOptions(grpc.WaitForReady(true)),
+	)
+	if err != nil {
+		t.Fatalf("dial server: %v", err)
+	}
+	defer conn.Close()
+
+	healthClient := grpc_health_v1.NewHealthClient(conn)
+	services := []string{"", "duality.v1.DualityService", "campaign.v1.CampaignService"}
+	for _, service := range services {
+		callCtx, callCancel := context.WithTimeout(context.Background(), time.Second)
+		response, err := healthClient.Check(callCtx, &grpc_health_v1.HealthCheckRequest{Service: service})
+		callCancel()
+		if err != nil {
+			t.Fatalf("health check %q: %v", service, err)
+		}
+		if response.GetStatus() != grpc_health_v1.HealthCheckResponse_SERVING {
+			t.Fatalf("health check %q = %v, want SERVING", service, response.GetStatus())
+		}
 	}
 
 	cancel()
@@ -131,4 +176,17 @@ func TestServeReturnsErrorOnClosedListener(t *testing.T) {
 	if err := grpcServer.Serve(ctx); err == nil {
 		t.Fatal("expected serve error after closing listener")
 	}
+}
+
+func normalizeAddress(t *testing.T, addr string) string {
+	t.Helper()
+
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		t.Fatalf("split address %q: %v", addr, err)
+	}
+	if host == "" || host == "0.0.0.0" || host == "::" {
+		host = "127.0.0.1"
+	}
+	return net.JoinHostPort(host, port)
 }
