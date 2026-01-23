@@ -57,18 +57,19 @@ func (s *Server) Serve(ctx context.Context) error {
 		serveErr <- s.grpcServer.Serve(s.listener)
 	}()
 
+	handleErr := func(err error) error {
+		if err == nil || errors.Is(err, grpc.ErrServerStopped) {
+			return nil
+		}
+		return fmt.Errorf("serve gRPC: %w", err)
+	}
+
 	select {
 	case <-ctx.Done():
 		s.grpcServer.GracefulStop()
 		err := <-serveErr
-		if err == nil || errors.Is(err, grpc.ErrServerStopped) {
-			return nil
-		}
-		return fmt.Errorf("serve gRPC: %w", err)
+		return handleErr(err)
 	case err := <-serveErr:
-		if err == nil || errors.Is(err, grpc.ErrServerStopped) {
-			return nil
-		}
-		return fmt.Errorf("serve gRPC: %w", err)
+		return handleErr(err)
 	}
 }

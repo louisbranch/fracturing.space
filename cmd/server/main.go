@@ -4,6 +4,9 @@ import (
 	"context"
 	"flag"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/louisbranch/duality-protocol/internal/app/server"
 )
@@ -14,7 +17,10 @@ var (
 
 func main() {
 	flag.Parse()
-	if err := server.Run(context.Background(), *port); err != nil {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	if err := server.Run(ctx, *port); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
 }
