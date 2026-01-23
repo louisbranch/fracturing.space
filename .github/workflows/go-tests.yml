@@ -68,11 +68,11 @@ jobs:
             git commit --allow-empty -m "chore: initialize badges branch"
           fi
           curl -f -o coverage.svg "https://img.shields.io/badge/coverage-${COVERAGE_PERCENT}%25-${COLOR}"
-          if git diff --quiet -- coverage.svg; then
+          git add coverage.svg
+          if git diff --cached --quiet; then
             echo "No changes to coverage badge."
             exit 0
           fi
-          git add coverage.svg
           git commit -m "chore: update coverage badge"
           for attempt in 1 2 3; do
             if git push --force-with-lease origin HEAD:refs/heads/badges; then
