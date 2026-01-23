@@ -6,6 +6,9 @@ on:
     branches:
       - main
 
+permissions:
+  contents: write
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -16,5 +19,27 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: "1.25.6"
-      - name: Run tests
-        run: go test ./...
+      - name: Run tests and generate coverage report
+        run: make cover
+      - name: Generate and push coverage badge
+        if: github.ref == 'refs/heads/main'
+        run: |
+          COVERAGE_PERCENT=$(go tool cover -func=coverage.out | awk '/total/ {print substr($3, 1, length($3)-1)}')
+          if git ls-remote --exit-code --heads origin badges; then
+            git fetch origin badges:badges
+            git checkout badges
+          else
+            git checkout --orphan badges
+            git clean -fdx
+            git commit --allow-empty -m "chore: initialize badges branch"
+          fi
+          curl -o coverage.svg "https://img.shields.io/badge/coverage-${COVERAGE_PERCENT}%25-brightgreen"
+          if git diff --quiet -- coverage.svg; then
+            echo "No changes to coverage badge."
+            exit 0
+          fi
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add coverage.svg
+          git commit -m "chore: update coverage badge"
+          git push origin HEAD:refs/heads/badges

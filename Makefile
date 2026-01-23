@@ -4,7 +4,7 @@ GEN_GO_DIR := api/gen/go
 PROTO_FILES := \
 	$(PROTO_DIR)/duality/v1/duality.proto
 
-.PHONY: all proto clean run
+.PHONY: all proto clean run cover
 
 all: proto
 
@@ -30,3 +30,8 @@ run:
 	  go run ./cmd/mcp 2>&1 & \
 	  wait \
 	'
+
+cover:
+	go test -v -coverpkg=./... -coverprofile=coverage.out ./...
+	go tool cover -func coverage.out
+	go tool cover -html=coverage.out -o coverage.html
