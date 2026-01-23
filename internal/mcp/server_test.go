@@ -13,8 +13,8 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-// fakeDiceRollClient implements DualityServiceClient for tests.
-type fakeDiceRollClient struct {
+// fakeDualityClient implements DualityServiceClient for tests.
+type fakeDualityClient struct {
 	response                      *pb.ActionRollResponse
 	rollDiceResponse              *pb.RollDiceResponse
 	dualityOutcomeResponse        *pb.DualityOutcomeResponse
@@ -36,37 +36,37 @@ type fakeDiceRollClient struct {
 }
 
 // ActionRoll records the request and returns the configured response.
-func (f *fakeDiceRollClient) ActionRoll(ctx context.Context, req *pb.ActionRollRequest, opts ...grpc.CallOption) (*pb.ActionRollResponse, error) {
+func (f *fakeDualityClient) ActionRoll(ctx context.Context, req *pb.ActionRollRequest, opts ...grpc.CallOption) (*pb.ActionRollResponse, error) {
 	f.lastRequest = req
 	return f.response, f.err
 }
 
 // DualityOutcome records the request and returns the configured response.
-func (f *fakeDiceRollClient) DualityOutcome(ctx context.Context, req *pb.DualityOutcomeRequest, opts ...grpc.CallOption) (*pb.DualityOutcomeResponse, error) {
+func (f *fakeDualityClient) DualityOutcome(ctx context.Context, req *pb.DualityOutcomeRequest, opts ...grpc.CallOption) (*pb.DualityOutcomeResponse, error) {
 	f.lastDualityOutcomeRequest = req
 	return f.dualityOutcomeResponse, f.dualityOutcomeErr
 }
 
 // DualityExplain records the request and returns the configured response.
-func (f *fakeDiceRollClient) DualityExplain(ctx context.Context, req *pb.DualityExplainRequest, opts ...grpc.CallOption) (*pb.DualityExplainResponse, error) {
+func (f *fakeDualityClient) DualityExplain(ctx context.Context, req *pb.DualityExplainRequest, opts ...grpc.CallOption) (*pb.DualityExplainResponse, error) {
 	f.lastDualityExplainRequest = req
 	return f.dualityExplainResponse, f.dualityExplainErr
 }
 
 // DualityProbability records the request and returns the configured response.
-func (f *fakeDiceRollClient) DualityProbability(ctx context.Context, req *pb.DualityProbabilityRequest, opts ...grpc.CallOption) (*pb.DualityProbabilityResponse, error) {
+func (f *fakeDualityClient) DualityProbability(ctx context.Context, req *pb.DualityProbabilityRequest, opts ...grpc.CallOption) (*pb.DualityProbabilityResponse, error) {
 	f.lastDualityProbabilityRequest = req
 	return f.dualityProbabilityResponse, f.dualityProbabilityErr
 }
 
 // RulesVersion records the request and returns the configured response.
-func (f *fakeDiceRollClient) RulesVersion(ctx context.Context, req *pb.RulesVersionRequest, opts ...grpc.CallOption) (*pb.RulesVersionResponse, error) {
+func (f *fakeDualityClient) RulesVersion(ctx context.Context, req *pb.RulesVersionRequest, opts ...grpc.CallOption) (*pb.RulesVersionResponse, error) {
 	f.lastRulesVersionRequest = req
 	return f.rulesVersionResponse, f.rulesVersionErr
 }
 
 // RollDice records the request and returns the configured response.
-func (f *fakeDiceRollClient) RollDice(ctx context.Context, req *pb.RollDiceRequest, opts ...grpc.CallOption) (*pb.RollDiceResponse, error) {
+func (f *fakeDualityClient) RollDice(ctx context.Context, req *pb.RollDiceRequest, opts ...grpc.CallOption) (*pb.RollDiceResponse, error) {
 	f.lastRollDiceRequest = req
 	return f.rollDiceResponse, f.rollDiceErr
 }
@@ -119,7 +119,7 @@ func TestNewConfiguresServer(t *testing.T) {
 
 // TestActionRollHandlerPassesNegativeDifficulty ensures gRPC receives invalid difficulty.
 func TestActionRollHandlerPassesNegativeDifficulty(t *testing.T) {
-	client := &fakeDiceRollClient{err: errors.New("boom")}
+	client := &fakeDualityClient{err: errors.New("boom")}
 	handler := actionRollHandler(client)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, ActionRollInput{
@@ -142,7 +142,7 @@ func TestActionRollHandlerPassesNegativeDifficulty(t *testing.T) {
 
 // TestActionRollHandlerReturnsClientError ensures gRPC errors are returned as tool errors.
 func TestActionRollHandlerReturnsClientError(t *testing.T) {
-	client := &fakeDiceRollClient{err: errors.New("boom")}
+	client := &fakeDualityClient{err: errors.New("boom")}
 	handler := actionRollHandler(client)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, ActionRollInput{Modifier: 2})
@@ -157,7 +157,7 @@ func TestActionRollHandlerReturnsClientError(t *testing.T) {
 // TestActionRollHandlerMapsRequestAndResponse ensures inputs and outputs are mapped consistently.
 func TestActionRollHandlerMapsRequestAndResponse(t *testing.T) {
 	difficulty := int32(7)
-	client := &fakeDiceRollClient{
+	client := &fakeDualityClient{
 		response: &pb.ActionRollResponse{
 			Hope:            4,
 			Fear:            6,
@@ -213,7 +213,7 @@ func TestActionRollHandlerMapsRequestAndResponse(t *testing.T) {
 
 // TestDualityOutcomeHandlerPassesInvalidDice ensures gRPC receives invalid dice.
 func TestDualityOutcomeHandlerPassesInvalidDice(t *testing.T) {
-	client := &fakeDiceRollClient{dualityOutcomeErr: errors.New("boom")}
+	client := &fakeDualityClient{dualityOutcomeErr: errors.New("boom")}
 	handler := dualityOutcomeHandler(client)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, DualityOutcomeInput{
@@ -236,7 +236,7 @@ func TestDualityOutcomeHandlerPassesInvalidDice(t *testing.T) {
 
 // TestDualityOutcomeHandlerPassesNegativeDifficulty ensures gRPC receives invalid difficulty.
 func TestDualityOutcomeHandlerPassesNegativeDifficulty(t *testing.T) {
-	client := &fakeDiceRollClient{dualityOutcomeErr: errors.New("boom")}
+	client := &fakeDualityClient{dualityOutcomeErr: errors.New("boom")}
 	handler := dualityOutcomeHandler(client)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, DualityOutcomeInput{
@@ -260,7 +260,7 @@ func TestDualityOutcomeHandlerPassesNegativeDifficulty(t *testing.T) {
 
 // TestDualityOutcomeHandlerReturnsClientError ensures gRPC errors are returned as tool errors.
 func TestDualityOutcomeHandlerReturnsClientError(t *testing.T) {
-	client := &fakeDiceRollClient{dualityOutcomeErr: errors.New("boom")}
+	client := &fakeDualityClient{dualityOutcomeErr: errors.New("boom")}
 	handler := dualityOutcomeHandler(client)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, DualityOutcomeInput{
@@ -279,7 +279,7 @@ func TestDualityOutcomeHandlerReturnsClientError(t *testing.T) {
 // TestDualityOutcomeHandlerMapsRequestAndResponse ensures inputs and outputs map consistently.
 func TestDualityOutcomeHandlerMapsRequestAndResponse(t *testing.T) {
 	difficulty := int32(10)
-	client := &fakeDiceRollClient{dualityOutcomeResponse: &pb.DualityOutcomeResponse{
+	client := &fakeDualityClient{dualityOutcomeResponse: &pb.DualityOutcomeResponse{
 		Hope:            10,
 		Fear:            4,
 		Modifier:        1,
@@ -323,7 +323,7 @@ func TestDualityOutcomeHandlerMapsRequestAndResponse(t *testing.T) {
 
 // TestDualityExplainHandlerReturnsClientError ensures gRPC errors are returned as tool errors.
 func TestDualityExplainHandlerReturnsClientError(t *testing.T) {
-	client := &fakeDiceRollClient{dualityExplainErr: errors.New("boom")}
+	client := &fakeDualityClient{dualityExplainErr: errors.New("boom")}
 	handler := dualityExplainHandler(client)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, DualityExplainInput{
@@ -346,7 +346,7 @@ func TestDualityExplainHandlerMapsRequestAndResponse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected step data, got %v", err)
 	}
-	client := &fakeDiceRollClient{dualityExplainResponse: &pb.DualityExplainResponse{
+	client := &fakeDualityClient{dualityExplainResponse: &pb.DualityExplainResponse{
 		Hope:            10,
 		Fear:            4,
 		Modifier:        1,
@@ -415,7 +415,7 @@ func TestDualityExplainHandlerMapsRequestAndResponse(t *testing.T) {
 
 // TestDualityProbabilityHandlerPassesNegativeDifficulty ensures gRPC receives invalid difficulty.
 func TestDualityProbabilityHandlerPassesNegativeDifficulty(t *testing.T) {
-	client := &fakeDiceRollClient{dualityProbabilityErr: errors.New("boom")}
+	client := &fakeDualityClient{dualityProbabilityErr: errors.New("boom")}
 	handler := dualityProbabilityHandler(client)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, DualityProbabilityInput{
@@ -438,7 +438,7 @@ func TestDualityProbabilityHandlerPassesNegativeDifficulty(t *testing.T) {
 
 // TestDualityProbabilityHandlerReturnsClientError ensures gRPC errors are returned as tool errors.
 func TestDualityProbabilityHandlerReturnsClientError(t *testing.T) {
-	client := &fakeDiceRollClient{dualityProbabilityErr: errors.New("boom")}
+	client := &fakeDualityClient{dualityProbabilityErr: errors.New("boom")}
 	handler := dualityProbabilityHandler(client)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, DualityProbabilityInput{
@@ -455,7 +455,7 @@ func TestDualityProbabilityHandlerReturnsClientError(t *testing.T) {
 
 // TestDualityProbabilityHandlerMapsRequestAndResponse ensures inputs and outputs map consistently.
 func TestDualityProbabilityHandlerMapsRequestAndResponse(t *testing.T) {
-	client := &fakeDiceRollClient{dualityProbabilityResponse: &pb.DualityProbabilityResponse{
+	client := &fakeDualityClient{dualityProbabilityResponse: &pb.DualityProbabilityResponse{
 		TotalOutcomes: 144,
 		CritCount:     12,
 		SuccessCount:  70,
@@ -496,7 +496,7 @@ func TestDualityProbabilityHandlerMapsRequestAndResponse(t *testing.T) {
 
 // TestRollDiceHandlerPassesMissingDice ensures gRPC receives empty dice.
 func TestRollDiceHandlerPassesMissingDice(t *testing.T) {
-	client := &fakeDiceRollClient{rollDiceErr: errors.New("boom")}
+	client := &fakeDualityClient{rollDiceErr: errors.New("boom")}
 	handler := rollDiceHandler(client)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, RollDiceInput{})
@@ -516,7 +516,7 @@ func TestRollDiceHandlerPassesMissingDice(t *testing.T) {
 
 // TestRollDiceHandlerPassesInvalidDice ensures gRPC receives invalid dice specs.
 func TestRollDiceHandlerPassesInvalidDice(t *testing.T) {
-	client := &fakeDiceRollClient{rollDiceErr: errors.New("boom")}
+	client := &fakeDualityClient{rollDiceErr: errors.New("boom")}
 	handler := rollDiceHandler(client)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, RollDiceInput{
@@ -541,7 +541,7 @@ func TestRollDiceHandlerPassesInvalidDice(t *testing.T) {
 
 // TestRollDiceHandlerReturnsClientError ensures gRPC errors are returned as tool errors.
 func TestRollDiceHandlerReturnsClientError(t *testing.T) {
-	client := &fakeDiceRollClient{rollDiceErr: errors.New("boom")}
+	client := &fakeDualityClient{rollDiceErr: errors.New("boom")}
 	handler := rollDiceHandler(client)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, RollDiceInput{
@@ -557,7 +557,7 @@ func TestRollDiceHandlerReturnsClientError(t *testing.T) {
 
 // TestRollDiceHandlerMapsRequestAndResponse ensures inputs and outputs are mapped consistently.
 func TestRollDiceHandlerMapsRequestAndResponse(t *testing.T) {
-	client := &fakeDiceRollClient{rollDiceResponse: &pb.RollDiceResponse{
+	client := &fakeDualityClient{rollDiceResponse: &pb.RollDiceResponse{
 		Rolls: []*pb.DiceRoll{
 			{Sides: 6, Results: []int32{2, 5}, Total: 7},
 			{Sides: 8, Results: []int32{4}, Total: 4},
@@ -605,7 +605,7 @@ func TestRollDiceHandlerMapsRequestAndResponse(t *testing.T) {
 
 // TestRulesVersionHandlerReturnsClientError ensures gRPC errors are returned as tool errors.
 func TestRulesVersionHandlerReturnsClientError(t *testing.T) {
-	client := &fakeDiceRollClient{rulesVersionErr: errors.New("boom")}
+	client := &fakeDualityClient{rulesVersionErr: errors.New("boom")}
 	handler := rulesVersionHandler(client)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, RulesVersionInput{})
@@ -619,7 +619,7 @@ func TestRulesVersionHandlerReturnsClientError(t *testing.T) {
 
 // TestRulesVersionHandlerMapsResponse ensures metadata is passed through.
 func TestRulesVersionHandlerMapsResponse(t *testing.T) {
-	client := &fakeDiceRollClient{rulesVersionResponse: &pb.RulesVersionResponse{
+	client := &fakeDualityClient{rulesVersionResponse: &pb.RulesVersionResponse{
 		System:         "Daggerheart",
 		Module:         "Duality",
 		RulesVersion:   "1.0.0",
