@@ -38,6 +38,7 @@ type Config struct {
 // Server hosts the MCP server.
 type Server struct {
 	mcpServer *mcp.Server
+	conn      *grpc.ClientConn
 }
 
 // New creates a configured MCP server that connects to the gRPC dice service.
@@ -45,14 +46,14 @@ func New(grpcAddr string) (*Server, error) {
 	mcpServer := mcp.NewServer(&mcp.Implementation{Name: serverName, Version: serverVersion}, nil)
 
 	addr := grpcAddress(grpcAddr)
-	grpcClient, err := newDualityClient(addr)
+	conn, grpcClient, err := newDualityClient(addr)
 	if err != nil {
 		return nil, fmt.Errorf("connect to gRPC server at %s: %w", addr, err)
 	}
 
 	registerDualityTools(mcpServer, grpcClient)
 
-	return &Server{mcpServer: mcpServer}, nil
+	return &Server{mcpServer: mcpServer, conn: conn}, nil
 }
 
 // Run creates and serves the MCP server until the context ends.
@@ -76,6 +77,18 @@ func (s *Server) Serve(ctx context.Context) error {
 	return s.serveWithTransport(ctx, &mcp.StdioTransport{})
 }
 
+// Close releases the gRPC connection held by the server.
+func (s *Server) Close() error {
+	if s == nil || s.conn == nil {
+		return nil
+	}
+	if err := s.conn.Close(); err != nil {
+		return err
+	}
+	s.conn = nil
+	return nil
+}
+
 // serveWithTransport starts the MCP server using the provided transport.
 func (s *Server) serveWithTransport(ctx context.Context, transport mcp.Transport) error {
 	if s == nil || s.mcpServer == nil {
@@ -84,10 +97,18 @@ func (s *Server) serveWithTransport(ctx context.Context, transport mcp.Transport
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	if err := s.mcpServer.Run(ctx, transport); err != nil {
-		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-			return nil
+	err := s.mcpServer.Run(ctx, transport)
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		err = nil
+	}
+	closeErr := s.Close()
+	if closeErr != nil {
+		if err == nil {
+			return fmt.Errorf("close gRPC connection: %w", closeErr)
 		}
+		return fmt.Errorf("serve MCP: %v; close gRPC connection: %w", err, closeErr)
+	}
+	if err != nil {
 		return fmt.Errorf("serve MCP: %w", err)
 	}
 	return nil
@@ -103,12 +124,12 @@ func runWithTransport(ctx context.Context, grpcAddr string, transport mcp.Transp
 }
 
 // newDualityClient connects to the gRPC Duality service.
-func newDualityClient(addr string) (dualityv1.DualityServiceClient, error) {
+func newDualityClient(addr string) (*grpc.ClientConn, dualityv1.DualityServiceClient, error) {
 	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return dualityv1.NewDualityServiceClient(conn), nil
+	return conn, dualityv1.NewDualityServiceClient(conn), nil
 }
 
 // grpcAddress resolves the gRPC address from env or defaults.
