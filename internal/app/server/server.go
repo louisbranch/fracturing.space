@@ -11,7 +11,7 @@ import (
 
 	campaignv1 "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1"
 	pb "github.com/louisbranch/duality-engine/api/gen/go/duality/v1"
-	campaignservice "github.com/louisbranch/duality-engine/internal/campaign/service"
+	"github.com/louisbranch/duality-engine/internal/campaign"
 	dualityservice "github.com/louisbranch/duality-engine/internal/duality/service"
 	"github.com/louisbranch/duality-engine/internal/random"
 	storagebbolt "github.com/louisbranch/duality-engine/internal/storage/bbolt"
@@ -42,7 +42,7 @@ func New(port int) (*Server, error) {
 
 	grpcServer := grpc.NewServer()
 	dualityService := dualityservice.NewDualityService(random.NewSeed)
-	campaignService := campaignservice.NewCampaignService(store, store)
+	campaignService := campaign.New(store, store)
 	healthServer := health.NewServer()
 	pb.RegisterDualityServiceServer(grpcServer, dualityService)
 	campaignv1.RegisterCampaignServiceServer(grpcServer, campaignService)
