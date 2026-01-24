@@ -1,8 +1,6 @@
 package domain
 
 import (
-	"crypto/rand"
-	"encoding/base32"
 	"errors"
 	"fmt"
 	"strings"
@@ -67,7 +65,7 @@ func CreateParticipant(input CreateParticipantInput, now func() time.Time, idGen
 		now = time.Now
 	}
 	if idGenerator == nil {
-		idGenerator = NewParticipantID
+		idGenerator = NewID
 	}
 
 	normalized, err := NormalizeCreateParticipantInput(input)
@@ -109,19 +107,4 @@ func NormalizeCreateParticipantInput(input CreateParticipantInput) (CreatePartic
 		input.Controller = ControllerHuman
 	}
 	return input, nil
-}
-
-// NewParticipantID generates a URL-safe participant identifier.
-func NewParticipantID() (string, error) {
-	var raw [16]byte
-	if _, err := rand.Read(raw[:]); err != nil {
-		return "", fmt.Errorf("read random bytes: %w", err)
-	}
-
-	// RFC 4122 variant and version bits for a v4 UUID.
-	raw[6] = (raw[6] & 0x0f) | 0x40
-	raw[8] = (raw[8] & 0x3f) | 0x80
-
-	encoded := base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(raw[:])
-	return strings.ToLower(encoded), nil
 }
