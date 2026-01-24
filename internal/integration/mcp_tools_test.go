@@ -32,6 +32,7 @@ func runMCPToolsTests(t *testing.T, suite *integrationSuite) {
 			"duality_outcome",
 			"duality_probability",
 			"duality_rules_version",
+			"participant_create",
 			"roll_dice",
 		}
 
