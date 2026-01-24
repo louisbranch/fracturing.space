@@ -111,35 +111,27 @@ func CampaignListResourceHandler(client campaignv1.CampaignServiceClient) mcp.Re
 		defer cancel()
 
 		payload := CampaignListPayload{}
-		pageToken := ""
-		for {
-			response, err := client.ListCampaigns(runCtx, &campaignv1.ListCampaignsRequest{
-				PageSize:  10,
-				PageToken: pageToken,
+		// TODO: Support page_size/page_token inputs and return next_page_token.
+		response, err := client.ListCampaigns(runCtx, &campaignv1.ListCampaignsRequest{
+			PageSize: 10,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("campaign list failed: %w", err)
+		}
+		if response == nil {
+			return nil, fmt.Errorf("campaign list response is missing")
+		}
+
+		for _, campaign := range response.GetCampaigns() {
+			payload.Campaigns = append(payload.Campaigns, CampaignListEntry{
+				ID:          campaign.GetId(),
+				Name:        campaign.GetName(),
+				GmMode:      gmModeToString(campaign.GetGmMode()),
+				PlayerSlots: int(campaign.GetPlayerSlots()),
+				ThemePrompt: campaign.GetThemePrompt(),
+				CreatedAt:   formatTimestamp(campaign.GetCreatedAt()),
+				UpdatedAt:   formatTimestamp(campaign.GetUpdatedAt()),
 			})
-			if err != nil {
-				return nil, fmt.Errorf("campaign list failed: %w", err)
-			}
-			if response == nil {
-				return nil, fmt.Errorf("campaign list response is missing")
-			}
-
-			for _, campaign := range response.GetCampaigns() {
-				payload.Campaigns = append(payload.Campaigns, CampaignListEntry{
-					ID:          campaign.GetId(),
-					Name:        campaign.GetName(),
-					GmMode:      gmModeToString(campaign.GetGmMode()),
-					PlayerSlots: int(campaign.GetPlayerSlots()),
-					ThemePrompt: campaign.GetThemePrompt(),
-					CreatedAt:   formatTimestamp(campaign.GetCreatedAt()),
-					UpdatedAt:   formatTimestamp(campaign.GetUpdatedAt()),
-				})
-			}
-
-			if response.GetNextPageToken() == "" {
-				break
-			}
-			pageToken = response.GetNextPageToken()
 		}
 
 		data, err := json.MarshalIndent(payload, "", "  ")
