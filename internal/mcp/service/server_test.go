@@ -3,13 +3,14 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net"
 	"reflect"
 	"testing"
 	"time"
 
-	campaignpb "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1"
+	campaignv1 "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1"
 	pb "github.com/louisbranch/duality-engine/api/gen/go/duality/v1"
 	"github.com/louisbranch/duality-engine/internal/mcp/domain"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -44,12 +45,13 @@ type fakeDualityClient struct {
 
 // fakeCampaignClient implements CampaignServiceClient for tests.
 type fakeCampaignClient struct {
-	response        *campaignpb.CreateCampaignResponse
-	listResponse    *campaignpb.ListCampaignsResponse
+	response        *campaignv1.CreateCampaignResponse
+	listResponse    *campaignv1.ListCampaignsResponse
 	err             error
 	listErr         error
-	lastRequest     *campaignpb.CreateCampaignRequest
-	lastListRequest *campaignpb.ListCampaignsRequest
+	lastRequest     *campaignv1.CreateCampaignRequest
+	lastListRequest *campaignv1.ListCampaignsRequest
+	listCalls       int
 }
 
 // failingTransport returns a connection error for tests.
@@ -97,14 +99,15 @@ func (f *fakeDualityClient) RollDice(ctx context.Context, req *pb.RollDiceReques
 }
 
 // CreateCampaign records the request and returns the configured response.
-func (f *fakeCampaignClient) CreateCampaign(ctx context.Context, req *campaignpb.CreateCampaignRequest, opts ...grpc.CallOption) (*campaignpb.CreateCampaignResponse, error) {
+func (f *fakeCampaignClient) CreateCampaign(ctx context.Context, req *campaignv1.CreateCampaignRequest, opts ...grpc.CallOption) (*campaignv1.CreateCampaignResponse, error) {
 	f.lastRequest = req
 	return f.response, f.err
 }
 
 // ListCampaigns records the request and returns the configured response.
-func (f *fakeCampaignClient) ListCampaigns(ctx context.Context, req *campaignpb.ListCampaignsRequest, opts ...grpc.CallOption) (*campaignpb.ListCampaignsResponse, error) {
+func (f *fakeCampaignClient) ListCampaigns(ctx context.Context, req *campaignv1.ListCampaignsRequest, opts ...grpc.CallOption) (*campaignv1.ListCampaignsResponse, error) {
 	f.lastListRequest = req
+	f.listCalls++
 	return f.listResponse, f.listErr
 }
 
@@ -828,11 +831,11 @@ func TestCampaignCreateHandlerReturnsClientError(t *testing.T) {
 // TestCampaignCreateHandlerMapsRequestAndResponse ensures inputs and outputs map consistently.
 func TestCampaignCreateHandlerMapsRequestAndResponse(t *testing.T) {
 	now := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
-	client := &fakeCampaignClient{response: &campaignpb.CreateCampaignResponse{
-		Campaign: &campaignpb.Campaign{
+	client := &fakeCampaignClient{response: &campaignv1.CreateCampaignResponse{
+		Campaign: &campaignv1.Campaign{
 			Id:          "camp-123",
 			Name:        "Snowbound",
-			GmMode:      campaignpb.GmMode_AI,
+			GmMode:      campaignv1.GmMode_AI,
 			PlayerSlots: 5,
 			ThemePrompt: "ice and steel",
 			CreatedAt:   timestamppb.New(now),
@@ -858,7 +861,7 @@ func TestCampaignCreateHandlerMapsRequestAndResponse(t *testing.T) {
 	if client.lastRequest == nil {
 		t.Fatal("expected gRPC request")
 	}
-	if client.lastRequest.GetGmMode() != campaignpb.GmMode_HUMAN {
+	if client.lastRequest.GetGmMode() != campaignv1.GmMode_HUMAN {
 		t.Fatalf("expected gm mode HUMAN, got %v", client.lastRequest.GetGmMode())
 	}
 	if output.ID != "camp-123" {
@@ -869,6 +872,105 @@ func TestCampaignCreateHandlerMapsRequestAndResponse(t *testing.T) {
 	}
 	if output.PlayerSlots != 5 {
 		t.Fatalf("expected player slots 5, got %d", output.PlayerSlots)
+	}
+}
+
+// TestCampaignListResourceHandlerReturnsClientError ensures list errors are returned.
+func TestCampaignListResourceHandlerReturnsClientError(t *testing.T) {
+	client := &fakeCampaignClient{listErr: errors.New("boom")}
+	handler := domain.CampaignListResourceHandler(client)
+
+	result, err := handler(context.Background(), &mcp.ReadResourceRequest{})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if result != nil {
+		t.Fatal("expected nil result on error")
+	}
+	if client.listCalls != 1 {
+		t.Fatalf("expected 1 list call, got %d", client.listCalls)
+	}
+}
+
+// TestCampaignListResourceHandlerRejectsEmptyResponse ensures nil responses are rejected.
+func TestCampaignListResourceHandlerRejectsEmptyResponse(t *testing.T) {
+	client := &fakeCampaignClient{}
+	handler := domain.CampaignListResourceHandler(client)
+
+	result, err := handler(context.Background(), &mcp.ReadResourceRequest{})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if result != nil {
+		t.Fatal("expected nil result on error")
+	}
+}
+
+// TestCampaignListResourceHandlerMapsResponse ensures JSON payload is formatted.
+func TestCampaignListResourceHandlerMapsResponse(t *testing.T) {
+	now := time.Date(2026, 1, 23, 13, 0, 0, 0, time.UTC)
+	client := &fakeCampaignClient{listResponse: &campaignv1.ListCampaignsResponse{
+		Campaigns: []*campaignv1.Campaign{{
+			Id:          "camp-1",
+			Name:        "Red Sands",
+			GmMode:      campaignv1.GmMode_HUMAN,
+			PlayerSlots: 4,
+			ThemePrompt: "desert skies",
+			CreatedAt:   timestamppb.New(now),
+			UpdatedAt:   timestamppb.New(now.Add(time.Hour)),
+		}},
+		NextPageToken: "next",
+	}}
+
+	handler := domain.CampaignListResourceHandler(client)
+	result, err := handler(context.Background(), &mcp.ReadResourceRequest{})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if result == nil || len(result.Contents) != 1 {
+		t.Fatalf("expected 1 content item, got %v", result)
+	}
+	if client.lastListRequest == nil {
+		t.Fatal("expected list request")
+	}
+	if client.lastListRequest.GetPageSize() != 10 {
+		t.Fatalf("expected page size 10, got %d", client.lastListRequest.GetPageSize())
+	}
+	if client.lastListRequest.GetPageToken() != "" {
+		t.Fatalf("expected empty page token, got %q", client.lastListRequest.GetPageToken())
+	}
+	if client.listCalls != 1 {
+		t.Fatalf("expected 1 list call, got %d", client.listCalls)
+	}
+
+	var payload struct {
+		Campaigns []struct {
+			ID          string `json:"id"`
+			Name        string `json:"name"`
+			GmMode      string `json:"gm_mode"`
+			PlayerSlots int    `json:"player_slots"`
+			ThemePrompt string `json:"theme_prompt"`
+			CreatedAt   string `json:"created_at"`
+			UpdatedAt   string `json:"updated_at"`
+		} `json:"campaigns"`
+	}
+	if err := json.Unmarshal([]byte(result.Contents[0].Text), &payload); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+	if len(payload.Campaigns) != 1 {
+		t.Fatalf("expected 1 campaign, got %d", len(payload.Campaigns))
+	}
+	if payload.Campaigns[0].ID != "camp-1" {
+		t.Fatalf("expected id camp-1, got %q", payload.Campaigns[0].ID)
+	}
+	if payload.Campaigns[0].GmMode != "HUMAN" {
+		t.Fatalf("expected gm mode HUMAN, got %q", payload.Campaigns[0].GmMode)
+	}
+	if payload.Campaigns[0].CreatedAt != now.Format(time.RFC3339) {
+		t.Fatalf("expected created_at %q, got %q", now.Format(time.RFC3339), payload.Campaigns[0].CreatedAt)
+	}
+	if payload.Campaigns[0].UpdatedAt != now.Add(time.Hour).Format(time.RFC3339) {
+		t.Fatalf("expected updated_at %q, got %q", now.Add(time.Hour).Format(time.RFC3339), payload.Campaigns[0].UpdatedAt)
 	}
 }
 

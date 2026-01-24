@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	campaignpb "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1"
+	campaignv1 "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1"
 	"github.com/louisbranch/duality-engine/internal/campaign/domain"
 	"github.com/louisbranch/duality-engine/internal/storage"
 	"google.golang.org/grpc/codes"
@@ -50,9 +50,9 @@ func TestCreateCampaignSuccess(t *testing.T) {
 		},
 	}
 
-	response, err := service.CreateCampaign(context.Background(), &campaignpb.CreateCampaignRequest{
+	response, err := service.CreateCampaign(context.Background(), &campaignv1.CreateCampaignRequest{
 		Name:        "  First Steps ",
-		GmMode:      campaignpb.GmMode_HYBRID,
+		GmMode:      campaignv1.GmMode_HYBRID,
 		PlayerSlots: 5,
 		ThemePrompt: "gentle hills",
 	})
@@ -68,7 +68,7 @@ func TestCreateCampaignSuccess(t *testing.T) {
 	if response.Campaign.Name != "First Steps" {
 		t.Fatalf("expected trimmed name, got %q", response.Campaign.Name)
 	}
-	if response.Campaign.GmMode != campaignpb.GmMode_HYBRID {
+	if response.Campaign.GmMode != campaignv1.GmMode_HYBRID {
 		t.Fatalf("expected hybrid gm mode, got %v", response.Campaign.GmMode)
 	}
 	if response.Campaign.PlayerSlots != 5 {
@@ -91,29 +91,29 @@ func TestCreateCampaignSuccess(t *testing.T) {
 func TestCreateCampaignValidationErrors(t *testing.T) {
 	tests := []struct {
 		name string
-		req  *campaignpb.CreateCampaignRequest
+		req  *campaignv1.CreateCampaignRequest
 	}{
 		{
 			name: "empty name",
-			req: &campaignpb.CreateCampaignRequest{
+			req: &campaignv1.CreateCampaignRequest{
 				Name:        "  ",
-				GmMode:      campaignpb.GmMode_HUMAN,
+				GmMode:      campaignv1.GmMode_HUMAN,
 				PlayerSlots: 1,
 			},
 		},
 		{
 			name: "missing gm mode",
-			req: &campaignpb.CreateCampaignRequest{
+			req: &campaignv1.CreateCampaignRequest{
 				Name:        "Campaign",
-				GmMode:      campaignpb.GmMode_GM_MODE_UNSPECIFIED,
+				GmMode:      campaignv1.GmMode_GM_MODE_UNSPECIFIED,
 				PlayerSlots: 1,
 			},
 		},
 		{
 			name: "invalid player slots",
-			req: &campaignpb.CreateCampaignRequest{
+			req: &campaignv1.CreateCampaignRequest{
 				Name:        "Campaign",
-				GmMode:      campaignpb.GmMode_AI,
+				GmMode:      campaignv1.GmMode_AI,
 				PlayerSlots: 0,
 			},
 		},
@@ -167,9 +167,9 @@ func TestCreateCampaignIDGenerationFailure(t *testing.T) {
 		},
 	}
 
-	_, err := service.CreateCampaign(context.Background(), &campaignpb.CreateCampaignRequest{
+	_, err := service.CreateCampaign(context.Background(), &campaignv1.CreateCampaignRequest{
 		Name:        "Campaign",
-		GmMode:      campaignpb.GmMode_HUMAN,
+		GmMode:      campaignv1.GmMode_HUMAN,
 		PlayerSlots: 2,
 	})
 	if err == nil {
@@ -194,9 +194,9 @@ func TestCreateCampaignStoreFailure(t *testing.T) {
 		},
 	}
 
-	_, err := service.CreateCampaign(context.Background(), &campaignpb.CreateCampaignRequest{
+	_, err := service.CreateCampaign(context.Background(), &campaignv1.CreateCampaignRequest{
 		Name:        "Campaign",
-		GmMode:      campaignpb.GmMode_HUMAN,
+		GmMode:      campaignv1.GmMode_HUMAN,
 		PlayerSlots: 2,
 	})
 	if err == nil {
@@ -219,9 +219,9 @@ func TestCreateCampaignMissingStore(t *testing.T) {
 		},
 	}
 
-	_, err := service.CreateCampaign(context.Background(), &campaignpb.CreateCampaignRequest{
+	_, err := service.CreateCampaign(context.Background(), &campaignv1.CreateCampaignRequest{
 		Name:        "Campaign",
-		GmMode:      campaignpb.GmMode_AI,
+		GmMode:      campaignv1.GmMode_AI,
 		PlayerSlots: 2,
 	})
 	if err == nil {
@@ -256,7 +256,7 @@ func TestListCampaignsDefaults(t *testing.T) {
 	}
 	service := NewCampaignService(store)
 
-	response, err := service.ListCampaigns(context.Background(), &campaignpb.ListCampaignsRequest{})
+	response, err := service.ListCampaigns(context.Background(), &campaignv1.ListCampaignsRequest{})
 	if err != nil {
 		t.Fatalf("list campaigns: %v", err)
 	}
@@ -275,7 +275,7 @@ func TestListCampaignsDefaults(t *testing.T) {
 	if response.Campaigns[0].Id != "camp-10" {
 		t.Fatalf("expected id camp-10, got %q", response.Campaigns[0].Id)
 	}
-	if response.Campaigns[0].GmMode != campaignpb.GmMode_AI {
+	if response.Campaigns[0].GmMode != campaignv1.GmMode_AI {
 		t.Fatalf("expected gm mode AI, got %v", response.Campaigns[0].GmMode)
 	}
 	if response.Campaigns[0].CreatedAt.AsTime() != fixedTime {
@@ -287,7 +287,7 @@ func TestListCampaignsClampPageSize(t *testing.T) {
 	store := &fakeCampaignStore{listPage: storage.CampaignPage{}}
 	service := NewCampaignService(store)
 
-	_, err := service.ListCampaigns(context.Background(), &campaignpb.ListCampaignsRequest{
+	_, err := service.ListCampaigns(context.Background(), &campaignv1.ListCampaignsRequest{
 		PageSize: 25,
 	})
 	if err != nil {
@@ -302,7 +302,7 @@ func TestListCampaignsPassesToken(t *testing.T) {
 	store := &fakeCampaignStore{listPage: storage.CampaignPage{}}
 	service := NewCampaignService(store)
 
-	_, err := service.ListCampaigns(context.Background(), &campaignpb.ListCampaignsRequest{
+	_, err := service.ListCampaigns(context.Background(), &campaignv1.ListCampaignsRequest{
 		PageSize:  1,
 		PageToken: "next",
 	})
@@ -333,7 +333,7 @@ func TestListCampaignsNilRequest(t *testing.T) {
 func TestListCampaignsStoreFailure(t *testing.T) {
 	service := NewCampaignService(&fakeCampaignStore{listErr: errors.New("boom")})
 
-	_, err := service.ListCampaigns(context.Background(), &campaignpb.ListCampaignsRequest{
+	_, err := service.ListCampaigns(context.Background(), &campaignv1.ListCampaignsRequest{
 		PageSize: 1,
 	})
 	if err == nil {
@@ -351,7 +351,7 @@ func TestListCampaignsStoreFailure(t *testing.T) {
 func TestListCampaignsMissingStore(t *testing.T) {
 	service := &CampaignService{}
 
-	_, err := service.ListCampaigns(context.Background(), &campaignpb.ListCampaignsRequest{
+	_, err := service.ListCampaigns(context.Background(), &campaignv1.ListCampaignsRequest{
 		PageSize: 1,
 	})
 	if err == nil {

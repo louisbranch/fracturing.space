@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	campaignpb "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1"
+	campaignv1 "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1"
 	dualityv1 "github.com/louisbranch/duality-engine/api/gen/go/duality/v1"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
@@ -56,9 +56,10 @@ func New(grpcAddr string) (*Server, error) {
 	}
 
 	dualityClient := dualityv1.NewDualityServiceClient(conn)
-	campaignClient := campaignpb.NewCampaignServiceClient(conn)
+	campaignClient := campaignv1.NewCampaignServiceClient(conn)
 	registerDualityTools(mcpServer, dualityClient)
 	registerCampaignTools(mcpServer, campaignClient)
+	registerCampaignResources(mcpServer, campaignClient)
 
 	return &Server{mcpServer: mcpServer, conn: conn}, nil
 }

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	campaignpb "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1"
+	campaignv1 "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1"
 	"github.com/louisbranch/duality-engine/internal/campaign/domain"
 	"github.com/louisbranch/duality-engine/internal/storage"
 	"google.golang.org/grpc/codes"
@@ -20,7 +20,7 @@ const (
 
 // CampaignService implements the CampaignService gRPC API.
 type CampaignService struct {
-	campaignpb.UnimplementedCampaignServiceServer
+	campaignv1.UnimplementedCampaignServiceServer
 	store       storage.CampaignStore
 	clock       func() time.Time
 	idGenerator func() (string, error)
@@ -36,7 +36,7 @@ func NewCampaignService(store storage.CampaignStore) *CampaignService {
 }
 
 // CreateCampaign creates a new campaign metadata record.
-func (s *CampaignService) CreateCampaign(ctx context.Context, in *campaignpb.CreateCampaignRequest) (*campaignpb.CreateCampaignResponse, error) {
+func (s *CampaignService) CreateCampaign(ctx context.Context, in *campaignv1.CreateCampaignRequest) (*campaignv1.CreateCampaignResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "create campaign request is required")
 	}
@@ -65,8 +65,8 @@ func (s *CampaignService) CreateCampaign(ctx context.Context, in *campaignpb.Cre
 	// TODO: Persist GM state to key "gm/{campaign_id}/{session_id}" when GM state is added.
 	// TODO: Consider removing warnings from the gRPC response when the API stabilizes.
 
-	response := &campaignpb.CreateCampaignResponse{
-		Campaign: &campaignpb.Campaign{
+	response := &campaignv1.CreateCampaignResponse{
+		Campaign: &campaignv1.Campaign{
 			Id:          campaign.ID,
 			Name:        campaign.Name,
 			GmMode:      gmModeToProto(campaign.GmMode),
@@ -81,7 +81,7 @@ func (s *CampaignService) CreateCampaign(ctx context.Context, in *campaignpb.Cre
 }
 
 // ListCampaigns returns a page of campaign metadata records.
-func (s *CampaignService) ListCampaigns(ctx context.Context, in *campaignpb.ListCampaignsRequest) (*campaignpb.ListCampaignsResponse, error) {
+func (s *CampaignService) ListCampaigns(ctx context.Context, in *campaignv1.ListCampaignsRequest) (*campaignv1.ListCampaignsResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "list campaigns request is required")
 	}
@@ -103,16 +103,16 @@ func (s *CampaignService) ListCampaigns(ctx context.Context, in *campaignpb.List
 		return nil, status.Errorf(codes.Internal, "list campaigns: %v", err)
 	}
 
-	response := &campaignpb.ListCampaignsResponse{
+	response := &campaignv1.ListCampaignsResponse{
 		NextPageToken: page.NextPageToken,
 	}
 	if len(page.Campaigns) == 0 {
 		return response, nil
 	}
 
-	response.Campaigns = make([]*campaignpb.Campaign, 0, len(page.Campaigns))
+	response.Campaigns = make([]*campaignv1.Campaign, 0, len(page.Campaigns))
 	for _, campaign := range page.Campaigns {
-		response.Campaigns = append(response.Campaigns, &campaignpb.Campaign{
+		response.Campaigns = append(response.Campaigns, &campaignv1.Campaign{
 			Id:          campaign.ID,
 			Name:        campaign.Name,
 			GmMode:      gmModeToProto(campaign.GmMode),
@@ -127,13 +127,13 @@ func (s *CampaignService) ListCampaigns(ctx context.Context, in *campaignpb.List
 }
 
 // gmModeFromProto maps a protobuf GM mode to the domain representation.
-func gmModeFromProto(mode campaignpb.GmMode) domain.GmMode {
+func gmModeFromProto(mode campaignv1.GmMode) domain.GmMode {
 	switch mode {
-	case campaignpb.GmMode_HUMAN:
+	case campaignv1.GmMode_HUMAN:
 		return domain.GmModeHuman
-	case campaignpb.GmMode_AI:
+	case campaignv1.GmMode_AI:
 		return domain.GmModeAI
-	case campaignpb.GmMode_HYBRID:
+	case campaignv1.GmMode_HYBRID:
 		return domain.GmModeHybrid
 	default:
 		return domain.GmModeUnspecified
@@ -141,15 +141,15 @@ func gmModeFromProto(mode campaignpb.GmMode) domain.GmMode {
 }
 
 // gmModeToProto maps a domain GM mode to the protobuf representation.
-func gmModeToProto(mode domain.GmMode) campaignpb.GmMode {
+func gmModeToProto(mode domain.GmMode) campaignv1.GmMode {
 	switch mode {
 	case domain.GmModeHuman:
-		return campaignpb.GmMode_HUMAN
+		return campaignv1.GmMode_HUMAN
 	case domain.GmModeAI:
-		return campaignpb.GmMode_AI
+		return campaignv1.GmMode_AI
 	case domain.GmModeHybrid:
-		return campaignpb.GmMode_HYBRID
+		return campaignv1.GmMode_HYBRID
 	default:
-		return campaignpb.GmMode_GM_MODE_UNSPECIFIED
+		return campaignv1.GmMode_GM_MODE_UNSPECIFIED
 	}
 }

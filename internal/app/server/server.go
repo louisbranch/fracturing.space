@@ -9,7 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
-	campaignpb "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1"
+	campaignv1 "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1"
 	pb "github.com/louisbranch/duality-engine/api/gen/go/duality/v1"
 	campaignservice "github.com/louisbranch/duality-engine/internal/campaign/service"
 	dualityservice "github.com/louisbranch/duality-engine/internal/duality/service"
@@ -45,7 +45,7 @@ func New(port int) (*Server, error) {
 	campaignService := campaignservice.NewCampaignService(store)
 	healthServer := health.NewServer()
 	pb.RegisterDualityServiceServer(grpcServer, dualityService)
-	campaignpb.RegisterCampaignServiceServer(grpcServer, campaignService)
+	campaignv1.RegisterCampaignServiceServer(grpcServer, campaignService)
 	grpc_health_v1.RegisterHealthServer(grpcServer, healthServer)
 	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("duality.v1.DualityService", grpc_health_v1.HealthCheckResponse_SERVING)
