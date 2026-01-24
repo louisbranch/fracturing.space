@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"errors"
-	"strings"
 	"time"
 
 	campaignv1 "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1"
@@ -34,8 +33,8 @@ func NewCampaignService(store storage.CampaignStore, participantStore storage.Pa
 	return &CampaignService{
 		store:            store,
 		participantStore: participantStore,
-		clock:             time.Now,
-		idGenerator:       domain.NewID,
+		clock:            time.Now,
+		idGenerator:      domain.NewID,
 		participantIDGen: domain.NewID,
 	}
 }
@@ -156,111 +155,5 @@ func gmModeToProto(mode domain.GmMode) campaignv1.GmMode {
 		return campaignv1.GmMode_HYBRID
 	default:
 		return campaignv1.GmMode_GM_MODE_UNSPECIFIED
-	}
-}
-
-// RegisterParticipant registers a participant (GM or player) for a campaign.
-func (s *CampaignService) RegisterParticipant(ctx context.Context, in *campaignv1.RegisterParticipantRequest) (*campaignv1.RegisterParticipantResponse, error) {
-	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "register participant request is required")
-	}
-
-	if s.store == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if s.participantStore == nil {
-		return nil, status.Error(codes.Internal, "participant store is not configured")
-	}
-
-	// Validate campaign exists
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
-	}
-	_, err := s.store.Get(ctx, campaignID)
-	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return nil, status.Error(codes.NotFound, "campaign not found")
-		}
-		return nil, status.Errorf(codes.Internal, "check campaign: %v", err)
-	}
-
-	participant, err := domain.CreateParticipant(domain.CreateParticipantInput{
-		CampaignID:  campaignID,
-		DisplayName: in.GetDisplayName(),
-		Role:        participantRoleFromProto(in.GetRole()),
-		Controller:  controllerFromProto(in.GetController()),
-	}, s.clock, s.participantIDGen)
-	if err != nil {
-		if errors.Is(err, domain.ErrEmptyDisplayName) || errors.Is(err, domain.ErrInvalidParticipantRole) || errors.Is(err, domain.ErrEmptyCampaignID) {
-			return nil, status.Error(codes.InvalidArgument, err.Error())
-		}
-		return nil, status.Errorf(codes.Internal, "create participant: %v", err)
-	}
-
-	if err := s.participantStore.PutParticipant(ctx, participant); err != nil {
-		return nil, status.Errorf(codes.Internal, "persist participant: %v", err)
-	}
-
-	response := &campaignv1.RegisterParticipantResponse{
-		Participant: &campaignv1.Participant{
-			Id:          participant.ID,
-			CampaignId:  participant.CampaignID,
-			DisplayName: participant.DisplayName,
-			Role:        participantRoleToProto(participant.Role),
-			Controller:  controllerToProto(participant.Controller),
-			CreatedAt:   timestamppb.New(participant.CreatedAt),
-			UpdatedAt:   timestamppb.New(participant.UpdatedAt),
-		},
-	}
-
-	return response, nil
-}
-
-// participantRoleFromProto maps a protobuf participant role to the domain representation.
-func participantRoleFromProto(role campaignv1.ParticipantRole) domain.ParticipantRole {
-	switch role {
-	case campaignv1.ParticipantRole_GM:
-		return domain.ParticipantRoleGM
-	case campaignv1.ParticipantRole_PLAYER:
-		return domain.ParticipantRolePlayer
-	default:
-		return domain.ParticipantRoleUnspecified
-	}
-}
-
-// participantRoleToProto maps a domain participant role to the protobuf representation.
-func participantRoleToProto(role domain.ParticipantRole) campaignv1.ParticipantRole {
-	switch role {
-	case domain.ParticipantRoleGM:
-		return campaignv1.ParticipantRole_GM
-	case domain.ParticipantRolePlayer:
-		return campaignv1.ParticipantRole_PLAYER
-	default:
-		return campaignv1.ParticipantRole_ROLE_UNSPECIFIED
-	}
-}
-
-// controllerFromProto maps a protobuf controller to the domain representation.
-func controllerFromProto(controller campaignv1.Controller) domain.Controller {
-	switch controller {
-	case campaignv1.Controller_CONTROLLER_HUMAN:
-		return domain.ControllerHuman
-	case campaignv1.Controller_CONTROLLER_AI:
-		return domain.ControllerAI
-	default:
-		return domain.ControllerUnspecified
-	}
-}
-
-// controllerToProto maps a domain controller to the protobuf representation.
-func controllerToProto(controller domain.Controller) campaignv1.Controller {
-	switch controller {
-	case domain.ControllerHuman:
-		return campaignv1.Controller_CONTROLLER_HUMAN
-	case domain.ControllerAI:
-		return campaignv1.Controller_CONTROLLER_AI
-	default:
-		return campaignv1.Controller_CONTROLLER_UNSPECIFIED
 	}
 }
