@@ -17,7 +17,7 @@ type CampaignCreateInput struct {
 	Name        string `json:"name" jsonschema:"campaign name"`
 	GmMode      string `json:"gm_mode" jsonschema:"gm mode (HUMAN, AI, HYBRID)"`
 	PlayerSlots int    `json:"player_slots" jsonschema:"number of player slots"`
-	ThemePrompt string `json:"theme_prompt" jsonschema:"optional theme prompt"`
+	ThemePrompt string `json:"theme_prompt,omitempty" jsonschema:"optional theme prompt"`
 }
 
 // CampaignCreateResult represents the MCP tool output for campaign creation.

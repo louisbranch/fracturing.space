@@ -86,6 +86,7 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 				"name":         "Test Campaign",
 				"gm_mode":      "HUMAN",
 				"player_slots": 4,
+				"theme_prompt": "",
 			},
 		}
 		campaignResult, err := suite.client.CallTool(ctx, campaignParams)
