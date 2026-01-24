@@ -3,7 +3,7 @@
   "mcp": {
     "duality-local": {
       "type": "local",
-      "command": ["go", "run", "./cmd/mcp"],
+      "command": ["./scripts/mcp.sh"],
       "enabled": true,
       "environment": {
         "DUALITY_GRPC_ADDR": "localhost:8080"

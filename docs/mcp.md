@@ -7,6 +7,12 @@ your MCP client at the process stdin/stdout.
 go run ./cmd/mcp
 ```
 
+Alternatively, use the convenience script which resolves to the repo root automatically:
+
+```sh
+./scripts/mcp.sh
+```
+
 The gRPC server must be running at `localhost:8080` (or the configured address).
 
 For an OpenCode client configuration, see `opencode.jsonc`.
