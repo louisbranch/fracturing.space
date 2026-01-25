@@ -20,6 +20,7 @@ func registerCampaignTools(mcpServer *mcp.Server, client campaignv1.CampaignServ
 	mcp.AddTool(mcpServer, domain.CampaignCreateTool(), domain.CampaignCreateHandler(client))
 	mcp.AddTool(mcpServer, domain.ParticipantCreateTool(), domain.ParticipantCreateHandler(client))
 	mcp.AddTool(mcpServer, domain.ActorCreateTool(), domain.ActorCreateHandler(client))
+	mcp.AddTool(mcpServer, domain.ActorControlSetTool(), domain.ActorControlSetHandler(client))
 }
 
 // registerCampaignResources registers readable campaign MCP resources.

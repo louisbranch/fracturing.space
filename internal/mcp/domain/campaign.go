@@ -114,6 +114,20 @@ type ActorCreateResult struct {
 	UpdatedAt  string `json:"updated_at" jsonschema:"RFC3339 timestamp when actor was last updated"`
 }
 
+// ActorControlSetInput represents the MCP tool input for setting actor control.
+type ActorControlSetInput struct {
+	CampaignID     string `json:"campaign_id" jsonschema:"campaign identifier"`
+	ActorID        string `json:"actor_id" jsonschema:"actor identifier"`
+	ControllerType string `json:"controller_type" jsonschema:"controller type: 'GM' for GM control, or participant ID for participant control"`
+}
+
+// ActorControlSetResult represents the MCP tool output for setting actor control.
+type ActorControlSetResult struct {
+	CampaignID     string `json:"campaign_id" jsonschema:"campaign identifier"`
+	ActorID        string `json:"actor_id" jsonschema:"actor identifier"`
+	ControllerType string `json:"controller_type" jsonschema:"controller type: 'GM' or participant ID"`
+}
+
 // CampaignCreateTool defines the MCP tool schema for creating campaigns.
 func CampaignCreateTool() *mcp.Tool {
 	return &mcp.Tool{
@@ -135,6 +149,14 @@ func ActorCreateTool() *mcp.Tool {
 	return &mcp.Tool{
 		Name:        "actor_create",
 		Description: "Creates an actor (PC or NPC) for a campaign",
+	}
+}
+
+// ActorControlSetTool defines the MCP tool schema for setting actor control.
+func ActorControlSetTool() *mcp.Tool {
+	return &mcp.Tool{
+		Name:        "actor_control_set",
+		Description: "Sets the default controller (GM or participant) for an actor in a campaign",
 	}
 }
 
@@ -434,6 +456,88 @@ func actorKindToString(kind campaignv1.ActorKind) string {
 		return "NPC"
 	default:
 		return "UNSPECIFIED"
+	}
+}
+
+// ActorControlSetHandler executes an actor control set request.
+func ActorControlSetHandler(client campaignv1.CampaignServiceClient) mcp.ToolHandlerFor[ActorControlSetInput, ActorControlSetResult] {
+	return func(ctx context.Context, _ *mcp.CallToolRequest, input ActorControlSetInput) (*mcp.CallToolResult, ActorControlSetResult, error) {
+		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+
+		controller, err := actorControllerFromString(input.ControllerType)
+		if err != nil {
+			return nil, ActorControlSetResult{}, fmt.Errorf("invalid controller type: %w", err)
+		}
+
+		req := &campaignv1.SetDefaultControlRequest{
+			CampaignId: input.CampaignID,
+			ActorId:    input.ActorID,
+			Controller: controller,
+		}
+
+		response, err := client.SetDefaultControl(runCtx, req)
+		if err != nil {
+			return nil, ActorControlSetResult{}, fmt.Errorf("actor control set failed: %w", err)
+		}
+		if response == nil {
+			return nil, ActorControlSetResult{}, fmt.Errorf("actor control set response is missing")
+		}
+
+		result := ActorControlSetResult{
+			CampaignID:     response.GetCampaignId(),
+			ActorID:        response.GetActorId(),
+			ControllerType: actorControllerToString(response.GetController()),
+		}
+
+		return nil, result, nil
+	}
+}
+
+// actorControllerFromString converts a string to a protobuf ActorController.
+// Accepts "GM" (case-insensitive) for GM control, or a participant ID for participant control.
+func actorControllerFromString(controllerType string) (*campaignv1.ActorController, error) {
+	controllerType = strings.TrimSpace(controllerType)
+	if controllerType == "" {
+		return nil, fmt.Errorf("controller type is required")
+	}
+
+	upper := strings.ToUpper(controllerType)
+	if upper == "GM" {
+		return &campaignv1.ActorController{
+			Controller: &campaignv1.ActorController_Gm{
+				Gm: &campaignv1.GmController{},
+			},
+		}, nil
+	}
+
+	// Otherwise, treat as participant ID
+	return &campaignv1.ActorController{
+		Controller: &campaignv1.ActorController_Participant{
+			Participant: &campaignv1.ParticipantController{
+				ParticipantId: controllerType,
+			},
+		},
+	}, nil
+}
+
+// actorControllerToString converts a protobuf ActorController to a string representation.
+// Returns "GM" for GM control, or the participant ID for participant control.
+func actorControllerToString(controller *campaignv1.ActorController) string {
+	if controller == nil {
+		return ""
+	}
+
+	switch c := controller.GetController().(type) {
+	case *campaignv1.ActorController_Gm:
+		return "GM"
+	case *campaignv1.ActorController_Participant:
+		if c.Participant != nil {
+			return c.Participant.GetParticipantId()
+		}
+		return ""
+	default:
+		return ""
 	}
 }
 
