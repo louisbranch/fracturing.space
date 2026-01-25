@@ -27,6 +27,7 @@ For an OpenCode client configuration, see `opencode.jsonc`.
 - `roll_dice`: rolls arbitrary dice pools and returns the individual results.
 - `campaign_create`: creates a new campaign metadata record.
 - `participant_create`: creates a participant (GM or player) for a campaign.
+- `actor_create`: creates an actor (PC or NPC) for a campaign.
 
 ## Resources
 

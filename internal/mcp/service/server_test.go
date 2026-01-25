@@ -1146,6 +1146,152 @@ func TestParticipantCreateHandlerRejectsEmptyResponse(t *testing.T) {
 	}
 }
 
+// TestActorCreateHandlerReturnsClientError ensures gRPC errors are returned as tool errors.
+func TestActorCreateHandlerReturnsClientError(t *testing.T) {
+	client := &fakeCampaignClient{createActorErr: errors.New("boom")}
+	handler := domain.ActorCreateHandler(client)
+
+	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.ActorCreateInput{
+		CampaignID: "camp-123",
+		Name:       "Test Actor",
+		Kind:       "PC",
+		Notes:      "A brave warrior",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if result != nil {
+		t.Fatal("expected nil result on error")
+	}
+}
+
+// TestActorCreateHandlerMapsRequestAndResponse ensures inputs and outputs map consistently.
+func TestActorCreateHandlerMapsRequestAndResponse(t *testing.T) {
+	now := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
+	client := &fakeCampaignClient{createActorResponse: &campaignv1.CreateActorResponse{
+		Actor: &campaignv1.Actor{
+			Id:         "actor-456",
+			CampaignId: "camp-123",
+			Name:       "Test Actor",
+			Kind:       campaignv1.ActorKind_PC,
+			Notes:      "A brave warrior",
+			CreatedAt:  timestamppb.New(now),
+			UpdatedAt:  timestamppb.New(now.Add(time.Hour)),
+		},
+	}}
+	result, output, err := domain.ActorCreateHandler(client)(
+		context.Background(),
+		&mcp.CallToolRequest{},
+		domain.ActorCreateInput{
+			CampaignID: "camp-123",
+			Name:       "Test Actor",
+			Kind:       "PC",
+			Notes:      "A brave warrior",
+		},
+	)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if result != nil {
+		t.Fatal("expected nil result on success")
+	}
+	if client.lastCreateActorRequest == nil {
+		t.Fatal("expected gRPC request")
+	}
+	if client.lastCreateActorRequest.GetCampaignId() != "camp-123" {
+		t.Fatalf("expected campaign id camp-123, got %q", client.lastCreateActorRequest.GetCampaignId())
+	}
+	if client.lastCreateActorRequest.GetName() != "Test Actor" {
+		t.Fatalf("expected name Test Actor, got %q", client.lastCreateActorRequest.GetName())
+	}
+	if client.lastCreateActorRequest.GetKind() != campaignv1.ActorKind_PC {
+		t.Fatalf("expected kind PC, got %v", client.lastCreateActorRequest.GetKind())
+	}
+	if client.lastCreateActorRequest.GetNotes() != "A brave warrior" {
+		t.Fatalf("expected notes A brave warrior, got %q", client.lastCreateActorRequest.GetNotes())
+	}
+	if output.ID != "actor-456" {
+		t.Fatalf("expected id actor-456, got %q", output.ID)
+	}
+	if output.CampaignID != "camp-123" {
+		t.Fatalf("expected campaign id camp-123, got %q", output.CampaignID)
+	}
+	if output.Name != "Test Actor" {
+		t.Fatalf("expected name Test Actor, got %q", output.Name)
+	}
+	if output.Kind != "PC" {
+		t.Fatalf("expected kind PC, got %q", output.Kind)
+	}
+	if output.Notes != "A brave warrior" {
+		t.Fatalf("expected notes A brave warrior, got %q", output.Notes)
+	}
+	if output.CreatedAt != now.Format(time.RFC3339) {
+		t.Fatalf("expected created_at %q, got %q", now.Format(time.RFC3339), output.CreatedAt)
+	}
+	if output.UpdatedAt != now.Add(time.Hour).Format(time.RFC3339) {
+		t.Fatalf("expected updated_at %q, got %q", now.Add(time.Hour).Format(time.RFC3339), output.UpdatedAt)
+	}
+}
+
+// TestActorCreateHandlerOptionalNotes ensures optional notes field works.
+func TestActorCreateHandlerOptionalNotes(t *testing.T) {
+	now := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
+	client := &fakeCampaignClient{createActorResponse: &campaignv1.CreateActorResponse{
+		Actor: &campaignv1.Actor{
+			Id:         "actor-789",
+			CampaignId: "camp-123",
+			Name:       "Test NPC",
+			Kind:       campaignv1.ActorKind_NPC,
+			Notes:      "",
+			CreatedAt:  timestamppb.New(now),
+			UpdatedAt:  timestamppb.New(now),
+		},
+	}}
+	result, output, err := domain.ActorCreateHandler(client)(
+		context.Background(),
+		&mcp.CallToolRequest{},
+		domain.ActorCreateInput{
+			CampaignID: "camp-123",
+			Name:       "Test NPC",
+			Kind:       "NPC",
+			// Notes omitted
+		},
+	)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if result != nil {
+		t.Fatal("expected nil result on success")
+	}
+	if client.lastCreateActorRequest == nil {
+		t.Fatal("expected gRPC request")
+	}
+	if client.lastCreateActorRequest.GetNotes() != "" {
+		t.Fatalf("expected empty notes when omitted, got %q", client.lastCreateActorRequest.GetNotes())
+	}
+	if output.Kind != "NPC" {
+		t.Fatalf("expected kind NPC, got %q", output.Kind)
+	}
+}
+
+// TestActorCreateHandlerRejectsEmptyResponse ensures nil responses are rejected.
+func TestActorCreateHandlerRejectsEmptyResponse(t *testing.T) {
+	client := &fakeCampaignClient{}
+	handler := domain.ActorCreateHandler(client)
+
+	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.ActorCreateInput{
+		CampaignID: "camp-123",
+		Name:       "Test Actor",
+		Kind:       "PC",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if result != nil {
+		t.Fatal("expected nil result on error")
+	}
+}
+
 // TestParticipantListResourceHandlerMapsResponse ensures JSON payload is formatted correctly.
 func TestParticipantListResourceHandlerMapsResponse(t *testing.T) {
 	now := time.Date(2026, 1, 23, 13, 0, 0, 0, time.UTC)

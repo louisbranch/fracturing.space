@@ -79,6 +79,25 @@ type ParticipantListPayload struct {
 	Participants []ParticipantListEntry `json:"participants"`
 }
 
+// ActorCreateInput represents the MCP tool input for actor creation.
+type ActorCreateInput struct {
+	CampaignID string `json:"campaign_id" jsonschema:"campaign identifier"`
+	Name       string `json:"name" jsonschema:"display name for the actor"`
+	Kind       string `json:"kind" jsonschema:"actor kind (PC, NPC)"`
+	Notes      string `json:"notes,omitempty" jsonschema:"optional free-form notes about the actor"`
+}
+
+// ActorCreateResult represents the MCP tool output for actor creation.
+type ActorCreateResult struct {
+	ID         string `json:"id" jsonschema:"actor identifier"`
+	CampaignID string `json:"campaign_id" jsonschema:"campaign identifier"`
+	Name       string `json:"name" jsonschema:"display name for the actor"`
+	Kind       string `json:"kind" jsonschema:"actor kind"`
+	Notes      string `json:"notes" jsonschema:"free-form notes about the actor"`
+	CreatedAt  string `json:"created_at" jsonschema:"RFC3339 timestamp when actor was created"`
+	UpdatedAt  string `json:"updated_at" jsonschema:"RFC3339 timestamp when actor was last updated"`
+}
+
 // CampaignCreateTool defines the MCP tool schema for creating campaigns.
 func CampaignCreateTool() *mcp.Tool {
 	return &mcp.Tool{
@@ -92,6 +111,14 @@ func ParticipantCreateTool() *mcp.Tool {
 	return &mcp.Tool{
 		Name:        "participant_create",
 		Description: "Creates a participant (GM or player) for a campaign",
+	}
+}
+
+// ActorCreateTool defines the MCP tool schema for creating actors.
+func ActorCreateTool() *mcp.Tool {
+	return &mcp.Tool{
+		Name:        "actor_create",
+		Description: "Creates an actor (PC or NPC) for a campaign",
 	}
 }
 
@@ -318,6 +345,63 @@ func controllerToString(controller campaignv1.Controller) string {
 		return "HUMAN"
 	case campaignv1.Controller_CONTROLLER_AI:
 		return "AI"
+	default:
+		return "UNSPECIFIED"
+	}
+}
+
+// ActorCreateHandler executes an actor creation request.
+func ActorCreateHandler(client campaignv1.CampaignServiceClient) mcp.ToolHandlerFor[ActorCreateInput, ActorCreateResult] {
+	return func(ctx context.Context, _ *mcp.CallToolRequest, input ActorCreateInput) (*mcp.CallToolResult, ActorCreateResult, error) {
+		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+
+		req := &campaignv1.CreateActorRequest{
+			CampaignId: input.CampaignID,
+			Name:       input.Name,
+			Kind:       actorKindFromString(input.Kind),
+			Notes:      input.Notes,
+		}
+
+		response, err := client.CreateActor(runCtx, req)
+		if err != nil {
+			return nil, ActorCreateResult{}, fmt.Errorf("actor create failed: %w", err)
+		}
+		if response == nil || response.Actor == nil {
+			return nil, ActorCreateResult{}, fmt.Errorf("actor create response is missing")
+		}
+
+		result := ActorCreateResult{
+			ID:         response.Actor.GetId(),
+			CampaignID: response.Actor.GetCampaignId(),
+			Name:       response.Actor.GetName(),
+			Kind:       actorKindToString(response.Actor.GetKind()),
+			Notes:      response.Actor.GetNotes(),
+			CreatedAt:  formatTimestamp(response.Actor.GetCreatedAt()),
+			UpdatedAt:  formatTimestamp(response.Actor.GetUpdatedAt()),
+		}
+
+		return nil, result, nil
+	}
+}
+
+func actorKindFromString(value string) campaignv1.ActorKind {
+	switch strings.ToUpper(strings.TrimSpace(value)) {
+	case "PC":
+		return campaignv1.ActorKind_PC
+	case "NPC":
+		return campaignv1.ActorKind_NPC
+	default:
+		return campaignv1.ActorKind_ACTOR_KIND_UNSPECIFIED
+	}
+}
+
+func actorKindToString(kind campaignv1.ActorKind) string {
+	switch kind {
+	case campaignv1.ActorKind_PC:
+		return "PC"
+	case campaignv1.ActorKind_NPC:
+		return "NPC"
 	default:
 		return "UNSPECIFIED"
 	}
