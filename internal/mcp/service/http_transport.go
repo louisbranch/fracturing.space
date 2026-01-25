@@ -299,6 +299,8 @@ func (t *HTTPTransport) handleMessages(w http.ResponseWriter, r *http.Request) {
 	switch v := msg.(type) {
 	case *jsonrpc.Request:
 		// Request has an ID field - check if it's set (not zero value)
+		// In JSON-RPC 2.0, notifications have null ID, requests have non-null ID
+		// The zero value of jsonrpc.ID represents a null/empty ID (notification)
 		id := v.ID
 		isRequest = id != jsonrpc.ID{}
 	case *jsonrpc.Response:
