@@ -13,6 +13,9 @@ service SessionService {
 
   // List sessions for a campaign.
   rpc ListSessions(ListSessionsRequest) returns (ListSessionsResponse);
+
+  // Get a session by campaign ID and session ID.
+  rpc GetSession(GetSessionRequest) returns (GetSessionResponse);
 }
 
 message StartSessionRequest {
@@ -60,4 +63,16 @@ message ListSessionsRequest {
 message ListSessionsResponse {
   repeated Session sessions = 1;
   string next_page_token = 2;
+}
+
+message GetSessionRequest {
+  // The campaign ID.
+  string campaign_id = 1;
+
+  // The session ID.
+  string session_id = 2;
+}
+
+message GetSessionResponse {
+  Session session = 1;
 }

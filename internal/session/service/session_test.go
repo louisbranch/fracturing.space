@@ -797,3 +797,311 @@ func TestListSessionsEmptyCampaignID(t *testing.T) {
 		t.Fatalf("expected invalid argument, got %v", st.Code())
 	}
 }
+
+func TestGetSessionSuccess(t *testing.T) {
+	fixedTime := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
+	endedTime := time.Date(2026, 1, 23, 14, 0, 0, 0, time.UTC)
+	campaignStore := &fakeCampaignStore{}
+	campaignStore.getFunc = func(ctx context.Context, id string) (domain.Campaign, error) {
+		if id == "camp-123" {
+			return domain.Campaign{ID: "camp-123", Name: "Test Campaign"}, nil
+		}
+		return domain.Campaign{}, storage.ErrNotFound
+	}
+	sessionStore := &fakeSessionStore{
+		getSession: sessiondomain.Session{
+			ID:         "sess-456",
+			CampaignID: "camp-123",
+			Name:       "Test Session",
+			Status:     sessiondomain.SessionStatusEnded,
+			StartedAt:  fixedTime,
+			UpdatedAt:  fixedTime,
+			EndedAt:    &endedTime,
+		},
+	}
+	service := NewSessionService(Stores{
+		Campaign: campaignStore,
+		Session:  sessionStore,
+	})
+
+	response, err := service.GetSession(context.Background(), &sessionv1.GetSessionRequest{
+		CampaignId: "camp-123",
+		SessionId:  "sess-456",
+	})
+	if err != nil {
+		t.Fatalf("get session: %v", err)
+	}
+	if response == nil || response.Session == nil {
+		t.Fatal("expected session response")
+	}
+	if response.Session.Id != "sess-456" {
+		t.Fatalf("expected id sess-456, got %q", response.Session.Id)
+	}
+	if response.Session.CampaignId != "camp-123" {
+		t.Fatalf("expected campaign id camp-123, got %q", response.Session.CampaignId)
+	}
+	if response.Session.Name != "Test Session" {
+		t.Fatalf("expected name Test Session, got %q", response.Session.Name)
+	}
+	if response.Session.Status != sessionv1.SessionStatus_ENDED {
+		t.Fatalf("expected status ENDED, got %v", response.Session.Status)
+	}
+	if response.Session.StartedAt.AsTime() != fixedTime {
+		t.Fatalf("expected started_at %v, got %v", fixedTime, response.Session.StartedAt.AsTime())
+	}
+	if response.Session.UpdatedAt.AsTime() != fixedTime {
+		t.Fatalf("expected updated_at %v, got %v", fixedTime, response.Session.UpdatedAt.AsTime())
+	}
+	if response.Session.EndedAt == nil {
+		t.Fatal("expected ended_at to be set")
+	}
+	if response.Session.EndedAt.AsTime() != endedTime {
+		t.Fatalf("expected ended_at %v, got %v", endedTime, response.Session.EndedAt.AsTime())
+	}
+}
+
+func TestGetSessionSuccessWithoutEndedAt(t *testing.T) {
+	fixedTime := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
+	campaignStore := &fakeCampaignStore{}
+	campaignStore.getFunc = func(ctx context.Context, id string) (domain.Campaign, error) {
+		if id == "camp-123" {
+			return domain.Campaign{ID: "camp-123", Name: "Test Campaign"}, nil
+		}
+		return domain.Campaign{}, storage.ErrNotFound
+	}
+	sessionStore := &fakeSessionStore{
+		getSession: sessiondomain.Session{
+			ID:         "sess-456",
+			CampaignID: "camp-123",
+			Name:       "Active Session",
+			Status:     sessiondomain.SessionStatusActive,
+			StartedAt:  fixedTime,
+			UpdatedAt:  fixedTime,
+			EndedAt:    nil,
+		},
+	}
+	service := NewSessionService(Stores{
+		Campaign: campaignStore,
+		Session:  sessionStore,
+	})
+
+	response, err := service.GetSession(context.Background(), &sessionv1.GetSessionRequest{
+		CampaignId: "camp-123",
+		SessionId:  "sess-456",
+	})
+	if err != nil {
+		t.Fatalf("get session: %v", err)
+	}
+	if response == nil || response.Session == nil {
+		t.Fatal("expected session response")
+	}
+	if response.Session.EndedAt != nil {
+		t.Fatal("expected ended_at to be nil for active session")
+	}
+}
+
+func TestGetSessionNilRequest(t *testing.T) {
+	service := NewSessionService(Stores{
+		Campaign: &fakeCampaignStore{},
+		Session:  &fakeSessionStore{},
+	})
+
+	_, err := service.GetSession(context.Background(), nil)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	st, ok := status.FromError(err)
+	if !ok {
+		t.Fatalf("expected grpc status error, got %v", err)
+	}
+	if st.Code() != codes.InvalidArgument {
+		t.Fatalf("expected invalid argument, got %v", st.Code())
+	}
+}
+
+func TestGetSessionMissingCampaignStore(t *testing.T) {
+	service := &SessionService{
+		stores: Stores{
+			Session: &fakeSessionStore{},
+		},
+		clock: time.Now,
+	}
+
+	_, err := service.GetSession(context.Background(), &sessionv1.GetSessionRequest{
+		CampaignId: "camp-123",
+		SessionId:  "sess-456",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	st, ok := status.FromError(err)
+	if !ok {
+		t.Fatalf("expected grpc status error, got %v", err)
+	}
+	if st.Code() != codes.Internal {
+		t.Fatalf("expected internal error, got %v", st.Code())
+	}
+}
+
+func TestGetSessionMissingSessionStore(t *testing.T) {
+	service := &SessionService{
+		stores: Stores{
+			Campaign: &fakeCampaignStore{},
+		},
+		clock: time.Now,
+	}
+
+	_, err := service.GetSession(context.Background(), &sessionv1.GetSessionRequest{
+		CampaignId: "camp-123",
+		SessionId:  "sess-456",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	st, ok := status.FromError(err)
+	if !ok {
+		t.Fatalf("expected grpc status error, got %v", err)
+	}
+	if st.Code() != codes.Internal {
+		t.Fatalf("expected internal error, got %v", st.Code())
+	}
+}
+
+func TestGetSessionEmptyCampaignID(t *testing.T) {
+	service := NewSessionService(Stores{
+		Campaign: &fakeCampaignStore{},
+		Session:  &fakeSessionStore{},
+	})
+
+	_, err := service.GetSession(context.Background(), &sessionv1.GetSessionRequest{
+		CampaignId: "  ",
+		SessionId:  "sess-456",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	st, ok := status.FromError(err)
+	if !ok {
+		t.Fatalf("expected grpc status error, got %v", err)
+	}
+	if st.Code() != codes.InvalidArgument {
+		t.Fatalf("expected invalid argument, got %v", st.Code())
+	}
+}
+
+func TestGetSessionEmptySessionID(t *testing.T) {
+	service := NewSessionService(Stores{
+		Campaign: &fakeCampaignStore{},
+		Session:  &fakeSessionStore{},
+	})
+
+	_, err := service.GetSession(context.Background(), &sessionv1.GetSessionRequest{
+		CampaignId: "camp-123",
+		SessionId:  "  ",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	st, ok := status.FromError(err)
+	if !ok {
+		t.Fatalf("expected grpc status error, got %v", err)
+	}
+	if st.Code() != codes.InvalidArgument {
+		t.Fatalf("expected invalid argument, got %v", st.Code())
+	}
+}
+
+func TestGetSessionCampaignNotFound(t *testing.T) {
+	campaignStore := &fakeCampaignStore{
+		getErr: storage.ErrNotFound,
+	}
+	service := NewSessionService(Stores{
+		Campaign: campaignStore,
+		Session:  &fakeSessionStore{},
+	})
+
+	_, err := service.GetSession(context.Background(), &sessionv1.GetSessionRequest{
+		CampaignId: "camp-999",
+		SessionId:  "sess-456",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	st, ok := status.FromError(err)
+	if !ok {
+		t.Fatalf("expected grpc status error, got %v", err)
+	}
+	if st.Code() != codes.NotFound {
+		t.Fatalf("expected not found, got %v", st.Code())
+	}
+	if st.Message() != "campaign not found" {
+		t.Fatalf("expected message 'campaign not found', got %q", st.Message())
+	}
+}
+
+func TestGetSessionNotFound(t *testing.T) {
+	campaignStore := &fakeCampaignStore{}
+	campaignStore.getFunc = func(ctx context.Context, id string) (domain.Campaign, error) {
+		if id == "camp-123" {
+			return domain.Campaign{ID: "camp-123", Name: "Test Campaign"}, nil
+		}
+		return domain.Campaign{}, storage.ErrNotFound
+	}
+	sessionStore := &fakeSessionStore{
+		getSessionErr: storage.ErrNotFound,
+	}
+	service := NewSessionService(Stores{
+		Campaign: campaignStore,
+		Session:  sessionStore,
+	})
+
+	_, err := service.GetSession(context.Background(), &sessionv1.GetSessionRequest{
+		CampaignId: "camp-123",
+		SessionId:  "sess-999",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	st, ok := status.FromError(err)
+	if !ok {
+		t.Fatalf("expected grpc status error, got %v", err)
+	}
+	if st.Code() != codes.NotFound {
+		t.Fatalf("expected not found, got %v", st.Code())
+	}
+	if st.Message() != "session not found" {
+		t.Fatalf("expected message 'session not found', got %q", st.Message())
+	}
+}
+
+func TestGetSessionStoreError(t *testing.T) {
+	campaignStore := &fakeCampaignStore{}
+	campaignStore.getFunc = func(ctx context.Context, id string) (domain.Campaign, error) {
+		if id == "camp-123" {
+			return domain.Campaign{ID: "camp-123", Name: "Test Campaign"}, nil
+		}
+		return domain.Campaign{}, storage.ErrNotFound
+	}
+	sessionStore := &fakeSessionStore{
+		getSessionErr: errors.New("database error"),
+	}
+	service := NewSessionService(Stores{
+		Campaign: campaignStore,
+		Session:  sessionStore,
+	})
+
+	_, err := service.GetSession(context.Background(), &sessionv1.GetSessionRequest{
+		CampaignId: "camp-123",
+		SessionId:  "sess-456",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	st, ok := status.FromError(err)
+	if !ok {
+		t.Fatalf("expected grpc status error, got %v", err)
+	}
+	if st.Code() != codes.Internal {
+		t.Fatalf("expected internal error, got %v", st.Code())
+	}
+}

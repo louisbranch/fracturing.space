@@ -185,6 +185,65 @@ func (s *SessionService) ListSessions(ctx context.Context, in *sessionv1.ListSes
 	return response, nil
 }
 
+// GetSession returns a session by campaign ID and session ID.
+func (s *SessionService) GetSession(ctx context.Context, in *sessionv1.GetSessionRequest) (*sessionv1.GetSessionResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "get session request is required")
+	}
+
+	if s.stores.Campaign == nil {
+		return nil, status.Error(codes.Internal, "campaign store is not configured")
+	}
+	if s.stores.Session == nil {
+		return nil, status.Error(codes.Internal, "session store is not configured")
+	}
+
+	campaignID := strings.TrimSpace(in.GetCampaignId())
+	if campaignID == "" {
+		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	}
+
+	sessionID := strings.TrimSpace(in.GetSessionId())
+	if sessionID == "" {
+		return nil, status.Error(codes.InvalidArgument, "session id is required")
+	}
+
+	// Validate campaign exists
+	_, err := s.stores.Campaign.Get(ctx, campaignID)
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return nil, status.Error(codes.NotFound, "campaign not found")
+		}
+		return nil, status.Errorf(codes.Internal, "check campaign: %v", err)
+	}
+
+	session, err := s.stores.Session.GetSession(ctx, campaignID, sessionID)
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return nil, status.Error(codes.NotFound, "session not found")
+		}
+		return nil, status.Errorf(codes.Internal, "get session: %v", err)
+	}
+
+	sessionProto := &sessionv1.Session{
+		Id:         session.ID,
+		CampaignId: session.CampaignID,
+		Name:       session.Name,
+		Status:     sessionStatusToProto(session.Status),
+		StartedAt:  timestamppb.New(session.StartedAt),
+		UpdatedAt:  timestamppb.New(session.UpdatedAt),
+	}
+	if session.EndedAt != nil {
+		sessionProto.EndedAt = timestamppb.New(*session.EndedAt)
+	}
+
+	response := &sessionv1.GetSessionResponse{
+		Session: sessionProto,
+	}
+
+	return response, nil
+}
+
 // sessionStatusToProto maps a domain session status to the protobuf representation.
 func sessionStatusToProto(status sessiondomain.SessionStatus) sessionv1.SessionStatus {
 	switch status {

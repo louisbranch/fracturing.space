@@ -179,10 +179,13 @@ func (f *fakeCampaignClient) SetDefaultControl(ctx context.Context, req *campaig
 type fakeSessionClient struct {
 	startSessionResponse *sessionv1.StartSessionResponse
 	listSessionsResponse  *sessionv1.ListSessionsResponse
+	getSessionResponse   *sessionv1.GetSessionResponse
 	err                  error
 	listSessionsErr      error
+	getSessionErr        error
 	lastRequest          *sessionv1.StartSessionRequest
 	lastListSessionsRequest *sessionv1.ListSessionsRequest
+	lastGetSessionRequest   *sessionv1.GetSessionRequest
 }
 
 // StartSession records the request and returns the configured response.
@@ -195,6 +198,12 @@ func (f *fakeSessionClient) StartSession(ctx context.Context, req *sessionv1.Sta
 func (f *fakeSessionClient) ListSessions(ctx context.Context, req *sessionv1.ListSessionsRequest, opts ...grpc.CallOption) (*sessionv1.ListSessionsResponse, error) {
 	f.lastListSessionsRequest = req
 	return f.listSessionsResponse, f.listSessionsErr
+}
+
+// GetSession records the request and returns the configured response.
+func (f *fakeSessionClient) GetSession(ctx context.Context, req *sessionv1.GetSessionRequest, opts ...grpc.CallOption) (*sessionv1.GetSessionResponse, error) {
+	f.lastGetSessionRequest = req
+	return f.getSessionResponse, f.getSessionErr
 }
 
 // TestGRPCAddressPrefersEnv ensures env configuration overrides defaults.
