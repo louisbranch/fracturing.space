@@ -3,6 +3,7 @@ package service
 import (
 	campaignv1 "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1"
 	dualityv1 "github.com/louisbranch/duality-engine/api/gen/go/duality/v1"
+	sessionv1 "github.com/louisbranch/duality-engine/api/gen/go/session/v1"
 	"github.com/louisbranch/duality-engine/internal/mcp/domain"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -21,6 +22,10 @@ func registerCampaignTools(mcpServer *mcp.Server, client campaignv1.CampaignServ
 	mcp.AddTool(mcpServer, domain.ParticipantCreateTool(), domain.ParticipantCreateHandler(client))
 	mcp.AddTool(mcpServer, domain.ActorCreateTool(), domain.ActorCreateHandler(client))
 	mcp.AddTool(mcpServer, domain.ActorControlSetTool(), domain.ActorControlSetHandler(client))
+}
+
+func registerSessionTools(mcpServer *mcp.Server, client sessionv1.SessionServiceClient) {
+	mcp.AddTool(mcpServer, domain.SessionStartTool(), domain.SessionStartHandler(client))
 }
 
 // registerCampaignResources registers readable campaign MCP resources.

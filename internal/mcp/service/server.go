@@ -10,6 +10,7 @@ import (
 
 	campaignv1 "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1"
 	dualityv1 "github.com/louisbranch/duality-engine/api/gen/go/duality/v1"
+	sessionv1 "github.com/louisbranch/duality-engine/api/gen/go/session/v1"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -45,7 +46,7 @@ type Server struct {
 	conn      *grpc.ClientConn
 }
 
-// New creates a configured MCP server that connects to Duality and Campaign gRPC services.
+// New creates a configured MCP server that connects to Duality, Campaign, and Session gRPC services.
 func New(grpcAddr string) (*Server, error) {
 	mcpServer := mcp.NewServer(&mcp.Implementation{Name: serverName, Version: serverVersion}, nil)
 
@@ -57,8 +58,10 @@ func New(grpcAddr string) (*Server, error) {
 
 	dualityClient := dualityv1.NewDualityServiceClient(conn)
 	campaignClient := campaignv1.NewCampaignServiceClient(conn)
+	sessionClient := sessionv1.NewSessionServiceClient(conn)
 	registerDualityTools(mcpServer, dualityClient)
 	registerCampaignTools(mcpServer, campaignClient)
+	registerSessionTools(mcpServer, sessionClient)
 	registerCampaignResources(mcpServer, campaignClient)
 
 	return &Server{mcpServer: mcpServer, conn: conn}, nil

@@ -36,6 +36,7 @@ func runMCPToolsTests(t *testing.T, suite *integrationSuite) {
 			"duality_rules_version",
 			"participant_create",
 			"roll_dice",
+			"session_start",
 		}
 
 		actual := make([]string, 0, len(result.Tools))
