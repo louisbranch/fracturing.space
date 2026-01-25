@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package duality.v1;
+
+option go_package = "github.com/louisbranch/duality-engine/api/gen/go/duality/v1;dualityv1";
+
+import "duality/v1/requests.proto";
+
+service DualityService {
+  // Daggerheart-style action roll:
+  // roll Hope d12 + Fear d12, apply modifier, compare to optional difficulty.
+  rpc ActionRoll(ActionRollRequest) returns (ActionRollResponse);
+
+  // Deterministically evaluate a duality outcome from known dice.
+  rpc DualityOutcome(DualityOutcomeRequest) returns (DualityOutcomeResponse);
+
+  // Provide a deterministic explanation for a duality outcome.
+  rpc DualityExplain(DualityExplainRequest) returns (DualityExplainResponse);
+
+  // Compute probabilities for duality outcomes across all dice pairs.
+  rpc DualityProbability(DualityProbabilityRequest) returns (DualityProbabilityResponse);
+
+  // Return ruleset metadata for Duality roll interpretation.
+  rpc RulesVersion(RulesVersionRequest) returns (RulesVersionResponse);
+
+  // Roll arbitrary dice sets and return the individual results.
+  rpc RollDice(RollDiceRequest) returns (RollDiceResponse);
+}

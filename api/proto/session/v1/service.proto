@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package session.v1;
+
+option go_package = "github.com/louisbranch/duality-engine/api/gen/go/session/v1;sessionv1";
+
+import "session/v1/requests.proto";
+
+service SessionService {
+  // Start a new session for a campaign.
+  // Enforces at most one ACTIVE session per campaign.
+  rpc StartSession(StartSessionRequest) returns (StartSessionResponse);
+
+  // List sessions for a campaign.
+  rpc ListSessions(ListSessionsRequest) returns (ListSessionsResponse);
+
+  // Get a session by campaign ID and session ID.
+  rpc GetSession(GetSessionRequest) returns (GetSessionResponse);
+}

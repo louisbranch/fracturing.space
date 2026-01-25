@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package campaign.v1;
+
+option go_package = "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1;campaignv1";
+
+message ActorController {
+  oneof controller {
+    // If set, the controller is the GM.
+    GmController gm = 1;
+
+    // If set, the controller is a registered campaign participant.
+    ParticipantController participant = 2;
+  }
+}
+
+message GmController {
+  // Empty message to indicate GM control.
+}
+
+message ParticipantController {
+  // The participant ID of the controller.
+  string participant_id = 1;
+}

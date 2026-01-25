@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package campaign.v1;
+
+option go_package = "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1;campaignv1";
+
+import "campaign/v1/requests.proto";
+
+service CampaignService {
+  // Create a new campaign metadata record.
+  rpc CreateCampaign(CreateCampaignRequest) returns (CreateCampaignResponse);
+
+  // List campaign metadata records.
+  rpc ListCampaigns(ListCampaignsRequest) returns (ListCampaignsResponse);
+
+  // Get a campaign metadata record by ID.
+  rpc GetCampaign(GetCampaignRequest) returns (GetCampaignResponse);
+
+  // Create a participant (GM or player) for a campaign.
+  rpc CreateParticipant(CreateParticipantRequest) returns (CreateParticipantResponse);
+
+  // List participants for a campaign.
+  rpc ListParticipants(ListParticipantsRequest) returns (ListParticipantsResponse);
+
+  // Get a participant by campaign ID and participant ID.
+  rpc GetParticipant(GetParticipantRequest) returns (GetParticipantResponse);
+
+  // Create an actor (PC/NPC/etc) for a campaign.
+  rpc CreateActor(CreateActorRequest) returns (CreateActorResponse);
+
+  // List actors for a campaign.
+  rpc ListActors(ListActorsRequest) returns (ListActorsResponse);
+
+  // Assign a campaign-scoped default controller for an actor.
+  rpc SetDefaultControl(SetDefaultControlRequest) returns (SetDefaultControlResponse);
+}

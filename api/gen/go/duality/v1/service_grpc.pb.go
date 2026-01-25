@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.6.0
 // - protoc             v3.21.12
-// source: duality/v1/duality.proto
+// source: duality/v1/service.proto
 
 package dualityv1
 
@@ -321,5 +321,5 @@ var DualityService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "duality/v1/duality.proto",
+	Metadata: "duality/v1/service.proto",
 }

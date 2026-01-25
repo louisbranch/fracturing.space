@@ -2,30 +2,11 @@ syntax = "proto3";
 
 package duality.v1;
 
-import "google/protobuf/struct.proto";
-
 option go_package = "github.com/louisbranch/duality-engine/api/gen/go/duality/v1;dualityv1";
 
-service DualityService {
-  // Daggerheart-style action roll:
-  // roll Hope d12 + Fear d12, apply modifier, compare to optional difficulty.
-  rpc ActionRoll(ActionRollRequest) returns (ActionRollResponse);
-
-  // Deterministically evaluate a duality outcome from known dice.
-  rpc DualityOutcome(DualityOutcomeRequest) returns (DualityOutcomeResponse);
-
-  // Provide a deterministic explanation for a duality outcome.
-  rpc DualityExplain(DualityExplainRequest) returns (DualityExplainResponse);
-
-  // Compute probabilities for duality outcomes across all dice pairs.
-  rpc DualityProbability(DualityProbabilityRequest) returns (DualityProbabilityResponse);
-
-  // Return ruleset metadata for Duality roll interpretation.
-  rpc RulesVersion(RulesVersionRequest) returns (RulesVersionResponse);
-
-  // Roll arbitrary dice sets and return the individual results.
-  rpc RollDice(RollDiceRequest) returns (RollDiceResponse);
-}
+import "duality/v1/outcome.proto";
+import "duality/v1/dice.proto";
+import "duality/v1/explain.proto";
 
 message ActionRollRequest {
   // Additive modifier applied after summing the two d12s.
@@ -49,11 +30,6 @@ message ActionRollResponse {
   bool is_crit = 6;
   bool meets_difficulty = 7;
   Outcome outcome = 8;
-}
-
-message DualityDice {
-  int32 hope_d12 = 1; // 1..12
-  int32 fear_d12 = 2; // 1..12
 }
 
 message DualityOutcomeRequest {
@@ -112,21 +88,6 @@ message DualityExplainResponse {
   repeated ExplainStep steps = 11;
 }
 
-message Intermediates {
-  int32 base_total = 1;
-  int32 total = 2;
-  bool is_crit = 3;
-  bool meets_difficulty = 4;
-  bool hope_gt_fear = 5;
-  bool fear_gt_hope = 6;
-}
-
-message ExplainStep {
-  string code = 1;
-  string message = 2;
-  google.protobuf.Struct data = 3;
-}
-
 message DualityProbabilityRequest {
   int32 modifier = 1;
   int32 difficulty = 2;
@@ -168,32 +129,4 @@ message RollDiceResponse {
 
   // The sum of all rolls.
   int32 total = 2;
-}
-
-message DiceSpec {
-  int32 sides = 1;
-  int32 count = 2;
-}
-
-message DiceRoll {
-  int32 sides = 1;
-  repeated int32 results = 2;
-  int32 total = 3;
-}
-
-enum Outcome {
-  OUTCOME_UNSPECIFIED = 0;
-
-  // No difficulty provided: just classify the roll by the higher die (or crit).
-  ROLL_WITH_HOPE = 1;
-  ROLL_WITH_FEAR = 2;
-
-  // Difficulty provided: success/failure flavored by higher die (or crit).
-  SUCCESS_WITH_HOPE = 3;
-  SUCCESS_WITH_FEAR = 4;
-  FAILURE_WITH_HOPE = 5;
-  FAILURE_WITH_FEAR = 6;
-
-  // Matching duality dice.
-  CRITICAL_SUCCESS = 7;
 }

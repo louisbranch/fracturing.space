@@ -1,0 +1,153 @@
+syntax = "proto3";
+
+package campaign.v1;
+
+option go_package = "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1;campaignv1";
+
+import "campaign/v1/campaign.proto";
+import "campaign/v1/participant.proto";
+import "campaign/v1/actor.proto";
+import "campaign/v1/controller.proto";
+
+message CreateCampaignRequest {
+  // Display name for the campaign.
+  string name = 1;
+
+  // The mode of GM participation.
+  GmMode gm_mode = 2;
+
+  // Optional free-form theme prompt for assistants.
+  string theme_prompt = 3;
+}
+
+message CreateCampaignResponse {
+  Campaign campaign = 1;
+  repeated string warnings = 2;
+}
+
+message ListCampaignsRequest {
+  // The maximum number of campaigns to return.
+  // If zero, the server defaults to 10. The server clamps values above 10 to 10.
+  int32 page_size = 1;
+
+  // A page token received from a prior ListCampaignsResponse.
+  string page_token = 2;
+}
+
+message ListCampaignsResponse {
+  repeated Campaign campaigns = 1;
+  string next_page_token = 2;
+}
+
+message GetCampaignRequest {
+  // The campaign ID to retrieve.
+  string campaign_id = 1;
+}
+
+message GetCampaignResponse {
+  Campaign campaign = 1;
+}
+
+message CreateParticipantRequest {
+  // The campaign ID to create the participant for.
+  string campaign_id = 1;
+
+  // Display name for the participant.
+  string display_name = 2;
+
+  // The role of the participant.
+  ParticipantRole role = 3;
+
+  // The controller type (defaults to HUMAN if unspecified).
+  Controller controller = 4;
+}
+
+message CreateParticipantResponse {
+  Participant participant = 1;
+}
+
+message ListParticipantsRequest {
+  // The campaign ID to list participants for.
+  string campaign_id = 1;
+
+  // The maximum number of participants to return.
+  // If zero, the server defaults to 10. The server clamps values above 10 to 10.
+  int32 page_size = 2;
+
+  // A page token received from a prior ListParticipantsResponse.
+  string page_token = 3;
+}
+
+message ListParticipantsResponse {
+  repeated Participant participants = 1;
+  string next_page_token = 2;
+}
+
+message GetParticipantRequest {
+  // The campaign ID.
+  string campaign_id = 1;
+
+  // The participant ID.
+  string participant_id = 2;
+}
+
+message GetParticipantResponse {
+  Participant participant = 1;
+}
+
+message CreateActorRequest {
+  // The campaign ID to create the actor for.
+  string campaign_id = 1;
+
+  // Display name for the actor.
+  string name = 2;
+
+  // The kind of actor (PC or NPC).
+  ActorKind kind = 3;
+
+  // Optional free-form notes about the actor.
+  string notes = 4;
+}
+
+message CreateActorResponse {
+  Actor actor = 1;
+}
+
+message ListActorsRequest {
+  // The campaign ID to list actors for.
+  string campaign_id = 1;
+
+  // The maximum number of actors to return.
+  // If zero, the server defaults to 10. The server clamps values above 10 to 10.
+  int32 page_size = 2;
+
+  // A page token received from a prior ListActorsResponse.
+  string page_token = 3;
+}
+
+message ListActorsResponse {
+  repeated Actor actors = 1;
+  string next_page_token = 2;
+}
+
+message SetDefaultControlRequest {
+  // The campaign ID.
+  string campaign_id = 1;
+
+  // The actor ID.
+  string actor_id = 2;
+
+  // The controller for the actor.
+  ActorController controller = 3;
+}
+
+message SetDefaultControlResponse {
+  // The campaign ID.
+  string campaign_id = 1;
+
+  // The actor ID.
+  string actor_id = 2;
+
+  // The controller for the actor.
+  ActorController controller = 3;
+}

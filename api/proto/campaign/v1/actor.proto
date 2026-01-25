@@ -6,20 +6,18 @@ import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1;campaignv1";
 
-message Campaign {
+message Actor {
   string id = 1;
-  string name = 2;
-  GmMode gm_mode = 3;
-  // Number of registered players for this campaign.
-  int32 player_count = 4;
-  string theme_prompt = 5;
+  string campaign_id = 2;
+  string name = 3;
+  ActorKind kind = 4;
+  string notes = 5;
   google.protobuf.Timestamp created_at = 6;
   google.protobuf.Timestamp updated_at = 7;
 }
 
-enum GmMode {
-  GM_MODE_UNSPECIFIED = 0;
-  HUMAN = 1;
-  AI = 2;
-  HYBRID = 3;
+enum ActorKind {
+  ACTOR_KIND_UNSPECIFIED = 0;
+  PC = 1;
+  NPC = 2;
 }

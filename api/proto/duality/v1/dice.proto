@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package duality.v1;
+
+option go_package = "github.com/louisbranch/duality-engine/api/gen/go/duality/v1;dualityv1";
+
+message DualityDice {
+  int32 hope_d12 = 1; // 1..12
+  int32 fear_d12 = 2; // 1..12
+}
+
+message DiceSpec {
+  int32 sides = 1;
+  int32 count = 2;
+}
+
+message DiceRoll {
+  int32 sides = 1;
+  repeated int32 results = 2;
+  int32 total = 3;
+}
