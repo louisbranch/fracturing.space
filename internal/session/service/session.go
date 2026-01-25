@@ -7,7 +7,7 @@ import (
 	"time"
 
 	sessionv1 "github.com/louisbranch/duality-engine/api/gen/go/session/v1"
-	"github.com/louisbranch/duality-engine/internal/campaign/domain"
+	"github.com/louisbranch/duality-engine/internal/id"
 	sessiondomain "github.com/louisbranch/duality-engine/internal/session/domain"
 	"github.com/louisbranch/duality-engine/internal/storage"
 	"google.golang.org/grpc/codes"
@@ -34,7 +34,7 @@ func NewSessionService(stores Stores) *SessionService {
 	return &SessionService{
 		stores:      stores,
 		clock:       time.Now,
-		idGenerator: domain.NewID,
+		idGenerator: id.NewID,
 	}
 }
 

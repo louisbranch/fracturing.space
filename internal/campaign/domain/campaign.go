@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/louisbranch/duality-engine/internal/id"
 )
 
 // GmMode describes how the GM role is handled for a campaign.
@@ -52,7 +54,7 @@ func CreateCampaign(input CreateCampaignInput, now func() time.Time, idGenerator
 		now = time.Now
 	}
 	if idGenerator == nil {
-		idGenerator = NewID
+		idGenerator = id.NewID
 	}
 
 	normalized, err := NormalizeCreateCampaignInput(input)

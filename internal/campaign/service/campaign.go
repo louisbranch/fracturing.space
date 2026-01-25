@@ -8,6 +8,7 @@ import (
 
 	campaignv1 "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1"
 	"github.com/louisbranch/duality-engine/internal/campaign/domain"
+	"github.com/louisbranch/duality-engine/internal/id"
 	"github.com/louisbranch/duality-engine/internal/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -44,7 +45,7 @@ func NewCampaignService(stores Stores) *CampaignService {
 	return &CampaignService{
 		stores:      stores,
 		clock:       time.Now,
-		idGenerator: domain.NewID,
+		idGenerator: id.NewID,
 	}
 }
 

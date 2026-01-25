@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/louisbranch/duality-engine/internal/campaign/domain"
+	"github.com/louisbranch/duality-engine/internal/id"
 )
 
 // SessionStatus describes the lifecycle state of a session.
@@ -52,7 +52,7 @@ func CreateSession(input CreateSessionInput, now func() time.Time, idGenerator f
 		now = time.Now
 	}
 	if idGenerator == nil {
-		idGenerator = domain.NewID
+		idGenerator = id.NewID
 	}
 
 	normalized, err := NormalizeCreateSessionInput(input)

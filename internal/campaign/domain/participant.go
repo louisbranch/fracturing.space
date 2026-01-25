@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/louisbranch/duality-engine/internal/id"
 )
 
 // ParticipantRole describes the role of a participant in a campaign.
@@ -65,7 +67,7 @@ func CreateParticipant(input CreateParticipantInput, now func() time.Time, idGen
 		now = time.Now
 	}
 	if idGenerator == nil {
-		idGenerator = NewID
+		idGenerator = id.NewID
 	}
 
 	normalized, err := NormalizeCreateParticipantInput(input)
