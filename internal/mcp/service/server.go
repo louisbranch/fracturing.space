@@ -63,6 +63,7 @@ func New(grpcAddr string) (*Server, error) {
 	registerCampaignTools(mcpServer, campaignClient)
 	registerSessionTools(mcpServer, sessionClient)
 	registerCampaignResources(mcpServer, campaignClient)
+	registerSessionResources(mcpServer, sessionClient)
 
 	return &Server{mcpServer: mcpServer, conn: conn}, nil
 }

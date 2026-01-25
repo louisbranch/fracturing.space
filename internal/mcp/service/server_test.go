@@ -1940,6 +1940,123 @@ func TestActorListResourceHandlerReturnsClientError(t *testing.T) {
 	}
 }
 
+// TestSessionListResourceHandlerMapsResponse ensures JSON payload is formatted correctly.
+func TestSessionListResourceHandlerMapsResponse(t *testing.T) {
+	now := time.Date(2026, 1, 23, 13, 0, 0, 0, time.UTC)
+	endedAt := now.Add(2 * time.Hour)
+	campaignID := "camp-999"
+	client := &fakeSessionClient{listSessionsResponse: &sessionv1.ListSessionsResponse{
+		Sessions: []*sessionv1.Session{{
+			Id:         "sess-1",
+			CampaignId: campaignID,
+			Name:       "Session One",
+			Status:     sessionv1.SessionStatus_ACTIVE,
+			StartedAt:  timestamppb.New(now),
+			UpdatedAt:  timestamppb.New(now.Add(time.Hour)),
+		}, {
+			Id:         "sess-2",
+			CampaignId: campaignID,
+			Name:       "Session Two",
+			Status:     sessionv1.SessionStatus_ENDED,
+			StartedAt:  timestamppb.New(now),
+			UpdatedAt:  timestamppb.New(endedAt),
+			EndedAt:    timestamppb.New(endedAt),
+		}},
+	}}
+
+	handler := domain.SessionListResourceHandler(client)
+	resourceURI := "campaign://" + campaignID + "/sessions"
+	result, err := handler(context.Background(), &mcp.ReadResourceRequest{
+		Params: &mcp.ReadResourceParams{URI: resourceURI},
+	})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if result == nil || len(result.Contents) != 1 {
+		t.Fatalf("expected 1 content item, got %v", result)
+	}
+	if client.lastListSessionsRequest == nil {
+		t.Fatal("expected list sessions request")
+	}
+	if client.lastListSessionsRequest.GetCampaignId() != campaignID {
+		t.Fatalf("expected campaign id %q, got %q", campaignID, client.lastListSessionsRequest.GetCampaignId())
+	}
+	if client.lastListSessionsRequest.GetPageSize() != 10 {
+		t.Fatalf("expected page size 10, got %d", client.lastListSessionsRequest.GetPageSize())
+	}
+
+	var payload struct {
+		Sessions []struct {
+			ID         string `json:"id"`
+			CampaignID string `json:"campaign_id"`
+			Name       string `json:"name"`
+			Status     string `json:"status"`
+			StartedAt  string `json:"started_at"`
+			UpdatedAt  string `json:"updated_at"`
+			EndedAt    string `json:"ended_at,omitempty"`
+		} `json:"sessions"`
+	}
+	if err := json.Unmarshal([]byte(result.Contents[0].Text), &payload); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+	if len(payload.Sessions) != 2 {
+		t.Fatalf("expected 2 sessions, got %d", len(payload.Sessions))
+	}
+	if payload.Sessions[0].ID != "sess-1" {
+		t.Fatalf("expected first session id sess-1, got %q", payload.Sessions[0].ID)
+	}
+	if payload.Sessions[0].Status != "ACTIVE" {
+		t.Fatalf("expected first session status ACTIVE, got %q", payload.Sessions[0].Status)
+	}
+	if payload.Sessions[1].ID != "sess-2" {
+		t.Fatalf("expected second session id sess-2, got %q", payload.Sessions[1].ID)
+	}
+	if payload.Sessions[1].Status != "ENDED" {
+		t.Fatalf("expected second session status ENDED, got %q", payload.Sessions[1].Status)
+	}
+	if payload.Sessions[0].StartedAt != now.Format(time.RFC3339) {
+		t.Fatalf("expected started_at %q, got %q", now.Format(time.RFC3339), payload.Sessions[0].StartedAt)
+	}
+	if payload.Sessions[1].EndedAt != endedAt.Format(time.RFC3339) {
+		t.Fatalf("expected ended_at %q, got %q", endedAt.Format(time.RFC3339), payload.Sessions[1].EndedAt)
+	}
+	if result.Contents[0].URI != resourceURI {
+		t.Fatalf("expected resource URI %q, got %q", resourceURI, result.Contents[0].URI)
+	}
+}
+
+// TestSessionListResourceHandlerRejectsPlaceholder ensures placeholder campaign ID is rejected.
+func TestSessionListResourceHandlerRejectsPlaceholder(t *testing.T) {
+	client := &fakeSessionClient{}
+	handler := domain.SessionListResourceHandler(client)
+
+	result, err := handler(context.Background(), &mcp.ReadResourceRequest{
+		Params: &mcp.ReadResourceParams{URI: "campaign://_/sessions"},
+	})
+	if err == nil {
+		t.Fatal("expected error for placeholder campaign ID")
+	}
+	if result != nil {
+		t.Fatal("expected nil result on error")
+	}
+}
+
+// TestSessionListResourceHandlerReturnsClientError ensures list errors are returned.
+func TestSessionListResourceHandlerReturnsClientError(t *testing.T) {
+	client := &fakeSessionClient{listSessionsErr: errors.New("boom")}
+	handler := domain.SessionListResourceHandler(client)
+
+	result, err := handler(context.Background(), &mcp.ReadResourceRequest{
+		Params: &mcp.ReadResourceParams{URI: "campaign://camp-123/sessions"},
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if result != nil {
+		t.Fatal("expected nil result on error")
+	}
+}
+
 // intPointer returns an int pointer for test inputs.
 func intPointer(value int) *int {
 	return &value

@@ -401,6 +401,14 @@ The `{campaign_id}` must be replaced with an actual campaign identifier when rea
 
 Fields: `id`, `campaign_id`, `name`, `kind`, `notes`, `created_at`, `updated_at`.
 
+#### campaign://{campaign_id}/sessions
+
+JSON listing of sessions for a campaign. Depends on campaign (requires `campaign_id`).
+
+The `{campaign_id}` must be replaced with an actual campaign identifier when reading the resource.
+
+Fields: `id`, `campaign_id`, `name`, `status`, `started_at`, `updated_at`, `ended_at` (optional).
+
 Planned MCP resources that will expand what the client can ask the MCP server to
 retrieve or manage:
 
