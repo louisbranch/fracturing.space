@@ -14,7 +14,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func TestRegisterParticipantSuccess(t *testing.T) {
+func TestCreateParticipantSuccess(t *testing.T) {
 	fixedTime := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
 	campaignStore := &fakeCampaignStore{
 		putCampaign: domain.Campaign{ID: "camp-123"},
@@ -37,14 +37,14 @@ func TestRegisterParticipantSuccess(t *testing.T) {
 		},
 	}
 
-	response, err := service.RegisterParticipant(context.Background(), &campaignv1.RegisterParticipantRequest{
+	response, err := service.CreateParticipant(context.Background(), &campaignv1.CreateParticipantRequest{
 		CampaignId:  "camp-123",
 		DisplayName: "  Alice  ",
 		Role:        campaignv1.ParticipantRole_PLAYER,
 		Controller:  campaignv1.Controller_CONTROLLER_HUMAN,
 	})
 	if err != nil {
-		t.Fatalf("register participant: %v", err)
+		t.Fatalf("create participant: %v", err)
 	}
 	if response == nil || response.Participant == nil {
 		t.Fatal("expected participant response")
@@ -72,7 +72,7 @@ func TestRegisterParticipantSuccess(t *testing.T) {
 	}
 }
 
-func TestRegisterParticipantIncrementsPlayerCount(t *testing.T) {
+func TestCreateParticipantIncrementsPlayerCount(t *testing.T) {
 	fixedTime := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
 	campaignStore := &fakeCampaignStore{}
 	campaignStore.getFunc = func(ctx context.Context, id string) (domain.Campaign, error) {
@@ -97,14 +97,14 @@ func TestRegisterParticipantIncrementsPlayerCount(t *testing.T) {
 		},
 	}
 
-	_, err := service.RegisterParticipant(context.Background(), &campaignv1.RegisterParticipantRequest{
+	_, err := service.CreateParticipant(context.Background(), &campaignv1.CreateParticipantRequest{
 		CampaignId:  "camp-123",
 		DisplayName: "Charlie",
 		Role:        campaignv1.ParticipantRole_PLAYER,
 		Controller:  campaignv1.Controller_CONTROLLER_HUMAN,
 	})
 	if err != nil {
-		t.Fatalf("register participant: %v", err)
+		t.Fatalf("create participant: %v", err)
 	}
 
 	// Verify campaign was updated with incremented player count
@@ -116,7 +116,7 @@ func TestRegisterParticipantIncrementsPlayerCount(t *testing.T) {
 	}
 }
 
-func TestRegisterParticipantDoesNotIncrementForGM(t *testing.T) {
+func TestCreateParticipantDoesNotIncrementForGM(t *testing.T) {
 	campaignStore := &fakeCampaignStore{}
 	campaignStore.getFunc = func(ctx context.Context, id string) (domain.Campaign, error) {
 		if id == "camp-123" {
@@ -138,14 +138,14 @@ func TestRegisterParticipantDoesNotIncrementForGM(t *testing.T) {
 		},
 	}
 
-	_, err := service.RegisterParticipant(context.Background(), &campaignv1.RegisterParticipantRequest{
+	_, err := service.CreateParticipant(context.Background(), &campaignv1.CreateParticipantRequest{
 		CampaignId:  "camp-123",
 		DisplayName: "GM",
 		Role:        campaignv1.ParticipantRole_GM,
 		Controller:  campaignv1.Controller_CONTROLLER_HUMAN,
 	})
 	if err != nil {
-		t.Fatalf("register participant: %v", err)
+		t.Fatalf("create participant: %v", err)
 	}
 
 	// Verify campaign was not updated (Put should not have been called)
@@ -154,7 +154,7 @@ func TestRegisterParticipantDoesNotIncrementForGM(t *testing.T) {
 	}
 }
 
-func TestRegisterParticipantDefaultsController(t *testing.T) {
+func TestCreateParticipantDefaultsController(t *testing.T) {
 	campaignStore := &fakeCampaignStore{}
 	campaignStore.getFunc = func(ctx context.Context, id string) (domain.Campaign, error) {
 		return domain.Campaign{ID: "camp-123"}, nil
@@ -167,28 +167,28 @@ func TestRegisterParticipantDefaultsController(t *testing.T) {
 		participantIDGen: func() (string, error) { return "part-1", nil },
 	}
 
-	response, err := service.RegisterParticipant(context.Background(), &campaignv1.RegisterParticipantRequest{
+	response, err := service.CreateParticipant(context.Background(), &campaignv1.CreateParticipantRequest{
 		CampaignId:  "camp-123",
 		DisplayName: "Bob",
 		Role:        campaignv1.ParticipantRole_GM,
 		Controller:  campaignv1.Controller_CONTROLLER_UNSPECIFIED,
 	})
 	if err != nil {
-		t.Fatalf("register participant: %v", err)
+		t.Fatalf("create participant: %v", err)
 	}
 	if response.Participant.Controller != campaignv1.Controller_CONTROLLER_HUMAN {
 		t.Fatalf("expected default controller human, got %v", response.Participant.Controller)
 	}
 }
 
-func TestRegisterParticipantValidationErrors(t *testing.T) {
+func TestCreateParticipantValidationErrors(t *testing.T) {
 	tests := []struct {
 		name string
-		req  *campaignv1.RegisterParticipantRequest
+		req  *campaignv1.CreateParticipantRequest
 	}{
 		{
 			name: "empty display name",
-			req: &campaignv1.RegisterParticipantRequest{
+			req: &campaignv1.CreateParticipantRequest{
 				CampaignId:  "camp-123",
 				DisplayName: "  ",
 				Role:        campaignv1.ParticipantRole_PLAYER,
@@ -196,7 +196,7 @@ func TestRegisterParticipantValidationErrors(t *testing.T) {
 		},
 		{
 			name: "missing role",
-			req: &campaignv1.RegisterParticipantRequest{
+			req: &campaignv1.CreateParticipantRequest{
 				CampaignId:  "camp-123",
 				DisplayName: "Alice",
 				Role:        campaignv1.ParticipantRole_ROLE_UNSPECIFIED,
@@ -204,7 +204,7 @@ func TestRegisterParticipantValidationErrors(t *testing.T) {
 		},
 		{
 			name: "empty campaign id",
-			req: &campaignv1.RegisterParticipantRequest{
+			req: &campaignv1.CreateParticipantRequest{
 				CampaignId:  "  ",
 				DisplayName: "Alice",
 				Role:        campaignv1.ParticipantRole_PLAYER,
@@ -225,7 +225,7 @@ func TestRegisterParticipantValidationErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := service.RegisterParticipant(context.Background(), tt.req)
+			_, err := service.CreateParticipant(context.Background(), tt.req)
 			if err == nil {
 				t.Fatal("expected error")
 			}
@@ -240,7 +240,7 @@ func TestRegisterParticipantValidationErrors(t *testing.T) {
 	}
 }
 
-func TestRegisterParticipantCampaignNotFound(t *testing.T) {
+func TestCreateParticipantCampaignNotFound(t *testing.T) {
 	campaignStore := &fakeCampaignStore{}
 	campaignStore.getFunc = func(ctx context.Context, id string) (domain.Campaign, error) {
 		return domain.Campaign{}, storage.ErrNotFound
@@ -252,7 +252,7 @@ func TestRegisterParticipantCampaignNotFound(t *testing.T) {
 		participantIDGen: func() (string, error) { return "part-1", nil },
 	}
 
-	_, err := service.RegisterParticipant(context.Background(), &campaignv1.RegisterParticipantRequest{
+	_, err := service.CreateParticipant(context.Background(), &campaignv1.CreateParticipantRequest{
 		CampaignId:  "missing",
 		DisplayName: "Alice",
 		Role:        campaignv1.ParticipantRole_PLAYER,
@@ -269,10 +269,10 @@ func TestRegisterParticipantCampaignNotFound(t *testing.T) {
 	}
 }
 
-func TestRegisterParticipantNilRequest(t *testing.T) {
+func TestCreateParticipantNilRequest(t *testing.T) {
 	service := NewCampaignService(&fakeCampaignStore{}, &fakeParticipantStore{}, &fakeActorStore{})
 
-	_, err := service.RegisterParticipant(context.Background(), nil)
+	_, err := service.CreateParticipant(context.Background(), nil)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -285,7 +285,7 @@ func TestRegisterParticipantNilRequest(t *testing.T) {
 	}
 }
 
-func TestRegisterParticipantStoreFailure(t *testing.T) {
+func TestCreateParticipantStoreFailure(t *testing.T) {
 	campaignStore := &fakeCampaignStore{}
 	campaignStore.getFunc = func(ctx context.Context, id string) (domain.Campaign, error) {
 		return domain.Campaign{ID: "camp-123"}, nil
@@ -298,7 +298,7 @@ func TestRegisterParticipantStoreFailure(t *testing.T) {
 		participantIDGen: func() (string, error) { return "part-123", nil },
 	}
 
-	_, err := service.RegisterParticipant(context.Background(), &campaignv1.RegisterParticipantRequest{
+	_, err := service.CreateParticipant(context.Background(), &campaignv1.CreateParticipantRequest{
 		CampaignId:  "camp-123",
 		DisplayName: "Alice",
 		Role:        campaignv1.ParticipantRole_PLAYER,
@@ -315,7 +315,7 @@ func TestRegisterParticipantStoreFailure(t *testing.T) {
 	}
 }
 
-func TestRegisterParticipantCampaignUpdateFailure(t *testing.T) {
+func TestCreateParticipantCampaignUpdateFailure(t *testing.T) {
 	fixedTime := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
 	campaignStore := &fakeCampaignStore{putErr: errors.New("campaign update failed")}
 	campaignStore.getFunc = func(ctx context.Context, id string) (domain.Campaign, error) {
@@ -340,7 +340,7 @@ func TestRegisterParticipantCampaignUpdateFailure(t *testing.T) {
 		},
 	}
 
-	_, err := service.RegisterParticipant(context.Background(), &campaignv1.RegisterParticipantRequest{
+	_, err := service.CreateParticipant(context.Background(), &campaignv1.CreateParticipantRequest{
 		CampaignId:  "camp-123",
 		DisplayName: "Bob",
 		Role:        campaignv1.ParticipantRole_PLAYER,

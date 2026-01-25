@@ -26,7 +26,7 @@ For an OpenCode client configuration, see `opencode.jsonc`.
 - `duality_rules_version`: returns the ruleset semantics used for Duality roll evaluation.
 - `roll_dice`: rolls arbitrary dice pools and returns the individual results.
 - `campaign_create`: creates a new campaign metadata record.
-- `participant_create`: registers a participant (GM or player) for a campaign.
+- `participant_create`: creates a participant (GM or player) for a campaign.
 
 ## Resources
 

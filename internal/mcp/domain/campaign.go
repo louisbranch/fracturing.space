@@ -44,7 +44,7 @@ type CampaignListPayload struct {
 	Campaigns []CampaignListEntry `json:"campaigns"`
 }
 
-// ParticipantCreateInput represents the MCP tool input for participant registration.
+// ParticipantCreateInput represents the MCP tool input for participant creation.
 type ParticipantCreateInput struct {
 	CampaignID  string `json:"campaign_id" jsonschema:"campaign identifier"`
 	DisplayName string `json:"display_name" jsonschema:"display name for the participant"`
@@ -52,7 +52,7 @@ type ParticipantCreateInput struct {
 	Controller  string `json:"controller,omitempty" jsonschema:"controller type (HUMAN, AI); optional, defaults to HUMAN if unspecified"`
 }
 
-// ParticipantCreateResult represents the MCP tool output for participant registration.
+// ParticipantCreateResult represents the MCP tool output for participant creation.
 type ParticipantCreateResult struct {
 	ID          string `json:"id" jsonschema:"participant identifier"`
 	CampaignID  string `json:"campaign_id" jsonschema:"campaign identifier"`
@@ -87,11 +87,11 @@ func CampaignCreateTool() *mcp.Tool {
 	}
 }
 
-// ParticipantCreateTool defines the MCP tool schema for registering participants.
+// ParticipantCreateTool defines the MCP tool schema for creating participants.
 func ParticipantCreateTool() *mcp.Tool {
 	return &mcp.Tool{
 		Name:        "participant_create",
-		Description: "Registers a participant (GM or player) for a campaign",
+		Description: "Creates a participant (GM or player) for a campaign",
 	}
 }
 
@@ -240,13 +240,13 @@ func gmModeToString(mode campaignv1.GmMode) string {
 	}
 }
 
-// ParticipantCreateHandler executes a participant registration request.
+// ParticipantCreateHandler executes a participant creation request.
 func ParticipantCreateHandler(client campaignv1.CampaignServiceClient) mcp.ToolHandlerFor[ParticipantCreateInput, ParticipantCreateResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input ParticipantCreateInput) (*mcp.CallToolResult, ParticipantCreateResult, error) {
 		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 
-		req := &campaignv1.RegisterParticipantRequest{
+		req := &campaignv1.CreateParticipantRequest{
 			CampaignId:  input.CampaignID,
 			DisplayName: input.DisplayName,
 			Role:        participantRoleFromString(input.Role),
@@ -257,7 +257,7 @@ func ParticipantCreateHandler(client campaignv1.CampaignServiceClient) mcp.ToolH
 			req.Controller = controllerFromString(input.Controller)
 		}
 
-		response, err := client.RegisterParticipant(runCtx, req)
+		response, err := client.CreateParticipant(runCtx, req)
 		if err != nil {
 			return nil, ParticipantCreateResult{}, fmt.Errorf("participant create failed: %w", err)
 		}

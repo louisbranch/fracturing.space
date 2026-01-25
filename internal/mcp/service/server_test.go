@@ -47,17 +47,17 @@ type fakeDualityClient struct {
 type fakeCampaignClient struct {
 	response              *campaignv1.CreateCampaignResponse
 	listResponse          *campaignv1.ListCampaignsResponse
-	registerResponse      *campaignv1.RegisterParticipantResponse
+	createResponse        *campaignv1.CreateParticipantResponse
 	listParticipantsResponse *campaignv1.ListParticipantsResponse
 	createActorResponse   *campaignv1.CreateActorResponse
 	err                   error
 	listErr               error
-	registerErr           error
+	createErr             error
 	listParticipantsErr   error
 	createActorErr        error
 	lastRequest           *campaignv1.CreateCampaignRequest
 	lastListRequest       *campaignv1.ListCampaignsRequest
-	lastRegisterRequest   *campaignv1.RegisterParticipantRequest
+	lastCreateRequest     *campaignv1.CreateParticipantRequest
 	lastListParticipantsRequest *campaignv1.ListParticipantsRequest
 	lastCreateActorRequest *campaignv1.CreateActorRequest
 	listCalls             int
@@ -120,10 +120,10 @@ func (f *fakeCampaignClient) ListCampaigns(ctx context.Context, req *campaignv1.
 	return f.listResponse, f.listErr
 }
 
-// RegisterParticipant records the request and returns the configured response.
-func (f *fakeCampaignClient) RegisterParticipant(ctx context.Context, req *campaignv1.RegisterParticipantRequest, opts ...grpc.CallOption) (*campaignv1.RegisterParticipantResponse, error) {
-	f.lastRegisterRequest = req
-	return f.registerResponse, f.registerErr
+// CreateParticipant records the request and returns the configured response.
+func (f *fakeCampaignClient) CreateParticipant(ctx context.Context, req *campaignv1.CreateParticipantRequest, opts ...grpc.CallOption) (*campaignv1.CreateParticipantResponse, error) {
+	f.lastCreateRequest = req
+	return f.createResponse, f.createErr
 }
 
 // ListParticipants records the request and returns the configured response.
@@ -1001,7 +1001,7 @@ func TestCampaignListResourceHandlerMapsResponse(t *testing.T) {
 
 // TestParticipantCreateHandlerReturnsClientError ensures gRPC errors are returned as tool errors.
 func TestParticipantCreateHandlerReturnsClientError(t *testing.T) {
-	client := &fakeCampaignClient{registerErr: errors.New("boom")}
+	client := &fakeCampaignClient{createErr: errors.New("boom")}
 	handler := domain.ParticipantCreateHandler(client)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.ParticipantCreateInput{
@@ -1021,7 +1021,7 @@ func TestParticipantCreateHandlerReturnsClientError(t *testing.T) {
 // TestParticipantCreateHandlerMapsRequestAndResponse ensures inputs and outputs map consistently.
 func TestParticipantCreateHandlerMapsRequestAndResponse(t *testing.T) {
 	now := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
-	client := &fakeCampaignClient{registerResponse: &campaignv1.RegisterParticipantResponse{
+	client := &fakeCampaignClient{createResponse: &campaignv1.CreateParticipantResponse{
 		Participant: &campaignv1.Participant{
 			Id:          "part-456",
 			CampaignId:  "camp-123",
@@ -1048,20 +1048,20 @@ func TestParticipantCreateHandlerMapsRequestAndResponse(t *testing.T) {
 	if result != nil {
 		t.Fatal("expected nil result on success")
 	}
-	if client.lastRegisterRequest == nil {
+	if client.lastCreateRequest == nil {
 		t.Fatal("expected gRPC request")
 	}
-	if client.lastRegisterRequest.GetCampaignId() != "camp-123" {
-		t.Fatalf("expected campaign id camp-123, got %q", client.lastRegisterRequest.GetCampaignId())
+	if client.lastCreateRequest.GetCampaignId() != "camp-123" {
+		t.Fatalf("expected campaign id camp-123, got %q", client.lastCreateRequest.GetCampaignId())
 	}
-	if client.lastRegisterRequest.GetDisplayName() != "Test Player" {
-		t.Fatalf("expected display name Test Player, got %q", client.lastRegisterRequest.GetDisplayName())
+	if client.lastCreateRequest.GetDisplayName() != "Test Player" {
+		t.Fatalf("expected display name Test Player, got %q", client.lastCreateRequest.GetDisplayName())
 	}
-	if client.lastRegisterRequest.GetRole() != campaignv1.ParticipantRole_PLAYER {
-		t.Fatalf("expected role PLAYER, got %v", client.lastRegisterRequest.GetRole())
+	if client.lastCreateRequest.GetRole() != campaignv1.ParticipantRole_PLAYER {
+		t.Fatalf("expected role PLAYER, got %v", client.lastCreateRequest.GetRole())
 	}
-	if client.lastRegisterRequest.GetController() != campaignv1.Controller_CONTROLLER_HUMAN {
-		t.Fatalf("expected controller HUMAN, got %v", client.lastRegisterRequest.GetController())
+	if client.lastCreateRequest.GetController() != campaignv1.Controller_CONTROLLER_HUMAN {
+		t.Fatalf("expected controller HUMAN, got %v", client.lastCreateRequest.GetController())
 	}
 	if output.ID != "part-456" {
 		t.Fatalf("expected id part-456, got %q", output.ID)
@@ -1089,7 +1089,7 @@ func TestParticipantCreateHandlerMapsRequestAndResponse(t *testing.T) {
 // TestParticipantCreateHandlerOptionalController ensures optional controller field works.
 func TestParticipantCreateHandlerOptionalController(t *testing.T) {
 	now := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
-	client := &fakeCampaignClient{registerResponse: &campaignv1.RegisterParticipantResponse{
+	client := &fakeCampaignClient{createResponse: &campaignv1.CreateParticipantResponse{
 		Participant: &campaignv1.Participant{
 			Id:          "part-789",
 			CampaignId:  "camp-123",
@@ -1116,12 +1116,12 @@ func TestParticipantCreateHandlerOptionalController(t *testing.T) {
 	if result != nil {
 		t.Fatal("expected nil result on success")
 	}
-	if client.lastRegisterRequest == nil {
+	if client.lastCreateRequest == nil {
 		t.Fatal("expected gRPC request")
 	}
 	// Controller should be unspecified when not provided
-	if client.lastRegisterRequest.GetController() != campaignv1.Controller_CONTROLLER_UNSPECIFIED {
-		t.Fatalf("expected controller UNSPECIFIED when omitted, got %v", client.lastRegisterRequest.GetController())
+	if client.lastCreateRequest.GetController() != campaignv1.Controller_CONTROLLER_UNSPECIFIED {
+		t.Fatalf("expected controller UNSPECIFIED when omitted, got %v", client.lastCreateRequest.GetController())
 	}
 	if output.Role != "GM" {
 		t.Fatalf("expected role GM, got %q", output.Role)

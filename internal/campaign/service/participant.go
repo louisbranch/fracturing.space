@@ -13,10 +13,10 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-// RegisterParticipant registers a participant (GM or player) for a campaign.
-func (s *CampaignService) RegisterParticipant(ctx context.Context, in *campaignv1.RegisterParticipantRequest) (*campaignv1.RegisterParticipantResponse, error) {
+// CreateParticipant creates a participant (GM or player) for a campaign.
+func (s *CampaignService) CreateParticipant(ctx context.Context, in *campaignv1.CreateParticipantRequest) (*campaignv1.CreateParticipantResponse, error) {
 	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "register participant request is required")
+		return nil, status.Error(codes.InvalidArgument, "create participant request is required")
 	}
 
 	if s.store == nil {
@@ -68,7 +68,7 @@ func (s *CampaignService) RegisterParticipant(ctx context.Context, in *campaignv
 		}
 	}
 
-	response := &campaignv1.RegisterParticipantResponse{
+	response := &campaignv1.CreateParticipantResponse{
 		Participant: &campaignv1.Participant{
 			Id:          participant.ID,
 			CampaignId:  participant.CampaignID,

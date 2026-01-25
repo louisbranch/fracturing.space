@@ -96,7 +96,7 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 		}
 		campaignOutput := decodeStructuredContent[domain.CampaignCreateResult](t, campaignResult.StructuredContent)
 
-		// Now register a participant
+		// Now create a participant
 		participantParams := &mcp.CallToolParams{
 			Name: "participant_create",
 			Arguments: map[string]any{

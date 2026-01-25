@@ -13,8 +13,8 @@ service CampaignService {
   // List campaign metadata records.
   rpc ListCampaigns(ListCampaignsRequest) returns (ListCampaignsResponse);
 
-  // Register a participant (GM or player) for a campaign.
-  rpc RegisterParticipant(RegisterParticipantRequest) returns (RegisterParticipantResponse);
+  // Create a participant (GM or player) for a campaign.
+  rpc CreateParticipant(CreateParticipantRequest) returns (CreateParticipantResponse);
 
   // List participants for a campaign.
   rpc ListParticipants(ListParticipantsRequest) returns (ListParticipantsResponse);
@@ -71,8 +71,8 @@ enum GmMode {
   HYBRID = 3;
 }
 
-message RegisterParticipantRequest {
-  // The campaign ID to register the participant for.
+message CreateParticipantRequest {
+  // The campaign ID to create the participant for.
   string campaign_id = 1;
 
   // Display name for the participant.
@@ -85,7 +85,7 @@ message RegisterParticipantRequest {
   Controller controller = 4;
 }
 
-message RegisterParticipantResponse {
+message CreateParticipantResponse {
   Participant participant = 1;
 }
 

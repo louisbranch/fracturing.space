@@ -78,7 +78,7 @@ func runMCPResourcesTests(t *testing.T, suite *integrationSuite) {
 			t.Fatal("campaign_create returned empty id")
 		}
 
-		// Register a participant
+		// Create a participant
 		participantParams := &mcp.CallToolParams{
 			Name: "participant_create",
 			Arguments: map[string]any{

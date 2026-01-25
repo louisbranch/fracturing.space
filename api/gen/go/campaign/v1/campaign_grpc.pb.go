@@ -19,11 +19,11 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	CampaignService_CreateCampaign_FullMethodName      = "/campaign.v1.CampaignService/CreateCampaign"
-	CampaignService_ListCampaigns_FullMethodName       = "/campaign.v1.CampaignService/ListCampaigns"
-	CampaignService_RegisterParticipant_FullMethodName = "/campaign.v1.CampaignService/RegisterParticipant"
-	CampaignService_ListParticipants_FullMethodName    = "/campaign.v1.CampaignService/ListParticipants"
-	CampaignService_CreateActor_FullMethodName         = "/campaign.v1.CampaignService/CreateActor"
+	CampaignService_CreateCampaign_FullMethodName    = "/campaign.v1.CampaignService/CreateCampaign"
+	CampaignService_ListCampaigns_FullMethodName     = "/campaign.v1.CampaignService/ListCampaigns"
+	CampaignService_CreateParticipant_FullMethodName = "/campaign.v1.CampaignService/CreateParticipant"
+	CampaignService_ListParticipants_FullMethodName  = "/campaign.v1.CampaignService/ListParticipants"
+	CampaignService_CreateActor_FullMethodName       = "/campaign.v1.CampaignService/CreateActor"
 )
 
 // CampaignServiceClient is the client API for CampaignService service.
@@ -34,8 +34,8 @@ type CampaignServiceClient interface {
 	CreateCampaign(ctx context.Context, in *CreateCampaignRequest, opts ...grpc.CallOption) (*CreateCampaignResponse, error)
 	// List campaign metadata records.
 	ListCampaigns(ctx context.Context, in *ListCampaignsRequest, opts ...grpc.CallOption) (*ListCampaignsResponse, error)
-	// Register a participant (GM or player) for a campaign.
-	RegisterParticipant(ctx context.Context, in *RegisterParticipantRequest, opts ...grpc.CallOption) (*RegisterParticipantResponse, error)
+	// Create a participant (GM or player) for a campaign.
+	CreateParticipant(ctx context.Context, in *CreateParticipantRequest, opts ...grpc.CallOption) (*CreateParticipantResponse, error)
 	// List participants for a campaign.
 	ListParticipants(ctx context.Context, in *ListParticipantsRequest, opts ...grpc.CallOption) (*ListParticipantsResponse, error)
 	// Create an actor (PC/NPC/etc) for a campaign.
@@ -70,10 +70,10 @@ func (c *campaignServiceClient) ListCampaigns(ctx context.Context, in *ListCampa
 	return out, nil
 }
 
-func (c *campaignServiceClient) RegisterParticipant(ctx context.Context, in *RegisterParticipantRequest, opts ...grpc.CallOption) (*RegisterParticipantResponse, error) {
+func (c *campaignServiceClient) CreateParticipant(ctx context.Context, in *CreateParticipantRequest, opts ...grpc.CallOption) (*CreateParticipantResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RegisterParticipantResponse)
-	err := c.cc.Invoke(ctx, CampaignService_RegisterParticipant_FullMethodName, in, out, cOpts...)
+	out := new(CreateParticipantResponse)
+	err := c.cc.Invoke(ctx, CampaignService_CreateParticipant_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -108,8 +108,8 @@ type CampaignServiceServer interface {
 	CreateCampaign(context.Context, *CreateCampaignRequest) (*CreateCampaignResponse, error)
 	// List campaign metadata records.
 	ListCampaigns(context.Context, *ListCampaignsRequest) (*ListCampaignsResponse, error)
-	// Register a participant (GM or player) for a campaign.
-	RegisterParticipant(context.Context, *RegisterParticipantRequest) (*RegisterParticipantResponse, error)
+	// Create a participant (GM or player) for a campaign.
+	CreateParticipant(context.Context, *CreateParticipantRequest) (*CreateParticipantResponse, error)
 	// List participants for a campaign.
 	ListParticipants(context.Context, *ListParticipantsRequest) (*ListParticipantsResponse, error)
 	// Create an actor (PC/NPC/etc) for a campaign.
@@ -130,8 +130,8 @@ func (UnimplementedCampaignServiceServer) CreateCampaign(context.Context, *Creat
 func (UnimplementedCampaignServiceServer) ListCampaigns(context.Context, *ListCampaignsRequest) (*ListCampaignsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListCampaigns not implemented")
 }
-func (UnimplementedCampaignServiceServer) RegisterParticipant(context.Context, *RegisterParticipantRequest) (*RegisterParticipantResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method RegisterParticipant not implemented")
+func (UnimplementedCampaignServiceServer) CreateParticipant(context.Context, *CreateParticipantRequest) (*CreateParticipantResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateParticipant not implemented")
 }
 func (UnimplementedCampaignServiceServer) ListParticipants(context.Context, *ListParticipantsRequest) (*ListParticipantsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListParticipants not implemented")
@@ -196,20 +196,20 @@ func _CampaignService_ListCampaigns_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
-func _CampaignService_RegisterParticipant_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RegisterParticipantRequest)
+func _CampaignService_CreateParticipant_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateParticipantRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(CampaignServiceServer).RegisterParticipant(ctx, in)
+		return srv.(CampaignServiceServer).CreateParticipant(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: CampaignService_RegisterParticipant_FullMethodName,
+		FullMethod: CampaignService_CreateParticipant_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CampaignServiceServer).RegisterParticipant(ctx, req.(*RegisterParticipantRequest))
+		return srv.(CampaignServiceServer).CreateParticipant(ctx, req.(*CreateParticipantRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -266,8 +266,8 @@ var CampaignService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _CampaignService_ListCampaigns_Handler,
 		},
 		{
-			MethodName: "RegisterParticipant",
-			Handler:    _CampaignService_RegisterParticipant_Handler,
+			MethodName: "CreateParticipant",
+			Handler:    _CampaignService_CreateParticipant_Handler,
 		},
 		{
 			MethodName: "ListParticipants",
