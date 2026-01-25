@@ -17,6 +17,29 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 )
 
+const (
+	// defaultChannelBufferSize is the buffer size for request, response, and notification channels.
+	// This allows some buffering of messages before blocking, improving throughput under load.
+	defaultChannelBufferSize = 10
+
+	// defaultRequestTimeout is the maximum time to wait for a JSON-RPC response.
+	// This should be long enough for most operations but short enough to fail fast on errors.
+	defaultRequestTimeout = 30 * time.Second
+
+	// defaultShutdownTimeout is the maximum time to wait for graceful HTTP server shutdown.
+	// This should be longer than defaultRequestTimeout to allow in-flight requests to complete.
+	defaultShutdownTimeout = 35 * time.Second
+
+	// sessionCleanupInterval is how often the cleanup goroutine runs to remove expired sessions.
+	sessionCleanupInterval = 5 * time.Minute
+
+	// sessionExpirationTime is how long a session can be inactive before being cleaned up.
+	sessionExpirationTime = 1 * time.Hour
+
+	// sseHeartbeatInterval is how often to update lastUsed for active SSE connections.
+	sseHeartbeatInterval = 30 * time.Second
+)
+
 // HTTPTransport implements mcp.Transport for HTTP-based MCP communication.
 // It provides an HTTP server that handles JSON-RPC messages over POST requests
 // and supports Server-Sent Events (SSE) for streaming responses.
@@ -87,9 +110,9 @@ func (t *HTTPTransport) Connect(ctx context.Context) (mcp.Connection, error) {
 
 	conn := &httpConnection{
 		sessionID:   sessionID,
-		reqChan:     make(chan jsonrpc.Message, 10),
-		respChan:    make(chan jsonrpc.Message, 10),
-		notifyChan:  make(chan jsonrpc.Message, 10),
+		reqChan:     make(chan jsonrpc.Message, defaultChannelBufferSize),
+		respChan:    make(chan jsonrpc.Message, defaultChannelBufferSize),
+		notifyChan:  make(chan jsonrpc.Message, defaultChannelBufferSize),
 		closed:      make(chan struct{}),
 		pendingReqs: make(map[jsonrpc.ID]chan jsonrpc.Message),
 	}
@@ -147,7 +170,7 @@ func (t *HTTPTransport) Start(ctx context.Context) error {
 	select {
 	case <-ctx.Done():
 		log.Printf("Shutting down MCP HTTP server")
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), defaultShutdownTimeout)
 		defer cancel()
 		if err := t.httpServer.Shutdown(shutdownCtx); err != nil {
 			return fmt.Errorf("shutdown HTTP server: %w", err)
@@ -163,9 +186,9 @@ func (t *HTTPTransport) Start(ctx context.Context) error {
 }
 
 // cleanupSessions periodically removes expired sessions from the sessions map.
-// Sessions expire after 1 hour of inactivity.
+// Sessions expire after sessionExpirationTime of inactivity.
 func (t *HTTPTransport) cleanupSessions(ctx context.Context) {
-	ticker := time.NewTicker(5 * time.Minute)
+	ticker := time.NewTicker(sessionCleanupInterval)
 	defer ticker.Stop()
 
 	for {
@@ -175,7 +198,7 @@ func (t *HTTPTransport) cleanupSessions(ctx context.Context) {
 		case <-ticker.C:
 			t.sessionsMu.Lock()
 			now := time.Now()
-			expirationTime := now.Add(-1 * time.Hour)
+			expirationTime := now.Add(-sessionExpirationTime)
 			
 			for id, session := range t.sessions {
 				if session.lastUsed.Before(expirationTime) {
@@ -320,7 +343,7 @@ func (t *HTTPTransport) handleMessages(w http.ResponseWriter, r *http.Request) {
 			session.conn.pendingMu.Unlock()
 			http.Error(w, "Request cancelled", http.StatusRequestTimeout)
 			return
-		case <-time.After(30 * time.Second):
+		case <-time.After(defaultRequestTimeout):
 			// Clean up pending request
 			session.conn.pendingMu.Lock()
 			delete(session.conn.pendingReqs, req.ID)
@@ -391,7 +414,7 @@ func (t *HTTPTransport) handleSSE(w http.ResponseWriter, r *http.Request) {
 	t.sessionsMu.Unlock()
 	
 	// Set up a ticker to periodically update lastUsed for long-lived SSE connections
-	ticker := time.NewTicker(30 * time.Second)
+	ticker := time.NewTicker(sseHeartbeatInterval)
 	defer ticker.Stop()
 	
 	for {
