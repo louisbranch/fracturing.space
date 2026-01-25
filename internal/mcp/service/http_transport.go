@@ -2,12 +2,15 @@ package service
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -549,7 +552,19 @@ func (st *sessionTransport) Connect(ctx context.Context) (mcp.Connection, error)
 	return st.conn, nil
 }
 
-// generateSessionID generates a unique session ID.
+var sessionCounter atomic.Uint64
+
+// generateSessionID generates a unique session ID using crypto/rand
+// combined with a counter to prevent collisions.
 func generateSessionID() string {
-	return fmt.Sprintf("session_%d", time.Now().UnixNano())
+	// Generate 8 random bytes
+	b := make([]byte, 8)
+	if _, err := rand.Read(b); err != nil {
+		// Fallback to timestamp + counter if crypto/rand fails
+		counter := sessionCounter.Add(1)
+		return fmt.Sprintf("session_%d_%d", time.Now().UnixNano(), counter)
+	}
+	// Combine random bytes with counter for uniqueness
+	counter := sessionCounter.Add(1)
+	return fmt.Sprintf("session_%s_%d", hex.EncodeToString(b), counter)
 }
