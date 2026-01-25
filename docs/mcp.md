@@ -152,7 +152,7 @@ Returns the ruleset semantics used for Duality roll evaluation.
   "total_formula": "hope + fear + modifier",
   "crit_rule": "HOPE_EQUALS_FEAR_IS_CRITICAL",
   "difficulty_rule": "TOTAL_MEETS_OR_EXCEEDS_DIFFICULTY",
-  "outcomes": ["SUCCESS_WITH_HOPE", "SUCCESS_WITH_FEAR", "MIXED_SUCCESS", "FAILURE", "CATASTROPHIC_FAILURE"]
+  "outcomes": ["ROLL_WITH_HOPE", "ROLL_WITH_FEAR", "SUCCESS_WITH_HOPE", "SUCCESS_WITH_FEAR", "FAILURE_WITH_HOPE", "FAILURE_WITH_FEAR", "CRITICAL_SUCCESS"]
 }
 ```
 
@@ -303,9 +303,11 @@ Computes exact outcome counts across all duality dice combinations.
   "success_count": 85,
   "failure_count": 47,
   "outcome_counts": [
-    {"outcome": 0, "count": 12},
-    {"outcome": 1, "count": 85},
-    {"outcome": 2, "count": 47}
+    {"outcome": "CRITICAL_SUCCESS", "count": 12},
+    {"outcome": "SUCCESS_WITH_HOPE", "count": 45},
+    {"outcome": "SUCCESS_WITH_FEAR", "count": 40},
+    {"outcome": "FAILURE_WITH_HOPE", "count": 25},
+    {"outcome": "FAILURE_WITH_FEAR", "count": 22}
   ]
 }
 ```
