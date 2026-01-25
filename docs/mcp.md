@@ -1,5 +1,11 @@
 # MCP Tools and Resources
 
+The MCP server supports two transport modes: stdio (default) and HTTP.
+
+## Transport Modes
+
+### Stdio Transport (Default)
+
 The MCP server communicates over stdio using JSON-RPC. Run it locally and point
 your MCP client at the process stdin/stdout.
 
@@ -11,6 +17,67 @@ Alternatively, use the convenience script which resolves to the repo root automa
 
 ```sh
 ./scripts/mcp.sh
+```
+
+### HTTP Transport
+
+The MCP server can also be exposed over HTTP for local use. This enables remote
+clients to connect via HTTP requests.
+
+```sh
+go run ./cmd/mcp -transport=http -http-addr=localhost:8081 -addr=localhost:8080
+```
+
+**Note**: HTTP transport is intended for local use only. Security features
+(authentication, TLS, rate limiting) are planned for future releases.
+
+#### HTTP Endpoints
+
+- `POST /mcp/messages` - Send JSON-RPC requests
+  - Content-Type: `application/json`
+  - Request body: JSON-RPC message
+  - Response: JSON-RPC response
+  - Headers: `X-MCP-Session-ID` (optional, for session management)
+
+- `GET /mcp/sse` - Server-Sent Events stream for streaming responses
+  - Query parameter: `session` (optional session ID)
+  - Response: `text/event-stream` with JSON-RPC notifications
+
+- `GET /mcp/health` - Health check endpoint
+  - Returns: `200 OK` when server is ready
+
+#### Example HTTP Usage
+
+```bash
+# 1) First request: start a new session (no X-MCP-Session-ID header)
+#    Use -D - to print response headers so we can capture X-MCP-Session-ID.
+SESSION_ID=$(
+  curl -sS -D - http://localhost:8081/mcp/messages \
+    -H "Content-Type: application/json" \
+    -d '{
+      "jsonrpc": "2.0",
+      "id": 1,
+      "method": "tools/list",
+      "params": {}
+    }' \
+  | awk -F': ' '/^X-MCP-Session-ID:/ {print $2}' | tr -d '\r'
+)
+
+echo "Session ID: $SESSION_ID"
+
+# 2) Subsequent request: send the session ID so the server can reuse context
+curl -sS -X POST http://localhost:8081/mcp/messages \
+  -H "Content-Type: application/json" \
+  -H "X-MCP-Session-ID: $SESSION_ID" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "tools/list",
+    "params": {}
+  }'
+
+# 3) Check health
+curl http://localhost:8081/mcp/health
 ```
 
 The gRPC server must be running at `localhost:8080` (or the configured address).

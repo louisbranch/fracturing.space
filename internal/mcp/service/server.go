@@ -40,6 +40,9 @@ const (
 type Config struct {
 	GRPCAddr  string
 	Transport TransportKind
+	HTTPAddr  string // HTTP server address (e.g., "localhost:8081"). Defaults to localhost:8081 for HTTP transport.
+	// TODO: Add TLSConfig field for future TLS/HTTPS support
+	// TODO: Add AuthToken field for future API key authentication
 }
 
 // Server hosts the MCP server.
@@ -87,9 +90,73 @@ func Run(ctx context.Context, cfg Config) error {
 	case TransportStdio:
 		return runWithTransport(ctx, cfg.GRPCAddr, &mcp.StdioTransport{})
 	case TransportHTTP:
-		return fmt.Errorf("transport %q is not supported", cfg.Transport)
+		return runWithHTTPTransport(ctx, cfg)
 	default:
 		return fmt.Errorf("transport %q is not supported", cfg.Transport)
+	}
+}
+
+// runWithHTTPTransport creates a server and serves it over HTTP transport.
+func runWithHTTPTransport(ctx context.Context, cfg Config) error {
+	// Default to localhost-only binding for security
+	httpAddr := cfg.HTTPAddr
+	if httpAddr == "" {
+		httpAddr = "localhost:8081"
+	}
+
+	mcpServer, err := New(cfg.GRPCAddr)
+	if err != nil {
+		return err
+	}
+	defer mcpServer.Close()
+
+	if err := mcpServer.waitForHealth(ctx); err != nil {
+		return err
+	}
+
+	// Start gRPC connection health monitoring in background
+	// This ensures we detect connection failures during HTTP server operation
+	healthCtx, healthCancel := context.WithCancel(ctx)
+	defer healthCancel()
+	go mcpServer.monitorHealth(healthCtx)
+
+	// Create HTTP transport with reference to MCP server
+	httpTransport := NewHTTPTransportWithServer(httpAddr, mcpServer.mcpServer)
+
+	// Start HTTP server (this will handle all HTTP requests)
+	return httpTransport.Start(ctx)
+}
+
+// monitorHealth periodically checks gRPC connection health.
+// If the connection becomes unhealthy, it logs errors but doesn't terminate
+// the HTTP server, allowing for graceful degradation.
+func (s *Server) monitorHealth(ctx context.Context) {
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			if s.conn == nil {
+				log.Printf("gRPC connection is nil, health check skipped")
+				continue
+			}
+
+			healthClient := grpc_health_v1.NewHealthClient(s.conn)
+			callCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			response, err := healthClient.Check(callCtx, &grpc_health_v1.HealthCheckRequest{Service: ""})
+			cancel()
+
+			if err != nil {
+				log.Printf("gRPC health check failed: %v", err)
+			} else if response.GetStatus() != grpc_health_v1.HealthCheckResponse_SERVING {
+				log.Printf("gRPC health check status: %s", response.GetStatus().String())
+			}
+			// Note: We log but don't fail - HTTP server continues to operate
+			// Individual requests will handle gRPC errors appropriately
+		}
 	}
 }
 
