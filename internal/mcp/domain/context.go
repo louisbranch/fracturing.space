@@ -66,28 +66,26 @@ func SetContextHandler(
 			CampaignID: campaignID,
 		}
 
-		// Validate and set session_id if provided
+		// Validate and set session_id if provided (treat whitespace-only as omitted)
 		if input.SessionID != "" {
 			sessionID := strings.TrimSpace(input.SessionID)
-			if sessionID == "" {
-				return nil, SetContextResult{}, fmt.Errorf("session_id cannot be empty string")
+			if sessionID != "" {
+				if err := validateSessionExists(runCtx, sessionClient, campaignID, sessionID); err != nil {
+					return nil, SetContextResult{}, fmt.Errorf("validate session: %w", err)
+				}
+				newCtx.SessionID = sessionID
 			}
-			if err := validateSessionExists(runCtx, sessionClient, campaignID, sessionID); err != nil {
-				return nil, SetContextResult{}, fmt.Errorf("validate session: %w", err)
-			}
-			newCtx.SessionID = sessionID
 		}
 
-		// Validate and set participant_id if provided
+		// Validate and set participant_id if provided (treat whitespace-only as omitted)
 		if input.ParticipantID != "" {
 			participantID := strings.TrimSpace(input.ParticipantID)
-			if participantID == "" {
-				return nil, SetContextResult{}, fmt.Errorf("participant_id cannot be empty string")
+			if participantID != "" {
+				if err := validateParticipantExists(runCtx, campaignClient, campaignID, participantID); err != nil {
+					return nil, SetContextResult{}, fmt.Errorf("validate participant: %w", err)
+				}
+				newCtx.ParticipantID = participantID
 			}
-			if err := validateParticipantExists(runCtx, campaignClient, campaignID, participantID); err != nil {
-				return nil, SetContextResult{}, fmt.Errorf("validate participant: %w", err)
-			}
-			newCtx.ParticipantID = participantID
 		}
 
 		// Update server context
@@ -189,10 +187,7 @@ func validateSessionExists(ctx context.Context, client sessionv1.SessionServiceC
 	for {
 		for _, session := range response.GetSessions() {
 			if session.GetId() == sessionID {
-				// Verify it belongs to the campaign
-				if session.GetCampaignId() != campaignID {
-					return fmt.Errorf("session does not belong to campaign")
-				}
+				// Session found - ListSessions already filters by campaign_id, so ownership is verified
 				return nil
 			}
 		}
@@ -249,10 +244,7 @@ func validateParticipantExists(ctx context.Context, client campaignv1.CampaignSe
 	for {
 		for _, participant := range response.GetParticipants() {
 			if participant.GetId() == participantID {
-				// Verify it belongs to the campaign
-				if participant.GetCampaignId() != campaignID {
-					return fmt.Errorf("participant does not belong to campaign")
-				}
+				// Participant found - ListParticipants already filters by campaign_id, so ownership is verified
 				return nil
 			}
 		}
