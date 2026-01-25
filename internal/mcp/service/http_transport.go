@@ -21,12 +21,16 @@ import (
 // TODO: Add authentication/authorization for production use
 // TODO: Add rate limiting per connection
 type HTTPTransport struct {
-	addr       string
-	server     *mcp.Server
-	sessions   map[string]*httpSession
-	sessionsMu sync.RWMutex
-	httpServer *http.Server
-	connChan   chan *httpConnection
+	addr         string
+	server       *mcp.Server
+	sessions     map[string]*httpSession
+	sessionsMu   sync.RWMutex
+	httpServer   *http.Server
+	connChan     chan *httpConnection
+	serverCtx    context.Context
+	serverCancel context.CancelFunc
+	serverOnceMu sync.Mutex
+	serverOnce   map[string]*sync.Once
 }
 
 // httpSession maintains state for an HTTP client connection.
@@ -53,10 +57,14 @@ func NewHTTPTransport(addr string) *HTTPTransport {
 	if addr == "" {
 		addr = "localhost:8081"
 	}
+	ctx, cancel := context.WithCancel(context.Background())
 	return &HTTPTransport{
-		addr:     addr,
-		sessions: make(map[string]*httpSession),
-		connChan: make(chan *httpConnection, 10),
+		addr:         addr,
+		sessions:     make(map[string]*httpSession),
+		connChan:     make(chan *httpConnection, 10),
+		serverCtx:    ctx,
+		serverCancel: cancel,
+		serverOnce:   make(map[string]*sync.Once),
 	}
 }
 
@@ -103,6 +111,9 @@ func (t *HTTPTransport) Connect(ctx context.Context) (mcp.Connection, error) {
 // Start starts the HTTP server and begins handling requests.
 // This should be called in a separate goroutine while the MCP server runs.
 func (t *HTTPTransport) Start(ctx context.Context) error {
+	// Update server context to use the provided context
+	t.serverCtx, t.serverCancel = context.WithCancel(ctx)
+
 	mux := http.NewServeMux()
 
 	// POST /mcp/messages - JSON-RPC request/response
@@ -137,6 +148,10 @@ func (t *HTTPTransport) Start(ctx context.Context) error {
 		defer cancel()
 		if err := t.httpServer.Shutdown(shutdownCtx); err != nil {
 			return fmt.Errorf("shutdown HTTP server: %w", err)
+		}
+		// Cancel server context to stop all server.Run goroutines
+		if t.serverCancel != nil {
+			t.serverCancel()
 		}
 		return nil
 	case err := <-errChan:
@@ -194,12 +209,14 @@ func (t *HTTPTransport) handleMessages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Update last used time
+	// Update last used time (protected by mutex)
+	t.sessionsMu.Lock()
 	session.lastUsed = time.Now()
+	t.sessionsMu.Unlock()
 
 	// Ensure MCP server is running for this connection
 	// Start processing goroutine if not already started
-	t.ensureServerRunning(session, r.Context())
+	t.ensureServerRunning(session)
 
 	// Send message to connection's request channel (will be read by MCP server)
 	select {
@@ -377,22 +394,33 @@ func (c *httpConnection) SessionID() string {
 
 // ensureServerRunning ensures the MCP server is processing messages for this session.
 // It starts a goroutine that runs Server.Run with a transport that returns this session's connection.
-func (t *HTTPTransport) ensureServerRunning(session *httpSession, ctx context.Context) {
+// Uses sync.Once per session to prevent goroutine leaks from multiple calls.
+func (t *HTTPTransport) ensureServerRunning(session *httpSession) {
+	if t.server == nil {
+		return
+	}
+
+	// Get or create sync.Once for this session to ensure server.Run is only started once
+	t.serverOnceMu.Lock()
+	once, exists := t.serverOnce[session.id]
+	if !exists {
+		once = &sync.Once{}
+		t.serverOnce[session.id] = once
+	}
+	t.serverOnceMu.Unlock()
+
 	// Create a single-use transport that returns this session's connection
 	// This allows Server.Run to use the connection for this session
 	sessionTransport := &sessionTransport{conn: session.conn}
-	
-	// Start the MCP server for this session if not already running
-	// We use a sync.Once-like pattern with a flag in the session
-	// For now, we'll start it each time (inefficient but functional)
-	// TODO: Track running servers per session to avoid starting multiple times
-	if t.server != nil {
+
+	// Start the MCP server for this session only once
+	once.Do(func() {
 		go func() {
-			// Run the MCP server with this session's transport
+			// Run the MCP server with this session's transport using the long-lived server context
 			// This will read from reqChan and write to respChan
-			_ = t.server.Run(ctx, sessionTransport)
+			_ = t.server.Run(t.serverCtx, sessionTransport)
 		}()
-	}
+	})
 }
 
 // sessionTransport is a transport that returns a specific connection.
