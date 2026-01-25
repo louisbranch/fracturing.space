@@ -114,13 +114,10 @@ type Context struct {
 	ParticipantID string
 }
 
-// validateCampaignExists checks if a campaign exists by listing campaigns and searching for the ID.
-// TODO: Replace with GetCampaign gRPC method when available. The current implementation is inefficient
-// as it must list and search through all campaigns to validate existence.
+// validateCampaignExists checks if a campaign exists by calling GetCampaign.
 func validateCampaignExists(ctx context.Context, client campaignv1.CampaignServiceClient, campaignID string) error {
-	// List campaigns with a reasonable page size to find the campaign
-	response, err := client.ListCampaigns(ctx, &campaignv1.ListCampaignsRequest{
-		PageSize: 100,
+	_, err := client.GetCampaign(ctx, &campaignv1.GetCampaignRequest{
+		CampaignId: campaignID,
 	})
 	if err != nil {
 		if s, ok := status.FromError(err); ok {
@@ -128,48 +125,17 @@ func validateCampaignExists(ctx context.Context, client campaignv1.CampaignServi
 				return fmt.Errorf("campaign not found")
 			}
 		}
-		return fmt.Errorf("list campaigns: %w", err)
+		return fmt.Errorf("get campaign: %w", err)
 	}
-
-	// Search through all pages if needed
-	for {
-		for _, campaign := range response.GetCampaigns() {
-			if campaign.GetId() == campaignID {
-				return nil
-			}
-		}
-
-		// Check if there are more pages
-		if response.GetNextPageToken() == "" {
-			break
-		}
-
-		// Fetch next page
-		response, err = client.ListCampaigns(ctx, &campaignv1.ListCampaignsRequest{
-			PageSize:  100,
-			PageToken: response.GetNextPageToken(),
-		})
-		if err != nil {
-			if s, ok := status.FromError(err); ok {
-				if s.Code() == codes.NotFound {
-					return fmt.Errorf("campaign not found")
-				}
-			}
-			return fmt.Errorf("list campaigns: %w", err)
-		}
-	}
-
-	return fmt.Errorf("campaign not found")
+	return nil
 }
 
 // validateSessionExists checks if a session exists and belongs to the campaign.
-// TODO: Replace with GetSession gRPC method when available. The current implementation is inefficient
-// as it must list and search through all sessions to validate existence.
+// The GetSession gRPC method validates that the session belongs to the campaign.
 func validateSessionExists(ctx context.Context, client sessionv1.SessionServiceClient, campaignID, sessionID string) error {
-	// List sessions for the campaign
-	response, err := client.ListSessions(ctx, &sessionv1.ListSessionsRequest{
+	_, err := client.GetSession(ctx, &sessionv1.GetSessionRequest{
 		CampaignId: campaignID,
-		PageSize:   100,
+		SessionId:  sessionID,
 	})
 	if err != nil {
 		if s, ok := status.FromError(err); ok {
@@ -180,53 +146,17 @@ func validateSessionExists(ctx context.Context, client sessionv1.SessionServiceC
 				return fmt.Errorf("session not found or does not belong to campaign")
 			}
 		}
-		return fmt.Errorf("list sessions: %w", err)
+		return fmt.Errorf("get session: %w", err)
 	}
-
-	// Search through all pages if needed
-	for {
-		for _, session := range response.GetSessions() {
-			if session.GetId() == sessionID {
-				// Session found - ListSessions already filters by campaign_id, so ownership is verified
-				return nil
-			}
-		}
-
-		// Check if there are more pages
-		if response.GetNextPageToken() == "" {
-			break
-		}
-
-		// Fetch next page
-		response, err = client.ListSessions(ctx, &sessionv1.ListSessionsRequest{
-			CampaignId: campaignID,
-			PageSize:   100,
-			PageToken:  response.GetNextPageToken(),
-		})
-		if err != nil {
-			if s, ok := status.FromError(err); ok {
-				if s.Code() == codes.NotFound {
-					return fmt.Errorf("session not found")
-				}
-				if s.Code() == codes.InvalidArgument {
-					return fmt.Errorf("session not found or does not belong to campaign")
-				}
-			}
-			return fmt.Errorf("list sessions: %w", err)
-		}
-	}
-
-	return fmt.Errorf("session not found")
+	return nil
 }
 
 // validateParticipantExists checks if a participant exists and belongs to the campaign.
-// TODO: Replace with GetParticipant gRPC method when available. The current implementation is inefficient
-// as it must list and search through all participants to validate existence.
+// The GetParticipant gRPC method validates that the participant belongs to the campaign.
 func validateParticipantExists(ctx context.Context, client campaignv1.CampaignServiceClient, campaignID, participantID string) error {
-	// List participants for the campaign
-	response, err := client.ListParticipants(ctx, &campaignv1.ListParticipantsRequest{
-		CampaignId: campaignID,
-		PageSize:   100,
+	_, err := client.GetParticipant(ctx, &campaignv1.GetParticipantRequest{
+		CampaignId:    campaignID,
+		ParticipantId: participantID,
 	})
 	if err != nil {
 		if s, ok := status.FromError(err); ok {
@@ -237,41 +167,7 @@ func validateParticipantExists(ctx context.Context, client campaignv1.CampaignSe
 				return fmt.Errorf("participant not found or does not belong to campaign")
 			}
 		}
-		return fmt.Errorf("list participants: %w", err)
+		return fmt.Errorf("get participant: %w", err)
 	}
-
-	// Search through all pages if needed
-	for {
-		for _, participant := range response.GetParticipants() {
-			if participant.GetId() == participantID {
-				// Participant found - ListParticipants already filters by campaign_id, so ownership is verified
-				return nil
-			}
-		}
-
-		// Check if there are more pages
-		if response.GetNextPageToken() == "" {
-			break
-		}
-
-		// Fetch next page
-		response, err = client.ListParticipants(ctx, &campaignv1.ListParticipantsRequest{
-			CampaignId: campaignID,
-			PageSize:   100,
-			PageToken:  response.GetNextPageToken(),
-		})
-		if err != nil {
-			if s, ok := status.FromError(err); ok {
-				if s.Code() == codes.NotFound {
-					return fmt.Errorf("participant not found")
-				}
-				if s.Code() == codes.InvalidArgument {
-					return fmt.Errorf("participant not found or does not belong to campaign")
-				}
-			}
-			return fmt.Errorf("list participants: %w", err)
-		}
-	}
-
-	return fmt.Errorf("participant not found")
+	return nil
 }
