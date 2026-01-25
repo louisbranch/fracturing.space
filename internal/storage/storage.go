@@ -39,3 +39,9 @@ type ParticipantPage struct {
 	Participants  []domain.Participant
 	NextPageToken string
 }
+
+// ActorStore persists actor records.
+type ActorStore interface {
+	PutActor(ctx context.Context, actor domain.Actor) error
+	GetActor(ctx context.Context, campaignID, actorID string) (domain.Actor, error)
+}

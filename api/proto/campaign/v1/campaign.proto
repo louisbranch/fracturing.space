@@ -18,6 +18,9 @@ service CampaignService {
 
   // List participants for a campaign.
   rpc ListParticipants(ListParticipantsRequest) returns (ListParticipantsResponse);
+
+  // Create an actor (PC/NPC/etc) for a campaign.
+  rpc CreateActor(CreateActorRequest) returns (CreateActorResponse);
 }
 
 message CreateCampaignRequest {
@@ -123,4 +126,38 @@ message ListParticipantsRequest {
 message ListParticipantsResponse {
   repeated Participant participants = 1;
   string next_page_token = 2;
+}
+
+message CreateActorRequest {
+  // The campaign ID to create the actor for.
+  string campaign_id = 1;
+
+  // Display name for the actor.
+  string name = 2;
+
+  // The kind of actor (PC or NPC).
+  ActorKind kind = 3;
+
+  // Optional free-form notes about the actor.
+  string notes = 4;
+}
+
+message CreateActorResponse {
+  Actor actor = 1;
+}
+
+message Actor {
+  string id = 1;
+  string campaign_id = 2;
+  string name = 3;
+  ActorKind kind = 4;
+  string notes = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+enum ActorKind {
+  ACTOR_KIND_UNSPECIFIED = 0;
+  PC = 1;
+  NPC = 2;
 }

@@ -827,3 +827,171 @@ func TestParticipantStoreListPageTokenResume(t *testing.T) {
 		t.Fatal("expected different participant on second page")
 	}
 }
+
+func TestActorStorePutGet(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "duality.db")
+	store, err := Open(path)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer store.Close()
+
+	now := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
+	actor := domain.Actor{
+		ID:         "actor-123",
+		CampaignID: "camp-456",
+		Name:       "Alice",
+		Kind:       domain.ActorKindPC,
+		Notes:      "A brave warrior",
+		CreatedAt:  now,
+		UpdatedAt:  now,
+	}
+
+	if err := store.PutActor(context.Background(), actor); err != nil {
+		t.Fatalf("put actor: %v", err)
+	}
+
+	loaded, err := store.GetActor(context.Background(), "camp-456", "actor-123")
+	if err != nil {
+		t.Fatalf("get actor: %v", err)
+	}
+	if loaded.Name != actor.Name {
+		t.Fatalf("expected name %q, got %q", actor.Name, loaded.Name)
+	}
+	if loaded.ID != actor.ID {
+		t.Fatalf("expected id %q, got %q", actor.ID, loaded.ID)
+	}
+	if loaded.CampaignID != actor.CampaignID {
+		t.Fatalf("expected campaign id %q, got %q", actor.CampaignID, loaded.CampaignID)
+	}
+	if loaded.Kind != actor.Kind {
+		t.Fatalf("expected kind %v, got %v", actor.Kind, loaded.Kind)
+	}
+	if loaded.Notes != actor.Notes {
+		t.Fatalf("expected notes %q, got %q", actor.Notes, loaded.Notes)
+	}
+	if !loaded.CreatedAt.Equal(now) {
+		t.Fatalf("expected created_at %v, got %v", now, loaded.CreatedAt)
+	}
+	if !loaded.UpdatedAt.Equal(now) {
+		t.Fatalf("expected updated_at %v, got %v", now, loaded.UpdatedAt)
+	}
+}
+
+func TestActorStoreGetNotFound(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "duality.db")
+	store, err := Open(path)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer store.Close()
+
+	_, err = store.GetActor(context.Background(), "camp-123", "missing")
+	if !errors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("expected not found error, got %v", err)
+	}
+}
+
+func TestActorStorePutEmptyID(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "duality.db")
+	store, err := Open(path)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer store.Close()
+
+	if err := store.PutActor(context.Background(), domain.Actor{}); err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestActorStorePutCanceledContext(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "duality.db")
+	store, err := Open(path)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer store.Close()
+
+	now := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
+	actor := domain.Actor{
+		ID:         "actor-123",
+		CampaignID: "camp-456",
+		Name:       "Alice",
+		Kind:       domain.ActorKindPC,
+		CreatedAt:  now,
+		UpdatedAt:  now,
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := store.PutActor(ctx, actor); err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestActorStoreGetEmptyID(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "duality.db")
+	store, err := Open(path)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer store.Close()
+
+	_, err = store.GetActor(context.Background(), "", "actor-123")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	_, err = store.GetActor(context.Background(), "camp-123", "")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestActorStoreGetCanceledContext(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "duality.db")
+	store, err := Open(path)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer store.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, err = store.GetActor(ctx, "camp-123", "actor-123")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestActorStorePutNPC(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "duality.db")
+	store, err := Open(path)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer store.Close()
+
+	now := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
+	actor := domain.Actor{
+		ID:         "actor-789",
+		CampaignID: "camp-456",
+		Name:       "Goblin",
+		Kind:       domain.ActorKindNPC,
+		Notes:      "A small creature",
+		CreatedAt:  now,
+		UpdatedAt:  now,
+	}
+
+	if err := store.PutActor(context.Background(), actor); err != nil {
+		t.Fatalf("put actor: %v", err)
+	}
+
+	loaded, err := store.GetActor(context.Background(), "camp-456", "actor-789")
+	if err != nil {
+		t.Fatalf("get actor: %v", err)
+	}
+	if loaded.Kind != domain.ActorKindNPC {
+		t.Fatalf("expected kind NPC, got %v", loaded.Kind)
+	}
+}

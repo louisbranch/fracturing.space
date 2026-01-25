@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	campaignv1 "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1"
@@ -25,19 +26,23 @@ type CampaignService struct {
 	campaignv1.UnimplementedCampaignServiceServer
 	store            storage.CampaignStore
 	participantStore storage.ParticipantStore
+	actorStore       storage.ActorStore
 	clock            func() time.Time
 	idGenerator      func() (string, error)
 	participantIDGen func() (string, error)
+	actorIDGen       func() (string, error)
 }
 
 // NewCampaignService creates a CampaignService with default dependencies.
-func NewCampaignService(store storage.CampaignStore, participantStore storage.ParticipantStore) *CampaignService {
+func NewCampaignService(store storage.CampaignStore, participantStore storage.ParticipantStore, actorStore storage.ActorStore) *CampaignService {
 	return &CampaignService{
 		store:            store,
 		participantStore: participantStore,
+		actorStore:       actorStore,
 		clock:            time.Now,
 		idGenerator:      domain.NewID,
 		participantIDGen: domain.NewID,
+		actorIDGen:       domain.NewID,
 	}
 }
 
@@ -156,5 +161,87 @@ func gmModeToProto(mode domain.GmMode) campaignv1.GmMode {
 		return campaignv1.GmMode_HYBRID
 	default:
 		return campaignv1.GmMode_GM_MODE_UNSPECIFIED
+	}
+}
+
+// CreateActor creates an actor (PC/NPC/etc) for a campaign.
+func (s *CampaignService) CreateActor(ctx context.Context, in *campaignv1.CreateActorRequest) (*campaignv1.CreateActorResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "create actor request is required")
+	}
+
+	if s.store == nil {
+		return nil, status.Error(codes.Internal, "campaign store is not configured")
+	}
+	if s.actorStore == nil {
+		return nil, status.Error(codes.Internal, "actor store is not configured")
+	}
+
+	// Validate campaign exists
+	campaignID := strings.TrimSpace(in.GetCampaignId())
+	if campaignID == "" {
+		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	}
+	_, err := s.store.Get(ctx, campaignID)
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return nil, status.Error(codes.NotFound, "campaign not found")
+		}
+		return nil, status.Errorf(codes.Internal, "check campaign: %v", err)
+	}
+
+	actor, err := domain.CreateActor(domain.CreateActorInput{
+		CampaignID: campaignID,
+		Name:       in.GetName(),
+		Kind:       actorKindFromProto(in.GetKind()),
+		Notes:      in.GetNotes(),
+	}, s.clock, s.actorIDGen)
+	if err != nil {
+		if errors.Is(err, domain.ErrEmptyActorName) || errors.Is(err, domain.ErrInvalidActorKind) || errors.Is(err, domain.ErrEmptyCampaignID) {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+		return nil, status.Errorf(codes.Internal, "create actor: %v", err)
+	}
+
+	if err := s.actorStore.PutActor(ctx, actor); err != nil {
+		return nil, status.Errorf(codes.Internal, "persist actor: %v", err)
+	}
+
+	response := &campaignv1.CreateActorResponse{
+		Actor: &campaignv1.Actor{
+			Id:         actor.ID,
+			CampaignId: actor.CampaignID,
+			Name:       actor.Name,
+			Kind:       actorKindToProto(actor.Kind),
+			Notes:      actor.Notes,
+			CreatedAt:  timestamppb.New(actor.CreatedAt),
+			UpdatedAt:  timestamppb.New(actor.UpdatedAt),
+		},
+	}
+
+	return response, nil
+}
+
+// actorKindFromProto maps a protobuf actor kind to the domain representation.
+func actorKindFromProto(kind campaignv1.ActorKind) domain.ActorKind {
+	switch kind {
+	case campaignv1.ActorKind_PC:
+		return domain.ActorKindPC
+	case campaignv1.ActorKind_NPC:
+		return domain.ActorKindNPC
+	default:
+		return domain.ActorKindUnspecified
+	}
+}
+
+// actorKindToProto maps a domain actor kind to the protobuf representation.
+func actorKindToProto(kind domain.ActorKind) campaignv1.ActorKind {
+	switch kind {
+	case domain.ActorKindPC:
+		return campaignv1.ActorKind_PC
+	case domain.ActorKindNPC:
+		return campaignv1.ActorKind_NPC
+	default:
+		return campaignv1.ActorKind_ACTOR_KIND_UNSPECIFIED
 	}
 }

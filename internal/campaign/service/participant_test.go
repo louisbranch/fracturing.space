@@ -270,7 +270,7 @@ func TestRegisterParticipantCampaignNotFound(t *testing.T) {
 }
 
 func TestRegisterParticipantNilRequest(t *testing.T) {
-	service := NewCampaignService(&fakeCampaignStore{}, &fakeParticipantStore{})
+	service := NewCampaignService(&fakeCampaignStore{}, &fakeParticipantStore{}, &fakeActorStore{})
 
 	_, err := service.RegisterParticipant(context.Background(), nil)
 	if err == nil {
@@ -576,7 +576,7 @@ func TestListParticipantsPassesToken(t *testing.T) {
 }
 
 func TestListParticipantsNilRequest(t *testing.T) {
-	service := NewCampaignService(&fakeCampaignStore{}, &fakeParticipantStore{})
+	service := NewCampaignService(&fakeCampaignStore{}, &fakeParticipantStore{}, &fakeActorStore{})
 
 	_, err := service.ListParticipants(context.Background(), nil)
 	if err == nil {
