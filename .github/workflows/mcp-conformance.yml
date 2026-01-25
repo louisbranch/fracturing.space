@@ -23,5 +23,5 @@ jobs:
       - uses: modelcontextprotocol/conformance@v0.1.11
         with:
           mode: server
-          url: http://localhost:3001/mcp/messages
+          url: http://localhost:3001/mcp
           # expected-failures: ./conformance-baseline.yml
