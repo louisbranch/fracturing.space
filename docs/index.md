@@ -51,6 +51,11 @@ Tools:
 
 ### MCP Context
 
+Resources:
+
+-   context://current
+
+Tools:
 -   set_context
 
 ------------------------------------------------------------------------

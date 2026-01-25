@@ -64,8 +64,13 @@ Resources:
 
 ### MCP Context
 
+Tools:
+
 -   set_context (in-memory, resets on restart)
 
+Resources:
+
+-   context://current (current MCP execution context; ephemeral, resets on restart)
 ------------------------------------------------------------------------
 
 ## State Model
