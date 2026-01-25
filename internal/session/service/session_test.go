@@ -36,19 +36,17 @@ func (f *fakeCampaignStore) List(ctx context.Context, pageSize int, pageToken st
 }
 
 type fakeSessionStore struct {
-	putSession              sessiondomain.Session
-	putErr                  error
-	putWithActiveSession    sessiondomain.Session
-	putWithActiveErr        error
-	getSession              sessiondomain.Session
-	getSessionErr           error
-	getActiveSession        sessiondomain.Session
-	getActiveSessionErr     error
-	listPage                storage.SessionPage
-	listErr                 error
-	listPageSize            int
-	listPageToken           string
-	listPageCampaignID      string
+	putSession          sessiondomain.Session
+	putErr              error
+	getSession          sessiondomain.Session
+	getSessionErr       error
+	getActiveSession    sessiondomain.Session
+	getActiveSessionErr error
+	listPage            storage.SessionPage
+	listErr             error
+	listPageSize        int
+	listPageToken       string
+	listPageCampaignID  string
 }
 
 func (f *fakeSessionStore) PutSession(ctx context.Context, session sessiondomain.Session) error {
@@ -62,11 +60,6 @@ func (f *fakeSessionStore) GetSession(ctx context.Context, campaignID, sessionID
 
 func (f *fakeSessionStore) GetActiveSession(ctx context.Context, campaignID string) (sessiondomain.Session, error) {
 	return f.getActiveSession, f.getActiveSessionErr
-}
-
-func (f *fakeSessionStore) PutSessionWithActivePointer(ctx context.Context, session sessiondomain.Session) error {
-	f.putWithActiveSession = session
-	return f.putWithActiveErr
 }
 
 func (f *fakeSessionStore) ListSessions(ctx context.Context, campaignID string, pageSize int, pageToken string) (storage.SessionPage, error) {
@@ -128,8 +121,8 @@ func TestStartSessionSuccess(t *testing.T) {
 	if response.Session.UpdatedAt.AsTime() != fixedTime {
 		t.Fatalf("expected updated_at %v, got %v", fixedTime, response.Session.UpdatedAt.AsTime())
 	}
-	if sessionStore.putWithActiveSession.ID != "sess-456" {
-		t.Fatalf("expected stored id sess-456, got %q", sessionStore.putWithActiveSession.ID)
+	if sessionStore.putSession.ID != "sess-456" {
+		t.Fatalf("expected stored id sess-456, got %q", sessionStore.putSession.ID)
 	}
 }
 
@@ -334,7 +327,7 @@ func TestStartSessionStoreFailure(t *testing.T) {
 	}
 	sessionStore := &fakeSessionStore{
 		getActiveSessionErr: storage.ErrNotFound,
-		putWithActiveErr:    errors.New("boom"),
+		putErr:              errors.New("boom"),
 	}
 	service := &SessionService{
 		stores: Stores{
@@ -371,7 +364,7 @@ func TestStartSessionActiveSessionConflict(t *testing.T) {
 	}
 	sessionStore := &fakeSessionStore{
 		getActiveSessionErr: storage.ErrNotFound,
-		putWithActiveErr:    storage.ErrActiveSessionExists,
+		putErr:              storage.ErrActiveSessionExists,
 	}
 	service := &SessionService{
 		stores: Stores{

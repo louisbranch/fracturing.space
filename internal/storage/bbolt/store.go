@@ -653,35 +653,6 @@ func (s *Store) PutControlDefault(ctx context.Context, campaignID, actorID strin
 	})
 }
 
-// PutSession persists a session record (implements storage.SessionStore).
-func (s *Store) PutSession(ctx context.Context, session sessiondomain.Session) error {
-	if err := ctx.Err(); err != nil {
-		return err
-	}
-	if s == nil || s.db == nil {
-		return fmt.Errorf("storage is not configured")
-	}
-	if strings.TrimSpace(session.CampaignID) == "" {
-		return fmt.Errorf("campaign id is required")
-	}
-	if strings.TrimSpace(session.ID) == "" {
-		return fmt.Errorf("session id is required")
-	}
-
-	payload, err := json.Marshal(session)
-	if err != nil {
-		return fmt.Errorf("marshal session: %w", err)
-	}
-
-	return s.db.Update(func(tx *bbolt.Tx) error {
-		bucket := tx.Bucket([]byte(sessionsBucket))
-		if bucket == nil {
-			return fmt.Errorf("sessions bucket is missing")
-		}
-		return bucket.Put(sessionKey(session.CampaignID, session.ID), payload)
-	})
-}
-
 // GetSession fetches a session record by campaign ID and session ID (implements storage.SessionStore).
 func (s *Store) GetSession(ctx context.Context, campaignID, sessionID string) (sessiondomain.Session, error) {
 	if err := ctx.Err(); err != nil {
@@ -758,9 +729,10 @@ func (s *Store) GetActiveSession(ctx context.Context, campaignID string) (sessio
 	return s.GetSession(ctx, campaignID, sessionID)
 }
 
-// PutSessionWithActivePointer atomically stores a session and sets it as the active session for the campaign.
+// PutSession atomically stores a session and sets it as the active session for the campaign.
 // This method ensures that only one active session exists per campaign.
-func (s *Store) PutSessionWithActivePointer(ctx context.Context, session sessiondomain.Session) error {
+// Returns ErrActiveSessionExists if an active session already exists for the campaign.
+func (s *Store) PutSession(ctx context.Context, session sessiondomain.Session) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}

@@ -67,16 +67,14 @@ type ControlDefaultStore interface {
 
 // SessionStore persists session records.
 type SessionStore interface {
-	// PutSession stores a session record.
+	// PutSession atomically stores a session and sets it as the active session for the campaign.
+	// Returns ErrActiveSessionExists if an active session already exists for the campaign.
 	PutSession(ctx context.Context, session sessiondomain.Session) error
 	// GetSession retrieves a session by campaign ID and session ID.
 	GetSession(ctx context.Context, campaignID, sessionID string) (sessiondomain.Session, error)
 	// GetActiveSession retrieves the active session for a campaign, if one exists.
 	// Returns ErrNotFound if no active session exists.
 	GetActiveSession(ctx context.Context, campaignID string) (sessiondomain.Session, error)
-	// PutSessionWithActivePointer atomically stores a session and sets it as the active session for the campaign.
-	// Returns an error if an active session already exists for the campaign.
-	PutSessionWithActivePointer(ctx context.Context, session sessiondomain.Session) error
 	// ListSessions returns a page of session records for a campaign starting after the page token.
 	ListSessions(ctx context.Context, campaignID string, pageSize int, pageToken string) (SessionPage, error)
 }
