@@ -34,9 +34,6 @@ func (c ActorController) Validate() error {
 	if !hasGM && !hasParticipant {
 		return ErrInvalidActorController
 	}
-	if hasParticipant && c.ParticipantID == "" {
-		return ErrEmptyParticipantID
-	}
 	return nil
 }
 

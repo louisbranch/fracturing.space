@@ -412,6 +412,7 @@ func actorControllerFromProto(pb *campaignv1.ActorController) (domain.ActorContr
 }
 
 // actorControllerToProto converts a domain ActorController to the protobuf representation.
+// The controller must be valid (exactly one of IsGM or ParticipantID set).
 func actorControllerToProto(ctrl domain.ActorController) *campaignv1.ActorController {
 	if ctrl.IsGM {
 		return &campaignv1.ActorController{
@@ -420,6 +421,7 @@ func actorControllerToProto(ctrl domain.ActorController) *campaignv1.ActorContro
 			},
 		}
 	}
+	// If not GM, assume participant controller (validation should ensure this is valid).
 	return &campaignv1.ActorController{
 		Controller: &campaignv1.ActorController_Participant{
 			Participant: &campaignv1.ParticipantController{

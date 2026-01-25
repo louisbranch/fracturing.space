@@ -384,6 +384,22 @@ func TestSetDefaultControlInvalidController(t *testing.T) {
 			wantCode: codes.InvalidArgument,
 			wantMsg:  "actor id is required",
 		},
+		{
+			name: "empty participant id",
+			request: &campaignv1.SetDefaultControlRequest{
+				CampaignId: "camp-123",
+				ActorId:    "actor-456",
+				Controller: &campaignv1.ActorController{
+					Controller: &campaignv1.ActorController_Participant{
+						Participant: &campaignv1.ParticipantController{
+							ParticipantId: "   ",
+						},
+					},
+				},
+			},
+			wantCode: codes.InvalidArgument,
+			wantMsg:  "participant id is required when participant controller is specified",
+		},
 	}
 
 	for _, tt := range tests {
