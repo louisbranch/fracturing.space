@@ -224,8 +224,8 @@ func TestSessionStorePutSessionWithActivePointerConflict(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error when setting second active session")
 	}
-	if !errors.Is(err, storage.ErrNotFound) && err.Error() != "active session already exists for campaign" {
-		t.Fatalf("expected 'active session already exists' error, got %v", err)
+	if !errors.Is(err, storage.ErrActiveSessionExists) {
+		t.Fatalf("expected ErrActiveSessionExists error, got %v", err)
 	}
 
 	// Verify first session is still active

@@ -92,7 +92,7 @@ func (s *SessionService) StartSession(ctx context.Context, in *sessionv1.StartSe
 
 	// Persist session and set as active (atomic operation)
 	if err := s.stores.Session.PutSessionWithActivePointer(ctx, session); err != nil {
-		if strings.Contains(err.Error(), "active session already exists") {
+		if errors.Is(err, storage.ErrActiveSessionExists) {
 			return nil, status.Error(codes.FailedPrecondition, "active session exists")
 		}
 		return nil, status.Errorf(codes.Internal, "persist session: %v", err)

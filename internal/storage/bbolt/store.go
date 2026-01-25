@@ -710,7 +710,7 @@ func (s *Store) PutSessionWithActivePointer(ctx context.Context, session session
 		}
 		existingActive := activeBucket.Get(activeSessionKey(session.CampaignID))
 		if existingActive != nil {
-			return fmt.Errorf("active session already exists for campaign")
+			return storage.ErrActiveSessionExists
 		}
 
 		// Store the session

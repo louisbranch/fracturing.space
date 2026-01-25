@@ -355,7 +355,7 @@ func TestStartSessionActiveSessionConflict(t *testing.T) {
 	}
 	sessionStore := &fakeSessionStore{
 		getActiveSessionErr: storage.ErrNotFound,
-		putWithActiveErr:    errors.New("active session already exists for campaign"),
+		putWithActiveErr:    storage.ErrActiveSessionExists,
 	}
 	service := &SessionService{
 		stores: Stores{

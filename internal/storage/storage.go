@@ -11,6 +11,9 @@ import (
 // ErrNotFound indicates a requested record is missing.
 var ErrNotFound = errors.New("record not found")
 
+// ErrActiveSessionExists indicates an active session already exists for a campaign.
+var ErrActiveSessionExists = errors.New("active session already exists for campaign")
+
 // CampaignStore persists campaign metadata records.
 type CampaignStore interface {
 	Put(ctx context.Context, campaign domain.Campaign) error
