@@ -16,9 +16,10 @@ import (
 )
 
 const (
-	campaignBucket    = "campaign"
-	participantBucket = "participant"
-	actorBucket       = "actor"
+	campaignBucket       = "campaign"
+	participantBucket    = "participant"
+	actorBucket          = "actor"
+	controlDefaultBucket = "control_default"
 )
 
 // Store provides a BoltDB-backed campaign store.
@@ -188,6 +189,10 @@ func (s *Store) ensureBuckets() error {
 		if err != nil {
 			return fmt.Errorf("create actor bucket: %w", err)
 		}
+		_, err = tx.CreateBucketIfNotExists([]byte(controlDefaultBucket))
+		if err != nil {
+			return fmt.Errorf("create control default bucket: %w", err)
+		}
 		return nil
 	})
 }
@@ -201,6 +206,10 @@ func participantKey(campaignID, participantID string) []byte {
 }
 
 func actorKey(campaignID, actorID string) []byte {
+	return []byte(fmt.Sprintf("%s/%s", campaignID, actorID))
+}
+
+func controlDefaultKey(campaignID, actorID string) []byte {
 	return []byte(fmt.Sprintf("%s/%s", campaignID, actorID))
 }
 
@@ -511,6 +520,38 @@ func (s *Store) ListActors(ctx context.Context, campaignID string, pageSize int,
 	}
 
 	return page, nil
+}
+
+// PutControlDefault persists a default controller assignment for an actor (implements storage.ControlDefaultStore).
+func (s *Store) PutControlDefault(ctx context.Context, campaignID, actorID string, controller domain.ActorController) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if s == nil || s.db == nil {
+		return fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(campaignID) == "" {
+		return fmt.Errorf("campaign id is required")
+	}
+	if strings.TrimSpace(actorID) == "" {
+		return fmt.Errorf("actor id is required")
+	}
+	if err := controller.Validate(); err != nil {
+		return fmt.Errorf("validate controller: %w", err)
+	}
+
+	payload, err := json.Marshal(controller)
+	if err != nil {
+		return fmt.Errorf("marshal controller: %w", err)
+	}
+
+	return s.db.Update(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket([]byte(controlDefaultBucket))
+		if bucket == nil {
+			return fmt.Errorf("control default bucket is missing")
+		}
+		return bucket.Put(controlDefaultKey(campaignID, actorID), payload)
+	})
 }
 
 // TODO: Reserve index keys such as idx/creator/{creator_id}/campaign/{campaign_id}.

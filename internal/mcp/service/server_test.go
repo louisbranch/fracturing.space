@@ -45,25 +45,28 @@ type fakeDualityClient struct {
 
 // fakeCampaignClient implements CampaignServiceClient for tests.
 type fakeCampaignClient struct {
-	response                    *campaignv1.CreateCampaignResponse
-	listResponse                *campaignv1.ListCampaignsResponse
-	createParticipantResponse   *campaignv1.CreateParticipantResponse
-	listParticipantsResponse    *campaignv1.ListParticipantsResponse
-	createActorResponse         *campaignv1.CreateActorResponse
-	listActorsResponse          *campaignv1.ListActorsResponse
-	err                         error
-	listErr                     error
-	createParticipantErr        error
-	listParticipantsErr         error
-	createActorErr              error
-	listActorsErr               error
-	lastRequest                 *campaignv1.CreateCampaignRequest
-	lastListRequest             *campaignv1.ListCampaignsRequest
+	response                     *campaignv1.CreateCampaignResponse
+	listResponse                 *campaignv1.ListCampaignsResponse
+	createParticipantResponse    *campaignv1.CreateParticipantResponse
+	listParticipantsResponse     *campaignv1.ListParticipantsResponse
+	createActorResponse          *campaignv1.CreateActorResponse
+	listActorsResponse           *campaignv1.ListActorsResponse
+	setDefaultControlResponse    *campaignv1.SetDefaultControlResponse
+	err                          error
+	listErr                      error
+	createParticipantErr         error
+	listParticipantsErr          error
+	createActorErr               error
+	listActorsErr                error
+	setDefaultControlErr         error
+	lastRequest                  *campaignv1.CreateCampaignRequest
+	lastListRequest              *campaignv1.ListCampaignsRequest
 	lastCreateParticipantRequest *campaignv1.CreateParticipantRequest
-	lastListParticipantsRequest *campaignv1.ListParticipantsRequest
+	lastListParticipantsRequest  *campaignv1.ListParticipantsRequest
 	lastCreateActorRequest       *campaignv1.CreateActorRequest
 	lastListActorsRequest        *campaignv1.ListActorsRequest
-	listCalls                   int
+	lastSetDefaultControlRequest *campaignv1.SetDefaultControlRequest
+	listCalls                    int
 }
 
 // failingTransport returns a connection error for tests.
@@ -145,6 +148,12 @@ func (f *fakeCampaignClient) CreateActor(ctx context.Context, req *campaignv1.Cr
 func (f *fakeCampaignClient) ListActors(ctx context.Context, req *campaignv1.ListActorsRequest, opts ...grpc.CallOption) (*campaignv1.ListActorsResponse, error) {
 	f.lastListActorsRequest = req
 	return f.listActorsResponse, f.listActorsErr
+}
+
+// SetDefaultControl records the request and returns the configured response.
+func (f *fakeCampaignClient) SetDefaultControl(ctx context.Context, req *campaignv1.SetDefaultControlRequest, opts ...grpc.CallOption) (*campaignv1.SetDefaultControlResponse, error) {
+	f.lastSetDefaultControlRequest = req
+	return f.setDefaultControlResponse, f.setDefaultControlErr
 }
 
 // TestGRPCAddressPrefersEnv ensures env configuration overrides defaults.

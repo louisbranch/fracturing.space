@@ -8,6 +8,7 @@ package campaignv1
 
 import (
 	context "context"
+
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -25,6 +26,7 @@ const (
 	CampaignService_ListParticipants_FullMethodName  = "/campaign.v1.CampaignService/ListParticipants"
 	CampaignService_CreateActor_FullMethodName       = "/campaign.v1.CampaignService/CreateActor"
 	CampaignService_ListActors_FullMethodName        = "/campaign.v1.CampaignService/ListActors"
+	CampaignService_SetDefaultControl_FullMethodName = "/campaign.v1.CampaignService/SetDefaultControl"
 )
 
 // CampaignServiceClient is the client API for CampaignService service.
@@ -43,6 +45,8 @@ type CampaignServiceClient interface {
 	CreateActor(ctx context.Context, in *CreateActorRequest, opts ...grpc.CallOption) (*CreateActorResponse, error)
 	// List actors for a campaign.
 	ListActors(ctx context.Context, in *ListActorsRequest, opts ...grpc.CallOption) (*ListActorsResponse, error)
+	// Assign a campaign-scoped default controller for an actor.
+	SetDefaultControl(ctx context.Context, in *SetDefaultControlRequest, opts ...grpc.CallOption) (*SetDefaultControlResponse, error)
 }
 
 type campaignServiceClient struct {
@@ -113,6 +117,16 @@ func (c *campaignServiceClient) ListActors(ctx context.Context, in *ListActorsRe
 	return out, nil
 }
 
+func (c *campaignServiceClient) SetDefaultControl(ctx context.Context, in *SetDefaultControlRequest, opts ...grpc.CallOption) (*SetDefaultControlResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetDefaultControlResponse)
+	err := c.cc.Invoke(ctx, CampaignService_SetDefaultControl_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CampaignServiceServer is the server API for CampaignService service.
 // All implementations must embed UnimplementedCampaignServiceServer
 // for forward compatibility.
@@ -129,6 +143,8 @@ type CampaignServiceServer interface {
 	CreateActor(context.Context, *CreateActorRequest) (*CreateActorResponse, error)
 	// List actors for a campaign.
 	ListActors(context.Context, *ListActorsRequest) (*ListActorsResponse, error)
+	// Assign a campaign-scoped default controller for an actor.
+	SetDefaultControl(context.Context, *SetDefaultControlRequest) (*SetDefaultControlResponse, error)
 	mustEmbedUnimplementedCampaignServiceServer()
 }
 
@@ -156,6 +172,9 @@ func (UnimplementedCampaignServiceServer) CreateActor(context.Context, *CreateAc
 }
 func (UnimplementedCampaignServiceServer) ListActors(context.Context, *ListActorsRequest) (*ListActorsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListActors not implemented")
+}
+func (UnimplementedCampaignServiceServer) SetDefaultControl(context.Context, *SetDefaultControlRequest) (*SetDefaultControlResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetDefaultControl not implemented")
 }
 func (UnimplementedCampaignServiceServer) mustEmbedUnimplementedCampaignServiceServer() {}
 func (UnimplementedCampaignServiceServer) testEmbeddedByValue()                         {}
@@ -286,6 +305,24 @@ func _CampaignService_ListActors_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CampaignService_SetDefaultControl_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetDefaultControlRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CampaignServiceServer).SetDefaultControl(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CampaignService_SetDefaultControl_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CampaignServiceServer).SetDefaultControl(ctx, req.(*SetDefaultControlRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // CampaignService_ServiceDesc is the grpc.ServiceDesc for CampaignService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -316,6 +353,10 @@ var CampaignService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListActors",
 			Handler:    _CampaignService_ListActors_Handler,
+		},
+		{
+			MethodName: "SetDefaultControl",
+			Handler:    _CampaignService_SetDefaultControl_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -253,7 +253,7 @@ func TestCreateCampaignStoreFailure(t *testing.T) {
 func TestCreateCampaignMissingStore(t *testing.T) {
 	service := &CampaignService{
 		stores: Stores{},
-		clock: time.Now,
+		clock:  time.Now,
 		idGenerator: func() (string, error) {
 			return "camp-123", nil
 		},

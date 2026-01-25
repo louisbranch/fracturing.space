@@ -138,7 +138,7 @@ func TestCreateParticipantDoesNotIncrementForGM(t *testing.T) {
 			Campaign:    campaignStore,
 			Participant: participantStore,
 		},
-		clock:            time.Now,
+		clock: time.Now,
 		idGenerator: func() (string, error) {
 			return "part-999", nil
 		},
@@ -171,7 +171,7 @@ func TestCreateParticipantDefaultsController(t *testing.T) {
 			Campaign:    campaignStore,
 			Participant: participantStore,
 		},
-		clock:            time.Now,
+		clock:       time.Now,
 		idGenerator: func() (string, error) { return "part-1", nil },
 	}
 
@@ -229,7 +229,7 @@ func TestCreateParticipantValidationErrors(t *testing.T) {
 			Campaign:    campaignStore,
 			Participant: &fakeParticipantStore{},
 		},
-		clock:            time.Now,
+		clock:       time.Now,
 		idGenerator: func() (string, error) { return "part-1", nil },
 	}
 
@@ -260,7 +260,7 @@ func TestCreateParticipantCampaignNotFound(t *testing.T) {
 			Campaign:    campaignStore,
 			Participant: &fakeParticipantStore{},
 		},
-		clock:            time.Now,
+		clock:       time.Now,
 		idGenerator: func() (string, error) { return "part-1", nil },
 	}
 
@@ -312,7 +312,7 @@ func TestCreateParticipantStoreFailure(t *testing.T) {
 			Campaign:    campaignStore,
 			Participant: participantStore,
 		},
-		clock:            time.Now,
+		clock:       time.Now,
 		idGenerator: func() (string, error) { return "part-123", nil },
 	}
 

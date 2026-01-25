@@ -24,6 +24,9 @@ service CampaignService {
 
   // List actors for a campaign.
   rpc ListActors(ListActorsRequest) returns (ListActorsResponse);
+
+  // Assign a campaign-scoped default controller for an actor.
+  rpc SetDefaultControl(SetDefaultControlRequest) returns (SetDefaultControlResponse);
 }
 
 message CreateCampaignRequest {
@@ -180,4 +183,45 @@ message ListActorsRequest {
 message ListActorsResponse {
   repeated Actor actors = 1;
   string next_page_token = 2;
+}
+
+message SetDefaultControlRequest {
+  // The campaign ID.
+  string campaign_id = 1;
+
+  // The actor ID.
+  string actor_id = 2;
+
+  // The controller for the actor.
+  ActorController controller = 3;
+}
+
+message SetDefaultControlResponse {
+  // The campaign ID.
+  string campaign_id = 1;
+
+  // The actor ID.
+  string actor_id = 2;
+
+  // The controller for the actor.
+  ActorController controller = 3;
+}
+
+message ActorController {
+  oneof controller {
+    // If set, the controller is the GM.
+    GmController gm = 1;
+
+    // If set, the controller is a registered campaign participant.
+    ParticipantController participant = 2;
+  }
+}
+
+message GmController {
+  // Empty message to indicate GM control.
+}
+
+message ParticipantController {
+  // The participant ID of the controller.
+  string participant_id = 1;
 }

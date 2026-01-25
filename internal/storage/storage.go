@@ -53,3 +53,10 @@ type ActorPage struct {
 	Actors        []domain.Actor
 	NextPageToken string
 }
+
+// ControlDefaultStore persists default controller assignments for actors.
+type ControlDefaultStore interface {
+	// PutControlDefault sets the default controller for an actor in a campaign.
+	// Overwrites any existing controller for the same (campaign_id, actor_id) pair.
+	PutControlDefault(ctx context.Context, campaignID, actorID string, controller domain.ActorController) error
+}

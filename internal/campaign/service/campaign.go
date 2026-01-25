@@ -25,9 +25,10 @@ const (
 
 // Stores groups all campaign-related storage interfaces.
 type Stores struct {
-	Campaign    storage.CampaignStore
-	Participant storage.ParticipantStore
-	Actor       storage.ActorStore
+	Campaign       storage.CampaignStore
+	Participant    storage.ParticipantStore
+	Actor          storage.ActorStore
+	ControlDefault storage.ControlDefaultStore
 }
 
 // CampaignService implements the CampaignService gRPC API.
@@ -307,4 +308,125 @@ func (s *CampaignService) ListActors(ctx context.Context, in *campaignv1.ListAct
 	}
 
 	return response, nil
+}
+
+// SetDefaultControl assigns a campaign-scoped default controller for an actor.
+func (s *CampaignService) SetDefaultControl(ctx context.Context, in *campaignv1.SetDefaultControlRequest) (*campaignv1.SetDefaultControlResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "set default control request is required")
+	}
+
+	if s.stores.Campaign == nil {
+		return nil, status.Error(codes.Internal, "campaign store is not configured")
+	}
+	if s.stores.Actor == nil {
+		return nil, status.Error(codes.Internal, "actor store is not configured")
+	}
+	if s.stores.ControlDefault == nil {
+		return nil, status.Error(codes.Internal, "control default store is not configured")
+	}
+
+	// Validate campaign exists
+	campaignID := strings.TrimSpace(in.GetCampaignId())
+	if campaignID == "" {
+		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	}
+	_, err := s.stores.Campaign.Get(ctx, campaignID)
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return nil, status.Error(codes.NotFound, "campaign not found")
+		}
+		return nil, status.Errorf(codes.Internal, "check campaign: %v", err)
+	}
+
+	// Validate actor exists
+	actorID := strings.TrimSpace(in.GetActorId())
+	if actorID == "" {
+		return nil, status.Error(codes.InvalidArgument, "actor id is required")
+	}
+	_, err = s.stores.Actor.GetActor(ctx, campaignID, actorID)
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return nil, status.Error(codes.NotFound, "actor not found")
+		}
+		return nil, status.Errorf(codes.Internal, "check actor: %v", err)
+	}
+
+	// Validate and convert controller
+	if in.GetController() == nil {
+		return nil, status.Error(codes.InvalidArgument, "controller is required")
+	}
+	controller, err := actorControllerFromProto(in.GetController())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	// If participant controller, validate participant exists
+	if !controller.IsGM {
+		if s.stores.Participant == nil {
+			return nil, status.Error(codes.Internal, "participant store is not configured")
+		}
+		_, err = s.stores.Participant.GetParticipant(ctx, campaignID, controller.ParticipantID)
+		if err != nil {
+			if errors.Is(err, storage.ErrNotFound) {
+				return nil, status.Error(codes.NotFound, "participant not found")
+			}
+			return nil, status.Errorf(codes.Internal, "check participant: %v", err)
+		}
+	}
+
+	// Persist controller
+	if err := s.stores.ControlDefault.PutControlDefault(ctx, campaignID, actorID, controller); err != nil {
+		return nil, status.Errorf(codes.Internal, "persist control default: %v", err)
+	}
+
+	response := &campaignv1.SetDefaultControlResponse{
+		CampaignId: campaignID,
+		ActorId:    actorID,
+		Controller: actorControllerToProto(controller),
+	}
+
+	return response, nil
+}
+
+// actorControllerFromProto converts a protobuf ActorController to the domain representation.
+func actorControllerFromProto(pb *campaignv1.ActorController) (domain.ActorController, error) {
+	if pb == nil {
+		return domain.ActorController{}, domain.ErrInvalidActorController
+	}
+
+	switch c := pb.GetController().(type) {
+	case *campaignv1.ActorController_Gm:
+		if c.Gm == nil {
+			return domain.ActorController{}, domain.ErrInvalidActorController
+		}
+		return domain.NewGmController(), nil
+	case *campaignv1.ActorController_Participant:
+		if c.Participant == nil {
+			return domain.ActorController{}, domain.ErrInvalidActorController
+		}
+		return domain.NewParticipantController(c.Participant.GetParticipantId())
+	default:
+		return domain.ActorController{}, domain.ErrInvalidActorController
+	}
+}
+
+// actorControllerToProto converts a domain ActorController to the protobuf representation.
+// The controller must be valid (exactly one of IsGM or ParticipantID set).
+func actorControllerToProto(ctrl domain.ActorController) *campaignv1.ActorController {
+	if ctrl.IsGM {
+		return &campaignv1.ActorController{
+			Controller: &campaignv1.ActorController_Gm{
+				Gm: &campaignv1.GmController{},
+			},
+		}
+	}
+	// If not GM, assume participant controller (validation should ensure this is valid).
+	return &campaignv1.ActorController{
+		Controller: &campaignv1.ActorController_Participant{
+			Participant: &campaignv1.ParticipantController{
+				ParticipantId: ctrl.ParticipantID,
+			},
+		},
+	}
 }

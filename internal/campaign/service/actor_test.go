@@ -15,14 +15,14 @@ import (
 )
 
 type fakeActorStore struct {
-	putActor  domain.Actor
-	putErr    error
-	getActor  domain.Actor
-	getErr    error
-	listPage  storage.ActorPage
-	listErr   error
-	listPageSize int
-	listPageToken string
+	putActor           domain.Actor
+	putErr             error
+	getActor           domain.Actor
+	getErr             error
+	listPage           storage.ActorPage
+	listErr            error
+	listPageSize       int
+	listPageToken      string
 	listPageCampaignID string
 }
 
@@ -140,7 +140,7 @@ func TestCreateActorValidationErrors(t *testing.T) {
 			Campaign: campaignStore,
 			Actor:    &fakeActorStore{},
 		},
-		clock:      time.Now,
+		clock:       time.Now,
 		idGenerator: func() (string, error) { return "actor-1", nil },
 	}
 
@@ -171,7 +171,7 @@ func TestCreateActorCampaignNotFound(t *testing.T) {
 			Campaign: campaignStore,
 			Actor:    &fakeActorStore{},
 		},
-		clock:      time.Now,
+		clock:       time.Now,
 		idGenerator: func() (string, error) { return "actor-1", nil },
 	}
 
@@ -223,7 +223,7 @@ func TestCreateActorStoreFailure(t *testing.T) {
 			Campaign: campaignStore,
 			Actor:    actorStore,
 		},
-		clock:      time.Now,
+		clock:       time.Now,
 		idGenerator: func() (string, error) { return "actor-123", nil },
 	}
 

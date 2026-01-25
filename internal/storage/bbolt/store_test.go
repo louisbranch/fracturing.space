@@ -2,6 +2,7 @@ package bbolt
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"path/filepath"
 	"testing"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/louisbranch/duality-engine/internal/campaign/domain"
 	"github.com/louisbranch/duality-engine/internal/storage"
+	"go.etcd.io/bbolt"
 )
 
 func TestCampaignStorePutGet(t *testing.T) {
@@ -993,5 +995,192 @@ func TestActorStorePutNPC(t *testing.T) {
 	}
 	if loaded.Kind != domain.ActorKindNPC {
 		t.Fatalf("expected kind NPC, got %v", loaded.Kind)
+	}
+}
+
+func TestControlDefaultStorePutGM(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "duality.db")
+	store, err := Open(path)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer store.Close()
+
+	controller := domain.NewGmController()
+	if err := store.PutControlDefault(context.Background(), "camp-123", "actor-456", controller); err != nil {
+		t.Fatalf("put control default: %v", err)
+	}
+
+	// Verify by reading directly from the bucket
+	var loaded domain.ActorController
+	err = store.db.View(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket([]byte(controlDefaultBucket))
+		if bucket == nil {
+			return errors.New("bucket not found")
+		}
+		key := controlDefaultKey("camp-123", "actor-456")
+		payload := bucket.Get(key)
+		if payload == nil {
+			return storage.ErrNotFound
+		}
+		return json.Unmarshal(payload, &loaded)
+	})
+	if err != nil {
+		t.Fatalf("read control default: %v", err)
+	}
+	if !loaded.IsGM {
+		t.Fatal("expected controller to be GM")
+	}
+	if loaded.ParticipantID != "" {
+		t.Fatalf("expected empty participant ID, got %q", loaded.ParticipantID)
+	}
+}
+
+func TestControlDefaultStorePutParticipant(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "duality.db")
+	store, err := Open(path)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer store.Close()
+
+	controller, err := domain.NewParticipantController("participant-789")
+	if err != nil {
+		t.Fatalf("new participant controller: %v", err)
+	}
+	if err := store.PutControlDefault(context.Background(), "camp-123", "actor-456", controller); err != nil {
+		t.Fatalf("put control default: %v", err)
+	}
+
+	// Verify by reading directly from the bucket
+	var loaded domain.ActorController
+	err = store.db.View(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket([]byte(controlDefaultBucket))
+		if bucket == nil {
+			return errors.New("bucket not found")
+		}
+		key := controlDefaultKey("camp-123", "actor-456")
+		payload := bucket.Get(key)
+		if payload == nil {
+			return storage.ErrNotFound
+		}
+		return json.Unmarshal(payload, &loaded)
+	})
+	if err != nil {
+		t.Fatalf("read control default: %v", err)
+	}
+	if loaded.IsGM {
+		t.Fatal("expected controller to be participant")
+	}
+	if loaded.ParticipantID != "participant-789" {
+		t.Fatalf("expected participant ID participant-789, got %q", loaded.ParticipantID)
+	}
+}
+
+func TestControlDefaultStorePutOverwrite(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "duality.db")
+	store, err := Open(path)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer store.Close()
+
+	// First, set GM controller
+	gmController := domain.NewGmController()
+	if err := store.PutControlDefault(context.Background(), "camp-123", "actor-456", gmController); err != nil {
+		t.Fatalf("put control default (GM): %v", err)
+	}
+
+	// Then overwrite with participant controller
+	participantController, err := domain.NewParticipantController("participant-789")
+	if err != nil {
+		t.Fatalf("new participant controller: %v", err)
+	}
+	if err := store.PutControlDefault(context.Background(), "camp-123", "actor-456", participantController); err != nil {
+		t.Fatalf("put control default (participant): %v", err)
+	}
+
+	// Verify the overwrite
+	var loaded domain.ActorController
+	err = store.db.View(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket([]byte(controlDefaultBucket))
+		if bucket == nil {
+			return errors.New("bucket not found")
+		}
+		key := controlDefaultKey("camp-123", "actor-456")
+		payload := bucket.Get(key)
+		if payload == nil {
+			return storage.ErrNotFound
+		}
+		return json.Unmarshal(payload, &loaded)
+	})
+	if err != nil {
+		t.Fatalf("read control default: %v", err)
+	}
+	if loaded.IsGM {
+		t.Fatal("expected controller to be participant after overwrite")
+	}
+	if loaded.ParticipantID != "participant-789" {
+		t.Fatalf("expected participant ID participant-789, got %q", loaded.ParticipantID)
+	}
+}
+
+func TestControlDefaultStorePutEmptyCampaignID(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "duality.db")
+	store, err := Open(path)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer store.Close()
+
+	controller := domain.NewGmController()
+	if err := store.PutControlDefault(context.Background(), "", "actor-456", controller); err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestControlDefaultStorePutEmptyActorID(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "duality.db")
+	store, err := Open(path)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer store.Close()
+
+	controller := domain.NewGmController()
+	if err := store.PutControlDefault(context.Background(), "camp-123", "", controller); err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestControlDefaultStorePutInvalidController(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "duality.db")
+	store, err := Open(path)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer store.Close()
+
+	// Invalid controller: neither IsGM nor ParticipantID set
+	controller := domain.ActorController{}
+	if err := store.PutControlDefault(context.Background(), "camp-123", "actor-456", controller); err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestControlDefaultStorePutCanceledContext(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "duality.db")
+	store, err := Open(path)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer store.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	controller := domain.NewGmController()
+	if err := store.PutControlDefault(ctx, "camp-123", "actor-456", controller); err == nil {
+		t.Fatal("expected error")
 	}
 }
