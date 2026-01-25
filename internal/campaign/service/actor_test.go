@@ -15,10 +15,14 @@ import (
 )
 
 type fakeActorStore struct {
-	putActor domain.Actor
-	putErr   error
-	getActor domain.Actor
-	getErr   error
+	putActor  domain.Actor
+	putErr    error
+	getActor  domain.Actor
+	getErr    error
+	listPage  storage.ActorPage
+	listErr   error
+	listPageSize int
+	listPageToken string
 }
 
 func (f *fakeActorStore) PutActor(ctx context.Context, actor domain.Actor) error {
@@ -28,6 +32,12 @@ func (f *fakeActorStore) PutActor(ctx context.Context, actor domain.Actor) error
 
 func (f *fakeActorStore) GetActor(ctx context.Context, campaignID, actorID string) (domain.Actor, error) {
 	return f.getActor, f.getErr
+}
+
+func (f *fakeActorStore) ListActors(ctx context.Context, campaignID string, pageSize int, pageToken string) (storage.ActorPage, error) {
+	f.listPageSize = pageSize
+	f.listPageToken = pageToken
+	return f.listPage, f.listErr
 }
 
 func TestCreateActorSuccess(t *testing.T) {

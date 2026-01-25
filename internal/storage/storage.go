@@ -44,4 +44,12 @@ type ParticipantPage struct {
 type ActorStore interface {
 	PutActor(ctx context.Context, actor domain.Actor) error
 	GetActor(ctx context.Context, campaignID, actorID string) (domain.Actor, error)
+	// ListActors returns a page of actor records for a campaign starting after the page token.
+	ListActors(ctx context.Context, campaignID string, pageSize int, pageToken string) (ActorPage, error)
+}
+
+// ActorPage describes a page of actor records.
+type ActorPage struct {
+	Actors        []domain.Actor
+	NextPageToken string
 }

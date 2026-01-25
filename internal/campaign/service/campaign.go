@@ -19,6 +19,8 @@ const (
 	maxListCampaignsPageSize        = 10
 	defaultListParticipantsPageSize = 10
 	maxListParticipantsPageSize     = 10
+	defaultListActorsPageSize       = 10
+	maxListActorsPageSize           = 10
 )
 
 // Stores groups all campaign-related storage interfaces.
@@ -243,4 +245,66 @@ func actorKindToProto(kind domain.ActorKind) campaignv1.ActorKind {
 	default:
 		return campaignv1.ActorKind_ACTOR_KIND_UNSPECIFIED
 	}
+}
+
+// ListActors returns a page of actor records for a campaign.
+func (s *CampaignService) ListActors(ctx context.Context, in *campaignv1.ListActorsRequest) (*campaignv1.ListActorsResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "list actors request is required")
+	}
+
+	if s.stores.Campaign == nil {
+		return nil, status.Error(codes.Internal, "campaign store is not configured")
+	}
+	if s.stores.Actor == nil {
+		return nil, status.Error(codes.Internal, "actor store is not configured")
+	}
+
+	// Validate campaign exists
+	campaignID := strings.TrimSpace(in.GetCampaignId())
+	if campaignID == "" {
+		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	}
+	_, err := s.stores.Campaign.Get(ctx, campaignID)
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return nil, status.Error(codes.NotFound, "campaign not found")
+		}
+		return nil, status.Errorf(codes.Internal, "check campaign: %v", err)
+	}
+
+	pageSize := int(in.GetPageSize())
+	if pageSize <= 0 {
+		pageSize = defaultListActorsPageSize
+	}
+	if pageSize > maxListActorsPageSize {
+		pageSize = maxListActorsPageSize
+	}
+
+	page, err := s.stores.Actor.ListActors(ctx, campaignID, pageSize, in.GetPageToken())
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "list actors: %v", err)
+	}
+
+	response := &campaignv1.ListActorsResponse{
+		NextPageToken: page.NextPageToken,
+	}
+	if len(page.Actors) == 0 {
+		return response, nil
+	}
+
+	response.Actors = make([]*campaignv1.Actor, 0, len(page.Actors))
+	for _, actor := range page.Actors {
+		response.Actors = append(response.Actors, &campaignv1.Actor{
+			Id:         actor.ID,
+			CampaignId: actor.CampaignID,
+			Name:       actor.Name,
+			Kind:       actorKindToProto(actor.Kind),
+			Notes:      actor.Notes,
+			CreatedAt:  timestamppb.New(actor.CreatedAt),
+			UpdatedAt:  timestamppb.New(actor.UpdatedAt),
+		})
+	}
+
+	return response, nil
 }

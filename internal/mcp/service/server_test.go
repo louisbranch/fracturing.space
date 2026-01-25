@@ -138,6 +138,11 @@ func (f *fakeCampaignClient) CreateActor(ctx context.Context, req *campaignv1.Cr
 	return f.createActorResponse, f.createActorErr
 }
 
+// ListActors records the request and returns the configured response.
+func (f *fakeCampaignClient) ListActors(ctx context.Context, req *campaignv1.ListActorsRequest, opts ...grpc.CallOption) (*campaignv1.ListActorsResponse, error) {
+	return &campaignv1.ListActorsResponse{}, nil
+}
+
 // TestGRPCAddressPrefersEnv ensures env configuration overrides defaults.
 func TestGRPCAddressPrefersEnv(t *testing.T) {
 	t.Setenv("DUALITY_GRPC_ADDR", "env:123")

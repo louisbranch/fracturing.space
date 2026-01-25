@@ -447,6 +447,72 @@ func (s *Store) GetActor(ctx context.Context, campaignID, actorID string) (domai
 	return actor, nil
 }
 
+// ListActors returns a page of actor records for a campaign ordered by storage key (implements storage.ActorStore).
+func (s *Store) ListActors(ctx context.Context, campaignID string, pageSize int, pageToken string) (storage.ActorPage, error) {
+	if err := ctx.Err(); err != nil {
+		return storage.ActorPage{}, err
+	}
+	if s == nil || s.db == nil {
+		return storage.ActorPage{}, fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(campaignID) == "" {
+		return storage.ActorPage{}, fmt.Errorf("campaign id is required")
+	}
+	if pageSize <= 0 {
+		return storage.ActorPage{}, fmt.Errorf("page size must be greater than zero")
+	}
+
+	prefix := campaignID + "/"
+	page := storage.ActorPage{}
+	var lastKey string
+	viewErr := s.db.View(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket([]byte(actorBucket))
+		if bucket == nil {
+			return fmt.Errorf("actor bucket is missing")
+		}
+
+		cursor := bucket.Cursor()
+		prefixBytes := []byte(prefix)
+		var key, payload []byte
+		if pageToken == "" {
+			key, payload = cursor.Seek(prefixBytes)
+			if key != nil && !bytes.HasPrefix(key, prefixBytes) {
+				key = nil
+			}
+		} else {
+			key, payload = cursor.Seek([]byte(pageToken))
+			if key != nil && string(key) == pageToken && bytes.HasPrefix(key, prefixBytes) {
+				key, payload = cursor.Next()
+			} else if key != nil && !bytes.HasPrefix(key, prefixBytes) {
+				key = nil
+			}
+		}
+
+		for key != nil && bytes.HasPrefix(key, prefixBytes) && len(page.Actors) < pageSize {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+			var actor domain.Actor
+			if err := json.Unmarshal(payload, &actor); err != nil {
+				return fmt.Errorf("unmarshal actor: %w", err)
+			}
+			page.Actors = append(page.Actors, actor)
+			lastKey = string(key)
+			key, payload = cursor.Next()
+		}
+
+		if key != nil && bytes.HasPrefix(key, prefixBytes) && len(page.Actors) > 0 {
+			page.NextPageToken = lastKey
+		}
+		return nil
+	})
+	if viewErr != nil {
+		return storage.ActorPage{}, viewErr
+	}
+
+	return page, nil
+}
+
 // TODO: Reserve index keys such as idx/creator/{creator_id}/campaign/{campaign_id}.
 // TODO: Reserve index keys such as idx/campaign/{campaign_id}/session/{session_id}.
 // TODO: Reserve index keys such as idx/session/{campaign_id}/{session_id}/actor/{actor_id}.

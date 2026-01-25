@@ -1068,6 +1068,122 @@ func (x *Actor) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+type ListActorsRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The campaign ID to list actors for.
+	CampaignId string `protobuf:"bytes,1,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"`
+	// The maximum number of actors to return.
+	// If zero, the server defaults to 10. The server clamps values above 10 to 10.
+	PageSize int32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// A page token received from a prior ListActorsResponse.
+	PageToken     string `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListActorsRequest) Reset() {
+	*x = ListActorsRequest{}
+	mi := &file_campaign_v1_campaign_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListActorsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListActorsRequest) ProtoMessage() {}
+
+func (x *ListActorsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_campaign_v1_campaign_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListActorsRequest.ProtoReflect.Descriptor instead.
+func (*ListActorsRequest) Descriptor() ([]byte, []int) {
+	return file_campaign_v1_campaign_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *ListActorsRequest) GetCampaignId() string {
+	if x != nil {
+		return x.CampaignId
+	}
+	return ""
+}
+
+func (x *ListActorsRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListActorsRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+type ListActorsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Actors        []*Actor               `protobuf:"bytes,1,rep,name=actors,proto3" json:"actors,omitempty"`
+	NextPageToken string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListActorsResponse) Reset() {
+	*x = ListActorsResponse{}
+	mi := &file_campaign_v1_campaign_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListActorsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListActorsResponse) ProtoMessage() {}
+
+func (x *ListActorsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_campaign_v1_campaign_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListActorsResponse.ProtoReflect.Descriptor instead.
+func (*ListActorsResponse) Descriptor() ([]byte, []int) {
+	return file_campaign_v1_campaign_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *ListActorsResponse) GetActors() []*Actor {
+	if x != nil {
+		return x.Actors
+	}
+	return nil
+}
+
+func (x *ListActorsResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
 var File_campaign_v1_campaign_proto protoreflect.FileDescriptor
 
 const file_campaign_v1_campaign_proto_rawDesc = "" +
@@ -1147,7 +1263,16 @@ const file_campaign_v1_campaign_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt*@\n" +
+	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"p\n" +
+	"\x11ListActorsRequest\x12\x1f\n" +
+	"\vcampaign_id\x18\x01 \x01(\tR\n" +
+	"campaignId\x12\x1b\n" +
+	"\tpage_size\x18\x02 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x03 \x01(\tR\tpageToken\"h\n" +
+	"\x12ListActorsResponse\x12*\n" +
+	"\x06actors\x18\x01 \x03(\v2\x12.campaign.v1.ActorR\x06actors\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken*@\n" +
 	"\x06GmMode\x12\x17\n" +
 	"\x13GM_MODE_UNSPECIFIED\x10\x00\x12\t\n" +
 	"\x05HUMAN\x10\x01\x12\x06\n" +
@@ -1167,13 +1292,15 @@ const file_campaign_v1_campaign_proto_rawDesc = "" +
 	"\tActorKind\x12\x1a\n" +
 	"\x16ACTOR_KIND_UNSPECIFIED\x10\x00\x12\x06\n" +
 	"\x02PC\x10\x01\x12\a\n" +
-	"\x03NPC\x10\x022\xdb\x03\n" +
+	"\x03NPC\x10\x022\xaa\x04\n" +
 	"\x0fCampaignService\x12Y\n" +
 	"\x0eCreateCampaign\x12\".campaign.v1.CreateCampaignRequest\x1a#.campaign.v1.CreateCampaignResponse\x12V\n" +
 	"\rListCampaigns\x12!.campaign.v1.ListCampaignsRequest\x1a\".campaign.v1.ListCampaignsResponse\x12b\n" +
 	"\x11CreateParticipant\x12%.campaign.v1.CreateParticipantRequest\x1a&.campaign.v1.CreateParticipantResponse\x12_\n" +
 	"\x10ListParticipants\x12$.campaign.v1.ListParticipantsRequest\x1a%.campaign.v1.ListParticipantsResponse\x12P\n" +
-	"\vCreateActor\x12\x1f.campaign.v1.CreateActorRequest\x1a .campaign.v1.CreateActorResponseBIZGgithub.com/louisbranch/duality-engine/api/gen/go/campaign/v1;campaignv1b\x06proto3"
+	"\vCreateActor\x12\x1f.campaign.v1.CreateActorRequest\x1a .campaign.v1.CreateActorResponse\x12M\n" +
+	"\n" +
+	"ListActors\x12\x1e.campaign.v1.ListActorsRequest\x1a\x1f.campaign.v1.ListActorsResponseBIZGgithub.com/louisbranch/duality-engine/api/gen/go/campaign/v1;campaignv1b\x06proto3"
 
 var (
 	file_campaign_v1_campaign_proto_rawDescOnce sync.Once
@@ -1188,7 +1315,7 @@ func file_campaign_v1_campaign_proto_rawDescGZIP() []byte {
 }
 
 var file_campaign_v1_campaign_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_campaign_v1_campaign_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
+var file_campaign_v1_campaign_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_campaign_v1_campaign_proto_goTypes = []any{
 	(GmMode)(0),                       // 0: campaign.v1.GmMode
 	(ParticipantRole)(0),              // 1: campaign.v1.ParticipantRole
@@ -1207,43 +1334,48 @@ var file_campaign_v1_campaign_proto_goTypes = []any{
 	(*CreateActorRequest)(nil),        // 14: campaign.v1.CreateActorRequest
 	(*CreateActorResponse)(nil),       // 15: campaign.v1.CreateActorResponse
 	(*Actor)(nil),                     // 16: campaign.v1.Actor
-	(*timestamppb.Timestamp)(nil),     // 17: google.protobuf.Timestamp
+	(*ListActorsRequest)(nil),         // 17: campaign.v1.ListActorsRequest
+	(*ListActorsResponse)(nil),        // 18: campaign.v1.ListActorsResponse
+	(*timestamppb.Timestamp)(nil),     // 19: google.protobuf.Timestamp
 }
 var file_campaign_v1_campaign_proto_depIdxs = []int32{
 	0,  // 0: campaign.v1.CreateCampaignRequest.gm_mode:type_name -> campaign.v1.GmMode
 	8,  // 1: campaign.v1.CreateCampaignResponse.campaign:type_name -> campaign.v1.Campaign
 	8,  // 2: campaign.v1.ListCampaignsResponse.campaigns:type_name -> campaign.v1.Campaign
 	0,  // 3: campaign.v1.Campaign.gm_mode:type_name -> campaign.v1.GmMode
-	17, // 4: campaign.v1.Campaign.created_at:type_name -> google.protobuf.Timestamp
-	17, // 5: campaign.v1.Campaign.updated_at:type_name -> google.protobuf.Timestamp
+	19, // 4: campaign.v1.Campaign.created_at:type_name -> google.protobuf.Timestamp
+	19, // 5: campaign.v1.Campaign.updated_at:type_name -> google.protobuf.Timestamp
 	1,  // 6: campaign.v1.CreateParticipantRequest.role:type_name -> campaign.v1.ParticipantRole
 	2,  // 7: campaign.v1.CreateParticipantRequest.controller:type_name -> campaign.v1.Controller
 	11, // 8: campaign.v1.CreateParticipantResponse.participant:type_name -> campaign.v1.Participant
 	1,  // 9: campaign.v1.Participant.role:type_name -> campaign.v1.ParticipantRole
 	2,  // 10: campaign.v1.Participant.controller:type_name -> campaign.v1.Controller
-	17, // 11: campaign.v1.Participant.created_at:type_name -> google.protobuf.Timestamp
-	17, // 12: campaign.v1.Participant.updated_at:type_name -> google.protobuf.Timestamp
+	19, // 11: campaign.v1.Participant.created_at:type_name -> google.protobuf.Timestamp
+	19, // 12: campaign.v1.Participant.updated_at:type_name -> google.protobuf.Timestamp
 	11, // 13: campaign.v1.ListParticipantsResponse.participants:type_name -> campaign.v1.Participant
 	3,  // 14: campaign.v1.CreateActorRequest.kind:type_name -> campaign.v1.ActorKind
 	16, // 15: campaign.v1.CreateActorResponse.actor:type_name -> campaign.v1.Actor
 	3,  // 16: campaign.v1.Actor.kind:type_name -> campaign.v1.ActorKind
-	17, // 17: campaign.v1.Actor.created_at:type_name -> google.protobuf.Timestamp
-	17, // 18: campaign.v1.Actor.updated_at:type_name -> google.protobuf.Timestamp
-	4,  // 19: campaign.v1.CampaignService.CreateCampaign:input_type -> campaign.v1.CreateCampaignRequest
-	6,  // 20: campaign.v1.CampaignService.ListCampaigns:input_type -> campaign.v1.ListCampaignsRequest
-	9,  // 21: campaign.v1.CampaignService.CreateParticipant:input_type -> campaign.v1.CreateParticipantRequest
-	12, // 22: campaign.v1.CampaignService.ListParticipants:input_type -> campaign.v1.ListParticipantsRequest
-	14, // 23: campaign.v1.CampaignService.CreateActor:input_type -> campaign.v1.CreateActorRequest
-	5,  // 24: campaign.v1.CampaignService.CreateCampaign:output_type -> campaign.v1.CreateCampaignResponse
-	7,  // 25: campaign.v1.CampaignService.ListCampaigns:output_type -> campaign.v1.ListCampaignsResponse
-	10, // 26: campaign.v1.CampaignService.CreateParticipant:output_type -> campaign.v1.CreateParticipantResponse
-	13, // 27: campaign.v1.CampaignService.ListParticipants:output_type -> campaign.v1.ListParticipantsResponse
-	15, // 28: campaign.v1.CampaignService.CreateActor:output_type -> campaign.v1.CreateActorResponse
-	24, // [24:29] is the sub-list for method output_type
-	19, // [19:24] is the sub-list for method input_type
-	19, // [19:19] is the sub-list for extension type_name
-	19, // [19:19] is the sub-list for extension extendee
-	0,  // [0:19] is the sub-list for field type_name
+	19, // 17: campaign.v1.Actor.created_at:type_name -> google.protobuf.Timestamp
+	19, // 18: campaign.v1.Actor.updated_at:type_name -> google.protobuf.Timestamp
+	16, // 19: campaign.v1.ListActorsResponse.actors:type_name -> campaign.v1.Actor
+	4,  // 20: campaign.v1.CampaignService.CreateCampaign:input_type -> campaign.v1.CreateCampaignRequest
+	6,  // 21: campaign.v1.CampaignService.ListCampaigns:input_type -> campaign.v1.ListCampaignsRequest
+	9,  // 22: campaign.v1.CampaignService.CreateParticipant:input_type -> campaign.v1.CreateParticipantRequest
+	12, // 23: campaign.v1.CampaignService.ListParticipants:input_type -> campaign.v1.ListParticipantsRequest
+	14, // 24: campaign.v1.CampaignService.CreateActor:input_type -> campaign.v1.CreateActorRequest
+	17, // 25: campaign.v1.CampaignService.ListActors:input_type -> campaign.v1.ListActorsRequest
+	5,  // 26: campaign.v1.CampaignService.CreateCampaign:output_type -> campaign.v1.CreateCampaignResponse
+	7,  // 27: campaign.v1.CampaignService.ListCampaigns:output_type -> campaign.v1.ListCampaignsResponse
+	10, // 28: campaign.v1.CampaignService.CreateParticipant:output_type -> campaign.v1.CreateParticipantResponse
+	13, // 29: campaign.v1.CampaignService.ListParticipants:output_type -> campaign.v1.ListParticipantsResponse
+	15, // 30: campaign.v1.CampaignService.CreateActor:output_type -> campaign.v1.CreateActorResponse
+	18, // 31: campaign.v1.CampaignService.ListActors:output_type -> campaign.v1.ListActorsResponse
+	26, // [26:32] is the sub-list for method output_type
+	20, // [20:26] is the sub-list for method input_type
+	20, // [20:20] is the sub-list for extension type_name
+	20, // [20:20] is the sub-list for extension extendee
+	0,  // [0:20] is the sub-list for field type_name
 }
 
 func init() { file_campaign_v1_campaign_proto_init() }
@@ -1257,7 +1389,7 @@ func file_campaign_v1_campaign_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_campaign_v1_campaign_proto_rawDesc), len(file_campaign_v1_campaign_proto_rawDesc)),
 			NumEnums:      4,
-			NumMessages:   13,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
