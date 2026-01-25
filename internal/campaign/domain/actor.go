@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/louisbranch/duality-engine/internal/id"
 )
 
 // ActorKind describes the kind of actor in a campaign.
@@ -51,7 +53,7 @@ func CreateActor(input CreateActorInput, now func() time.Time, idGenerator func(
 		now = time.Now
 	}
 	if idGenerator == nil {
-		idGenerator = NewID
+		idGenerator = id.NewID
 	}
 
 	normalized, err := NormalizeCreateActorInput(input)
