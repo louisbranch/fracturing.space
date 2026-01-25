@@ -139,6 +139,44 @@ func (s *CampaignService) ListCampaigns(ctx context.Context, in *campaignv1.List
 	return response, nil
 }
 
+// GetCampaign returns a campaign metadata record by ID.
+func (s *CampaignService) GetCampaign(ctx context.Context, in *campaignv1.GetCampaignRequest) (*campaignv1.GetCampaignResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "get campaign request is required")
+	}
+
+	if s.stores.Campaign == nil {
+		return nil, status.Error(codes.Internal, "campaign store is not configured")
+	}
+
+	campaignID := strings.TrimSpace(in.GetCampaignId())
+	if campaignID == "" {
+		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	}
+
+	campaign, err := s.stores.Campaign.Get(ctx, campaignID)
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return nil, status.Error(codes.NotFound, "campaign not found")
+		}
+		return nil, status.Errorf(codes.Internal, "get campaign: %v", err)
+	}
+
+	response := &campaignv1.GetCampaignResponse{
+		Campaign: &campaignv1.Campaign{
+			Id:          campaign.ID,
+			Name:        campaign.Name,
+			GmMode:      gmModeToProto(campaign.GmMode),
+			PlayerCount: int32(campaign.PlayerCount),
+			ThemePrompt: campaign.ThemePrompt,
+			CreatedAt:   timestamppb.New(campaign.CreatedAt),
+			UpdatedAt:   timestamppb.New(campaign.UpdatedAt),
+		},
+	}
+
+	return response, nil
+}
+
 // gmModeFromProto maps a protobuf GM mode to the domain representation.
 func gmModeFromProto(mode campaignv1.GmMode) domain.GmMode {
 	switch mode {

@@ -21,6 +21,7 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	CampaignService_CreateCampaign_FullMethodName    = "/campaign.v1.CampaignService/CreateCampaign"
 	CampaignService_ListCampaigns_FullMethodName     = "/campaign.v1.CampaignService/ListCampaigns"
+	CampaignService_GetCampaign_FullMethodName       = "/campaign.v1.CampaignService/GetCampaign"
 	CampaignService_CreateParticipant_FullMethodName = "/campaign.v1.CampaignService/CreateParticipant"
 	CampaignService_ListParticipants_FullMethodName  = "/campaign.v1.CampaignService/ListParticipants"
 	CampaignService_CreateActor_FullMethodName       = "/campaign.v1.CampaignService/CreateActor"
@@ -36,6 +37,8 @@ type CampaignServiceClient interface {
 	CreateCampaign(ctx context.Context, in *CreateCampaignRequest, opts ...grpc.CallOption) (*CreateCampaignResponse, error)
 	// List campaign metadata records.
 	ListCampaigns(ctx context.Context, in *ListCampaignsRequest, opts ...grpc.CallOption) (*ListCampaignsResponse, error)
+	// Get a campaign metadata record by ID.
+	GetCampaign(ctx context.Context, in *GetCampaignRequest, opts ...grpc.CallOption) (*GetCampaignResponse, error)
 	// Create a participant (GM or player) for a campaign.
 	CreateParticipant(ctx context.Context, in *CreateParticipantRequest, opts ...grpc.CallOption) (*CreateParticipantResponse, error)
 	// List participants for a campaign.
@@ -70,6 +73,16 @@ func (c *campaignServiceClient) ListCampaigns(ctx context.Context, in *ListCampa
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListCampaignsResponse)
 	err := c.cc.Invoke(ctx, CampaignService_ListCampaigns_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *campaignServiceClient) GetCampaign(ctx context.Context, in *GetCampaignRequest, opts ...grpc.CallOption) (*GetCampaignResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCampaignResponse)
+	err := c.cc.Invoke(ctx, CampaignService_GetCampaign_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -134,6 +147,8 @@ type CampaignServiceServer interface {
 	CreateCampaign(context.Context, *CreateCampaignRequest) (*CreateCampaignResponse, error)
 	// List campaign metadata records.
 	ListCampaigns(context.Context, *ListCampaignsRequest) (*ListCampaignsResponse, error)
+	// Get a campaign metadata record by ID.
+	GetCampaign(context.Context, *GetCampaignRequest) (*GetCampaignResponse, error)
 	// Create a participant (GM or player) for a campaign.
 	CreateParticipant(context.Context, *CreateParticipantRequest) (*CreateParticipantResponse, error)
 	// List participants for a campaign.
@@ -159,6 +174,9 @@ func (UnimplementedCampaignServiceServer) CreateCampaign(context.Context, *Creat
 }
 func (UnimplementedCampaignServiceServer) ListCampaigns(context.Context, *ListCampaignsRequest) (*ListCampaignsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListCampaigns not implemented")
+}
+func (UnimplementedCampaignServiceServer) GetCampaign(context.Context, *GetCampaignRequest) (*GetCampaignResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetCampaign not implemented")
 }
 func (UnimplementedCampaignServiceServer) CreateParticipant(context.Context, *CreateParticipantRequest) (*CreateParticipantResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateParticipant not implemented")
@@ -228,6 +246,24 @@ func _CampaignService_ListCampaigns_Handler(srv interface{}, ctx context.Context
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CampaignServiceServer).ListCampaigns(ctx, req.(*ListCampaignsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CampaignService_GetCampaign_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCampaignRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CampaignServiceServer).GetCampaign(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CampaignService_GetCampaign_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CampaignServiceServer).GetCampaign(ctx, req.(*GetCampaignRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -336,6 +372,10 @@ var CampaignService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListCampaigns",
 			Handler:    _CampaignService_ListCampaigns_Handler,
+		},
+		{
+			MethodName: "GetCampaign",
+			Handler:    _CampaignService_GetCampaign_Handler,
 		},
 		{
 			MethodName: "CreateParticipant",

@@ -13,6 +13,9 @@ service CampaignService {
   // List campaign metadata records.
   rpc ListCampaigns(ListCampaignsRequest) returns (ListCampaignsResponse);
 
+  // Get a campaign metadata record by ID.
+  rpc GetCampaign(GetCampaignRequest) returns (GetCampaignResponse);
+
   // Create a participant (GM or player) for a campaign.
   rpc CreateParticipant(CreateParticipantRequest) returns (CreateParticipantResponse);
 
@@ -57,6 +60,15 @@ message ListCampaignsRequest {
 message ListCampaignsResponse {
   repeated Campaign campaigns = 1;
   string next_page_token = 2;
+}
+
+message GetCampaignRequest {
+  // The campaign ID to retrieve.
+  string campaign_id = 1;
+}
+
+message GetCampaignResponse {
+  Campaign campaign = 1;
 }
 
 message Campaign {

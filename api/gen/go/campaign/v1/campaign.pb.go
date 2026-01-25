@@ -443,6 +443,95 @@ func (x *ListCampaignsResponse) GetNextPageToken() string {
 	return ""
 }
 
+type GetCampaignRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The campaign ID to retrieve.
+	CampaignId    string `protobuf:"bytes,1,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetCampaignRequest) Reset() {
+	*x = GetCampaignRequest{}
+	mi := &file_campaign_v1_campaign_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCampaignRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCampaignRequest) ProtoMessage() {}
+
+func (x *GetCampaignRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_campaign_v1_campaign_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCampaignRequest.ProtoReflect.Descriptor instead.
+func (*GetCampaignRequest) Descriptor() ([]byte, []int) {
+	return file_campaign_v1_campaign_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *GetCampaignRequest) GetCampaignId() string {
+	if x != nil {
+		return x.CampaignId
+	}
+	return ""
+}
+
+type GetCampaignResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Campaign      *Campaign              `protobuf:"bytes,1,opt,name=campaign,proto3" json:"campaign,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetCampaignResponse) Reset() {
+	*x = GetCampaignResponse{}
+	mi := &file_campaign_v1_campaign_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCampaignResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCampaignResponse) ProtoMessage() {}
+
+func (x *GetCampaignResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_campaign_v1_campaign_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCampaignResponse.ProtoReflect.Descriptor instead.
+func (*GetCampaignResponse) Descriptor() ([]byte, []int) {
+	return file_campaign_v1_campaign_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *GetCampaignResponse) GetCampaign() *Campaign {
+	if x != nil {
+		return x.Campaign
+	}
+	return nil
+}
+
 type Campaign struct {
 	state  protoimpl.MessageState `protogen:"open.v1"`
 	Id     string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -459,7 +548,7 @@ type Campaign struct {
 
 func (x *Campaign) Reset() {
 	*x = Campaign{}
-	mi := &file_campaign_v1_campaign_proto_msgTypes[4]
+	mi := &file_campaign_v1_campaign_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -471,7 +560,7 @@ func (x *Campaign) String() string {
 func (*Campaign) ProtoMessage() {}
 
 func (x *Campaign) ProtoReflect() protoreflect.Message {
-	mi := &file_campaign_v1_campaign_proto_msgTypes[4]
+	mi := &file_campaign_v1_campaign_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -484,7 +573,7 @@ func (x *Campaign) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Campaign.ProtoReflect.Descriptor instead.
 func (*Campaign) Descriptor() ([]byte, []int) {
-	return file_campaign_v1_campaign_proto_rawDescGZIP(), []int{4}
+	return file_campaign_v1_campaign_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *Campaign) GetId() string {
@@ -552,7 +641,7 @@ type CreateParticipantRequest struct {
 
 func (x *CreateParticipantRequest) Reset() {
 	*x = CreateParticipantRequest{}
-	mi := &file_campaign_v1_campaign_proto_msgTypes[5]
+	mi := &file_campaign_v1_campaign_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -564,7 +653,7 @@ func (x *CreateParticipantRequest) String() string {
 func (*CreateParticipantRequest) ProtoMessage() {}
 
 func (x *CreateParticipantRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_campaign_v1_campaign_proto_msgTypes[5]
+	mi := &file_campaign_v1_campaign_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -577,7 +666,7 @@ func (x *CreateParticipantRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateParticipantRequest.ProtoReflect.Descriptor instead.
 func (*CreateParticipantRequest) Descriptor() ([]byte, []int) {
-	return file_campaign_v1_campaign_proto_rawDescGZIP(), []int{5}
+	return file_campaign_v1_campaign_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *CreateParticipantRequest) GetCampaignId() string {
@@ -617,7 +706,7 @@ type CreateParticipantResponse struct {
 
 func (x *CreateParticipantResponse) Reset() {
 	*x = CreateParticipantResponse{}
-	mi := &file_campaign_v1_campaign_proto_msgTypes[6]
+	mi := &file_campaign_v1_campaign_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -629,7 +718,7 @@ func (x *CreateParticipantResponse) String() string {
 func (*CreateParticipantResponse) ProtoMessage() {}
 
 func (x *CreateParticipantResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_campaign_v1_campaign_proto_msgTypes[6]
+	mi := &file_campaign_v1_campaign_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -642,7 +731,7 @@ func (x *CreateParticipantResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateParticipantResponse.ProtoReflect.Descriptor instead.
 func (*CreateParticipantResponse) Descriptor() ([]byte, []int) {
-	return file_campaign_v1_campaign_proto_rawDescGZIP(), []int{6}
+	return file_campaign_v1_campaign_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *CreateParticipantResponse) GetParticipant() *Participant {
@@ -667,7 +756,7 @@ type Participant struct {
 
 func (x *Participant) Reset() {
 	*x = Participant{}
-	mi := &file_campaign_v1_campaign_proto_msgTypes[7]
+	mi := &file_campaign_v1_campaign_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -679,7 +768,7 @@ func (x *Participant) String() string {
 func (*Participant) ProtoMessage() {}
 
 func (x *Participant) ProtoReflect() protoreflect.Message {
-	mi := &file_campaign_v1_campaign_proto_msgTypes[7]
+	mi := &file_campaign_v1_campaign_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -692,7 +781,7 @@ func (x *Participant) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Participant.ProtoReflect.Descriptor instead.
 func (*Participant) Descriptor() ([]byte, []int) {
-	return file_campaign_v1_campaign_proto_rawDescGZIP(), []int{7}
+	return file_campaign_v1_campaign_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *Participant) GetId() string {
@@ -759,7 +848,7 @@ type ListParticipantsRequest struct {
 
 func (x *ListParticipantsRequest) Reset() {
 	*x = ListParticipantsRequest{}
-	mi := &file_campaign_v1_campaign_proto_msgTypes[8]
+	mi := &file_campaign_v1_campaign_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -771,7 +860,7 @@ func (x *ListParticipantsRequest) String() string {
 func (*ListParticipantsRequest) ProtoMessage() {}
 
 func (x *ListParticipantsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_campaign_v1_campaign_proto_msgTypes[8]
+	mi := &file_campaign_v1_campaign_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -784,7 +873,7 @@ func (x *ListParticipantsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListParticipantsRequest.ProtoReflect.Descriptor instead.
 func (*ListParticipantsRequest) Descriptor() ([]byte, []int) {
-	return file_campaign_v1_campaign_proto_rawDescGZIP(), []int{8}
+	return file_campaign_v1_campaign_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ListParticipantsRequest) GetCampaignId() string {
@@ -818,7 +907,7 @@ type ListParticipantsResponse struct {
 
 func (x *ListParticipantsResponse) Reset() {
 	*x = ListParticipantsResponse{}
-	mi := &file_campaign_v1_campaign_proto_msgTypes[9]
+	mi := &file_campaign_v1_campaign_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -830,7 +919,7 @@ func (x *ListParticipantsResponse) String() string {
 func (*ListParticipantsResponse) ProtoMessage() {}
 
 func (x *ListParticipantsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_campaign_v1_campaign_proto_msgTypes[9]
+	mi := &file_campaign_v1_campaign_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -843,7 +932,7 @@ func (x *ListParticipantsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListParticipantsResponse.ProtoReflect.Descriptor instead.
 func (*ListParticipantsResponse) Descriptor() ([]byte, []int) {
-	return file_campaign_v1_campaign_proto_rawDescGZIP(), []int{9}
+	return file_campaign_v1_campaign_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *ListParticipantsResponse) GetParticipants() []*Participant {
@@ -876,7 +965,7 @@ type CreateActorRequest struct {
 
 func (x *CreateActorRequest) Reset() {
 	*x = CreateActorRequest{}
-	mi := &file_campaign_v1_campaign_proto_msgTypes[10]
+	mi := &file_campaign_v1_campaign_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -888,7 +977,7 @@ func (x *CreateActorRequest) String() string {
 func (*CreateActorRequest) ProtoMessage() {}
 
 func (x *CreateActorRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_campaign_v1_campaign_proto_msgTypes[10]
+	mi := &file_campaign_v1_campaign_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -901,7 +990,7 @@ func (x *CreateActorRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateActorRequest.ProtoReflect.Descriptor instead.
 func (*CreateActorRequest) Descriptor() ([]byte, []int) {
-	return file_campaign_v1_campaign_proto_rawDescGZIP(), []int{10}
+	return file_campaign_v1_campaign_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *CreateActorRequest) GetCampaignId() string {
@@ -941,7 +1030,7 @@ type CreateActorResponse struct {
 
 func (x *CreateActorResponse) Reset() {
 	*x = CreateActorResponse{}
-	mi := &file_campaign_v1_campaign_proto_msgTypes[11]
+	mi := &file_campaign_v1_campaign_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -953,7 +1042,7 @@ func (x *CreateActorResponse) String() string {
 func (*CreateActorResponse) ProtoMessage() {}
 
 func (x *CreateActorResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_campaign_v1_campaign_proto_msgTypes[11]
+	mi := &file_campaign_v1_campaign_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -966,7 +1055,7 @@ func (x *CreateActorResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateActorResponse.ProtoReflect.Descriptor instead.
 func (*CreateActorResponse) Descriptor() ([]byte, []int) {
-	return file_campaign_v1_campaign_proto_rawDescGZIP(), []int{11}
+	return file_campaign_v1_campaign_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *CreateActorResponse) GetActor() *Actor {
@@ -991,7 +1080,7 @@ type Actor struct {
 
 func (x *Actor) Reset() {
 	*x = Actor{}
-	mi := &file_campaign_v1_campaign_proto_msgTypes[12]
+	mi := &file_campaign_v1_campaign_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1003,7 +1092,7 @@ func (x *Actor) String() string {
 func (*Actor) ProtoMessage() {}
 
 func (x *Actor) ProtoReflect() protoreflect.Message {
-	mi := &file_campaign_v1_campaign_proto_msgTypes[12]
+	mi := &file_campaign_v1_campaign_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1016,7 +1105,7 @@ func (x *Actor) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Actor.ProtoReflect.Descriptor instead.
 func (*Actor) Descriptor() ([]byte, []int) {
-	return file_campaign_v1_campaign_proto_rawDescGZIP(), []int{12}
+	return file_campaign_v1_campaign_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *Actor) GetId() string {
@@ -1083,7 +1172,7 @@ type ListActorsRequest struct {
 
 func (x *ListActorsRequest) Reset() {
 	*x = ListActorsRequest{}
-	mi := &file_campaign_v1_campaign_proto_msgTypes[13]
+	mi := &file_campaign_v1_campaign_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1095,7 +1184,7 @@ func (x *ListActorsRequest) String() string {
 func (*ListActorsRequest) ProtoMessage() {}
 
 func (x *ListActorsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_campaign_v1_campaign_proto_msgTypes[13]
+	mi := &file_campaign_v1_campaign_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1108,7 +1197,7 @@ func (x *ListActorsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListActorsRequest.ProtoReflect.Descriptor instead.
 func (*ListActorsRequest) Descriptor() ([]byte, []int) {
-	return file_campaign_v1_campaign_proto_rawDescGZIP(), []int{13}
+	return file_campaign_v1_campaign_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ListActorsRequest) GetCampaignId() string {
@@ -1142,7 +1231,7 @@ type ListActorsResponse struct {
 
 func (x *ListActorsResponse) Reset() {
 	*x = ListActorsResponse{}
-	mi := &file_campaign_v1_campaign_proto_msgTypes[14]
+	mi := &file_campaign_v1_campaign_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1154,7 +1243,7 @@ func (x *ListActorsResponse) String() string {
 func (*ListActorsResponse) ProtoMessage() {}
 
 func (x *ListActorsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_campaign_v1_campaign_proto_msgTypes[14]
+	mi := &file_campaign_v1_campaign_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1167,7 +1256,7 @@ func (x *ListActorsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListActorsResponse.ProtoReflect.Descriptor instead.
 func (*ListActorsResponse) Descriptor() ([]byte, []int) {
-	return file_campaign_v1_campaign_proto_rawDescGZIP(), []int{14}
+	return file_campaign_v1_campaign_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ListActorsResponse) GetActors() []*Actor {
@@ -1198,7 +1287,7 @@ type SetDefaultControlRequest struct {
 
 func (x *SetDefaultControlRequest) Reset() {
 	*x = SetDefaultControlRequest{}
-	mi := &file_campaign_v1_campaign_proto_msgTypes[15]
+	mi := &file_campaign_v1_campaign_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1210,7 +1299,7 @@ func (x *SetDefaultControlRequest) String() string {
 func (*SetDefaultControlRequest) ProtoMessage() {}
 
 func (x *SetDefaultControlRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_campaign_v1_campaign_proto_msgTypes[15]
+	mi := &file_campaign_v1_campaign_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1223,7 +1312,7 @@ func (x *SetDefaultControlRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetDefaultControlRequest.ProtoReflect.Descriptor instead.
 func (*SetDefaultControlRequest) Descriptor() ([]byte, []int) {
-	return file_campaign_v1_campaign_proto_rawDescGZIP(), []int{15}
+	return file_campaign_v1_campaign_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *SetDefaultControlRequest) GetCampaignId() string {
@@ -1261,7 +1350,7 @@ type SetDefaultControlResponse struct {
 
 func (x *SetDefaultControlResponse) Reset() {
 	*x = SetDefaultControlResponse{}
-	mi := &file_campaign_v1_campaign_proto_msgTypes[16]
+	mi := &file_campaign_v1_campaign_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1273,7 +1362,7 @@ func (x *SetDefaultControlResponse) String() string {
 func (*SetDefaultControlResponse) ProtoMessage() {}
 
 func (x *SetDefaultControlResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_campaign_v1_campaign_proto_msgTypes[16]
+	mi := &file_campaign_v1_campaign_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1286,7 +1375,7 @@ func (x *SetDefaultControlResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetDefaultControlResponse.ProtoReflect.Descriptor instead.
 func (*SetDefaultControlResponse) Descriptor() ([]byte, []int) {
-	return file_campaign_v1_campaign_proto_rawDescGZIP(), []int{16}
+	return file_campaign_v1_campaign_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *SetDefaultControlResponse) GetCampaignId() string {
@@ -1323,7 +1412,7 @@ type ActorController struct {
 
 func (x *ActorController) Reset() {
 	*x = ActorController{}
-	mi := &file_campaign_v1_campaign_proto_msgTypes[17]
+	mi := &file_campaign_v1_campaign_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1335,7 +1424,7 @@ func (x *ActorController) String() string {
 func (*ActorController) ProtoMessage() {}
 
 func (x *ActorController) ProtoReflect() protoreflect.Message {
-	mi := &file_campaign_v1_campaign_proto_msgTypes[17]
+	mi := &file_campaign_v1_campaign_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1348,7 +1437,7 @@ func (x *ActorController) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ActorController.ProtoReflect.Descriptor instead.
 func (*ActorController) Descriptor() ([]byte, []int) {
-	return file_campaign_v1_campaign_proto_rawDescGZIP(), []int{17}
+	return file_campaign_v1_campaign_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ActorController) GetController() isActorController_Controller {
@@ -1402,7 +1491,7 @@ type GmController struct {
 
 func (x *GmController) Reset() {
 	*x = GmController{}
-	mi := &file_campaign_v1_campaign_proto_msgTypes[18]
+	mi := &file_campaign_v1_campaign_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1414,7 +1503,7 @@ func (x *GmController) String() string {
 func (*GmController) ProtoMessage() {}
 
 func (x *GmController) ProtoReflect() protoreflect.Message {
-	mi := &file_campaign_v1_campaign_proto_msgTypes[18]
+	mi := &file_campaign_v1_campaign_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1427,7 +1516,7 @@ func (x *GmController) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GmController.ProtoReflect.Descriptor instead.
 func (*GmController) Descriptor() ([]byte, []int) {
-	return file_campaign_v1_campaign_proto_rawDescGZIP(), []int{18}
+	return file_campaign_v1_campaign_proto_rawDescGZIP(), []int{20}
 }
 
 type ParticipantController struct {
@@ -1440,7 +1529,7 @@ type ParticipantController struct {
 
 func (x *ParticipantController) Reset() {
 	*x = ParticipantController{}
-	mi := &file_campaign_v1_campaign_proto_msgTypes[19]
+	mi := &file_campaign_v1_campaign_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1452,7 +1541,7 @@ func (x *ParticipantController) String() string {
 func (*ParticipantController) ProtoMessage() {}
 
 func (x *ParticipantController) ProtoReflect() protoreflect.Message {
-	mi := &file_campaign_v1_campaign_proto_msgTypes[19]
+	mi := &file_campaign_v1_campaign_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1465,7 +1554,7 @@ func (x *ParticipantController) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ParticipantController.ProtoReflect.Descriptor instead.
 func (*ParticipantController) Descriptor() ([]byte, []int) {
-	return file_campaign_v1_campaign_proto_rawDescGZIP(), []int{19}
+	return file_campaign_v1_campaign_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *ParticipantController) GetParticipantId() string {
@@ -1493,7 +1582,12 @@ const file_campaign_v1_campaign_proto_rawDesc = "" +
 	"page_token\x18\x02 \x01(\tR\tpageToken\"t\n" +
 	"\x15ListCampaignsResponse\x123\n" +
 	"\tcampaigns\x18\x01 \x03(\v2\x15.campaign.v1.CampaignR\tcampaigns\x12&\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\x98\x02\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"5\n" +
+	"\x12GetCampaignRequest\x12\x1f\n" +
+	"\vcampaign_id\x18\x01 \x01(\tR\n" +
+	"campaignId\"H\n" +
+	"\x13GetCampaignResponse\x121\n" +
+	"\bcampaign\x18\x01 \x01(\v2\x15.campaign.v1.CampaignR\bcampaign\"\x98\x02\n" +
 	"\bCampaign\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12,\n" +
@@ -1605,10 +1699,11 @@ const file_campaign_v1_campaign_proto_rawDesc = "" +
 	"\tActorKind\x12\x1a\n" +
 	"\x16ACTOR_KIND_UNSPECIFIED\x10\x00\x12\x06\n" +
 	"\x02PC\x10\x01\x12\a\n" +
-	"\x03NPC\x10\x022\x8e\x05\n" +
+	"\x03NPC\x10\x022\xe0\x05\n" +
 	"\x0fCampaignService\x12Y\n" +
 	"\x0eCreateCampaign\x12\".campaign.v1.CreateCampaignRequest\x1a#.campaign.v1.CreateCampaignResponse\x12V\n" +
-	"\rListCampaigns\x12!.campaign.v1.ListCampaignsRequest\x1a\".campaign.v1.ListCampaignsResponse\x12b\n" +
+	"\rListCampaigns\x12!.campaign.v1.ListCampaignsRequest\x1a\".campaign.v1.ListCampaignsResponse\x12P\n" +
+	"\vGetCampaign\x12\x1f.campaign.v1.GetCampaignRequest\x1a .campaign.v1.GetCampaignResponse\x12b\n" +
 	"\x11CreateParticipant\x12%.campaign.v1.CreateParticipantRequest\x1a&.campaign.v1.CreateParticipantResponse\x12_\n" +
 	"\x10ListParticipants\x12$.campaign.v1.ListParticipantsRequest\x1a%.campaign.v1.ListParticipantsResponse\x12P\n" +
 	"\vCreateActor\x12\x1f.campaign.v1.CreateActorRequest\x1a .campaign.v1.CreateActorResponse\x12M\n" +
@@ -1629,7 +1724,7 @@ func file_campaign_v1_campaign_proto_rawDescGZIP() []byte {
 }
 
 var file_campaign_v1_campaign_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_campaign_v1_campaign_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
+var file_campaign_v1_campaign_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
 var file_campaign_v1_campaign_proto_goTypes = []any{
 	(GmMode)(0),                       // 0: campaign.v1.GmMode
 	(ParticipantRole)(0),              // 1: campaign.v1.ParticipantRole
@@ -1639,68 +1734,73 @@ var file_campaign_v1_campaign_proto_goTypes = []any{
 	(*CreateCampaignResponse)(nil),    // 5: campaign.v1.CreateCampaignResponse
 	(*ListCampaignsRequest)(nil),      // 6: campaign.v1.ListCampaignsRequest
 	(*ListCampaignsResponse)(nil),     // 7: campaign.v1.ListCampaignsResponse
-	(*Campaign)(nil),                  // 8: campaign.v1.Campaign
-	(*CreateParticipantRequest)(nil),  // 9: campaign.v1.CreateParticipantRequest
-	(*CreateParticipantResponse)(nil), // 10: campaign.v1.CreateParticipantResponse
-	(*Participant)(nil),               // 11: campaign.v1.Participant
-	(*ListParticipantsRequest)(nil),   // 12: campaign.v1.ListParticipantsRequest
-	(*ListParticipantsResponse)(nil),  // 13: campaign.v1.ListParticipantsResponse
-	(*CreateActorRequest)(nil),        // 14: campaign.v1.CreateActorRequest
-	(*CreateActorResponse)(nil),       // 15: campaign.v1.CreateActorResponse
-	(*Actor)(nil),                     // 16: campaign.v1.Actor
-	(*ListActorsRequest)(nil),         // 17: campaign.v1.ListActorsRequest
-	(*ListActorsResponse)(nil),        // 18: campaign.v1.ListActorsResponse
-	(*SetDefaultControlRequest)(nil),  // 19: campaign.v1.SetDefaultControlRequest
-	(*SetDefaultControlResponse)(nil), // 20: campaign.v1.SetDefaultControlResponse
-	(*ActorController)(nil),           // 21: campaign.v1.ActorController
-	(*GmController)(nil),              // 22: campaign.v1.GmController
-	(*ParticipantController)(nil),     // 23: campaign.v1.ParticipantController
-	(*timestamppb.Timestamp)(nil),     // 24: google.protobuf.Timestamp
+	(*GetCampaignRequest)(nil),        // 8: campaign.v1.GetCampaignRequest
+	(*GetCampaignResponse)(nil),       // 9: campaign.v1.GetCampaignResponse
+	(*Campaign)(nil),                  // 10: campaign.v1.Campaign
+	(*CreateParticipantRequest)(nil),  // 11: campaign.v1.CreateParticipantRequest
+	(*CreateParticipantResponse)(nil), // 12: campaign.v1.CreateParticipantResponse
+	(*Participant)(nil),               // 13: campaign.v1.Participant
+	(*ListParticipantsRequest)(nil),   // 14: campaign.v1.ListParticipantsRequest
+	(*ListParticipantsResponse)(nil),  // 15: campaign.v1.ListParticipantsResponse
+	(*CreateActorRequest)(nil),        // 16: campaign.v1.CreateActorRequest
+	(*CreateActorResponse)(nil),       // 17: campaign.v1.CreateActorResponse
+	(*Actor)(nil),                     // 18: campaign.v1.Actor
+	(*ListActorsRequest)(nil),         // 19: campaign.v1.ListActorsRequest
+	(*ListActorsResponse)(nil),        // 20: campaign.v1.ListActorsResponse
+	(*SetDefaultControlRequest)(nil),  // 21: campaign.v1.SetDefaultControlRequest
+	(*SetDefaultControlResponse)(nil), // 22: campaign.v1.SetDefaultControlResponse
+	(*ActorController)(nil),           // 23: campaign.v1.ActorController
+	(*GmController)(nil),              // 24: campaign.v1.GmController
+	(*ParticipantController)(nil),     // 25: campaign.v1.ParticipantController
+	(*timestamppb.Timestamp)(nil),     // 26: google.protobuf.Timestamp
 }
 var file_campaign_v1_campaign_proto_depIdxs = []int32{
 	0,  // 0: campaign.v1.CreateCampaignRequest.gm_mode:type_name -> campaign.v1.GmMode
-	8,  // 1: campaign.v1.CreateCampaignResponse.campaign:type_name -> campaign.v1.Campaign
-	8,  // 2: campaign.v1.ListCampaignsResponse.campaigns:type_name -> campaign.v1.Campaign
-	0,  // 3: campaign.v1.Campaign.gm_mode:type_name -> campaign.v1.GmMode
-	24, // 4: campaign.v1.Campaign.created_at:type_name -> google.protobuf.Timestamp
-	24, // 5: campaign.v1.Campaign.updated_at:type_name -> google.protobuf.Timestamp
-	1,  // 6: campaign.v1.CreateParticipantRequest.role:type_name -> campaign.v1.ParticipantRole
-	2,  // 7: campaign.v1.CreateParticipantRequest.controller:type_name -> campaign.v1.Controller
-	11, // 8: campaign.v1.CreateParticipantResponse.participant:type_name -> campaign.v1.Participant
-	1,  // 9: campaign.v1.Participant.role:type_name -> campaign.v1.ParticipantRole
-	2,  // 10: campaign.v1.Participant.controller:type_name -> campaign.v1.Controller
-	24, // 11: campaign.v1.Participant.created_at:type_name -> google.protobuf.Timestamp
-	24, // 12: campaign.v1.Participant.updated_at:type_name -> google.protobuf.Timestamp
-	11, // 13: campaign.v1.ListParticipantsResponse.participants:type_name -> campaign.v1.Participant
-	3,  // 14: campaign.v1.CreateActorRequest.kind:type_name -> campaign.v1.ActorKind
-	16, // 15: campaign.v1.CreateActorResponse.actor:type_name -> campaign.v1.Actor
-	3,  // 16: campaign.v1.Actor.kind:type_name -> campaign.v1.ActorKind
-	24, // 17: campaign.v1.Actor.created_at:type_name -> google.protobuf.Timestamp
-	24, // 18: campaign.v1.Actor.updated_at:type_name -> google.protobuf.Timestamp
-	16, // 19: campaign.v1.ListActorsResponse.actors:type_name -> campaign.v1.Actor
-	21, // 20: campaign.v1.SetDefaultControlRequest.controller:type_name -> campaign.v1.ActorController
-	21, // 21: campaign.v1.SetDefaultControlResponse.controller:type_name -> campaign.v1.ActorController
-	22, // 22: campaign.v1.ActorController.gm:type_name -> campaign.v1.GmController
-	23, // 23: campaign.v1.ActorController.participant:type_name -> campaign.v1.ParticipantController
-	4,  // 24: campaign.v1.CampaignService.CreateCampaign:input_type -> campaign.v1.CreateCampaignRequest
-	6,  // 25: campaign.v1.CampaignService.ListCampaigns:input_type -> campaign.v1.ListCampaignsRequest
-	9,  // 26: campaign.v1.CampaignService.CreateParticipant:input_type -> campaign.v1.CreateParticipantRequest
-	12, // 27: campaign.v1.CampaignService.ListParticipants:input_type -> campaign.v1.ListParticipantsRequest
-	14, // 28: campaign.v1.CampaignService.CreateActor:input_type -> campaign.v1.CreateActorRequest
-	17, // 29: campaign.v1.CampaignService.ListActors:input_type -> campaign.v1.ListActorsRequest
-	19, // 30: campaign.v1.CampaignService.SetDefaultControl:input_type -> campaign.v1.SetDefaultControlRequest
-	5,  // 31: campaign.v1.CampaignService.CreateCampaign:output_type -> campaign.v1.CreateCampaignResponse
-	7,  // 32: campaign.v1.CampaignService.ListCampaigns:output_type -> campaign.v1.ListCampaignsResponse
-	10, // 33: campaign.v1.CampaignService.CreateParticipant:output_type -> campaign.v1.CreateParticipantResponse
-	13, // 34: campaign.v1.CampaignService.ListParticipants:output_type -> campaign.v1.ListParticipantsResponse
-	15, // 35: campaign.v1.CampaignService.CreateActor:output_type -> campaign.v1.CreateActorResponse
-	18, // 36: campaign.v1.CampaignService.ListActors:output_type -> campaign.v1.ListActorsResponse
-	20, // 37: campaign.v1.CampaignService.SetDefaultControl:output_type -> campaign.v1.SetDefaultControlResponse
-	31, // [31:38] is the sub-list for method output_type
-	24, // [24:31] is the sub-list for method input_type
-	24, // [24:24] is the sub-list for extension type_name
-	24, // [24:24] is the sub-list for extension extendee
-	0,  // [0:24] is the sub-list for field type_name
+	10, // 1: campaign.v1.CreateCampaignResponse.campaign:type_name -> campaign.v1.Campaign
+	10, // 2: campaign.v1.ListCampaignsResponse.campaigns:type_name -> campaign.v1.Campaign
+	10, // 3: campaign.v1.GetCampaignResponse.campaign:type_name -> campaign.v1.Campaign
+	0,  // 4: campaign.v1.Campaign.gm_mode:type_name -> campaign.v1.GmMode
+	26, // 5: campaign.v1.Campaign.created_at:type_name -> google.protobuf.Timestamp
+	26, // 6: campaign.v1.Campaign.updated_at:type_name -> google.protobuf.Timestamp
+	1,  // 7: campaign.v1.CreateParticipantRequest.role:type_name -> campaign.v1.ParticipantRole
+	2,  // 8: campaign.v1.CreateParticipantRequest.controller:type_name -> campaign.v1.Controller
+	13, // 9: campaign.v1.CreateParticipantResponse.participant:type_name -> campaign.v1.Participant
+	1,  // 10: campaign.v1.Participant.role:type_name -> campaign.v1.ParticipantRole
+	2,  // 11: campaign.v1.Participant.controller:type_name -> campaign.v1.Controller
+	26, // 12: campaign.v1.Participant.created_at:type_name -> google.protobuf.Timestamp
+	26, // 13: campaign.v1.Participant.updated_at:type_name -> google.protobuf.Timestamp
+	13, // 14: campaign.v1.ListParticipantsResponse.participants:type_name -> campaign.v1.Participant
+	3,  // 15: campaign.v1.CreateActorRequest.kind:type_name -> campaign.v1.ActorKind
+	18, // 16: campaign.v1.CreateActorResponse.actor:type_name -> campaign.v1.Actor
+	3,  // 17: campaign.v1.Actor.kind:type_name -> campaign.v1.ActorKind
+	26, // 18: campaign.v1.Actor.created_at:type_name -> google.protobuf.Timestamp
+	26, // 19: campaign.v1.Actor.updated_at:type_name -> google.protobuf.Timestamp
+	18, // 20: campaign.v1.ListActorsResponse.actors:type_name -> campaign.v1.Actor
+	23, // 21: campaign.v1.SetDefaultControlRequest.controller:type_name -> campaign.v1.ActorController
+	23, // 22: campaign.v1.SetDefaultControlResponse.controller:type_name -> campaign.v1.ActorController
+	24, // 23: campaign.v1.ActorController.gm:type_name -> campaign.v1.GmController
+	25, // 24: campaign.v1.ActorController.participant:type_name -> campaign.v1.ParticipantController
+	4,  // 25: campaign.v1.CampaignService.CreateCampaign:input_type -> campaign.v1.CreateCampaignRequest
+	6,  // 26: campaign.v1.CampaignService.ListCampaigns:input_type -> campaign.v1.ListCampaignsRequest
+	8,  // 27: campaign.v1.CampaignService.GetCampaign:input_type -> campaign.v1.GetCampaignRequest
+	11, // 28: campaign.v1.CampaignService.CreateParticipant:input_type -> campaign.v1.CreateParticipantRequest
+	14, // 29: campaign.v1.CampaignService.ListParticipants:input_type -> campaign.v1.ListParticipantsRequest
+	16, // 30: campaign.v1.CampaignService.CreateActor:input_type -> campaign.v1.CreateActorRequest
+	19, // 31: campaign.v1.CampaignService.ListActors:input_type -> campaign.v1.ListActorsRequest
+	21, // 32: campaign.v1.CampaignService.SetDefaultControl:input_type -> campaign.v1.SetDefaultControlRequest
+	5,  // 33: campaign.v1.CampaignService.CreateCampaign:output_type -> campaign.v1.CreateCampaignResponse
+	7,  // 34: campaign.v1.CampaignService.ListCampaigns:output_type -> campaign.v1.ListCampaignsResponse
+	9,  // 35: campaign.v1.CampaignService.GetCampaign:output_type -> campaign.v1.GetCampaignResponse
+	12, // 36: campaign.v1.CampaignService.CreateParticipant:output_type -> campaign.v1.CreateParticipantResponse
+	15, // 37: campaign.v1.CampaignService.ListParticipants:output_type -> campaign.v1.ListParticipantsResponse
+	17, // 38: campaign.v1.CampaignService.CreateActor:output_type -> campaign.v1.CreateActorResponse
+	20, // 39: campaign.v1.CampaignService.ListActors:output_type -> campaign.v1.ListActorsResponse
+	22, // 40: campaign.v1.CampaignService.SetDefaultControl:output_type -> campaign.v1.SetDefaultControlResponse
+	33, // [33:41] is the sub-list for method output_type
+	25, // [25:33] is the sub-list for method input_type
+	25, // [25:25] is the sub-list for extension type_name
+	25, // [25:25] is the sub-list for extension extendee
+	0,  // [0:25] is the sub-list for field type_name
 }
 
 func init() { file_campaign_v1_campaign_proto_init() }
@@ -1708,7 +1808,7 @@ func file_campaign_v1_campaign_proto_init() {
 	if File_campaign_v1_campaign_proto != nil {
 		return
 	}
-	file_campaign_v1_campaign_proto_msgTypes[17].OneofWrappers = []any{
+	file_campaign_v1_campaign_proto_msgTypes[19].OneofWrappers = []any{
 		(*ActorController_Gm)(nil),
 		(*ActorController_Participant)(nil),
 	}
@@ -1718,7 +1818,7 @@ func file_campaign_v1_campaign_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_campaign_v1_campaign_proto_rawDesc), len(file_campaign_v1_campaign_proto_rawDesc)),
 			NumEnums:      4,
-			NumMessages:   20,
+			NumMessages:   22,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

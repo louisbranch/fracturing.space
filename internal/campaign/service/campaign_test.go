@@ -424,3 +424,167 @@ func TestListCampaignsMissingStore(t *testing.T) {
 		t.Fatalf("expected internal error, got %v", st.Code())
 	}
 }
+
+func TestGetCampaignSuccess(t *testing.T) {
+	fixedTime := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
+	store := &fakeCampaignStore{
+		getCampaign: domain.Campaign{
+			ID:          "camp-123",
+			Name:        "Test Campaign",
+			GmMode:      domain.GmModeHybrid,
+			PlayerCount: 5,
+			ThemePrompt: "fantasy adventure",
+			CreatedAt:   fixedTime,
+			UpdatedAt:   fixedTime,
+		},
+	}
+	service := NewCampaignService(Stores{
+		Campaign:    store,
+		Participant: &fakeParticipantStore{},
+		Actor:       &fakeActorStore{},
+	})
+
+	response, err := service.GetCampaign(context.Background(), &campaignv1.GetCampaignRequest{
+		CampaignId: "camp-123",
+	})
+	if err != nil {
+		t.Fatalf("get campaign: %v", err)
+	}
+	if response == nil || response.Campaign == nil {
+		t.Fatal("expected campaign response")
+	}
+	if response.Campaign.Id != "camp-123" {
+		t.Fatalf("expected id camp-123, got %q", response.Campaign.Id)
+	}
+	if response.Campaign.Name != "Test Campaign" {
+		t.Fatalf("expected name Test Campaign, got %q", response.Campaign.Name)
+	}
+	if response.Campaign.GmMode != campaignv1.GmMode_HYBRID {
+		t.Fatalf("expected hybrid gm mode, got %v", response.Campaign.GmMode)
+	}
+	if response.Campaign.PlayerCount != 5 {
+		t.Fatalf("expected 5 player count, got %d", response.Campaign.PlayerCount)
+	}
+	if response.Campaign.ThemePrompt != "fantasy adventure" {
+		t.Fatalf("expected theme prompt fantasy adventure, got %q", response.Campaign.ThemePrompt)
+	}
+	if response.Campaign.CreatedAt.AsTime() != fixedTime {
+		t.Fatalf("expected created_at %v, got %v", fixedTime, response.Campaign.CreatedAt.AsTime())
+	}
+	if response.Campaign.UpdatedAt.AsTime() != fixedTime {
+		t.Fatalf("expected updated_at %v, got %v", fixedTime, response.Campaign.UpdatedAt.AsTime())
+	}
+}
+
+func TestGetCampaignNilRequest(t *testing.T) {
+	service := NewCampaignService(Stores{
+		Campaign:    &fakeCampaignStore{},
+		Participant: &fakeParticipantStore{},
+		Actor:       &fakeActorStore{},
+	})
+
+	_, err := service.GetCampaign(context.Background(), nil)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	st, ok := status.FromError(err)
+	if !ok {
+		t.Fatalf("expected grpc status error, got %v", err)
+	}
+	if st.Code() != codes.InvalidArgument {
+		t.Fatalf("expected invalid argument, got %v", st.Code())
+	}
+}
+
+func TestGetCampaignMissingStore(t *testing.T) {
+	service := &CampaignService{}
+
+	_, err := service.GetCampaign(context.Background(), &campaignv1.GetCampaignRequest{
+		CampaignId: "camp-123",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	st, ok := status.FromError(err)
+	if !ok {
+		t.Fatalf("expected grpc status error, got %v", err)
+	}
+	if st.Code() != codes.Internal {
+		t.Fatalf("expected internal error, got %v", st.Code())
+	}
+}
+
+func TestGetCampaignEmptyID(t *testing.T) {
+	service := NewCampaignService(Stores{
+		Campaign:    &fakeCampaignStore{},
+		Participant: &fakeParticipantStore{},
+		Actor:       &fakeActorStore{},
+	})
+
+	_, err := service.GetCampaign(context.Background(), &campaignv1.GetCampaignRequest{
+		CampaignId: "  ",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	st, ok := status.FromError(err)
+	if !ok {
+		t.Fatalf("expected grpc status error, got %v", err)
+	}
+	if st.Code() != codes.InvalidArgument {
+		t.Fatalf("expected invalid argument, got %v", st.Code())
+	}
+}
+
+func TestGetCampaignNotFound(t *testing.T) {
+	store := &fakeCampaignStore{
+		getErr: storage.ErrNotFound,
+	}
+	service := NewCampaignService(Stores{
+		Campaign:    store,
+		Participant: &fakeParticipantStore{},
+		Actor:       &fakeActorStore{},
+	})
+
+	_, err := service.GetCampaign(context.Background(), &campaignv1.GetCampaignRequest{
+		CampaignId: "camp-999",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	st, ok := status.FromError(err)
+	if !ok {
+		t.Fatalf("expected grpc status error, got %v", err)
+	}
+	if st.Code() != codes.NotFound {
+		t.Fatalf("expected not found, got %v", st.Code())
+	}
+	if st.Message() != "campaign not found" {
+		t.Fatalf("expected message 'campaign not found', got %q", st.Message())
+	}
+}
+
+func TestGetCampaignStoreError(t *testing.T) {
+	store := &fakeCampaignStore{
+		getErr: errors.New("database error"),
+	}
+	service := NewCampaignService(Stores{
+		Campaign:    store,
+		Participant: &fakeParticipantStore{},
+		Actor:       &fakeActorStore{},
+	})
+
+	_, err := service.GetCampaign(context.Background(), &campaignv1.GetCampaignRequest{
+		CampaignId: "camp-123",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	st, ok := status.FromError(err)
+	if !ok {
+		t.Fatalf("expected grpc status error, got %v", err)
+	}
+	if st.Code() != codes.Internal {
+		t.Fatalf("expected internal error, got %v", st.Code())
+	}
+}
