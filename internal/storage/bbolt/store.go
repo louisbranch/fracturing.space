@@ -18,6 +18,7 @@ import (
 const (
 	campaignBucket    = "campaign"
 	participantBucket = "participant"
+	actorBucket       = "actor"
 )
 
 // Store provides a BoltDB-backed campaign store.
@@ -183,6 +184,10 @@ func (s *Store) ensureBuckets() error {
 		if err != nil {
 			return fmt.Errorf("create participant bucket: %w", err)
 		}
+		_, err = tx.CreateBucketIfNotExists([]byte(actorBucket))
+		if err != nil {
+			return fmt.Errorf("create actor bucket: %w", err)
+		}
 		return nil
 	})
 }
@@ -193,6 +198,10 @@ func campaignKey(id string) []byte {
 
 func participantKey(campaignID, participantID string) []byte {
 	return []byte(fmt.Sprintf("%s/%s", campaignID, participantID))
+}
+
+func actorKey(campaignID, actorID string) []byte {
+	return []byte(fmt.Sprintf("%s/%s", campaignID, actorID))
 }
 
 // Put persists a participant record (implements storage.ParticipantStore).
@@ -369,6 +378,75 @@ func (s *Store) ListParticipants(ctx context.Context, campaignID string, pageSiz
 	}
 
 	return page, nil
+}
+
+// PutActor persists an actor record (implements storage.ActorStore).
+func (s *Store) PutActor(ctx context.Context, actor domain.Actor) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if s == nil || s.db == nil {
+		return fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(actor.CampaignID) == "" {
+		return fmt.Errorf("campaign id is required")
+	}
+	if strings.TrimSpace(actor.ID) == "" {
+		return fmt.Errorf("actor id is required")
+	}
+
+	payload, err := json.Marshal(actor)
+	if err != nil {
+		return fmt.Errorf("marshal actor: %w", err)
+	}
+
+	return s.db.Update(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket([]byte(actorBucket))
+		if bucket == nil {
+			return fmt.Errorf("actor bucket is missing")
+		}
+		return bucket.Put(actorKey(actor.CampaignID, actor.ID), payload)
+	})
+}
+
+// GetActor fetches an actor record by campaign ID and actor ID (implements storage.ActorStore).
+func (s *Store) GetActor(ctx context.Context, campaignID, actorID string) (domain.Actor, error) {
+	if err := ctx.Err(); err != nil {
+		return domain.Actor{}, err
+	}
+	if s == nil || s.db == nil {
+		return domain.Actor{}, fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(campaignID) == "" {
+		return domain.Actor{}, fmt.Errorf("campaign id is required")
+	}
+	if strings.TrimSpace(actorID) == "" {
+		return domain.Actor{}, fmt.Errorf("actor id is required")
+	}
+
+	var actor domain.Actor
+	err := s.db.View(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket([]byte(actorBucket))
+		if bucket == nil {
+			return fmt.Errorf("actor bucket is missing")
+		}
+		payload := bucket.Get(actorKey(campaignID, actorID))
+		if payload == nil {
+			return storage.ErrNotFound
+		}
+		if err := json.Unmarshal(payload, &actor); err != nil {
+			return fmt.Errorf("unmarshal actor: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return domain.Actor{}, err
+		}
+		return domain.Actor{}, err
+	}
+
+	return actor, nil
 }
 
 // TODO: Reserve index keys such as idx/creator/{creator_id}/campaign/{campaign_id}.

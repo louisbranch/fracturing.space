@@ -49,14 +49,17 @@ type fakeCampaignClient struct {
 	listResponse          *campaignv1.ListCampaignsResponse
 	registerResponse      *campaignv1.RegisterParticipantResponse
 	listParticipantsResponse *campaignv1.ListParticipantsResponse
+	createActorResponse   *campaignv1.CreateActorResponse
 	err                   error
 	listErr               error
 	registerErr           error
 	listParticipantsErr   error
+	createActorErr        error
 	lastRequest           *campaignv1.CreateCampaignRequest
 	lastListRequest       *campaignv1.ListCampaignsRequest
 	lastRegisterRequest   *campaignv1.RegisterParticipantRequest
 	lastListParticipantsRequest *campaignv1.ListParticipantsRequest
+	lastCreateActorRequest *campaignv1.CreateActorRequest
 	listCalls             int
 }
 
@@ -127,6 +130,12 @@ func (f *fakeCampaignClient) RegisterParticipant(ctx context.Context, req *campa
 func (f *fakeCampaignClient) ListParticipants(ctx context.Context, req *campaignv1.ListParticipantsRequest, opts ...grpc.CallOption) (*campaignv1.ListParticipantsResponse, error) {
 	f.lastListParticipantsRequest = req
 	return f.listParticipantsResponse, f.listParticipantsErr
+}
+
+// CreateActor records the request and returns the configured response.
+func (f *fakeCampaignClient) CreateActor(ctx context.Context, req *campaignv1.CreateActorRequest, opts ...grpc.CallOption) (*campaignv1.CreateActorResponse, error) {
+	f.lastCreateActorRequest = req
+	return f.createActorResponse, f.createActorErr
 }
 
 // TestGRPCAddressPrefersEnv ensures env configuration overrides defaults.

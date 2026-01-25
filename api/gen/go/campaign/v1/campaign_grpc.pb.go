@@ -23,6 +23,7 @@ const (
 	CampaignService_ListCampaigns_FullMethodName       = "/campaign.v1.CampaignService/ListCampaigns"
 	CampaignService_RegisterParticipant_FullMethodName = "/campaign.v1.CampaignService/RegisterParticipant"
 	CampaignService_ListParticipants_FullMethodName    = "/campaign.v1.CampaignService/ListParticipants"
+	CampaignService_CreateActor_FullMethodName         = "/campaign.v1.CampaignService/CreateActor"
 )
 
 // CampaignServiceClient is the client API for CampaignService service.
@@ -37,6 +38,8 @@ type CampaignServiceClient interface {
 	RegisterParticipant(ctx context.Context, in *RegisterParticipantRequest, opts ...grpc.CallOption) (*RegisterParticipantResponse, error)
 	// List participants for a campaign.
 	ListParticipants(ctx context.Context, in *ListParticipantsRequest, opts ...grpc.CallOption) (*ListParticipantsResponse, error)
+	// Create an actor (PC/NPC/etc) for a campaign.
+	CreateActor(ctx context.Context, in *CreateActorRequest, opts ...grpc.CallOption) (*CreateActorResponse, error)
 }
 
 type campaignServiceClient struct {
@@ -87,6 +90,16 @@ func (c *campaignServiceClient) ListParticipants(ctx context.Context, in *ListPa
 	return out, nil
 }
 
+func (c *campaignServiceClient) CreateActor(ctx context.Context, in *CreateActorRequest, opts ...grpc.CallOption) (*CreateActorResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateActorResponse)
+	err := c.cc.Invoke(ctx, CampaignService_CreateActor_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CampaignServiceServer is the server API for CampaignService service.
 // All implementations must embed UnimplementedCampaignServiceServer
 // for forward compatibility.
@@ -99,6 +112,8 @@ type CampaignServiceServer interface {
 	RegisterParticipant(context.Context, *RegisterParticipantRequest) (*RegisterParticipantResponse, error)
 	// List participants for a campaign.
 	ListParticipants(context.Context, *ListParticipantsRequest) (*ListParticipantsResponse, error)
+	// Create an actor (PC/NPC/etc) for a campaign.
+	CreateActor(context.Context, *CreateActorRequest) (*CreateActorResponse, error)
 	mustEmbedUnimplementedCampaignServiceServer()
 }
 
@@ -120,6 +135,9 @@ func (UnimplementedCampaignServiceServer) RegisterParticipant(context.Context, *
 }
 func (UnimplementedCampaignServiceServer) ListParticipants(context.Context, *ListParticipantsRequest) (*ListParticipantsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListParticipants not implemented")
+}
+func (UnimplementedCampaignServiceServer) CreateActor(context.Context, *CreateActorRequest) (*CreateActorResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateActor not implemented")
 }
 func (UnimplementedCampaignServiceServer) mustEmbedUnimplementedCampaignServiceServer() {}
 func (UnimplementedCampaignServiceServer) testEmbeddedByValue()                         {}
@@ -214,6 +232,24 @@ func _CampaignService_ListParticipants_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CampaignService_CreateActor_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateActorRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CampaignServiceServer).CreateActor(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CampaignService_CreateActor_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CampaignServiceServer).CreateActor(ctx, req.(*CreateActorRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // CampaignService_ServiceDesc is the grpc.ServiceDesc for CampaignService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -236,6 +272,10 @@ var CampaignService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListParticipants",
 			Handler:    _CampaignService_ListParticipants_Handler,
+		},
+		{
+			MethodName: "CreateActor",
+			Handler:    _CampaignService_CreateActor_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
