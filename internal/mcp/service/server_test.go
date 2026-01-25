@@ -48,6 +48,7 @@ type fakeDualityClient struct {
 type fakeCampaignClient struct {
 	response                     *campaignv1.CreateCampaignResponse
 	listResponse                 *campaignv1.ListCampaignsResponse
+	getCampaignResponse           *campaignv1.GetCampaignResponse
 	createParticipantResponse    *campaignv1.CreateParticipantResponse
 	listParticipantsResponse     *campaignv1.ListParticipantsResponse
 	createActorResponse          *campaignv1.CreateActorResponse
@@ -55,6 +56,7 @@ type fakeCampaignClient struct {
 	setDefaultControlResponse    *campaignv1.SetDefaultControlResponse
 	err                          error
 	listErr                      error
+	getCampaignErr               error
 	createParticipantErr         error
 	listParticipantsErr          error
 	createActorErr               error
@@ -62,6 +64,7 @@ type fakeCampaignClient struct {
 	setDefaultControlErr         error
 	lastRequest                  *campaignv1.CreateCampaignRequest
 	lastListRequest              *campaignv1.ListCampaignsRequest
+	lastGetCampaignRequest       *campaignv1.GetCampaignRequest
 	lastCreateParticipantRequest *campaignv1.CreateParticipantRequest
 	lastListParticipantsRequest  *campaignv1.ListParticipantsRequest
 	lastCreateActorRequest       *campaignv1.CreateActorRequest
@@ -125,6 +128,12 @@ func (f *fakeCampaignClient) ListCampaigns(ctx context.Context, req *campaignv1.
 	f.lastListRequest = req
 	f.listCalls++
 	return f.listResponse, f.listErr
+}
+
+// GetCampaign records the request and returns the configured response.
+func (f *fakeCampaignClient) GetCampaign(ctx context.Context, req *campaignv1.GetCampaignRequest, opts ...grpc.CallOption) (*campaignv1.GetCampaignResponse, error) {
+	f.lastGetCampaignRequest = req
+	return f.getCampaignResponse, f.getCampaignErr
 }
 
 // CreateParticipant records the request and returns the configured response.
