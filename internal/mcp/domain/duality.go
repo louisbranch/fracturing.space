@@ -87,8 +87,8 @@ type DualityProbabilityInput struct {
 
 // ProbabilityOutcomeCount represents a counted outcome for probabilities.
 type ProbabilityOutcomeCount struct {
-	Outcome int `json:"outcome" jsonschema:"numeric outcome enum value"`
-	Count   int `json:"count" jsonschema:"number of outcomes"`
+	Outcome string `json:"outcome" jsonschema:"outcome enum name"`
+	Count   int    `json:"count" jsonschema:"number of outcomes"`
 }
 
 // DualityProbabilityResult represents the MCP tool output for probabilities.
@@ -363,7 +363,7 @@ func DualityProbabilityHandler(client pb.DualityServiceClient) mcp.ToolHandlerFo
 		counts := make([]ProbabilityOutcomeCount, 0, len(response.GetOutcomeCounts()))
 		for _, count := range response.GetOutcomeCounts() {
 			counts = append(counts, ProbabilityOutcomeCount{
-				Outcome: int(count.GetOutcome()),
+				Outcome: count.GetOutcome().String(),
 				Count:   int(count.GetCount()),
 			})
 		}
