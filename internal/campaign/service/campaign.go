@@ -42,7 +42,7 @@ func NewCampaignService(store storage.CampaignStore, participantStore storage.Pa
 		clock:            time.Now,
 		idGenerator:      domain.NewID,
 		participantIDGen: domain.NewID,
-		actorIDGen:        domain.NewID,
+		actorIDGen:       domain.NewID,
 	}
 }
 

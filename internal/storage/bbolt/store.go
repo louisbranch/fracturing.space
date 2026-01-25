@@ -440,9 +440,7 @@ func (s *Store) GetActor(ctx context.Context, campaignID, actorID string) (domai
 		return nil
 	})
 	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return domain.Actor{}, err
-		}
+
 		return domain.Actor{}, err
 	}
 
