@@ -10,6 +10,9 @@ service SessionService {
   // Start a new session for a campaign.
   // Enforces at most one ACTIVE session per campaign.
   rpc StartSession(StartSessionRequest) returns (StartSessionResponse);
+
+  // List sessions for a campaign.
+  rpc ListSessions(ListSessionsRequest) returns (ListSessionsResponse);
 }
 
 message StartSessionRequest {
@@ -40,4 +43,21 @@ enum SessionStatus {
   ACTIVE = 1;
   PAUSED = 2;
   ENDED = 3;
+}
+
+message ListSessionsRequest {
+  // The campaign ID to list sessions for.
+  string campaign_id = 1;
+
+  // The maximum number of sessions to return.
+  // If zero, the server defaults to 10. The server clamps values above 10 to 10.
+  int32 page_size = 2;
+
+  // A page token received from a prior ListSessionsResponse.
+  string page_token = 3;
+}
+
+message ListSessionsResponse {
+  repeated Session sessions = 1;
+  string next_page_token = 2;
 }

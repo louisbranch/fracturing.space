@@ -17,6 +17,7 @@ import (
 type fakeCampaignStore struct {
 	getCampaign domain.Campaign
 	getErr      error
+	getFunc     func(ctx context.Context, id string) (domain.Campaign, error)
 }
 
 func (f *fakeCampaignStore) Put(ctx context.Context, campaign domain.Campaign) error {
@@ -24,6 +25,9 @@ func (f *fakeCampaignStore) Put(ctx context.Context, campaign domain.Campaign) e
 }
 
 func (f *fakeCampaignStore) Get(ctx context.Context, id string) (domain.Campaign, error) {
+	if f.getFunc != nil {
+		return f.getFunc(ctx, id)
+	}
 	return f.getCampaign, f.getErr
 }
 
@@ -40,6 +44,11 @@ type fakeSessionStore struct {
 	getSessionErr           error
 	getActiveSession        sessiondomain.Session
 	getActiveSessionErr     error
+	listPage                storage.SessionPage
+	listErr                 error
+	listPageSize            int
+	listPageToken           string
+	listPageCampaignID      string
 }
 
 func (f *fakeSessionStore) PutSession(ctx context.Context, session sessiondomain.Session) error {
@@ -58,6 +67,13 @@ func (f *fakeSessionStore) GetActiveSession(ctx context.Context, campaignID stri
 func (f *fakeSessionStore) PutSessionWithActivePointer(ctx context.Context, session sessiondomain.Session) error {
 	f.putWithActiveSession = session
 	return f.putWithActiveErr
+}
+
+func (f *fakeSessionStore) ListSessions(ctx context.Context, campaignID string, pageSize int, pageToken string) (storage.SessionPage, error) {
+	f.listPageCampaignID = campaignID
+	f.listPageSize = pageSize
+	f.listPageToken = pageToken
+	return f.listPage, f.listErr
 }
 
 func TestStartSessionSuccess(t *testing.T) {
@@ -407,5 +423,377 @@ func TestStartSessionMissingStore(t *testing.T) {
 	}
 	if st.Code() != codes.Internal {
 		t.Fatalf("expected internal error, got %v", st.Code())
+	}
+}
+
+func TestListSessionsSuccess(t *testing.T) {
+	fixedTime := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
+	endedTime := time.Date(2026, 1, 24, 12, 0, 0, 0, time.UTC)
+	campaignStore := &fakeCampaignStore{}
+	campaignStore.getFunc = func(ctx context.Context, id string) (domain.Campaign, error) {
+		if id == "camp-123" {
+			return domain.Campaign{ID: "camp-123", Name: "Test Campaign"}, nil
+		}
+		return domain.Campaign{}, storage.ErrNotFound
+	}
+	sessionStore := &fakeSessionStore{
+		listPage: storage.SessionPage{
+			Sessions: []sessiondomain.Session{
+				{
+					ID:         "session-1",
+					CampaignID: "camp-123",
+					Name:       "Session One",
+					Status:     sessiondomain.SessionStatusActive,
+					StartedAt:  fixedTime,
+					UpdatedAt:  fixedTime,
+					EndedAt:    nil,
+				},
+				{
+					ID:         "session-2",
+					CampaignID: "camp-123",
+					Name:       "Session Two",
+					Status:     sessiondomain.SessionStatusEnded,
+					StartedAt:  fixedTime,
+					UpdatedAt:  fixedTime,
+					EndedAt:    &endedTime,
+				},
+			},
+			NextPageToken: "next-token",
+		},
+	}
+	service := &SessionService{
+		stores: Stores{
+			Campaign: campaignStore,
+			Session:  sessionStore,
+		},
+		clock: time.Now,
+	}
+
+	response, err := service.ListSessions(context.Background(), &sessionv1.ListSessionsRequest{
+		CampaignId: "camp-123",
+		PageSize:   10,
+	})
+	if err != nil {
+		t.Fatalf("list sessions: %v", err)
+	}
+	if response == nil {
+		t.Fatal("expected response")
+	}
+	if len(response.Sessions) != 2 {
+		t.Fatalf("expected 2 sessions, got %d", len(response.Sessions))
+	}
+	if response.NextPageToken != "next-token" {
+		t.Fatalf("expected next page token next-token, got %q", response.NextPageToken)
+	}
+	if response.Sessions[0].Id != "session-1" {
+		t.Fatalf("expected first session id session-1, got %q", response.Sessions[0].Id)
+	}
+	if response.Sessions[0].Status != sessionv1.SessionStatus_ACTIVE {
+		t.Fatalf("expected first session status ACTIVE, got %v", response.Sessions[0].Status)
+	}
+	if response.Sessions[1].Status != sessionv1.SessionStatus_ENDED {
+		t.Fatalf("expected second session status ENDED, got %v", response.Sessions[1].Status)
+	}
+	if sessionStore.listPageCampaignID != "camp-123" {
+		t.Fatalf("expected campaign id camp-123, got %q", sessionStore.listPageCampaignID)
+	}
+}
+
+func TestListSessionsDefaults(t *testing.T) {
+	fixedTime := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
+	campaignStore := &fakeCampaignStore{}
+	campaignStore.getFunc = func(ctx context.Context, id string) (domain.Campaign, error) {
+		return domain.Campaign{ID: "camp-123"}, nil
+	}
+	sessionStore := &fakeSessionStore{
+		listPage: storage.SessionPage{
+			Sessions: []sessiondomain.Session{
+				{
+					ID:         "session-1",
+					CampaignID: "camp-123",
+					Name:       "Session One",
+					Status:     sessiondomain.SessionStatusPaused,
+					StartedAt:  fixedTime,
+					UpdatedAt:  fixedTime,
+					EndedAt:    nil,
+				},
+			},
+			NextPageToken: "next-token",
+		},
+	}
+	service := &SessionService{
+		stores: Stores{
+			Campaign: campaignStore,
+			Session:  sessionStore,
+		},
+		clock: time.Now,
+	}
+
+	response, err := service.ListSessions(context.Background(), &sessionv1.ListSessionsRequest{
+		CampaignId: "camp-123",
+		PageSize:   0,
+	})
+	if err != nil {
+		t.Fatalf("list sessions: %v", err)
+	}
+	if response == nil {
+		t.Fatal("expected response")
+	}
+	if sessionStore.listPageSize != defaultListSessionsPageSize {
+		t.Fatalf("expected default page size %d, got %d", defaultListSessionsPageSize, sessionStore.listPageSize)
+	}
+	if response.NextPageToken != "next-token" {
+		t.Fatalf("expected next page token, got %q", response.NextPageToken)
+	}
+	if len(response.Sessions) != 1 {
+		t.Fatalf("expected 1 session, got %d", len(response.Sessions))
+	}
+}
+
+func TestListSessionsEmpty(t *testing.T) {
+	campaignStore := &fakeCampaignStore{}
+	campaignStore.getFunc = func(ctx context.Context, id string) (domain.Campaign, error) {
+		return domain.Campaign{ID: "camp-123"}, nil
+	}
+	sessionStore := &fakeSessionStore{
+		listPage: storage.SessionPage{},
+	}
+	service := &SessionService{
+		stores: Stores{
+			Campaign: campaignStore,
+			Session:  sessionStore,
+		},
+		clock: time.Now,
+	}
+
+	response, err := service.ListSessions(context.Background(), &sessionv1.ListSessionsRequest{
+		CampaignId: "camp-123",
+		PageSize:   10,
+	})
+	if err != nil {
+		t.Fatalf("list sessions: %v", err)
+	}
+	if response == nil {
+		t.Fatal("expected response")
+	}
+	if len(response.Sessions) != 0 {
+		t.Fatalf("expected 0 sessions, got %d", len(response.Sessions))
+	}
+}
+
+func TestListSessionsClampPageSize(t *testing.T) {
+	campaignStore := &fakeCampaignStore{}
+	campaignStore.getFunc = func(ctx context.Context, id string) (domain.Campaign, error) {
+		return domain.Campaign{ID: "camp-123"}, nil
+	}
+	sessionStore := &fakeSessionStore{listPage: storage.SessionPage{}}
+	service := &SessionService{
+		stores: Stores{
+			Campaign: campaignStore,
+			Session:  sessionStore,
+		},
+		clock: time.Now,
+	}
+
+	_, err := service.ListSessions(context.Background(), &sessionv1.ListSessionsRequest{
+		CampaignId: "camp-123",
+		PageSize:   25,
+	})
+	if err != nil {
+		t.Fatalf("list sessions: %v", err)
+	}
+	if sessionStore.listPageSize != maxListSessionsPageSize {
+		t.Fatalf("expected max page size %d, got %d", maxListSessionsPageSize, sessionStore.listPageSize)
+	}
+}
+
+func TestListSessionsPassesToken(t *testing.T) {
+	campaignStore := &fakeCampaignStore{}
+	campaignStore.getFunc = func(ctx context.Context, id string) (domain.Campaign, error) {
+		return domain.Campaign{ID: "camp-123"}, nil
+	}
+	sessionStore := &fakeSessionStore{listPage: storage.SessionPage{}}
+	service := &SessionService{
+		stores: Stores{
+			Campaign: campaignStore,
+			Session:  sessionStore,
+		},
+		clock: time.Now,
+	}
+
+	_, err := service.ListSessions(context.Background(), &sessionv1.ListSessionsRequest{
+		CampaignId: "camp-123",
+		PageSize:   1,
+		PageToken:  "next",
+	})
+	if err != nil {
+		t.Fatalf("list sessions: %v", err)
+	}
+	if sessionStore.listPageToken != "next" {
+		t.Fatalf("expected page token next, got %q", sessionStore.listPageToken)
+	}
+	if sessionStore.listPageCampaignID != "camp-123" {
+		t.Fatalf("expected campaign id camp-123, got %q", sessionStore.listPageCampaignID)
+	}
+}
+
+func TestListSessionsNilRequest(t *testing.T) {
+	service := &SessionService{
+		stores: Stores{
+			Campaign: &fakeCampaignStore{},
+			Session:  &fakeSessionStore{},
+		},
+		clock: time.Now,
+	}
+
+	_, err := service.ListSessions(context.Background(), nil)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	st, ok := status.FromError(err)
+	if !ok {
+		t.Fatalf("expected grpc status error, got %v", err)
+	}
+	if st.Code() != codes.InvalidArgument {
+		t.Fatalf("expected invalid argument, got %v", st.Code())
+	}
+}
+
+func TestListSessionsCampaignNotFound(t *testing.T) {
+	campaignStore := &fakeCampaignStore{}
+	campaignStore.getFunc = func(ctx context.Context, id string) (domain.Campaign, error) {
+		return domain.Campaign{}, storage.ErrNotFound
+	}
+	sessionStore := &fakeSessionStore{}
+	service := &SessionService{
+		stores: Stores{
+			Campaign: campaignStore,
+			Session:  sessionStore,
+		},
+		clock: time.Now,
+	}
+
+	_, err := service.ListSessions(context.Background(), &sessionv1.ListSessionsRequest{
+		CampaignId: "missing",
+		PageSize:   10,
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	st, ok := status.FromError(err)
+	if !ok {
+		t.Fatalf("expected grpc status error, got %v", err)
+	}
+	if st.Code() != codes.NotFound {
+		t.Fatalf("expected not found, got %v", st.Code())
+	}
+}
+
+func TestListSessionsStoreFailure(t *testing.T) {
+	campaignStore := &fakeCampaignStore{}
+	campaignStore.getFunc = func(ctx context.Context, id string) (domain.Campaign, error) {
+		return domain.Campaign{ID: "camp-123"}, nil
+	}
+	sessionStore := &fakeSessionStore{listErr: errors.New("boom")}
+	service := &SessionService{
+		stores: Stores{
+			Campaign: campaignStore,
+			Session:  sessionStore,
+		},
+		clock: time.Now,
+	}
+
+	_, err := service.ListSessions(context.Background(), &sessionv1.ListSessionsRequest{
+		CampaignId: "camp-123",
+		PageSize:   10,
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	st, ok := status.FromError(err)
+	if !ok {
+		t.Fatalf("expected grpc status error, got %v", err)
+	}
+	if st.Code() != codes.Internal {
+		t.Fatalf("expected internal error, got %v", st.Code())
+	}
+}
+
+func TestListSessionsMissingCampaignStore(t *testing.T) {
+	service := &SessionService{
+		stores: Stores{
+			Session: &fakeSessionStore{},
+		},
+		clock: time.Now,
+	}
+
+	_, err := service.ListSessions(context.Background(), &sessionv1.ListSessionsRequest{
+		CampaignId: "camp-123",
+		PageSize:   10,
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	st, ok := status.FromError(err)
+	if !ok {
+		t.Fatalf("expected grpc status error, got %v", err)
+	}
+	if st.Code() != codes.Internal {
+		t.Fatalf("expected internal error, got %v", st.Code())
+	}
+}
+
+func TestListSessionsMissingSessionStore(t *testing.T) {
+	campaignStore := &fakeCampaignStore{}
+	campaignStore.getFunc = func(ctx context.Context, id string) (domain.Campaign, error) {
+		return domain.Campaign{ID: "camp-123"}, nil
+	}
+	service := &SessionService{
+		stores: Stores{
+			Campaign: campaignStore,
+		},
+		clock: time.Now,
+	}
+
+	_, err := service.ListSessions(context.Background(), &sessionv1.ListSessionsRequest{
+		CampaignId: "camp-123",
+		PageSize:   10,
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	st, ok := status.FromError(err)
+	if !ok {
+		t.Fatalf("expected grpc status error, got %v", err)
+	}
+	if st.Code() != codes.Internal {
+		t.Fatalf("expected internal error, got %v", st.Code())
+	}
+}
+
+func TestListSessionsEmptyCampaignID(t *testing.T) {
+	campaignStore := &fakeCampaignStore{}
+	sessionStore := &fakeSessionStore{}
+	service := &SessionService{
+		stores: Stores{
+			Campaign: campaignStore,
+			Session:  sessionStore,
+		},
+		clock: time.Now,
+	}
+
+	_, err := service.ListSessions(context.Background(), &sessionv1.ListSessionsRequest{
+		CampaignId: "  ",
+		PageSize:   10,
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	st, ok := status.FromError(err)
+	if !ok {
+		t.Fatalf("expected grpc status error, got %v", err)
+	}
+	if st.Code() != codes.InvalidArgument {
+		t.Fatalf("expected invalid argument, got %v", st.Code())
 	}
 }

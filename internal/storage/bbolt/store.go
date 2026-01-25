@@ -731,6 +731,72 @@ func (s *Store) PutSessionWithActivePointer(ctx context.Context, session session
 	})
 }
 
+// ListSessions returns a page of session records for a campaign ordered by storage key (implements storage.SessionStore).
+func (s *Store) ListSessions(ctx context.Context, campaignID string, pageSize int, pageToken string) (storage.SessionPage, error) {
+	if err := ctx.Err(); err != nil {
+		return storage.SessionPage{}, err
+	}
+	if s == nil || s.db == nil {
+		return storage.SessionPage{}, fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(campaignID) == "" {
+		return storage.SessionPage{}, fmt.Errorf("campaign id is required")
+	}
+	if pageSize <= 0 {
+		return storage.SessionPage{}, fmt.Errorf("page size must be greater than zero")
+	}
+
+	prefix := campaignID + "/"
+	page := storage.SessionPage{}
+	var lastKey string
+	viewErr := s.db.View(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket([]byte(sessionsBucket))
+		if bucket == nil {
+			return fmt.Errorf("sessions bucket is missing")
+		}
+
+		cursor := bucket.Cursor()
+		prefixBytes := []byte(prefix)
+		var key, payload []byte
+		if pageToken == "" {
+			key, payload = cursor.Seek(prefixBytes)
+			if key != nil && !bytes.HasPrefix(key, prefixBytes) {
+				key = nil
+			}
+		} else {
+			key, payload = cursor.Seek([]byte(pageToken))
+			if key != nil && string(key) == pageToken && bytes.HasPrefix(key, prefixBytes) {
+				key, payload = cursor.Next()
+			} else if key != nil && !bytes.HasPrefix(key, prefixBytes) {
+				key = nil
+			}
+		}
+
+		for key != nil && bytes.HasPrefix(key, prefixBytes) && len(page.Sessions) < pageSize {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+			var session sessiondomain.Session
+			if err := json.Unmarshal(payload, &session); err != nil {
+				return fmt.Errorf("unmarshal session: %w", err)
+			}
+			page.Sessions = append(page.Sessions, session)
+			lastKey = string(key)
+			key, payload = cursor.Next()
+		}
+
+		if key != nil && bytes.HasPrefix(key, prefixBytes) && len(page.Sessions) > 0 {
+			page.NextPageToken = lastKey
+		}
+		return nil
+	})
+	if viewErr != nil {
+		return storage.SessionPage{}, viewErr
+	}
+
+	return page, nil
+}
+
 // TODO: Reserve index keys such as idx/creator/{creator_id}/campaign/{campaign_id}.
 // TODO: Reserve index keys such as idx/campaign/{campaign_id}/session/{session_id}.
 // TODO: Reserve index keys such as idx/session/{campaign_id}/{session_id}/actor/{actor_id}.

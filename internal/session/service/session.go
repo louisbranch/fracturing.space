@@ -115,6 +115,76 @@ func (s *SessionService) StartSession(ctx context.Context, in *sessionv1.StartSe
 	return response, nil
 }
 
+const (
+	defaultListSessionsPageSize = 10
+	maxListSessionsPageSize     = 10
+)
+
+// ListSessions returns a page of session records for a campaign.
+func (s *SessionService) ListSessions(ctx context.Context, in *sessionv1.ListSessionsRequest) (*sessionv1.ListSessionsResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "list sessions request is required")
+	}
+
+	if s.stores.Campaign == nil {
+		return nil, status.Error(codes.Internal, "campaign store is not configured")
+	}
+	if s.stores.Session == nil {
+		return nil, status.Error(codes.Internal, "session store is not configured")
+	}
+
+	// Validate campaign exists
+	campaignID := strings.TrimSpace(in.GetCampaignId())
+	if campaignID == "" {
+		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	}
+	_, err := s.stores.Campaign.Get(ctx, campaignID)
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return nil, status.Error(codes.NotFound, "campaign not found")
+		}
+		return nil, status.Errorf(codes.Internal, "check campaign: %v", err)
+	}
+
+	pageSize := int(in.GetPageSize())
+	if pageSize <= 0 {
+		pageSize = defaultListSessionsPageSize
+	}
+	if pageSize > maxListSessionsPageSize {
+		pageSize = maxListSessionsPageSize
+	}
+
+	page, err := s.stores.Session.ListSessions(ctx, campaignID, pageSize, in.GetPageToken())
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "list sessions: %v", err)
+	}
+
+	response := &sessionv1.ListSessionsResponse{
+		NextPageToken: page.NextPageToken,
+	}
+	if len(page.Sessions) == 0 {
+		return response, nil
+	}
+
+	response.Sessions = make([]*sessionv1.Session, 0, len(page.Sessions))
+	for _, session := range page.Sessions {
+		sessionProto := &sessionv1.Session{
+			Id:         session.ID,
+			CampaignId: session.CampaignID,
+			Name:       session.Name,
+			Status:     sessionStatusToProto(session.Status),
+			StartedAt:  timestamppb.New(session.StartedAt),
+			UpdatedAt:  timestamppb.New(session.UpdatedAt),
+		}
+		if session.EndedAt != nil {
+			sessionProto.EndedAt = timestamppb.New(*session.EndedAt)
+		}
+		response.Sessions = append(response.Sessions, sessionProto)
+	}
+
+	return response, nil
+}
+
 // sessionStatusToProto maps a domain session status to the protobuf representation.
 func sessionStatusToProto(status sessiondomain.SessionStatus) sessionv1.SessionStatus {
 	switch status {

@@ -77,4 +77,12 @@ type SessionStore interface {
 	// PutSessionWithActivePointer atomically stores a session and sets it as the active session for the campaign.
 	// Returns an error if an active session already exists for the campaign.
 	PutSessionWithActivePointer(ctx context.Context, session sessiondomain.Session) error
+	// ListSessions returns a page of session records for a campaign starting after the page token.
+	ListSessions(ctx context.Context, campaignID string, pageSize int, pageToken string) (SessionPage, error)
+}
+
+// SessionPage describes a page of session records.
+type SessionPage struct {
+	Sessions      []sessiondomain.Session
+	NextPageToken string
 }

@@ -272,6 +272,122 @@ func (x *Session) GetVersion() int64 {
 	return 0
 }
 
+type ListSessionsRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The campaign ID to list sessions for.
+	CampaignId string `protobuf:"bytes,1,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"`
+	// The maximum number of sessions to return.
+	// If zero, the server defaults to 10. The server clamps values above 10 to 10.
+	PageSize int32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// A page token received from a prior ListSessionsResponse.
+	PageToken     string `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListSessionsRequest) Reset() {
+	*x = ListSessionsRequest{}
+	mi := &file_session_v1_session_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListSessionsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListSessionsRequest) ProtoMessage() {}
+
+func (x *ListSessionsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_session_v1_session_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListSessionsRequest.ProtoReflect.Descriptor instead.
+func (*ListSessionsRequest) Descriptor() ([]byte, []int) {
+	return file_session_v1_session_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *ListSessionsRequest) GetCampaignId() string {
+	if x != nil {
+		return x.CampaignId
+	}
+	return ""
+}
+
+func (x *ListSessionsRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListSessionsRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+type ListSessionsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Sessions      []*Session             `protobuf:"bytes,1,rep,name=sessions,proto3" json:"sessions,omitempty"`
+	NextPageToken string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListSessionsResponse) Reset() {
+	*x = ListSessionsResponse{}
+	mi := &file_session_v1_session_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListSessionsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListSessionsResponse) ProtoMessage() {}
+
+func (x *ListSessionsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_session_v1_session_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListSessionsResponse.ProtoReflect.Descriptor instead.
+func (*ListSessionsResponse) Descriptor() ([]byte, []int) {
+	return file_session_v1_session_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *ListSessionsResponse) GetSessions() []*Session {
+	if x != nil {
+		return x.Sessions
+	}
+	return nil
+}
+
+func (x *ListSessionsResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
 var File_session_v1_session_proto protoreflect.FileDescriptor
 
 const file_session_v1_session_proto_rawDesc = "" +
@@ -295,16 +411,26 @@ const file_session_v1_session_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x125\n" +
 	"\bended_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\aendedAt\x12\x18\n" +
-	"\aversion\x18\b \x01(\x03R\aversion*J\n" +
+	"\aversion\x18\b \x01(\x03R\aversion\"r\n" +
+	"\x13ListSessionsRequest\x12\x1f\n" +
+	"\vcampaign_id\x18\x01 \x01(\tR\n" +
+	"campaignId\x12\x1b\n" +
+	"\tpage_size\x18\x02 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x03 \x01(\tR\tpageToken\"o\n" +
+	"\x14ListSessionsResponse\x12/\n" +
+	"\bsessions\x18\x01 \x03(\v2\x13.session.v1.SessionR\bsessions\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken*J\n" +
 	"\rSessionStatus\x12\x16\n" +
 	"\x12STATUS_UNSPECIFIED\x10\x00\x12\n" +
 	"\n" +
 	"\x06ACTIVE\x10\x01\x12\n" +
 	"\n" +
 	"\x06PAUSED\x10\x02\x12\t\n" +
-	"\x05ENDED\x10\x032c\n" +
+	"\x05ENDED\x10\x032\xb6\x01\n" +
 	"\x0eSessionService\x12Q\n" +
-	"\fStartSession\x12\x1f.session.v1.StartSessionRequest\x1a .session.v1.StartSessionResponseBGZEgithub.com/louisbranch/duality-engine/api/gen/go/session/v1;sessionv1b\x06proto3"
+	"\fStartSession\x12\x1f.session.v1.StartSessionRequest\x1a .session.v1.StartSessionResponse\x12Q\n" +
+	"\fListSessions\x12\x1f.session.v1.ListSessionsRequest\x1a .session.v1.ListSessionsResponseBGZEgithub.com/louisbranch/duality-engine/api/gen/go/session/v1;sessionv1b\x06proto3"
 
 var (
 	file_session_v1_session_proto_rawDescOnce sync.Once
@@ -319,27 +445,32 @@ func file_session_v1_session_proto_rawDescGZIP() []byte {
 }
 
 var file_session_v1_session_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_session_v1_session_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_session_v1_session_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_session_v1_session_proto_goTypes = []any{
 	(SessionStatus)(0),            // 0: session.v1.SessionStatus
 	(*StartSessionRequest)(nil),   // 1: session.v1.StartSessionRequest
 	(*StartSessionResponse)(nil),  // 2: session.v1.StartSessionResponse
 	(*Session)(nil),               // 3: session.v1.Session
-	(*timestamppb.Timestamp)(nil), // 4: google.protobuf.Timestamp
+	(*ListSessionsRequest)(nil),   // 4: session.v1.ListSessionsRequest
+	(*ListSessionsResponse)(nil),  // 5: session.v1.ListSessionsResponse
+	(*timestamppb.Timestamp)(nil), // 6: google.protobuf.Timestamp
 }
 var file_session_v1_session_proto_depIdxs = []int32{
 	3, // 0: session.v1.StartSessionResponse.session:type_name -> session.v1.Session
 	0, // 1: session.v1.Session.status:type_name -> session.v1.SessionStatus
-	4, // 2: session.v1.Session.started_at:type_name -> google.protobuf.Timestamp
-	4, // 3: session.v1.Session.updated_at:type_name -> google.protobuf.Timestamp
-	4, // 4: session.v1.Session.ended_at:type_name -> google.protobuf.Timestamp
-	1, // 5: session.v1.SessionService.StartSession:input_type -> session.v1.StartSessionRequest
-	2, // 6: session.v1.SessionService.StartSession:output_type -> session.v1.StartSessionResponse
-	6, // [6:7] is the sub-list for method output_type
-	5, // [5:6] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	6, // 2: session.v1.Session.started_at:type_name -> google.protobuf.Timestamp
+	6, // 3: session.v1.Session.updated_at:type_name -> google.protobuf.Timestamp
+	6, // 4: session.v1.Session.ended_at:type_name -> google.protobuf.Timestamp
+	3, // 5: session.v1.ListSessionsResponse.sessions:type_name -> session.v1.Session
+	1, // 6: session.v1.SessionService.StartSession:input_type -> session.v1.StartSessionRequest
+	4, // 7: session.v1.SessionService.ListSessions:input_type -> session.v1.ListSessionsRequest
+	2, // 8: session.v1.SessionService.StartSession:output_type -> session.v1.StartSessionResponse
+	5, // 9: session.v1.SessionService.ListSessions:output_type -> session.v1.ListSessionsResponse
+	8, // [8:10] is the sub-list for method output_type
+	6, // [6:8] is the sub-list for method input_type
+	6, // [6:6] is the sub-list for extension type_name
+	6, // [6:6] is the sub-list for extension extendee
+	0, // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_session_v1_session_proto_init() }
@@ -353,7 +484,7 @@ func file_session_v1_session_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_session_v1_session_proto_rawDesc), len(file_session_v1_session_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   3,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
