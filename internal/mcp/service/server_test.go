@@ -1310,6 +1310,205 @@ func TestActorCreateHandlerRejectsEmptyResponse(t *testing.T) {
 	}
 }
 
+// TestActorControlSetHandlerReturnsClientError ensures gRPC errors are returned as tool errors.
+func TestActorControlSetHandlerReturnsClientError(t *testing.T) {
+	client := &fakeCampaignClient{setDefaultControlErr: errors.New("boom")}
+	handler := domain.ActorControlSetHandler(client)
+
+	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.ActorControlSetInput{
+		CampaignID: "camp-123",
+		ActorID:    "actor-456",
+		Controller: "GM",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if result != nil {
+		t.Fatal("expected nil result on error")
+	}
+}
+
+// TestActorControlSetHandlerMapsRequestAndResponseGM ensures GM controller inputs and outputs map consistently.
+func TestActorControlSetHandlerMapsRequestAndResponseGM(t *testing.T) {
+	client := &fakeCampaignClient{setDefaultControlResponse: &campaignv1.SetDefaultControlResponse{
+		CampaignId: "camp-123",
+		ActorId:    "actor-456",
+		Controller: &campaignv1.ActorController{
+			Controller: &campaignv1.ActorController_Gm{
+				Gm: &campaignv1.GmController{},
+			},
+		},
+	}}
+	result, output, err := domain.ActorControlSetHandler(client)(
+		context.Background(),
+		&mcp.CallToolRequest{},
+		domain.ActorControlSetInput{
+			CampaignID: "camp-123",
+			ActorID:    "actor-456",
+			Controller: "GM",
+		},
+	)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if result != nil {
+		t.Fatal("expected nil result on success")
+	}
+	if client.lastSetDefaultControlRequest == nil {
+		t.Fatal("expected gRPC request")
+	}
+	if client.lastSetDefaultControlRequest.GetCampaignId() != "camp-123" {
+		t.Fatalf("expected campaign id camp-123, got %q", client.lastSetDefaultControlRequest.GetCampaignId())
+	}
+	if client.lastSetDefaultControlRequest.GetActorId() != "actor-456" {
+		t.Fatalf("expected actor id actor-456, got %q", client.lastSetDefaultControlRequest.GetActorId())
+	}
+	controller := client.lastSetDefaultControlRequest.GetController()
+	if controller == nil {
+		t.Fatal("expected controller in request")
+	}
+	if _, ok := controller.GetController().(*campaignv1.ActorController_Gm); !ok {
+		t.Fatalf("expected GM controller, got %T", controller.GetController())
+	}
+	if output.CampaignID != "camp-123" {
+		t.Fatalf("expected campaign id camp-123, got %q", output.CampaignID)
+	}
+	if output.ActorID != "actor-456" {
+		t.Fatalf("expected actor id actor-456, got %q", output.ActorID)
+	}
+	if output.Controller != "GM" {
+		t.Fatalf("expected controller GM, got %q", output.Controller)
+	}
+}
+
+// TestActorControlSetHandlerMapsRequestAndResponseParticipant ensures participant controller inputs and outputs map consistently.
+func TestActorControlSetHandlerMapsRequestAndResponseParticipant(t *testing.T) {
+	participantID := "part-789"
+	client := &fakeCampaignClient{setDefaultControlResponse: &campaignv1.SetDefaultControlResponse{
+		CampaignId: "camp-123",
+		ActorId:    "actor-456",
+		Controller: &campaignv1.ActorController{
+			Controller: &campaignv1.ActorController_Participant{
+				Participant: &campaignv1.ParticipantController{
+					ParticipantId: participantID,
+				},
+			},
+		},
+	}}
+	result, output, err := domain.ActorControlSetHandler(client)(
+		context.Background(),
+		&mcp.CallToolRequest{},
+		domain.ActorControlSetInput{
+			CampaignID: "camp-123",
+			ActorID:    "actor-456",
+			Controller: participantID,
+		},
+	)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if result != nil {
+		t.Fatal("expected nil result on success")
+	}
+	if client.lastSetDefaultControlRequest == nil {
+		t.Fatal("expected gRPC request")
+	}
+	if client.lastSetDefaultControlRequest.GetCampaignId() != "camp-123" {
+		t.Fatalf("expected campaign id camp-123, got %q", client.lastSetDefaultControlRequest.GetCampaignId())
+	}
+	if client.lastSetDefaultControlRequest.GetActorId() != "actor-456" {
+		t.Fatalf("expected actor id actor-456, got %q", client.lastSetDefaultControlRequest.GetActorId())
+	}
+	controller := client.lastSetDefaultControlRequest.GetController()
+	if controller == nil {
+		t.Fatal("expected controller in request")
+	}
+	participantCtrl, ok := controller.GetController().(*campaignv1.ActorController_Participant)
+	if !ok {
+		t.Fatalf("expected participant controller, got %T", controller.GetController())
+	}
+	if participantCtrl.Participant.GetParticipantId() != participantID {
+		t.Fatalf("expected participant id %q, got %q", participantID, participantCtrl.Participant.GetParticipantId())
+	}
+	if output.CampaignID != "camp-123" {
+		t.Fatalf("expected campaign id camp-123, got %q", output.CampaignID)
+	}
+	if output.ActorID != "actor-456" {
+		t.Fatalf("expected actor id actor-456, got %q", output.ActorID)
+	}
+	if output.Controller != participantID {
+		t.Fatalf("expected controller %q, got %q", participantID, output.Controller)
+	}
+}
+
+// TestActorControlSetHandlerCaseInsensitiveGM ensures GM controller accepts case-insensitive input.
+func TestActorControlSetHandlerCaseInsensitiveGM(t *testing.T) {
+	client := &fakeCampaignClient{setDefaultControlResponse: &campaignv1.SetDefaultControlResponse{
+		CampaignId: "camp-123",
+		ActorId:    "actor-456",
+		Controller: &campaignv1.ActorController{
+			Controller: &campaignv1.ActorController_Gm{
+				Gm: &campaignv1.GmController{},
+			},
+		},
+	}}
+	for _, input := range []string{"GM", "gm", "Gm", "gM"} {
+		t.Run(input, func(t *testing.T) {
+			_, output, err := domain.ActorControlSetHandler(client)(
+				context.Background(),
+				&mcp.CallToolRequest{},
+				domain.ActorControlSetInput{
+					CampaignID: "camp-123",
+					ActorID:    "actor-456",
+					Controller: input,
+				},
+			)
+			if err != nil {
+				t.Fatalf("expected no error for %q, got %v", input, err)
+			}
+			if output.Controller != "GM" {
+				t.Fatalf("expected controller GM, got %q", output.Controller)
+			}
+		})
+	}
+}
+
+// TestActorControlSetHandlerRejectsEmptyResponse ensures nil responses are rejected.
+func TestActorControlSetHandlerRejectsEmptyResponse(t *testing.T) {
+	client := &fakeCampaignClient{}
+	handler := domain.ActorControlSetHandler(client)
+
+	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.ActorControlSetInput{
+		CampaignID: "camp-123",
+		ActorID:    "actor-456",
+		Controller: "GM",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if result != nil {
+		t.Fatal("expected nil result on error")
+	}
+}
+
+// TestActorControlSetHandlerRejectsEmptyController ensures empty controller is rejected.
+func TestActorControlSetHandlerRejectsEmptyController(t *testing.T) {
+	client := &fakeCampaignClient{}
+	handler := domain.ActorControlSetHandler(client)
+
+	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.ActorControlSetInput{
+		CampaignID: "camp-123",
+		ActorID:    "actor-456",
+		Controller: "",
+	})
+	if err == nil {
+		t.Fatal("expected error for empty controller")
+	}
+	if result != nil {
+		t.Fatal("expected nil result on error")
+	}
+}
+
 // TestParticipantListResourceHandlerMapsResponse ensures JSON payload is formatted correctly.
 func TestParticipantListResourceHandlerMapsResponse(t *testing.T) {
 	now := time.Date(2026, 1, 23, 13, 0, 0, 0, time.UTC)

@@ -244,4 +244,125 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 			t.Fatalf("expected name Test NPC, got %q", npcOutput.Name)
 		}
 	})
+
+	t.Run("actor control set", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
+		defer cancel()
+
+		// First create a campaign
+		campaignParams := &mcp.CallToolParams{
+			Name: "campaign_create",
+			Arguments: map[string]any{
+				"name":         "Test Campaign",
+				"gm_mode":      "HUMAN",
+				"theme_prompt": "",
+			},
+		}
+		campaignResult, err := suite.client.CallTool(ctx, campaignParams)
+		if err != nil {
+			t.Fatalf("call campaign_create: %v", err)
+		}
+		if campaignResult == nil || campaignResult.IsError {
+			t.Fatalf("campaign_create failed: %+v", campaignResult)
+		}
+		campaignOutput := decodeStructuredContent[domain.CampaignCreateResult](t, campaignResult.StructuredContent)
+
+		// Create an actor
+		actorParams := &mcp.CallToolParams{
+			Name: "actor_create",
+			Arguments: map[string]any{
+				"campaign_id": campaignOutput.ID,
+				"name":        "Test Actor",
+				"kind":        "PC",
+			},
+		}
+		actorResult, err := suite.client.CallTool(ctx, actorParams)
+		if err != nil {
+			t.Fatalf("call actor_create: %v", err)
+		}
+		if actorResult == nil || actorResult.IsError {
+			t.Fatalf("actor_create failed: %+v", actorResult)
+		}
+		actorOutput := decodeStructuredContent[domain.ActorCreateResult](t, actorResult.StructuredContent)
+
+		// Test setting GM controller
+		gmControlParams := &mcp.CallToolParams{
+			Name: "actor_control_set",
+			Arguments: map[string]any{
+				"campaign_id": campaignOutput.ID,
+				"actor_id":    actorOutput.ID,
+				"controller":  "GM",
+			},
+		}
+		gmControlResult, err := suite.client.CallTool(ctx, gmControlParams)
+		if err != nil {
+			t.Fatalf("call actor_control_set with GM: %v", err)
+		}
+		if gmControlResult == nil {
+			t.Fatal("call actor_control_set returned nil")
+		}
+		if gmControlResult.IsError {
+			t.Fatalf("actor_control_set returned error content: %+v", gmControlResult.Content)
+		}
+
+		gmControlOutput := decodeStructuredContent[domain.ActorControlSetResult](t, gmControlResult.StructuredContent)
+		if gmControlOutput.CampaignID != campaignOutput.ID {
+			t.Fatalf("expected campaign id %q, got %q", campaignOutput.ID, gmControlOutput.CampaignID)
+		}
+		if gmControlOutput.ActorID != actorOutput.ID {
+			t.Fatalf("expected actor id %q, got %q", actorOutput.ID, gmControlOutput.ActorID)
+		}
+		if gmControlOutput.Controller != "GM" {
+			t.Fatalf("expected controller GM, got %q", gmControlOutput.Controller)
+		}
+
+		// Create a participant for participant controller test
+		participantParams := &mcp.CallToolParams{
+			Name: "participant_create",
+			Arguments: map[string]any{
+				"campaign_id":  campaignOutput.ID,
+				"display_name": "Test Player",
+				"role":         "PLAYER",
+			},
+		}
+		participantResult, err := suite.client.CallTool(ctx, participantParams)
+		if err != nil {
+			t.Fatalf("call participant_create: %v", err)
+		}
+		if participantResult == nil || participantResult.IsError {
+			t.Fatalf("participant_create failed: %+v", participantResult)
+		}
+		participantOutput := decodeStructuredContent[domain.ParticipantCreateResult](t, participantResult.StructuredContent)
+
+		// Test setting participant controller
+		participantControlParams := &mcp.CallToolParams{
+			Name: "actor_control_set",
+			Arguments: map[string]any{
+				"campaign_id": campaignOutput.ID,
+				"actor_id":    actorOutput.ID,
+				"controller":  participantOutput.ID,
+			},
+		}
+		participantControlResult, err := suite.client.CallTool(ctx, participantControlParams)
+		if err != nil {
+			t.Fatalf("call actor_control_set with participant: %v", err)
+		}
+		if participantControlResult == nil {
+			t.Fatal("call actor_control_set returned nil")
+		}
+		if participantControlResult.IsError {
+			t.Fatalf("actor_control_set returned error content: %+v", participantControlResult.Content)
+		}
+
+		participantControlOutput := decodeStructuredContent[domain.ActorControlSetResult](t, participantControlResult.StructuredContent)
+		if participantControlOutput.CampaignID != campaignOutput.ID {
+			t.Fatalf("expected campaign id %q, got %q", campaignOutput.ID, participantControlOutput.CampaignID)
+		}
+		if participantControlOutput.ActorID != actorOutput.ID {
+			t.Fatalf("expected actor id %q, got %q", actorOutput.ID, participantControlOutput.ActorID)
+		}
+		if participantControlOutput.Controller != participantOutput.ID {
+			t.Fatalf("expected controller %q, got %q", participantOutput.ID, participantControlOutput.Controller)
+		}
+	})
 }
