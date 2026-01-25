@@ -19,6 +19,47 @@ For an OpenCode client configuration, see `opencode.jsonc`.
 
 ## Tools
 
+### Context Management Tools
+
+#### set_context
+
+Sets the current context (campaign_id, optional session_id, optional participant_id) for subsequent tool calls. The context is stored in-memory and does not persist across process restarts. If an optional field is omitted, it is cleared from the context.
+
+**Input:**
+
+```json
+{
+  "campaign_id": "camp_abc123",
+  "session_id": "sess_ghi789",
+  "participant_id": "part_xyz789"
+}
+```
+
+All fields except `campaign_id` are optional. To clear optional fields, omit them from the request.
+
+**Output:**
+
+```json
+{
+  "context": {
+    "campaign_id": "camp_abc123",
+    "session_id": "sess_ghi789",
+    "participant_id": "part_xyz789"
+  }
+}
+```
+
+**Validation:**
+
+- `campaign_id` must exist
+- If `session_id` is provided: the session must exist and belong to `campaign_id`
+- If `participant_id` is provided: the participant must exist and belong to `campaign_id`
+
+**Errors:**
+
+- `NotFound`: campaign, session, or participant does not exist
+- `InvalidArgument`: empty strings provided, or mismatched ownership (e.g., session not in campaign)
+
 ### Campaign Service Tools
 
 #### campaign_create

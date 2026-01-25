@@ -37,6 +37,7 @@ func runMCPToolsTests(t *testing.T, suite *integrationSuite) {
 			"participant_create",
 			"roll_dice",
 			"session_start",
+			"set_context",
 		}
 
 		actual := make([]string, 0, len(result.Tools))

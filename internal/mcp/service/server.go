@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sync"
 	"time"
 
 	campaignv1 "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1"
 	dualityv1 "github.com/louisbranch/duality-engine/api/gen/go/duality/v1"
 	sessionv1 "github.com/louisbranch/duality-engine/api/gen/go/session/v1"
+	"github.com/louisbranch/duality-engine/internal/mcp/domain"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -44,6 +46,8 @@ type Config struct {
 type Server struct {
 	mcpServer *mcp.Server
 	conn      *grpc.ClientConn
+	ctx       domain.Context
+	ctxMu     sync.RWMutex
 }
 
 // New creates a configured MCP server that connects to Duality, Campaign, and Session gRPC services.
@@ -59,13 +63,17 @@ func New(grpcAddr string) (*Server, error) {
 	dualityClient := dualityv1.NewDualityServiceClient(conn)
 	campaignClient := campaignv1.NewCampaignServiceClient(conn)
 	sessionClient := sessionv1.NewSessionServiceClient(conn)
+
+	server := &Server{mcpServer: mcpServer, conn: conn}
+
 	registerDualityTools(mcpServer, dualityClient)
 	registerCampaignTools(mcpServer, campaignClient)
 	registerSessionTools(mcpServer, sessionClient)
+	registerContextTools(mcpServer, campaignClient, sessionClient, server)
 	registerCampaignResources(mcpServer, campaignClient)
 	registerSessionResources(mcpServer, sessionClient)
 
-	return &Server{mcpServer: mcpServer, conn: conn}, nil
+	return server, nil
 }
 
 // Run creates and serves the MCP server until the context ends.
@@ -99,6 +107,26 @@ func (s *Server) Close() error {
 	}
 	s.conn = nil
 	return nil
+}
+
+// setContext updates the server's context state.
+func (s *Server) setContext(ctx domain.Context) {
+	if s == nil {
+		return
+	}
+	s.ctxMu.Lock()
+	defer s.ctxMu.Unlock()
+	s.ctx = ctx
+}
+
+// getContext returns the server's current context state.
+func (s *Server) getContext() domain.Context {
+	if s == nil {
+		return domain.Context{}
+	}
+	s.ctxMu.RLock()
+	defer s.ctxMu.RUnlock()
+	return s.ctx
 }
 
 // serveWithTransport starts the MCP server using the provided transport.

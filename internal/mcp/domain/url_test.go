@@ -7,12 +7,12 @@ import (
 
 func TestParseCampaignIDFromResourceURI(t *testing.T) {
 	tests := []struct {
-		name        string
-		uri         string
+		name         string
+		uri          string
 		resourceType string
-		wantID      string
-		wantErr     bool
-		errContains string
+		wantID       string
+		wantErr      bool
+		errContains  string
 	}{
 		// Valid cases
 		{
