@@ -16,8 +16,10 @@ import (
 	"github.com/louisbranch/duality-engine/internal/mcp/domain"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/health"
 	grpc_health_v1 "google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -48,7 +50,7 @@ type fakeDualityClient struct {
 type fakeCampaignClient struct {
 	response                     *campaignv1.CreateCampaignResponse
 	listResponse                 *campaignv1.ListCampaignsResponse
-	getCampaignResponse           *campaignv1.GetCampaignResponse
+	getCampaignResponse          *campaignv1.GetCampaignResponse
 	createParticipantResponse    *campaignv1.CreateParticipantResponse
 	listParticipantsResponse     *campaignv1.ListParticipantsResponse
 	getParticipantResponse       *campaignv1.GetParticipantResponse
@@ -177,13 +179,13 @@ func (f *fakeCampaignClient) SetDefaultControl(ctx context.Context, req *campaig
 
 // fakeSessionClient implements SessionServiceClient for tests.
 type fakeSessionClient struct {
-	startSessionResponse *sessionv1.StartSessionResponse
-	listSessionsResponse  *sessionv1.ListSessionsResponse
-	getSessionResponse   *sessionv1.GetSessionResponse
-	err                  error
-	listSessionsErr      error
-	getSessionErr        error
-	lastRequest          *sessionv1.StartSessionRequest
+	startSessionResponse    *sessionv1.StartSessionResponse
+	listSessionsResponse    *sessionv1.ListSessionsResponse
+	getSessionResponse      *sessionv1.GetSessionResponse
+	err                     error
+	listSessionsErr         error
+	getSessionErr           error
+	lastRequest             *sessionv1.StartSessionRequest
 	lastListSessionsRequest *sessionv1.ListSessionsRequest
 	lastGetSessionRequest   *sessionv1.GetSessionRequest
 }
@@ -2081,6 +2083,477 @@ func TestSessionListResourceHandlerReturnsClientError(t *testing.T) {
 	}
 	if result != nil {
 		t.Fatal("expected nil result on error")
+	}
+}
+
+// TestSetContextHandlerReturnsClientError ensures gRPC errors are returned as tool errors.
+func TestSetContextHandlerReturnsClientError(t *testing.T) {
+	campaignClient := &fakeCampaignClient{getCampaignErr: errors.New("boom")}
+	sessionClient := &fakeSessionClient{}
+	server := &Server{}
+	handler := domain.SetContextHandler(campaignClient, sessionClient, server.setContext, server.getContext)
+
+	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.SetContextInput{
+		CampaignID: "camp-123",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if result != nil {
+		t.Fatal("expected nil result on error")
+	}
+}
+
+// TestSetContextHandlerRejectsEmptyCampaignID validates empty campaign_id is rejected.
+func TestSetContextHandlerRejectsEmptyCampaignID(t *testing.T) {
+	campaignClient := &fakeCampaignClient{}
+	sessionClient := &fakeSessionClient{}
+	server := &Server{}
+	handler := domain.SetContextHandler(campaignClient, sessionClient, server.setContext, server.getContext)
+
+	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.SetContextInput{
+		CampaignID: "",
+	})
+	if err == nil {
+		t.Fatal("expected error for empty campaign_id")
+	}
+	if result != nil {
+		t.Fatal("expected nil result on error")
+	}
+	if campaignClient.lastGetCampaignRequest != nil {
+		t.Fatal("expected no GetCampaign call for empty campaign_id")
+	}
+}
+
+// TestSetContextHandlerRejectsNonExistentCampaign validates non-existent campaign returns error.
+func TestSetContextHandlerRejectsNonExistentCampaign(t *testing.T) {
+	campaignClient := &fakeCampaignClient{
+		getCampaignErr: status.Error(codes.NotFound, "campaign not found"),
+	}
+	sessionClient := &fakeSessionClient{}
+	server := &Server{}
+	handler := domain.SetContextHandler(campaignClient, sessionClient, server.setContext, server.getContext)
+
+	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.SetContextInput{
+		CampaignID: "camp-123",
+	})
+	if err == nil {
+		t.Fatal("expected error for non-existent campaign")
+	}
+	if result != nil {
+		t.Fatal("expected nil result on error")
+	}
+	if campaignClient.lastGetCampaignRequest == nil {
+		t.Fatal("expected GetCampaign call")
+	}
+	if campaignClient.lastGetCampaignRequest.GetCampaignId() != "camp-123" {
+		t.Fatalf("expected campaign id camp-123, got %q", campaignClient.lastGetCampaignRequest.GetCampaignId())
+	}
+}
+
+// TestSetContextHandlerRejectsEmptySessionIDAfterTrim validates whitespace-only session_id is treated as omitted.
+func TestSetContextHandlerRejectsEmptySessionIDAfterTrim(t *testing.T) {
+	campaignClient := &fakeCampaignClient{
+		getCampaignResponse: &campaignv1.GetCampaignResponse{
+			Campaign: &campaignv1.Campaign{Id: "camp-123"},
+		},
+	}
+	sessionClient := &fakeSessionClient{}
+	server := &Server{}
+	handler := domain.SetContextHandler(campaignClient, sessionClient, server.setContext, server.getContext)
+
+	result, output, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.SetContextInput{
+		CampaignID: "camp-123",
+		SessionID:  "   ",
+	})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if result != nil {
+		t.Fatal("expected nil result on success")
+	}
+	if output.Context.SessionID != "" {
+		t.Fatalf("expected empty session_id after trim, got %q", output.Context.SessionID)
+	}
+	if sessionClient.lastGetSessionRequest != nil {
+		t.Fatal("expected no GetSession call for whitespace-only session_id")
+	}
+}
+
+// TestSetContextHandlerRejectsNonExistentSession validates non-existent session returns error.
+func TestSetContextHandlerRejectsNonExistentSession(t *testing.T) {
+	campaignClient := &fakeCampaignClient{
+		getCampaignResponse: &campaignv1.GetCampaignResponse{
+			Campaign: &campaignv1.Campaign{Id: "camp-123"},
+		},
+	}
+	sessionClient := &fakeSessionClient{
+		getSessionErr: status.Error(codes.NotFound, "session not found"),
+	}
+	server := &Server{}
+	handler := domain.SetContextHandler(campaignClient, sessionClient, server.setContext, server.getContext)
+
+	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.SetContextInput{
+		CampaignID: "camp-123",
+		SessionID:  "sess-456",
+	})
+	if err == nil {
+		t.Fatal("expected error for non-existent session")
+	}
+	if result != nil {
+		t.Fatal("expected nil result on error")
+	}
+	if sessionClient.lastGetSessionRequest == nil {
+		t.Fatal("expected GetSession call")
+	}
+	if sessionClient.lastGetSessionRequest.GetCampaignId() != "camp-123" {
+		t.Fatalf("expected campaign id camp-123, got %q", sessionClient.lastGetSessionRequest.GetCampaignId())
+	}
+	if sessionClient.lastGetSessionRequest.GetSessionId() != "sess-456" {
+		t.Fatalf("expected session id sess-456, got %q", sessionClient.lastGetSessionRequest.GetSessionId())
+	}
+}
+
+// TestSetContextHandlerRejectsSessionFromDifferentCampaign validates session belonging to different campaign returns error.
+func TestSetContextHandlerRejectsSessionFromDifferentCampaign(t *testing.T) {
+	campaignClient := &fakeCampaignClient{
+		getCampaignResponse: &campaignv1.GetCampaignResponse{
+			Campaign: &campaignv1.Campaign{Id: "camp-123"},
+		},
+	}
+	sessionClient := &fakeSessionClient{
+		getSessionErr: status.Error(codes.InvalidArgument, "session not found or does not belong to campaign"),
+	}
+	server := &Server{}
+	handler := domain.SetContextHandler(campaignClient, sessionClient, server.setContext, server.getContext)
+
+	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.SetContextInput{
+		CampaignID: "camp-123",
+		SessionID:  "sess-456",
+	})
+	if err == nil {
+		t.Fatal("expected error for session from different campaign")
+	}
+	if result != nil {
+		t.Fatal("expected nil result on error")
+	}
+}
+
+// TestSetContextHandlerRejectsEmptyParticipantIDAfterTrim validates whitespace-only participant_id is treated as omitted.
+func TestSetContextHandlerRejectsEmptyParticipantIDAfterTrim(t *testing.T) {
+	campaignClient := &fakeCampaignClient{
+		getCampaignResponse: &campaignv1.GetCampaignResponse{
+			Campaign: &campaignv1.Campaign{Id: "camp-123"},
+		},
+	}
+	sessionClient := &fakeSessionClient{}
+	server := &Server{}
+	handler := domain.SetContextHandler(campaignClient, sessionClient, server.setContext, server.getContext)
+
+	result, output, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.SetContextInput{
+		CampaignID:    "camp-123",
+		ParticipantID: "   ",
+	})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if result != nil {
+		t.Fatal("expected nil result on success")
+	}
+	if output.Context.ParticipantID != "" {
+		t.Fatalf("expected empty participant_id after trim, got %q", output.Context.ParticipantID)
+	}
+	if campaignClient.lastGetParticipantRequest != nil {
+		t.Fatal("expected no GetParticipant call for whitespace-only participant_id")
+	}
+}
+
+// TestSetContextHandlerRejectsNonExistentParticipant validates non-existent participant returns error.
+func TestSetContextHandlerRejectsNonExistentParticipant(t *testing.T) {
+	campaignClient := &fakeCampaignClient{
+		getCampaignResponse: &campaignv1.GetCampaignResponse{
+			Campaign: &campaignv1.Campaign{Id: "camp-123"},
+		},
+		getParticipantErr: status.Error(codes.NotFound, "participant not found"),
+	}
+	sessionClient := &fakeSessionClient{}
+	server := &Server{}
+	handler := domain.SetContextHandler(campaignClient, sessionClient, server.setContext, server.getContext)
+
+	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.SetContextInput{
+		CampaignID:    "camp-123",
+		ParticipantID: "part-456",
+	})
+	if err == nil {
+		t.Fatal("expected error for non-existent participant")
+	}
+	if result != nil {
+		t.Fatal("expected nil result on error")
+	}
+	if campaignClient.lastGetParticipantRequest == nil {
+		t.Fatal("expected GetParticipant call")
+	}
+	if campaignClient.lastGetParticipantRequest.GetCampaignId() != "camp-123" {
+		t.Fatalf("expected campaign id camp-123, got %q", campaignClient.lastGetParticipantRequest.GetCampaignId())
+	}
+	if campaignClient.lastGetParticipantRequest.GetParticipantId() != "part-456" {
+		t.Fatalf("expected participant id part-456, got %q", campaignClient.lastGetParticipantRequest.GetParticipantId())
+	}
+}
+
+// TestSetContextHandlerRejectsParticipantFromDifferentCampaign validates participant belonging to different campaign returns error.
+func TestSetContextHandlerRejectsParticipantFromDifferentCampaign(t *testing.T) {
+	campaignClient := &fakeCampaignClient{
+		getCampaignResponse: &campaignv1.GetCampaignResponse{
+			Campaign: &campaignv1.Campaign{Id: "camp-123"},
+		},
+		getParticipantErr: status.Error(codes.InvalidArgument, "participant not found or does not belong to campaign"),
+	}
+	sessionClient := &fakeSessionClient{}
+	server := &Server{}
+	handler := domain.SetContextHandler(campaignClient, sessionClient, server.setContext, server.getContext)
+
+	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.SetContextInput{
+		CampaignID:    "camp-123",
+		ParticipantID: "part-456",
+	})
+	if err == nil {
+		t.Fatal("expected error for participant from different campaign")
+	}
+	if result != nil {
+		t.Fatal("expected nil result on error")
+	}
+}
+
+// TestSetContextHandlerMapsRequestAndResponse ensures context is properly set and returned with all fields.
+func TestSetContextHandlerMapsRequestAndResponse(t *testing.T) {
+	campaignClient := &fakeCampaignClient{
+		getCampaignResponse: &campaignv1.GetCampaignResponse{
+			Campaign: &campaignv1.Campaign{Id: "camp-123"},
+		},
+		getParticipantResponse: &campaignv1.GetParticipantResponse{
+			Participant: &campaignv1.Participant{
+				Id:         "part-456",
+				CampaignId: "camp-123",
+			},
+		},
+	}
+	sessionClient := &fakeSessionClient{
+		getSessionResponse: &sessionv1.GetSessionResponse{
+			Session: &sessionv1.Session{
+				Id:         "sess-789",
+				CampaignId: "camp-123",
+			},
+		},
+	}
+	server := &Server{}
+	handler := domain.SetContextHandler(campaignClient, sessionClient, server.setContext, server.getContext)
+
+	result, output, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.SetContextInput{
+		CampaignID:    "camp-123",
+		SessionID:     "sess-789",
+		ParticipantID: "part-456",
+	})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if result != nil {
+		t.Fatal("expected nil result on success")
+	}
+	if output.Context.CampaignID != "camp-123" {
+		t.Fatalf("expected campaign id camp-123, got %q", output.Context.CampaignID)
+	}
+	if output.Context.SessionID != "sess-789" {
+		t.Fatalf("expected session id sess-789, got %q", output.Context.SessionID)
+	}
+	if output.Context.ParticipantID != "part-456" {
+		t.Fatalf("expected participant id part-456, got %q", output.Context.ParticipantID)
+	}
+	// Verify context was set on server
+	currentCtx := server.getContext()
+	if currentCtx.CampaignID != "camp-123" {
+		t.Fatalf("expected server context campaign id camp-123, got %q", currentCtx.CampaignID)
+	}
+	if currentCtx.SessionID != "sess-789" {
+		t.Fatalf("expected server context session id sess-789, got %q", currentCtx.SessionID)
+	}
+	if currentCtx.ParticipantID != "part-456" {
+		t.Fatalf("expected server context participant id part-456, got %q", currentCtx.ParticipantID)
+	}
+}
+
+// TestSetContextHandlerOptionalFields tests that optional session_id and participant_id can be omitted.
+func TestSetContextHandlerOptionalFields(t *testing.T) {
+	campaignClient := &fakeCampaignClient{
+		getCampaignResponse: &campaignv1.GetCampaignResponse{
+			Campaign: &campaignv1.Campaign{Id: "camp-123"},
+		},
+	}
+	sessionClient := &fakeSessionClient{}
+	server := &Server{}
+	handler := domain.SetContextHandler(campaignClient, sessionClient, server.setContext, server.getContext)
+
+	result, output, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.SetContextInput{
+		CampaignID: "camp-123",
+		// SessionID and ParticipantID omitted
+	})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if result != nil {
+		t.Fatal("expected nil result on success")
+	}
+	if output.Context.CampaignID != "camp-123" {
+		t.Fatalf("expected campaign id camp-123, got %q", output.Context.CampaignID)
+	}
+	if output.Context.SessionID != "" {
+		t.Fatalf("expected empty session_id, got %q", output.Context.SessionID)
+	}
+	if output.Context.ParticipantID != "" {
+		t.Fatalf("expected empty participant_id, got %q", output.Context.ParticipantID)
+	}
+	// Verify context was set on server
+	currentCtx := server.getContext()
+	if currentCtx.CampaignID != "camp-123" {
+		t.Fatalf("expected server context campaign id camp-123, got %q", currentCtx.CampaignID)
+	}
+	if currentCtx.SessionID != "" {
+		t.Fatalf("expected server context session id empty, got %q", currentCtx.SessionID)
+	}
+	if currentCtx.ParticipantID != "" {
+		t.Fatalf("expected server context participant id empty, got %q", currentCtx.ParticipantID)
+	}
+}
+
+// TestSetContextHandlerClearsOptionalFields tests that omitting optional fields clears them from context.
+func TestSetContextHandlerClearsOptionalFields(t *testing.T) {
+	campaignClient := &fakeCampaignClient{
+		getCampaignResponse: &campaignv1.GetCampaignResponse{
+			Campaign: &campaignv1.Campaign{Id: "camp-123"},
+		},
+		getParticipantResponse: &campaignv1.GetParticipantResponse{
+			Participant: &campaignv1.Participant{
+				Id:         "part-456",
+				CampaignId: "camp-123",
+			},
+		},
+	}
+	sessionClient := &fakeSessionClient{
+		getSessionResponse: &sessionv1.GetSessionResponse{
+			Session: &sessionv1.Session{
+				Id:         "sess-789",
+				CampaignId: "camp-123",
+			},
+		},
+	}
+	server := &Server{}
+	handler := domain.SetContextHandler(campaignClient, sessionClient, server.setContext, server.getContext)
+
+	// First set context with all fields
+	_, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.SetContextInput{
+		CampaignID:    "camp-123",
+		SessionID:     "sess-789",
+		ParticipantID: "part-456",
+	})
+	if err != nil {
+		t.Fatalf("first set context: %v", err)
+	}
+
+	// Verify initial context has all fields
+	initialCtx := server.getContext()
+	if initialCtx.SessionID == "" || initialCtx.ParticipantID == "" {
+		t.Fatal("expected initial context to have session and participant")
+	}
+
+	// Now set context with only campaign_id (omitting session and participant)
+	_, output, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.SetContextInput{
+		CampaignID: "camp-123",
+		// SessionID and ParticipantID omitted
+	})
+	if err != nil {
+		t.Fatalf("second set context: %v", err)
+	}
+	if output.Context.SessionID != "" {
+		t.Fatalf("expected session_id to be cleared, got %q", output.Context.SessionID)
+	}
+	if output.Context.ParticipantID != "" {
+		t.Fatalf("expected participant_id to be cleared, got %q", output.Context.ParticipantID)
+	}
+	// Verify context was cleared on server
+	currentCtx := server.getContext()
+	if currentCtx.SessionID != "" {
+		t.Fatalf("expected server context session id to be cleared, got %q", currentCtx.SessionID)
+	}
+	if currentCtx.ParticipantID != "" {
+		t.Fatalf("expected server context participant id to be cleared, got %q", currentCtx.ParticipantID)
+	}
+}
+
+// TestSetContextHandlerGetSetContextIntegration tests getContext/setContext integration.
+func TestSetContextHandlerGetSetContextIntegration(t *testing.T) {
+	campaignClient := &fakeCampaignClient{
+		getCampaignResponse: &campaignv1.GetCampaignResponse{
+			Campaign: &campaignv1.Campaign{Id: "camp-123"},
+		},
+		getParticipantResponse: &campaignv1.GetParticipantResponse{
+			Participant: &campaignv1.Participant{
+				Id:         "part-456",
+				CampaignId: "camp-123",
+			},
+		},
+	}
+	sessionClient := &fakeSessionClient{
+		getSessionResponse: &sessionv1.GetSessionResponse{
+			Session: &sessionv1.Session{
+				Id:         "sess-789",
+				CampaignId: "camp-123",
+			},
+		},
+	}
+	server := &Server{}
+	handler := domain.SetContextHandler(campaignClient, sessionClient, server.setContext, server.getContext)
+
+	// Set context
+	_, output1, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.SetContextInput{
+		CampaignID:    "camp-123",
+		SessionID:     "sess-789",
+		ParticipantID: "part-456",
+	})
+	if err != nil {
+		t.Fatalf("set context: %v", err)
+	}
+
+	// Verify output matches server context
+	currentCtx := server.getContext()
+	if output1.Context.CampaignID != currentCtx.CampaignID {
+		t.Fatalf("output campaign id %q != server context %q", output1.Context.CampaignID, currentCtx.CampaignID)
+	}
+	if output1.Context.SessionID != currentCtx.SessionID {
+		t.Fatalf("output session id %q != server context %q", output1.Context.SessionID, currentCtx.SessionID)
+	}
+	if output1.Context.ParticipantID != currentCtx.ParticipantID {
+		t.Fatalf("output participant id %q != server context %q", output1.Context.ParticipantID, currentCtx.ParticipantID)
+	}
+
+	// Set context again with different values
+	_, output2, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.SetContextInput{
+		CampaignID: "camp-123",
+		// Only campaign, no session or participant
+	})
+	if err != nil {
+		t.Fatalf("set context again: %v", err)
+	}
+
+	// Verify output matches updated server context
+	currentCtx2 := server.getContext()
+	if output2.Context.CampaignID != currentCtx2.CampaignID {
+		t.Fatalf("output2 campaign id %q != server context %q", output2.Context.CampaignID, currentCtx2.CampaignID)
+	}
+	if output2.Context.SessionID != currentCtx2.SessionID {
+		t.Fatalf("output2 session id %q != server context %q", output2.Context.SessionID, currentCtx2.SessionID)
+	}
+	if output2.Context.ParticipantID != currentCtx2.ParticipantID {
+		t.Fatalf("output2 participant id %q != server context %q", output2.Context.ParticipantID, currentCtx2.ParticipantID)
 	}
 }
 
