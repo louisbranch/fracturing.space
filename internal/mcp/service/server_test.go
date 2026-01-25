@@ -662,6 +662,18 @@ func TestDualityProbabilityHandlerMapsRequestAndResponse(t *testing.T) {
 	if len(output.OutcomeCounts) != 5 {
 		t.Fatalf("expected 5 outcome counts, got %d", len(output.OutcomeCounts))
 	}
+	expectedOutcomes := []pb.Outcome{
+		pb.Outcome_CRITICAL_SUCCESS,
+		pb.Outcome_SUCCESS_WITH_HOPE,
+		pb.Outcome_SUCCESS_WITH_FEAR,
+		pb.Outcome_FAILURE_WITH_HOPE,
+		pb.Outcome_FAILURE_WITH_FEAR,
+	}
+	for i, expectedOutcome := range expectedOutcomes {
+		if output.OutcomeCounts[i].Outcome != expectedOutcome.String() {
+			t.Fatalf("outcome[%d] = %q, want %q", i, output.OutcomeCounts[i].Outcome, expectedOutcome.String())
+		}
+	}
 }
 
 // TestRollDiceHandlerPassesMissingDice ensures gRPC receives empty dice.
