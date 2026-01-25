@@ -48,7 +48,7 @@ func TestCreateActorSuccess(t *testing.T) {
 		clock: func() time.Time {
 			return fixedTime
 		},
-		actorIDGen: func() (string, error) {
+		idGenerator: func() (string, error) {
 			return "actor-456", nil
 		},
 	}
@@ -129,7 +129,7 @@ func TestCreateActorValidationErrors(t *testing.T) {
 			Actor:    &fakeActorStore{},
 		},
 		clock:      time.Now,
-		actorIDGen: func() (string, error) { return "actor-1", nil },
+		idGenerator: func() (string, error) { return "actor-1", nil },
 	}
 
 	for _, tt := range tests {
@@ -160,7 +160,7 @@ func TestCreateActorCampaignNotFound(t *testing.T) {
 			Actor:    &fakeActorStore{},
 		},
 		clock:      time.Now,
-		actorIDGen: func() (string, error) { return "actor-1", nil },
+		idGenerator: func() (string, error) { return "actor-1", nil },
 	}
 
 	_, err := service.CreateActor(context.Background(), &campaignv1.CreateActorRequest{
@@ -212,7 +212,7 @@ func TestCreateActorStoreFailure(t *testing.T) {
 			Actor:    actorStore,
 		},
 		clock:      time.Now,
-		actorIDGen: func() (string, error) { return "actor-123", nil },
+		idGenerator: func() (string, error) { return "actor-123", nil },
 	}
 
 	_, err := service.CreateActor(context.Background(), &campaignv1.CreateActorRequest{
@@ -250,7 +250,7 @@ func TestCreateActorNPCKind(t *testing.T) {
 		clock: func() time.Time {
 			return fixedTime
 		},
-		actorIDGen: func() (string, error) {
+		idGenerator: func() (string, error) {
 			return "actor-789", nil
 		},
 	}

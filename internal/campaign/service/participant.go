@@ -44,7 +44,7 @@ func (s *CampaignService) CreateParticipant(ctx context.Context, in *campaignv1.
 		DisplayName: in.GetDisplayName(),
 		Role:        participantRoleFromProto(in.GetRole()),
 		Controller:  controllerFromProto(in.GetController()),
-	}, s.clock, s.participantIDGen)
+	}, s.clock, s.idGenerator)
 	if err != nil {
 		if errors.Is(err, domain.ErrEmptyDisplayName) || errors.Is(err, domain.ErrInvalidParticipantRole) || errors.Is(err, domain.ErrEmptyCampaignID) {
 			return nil, status.Error(codes.InvalidArgument, err.Error())

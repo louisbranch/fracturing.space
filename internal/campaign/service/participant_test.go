@@ -34,7 +34,7 @@ func TestCreateParticipantSuccess(t *testing.T) {
 		clock: func() time.Time {
 			return fixedTime
 		},
-		participantIDGen: func() (string, error) {
+		idGenerator: func() (string, error) {
 			return "part-456", nil
 		},
 	}
@@ -96,7 +96,7 @@ func TestCreateParticipantIncrementsPlayerCount(t *testing.T) {
 		clock: func() time.Time {
 			return fixedTime
 		},
-		participantIDGen: func() (string, error) {
+		idGenerator: func() (string, error) {
 			return "part-789", nil
 		},
 	}
@@ -139,7 +139,7 @@ func TestCreateParticipantDoesNotIncrementForGM(t *testing.T) {
 			Participant: participantStore,
 		},
 		clock:            time.Now,
-		participantIDGen: func() (string, error) {
+		idGenerator: func() (string, error) {
 			return "part-999", nil
 		},
 	}
@@ -172,7 +172,7 @@ func TestCreateParticipantDefaultsController(t *testing.T) {
 			Participant: participantStore,
 		},
 		clock:            time.Now,
-		participantIDGen: func() (string, error) { return "part-1", nil },
+		idGenerator: func() (string, error) { return "part-1", nil },
 	}
 
 	response, err := service.CreateParticipant(context.Background(), &campaignv1.CreateParticipantRequest{
@@ -230,7 +230,7 @@ func TestCreateParticipantValidationErrors(t *testing.T) {
 			Participant: &fakeParticipantStore{},
 		},
 		clock:            time.Now,
-		participantIDGen: func() (string, error) { return "part-1", nil },
+		idGenerator: func() (string, error) { return "part-1", nil },
 	}
 
 	for _, tt := range tests {
@@ -261,7 +261,7 @@ func TestCreateParticipantCampaignNotFound(t *testing.T) {
 			Participant: &fakeParticipantStore{},
 		},
 		clock:            time.Now,
-		participantIDGen: func() (string, error) { return "part-1", nil },
+		idGenerator: func() (string, error) { return "part-1", nil },
 	}
 
 	_, err := service.CreateParticipant(context.Background(), &campaignv1.CreateParticipantRequest{
@@ -313,7 +313,7 @@ func TestCreateParticipantStoreFailure(t *testing.T) {
 			Participant: participantStore,
 		},
 		clock:            time.Now,
-		participantIDGen: func() (string, error) { return "part-123", nil },
+		idGenerator: func() (string, error) { return "part-123", nil },
 	}
 
 	_, err := service.CreateParticipant(context.Background(), &campaignv1.CreateParticipantRequest{
@@ -355,7 +355,7 @@ func TestCreateParticipantCampaignUpdateFailure(t *testing.T) {
 		clock: func() time.Time {
 			return fixedTime
 		},
-		participantIDGen: func() (string, error) {
+		idGenerator: func() (string, error) {
 			return "part-456", nil
 		},
 	}

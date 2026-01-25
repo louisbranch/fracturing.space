@@ -31,21 +31,17 @@ type Stores struct {
 // CampaignService implements the CampaignService gRPC API.
 type CampaignService struct {
 	campaignv1.UnimplementedCampaignServiceServer
-	stores           Stores
-	clock            func() time.Time
-	idGenerator      func() (string, error)
-	participantIDGen func() (string, error)
-	actorIDGen       func() (string, error)
+	stores      Stores
+	clock       func() time.Time
+	idGenerator func() (string, error)
 }
 
 // NewCampaignService creates a CampaignService with default dependencies.
 func NewCampaignService(stores Stores) *CampaignService {
 	return &CampaignService{
-		stores:           stores,
-		clock:            time.Now,
-		idGenerator:      domain.NewID,
-		participantIDGen: domain.NewID,
-		actorIDGen:       domain.NewID,
+		stores:      stores,
+		clock:       time.Now,
+		idGenerator: domain.NewID,
 	}
 }
 
@@ -198,7 +194,7 @@ func (s *CampaignService) CreateActor(ctx context.Context, in *campaignv1.Create
 		Name:       in.GetName(),
 		Kind:       actorKindFromProto(in.GetKind()),
 		Notes:      in.GetNotes(),
-	}, s.clock, s.actorIDGen)
+	}, s.clock, s.idGenerator)
 	if err != nil {
 		if errors.Is(err, domain.ErrEmptyActorName) || errors.Is(err, domain.ErrInvalidActorKind) || errors.Is(err, domain.ErrEmptyCampaignID) {
 			return nil, status.Error(codes.InvalidArgument, err.Error())
