@@ -98,6 +98,7 @@ func Run(ctx context.Context, cfg Config) error {
 
 // runWithHTTPTransport creates a server and serves it over HTTP transport.
 func runWithHTTPTransport(ctx context.Context, cfg Config) error {
+	// Default to localhost-only binding for security
 	httpAddr := cfg.HTTPAddr
 	if httpAddr == "" {
 		httpAddr = "localhost:8081"

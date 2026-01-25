@@ -29,7 +29,6 @@ type HTTPTransport struct {
 	sessions     map[string]*httpSession
 	sessionsMu   sync.RWMutex
 	httpServer   *http.Server
-	connChan     chan *httpConnection
 	serverCtx    context.Context
 	serverCancel context.CancelFunc
 	serverOnceMu sync.Mutex
@@ -59,7 +58,7 @@ type httpConnection struct {
 
 // NewHTTPTransport creates a new HTTP transport that will serve MCP over HTTP.
 func NewHTTPTransport(addr string) *HTTPTransport {
-	// TODO: Bind HTTP server to localhost only by default (not 0.0.0.0) for security
+	// Default to localhost-only binding for security
 	if addr == "" {
 		addr = "localhost:8081"
 	}
@@ -67,7 +66,6 @@ func NewHTTPTransport(addr string) *HTTPTransport {
 	return &HTTPTransport{
 		addr:         addr,
 		sessions:     make(map[string]*httpSession),
-		connChan:     make(chan *httpConnection, 10),
 		serverCtx:    ctx,
 		serverCancel: cancel,
 		serverOnce:   make(map[string]*sync.Once),
@@ -106,12 +104,6 @@ func (t *HTTPTransport) Connect(ctx context.Context) (mcp.Connection, error) {
 	t.sessionsMu.Lock()
 	t.sessions[sessionID] = session
 	t.sessionsMu.Unlock()
-
-	// Notify that a new connection is available
-	select {
-	case t.connChan <- conn:
-	default:
-	}
 
 	return conn, nil
 }
