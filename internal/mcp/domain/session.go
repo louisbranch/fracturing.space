@@ -77,6 +77,8 @@ func sessionStatusToString(status sessionv1.SessionStatus) string {
 		return "PAUSED"
 	case sessionv1.SessionStatus_ENDED:
 		return "ENDED"
+	case sessionv1.SessionStatus_STATUS_UNSPECIFIED:
+		return "UNSPECIFIED"
 	default:
 		return "UNSPECIFIED"
 	}
