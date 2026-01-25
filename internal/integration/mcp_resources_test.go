@@ -4,6 +4,7 @@ package integration
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -34,6 +35,20 @@ func runMCPResourcesTests(t *testing.T, suite *integrationSuite) {
 		}
 		if resource.MIMEType != "application/json" {
 			t.Fatalf("expected resource MIME application/json, got %q", resource.MIMEType)
+		}
+
+		participantResource, found := findResource(result.Resources, "participant_list")
+		if !found {
+			t.Fatal("expected participant_list resource")
+		}
+		if !strings.HasPrefix(participantResource.URI, "campaign://") {
+			t.Fatalf("expected resource URI to start with campaign://, got %q", participantResource.URI)
+		}
+		if !strings.HasSuffix(participantResource.URI, "/participants") {
+			t.Fatalf("expected resource URI to end with /participants, got %q", participantResource.URI)
+		}
+		if participantResource.MIMEType != "application/json" {
+			t.Fatalf("expected resource MIME application/json, got %q", participantResource.MIMEType)
 		}
 	})
 }

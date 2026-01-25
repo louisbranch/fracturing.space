@@ -32,6 +32,10 @@ For an OpenCode client configuration, see `opencode.jsonc`.
 
 - `campaigns://list`: JSON listing of campaign metadata records (id, name, gm_mode,
   player_slots, theme_prompt, created_at, updated_at).
+- `campaign://{campaign_id}/participants`: JSON listing of participants for a campaign
+  (id, campaign_id, display_name, role, controller, created_at, updated_at). The
+  `{campaign_id}` must be replaced with an actual campaign identifier when reading
+  the resource.
 
 Planned MCP resources that will expand what the client can ask the MCP server to
 retrieve or manage:

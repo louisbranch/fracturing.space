@@ -24,4 +24,5 @@ func registerCampaignTools(mcpServer *mcp.Server, client campaignv1.CampaignServ
 // registerCampaignResources registers readable campaign MCP resources.
 func registerCampaignResources(mcpServer *mcp.Server, client campaignv1.CampaignServiceClient) {
 	mcpServer.AddResource(domain.CampaignListResource(), domain.CampaignListResourceHandler(client))
+	mcpServer.AddResource(domain.ParticipantListResource(), domain.ParticipantListResourceHandler(client))
 }
