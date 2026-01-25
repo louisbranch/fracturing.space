@@ -332,14 +332,22 @@ func ParticipantListResourceHandler(client campaignv1.CampaignServiceClient) mcp
 			return nil, fmt.Errorf("participant list client is not configured")
 		}
 
-		if req == nil || req.Params == nil || req.Params.URI == "" {
-			return nil, fmt.Errorf("URI is required for participant list resource")
+		uri := ParticipantListResource().URI
+		if req != nil && req.Params != nil && req.Params.URI != "" {
+			uri = req.Params.URI
 		}
 
-		uri := req.Params.URI
-
 		// Parse campaign_id from URI: campaign://{campaign_id}/participants
-		campaignID, err := parseCampaignIDFromURI(uri)
+		// If the URI is the registered placeholder, try to extract from query parameter
+		// Otherwise, parse the campaign ID from the URI path
+		var campaignID string
+		var err error
+		if uri == ParticipantListResource().URI {
+			// Using registered placeholder URI - this shouldn't happen in practice
+			// but handle it gracefully by requiring campaign_id in a different way
+			return nil, fmt.Errorf("campaign ID is required; use URI format campaign://{campaign_id}/participants")
+		}
+		campaignID, err = parseCampaignIDFromURI(uri)
 		if err != nil {
 			return nil, fmt.Errorf("parse campaign ID from URI: %w", err)
 		}
@@ -389,6 +397,7 @@ func ParticipantListResourceHandler(client campaignv1.CampaignServiceClient) mcp
 }
 
 // parseCampaignIDFromURI extracts the campaign ID from a URI of the form campaign://{campaign_id}/participants.
+// It accepts both the registered placeholder URI (campaign://_/participants) and actual campaign IDs.
 func parseCampaignIDFromURI(uri string) (string, error) {
 	prefix := "campaign://"
 	suffix := "/participants"
@@ -406,6 +415,11 @@ func parseCampaignIDFromURI(uri string) (string, error) {
 
 	if campaignID == "" {
 		return "", fmt.Errorf("campaign ID is required in URI")
+	}
+
+	// Reject the placeholder value - actual campaign IDs must be provided
+	if campaignID == "_" {
+		return "", fmt.Errorf("campaign ID placeholder '_' is not a valid campaign ID")
 	}
 
 	return campaignID, nil

@@ -1139,6 +1139,120 @@ func TestParticipantCreateHandlerRejectsEmptyResponse(t *testing.T) {
 	}
 }
 
+// TestParticipantListResourceHandlerMapsResponse ensures JSON payload is formatted correctly.
+func TestParticipantListResourceHandlerMapsResponse(t *testing.T) {
+	now := time.Date(2026, 1, 23, 13, 0, 0, 0, time.UTC)
+	campaignID := "camp-456"
+	client := &fakeCampaignClient{listParticipantsResponse: &campaignv1.ListParticipantsResponse{
+		Participants: []*campaignv1.Participant{{
+			Id:          "part-1",
+			CampaignId:  campaignID,
+			DisplayName: "Test Player",
+			Role:        campaignv1.ParticipantRole_PLAYER,
+			Controller:  campaignv1.Controller_CONTROLLER_HUMAN,
+			CreatedAt:   timestamppb.New(now),
+			UpdatedAt:   timestamppb.New(now.Add(time.Hour)),
+		}, {
+			Id:          "part-2",
+			CampaignId:  campaignID,
+			DisplayName: "Test GM",
+			Role:        campaignv1.ParticipantRole_GM,
+			Controller:  campaignv1.Controller_CONTROLLER_AI,
+			CreatedAt:   timestamppb.New(now),
+			UpdatedAt:   timestamppb.New(now),
+		}},
+	}}
+
+	handler := domain.ParticipantListResourceHandler(client)
+	resourceURI := "campaign://" + campaignID + "/participants"
+	result, err := handler(context.Background(), &mcp.ReadResourceRequest{
+		Params: &mcp.ReadResourceParams{URI: resourceURI},
+	})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if result == nil || len(result.Contents) != 1 {
+		t.Fatalf("expected 1 content item, got %v", result)
+	}
+	if client.lastListParticipantsRequest == nil {
+		t.Fatal("expected list participants request")
+	}
+	if client.lastListParticipantsRequest.GetCampaignId() != campaignID {
+		t.Fatalf("expected campaign id %q, got %q", campaignID, client.lastListParticipantsRequest.GetCampaignId())
+	}
+	if client.lastListParticipantsRequest.GetPageSize() != 10 {
+		t.Fatalf("expected page size 10, got %d", client.lastListParticipantsRequest.GetPageSize())
+	}
+
+	var payload struct {
+		Participants []struct {
+			ID          string `json:"id"`
+			CampaignID  string `json:"campaign_id"`
+			DisplayName string `json:"display_name"`
+			Role        string `json:"role"`
+			Controller  string `json:"controller"`
+			CreatedAt   string `json:"created_at"`
+			UpdatedAt   string `json:"updated_at"`
+		} `json:"participants"`
+	}
+	if err := json.Unmarshal([]byte(result.Contents[0].Text), &payload); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+	if len(payload.Participants) != 2 {
+		t.Fatalf("expected 2 participants, got %d", len(payload.Participants))
+	}
+	if payload.Participants[0].ID != "part-1" {
+		t.Fatalf("expected first participant id part-1, got %q", payload.Participants[0].ID)
+	}
+	if payload.Participants[0].Role != "PLAYER" {
+		t.Fatalf("expected first participant role PLAYER, got %q", payload.Participants[0].Role)
+	}
+	if payload.Participants[1].ID != "part-2" {
+		t.Fatalf("expected second participant id part-2, got %q", payload.Participants[1].ID)
+	}
+	if payload.Participants[1].Role != "GM" {
+		t.Fatalf("expected second participant role GM, got %q", payload.Participants[1].Role)
+	}
+	if payload.Participants[0].CreatedAt != now.Format(time.RFC3339) {
+		t.Fatalf("expected created_at %q, got %q", now.Format(time.RFC3339), payload.Participants[0].CreatedAt)
+	}
+	if result.Contents[0].URI != resourceURI {
+		t.Fatalf("expected resource URI %q, got %q", resourceURI, result.Contents[0].URI)
+	}
+}
+
+// TestParticipantListResourceHandlerRejectsPlaceholder ensures placeholder campaign ID is rejected.
+func TestParticipantListResourceHandlerRejectsPlaceholder(t *testing.T) {
+	client := &fakeCampaignClient{}
+	handler := domain.ParticipantListResourceHandler(client)
+
+	result, err := handler(context.Background(), &mcp.ReadResourceRequest{
+		Params: &mcp.ReadResourceParams{URI: "campaign://_/participants"},
+	})
+	if err == nil {
+		t.Fatal("expected error for placeholder campaign ID")
+	}
+	if result != nil {
+		t.Fatal("expected nil result on error")
+	}
+}
+
+// TestParticipantListResourceHandlerReturnsClientError ensures list errors are returned.
+func TestParticipantListResourceHandlerReturnsClientError(t *testing.T) {
+	client := &fakeCampaignClient{listParticipantsErr: errors.New("boom")}
+	handler := domain.ParticipantListResourceHandler(client)
+
+	result, err := handler(context.Background(), &mcp.ReadResourceRequest{
+		Params: &mcp.ReadResourceParams{URI: "campaign://camp-123/participants"},
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if result != nil {
+		t.Fatal("expected nil result on error")
+	}
+}
+
 // intPointer returns an int pointer for test inputs.
 func intPointer(value int) *int {
 	return &value
