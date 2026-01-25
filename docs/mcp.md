@@ -424,7 +424,23 @@ Rolls arbitrary dice pools and returns the individual results.
 
 Returns a JSON object with a `campaigns` array of campaign metadata records. No dependencies.
 
-Each entry in `campaigns` has fields: `id`, `name`, `gm_mode`, `player_count`, `theme_prompt`, `created_at`, `updated_at`.
+**Response:**
+
+```json
+{
+  "campaigns": [
+    {
+      "id": "camp_abc123",
+      "name": "The Lost Expedition",
+      "gm_mode": "HUMAN",
+      "player_count": 3,
+      "theme_prompt": "A dark fantasy campaign set in a cursed forest",
+      "created_at": "2025-01-15T10:00:00Z",
+      "updated_at": "2025-01-15T10:00:00Z"
+    }
+  ]
+}
+```
 
 #### campaign://{campaign_id}/participants
 
@@ -432,7 +448,23 @@ JSON listing of participants for a campaign. Depends on campaign (requires `camp
 
 The `{campaign_id}` must be replaced with an actual campaign identifier when reading the resource.
 
-Fields: `id`, `campaign_id`, `display_name`, `role`, `controller`, `created_at`, `updated_at`.
+**Response:**
+
+```json
+{
+  "participants": [
+    {
+      "id": "part_xyz789",
+      "campaign_id": "camp_abc123",
+      "display_name": "Alice",
+      "role": "PLAYER",
+      "controller": "HUMAN",
+      "created_at": "2025-01-15T10:30:00Z",
+      "updated_at": "2025-01-15T10:30:00Z"
+    }
+  ]
+}
+```
 
 #### campaign://{campaign_id}/actors
 
@@ -440,7 +472,23 @@ JSON listing of actors for a campaign. Depends on campaign (requires `campaign_i
 
 The `{campaign_id}` must be replaced with an actual campaign identifier when reading the resource.
 
-Fields: `id`, `campaign_id`, `name`, `kind`, `notes`, `created_at`, `updated_at`.
+**Response:**
+
+```json
+{
+  "actors": [
+    {
+      "id": "actor_def456",
+      "campaign_id": "camp_abc123",
+      "name": "Thorin Ironforge",
+      "kind": "PC",
+      "notes": "Dwarf warrior with a mysterious past",
+      "created_at": "2025-01-15T10:35:00Z",
+      "updated_at": "2025-01-15T10:35:00Z"
+    }
+  ]
+}
+```
 
 #### campaign://{campaign_id}/sessions
 
@@ -448,12 +496,21 @@ JSON listing of sessions for a campaign. Depends on campaign (requires `campaign
 
 The `{campaign_id}` must be replaced with an actual campaign identifier when reading the resource.
 
-Fields: `id`, `campaign_id`, `name`, `status`, `started_at`, `updated_at`, `ended_at` (optional).
+**Response:**
 
-Planned MCP resources that will expand what the client can ask the MCP server to
-retrieve or manage:
+```json
+{
+  "sessions": [
+    {
+      "id": "sess_ghi789",
+      "campaign_id": "camp_abc123",
+      "name": "Session 1: The Journey Begins",
+      "status": "ACTIVE",
+      "started_at": "2025-01-15T11:00:00Z",
+      "updated_at": "2025-01-15T11:00:00Z"
+    }
+  ]
+}
+```
 
-- Campaign lookup by id.
-- Session state, GM state, and actor records for active campaigns.
-- Event streams for campaign timelines.
-- MCP services: `duality.v1.DualityService` and `campaign.v1.CampaignService` over gRPC.
+Note: The `ended_at` field is optional and only present for sessions that have ended.
