@@ -834,9 +834,8 @@ func TestCampaignCreateHandlerReturnsClientError(t *testing.T) {
 	handler := domain.CampaignCreateHandler(client)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.CampaignCreateInput{
-		Name:        "New Campaign",
-		GmMode:      "HUMAN",
-		PlayerSlots: 4,
+		Name:   "New Campaign",
+		GmMode: "HUMAN",
 	})
 	if err == nil {
 		t.Fatal("expected error")
@@ -854,7 +853,7 @@ func TestCampaignCreateHandlerMapsRequestAndResponse(t *testing.T) {
 			Id:          "camp-123",
 			Name:        "Snowbound",
 			GmMode:      campaignv1.GmMode_AI,
-			PlayerSlots: 5,
+			PlayerCount: 5,
 			ThemePrompt: "ice and steel",
 			CreatedAt:   timestamppb.New(now),
 			UpdatedAt:   timestamppb.New(now),
@@ -866,7 +865,6 @@ func TestCampaignCreateHandlerMapsRequestAndResponse(t *testing.T) {
 		domain.CampaignCreateInput{
 			Name:        "Snowbound",
 			GmMode:      "HUMAN",
-			PlayerSlots: 5,
 			ThemePrompt: "ice and steel",
 		},
 	)
@@ -888,8 +886,8 @@ func TestCampaignCreateHandlerMapsRequestAndResponse(t *testing.T) {
 	if output.GmMode != "AI" {
 		t.Fatalf("expected gm mode AI, got %q", output.GmMode)
 	}
-	if output.PlayerSlots != 5 {
-		t.Fatalf("expected player slots 5, got %d", output.PlayerSlots)
+	if output.PlayerCount != 5 {
+		t.Fatalf("expected player count 5, got %d", output.PlayerCount)
 	}
 }
 
@@ -932,7 +930,7 @@ func TestCampaignListResourceHandlerMapsResponse(t *testing.T) {
 			Id:          "camp-1",
 			Name:        "Red Sands",
 			GmMode:      campaignv1.GmMode_HUMAN,
-			PlayerSlots: 4,
+			PlayerCount: 4,
 			ThemePrompt: "desert skies",
 			CreatedAt:   timestamppb.New(now),
 			UpdatedAt:   timestamppb.New(now.Add(time.Hour)),
@@ -966,7 +964,7 @@ func TestCampaignListResourceHandlerMapsResponse(t *testing.T) {
 			ID          string `json:"id"`
 			Name        string `json:"name"`
 			GmMode      string `json:"gm_mode"`
-			PlayerSlots int    `json:"player_slots"`
+			PlayerCount int    `json:"player_count"`
 			ThemePrompt string `json:"theme_prompt"`
 			CreatedAt   string `json:"created_at"`
 			UpdatedAt   string `json:"updated_at"`

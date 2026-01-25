@@ -27,11 +27,8 @@ message CreateCampaignRequest {
   // The mode of GM participation.
   GmMode gm_mode = 2;
 
-  // Number of available player slots.
-  int32 player_slots = 3;
-
   // Optional free-form theme prompt for assistants.
-  string theme_prompt = 4;
+  string theme_prompt = 3;
 }
 
 message CreateCampaignResponse {
@@ -57,7 +54,8 @@ message Campaign {
   string id = 1;
   string name = 2;
   GmMode gm_mode = 3;
-  int32 player_slots = 4;
+  // Number of registered players for this campaign.
+  int32 player_count = 4;
   string theme_prompt = 5;
   google.protobuf.Timestamp created_at = 6;
   google.protobuf.Timestamp updated_at = 7;

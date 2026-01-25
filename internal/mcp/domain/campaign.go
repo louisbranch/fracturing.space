@@ -16,7 +16,6 @@ import (
 type CampaignCreateInput struct {
 	Name        string `json:"name" jsonschema:"campaign name"`
 	GmMode      string `json:"gm_mode" jsonschema:"gm mode (HUMAN, AI, HYBRID)"`
-	PlayerSlots int    `json:"player_slots" jsonschema:"number of player slots"`
 	ThemePrompt string `json:"theme_prompt,omitempty" jsonschema:"optional theme prompt"`
 }
 
@@ -25,7 +24,7 @@ type CampaignCreateResult struct {
 	ID          string `json:"id" jsonschema:"campaign identifier"`
 	Name        string `json:"name" jsonschema:"campaign name"`
 	GmMode      string `json:"gm_mode" jsonschema:"gm mode"`
-	PlayerSlots int    `json:"player_slots" jsonschema:"number of player slots"`
+	PlayerCount int    `json:"player_count" jsonschema:"number of registered players"`
 	ThemePrompt string `json:"theme_prompt" jsonschema:"theme prompt"`
 }
 
@@ -34,7 +33,7 @@ type CampaignListEntry struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
 	GmMode      string `json:"gm_mode"`
-	PlayerSlots int    `json:"player_slots"`
+	PlayerCount int    `json:"player_count"`
 	ThemePrompt string `json:"theme_prompt"`
 	CreatedAt   string `json:"created_at"`
 	UpdatedAt   string `json:"updated_at"`
@@ -130,7 +129,6 @@ func CampaignCreateHandler(client campaignv1.CampaignServiceClient) mcp.ToolHand
 		response, err := client.CreateCampaign(runCtx, &campaignv1.CreateCampaignRequest{
 			Name:        input.Name,
 			GmMode:      gmModeFromString(input.GmMode),
-			PlayerSlots: int32(input.PlayerSlots),
 			ThemePrompt: input.ThemePrompt,
 		})
 		if err != nil {
@@ -144,7 +142,7 @@ func CampaignCreateHandler(client campaignv1.CampaignServiceClient) mcp.ToolHand
 			ID:          response.Campaign.GetId(),
 			Name:        response.Campaign.GetName(),
 			GmMode:      gmModeToString(response.Campaign.GetGmMode()),
-			PlayerSlots: int(response.Campaign.GetPlayerSlots()),
+			PlayerCount: int(response.Campaign.GetPlayerCount()),
 			ThemePrompt: response.Campaign.GetThemePrompt(),
 		}
 
@@ -184,7 +182,7 @@ func CampaignListResourceHandler(client campaignv1.CampaignServiceClient) mcp.Re
 				ID:          campaign.GetId(),
 				Name:        campaign.GetName(),
 				GmMode:      gmModeToString(campaign.GetGmMode()),
-				PlayerSlots: int(campaign.GetPlayerSlots()),
+				PlayerCount: int(campaign.GetPlayerCount()),
 				ThemePrompt: campaign.GetThemePrompt(),
 				CreatedAt:   formatTimestamp(campaign.GetCreatedAt()),
 				UpdatedAt:   formatTimestamp(campaign.GetUpdatedAt()),

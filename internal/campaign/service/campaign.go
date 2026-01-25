@@ -54,11 +54,10 @@ func (s *CampaignService) CreateCampaign(ctx context.Context, in *campaignv1.Cre
 	campaign, err := domain.CreateCampaign(domain.CreateCampaignInput{
 		Name:        in.GetName(),
 		GmMode:      gmModeFromProto(in.GetGmMode()),
-		PlayerSlots: int(in.GetPlayerSlots()),
 		ThemePrompt: in.GetThemePrompt(),
 	}, s.clock, s.idGenerator)
 	if err != nil {
-		if errors.Is(err, domain.ErrEmptyName) || errors.Is(err, domain.ErrInvalidGmMode) || errors.Is(err, domain.ErrInvalidPlayerSlots) {
+		if errors.Is(err, domain.ErrEmptyName) || errors.Is(err, domain.ErrInvalidGmMode) {
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
 		return nil, status.Errorf(codes.Internal, "create campaign: %v", err)
@@ -76,7 +75,7 @@ func (s *CampaignService) CreateCampaign(ctx context.Context, in *campaignv1.Cre
 			Id:          campaign.ID,
 			Name:        campaign.Name,
 			GmMode:      gmModeToProto(campaign.GmMode),
-			PlayerSlots: int32(campaign.PlayerSlots),
+			PlayerCount: int32(campaign.PlayerCount),
 			ThemePrompt: campaign.ThemePrompt,
 			CreatedAt:   timestamppb.New(campaign.CreatedAt),
 			UpdatedAt:   timestamppb.New(campaign.UpdatedAt),
@@ -122,7 +121,7 @@ func (s *CampaignService) ListCampaigns(ctx context.Context, in *campaignv1.List
 			Id:          campaign.ID,
 			Name:        campaign.Name,
 			GmMode:      gmModeToProto(campaign.GmMode),
-			PlayerSlots: int32(campaign.PlayerSlots),
+			PlayerCount: int32(campaign.PlayerCount),
 			ThemePrompt: campaign.ThemePrompt,
 			CreatedAt:   timestamppb.New(campaign.CreatedAt),
 			UpdatedAt:   timestamppb.New(campaign.UpdatedAt),

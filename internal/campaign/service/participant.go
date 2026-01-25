@@ -31,7 +31,7 @@ func (s *CampaignService) RegisterParticipant(ctx context.Context, in *campaignv
 	if campaignID == "" {
 		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
 	}
-	_, err := s.store.Get(ctx, campaignID)
+	campaign, err := s.store.Get(ctx, campaignID)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			return nil, status.Error(codes.NotFound, "campaign not found")
@@ -54,6 +54,18 @@ func (s *CampaignService) RegisterParticipant(ctx context.Context, in *campaignv
 
 	if err := s.participantStore.PutParticipant(ctx, participant); err != nil {
 		return nil, status.Errorf(codes.Internal, "persist participant: %v", err)
+	}
+
+	// Increment player count if the participant is a player
+	if participant.Role == domain.ParticipantRolePlayer {
+		// TODO: Fix race condition - Get and Put are not atomic. If multiple players
+		// register concurrently, the player count may be incorrect. Consider using
+		// transactions or atomic increment operations if the storage layer supports them.
+		campaign.PlayerCount++
+		campaign.UpdatedAt = s.clock().UTC()
+		if err := s.store.Put(ctx, campaign); err != nil {
+			return nil, status.Errorf(codes.Internal, "update campaign player count: %v", err)
+		}
 	}
 
 	response := &campaignv1.RegisterParticipantResponse{

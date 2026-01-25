@@ -63,7 +63,6 @@ func runMCPResourcesTests(t *testing.T, suite *integrationSuite) {
 			Arguments: map[string]any{
 				"name":         "Participant Test Campaign",
 				"gm_mode":      "AI",
-				"player_slots": 3,
 				"theme_prompt": "test theme",
 			},
 		}

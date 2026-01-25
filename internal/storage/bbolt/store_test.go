@@ -24,7 +24,7 @@ func TestCampaignStorePutGet(t *testing.T) {
 		ID:          "camp-123",
 		Name:        "Snowbound",
 		GmMode:      domain.GmModeAI,
-		PlayerSlots: 4,
+		PlayerCount: 4,
 		ThemePrompt: "ice and steel",
 		CreatedAt:   now,
 		UpdatedAt:   now,
@@ -47,8 +47,8 @@ func TestCampaignStorePutGet(t *testing.T) {
 	if loaded.GmMode != campaign.GmMode {
 		t.Fatalf("expected gm mode %v, got %v", campaign.GmMode, loaded.GmMode)
 	}
-	if loaded.PlayerSlots != campaign.PlayerSlots {
-		t.Fatalf("expected player slots %d, got %d", campaign.PlayerSlots, loaded.PlayerSlots)
+	if loaded.PlayerCount != campaign.PlayerCount {
+		t.Fatalf("expected player count %d, got %d", campaign.PlayerCount, loaded.PlayerCount)
 	}
 	if loaded.ThemePrompt != campaign.ThemePrompt {
 		t.Fatalf("expected theme prompt %q, got %q", campaign.ThemePrompt, loaded.ThemePrompt)
@@ -147,7 +147,7 @@ func TestCampaignStoreListPagination(t *testing.T) {
 			ID:          "camp-1",
 			Name:        "A",
 			GmMode:      domain.GmModeAI,
-			PlayerSlots: 2,
+			PlayerCount: 2,
 			CreatedAt:   now,
 			UpdatedAt:   now,
 		},
@@ -155,7 +155,7 @@ func TestCampaignStoreListPagination(t *testing.T) {
 			ID:          "camp-2",
 			Name:        "B",
 			GmMode:      domain.GmModeHuman,
-			PlayerSlots: 3,
+			PlayerCount: 3,
 			CreatedAt:   now,
 			UpdatedAt:   now,
 		},
@@ -163,7 +163,7 @@ func TestCampaignStoreListPagination(t *testing.T) {
 			ID:          "camp-3",
 			Name:        "C",
 			GmMode:      domain.GmModeHybrid,
-			PlayerSlots: 4,
+			PlayerCount: 4,
 			CreatedAt:   now,
 			UpdatedAt:   now,
 		},
