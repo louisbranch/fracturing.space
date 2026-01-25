@@ -93,7 +93,6 @@ func TestCreateCampaignSuccess(t *testing.T) {
 	response, err := service.CreateCampaign(context.Background(), &campaignv1.CreateCampaignRequest{
 		Name:        "  First Steps ",
 		GmMode:      campaignv1.GmMode_HYBRID,
-		PlayerSlots: 5,
 		ThemePrompt: "gentle hills",
 	})
 	if err != nil {
@@ -111,8 +110,8 @@ func TestCreateCampaignSuccess(t *testing.T) {
 	if response.Campaign.GmMode != campaignv1.GmMode_HYBRID {
 		t.Fatalf("expected hybrid gm mode, got %v", response.Campaign.GmMode)
 	}
-	if response.Campaign.PlayerSlots != 5 {
-		t.Fatalf("expected 5 player slots, got %d", response.Campaign.PlayerSlots)
+	if response.Campaign.PlayerCount != 0 {
+		t.Fatalf("expected 0 player count, got %d", response.Campaign.PlayerCount)
 	}
 	if response.Campaign.ThemePrompt != "gentle hills" {
 		t.Fatalf("expected theme prompt preserved, got %q", response.Campaign.ThemePrompt)
@@ -136,25 +135,15 @@ func TestCreateCampaignValidationErrors(t *testing.T) {
 		{
 			name: "empty name",
 			req: &campaignv1.CreateCampaignRequest{
-				Name:        "  ",
-				GmMode:      campaignv1.GmMode_HUMAN,
-				PlayerSlots: 1,
+				Name:   "  ",
+				GmMode: campaignv1.GmMode_HUMAN,
 			},
 		},
 		{
 			name: "missing gm mode",
 			req: &campaignv1.CreateCampaignRequest{
-				Name:        "Campaign",
-				GmMode:      campaignv1.GmMode_GM_MODE_UNSPECIFIED,
-				PlayerSlots: 1,
-			},
-		},
-		{
-			name: "invalid player slots",
-			req: &campaignv1.CreateCampaignRequest{
-				Name:        "Campaign",
-				GmMode:      campaignv1.GmMode_AI,
-				PlayerSlots: 0,
+				Name:   "Campaign",
+				GmMode: campaignv1.GmMode_GM_MODE_UNSPECIFIED,
 			},
 		},
 	}
@@ -208,9 +197,8 @@ func TestCreateCampaignIDGenerationFailure(t *testing.T) {
 	}
 
 	_, err := service.CreateCampaign(context.Background(), &campaignv1.CreateCampaignRequest{
-		Name:        "Campaign",
-		GmMode:      campaignv1.GmMode_HUMAN,
-		PlayerSlots: 2,
+		Name:   "Campaign",
+		GmMode: campaignv1.GmMode_HUMAN,
 	})
 	if err == nil {
 		t.Fatal("expected error")
@@ -235,9 +223,8 @@ func TestCreateCampaignStoreFailure(t *testing.T) {
 	}
 
 	_, err := service.CreateCampaign(context.Background(), &campaignv1.CreateCampaignRequest{
-		Name:        "Campaign",
-		GmMode:      campaignv1.GmMode_HUMAN,
-		PlayerSlots: 2,
+		Name:   "Campaign",
+		GmMode: campaignv1.GmMode_HUMAN,
 	})
 	if err == nil {
 		t.Fatal("expected error")
@@ -260,9 +247,8 @@ func TestCreateCampaignMissingStore(t *testing.T) {
 	}
 
 	_, err := service.CreateCampaign(context.Background(), &campaignv1.CreateCampaignRequest{
-		Name:        "Campaign",
-		GmMode:      campaignv1.GmMode_AI,
-		PlayerSlots: 2,
+		Name:   "Campaign",
+		GmMode: campaignv1.GmMode_AI,
 	})
 	if err == nil {
 		t.Fatal("expected error")
@@ -285,7 +271,7 @@ func TestListCampaignsDefaults(t *testing.T) {
 					ID:          "camp-10",
 					Name:        "Wayfarers",
 					GmMode:      domain.GmModeAI,
-					PlayerSlots: 3,
+					PlayerCount: 3,
 					ThemePrompt: "windswept",
 					CreatedAt:   fixedTime,
 					UpdatedAt:   fixedTime,

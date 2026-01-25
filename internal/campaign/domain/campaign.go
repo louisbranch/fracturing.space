@@ -26,8 +26,6 @@ var (
 	ErrEmptyName = errors.New("campaign name is required")
 	// ErrInvalidGmMode indicates a missing or invalid GM mode.
 	ErrInvalidGmMode = errors.New("gm mode is required")
-	// ErrInvalidPlayerSlots indicates an invalid player slots value.
-	ErrInvalidPlayerSlots = errors.New("player slots must be greater than zero")
 )
 
 // Campaign represents metadata for a campaign.
@@ -35,7 +33,7 @@ type Campaign struct {
 	ID          string
 	Name        string
 	GmMode      GmMode
-	PlayerSlots int
+	PlayerCount int
 	ThemePrompt string
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
@@ -45,7 +43,6 @@ type Campaign struct {
 type CreateCampaignInput struct {
 	Name        string
 	GmMode      GmMode
-	PlayerSlots int
 	ThemePrompt string
 }
 
@@ -73,7 +70,7 @@ func CreateCampaign(input CreateCampaignInput, now func() time.Time, idGenerator
 		ID:          campaignID,
 		Name:        normalized.Name,
 		GmMode:      normalized.GmMode,
-		PlayerSlots: normalized.PlayerSlots,
+		PlayerCount: 0,
 		ThemePrompt: normalized.ThemePrompt,
 		CreatedAt:   createdAt,
 		UpdatedAt:   createdAt,
@@ -88,9 +85,6 @@ func NormalizeCreateCampaignInput(input CreateCampaignInput) (CreateCampaignInpu
 	}
 	if input.GmMode == GmModeUnspecified {
 		return CreateCampaignInput{}, ErrInvalidGmMode
-	}
-	if input.PlayerSlots <= 0 {
-		return CreateCampaignInput{}, ErrInvalidPlayerSlots
 	}
 	return input, nil
 }

@@ -11,7 +11,6 @@ func TestCreateCampaignNormalizesInput(t *testing.T) {
 	input := CreateCampaignInput{
 		Name:        "  The Glade  ",
 		GmMode:      GmModeHuman,
-		PlayerSlots: 4,
 		ThemePrompt: "moss and mist",
 	}
 
@@ -31,8 +30,8 @@ func TestCreateCampaignNormalizesInput(t *testing.T) {
 	if campaign.GmMode != GmModeHuman {
 		t.Fatalf("expected gm mode human, got %v", campaign.GmMode)
 	}
-	if campaign.PlayerSlots != 4 {
-		t.Fatalf("expected 4 player slots, got %d", campaign.PlayerSlots)
+	if campaign.PlayerCount != 0 {
+		t.Fatalf("expected 0 player count, got %d", campaign.PlayerCount)
 	}
 	if campaign.ThemePrompt != "moss and mist" {
 		t.Fatalf("expected theme prompt preserved, got %q", campaign.ThemePrompt)
@@ -51,29 +50,18 @@ func TestNormalizeCreateCampaignInputValidation(t *testing.T) {
 		{
 			name: "empty name",
 			input: CreateCampaignInput{
-				Name:        "   ",
-				GmMode:      GmModeHuman,
-				PlayerSlots: 3,
+				Name:   "   ",
+				GmMode: GmModeHuman,
 			},
 			err: ErrEmptyName,
 		},
 		{
 			name: "missing gm mode",
 			input: CreateCampaignInput{
-				Name:        "Campaign",
-				GmMode:      GmModeUnspecified,
-				PlayerSlots: 3,
+				Name:   "Campaign",
+				GmMode: GmModeUnspecified,
 			},
 			err: ErrInvalidGmMode,
-		},
-		{
-			name: "invalid player slots",
-			input: CreateCampaignInput{
-				Name:        "Campaign",
-				GmMode:      GmModeHuman,
-				PlayerSlots: 0,
-			},
-			err: ErrInvalidPlayerSlots,
 		},
 	}
 

@@ -23,7 +23,6 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 			Arguments: map[string]any{
 				"name":         "Stormbound",
 				"gm_mode":      "HUMAN",
-				"player_slots": 4,
 				"theme_prompt": "sea and thunder",
 			},
 		}
@@ -85,7 +84,6 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 			Arguments: map[string]any{
 				"name":         "Test Campaign",
 				"gm_mode":      "HUMAN",
-				"player_slots": 4,
 				"theme_prompt": "",
 			},
 		}

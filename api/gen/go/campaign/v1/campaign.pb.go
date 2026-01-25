@@ -178,10 +178,8 @@ type CreateCampaignRequest struct {
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	// The mode of GM participation.
 	GmMode GmMode `protobuf:"varint,2,opt,name=gm_mode,json=gmMode,proto3,enum=campaign.v1.GmMode" json:"gm_mode,omitempty"`
-	// Number of available player slots.
-	PlayerSlots int32 `protobuf:"varint,3,opt,name=player_slots,json=playerSlots,proto3" json:"player_slots,omitempty"`
 	// Optional free-form theme prompt for assistants.
-	ThemePrompt   string `protobuf:"bytes,4,opt,name=theme_prompt,json=themePrompt,proto3" json:"theme_prompt,omitempty"`
+	ThemePrompt   string `protobuf:"bytes,3,opt,name=theme_prompt,json=themePrompt,proto3" json:"theme_prompt,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -228,13 +226,6 @@ func (x *CreateCampaignRequest) GetGmMode() GmMode {
 		return x.GmMode
 	}
 	return GmMode_GM_MODE_UNSPECIFIED
-}
-
-func (x *CreateCampaignRequest) GetPlayerSlots() int32 {
-	if x != nil {
-		return x.PlayerSlots
-	}
-	return 0
 }
 
 func (x *CreateCampaignRequest) GetThemePrompt() string {
@@ -404,11 +395,12 @@ func (x *ListCampaignsResponse) GetNextPageToken() string {
 }
 
 type Campaign struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	GmMode        GmMode                 `protobuf:"varint,3,opt,name=gm_mode,json=gmMode,proto3,enum=campaign.v1.GmMode" json:"gm_mode,omitempty"`
-	PlayerSlots   int32                  `protobuf:"varint,4,opt,name=player_slots,json=playerSlots,proto3" json:"player_slots,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Id     string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name   string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	GmMode GmMode                 `protobuf:"varint,3,opt,name=gm_mode,json=gmMode,proto3,enum=campaign.v1.GmMode" json:"gm_mode,omitempty"`
+	// Number of registered players for this campaign.
+	PlayerCount   int32                  `protobuf:"varint,4,opt,name=player_count,json=playerCount,proto3" json:"player_count,omitempty"`
 	ThemePrompt   string                 `protobuf:"bytes,5,opt,name=theme_prompt,json=themePrompt,proto3" json:"theme_prompt,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
@@ -467,9 +459,9 @@ func (x *Campaign) GetGmMode() GmMode {
 	return GmMode_GM_MODE_UNSPECIFIED
 }
 
-func (x *Campaign) GetPlayerSlots() int32 {
+func (x *Campaign) GetPlayerCount() int32 {
 	if x != nil {
-		return x.PlayerSlots
+		return x.PlayerCount
 	}
 	return 0
 }
@@ -823,12 +815,11 @@ var File_campaign_v1_campaign_proto protoreflect.FileDescriptor
 
 const file_campaign_v1_campaign_proto_rawDesc = "" +
 	"\n" +
-	"\x1acampaign/v1/campaign.proto\x12\vcampaign.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x9f\x01\n" +
+	"\x1acampaign/v1/campaign.proto\x12\vcampaign.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"|\n" +
 	"\x15CreateCampaignRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12,\n" +
 	"\agm_mode\x18\x02 \x01(\x0e2\x13.campaign.v1.GmModeR\x06gmMode\x12!\n" +
-	"\fplayer_slots\x18\x03 \x01(\x05R\vplayerSlots\x12!\n" +
-	"\ftheme_prompt\x18\x04 \x01(\tR\vthemePrompt\"g\n" +
+	"\ftheme_prompt\x18\x03 \x01(\tR\vthemePrompt\"g\n" +
 	"\x16CreateCampaignResponse\x121\n" +
 	"\bcampaign\x18\x01 \x01(\v2\x15.campaign.v1.CampaignR\bcampaign\x12\x1a\n" +
 	"\bwarnings\x18\x02 \x03(\tR\bwarnings\"R\n" +
@@ -843,7 +834,7 @@ const file_campaign_v1_campaign_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12,\n" +
 	"\agm_mode\x18\x03 \x01(\x0e2\x13.campaign.v1.GmModeR\x06gmMode\x12!\n" +
-	"\fplayer_slots\x18\x04 \x01(\x05R\vplayerSlots\x12!\n" +
+	"\fplayer_count\x18\x04 \x01(\x05R\vplayerCount\x12!\n" +
 	"\ftheme_prompt\x18\x05 \x01(\tR\vthemePrompt\x129\n" +
 	"\n" +
 	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
