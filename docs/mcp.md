@@ -129,6 +129,34 @@ Sets the default controller (GM or participant) for an actor in a campaign.
 }
 ```
 
+### Session Service Tools
+
+#### session_start
+
+Starts a new session for a campaign. Enforces at most one ACTIVE session per campaign.
+
+**Input:**
+
+```json
+{
+  "campaign_id": "camp_abc123",
+  "name": "Session 1: The Journey Begins"
+}
+```
+
+**Output:**
+
+```json
+{
+  "id": "sess_ghi789",
+  "campaign_id": "camp_abc123",
+  "name": "Session 1: The Journey Begins",
+  "status": "ACTIVE",
+  "started_at": "2025-01-15T11:00:00Z",
+  "updated_at": "2025-01-15T11:00:00Z"
+}
+```
+
 ### Duality Service Tools
 
 #### duality_rules_version
