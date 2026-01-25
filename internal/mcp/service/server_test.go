@@ -50,17 +50,20 @@ type fakeCampaignClient struct {
 	createParticipantResponse   *campaignv1.CreateParticipantResponse
 	listParticipantsResponse    *campaignv1.ListParticipantsResponse
 	createActorResponse         *campaignv1.CreateActorResponse
+	listActorsResponse          *campaignv1.ListActorsResponse
 	err                         error
 	listErr                     error
 	createParticipantErr        error
 	listParticipantsErr         error
 	createActorErr              error
+	listActorsErr               error
 	lastRequest                 *campaignv1.CreateCampaignRequest
 	lastListRequest             *campaignv1.ListCampaignsRequest
 	lastCreateParticipantRequest *campaignv1.CreateParticipantRequest
 	lastListParticipantsRequest *campaignv1.ListParticipantsRequest
-	lastCreateActorRequest *campaignv1.CreateActorRequest
-	listCalls             int
+	lastCreateActorRequest       *campaignv1.CreateActorRequest
+	lastListActorsRequest        *campaignv1.ListActorsRequest
+	listCalls                   int
 }
 
 // failingTransport returns a connection error for tests.
@@ -140,7 +143,8 @@ func (f *fakeCampaignClient) CreateActor(ctx context.Context, req *campaignv1.Cr
 
 // ListActors records the request and returns the configured response.
 func (f *fakeCampaignClient) ListActors(ctx context.Context, req *campaignv1.ListActorsRequest, opts ...grpc.CallOption) (*campaignv1.ListActorsResponse, error) {
-	return &campaignv1.ListActorsResponse{}, nil
+	f.lastListActorsRequest = req
+	return f.listActorsResponse, f.listActorsErr
 }
 
 // TestGRPCAddressPrefersEnv ensures env configuration overrides defaults.
@@ -1402,6 +1406,120 @@ func TestParticipantListResourceHandlerReturnsClientError(t *testing.T) {
 
 	result, err := handler(context.Background(), &mcp.ReadResourceRequest{
 		Params: &mcp.ReadResourceParams{URI: "campaign://camp-123/participants"},
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if result != nil {
+		t.Fatal("expected nil result on error")
+	}
+}
+
+// TestActorListResourceHandlerMapsResponse ensures JSON payload is formatted correctly.
+func TestActorListResourceHandlerMapsResponse(t *testing.T) {
+	now := time.Date(2026, 1, 23, 13, 0, 0, 0, time.UTC)
+	campaignID := "camp-789"
+	client := &fakeCampaignClient{listActorsResponse: &campaignv1.ListActorsResponse{
+		Actors: []*campaignv1.Actor{{
+			Id:         "actor-1",
+			CampaignId: campaignID,
+			Name:       "Test PC",
+			Kind:       campaignv1.ActorKind_PC,
+			Notes:      "A brave warrior",
+			CreatedAt:  timestamppb.New(now),
+			UpdatedAt:  timestamppb.New(now.Add(time.Hour)),
+		}, {
+			Id:         "actor-2",
+			CampaignId: campaignID,
+			Name:       "Test NPC",
+			Kind:       campaignv1.ActorKind_NPC,
+			Notes:      "A helpful merchant",
+			CreatedAt:  timestamppb.New(now),
+			UpdatedAt:  timestamppb.New(now),
+		}},
+	}}
+
+	handler := domain.ActorListResourceHandler(client)
+	resourceURI := "campaign://" + campaignID + "/actors"
+	result, err := handler(context.Background(), &mcp.ReadResourceRequest{
+		Params: &mcp.ReadResourceParams{URI: resourceURI},
+	})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if result == nil || len(result.Contents) != 1 {
+		t.Fatalf("expected 1 content item, got %v", result)
+	}
+	if client.lastListActorsRequest == nil {
+		t.Fatal("expected list actors request")
+	}
+	if client.lastListActorsRequest.GetCampaignId() != campaignID {
+		t.Fatalf("expected campaign id %q, got %q", campaignID, client.lastListActorsRequest.GetCampaignId())
+	}
+	if client.lastListActorsRequest.GetPageSize() != 10 {
+		t.Fatalf("expected page size 10, got %d", client.lastListActorsRequest.GetPageSize())
+	}
+
+	var payload struct {
+		Actors []struct {
+			ID         string `json:"id"`
+			CampaignID string `json:"campaign_id"`
+			Name       string `json:"name"`
+			Kind       string `json:"kind"`
+			Notes      string `json:"notes"`
+			CreatedAt  string `json:"created_at"`
+			UpdatedAt  string `json:"updated_at"`
+		} `json:"actors"`
+	}
+	if err := json.Unmarshal([]byte(result.Contents[0].Text), &payload); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+	if len(payload.Actors) != 2 {
+		t.Fatalf("expected 2 actors, got %d", len(payload.Actors))
+	}
+	if payload.Actors[0].ID != "actor-1" {
+		t.Fatalf("expected first actor id actor-1, got %q", payload.Actors[0].ID)
+	}
+	if payload.Actors[0].Kind != "PC" {
+		t.Fatalf("expected first actor kind PC, got %q", payload.Actors[0].Kind)
+	}
+	if payload.Actors[1].ID != "actor-2" {
+		t.Fatalf("expected second actor id actor-2, got %q", payload.Actors[1].ID)
+	}
+	if payload.Actors[1].Kind != "NPC" {
+		t.Fatalf("expected second actor kind NPC, got %q", payload.Actors[1].Kind)
+	}
+	if payload.Actors[0].CreatedAt != now.Format(time.RFC3339) {
+		t.Fatalf("expected created_at %q, got %q", now.Format(time.RFC3339), payload.Actors[0].CreatedAt)
+	}
+	if result.Contents[0].URI != resourceURI {
+		t.Fatalf("expected resource URI %q, got %q", resourceURI, result.Contents[0].URI)
+	}
+}
+
+// TestActorListResourceHandlerRejectsPlaceholder ensures placeholder campaign ID is rejected.
+func TestActorListResourceHandlerRejectsPlaceholder(t *testing.T) {
+	client := &fakeCampaignClient{}
+	handler := domain.ActorListResourceHandler(client)
+
+	result, err := handler(context.Background(), &mcp.ReadResourceRequest{
+		Params: &mcp.ReadResourceParams{URI: "campaign://_/actors"},
+	})
+	if err == nil {
+		t.Fatal("expected error for placeholder campaign ID")
+	}
+	if result != nil {
+		t.Fatal("expected nil result on error")
+	}
+}
+
+// TestActorListResourceHandlerReturnsClientError ensures list errors are returned.
+func TestActorListResourceHandlerReturnsClientError(t *testing.T) {
+	client := &fakeCampaignClient{listActorsErr: errors.New("boom")}
+	handler := domain.ActorListResourceHandler(client)
+
+	result, err := handler(context.Background(), &mcp.ReadResourceRequest{
+		Params: &mcp.ReadResourceParams{URI: "campaign://camp-123/actors"},
 	})
 	if err == nil {
 		t.Fatal("expected error")

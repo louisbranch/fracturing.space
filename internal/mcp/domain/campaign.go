@@ -79,6 +79,22 @@ type ParticipantListPayload struct {
 	Participants []ParticipantListEntry `json:"participants"`
 }
 
+// ActorListEntry represents a readable actor entry.
+type ActorListEntry struct {
+	ID         string `json:"id"`
+	CampaignID string `json:"campaign_id"`
+	Name       string `json:"name"`
+	Kind       string `json:"kind"`
+	Notes      string `json:"notes"`
+	CreatedAt  string `json:"created_at"`
+	UpdatedAt  string `json:"updated_at"`
+}
+
+// ActorListPayload represents the MCP resource payload for actor listings.
+type ActorListPayload struct {
+	Actors []ActorListEntry `json:"actors"`
+}
+
 // ActorCreateInput represents the MCP tool input for actor creation.
 type ActorCreateInput struct {
 	CampaignID string `json:"campaign_id" jsonschema:"campaign identifier"`
@@ -144,6 +160,20 @@ func ParticipantListResource() *mcp.Resource {
 		Description: "Readable listing of participants for a campaign. URI format: campaign://{campaign_id}/participants",
 		MIMEType:    "application/json",
 		URI:         "campaign://_/participants", // Placeholder; actual format: campaign://{campaign_id}/participants
+	}
+}
+
+// ActorListResource defines the MCP resource for actor listings.
+// The effective URI template is campaign://{campaign_id}/actors, but the
+// SDK requires a valid URI for registration, so we use a placeholder here.
+// Clients must provide the full URI with actual campaign_id when reading.
+func ActorListResource() *mcp.Resource {
+	return &mcp.Resource{
+		Name:        "actor_list",
+		Title:       "Actors",
+		Description: "Readable listing of actors for a campaign. URI format: campaign://{campaign_id}/actors",
+		MIMEType:    "application/json",
+		URI:         "campaign://_/actors", // Placeholder; actual format: campaign://{campaign_id}/actors
 	}
 }
 
@@ -483,6 +513,106 @@ func ParticipantListResourceHandler(client campaignv1.CampaignServiceClient) mcp
 func parseCampaignIDFromURI(uri string) (string, error) {
 	prefix := "campaign://"
 	suffix := "/participants"
+
+	if !strings.HasPrefix(uri, prefix) {
+		return "", fmt.Errorf("URI must start with %q", prefix)
+	}
+	if !strings.HasSuffix(uri, suffix) {
+		return "", fmt.Errorf("URI must end with %q", suffix)
+	}
+
+	campaignID := strings.TrimPrefix(uri, prefix)
+	campaignID = strings.TrimSuffix(campaignID, suffix)
+	campaignID = strings.TrimSpace(campaignID)
+
+	if campaignID == "" {
+		return "", fmt.Errorf("campaign ID is required in URI")
+	}
+
+	// Reject the placeholder value - actual campaign IDs must be provided
+	if campaignID == "_" {
+		return "", fmt.Errorf("campaign ID placeholder '_' is not a valid campaign ID")
+	}
+
+	return campaignID, nil
+}
+
+// ActorListResourceHandler returns a readable actor listing resource.
+func ActorListResourceHandler(client campaignv1.CampaignServiceClient) mcp.ResourceHandler {
+	return func(ctx context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
+		if client == nil {
+			return nil, fmt.Errorf("actor list client is not configured")
+		}
+
+		uri := ActorListResource().URI
+		if req != nil && req.Params != nil && req.Params.URI != "" {
+			uri = req.Params.URI
+		}
+
+		// Parse campaign_id from URI: expected format is campaign://{campaign_id}/actors.
+		// If the URI is the registered placeholder, return an error requiring a concrete campaign ID.
+		// Otherwise, parse the campaign ID from the URI path.
+		var campaignID string
+		var err error
+		if uri == ActorListResource().URI {
+			// Using registered placeholder URI - this shouldn't happen in practice
+			// but handle it gracefully by requiring campaign_id in a different way
+			return nil, fmt.Errorf("campaign ID is required; use URI format campaign://{campaign_id}/actors")
+		}
+		campaignID, err = parseCampaignIDFromActorURI(uri)
+		if err != nil {
+			return nil, fmt.Errorf("parse campaign ID from URI: %w", err)
+		}
+
+		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+
+		payload := ActorListPayload{}
+		response, err := client.ListActors(runCtx, &campaignv1.ListActorsRequest{
+			CampaignId: campaignID,
+			PageSize:   10,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("actor list failed: %w", err)
+		}
+		if response == nil {
+			return nil, fmt.Errorf("actor list response is missing")
+		}
+
+		for _, actor := range response.GetActors() {
+			payload.Actors = append(payload.Actors, ActorListEntry{
+				ID:         actor.GetId(),
+				CampaignID: actor.GetCampaignId(),
+				Name:       actor.GetName(),
+				Kind:       actorKindToString(actor.GetKind()),
+				Notes:      actor.GetNotes(),
+				CreatedAt:  formatTimestamp(actor.GetCreatedAt()),
+				UpdatedAt:  formatTimestamp(actor.GetUpdatedAt()),
+			})
+		}
+
+		data, err := json.MarshalIndent(payload, "", "  ")
+		if err != nil {
+			return nil, fmt.Errorf("marshal actor list: %w", err)
+		}
+
+		return &mcp.ReadResourceResult{
+			Contents: []*mcp.ResourceContents{
+				{
+					URI:      uri,
+					MIMEType: "application/json",
+					Text:     string(data),
+				},
+			},
+		}, nil
+	}
+}
+
+// parseCampaignIDFromActorURI extracts the campaign ID from a URI of the form campaign://{campaign_id}/actors.
+// It parses URIs of the expected format but requires an actual campaign ID and rejects the placeholder (campaign://_/actors).
+func parseCampaignIDFromActorURI(uri string) (string, error) {
+	prefix := "campaign://"
+	suffix := "/actors"
 
 	if !strings.HasPrefix(uri, prefix) {
 		return "", fmt.Errorf("URI must start with %q", prefix)
