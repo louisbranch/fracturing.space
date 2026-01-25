@@ -1247,6 +1247,41 @@ func TestCampaignResourceHandlerRejectsEmptyID(t *testing.T) {
 	}
 }
 
+// TestCampaignResourceHandlerRejectsSuffixedURI ensures URIs with path segments are rejected.
+func TestCampaignResourceHandlerRejectsSuffixedURI(t *testing.T) {
+	client := &fakeCampaignClient{}
+	handler := domain.CampaignResourceHandler(client)
+
+	testCases := []struct {
+		name string
+		uri  string
+	}{
+		{"path segment", "campaign://camp-1/participants"},
+		{"query parameter", "campaign://camp-1?foo=bar"},
+		{"fragment", "campaign://camp-1#section"},
+		{"path and query", "campaign://camp-1/participants?foo=bar"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := handler(context.Background(), &mcp.ReadResourceRequest{
+				Params: &mcp.ReadResourceParams{
+					URI: tc.uri,
+				},
+			})
+			if err == nil {
+				t.Fatal("expected error")
+			}
+			if result != nil {
+				t.Fatal("expected nil result on error")
+			}
+			if !strings.Contains(err.Error(), "path segments") && !strings.Contains(err.Error(), "query parameters") && !strings.Contains(err.Error(), "fragments") {
+				t.Fatalf("expected error about path segments/query parameters/fragments, got %q", err.Error())
+			}
+		})
+	}
+}
+
 // TestParticipantCreateHandlerReturnsClientError ensures gRPC errors are returned as tool errors.
 func TestParticipantCreateHandlerReturnsClientError(t *testing.T) {
 	client := &fakeCampaignClient{createParticipantErr: errors.New("boom")}

@@ -446,9 +446,9 @@ Returns a JSON object with a `campaigns` array of campaign metadata records. No 
 
 #### campaign://{campaign_id}
 
-Returns a JSON object with a single `campaign` metadata record. Provides direct access to a campaign by ID without requiring a scan of campaigns://list. Depends on campaign (requires `campaign_id`).
+Returns a JSON object with a single `campaign` metadata record. Provides direct access to a campaign by ID without requiring a scan of campaigns://list. Requires `campaign_id` in the URI.
 
-The `{campaign_id}` must be replaced with an actual campaign identifier when reading the resource.
+The `{campaign_id}` must be replaced with an actual campaign identifier when reading the resource. The URI must not contain additional path segments, query parameters, or fragments (e.g., `campaign://id/participants` should use the participant list resource instead).
 
 **Response:**
 

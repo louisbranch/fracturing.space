@@ -722,6 +722,7 @@ func parseCampaignIDFromActorURI(uri string) (string, error) {
 
 // parseCampaignIDFromCampaignURI extracts the campaign ID from a URI of the form campaign://{campaign_id}.
 // It parses URIs of the expected format but requires an actual campaign ID and rejects the placeholder (campaign://_).
+// It also rejects URIs with additional path segments, query parameters, or fragments (e.g., campaign://id/participants).
 func parseCampaignIDFromCampaignURI(uri string) (string, error) {
 	prefix := "campaign://"
 
@@ -739,6 +740,12 @@ func parseCampaignIDFromCampaignURI(uri string) (string, error) {
 	// Reject the placeholder value - actual campaign IDs must be provided
 	if campaignID == "_" {
 		return "", fmt.Errorf("campaign ID placeholder '_' is not a valid campaign ID")
+	}
+
+	// Reject URIs with additional path segments, query parameters, or fragments
+	// These should be handled by other resource handlers (e.g., campaign://id/participants)
+	if strings.ContainsAny(campaignID, "/?#") {
+		return "", fmt.Errorf("URI must not contain path segments, query parameters, or fragments after campaign ID")
 	}
 
 	return campaignID, nil
