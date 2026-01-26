@@ -27,6 +27,7 @@ jobs:
       - name: Start MCP endpoint
         env:
           MCP_CONFORMANCE: "1"
+          GOFLAGS: "-tags=conformance"
         run: |
           ./scripts/mcp-http.sh &
           timeout 15 bash -c 'until curl -s http://localhost:3001/mcp/health >/dev/null; do sleep 0.5; done'

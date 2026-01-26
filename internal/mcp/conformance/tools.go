@@ -1,3 +1,5 @@
+//go:build conformance
+
 package conformance
 
 import (
@@ -8,7 +10,7 @@ import (
 
 const simpleTextResponse = "This is a simple text response for testing."
 
-// Register adds conformance-only MCP tools to the server.
+// Register adds conformance-only MCP fixtures (tools, prompts, resources).
 func Register(mcpServer *mcp.Server) {
 	if mcpServer == nil {
 		return
