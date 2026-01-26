@@ -6,6 +6,19 @@ import (
 	"time"
 )
 
+func TestCreateCampaignDefaults(t *testing.T) {
+	input := CreateCampaignInput{
+		Name:        "  The Glade  ",
+		GmMode:      GmModeHuman,
+		ThemePrompt: "moss and mist",
+	}
+
+	_, err := CreateCampaign(input, nil, nil)
+	if err != nil {
+		t.Fatalf("create campaign: %v", err)
+	}
+}
+
 func TestCreateCampaignNormalizesInput(t *testing.T) {
 	fixedTime := time.Date(2026, 1, 23, 10, 0, 0, 0, time.UTC)
 	input := CreateCampaignInput{

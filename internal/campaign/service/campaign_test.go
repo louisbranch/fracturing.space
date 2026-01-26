@@ -182,7 +182,7 @@ func TestCreateCampaignNilRequest(t *testing.T) {
 	service := NewCampaignService(Stores{
 		Campaign:    &fakeCampaignStore{},
 		Participant: &fakeParticipantStore{},
-		Character:       &fakeCharacterStore{},
+		Character:   &fakeCharacterStore{},
 	})
 
 	_, err := service.CreateCampaign(context.Background(), nil)
@@ -284,14 +284,14 @@ func TestListCampaignsDefaults(t *testing.T) {
 		listPage: storage.CampaignPage{
 			Campaigns: []domain.Campaign{
 				{
-					ID:              "camp-10",
-					Name:            "Wayfarers",
-					GmMode:          domain.GmModeAI,
+					ID:               "camp-10",
+					Name:             "Wayfarers",
+					GmMode:           domain.GmModeAI,
 					ParticipantCount: 3,
-					CharacterCount:      2,
-					ThemePrompt:     "windswept",
-					CreatedAt:       fixedTime,
-					UpdatedAt:   fixedTime,
+					CharacterCount:   2,
+					ThemePrompt:      "windswept",
+					CreatedAt:        fixedTime,
+					UpdatedAt:        fixedTime,
 				},
 			},
 			NextPageToken: "camp-11",
@@ -300,7 +300,7 @@ func TestListCampaignsDefaults(t *testing.T) {
 	service := NewCampaignService(Stores{
 		Campaign:    store,
 		Participant: &fakeParticipantStore{},
-		Character:       &fakeCharacterStore{},
+		Character:   &fakeCharacterStore{},
 	})
 
 	response, err := service.ListCampaigns(context.Background(), &campaignv1.ListCampaignsRequest{})
@@ -335,7 +335,7 @@ func TestListCampaignsClampPageSize(t *testing.T) {
 	service := NewCampaignService(Stores{
 		Campaign:    store,
 		Participant: &fakeParticipantStore{},
-		Character:       &fakeCharacterStore{},
+		Character:   &fakeCharacterStore{},
 	})
 
 	_, err := service.ListCampaigns(context.Background(), &campaignv1.ListCampaignsRequest{
@@ -354,7 +354,7 @@ func TestListCampaignsPassesToken(t *testing.T) {
 	service := NewCampaignService(Stores{
 		Campaign:    store,
 		Participant: &fakeParticipantStore{},
-		Character:       &fakeCharacterStore{},
+		Character:   &fakeCharacterStore{},
 	})
 
 	_, err := service.ListCampaigns(context.Background(), &campaignv1.ListCampaignsRequest{
@@ -373,7 +373,7 @@ func TestListCampaignsNilRequest(t *testing.T) {
 	service := NewCampaignService(Stores{
 		Campaign:    &fakeCampaignStore{},
 		Participant: &fakeParticipantStore{},
-		Character:       &fakeCharacterStore{},
+		Character:   &fakeCharacterStore{},
 	})
 
 	_, err := service.ListCampaigns(context.Background(), nil)
@@ -393,7 +393,7 @@ func TestListCampaignsStoreFailure(t *testing.T) {
 	service := NewCampaignService(Stores{
 		Campaign:    &fakeCampaignStore{listErr: errors.New("boom")},
 		Participant: &fakeParticipantStore{},
-		Character:       &fakeCharacterStore{},
+		Character:   &fakeCharacterStore{},
 	})
 
 	_, err := service.ListCampaigns(context.Background(), &campaignv1.ListCampaignsRequest{
@@ -433,20 +433,20 @@ func TestGetCampaignSuccess(t *testing.T) {
 	fixedTime := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
 	store := &fakeCampaignStore{
 		getCampaign: domain.Campaign{
-			ID:              "camp-123",
-			Name:            "Test Campaign",
-			GmMode:          domain.GmModeHybrid,
+			ID:               "camp-123",
+			Name:             "Test Campaign",
+			GmMode:           domain.GmModeHybrid,
 			ParticipantCount: 5,
-			CharacterCount:      3,
-			ThemePrompt:     "fantasy adventure",
-			CreatedAt:       fixedTime,
-			UpdatedAt:       fixedTime,
+			CharacterCount:   3,
+			ThemePrompt:      "fantasy adventure",
+			CreatedAt:        fixedTime,
+			UpdatedAt:        fixedTime,
 		},
 	}
 	service := NewCampaignService(Stores{
 		Campaign:    store,
 		Participant: &fakeParticipantStore{},
-		Character:       &fakeCharacterStore{},
+		Character:   &fakeCharacterStore{},
 	})
 
 	response, err := service.GetCampaign(context.Background(), &campaignv1.GetCampaignRequest{
@@ -488,7 +488,7 @@ func TestGetCampaignNilRequest(t *testing.T) {
 	service := NewCampaignService(Stores{
 		Campaign:    &fakeCampaignStore{},
 		Participant: &fakeParticipantStore{},
-		Character:       &fakeCharacterStore{},
+		Character:   &fakeCharacterStore{},
 	})
 
 	_, err := service.GetCampaign(context.Background(), nil)
@@ -526,7 +526,7 @@ func TestGetCampaignEmptyID(t *testing.T) {
 	service := NewCampaignService(Stores{
 		Campaign:    &fakeCampaignStore{},
 		Participant: &fakeParticipantStore{},
-		Character:       &fakeCharacterStore{},
+		Character:   &fakeCharacterStore{},
 	})
 
 	_, err := service.GetCampaign(context.Background(), &campaignv1.GetCampaignRequest{
@@ -551,7 +551,7 @@ func TestGetCampaignNotFound(t *testing.T) {
 	service := NewCampaignService(Stores{
 		Campaign:    store,
 		Participant: &fakeParticipantStore{},
-		Character:       &fakeCharacterStore{},
+		Character:   &fakeCharacterStore{},
 	})
 
 	_, err := service.GetCampaign(context.Background(), &campaignv1.GetCampaignRequest{
@@ -579,7 +579,7 @@ func TestGetCampaignStoreError(t *testing.T) {
 	service := NewCampaignService(Stores{
 		Campaign:    store,
 		Participant: &fakeParticipantStore{},
-		Character:       &fakeCharacterStore{},
+		Character:   &fakeCharacterStore{},
 	})
 
 	_, err := service.GetCampaign(context.Background(), &campaignv1.GetCampaignRequest{
@@ -594,5 +594,43 @@ func TestGetCampaignStoreError(t *testing.T) {
 	}
 	if st.Code() != codes.Internal {
 		t.Fatalf("expected internal error, got %v", st.Code())
+	}
+}
+
+func TestGMModeToProto(t *testing.T) {
+	tests := []struct {
+		name   string
+		gmMode domain.GmMode
+		proto  campaignv1.GmMode
+	}{
+		{
+			name:   "human",
+			gmMode: domain.GmModeHuman,
+			proto:  campaignv1.GmMode_HUMAN,
+		},
+		{
+			name:   "ai",
+			gmMode: domain.GmModeAI,
+			proto:  campaignv1.GmMode_AI,
+		},
+		{
+			name:   "hybrid",
+			gmMode: domain.GmModeHybrid,
+			proto:  campaignv1.GmMode_HYBRID,
+		},
+		{
+			name:   "unspecified",
+			gmMode: domain.GmModeUnspecified,
+			proto:  campaignv1.GmMode_GM_MODE_UNSPECIFIED,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			proto := gmModeToProto(tt.gmMode)
+			if proto != tt.proto {
+				t.Fatalf("expected %v, got %v", tt.proto, proto)
+			}
+		})
 	}
 }

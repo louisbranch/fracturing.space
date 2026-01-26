@@ -6,6 +6,24 @@ import (
 	"time"
 )
 
+func TestCreateParticipantDefaults(t *testing.T) {
+	input := CreateParticipantInput{
+		CampaignID:  "camp-123",
+		DisplayName: "Alice",
+		Role:        ParticipantRolePlayer,
+	}
+	_, err := CreateParticipant(input, nil, nil)
+	if err != nil {
+		t.Fatalf("create participant: %v", err)
+	}
+
+	// id generator error
+	_, err = CreateParticipant(input, nil, func() (string, error) { return "", errors.New("id generator error") })
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
 func TestCreateParticipantNormalizesInput(t *testing.T) {
 	fixedTime := time.Date(2026, 1, 23, 10, 0, 0, 0, time.UTC)
 	input := CreateParticipantInput{
