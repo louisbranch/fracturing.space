@@ -127,5 +127,11 @@ Daggerheart is a trademark of Critical Role Productions LLC.
 This project is intended for use under the Darrington Press Community
 Gaming License.
 
+Source code is licensed under the MIT License. See [LICENSE](LICENSE).
+
 All trademarks, artwork, and copyrighted material remain the property of
 their respective owners.
+
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+Authors: [AUTHORS](AUTHORS).
