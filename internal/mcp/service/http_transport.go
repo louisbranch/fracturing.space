@@ -280,7 +280,8 @@ func (t *HTTPTransport) handleMessages(w http.ResponseWriter, r *http.Request) {
 	// Log message type for debugging
 	switch v := msg.(type) {
 	case *jsonrpc.Request:
-		if v.ID != jsonrpc.ID{} {
+		var zeroID jsonrpc.ID
+		if v.ID != zeroID {
 			log.Printf("Decoded request: method=%s, id=%v", v.Method, v.ID)
 		} else {
 			log.Printf("Decoded notification: method=%s", v.Method)
