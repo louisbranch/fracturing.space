@@ -1,13 +1,19 @@
 #!/bin/bash
 # Test script for MCP HTTP transport initialization sequence
 # This script simulates the proper MCP protocol flow:
-# 1. initialize request -> get session ID
-# 2. initialized notification -> complete initialization
-# 3. tools/list request -> verify server is ready
+# 1. initialize request -> get session cookie
+# 2. initialized notification -> complete initialization (using cookie)
+# 3. tools/list request -> verify server is ready (using cookie)
+#
+# MCP spec uses cookies (not custom headers) for session management
 
 set -e
 
 MCP_URL="${MCP_URL:-http://localhost:3001/mcp}"
+COOKIE_JAR="/tmp/mcp-cookies.txt"
+
+# Clean up cookie jar
+rm -f "$COOKIE_JAR"
 
 echo "=== MCP HTTP Transport Test ==="
 echo "Testing endpoint: $MCP_URL"
@@ -15,7 +21,7 @@ echo ""
 
 # Step 1: Send initialize request
 echo "Step 1: Sending initialize request..."
-INIT_RESPONSE=$(curl -sS -D /tmp/mcp-headers.txt -X POST "$MCP_URL" \
+INIT_RESPONSE=$(curl -sS -c "$COOKIE_JAR" -X POST "$MCP_URL" \
   -H "Content-Type: application/json" \
   -d '{
     "jsonrpc": "2.0",
@@ -33,24 +39,21 @@ INIT_RESPONSE=$(curl -sS -D /tmp/mcp-headers.txt -X POST "$MCP_URL" \
 echo "Initialize response: $INIT_RESPONSE"
 echo ""
 
-# Extract session ID from response headers
-SESSION_ID=$(grep -i "X-MCP-Session-ID" /tmp/mcp-headers.txt | cut -d' ' -f2 | tr -d '\r' | tr -d '\n')
-
-if [ -z "$SESSION_ID" ]; then
-  echo "ERROR: No session ID found in response headers"
-  echo "Response headers:"
-  cat /tmp/mcp-headers.txt
+# Check if cookie was set
+if [ ! -f "$COOKIE_JAR" ] || ! grep -q "mcp_session" "$COOKIE_JAR"; then
+  echo "ERROR: No session cookie found in response"
+  echo "Cookie jar contents:"
+  cat "$COOKIE_JAR" 2>/dev/null || echo "(empty)"
   exit 1
 fi
 
-echo "Session ID: $SESSION_ID"
+echo "Session cookie set (stored in $COOKIE_JAR)"
 echo ""
 
-# Step 2: Send initialized notification
+# Step 2: Send initialized notification (cookie will be sent automatically)
 echo "Step 2: Sending initialized notification..."
-INITIALIZED_RESPONSE=$(curl -sS -w "\nHTTP Status: %{http_code}\n" -X POST "$MCP_URL" \
+INITIALIZED_RESPONSE=$(curl -sS -w "\nHTTP Status: %{http_code}\n" -b "$COOKIE_JAR" -X POST "$MCP_URL" \
   -H "Content-Type: application/json" \
-  -H "X-MCP-Session-ID: $SESSION_ID" \
   -d '{
     "jsonrpc": "2.0",
     "method": "initialized",
@@ -60,11 +63,10 @@ INITIALIZED_RESPONSE=$(curl -sS -w "\nHTTP Status: %{http_code}\n" -X POST "$MCP
 echo "Initialized response: $INITIALIZED_RESPONSE"
 echo ""
 
-# Step 3: Send tools/list request to verify server is ready
+# Step 3: Send tools/list request to verify server is ready (cookie will be sent automatically)
 echo "Step 3: Sending tools/list request..."
-TOOLS_LIST_RESPONSE=$(curl -sS -X POST "$MCP_URL" \
+TOOLS_LIST_RESPONSE=$(curl -sS -b "$COOKIE_JAR" -X POST "$MCP_URL" \
   -H "Content-Type: application/json" \
-  -H "X-MCP-Session-ID: $SESSION_ID" \
   -d '{
     "jsonrpc": "2.0",
     "id": 2,

@@ -234,12 +234,16 @@ func (t *HTTPTransport) handleMessages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get or create session from header
-	sessionID := r.Header.Get("X-MCP-Session-ID")
+	// Get or create session from cookie (MCP spec uses cookies, not custom headers)
+	const cookieName = "mcp_session"
 	var session *httpSession
 	var exists bool
+	var sessionID string
 
-	if sessionID != "" {
+	// Read session ID from cookie
+	cookie, err := r.Cookie(cookieName)
+	if err == nil && cookie != nil && cookie.Value != "" {
+		sessionID = cookie.Value
 		t.sessionsMu.RLock()
 		session, exists = t.sessions[sessionID]
 		t.sessionsMu.RUnlock()
@@ -257,7 +261,15 @@ func (t *HTTPTransport) handleMessages(w http.ResponseWriter, r *http.Request) {
 		t.sessionsMu.RLock()
 		session = t.sessions[sessionID]
 		t.sessionsMu.RUnlock()
-		w.Header().Set("X-MCP-Session-ID", sessionID)
+
+		// Set cookie for subsequent requests
+		http.SetCookie(w, &http.Cookie{
+			Name:     cookieName,
+			Value:    sessionID,
+			Path:     "/",
+			HttpOnly: true,
+			SameSite: http.SameSiteStrictMode,
+		})
 	}
 
 	// Read request body
