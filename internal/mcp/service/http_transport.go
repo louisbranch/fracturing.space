@@ -694,11 +694,14 @@ func (t *HTTPTransport) ensureServerRunning(session *httpSession) {
 
 	// Wait for the connection to be ready (Server.Connect() has started reading)
 	// Use a timeout to avoid blocking forever if something goes wrong
+	// Use a shorter timeout to avoid slowing down tests when no messages are sent
 	select {
 	case <-session.conn.ready:
 		// Connection is ready to process messages
-	case <-time.After(5 * time.Second):
-		log.Printf("Warning: Connection readiness timeout for session %s", session.id)
+	case <-time.After(100 * time.Millisecond):
+		// Short timeout - if readiness hasn't happened yet, it will happen when
+		// the first message is sent and Read() is called. This avoids blocking
+		// tests that call ensureServerRunning() without sending messages.
 	case <-t.serverCtx.Done():
 		// Server is shutting down
 		return
