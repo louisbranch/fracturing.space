@@ -37,10 +37,10 @@ go run ./cmd/mcp -transport=http -http-addr=localhost:8081 -addr=localhost:8080
   - Content-Type: `application/json`
   - Request body: JSON-RPC message
   - Response: JSON-RPC response
-  - Headers: `X-MCP-Session-ID` (optional, for session management)
+  - Session management: Uses `mcp_session` cookie (set automatically on first request)
 
 - `GET /mcp` - Server-Sent Events stream for streaming responses
-  - Query parameter: `session` (optional session ID)
+  - Session management: Uses `mcp_session` cookie (set automatically on first request)
   - Response: `text/event-stream` with JSON-RPC notifications
 
 - `GET /mcp/health` - Health check endpoint
@@ -49,26 +49,37 @@ go run ./cmd/mcp -transport=http -http-addr=localhost:8081 -addr=localhost:8080
 #### Example HTTP Usage
 
 ```bash
-# 1) First request: start a new session (no X-MCP-Session-ID header)
-#    Use -D - to print response headers so we can capture X-MCP-Session-ID.
-SESSION_ID=$(
-  curl -sS -D - http://localhost:8081/mcp \
-    -H "Content-Type: application/json" \
-    -d '{
-      "jsonrpc": "2.0",
-      "id": 1,
-      "method": "tools/list",
-      "params": {}
-    }' \
-  | awk -F': ' '/^X-MCP-Session-ID:/ {print $2}' | tr -d '\r'
-)
+# MCP uses cookies for session management (per spec)
+# curl automatically handles cookies with -c and -b flags
 
-echo "Session ID: $SESSION_ID"
-
-# 2) Subsequent request: send the session ID so the server can reuse context
-curl -sS -X POST http://localhost:8081/mcp \
+# 1) First request: initialize session (cookie is set automatically)
+curl -sS -c /tmp/mcp-cookies.txt -X POST http://localhost:8081/mcp \
   -H "Content-Type: application/json" \
-  -H "X-MCP-Session-ID: $SESSION_ID" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "initialize",
+    "params": {
+      "protocolVersion": "2024-11-05",
+      "clientInfo": {
+        "name": "test-client",
+        "version": "0.1.0"
+      }
+    }
+  }'
+
+# 2) Send initialized notification (cookie is sent automatically)
+curl -sS -b /tmp/mcp-cookies.txt -X POST http://localhost:8081/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "method": "initialized",
+    "params": {}
+  }'
+
+# 3) Subsequent request: cookie is sent automatically to reuse session
+curl -sS -b /tmp/mcp-cookies.txt -X POST http://localhost:8081/mcp \
+  -H "Content-Type: application/json" \
   -d '{
     "jsonrpc": "2.0",
     "id": 2,
@@ -76,7 +87,7 @@ curl -sS -X POST http://localhost:8081/mcp \
     "params": {}
   }'
 
-# 3) Check health
+# 4) Check health
 curl http://localhost:8081/mcp/health
 ```
 
