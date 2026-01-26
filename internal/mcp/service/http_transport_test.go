@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 func TestHTTPTransport_Connect(t *testing.T) {
@@ -39,16 +39,16 @@ func TestHTTPTransport_Connect(t *testing.T) {
 
 func TestHTTPTransport_handleHealth(t *testing.T) {
 	transport := NewHTTPTransport("localhost:8081")
-	
+
 	req := httptest.NewRequest(http.MethodGet, "/mcp/health", nil)
 	w := httptest.NewRecorder()
-	
+
 	transport.handleHealth(w, req)
-	
+
 	if w.Code != http.StatusOK {
 		t.Errorf("handleHealth() status = %d, want %d", w.Code, http.StatusOK)
 	}
-	
+
 	if w.Body.String() != "OK" {
 		t.Errorf("handleHealth() body = %q, want %q", w.Body.String(), "OK")
 	}
@@ -56,12 +56,12 @@ func TestHTTPTransport_handleHealth(t *testing.T) {
 
 func TestHTTPTransport_handleMessages_InvalidMethod(t *testing.T) {
 	transport := NewHTTPTransport("localhost:8081")
-	
+
 	req := httptest.NewRequest(http.MethodGet, "/mcp/messages", nil)
 	w := httptest.NewRecorder()
-	
+
 	transport.handleMessages(w, req)
-	
+
 	if w.Code != http.StatusMethodNotAllowed {
 		t.Errorf("handleMessages() status = %d, want %d", w.Code, http.StatusMethodNotAllowed)
 	}
@@ -69,13 +69,13 @@ func TestHTTPTransport_handleMessages_InvalidMethod(t *testing.T) {
 
 func TestHTTPTransport_handleMessages_InvalidJSON(t *testing.T) {
 	transport := NewHTTPTransport("localhost:8081")
-	
+
 	req := httptest.NewRequest(http.MethodPost, "/mcp/messages", strings.NewReader("invalid json"))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
-	
+
 	transport.handleMessages(w, req)
-	
+
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("handleMessages() status = %d, want %d", w.Code, http.StatusBadRequest)
 	}
@@ -83,7 +83,7 @@ func TestHTTPTransport_handleMessages_InvalidJSON(t *testing.T) {
 
 func TestHTTPTransport_handleMessages_NewSession(t *testing.T) {
 	transport := NewHTTPTransport("localhost:8081")
-	
+
 	// Create a simple JSON-RPC request
 	request := map[string]interface{}{
 		"jsonrpc": "2.0",
@@ -92,19 +92,19 @@ func TestHTTPTransport_handleMessages_NewSession(t *testing.T) {
 		"params":  map[string]interface{}{},
 	}
 	body, _ := json.Marshal(request)
-	
+
 	req := httptest.NewRequest(http.MethodPost, "/mcp/messages", strings.NewReader(string(body)))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
-	
+
 	// This will create a new session but won't get a response without a running MCP server
 	// So we expect it to timeout or handle gracefully
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 	req = req.WithContext(ctx)
-	
+
 	transport.handleMessages(w, req)
-	
+
 	// Should have created a session (check cookie)
 	cookies := w.Result().Cookies()
 	var sessionCookie *http.Cookie
@@ -117,16 +117,97 @@ func TestHTTPTransport_handleMessages_NewSession(t *testing.T) {
 	if sessionCookie == nil || sessionCookie.Value == "" {
 		t.Error("handleMessages() should set mcp_session cookie for new sessions")
 	}
+
+	if got := w.Result().Header.Get("Mcp-Session-Id"); got == "" {
+		t.Error("handleMessages() should set Mcp-Session-Id header for new sessions")
+	}
+}
+
+func TestHTTPTransport_handleMessages_MissingSessionRequiresInitialize(t *testing.T) {
+	transport := NewHTTPTransport("localhost:8081")
+
+	request := map[string]interface{}{
+		"jsonrpc": "2.0",
+		"id":      1,
+		"method":  "tools/list",
+		"params":  map[string]interface{}{},
+	}
+	body, _ := json.Marshal(request)
+
+	req := httptest.NewRequest(http.MethodPost, "/mcp/messages", strings.NewReader(string(body)))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	transport.handleMessages(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("handleMessages() status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+	if !strings.Contains(w.Body.String(), "Invalid or missing session ID") {
+		t.Errorf("handleMessages() body = %q, want session error", w.Body.String())
+	}
+}
+
+func TestHTTPTransport_handleMessages_HeaderSessionReuse(t *testing.T) {
+	transport := NewHTTPTransport("localhost:8081")
+
+	initRequest := map[string]interface{}{
+		"jsonrpc": "2.0",
+		"id":      1,
+		"method":  "initialize",
+		"params":  map[string]interface{}{},
+	}
+	initBody, _ := json.Marshal(initRequest)
+
+	initReq := httptest.NewRequest(http.MethodPost, "/mcp/messages", strings.NewReader(string(initBody)))
+	initReq.Header.Set("Content-Type", "application/json")
+	initResp := httptest.NewRecorder()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+	initReq = initReq.WithContext(ctx)
+
+	transport.handleMessages(initResp, initReq)
+
+	sessionID := initResp.Result().Header.Get("Mcp-Session-Id")
+	if sessionID == "" {
+		t.Fatal("expected Mcp-Session-Id header on initialize")
+	}
+
+	initialSessions := len(transport.sessions)
+
+	listRequest := map[string]interface{}{
+		"jsonrpc": "2.0",
+		"id":      2,
+		"method":  "tools/list",
+		"params":  map[string]interface{}{},
+	}
+	listBody, _ := json.Marshal(listRequest)
+
+	listReq := httptest.NewRequest(http.MethodPost, "/mcp/messages", strings.NewReader(string(listBody)))
+	listReq.Header.Set("Content-Type", "application/json")
+	listReq.Header.Set("Mcp-Session-Id", sessionID)
+	listResp := httptest.NewRecorder()
+
+	listCtx, listCancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer listCancel()
+	listReq = listReq.WithContext(listCtx)
+
+	transport.handleMessages(listResp, listReq)
+
+	if len(transport.sessions) != initialSessions {
+		t.Errorf("expected session reuse, sessions = %d, want %d", len(transport.sessions), initialSessions)
+	}
 }
 
 func TestHTTPTransport_handleSSE_InvalidMethod(t *testing.T) {
 	transport := NewHTTPTransport("localhost:8081")
-	
+
 	req := httptest.NewRequest(http.MethodPost, "/mcp/sse", nil)
 	w := httptest.NewRecorder()
-	
+
 	transport.handleSSE(w, req)
-	
+
 	if w.Code != http.StatusMethodNotAllowed {
 		t.Errorf("handleSSE() status = %d, want %d", w.Code, http.StatusMethodNotAllowed)
 	}
@@ -144,14 +225,14 @@ func TestHTTPConnection_ReadWrite(t *testing.T) {
 		closed:      make(chan struct{}),
 		pendingReqs: make(map[jsonrpc.ID]chan jsonrpc.Message),
 	}
-	
+
 	// Test Read (reads from reqChan)
 	request := &jsonrpc.Request{
 		Method: "test",
 		ID:     jsonrpc.ID{},
 	}
 	conn.reqChan <- request
-	
+
 	msg, err := conn.Read(ctx)
 	if err != nil {
 		t.Errorf("Read() error = %v", err)
@@ -159,7 +240,7 @@ func TestHTTPConnection_ReadWrite(t *testing.T) {
 	if msg == nil {
 		t.Error("Read() returned nil message")
 	}
-	
+
 	// Test Write (writes to notifyChan for notifications)
 	if err := conn.Write(ctx, request); err != nil {
 		t.Errorf("Write() error = %v", err)
@@ -178,17 +259,17 @@ func TestHTTPConnection_Close(t *testing.T) {
 		closed:      make(chan struct{}),
 		pendingReqs: make(map[jsonrpc.ID]chan jsonrpc.Message),
 	}
-	
+
 	// Close should not error
 	if err := conn.Close(); err != nil {
 		t.Errorf("Close() error = %v", err)
 	}
-	
+
 	// Close again should also not error
 	if err := conn.Close(); err != nil {
 		t.Errorf("Close() second call error = %v", err)
 	}
-	
+
 	// Write after close should error
 	request := &jsonrpc.Request{
 		Method: "test",
@@ -206,7 +287,7 @@ func TestHTTPConnection_SessionID(t *testing.T) {
 		respChan:  make(chan jsonrpc.Message, 1),
 		closed:    make(chan struct{}),
 	}
-	
+
 	if got := conn.SessionID(); got != "test_session_123" {
 		t.Errorf("SessionID() = %q, want %q", got, "test_session_123")
 	}
@@ -219,15 +300,15 @@ func TestSessionTransport_Connect(t *testing.T) {
 		respChan:  make(chan jsonrpc.Message, 1),
 		closed:    make(chan struct{}),
 	}
-	
+
 	transport := &sessionTransport{conn: conn}
 	ctx := context.Background()
-	
+
 	returnedConn, err := transport.Connect(ctx)
 	if err != nil {
 		t.Fatalf("Connect() error = %v", err)
 	}
-	
+
 	if returnedConn != conn {
 		t.Error("Connect() returned different connection")
 	}
@@ -236,11 +317,11 @@ func TestSessionTransport_Connect(t *testing.T) {
 func TestGenerateSessionID(t *testing.T) {
 	id1 := generateSessionID()
 	id2 := generateSessionID()
-	
+
 	if id1 == id2 {
 		t.Error("generateSessionID() should generate unique IDs")
 	}
-	
+
 	if !strings.HasPrefix(id1, "session_") {
 		t.Errorf("generateSessionID() = %q, should start with 'session_'", id1)
 	}
@@ -251,35 +332,35 @@ func TestHTTPTransport_cleanupSessions(t *testing.T) {
 	defer cancel()
 
 	transport := NewHTTPTransport("localhost:8081")
-	
+
 	// Create a session
 	conn1, err := transport.Connect(ctx)
 	if err != nil {
 		t.Fatalf("Connect() error = %v", err)
 	}
 	sessionID1 := conn1.SessionID()
-	
+
 	// Create another session
 	conn2, err := transport.Connect(ctx)
 	if err != nil {
 		t.Fatalf("Connect() error = %v", err)
 	}
 	sessionID2 := conn2.SessionID()
-	
+
 	// Manually set lastUsed to expired time for first session
 	transport.sessionsMu.Lock()
 	if session, ok := transport.sessions[sessionID1]; ok {
 		session.lastUsed = time.Now().Add(-2 * time.Hour) // Expired
 	}
 	transport.sessionsMu.Unlock()
-	
+
 	// Start cleanup goroutine
 	go transport.cleanupSessions(ctx)
-	
+
 	// Wait for cleanup to run (runs every 5 minutes, but we can trigger manually)
 	// For testing, we'll check that expired session is removed
 	time.Sleep(100 * time.Millisecond)
-	
+
 	// Manually trigger cleanup by calling it directly
 	transport.sessionsMu.Lock()
 	now := time.Now()
@@ -292,13 +373,13 @@ func TestHTTPTransport_cleanupSessions(t *testing.T) {
 		}
 	}
 	transport.sessionsMu.Unlock()
-	
+
 	// Verify expired session is removed
 	transport.sessionsMu.RLock()
 	_, exists1 := transport.sessions[sessionID1]
 	_, exists2 := transport.sessions[sessionID2]
 	transport.sessionsMu.RUnlock()
-	
+
 	if exists1 {
 		t.Error("Expired session should have been removed")
 	}
@@ -312,26 +393,26 @@ func TestHTTPTransport_ensureServerRunning(t *testing.T) {
 	defer cancel()
 
 	transport := NewHTTPTransport("localhost:8081")
-	
+
 	// Create a mock MCP server
 	mcpServer := mcp.NewServer(&mcp.Implementation{Name: "test", Version: "1.0"}, nil)
 	transport.server = mcpServer
-	
+
 	// Create a session
 	conn, err := transport.Connect(ctx)
 	if err != nil {
 		t.Fatalf("Connect() error = %v", err)
 	}
 	sessionID := conn.SessionID()
-	
+
 	transport.sessionsMu.RLock()
 	session := transport.sessions[sessionID]
 	transport.sessionsMu.RUnlock()
-	
+
 	if session == nil {
 		t.Fatal("Session should exist")
 	}
-	
+
 	// Call ensureServerRunning multiple times concurrently
 	// It should only start the server once
 	var wg sync.WaitGroup
@@ -343,12 +424,12 @@ func TestHTTPTransport_ensureServerRunning(t *testing.T) {
 		}()
 	}
 	wg.Wait()
-	
+
 	// Verify serverOnce was created
 	transport.serverOnceMu.Lock()
 	once, exists := transport.serverOnce[sessionID]
 	transport.serverOnceMu.Unlock()
-	
+
 	if !exists {
 		t.Error("serverOnce should have been created")
 	}

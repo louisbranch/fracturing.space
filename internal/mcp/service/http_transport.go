@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -234,44 +235,6 @@ func (t *HTTPTransport) handleMessages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get or create session from cookie (MCP spec uses cookies, not custom headers)
-	const cookieName = "mcp_session"
-	var session *httpSession
-	var exists bool
-	var sessionID string
-
-	// Read session ID from cookie
-	cookie, err := r.Cookie(cookieName)
-	if err == nil && cookie != nil && cookie.Value != "" {
-		sessionID = cookie.Value
-		t.sessionsMu.RLock()
-		session, exists = t.sessions[sessionID]
-		t.sessionsMu.RUnlock()
-	}
-
-	if !exists || session == nil {
-		// Create new session for this request
-		conn, err := t.Connect(r.Context())
-		if err != nil {
-			log.Printf("Failed to create session: %v", err)
-			http.Error(w, "Failed to create session", http.StatusInternalServerError)
-			return
-		}
-		sessionID = conn.SessionID()
-		t.sessionsMu.RLock()
-		session = t.sessions[sessionID]
-		t.sessionsMu.RUnlock()
-
-		// Set cookie for subsequent requests
-		http.SetCookie(w, &http.Cookie{
-			Name:     cookieName,
-			Value:    sessionID,
-			Path:     "/",
-			HttpOnly: true,
-			SameSite: http.SameSiteStrictMode,
-		})
-	}
-
 	// Read request body
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -302,6 +265,68 @@ func (t *HTTPTransport) handleMessages(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Decoded response: id=%v", v.ID)
 	default:
 		log.Printf("Decoded unknown message type: %T", msg)
+	}
+
+	// Determine if this is an initialization request.
+	// The MCP HTTP transport requires initialize before other methods.
+	isInitialize := false
+	if req, ok := msg.(*jsonrpc.Request); ok {
+		isInitialize = req.Method == "initialize"
+	}
+
+	// Get or create session from header or cookie
+	const cookieName = "mcp_session"
+	var session *httpSession
+	var exists bool
+	var sessionID string
+
+	sessionID = strings.TrimSpace(r.Header.Get("Mcp-Session-Id"))
+	if sessionID != "" {
+		t.sessionsMu.RLock()
+		session, exists = t.sessions[sessionID]
+		t.sessionsMu.RUnlock()
+		if !exists || session == nil {
+			writeSessionError(w, "Invalid session ID")
+			return
+		}
+	} else {
+		cookie, err := r.Cookie(cookieName)
+		if err == nil && cookie != nil && cookie.Value != "" {
+			sessionID = cookie.Value
+			t.sessionsMu.RLock()
+			session, exists = t.sessions[sessionID]
+			t.sessionsMu.RUnlock()
+		}
+	}
+
+	if !exists || session == nil {
+		if !isInitialize {
+			writeSessionError(w, "Invalid or missing session ID")
+			return
+		}
+		// Create new session for this request
+		conn, err := t.Connect(r.Context())
+		if err != nil {
+			log.Printf("Failed to create session: %v", err)
+			http.Error(w, "Failed to create session", http.StatusInternalServerError)
+			return
+		}
+		sessionID = conn.SessionID()
+		t.sessionsMu.RLock()
+		session = t.sessions[sessionID]
+		t.sessionsMu.RUnlock()
+
+		// Set session header for MCP clients
+		w.Header().Set("Mcp-Session-Id", sessionID)
+
+		// Set cookie for subsequent requests (legacy fallback)
+		http.SetCookie(w, &http.Cookie{
+			Name:     cookieName,
+			Value:    sessionID,
+			Path:     "/",
+			HttpOnly: true,
+			SameSite: http.SameSiteStrictMode,
+		})
 	}
 
 	// Update last used time (protected by mutex)
@@ -418,41 +443,30 @@ func (t *HTTPTransport) handleSSE(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get or create session from cookie (MCP spec uses cookies, not query params)
+	// Get session from header or cookie
 	const cookieName = "mcp_session"
 	var session *httpSession
 	var exists bool
 	var sessionID string
 
-	// Read session ID from cookie
-	cookie, err := r.Cookie(cookieName)
-	if err == nil && cookie != nil && cookie.Value != "" {
-		sessionID = cookie.Value
+	sessionID = strings.TrimSpace(r.Header.Get("Mcp-Session-Id"))
+	if sessionID != "" {
 		t.sessionsMu.RLock()
 		session, exists = t.sessions[sessionID]
 		t.sessionsMu.RUnlock()
+	} else {
+		cookie, err := r.Cookie(cookieName)
+		if err == nil && cookie != nil && cookie.Value != "" {
+			sessionID = cookie.Value
+			t.sessionsMu.RLock()
+			session, exists = t.sessions[sessionID]
+			t.sessionsMu.RUnlock()
+		}
 	}
 
 	if !exists || session == nil {
-		conn, err := t.Connect(r.Context())
-		if err != nil {
-			log.Printf("Failed to create session: %v", err)
-			http.Error(w, "Failed to create session", http.StatusInternalServerError)
-			return
-		}
-		sessionID = conn.SessionID()
-		t.sessionsMu.RLock()
-		session = t.sessions[sessionID]
-		t.sessionsMu.RUnlock()
-
-		// Set cookie for subsequent requests
-		http.SetCookie(w, &http.Cookie{
-			Name:     cookieName,
-			Value:    sessionID,
-			Path:     "/",
-			HttpOnly: true,
-			SameSite: http.SameSiteStrictMode,
-		})
+		http.Error(w, "Invalid or missing session ID", http.StatusBadRequest)
+		return
 	}
 
 	// Set up SSE headers
@@ -515,6 +529,26 @@ func (t *HTTPTransport) handleSSE(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+}
+
+// writeSessionError writes a JSON-RPC error response for invalid session state.
+func writeSessionError(w http.ResponseWriter, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusBadRequest)
+	payload := map[string]interface{}{
+		"jsonrpc": "2.0",
+		"error": map[string]interface{}{
+			"code":    -32000,
+			"message": message,
+		},
+		"id": nil,
+	}
+	data, err := json.Marshal(payload)
+	if err != nil {
+		_, _ = w.Write([]byte("{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32000,\"message\":\"Invalid or missing session ID\"},\"id\":null}"))
+		return
+	}
+	_, _ = w.Write(data)
 }
 
 // handleHealth handles GET /mcp/health for health checks.
