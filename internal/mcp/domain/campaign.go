@@ -9,7 +9,9 @@ import (
 
 	campaignv1 "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -23,24 +25,24 @@ type CampaignCreateInput struct {
 
 // CampaignCreateResult represents the MCP tool output for campaign creation.
 type CampaignCreateResult struct {
-	ID              string `json:"id" jsonschema:"campaign identifier"`
-	Name            string `json:"name" jsonschema:"campaign name"`
-	GmMode          string `json:"gm_mode" jsonschema:"gm mode"`
+	ID               string `json:"id" jsonschema:"campaign identifier"`
+	Name             string `json:"name" jsonschema:"campaign name"`
+	GmMode           string `json:"gm_mode" jsonschema:"gm mode"`
 	ParticipantCount int    `json:"participant_count" jsonschema:"number of all participants (GM + PLAYER + future roles)"`
-	CharacterCount  int    `json:"character_count" jsonschema:"number of all characters (PC + NPC + future kinds)"`
-	ThemePrompt     string `json:"theme_prompt" jsonschema:"theme prompt"`
+	CharacterCount   int    `json:"character_count" jsonschema:"number of all characters (PC + NPC + future kinds)"`
+	ThemePrompt      string `json:"theme_prompt" jsonschema:"theme prompt"`
 }
 
 // CampaignListEntry represents a readable campaign metadata entry.
 type CampaignListEntry struct {
-	ID              string `json:"id"`
-	Name            string `json:"name"`
-	GmMode          string `json:"gm_mode"`
+	ID               string `json:"id"`
+	Name             string `json:"name"`
+	GmMode           string `json:"gm_mode"`
 	ParticipantCount int    `json:"participant_count"`
-	CharacterCount  int    `json:"character_count"`
-	ThemePrompt     string `json:"theme_prompt"`
-	CreatedAt       string `json:"created_at"`
-	UpdatedAt       string `json:"updated_at"`
+	CharacterCount   int    `json:"character_count"`
+	ThemePrompt      string `json:"theme_prompt"`
+	CreatedAt        string `json:"created_at"`
+	UpdatedAt        string `json:"updated_at"`
 }
 
 // CampaignListPayload represents the MCP resource payload for campaign listings.
@@ -144,9 +146,9 @@ type CharacterSheetGetInput struct {
 
 // CharacterSheetGetResult represents the MCP tool output for getting a character sheet.
 type CharacterSheetGetResult struct {
-	Character CharacterCreateResult        `json:"character" jsonschema:"character metadata"`
-	Profile   CharacterProfileResult       `json:"profile" jsonschema:"character profile"`
-	State     CharacterStateResult         `json:"state" jsonschema:"character state"`
+	Character CharacterCreateResult  `json:"character" jsonschema:"character metadata"`
+	Profile   CharacterProfileResult `json:"profile" jsonschema:"character profile"`
+	State     CharacterStateResult   `json:"state" jsonschema:"character state"`
 }
 
 // CharacterProfileResult represents character profile data in MCP responses.
@@ -309,14 +311,26 @@ func CampaignResource() *mcp.Resource {
 // CampaignCreateHandler executes a campaign creation request.
 func CampaignCreateHandler(client campaignv1.CampaignServiceClient) mcp.ToolHandlerFor[CampaignCreateInput, CampaignCreateResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input CampaignCreateInput) (*mcp.CallToolResult, CampaignCreateResult, error) {
+		invocationID, err := NewInvocationID()
+		if err != nil {
+			return nil, CampaignCreateResult{}, fmt.Errorf("generate invocation id: %w", err)
+		}
+
 		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 
-		response, err := client.CreateCampaign(runCtx, &campaignv1.CreateCampaignRequest{
+		callCtx, callMeta, err := NewOutgoingContext(runCtx, invocationID)
+		if err != nil {
+			return nil, CampaignCreateResult{}, fmt.Errorf("create request metadata: %w", err)
+		}
+
+		var header metadata.MD
+
+		response, err := client.CreateCampaign(callCtx, &campaignv1.CreateCampaignRequest{
 			Name:        input.Name,
 			GmMode:      gmModeFromString(input.GmMode),
 			ThemePrompt: input.ThemePrompt,
-		})
+		}, grpc.Header(&header))
 		if err != nil {
 			return nil, CampaignCreateResult{}, fmt.Errorf("campaign create failed: %w", err)
 		}
@@ -325,15 +339,16 @@ func CampaignCreateHandler(client campaignv1.CampaignServiceClient) mcp.ToolHand
 		}
 
 		result := CampaignCreateResult{
-			ID:              response.Campaign.GetId(),
-			Name:            response.Campaign.GetName(),
-			GmMode:          gmModeToString(response.Campaign.GetGmMode()),
+			ID:               response.Campaign.GetId(),
+			Name:             response.Campaign.GetName(),
+			GmMode:           gmModeToString(response.Campaign.GetGmMode()),
 			ParticipantCount: int(response.Campaign.GetParticipantCount()),
 			CharacterCount:   int(response.Campaign.GetCharacterCount()),
-			ThemePrompt:     response.Campaign.GetThemePrompt(),
+			ThemePrompt:      response.Campaign.GetThemePrompt(),
 		}
 
-		return nil, result, nil
+		responseMeta := MergeResponseMetadata(callMeta, header)
+		return CallToolResultWithMetadata(responseMeta), result, nil
 	}
 }
 
@@ -352,9 +367,14 @@ func CampaignListResourceHandler(client campaignv1.CampaignServiceClient) mcp.Re
 		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 
+		callCtx, _, err := NewOutgoingContext(runCtx, "")
+		if err != nil {
+			return nil, fmt.Errorf("create request metadata: %w", err)
+		}
+
 		payload := CampaignListPayload{}
 		// TODO: Support page_size/page_token inputs and return next_page_token.
-		response, err := client.ListCampaigns(runCtx, &campaignv1.ListCampaignsRequest{
+		response, err := client.ListCampaigns(callCtx, &campaignv1.ListCampaignsRequest{
 			PageSize: 10,
 		})
 		if err != nil {
@@ -366,14 +386,14 @@ func CampaignListResourceHandler(client campaignv1.CampaignServiceClient) mcp.Re
 
 		for _, campaign := range response.GetCampaigns() {
 			payload.Campaigns = append(payload.Campaigns, CampaignListEntry{
-				ID:              campaign.GetId(),
-				Name:            campaign.GetName(),
-				GmMode:          gmModeToString(campaign.GetGmMode()),
+				ID:               campaign.GetId(),
+				Name:             campaign.GetName(),
+				GmMode:           gmModeToString(campaign.GetGmMode()),
 				ParticipantCount: int(campaign.GetParticipantCount()),
 				CharacterCount:   int(campaign.GetCharacterCount()),
-				ThemePrompt:     campaign.GetThemePrompt(),
-				CreatedAt:       formatTimestamp(campaign.GetCreatedAt()),
-				UpdatedAt:       formatTimestamp(campaign.GetUpdatedAt()),
+				ThemePrompt:      campaign.GetThemePrompt(),
+				CreatedAt:        formatTimestamp(campaign.GetCreatedAt()),
+				UpdatedAt:        formatTimestamp(campaign.GetUpdatedAt()),
 			})
 		}
 
@@ -431,8 +451,20 @@ func gmModeToString(mode campaignv1.GmMode) string {
 // ParticipantCreateHandler executes a participant creation request.
 func ParticipantCreateHandler(client campaignv1.CampaignServiceClient) mcp.ToolHandlerFor[ParticipantCreateInput, ParticipantCreateResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input ParticipantCreateInput) (*mcp.CallToolResult, ParticipantCreateResult, error) {
+		invocationID, err := NewInvocationID()
+		if err != nil {
+			return nil, ParticipantCreateResult{}, fmt.Errorf("generate invocation id: %w", err)
+		}
+
 		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
+
+		callCtx, callMeta, err := NewOutgoingContext(runCtx, invocationID)
+		if err != nil {
+			return nil, ParticipantCreateResult{}, fmt.Errorf("create request metadata: %w", err)
+		}
+
+		var header metadata.MD
 
 		req := &campaignv1.CreateParticipantRequest{
 			CampaignId:  input.CampaignID,
@@ -445,7 +477,7 @@ func ParticipantCreateHandler(client campaignv1.CampaignServiceClient) mcp.ToolH
 			req.Controller = controllerFromString(input.Controller)
 		}
 
-		response, err := client.CreateParticipant(runCtx, req)
+		response, err := client.CreateParticipant(callCtx, req, grpc.Header(&header))
 		if err != nil {
 			return nil, ParticipantCreateResult{}, fmt.Errorf("participant create failed: %w", err)
 		}
@@ -463,7 +495,8 @@ func ParticipantCreateHandler(client campaignv1.CampaignServiceClient) mcp.ToolH
 			UpdatedAt:   formatTimestamp(response.Participant.GetUpdatedAt()),
 		}
 
-		return nil, result, nil
+		responseMeta := MergeResponseMetadata(callMeta, header)
+		return CallToolResultWithMetadata(responseMeta), result, nil
 	}
 }
 
@@ -514,8 +547,20 @@ func controllerToString(controller campaignv1.Controller) string {
 // CharacterCreateHandler executes a character creation request.
 func CharacterCreateHandler(client campaignv1.CampaignServiceClient) mcp.ToolHandlerFor[CharacterCreateInput, CharacterCreateResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input CharacterCreateInput) (*mcp.CallToolResult, CharacterCreateResult, error) {
+		invocationID, err := NewInvocationID()
+		if err != nil {
+			return nil, CharacterCreateResult{}, fmt.Errorf("generate invocation id: %w", err)
+		}
+
 		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
+
+		callCtx, callMeta, err := NewOutgoingContext(runCtx, invocationID)
+		if err != nil {
+			return nil, CharacterCreateResult{}, fmt.Errorf("create request metadata: %w", err)
+		}
+
+		var header metadata.MD
 
 		req := &campaignv1.CreateCharacterRequest{
 			CampaignId: input.CampaignID,
@@ -524,7 +569,7 @@ func CharacterCreateHandler(client campaignv1.CampaignServiceClient) mcp.ToolHan
 			Notes:      input.Notes,
 		}
 
-		response, err := client.CreateCharacter(runCtx, req)
+		response, err := client.CreateCharacter(callCtx, req, grpc.Header(&header))
 		if err != nil {
 			return nil, CharacterCreateResult{}, fmt.Errorf("character create failed: %w", err)
 		}
@@ -542,7 +587,8 @@ func CharacterCreateHandler(client campaignv1.CampaignServiceClient) mcp.ToolHan
 			UpdatedAt:  formatTimestamp(response.Character.GetUpdatedAt()),
 		}
 
-		return nil, result, nil
+		responseMeta := MergeResponseMetadata(callMeta, header)
+		return CallToolResultWithMetadata(responseMeta), result, nil
 	}
 }
 
@@ -571,6 +617,11 @@ func characterKindToString(kind campaignv1.CharacterKind) string {
 // CharacterControlSetHandler executes a character control set request.
 func CharacterControlSetHandler(client campaignv1.CampaignServiceClient) mcp.ToolHandlerFor[CharacterControlSetInput, CharacterControlSetResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input CharacterControlSetInput) (*mcp.CallToolResult, CharacterControlSetResult, error) {
+		invocationID, err := NewInvocationID()
+		if err != nil {
+			return nil, CharacterControlSetResult{}, fmt.Errorf("generate invocation id: %w", err)
+		}
+
 		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 
@@ -579,13 +630,20 @@ func CharacterControlSetHandler(client campaignv1.CampaignServiceClient) mcp.Too
 			return nil, CharacterControlSetResult{}, fmt.Errorf("invalid controller: %w", err)
 		}
 
-		req := &campaignv1.SetDefaultControlRequest{
-			CampaignId:   input.CampaignID,
-			CharacterId:  input.CharacterID,
-			Controller:   controller,
+		callCtx, callMeta, err := NewOutgoingContext(runCtx, invocationID)
+		if err != nil {
+			return nil, CharacterControlSetResult{}, fmt.Errorf("create request metadata: %w", err)
 		}
 
-		response, err := client.SetDefaultControl(runCtx, req)
+		var header metadata.MD
+
+		req := &campaignv1.SetDefaultControlRequest{
+			CampaignId:  input.CampaignID,
+			CharacterId: input.CharacterID,
+			Controller:  controller,
+		}
+
+		response, err := client.SetDefaultControl(callCtx, req, grpc.Header(&header))
 		if err != nil {
 			return nil, CharacterControlSetResult{}, fmt.Errorf("character control set failed: %w", err)
 		}
@@ -599,7 +657,8 @@ func CharacterControlSetHandler(client campaignv1.CampaignServiceClient) mcp.Too
 			Controller:  characterControllerToString(response.GetController()),
 		}
 
-		return nil, result, nil
+		responseMeta := MergeResponseMetadata(callMeta, header)
+		return CallToolResultWithMetadata(responseMeta), result, nil
 	}
 }
 
@@ -653,6 +712,11 @@ func characterControllerToString(controller *campaignv1.CharacterController) str
 // CharacterSheetGetHandler executes a character sheet get request.
 func CharacterSheetGetHandler(client campaignv1.CampaignServiceClient, getContext func() Context) mcp.ToolHandlerFor[CharacterSheetGetInput, CharacterSheetGetResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input CharacterSheetGetInput) (*mcp.CallToolResult, CharacterSheetGetResult, error) {
+		invocationID, err := NewInvocationID()
+		if err != nil {
+			return nil, CharacterSheetGetResult{}, fmt.Errorf("generate invocation id: %w", err)
+		}
+
 		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 
@@ -662,10 +726,17 @@ func CharacterSheetGetHandler(client campaignv1.CampaignServiceClient, getContex
 			return nil, CharacterSheetGetResult{}, fmt.Errorf("campaign context is required")
 		}
 
-		response, err := client.GetCharacterSheet(runCtx, &campaignv1.GetCharacterSheetRequest{
+		callCtx, callMeta, err := NewOutgoingContext(runCtx, invocationID)
+		if err != nil {
+			return nil, CharacterSheetGetResult{}, fmt.Errorf("create request metadata: %w", err)
+		}
+
+		var header metadata.MD
+
+		response, err := client.GetCharacterSheet(callCtx, &campaignv1.GetCharacterSheetRequest{
 			CampaignId:  campaignID,
 			CharacterId: input.CharacterID,
-		})
+		}, grpc.Header(&header))
 		if err != nil {
 			return nil, CharacterSheetGetResult{}, fmt.Errorf("character sheet get failed: %w", err)
 		}
@@ -707,13 +778,19 @@ func CharacterSheetGetHandler(client campaignv1.CampaignServiceClient, getContex
 			},
 		}
 
-		return nil, result, nil
+		responseMeta := MergeResponseMetadata(callMeta, header)
+		return CallToolResultWithMetadata(responseMeta), result, nil
 	}
 }
 
 // CharacterProfilePatchHandler executes a character profile patch request.
 func CharacterProfilePatchHandler(client campaignv1.CampaignServiceClient, getContext func() Context) mcp.ToolHandlerFor[CharacterProfilePatchInput, CharacterProfilePatchResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input CharacterProfilePatchInput) (*mcp.CallToolResult, CharacterProfilePatchResult, error) {
+		invocationID, err := NewInvocationID()
+		if err != nil {
+			return nil, CharacterProfilePatchResult{}, fmt.Errorf("generate invocation id: %w", err)
+		}
+
 		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 
@@ -722,6 +799,13 @@ func CharacterProfilePatchHandler(client campaignv1.CampaignServiceClient, getCo
 		if campaignID == "" {
 			return nil, CharacterProfilePatchResult{}, fmt.Errorf("campaign context is required")
 		}
+
+		callCtx, callMeta, err := NewOutgoingContext(runCtx, invocationID)
+		if err != nil {
+			return nil, CharacterProfilePatchResult{}, fmt.Errorf("create request metadata: %w", err)
+		}
+
+		var header metadata.MD
 
 		req := &campaignv1.PatchCharacterProfileRequest{
 			CampaignId:  campaignID,
@@ -756,7 +840,7 @@ func CharacterProfilePatchHandler(client campaignv1.CampaignServiceClient, getCo
 			req.SevereThreshold = &severeThreshold
 		}
 
-		response, err := client.PatchCharacterProfile(runCtx, req)
+		response, err := client.PatchCharacterProfile(callCtx, req, grpc.Header(&header))
 		if err != nil {
 			return nil, CharacterProfilePatchResult{}, fmt.Errorf("character profile patch failed: %w", err)
 		}
@@ -781,13 +865,19 @@ func CharacterProfilePatchHandler(client campaignv1.CampaignServiceClient, getCo
 			},
 		}
 
-		return nil, result, nil
+		responseMeta := MergeResponseMetadata(callMeta, header)
+		return CallToolResultWithMetadata(responseMeta), result, nil
 	}
 }
 
 // CharacterStatePatchHandler executes a character state patch request.
 func CharacterStatePatchHandler(client campaignv1.CampaignServiceClient, getContext func() Context) mcp.ToolHandlerFor[CharacterStatePatchInput, CharacterStatePatchResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input CharacterStatePatchInput) (*mcp.CallToolResult, CharacterStatePatchResult, error) {
+		invocationID, err := NewInvocationID()
+		if err != nil {
+			return nil, CharacterStatePatchResult{}, fmt.Errorf("generate invocation id: %w", err)
+		}
+
 		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 
@@ -796,6 +886,13 @@ func CharacterStatePatchHandler(client campaignv1.CampaignServiceClient, getCont
 		if campaignID == "" {
 			return nil, CharacterStatePatchResult{}, fmt.Errorf("campaign context is required")
 		}
+
+		callCtx, callMeta, err := NewOutgoingContext(runCtx, invocationID)
+		if err != nil {
+			return nil, CharacterStatePatchResult{}, fmt.Errorf("create request metadata: %w", err)
+		}
+
+		var header metadata.MD
 
 		req := &campaignv1.PatchCharacterStateRequest{
 			CampaignId:  campaignID,
@@ -815,7 +912,7 @@ func CharacterStatePatchHandler(client campaignv1.CampaignServiceClient, getCont
 			req.Hp = &hp
 		}
 
-		response, err := client.PatchCharacterState(runCtx, req)
+		response, err := client.PatchCharacterState(callCtx, req, grpc.Header(&header))
 		if err != nil {
 			return nil, CharacterStatePatchResult{}, fmt.Errorf("character state patch failed: %w", err)
 		}
@@ -832,7 +929,8 @@ func CharacterStatePatchHandler(client campaignv1.CampaignServiceClient, getCont
 			},
 		}
 
-		return nil, result, nil
+		responseMeta := MergeResponseMetadata(callMeta, header)
+		return CallToolResultWithMetadata(responseMeta), result, nil
 	}
 }
 
@@ -866,8 +964,13 @@ func ParticipantListResourceHandler(client campaignv1.CampaignServiceClient) mcp
 		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 
+		callCtx, _, err := NewOutgoingContext(runCtx, "")
+		if err != nil {
+			return nil, fmt.Errorf("create request metadata: %w", err)
+		}
+
 		payload := ParticipantListPayload{}
-		response, err := client.ListParticipants(runCtx, &campaignv1.ListParticipantsRequest{
+		response, err := client.ListParticipants(callCtx, &campaignv1.ListParticipantsRequest{
 			CampaignId: campaignID,
 			PageSize:   10,
 		})
@@ -943,8 +1046,13 @@ func CharacterListResourceHandler(client campaignv1.CampaignServiceClient) mcp.R
 		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 
+		callCtx, _, err := NewOutgoingContext(runCtx, "")
+		if err != nil {
+			return nil, fmt.Errorf("create request metadata: %w", err)
+		}
+
 		payload := CharacterListPayload{}
-		response, err := client.ListCharacters(runCtx, &campaignv1.ListCharactersRequest{
+		response, err := client.ListCharacters(callCtx, &campaignv1.ListCharactersRequest{
 			CampaignId: campaignID,
 			PageSize:   10,
 		})
@@ -1051,7 +1159,12 @@ func CampaignResourceHandler(client campaignv1.CampaignServiceClient) mcp.Resour
 		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 
-		response, err := client.GetCampaign(runCtx, &campaignv1.GetCampaignRequest{
+		callCtx, _, err := NewOutgoingContext(runCtx, "")
+		if err != nil {
+			return nil, fmt.Errorf("create request metadata: %w", err)
+		}
+
+		response, err := client.GetCampaign(callCtx, &campaignv1.GetCampaignRequest{
 			CampaignId: campaignID,
 		})
 		if err != nil {
@@ -1072,14 +1185,14 @@ func CampaignResourceHandler(client campaignv1.CampaignServiceClient) mcp.Resour
 		campaign := response.Campaign
 		payload := CampaignPayload{
 			Campaign: CampaignListEntry{
-				ID:              campaign.GetId(),
-				Name:            campaign.GetName(),
-				GmMode:          gmModeToString(campaign.GetGmMode()),
+				ID:               campaign.GetId(),
+				Name:             campaign.GetName(),
+				GmMode:           gmModeToString(campaign.GetGmMode()),
 				ParticipantCount: int(campaign.GetParticipantCount()),
 				CharacterCount:   int(campaign.GetCharacterCount()),
-				ThemePrompt:     campaign.GetThemePrompt(),
-				CreatedAt:       formatTimestamp(campaign.GetCreatedAt()),
-				UpdatedAt:       formatTimestamp(campaign.GetUpdatedAt()),
+				ThemePrompt:      campaign.GetThemePrompt(),
+				CreatedAt:        formatTimestamp(campaign.GetCreatedAt()),
+				UpdatedAt:        formatTimestamp(campaign.GetUpdatedAt()),
 			},
 		}
 

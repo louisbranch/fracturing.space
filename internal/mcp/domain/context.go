@@ -10,7 +10,9 @@ import (
 	campaignv1 "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1"
 	sessionv1 "github.com/louisbranch/duality-engine/api/gen/go/session/v1"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -48,6 +50,11 @@ func SetContextHandler(
 	getContextFunc func() Context,
 ) mcp.ToolHandlerFor[SetContextInput, SetContextResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input SetContextInput) (*mcp.CallToolResult, SetContextResult, error) {
+		invocationID, err := NewInvocationID()
+		if err != nil {
+			return nil, SetContextResult{}, fmt.Errorf("generate invocation id: %w", err)
+		}
+
 		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 
@@ -58,9 +65,11 @@ func SetContextHandler(
 		}
 
 		// Validate campaign exists
-		if err := validateCampaignExists(runCtx, campaignClient, campaignID); err != nil {
+		responseMeta, err := validateCampaignExists(runCtx, campaignClient, campaignID, invocationID)
+		if err != nil {
 			return nil, SetContextResult{}, fmt.Errorf("validate campaign: %w", err)
 		}
+		lastMeta := responseMeta
 
 		// Build new context starting with campaign_id
 		newCtx := Context{
@@ -71,9 +80,11 @@ func SetContextHandler(
 		if input.SessionID != "" {
 			sessionID := strings.TrimSpace(input.SessionID)
 			if sessionID != "" {
-				if err := validateSessionExists(runCtx, sessionClient, campaignID, sessionID); err != nil {
+				responseMeta, err := validateSessionExists(runCtx, sessionClient, campaignID, sessionID, invocationID)
+				if err != nil {
 					return nil, SetContextResult{}, fmt.Errorf("validate session: %w", err)
 				}
+				lastMeta = responseMeta
 				newCtx.SessionID = sessionID
 			}
 		}
@@ -82,9 +93,11 @@ func SetContextHandler(
 		if input.ParticipantID != "" {
 			participantID := strings.TrimSpace(input.ParticipantID)
 			if participantID != "" {
-				if err := validateParticipantExists(runCtx, campaignClient, campaignID, participantID); err != nil {
+				responseMeta, err := validateParticipantExists(runCtx, campaignClient, campaignID, participantID, invocationID)
+				if err != nil {
 					return nil, SetContextResult{}, fmt.Errorf("validate participant: %w", err)
 				}
+				lastMeta = responseMeta
 				newCtx.ParticipantID = participantID
 			}
 		}
@@ -103,7 +116,7 @@ func SetContextHandler(
 			result.Context.ParticipantID = currentCtx.ParticipantID
 		}
 
-		return nil, result, nil
+		return CallToolResultWithMetadata(lastMeta), result, nil
 	}
 }
 
@@ -116,61 +129,82 @@ type Context struct {
 }
 
 // validateCampaignExists checks if a campaign exists by calling GetCampaign.
-func validateCampaignExists(ctx context.Context, client campaignv1.CampaignServiceClient, campaignID string) error {
-	_, err := client.GetCampaign(ctx, &campaignv1.GetCampaignRequest{
+func validateCampaignExists(ctx context.Context, client campaignv1.CampaignServiceClient, campaignID string, invocationID string) (ToolCallMetadata, error) {
+	callCtx, callMeta, err := NewOutgoingContext(ctx, invocationID)
+	if err != nil {
+		return ToolCallMetadata{}, fmt.Errorf("create request metadata: %w", err)
+	}
+
+	var header metadata.MD
+	_, err = client.GetCampaign(callCtx, &campaignv1.GetCampaignRequest{
 		CampaignId: campaignID,
-	})
+	}, grpc.Header(&header))
 	if err != nil {
 		if s, ok := status.FromError(err); ok {
 			if s.Code() == codes.NotFound {
-				return fmt.Errorf("campaign not found")
+				return ToolCallMetadata{}, fmt.Errorf("campaign not found")
 			}
 		}
-		return fmt.Errorf("get campaign: %w", err)
+		return ToolCallMetadata{}, fmt.Errorf("get campaign: %w", err)
 	}
-	return nil
+
+	return MergeResponseMetadata(callMeta, header), nil
 }
 
 // validateSessionExists checks if a session exists and belongs to the campaign.
 // The GetSession gRPC method validates that the session belongs to the campaign.
-func validateSessionExists(ctx context.Context, client sessionv1.SessionServiceClient, campaignID, sessionID string) error {
-	_, err := client.GetSession(ctx, &sessionv1.GetSessionRequest{
+func validateSessionExists(ctx context.Context, client sessionv1.SessionServiceClient, campaignID, sessionID, invocationID string) (ToolCallMetadata, error) {
+	callCtx, callMeta, err := NewOutgoingContext(ctx, invocationID)
+	if err != nil {
+		return ToolCallMetadata{}, fmt.Errorf("create request metadata: %w", err)
+	}
+
+	var header metadata.MD
+	_, err = client.GetSession(callCtx, &sessionv1.GetSessionRequest{
 		CampaignId: campaignID,
 		SessionId:  sessionID,
-	})
+	}, grpc.Header(&header))
 	if err != nil {
 		if s, ok := status.FromError(err); ok {
 			if s.Code() == codes.NotFound {
-				return fmt.Errorf("session not found")
+				return ToolCallMetadata{}, fmt.Errorf("session not found")
 			}
 			if s.Code() == codes.InvalidArgument {
-				return fmt.Errorf("session not found or does not belong to campaign")
+				return ToolCallMetadata{}, fmt.Errorf("session not found or does not belong to campaign")
 			}
 		}
-		return fmt.Errorf("get session: %w", err)
+		return ToolCallMetadata{}, fmt.Errorf("get session: %w", err)
 	}
-	return nil
+
+	return MergeResponseMetadata(callMeta, header), nil
 }
 
 // validateParticipantExists checks if a participant exists and belongs to the campaign.
 // The GetParticipant gRPC method validates that the participant belongs to the campaign.
-func validateParticipantExists(ctx context.Context, client campaignv1.CampaignServiceClient, campaignID, participantID string) error {
-	_, err := client.GetParticipant(ctx, &campaignv1.GetParticipantRequest{
+func validateParticipantExists(ctx context.Context, client campaignv1.CampaignServiceClient, campaignID, participantID, invocationID string) (ToolCallMetadata, error) {
+	callCtx, callMeta, err := NewOutgoingContext(ctx, invocationID)
+	if err != nil {
+		return ToolCallMetadata{}, fmt.Errorf("create request metadata: %w", err)
+	}
+
+	var header metadata.MD
+	_, err = client.GetParticipant(callCtx, &campaignv1.GetParticipantRequest{
 		CampaignId:    campaignID,
 		ParticipantId: participantID,
-	})
+	}, grpc.Header(&header))
 	if err != nil {
 		if s, ok := status.FromError(err); ok {
 			if s.Code() == codes.NotFound {
-				return fmt.Errorf("participant not found")
+				return ToolCallMetadata{}, fmt.Errorf("participant not found")
 			}
 			if s.Code() == codes.InvalidArgument {
-				return fmt.Errorf("participant not found or does not belong to campaign")
+				return ToolCallMetadata{}, fmt.Errorf("participant not found or does not belong to campaign")
 			}
 		}
-		return fmt.Errorf("get participant: %w", err)
+		return ToolCallMetadata{}, fmt.Errorf("get participant: %w", err)
 	}
-	return nil
+
+	return MergeResponseMetadata(callMeta, header), nil
 }
 
 // ContextResourcePayload represents the MCP resource payload for the current context.

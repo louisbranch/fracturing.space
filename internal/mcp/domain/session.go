@@ -8,6 +8,8 @@ import (
 
 	sessionv1 "github.com/louisbranch/duality-engine/api/gen/go/session/v1"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
 // SessionStartInput represents the MCP tool input for starting a session.
@@ -38,13 +40,25 @@ func SessionStartTool() *mcp.Tool {
 // SessionStartHandler executes a session start request.
 func SessionStartHandler(client sessionv1.SessionServiceClient) mcp.ToolHandlerFor[SessionStartInput, SessionStartResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input SessionStartInput) (*mcp.CallToolResult, SessionStartResult, error) {
+		invocationID, err := NewInvocationID()
+		if err != nil {
+			return nil, SessionStartResult{}, fmt.Errorf("generate invocation id: %w", err)
+		}
+
 		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 
-		response, err := client.StartSession(runCtx, &sessionv1.StartSessionRequest{
+		callCtx, callMeta, err := NewOutgoingContext(runCtx, invocationID)
+		if err != nil {
+			return nil, SessionStartResult{}, fmt.Errorf("create request metadata: %w", err)
+		}
+
+		var header metadata.MD
+
+		response, err := client.StartSession(callCtx, &sessionv1.StartSessionRequest{
 			CampaignId: input.CampaignID,
 			Name:       input.Name,
-		})
+		}, grpc.Header(&header))
 		if err != nil {
 			return nil, SessionStartResult{}, fmt.Errorf("session start failed: %w", err)
 		}
@@ -65,7 +79,8 @@ func SessionStartHandler(client sessionv1.SessionServiceClient) mcp.ToolHandlerF
 			result.EndedAt = formatTimestamp(response.Session.GetEndedAt())
 		}
 
-		return nil, result, nil
+		responseMeta := MergeResponseMetadata(callMeta, header)
+		return CallToolResultWithMetadata(responseMeta), result, nil
 	}
 }
 
@@ -145,8 +160,13 @@ func SessionListResourceHandler(client sessionv1.SessionServiceClient) mcp.Resou
 		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 
+		callCtx, _, err := NewOutgoingContext(runCtx, "")
+		if err != nil {
+			return nil, fmt.Errorf("create request metadata: %w", err)
+		}
+
 		payload := SessionListPayload{}
-		response, err := client.ListSessions(runCtx, &sessionv1.ListSessionsRequest{
+		response, err := client.ListSessions(callCtx, &sessionv1.ListSessionsRequest{
 			CampaignId: campaignID,
 			PageSize:   10,
 		})

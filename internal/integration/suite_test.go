@@ -29,4 +29,8 @@ func TestMCPStdioEndToEnd(t *testing.T) {
 	t.Run("campaign tools", func(t *testing.T) {
 		runCampaignToolsTests(t, suite)
 	})
+
+	t.Run("metadata", func(t *testing.T) {
+		runMetadataTests(t, suite, grpcAddr)
+	})
 }

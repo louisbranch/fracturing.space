@@ -7,6 +7,8 @@ import (
 
 	pb "github.com/louisbranch/duality-engine/api/gen/go/duality/v1"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
 // ActionRollResult represents the MCP tool output for an action roll.
@@ -190,6 +192,11 @@ func RulesVersionTool() *mcp.Tool {
 // ActionRollHandler executes a duality action roll.
 func ActionRollHandler(client pb.DualityServiceClient) mcp.ToolHandlerFor[ActionRollInput, ActionRollResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input ActionRollInput) (*mcp.CallToolResult, ActionRollResult, error) {
+		invocationID, err := NewInvocationID()
+		if err != nil {
+			return nil, ActionRollResult{}, fmt.Errorf("generate invocation id: %w", err)
+		}
+
 		modifier := input.Modifier
 
 		var difficulty *int32
@@ -201,10 +208,17 @@ func ActionRollHandler(client pb.DualityServiceClient) mcp.ToolHandlerFor[Action
 		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 
-		response, err := client.ActionRoll(runCtx, &pb.ActionRollRequest{
+		callCtx, callMeta, err := NewOutgoingContext(runCtx, invocationID)
+		if err != nil {
+			return nil, ActionRollResult{}, fmt.Errorf("create request metadata: %w", err)
+		}
+
+		var header metadata.MD
+
+		response, err := client.ActionRoll(callCtx, &pb.ActionRollRequest{
 			Modifier:   int32(modifier),
 			Difficulty: difficulty,
-		})
+		}, grpc.Header(&header))
 		if err != nil {
 			return nil, ActionRollResult{}, fmt.Errorf("action roll failed: %w", err)
 		}
@@ -223,13 +237,19 @@ func ActionRollHandler(client pb.DualityServiceClient) mcp.ToolHandlerFor[Action
 			result.Difficulty = &value
 		}
 
-		return nil, result, nil
+		responseMeta := MergeResponseMetadata(callMeta, header)
+		return CallToolResultWithMetadata(responseMeta), result, nil
 	}
 }
 
 // DualityOutcomeHandler executes a deterministic outcome evaluation.
 func DualityOutcomeHandler(client pb.DualityServiceClient) mcp.ToolHandlerFor[DualityOutcomeInput, DualityOutcomeResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input DualityOutcomeInput) (*mcp.CallToolResult, DualityOutcomeResult, error) {
+		invocationID, err := NewInvocationID()
+		if err != nil {
+			return nil, DualityOutcomeResult{}, fmt.Errorf("generate invocation id: %w", err)
+		}
+
 		var difficulty *int32
 		if input.Difficulty != nil {
 			value := int32(*input.Difficulty)
@@ -239,12 +259,19 @@ func DualityOutcomeHandler(client pb.DualityServiceClient) mcp.ToolHandlerFor[Du
 		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 
-		response, err := client.DualityOutcome(runCtx, &pb.DualityOutcomeRequest{
+		callCtx, callMeta, err := NewOutgoingContext(runCtx, invocationID)
+		if err != nil {
+			return nil, DualityOutcomeResult{}, fmt.Errorf("create request metadata: %w", err)
+		}
+
+		var header metadata.MD
+
+		response, err := client.DualityOutcome(callCtx, &pb.DualityOutcomeRequest{
 			Hope:       int32(input.Hope),
 			Fear:       int32(input.Fear),
 			Modifier:   int32(input.Modifier),
 			Difficulty: difficulty,
-		})
+		}, grpc.Header(&header))
 		if err != nil {
 			return nil, DualityOutcomeResult{}, fmt.Errorf("duality outcome failed: %w", err)
 		}
@@ -263,13 +290,19 @@ func DualityOutcomeHandler(client pb.DualityServiceClient) mcp.ToolHandlerFor[Du
 			result.Difficulty = &value
 		}
 
-		return nil, result, nil
+		responseMeta := MergeResponseMetadata(callMeta, header)
+		return CallToolResultWithMetadata(responseMeta), result, nil
 	}
 }
 
 // DualityExplainHandler executes a deterministic explanation request.
 func DualityExplainHandler(client pb.DualityServiceClient) mcp.ToolHandlerFor[DualityExplainInput, DualityExplainResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input DualityExplainInput) (*mcp.CallToolResult, DualityExplainResult, error) {
+		invocationID, err := NewInvocationID()
+		if err != nil {
+			return nil, DualityExplainResult{}, fmt.Errorf("generate invocation id: %w", err)
+		}
+
 		modifier := input.Modifier
 
 		var difficulty *int32
@@ -286,13 +319,20 @@ func DualityExplainHandler(client pb.DualityServiceClient) mcp.ToolHandlerFor[Du
 		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 
-		response, err := client.DualityExplain(runCtx, &pb.DualityExplainRequest{
+		callCtx, callMeta, err := NewOutgoingContext(runCtx, invocationID)
+		if err != nil {
+			return nil, DualityExplainResult{}, fmt.Errorf("create request metadata: %w", err)
+		}
+
+		var header metadata.MD
+
+		response, err := client.DualityExplain(callCtx, &pb.DualityExplainRequest{
 			Hope:       int32(input.Hope),
 			Fear:       int32(input.Fear),
 			Modifier:   int32(modifier),
 			Difficulty: difficulty,
 			RequestId:  requestID,
-		})
+		}, grpc.Header(&header))
 		if err != nil {
 			return nil, DualityExplainResult{}, fmt.Errorf("duality explain failed: %w", err)
 		}
@@ -339,20 +379,33 @@ func DualityExplainHandler(client pb.DualityServiceClient) mcp.ToolHandlerFor[Du
 			})
 		}
 
-		return nil, result, nil
+		responseMeta := MergeResponseMetadata(callMeta, header)
+		return CallToolResultWithMetadata(responseMeta), result, nil
 	}
 }
 
 // DualityProbabilityHandler executes the deterministic probability evaluation.
 func DualityProbabilityHandler(client pb.DualityServiceClient) mcp.ToolHandlerFor[DualityProbabilityInput, DualityProbabilityResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input DualityProbabilityInput) (*mcp.CallToolResult, DualityProbabilityResult, error) {
+		invocationID, err := NewInvocationID()
+		if err != nil {
+			return nil, DualityProbabilityResult{}, fmt.Errorf("generate invocation id: %w", err)
+		}
+
 		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 
-		response, err := client.DualityProbability(runCtx, &pb.DualityProbabilityRequest{
+		callCtx, callMeta, err := NewOutgoingContext(runCtx, invocationID)
+		if err != nil {
+			return nil, DualityProbabilityResult{}, fmt.Errorf("create request metadata: %w", err)
+		}
+
+		var header metadata.MD
+
+		response, err := client.DualityProbability(callCtx, &pb.DualityProbabilityRequest{
 			Modifier:   int32(input.Modifier),
 			Difficulty: int32(input.Difficulty),
-		})
+		}, grpc.Header(&header))
 		if err != nil {
 			return nil, DualityProbabilityResult{}, fmt.Errorf("duality probability failed: %w", err)
 		}
@@ -376,17 +429,30 @@ func DualityProbabilityHandler(client pb.DualityServiceClient) mcp.ToolHandlerFo
 			OutcomeCounts: counts,
 		}
 
-		return nil, result, nil
+		responseMeta := MergeResponseMetadata(callMeta, header)
+		return CallToolResultWithMetadata(responseMeta), result, nil
 	}
 }
 
 // RulesVersionHandler returns static ruleset metadata from the gRPC service.
 func RulesVersionHandler(client pb.DualityServiceClient) mcp.ToolHandlerFor[RulesVersionInput, RulesVersionResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, _ RulesVersionInput) (*mcp.CallToolResult, RulesVersionResult, error) {
+		invocationID, err := NewInvocationID()
+		if err != nil {
+			return nil, RulesVersionResult{}, fmt.Errorf("generate invocation id: %w", err)
+		}
+
 		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 
-		response, err := client.RulesVersion(runCtx, &pb.RulesVersionRequest{})
+		callCtx, callMeta, err := NewOutgoingContext(runCtx, invocationID)
+		if err != nil {
+			return nil, RulesVersionResult{}, fmt.Errorf("create request metadata: %w", err)
+		}
+
+		var header metadata.MD
+
+		response, err := client.RulesVersion(callCtx, &pb.RulesVersionRequest{}, grpc.Header(&header))
 		if err != nil {
 			return nil, RulesVersionResult{}, fmt.Errorf("rules version failed: %w", err)
 		}
@@ -399,7 +465,8 @@ func RulesVersionHandler(client pb.DualityServiceClient) mcp.ToolHandlerFor[Rule
 			outcomes = append(outcomes, outcome.String())
 		}
 
-		return nil, RulesVersionResult{
+		responseMeta := MergeResponseMetadata(callMeta, header)
+		return CallToolResultWithMetadata(responseMeta), RulesVersionResult{
 			System:         response.GetSystem(),
 			Module:         response.GetModule(),
 			RulesVersion:   response.GetRulesVersion(),
@@ -415,6 +482,11 @@ func RulesVersionHandler(client pb.DualityServiceClient) mcp.ToolHandlerFor[Rule
 // RollDiceHandler executes a generic dice roll.
 func RollDiceHandler(client pb.DualityServiceClient) mcp.ToolHandlerFor[RollDiceInput, RollDiceResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input RollDiceInput) (*mcp.CallToolResult, RollDiceResult, error) {
+		invocationID, err := NewInvocationID()
+		if err != nil {
+			return nil, RollDiceResult{}, fmt.Errorf("generate invocation id: %w", err)
+		}
+
 		diceSpecs := make([]*pb.DiceSpec, 0, len(input.Dice))
 		for _, spec := range input.Dice {
 			diceSpecs = append(diceSpecs, &pb.DiceSpec{
@@ -426,9 +498,16 @@ func RollDiceHandler(client pb.DualityServiceClient) mcp.ToolHandlerFor[RollDice
 		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 
-		response, err := client.RollDice(runCtx, &pb.RollDiceRequest{
+		callCtx, callMeta, err := NewOutgoingContext(runCtx, invocationID)
+		if err != nil {
+			return nil, RollDiceResult{}, fmt.Errorf("create request metadata: %w", err)
+		}
+
+		var header metadata.MD
+
+		response, err := client.RollDice(callCtx, &pb.RollDiceRequest{
 			Dice: diceSpecs,
-		})
+		}, grpc.Header(&header))
 		if err != nil {
 			return nil, RollDiceResult{}, fmt.Errorf("dice roll failed: %w", err)
 		}
@@ -450,7 +529,8 @@ func RollDiceHandler(client pb.DualityServiceClient) mcp.ToolHandlerFor[RollDice
 			Total: int(response.GetTotal()),
 		}
 
-		return nil, result, nil
+		responseMeta := MergeResponseMetadata(callMeta, header)
+		return CallToolResultWithMetadata(responseMeta), result, nil
 	}
 }
 

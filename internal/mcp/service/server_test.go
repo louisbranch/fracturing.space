@@ -14,6 +14,7 @@ import (
 	campaignv1 "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1"
 	pb "github.com/louisbranch/duality-engine/api/gen/go/duality/v1"
 	sessionv1 "github.com/louisbranch/duality-engine/api/gen/go/session/v1"
+	"github.com/louisbranch/duality-engine/internal/grpcmeta"
 	"github.com/louisbranch/duality-engine/internal/mcp/domain"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
@@ -47,6 +48,26 @@ type fakeDualityClient struct {
 	lastRulesVersionRequest       *pb.RulesVersionRequest
 }
 
+// requireToolMetadata asserts tool result metadata includes correlation IDs.
+func requireToolMetadata(t *testing.T, result *mcp.CallToolResult) (string, string) {
+	t.Helper()
+	if result == nil {
+		t.Fatal("expected result metadata")
+	}
+	if result.Meta == nil {
+		t.Fatal("expected result metadata map")
+	}
+	requestID, _ := result.Meta[grpcmeta.RequestIDHeader].(string)
+	if requestID == "" {
+		t.Fatal("expected request id metadata")
+	}
+	invocationID, _ := result.Meta[grpcmeta.InvocationIDHeader].(string)
+	if invocationID == "" {
+		t.Fatal("expected invocation id metadata")
+	}
+	return requestID, invocationID
+}
+
 // fakeCampaignClient implements CampaignServiceClient for tests.
 type fakeCampaignClient struct {
 	response                     *campaignv1.CreateCampaignResponse
@@ -55,8 +76,8 @@ type fakeCampaignClient struct {
 	createParticipantResponse    *campaignv1.CreateParticipantResponse
 	listParticipantsResponse     *campaignv1.ListParticipantsResponse
 	getParticipantResponse       *campaignv1.GetParticipantResponse
-	createCharacterResponse          *campaignv1.CreateCharacterResponse
-	listCharactersResponse           *campaignv1.ListCharactersResponse
+	createCharacterResponse      *campaignv1.CreateCharacterResponse
+	listCharactersResponse       *campaignv1.ListCharactersResponse
 	setDefaultControlResponse    *campaignv1.SetDefaultControlResponse
 	err                          error
 	listErr                      error
@@ -64,8 +85,8 @@ type fakeCampaignClient struct {
 	createParticipantErr         error
 	listParticipantsErr          error
 	getParticipantErr            error
-	createCharacterErr               error
-	listCharactersErr                error
+	createCharacterErr           error
+	listCharactersErr            error
 	setDefaultControlErr         error
 	lastRequest                  *campaignv1.CreateCampaignRequest
 	lastListRequest              *campaignv1.ListCampaignsRequest
@@ -73,8 +94,8 @@ type fakeCampaignClient struct {
 	lastCreateParticipantRequest *campaignv1.CreateParticipantRequest
 	lastListParticipantsRequest  *campaignv1.ListParticipantsRequest
 	lastGetParticipantRequest    *campaignv1.GetParticipantRequest
-	lastCreateCharacterRequest       *campaignv1.CreateCharacterRequest
-	lastListCharactersRequest        *campaignv1.ListCharactersRequest
+	lastCreateCharacterRequest   *campaignv1.CreateCharacterRequest
+	lastListCharactersRequest    *campaignv1.ListCharactersRequest
 	lastSetDefaultControlRequest *campaignv1.SetDefaultControlRequest
 	listCalls                    int
 }
@@ -416,9 +437,7 @@ func TestActionRollHandlerMapsRequestAndResponse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if result != nil {
-		t.Fatal("expected nil result on success")
-	}
+	requireToolMetadata(t, result)
 	if client.lastRequest == nil {
 		t.Fatal("expected gRPC request")
 	}
@@ -539,9 +558,7 @@ func TestDualityOutcomeHandlerMapsRequestAndResponse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if result != nil {
-		t.Fatal("expected nil result on success")
-	}
+	requireToolMetadata(t, result)
 	if client.lastDualityOutcomeRequest == nil {
 		t.Fatal("expected gRPC request")
 	}
@@ -622,9 +639,7 @@ func TestDualityExplainHandlerMapsRequestAndResponse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if result != nil {
-		t.Fatal("expected nil result on success")
-	}
+	requireToolMetadata(t, result)
 	if client.lastDualityExplainRequest == nil {
 		t.Fatal("expected gRPC request")
 	}
@@ -715,9 +730,7 @@ func TestDualityProbabilityHandlerMapsRequestAndResponse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if result != nil {
-		t.Fatal("expected nil result on success")
-	}
+	requireToolMetadata(t, result)
 	if client.lastDualityProbabilityRequest == nil {
 		t.Fatal("expected gRPC request")
 	}
@@ -823,9 +836,7 @@ func TestRollDiceHandlerMapsRequestAndResponse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if result != nil {
-		t.Fatal("expected nil result on success")
-	}
+	requireToolMetadata(t, result)
 	if client.lastRollDiceRequest == nil {
 		t.Fatal("expected gRPC request")
 	}
@@ -893,9 +904,7 @@ func TestRulesVersionHandlerMapsResponse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if result != nil {
-		t.Fatal("expected nil result on success")
-	}
+	requireToolMetadata(t, result)
 	if client.lastRulesVersionRequest == nil {
 		t.Fatal("expected gRPC request")
 	}
@@ -957,14 +966,14 @@ func TestCampaignCreateHandlerMapsRequestAndResponse(t *testing.T) {
 	now := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
 	client := &fakeCampaignClient{response: &campaignv1.CreateCampaignResponse{
 		Campaign: &campaignv1.Campaign{
-			Id:              "camp-123",
-			Name:            "Snowbound",
-			GmMode:          campaignv1.GmMode_AI,
+			Id:               "camp-123",
+			Name:             "Snowbound",
+			GmMode:           campaignv1.GmMode_AI,
 			ParticipantCount: 5,
-			CharacterCount:      3,
-			ThemePrompt:     "ice and steel",
-			CreatedAt:       timestamppb.New(now),
-			UpdatedAt:       timestamppb.New(now),
+			CharacterCount:   3,
+			ThemePrompt:      "ice and steel",
+			CreatedAt:        timestamppb.New(now),
+			UpdatedAt:        timestamppb.New(now),
 		},
 	}}
 	result, output, err := domain.CampaignCreateHandler(client)(
@@ -979,9 +988,7 @@ func TestCampaignCreateHandlerMapsRequestAndResponse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if result != nil {
-		t.Fatal("expected nil result on success")
-	}
+	requireToolMetadata(t, result)
 	if client.lastRequest == nil {
 		t.Fatal("expected gRPC request")
 	}
@@ -1038,14 +1045,14 @@ func TestCampaignListResourceHandlerMapsResponse(t *testing.T) {
 	now := time.Date(2026, 1, 23, 13, 0, 0, 0, time.UTC)
 	client := &fakeCampaignClient{listResponse: &campaignv1.ListCampaignsResponse{
 		Campaigns: []*campaignv1.Campaign{{
-			Id:              "camp-1",
-			Name:            "Red Sands",
-			GmMode:          campaignv1.GmMode_HUMAN,
+			Id:               "camp-1",
+			Name:             "Red Sands",
+			GmMode:           campaignv1.GmMode_HUMAN,
 			ParticipantCount: 4,
-			CharacterCount:      2,
-			ThemePrompt:     "desert skies",
-			CreatedAt:       timestamppb.New(now),
-			UpdatedAt:       timestamppb.New(now.Add(time.Hour)),
+			CharacterCount:   2,
+			ThemePrompt:      "desert skies",
+			CreatedAt:        timestamppb.New(now),
+			UpdatedAt:        timestamppb.New(now.Add(time.Hour)),
 		}},
 		NextPageToken: "next",
 	}}
@@ -1073,14 +1080,14 @@ func TestCampaignListResourceHandlerMapsResponse(t *testing.T) {
 
 	var payload struct {
 		Campaigns []struct {
-			ID              string `json:"id"`
-			Name            string `json:"name"`
-			GmMode          string `json:"gm_mode"`
+			ID               string `json:"id"`
+			Name             string `json:"name"`
+			GmMode           string `json:"gm_mode"`
 			ParticipantCount int    `json:"participant_count"`
-			CharacterCount      int    `json:"character_count"`
-			ThemePrompt     string `json:"theme_prompt"`
-			CreatedAt       string `json:"created_at"`
-			UpdatedAt       string `json:"updated_at"`
+			CharacterCount   int    `json:"character_count"`
+			ThemePrompt      string `json:"theme_prompt"`
+			CreatedAt        string `json:"created_at"`
+			UpdatedAt        string `json:"updated_at"`
 		} `json:"campaigns"`
 	}
 	if err := json.Unmarshal([]byte(result.Contents[0].Text), &payload); err != nil {
@@ -1108,14 +1115,14 @@ func TestCampaignResourceHandlerMapsResponse(t *testing.T) {
 	now := time.Date(2026, 1, 23, 13, 0, 0, 0, time.UTC)
 	client := &fakeCampaignClient{getCampaignResponse: &campaignv1.GetCampaignResponse{
 		Campaign: &campaignv1.Campaign{
-			Id:              "camp-1",
-			Name:            "Red Sands",
-			GmMode:          campaignv1.GmMode_HUMAN,
+			Id:               "camp-1",
+			Name:             "Red Sands",
+			GmMode:           campaignv1.GmMode_HUMAN,
 			ParticipantCount: 4,
-			CharacterCount:      2,
-			ThemePrompt:     "desert skies",
-			CreatedAt:       timestamppb.New(now),
-			UpdatedAt:       timestamppb.New(now.Add(time.Hour)),
+			CharacterCount:   2,
+			ThemePrompt:      "desert skies",
+			CreatedAt:        timestamppb.New(now),
+			UpdatedAt:        timestamppb.New(now.Add(time.Hour)),
 		},
 	}}
 
@@ -1140,14 +1147,14 @@ func TestCampaignResourceHandlerMapsResponse(t *testing.T) {
 
 	var payload struct {
 		Campaign struct {
-			ID              string `json:"id"`
-			Name            string `json:"name"`
-			GmMode          string `json:"gm_mode"`
+			ID               string `json:"id"`
+			Name             string `json:"name"`
+			GmMode           string `json:"gm_mode"`
 			ParticipantCount int    `json:"participant_count"`
-			CharacterCount      int    `json:"character_count"`
-			ThemePrompt     string `json:"theme_prompt"`
-			CreatedAt       string `json:"created_at"`
-			UpdatedAt       string `json:"updated_at"`
+			CharacterCount   int    `json:"character_count"`
+			ThemePrompt      string `json:"theme_prompt"`
+			CreatedAt        string `json:"created_at"`
+			UpdatedAt        string `json:"updated_at"`
 		} `json:"campaign"`
 	}
 	if err := json.Unmarshal([]byte(result.Contents[0].Text), &payload); err != nil {
@@ -1343,9 +1350,7 @@ func TestParticipantCreateHandlerMapsRequestAndResponse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if result != nil {
-		t.Fatal("expected nil result on success")
-	}
+	requireToolMetadata(t, result)
 	if client.lastCreateParticipantRequest == nil {
 		t.Fatal("expected gRPC request")
 	}
@@ -1411,9 +1416,7 @@ func TestParticipantCreateHandlerOptionalController(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if result != nil {
-		t.Fatal("expected nil result on success")
-	}
+	requireToolMetadata(t, result)
 	if client.lastCreateParticipantRequest == nil {
 		t.Fatal("expected gRPC request")
 	}
@@ -1490,9 +1493,7 @@ func TestCharacterCreateHandlerMapsRequestAndResponse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if result != nil {
-		t.Fatal("expected nil result on success")
-	}
+	requireToolMetadata(t, result)
 	if client.lastCreateCharacterRequest == nil {
 		t.Fatal("expected gRPC request")
 	}
@@ -1558,9 +1559,7 @@ func TestCharacterCreateHandlerOptionalNotes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if result != nil {
-		t.Fatal("expected nil result on success")
-	}
+	requireToolMetadata(t, result)
 	if client.lastCreateCharacterRequest == nil {
 		t.Fatal("expected gRPC request")
 	}
@@ -1596,9 +1595,9 @@ func TestCharacterControlSetHandlerReturnsClientError(t *testing.T) {
 	handler := domain.CharacterControlSetHandler(client)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.CharacterControlSetInput{
-		CampaignID: "camp-123",
-		CharacterID:    "character-456",
-		Controller: "GM",
+		CampaignID:  "camp-123",
+		CharacterID: "character-456",
+		Controller:  "GM",
 	})
 	if err == nil {
 		t.Fatal("expected error")
@@ -1611,8 +1610,8 @@ func TestCharacterControlSetHandlerReturnsClientError(t *testing.T) {
 // TestCharacterControlSetHandlerMapsRequestAndResponseGM ensures GM controller inputs and outputs map consistently.
 func TestCharacterControlSetHandlerMapsRequestAndResponseGM(t *testing.T) {
 	client := &fakeCampaignClient{setDefaultControlResponse: &campaignv1.SetDefaultControlResponse{
-		CampaignId: "camp-123",
-		CharacterId:    "character-456",
+		CampaignId:  "camp-123",
+		CharacterId: "character-456",
 		Controller: &campaignv1.CharacterController{
 			Controller: &campaignv1.CharacterController_Gm{
 				Gm: &campaignv1.GmController{},
@@ -1623,17 +1622,15 @@ func TestCharacterControlSetHandlerMapsRequestAndResponseGM(t *testing.T) {
 		context.Background(),
 		&mcp.CallToolRequest{},
 		domain.CharacterControlSetInput{
-			CampaignID: "camp-123",
-			CharacterID:    "character-456",
-			Controller: "GM",
+			CampaignID:  "camp-123",
+			CharacterID: "character-456",
+			Controller:  "GM",
 		},
 	)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if result != nil {
-		t.Fatal("expected nil result on success")
-	}
+	requireToolMetadata(t, result)
 	if client.lastSetDefaultControlRequest == nil {
 		t.Fatal("expected gRPC request")
 	}
@@ -1665,8 +1662,8 @@ func TestCharacterControlSetHandlerMapsRequestAndResponseGM(t *testing.T) {
 func TestCharacterControlSetHandlerMapsRequestAndResponseParticipant(t *testing.T) {
 	participantID := "part-789"
 	client := &fakeCampaignClient{setDefaultControlResponse: &campaignv1.SetDefaultControlResponse{
-		CampaignId: "camp-123",
-		CharacterId:    "character-456",
+		CampaignId:  "camp-123",
+		CharacterId: "character-456",
 		Controller: &campaignv1.CharacterController{
 			Controller: &campaignv1.CharacterController_Participant{
 				Participant: &campaignv1.ParticipantController{
@@ -1679,17 +1676,15 @@ func TestCharacterControlSetHandlerMapsRequestAndResponseParticipant(t *testing.
 		context.Background(),
 		&mcp.CallToolRequest{},
 		domain.CharacterControlSetInput{
-			CampaignID: "camp-123",
-			CharacterID:    "character-456",
-			Controller: participantID,
+			CampaignID:  "camp-123",
+			CharacterID: "character-456",
+			Controller:  participantID,
 		},
 	)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if result != nil {
-		t.Fatal("expected nil result on success")
-	}
+	requireToolMetadata(t, result)
 	if client.lastSetDefaultControlRequest == nil {
 		t.Fatal("expected gRPC request")
 	}
@@ -1724,8 +1719,8 @@ func TestCharacterControlSetHandlerMapsRequestAndResponseParticipant(t *testing.
 // TestCharacterControlSetHandlerCaseInsensitiveGM ensures GM controller accepts case-insensitive input.
 func TestCharacterControlSetHandlerCaseInsensitiveGM(t *testing.T) {
 	client := &fakeCampaignClient{setDefaultControlResponse: &campaignv1.SetDefaultControlResponse{
-		CampaignId: "camp-123",
-		CharacterId:    "character-456",
+		CampaignId:  "camp-123",
+		CharacterId: "character-456",
 		Controller: &campaignv1.CharacterController{
 			Controller: &campaignv1.CharacterController_Gm{
 				Gm: &campaignv1.GmController{},
@@ -1738,9 +1733,9 @@ func TestCharacterControlSetHandlerCaseInsensitiveGM(t *testing.T) {
 				context.Background(),
 				&mcp.CallToolRequest{},
 				domain.CharacterControlSetInput{
-					CampaignID: "camp-123",
-					CharacterID:    "character-456",
-					Controller: input,
+					CampaignID:  "camp-123",
+					CharacterID: "character-456",
+					Controller:  input,
 				},
 			)
 			if err != nil {
@@ -1759,9 +1754,9 @@ func TestCharacterControlSetHandlerRejectsEmptyResponse(t *testing.T) {
 	handler := domain.CharacterControlSetHandler(client)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.CharacterControlSetInput{
-		CampaignID: "camp-123",
-		CharacterID:    "character-456",
-		Controller: "GM",
+		CampaignID:  "camp-123",
+		CharacterID: "character-456",
+		Controller:  "GM",
 	})
 	if err == nil {
 		t.Fatal("expected error")
@@ -1777,9 +1772,9 @@ func TestCharacterControlSetHandlerRejectsEmptyController(t *testing.T) {
 	handler := domain.CharacterControlSetHandler(client)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.CharacterControlSetInput{
-		CampaignID: "camp-123",
-		CharacterID:    "character-456",
-		Controller: "",
+		CampaignID:  "camp-123",
+		CharacterID: "character-456",
+		Controller:  "",
 	})
 	if err == nil {
 		t.Fatal("expected error for empty controller")
@@ -1830,9 +1825,7 @@ func TestSessionStartHandlerMapsRequestAndResponse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if result != nil {
-		t.Fatal("expected nil result on success")
-	}
+	requireToolMetadata(t, result)
 	if client.lastRequest == nil {
 		t.Fatal("expected gRPC request")
 	}
@@ -1886,9 +1879,7 @@ func TestSessionStartHandlerOptionalName(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if result != nil {
-		t.Fatal("expected nil result on success")
-	}
+	requireToolMetadata(t, result)
 	if client.lastRequest == nil {
 		t.Fatal("expected gRPC request")
 	}
@@ -1946,9 +1937,7 @@ func TestSessionStartHandlerMapsEndedAt(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if result != nil {
-		t.Fatal("expected nil result on success")
-	}
+	requireToolMetadata(t, result)
 	if output.EndedAt != endedAt.Format(time.RFC3339) {
 		t.Fatalf("expected ended_at %q, got %q", endedAt.Format(time.RFC3339), output.EndedAt)
 	}
@@ -2385,9 +2374,7 @@ func TestSetContextHandlerTreatsWhitespaceOnlySessionIDAsOmitted(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if result != nil {
-		t.Fatal("expected nil result on success")
-	}
+	requireToolMetadata(t, result)
 	if output.Context.SessionID != "" {
 		t.Fatalf("expected empty session_id after trim, got %q", output.Context.SessionID)
 	}
@@ -2473,9 +2460,7 @@ func TestSetContextHandlerTreatsWhitespaceOnlyParticipantIDAsOmitted(t *testing.
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if result != nil {
-		t.Fatal("expected nil result on success")
-	}
+	requireToolMetadata(t, result)
 	if output.Context.ParticipantID != "" {
 		t.Fatalf("expected empty participant_id after trim, got %q", output.Context.ParticipantID)
 	}
@@ -2573,9 +2558,7 @@ func TestSetContextHandlerMapsRequestAndResponse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if result != nil {
-		t.Fatal("expected nil result on success")
-	}
+	requireToolMetadata(t, result)
 	if output.Context.CampaignID != "camp-123" {
 		t.Fatalf("expected campaign id camp-123, got %q", output.Context.CampaignID)
 	}
@@ -2616,9 +2599,7 @@ func TestSetContextHandlerOptionalFields(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if result != nil {
-		t.Fatal("expected nil result on success")
-	}
+	requireToolMetadata(t, result)
 	if output.Context.CampaignID != "camp-123" {
 		t.Fatalf("expected campaign id camp-123, got %q", output.Context.CampaignID)
 	}
