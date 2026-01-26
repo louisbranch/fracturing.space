@@ -24,17 +24,16 @@ var File_campaign_v1_service_proto protoreflect.FileDescriptor
 
 const file_campaign_v1_service_proto_rawDesc = "" +
 	"\n" +
-	"\x19campaign/v1/service.proto\x12\vcampaign.v1\x1a\x1acampaign/v1/requests.proto2\xbb\x06\n" +
+	"\x19campaign/v1/service.proto\x12\vcampaign.v1\x1a\x1acampaign/v1/requests.proto2\xd3\x06\n" +
 	"\x0fCampaignService\x12Y\n" +
 	"\x0eCreateCampaign\x12\".campaign.v1.CreateCampaignRequest\x1a#.campaign.v1.CreateCampaignResponse\x12V\n" +
 	"\rListCampaigns\x12!.campaign.v1.ListCampaignsRequest\x1a\".campaign.v1.ListCampaignsResponse\x12P\n" +
 	"\vGetCampaign\x12\x1f.campaign.v1.GetCampaignRequest\x1a .campaign.v1.GetCampaignResponse\x12b\n" +
 	"\x11CreateParticipant\x12%.campaign.v1.CreateParticipantRequest\x1a&.campaign.v1.CreateParticipantResponse\x12_\n" +
 	"\x10ListParticipants\x12$.campaign.v1.ListParticipantsRequest\x1a%.campaign.v1.ListParticipantsResponse\x12Y\n" +
-	"\x0eGetParticipant\x12\".campaign.v1.GetParticipantRequest\x1a#.campaign.v1.GetParticipantResponse\x12P\n" +
-	"\vCreateActor\x12\x1f.campaign.v1.CreateActorRequest\x1a .campaign.v1.CreateActorResponse\x12M\n" +
-	"\n" +
-	"ListActors\x12\x1e.campaign.v1.ListActorsRequest\x1a\x1f.campaign.v1.ListActorsResponse\x12b\n" +
+	"\x0eGetParticipant\x12\".campaign.v1.GetParticipantRequest\x1a#.campaign.v1.GetParticipantResponse\x12\\\n" +
+	"\x0fCreateCharacter\x12#.campaign.v1.CreateCharacterRequest\x1a$.campaign.v1.CreateCharacterResponse\x12Y\n" +
+	"\x0eListCharacters\x12\".campaign.v1.ListCharactersRequest\x1a#.campaign.v1.ListCharactersResponse\x12b\n" +
 	"\x11SetDefaultControl\x12%.campaign.v1.SetDefaultControlRequest\x1a&.campaign.v1.SetDefaultControlResponseBIZGgithub.com/louisbranch/duality-engine/api/gen/go/campaign/v1;campaignv1b\x06proto3"
 
 var file_campaign_v1_service_proto_goTypes = []any{
@@ -44,8 +43,8 @@ var file_campaign_v1_service_proto_goTypes = []any{
 	(*CreateParticipantRequest)(nil),  // 3: campaign.v1.CreateParticipantRequest
 	(*ListParticipantsRequest)(nil),   // 4: campaign.v1.ListParticipantsRequest
 	(*GetParticipantRequest)(nil),     // 5: campaign.v1.GetParticipantRequest
-	(*CreateActorRequest)(nil),        // 6: campaign.v1.CreateActorRequest
-	(*ListActorsRequest)(nil),         // 7: campaign.v1.ListActorsRequest
+	(*CreateCharacterRequest)(nil),    // 6: campaign.v1.CreateCharacterRequest
+	(*ListCharactersRequest)(nil),     // 7: campaign.v1.ListCharactersRequest
 	(*SetDefaultControlRequest)(nil),  // 8: campaign.v1.SetDefaultControlRequest
 	(*CreateCampaignResponse)(nil),    // 9: campaign.v1.CreateCampaignResponse
 	(*ListCampaignsResponse)(nil),     // 10: campaign.v1.ListCampaignsResponse
@@ -53,8 +52,8 @@ var file_campaign_v1_service_proto_goTypes = []any{
 	(*CreateParticipantResponse)(nil), // 12: campaign.v1.CreateParticipantResponse
 	(*ListParticipantsResponse)(nil),  // 13: campaign.v1.ListParticipantsResponse
 	(*GetParticipantResponse)(nil),    // 14: campaign.v1.GetParticipantResponse
-	(*CreateActorResponse)(nil),       // 15: campaign.v1.CreateActorResponse
-	(*ListActorsResponse)(nil),        // 16: campaign.v1.ListActorsResponse
+	(*CreateCharacterResponse)(nil),   // 15: campaign.v1.CreateCharacterResponse
+	(*ListCharactersResponse)(nil),    // 16: campaign.v1.ListCharactersResponse
 	(*SetDefaultControlResponse)(nil), // 17: campaign.v1.SetDefaultControlResponse
 }
 var file_campaign_v1_service_proto_depIdxs = []int32{
@@ -64,8 +63,8 @@ var file_campaign_v1_service_proto_depIdxs = []int32{
 	3,  // 3: campaign.v1.CampaignService.CreateParticipant:input_type -> campaign.v1.CreateParticipantRequest
 	4,  // 4: campaign.v1.CampaignService.ListParticipants:input_type -> campaign.v1.ListParticipantsRequest
 	5,  // 5: campaign.v1.CampaignService.GetParticipant:input_type -> campaign.v1.GetParticipantRequest
-	6,  // 6: campaign.v1.CampaignService.CreateActor:input_type -> campaign.v1.CreateActorRequest
-	7,  // 7: campaign.v1.CampaignService.ListActors:input_type -> campaign.v1.ListActorsRequest
+	6,  // 6: campaign.v1.CampaignService.CreateCharacter:input_type -> campaign.v1.CreateCharacterRequest
+	7,  // 7: campaign.v1.CampaignService.ListCharacters:input_type -> campaign.v1.ListCharactersRequest
 	8,  // 8: campaign.v1.CampaignService.SetDefaultControl:input_type -> campaign.v1.SetDefaultControlRequest
 	9,  // 9: campaign.v1.CampaignService.CreateCampaign:output_type -> campaign.v1.CreateCampaignResponse
 	10, // 10: campaign.v1.CampaignService.ListCampaigns:output_type -> campaign.v1.ListCampaignsResponse
@@ -73,8 +72,8 @@ var file_campaign_v1_service_proto_depIdxs = []int32{
 	12, // 12: campaign.v1.CampaignService.CreateParticipant:output_type -> campaign.v1.CreateParticipantResponse
 	13, // 13: campaign.v1.CampaignService.ListParticipants:output_type -> campaign.v1.ListParticipantsResponse
 	14, // 14: campaign.v1.CampaignService.GetParticipant:output_type -> campaign.v1.GetParticipantResponse
-	15, // 15: campaign.v1.CampaignService.CreateActor:output_type -> campaign.v1.CreateActorResponse
-	16, // 16: campaign.v1.CampaignService.ListActors:output_type -> campaign.v1.ListActorsResponse
+	15, // 15: campaign.v1.CampaignService.CreateCharacter:output_type -> campaign.v1.CreateCharacterResponse
+	16, // 16: campaign.v1.CampaignService.ListCharacters:output_type -> campaign.v1.ListCharactersResponse
 	17, // 17: campaign.v1.CampaignService.SetDefaultControl:output_type -> campaign.v1.SetDefaultControlResponse
 	9,  // [9:18] is the sub-list for method output_type
 	0,  // [0:9] is the sub-list for method input_type

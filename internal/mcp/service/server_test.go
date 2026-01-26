@@ -55,8 +55,8 @@ type fakeCampaignClient struct {
 	createParticipantResponse    *campaignv1.CreateParticipantResponse
 	listParticipantsResponse     *campaignv1.ListParticipantsResponse
 	getParticipantResponse       *campaignv1.GetParticipantResponse
-	createActorResponse          *campaignv1.CreateActorResponse
-	listActorsResponse           *campaignv1.ListActorsResponse
+	createCharacterResponse          *campaignv1.CreateCharacterResponse
+	listCharactersResponse           *campaignv1.ListCharactersResponse
 	setDefaultControlResponse    *campaignv1.SetDefaultControlResponse
 	err                          error
 	listErr                      error
@@ -64,8 +64,8 @@ type fakeCampaignClient struct {
 	createParticipantErr         error
 	listParticipantsErr          error
 	getParticipantErr            error
-	createActorErr               error
-	listActorsErr                error
+	createCharacterErr               error
+	listCharactersErr                error
 	setDefaultControlErr         error
 	lastRequest                  *campaignv1.CreateCampaignRequest
 	lastListRequest              *campaignv1.ListCampaignsRequest
@@ -73,8 +73,8 @@ type fakeCampaignClient struct {
 	lastCreateParticipantRequest *campaignv1.CreateParticipantRequest
 	lastListParticipantsRequest  *campaignv1.ListParticipantsRequest
 	lastGetParticipantRequest    *campaignv1.GetParticipantRequest
-	lastCreateActorRequest       *campaignv1.CreateActorRequest
-	lastListActorsRequest        *campaignv1.ListActorsRequest
+	lastCreateCharacterRequest       *campaignv1.CreateCharacterRequest
+	lastListCharactersRequest        *campaignv1.ListCharactersRequest
 	lastSetDefaultControlRequest *campaignv1.SetDefaultControlRequest
 	listCalls                    int
 }
@@ -160,16 +160,16 @@ func (f *fakeCampaignClient) GetParticipant(ctx context.Context, req *campaignv1
 	return f.getParticipantResponse, f.getParticipantErr
 }
 
-// CreateActor records the request and returns the configured response.
-func (f *fakeCampaignClient) CreateActor(ctx context.Context, req *campaignv1.CreateActorRequest, opts ...grpc.CallOption) (*campaignv1.CreateActorResponse, error) {
-	f.lastCreateActorRequest = req
-	return f.createActorResponse, f.createActorErr
+// CreateCharacter records the request and returns the configured response.
+func (f *fakeCampaignClient) CreateCharacter(ctx context.Context, req *campaignv1.CreateCharacterRequest, opts ...grpc.CallOption) (*campaignv1.CreateCharacterResponse, error) {
+	f.lastCreateCharacterRequest = req
+	return f.createCharacterResponse, f.createCharacterErr
 }
 
-// ListActors records the request and returns the configured response.
-func (f *fakeCampaignClient) ListActors(ctx context.Context, req *campaignv1.ListActorsRequest, opts ...grpc.CallOption) (*campaignv1.ListActorsResponse, error) {
-	f.lastListActorsRequest = req
-	return f.listActorsResponse, f.listActorsErr
+// ListCharacters records the request and returns the configured response.
+func (f *fakeCampaignClient) ListCharacters(ctx context.Context, req *campaignv1.ListCharactersRequest, opts ...grpc.CallOption) (*campaignv1.ListCharactersResponse, error) {
+	f.lastListCharactersRequest = req
+	return f.listCharactersResponse, f.listCharactersErr
 }
 
 // SetDefaultControl records the request and returns the configured response.
@@ -946,7 +946,7 @@ func TestCampaignCreateHandlerMapsRequestAndResponse(t *testing.T) {
 			Name:            "Snowbound",
 			GmMode:          campaignv1.GmMode_AI,
 			ParticipantCount: 5,
-			ActorCount:      3,
+			CharacterCount:      3,
 			ThemePrompt:     "ice and steel",
 			CreatedAt:       timestamppb.New(now),
 			UpdatedAt:       timestamppb.New(now),
@@ -982,8 +982,8 @@ func TestCampaignCreateHandlerMapsRequestAndResponse(t *testing.T) {
 	if output.ParticipantCount != 5 {
 		t.Fatalf("expected participant count 5, got %d", output.ParticipantCount)
 	}
-	if output.ActorCount != 3 {
-		t.Fatalf("expected actor count 3, got %d", output.ActorCount)
+	if output.CharacterCount != 3 {
+		t.Fatalf("expected character count 3, got %d", output.CharacterCount)
 	}
 }
 
@@ -1027,7 +1027,7 @@ func TestCampaignListResourceHandlerMapsResponse(t *testing.T) {
 			Name:            "Red Sands",
 			GmMode:          campaignv1.GmMode_HUMAN,
 			ParticipantCount: 4,
-			ActorCount:      2,
+			CharacterCount:      2,
 			ThemePrompt:     "desert skies",
 			CreatedAt:       timestamppb.New(now),
 			UpdatedAt:       timestamppb.New(now.Add(time.Hour)),
@@ -1062,7 +1062,7 @@ func TestCampaignListResourceHandlerMapsResponse(t *testing.T) {
 			Name            string `json:"name"`
 			GmMode          string `json:"gm_mode"`
 			ParticipantCount int    `json:"participant_count"`
-			ActorCount      int    `json:"actor_count"`
+			CharacterCount      int    `json:"character_count"`
 			ThemePrompt     string `json:"theme_prompt"`
 			CreatedAt       string `json:"created_at"`
 			UpdatedAt       string `json:"updated_at"`
@@ -1097,7 +1097,7 @@ func TestCampaignResourceHandlerMapsResponse(t *testing.T) {
 			Name:            "Red Sands",
 			GmMode:          campaignv1.GmMode_HUMAN,
 			ParticipantCount: 4,
-			ActorCount:      2,
+			CharacterCount:      2,
 			ThemePrompt:     "desert skies",
 			CreatedAt:       timestamppb.New(now),
 			UpdatedAt:       timestamppb.New(now.Add(time.Hour)),
@@ -1129,7 +1129,7 @@ func TestCampaignResourceHandlerMapsResponse(t *testing.T) {
 			Name            string `json:"name"`
 			GmMode          string `json:"gm_mode"`
 			ParticipantCount int    `json:"participant_count"`
-			ActorCount      int    `json:"actor_count"`
+			CharacterCount      int    `json:"character_count"`
 			ThemePrompt     string `json:"theme_prompt"`
 			CreatedAt       string `json:"created_at"`
 			UpdatedAt       string `json:"updated_at"`
@@ -1150,8 +1150,8 @@ func TestCampaignResourceHandlerMapsResponse(t *testing.T) {
 	if payload.Campaign.ParticipantCount != 4 {
 		t.Fatalf("expected participant_count 4, got %d", payload.Campaign.ParticipantCount)
 	}
-	if payload.Campaign.ActorCount != 2 {
-		t.Fatalf("expected actor_count 2, got %d", payload.Campaign.ActorCount)
+	if payload.Campaign.CharacterCount != 2 {
+		t.Fatalf("expected character_count 2, got %d", payload.Campaign.CharacterCount)
 	}
 	if payload.Campaign.CreatedAt != now.Format(time.RFC3339) {
 		t.Fatalf("expected created_at %q, got %q", now.Format(time.RFC3339), payload.Campaign.CreatedAt)
@@ -1429,14 +1429,14 @@ func TestParticipantCreateHandlerRejectsEmptyResponse(t *testing.T) {
 	}
 }
 
-// TestActorCreateHandlerReturnsClientError ensures gRPC errors are returned as tool errors.
-func TestActorCreateHandlerReturnsClientError(t *testing.T) {
-	client := &fakeCampaignClient{createActorErr: errors.New("boom")}
-	handler := domain.ActorCreateHandler(client)
+// TestCharacterCreateHandlerReturnsClientError ensures gRPC errors are returned as tool errors.
+func TestCharacterCreateHandlerReturnsClientError(t *testing.T) {
+	client := &fakeCampaignClient{createCharacterErr: errors.New("boom")}
+	handler := domain.CharacterCreateHandler(client)
 
-	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.ActorCreateInput{
+	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.CharacterCreateInput{
 		CampaignID: "camp-123",
-		Name:       "Test Actor",
+		Name:       "Test Character",
 		Kind:       "PC",
 		Notes:      "A brave warrior",
 	})
@@ -1448,26 +1448,26 @@ func TestActorCreateHandlerReturnsClientError(t *testing.T) {
 	}
 }
 
-// TestActorCreateHandlerMapsRequestAndResponse ensures inputs and outputs map consistently.
-func TestActorCreateHandlerMapsRequestAndResponse(t *testing.T) {
+// TestCharacterCreateHandlerMapsRequestAndResponse ensures inputs and outputs map consistently.
+func TestCharacterCreateHandlerMapsRequestAndResponse(t *testing.T) {
 	now := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
-	client := &fakeCampaignClient{createActorResponse: &campaignv1.CreateActorResponse{
-		Actor: &campaignv1.Actor{
-			Id:         "actor-456",
+	client := &fakeCampaignClient{createCharacterResponse: &campaignv1.CreateCharacterResponse{
+		Character: &campaignv1.Character{
+			Id:         "character-456",
 			CampaignId: "camp-123",
-			Name:       "Test Actor",
-			Kind:       campaignv1.ActorKind_PC,
+			Name:       "Test Character",
+			Kind:       campaignv1.CharacterKind_PC,
 			Notes:      "A brave warrior",
 			CreatedAt:  timestamppb.New(now),
 			UpdatedAt:  timestamppb.New(now.Add(time.Hour)),
 		},
 	}}
-	result, output, err := domain.ActorCreateHandler(client)(
+	result, output, err := domain.CharacterCreateHandler(client)(
 		context.Background(),
 		&mcp.CallToolRequest{},
-		domain.ActorCreateInput{
+		domain.CharacterCreateInput{
 			CampaignID: "camp-123",
-			Name:       "Test Actor",
+			Name:       "Test Character",
 			Kind:       "PC",
 			Notes:      "A brave warrior",
 		},
@@ -1478,29 +1478,29 @@ func TestActorCreateHandlerMapsRequestAndResponse(t *testing.T) {
 	if result != nil {
 		t.Fatal("expected nil result on success")
 	}
-	if client.lastCreateActorRequest == nil {
+	if client.lastCreateCharacterRequest == nil {
 		t.Fatal("expected gRPC request")
 	}
-	if client.lastCreateActorRequest.GetCampaignId() != "camp-123" {
-		t.Fatalf("expected campaign id camp-123, got %q", client.lastCreateActorRequest.GetCampaignId())
+	if client.lastCreateCharacterRequest.GetCampaignId() != "camp-123" {
+		t.Fatalf("expected campaign id camp-123, got %q", client.lastCreateCharacterRequest.GetCampaignId())
 	}
-	if client.lastCreateActorRequest.GetName() != "Test Actor" {
-		t.Fatalf("expected name Test Actor, got %q", client.lastCreateActorRequest.GetName())
+	if client.lastCreateCharacterRequest.GetName() != "Test Character" {
+		t.Fatalf("expected name Test Character, got %q", client.lastCreateCharacterRequest.GetName())
 	}
-	if client.lastCreateActorRequest.GetKind() != campaignv1.ActorKind_PC {
-		t.Fatalf("expected kind PC, got %v", client.lastCreateActorRequest.GetKind())
+	if client.lastCreateCharacterRequest.GetKind() != campaignv1.CharacterKind_PC {
+		t.Fatalf("expected kind PC, got %v", client.lastCreateCharacterRequest.GetKind())
 	}
-	if client.lastCreateActorRequest.GetNotes() != "A brave warrior" {
-		t.Fatalf("expected notes A brave warrior, got %q", client.lastCreateActorRequest.GetNotes())
+	if client.lastCreateCharacterRequest.GetNotes() != "A brave warrior" {
+		t.Fatalf("expected notes A brave warrior, got %q", client.lastCreateCharacterRequest.GetNotes())
 	}
-	if output.ID != "actor-456" {
-		t.Fatalf("expected id actor-456, got %q", output.ID)
+	if output.ID != "character-456" {
+		t.Fatalf("expected id character-456, got %q", output.ID)
 	}
 	if output.CampaignID != "camp-123" {
 		t.Fatalf("expected campaign id camp-123, got %q", output.CampaignID)
 	}
-	if output.Name != "Test Actor" {
-		t.Fatalf("expected name Test Actor, got %q", output.Name)
+	if output.Name != "Test Character" {
+		t.Fatalf("expected name Test Character, got %q", output.Name)
 	}
 	if output.Kind != "PC" {
 		t.Fatalf("expected kind PC, got %q", output.Kind)
@@ -1516,24 +1516,24 @@ func TestActorCreateHandlerMapsRequestAndResponse(t *testing.T) {
 	}
 }
 
-// TestActorCreateHandlerOptionalNotes ensures optional notes field works.
-func TestActorCreateHandlerOptionalNotes(t *testing.T) {
+// TestCharacterCreateHandlerOptionalNotes ensures optional notes field works.
+func TestCharacterCreateHandlerOptionalNotes(t *testing.T) {
 	now := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
-	client := &fakeCampaignClient{createActorResponse: &campaignv1.CreateActorResponse{
-		Actor: &campaignv1.Actor{
-			Id:         "actor-789",
+	client := &fakeCampaignClient{createCharacterResponse: &campaignv1.CreateCharacterResponse{
+		Character: &campaignv1.Character{
+			Id:         "character-789",
 			CampaignId: "camp-123",
 			Name:       "Test NPC",
-			Kind:       campaignv1.ActorKind_NPC,
+			Kind:       campaignv1.CharacterKind_NPC,
 			Notes:      "",
 			CreatedAt:  timestamppb.New(now),
 			UpdatedAt:  timestamppb.New(now),
 		},
 	}}
-	result, output, err := domain.ActorCreateHandler(client)(
+	result, output, err := domain.CharacterCreateHandler(client)(
 		context.Background(),
 		&mcp.CallToolRequest{},
-		domain.ActorCreateInput{
+		domain.CharacterCreateInput{
 			CampaignID: "camp-123",
 			Name:       "Test NPC",
 			Kind:       "NPC",
@@ -1546,25 +1546,25 @@ func TestActorCreateHandlerOptionalNotes(t *testing.T) {
 	if result != nil {
 		t.Fatal("expected nil result on success")
 	}
-	if client.lastCreateActorRequest == nil {
+	if client.lastCreateCharacterRequest == nil {
 		t.Fatal("expected gRPC request")
 	}
-	if client.lastCreateActorRequest.GetNotes() != "" {
-		t.Fatalf("expected empty notes when omitted, got %q", client.lastCreateActorRequest.GetNotes())
+	if client.lastCreateCharacterRequest.GetNotes() != "" {
+		t.Fatalf("expected empty notes when omitted, got %q", client.lastCreateCharacterRequest.GetNotes())
 	}
 	if output.Kind != "NPC" {
 		t.Fatalf("expected kind NPC, got %q", output.Kind)
 	}
 }
 
-// TestActorCreateHandlerRejectsEmptyResponse ensures nil responses are rejected.
-func TestActorCreateHandlerRejectsEmptyResponse(t *testing.T) {
+// TestCharacterCreateHandlerRejectsEmptyResponse ensures nil responses are rejected.
+func TestCharacterCreateHandlerRejectsEmptyResponse(t *testing.T) {
 	client := &fakeCampaignClient{}
-	handler := domain.ActorCreateHandler(client)
+	handler := domain.CharacterCreateHandler(client)
 
-	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.ActorCreateInput{
+	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.CharacterCreateInput{
 		CampaignID: "camp-123",
-		Name:       "Test Actor",
+		Name:       "Test Character",
 		Kind:       "PC",
 	})
 	if err == nil {
@@ -1575,14 +1575,14 @@ func TestActorCreateHandlerRejectsEmptyResponse(t *testing.T) {
 	}
 }
 
-// TestActorControlSetHandlerReturnsClientError ensures gRPC errors are returned as tool errors.
-func TestActorControlSetHandlerReturnsClientError(t *testing.T) {
+// TestCharacterControlSetHandlerReturnsClientError ensures gRPC errors are returned as tool errors.
+func TestCharacterControlSetHandlerReturnsClientError(t *testing.T) {
 	client := &fakeCampaignClient{setDefaultControlErr: errors.New("boom")}
-	handler := domain.ActorControlSetHandler(client)
+	handler := domain.CharacterControlSetHandler(client)
 
-	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.ActorControlSetInput{
+	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.CharacterControlSetInput{
 		CampaignID: "camp-123",
-		ActorID:    "actor-456",
+		CharacterID:    "character-456",
 		Controller: "GM",
 	})
 	if err == nil {
@@ -1593,23 +1593,23 @@ func TestActorControlSetHandlerReturnsClientError(t *testing.T) {
 	}
 }
 
-// TestActorControlSetHandlerMapsRequestAndResponseGM ensures GM controller inputs and outputs map consistently.
-func TestActorControlSetHandlerMapsRequestAndResponseGM(t *testing.T) {
+// TestCharacterControlSetHandlerMapsRequestAndResponseGM ensures GM controller inputs and outputs map consistently.
+func TestCharacterControlSetHandlerMapsRequestAndResponseGM(t *testing.T) {
 	client := &fakeCampaignClient{setDefaultControlResponse: &campaignv1.SetDefaultControlResponse{
 		CampaignId: "camp-123",
-		ActorId:    "actor-456",
-		Controller: &campaignv1.ActorController{
-			Controller: &campaignv1.ActorController_Gm{
+		CharacterId:    "character-456",
+		Controller: &campaignv1.CharacterController{
+			Controller: &campaignv1.CharacterController_Gm{
 				Gm: &campaignv1.GmController{},
 			},
 		},
 	}}
-	result, output, err := domain.ActorControlSetHandler(client)(
+	result, output, err := domain.CharacterControlSetHandler(client)(
 		context.Background(),
 		&mcp.CallToolRequest{},
-		domain.ActorControlSetInput{
+		domain.CharacterControlSetInput{
 			CampaignID: "camp-123",
-			ActorID:    "actor-456",
+			CharacterID:    "character-456",
 			Controller: "GM",
 		},
 	)
@@ -1625,47 +1625,47 @@ func TestActorControlSetHandlerMapsRequestAndResponseGM(t *testing.T) {
 	if client.lastSetDefaultControlRequest.GetCampaignId() != "camp-123" {
 		t.Fatalf("expected campaign id camp-123, got %q", client.lastSetDefaultControlRequest.GetCampaignId())
 	}
-	if client.lastSetDefaultControlRequest.GetActorId() != "actor-456" {
-		t.Fatalf("expected actor id actor-456, got %q", client.lastSetDefaultControlRequest.GetActorId())
+	if client.lastSetDefaultControlRequest.GetCharacterId() != "character-456" {
+		t.Fatalf("expected character id character-456, got %q", client.lastSetDefaultControlRequest.GetCharacterId())
 	}
 	controller := client.lastSetDefaultControlRequest.GetController()
 	if controller == nil {
 		t.Fatal("expected controller in request")
 	}
-	if _, ok := controller.GetController().(*campaignv1.ActorController_Gm); !ok {
+	if _, ok := controller.GetController().(*campaignv1.CharacterController_Gm); !ok {
 		t.Fatalf("expected GM controller, got %T", controller.GetController())
 	}
 	if output.CampaignID != "camp-123" {
 		t.Fatalf("expected campaign id camp-123, got %q", output.CampaignID)
 	}
-	if output.ActorID != "actor-456" {
-		t.Fatalf("expected actor id actor-456, got %q", output.ActorID)
+	if output.CharacterID != "character-456" {
+		t.Fatalf("expected character id character-456, got %q", output.CharacterID)
 	}
 	if output.Controller != "GM" {
 		t.Fatalf("expected controller GM, got %q", output.Controller)
 	}
 }
 
-// TestActorControlSetHandlerMapsRequestAndResponseParticipant ensures participant controller inputs and outputs map consistently.
-func TestActorControlSetHandlerMapsRequestAndResponseParticipant(t *testing.T) {
+// TestCharacterControlSetHandlerMapsRequestAndResponseParticipant ensures participant controller inputs and outputs map consistently.
+func TestCharacterControlSetHandlerMapsRequestAndResponseParticipant(t *testing.T) {
 	participantID := "part-789"
 	client := &fakeCampaignClient{setDefaultControlResponse: &campaignv1.SetDefaultControlResponse{
 		CampaignId: "camp-123",
-		ActorId:    "actor-456",
-		Controller: &campaignv1.ActorController{
-			Controller: &campaignv1.ActorController_Participant{
+		CharacterId:    "character-456",
+		Controller: &campaignv1.CharacterController{
+			Controller: &campaignv1.CharacterController_Participant{
 				Participant: &campaignv1.ParticipantController{
 					ParticipantId: participantID,
 				},
 			},
 		},
 	}}
-	result, output, err := domain.ActorControlSetHandler(client)(
+	result, output, err := domain.CharacterControlSetHandler(client)(
 		context.Background(),
 		&mcp.CallToolRequest{},
-		domain.ActorControlSetInput{
+		domain.CharacterControlSetInput{
 			CampaignID: "camp-123",
-			ActorID:    "actor-456",
+			CharacterID:    "character-456",
 			Controller: participantID,
 		},
 	)
@@ -1681,14 +1681,14 @@ func TestActorControlSetHandlerMapsRequestAndResponseParticipant(t *testing.T) {
 	if client.lastSetDefaultControlRequest.GetCampaignId() != "camp-123" {
 		t.Fatalf("expected campaign id camp-123, got %q", client.lastSetDefaultControlRequest.GetCampaignId())
 	}
-	if client.lastSetDefaultControlRequest.GetActorId() != "actor-456" {
-		t.Fatalf("expected actor id actor-456, got %q", client.lastSetDefaultControlRequest.GetActorId())
+	if client.lastSetDefaultControlRequest.GetCharacterId() != "character-456" {
+		t.Fatalf("expected character id character-456, got %q", client.lastSetDefaultControlRequest.GetCharacterId())
 	}
 	controller := client.lastSetDefaultControlRequest.GetController()
 	if controller == nil {
 		t.Fatal("expected controller in request")
 	}
-	participantCtrl, ok := controller.GetController().(*campaignv1.ActorController_Participant)
+	participantCtrl, ok := controller.GetController().(*campaignv1.CharacterController_Participant)
 	if !ok {
 		t.Fatalf("expected participant controller, got %T", controller.GetController())
 	}
@@ -1698,33 +1698,33 @@ func TestActorControlSetHandlerMapsRequestAndResponseParticipant(t *testing.T) {
 	if output.CampaignID != "camp-123" {
 		t.Fatalf("expected campaign id camp-123, got %q", output.CampaignID)
 	}
-	if output.ActorID != "actor-456" {
-		t.Fatalf("expected actor id actor-456, got %q", output.ActorID)
+	if output.CharacterID != "character-456" {
+		t.Fatalf("expected character id character-456, got %q", output.CharacterID)
 	}
 	if output.Controller != participantID {
 		t.Fatalf("expected controller %q, got %q", participantID, output.Controller)
 	}
 }
 
-// TestActorControlSetHandlerCaseInsensitiveGM ensures GM controller accepts case-insensitive input.
-func TestActorControlSetHandlerCaseInsensitiveGM(t *testing.T) {
+// TestCharacterControlSetHandlerCaseInsensitiveGM ensures GM controller accepts case-insensitive input.
+func TestCharacterControlSetHandlerCaseInsensitiveGM(t *testing.T) {
 	client := &fakeCampaignClient{setDefaultControlResponse: &campaignv1.SetDefaultControlResponse{
 		CampaignId: "camp-123",
-		ActorId:    "actor-456",
-		Controller: &campaignv1.ActorController{
-			Controller: &campaignv1.ActorController_Gm{
+		CharacterId:    "character-456",
+		Controller: &campaignv1.CharacterController{
+			Controller: &campaignv1.CharacterController_Gm{
 				Gm: &campaignv1.GmController{},
 			},
 		},
 	}}
 	for _, input := range []string{"GM", "gm", "Gm", "gM"} {
 		t.Run(input, func(t *testing.T) {
-			_, output, err := domain.ActorControlSetHandler(client)(
+			_, output, err := domain.CharacterControlSetHandler(client)(
 				context.Background(),
 				&mcp.CallToolRequest{},
-				domain.ActorControlSetInput{
+				domain.CharacterControlSetInput{
 					CampaignID: "camp-123",
-					ActorID:    "actor-456",
+					CharacterID:    "character-456",
 					Controller: input,
 				},
 			)
@@ -1738,14 +1738,14 @@ func TestActorControlSetHandlerCaseInsensitiveGM(t *testing.T) {
 	}
 }
 
-// TestActorControlSetHandlerRejectsEmptyResponse ensures nil responses are rejected.
-func TestActorControlSetHandlerRejectsEmptyResponse(t *testing.T) {
+// TestCharacterControlSetHandlerRejectsEmptyResponse ensures nil responses are rejected.
+func TestCharacterControlSetHandlerRejectsEmptyResponse(t *testing.T) {
 	client := &fakeCampaignClient{}
-	handler := domain.ActorControlSetHandler(client)
+	handler := domain.CharacterControlSetHandler(client)
 
-	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.ActorControlSetInput{
+	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.CharacterControlSetInput{
 		CampaignID: "camp-123",
-		ActorID:    "actor-456",
+		CharacterID:    "character-456",
 		Controller: "GM",
 	})
 	if err == nil {
@@ -1756,14 +1756,14 @@ func TestActorControlSetHandlerRejectsEmptyResponse(t *testing.T) {
 	}
 }
 
-// TestActorControlSetHandlerRejectsEmptyController ensures empty controller is rejected.
-func TestActorControlSetHandlerRejectsEmptyController(t *testing.T) {
+// TestCharacterControlSetHandlerRejectsEmptyController ensures empty controller is rejected.
+func TestCharacterControlSetHandlerRejectsEmptyController(t *testing.T) {
 	client := &fakeCampaignClient{}
-	handler := domain.ActorControlSetHandler(client)
+	handler := domain.CharacterControlSetHandler(client)
 
-	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.ActorControlSetInput{
+	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.CharacterControlSetInput{
 		CampaignID: "camp-123",
-		ActorID:    "actor-456",
+		CharacterID:    "character-456",
 		Controller: "",
 	})
 	if err == nil {
@@ -2056,32 +2056,32 @@ func TestParticipantListResourceHandlerReturnsClientError(t *testing.T) {
 	}
 }
 
-// TestActorListResourceHandlerMapsResponse ensures JSON payload is formatted correctly.
-func TestActorListResourceHandlerMapsResponse(t *testing.T) {
+// TestCharacterListResourceHandlerMapsResponse ensures JSON payload is formatted correctly.
+func TestCharacterListResourceHandlerMapsResponse(t *testing.T) {
 	now := time.Date(2026, 1, 23, 13, 0, 0, 0, time.UTC)
 	campaignID := "camp-789"
-	client := &fakeCampaignClient{listActorsResponse: &campaignv1.ListActorsResponse{
-		Actors: []*campaignv1.Actor{{
-			Id:         "actor-1",
+	client := &fakeCampaignClient{listCharactersResponse: &campaignv1.ListCharactersResponse{
+		Characters: []*campaignv1.Character{{
+			Id:         "character-1",
 			CampaignId: campaignID,
 			Name:       "Test PC",
-			Kind:       campaignv1.ActorKind_PC,
+			Kind:       campaignv1.CharacterKind_PC,
 			Notes:      "A brave warrior",
 			CreatedAt:  timestamppb.New(now),
 			UpdatedAt:  timestamppb.New(now.Add(time.Hour)),
 		}, {
-			Id:         "actor-2",
+			Id:         "character-2",
 			CampaignId: campaignID,
 			Name:       "Test NPC",
-			Kind:       campaignv1.ActorKind_NPC,
+			Kind:       campaignv1.CharacterKind_NPC,
 			Notes:      "A helpful merchant",
 			CreatedAt:  timestamppb.New(now),
 			UpdatedAt:  timestamppb.New(now),
 		}},
 	}}
 
-	handler := domain.ActorListResourceHandler(client)
-	resourceURI := "campaign://" + campaignID + "/actors"
+	handler := domain.CharacterListResourceHandler(client)
+	resourceURI := "campaign://" + campaignID + "/characters"
 	result, err := handler(context.Background(), &mcp.ReadResourceRequest{
 		Params: &mcp.ReadResourceParams{URI: resourceURI},
 	})
@@ -2091,18 +2091,18 @@ func TestActorListResourceHandlerMapsResponse(t *testing.T) {
 	if result == nil || len(result.Contents) != 1 {
 		t.Fatalf("expected 1 content item, got %v", result)
 	}
-	if client.lastListActorsRequest == nil {
-		t.Fatal("expected list actors request")
+	if client.lastListCharactersRequest == nil {
+		t.Fatal("expected list characters request")
 	}
-	if client.lastListActorsRequest.GetCampaignId() != campaignID {
-		t.Fatalf("expected campaign id %q, got %q", campaignID, client.lastListActorsRequest.GetCampaignId())
+	if client.lastListCharactersRequest.GetCampaignId() != campaignID {
+		t.Fatalf("expected campaign id %q, got %q", campaignID, client.lastListCharactersRequest.GetCampaignId())
 	}
-	if client.lastListActorsRequest.GetPageSize() != 10 {
-		t.Fatalf("expected page size 10, got %d", client.lastListActorsRequest.GetPageSize())
+	if client.lastListCharactersRequest.GetPageSize() != 10 {
+		t.Fatalf("expected page size 10, got %d", client.lastListCharactersRequest.GetPageSize())
 	}
 
 	var payload struct {
-		Actors []struct {
+		Characters []struct {
 			ID         string `json:"id"`
 			CampaignID string `json:"campaign_id"`
 			Name       string `json:"name"`
@@ -2110,41 +2110,41 @@ func TestActorListResourceHandlerMapsResponse(t *testing.T) {
 			Notes      string `json:"notes"`
 			CreatedAt  string `json:"created_at"`
 			UpdatedAt  string `json:"updated_at"`
-		} `json:"actors"`
+		} `json:"characters"`
 	}
 	if err := json.Unmarshal([]byte(result.Contents[0].Text), &payload); err != nil {
 		t.Fatalf("unmarshal payload: %v", err)
 	}
-	if len(payload.Actors) != 2 {
-		t.Fatalf("expected 2 actors, got %d", len(payload.Actors))
+	if len(payload.Characters) != 2 {
+		t.Fatalf("expected 2 characters, got %d", len(payload.Characters))
 	}
-	if payload.Actors[0].ID != "actor-1" {
-		t.Fatalf("expected first actor id actor-1, got %q", payload.Actors[0].ID)
+	if payload.Characters[0].ID != "character-1" {
+		t.Fatalf("expected first character id character-1, got %q", payload.Characters[0].ID)
 	}
-	if payload.Actors[0].Kind != "PC" {
-		t.Fatalf("expected first actor kind PC, got %q", payload.Actors[0].Kind)
+	if payload.Characters[0].Kind != "PC" {
+		t.Fatalf("expected first character kind PC, got %q", payload.Characters[0].Kind)
 	}
-	if payload.Actors[1].ID != "actor-2" {
-		t.Fatalf("expected second actor id actor-2, got %q", payload.Actors[1].ID)
+	if payload.Characters[1].ID != "character-2" {
+		t.Fatalf("expected second character id character-2, got %q", payload.Characters[1].ID)
 	}
-	if payload.Actors[1].Kind != "NPC" {
-		t.Fatalf("expected second actor kind NPC, got %q", payload.Actors[1].Kind)
+	if payload.Characters[1].Kind != "NPC" {
+		t.Fatalf("expected second character kind NPC, got %q", payload.Characters[1].Kind)
 	}
-	if payload.Actors[0].CreatedAt != now.Format(time.RFC3339) {
-		t.Fatalf("expected created_at %q, got %q", now.Format(time.RFC3339), payload.Actors[0].CreatedAt)
+	if payload.Characters[0].CreatedAt != now.Format(time.RFC3339) {
+		t.Fatalf("expected created_at %q, got %q", now.Format(time.RFC3339), payload.Characters[0].CreatedAt)
 	}
 	if result.Contents[0].URI != resourceURI {
 		t.Fatalf("expected resource URI %q, got %q", resourceURI, result.Contents[0].URI)
 	}
 }
 
-// TestActorListResourceHandlerRejectsPlaceholder ensures placeholder campaign ID is rejected.
-func TestActorListResourceHandlerRejectsPlaceholder(t *testing.T) {
+// TestCharacterListResourceHandlerRejectsPlaceholder ensures placeholder campaign ID is rejected.
+func TestCharacterListResourceHandlerRejectsPlaceholder(t *testing.T) {
 	client := &fakeCampaignClient{}
-	handler := domain.ActorListResourceHandler(client)
+	handler := domain.CharacterListResourceHandler(client)
 
 	result, err := handler(context.Background(), &mcp.ReadResourceRequest{
-		Params: &mcp.ReadResourceParams{URI: "campaign://_/actors"},
+		Params: &mcp.ReadResourceParams{URI: "campaign://_/characters"},
 	})
 	if err == nil {
 		t.Fatal("expected error for placeholder campaign ID")
@@ -2154,13 +2154,13 @@ func TestActorListResourceHandlerRejectsPlaceholder(t *testing.T) {
 	}
 }
 
-// TestActorListResourceHandlerReturnsClientError ensures list errors are returned.
-func TestActorListResourceHandlerReturnsClientError(t *testing.T) {
-	client := &fakeCampaignClient{listActorsErr: errors.New("boom")}
-	handler := domain.ActorListResourceHandler(client)
+// TestCharacterListResourceHandlerReturnsClientError ensures list errors are returned.
+func TestCharacterListResourceHandlerReturnsClientError(t *testing.T) {
+	client := &fakeCampaignClient{listCharactersErr: errors.New("boom")}
+	handler := domain.CharacterListResourceHandler(client)
 
 	result, err := handler(context.Background(), &mcp.ReadResourceRequest{
-		Params: &mcp.ReadResourceParams{URI: "campaign://camp-123/actors"},
+		Params: &mcp.ReadResourceParams{URI: "campaign://camp-123/characters"},
 	})
 	if err == nil {
 		t.Fatal("expected error")

@@ -662,34 +662,34 @@ func (x *GetParticipantResponse) GetParticipant() *Participant {
 	return nil
 }
 
-type CreateActorRequest struct {
+type CreateCharacterRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// The campaign ID to create the actor for.
+	// The campaign ID to create the character for.
 	CampaignId string `protobuf:"bytes,1,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"`
-	// Display name for the actor.
+	// Display name for the character.
 	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	// The kind of actor (PC or NPC).
-	Kind ActorKind `protobuf:"varint,3,opt,name=kind,proto3,enum=campaign.v1.ActorKind" json:"kind,omitempty"`
-	// Optional free-form notes about the actor.
+	// The kind of character (PC or NPC).
+	Kind CharacterKind `protobuf:"varint,3,opt,name=kind,proto3,enum=campaign.v1.CharacterKind" json:"kind,omitempty"`
+	// Optional free-form notes about the character.
 	Notes         string `protobuf:"bytes,4,opt,name=notes,proto3" json:"notes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *CreateActorRequest) Reset() {
-	*x = CreateActorRequest{}
+func (x *CreateCharacterRequest) Reset() {
+	*x = CreateCharacterRequest{}
 	mi := &file_campaign_v1_requests_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *CreateActorRequest) String() string {
+func (x *CreateCharacterRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*CreateActorRequest) ProtoMessage() {}
+func (*CreateCharacterRequest) ProtoMessage() {}
 
-func (x *CreateActorRequest) ProtoReflect() protoreflect.Message {
+func (x *CreateCharacterRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_campaign_v1_requests_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -701,60 +701,60 @@ func (x *CreateActorRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use CreateActorRequest.ProtoReflect.Descriptor instead.
-func (*CreateActorRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use CreateCharacterRequest.ProtoReflect.Descriptor instead.
+func (*CreateCharacterRequest) Descriptor() ([]byte, []int) {
 	return file_campaign_v1_requests_proto_rawDescGZIP(), []int{12}
 }
 
-func (x *CreateActorRequest) GetCampaignId() string {
+func (x *CreateCharacterRequest) GetCampaignId() string {
 	if x != nil {
 		return x.CampaignId
 	}
 	return ""
 }
 
-func (x *CreateActorRequest) GetName() string {
+func (x *CreateCharacterRequest) GetName() string {
 	if x != nil {
 		return x.Name
 	}
 	return ""
 }
 
-func (x *CreateActorRequest) GetKind() ActorKind {
+func (x *CreateCharacterRequest) GetKind() CharacterKind {
 	if x != nil {
 		return x.Kind
 	}
-	return ActorKind_ACTOR_KIND_UNSPECIFIED
+	return CharacterKind_CHARACTER_KIND_UNSPECIFIED
 }
 
-func (x *CreateActorRequest) GetNotes() string {
+func (x *CreateCharacterRequest) GetNotes() string {
 	if x != nil {
 		return x.Notes
 	}
 	return ""
 }
 
-type CreateActorResponse struct {
+type CreateCharacterResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Actor         *Actor                 `protobuf:"bytes,1,opt,name=actor,proto3" json:"actor,omitempty"`
+	Character     *Character             `protobuf:"bytes,1,opt,name=character,proto3" json:"character,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *CreateActorResponse) Reset() {
-	*x = CreateActorResponse{}
+func (x *CreateCharacterResponse) Reset() {
+	*x = CreateCharacterResponse{}
 	mi := &file_campaign_v1_requests_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *CreateActorResponse) String() string {
+func (x *CreateCharacterResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*CreateActorResponse) ProtoMessage() {}
+func (*CreateCharacterResponse) ProtoMessage() {}
 
-func (x *CreateActorResponse) ProtoReflect() protoreflect.Message {
+func (x *CreateCharacterResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_campaign_v1_requests_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -766,45 +766,45 @@ func (x *CreateActorResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use CreateActorResponse.ProtoReflect.Descriptor instead.
-func (*CreateActorResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use CreateCharacterResponse.ProtoReflect.Descriptor instead.
+func (*CreateCharacterResponse) Descriptor() ([]byte, []int) {
 	return file_campaign_v1_requests_proto_rawDescGZIP(), []int{13}
 }
 
-func (x *CreateActorResponse) GetActor() *Actor {
+func (x *CreateCharacterResponse) GetCharacter() *Character {
 	if x != nil {
-		return x.Actor
+		return x.Character
 	}
 	return nil
 }
 
-type ListActorsRequest struct {
+type ListCharactersRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// The campaign ID to list actors for.
+	// The campaign ID to list characters for.
 	CampaignId string `protobuf:"bytes,1,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"`
-	// The maximum number of actors to return.
+	// The maximum number of characters to return.
 	// If zero, the server defaults to 10. The server clamps values above 10 to 10.
 	PageSize int32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	// A page token received from a prior ListActorsResponse.
+	// A page token received from a prior ListCharactersResponse.
 	PageToken     string `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ListActorsRequest) Reset() {
-	*x = ListActorsRequest{}
+func (x *ListCharactersRequest) Reset() {
+	*x = ListCharactersRequest{}
 	mi := &file_campaign_v1_requests_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ListActorsRequest) String() string {
+func (x *ListCharactersRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ListActorsRequest) ProtoMessage() {}
+func (*ListCharactersRequest) ProtoMessage() {}
 
-func (x *ListActorsRequest) ProtoReflect() protoreflect.Message {
+func (x *ListCharactersRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_campaign_v1_requests_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -816,54 +816,54 @@ func (x *ListActorsRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListActorsRequest.ProtoReflect.Descriptor instead.
-func (*ListActorsRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use ListCharactersRequest.ProtoReflect.Descriptor instead.
+func (*ListCharactersRequest) Descriptor() ([]byte, []int) {
 	return file_campaign_v1_requests_proto_rawDescGZIP(), []int{14}
 }
 
-func (x *ListActorsRequest) GetCampaignId() string {
+func (x *ListCharactersRequest) GetCampaignId() string {
 	if x != nil {
 		return x.CampaignId
 	}
 	return ""
 }
 
-func (x *ListActorsRequest) GetPageSize() int32 {
+func (x *ListCharactersRequest) GetPageSize() int32 {
 	if x != nil {
 		return x.PageSize
 	}
 	return 0
 }
 
-func (x *ListActorsRequest) GetPageToken() string {
+func (x *ListCharactersRequest) GetPageToken() string {
 	if x != nil {
 		return x.PageToken
 	}
 	return ""
 }
 
-type ListActorsResponse struct {
+type ListCharactersResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Actors        []*Actor               `protobuf:"bytes,1,rep,name=actors,proto3" json:"actors,omitempty"`
+	Characters    []*Character           `protobuf:"bytes,1,rep,name=characters,proto3" json:"characters,omitempty"`
 	NextPageToken string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ListActorsResponse) Reset() {
-	*x = ListActorsResponse{}
+func (x *ListCharactersResponse) Reset() {
+	*x = ListCharactersResponse{}
 	mi := &file_campaign_v1_requests_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ListActorsResponse) String() string {
+func (x *ListCharactersResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ListActorsResponse) ProtoMessage() {}
+func (*ListCharactersResponse) ProtoMessage() {}
 
-func (x *ListActorsResponse) ProtoReflect() protoreflect.Message {
+func (x *ListCharactersResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_campaign_v1_requests_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -875,19 +875,19 @@ func (x *ListActorsResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListActorsResponse.ProtoReflect.Descriptor instead.
-func (*ListActorsResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use ListCharactersResponse.ProtoReflect.Descriptor instead.
+func (*ListCharactersResponse) Descriptor() ([]byte, []int) {
 	return file_campaign_v1_requests_proto_rawDescGZIP(), []int{15}
 }
 
-func (x *ListActorsResponse) GetActors() []*Actor {
+func (x *ListCharactersResponse) GetCharacters() []*Character {
 	if x != nil {
-		return x.Actors
+		return x.Characters
 	}
 	return nil
 }
 
-func (x *ListActorsResponse) GetNextPageToken() string {
+func (x *ListCharactersResponse) GetNextPageToken() string {
 	if x != nil {
 		return x.NextPageToken
 	}
@@ -898,10 +898,10 @@ type SetDefaultControlRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The campaign ID.
 	CampaignId string `protobuf:"bytes,1,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"`
-	// The actor ID.
-	ActorId string `protobuf:"bytes,2,opt,name=actor_id,json=actorId,proto3" json:"actor_id,omitempty"`
-	// The controller for the actor.
-	Controller    *ActorController `protobuf:"bytes,3,opt,name=controller,proto3" json:"controller,omitempty"`
+	// The character ID.
+	CharacterId string `protobuf:"bytes,2,opt,name=character_id,json=characterId,proto3" json:"character_id,omitempty"`
+	// The controller for the character.
+	Controller    *CharacterController `protobuf:"bytes,3,opt,name=controller,proto3" json:"controller,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -943,14 +943,14 @@ func (x *SetDefaultControlRequest) GetCampaignId() string {
 	return ""
 }
 
-func (x *SetDefaultControlRequest) GetActorId() string {
+func (x *SetDefaultControlRequest) GetCharacterId() string {
 	if x != nil {
-		return x.ActorId
+		return x.CharacterId
 	}
 	return ""
 }
 
-func (x *SetDefaultControlRequest) GetController() *ActorController {
+func (x *SetDefaultControlRequest) GetController() *CharacterController {
 	if x != nil {
 		return x.Controller
 	}
@@ -961,10 +961,10 @@ type SetDefaultControlResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The campaign ID.
 	CampaignId string `protobuf:"bytes,1,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"`
-	// The actor ID.
-	ActorId string `protobuf:"bytes,2,opt,name=actor_id,json=actorId,proto3" json:"actor_id,omitempty"`
-	// The controller for the actor.
-	Controller    *ActorController `protobuf:"bytes,3,opt,name=controller,proto3" json:"controller,omitempty"`
+	// The character ID.
+	CharacterId string `protobuf:"bytes,2,opt,name=character_id,json=characterId,proto3" json:"character_id,omitempty"`
+	// The controller for the character.
+	Controller    *CharacterController `protobuf:"bytes,3,opt,name=controller,proto3" json:"controller,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1006,14 +1006,14 @@ func (x *SetDefaultControlResponse) GetCampaignId() string {
 	return ""
 }
 
-func (x *SetDefaultControlResponse) GetActorId() string {
+func (x *SetDefaultControlResponse) GetCharacterId() string {
 	if x != nil {
-		return x.ActorId
+		return x.CharacterId
 	}
 	return ""
 }
 
-func (x *SetDefaultControlResponse) GetController() *ActorController {
+func (x *SetDefaultControlResponse) GetController() *CharacterController {
 	if x != nil {
 		return x.Controller
 	}
@@ -1024,7 +1024,7 @@ var File_campaign_v1_requests_proto protoreflect.FileDescriptor
 
 const file_campaign_v1_requests_proto_rawDesc = "" +
 	"\n" +
-	"\x1acampaign/v1/requests.proto\x12\vcampaign.v1\x1a\x1acampaign/v1/campaign.proto\x1a\x1dcampaign/v1/participant.proto\x1a\x17campaign/v1/actor.proto\x1a\x1ccampaign/v1/controller.proto\"|\n" +
+	"\x1acampaign/v1/requests.proto\x12\vcampaign.v1\x1a\x1acampaign/v1/campaign.proto\x1a\x1dcampaign/v1/participant.proto\x1a\x1bcampaign/v1/character.proto\x1a\x1ccampaign/v1/controller.proto\"|\n" +
 	"\x15CreateCampaignRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12,\n" +
 	"\agm_mode\x18\x02 \x01(\x0e2\x13.campaign.v1.GmModeR\x06gmMode\x12!\n" +
@@ -1068,37 +1068,39 @@ const file_campaign_v1_requests_proto_rawDesc = "" +
 	"campaignId\x12%\n" +
 	"\x0eparticipant_id\x18\x02 \x01(\tR\rparticipantId\"T\n" +
 	"\x16GetParticipantResponse\x12:\n" +
-	"\vparticipant\x18\x01 \x01(\v2\x18.campaign.v1.ParticipantR\vparticipant\"\x8b\x01\n" +
-	"\x12CreateActorRequest\x12\x1f\n" +
+	"\vparticipant\x18\x01 \x01(\v2\x18.campaign.v1.ParticipantR\vparticipant\"\x93\x01\n" +
+	"\x16CreateCharacterRequest\x12\x1f\n" +
 	"\vcampaign_id\x18\x01 \x01(\tR\n" +
 	"campaignId\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\x12*\n" +
-	"\x04kind\x18\x03 \x01(\x0e2\x16.campaign.v1.ActorKindR\x04kind\x12\x14\n" +
-	"\x05notes\x18\x04 \x01(\tR\x05notes\"?\n" +
-	"\x13CreateActorResponse\x12(\n" +
-	"\x05actor\x18\x01 \x01(\v2\x12.campaign.v1.ActorR\x05actor\"p\n" +
-	"\x11ListActorsRequest\x12\x1f\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12.\n" +
+	"\x04kind\x18\x03 \x01(\x0e2\x1a.campaign.v1.CharacterKindR\x04kind\x12\x14\n" +
+	"\x05notes\x18\x04 \x01(\tR\x05notes\"O\n" +
+	"\x17CreateCharacterResponse\x124\n" +
+	"\tcharacter\x18\x01 \x01(\v2\x16.campaign.v1.CharacterR\tcharacter\"t\n" +
+	"\x15ListCharactersRequest\x12\x1f\n" +
 	"\vcampaign_id\x18\x01 \x01(\tR\n" +
 	"campaignId\x12\x1b\n" +
 	"\tpage_size\x18\x02 \x01(\x05R\bpageSize\x12\x1d\n" +
 	"\n" +
-	"page_token\x18\x03 \x01(\tR\tpageToken\"h\n" +
-	"\x12ListActorsResponse\x12*\n" +
-	"\x06actors\x18\x01 \x03(\v2\x12.campaign.v1.ActorR\x06actors\x12&\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\x94\x01\n" +
+	"page_token\x18\x03 \x01(\tR\tpageToken\"x\n" +
+	"\x16ListCharactersResponse\x126\n" +
+	"\n" +
+	"characters\x18\x01 \x03(\v2\x16.campaign.v1.CharacterR\n" +
+	"characters\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\xa0\x01\n" +
 	"\x18SetDefaultControlRequest\x12\x1f\n" +
 	"\vcampaign_id\x18\x01 \x01(\tR\n" +
-	"campaignId\x12\x19\n" +
-	"\bactor_id\x18\x02 \x01(\tR\aactorId\x12<\n" +
+	"campaignId\x12!\n" +
+	"\fcharacter_id\x18\x02 \x01(\tR\vcharacterId\x12@\n" +
 	"\n" +
-	"controller\x18\x03 \x01(\v2\x1c.campaign.v1.ActorControllerR\n" +
-	"controller\"\x95\x01\n" +
+	"controller\x18\x03 \x01(\v2 .campaign.v1.CharacterControllerR\n" +
+	"controller\"\xa1\x01\n" +
 	"\x19SetDefaultControlResponse\x12\x1f\n" +
 	"\vcampaign_id\x18\x01 \x01(\tR\n" +
-	"campaignId\x12\x19\n" +
-	"\bactor_id\x18\x02 \x01(\tR\aactorId\x12<\n" +
+	"campaignId\x12!\n" +
+	"\fcharacter_id\x18\x02 \x01(\tR\vcharacterId\x12@\n" +
 	"\n" +
-	"controller\x18\x03 \x01(\v2\x1c.campaign.v1.ActorControllerR\n" +
+	"controller\x18\x03 \x01(\v2 .campaign.v1.CharacterControllerR\n" +
 	"controllerBIZGgithub.com/louisbranch/duality-engine/api/gen/go/campaign/v1;campaignv1b\x06proto3"
 
 var (
@@ -1127,10 +1129,10 @@ var file_campaign_v1_requests_proto_goTypes = []any{
 	(*ListParticipantsResponse)(nil),  // 9: campaign.v1.ListParticipantsResponse
 	(*GetParticipantRequest)(nil),     // 10: campaign.v1.GetParticipantRequest
 	(*GetParticipantResponse)(nil),    // 11: campaign.v1.GetParticipantResponse
-	(*CreateActorRequest)(nil),        // 12: campaign.v1.CreateActorRequest
-	(*CreateActorResponse)(nil),       // 13: campaign.v1.CreateActorResponse
-	(*ListActorsRequest)(nil),         // 14: campaign.v1.ListActorsRequest
-	(*ListActorsResponse)(nil),        // 15: campaign.v1.ListActorsResponse
+	(*CreateCharacterRequest)(nil),    // 12: campaign.v1.CreateCharacterRequest
+	(*CreateCharacterResponse)(nil),   // 13: campaign.v1.CreateCharacterResponse
+	(*ListCharactersRequest)(nil),     // 14: campaign.v1.ListCharactersRequest
+	(*ListCharactersResponse)(nil),    // 15: campaign.v1.ListCharactersResponse
 	(*SetDefaultControlRequest)(nil),  // 16: campaign.v1.SetDefaultControlRequest
 	(*SetDefaultControlResponse)(nil), // 17: campaign.v1.SetDefaultControlResponse
 	(GmMode)(0),                       // 18: campaign.v1.GmMode
@@ -1138,9 +1140,9 @@ var file_campaign_v1_requests_proto_goTypes = []any{
 	(ParticipantRole)(0),              // 20: campaign.v1.ParticipantRole
 	(Controller)(0),                   // 21: campaign.v1.Controller
 	(*Participant)(nil),               // 22: campaign.v1.Participant
-	(ActorKind)(0),                    // 23: campaign.v1.ActorKind
-	(*Actor)(nil),                     // 24: campaign.v1.Actor
-	(*ActorController)(nil),           // 25: campaign.v1.ActorController
+	(CharacterKind)(0),                // 23: campaign.v1.CharacterKind
+	(*Character)(nil),                 // 24: campaign.v1.Character
+	(*CharacterController)(nil),       // 25: campaign.v1.CharacterController
 }
 var file_campaign_v1_requests_proto_depIdxs = []int32{
 	18, // 0: campaign.v1.CreateCampaignRequest.gm_mode:type_name -> campaign.v1.GmMode
@@ -1152,11 +1154,11 @@ var file_campaign_v1_requests_proto_depIdxs = []int32{
 	22, // 6: campaign.v1.CreateParticipantResponse.participant:type_name -> campaign.v1.Participant
 	22, // 7: campaign.v1.ListParticipantsResponse.participants:type_name -> campaign.v1.Participant
 	22, // 8: campaign.v1.GetParticipantResponse.participant:type_name -> campaign.v1.Participant
-	23, // 9: campaign.v1.CreateActorRequest.kind:type_name -> campaign.v1.ActorKind
-	24, // 10: campaign.v1.CreateActorResponse.actor:type_name -> campaign.v1.Actor
-	24, // 11: campaign.v1.ListActorsResponse.actors:type_name -> campaign.v1.Actor
-	25, // 12: campaign.v1.SetDefaultControlRequest.controller:type_name -> campaign.v1.ActorController
-	25, // 13: campaign.v1.SetDefaultControlResponse.controller:type_name -> campaign.v1.ActorController
+	23, // 9: campaign.v1.CreateCharacterRequest.kind:type_name -> campaign.v1.CharacterKind
+	24, // 10: campaign.v1.CreateCharacterResponse.character:type_name -> campaign.v1.Character
+	24, // 11: campaign.v1.ListCharactersResponse.characters:type_name -> campaign.v1.Character
+	25, // 12: campaign.v1.SetDefaultControlRequest.controller:type_name -> campaign.v1.CharacterController
+	25, // 13: campaign.v1.SetDefaultControlResponse.controller:type_name -> campaign.v1.CharacterController
 	14, // [14:14] is the sub-list for method output_type
 	14, // [14:14] is the sub-list for method input_type
 	14, // [14:14] is the sub-list for extension type_name
@@ -1171,7 +1173,7 @@ func file_campaign_v1_requests_proto_init() {
 	}
 	file_campaign_v1_campaign_proto_init()
 	file_campaign_v1_participant_proto_init()
-	file_campaign_v1_actor_proto_init()
+	file_campaign_v1_character_proto_init()
 	file_campaign_v1_controller_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{

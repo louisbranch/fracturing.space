@@ -50,8 +50,8 @@ Tools:
 
 -   campaign_create
 -   participant_create
--   actor_create
--   actor_control_set
+-   character_create
+-   character_control_set
 -   session_start
 
 Resources:
@@ -59,7 +59,7 @@ Resources:
 -   campaigns://list
 -   campaign://{campaign_id}
 -   campaign://{campaign_id}/participants
--   campaign://{campaign_id}/actors
+-   campaign://{campaign_id}/characters
 -   campaign://{campaign_id}/sessions
 
 ### MCP Context
@@ -79,7 +79,7 @@ Persisted (BoltDB):
 
 -   Campaigns
 -   Participants
--   Actors
+-   Characters
 -   Sessions
 
 Ephemeral:

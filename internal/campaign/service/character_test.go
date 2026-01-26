@@ -14,35 +14,35 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-type fakeActorStore struct {
-	putActor           domain.Actor
+type fakeCharacterStore struct {
+	putCharacter           domain.Character
 	putErr             error
-	getActor           domain.Actor
+	getCharacter           domain.Character
 	getErr             error
-	listPage           storage.ActorPage
+	listPage           storage.CharacterPage
 	listErr            error
 	listPageSize       int
 	listPageToken      string
 	listPageCampaignID string
 }
 
-func (f *fakeActorStore) PutActor(ctx context.Context, actor domain.Actor) error {
-	f.putActor = actor
+func (f *fakeCharacterStore) PutCharacter(ctx context.Context, character domain.Character) error {
+	f.putCharacter = character
 	return f.putErr
 }
 
-func (f *fakeActorStore) GetActor(ctx context.Context, campaignID, actorID string) (domain.Actor, error) {
-	return f.getActor, f.getErr
+func (f *fakeCharacterStore) GetCharacter(ctx context.Context, campaignID, characterID string) (domain.Character, error) {
+	return f.getCharacter, f.getErr
 }
 
-func (f *fakeActorStore) ListActors(ctx context.Context, campaignID string, pageSize int, pageToken string) (storage.ActorPage, error) {
+func (f *fakeCharacterStore) ListCharacters(ctx context.Context, campaignID string, pageSize int, pageToken string) (storage.CharacterPage, error) {
 	f.listPageCampaignID = campaignID
 	f.listPageSize = pageSize
 	f.listPageToken = pageToken
 	return f.listPage, f.listErr
 }
 
-func TestCreateActorSuccess(t *testing.T) {
+func TestCreateCharacterSuccess(t *testing.T) {
 	fixedTime := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
 	campaignStore := &fakeCampaignStore{}
 	campaignStore.getFunc = func(ctx context.Context, id string) (domain.Campaign, error) {
@@ -51,82 +51,82 @@ func TestCreateActorSuccess(t *testing.T) {
 		}
 		return domain.Campaign{}, storage.ErrNotFound
 	}
-	actorStore := &fakeActorStore{}
+	characterStore := &fakeCharacterStore{}
 	service := &CampaignService{
 		stores: Stores{
 			Campaign: campaignStore,
-			Actor:    actorStore,
+			Character:    characterStore,
 		},
 		clock: func() time.Time {
 			return fixedTime
 		},
 		idGenerator: func() (string, error) {
-			return "actor-456", nil
+			return "character-456", nil
 		},
 	}
 
-	response, err := service.CreateActor(context.Background(), &campaignv1.CreateActorRequest{
+	response, err := service.CreateCharacter(context.Background(), &campaignv1.CreateCharacterRequest{
 		CampaignId: "camp-123",
 		Name:       "  Alice  ",
-		Kind:       campaignv1.ActorKind_PC,
+		Kind:       campaignv1.CharacterKind_PC,
 		Notes:      "A brave warrior",
 	})
 	if err != nil {
-		t.Fatalf("create actor: %v", err)
+		t.Fatalf("create character: %v", err)
 	}
-	if response == nil || response.Actor == nil {
-		t.Fatal("expected actor response")
+	if response == nil || response.Character == nil {
+		t.Fatal("expected character response")
 	}
-	if response.Actor.Id != "actor-456" {
-		t.Fatalf("expected id actor-456, got %q", response.Actor.Id)
+	if response.Character.Id != "character-456" {
+		t.Fatalf("expected id character-456, got %q", response.Character.Id)
 	}
-	if response.Actor.CampaignId != "camp-123" {
-		t.Fatalf("expected campaign id camp-123, got %q", response.Actor.CampaignId)
+	if response.Character.CampaignId != "camp-123" {
+		t.Fatalf("expected campaign id camp-123, got %q", response.Character.CampaignId)
 	}
-	if response.Actor.Name != "Alice" {
-		t.Fatalf("expected trimmed name, got %q", response.Actor.Name)
+	if response.Character.Name != "Alice" {
+		t.Fatalf("expected trimmed name, got %q", response.Character.Name)
 	}
-	if response.Actor.Kind != campaignv1.ActorKind_PC {
-		t.Fatalf("expected kind PC, got %v", response.Actor.Kind)
+	if response.Character.Kind != campaignv1.CharacterKind_PC {
+		t.Fatalf("expected kind PC, got %v", response.Character.Kind)
 	}
-	if response.Actor.Notes != "A brave warrior" {
-		t.Fatalf("expected notes, got %q", response.Actor.Notes)
+	if response.Character.Notes != "A brave warrior" {
+		t.Fatalf("expected notes, got %q", response.Character.Notes)
 	}
-	if response.Actor.CreatedAt.AsTime() != fixedTime {
-		t.Fatalf("expected created_at %v, got %v", fixedTime, response.Actor.CreatedAt.AsTime())
+	if response.Character.CreatedAt.AsTime() != fixedTime {
+		t.Fatalf("expected created_at %v, got %v", fixedTime, response.Character.CreatedAt.AsTime())
 	}
-	if actorStore.putActor.ID != "actor-456" {
-		t.Fatalf("expected stored id actor-456, got %q", actorStore.putActor.ID)
+	if characterStore.putCharacter.ID != "character-456" {
+		t.Fatalf("expected stored id character-456, got %q", characterStore.putCharacter.ID)
 	}
 }
 
-func TestCreateActorValidationErrors(t *testing.T) {
+func TestCreateCharacterValidationErrors(t *testing.T) {
 	tests := []struct {
 		name string
-		req  *campaignv1.CreateActorRequest
+		req  *campaignv1.CreateCharacterRequest
 	}{
 		{
 			name: "empty name",
-			req: &campaignv1.CreateActorRequest{
+			req: &campaignv1.CreateCharacterRequest{
 				CampaignId: "camp-123",
 				Name:       "  ",
-				Kind:       campaignv1.ActorKind_PC,
+				Kind:       campaignv1.CharacterKind_PC,
 			},
 		},
 		{
 			name: "missing kind",
-			req: &campaignv1.CreateActorRequest{
+			req: &campaignv1.CreateCharacterRequest{
 				CampaignId: "camp-123",
 				Name:       "Alice",
-				Kind:       campaignv1.ActorKind_ACTOR_KIND_UNSPECIFIED,
+				Kind:       campaignv1.CharacterKind_CHARACTER_KIND_UNSPECIFIED,
 			},
 		},
 		{
 			name: "empty campaign id",
-			req: &campaignv1.CreateActorRequest{
+			req: &campaignv1.CreateCharacterRequest{
 				CampaignId: "  ",
 				Name:       "Alice",
-				Kind:       campaignv1.ActorKind_PC,
+				Kind:       campaignv1.CharacterKind_PC,
 			},
 		},
 	}
@@ -138,15 +138,15 @@ func TestCreateActorValidationErrors(t *testing.T) {
 	service := &CampaignService{
 		stores: Stores{
 			Campaign: campaignStore,
-			Actor:    &fakeActorStore{},
+			Character:    &fakeCharacterStore{},
 		},
 		clock:       time.Now,
-		idGenerator: func() (string, error) { return "actor-1", nil },
+		idGenerator: func() (string, error) { return "character-1", nil },
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := service.CreateActor(context.Background(), tt.req)
+			_, err := service.CreateCharacter(context.Background(), tt.req)
 			if err == nil {
 				t.Fatal("expected error")
 			}
@@ -161,20 +161,20 @@ func TestCreateActorValidationErrors(t *testing.T) {
 	}
 }
 
-func TestCreateActorCampaignNotFound(t *testing.T) {
-	actorStore := &fakeActorStore{putErr: storage.ErrNotFound}
+func TestCreateCharacterCampaignNotFound(t *testing.T) {
+	characterStore := &fakeCharacterStore{putErr: storage.ErrNotFound}
 	service := &CampaignService{
 		stores: Stores{
-			Actor: actorStore,
+			Character: characterStore,
 		},
 		clock:       time.Now,
-		idGenerator: func() (string, error) { return "actor-1", nil },
+		idGenerator: func() (string, error) { return "character-1", nil },
 	}
 
-	_, err := service.CreateActor(context.Background(), &campaignv1.CreateActorRequest{
+	_, err := service.CreateCharacter(context.Background(), &campaignv1.CreateCharacterRequest{
 		CampaignId: "missing",
 		Name:       "Alice",
-		Kind:       campaignv1.ActorKind_PC,
+		Kind:       campaignv1.CharacterKind_PC,
 	})
 	if err == nil {
 		t.Fatal("expected error")
@@ -188,14 +188,14 @@ func TestCreateActorCampaignNotFound(t *testing.T) {
 	}
 }
 
-func TestCreateActorNilRequest(t *testing.T) {
+func TestCreateCharacterNilRequest(t *testing.T) {
 	service := NewCampaignService(Stores{
 		Campaign:    &fakeCampaignStore{},
 		Participant: &fakeParticipantStore{},
-		Actor:       &fakeActorStore{},
+		Character:       &fakeCharacterStore{},
 	})
 
-	_, err := service.CreateActor(context.Background(), nil)
+	_, err := service.CreateCharacter(context.Background(), nil)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -208,25 +208,25 @@ func TestCreateActorNilRequest(t *testing.T) {
 	}
 }
 
-func TestCreateActorStoreFailure(t *testing.T) {
+func TestCreateCharacterStoreFailure(t *testing.T) {
 	campaignStore := &fakeCampaignStore{}
 	campaignStore.getFunc = func(ctx context.Context, id string) (domain.Campaign, error) {
 		return domain.Campaign{ID: "camp-123"}, nil
 	}
-	actorStore := &fakeActorStore{putErr: errors.New("boom")}
+	characterStore := &fakeCharacterStore{putErr: errors.New("boom")}
 	service := &CampaignService{
 		stores: Stores{
 			Campaign: campaignStore,
-			Actor:    actorStore,
+			Character:    characterStore,
 		},
 		clock:       time.Now,
-		idGenerator: func() (string, error) { return "actor-123", nil },
+		idGenerator: func() (string, error) { return "character-123", nil },
 	}
 
-	_, err := service.CreateActor(context.Background(), &campaignv1.CreateActorRequest{
+	_, err := service.CreateCharacter(context.Background(), &campaignv1.CreateCharacterRequest{
 		CampaignId: "camp-123",
 		Name:       "Alice",
-		Kind:       campaignv1.ActorKind_PC,
+		Kind:       campaignv1.CharacterKind_PC,
 	})
 	if err == nil {
 		t.Fatal("expected error")
@@ -238,49 +238,49 @@ func TestCreateActorStoreFailure(t *testing.T) {
 	if st.Code() != codes.Internal {
 		t.Fatalf("expected internal error, got %v", st.Code())
 	}
-	if !strings.Contains(st.Message(), "persist actor") {
-		t.Fatalf("expected error message to mention 'persist actor', got %q", st.Message())
+	if !strings.Contains(st.Message(), "persist character") {
+		t.Fatalf("expected error message to mention 'persist character', got %q", st.Message())
 	}
 }
 
-func TestCreateActorNPCKind(t *testing.T) {
+func TestCreateCharacterNPCKind(t *testing.T) {
 	fixedTime := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
 	campaignStore := &fakeCampaignStore{}
 	campaignStore.getFunc = func(ctx context.Context, id string) (domain.Campaign, error) {
 		return domain.Campaign{ID: "camp-123"}, nil
 	}
-	actorStore := &fakeActorStore{}
+	characterStore := &fakeCharacterStore{}
 	service := &CampaignService{
 		stores: Stores{
 			Campaign: campaignStore,
-			Actor:    actorStore,
+			Character:    characterStore,
 		},
 		clock: func() time.Time {
 			return fixedTime
 		},
 		idGenerator: func() (string, error) {
-			return "actor-789", nil
+			return "character-789", nil
 		},
 	}
 
-	response, err := service.CreateActor(context.Background(), &campaignv1.CreateActorRequest{
+	response, err := service.CreateCharacter(context.Background(), &campaignv1.CreateCharacterRequest{
 		CampaignId: "camp-123",
 		Name:       "Goblin",
-		Kind:       campaignv1.ActorKind_NPC,
+		Kind:       campaignv1.CharacterKind_NPC,
 		Notes:      "A small creature",
 	})
 	if err != nil {
-		t.Fatalf("create actor: %v", err)
+		t.Fatalf("create character: %v", err)
 	}
-	if response.Actor.Kind != campaignv1.ActorKind_NPC {
-		t.Fatalf("expected kind NPC, got %v", response.Actor.Kind)
+	if response.Character.Kind != campaignv1.CharacterKind_NPC {
+		t.Fatalf("expected kind NPC, got %v", response.Character.Kind)
 	}
-	if actorStore.putActor.Kind != domain.ActorKindNPC {
-		t.Fatalf("expected stored kind NPC, got %v", actorStore.putActor.Kind)
+	if characterStore.putCharacter.Kind != domain.CharacterKindNPC {
+		t.Fatalf("expected stored kind NPC, got %v", characterStore.putCharacter.Kind)
 	}
 }
 
-func TestCreateActorMissingStore(t *testing.T) {
+func TestCreateCharacterMissingStore(t *testing.T) {
 	campaignStore := &fakeCampaignStore{}
 	campaignStore.getFunc = func(ctx context.Context, id string) (domain.Campaign, error) {
 		return domain.Campaign{ID: "camp-123"}, nil
@@ -291,10 +291,10 @@ func TestCreateActorMissingStore(t *testing.T) {
 		},
 	}
 
-	_, err := service.CreateActor(context.Background(), &campaignv1.CreateActorRequest{
+	_, err := service.CreateCharacter(context.Background(), &campaignv1.CreateCharacterRequest{
 		CampaignId: "camp-123",
 		Name:       "Alice",
-		Kind:       campaignv1.ActorKind_PC,
+		Kind:       campaignv1.CharacterKind_PC,
 	})
 	if err == nil {
 		t.Fatal("expected error")
@@ -308,7 +308,7 @@ func TestCreateActorMissingStore(t *testing.T) {
 	}
 }
 
-func TestListActorsSuccess(t *testing.T) {
+func TestListCharactersSuccess(t *testing.T) {
 	fixedTime := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
 	campaignStore := &fakeCampaignStore{}
 	campaignStore.getFunc = func(ctx context.Context, id string) (domain.Campaign, error) {
@@ -317,23 +317,23 @@ func TestListActorsSuccess(t *testing.T) {
 		}
 		return domain.Campaign{}, storage.ErrNotFound
 	}
-	actorStore := &fakeActorStore{
-		listPage: storage.ActorPage{
-			Actors: []domain.Actor{
+	characterStore := &fakeCharacterStore{
+		listPage: storage.CharacterPage{
+			Characters: []domain.Character{
 				{
-					ID:         "actor-1",
+					ID:         "character-1",
 					CampaignID: "camp-123",
 					Name:       "Alice",
-					Kind:       domain.ActorKindPC,
+					Kind:       domain.CharacterKindPC,
 					Notes:      "A brave warrior",
 					CreatedAt:  fixedTime,
 					UpdatedAt:  fixedTime,
 				},
 				{
-					ID:         "actor-2",
+					ID:         "character-2",
 					CampaignID: "camp-123",
 					Name:       "Goblin",
-					Kind:       domain.ActorKindNPC,
+					Kind:       domain.CharacterKindNPC,
 					Notes:      "A small creature",
 					CreatedAt:  fixedTime,
 					UpdatedAt:  fixedTime,
@@ -345,61 +345,61 @@ func TestListActorsSuccess(t *testing.T) {
 	service := &CampaignService{
 		stores: Stores{
 			Campaign: campaignStore,
-			Actor:    actorStore,
+			Character:    characterStore,
 		},
 		clock: time.Now,
 	}
 
-	response, err := service.ListActors(context.Background(), &campaignv1.ListActorsRequest{
+	response, err := service.ListCharacters(context.Background(), &campaignv1.ListCharactersRequest{
 		CampaignId: "camp-123",
 		PageSize:   10,
 	})
 	if err != nil {
-		t.Fatalf("list actors: %v", err)
+		t.Fatalf("list characters: %v", err)
 	}
 	if response == nil {
 		t.Fatal("expected response")
 	}
-	if len(response.Actors) != 2 {
-		t.Fatalf("expected 2 actors, got %d", len(response.Actors))
+	if len(response.Characters) != 2 {
+		t.Fatalf("expected 2 characters, got %d", len(response.Characters))
 	}
 	if response.NextPageToken != "next-token" {
 		t.Fatalf("expected next page token next-token, got %q", response.NextPageToken)
 	}
-	if response.Actors[0].Id != "actor-1" {
-		t.Fatalf("expected first actor id actor-1, got %q", response.Actors[0].Id)
+	if response.Characters[0].Id != "character-1" {
+		t.Fatalf("expected first character id character-1, got %q", response.Characters[0].Id)
 	}
-	if response.Actors[0].Name != "Alice" {
-		t.Fatalf("expected first actor name Alice, got %q", response.Actors[0].Name)
+	if response.Characters[0].Name != "Alice" {
+		t.Fatalf("expected first character name Alice, got %q", response.Characters[0].Name)
 	}
-	if response.Actors[0].Kind != campaignv1.ActorKind_PC {
-		t.Fatalf("expected first actor kind PC, got %v", response.Actors[0].Kind)
+	if response.Characters[0].Kind != campaignv1.CharacterKind_PC {
+		t.Fatalf("expected first character kind PC, got %v", response.Characters[0].Kind)
 	}
-	if response.Actors[1].Id != "actor-2" {
-		t.Fatalf("expected second actor id actor-2, got %q", response.Actors[1].Id)
+	if response.Characters[1].Id != "character-2" {
+		t.Fatalf("expected second character id character-2, got %q", response.Characters[1].Id)
 	}
-	if response.Actors[1].Kind != campaignv1.ActorKind_NPC {
-		t.Fatalf("expected second actor kind NPC, got %v", response.Actors[1].Kind)
+	if response.Characters[1].Kind != campaignv1.CharacterKind_NPC {
+		t.Fatalf("expected second character kind NPC, got %v", response.Characters[1].Kind)
 	}
-	if response.Actors[0].CreatedAt.AsTime() != fixedTime {
-		t.Fatalf("expected created_at %v, got %v", fixedTime, response.Actors[0].CreatedAt.AsTime())
+	if response.Characters[0].CreatedAt.AsTime() != fixedTime {
+		t.Fatalf("expected created_at %v, got %v", fixedTime, response.Characters[0].CreatedAt.AsTime())
 	}
 }
 
-func TestListActorsDefaults(t *testing.T) {
+func TestListCharactersDefaults(t *testing.T) {
 	fixedTime := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
 	campaignStore := &fakeCampaignStore{}
 	campaignStore.getFunc = func(ctx context.Context, id string) (domain.Campaign, error) {
 		return domain.Campaign{ID: "camp-123"}, nil
 	}
-	actorStore := &fakeActorStore{
-		listPage: storage.ActorPage{
-			Actors: []domain.Actor{
+	characterStore := &fakeCharacterStore{
+		listPage: storage.CharacterPage{
+			Characters: []domain.Character{
 				{
-					ID:         "actor-1",
+					ID:         "character-1",
 					CampaignID: "camp-123",
 					Name:       "Alice",
-					Kind:       domain.ActorKindPC,
+					Kind:       domain.CharacterKindPC,
 					CreatedAt:  fixedTime,
 					UpdatedAt:  fixedTime,
 				},
@@ -410,127 +410,127 @@ func TestListActorsDefaults(t *testing.T) {
 	service := &CampaignService{
 		stores: Stores{
 			Campaign: campaignStore,
-			Actor:    actorStore,
+			Character:    characterStore,
 		},
 		clock: time.Now,
 	}
 
-	response, err := service.ListActors(context.Background(), &campaignv1.ListActorsRequest{
+	response, err := service.ListCharacters(context.Background(), &campaignv1.ListCharactersRequest{
 		CampaignId: "camp-123",
 		PageSize:   0,
 	})
 	if err != nil {
-		t.Fatalf("list actors: %v", err)
+		t.Fatalf("list characters: %v", err)
 	}
 	if response == nil {
 		t.Fatal("expected response")
 	}
-	if actorStore.listPageSize != defaultListActorsPageSize {
-		t.Fatalf("expected default page size %d, got %d", defaultListActorsPageSize, actorStore.listPageSize)
+	if characterStore.listPageSize != defaultListCharactersPageSize {
+		t.Fatalf("expected default page size %d, got %d", defaultListCharactersPageSize, characterStore.listPageSize)
 	}
 	if response.NextPageToken != "next-token" {
 		t.Fatalf("expected next page token, got %q", response.NextPageToken)
 	}
-	if len(response.Actors) != 1 {
-		t.Fatalf("expected 1 actor, got %d", len(response.Actors))
+	if len(response.Characters) != 1 {
+		t.Fatalf("expected 1 character, got %d", len(response.Characters))
 	}
 }
 
-func TestListActorsEmpty(t *testing.T) {
+func TestListCharactersEmpty(t *testing.T) {
 	campaignStore := &fakeCampaignStore{}
 	campaignStore.getFunc = func(ctx context.Context, id string) (domain.Campaign, error) {
 		return domain.Campaign{ID: "camp-123"}, nil
 	}
-	actorStore := &fakeActorStore{
-		listPage: storage.ActorPage{},
+	characterStore := &fakeCharacterStore{
+		listPage: storage.CharacterPage{},
 	}
 	service := &CampaignService{
 		stores: Stores{
 			Campaign: campaignStore,
-			Actor:    actorStore,
+			Character:    characterStore,
 		},
 		clock: time.Now,
 	}
 
-	response, err := service.ListActors(context.Background(), &campaignv1.ListActorsRequest{
+	response, err := service.ListCharacters(context.Background(), &campaignv1.ListCharactersRequest{
 		CampaignId: "camp-123",
 		PageSize:   10,
 	})
 	if err != nil {
-		t.Fatalf("list actors: %v", err)
+		t.Fatalf("list characters: %v", err)
 	}
 	if response == nil {
 		t.Fatal("expected response")
 	}
-	if len(response.Actors) != 0 {
-		t.Fatalf("expected 0 actors, got %d", len(response.Actors))
+	if len(response.Characters) != 0 {
+		t.Fatalf("expected 0 characters, got %d", len(response.Characters))
 	}
 }
 
-func TestListActorsClampPageSize(t *testing.T) {
+func TestListCharactersClampPageSize(t *testing.T) {
 	campaignStore := &fakeCampaignStore{}
 	campaignStore.getFunc = func(ctx context.Context, id string) (domain.Campaign, error) {
 		return domain.Campaign{ID: "camp-123"}, nil
 	}
-	actorStore := &fakeActorStore{listPage: storage.ActorPage{}}
+	characterStore := &fakeCharacterStore{listPage: storage.CharacterPage{}}
 	service := &CampaignService{
 		stores: Stores{
 			Campaign: campaignStore,
-			Actor:    actorStore,
+			Character:    characterStore,
 		},
 		clock: time.Now,
 	}
 
-	_, err := service.ListActors(context.Background(), &campaignv1.ListActorsRequest{
+	_, err := service.ListCharacters(context.Background(), &campaignv1.ListCharactersRequest{
 		CampaignId: "camp-123",
 		PageSize:   25,
 	})
 	if err != nil {
-		t.Fatalf("list actors: %v", err)
+		t.Fatalf("list characters: %v", err)
 	}
-	if actorStore.listPageSize != maxListActorsPageSize {
-		t.Fatalf("expected max page size %d, got %d", maxListActorsPageSize, actorStore.listPageSize)
+	if characterStore.listPageSize != maxListCharactersPageSize {
+		t.Fatalf("expected max page size %d, got %d", maxListCharactersPageSize, characterStore.listPageSize)
 	}
 }
 
-func TestListActorsPassesToken(t *testing.T) {
+func TestListCharactersPassesToken(t *testing.T) {
 	campaignStore := &fakeCampaignStore{}
 	campaignStore.getFunc = func(ctx context.Context, id string) (domain.Campaign, error) {
 		return domain.Campaign{ID: "camp-123"}, nil
 	}
-	actorStore := &fakeActorStore{listPage: storage.ActorPage{}}
+	characterStore := &fakeCharacterStore{listPage: storage.CharacterPage{}}
 	service := &CampaignService{
 		stores: Stores{
 			Campaign: campaignStore,
-			Actor:    actorStore,
+			Character:    characterStore,
 		},
 		clock: time.Now,
 	}
 
-	_, err := service.ListActors(context.Background(), &campaignv1.ListActorsRequest{
+	_, err := service.ListCharacters(context.Background(), &campaignv1.ListCharactersRequest{
 		CampaignId: "camp-123",
 		PageSize:   1,
 		PageToken:  "next",
 	})
 	if err != nil {
-		t.Fatalf("list actors: %v", err)
+		t.Fatalf("list characters: %v", err)
 	}
-	if actorStore.listPageToken != "next" {
-		t.Fatalf("expected page token next, got %q", actorStore.listPageToken)
+	if characterStore.listPageToken != "next" {
+		t.Fatalf("expected page token next, got %q", characterStore.listPageToken)
 	}
-	if actorStore.listPageCampaignID != "camp-123" {
-		t.Fatalf("expected campaign id camp-123, got %q", actorStore.listPageCampaignID)
+	if characterStore.listPageCampaignID != "camp-123" {
+		t.Fatalf("expected campaign id camp-123, got %q", characterStore.listPageCampaignID)
 	}
 }
 
-func TestListActorsNilRequest(t *testing.T) {
+func TestListCharactersNilRequest(t *testing.T) {
 	service := NewCampaignService(Stores{
 		Campaign:    &fakeCampaignStore{},
 		Participant: &fakeParticipantStore{},
-		Actor:       &fakeActorStore{},
+		Character:       &fakeCharacterStore{},
 	})
 
-	_, err := service.ListActors(context.Background(), nil)
+	_, err := service.ListCharacters(context.Background(), nil)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -543,7 +543,7 @@ func TestListActorsNilRequest(t *testing.T) {
 	}
 }
 
-func TestListActorsCampaignNotFound(t *testing.T) {
+func TestListCharactersCampaignNotFound(t *testing.T) {
 	campaignStore := &fakeCampaignStore{}
 	campaignStore.getFunc = func(ctx context.Context, id string) (domain.Campaign, error) {
 		return domain.Campaign{}, storage.ErrNotFound
@@ -551,12 +551,12 @@ func TestListActorsCampaignNotFound(t *testing.T) {
 	service := &CampaignService{
 		stores: Stores{
 			Campaign: campaignStore,
-			Actor:    &fakeActorStore{},
+			Character:    &fakeCharacterStore{},
 		},
 		clock: time.Now,
 	}
 
-	_, err := service.ListActors(context.Background(), &campaignv1.ListActorsRequest{
+	_, err := service.ListCharacters(context.Background(), &campaignv1.ListCharactersRequest{
 		CampaignId: "missing",
 		PageSize:   10,
 	})
@@ -572,21 +572,21 @@ func TestListActorsCampaignNotFound(t *testing.T) {
 	}
 }
 
-func TestListActorsStoreFailure(t *testing.T) {
+func TestListCharactersStoreFailure(t *testing.T) {
 	campaignStore := &fakeCampaignStore{}
 	campaignStore.getFunc = func(ctx context.Context, id string) (domain.Campaign, error) {
 		return domain.Campaign{ID: "camp-123"}, nil
 	}
-	actorStore := &fakeActorStore{listErr: errors.New("boom")}
+	characterStore := &fakeCharacterStore{listErr: errors.New("boom")}
 	service := &CampaignService{
 		stores: Stores{
 			Campaign: campaignStore,
-			Actor:    actorStore,
+			Character:    characterStore,
 		},
 		clock: time.Now,
 	}
 
-	_, err := service.ListActors(context.Background(), &campaignv1.ListActorsRequest{
+	_, err := service.ListCharacters(context.Background(), &campaignv1.ListCharactersRequest{
 		CampaignId: "camp-123",
 		PageSize:   10,
 	})
@@ -602,7 +602,7 @@ func TestListActorsStoreFailure(t *testing.T) {
 	}
 }
 
-func TestListActorsMissingStore(t *testing.T) {
+func TestListCharactersMissingStore(t *testing.T) {
 	campaignStore := &fakeCampaignStore{}
 	campaignStore.getFunc = func(ctx context.Context, id string) (domain.Campaign, error) {
 		return domain.Campaign{ID: "camp-123"}, nil
@@ -613,7 +613,7 @@ func TestListActorsMissingStore(t *testing.T) {
 		},
 	}
 
-	_, err := service.ListActors(context.Background(), &campaignv1.ListActorsRequest{
+	_, err := service.ListCharacters(context.Background(), &campaignv1.ListCharactersRequest{
 		CampaignId: "camp-123",
 		PageSize:   10,
 	})
@@ -629,17 +629,17 @@ func TestListActorsMissingStore(t *testing.T) {
 	}
 }
 
-func TestListActorsEmptyCampaignID(t *testing.T) {
+func TestListCharactersEmptyCampaignID(t *testing.T) {
 	campaignStore := &fakeCampaignStore{}
 	service := &CampaignService{
 		stores: Stores{
 			Campaign: campaignStore,
-			Actor:    &fakeActorStore{},
+			Character:    &fakeCharacterStore{},
 		},
 		clock: time.Now,
 	}
 
-	_, err := service.ListActors(context.Background(), &campaignv1.ListActorsRequest{
+	_, err := service.ListCharacters(context.Background(), &campaignv1.ListCharactersRequest{
 		CampaignId: "  ",
 		PageSize:   10,
 	})

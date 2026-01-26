@@ -25,8 +25,8 @@ const (
 	CampaignService_CreateParticipant_FullMethodName = "/campaign.v1.CampaignService/CreateParticipant"
 	CampaignService_ListParticipants_FullMethodName  = "/campaign.v1.CampaignService/ListParticipants"
 	CampaignService_GetParticipant_FullMethodName    = "/campaign.v1.CampaignService/GetParticipant"
-	CampaignService_CreateActor_FullMethodName       = "/campaign.v1.CampaignService/CreateActor"
-	CampaignService_ListActors_FullMethodName        = "/campaign.v1.CampaignService/ListActors"
+	CampaignService_CreateCharacter_FullMethodName   = "/campaign.v1.CampaignService/CreateCharacter"
+	CampaignService_ListCharacters_FullMethodName    = "/campaign.v1.CampaignService/ListCharacters"
 	CampaignService_SetDefaultControl_FullMethodName = "/campaign.v1.CampaignService/SetDefaultControl"
 )
 
@@ -46,11 +46,11 @@ type CampaignServiceClient interface {
 	ListParticipants(ctx context.Context, in *ListParticipantsRequest, opts ...grpc.CallOption) (*ListParticipantsResponse, error)
 	// Get a participant by campaign ID and participant ID.
 	GetParticipant(ctx context.Context, in *GetParticipantRequest, opts ...grpc.CallOption) (*GetParticipantResponse, error)
-	// Create an actor (PC/NPC/etc) for a campaign.
-	CreateActor(ctx context.Context, in *CreateActorRequest, opts ...grpc.CallOption) (*CreateActorResponse, error)
-	// List actors for a campaign.
-	ListActors(ctx context.Context, in *ListActorsRequest, opts ...grpc.CallOption) (*ListActorsResponse, error)
-	// Assign a campaign-scoped default controller for an actor.
+	// Create a character (PC/NPC/etc) for a campaign.
+	CreateCharacter(ctx context.Context, in *CreateCharacterRequest, opts ...grpc.CallOption) (*CreateCharacterResponse, error)
+	// List characters for a campaign.
+	ListCharacters(ctx context.Context, in *ListCharactersRequest, opts ...grpc.CallOption) (*ListCharactersResponse, error)
+	// Assign a campaign-scoped default controller for a character.
 	SetDefaultControl(ctx context.Context, in *SetDefaultControlRequest, opts ...grpc.CallOption) (*SetDefaultControlResponse, error)
 }
 
@@ -122,20 +122,20 @@ func (c *campaignServiceClient) GetParticipant(ctx context.Context, in *GetParti
 	return out, nil
 }
 
-func (c *campaignServiceClient) CreateActor(ctx context.Context, in *CreateActorRequest, opts ...grpc.CallOption) (*CreateActorResponse, error) {
+func (c *campaignServiceClient) CreateCharacter(ctx context.Context, in *CreateCharacterRequest, opts ...grpc.CallOption) (*CreateCharacterResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CreateActorResponse)
-	err := c.cc.Invoke(ctx, CampaignService_CreateActor_FullMethodName, in, out, cOpts...)
+	out := new(CreateCharacterResponse)
+	err := c.cc.Invoke(ctx, CampaignService_CreateCharacter_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *campaignServiceClient) ListActors(ctx context.Context, in *ListActorsRequest, opts ...grpc.CallOption) (*ListActorsResponse, error) {
+func (c *campaignServiceClient) ListCharacters(ctx context.Context, in *ListCharactersRequest, opts ...grpc.CallOption) (*ListCharactersResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ListActorsResponse)
-	err := c.cc.Invoke(ctx, CampaignService_ListActors_FullMethodName, in, out, cOpts...)
+	out := new(ListCharactersResponse)
+	err := c.cc.Invoke(ctx, CampaignService_ListCharacters_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -168,11 +168,11 @@ type CampaignServiceServer interface {
 	ListParticipants(context.Context, *ListParticipantsRequest) (*ListParticipantsResponse, error)
 	// Get a participant by campaign ID and participant ID.
 	GetParticipant(context.Context, *GetParticipantRequest) (*GetParticipantResponse, error)
-	// Create an actor (PC/NPC/etc) for a campaign.
-	CreateActor(context.Context, *CreateActorRequest) (*CreateActorResponse, error)
-	// List actors for a campaign.
-	ListActors(context.Context, *ListActorsRequest) (*ListActorsResponse, error)
-	// Assign a campaign-scoped default controller for an actor.
+	// Create a character (PC/NPC/etc) for a campaign.
+	CreateCharacter(context.Context, *CreateCharacterRequest) (*CreateCharacterResponse, error)
+	// List characters for a campaign.
+	ListCharacters(context.Context, *ListCharactersRequest) (*ListCharactersResponse, error)
+	// Assign a campaign-scoped default controller for a character.
 	SetDefaultControl(context.Context, *SetDefaultControlRequest) (*SetDefaultControlResponse, error)
 	mustEmbedUnimplementedCampaignServiceServer()
 }
@@ -202,11 +202,11 @@ func (UnimplementedCampaignServiceServer) ListParticipants(context.Context, *Lis
 func (UnimplementedCampaignServiceServer) GetParticipant(context.Context, *GetParticipantRequest) (*GetParticipantResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetParticipant not implemented")
 }
-func (UnimplementedCampaignServiceServer) CreateActor(context.Context, *CreateActorRequest) (*CreateActorResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method CreateActor not implemented")
+func (UnimplementedCampaignServiceServer) CreateCharacter(context.Context, *CreateCharacterRequest) (*CreateCharacterResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateCharacter not implemented")
 }
-func (UnimplementedCampaignServiceServer) ListActors(context.Context, *ListActorsRequest) (*ListActorsResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method ListActors not implemented")
+func (UnimplementedCampaignServiceServer) ListCharacters(context.Context, *ListCharactersRequest) (*ListCharactersResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListCharacters not implemented")
 }
 func (UnimplementedCampaignServiceServer) SetDefaultControl(context.Context, *SetDefaultControlRequest) (*SetDefaultControlResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SetDefaultControl not implemented")
@@ -340,38 +340,38 @@ func _CampaignService_GetParticipant_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
-func _CampaignService_CreateActor_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateActorRequest)
+func _CampaignService_CreateCharacter_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateCharacterRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(CampaignServiceServer).CreateActor(ctx, in)
+		return srv.(CampaignServiceServer).CreateCharacter(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: CampaignService_CreateActor_FullMethodName,
+		FullMethod: CampaignService_CreateCharacter_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CampaignServiceServer).CreateActor(ctx, req.(*CreateActorRequest))
+		return srv.(CampaignServiceServer).CreateCharacter(ctx, req.(*CreateCharacterRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _CampaignService_ListActors_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListActorsRequest)
+func _CampaignService_ListCharacters_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListCharactersRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(CampaignServiceServer).ListActors(ctx, in)
+		return srv.(CampaignServiceServer).ListCharacters(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: CampaignService_ListActors_FullMethodName,
+		FullMethod: CampaignService_ListCharacters_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CampaignServiceServer).ListActors(ctx, req.(*ListActorsRequest))
+		return srv.(CampaignServiceServer).ListCharacters(ctx, req.(*ListCharactersRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -426,12 +426,12 @@ var CampaignService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _CampaignService_GetParticipant_Handler,
 		},
 		{
-			MethodName: "CreateActor",
-			Handler:    _CampaignService_CreateActor_Handler,
+			MethodName: "CreateCharacter",
+			Handler:    _CampaignService_CreateCharacter_Handler,
 		},
 		{
-			MethodName: "ListActors",
-			Handler:    _CampaignService_ListActors_Handler,
+			MethodName: "ListCharacters",
+			Handler:    _CampaignService_ListCharacters_Handler,
 		},
 		{
 			MethodName: "SetDefaultControl",

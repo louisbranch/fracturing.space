@@ -27,7 +27,7 @@ type CampaignCreateResult struct {
 	Name            string `json:"name" jsonschema:"campaign name"`
 	GmMode          string `json:"gm_mode" jsonschema:"gm mode"`
 	ParticipantCount int    `json:"participant_count" jsonschema:"number of all participants (GM + PLAYER + future roles)"`
-	ActorCount      int    `json:"actor_count" jsonschema:"number of all actors (PC + NPC + future kinds)"`
+	CharacterCount  int    `json:"character_count" jsonschema:"number of all characters (PC + NPC + future kinds)"`
 	ThemePrompt     string `json:"theme_prompt" jsonschema:"theme prompt"`
 }
 
@@ -37,7 +37,7 @@ type CampaignListEntry struct {
 	Name            string `json:"name"`
 	GmMode          string `json:"gm_mode"`
 	ParticipantCount int    `json:"participant_count"`
-	ActorCount      int    `json:"actor_count"`
+	CharacterCount  int    `json:"character_count"`
 	ThemePrompt     string `json:"theme_prompt"`
 	CreatedAt       string `json:"created_at"`
 	UpdatedAt       string `json:"updated_at"`
@@ -88,8 +88,8 @@ type ParticipantListPayload struct {
 	Participants []ParticipantListEntry `json:"participants"`
 }
 
-// ActorListEntry represents a readable actor entry.
-type ActorListEntry struct {
+// CharacterListEntry represents a readable character entry.
+type CharacterListEntry struct {
 	ID         string `json:"id"`
 	CampaignID string `json:"campaign_id"`
 	Name       string `json:"name"`
@@ -99,42 +99,42 @@ type ActorListEntry struct {
 	UpdatedAt  string `json:"updated_at"`
 }
 
-// ActorListPayload represents the MCP resource payload for actor listings.
-type ActorListPayload struct {
-	Actors []ActorListEntry `json:"actors"`
+// CharacterListPayload represents the MCP resource payload for character listings.
+type CharacterListPayload struct {
+	Characters []CharacterListEntry `json:"characters"`
 }
 
-// ActorCreateInput represents the MCP tool input for actor creation.
-type ActorCreateInput struct {
+// CharacterCreateInput represents the MCP tool input for character creation.
+type CharacterCreateInput struct {
 	CampaignID string `json:"campaign_id" jsonschema:"campaign identifier"`
-	Name       string `json:"name" jsonschema:"display name for the actor"`
-	Kind       string `json:"kind" jsonschema:"actor kind (PC, NPC)"`
-	Notes      string `json:"notes,omitempty" jsonschema:"optional free-form notes about the actor"`
+	Name       string `json:"name" jsonschema:"display name for the character"`
+	Kind       string `json:"kind" jsonschema:"character kind (PC, NPC)"`
+	Notes      string `json:"notes,omitempty" jsonschema:"optional free-form notes about the character"`
 }
 
-// ActorCreateResult represents the MCP tool output for actor creation.
-type ActorCreateResult struct {
-	ID         string `json:"id" jsonschema:"actor identifier"`
+// CharacterCreateResult represents the MCP tool output for character creation.
+type CharacterCreateResult struct {
+	ID         string `json:"id" jsonschema:"character identifier"`
 	CampaignID string `json:"campaign_id" jsonschema:"campaign identifier"`
-	Name       string `json:"name" jsonschema:"display name for the actor"`
-	Kind       string `json:"kind" jsonschema:"actor kind"`
-	Notes      string `json:"notes" jsonschema:"free-form notes about the actor"`
-	CreatedAt  string `json:"created_at" jsonschema:"RFC3339 timestamp when actor was created"`
-	UpdatedAt  string `json:"updated_at" jsonschema:"RFC3339 timestamp when actor was last updated"`
+	Name       string `json:"name" jsonschema:"display name for the character"`
+	Kind       string `json:"kind" jsonschema:"character kind"`
+	Notes      string `json:"notes" jsonschema:"free-form notes about the character"`
+	CreatedAt  string `json:"created_at" jsonschema:"RFC3339 timestamp when character was created"`
+	UpdatedAt  string `json:"updated_at" jsonschema:"RFC3339 timestamp when character was last updated"`
 }
 
-// ActorControlSetInput represents the MCP tool input for setting actor control.
-type ActorControlSetInput struct {
-	CampaignID string `json:"campaign_id" jsonschema:"campaign identifier"`
-	ActorID    string `json:"actor_id" jsonschema:"actor identifier"`
-	Controller string `json:"controller" jsonschema:"controller: 'GM' (case-insensitive) for GM control, or a participant ID for participant control"`
+// CharacterControlSetInput represents the MCP tool input for setting character control.
+type CharacterControlSetInput struct {
+	CampaignID  string `json:"campaign_id" jsonschema:"campaign identifier"`
+	CharacterID string `json:"character_id" jsonschema:"character identifier"`
+	Controller  string `json:"controller" jsonschema:"controller: 'GM' (case-insensitive) for GM control, or a participant ID for participant control"`
 }
 
-// ActorControlSetResult represents the MCP tool output for setting actor control.
-type ActorControlSetResult struct {
-	CampaignID string `json:"campaign_id" jsonschema:"campaign identifier"`
-	ActorID    string `json:"actor_id" jsonschema:"actor identifier"`
-	Controller string `json:"controller" jsonschema:"controller: 'GM' or the participant ID"`
+// CharacterControlSetResult represents the MCP tool output for setting character control.
+type CharacterControlSetResult struct {
+	CampaignID  string `json:"campaign_id" jsonschema:"campaign identifier"`
+	CharacterID string `json:"character_id" jsonschema:"character identifier"`
+	Controller  string `json:"controller" jsonschema:"controller: 'GM' or the participant ID"`
 }
 
 // CampaignCreateTool defines the MCP tool schema for creating campaigns.
@@ -153,19 +153,19 @@ func ParticipantCreateTool() *mcp.Tool {
 	}
 }
 
-// ActorCreateTool defines the MCP tool schema for creating actors.
-func ActorCreateTool() *mcp.Tool {
+// CharacterCreateTool defines the MCP tool schema for creating characters.
+func CharacterCreateTool() *mcp.Tool {
 	return &mcp.Tool{
-		Name:        "actor_create",
-		Description: "Creates an actor (PC or NPC) for a campaign",
+		Name:        "character_create",
+		Description: "Creates a character (PC or NPC) for a campaign",
 	}
 }
 
-// ActorControlSetTool defines the MCP tool schema for setting actor control.
-func ActorControlSetTool() *mcp.Tool {
+// CharacterControlSetTool defines the MCP tool schema for setting character control.
+func CharacterControlSetTool() *mcp.Tool {
 	return &mcp.Tool{
-		Name:        "actor_control_set",
-		Description: "Sets the default controller (GM or participant) for an actor in a campaign",
+		Name:        "character_control_set",
+		Description: "Sets the default controller (GM or participant) for a character in a campaign",
 	}
 }
 
@@ -194,17 +194,17 @@ func ParticipantListResource() *mcp.Resource {
 	}
 }
 
-// ActorListResource defines the MCP resource for actor listings.
-// The effective URI template is campaign://{campaign_id}/actors, but the
+// CharacterListResource defines the MCP resource for character listings.
+// The effective URI template is campaign://{campaign_id}/characters, but the
 // SDK requires a valid URI for registration, so we use a placeholder here.
 // Clients must provide the full URI with actual campaign_id when reading.
-func ActorListResource() *mcp.Resource {
+func CharacterListResource() *mcp.Resource {
 	return &mcp.Resource{
-		Name:        "actor_list",
-		Title:       "Actors",
-		Description: "Readable listing of actors for a campaign. URI format: campaign://{campaign_id}/actors",
+		Name:        "character_list",
+		Title:       "Characters",
+		Description: "Readable listing of characters for a campaign. URI format: campaign://{campaign_id}/characters",
 		MIMEType:    "application/json",
-		URI:         "campaign://_/actors", // Placeholder; actual format: campaign://{campaign_id}/actors
+		URI:         "campaign://_/characters", // Placeholder; actual format: campaign://{campaign_id}/characters
 	}
 }
 
@@ -245,7 +245,7 @@ func CampaignCreateHandler(client campaignv1.CampaignServiceClient) mcp.ToolHand
 			Name:            response.Campaign.GetName(),
 			GmMode:          gmModeToString(response.Campaign.GetGmMode()),
 			ParticipantCount: int(response.Campaign.GetParticipantCount()),
-			ActorCount:       int(response.Campaign.GetActorCount()),
+			CharacterCount:   int(response.Campaign.GetCharacterCount()),
 			ThemePrompt:     response.Campaign.GetThemePrompt(),
 		}
 
@@ -286,7 +286,7 @@ func CampaignListResourceHandler(client campaignv1.CampaignServiceClient) mcp.Re
 				Name:            campaign.GetName(),
 				GmMode:          gmModeToString(campaign.GetGmMode()),
 				ParticipantCount: int(campaign.GetParticipantCount()),
-				ActorCount:       int(campaign.GetActorCount()),
+				CharacterCount:   int(campaign.GetCharacterCount()),
 				ThemePrompt:     campaign.GetThemePrompt(),
 				CreatedAt:       formatTimestamp(campaign.GetCreatedAt()),
 				UpdatedAt:       formatTimestamp(campaign.GetUpdatedAt()),
@@ -427,101 +427,101 @@ func controllerToString(controller campaignv1.Controller) string {
 	}
 }
 
-// ActorCreateHandler executes an actor creation request.
-func ActorCreateHandler(client campaignv1.CampaignServiceClient) mcp.ToolHandlerFor[ActorCreateInput, ActorCreateResult] {
-	return func(ctx context.Context, _ *mcp.CallToolRequest, input ActorCreateInput) (*mcp.CallToolResult, ActorCreateResult, error) {
+// CharacterCreateHandler executes a character creation request.
+func CharacterCreateHandler(client campaignv1.CampaignServiceClient) mcp.ToolHandlerFor[CharacterCreateInput, CharacterCreateResult] {
+	return func(ctx context.Context, _ *mcp.CallToolRequest, input CharacterCreateInput) (*mcp.CallToolResult, CharacterCreateResult, error) {
 		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 
-		req := &campaignv1.CreateActorRequest{
+		req := &campaignv1.CreateCharacterRequest{
 			CampaignId: input.CampaignID,
 			Name:       input.Name,
-			Kind:       actorKindFromString(input.Kind),
+			Kind:       characterKindFromString(input.Kind),
 			Notes:      input.Notes,
 		}
 
-		response, err := client.CreateActor(runCtx, req)
+		response, err := client.CreateCharacter(runCtx, req)
 		if err != nil {
-			return nil, ActorCreateResult{}, fmt.Errorf("actor create failed: %w", err)
+			return nil, CharacterCreateResult{}, fmt.Errorf("character create failed: %w", err)
 		}
-		if response == nil || response.Actor == nil {
-			return nil, ActorCreateResult{}, fmt.Errorf("actor create response is missing")
+		if response == nil || response.Character == nil {
+			return nil, CharacterCreateResult{}, fmt.Errorf("character create response is missing")
 		}
 
-		result := ActorCreateResult{
-			ID:         response.Actor.GetId(),
-			CampaignID: response.Actor.GetCampaignId(),
-			Name:       response.Actor.GetName(),
-			Kind:       actorKindToString(response.Actor.GetKind()),
-			Notes:      response.Actor.GetNotes(),
-			CreatedAt:  formatTimestamp(response.Actor.GetCreatedAt()),
-			UpdatedAt:  formatTimestamp(response.Actor.GetUpdatedAt()),
+		result := CharacterCreateResult{
+			ID:         response.Character.GetId(),
+			CampaignID: response.Character.GetCampaignId(),
+			Name:       response.Character.GetName(),
+			Kind:       characterKindToString(response.Character.GetKind()),
+			Notes:      response.Character.GetNotes(),
+			CreatedAt:  formatTimestamp(response.Character.GetCreatedAt()),
+			UpdatedAt:  formatTimestamp(response.Character.GetUpdatedAt()),
 		}
 
 		return nil, result, nil
 	}
 }
 
-func actorKindFromString(value string) campaignv1.ActorKind {
+func characterKindFromString(value string) campaignv1.CharacterKind {
 	switch strings.ToUpper(strings.TrimSpace(value)) {
 	case "PC":
-		return campaignv1.ActorKind_PC
+		return campaignv1.CharacterKind_PC
 	case "NPC":
-		return campaignv1.ActorKind_NPC
+		return campaignv1.CharacterKind_NPC
 	default:
-		return campaignv1.ActorKind_ACTOR_KIND_UNSPECIFIED
+		return campaignv1.CharacterKind_CHARACTER_KIND_UNSPECIFIED
 	}
 }
 
-func actorKindToString(kind campaignv1.ActorKind) string {
+func characterKindToString(kind campaignv1.CharacterKind) string {
 	switch kind {
-	case campaignv1.ActorKind_PC:
+	case campaignv1.CharacterKind_PC:
 		return "PC"
-	case campaignv1.ActorKind_NPC:
+	case campaignv1.CharacterKind_NPC:
 		return "NPC"
 	default:
 		return "UNSPECIFIED"
 	}
 }
 
-// ActorControlSetHandler executes an actor control set request.
-func ActorControlSetHandler(client campaignv1.CampaignServiceClient) mcp.ToolHandlerFor[ActorControlSetInput, ActorControlSetResult] {
-	return func(ctx context.Context, _ *mcp.CallToolRequest, input ActorControlSetInput) (*mcp.CallToolResult, ActorControlSetResult, error) {
+// CharacterControlSetHandler executes a character control set request.
+func CharacterControlSetHandler(client campaignv1.CampaignServiceClient) mcp.ToolHandlerFor[CharacterControlSetInput, CharacterControlSetResult] {
+	return func(ctx context.Context, _ *mcp.CallToolRequest, input CharacterControlSetInput) (*mcp.CallToolResult, CharacterControlSetResult, error) {
 		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 
-		controller, err := actorControllerFromString(input.Controller)
+		controller, err := characterControllerFromString(input.Controller)
 		if err != nil {
-			return nil, ActorControlSetResult{}, fmt.Errorf("invalid controller: %w", err)
+			return nil, CharacterControlSetResult{}, fmt.Errorf("invalid controller: %w", err)
 		}
 
 		req := &campaignv1.SetDefaultControlRequest{
-			CampaignId: input.CampaignID,
-			ActorId:    input.ActorID,
-			Controller: controller,
+			CampaignId:   input.CampaignID,
+			CharacterId:  input.CharacterID,
+			Controller:   controller,
 		}
 
 		response, err := client.SetDefaultControl(runCtx, req)
 		if err != nil {
-			return nil, ActorControlSetResult{}, fmt.Errorf("actor control set failed: %w", err)
+			return nil, CharacterControlSetResult{}, fmt.Errorf("character control set failed: %w", err)
 		}
 		if response == nil {
-			return nil, ActorControlSetResult{}, fmt.Errorf("actor control set response is missing")
+			return nil, CharacterControlSetResult{}, fmt.Errorf("character control set response is missing")
 		}
 
-		result := ActorControlSetResult{
-			CampaignID: response.GetCampaignId(),
-			ActorID:    response.GetActorId(),
-			Controller: actorControllerToString(response.GetController()),
+		result := CharacterControlSetResult{
+			CampaignID:  response.GetCampaignId(),
+			CharacterID: response.GetCharacterId(),
+			Controller:  characterControllerToString(response.GetController()),
 		}
 
 		return nil, result, nil
 	}
 }
 
-// actorControllerFromString converts a string to a protobuf ActorController.
+// characterControllerFromString converts a string to a protobuf CharacterController.
 // Accepts "GM" (case-insensitive) for GM control, or a participant ID for participant control.
-func actorControllerFromString(controller string) (*campaignv1.ActorController, error) {
+func characterControllerFromString(controller string) (*campaignv1.CharacterController, error) {
 	controller = strings.TrimSpace(controller)
 	if controller == "" {
 		return nil, fmt.Errorf("controller is required")
@@ -529,16 +529,16 @@ func actorControllerFromString(controller string) (*campaignv1.ActorController, 
 
 	upper := strings.ToUpper(controller)
 	if upper == "GM" {
-		return &campaignv1.ActorController{
-			Controller: &campaignv1.ActorController_Gm{
+		return &campaignv1.CharacterController{
+			Controller: &campaignv1.CharacterController_Gm{
 				Gm: &campaignv1.GmController{},
 			},
 		}, nil
 	}
 
 	// Otherwise, treat as participant ID
-	return &campaignv1.ActorController{
-		Controller: &campaignv1.ActorController_Participant{
+	return &campaignv1.CharacterController{
+		Controller: &campaignv1.CharacterController_Participant{
 			Participant: &campaignv1.ParticipantController{
 				ParticipantId: controller,
 			},
@@ -546,17 +546,17 @@ func actorControllerFromString(controller string) (*campaignv1.ActorController, 
 	}, nil
 }
 
-// actorControllerToString converts a protobuf ActorController to a string representation.
+// characterControllerToString converts a protobuf CharacterController to a string representation.
 // Returns "GM" for GM control, or the participant ID for participant control.
-func actorControllerToString(controller *campaignv1.ActorController) string {
+func characterControllerToString(controller *campaignv1.CharacterController) string {
 	if controller == nil {
 		return ""
 	}
 
 	switch c := controller.GetController().(type) {
-	case *campaignv1.ActorController_Gm:
+	case *campaignv1.CharacterController_Gm:
 		return "GM"
-	case *campaignv1.ActorController_Participant:
+	case *campaignv1.CharacterController_Participant:
 		if c.Participant != nil {
 			return c.Participant.GetParticipantId()
 		}
@@ -643,29 +643,29 @@ func parseCampaignIDFromURI(uri string) (string, error) {
 	return parseCampaignIDFromResourceURI(uri, "participants")
 }
 
-// ActorListResourceHandler returns a readable actor listing resource.
-func ActorListResourceHandler(client campaignv1.CampaignServiceClient) mcp.ResourceHandler {
+// CharacterListResourceHandler returns a readable character listing resource.
+func CharacterListResourceHandler(client campaignv1.CampaignServiceClient) mcp.ResourceHandler {
 	return func(ctx context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
 		if client == nil {
-			return nil, fmt.Errorf("actor list client is not configured")
+			return nil, fmt.Errorf("character list client is not configured")
 		}
 
-		uri := ActorListResource().URI
+		uri := CharacterListResource().URI
 		if req != nil && req.Params != nil && req.Params.URI != "" {
 			uri = req.Params.URI
 		}
 
-		// Parse campaign_id from URI: expected format is campaign://{campaign_id}/actors.
+		// Parse campaign_id from URI: expected format is campaign://{campaign_id}/characters.
 		// If the URI is the registered placeholder, return an error requiring a concrete campaign ID.
 		// Otherwise, parse the campaign ID from the URI path.
 		var campaignID string
 		var err error
-		if uri == ActorListResource().URI {
+		if uri == CharacterListResource().URI {
 			// Using registered placeholder URI - this shouldn't happen in practice
 			// but handle it gracefully by requiring campaign_id in a different way
-			return nil, fmt.Errorf("campaign ID is required; use URI format campaign://{campaign_id}/actors")
+			return nil, fmt.Errorf("campaign ID is required; use URI format campaign://{campaign_id}/characters")
 		}
-		campaignID, err = parseCampaignIDFromActorURI(uri)
+		campaignID, err = parseCampaignIDFromCharacterURI(uri)
 		if err != nil {
 			return nil, fmt.Errorf("parse campaign ID from URI: %w", err)
 		}
@@ -673,33 +673,33 @@ func ActorListResourceHandler(client campaignv1.CampaignServiceClient) mcp.Resou
 		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 
-		payload := ActorListPayload{}
-		response, err := client.ListActors(runCtx, &campaignv1.ListActorsRequest{
+		payload := CharacterListPayload{}
+		response, err := client.ListCharacters(runCtx, &campaignv1.ListCharactersRequest{
 			CampaignId: campaignID,
 			PageSize:   10,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("actor list failed: %w", err)
+			return nil, fmt.Errorf("character list failed: %w", err)
 		}
 		if response == nil {
-			return nil, fmt.Errorf("actor list response is missing")
+			return nil, fmt.Errorf("character list response is missing")
 		}
 
-		for _, actor := range response.GetActors() {
-			payload.Actors = append(payload.Actors, ActorListEntry{
-				ID:         actor.GetId(),
-				CampaignID: actor.GetCampaignId(),
-				Name:       actor.GetName(),
-				Kind:       actorKindToString(actor.GetKind()),
-				Notes:      actor.GetNotes(),
-				CreatedAt:  formatTimestamp(actor.GetCreatedAt()),
-				UpdatedAt:  formatTimestamp(actor.GetUpdatedAt()),
+		for _, character := range response.GetCharacters() {
+			payload.Characters = append(payload.Characters, CharacterListEntry{
+				ID:         character.GetId(),
+				CampaignID: character.GetCampaignId(),
+				Name:       character.GetName(),
+				Kind:       characterKindToString(character.GetKind()),
+				Notes:      character.GetNotes(),
+				CreatedAt:  formatTimestamp(character.GetCreatedAt()),
+				UpdatedAt:  formatTimestamp(character.GetUpdatedAt()),
 			})
 		}
 
 		data, err := json.MarshalIndent(payload, "", "  ")
 		if err != nil {
-			return nil, fmt.Errorf("marshal actor list: %w", err)
+			return nil, fmt.Errorf("marshal character list: %w", err)
 		}
 
 		return &mcp.ReadResourceResult{
@@ -714,10 +714,10 @@ func ActorListResourceHandler(client campaignv1.CampaignServiceClient) mcp.Resou
 	}
 }
 
-// parseCampaignIDFromActorURI extracts the campaign ID from a URI of the form campaign://{campaign_id}/actors.
-// It parses URIs of the expected format but requires an actual campaign ID and rejects the placeholder (campaign://_/actors).
-func parseCampaignIDFromActorURI(uri string) (string, error) {
-	return parseCampaignIDFromResourceURI(uri, "actors")
+// parseCampaignIDFromCharacterURI extracts the campaign ID from a URI of the form campaign://{campaign_id}/characters.
+// It parses URIs of the expected format but requires an actual campaign ID and rejects the placeholder (campaign://_/characters).
+func parseCampaignIDFromCharacterURI(uri string) (string, error) {
+	return parseCampaignIDFromResourceURI(uri, "characters")
 }
 
 // parseCampaignIDFromCampaignURI extracts the campaign ID from a URI of the form campaign://{campaign_id}.
@@ -806,7 +806,7 @@ func CampaignResourceHandler(client campaignv1.CampaignServiceClient) mcp.Resour
 				Name:            campaign.GetName(),
 				GmMode:          gmModeToString(campaign.GetGmMode()),
 				ParticipantCount: int(campaign.GetParticipantCount()),
-				ActorCount:       int(campaign.GetActorCount()),
+				CharacterCount:   int(campaign.GetCharacterCount()),
 				ThemePrompt:     campaign.GetThemePrompt(),
 				CreatedAt:       formatTimestamp(campaign.GetCreatedAt()),
 				UpdatedAt:       formatTimestamp(campaign.GetUpdatedAt()),

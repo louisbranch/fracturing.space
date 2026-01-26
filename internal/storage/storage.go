@@ -44,25 +44,25 @@ type ParticipantPage struct {
 	NextPageToken string
 }
 
-// ActorStore persists actor records.
-type ActorStore interface {
-	PutActor(ctx context.Context, actor domain.Actor) error
-	GetActor(ctx context.Context, campaignID, actorID string) (domain.Actor, error)
-	// ListActors returns a page of actor records for a campaign starting after the page token.
-	ListActors(ctx context.Context, campaignID string, pageSize int, pageToken string) (ActorPage, error)
+// CharacterStore persists character records.
+type CharacterStore interface {
+	PutCharacter(ctx context.Context, character domain.Character) error
+	GetCharacter(ctx context.Context, campaignID, characterID string) (domain.Character, error)
+	// ListCharacters returns a page of character records for a campaign starting after the page token.
+	ListCharacters(ctx context.Context, campaignID string, pageSize int, pageToken string) (CharacterPage, error)
 }
 
-// ActorPage describes a page of actor records.
-type ActorPage struct {
-	Actors        []domain.Actor
+// CharacterPage describes a page of character records.
+type CharacterPage struct {
+	Characters    []domain.Character
 	NextPageToken string
 }
 
-// ControlDefaultStore persists default controller assignments for actors.
+// ControlDefaultStore persists default controller assignments for characters.
 type ControlDefaultStore interface {
-	// PutControlDefault sets the default controller for an actor in a campaign.
-	// Overwrites any existing controller for the same (campaign_id, actor_id) pair.
-	PutControlDefault(ctx context.Context, campaignID, actorID string, controller domain.ActorController) error
+	// PutControlDefault sets the default controller for a character in a campaign.
+	// Overwrites any existing controller for the same (campaign_id, character_id) pair.
+	PutControlDefault(ctx context.Context, campaignID, characterID string, controller domain.CharacterController) error
 }
 
 // SessionStore persists session records.

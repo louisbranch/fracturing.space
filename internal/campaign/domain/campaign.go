@@ -36,7 +36,7 @@ type Campaign struct {
 	Name            string
 	GmMode          GmMode
 	ParticipantCount int
-	ActorCount      int
+	CharacterCount  int
 	ThemePrompt     string
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
@@ -74,7 +74,7 @@ func CreateCampaign(input CreateCampaignInput, now func() time.Time, idGenerator
 		Name:            normalized.Name,
 		GmMode:          normalized.GmMode,
 		ParticipantCount: 0,
-		ActorCount:      0,
+		CharacterCount:  0,
 		ThemePrompt:     normalized.ThemePrompt,
 		CreatedAt:       createdAt,
 		UpdatedAt:       createdAt,

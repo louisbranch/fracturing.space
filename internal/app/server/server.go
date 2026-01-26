@@ -47,7 +47,7 @@ func New(port int) (*Server, error) {
 	campaignService := campaignservice.NewCampaignService(campaignservice.Stores{
 		Campaign:       store,
 		Participant:    store,
-		Actor:          store,
+		Character:      store,
 		ControlDefault: store,
 	})
 	sessionService := sessionservice.NewSessionService(sessionservice.Stores{

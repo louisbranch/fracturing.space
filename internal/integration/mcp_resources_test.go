@@ -64,18 +64,18 @@ func runMCPResourcesTests(t *testing.T, suite *integrationSuite) {
 			t.Fatalf("expected resource MIME application/json, got %q", participantResource.MIMEType)
 		}
 
-		actorResource, found := findResource(result.Resources, "actor_list")
+		characterResource, found := findResource(result.Resources, "character_list")
 		if !found {
-			t.Fatal("expected actor_list resource")
+			t.Fatal("expected character_list resource")
 		}
-		if !strings.HasPrefix(actorResource.URI, "campaign://") {
-			t.Fatalf("expected resource URI to start with campaign://, got %q", actorResource.URI)
+		if !strings.HasPrefix(characterResource.URI, "campaign://") {
+			t.Fatalf("expected resource URI to start with campaign://, got %q", characterResource.URI)
 		}
-		if !strings.HasSuffix(actorResource.URI, "/actors") {
-			t.Fatalf("expected resource URI to end with /actors, got %q", actorResource.URI)
+		if !strings.HasSuffix(characterResource.URI, "/characters") {
+			t.Fatalf("expected resource URI to end with /characters, got %q", characterResource.URI)
 		}
-		if actorResource.MIMEType != "application/json" {
-			t.Fatalf("expected resource MIME application/json, got %q", actorResource.MIMEType)
+		if characterResource.MIMEType != "application/json" {
+			t.Fatalf("expected resource MIME application/json, got %q", characterResource.MIMEType)
 		}
 
 		sessionResource, found := findResource(result.Resources, "session_list")
@@ -172,7 +172,7 @@ func runMCPResourcesTests(t *testing.T, suite *integrationSuite) {
 		}
 	})
 
-	t.Run("read actor list resource", func(t *testing.T) {
+	t.Run("read character list resource", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
 		defer cancel()
 
@@ -180,7 +180,7 @@ func runMCPResourcesTests(t *testing.T, suite *integrationSuite) {
 		campaignParams := &mcp.CallToolParams{
 			Name: "campaign_create",
 			Arguments: map[string]any{
-				"name":         "Actor Test Campaign",
+				"name":         "Character Test Campaign",
 				"gm_mode":      "AI",
 				"theme_prompt": "test theme",
 			},
@@ -197,9 +197,9 @@ func runMCPResourcesTests(t *testing.T, suite *integrationSuite) {
 			t.Fatal("campaign_create returned empty id")
 		}
 
-		// Create an actor
-		actorParams := &mcp.CallToolParams{
-			Name: "actor_create",
+		// Create a character
+		characterParams := &mcp.CallToolParams{
+			Name: "character_create",
 			Arguments: map[string]any{
 				"campaign_id": campaignOutput.ID,
 				"name":        "Test PC",
@@ -207,35 +207,35 @@ func runMCPResourcesTests(t *testing.T, suite *integrationSuite) {
 				"notes":       "Test notes",
 			},
 		}
-		actorResult, err := suite.client.CallTool(ctx, actorParams)
+		characterResult, err := suite.client.CallTool(ctx, characterParams)
 		if err != nil {
-			t.Fatalf("call actor_create: %v", err)
+			t.Fatalf("call character_create: %v", err)
 		}
-		if actorResult == nil || actorResult.IsError {
-			t.Fatalf("actor_create failed: %+v", actorResult)
+		if characterResult == nil || characterResult.IsError {
+			t.Fatalf("character_create failed: %+v", characterResult)
 		}
-		actorOutput := decodeStructuredContent[domain.ActorCreateResult](t, actorResult.StructuredContent)
-		if actorOutput.ID == "" {
-			t.Fatal("actor_create returned empty id")
+		characterOutput := decodeStructuredContent[domain.CharacterCreateResult](t, characterResult.StructuredContent)
+		if characterOutput.ID == "" {
+			t.Fatal("character_create returned empty id")
 		}
 
 		// Note: The MCP SDK validates URIs exactly against registered resources.
-		// Since we registered campaign://_/actors, the SDK only accepts that exact URI.
-		// The handler implementation correctly parses campaign://{campaign_id}/actors
+		// Since we registered campaign://_/characters, the SDK only accepts that exact URI.
+		// The handler implementation correctly parses campaign://{campaign_id}/characters
 		// format, but the SDK validation prevents testing it directly via ReadResource.
-		// The handler logic is tested in unit tests (TestActorListResourceHandler*).
+		// The handler logic is tested in unit tests (TestCharacterListResourceHandler*).
 		// This integration test verifies the resource is discoverable and the handler
 		// would work correctly if the SDK supported URI templates.
 		//
 		// For now, we test that the registered URI format is accepted (even though
 		// it uses a placeholder) to verify the resource is properly registered.
-		registeredURI := "campaign://_/actors"
+		registeredURI := "campaign://_/characters"
 		_, err = suite.client.ReadResource(ctx, &mcp.ReadResourceParams{URI: registeredURI})
 		if err != nil {
 			// The handler will reject the placeholder, which is expected behavior
 			// This confirms the handler is being called and validates the campaign ID
 			if !strings.Contains(err.Error(), "campaign ID") {
-				t.Fatalf("read actor list resource: expected campaign ID error, got %v", err)
+				t.Fatalf("read character list resource: expected campaign ID error, got %v", err)
 			}
 		}
 	})

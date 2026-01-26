@@ -21,31 +21,31 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type ActorController struct {
+type CharacterController struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Types that are valid to be assigned to Controller:
 	//
-	//	*ActorController_Gm
-	//	*ActorController_Participant
-	Controller    isActorController_Controller `protobuf_oneof:"controller"`
+	//	*CharacterController_Gm
+	//	*CharacterController_Participant
+	Controller    isCharacterController_Controller `protobuf_oneof:"controller"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ActorController) Reset() {
-	*x = ActorController{}
+func (x *CharacterController) Reset() {
+	*x = CharacterController{}
 	mi := &file_campaign_v1_controller_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ActorController) String() string {
+func (x *CharacterController) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ActorController) ProtoMessage() {}
+func (*CharacterController) ProtoMessage() {}
 
-func (x *ActorController) ProtoReflect() protoreflect.Message {
+func (x *CharacterController) ProtoReflect() protoreflect.Message {
 	mi := &file_campaign_v1_controller_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -57,53 +57,53 @@ func (x *ActorController) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ActorController.ProtoReflect.Descriptor instead.
-func (*ActorController) Descriptor() ([]byte, []int) {
+// Deprecated: Use CharacterController.ProtoReflect.Descriptor instead.
+func (*CharacterController) Descriptor() ([]byte, []int) {
 	return file_campaign_v1_controller_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *ActorController) GetController() isActorController_Controller {
+func (x *CharacterController) GetController() isCharacterController_Controller {
 	if x != nil {
 		return x.Controller
 	}
 	return nil
 }
 
-func (x *ActorController) GetGm() *GmController {
+func (x *CharacterController) GetGm() *GmController {
 	if x != nil {
-		if x, ok := x.Controller.(*ActorController_Gm); ok {
+		if x, ok := x.Controller.(*CharacterController_Gm); ok {
 			return x.Gm
 		}
 	}
 	return nil
 }
 
-func (x *ActorController) GetParticipant() *ParticipantController {
+func (x *CharacterController) GetParticipant() *ParticipantController {
 	if x != nil {
-		if x, ok := x.Controller.(*ActorController_Participant); ok {
+		if x, ok := x.Controller.(*CharacterController_Participant); ok {
 			return x.Participant
 		}
 	}
 	return nil
 }
 
-type isActorController_Controller interface {
-	isActorController_Controller()
+type isCharacterController_Controller interface {
+	isCharacterController_Controller()
 }
 
-type ActorController_Gm struct {
+type CharacterController_Gm struct {
 	// If set, the controller is the GM.
 	Gm *GmController `protobuf:"bytes,1,opt,name=gm,proto3,oneof"`
 }
 
-type ActorController_Participant struct {
+type CharacterController_Participant struct {
 	// If set, the controller is a registered campaign participant.
 	Participant *ParticipantController `protobuf:"bytes,2,opt,name=participant,proto3,oneof"`
 }
 
-func (*ActorController_Gm) isActorController_Controller() {}
+func (*CharacterController_Gm) isCharacterController_Controller() {}
 
-func (*ActorController_Participant) isActorController_Controller() {}
+func (*CharacterController_Participant) isCharacterController_Controller() {}
 
 type GmController struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -190,8 +190,8 @@ var File_campaign_v1_controller_proto protoreflect.FileDescriptor
 
 const file_campaign_v1_controller_proto_rawDesc = "" +
 	"\n" +
-	"\x1ccampaign/v1/controller.proto\x12\vcampaign.v1\"\x94\x01\n" +
-	"\x0fActorController\x12+\n" +
+	"\x1ccampaign/v1/controller.proto\x12\vcampaign.v1\"\x98\x01\n" +
+	"\x13CharacterController\x12+\n" +
 	"\x02gm\x18\x01 \x01(\v2\x19.campaign.v1.GmControllerH\x00R\x02gm\x12F\n" +
 	"\vparticipant\x18\x02 \x01(\v2\".campaign.v1.ParticipantControllerH\x00R\vparticipantB\f\n" +
 	"\n" +
@@ -214,13 +214,13 @@ func file_campaign_v1_controller_proto_rawDescGZIP() []byte {
 
 var file_campaign_v1_controller_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_campaign_v1_controller_proto_goTypes = []any{
-	(*ActorController)(nil),       // 0: campaign.v1.ActorController
+	(*CharacterController)(nil),   // 0: campaign.v1.CharacterController
 	(*GmController)(nil),          // 1: campaign.v1.GmController
 	(*ParticipantController)(nil), // 2: campaign.v1.ParticipantController
 }
 var file_campaign_v1_controller_proto_depIdxs = []int32{
-	1, // 0: campaign.v1.ActorController.gm:type_name -> campaign.v1.GmController
-	2, // 1: campaign.v1.ActorController.participant:type_name -> campaign.v1.ParticipantController
+	1, // 0: campaign.v1.CharacterController.gm:type_name -> campaign.v1.GmController
+	2, // 1: campaign.v1.CharacterController.participant:type_name -> campaign.v1.ParticipantController
 	2, // [2:2] is the sub-list for method output_type
 	2, // [2:2] is the sub-list for method input_type
 	2, // [2:2] is the sub-list for extension type_name
@@ -234,8 +234,8 @@ func file_campaign_v1_controller_proto_init() {
 		return
 	}
 	file_campaign_v1_controller_proto_msgTypes[0].OneofWrappers = []any{
-		(*ActorController_Gm)(nil),
-		(*ActorController_Participant)(nil),
+		(*CharacterController_Gm)(nil),
+		(*CharacterController_Participant)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

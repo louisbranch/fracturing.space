@@ -20,8 +20,8 @@ func registerDualityTools(mcpServer *mcp.Server, client dualityv1.DualityService
 func registerCampaignTools(mcpServer *mcp.Server, client campaignv1.CampaignServiceClient) {
 	mcp.AddTool(mcpServer, domain.CampaignCreateTool(), domain.CampaignCreateHandler(client))
 	mcp.AddTool(mcpServer, domain.ParticipantCreateTool(), domain.ParticipantCreateHandler(client))
-	mcp.AddTool(mcpServer, domain.ActorCreateTool(), domain.ActorCreateHandler(client))
-	mcp.AddTool(mcpServer, domain.ActorControlSetTool(), domain.ActorControlSetHandler(client))
+	mcp.AddTool(mcpServer, domain.CharacterCreateTool(), domain.CharacterCreateHandler(client))
+	mcp.AddTool(mcpServer, domain.CharacterControlSetTool(), domain.CharacterControlSetHandler(client))
 }
 
 func registerSessionTools(mcpServer *mcp.Server, client sessionv1.SessionServiceClient) {
@@ -48,7 +48,7 @@ func registerCampaignResources(mcpServer *mcp.Server, client campaignv1.Campaign
 	mcpServer.AddResource(domain.CampaignListResource(), domain.CampaignListResourceHandler(client))
 	mcpServer.AddResource(domain.CampaignResource(), domain.CampaignResourceHandler(client))
 	mcpServer.AddResource(domain.ParticipantListResource(), domain.ParticipantListResourceHandler(client))
-	mcpServer.AddResource(domain.ActorListResource(), domain.ActorListResourceHandler(client))
+	mcpServer.AddResource(domain.CharacterListResource(), domain.CharacterListResourceHandler(client))
 }
 
 // registerSessionResources registers readable session MCP resources.

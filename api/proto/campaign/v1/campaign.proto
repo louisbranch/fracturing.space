@@ -12,8 +12,8 @@ message Campaign {
   GmMode gm_mode = 3;
   // Number of all participants (GM + PLAYER + future roles) for this campaign.
   int32 participant_count = 4;
-  // Number of all actors (PC + NPC + future kinds) for this campaign.
-  int32 actor_count = 5;
+  // Number of all characters (PC + NPC + future kinds) for this campaign.
+  int32 character_count = 5;
   string theme_prompt = 6;
   google.protobuf.Timestamp created_at = 7;
   google.protobuf.Timestamp updated_at = 8;
