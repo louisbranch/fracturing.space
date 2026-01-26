@@ -218,7 +218,7 @@ Creates a participant (GM or player) for a campaign.
 
 #### character_create
 
-Creates an character (PC or NPC) for a campaign.
+Creates a character (PC or NPC) for a campaign.
 
 **Input:**
 
@@ -247,7 +247,7 @@ Creates an character (PC or NPC) for a campaign.
 
 #### character_control_set
 
-Sets the default controller (GM or participant) for an character in a campaign.
+Sets the default controller (GM or participant) for a character in a campaign.
 
 **Input:**
 
