@@ -6,7 +6,6 @@ import (
 	"context"
 	"strings"
 	"testing"
-	"time"
 
 	campaignv1 "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1"
 	sessionv1 "github.com/louisbranch/duality-engine/api/gen/go/session/v1"
@@ -32,7 +31,7 @@ func runSessionLockTests(t *testing.T, grpcAddr string) {
 	campaignClient := campaignv1.NewCampaignServiceClient(conn)
 	sessionClient := sessionv1.NewSessionServiceClient(conn)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
 	defer cancel()
 
 	createResp, err := campaignClient.CreateCampaign(ctx, &campaignv1.CreateCampaignRequest{

@@ -137,3 +137,54 @@ func TestSessionLockInterceptorRequiresCampaignID(t *testing.T) {
 		t.Fatalf("expected invalid argument, got %v", st.Code())
 	}
 }
+
+func TestSessionLockInterceptorRequiresSessionStore(t *testing.T) {
+	interceptor := SessionLockInterceptor(nil)
+
+	handler := func(ctx context.Context, req any) (any, error) {
+		return "ok", nil
+	}
+
+	info := &grpc.UnaryServerInfo{FullMethod: campaignv1.CampaignService_CreateParticipant_FullMethodName}
+	_, err := interceptor(context.Background(), &campaignv1.CreateParticipantRequest{CampaignId: "camp-1"}, info, handler)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	st, ok := status.FromError(err)
+	if !ok {
+		t.Fatalf("expected grpc status error, got %v", err)
+	}
+	if st.Code() != codes.Internal {
+		t.Fatalf("expected internal, got %v", st.Code())
+	}
+	if st.Message() != "session store is not configured" {
+		t.Fatalf("unexpected message: %q", st.Message())
+	}
+}
+
+func TestSessionLockInterceptorPropagatesSessionStoreError(t *testing.T) {
+	store := &fakeSessionStore{
+		activeErr: errors.New("db unavailable"),
+	}
+	interceptor := SessionLockInterceptor(store)
+
+	handler := func(ctx context.Context, req any) (any, error) {
+		return "ok", nil
+	}
+
+	info := &grpc.UnaryServerInfo{FullMethod: campaignv1.CampaignService_CreateParticipant_FullMethodName}
+	_, err := interceptor(context.Background(), &campaignv1.CreateParticipantRequest{CampaignId: "camp-1"}, info, handler)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	st, ok := status.FromError(err)
+	if !ok {
+		t.Fatalf("expected grpc status error, got %v", err)
+	}
+	if st.Code() != codes.Internal {
+		t.Fatalf("expected internal, got %v", st.Code())
+	}
+	if !strings.Contains(st.Message(), "check active session") {
+		t.Fatalf("expected active session check message, got %q", st.Message())
+	}
+}
