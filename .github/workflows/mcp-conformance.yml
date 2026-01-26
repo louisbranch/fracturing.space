@@ -27,20 +27,3 @@ jobs:
           url: http://localhost:3001/mcp
           verbose: true
           # expected-failures: ./conformance-baseline.yml
-          scenario: server-initialize
-
-      - name: Tools list
-        uses: modelcontextprotocol/conformance@v0.1.11
-        with:
-          mode: server
-          url: http://localhost:3001/mcp
-          verbose: true
-          scenario: tools-list
-
-      - name: Ping
-        uses: modelcontextprotocol/conformance@v0.1.11
-        with:
-          mode: server
-          url: http://localhost:3001/mcp
-          verbose: true
-          scenario: ping
