@@ -26,4 +26,4 @@ jobs:
           url: http://localhost:3001/mcp
           verbose: true
           # expected-failures: ./conformance-baseline.yml
-          scenario: initialize
+          scenario: server-initialize,ping
