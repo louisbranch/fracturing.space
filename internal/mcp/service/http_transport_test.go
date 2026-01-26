@@ -14,6 +14,11 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+func setLocalhostHeaders(req *http.Request) {
+	req.Host = "localhost:8081"
+	req.Header.Set("Origin", "http://localhost:8081")
+}
+
 func TestHTTPTransport_Connect(t *testing.T) {
 	transport := NewHTTPTransport("localhost:8081")
 	ctx := context.Background()
@@ -41,6 +46,7 @@ func TestHTTPTransport_handleHealth(t *testing.T) {
 	transport := NewHTTPTransport("localhost:8081")
 
 	req := httptest.NewRequest(http.MethodGet, "/mcp/health", nil)
+	setLocalhostHeaders(req)
 	w := httptest.NewRecorder()
 
 	transport.handleHealth(w, req)
@@ -58,6 +64,7 @@ func TestHTTPTransport_handleMessages_InvalidMethod(t *testing.T) {
 	transport := NewHTTPTransport("localhost:8081")
 
 	req := httptest.NewRequest(http.MethodGet, "/mcp/messages", nil)
+	setLocalhostHeaders(req)
 	w := httptest.NewRecorder()
 
 	transport.handleMessages(w, req)
@@ -72,6 +79,7 @@ func TestHTTPTransport_handleMessages_InvalidJSON(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/mcp/messages", strings.NewReader("invalid json"))
 	req.Header.Set("Content-Type", "application/json")
+	setLocalhostHeaders(req)
 	w := httptest.NewRecorder()
 
 	transport.handleMessages(w, req)
@@ -95,6 +103,7 @@ func TestHTTPTransport_handleMessages_NewSession(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/mcp/messages", strings.NewReader(string(body)))
 	req.Header.Set("Content-Type", "application/json")
+	setLocalhostHeaders(req)
 	w := httptest.NewRecorder()
 
 	// This will create a new session but won't get a response without a running MCP server
@@ -136,6 +145,7 @@ func TestHTTPTransport_handleMessages_MissingSessionRequiresInitialize(t *testin
 
 	req := httptest.NewRequest(http.MethodPost, "/mcp/messages", strings.NewReader(string(body)))
 	req.Header.Set("Content-Type", "application/json")
+	setLocalhostHeaders(req)
 	w := httptest.NewRecorder()
 
 	transport.handleMessages(w, req)
@@ -161,6 +171,7 @@ func TestHTTPTransport_handleMessages_HeaderSessionReuse(t *testing.T) {
 
 	initReq := httptest.NewRequest(http.MethodPost, "/mcp/messages", strings.NewReader(string(initBody)))
 	initReq.Header.Set("Content-Type", "application/json")
+	setLocalhostHeaders(initReq)
 	initResp := httptest.NewRecorder()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
@@ -189,6 +200,7 @@ func TestHTTPTransport_handleMessages_HeaderSessionReuse(t *testing.T) {
 	listReq := httptest.NewRequest(http.MethodPost, "/mcp/messages", strings.NewReader(string(listBody)))
 	listReq.Header.Set("Content-Type", "application/json")
 	listReq.Header.Set("Mcp-Session-Id", sessionID)
+	setLocalhostHeaders(listReq)
 	listResp := httptest.NewRecorder()
 
 	listCtx, listCancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
@@ -206,6 +218,7 @@ func TestHTTPTransport_handleSSE_MissingSession(t *testing.T) {
 	transport := NewHTTPTransport("localhost:8081")
 
 	req := httptest.NewRequest(http.MethodGet, "/mcp/sse", nil)
+	setLocalhostHeaders(req)
 	w := httptest.NewRecorder()
 
 	transport.handleSSE(w, req)
@@ -219,12 +232,67 @@ func TestHTTPTransport_handleSSE_InvalidMethod(t *testing.T) {
 	transport := NewHTTPTransport("localhost:8081")
 
 	req := httptest.NewRequest(http.MethodPost, "/mcp/sse", nil)
+	setLocalhostHeaders(req)
 	w := httptest.NewRecorder()
 
 	transport.handleSSE(w, req)
 
 	if w.Code != http.StatusMethodNotAllowed {
 		t.Errorf("handleSSE() status = %d, want %d", w.Code, http.StatusMethodNotAllowed)
+	}
+}
+
+func TestHTTPTransport_handleMessages_RejectsNonLocalhostHeaders(t *testing.T) {
+	transport := NewHTTPTransport("localhost:8081")
+
+	request := map[string]interface{}{
+		"jsonrpc": "2.0",
+		"id":      1,
+		"method":  "initialize",
+		"params":  map[string]interface{}{},
+	}
+	body, _ := json.Marshal(request)
+
+	req := httptest.NewRequest(http.MethodPost, "/mcp/messages", strings.NewReader(string(body)))
+	req.Header.Set("Content-Type", "application/json")
+	req.Host = "evil.example.com"
+	req.Header.Set("Origin", "http://evil.example.com")
+	w := httptest.NewRecorder()
+
+	transport.handleMessages(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("handleMessages() status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+}
+
+func TestHTTPTransport_handleSSE_RejectsNonLocalhostHeaders(t *testing.T) {
+	transport := NewHTTPTransport("localhost:8081")
+
+	req := httptest.NewRequest(http.MethodGet, "/mcp/sse", nil)
+	req.Host = "evil.example.com"
+	req.Header.Set("Origin", "http://evil.example.com")
+	w := httptest.NewRecorder()
+
+	transport.handleSSE(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("handleSSE() status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+}
+
+func TestHTTPTransport_handleHealth_RejectsNonLocalhostHeaders(t *testing.T) {
+	transport := NewHTTPTransport("localhost:8081")
+
+	req := httptest.NewRequest(http.MethodGet, "/mcp/health", nil)
+	req.Host = "evil.example.com"
+	req.Header.Set("Origin", "http://evil.example.com")
+	w := httptest.NewRecorder()
+
+	transport.handleHealth(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("handleHealth() status = %d, want %d", w.Code, http.StatusBadRequest)
 	}
 }
 

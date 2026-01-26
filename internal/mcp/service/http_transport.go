@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -230,6 +232,11 @@ func (t *HTTPTransport) handleMessages(w http.ResponseWriter, r *http.Request) {
 	// TODO: Add API key/token authentication middleware
 	// TODO: Add CORS headers if web clients are expected
 
+	if err := validateLocalRequest(r); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -443,6 +450,11 @@ func (t *HTTPTransport) handleMessages(w http.ResponseWriter, r *http.Request) {
 func (t *HTTPTransport) handleSSE(w http.ResponseWriter, r *http.Request) {
 	// TODO: Add authentication check before establishing SSE connection
 
+	if err := validateLocalRequest(r); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -556,8 +568,89 @@ func writeSessionError(w http.ResponseWriter, message string) {
 	_, _ = w.Write(data)
 }
 
+func validateLocalRequest(r *http.Request) error {
+	if r == nil {
+		return fmt.Errorf("invalid request")
+	}
+
+	if !isLocalHostHeader(r.Host) {
+		return fmt.Errorf("invalid host")
+	}
+
+	origin := strings.TrimSpace(r.Header.Get("Origin"))
+	if origin == "" {
+		return nil
+	}
+
+	parsed, err := url.Parse(origin)
+	if err != nil {
+		return fmt.Errorf("invalid origin")
+	}
+
+	originHost := parsed.Host
+	if originHost == "" {
+		return fmt.Errorf("invalid origin")
+	}
+
+	if !isLocalHostHeader(originHost) {
+		return fmt.Errorf("invalid origin")
+	}
+
+	return nil
+}
+
+func isLocalHostHeader(host string) bool {
+	resolvedHost, ok := normalizeHost(host)
+	if !ok {
+		return false
+	}
+
+	host = resolvedHost
+	switch host {
+	case "localhost", "127.0.0.1", "::1":
+		return true
+	default:
+		return false
+	}
+}
+
+func normalizeHost(host string) (string, bool) {
+	host = strings.TrimSpace(host)
+	if host == "" {
+		return "", false
+	}
+
+	if strings.HasPrefix(host, "[") {
+		if splitHost, _, err := net.SplitHostPort(host); err == nil {
+			return splitHost, true
+		}
+		if strings.HasSuffix(host, "]") {
+			return strings.TrimSuffix(strings.TrimPrefix(host, "["), "]"), true
+		}
+		return "", false
+	}
+
+	if strings.Count(host, ":") > 1 {
+		return host, true
+	}
+
+	if strings.Contains(host, ":") {
+		splitHost, _, err := net.SplitHostPort(host)
+		if err != nil {
+			return "", false
+		}
+		return splitHost, true
+	}
+
+	return host, true
+}
+
 // handleHealth handles GET /mcp/health for health checks.
 func (t *HTTPTransport) handleHealth(w http.ResponseWriter, r *http.Request) {
+	if err := validateLocalRequest(r); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
