@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 	"sync"
 	"time"
 
@@ -26,8 +25,6 @@ const (
 	serverName = "Duality Engine MCP"
 	// serverVersion identifies the MCP server version.
 	serverVersion = "0.1.0"
-	// conformanceEnvVar enables MCP conformance fixtures when set to "1" or "true" (case-insensitive).
-	conformanceEnvVar = "MCP_CONFORMANCE"
 )
 
 // TransportKind identifies the MCP transport implementation.
@@ -82,9 +79,7 @@ func New(grpcAddr string) (*Server, error) {
 	registerCampaignResources(mcpServer, campaignClient)
 	registerSessionResources(mcpServer, sessionClient)
 	registerContextResources(mcpServer, server)
-	if conformanceEnabled() {
-		conformance.Register(mcpServer)
-	}
+	conformance.Register(mcpServer)
 
 	return server, nil
 }
@@ -214,15 +209,6 @@ func (s *Server) getContext() domain.Context {
 	s.ctxMu.RLock()
 	defer s.ctxMu.RUnlock()
 	return s.ctx
-}
-
-// conformanceEnabled reports whether conformance fixtures should be registered.
-func conformanceEnabled() bool {
-	value := strings.TrimSpace(os.Getenv(conformanceEnvVar))
-	if value == "" {
-		return false
-	}
-	return value == "1" || strings.EqualFold(value, "true")
 }
 
 // serveWithTransport starts the MCP server using the provided transport.
