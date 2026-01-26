@@ -24,7 +24,6 @@ Run individually:
 
     go run ./cmd/server
     go run ./cmd/mcp
-    ./scripts/mcp.sh
 
 Default endpoints:
 
