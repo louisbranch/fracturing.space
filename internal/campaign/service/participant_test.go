@@ -264,7 +264,7 @@ func TestCreateParticipantNilRequest(t *testing.T) {
 	service := NewCampaignService(Stores{
 		Campaign:    &fakeCampaignStore{},
 		Participant: &fakeParticipantStore{},
-		Character:       &fakeCharacterStore{},
+		Character:   &fakeCharacterStore{},
 	})
 
 	_, err := service.CreateParticipant(context.Background(), nil)
@@ -532,7 +532,7 @@ func TestListParticipantsNilRequest(t *testing.T) {
 	service := NewCampaignService(Stores{
 		Campaign:    &fakeCampaignStore{},
 		Participant: &fakeParticipantStore{},
-		Character:       &fakeCharacterStore{},
+		Character:   &fakeCharacterStore{},
 	})
 
 	_, err := service.ListParticipants(context.Background(), nil)
@@ -683,7 +683,7 @@ func TestGetParticipantSuccess(t *testing.T) {
 	service := NewCampaignService(Stores{
 		Campaign:    campaignStore,
 		Participant: participantStore,
-		Character:       &fakeCharacterStore{},
+		Character:   &fakeCharacterStore{},
 	})
 
 	response, err := service.GetParticipant(context.Background(), &campaignv1.GetParticipantRequest{
@@ -723,7 +723,7 @@ func TestGetParticipantNilRequest(t *testing.T) {
 	service := NewCampaignService(Stores{
 		Campaign:    &fakeCampaignStore{},
 		Participant: &fakeParticipantStore{},
-		Character:       &fakeCharacterStore{},
+		Character:   &fakeCharacterStore{},
 	})
 
 	_, err := service.GetParticipant(context.Background(), nil)
@@ -791,7 +791,7 @@ func TestGetParticipantEmptyCampaignID(t *testing.T) {
 	service := NewCampaignService(Stores{
 		Campaign:    &fakeCampaignStore{},
 		Participant: &fakeParticipantStore{},
-		Character:       &fakeCharacterStore{},
+		Character:   &fakeCharacterStore{},
 	})
 
 	_, err := service.GetParticipant(context.Background(), &campaignv1.GetParticipantRequest{
@@ -814,7 +814,7 @@ func TestGetParticipantEmptyParticipantID(t *testing.T) {
 	service := NewCampaignService(Stores{
 		Campaign:    &fakeCampaignStore{},
 		Participant: &fakeParticipantStore{},
-		Character:       &fakeCharacterStore{},
+		Character:   &fakeCharacterStore{},
 	})
 
 	_, err := service.GetParticipant(context.Background(), &campaignv1.GetParticipantRequest{
@@ -840,7 +840,7 @@ func TestGetParticipantCampaignNotFound(t *testing.T) {
 	service := NewCampaignService(Stores{
 		Campaign:    campaignStore,
 		Participant: &fakeParticipantStore{},
-		Character:       &fakeCharacterStore{},
+		Character:   &fakeCharacterStore{},
 	})
 
 	_, err := service.GetParticipant(context.Background(), &campaignv1.GetParticipantRequest{
@@ -876,7 +876,7 @@ func TestGetParticipantNotFound(t *testing.T) {
 	service := NewCampaignService(Stores{
 		Campaign:    campaignStore,
 		Participant: participantStore,
-		Character:       &fakeCharacterStore{},
+		Character:   &fakeCharacterStore{},
 	})
 
 	_, err := service.GetParticipant(context.Background(), &campaignv1.GetParticipantRequest{
@@ -912,7 +912,7 @@ func TestGetParticipantStoreError(t *testing.T) {
 	service := NewCampaignService(Stores{
 		Campaign:    campaignStore,
 		Participant: participantStore,
-		Character:       &fakeCharacterStore{},
+		Character:   &fakeCharacterStore{},
 	})
 
 	_, err := service.GetParticipant(context.Background(), &campaignv1.GetParticipantRequest{
@@ -928,5 +928,38 @@ func TestGetParticipantStoreError(t *testing.T) {
 	}
 	if st.Code() != codes.Internal {
 		t.Fatalf("expected internal error, got %v", st.Code())
+	}
+}
+
+func TestParticipantRole(t *testing.T) {
+	tests := []struct {
+		name            string
+		participantRole domain.ParticipantRole
+		proto           campaignv1.ParticipantRole
+	}{
+		{
+			name:            "player",
+			participantRole: domain.ParticipantRolePlayer,
+			proto:           campaignv1.ParticipantRole_PLAYER,
+		},
+		{
+			name:            "gm",
+			participantRole: domain.ParticipantRoleGM,
+			proto:           campaignv1.ParticipantRole_GM,
+		},
+		{
+			name:            "unspecified",
+			participantRole: domain.ParticipantRoleUnspecified,
+			proto:           campaignv1.ParticipantRole_ROLE_UNSPECIFIED,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			proto := participantRoleToProto(tt.participantRole)
+			if proto != tt.proto {
+				t.Fatalf("expected %v, got %v", tt.proto, proto)
+			}
+		})
 	}
 }
