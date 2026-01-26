@@ -73,6 +73,8 @@ type httpConnection struct {
 	respChan    chan jsonrpc.Message
 	notifyChan  chan jsonrpc.Message // Separate channel for notifications (SSE)
 	closed      chan struct{}
+	ready       chan struct{} // Signals when Server.Connect() has started reading (buffered, size 1)
+	readyOnce   sync.Once     // Ensures readiness is signaled only once
 	mu          sync.Mutex
 	closedFlag  bool
 	pendingReqs map[jsonrpc.ID]chan jsonrpc.Message // Map request ID to response channel
@@ -114,6 +116,7 @@ func (t *HTTPTransport) Connect(ctx context.Context) (mcp.Connection, error) {
 		respChan:    make(chan jsonrpc.Message, defaultChannelBufferSize),
 		notifyChan:  make(chan jsonrpc.Message, defaultChannelBufferSize),
 		closed:      make(chan struct{}),
+		ready:       make(chan struct{}, 1), // Buffered so signal doesn't block
 		pendingReqs: make(map[jsonrpc.ID]chan jsonrpc.Message),
 	}
 
@@ -485,6 +488,16 @@ func (t *HTTPTransport) handleHealth(w http.ResponseWriter, r *http.Request) {
 // For HTTP transport, this reads messages from HTTP requests that have been
 // sent to the connection's request channel.
 func (c *httpConnection) Read(ctx context.Context) (jsonrpc.Message, error) {
+	// Signal readiness on first read (when Server.Connect() starts reading)
+	// Use sync.Once to ensure we only signal once
+	c.readyOnce.Do(func() {
+		select {
+		case c.ready <- struct{}{}:
+		default:
+			// Channel already has signal, ignore
+		}
+	})
+
 	select {
 	case msg, ok := <-c.reqChan:
 		if !ok {
@@ -626,6 +639,18 @@ func (t *HTTPTransport) ensureServerRunning(session *httpSession) {
 			_ = serverSession.Wait()
 		}()
 	})
+
+	// Wait for the connection to be ready (Server.Connect() has started reading)
+	// Use a timeout to avoid blocking forever if something goes wrong
+	select {
+	case <-session.conn.ready:
+		// Connection is ready to process messages
+	case <-time.After(5 * time.Second):
+		log.Printf("Warning: Connection readiness timeout for session %s", session.id)
+	case <-t.serverCtx.Done():
+		// Server is shutting down
+		return
+	}
 }
 
 // sessionTransport is a transport that returns a specific connection.
