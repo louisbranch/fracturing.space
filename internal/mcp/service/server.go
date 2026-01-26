@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
 	campaignv1 "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1"
 	dualityv1 "github.com/louisbranch/duality-engine/api/gen/go/duality/v1"
 	sessionv1 "github.com/louisbranch/duality-engine/api/gen/go/session/v1"
+	"github.com/louisbranch/duality-engine/internal/mcp/conformance"
 	"github.com/louisbranch/duality-engine/internal/mcp/domain"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
@@ -24,6 +26,8 @@ const (
 	serverName = "Duality Engine MCP"
 	// serverVersion identifies the MCP server version.
 	serverVersion = "0.1.0"
+	// conformanceEnvVar enables MCP conformance fixtures when set to "1" or "true" (case-insensitive).
+	conformanceEnvVar = "MCP_CONFORMANCE"
 )
 
 // TransportKind identifies the MCP transport implementation.
@@ -78,6 +82,9 @@ func New(grpcAddr string) (*Server, error) {
 	registerCampaignResources(mcpServer, campaignClient)
 	registerSessionResources(mcpServer, sessionClient)
 	registerContextResources(mcpServer, server)
+	if conformanceEnabled() {
+		conformance.Register(mcpServer)
+	}
 
 	return server, nil
 }
@@ -207,6 +214,15 @@ func (s *Server) getContext() domain.Context {
 	s.ctxMu.RLock()
 	defer s.ctxMu.RUnlock()
 	return s.ctx
+}
+
+// conformanceEnabled reports whether conformance fixtures should be registered.
+func conformanceEnabled() bool {
+	value := strings.TrimSpace(os.Getenv(conformanceEnvVar))
+	if value == "" {
+		return false
+	}
+	return value == "1" || strings.EqualFold(value, "true")
 }
 
 // serveWithTransport starts the MCP server using the provided transport.
