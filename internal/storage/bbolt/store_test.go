@@ -23,14 +23,14 @@ func TestCampaignStorePutGet(t *testing.T) {
 
 	now := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
 	campaign := domain.Campaign{
-		ID:              "camp-123",
-		Name:            "Snowbound",
-		GmMode:          domain.GmModeAI,
+		ID:               "camp-123",
+		Name:             "Snowbound",
+		GmMode:           domain.GmModeAI,
 		ParticipantCount: 4,
-		CharacterCount:      2,
-		ThemePrompt:     "ice and steel",
-		CreatedAt:       now,
-		UpdatedAt:       now,
+		CharacterCount:   2,
+		ThemePrompt:      "ice and steel",
+		CreatedAt:        now,
+		UpdatedAt:        now,
 	}
 
 	if err := store.Put(context.Background(), campaign); err != nil {
@@ -150,31 +150,31 @@ func TestCampaignStoreListPagination(t *testing.T) {
 	now := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
 	campaigns := []domain.Campaign{
 		{
-			ID:              "camp-1",
-			Name:            "A",
-			GmMode:          domain.GmModeAI,
+			ID:               "camp-1",
+			Name:             "A",
+			GmMode:           domain.GmModeAI,
 			ParticipantCount: 2,
-			CharacterCount:      1,
-			CreatedAt:       now,
-			UpdatedAt:       now,
+			CharacterCount:   1,
+			CreatedAt:        now,
+			UpdatedAt:        now,
 		},
 		{
-			ID:              "camp-2",
-			Name:            "B",
-			GmMode:          domain.GmModeHuman,
+			ID:               "camp-2",
+			Name:             "B",
+			GmMode:           domain.GmModeHuman,
 			ParticipantCount: 3,
-			CharacterCount:      2,
-			CreatedAt:       now,
-			UpdatedAt:       now,
+			CharacterCount:   2,
+			CreatedAt:        now,
+			UpdatedAt:        now,
 		},
 		{
-			ID:              "camp-3",
-			Name:            "C",
-			GmMode:          domain.GmModeHybrid,
+			ID:               "camp-3",
+			Name:             "C",
+			GmMode:           domain.GmModeHybrid,
 			ParticipantCount: 4,
-			CharacterCount:      3,
-			CreatedAt:       now,
-			UpdatedAt:       now,
+			CharacterCount:   3,
+			CreatedAt:        now,
+			UpdatedAt:        now,
 		},
 	}
 
@@ -254,13 +254,13 @@ func TestParticipantStorePutGet(t *testing.T) {
 	now := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
 	// Create campaign first since PutParticipant now requires it to exist
 	campaign := domain.Campaign{
-		ID:              "camp-456",
-		Name:            "Test Campaign",
-		GmMode:          domain.GmModeHuman,
+		ID:               "camp-456",
+		Name:             "Test Campaign",
+		GmMode:           domain.GmModeHuman,
 		ParticipantCount: 0,
-		CharacterCount:      0,
-		CreatedAt:       now,
-		UpdatedAt:       now,
+		CharacterCount:   0,
+		CreatedAt:        now,
+		UpdatedAt:        now,
 	}
 	if err := store.Put(context.Background(), campaign); err != nil {
 		t.Fatalf("put campaign: %v", err)
@@ -326,13 +326,13 @@ func TestParticipantStorePutIncrementsCounterOnlyForNewRecords(t *testing.T) {
 
 	now := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
 	campaign := domain.Campaign{
-		ID:              "camp-789",
-		Name:            "Test Campaign",
-		GmMode:          domain.GmModeHuman,
+		ID:               "camp-789",
+		Name:             "Test Campaign",
+		GmMode:           domain.GmModeHuman,
 		ParticipantCount: 0,
-		CharacterCount:      0,
-		CreatedAt:       now,
-		UpdatedAt:       now,
+		CharacterCount:   0,
+		CreatedAt:        now,
+		UpdatedAt:        now,
 	}
 	if err := store.Put(context.Background(), campaign); err != nil {
 		t.Fatalf("put campaign: %v", err)
@@ -470,22 +470,22 @@ func TestParticipantStoreListByCampaign(t *testing.T) {
 	// Create campaigns first since PutParticipant now requires them to exist
 	campaigns := []domain.Campaign{
 		{
-			ID:              "camp-123",
-			Name:            "Campaign 1",
-			GmMode:          domain.GmModeHuman,
+			ID:               "camp-123",
+			Name:             "Campaign 1",
+			GmMode:           domain.GmModeHuman,
 			ParticipantCount: 0,
-			CharacterCount:      0,
-			CreatedAt:       now,
-			UpdatedAt:       now,
+			CharacterCount:   0,
+			CreatedAt:        now,
+			UpdatedAt:        now,
 		},
 		{
-			ID:              "camp-456",
-			Name:            "Campaign 2",
-			GmMode:          domain.GmModeHuman,
+			ID:               "camp-456",
+			Name:             "Campaign 2",
+			GmMode:           domain.GmModeHuman,
 			ParticipantCount: 0,
-			CharacterCount:      0,
-			CreatedAt:       now,
-			UpdatedAt:       now,
+			CharacterCount:   0,
+			CreatedAt:        now,
+			UpdatedAt:        now,
 		},
 	}
 	for _, campaign := range campaigns {
@@ -599,13 +599,13 @@ func TestParticipantStoreListPagination(t *testing.T) {
 	now := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
 	// Create campaign first since PutParticipant now requires it to exist
 	campaign := domain.Campaign{
-		ID:              "camp-123",
-		Name:            "Test Campaign",
-		GmMode:          domain.GmModeHuman,
+		ID:               "camp-123",
+		Name:             "Test Campaign",
+		GmMode:           domain.GmModeHuman,
 		ParticipantCount: 0,
-		CharacterCount:      0,
-		CreatedAt:       now,
-		UpdatedAt:       now,
+		CharacterCount:   0,
+		CreatedAt:        now,
+		UpdatedAt:        now,
 	}
 	if err := store.Put(context.Background(), campaign); err != nil {
 		t.Fatalf("put campaign: %v", err)
@@ -692,22 +692,22 @@ func TestParticipantStoreListPaginationPrefixFiltering(t *testing.T) {
 	// Create campaigns first since PutParticipant now requires them to exist
 	campaigns := []domain.Campaign{
 		{
-			ID:              "camp-123",
-			Name:            "Campaign 1",
-			GmMode:          domain.GmModeHuman,
+			ID:               "camp-123",
+			Name:             "Campaign 1",
+			GmMode:           domain.GmModeHuman,
 			ParticipantCount: 0,
-			CharacterCount:      0,
-			CreatedAt:       now,
-			UpdatedAt:       now,
+			CharacterCount:   0,
+			CreatedAt:        now,
+			UpdatedAt:        now,
 		},
 		{
-			ID:              "camp-456",
-			Name:            "Campaign 2",
-			GmMode:          domain.GmModeHuman,
+			ID:               "camp-456",
+			Name:             "Campaign 2",
+			GmMode:           domain.GmModeHuman,
 			ParticipantCount: 0,
-			CharacterCount:      0,
-			CreatedAt:       now,
-			UpdatedAt:       now,
+			CharacterCount:   0,
+			CreatedAt:        now,
+			UpdatedAt:        now,
 		},
 	}
 	for _, campaign := range campaigns {
@@ -791,13 +791,13 @@ func TestParticipantStoreListEmptyPageToken(t *testing.T) {
 	now := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
 	// Create campaign first since PutParticipant now requires it to exist
 	campaign := domain.Campaign{
-		ID:              "camp-123",
-		Name:            "Test Campaign",
-		GmMode:          domain.GmModeHuman,
+		ID:               "camp-123",
+		Name:             "Test Campaign",
+		GmMode:           domain.GmModeHuman,
 		ParticipantCount: 0,
-		CharacterCount:      0,
-		CreatedAt:       now,
-		UpdatedAt:       now,
+		CharacterCount:   0,
+		CreatedAt:        now,
+		UpdatedAt:        now,
 	}
 	if err := store.Put(context.Background(), campaign); err != nil {
 		t.Fatalf("put campaign: %v", err)
@@ -907,13 +907,13 @@ func TestParticipantStoreListExactPageSize(t *testing.T) {
 	now := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
 	// Create campaign first since PutParticipant now requires it to exist
 	campaign := domain.Campaign{
-		ID:              "camp-123",
-		Name:            "Test Campaign",
-		GmMode:          domain.GmModeHuman,
+		ID:               "camp-123",
+		Name:             "Test Campaign",
+		GmMode:           domain.GmModeHuman,
 		ParticipantCount: 0,
-		CharacterCount:      0,
-		CreatedAt:       now,
-		UpdatedAt:       now,
+		CharacterCount:   0,
+		CreatedAt:        now,
+		UpdatedAt:        now,
 	}
 	if err := store.Put(context.Background(), campaign); err != nil {
 		t.Fatalf("put campaign: %v", err)
@@ -969,13 +969,13 @@ func TestParticipantStoreListPageTokenResume(t *testing.T) {
 	now := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
 	// Create campaign first since PutParticipant now requires it to exist
 	campaign := domain.Campaign{
-		ID:              "camp-123",
-		Name:            "Test Campaign",
-		GmMode:          domain.GmModeHuman,
+		ID:               "camp-123",
+		Name:             "Test Campaign",
+		GmMode:           domain.GmModeHuman,
 		ParticipantCount: 0,
-		CharacterCount:      0,
-		CreatedAt:       now,
-		UpdatedAt:       now,
+		CharacterCount:   0,
+		CreatedAt:        now,
+		UpdatedAt:        now,
 	}
 	if err := store.Put(context.Background(), campaign); err != nil {
 		t.Fatalf("put campaign: %v", err)
@@ -1051,19 +1051,19 @@ func TestCharacterStorePutGet(t *testing.T) {
 	now := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
 	// Create campaign first since PutCharacter now requires it to exist
 	campaign := domain.Campaign{
-		ID:              "camp-456",
-		Name:            "Test Campaign",
-		GmMode:          domain.GmModeHuman,
+		ID:               "camp-456",
+		Name:             "Test Campaign",
+		GmMode:           domain.GmModeHuman,
 		ParticipantCount: 0,
-		CharacterCount:      0,
-		CreatedAt:       now,
-		UpdatedAt:       now,
+		CharacterCount:   0,
+		CreatedAt:        now,
+		UpdatedAt:        now,
 	}
 	if err := store.Put(context.Background(), campaign); err != nil {
 		t.Fatalf("put campaign: %v", err)
 	}
 
-		character := domain.Character{
+	character := domain.Character{
 		ID:         "character-123",
 		CampaignID: "camp-456",
 		Name:       "Alice",
@@ -1123,19 +1123,19 @@ func TestCharacterStorePutIncrementsCounterOnlyForNewRecords(t *testing.T) {
 
 	now := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
 	campaign := domain.Campaign{
-		ID:              "camp-999",
-		Name:            "Test Campaign",
-		GmMode:          domain.GmModeHuman,
+		ID:               "camp-999",
+		Name:             "Test Campaign",
+		GmMode:           domain.GmModeHuman,
 		ParticipantCount: 0,
-		CharacterCount:      0,
-		CreatedAt:       now,
-		UpdatedAt:       now,
+		CharacterCount:   0,
+		CreatedAt:        now,
+		UpdatedAt:        now,
 	}
 	if err := store.Put(context.Background(), campaign); err != nil {
 		t.Fatalf("put campaign: %v", err)
 	}
 
-		character := domain.Character{
+	character := domain.Character{
 		ID:         "character-888",
 		CampaignID: "camp-999",
 		Name:       "Hero",
@@ -1219,7 +1219,7 @@ func TestCharacterStorePutCanceledContext(t *testing.T) {
 	defer store.Close()
 
 	now := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
-		character := domain.Character{
+	character := domain.Character{
 		ID:         "character-123",
 		CampaignID: "camp-456",
 		Name:       "Alice",
@@ -1280,19 +1280,19 @@ func TestCharacterStorePutNPC(t *testing.T) {
 	now := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
 	// Create campaign first since PutCharacter now requires it to exist
 	campaign := domain.Campaign{
-		ID:              "camp-456",
-		Name:            "Test Campaign",
-		GmMode:          domain.GmModeHuman,
+		ID:               "camp-456",
+		Name:             "Test Campaign",
+		GmMode:           domain.GmModeHuman,
 		ParticipantCount: 0,
-		CharacterCount:      0,
-		CreatedAt:       now,
-		UpdatedAt:       now,
+		CharacterCount:   0,
+		CreatedAt:        now,
+		UpdatedAt:        now,
 	}
 	if err := store.Put(context.Background(), campaign); err != nil {
 		t.Fatalf("put campaign: %v", err)
 	}
 
-		character := domain.Character{
+	character := domain.Character{
 		ID:         "character-789",
 		CampaignID: "camp-456",
 		Name:       "Goblin",
@@ -1498,6 +1498,224 @@ func TestControlDefaultStorePutCanceledContext(t *testing.T) {
 
 	controller := domain.NewGmController()
 	if err := store.PutControlDefault(ctx, "camp-123", "character-456", controller); err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestCharacterProfileStorePutGet(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "duality.db")
+	store, err := Open(path)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer store.Close()
+
+	profile := domain.CharacterProfile{
+		CampaignID:      "camp-123",
+		CharacterID:     "char-456",
+		Traits:          map[string]int{"agility": 1},
+		HpMax:           6,
+		StressMax:       4,
+		Evasion:         3,
+		MajorThreshold:  2,
+		SevereThreshold: 5,
+	}
+
+	if err := store.PutCharacterProfile(context.Background(), profile); err != nil {
+		t.Fatalf("put character profile: %v", err)
+	}
+
+	loaded, err := store.GetCharacterProfile(context.Background(), "camp-123", "char-456")
+	if err != nil {
+		t.Fatalf("get character profile: %v", err)
+	}
+	if loaded.HpMax != profile.HpMax {
+		t.Fatalf("expected hp max %d, got %d", profile.HpMax, loaded.HpMax)
+	}
+	if loaded.Traits["agility"] != 1 {
+		t.Fatalf("expected agility 1, got %d", loaded.Traits["agility"])
+	}
+}
+
+func TestCharacterProfileStoreGetNotFound(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "duality.db")
+	store, err := Open(path)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer store.Close()
+
+	_, err = store.GetCharacterProfile(context.Background(), "camp-123", "missing")
+	if !errors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("expected not found error, got %v", err)
+	}
+}
+
+func TestCharacterProfileStorePutEmptyID(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "duality.db")
+	store, err := Open(path)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer store.Close()
+
+	if err := store.PutCharacterProfile(context.Background(), domain.CharacterProfile{}); err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestCharacterProfileStorePutCanceledContext(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "duality.db")
+	store, err := Open(path)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer store.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	profile := domain.CharacterProfile{CampaignID: "camp-123", CharacterID: "char-456"}
+	if err := store.PutCharacterProfile(ctx, profile); err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestCharacterProfileStoreGetEmptyID(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "duality.db")
+	store, err := Open(path)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer store.Close()
+
+	_, err = store.GetCharacterProfile(context.Background(), "", "char-456")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	_, err = store.GetCharacterProfile(context.Background(), "camp-123", "")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestCharacterProfileStoreGetCanceledContext(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "duality.db")
+	store, err := Open(path)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer store.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, err = store.GetCharacterProfile(ctx, "camp-123", "char-456")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestCharacterStateStorePutGet(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "duality.db")
+	store, err := Open(path)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer store.Close()
+
+	state := domain.CharacterState{
+		CampaignID:  "camp-123",
+		CharacterID: "char-456",
+		Hope:        2,
+		Stress:      1,
+		Hp:          5,
+	}
+
+	if err := store.PutCharacterState(context.Background(), state); err != nil {
+		t.Fatalf("put character state: %v", err)
+	}
+
+	loaded, err := store.GetCharacterState(context.Background(), "camp-123", "char-456")
+	if err != nil {
+		t.Fatalf("get character state: %v", err)
+	}
+	if loaded.Hope != 2 || loaded.Hp != 5 {
+		t.Fatalf("expected hope 2 hp 5, got hope %d hp %d", loaded.Hope, loaded.Hp)
+	}
+}
+
+func TestCharacterStateStoreGetNotFound(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "duality.db")
+	store, err := Open(path)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer store.Close()
+
+	_, err = store.GetCharacterState(context.Background(), "camp-123", "missing")
+	if !errors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("expected not found error, got %v", err)
+	}
+}
+
+func TestCharacterStateStorePutEmptyID(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "duality.db")
+	store, err := Open(path)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer store.Close()
+
+	if err := store.PutCharacterState(context.Background(), domain.CharacterState{}); err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestCharacterStateStorePutCanceledContext(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "duality.db")
+	store, err := Open(path)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer store.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	state := domain.CharacterState{CampaignID: "camp-123", CharacterID: "char-456"}
+	if err := store.PutCharacterState(ctx, state); err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestCharacterStateStoreGetEmptyID(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "duality.db")
+	store, err := Open(path)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer store.Close()
+
+	_, err = store.GetCharacterState(context.Background(), "", "char-456")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	_, err = store.GetCharacterState(context.Background(), "camp-123", "")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestCharacterStateStoreGetCanceledContext(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "duality.db")
+	store, err := Open(path)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer store.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, err = store.GetCharacterState(ctx, "camp-123", "char-456")
+	if err == nil {
 		t.Fatal("expected error")
 	}
 }
