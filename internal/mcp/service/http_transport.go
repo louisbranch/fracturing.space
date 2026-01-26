@@ -277,6 +277,20 @@ func (t *HTTPTransport) handleMessages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Log message type for debugging
+	switch v := msg.(type) {
+	case *jsonrpc.Request:
+		if v.ID != jsonrpc.ID{} {
+			log.Printf("Decoded request: method=%s, id=%v", v.Method, v.ID)
+		} else {
+			log.Printf("Decoded notification: method=%s", v.Method)
+		}
+	case *jsonrpc.Response:
+		log.Printf("Decoded response: id=%v", v.ID)
+	default:
+		log.Printf("Decoded unknown message type: %T", msg)
+	}
+
 	// Update last used time (protected by mutex)
 	t.sessionsMu.Lock()
 	if session != nil {
