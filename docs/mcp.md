@@ -43,12 +43,6 @@ go run ./cmd/mcp -transport=http -http-addr=localhost:8081 -addr=localhost:8080
   - Query parameter: `session` (optional session ID)
   - Response: `text/event-stream` with JSON-RPC notifications
 
-- `POST /mcp/messages` - Send JSON-RPC requests (alternative endpoint for explicit routing)
-  - Same as `POST /mcp`
-
-- `GET /mcp/sse` - Server-Sent Events stream (alternative endpoint for backward compatibility)
-  - Same as `GET /mcp`
-
 - `GET /mcp/health` - Health check endpoint
   - Returns: `200 OK` when server is ready
 

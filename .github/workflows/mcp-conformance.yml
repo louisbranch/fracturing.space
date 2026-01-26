@@ -24,4 +24,5 @@ jobs:
         with:
           mode: server
           url: http://localhost:3001/mcp
+          verbose: true
           # expected-failures: ./conformance-baseline.yml

@@ -153,10 +153,6 @@ func (t *HTTPTransport) Start(ctx context.Context) error {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	})
-	// POST /mcp/messages - JSON-RPC request/response (alternative endpoint for explicit routing)
-	mux.HandleFunc("/mcp/messages", t.handleMessages)
-	// GET /mcp/sse - Server-Sent Events stream (alternative endpoint for backward compatibility)
-	mux.HandleFunc("/mcp/sse", t.handleSSE)
 
 	// GET /mcp/health - Health check endpoint
 	mux.HandleFunc("/mcp/health", t.handleHealth)
