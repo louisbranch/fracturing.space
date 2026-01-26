@@ -459,7 +459,7 @@ func (t *HTTPTransport) handleSSE(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
-	w.Header().Set("X-MCP-Session-ID", sessionID)
+	// Note: Session is managed via cookies, not headers (per MCP spec)
 
 	// Flush headers
 	if flusher, ok := w.(http.Flusher); ok {
