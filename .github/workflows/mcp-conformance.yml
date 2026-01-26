@@ -26,3 +26,25 @@ jobs:
           url: http://localhost:3001/mcp
           verbose: true
           # expected-failures: ./conformance-baseline.yml
+
+      - uses: modelcontextprotocol/conformance@v0.1.11
+        with:
+          mode: server
+          url: http://localhost:3001/mcp
+          verbose: true
+          scenario: tools-list
+
+      - name: Dump conformance results (on failure)
+        if: failure()
+        run: |
+          echo "== result dirs =="
+          ls -la results || true
+          echo "== checks.json files =="
+          find results -name 'checks.json' -maxdepth 3 -print -exec cat {} \; || true
+
+      - name: Upload conformance results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcp-conformance-results
+          path: results/
