@@ -26,10 +26,12 @@ const (
 
 // Stores groups all campaign-related storage interfaces.
 type Stores struct {
-	Campaign       storage.CampaignStore
-	Participant    storage.ParticipantStore
-	Character      storage.CharacterStore
-	ControlDefault storage.ControlDefaultStore
+	Campaign        storage.CampaignStore
+	Participant     storage.ParticipantStore
+	Character       storage.CharacterStore
+	CharacterProfile storage.CharacterProfileStore
+	CharacterState   storage.CharacterStateStore
+	ControlDefault  storage.ControlDefaultStore
 }
 
 // CampaignService implements the CampaignService gRPC API.
@@ -217,6 +219,12 @@ func (s *CampaignService) CreateCharacter(ctx context.Context, in *campaignv1.Cr
 	if s.stores.Character == nil {
 		return nil, status.Error(codes.Internal, "character store is not configured")
 	}
+	if s.stores.CharacterProfile == nil {
+		return nil, status.Error(codes.Internal, "character profile store is not configured")
+	}
+	if s.stores.CharacterState == nil {
+		return nil, status.Error(codes.Internal, "character state store is not configured")
+	}
 
 	campaignID := strings.TrimSpace(in.GetCampaignId())
 	if campaignID == "" {
@@ -241,6 +249,51 @@ func (s *CampaignService) CreateCharacter(ctx context.Context, in *campaignv1.Cr
 			return nil, status.Error(codes.NotFound, "campaign not found")
 		}
 		return nil, status.Errorf(codes.Internal, "persist character: %v", err)
+	}
+
+	// Load defaults and create profile
+	defaults, err := domain.LoadCharacterDefaults("")
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "load character defaults: %v", err)
+	}
+
+	defaultProfile, err := domain.GetDefaultProfile(character.Kind, defaults)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "get default profile: %v", err)
+	}
+
+	profile, err := domain.CreateCharacterProfile(domain.CreateCharacterProfileInput{
+		CampaignID:      campaignID,
+		CharacterID:     character.ID,
+		Traits:          defaultProfile.Traits,
+		HpMax:           defaultProfile.HpMax,
+		StressMax:       defaultProfile.StressMax,
+		Evasion:         defaultProfile.Evasion,
+		MajorThreshold:  defaultProfile.MajorThreshold,
+		SevereThreshold: defaultProfile.SevereThreshold,
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "create character profile: %v", err)
+	}
+
+	if err := s.stores.CharacterProfile.PutCharacterProfile(ctx, profile); err != nil {
+		return nil, status.Errorf(codes.Internal, "persist character profile: %v", err)
+	}
+
+	// Create state with defaults
+	state, err := domain.CreateCharacterState(domain.CreateCharacterStateInput{
+		CampaignID:  campaignID,
+		CharacterID: character.ID,
+		Hope:         0,
+		Stress:       0,
+		Hp:           profile.HpMax,
+	}, profile)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "create character state: %v", err)
+	}
+
+	if err := s.stores.CharacterState.PutCharacterState(ctx, state); err != nil {
+		return nil, status.Errorf(codes.Internal, "persist character state: %v", err)
 	}
 
 	response := &campaignv1.CreateCharacterResponse{

@@ -17,11 +17,14 @@ func registerDualityTools(mcpServer *mcp.Server, client dualityv1.DualityService
 	mcp.AddTool(mcpServer, domain.RollDiceTool(), domain.RollDiceHandler(client))
 }
 
-func registerCampaignTools(mcpServer *mcp.Server, client campaignv1.CampaignServiceClient) {
+func registerCampaignTools(mcpServer *mcp.Server, client campaignv1.CampaignServiceClient, getContext func() domain.Context) {
 	mcp.AddTool(mcpServer, domain.CampaignCreateTool(), domain.CampaignCreateHandler(client))
 	mcp.AddTool(mcpServer, domain.ParticipantCreateTool(), domain.ParticipantCreateHandler(client))
 	mcp.AddTool(mcpServer, domain.CharacterCreateTool(), domain.CharacterCreateHandler(client))
 	mcp.AddTool(mcpServer, domain.CharacterControlSetTool(), domain.CharacterControlSetHandler(client))
+	mcp.AddTool(mcpServer, domain.CharacterSheetGetTool(), domain.CharacterSheetGetHandler(client, getContext))
+	mcp.AddTool(mcpServer, domain.CharacterProfilePatchTool(), domain.CharacterProfilePatchHandler(client, getContext))
+	mcp.AddTool(mcpServer, domain.CharacterStatePatchTool(), domain.CharacterStatePatchHandler(client, getContext))
 }
 
 func registerSessionTools(mcpServer *mcp.Server, client sessionv1.SessionServiceClient) {

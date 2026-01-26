@@ -151,3 +151,68 @@ message SetDefaultControlResponse {
   // The controller for the character.
   CharacterController controller = 3;
 }
+
+message GetCharacterSheetRequest {
+  // The campaign ID.
+  string campaign_id = 1;
+
+  // The character ID.
+  string character_id = 2;
+}
+
+message GetCharacterSheetResponse {
+  Character character = 1;
+  CharacterProfile profile = 2;
+  CharacterState state = 3;
+}
+
+message PatchCharacterProfileRequest {
+  // The campaign ID.
+  string campaign_id = 1;
+
+  // The character ID.
+  string character_id = 2;
+
+  // Optional traits map. If provided, replaces the entire traits map.
+  map<string, int32> traits = 3;
+
+  // Optional hp_max. If provided, updates hp_max.
+  optional int32 hp_max = 4;
+
+  // Optional stress_max. If provided, updates stress_max.
+  optional int32 stress_max = 5;
+
+  // Optional evasion. If provided, updates evasion.
+  optional int32 evasion = 6;
+
+  // Optional major_threshold. If provided, updates major_threshold.
+  optional int32 major_threshold = 7;
+
+  // Optional severe_threshold. If provided, updates severe_threshold.
+  optional int32 severe_threshold = 8;
+}
+
+message PatchCharacterProfileResponse {
+  CharacterProfile profile = 1;
+}
+
+message PatchCharacterStateRequest {
+  // The campaign ID.
+  string campaign_id = 1;
+
+  // The character ID.
+  string character_id = 2;
+
+  // Optional hope. If provided, updates hope.
+  optional int32 hope = 3;
+
+  // Optional stress. If provided, updates stress.
+  optional int32 stress = 4;
+
+  // Optional hp. If provided, updates hp.
+  optional int32 hp = 5;
+}
+
+message PatchCharacterStateResponse {
+  CharacterState state = 1;
+}

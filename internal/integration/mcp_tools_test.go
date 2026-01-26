@@ -28,6 +28,9 @@ func runMCPToolsTests(t *testing.T, suite *integrationSuite) {
 		expected := []string{
 			"character_control_set",
 			"character_create",
+			"character_profile_patch",
+			"character_sheet_get",
+			"character_state_patch",
 			"campaign_create",
 			"duality_action_roll",
 			"duality_explain",

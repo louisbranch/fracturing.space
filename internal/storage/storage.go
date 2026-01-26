@@ -58,6 +58,18 @@ type CharacterPage struct {
 	NextPageToken string
 }
 
+// CharacterProfileStore persists character profile records.
+type CharacterProfileStore interface {
+	PutCharacterProfile(ctx context.Context, profile domain.CharacterProfile) error
+	GetCharacterProfile(ctx context.Context, campaignID, characterID string) (domain.CharacterProfile, error)
+}
+
+// CharacterStateStore persists character state records.
+type CharacterStateStore interface {
+	PutCharacterState(ctx context.Context, state domain.CharacterState) error
+	GetCharacterState(ctx context.Context, campaignID, characterID string) (domain.CharacterState, error)
+}
+
 // ControlDefaultStore persists default controller assignments for characters.
 type ControlDefaultStore interface {
 	// PutControlDefault sets the default controller for a character in a campaign.

@@ -33,4 +33,13 @@ service CampaignService {
 
   // Assign a campaign-scoped default controller for a character.
   rpc SetDefaultControl(SetDefaultControlRequest) returns (SetDefaultControlResponse);
+
+  // Get a character sheet (character, profile, and state).
+  rpc GetCharacterSheet(GetCharacterSheetRequest) returns (GetCharacterSheetResponse);
+
+  // Patch a character profile (all fields optional).
+  rpc PatchCharacterProfile(PatchCharacterProfileRequest) returns (PatchCharacterProfileResponse);
+
+  // Patch a character state (all fields optional).
+  rpc PatchCharacterState(PatchCharacterStateRequest) returns (PatchCharacterStateResponse);
 }

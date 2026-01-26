@@ -20,6 +20,8 @@ const (
 	campaignBucket              = "campaign"
 	participantBucket           = "participant"
 	characterBucket             = "character"
+	characterProfileBucket     = "character_profile"
+	characterStateBucket        = "character_state"
 	controlDefaultBucket        = "control_default"
 	sessionsBucket              = "sessions"
 	campaignActiveSessionBucket = "campaign_active_session"
@@ -192,6 +194,14 @@ func (s *Store) ensureBuckets() error {
 		if err != nil {
 			return fmt.Errorf("create character bucket: %w", err)
 		}
+		_, err = tx.CreateBucketIfNotExists([]byte(characterProfileBucket))
+		if err != nil {
+			return fmt.Errorf("create character profile bucket: %w", err)
+		}
+		_, err = tx.CreateBucketIfNotExists([]byte(characterStateBucket))
+		if err != nil {
+			return fmt.Errorf("create character state bucket: %w", err)
+		}
 		_, err = tx.CreateBucketIfNotExists([]byte(controlDefaultBucket))
 		if err != nil {
 			return fmt.Errorf("create control default bucket: %w", err)
@@ -217,6 +227,14 @@ func participantKey(campaignID, participantID string) []byte {
 }
 
 func characterKey(campaignID, characterID string) []byte {
+	return []byte(fmt.Sprintf("%s/%s", campaignID, characterID))
+}
+
+func characterProfileKey(campaignID, characterID string) []byte {
+	return []byte(fmt.Sprintf("%s/%s", campaignID, characterID))
+}
+
+func characterStateKey(campaignID, characterID string) []byte {
 	return []byte(fmt.Sprintf("%s/%s", campaignID, characterID))
 }
 
@@ -847,6 +865,144 @@ func (s *Store) ListSessions(ctx context.Context, campaignID string, pageSize in
 	}
 
 	return page, nil
+}
+
+// PutCharacterProfile persists a character profile record (implements storage.CharacterProfileStore).
+func (s *Store) PutCharacterProfile(ctx context.Context, profile domain.CharacterProfile) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if s == nil || s.db == nil {
+		return fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(profile.CampaignID) == "" {
+		return fmt.Errorf("campaign id is required")
+	}
+	if strings.TrimSpace(profile.CharacterID) == "" {
+		return fmt.Errorf("character id is required")
+	}
+
+	profilePayload, err := json.Marshal(profile)
+	if err != nil {
+		return fmt.Errorf("marshal character profile: %w", err)
+	}
+
+	return s.db.Update(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket([]byte(characterProfileBucket))
+		if bucket == nil {
+			return fmt.Errorf("character profile bucket is missing")
+		}
+		return bucket.Put(characterProfileKey(profile.CampaignID, profile.CharacterID), profilePayload)
+	})
+}
+
+// GetCharacterProfile fetches a character profile record by campaign ID and character ID (implements storage.CharacterProfileStore).
+func (s *Store) GetCharacterProfile(ctx context.Context, campaignID, characterID string) (domain.CharacterProfile, error) {
+	if err := ctx.Err(); err != nil {
+		return domain.CharacterProfile{}, err
+	}
+	if s == nil || s.db == nil {
+		return domain.CharacterProfile{}, fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(campaignID) == "" {
+		return domain.CharacterProfile{}, fmt.Errorf("campaign id is required")
+	}
+	if strings.TrimSpace(characterID) == "" {
+		return domain.CharacterProfile{}, fmt.Errorf("character id is required")
+	}
+
+	var profile domain.CharacterProfile
+	err := s.db.View(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket([]byte(characterProfileBucket))
+		if bucket == nil {
+			return fmt.Errorf("character profile bucket is missing")
+		}
+		payload := bucket.Get(characterProfileKey(campaignID, characterID))
+		if payload == nil {
+			return storage.ErrNotFound
+		}
+		if err := json.Unmarshal(payload, &profile); err != nil {
+			return fmt.Errorf("unmarshal character profile: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return domain.CharacterProfile{}, err
+		}
+		return domain.CharacterProfile{}, err
+	}
+
+	return profile, nil
+}
+
+// PutCharacterState persists a character state record (implements storage.CharacterStateStore).
+func (s *Store) PutCharacterState(ctx context.Context, state domain.CharacterState) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if s == nil || s.db == nil {
+		return fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(state.CampaignID) == "" {
+		return fmt.Errorf("campaign id is required")
+	}
+	if strings.TrimSpace(state.CharacterID) == "" {
+		return fmt.Errorf("character id is required")
+	}
+
+	statePayload, err := json.Marshal(state)
+	if err != nil {
+		return fmt.Errorf("marshal character state: %w", err)
+	}
+
+	return s.db.Update(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket([]byte(characterStateBucket))
+		if bucket == nil {
+			return fmt.Errorf("character state bucket is missing")
+		}
+		return bucket.Put(characterStateKey(state.CampaignID, state.CharacterID), statePayload)
+	})
+}
+
+// GetCharacterState fetches a character state record by campaign ID and character ID (implements storage.CharacterStateStore).
+func (s *Store) GetCharacterState(ctx context.Context, campaignID, characterID string) (domain.CharacterState, error) {
+	if err := ctx.Err(); err != nil {
+		return domain.CharacterState{}, err
+	}
+	if s == nil || s.db == nil {
+		return domain.CharacterState{}, fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(campaignID) == "" {
+		return domain.CharacterState{}, fmt.Errorf("campaign id is required")
+	}
+	if strings.TrimSpace(characterID) == "" {
+		return domain.CharacterState{}, fmt.Errorf("character id is required")
+	}
+
+	var state domain.CharacterState
+	err := s.db.View(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket([]byte(characterStateBucket))
+		if bucket == nil {
+			return fmt.Errorf("character state bucket is missing")
+		}
+		payload := bucket.Get(characterStateKey(campaignID, characterID))
+		if payload == nil {
+			return storage.ErrNotFound
+		}
+		if err := json.Unmarshal(payload, &state); err != nil {
+			return fmt.Errorf("unmarshal character state: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return domain.CharacterState{}, err
+		}
+		return domain.CharacterState{}, err
+	}
+
+	return state, nil
 }
 
 // TODO: Reserve index keys such as idx/creator/{creator_id}/campaign/{campaign_id}.

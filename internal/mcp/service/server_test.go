@@ -178,6 +178,21 @@ func (f *fakeCampaignClient) SetDefaultControl(ctx context.Context, req *campaig
 	return f.setDefaultControlResponse, f.setDefaultControlErr
 }
 
+// GetCharacterSheet records the request and returns the configured response.
+func (f *fakeCampaignClient) GetCharacterSheet(ctx context.Context, req *campaignv1.GetCharacterSheetRequest, opts ...grpc.CallOption) (*campaignv1.GetCharacterSheetResponse, error) {
+	return nil, errors.New("not implemented in fake client")
+}
+
+// PatchCharacterProfile records the request and returns the configured response.
+func (f *fakeCampaignClient) PatchCharacterProfile(ctx context.Context, req *campaignv1.PatchCharacterProfileRequest, opts ...grpc.CallOption) (*campaignv1.PatchCharacterProfileResponse, error) {
+	return nil, errors.New("not implemented in fake client")
+}
+
+// PatchCharacterState records the request and returns the configured response.
+func (f *fakeCampaignClient) PatchCharacterState(ctx context.Context, req *campaignv1.PatchCharacterStateRequest, opts ...grpc.CallOption) (*campaignv1.PatchCharacterStateResponse, error) {
+	return nil, errors.New("not implemented in fake client")
+}
+
 // fakeSessionClient implements SessionServiceClient for tests.
 type fakeSessionClient struct {
 	startSessionResponse    *sessionv1.StartSessionResponse

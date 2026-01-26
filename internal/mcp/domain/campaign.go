@@ -137,6 +137,66 @@ type CharacterControlSetResult struct {
 	Controller  string `json:"controller" jsonschema:"controller: 'GM' or the participant ID"`
 }
 
+// CharacterSheetGetInput represents the MCP tool input for getting a character sheet.
+type CharacterSheetGetInput struct {
+	CharacterID string `json:"character_id" jsonschema:"character identifier"`
+}
+
+// CharacterSheetGetResult represents the MCP tool output for getting a character sheet.
+type CharacterSheetGetResult struct {
+	Character CharacterCreateResult        `json:"character" jsonschema:"character metadata"`
+	Profile   CharacterProfileResult       `json:"profile" jsonschema:"character profile"`
+	State     CharacterStateResult         `json:"state" jsonschema:"character state"`
+}
+
+// CharacterProfileResult represents character profile data in MCP responses.
+type CharacterProfileResult struct {
+	CharacterID     string         `json:"character_id" jsonschema:"character identifier"`
+	Traits          map[string]int `json:"traits" jsonschema:"trait values"`
+	HpMax           int            `json:"hp_max" jsonschema:"maximum hit points"`
+	StressMax       int            `json:"stress_max" jsonschema:"maximum stress"`
+	Evasion         int            `json:"evasion" jsonschema:"evasion difficulty"`
+	MajorThreshold  int            `json:"major_threshold" jsonschema:"major damage threshold"`
+	SevereThreshold int            `json:"severe_threshold" jsonschema:"severe damage threshold"`
+}
+
+// CharacterStateResult represents character state data in MCP responses.
+type CharacterStateResult struct {
+	CharacterID string `json:"character_id" jsonschema:"character identifier"`
+	Hope        int    `json:"hope" jsonschema:"hope value (0..6)"`
+	Stress      int    `json:"stress" jsonschema:"current stress"`
+	Hp          int    `json:"hp" jsonschema:"current hit points"`
+}
+
+// CharacterProfilePatchInput represents the MCP tool input for patching a character profile.
+type CharacterProfilePatchInput struct {
+	CharacterID     string         `json:"character_id" jsonschema:"character identifier"`
+	Traits          map[string]int `json:"traits,omitempty" jsonschema:"optional traits map (replaces entire map if provided)"`
+	HpMax           *int           `json:"hp_max,omitempty" jsonschema:"optional hp_max"`
+	StressMax       *int           `json:"stress_max,omitempty" jsonschema:"optional stress_max"`
+	Evasion         *int           `json:"evasion,omitempty" jsonschema:"optional evasion"`
+	MajorThreshold  *int           `json:"major_threshold,omitempty" jsonschema:"optional major_threshold"`
+	SevereThreshold *int           `json:"severe_threshold,omitempty" jsonschema:"optional severe_threshold"`
+}
+
+// CharacterProfilePatchResult represents the MCP tool output for patching a character profile.
+type CharacterProfilePatchResult struct {
+	Profile CharacterProfileResult `json:"profile" jsonschema:"updated character profile"`
+}
+
+// CharacterStatePatchInput represents the MCP tool input for patching a character state.
+type CharacterStatePatchInput struct {
+	CharacterID string `json:"character_id" jsonschema:"character identifier"`
+	Hope        *int   `json:"hope,omitempty" jsonschema:"optional hope (0..6)"`
+	Stress      *int   `json:"stress,omitempty" jsonschema:"optional stress"`
+	Hp          *int   `json:"hp,omitempty" jsonschema:"optional hp"`
+}
+
+// CharacterStatePatchResult represents the MCP tool output for patching a character state.
+type CharacterStatePatchResult struct {
+	State CharacterStateResult `json:"state" jsonschema:"updated character state"`
+}
+
 // CampaignCreateTool defines the MCP tool schema for creating campaigns.
 func CampaignCreateTool() *mcp.Tool {
 	return &mcp.Tool{
@@ -166,6 +226,30 @@ func CharacterControlSetTool() *mcp.Tool {
 	return &mcp.Tool{
 		Name:        "character_control_set",
 		Description: "Sets the default controller (GM or participant) for a character in a campaign",
+	}
+}
+
+// CharacterSheetGetTool defines the MCP tool schema for getting a character sheet.
+func CharacterSheetGetTool() *mcp.Tool {
+	return &mcp.Tool{
+		Name:        "character_sheet_get",
+		Description: "Gets a character sheet (character, profile, and state)",
+	}
+}
+
+// CharacterProfilePatchTool defines the MCP tool schema for patching a character profile.
+func CharacterProfilePatchTool() *mcp.Tool {
+	return &mcp.Tool{
+		Name:        "character_profile_patch",
+		Description: "Patches a character profile (all fields optional)",
+	}
+}
+
+// CharacterStatePatchTool defines the MCP tool schema for patching a character state.
+func CharacterStatePatchTool() *mcp.Tool {
+	return &mcp.Tool{
+		Name:        "character_state_patch",
+		Description: "Patches a character state (all fields optional)",
 	}
 }
 
@@ -563,6 +647,192 @@ func characterControllerToString(controller *campaignv1.CharacterController) str
 		return ""
 	default:
 		return ""
+	}
+}
+
+// CharacterSheetGetHandler executes a character sheet get request.
+func CharacterSheetGetHandler(client campaignv1.CampaignServiceClient, getContext func() Context) mcp.ToolHandlerFor[CharacterSheetGetInput, CharacterSheetGetResult] {
+	return func(ctx context.Context, _ *mcp.CallToolRequest, input CharacterSheetGetInput) (*mcp.CallToolResult, CharacterSheetGetResult, error) {
+		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+
+		mcpCtx := getContext()
+		campaignID := mcpCtx.CampaignID
+		if campaignID == "" {
+			return nil, CharacterSheetGetResult{}, fmt.Errorf("campaign context is required")
+		}
+
+		response, err := client.GetCharacterSheet(runCtx, &campaignv1.GetCharacterSheetRequest{
+			CampaignId:  campaignID,
+			CharacterId: input.CharacterID,
+		})
+		if err != nil {
+			return nil, CharacterSheetGetResult{}, fmt.Errorf("character sheet get failed: %w", err)
+		}
+		if response == nil {
+			return nil, CharacterSheetGetResult{}, fmt.Errorf("character sheet response is missing")
+		}
+
+		traits := make(map[string]int)
+		if response.Profile != nil {
+			for k, v := range response.Profile.GetTraits() {
+				traits[k] = int(v)
+			}
+		}
+
+		result := CharacterSheetGetResult{
+			Character: CharacterCreateResult{
+				ID:         response.Character.GetId(),
+				CampaignID: response.Character.GetCampaignId(),
+				Name:       response.Character.GetName(),
+				Kind:       characterKindToString(response.Character.GetKind()),
+				Notes:      response.Character.GetNotes(),
+				CreatedAt:  formatTimestamp(response.Character.GetCreatedAt()),
+				UpdatedAt:  formatTimestamp(response.Character.GetUpdatedAt()),
+			},
+			Profile: CharacterProfileResult{
+				CharacterID:     response.Profile.GetCharacterId(),
+				Traits:          traits,
+				HpMax:           int(response.Profile.GetHpMax()),
+				StressMax:       int(response.Profile.GetStressMax()),
+				Evasion:         int(response.Profile.GetEvasion()),
+				MajorThreshold:  int(response.Profile.GetMajorThreshold()),
+				SevereThreshold: int(response.Profile.GetSevereThreshold()),
+			},
+			State: CharacterStateResult{
+				CharacterID: response.State.GetCharacterId(),
+				Hope:        int(response.State.GetHope()),
+				Stress:      int(response.State.GetStress()),
+				Hp:          int(response.State.GetHp()),
+			},
+		}
+
+		return nil, result, nil
+	}
+}
+
+// CharacterProfilePatchHandler executes a character profile patch request.
+func CharacterProfilePatchHandler(client campaignv1.CampaignServiceClient, getContext func() Context) mcp.ToolHandlerFor[CharacterProfilePatchInput, CharacterProfilePatchResult] {
+	return func(ctx context.Context, _ *mcp.CallToolRequest, input CharacterProfilePatchInput) (*mcp.CallToolResult, CharacterProfilePatchResult, error) {
+		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+
+		mcpCtx := getContext()
+		campaignID := mcpCtx.CampaignID
+		if campaignID == "" {
+			return nil, CharacterProfilePatchResult{}, fmt.Errorf("campaign context is required")
+		}
+
+		req := &campaignv1.PatchCharacterProfileRequest{
+			CampaignId:  campaignID,
+			CharacterId: input.CharacterID,
+		}
+
+		if input.Traits != nil {
+			traits := make(map[string]int32)
+			for k, v := range input.Traits {
+				traits[k] = int32(v)
+			}
+			req.Traits = traits
+		}
+		if input.HpMax != nil {
+			hpMax := int32(*input.HpMax)
+			req.HpMax = &hpMax
+		}
+		if input.StressMax != nil {
+			stressMax := int32(*input.StressMax)
+			req.StressMax = &stressMax
+		}
+		if input.Evasion != nil {
+			evasion := int32(*input.Evasion)
+			req.Evasion = &evasion
+		}
+		if input.MajorThreshold != nil {
+			majorThreshold := int32(*input.MajorThreshold)
+			req.MajorThreshold = &majorThreshold
+		}
+		if input.SevereThreshold != nil {
+			severeThreshold := int32(*input.SevereThreshold)
+			req.SevereThreshold = &severeThreshold
+		}
+
+		response, err := client.PatchCharacterProfile(runCtx, req)
+		if err != nil {
+			return nil, CharacterProfilePatchResult{}, fmt.Errorf("character profile patch failed: %w", err)
+		}
+		if response == nil || response.Profile == nil {
+			return nil, CharacterProfilePatchResult{}, fmt.Errorf("character profile patch response is missing")
+		}
+
+		traits := make(map[string]int)
+		for k, v := range response.Profile.GetTraits() {
+			traits[k] = int(v)
+		}
+
+		result := CharacterProfilePatchResult{
+			Profile: CharacterProfileResult{
+				CharacterID:     response.Profile.GetCharacterId(),
+				Traits:          traits,
+				HpMax:           int(response.Profile.GetHpMax()),
+				StressMax:       int(response.Profile.GetStressMax()),
+				Evasion:         int(response.Profile.GetEvasion()),
+				MajorThreshold:  int(response.Profile.GetMajorThreshold()),
+				SevereThreshold: int(response.Profile.GetSevereThreshold()),
+			},
+		}
+
+		return nil, result, nil
+	}
+}
+
+// CharacterStatePatchHandler executes a character state patch request.
+func CharacterStatePatchHandler(client campaignv1.CampaignServiceClient, getContext func() Context) mcp.ToolHandlerFor[CharacterStatePatchInput, CharacterStatePatchResult] {
+	return func(ctx context.Context, _ *mcp.CallToolRequest, input CharacterStatePatchInput) (*mcp.CallToolResult, CharacterStatePatchResult, error) {
+		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+
+		mcpCtx := getContext()
+		campaignID := mcpCtx.CampaignID
+		if campaignID == "" {
+			return nil, CharacterStatePatchResult{}, fmt.Errorf("campaign context is required")
+		}
+
+		req := &campaignv1.PatchCharacterStateRequest{
+			CampaignId:  campaignID,
+			CharacterId: input.CharacterID,
+		}
+
+		if input.Hope != nil {
+			hope := int32(*input.Hope)
+			req.Hope = &hope
+		}
+		if input.Stress != nil {
+			stress := int32(*input.Stress)
+			req.Stress = &stress
+		}
+		if input.Hp != nil {
+			hp := int32(*input.Hp)
+			req.Hp = &hp
+		}
+
+		response, err := client.PatchCharacterState(runCtx, req)
+		if err != nil {
+			return nil, CharacterStatePatchResult{}, fmt.Errorf("character state patch failed: %w", err)
+		}
+		if response == nil || response.State == nil {
+			return nil, CharacterStatePatchResult{}, fmt.Errorf("character state patch response is missing")
+		}
+
+		result := CharacterStatePatchResult{
+			State: CharacterStateResult{
+				CharacterID: response.State.GetCharacterId(),
+				Hope:        int(response.State.GetHope()),
+				Stress:      int(response.State.GetStress()),
+				Hp:          int(response.State.GetHp()),
+			},
+		}
+
+		return nil, result, nil
 	}
 }
 

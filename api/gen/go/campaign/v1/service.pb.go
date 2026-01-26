@@ -24,7 +24,7 @@ var File_campaign_v1_service_proto protoreflect.FileDescriptor
 
 const file_campaign_v1_service_proto_rawDesc = "" +
 	"\n" +
-	"\x19campaign/v1/service.proto\x12\vcampaign.v1\x1a\x1acampaign/v1/requests.proto2\xd3\x06\n" +
+	"\x19campaign/v1/service.proto\x12\vcampaign.v1\x1a\x1acampaign/v1/requests.proto2\x91\t\n" +
 	"\x0fCampaignService\x12Y\n" +
 	"\x0eCreateCampaign\x12\".campaign.v1.CreateCampaignRequest\x1a#.campaign.v1.CreateCampaignResponse\x12V\n" +
 	"\rListCampaigns\x12!.campaign.v1.ListCampaignsRequest\x1a\".campaign.v1.ListCampaignsResponse\x12P\n" +
@@ -34,27 +34,36 @@ const file_campaign_v1_service_proto_rawDesc = "" +
 	"\x0eGetParticipant\x12\".campaign.v1.GetParticipantRequest\x1a#.campaign.v1.GetParticipantResponse\x12\\\n" +
 	"\x0fCreateCharacter\x12#.campaign.v1.CreateCharacterRequest\x1a$.campaign.v1.CreateCharacterResponse\x12Y\n" +
 	"\x0eListCharacters\x12\".campaign.v1.ListCharactersRequest\x1a#.campaign.v1.ListCharactersResponse\x12b\n" +
-	"\x11SetDefaultControl\x12%.campaign.v1.SetDefaultControlRequest\x1a&.campaign.v1.SetDefaultControlResponseBIZGgithub.com/louisbranch/duality-engine/api/gen/go/campaign/v1;campaignv1b\x06proto3"
+	"\x11SetDefaultControl\x12%.campaign.v1.SetDefaultControlRequest\x1a&.campaign.v1.SetDefaultControlResponse\x12b\n" +
+	"\x11GetCharacterSheet\x12%.campaign.v1.GetCharacterSheetRequest\x1a&.campaign.v1.GetCharacterSheetResponse\x12n\n" +
+	"\x15PatchCharacterProfile\x12).campaign.v1.PatchCharacterProfileRequest\x1a*.campaign.v1.PatchCharacterProfileResponse\x12h\n" +
+	"\x13PatchCharacterState\x12'.campaign.v1.PatchCharacterStateRequest\x1a(.campaign.v1.PatchCharacterStateResponseBIZGgithub.com/louisbranch/duality-engine/api/gen/go/campaign/v1;campaignv1b\x06proto3"
 
 var file_campaign_v1_service_proto_goTypes = []any{
-	(*CreateCampaignRequest)(nil),     // 0: campaign.v1.CreateCampaignRequest
-	(*ListCampaignsRequest)(nil),      // 1: campaign.v1.ListCampaignsRequest
-	(*GetCampaignRequest)(nil),        // 2: campaign.v1.GetCampaignRequest
-	(*CreateParticipantRequest)(nil),  // 3: campaign.v1.CreateParticipantRequest
-	(*ListParticipantsRequest)(nil),   // 4: campaign.v1.ListParticipantsRequest
-	(*GetParticipantRequest)(nil),     // 5: campaign.v1.GetParticipantRequest
-	(*CreateCharacterRequest)(nil),    // 6: campaign.v1.CreateCharacterRequest
-	(*ListCharactersRequest)(nil),     // 7: campaign.v1.ListCharactersRequest
-	(*SetDefaultControlRequest)(nil),  // 8: campaign.v1.SetDefaultControlRequest
-	(*CreateCampaignResponse)(nil),    // 9: campaign.v1.CreateCampaignResponse
-	(*ListCampaignsResponse)(nil),     // 10: campaign.v1.ListCampaignsResponse
-	(*GetCampaignResponse)(nil),       // 11: campaign.v1.GetCampaignResponse
-	(*CreateParticipantResponse)(nil), // 12: campaign.v1.CreateParticipantResponse
-	(*ListParticipantsResponse)(nil),  // 13: campaign.v1.ListParticipantsResponse
-	(*GetParticipantResponse)(nil),    // 14: campaign.v1.GetParticipantResponse
-	(*CreateCharacterResponse)(nil),   // 15: campaign.v1.CreateCharacterResponse
-	(*ListCharactersResponse)(nil),    // 16: campaign.v1.ListCharactersResponse
-	(*SetDefaultControlResponse)(nil), // 17: campaign.v1.SetDefaultControlResponse
+	(*CreateCampaignRequest)(nil),         // 0: campaign.v1.CreateCampaignRequest
+	(*ListCampaignsRequest)(nil),          // 1: campaign.v1.ListCampaignsRequest
+	(*GetCampaignRequest)(nil),            // 2: campaign.v1.GetCampaignRequest
+	(*CreateParticipantRequest)(nil),      // 3: campaign.v1.CreateParticipantRequest
+	(*ListParticipantsRequest)(nil),       // 4: campaign.v1.ListParticipantsRequest
+	(*GetParticipantRequest)(nil),         // 5: campaign.v1.GetParticipantRequest
+	(*CreateCharacterRequest)(nil),        // 6: campaign.v1.CreateCharacterRequest
+	(*ListCharactersRequest)(nil),         // 7: campaign.v1.ListCharactersRequest
+	(*SetDefaultControlRequest)(nil),      // 8: campaign.v1.SetDefaultControlRequest
+	(*GetCharacterSheetRequest)(nil),      // 9: campaign.v1.GetCharacterSheetRequest
+	(*PatchCharacterProfileRequest)(nil),  // 10: campaign.v1.PatchCharacterProfileRequest
+	(*PatchCharacterStateRequest)(nil),    // 11: campaign.v1.PatchCharacterStateRequest
+	(*CreateCampaignResponse)(nil),        // 12: campaign.v1.CreateCampaignResponse
+	(*ListCampaignsResponse)(nil),         // 13: campaign.v1.ListCampaignsResponse
+	(*GetCampaignResponse)(nil),           // 14: campaign.v1.GetCampaignResponse
+	(*CreateParticipantResponse)(nil),     // 15: campaign.v1.CreateParticipantResponse
+	(*ListParticipantsResponse)(nil),      // 16: campaign.v1.ListParticipantsResponse
+	(*GetParticipantResponse)(nil),        // 17: campaign.v1.GetParticipantResponse
+	(*CreateCharacterResponse)(nil),       // 18: campaign.v1.CreateCharacterResponse
+	(*ListCharactersResponse)(nil),        // 19: campaign.v1.ListCharactersResponse
+	(*SetDefaultControlResponse)(nil),     // 20: campaign.v1.SetDefaultControlResponse
+	(*GetCharacterSheetResponse)(nil),     // 21: campaign.v1.GetCharacterSheetResponse
+	(*PatchCharacterProfileResponse)(nil), // 22: campaign.v1.PatchCharacterProfileResponse
+	(*PatchCharacterStateResponse)(nil),   // 23: campaign.v1.PatchCharacterStateResponse
 }
 var file_campaign_v1_service_proto_depIdxs = []int32{
 	0,  // 0: campaign.v1.CampaignService.CreateCampaign:input_type -> campaign.v1.CreateCampaignRequest
@@ -66,17 +75,23 @@ var file_campaign_v1_service_proto_depIdxs = []int32{
 	6,  // 6: campaign.v1.CampaignService.CreateCharacter:input_type -> campaign.v1.CreateCharacterRequest
 	7,  // 7: campaign.v1.CampaignService.ListCharacters:input_type -> campaign.v1.ListCharactersRequest
 	8,  // 8: campaign.v1.CampaignService.SetDefaultControl:input_type -> campaign.v1.SetDefaultControlRequest
-	9,  // 9: campaign.v1.CampaignService.CreateCampaign:output_type -> campaign.v1.CreateCampaignResponse
-	10, // 10: campaign.v1.CampaignService.ListCampaigns:output_type -> campaign.v1.ListCampaignsResponse
-	11, // 11: campaign.v1.CampaignService.GetCampaign:output_type -> campaign.v1.GetCampaignResponse
-	12, // 12: campaign.v1.CampaignService.CreateParticipant:output_type -> campaign.v1.CreateParticipantResponse
-	13, // 13: campaign.v1.CampaignService.ListParticipants:output_type -> campaign.v1.ListParticipantsResponse
-	14, // 14: campaign.v1.CampaignService.GetParticipant:output_type -> campaign.v1.GetParticipantResponse
-	15, // 15: campaign.v1.CampaignService.CreateCharacter:output_type -> campaign.v1.CreateCharacterResponse
-	16, // 16: campaign.v1.CampaignService.ListCharacters:output_type -> campaign.v1.ListCharactersResponse
-	17, // 17: campaign.v1.CampaignService.SetDefaultControl:output_type -> campaign.v1.SetDefaultControlResponse
-	9,  // [9:18] is the sub-list for method output_type
-	0,  // [0:9] is the sub-list for method input_type
+	9,  // 9: campaign.v1.CampaignService.GetCharacterSheet:input_type -> campaign.v1.GetCharacterSheetRequest
+	10, // 10: campaign.v1.CampaignService.PatchCharacterProfile:input_type -> campaign.v1.PatchCharacterProfileRequest
+	11, // 11: campaign.v1.CampaignService.PatchCharacterState:input_type -> campaign.v1.PatchCharacterStateRequest
+	12, // 12: campaign.v1.CampaignService.CreateCampaign:output_type -> campaign.v1.CreateCampaignResponse
+	13, // 13: campaign.v1.CampaignService.ListCampaigns:output_type -> campaign.v1.ListCampaignsResponse
+	14, // 14: campaign.v1.CampaignService.GetCampaign:output_type -> campaign.v1.GetCampaignResponse
+	15, // 15: campaign.v1.CampaignService.CreateParticipant:output_type -> campaign.v1.CreateParticipantResponse
+	16, // 16: campaign.v1.CampaignService.ListParticipants:output_type -> campaign.v1.ListParticipantsResponse
+	17, // 17: campaign.v1.CampaignService.GetParticipant:output_type -> campaign.v1.GetParticipantResponse
+	18, // 18: campaign.v1.CampaignService.CreateCharacter:output_type -> campaign.v1.CreateCharacterResponse
+	19, // 19: campaign.v1.CampaignService.ListCharacters:output_type -> campaign.v1.ListCharactersResponse
+	20, // 20: campaign.v1.CampaignService.SetDefaultControl:output_type -> campaign.v1.SetDefaultControlResponse
+	21, // 21: campaign.v1.CampaignService.GetCharacterSheet:output_type -> campaign.v1.GetCharacterSheetResponse
+	22, // 22: campaign.v1.CampaignService.PatchCharacterProfile:output_type -> campaign.v1.PatchCharacterProfileResponse
+	23, // 23: campaign.v1.CampaignService.PatchCharacterState:output_type -> campaign.v1.PatchCharacterStateResponse
+	12, // [12:24] is the sub-list for method output_type
+	0,  // [0:12] is the sub-list for method input_type
 	0,  // [0:0] is the sub-list for extension type_name
 	0,  // [0:0] is the sub-list for extension extendee
 	0,  // [0:0] is the sub-list for field type_name

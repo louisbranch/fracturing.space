@@ -45,10 +45,12 @@ func New(port int) (*Server, error) {
 	grpcServer := grpc.NewServer()
 	dualityService := dualityservice.NewDualityService(random.NewSeed)
 	campaignService := campaignservice.NewCampaignService(campaignservice.Stores{
-		Campaign:       store,
-		Participant:    store,
-		Character:      store,
-		ControlDefault: store,
+		Campaign:         store,
+		Participant:      store,
+		Character:        store,
+		CharacterProfile: store,
+		CharacterState:   store,
+		ControlDefault:   store,
 	})
 	sessionService := sessionservice.NewSessionService(sessionservice.Stores{
 		Campaign: store,

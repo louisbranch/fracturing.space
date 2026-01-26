@@ -42,6 +42,38 @@ func (f *fakeCharacterStore) ListCharacters(ctx context.Context, campaignID stri
 	return f.listPage, f.listErr
 }
 
+type fakeCharacterProfileStore struct {
+	putProfile domain.CharacterProfile
+	putErr     error
+	getProfile domain.CharacterProfile
+	getErr     error
+}
+
+func (f *fakeCharacterProfileStore) PutCharacterProfile(ctx context.Context, profile domain.CharacterProfile) error {
+	f.putProfile = profile
+	return f.putErr
+}
+
+func (f *fakeCharacterProfileStore) GetCharacterProfile(ctx context.Context, campaignID, characterID string) (domain.CharacterProfile, error) {
+	return f.getProfile, f.getErr
+}
+
+type fakeCharacterStateStore struct {
+	putState domain.CharacterState
+	putErr   error
+	getState domain.CharacterState
+	getErr   error
+}
+
+func (f *fakeCharacterStateStore) PutCharacterState(ctx context.Context, state domain.CharacterState) error {
+	f.putState = state
+	return f.putErr
+}
+
+func (f *fakeCharacterStateStore) GetCharacterState(ctx context.Context, campaignID, characterID string) (domain.CharacterState, error) {
+	return f.getState, f.getErr
+}
+
 func TestCreateCharacterSuccess(t *testing.T) {
 	fixedTime := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
 	campaignStore := &fakeCampaignStore{}
@@ -54,8 +86,10 @@ func TestCreateCharacterSuccess(t *testing.T) {
 	characterStore := &fakeCharacterStore{}
 	service := &CampaignService{
 		stores: Stores{
-			Campaign: campaignStore,
-			Character:    characterStore,
+			Campaign:         campaignStore,
+			Character:        characterStore,
+			CharacterProfile: &fakeCharacterProfileStore{},
+			CharacterState:   &fakeCharacterStateStore{},
 		},
 		clock: func() time.Time {
 			return fixedTime
@@ -137,8 +171,10 @@ func TestCreateCharacterValidationErrors(t *testing.T) {
 	}
 	service := &CampaignService{
 		stores: Stores{
-			Campaign: campaignStore,
-			Character:    &fakeCharacterStore{},
+			Campaign:         campaignStore,
+			Character:        &fakeCharacterStore{},
+			CharacterProfile: &fakeCharacterProfileStore{},
+			CharacterState:   &fakeCharacterStateStore{},
 		},
 		clock:       time.Now,
 		idGenerator: func() (string, error) { return "character-1", nil },
@@ -165,7 +201,9 @@ func TestCreateCharacterCampaignNotFound(t *testing.T) {
 	characterStore := &fakeCharacterStore{putErr: storage.ErrNotFound}
 	service := &CampaignService{
 		stores: Stores{
-			Character: characterStore,
+			Character:        characterStore,
+			CharacterProfile: &fakeCharacterProfileStore{},
+			CharacterState:   &fakeCharacterStateStore{},
 		},
 		clock:       time.Now,
 		idGenerator: func() (string, error) { return "character-1", nil },
@@ -190,9 +228,11 @@ func TestCreateCharacterCampaignNotFound(t *testing.T) {
 
 func TestCreateCharacterNilRequest(t *testing.T) {
 	service := NewCampaignService(Stores{
-		Campaign:    &fakeCampaignStore{},
-		Participant: &fakeParticipantStore{},
-		Character:       &fakeCharacterStore{},
+		Campaign:         &fakeCampaignStore{},
+		Participant:      &fakeParticipantStore{},
+		Character:        &fakeCharacterStore{},
+		CharacterProfile: &fakeCharacterProfileStore{},
+		CharacterState:   &fakeCharacterStateStore{},
 	})
 
 	_, err := service.CreateCharacter(context.Background(), nil)
@@ -216,8 +256,10 @@ func TestCreateCharacterStoreFailure(t *testing.T) {
 	characterStore := &fakeCharacterStore{putErr: errors.New("boom")}
 	service := &CampaignService{
 		stores: Stores{
-			Campaign: campaignStore,
-			Character:    characterStore,
+			Campaign:         campaignStore,
+			Character:        characterStore,
+			CharacterProfile: &fakeCharacterProfileStore{},
+			CharacterState:   &fakeCharacterStateStore{},
 		},
 		clock:       time.Now,
 		idGenerator: func() (string, error) { return "character-123", nil },
@@ -252,8 +294,10 @@ func TestCreateCharacterNPCKind(t *testing.T) {
 	characterStore := &fakeCharacterStore{}
 	service := &CampaignService{
 		stores: Stores{
-			Campaign: campaignStore,
-			Character:    characterStore,
+			Campaign:         campaignStore,
+			Character:        characterStore,
+			CharacterProfile: &fakeCharacterProfileStore{},
+			CharacterState:   &fakeCharacterStateStore{},
 		},
 		clock: func() time.Time {
 			return fixedTime
@@ -287,7 +331,9 @@ func TestCreateCharacterMissingStore(t *testing.T) {
 	}
 	service := &CampaignService{
 		stores: Stores{
-			Campaign: campaignStore,
+			Campaign:         campaignStore,
+			CharacterProfile: &fakeCharacterProfileStore{},
+			CharacterState:   &fakeCharacterStateStore{},
 		},
 	}
 
@@ -344,8 +390,10 @@ func TestListCharactersSuccess(t *testing.T) {
 	}
 	service := &CampaignService{
 		stores: Stores{
-			Campaign: campaignStore,
-			Character:    characterStore,
+			Campaign:         campaignStore,
+			Character:        characterStore,
+			CharacterProfile: &fakeCharacterProfileStore{},
+			CharacterState:   &fakeCharacterStateStore{},
 		},
 		clock: time.Now,
 	}
@@ -409,8 +457,10 @@ func TestListCharactersDefaults(t *testing.T) {
 	}
 	service := &CampaignService{
 		stores: Stores{
-			Campaign: campaignStore,
-			Character:    characterStore,
+			Campaign:         campaignStore,
+			Character:        characterStore,
+			CharacterProfile: &fakeCharacterProfileStore{},
+			CharacterState:   &fakeCharacterStateStore{},
 		},
 		clock: time.Now,
 	}
@@ -446,8 +496,10 @@ func TestListCharactersEmpty(t *testing.T) {
 	}
 	service := &CampaignService{
 		stores: Stores{
-			Campaign: campaignStore,
-			Character:    characterStore,
+			Campaign:         campaignStore,
+			Character:        characterStore,
+			CharacterProfile: &fakeCharacterProfileStore{},
+			CharacterState:   &fakeCharacterStateStore{},
 		},
 		clock: time.Now,
 	}
@@ -475,8 +527,10 @@ func TestListCharactersClampPageSize(t *testing.T) {
 	characterStore := &fakeCharacterStore{listPage: storage.CharacterPage{}}
 	service := &CampaignService{
 		stores: Stores{
-			Campaign: campaignStore,
-			Character:    characterStore,
+			Campaign:         campaignStore,
+			Character:        characterStore,
+			CharacterProfile: &fakeCharacterProfileStore{},
+			CharacterState:   &fakeCharacterStateStore{},
 		},
 		clock: time.Now,
 	}
@@ -501,8 +555,10 @@ func TestListCharactersPassesToken(t *testing.T) {
 	characterStore := &fakeCharacterStore{listPage: storage.CharacterPage{}}
 	service := &CampaignService{
 		stores: Stores{
-			Campaign: campaignStore,
-			Character:    characterStore,
+			Campaign:         campaignStore,
+			Character:        characterStore,
+			CharacterProfile: &fakeCharacterProfileStore{},
+			CharacterState:   &fakeCharacterStateStore{},
 		},
 		clock: time.Now,
 	}
@@ -525,9 +581,11 @@ func TestListCharactersPassesToken(t *testing.T) {
 
 func TestListCharactersNilRequest(t *testing.T) {
 	service := NewCampaignService(Stores{
-		Campaign:    &fakeCampaignStore{},
-		Participant: &fakeParticipantStore{},
-		Character:       &fakeCharacterStore{},
+		Campaign:         &fakeCampaignStore{},
+		Participant:      &fakeParticipantStore{},
+		Character:        &fakeCharacterStore{},
+		CharacterProfile: &fakeCharacterProfileStore{},
+		CharacterState:   &fakeCharacterStateStore{},
 	})
 
 	_, err := service.ListCharacters(context.Background(), nil)
@@ -550,8 +608,10 @@ func TestListCharactersCampaignNotFound(t *testing.T) {
 	}
 	service := &CampaignService{
 		stores: Stores{
-			Campaign: campaignStore,
-			Character:    &fakeCharacterStore{},
+			Campaign:         campaignStore,
+			Character:        &fakeCharacterStore{},
+			CharacterProfile: &fakeCharacterProfileStore{},
+			CharacterState:   &fakeCharacterStateStore{},
 		},
 		clock: time.Now,
 	}
@@ -580,8 +640,10 @@ func TestListCharactersStoreFailure(t *testing.T) {
 	characterStore := &fakeCharacterStore{listErr: errors.New("boom")}
 	service := &CampaignService{
 		stores: Stores{
-			Campaign: campaignStore,
-			Character:    characterStore,
+			Campaign:         campaignStore,
+			Character:        characterStore,
+			CharacterProfile: &fakeCharacterProfileStore{},
+			CharacterState:   &fakeCharacterStateStore{},
 		},
 		clock: time.Now,
 	}
@@ -609,7 +671,9 @@ func TestListCharactersMissingStore(t *testing.T) {
 	}
 	service := &CampaignService{
 		stores: Stores{
-			Campaign: campaignStore,
+			Campaign:         campaignStore,
+			CharacterProfile: &fakeCharacterProfileStore{},
+			CharacterState:   &fakeCharacterStateStore{},
 		},
 	}
 
@@ -633,8 +697,10 @@ func TestListCharactersEmptyCampaignID(t *testing.T) {
 	campaignStore := &fakeCampaignStore{}
 	service := &CampaignService{
 		stores: Stores{
-			Campaign: campaignStore,
-			Character:    &fakeCharacterStore{},
+			Campaign:         campaignStore,
+			Character:        &fakeCharacterStore{},
+			CharacterProfile: &fakeCharacterProfileStore{},
+			CharacterState:   &fakeCharacterStateStore{},
 		},
 		clock: time.Now,
 	}

@@ -19,15 +19,18 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	CampaignService_CreateCampaign_FullMethodName    = "/campaign.v1.CampaignService/CreateCampaign"
-	CampaignService_ListCampaigns_FullMethodName     = "/campaign.v1.CampaignService/ListCampaigns"
-	CampaignService_GetCampaign_FullMethodName       = "/campaign.v1.CampaignService/GetCampaign"
-	CampaignService_CreateParticipant_FullMethodName = "/campaign.v1.CampaignService/CreateParticipant"
-	CampaignService_ListParticipants_FullMethodName  = "/campaign.v1.CampaignService/ListParticipants"
-	CampaignService_GetParticipant_FullMethodName    = "/campaign.v1.CampaignService/GetParticipant"
-	CampaignService_CreateCharacter_FullMethodName   = "/campaign.v1.CampaignService/CreateCharacter"
-	CampaignService_ListCharacters_FullMethodName    = "/campaign.v1.CampaignService/ListCharacters"
-	CampaignService_SetDefaultControl_FullMethodName = "/campaign.v1.CampaignService/SetDefaultControl"
+	CampaignService_CreateCampaign_FullMethodName        = "/campaign.v1.CampaignService/CreateCampaign"
+	CampaignService_ListCampaigns_FullMethodName         = "/campaign.v1.CampaignService/ListCampaigns"
+	CampaignService_GetCampaign_FullMethodName           = "/campaign.v1.CampaignService/GetCampaign"
+	CampaignService_CreateParticipant_FullMethodName     = "/campaign.v1.CampaignService/CreateParticipant"
+	CampaignService_ListParticipants_FullMethodName      = "/campaign.v1.CampaignService/ListParticipants"
+	CampaignService_GetParticipant_FullMethodName        = "/campaign.v1.CampaignService/GetParticipant"
+	CampaignService_CreateCharacter_FullMethodName       = "/campaign.v1.CampaignService/CreateCharacter"
+	CampaignService_ListCharacters_FullMethodName        = "/campaign.v1.CampaignService/ListCharacters"
+	CampaignService_SetDefaultControl_FullMethodName     = "/campaign.v1.CampaignService/SetDefaultControl"
+	CampaignService_GetCharacterSheet_FullMethodName     = "/campaign.v1.CampaignService/GetCharacterSheet"
+	CampaignService_PatchCharacterProfile_FullMethodName = "/campaign.v1.CampaignService/PatchCharacterProfile"
+	CampaignService_PatchCharacterState_FullMethodName   = "/campaign.v1.CampaignService/PatchCharacterState"
 )
 
 // CampaignServiceClient is the client API for CampaignService service.
@@ -52,6 +55,12 @@ type CampaignServiceClient interface {
 	ListCharacters(ctx context.Context, in *ListCharactersRequest, opts ...grpc.CallOption) (*ListCharactersResponse, error)
 	// Assign a campaign-scoped default controller for a character.
 	SetDefaultControl(ctx context.Context, in *SetDefaultControlRequest, opts ...grpc.CallOption) (*SetDefaultControlResponse, error)
+	// Get a character sheet (character, profile, and state).
+	GetCharacterSheet(ctx context.Context, in *GetCharacterSheetRequest, opts ...grpc.CallOption) (*GetCharacterSheetResponse, error)
+	// Patch a character profile (all fields optional).
+	PatchCharacterProfile(ctx context.Context, in *PatchCharacterProfileRequest, opts ...grpc.CallOption) (*PatchCharacterProfileResponse, error)
+	// Patch a character state (all fields optional).
+	PatchCharacterState(ctx context.Context, in *PatchCharacterStateRequest, opts ...grpc.CallOption) (*PatchCharacterStateResponse, error)
 }
 
 type campaignServiceClient struct {
@@ -152,6 +161,36 @@ func (c *campaignServiceClient) SetDefaultControl(ctx context.Context, in *SetDe
 	return out, nil
 }
 
+func (c *campaignServiceClient) GetCharacterSheet(ctx context.Context, in *GetCharacterSheetRequest, opts ...grpc.CallOption) (*GetCharacterSheetResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCharacterSheetResponse)
+	err := c.cc.Invoke(ctx, CampaignService_GetCharacterSheet_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *campaignServiceClient) PatchCharacterProfile(ctx context.Context, in *PatchCharacterProfileRequest, opts ...grpc.CallOption) (*PatchCharacterProfileResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PatchCharacterProfileResponse)
+	err := c.cc.Invoke(ctx, CampaignService_PatchCharacterProfile_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *campaignServiceClient) PatchCharacterState(ctx context.Context, in *PatchCharacterStateRequest, opts ...grpc.CallOption) (*PatchCharacterStateResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PatchCharacterStateResponse)
+	err := c.cc.Invoke(ctx, CampaignService_PatchCharacterState_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CampaignServiceServer is the server API for CampaignService service.
 // All implementations must embed UnimplementedCampaignServiceServer
 // for forward compatibility.
@@ -174,6 +213,12 @@ type CampaignServiceServer interface {
 	ListCharacters(context.Context, *ListCharactersRequest) (*ListCharactersResponse, error)
 	// Assign a campaign-scoped default controller for a character.
 	SetDefaultControl(context.Context, *SetDefaultControlRequest) (*SetDefaultControlResponse, error)
+	// Get a character sheet (character, profile, and state).
+	GetCharacterSheet(context.Context, *GetCharacterSheetRequest) (*GetCharacterSheetResponse, error)
+	// Patch a character profile (all fields optional).
+	PatchCharacterProfile(context.Context, *PatchCharacterProfileRequest) (*PatchCharacterProfileResponse, error)
+	// Patch a character state (all fields optional).
+	PatchCharacterState(context.Context, *PatchCharacterStateRequest) (*PatchCharacterStateResponse, error)
 	mustEmbedUnimplementedCampaignServiceServer()
 }
 
@@ -210,6 +255,15 @@ func (UnimplementedCampaignServiceServer) ListCharacters(context.Context, *ListC
 }
 func (UnimplementedCampaignServiceServer) SetDefaultControl(context.Context, *SetDefaultControlRequest) (*SetDefaultControlResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SetDefaultControl not implemented")
+}
+func (UnimplementedCampaignServiceServer) GetCharacterSheet(context.Context, *GetCharacterSheetRequest) (*GetCharacterSheetResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetCharacterSheet not implemented")
+}
+func (UnimplementedCampaignServiceServer) PatchCharacterProfile(context.Context, *PatchCharacterProfileRequest) (*PatchCharacterProfileResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method PatchCharacterProfile not implemented")
+}
+func (UnimplementedCampaignServiceServer) PatchCharacterState(context.Context, *PatchCharacterStateRequest) (*PatchCharacterStateResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method PatchCharacterState not implemented")
 }
 func (UnimplementedCampaignServiceServer) mustEmbedUnimplementedCampaignServiceServer() {}
 func (UnimplementedCampaignServiceServer) testEmbeddedByValue()                         {}
@@ -394,6 +448,60 @@ func _CampaignService_SetDefaultControl_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CampaignService_GetCharacterSheet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCharacterSheetRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CampaignServiceServer).GetCharacterSheet(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CampaignService_GetCharacterSheet_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CampaignServiceServer).GetCharacterSheet(ctx, req.(*GetCharacterSheetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CampaignService_PatchCharacterProfile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PatchCharacterProfileRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CampaignServiceServer).PatchCharacterProfile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CampaignService_PatchCharacterProfile_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CampaignServiceServer).PatchCharacterProfile(ctx, req.(*PatchCharacterProfileRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CampaignService_PatchCharacterState_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PatchCharacterStateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CampaignServiceServer).PatchCharacterState(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CampaignService_PatchCharacterState_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CampaignServiceServer).PatchCharacterState(ctx, req.(*PatchCharacterStateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // CampaignService_ServiceDesc is the grpc.ServiceDesc for CampaignService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -436,6 +544,18 @@ var CampaignService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetDefaultControl",
 			Handler:    _CampaignService_SetDefaultControl_Handler,
+		},
+		{
+			MethodName: "GetCharacterSheet",
+			Handler:    _CampaignService_GetCharacterSheet_Handler,
+		},
+		{
+			MethodName: "PatchCharacterProfile",
+			Handler:    _CampaignService_PatchCharacterProfile_Handler,
+		},
+		{
+			MethodName: "PatchCharacterState",
+			Handler:    _CampaignService_PatchCharacterState_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

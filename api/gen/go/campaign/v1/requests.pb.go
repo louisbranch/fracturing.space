@@ -1020,6 +1020,397 @@ func (x *SetDefaultControlResponse) GetController() *CharacterController {
 	return nil
 }
 
+type GetCharacterSheetRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The campaign ID.
+	CampaignId string `protobuf:"bytes,1,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"`
+	// The character ID.
+	CharacterId   string `protobuf:"bytes,2,opt,name=character_id,json=characterId,proto3" json:"character_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetCharacterSheetRequest) Reset() {
+	*x = GetCharacterSheetRequest{}
+	mi := &file_campaign_v1_requests_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCharacterSheetRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCharacterSheetRequest) ProtoMessage() {}
+
+func (x *GetCharacterSheetRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_campaign_v1_requests_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCharacterSheetRequest.ProtoReflect.Descriptor instead.
+func (*GetCharacterSheetRequest) Descriptor() ([]byte, []int) {
+	return file_campaign_v1_requests_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *GetCharacterSheetRequest) GetCampaignId() string {
+	if x != nil {
+		return x.CampaignId
+	}
+	return ""
+}
+
+func (x *GetCharacterSheetRequest) GetCharacterId() string {
+	if x != nil {
+		return x.CharacterId
+	}
+	return ""
+}
+
+type GetCharacterSheetResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Character     *Character             `protobuf:"bytes,1,opt,name=character,proto3" json:"character,omitempty"`
+	Profile       *CharacterProfile      `protobuf:"bytes,2,opt,name=profile,proto3" json:"profile,omitempty"`
+	State         *CharacterState        `protobuf:"bytes,3,opt,name=state,proto3" json:"state,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetCharacterSheetResponse) Reset() {
+	*x = GetCharacterSheetResponse{}
+	mi := &file_campaign_v1_requests_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCharacterSheetResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCharacterSheetResponse) ProtoMessage() {}
+
+func (x *GetCharacterSheetResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_campaign_v1_requests_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCharacterSheetResponse.ProtoReflect.Descriptor instead.
+func (*GetCharacterSheetResponse) Descriptor() ([]byte, []int) {
+	return file_campaign_v1_requests_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *GetCharacterSheetResponse) GetCharacter() *Character {
+	if x != nil {
+		return x.Character
+	}
+	return nil
+}
+
+func (x *GetCharacterSheetResponse) GetProfile() *CharacterProfile {
+	if x != nil {
+		return x.Profile
+	}
+	return nil
+}
+
+func (x *GetCharacterSheetResponse) GetState() *CharacterState {
+	if x != nil {
+		return x.State
+	}
+	return nil
+}
+
+type PatchCharacterProfileRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The campaign ID.
+	CampaignId string `protobuf:"bytes,1,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"`
+	// The character ID.
+	CharacterId string `protobuf:"bytes,2,opt,name=character_id,json=characterId,proto3" json:"character_id,omitempty"`
+	// Optional traits map. If provided, replaces the entire traits map.
+	Traits map[string]int32 `protobuf:"bytes,3,rep,name=traits,proto3" json:"traits,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
+	// Optional hp_max. If provided, updates hp_max.
+	HpMax *int32 `protobuf:"varint,4,opt,name=hp_max,json=hpMax,proto3,oneof" json:"hp_max,omitempty"`
+	// Optional stress_max. If provided, updates stress_max.
+	StressMax *int32 `protobuf:"varint,5,opt,name=stress_max,json=stressMax,proto3,oneof" json:"stress_max,omitempty"`
+	// Optional evasion. If provided, updates evasion.
+	Evasion *int32 `protobuf:"varint,6,opt,name=evasion,proto3,oneof" json:"evasion,omitempty"`
+	// Optional major_threshold. If provided, updates major_threshold.
+	MajorThreshold *int32 `protobuf:"varint,7,opt,name=major_threshold,json=majorThreshold,proto3,oneof" json:"major_threshold,omitempty"`
+	// Optional severe_threshold. If provided, updates severe_threshold.
+	SevereThreshold *int32 `protobuf:"varint,8,opt,name=severe_threshold,json=severeThreshold,proto3,oneof" json:"severe_threshold,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *PatchCharacterProfileRequest) Reset() {
+	*x = PatchCharacterProfileRequest{}
+	mi := &file_campaign_v1_requests_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PatchCharacterProfileRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PatchCharacterProfileRequest) ProtoMessage() {}
+
+func (x *PatchCharacterProfileRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_campaign_v1_requests_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PatchCharacterProfileRequest.ProtoReflect.Descriptor instead.
+func (*PatchCharacterProfileRequest) Descriptor() ([]byte, []int) {
+	return file_campaign_v1_requests_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *PatchCharacterProfileRequest) GetCampaignId() string {
+	if x != nil {
+		return x.CampaignId
+	}
+	return ""
+}
+
+func (x *PatchCharacterProfileRequest) GetCharacterId() string {
+	if x != nil {
+		return x.CharacterId
+	}
+	return ""
+}
+
+func (x *PatchCharacterProfileRequest) GetTraits() map[string]int32 {
+	if x != nil {
+		return x.Traits
+	}
+	return nil
+}
+
+func (x *PatchCharacterProfileRequest) GetHpMax() int32 {
+	if x != nil && x.HpMax != nil {
+		return *x.HpMax
+	}
+	return 0
+}
+
+func (x *PatchCharacterProfileRequest) GetStressMax() int32 {
+	if x != nil && x.StressMax != nil {
+		return *x.StressMax
+	}
+	return 0
+}
+
+func (x *PatchCharacterProfileRequest) GetEvasion() int32 {
+	if x != nil && x.Evasion != nil {
+		return *x.Evasion
+	}
+	return 0
+}
+
+func (x *PatchCharacterProfileRequest) GetMajorThreshold() int32 {
+	if x != nil && x.MajorThreshold != nil {
+		return *x.MajorThreshold
+	}
+	return 0
+}
+
+func (x *PatchCharacterProfileRequest) GetSevereThreshold() int32 {
+	if x != nil && x.SevereThreshold != nil {
+		return *x.SevereThreshold
+	}
+	return 0
+}
+
+type PatchCharacterProfileResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Profile       *CharacterProfile      `protobuf:"bytes,1,opt,name=profile,proto3" json:"profile,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PatchCharacterProfileResponse) Reset() {
+	*x = PatchCharacterProfileResponse{}
+	mi := &file_campaign_v1_requests_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PatchCharacterProfileResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PatchCharacterProfileResponse) ProtoMessage() {}
+
+func (x *PatchCharacterProfileResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_campaign_v1_requests_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PatchCharacterProfileResponse.ProtoReflect.Descriptor instead.
+func (*PatchCharacterProfileResponse) Descriptor() ([]byte, []int) {
+	return file_campaign_v1_requests_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *PatchCharacterProfileResponse) GetProfile() *CharacterProfile {
+	if x != nil {
+		return x.Profile
+	}
+	return nil
+}
+
+type PatchCharacterStateRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The campaign ID.
+	CampaignId string `protobuf:"bytes,1,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"`
+	// The character ID.
+	CharacterId string `protobuf:"bytes,2,opt,name=character_id,json=characterId,proto3" json:"character_id,omitempty"`
+	// Optional hope. If provided, updates hope.
+	Hope *int32 `protobuf:"varint,3,opt,name=hope,proto3,oneof" json:"hope,omitempty"`
+	// Optional stress. If provided, updates stress.
+	Stress *int32 `protobuf:"varint,4,opt,name=stress,proto3,oneof" json:"stress,omitempty"`
+	// Optional hp. If provided, updates hp.
+	Hp            *int32 `protobuf:"varint,5,opt,name=hp,proto3,oneof" json:"hp,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PatchCharacterStateRequest) Reset() {
+	*x = PatchCharacterStateRequest{}
+	mi := &file_campaign_v1_requests_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PatchCharacterStateRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PatchCharacterStateRequest) ProtoMessage() {}
+
+func (x *PatchCharacterStateRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_campaign_v1_requests_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PatchCharacterStateRequest.ProtoReflect.Descriptor instead.
+func (*PatchCharacterStateRequest) Descriptor() ([]byte, []int) {
+	return file_campaign_v1_requests_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *PatchCharacterStateRequest) GetCampaignId() string {
+	if x != nil {
+		return x.CampaignId
+	}
+	return ""
+}
+
+func (x *PatchCharacterStateRequest) GetCharacterId() string {
+	if x != nil {
+		return x.CharacterId
+	}
+	return ""
+}
+
+func (x *PatchCharacterStateRequest) GetHope() int32 {
+	if x != nil && x.Hope != nil {
+		return *x.Hope
+	}
+	return 0
+}
+
+func (x *PatchCharacterStateRequest) GetStress() int32 {
+	if x != nil && x.Stress != nil {
+		return *x.Stress
+	}
+	return 0
+}
+
+func (x *PatchCharacterStateRequest) GetHp() int32 {
+	if x != nil && x.Hp != nil {
+		return *x.Hp
+	}
+	return 0
+}
+
+type PatchCharacterStateResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	State         *CharacterState        `protobuf:"bytes,1,opt,name=state,proto3" json:"state,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PatchCharacterStateResponse) Reset() {
+	*x = PatchCharacterStateResponse{}
+	mi := &file_campaign_v1_requests_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PatchCharacterStateResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PatchCharacterStateResponse) ProtoMessage() {}
+
+func (x *PatchCharacterStateResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_campaign_v1_requests_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PatchCharacterStateResponse.ProtoReflect.Descriptor instead.
+func (*PatchCharacterStateResponse) Descriptor() ([]byte, []int) {
+	return file_campaign_v1_requests_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *PatchCharacterStateResponse) GetState() *CharacterState {
+	if x != nil {
+		return x.State
+	}
+	return nil
+}
+
 var File_campaign_v1_requests_proto protoreflect.FileDescriptor
 
 const file_campaign_v1_requests_proto_rawDesc = "" +
@@ -1101,7 +1492,49 @@ const file_campaign_v1_requests_proto_rawDesc = "" +
 	"\fcharacter_id\x18\x02 \x01(\tR\vcharacterId\x12@\n" +
 	"\n" +
 	"controller\x18\x03 \x01(\v2 .campaign.v1.CharacterControllerR\n" +
-	"controllerBIZGgithub.com/louisbranch/duality-engine/api/gen/go/campaign/v1;campaignv1b\x06proto3"
+	"controller\"^\n" +
+	"\x18GetCharacterSheetRequest\x12\x1f\n" +
+	"\vcampaign_id\x18\x01 \x01(\tR\n" +
+	"campaignId\x12!\n" +
+	"\fcharacter_id\x18\x02 \x01(\tR\vcharacterId\"\xbd\x01\n" +
+	"\x19GetCharacterSheetResponse\x124\n" +
+	"\tcharacter\x18\x01 \x01(\v2\x16.campaign.v1.CharacterR\tcharacter\x127\n" +
+	"\aprofile\x18\x02 \x01(\v2\x1d.campaign.v1.CharacterProfileR\aprofile\x121\n" +
+	"\x05state\x18\x03 \x01(\v2\x1b.campaign.v1.CharacterStateR\x05state\"\xf8\x03\n" +
+	"\x1cPatchCharacterProfileRequest\x12\x1f\n" +
+	"\vcampaign_id\x18\x01 \x01(\tR\n" +
+	"campaignId\x12!\n" +
+	"\fcharacter_id\x18\x02 \x01(\tR\vcharacterId\x12M\n" +
+	"\x06traits\x18\x03 \x03(\v25.campaign.v1.PatchCharacterProfileRequest.TraitsEntryR\x06traits\x12\x1a\n" +
+	"\x06hp_max\x18\x04 \x01(\x05H\x00R\x05hpMax\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"stress_max\x18\x05 \x01(\x05H\x01R\tstressMax\x88\x01\x01\x12\x1d\n" +
+	"\aevasion\x18\x06 \x01(\x05H\x02R\aevasion\x88\x01\x01\x12,\n" +
+	"\x0fmajor_threshold\x18\a \x01(\x05H\x03R\x0emajorThreshold\x88\x01\x01\x12.\n" +
+	"\x10severe_threshold\x18\b \x01(\x05H\x04R\x0fsevereThreshold\x88\x01\x01\x1a9\n" +
+	"\vTraitsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01B\t\n" +
+	"\a_hp_maxB\r\n" +
+	"\v_stress_maxB\n" +
+	"\n" +
+	"\b_evasionB\x12\n" +
+	"\x10_major_thresholdB\x13\n" +
+	"\x11_severe_threshold\"X\n" +
+	"\x1dPatchCharacterProfileResponse\x127\n" +
+	"\aprofile\x18\x01 \x01(\v2\x1d.campaign.v1.CharacterProfileR\aprofile\"\xc6\x01\n" +
+	"\x1aPatchCharacterStateRequest\x12\x1f\n" +
+	"\vcampaign_id\x18\x01 \x01(\tR\n" +
+	"campaignId\x12!\n" +
+	"\fcharacter_id\x18\x02 \x01(\tR\vcharacterId\x12\x17\n" +
+	"\x04hope\x18\x03 \x01(\x05H\x00R\x04hope\x88\x01\x01\x12\x1b\n" +
+	"\x06stress\x18\x04 \x01(\x05H\x01R\x06stress\x88\x01\x01\x12\x13\n" +
+	"\x02hp\x18\x05 \x01(\x05H\x02R\x02hp\x88\x01\x01B\a\n" +
+	"\x05_hopeB\t\n" +
+	"\a_stressB\x05\n" +
+	"\x03_hp\"P\n" +
+	"\x1bPatchCharacterStateResponse\x121\n" +
+	"\x05state\x18\x01 \x01(\v2\x1b.campaign.v1.CharacterStateR\x05stateBIZGgithub.com/louisbranch/duality-engine/api/gen/go/campaign/v1;campaignv1b\x06proto3"
 
 var (
 	file_campaign_v1_requests_proto_rawDescOnce sync.Once
@@ -1115,55 +1548,70 @@ func file_campaign_v1_requests_proto_rawDescGZIP() []byte {
 	return file_campaign_v1_requests_proto_rawDescData
 }
 
-var file_campaign_v1_requests_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
+var file_campaign_v1_requests_proto_msgTypes = make([]protoimpl.MessageInfo, 25)
 var file_campaign_v1_requests_proto_goTypes = []any{
-	(*CreateCampaignRequest)(nil),     // 0: campaign.v1.CreateCampaignRequest
-	(*CreateCampaignResponse)(nil),    // 1: campaign.v1.CreateCampaignResponse
-	(*ListCampaignsRequest)(nil),      // 2: campaign.v1.ListCampaignsRequest
-	(*ListCampaignsResponse)(nil),     // 3: campaign.v1.ListCampaignsResponse
-	(*GetCampaignRequest)(nil),        // 4: campaign.v1.GetCampaignRequest
-	(*GetCampaignResponse)(nil),       // 5: campaign.v1.GetCampaignResponse
-	(*CreateParticipantRequest)(nil),  // 6: campaign.v1.CreateParticipantRequest
-	(*CreateParticipantResponse)(nil), // 7: campaign.v1.CreateParticipantResponse
-	(*ListParticipantsRequest)(nil),   // 8: campaign.v1.ListParticipantsRequest
-	(*ListParticipantsResponse)(nil),  // 9: campaign.v1.ListParticipantsResponse
-	(*GetParticipantRequest)(nil),     // 10: campaign.v1.GetParticipantRequest
-	(*GetParticipantResponse)(nil),    // 11: campaign.v1.GetParticipantResponse
-	(*CreateCharacterRequest)(nil),    // 12: campaign.v1.CreateCharacterRequest
-	(*CreateCharacterResponse)(nil),   // 13: campaign.v1.CreateCharacterResponse
-	(*ListCharactersRequest)(nil),     // 14: campaign.v1.ListCharactersRequest
-	(*ListCharactersResponse)(nil),    // 15: campaign.v1.ListCharactersResponse
-	(*SetDefaultControlRequest)(nil),  // 16: campaign.v1.SetDefaultControlRequest
-	(*SetDefaultControlResponse)(nil), // 17: campaign.v1.SetDefaultControlResponse
-	(GmMode)(0),                       // 18: campaign.v1.GmMode
-	(*Campaign)(nil),                  // 19: campaign.v1.Campaign
-	(ParticipantRole)(0),              // 20: campaign.v1.ParticipantRole
-	(Controller)(0),                   // 21: campaign.v1.Controller
-	(*Participant)(nil),               // 22: campaign.v1.Participant
-	(CharacterKind)(0),                // 23: campaign.v1.CharacterKind
-	(*Character)(nil),                 // 24: campaign.v1.Character
-	(*CharacterController)(nil),       // 25: campaign.v1.CharacterController
+	(*CreateCampaignRequest)(nil),         // 0: campaign.v1.CreateCampaignRequest
+	(*CreateCampaignResponse)(nil),        // 1: campaign.v1.CreateCampaignResponse
+	(*ListCampaignsRequest)(nil),          // 2: campaign.v1.ListCampaignsRequest
+	(*ListCampaignsResponse)(nil),         // 3: campaign.v1.ListCampaignsResponse
+	(*GetCampaignRequest)(nil),            // 4: campaign.v1.GetCampaignRequest
+	(*GetCampaignResponse)(nil),           // 5: campaign.v1.GetCampaignResponse
+	(*CreateParticipantRequest)(nil),      // 6: campaign.v1.CreateParticipantRequest
+	(*CreateParticipantResponse)(nil),     // 7: campaign.v1.CreateParticipantResponse
+	(*ListParticipantsRequest)(nil),       // 8: campaign.v1.ListParticipantsRequest
+	(*ListParticipantsResponse)(nil),      // 9: campaign.v1.ListParticipantsResponse
+	(*GetParticipantRequest)(nil),         // 10: campaign.v1.GetParticipantRequest
+	(*GetParticipantResponse)(nil),        // 11: campaign.v1.GetParticipantResponse
+	(*CreateCharacterRequest)(nil),        // 12: campaign.v1.CreateCharacterRequest
+	(*CreateCharacterResponse)(nil),       // 13: campaign.v1.CreateCharacterResponse
+	(*ListCharactersRequest)(nil),         // 14: campaign.v1.ListCharactersRequest
+	(*ListCharactersResponse)(nil),        // 15: campaign.v1.ListCharactersResponse
+	(*SetDefaultControlRequest)(nil),      // 16: campaign.v1.SetDefaultControlRequest
+	(*SetDefaultControlResponse)(nil),     // 17: campaign.v1.SetDefaultControlResponse
+	(*GetCharacterSheetRequest)(nil),      // 18: campaign.v1.GetCharacterSheetRequest
+	(*GetCharacterSheetResponse)(nil),     // 19: campaign.v1.GetCharacterSheetResponse
+	(*PatchCharacterProfileRequest)(nil),  // 20: campaign.v1.PatchCharacterProfileRequest
+	(*PatchCharacterProfileResponse)(nil), // 21: campaign.v1.PatchCharacterProfileResponse
+	(*PatchCharacterStateRequest)(nil),    // 22: campaign.v1.PatchCharacterStateRequest
+	(*PatchCharacterStateResponse)(nil),   // 23: campaign.v1.PatchCharacterStateResponse
+	nil,                                   // 24: campaign.v1.PatchCharacterProfileRequest.TraitsEntry
+	(GmMode)(0),                           // 25: campaign.v1.GmMode
+	(*Campaign)(nil),                      // 26: campaign.v1.Campaign
+	(ParticipantRole)(0),                  // 27: campaign.v1.ParticipantRole
+	(Controller)(0),                       // 28: campaign.v1.Controller
+	(*Participant)(nil),                   // 29: campaign.v1.Participant
+	(CharacterKind)(0),                    // 30: campaign.v1.CharacterKind
+	(*Character)(nil),                     // 31: campaign.v1.Character
+	(*CharacterController)(nil),           // 32: campaign.v1.CharacterController
+	(*CharacterProfile)(nil),              // 33: campaign.v1.CharacterProfile
+	(*CharacterState)(nil),                // 34: campaign.v1.CharacterState
 }
 var file_campaign_v1_requests_proto_depIdxs = []int32{
-	18, // 0: campaign.v1.CreateCampaignRequest.gm_mode:type_name -> campaign.v1.GmMode
-	19, // 1: campaign.v1.CreateCampaignResponse.campaign:type_name -> campaign.v1.Campaign
-	19, // 2: campaign.v1.ListCampaignsResponse.campaigns:type_name -> campaign.v1.Campaign
-	19, // 3: campaign.v1.GetCampaignResponse.campaign:type_name -> campaign.v1.Campaign
-	20, // 4: campaign.v1.CreateParticipantRequest.role:type_name -> campaign.v1.ParticipantRole
-	21, // 5: campaign.v1.CreateParticipantRequest.controller:type_name -> campaign.v1.Controller
-	22, // 6: campaign.v1.CreateParticipantResponse.participant:type_name -> campaign.v1.Participant
-	22, // 7: campaign.v1.ListParticipantsResponse.participants:type_name -> campaign.v1.Participant
-	22, // 8: campaign.v1.GetParticipantResponse.participant:type_name -> campaign.v1.Participant
-	23, // 9: campaign.v1.CreateCharacterRequest.kind:type_name -> campaign.v1.CharacterKind
-	24, // 10: campaign.v1.CreateCharacterResponse.character:type_name -> campaign.v1.Character
-	24, // 11: campaign.v1.ListCharactersResponse.characters:type_name -> campaign.v1.Character
-	25, // 12: campaign.v1.SetDefaultControlRequest.controller:type_name -> campaign.v1.CharacterController
-	25, // 13: campaign.v1.SetDefaultControlResponse.controller:type_name -> campaign.v1.CharacterController
-	14, // [14:14] is the sub-list for method output_type
-	14, // [14:14] is the sub-list for method input_type
-	14, // [14:14] is the sub-list for extension type_name
-	14, // [14:14] is the sub-list for extension extendee
-	0,  // [0:14] is the sub-list for field type_name
+	25, // 0: campaign.v1.CreateCampaignRequest.gm_mode:type_name -> campaign.v1.GmMode
+	26, // 1: campaign.v1.CreateCampaignResponse.campaign:type_name -> campaign.v1.Campaign
+	26, // 2: campaign.v1.ListCampaignsResponse.campaigns:type_name -> campaign.v1.Campaign
+	26, // 3: campaign.v1.GetCampaignResponse.campaign:type_name -> campaign.v1.Campaign
+	27, // 4: campaign.v1.CreateParticipantRequest.role:type_name -> campaign.v1.ParticipantRole
+	28, // 5: campaign.v1.CreateParticipantRequest.controller:type_name -> campaign.v1.Controller
+	29, // 6: campaign.v1.CreateParticipantResponse.participant:type_name -> campaign.v1.Participant
+	29, // 7: campaign.v1.ListParticipantsResponse.participants:type_name -> campaign.v1.Participant
+	29, // 8: campaign.v1.GetParticipantResponse.participant:type_name -> campaign.v1.Participant
+	30, // 9: campaign.v1.CreateCharacterRequest.kind:type_name -> campaign.v1.CharacterKind
+	31, // 10: campaign.v1.CreateCharacterResponse.character:type_name -> campaign.v1.Character
+	31, // 11: campaign.v1.ListCharactersResponse.characters:type_name -> campaign.v1.Character
+	32, // 12: campaign.v1.SetDefaultControlRequest.controller:type_name -> campaign.v1.CharacterController
+	32, // 13: campaign.v1.SetDefaultControlResponse.controller:type_name -> campaign.v1.CharacterController
+	31, // 14: campaign.v1.GetCharacterSheetResponse.character:type_name -> campaign.v1.Character
+	33, // 15: campaign.v1.GetCharacterSheetResponse.profile:type_name -> campaign.v1.CharacterProfile
+	34, // 16: campaign.v1.GetCharacterSheetResponse.state:type_name -> campaign.v1.CharacterState
+	24, // 17: campaign.v1.PatchCharacterProfileRequest.traits:type_name -> campaign.v1.PatchCharacterProfileRequest.TraitsEntry
+	33, // 18: campaign.v1.PatchCharacterProfileResponse.profile:type_name -> campaign.v1.CharacterProfile
+	34, // 19: campaign.v1.PatchCharacterStateResponse.state:type_name -> campaign.v1.CharacterState
+	20, // [20:20] is the sub-list for method output_type
+	20, // [20:20] is the sub-list for method input_type
+	20, // [20:20] is the sub-list for extension type_name
+	20, // [20:20] is the sub-list for extension extendee
+	0,  // [0:20] is the sub-list for field type_name
 }
 
 func init() { file_campaign_v1_requests_proto_init() }
@@ -1175,13 +1623,15 @@ func file_campaign_v1_requests_proto_init() {
 	file_campaign_v1_participant_proto_init()
 	file_campaign_v1_character_proto_init()
 	file_campaign_v1_controller_proto_init()
+	file_campaign_v1_requests_proto_msgTypes[20].OneofWrappers = []any{}
+	file_campaign_v1_requests_proto_msgTypes[22].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_campaign_v1_requests_proto_rawDesc), len(file_campaign_v1_requests_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   18,
+			NumMessages:   25,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

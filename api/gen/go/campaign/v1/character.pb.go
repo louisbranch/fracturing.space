@@ -163,6 +163,182 @@ func (x *Character) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+type CharacterProfile struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	CampaignId      string                 `protobuf:"bytes,1,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"`
+	CharacterId     string                 `protobuf:"bytes,2,opt,name=character_id,json=characterId,proto3" json:"character_id,omitempty"`
+	Traits          map[string]int32       `protobuf:"bytes,3,rep,name=traits,proto3" json:"traits,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
+	HpMax           int32                  `protobuf:"varint,4,opt,name=hp_max,json=hpMax,proto3" json:"hp_max,omitempty"`
+	StressMax       int32                  `protobuf:"varint,5,opt,name=stress_max,json=stressMax,proto3" json:"stress_max,omitempty"`
+	Evasion         int32                  `protobuf:"varint,6,opt,name=evasion,proto3" json:"evasion,omitempty"`
+	MajorThreshold  int32                  `protobuf:"varint,7,opt,name=major_threshold,json=majorThreshold,proto3" json:"major_threshold,omitempty"`
+	SevereThreshold int32                  `protobuf:"varint,8,opt,name=severe_threshold,json=severeThreshold,proto3" json:"severe_threshold,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *CharacterProfile) Reset() {
+	*x = CharacterProfile{}
+	mi := &file_campaign_v1_character_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CharacterProfile) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CharacterProfile) ProtoMessage() {}
+
+func (x *CharacterProfile) ProtoReflect() protoreflect.Message {
+	mi := &file_campaign_v1_character_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CharacterProfile.ProtoReflect.Descriptor instead.
+func (*CharacterProfile) Descriptor() ([]byte, []int) {
+	return file_campaign_v1_character_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *CharacterProfile) GetCampaignId() string {
+	if x != nil {
+		return x.CampaignId
+	}
+	return ""
+}
+
+func (x *CharacterProfile) GetCharacterId() string {
+	if x != nil {
+		return x.CharacterId
+	}
+	return ""
+}
+
+func (x *CharacterProfile) GetTraits() map[string]int32 {
+	if x != nil {
+		return x.Traits
+	}
+	return nil
+}
+
+func (x *CharacterProfile) GetHpMax() int32 {
+	if x != nil {
+		return x.HpMax
+	}
+	return 0
+}
+
+func (x *CharacterProfile) GetStressMax() int32 {
+	if x != nil {
+		return x.StressMax
+	}
+	return 0
+}
+
+func (x *CharacterProfile) GetEvasion() int32 {
+	if x != nil {
+		return x.Evasion
+	}
+	return 0
+}
+
+func (x *CharacterProfile) GetMajorThreshold() int32 {
+	if x != nil {
+		return x.MajorThreshold
+	}
+	return 0
+}
+
+func (x *CharacterProfile) GetSevereThreshold() int32 {
+	if x != nil {
+		return x.SevereThreshold
+	}
+	return 0
+}
+
+type CharacterState struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CampaignId    string                 `protobuf:"bytes,1,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"`
+	CharacterId   string                 `protobuf:"bytes,2,opt,name=character_id,json=characterId,proto3" json:"character_id,omitempty"`
+	Hope          int32                  `protobuf:"varint,3,opt,name=hope,proto3" json:"hope,omitempty"`
+	Stress        int32                  `protobuf:"varint,4,opt,name=stress,proto3" json:"stress,omitempty"`
+	Hp            int32                  `protobuf:"varint,5,opt,name=hp,proto3" json:"hp,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CharacterState) Reset() {
+	*x = CharacterState{}
+	mi := &file_campaign_v1_character_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CharacterState) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CharacterState) ProtoMessage() {}
+
+func (x *CharacterState) ProtoReflect() protoreflect.Message {
+	mi := &file_campaign_v1_character_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CharacterState.ProtoReflect.Descriptor instead.
+func (*CharacterState) Descriptor() ([]byte, []int) {
+	return file_campaign_v1_character_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *CharacterState) GetCampaignId() string {
+	if x != nil {
+		return x.CampaignId
+	}
+	return ""
+}
+
+func (x *CharacterState) GetCharacterId() string {
+	if x != nil {
+		return x.CharacterId
+	}
+	return ""
+}
+
+func (x *CharacterState) GetHope() int32 {
+	if x != nil {
+		return x.Hope
+	}
+	return 0
+}
+
+func (x *CharacterState) GetStress() int32 {
+	if x != nil {
+		return x.Stress
+	}
+	return 0
+}
+
+func (x *CharacterState) GetHp() int32 {
+	if x != nil {
+		return x.Hp
+	}
+	return 0
+}
+
 var File_campaign_v1_character_proto protoreflect.FileDescriptor
 
 const file_campaign_v1_character_proto_rawDesc = "" +
@@ -178,7 +354,28 @@ const file_campaign_v1_character_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt*@\n" +
+	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xf8\x02\n" +
+	"\x10CharacterProfile\x12\x1f\n" +
+	"\vcampaign_id\x18\x01 \x01(\tR\n" +
+	"campaignId\x12!\n" +
+	"\fcharacter_id\x18\x02 \x01(\tR\vcharacterId\x12A\n" +
+	"\x06traits\x18\x03 \x03(\v2).campaign.v1.CharacterProfile.TraitsEntryR\x06traits\x12\x15\n" +
+	"\x06hp_max\x18\x04 \x01(\x05R\x05hpMax\x12\x1d\n" +
+	"\n" +
+	"stress_max\x18\x05 \x01(\x05R\tstressMax\x12\x18\n" +
+	"\aevasion\x18\x06 \x01(\x05R\aevasion\x12'\n" +
+	"\x0fmajor_threshold\x18\a \x01(\x05R\x0emajorThreshold\x12)\n" +
+	"\x10severe_threshold\x18\b \x01(\x05R\x0fsevereThreshold\x1a9\n" +
+	"\vTraitsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01\"\x90\x01\n" +
+	"\x0eCharacterState\x12\x1f\n" +
+	"\vcampaign_id\x18\x01 \x01(\tR\n" +
+	"campaignId\x12!\n" +
+	"\fcharacter_id\x18\x02 \x01(\tR\vcharacterId\x12\x12\n" +
+	"\x04hope\x18\x03 \x01(\x05R\x04hope\x12\x16\n" +
+	"\x06stress\x18\x04 \x01(\x05R\x06stress\x12\x0e\n" +
+	"\x02hp\x18\x05 \x01(\x05R\x02hp*@\n" +
 	"\rCharacterKind\x12\x1e\n" +
 	"\x1aCHARACTER_KIND_UNSPECIFIED\x10\x00\x12\x06\n" +
 	"\x02PC\x10\x01\x12\a\n" +
@@ -197,21 +394,25 @@ func file_campaign_v1_character_proto_rawDescGZIP() []byte {
 }
 
 var file_campaign_v1_character_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_campaign_v1_character_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_campaign_v1_character_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_campaign_v1_character_proto_goTypes = []any{
 	(CharacterKind)(0),            // 0: campaign.v1.CharacterKind
 	(*Character)(nil),             // 1: campaign.v1.Character
-	(*timestamppb.Timestamp)(nil), // 2: google.protobuf.Timestamp
+	(*CharacterProfile)(nil),      // 2: campaign.v1.CharacterProfile
+	(*CharacterState)(nil),        // 3: campaign.v1.CharacterState
+	nil,                           // 4: campaign.v1.CharacterProfile.TraitsEntry
+	(*timestamppb.Timestamp)(nil), // 5: google.protobuf.Timestamp
 }
 var file_campaign_v1_character_proto_depIdxs = []int32{
 	0, // 0: campaign.v1.Character.kind:type_name -> campaign.v1.CharacterKind
-	2, // 1: campaign.v1.Character.created_at:type_name -> google.protobuf.Timestamp
-	2, // 2: campaign.v1.Character.updated_at:type_name -> google.protobuf.Timestamp
-	3, // [3:3] is the sub-list for method output_type
-	3, // [3:3] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	5, // 1: campaign.v1.Character.created_at:type_name -> google.protobuf.Timestamp
+	5, // 2: campaign.v1.Character.updated_at:type_name -> google.protobuf.Timestamp
+	4, // 3: campaign.v1.CharacterProfile.traits:type_name -> campaign.v1.CharacterProfile.TraitsEntry
+	4, // [4:4] is the sub-list for method output_type
+	4, // [4:4] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_campaign_v1_character_proto_init() }
@@ -225,7 +426,7 @@ func file_campaign_v1_character_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_campaign_v1_character_proto_rawDesc), len(file_campaign_v1_character_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   1,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
