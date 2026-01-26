@@ -5,48 +5,48 @@ import (
 	"testing"
 )
 
-func TestActorControllerValidate(t *testing.T) {
+func TestCharacterControllerValidate(t *testing.T) {
 	tests := []struct {
 		name       string
-		controller ActorController
+		controller CharacterController
 		wantErr    error
 	}{
 		{
 			name: "valid GM controller",
-			controller: ActorController{
+			controller: CharacterController{
 				IsGM: true,
 			},
 			wantErr: nil,
 		},
 		{
 			name: "valid participant controller",
-			controller: ActorController{
+			controller: CharacterController{
 				ParticipantID: "participant-123",
 			},
 			wantErr: nil,
 		},
 		{
 			name: "invalid: both set",
-			controller: ActorController{
+			controller: CharacterController{
 				IsGM:          true,
 				ParticipantID: "participant-123",
 			},
-			wantErr: ErrInvalidActorController,
+			wantErr: ErrInvalidCharacterController,
 		},
 		{
 			name: "invalid: neither set",
-			controller: ActorController{
+			controller: CharacterController{
 				IsGM:          false,
 				ParticipantID: "",
 			},
-			wantErr: ErrInvalidActorController,
+			wantErr: ErrInvalidCharacterController,
 		},
 		{
 			name: "invalid: empty participant ID",
-			controller: ActorController{
+			controller: CharacterController{
 				ParticipantID: "   ",
 			},
-			wantErr: ErrInvalidActorController,
+			wantErr: ErrInvalidCharacterController,
 		},
 	}
 

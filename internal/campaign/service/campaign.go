@@ -20,15 +20,15 @@ const (
 	maxListCampaignsPageSize        = 10
 	defaultListParticipantsPageSize = 10
 	maxListParticipantsPageSize     = 10
-	defaultListActorsPageSize       = 10
-	maxListActorsPageSize           = 10
+	defaultListCharactersPageSize   = 10
+	maxListCharactersPageSize       = 10
 )
 
 // Stores groups all campaign-related storage interfaces.
 type Stores struct {
 	Campaign       storage.CampaignStore
 	Participant    storage.ParticipantStore
-	Actor          storage.ActorStore
+	Character      storage.CharacterStore
 	ControlDefault storage.ControlDefaultStore
 }
 
@@ -84,7 +84,7 @@ func (s *CampaignService) CreateCampaign(ctx context.Context, in *campaignv1.Cre
 			Name:            campaign.Name,
 			GmMode:          gmModeToProto(campaign.GmMode),
 			ParticipantCount: int32(campaign.ParticipantCount),
-			ActorCount:       int32(campaign.ActorCount),
+			CharacterCount:   int32(campaign.CharacterCount),
 			ThemePrompt:     campaign.ThemePrompt,
 			CreatedAt:       timestamppb.New(campaign.CreatedAt),
 			UpdatedAt:       timestamppb.New(campaign.UpdatedAt),
@@ -131,7 +131,7 @@ func (s *CampaignService) ListCampaigns(ctx context.Context, in *campaignv1.List
 			Name:            campaign.Name,
 			GmMode:          gmModeToProto(campaign.GmMode),
 			ParticipantCount: int32(campaign.ParticipantCount),
-			ActorCount:       int32(campaign.ActorCount),
+			CharacterCount:   int32(campaign.CharacterCount),
 			ThemePrompt:     campaign.ThemePrompt,
 			CreatedAt:       timestamppb.New(campaign.CreatedAt),
 			UpdatedAt:       timestamppb.New(campaign.UpdatedAt),
@@ -170,7 +170,7 @@ func (s *CampaignService) GetCampaign(ctx context.Context, in *campaignv1.GetCam
 			Name:            campaign.Name,
 			GmMode:          gmModeToProto(campaign.GmMode),
 			ParticipantCount: int32(campaign.ParticipantCount),
-			ActorCount:       int32(campaign.ActorCount),
+			CharacterCount:   int32(campaign.CharacterCount),
 			ThemePrompt:     campaign.ThemePrompt,
 			CreatedAt:       timestamppb.New(campaign.CreatedAt),
 			UpdatedAt:       timestamppb.New(campaign.UpdatedAt),
@@ -208,14 +208,14 @@ func gmModeToProto(mode domain.GmMode) campaignv1.GmMode {
 	}
 }
 
-// CreateActor creates an actor (PC/NPC/etc) for a campaign.
-func (s *CampaignService) CreateActor(ctx context.Context, in *campaignv1.CreateActorRequest) (*campaignv1.CreateActorResponse, error) {
+// CreateCharacter creates a character (PC/NPC/etc) for a campaign.
+func (s *CampaignService) CreateCharacter(ctx context.Context, in *campaignv1.CreateCharacterRequest) (*campaignv1.CreateCharacterResponse, error) {
 	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "create actor request is required")
+		return nil, status.Error(codes.InvalidArgument, "create character request is required")
 	}
 
-	if s.stores.Actor == nil {
-		return nil, status.Error(codes.Internal, "actor store is not configured")
+	if s.stores.Character == nil {
+		return nil, status.Error(codes.Internal, "character store is not configured")
 	}
 
 	campaignID := strings.TrimSpace(in.GetCampaignId())
@@ -223,76 +223,76 @@ func (s *CampaignService) CreateActor(ctx context.Context, in *campaignv1.Create
 		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
 	}
 
-	actor, err := domain.CreateActor(domain.CreateActorInput{
+	character, err := domain.CreateCharacter(domain.CreateCharacterInput{
 		CampaignID: campaignID,
 		Name:       in.GetName(),
-		Kind:       actorKindFromProto(in.GetKind()),
+		Kind:       characterKindFromProto(in.GetKind()),
 		Notes:      in.GetNotes(),
 	}, s.clock, s.idGenerator)
 	if err != nil {
-		if errors.Is(err, domain.ErrEmptyActorName) || errors.Is(err, domain.ErrInvalidActorKind) || errors.Is(err, domain.ErrEmptyCampaignID) {
+		if errors.Is(err, domain.ErrEmptyCharacterName) || errors.Is(err, domain.ErrInvalidCharacterKind) || errors.Is(err, domain.ErrEmptyCampaignID) {
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
-		return nil, status.Errorf(codes.Internal, "create actor: %v", err)
+		return nil, status.Errorf(codes.Internal, "create character: %v", err)
 	}
 
-	if err := s.stores.Actor.PutActor(ctx, actor); err != nil {
+	if err := s.stores.Character.PutCharacter(ctx, character); err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			return nil, status.Error(codes.NotFound, "campaign not found")
 		}
-		return nil, status.Errorf(codes.Internal, "persist actor: %v", err)
+		return nil, status.Errorf(codes.Internal, "persist character: %v", err)
 	}
 
-	response := &campaignv1.CreateActorResponse{
-		Actor: &campaignv1.Actor{
-			Id:         actor.ID,
-			CampaignId: actor.CampaignID,
-			Name:       actor.Name,
-			Kind:       actorKindToProto(actor.Kind),
-			Notes:      actor.Notes,
-			CreatedAt:  timestamppb.New(actor.CreatedAt),
-			UpdatedAt:  timestamppb.New(actor.UpdatedAt),
+	response := &campaignv1.CreateCharacterResponse{
+		Character: &campaignv1.Character{
+			Id:         character.ID,
+			CampaignId: character.CampaignID,
+			Name:       character.Name,
+			Kind:       characterKindToProto(character.Kind),
+			Notes:      character.Notes,
+			CreatedAt:  timestamppb.New(character.CreatedAt),
+			UpdatedAt:  timestamppb.New(character.UpdatedAt),
 		},
 	}
 
 	return response, nil
 }
 
-// actorKindFromProto maps a protobuf actor kind to the domain representation.
-func actorKindFromProto(kind campaignv1.ActorKind) domain.ActorKind {
+// characterKindFromProto maps a protobuf character kind to the domain representation.
+func characterKindFromProto(kind campaignv1.CharacterKind) domain.CharacterKind {
 	switch kind {
-	case campaignv1.ActorKind_PC:
-		return domain.ActorKindPC
-	case campaignv1.ActorKind_NPC:
-		return domain.ActorKindNPC
+	case campaignv1.CharacterKind_PC:
+		return domain.CharacterKindPC
+	case campaignv1.CharacterKind_NPC:
+		return domain.CharacterKindNPC
 	default:
-		return domain.ActorKindUnspecified
+		return domain.CharacterKindUnspecified
 	}
 }
 
-// actorKindToProto maps a domain actor kind to the protobuf representation.
-func actorKindToProto(kind domain.ActorKind) campaignv1.ActorKind {
+// characterKindToProto maps a domain character kind to the protobuf representation.
+func characterKindToProto(kind domain.CharacterKind) campaignv1.CharacterKind {
 	switch kind {
-	case domain.ActorKindPC:
-		return campaignv1.ActorKind_PC
-	case domain.ActorKindNPC:
-		return campaignv1.ActorKind_NPC
+	case domain.CharacterKindPC:
+		return campaignv1.CharacterKind_PC
+	case domain.CharacterKindNPC:
+		return campaignv1.CharacterKind_NPC
 	default:
-		return campaignv1.ActorKind_ACTOR_KIND_UNSPECIFIED
+		return campaignv1.CharacterKind_CHARACTER_KIND_UNSPECIFIED
 	}
 }
 
-// ListActors returns a page of actor records for a campaign.
-func (s *CampaignService) ListActors(ctx context.Context, in *campaignv1.ListActorsRequest) (*campaignv1.ListActorsResponse, error) {
+// ListCharacters returns a page of character records for a campaign.
+func (s *CampaignService) ListCharacters(ctx context.Context, in *campaignv1.ListCharactersRequest) (*campaignv1.ListCharactersResponse, error) {
 	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "list actors request is required")
+		return nil, status.Error(codes.InvalidArgument, "list characters request is required")
 	}
 
 	if s.stores.Campaign == nil {
 		return nil, status.Error(codes.Internal, "campaign store is not configured")
 	}
-	if s.stores.Actor == nil {
-		return nil, status.Error(codes.Internal, "actor store is not configured")
+	if s.stores.Character == nil {
+		return nil, status.Error(codes.Internal, "character store is not configured")
 	}
 
 	// Validate campaign exists
@@ -310,41 +310,41 @@ func (s *CampaignService) ListActors(ctx context.Context, in *campaignv1.ListAct
 
 	pageSize := int(in.GetPageSize())
 	if pageSize <= 0 {
-		pageSize = defaultListActorsPageSize
+		pageSize = defaultListCharactersPageSize
 	}
-	if pageSize > maxListActorsPageSize {
-		pageSize = maxListActorsPageSize
+	if pageSize > maxListCharactersPageSize {
+		pageSize = maxListCharactersPageSize
 	}
 
-	page, err := s.stores.Actor.ListActors(ctx, campaignID, pageSize, in.GetPageToken())
+	page, err := s.stores.Character.ListCharacters(ctx, campaignID, pageSize, in.GetPageToken())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list actors: %v", err)
+		return nil, status.Errorf(codes.Internal, "list characters: %v", err)
 	}
 
-	response := &campaignv1.ListActorsResponse{
+	response := &campaignv1.ListCharactersResponse{
 		NextPageToken: page.NextPageToken,
 	}
-	if len(page.Actors) == 0 {
+	if len(page.Characters) == 0 {
 		return response, nil
 	}
 
-	response.Actors = make([]*campaignv1.Actor, 0, len(page.Actors))
-	for _, actor := range page.Actors {
-		response.Actors = append(response.Actors, &campaignv1.Actor{
-			Id:         actor.ID,
-			CampaignId: actor.CampaignID,
-			Name:       actor.Name,
-			Kind:       actorKindToProto(actor.Kind),
-			Notes:      actor.Notes,
-			CreatedAt:  timestamppb.New(actor.CreatedAt),
-			UpdatedAt:  timestamppb.New(actor.UpdatedAt),
+	response.Characters = make([]*campaignv1.Character, 0, len(page.Characters))
+	for _, character := range page.Characters {
+		response.Characters = append(response.Characters, &campaignv1.Character{
+			Id:         character.ID,
+			CampaignId: character.CampaignID,
+			Name:       character.Name,
+			Kind:       characterKindToProto(character.Kind),
+			Notes:      character.Notes,
+			CreatedAt:  timestamppb.New(character.CreatedAt),
+			UpdatedAt:  timestamppb.New(character.UpdatedAt),
 		})
 	}
 
 	return response, nil
 }
 
-// SetDefaultControl assigns a campaign-scoped default controller for an actor.
+// SetDefaultControl assigns a campaign-scoped default controller for a character.
 func (s *CampaignService) SetDefaultControl(ctx context.Context, in *campaignv1.SetDefaultControlRequest) (*campaignv1.SetDefaultControlResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "set default control request is required")
@@ -353,8 +353,8 @@ func (s *CampaignService) SetDefaultControl(ctx context.Context, in *campaignv1.
 	if s.stores.Campaign == nil {
 		return nil, status.Error(codes.Internal, "campaign store is not configured")
 	}
-	if s.stores.Actor == nil {
-		return nil, status.Error(codes.Internal, "actor store is not configured")
+	if s.stores.Character == nil {
+		return nil, status.Error(codes.Internal, "character store is not configured")
 	}
 	if s.stores.ControlDefault == nil {
 		return nil, status.Error(codes.Internal, "control default store is not configured")
@@ -373,24 +373,24 @@ func (s *CampaignService) SetDefaultControl(ctx context.Context, in *campaignv1.
 		return nil, status.Errorf(codes.Internal, "check campaign: %v", err)
 	}
 
-	// Validate actor exists
-	actorID := strings.TrimSpace(in.GetActorId())
-	if actorID == "" {
-		return nil, status.Error(codes.InvalidArgument, "actor id is required")
+	// Validate character exists
+	characterID := strings.TrimSpace(in.GetCharacterId())
+	if characterID == "" {
+		return nil, status.Error(codes.InvalidArgument, "character id is required")
 	}
-	_, err = s.stores.Actor.GetActor(ctx, campaignID, actorID)
+	_, err = s.stores.Character.GetCharacter(ctx, campaignID, characterID)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
-			return nil, status.Error(codes.NotFound, "actor not found")
+			return nil, status.Error(codes.NotFound, "character not found")
 		}
-		return nil, status.Errorf(codes.Internal, "check actor: %v", err)
+		return nil, status.Errorf(codes.Internal, "check character: %v", err)
 	}
 
 	// Validate and convert controller
 	if in.GetController() == nil {
 		return nil, status.Error(codes.InvalidArgument, "controller is required")
 	}
-	controller, err := actorControllerFromProto(in.GetController())
+	controller, err := characterControllerFromProto(in.GetController())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
@@ -410,54 +410,54 @@ func (s *CampaignService) SetDefaultControl(ctx context.Context, in *campaignv1.
 	}
 
 	// Persist controller
-	if err := s.stores.ControlDefault.PutControlDefault(ctx, campaignID, actorID, controller); err != nil {
+	if err := s.stores.ControlDefault.PutControlDefault(ctx, campaignID, characterID, controller); err != nil {
 		return nil, status.Errorf(codes.Internal, "persist control default: %v", err)
 	}
 
 	response := &campaignv1.SetDefaultControlResponse{
-		CampaignId: campaignID,
-		ActorId:    actorID,
-		Controller: actorControllerToProto(controller),
+		CampaignId:   campaignID,
+		CharacterId: characterID,
+		Controller:   characterControllerToProto(controller),
 	}
 
 	return response, nil
 }
 
-// actorControllerFromProto converts a protobuf ActorController to the domain representation.
-func actorControllerFromProto(pb *campaignv1.ActorController) (domain.ActorController, error) {
+// characterControllerFromProto converts a protobuf CharacterController to the domain representation.
+func characterControllerFromProto(pb *campaignv1.CharacterController) (domain.CharacterController, error) {
 	if pb == nil {
-		return domain.ActorController{}, domain.ErrInvalidActorController
+		return domain.CharacterController{}, domain.ErrInvalidCharacterController
 	}
 
 	switch c := pb.GetController().(type) {
-	case *campaignv1.ActorController_Gm:
+	case *campaignv1.CharacterController_Gm:
 		if c.Gm == nil {
-			return domain.ActorController{}, domain.ErrInvalidActorController
+			return domain.CharacterController{}, domain.ErrInvalidCharacterController
 		}
 		return domain.NewGmController(), nil
-	case *campaignv1.ActorController_Participant:
+	case *campaignv1.CharacterController_Participant:
 		if c.Participant == nil {
-			return domain.ActorController{}, domain.ErrInvalidActorController
+			return domain.CharacterController{}, domain.ErrInvalidCharacterController
 		}
 		return domain.NewParticipantController(c.Participant.GetParticipantId())
 	default:
-		return domain.ActorController{}, domain.ErrInvalidActorController
+		return domain.CharacterController{}, domain.ErrInvalidCharacterController
 	}
 }
 
-// actorControllerToProto converts a domain ActorController to the protobuf representation.
+// characterControllerToProto converts a domain CharacterController to the protobuf representation.
 // The controller must be valid (exactly one of IsGM or ParticipantID set).
-func actorControllerToProto(ctrl domain.ActorController) *campaignv1.ActorController {
+func characterControllerToProto(ctrl domain.CharacterController) *campaignv1.CharacterController {
 	if ctrl.IsGM {
-		return &campaignv1.ActorController{
-			Controller: &campaignv1.ActorController_Gm{
+		return &campaignv1.CharacterController{
+			Controller: &campaignv1.CharacterController_Gm{
 				Gm: &campaignv1.GmController{},
 			},
 		}
 	}
 	// If not GM, assume participant controller (validation should ensure this is valid).
-	return &campaignv1.ActorController{
-		Controller: &campaignv1.ActorController_Participant{
+	return &campaignv1.CharacterController{
+		Controller: &campaignv1.CharacterController_Participant{
 			Participant: &campaignv1.ParticipantController{
 				ParticipantId: ctrl.ParticipantID,
 			},

@@ -13,15 +13,15 @@ import (
 )
 
 type fakeControlDefaultStore struct {
-	putController domain.ActorController
+	putController domain.CharacterController
 	putCampaignID string
-	putActorID    string
+	putCharacterID    string
 	putErr        error
 }
 
-func (f *fakeControlDefaultStore) PutControlDefault(ctx context.Context, campaignID, actorID string, controller domain.ActorController) error {
+func (f *fakeControlDefaultStore) PutControlDefault(ctx context.Context, campaignID, characterID string, controller domain.CharacterController) error {
 	f.putCampaignID = campaignID
-	f.putActorID = actorID
+	f.putCharacterID = characterID
 	f.putController = controller
 	return f.putErr
 }
@@ -35,12 +35,12 @@ func TestSetDefaultControlSuccessGM(t *testing.T) {
 		return domain.Campaign{}, storage.ErrNotFound
 	}
 
-	actorStore := &fakeActorStore{}
-	actorStore.getErr = nil
-	actorStore.getActor = domain.Actor{
-		ID:         "actor-456",
+	characterStore := &fakeCharacterStore{}
+	characterStore.getErr = nil
+	characterStore.getCharacter = domain.Character{
+		ID:         "character-456",
 		CampaignID: "camp-123",
-		Name:       "Test Actor",
+		Name:       "Test Character",
 	}
 
 	controlStore := &fakeControlDefaultStore{}
@@ -48,16 +48,16 @@ func TestSetDefaultControlSuccessGM(t *testing.T) {
 	service := &CampaignService{
 		stores: Stores{
 			Campaign:       campaignStore,
-			Actor:          actorStore,
+			Character:          characterStore,
 			ControlDefault: controlStore,
 		},
 	}
 
 	response, err := service.SetDefaultControl(context.Background(), &campaignv1.SetDefaultControlRequest{
 		CampaignId: "camp-123",
-		ActorId:    "actor-456",
-		Controller: &campaignv1.ActorController{
-			Controller: &campaignv1.ActorController_Gm{
+		CharacterId:    "character-456",
+		Controller: &campaignv1.CharacterController{
+			Controller: &campaignv1.CharacterController_Gm{
 				Gm: &campaignv1.GmController{},
 			},
 		},
@@ -71,14 +71,14 @@ func TestSetDefaultControlSuccessGM(t *testing.T) {
 	if response.CampaignId != "camp-123" {
 		t.Fatalf("expected campaign id camp-123, got %q", response.CampaignId)
 	}
-	if response.ActorId != "actor-456" {
-		t.Fatalf("expected actor id actor-456, got %q", response.ActorId)
+	if response.CharacterId != "character-456" {
+		t.Fatalf("expected character id character-456, got %q", response.CharacterId)
 	}
 	if controlStore.putCampaignID != "camp-123" {
 		t.Fatalf("expected stored campaign id camp-123, got %q", controlStore.putCampaignID)
 	}
-	if controlStore.putActorID != "actor-456" {
-		t.Fatalf("expected stored actor id actor-456, got %q", controlStore.putActorID)
+	if controlStore.putCharacterID != "character-456" {
+		t.Fatalf("expected stored character id character-456, got %q", controlStore.putCharacterID)
 	}
 	if !controlStore.putController.IsGM {
 		t.Fatal("expected stored controller to be GM")
@@ -97,12 +97,12 @@ func TestSetDefaultControlSuccessParticipant(t *testing.T) {
 		return domain.Campaign{}, storage.ErrNotFound
 	}
 
-	actorStore := &fakeActorStore{}
-	actorStore.getErr = nil
-	actorStore.getActor = domain.Actor{
-		ID:         "actor-456",
+	characterStore := &fakeCharacterStore{}
+	characterStore.getErr = nil
+	characterStore.getCharacter = domain.Character{
+		ID:         "character-456",
 		CampaignID: "camp-123",
-		Name:       "Test Actor",
+		Name:       "Test Character",
 	}
 
 	participantStore := &fakeParticipantStore{}
@@ -117,7 +117,7 @@ func TestSetDefaultControlSuccessParticipant(t *testing.T) {
 	service := &CampaignService{
 		stores: Stores{
 			Campaign:       campaignStore,
-			Actor:          actorStore,
+			Character:          characterStore,
 			Participant:    participantStore,
 			ControlDefault: controlStore,
 		},
@@ -125,9 +125,9 @@ func TestSetDefaultControlSuccessParticipant(t *testing.T) {
 
 	response, err := service.SetDefaultControl(context.Background(), &campaignv1.SetDefaultControlRequest{
 		CampaignId: "camp-123",
-		ActorId:    "actor-456",
-		Controller: &campaignv1.ActorController{
-			Controller: &campaignv1.ActorController_Participant{
+		CharacterId:    "character-456",
+		Controller: &campaignv1.CharacterController{
+			Controller: &campaignv1.CharacterController_Participant{
 				Participant: &campaignv1.ParticipantController{
 					ParticipantId: "participant-789",
 				},
@@ -143,14 +143,14 @@ func TestSetDefaultControlSuccessParticipant(t *testing.T) {
 	if response.CampaignId != "camp-123" {
 		t.Fatalf("expected campaign id camp-123, got %q", response.CampaignId)
 	}
-	if response.ActorId != "actor-456" {
-		t.Fatalf("expected actor id actor-456, got %q", response.ActorId)
+	if response.CharacterId != "character-456" {
+		t.Fatalf("expected character id character-456, got %q", response.CharacterId)
 	}
 	if controlStore.putCampaignID != "camp-123" {
 		t.Fatalf("expected stored campaign id camp-123, got %q", controlStore.putCampaignID)
 	}
-	if controlStore.putActorID != "actor-456" {
-		t.Fatalf("expected stored actor id actor-456, got %q", controlStore.putActorID)
+	if controlStore.putCharacterID != "character-456" {
+		t.Fatalf("expected stored character id character-456, got %q", controlStore.putCharacterID)
 	}
 	if controlStore.putController.IsGM {
 		t.Fatal("expected stored controller to be participant")
@@ -163,7 +163,7 @@ func TestSetDefaultControlSuccessParticipant(t *testing.T) {
 func TestSetDefaultControlNilRequest(t *testing.T) {
 	service := NewCampaignService(Stores{
 		Campaign:       &fakeCampaignStore{},
-		Actor:          &fakeActorStore{},
+			Character:          &fakeCharacterStore{},
 		ControlDefault: &fakeControlDefaultStore{},
 	})
 
@@ -187,16 +187,16 @@ func TestSetDefaultControlMissingCampaign(t *testing.T) {
 	service := &CampaignService{
 		stores: Stores{
 			Campaign:       campaignStore,
-			Actor:          &fakeActorStore{},
+			Character:          &fakeCharacterStore{},
 			ControlDefault: &fakeControlDefaultStore{},
 		},
 	}
 
 	_, err := service.SetDefaultControl(context.Background(), &campaignv1.SetDefaultControlRequest{
 		CampaignId: "camp-123",
-		ActorId:    "actor-456",
-		Controller: &campaignv1.ActorController{
-			Controller: &campaignv1.ActorController_Gm{
+		CharacterId:    "character-456",
+		Controller: &campaignv1.CharacterController{
+			Controller: &campaignv1.CharacterController_Gm{
 				Gm: &campaignv1.GmController{},
 			},
 		},
@@ -216,7 +216,7 @@ func TestSetDefaultControlMissingCampaign(t *testing.T) {
 	}
 }
 
-func TestSetDefaultControlMissingActor(t *testing.T) {
+func TestSetDefaultControlMissingCharacter(t *testing.T) {
 	campaignStore := &fakeCampaignStore{}
 	campaignStore.getFunc = func(ctx context.Context, id string) (domain.Campaign, error) {
 		if id == "camp-123" {
@@ -225,22 +225,22 @@ func TestSetDefaultControlMissingActor(t *testing.T) {
 		return domain.Campaign{}, storage.ErrNotFound
 	}
 
-	actorStore := &fakeActorStore{}
-	actorStore.getErr = storage.ErrNotFound
+	characterStore := &fakeCharacterStore{}
+	characterStore.getErr = storage.ErrNotFound
 
 	service := &CampaignService{
 		stores: Stores{
 			Campaign:       campaignStore,
-			Actor:          actorStore,
+			Character:          characterStore,
 			ControlDefault: &fakeControlDefaultStore{},
 		},
 	}
 
 	_, err := service.SetDefaultControl(context.Background(), &campaignv1.SetDefaultControlRequest{
 		CampaignId: "camp-123",
-		ActorId:    "actor-456",
-		Controller: &campaignv1.ActorController{
-			Controller: &campaignv1.ActorController_Gm{
+		CharacterId:    "character-456",
+		Controller: &campaignv1.CharacterController{
+			Controller: &campaignv1.CharacterController_Gm{
 				Gm: &campaignv1.GmController{},
 			},
 		},
@@ -255,8 +255,8 @@ func TestSetDefaultControlMissingActor(t *testing.T) {
 	if st.Code() != codes.NotFound {
 		t.Fatalf("expected not found, got %v", st.Code())
 	}
-	if st.Message() != "actor not found" {
-		t.Fatalf("expected 'actor not found', got %q", st.Message())
+	if st.Message() != "character not found" {
+		t.Fatalf("expected 'character not found', got %q", st.Message())
 	}
 }
 
@@ -269,12 +269,12 @@ func TestSetDefaultControlMissingParticipant(t *testing.T) {
 		return domain.Campaign{}, storage.ErrNotFound
 	}
 
-	actorStore := &fakeActorStore{}
-	actorStore.getErr = nil
-	actorStore.getActor = domain.Actor{
-		ID:         "actor-456",
+	characterStore := &fakeCharacterStore{}
+	characterStore.getErr = nil
+	characterStore.getCharacter = domain.Character{
+		ID:         "character-456",
 		CampaignID: "camp-123",
-		Name:       "Test Actor",
+		Name:       "Test Character",
 	}
 
 	participantStore := &fakeParticipantStore{}
@@ -283,7 +283,7 @@ func TestSetDefaultControlMissingParticipant(t *testing.T) {
 	service := &CampaignService{
 		stores: Stores{
 			Campaign:       campaignStore,
-			Actor:          actorStore,
+			Character:          characterStore,
 			Participant:    participantStore,
 			ControlDefault: &fakeControlDefaultStore{},
 		},
@@ -291,9 +291,9 @@ func TestSetDefaultControlMissingParticipant(t *testing.T) {
 
 	_, err := service.SetDefaultControl(context.Background(), &campaignv1.SetDefaultControlRequest{
 		CampaignId: "camp-123",
-		ActorId:    "actor-456",
-		Controller: &campaignv1.ActorController{
-			Controller: &campaignv1.ActorController_Participant{
+		CharacterId:    "character-456",
+		Controller: &campaignv1.CharacterController{
+			Controller: &campaignv1.CharacterController_Participant{
 				Participant: &campaignv1.ParticipantController{
 					ParticipantId: "participant-789",
 				},
@@ -324,18 +324,18 @@ func TestSetDefaultControlInvalidController(t *testing.T) {
 		return domain.Campaign{}, storage.ErrNotFound
 	}
 
-	actorStore := &fakeActorStore{}
-	actorStore.getErr = nil
-	actorStore.getActor = domain.Actor{
-		ID:         "actor-456",
+	characterStore := &fakeCharacterStore{}
+	characterStore.getErr = nil
+	characterStore.getCharacter = domain.Character{
+		ID:         "character-456",
 		CampaignID: "camp-123",
-		Name:       "Test Actor",
+		Name:       "Test Character",
 	}
 
 	service := &CampaignService{
 		stores: Stores{
 			Campaign:       campaignStore,
-			Actor:          actorStore,
+			Character:          characterStore,
 			ControlDefault: &fakeControlDefaultStore{},
 		},
 	}
@@ -350,7 +350,7 @@ func TestSetDefaultControlInvalidController(t *testing.T) {
 			name: "nil controller",
 			request: &campaignv1.SetDefaultControlRequest{
 				CampaignId: "camp-123",
-				ActorId:    "actor-456",
+				CharacterId:    "character-456",
 				Controller: nil,
 			},
 			wantCode: codes.InvalidArgument,
@@ -360,9 +360,9 @@ func TestSetDefaultControlInvalidController(t *testing.T) {
 			name: "empty campaign id",
 			request: &campaignv1.SetDefaultControlRequest{
 				CampaignId: "   ",
-				ActorId:    "actor-456",
-				Controller: &campaignv1.ActorController{
-					Controller: &campaignv1.ActorController_Gm{
+				CharacterId:    "character-456",
+				Controller: &campaignv1.CharacterController{
+					Controller: &campaignv1.CharacterController_Gm{
 						Gm: &campaignv1.GmController{},
 					},
 				},
@@ -371,26 +371,26 @@ func TestSetDefaultControlInvalidController(t *testing.T) {
 			wantMsg:  "campaign id is required",
 		},
 		{
-			name: "empty actor id",
+			name: "empty character id",
 			request: &campaignv1.SetDefaultControlRequest{
 				CampaignId: "camp-123",
-				ActorId:    "   ",
-				Controller: &campaignv1.ActorController{
-					Controller: &campaignv1.ActorController_Gm{
+				CharacterId:    "   ",
+				Controller: &campaignv1.CharacterController{
+					Controller: &campaignv1.CharacterController_Gm{
 						Gm: &campaignv1.GmController{},
 					},
 				},
 			},
 			wantCode: codes.InvalidArgument,
-			wantMsg:  "actor id is required",
+			wantMsg:  "character id is required",
 		},
 		{
 			name: "empty participant id",
 			request: &campaignv1.SetDefaultControlRequest{
 				CampaignId: "camp-123",
-				ActorId:    "actor-456",
-				Controller: &campaignv1.ActorController{
-					Controller: &campaignv1.ActorController_Participant{
+				CharacterId:    "character-456",
+				Controller: &campaignv1.CharacterController{
+					Controller: &campaignv1.CharacterController_Participant{
 						Participant: &campaignv1.ParticipantController{
 							ParticipantId: "   ",
 						},
@@ -431,12 +431,12 @@ func TestSetDefaultControlStoreFailure(t *testing.T) {
 		return domain.Campaign{}, storage.ErrNotFound
 	}
 
-	actorStore := &fakeActorStore{}
-	actorStore.getErr = nil
-	actorStore.getActor = domain.Actor{
-		ID:         "actor-456",
+	characterStore := &fakeCharacterStore{}
+	characterStore.getErr = nil
+	characterStore.getCharacter = domain.Character{
+		ID:         "character-456",
 		CampaignID: "camp-123",
-		Name:       "Test Actor",
+		Name:       "Test Character",
 	}
 
 	controlStore := &fakeControlDefaultStore{}
@@ -445,16 +445,16 @@ func TestSetDefaultControlStoreFailure(t *testing.T) {
 	service := &CampaignService{
 		stores: Stores{
 			Campaign:       campaignStore,
-			Actor:          actorStore,
+			Character:          characterStore,
 			ControlDefault: controlStore,
 		},
 	}
 
 	_, err := service.SetDefaultControl(context.Background(), &campaignv1.SetDefaultControlRequest{
 		CampaignId: "camp-123",
-		ActorId:    "actor-456",
-		Controller: &campaignv1.ActorController{
-			Controller: &campaignv1.ActorController_Gm{
+		CharacterId:    "character-456",
+		Controller: &campaignv1.CharacterController{
+			Controller: &campaignv1.CharacterController_Gm{
 				Gm: &campaignv1.GmController{},
 			},
 		},
@@ -478,9 +478,9 @@ func TestSetDefaultControlMissingStore(t *testing.T) {
 
 	_, err := service.SetDefaultControl(context.Background(), &campaignv1.SetDefaultControlRequest{
 		CampaignId: "camp-123",
-		ActorId:    "actor-456",
-		Controller: &campaignv1.ActorController{
-			Controller: &campaignv1.ActorController_Gm{
+		CharacterId:    "character-456",
+		Controller: &campaignv1.CharacterController{
+			Controller: &campaignv1.CharacterController_Gm{
 				Gm: &campaignv1.GmController{},
 			},
 		},

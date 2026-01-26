@@ -4,7 +4,7 @@ package campaign.v1;
 
 option go_package = "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1;campaignv1";
 
-message ActorController {
+message CharacterController {
   oneof controller {
     // If set, the controller is the GM.
     GmController gm = 1;

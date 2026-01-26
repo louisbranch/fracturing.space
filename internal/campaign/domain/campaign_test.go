@@ -33,8 +33,8 @@ func TestCreateCampaignNormalizesInput(t *testing.T) {
 	if campaign.ParticipantCount != 0 {
 		t.Fatalf("expected 0 participant count, got %d", campaign.ParticipantCount)
 	}
-	if campaign.ActorCount != 0 {
-		t.Fatalf("expected 0 actor count, got %d", campaign.ActorCount)
+	if campaign.CharacterCount != 0 {
+		t.Fatalf("expected 0 character count, got %d", campaign.CharacterCount)
 	}
 	if campaign.ThemePrompt != "moss and mist" {
 		t.Fatalf("expected theme prompt preserved, got %q", campaign.ThemePrompt)

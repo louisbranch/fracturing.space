@@ -6,18 +6,18 @@ import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1;campaignv1";
 
-message Actor {
+message Character {
   string id = 1;
   string campaign_id = 2;
   string name = 3;
-  ActorKind kind = 4;
+  CharacterKind kind = 4;
   string notes = 5;
   google.protobuf.Timestamp created_at = 6;
   google.protobuf.Timestamp updated_at = 7;
 }
 
-enum ActorKind {
-  ACTOR_KIND_UNSPECIFIED = 0;
+enum CharacterKind {
+  CHARACTER_KIND_UNSPECIFIED = 0;
   PC = 1;
   NPC = 2;
 }

@@ -182,7 +182,7 @@ Creates a new campaign metadata record.
   "name": "The Lost Expedition",
   "gm_mode": "HUMAN",
   "participant_count": 0,
-  "actor_count": 0,
+  "character_count": 0,
   "theme_prompt": "A dark fantasy campaign set in a cursed forest"
 }
 ```
@@ -216,9 +216,9 @@ Creates a participant (GM or player) for a campaign.
 }
 ```
 
-#### actor_create
+#### character_create
 
-Creates an actor (PC or NPC) for a campaign.
+Creates an character (PC or NPC) for a campaign.
 
 **Input:**
 
@@ -235,7 +235,7 @@ Creates an actor (PC or NPC) for a campaign.
 
 ```json
 {
-  "id": "actor_def456",
+  "id": "character_def456",
   "campaign_id": "camp_abc123",
   "name": "Thorin Ironforge",
   "kind": "PC",
@@ -245,16 +245,16 @@ Creates an actor (PC or NPC) for a campaign.
 }
 ```
 
-#### actor_control_set
+#### character_control_set
 
-Sets the default controller (GM or participant) for an actor in a campaign.
+Sets the default controller (GM or participant) for an character in a campaign.
 
 **Input:**
 
 ```json
 {
   "campaign_id": "camp_abc123",
-  "actor_id": "actor_def456",
+  "character_id": "character_def456",
   "controller": "part_xyz789"
 }
 ```
@@ -264,7 +264,7 @@ Sets the default controller (GM or participant) for an actor in a campaign.
 ```json
 {
   "campaign_id": "camp_abc123",
-  "actor_id": "actor_def456",
+  "character_id": "character_def456",
   "controller": "part_xyz789"
 }
 ```
@@ -533,7 +533,7 @@ Returns a JSON object with a `campaigns` array of campaign metadata records. No 
       "name": "The Lost Expedition",
       "gm_mode": "HUMAN",
       "participant_count": 3,
-      "actor_count": 2,
+      "character_count": 2,
       "theme_prompt": "A dark fantasy campaign set in a cursed forest",
       "created_at": "2025-01-15T10:00:00Z",
       "updated_at": "2025-01-15T10:00:00Z"
@@ -557,7 +557,7 @@ The `{campaign_id}` must be replaced with an actual campaign identifier when rea
     "name": "The Lost Expedition",
     "gm_mode": "HUMAN",
     "participant_count": 3,
-    "actor_count": 2,
+    "character_count": 2,
     "theme_prompt": "A dark fantasy campaign set in a cursed forest",
     "created_at": "2025-01-15T10:00:00Z",
     "updated_at": "2025-01-15T10:00:00Z"
@@ -594,9 +594,9 @@ The `{campaign_id}` must be replaced with an actual campaign identifier when rea
 }
 ```
 
-#### campaign://{campaign_id}/actors
+#### campaign://{campaign_id}/characters
 
-JSON listing of actors for a campaign. Depends on campaign (requires `campaign_id`).
+JSON listing of characters for a campaign. Depends on campaign (requires `campaign_id`).
 
 The `{campaign_id}` must be replaced with an actual campaign identifier when reading the resource.
 
@@ -604,9 +604,9 @@ The `{campaign_id}` must be replaced with an actual campaign identifier when rea
 
 ```json
 {
-  "actors": [
+  "characters": [
     {
-      "id": "actor_def456",
+      "id": "character_def456",
       "campaign_id": "camp_abc123",
       "name": "Thorin Ironforge",
       "kind": "PC",

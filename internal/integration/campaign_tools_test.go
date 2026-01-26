@@ -146,7 +146,7 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 		}
 	})
 
-	t.Run("actor create", func(t *testing.T) {
+	t.Run("character create", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
 		defer cancel()
 
@@ -168,9 +168,9 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 		}
 		campaignOutput := decodeStructuredContent[domain.CampaignCreateResult](t, campaignResult.StructuredContent)
 
-		// Test creating a PC actor
-		actorParams := &mcp.CallToolParams{
-			Name: "actor_create",
+		// Test creating a PC character
+		characterParams := &mcp.CallToolParams{
+			Name: "character_create",
 			Arguments: map[string]any{
 				"campaign_id": campaignOutput.ID,
 				"name":        "Test PC",
@@ -178,20 +178,20 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 				"notes":       "A brave warrior",
 			},
 		}
-		actorResult, err := suite.client.CallTool(ctx, actorParams)
+		characterResult, err := suite.client.CallTool(ctx, characterParams)
 		if err != nil {
-			t.Fatalf("call actor_create: %v", err)
+			t.Fatalf("call character_create: %v", err)
 		}
-		if actorResult == nil {
-			t.Fatal("call actor_create returned nil")
+		if characterResult == nil {
+			t.Fatal("call character_create returned nil")
 		}
-		if actorResult.IsError {
-			t.Fatalf("actor_create returned error content: %+v", actorResult.Content)
+		if characterResult.IsError {
+			t.Fatalf("character_create returned error content: %+v", characterResult.Content)
 		}
 
-		output := decodeStructuredContent[domain.ActorCreateResult](t, actorResult.StructuredContent)
+		output := decodeStructuredContent[domain.CharacterCreateResult](t, characterResult.StructuredContent)
 		if output.ID == "" {
-			t.Fatal("actor_create returned empty id")
+			t.Fatal("character_create returned empty id")
 		}
 		if output.CampaignID != campaignOutput.ID {
 			t.Fatalf("expected campaign id %q, got %q", campaignOutput.ID, output.CampaignID)
@@ -206,10 +206,10 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 			t.Fatalf("expected notes A brave warrior, got %q", output.Notes)
 		}
 		if output.CreatedAt == "" {
-			t.Fatal("actor_create returned empty created_at")
+			t.Fatal("character_create returned empty created_at")
 		}
 		if output.UpdatedAt == "" {
-			t.Fatal("actor_create returned empty updated_at")
+			t.Fatal("character_create returned empty updated_at")
 		}
 		createdAt := parseRFC3339(t, output.CreatedAt)
 		updatedAt := parseRFC3339(t, output.UpdatedAt)
@@ -217,9 +217,9 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 			t.Fatalf("expected updated_at after created_at: %v < %v", updatedAt, createdAt)
 		}
 
-		// Test creating an NPC actor with optional notes omitted
+		// Test creating an NPC character with optional notes omitted
 		npcParams := &mcp.CallToolParams{
-			Name: "actor_create",
+			Name: "character_create",
 			Arguments: map[string]any{
 				"campaign_id": campaignOutput.ID,
 				"name":        "Test NPC",
@@ -228,14 +228,14 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 		}
 		npcResult, err := suite.client.CallTool(ctx, npcParams)
 		if err != nil {
-			t.Fatalf("call actor_create for NPC: %v", err)
+			t.Fatalf("call character_create for NPC: %v", err)
 		}
 		if npcResult == nil || npcResult.IsError {
-			t.Fatalf("actor_create for NPC failed: %+v", npcResult)
+			t.Fatalf("character_create for NPC failed: %+v", npcResult)
 		}
-		npcOutput := decodeStructuredContent[domain.ActorCreateResult](t, npcResult.StructuredContent)
+		npcOutput := decodeStructuredContent[domain.CharacterCreateResult](t, npcResult.StructuredContent)
 		if npcOutput.ID == "" {
-			t.Fatal("actor_create for NPC returned empty id")
+			t.Fatal("character_create for NPC returned empty id")
 		}
 		if npcOutput.Kind != "NPC" {
 			t.Fatalf("expected kind NPC, got %q", npcOutput.Kind)
@@ -245,7 +245,7 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 		}
 	})
 
-	t.Run("actor control set", func(t *testing.T) {
+	t.Run("character control set", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
 		defer cancel()
 
@@ -267,50 +267,50 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 		}
 		campaignOutput := decodeStructuredContent[domain.CampaignCreateResult](t, campaignResult.StructuredContent)
 
-		// Create an actor
-		actorParams := &mcp.CallToolParams{
-			Name: "actor_create",
+		// Create a character
+		characterParams := &mcp.CallToolParams{
+			Name: "character_create",
 			Arguments: map[string]any{
 				"campaign_id": campaignOutput.ID,
-				"name":        "Test Actor",
+				"name":        "Test Character",
 				"kind":        "PC",
 			},
 		}
-		actorResult, err := suite.client.CallTool(ctx, actorParams)
+		characterResult, err := suite.client.CallTool(ctx, characterParams)
 		if err != nil {
-			t.Fatalf("call actor_create: %v", err)
+			t.Fatalf("call character_create: %v", err)
 		}
-		if actorResult == nil || actorResult.IsError {
-			t.Fatalf("actor_create failed: %+v", actorResult)
+		if characterResult == nil || characterResult.IsError {
+			t.Fatalf("character_create failed: %+v", characterResult)
 		}
-		actorOutput := decodeStructuredContent[domain.ActorCreateResult](t, actorResult.StructuredContent)
+		characterOutput := decodeStructuredContent[domain.CharacterCreateResult](t, characterResult.StructuredContent)
 
 		// Test setting GM controller
 		gmControlParams := &mcp.CallToolParams{
-			Name: "actor_control_set",
+			Name: "character_control_set",
 			Arguments: map[string]any{
-				"campaign_id": campaignOutput.ID,
-				"actor_id":    actorOutput.ID,
-				"controller":  "GM",
+				"campaign_id":  campaignOutput.ID,
+				"character_id": characterOutput.ID,
+				"controller":   "GM",
 			},
 		}
 		gmControlResult, err := suite.client.CallTool(ctx, gmControlParams)
 		if err != nil {
-			t.Fatalf("call actor_control_set with GM: %v", err)
+			t.Fatalf("call character_control_set with GM: %v", err)
 		}
 		if gmControlResult == nil {
-			t.Fatal("call actor_control_set returned nil")
+			t.Fatal("call character_control_set returned nil")
 		}
 		if gmControlResult.IsError {
-			t.Fatalf("actor_control_set returned error content: %+v", gmControlResult.Content)
+			t.Fatalf("character_control_set returned error content: %+v", gmControlResult.Content)
 		}
 
-		gmControlOutput := decodeStructuredContent[domain.ActorControlSetResult](t, gmControlResult.StructuredContent)
+		gmControlOutput := decodeStructuredContent[domain.CharacterControlSetResult](t, gmControlResult.StructuredContent)
 		if gmControlOutput.CampaignID != campaignOutput.ID {
 			t.Fatalf("expected campaign id %q, got %q", campaignOutput.ID, gmControlOutput.CampaignID)
 		}
-		if gmControlOutput.ActorID != actorOutput.ID {
-			t.Fatalf("expected actor id %q, got %q", actorOutput.ID, gmControlOutput.ActorID)
+		if gmControlOutput.CharacterID != characterOutput.ID {
+			t.Fatalf("expected character id %q, got %q", characterOutput.ID, gmControlOutput.CharacterID)
 		}
 		if gmControlOutput.Controller != "GM" {
 			t.Fatalf("expected controller GM, got %q", gmControlOutput.Controller)
@@ -336,30 +336,30 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 
 		// Test setting participant controller
 		participantControlParams := &mcp.CallToolParams{
-			Name: "actor_control_set",
+			Name: "character_control_set",
 			Arguments: map[string]any{
-				"campaign_id": campaignOutput.ID,
-				"actor_id":    actorOutput.ID,
-				"controller":  participantOutput.ID,
+				"campaign_id":  campaignOutput.ID,
+				"character_id": characterOutput.ID,
+				"controller":   participantOutput.ID,
 			},
 		}
 		participantControlResult, err := suite.client.CallTool(ctx, participantControlParams)
 		if err != nil {
-			t.Fatalf("call actor_control_set with participant: %v", err)
+			t.Fatalf("call character_control_set with participant: %v", err)
 		}
 		if participantControlResult == nil {
-			t.Fatal("call actor_control_set returned nil")
+			t.Fatal("call character_control_set returned nil")
 		}
 		if participantControlResult.IsError {
-			t.Fatalf("actor_control_set returned error content: %+v", participantControlResult.Content)
+			t.Fatalf("character_control_set returned error content: %+v", participantControlResult.Content)
 		}
 
-		participantControlOutput := decodeStructuredContent[domain.ActorControlSetResult](t, participantControlResult.StructuredContent)
+		participantControlOutput := decodeStructuredContent[domain.CharacterControlSetResult](t, participantControlResult.StructuredContent)
 		if participantControlOutput.CampaignID != campaignOutput.ID {
 			t.Fatalf("expected campaign id %q, got %q", campaignOutput.ID, participantControlOutput.CampaignID)
 		}
-		if participantControlOutput.ActorID != actorOutput.ID {
-			t.Fatalf("expected actor id %q, got %q", actorOutput.ID, participantControlOutput.ActorID)
+		if participantControlOutput.CharacterID != characterOutput.ID {
+			t.Fatalf("expected character id %q, got %q", characterOutput.ID, participantControlOutput.CharacterID)
 		}
 		if participantControlOutput.Controller != participantOutput.ID {
 			t.Fatalf("expected controller %q, got %q", participantOutput.ID, participantControlOutput.Controller)

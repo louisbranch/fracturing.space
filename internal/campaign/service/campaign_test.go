@@ -115,8 +115,8 @@ func TestCreateCampaignSuccess(t *testing.T) {
 	if response.Campaign.ParticipantCount != 0 {
 		t.Fatalf("expected 0 participant count, got %d", response.Campaign.ParticipantCount)
 	}
-	if response.Campaign.ActorCount != 0 {
-		t.Fatalf("expected 0 actor count, got %d", response.Campaign.ActorCount)
+	if response.Campaign.CharacterCount != 0 {
+		t.Fatalf("expected 0 character count, got %d", response.Campaign.CharacterCount)
 	}
 	if response.Campaign.ThemePrompt != "gentle hills" {
 		t.Fatalf("expected theme prompt preserved, got %q", response.Campaign.ThemePrompt)
@@ -182,7 +182,7 @@ func TestCreateCampaignNilRequest(t *testing.T) {
 	service := NewCampaignService(Stores{
 		Campaign:    &fakeCampaignStore{},
 		Participant: &fakeParticipantStore{},
-		Actor:       &fakeActorStore{},
+		Character:       &fakeCharacterStore{},
 	})
 
 	_, err := service.CreateCampaign(context.Background(), nil)
@@ -288,7 +288,7 @@ func TestListCampaignsDefaults(t *testing.T) {
 					Name:            "Wayfarers",
 					GmMode:          domain.GmModeAI,
 					ParticipantCount: 3,
-					ActorCount:      2,
+					CharacterCount:      2,
 					ThemePrompt:     "windswept",
 					CreatedAt:       fixedTime,
 					UpdatedAt:   fixedTime,
@@ -300,7 +300,7 @@ func TestListCampaignsDefaults(t *testing.T) {
 	service := NewCampaignService(Stores{
 		Campaign:    store,
 		Participant: &fakeParticipantStore{},
-		Actor:       &fakeActorStore{},
+		Character:       &fakeCharacterStore{},
 	})
 
 	response, err := service.ListCampaigns(context.Background(), &campaignv1.ListCampaignsRequest{})
@@ -335,7 +335,7 @@ func TestListCampaignsClampPageSize(t *testing.T) {
 	service := NewCampaignService(Stores{
 		Campaign:    store,
 		Participant: &fakeParticipantStore{},
-		Actor:       &fakeActorStore{},
+		Character:       &fakeCharacterStore{},
 	})
 
 	_, err := service.ListCampaigns(context.Background(), &campaignv1.ListCampaignsRequest{
@@ -354,7 +354,7 @@ func TestListCampaignsPassesToken(t *testing.T) {
 	service := NewCampaignService(Stores{
 		Campaign:    store,
 		Participant: &fakeParticipantStore{},
-		Actor:       &fakeActorStore{},
+		Character:       &fakeCharacterStore{},
 	})
 
 	_, err := service.ListCampaigns(context.Background(), &campaignv1.ListCampaignsRequest{
@@ -373,7 +373,7 @@ func TestListCampaignsNilRequest(t *testing.T) {
 	service := NewCampaignService(Stores{
 		Campaign:    &fakeCampaignStore{},
 		Participant: &fakeParticipantStore{},
-		Actor:       &fakeActorStore{},
+		Character:       &fakeCharacterStore{},
 	})
 
 	_, err := service.ListCampaigns(context.Background(), nil)
@@ -393,7 +393,7 @@ func TestListCampaignsStoreFailure(t *testing.T) {
 	service := NewCampaignService(Stores{
 		Campaign:    &fakeCampaignStore{listErr: errors.New("boom")},
 		Participant: &fakeParticipantStore{},
-		Actor:       &fakeActorStore{},
+		Character:       &fakeCharacterStore{},
 	})
 
 	_, err := service.ListCampaigns(context.Background(), &campaignv1.ListCampaignsRequest{
@@ -437,7 +437,7 @@ func TestGetCampaignSuccess(t *testing.T) {
 			Name:            "Test Campaign",
 			GmMode:          domain.GmModeHybrid,
 			ParticipantCount: 5,
-			ActorCount:      3,
+			CharacterCount:      3,
 			ThemePrompt:     "fantasy adventure",
 			CreatedAt:       fixedTime,
 			UpdatedAt:       fixedTime,
@@ -446,7 +446,7 @@ func TestGetCampaignSuccess(t *testing.T) {
 	service := NewCampaignService(Stores{
 		Campaign:    store,
 		Participant: &fakeParticipantStore{},
-		Actor:       &fakeActorStore{},
+		Character:       &fakeCharacterStore{},
 	})
 
 	response, err := service.GetCampaign(context.Background(), &campaignv1.GetCampaignRequest{
@@ -470,8 +470,8 @@ func TestGetCampaignSuccess(t *testing.T) {
 	if response.Campaign.ParticipantCount != 5 {
 		t.Fatalf("expected 5 participant count, got %d", response.Campaign.ParticipantCount)
 	}
-	if response.Campaign.ActorCount != 3 {
-		t.Fatalf("expected 3 actor count, got %d", response.Campaign.ActorCount)
+	if response.Campaign.CharacterCount != 3 {
+		t.Fatalf("expected 3 character count, got %d", response.Campaign.CharacterCount)
 	}
 	if response.Campaign.ThemePrompt != "fantasy adventure" {
 		t.Fatalf("expected theme prompt fantasy adventure, got %q", response.Campaign.ThemePrompt)
@@ -488,7 +488,7 @@ func TestGetCampaignNilRequest(t *testing.T) {
 	service := NewCampaignService(Stores{
 		Campaign:    &fakeCampaignStore{},
 		Participant: &fakeParticipantStore{},
-		Actor:       &fakeActorStore{},
+		Character:       &fakeCharacterStore{},
 	})
 
 	_, err := service.GetCampaign(context.Background(), nil)
@@ -526,7 +526,7 @@ func TestGetCampaignEmptyID(t *testing.T) {
 	service := NewCampaignService(Stores{
 		Campaign:    &fakeCampaignStore{},
 		Participant: &fakeParticipantStore{},
-		Actor:       &fakeActorStore{},
+		Character:       &fakeCharacterStore{},
 	})
 
 	_, err := service.GetCampaign(context.Background(), &campaignv1.GetCampaignRequest{
@@ -551,7 +551,7 @@ func TestGetCampaignNotFound(t *testing.T) {
 	service := NewCampaignService(Stores{
 		Campaign:    store,
 		Participant: &fakeParticipantStore{},
-		Actor:       &fakeActorStore{},
+		Character:       &fakeCharacterStore{},
 	})
 
 	_, err := service.GetCampaign(context.Background(), &campaignv1.GetCampaignRequest{
@@ -579,7 +579,7 @@ func TestGetCampaignStoreError(t *testing.T) {
 	service := NewCampaignService(Stores{
 		Campaign:    store,
 		Participant: &fakeParticipantStore{},
-		Actor:       &fakeActorStore{},
+		Character:       &fakeCharacterStore{},
 	})
 
 	_, err := service.GetCampaign(context.Background(), &campaignv1.GetCampaignRequest{

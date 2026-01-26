@@ -25,12 +25,12 @@ service CampaignService {
   // Get a participant by campaign ID and participant ID.
   rpc GetParticipant(GetParticipantRequest) returns (GetParticipantResponse);
 
-  // Create an actor (PC/NPC/etc) for a campaign.
-  rpc CreateActor(CreateActorRequest) returns (CreateActorResponse);
+  // Create a character (PC/NPC/etc) for a campaign.
+  rpc CreateCharacter(CreateCharacterRequest) returns (CreateCharacterResponse);
 
-  // List actors for a campaign.
-  rpc ListActors(ListActorsRequest) returns (ListActorsResponse);
+  // List characters for a campaign.
+  rpc ListCharacters(ListCharactersRequest) returns (ListCharactersResponse);
 
-  // Assign a campaign-scoped default controller for an actor.
+  // Assign a campaign-scoped default controller for a character.
   rpc SetDefaultControl(SetDefaultControlRequest) returns (SetDefaultControlResponse);
 }

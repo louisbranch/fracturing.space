@@ -19,7 +19,7 @@ import (
 const (
 	campaignBucket              = "campaign"
 	participantBucket           = "participant"
-	actorBucket                 = "actor"
+	characterBucket             = "character"
 	controlDefaultBucket        = "control_default"
 	sessionsBucket              = "sessions"
 	campaignActiveSessionBucket = "campaign_active_session"
@@ -188,9 +188,9 @@ func (s *Store) ensureBuckets() error {
 		if err != nil {
 			return fmt.Errorf("create participant bucket: %w", err)
 		}
-		_, err = tx.CreateBucketIfNotExists([]byte(actorBucket))
+		_, err = tx.CreateBucketIfNotExists([]byte(characterBucket))
 		if err != nil {
-			return fmt.Errorf("create actor bucket: %w", err)
+			return fmt.Errorf("create character bucket: %w", err)
 		}
 		_, err = tx.CreateBucketIfNotExists([]byte(controlDefaultBucket))
 		if err != nil {
@@ -216,12 +216,12 @@ func participantKey(campaignID, participantID string) []byte {
 	return []byte(fmt.Sprintf("%s/%s", campaignID, participantID))
 }
 
-func actorKey(campaignID, actorID string) []byte {
-	return []byte(fmt.Sprintf("%s/%s", campaignID, actorID))
+func characterKey(campaignID, characterID string) []byte {
+	return []byte(fmt.Sprintf("%s/%s", campaignID, characterID))
 }
 
-func controlDefaultKey(campaignID, actorID string) []byte {
-	return []byte(fmt.Sprintf("%s/%s", campaignID, actorID))
+func controlDefaultKey(campaignID, characterID string) []byte {
+	return []byte(fmt.Sprintf("%s/%s", campaignID, characterID))
 }
 
 func sessionKey(campaignID, sessionID string) []byte {
@@ -448,25 +448,25 @@ func (s *Store) ListParticipants(ctx context.Context, campaignID string, pageSiz
 	return page, nil
 }
 
-// PutActor persists an actor record (implements storage.ActorStore).
-// Atomically increments the campaign's actor_count within the same transaction.
-func (s *Store) PutActor(ctx context.Context, actor domain.Actor) error {
+// PutCharacter persists a character record (implements storage.CharacterStore).
+// Atomically increments the campaign's character_count within the same transaction.
+func (s *Store) PutCharacter(ctx context.Context, character domain.Character) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
 	if s == nil || s.db == nil {
 		return fmt.Errorf("storage is not configured")
 	}
-	if strings.TrimSpace(actor.CampaignID) == "" {
+	if strings.TrimSpace(character.CampaignID) == "" {
 		return fmt.Errorf("campaign id is required")
 	}
-	if strings.TrimSpace(actor.ID) == "" {
-		return fmt.Errorf("actor id is required")
+	if strings.TrimSpace(character.ID) == "" {
+		return fmt.Errorf("character id is required")
 	}
 
-	actorPayload, err := json.Marshal(actor)
+	characterPayload, err := json.Marshal(character)
 	if err != nil {
-		return fmt.Errorf("marshal actor: %w", err)
+		return fmt.Errorf("marshal character: %w", err)
 	}
 
 	return s.db.Update(func(tx *bbolt.Tx) error {
@@ -475,7 +475,7 @@ func (s *Store) PutActor(ctx context.Context, actor domain.Actor) error {
 		if campBucket == nil {
 			return fmt.Errorf("campaign bucket is missing")
 		}
-		campaignPayload := campBucket.Get(campaignKey(actor.CampaignID))
+		campaignPayload := campBucket.Get(campaignKey(character.CampaignID))
 		if campaignPayload == nil {
 			return storage.ErrNotFound
 		}
@@ -485,22 +485,22 @@ func (s *Store) PutActor(ctx context.Context, actor domain.Actor) error {
 			return fmt.Errorf("unmarshal campaign: %w", err)
 		}
 
-		// Check if actor already exists - only increment counter for new records
-		actsBucket := tx.Bucket([]byte(actorBucket))
-		if actsBucket == nil {
-			return fmt.Errorf("actor bucket is missing")
+		// Check if character already exists - only increment counter for new records
+		charsBucket := tx.Bucket([]byte(characterBucket))
+		if charsBucket == nil {
+			return fmt.Errorf("character bucket is missing")
 		}
-		actorKeyBytes := actorKey(actor.CampaignID, actor.ID)
-		isNewActor := actsBucket.Get(actorKeyBytes) == nil
+		characterKeyBytes := characterKey(character.CampaignID, character.ID)
+		isNewCharacter := charsBucket.Get(characterKeyBytes) == nil
 
-		// Store the actor
-		if err := actsBucket.Put(actorKeyBytes, actorPayload); err != nil {
-			return fmt.Errorf("put actor: %w", err)
+		// Store the character
+		if err := charsBucket.Put(characterKeyBytes, characterPayload); err != nil {
+			return fmt.Errorf("put character: %w", err)
 		}
 
-		// Increment actor count only for new records and update timestamp
-		if isNewActor {
-			campaign.ActorCount++
+		// Increment character count only for new records and update timestamp
+		if isNewCharacter {
+			campaign.CharacterCount++
 			campaign.UpdatedAt = time.Now().UTC()
 
 			// Persist updated campaign
@@ -508,7 +508,7 @@ func (s *Store) PutActor(ctx context.Context, actor domain.Actor) error {
 			if err != nil {
 				return fmt.Errorf("marshal campaign: %w", err)
 			}
-			if err := campBucket.Put(campaignKey(actor.CampaignID), updatedCampaignPayload); err != nil {
+			if err := campBucket.Put(campaignKey(character.CampaignID), updatedCampaignPayload); err != nil {
 				return fmt.Errorf("put campaign: %w", err)
 			}
 		}
@@ -517,66 +517,66 @@ func (s *Store) PutActor(ctx context.Context, actor domain.Actor) error {
 	})
 }
 
-// GetActor fetches an actor record by campaign ID and actor ID (implements storage.ActorStore).
-func (s *Store) GetActor(ctx context.Context, campaignID, actorID string) (domain.Actor, error) {
+// GetCharacter fetches a character record by campaign ID and character ID (implements storage.CharacterStore).
+func (s *Store) GetCharacter(ctx context.Context, campaignID, characterID string) (domain.Character, error) {
 	if err := ctx.Err(); err != nil {
-		return domain.Actor{}, err
+		return domain.Character{}, err
 	}
 	if s == nil || s.db == nil {
-		return domain.Actor{}, fmt.Errorf("storage is not configured")
+		return domain.Character{}, fmt.Errorf("storage is not configured")
 	}
 	if strings.TrimSpace(campaignID) == "" {
-		return domain.Actor{}, fmt.Errorf("campaign id is required")
+		return domain.Character{}, fmt.Errorf("campaign id is required")
 	}
-	if strings.TrimSpace(actorID) == "" {
-		return domain.Actor{}, fmt.Errorf("actor id is required")
+	if strings.TrimSpace(characterID) == "" {
+		return domain.Character{}, fmt.Errorf("character id is required")
 	}
 
-	var actor domain.Actor
+	var character domain.Character
 	err := s.db.View(func(tx *bbolt.Tx) error {
-		bucket := tx.Bucket([]byte(actorBucket))
+		bucket := tx.Bucket([]byte(characterBucket))
 		if bucket == nil {
-			return fmt.Errorf("actor bucket is missing")
+			return fmt.Errorf("character bucket is missing")
 		}
-		payload := bucket.Get(actorKey(campaignID, actorID))
+		payload := bucket.Get(characterKey(campaignID, characterID))
 		if payload == nil {
 			return storage.ErrNotFound
 		}
-		if err := json.Unmarshal(payload, &actor); err != nil {
-			return fmt.Errorf("unmarshal actor: %w", err)
+		if err := json.Unmarshal(payload, &character); err != nil {
+			return fmt.Errorf("unmarshal character: %w", err)
 		}
 		return nil
 	})
 	if err != nil {
 
-		return domain.Actor{}, err
+		return domain.Character{}, err
 	}
 
-	return actor, nil
+	return character, nil
 }
 
-// ListActors returns a page of actor records for a campaign ordered by storage key (implements storage.ActorStore).
-func (s *Store) ListActors(ctx context.Context, campaignID string, pageSize int, pageToken string) (storage.ActorPage, error) {
+// ListCharacters returns a page of character records for a campaign ordered by storage key (implements storage.CharacterStore).
+func (s *Store) ListCharacters(ctx context.Context, campaignID string, pageSize int, pageToken string) (storage.CharacterPage, error) {
 	if err := ctx.Err(); err != nil {
-		return storage.ActorPage{}, err
+		return storage.CharacterPage{}, err
 	}
 	if s == nil || s.db == nil {
-		return storage.ActorPage{}, fmt.Errorf("storage is not configured")
+		return storage.CharacterPage{}, fmt.Errorf("storage is not configured")
 	}
 	if strings.TrimSpace(campaignID) == "" {
-		return storage.ActorPage{}, fmt.Errorf("campaign id is required")
+		return storage.CharacterPage{}, fmt.Errorf("campaign id is required")
 	}
 	if pageSize <= 0 {
-		return storage.ActorPage{}, fmt.Errorf("page size must be greater than zero")
+		return storage.CharacterPage{}, fmt.Errorf("page size must be greater than zero")
 	}
 
 	prefix := campaignID + "/"
-	page := storage.ActorPage{}
+	page := storage.CharacterPage{}
 	var lastKey string
 	viewErr := s.db.View(func(tx *bbolt.Tx) error {
-		bucket := tx.Bucket([]byte(actorBucket))
+		bucket := tx.Bucket([]byte(characterBucket))
 		if bucket == nil {
-			return fmt.Errorf("actor bucket is missing")
+			return fmt.Errorf("character bucket is missing")
 		}
 
 		cursor := bucket.Cursor()
@@ -596,33 +596,33 @@ func (s *Store) ListActors(ctx context.Context, campaignID string, pageSize int,
 			}
 		}
 
-		for key != nil && bytes.HasPrefix(key, prefixBytes) && len(page.Actors) < pageSize {
+		for key != nil && bytes.HasPrefix(key, prefixBytes) && len(page.Characters) < pageSize {
 			if err := ctx.Err(); err != nil {
 				return err
 			}
-			var actor domain.Actor
-			if err := json.Unmarshal(payload, &actor); err != nil {
-				return fmt.Errorf("unmarshal actor: %w", err)
+			var character domain.Character
+			if err := json.Unmarshal(payload, &character); err != nil {
+				return fmt.Errorf("unmarshal character: %w", err)
 			}
-			page.Actors = append(page.Actors, actor)
+			page.Characters = append(page.Characters, character)
 			lastKey = string(key)
 			key, payload = cursor.Next()
 		}
 
-		if key != nil && bytes.HasPrefix(key, prefixBytes) && len(page.Actors) > 0 {
+		if key != nil && bytes.HasPrefix(key, prefixBytes) && len(page.Characters) > 0 {
 			page.NextPageToken = lastKey
 		}
 		return nil
 	})
 	if viewErr != nil {
-		return storage.ActorPage{}, viewErr
+		return storage.CharacterPage{}, viewErr
 	}
 
 	return page, nil
 }
 
-// PutControlDefault persists a default controller assignment for an actor (implements storage.ControlDefaultStore).
-func (s *Store) PutControlDefault(ctx context.Context, campaignID, actorID string, controller domain.ActorController) error {
+// PutControlDefault persists a default controller assignment for a character (implements storage.ControlDefaultStore).
+func (s *Store) PutControlDefault(ctx context.Context, campaignID, characterID string, controller domain.CharacterController) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -632,8 +632,8 @@ func (s *Store) PutControlDefault(ctx context.Context, campaignID, actorID strin
 	if strings.TrimSpace(campaignID) == "" {
 		return fmt.Errorf("campaign id is required")
 	}
-	if strings.TrimSpace(actorID) == "" {
-		return fmt.Errorf("actor id is required")
+	if strings.TrimSpace(characterID) == "" {
+		return fmt.Errorf("character id is required")
 	}
 	if err := controller.Validate(); err != nil {
 		return fmt.Errorf("validate controller: %w", err)
@@ -649,7 +649,7 @@ func (s *Store) PutControlDefault(ctx context.Context, campaignID, actorID strin
 		if bucket == nil {
 			return fmt.Errorf("control default bucket is missing")
 		}
-		return bucket.Put(controlDefaultKey(campaignID, actorID), payload)
+		return bucket.Put(controlDefaultKey(campaignID, characterID), payload)
 	})
 }
 
@@ -851,9 +851,9 @@ func (s *Store) ListSessions(ctx context.Context, campaignID string, pageSize in
 
 // TODO: Reserve index keys such as idx/creator/{creator_id}/campaign/{campaign_id}.
 // TODO: Reserve index keys such as idx/campaign/{campaign_id}/session/{session_id}.
-// TODO: Reserve index keys such as idx/session/{campaign_id}/{session_id}/actor/{actor_id}.
+// TODO: Reserve index keys such as idx/session/{campaign_id}/{session_id}/character/{character_id}.
 // TODO: Reserve session keys such as session/{campaign_id}/{session_id}.
 // TODO: Reserve GM state keys such as gm/{campaign_id}/{session_id}.
-// TODO: Reserve actor keys such as actor/{campaign_id}/{session_id}/{actor_id}.
+// TODO: Reserve character keys such as character/{campaign_id}/{session_id}/{character_id}.
 // TODO: Reserve event keys such as event/{campaign_id}/{session_id}/{seq}.
 // TODO: Add versioning and CAS semantics when multi-writer support is required.
