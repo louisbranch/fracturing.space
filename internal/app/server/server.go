@@ -14,8 +14,9 @@ import (
 	sessionv1 "github.com/louisbranch/duality-engine/api/gen/go/session/v1"
 	campaignservice "github.com/louisbranch/duality-engine/internal/campaign/service"
 	dualityservice "github.com/louisbranch/duality-engine/internal/duality/service"
-	sessionservice "github.com/louisbranch/duality-engine/internal/session/service"
+	"github.com/louisbranch/duality-engine/internal/grpcmeta"
 	"github.com/louisbranch/duality-engine/internal/random"
+	sessionservice "github.com/louisbranch/duality-engine/internal/session/service"
 	storagebbolt "github.com/louisbranch/duality-engine/internal/storage/bbolt"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
@@ -42,7 +43,10 @@ func New(port int) (*Server, error) {
 		return nil, err
 	}
 
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(
+		grpc.UnaryInterceptor(grpcmeta.UnaryServerInterceptor(nil)),
+		grpc.StreamInterceptor(grpcmeta.StreamServerInterceptor(nil)),
+	)
 	dualityService := dualityservice.NewDualityService(random.NewSeed)
 	campaignService := campaignservice.NewCampaignService(campaignservice.Stores{
 		Campaign:         store,

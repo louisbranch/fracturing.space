@@ -264,7 +264,7 @@ func TestCreateParticipantNilRequest(t *testing.T) {
 	service := NewCampaignService(Stores{
 		Campaign:    &fakeCampaignStore{},
 		Participant: &fakeParticipantStore{},
-		Character:       &fakeCharacterStore{},
+		Character:   &fakeCharacterStore{},
 	})
 
 	_, err := service.CreateParticipant(context.Background(), nil)
@@ -532,7 +532,7 @@ func TestListParticipantsNilRequest(t *testing.T) {
 	service := NewCampaignService(Stores{
 		Campaign:    &fakeCampaignStore{},
 		Participant: &fakeParticipantStore{},
-		Character:       &fakeCharacterStore{},
+		Character:   &fakeCharacterStore{},
 	})
 
 	_, err := service.ListParticipants(context.Background(), nil)
@@ -683,7 +683,7 @@ func TestGetParticipantSuccess(t *testing.T) {
 	service := NewCampaignService(Stores{
 		Campaign:    campaignStore,
 		Participant: participantStore,
-		Character:       &fakeCharacterStore{},
+		Character:   &fakeCharacterStore{},
 	})
 
 	response, err := service.GetParticipant(context.Background(), &campaignv1.GetParticipantRequest{
@@ -723,7 +723,7 @@ func TestGetParticipantNilRequest(t *testing.T) {
 	service := NewCampaignService(Stores{
 		Campaign:    &fakeCampaignStore{},
 		Participant: &fakeParticipantStore{},
-		Character:       &fakeCharacterStore{},
+		Character:   &fakeCharacterStore{},
 	})
 
 	_, err := service.GetParticipant(context.Background(), nil)
@@ -791,7 +791,7 @@ func TestGetParticipantEmptyCampaignID(t *testing.T) {
 	service := NewCampaignService(Stores{
 		Campaign:    &fakeCampaignStore{},
 		Participant: &fakeParticipantStore{},
-		Character:       &fakeCharacterStore{},
+		Character:   &fakeCharacterStore{},
 	})
 
 	_, err := service.GetParticipant(context.Background(), &campaignv1.GetParticipantRequest{
@@ -814,7 +814,7 @@ func TestGetParticipantEmptyParticipantID(t *testing.T) {
 	service := NewCampaignService(Stores{
 		Campaign:    &fakeCampaignStore{},
 		Participant: &fakeParticipantStore{},
-		Character:       &fakeCharacterStore{},
+		Character:   &fakeCharacterStore{},
 	})
 
 	_, err := service.GetParticipant(context.Background(), &campaignv1.GetParticipantRequest{
@@ -840,7 +840,7 @@ func TestGetParticipantCampaignNotFound(t *testing.T) {
 	service := NewCampaignService(Stores{
 		Campaign:    campaignStore,
 		Participant: &fakeParticipantStore{},
-		Character:       &fakeCharacterStore{},
+		Character:   &fakeCharacterStore{},
 	})
 
 	_, err := service.GetParticipant(context.Background(), &campaignv1.GetParticipantRequest{
@@ -876,7 +876,7 @@ func TestGetParticipantNotFound(t *testing.T) {
 	service := NewCampaignService(Stores{
 		Campaign:    campaignStore,
 		Participant: participantStore,
-		Character:       &fakeCharacterStore{},
+		Character:   &fakeCharacterStore{},
 	})
 
 	_, err := service.GetParticipant(context.Background(), &campaignv1.GetParticipantRequest{
@@ -912,7 +912,7 @@ func TestGetParticipantStoreError(t *testing.T) {
 	service := NewCampaignService(Stores{
 		Campaign:    campaignStore,
 		Participant: participantStore,
-		Character:       &fakeCharacterStore{},
+		Character:   &fakeCharacterStore{},
 	})
 
 	_, err := service.GetParticipant(context.Background(), &campaignv1.GetParticipantRequest{

@@ -9,9 +9,11 @@ import (
 	"time"
 
 	pb "github.com/louisbranch/duality-engine/api/gen/go/duality/v1"
+	"github.com/louisbranch/duality-engine/internal/grpcmeta"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	grpc_health_v1 "google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/metadata"
 )
 
 // TestServeStopsOnContext verifies the server serves and stops on cancel.
@@ -104,6 +106,82 @@ func TestHealthCheckReportsServing(t *testing.T) {
 
 	cancel()
 
+	select {
+	case err := <-serveErr:
+		if err != nil {
+			t.Fatalf("serve returned error: %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("server did not stop in time")
+	}
+}
+
+// TestServerMetadataHeaders ensures request metadata is echoed in headers.
+func TestServerMetadataHeaders(t *testing.T) {
+	setTempDBPath(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	grpcServer, err := New(0)
+	if err != nil {
+		t.Fatalf("new server: %v", err)
+	}
+
+	serveErr := make(chan error, 1)
+	go func() {
+		serveErr <- grpcServer.Serve(ctx)
+	}()
+
+	addr := normalizeAddress(t, grpcServer.listener.Addr().String())
+	conn, err := grpc.NewClient(
+		addr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDefaultCallOptions(grpc.WaitForReady(true)),
+	)
+	if err != nil {
+		t.Fatalf("dial server: %v", err)
+	}
+	defer conn.Close()
+
+	client := pb.NewDualityServiceClient(conn)
+
+	requestID := "req-123"
+	invocationID := "inv-456"
+	md := metadata.Pairs(
+		grpcmeta.RequestIDHeader, requestID,
+		grpcmeta.InvocationIDHeader, invocationID,
+	)
+	callCtx := metadata.NewOutgoingContext(context.Background(), md)
+
+	var header metadata.MD
+	callTimeout, callCancel := context.WithTimeout(callCtx, time.Second)
+	_, err = client.ActionRoll(callTimeout, &pb.ActionRollRequest{}, grpc.Header(&header))
+	callCancel()
+	if err != nil {
+		t.Fatalf("action roll: %v", err)
+	}
+
+	responseRequestID := header.Get(grpcmeta.RequestIDHeader)
+	if len(responseRequestID) != 1 || responseRequestID[0] != requestID {
+		t.Fatalf("request id header = %v, want %q", responseRequestID, requestID)
+	}
+	responseInvocationID := header.Get(grpcmeta.InvocationIDHeader)
+	if len(responseInvocationID) != 1 || responseInvocationID[0] != invocationID {
+		t.Fatalf("invocation id header = %v, want %q", responseInvocationID, invocationID)
+	}
+
+	callTimeout, callCancel = context.WithTimeout(context.Background(), time.Second)
+	var generatedHeader metadata.MD
+	_, err = client.ActionRoll(callTimeout, &pb.ActionRollRequest{}, grpc.Header(&generatedHeader))
+	callCancel()
+	if err != nil {
+		t.Fatalf("action roll without request id: %v", err)
+	}
+	if len(generatedHeader.Get(grpcmeta.RequestIDHeader)) != 1 {
+		t.Fatal("expected generated request id header")
+	}
+
+	cancel()
 	select {
 	case err := <-serveErr:
 		if err != nil {
