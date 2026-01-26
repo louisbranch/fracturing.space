@@ -5,6 +5,7 @@ package session.v1;
 option go_package = "github.com/louisbranch/duality-engine/api/gen/go/session/v1;sessionv1";
 
 import "session/v1/session.proto";
+import "session/v1/events.proto";
 
 message StartSessionRequest {
   // The campaign ID to start a session for.
@@ -45,4 +46,75 @@ message GetSessionRequest {
 
 message GetSessionResponse {
   Session session = 1;
+}
+
+message SessionEventAppendRequest {
+  // The session ID to append the event to.
+  string session_id = 1;
+
+  // The event type.
+  SessionEventType type = 2;
+
+  // Optional participant identifier for correlation.
+  string participant_id = 3;
+
+  // Optional character identifier for correlation.
+  string character_id = 4;
+
+  // JSON payload encoded as bytes.
+  bytes payload_json = 5;
+}
+
+message SessionEventAppendResponse {
+  SessionEvent event = 1;
+}
+
+message SessionEventsListRequest {
+  // The session ID to list events for.
+  string session_id = 1;
+
+  // Return events with seq greater than this value.
+  uint64 after_seq = 2;
+
+  // Maximum number of events to return.
+  int32 limit = 3;
+}
+
+message SessionEventsListResponse {
+  repeated SessionEvent events = 1;
+}
+
+message ActionRollModifier {
+  string source = 1;
+  int32 value = 2;
+}
+
+message SessionActionRollRequest {
+  // The campaign ID for validation.
+  string campaign_id = 1;
+
+  // The session ID to associate with this roll.
+  string session_id = 2;
+
+  // The character performing the roll.
+  string character_id = 3;
+
+  // The trait being rolled.
+  string trait = 4;
+
+  // The difficulty target.
+  int32 difficulty = 5;
+
+  // Optional modifiers applied to the roll.
+  repeated ActionRollModifier modifiers = 6;
+}
+
+message SessionActionRollResponse {
+  int32 hope_die = 1;
+  int32 fear_die = 2;
+  int32 total = 3;
+  int32 difficulty = 4;
+  bool success = 5;
+  string flavor = 6;
+  bool crit = 7;
 }

@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 	"time"
@@ -69,6 +70,34 @@ func (f *fakeSessionStore) ListSessions(ctx context.Context, campaignID string, 
 	return f.listPage, f.listErr
 }
 
+type fakeSessionEventStore struct {
+	appendInputs []sessiondomain.SessionEvent
+	appendErr    error
+	listEvents   []sessiondomain.SessionEvent
+	listErr      error
+	listSession  string
+	listAfterSeq uint64
+	listLimit    int
+}
+
+func (f *fakeSessionEventStore) AppendSessionEvent(ctx context.Context, event sessiondomain.SessionEvent) (sessiondomain.SessionEvent, error) {
+	if f.appendErr != nil {
+		return sessiondomain.SessionEvent{}, f.appendErr
+	}
+	if event.Seq == 0 {
+		event.Seq = uint64(len(f.appendInputs) + 1)
+	}
+	f.appendInputs = append(f.appendInputs, event)
+	return event, nil
+}
+
+func (f *fakeSessionEventStore) ListSessionEvents(ctx context.Context, sessionID string, afterSeq uint64, limit int) ([]sessiondomain.SessionEvent, error) {
+	f.listSession = sessionID
+	f.listAfterSeq = afterSeq
+	f.listLimit = limit
+	return f.listEvents, f.listErr
+}
+
 func TestStartSessionSuccess(t *testing.T) {
 	fixedTime := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
 	campaignStore := &fakeCampaignStore{
@@ -95,7 +124,7 @@ func TestStartSessionSuccess(t *testing.T) {
 
 	response, err := service.StartSession(context.Background(), &sessionv1.StartSessionRequest{
 		CampaignId: "camp-123",
-		Name:        "  First Session ",
+		Name:       "  First Session ",
 	})
 	if err != nil {
 		t.Fatalf("start session: %v", err)
@@ -152,7 +181,7 @@ func TestStartSessionWithEmptyName(t *testing.T) {
 
 	response, err := service.StartSession(context.Background(), &sessionv1.StartSessionRequest{
 		CampaignId: "camp-123",
-		Name:        "",
+		Name:       "",
 	})
 	if err != nil {
 		t.Fatalf("start session: %v", err)
@@ -1096,5 +1125,106 @@ func TestGetSessionStoreError(t *testing.T) {
 	}
 	if st.Code() != codes.Internal {
 		t.Fatalf("expected internal error, got %v", st.Code())
+	}
+}
+
+func TestSessionActionRollSuccessAppendsEvents(t *testing.T) {
+	fixedTime := time.Date(2026, 1, 25, 10, 0, 0, 0, time.UTC)
+	campaignStore := &fakeCampaignStore{
+		getCampaign: domain.Campaign{ID: "camp-123", Name: "Test Campaign"},
+	}
+	sessionStore := &fakeSessionStore{
+		getSession: sessiondomain.Session{ID: "sess-123", CampaignID: "camp-123", Status: sessiondomain.SessionStatusActive},
+	}
+	eventStore := &fakeSessionEventStore{}
+
+	service := &SessionService{
+		stores: Stores{
+			Campaign: campaignStore,
+			Session:  sessionStore,
+			Event:    eventStore,
+		},
+		clock: func() time.Time { return fixedTime },
+		seedFunc: func() (int64, error) {
+			return 1, nil
+		},
+	}
+
+	response, err := service.SessionActionRoll(context.Background(), &sessionv1.SessionActionRollRequest{
+		CampaignId:  "camp-123",
+		SessionId:   "sess-123",
+		CharacterId: "char-1",
+		Trait:       "bravery",
+		Difficulty:  10,
+		Modifiers: []*sessionv1.ActionRollModifier{
+			{Source: "skill", Value: 2},
+		},
+	})
+	if err != nil {
+		t.Fatalf("session action roll: %v", err)
+	}
+	if response == nil {
+		t.Fatal("expected response")
+	}
+	if len(eventStore.appendInputs) != 2 {
+		t.Fatalf("expected 2 events, got %d", len(eventStore.appendInputs))
+	}
+	if eventStore.appendInputs[0].Type != sessiondomain.SessionEventTypeActionRollRequested {
+		t.Fatalf("expected first event type ACTION_ROLL_REQUESTED, got %s", eventStore.appendInputs[0].Type)
+	}
+	if eventStore.appendInputs[1].Type != sessiondomain.SessionEventTypeActionRollResolved {
+		t.Fatalf("expected second event type ACTION_ROLL_RESOLVED, got %s", eventStore.appendInputs[1].Type)
+	}
+
+	var requested actionRollRequestedPayload
+	if err := json.Unmarshal(eventStore.appendInputs[0].PayloadJSON, &requested); err != nil {
+		t.Fatalf("unmarshal requested payload: %v", err)
+	}
+	if requested.CharacterID != "char-1" {
+		t.Fatalf("expected character id char-1, got %q", requested.CharacterID)
+	}
+	if requested.Trait != "bravery" {
+		t.Fatalf("expected trait bravery, got %q", requested.Trait)
+	}
+	if requested.Difficulty != 10 {
+		t.Fatalf("expected difficulty 10, got %d", requested.Difficulty)
+	}
+	if len(requested.Modifiers) != 1 || requested.Modifiers[0].Source != "skill" {
+		t.Fatalf("expected modifiers to include skill")
+	}
+}
+
+func TestSessionActionRollRejectsMissingTrait(t *testing.T) {
+	campaignStore := &fakeCampaignStore{getCampaign: domain.Campaign{ID: "camp-123"}}
+	sessionStore := &fakeSessionStore{
+		getSession: sessiondomain.Session{ID: "sess-123", CampaignID: "camp-123", Status: sessiondomain.SessionStatusActive},
+	}
+	eventStore := &fakeSessionEventStore{}
+
+	service := &SessionService{
+		stores: Stores{
+			Campaign: campaignStore,
+			Session:  sessionStore,
+			Event:    eventStore,
+		},
+		clock:    time.Now,
+		seedFunc: func() (int64, error) { return 1, nil },
+	}
+
+	_, err := service.SessionActionRoll(context.Background(), &sessionv1.SessionActionRollRequest{
+		CampaignId:  "camp-123",
+		SessionId:   "sess-123",
+		CharacterId: "char-1",
+		Trait:       " ",
+		Difficulty:  10,
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if len(eventStore.appendInputs) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(eventStore.appendInputs))
+	}
+	if eventStore.appendInputs[0].Type != sessiondomain.SessionEventTypeRequestRejected {
+		t.Fatalf("expected REQUEST_REJECTED event, got %s", eventStore.appendInputs[0].Type)
 	}
 }

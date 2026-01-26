@@ -3,6 +3,7 @@ package bbolt
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -11,8 +12,8 @@ import (
 	"time"
 
 	"github.com/louisbranch/duality-engine/internal/campaign/domain"
-	"github.com/louisbranch/duality-engine/internal/storage"
 	sessiondomain "github.com/louisbranch/duality-engine/internal/session/domain"
+	"github.com/louisbranch/duality-engine/internal/storage"
 	"go.etcd.io/bbolt"
 )
 
@@ -20,11 +21,13 @@ const (
 	campaignBucket              = "campaign"
 	participantBucket           = "participant"
 	characterBucket             = "character"
-	characterProfileBucket     = "character_profile"
+	characterProfileBucket      = "character_profile"
 	characterStateBucket        = "character_state"
 	controlDefaultBucket        = "control_default"
 	sessionsBucket              = "sessions"
 	campaignActiveSessionBucket = "campaign_active_session"
+	sessionEventsBucket         = "session_events"
+	sessionEventSeqBucket       = "session_event_seq"
 )
 
 // Store provides a BoltDB-backed campaign store.
@@ -214,6 +217,14 @@ func (s *Store) ensureBuckets() error {
 		if err != nil {
 			return fmt.Errorf("create campaign active session bucket: %w", err)
 		}
+		_, err = tx.CreateBucketIfNotExists([]byte(sessionEventsBucket))
+		if err != nil {
+			return fmt.Errorf("create session events bucket: %w", err)
+		}
+		_, err = tx.CreateBucketIfNotExists([]byte(sessionEventSeqBucket))
+		if err != nil {
+			return fmt.Errorf("create session event seq bucket: %w", err)
+		}
 		return nil
 	})
 }
@@ -248,6 +259,14 @@ func sessionKey(campaignID, sessionID string) []byte {
 
 func activeSessionKey(campaignID string) []byte {
 	return []byte(campaignID)
+}
+
+func sessionEventKey(sessionID string, seq uint64) []byte {
+	prefix := []byte(sessionID + "/")
+	key := make([]byte, len(prefix)+8)
+	copy(key, prefix)
+	binary.BigEndian.PutUint64(key[len(prefix):], seq)
+	return key
 }
 
 // Put persists a participant record (implements storage.ParticipantStore).
@@ -865,6 +884,118 @@ func (s *Store) ListSessions(ctx context.Context, campaignID string, pageSize in
 	}
 
 	return page, nil
+}
+
+// AppendSessionEvent atomically appends a session event and returns it with seq set.
+func (s *Store) AppendSessionEvent(ctx context.Context, event sessiondomain.SessionEvent) (sessiondomain.SessionEvent, error) {
+	if err := ctx.Err(); err != nil {
+		return sessiondomain.SessionEvent{}, err
+	}
+	if s == nil || s.db == nil {
+		return sessiondomain.SessionEvent{}, fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(event.SessionID) == "" {
+		return sessiondomain.SessionEvent{}, fmt.Errorf("session id is required")
+	}
+	if !event.Type.IsValid() {
+		return sessiondomain.SessionEvent{}, fmt.Errorf("session event type is required")
+	}
+	if event.Timestamp.IsZero() {
+		event.Timestamp = time.Now().UTC()
+	}
+
+	var stored sessiondomain.SessionEvent
+	updateErr := s.db.Update(func(tx *bbolt.Tx) error {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+
+		seqBucket := tx.Bucket([]byte(sessionEventSeqBucket))
+		if seqBucket == nil {
+			return fmt.Errorf("session event seq bucket is missing")
+		}
+
+		currentSeq := uint64(0)
+		if payload := seqBucket.Get([]byte(event.SessionID)); payload != nil {
+			if len(payload) != 8 {
+				return fmt.Errorf("invalid session event seq value")
+			}
+			currentSeq = binary.BigEndian.Uint64(payload)
+		}
+
+		event.Seq = currentSeq + 1
+		seqBytes := make([]byte, 8)
+		binary.BigEndian.PutUint64(seqBytes, event.Seq)
+		if err := seqBucket.Put([]byte(event.SessionID), seqBytes); err != nil {
+			return fmt.Errorf("put session event seq: %w", err)
+		}
+
+		payload, err := json.Marshal(event)
+		if err != nil {
+			return fmt.Errorf("marshal session event: %w", err)
+		}
+
+		eventBucket := tx.Bucket([]byte(sessionEventsBucket))
+		if eventBucket == nil {
+			return fmt.Errorf("session events bucket is missing")
+		}
+		if err := eventBucket.Put(sessionEventKey(event.SessionID, event.Seq), payload); err != nil {
+			return fmt.Errorf("put session event: %w", err)
+		}
+
+		stored = event
+		return nil
+	})
+	if updateErr != nil {
+		return sessiondomain.SessionEvent{}, updateErr
+	}
+
+	return stored, nil
+}
+
+// ListSessionEvents returns a slice of session events ordered by sequence ascending.
+func (s *Store) ListSessionEvents(ctx context.Context, sessionID string, afterSeq uint64, limit int) ([]sessiondomain.SessionEvent, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if s == nil || s.db == nil {
+		return nil, fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(sessionID) == "" {
+		return nil, fmt.Errorf("session id is required")
+	}
+	if limit <= 0 {
+		return nil, fmt.Errorf("limit must be greater than zero")
+	}
+
+	prefix := []byte(sessionID + "/")
+	startKey := sessionEventKey(sessionID, afterSeq+1)
+	results := make([]sessiondomain.SessionEvent, 0, limit)
+
+	viewErr := s.db.View(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket([]byte(sessionEventsBucket))
+		if bucket == nil {
+			return fmt.Errorf("session events bucket is missing")
+		}
+
+		cursor := bucket.Cursor()
+		for key, payload := cursor.Seek(startKey); key != nil && bytes.HasPrefix(key, prefix) && len(results) < limit; key, payload = cursor.Next() {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+			var event sessiondomain.SessionEvent
+			if err := json.Unmarshal(payload, &event); err != nil {
+				return fmt.Errorf("unmarshal session event: %w", err)
+			}
+			results = append(results, event)
+		}
+		return nil
+	})
+	if viewErr != nil {
+		return nil, viewErr
+	}
+
+	return results, nil
 }
 
 // PutCharacterProfile persists a character profile record (implements storage.CharacterProfileStore).

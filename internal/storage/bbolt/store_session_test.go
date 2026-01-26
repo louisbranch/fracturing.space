@@ -710,3 +710,82 @@ func TestSessionStoreListSessionsCanceledContext(t *testing.T) {
 		t.Fatal("expected error")
 	}
 }
+
+func TestSessionEventAppendAndList(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "duality.db")
+	store, err := Open(path)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer store.Close()
+
+	now := time.Date(2026, 1, 25, 12, 0, 0, 0, time.UTC)
+	event := sessiondomain.SessionEvent{
+		SessionID:   "sess-123",
+		Timestamp:   now,
+		Type:        sessiondomain.SessionEventTypeNoteAdded,
+		RequestID:   "req-1",
+		PayloadJSON: []byte(`{"text":"note"}`),
+	}
+
+	stored, err := store.AppendSessionEvent(context.Background(), event)
+	if err != nil {
+		t.Fatalf("append session event: %v", err)
+	}
+	if stored.Seq != 1 {
+		t.Fatalf("expected seq 1, got %d", stored.Seq)
+	}
+
+	stored2, err := store.AppendSessionEvent(context.Background(), sessiondomain.SessionEvent{
+		SessionID:   "sess-123",
+		Timestamp:   now,
+		Type:        sessiondomain.SessionEventTypeNoteAdded,
+		RequestID:   "req-2",
+		PayloadJSON: []byte(`{"text":"note2"}`),
+	})
+	if err != nil {
+		t.Fatalf("append session event: %v", err)
+	}
+	if stored2.Seq != 2 {
+		t.Fatalf("expected seq 2, got %d", stored2.Seq)
+	}
+
+	events, err := store.ListSessionEvents(context.Background(), "sess-123", 0, 10)
+	if err != nil {
+		t.Fatalf("list session events: %v", err)
+	}
+	if len(events) != 2 {
+		t.Fatalf("expected 2 events, got %d", len(events))
+	}
+	if events[0].Seq != 1 || events[1].Seq != 2 {
+		t.Fatalf("expected seq order 1,2 got %d,%d", events[0].Seq, events[1].Seq)
+	}
+
+	filtered, err := store.ListSessionEvents(context.Background(), "sess-123", 1, 10)
+	if err != nil {
+		t.Fatalf("list session events after seq: %v", err)
+	}
+	if len(filtered) != 1 {
+		t.Fatalf("expected 1 event after seq, got %d", len(filtered))
+	}
+	if filtered[0].Seq != 2 {
+		t.Fatalf("expected seq 2 after filter, got %d", filtered[0].Seq)
+	}
+}
+
+func TestSessionEventAppendEmptySessionID(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "duality.db")
+	store, err := Open(path)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer store.Close()
+
+	_, err = store.AppendSessionEvent(context.Background(), sessiondomain.SessionEvent{
+		SessionID: " ",
+		Type:      sessiondomain.SessionEventTypeNoteAdded,
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}

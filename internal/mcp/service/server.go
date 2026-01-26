@@ -74,7 +74,7 @@ func New(grpcAddr string) (*Server, error) {
 
 	registerDualityTools(mcpServer, dualityClient)
 	registerCampaignTools(mcpServer, campaignClient, server.getContext)
-	registerSessionTools(mcpServer, sessionClient)
+	registerSessionTools(mcpServer, sessionClient, server.getContext)
 	registerContextTools(mcpServer, campaignClient, sessionClient, server)
 	registerCampaignResources(mcpServer, campaignClient)
 	registerSessionResources(mcpServer, sessionClient)

@@ -91,6 +91,14 @@ type SessionStore interface {
 	ListSessions(ctx context.Context, campaignID string, pageSize int, pageToken string) (SessionPage, error)
 }
 
+// SessionEventStore persists session event records.
+type SessionEventStore interface {
+	// AppendSessionEvent atomically appends a session event and returns the stored event with sequence set.
+	AppendSessionEvent(ctx context.Context, event sessiondomain.SessionEvent) (sessiondomain.SessionEvent, error)
+	// ListSessionEvents returns session events ordered by sequence ascending.
+	ListSessionEvents(ctx context.Context, sessionID string, afterSeq uint64, limit int) ([]sessiondomain.SessionEvent, error)
+}
+
 // SessionPage describes a page of session records.
 type SessionPage struct {
 	Sessions      []sessiondomain.Session

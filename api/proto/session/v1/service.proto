@@ -16,4 +16,13 @@ service SessionService {
 
   // Get a session by campaign ID and session ID.
   rpc GetSession(GetSessionRequest) returns (GetSessionResponse);
+
+  // Append a session event.
+  rpc SessionEventAppend(SessionEventAppendRequest) returns (SessionEventAppendResponse);
+
+  // List session events ordered by sequence.
+  rpc SessionEventsList(SessionEventsListRequest) returns (SessionEventsListResponse);
+
+  // Roll Duality dice for a session.
+  rpc SessionActionRoll(SessionActionRollRequest) returns (SessionActionRollResponse);
 }

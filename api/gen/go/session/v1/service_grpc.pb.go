@@ -19,9 +19,12 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	SessionService_StartSession_FullMethodName = "/session.v1.SessionService/StartSession"
-	SessionService_ListSessions_FullMethodName = "/session.v1.SessionService/ListSessions"
-	SessionService_GetSession_FullMethodName   = "/session.v1.SessionService/GetSession"
+	SessionService_StartSession_FullMethodName       = "/session.v1.SessionService/StartSession"
+	SessionService_ListSessions_FullMethodName       = "/session.v1.SessionService/ListSessions"
+	SessionService_GetSession_FullMethodName         = "/session.v1.SessionService/GetSession"
+	SessionService_SessionEventAppend_FullMethodName = "/session.v1.SessionService/SessionEventAppend"
+	SessionService_SessionEventsList_FullMethodName  = "/session.v1.SessionService/SessionEventsList"
+	SessionService_SessionActionRoll_FullMethodName  = "/session.v1.SessionService/SessionActionRoll"
 )
 
 // SessionServiceClient is the client API for SessionService service.
@@ -35,6 +38,12 @@ type SessionServiceClient interface {
 	ListSessions(ctx context.Context, in *ListSessionsRequest, opts ...grpc.CallOption) (*ListSessionsResponse, error)
 	// Get a session by campaign ID and session ID.
 	GetSession(ctx context.Context, in *GetSessionRequest, opts ...grpc.CallOption) (*GetSessionResponse, error)
+	// Append a session event.
+	SessionEventAppend(ctx context.Context, in *SessionEventAppendRequest, opts ...grpc.CallOption) (*SessionEventAppendResponse, error)
+	// List session events ordered by sequence.
+	SessionEventsList(ctx context.Context, in *SessionEventsListRequest, opts ...grpc.CallOption) (*SessionEventsListResponse, error)
+	// Roll Duality dice for a session.
+	SessionActionRoll(ctx context.Context, in *SessionActionRollRequest, opts ...grpc.CallOption) (*SessionActionRollResponse, error)
 }
 
 type sessionServiceClient struct {
@@ -75,6 +84,36 @@ func (c *sessionServiceClient) GetSession(ctx context.Context, in *GetSessionReq
 	return out, nil
 }
 
+func (c *sessionServiceClient) SessionEventAppend(ctx context.Context, in *SessionEventAppendRequest, opts ...grpc.CallOption) (*SessionEventAppendResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SessionEventAppendResponse)
+	err := c.cc.Invoke(ctx, SessionService_SessionEventAppend_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sessionServiceClient) SessionEventsList(ctx context.Context, in *SessionEventsListRequest, opts ...grpc.CallOption) (*SessionEventsListResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SessionEventsListResponse)
+	err := c.cc.Invoke(ctx, SessionService_SessionEventsList_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sessionServiceClient) SessionActionRoll(ctx context.Context, in *SessionActionRollRequest, opts ...grpc.CallOption) (*SessionActionRollResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SessionActionRollResponse)
+	err := c.cc.Invoke(ctx, SessionService_SessionActionRoll_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SessionServiceServer is the server API for SessionService service.
 // All implementations must embed UnimplementedSessionServiceServer
 // for forward compatibility.
@@ -86,6 +125,12 @@ type SessionServiceServer interface {
 	ListSessions(context.Context, *ListSessionsRequest) (*ListSessionsResponse, error)
 	// Get a session by campaign ID and session ID.
 	GetSession(context.Context, *GetSessionRequest) (*GetSessionResponse, error)
+	// Append a session event.
+	SessionEventAppend(context.Context, *SessionEventAppendRequest) (*SessionEventAppendResponse, error)
+	// List session events ordered by sequence.
+	SessionEventsList(context.Context, *SessionEventsListRequest) (*SessionEventsListResponse, error)
+	// Roll Duality dice for a session.
+	SessionActionRoll(context.Context, *SessionActionRollRequest) (*SessionActionRollResponse, error)
 	mustEmbedUnimplementedSessionServiceServer()
 }
 
@@ -104,6 +149,15 @@ func (UnimplementedSessionServiceServer) ListSessions(context.Context, *ListSess
 }
 func (UnimplementedSessionServiceServer) GetSession(context.Context, *GetSessionRequest) (*GetSessionResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetSession not implemented")
+}
+func (UnimplementedSessionServiceServer) SessionEventAppend(context.Context, *SessionEventAppendRequest) (*SessionEventAppendResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SessionEventAppend not implemented")
+}
+func (UnimplementedSessionServiceServer) SessionEventsList(context.Context, *SessionEventsListRequest) (*SessionEventsListResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SessionEventsList not implemented")
+}
+func (UnimplementedSessionServiceServer) SessionActionRoll(context.Context, *SessionActionRollRequest) (*SessionActionRollResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SessionActionRoll not implemented")
 }
 func (UnimplementedSessionServiceServer) mustEmbedUnimplementedSessionServiceServer() {}
 func (UnimplementedSessionServiceServer) testEmbeddedByValue()                        {}
@@ -180,6 +234,60 @@ func _SessionService_GetSession_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SessionService_SessionEventAppend_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SessionEventAppendRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SessionServiceServer).SessionEventAppend(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SessionService_SessionEventAppend_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SessionServiceServer).SessionEventAppend(ctx, req.(*SessionEventAppendRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SessionService_SessionEventsList_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SessionEventsListRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SessionServiceServer).SessionEventsList(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SessionService_SessionEventsList_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SessionServiceServer).SessionEventsList(ctx, req.(*SessionEventsListRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SessionService_SessionActionRoll_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SessionActionRollRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SessionServiceServer).SessionActionRoll(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SessionService_SessionActionRoll_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SessionServiceServer).SessionActionRoll(ctx, req.(*SessionActionRollRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // SessionService_ServiceDesc is the grpc.ServiceDesc for SessionService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -198,6 +306,18 @@ var SessionService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetSession",
 			Handler:    _SessionService_GetSession_Handler,
+		},
+		{
+			MethodName: "SessionEventAppend",
+			Handler:    _SessionService_SessionEventAppend_Handler,
+		},
+		{
+			MethodName: "SessionEventsList",
+			Handler:    _SessionService_SessionEventsList_Handler,
+		},
+		{
+			MethodName: "SessionActionRoll",
+			Handler:    _SessionService_SessionActionRoll_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
