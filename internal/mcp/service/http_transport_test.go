@@ -105,10 +105,17 @@ func TestHTTPTransport_handleMessages_NewSession(t *testing.T) {
 	
 	transport.handleMessages(w, req)
 	
-	// Should have created a session (check header)
-	sessionID := w.Header().Get("X-MCP-Session-ID")
-	if sessionID == "" {
-		t.Error("handleMessages() should set X-MCP-Session-ID header for new sessions")
+	// Should have created a session (check cookie)
+	cookies := w.Result().Cookies()
+	var sessionCookie *http.Cookie
+	for _, cookie := range cookies {
+		if cookie.Name == "mcp_session" {
+			sessionCookie = cookie
+			break
+		}
+	}
+	if sessionCookie == nil || sessionCookie.Value == "" {
+		t.Error("handleMessages() should set mcp_session cookie for new sessions")
 	}
 }
 
