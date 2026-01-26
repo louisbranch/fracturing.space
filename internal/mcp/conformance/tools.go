@@ -10,6 +10,8 @@ import (
 
 const (
 	simpleTextResponse        = "This is a simple text response for testing."
+	errorTextResponse         = "This is an error response for testing."
+	errorHandlingResponse     = "This tool intentionally returns an error for testing"
 	staticTextResourceContent = "This is the content of the static text resource."
 	staticTextResourceName    = "test_static_text"
 	staticTextResourceURI     = "test://static-text"
@@ -22,6 +24,8 @@ func Register(mcpServer *mcp.Server) {
 	}
 
 	mcp.AddTool(mcpServer, simpleTextTool(), simpleTextHandler())
+	mcp.AddTool(mcpServer, errorContentTool(), errorContentHandler())
+	mcp.AddTool(mcpServer, errorHandlingTool(), errorHandlingHandler())
 	mcpServer.AddPrompt(simplePrompt(), simplePromptHandler())
 	mcpServer.AddResource(staticTextResource(), staticTextResourceHandler())
 }
@@ -41,6 +45,46 @@ func simpleTextHandler() mcp.ToolHandlerFor[struct{}, any] {
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				&mcp.TextContent{Text: simpleTextResponse},
+			},
+		}, nil, nil
+	}
+}
+
+// errorContentTool defines the MCP conformance tool schema for error responses.
+func errorContentTool() *mcp.Tool {
+	return &mcp.Tool{
+		Name:        "test_error_content",
+		Description: "Conformance tool that returns an error response.",
+	}
+}
+
+// errorContentHandler returns a fixed tool error payload for conformance validation.
+func errorContentHandler() mcp.ToolHandlerFor[struct{}, any] {
+	return func(_ context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, any, error) {
+		return &mcp.CallToolResult{
+			IsError: true,
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: errorTextResponse},
+			},
+		}, nil, nil
+	}
+}
+
+// errorHandlingTool defines the MCP conformance tool schema for tool error handling.
+func errorHandlingTool() *mcp.Tool {
+	return &mcp.Tool{
+		Name:        "test_error_handling",
+		Description: "Conformance tool that always returns a tool error.",
+	}
+}
+
+// errorHandlingHandler returns a fixed tool error payload for conformance validation.
+func errorHandlingHandler() mcp.ToolHandlerFor[struct{}, any] {
+	return func(_ context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, any, error) {
+		return &mcp.CallToolResult{
+			IsError: true,
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: errorHandlingResponse},
 			},
 		}, nil, nil
 	}
