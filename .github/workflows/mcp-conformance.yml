@@ -12,11 +12,11 @@ jobs:
       fail-fast: false
       matrix:
         scenario:
-          - completion-complete
-          - tools-call-simple-text
-          - resources-read-text
-          - prompts-get-simple
-          - dns-rebinding-protection
+          - tools-call-image
+          - tools-call-audio
+          - tools-call-embedded-resource
+          - tools-call-mixed-content
+          - tools-call-with-logging
     steps:
       - uses: actions/checkout@v4
 
