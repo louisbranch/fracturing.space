@@ -337,7 +337,6 @@ func (s *SessionService) SessionEventsList(ctx context.Context, in *sessionv1.Se
 
 	items, err := s.stores.Event.ListSessionEvents(ctx, sessionID, in.GetAfterSeq(), limit)
 	if err != nil {
-		s.appendRequestRejected(ctx, sessionID, "session.v1.SessionService/SessionEventsList", "INTERNAL", err.Error(), "")
 		return nil, status.Errorf(codes.Internal, "list session events: %v", err)
 	}
 

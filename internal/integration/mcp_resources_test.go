@@ -92,6 +92,17 @@ func runMCPResourcesTests(t *testing.T, suite *integrationSuite) {
 			t.Fatalf("expected resource MIME application/json, got %q", sessionResource.MIMEType)
 		}
 
+		sessionEventsResource, found := findResource(result.Resources, "session_events")
+		if !found {
+			t.Fatal("expected session_events resource")
+		}
+		if sessionEventsResource.URI != "session://_/events" {
+			t.Fatalf("expected resource URI session://_/events, got %q", sessionEventsResource.URI)
+		}
+		if sessionEventsResource.MIMEType != "application/json" {
+			t.Fatalf("expected resource MIME application/json, got %q", sessionEventsResource.MIMEType)
+		}
+
 		contextResource, found := findResource(result.Resources, "context_current")
 		if !found {
 			t.Fatal("expected context_current resource")

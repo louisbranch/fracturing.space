@@ -9,9 +9,11 @@ import (
 
 	sessionv1 "github.com/louisbranch/duality-engine/api/gen/go/session/v1"
 	"github.com/louisbranch/duality-engine/internal/campaign/domain"
+	"github.com/louisbranch/duality-engine/internal/grpcmeta"
 	sessiondomain "github.com/louisbranch/duality-engine/internal/session/domain"
 	"github.com/louisbranch/duality-engine/internal/storage"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -1125,6 +1127,327 @@ func TestGetSessionStoreError(t *testing.T) {
 	}
 	if st.Code() != codes.Internal {
 		t.Fatalf("expected internal error, got %v", st.Code())
+	}
+}
+
+// TestSessionEventAppendUsesMetadata ensures metadata fills in missing fields.
+func TestSessionEventAppendUsesMetadata(t *testing.T) {
+	fixedTime := time.Date(2026, 1, 26, 9, 0, 0, 0, time.UTC)
+	eventStore := &fakeSessionEventStore{}
+	service := &SessionService{
+		stores: Stores{
+			Event: eventStore,
+		},
+		clock: func() time.Time { return fixedTime },
+	}
+
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "part-123"))
+	ctx = grpcmeta.WithRequestID(ctx, "req-1")
+	ctx = grpcmeta.WithInvocationID(ctx, "inv-1")
+
+	response, err := service.SessionEventAppend(ctx, &sessionv1.SessionEventAppendRequest{
+		SessionId:   "sess-123",
+		Type:        sessionv1.SessionEventType_NOTE_ADDED,
+		CharacterId: " char-9 ",
+		PayloadJson: []byte(`{"note":"hello"}`),
+	})
+	if err != nil {
+		t.Fatalf("session event append: %v", err)
+	}
+	if response == nil || response.Event == nil {
+		t.Fatal("expected event response")
+	}
+	if len(eventStore.appendInputs) != 1 {
+		t.Fatalf("expected 1 event stored, got %d", len(eventStore.appendInputs))
+	}
+
+	stored := eventStore.appendInputs[0]
+	if stored.SessionID != "sess-123" {
+		t.Fatalf("expected session id sess-123, got %q", stored.SessionID)
+	}
+	if stored.Type != sessiondomain.SessionEventTypeNoteAdded {
+		t.Fatalf("expected event type NOTE_ADDED, got %s", stored.Type)
+	}
+	if stored.ParticipantID != "part-123" {
+		t.Fatalf("expected participant id part-123, got %q", stored.ParticipantID)
+	}
+	if stored.CharacterID != "char-9" {
+		t.Fatalf("expected character id char-9, got %q", stored.CharacterID)
+	}
+	if stored.RequestID != "req-1" {
+		t.Fatalf("expected request id req-1, got %q", stored.RequestID)
+	}
+	if stored.InvocationID != "inv-1" {
+		t.Fatalf("expected invocation id inv-1, got %q", stored.InvocationID)
+	}
+	if string(stored.PayloadJSON) != `{"note":"hello"}` {
+		t.Fatalf("unexpected payload json %q", string(stored.PayloadJSON))
+	}
+	if stored.Timestamp != fixedTime {
+		t.Fatalf("expected timestamp %v, got %v", fixedTime, stored.Timestamp)
+	}
+
+	if response.Event.SessionId != "sess-123" {
+		t.Fatalf("expected response session id sess-123, got %q", response.Event.SessionId)
+	}
+	if response.Event.Type != sessionv1.SessionEventType_NOTE_ADDED {
+		t.Fatalf("expected response event type NOTE_ADDED, got %v", response.Event.Type)
+	}
+	if response.Event.ParticipantId != "part-123" {
+		t.Fatalf("expected response participant id part-123, got %q", response.Event.ParticipantId)
+	}
+	if response.Event.CharacterId != "char-9" {
+		t.Fatalf("expected response character id char-9, got %q", response.Event.CharacterId)
+	}
+	if response.Event.RequestId != "req-1" {
+		t.Fatalf("expected response request id req-1, got %q", response.Event.RequestId)
+	}
+	if response.Event.InvocationId != "inv-1" {
+		t.Fatalf("expected response invocation id inv-1, got %q", response.Event.InvocationId)
+	}
+	if string(response.Event.PayloadJson) != `{"note":"hello"}` {
+		t.Fatalf("unexpected response payload json %q", string(response.Event.PayloadJson))
+	}
+	if response.Event.Ts.AsTime() != fixedTime {
+		t.Fatalf("expected response timestamp %v, got %v", fixedTime, response.Event.Ts.AsTime())
+	}
+}
+
+// TestSessionEventAppendRejectsInvalidType verifies invalid type handling.
+func TestSessionEventAppendRejectsInvalidType(t *testing.T) {
+	fixedTime := time.Date(2026, 1, 26, 10, 0, 0, 0, time.UTC)
+	eventStore := &fakeSessionEventStore{}
+	service := &SessionService{
+		stores: Stores{
+			Event: eventStore,
+		},
+		clock: func() time.Time { return fixedTime },
+	}
+
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "part-9"))
+	ctx = grpcmeta.WithRequestID(ctx, "req-9")
+	ctx = grpcmeta.WithInvocationID(ctx, "inv-9")
+
+	_, err := service.SessionEventAppend(ctx, &sessionv1.SessionEventAppendRequest{
+		SessionId: "sess-999",
+		Type:      sessionv1.SessionEventType_SESSION_EVENT_TYPE_UNSPECIFIED,
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	st, ok := status.FromError(err)
+	if !ok {
+		t.Fatalf("expected grpc status error, got %v", err)
+	}
+	if st.Code() != codes.InvalidArgument {
+		t.Fatalf("expected invalid argument, got %v", st.Code())
+	}
+	if st.Message() != "event type is required" {
+		t.Fatalf("expected message 'event type is required', got %q", st.Message())
+	}
+	if len(eventStore.appendInputs) != 1 {
+		t.Fatalf("expected 1 rejected event, got %d", len(eventStore.appendInputs))
+	}
+	stored := eventStore.appendInputs[0]
+	if stored.Type != sessiondomain.SessionEventTypeRequestRejected {
+		t.Fatalf("expected REQUEST_REJECTED event, got %s", stored.Type)
+	}
+	if stored.ParticipantID != "part-9" {
+		t.Fatalf("expected participant id part-9, got %q", stored.ParticipantID)
+	}
+	if stored.RequestID != "req-9" {
+		t.Fatalf("expected request id req-9, got %q", stored.RequestID)
+	}
+	if stored.InvocationID != "inv-9" {
+		t.Fatalf("expected invocation id inv-9, got %q", stored.InvocationID)
+	}
+
+	var payload requestRejectedPayload
+	if err := json.Unmarshal(stored.PayloadJSON, &payload); err != nil {
+		t.Fatalf("unmarshal request rejected payload: %v", err)
+	}
+	if payload.RPC != "session.v1.SessionService/SessionEventAppend" {
+		t.Fatalf("expected rpc SessionEventAppend, got %q", payload.RPC)
+	}
+	if payload.ReasonCode != "INVALID_ARGUMENT" {
+		t.Fatalf("expected reason code INVALID_ARGUMENT, got %q", payload.ReasonCode)
+	}
+	if payload.Message != "event type is required" {
+		t.Fatalf("expected message 'event type is required', got %q", payload.Message)
+	}
+}
+
+// TestSessionEventAppendReturnsInternalOnStoreError checks store errors.
+func TestSessionEventAppendReturnsInternalOnStoreError(t *testing.T) {
+	eventStore := &fakeSessionEventStore{appendErr: errors.New("store error")}
+	service := &SessionService{
+		stores: Stores{
+			Event: eventStore,
+		},
+		clock: time.Now,
+	}
+
+	_, err := service.SessionEventAppend(context.Background(), &sessionv1.SessionEventAppendRequest{
+		SessionId: "sess-1",
+		Type:      sessionv1.SessionEventType_NOTE_ADDED,
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	st, ok := status.FromError(err)
+	if !ok {
+		t.Fatalf("expected grpc status error, got %v", err)
+	}
+	if st.Code() != codes.Internal {
+		t.Fatalf("expected internal, got %v", st.Code())
+	}
+	if len(eventStore.appendInputs) != 0 {
+		t.Fatalf("expected no events stored, got %d", len(eventStore.appendInputs))
+	}
+}
+
+// TestSessionEventsListDefaultsLimit verifies the default limit behavior.
+func TestSessionEventsListDefaultsLimit(t *testing.T) {
+	eventStore := &fakeSessionEventStore{}
+	service := &SessionService{
+		stores: Stores{
+			Event: eventStore,
+		},
+	}
+
+	_, err := service.SessionEventsList(context.Background(), &sessionv1.SessionEventsListRequest{
+		SessionId: "sess-1",
+		AfterSeq:  12,
+	})
+	if err != nil {
+		t.Fatalf("session events list: %v", err)
+	}
+	if eventStore.listSession != "sess-1" {
+		t.Fatalf("expected session id sess-1, got %q", eventStore.listSession)
+	}
+	if eventStore.listAfterSeq != 12 {
+		t.Fatalf("expected after seq 12, got %d", eventStore.listAfterSeq)
+	}
+	if eventStore.listLimit != defaultListSessionEventsLimit {
+		t.Fatalf("expected limit %d, got %d", defaultListSessionEventsLimit, eventStore.listLimit)
+	}
+}
+
+// TestSessionEventsListCapsLimitAndConverts ensures max limit and conversion.
+func TestSessionEventsListCapsLimitAndConverts(t *testing.T) {
+	fixedTime := time.Date(2026, 1, 26, 11, 0, 0, 0, time.UTC)
+	eventStore := &fakeSessionEventStore{
+		listEvents: []sessiondomain.SessionEvent{
+			{
+				SessionID:     "sess-1",
+				Seq:           99,
+				Timestamp:     fixedTime,
+				Type:          sessiondomain.SessionEventTypeNoteAdded,
+				RequestID:     "req-7",
+				InvocationID:  "inv-7",
+				ParticipantID: "part-7",
+				CharacterID:   "char-7",
+				PayloadJSON:   []byte(`{"note":"hi"}`),
+			},
+		},
+	}
+	service := &SessionService{
+		stores: Stores{
+			Event: eventStore,
+		},
+	}
+
+	response, err := service.SessionEventsList(context.Background(), &sessionv1.SessionEventsListRequest{
+		SessionId: "sess-1",
+		Limit:     500,
+	})
+	if err != nil {
+		t.Fatalf("session events list: %v", err)
+	}
+	if eventStore.listLimit != maxListSessionEventsLimit {
+		t.Fatalf("expected limit %d, got %d", maxListSessionEventsLimit, eventStore.listLimit)
+	}
+	if response == nil || len(response.Events) != 1 {
+		t.Fatalf("expected 1 event response, got %+v", response)
+	}
+	resp := response.Events[0]
+	if resp.SessionId != "sess-1" {
+		t.Fatalf("expected session id sess-1, got %q", resp.SessionId)
+	}
+	if resp.Seq != 99 {
+		t.Fatalf("expected seq 99, got %d", resp.Seq)
+	}
+	if resp.Type != sessionv1.SessionEventType_NOTE_ADDED {
+		t.Fatalf("expected type NOTE_ADDED, got %v", resp.Type)
+	}
+	if resp.RequestId != "req-7" {
+		t.Fatalf("expected request id req-7, got %q", resp.RequestId)
+	}
+	if resp.InvocationId != "inv-7" {
+		t.Fatalf("expected invocation id inv-7, got %q", resp.InvocationId)
+	}
+	if resp.ParticipantId != "part-7" {
+		t.Fatalf("expected participant id part-7, got %q", resp.ParticipantId)
+	}
+	if resp.CharacterId != "char-7" {
+		t.Fatalf("expected character id char-7, got %q", resp.CharacterId)
+	}
+	if string(resp.PayloadJson) != `{"note":"hi"}` {
+		t.Fatalf("unexpected payload json %q", string(resp.PayloadJson))
+	}
+	if resp.Ts.AsTime() != fixedTime {
+		t.Fatalf("expected timestamp %v, got %v", fixedTime, resp.Ts.AsTime())
+	}
+}
+
+// TestSessionEventsListRejectsMissingSessionID covers session id validation.
+func TestSessionEventsListRejectsMissingSessionID(t *testing.T) {
+	eventStore := &fakeSessionEventStore{}
+	service := &SessionService{
+		stores: Stores{
+			Event: eventStore,
+		},
+	}
+
+	_, err := service.SessionEventsList(context.Background(), &sessionv1.SessionEventsListRequest{
+		SessionId: " ",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	st, ok := status.FromError(err)
+	if !ok {
+		t.Fatalf("expected grpc status error, got %v", err)
+	}
+	if st.Code() != codes.InvalidArgument {
+		t.Fatalf("expected invalid argument, got %v", st.Code())
+	}
+}
+
+// TestSessionEventsListReturnsInternalOnStoreError checks list errors.
+func TestSessionEventsListReturnsInternalOnStoreError(t *testing.T) {
+	eventStore := &fakeSessionEventStore{listErr: errors.New("list error")}
+	service := &SessionService{
+		stores: Stores{
+			Event: eventStore,
+		},
+	}
+
+	_, err := service.SessionEventsList(context.Background(), &sessionv1.SessionEventsListRequest{
+		SessionId: "sess-1",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	st, ok := status.FromError(err)
+	if !ok {
+		t.Fatalf("expected grpc status error, got %v", err)
+	}
+	if st.Code() != codes.Internal {
+		t.Fatalf("expected internal, got %v", st.Code())
+	}
+	if len(eventStore.appendInputs) != 0 {
+		t.Fatalf("expected no events appended, got %d", len(eventStore.appendInputs))
 	}
 }
 
