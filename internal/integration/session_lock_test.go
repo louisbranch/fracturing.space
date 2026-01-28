@@ -80,6 +80,36 @@ func runSessionLockTests(t *testing.T, grpcAddr string) {
 		t.Fatalf("expected active session id in message, got %q", st.Message())
 	}
 
+	endResp, err := sessionClient.EndSession(ctx, &sessionv1.EndSessionRequest{
+		CampaignId: createResp.Campaign.Id,
+		SessionId:  startResp.Session.Id,
+	})
+	if err != nil {
+		t.Fatalf("end session: %v", err)
+	}
+	if endResp == nil || endResp.Session == nil {
+		t.Fatal("expected end session response")
+	}
+	if endResp.Session.Status != sessionv1.SessionStatus_ENDED {
+		t.Fatalf("expected ended status, got %v", endResp.Session.Status)
+	}
+	if endResp.Session.EndedAt == nil {
+		t.Fatal("expected ended_at to be set")
+	}
+
+	createParticipantResp, err := campaignClient.CreateParticipant(ctx, &campaignv1.CreateParticipantRequest{
+		CampaignId:  createResp.Campaign.Id,
+		DisplayName: "Player One",
+		Role:        campaignv1.ParticipantRole_PLAYER,
+		Controller:  campaignv1.Controller_CONTROLLER_HUMAN,
+	})
+	if err != nil {
+		t.Fatalf("create participant after end session: %v", err)
+	}
+	if createParticipantResp == nil || createParticipantResp.Participant == nil || createParticipantResp.Participant.Id == "" {
+		t.Fatal("expected participant response after end session")
+	}
+
 	_, err = campaignClient.ListParticipants(ctx, &campaignv1.ListParticipantsRequest{
 		CampaignId: createResp.Campaign.Id,
 	})

@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/louisbranch/duality-engine/internal/campaign/domain"
 	sessiondomain "github.com/louisbranch/duality-engine/internal/session/domain"
@@ -82,6 +83,9 @@ type SessionStore interface {
 	// PutSession atomically stores a session and sets it as the active session for the campaign.
 	// Returns ErrActiveSessionExists if an active session already exists for the campaign.
 	PutSession(ctx context.Context, session sessiondomain.Session) error
+	// EndSession marks a session as ended and clears it as active for the campaign.
+	// The boolean return value reports whether the session transitioned to ENDED.
+	EndSession(ctx context.Context, campaignID, sessionID string, endedAt time.Time) (sessiondomain.Session, bool, error)
 	// GetSession retrieves a session by campaign ID and session ID.
 	GetSession(ctx context.Context, campaignID, sessionID string) (sessiondomain.Session, error)
 	// GetActiveSession retrieves the active session for a campaign, if one exists.

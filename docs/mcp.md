@@ -297,6 +297,35 @@ Starts a new session for a campaign. Enforces at most one ACTIVE session per cam
 }
 ```
 
+#### session_end
+
+Ends a session for a campaign. Clears the active session pointer if present.
+
+**Input:**
+
+```json
+{
+  "campaign_id": "camp_abc123",
+  "session_id": "sess_ghi789"
+}
+```
+
+`campaign_id` and `session_id` default to the current context if omitted.
+
+**Output:**
+
+```json
+{
+  "id": "sess_ghi789",
+  "campaign_id": "camp_abc123",
+  "name": "Session 1: The Journey Begins",
+  "status": "ENDED",
+  "started_at": "2025-01-15T11:00:00Z",
+  "updated_at": "2025-01-15T13:00:00Z",
+  "ended_at": "2025-01-15T13:00:00Z"
+}
+```
+
 #### session_action_roll
 
 Rolls Duality dice for a session and appends session events.

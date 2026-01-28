@@ -7,6 +7,5 @@
 //
 // Sessions move through several statuses:
 //   - Active: The session is currently ongoing. Only one session can be active per campaign.
-//   - Paused: Play is temporarily suspended.
 //   - Ended: The session is finished and record-keeping is complete.
 package domain

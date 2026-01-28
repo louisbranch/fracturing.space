@@ -17,6 +17,9 @@ service SessionService {
   // Get a session by campaign ID and session ID.
   rpc GetSession(GetSessionRequest) returns (GetSessionResponse);
 
+  // End a session by campaign ID and session ID.
+  rpc EndSession(EndSessionRequest) returns (EndSessionResponse);
+
   // Append a session event.
   rpc SessionEventAppend(SessionEventAppendRequest) returns (SessionEventAppendResponse);
 

@@ -257,6 +257,68 @@ func (s *SessionService) GetSession(ctx context.Context, in *sessionv1.GetSessio
 	return response, nil
 }
 
+// EndSession ends a session by campaign ID and session ID.
+func (s *SessionService) EndSession(ctx context.Context, in *sessionv1.EndSessionRequest) (*sessionv1.EndSessionResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "end session request is required")
+	}
+
+	if s.stores.Campaign == nil {
+		return nil, status.Error(codes.Internal, "campaign store is not configured")
+	}
+	if s.stores.Session == nil {
+		return nil, status.Error(codes.Internal, "session store is not configured")
+	}
+
+	campaignID := strings.TrimSpace(in.GetCampaignId())
+	if campaignID == "" {
+		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	}
+
+	sessionID := strings.TrimSpace(in.GetSessionId())
+	if sessionID == "" {
+		return nil, status.Error(codes.InvalidArgument, "session id is required")
+	}
+
+	if _, err := s.stores.Campaign.Get(ctx, campaignID); err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return nil, status.Error(codes.NotFound, "campaign not found")
+		}
+		return nil, status.Errorf(codes.Internal, "check campaign: %v", err)
+	}
+
+	endedAt := s.clock().UTC()
+	session, endedNow, err := s.stores.Session.EndSession(ctx, campaignID, sessionID, endedAt)
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return nil, status.Error(codes.NotFound, "session not found")
+		}
+		return nil, status.Errorf(codes.Internal, "end session: %v", err)
+	}
+
+	if endedNow {
+		if err := s.appendSessionEndedEvent(ctx, session); err != nil {
+			log.Printf("append session ended event: %v", err)
+		}
+	}
+
+	response := &sessionv1.EndSessionResponse{
+		Session: &sessionv1.Session{
+			Id:         session.ID,
+			CampaignId: session.CampaignID,
+			Name:       session.Name,
+			Status:     sessionStatusToProto(session.Status),
+			StartedAt:  timestamppb.New(session.StartedAt),
+			UpdatedAt:  timestamppb.New(session.UpdatedAt),
+		},
+	}
+	if session.EndedAt != nil {
+		response.Session.EndedAt = timestamppb.New(*session.EndedAt)
+	}
+
+	return response, nil
+}
+
 const (
 	defaultListSessionEventsLimit = 50
 	maxListSessionEventsLimit     = 200
@@ -520,8 +582,6 @@ func sessionStatusToProto(status sessiondomain.SessionStatus) sessionv1.SessionS
 	switch status {
 	case sessiondomain.SessionStatusActive:
 		return sessionv1.SessionStatus_ACTIVE
-	case sessiondomain.SessionStatusPaused:
-		return sessionv1.SessionStatus_PAUSED
 	case sessiondomain.SessionStatusEnded:
 		return sessionv1.SessionStatus_ENDED
 	default:
@@ -556,6 +616,12 @@ type sessionStartedPayload struct {
 	CampaignID string `json:"campaign_id"`
 }
 
+// sessionEndedPayload captures the event payload for ended sessions.
+type sessionEndedPayload struct {
+	CampaignID string `json:"campaign_id"`
+	EndedAt    string `json:"ended_at"`
+}
+
 type requestRejectedPayload struct {
 	RPC        string `json:"rpc"`
 	ReasonCode string `json:"reason_code"`
@@ -576,6 +642,38 @@ func (s *SessionService) appendSessionStartedEvent(ctx context.Context, session 
 		SessionID:     session.ID,
 		Timestamp:     s.clock().UTC(),
 		Type:          sessiondomain.SessionEventTypeSessionStarted,
+		RequestID:     grpcmeta.RequestIDFromContext(ctx),
+		InvocationID:  grpcmeta.InvocationIDFromContext(ctx),
+		ParticipantID: grpcmeta.ParticipantIDFromContext(ctx),
+		PayloadJSON:   payload,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *SessionService) appendSessionEndedEvent(ctx context.Context, session sessiondomain.Session) error {
+	if s.stores.Event == nil {
+		return fmt.Errorf("session event store is not configured")
+	}
+	if session.EndedAt == nil {
+		return fmt.Errorf("session ended_at is required")
+	}
+
+	payload, err := json.Marshal(sessionEndedPayload{
+		CampaignID: session.CampaignID,
+		EndedAt:    session.EndedAt.UTC().Format(time.RFC3339Nano),
+	})
+	if err != nil {
+		return fmt.Errorf("marshal session ended payload: %w", err)
+	}
+
+	_, err = s.stores.Event.AppendSessionEvent(ctx, sessiondomain.SessionEvent{
+		SessionID:     session.ID,
+		Timestamp:     s.clock().UTC(),
+		Type:          sessiondomain.SessionEventTypeSessionEnded,
 		RequestID:     grpcmeta.RequestIDFromContext(ctx),
 		InvocationID:  grpcmeta.InvocationIDFromContext(ctx),
 		ParticipantID: grpcmeta.ParticipantIDFromContext(ctx),

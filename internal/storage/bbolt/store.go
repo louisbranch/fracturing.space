@@ -820,6 +820,88 @@ func (s *Store) PutSession(ctx context.Context, session sessiondomain.Session) e
 	})
 }
 
+// EndSession marks a session as ended and clears it as active for the campaign.
+// Returns true if the session transitioned from ACTIVE to ENDED.
+func (s *Store) EndSession(ctx context.Context, campaignID, sessionID string, endedAt time.Time) (sessiondomain.Session, bool, error) {
+	if err := ctx.Err(); err != nil {
+		return sessiondomain.Session{}, false, err
+	}
+	if s == nil || s.db == nil {
+		return sessiondomain.Session{}, false, fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(campaignID) == "" {
+		return sessiondomain.Session{}, false, fmt.Errorf("campaign id is required")
+	}
+	if strings.TrimSpace(sessionID) == "" {
+		return sessiondomain.Session{}, false, fmt.Errorf("session id is required")
+	}
+	if endedAt.IsZero() {
+		endedAt = time.Now().UTC()
+	}
+
+	var session sessiondomain.Session
+	endedNow := false
+	updateErr := s.db.Update(func(tx *bbolt.Tx) error {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+
+		sessionBucket := tx.Bucket([]byte(sessionsBucket))
+		if sessionBucket == nil {
+			return fmt.Errorf("sessions bucket is missing")
+		}
+		payload := sessionBucket.Get(sessionKey(campaignID, sessionID))
+		if payload == nil {
+			return storage.ErrNotFound
+		}
+		if err := json.Unmarshal(payload, &session); err != nil {
+			return fmt.Errorf("unmarshal session: %w", err)
+		}
+
+		activeBucket := tx.Bucket([]byte(campaignActiveSessionBucket))
+		if activeBucket == nil {
+			return fmt.Errorf("campaign active session bucket is missing")
+		}
+
+		if session.Status == sessiondomain.SessionStatusEnded {
+			activeSessionID := activeBucket.Get(activeSessionKey(campaignID))
+			if activeSessionID != nil && string(activeSessionID) == sessionID {
+				if err := activeBucket.Delete(activeSessionKey(campaignID)); err != nil {
+					return fmt.Errorf("delete active session pointer: %w", err)
+				}
+			}
+			return nil
+		}
+
+		session.Status = sessiondomain.SessionStatusEnded
+		session.EndedAt = &endedAt
+		session.UpdatedAt = endedAt
+		endedNow = true
+
+		updatedPayload, err := json.Marshal(session)
+		if err != nil {
+			return fmt.Errorf("marshal session: %w", err)
+		}
+		if err := sessionBucket.Put(sessionKey(campaignID, sessionID), updatedPayload); err != nil {
+			return fmt.Errorf("put session: %w", err)
+		}
+
+		activeSessionID := activeBucket.Get(activeSessionKey(campaignID))
+		if activeSessionID != nil && string(activeSessionID) == sessionID {
+			if err := activeBucket.Delete(activeSessionKey(campaignID)); err != nil {
+				return fmt.Errorf("delete active session pointer: %w", err)
+			}
+		}
+
+		return nil
+	})
+	if updateErr != nil {
+		return sessiondomain.Session{}, false, updateErr
+	}
+
+	return session, endedNow, nil
+}
+
 // ListSessions returns a page of session records for a campaign ordered by storage key (implements storage.SessionStore).
 func (s *Store) ListSessions(ctx context.Context, campaignID string, pageSize int, pageToken string) (storage.SessionPage, error) {
 	if err := ctx.Err(); err != nil {

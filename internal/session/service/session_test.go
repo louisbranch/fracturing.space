@@ -41,6 +41,12 @@ func (f *fakeCampaignStore) List(ctx context.Context, pageSize int, pageToken st
 type fakeSessionStore struct {
 	putSession          sessiondomain.Session
 	putErr              error
+	endSession          sessiondomain.Session
+	endSessionErr       error
+	endSessionEndedNow  bool
+	endSessionCampaign  string
+	endSessionID        string
+	endSessionEndedAt   time.Time
 	getSession          sessiondomain.Session
 	getSessionErr       error
 	getActiveSession    sessiondomain.Session
@@ -55,6 +61,13 @@ type fakeSessionStore struct {
 func (f *fakeSessionStore) PutSession(ctx context.Context, session sessiondomain.Session) error {
 	f.putSession = session
 	return f.putErr
+}
+
+func (f *fakeSessionStore) EndSession(ctx context.Context, campaignID, sessionID string, endedAt time.Time) (sessiondomain.Session, bool, error) {
+	f.endSessionCampaign = campaignID
+	f.endSessionID = sessionID
+	f.endSessionEndedAt = endedAt
+	return f.endSession, f.endSessionEndedNow, f.endSessionErr
 }
 
 func (f *fakeSessionStore) GetSession(ctx context.Context, campaignID, sessionID string) (sessiondomain.Session, error) {
@@ -536,7 +549,7 @@ func TestListSessionsDefaults(t *testing.T) {
 					ID:         "session-1",
 					CampaignID: "camp-123",
 					Name:       "Session One",
-					Status:     sessiondomain.SessionStatusPaused,
+					Status:     sessiondomain.SessionStatusEnded,
 					StartedAt:  fixedTime,
 					UpdatedAt:  fixedTime,
 					EndedAt:    nil,
@@ -1127,6 +1140,162 @@ func TestGetSessionStoreError(t *testing.T) {
 	}
 	if st.Code() != codes.Internal {
 		t.Fatalf("expected internal error, got %v", st.Code())
+	}
+}
+
+func TestEndSessionSuccess(t *testing.T) {
+	fixedTime := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
+	campaignStore := &fakeCampaignStore{}
+	campaignStore.getFunc = func(ctx context.Context, id string) (domain.Campaign, error) {
+		if id == "camp-123" {
+			return domain.Campaign{ID: "camp-123", Name: "Test Campaign"}, nil
+		}
+		return domain.Campaign{}, storage.ErrNotFound
+	}
+	sessionStore := &fakeSessionStore{
+		endSession: sessiondomain.Session{
+			ID:         "sess-456",
+			CampaignID: "camp-123",
+			Name:       "Test Session",
+			Status:     sessiondomain.SessionStatusEnded,
+			StartedAt:  fixedTime.Add(-time.Hour),
+			UpdatedAt:  fixedTime,
+			EndedAt:    &fixedTime,
+		},
+		endSessionEndedNow: true,
+	}
+	eventStore := &fakeSessionEventStore{}
+	service := &SessionService{
+		stores: Stores{
+			Campaign: campaignStore,
+			Session:  sessionStore,
+			Event:    eventStore,
+		},
+		clock: func() time.Time { return fixedTime },
+	}
+
+	response, err := service.EndSession(context.Background(), &sessionv1.EndSessionRequest{
+		CampaignId: "camp-123",
+		SessionId:  "sess-456",
+	})
+	if err != nil {
+		t.Fatalf("end session: %v", err)
+	}
+	if response == nil || response.Session == nil {
+		t.Fatal("expected session response")
+	}
+	if sessionStore.endSessionCampaign != "camp-123" {
+		t.Fatalf("expected end session campaign camp-123, got %q", sessionStore.endSessionCampaign)
+	}
+	if sessionStore.endSessionID != "sess-456" {
+		t.Fatalf("expected end session id sess-456, got %q", sessionStore.endSessionID)
+	}
+	if !sessionStore.endSessionEndedAt.Equal(fixedTime) {
+		t.Fatalf("expected end session time %v, got %v", fixedTime, sessionStore.endSessionEndedAt)
+	}
+	if response.Session.Status != sessionv1.SessionStatus_ENDED {
+		t.Fatalf("expected status ENDED, got %v", response.Session.Status)
+	}
+	if response.Session.EndedAt == nil {
+		t.Fatal("expected ended_at to be set")
+	}
+	if response.Session.EndedAt.AsTime() != fixedTime {
+		t.Fatalf("expected ended_at %v, got %v", fixedTime, response.Session.EndedAt.AsTime())
+	}
+	if len(eventStore.appendInputs) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(eventStore.appendInputs))
+	}
+	if eventStore.appendInputs[0].Type != sessiondomain.SessionEventTypeSessionEnded {
+		t.Fatalf("expected session ended event, got %v", eventStore.appendInputs[0].Type)
+	}
+	var payload sessionEndedPayload
+	if err := json.Unmarshal(eventStore.appendInputs[0].PayloadJSON, &payload); err != nil {
+		t.Fatalf("unmarshal session ended payload: %v", err)
+	}
+	if payload.CampaignID != "camp-123" {
+		t.Fatalf("expected campaign_id camp-123, got %q", payload.CampaignID)
+	}
+}
+
+func TestEndSessionIdempotent(t *testing.T) {
+	fixedTime := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
+	campaignStore := &fakeCampaignStore{}
+	campaignStore.getFunc = func(ctx context.Context, id string) (domain.Campaign, error) {
+		if id == "camp-123" {
+			return domain.Campaign{ID: "camp-123", Name: "Test Campaign"}, nil
+		}
+		return domain.Campaign{}, storage.ErrNotFound
+	}
+	sessionStore := &fakeSessionStore{
+		endSession: sessiondomain.Session{
+			ID:         "sess-456",
+			CampaignID: "camp-123",
+			Name:       "Test Session",
+			Status:     sessiondomain.SessionStatusEnded,
+			StartedAt:  fixedTime.Add(-time.Hour),
+			UpdatedAt:  fixedTime,
+			EndedAt:    &fixedTime,
+		},
+		endSessionEndedNow: false,
+	}
+	eventStore := &fakeSessionEventStore{}
+	service := &SessionService{
+		stores: Stores{
+			Campaign: campaignStore,
+			Session:  sessionStore,
+			Event:    eventStore,
+		},
+		clock: func() time.Time { return fixedTime },
+	}
+
+	response, err := service.EndSession(context.Background(), &sessionv1.EndSessionRequest{
+		CampaignId: "camp-123",
+		SessionId:  "sess-456",
+	})
+	if err != nil {
+		t.Fatalf("end session: %v", err)
+	}
+	if response == nil || response.Session == nil {
+		t.Fatal("expected session response")
+	}
+	if len(eventStore.appendInputs) != 0 {
+		t.Fatalf("expected no events, got %d", len(eventStore.appendInputs))
+	}
+}
+
+func TestEndSessionNotFound(t *testing.T) {
+	campaignStore := &fakeCampaignStore{}
+	campaignStore.getFunc = func(ctx context.Context, id string) (domain.Campaign, error) {
+		if id == "camp-123" {
+			return domain.Campaign{ID: "camp-123", Name: "Test Campaign"}, nil
+		}
+		return domain.Campaign{}, storage.ErrNotFound
+	}
+	sessionStore := &fakeSessionStore{
+		endSessionErr: storage.ErrNotFound,
+	}
+	service := &SessionService{
+		stores: Stores{
+			Campaign: campaignStore,
+			Session:  sessionStore,
+			Event:    &fakeSessionEventStore{},
+		},
+		clock: time.Now,
+	}
+
+	_, err := service.EndSession(context.Background(), &sessionv1.EndSessionRequest{
+		CampaignId: "camp-123",
+		SessionId:  "sess-999",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	st, ok := status.FromError(err)
+	if !ok {
+		t.Fatalf("expected grpc status error, got %v", err)
+	}
+	if st.Code() != codes.NotFound {
+		t.Fatalf("expected not found, got %v", st.Code())
 	}
 }
 
