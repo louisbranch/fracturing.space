@@ -2,12 +2,18 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"log"
 	"strings"
 	"time"
 
 	sessionv1 "github.com/louisbranch/duality-engine/api/gen/go/session/v1"
+	"github.com/louisbranch/duality-engine/internal/duality/domain"
+	"github.com/louisbranch/duality-engine/internal/grpcmeta"
 	"github.com/louisbranch/duality-engine/internal/id"
+	"github.com/louisbranch/duality-engine/internal/random"
 	sessiondomain "github.com/louisbranch/duality-engine/internal/session/domain"
 	"github.com/louisbranch/duality-engine/internal/storage"
 	"google.golang.org/grpc/codes"
@@ -19,6 +25,7 @@ import (
 type Stores struct {
 	Campaign storage.CampaignStore
 	Session  storage.SessionStore
+	Event    storage.SessionEventStore
 }
 
 // SessionService implements the SessionService gRPC API.
@@ -27,6 +34,7 @@ type SessionService struct {
 	stores      Stores
 	clock       func() time.Time
 	idGenerator func() (string, error)
+	seedFunc    func() (int64, error)
 }
 
 // NewSessionService creates a SessionService with default dependencies.
@@ -35,6 +43,7 @@ func NewSessionService(stores Stores) *SessionService {
 		stores:      stores,
 		clock:       time.Now,
 		idGenerator: id.NewID,
+		seedFunc:    random.NewSeed,
 	}
 }
 
@@ -96,6 +105,10 @@ func (s *SessionService) StartSession(ctx context.Context, in *sessionv1.StartSe
 			return nil, status.Error(codes.FailedPrecondition, "active session exists")
 		}
 		return nil, status.Errorf(codes.Internal, "persist session: %v", err)
+	}
+
+	if err := s.appendSessionStartedEvent(ctx, session); err != nil {
+		log.Printf("append session started event: %v", err)
 	}
 
 	response := &sessionv1.StartSessionResponse{
@@ -244,6 +257,264 @@ func (s *SessionService) GetSession(ctx context.Context, in *sessionv1.GetSessio
 	return response, nil
 }
 
+const (
+	defaultListSessionEventsLimit = 50
+	maxListSessionEventsLimit     = 200
+)
+
+// SessionEventAppend appends a session event to the session event stream.
+func (s *SessionService) SessionEventAppend(ctx context.Context, in *sessionv1.SessionEventAppendRequest) (*sessionv1.SessionEventAppendResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "session event append request is required")
+	}
+
+	if s.stores.Event == nil {
+		return nil, status.Error(codes.Internal, "session event store is not configured")
+	}
+
+	sessionID := strings.TrimSpace(in.GetSessionId())
+	if sessionID == "" {
+		return nil, status.Error(codes.InvalidArgument, "session id is required")
+	}
+
+	eventType, err := eventTypeFromProto(in.GetType())
+	if err != nil {
+		s.appendRequestRejected(ctx, sessionID, "session.v1.SessionService/SessionEventAppend", "INVALID_ARGUMENT", err.Error(), "")
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	participantID := strings.TrimSpace(in.GetParticipantId())
+	if participantID == "" {
+		participantID = grpcmeta.ParticipantIDFromContext(ctx)
+	}
+
+	characterID := strings.TrimSpace(in.GetCharacterId())
+	payload := in.GetPayloadJson()
+
+	event := sessiondomain.SessionEvent{
+		SessionID:     sessionID,
+		Timestamp:     s.clock().UTC(),
+		Type:          eventType,
+		RequestID:     grpcmeta.RequestIDFromContext(ctx),
+		InvocationID:  grpcmeta.InvocationIDFromContext(ctx),
+		ParticipantID: participantID,
+		CharacterID:   characterID,
+		PayloadJSON:   payload,
+	}
+
+	stored, err := s.stores.Event.AppendSessionEvent(ctx, event)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "append session event: %v", err)
+	}
+
+	return &sessionv1.SessionEventAppendResponse{
+		Event: sessionEventToProto(stored),
+	}, nil
+}
+
+// SessionEventsList returns session events ordered by sequence.
+func (s *SessionService) SessionEventsList(ctx context.Context, in *sessionv1.SessionEventsListRequest) (*sessionv1.SessionEventsListResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "session events list request is required")
+	}
+
+	if s.stores.Event == nil {
+		return nil, status.Error(codes.Internal, "session event store is not configured")
+	}
+
+	sessionID := strings.TrimSpace(in.GetSessionId())
+	if sessionID == "" {
+		return nil, status.Error(codes.InvalidArgument, "session id is required")
+	}
+
+	limit := int(in.GetLimit())
+	if limit <= 0 {
+		limit = defaultListSessionEventsLimit
+	}
+	if limit > maxListSessionEventsLimit {
+		limit = maxListSessionEventsLimit
+	}
+
+	items, err := s.stores.Event.ListSessionEvents(ctx, sessionID, in.GetAfterSeq(), limit)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "list session events: %v", err)
+	}
+
+	response := &sessionv1.SessionEventsListResponse{
+		Events: make([]*sessionv1.SessionEvent, 0, len(items)),
+	}
+	for _, event := range items {
+		response.Events = append(response.Events, sessionEventToProto(event))
+	}
+
+	return response, nil
+}
+
+// SessionActionRoll rolls duality dice for a session and appends session events.
+func (s *SessionService) SessionActionRoll(ctx context.Context, in *sessionv1.SessionActionRollRequest) (*sessionv1.SessionActionRollResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "session action roll request is required")
+	}
+
+	if s.seedFunc == nil {
+		return nil, status.Error(codes.Internal, "seed generator is not configured")
+	}
+	if s.stores.Campaign == nil {
+		return nil, status.Error(codes.Internal, "campaign store is not configured")
+	}
+	if s.stores.Session == nil {
+		return nil, status.Error(codes.Internal, "session store is not configured")
+	}
+	if s.stores.Event == nil {
+		return nil, status.Error(codes.Internal, "session event store is not configured")
+	}
+
+	campaignID := strings.TrimSpace(in.GetCampaignId())
+	if campaignID == "" {
+		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	}
+
+	sessionID := strings.TrimSpace(in.GetSessionId())
+	if sessionID == "" {
+		return nil, status.Error(codes.InvalidArgument, "session id is required")
+	}
+
+	characterID := strings.TrimSpace(in.GetCharacterId())
+	if characterID == "" {
+		s.appendRequestRejected(ctx, sessionID, "session.v1.SessionService/SessionActionRoll", "INVALID_ARGUMENT", "character id is required", "")
+		return nil, status.Error(codes.InvalidArgument, "character id is required")
+	}
+
+	trait := strings.TrimSpace(in.GetTrait())
+	if trait == "" {
+		s.appendRequestRejected(ctx, sessionID, "session.v1.SessionService/SessionActionRoll", "INVALID_ARGUMENT", "trait is required", characterID)
+		return nil, status.Error(codes.InvalidArgument, "trait is required")
+	}
+
+	if _, err := s.stores.Campaign.Get(ctx, campaignID); err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			s.appendRequestRejected(ctx, sessionID, "session.v1.SessionService/SessionActionRoll", "NOT_FOUND", "campaign not found", characterID)
+			return nil, status.Error(codes.NotFound, "campaign not found")
+		}
+		s.appendRequestRejected(ctx, sessionID, "session.v1.SessionService/SessionActionRoll", "INTERNAL", err.Error(), characterID)
+		return nil, status.Errorf(codes.Internal, "check campaign: %v", err)
+	}
+
+	if _, err := s.stores.Session.GetSession(ctx, campaignID, sessionID); err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			s.appendRequestRejected(ctx, sessionID, "session.v1.SessionService/SessionActionRoll", "NOT_FOUND", "session not found", characterID)
+			return nil, status.Error(codes.NotFound, "session not found")
+		}
+		s.appendRequestRejected(ctx, sessionID, "session.v1.SessionService/SessionActionRoll", "INTERNAL", err.Error(), characterID)
+		return nil, status.Errorf(codes.Internal, "get session: %v", err)
+	}
+
+	modifierTotal := 0
+	requestedModifiers := make([]actionRollModifierPayload, 0, len(in.GetModifiers()))
+	for _, modifier := range in.GetModifiers() {
+		source := strings.TrimSpace(modifier.GetSource())
+		if source == "" {
+			s.appendRequestRejected(ctx, sessionID, "session.v1.SessionService/SessionActionRoll", "INVALID_ARGUMENT", "modifier source is required", characterID)
+			return nil, status.Error(codes.InvalidArgument, "modifier source is required")
+		}
+		value := int(modifier.GetValue())
+		modifierTotal += value
+		requestedModifiers = append(requestedModifiers, actionRollModifierPayload{
+			Source: source,
+			Value:  value,
+		})
+	}
+
+	difficulty := int(in.GetDifficulty())
+	if difficulty < 0 {
+		s.appendRequestRejected(ctx, sessionID, "session.v1.SessionService/SessionActionRoll", "INVALID_ARGUMENT", "difficulty must be zero or greater", characterID)
+		return nil, status.Error(codes.InvalidArgument, "difficulty must be zero or greater")
+	}
+
+	requestedPayload, err := json.Marshal(actionRollRequestedPayload{
+		CharacterID: characterID,
+		Trait:       trait,
+		Difficulty:  difficulty,
+		Modifiers:   requestedModifiers,
+	})
+	if err != nil {
+		s.appendRequestRejected(ctx, sessionID, "session.v1.SessionService/SessionActionRoll", "INTERNAL", "marshal action roll payload", characterID)
+		return nil, status.Errorf(codes.Internal, "marshal action roll payload: %v", err)
+	}
+
+	if err := s.appendEvent(ctx, sessiondomain.SessionEvent{
+		SessionID:     sessionID,
+		Timestamp:     s.clock().UTC(),
+		Type:          sessiondomain.SessionEventTypeActionRollRequested,
+		RequestID:     grpcmeta.RequestIDFromContext(ctx),
+		InvocationID:  grpcmeta.InvocationIDFromContext(ctx),
+		ParticipantID: grpcmeta.ParticipantIDFromContext(ctx),
+		CharacterID:   characterID,
+		PayloadJSON:   requestedPayload,
+	}); err != nil {
+		return nil, status.Errorf(codes.Internal, "append action roll requested: %v", err)
+	}
+
+	seed, err := s.seedFunc()
+	if err != nil {
+		s.appendRequestRejected(ctx, sessionID, "session.v1.SessionService/SessionActionRoll", "INTERNAL", "failed to generate seed", characterID)
+		return nil, status.Errorf(codes.Internal, "failed to generate seed: %v", err)
+	}
+
+	result, err := domain.RollAction(domain.ActionRequest{
+		Modifier:   modifierTotal,
+		Difficulty: &difficulty,
+		Seed:       seed,
+	})
+	if err != nil {
+		if errors.Is(err, domain.ErrInvalidDifficulty) {
+			s.appendRequestRejected(ctx, sessionID, "session.v1.SessionService/SessionActionRoll", "INVALID_ARGUMENT", err.Error(), characterID)
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+		s.appendRequestRejected(ctx, sessionID, "session.v1.SessionService/SessionActionRoll", "INTERNAL", "failed to roll action", characterID)
+		return nil, status.Errorf(codes.Internal, "failed to roll action: %v", err)
+	}
+
+	flavor := actionRollFlavor(result.Hope, result.Fear)
+	resolvedPayload, err := json.Marshal(actionRollResolvedPayload{
+		CharacterID: characterID,
+		HopeDie:     result.Hope,
+		FearDie:     result.Fear,
+		Total:       result.Total,
+		Difficulty:  difficulty,
+		Success:     result.MeetsDifficulty,
+		Flavor:      flavor,
+		Crit:        result.IsCrit,
+	})
+	if err != nil {
+		s.appendRequestRejected(ctx, sessionID, "session.v1.SessionService/SessionActionRoll", "INTERNAL", "marshal action roll resolved payload", characterID)
+		return nil, status.Errorf(codes.Internal, "marshal action roll resolved payload: %v", err)
+	}
+
+	if err := s.appendEvent(ctx, sessiondomain.SessionEvent{
+		SessionID:     sessionID,
+		Timestamp:     s.clock().UTC(),
+		Type:          sessiondomain.SessionEventTypeActionRollResolved,
+		RequestID:     grpcmeta.RequestIDFromContext(ctx),
+		InvocationID:  grpcmeta.InvocationIDFromContext(ctx),
+		ParticipantID: grpcmeta.ParticipantIDFromContext(ctx),
+		CharacterID:   characterID,
+		PayloadJSON:   resolvedPayload,
+	}); err != nil {
+		return nil, status.Errorf(codes.Internal, "append action roll resolved: %v", err)
+	}
+
+	return &sessionv1.SessionActionRollResponse{
+		HopeDie:    int32(result.Hope),
+		FearDie:    int32(result.Fear),
+		Total:      int32(result.Total),
+		Difficulty: int32(difficulty),
+		Success:    result.MeetsDifficulty,
+		Flavor:     flavor,
+		Crit:       result.IsCrit,
+	}, nil
+}
+
 // sessionStatusToProto maps a domain session status to the protobuf representation.
 func sessionStatusToProto(status sessiondomain.SessionStatus) sessionv1.SessionStatus {
 	switch status {
@@ -256,4 +527,156 @@ func sessionStatusToProto(status sessiondomain.SessionStatus) sessionv1.SessionS
 	default:
 		return sessionv1.SessionStatus_STATUS_UNSPECIFIED
 	}
+}
+
+type actionRollModifierPayload struct {
+	Source string `json:"source"`
+	Value  int    `json:"value"`
+}
+
+type actionRollRequestedPayload struct {
+	CharacterID string                      `json:"character_id"`
+	Trait       string                      `json:"trait"`
+	Difficulty  int                         `json:"difficulty"`
+	Modifiers   []actionRollModifierPayload `json:"modifiers,omitempty"`
+}
+
+type actionRollResolvedPayload struct {
+	CharacterID string `json:"character_id"`
+	HopeDie     int    `json:"hope_die"`
+	FearDie     int    `json:"fear_die"`
+	Total       int    `json:"total"`
+	Difficulty  int    `json:"difficulty"`
+	Success     bool   `json:"success"`
+	Flavor      string `json:"flavor"`
+	Crit        bool   `json:"crit"`
+}
+
+type sessionStartedPayload struct {
+	CampaignID string `json:"campaign_id"`
+}
+
+type requestRejectedPayload struct {
+	RPC        string `json:"rpc"`
+	ReasonCode string `json:"reason_code"`
+	Message    string `json:"message,omitempty"`
+}
+
+func (s *SessionService) appendSessionStartedEvent(ctx context.Context, session sessiondomain.Session) error {
+	if s.stores.Event == nil {
+		return fmt.Errorf("session event store is not configured")
+	}
+
+	payload, err := json.Marshal(sessionStartedPayload{CampaignID: session.CampaignID})
+	if err != nil {
+		return fmt.Errorf("marshal session started payload: %w", err)
+	}
+
+	_, err = s.stores.Event.AppendSessionEvent(ctx, sessiondomain.SessionEvent{
+		SessionID:     session.ID,
+		Timestamp:     s.clock().UTC(),
+		Type:          sessiondomain.SessionEventTypeSessionStarted,
+		RequestID:     grpcmeta.RequestIDFromContext(ctx),
+		InvocationID:  grpcmeta.InvocationIDFromContext(ctx),
+		ParticipantID: grpcmeta.ParticipantIDFromContext(ctx),
+		PayloadJSON:   payload,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *SessionService) appendRequestRejected(ctx context.Context, sessionID, rpc, reasonCode, message, characterID string) {
+	if s == nil || s.stores.Event == nil {
+		return
+	}
+
+	payload, err := json.Marshal(requestRejectedPayload{
+		RPC:        rpc,
+		ReasonCode: reasonCode,
+		Message:    message,
+	})
+	if err != nil {
+		return
+	}
+
+	_ = s.appendEvent(ctx, sessiondomain.SessionEvent{
+		SessionID:     sessionID,
+		Timestamp:     s.clock().UTC(),
+		Type:          sessiondomain.SessionEventTypeRequestRejected,
+		RequestID:     grpcmeta.RequestIDFromContext(ctx),
+		InvocationID:  grpcmeta.InvocationIDFromContext(ctx),
+		ParticipantID: grpcmeta.ParticipantIDFromContext(ctx),
+		CharacterID:   characterID,
+		PayloadJSON:   payload,
+	})
+}
+
+func (s *SessionService) appendEvent(ctx context.Context, event sessiondomain.SessionEvent) error {
+	if s.stores.Event == nil {
+		return fmt.Errorf("session event store is not configured")
+	}
+	_, err := s.stores.Event.AppendSessionEvent(ctx, event)
+	return err
+}
+
+func eventTypeFromProto(eventType sessionv1.SessionEventType) (sessiondomain.SessionEventType, error) {
+	switch eventType {
+	case sessionv1.SessionEventType_SESSION_STARTED:
+		return sessiondomain.SessionEventTypeSessionStarted, nil
+	case sessionv1.SessionEventType_SESSION_ENDED:
+		return sessiondomain.SessionEventTypeSessionEnded, nil
+	case sessionv1.SessionEventType_NOTE_ADDED:
+		return sessiondomain.SessionEventTypeNoteAdded, nil
+	case sessionv1.SessionEventType_ACTION_ROLL_REQUESTED:
+		return sessiondomain.SessionEventTypeActionRollRequested, nil
+	case sessionv1.SessionEventType_ACTION_ROLL_RESOLVED:
+		return sessiondomain.SessionEventTypeActionRollResolved, nil
+	case sessionv1.SessionEventType_REQUEST_REJECTED:
+		return sessiondomain.SessionEventTypeRequestRejected, nil
+	default:
+		return "", fmt.Errorf("event type is required")
+	}
+}
+
+func eventTypeToProto(eventType sessiondomain.SessionEventType) sessionv1.SessionEventType {
+	switch eventType {
+	case sessiondomain.SessionEventTypeSessionStarted:
+		return sessionv1.SessionEventType_SESSION_STARTED
+	case sessiondomain.SessionEventTypeSessionEnded:
+		return sessionv1.SessionEventType_SESSION_ENDED
+	case sessiondomain.SessionEventTypeNoteAdded:
+		return sessionv1.SessionEventType_NOTE_ADDED
+	case sessiondomain.SessionEventTypeActionRollRequested:
+		return sessionv1.SessionEventType_ACTION_ROLL_REQUESTED
+	case sessiondomain.SessionEventTypeActionRollResolved:
+		return sessionv1.SessionEventType_ACTION_ROLL_RESOLVED
+	case sessiondomain.SessionEventTypeRequestRejected:
+		return sessionv1.SessionEventType_REQUEST_REJECTED
+	default:
+		return sessionv1.SessionEventType_SESSION_EVENT_TYPE_UNSPECIFIED
+	}
+}
+
+func sessionEventToProto(event sessiondomain.SessionEvent) *sessionv1.SessionEvent {
+	return &sessionv1.SessionEvent{
+		SessionId:     event.SessionID,
+		Seq:           event.Seq,
+		Ts:            timestamppb.New(event.Timestamp),
+		Type:          eventTypeToProto(event.Type),
+		RequestId:     event.RequestID,
+		InvocationId:  event.InvocationID,
+		ParticipantId: event.ParticipantID,
+		CharacterId:   event.CharacterID,
+		PayloadJson:   event.PayloadJSON,
+	}
+}
+
+func actionRollFlavor(hope, fear int) string {
+	if fear > hope {
+		return "FEAR"
+	}
+	return "HOPE"
 }

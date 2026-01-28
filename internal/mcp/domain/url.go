@@ -34,3 +34,32 @@ func parseCampaignIDFromResourceURI(uri, resourceType string) (string, error) {
 
 	return campaignID, nil
 }
+
+// parseSessionIDFromResourceURI extracts the session ID from a URI of the form session://{session_id}/{resourceType}.
+// It parses URIs of the expected format but requires an actual session ID and rejects the placeholder (session://_/{resourceType}).
+// The resourceType parameter should be the resource suffix (e.g., "events").
+func parseSessionIDFromResourceURI(uri, resourceType string) (string, error) {
+	prefix := "session://"
+	suffix := "/" + resourceType
+
+	if !strings.HasPrefix(uri, prefix) {
+		return "", fmt.Errorf("URI must start with %q", prefix)
+	}
+	if !strings.HasSuffix(uri, suffix) {
+		return "", fmt.Errorf("URI must end with %q", suffix)
+	}
+
+	sessionID := strings.TrimPrefix(uri, prefix)
+	sessionID = strings.TrimSuffix(sessionID, suffix)
+	sessionID = strings.TrimSpace(sessionID)
+
+	if sessionID == "" {
+		return "", fmt.Errorf("session ID is required in URI")
+	}
+
+	if sessionID == "_" {
+		return "", fmt.Errorf("session ID placeholder '_' is not a valid session ID")
+	}
+
+	return sessionID, nil
+}

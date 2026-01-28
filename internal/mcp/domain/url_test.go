@@ -157,3 +157,84 @@ func TestParseCampaignIDFromResourceURI(t *testing.T) {
 		})
 	}
 }
+
+func TestParseSessionIDFromResourceURI(t *testing.T) {
+	tests := []struct {
+		name         string
+		uri          string
+		resourceType string
+		wantID       string
+		wantErr      bool
+		errContains  string
+	}{
+		{
+			name:         "valid events URI",
+			uri:          "session://sess-123/events",
+			resourceType: "events",
+			wantID:       "sess-123",
+			wantErr:      false,
+		},
+		{
+			name:         "valid URI with whitespace trimmed",
+			uri:          "session://  sess-456  /events",
+			resourceType: "events",
+			wantID:       "sess-456",
+			wantErr:      false,
+		},
+		{
+			name:         "missing prefix",
+			uri:          "sess-123/events",
+			resourceType: "events",
+			wantErr:      true,
+			errContains:  "URI must start with",
+		},
+		{
+			name:         "missing suffix",
+			uri:          "session://sess-123",
+			resourceType: "events",
+			wantErr:      true,
+			errContains:  "URI must end with",
+		},
+		{
+			name:         "empty session ID",
+			uri:          "session:///events",
+			resourceType: "events",
+			wantErr:      true,
+			errContains:  "session ID is required",
+		},
+		{
+			name:         "placeholder session ID",
+			uri:          "session://_/events",
+			resourceType: "events",
+			wantErr:      true,
+			errContains:  "session ID placeholder",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotID, err := parseSessionIDFromResourceURI(tt.uri, tt.resourceType)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("parseSessionIDFromResourceURI() expected error but got none")
+					return
+				}
+				if tt.errContains != "" && !strings.Contains(err.Error(), tt.errContains) {
+					t.Errorf("parseSessionIDFromResourceURI() error = %v, want error containing %q", err, tt.errContains)
+				}
+				if gotID != "" {
+					t.Errorf("parseSessionIDFromResourceURI() gotID = %q, want empty string on error", gotID)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("parseSessionIDFromResourceURI() unexpected error = %v", err)
+					return
+				}
+				if gotID != tt.wantID {
+					t.Errorf("parseSessionIDFromResourceURI() gotID = %q, want %q", gotID, tt.wantID)
+				}
+			}
+		})
+	}
+}

@@ -54,6 +54,21 @@ func InvocationIDFromContext(ctx context.Context) string {
 	return value
 }
 
+// ParticipantIDFromContext returns the participant ID from incoming metadata.
+func ParticipantIDFromContext(ctx context.Context) string {
+	return metadataValueFromIncomingContext(ctx, ParticipantIDHeader)
+}
+
+// CampaignIDFromContext returns the campaign ID from incoming metadata.
+func CampaignIDFromContext(ctx context.Context) string {
+	return metadataValueFromIncomingContext(ctx, CampaignIDHeader)
+}
+
+// SessionIDFromContext returns the session ID from incoming metadata.
+func SessionIDFromContext(ctx context.Context) string {
+	return metadataValueFromIncomingContext(ctx, SessionIDHeader)
+}
+
 // WithRequestID stores the request ID in context.
 func WithRequestID(ctx context.Context, requestID string) context.Context {
 	if ctx == nil {
@@ -191,6 +206,14 @@ func invocationIDFromIncomingContext(ctx context.Context) string {
 		return ""
 	}
 	return FirstMetadataValue(md, InvocationIDHeader)
+}
+
+func metadataValueFromIncomingContext(ctx context.Context, header string) string {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return ""
+	}
+	return FirstMetadataValue(md, header)
 }
 
 // responseHeaders builds response metadata headers from IDs.

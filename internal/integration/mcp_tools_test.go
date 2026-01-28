@@ -40,6 +40,7 @@ func runMCPToolsTests(t *testing.T, suite *integrationSuite) {
 			"participant_create",
 			"roll_dice",
 			"session_start",
+			"session_action_roll",
 			"set_context",
 		}
 

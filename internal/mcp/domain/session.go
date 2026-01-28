@@ -7,6 +7,7 @@ import (
 	"time"
 
 	sessionv1 "github.com/louisbranch/duality-engine/api/gen/go/session/v1"
+	"github.com/louisbranch/duality-engine/internal/grpcmeta"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -84,6 +85,119 @@ func SessionStartHandler(client sessionv1.SessionServiceClient) mcp.ToolHandlerF
 	}
 }
 
+// SessionActionRollModifier represents a modifier for a session action roll.
+type SessionActionRollModifier struct {
+	Source string `json:"source" jsonschema:"modifier source label"`
+	Value  int    `json:"value" jsonschema:"modifier value"`
+}
+
+// SessionActionRollInput represents the MCP tool input for a session action roll.
+type SessionActionRollInput struct {
+	CampaignID  string                      `json:"campaign_id,omitempty" jsonschema:"campaign identifier (defaults to context)"`
+	SessionID   string                      `json:"session_id,omitempty" jsonschema:"session identifier (defaults to context)"`
+	CharacterID string                      `json:"character_id" jsonschema:"character identifier"`
+	Trait       string                      `json:"trait" jsonschema:"trait being rolled"`
+	Difficulty  int                         `json:"difficulty" jsonschema:"difficulty target"`
+	Modifiers   []SessionActionRollModifier `json:"modifiers,omitempty" jsonschema:"optional roll modifiers"`
+}
+
+// SessionActionRollResult represents the MCP tool output for a session action roll.
+type SessionActionRollResult struct {
+	HopeDie    int    `json:"hope_die" jsonschema:"hope die result"`
+	FearDie    int    `json:"fear_die" jsonschema:"fear die result"`
+	Total      int    `json:"total" jsonschema:"sum of dice and modifiers"`
+	Difficulty int    `json:"difficulty" jsonschema:"difficulty target"`
+	Success    bool   `json:"success" jsonschema:"whether total meets difficulty"`
+	Flavor     string `json:"flavor" jsonschema:"HOPE or FEAR"`
+	Crit       bool   `json:"crit" jsonschema:"whether the roll is a critical success"`
+}
+
+// SessionActionRollTool defines the MCP tool schema for session action rolls.
+func SessionActionRollTool() *mcp.Tool {
+	return &mcp.Tool{
+		Name:        "session_action_roll",
+		Description: "Rolls Duality dice for a session and appends session events",
+	}
+}
+
+// SessionActionRollHandler executes a session action roll request.
+func SessionActionRollHandler(client sessionv1.SessionServiceClient, getContext func() Context) mcp.ToolHandlerFor[SessionActionRollInput, SessionActionRollResult] {
+	return func(ctx context.Context, _ *mcp.CallToolRequest, input SessionActionRollInput) (*mcp.CallToolResult, SessionActionRollResult, error) {
+		invocationID, err := NewInvocationID()
+		if err != nil {
+			return nil, SessionActionRollResult{}, fmt.Errorf("generate invocation id: %w", err)
+		}
+
+		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+
+		mcpCtx := Context{}
+		if getContext != nil {
+			mcpCtx = getContext()
+		}
+
+		campaignID := input.CampaignID
+		if campaignID == "" {
+			campaignID = mcpCtx.CampaignID
+		}
+		sessionID := input.SessionID
+		if sessionID == "" {
+			sessionID = mcpCtx.SessionID
+		}
+		if campaignID == "" {
+			return nil, SessionActionRollResult{}, fmt.Errorf("campaign_id is required")
+		}
+		if sessionID == "" {
+			return nil, SessionActionRollResult{}, fmt.Errorf("session_id is required")
+		}
+
+		callCtx, callMeta, err := NewOutgoingContext(runCtx, invocationID)
+		if err != nil {
+			return nil, SessionActionRollResult{}, fmt.Errorf("create request metadata: %w", err)
+		}
+		if mcpCtx.ParticipantID != "" {
+			callCtx = metadata.AppendToOutgoingContext(callCtx, grpcmeta.ParticipantIDHeader, mcpCtx.ParticipantID)
+		}
+
+		modifiers := make([]*sessionv1.ActionRollModifier, 0, len(input.Modifiers))
+		for _, modifier := range input.Modifiers {
+			modifiers = append(modifiers, &sessionv1.ActionRollModifier{
+				Source: modifier.Source,
+				Value:  int32(modifier.Value),
+			})
+		}
+
+		var header metadata.MD
+		response, err := client.SessionActionRoll(callCtx, &sessionv1.SessionActionRollRequest{
+			CampaignId:  campaignID,
+			SessionId:   sessionID,
+			CharacterId: input.CharacterID,
+			Trait:       input.Trait,
+			Difficulty:  int32(input.Difficulty),
+			Modifiers:   modifiers,
+		}, grpc.Header(&header))
+		if err != nil {
+			return nil, SessionActionRollResult{}, fmt.Errorf("session action roll failed: %w", err)
+		}
+		if response == nil {
+			return nil, SessionActionRollResult{}, fmt.Errorf("session action roll response is missing")
+		}
+
+		result := SessionActionRollResult{
+			HopeDie:    int(response.GetHopeDie()),
+			FearDie:    int(response.GetFearDie()),
+			Total:      int(response.GetTotal()),
+			Difficulty: int(response.GetDifficulty()),
+			Success:    response.GetSuccess(),
+			Flavor:     response.GetFlavor(),
+			Crit:       response.GetCrit(),
+		}
+
+		responseMeta := MergeResponseMetadata(callMeta, header)
+		return CallToolResultWithMetadata(responseMeta), result, nil
+	}
+}
+
 // sessionStatusToString converts a protobuf SessionStatus to a string representation.
 func sessionStatusToString(status sessionv1.SessionStatus) string {
 	switch status {
@@ -114,6 +228,24 @@ type SessionListEntry struct {
 // SessionListPayload represents the MCP resource payload for session listings.
 type SessionListPayload struct {
 	Sessions []SessionListEntry `json:"sessions"`
+}
+
+// SessionEventEntry represents a readable session event.
+type SessionEventEntry struct {
+	SessionID     string `json:"session_id"`
+	Seq           uint64 `json:"seq"`
+	Timestamp     string `json:"ts"`
+	Type          string `json:"type"`
+	RequestID     string `json:"request_id"`
+	InvocationID  string `json:"invocation_id"`
+	ParticipantID string `json:"participant_id,omitempty"`
+	CharacterID   string `json:"character_id,omitempty"`
+	PayloadJSON   string `json:"payload_json"`
+}
+
+// SessionEventsPayload represents the MCP resource payload for session events.
+type SessionEventsPayload struct {
+	Events []SessionEventEntry `json:"events"`
 }
 
 // SessionListResource defines the MCP resource for session listings.
@@ -209,8 +341,99 @@ func SessionListResourceHandler(client sessionv1.SessionServiceClient) mcp.Resou
 	}
 }
 
+// SessionEventsResource defines the MCP resource for session event listings.
+// The effective URI template is session://{session_id}/events, but the
+// SDK requires a valid URI for registration, so we use a placeholder here.
+// Clients must provide the full URI with actual session_id when reading.
+func SessionEventsResource() *mcp.Resource {
+	return &mcp.Resource{
+		Name:        "session_events",
+		Title:       "Session Events",
+		Description: "Readable listing of session events. URI format: session://{session_id}/events",
+		MIMEType:    "application/json",
+		URI:         "session://_/events",
+	}
+}
+
+// SessionEventsResourceHandler returns a readable session events listing resource.
+func SessionEventsResourceHandler(client sessionv1.SessionServiceClient) mcp.ResourceHandler {
+	return func(ctx context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
+		if client == nil {
+			return nil, fmt.Errorf("session events client is not configured")
+		}
+
+		uri := SessionEventsResource().URI
+		if req != nil && req.Params != nil && req.Params.URI != "" {
+			uri = req.Params.URI
+		}
+		if uri == SessionEventsResource().URI {
+			return nil, fmt.Errorf("session ID is required; use URI format session://{session_id}/events")
+		}
+
+		sessionID, err := parseSessionIDFromSessionEventsURI(uri)
+		if err != nil {
+			return nil, fmt.Errorf("parse session ID from URI: %w", err)
+		}
+
+		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+
+		callCtx, _, err := NewOutgoingContext(runCtx, "")
+		if err != nil {
+			return nil, fmt.Errorf("create request metadata: %w", err)
+		}
+
+		response, err := client.SessionEventsList(callCtx, &sessionv1.SessionEventsListRequest{
+			SessionId: sessionID,
+			Limit:     50,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("session events list failed: %w", err)
+		}
+		if response == nil {
+			return nil, fmt.Errorf("session events list response is missing")
+		}
+
+		payload := SessionEventsPayload{Events: make([]SessionEventEntry, 0, len(response.GetEvents()))}
+		for _, event := range response.GetEvents() {
+			payload.Events = append(payload.Events, SessionEventEntry{
+				SessionID:     event.GetSessionId(),
+				Seq:           event.GetSeq(),
+				Timestamp:     formatTimestamp(event.GetTs()),
+				Type:          event.GetType().String(),
+				RequestID:     event.GetRequestId(),
+				InvocationID:  event.GetInvocationId(),
+				ParticipantID: event.GetParticipantId(),
+				CharacterID:   event.GetCharacterId(),
+				PayloadJSON:   string(event.GetPayloadJson()),
+			})
+		}
+
+		data, err := json.MarshalIndent(payload, "", "  ")
+		if err != nil {
+			return nil, fmt.Errorf("marshal session events: %w", err)
+		}
+
+		return &mcp.ReadResourceResult{
+			Contents: []*mcp.ResourceContents{
+				{
+					URI:      uri,
+					MIMEType: "application/json",
+					Text:     string(data),
+				},
+			},
+		}, nil
+	}
+}
+
 // parseCampaignIDFromSessionURI extracts the campaign ID from a URI of the form campaign://{campaign_id}/sessions.
 // It parses URIs of the expected format but requires an actual campaign ID and rejects the placeholder (campaign://_/sessions).
 func parseCampaignIDFromSessionURI(uri string) (string, error) {
 	return parseCampaignIDFromResourceURI(uri, "sessions")
+}
+
+// parseSessionIDFromSessionEventsURI extracts the session ID from a URI of the form session://{session_id}/events.
+// It parses URIs of the expected format but requires an actual session ID and rejects the placeholder (session://_/events).
+func parseSessionIDFromSessionEventsURI(uri string) (string, error) {
+	return parseSessionIDFromResourceURI(uri, "events")
 }

@@ -25,33 +25,48 @@ var File_session_v1_service_proto protoreflect.FileDescriptor
 const file_session_v1_service_proto_rawDesc = "" +
 	"\n" +
 	"\x18session/v1/service.proto\x12\n" +
-	"session.v1\x1a\x19session/v1/requests.proto2\x83\x02\n" +
+	"session.v1\x1a\x19session/v1/requests.proto2\xac\x04\n" +
 	"\x0eSessionService\x12Q\n" +
 	"\fStartSession\x12\x1f.session.v1.StartSessionRequest\x1a .session.v1.StartSessionResponse\x12Q\n" +
 	"\fListSessions\x12\x1f.session.v1.ListSessionsRequest\x1a .session.v1.ListSessionsResponse\x12K\n" +
 	"\n" +
-	"GetSession\x12\x1d.session.v1.GetSessionRequest\x1a\x1e.session.v1.GetSessionResponseBGZEgithub.com/louisbranch/duality-engine/api/gen/go/session/v1;sessionv1b\x06proto3"
+	"GetSession\x12\x1d.session.v1.GetSessionRequest\x1a\x1e.session.v1.GetSessionResponse\x12c\n" +
+	"\x12SessionEventAppend\x12%.session.v1.SessionEventAppendRequest\x1a&.session.v1.SessionEventAppendResponse\x12`\n" +
+	"\x11SessionEventsList\x12$.session.v1.SessionEventsListRequest\x1a%.session.v1.SessionEventsListResponse\x12`\n" +
+	"\x11SessionActionRoll\x12$.session.v1.SessionActionRollRequest\x1a%.session.v1.SessionActionRollResponseBGZEgithub.com/louisbranch/duality-engine/api/gen/go/session/v1;sessionv1b\x06proto3"
 
 var file_session_v1_service_proto_goTypes = []any{
-	(*StartSessionRequest)(nil),  // 0: session.v1.StartSessionRequest
-	(*ListSessionsRequest)(nil),  // 1: session.v1.ListSessionsRequest
-	(*GetSessionRequest)(nil),    // 2: session.v1.GetSessionRequest
-	(*StartSessionResponse)(nil), // 3: session.v1.StartSessionResponse
-	(*ListSessionsResponse)(nil), // 4: session.v1.ListSessionsResponse
-	(*GetSessionResponse)(nil),   // 5: session.v1.GetSessionResponse
+	(*StartSessionRequest)(nil),        // 0: session.v1.StartSessionRequest
+	(*ListSessionsRequest)(nil),        // 1: session.v1.ListSessionsRequest
+	(*GetSessionRequest)(nil),          // 2: session.v1.GetSessionRequest
+	(*SessionEventAppendRequest)(nil),  // 3: session.v1.SessionEventAppendRequest
+	(*SessionEventsListRequest)(nil),   // 4: session.v1.SessionEventsListRequest
+	(*SessionActionRollRequest)(nil),   // 5: session.v1.SessionActionRollRequest
+	(*StartSessionResponse)(nil),       // 6: session.v1.StartSessionResponse
+	(*ListSessionsResponse)(nil),       // 7: session.v1.ListSessionsResponse
+	(*GetSessionResponse)(nil),         // 8: session.v1.GetSessionResponse
+	(*SessionEventAppendResponse)(nil), // 9: session.v1.SessionEventAppendResponse
+	(*SessionEventsListResponse)(nil),  // 10: session.v1.SessionEventsListResponse
+	(*SessionActionRollResponse)(nil),  // 11: session.v1.SessionActionRollResponse
 }
 var file_session_v1_service_proto_depIdxs = []int32{
-	0, // 0: session.v1.SessionService.StartSession:input_type -> session.v1.StartSessionRequest
-	1, // 1: session.v1.SessionService.ListSessions:input_type -> session.v1.ListSessionsRequest
-	2, // 2: session.v1.SessionService.GetSession:input_type -> session.v1.GetSessionRequest
-	3, // 3: session.v1.SessionService.StartSession:output_type -> session.v1.StartSessionResponse
-	4, // 4: session.v1.SessionService.ListSessions:output_type -> session.v1.ListSessionsResponse
-	5, // 5: session.v1.SessionService.GetSession:output_type -> session.v1.GetSessionResponse
-	3, // [3:6] is the sub-list for method output_type
-	0, // [0:3] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	0,  // 0: session.v1.SessionService.StartSession:input_type -> session.v1.StartSessionRequest
+	1,  // 1: session.v1.SessionService.ListSessions:input_type -> session.v1.ListSessionsRequest
+	2,  // 2: session.v1.SessionService.GetSession:input_type -> session.v1.GetSessionRequest
+	3,  // 3: session.v1.SessionService.SessionEventAppend:input_type -> session.v1.SessionEventAppendRequest
+	4,  // 4: session.v1.SessionService.SessionEventsList:input_type -> session.v1.SessionEventsListRequest
+	5,  // 5: session.v1.SessionService.SessionActionRoll:input_type -> session.v1.SessionActionRollRequest
+	6,  // 6: session.v1.SessionService.StartSession:output_type -> session.v1.StartSessionResponse
+	7,  // 7: session.v1.SessionService.ListSessions:output_type -> session.v1.ListSessionsResponse
+	8,  // 8: session.v1.SessionService.GetSession:output_type -> session.v1.GetSessionResponse
+	9,  // 9: session.v1.SessionService.SessionEventAppend:output_type -> session.v1.SessionEventAppendResponse
+	10, // 10: session.v1.SessionService.SessionEventsList:output_type -> session.v1.SessionEventsListResponse
+	11, // 11: session.v1.SessionService.SessionActionRoll:output_type -> session.v1.SessionActionRollResponse
+	6,  // [6:12] is the sub-list for method output_type
+	0,  // [0:6] is the sub-list for method input_type
+	0,  // [0:0] is the sub-list for extension type_name
+	0,  // [0:0] is the sub-list for extension extendee
+	0,  // [0:0] is the sub-list for field type_name
 }
 
 func init() { file_session_v1_service_proto_init() }

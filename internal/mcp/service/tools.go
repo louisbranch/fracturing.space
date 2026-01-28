@@ -27,8 +27,9 @@ func registerCampaignTools(mcpServer *mcp.Server, client campaignv1.CampaignServ
 	mcp.AddTool(mcpServer, domain.CharacterStatePatchTool(), domain.CharacterStatePatchHandler(client, getContext))
 }
 
-func registerSessionTools(mcpServer *mcp.Server, client sessionv1.SessionServiceClient) {
+func registerSessionTools(mcpServer *mcp.Server, client sessionv1.SessionServiceClient, getContext func() domain.Context) {
 	mcp.AddTool(mcpServer, domain.SessionStartTool(), domain.SessionStartHandler(client))
+	mcp.AddTool(mcpServer, domain.SessionActionRollTool(), domain.SessionActionRollHandler(client, getContext))
 }
 
 // registerContextTools registers context management tools.
@@ -57,6 +58,7 @@ func registerCampaignResources(mcpServer *mcp.Server, client campaignv1.Campaign
 // registerSessionResources registers readable session MCP resources.
 func registerSessionResources(mcpServer *mcp.Server, client sessionv1.SessionServiceClient) {
 	mcpServer.AddResource(domain.SessionListResource(), domain.SessionListResourceHandler(client))
+	mcpServer.AddResource(domain.SessionEventsResource(), domain.SessionEventsResourceHandler(client))
 }
 
 // registerContextResources registers readable context MCP resources.

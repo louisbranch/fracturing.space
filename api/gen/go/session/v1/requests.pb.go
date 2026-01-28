@@ -333,12 +333,478 @@ func (x *GetSessionResponse) GetSession() *Session {
 	return nil
 }
 
+type SessionEventAppendRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The session ID to append the event to.
+	SessionId string `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	// The event type.
+	Type SessionEventType `protobuf:"varint,2,opt,name=type,proto3,enum=session.v1.SessionEventType" json:"type,omitempty"`
+	// Optional participant identifier for correlation.
+	ParticipantId string `protobuf:"bytes,3,opt,name=participant_id,json=participantId,proto3" json:"participant_id,omitempty"`
+	// Optional character identifier for correlation.
+	CharacterId string `protobuf:"bytes,4,opt,name=character_id,json=characterId,proto3" json:"character_id,omitempty"`
+	// JSON payload encoded as bytes.
+	PayloadJson   []byte `protobuf:"bytes,5,opt,name=payload_json,json=payloadJson,proto3" json:"payload_json,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SessionEventAppendRequest) Reset() {
+	*x = SessionEventAppendRequest{}
+	mi := &file_session_v1_requests_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SessionEventAppendRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SessionEventAppendRequest) ProtoMessage() {}
+
+func (x *SessionEventAppendRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_session_v1_requests_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SessionEventAppendRequest.ProtoReflect.Descriptor instead.
+func (*SessionEventAppendRequest) Descriptor() ([]byte, []int) {
+	return file_session_v1_requests_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *SessionEventAppendRequest) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *SessionEventAppendRequest) GetType() SessionEventType {
+	if x != nil {
+		return x.Type
+	}
+	return SessionEventType_SESSION_EVENT_TYPE_UNSPECIFIED
+}
+
+func (x *SessionEventAppendRequest) GetParticipantId() string {
+	if x != nil {
+		return x.ParticipantId
+	}
+	return ""
+}
+
+func (x *SessionEventAppendRequest) GetCharacterId() string {
+	if x != nil {
+		return x.CharacterId
+	}
+	return ""
+}
+
+func (x *SessionEventAppendRequest) GetPayloadJson() []byte {
+	if x != nil {
+		return x.PayloadJson
+	}
+	return nil
+}
+
+type SessionEventAppendResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Event         *SessionEvent          `protobuf:"bytes,1,opt,name=event,proto3" json:"event,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SessionEventAppendResponse) Reset() {
+	*x = SessionEventAppendResponse{}
+	mi := &file_session_v1_requests_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SessionEventAppendResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SessionEventAppendResponse) ProtoMessage() {}
+
+func (x *SessionEventAppendResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_session_v1_requests_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SessionEventAppendResponse.ProtoReflect.Descriptor instead.
+func (*SessionEventAppendResponse) Descriptor() ([]byte, []int) {
+	return file_session_v1_requests_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *SessionEventAppendResponse) GetEvent() *SessionEvent {
+	if x != nil {
+		return x.Event
+	}
+	return nil
+}
+
+type SessionEventsListRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The session ID to list events for.
+	SessionId string `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	// Return events with seq greater than this value.
+	AfterSeq uint64 `protobuf:"varint,2,opt,name=after_seq,json=afterSeq,proto3" json:"after_seq,omitempty"`
+	// Maximum number of events to return.
+	Limit         int32 `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SessionEventsListRequest) Reset() {
+	*x = SessionEventsListRequest{}
+	mi := &file_session_v1_requests_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SessionEventsListRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SessionEventsListRequest) ProtoMessage() {}
+
+func (x *SessionEventsListRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_session_v1_requests_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SessionEventsListRequest.ProtoReflect.Descriptor instead.
+func (*SessionEventsListRequest) Descriptor() ([]byte, []int) {
+	return file_session_v1_requests_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *SessionEventsListRequest) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *SessionEventsListRequest) GetAfterSeq() uint64 {
+	if x != nil {
+		return x.AfterSeq
+	}
+	return 0
+}
+
+func (x *SessionEventsListRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+type SessionEventsListResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Events        []*SessionEvent        `protobuf:"bytes,1,rep,name=events,proto3" json:"events,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SessionEventsListResponse) Reset() {
+	*x = SessionEventsListResponse{}
+	mi := &file_session_v1_requests_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SessionEventsListResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SessionEventsListResponse) ProtoMessage() {}
+
+func (x *SessionEventsListResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_session_v1_requests_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SessionEventsListResponse.ProtoReflect.Descriptor instead.
+func (*SessionEventsListResponse) Descriptor() ([]byte, []int) {
+	return file_session_v1_requests_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *SessionEventsListResponse) GetEvents() []*SessionEvent {
+	if x != nil {
+		return x.Events
+	}
+	return nil
+}
+
+type ActionRollModifier struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Source        string                 `protobuf:"bytes,1,opt,name=source,proto3" json:"source,omitempty"`
+	Value         int32                  `protobuf:"varint,2,opt,name=value,proto3" json:"value,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ActionRollModifier) Reset() {
+	*x = ActionRollModifier{}
+	mi := &file_session_v1_requests_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ActionRollModifier) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ActionRollModifier) ProtoMessage() {}
+
+func (x *ActionRollModifier) ProtoReflect() protoreflect.Message {
+	mi := &file_session_v1_requests_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ActionRollModifier.ProtoReflect.Descriptor instead.
+func (*ActionRollModifier) Descriptor() ([]byte, []int) {
+	return file_session_v1_requests_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *ActionRollModifier) GetSource() string {
+	if x != nil {
+		return x.Source
+	}
+	return ""
+}
+
+func (x *ActionRollModifier) GetValue() int32 {
+	if x != nil {
+		return x.Value
+	}
+	return 0
+}
+
+type SessionActionRollRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The campaign ID for validation.
+	CampaignId string `protobuf:"bytes,1,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"`
+	// The session ID to associate with this roll.
+	SessionId string `protobuf:"bytes,2,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	// The character performing the roll.
+	CharacterId string `protobuf:"bytes,3,opt,name=character_id,json=characterId,proto3" json:"character_id,omitempty"`
+	// The trait being rolled.
+	Trait string `protobuf:"bytes,4,opt,name=trait,proto3" json:"trait,omitempty"`
+	// The difficulty target.
+	Difficulty int32 `protobuf:"varint,5,opt,name=difficulty,proto3" json:"difficulty,omitempty"`
+	// Optional modifiers applied to the roll.
+	Modifiers     []*ActionRollModifier `protobuf:"bytes,6,rep,name=modifiers,proto3" json:"modifiers,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SessionActionRollRequest) Reset() {
+	*x = SessionActionRollRequest{}
+	mi := &file_session_v1_requests_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SessionActionRollRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SessionActionRollRequest) ProtoMessage() {}
+
+func (x *SessionActionRollRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_session_v1_requests_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SessionActionRollRequest.ProtoReflect.Descriptor instead.
+func (*SessionActionRollRequest) Descriptor() ([]byte, []int) {
+	return file_session_v1_requests_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *SessionActionRollRequest) GetCampaignId() string {
+	if x != nil {
+		return x.CampaignId
+	}
+	return ""
+}
+
+func (x *SessionActionRollRequest) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *SessionActionRollRequest) GetCharacterId() string {
+	if x != nil {
+		return x.CharacterId
+	}
+	return ""
+}
+
+func (x *SessionActionRollRequest) GetTrait() string {
+	if x != nil {
+		return x.Trait
+	}
+	return ""
+}
+
+func (x *SessionActionRollRequest) GetDifficulty() int32 {
+	if x != nil {
+		return x.Difficulty
+	}
+	return 0
+}
+
+func (x *SessionActionRollRequest) GetModifiers() []*ActionRollModifier {
+	if x != nil {
+		return x.Modifiers
+	}
+	return nil
+}
+
+type SessionActionRollResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	HopeDie       int32                  `protobuf:"varint,1,opt,name=hope_die,json=hopeDie,proto3" json:"hope_die,omitempty"`
+	FearDie       int32                  `protobuf:"varint,2,opt,name=fear_die,json=fearDie,proto3" json:"fear_die,omitempty"`
+	Total         int32                  `protobuf:"varint,3,opt,name=total,proto3" json:"total,omitempty"`
+	Difficulty    int32                  `protobuf:"varint,4,opt,name=difficulty,proto3" json:"difficulty,omitempty"`
+	Success       bool                   `protobuf:"varint,5,opt,name=success,proto3" json:"success,omitempty"`
+	Flavor        string                 `protobuf:"bytes,6,opt,name=flavor,proto3" json:"flavor,omitempty"`
+	Crit          bool                   `protobuf:"varint,7,opt,name=crit,proto3" json:"crit,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SessionActionRollResponse) Reset() {
+	*x = SessionActionRollResponse{}
+	mi := &file_session_v1_requests_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SessionActionRollResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SessionActionRollResponse) ProtoMessage() {}
+
+func (x *SessionActionRollResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_session_v1_requests_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SessionActionRollResponse.ProtoReflect.Descriptor instead.
+func (*SessionActionRollResponse) Descriptor() ([]byte, []int) {
+	return file_session_v1_requests_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *SessionActionRollResponse) GetHopeDie() int32 {
+	if x != nil {
+		return x.HopeDie
+	}
+	return 0
+}
+
+func (x *SessionActionRollResponse) GetFearDie() int32 {
+	if x != nil {
+		return x.FearDie
+	}
+	return 0
+}
+
+func (x *SessionActionRollResponse) GetTotal() int32 {
+	if x != nil {
+		return x.Total
+	}
+	return 0
+}
+
+func (x *SessionActionRollResponse) GetDifficulty() int32 {
+	if x != nil {
+		return x.Difficulty
+	}
+	return 0
+}
+
+func (x *SessionActionRollResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *SessionActionRollResponse) GetFlavor() string {
+	if x != nil {
+		return x.Flavor
+	}
+	return ""
+}
+
+func (x *SessionActionRollResponse) GetCrit() bool {
+	if x != nil {
+		return x.Crit
+	}
+	return false
+}
+
 var File_session_v1_requests_proto protoreflect.FileDescriptor
 
 const file_session_v1_requests_proto_rawDesc = "" +
 	"\n" +
 	"\x19session/v1/requests.proto\x12\n" +
-	"session.v1\x1a\x18session/v1/session.proto\"J\n" +
+	"session.v1\x1a\x18session/v1/session.proto\x1a\x17session/v1/events.proto\"J\n" +
 	"\x13StartSessionRequest\x12\x1f\n" +
 	"\vcampaign_id\x18\x01 \x01(\tR\n" +
 	"campaignId\x12\x12\n" +
@@ -360,7 +826,47 @@ const file_session_v1_requests_proto_rawDesc = "" +
 	"\n" +
 	"session_id\x18\x02 \x01(\tR\tsessionId\"C\n" +
 	"\x12GetSessionResponse\x12-\n" +
-	"\asession\x18\x01 \x01(\v2\x13.session.v1.SessionR\asessionBGZEgithub.com/louisbranch/duality-engine/api/gen/go/session/v1;sessionv1b\x06proto3"
+	"\asession\x18\x01 \x01(\v2\x13.session.v1.SessionR\asession\"\xd9\x01\n" +
+	"\x19SessionEventAppendRequest\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\x120\n" +
+	"\x04type\x18\x02 \x01(\x0e2\x1c.session.v1.SessionEventTypeR\x04type\x12%\n" +
+	"\x0eparticipant_id\x18\x03 \x01(\tR\rparticipantId\x12!\n" +
+	"\fcharacter_id\x18\x04 \x01(\tR\vcharacterId\x12!\n" +
+	"\fpayload_json\x18\x05 \x01(\fR\vpayloadJson\"L\n" +
+	"\x1aSessionEventAppendResponse\x12.\n" +
+	"\x05event\x18\x01 \x01(\v2\x18.session.v1.SessionEventR\x05event\"l\n" +
+	"\x18SessionEventsListRequest\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x1b\n" +
+	"\tafter_seq\x18\x02 \x01(\x04R\bafterSeq\x12\x14\n" +
+	"\x05limit\x18\x03 \x01(\x05R\x05limit\"M\n" +
+	"\x19SessionEventsListResponse\x120\n" +
+	"\x06events\x18\x01 \x03(\v2\x18.session.v1.SessionEventR\x06events\"B\n" +
+	"\x12ActionRollModifier\x12\x16\n" +
+	"\x06source\x18\x01 \x01(\tR\x06source\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x05R\x05value\"\xf1\x01\n" +
+	"\x18SessionActionRollRequest\x12\x1f\n" +
+	"\vcampaign_id\x18\x01 \x01(\tR\n" +
+	"campaignId\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x02 \x01(\tR\tsessionId\x12!\n" +
+	"\fcharacter_id\x18\x03 \x01(\tR\vcharacterId\x12\x14\n" +
+	"\x05trait\x18\x04 \x01(\tR\x05trait\x12\x1e\n" +
+	"\n" +
+	"difficulty\x18\x05 \x01(\x05R\n" +
+	"difficulty\x12<\n" +
+	"\tmodifiers\x18\x06 \x03(\v2\x1e.session.v1.ActionRollModifierR\tmodifiers\"\xcd\x01\n" +
+	"\x19SessionActionRollResponse\x12\x19\n" +
+	"\bhope_die\x18\x01 \x01(\x05R\ahopeDie\x12\x19\n" +
+	"\bfear_die\x18\x02 \x01(\x05R\afearDie\x12\x14\n" +
+	"\x05total\x18\x03 \x01(\x05R\x05total\x12\x1e\n" +
+	"\n" +
+	"difficulty\x18\x04 \x01(\x05R\n" +
+	"difficulty\x12\x18\n" +
+	"\asuccess\x18\x05 \x01(\bR\asuccess\x12\x16\n" +
+	"\x06flavor\x18\x06 \x01(\tR\x06flavor\x12\x12\n" +
+	"\x04crit\x18\a \x01(\bR\x04critBGZEgithub.com/louisbranch/duality-engine/api/gen/go/session/v1;sessionv1b\x06proto3"
 
 var (
 	file_session_v1_requests_proto_rawDescOnce sync.Once
@@ -374,25 +880,38 @@ func file_session_v1_requests_proto_rawDescGZIP() []byte {
 	return file_session_v1_requests_proto_rawDescData
 }
 
-var file_session_v1_requests_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_session_v1_requests_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_session_v1_requests_proto_goTypes = []any{
-	(*StartSessionRequest)(nil),  // 0: session.v1.StartSessionRequest
-	(*StartSessionResponse)(nil), // 1: session.v1.StartSessionResponse
-	(*ListSessionsRequest)(nil),  // 2: session.v1.ListSessionsRequest
-	(*ListSessionsResponse)(nil), // 3: session.v1.ListSessionsResponse
-	(*GetSessionRequest)(nil),    // 4: session.v1.GetSessionRequest
-	(*GetSessionResponse)(nil),   // 5: session.v1.GetSessionResponse
-	(*Session)(nil),              // 6: session.v1.Session
+	(*StartSessionRequest)(nil),        // 0: session.v1.StartSessionRequest
+	(*StartSessionResponse)(nil),       // 1: session.v1.StartSessionResponse
+	(*ListSessionsRequest)(nil),        // 2: session.v1.ListSessionsRequest
+	(*ListSessionsResponse)(nil),       // 3: session.v1.ListSessionsResponse
+	(*GetSessionRequest)(nil),          // 4: session.v1.GetSessionRequest
+	(*GetSessionResponse)(nil),         // 5: session.v1.GetSessionResponse
+	(*SessionEventAppendRequest)(nil),  // 6: session.v1.SessionEventAppendRequest
+	(*SessionEventAppendResponse)(nil), // 7: session.v1.SessionEventAppendResponse
+	(*SessionEventsListRequest)(nil),   // 8: session.v1.SessionEventsListRequest
+	(*SessionEventsListResponse)(nil),  // 9: session.v1.SessionEventsListResponse
+	(*ActionRollModifier)(nil),         // 10: session.v1.ActionRollModifier
+	(*SessionActionRollRequest)(nil),   // 11: session.v1.SessionActionRollRequest
+	(*SessionActionRollResponse)(nil),  // 12: session.v1.SessionActionRollResponse
+	(*Session)(nil),                    // 13: session.v1.Session
+	(SessionEventType)(0),              // 14: session.v1.SessionEventType
+	(*SessionEvent)(nil),               // 15: session.v1.SessionEvent
 }
 var file_session_v1_requests_proto_depIdxs = []int32{
-	6, // 0: session.v1.StartSessionResponse.session:type_name -> session.v1.Session
-	6, // 1: session.v1.ListSessionsResponse.sessions:type_name -> session.v1.Session
-	6, // 2: session.v1.GetSessionResponse.session:type_name -> session.v1.Session
-	3, // [3:3] is the sub-list for method output_type
-	3, // [3:3] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	13, // 0: session.v1.StartSessionResponse.session:type_name -> session.v1.Session
+	13, // 1: session.v1.ListSessionsResponse.sessions:type_name -> session.v1.Session
+	13, // 2: session.v1.GetSessionResponse.session:type_name -> session.v1.Session
+	14, // 3: session.v1.SessionEventAppendRequest.type:type_name -> session.v1.SessionEventType
+	15, // 4: session.v1.SessionEventAppendResponse.event:type_name -> session.v1.SessionEvent
+	15, // 5: session.v1.SessionEventsListResponse.events:type_name -> session.v1.SessionEvent
+	10, // 6: session.v1.SessionActionRollRequest.modifiers:type_name -> session.v1.ActionRollModifier
+	7,  // [7:7] is the sub-list for method output_type
+	7,  // [7:7] is the sub-list for method input_type
+	7,  // [7:7] is the sub-list for extension type_name
+	7,  // [7:7] is the sub-list for extension extendee
+	0,  // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_session_v1_requests_proto_init() }
@@ -401,13 +920,14 @@ func file_session_v1_requests_proto_init() {
 		return
 	}
 	file_session_v1_session_proto_init()
+	file_session_v1_events_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_session_v1_requests_proto_rawDesc), len(file_session_v1_requests_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

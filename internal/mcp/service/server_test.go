@@ -219,12 +219,21 @@ type fakeSessionClient struct {
 	startSessionResponse    *sessionv1.StartSessionResponse
 	listSessionsResponse    *sessionv1.ListSessionsResponse
 	getSessionResponse      *sessionv1.GetSessionResponse
+	sessionEventResponse    *sessionv1.SessionEventAppendResponse
+	sessionEventsResponse   *sessionv1.SessionEventsListResponse
+	sessionActionRollResult *sessionv1.SessionActionRollResponse
 	err                     error
 	listSessionsErr         error
 	getSessionErr           error
+	sessionEventErr         error
+	sessionEventsErr        error
+	sessionActionRollErr    error
 	lastRequest             *sessionv1.StartSessionRequest
 	lastListSessionsRequest *sessionv1.ListSessionsRequest
 	lastGetSessionRequest   *sessionv1.GetSessionRequest
+	lastEventRequest        *sessionv1.SessionEventAppendRequest
+	lastEventsListRequest   *sessionv1.SessionEventsListRequest
+	lastActionRollRequest   *sessionv1.SessionActionRollRequest
 }
 
 // StartSession records the request and returns the configured response.
@@ -243,6 +252,24 @@ func (f *fakeSessionClient) ListSessions(ctx context.Context, req *sessionv1.Lis
 func (f *fakeSessionClient) GetSession(ctx context.Context, req *sessionv1.GetSessionRequest, opts ...grpc.CallOption) (*sessionv1.GetSessionResponse, error) {
 	f.lastGetSessionRequest = req
 	return f.getSessionResponse, f.getSessionErr
+}
+
+// SessionEventAppend records the request and returns the configured response.
+func (f *fakeSessionClient) SessionEventAppend(ctx context.Context, req *sessionv1.SessionEventAppendRequest, opts ...grpc.CallOption) (*sessionv1.SessionEventAppendResponse, error) {
+	f.lastEventRequest = req
+	return f.sessionEventResponse, f.sessionEventErr
+}
+
+// SessionEventsList records the request and returns the configured response.
+func (f *fakeSessionClient) SessionEventsList(ctx context.Context, req *sessionv1.SessionEventsListRequest, opts ...grpc.CallOption) (*sessionv1.SessionEventsListResponse, error) {
+	f.lastEventsListRequest = req
+	return f.sessionEventsResponse, f.sessionEventsErr
+}
+
+// SessionActionRoll records the request and returns the configured response.
+func (f *fakeSessionClient) SessionActionRoll(ctx context.Context, req *sessionv1.SessionActionRollRequest, opts ...grpc.CallOption) (*sessionv1.SessionActionRollResponse, error) {
+	f.lastActionRollRequest = req
+	return f.sessionActionRollResult, f.sessionActionRollErr
 }
 
 // TestGRPCAddressPrefersEnv ensures env configuration overrides defaults.

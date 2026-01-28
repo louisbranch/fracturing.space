@@ -297,6 +297,41 @@ Starts a new session for a campaign. Enforces at most one ACTIVE session per cam
 }
 ```
 
+#### session_action_roll
+
+Rolls Duality dice for a session and appends session events.
+
+**Input:**
+
+```json
+{
+  "campaign_id": "camp_abc123",
+  "session_id": "sess_ghi789",
+  "character_id": "char_123",
+  "trait": "bravery",
+  "difficulty": 10,
+  "modifiers": [
+    {"source": "skill", "value": 2}
+  ]
+}
+```
+
+`campaign_id` and `session_id` default to the current context if omitted.
+
+**Output:**
+
+```json
+{
+  "hope_die": 8,
+  "fear_die": 5,
+  "total": 15,
+  "difficulty": 10,
+  "success": true,
+  "flavor": "HOPE",
+  "crit": false
+}
+```
+
 ### Duality Service Tools
 
 #### duality_rules_version
@@ -642,3 +677,27 @@ The `{campaign_id}` must be replaced with an actual campaign identifier when rea
 ```
 
 Note: The `ended_at` field is optional and only present for sessions that have ended.
+
+### Session Resources
+
+#### session://{session_id}/events
+
+JSON listing of session events for a session. Requires a concrete session ID.
+
+**Response:**
+
+```json
+{
+  "events": [
+    {
+      "session_id": "sess_ghi789",
+      "seq": 1,
+      "ts": "2026-01-25T12:00:00Z",
+      "type": "SESSION_STARTED",
+      "request_id": "req_123",
+      "invocation_id": "inv_456",
+      "payload_json": "{\"campaign_id\":\"camp_abc123\"}"
+    }
+  ]
+}
+```
