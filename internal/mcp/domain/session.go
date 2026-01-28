@@ -24,7 +24,7 @@ type SessionStartResult struct {
 	ID         string `json:"id" jsonschema:"session identifier"`
 	CampaignID string `json:"campaign_id" jsonschema:"campaign identifier"`
 	Name       string `json:"name" jsonschema:"session name"`
-	Status     string `json:"status" jsonschema:"session status (ACTIVE, PAUSED, ENDED)"`
+	Status     string `json:"status" jsonschema:"session status (ACTIVE, ENDED)"`
 	StartedAt  string `json:"started_at" jsonschema:"RFC3339 timestamp when session was started"`
 	UpdatedAt  string `json:"updated_at" jsonschema:"RFC3339 timestamp when session was last updated"`
 	EndedAt    string `json:"ended_at,omitempty" jsonschema:"RFC3339 timestamp when session ended, if applicable"`
@@ -68,6 +68,97 @@ func SessionStartHandler(client sessionv1.SessionServiceClient) mcp.ToolHandlerF
 		}
 
 		result := SessionStartResult{
+			ID:         response.Session.GetId(),
+			CampaignID: response.Session.GetCampaignId(),
+			Name:       response.Session.GetName(),
+			Status:     sessionStatusToString(response.Session.GetStatus()),
+			StartedAt:  formatTimestamp(response.Session.GetStartedAt()),
+			UpdatedAt:  formatTimestamp(response.Session.GetUpdatedAt()),
+		}
+
+		if response.Session.GetEndedAt() != nil {
+			result.EndedAt = formatTimestamp(response.Session.GetEndedAt())
+		}
+
+		responseMeta := MergeResponseMetadata(callMeta, header)
+		return CallToolResultWithMetadata(responseMeta), result, nil
+	}
+}
+
+// SessionEndInput represents the MCP tool input for ending a session.
+type SessionEndInput struct {
+	CampaignID string `json:"campaign_id,omitempty" jsonschema:"campaign identifier (defaults to context)"`
+	SessionID  string `json:"session_id,omitempty" jsonschema:"session identifier (defaults to context)"`
+}
+
+// SessionEndResult represents the MCP tool output for ending a session.
+type SessionEndResult struct {
+	ID         string `json:"id" jsonschema:"session identifier"`
+	CampaignID string `json:"campaign_id" jsonschema:"campaign identifier"`
+	Name       string `json:"name" jsonschema:"session name"`
+	Status     string `json:"status" jsonschema:"session status (ACTIVE, ENDED)"`
+	StartedAt  string `json:"started_at" jsonschema:"RFC3339 timestamp when session was started"`
+	UpdatedAt  string `json:"updated_at" jsonschema:"RFC3339 timestamp when session was last updated"`
+	EndedAt    string `json:"ended_at,omitempty" jsonschema:"RFC3339 timestamp when session ended, if applicable"`
+}
+
+// SessionEndTool defines the MCP tool schema for ending a session.
+func SessionEndTool() *mcp.Tool {
+	return &mcp.Tool{
+		Name:        "session_end",
+		Description: "Ends a session for a campaign and clears the active session pointer.",
+	}
+}
+
+// SessionEndHandler executes a session end request.
+func SessionEndHandler(client sessionv1.SessionServiceClient, getContext func() Context) mcp.ToolHandlerFor[SessionEndInput, SessionEndResult] {
+	return func(ctx context.Context, _ *mcp.CallToolRequest, input SessionEndInput) (*mcp.CallToolResult, SessionEndResult, error) {
+		invocationID, err := NewInvocationID()
+		if err != nil {
+			return nil, SessionEndResult{}, fmt.Errorf("generate invocation id: %w", err)
+		}
+
+		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+
+		mcpCtx := Context{}
+		if getContext != nil {
+			mcpCtx = getContext()
+		}
+
+		campaignID := input.CampaignID
+		if campaignID == "" {
+			campaignID = mcpCtx.CampaignID
+		}
+		sessionID := input.SessionID
+		if sessionID == "" {
+			sessionID = mcpCtx.SessionID
+		}
+		if campaignID == "" {
+			return nil, SessionEndResult{}, fmt.Errorf("campaign_id is required")
+		}
+		if sessionID == "" {
+			return nil, SessionEndResult{}, fmt.Errorf("session_id is required")
+		}
+
+		callCtx, callMeta, err := NewOutgoingContext(runCtx, invocationID)
+		if err != nil {
+			return nil, SessionEndResult{}, fmt.Errorf("create request metadata: %w", err)
+		}
+
+		var header metadata.MD
+		response, err := client.EndSession(callCtx, &sessionv1.EndSessionRequest{
+			CampaignId: campaignID,
+			SessionId:  sessionID,
+		}, grpc.Header(&header))
+		if err != nil {
+			return nil, SessionEndResult{}, fmt.Errorf("session end failed: %w", err)
+		}
+		if response == nil || response.Session == nil {
+			return nil, SessionEndResult{}, fmt.Errorf("session end response is missing")
+		}
+
+		result := SessionEndResult{
 			ID:         response.Session.GetId(),
 			CampaignID: response.Session.GetCampaignId(),
 			Name:       response.Session.GetName(),
@@ -203,8 +294,6 @@ func sessionStatusToString(status sessionv1.SessionStatus) string {
 	switch status {
 	case sessionv1.SessionStatus_ACTIVE:
 		return "ACTIVE"
-	case sessionv1.SessionStatus_PAUSED:
-		return "PAUSED"
 	case sessionv1.SessionStatus_ENDED:
 		return "ENDED"
 	case sessionv1.SessionStatus_STATUS_UNSPECIFIED:

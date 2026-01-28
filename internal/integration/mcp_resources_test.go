@@ -296,6 +296,31 @@ func runMCPResourcesTests(t *testing.T, suite *integrationSuite) {
 			t.Fatal("session_start returned empty id")
 		}
 
+		endSessionParams := &mcp.CallToolParams{
+			Name: "session_end",
+			Arguments: map[string]any{
+				"campaign_id": campaignOutput.ID,
+				"session_id":  sessionOutput.ID,
+			},
+		}
+		endSessionResult, err := suite.client.CallTool(ctx, endSessionParams)
+		if err != nil {
+			t.Fatalf("call session_end: %v", err)
+		}
+		if endSessionResult == nil || endSessionResult.IsError {
+			t.Fatalf("session_end failed: %+v", endSessionResult)
+		}
+		endSessionOutput := decodeStructuredContent[domain.SessionEndResult](t, endSessionResult.StructuredContent)
+		if endSessionOutput.ID != sessionOutput.ID {
+			t.Fatalf("expected session_end id %q, got %q", sessionOutput.ID, endSessionOutput.ID)
+		}
+		if endSessionOutput.Status != "ENDED" {
+			t.Fatalf("expected ended status, got %q", endSessionOutput.Status)
+		}
+		if endSessionOutput.EndedAt == "" {
+			t.Fatal("expected ended_at to be set")
+		}
+
 		// Note: The MCP SDK validates URIs exactly against registered resources.
 		// Since we registered campaign://_/sessions, the SDK only accepts that exact URI.
 		// The handler implementation correctly parses campaign://{campaign_id}/sessions

@@ -48,6 +48,18 @@ message GetSessionResponse {
   Session session = 1;
 }
 
+message EndSessionRequest {
+  // The campaign ID.
+  string campaign_id = 1;
+
+  // The session ID.
+  string session_id = 2;
+}
+
+message EndSessionResponse {
+  Session session = 1;
+}
+
 message SessionEventAppendRequest {
   // The session ID to append the event to.
   string session_id = 1;

@@ -20,6 +20,5 @@ message Session {
 enum SessionStatus {
   STATUS_UNSPECIFIED = 0;
   ACTIVE = 1;
-  PAUSED = 2;
-  ENDED = 3;
+  ENDED = 2;
 }

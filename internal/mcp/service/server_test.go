@@ -217,18 +217,21 @@ func (f *fakeCampaignClient) PatchCharacterState(ctx context.Context, req *campa
 // fakeSessionClient implements SessionServiceClient for tests.
 type fakeSessionClient struct {
 	startSessionResponse    *sessionv1.StartSessionResponse
+	endSessionResponse      *sessionv1.EndSessionResponse
 	listSessionsResponse    *sessionv1.ListSessionsResponse
 	getSessionResponse      *sessionv1.GetSessionResponse
 	sessionEventResponse    *sessionv1.SessionEventAppendResponse
 	sessionEventsResponse   *sessionv1.SessionEventsListResponse
 	sessionActionRollResult *sessionv1.SessionActionRollResponse
 	err                     error
+	endSessionErr           error
 	listSessionsErr         error
 	getSessionErr           error
 	sessionEventErr         error
 	sessionEventsErr        error
 	sessionActionRollErr    error
 	lastRequest             *sessionv1.StartSessionRequest
+	lastEndSessionRequest   *sessionv1.EndSessionRequest
 	lastListSessionsRequest *sessionv1.ListSessionsRequest
 	lastGetSessionRequest   *sessionv1.GetSessionRequest
 	lastEventRequest        *sessionv1.SessionEventAppendRequest
@@ -240,6 +243,12 @@ type fakeSessionClient struct {
 func (f *fakeSessionClient) StartSession(ctx context.Context, req *sessionv1.StartSessionRequest, opts ...grpc.CallOption) (*sessionv1.StartSessionResponse, error) {
 	f.lastRequest = req
 	return f.startSessionResponse, f.err
+}
+
+// EndSession records the request and returns the configured response.
+func (f *fakeSessionClient) EndSession(ctx context.Context, req *sessionv1.EndSessionRequest, opts ...grpc.CallOption) (*sessionv1.EndSessionResponse, error) {
+	f.lastEndSessionRequest = req
+	return f.endSessionResponse, f.endSessionErr
 }
 
 // ListSessions records the request and returns the configured response.
@@ -1970,6 +1979,151 @@ func TestSessionStartHandlerMapsEndedAt(t *testing.T) {
 	}
 	if output.Status != "ENDED" {
 		t.Fatalf("expected status ENDED, got %q", output.Status)
+	}
+}
+
+// TestSessionEndHandlerReturnsClientError ensures gRPC errors are returned as tool errors.
+func TestSessionEndHandlerReturnsClientError(t *testing.T) {
+	client := &fakeSessionClient{endSessionErr: errors.New("boom")}
+	handler := domain.SessionEndHandler(client, nil)
+
+	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.SessionEndInput{
+		CampaignID: "camp-123",
+		SessionID:  "sess-456",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if result != nil {
+		t.Fatal("expected nil result on error")
+	}
+}
+
+// TestSessionEndHandlerMapsRequestAndResponse ensures inputs and outputs map consistently.
+func TestSessionEndHandlerMapsRequestAndResponse(t *testing.T) {
+	now := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
+	client := &fakeSessionClient{endSessionResponse: &sessionv1.EndSessionResponse{
+		Session: &sessionv1.Session{
+			Id:         "sess-456",
+			CampaignId: "camp-123",
+			Name:       "Test Session",
+			Status:     sessionv1.SessionStatus_ENDED,
+			StartedAt:  timestamppb.New(now.Add(-time.Hour)),
+			UpdatedAt:  timestamppb.New(now),
+			EndedAt:    timestamppb.New(now),
+		},
+	}}
+	result, output, err := domain.SessionEndHandler(client, nil)(
+		context.Background(),
+		&mcp.CallToolRequest{},
+		domain.SessionEndInput{
+			CampaignID: "camp-123",
+			SessionID:  "sess-456",
+		},
+	)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	requireToolMetadata(t, result)
+	if client.lastEndSessionRequest == nil {
+		t.Fatal("expected gRPC request")
+	}
+	if client.lastEndSessionRequest.GetCampaignId() != "camp-123" {
+		t.Fatalf("expected campaign id camp-123, got %q", client.lastEndSessionRequest.GetCampaignId())
+	}
+	if client.lastEndSessionRequest.GetSessionId() != "sess-456" {
+		t.Fatalf("expected session id sess-456, got %q", client.lastEndSessionRequest.GetSessionId())
+	}
+	if output.ID != "sess-456" {
+		t.Fatalf("expected id sess-456, got %q", output.ID)
+	}
+	if output.CampaignID != "camp-123" {
+		t.Fatalf("expected campaign id camp-123, got %q", output.CampaignID)
+	}
+	if output.Name != "Test Session" {
+		t.Fatalf("expected name Test Session, got %q", output.Name)
+	}
+	if output.Status != "ENDED" {
+		t.Fatalf("expected status ENDED, got %q", output.Status)
+	}
+	if output.StartedAt != now.Add(-time.Hour).Format(time.RFC3339) {
+		t.Fatalf("expected started_at %q, got %q", now.Add(-time.Hour).Format(time.RFC3339), output.StartedAt)
+	}
+	if output.UpdatedAt != now.Format(time.RFC3339) {
+		t.Fatalf("expected updated_at %q, got %q", now.Format(time.RFC3339), output.UpdatedAt)
+	}
+	if output.EndedAt != now.Format(time.RFC3339) {
+		t.Fatalf("expected ended_at %q, got %q", now.Format(time.RFC3339), output.EndedAt)
+	}
+}
+
+// TestSessionEndHandlerUsesContextDefaults ensures campaign_id and session_id default from context.
+func TestSessionEndHandlerUsesContextDefaults(t *testing.T) {
+	now := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
+	client := &fakeSessionClient{endSessionResponse: &sessionv1.EndSessionResponse{
+		Session: &sessionv1.Session{
+			Id:         "sess-456",
+			CampaignId: "camp-123",
+			Name:       "Test Session",
+			Status:     sessionv1.SessionStatus_ENDED,
+			StartedAt:  timestamppb.New(now.Add(-time.Hour)),
+			UpdatedAt:  timestamppb.New(now),
+			EndedAt:    timestamppb.New(now),
+		},
+	}}
+	getContext := func() domain.Context {
+		return domain.Context{CampaignID: "camp-123", SessionID: "sess-456"}
+	}
+	result, _, err := domain.SessionEndHandler(client, getContext)(
+		context.Background(),
+		&mcp.CallToolRequest{},
+		domain.SessionEndInput{},
+	)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	requireToolMetadata(t, result)
+	if client.lastEndSessionRequest == nil {
+		t.Fatal("expected gRPC request")
+	}
+	if client.lastEndSessionRequest.GetCampaignId() != "camp-123" {
+		t.Fatalf("expected campaign id camp-123, got %q", client.lastEndSessionRequest.GetCampaignId())
+	}
+	if client.lastEndSessionRequest.GetSessionId() != "sess-456" {
+		t.Fatalf("expected session id sess-456, got %q", client.lastEndSessionRequest.GetSessionId())
+	}
+}
+
+// TestSessionEndHandlerRejectsEmptyResponse ensures nil responses are rejected.
+func TestSessionEndHandlerRejectsEmptyResponse(t *testing.T) {
+	client := &fakeSessionClient{}
+	handler := domain.SessionEndHandler(client, nil)
+
+	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.SessionEndInput{
+		CampaignID: "camp-123",
+		SessionID:  "sess-456",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if result != nil {
+		t.Fatal("expected nil result on error")
+	}
+}
+
+// TestSessionEndHandlerRejectsMissingCampaign ensures campaign_id is required.
+func TestSessionEndHandlerRejectsMissingCampaign(t *testing.T) {
+	client := &fakeSessionClient{}
+	handler := domain.SessionEndHandler(client, func() domain.Context { return domain.Context{} })
+
+	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.SessionEndInput{
+		SessionID: "sess-456",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if result != nil {
+		t.Fatal("expected nil result on error")
 	}
 }
 

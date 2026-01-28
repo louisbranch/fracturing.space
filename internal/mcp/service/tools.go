@@ -29,6 +29,7 @@ func registerCampaignTools(mcpServer *mcp.Server, client campaignv1.CampaignServ
 
 func registerSessionTools(mcpServer *mcp.Server, client sessionv1.SessionServiceClient, getContext func() domain.Context) {
 	mcp.AddTool(mcpServer, domain.SessionStartTool(), domain.SessionStartHandler(client))
+	mcp.AddTool(mcpServer, domain.SessionEndTool(), domain.SessionEndHandler(client, getContext))
 	mcp.AddTool(mcpServer, domain.SessionActionRollTool(), domain.SessionActionRollHandler(client, getContext))
 }
 

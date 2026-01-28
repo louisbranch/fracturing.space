@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	campaignv1 "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1"
 	sessiondomain "github.com/louisbranch/duality-engine/internal/session/domain"
@@ -21,6 +22,10 @@ type fakeSessionStore struct {
 
 func (f *fakeSessionStore) PutSession(ctx context.Context, session sessiondomain.Session) error {
 	return errors.New("not implemented")
+}
+
+func (f *fakeSessionStore) EndSession(ctx context.Context, campaignID, sessionID string, endedAt time.Time) (sessiondomain.Session, bool, error) {
+	return sessiondomain.Session{}, false, errors.New("not implemented")
 }
 
 func (f *fakeSessionStore) GetSession(ctx context.Context, campaignID, sessionID string) (sessiondomain.Session, error) {

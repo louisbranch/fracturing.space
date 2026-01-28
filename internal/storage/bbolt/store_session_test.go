@@ -254,8 +254,8 @@ func TestSessionStorePutSessionNonActiveStatus(t *testing.T) {
 	session := sessiondomain.Session{
 		ID:         "sess-123",
 		CampaignID: "camp-456",
-		Name:       "Paused Session",
-		Status:     sessiondomain.SessionStatusPaused,
+		Name:       "Ended Session",
+		Status:     sessiondomain.SessionStatusEnded,
 		StartedAt:  now,
 		UpdatedAt:  now,
 		EndedAt:    nil,
@@ -267,6 +267,113 @@ func TestSessionStorePutSessionNonActiveStatus(t *testing.T) {
 	}
 	if err.Error() != "session must be ACTIVE to set as active session" {
 		t.Fatalf("expected 'session must be ACTIVE' error, got %v", err)
+	}
+}
+
+func TestSessionStoreEndSession(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "duality.db")
+	store, err := Open(path)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer store.Close()
+
+	startedAt := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
+	endedAt := time.Date(2026, 1, 23, 13, 0, 0, 0, time.UTC)
+	session := sessiondomain.Session{
+		ID:         "sess-123",
+		CampaignID: "camp-456",
+		Name:       "Session",
+		Status:     sessiondomain.SessionStatusActive,
+		StartedAt:  startedAt,
+		UpdatedAt:  startedAt,
+		EndedAt:    nil,
+	}
+
+	if err := store.PutSession(context.Background(), session); err != nil {
+		t.Fatalf("put session: %v", err)
+	}
+
+	ended, endedNow, err := store.EndSession(context.Background(), "camp-456", "sess-123", endedAt)
+	if err != nil {
+		t.Fatalf("end session: %v", err)
+	}
+	if !endedNow {
+		t.Fatal("expected endedNow true")
+	}
+	if ended.Status != sessiondomain.SessionStatusEnded {
+		t.Fatalf("expected ended status, got %v", ended.Status)
+	}
+	if ended.EndedAt == nil || !ended.EndedAt.Equal(endedAt) {
+		t.Fatalf("expected ended_at %v, got %v", endedAt, ended.EndedAt)
+	}
+	if !ended.UpdatedAt.Equal(endedAt) {
+		t.Fatalf("expected updated_at %v, got %v", endedAt, ended.UpdatedAt)
+	}
+
+	_, err = store.GetActiveSession(context.Background(), "camp-456")
+	if !errors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("expected no active session, got %v", err)
+	}
+}
+
+func TestSessionStoreEndSessionIdempotent(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "duality.db")
+	store, err := Open(path)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer store.Close()
+
+	endedAt := time.Date(2026, 1, 23, 13, 0, 0, 0, time.UTC)
+	session := sessiondomain.Session{
+		ID:         "sess-123",
+		CampaignID: "camp-456",
+		Name:       "Session",
+		Status:     sessiondomain.SessionStatusEnded,
+		StartedAt:  endedAt.Add(-time.Hour),
+		UpdatedAt:  endedAt,
+		EndedAt:    &endedAt,
+	}
+
+	payload, err := json.Marshal(session)
+	if err != nil {
+		t.Fatalf("marshal session: %v", err)
+	}
+	if err := store.db.Update(func(tx *bbolt.Tx) error {
+		sessionBucket := tx.Bucket([]byte(sessionsBucket))
+		if sessionBucket == nil {
+			return fmt.Errorf("sessions bucket is missing")
+		}
+		if err := sessionBucket.Put(sessionKey(session.CampaignID, session.ID), payload); err != nil {
+			return err
+		}
+		activeBucket := tx.Bucket([]byte(campaignActiveSessionBucket))
+		if activeBucket == nil {
+			return fmt.Errorf("campaign active session bucket is missing")
+		}
+		return activeBucket.Put(activeSessionKey(session.CampaignID), []byte(session.ID))
+	}); err != nil {
+		t.Fatalf("seed session: %v", err)
+	}
+
+	ended, endedNow, err := store.EndSession(context.Background(), "camp-456", "sess-123", endedAt.Add(time.Minute))
+	if err != nil {
+		t.Fatalf("end session: %v", err)
+	}
+	if endedNow {
+		t.Fatal("expected endedNow false")
+	}
+	if ended.Status != sessiondomain.SessionStatusEnded {
+		t.Fatalf("expected ended status, got %v", ended.Status)
+	}
+	if ended.EndedAt == nil || !ended.EndedAt.Equal(endedAt) {
+		t.Fatalf("expected ended_at %v, got %v", endedAt, ended.EndedAt)
+	}
+
+	_, err = store.GetActiveSession(context.Background(), "camp-456")
+	if !errors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("expected no active session, got %v", err)
 	}
 }
 
@@ -456,7 +563,7 @@ func TestSessionStoreListSessionsPagination(t *testing.T) {
 			ID:         "sess-2",
 			CampaignID: "camp-123",
 			Name:       "Session Two",
-			Status:     sessiondomain.SessionStatusPaused,
+			Status:     sessiondomain.SessionStatusEnded,
 			StartedAt:  now,
 			UpdatedAt:  now,
 			EndedAt:    nil,
@@ -465,7 +572,7 @@ func TestSessionStoreListSessionsPagination(t *testing.T) {
 			ID:         "sess-3",
 			CampaignID: "camp-123",
 			Name:       "Session Three",
-			Status:     sessiondomain.SessionStatusPaused,
+			Status:     sessiondomain.SessionStatusEnded,
 			StartedAt:  now,
 			UpdatedAt:  now,
 			EndedAt:    nil,
