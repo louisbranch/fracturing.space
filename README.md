@@ -32,44 +32,11 @@ Default endpoints:
 
 ------------------------------------------------------------------------
 
-## Capabilities
+## MCP Server
 
-### Mechanics
+The MCP server exposes the Duality Engine rules and campaign state as MCP tools/resources so clients can drive deterministic play flows without embedding game logic. It is a thin transport layer over the gRPC services and keeps all adjudication and persistence on the server.
 
--   duality_action_roll
--   duality_outcome
--   duality_explain
--   duality_probability
--   duality_rules_version
--   roll_dice
-
-### Campaign Runtime
-
-Tools:
-
--   campaign_create
--   participant_create
--   character_create
--   character_control_set
--   session_start
-
-Resources:
-
--   campaigns://list
--   campaign://{campaign_id}
--   campaign://{campaign_id}/participants
--   campaign://{campaign_id}/characters
--   campaign://{campaign_id}/sessions
-
-### MCP Context
-
-Tools:
-
--   set_context (in-memory, resets on restart)
-
-Resources:
-
--   context://current (current MCP execution context; ephemeral, resets on restart)
+See [MCP tools and resources](docs/mcp.md) for the full catalog and usage details.
 ------------------------------------------------------------------------
 
 ## State Model

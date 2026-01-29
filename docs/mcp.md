@@ -269,6 +269,126 @@ Sets the default controller (GM or participant) for a character in a campaign.
 }
 ```
 
+#### character_sheet_get
+
+Fetches a full character sheet (character metadata, profile, and state) for the current campaign context.
+
+**Input:**
+
+```json
+{
+  "character_id": "character_def456"
+}
+```
+
+`campaign_id` is taken from the current context and is required.
+
+**Output:**
+
+```json
+{
+  "character": {
+    "id": "character_def456",
+    "campaign_id": "camp_abc123",
+    "name": "Thorin Ironforge",
+    "kind": "PC",
+    "notes": "Dwarf warrior with a mysterious past",
+    "created_at": "2025-01-15T10:35:00Z",
+    "updated_at": "2025-01-15T10:35:00Z"
+  },
+  "profile": {
+    "character_id": "character_def456",
+    "traits": {
+      "bravery": 2,
+      "insight": 1
+    },
+    "hp_max": 12,
+    "stress_max": 6,
+    "evasion": 12,
+    "major_threshold": 6,
+    "severe_threshold": 10
+  },
+  "state": {
+    "character_id": "character_def456",
+    "hope": 3,
+    "stress": 1,
+    "hp": 10
+  }
+}
+```
+
+#### character_profile_patch
+
+Patches character profile fields for the current campaign context. Any provided field replaces the existing value.
+
+**Input:**
+
+```json
+{
+  "character_id": "character_def456",
+  "traits": {
+    "bravery": 3,
+    "insight": 2
+  },
+  "hp_max": 14,
+  "stress_max": 7,
+  "evasion": 13,
+  "major_threshold": 7,
+  "severe_threshold": 11
+}
+```
+
+All fields except `character_id` are optional. `campaign_id` is taken from the current context and is required.
+
+**Output:**
+
+```json
+{
+  "profile": {
+    "character_id": "character_def456",
+    "traits": {
+      "bravery": 3,
+      "insight": 2
+    },
+    "hp_max": 14,
+    "stress_max": 7,
+    "evasion": 13,
+    "major_threshold": 7,
+    "severe_threshold": 11
+  }
+}
+```
+
+#### character_state_patch
+
+Patches character state fields for the current campaign context.
+
+**Input:**
+
+```json
+{
+  "character_id": "character_def456",
+  "hope": 4,
+  "stress": 2,
+  "hp": 9
+}
+```
+
+All fields except `character_id` are optional. `campaign_id` is taken from the current context and is required.
+
+**Output:**
+
+```json
+{
+  "state": {
+    "character_id": "character_def456",
+    "hope": 4,
+    "stress": 2,
+    "hp": 9
+  }
+}
+```
+
 ### Session Service Tools
 
 #### session_start
@@ -611,6 +731,8 @@ Rolls arbitrary dice pools and returns the individual results.
 
 ## Resources
 
+MCP resource registrations use placeholder URIs because the SDK requires concrete URIs for registration. Clients should read using the concrete URI format shown in each resource section. When listing resources, you may see placeholder URIs like `campaign://_/participants` or `session://_/events`.
+
 ### Campaign Resources
 
 #### campaigns://list
@@ -759,5 +881,23 @@ Events are ordered by descending sequence (latest first).
       "payload_json": "{\"campaign_id\":\"camp_abc123\"}"
     }
   ]
+}
+```
+
+### Context Resources
+
+#### context://current
+
+Returns the current in-memory MCP execution context. Unset fields return `null`.
+
+**Response:**
+
+```json
+{
+  "context": {
+    "campaign_id": "camp_abc123",
+    "session_id": null,
+    "participant_id": "part_xyz789"
+  }
 }
 ```
