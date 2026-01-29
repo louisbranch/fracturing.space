@@ -351,6 +351,7 @@ func CampaignCreateHandler(client campaignv1.CampaignServiceClient) mcp.ToolHand
 		}
 
 		responseMeta := MergeResponseMetadata(callMeta, header)
+		// TODO: Emit MCP notifications when campaigns are created or updated so SSE clients can refresh resources.
 		return CallToolResultWithMetadata(responseMeta), result, nil
 	}
 }

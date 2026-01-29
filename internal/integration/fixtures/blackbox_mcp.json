@@ -1,0 +1,79 @@
+{
+  "name": "mcp_http_blackbox_campaign_flow",
+  "steps": [
+    {
+      "name": "initialize",
+      "expect_status": 200,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "initialize",
+        "params": {
+          "protocolVersion": "2024-11-05",
+          "clientInfo": {
+            "name": "blackbox-client",
+            "version": "0.1.0"
+          }
+        }
+      },
+      "expect_paths": {
+        "jsonrpc": "2.0",
+        "id": 1
+      }
+    },
+    {
+      "name": "initialized",
+      "expect_status": 204,
+      "request": {
+        "jsonrpc": "2.0",
+        "method": "initialized",
+        "params": {}
+      }
+    },
+    {
+      "name": "campaign_create",
+      "expect_status": 200,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 2,
+        "method": "tools/call",
+        "params": {
+          "name": "campaign_create",
+          "arguments": {
+            "name": "Blackbox Campaign",
+            "gm_mode": "HUMAN",
+            "theme_prompt": "An integration test campaign"
+          }
+        }
+      },
+      "expect_paths": {
+        "jsonrpc": "2.0",
+        "id": 2
+      },
+      "captures": {
+        "campaign_id": [
+          "result.structuredContent.id",
+          "result.structured_content.id"
+        ]
+      }
+    },
+    {
+      "name": "campaign_list_read",
+      "expect_status": 200,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 3,
+        "method": "resources/read",
+        "params": {
+          "uri": "campaigns://list"
+        }
+      },
+      "expect_paths": {
+        "jsonrpc": "2.0",
+        "id": 3,
+        "result.contents[0].text|json.campaigns[0].id": "{{campaign_id}}",
+        "result.contents[0].text|json.campaigns[0].name": "Blackbox Campaign"
+      }
+    }
+  ]
+}
