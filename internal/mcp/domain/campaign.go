@@ -268,45 +268,36 @@ func CampaignListResource() *mcp.Resource {
 	}
 }
 
-// ParticipantListResource defines the MCP resource for participant listings.
-// The effective URI template is campaign://{campaign_id}/participants, but the
-// SDK requires a valid URI for registration, so we use a placeholder here.
-// Clients must provide the full URI with actual campaign_id when reading.
-func ParticipantListResource() *mcp.Resource {
-	return &mcp.Resource{
+// ParticipantListResourceTemplate defines the MCP resource template for participant listings.
+func ParticipantListResourceTemplate() *mcp.ResourceTemplate {
+	return &mcp.ResourceTemplate{
 		Name:        "participant_list",
 		Title:       "Participants",
 		Description: "Readable listing of participants for a campaign. URI format: campaign://{campaign_id}/participants",
 		MIMEType:    "application/json",
-		URI:         "campaign://_/participants", // Placeholder; actual format: campaign://{campaign_id}/participants
+		URITemplate: "campaign://{campaign_id}/participants",
 	}
 }
 
-// CharacterListResource defines the MCP resource for character listings.
-// The effective URI template is campaign://{campaign_id}/characters, but the
-// SDK requires a valid URI for registration, so we use a placeholder here.
-// Clients must provide the full URI with actual campaign_id when reading.
-func CharacterListResource() *mcp.Resource {
-	return &mcp.Resource{
+// CharacterListResourceTemplate defines the MCP resource template for character listings.
+func CharacterListResourceTemplate() *mcp.ResourceTemplate {
+	return &mcp.ResourceTemplate{
 		Name:        "character_list",
 		Title:       "Characters",
 		Description: "Readable listing of characters for a campaign. URI format: campaign://{campaign_id}/characters",
 		MIMEType:    "application/json",
-		URI:         "campaign://_/characters", // Placeholder; actual format: campaign://{campaign_id}/characters
+		URITemplate: "campaign://{campaign_id}/characters",
 	}
 }
 
-// CampaignResource defines the MCP resource for a single campaign.
-// The effective URI template is campaign://{campaign_id}, but the
-// SDK requires a valid URI for registration, so we use a placeholder here.
-// Clients must provide the full URI with actual campaign_id when reading.
-func CampaignResource() *mcp.Resource {
-	return &mcp.Resource{
+// CampaignResourceTemplate defines the MCP resource template for a single campaign.
+func CampaignResourceTemplate() *mcp.ResourceTemplate {
+	return &mcp.ResourceTemplate{
 		Name:        "campaign",
 		Title:       "Campaign",
 		Description: "Readable campaign metadata record. URI format: campaign://{campaign_id}",
 		MIMEType:    "application/json",
-		URI:         "campaign://_", // Placeholder; actual format: campaign://{campaign_id}
+		URITemplate: "campaign://{campaign_id}",
 	}
 }
 
@@ -946,22 +937,13 @@ func ParticipantListResourceHandler(client campaignv1.CampaignServiceClient) mcp
 			return nil, fmt.Errorf("participant list client is not configured")
 		}
 
-		uri := ParticipantListResource().URI
-		if req != nil && req.Params != nil && req.Params.URI != "" {
-			uri = req.Params.URI
-		}
-
-		// Parse campaign_id from URI: expected format is campaign://{campaign_id}/participants.
-		// If the URI is the registered placeholder, return an error requiring a concrete campaign ID.
-		// Otherwise, parse the campaign ID from the URI path.
-		var campaignID string
-		var err error
-		if uri == ParticipantListResource().URI {
-			// Using registered placeholder URI - this shouldn't happen in practice
-			// but handle it gracefully by requiring campaign_id in a different way
+		if req == nil || req.Params == nil || req.Params.URI == "" {
 			return nil, fmt.Errorf("campaign ID is required; use URI format campaign://{campaign_id}/participants")
 		}
-		campaignID, err = parseCampaignIDFromURI(uri)
+		uri := req.Params.URI
+
+		// Parse campaign_id from URI: expected format is campaign://{campaign_id}/participants.
+		campaignID, err := parseCampaignIDFromURI(uri)
 		if err != nil {
 			return nil, fmt.Errorf("parse campaign ID from URI: %w", err)
 		}
@@ -1016,7 +998,7 @@ func ParticipantListResourceHandler(client campaignv1.CampaignServiceClient) mcp
 }
 
 // parseCampaignIDFromURI extracts the campaign ID from a URI of the form campaign://{campaign_id}/participants.
-// It parses URIs of the expected format but requires an actual campaign ID and rejects the placeholder (campaign://_/participants).
+// It parses URIs of the expected format but requires an actual campaign ID.
 func parseCampaignIDFromURI(uri string) (string, error) {
 	return parseCampaignIDFromResourceURI(uri, "participants")
 }
@@ -1028,22 +1010,13 @@ func CharacterListResourceHandler(client campaignv1.CampaignServiceClient) mcp.R
 			return nil, fmt.Errorf("character list client is not configured")
 		}
 
-		uri := CharacterListResource().URI
-		if req != nil && req.Params != nil && req.Params.URI != "" {
-			uri = req.Params.URI
-		}
-
-		// Parse campaign_id from URI: expected format is campaign://{campaign_id}/characters.
-		// If the URI is the registered placeholder, return an error requiring a concrete campaign ID.
-		// Otherwise, parse the campaign ID from the URI path.
-		var campaignID string
-		var err error
-		if uri == CharacterListResource().URI {
-			// Using registered placeholder URI - this shouldn't happen in practice
-			// but handle it gracefully by requiring campaign_id in a different way
+		if req == nil || req.Params == nil || req.Params.URI == "" {
 			return nil, fmt.Errorf("campaign ID is required; use URI format campaign://{campaign_id}/characters")
 		}
-		campaignID, err = parseCampaignIDFromCharacterURI(uri)
+		uri := req.Params.URI
+
+		// Parse campaign_id from URI: expected format is campaign://{campaign_id}/characters.
+		campaignID, err := parseCampaignIDFromCharacterURI(uri)
 		if err != nil {
 			return nil, fmt.Errorf("parse campaign ID from URI: %w", err)
 		}
@@ -1098,13 +1071,13 @@ func CharacterListResourceHandler(client campaignv1.CampaignServiceClient) mcp.R
 }
 
 // parseCampaignIDFromCharacterURI extracts the campaign ID from a URI of the form campaign://{campaign_id}/characters.
-// It parses URIs of the expected format but requires an actual campaign ID and rejects the placeholder (campaign://_/characters).
+// It parses URIs of the expected format but requires an actual campaign ID.
 func parseCampaignIDFromCharacterURI(uri string) (string, error) {
 	return parseCampaignIDFromResourceURI(uri, "characters")
 }
 
 // parseCampaignIDFromCampaignURI extracts the campaign ID from a URI of the form campaign://{campaign_id}.
-// It parses URIs of the expected format but requires an actual campaign ID and rejects the placeholder (campaign://_).
+// It parses URIs of the expected format but requires an actual campaign ID.
 // It also rejects URIs with additional path segments, query parameters, or fragments (e.g., campaign://id/participants).
 func parseCampaignIDFromCampaignURI(uri string) (string, error) {
 	prefix := "campaign://"
@@ -1141,22 +1114,13 @@ func CampaignResourceHandler(client campaignv1.CampaignServiceClient) mcp.Resour
 			return nil, fmt.Errorf("campaign client is not configured")
 		}
 
-		uri := CampaignResource().URI
-		if req != nil && req.Params != nil && req.Params.URI != "" {
-			uri = req.Params.URI
-		}
-
-		// Parse campaign_id from URI: expected format is campaign://{campaign_id}.
-		// If the URI is the registered placeholder, return an error requiring a concrete campaign ID.
-		// Otherwise, parse the campaign ID from the URI.
-		var campaignID string
-		var err error
-		if uri == CampaignResource().URI {
-			// Using registered placeholder URI - this shouldn't happen in practice
-			// but handle it gracefully by requiring campaign_id in a different way
+		if req == nil || req.Params == nil || req.Params.URI == "" {
 			return nil, fmt.Errorf("campaign ID is required; use URI format campaign://{campaign_id}")
 		}
-		campaignID, err = parseCampaignIDFromCampaignURI(uri)
+		uri := req.Params.URI
+
+		// Parse campaign_id from URI: expected format is campaign://{campaign_id}.
+		campaignID, err := parseCampaignIDFromCampaignURI(uri)
 		if err != nil {
 			return nil, fmt.Errorf("parse campaign ID from URI: %w", err)
 		}

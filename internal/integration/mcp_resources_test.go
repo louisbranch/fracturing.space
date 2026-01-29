@@ -5,7 +5,7 @@ package integration
 import (
 	"context"
 	"encoding/json"
-	"strings"
+	"fmt"
 	"testing"
 
 	"github.com/louisbranch/duality-engine/internal/mcp/domain"
@@ -39,70 +39,6 @@ func runMCPResourcesTests(t *testing.T, suite *integrationSuite) {
 			t.Fatalf("expected resource MIME application/json, got %q", resource.MIMEType)
 		}
 
-		campaignResource, found := findResource(result.Resources, "campaign")
-		if !found {
-			t.Fatal("expected campaign resource")
-		}
-		if !strings.HasPrefix(campaignResource.URI, "campaign://") {
-			t.Fatalf("expected resource URI to start with campaign://, got %q", campaignResource.URI)
-		}
-		if campaignResource.MIMEType != "application/json" {
-			t.Fatalf("expected resource MIME application/json, got %q", campaignResource.MIMEType)
-		}
-
-		participantResource, found := findResource(result.Resources, "participant_list")
-		if !found {
-			t.Fatal("expected participant_list resource")
-		}
-		if !strings.HasPrefix(participantResource.URI, "campaign://") {
-			t.Fatalf("expected resource URI to start with campaign://, got %q", participantResource.URI)
-		}
-		if !strings.HasSuffix(participantResource.URI, "/participants") {
-			t.Fatalf("expected resource URI to end with /participants, got %q", participantResource.URI)
-		}
-		if participantResource.MIMEType != "application/json" {
-			t.Fatalf("expected resource MIME application/json, got %q", participantResource.MIMEType)
-		}
-
-		characterResource, found := findResource(result.Resources, "character_list")
-		if !found {
-			t.Fatal("expected character_list resource")
-		}
-		if !strings.HasPrefix(characterResource.URI, "campaign://") {
-			t.Fatalf("expected resource URI to start with campaign://, got %q", characterResource.URI)
-		}
-		if !strings.HasSuffix(characterResource.URI, "/characters") {
-			t.Fatalf("expected resource URI to end with /characters, got %q", characterResource.URI)
-		}
-		if characterResource.MIMEType != "application/json" {
-			t.Fatalf("expected resource MIME application/json, got %q", characterResource.MIMEType)
-		}
-
-		sessionResource, found := findResource(result.Resources, "session_list")
-		if !found {
-			t.Fatal("expected session_list resource")
-		}
-		if !strings.HasPrefix(sessionResource.URI, "campaign://") {
-			t.Fatalf("expected resource URI to start with campaign://, got %q", sessionResource.URI)
-		}
-		if !strings.HasSuffix(sessionResource.URI, "/sessions") {
-			t.Fatalf("expected resource URI to end with /sessions, got %q", sessionResource.URI)
-		}
-		if sessionResource.MIMEType != "application/json" {
-			t.Fatalf("expected resource MIME application/json, got %q", sessionResource.MIMEType)
-		}
-
-		sessionEventsResource, found := findResource(result.Resources, "session_events")
-		if !found {
-			t.Fatal("expected session_events resource")
-		}
-		if sessionEventsResource.URI != "session://_/events" {
-			t.Fatalf("expected resource URI session://_/events, got %q", sessionEventsResource.URI)
-		}
-		if sessionEventsResource.MIMEType != "application/json" {
-			t.Fatalf("expected resource MIME application/json, got %q", sessionEventsResource.MIMEType)
-		}
-
 		contextResource, found := findResource(result.Resources, "context_current")
 		if !found {
 			t.Fatal("expected context_current resource")
@@ -112,6 +48,69 @@ func runMCPResourcesTests(t *testing.T, suite *integrationSuite) {
 		}
 		if contextResource.MIMEType != "application/json" {
 			t.Fatalf("expected resource MIME application/json, got %q", contextResource.MIMEType)
+		}
+
+		templateResult, err := suite.client.ListResourceTemplates(ctx, nil)
+		if err != nil {
+			t.Fatalf("list resource templates: %v", err)
+		}
+		if templateResult == nil {
+			t.Fatal("list resource templates returned nil result")
+		}
+
+		campaignTemplate, found := findResourceTemplate(templateResult.ResourceTemplates, "campaign")
+		if !found {
+			t.Fatal("expected campaign resource template")
+		}
+		if campaignTemplate.URITemplate != "campaign://{campaign_id}" {
+			t.Fatalf("expected campaign template URI campaign://{campaign_id}, got %q", campaignTemplate.URITemplate)
+		}
+		if campaignTemplate.MIMEType != "application/json" {
+			t.Fatalf("expected campaign template MIME application/json, got %q", campaignTemplate.MIMEType)
+		}
+
+		participantTemplate, found := findResourceTemplate(templateResult.ResourceTemplates, "participant_list")
+		if !found {
+			t.Fatal("expected participant_list resource template")
+		}
+		if participantTemplate.URITemplate != "campaign://{campaign_id}/participants" {
+			t.Fatalf("expected participant template URI campaign://{campaign_id}/participants, got %q", participantTemplate.URITemplate)
+		}
+		if participantTemplate.MIMEType != "application/json" {
+			t.Fatalf("expected participant template MIME application/json, got %q", participantTemplate.MIMEType)
+		}
+
+		characterTemplate, found := findResourceTemplate(templateResult.ResourceTemplates, "character_list")
+		if !found {
+			t.Fatal("expected character_list resource template")
+		}
+		if characterTemplate.URITemplate != "campaign://{campaign_id}/characters" {
+			t.Fatalf("expected character template URI campaign://{campaign_id}/characters, got %q", characterTemplate.URITemplate)
+		}
+		if characterTemplate.MIMEType != "application/json" {
+			t.Fatalf("expected character template MIME application/json, got %q", characterTemplate.MIMEType)
+		}
+
+		sessionTemplate, found := findResourceTemplate(templateResult.ResourceTemplates, "session_list")
+		if !found {
+			t.Fatal("expected session_list resource template")
+		}
+		if sessionTemplate.URITemplate != "campaign://{campaign_id}/sessions" {
+			t.Fatalf("expected session template URI campaign://{campaign_id}/sessions, got %q", sessionTemplate.URITemplate)
+		}
+		if sessionTemplate.MIMEType != "application/json" {
+			t.Fatalf("expected session template MIME application/json, got %q", sessionTemplate.MIMEType)
+		}
+
+		sessionEventsTemplate, found := findResourceTemplate(templateResult.ResourceTemplates, "session_events")
+		if !found {
+			t.Fatal("expected session_events resource template")
+		}
+		if sessionEventsTemplate.URITemplate != "session://{session_id}/events" {
+			t.Fatalf("expected session events template URI session://{session_id}/events, got %q", sessionEventsTemplate.URITemplate)
+		}
+		if sessionEventsTemplate.MIMEType != "application/json" {
+			t.Fatalf("expected session events template MIME application/json, got %q", sessionEventsTemplate.MIMEType)
 		}
 	})
 
@@ -165,24 +164,31 @@ func runMCPResourcesTests(t *testing.T, suite *integrationSuite) {
 			t.Fatal("participant_create returned empty id")
 		}
 
-		// Note: The MCP SDK validates URIs exactly against registered resources.
-		// Since we registered campaign://_/participants, the SDK only accepts that exact URI.
-		// The handler implementation correctly parses campaign://{campaign_id}/participants
-		// format, but the SDK validation prevents testing it directly via ReadResource.
-		// The handler logic is tested in unit tests (TestParticipantListResourceHandler*).
-		// This integration test verifies the resource is discoverable and the handler
-		// would work correctly if the SDK supported URI templates.
-		//
-		// For now, we test that the registered URI format is accepted (even though
-		// it uses a placeholder) to verify the resource is properly registered.
-		registeredURI := "campaign://_/participants"
-		_, err = suite.client.ReadResource(ctx, &mcp.ReadResourceParams{URI: registeredURI})
+		resourceURI := fmt.Sprintf("campaign://%s/participants", campaignOutput.ID)
+		resourceResult, err := suite.client.ReadResource(ctx, &mcp.ReadResourceParams{URI: resourceURI})
 		if err != nil {
-			// The handler will reject the placeholder, which is expected behavior
-			// This confirms the handler is being called and validates the campaign ID
-			if !strings.Contains(err.Error(), "campaign ID") {
-				t.Fatalf("read participant list resource: expected campaign ID error, got %v", err)
+			t.Fatalf("read participant list resource: %v", err)
+		}
+		if resourceResult == nil || len(resourceResult.Contents) != 1 {
+			t.Fatalf("expected 1 content item, got %v", resourceResult)
+		}
+
+		var payload domain.ParticipantListPayload
+		if err := json.Unmarshal([]byte(resourceResult.Contents[0].Text), &payload); err != nil {
+			t.Fatalf("unmarshal participant list JSON: %v", err)
+		}
+		if len(payload.Participants) == 0 {
+			t.Fatal("expected participants in list")
+		}
+		found := false
+		for _, participant := range payload.Participants {
+			if participant.ID == participantOutput.ID {
+				found = true
+				break
 			}
+		}
+		if !found {
+			t.Fatalf("expected participant %q in list", participantOutput.ID)
 		}
 	})
 
@@ -233,24 +239,31 @@ func runMCPResourcesTests(t *testing.T, suite *integrationSuite) {
 			t.Fatal("character_create returned empty id")
 		}
 
-		// Note: The MCP SDK validates URIs exactly against registered resources.
-		// Since we registered campaign://_/characters, the SDK only accepts that exact URI.
-		// The handler implementation correctly parses campaign://{campaign_id}/characters
-		// format, but the SDK validation prevents testing it directly via ReadResource.
-		// The handler logic is tested in unit tests (TestCharacterListResourceHandler*).
-		// This integration test verifies the resource is discoverable and the handler
-		// would work correctly if the SDK supported URI templates.
-		//
-		// For now, we test that the registered URI format is accepted (even though
-		// it uses a placeholder) to verify the resource is properly registered.
-		registeredURI := "campaign://_/characters"
-		_, err = suite.client.ReadResource(ctx, &mcp.ReadResourceParams{URI: registeredURI})
+		resourceURI := fmt.Sprintf("campaign://%s/characters", campaignOutput.ID)
+		resourceResult, err := suite.client.ReadResource(ctx, &mcp.ReadResourceParams{URI: resourceURI})
 		if err != nil {
-			// The handler will reject the placeholder, which is expected behavior
-			// This confirms the handler is being called and validates the campaign ID
-			if !strings.Contains(err.Error(), "campaign ID") {
-				t.Fatalf("read character list resource: expected campaign ID error, got %v", err)
+			t.Fatalf("read character list resource: %v", err)
+		}
+		if resourceResult == nil || len(resourceResult.Contents) != 1 {
+			t.Fatalf("expected 1 content item, got %v", resourceResult)
+		}
+
+		var payload domain.CharacterListPayload
+		if err := json.Unmarshal([]byte(resourceResult.Contents[0].Text), &payload); err != nil {
+			t.Fatalf("unmarshal character list JSON: %v", err)
+		}
+		if len(payload.Characters) == 0 {
+			t.Fatal("expected characters in list")
+		}
+		found := false
+		for _, character := range payload.Characters {
+			if character.ID == characterOutput.ID {
+				found = true
+				break
 			}
+		}
+		if !found {
+			t.Fatalf("expected character %q in list", characterOutput.ID)
 		}
 	})
 
@@ -324,24 +337,34 @@ func runMCPResourcesTests(t *testing.T, suite *integrationSuite) {
 			t.Fatal("expected ended_at to be set")
 		}
 
-		// Note: The MCP SDK validates URIs exactly against registered resources.
-		// Since we registered campaign://_/sessions, the SDK only accepts that exact URI.
-		// The handler implementation correctly parses campaign://{campaign_id}/sessions
-		// format, but the SDK validation prevents testing it directly via ReadResource.
-		// The handler logic is tested in unit tests (TestSessionListResourceHandler*).
-		// This integration test verifies the resource is discoverable and the handler
-		// would work correctly if the SDK supported URI templates.
-		//
-		// For now, we test that the registered URI format is accepted (even though
-		// it uses a placeholder) to verify the resource is properly registered.
-		registeredURI := "campaign://_/sessions"
-		_, err = suite.client.ReadResource(ctx, &mcp.ReadResourceParams{URI: registeredURI})
+		resourceURI := fmt.Sprintf("campaign://%s/sessions", campaignOutput.ID)
+		resourceResult, err := suite.client.ReadResource(ctx, &mcp.ReadResourceParams{URI: resourceURI})
 		if err != nil {
-			// The handler will reject the placeholder, which is expected behavior
-			// This confirms the handler is being called and validates the campaign ID
-			if !strings.Contains(err.Error(), "campaign ID") {
-				t.Fatalf("read session list resource: expected campaign ID error, got %v", err)
+			t.Fatalf("read session list resource: %v", err)
+		}
+		if resourceResult == nil || len(resourceResult.Contents) != 1 {
+			t.Fatalf("expected 1 content item, got %v", resourceResult)
+		}
+
+		var payload domain.SessionListPayload
+		if err := json.Unmarshal([]byte(resourceResult.Contents[0].Text), &payload); err != nil {
+			t.Fatalf("unmarshal session list JSON: %v", err)
+		}
+		if len(payload.Sessions) == 0 {
+			t.Fatal("expected sessions in list")
+		}
+		found := false
+		for _, session := range payload.Sessions {
+			if session.ID == sessionOutput.ID {
+				found = true
+				if session.Status != "ENDED" {
+					t.Fatalf("expected session status ENDED, got %q", session.Status)
+				}
+				break
 			}
+		}
+		if !found {
+			t.Fatalf("expected session %q in list", sessionOutput.ID)
 		}
 	})
 
@@ -442,6 +465,16 @@ func findResource(resources []*mcp.Resource, name string) (*mcp.Resource, bool) 
 	for _, resource := range resources {
 		if resource != nil && resource.Name == name {
 			return resource, true
+		}
+	}
+	return nil, false
+}
+
+// findResourceTemplate searches a resource template list for a matching name.
+func findResourceTemplate(templates []*mcp.ResourceTemplate, name string) (*mcp.ResourceTemplate, bool) {
+	for _, template := range templates {
+		if template != nil && template.Name == name {
+			return template, true
 		}
 	}
 	return nil, false

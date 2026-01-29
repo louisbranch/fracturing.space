@@ -1270,15 +1270,14 @@ func TestCampaignResourceHandlerReturnsInvalidArgument(t *testing.T) {
 	}
 }
 
-// TestCampaignResourceHandlerRejectsPlaceholder ensures placeholder URI is rejected.
-func TestCampaignResourceHandlerRejectsPlaceholder(t *testing.T) {
+// TestCampaignResourceHandlerRejectsMissingURI ensures missing URI is rejected.
+func TestCampaignResourceHandlerRejectsMissingURI(t *testing.T) {
 	client := &fakeCampaignClient{}
 	handler := domain.CampaignResourceHandler(client)
 
-	// When the URI matches the registered placeholder, it returns early with a specific error
 	result, err := handler(context.Background(), &mcp.ReadResourceRequest{
 		Params: &mcp.ReadResourceParams{
-			URI: "campaign://_",
+			URI: "",
 		},
 	})
 	if err == nil {
@@ -1287,7 +1286,6 @@ func TestCampaignResourceHandlerRejectsPlaceholder(t *testing.T) {
 	if result != nil {
 		t.Fatal("expected nil result on error")
 	}
-	// The handler checks if URI matches registered placeholder first, so we get the early return message
 	if !strings.Contains(err.Error(), "campaign ID is required") {
 		t.Fatalf("expected 'campaign ID is required' in error, got %q", err.Error())
 	}
@@ -2218,16 +2216,16 @@ func TestParticipantListResourceHandlerMapsResponse(t *testing.T) {
 	}
 }
 
-// TestParticipantListResourceHandlerRejectsPlaceholder ensures placeholder campaign ID is rejected.
-func TestParticipantListResourceHandlerRejectsPlaceholder(t *testing.T) {
+// TestParticipantListResourceHandlerRejectsMissingURI ensures missing campaign URI is rejected.
+func TestParticipantListResourceHandlerRejectsMissingURI(t *testing.T) {
 	client := &fakeCampaignClient{}
 	handler := domain.ParticipantListResourceHandler(client)
 
 	result, err := handler(context.Background(), &mcp.ReadResourceRequest{
-		Params: &mcp.ReadResourceParams{URI: "campaign://_/participants"},
+		Params: &mcp.ReadResourceParams{URI: ""},
 	})
 	if err == nil {
-		t.Fatal("expected error for placeholder campaign ID")
+		t.Fatal("expected error for missing campaign URI")
 	}
 	if result != nil {
 		t.Fatal("expected nil result on error")
@@ -2332,16 +2330,16 @@ func TestCharacterListResourceHandlerMapsResponse(t *testing.T) {
 	}
 }
 
-// TestCharacterListResourceHandlerRejectsPlaceholder ensures placeholder campaign ID is rejected.
-func TestCharacterListResourceHandlerRejectsPlaceholder(t *testing.T) {
+// TestCharacterListResourceHandlerRejectsMissingURI ensures missing campaign URI is rejected.
+func TestCharacterListResourceHandlerRejectsMissingURI(t *testing.T) {
 	client := &fakeCampaignClient{}
 	handler := domain.CharacterListResourceHandler(client)
 
 	result, err := handler(context.Background(), &mcp.ReadResourceRequest{
-		Params: &mcp.ReadResourceParams{URI: "campaign://_/characters"},
+		Params: &mcp.ReadResourceParams{URI: ""},
 	})
 	if err == nil {
-		t.Fatal("expected error for placeholder campaign ID")
+		t.Fatal("expected error for missing campaign URI")
 	}
 	if result != nil {
 		t.Fatal("expected nil result on error")
@@ -2449,16 +2447,16 @@ func TestSessionListResourceHandlerMapsResponse(t *testing.T) {
 	}
 }
 
-// TestSessionListResourceHandlerRejectsPlaceholder ensures placeholder campaign ID is rejected.
-func TestSessionListResourceHandlerRejectsPlaceholder(t *testing.T) {
+// TestSessionListResourceHandlerRejectsMissingURI ensures missing campaign URI is rejected.
+func TestSessionListResourceHandlerRejectsMissingURI(t *testing.T) {
 	client := &fakeSessionClient{}
 	handler := domain.SessionListResourceHandler(client)
 
 	result, err := handler(context.Background(), &mcp.ReadResourceRequest{
-		Params: &mcp.ReadResourceParams{URI: "campaign://_/sessions"},
+		Params: &mcp.ReadResourceParams{URI: ""},
 	})
 	if err == nil {
-		t.Fatal("expected error for placeholder campaign ID")
+		t.Fatal("expected error for missing campaign URI")
 	}
 	if result != nil {
 		t.Fatal("expected nil result on error")

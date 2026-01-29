@@ -6,7 +6,7 @@ import (
 )
 
 // parseCampaignIDFromResourceURI extracts the campaign ID from a URI of the form campaign://{campaign_id}/{resourceType}.
-// It parses URIs of the expected format but requires an actual campaign ID and rejects the placeholder (campaign://_/{resourceType}).
+// It parses URIs of the expected format but requires an actual campaign ID.
 // The resourceType parameter should be the resource suffix (e.g., "participants", "characters", "sessions").
 func parseCampaignIDFromResourceURI(uri, resourceType string) (string, error) {
 	prefix := "campaign://"
@@ -36,7 +36,7 @@ func parseCampaignIDFromResourceURI(uri, resourceType string) (string, error) {
 }
 
 // parseSessionIDFromResourceURI extracts the session ID from a URI of the form session://{session_id}/{resourceType}.
-// It parses URIs of the expected format but requires an actual session ID and rejects the placeholder (session://_/{resourceType}).
+// It parses URIs of the expected format but requires an actual session ID.
 // The resourceType parameter should be the resource suffix (e.g., "events").
 func parseSessionIDFromResourceURI(uri, resourceType string) (string, error) {
 	prefix := "session://"

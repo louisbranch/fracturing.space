@@ -52,15 +52,15 @@ func registerContextTools(
 // registerCampaignResources registers readable campaign MCP resources.
 func registerCampaignResources(mcpServer *mcp.Server, client campaignv1.CampaignServiceClient) {
 	mcpServer.AddResource(domain.CampaignListResource(), domain.CampaignListResourceHandler(client))
-	mcpServer.AddResource(domain.CampaignResource(), domain.CampaignResourceHandler(client))
-	mcpServer.AddResource(domain.ParticipantListResource(), domain.ParticipantListResourceHandler(client))
-	mcpServer.AddResource(domain.CharacterListResource(), domain.CharacterListResourceHandler(client))
+	mcpServer.AddResourceTemplate(domain.CampaignResourceTemplate(), domain.CampaignResourceHandler(client))
+	mcpServer.AddResourceTemplate(domain.ParticipantListResourceTemplate(), domain.ParticipantListResourceHandler(client))
+	mcpServer.AddResourceTemplate(domain.CharacterListResourceTemplate(), domain.CharacterListResourceHandler(client))
 }
 
 // registerSessionResources registers readable session MCP resources.
 func registerSessionResources(mcpServer *mcp.Server, client sessionv1.SessionServiceClient) {
-	mcpServer.AddResource(domain.SessionListResource(), domain.SessionListResourceHandler(client))
-	mcpServer.AddResource(domain.SessionEventsResource(), domain.SessionEventsResourceHandler(client))
+	mcpServer.AddResourceTemplate(domain.SessionListResourceTemplate(), domain.SessionListResourceHandler(client))
+	mcpServer.AddResourceTemplate(domain.SessionEventsResourceTemplate(), domain.SessionEventsResourceHandler(client))
 }
 
 // registerContextResources registers readable context MCP resources.

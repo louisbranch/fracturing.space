@@ -445,17 +445,14 @@ type SessionEventsPayload struct {
 	Events []SessionEventEntry `json:"events"`
 }
 
-// SessionListResource defines the MCP resource for session listings.
-// The effective URI template is campaign://{campaign_id}/sessions, but the
-// SDK requires a valid URI for registration, so we use a placeholder here.
-// Clients must provide the full URI with actual campaign_id when reading.
-func SessionListResource() *mcp.Resource {
-	return &mcp.Resource{
+// SessionListResourceTemplate defines the MCP resource template for session listings.
+func SessionListResourceTemplate() *mcp.ResourceTemplate {
+	return &mcp.ResourceTemplate{
 		Name:        "session_list",
 		Title:       "Sessions",
 		Description: "Readable listing of sessions for a campaign. URI format: campaign://{campaign_id}/sessions",
 		MIMEType:    "application/json",
-		URI:         "campaign://_/sessions", // Placeholder; actual format: campaign://{campaign_id}/sessions
+		URITemplate: "campaign://{campaign_id}/sessions",
 	}
 }
 
@@ -466,22 +463,13 @@ func SessionListResourceHandler(client sessionv1.SessionServiceClient) mcp.Resou
 			return nil, fmt.Errorf("session list client is not configured")
 		}
 
-		uri := SessionListResource().URI
-		if req != nil && req.Params != nil && req.Params.URI != "" {
-			uri = req.Params.URI
-		}
-
-		// Parse campaign_id from URI: expected format is campaign://{campaign_id}/sessions.
-		// If the URI is the registered placeholder, return an error requiring a concrete campaign ID.
-		// Otherwise, parse the campaign ID from the URI path.
-		var campaignID string
-		var err error
-		if uri == SessionListResource().URI {
-			// Using registered placeholder URI - this shouldn't happen in practice
-			// but handle it gracefully by requiring campaign_id in a different way
+		if req == nil || req.Params == nil || req.Params.URI == "" {
 			return nil, fmt.Errorf("campaign ID is required; use URI format campaign://{campaign_id}/sessions")
 		}
-		campaignID, err = parseCampaignIDFromSessionURI(uri)
+		uri := req.Params.URI
+
+		// Parse campaign_id from URI: expected format is campaign://{campaign_id}/sessions.
+		campaignID, err := parseCampaignIDFromSessionURI(uri)
 		if err != nil {
 			return nil, fmt.Errorf("parse campaign ID from URI: %w", err)
 		}
@@ -538,17 +526,14 @@ func SessionListResourceHandler(client sessionv1.SessionServiceClient) mcp.Resou
 	}
 }
 
-// SessionEventsResource defines the MCP resource for session event listings.
-// The effective URI template is session://{session_id}/events, but the
-// SDK requires a valid URI for registration, so we use a placeholder here.
-// Clients must provide the full URI with actual session_id when reading.
-func SessionEventsResource() *mcp.Resource {
-	return &mcp.Resource{
+// SessionEventsResourceTemplate defines the MCP resource template for session event listings.
+func SessionEventsResourceTemplate() *mcp.ResourceTemplate {
+	return &mcp.ResourceTemplate{
 		Name:        "session_events",
 		Title:       "Session Events",
 		Description: "Readable listing of session events. URI format: session://{session_id}/events",
 		MIMEType:    "application/json",
-		URI:         "session://_/events",
+		URITemplate: "session://{session_id}/events",
 	}
 }
 
@@ -559,13 +544,10 @@ func SessionEventsResourceHandler(client sessionv1.SessionServiceClient) mcp.Res
 			return nil, fmt.Errorf("session events client is not configured")
 		}
 
-		uri := SessionEventsResource().URI
-		if req != nil && req.Params != nil && req.Params.URI != "" {
-			uri = req.Params.URI
-		}
-		if uri == SessionEventsResource().URI {
+		if req == nil || req.Params == nil || req.Params.URI == "" {
 			return nil, fmt.Errorf("session ID is required; use URI format session://{session_id}/events")
 		}
+		uri := req.Params.URI
 
 		sessionID, err := parseSessionIDFromSessionEventsURI(uri)
 		if err != nil {
@@ -626,13 +608,13 @@ func SessionEventsResourceHandler(client sessionv1.SessionServiceClient) mcp.Res
 }
 
 // parseCampaignIDFromSessionURI extracts the campaign ID from a URI of the form campaign://{campaign_id}/sessions.
-// It parses URIs of the expected format but requires an actual campaign ID and rejects the placeholder (campaign://_/sessions).
+// It parses URIs of the expected format but requires an actual campaign ID.
 func parseCampaignIDFromSessionURI(uri string) (string, error) {
 	return parseCampaignIDFromResourceURI(uri, "sessions")
 }
 
 // parseSessionIDFromSessionEventsURI extracts the session ID from a URI of the form session://{session_id}/events.
-// It parses URIs of the expected format but requires an actual session ID and rejects the placeholder (session://_/events).
+// It parses URIs of the expected format but requires an actual session ID.
 func parseSessionIDFromSessionEventsURI(uri string) (string, error) {
 	return parseSessionIDFromResourceURI(uri, "events")
 }
