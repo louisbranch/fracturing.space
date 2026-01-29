@@ -1,5 +1,8 @@
 //go:build integration
 
+// Package integration includes a blackbox MCP HTTP test that validates the public
+// request/response surface for campaign setup, session context, and action rolls.
+// It serves as a baseline for future transport-focused blackbox suites (e.g. stdio).
 package integration
 
 import (

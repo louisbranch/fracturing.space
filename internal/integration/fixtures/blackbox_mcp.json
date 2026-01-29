@@ -58,21 +58,169 @@
       }
     },
     {
-      "name": "campaign_list_read",
+      "name": "campaign_read",
       "expect_status": 200,
       "request": {
         "jsonrpc": "2.0",
         "id": 3,
         "method": "resources/read",
         "params": {
-          "uri": "campaigns://list"
+          "uri": "campaign://{{campaign_id}}"
         }
       },
       "expect_paths": {
         "jsonrpc": "2.0",
         "id": 3,
-        "result.contents[0].text|json.campaigns[0].id": "{{campaign_id}}",
-        "result.contents[0].text|json.campaigns[0].name": "Blackbox Campaign"
+        "result.contents[0].text|json.campaign.id": "{{campaign_id}}",
+        "result.contents[0].text|json.campaign.name": "Blackbox Campaign"
+      }
+    },
+    {
+      "name": "participant_create",
+      "expect_status": 200,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 4,
+        "method": "tools/call",
+        "params": {
+          "name": "participant_create",
+          "arguments": {
+            "campaign_id": "{{campaign_id}}",
+            "display_name": "Blackbox Player",
+            "role": "PLAYER",
+            "controller": "HUMAN"
+          }
+        }
+      },
+      "expect_paths": {
+        "jsonrpc": "2.0",
+        "id": 4
+      },
+      "captures": {
+        "participant_id": [
+          "result.structuredContent.id",
+          "result.structured_content.id"
+        ]
+      }
+    },
+    {
+      "name": "character_create",
+      "expect_status": 200,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 5,
+        "method": "tools/call",
+        "params": {
+          "name": "character_create",
+          "arguments": {
+            "campaign_id": "{{campaign_id}}",
+            "name": "Blackbox Hero",
+            "kind": "PC",
+            "notes": "Owned by participant"
+          }
+        }
+      },
+      "expect_paths": {
+        "jsonrpc": "2.0",
+        "id": 5
+      },
+      "captures": {
+        "character_id": [
+          "result.structuredContent.id",
+          "result.structured_content.id"
+        ]
+      }
+    },
+    {
+      "name": "character_control_set",
+      "expect_status": 200,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 6,
+        "method": "tools/call",
+        "params": {
+          "name": "character_control_set",
+          "arguments": {
+            "campaign_id": "{{campaign_id}}",
+            "character_id": "{{character_id}}",
+            "controller": "{{participant_id}}"
+          }
+        }
+      },
+      "expect_paths": {
+        "jsonrpc": "2.0",
+        "id": 6
+      }
+    },
+    {
+      "name": "session_start",
+      "expect_status": 200,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "method": "tools/call",
+        "params": {
+          "name": "session_start",
+          "arguments": {
+            "campaign_id": "{{campaign_id}}",
+            "name": "Blackbox Session"
+          }
+        }
+      },
+      "expect_paths": {
+        "jsonrpc": "2.0",
+        "id": 7
+      },
+      "captures": {
+        "session_id": [
+          "result.structuredContent.id",
+          "result.structured_content.id"
+        ]
+      }
+    },
+    {
+      "name": "set_context",
+      "expect_status": 200,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 8,
+        "method": "tools/call",
+        "params": {
+          "name": "set_context",
+          "arguments": {
+            "campaign_id": "{{campaign_id}}",
+            "session_id": "{{session_id}}",
+            "participant_id": "{{participant_id}}"
+          }
+        }
+      },
+      "expect_paths": {
+        "jsonrpc": "2.0",
+        "id": 8
+      }
+    },
+    {
+      "name": "session_action_roll",
+      "expect_status": 200,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 9,
+        "method": "tools/call",
+        "params": {
+          "name": "session_action_roll",
+          "arguments": {
+            "character_id": "{{character_id}}",
+            "trait": "bravery",
+            "difficulty": 10,
+            "modifiers": [
+              {"source": "skill", "value": 2}
+            ]
+          }
+        }
+      },
+      "expect_paths": {
+        "jsonrpc": "2.0",
+        "id": 9
       }
     }
   ]
