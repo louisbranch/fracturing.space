@@ -1,8 +1,8 @@
 //go:build integration
 
-// Package integration includes a blackbox MCP HTTP test that validates the public
+// Package integration includes blackbox MCP transport tests that validate the public
 // request/response surface for campaign setup, session context, and action rolls.
-// It serves as a baseline for future transport-focused blackbox suites (e.g. stdio).
+// They serve as a baseline for transport-focused suites (HTTP and stdio).
 package integration
 
 import (
@@ -55,7 +55,7 @@ func TestMCPHTTPBlackbox(t *testing.T) {
 	if err != nil {
 		t.Fatalf("start MCP HTTP server: %v", err)
 	}
-	defer stopMCPHTTPServer(t, cancel, mcpCmd)
+	defer stopMCPProcess(t, cancel, mcpCmd)
 
 	baseURL := "http://" + httpAddr
 	client := newHTTPClient(t)
@@ -434,8 +434,8 @@ func startMCPHTTPServer(ctx context.Context, t *testing.T, grpcAddr, httpAddr st
 	return cmd, nil
 }
 
-// stopMCPHTTPServer terminates the MCP HTTP process and waits for exit.
-func stopMCPHTTPServer(t *testing.T, cancel context.CancelFunc, cmd *exec.Cmd) {
+// stopMCPProcess terminates the MCP process and waits for exit.
+func stopMCPProcess(t *testing.T, cancel context.CancelFunc, cmd *exec.Cmd) {
 	t.Helper()
 
 	cancel()
