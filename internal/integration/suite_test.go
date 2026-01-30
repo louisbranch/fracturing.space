@@ -14,14 +14,6 @@ func TestMCPStdioEndToEnd(t *testing.T) {
 
 	suite := &integrationSuite{client: clientSession}
 
-	t.Run("mcp tools", func(t *testing.T) {
-		runMCPToolsTests(t, suite)
-	})
-
-	t.Run("mcp resources", func(t *testing.T) {
-		runMCPResourcesTests(t, suite)
-	})
-
 	t.Run("duality tools", func(t *testing.T) {
 		runDualityToolsTests(t, suite)
 	})

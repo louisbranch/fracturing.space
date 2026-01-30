@@ -40,19 +40,6 @@ func runDualityToolsTests(t *testing.T, suite *integrationSuite) {
 		}
 
 		output := decodeStructuredContent[domain.DualityOutcomeResult](t, result.StructuredContent)
-		if output.Hope != 10 || output.Fear != 4 || output.Modifier != 1 {
-			t.Fatalf("unexpected dice output: %+v", output)
-		}
-		if output.Total != 15 {
-			t.Fatalf("expected total 15, got %d", output.Total)
-		}
-		if output.Difficulty == nil || *output.Difficulty != 10 {
-			t.Fatalf("expected difficulty 10, got %v", output.Difficulty)
-		}
-		if output.Outcome != "SUCCESS_WITH_HOPE" {
-			t.Fatalf("expected outcome SUCCESS_WITH_HOPE, got %q", output.Outcome)
-		}
-
 		expected, err := dualitydomain.EvaluateOutcome(dualitydomain.OutcomeRequest{
 			Hope:       10,
 			Fear:       4,

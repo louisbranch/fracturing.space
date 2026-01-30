@@ -1,0 +1,50 @@
+{
+  "name": "mcp_http_blackbox_resources_list",
+  "steps": [
+    {
+      "name": "initialize",
+      "action": "initialize"
+    },
+    {
+      "name": "initialized",
+      "action": "initialized"
+    },
+    {
+      "name": "resources_list",
+      "action": "call",
+      "method": "resources/list",
+      "params": {},
+      "expect_paths": {
+        "result.resources[0].uri": "campaigns://list",
+        "result.resources[0].name": "campaign_list",
+        "result.resources[0].mimeType": "application/json",
+        "result.resources[1].uri": "context://current",
+        "result.resources[1].name": "context_current",
+        "result.resources[1].mimeType": "application/json"
+      }
+    },
+    {
+      "name": "resource_templates_list",
+      "action": "call",
+      "method": "resources/templates/list",
+      "params": {},
+      "expect_paths": {
+        "result.resourceTemplates[0].uriTemplate": "campaign://{campaign_id}",
+        "result.resourceTemplates[0].name": "campaign",
+        "result.resourceTemplates[0].mimeType": "application/json",
+        "result.resourceTemplates[1].uriTemplate": "campaign://{campaign_id}/characters",
+        "result.resourceTemplates[1].name": "character_list",
+        "result.resourceTemplates[1].mimeType": "application/json",
+        "result.resourceTemplates[2].uriTemplate": "campaign://{campaign_id}/participants",
+        "result.resourceTemplates[2].name": "participant_list",
+        "result.resourceTemplates[2].mimeType": "application/json",
+        "result.resourceTemplates[3].uriTemplate": "campaign://{campaign_id}/sessions",
+        "result.resourceTemplates[3].name": "session_list",
+        "result.resourceTemplates[3].mimeType": "application/json",
+        "result.resourceTemplates[4].uriTemplate": "session://{session_id}/events",
+        "result.resourceTemplates[4].name": "session_events",
+        "result.resourceTemplates[4].mimeType": "application/json"
+      }
+    }
+  ]
+}

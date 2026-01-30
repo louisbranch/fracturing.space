@@ -1,0 +1,54 @@
+{
+  "name": "mcp_http_blackbox_context_flow",
+  "steps": [
+    {
+      "name": "initialize",
+      "action": "initialize"
+    },
+    {
+      "name": "initialized",
+      "action": "initialized"
+    },
+    {
+      "name": "context_read_empty",
+      "action": "read_resource",
+      "uri": "context://current",
+      "expect_paths": {
+        "result.contents[0].text|json.context.campaign_id": null,
+        "result.contents[0].text|json.context.session_id": null,
+        "result.contents[0].text|json.context.participant_id": null
+      }
+    },
+    {
+      "name": "campaign_create",
+      "action": "tool_call",
+      "tool": "campaign_create",
+      "args": {
+        "name": "Context Scenario",
+        "gm_mode": "AI",
+        "theme_prompt": "context"
+      },
+      "capture": {
+        "campaign_id": "campaign"
+      }
+    },
+    {
+      "name": "set_context_campaign",
+      "action": "tool_call",
+      "tool": "set_context",
+      "args": {
+        "campaign_id": {"ref": "campaign_id"}
+      }
+    },
+    {
+      "name": "context_read_campaign",
+      "action": "read_resource",
+      "uri": "context://current",
+      "expect_paths": {
+        "result.contents[0].text|json.context.campaign_id": "{{campaign_id}}",
+        "result.contents[0].text|json.context.session_id": null,
+        "result.contents[0].text|json.context.participant_id": null
+      }
+    }
+  ]
+}

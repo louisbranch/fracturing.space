@@ -1,0 +1,29 @@
+{
+  "name": "mcp_http_blackbox_duality_flow",
+  "steps": [
+    {
+      "name": "initialize",
+      "action": "initialize"
+    },
+    {
+      "name": "initialized",
+      "action": "initialized"
+    },
+    {
+      "name": "duality_outcome",
+      "action": "tool_call",
+      "tool": "duality_outcome",
+      "args": {
+        "hope": 10,
+        "fear": 4,
+        "modifier": 1,
+        "difficulty": 10
+      }
+    },
+    {
+      "name": "duality_rules_version",
+      "action": "tool_call",
+      "tool": "duality_rules_version"
+    }
+  ]
+}
