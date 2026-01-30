@@ -1,0 +1,56 @@
+{
+  "name": "mcp_http_blackbox_session_flow",
+  "steps": [
+    {
+      "name": "initialize",
+      "action": "initialize"
+    },
+    {
+      "name": "initialized",
+      "action": "initialized"
+    },
+    {
+      "name": "campaign_create",
+      "action": "tool_call",
+      "tool": "campaign_create",
+      "args": {
+        "name": "Session Scenario",
+        "gm_mode": "HUMAN",
+        "theme_prompt": "sessions"
+      },
+      "capture": {
+        "campaign_id": "campaign"
+      }
+    },
+    {
+      "name": "session_start",
+      "action": "tool_call",
+      "tool": "session_start",
+      "args": {
+        "campaign_id": {"ref": "campaign_id"},
+        "name": "Scenario Session"
+      },
+      "capture": {
+        "session_id": "session"
+      }
+    },
+    {
+      "name": "session_end",
+      "action": "tool_call",
+      "tool": "session_end",
+      "args": {
+        "campaign_id": {"ref": "campaign_id"},
+        "session_id": {"ref": "session_id"}
+      }
+    },
+    {
+      "name": "session_list_read",
+      "action": "read_resource",
+      "uri": "campaign://{{campaign_id}}/sessions",
+      "expect_paths": {
+        "result.contents[0].text|json.sessions[0].id": "{{session_id}}",
+        "result.contents[0].text|json.sessions[0].status": "ENDED"
+      }
+    }
+  ]
+}

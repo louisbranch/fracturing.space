@@ -32,10 +32,12 @@ func TestMCPStdioBlackbox(t *testing.T) {
 	}
 	defer stopMCPProcess(t, cancel, cmd)
 
-	fixture := loadBlackboxFixture(t, filepath.Join(repoRoot(t), blackboxFixturePath))
-	captures := make(map[string]string)
-	for _, step := range fixture.Steps {
-		executeStdioBlackboxStep(t, client, step, captures)
+	fixtures := loadBlackboxFixtures(t, filepath.Join(repoRoot(t), blackboxFixtureGlob))
+	for _, fixture := range fixtures {
+		captures := make(map[string]string)
+		for _, step := range fixture.Steps {
+			executeStdioBlackboxStep(t, client, step, captures)
+		}
 	}
 }
 
@@ -76,7 +78,7 @@ func startMCPStdioServer(ctx context.Context, t *testing.T, grpcAddr string) (*e
 func executeStdioBlackboxStep(t *testing.T, client *stdioClient, step blackboxStep, captures map[string]string) {
 	t.Helper()
 
-	request := renderPlaceholders(step.Request, captures)
+	request := renderPlaceholders(t, step.Request, captures)
 	requestMap, ok := request.(map[string]any)
 	if !ok {
 		t.Fatalf("%s request is not an object", step.Name)
@@ -107,7 +109,7 @@ func executeStdioBlackboxStep(t *testing.T, client *stdioClient, step blackboxSt
 			}
 			t.Fatalf("%s lookup %s: %v (response=%s)", step.Name, path, err, string(responseBytes))
 		}
-		resolvedExpected := renderPlaceholders(expected, captures)
+		resolvedExpected := renderPlaceholders(t, expected, captures)
 		if !valuesEqual(actual, resolvedExpected) {
 			t.Fatalf("%s expected %s = %v, got %v (response=%s)", step.Name, path, resolvedExpected, actual, string(responseBytes))
 		}
@@ -116,6 +118,10 @@ func executeStdioBlackboxStep(t *testing.T, client *stdioClient, step blackboxSt
 	for key, paths := range step.Captures {
 		value, err := captureFromPaths(responseAny, paths)
 		if err != nil {
+			hints := captureHints(responseAny)
+			if len(hints) > 0 {
+				t.Fatalf("%s capture %s: %v (hints=%s, response=%s)", step.Name, key, err, formatCaptureHints(hints), string(responseBytes))
+			}
 			t.Fatalf("%s capture %s: %v (response=%s)", step.Name, key, err, string(responseBytes))
 		}
 		if value == "" {

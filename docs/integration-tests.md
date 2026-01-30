@@ -26,6 +26,72 @@ meant to increase trust in end-to-end behavior and backward compatibility.
 3. Connect an MCP client over the stdio transport and exchange JSON-RPC.
 4. Assert responses using strict or normalized expectations.
 
+## Scenario Fixture Format
+
+Blackbox tests load action-focused scenario fixtures from
+`internal/integration/fixtures/blackbox_*.json`. Each fixture describes human
+actions (initialize, subscribe, tool calls, resource reads) and the loader
+expands them into JSON-RPC requests with IDs, jsonrpc version, and optional
+expectations. This keeps scenarios readable while still validating protocol
+correctness.
+
+### Blocks (Reusable Steps)
+
+Define reusable blocks in the `blocks` section and reference them with `use` in
+the main `steps` array. Blocks are inlined during expansion, so they can be
+shared across scenarios without repeating handshakes or setup flows.
+
+### Expectations
+
+Use `expect: ok` (default) to validate jsonrpc/id, `expect: none` to skip the
+implicit protocol assertions, or `expect: no_response` for notifications.
+`expect_paths` always applies when provided so you can validate specific fields
+without the default jsonrpc/id checks.
+
+### Captures
+
+Use `capture` to extract IDs from responses and reuse them in later steps via
+`{{capture_name}}` or `{ "ref": "capture_name" }` for direct substitutions. The
+loader supports shortcuts like `campaign`, `participant`, `character`, and
+`session` to map to common structuredContent ID paths.
+
+Use `expect_sse: true` at the fixture level to assert SSE resource updates for
+that scenario. Other fixtures omit SSE checks by default.
+
+Example:
+
+```json
+{
+  "blocks": {
+    "handshake": [
+      {"action": "initialize"},
+      {"action": "initialized"}
+    ]
+  },
+  "steps": [
+    {"use": "handshake"},
+    {
+      "action": "tool_call",
+      "tool": "campaign_create",
+      "args": {"name": "Test Campaign", "gm_mode": "HUMAN"},
+      "capture": {"campaign_id": "campaign"}
+    },
+    {
+      "action": "tool_call",
+      "tool": "participant_create",
+      "args": {"campaign_id": {"ref": "campaign_id"}, "display_name": "Player"}
+    },
+    {
+      "action": "read_resource",
+      "uri": "campaign://{{campaign_id}}",
+      "expect_paths": {
+        "result.contents[0].text|json.campaign.id": "{{campaign_id}}"
+      }
+    }
+  ]
+}
+```
+
 ## Determinism and Randomness
 
 - Prefer deterministic endpoints for assertions (example: duality_outcome).

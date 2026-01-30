@@ -1,0 +1,35 @@
+{
+  "name": "mcp_http_blackbox_campaign_create",
+  "steps": [
+    {
+      "name": "initialize",
+      "action": "initialize"
+    },
+    {
+      "name": "initialized",
+      "action": "initialized"
+    },
+    {
+      "name": "campaign_create",
+      "action": "tool_call",
+      "tool": "campaign_create",
+      "args": {
+        "name": "Scenario Campaign",
+        "gm_mode": "HUMAN",
+        "theme_prompt": "short flow"
+      },
+      "capture": {
+        "campaign_id": "campaign"
+      }
+    },
+    {
+      "name": "campaign_read",
+      "action": "read_resource",
+      "uri": "campaign://{{campaign_id}}",
+      "expect_paths": {
+        "result.contents[0].text|json.campaign.id": "{{campaign_id}}",
+        "result.contents[0].text|json.campaign.name": "Scenario Campaign"
+      }
+    }
+  ]
+}
