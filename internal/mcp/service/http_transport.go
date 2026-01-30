@@ -361,16 +361,6 @@ func (t *HTTPTransport) handleMessages(w http.ResponseWriter, r *http.Request) {
 	// Start processing goroutine if not already started
 	t.ensureServerRunning(session)
 
-	// Send message to connection's request channel (will be read by MCP server)
-	log.Printf("Sending message to reqChan for session %s", session.id)
-	select {
-	case session.conn.reqChan <- msg:
-		log.Printf("Message sent to reqChan for session %s", session.id)
-	case <-r.Context().Done():
-		http.Error(w, "Request cancelled", http.StatusRequestTimeout)
-		return
-	}
-
 	// Check if message is a request (has ID) or notification (no ID)
 	// Message is an interface, so we need to check the concrete type
 	var isRequest bool
@@ -408,6 +398,20 @@ func (t *HTTPTransport) handleMessages(w http.ResponseWriter, r *http.Request) {
 		session.conn.pendingReqs[req.ID] = respChan
 		session.conn.pendingMu.Unlock()
 
+		// Send message to connection's request channel (will be read by MCP server)
+		log.Printf("Sending message to reqChan for session %s", session.id)
+		select {
+		case session.conn.reqChan <- msg:
+			log.Printf("Message sent to reqChan for session %s", session.id)
+		case <-r.Context().Done():
+			// Clean up pending request
+			session.conn.pendingMu.Lock()
+			delete(session.conn.pendingReqs, req.ID)
+			session.conn.pendingMu.Unlock()
+			http.Error(w, "Request cancelled", http.StatusRequestTimeout)
+			return
+		}
+
 		// Wait for response with timeout
 		select {
 		case resp := <-respChan:
@@ -444,6 +448,16 @@ func (t *HTTPTransport) handleMessages(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else {
+		// Send message to connection's request channel (will be read by MCP server)
+		log.Printf("Sending message to reqChan for session %s", session.id)
+		select {
+		case session.conn.reqChan <- msg:
+			log.Printf("Message sent to reqChan for session %s", session.id)
+		case <-r.Context().Done():
+			http.Error(w, "Request cancelled", http.StatusRequestTimeout)
+			return
+		}
+
 		// Notification - no response
 		w.WriteHeader(http.StatusNoContent)
 	}

@@ -34,7 +34,7 @@ run:
 
 cover:
 	rm -f coverage.raw coverage.out coverage.html
-	go test -tags=integration -v -coverpkg=./... -coverprofile=coverage.raw ./...
+	@bash -euo pipefail -c 'go test -tags=integration -v -coverpkg=./... -coverprofile=coverage.raw ./... | tee coverage.log'
 	awk -v exclude='$(COVER_EXCLUDE_REGEX)' 'NR==1 || $$1 !~ exclude' coverage.raw > coverage.out
 	go tool cover -func coverage.out
 	go tool cover -html=coverage.out -o coverage.html
