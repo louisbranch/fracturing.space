@@ -62,6 +62,8 @@ Environment variables:
 
 -   DUALITY_DB_PATH (default: data/duality.db)
 -   DUALITY_GRPC_ADDR (default: localhost:8080)
+-   DUALITY_MCP_ALLOWED_HOSTS (default: loopback-only)
+-   DUALITY_MCP_HTTP_ADDR (default: 0.0.0.0:8081)
 
 ------------------------------------------------------------------------
 

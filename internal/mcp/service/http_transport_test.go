@@ -97,6 +97,36 @@ func TestHTTPTransport_handleHealth_AllowsLoopbackHosts(t *testing.T) {
 	}
 }
 
+func TestHTTPTransport_handleHealth_AllowsConfiguredHosts(t *testing.T) {
+	t.Setenv("DUALITY_MCP_ALLOWED_HOSTS", "example.com, api.example.com")
+	transport := NewHTTPTransport("localhost:8081")
+
+	req := httptest.NewRequest(http.MethodGet, "/mcp/health", nil)
+	setHostOrigin(req, "example.com", "http://example.com")
+	w := httptest.NewRecorder()
+
+	transport.handleHealth(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("handleHealth() status = %d, want %d", w.Code, http.StatusOK)
+	}
+}
+
+func TestHTTPTransport_handleHealth_RejectsUnlistedHost(t *testing.T) {
+	t.Setenv("DUALITY_MCP_ALLOWED_HOSTS", "example.com")
+	transport := NewHTTPTransport("localhost:8081")
+
+	req := httptest.NewRequest(http.MethodGet, "/mcp/health", nil)
+	setHostOrigin(req, "evil.example.com", "http://evil.example.com")
+	w := httptest.NewRecorder()
+
+	transport.handleHealth(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("handleHealth() status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+}
+
 func TestHTTPTransport_handleMessages_InvalidMethod(t *testing.T) {
 	transport := NewHTTPTransport("localhost:8081")
 
@@ -166,6 +196,58 @@ func TestHTTPTransport_handleMessages_NewSession(t *testing.T) {
 
 	if got := w.Result().Header.Get("Mcp-Session-Id"); got == "" {
 		t.Error("handleMessages() should set Mcp-Session-Id header for new sessions")
+	}
+}
+
+func TestHTTPTransport_handleMessages_AllowsConfiguredHosts(t *testing.T) {
+	t.Setenv("DUALITY_MCP_ALLOWED_HOSTS", "example.com")
+	transport := NewHTTPTransport("localhost:8081")
+
+	request := map[string]interface{}{
+		"jsonrpc": "2.0",
+		"id":      1,
+		"method":  "initialize",
+		"params":  map[string]interface{}{},
+	}
+	body, _ := json.Marshal(request)
+
+	req := httptest.NewRequest(http.MethodPost, "/mcp/messages", strings.NewReader(string(body)))
+	req.Header.Set("Content-Type", "application/json")
+	setHostOrigin(req, "example.com", "http://example.com")
+	w := httptest.NewRecorder()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+	req = req.WithContext(ctx)
+
+	transport.handleMessages(w, req)
+
+	if w.Code == http.StatusBadRequest {
+		t.Errorf("handleMessages() status = %d, want non-%d", w.Code, http.StatusBadRequest)
+	}
+}
+
+func TestHTTPTransport_handleMessages_RejectsUnlistedHost(t *testing.T) {
+	t.Setenv("DUALITY_MCP_ALLOWED_HOSTS", "example.com")
+	transport := NewHTTPTransport("localhost:8081")
+
+	request := map[string]interface{}{
+		"jsonrpc": "2.0",
+		"id":      1,
+		"method":  "initialize",
+		"params":  map[string]interface{}{},
+	}
+	body, _ := json.Marshal(request)
+
+	req := httptest.NewRequest(http.MethodPost, "/mcp/messages", strings.NewReader(string(body)))
+	req.Header.Set("Content-Type", "application/json")
+	setHostOrigin(req, "evil.example.com", "http://evil.example.com")
+	w := httptest.NewRecorder()
+
+	transport.handleMessages(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("handleMessages() status = %d, want %d", w.Code, http.StatusBadRequest)
 	}
 }
 

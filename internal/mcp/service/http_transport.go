@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -51,6 +52,7 @@ const (
 // TODO: Add rate limiting per connection
 type HTTPTransport struct {
 	addr         string
+	allowedHosts map[string]struct{}
 	server       *mcp.Server
 	sessions     map[string]*httpSession
 	sessionsMu   sync.RWMutex
@@ -93,6 +95,7 @@ func NewHTTPTransport(addr string) *HTTPTransport {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &HTTPTransport{
 		addr:         addr,
+		allowedHosts: parseAllowedHosts(),
 		sessions:     make(map[string]*httpSession),
 		serverCtx:    ctx,
 		serverCancel: cancel,
@@ -232,7 +235,7 @@ func (t *HTTPTransport) handleMessages(w http.ResponseWriter, r *http.Request) {
 	// TODO: Add API key/token authentication middleware
 	// TODO: Add CORS headers if web clients are expected
 
-	if err := validateLocalRequest(r); err != nil {
+	if err := t.validateLocalRequest(r); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -450,7 +453,7 @@ func (t *HTTPTransport) handleMessages(w http.ResponseWriter, r *http.Request) {
 func (t *HTTPTransport) handleSSE(w http.ResponseWriter, r *http.Request) {
 	// TODO: Add authentication check before establishing SSE connection
 
-	if err := validateLocalRequest(r); err != nil {
+	if err := t.validateLocalRequest(r); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -568,15 +571,15 @@ func writeSessionError(w http.ResponseWriter, message string) {
 	_, _ = w.Write(data)
 }
 
-// validateLocalRequest enforces localhost-only access to mitigate DNS rebinding.
-// It checks Host and Origin headers against loopback values per MCP guidance so
+// validateLocalRequest enforces host access to mitigate DNS rebinding.
+// It checks Host and Origin headers against allowed hosts per MCP guidance so
 // remote web pages cannot reach local MCP servers via rebinding.
-func validateLocalRequest(r *http.Request) error {
+func (t *HTTPTransport) validateLocalRequest(r *http.Request) error {
 	if r == nil {
 		return fmt.Errorf("invalid request")
 	}
 
-	if !isLocalHostHeader(r.Host) {
+	if !t.isAllowedHostHeader(r.Host) {
 		return fmt.Errorf("invalid host")
 	}
 
@@ -595,27 +598,56 @@ func validateLocalRequest(r *http.Request) error {
 		return fmt.Errorf("invalid origin")
 	}
 
-	if !isLocalHostHeader(originHost) {
+	if !t.isAllowedHostHeader(originHost) {
 		return fmt.Errorf("invalid origin")
 	}
 
 	return nil
 }
 
-// isLocalHostHeader reports whether a Host/Origin header resolves to loopback.
-func isLocalHostHeader(host string) bool {
+// isAllowedHostHeader reports whether a Host/Origin header resolves to an allowed host.
+func (t *HTTPTransport) isAllowedHostHeader(host string) bool {
 	resolvedHost, ok := normalizeHost(host)
 	if !ok {
 		return false
 	}
 
-	host = strings.ToLower(resolvedHost)
+	if isLoopbackHost(resolvedHost) {
+		return true
+	}
+
+	allowed := t.allowedHosts
+	if len(allowed) == 0 {
+		return false
+	}
+
+	_, ok = allowed[strings.ToLower(resolvedHost)]
+	return ok
+}
+
+// isLoopbackHost reports whether a host resolves to loopback.
+func isLoopbackHost(host string) bool {
+	host = strings.ToLower(strings.TrimSpace(host))
 	switch host {
 	case "localhost", "127.0.0.1", "::1":
 		return true
 	default:
 		return false
 	}
+}
+
+// parseAllowedHosts parses allowed hosts from env (comma-separated, hostnames only).
+func parseAllowedHosts() map[string]struct{} {
+	entries := strings.Split(os.Getenv("DUALITY_MCP_ALLOWED_HOSTS"), ",")
+	result := make(map[string]struct{}, len(entries))
+	for _, entry := range entries {
+		trimmed := strings.TrimSpace(entry)
+		if trimmed == "" {
+			continue
+		}
+		result[strings.ToLower(trimmed)] = struct{}{}
+	}
+	return result
 }
 
 // normalizeHost extracts the hostname portion from Host/Origin headers.
@@ -652,7 +684,7 @@ func normalizeHost(host string) (string, bool) {
 
 // handleHealth handles GET /mcp/health for health checks.
 func (t *HTTPTransport) handleHealth(w http.ResponseWriter, r *http.Request) {
-	if err := validateLocalRequest(r); err != nil {
+	if err := t.validateLocalRequest(r); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
