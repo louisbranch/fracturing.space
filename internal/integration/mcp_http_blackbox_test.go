@@ -27,12 +27,34 @@ import (
 	"time"
 )
 
-const blackboxFixturePath = "internal/integration/fixtures/blackbox_mcp.json"
+const blackboxFixtureGlob = "internal/integration/fixtures/blackbox_*.json"
 
-// blackboxFixture defines a sequence of JSON-RPC steps for HTTP transport testing.
-type blackboxFixture struct {
-	Name  string         `json:"name"`
-	Steps []blackboxStep `json:"steps"`
+// scenarioFixture defines an action-focused scenario that expands into JSON-RPC steps.
+type scenarioFixture struct {
+	Name      string                    `json:"name"`
+	ExpectSSE bool                      `json:"expect_sse"`
+	Blocks    map[string][]scenarioStep `json:"blocks"`
+	Steps     []scenarioStep            `json:"steps"`
+}
+
+// scenarioStep defines a single human-oriented action step.
+type scenarioStep struct {
+	Name            string         `json:"name"`
+	Use             string         `json:"use"`
+	With            map[string]any `json:"with"`
+	Action          string         `json:"action"`
+	Tool            string         `json:"tool"`
+	Args            map[string]any `json:"args"`
+	URI             any            `json:"uri"`
+	Expect          string         `json:"expect"`
+	ExpectStatus    int            `json:"expect_status"`
+	ExpectPaths     map[string]any `json:"expect_paths"`
+	Capture         map[string]any `json:"capture"`
+	Request         map[string]any `json:"request"`
+	Method          string         `json:"method"`
+	Params          map[string]any `json:"params"`
+	Client          map[string]any `json:"client"`
+	ProtocolVersion string         `json:"protocol_version"`
 }
 
 // blackboxStep defines a single JSON-RPC request/expectation pair.
@@ -42,6 +64,12 @@ type blackboxStep struct {
 	Request      map[string]any      `json:"request"`
 	ExpectPaths  map[string]any      `json:"expect_paths"`
 	Captures     map[string][]string `json:"captures"`
+}
+
+type blackboxFixture struct {
+	Name      string         `json:"name"`
+	ExpectSSE bool           `json:"expect_sse"`
+	Steps     []blackboxStep `json:"steps"`
 }
 
 // TestMCPHTTPBlackbox validates HTTP transport behavior using raw JSON-RPC payloads.
@@ -63,25 +91,48 @@ func TestMCPHTTPBlackbox(t *testing.T) {
 	client := newHTTPClient(t)
 	waitForHTTPHealth(t, client, baseURL+"/mcp/health")
 
-	fixture := loadBlackboxFixture(t, filepath.Join(repoRoot(t), blackboxFixturePath))
-	captures := make(map[string]string)
-	var sseResp *http.Response
-	var sseRecorder *sseCapture
-	for index, step := range fixture.Steps {
-		executeBlackboxStep(t, client, baseURL+"/mcp", step, captures)
-		if index == 0 {
-			sseClient := newSSEClient(t, client.Jar)
-			sseResp, sseRecorder = openSSE(t, sseClient, baseURL+"/mcp")
+	fixtures := loadBlackboxFixtures(t, filepath.Join(repoRoot(t), blackboxFixtureGlob))
+	for _, fixture := range fixtures {
+		captures := make(map[string]string)
+		var sseResp *http.Response
+		var sseRecorder *sseCapture
+		for index, step := range fixture.Steps {
+			executeBlackboxStep(t, client, baseURL+"/mcp", step, captures)
+			if fixture.ExpectSSE && index == 0 {
+				sseClient := newSSEClient(t, client.Jar)
+				sseResp, sseRecorder = openSSE(t, sseClient, baseURL+"/mcp")
+			}
+		}
+		if fixture.ExpectSSE {
+			if sseRecorder == nil {
+				t.Fatal("SSE recorder not initialized")
+			}
+			finishSSERecorder(t, sseResp, sseRecorder)
+			assertSSEResourceUpdates(t, sseRecorder, expectedResourceURIs(captures))
 		}
 	}
-	if sseRecorder == nil {
-		t.Fatal("SSE recorder not initialized")
-	}
-	finishSSERecorder(t, sseResp, sseRecorder)
-	assertSSEResourceUpdates(t, sseRecorder, expectedResourceURIs(captures))
 }
 
-// loadBlackboxFixture reads the JSON fixture from disk with number preservation.
+// loadBlackboxFixtures reads scenario fixtures and expands them into JSON-RPC steps.
+func loadBlackboxFixtures(t *testing.T, pattern string) []blackboxFixture {
+	t.Helper()
+
+	paths, err := filepath.Glob(pattern)
+	if err != nil {
+		t.Fatalf("glob fixtures: %v", err)
+	}
+	if len(paths) == 0 {
+		t.Fatalf("no fixtures found for %s", pattern)
+	}
+	sort.Strings(paths)
+	fixtures := make([]blackboxFixture, 0, len(paths))
+	for _, path := range paths {
+		fixtures = append(fixtures, loadBlackboxFixture(t, path))
+	}
+	return fixtures
+}
+
+// loadBlackboxFixture reads the scenario fixture and expands it into JSON-RPC steps.
 func loadBlackboxFixture(t *testing.T, path string) blackboxFixture {
 	t.Helper()
 
@@ -93,21 +144,302 @@ func loadBlackboxFixture(t *testing.T, path string) blackboxFixture {
 
 	decoder := json.NewDecoder(file)
 	decoder.UseNumber()
-	var fixture blackboxFixture
-	if err := decoder.Decode(&fixture); err != nil {
+	var scenario scenarioFixture
+	if err := decoder.Decode(&scenario); err != nil {
 		t.Fatalf("decode fixture: %v", err)
 	}
+	fixture := expandScenario(t, scenario)
 	if len(fixture.Steps) == 0 {
 		t.Fatal("fixture has no steps")
 	}
 	return fixture
 }
 
+// expandedStep binds a scenario step to resolved variables.
+type expandedStep struct {
+	step scenarioStep
+	vars map[string]string
+}
+
+// captureDefaults defines common capture shortcuts to structuredContent ID paths.
+var captureDefaults = map[string][]string{
+	"campaign":    {"result.structuredContent.id", "result.structured_content.id"},
+	"participant": {"result.structuredContent.id", "result.structured_content.id"},
+	"character":   {"result.structuredContent.id", "result.structured_content.id"},
+	"session":     {"result.structuredContent.id", "result.structured_content.id"},
+}
+
+// expandScenario expands a scenario fixture into JSON-RPC steps.
+func expandScenario(t *testing.T, scenario scenarioFixture) blackboxFixture {
+	t.Helper()
+
+	expanded := expandScenarioSteps(t, scenario.Steps, scenario.Blocks, nil, nil)
+	steps := make([]blackboxStep, 0, len(expanded))
+	requestID := 1
+	for _, entry := range expanded {
+		steps = append(steps, buildBlackboxStep(t, entry.step, entry.vars, &requestID))
+	}
+	return blackboxFixture{Name: scenario.Name, Steps: steps, ExpectSSE: scenario.ExpectSSE}
+}
+
+// expandScenarioSteps inlines block references and carries variables forward.
+func expandScenarioSteps(t *testing.T, steps []scenarioStep, blocks map[string][]scenarioStep, vars map[string]string, stack []string) []expandedStep {
+	t.Helper()
+
+	var expanded []expandedStep
+	for _, step := range steps {
+		if step.Use == "" {
+			expanded = append(expanded, expandedStep{step: step, vars: vars})
+			continue
+		}
+		blockSteps, ok := blocks[step.Use]
+		if !ok {
+			t.Fatalf("unknown block %q", step.Use)
+		}
+		for _, name := range stack {
+			if name == step.Use {
+				t.Fatalf("recursive block reference %q", step.Use)
+			}
+		}
+		mergedVars := mergeVars(vars, step.With)
+		childStack := append(append([]string{}, stack...), step.Use)
+		expanded = append(expanded, expandScenarioSteps(t, blockSteps, blocks, mergedVars, childStack)...)
+	}
+	return expanded
+}
+
+// mergeVars merges base vars with step overrides.
+func mergeVars(base map[string]string, overrides map[string]any) map[string]string {
+	merged := make(map[string]string)
+	for key, value := range base {
+		merged[key] = value
+	}
+	for key, value := range overrides {
+		merged[key] = fmt.Sprint(value)
+	}
+	if len(merged) == 0 {
+		return nil
+	}
+	return merged
+}
+
+// buildBlackboxStep converts a scenario step into a JSON-RPC step.
+func buildBlackboxStep(t *testing.T, step scenarioStep, vars map[string]string, requestID *int) blackboxStep {
+	t.Helper()
+
+	name := step.Name
+	if name == "" {
+		name = step.Action
+	}
+	name = renderVarsInString(name, vars)
+
+	action := step.Action
+	if action == "" && step.Request != nil {
+		action = "raw"
+	}
+
+	request, hasID := buildRequest(t, action, step, vars, requestID)
+	if request == nil {
+		t.Fatalf("step %q has no request", name)
+	}
+
+	expect := step.Expect
+	if expect == "" {
+		if action == "initialized" {
+			expect = "no_response"
+		} else if hasID {
+			expect = "ok"
+		} else {
+			expect = "none"
+		}
+	}
+
+	expectStatus := step.ExpectStatus
+	if expectStatus == 0 {
+		switch expect {
+		case "no_response":
+			expectStatus = http.StatusNoContent
+		default:
+			expectStatus = http.StatusOK
+		}
+	}
+
+	var expectPaths map[string]any
+	if expect == "ok" && hasID {
+		expectPaths = map[string]any{}
+		if value, ok := request["jsonrpc"]; ok {
+			expectPaths["jsonrpc"] = value
+		}
+		if value, ok := request["id"]; ok {
+			expectPaths["id"] = value
+		}
+	}
+	if rendered := renderVars(step.ExpectPaths, vars); rendered != nil {
+		expectOverrides, ok := rendered.(map[string]any)
+		if !ok {
+			t.Fatalf("expect_paths must be an object")
+		}
+		if expectPaths == nil {
+			expectPaths = map[string]any{}
+		}
+		for key, value := range expectOverrides {
+			expectPaths[key] = value
+		}
+	}
+
+	captures := parseCaptureSpec(t, renderVars(step.Capture, vars))
+
+	return blackboxStep{
+		Name:         name,
+		ExpectStatus: expectStatus,
+		Request:      request,
+		ExpectPaths:  expectPaths,
+		Captures:     captures,
+	}
+}
+
+// buildRequest constructs the JSON-RPC request and assigns IDs when needed.
+func buildRequest(t *testing.T, action string, step scenarioStep, vars map[string]string, requestID *int) (map[string]any, bool) {
+	t.Helper()
+
+	var request map[string]any
+	assignID := false
+
+	switch action {
+	case "initialize":
+		protocolVersion := step.ProtocolVersion
+		if protocolVersion == "" {
+			protocolVersion = "2024-11-05"
+		}
+		client := step.Client
+		if client == nil {
+			client = map[string]any{"name": "blackbox-client", "version": "0.1.0"}
+		}
+		request = map[string]any{
+			"jsonrpc": "2.0",
+			"method":  "initialize",
+			"params": map[string]any{
+				"protocolVersion": protocolVersion,
+				"clientInfo":      client,
+			},
+		}
+		assignID = true
+	case "initialized":
+		request = map[string]any{
+			"jsonrpc": "2.0",
+			"method":  "initialized",
+			"params":  map[string]any{},
+		}
+	case "subscribe":
+		request = map[string]any{
+			"jsonrpc": "2.0",
+			"method":  "resources/subscribe",
+			"params": map[string]any{
+				"uri": renderVars(step.URI, vars),
+			},
+		}
+		assignID = true
+	case "read_resource":
+		request = map[string]any{
+			"jsonrpc": "2.0",
+			"method":  "resources/read",
+			"params": map[string]any{
+				"uri": renderVars(step.URI, vars),
+			},
+		}
+		assignID = true
+	case "tool_call":
+		request = map[string]any{
+			"jsonrpc": "2.0",
+			"method":  "tools/call",
+			"params": map[string]any{
+				"name":      step.Tool,
+				"arguments": renderVars(step.Args, vars),
+			},
+		}
+		assignID = true
+	case "call":
+		if step.Method == "" {
+			t.Fatalf("call action missing method")
+		}
+		request = map[string]any{
+			"jsonrpc": "2.0",
+			"method":  step.Method,
+			"params":  renderVars(step.Params, vars),
+		}
+		assignID = true
+	case "raw":
+		requestValue := renderVars(step.Request, vars)
+		requestMap, ok := requestValue.(map[string]any)
+		if !ok {
+			t.Fatalf("raw request must be an object")
+		}
+		request = requestMap
+	default:
+		t.Fatalf("unknown action %q", action)
+	}
+
+	if request == nil {
+		return nil, false
+	}
+	if _, ok := request["jsonrpc"]; !ok {
+		request["jsonrpc"] = "2.0"
+	}
+	if assignID {
+		if _, ok := request["id"]; !ok {
+			request["id"] = *requestID
+			*requestID = *requestID + 1
+		}
+	}
+	_, hasID := request["id"]
+	return request, hasID
+}
+
+// parseCaptureSpec resolves capture shortcuts into concrete JSON paths.
+func parseCaptureSpec(t *testing.T, value any) map[string][]string {
+	t.Helper()
+
+	if value == nil {
+		return nil
+	}
+	input, ok := value.(map[string]any)
+	if !ok {
+		t.Fatalf("capture must be an object")
+	}
+	if len(input) == 0 {
+		return nil
+	}
+	output := make(map[string][]string, len(input))
+	for key, raw := range input {
+		switch typed := raw.(type) {
+		case string:
+			if paths, ok := captureDefaults[typed]; ok {
+				output[key] = paths
+				continue
+			}
+			output[key] = []string{typed}
+		case []any:
+			paths := make([]string, 0, len(typed))
+			for _, item := range typed {
+				text, ok := item.(string)
+				if !ok {
+					t.Fatalf("capture %q path is not a string", key)
+				}
+				paths = append(paths, text)
+			}
+			output[key] = paths
+		default:
+			t.Fatalf("capture %q has unsupported type", key)
+		}
+	}
+	return output
+}
+
 // executeBlackboxStep issues the HTTP request and validates expectations and captures.
 func executeBlackboxStep(t *testing.T, client *http.Client, url string, step blackboxStep, captures map[string]string) {
 	t.Helper()
 
-	request := renderPlaceholders(step.Request, captures)
+	request := renderPlaceholders(t, step.Request, captures)
 	body, err := json.Marshal(request)
 	if err != nil {
 		t.Fatalf("marshal request for %s: %v", step.Name, err)
@@ -151,7 +483,7 @@ func executeBlackboxStep(t *testing.T, client *http.Client, url string, step bla
 			}
 			t.Fatalf("%s lookup %s: %v (response=%s)", step.Name, path, err, string(body))
 		}
-		resolvedExpected := renderPlaceholders(expected, captures)
+		resolvedExpected := renderPlaceholders(t, expected, captures)
 		if !valuesEqual(actual, resolvedExpected) {
 			t.Fatalf("%s expected %s = %v, got %v (response=%s)", step.Name, path, resolvedExpected, actual, string(body))
 		}
@@ -160,6 +492,10 @@ func executeBlackboxStep(t *testing.T, client *http.Client, url string, step bla
 	for key, paths := range step.Captures {
 		value, err := captureFromPaths(response, paths)
 		if err != nil {
+			hints := captureHints(response)
+			if len(hints) > 0 {
+				t.Fatalf("%s capture %s: %v (hints=%s, response=%s)", step.Name, key, err, formatCaptureHints(hints), string(body))
+			}
 			t.Fatalf("%s capture %s: %v (response=%s)", step.Name, key, err, string(body))
 		}
 		if value == "" {
@@ -182,19 +518,70 @@ func decodeJSONValue(t *testing.T, data []byte) any {
 	return value
 }
 
-// renderPlaceholders substitutes {{token}} values in strings using captures.
-func renderPlaceholders(value any, captures map[string]string) any {
+// renderVars substitutes ${var} tokens in strings using vars.
+func renderVars(value any, vars map[string]string) any {
+	if value == nil {
+		return nil
+	}
 	switch typed := value.(type) {
 	case map[string]any:
 		out := make(map[string]any, len(typed))
 		for key, child := range typed {
-			out[key] = renderPlaceholders(child, captures)
+			out[key] = renderVars(child, vars)
 		}
 		return out
 	case []any:
 		out := make([]any, len(typed))
 		for i, child := range typed {
-			out[i] = renderPlaceholders(child, captures)
+			out[i] = renderVars(child, vars)
+		}
+		return out
+	case string:
+		return renderVarsInString(typed, vars)
+	default:
+		return value
+	}
+}
+
+// renderVarsInString replaces ${var} tokens inside a string.
+func renderVarsInString(value string, vars map[string]string) string {
+	if len(vars) == 0 {
+		return value
+	}
+	resolved := value
+	for key, val := range vars {
+		token := "${" + key + "}"
+		resolved = strings.ReplaceAll(resolved, token, val)
+	}
+	return resolved
+}
+
+// renderPlaceholders substitutes {{token}} values in strings using captures.
+func renderPlaceholders(t *testing.T, value any, captures map[string]string) any {
+	t.Helper()
+
+	switch typed := value.(type) {
+	case map[string]any:
+		if refValue, ok := typed["ref"]; ok && len(typed) == 1 {
+			refKey, ok := refValue.(string)
+			if !ok {
+				t.Fatalf("ref must be a string")
+			}
+			resolved, ok := captures[refKey]
+			if !ok {
+				t.Fatalf("missing capture %q", refKey)
+			}
+			return resolved
+		}
+		out := make(map[string]any, len(typed))
+		for key, child := range typed {
+			out[key] = renderPlaceholders(t, child, captures)
+		}
+		return out
+	case []any:
+		out := make([]any, len(typed))
+		for i, child := range typed {
+			out[i] = renderPlaceholders(t, child, captures)
 		}
 		return out
 	case string:
@@ -227,6 +614,39 @@ func captureFromPaths(value any, paths []string) (string, error) {
 		lastErr = fmt.Errorf("capture path not found")
 	}
 	return "", lastErr
+}
+
+// captureHints surfaces common capture paths for debugging failures.
+func captureHints(value any) []string {
+	response, ok := value.(map[string]any)
+	if !ok {
+		return nil
+	}
+	resultValue, ok := response["result"]
+	if !ok {
+		return nil
+	}
+	result, ok := resultValue.(map[string]any)
+	if !ok {
+		return nil
+	}
+	var hints []string
+	if structured, ok := result["structuredContent"].(map[string]any); ok {
+		if _, ok := structured["id"]; ok {
+			hints = append(hints, "result.structuredContent.id")
+		}
+	}
+	if structured, ok := result["structured_content"].(map[string]any); ok {
+		if _, ok := structured["id"]; ok {
+			hints = append(hints, "result.structured_content.id")
+		}
+	}
+	return hints
+}
+
+// formatCaptureHints joins hint paths for diagnostics.
+func formatCaptureHints(hints []string) string {
+	return strings.Join(hints, ", ")
 }
 
 // lookupJSONPath resolves dot paths with optional array indexing and JSON decoding.

@@ -1,0 +1,189 @@
+{
+  "name": "mcp_http_blackbox_campaign_flow",
+  "expect_sse": true,
+  "blocks": {
+    "handshake": [
+      {
+        "name": "initialize",
+        "action": "initialize",
+        "client": {
+          "name": "blackbox-client",
+          "version": "0.1.0"
+        }
+      },
+      {
+        "name": "initialized",
+        "action": "initialized"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "use": "handshake"
+    },
+    {
+      "name": "campaign_list_subscribe",
+      "action": "subscribe",
+      "uri": "campaigns://list",
+      "expect": "none"
+    },
+    {
+      "name": "campaign_create",
+      "action": "tool_call",
+      "tool": "campaign_create",
+      "args": {
+        "name": "Blackbox Campaign",
+        "gm_mode": "HUMAN",
+        "theme_prompt": "An integration test campaign"
+      },
+      "capture": {
+        "campaign_id": "campaign"
+      }
+    },
+    {
+      "name": "campaign_read",
+      "action": "read_resource",
+      "uri": "campaign://{{campaign_id}}",
+      "expect_paths": {
+        "result.contents[0].text|json.campaign.id": "{{campaign_id}}",
+        "result.contents[0].text|json.campaign.name": "Blackbox Campaign"
+      }
+    },
+    {
+      "name": "campaign_subscribe",
+      "action": "subscribe",
+      "uri": "campaign://{{campaign_id}}",
+      "expect": "none"
+    },
+    {
+      "name": "participant_list_subscribe",
+      "action": "subscribe",
+      "uri": "campaign://{{campaign_id}}/participants",
+      "expect": "none"
+    },
+    {
+      "name": "participant_create",
+      "action": "tool_call",
+      "tool": "participant_create",
+      "args": {
+        "campaign_id": {"ref": "campaign_id"},
+        "display_name": "Blackbox Player",
+        "role": "PLAYER",
+        "controller": "HUMAN"
+      },
+      "capture": {
+        "participant_id": "participant"
+      }
+    },
+    {
+      "name": "participant_list_read",
+      "action": "read_resource",
+      "uri": "campaign://{{campaign_id}}/participants",
+      "expect_paths": {
+        "result.contents[0].text|json.participants[0].id": "{{participant_id}}"
+      }
+    },
+    {
+      "name": "character_list_subscribe",
+      "action": "subscribe",
+      "uri": "campaign://{{campaign_id}}/characters",
+      "expect": "none"
+    },
+    {
+      "name": "character_create",
+      "action": "tool_call",
+      "tool": "character_create",
+      "args": {
+        "campaign_id": {"ref": "campaign_id"},
+        "name": "Blackbox Hero",
+        "kind": "PC",
+        "notes": "Owned by participant"
+      },
+      "capture": {
+        "character_id": "character"
+      }
+    },
+    {
+      "name": "character_list_read",
+      "action": "read_resource",
+      "uri": "campaign://{{campaign_id}}/characters",
+      "expect_paths": {
+        "result.contents[0].text|json.characters[0].id": "{{character_id}}"
+      }
+    },
+    {
+      "name": "character_control_set",
+      "action": "tool_call",
+      "tool": "character_control_set",
+      "args": {
+        "campaign_id": {"ref": "campaign_id"},
+        "character_id": {"ref": "character_id"},
+        "controller": {"ref": "participant_id"}
+      },
+      "expect": "none"
+    },
+    {
+      "name": "session_list_subscribe",
+      "action": "subscribe",
+      "uri": "campaign://{{campaign_id}}/sessions",
+      "expect": "none"
+    },
+    {
+      "name": "session_start",
+      "action": "tool_call",
+      "tool": "session_start",
+      "args": {
+        "campaign_id": {"ref": "campaign_id"},
+        "name": "Blackbox Session"
+      },
+      "capture": {
+        "session_id": "session"
+      }
+    },
+    {
+      "name": "session_events_subscribe",
+      "action": "subscribe",
+      "uri": "session://{{session_id}}/events",
+      "expect": "none"
+    },
+    {
+      "name": "context_subscribe",
+      "action": "subscribe",
+      "uri": "context://current",
+      "expect": "none"
+    },
+    {
+      "name": "set_context",
+      "action": "tool_call",
+      "tool": "set_context",
+      "args": {
+        "campaign_id": {"ref": "campaign_id"},
+        "session_id": {"ref": "session_id"},
+        "participant_id": {"ref": "participant_id"}
+      },
+      "expect": "none"
+    },
+    {
+      "name": "session_action_roll",
+      "action": "tool_call",
+      "tool": "session_action_roll",
+      "args": {
+        "character_id": {"ref": "character_id"},
+        "trait": "bravery",
+        "difficulty": 10,
+        "modifiers": [
+          {"source": "skill", "value": 2}
+        ]
+      },
+      "expect": "none"
+    },
+    {
+      "name": "session_events_read",
+      "action": "read_resource",
+      "uri": "session://{{session_id}}/events",
+      "expect_paths": {
+        "result.contents[0].text|json.events[0].session_id": "{{session_id}}"
+      }
+    }
+  ]
+}

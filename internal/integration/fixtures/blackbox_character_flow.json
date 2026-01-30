@@ -1,0 +1,48 @@
+{
+  "name": "mcp_http_blackbox_character_flow",
+  "steps": [
+    {
+      "name": "initialize",
+      "action": "initialize"
+    },
+    {
+      "name": "initialized",
+      "action": "initialized"
+    },
+    {
+      "name": "campaign_create",
+      "action": "tool_call",
+      "tool": "campaign_create",
+      "args": {
+        "name": "Character Scenario",
+        "gm_mode": "HUMAN",
+        "theme_prompt": "characters"
+      },
+      "capture": {
+        "campaign_id": "campaign"
+      }
+    },
+    {
+      "name": "character_create",
+      "action": "tool_call",
+      "tool": "character_create",
+      "args": {
+        "campaign_id": {"ref": "campaign_id"},
+        "name": "Scenario Hero",
+        "kind": "PC",
+        "notes": "one character"
+      },
+      "capture": {
+        "character_id": "character"
+      }
+    },
+    {
+      "name": "character_list_read",
+      "action": "read_resource",
+      "uri": "campaign://{{campaign_id}}/characters",
+      "expect_paths": {
+        "result.contents[0].text|json.characters[0].id": "{{character_id}}"
+      }
+    }
+  ]
+}

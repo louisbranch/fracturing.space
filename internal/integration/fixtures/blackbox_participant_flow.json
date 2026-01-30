@@ -1,0 +1,48 @@
+{
+  "name": "mcp_http_blackbox_participant_flow",
+  "steps": [
+    {
+      "name": "initialize",
+      "action": "initialize"
+    },
+    {
+      "name": "initialized",
+      "action": "initialized"
+    },
+    {
+      "name": "campaign_create",
+      "action": "tool_call",
+      "tool": "campaign_create",
+      "args": {
+        "name": "Participant Scenario",
+        "gm_mode": "HUMAN",
+        "theme_prompt": "participants"
+      },
+      "capture": {
+        "campaign_id": "campaign"
+      }
+    },
+    {
+      "name": "participant_create",
+      "action": "tool_call",
+      "tool": "participant_create",
+      "args": {
+        "campaign_id": {"ref": "campaign_id"},
+        "display_name": "Scenario Player",
+        "role": "PLAYER",
+        "controller": "HUMAN"
+      },
+      "capture": {
+        "participant_id": "participant"
+      }
+    },
+    {
+      "name": "participant_list_read",
+      "action": "read_resource",
+      "uri": "campaign://{{campaign_id}}/participants",
+      "expect_paths": {
+        "result.contents[0].text|json.participants[0].id": "{{participant_id}}"
+      }
+    }
+  ]
+}
