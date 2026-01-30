@@ -1,3 +1,5 @@
+# Integration Tests
+
 ## Overview
 
 Integration tests exercise the full request path through the gRPC server, MCP

@@ -1,3 +1,5 @@
+# Configuration
+
 ## Environment variables
 
 - `DUALITY_DB_PATH`: file path for the campaign BoltDB store. Default: `data/duality.db`.
