@@ -1,32 +1,17 @@
-# MCP Tools and Resources
-
 The MCP server supports two transport modes: stdio (default) and HTTP.
+See [Getting started](getting-started.md) for run commands.
 
 ## Transport Modes
 
 ### Stdio Transport (Default)
 
-The MCP server communicates over stdio using JSON-RPC. Run it locally and point
-your MCP client at the process stdin/stdout.
-
-```sh
-go run ./cmd/mcp
-```
-
-Alternatively, use the convenience script which resolves to the repo root automatically:
-
-```sh
-./scripts/mcp.sh
-```
+The MCP server communicates over stdio using JSON-RPC. Point your MCP client at
+the process stdin/stdout.
 
 ### HTTP Transport
 
 The MCP server can also be exposed over HTTP for local use. This enables remote
 clients to connect via HTTP requests.
-
-```sh
-go run ./cmd/mcp -transport=http -http-addr=localhost:8081 -addr=localhost:8080
-```
 
 **Note**: HTTP transport is intended for local use only. Security features
 (authentication, TLS, rate limiting) are planned for future releases.

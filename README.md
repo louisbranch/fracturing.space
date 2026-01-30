@@ -16,19 +16,7 @@ Documentation: https://louisbranch.github.io/duality-engine/
 
 ## Quickstart
 
-Run gRPC server and MCP bridge:
-
-    make run
-
-Run individually:
-
-    go run ./cmd/server
-    go run ./cmd/mcp
-
-Default endpoints:
-
--   gRPC: localhost:8080
--   MCP: stdio
+See [Getting started](docs/getting-started.md) for run instructions and default endpoints.
 
 ------------------------------------------------------------------------
 
@@ -58,13 +46,6 @@ Ephemeral:
 
 See: [Configuration](docs/configuration.md)
 
-Environment variables:
-
--   DUALITY_DB_PATH (default: data/duality.db)
--   DUALITY_GRPC_ADDR (default: localhost:8080)
--   DUALITY_MCP_ALLOWED_HOSTS (default: loopback-only)
--   DUALITY_MCP_HTTP_ADDR (default: 0.0.0.0:8081)
-
 ------------------------------------------------------------------------
 
 ## Documentation
@@ -79,8 +60,7 @@ Environment variables:
 ## Near-term Roadmap
 
 -   Publish prebuilt binaries
--   Add HTTP transport alongside gRPC
--   Complete campaign lifecycle tools
+-   Expand campaign lifecycle tools
 -   Improve MCP context handling for multi-client use
 -   Expand telemetry and request tracing
 

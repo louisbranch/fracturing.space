@@ -1,5 +1,3 @@
-# Getting Started
-
 ## Prerequisites
 
 - Go 1.25.6
@@ -7,7 +5,7 @@
 - BoltDB (embedded; the server creates `data/duality.db` by default)
 - Make (for `make run`)
 
-## Run locally
+## Run locally (fastest)
 
 Start the gRPC server and MCP bridge together:
 
@@ -26,8 +24,26 @@ Start the gRPC server:
 go run ./cmd/server
 ```
 
-Start the MCP server after the gRPC server starts. See
-[MCP tools and resources](mcp.md) for the MCP run command.
+Start the MCP server after the gRPC server starts.
+
+```sh
+go run ./cmd/mcp
+```
+
+Default endpoints:
+
+- gRPC: `localhost:8080`
+- MCP (stdio): process stdin/stdout
+
+## MCP HTTP transport (local only)
+
+If you need the MCP bridge over HTTP for local tooling:
+
+```sh
+go run ./cmd/mcp -transport=http -http-addr=localhost:8081 -addr=localhost:8080
+```
+
+Default HTTP endpoint: `http://localhost:8081/mcp`
 
 ## Docker (Local testing)
 

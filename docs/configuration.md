@@ -1,5 +1,3 @@
-# Configuration
-
 ## Environment variables
 
 - `DUALITY_DB_PATH`: file path for the campaign BoltDB store. Default: `data/duality.db`.
@@ -26,15 +24,6 @@ is set, it takes precedence over the flag value.
 
 ### Transport Selection
 
-**Stdio Transport (Default)**:
-```sh
-go run ./cmd/mcp -addr=localhost:8080
-```
-
-**HTTP Transport**:
-```sh
-go run ./cmd/mcp -transport=http -http-addr=localhost:8081 -addr=localhost:8080
-```
-
-**Note**: HTTP transport binds to localhost by default for security. See `mcp.md` for
-detailed HTTP transport usage and endpoint documentation.
+The MCP server supports `stdio` (default) and `http` transports. See
+[Getting started](getting-started.md) for run commands and
+[MCP tools and resources](mcp.md) for HTTP endpoint details.
