@@ -73,6 +73,15 @@ type fakeParticipantStore struct {
 	listPageToken  string
 }
 
+type fakeControlDefaultStore struct {
+	putCampaignID  string
+	putCharacterID string
+	putController  domain.CharacterController
+	putErr         error
+	getController  domain.CharacterController
+	getErr         error
+}
+
 // PutParticipant records the participant to store.
 func (f *fakeParticipantStore) PutParticipant(ctx context.Context, participant domain.Participant) error {
 	f.putParticipant = participant
@@ -95,6 +104,17 @@ func (f *fakeParticipantStore) ListParticipants(ctx context.Context, campaignID 
 	f.listPageSize = pageSize
 	f.listPageToken = pageToken
 	return f.listPage, f.listPageErr
+}
+
+func (f *fakeControlDefaultStore) PutControlDefault(ctx context.Context, campaignID, characterID string, controller domain.CharacterController) error {
+	f.putCampaignID = campaignID
+	f.putCharacterID = characterID
+	f.putController = controller
+	return f.putErr
+}
+
+func (f *fakeControlDefaultStore) GetControlDefault(ctx context.Context, campaignID, characterID string) (domain.CharacterController, error) {
+	return f.getController, f.getErr
 }
 
 // fakeRollOutcomeStore implements RollOutcomeStore for tests.
@@ -1722,6 +1742,9 @@ func TestSessionActionRollSuccessAppendsEvents(t *testing.T) {
 	if response == nil {
 		t.Fatal("expected response")
 	}
+	if response.GetRollSeq() == 0 {
+		t.Fatal("expected roll seq")
+	}
 	if len(eventStore.appendInputs) != 2 {
 		t.Fatalf("expected 2 events, got %d", len(eventStore.appendInputs))
 	}
@@ -1730,6 +1753,9 @@ func TestSessionActionRollSuccessAppendsEvents(t *testing.T) {
 	}
 	if eventStore.appendInputs[1].Type != sessiondomain.SessionEventTypeActionRollResolved {
 		t.Fatalf("expected second event type ACTION_ROLL_RESOLVED, got %s", eventStore.appendInputs[1].Type)
+	}
+	if response.GetRollSeq() != eventStore.appendInputs[1].Seq {
+		t.Fatalf("expected roll seq %d, got %d", eventStore.appendInputs[1].Seq, response.GetRollSeq())
 	}
 
 	var requested actionRollRequestedPayload
@@ -1797,14 +1823,16 @@ func TestApplyRollOutcomeHopeSuccess(t *testing.T) {
 		t.Fatalf("marshal session started payload: %v", err)
 	}
 	resolvedPayload, err := json.Marshal(actionRollResolvedPayload{
-		CharacterID: "char-1",
-		HopeDie:     8,
-		FearDie:     5,
-		Total:       13,
-		Difficulty:  10,
-		Success:     true,
-		Flavor:      "HOPE",
-		Crit:        false,
+		RollerCharacterID: "char-1",
+		Dice: actionRollResolvedDice{
+			HopeDie: 8,
+			FearDie: 5,
+		},
+		Total:      13,
+		Difficulty: 10,
+		Success:    true,
+		Flavor:     "HOPE",
+		Crit:       false,
 	})
 	if err != nil {
 		t.Fatalf("marshal action roll resolved payload: %v", err)
@@ -1819,7 +1847,10 @@ func TestApplyRollOutcomeHopeSuccess(t *testing.T) {
 	sessionStore := &fakeSessionStore{
 		getSession: sessiondomain.Session{ID: sessionID, CampaignID: campaignID, Status: sessiondomain.SessionStatusActive},
 	}
-	participantStore := &fakeParticipantStore{}
+	participantStore := &fakeParticipantStore{
+		getParticipant: domain.Participant{ID: "part-gm", CampaignID: campaignID, Role: domain.ParticipantRoleGM},
+	}
+	controlStore := &fakeControlDefaultStore{}
 	outcomeStore := &fakeRollOutcomeStore{
 		applyResult: storage.RollOutcomeApplyResult{
 			UpdatedCharacterStates: []domain.CharacterState{{CampaignID: campaignID, CharacterID: "char-1", Hope: 2, Stress: 1, Hp: 5}},
@@ -1828,15 +1859,17 @@ func TestApplyRollOutcomeHopeSuccess(t *testing.T) {
 
 	service := &SessionService{
 		stores: Stores{
-			Session:     sessionStore,
-			Event:       eventStore,
-			Outcome:     outcomeStore,
-			Participant: participantStore,
+			Session:        sessionStore,
+			Event:          eventStore,
+			Outcome:        outcomeStore,
+			Participant:    participantStore,
+			ControlDefault: controlStore,
 		},
 		clock: func() time.Time { return fixedTime },
 	}
 
-	response, err := service.ApplyRollOutcome(context.Background(), &sessionv1.ApplyRollOutcomeRequest{
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "part-gm"))
+	response, err := service.ApplyRollOutcome(ctx, &sessionv1.ApplyRollOutcomeRequest{
 		SessionId: sessionID,
 		RollSeq:   rollSeq,
 	})
@@ -1888,14 +1921,16 @@ func TestApplyRollOutcomeFearSuccess(t *testing.T) {
 		t.Fatalf("marshal session started payload: %v", err)
 	}
 	resolvedPayload, err := json.Marshal(actionRollResolvedPayload{
-		CharacterID: "char-9",
-		HopeDie:     2,
-		FearDie:     9,
-		Total:       11,
-		Difficulty:  10,
-		Success:     true,
-		Flavor:      "FEAR",
-		Crit:        false,
+		RollerCharacterID: "char-9",
+		Dice: actionRollResolvedDice{
+			HopeDie: 2,
+			FearDie: 9,
+		},
+		Total:      11,
+		Difficulty: 10,
+		Success:    true,
+		Flavor:     "FEAR",
+		Crit:       false,
 	})
 	if err != nil {
 		t.Fatalf("marshal action roll resolved payload: %v", err)
@@ -1910,7 +1945,10 @@ func TestApplyRollOutcomeFearSuccess(t *testing.T) {
 	sessionStore := &fakeSessionStore{
 		getSession: sessiondomain.Session{ID: sessionID, CampaignID: campaignID, Status: sessiondomain.SessionStatusActive},
 	}
-	participantStore := &fakeParticipantStore{}
+	participantStore := &fakeParticipantStore{
+		getParticipant: domain.Participant{ID: "part-gm", CampaignID: campaignID, Role: domain.ParticipantRoleGM},
+	}
+	controlStore := &fakeControlDefaultStore{}
 	outcomeStore := &fakeRollOutcomeStore{
 		applyResult: storage.RollOutcomeApplyResult{
 			UpdatedCharacterStates: []domain.CharacterState{{CampaignID: campaignID, CharacterID: "char-9", Hope: 1, Stress: 2, Hp: 6}},
@@ -1921,15 +1959,17 @@ func TestApplyRollOutcomeFearSuccess(t *testing.T) {
 
 	service := &SessionService{
 		stores: Stores{
-			Session:     sessionStore,
-			Event:       eventStore,
-			Outcome:     outcomeStore,
-			Participant: participantStore,
+			Session:        sessionStore,
+			Event:          eventStore,
+			Outcome:        outcomeStore,
+			Participant:    participantStore,
+			ControlDefault: controlStore,
 		},
 		clock: time.Now,
 	}
 
-	response, err := service.ApplyRollOutcome(context.Background(), &sessionv1.ApplyRollOutcomeRequest{
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "part-gm"))
+	response, err := service.ApplyRollOutcome(ctx, &sessionv1.ApplyRollOutcomeRequest{
 		SessionId: sessionID,
 		RollSeq:   rollSeq,
 	})
@@ -1971,14 +2011,16 @@ func TestApplyRollOutcomeRejectsAlreadyApplied(t *testing.T) {
 		t.Fatalf("marshal session started payload: %v", err)
 	}
 	resolvedPayload, err := json.Marshal(actionRollResolvedPayload{
-		CharacterID: "char-7",
-		HopeDie:     7,
-		FearDie:     7,
-		Total:       14,
-		Difficulty:  12,
-		Success:     true,
-		Flavor:      "HOPE",
-		Crit:        true,
+		RollerCharacterID: "char-7",
+		Dice: actionRollResolvedDice{
+			HopeDie: 7,
+			FearDie: 7,
+		},
+		Total:      14,
+		Difficulty: 12,
+		Success:    true,
+		Flavor:     "HOPE",
+		Crit:       true,
 	})
 	if err != nil {
 		t.Fatalf("marshal action roll resolved payload: %v", err)
@@ -1993,22 +2035,27 @@ func TestApplyRollOutcomeRejectsAlreadyApplied(t *testing.T) {
 	sessionStore := &fakeSessionStore{
 		getSession: sessiondomain.Session{ID: sessionID, CampaignID: campaignID, Status: sessiondomain.SessionStatusActive},
 	}
-	participantStore := &fakeParticipantStore{}
+	participantStore := &fakeParticipantStore{
+		getParticipant: domain.Participant{ID: "part-gm", CampaignID: campaignID, Role: domain.ParticipantRoleGM},
+	}
+	controlStore := &fakeControlDefaultStore{}
 	outcomeStore := &fakeRollOutcomeStore{
 		applyErr: sessiondomain.ErrOutcomeAlreadyApplied,
 	}
 
 	service := &SessionService{
 		stores: Stores{
-			Session:     sessionStore,
-			Event:       eventStore,
-			Outcome:     outcomeStore,
-			Participant: participantStore,
+			Session:        sessionStore,
+			Event:          eventStore,
+			Outcome:        outcomeStore,
+			Participant:    participantStore,
+			ControlDefault: controlStore,
 		},
 		clock: time.Now,
 	}
 
-	_, err = service.ApplyRollOutcome(context.Background(), &sessionv1.ApplyRollOutcomeRequest{
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "part-gm"))
+	_, err = service.ApplyRollOutcome(ctx, &sessionv1.ApplyRollOutcomeRequest{
 		SessionId: sessionID,
 		RollSeq:   rollSeq,
 	})
@@ -2049,14 +2096,16 @@ func TestApplyRollOutcomeRejectsPlayerTargetMismatch(t *testing.T) {
 		t.Fatalf("marshal session started payload: %v", err)
 	}
 	resolvedPayload, err := json.Marshal(actionRollResolvedPayload{
-		CharacterID: "char-1",
-		HopeDie:     4,
-		FearDie:     2,
-		Total:       6,
-		Difficulty:  5,
-		Success:     true,
-		Flavor:      "HOPE",
-		Crit:        false,
+		RollerCharacterID: "char-1",
+		Dice: actionRollResolvedDice{
+			HopeDie: 4,
+			FearDie: 2,
+		},
+		Total:      6,
+		Difficulty: 5,
+		Success:    true,
+		Flavor:     "HOPE",
+		Crit:       false,
 	})
 	if err != nil {
 		t.Fatalf("marshal action roll resolved payload: %v", err)
@@ -2074,14 +2123,18 @@ func TestApplyRollOutcomeRejectsPlayerTargetMismatch(t *testing.T) {
 	participantStore := &fakeParticipantStore{
 		getParticipant: domain.Participant{ID: "part-1", CampaignID: campaignID, Role: domain.ParticipantRolePlayer},
 	}
+	controlStore := &fakeControlDefaultStore{
+		getController: domain.CharacterController{ParticipantID: "part-1"},
+	}
 	outcomeStore := &fakeRollOutcomeStore{}
 
 	service := &SessionService{
 		stores: Stores{
-			Session:     sessionStore,
-			Event:       eventStore,
-			Outcome:     outcomeStore,
-			Participant: participantStore,
+			Session:        sessionStore,
+			Event:          eventStore,
+			Outcome:        outcomeStore,
+			Participant:    participantStore,
+			ControlDefault: controlStore,
 		},
 		clock: time.Now,
 	}

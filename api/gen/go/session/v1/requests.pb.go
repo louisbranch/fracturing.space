@@ -807,13 +807,14 @@ func (x *SessionActionRollRequest) GetModifiers() []*ActionRollModifier {
 
 type SessionActionRollResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	HopeDie       int32                  `protobuf:"varint,1,opt,name=hope_die,json=hopeDie,proto3" json:"hope_die,omitempty"`
-	FearDie       int32                  `protobuf:"varint,2,opt,name=fear_die,json=fearDie,proto3" json:"fear_die,omitempty"`
-	Total         int32                  `protobuf:"varint,3,opt,name=total,proto3" json:"total,omitempty"`
-	Difficulty    int32                  `protobuf:"varint,4,opt,name=difficulty,proto3" json:"difficulty,omitempty"`
-	Success       bool                   `protobuf:"varint,5,opt,name=success,proto3" json:"success,omitempty"`
-	Flavor        string                 `protobuf:"bytes,6,opt,name=flavor,proto3" json:"flavor,omitempty"`
-	Crit          bool                   `protobuf:"varint,7,opt,name=crit,proto3" json:"crit,omitempty"`
+	RollSeq       uint64                 `protobuf:"varint,1,opt,name=roll_seq,json=rollSeq,proto3" json:"roll_seq,omitempty"`
+	HopeDie       int32                  `protobuf:"varint,2,opt,name=hope_die,json=hopeDie,proto3" json:"hope_die,omitempty"`
+	FearDie       int32                  `protobuf:"varint,3,opt,name=fear_die,json=fearDie,proto3" json:"fear_die,omitempty"`
+	Total         int32                  `protobuf:"varint,4,opt,name=total,proto3" json:"total,omitempty"`
+	Difficulty    int32                  `protobuf:"varint,5,opt,name=difficulty,proto3" json:"difficulty,omitempty"`
+	Success       bool                   `protobuf:"varint,6,opt,name=success,proto3" json:"success,omitempty"`
+	Flavor        string                 `protobuf:"bytes,7,opt,name=flavor,proto3" json:"flavor,omitempty"`
+	Crit          bool                   `protobuf:"varint,8,opt,name=crit,proto3" json:"crit,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -846,6 +847,13 @@ func (x *SessionActionRollResponse) ProtoReflect() protoreflect.Message {
 // Deprecated: Use SessionActionRollResponse.ProtoReflect.Descriptor instead.
 func (*SessionActionRollResponse) Descriptor() ([]byte, []int) {
 	return file_session_v1_requests_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *SessionActionRollResponse) GetRollSeq() uint64 {
+	if x != nil {
+		return x.RollSeq
+	}
+	return 0
 }
 
 func (x *SessionActionRollResponse) GetHopeDie() int32 {
@@ -1205,17 +1213,18 @@ const file_session_v1_requests_proto_rawDesc = "" +
 	"\n" +
 	"difficulty\x18\x05 \x01(\x05R\n" +
 	"difficulty\x12<\n" +
-	"\tmodifiers\x18\x06 \x03(\v2\x1e.session.v1.ActionRollModifierR\tmodifiers\"\xcd\x01\n" +
+	"\tmodifiers\x18\x06 \x03(\v2\x1e.session.v1.ActionRollModifierR\tmodifiers\"\xe8\x01\n" +
 	"\x19SessionActionRollResponse\x12\x19\n" +
-	"\bhope_die\x18\x01 \x01(\x05R\ahopeDie\x12\x19\n" +
-	"\bfear_die\x18\x02 \x01(\x05R\afearDie\x12\x14\n" +
-	"\x05total\x18\x03 \x01(\x05R\x05total\x12\x1e\n" +
+	"\broll_seq\x18\x01 \x01(\x04R\arollSeq\x12\x19\n" +
+	"\bhope_die\x18\x02 \x01(\x05R\ahopeDie\x12\x19\n" +
+	"\bfear_die\x18\x03 \x01(\x05R\afearDie\x12\x14\n" +
+	"\x05total\x18\x04 \x01(\x05R\x05total\x12\x1e\n" +
 	"\n" +
-	"difficulty\x18\x04 \x01(\x05R\n" +
+	"difficulty\x18\x05 \x01(\x05R\n" +
 	"difficulty\x12\x18\n" +
-	"\asuccess\x18\x05 \x01(\bR\asuccess\x12\x16\n" +
-	"\x06flavor\x18\x06 \x01(\tR\x06flavor\x12\x12\n" +
-	"\x04crit\x18\a \x01(\bR\x04crit\"m\n" +
+	"\asuccess\x18\x06 \x01(\bR\asuccess\x12\x16\n" +
+	"\x06flavor\x18\a \x01(\tR\x06flavor\x12\x12\n" +
+	"\x04crit\x18\b \x01(\bR\x04crit\"m\n" +
 	"\x17ApplyRollOutcomeRequest\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x19\n" +

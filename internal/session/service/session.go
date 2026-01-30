@@ -24,11 +24,12 @@ import (
 
 // Stores groups all session-related storage interfaces.
 type Stores struct {
-	Campaign    storage.CampaignStore
-	Participant storage.ParticipantStore
-	Session     storage.SessionStore
-	Event       storage.SessionEventStore
-	Outcome     storage.RollOutcomeStore
+	Campaign       storage.CampaignStore
+	Participant    storage.ParticipantStore
+	ControlDefault storage.ControlDefaultStore
+	Session        storage.SessionStore
+	Event          storage.SessionEventStore
+	Outcome        storage.RollOutcomeStore
 }
 
 // SessionService implements the SessionService gRPC API.
@@ -542,21 +543,23 @@ func (s *SessionService) SessionActionRoll(ctx context.Context, in *sessionv1.Se
 
 	flavor := actionRollFlavor(result.Hope, result.Fear)
 	resolvedPayload, err := json.Marshal(actionRollResolvedPayload{
-		CharacterID: characterID,
-		HopeDie:     result.Hope,
-		FearDie:     result.Fear,
-		Total:       result.Total,
-		Difficulty:  difficulty,
-		Success:     result.MeetsDifficulty,
-		Flavor:      flavor,
-		Crit:        result.IsCrit,
+		RollerCharacterID: characterID,
+		Dice: actionRollResolvedDice{
+			HopeDie: result.Hope,
+			FearDie: result.Fear,
+		},
+		Total:      result.Total,
+		Difficulty: difficulty,
+		Success:    result.MeetsDifficulty,
+		Flavor:     flavor,
+		Crit:       result.IsCrit,
 	})
 	if err != nil {
 		s.appendRequestRejected(ctx, sessionID, "session.v1.SessionService/SessionActionRoll", "INTERNAL", "marshal action roll resolved payload", characterID)
 		return nil, status.Errorf(codes.Internal, "marshal action roll resolved payload: %v", err)
 	}
 
-	if err := s.appendEvent(ctx, sessiondomain.SessionEvent{
+	resolvedEvent, err := s.stores.Event.AppendSessionEvent(ctx, sessiondomain.SessionEvent{
 		SessionID:     sessionID,
 		Timestamp:     s.clock().UTC(),
 		Type:          sessiondomain.SessionEventTypeActionRollResolved,
@@ -565,11 +568,13 @@ func (s *SessionService) SessionActionRoll(ctx context.Context, in *sessionv1.Se
 		ParticipantID: grpcmeta.ParticipantIDFromContext(ctx),
 		CharacterID:   characterID,
 		PayloadJSON:   resolvedPayload,
-	}); err != nil {
+	})
+	if err != nil {
 		return nil, status.Errorf(codes.Internal, "append action roll resolved: %v", err)
 	}
 
 	return &sessionv1.SessionActionRollResponse{
+		RollSeq:    resolvedEvent.Seq,
 		HopeDie:    int32(result.Hope),
 		FearDie:    int32(result.Fear),
 		Total:      int32(result.Total),
@@ -593,8 +598,10 @@ const (
 	outcomeRejectPermissionDenied = "PERMISSION_DENIED"
 	// outcomeRejectCharacterNotFound indicates a target character was not found.
 	outcomeRejectCharacterNotFound = "CHARACTER_NOT_FOUND"
-	// outcomeRejectInvalidState indicates an unexpected state error occurred.
-	outcomeRejectInvalidState = "INVALID_STATE"
+	// outcomeRejectMultiTargetUnsupported indicates multiple targets are not supported.
+	outcomeRejectMultiTargetUnsupported = "MULTI_TARGET_UNSUPPORTED"
+	// outcomeRejectInternalError indicates an unexpected state error occurred.
+	outcomeRejectInternalError = "INTERNAL_ERROR"
 )
 
 // ApplyRollOutcome applies the mandatory outcome effects for a resolved action roll.
@@ -613,6 +620,9 @@ func (s *SessionService) ApplyRollOutcome(ctx context.Context, in *sessionv1.App
 	}
 	if s.stores.Participant == nil {
 		return nil, status.Error(codes.Internal, "participant store is not configured")
+	}
+	if s.stores.ControlDefault == nil {
+		return nil, status.Error(codes.Internal, "control default store is not configured")
 	}
 
 	sessionID := strings.TrimSpace(in.GetSessionId())
@@ -638,24 +648,28 @@ func (s *SessionService) ApplyRollOutcome(ctx context.Context, in *sessionv1.App
 
 	var resolved actionRollResolvedPayload
 	if err := json.Unmarshal(rollEvent.PayloadJSON, &resolved); err != nil {
-		s.appendOutcomeRejected(ctx, sessionID, rollSeq, outcomeRejectInvalidState, "invalid roll payload", rollEvent.CharacterID)
+		s.appendOutcomeRejected(ctx, sessionID, rollSeq, outcomeRejectInternalError, "invalid roll payload", rollEvent.CharacterID)
 		return nil, status.Error(codes.Internal, "invalid roll payload")
 	}
-	rollerID := strings.TrimSpace(resolved.CharacterID)
+	rollerID := strings.TrimSpace(resolved.RollerCharacterID)
 	if rollerID == "" {
-		s.appendOutcomeRejected(ctx, sessionID, rollSeq, outcomeRejectInvalidState, "roll payload missing character id", rollEvent.CharacterID)
+		s.appendOutcomeRejected(ctx, sessionID, rollSeq, outcomeRejectInternalError, "roll payload missing character id", rollEvent.CharacterID)
 		return nil, status.Error(codes.Internal, "roll payload missing character id")
 	}
 
 	targets := normalizeOutcomeTargets(in.GetTargets(), rollerID)
 	if len(targets) == 0 {
-		s.appendOutcomeRejected(ctx, sessionID, rollSeq, outcomeRejectInvalidState, "targets are required", rollerID)
+		s.appendOutcomeRejected(ctx, sessionID, rollSeq, outcomeRejectInternalError, "targets are required", rollerID)
 		return nil, status.Error(codes.InvalidArgument, "targets are required")
+	}
+	if len(targets) > 1 {
+		s.appendOutcomeRejected(ctx, sessionID, rollSeq, outcomeRejectMultiTargetUnsupported, "multi target unsupported", rollerID)
+		return nil, status.Error(codes.FailedPrecondition, "multi target unsupported")
 	}
 
 	campaignID, err := s.sessionCampaignID(ctx, sessionID)
 	if err != nil {
-		s.appendOutcomeRejected(ctx, sessionID, rollSeq, outcomeRejectInvalidState, "session campaign not found", rollerID)
+		s.appendOutcomeRejected(ctx, sessionID, rollSeq, outcomeRejectInternalError, "session campaign not found", rollerID)
 		return nil, status.Error(codes.Internal, "session campaign not found")
 	}
 
@@ -670,17 +684,28 @@ func (s *SessionService) ApplyRollOutcome(ctx context.Context, in *sessionv1.App
 	}
 
 	participantID := strings.TrimSpace(grpcmeta.ParticipantIDFromContext(ctx))
-	if participantID != "" {
-		participant, err := s.stores.Participant.GetParticipant(ctx, campaignID, participantID)
-		if err != nil {
-			s.appendOutcomeRejected(ctx, sessionID, rollSeq, outcomeRejectPermissionDenied, "participant not found", rollerID)
-			return nil, status.Error(codes.PermissionDenied, "participant not found")
+	if participantID == "" {
+		s.appendOutcomeRejected(ctx, sessionID, rollSeq, outcomeRejectPermissionDenied, "participant id is required", rollerID)
+		return nil, status.Error(codes.PermissionDenied, "participant id is required")
+	}
+	participant, err := s.stores.Participant.GetParticipant(ctx, campaignID, participantID)
+	if err != nil {
+		s.appendOutcomeRejected(ctx, sessionID, rollSeq, outcomeRejectPermissionDenied, "participant not found", rollerID)
+		return nil, status.Error(codes.PermissionDenied, "participant not found")
+	}
+	if participant.Role != campaigndomain.ParticipantRoleGM {
+		if targets[0] != rollerID {
+			s.appendOutcomeRejected(ctx, sessionID, rollSeq, outcomeRejectPermissionDenied, "player may only apply to roller", rollerID)
+			return nil, status.Error(codes.PermissionDenied, "player may only apply to roller")
 		}
-		if participant.Role == campaigndomain.ParticipantRolePlayer {
-			if len(targets) != 1 || targets[0] != rollerID {
-				s.appendOutcomeRejected(ctx, sessionID, rollSeq, outcomeRejectPermissionDenied, "player may only apply to roller", rollerID)
-				return nil, status.Error(codes.PermissionDenied, "player may only apply to roller")
-			}
+		controller, err := s.stores.ControlDefault.GetControlDefault(ctx, campaignID, rollerID)
+		if err != nil {
+			s.appendOutcomeRejected(ctx, sessionID, rollSeq, outcomeRejectPermissionDenied, "character controller not found", rollerID)
+			return nil, status.Error(codes.PermissionDenied, "character controller not found")
+		}
+		if controller.IsGM || controller.ParticipantID != participantID {
+			s.appendOutcomeRejected(ctx, sessionID, rollSeq, outcomeRejectPermissionDenied, "participant does not control roller", rollerID)
+			return nil, status.Error(codes.PermissionDenied, "participant does not control roller")
 		}
 	}
 
@@ -712,7 +737,7 @@ func (s *SessionService) ApplyRollOutcome(ctx context.Context, in *sessionv1.App
 		gmFearDelta = 1
 		requiresComplication = true
 	default:
-		s.appendOutcomeRejected(ctx, sessionID, rollSeq, outcomeRejectInvalidState, "invalid roll flavor", rollerID)
+		s.appendOutcomeRejected(ctx, sessionID, rollSeq, outcomeRejectInternalError, "invalid roll flavor", rollerID)
 		return nil, status.Error(codes.Internal, "invalid roll flavor")
 	}
 
@@ -739,10 +764,10 @@ func (s *SessionService) ApplyRollOutcome(ctx context.Context, in *sessionv1.App
 			s.appendOutcomeRejected(ctx, sessionID, rollSeq, outcomeRejectCharacterNotFound, "character not found", rollerID)
 			return nil, status.Error(codes.NotFound, "character not found")
 		case errors.Is(err, sessiondomain.ErrOutcomeGMFearInvalid):
-			s.appendOutcomeRejected(ctx, sessionID, rollSeq, outcomeRejectInvalidState, "gm fear update invalid", rollerID)
+			s.appendOutcomeRejected(ctx, sessionID, rollSeq, outcomeRejectInternalError, "gm fear update invalid", rollerID)
 			return nil, status.Error(codes.FailedPrecondition, "gm fear update invalid")
 		default:
-			s.appendOutcomeRejected(ctx, sessionID, rollSeq, outcomeRejectInvalidState, err.Error(), rollerID)
+			s.appendOutcomeRejected(ctx, sessionID, rollSeq, outcomeRejectInternalError, err.Error(), rollerID)
 			return nil, status.Errorf(codes.Internal, "apply roll outcome: %v", err)
 		}
 	}
@@ -795,14 +820,18 @@ type actionRollRequestedPayload struct {
 }
 
 type actionRollResolvedPayload struct {
-	CharacterID string `json:"character_id"`
-	HopeDie     int    `json:"hope_die"`
-	FearDie     int    `json:"fear_die"`
-	Total       int    `json:"total"`
-	Difficulty  int    `json:"difficulty"`
-	Success     bool   `json:"success"`
-	Flavor      string `json:"flavor"`
-	Crit        bool   `json:"crit"`
+	RollerCharacterID string                 `json:"roller_character_id"`
+	Dice              actionRollResolvedDice `json:"dice"`
+	Total             int                    `json:"total"`
+	Difficulty        int                    `json:"difficulty"`
+	Success           bool                   `json:"success"`
+	Flavor            string                 `json:"flavor"`
+	Crit              bool                   `json:"crit"`
+}
+
+type actionRollResolvedDice struct {
+	HopeDie int `json:"hope_die"`
+	FearDie int `json:"fear_die"`
 }
 
 type sessionStartedPayload struct {

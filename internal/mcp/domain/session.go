@@ -206,6 +206,7 @@ type SessionActionRollInput struct {
 
 // SessionActionRollResult represents the MCP tool output for a session action roll.
 type SessionActionRollResult struct {
+	RollSeq    uint64 `json:"roll_seq" jsonschema:"roll sequence number"`
 	HopeDie    int    `json:"hope_die" jsonschema:"hope die result"`
 	FearDie    int    `json:"fear_die" jsonschema:"fear die result"`
 	Total      int    `json:"total" jsonschema:"sum of dice and modifiers"`
@@ -323,6 +324,7 @@ func SessionActionRollHandler(client sessionv1.SessionServiceClient, getContext 
 		}
 
 		result := SessionActionRollResult{
+			RollSeq:    response.GetRollSeq(),
 			HopeDie:    int(response.GetHopeDie()),
 			FearDie:    int(response.GetFearDie()),
 			Total:      int(response.GetTotal()),

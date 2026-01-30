@@ -76,6 +76,8 @@ type ControlDefaultStore interface {
 	// PutControlDefault sets the default controller for a character in a campaign.
 	// Overwrites any existing controller for the same (campaign_id, character_id) pair.
 	PutControlDefault(ctx context.Context, campaignID, characterID string, controller domain.CharacterController) error
+	// GetControlDefault retrieves the default controller for a character in a campaign.
+	GetControlDefault(ctx context.Context, campaignID, characterID string) (domain.CharacterController, error)
 }
 
 // SessionStore persists session records.

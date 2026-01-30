@@ -124,13 +124,14 @@ message SessionActionRollRequest {
 }
 
 message SessionActionRollResponse {
-  int32 hope_die = 1;
-  int32 fear_die = 2;
-  int32 total = 3;
-  int32 difficulty = 4;
-  bool success = 5;
-  string flavor = 6;
-  bool crit = 7;
+  uint64 roll_seq = 1;
+  int32 hope_die = 2;
+  int32 fear_die = 3;
+  int32 total = 4;
+  int32 difficulty = 5;
+  bool success = 6;
+  string flavor = 7;
+  bool crit = 8;
 }
 
 message ApplyRollOutcomeRequest {

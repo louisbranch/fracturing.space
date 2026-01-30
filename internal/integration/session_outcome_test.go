@@ -14,12 +14,6 @@ import (
 	"testing"
 )
 
-type actionRollResolvedPayload struct {
-	CharacterID string `json:"character_id"`
-	Flavor      string `json:"flavor"`
-	Crit        bool   `json:"crit"`
-}
-
 type outcomeAppliedPayload struct {
 	RollSeq              uint64   `json:"roll_seq"`
 	Targets              []string `json:"targets"`
@@ -72,6 +66,26 @@ func runSessionOutcomeTests(t *testing.T, suite *integrationSuite, grpcAddr stri
 			t.Fatal("character_create returned empty id")
 		}
 
+		participantResult, err := suite.client.CallTool(ctx, &mcp.CallToolParams{
+			Name: "participant_create",
+			Arguments: map[string]any{
+				"campaign_id":  campaignOutput.ID,
+				"display_name": "Outcome GM",
+				"role":         "GM",
+				"controller":   "HUMAN",
+			},
+		})
+		if err != nil {
+			t.Fatalf("call participant_create: %v", err)
+		}
+		if participantResult == nil || participantResult.IsError {
+			t.Fatalf("participant_create failed: %+v", participantResult)
+		}
+		participantOutput := decodeStructuredContent[domain.ParticipantCreateResult](t, participantResult.StructuredContent)
+		if participantOutput.ID == "" {
+			t.Fatal("participant_create returned empty id")
+		}
+
 		sessionResult, err := suite.client.CallTool(ctx, &mcp.CallToolParams{
 			Name: "session_start",
 			Arguments: map[string]any{
@@ -88,6 +102,21 @@ func runSessionOutcomeTests(t *testing.T, suite *integrationSuite, grpcAddr stri
 		sessionOutput := decodeStructuredContent[domain.SessionStartResult](t, sessionResult.StructuredContent)
 		if sessionOutput.ID == "" {
 			t.Fatal("session_start returned empty id")
+		}
+
+		contextResult, err := suite.client.CallTool(ctx, &mcp.CallToolParams{
+			Name: "set_context",
+			Arguments: map[string]any{
+				"campaign_id":    campaignOutput.ID,
+				"session_id":     sessionOutput.ID,
+				"participant_id": participantOutput.ID,
+			},
+		})
+		if err != nil {
+			t.Fatalf("call set_context: %v", err)
+		}
+		if contextResult == nil || contextResult.IsError {
+			t.Fatalf("set_context failed: %+v", contextResult)
 		}
 
 		actionRollResult, err := suite.client.CallTool(ctx, &mcp.CallToolParams{
@@ -125,10 +154,7 @@ func runSessionOutcomeTests(t *testing.T, suite *integrationSuite, grpcAddr stri
 		defer conn.Close()
 		grpcClient := sessionv1.NewSessionServiceClient(conn)
 
-		rollSeq, err := findRollResolvedSeq(ctx, grpcClient, sessionOutput.ID)
-		if err != nil {
-			t.Fatalf("find action roll resolved: %v", err)
-		}
+		rollSeq := actionRollOutput.RollSeq
 		if rollSeq == 0 {
 			t.Fatal("expected roll seq")
 		}
@@ -179,36 +205,6 @@ func runSessionOutcomeTests(t *testing.T, suite *integrationSuite, grpcAddr stri
 	t.Run("apply roll outcome fear increments gm fear", func(t *testing.T) {
 		t.Skip("requires deterministic roll seed to force FEAR")
 	})
-}
-
-func findRollResolvedSeq(ctx context.Context, client sessionv1.SessionServiceClient, sessionID string) (uint64, error) {
-	response, err := client.SessionEventsList(ctx, &sessionv1.SessionEventsListRequest{
-		SessionId: sessionID,
-		Limit:     50,
-	})
-	if err != nil {
-		return 0, err
-	}
-	if response == nil {
-		return 0, nil
-	}
-
-	for i := len(response.Events); i > 0; i-- {
-		event := response.Events[i-1]
-		if event.GetType() != sessionv1.SessionEventType_ACTION_ROLL_RESOLVED {
-			continue
-		}
-		var payload actionRollResolvedPayload
-		if err := json.Unmarshal(event.GetPayloadJson(), &payload); err != nil {
-			return 0, err
-		}
-		if payload.CharacterID == "" {
-			return 0, nil
-		}
-		return event.GetSeq(), nil
-	}
-
-	return 0, fmt.Errorf("action roll resolved event not found")
 }
 
 func findOutcomeApplied(ctx context.Context, client sessionv1.SessionServiceClient, sessionID string, rollSeq uint64) (outcomeAppliedPayload, error) {

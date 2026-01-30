@@ -458,6 +458,7 @@ Rolls Duality dice for a session and appends session events.
 
 ```json
 {
+  "roll_seq": 42,
   "hope_die": 8,
   "fear_die": 5,
   "total": 15,

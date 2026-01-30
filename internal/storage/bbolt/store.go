@@ -703,6 +703,46 @@ func (s *Store) PutControlDefault(ctx context.Context, campaignID, characterID s
 	})
 }
 
+// GetControlDefault retrieves the default controller assignment for a character (implements storage.ControlDefaultStore).
+func (s *Store) GetControlDefault(ctx context.Context, campaignID, characterID string) (domain.CharacterController, error) {
+	if err := ctx.Err(); err != nil {
+		return domain.CharacterController{}, err
+	}
+	if s == nil || s.db == nil {
+		return domain.CharacterController{}, fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(campaignID) == "" {
+		return domain.CharacterController{}, fmt.Errorf("campaign id is required")
+	}
+	if strings.TrimSpace(characterID) == "" {
+		return domain.CharacterController{}, fmt.Errorf("character id is required")
+	}
+
+	var controller domain.CharacterController
+	err := s.db.View(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket([]byte(controlDefaultBucket))
+		if bucket == nil {
+			return fmt.Errorf("control default bucket is missing")
+		}
+		payload := bucket.Get(controlDefaultKey(campaignID, characterID))
+		if payload == nil {
+			return storage.ErrNotFound
+		}
+		if err := json.Unmarshal(payload, &controller); err != nil {
+			return fmt.Errorf("unmarshal controller: %w", err)
+		}
+		if err := controller.Validate(); err != nil {
+			return fmt.Errorf("validate controller: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return domain.CharacterController{}, err
+	}
+
+	return controller, nil
+}
+
 // GetSession fetches a session record by campaign ID and session ID (implements storage.SessionStore).
 func (s *Store) GetSession(ctx context.Context, campaignID, sessionID string) (sessiondomain.Session, error) {
 	if err := ctx.Err(); err != nil {
