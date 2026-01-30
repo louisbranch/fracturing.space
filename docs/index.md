@@ -1,3 +1,5 @@
+# Duality Engine Documentation
+
 Duality Engine provides a server-authoritative implementation of the
 Duality Dice system, exposed via gRPC and MCP.
 

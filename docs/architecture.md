@@ -1,3 +1,5 @@
+# Architecture
+
 ## Overview
 
 Duality Engine is split into three layers:
