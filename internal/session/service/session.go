@@ -6,9 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"sort"
 	"strings"
 	"time"
 
+	commonv1 "github.com/louisbranch/duality-engine/api/gen/go/common/v1"
 	sessionv1 "github.com/louisbranch/duality-engine/api/gen/go/session/v1"
 	campaigndomain "github.com/louisbranch/duality-engine/internal/campaign/domain"
 	dualitydomain "github.com/louisbranch/duality-engine/internal/duality/domain"
@@ -490,6 +492,12 @@ func (s *SessionService) SessionActionRoll(ctx context.Context, in *sessionv1.Se
 			Value:  value,
 		})
 	}
+	sort.Slice(requestedModifiers, func(i, j int) bool {
+		if requestedModifiers[i].Source == requestedModifiers[j].Source {
+			return requestedModifiers[i].Value < requestedModifiers[j].Value
+		}
+		return requestedModifiers[i].Source < requestedModifiers[j].Source
+	})
 
 	difficulty := int(in.GetDifficulty())
 	if difficulty < 0 {
@@ -521,8 +529,32 @@ func (s *SessionService) SessionActionRoll(ctx context.Context, in *sessionv1.Se
 		return nil, status.Errorf(codes.Internal, "append action roll requested: %v", err)
 	}
 
-	seed, err := s.seedFunc()
+	seed, seedSource, rollMode, err := random.ResolveSeed(
+		in.GetRng(),
+		s.seedFunc,
+		func(mode commonv1.RollMode) bool {
+			if mode == commonv1.RollMode_REPLAY {
+				return true
+			}
+			if s.stores.Participant == nil {
+				return false
+			}
+			participantID := strings.TrimSpace(grpcmeta.ParticipantIDFromContext(ctx))
+			if participantID == "" {
+				return false
+			}
+			participant, err := s.stores.Participant.GetParticipant(ctx, campaignID, participantID)
+			if err != nil {
+				return false
+			}
+			return participant.Role == campaigndomain.ParticipantRoleGM
+		},
+	)
 	if err != nil {
+		if errors.Is(err, random.ErrSeedOutOfRange()) {
+			s.appendRequestRejected(ctx, sessionID, "session.v1.SessionService/SessionActionRoll", "INVALID_ARGUMENT", err.Error(), characterID)
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
 		s.appendRequestRejected(ctx, sessionID, "session.v1.SessionService/SessionActionRoll", "INTERNAL", "failed to generate seed", characterID)
 		return nil, status.Errorf(codes.Internal, "failed to generate seed: %v", err)
 	}
@@ -542,8 +574,19 @@ func (s *SessionService) SessionActionRoll(ctx context.Context, in *sessionv1.Se
 	}
 
 	flavor := actionRollFlavor(result.Hope, result.Fear)
+	rollModeLabel := "LIVE"
+	if rollMode == commonv1.RollMode_REPLAY {
+		rollModeLabel = "REPLAY"
+	}
 	resolvedPayload, err := json.Marshal(actionRollResolvedPayload{
 		RollerCharacterID: characterID,
+		CharacterID:       characterID,
+		Trait:             trait,
+		Modifiers:         requestedModifiers,
+		SeedUsed:          uint64(seed),
+		RngAlgo:           random.RngAlgoMathRandV1,
+		SeedSource:        seedSource,
+		RollMode:          rollModeLabel,
 		Dice: actionRollResolvedDice{
 			HopeDie: result.Hope,
 			FearDie: result.Fear,
@@ -582,6 +625,12 @@ func (s *SessionService) SessionActionRoll(ctx context.Context, in *sessionv1.Se
 		Success:    result.MeetsDifficulty,
 		Flavor:     flavor,
 		Crit:       result.IsCrit,
+		Rng: &commonv1.RngResponse{
+			SeedUsed:   uint64(seed),
+			RngAlgo:    random.RngAlgoMathRandV1,
+			SeedSource: seedSource,
+			RollMode:   rollMode,
+		},
 	}, nil
 }
 
@@ -819,14 +868,36 @@ type actionRollRequestedPayload struct {
 	Modifiers   []actionRollModifierPayload `json:"modifiers,omitempty"`
 }
 
+// actionRollResolvedPayload captures the payload for resolved action roll events.
 type actionRollResolvedPayload struct {
-	RollerCharacterID string                 `json:"roller_character_id"`
-	Dice              actionRollResolvedDice `json:"dice"`
-	Total             int                    `json:"total"`
-	Difficulty        int                    `json:"difficulty"`
-	Success           bool                   `json:"success"`
-	Flavor            string                 `json:"flavor"`
-	Crit              bool                   `json:"crit"`
+	// RollerCharacterID identifies the character that rolled.
+	RollerCharacterID string `json:"roller_character_id"`
+	// CharacterID echoes the request character identifier.
+	CharacterID string `json:"character_id"`
+	// Trait echoes the canonicalized trait name.
+	Trait string `json:"trait"`
+	// Modifiers echoes canonicalized modifiers used for the roll.
+	Modifiers []actionRollModifierPayload `json:"modifiers"`
+	// SeedUsed is the RNG seed used for this roll.
+	SeedUsed uint64 `json:"seed_used"`
+	// RngAlgo identifies the RNG algorithm used.
+	RngAlgo string `json:"rng_algo"`
+	// SeedSource indicates whether the seed was client- or server-supplied.
+	SeedSource string `json:"seed_source"`
+	// RollMode records whether the roll was live or replayed.
+	RollMode string `json:"roll_mode"`
+	// Dice captures the raw dice results.
+	Dice actionRollResolvedDice `json:"dice"`
+	// Total is the sum of dice and modifiers.
+	Total int `json:"total"`
+	// Difficulty is the target threshold for success.
+	Difficulty int `json:"difficulty"`
+	// Success indicates whether the roll met the difficulty.
+	Success bool `json:"success"`
+	// Flavor indicates whether the roll favored hope or fear.
+	Flavor string `json:"flavor"`
+	// Crit indicates whether the roll is a critical success.
+	Crit bool `json:"crit"`
 }
 
 type actionRollResolvedDice struct {

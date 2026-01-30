@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	commonv1 "github.com/louisbranch/duality-engine/api/gen/go/common/v1"
 	sessionv1 "github.com/louisbranch/duality-engine/api/gen/go/session/v1"
 	"github.com/louisbranch/duality-engine/internal/grpcmeta"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -202,18 +203,20 @@ type SessionActionRollInput struct {
 	Trait       string                      `json:"trait" jsonschema:"trait being rolled"`
 	Difficulty  int                         `json:"difficulty" jsonschema:"difficulty target"`
 	Modifiers   []SessionActionRollModifier `json:"modifiers,omitempty" jsonschema:"optional roll modifiers"`
+	Rng         *RngRequest                 `json:"rng,omitempty" jsonschema:"optional rng configuration"`
 }
 
 // SessionActionRollResult represents the MCP tool output for a session action roll.
 type SessionActionRollResult struct {
-	RollSeq    uint64 `json:"roll_seq" jsonschema:"roll sequence number"`
-	HopeDie    int    `json:"hope_die" jsonschema:"hope die result"`
-	FearDie    int    `json:"fear_die" jsonschema:"fear die result"`
-	Total      int    `json:"total" jsonschema:"sum of dice and modifiers"`
-	Difficulty int    `json:"difficulty" jsonschema:"difficulty target"`
-	Success    bool   `json:"success" jsonschema:"whether total meets difficulty"`
-	Flavor     string `json:"flavor" jsonschema:"HOPE or FEAR"`
-	Crit       bool   `json:"crit" jsonschema:"whether the roll is a critical success"`
+	RollSeq    uint64     `json:"roll_seq" jsonschema:"roll sequence number"`
+	HopeDie    int        `json:"hope_die" jsonschema:"hope die result"`
+	FearDie    int        `json:"fear_die" jsonschema:"fear die result"`
+	Total      int        `json:"total" jsonschema:"sum of dice and modifiers"`
+	Difficulty int        `json:"difficulty" jsonschema:"difficulty target"`
+	Success    bool       `json:"success" jsonschema:"whether total meets difficulty"`
+	Flavor     string     `json:"flavor" jsonschema:"HOPE or FEAR"`
+	Crit       bool       `json:"crit" jsonschema:"whether the roll is a critical success"`
+	Rng        *RngResult `json:"rng,omitempty" jsonschema:"rng details"`
 }
 
 // SessionRollOutcomeApplyInput represents the MCP tool input for applying roll outcomes.
@@ -306,6 +309,13 @@ func SessionActionRollHandler(client sessionv1.SessionServiceClient, getContext 
 				Value:  int32(modifier.Value),
 			})
 		}
+		var rngRequest *commonv1.RngRequest
+		if input.Rng != nil {
+			rngRequest = &commonv1.RngRequest{RollMode: rollModeToProto(input.Rng.RollMode)}
+			if input.Rng.Seed != nil {
+				rngRequest.Seed = input.Rng.Seed
+			}
+		}
 
 		var header metadata.MD
 		response, err := client.SessionActionRoll(callCtx, &sessionv1.SessionActionRollRequest{
@@ -315,12 +325,24 @@ func SessionActionRollHandler(client sessionv1.SessionServiceClient, getContext 
 			Trait:       input.Trait,
 			Difficulty:  int32(input.Difficulty),
 			Modifiers:   modifiers,
+			Rng:         rngRequest,
 		}, grpc.Header(&header))
 		if err != nil {
 			return nil, SessionActionRollResult{}, fmt.Errorf("session action roll failed: %w", err)
 		}
 		if response == nil {
 			return nil, SessionActionRollResult{}, fmt.Errorf("session action roll response is missing")
+		}
+
+		var rngResult *RngResult
+		if response.GetRng() != nil {
+			rng := response.GetRng()
+			rngResult = &RngResult{
+				SeedUsed:   rng.GetSeedUsed(),
+				RngAlgo:    rng.GetRngAlgo(),
+				SeedSource: rng.GetSeedSource(),
+				RollMode:   rollModeLabel(rng.GetRollMode()),
+			}
 		}
 
 		result := SessionActionRollResult{
@@ -332,6 +354,7 @@ func SessionActionRollHandler(client sessionv1.SessionServiceClient, getContext 
 			Success:    response.GetSuccess(),
 			Flavor:     response.GetFlavor(),
 			Crit:       response.GetCrit(),
+			Rng:        rngResult,
 		}
 
 		responseMeta := MergeResponseMetadata(callMeta, header)

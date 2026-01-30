@@ -3,6 +3,7 @@ GEN_GO_DIR := api/gen/go
 COVER_EXCLUDE_REGEX := api/gen/
 
 PROTO_FILES := \
+	$(wildcard $(PROTO_DIR)/common/v1/*.proto) \
 	$(wildcard $(PROTO_DIR)/campaign/v1/*.proto) \
 	$(wildcard $(PROTO_DIR)/duality/v1/*.proto) \
 	$(wildcard $(PROTO_DIR)/session/v1/*.proto)

@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package common.v1;
+
+option go_package = "github.com/louisbranch/duality-engine/api/gen/go/common/v1;commonv1";
+
+// RollMode declares whether a roll is live gameplay or a deterministic replay.
+enum RollMode {
+  ROLL_MODE_UNSPECIFIED = 0;
+  LIVE = 1;
+  REPLAY = 2;
+}
+
+// RngRequest configures RNG seeding for a single roll.
+message RngRequest {
+  // Optional seed for deterministic rolls.
+  optional uint64 seed = 1;
+
+  // Controls whether deterministic replay is enabled.
+  RollMode roll_mode = 2;
+}
+
+// RngResponse captures the RNG details used for a roll.
+message RngResponse {
+  // The seed value actually used by the server.
+  uint64 seed_used = 1;
+
+  // Identifier for the RNG algorithm version.
+  string rng_algo = 2;
+
+  // Indicates whether the seed came from the client or server.
+  string seed_source = 3;
+
+  // The roll mode applied when processing the request.
+  RollMode roll_mode = 4;
+}

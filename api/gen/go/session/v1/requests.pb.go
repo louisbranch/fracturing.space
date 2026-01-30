@@ -7,6 +7,7 @@
 package sessionv1
 
 import (
+	v1 "github.com/louisbranch/duality-engine/api/gen/go/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -728,7 +729,9 @@ type SessionActionRollRequest struct {
 	// The difficulty target.
 	Difficulty int32 `protobuf:"varint,5,opt,name=difficulty,proto3" json:"difficulty,omitempty"`
 	// Optional modifiers applied to the roll.
-	Modifiers     []*ActionRollModifier `protobuf:"bytes,6,rep,name=modifiers,proto3" json:"modifiers,omitempty"`
+	Modifiers []*ActionRollModifier `protobuf:"bytes,6,rep,name=modifiers,proto3" json:"modifiers,omitempty"`
+	// Optional RNG configuration for deterministic rolls.
+	Rng           *v1.RngRequest `protobuf:"bytes,7,opt,name=rng,proto3" json:"rng,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -805,6 +808,13 @@ func (x *SessionActionRollRequest) GetModifiers() []*ActionRollModifier {
 	return nil
 }
 
+func (x *SessionActionRollRequest) GetRng() *v1.RngRequest {
+	if x != nil {
+		return x.Rng
+	}
+	return nil
+}
+
 type SessionActionRollResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	RollSeq       uint64                 `protobuf:"varint,1,opt,name=roll_seq,json=rollSeq,proto3" json:"roll_seq,omitempty"`
@@ -815,6 +825,7 @@ type SessionActionRollResponse struct {
 	Success       bool                   `protobuf:"varint,6,opt,name=success,proto3" json:"success,omitempty"`
 	Flavor        string                 `protobuf:"bytes,7,opt,name=flavor,proto3" json:"flavor,omitempty"`
 	Crit          bool                   `protobuf:"varint,8,opt,name=crit,proto3" json:"crit,omitempty"`
+	Rng           *v1.RngResponse        `protobuf:"bytes,9,opt,name=rng,proto3" json:"rng,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -903,6 +914,13 @@ func (x *SessionActionRollResponse) GetCrit() bool {
 		return x.Crit
 	}
 	return false
+}
+
+func (x *SessionActionRollResponse) GetRng() *v1.RngResponse {
+	if x != nil {
+		return x.Rng
+	}
+	return nil
 }
 
 type ApplyRollOutcomeRequest struct {
@@ -1154,7 +1172,7 @@ var File_session_v1_requests_proto protoreflect.FileDescriptor
 const file_session_v1_requests_proto_rawDesc = "" +
 	"\n" +
 	"\x19session/v1/requests.proto\x12\n" +
-	"session.v1\x1a\x18session/v1/session.proto\x1a\x17session/v1/events.proto\"J\n" +
+	"session.v1\x1a\x13common/v1/rng.proto\x1a\x18session/v1/session.proto\x1a\x17session/v1/events.proto\"J\n" +
 	"\x13StartSessionRequest\x12\x1f\n" +
 	"\vcampaign_id\x18\x01 \x01(\tR\n" +
 	"campaignId\x12\x12\n" +
@@ -1202,7 +1220,7 @@ const file_session_v1_requests_proto_rawDesc = "" +
 	"\x06events\x18\x01 \x03(\v2\x18.session.v1.SessionEventR\x06events\"B\n" +
 	"\x12ActionRollModifier\x12\x16\n" +
 	"\x06source\x18\x01 \x01(\tR\x06source\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\x05R\x05value\"\xf1\x01\n" +
+	"\x05value\x18\x02 \x01(\x05R\x05value\"\x9a\x02\n" +
 	"\x18SessionActionRollRequest\x12\x1f\n" +
 	"\vcampaign_id\x18\x01 \x01(\tR\n" +
 	"campaignId\x12\x1d\n" +
@@ -1213,7 +1231,8 @@ const file_session_v1_requests_proto_rawDesc = "" +
 	"\n" +
 	"difficulty\x18\x05 \x01(\x05R\n" +
 	"difficulty\x12<\n" +
-	"\tmodifiers\x18\x06 \x03(\v2\x1e.session.v1.ActionRollModifierR\tmodifiers\"\xe8\x01\n" +
+	"\tmodifiers\x18\x06 \x03(\v2\x1e.session.v1.ActionRollModifierR\tmodifiers\x12'\n" +
+	"\x03rng\x18\a \x01(\v2\x15.common.v1.RngRequestR\x03rng\"\x92\x02\n" +
 	"\x19SessionActionRollResponse\x12\x19\n" +
 	"\broll_seq\x18\x01 \x01(\x04R\arollSeq\x12\x19\n" +
 	"\bhope_die\x18\x02 \x01(\x05R\ahopeDie\x12\x19\n" +
@@ -1224,7 +1243,8 @@ const file_session_v1_requests_proto_rawDesc = "" +
 	"difficulty\x12\x18\n" +
 	"\asuccess\x18\x06 \x01(\bR\asuccess\x12\x16\n" +
 	"\x06flavor\x18\a \x01(\tR\x06flavor\x12\x12\n" +
-	"\x04crit\x18\b \x01(\bR\x04crit\"m\n" +
+	"\x04crit\x18\b \x01(\bR\x04crit\x12(\n" +
+	"\x03rng\x18\t \x01(\v2\x16.common.v1.RngResponseR\x03rng\"m\n" +
 	"\x17ApplyRollOutcomeRequest\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x19\n" +
@@ -1281,6 +1301,8 @@ var file_session_v1_requests_proto_goTypes = []any{
 	(*Session)(nil),                    // 19: session.v1.Session
 	(SessionEventType)(0),              // 20: session.v1.SessionEventType
 	(*SessionEvent)(nil),               // 21: session.v1.SessionEvent
+	(*v1.RngRequest)(nil),              // 22: common.v1.RngRequest
+	(*v1.RngResponse)(nil),             // 23: common.v1.RngResponse
 }
 var file_session_v1_requests_proto_depIdxs = []int32{
 	19, // 0: session.v1.StartSessionResponse.session:type_name -> session.v1.Session
@@ -1291,13 +1313,15 @@ var file_session_v1_requests_proto_depIdxs = []int32{
 	21, // 5: session.v1.SessionEventAppendResponse.event:type_name -> session.v1.SessionEvent
 	21, // 6: session.v1.SessionEventsListResponse.events:type_name -> session.v1.SessionEvent
 	12, // 7: session.v1.SessionActionRollRequest.modifiers:type_name -> session.v1.ActionRollModifier
-	16, // 8: session.v1.OutcomeUpdated.character_states:type_name -> session.v1.OutcomeCharacterState
-	17, // 9: session.v1.ApplyRollOutcomeResponse.updated:type_name -> session.v1.OutcomeUpdated
-	10, // [10:10] is the sub-list for method output_type
-	10, // [10:10] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	22, // 8: session.v1.SessionActionRollRequest.rng:type_name -> common.v1.RngRequest
+	23, // 9: session.v1.SessionActionRollResponse.rng:type_name -> common.v1.RngResponse
+	16, // 10: session.v1.OutcomeUpdated.character_states:type_name -> session.v1.OutcomeCharacterState
+	17, // 11: session.v1.ApplyRollOutcomeResponse.updated:type_name -> session.v1.OutcomeUpdated
+	12, // [12:12] is the sub-list for method output_type
+	12, // [12:12] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_session_v1_requests_proto_init() }

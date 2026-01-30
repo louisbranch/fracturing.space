@@ -12,6 +12,7 @@ import (
 	"time"
 
 	campaignv1 "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1"
+	commonv1 "github.com/louisbranch/duality-engine/api/gen/go/common/v1"
 	pb "github.com/louisbranch/duality-engine/api/gen/go/duality/v1"
 	sessionv1 "github.com/louisbranch/duality-engine/api/gen/go/session/v1"
 	"github.com/louisbranch/duality-engine/internal/grpcmeta"
@@ -471,13 +472,24 @@ func TestActionRollHandlerMapsRequestAndResponse(t *testing.T) {
 			MeetsDifficulty: true,
 			Difficulty:      &difficulty,
 			Outcome:         pb.Outcome_SUCCESS_WITH_FEAR,
+			Rng: &commonv1.RngResponse{
+				SeedUsed:   12,
+				RngAlgo:    "math-rand-v1",
+				SeedSource: "SERVER",
+				RollMode:   commonv1.RollMode_LIVE,
+			},
 		},
 	}
 	handler := domain.ActionRollHandler(client)
 
+	seed := uint64(101)
 	result, output, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.ActionRollInput{
 		Modifier:   7,
 		Difficulty: intPointer(7),
+		Rng: &domain.RngRequest{
+			Seed:     &seed,
+			RollMode: "REPLAY",
+		},
 	})
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
@@ -491,6 +503,15 @@ func TestActionRollHandlerMapsRequestAndResponse(t *testing.T) {
 	}
 	if client.lastRequest.Difficulty == nil || *client.lastRequest.Difficulty != 7 {
 		t.Fatalf("expected difficulty 7, got %v", client.lastRequest.Difficulty)
+	}
+	if client.lastRequest.GetRng() == nil {
+		t.Fatal("expected rng request")
+	}
+	if client.lastRequest.GetRng().GetSeed() != seed {
+		t.Fatalf("expected rng seed %d, got %d", seed, client.lastRequest.GetRng().GetSeed())
+	}
+	if client.lastRequest.GetRng().GetRollMode() != commonv1.RollMode_REPLAY {
+		t.Fatalf("expected roll mode REPLAY, got %v", client.lastRequest.GetRng().GetRollMode())
 	}
 
 	if output.Hope != 4 || output.Fear != 6 || output.Total != 17 {
@@ -510,6 +531,12 @@ func TestActionRollHandlerMapsRequestAndResponse(t *testing.T) {
 	}
 	if output.Difficulty == nil || *output.Difficulty != 7 {
 		t.Fatalf("expected difficulty 7, got %v", output.Difficulty)
+	}
+	if output.Rng == nil {
+		t.Fatal("expected rng output")
+	}
+	if output.Rng.SeedUsed != 12 {
+		t.Fatalf("expected seed_used 12, got %d", output.Rng.SeedUsed)
 	}
 }
 
@@ -871,12 +898,23 @@ func TestRollDiceHandlerMapsRequestAndResponse(t *testing.T) {
 			{Sides: 8, Results: []int32{4}, Total: 4},
 		},
 		Total: 11,
+		Rng: &commonv1.RngResponse{
+			SeedUsed:   33,
+			RngAlgo:    "math-rand-v1",
+			SeedSource: "SERVER",
+			RollMode:   commonv1.RollMode_LIVE,
+		},
 	}}
 
 	handler := domain.RollDiceHandler(client)
 
+	seed := uint64(44)
 	result, output, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.RollDiceInput{
 		Dice: []domain.RollDiceSpec{{Sides: 6, Count: 2}, {Sides: 8, Count: 1}},
+		Rng: &domain.RngRequest{
+			Seed:     &seed,
+			RollMode: "REPLAY",
+		},
 	})
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
@@ -894,6 +932,15 @@ func TestRollDiceHandlerMapsRequestAndResponse(t *testing.T) {
 	if client.lastRollDiceRequest.Dice[1].Sides != 8 || client.lastRollDiceRequest.Dice[1].Count != 1 {
 		t.Fatalf("unexpected second dice spec: %+v", client.lastRollDiceRequest.Dice[1])
 	}
+	if client.lastRollDiceRequest.GetRng() == nil {
+		t.Fatal("expected rng on request")
+	}
+	if client.lastRollDiceRequest.GetRng().GetSeed() != seed {
+		t.Fatalf("expected rng seed %d, got %d", seed, client.lastRollDiceRequest.GetRng().GetSeed())
+	}
+	if client.lastRollDiceRequest.GetRng().GetRollMode() != commonv1.RollMode_REPLAY {
+		t.Fatalf("expected roll mode REPLAY, got %v", client.lastRollDiceRequest.GetRng().GetRollMode())
+	}
 
 	if output.Total != 11 {
 		t.Fatalf("expected total 11, got %d", output.Total)
@@ -906,6 +953,15 @@ func TestRollDiceHandlerMapsRequestAndResponse(t *testing.T) {
 	}
 	if output.Rolls[1].Sides != 8 || output.Rolls[1].Total != 4 {
 		t.Fatalf("unexpected second roll: %+v", output.Rolls[1])
+	}
+	if output.Rng == nil {
+		t.Fatal("expected rng output")
+	}
+	if output.Rng.SeedUsed != 33 {
+		t.Fatalf("expected seed_used 33, got %d", output.Rng.SeedUsed)
+	}
+	if output.Rng.RollMode != "LIVE" {
+		t.Fatalf("expected roll_mode LIVE, got %q", output.Rng.RollMode)
 	}
 }
 

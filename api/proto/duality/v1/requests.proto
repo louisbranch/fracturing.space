@@ -4,6 +4,7 @@ package duality.v1;
 
 option go_package = "github.com/louisbranch/duality-engine/api/gen/go/duality/v1;dualityv1";
 
+import "common/v1/rng.proto";
 import "duality/v1/outcome.proto";
 import "duality/v1/dice.proto";
 import "duality/v1/explain.proto";
@@ -15,6 +16,9 @@ message ActionRollRequest {
   // If omitted, the server returns a roll outcome (Hope/Fear/Crit) but does not
   // classify as success/failure.
   optional int32 difficulty = 2;
+
+  // Optional RNG configuration for deterministic rolls.
+  common.v1.RngRequest rng = 3;
 }
 
 message ActionRollResponse {
@@ -30,6 +34,7 @@ message ActionRollResponse {
   bool is_crit = 6;
   bool meets_difficulty = 7;
   Outcome outcome = 8;
+  common.v1.RngResponse rng = 9;
 }
 
 message DualityOutcomeRequest {
@@ -122,6 +127,9 @@ message OutcomeCount {
 message RollDiceRequest {
   // The dice to roll in order.
   repeated DiceSpec dice = 1;
+
+  // Optional RNG configuration for deterministic rolls.
+  common.v1.RngRequest rng = 2;
 }
 
 message RollDiceResponse {
@@ -129,4 +137,7 @@ message RollDiceResponse {
 
   // The sum of all rolls.
   int32 total = 2;
+
+  // RNG details used for this roll.
+  common.v1.RngResponse rng = 3;
 }

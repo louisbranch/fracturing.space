@@ -6,8 +6,10 @@ import (
 	"reflect"
 	"testing"
 
+	commonv1 "github.com/louisbranch/duality-engine/api/gen/go/common/v1"
 	pb "github.com/louisbranch/duality-engine/api/gen/go/duality/v1"
 	"github.com/louisbranch/duality-engine/internal/duality/domain"
+	"github.com/louisbranch/duality-engine/internal/random"
 	"github.com/louisbranch/duality-engine/internal/testutil"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -41,7 +43,7 @@ func TestActionRollWithDifficulty(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ActionRoll returned error: %v", err)
 	}
-	assertResponseMatches(t, response, seed, modifier, &difficulty)
+	assertResponseMatches(t, response, seed, random.SeedSourceServer, commonv1.RollMode_LIVE, modifier, &difficulty)
 }
 
 func TestActionRollWithoutDifficulty(t *testing.T) {
@@ -56,7 +58,24 @@ func TestActionRollWithoutDifficulty(t *testing.T) {
 	if response.Difficulty != nil {
 		t.Fatalf("ActionRoll difficulty = %v, want nil", *response.Difficulty)
 	}
-	assertResponseMatches(t, response, seed, modifier, nil)
+	assertResponseMatches(t, response, seed, random.SeedSourceServer, commonv1.RollMode_LIVE, modifier, nil)
+}
+
+func TestActionRollAcceptsReplaySeed(t *testing.T) {
+	seed := uint64(101)
+	server := newTestService(55)
+
+	response, err := server.ActionRoll(context.Background(), &pb.ActionRollRequest{
+		Modifier: 1,
+		Rng: &commonv1.RngRequest{
+			Seed:     &seed,
+			RollMode: commonv1.RollMode_REPLAY,
+		},
+	})
+	if err != nil {
+		t.Fatalf("ActionRoll returned error: %v", err)
+	}
+	assertResponseMatches(t, response, int64(seed), random.SeedSourceClient, commonv1.RollMode_REPLAY, 1, nil)
 }
 
 func TestActionRollSeedFailure(t *testing.T) {
@@ -266,7 +285,41 @@ func TestRollDiceReturnsResults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("RollDice returned error: %v", err)
 	}
-	assertRollDiceResponse(t, response, seed, []domain.DiceSpec{{Sides: 6, Count: 2}, {Sides: 8, Count: 1}})
+	assertRollDiceResponse(t, response, seed, random.SeedSourceServer, commonv1.RollMode_LIVE, []domain.DiceSpec{{Sides: 6, Count: 2}, {Sides: 8, Count: 1}})
+}
+
+func TestRollDiceAcceptsReplaySeed(t *testing.T) {
+	seed := uint64(21)
+	server := newTestService(99)
+
+	response, err := server.RollDice(context.Background(), &pb.RollDiceRequest{
+		Dice: []*pb.DiceSpec{{Sides: 6, Count: 2}},
+		Rng: &commonv1.RngRequest{
+			Seed:     &seed,
+			RollMode: commonv1.RollMode_REPLAY,
+		},
+	})
+	if err != nil {
+		t.Fatalf("RollDice returned error: %v", err)
+	}
+	assertRollDiceResponse(t, response, int64(seed), random.SeedSourceClient, commonv1.RollMode_REPLAY, []domain.DiceSpec{{Sides: 6, Count: 2}})
+}
+
+func TestRollDiceIgnoresLiveSeed(t *testing.T) {
+	seed := uint64(21)
+	server := newTestService(99)
+
+	response, err := server.RollDice(context.Background(), &pb.RollDiceRequest{
+		Dice: []*pb.DiceSpec{{Sides: 6, Count: 2}},
+		Rng: &commonv1.RngRequest{
+			Seed:     &seed,
+			RollMode: commonv1.RollMode_LIVE,
+		},
+	})
+	if err != nil {
+		t.Fatalf("RollDice returned error: %v", err)
+	}
+	assertRollDiceResponse(t, response, 99, random.SeedSourceServer, commonv1.RollMode_LIVE, []domain.DiceSpec{{Sides: 6, Count: 2}})
 }
 
 func TestRollDiceSeedFailure(t *testing.T) {
@@ -299,11 +352,26 @@ func assertStatusCode(t *testing.T, err error, want codes.Code) {
 }
 
 // assertResponseMatches validates response fields against expectations.
-func assertResponseMatches(t *testing.T, response *pb.ActionRollResponse, seed int64, modifier int32, difficulty *int32) {
+func assertResponseMatches(t *testing.T, response *pb.ActionRollResponse, seed int64, seedSource string, rollMode commonv1.RollMode, modifier int32, difficulty *int32) {
 	t.Helper()
 
 	if response == nil {
 		t.Fatal("ActionRoll response is nil")
+	}
+	if response.GetRng() == nil {
+		t.Fatal("ActionRoll rng is nil")
+	}
+	if response.GetRng().GetSeedUsed() != uint64(seed) {
+		t.Fatalf("ActionRoll seed_used = %d, want %d", response.GetRng().GetSeedUsed(), seed)
+	}
+	if response.GetRng().GetRngAlgo() != random.RngAlgoMathRandV1 {
+		t.Fatalf("ActionRoll rng_algo = %q, want %q", response.GetRng().GetRngAlgo(), random.RngAlgoMathRandV1)
+	}
+	if response.GetRng().GetSeedSource() != seedSource {
+		t.Fatalf("ActionRoll seed_source = %q, want %q", response.GetRng().GetSeedSource(), seedSource)
+	}
+	if response.GetRng().GetRollMode() != rollMode {
+		t.Fatalf("ActionRoll roll_mode = %v, want %v", response.GetRng().GetRollMode(), rollMode)
 	}
 
 	result, err := domain.RollAction(domain.ActionRequest{
@@ -498,11 +566,26 @@ func assertProbabilityResponse(t *testing.T, response *pb.DualityProbabilityResp
 }
 
 // assertRollDiceResponse validates roll dice response fields against expectations.
-func assertRollDiceResponse(t *testing.T, response *pb.RollDiceResponse, seed int64, specs []domain.DiceSpec) {
+func assertRollDiceResponse(t *testing.T, response *pb.RollDiceResponse, seed int64, seedSource string, rollMode commonv1.RollMode, specs []domain.DiceSpec) {
 	t.Helper()
 
 	if response == nil {
 		t.Fatal("RollDice response is nil")
+	}
+	if response.GetRng() == nil {
+		t.Fatal("RollDice rng is nil")
+	}
+	if response.GetRng().GetSeedUsed() != uint64(seed) {
+		t.Fatalf("RollDice seed_used = %d, want %d", response.GetRng().GetSeedUsed(), seed)
+	}
+	if response.GetRng().GetRngAlgo() != random.RngAlgoMathRandV1 {
+		t.Fatalf("RollDice rng_algo = %q, want %q", response.GetRng().GetRngAlgo(), random.RngAlgoMathRandV1)
+	}
+	if response.GetRng().GetSeedSource() != seedSource {
+		t.Fatalf("RollDice seed_source = %q, want %q", response.GetRng().GetSeedSource(), seedSource)
+	}
+	if response.GetRng().GetRollMode() != rollMode {
+		t.Fatalf("RollDice roll_mode = %v, want %v", response.GetRng().GetRollMode(), rollMode)
 	}
 
 	result, err := domain.RollDice(domain.RollRequest{

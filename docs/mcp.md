@@ -448,7 +448,11 @@ Rolls Duality dice for a session and appends session events.
   "difficulty": 10,
   "modifiers": [
     {"source": "skill", "value": 2}
-  ]
+  ],
+  "rng": {
+    "seed": 42,
+    "roll_mode": "REPLAY"
+  }
 }
 ```
 
@@ -465,7 +469,13 @@ Rolls Duality dice for a session and appends session events.
   "difficulty": 10,
   "success": true,
   "flavor": "HOPE",
-  "crit": false
+  "crit": false,
+  "rng": {
+    "seed_used": 42,
+    "rng_algo": "math-rand-v1",
+    "seed_source": "CLIENT",
+    "roll_mode": "REPLAY"
+  }
 }
 ```
 
@@ -535,7 +545,11 @@ Rolls Duality dice and returns the outcome with the roll context.
 ```json
 {
   "modifier": 2,
-  "difficulty": 15
+  "difficulty": 15,
+  "rng": {
+    "seed": 99,
+    "roll_mode": "REPLAY"
+  }
 }
 ```
 
@@ -550,7 +564,13 @@ Rolls Duality dice and returns the outcome with the roll context.
   "total": 15,
   "is_crit": false,
   "meets_difficulty": true,
-  "outcome": "SUCCESS_WITH_HOPE"
+  "outcome": "SUCCESS_WITH_HOPE",
+  "rng": {
+    "seed_used": 99,
+    "rng_algo": "math-rand-v1",
+    "seed_source": "CLIENT",
+    "roll_mode": "REPLAY"
+  }
 }
 ```
 
@@ -693,7 +713,11 @@ Rolls arbitrary dice pools and returns the individual results.
   "dice": [
     {"sides": 20, "count": 2},
     {"sides": 6, "count": 1}
-  ]
+  ],
+  "rng": {
+    "seed": 123,
+    "roll_mode": "REPLAY"
+  }
 }
 ```
 
@@ -713,7 +737,13 @@ Rolls arbitrary dice pools and returns the individual results.
       "total": 4
     }
   ],
-  "total": 27
+  "total": 27,
+  "rng": {
+    "seed_used": 123,
+    "rng_algo": "math-rand-v1",
+    "seed_source": "CLIENT",
+    "roll_mode": "REPLAY"
+  }
 }
 ```
 

@@ -4,6 +4,7 @@ package session.v1;
 
 option go_package = "github.com/louisbranch/duality-engine/api/gen/go/session/v1;sessionv1";
 
+import "common/v1/rng.proto";
 import "session/v1/session.proto";
 import "session/v1/events.proto";
 
@@ -120,7 +121,8 @@ message SessionActionRollRequest {
   // Optional modifiers applied to the roll.
   repeated ActionRollModifier modifiers = 6;
 
-  // TODO: Add optional seed field for deterministic rolls.
+  // Optional RNG configuration for deterministic rolls.
+  common.v1.RngRequest rng = 7;
 }
 
 message SessionActionRollResponse {
@@ -132,6 +134,7 @@ message SessionActionRollResponse {
   bool success = 6;
   string flavor = 7;
   bool crit = 8;
+  common.v1.RngResponse rng = 9;
 }
 
 message ApplyRollOutcomeRequest {

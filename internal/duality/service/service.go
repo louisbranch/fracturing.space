@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 
+	commonv1 "github.com/louisbranch/duality-engine/api/gen/go/common/v1"
 	pb "github.com/louisbranch/duality-engine/api/gen/go/duality/v1"
 	"github.com/louisbranch/duality-engine/internal/duality/domain"
+	"github.com/louisbranch/duality-engine/internal/random"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -32,9 +34,17 @@ func (s *DualityService) ActionRoll(ctx context.Context, in *pb.ActionRollReques
 		return nil, status.Error(codes.Internal, "seed generator is not configured")
 	}
 
-	// TODO: Expose the seed in the gRPC request/response once the API supports it.
-	seed, err := s.seedFunc()
+	seed, seedSource, rollMode, err := random.ResolveSeed(
+		in.GetRng(),
+		s.seedFunc,
+		func(mode commonv1.RollMode) bool {
+			return mode == commonv1.RollMode_REPLAY
+		},
+	)
 	if err != nil {
+		if errors.Is(err, random.ErrSeedOutOfRange()) {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
 		return nil, status.Errorf(codes.Internal, "failed to generate seed: %v", err)
 	}
 
@@ -64,6 +74,12 @@ func (s *DualityService) ActionRoll(ctx context.Context, in *pb.ActionRollReques
 		IsCrit:          result.IsCrit,
 		MeetsDifficulty: result.MeetsDifficulty,
 		Outcome:         outcomeToProto(result.Outcome),
+		Rng: &commonv1.RngResponse{
+			SeedUsed:   uint64(seed),
+			RngAlgo:    random.RngAlgoMathRandV1,
+			SeedSource: seedSource,
+			RollMode:   rollMode,
+		},
 	}
 	if result.Difficulty != nil {
 		value := int32(*result.Difficulty)
@@ -246,8 +262,17 @@ func (s *DualityService) RollDice(ctx context.Context, in *pb.RollDiceRequest) (
 		return nil, status.Error(codes.Internal, "seed generator is not configured")
 	}
 
-	seed, err := s.seedFunc()
+	seed, seedSource, rollMode, err := random.ResolveSeed(
+		in.GetRng(),
+		s.seedFunc,
+		func(mode commonv1.RollMode) bool {
+			return mode == commonv1.RollMode_REPLAY
+		},
+	)
 	if err != nil {
+		if errors.Is(err, random.ErrSeedOutOfRange()) {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
 		return nil, status.Errorf(codes.Internal, "failed to generate seed: %v", err)
 	}
 
@@ -273,6 +298,12 @@ func (s *DualityService) RollDice(ctx context.Context, in *pb.RollDiceRequest) (
 	response := &pb.RollDiceResponse{
 		Rolls: make([]*pb.DiceRoll, 0, len(result.Rolls)),
 		Total: int32(result.Total),
+		Rng: &commonv1.RngResponse{
+			SeedUsed:   uint64(seed),
+			RngAlgo:    random.RngAlgoMathRandV1,
+			SeedSource: seedSource,
+			RollMode:   rollMode,
+		},
 	}
 	for _, roll := range result.Rolls {
 		response.Rolls = append(response.Rolls, &pb.DiceRoll{

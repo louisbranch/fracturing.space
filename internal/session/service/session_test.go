@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	commonv1 "github.com/louisbranch/duality-engine/api/gen/go/common/v1"
 	sessionv1 "github.com/louisbranch/duality-engine/api/gen/go/session/v1"
 	"github.com/louisbranch/duality-engine/internal/campaign/domain"
 	"github.com/louisbranch/duality-engine/internal/grpcmeta"
@@ -1734,6 +1735,7 @@ func TestSessionActionRollSuccessAppendsEvents(t *testing.T) {
 		Difficulty:  10,
 		Modifiers: []*sessionv1.ActionRollModifier{
 			{Source: "skill", Value: 2},
+			{Source: "skill", Value: 1},
 		},
 	})
 	if err != nil {
@@ -1771,8 +1773,37 @@ func TestSessionActionRollSuccessAppendsEvents(t *testing.T) {
 	if requested.Difficulty != 10 {
 		t.Fatalf("expected difficulty 10, got %d", requested.Difficulty)
 	}
-	if len(requested.Modifiers) != 1 || requested.Modifiers[0].Source != "skill" {
-		t.Fatalf("expected modifiers to include skill")
+	if len(requested.Modifiers) != 2 {
+		t.Fatalf("expected 2 modifiers, got %d", len(requested.Modifiers))
+	}
+	if requested.Modifiers[0].Value != 1 || requested.Modifiers[1].Value != 2 {
+		t.Fatalf("expected modifiers sorted by value, got %+v", requested.Modifiers)
+	}
+
+	var resolved actionRollResolvedPayload
+	if err := json.Unmarshal(eventStore.appendInputs[1].PayloadJSON, &resolved); err != nil {
+		t.Fatalf("unmarshal resolved payload: %v", err)
+	}
+	if resolved.SeedUsed != 1 {
+		t.Fatalf("expected seed_used 1, got %d", resolved.SeedUsed)
+	}
+	if resolved.RngAlgo == "" {
+		t.Fatalf("expected rng_algo in resolved payload")
+	}
+	if resolved.SeedSource == "" {
+		t.Fatalf("expected seed_source in resolved payload")
+	}
+	if resolved.RollMode != "LIVE" {
+		t.Fatalf("expected roll_mode LIVE, got %q", resolved.RollMode)
+	}
+	if response.Rng == nil {
+		t.Fatal("expected rng response")
+	}
+	if response.Rng.GetSeedUsed() != 1 {
+		t.Fatalf("expected rng seed_used 1, got %d", response.Rng.GetSeedUsed())
+	}
+	if response.Rng.GetRollMode() != commonv1.RollMode_LIVE {
+		t.Fatalf("expected roll mode LIVE, got %v", response.Rng.GetRollMode())
 	}
 }
 
@@ -1808,6 +1839,115 @@ func TestSessionActionRollRejectsMissingTrait(t *testing.T) {
 	}
 	if eventStore.appendInputs[0].Type != sessiondomain.SessionEventTypeRequestRejected {
 		t.Fatalf("expected REQUEST_REJECTED event, got %s", eventStore.appendInputs[0].Type)
+	}
+}
+
+func TestSessionActionRollAcceptsReplaySeed(t *testing.T) {
+	fixedTime := time.Date(2026, 1, 25, 11, 0, 0, 0, time.UTC)
+	campaignStore := &fakeCampaignStore{getCampaign: domain.Campaign{ID: "camp-123"}}
+	sessionStore := &fakeSessionStore{
+		getSession: sessiondomain.Session{ID: "sess-123", CampaignID: "camp-123", Status: sessiondomain.SessionStatusActive},
+	}
+	eventStore := &fakeSessionEventStore{}
+
+	service := &SessionService{
+		stores: Stores{
+			Campaign: campaignStore,
+			Session:  sessionStore,
+			Event:    eventStore,
+		},
+		clock: func() time.Time { return fixedTime },
+		seedFunc: func() (int64, error) {
+			return 7, nil
+		},
+	}
+
+	seed := uint64(42)
+	response, err := service.SessionActionRoll(context.Background(), &sessionv1.SessionActionRollRequest{
+		CampaignId:  "camp-123",
+		SessionId:   "sess-123",
+		CharacterId: "char-1",
+		Trait:       "bravery",
+		Difficulty:  5,
+		Rng: &commonv1.RngRequest{
+			Seed:     &seed,
+			RollMode: commonv1.RollMode_REPLAY,
+		},
+	})
+	if err != nil {
+		t.Fatalf("session action roll: %v", err)
+	}
+	if response == nil || response.Rng == nil {
+		t.Fatal("expected rng response")
+	}
+	if response.Rng.GetSeedUsed() != seed {
+		t.Fatalf("expected seed_used %d, got %d", seed, response.Rng.GetSeedUsed())
+	}
+	if response.Rng.GetSeedSource() != "CLIENT" {
+		t.Fatalf("expected seed_source CLIENT, got %q", response.Rng.GetSeedSource())
+	}
+	if response.Rng.GetRollMode() != commonv1.RollMode_REPLAY {
+		t.Fatalf("expected roll mode REPLAY, got %v", response.Rng.GetRollMode())
+	}
+
+	var resolved actionRollResolvedPayload
+	if err := json.Unmarshal(eventStore.appendInputs[1].PayloadJSON, &resolved); err != nil {
+		t.Fatalf("unmarshal resolved payload: %v", err)
+	}
+	if resolved.SeedUsed != seed {
+		t.Fatalf("expected resolved seed_used %d, got %d", seed, resolved.SeedUsed)
+	}
+	if resolved.RollMode != "REPLAY" {
+		t.Fatalf("expected roll_mode REPLAY, got %q", resolved.RollMode)
+	}
+}
+
+func TestSessionActionRollIgnoresLiveSeedForNonGM(t *testing.T) {
+	fixedTime := time.Date(2026, 1, 25, 12, 0, 0, 0, time.UTC)
+	campaignStore := &fakeCampaignStore{getCampaign: domain.Campaign{ID: "camp-123"}}
+	sessionStore := &fakeSessionStore{
+		getSession: sessiondomain.Session{ID: "sess-123", CampaignID: "camp-123", Status: sessiondomain.SessionStatusActive},
+	}
+	eventStore := &fakeSessionEventStore{}
+
+	service := &SessionService{
+		stores: Stores{
+			Campaign: campaignStore,
+			Session:  sessionStore,
+			Event:    eventStore,
+		},
+		clock: func() time.Time { return fixedTime },
+		seedFunc: func() (int64, error) {
+			return 9, nil
+		},
+	}
+
+	seed := uint64(55)
+	response, err := service.SessionActionRoll(context.Background(), &sessionv1.SessionActionRollRequest{
+		CampaignId:  "camp-123",
+		SessionId:   "sess-123",
+		CharacterId: "char-1",
+		Trait:       "bravery",
+		Difficulty:  5,
+		Rng: &commonv1.RngRequest{
+			Seed:     &seed,
+			RollMode: commonv1.RollMode_LIVE,
+		},
+	})
+	if err != nil {
+		t.Fatalf("session action roll: %v", err)
+	}
+	if response == nil || response.Rng == nil {
+		t.Fatal("expected rng response")
+	}
+	if response.Rng.GetSeedUsed() != 9 {
+		t.Fatalf("expected seed_used 9, got %d", response.Rng.GetSeedUsed())
+	}
+	if response.Rng.GetSeedSource() != "SERVER" {
+		t.Fatalf("expected seed_source SERVER, got %q", response.Rng.GetSeedSource())
+	}
+	if response.Rng.GetRollMode() != commonv1.RollMode_LIVE {
+		t.Fatalf("expected roll mode LIVE, got %v", response.Rng.GetRollMode())
 	}
 }
 

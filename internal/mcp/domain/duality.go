@@ -3,30 +3,72 @@ package domain
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
+	commonv1 "github.com/louisbranch/duality-engine/api/gen/go/common/v1"
 	pb "github.com/louisbranch/duality-engine/api/gen/go/duality/v1"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
 
+// RngRequest represents optional RNG configuration for deterministic rolls.
+type RngRequest struct {
+	Seed     *uint64 `json:"seed,omitempty" jsonschema:"optional seed for deterministic rolls"`
+	RollMode string  `json:"roll_mode,omitempty" jsonschema:"roll mode (LIVE or REPLAY)"`
+}
+
+// RngResult represents RNG details used for a roll.
+type RngResult struct {
+	SeedUsed   uint64 `json:"seed_used" jsonschema:"seed value used by the server"`
+	RngAlgo    string `json:"rng_algo" jsonschema:"rng algorithm identifier"`
+	SeedSource string `json:"seed_source" jsonschema:"seed source (CLIENT or SERVER)"`
+	RollMode   string `json:"roll_mode" jsonschema:"roll mode applied"`
+}
+
+// rollModeToProto maps a roll mode label to the protobuf enum.
+func rollModeToProto(value string) commonv1.RollMode {
+	switch strings.ToUpper(strings.TrimSpace(value)) {
+	case "REPLAY":
+		return commonv1.RollMode_REPLAY
+	case "LIVE":
+		return commonv1.RollMode_LIVE
+	default:
+		return commonv1.RollMode_ROLL_MODE_UNSPECIFIED
+	}
+}
+
+// rollModeLabel maps a protobuf roll mode to a label for MCP output.
+func rollModeLabel(value commonv1.RollMode) string {
+	switch value {
+	case commonv1.RollMode_REPLAY:
+		return "REPLAY"
+	case commonv1.RollMode_LIVE:
+		return "LIVE"
+	default:
+		return ""
+	}
+}
+
 // ActionRollResult represents the MCP tool output for an action roll.
 type ActionRollResult struct {
-	Hope            int    `json:"hope" jsonschema:"hope die result"`
-	Fear            int    `json:"fear" jsonschema:"fear die result"`
-	Modifier        int    `json:"modifier" jsonschema:"modifier applied to the total"`
-	Difficulty      *int   `json:"difficulty,omitempty" jsonschema:"difficulty target, if provided"`
-	Total           int    `json:"total" jsonschema:"sum of dice and modifier"`
-	IsCrit          bool   `json:"is_crit" jsonschema:"whether the roll is a critical success"`
-	MeetsDifficulty bool   `json:"meets_difficulty" jsonschema:"whether total meets difficulty"`
-	Outcome         string `json:"outcome" jsonschema:"categorized roll outcome"`
+	Hope            int        `json:"hope" jsonschema:"hope die result"`
+	Fear            int        `json:"fear" jsonschema:"fear die result"`
+	Modifier        int        `json:"modifier" jsonschema:"modifier applied to the total"`
+	Difficulty      *int       `json:"difficulty,omitempty" jsonschema:"difficulty target, if provided"`
+	Total           int        `json:"total" jsonschema:"sum of dice and modifier"`
+	IsCrit          bool       `json:"is_crit" jsonschema:"whether the roll is a critical success"`
+	MeetsDifficulty bool       `json:"meets_difficulty" jsonschema:"whether total meets difficulty"`
+	Outcome         string     `json:"outcome" jsonschema:"categorized roll outcome"`
+	Rng             *RngResult `json:"rng,omitempty" jsonschema:"rng details"`
 }
 
 // ActionRollInput represents the MCP tool input for an action roll.
 type ActionRollInput struct {
-	Modifier   int  `json:"modifier" jsonschema:"modifier applied to the roll"`
-	Difficulty *int `json:"difficulty" jsonschema:"optional difficulty target"`
+	Modifier   int         `json:"modifier" jsonschema:"modifier applied to the roll"`
+	Difficulty *int        `json:"difficulty" jsonschema:"optional difficulty target"`
+	Rng        *RngRequest `json:"rng,omitempty" jsonschema:"optional rng configuration"`
 }
 
 // DualityOutcomeInput represents the MCP tool input for deterministic outcomes.
@@ -126,6 +168,7 @@ type RollDiceSpec struct {
 // RollDiceInput represents the MCP tool input for rolling dice.
 type RollDiceInput struct {
 	Dice []RollDiceSpec `json:"dice" jsonschema:"dice specifications to roll"`
+	Rng  *RngRequest    `json:"rng,omitempty" jsonschema:"optional rng configuration"`
 }
 
 // RollDiceRoll represents the results for a single dice spec.
@@ -139,6 +182,7 @@ type RollDiceRoll struct {
 type RollDiceResult struct {
 	Rolls []RollDiceRoll `json:"rolls" jsonschema:"results for each dice spec"`
 	Total int            `json:"total" jsonschema:"sum of all roll totals"`
+	Rng   *RngResult     `json:"rng,omitempty" jsonschema:"rng details"`
 }
 
 // ActionRollTool defines the MCP tool schema for action rolls.
@@ -214,13 +258,32 @@ func ActionRollHandler(client pb.DualityServiceClient) mcp.ToolHandlerFor[Action
 		}
 
 		var header metadata.MD
+		var rngRequest *commonv1.RngRequest
+		if input.Rng != nil {
+			rngRequest = &commonv1.RngRequest{RollMode: rollModeToProto(input.Rng.RollMode)}
+			if input.Rng.Seed != nil {
+				rngRequest.Seed = input.Rng.Seed
+			}
+		}
 
 		response, err := client.ActionRoll(callCtx, &pb.ActionRollRequest{
 			Modifier:   int32(modifier),
 			Difficulty: difficulty,
+			Rng:        rngRequest,
 		}, grpc.Header(&header))
 		if err != nil {
 			return nil, ActionRollResult{}, fmt.Errorf("action roll failed: %w", err)
+		}
+
+		var rngResult *RngResult
+		if response.GetRng() != nil {
+			rng := response.GetRng()
+			rngResult = &RngResult{
+				SeedUsed:   rng.GetSeedUsed(),
+				RngAlgo:    rng.GetRngAlgo(),
+				SeedSource: rng.GetSeedSource(),
+				RollMode:   rollModeLabel(rng.GetRollMode()),
+			}
 		}
 
 		result := ActionRollResult{
@@ -231,6 +294,7 @@ func ActionRollHandler(client pb.DualityServiceClient) mcp.ToolHandlerFor[Action
 			IsCrit:          response.GetIsCrit(),
 			MeetsDifficulty: response.GetMeetsDifficulty(),
 			Outcome:         response.GetOutcome().String(),
+			Rng:             rngResult,
 		}
 		if response.Difficulty != nil {
 			value := int(response.GetDifficulty())
@@ -504,9 +568,17 @@ func RollDiceHandler(client pb.DualityServiceClient) mcp.ToolHandlerFor[RollDice
 		}
 
 		var header metadata.MD
+		var rngRequest *commonv1.RngRequest
+		if input.Rng != nil {
+			rngRequest = &commonv1.RngRequest{RollMode: rollModeToProto(input.Rng.RollMode)}
+			if input.Rng.Seed != nil {
+				rngRequest.Seed = input.Rng.Seed
+			}
+		}
 
 		response, err := client.RollDice(callCtx, &pb.RollDiceRequest{
 			Dice: diceSpecs,
+			Rng:  rngRequest,
 		}, grpc.Header(&header))
 		if err != nil {
 			return nil, RollDiceResult{}, fmt.Errorf("dice roll failed: %w", err)
@@ -524,9 +596,21 @@ func RollDiceHandler(client pb.DualityServiceClient) mcp.ToolHandlerFor[RollDice
 			})
 		}
 
+		var rngResult *RngResult
+		if response.GetRng() != nil {
+			rng := response.GetRng()
+			rngResult = &RngResult{
+				SeedUsed:   rng.GetSeedUsed(),
+				RngAlgo:    rng.GetRngAlgo(),
+				SeedSource: rng.GetSeedSource(),
+				RollMode:   rollModeLabel(rng.GetRollMode()),
+			}
+		}
+
 		result := RollDiceResult{
 			Rolls: rolls,
 			Total: int(response.GetTotal()),
+			Rng:   rngResult,
 		}
 
 		responseMeta := MergeResponseMetadata(callMeta, header)

@@ -7,6 +7,7 @@
 package dualityv1
 
 import (
+	v1 "github.com/louisbranch/duality-engine/api/gen/go/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -27,7 +28,9 @@ type ActionRollRequest struct {
 	Modifier int32 `protobuf:"varint,1,opt,name=modifier,proto3" json:"modifier,omitempty"`
 	// If omitted, the server returns a roll outcome (Hope/Fear/Crit) but does not
 	// classify as success/failure.
-	Difficulty    *int32 `protobuf:"varint,2,opt,name=difficulty,proto3,oneof" json:"difficulty,omitempty"`
+	Difficulty *int32 `protobuf:"varint,2,opt,name=difficulty,proto3,oneof" json:"difficulty,omitempty"`
+	// Optional RNG configuration for deterministic rolls.
+	Rng           *v1.RngRequest `protobuf:"bytes,3,opt,name=rng,proto3" json:"rng,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -76,6 +79,13 @@ func (x *ActionRollRequest) GetDifficulty() int32 {
 	return 0
 }
 
+func (x *ActionRollRequest) GetRng() *v1.RngRequest {
+	if x != nil {
+		return x.Rng
+	}
+	return nil
+}
+
 type ActionRollResponse struct {
 	state    protoimpl.MessageState `protogen:"open.v1"`
 	Hope     int32                  `protobuf:"varint,1,opt,name=hope,proto3" json:"hope,omitempty"`
@@ -84,10 +94,11 @@ type ActionRollResponse struct {
 	// Echoed back if provided in the request.
 	Difficulty *int32 `protobuf:"varint,4,opt,name=difficulty,proto3,oneof" json:"difficulty,omitempty"`
 	// total = hope + fear + modifier
-	Total           int32   `protobuf:"varint,5,opt,name=total,proto3" json:"total,omitempty"`
-	IsCrit          bool    `protobuf:"varint,6,opt,name=is_crit,json=isCrit,proto3" json:"is_crit,omitempty"`
-	MeetsDifficulty bool    `protobuf:"varint,7,opt,name=meets_difficulty,json=meetsDifficulty,proto3" json:"meets_difficulty,omitempty"`
-	Outcome         Outcome `protobuf:"varint,8,opt,name=outcome,proto3,enum=duality.v1.Outcome" json:"outcome,omitempty"`
+	Total           int32           `protobuf:"varint,5,opt,name=total,proto3" json:"total,omitempty"`
+	IsCrit          bool            `protobuf:"varint,6,opt,name=is_crit,json=isCrit,proto3" json:"is_crit,omitempty"`
+	MeetsDifficulty bool            `protobuf:"varint,7,opt,name=meets_difficulty,json=meetsDifficulty,proto3" json:"meets_difficulty,omitempty"`
+	Outcome         Outcome         `protobuf:"varint,8,opt,name=outcome,proto3,enum=duality.v1.Outcome" json:"outcome,omitempty"`
+	Rng             *v1.RngResponse `protobuf:"bytes,9,opt,name=rng,proto3" json:"rng,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -176,6 +187,13 @@ func (x *ActionRollResponse) GetOutcome() Outcome {
 		return x.Outcome
 	}
 	return Outcome_OUTCOME_UNSPECIFIED
+}
+
+func (x *ActionRollResponse) GetRng() *v1.RngResponse {
+	if x != nil {
+		return x.Rng
+	}
+	return nil
 }
 
 type DualityOutcomeRequest struct {
@@ -874,7 +892,9 @@ func (x *OutcomeCount) GetCount() int32 {
 type RollDiceRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The dice to roll in order.
-	Dice          []*DiceSpec `protobuf:"bytes,1,rep,name=dice,proto3" json:"dice,omitempty"`
+	Dice []*DiceSpec `protobuf:"bytes,1,rep,name=dice,proto3" json:"dice,omitempty"`
+	// Optional RNG configuration for deterministic rolls.
+	Rng           *v1.RngRequest `protobuf:"bytes,2,opt,name=rng,proto3" json:"rng,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -916,11 +936,20 @@ func (x *RollDiceRequest) GetDice() []*DiceSpec {
 	return nil
 }
 
+func (x *RollDiceRequest) GetRng() *v1.RngRequest {
+	if x != nil {
+		return x.Rng
+	}
+	return nil
+}
+
 type RollDiceResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Rolls []*DiceRoll            `protobuf:"bytes,1,rep,name=rolls,proto3" json:"rolls,omitempty"`
 	// The sum of all rolls.
-	Total         int32 `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	Total int32 `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	// RNG details used for this roll.
+	Rng           *v1.RngResponse `protobuf:"bytes,3,opt,name=rng,proto3" json:"rng,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -969,18 +998,26 @@ func (x *RollDiceResponse) GetTotal() int32 {
 	return 0
 }
 
+func (x *RollDiceResponse) GetRng() *v1.RngResponse {
+	if x != nil {
+		return x.Rng
+	}
+	return nil
+}
+
 var File_duality_v1_requests_proto protoreflect.FileDescriptor
 
 const file_duality_v1_requests_proto_rawDesc = "" +
 	"\n" +
 	"\x19duality/v1/requests.proto\x12\n" +
-	"duality.v1\x1a\x18duality/v1/outcome.proto\x1a\x15duality/v1/dice.proto\x1a\x18duality/v1/explain.proto\"c\n" +
+	"duality.v1\x1a\x13common/v1/rng.proto\x1a\x18duality/v1/outcome.proto\x1a\x15duality/v1/dice.proto\x1a\x18duality/v1/explain.proto\"\x8c\x01\n" +
 	"\x11ActionRollRequest\x12\x1a\n" +
 	"\bmodifier\x18\x01 \x01(\x05R\bmodifier\x12#\n" +
 	"\n" +
 	"difficulty\x18\x02 \x01(\x05H\x00R\n" +
-	"difficulty\x88\x01\x01B\r\n" +
-	"\v_difficulty\"\x95\x02\n" +
+	"difficulty\x88\x01\x01\x12'\n" +
+	"\x03rng\x18\x03 \x01(\v2\x15.common.v1.RngRequestR\x03rngB\r\n" +
+	"\v_difficulty\"\xbf\x02\n" +
 	"\x12ActionRollResponse\x12\x12\n" +
 	"\x04hope\x18\x01 \x01(\x05R\x04hope\x12\x12\n" +
 	"\x04fear\x18\x02 \x01(\x05R\x04fear\x12\x1a\n" +
@@ -991,7 +1028,8 @@ const file_duality_v1_requests_proto_rawDesc = "" +
 	"\x05total\x18\x05 \x01(\x05R\x05total\x12\x17\n" +
 	"\ais_crit\x18\x06 \x01(\bR\x06isCrit\x12)\n" +
 	"\x10meets_difficulty\x18\a \x01(\bR\x0fmeetsDifficulty\x12-\n" +
-	"\aoutcome\x18\b \x01(\x0e2\x13.duality.v1.OutcomeR\aoutcomeB\r\n" +
+	"\aoutcome\x18\b \x01(\x0e2\x13.duality.v1.OutcomeR\aoutcome\x12(\n" +
+	"\x03rng\x18\t \x01(\v2\x16.common.v1.RngResponseR\x03rngB\r\n" +
 	"\v_difficulty\"\x8f\x01\n" +
 	"\x15DualityOutcomeRequest\x12\x12\n" +
 	"\x04hope\x18\x01 \x01(\x05R\x04hope\x12\x12\n" +
@@ -1065,12 +1103,14 @@ const file_duality_v1_requests_proto_rawDesc = "" +
 	"\boutcomes\x18\b \x03(\x0e2\x13.duality.v1.OutcomeR\boutcomes\"S\n" +
 	"\fOutcomeCount\x12-\n" +
 	"\aoutcome\x18\x01 \x01(\x0e2\x13.duality.v1.OutcomeR\aoutcome\x12\x14\n" +
-	"\x05count\x18\x02 \x01(\x05R\x05count\";\n" +
+	"\x05count\x18\x02 \x01(\x05R\x05count\"d\n" +
 	"\x0fRollDiceRequest\x12(\n" +
-	"\x04dice\x18\x01 \x03(\v2\x14.duality.v1.DiceSpecR\x04dice\"T\n" +
+	"\x04dice\x18\x01 \x03(\v2\x14.duality.v1.DiceSpecR\x04dice\x12'\n" +
+	"\x03rng\x18\x02 \x01(\v2\x15.common.v1.RngRequestR\x03rng\"~\n" +
 	"\x10RollDiceResponse\x12*\n" +
 	"\x05rolls\x18\x01 \x03(\v2\x14.duality.v1.DiceRollR\x05rolls\x12\x14\n" +
-	"\x05total\x18\x02 \x01(\x05R\x05totalBGZEgithub.com/louisbranch/duality-engine/api/gen/go/duality/v1;dualityv1b\x06proto3"
+	"\x05total\x18\x02 \x01(\x05R\x05total\x12(\n" +
+	"\x03rng\x18\x03 \x01(\v2\x16.common.v1.RngResponseR\x03rngBGZEgithub.com/louisbranch/duality-engine/api/gen/go/duality/v1;dualityv1b\x06proto3"
 
 var (
 	file_duality_v1_requests_proto_rawDescOnce sync.Once
@@ -1099,28 +1139,34 @@ var file_duality_v1_requests_proto_goTypes = []any{
 	(*OutcomeCount)(nil),               // 10: duality.v1.OutcomeCount
 	(*RollDiceRequest)(nil),            // 11: duality.v1.RollDiceRequest
 	(*RollDiceResponse)(nil),           // 12: duality.v1.RollDiceResponse
-	(Outcome)(0),                       // 13: duality.v1.Outcome
-	(*Intermediates)(nil),              // 14: duality.v1.Intermediates
-	(*ExplainStep)(nil),                // 15: duality.v1.ExplainStep
-	(*DiceSpec)(nil),                   // 16: duality.v1.DiceSpec
-	(*DiceRoll)(nil),                   // 17: duality.v1.DiceRoll
+	(*v1.RngRequest)(nil),              // 13: common.v1.RngRequest
+	(Outcome)(0),                       // 14: duality.v1.Outcome
+	(*v1.RngResponse)(nil),             // 15: common.v1.RngResponse
+	(*Intermediates)(nil),              // 16: duality.v1.Intermediates
+	(*ExplainStep)(nil),                // 17: duality.v1.ExplainStep
+	(*DiceSpec)(nil),                   // 18: duality.v1.DiceSpec
+	(*DiceRoll)(nil),                   // 19: duality.v1.DiceRoll
 }
 var file_duality_v1_requests_proto_depIdxs = []int32{
-	13, // 0: duality.v1.ActionRollResponse.outcome:type_name -> duality.v1.Outcome
-	13, // 1: duality.v1.DualityOutcomeResponse.outcome:type_name -> duality.v1.Outcome
-	13, // 2: duality.v1.DualityExplainResponse.outcome:type_name -> duality.v1.Outcome
-	14, // 3: duality.v1.DualityExplainResponse.intermediates:type_name -> duality.v1.Intermediates
-	15, // 4: duality.v1.DualityExplainResponse.steps:type_name -> duality.v1.ExplainStep
-	10, // 5: duality.v1.DualityProbabilityResponse.outcome_counts:type_name -> duality.v1.OutcomeCount
-	13, // 6: duality.v1.RulesVersionResponse.outcomes:type_name -> duality.v1.Outcome
-	13, // 7: duality.v1.OutcomeCount.outcome:type_name -> duality.v1.Outcome
-	16, // 8: duality.v1.RollDiceRequest.dice:type_name -> duality.v1.DiceSpec
-	17, // 9: duality.v1.RollDiceResponse.rolls:type_name -> duality.v1.DiceRoll
-	10, // [10:10] is the sub-list for method output_type
-	10, // [10:10] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	13, // 0: duality.v1.ActionRollRequest.rng:type_name -> common.v1.RngRequest
+	14, // 1: duality.v1.ActionRollResponse.outcome:type_name -> duality.v1.Outcome
+	15, // 2: duality.v1.ActionRollResponse.rng:type_name -> common.v1.RngResponse
+	14, // 3: duality.v1.DualityOutcomeResponse.outcome:type_name -> duality.v1.Outcome
+	14, // 4: duality.v1.DualityExplainResponse.outcome:type_name -> duality.v1.Outcome
+	16, // 5: duality.v1.DualityExplainResponse.intermediates:type_name -> duality.v1.Intermediates
+	17, // 6: duality.v1.DualityExplainResponse.steps:type_name -> duality.v1.ExplainStep
+	10, // 7: duality.v1.DualityProbabilityResponse.outcome_counts:type_name -> duality.v1.OutcomeCount
+	14, // 8: duality.v1.RulesVersionResponse.outcomes:type_name -> duality.v1.Outcome
+	14, // 9: duality.v1.OutcomeCount.outcome:type_name -> duality.v1.Outcome
+	18, // 10: duality.v1.RollDiceRequest.dice:type_name -> duality.v1.DiceSpec
+	13, // 11: duality.v1.RollDiceRequest.rng:type_name -> common.v1.RngRequest
+	19, // 12: duality.v1.RollDiceResponse.rolls:type_name -> duality.v1.DiceRoll
+	15, // 13: duality.v1.RollDiceResponse.rng:type_name -> common.v1.RngResponse
+	14, // [14:14] is the sub-list for method output_type
+	14, // [14:14] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_duality_v1_requests_proto_init() }
