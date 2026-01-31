@@ -1,86 +1,106 @@
-# Duality Engine
+# Duality Engine ![Coverage](../../raw/badges/coverage.svg)
 
-![Coverage](../../raw/badges/coverage.svg)
+Duality Engine is a server-authoritative mechanics and campaign-state service for running a Daggerheart Compatible campaign using the Duality Dice system.
 
-Duality Engine is a server-authoritative implementation of the Duality
-Dice system used in Daggerheart. It provides deterministic, auditable
-mechanical outcomes via gRPC and an MCP (stdio JSON-RPC) bridge.
+Its primary goal is enabling an AI Game Master: an LLM (or agent runtime) drives the campaign by calling MCP tools/resources to resolve mechanics and persist state, while human participants interact through whatever client you build around it.
 
-This project focuses on rules adjudication and campaign state
-management. It does not generate narrative content and does not bundle
-Daggerheart SRD material.
+This project focuses on rules adjudication and campaign state management. It does not generate narrative content and it does not ship any copyrighted Daggerheart material (no rulebook text, artwork, setting, or other Prohibited Content).
 
-Documentation: https://louisbranch.github.io/duality-engine/
+## Who this is for
 
-------------------------------------------------------------------------
+Right now, Duality Engine is primarily for developers experimenting with AI-driven campaign runners:
+
+- You want an AI GM to call tools and get structured outcomes.
+- You want deterministic resolution you can replay, test, and audit.
+- You do not want clients to embed rules logic.
+
+It is not a VTT. You will need to run the service locally or remotely and integrate a client yourself.
+
+## What it does
+
+- **Rules adjudication**: resolve Duality Dice rolls and return structured outcomes.
+- **Campaign state**: persisted campaign entities (see State Model below).
+- **Determinism**: supports auditable resolution (useful for testing, replay, and debugging).
+- **Two interfaces, same behavior**: gRPC APIs and MCP tools/resources are kept in parity.
+
+## Interfaces
+
+### MCP (primary integration surface)
+
+Use MCP if you are integrating with AI tooling that can call tools/resources.
+
+- **stdio JSON-RPC**: best fit for local agent runtimes and tooling.
+- **HTTP**: useful when you want to run the MCP server remotely or behind a gateway.
+
+See [docs](#Documentation) for the tool/resource catalog.
+
+### gRPC (service API)
+
+Use gRPC if you are building a custom client (UI, automation, services) or you want a strongly-typed API. The gRPC API is the source of truth; the MCP server is a transport layer over it.
 
 ## Quickstart
 
-See [Getting started](docs/getting-started.md) for run instructions and default endpoints.
+### Run from source (recommended for development)
 
-------------------------------------------------------------------------
+```sh
+make run
+```
 
-## MCP Server
+Ports, endpoints, and configuration are documented in [docs](#Documentation).
 
-The MCP server exposes the Duality Engine rules and campaign state as MCP tools/resources so clients can drive deterministic play flows without embedding game logic. It is a thin transport layer over the gRPC services and keeps all adjudication and persistence on the server.
+### Run with Docker (recommended for local-only execution)
 
-See [MCP tools and resources](docs/mcp.md) for the full catalog and usage details.
-------------------------------------------------------------------------
+Download the Docker Hub [image](https://hub.docker.com/r/louisbranch/duality-engine).
+
+```shell
+docker pull louisbranch/duality-engine:latest
+```
+
+Notes:
+- The Docker image exposes an MCP server on port 8081 by default.
+- Full port/config details live in [docs](#Documentation).
 
 ## State Model
 
 Persisted (BoltDB):
 
--   Campaigns
--   Participants
--   Characters
--   Sessions
+- Campaigns
+- Participants
+- Characters
+- Sessions
 
 Ephemeral:
 
--   MCP execution context
+- MCP execution context
 
-------------------------------------------------------------------------
+## Status and stability
 
-## Configuration
-
-See: [Configuration](docs/configuration.md)
-
-------------------------------------------------------------------------
+- **Pre-release / prototype**
+- gRPC and MCP are kept in parity, but the API is expected to change until a release candidate is published.
 
 ## Documentation
 
--   [Getting started](docs/getting-started.md)
--   [Configuration](docs/configuration.md)
--   [MCP tools and resources](docs/mcp.md)
--   [Integration tests](docs/integration-tests.md)
+- Published docs site: [https://louisbranch.github.io/duality-engine/](https://louisbranch.github.io/duality-engine/)
+- Repo docs:
+  - [Getting Started](docs/getting-started.md)
+  - [Configuration](docs/configuration.md)
+  - [MCP](docs/mcp.md)
+  - [Integration Tests](docs/integration-tests.md)
 
-------------------------------------------------------------------------
+## Near-term roadmap
 
-## Near-term Roadmap
+- Expand campaign lifecycle tools
+- Improve MCP context handling for multi-client use
+- Expand telemetry and request tracing
+- Support user-provided content packs (e.g. JSON/Markdown) to extend MCP resources without bundling copyrighted material
 
--   Publish prebuilt binaries
--   Expand campaign lifecycle tools
--   Improve MCP context handling for multi-client use
--   Expand telemetry and request tracing
+## Attribution and licensing
 
-------------------------------------------------------------------------
+Duality Engine is an independent, fan-made project and is not affiliated with Critical Role Productions LLC, Darrington Press, or their partners.
 
-## Attribution and Licensing
+Daggerheart is a trademark of Critical Role Productions LLC. This project is intended for use under the Darrington Press Community Gaming License (DPCGL). Source code is licensed under the MIT License. See [LICENSE](LICENSE).
 
-Duality Engine is an independent, fan-made project and is not affiliated
-with Critical Role Productions LLC, Darrington Press, or their partners.
-
-Daggerheart is a trademark of Critical Role Productions LLC.
-
-This project is intended for use under the Darrington Press Community
-Gaming License.
-
-Source code is licensed under the MIT License. See [LICENSE](LICENSE).
-
-All trademarks, artwork, and copyrighted material remain the property of
-their respective owners.
+All trademarks and copyrighted material remain the property of their respective owners.
 
 Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
-
 Authors: [AUTHORS](AUTHORS).
