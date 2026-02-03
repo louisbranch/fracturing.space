@@ -49,36 +49,26 @@ Default HTTP endpoint: `http://localhost:8081/mcp`
 
 ## Docker (Local testing)
 
-Build the image:
+Build the images with bake:
 
 ```sh
-docker build -t duality-engine:dev .
+docker buildx bake
 ```
 
-Or use the helper script (builds and runs):
+Run with Compose (MCP HTTP on loopback, gRPC internal-only):
 
 ```sh
-./scripts/docker-run.sh
+docker compose up
 ```
 
-Create a local data directory for BoltDB:
+Compose uses a named volume for the gRPC data store. To remove it:
 
 ```sh
-mkdir -p data
-sudo chown -R 65532:65532 data
+docker compose down -v
 ```
 
-Run the container (MCP HTTP on loopback, gRPC internal-only):
-
-```sh
-docker run \
-  -p 127.0.0.1:8081:8081 \
-  -v $(pwd)/data:/data \
-  -e DUALITY_DB_PATH=/data/duality.db \
-  -e DUALITY_GRPC_ADDR=127.0.0.1:8080 \
-  -e DUALITY_MCP_ALLOWED_HOSTS=localhost \
-  duality-engine:dev
-```
+On first run, Compose initializes the volume permissions so the nonroot gRPC
+container can write the database.
 
 Check MCP health:
 
@@ -95,11 +85,29 @@ proxy (Caddy/Nginx) that terminates TLS. Allow only your domain in
 Example (replace `your-domain.example`):
 
 ```sh
-docker run \
-  -p 127.0.0.1:8081:8081 \
+docker network create duality
+
+docker run -d --name duality-grpc \
+  --network duality \
+  -p 127.0.0.1:8080:8080 \
   -v /srv/duality/data:/data \
   -e DUALITY_DB_PATH=/data/duality.db \
-  -e DUALITY_GRPC_ADDR=127.0.0.1:8080 \
+  louisbranch/duality-grpc:latest
+
+docker run -d --name duality-mcp \
+  --network duality \
+  -p 127.0.0.1:8081:8081 \
   -e DUALITY_MCP_ALLOWED_HOSTS=your-domain.example \
-  duality-engine:dev
+  louisbranch/duality-mcp:latest \
+  -transport=http -http-addr=0.0.0.0:8081 -addr=duality-grpc:8080
+```
+
+## Docker (Publish images)
+
+Use bake to build and push both images:
+
+```sh
+GRPC_IMAGE="louisbranch/duality-grpc:latest" \
+MCP_IMAGE="louisbranch/duality-mcp:latest" \
+docker buildx bake --push
 ```
