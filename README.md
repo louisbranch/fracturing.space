@@ -50,14 +50,15 @@ Ports, endpoints, and configuration are documented in [docs](#Documentation).
 
 ### Run with Docker (recommended for local-only execution)
 
-Download the Docker Hub [image](https://hub.docker.com/r/louisbranch/duality-engine).
+Download the Docker Hub images:
 
 ```shell
-docker pull louisbranch/duality-engine:latest
+docker pull louisbranch/duality-grpc:latest
+docker pull louisbranch/duality-mcp:latest
 ```
 
 Notes:
-- The Docker image exposes an MCP server on port 8081 by default.
+- The gRPC server listens on port 8080, and the MCP HTTP transport listens on port 8081 when enabled.
 - Full port/config details live in [docs](#Documentation).
 
 ## State Model

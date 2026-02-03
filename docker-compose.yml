@@ -1,0 +1,39 @@
+services:
+  init-data:
+    image: busybox:1.36
+    command: ["sh", "-c", "chown -R 65532:65532 /data"]
+    volumes:
+      - duality-data:/data
+
+  grpc:
+    build:
+      context: .
+      target: grpc
+      args:
+        GO_VERSION: ${GO_VERSION:-1.25.6}
+    image: duality-grpc:dev
+    depends_on:
+      init-data:
+        condition: service_completed_successfully
+    environment:
+      - DUALITY_DB_PATH=/data/duality.db
+    volumes:
+      - duality-data:/data
+    ports:
+      - "127.0.0.1:8080:8080"
+
+  mcp:
+    build:
+      context: .
+      target: mcp
+      args:
+        GO_VERSION: ${GO_VERSION:-1.25.6}
+    image: duality-mcp:dev
+    command: ["-transport=http", "-http-addr=0.0.0.0:8081", "-addr=grpc:8080"]
+    depends_on:
+      - grpc
+    ports:
+      - "127.0.0.1:8081:8081"
+
+volumes:
+  duality-data:

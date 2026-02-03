@@ -10,16 +10,23 @@ COPY . .
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/server ./cmd/server
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/mcp ./cmd/mcp
-RUN CGO_ENABLED=0 GOOS=linux go build -o /out/entrypoint ./cmd/entrypoint
 
-FROM gcr.io/distroless/static-debian12:nonroot
+FROM gcr.io/distroless/static-debian12:nonroot AS grpc
 
 WORKDIR /app
 
 COPY --from=build /out/server /app/server
+
+EXPOSE 8080
+
+ENTRYPOINT ["/app/server"]
+
+FROM gcr.io/distroless/static-debian12:nonroot AS mcp
+
+WORKDIR /app
+
 COPY --from=build /out/mcp /app/mcp
-COPY --from=build /out/entrypoint /app/entrypoint
 
 EXPOSE 8081
 
-ENTRYPOINT ["/app/entrypoint"]
+ENTRYPOINT ["/app/mcp"]
