@@ -1,37 +1,55 @@
-// Package main implements a client for the Duality service.
+// Package main hosts the Duality web client.
 package main
 
 import (
 	"context"
 	"flag"
 	"log"
+	"os"
+	"os/signal"
+	"strings"
+	"syscall"
 	"time"
 
-	pb "github.com/louisbranch/duality-engine/api/gen/go/duality/v1"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
+	"github.com/louisbranch/duality-engine/internal/web"
 )
 
 var (
-	addr = flag.String("addr", "localhost:8080", "the address to connect to")
+	// defaultHTTPAddr sets the fallback HTTP listen address.
+	defaultHTTPAddr = ":8082"
+	// defaultGRPCAddr sets the fallback gRPC server address.
+	defaultGRPCAddr = "localhost:8080"
 )
 
-func main() {
-	flag.Parse()
-	// Set up a connection to the server.
-	conn, err := grpc.NewClient(*addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		log.Fatalf("did not connect: %v", err)
+// envOrDefault returns the trimmed environment value or a fallback.
+func envOrDefault(key, fallback string) string {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return fallback
 	}
-	defer conn.Close()
-	c := pb.NewDualityServiceClient(conn)
+	return value
+}
 
-	// Contact the server and print out its response.
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-	r, err := c.ActionRoll(ctx, &pb.ActionRollRequest{})
+// main runs the web server with optional gRPC connectivity.
+func main() {
+	httpAddr := flag.String("http-addr", envOrDefault("DUALITY_WEB_ADDR", defaultHTTPAddr), "HTTP listen address")
+	grpcAddr := flag.String("grpc-addr", envOrDefault("DUALITY_GRPC_ADDR", defaultGRPCAddr), "gRPC server address")
+	flag.Parse()
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	server, err := web.NewServer(ctx, web.Config{
+		HTTPAddr:        *httpAddr,
+		GRPCAddr:        *grpcAddr,
+		GRPCDialTimeout: 2 * time.Second,
+	})
 	if err != nil {
-		log.Fatalf("could not perform action roll: %v", err)
+		log.Fatalf("init web server: %v", err)
 	}
-	log.Printf("Outcome: %s", r.GetOutcome())
+	defer server.Close()
+
+	if err = server.ListenAndServe(ctx); err != nil {
+		log.Fatalf("serve web: %v", err)
+	}
 }

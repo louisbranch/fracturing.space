@@ -8,7 +8,7 @@ PROTO_FILES := \
 	$(wildcard $(PROTO_DIR)/duality/v1/*.proto) \
 	$(wildcard $(PROTO_DIR)/session/v1/*.proto)
 
-.PHONY: all proto clean run cover test integration
+.PHONY: all proto clean run cover test integration templ-generate
 
 all: proto
 
@@ -21,6 +21,9 @@ proto:
 		--go-grpc_out=$(GEN_GO_DIR) \
 		--go-grpc_opt=paths=source_relative \
 		$(PROTO_FILES)
+
+templ-generate:
+	go run github.com/a-h/templ/cmd/templ@v0.3.977 generate ./...
 
 clean:
 	rm -rf $(GEN_GO_DIR)

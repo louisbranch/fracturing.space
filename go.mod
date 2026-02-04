@@ -3,6 +3,7 @@ module github.com/louisbranch/duality-engine
 go 1.25.6
 
 require (
+	github.com/a-h/templ v0.3.977
 	github.com/modelcontextprotocol/go-sdk v1.2.0
 	go.etcd.io/bbolt v1.4.3
 	google.golang.org/grpc v1.78.0
