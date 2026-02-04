@@ -291,10 +291,26 @@ func (f *fakeSessionClient) ApplyRollOutcome(ctx context.Context, req *sessionv1
 	return f.applyRollOutcomeResult, f.applyRollOutcomeErr
 }
 
-// TestGRPCAddressPrefersEnv ensures env configuration overrides defaults.
-func TestGRPCAddressPrefersEnv(t *testing.T) {
+// TestGRPCAddressUsesFallbackOverEnv ensures the fallback wins over env.
+func TestGRPCAddressUsesFallbackOverEnv(t *testing.T) {
 	t.Setenv("DUALITY_GRPC_ADDR", "env:123")
-	if got := grpcAddress("fallback"); got != "env:123" {
+	if got := grpcAddress("fallback"); got != "fallback" {
+		t.Fatalf("expected fallback address, got %q", got)
+	}
+}
+
+// TestGRPCAddressUsesEnvWhenFallbackEmpty ensures env is used when fallback is empty.
+func TestGRPCAddressUsesEnvWhenFallbackEmpty(t *testing.T) {
+	t.Setenv("DUALITY_GRPC_ADDR", "env:123")
+	if got := grpcAddress(""); got != "env:123" {
+		t.Fatalf("expected env address, got %q", got)
+	}
+}
+
+// TestGRPCAddressUsesEnvWhenFallbackWhitespace ensures env is used when fallback is whitespace.
+func TestGRPCAddressUsesEnvWhenFallbackWhitespace(t *testing.T) {
+	t.Setenv("DUALITY_GRPC_ADDR", "env:123")
+	if got := grpcAddress(" "); got != "env:123" {
 		t.Fatalf("expected env address, got %q", got)
 	}
 }

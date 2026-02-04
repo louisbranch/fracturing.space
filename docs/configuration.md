@@ -3,9 +3,9 @@
 ## Environment variables
 
 - `DUALITY_DB_PATH`: file path for the campaign BoltDB store. Default: `data/duality.db`.
-- `DUALITY_GRPC_ADDR`: gRPC address used by the MCP server. Defaults to `localhost:8080`.
+- `DUALITY_GRPC_ADDR`: gRPC address used by the MCP server when `-addr` is not set. Defaults to `localhost:8080`.
 - `DUALITY_MCP_ALLOWED_HOSTS`: comma-separated list of allowed Host/Origin values for MCP HTTP transport. Defaults to loopback-only when unset.
-- `DUALITY_MCP_HTTP_ADDR`: HTTP bind address for MCP transport when running via the container entrypoint. Defaults to `0.0.0.0:8081`.
+- `DUALITY_MCP_HTTP_ADDR`: HTTP bind address for MCP transport when using HTTP and `-http-addr` is not set. Defaults to `0.0.0.0:8081`.
 
 ## MCP Server Configuration
 
@@ -21,8 +21,9 @@ The MCP server (`cmd/mcp`) accepts the following flags:
 
 ### Address Overrides
 
-The MCP server accepts a flag for the gRPC address. If `DUALITY_GRPC_ADDR`
-is set, it takes precedence over the flag value.
+The MCP server accepts flags for gRPC and HTTP addresses. If `DUALITY_GRPC_ADDR`
+or `DUALITY_MCP_HTTP_ADDR` are set, they provide defaults when the matching flag
+is omitted. Command-line flags take precedence over env values.
 
 ### Transport Selection
 

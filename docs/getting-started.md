@@ -82,6 +82,9 @@ For remote deployments, keep MCP bound to loopback and front it with a reverse
 proxy (Caddy/Nginx) that terminates TLS. Allow only your domain in
 `DUALITY_MCP_ALLOWED_HOSTS`.
 
+You can set `DUALITY_GRPC_ADDR` and `DUALITY_MCP_HTTP_ADDR` in the MCP container
+instead of flags. Command-line flags still take precedence when provided.
+
 Example (replace `your-domain.example`):
 
 ```sh

@@ -291,8 +291,11 @@ func newGRPCConn(addr string) (*grpc.ClientConn, error) {
 	return conn, nil
 }
 
-// grpcAddress resolves the gRPC address from env or defaults.
+// grpcAddress resolves the gRPC address from the explicit fallback or env when empty.
 func grpcAddress(fallback string) string {
+	if strings.TrimSpace(fallback) != "" {
+		return fallback
+	}
 	if value := os.Getenv("DUALITY_GRPC_ADDR"); value != "" {
 		return value
 	}
