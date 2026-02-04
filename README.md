@@ -46,6 +46,7 @@ Use gRPC if you are building a custom client (UI, automation, services) or you w
 make run
 ```
 
+This starts the gRPC server on `localhost:8080`, the MCP server on stdio, and the web client at `http://localhost:8082`.
 Ports, endpoints, and configuration are documented in [docs](#Documentation).
 
 ### Run with Docker (recommended for local-only execution)

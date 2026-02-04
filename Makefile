@@ -30,10 +30,28 @@ clean:
 
 run:
 	@bash -euo pipefail -c '\
-	  cleanup() { kill -- -$$; } ; trap cleanup EXIT INT TERM; \
-	  go run ./cmd/server 2>&1 & \
-	  go run ./cmd/mcp 2>&1 & \
-	  wait \
+	  interrupted=0; \
+	  pids=(); \
+	  cleanup() { \
+	    trap - EXIT INT TERM; \
+	    for pid in "$$@"; do \
+	      if kill -0 "$$pid" 2>/dev/null; then \
+	        kill "$$pid" 2>/dev/null || true; \
+	      fi; \
+	    done; \
+	    wait || true; \
+	  }; \
+	  go run ./cmd/server 2>&1 & pids+=($$!); \
+	  go run ./cmd/mcp 2>&1 & pids+=($$!); \
+	  go run ./cmd/web 2>&1 & pids+=($$!); \
+	  trap "cleanup $${pids[*]}" EXIT; \
+	  trap "interrupted=1; cleanup $${pids[*]}" INT TERM; \
+	  status=0; \
+	  wait || status=$$?; \
+	  if [ "$$interrupted" -eq 1 ]; then \
+	    exit 0; \
+	  fi; \
+	  exit $$status \
 	'
 
 cover:

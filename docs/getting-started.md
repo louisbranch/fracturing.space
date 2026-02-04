@@ -9,13 +9,13 @@
 
 ## Run locally (fastest)
 
-Start the gRPC server and MCP bridge together:
+Start the gRPC server, MCP bridge, and web client together:
 
 ```sh
 make run
 ```
 
-This runs the gRPC server on `localhost:8080` and the MCP server on stdio.
+This runs the gRPC server on `localhost:8080`, the MCP server on stdio, and the web client on `http://localhost:8082`.
 The MCP server will wait for the gRPC server to be healthy before accepting requests.
 
 ## Run services individually
@@ -36,6 +36,7 @@ Default endpoints:
 
 - gRPC: `localhost:8080`
 - MCP (stdio): process stdin/stdout
+- Web: `http://localhost:8082`
 
 ## MCP HTTP transport (local only)
 
