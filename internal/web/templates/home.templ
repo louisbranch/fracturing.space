@@ -9,7 +9,6 @@ templ Home() {
 
 // CampaignsPage renders the campaigns page content.
 templ CampaignsPage() {
-	<h1>Duality Engine</h1>
 	<section>
 		<h2>Campaigns</h2>
 		@CampaignsLoading()
@@ -45,15 +44,16 @@ templ CampaignsTable(rows []CampaignRow, message string) {
 			for _, row := range rows {
 				<tr>
 					<td>
-						<a
-							href={"/campaigns/" + row.ID}
-							hx-get={"/campaigns/" + row.ID}
-							hx-target="#main"
-							hx-swap="innerHTML"
-						>{row.Name}</a>
-					</td>
-					<td>{row.GMMode}</td>
-					<td>{row.ParticipantCount}</td>
+					<a
+						href={"/campaigns/" + row.ID}
+						hx-get={"/campaigns/" + row.ID}
+						hx-target="#main"
+						hx-swap="innerHTML"
+						hx-replace-url={"/campaigns/" + row.ID}
+					>{row.Name}</a>
+				</td>
+				<td>{row.GMMode}</td>
+				<td>{row.ParticipantCount}</td>
 					<td>{row.CharacterCount}</td>
 					<td>{row.ThemePrompt}</td>
 					<td>{row.CreatedDate}</td>
@@ -73,6 +73,7 @@ templ CampaignDetailPage(detail CampaignDetail, message string) {
 					hx-get="/campaigns"
 					hx-target="#main"
 					hx-swap="innerHTML"
+					hx-replace-url="/campaigns"
 				>Campaigns</a>
 			</li>
 			if message != "" {
@@ -110,4 +111,11 @@ templ CampaignDetailPage(detail CampaignDetail, message string) {
 			</dl>
 		}
 	</section>
+}
+
+// CampaignDetailFullPage renders campaign detail content in the base layout.
+templ CampaignDetailFullPage(detail CampaignDetail, message string) {
+	@Layout("Duality Engine") {
+		@CampaignDetailPage(detail, message)
+	}
 }

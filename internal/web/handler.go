@@ -69,12 +69,17 @@ func (h *Handler) handleCampaignsTable(w http.ResponseWriter, r *http.Request) {
 	h.renderCampaignTable(w, r, rows, "")
 }
 
-// handleCampaignsPage returns the campaigns page content for HTMX.
+// handleCampaignsPage renders the campaigns page fragment or full layout.
 func (h *Handler) handleCampaignsPage(w http.ResponseWriter, r *http.Request) {
-	templ.Handler(templates.CampaignsPage()).ServeHTTP(w, r)
+	if isHTMXRequest(r) {
+		templ.Handler(templates.CampaignsPage()).ServeHTTP(w, r)
+		return
+	}
+
+	templ.Handler(templates.Home()).ServeHTTP(w, r)
 }
 
-// handleCampaignDetail renders the single-campaign detail page.
+// handleCampaignDetail renders the single-campaign detail content.
 func (h *Handler) handleCampaignDetail(w http.ResponseWriter, r *http.Request) {
 	if h.campaignClient == nil {
 		h.renderCampaignDetail(w, r, templates.CampaignDetail{}, "Campaign service unavailable.")
@@ -114,9 +119,22 @@ func (h *Handler) renderCampaignTable(w http.ResponseWriter, r *http.Request, ro
 	templ.Handler(templates.CampaignsTable(rows, message)).ServeHTTP(w, r)
 }
 
-// renderCampaignDetail renders the campaign detail page.
+// renderCampaignDetail renders the campaign detail fragment or full layout.
 func (h *Handler) renderCampaignDetail(w http.ResponseWriter, r *http.Request, detail templates.CampaignDetail, message string) {
-	templ.Handler(templates.CampaignDetailPage(detail, message)).ServeHTTP(w, r)
+	if isHTMXRequest(r) {
+		templ.Handler(templates.CampaignDetailPage(detail, message)).ServeHTTP(w, r)
+		return
+	}
+
+	templ.Handler(templates.CampaignDetailFullPage(detail, message)).ServeHTTP(w, r)
+}
+
+// isHTMXRequest reports whether the request originated from HTMX.
+func isHTMXRequest(r *http.Request) bool {
+	if r == nil {
+		return false
+	}
+	return strings.EqualFold(r.Header.Get("HX-Request"), "true")
 }
 
 // buildCampaignRows formats campaign rows for the table.
