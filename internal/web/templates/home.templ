@@ -3,17 +3,22 @@ package templates
 // Home renders the base landing page.
 templ Home() {
 	@Layout("Duality Engine") {
-		<h1>Duality Engine</h1>
-		<section>
-			<h2>Campaigns</h2>
-			@CampaignsLoading()
-		</section>
+		@CampaignsPage()
 	}
+}
+
+// CampaignsPage renders the campaigns page content.
+templ CampaignsPage() {
+	<h1>Duality Engine</h1>
+	<section>
+		<h2>Campaigns</h2>
+		@CampaignsLoading()
+	</section>
 }
 
 // CampaignsLoading renders the HTMX loading placeholder.
 templ CampaignsLoading() {
-	<div hx-get="/campaigns" hx-trigger="load" hx-swap="outerHTML">
+	<div hx-get="/campaigns/table" hx-trigger="load" hx-swap="outerHTML">
 		<p>Loading campaigns...</p>
 	</div>
 }
@@ -39,7 +44,14 @@ templ CampaignsTable(rows []CampaignRow, message string) {
 			}
 			for _, row := range rows {
 				<tr>
-					<td>{row.Name}</td>
+					<td>
+						<a
+							href={"/campaigns/" + row.ID}
+							hx-get={"/campaigns/" + row.ID}
+							hx-target="#main"
+							hx-swap="innerHTML"
+						>{row.Name}</a>
+					</td>
 					<td>{row.GMMode}</td>
 					<td>{row.ParticipantCount}</td>
 					<td>{row.CharacterCount}</td>
@@ -49,4 +61,53 @@ templ CampaignsTable(rows []CampaignRow, message string) {
 			}
 		</tbody>
 	</table>
+}
+
+// CampaignDetailPage renders a single campaign in a description list.
+templ CampaignDetailPage(detail CampaignDetail, message string) {
+	<nav aria-label="breadcrumb">
+		<ul>
+			<li>
+				<a
+					href="/campaigns"
+					hx-get="/campaigns"
+					hx-target="#main"
+					hx-swap="innerHTML"
+				>Campaigns</a>
+			</li>
+			if message != "" {
+				<li>Campaign</li>
+			} else {
+				<li>{detail.Name}</li>
+			}
+		</ul>
+	</nav>
+	<section>
+		if message != "" {
+			<h2>Campaign</h2>
+			<p>{message}</p>
+		} else {
+			<h2>{detail.Name}</h2>
+			<dl>
+				<dt>ID</dt>
+				<dd>{detail.ID}</dd>
+				<dt>Name</dt>
+				<dd>{detail.Name}</dd>
+				<dt>GM mode</dt>
+				<dd>{detail.GMMode}</dd>
+				<dt>Participants</dt>
+				<dd>{detail.ParticipantCount}</dd>
+				<dt>Characters</dt>
+				<dd>{detail.CharacterCount}</dd>
+				<dt>Theme prompt</dt>
+				<dd>{detail.ThemePrompt}</dd>
+				<dt>GM fear</dt>
+				<dd>{detail.GMFear}</dd>
+				<dt>Created</dt>
+				<dd>{detail.CreatedAt}</dd>
+				<dt>Updated</dt>
+				<dd>{detail.UpdatedAt}</dd>
+			</dl>
+		}
+	</section>
 }

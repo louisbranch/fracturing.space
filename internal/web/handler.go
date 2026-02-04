@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/a-h/templ"
@@ -35,12 +36,14 @@ func NewHandler(campaignClient campaignv1.CampaignServiceClient) http.Handler {
 func (h *Handler) routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle("/", templ.Handler(templates.Home()))
-	mux.Handle("/campaigns", http.HandlerFunc(h.handleCampaigns))
+	mux.Handle("/campaigns", http.HandlerFunc(h.handleCampaignsPage))
+	mux.Handle("/campaigns/table", http.HandlerFunc(h.handleCampaignsTable))
+	mux.Handle("/campaigns/", http.HandlerFunc(h.handleCampaignDetail))
 	return mux
 }
 
-// handleCampaigns returns the first page of campaign rows for HTMX.
-func (h *Handler) handleCampaigns(w http.ResponseWriter, r *http.Request) {
+// handleCampaignsTable returns the first page of campaign rows for HTMX.
+func (h *Handler) handleCampaignsTable(w http.ResponseWriter, r *http.Request) {
 	if h.campaignClient == nil {
 		h.renderCampaignTable(w, r, nil, "Campaign service unavailable.")
 		return
@@ -66,9 +69,54 @@ func (h *Handler) handleCampaigns(w http.ResponseWriter, r *http.Request) {
 	h.renderCampaignTable(w, r, rows, "")
 }
 
+// handleCampaignsPage returns the campaigns page content for HTMX.
+func (h *Handler) handleCampaignsPage(w http.ResponseWriter, r *http.Request) {
+	templ.Handler(templates.CampaignsPage()).ServeHTTP(w, r)
+}
+
+// handleCampaignDetail renders the single-campaign detail page.
+func (h *Handler) handleCampaignDetail(w http.ResponseWriter, r *http.Request) {
+	if h.campaignClient == nil {
+		h.renderCampaignDetail(w, r, templates.CampaignDetail{}, "Campaign service unavailable.")
+		return
+	}
+
+	campaignPath := strings.TrimPrefix(r.URL.Path, "/campaigns/")
+	parts := strings.Split(campaignPath, "/")
+	if len(parts) != 1 || strings.TrimSpace(parts[0]) == "" {
+		http.NotFound(w, r)
+		return
+	}
+	campaignID := parts[0]
+
+	ctx, cancel := context.WithTimeout(r.Context(), campaignsRequestTimeout)
+	defer cancel()
+
+	response, err := h.campaignClient.GetCampaign(ctx, &campaignv1.GetCampaignRequest{CampaignId: campaignID})
+	if err != nil {
+		log.Printf("get campaign: %v", err)
+		h.renderCampaignDetail(w, r, templates.CampaignDetail{}, "Campaign unavailable.")
+		return
+	}
+
+	campaign := response.GetCampaign()
+	if campaign == nil {
+		h.renderCampaignDetail(w, r, templates.CampaignDetail{}, "Campaign not found.")
+		return
+	}
+
+	detail := buildCampaignDetail(campaign)
+	h.renderCampaignDetail(w, r, detail, "")
+}
+
 // renderCampaignTable renders a campaign table with optional rows and message.
 func (h *Handler) renderCampaignTable(w http.ResponseWriter, r *http.Request, rows []templates.CampaignRow, message string) {
 	templ.Handler(templates.CampaignsTable(rows, message)).ServeHTTP(w, r)
+}
+
+// renderCampaignDetail renders the campaign detail page.
+func (h *Handler) renderCampaignDetail(w http.ResponseWriter, r *http.Request, detail templates.CampaignDetail, message string) {
+	templ.Handler(templates.CampaignDetailPage(detail, message)).ServeHTTP(w, r)
 }
 
 // buildCampaignRows formats campaign rows for the table.
@@ -79,6 +127,7 @@ func buildCampaignRows(campaigns []*campaignv1.Campaign) []templates.CampaignRow
 			continue
 		}
 		rows = append(rows, templates.CampaignRow{
+			ID:               campaign.GetId(),
 			Name:             campaign.GetName(),
 			GMMode:           formatGmMode(campaign.GetGmMode()),
 			ParticipantCount: strconv.FormatInt(int64(campaign.GetParticipantCount()), 10),
@@ -88,6 +137,24 @@ func buildCampaignRows(campaigns []*campaignv1.Campaign) []templates.CampaignRow
 		})
 	}
 	return rows
+}
+
+// buildCampaignDetail formats a campaign into detail view data.
+func buildCampaignDetail(campaign *campaignv1.Campaign) templates.CampaignDetail {
+	if campaign == nil {
+		return templates.CampaignDetail{}
+	}
+	return templates.CampaignDetail{
+		ID:               campaign.GetId(),
+		Name:             campaign.GetName(),
+		GMMode:           formatGmMode(campaign.GetGmMode()),
+		ParticipantCount: strconv.FormatInt(int64(campaign.GetParticipantCount()), 10),
+		CharacterCount:   strconv.FormatInt(int64(campaign.GetCharacterCount()), 10),
+		ThemePrompt:      campaign.GetThemePrompt(),
+		GMFear:           strconv.FormatInt(int64(campaign.GetGmFear()), 10),
+		CreatedAt:        formatTimestamp(campaign.GetCreatedAt()),
+		UpdatedAt:        formatTimestamp(campaign.GetUpdatedAt()),
+	}
 }
 
 // formatGmMode returns a display label for a GM mode enum.
@@ -110,6 +177,14 @@ func formatCreatedDate(createdAt *timestamppb.Timestamp) string {
 		return ""
 	}
 	return createdAt.AsTime().Format("2006-01-02")
+}
+
+// formatTimestamp returns a YYYY-MM-DD HH:MM:SS string for a timestamp.
+func formatTimestamp(value *timestamppb.Timestamp) string {
+	if value == nil {
+		return ""
+	}
+	return value.AsTime().Format("2006-01-02 15:04:05")
 }
 
 // truncateText shortens text to a maximum length with an ellipsis.
