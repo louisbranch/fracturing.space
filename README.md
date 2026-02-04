@@ -54,12 +54,13 @@ Ports, endpoints, and configuration are documented in [docs](#Documentation).
 Download the Docker Hub images:
 
 ```shell
-docker pull louisbranch/duality-grpc:latest
-docker pull louisbranch/duality-mcp:latest
+docker pull docker.io/louisbranch/duality-engine-grpc:latest
+docker pull docker.io/louisbranch/duality-engine-mcp:latest
+docker pull docker.io/louisbranch/duality-engine-web:latest
 ```
 
 Notes:
-- The gRPC server listens on port 8080, and the MCP HTTP transport listens on port 8081 when enabled.
+- The gRPC server listens on port 8080, the MCP HTTP transport listens on port 8081 when enabled, and the web app listens on port 8082.
 - Full port/config details live in [docs](#Documentation).
 
 ## State Model
