@@ -3,13 +3,11 @@ package templates
 // Home renders the base landing page.
 templ Home() {
 	@Layout("Duality Engine") {
-		<main>
-			<h1>Duality Engine</h1>
-			<section>
-				<h2>Campaigns</h2>
-				@CampaignsLoading()
-			</section>
-		</main>
+		<h1>Duality Engine</h1>
+		<section>
+			<h2>Campaigns</h2>
+			@CampaignsLoading()
+		</section>
 	}
 }
 

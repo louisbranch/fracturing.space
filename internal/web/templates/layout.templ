@@ -7,11 +7,15 @@ templ Layout(title string) {
 		<head>
 			<meta charset="utf-8">
 			<meta name="viewport" content="width=device-width, initial-scale=1">
+			<meta name="color-scheme" content="light dark">
 			<title>{title}</title>
+			<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.fluid.classless.min.css" integrity="sha384-9z2Z72wC8pZfEcmRXbHS/2Z7S9AhvsT/4SNNcEv16hlL6VRPT8pTVtJqHjdrk7c1" crossorigin="anonymous">
 			<script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js" integrity="sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2XoQrxeTUQyRjrOnlCoYta87iKBWq3EsdM2" crossorigin="anonymous"></script>
 		</head>
 		<body>
-			{ children... }
+			<main>
+				{ children... }
+			</main>
 		</body>
 	</html>
 }
