@@ -11,7 +11,7 @@ services:
       target: grpc
       args:
         GO_VERSION: ${GO_VERSION:-1.25.6}
-    image: duality-grpc:dev
+    image: docker.io/louisbranch/duality-engine-grpc:dev
     depends_on:
       init-data:
         condition: service_completed_successfully
@@ -28,12 +28,27 @@ services:
       target: mcp
       args:
         GO_VERSION: ${GO_VERSION:-1.25.6}
-    image: duality-mcp:dev
+    image: docker.io/louisbranch/duality-engine-mcp:dev
     command: ["-transport=http", "-http-addr=0.0.0.0:8081", "-addr=grpc:8080"]
     depends_on:
       - grpc
     ports:
       - "127.0.0.1:8081:8081"
+
+  web:
+    build:
+      context: .
+      target: web
+      args:
+        GO_VERSION: ${GO_VERSION:-1.25.6}
+    image: docker.io/louisbranch/duality-engine-web:dev
+    depends_on:
+      - grpc
+    environment:
+      - DUALITY_WEB_ADDR=0.0.0.0:8082
+      - DUALITY_GRPC_ADDR=grpc:8080
+    ports:
+      - "127.0.0.1:8082:8082"
 
 volumes:
   duality-data:

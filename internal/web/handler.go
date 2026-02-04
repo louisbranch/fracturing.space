@@ -21,14 +21,19 @@ const (
 	campaignThemePromptLimit = 80
 )
 
+// CampaignClientProvider supplies campaign clients for request handling.
+type CampaignClientProvider interface {
+	CampaignClient() campaignv1.CampaignServiceClient
+}
+
 // Handler routes web requests for the UI.
 type Handler struct {
-	campaignClient campaignv1.CampaignServiceClient
+	campaignProvider CampaignClientProvider
 }
 
 // NewHandler builds the HTTP handler for the web server.
-func NewHandler(campaignClient campaignv1.CampaignServiceClient) http.Handler {
-	handler := &Handler{campaignClient: campaignClient}
+func NewHandler(campaignProvider CampaignClientProvider) http.Handler {
+	handler := &Handler{campaignProvider: campaignProvider}
 	return handler.routes()
 }
 
@@ -44,7 +49,8 @@ func (h *Handler) routes() http.Handler {
 
 // handleCampaignsTable returns the first page of campaign rows for HTMX.
 func (h *Handler) handleCampaignsTable(w http.ResponseWriter, r *http.Request) {
-	if h.campaignClient == nil {
+	campaignClient := h.campaignClient()
+	if campaignClient == nil {
 		h.renderCampaignTable(w, r, nil, "Campaign service unavailable.")
 		return
 	}
@@ -52,7 +58,7 @@ func (h *Handler) handleCampaignsTable(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), campaignsRequestTimeout)
 	defer cancel()
 
-	response, err := h.campaignClient.ListCampaigns(ctx, &campaignv1.ListCampaignsRequest{})
+	response, err := campaignClient.ListCampaigns(ctx, &campaignv1.ListCampaignsRequest{})
 	if err != nil {
 		log.Printf("list campaigns: %v", err)
 		h.renderCampaignTable(w, r, nil, "Campaigns unavailable.")
@@ -81,7 +87,8 @@ func (h *Handler) handleCampaignsPage(w http.ResponseWriter, r *http.Request) {
 
 // handleCampaignDetail renders the single-campaign detail content.
 func (h *Handler) handleCampaignDetail(w http.ResponseWriter, r *http.Request) {
-	if h.campaignClient == nil {
+	campaignClient := h.campaignClient()
+	if campaignClient == nil {
 		h.renderCampaignDetail(w, r, templates.CampaignDetail{}, "Campaign service unavailable.")
 		return
 	}
@@ -97,7 +104,7 @@ func (h *Handler) handleCampaignDetail(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), campaignsRequestTimeout)
 	defer cancel()
 
-	response, err := h.campaignClient.GetCampaign(ctx, &campaignv1.GetCampaignRequest{CampaignId: campaignID})
+	response, err := campaignClient.GetCampaign(ctx, &campaignv1.GetCampaignRequest{CampaignId: campaignID})
 	if err != nil {
 		log.Printf("get campaign: %v", err)
 		h.renderCampaignDetail(w, r, templates.CampaignDetail{}, "Campaign unavailable.")
@@ -127,6 +134,14 @@ func (h *Handler) renderCampaignDetail(w http.ResponseWriter, r *http.Request, d
 	}
 
 	templ.Handler(templates.CampaignDetailFullPage(detail, message)).ServeHTTP(w, r)
+}
+
+// campaignClient returns the currently configured campaign client.
+func (h *Handler) campaignClient() campaignv1.CampaignServiceClient {
+	if h == nil || h.campaignProvider == nil {
+		return nil
+	}
+	return h.campaignProvider.CampaignClient()
 }
 
 // isHTMXRequest reports whether the request originated from HTMX.
