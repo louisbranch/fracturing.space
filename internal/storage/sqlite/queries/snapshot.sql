@@ -1,0 +1,2 @@
+-- Snapshot-related queries.
+-- Character state is now in system-specific extension tables (daggerheart.sql).

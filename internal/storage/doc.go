@@ -2,7 +2,7 @@
 //
 // It provides a high-level abstraction for storing campaign metadata,
 // participants, characters, and session states. Implementation of these
-// interfaces (e.g., using bbolt) can be found in subpackages.
+// interfaces (e.g., using sqlite) can be found in subpackages.
 //
 // # Error Types
 //
