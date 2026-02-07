@@ -94,10 +94,10 @@ Ephemeral:
 
 - Published docs site: [https://louisbranch.github.io/fracturing.space/](https://louisbranch.github.io/fracturing.space/)
 - Repo docs:
-  - [Getting Started](docs/getting-started.md)
-  - [Configuration](docs/configuration.md)
-  - [MCP](docs/mcp.md)
-  - [Integration Tests](docs/integration-tests.md)
+  - [Getting Started](docs/running/getting-started.md)
+  - [Configuration](docs/running/configuration.md)
+  - [MCP](docs/reference/mcp.md)
+  - [Integration Tests](docs/running/integration-tests.md)
 
 ## Near-term roadmap
 

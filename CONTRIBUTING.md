@@ -24,7 +24,7 @@ workflow, standards, and expectations used in this repo.
 - Keep `go.mod` tidy: `go mod tidy`
 
 Integration tests exercise the full gRPC + MCP + storage path. You can also
-use the Make targets documented in `docs/integration-tests.md`:
+use the Make targets documented in `docs/running/integration-tests.md`:
 
 - `make test`
 - `make integration`

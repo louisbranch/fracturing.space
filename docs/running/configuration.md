@@ -30,7 +30,7 @@ is omitted. Command-line flags take precedence over env values.
 
 The MCP server supports `stdio` (default) and `http` transports. See
 [Getting started](getting-started.md) for run commands and
-[MCP tools and resources](mcp.md) for HTTP endpoint details.
+[MCP tools and resources](../reference/mcp.md) for HTTP endpoint details.
 
 ## Web Client Configuration
 

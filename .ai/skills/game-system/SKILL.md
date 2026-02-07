@@ -6,7 +6,7 @@ user-invocable: true
 
 # Adding a New Game System
 
-See `docs/game-systems.md` for the comprehensive guide, including design rationale and a VtM example.
+See `docs/project/game-systems.md` for the comprehensive guide, including design rationale and a VtM example.
 
 ## Quick Summary
 

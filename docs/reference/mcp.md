@@ -1,7 +1,7 @@
 # MCP Tools and Resources
 
 The MCP server supports two transport modes: stdio (default) and HTTP.
-See [Getting started](getting-started.md) for run commands.
+See [Getting started](../running/getting-started.md) for run commands.
 
 ## Transport Modes
 
