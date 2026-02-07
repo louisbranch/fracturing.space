@@ -2,7 +2,7 @@
 
 ## Overview
 
-Duality Engine is split into three layers:
+Fracturing.Space is split into three layers:
 
 - Transport layer: gRPC server and MCP bridge
 - Domain layer: rules adjudication and campaign/session logic

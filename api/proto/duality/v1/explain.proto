@@ -4,7 +4,7 @@ package duality.v1;
 
 import "google/protobuf/struct.proto";
 
-option go_package = "github.com/louisbranch/duality-engine/api/gen/go/duality/v1;dualityv1";
+option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/duality/v1;dualityv1";
 
 message Intermediates {
   int32 base_total = 1;

@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	campaignv1 "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1"
-	sessionv1 "github.com/louisbranch/duality-engine/api/gen/go/session/v1"
+	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1"
+	sessionv1 "github.com/louisbranch/fracturing.space/api/gen/go/session/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"

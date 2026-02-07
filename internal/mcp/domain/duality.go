@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	commonv1 "github.com/louisbranch/duality-engine/api/gen/go/common/v1"
-	pb "github.com/louisbranch/duality-engine/api/gen/go/duality/v1"
+	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	pb "github.com/louisbranch/fracturing.space/api/gen/go/duality/v1"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"

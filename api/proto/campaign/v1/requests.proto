@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package campaign.v1;
 
-option go_package = "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1;campaignv1";
+option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1;campaignv1";
 
 import "campaign/v1/campaign.proto";
 import "campaign/v1/participant.proto";

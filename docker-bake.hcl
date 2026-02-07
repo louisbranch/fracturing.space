@@ -3,15 +3,15 @@ variable "GO_VERSION" {
 }
 
 variable "GRPC_IMAGE" {
-  default = "docker.io/louisbranch/duality-engine-grpc:dev"
+  default = "docker.io/louisbranch/fracturing.space-grpc:dev"
 }
 
 variable "MCP_IMAGE" {
-  default = "docker.io/louisbranch/duality-engine-mcp:dev"
+  default = "docker.io/louisbranch/fracturing.space-mcp:dev"
 }
 
 variable "WEB_IMAGE" {
-  default = "docker.io/louisbranch/duality-engine-web:dev"
+  default = "docker.io/louisbranch/fracturing.space-web:dev"
 }
 
 group "default" {

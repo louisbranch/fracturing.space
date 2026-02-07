@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping improve Duality Engine. This guide highlights the
+Thanks for helping improve Fracturing.Space. This guide highlights the
 workflow, standards, and expectations used in this repo.
 
 ------------------------------------------------------------------------

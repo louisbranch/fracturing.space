@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package common.v1;
 
-option go_package = "github.com/louisbranch/duality-engine/api/gen/go/common/v1;commonv1";
+option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/common/v1;commonv1";
 
 // RollMode declares whether a roll is live gameplay or a deterministic replay.
 enum RollMode {

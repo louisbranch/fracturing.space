@@ -5,9 +5,9 @@ import (
 	"errors"
 	"testing"
 
-	campaignv1 "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1"
-	"github.com/louisbranch/duality-engine/internal/campaign/domain"
-	"github.com/louisbranch/duality-engine/internal/storage"
+	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1"
+	"github.com/louisbranch/fracturing.space/internal/campaign/domain"
+	"github.com/louisbranch/fracturing.space/internal/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

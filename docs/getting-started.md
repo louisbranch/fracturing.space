@@ -96,13 +96,13 @@ docker run -d --name duality-grpc \
   -p 127.0.0.1:8080:8080 \
   -v /srv/duality/data:/data \
   -e DUALITY_DB_PATH=/data/duality.db \
-  docker.io/louisbranch/duality-engine-grpc:latest
+  docker.io/louisbranch/fracturing.space-grpc:latest
 
 docker run -d --name duality-mcp \
   --network duality \
   -p 127.0.0.1:8081:8081 \
   -e DUALITY_MCP_ALLOWED_HOSTS=your-domain.example \
-  docker.io/louisbranch/duality-engine-mcp:latest \
+  docker.io/louisbranch/fracturing.space-mcp:latest \
   -transport=http -http-addr=0.0.0.0:8081 -addr=duality-grpc:8080
 
 docker run -d --name duality-web \
@@ -110,7 +110,7 @@ docker run -d --name duality-web \
   -p 127.0.0.1:8082:8082 \
   -e DUALITY_WEB_ADDR=0.0.0.0:8082 \
   -e DUALITY_GRPC_ADDR=duality-grpc:8080 \
-  docker.io/louisbranch/duality-engine-web:latest
+  docker.io/louisbranch/fracturing.space-web:latest
 ```
 
 ## Docker (Publish images)
@@ -118,8 +118,8 @@ docker run -d --name duality-web \
 Use bake to build and push all images:
 
 ```sh
-GRPC_IMAGE="docker.io/louisbranch/duality-engine-grpc:latest" \
-MCP_IMAGE="docker.io/louisbranch/duality-engine-mcp:latest" \
-WEB_IMAGE="docker.io/louisbranch/duality-engine-web:latest" \
+GRPC_IMAGE="docker.io/louisbranch/fracturing.space-grpc:latest" \
+MCP_IMAGE="docker.io/louisbranch/fracturing.space-mcp:latest" \
+WEB_IMAGE="docker.io/louisbranch/fracturing.space-web:latest" \
 docker buildx bake --push
 ```

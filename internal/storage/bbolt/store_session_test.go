@@ -11,8 +11,8 @@ import (
 
 	"go.etcd.io/bbolt"
 
-	sessiondomain "github.com/louisbranch/duality-engine/internal/session/domain"
-	"github.com/louisbranch/duality-engine/internal/storage"
+	sessiondomain "github.com/louisbranch/fracturing.space/internal/session/domain"
+	"github.com/louisbranch/fracturing.space/internal/storage"
 )
 
 func TestSessionStorePutGet(t *testing.T) {

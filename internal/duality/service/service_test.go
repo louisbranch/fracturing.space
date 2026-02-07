@@ -6,11 +6,11 @@ import (
 	"reflect"
 	"testing"
 
-	commonv1 "github.com/louisbranch/duality-engine/api/gen/go/common/v1"
-	pb "github.com/louisbranch/duality-engine/api/gen/go/duality/v1"
-	"github.com/louisbranch/duality-engine/internal/duality/domain"
-	"github.com/louisbranch/duality-engine/internal/random"
-	"github.com/louisbranch/duality-engine/internal/testutil"
+	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	pb "github.com/louisbranch/fracturing.space/api/gen/go/duality/v1"
+	"github.com/louisbranch/fracturing.space/internal/duality/domain"
+	"github.com/louisbranch/fracturing.space/internal/random"
+	"github.com/louisbranch/fracturing.space/internal/testutil"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

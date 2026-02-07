@@ -102,7 +102,7 @@ const file_duality_v1_outcome_proto_rawDesc = "" +
 	"\x11SUCCESS_WITH_FEAR\x10\x04\x12\x15\n" +
 	"\x11FAILURE_WITH_HOPE\x10\x05\x12\x15\n" +
 	"\x11FAILURE_WITH_FEAR\x10\x06\x12\x14\n" +
-	"\x10CRITICAL_SUCCESS\x10\aBGZEgithub.com/louisbranch/duality-engine/api/gen/go/duality/v1;dualityv1b\x06proto3"
+	"\x10CRITICAL_SUCCESS\x10\aBIZGgithub.com/louisbranch/fracturing.space/api/gen/go/duality/v1;dualityv1b\x06proto3"
 
 var (
 	file_duality_v1_outcome_proto_rawDescOnce sync.Once

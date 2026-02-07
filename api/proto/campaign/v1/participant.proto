@@ -4,7 +4,7 @@ package campaign.v1;
 
 import "google/protobuf/timestamp.proto";
 
-option go_package = "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1;campaignv1";
+option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1;campaignv1";
 
 message Participant {
   string id = 1;

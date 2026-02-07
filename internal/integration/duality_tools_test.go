@@ -6,8 +6,8 @@ import (
 	"context"
 	"testing"
 
-	dualitydomain "github.com/louisbranch/duality-engine/internal/duality/domain"
-	"github.com/louisbranch/duality-engine/internal/mcp/domain"
+	dualitydomain "github.com/louisbranch/fracturing.space/internal/duality/domain"
+	"github.com/louisbranch/fracturing.space/internal/mcp/domain"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 

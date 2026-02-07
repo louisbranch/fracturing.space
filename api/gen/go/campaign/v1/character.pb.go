@@ -379,7 +379,7 @@ const file_campaign_v1_character_proto_rawDesc = "" +
 	"\rCharacterKind\x12\x1e\n" +
 	"\x1aCHARACTER_KIND_UNSPECIFIED\x10\x00\x12\x06\n" +
 	"\x02PC\x10\x01\x12\a\n" +
-	"\x03NPC\x10\x02BIZGgithub.com/louisbranch/duality-engine/api/gen/go/campaign/v1;campaignv1b\x06proto3"
+	"\x03NPC\x10\x02BKZIgithub.com/louisbranch/fracturing.space/api/gen/go/campaign/v1;campaignv1b\x06proto3"
 
 var (
 	file_campaign_v1_character_proto_rawDescOnce sync.Once

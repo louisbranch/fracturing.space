@@ -1,6 +1,6 @@
-# Duality Engine Documentation
+# Fracturing.Space Documentation
 
-Duality Engine provides a server-authoritative implementation of the
+Fracturing.Space provides a server-authoritative implementation of the
 Duality Dice system, exposed via gRPC and MCP.
 
 It focuses on deterministic resolution of mechanics and campaign state

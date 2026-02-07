@@ -6,9 +6,9 @@ import (
 	"log"
 	"strings"
 
-	campaignv1 "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1"
-	"github.com/louisbranch/duality-engine/internal/grpcmeta"
-	"github.com/louisbranch/duality-engine/internal/storage"
+	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1"
+	"github.com/louisbranch/fracturing.space/internal/grpcmeta"
+	"github.com/louisbranch/fracturing.space/internal/storage"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

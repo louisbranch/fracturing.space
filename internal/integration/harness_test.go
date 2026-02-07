@@ -14,8 +14,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/louisbranch/duality-engine/internal/app/server"
-	"github.com/louisbranch/duality-engine/internal/mcp/domain"
+	"github.com/louisbranch/fracturing.space/internal/app/server"
+	"github.com/louisbranch/fracturing.space/internal/mcp/domain"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"

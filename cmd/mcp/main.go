@@ -8,7 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/louisbranch/duality-engine/internal/app/mcp"
+	"github.com/louisbranch/fracturing.space/internal/app/mcp"
 )
 
 // main starts the MCP server on stdio or HTTP.

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	campaignv1 "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1"
+	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"

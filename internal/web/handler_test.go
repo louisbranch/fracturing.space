@@ -23,7 +23,7 @@ func TestWebPageRendering(t *testing.T) {
 			path: "/",
 			contains: []string{
 				"<!doctype html>",
-				"<h1>Duality Engine</h1>",
+				"<h1>Fracturing.Space</h1>",
 			},
 			notContains: []string{
 				"<h2>Campaigns</h2>",
@@ -34,7 +34,7 @@ func TestWebPageRendering(t *testing.T) {
 			path: "/campaigns",
 			contains: []string{
 				"<!doctype html>",
-				"<h1>Duality Engine</h1>",
+				"<h1>Fracturing.Space</h1>",
 				"<h2>Campaigns</h2>",
 			},
 		},
@@ -47,7 +47,7 @@ func TestWebPageRendering(t *testing.T) {
 			},
 			notContains: []string{
 				"<!doctype html>",
-				"<h1>Duality Engine</h1>",
+				"<h1>Fracturing.Space</h1>",
 				"<html",
 			},
 		},
@@ -56,7 +56,7 @@ func TestWebPageRendering(t *testing.T) {
 			path: "/campaigns/camp-123",
 			contains: []string{
 				"<!doctype html>",
-				"<h1>Duality Engine</h1>",
+				"<h1>Fracturing.Space</h1>",
 				"Campaign service unavailable.",
 				"<h2>Campaign</h2>",
 			},
@@ -71,7 +71,7 @@ func TestWebPageRendering(t *testing.T) {
 			},
 			notContains: []string{
 				"<!doctype html>",
-				"<h1>Duality Engine</h1>",
+				"<h1>Fracturing.Space</h1>",
 				"<html",
 			},
 		},

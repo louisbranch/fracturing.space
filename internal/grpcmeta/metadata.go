@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/louisbranch/duality-engine/internal/id"
+	"github.com/louisbranch/fracturing.space/internal/id"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"

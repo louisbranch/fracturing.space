@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package duality.v1;
 
-option go_package = "github.com/louisbranch/duality-engine/api/gen/go/duality/v1;dualityv1";
+option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/duality/v1;dualityv1";
 
 import "duality/v1/requests.proto";
 

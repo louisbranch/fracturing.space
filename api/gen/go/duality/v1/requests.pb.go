@@ -7,7 +7,7 @@
 package dualityv1
 
 import (
-	v1 "github.com/louisbranch/duality-engine/api/gen/go/common/v1"
+	v1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -1110,7 +1110,7 @@ const file_duality_v1_requests_proto_rawDesc = "" +
 	"\x10RollDiceResponse\x12*\n" +
 	"\x05rolls\x18\x01 \x03(\v2\x14.duality.v1.DiceRollR\x05rolls\x12\x14\n" +
 	"\x05total\x18\x02 \x01(\x05R\x05total\x12(\n" +
-	"\x03rng\x18\x03 \x01(\v2\x16.common.v1.RngResponseR\x03rngBGZEgithub.com/louisbranch/duality-engine/api/gen/go/duality/v1;dualityv1b\x06proto3"
+	"\x03rng\x18\x03 \x01(\v2\x16.common.v1.RngResponseR\x03rngBIZGgithub.com/louisbranch/fracturing.space/api/gen/go/duality/v1;dualityv1b\x06proto3"
 
 var (
 	file_duality_v1_requests_proto_rawDescOnce sync.Once

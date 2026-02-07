@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/louisbranch/duality-engine/internal/web"
+	"github.com/louisbranch/fracturing.space/internal/web"
 )
 
 var (

@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package session.v1;
 
-option go_package = "github.com/louisbranch/duality-engine/api/gen/go/session/v1;sessionv1";
+option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/session/v1;sessionv1";
 
 import "google/protobuf/timestamp.proto";
 

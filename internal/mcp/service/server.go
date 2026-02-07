@@ -10,11 +10,11 @@ import (
 	"sync"
 	"time"
 
-	campaignv1 "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1"
-	dualityv1 "github.com/louisbranch/duality-engine/api/gen/go/duality/v1"
-	sessionv1 "github.com/louisbranch/duality-engine/api/gen/go/session/v1"
-	"github.com/louisbranch/duality-engine/internal/mcp/conformance"
-	"github.com/louisbranch/duality-engine/internal/mcp/domain"
+	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1"
+	dualityv1 "github.com/louisbranch/fracturing.space/api/gen/go/duality/v1"
+	sessionv1 "github.com/louisbranch/fracturing.space/api/gen/go/session/v1"
+	"github.com/louisbranch/fracturing.space/internal/mcp/conformance"
+	"github.com/louisbranch/fracturing.space/internal/mcp/domain"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -23,7 +23,7 @@ import (
 
 const (
 	// serverName identifies this MCP server to clients.
-	serverName = "Duality Engine MCP"
+	serverName = "Fracturing.Space MCP"
 	// serverVersion identifies the MCP server version.
 	serverVersion = "0.1.0"
 )

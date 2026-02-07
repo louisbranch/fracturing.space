@@ -2,13 +2,13 @@ package templates
 
 // Home renders the base landing page.
 templ Home() {
-	@Layout("Duality Engine") {
+	@Layout("Fracturing.Space") {
 	}
 }
 
 // CampaignsFullPage renders campaigns content in the base layout.
 templ CampaignsFullPage() {
-	@Layout("Duality Engine") {
+	@Layout("Fracturing.Space") {
 		@CampaignsPage()
 	}
 }
@@ -121,7 +121,7 @@ templ CampaignDetailPage(detail CampaignDetail, message string) {
 
 // CampaignDetailFullPage renders campaign detail content in the base layout.
 templ CampaignDetailFullPage(detail CampaignDetail, message string) {
-	@Layout("Duality Engine") {
+	@Layout("Fracturing.Space") {
 		@CampaignDetailPage(detail, message)
 	}
 }

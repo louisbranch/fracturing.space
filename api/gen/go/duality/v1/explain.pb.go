@@ -185,7 +185,7 @@ const file_duality_v1_explain_proto_rawDesc = "" +
 	"\vExplainStep\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12+\n" +
-	"\x04data\x18\x03 \x01(\v2\x17.google.protobuf.StructR\x04dataBGZEgithub.com/louisbranch/duality-engine/api/gen/go/duality/v1;dualityv1b\x06proto3"
+	"\x04data\x18\x03 \x01(\v2\x17.google.protobuf.StructR\x04dataBIZGgithub.com/louisbranch/fracturing.space/api/gen/go/duality/v1;dualityv1b\x06proto3"
 
 var (
 	file_duality_v1_explain_proto_rawDescOnce sync.Once

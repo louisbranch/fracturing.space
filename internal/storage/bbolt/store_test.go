@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/louisbranch/duality-engine/internal/campaign/domain"
-	sessiondomain "github.com/louisbranch/duality-engine/internal/session/domain"
-	"github.com/louisbranch/duality-engine/internal/storage"
+	"github.com/louisbranch/fracturing.space/internal/campaign/domain"
+	sessiondomain "github.com/louisbranch/fracturing.space/internal/session/domain"
+	"github.com/louisbranch/fracturing.space/internal/storage"
 	"go.etcd.io/bbolt"
 )
 

@@ -207,7 +207,7 @@ const file_campaign_v1_campaign_proto_rawDesc = "" +
 	"\x05HUMAN\x10\x01\x12\x06\n" +
 	"\x02AI\x10\x02\x12\n" +
 	"\n" +
-	"\x06HYBRID\x10\x03BIZGgithub.com/louisbranch/duality-engine/api/gen/go/campaign/v1;campaignv1b\x06proto3"
+	"\x06HYBRID\x10\x03BKZIgithub.com/louisbranch/fracturing.space/api/gen/go/campaign/v1;campaignv1b\x06proto3"
 
 var (
 	file_campaign_v1_campaign_proto_rawDescOnce sync.Once

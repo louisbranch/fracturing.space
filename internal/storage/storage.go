@@ -5,8 +5,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/louisbranch/duality-engine/internal/campaign/domain"
-	sessiondomain "github.com/louisbranch/duality-engine/internal/session/domain"
+	"github.com/louisbranch/fracturing.space/internal/campaign/domain"
+	sessiondomain "github.com/louisbranch/fracturing.space/internal/session/domain"
 )
 
 // ErrNotFound indicates a requested record is missing.

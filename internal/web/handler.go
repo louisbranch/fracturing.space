@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/a-h/templ"
-	campaignv1 "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1"
-	"github.com/louisbranch/duality-engine/internal/web/templates"
+	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1"
+	"github.com/louisbranch/fracturing.space/internal/web/templates"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 

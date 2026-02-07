@@ -219,7 +219,7 @@ const file_common_v1_rng_proto_rawDesc = "" +
 	"\x15ROLL_MODE_UNSPECIFIED\x10\x00\x12\b\n" +
 	"\x04LIVE\x10\x01\x12\n" +
 	"\n" +
-	"\x06REPLAY\x10\x02BEZCgithub.com/louisbranch/duality-engine/api/gen/go/common/v1;commonv1b\x06proto3"
+	"\x06REPLAY\x10\x02BGZEgithub.com/louisbranch/fracturing.space/api/gen/go/common/v1;commonv1b\x06proto3"
 
 var (
 	file_common_v1_rng_proto_rawDescOnce sync.Once

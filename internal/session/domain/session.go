@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/louisbranch/duality-engine/internal/id"
+	"github.com/louisbranch/fracturing.space/internal/id"
 )
 
 // SessionStatus describes the lifecycle state of a session.

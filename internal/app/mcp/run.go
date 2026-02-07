@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/louisbranch/duality-engine/internal/mcp/service"
+	"github.com/louisbranch/fracturing.space/internal/mcp/service"
 )
 
 // Run starts the MCP app with the provided gRPC address, HTTP address, and transport type.

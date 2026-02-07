@@ -239,7 +239,7 @@ const file_campaign_v1_participant_proto_rawDesc = "" +
 	"Controller\x12\x1a\n" +
 	"\x16CONTROLLER_UNSPECIFIED\x10\x00\x12\x14\n" +
 	"\x10CONTROLLER_HUMAN\x10\x01\x12\x11\n" +
-	"\rCONTROLLER_AI\x10\x02BIZGgithub.com/louisbranch/duality-engine/api/gen/go/campaign/v1;campaignv1b\x06proto3"
+	"\rCONTROLLER_AI\x10\x02BKZIgithub.com/louisbranch/fracturing.space/api/gen/go/campaign/v1;campaignv1b\x06proto3"
 
 var (
 	file_campaign_v1_participant_proto_rawDescOnce sync.Once

@@ -44,7 +44,7 @@ func Home() templ.Component {
 			ctx = templ.InitializeContext(ctx)
 			return nil
 		})
-		templ_7745c5c3_Err = Layout("Duality Engine").Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = Layout("Fracturing.Space").Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -92,7 +92,7 @@ func CampaignsFullPage() templ.Component {
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = Layout("Duality Engine").Render(templ.WithChildren(ctx, templ_7745c5c3_Var4), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = Layout("Fracturing.Space").Render(templ.WithChildren(ctx, templ_7745c5c3_Var4), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -600,7 +600,7 @@ func CampaignDetailFullPage(detail CampaignDetail, message string) templ.Compone
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = Layout("Duality Engine").Render(templ.WithChildren(ctx, templ_7745c5c3_Var32), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = Layout("Fracturing.Space").Render(templ.WithChildren(ctx, templ_7745c5c3_Var32), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

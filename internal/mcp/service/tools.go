@@ -1,10 +1,10 @@
 package service
 
 import (
-	campaignv1 "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1"
-	dualityv1 "github.com/louisbranch/duality-engine/api/gen/go/duality/v1"
-	sessionv1 "github.com/louisbranch/duality-engine/api/gen/go/session/v1"
-	"github.com/louisbranch/duality-engine/internal/mcp/domain"
+	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1"
+	dualityv1 "github.com/louisbranch/fracturing.space/api/gen/go/duality/v1"
+	sessionv1 "github.com/louisbranch/fracturing.space/api/gen/go/session/v1"
+	"github.com/louisbranch/fracturing.space/internal/mcp/domain"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 

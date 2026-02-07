@@ -10,7 +10,7 @@ import (
 	"errors"
 	"fmt"
 
-	commonv1 "github.com/louisbranch/duality-engine/api/gen/go/common/v1"
+	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 )
 
 const (

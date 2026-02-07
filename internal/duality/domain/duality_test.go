@@ -5,7 +5,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/louisbranch/duality-engine/internal/testutil"
+	"github.com/louisbranch/fracturing.space/internal/testutil"
 )
 
 // TestRollDiceReturnsResults ensures roll results are deterministic and aggregated.

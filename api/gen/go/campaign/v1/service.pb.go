@@ -37,7 +37,7 @@ const file_campaign_v1_service_proto_rawDesc = "" +
 	"\x11SetDefaultControl\x12%.campaign.v1.SetDefaultControlRequest\x1a&.campaign.v1.SetDefaultControlResponse\x12b\n" +
 	"\x11GetCharacterSheet\x12%.campaign.v1.GetCharacterSheetRequest\x1a&.campaign.v1.GetCharacterSheetResponse\x12n\n" +
 	"\x15PatchCharacterProfile\x12).campaign.v1.PatchCharacterProfileRequest\x1a*.campaign.v1.PatchCharacterProfileResponse\x12h\n" +
-	"\x13PatchCharacterState\x12'.campaign.v1.PatchCharacterStateRequest\x1a(.campaign.v1.PatchCharacterStateResponseBIZGgithub.com/louisbranch/duality-engine/api/gen/go/campaign/v1;campaignv1b\x06proto3"
+	"\x13PatchCharacterState\x12'.campaign.v1.PatchCharacterStateRequest\x1a(.campaign.v1.PatchCharacterStateResponseBKZIgithub.com/louisbranch/fracturing.space/api/gen/go/campaign/v1;campaignv1b\x06proto3"
 
 var file_campaign_v1_service_proto_goTypes = []any{
 	(*CreateCampaignRequest)(nil),         // 0: campaign.v1.CreateCampaignRequest

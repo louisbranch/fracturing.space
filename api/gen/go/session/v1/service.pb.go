@@ -36,7 +36,7 @@ const file_session_v1_service_proto_rawDesc = "" +
 	"\x12SessionEventAppend\x12%.session.v1.SessionEventAppendRequest\x1a&.session.v1.SessionEventAppendResponse\x12`\n" +
 	"\x11SessionEventsList\x12$.session.v1.SessionEventsListRequest\x1a%.session.v1.SessionEventsListResponse\x12`\n" +
 	"\x11SessionActionRoll\x12$.session.v1.SessionActionRollRequest\x1a%.session.v1.SessionActionRollResponse\x12]\n" +
-	"\x10ApplyRollOutcome\x12#.session.v1.ApplyRollOutcomeRequest\x1a$.session.v1.ApplyRollOutcomeResponseBGZEgithub.com/louisbranch/duality-engine/api/gen/go/session/v1;sessionv1b\x06proto3"
+	"\x10ApplyRollOutcome\x12#.session.v1.ApplyRollOutcomeRequest\x1a$.session.v1.ApplyRollOutcomeResponseBIZGgithub.com/louisbranch/fracturing.space/api/gen/go/session/v1;sessionv1b\x06proto3"
 
 var file_session_v1_service_proto_goTypes = []any{
 	(*StartSessionRequest)(nil),        // 0: session.v1.StartSessionRequest

@@ -7,7 +7,7 @@
 package sessionv1
 
 import (
-	v1 "github.com/louisbranch/duality-engine/api/gen/go/common/v1"
+	v1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -1263,7 +1263,7 @@ const file_session_v1_requests_proto_rawDesc = "" +
 	"\x18ApplyRollOutcomeResponse\x12\x19\n" +
 	"\broll_seq\x18\x01 \x01(\x04R\arollSeq\x123\n" +
 	"\x15requires_complication\x18\x02 \x01(\bR\x14requiresComplication\x124\n" +
-	"\aupdated\x18\x03 \x01(\v2\x1a.session.v1.OutcomeUpdatedR\aupdatedBGZEgithub.com/louisbranch/duality-engine/api/gen/go/session/v1;sessionv1b\x06proto3"
+	"\aupdated\x18\x03 \x01(\v2\x1a.session.v1.OutcomeUpdatedR\aupdatedBIZGgithub.com/louisbranch/fracturing.space/api/gen/go/session/v1;sessionv1b\x06proto3"
 
 var (
 	file_session_v1_requests_proto_rawDescOnce sync.Once

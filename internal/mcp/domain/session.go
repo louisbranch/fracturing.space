@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	commonv1 "github.com/louisbranch/duality-engine/api/gen/go/common/v1"
-	sessionv1 "github.com/louisbranch/duality-engine/api/gen/go/session/v1"
-	"github.com/louisbranch/duality-engine/internal/grpcmeta"
+	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	sessionv1 "github.com/louisbranch/fracturing.space/api/gen/go/session/v1"
+	"github.com/louisbranch/fracturing.space/internal/grpcmeta"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"

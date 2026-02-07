@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/louisbranch/duality-engine/internal/id"
+	"github.com/louisbranch/fracturing.space/internal/id"
 )
 
 // CharacterKind describes the kind of character in a campaign.

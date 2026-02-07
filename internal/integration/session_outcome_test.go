@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"testing"
 
-	sessionv1 "github.com/louisbranch/duality-engine/api/gen/go/session/v1"
-	dualitydomain "github.com/louisbranch/duality-engine/internal/duality/domain"
-	"github.com/louisbranch/duality-engine/internal/mcp/domain"
+	sessionv1 "github.com/louisbranch/fracturing.space/api/gen/go/session/v1"
+	dualitydomain "github.com/louisbranch/fracturing.space/internal/duality/domain"
+	"github.com/louisbranch/fracturing.space/internal/mcp/domain"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"

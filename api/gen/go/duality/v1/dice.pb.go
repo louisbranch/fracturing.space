@@ -200,7 +200,7 @@ const file_duality_v1_dice_proto_rawDesc = "" +
 	"\bDiceRoll\x12\x14\n" +
 	"\x05sides\x18\x01 \x01(\x05R\x05sides\x12\x18\n" +
 	"\aresults\x18\x02 \x03(\x05R\aresults\x12\x14\n" +
-	"\x05total\x18\x03 \x01(\x05R\x05totalBGZEgithub.com/louisbranch/duality-engine/api/gen/go/duality/v1;dualityv1b\x06proto3"
+	"\x05total\x18\x03 \x01(\x05R\x05totalBIZGgithub.com/louisbranch/fracturing.space/api/gen/go/duality/v1;dualityv1b\x06proto3"
 
 var (
 	file_duality_v1_dice_proto_rawDescOnce sync.Once

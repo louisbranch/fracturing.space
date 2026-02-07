@@ -231,7 +231,7 @@ const file_session_v1_events_proto_rawDesc = "" +
 	"\x10REQUEST_REJECTED\x10\x06\x12\x1b\n" +
 	"\x17OUTCOME_APPLY_REQUESTED\x10\a\x12\x13\n" +
 	"\x0fOUTCOME_APPLIED\x10\b\x12\x14\n" +
-	"\x10OUTCOME_REJECTED\x10\tBGZEgithub.com/louisbranch/duality-engine/api/gen/go/session/v1;sessionv1b\x06proto3"
+	"\x10OUTCOME_REJECTED\x10\tBIZGgithub.com/louisbranch/fracturing.space/api/gen/go/session/v1;sessionv1b\x06proto3"
 
 var (
 	file_session_v1_events_proto_rawDescOnce sync.Once

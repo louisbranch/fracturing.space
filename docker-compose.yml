@@ -11,7 +11,7 @@ services:
       target: grpc
       args:
         GO_VERSION: ${GO_VERSION:-1.25.6}
-    image: docker.io/louisbranch/duality-engine-grpc:dev
+    image: docker.io/louisbranch/fracturing.space-grpc:dev
     depends_on:
       init-data:
         condition: service_completed_successfully
@@ -28,7 +28,7 @@ services:
       target: mcp
       args:
         GO_VERSION: ${GO_VERSION:-1.25.6}
-    image: docker.io/louisbranch/duality-engine-mcp:dev
+    image: docker.io/louisbranch/fracturing.space-mcp:dev
     command: ["-transport=http", "-http-addr=0.0.0.0:8081", "-addr=grpc:8080"]
     depends_on:
       - grpc
@@ -41,7 +41,7 @@ services:
       target: web
       args:
         GO_VERSION: ${GO_VERSION:-1.25.6}
-    image: docker.io/louisbranch/duality-engine-web:dev
+    image: docker.io/louisbranch/fracturing.space-web:dev
     depends_on:
       - grpc
     environment:

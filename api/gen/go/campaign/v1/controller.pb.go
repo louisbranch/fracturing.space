@@ -198,7 +198,7 @@ const file_campaign_v1_controller_proto_rawDesc = "" +
 	"controller\"\x0e\n" +
 	"\fGmController\">\n" +
 	"\x15ParticipantController\x12%\n" +
-	"\x0eparticipant_id\x18\x01 \x01(\tR\rparticipantIdBIZGgithub.com/louisbranch/duality-engine/api/gen/go/campaign/v1;campaignv1b\x06proto3"
+	"\x0eparticipant_id\x18\x01 \x01(\tR\rparticipantIdBKZIgithub.com/louisbranch/fracturing.space/api/gen/go/campaign/v1;campaignv1b\x06proto3"
 
 var (
 	file_campaign_v1_controller_proto_rawDescOnce sync.Once

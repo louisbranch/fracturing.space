@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	pb "github.com/louisbranch/duality-engine/api/gen/go/duality/v1"
-	"github.com/louisbranch/duality-engine/internal/grpcmeta"
+	pb "github.com/louisbranch/fracturing.space/api/gen/go/duality/v1"
+	"github.com/louisbranch/fracturing.space/internal/grpcmeta"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	grpc_health_v1 "google.golang.org/grpc/health/grpc_health_v1"

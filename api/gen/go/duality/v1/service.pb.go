@@ -33,7 +33,7 @@ const file_duality_v1_service_proto_rawDesc = "" +
 	"\x0eDualityExplain\x12!.duality.v1.DualityExplainRequest\x1a\".duality.v1.DualityExplainResponse\x12c\n" +
 	"\x12DualityProbability\x12%.duality.v1.DualityProbabilityRequest\x1a&.duality.v1.DualityProbabilityResponse\x12Q\n" +
 	"\fRulesVersion\x12\x1f.duality.v1.RulesVersionRequest\x1a .duality.v1.RulesVersionResponse\x12E\n" +
-	"\bRollDice\x12\x1b.duality.v1.RollDiceRequest\x1a\x1c.duality.v1.RollDiceResponseBGZEgithub.com/louisbranch/duality-engine/api/gen/go/duality/v1;dualityv1b\x06proto3"
+	"\bRollDice\x12\x1b.duality.v1.RollDiceRequest\x1a\x1c.duality.v1.RollDiceResponseBIZGgithub.com/louisbranch/fracturing.space/api/gen/go/duality/v1;dualityv1b\x06proto3"
 
 var file_duality_v1_service_proto_goTypes = []any{
 	(*ActionRollRequest)(nil),          // 0: duality.v1.ActionRollRequest

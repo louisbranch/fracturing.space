@@ -1,6 +1,6 @@
-# Duality Engine ![Coverage](../../raw/badges/coverage.svg)
+# Fracturing.Space ![Coverage](../../raw/badges/coverage.svg)
 
-Duality Engine is a server-authoritative mechanics and campaign-state service for running a Daggerheart Compatible campaign using the Duality Dice system.
+Fracturing.Space is a server-authoritative mechanics and campaign-state service for running a Daggerheart Compatible campaign using the Duality Dice system.
 
 Its primary goal is enabling an AI Game Master: an LLM (or agent runtime) drives the campaign by calling MCP tools/resources to resolve mechanics and persist state, while human participants interact through whatever client you build around it.
 
@@ -8,7 +8,7 @@ This project focuses on rules adjudication and campaign state management. It doe
 
 ## Who this is for
 
-Right now, Duality Engine is primarily for developers experimenting with AI-driven campaign runners:
+Right now, Fracturing.Space is primarily for developers experimenting with AI-driven campaign runners:
 
 - You want an AI GM to call tools and get structured outcomes.
 - You want deterministic resolution you can replay, test, and audit.
@@ -54,14 +54,21 @@ Ports, endpoints, and configuration are documented in [docs](#Documentation).
 Download the Docker Hub images:
 
 ```shell
-docker pull docker.io/louisbranch/duality-engine-grpc:latest
-docker pull docker.io/louisbranch/duality-engine-mcp:latest
-docker pull docker.io/louisbranch/duality-engine-web:latest
+docker pull docker.io/louisbranch/fracturing.space-grpc:latest
+docker pull docker.io/louisbranch/fracturing.space-mcp:latest
+docker pull docker.io/louisbranch/fracturing.space-web:latest
 ```
 
 Notes:
 - The gRPC server listens on port 8080, the MCP HTTP transport listens on port 8081 when enabled, and the web app listens on port 8082.
 - Full port/config details live in [docs](#Documentation).
+
+## Migration notes
+
+- Module path is now `github.com/louisbranch/fracturing.space`; update `go.mod` and import paths.
+- Docker images now use the `fracturing.space-*` names on Docker Hub.
+- Docs site moved to https://louisbranch.github.io/fracturing.space/.
+- Environment variables remain `DUALITY_*` and the default DB path is still `data/duality.db` for now.
 
 ## State Model
 
@@ -83,7 +90,7 @@ Ephemeral:
 
 ## Documentation
 
-- Published docs site: [https://louisbranch.github.io/duality-engine/](https://louisbranch.github.io/duality-engine/)
+- Published docs site: [https://louisbranch.github.io/fracturing.space/](https://louisbranch.github.io/fracturing.space/)
 - Repo docs:
   - [Getting Started](docs/getting-started.md)
   - [Configuration](docs/configuration.md)
@@ -99,7 +106,7 @@ Ephemeral:
 
 ## Attribution and licensing
 
-Duality Engine is an independent, fan-made project and is not affiliated with Critical Role Productions LLC, Darrington Press, or their partners.
+Fracturing.Space is an independent, fan-made project and is not affiliated with Critical Role Productions LLC, Darrington Press, or their partners.
 
 Daggerheart is a trademark of Critical Role Productions LLC. This project is intended for use under the Darrington Press Community Gaming License (DPCGL). Source code is licensed under the MIT License. See [LICENSE](LICENSE).
 

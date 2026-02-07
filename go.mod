@@ -1,4 +1,4 @@
-module github.com/louisbranch/duality-engine
+module github.com/louisbranch/fracturing.space
 
 go 1.25.6
 

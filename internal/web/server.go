@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	campaignv1 "github.com/louisbranch/duality-engine/api/gen/go/campaign/v1"
-	dualityv1 "github.com/louisbranch/duality-engine/api/gen/go/duality/v1"
+	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1"
+	dualityv1 "github.com/louisbranch/fracturing.space/api/gen/go/duality/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )

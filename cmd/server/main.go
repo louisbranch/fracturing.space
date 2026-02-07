@@ -8,7 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/louisbranch/duality-engine/internal/app/server"
+	"github.com/louisbranch/fracturing.space/internal/app/server"
 )
 
 var (

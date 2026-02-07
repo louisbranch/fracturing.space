@@ -1534,7 +1534,7 @@ const file_campaign_v1_requests_proto_rawDesc = "" +
 	"\a_stressB\x05\n" +
 	"\x03_hp\"P\n" +
 	"\x1bPatchCharacterStateResponse\x121\n" +
-	"\x05state\x18\x01 \x01(\v2\x1b.campaign.v1.CharacterStateR\x05stateBIZGgithub.com/louisbranch/duality-engine/api/gen/go/campaign/v1;campaignv1b\x06proto3"
+	"\x05state\x18\x01 \x01(\v2\x1b.campaign.v1.CharacterStateR\x05stateBKZIgithub.com/louisbranch/fracturing.space/api/gen/go/campaign/v1;campaignv1b\x06proto3"
 
 var (
 	file_campaign_v1_requests_proto_rawDescOnce sync.Once

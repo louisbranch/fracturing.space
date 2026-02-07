@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/louisbranch/duality-engine/internal/id"
+	"github.com/louisbranch/fracturing.space/internal/id"
 )
 
 // GmMode describes how the GM role is handled for a campaign.

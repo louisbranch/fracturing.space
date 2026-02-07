@@ -193,7 +193,7 @@ const file_session_v1_session_proto_rawDesc = "" +
 	"\x12STATUS_UNSPECIFIED\x10\x00\x12\n" +
 	"\n" +
 	"\x06ACTIVE\x10\x01\x12\t\n" +
-	"\x05ENDED\x10\x02BGZEgithub.com/louisbranch/duality-engine/api/gen/go/session/v1;sessionv1b\x06proto3"
+	"\x05ENDED\x10\x02BIZGgithub.com/louisbranch/fracturing.space/api/gen/go/session/v1;sessionv1b\x06proto3"
 
 var (
 	file_session_v1_session_proto_rawDescOnce sync.Once
