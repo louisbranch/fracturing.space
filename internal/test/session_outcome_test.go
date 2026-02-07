@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"testing"
 
-	sessionv1 "github.com/louisbranch/fracturing.space/api/gen/go/session/v1"
-	dualitydomain "github.com/louisbranch/fracturing.space/internal/duality/domain"
+	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/state/v1"
 	"github.com/louisbranch/fracturing.space/internal/mcp/domain"
+	daggerheartdomain "github.com/louisbranch/fracturing.space/internal/systems/daggerheart/domain"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -33,9 +33,38 @@ type actionRollResolvedPayload struct {
 	} `json:"dice"`
 }
 
+// TODO: These types were removed from domain during statev1 migration.
+// They should be re-implemented as part of Daggerheart-specific MCP tools.
+type sessionActionRollResultRng struct {
+	SeedUsed uint64 `json:"seed_used,omitempty"`
+	RollMode string `json:"roll_mode,omitempty"`
+}
+
+type sessionActionRollResult struct {
+	Rng     *sessionActionRollResultRng `json:"rng,omitempty"`
+	RollSeq uint64                      `json:"roll_seq,omitempty"`
+	Flavor  string                      `json:"flavor,omitempty"`
+	Crit    bool                        `json:"crit,omitempty"`
+}
+
+type sessionRollOutcomeApplyResult struct {
+	RollSeq              uint64 `json:"roll_seq,omitempty"`
+	RequiresComplication bool   `json:"requires_complication,omitempty"`
+	Updated              struct {
+		CharacterStates []struct {
+			CharacterID string `json:"character_id,omitempty"`
+		} `json:"character_states,omitempty"`
+		GMFear *int32 `json:"gm_fear,omitempty"`
+	} `json:"updated,omitempty"`
+}
+
 // runSessionOutcomeTests exercises applying session roll outcomes.
+// TODO: Re-enable when Daggerheart-specific MCP tools are implemented.
+// The session_action_roll and session_roll_outcome_apply MCP tools were
+// game-system specific and removed during the statev1 migration.
 func runSessionOutcomeTests(t *testing.T, suite *integrationSuite, grpcAddr string) {
 	t.Helper()
+	t.Skip("session_action_roll and session_roll_outcome_apply MCP tools need Daggerheart-specific implementation")
 
 	t.Run("apply roll outcome", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
@@ -45,6 +74,7 @@ func runSessionOutcomeTests(t *testing.T, suite *integrationSuite, grpcAddr stri
 			Name: "campaign_create",
 			Arguments: map[string]any{
 				"name":         "Outcome Campaign",
+				"system":       "DAGGERHEART",
 				"gm_mode":      "HUMAN",
 				"theme_prompt": "roll outcomes",
 			},
@@ -148,7 +178,7 @@ func runSessionOutcomeTests(t *testing.T, suite *integrationSuite, grpcAddr stri
 		if actionRollResult == nil || actionRollResult.IsError {
 			t.Fatalf("session_action_roll failed: %+v", actionRollResult)
 		}
-		actionRollOutput := decodeStructuredContent[domain.SessionActionRollResult](t, actionRollResult.StructuredContent)
+		actionRollOutput := decodeStructuredContent[sessionActionRollResult](t, actionRollResult.StructuredContent)
 		requiresComplication := false
 		if actionRollOutput.Crit {
 			requiresComplication = false
@@ -165,7 +195,7 @@ func runSessionOutcomeTests(t *testing.T, suite *integrationSuite, grpcAddr stri
 			t.Fatalf("dial gRPC: %v", err)
 		}
 		defer conn.Close()
-		grpcClient := sessionv1.NewSessionServiceClient(conn)
+		grpcClient := statev1.NewEventServiceClient(conn)
 
 		rollSeq := actionRollOutput.RollSeq
 		if rollSeq == 0 {
@@ -185,7 +215,7 @@ func runSessionOutcomeTests(t *testing.T, suite *integrationSuite, grpcAddr stri
 		if applyResult == nil || applyResult.IsError {
 			t.Fatalf("session_roll_outcome_apply failed: %+v", applyResult)
 		}
-		applyOutput := decodeStructuredContent[domain.SessionRollOutcomeApplyResult](t, applyResult.StructuredContent)
+		applyOutput := decodeStructuredContent[sessionRollOutcomeApplyResult](t, applyResult.StructuredContent)
 		if applyOutput.RollSeq != rollSeq {
 			t.Fatalf("expected roll seq %d, got %d", rollSeq, applyOutput.RollSeq)
 		}
@@ -199,7 +229,7 @@ func runSessionOutcomeTests(t *testing.T, suite *integrationSuite, grpcAddr stri
 			t.Fatalf("expected character id %q, got %q", characterOutput.ID, applyOutput.Updated.CharacterStates[0].CharacterID)
 		}
 
-		applied, err := findOutcomeApplied(ctx, grpcClient, sessionOutput.ID, rollSeq)
+		applied, err := findOutcomeApplied(ctx, grpcClient, campaignOutput.ID, sessionOutput.ID, rollSeq)
 		if err != nil {
 			t.Fatalf("find outcome applied event: %v", err)
 		}
@@ -222,6 +252,7 @@ func runSessionOutcomeTests(t *testing.T, suite *integrationSuite, grpcAddr stri
 			Name: "campaign_create",
 			Arguments: map[string]any{
 				"name":         "Outcome Campaign Fear",
+				"system":       "DAGGERHEART",
 				"gm_mode":      "HUMAN",
 				"theme_prompt": "roll outcomes",
 			},
@@ -336,7 +367,7 @@ func runSessionOutcomeTests(t *testing.T, suite *integrationSuite, grpcAddr stri
 		if actionRollResult == nil || actionRollResult.IsError {
 			t.Fatalf("session_action_roll failed: %+v", actionRollResult)
 		}
-		actionRollOutput := decodeStructuredContent[domain.SessionActionRollResult](t, actionRollResult.StructuredContent)
+		actionRollOutput := decodeStructuredContent[sessionActionRollResult](t, actionRollResult.StructuredContent)
 		if actionRollOutput.Rng == nil {
 			t.Fatal("expected rng metadata in session_action_roll output")
 		}
@@ -362,13 +393,13 @@ func runSessionOutcomeTests(t *testing.T, suite *integrationSuite, grpcAddr stri
 			t.Fatalf("dial gRPC: %v", err)
 		}
 		defer conn.Close()
-		grpcClient := sessionv1.NewSessionServiceClient(conn)
+		grpcClient := statev1.NewEventServiceClient(conn)
 
 		rollSeq := actionRollOutput.RollSeq
 		if rollSeq == 0 {
 			t.Fatal("expected roll seq")
 		}
-		resolved, err := findActionRollResolved(ctx, grpcClient, sessionOutput.ID, rollSeq)
+		resolved, err := findActionRollResolved(ctx, grpcClient, campaignOutput.ID, sessionOutput.ID, rollSeq)
 		if err != nil {
 			t.Fatalf("find action roll resolved event: %v", err)
 		}
@@ -395,7 +426,7 @@ func runSessionOutcomeTests(t *testing.T, suite *integrationSuite, grpcAddr stri
 		if applyResult == nil || applyResult.IsError {
 			t.Fatalf("session_roll_outcome_apply failed: %+v", applyResult)
 		}
-		applyOutput := decodeStructuredContent[domain.SessionRollOutcomeApplyResult](t, applyResult.StructuredContent)
+		applyOutput := decodeStructuredContent[sessionRollOutcomeApplyResult](t, applyResult.StructuredContent)
 		if !applyOutput.RequiresComplication {
 			t.Fatal("expected requires_complication true")
 		}
@@ -405,10 +436,12 @@ func runSessionOutcomeTests(t *testing.T, suite *integrationSuite, grpcAddr stri
 	})
 }
 
-func findOutcomeApplied(ctx context.Context, client sessionv1.SessionServiceClient, sessionID string, rollSeq uint64) (outcomeAppliedPayload, error) {
-	response, err := client.SessionEventsList(ctx, &sessionv1.SessionEventsListRequest{
-		SessionId: sessionID,
-		Limit:     50,
+func findOutcomeApplied(ctx context.Context, client statev1.EventServiceClient, campaignID, sessionID string, rollSeq uint64) (outcomeAppliedPayload, error) {
+	response, err := client.ListEvents(ctx, &statev1.ListEventsRequest{
+		CampaignId: campaignID,
+		PageSize:   200,
+		OrderBy:    "seq desc",
+		Filter:     "session_id = \"" + sessionID + "\" AND type = \"action.outcome_applied\"",
 	})
 	if err != nil {
 		return outcomeAppliedPayload{}, err
@@ -417,13 +450,9 @@ func findOutcomeApplied(ctx context.Context, client sessionv1.SessionServiceClie
 		return outcomeAppliedPayload{}, nil
 	}
 
-	for i := len(response.Events); i > 0; i-- {
-		event := response.Events[i-1]
-		if event.GetType() != sessionv1.SessionEventType_OUTCOME_APPLIED {
-			continue
-		}
+	for _, evt := range response.GetEvents() {
 		var payload outcomeAppliedPayload
-		if err := json.Unmarshal(event.GetPayloadJson(), &payload); err != nil {
+		if err := json.Unmarshal(evt.GetPayloadJson(), &payload); err != nil {
 			return outcomeAppliedPayload{}, err
 		}
 		if payload.RollSeq != rollSeq {
@@ -435,10 +464,12 @@ func findOutcomeApplied(ctx context.Context, client sessionv1.SessionServiceClie
 	return outcomeAppliedPayload{}, fmt.Errorf("outcome applied event not found")
 }
 
-func findActionRollResolved(ctx context.Context, client sessionv1.SessionServiceClient, sessionID string, rollSeq uint64) (actionRollResolvedPayload, error) {
-	response, err := client.SessionEventsList(ctx, &sessionv1.SessionEventsListRequest{
-		SessionId: sessionID,
-		Limit:     50,
+func findActionRollResolved(ctx context.Context, client statev1.EventServiceClient, campaignID, sessionID string, rollSeq uint64) (actionRollResolvedPayload, error) {
+	response, err := client.ListEvents(ctx, &statev1.ListEventsRequest{
+		CampaignId: campaignID,
+		PageSize:   200,
+		OrderBy:    "seq desc",
+		Filter:     "session_id = \"" + sessionID + "\" AND type = \"action.roll_resolved\"",
 	})
 	if err != nil {
 		return actionRollResolvedPayload{}, err
@@ -447,16 +478,12 @@ func findActionRollResolved(ctx context.Context, client sessionv1.SessionService
 		return actionRollResolvedPayload{}, nil
 	}
 
-	for i := len(response.Events); i > 0; i-- {
-		event := response.Events[i-1]
-		if event.GetType() != sessionv1.SessionEventType_ACTION_ROLL_RESOLVED {
-			continue
-		}
-		if event.GetSeq() != rollSeq {
+	for _, evt := range response.GetEvents() {
+		if evt.GetSeq() != rollSeq {
 			continue
 		}
 		var payload actionRollResolvedPayload
-		if err := json.Unmarshal(event.GetPayloadJson(), &payload); err != nil {
+		if err := json.Unmarshal(evt.GetPayloadJson(), &payload); err != nil {
 			return actionRollResolvedPayload{}, err
 		}
 		return payload, nil
@@ -469,7 +496,7 @@ func findReplaySeedForFear(t *testing.T, difficulty int) uint64 {
 	t.Helper()
 	for seed := uint64(1); seed < 50000; seed++ {
 		difficultyValue := difficulty
-		result, err := dualitydomain.RollAction(dualitydomain.ActionRequest{
+		result, err := daggerheartdomain.RollAction(daggerheartdomain.ActionRequest{
 			Modifier:   0,
 			Difficulty: &difficultyValue,
 			Seed:       int64(seed),

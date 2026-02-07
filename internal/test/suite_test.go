@@ -22,6 +22,10 @@ func TestMCPStdioEndToEnd(t *testing.T) {
 		runCampaignToolsTests(t, suite)
 	})
 
+	t.Run("fork tools", func(t *testing.T) {
+		runForkToolsTests(t, suite)
+	})
+
 	t.Run("session outcomes", func(t *testing.T) {
 		runSessionOutcomeTests(t, suite, grpcAddr)
 	})
@@ -32,5 +36,13 @@ func TestMCPStdioEndToEnd(t *testing.T) {
 
 	t.Run("session lock", func(t *testing.T) {
 		runSessionLockTests(t, grpcAddr)
+	})
+
+	t.Run("event list", func(t *testing.T) {
+		runEventListTests(t, grpcAddr)
+	})
+
+	t.Run("mutation event guardrails", func(t *testing.T) {
+		runMutationEventGuardrailTests(t, suite, grpcAddr)
 	})
 }

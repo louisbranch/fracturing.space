@@ -10,9 +10,8 @@ import (
 	"sync"
 	"time"
 
-	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1"
-	dualityv1 "github.com/louisbranch/fracturing.space/api/gen/go/duality/v1"
-	sessionv1 "github.com/louisbranch/fracturing.space/api/gen/go/session/v1"
+	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/state/v1"
+	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/mcp/conformance"
 	"github.com/louisbranch/fracturing.space/internal/mcp/domain"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -55,7 +54,7 @@ type Server struct {
 	ctxMu     sync.RWMutex
 }
 
-// New creates a configured MCP server that connects to Duality, Campaign, and Session gRPC services.
+// New creates a configured MCP server that connects to state and game system gRPC services.
 func New(grpcAddr string) (*Server, error) {
 	mcpServer := mcp.NewServer(&mcp.Implementation{Name: serverName, Version: serverVersion}, &mcp.ServerOptions{
 		CompletionHandler:  completionHandler,
@@ -69,9 +68,14 @@ func New(grpcAddr string) (*Server, error) {
 		return nil, fmt.Errorf("connect to gRPC server at %s: %w", addr, err)
 	}
 
-	dualityClient := dualityv1.NewDualityServiceClient(conn)
-	campaignClient := campaignv1.NewCampaignServiceClient(conn)
-	sessionClient := sessionv1.NewSessionServiceClient(conn)
+	daggerheartClient := daggerheartv1.NewDaggerheartServiceClient(conn)
+	campaignClient := statev1.NewCampaignServiceClient(conn)
+	participantClient := statev1.NewParticipantServiceClient(conn)
+	characterClient := statev1.NewCharacterServiceClient(conn)
+	snapshotClient := statev1.NewSnapshotServiceClient(conn)
+	sessionClient := statev1.NewSessionServiceClient(conn)
+	forkClient := statev1.NewForkServiceClient(conn)
+	eventClient := statev1.NewEventServiceClient(conn)
 
 	server := &Server{mcpServer: mcpServer, conn: conn}
 	resourceNotifier := func(ctx context.Context, uri string) {
@@ -86,12 +90,15 @@ func New(grpcAddr string) (*Server, error) {
 		}
 	}
 
-	registerDualityTools(mcpServer, dualityClient)
-	registerCampaignTools(mcpServer, campaignClient, server.getContext, resourceNotifier)
+	registerDaggerheartTools(mcpServer, daggerheartClient)
+	registerCampaignTools(mcpServer, campaignClient, participantClient, characterClient, snapshotClient, server.getContext, resourceNotifier)
 	registerSessionTools(mcpServer, sessionClient, server.getContext, resourceNotifier)
-	registerContextTools(mcpServer, campaignClient, sessionClient, server, resourceNotifier)
-	registerCampaignResources(mcpServer, campaignClient)
+	registerForkTools(mcpServer, forkClient, resourceNotifier)
+	registerEventTools(mcpServer, eventClient, server.getContext)
+	registerContextTools(mcpServer, campaignClient, sessionClient, participantClient, server, resourceNotifier)
+	registerCampaignResources(mcpServer, campaignClient, participantClient, characterClient)
 	registerSessionResources(mcpServer, sessionClient)
+	registerEventResources(mcpServer, eventClient)
 	registerContextResources(mcpServer, server)
 	conformance.Register(mcpServer)
 

@@ -1,0 +1,153 @@
+{
+  "name": "demo_campaign",
+  "blocks": {
+    "handshake": [
+      {
+        "name": "initialize",
+        "action": "initialize",
+        "client": {
+          "name": "seed-client",
+          "version": "0.1.0"
+        }
+      },
+      {
+        "name": "initialized",
+        "action": "initialized"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "use": "handshake"
+    },
+    {
+      "name": "Create campaign: The Crimson Vale",
+      "action": "tool_call",
+      "tool": "campaign_create",
+      "args": {
+        "name": "The Crimson Vale",
+        "system": "DAGGERHEART",
+        "gm_mode": "HUMAN",
+        "theme_prompt": "A dark fantasy adventure in a cursed valley where ancient evils stir beneath the crimson-stained earth."
+      },
+      "capture": {
+        "campaign_id": "campaign"
+      }
+    },
+    {
+      "name": "Create GM participant: Sarah",
+      "action": "tool_call",
+      "tool": "participant_create",
+      "args": {
+        "campaign_id": {"ref": "campaign_id"},
+        "display_name": "Sarah",
+        "role": "GM",
+        "controller": "HUMAN"
+      },
+      "capture": {
+        "gm_id": "participant"
+      }
+    },
+    {
+      "name": "Create player participant: Alex",
+      "action": "tool_call",
+      "tool": "participant_create",
+      "args": {
+        "campaign_id": {"ref": "campaign_id"},
+        "display_name": "Alex",
+        "role": "PLAYER",
+        "controller": "HUMAN"
+      },
+      "capture": {
+        "player1_id": "participant"
+      }
+    },
+    {
+      "name": "Create player participant: Jordan",
+      "action": "tool_call",
+      "tool": "participant_create",
+      "args": {
+        "campaign_id": {"ref": "campaign_id"},
+        "display_name": "Jordan",
+        "role": "PLAYER",
+        "controller": "HUMAN"
+      },
+      "capture": {
+        "player2_id": "participant"
+      }
+    },
+    {
+      "name": "Create PC: Theron Blackwood",
+      "action": "tool_call",
+      "tool": "character_create",
+      "args": {
+        "campaign_id": {"ref": "campaign_id"},
+        "name": "Theron Blackwood",
+        "kind": "PC",
+        "notes": "A haunted ex-soldier seeking redemption in the Vale. Carries his father's sword and his grandfather's shame."
+      },
+      "capture": {
+        "char1_id": "character"
+      }
+    },
+    {
+      "name": "Create PC: Lyra Whisperwind",
+      "action": "tool_call",
+      "tool": "character_create",
+      "args": {
+        "campaign_id": {"ref": "campaign_id"},
+        "name": "Lyra Whisperwind",
+        "kind": "PC",
+        "notes": "An elven scholar drawn to the Vale by ancient texts that speak of forgotten magic buried beneath."
+      },
+      "capture": {
+        "char2_id": "character"
+      }
+    },
+    {
+      "name": "Assign Theron to Alex",
+      "action": "tool_call",
+      "tool": "character_control_set",
+      "args": {
+        "campaign_id": {"ref": "campaign_id"},
+        "character_id": {"ref": "char1_id"},
+        "controller": {"ref": "player1_id"}
+      },
+      "expect": "none"
+    },
+    {
+      "name": "Assign Lyra to Jordan",
+      "action": "tool_call",
+      "tool": "character_control_set",
+      "args": {
+        "campaign_id": {"ref": "campaign_id"},
+        "character_id": {"ref": "char2_id"},
+        "controller": {"ref": "player2_id"}
+      },
+      "expect": "none"
+    },
+    {
+      "name": "Start session: The Descent",
+      "action": "tool_call",
+      "tool": "session_start",
+      "args": {
+        "campaign_id": {"ref": "campaign_id"},
+        "name": "Session 1: The Descent"
+      },
+      "capture": {
+        "session_id": "session"
+      }
+    },
+    {
+      "name": "Set context for GM",
+      "action": "tool_call",
+      "tool": "set_context",
+      "args": {
+        "campaign_id": {"ref": "campaign_id"},
+        "session_id": {"ref": "session_id"},
+        "participant_id": {"ref": "gm_id"}
+      },
+      "expect": "none"
+    }
+  ]
+}

@@ -15,6 +15,7 @@
       "tool": "campaign_create",
       "args": {
         "name": "Session Scenario",
+        "system": "DAGGERHEART",
         "gm_mode": "HUMAN",
         "theme_prompt": "sessions"
       },

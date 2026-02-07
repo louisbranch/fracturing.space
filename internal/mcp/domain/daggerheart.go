@@ -7,7 +7,7 @@ import (
 	"time"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
-	pb "github.com/louisbranch/fracturing.space/api/gen/go/duality/v1"
+	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -234,7 +234,7 @@ func RulesVersionTool() *mcp.Tool {
 }
 
 // ActionRollHandler executes a duality action roll.
-func ActionRollHandler(client pb.DualityServiceClient) mcp.ToolHandlerFor[ActionRollInput, ActionRollResult] {
+func ActionRollHandler(client pb.DaggerheartServiceClient) mcp.ToolHandlerFor[ActionRollInput, ActionRollResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input ActionRollInput) (*mcp.CallToolResult, ActionRollResult, error) {
 		invocationID, err := NewInvocationID()
 		if err != nil {
@@ -307,7 +307,7 @@ func ActionRollHandler(client pb.DualityServiceClient) mcp.ToolHandlerFor[Action
 }
 
 // DualityOutcomeHandler executes a deterministic outcome evaluation.
-func DualityOutcomeHandler(client pb.DualityServiceClient) mcp.ToolHandlerFor[DualityOutcomeInput, DualityOutcomeResult] {
+func DualityOutcomeHandler(client pb.DaggerheartServiceClient) mcp.ToolHandlerFor[DualityOutcomeInput, DualityOutcomeResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input DualityOutcomeInput) (*mcp.CallToolResult, DualityOutcomeResult, error) {
 		invocationID, err := NewInvocationID()
 		if err != nil {
@@ -360,7 +360,7 @@ func DualityOutcomeHandler(client pb.DualityServiceClient) mcp.ToolHandlerFor[Du
 }
 
 // DualityExplainHandler executes a deterministic explanation request.
-func DualityExplainHandler(client pb.DualityServiceClient) mcp.ToolHandlerFor[DualityExplainInput, DualityExplainResult] {
+func DualityExplainHandler(client pb.DaggerheartServiceClient) mcp.ToolHandlerFor[DualityExplainInput, DualityExplainResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input DualityExplainInput) (*mcp.CallToolResult, DualityExplainResult, error) {
 		invocationID, err := NewInvocationID()
 		if err != nil {
@@ -449,7 +449,7 @@ func DualityExplainHandler(client pb.DualityServiceClient) mcp.ToolHandlerFor[Du
 }
 
 // DualityProbabilityHandler executes the deterministic probability evaluation.
-func DualityProbabilityHandler(client pb.DualityServiceClient) mcp.ToolHandlerFor[DualityProbabilityInput, DualityProbabilityResult] {
+func DualityProbabilityHandler(client pb.DaggerheartServiceClient) mcp.ToolHandlerFor[DualityProbabilityInput, DualityProbabilityResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input DualityProbabilityInput) (*mcp.CallToolResult, DualityProbabilityResult, error) {
 		invocationID, err := NewInvocationID()
 		if err != nil {
@@ -499,7 +499,7 @@ func DualityProbabilityHandler(client pb.DualityServiceClient) mcp.ToolHandlerFo
 }
 
 // RulesVersionHandler returns static ruleset metadata from the gRPC service.
-func RulesVersionHandler(client pb.DualityServiceClient) mcp.ToolHandlerFor[RulesVersionInput, RulesVersionResult] {
+func RulesVersionHandler(client pb.DaggerheartServiceClient) mcp.ToolHandlerFor[RulesVersionInput, RulesVersionResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, _ RulesVersionInput) (*mcp.CallToolResult, RulesVersionResult, error) {
 		invocationID, err := NewInvocationID()
 		if err != nil {
@@ -544,7 +544,7 @@ func RulesVersionHandler(client pb.DualityServiceClient) mcp.ToolHandlerFor[Rule
 }
 
 // RollDiceHandler executes a generic dice roll.
-func RollDiceHandler(client pb.DualityServiceClient) mcp.ToolHandlerFor[RollDiceInput, RollDiceResult] {
+func RollDiceHandler(client pb.DaggerheartServiceClient) mcp.ToolHandlerFor[RollDiceInput, RollDiceResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input RollDiceInput) (*mcp.CallToolResult, RollDiceResult, error) {
 		invocationID, err := NewInvocationID()
 		if err != nil {

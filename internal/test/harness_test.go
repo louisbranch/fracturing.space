@@ -150,7 +150,7 @@ func parseRFC3339(t *testing.T, value string) time.Time {
 func setTempDBPath(t *testing.T) {
 	t.Helper()
 
-	path := filepath.Join(t.TempDir(), "duality.db")
+	path := filepath.Join(t.TempDir(), "fracturing.space.db")
 	t.Setenv("DUALITY_DB_PATH", path)
 }
 

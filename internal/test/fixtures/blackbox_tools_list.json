@@ -1,0 +1,47 @@
+{
+  "name": "mcp_http_blackbox_tools_list",
+  "steps": [
+    {
+      "name": "initialize",
+      "action": "initialize"
+    },
+    {
+      "name": "initialized",
+      "action": "initialized"
+    },
+    {
+      "name": "tools_list",
+      "action": "call",
+      "method": "tools/list",
+      "params": {},
+      "expect_paths": {
+        "result.tools[0].name": "campaign_archive",
+        "result.tools[1].name": "campaign_create",
+        "result.tools[2].name": "campaign_end",
+        "result.tools[3].name": "campaign_fork",
+        "result.tools[4].name": "campaign_lineage",
+        "result.tools[5].name": "campaign_restore",
+        "result.tools[6].name": "character_control_set",
+        "result.tools[7].name": "character_create",
+        "result.tools[8].name": "character_delete",
+        "result.tools[9].name": "character_profile_patch",
+        "result.tools[10].name": "character_sheet_get",
+        "result.tools[11].name": "character_state_patch",
+        "result.tools[12].name": "character_update",
+        "result.tools[13].name": "duality_action_roll",
+        "result.tools[14].name": "duality_explain",
+        "result.tools[15].name": "duality_outcome",
+        "result.tools[16].name": "duality_probability",
+        "result.tools[17].name": "duality_rules_version",
+        "result.tools[18].name": "events_list",
+        "result.tools[19].name": "participant_create",
+        "result.tools[20].name": "participant_delete",
+        "result.tools[21].name": "participant_update",
+        "result.tools[22].name": "roll_dice",
+        "result.tools[23].name": "session_end",
+        "result.tools[24].name": "session_start",
+        "result.tools[25].name": "set_context"
+      }
+    }
+  ]
+}

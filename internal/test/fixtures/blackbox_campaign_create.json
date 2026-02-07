@@ -15,6 +15,7 @@
       "tool": "campaign_create",
       "args": {
         "name": "Scenario Campaign",
+        "system": "DAGGERHEART",
         "gm_mode": "HUMAN",
         "theme_prompt": "short flow"
       },

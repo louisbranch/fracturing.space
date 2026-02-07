@@ -25,6 +25,7 @@
       "tool": "campaign_create",
       "args": {
         "name": "Context Scenario",
+        "system": "DAGGERHEART",
         "gm_mode": "AI",
         "theme_prompt": "context"
       },

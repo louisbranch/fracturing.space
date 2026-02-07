@@ -11,11 +11,10 @@ import (
 	"testing"
 	"time"
 
-	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
-	pb "github.com/louisbranch/fracturing.space/api/gen/go/duality/v1"
-	sessionv1 "github.com/louisbranch/fracturing.space/api/gen/go/session/v1"
-	"github.com/louisbranch/fracturing.space/internal/grpcmeta"
+	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/state/v1"
+	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	grpcmeta "github.com/louisbranch/fracturing.space/internal/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/mcp/domain"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
@@ -27,8 +26,8 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-// fakeDualityClient implements DualityServiceClient for tests.
-type fakeDualityClient struct {
+// fakeDaggerheartClient implements DaggerheartServiceClient for tests.
+type fakeDaggerheartClient struct {
 	response                      *pb.ActionRollResponse
 	rollDiceResponse              *pb.RollDiceResponse
 	dualityOutcomeResponse        *pb.DualityOutcomeResponse
@@ -69,36 +68,84 @@ func requireToolMetadata(t *testing.T, result *mcp.CallToolResult) (string, stri
 	return requestID, invocationID
 }
 
-// fakeCampaignClient implements CampaignServiceClient for tests.
+// fakeCampaignClient implements statev1.CampaignServiceClient for tests.
 type fakeCampaignClient struct {
-	response                     *campaignv1.CreateCampaignResponse
-	listResponse                 *campaignv1.ListCampaignsResponse
-	getCampaignResponse          *campaignv1.GetCampaignResponse
-	createParticipantResponse    *campaignv1.CreateParticipantResponse
-	listParticipantsResponse     *campaignv1.ListParticipantsResponse
-	getParticipantResponse       *campaignv1.GetParticipantResponse
-	createCharacterResponse      *campaignv1.CreateCharacterResponse
-	listCharactersResponse       *campaignv1.ListCharactersResponse
-	setDefaultControlResponse    *campaignv1.SetDefaultControlResponse
-	err                          error
-	listErr                      error
-	getCampaignErr               error
+	response                   *statev1.CreateCampaignResponse
+	listResponse               *statev1.ListCampaignsResponse
+	getCampaignResponse        *statev1.GetCampaignResponse
+	endCampaignResponse        *statev1.EndCampaignResponse
+	archiveCampaignResponse    *statev1.ArchiveCampaignResponse
+	restoreCampaignResponse    *statev1.RestoreCampaignResponse
+	err                        error
+	listErr                    error
+	getCampaignErr             error
+	endCampaignErr             error
+	archiveCampaignErr         error
+	restoreCampaignErr         error
+	lastRequest                *statev1.CreateCampaignRequest
+	lastListRequest            *statev1.ListCampaignsRequest
+	lastGetCampaignRequest     *statev1.GetCampaignRequest
+	lastEndCampaignRequest     *statev1.EndCampaignRequest
+	lastArchiveCampaignRequest *statev1.ArchiveCampaignRequest
+	lastRestoreCampaignRequest *statev1.RestoreCampaignRequest
+	listCalls                  int
+}
+
+// fakeParticipantClient implements statev1.ParticipantServiceClient for tests.
+type fakeParticipantClient struct {
+	createParticipantResponse    *statev1.CreateParticipantResponse
+	updateParticipantResponse    *statev1.UpdateParticipantResponse
+	deleteParticipantResponse    *statev1.DeleteParticipantResponse
+	listParticipantsResponse     *statev1.ListParticipantsResponse
+	getParticipantResponse       *statev1.GetParticipantResponse
 	createParticipantErr         error
+	updateParticipantErr         error
+	deleteParticipantErr         error
 	listParticipantsErr          error
 	getParticipantErr            error
-	createCharacterErr           error
-	listCharactersErr            error
-	setDefaultControlErr         error
-	lastRequest                  *campaignv1.CreateCampaignRequest
-	lastListRequest              *campaignv1.ListCampaignsRequest
-	lastGetCampaignRequest       *campaignv1.GetCampaignRequest
-	lastCreateParticipantRequest *campaignv1.CreateParticipantRequest
-	lastListParticipantsRequest  *campaignv1.ListParticipantsRequest
-	lastGetParticipantRequest    *campaignv1.GetParticipantRequest
-	lastCreateCharacterRequest   *campaignv1.CreateCharacterRequest
-	lastListCharactersRequest    *campaignv1.ListCharactersRequest
-	lastSetDefaultControlRequest *campaignv1.SetDefaultControlRequest
-	listCalls                    int
+	lastCreateParticipantRequest *statev1.CreateParticipantRequest
+	lastUpdateParticipantRequest *statev1.UpdateParticipantRequest
+	lastDeleteParticipantRequest *statev1.DeleteParticipantRequest
+	lastListParticipantsRequest  *statev1.ListParticipantsRequest
+	lastGetParticipantRequest    *statev1.GetParticipantRequest
+}
+
+// fakeCharacterClient implements statev1.CharacterServiceClient for tests.
+type fakeCharacterClient struct {
+	createCharacterResponse          *statev1.CreateCharacterResponse
+	updateCharacterResponse          *statev1.UpdateCharacterResponse
+	deleteCharacterResponse          *statev1.DeleteCharacterResponse
+	listCharactersResponse           *statev1.ListCharactersResponse
+	setDefaultControlResponse        *statev1.SetDefaultControlResponse
+	getCharacterSheetResponse        *statev1.GetCharacterSheetResponse
+	patchCharacterProfileResponse    *statev1.PatchCharacterProfileResponse
+	createCharacterErr               error
+	updateCharacterErr               error
+	deleteCharacterErr               error
+	listCharactersErr                error
+	setDefaultControlErr             error
+	getCharacterSheetErr             error
+	patchCharacterProfileErr         error
+	lastCreateCharacterRequest       *statev1.CreateCharacterRequest
+	lastUpdateCharacterRequest       *statev1.UpdateCharacterRequest
+	lastDeleteCharacterRequest       *statev1.DeleteCharacterRequest
+	lastListCharactersRequest        *statev1.ListCharactersRequest
+	lastSetDefaultControlRequest     *statev1.SetDefaultControlRequest
+	lastGetCharacterSheetRequest     *statev1.GetCharacterSheetRequest
+	lastPatchCharacterProfileRequest *statev1.PatchCharacterProfileRequest
+}
+
+// fakeSnapshotClient implements statev1.SnapshotServiceClient for tests.
+type fakeSnapshotClient struct {
+	getSnapshotResponse            *statev1.GetSnapshotResponse
+	patchCharacterStateResponse    *statev1.PatchCharacterStateResponse
+	updateSnapshotStateResponse    *statev1.UpdateSnapshotStateResponse
+	getSnapshotErr                 error
+	patchCharacterStateErr         error
+	updateSnapshotStateErr         error
+	lastGetSnapshotRequest         *statev1.GetSnapshotRequest
+	lastPatchCharacterStateRequest *statev1.PatchCharacterStateRequest
+	lastUpdateSnapshotStateRequest *statev1.UpdateSnapshotStateRequest
 }
 
 // failingTransport returns a connection error for tests.
@@ -110,185 +157,216 @@ func (f failingTransport) Connect(context.Context) (mcp.Connection, error) {
 }
 
 // ActionRoll records the request and returns the configured response.
-func (f *fakeDualityClient) ActionRoll(ctx context.Context, req *pb.ActionRollRequest, opts ...grpc.CallOption) (*pb.ActionRollResponse, error) {
+func (f *fakeDaggerheartClient) ActionRoll(ctx context.Context, req *pb.ActionRollRequest, opts ...grpc.CallOption) (*pb.ActionRollResponse, error) {
 	f.lastRequest = req
 	return f.response, f.err
 }
 
 // DualityOutcome records the request and returns the configured response.
-func (f *fakeDualityClient) DualityOutcome(ctx context.Context, req *pb.DualityOutcomeRequest, opts ...grpc.CallOption) (*pb.DualityOutcomeResponse, error) {
+func (f *fakeDaggerheartClient) DualityOutcome(ctx context.Context, req *pb.DualityOutcomeRequest, opts ...grpc.CallOption) (*pb.DualityOutcomeResponse, error) {
 	f.lastDualityOutcomeRequest = req
 	return f.dualityOutcomeResponse, f.dualityOutcomeErr
 }
 
 // DualityExplain records the request and returns the configured response.
-func (f *fakeDualityClient) DualityExplain(ctx context.Context, req *pb.DualityExplainRequest, opts ...grpc.CallOption) (*pb.DualityExplainResponse, error) {
+func (f *fakeDaggerheartClient) DualityExplain(ctx context.Context, req *pb.DualityExplainRequest, opts ...grpc.CallOption) (*pb.DualityExplainResponse, error) {
 	f.lastDualityExplainRequest = req
 	return f.dualityExplainResponse, f.dualityExplainErr
 }
 
 // DualityProbability records the request and returns the configured response.
-func (f *fakeDualityClient) DualityProbability(ctx context.Context, req *pb.DualityProbabilityRequest, opts ...grpc.CallOption) (*pb.DualityProbabilityResponse, error) {
+func (f *fakeDaggerheartClient) DualityProbability(ctx context.Context, req *pb.DualityProbabilityRequest, opts ...grpc.CallOption) (*pb.DualityProbabilityResponse, error) {
 	f.lastDualityProbabilityRequest = req
 	return f.dualityProbabilityResponse, f.dualityProbabilityErr
 }
 
 // RulesVersion records the request and returns the configured response.
-func (f *fakeDualityClient) RulesVersion(ctx context.Context, req *pb.RulesVersionRequest, opts ...grpc.CallOption) (*pb.RulesVersionResponse, error) {
+func (f *fakeDaggerheartClient) RulesVersion(ctx context.Context, req *pb.RulesVersionRequest, opts ...grpc.CallOption) (*pb.RulesVersionResponse, error) {
 	f.lastRulesVersionRequest = req
 	return f.rulesVersionResponse, f.rulesVersionErr
 }
 
 // RollDice records the request and returns the configured response.
-func (f *fakeDualityClient) RollDice(ctx context.Context, req *pb.RollDiceRequest, opts ...grpc.CallOption) (*pb.RollDiceResponse, error) {
+func (f *fakeDaggerheartClient) RollDice(ctx context.Context, req *pb.RollDiceRequest, opts ...grpc.CallOption) (*pb.RollDiceResponse, error) {
 	f.lastRollDiceRequest = req
 	return f.rollDiceResponse, f.rollDiceErr
 }
 
+// SessionActionRoll returns an unimplemented error for tests.
+func (f *fakeDaggerheartClient) SessionActionRoll(ctx context.Context, req *pb.SessionActionRollRequest, opts ...grpc.CallOption) (*pb.SessionActionRollResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented in test fake")
+}
+
+// ApplyRollOutcome returns an unimplemented error for tests.
+func (f *fakeDaggerheartClient) ApplyRollOutcome(ctx context.Context, req *pb.ApplyRollOutcomeRequest, opts ...grpc.CallOption) (*pb.ApplyRollOutcomeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented in test fake")
+}
+
 // CreateCampaign records the request and returns the configured response.
-func (f *fakeCampaignClient) CreateCampaign(ctx context.Context, req *campaignv1.CreateCampaignRequest, opts ...grpc.CallOption) (*campaignv1.CreateCampaignResponse, error) {
+func (f *fakeCampaignClient) CreateCampaign(ctx context.Context, req *statev1.CreateCampaignRequest, opts ...grpc.CallOption) (*statev1.CreateCampaignResponse, error) {
 	f.lastRequest = req
 	return f.response, f.err
 }
 
 // ListCampaigns records the request and returns the configured response.
-func (f *fakeCampaignClient) ListCampaigns(ctx context.Context, req *campaignv1.ListCampaignsRequest, opts ...grpc.CallOption) (*campaignv1.ListCampaignsResponse, error) {
+func (f *fakeCampaignClient) ListCampaigns(ctx context.Context, req *statev1.ListCampaignsRequest, opts ...grpc.CallOption) (*statev1.ListCampaignsResponse, error) {
 	f.lastListRequest = req
 	f.listCalls++
 	return f.listResponse, f.listErr
 }
 
 // GetCampaign records the request and returns the configured response.
-func (f *fakeCampaignClient) GetCampaign(ctx context.Context, req *campaignv1.GetCampaignRequest, opts ...grpc.CallOption) (*campaignv1.GetCampaignResponse, error) {
+func (f *fakeCampaignClient) GetCampaign(ctx context.Context, req *statev1.GetCampaignRequest, opts ...grpc.CallOption) (*statev1.GetCampaignResponse, error) {
 	f.lastGetCampaignRequest = req
 	return f.getCampaignResponse, f.getCampaignErr
 }
 
+// EndCampaign records the request and returns the configured response.
+func (f *fakeCampaignClient) EndCampaign(ctx context.Context, req *statev1.EndCampaignRequest, opts ...grpc.CallOption) (*statev1.EndCampaignResponse, error) {
+	f.lastEndCampaignRequest = req
+	return f.endCampaignResponse, f.endCampaignErr
+}
+
+// ArchiveCampaign records the request and returns the configured response.
+func (f *fakeCampaignClient) ArchiveCampaign(ctx context.Context, req *statev1.ArchiveCampaignRequest, opts ...grpc.CallOption) (*statev1.ArchiveCampaignResponse, error) {
+	f.lastArchiveCampaignRequest = req
+	return f.archiveCampaignResponse, f.archiveCampaignErr
+}
+
+// RestoreCampaign records the request and returns the configured response.
+func (f *fakeCampaignClient) RestoreCampaign(ctx context.Context, req *statev1.RestoreCampaignRequest, opts ...grpc.CallOption) (*statev1.RestoreCampaignResponse, error) {
+	f.lastRestoreCampaignRequest = req
+	return f.restoreCampaignResponse, f.restoreCampaignErr
+}
+
 // CreateParticipant records the request and returns the configured response.
-func (f *fakeCampaignClient) CreateParticipant(ctx context.Context, req *campaignv1.CreateParticipantRequest, opts ...grpc.CallOption) (*campaignv1.CreateParticipantResponse, error) {
+func (f *fakeParticipantClient) CreateParticipant(ctx context.Context, req *statev1.CreateParticipantRequest, opts ...grpc.CallOption) (*statev1.CreateParticipantResponse, error) {
 	f.lastCreateParticipantRequest = req
 	return f.createParticipantResponse, f.createParticipantErr
 }
 
+// UpdateParticipant records the request and returns the configured response.
+func (f *fakeParticipantClient) UpdateParticipant(ctx context.Context, req *statev1.UpdateParticipantRequest, opts ...grpc.CallOption) (*statev1.UpdateParticipantResponse, error) {
+	f.lastUpdateParticipantRequest = req
+	return f.updateParticipantResponse, f.updateParticipantErr
+}
+
+// DeleteParticipant records the request and returns the configured response.
+func (f *fakeParticipantClient) DeleteParticipant(ctx context.Context, req *statev1.DeleteParticipantRequest, opts ...grpc.CallOption) (*statev1.DeleteParticipantResponse, error) {
+	f.lastDeleteParticipantRequest = req
+	return f.deleteParticipantResponse, f.deleteParticipantErr
+}
+
 // ListParticipants records the request and returns the configured response.
-func (f *fakeCampaignClient) ListParticipants(ctx context.Context, req *campaignv1.ListParticipantsRequest, opts ...grpc.CallOption) (*campaignv1.ListParticipantsResponse, error) {
+func (f *fakeParticipantClient) ListParticipants(ctx context.Context, req *statev1.ListParticipantsRequest, opts ...grpc.CallOption) (*statev1.ListParticipantsResponse, error) {
 	f.lastListParticipantsRequest = req
 	return f.listParticipantsResponse, f.listParticipantsErr
 }
 
 // GetParticipant records the request and returns the configured response.
-func (f *fakeCampaignClient) GetParticipant(ctx context.Context, req *campaignv1.GetParticipantRequest, opts ...grpc.CallOption) (*campaignv1.GetParticipantResponse, error) {
+func (f *fakeParticipantClient) GetParticipant(ctx context.Context, req *statev1.GetParticipantRequest, opts ...grpc.CallOption) (*statev1.GetParticipantResponse, error) {
 	f.lastGetParticipantRequest = req
 	return f.getParticipantResponse, f.getParticipantErr
 }
 
 // CreateCharacter records the request and returns the configured response.
-func (f *fakeCampaignClient) CreateCharacter(ctx context.Context, req *campaignv1.CreateCharacterRequest, opts ...grpc.CallOption) (*campaignv1.CreateCharacterResponse, error) {
+func (f *fakeCharacterClient) CreateCharacter(ctx context.Context, req *statev1.CreateCharacterRequest, opts ...grpc.CallOption) (*statev1.CreateCharacterResponse, error) {
 	f.lastCreateCharacterRequest = req
 	return f.createCharacterResponse, f.createCharacterErr
 }
 
+// UpdateCharacter records the request and returns the configured response.
+func (f *fakeCharacterClient) UpdateCharacter(ctx context.Context, req *statev1.UpdateCharacterRequest, opts ...grpc.CallOption) (*statev1.UpdateCharacterResponse, error) {
+	f.lastUpdateCharacterRequest = req
+	return f.updateCharacterResponse, f.updateCharacterErr
+}
+
+// DeleteCharacter records the request and returns the configured response.
+func (f *fakeCharacterClient) DeleteCharacter(ctx context.Context, req *statev1.DeleteCharacterRequest, opts ...grpc.CallOption) (*statev1.DeleteCharacterResponse, error) {
+	f.lastDeleteCharacterRequest = req
+	return f.deleteCharacterResponse, f.deleteCharacterErr
+}
+
 // ListCharacters records the request and returns the configured response.
-func (f *fakeCampaignClient) ListCharacters(ctx context.Context, req *campaignv1.ListCharactersRequest, opts ...grpc.CallOption) (*campaignv1.ListCharactersResponse, error) {
+func (f *fakeCharacterClient) ListCharacters(ctx context.Context, req *statev1.ListCharactersRequest, opts ...grpc.CallOption) (*statev1.ListCharactersResponse, error) {
 	f.lastListCharactersRequest = req
 	return f.listCharactersResponse, f.listCharactersErr
 }
 
 // SetDefaultControl records the request and returns the configured response.
-func (f *fakeCampaignClient) SetDefaultControl(ctx context.Context, req *campaignv1.SetDefaultControlRequest, opts ...grpc.CallOption) (*campaignv1.SetDefaultControlResponse, error) {
+func (f *fakeCharacterClient) SetDefaultControl(ctx context.Context, req *statev1.SetDefaultControlRequest, opts ...grpc.CallOption) (*statev1.SetDefaultControlResponse, error) {
 	f.lastSetDefaultControlRequest = req
 	return f.setDefaultControlResponse, f.setDefaultControlErr
 }
 
 // GetCharacterSheet records the request and returns the configured response.
-func (f *fakeCampaignClient) GetCharacterSheet(ctx context.Context, req *campaignv1.GetCharacterSheetRequest, opts ...grpc.CallOption) (*campaignv1.GetCharacterSheetResponse, error) {
-	return nil, errors.New("not implemented in fake client")
+func (f *fakeCharacterClient) GetCharacterSheet(ctx context.Context, req *statev1.GetCharacterSheetRequest, opts ...grpc.CallOption) (*statev1.GetCharacterSheetResponse, error) {
+	f.lastGetCharacterSheetRequest = req
+	return f.getCharacterSheetResponse, f.getCharacterSheetErr
 }
 
 // PatchCharacterProfile records the request and returns the configured response.
-func (f *fakeCampaignClient) PatchCharacterProfile(ctx context.Context, req *campaignv1.PatchCharacterProfileRequest, opts ...grpc.CallOption) (*campaignv1.PatchCharacterProfileResponse, error) {
-	return nil, errors.New("not implemented in fake client")
+func (f *fakeCharacterClient) PatchCharacterProfile(ctx context.Context, req *statev1.PatchCharacterProfileRequest, opts ...grpc.CallOption) (*statev1.PatchCharacterProfileResponse, error) {
+	f.lastPatchCharacterProfileRequest = req
+	return f.patchCharacterProfileResponse, f.patchCharacterProfileErr
+}
+
+// GetSnapshot records the request and returns the configured response.
+func (f *fakeSnapshotClient) GetSnapshot(ctx context.Context, req *statev1.GetSnapshotRequest, opts ...grpc.CallOption) (*statev1.GetSnapshotResponse, error) {
+	f.lastGetSnapshotRequest = req
+	return f.getSnapshotResponse, f.getSnapshotErr
 }
 
 // PatchCharacterState records the request and returns the configured response.
-func (f *fakeCampaignClient) PatchCharacterState(ctx context.Context, req *campaignv1.PatchCharacterStateRequest, opts ...grpc.CallOption) (*campaignv1.PatchCharacterStateResponse, error) {
-	return nil, errors.New("not implemented in fake client")
+func (f *fakeSnapshotClient) PatchCharacterState(ctx context.Context, req *statev1.PatchCharacterStateRequest, opts ...grpc.CallOption) (*statev1.PatchCharacterStateResponse, error) {
+	f.lastPatchCharacterStateRequest = req
+	return f.patchCharacterStateResponse, f.patchCharacterStateErr
 }
 
-// fakeSessionClient implements SessionServiceClient for tests.
+// UpdateSnapshotState records the request and returns the configured response.
+func (f *fakeSnapshotClient) UpdateSnapshotState(ctx context.Context, req *statev1.UpdateSnapshotStateRequest, opts ...grpc.CallOption) (*statev1.UpdateSnapshotStateResponse, error) {
+	f.lastUpdateSnapshotStateRequest = req
+	return f.updateSnapshotStateResponse, f.updateSnapshotStateErr
+}
+
+// fakeSessionClient implements statev1.SessionServiceClient for tests.
 type fakeSessionClient struct {
-	startSessionResponse    *sessionv1.StartSessionResponse
-	endSessionResponse      *sessionv1.EndSessionResponse
-	listSessionsResponse    *sessionv1.ListSessionsResponse
-	getSessionResponse      *sessionv1.GetSessionResponse
-	sessionEventResponse    *sessionv1.SessionEventAppendResponse
-	sessionEventsResponse   *sessionv1.SessionEventsListResponse
-	sessionActionRollResult *sessionv1.SessionActionRollResponse
-	applyRollOutcomeResult  *sessionv1.ApplyRollOutcomeResponse
+	startSessionResponse    *statev1.StartSessionResponse
+	endSessionResponse      *statev1.EndSessionResponse
+	listSessionsResponse    *statev1.ListSessionsResponse
+	getSessionResponse      *statev1.GetSessionResponse
 	err                     error
 	endSessionErr           error
 	listSessionsErr         error
 	getSessionErr           error
-	sessionEventErr         error
-	sessionEventsErr        error
-	sessionActionRollErr    error
-	applyRollOutcomeErr     error
-	lastRequest             *sessionv1.StartSessionRequest
-	lastEndSessionRequest   *sessionv1.EndSessionRequest
-	lastListSessionsRequest *sessionv1.ListSessionsRequest
-	lastGetSessionRequest   *sessionv1.GetSessionRequest
-	lastEventRequest        *sessionv1.SessionEventAppendRequest
-	lastEventsListRequest   *sessionv1.SessionEventsListRequest
-	lastActionRollRequest   *sessionv1.SessionActionRollRequest
-	lastApplyOutcomeRequest *sessionv1.ApplyRollOutcomeRequest
+	lastRequest             *statev1.StartSessionRequest
+	lastEndSessionRequest   *statev1.EndSessionRequest
+	lastListSessionsRequest *statev1.ListSessionsRequest
+	lastGetSessionRequest   *statev1.GetSessionRequest
 }
 
 // StartSession records the request and returns the configured response.
-func (f *fakeSessionClient) StartSession(ctx context.Context, req *sessionv1.StartSessionRequest, opts ...grpc.CallOption) (*sessionv1.StartSessionResponse, error) {
+func (f *fakeSessionClient) StartSession(ctx context.Context, req *statev1.StartSessionRequest, opts ...grpc.CallOption) (*statev1.StartSessionResponse, error) {
 	f.lastRequest = req
 	return f.startSessionResponse, f.err
 }
 
 // EndSession records the request and returns the configured response.
-func (f *fakeSessionClient) EndSession(ctx context.Context, req *sessionv1.EndSessionRequest, opts ...grpc.CallOption) (*sessionv1.EndSessionResponse, error) {
+func (f *fakeSessionClient) EndSession(ctx context.Context, req *statev1.EndSessionRequest, opts ...grpc.CallOption) (*statev1.EndSessionResponse, error) {
 	f.lastEndSessionRequest = req
 	return f.endSessionResponse, f.endSessionErr
 }
 
 // ListSessions records the request and returns the configured response.
-func (f *fakeSessionClient) ListSessions(ctx context.Context, req *sessionv1.ListSessionsRequest, opts ...grpc.CallOption) (*sessionv1.ListSessionsResponse, error) {
+func (f *fakeSessionClient) ListSessions(ctx context.Context, req *statev1.ListSessionsRequest, opts ...grpc.CallOption) (*statev1.ListSessionsResponse, error) {
 	f.lastListSessionsRequest = req
 	return f.listSessionsResponse, f.listSessionsErr
 }
 
 // GetSession records the request and returns the configured response.
-func (f *fakeSessionClient) GetSession(ctx context.Context, req *sessionv1.GetSessionRequest, opts ...grpc.CallOption) (*sessionv1.GetSessionResponse, error) {
+func (f *fakeSessionClient) GetSession(ctx context.Context, req *statev1.GetSessionRequest, opts ...grpc.CallOption) (*statev1.GetSessionResponse, error) {
 	f.lastGetSessionRequest = req
 	return f.getSessionResponse, f.getSessionErr
-}
-
-// SessionEventAppend records the request and returns the configured response.
-func (f *fakeSessionClient) SessionEventAppend(ctx context.Context, req *sessionv1.SessionEventAppendRequest, opts ...grpc.CallOption) (*sessionv1.SessionEventAppendResponse, error) {
-	f.lastEventRequest = req
-	return f.sessionEventResponse, f.sessionEventErr
-}
-
-// SessionEventsList records the request and returns the configured response.
-func (f *fakeSessionClient) SessionEventsList(ctx context.Context, req *sessionv1.SessionEventsListRequest, opts ...grpc.CallOption) (*sessionv1.SessionEventsListResponse, error) {
-	f.lastEventsListRequest = req
-	return f.sessionEventsResponse, f.sessionEventsErr
-}
-
-// SessionActionRoll records the request and returns the configured response.
-func (f *fakeSessionClient) SessionActionRoll(ctx context.Context, req *sessionv1.SessionActionRollRequest, opts ...grpc.CallOption) (*sessionv1.SessionActionRollResponse, error) {
-	f.lastActionRollRequest = req
-	return f.sessionActionRollResult, f.sessionActionRollErr
-}
-
-// ApplyRollOutcome records the request and returns the configured response.
-func (f *fakeSessionClient) ApplyRollOutcome(ctx context.Context, req *sessionv1.ApplyRollOutcomeRequest, opts ...grpc.CallOption) (*sessionv1.ApplyRollOutcomeResponse, error) {
-	f.lastApplyOutcomeRequest = req
-	return f.applyRollOutcomeResult, f.applyRollOutcomeErr
 }
 
 // TestGRPCAddressUsesFallbackOverEnv ensures the fallback wins over env.
@@ -440,7 +518,7 @@ func TestNewConfiguresServer(t *testing.T) {
 
 // TestActionRollHandlerPassesNegativeDifficulty ensures gRPC receives invalid difficulty.
 func TestActionRollHandlerPassesNegativeDifficulty(t *testing.T) {
-	client := &fakeDualityClient{err: errors.New("boom")}
+	client := &fakeDaggerheartClient{err: errors.New("boom")}
 	handler := domain.ActionRollHandler(client)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.ActionRollInput{
@@ -463,7 +541,7 @@ func TestActionRollHandlerPassesNegativeDifficulty(t *testing.T) {
 
 // TestActionRollHandlerReturnsClientError ensures gRPC errors are returned as tool errors.
 func TestActionRollHandlerReturnsClientError(t *testing.T) {
-	client := &fakeDualityClient{err: errors.New("boom")}
+	client := &fakeDaggerheartClient{err: errors.New("boom")}
 	handler := domain.ActionRollHandler(client)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.ActionRollInput{Modifier: 2})
@@ -478,7 +556,7 @@ func TestActionRollHandlerReturnsClientError(t *testing.T) {
 // TestActionRollHandlerMapsRequestAndResponse ensures inputs and outputs are mapped consistently.
 func TestActionRollHandlerMapsRequestAndResponse(t *testing.T) {
 	difficulty := int32(7)
-	client := &fakeDualityClient{
+	client := &fakeDaggerheartClient{
 		response: &pb.ActionRollResponse{
 			Hope:            4,
 			Fear:            6,
@@ -558,7 +636,7 @@ func TestActionRollHandlerMapsRequestAndResponse(t *testing.T) {
 
 // TestDualityOutcomeHandlerPassesInvalidDice ensures gRPC receives invalid dice.
 func TestDualityOutcomeHandlerPassesInvalidDice(t *testing.T) {
-	client := &fakeDualityClient{dualityOutcomeErr: errors.New("boom")}
+	client := &fakeDaggerheartClient{dualityOutcomeErr: errors.New("boom")}
 	handler := domain.DualityOutcomeHandler(client)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.DualityOutcomeInput{
@@ -581,7 +659,7 @@ func TestDualityOutcomeHandlerPassesInvalidDice(t *testing.T) {
 
 // TestDualityOutcomeHandlerPassesNegativeDifficulty ensures gRPC receives invalid difficulty.
 func TestDualityOutcomeHandlerPassesNegativeDifficulty(t *testing.T) {
-	client := &fakeDualityClient{dualityOutcomeErr: errors.New("boom")}
+	client := &fakeDaggerheartClient{dualityOutcomeErr: errors.New("boom")}
 	handler := domain.DualityOutcomeHandler(client)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.DualityOutcomeInput{
@@ -605,7 +683,7 @@ func TestDualityOutcomeHandlerPassesNegativeDifficulty(t *testing.T) {
 
 // TestDualityOutcomeHandlerReturnsClientError ensures gRPC errors are returned as tool errors.
 func TestDualityOutcomeHandlerReturnsClientError(t *testing.T) {
-	client := &fakeDualityClient{dualityOutcomeErr: errors.New("boom")}
+	client := &fakeDaggerheartClient{dualityOutcomeErr: errors.New("boom")}
 	handler := domain.DualityOutcomeHandler(client)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.DualityOutcomeInput{
@@ -624,7 +702,7 @@ func TestDualityOutcomeHandlerReturnsClientError(t *testing.T) {
 // TestDualityOutcomeHandlerMapsRequestAndResponse ensures inputs and outputs map consistently.
 func TestDualityOutcomeHandlerMapsRequestAndResponse(t *testing.T) {
 	difficulty := int32(10)
-	client := &fakeDualityClient{dualityOutcomeResponse: &pb.DualityOutcomeResponse{
+	client := &fakeDaggerheartClient{dualityOutcomeResponse: &pb.DualityOutcomeResponse{
 		Hope:            10,
 		Fear:            4,
 		Modifier:        1,
@@ -666,7 +744,7 @@ func TestDualityOutcomeHandlerMapsRequestAndResponse(t *testing.T) {
 
 // TestDualityExplainHandlerReturnsClientError ensures gRPC errors are returned as tool errors.
 func TestDualityExplainHandlerReturnsClientError(t *testing.T) {
-	client := &fakeDualityClient{dualityExplainErr: errors.New("boom")}
+	client := &fakeDaggerheartClient{dualityExplainErr: errors.New("boom")}
 	handler := domain.DualityExplainHandler(client)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.DualityExplainInput{
@@ -689,7 +767,7 @@ func TestDualityExplainHandlerMapsRequestAndResponse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected step data, got %v", err)
 	}
-	client := &fakeDualityClient{dualityExplainResponse: &pb.DualityExplainResponse{
+	client := &fakeDaggerheartClient{dualityExplainResponse: &pb.DualityExplainResponse{
 		Hope:            10,
 		Fear:            4,
 		Modifier:        1,
@@ -756,7 +834,7 @@ func TestDualityExplainHandlerMapsRequestAndResponse(t *testing.T) {
 
 // TestDualityProbabilityHandlerPassesNegativeDifficulty ensures gRPC receives invalid difficulty.
 func TestDualityProbabilityHandlerPassesNegativeDifficulty(t *testing.T) {
-	client := &fakeDualityClient{dualityProbabilityErr: errors.New("boom")}
+	client := &fakeDaggerheartClient{dualityProbabilityErr: errors.New("boom")}
 	handler := domain.DualityProbabilityHandler(client)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.DualityProbabilityInput{
@@ -779,7 +857,7 @@ func TestDualityProbabilityHandlerPassesNegativeDifficulty(t *testing.T) {
 
 // TestDualityProbabilityHandlerReturnsClientError ensures gRPC errors are returned as tool errors.
 func TestDualityProbabilityHandlerReturnsClientError(t *testing.T) {
-	client := &fakeDualityClient{dualityProbabilityErr: errors.New("boom")}
+	client := &fakeDaggerheartClient{dualityProbabilityErr: errors.New("boom")}
 	handler := domain.DualityProbabilityHandler(client)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.DualityProbabilityInput{
@@ -796,7 +874,7 @@ func TestDualityProbabilityHandlerReturnsClientError(t *testing.T) {
 
 // TestDualityProbabilityHandlerMapsRequestAndResponse ensures inputs and outputs map consistently.
 func TestDualityProbabilityHandlerMapsRequestAndResponse(t *testing.T) {
-	client := &fakeDualityClient{dualityProbabilityResponse: &pb.DualityProbabilityResponse{
+	client := &fakeDaggerheartClient{dualityProbabilityResponse: &pb.DualityProbabilityResponse{
 		TotalOutcomes: 144,
 		CritCount:     12,
 		SuccessCount:  70,
@@ -847,7 +925,7 @@ func TestDualityProbabilityHandlerMapsRequestAndResponse(t *testing.T) {
 
 // TestRollDiceHandlerPassesMissingDice ensures gRPC receives empty dice.
 func TestRollDiceHandlerPassesMissingDice(t *testing.T) {
-	client := &fakeDualityClient{rollDiceErr: errors.New("boom")}
+	client := &fakeDaggerheartClient{rollDiceErr: errors.New("boom")}
 	handler := domain.RollDiceHandler(client)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.RollDiceInput{})
@@ -867,7 +945,7 @@ func TestRollDiceHandlerPassesMissingDice(t *testing.T) {
 
 // TestRollDiceHandlerPassesInvalidDice ensures gRPC receives invalid dice specs.
 func TestRollDiceHandlerPassesInvalidDice(t *testing.T) {
-	client := &fakeDualityClient{rollDiceErr: errors.New("boom")}
+	client := &fakeDaggerheartClient{rollDiceErr: errors.New("boom")}
 	handler := domain.RollDiceHandler(client)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.RollDiceInput{
@@ -892,7 +970,7 @@ func TestRollDiceHandlerPassesInvalidDice(t *testing.T) {
 
 // TestRollDiceHandlerReturnsClientError ensures gRPC errors are returned as tool errors.
 func TestRollDiceHandlerReturnsClientError(t *testing.T) {
-	client := &fakeDualityClient{rollDiceErr: errors.New("boom")}
+	client := &fakeDaggerheartClient{rollDiceErr: errors.New("boom")}
 	handler := domain.RollDiceHandler(client)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.RollDiceInput{
@@ -908,7 +986,7 @@ func TestRollDiceHandlerReturnsClientError(t *testing.T) {
 
 // TestRollDiceHandlerMapsRequestAndResponse ensures inputs and outputs are mapped consistently.
 func TestRollDiceHandlerMapsRequestAndResponse(t *testing.T) {
-	client := &fakeDualityClient{rollDiceResponse: &pb.RollDiceResponse{
+	client := &fakeDaggerheartClient{rollDiceResponse: &pb.RollDiceResponse{
 		Rolls: []*pb.DiceRoll{
 			{Sides: 6, Results: []int32{2, 5}, Total: 7},
 			{Sides: 8, Results: []int32{4}, Total: 4},
@@ -983,7 +1061,7 @@ func TestRollDiceHandlerMapsRequestAndResponse(t *testing.T) {
 
 // TestRulesVersionHandlerReturnsClientError ensures gRPC errors are returned as tool errors.
 func TestRulesVersionHandlerReturnsClientError(t *testing.T) {
-	client := &fakeDualityClient{rulesVersionErr: errors.New("boom")}
+	client := &fakeDaggerheartClient{rulesVersionErr: errors.New("boom")}
 	handler := domain.RulesVersionHandler(client)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.RulesVersionInput{})
@@ -997,7 +1075,7 @@ func TestRulesVersionHandlerReturnsClientError(t *testing.T) {
 
 // TestRulesVersionHandlerMapsResponse ensures metadata is passed through.
 func TestRulesVersionHandlerMapsResponse(t *testing.T) {
-	client := &fakeDualityClient{rulesVersionResponse: &pb.RulesVersionResponse{
+	client := &fakeDaggerheartClient{rulesVersionResponse: &pb.RulesVersionResponse{
 		System:         "Daggerheart",
 		Module:         "Duality",
 		RulesVersion:   "1.0.0",
@@ -1081,11 +1159,11 @@ func TestCampaignCreateHandlerReturnsClientError(t *testing.T) {
 // TestCampaignCreateHandlerMapsRequestAndResponse ensures inputs and outputs map consistently.
 func TestCampaignCreateHandlerMapsRequestAndResponse(t *testing.T) {
 	now := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
-	client := &fakeCampaignClient{response: &campaignv1.CreateCampaignResponse{
-		Campaign: &campaignv1.Campaign{
+	client := &fakeCampaignClient{response: &statev1.CreateCampaignResponse{
+		Campaign: &statev1.Campaign{
 			Id:               "camp-123",
 			Name:             "Snowbound",
-			GmMode:           campaignv1.GmMode_AI,
+			GmMode:           statev1.GmMode_AI,
 			ParticipantCount: 5,
 			CharacterCount:   3,
 			ThemePrompt:      "ice and steel",
@@ -1109,7 +1187,7 @@ func TestCampaignCreateHandlerMapsRequestAndResponse(t *testing.T) {
 	if client.lastRequest == nil {
 		t.Fatal("expected gRPC request")
 	}
-	if client.lastRequest.GetGmMode() != campaignv1.GmMode_HUMAN {
+	if client.lastRequest.GetGmMode() != statev1.GmMode_HUMAN {
 		t.Fatalf("expected gm mode HUMAN, got %v", client.lastRequest.GetGmMode())
 	}
 	if output.ID != "camp-123" {
@@ -1123,6 +1201,341 @@ func TestCampaignCreateHandlerMapsRequestAndResponse(t *testing.T) {
 	}
 	if output.CharacterCount != 3 {
 		t.Fatalf("expected character count 3, got %d", output.CharacterCount)
+	}
+}
+
+// TestCampaignEndHandlerMapsRequestAndResponse ensures inputs and outputs map consistently.
+func TestCampaignEndHandlerMapsRequestAndResponse(t *testing.T) {
+	now := time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC)
+	client := &fakeCampaignClient{endCampaignResponse: &statev1.EndCampaignResponse{
+		Campaign: &statev1.Campaign{
+			Id:             "camp-123",
+			Name:           "Finale",
+			Status:         statev1.CampaignStatus_COMPLETED,
+			GmMode:         statev1.GmMode_HUMAN,
+			CreatedAt:      timestamppb.New(now.Add(-2 * time.Hour)),
+			LastActivityAt: timestamppb.New(now.Add(-time.Hour)),
+			UpdatedAt:      timestamppb.New(now),
+			CompletedAt:    timestamppb.New(now),
+		},
+	}}
+
+	result, output, err := domain.CampaignEndHandler(client, nil, nil)(
+		context.Background(),
+		&mcp.CallToolRequest{},
+		domain.CampaignStatusChangeInput{CampaignID: "camp-123"},
+	)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	requireToolMetadata(t, result)
+	if client.lastEndCampaignRequest == nil {
+		t.Fatal("expected gRPC request")
+	}
+	if client.lastEndCampaignRequest.GetCampaignId() != "camp-123" {
+		t.Fatalf("expected campaign id camp-123, got %q", client.lastEndCampaignRequest.GetCampaignId())
+	}
+	if output.ID != "camp-123" {
+		t.Fatalf("expected id camp-123, got %q", output.ID)
+	}
+	if output.Status != "COMPLETED" {
+		t.Fatalf("expected status COMPLETED, got %q", output.Status)
+	}
+	if output.CompletedAt != now.Format(time.RFC3339) {
+		t.Fatalf("expected completed_at %q, got %q", now.Format(time.RFC3339), output.CompletedAt)
+	}
+	if output.ArchivedAt != "" {
+		t.Fatalf("expected empty archived_at, got %q", output.ArchivedAt)
+	}
+}
+
+// TestCampaignEndHandlerUsesContextDefaults ensures campaign_id defaults from context.
+func TestCampaignEndHandlerUsesContextDefaults(t *testing.T) {
+	client := &fakeCampaignClient{endCampaignResponse: &statev1.EndCampaignResponse{
+		Campaign: &statev1.Campaign{Id: "camp-123"},
+	}}
+	getContext := func() domain.Context {
+		return domain.Context{CampaignID: "camp-123"}
+	}
+
+	result, _, err := domain.CampaignEndHandler(client, getContext, nil)(
+		context.Background(),
+		&mcp.CallToolRequest{},
+		domain.CampaignStatusChangeInput{},
+	)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	requireToolMetadata(t, result)
+	if client.lastEndCampaignRequest == nil {
+		t.Fatal("expected gRPC request")
+	}
+	if client.lastEndCampaignRequest.GetCampaignId() != "camp-123" {
+		t.Fatalf("expected campaign id camp-123, got %q", client.lastEndCampaignRequest.GetCampaignId())
+	}
+}
+
+// TestCampaignEndHandlerRejectsMissingCampaign ensures campaign_id is required.
+func TestCampaignEndHandlerRejectsMissingCampaign(t *testing.T) {
+	client := &fakeCampaignClient{}
+	handler := domain.CampaignEndHandler(client, func() domain.Context { return domain.Context{} }, nil)
+
+	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.CampaignStatusChangeInput{})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if result != nil {
+		t.Fatal("expected nil result on error")
+	}
+}
+
+// TestCampaignEndHandlerReturnsClientError ensures gRPC errors are returned as tool errors.
+func TestCampaignEndHandlerReturnsClientError(t *testing.T) {
+	client := &fakeCampaignClient{endCampaignErr: errors.New("boom")}
+	handler := domain.CampaignEndHandler(client, nil, nil)
+
+	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.CampaignStatusChangeInput{CampaignID: "camp-123"})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if result != nil {
+		t.Fatal("expected nil result on error")
+	}
+}
+
+// TestCampaignEndHandlerRejectsEmptyResponse ensures nil responses are rejected.
+func TestCampaignEndHandlerRejectsEmptyResponse(t *testing.T) {
+	client := &fakeCampaignClient{endCampaignResponse: &statev1.EndCampaignResponse{}}
+	handler := domain.CampaignEndHandler(client, nil, nil)
+
+	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.CampaignStatusChangeInput{CampaignID: "camp-123"})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if result != nil {
+		t.Fatal("expected nil result on error")
+	}
+}
+
+// TestCampaignArchiveHandlerMapsRequestAndResponse ensures inputs and outputs map consistently.
+func TestCampaignArchiveHandlerMapsRequestAndResponse(t *testing.T) {
+	now := time.Date(2026, 2, 1, 11, 0, 0, 0, time.UTC)
+	client := &fakeCampaignClient{archiveCampaignResponse: &statev1.ArchiveCampaignResponse{
+		Campaign: &statev1.Campaign{
+			Id:             "camp-123",
+			Name:           "Finale",
+			Status:         statev1.CampaignStatus_ARCHIVED,
+			GmMode:         statev1.GmMode_AI,
+			CreatedAt:      timestamppb.New(now.Add(-2 * time.Hour)),
+			LastActivityAt: timestamppb.New(now.Add(-time.Hour)),
+			UpdatedAt:      timestamppb.New(now),
+			ArchivedAt:     timestamppb.New(now),
+		},
+	}}
+
+	result, output, err := domain.CampaignArchiveHandler(client, nil, nil)(
+		context.Background(),
+		&mcp.CallToolRequest{},
+		domain.CampaignStatusChangeInput{CampaignID: "camp-123"},
+	)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	requireToolMetadata(t, result)
+	if client.lastArchiveCampaignRequest == nil {
+		t.Fatal("expected gRPC request")
+	}
+	if client.lastArchiveCampaignRequest.GetCampaignId() != "camp-123" {
+		t.Fatalf("expected campaign id camp-123, got %q", client.lastArchiveCampaignRequest.GetCampaignId())
+	}
+	if output.ID != "camp-123" {
+		t.Fatalf("expected id camp-123, got %q", output.ID)
+	}
+	if output.Status != "ARCHIVED" {
+		t.Fatalf("expected status ARCHIVED, got %q", output.Status)
+	}
+	if output.ArchivedAt != now.Format(time.RFC3339) {
+		t.Fatalf("expected archived_at %q, got %q", now.Format(time.RFC3339), output.ArchivedAt)
+	}
+}
+
+// TestCampaignArchiveHandlerUsesContextDefaults ensures campaign_id defaults from context.
+func TestCampaignArchiveHandlerUsesContextDefaults(t *testing.T) {
+	client := &fakeCampaignClient{archiveCampaignResponse: &statev1.ArchiveCampaignResponse{
+		Campaign: &statev1.Campaign{Id: "camp-123"},
+	}}
+	getContext := func() domain.Context {
+		return domain.Context{CampaignID: "camp-123"}
+	}
+
+	result, _, err := domain.CampaignArchiveHandler(client, getContext, nil)(
+		context.Background(),
+		&mcp.CallToolRequest{},
+		domain.CampaignStatusChangeInput{},
+	)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	requireToolMetadata(t, result)
+	if client.lastArchiveCampaignRequest == nil {
+		t.Fatal("expected gRPC request")
+	}
+	if client.lastArchiveCampaignRequest.GetCampaignId() != "camp-123" {
+		t.Fatalf("expected campaign id camp-123, got %q", client.lastArchiveCampaignRequest.GetCampaignId())
+	}
+}
+
+// TestCampaignArchiveHandlerRejectsMissingCampaign ensures campaign_id is required.
+func TestCampaignArchiveHandlerRejectsMissingCampaign(t *testing.T) {
+	client := &fakeCampaignClient{}
+	handler := domain.CampaignArchiveHandler(client, func() domain.Context { return domain.Context{} }, nil)
+
+	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.CampaignStatusChangeInput{})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if result != nil {
+		t.Fatal("expected nil result on error")
+	}
+}
+
+// TestCampaignArchiveHandlerReturnsClientError ensures gRPC errors are returned as tool errors.
+func TestCampaignArchiveHandlerReturnsClientError(t *testing.T) {
+	client := &fakeCampaignClient{archiveCampaignErr: errors.New("boom")}
+	handler := domain.CampaignArchiveHandler(client, nil, nil)
+
+	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.CampaignStatusChangeInput{CampaignID: "camp-123"})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if result != nil {
+		t.Fatal("expected nil result on error")
+	}
+}
+
+// TestCampaignArchiveHandlerRejectsEmptyResponse ensures nil responses are rejected.
+func TestCampaignArchiveHandlerRejectsEmptyResponse(t *testing.T) {
+	client := &fakeCampaignClient{archiveCampaignResponse: &statev1.ArchiveCampaignResponse{}}
+	handler := domain.CampaignArchiveHandler(client, nil, nil)
+
+	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.CampaignStatusChangeInput{CampaignID: "camp-123"})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if result != nil {
+		t.Fatal("expected nil result on error")
+	}
+}
+
+// TestCampaignRestoreHandlerMapsRequestAndResponse ensures inputs and outputs map consistently.
+func TestCampaignRestoreHandlerMapsRequestAndResponse(t *testing.T) {
+	now := time.Date(2026, 2, 1, 12, 0, 0, 0, time.UTC)
+	client := &fakeCampaignClient{restoreCampaignResponse: &statev1.RestoreCampaignResponse{
+		Campaign: &statev1.Campaign{
+			Id:             "camp-123",
+			Name:           "Finale",
+			Status:         statev1.CampaignStatus_DRAFT,
+			GmMode:         statev1.GmMode_HYBRID,
+			CreatedAt:      timestamppb.New(now.Add(-2 * time.Hour)),
+			LastActivityAt: timestamppb.New(now.Add(-time.Hour)),
+			UpdatedAt:      timestamppb.New(now),
+		},
+	}}
+
+	result, output, err := domain.CampaignRestoreHandler(client, nil, nil)(
+		context.Background(),
+		&mcp.CallToolRequest{},
+		domain.CampaignStatusChangeInput{CampaignID: "camp-123"},
+	)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	requireToolMetadata(t, result)
+	if client.lastRestoreCampaignRequest == nil {
+		t.Fatal("expected gRPC request")
+	}
+	if client.lastRestoreCampaignRequest.GetCampaignId() != "camp-123" {
+		t.Fatalf("expected campaign id camp-123, got %q", client.lastRestoreCampaignRequest.GetCampaignId())
+	}
+	if output.ID != "camp-123" {
+		t.Fatalf("expected id camp-123, got %q", output.ID)
+	}
+	if output.Status != "DRAFT" {
+		t.Fatalf("expected status DRAFT, got %q", output.Status)
+	}
+	if output.CompletedAt != "" {
+		t.Fatalf("expected empty completed_at, got %q", output.CompletedAt)
+	}
+	if output.ArchivedAt != "" {
+		t.Fatalf("expected empty archived_at, got %q", output.ArchivedAt)
+	}
+}
+
+// TestCampaignRestoreHandlerUsesContextDefaults ensures campaign_id defaults from context.
+func TestCampaignRestoreHandlerUsesContextDefaults(t *testing.T) {
+	client := &fakeCampaignClient{restoreCampaignResponse: &statev1.RestoreCampaignResponse{
+		Campaign: &statev1.Campaign{Id: "camp-123"},
+	}}
+	getContext := func() domain.Context {
+		return domain.Context{CampaignID: "camp-123"}
+	}
+
+	result, _, err := domain.CampaignRestoreHandler(client, getContext, nil)(
+		context.Background(),
+		&mcp.CallToolRequest{},
+		domain.CampaignStatusChangeInput{},
+	)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	requireToolMetadata(t, result)
+	if client.lastRestoreCampaignRequest == nil {
+		t.Fatal("expected gRPC request")
+	}
+	if client.lastRestoreCampaignRequest.GetCampaignId() != "camp-123" {
+		t.Fatalf("expected campaign id camp-123, got %q", client.lastRestoreCampaignRequest.GetCampaignId())
+	}
+}
+
+// TestCampaignRestoreHandlerRejectsMissingCampaign ensures campaign_id is required.
+func TestCampaignRestoreHandlerRejectsMissingCampaign(t *testing.T) {
+	client := &fakeCampaignClient{}
+	handler := domain.CampaignRestoreHandler(client, func() domain.Context { return domain.Context{} }, nil)
+
+	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.CampaignStatusChangeInput{})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if result != nil {
+		t.Fatal("expected nil result on error")
+	}
+}
+
+// TestCampaignRestoreHandlerReturnsClientError ensures gRPC errors are returned as tool errors.
+func TestCampaignRestoreHandlerReturnsClientError(t *testing.T) {
+	client := &fakeCampaignClient{restoreCampaignErr: errors.New("boom")}
+	handler := domain.CampaignRestoreHandler(client, nil, nil)
+
+	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.CampaignStatusChangeInput{CampaignID: "camp-123"})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if result != nil {
+		t.Fatal("expected nil result on error")
+	}
+}
+
+// TestCampaignRestoreHandlerRejectsEmptyResponse ensures nil responses are rejected.
+func TestCampaignRestoreHandlerRejectsEmptyResponse(t *testing.T) {
+	client := &fakeCampaignClient{restoreCampaignResponse: &statev1.RestoreCampaignResponse{}}
+	handler := domain.CampaignRestoreHandler(client, nil, nil)
+
+	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.CampaignStatusChangeInput{CampaignID: "camp-123"})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if result != nil {
+		t.Fatal("expected nil result on error")
 	}
 }
 
@@ -1160,11 +1573,11 @@ func TestCampaignListResourceHandlerRejectsEmptyResponse(t *testing.T) {
 // TestCampaignListResourceHandlerMapsResponse ensures JSON payload is formatted.
 func TestCampaignListResourceHandlerMapsResponse(t *testing.T) {
 	now := time.Date(2026, 1, 23, 13, 0, 0, 0, time.UTC)
-	client := &fakeCampaignClient{listResponse: &campaignv1.ListCampaignsResponse{
-		Campaigns: []*campaignv1.Campaign{{
+	client := &fakeCampaignClient{listResponse: &statev1.ListCampaignsResponse{
+		Campaigns: []*statev1.Campaign{{
 			Id:               "camp-1",
 			Name:             "Red Sands",
-			GmMode:           campaignv1.GmMode_HUMAN,
+			GmMode:           statev1.GmMode_HUMAN,
 			ParticipantCount: 4,
 			CharacterCount:   2,
 			ThemePrompt:      "desert skies",
@@ -1230,11 +1643,11 @@ func TestCampaignListResourceHandlerMapsResponse(t *testing.T) {
 // TestCampaignResourceHandlerMapsResponse ensures JSON payload is formatted.
 func TestCampaignResourceHandlerMapsResponse(t *testing.T) {
 	now := time.Date(2026, 1, 23, 13, 0, 0, 0, time.UTC)
-	client := &fakeCampaignClient{getCampaignResponse: &campaignv1.GetCampaignResponse{
-		Campaign: &campaignv1.Campaign{
+	client := &fakeCampaignClient{getCampaignResponse: &statev1.GetCampaignResponse{
+		Campaign: &statev1.Campaign{
 			Id:               "camp-1",
 			Name:             "Red Sands",
-			GmMode:           campaignv1.GmMode_HUMAN,
+			GmMode:           statev1.GmMode_HUMAN,
 			ParticipantCount: 4,
 			CharacterCount:   2,
 			ThemePrompt:      "desert skies",
@@ -1421,7 +1834,7 @@ func TestCampaignResourceHandlerRejectsSuffixedURI(t *testing.T) {
 
 // TestParticipantCreateHandlerReturnsClientError ensures gRPC errors are returned as tool errors.
 func TestParticipantCreateHandlerReturnsClientError(t *testing.T) {
-	client := &fakeCampaignClient{createParticipantErr: errors.New("boom")}
+	client := &fakeParticipantClient{createParticipantErr: errors.New("boom")}
 	handler := domain.ParticipantCreateHandler(client, nil)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.ParticipantCreateInput{
@@ -1441,13 +1854,13 @@ func TestParticipantCreateHandlerReturnsClientError(t *testing.T) {
 // TestParticipantCreateHandlerMapsRequestAndResponse ensures inputs and outputs map consistently.
 func TestParticipantCreateHandlerMapsRequestAndResponse(t *testing.T) {
 	now := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
-	client := &fakeCampaignClient{createParticipantResponse: &campaignv1.CreateParticipantResponse{
-		Participant: &campaignv1.Participant{
+	client := &fakeParticipantClient{createParticipantResponse: &statev1.CreateParticipantResponse{
+		Participant: &statev1.Participant{
 			Id:          "part-456",
 			CampaignId:  "camp-123",
 			DisplayName: "Test Player",
-			Role:        campaignv1.ParticipantRole_PLAYER,
-			Controller:  campaignv1.Controller_CONTROLLER_HUMAN,
+			Role:        statev1.ParticipantRole_PLAYER,
+			Controller:  statev1.Controller_CONTROLLER_HUMAN,
 			CreatedAt:   timestamppb.New(now),
 			UpdatedAt:   timestamppb.New(now.Add(time.Hour)),
 		},
@@ -1475,10 +1888,10 @@ func TestParticipantCreateHandlerMapsRequestAndResponse(t *testing.T) {
 	if client.lastCreateParticipantRequest.GetDisplayName() != "Test Player" {
 		t.Fatalf("expected display name Test Player, got %q", client.lastCreateParticipantRequest.GetDisplayName())
 	}
-	if client.lastCreateParticipantRequest.GetRole() != campaignv1.ParticipantRole_PLAYER {
+	if client.lastCreateParticipantRequest.GetRole() != statev1.ParticipantRole_PLAYER {
 		t.Fatalf("expected role PLAYER, got %v", client.lastCreateParticipantRequest.GetRole())
 	}
-	if client.lastCreateParticipantRequest.GetController() != campaignv1.Controller_CONTROLLER_HUMAN {
+	if client.lastCreateParticipantRequest.GetController() != statev1.Controller_CONTROLLER_HUMAN {
 		t.Fatalf("expected controller HUMAN, got %v", client.lastCreateParticipantRequest.GetController())
 	}
 	if output.ID != "part-456" {
@@ -1507,13 +1920,13 @@ func TestParticipantCreateHandlerMapsRequestAndResponse(t *testing.T) {
 // TestParticipantCreateHandlerOptionalController ensures optional controller field works.
 func TestParticipantCreateHandlerOptionalController(t *testing.T) {
 	now := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
-	client := &fakeCampaignClient{createParticipantResponse: &campaignv1.CreateParticipantResponse{
-		Participant: &campaignv1.Participant{
+	client := &fakeParticipantClient{createParticipantResponse: &statev1.CreateParticipantResponse{
+		Participant: &statev1.Participant{
 			Id:          "part-789",
 			CampaignId:  "camp-123",
 			DisplayName: "Test GM",
-			Role:        campaignv1.ParticipantRole_GM,
-			Controller:  campaignv1.Controller_CONTROLLER_HUMAN,
+			Role:        statev1.ParticipantRole_GM,
+			Controller:  statev1.Controller_CONTROLLER_HUMAN,
 			CreatedAt:   timestamppb.New(now),
 			UpdatedAt:   timestamppb.New(now),
 		},
@@ -1536,7 +1949,7 @@ func TestParticipantCreateHandlerOptionalController(t *testing.T) {
 		t.Fatal("expected gRPC request")
 	}
 	// Controller should be unspecified when not provided
-	if client.lastCreateParticipantRequest.GetController() != campaignv1.Controller_CONTROLLER_UNSPECIFIED {
+	if client.lastCreateParticipantRequest.GetController() != statev1.Controller_CONTROLLER_UNSPECIFIED {
 		t.Fatalf("expected controller UNSPECIFIED when omitted, got %v", client.lastCreateParticipantRequest.GetController())
 	}
 	if output.Role != "GM" {
@@ -1546,7 +1959,7 @@ func TestParticipantCreateHandlerOptionalController(t *testing.T) {
 
 // TestParticipantCreateHandlerRejectsEmptyResponse ensures nil responses are rejected.
 func TestParticipantCreateHandlerRejectsEmptyResponse(t *testing.T) {
-	client := &fakeCampaignClient{}
+	client := &fakeParticipantClient{}
 	handler := domain.ParticipantCreateHandler(client, nil)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.ParticipantCreateInput{
@@ -1564,7 +1977,7 @@ func TestParticipantCreateHandlerRejectsEmptyResponse(t *testing.T) {
 
 // TestCharacterCreateHandlerReturnsClientError ensures gRPC errors are returned as tool errors.
 func TestCharacterCreateHandlerReturnsClientError(t *testing.T) {
-	client := &fakeCampaignClient{createCharacterErr: errors.New("boom")}
+	client := &fakeCharacterClient{createCharacterErr: errors.New("boom")}
 	handler := domain.CharacterCreateHandler(client, nil)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.CharacterCreateInput{
@@ -1584,12 +1997,12 @@ func TestCharacterCreateHandlerReturnsClientError(t *testing.T) {
 // TestCharacterCreateHandlerMapsRequestAndResponse ensures inputs and outputs map consistently.
 func TestCharacterCreateHandlerMapsRequestAndResponse(t *testing.T) {
 	now := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
-	client := &fakeCampaignClient{createCharacterResponse: &campaignv1.CreateCharacterResponse{
-		Character: &campaignv1.Character{
+	client := &fakeCharacterClient{createCharacterResponse: &statev1.CreateCharacterResponse{
+		Character: &statev1.Character{
 			Id:         "character-456",
 			CampaignId: "camp-123",
 			Name:       "Test Character",
-			Kind:       campaignv1.CharacterKind_PC,
+			Kind:       statev1.CharacterKind_PC,
 			Notes:      "A brave warrior",
 			CreatedAt:  timestamppb.New(now),
 			UpdatedAt:  timestamppb.New(now.Add(time.Hour)),
@@ -1618,7 +2031,7 @@ func TestCharacterCreateHandlerMapsRequestAndResponse(t *testing.T) {
 	if client.lastCreateCharacterRequest.GetName() != "Test Character" {
 		t.Fatalf("expected name Test Character, got %q", client.lastCreateCharacterRequest.GetName())
 	}
-	if client.lastCreateCharacterRequest.GetKind() != campaignv1.CharacterKind_PC {
+	if client.lastCreateCharacterRequest.GetKind() != statev1.CharacterKind_PC {
 		t.Fatalf("expected kind PC, got %v", client.lastCreateCharacterRequest.GetKind())
 	}
 	if client.lastCreateCharacterRequest.GetNotes() != "A brave warrior" {
@@ -1650,12 +2063,12 @@ func TestCharacterCreateHandlerMapsRequestAndResponse(t *testing.T) {
 // TestCharacterCreateHandlerOptionalNotes ensures optional notes field works.
 func TestCharacterCreateHandlerOptionalNotes(t *testing.T) {
 	now := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
-	client := &fakeCampaignClient{createCharacterResponse: &campaignv1.CreateCharacterResponse{
-		Character: &campaignv1.Character{
+	client := &fakeCharacterClient{createCharacterResponse: &statev1.CreateCharacterResponse{
+		Character: &statev1.Character{
 			Id:         "character-789",
 			CampaignId: "camp-123",
 			Name:       "Test NPC",
-			Kind:       campaignv1.CharacterKind_NPC,
+			Kind:       statev1.CharacterKind_NPC,
 			Notes:      "",
 			CreatedAt:  timestamppb.New(now),
 			UpdatedAt:  timestamppb.New(now),
@@ -1688,7 +2101,7 @@ func TestCharacterCreateHandlerOptionalNotes(t *testing.T) {
 
 // TestCharacterCreateHandlerRejectsEmptyResponse ensures nil responses are rejected.
 func TestCharacterCreateHandlerRejectsEmptyResponse(t *testing.T) {
-	client := &fakeCampaignClient{}
+	client := &fakeCharacterClient{}
 	handler := domain.CharacterCreateHandler(client, nil)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.CharacterCreateInput{
@@ -1706,7 +2119,7 @@ func TestCharacterCreateHandlerRejectsEmptyResponse(t *testing.T) {
 
 // TestCharacterControlSetHandlerReturnsClientError ensures gRPC errors are returned as tool errors.
 func TestCharacterControlSetHandlerReturnsClientError(t *testing.T) {
-	client := &fakeCampaignClient{setDefaultControlErr: errors.New("boom")}
+	client := &fakeCharacterClient{setDefaultControlErr: errors.New("boom")}
 	handler := domain.CharacterControlSetHandler(client, nil)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.CharacterControlSetInput{
@@ -1724,12 +2137,12 @@ func TestCharacterControlSetHandlerReturnsClientError(t *testing.T) {
 
 // TestCharacterControlSetHandlerMapsRequestAndResponseGM ensures GM controller inputs and outputs map consistently.
 func TestCharacterControlSetHandlerMapsRequestAndResponseGM(t *testing.T) {
-	client := &fakeCampaignClient{setDefaultControlResponse: &campaignv1.SetDefaultControlResponse{
+	client := &fakeCharacterClient{setDefaultControlResponse: &statev1.SetDefaultControlResponse{
 		CampaignId:  "camp-123",
 		CharacterId: "character-456",
-		Controller: &campaignv1.CharacterController{
-			Controller: &campaignv1.CharacterController_Gm{
-				Gm: &campaignv1.GmController{},
+		Controller: &statev1.CharacterController{
+			Controller: &statev1.CharacterController_Gm{
+				Gm: &statev1.GmController{},
 			},
 		},
 	}}
@@ -1759,7 +2172,7 @@ func TestCharacterControlSetHandlerMapsRequestAndResponseGM(t *testing.T) {
 	if controller == nil {
 		t.Fatal("expected controller in request")
 	}
-	if _, ok := controller.GetController().(*campaignv1.CharacterController_Gm); !ok {
+	if _, ok := controller.GetController().(*statev1.CharacterController_Gm); !ok {
 		t.Fatalf("expected GM controller, got %T", controller.GetController())
 	}
 	if output.CampaignID != "camp-123" {
@@ -1776,12 +2189,12 @@ func TestCharacterControlSetHandlerMapsRequestAndResponseGM(t *testing.T) {
 // TestCharacterControlSetHandlerMapsRequestAndResponseParticipant ensures participant controller inputs and outputs map consistently.
 func TestCharacterControlSetHandlerMapsRequestAndResponseParticipant(t *testing.T) {
 	participantID := "part-789"
-	client := &fakeCampaignClient{setDefaultControlResponse: &campaignv1.SetDefaultControlResponse{
+	client := &fakeCharacterClient{setDefaultControlResponse: &statev1.SetDefaultControlResponse{
 		CampaignId:  "camp-123",
 		CharacterId: "character-456",
-		Controller: &campaignv1.CharacterController{
-			Controller: &campaignv1.CharacterController_Participant{
-				Participant: &campaignv1.ParticipantController{
+		Controller: &statev1.CharacterController{
+			Controller: &statev1.CharacterController_Participant{
+				Participant: &statev1.ParticipantController{
 					ParticipantId: participantID,
 				},
 			},
@@ -1813,7 +2226,7 @@ func TestCharacterControlSetHandlerMapsRequestAndResponseParticipant(t *testing.
 	if controller == nil {
 		t.Fatal("expected controller in request")
 	}
-	participantCtrl, ok := controller.GetController().(*campaignv1.CharacterController_Participant)
+	participantCtrl, ok := controller.GetController().(*statev1.CharacterController_Participant)
 	if !ok {
 		t.Fatalf("expected participant controller, got %T", controller.GetController())
 	}
@@ -1833,12 +2246,12 @@ func TestCharacterControlSetHandlerMapsRequestAndResponseParticipant(t *testing.
 
 // TestCharacterControlSetHandlerCaseInsensitiveGM ensures GM controller accepts case-insensitive input.
 func TestCharacterControlSetHandlerCaseInsensitiveGM(t *testing.T) {
-	client := &fakeCampaignClient{setDefaultControlResponse: &campaignv1.SetDefaultControlResponse{
+	client := &fakeCharacterClient{setDefaultControlResponse: &statev1.SetDefaultControlResponse{
 		CampaignId:  "camp-123",
 		CharacterId: "character-456",
-		Controller: &campaignv1.CharacterController{
-			Controller: &campaignv1.CharacterController_Gm{
-				Gm: &campaignv1.GmController{},
+		Controller: &statev1.CharacterController{
+			Controller: &statev1.CharacterController_Gm{
+				Gm: &statev1.GmController{},
 			},
 		},
 	}}
@@ -1865,7 +2278,7 @@ func TestCharacterControlSetHandlerCaseInsensitiveGM(t *testing.T) {
 
 // TestCharacterControlSetHandlerRejectsEmptyResponse ensures nil responses are rejected.
 func TestCharacterControlSetHandlerRejectsEmptyResponse(t *testing.T) {
-	client := &fakeCampaignClient{}
+	client := &fakeCharacterClient{}
 	handler := domain.CharacterControlSetHandler(client, nil)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.CharacterControlSetInput{
@@ -1883,7 +2296,7 @@ func TestCharacterControlSetHandlerRejectsEmptyResponse(t *testing.T) {
 
 // TestCharacterControlSetHandlerRejectsEmptyController ensures empty controller is rejected.
 func TestCharacterControlSetHandlerRejectsEmptyController(t *testing.T) {
-	client := &fakeCampaignClient{}
+	client := &fakeCharacterClient{}
 	handler := domain.CharacterControlSetHandler(client, nil)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.CharacterControlSetInput{
@@ -1919,12 +2332,12 @@ func TestSessionStartHandlerReturnsClientError(t *testing.T) {
 // TestSessionStartHandlerMapsRequestAndResponse ensures inputs and outputs map consistently.
 func TestSessionStartHandlerMapsRequestAndResponse(t *testing.T) {
 	now := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
-	client := &fakeSessionClient{startSessionResponse: &sessionv1.StartSessionResponse{
-		Session: &sessionv1.Session{
+	client := &fakeSessionClient{startSessionResponse: &statev1.StartSessionResponse{
+		Session: &statev1.Session{
 			Id:         "sess-456",
 			CampaignId: "camp-123",
 			Name:       "Test Session",
-			Status:     sessionv1.SessionStatus_ACTIVE,
+			Status:     statev1.SessionStatus_SESSION_ACTIVE,
 			StartedAt:  timestamppb.New(now),
 			UpdatedAt:  timestamppb.New(now.Add(time.Hour)),
 		},
@@ -1973,12 +2386,12 @@ func TestSessionStartHandlerMapsRequestAndResponse(t *testing.T) {
 // TestSessionStartHandlerOptionalName ensures optional name field works.
 func TestSessionStartHandlerOptionalName(t *testing.T) {
 	now := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
-	client := &fakeSessionClient{startSessionResponse: &sessionv1.StartSessionResponse{
-		Session: &sessionv1.Session{
+	client := &fakeSessionClient{startSessionResponse: &statev1.StartSessionResponse{
+		Session: &statev1.Session{
 			Id:         "sess-789",
 			CampaignId: "camp-123",
 			Name:       "",
-			Status:     sessionv1.SessionStatus_ACTIVE,
+			Status:     statev1.SessionStatus_SESSION_ACTIVE,
 			StartedAt:  timestamppb.New(now),
 			UpdatedAt:  timestamppb.New(now),
 		},
@@ -2030,12 +2443,12 @@ func TestSessionStartHandlerRejectsEmptyResponse(t *testing.T) {
 func TestSessionStartHandlerMapsEndedAt(t *testing.T) {
 	now := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
 	endedAt := now.Add(2 * time.Hour)
-	client := &fakeSessionClient{startSessionResponse: &sessionv1.StartSessionResponse{
-		Session: &sessionv1.Session{
+	client := &fakeSessionClient{startSessionResponse: &statev1.StartSessionResponse{
+		Session: &statev1.Session{
 			Id:         "sess-999",
 			CampaignId: "camp-123",
 			Name:       "Ended Session",
-			Status:     sessionv1.SessionStatus_ENDED,
+			Status:     statev1.SessionStatus_SESSION_ENDED,
 			StartedAt:  timestamppb.New(now),
 			UpdatedAt:  timestamppb.New(endedAt),
 			EndedAt:    timestamppb.New(endedAt),
@@ -2081,12 +2494,12 @@ func TestSessionEndHandlerReturnsClientError(t *testing.T) {
 // TestSessionEndHandlerMapsRequestAndResponse ensures inputs and outputs map consistently.
 func TestSessionEndHandlerMapsRequestAndResponse(t *testing.T) {
 	now := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
-	client := &fakeSessionClient{endSessionResponse: &sessionv1.EndSessionResponse{
-		Session: &sessionv1.Session{
+	client := &fakeSessionClient{endSessionResponse: &statev1.EndSessionResponse{
+		Session: &statev1.Session{
 			Id:         "sess-456",
 			CampaignId: "camp-123",
 			Name:       "Test Session",
-			Status:     sessionv1.SessionStatus_ENDED,
+			Status:     statev1.SessionStatus_SESSION_ENDED,
 			StartedAt:  timestamppb.New(now.Add(-time.Hour)),
 			UpdatedAt:  timestamppb.New(now),
 			EndedAt:    timestamppb.New(now),
@@ -2139,12 +2552,12 @@ func TestSessionEndHandlerMapsRequestAndResponse(t *testing.T) {
 // TestSessionEndHandlerUsesContextDefaults ensures campaign_id and session_id default from context.
 func TestSessionEndHandlerUsesContextDefaults(t *testing.T) {
 	now := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
-	client := &fakeSessionClient{endSessionResponse: &sessionv1.EndSessionResponse{
-		Session: &sessionv1.Session{
+	client := &fakeSessionClient{endSessionResponse: &statev1.EndSessionResponse{
+		Session: &statev1.Session{
 			Id:         "sess-456",
 			CampaignId: "camp-123",
 			Name:       "Test Session",
-			Status:     sessionv1.SessionStatus_ENDED,
+			Status:     statev1.SessionStatus_SESSION_ENDED,
 			StartedAt:  timestamppb.New(now.Add(-time.Hour)),
 			UpdatedAt:  timestamppb.New(now),
 			EndedAt:    timestamppb.New(now),
@@ -2210,21 +2623,21 @@ func TestSessionEndHandlerRejectsMissingCampaign(t *testing.T) {
 func TestParticipantListResourceHandlerMapsResponse(t *testing.T) {
 	now := time.Date(2026, 1, 23, 13, 0, 0, 0, time.UTC)
 	campaignID := "camp-456"
-	client := &fakeCampaignClient{listParticipantsResponse: &campaignv1.ListParticipantsResponse{
-		Participants: []*campaignv1.Participant{{
+	client := &fakeParticipantClient{listParticipantsResponse: &statev1.ListParticipantsResponse{
+		Participants: []*statev1.Participant{{
 			Id:          "part-1",
 			CampaignId:  campaignID,
 			DisplayName: "Test Player",
-			Role:        campaignv1.ParticipantRole_PLAYER,
-			Controller:  campaignv1.Controller_CONTROLLER_HUMAN,
+			Role:        statev1.ParticipantRole_PLAYER,
+			Controller:  statev1.Controller_CONTROLLER_HUMAN,
 			CreatedAt:   timestamppb.New(now),
 			UpdatedAt:   timestamppb.New(now.Add(time.Hour)),
 		}, {
 			Id:          "part-2",
 			CampaignId:  campaignID,
 			DisplayName: "Test GM",
-			Role:        campaignv1.ParticipantRole_GM,
-			Controller:  campaignv1.Controller_CONTROLLER_AI,
+			Role:        statev1.ParticipantRole_GM,
+			Controller:  statev1.Controller_CONTROLLER_AI,
 			CreatedAt:   timestamppb.New(now),
 			UpdatedAt:   timestamppb.New(now),
 		}},
@@ -2290,7 +2703,7 @@ func TestParticipantListResourceHandlerMapsResponse(t *testing.T) {
 
 // TestParticipantListResourceHandlerRejectsMissingURI ensures missing campaign URI is rejected.
 func TestParticipantListResourceHandlerRejectsMissingURI(t *testing.T) {
-	client := &fakeCampaignClient{}
+	client := &fakeParticipantClient{}
 	handler := domain.ParticipantListResourceHandler(client)
 
 	result, err := handler(context.Background(), &mcp.ReadResourceRequest{
@@ -2306,7 +2719,7 @@ func TestParticipantListResourceHandlerRejectsMissingURI(t *testing.T) {
 
 // TestParticipantListResourceHandlerReturnsClientError ensures list errors are returned.
 func TestParticipantListResourceHandlerReturnsClientError(t *testing.T) {
-	client := &fakeCampaignClient{listParticipantsErr: errors.New("boom")}
+	client := &fakeParticipantClient{listParticipantsErr: errors.New("boom")}
 	handler := domain.ParticipantListResourceHandler(client)
 
 	result, err := handler(context.Background(), &mcp.ReadResourceRequest{
@@ -2324,12 +2737,12 @@ func TestParticipantListResourceHandlerReturnsClientError(t *testing.T) {
 func TestCharacterListResourceHandlerMapsResponse(t *testing.T) {
 	now := time.Date(2026, 1, 23, 13, 0, 0, 0, time.UTC)
 	campaignID := "camp-789"
-	client := &fakeCampaignClient{listCharactersResponse: &campaignv1.ListCharactersResponse{
-		Characters: []*campaignv1.Character{{
+	client := &fakeCharacterClient{listCharactersResponse: &statev1.ListCharactersResponse{
+		Characters: []*statev1.Character{{
 			Id:         "character-1",
 			CampaignId: campaignID,
 			Name:       "Test PC",
-			Kind:       campaignv1.CharacterKind_PC,
+			Kind:       statev1.CharacterKind_PC,
 			Notes:      "A brave warrior",
 			CreatedAt:  timestamppb.New(now),
 			UpdatedAt:  timestamppb.New(now.Add(time.Hour)),
@@ -2337,7 +2750,7 @@ func TestCharacterListResourceHandlerMapsResponse(t *testing.T) {
 			Id:         "character-2",
 			CampaignId: campaignID,
 			Name:       "Test NPC",
-			Kind:       campaignv1.CharacterKind_NPC,
+			Kind:       statev1.CharacterKind_NPC,
 			Notes:      "A helpful merchant",
 			CreatedAt:  timestamppb.New(now),
 			UpdatedAt:  timestamppb.New(now),
@@ -2404,7 +2817,7 @@ func TestCharacterListResourceHandlerMapsResponse(t *testing.T) {
 
 // TestCharacterListResourceHandlerRejectsMissingURI ensures missing campaign URI is rejected.
 func TestCharacterListResourceHandlerRejectsMissingURI(t *testing.T) {
-	client := &fakeCampaignClient{}
+	client := &fakeCharacterClient{}
 	handler := domain.CharacterListResourceHandler(client)
 
 	result, err := handler(context.Background(), &mcp.ReadResourceRequest{
@@ -2420,7 +2833,7 @@ func TestCharacterListResourceHandlerRejectsMissingURI(t *testing.T) {
 
 // TestCharacterListResourceHandlerReturnsClientError ensures list errors are returned.
 func TestCharacterListResourceHandlerReturnsClientError(t *testing.T) {
-	client := &fakeCampaignClient{listCharactersErr: errors.New("boom")}
+	client := &fakeCharacterClient{listCharactersErr: errors.New("boom")}
 	handler := domain.CharacterListResourceHandler(client)
 
 	result, err := handler(context.Background(), &mcp.ReadResourceRequest{
@@ -2439,19 +2852,19 @@ func TestSessionListResourceHandlerMapsResponse(t *testing.T) {
 	now := time.Date(2026, 1, 23, 13, 0, 0, 0, time.UTC)
 	endedAt := now.Add(2 * time.Hour)
 	campaignID := "camp-999"
-	client := &fakeSessionClient{listSessionsResponse: &sessionv1.ListSessionsResponse{
-		Sessions: []*sessionv1.Session{{
+	client := &fakeSessionClient{listSessionsResponse: &statev1.ListSessionsResponse{
+		Sessions: []*statev1.Session{{
 			Id:         "sess-1",
 			CampaignId: campaignID,
 			Name:       "Session One",
-			Status:     sessionv1.SessionStatus_ACTIVE,
+			Status:     statev1.SessionStatus_SESSION_ACTIVE,
 			StartedAt:  timestamppb.New(now),
 			UpdatedAt:  timestamppb.New(now.Add(time.Hour)),
 		}, {
 			Id:         "sess-2",
 			CampaignId: campaignID,
 			Name:       "Session Two",
-			Status:     sessionv1.SessionStatus_ENDED,
+			Status:     statev1.SessionStatus_SESSION_ENDED,
 			StartedAt:  timestamppb.New(now),
 			UpdatedAt:  timestamppb.New(endedAt),
 			EndedAt:    timestamppb.New(endedAt),
@@ -2551,80 +2964,13 @@ func TestSessionListResourceHandlerReturnsClientError(t *testing.T) {
 	}
 }
 
-// TestSessionEventsResourceHandlerReversesOrder ensures events are returned in descending sequence order.
-func TestSessionEventsResourceHandlerReversesOrder(t *testing.T) {
-	now := time.Date(2026, 1, 24, 9, 0, 0, 0, time.UTC)
-	sessionID := "sess-123"
-	client := &fakeSessionClient{sessionEventsResponse: &sessionv1.SessionEventsListResponse{
-		Events: []*sessionv1.SessionEvent{{
-			SessionId: sessionID,
-			Seq:       1,
-			Ts:        timestamppb.New(now),
-			Type:      sessionv1.SessionEventType_SESSION_STARTED,
-		}, {
-			SessionId: sessionID,
-			Seq:       2,
-			Ts:        timestamppb.New(now.Add(time.Minute)),
-			Type:      sessionv1.SessionEventType_NOTE_ADDED,
-		}, {
-			SessionId: sessionID,
-			Seq:       3,
-			Ts:        timestamppb.New(now.Add(2 * time.Minute)),
-			Type:      sessionv1.SessionEventType_SESSION_ENDED,
-		}},
-	}}
-
-	handler := domain.SessionEventsResourceHandler(client)
-	resourceURI := "session://" + sessionID + "/events"
-	result, err := handler(context.Background(), &mcp.ReadResourceRequest{
-		Params: &mcp.ReadResourceParams{URI: resourceURI},
-	})
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-	if result == nil || len(result.Contents) != 1 {
-		t.Fatalf("expected 1 content item, got %v", result)
-	}
-	if client.lastEventsListRequest == nil {
-		t.Fatal("expected session events list request")
-	}
-	if client.lastEventsListRequest.GetSessionId() != sessionID {
-		t.Fatalf("expected session id %q, got %q", sessionID, client.lastEventsListRequest.GetSessionId())
-	}
-
-	var payload struct {
-		Events []struct {
-			SessionID string `json:"session_id"`
-			Seq       uint64 `json:"seq"`
-			Type      string `json:"type"`
-		} `json:"events"`
-	}
-	if err := json.Unmarshal([]byte(result.Contents[0].Text), &payload); err != nil {
-		t.Fatalf("unmarshal payload: %v", err)
-	}
-	if len(payload.Events) != 3 {
-		t.Fatalf("expected 3 events, got %d", len(payload.Events))
-	}
-	if payload.Events[0].Seq != 3 {
-		t.Fatalf("expected first event seq 3, got %d", payload.Events[0].Seq)
-	}
-	if payload.Events[1].Seq != 2 {
-		t.Fatalf("expected second event seq 2, got %d", payload.Events[1].Seq)
-	}
-	if payload.Events[2].Seq != 1 {
-		t.Fatalf("expected third event seq 1, got %d", payload.Events[2].Seq)
-	}
-	if result.Contents[0].URI != resourceURI {
-		t.Fatalf("expected resource URI %q, got %q", resourceURI, result.Contents[0].URI)
-	}
-}
-
 // TestSetContextHandlerReturnsClientError ensures gRPC errors are returned as tool errors.
 func TestSetContextHandlerReturnsClientError(t *testing.T) {
 	campaignClient := &fakeCampaignClient{getCampaignErr: errors.New("boom")}
 	sessionClient := &fakeSessionClient{}
+	participantClient := &fakeParticipantClient{}
 	server := &Server{}
-	handler := domain.SetContextHandler(campaignClient, sessionClient, server.setContext, server.getContext, nil)
+	handler := domain.SetContextHandler(campaignClient, sessionClient, participantClient, server.setContext, server.getContext, nil)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.SetContextInput{
 		CampaignID: "camp-123",
@@ -2641,8 +2987,9 @@ func TestSetContextHandlerReturnsClientError(t *testing.T) {
 func TestSetContextHandlerRejectsEmptyCampaignID(t *testing.T) {
 	campaignClient := &fakeCampaignClient{}
 	sessionClient := &fakeSessionClient{}
+	participantClient := &fakeParticipantClient{}
 	server := &Server{}
-	handler := domain.SetContextHandler(campaignClient, sessionClient, server.setContext, server.getContext, nil)
+	handler := domain.SetContextHandler(campaignClient, sessionClient, participantClient, server.setContext, server.getContext, nil)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.SetContextInput{
 		CampaignID: "",
@@ -2664,8 +3011,9 @@ func TestSetContextHandlerRejectsNonExistentCampaign(t *testing.T) {
 		getCampaignErr: status.Error(codes.NotFound, "campaign not found"),
 	}
 	sessionClient := &fakeSessionClient{}
+	participantClient := &fakeParticipantClient{}
 	server := &Server{}
-	handler := domain.SetContextHandler(campaignClient, sessionClient, server.setContext, server.getContext, nil)
+	handler := domain.SetContextHandler(campaignClient, sessionClient, participantClient, server.setContext, server.getContext, nil)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.SetContextInput{
 		CampaignID: "camp-123",
@@ -2687,13 +3035,14 @@ func TestSetContextHandlerRejectsNonExistentCampaign(t *testing.T) {
 // TestSetContextHandlerTreatsWhitespaceOnlySessionIDAsOmitted validates whitespace-only session_id is treated as omitted.
 func TestSetContextHandlerTreatsWhitespaceOnlySessionIDAsOmitted(t *testing.T) {
 	campaignClient := &fakeCampaignClient{
-		getCampaignResponse: &campaignv1.GetCampaignResponse{
-			Campaign: &campaignv1.Campaign{Id: "camp-123"},
+		getCampaignResponse: &statev1.GetCampaignResponse{
+			Campaign: &statev1.Campaign{Id: "camp-123"},
 		},
 	}
 	sessionClient := &fakeSessionClient{}
+	participantClient := &fakeParticipantClient{}
 	server := &Server{}
-	handler := domain.SetContextHandler(campaignClient, sessionClient, server.setContext, server.getContext, nil)
+	handler := domain.SetContextHandler(campaignClient, sessionClient, participantClient, server.setContext, server.getContext, nil)
 
 	result, output, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.SetContextInput{
 		CampaignID: "camp-123",
@@ -2714,15 +3063,16 @@ func TestSetContextHandlerTreatsWhitespaceOnlySessionIDAsOmitted(t *testing.T) {
 // TestSetContextHandlerRejectsNonExistentSession validates non-existent session returns error.
 func TestSetContextHandlerRejectsNonExistentSession(t *testing.T) {
 	campaignClient := &fakeCampaignClient{
-		getCampaignResponse: &campaignv1.GetCampaignResponse{
-			Campaign: &campaignv1.Campaign{Id: "camp-123"},
+		getCampaignResponse: &statev1.GetCampaignResponse{
+			Campaign: &statev1.Campaign{Id: "camp-123"},
 		},
 	}
 	sessionClient := &fakeSessionClient{
 		getSessionErr: status.Error(codes.NotFound, "session not found"),
 	}
+	participantClient := &fakeParticipantClient{}
 	server := &Server{}
-	handler := domain.SetContextHandler(campaignClient, sessionClient, server.setContext, server.getContext, nil)
+	handler := domain.SetContextHandler(campaignClient, sessionClient, participantClient, server.setContext, server.getContext, nil)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.SetContextInput{
 		CampaignID: "camp-123",
@@ -2748,15 +3098,16 @@ func TestSetContextHandlerRejectsNonExistentSession(t *testing.T) {
 // TestSetContextHandlerRejectsSessionFromDifferentCampaign validates session belonging to different campaign returns error.
 func TestSetContextHandlerRejectsSessionFromDifferentCampaign(t *testing.T) {
 	campaignClient := &fakeCampaignClient{
-		getCampaignResponse: &campaignv1.GetCampaignResponse{
-			Campaign: &campaignv1.Campaign{Id: "camp-123"},
+		getCampaignResponse: &statev1.GetCampaignResponse{
+			Campaign: &statev1.Campaign{Id: "camp-123"},
 		},
 	}
 	sessionClient := &fakeSessionClient{
 		getSessionErr: status.Error(codes.InvalidArgument, "session not found or does not belong to campaign"),
 	}
+	participantClient := &fakeParticipantClient{}
 	server := &Server{}
-	handler := domain.SetContextHandler(campaignClient, sessionClient, server.setContext, server.getContext, nil)
+	handler := domain.SetContextHandler(campaignClient, sessionClient, participantClient, server.setContext, server.getContext, nil)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.SetContextInput{
 		CampaignID: "camp-123",
@@ -2773,13 +3124,14 @@ func TestSetContextHandlerRejectsSessionFromDifferentCampaign(t *testing.T) {
 // TestSetContextHandlerTreatsWhitespaceOnlyParticipantIDAsOmitted validates whitespace-only participant_id is treated as omitted.
 func TestSetContextHandlerTreatsWhitespaceOnlyParticipantIDAsOmitted(t *testing.T) {
 	campaignClient := &fakeCampaignClient{
-		getCampaignResponse: &campaignv1.GetCampaignResponse{
-			Campaign: &campaignv1.Campaign{Id: "camp-123"},
+		getCampaignResponse: &statev1.GetCampaignResponse{
+			Campaign: &statev1.Campaign{Id: "camp-123"},
 		},
 	}
 	sessionClient := &fakeSessionClient{}
+	participantClient := &fakeParticipantClient{}
 	server := &Server{}
-	handler := domain.SetContextHandler(campaignClient, sessionClient, server.setContext, server.getContext, nil)
+	handler := domain.SetContextHandler(campaignClient, sessionClient, participantClient, server.setContext, server.getContext, nil)
 
 	result, output, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.SetContextInput{
 		CampaignID:    "camp-123",
@@ -2792,7 +3144,7 @@ func TestSetContextHandlerTreatsWhitespaceOnlyParticipantIDAsOmitted(t *testing.
 	if output.Context.ParticipantID != "" {
 		t.Fatalf("expected empty participant_id after trim, got %q", output.Context.ParticipantID)
 	}
-	if campaignClient.lastGetParticipantRequest != nil {
+	if participantClient.lastGetParticipantRequest != nil {
 		t.Fatal("expected no GetParticipant call for whitespace-only participant_id")
 	}
 }
@@ -2800,14 +3152,16 @@ func TestSetContextHandlerTreatsWhitespaceOnlyParticipantIDAsOmitted(t *testing.
 // TestSetContextHandlerRejectsNonExistentParticipant validates non-existent participant returns error.
 func TestSetContextHandlerRejectsNonExistentParticipant(t *testing.T) {
 	campaignClient := &fakeCampaignClient{
-		getCampaignResponse: &campaignv1.GetCampaignResponse{
-			Campaign: &campaignv1.Campaign{Id: "camp-123"},
+		getCampaignResponse: &statev1.GetCampaignResponse{
+			Campaign: &statev1.Campaign{Id: "camp-123"},
 		},
-		getParticipantErr: status.Error(codes.NotFound, "participant not found"),
 	}
 	sessionClient := &fakeSessionClient{}
+	participantClient := &fakeParticipantClient{
+		getParticipantErr: status.Error(codes.NotFound, "participant not found"),
+	}
 	server := &Server{}
-	handler := domain.SetContextHandler(campaignClient, sessionClient, server.setContext, server.getContext, nil)
+	handler := domain.SetContextHandler(campaignClient, sessionClient, participantClient, server.setContext, server.getContext, nil)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.SetContextInput{
 		CampaignID:    "camp-123",
@@ -2819,28 +3173,30 @@ func TestSetContextHandlerRejectsNonExistentParticipant(t *testing.T) {
 	if result != nil {
 		t.Fatal("expected nil result on error")
 	}
-	if campaignClient.lastGetParticipantRequest == nil {
+	if participantClient.lastGetParticipantRequest == nil {
 		t.Fatal("expected GetParticipant call")
 	}
-	if campaignClient.lastGetParticipantRequest.GetCampaignId() != "camp-123" {
-		t.Fatalf("expected campaign id camp-123, got %q", campaignClient.lastGetParticipantRequest.GetCampaignId())
+	if participantClient.lastGetParticipantRequest.GetCampaignId() != "camp-123" {
+		t.Fatalf("expected campaign id camp-123, got %q", participantClient.lastGetParticipantRequest.GetCampaignId())
 	}
-	if campaignClient.lastGetParticipantRequest.GetParticipantId() != "part-456" {
-		t.Fatalf("expected participant id part-456, got %q", campaignClient.lastGetParticipantRequest.GetParticipantId())
+	if participantClient.lastGetParticipantRequest.GetParticipantId() != "part-456" {
+		t.Fatalf("expected participant id part-456, got %q", participantClient.lastGetParticipantRequest.GetParticipantId())
 	}
 }
 
 // TestSetContextHandlerRejectsParticipantFromDifferentCampaign validates participant belonging to different campaign returns error.
 func TestSetContextHandlerRejectsParticipantFromDifferentCampaign(t *testing.T) {
 	campaignClient := &fakeCampaignClient{
-		getCampaignResponse: &campaignv1.GetCampaignResponse{
-			Campaign: &campaignv1.Campaign{Id: "camp-123"},
+		getCampaignResponse: &statev1.GetCampaignResponse{
+			Campaign: &statev1.Campaign{Id: "camp-123"},
 		},
-		getParticipantErr: status.Error(codes.InvalidArgument, "participant not found or does not belong to campaign"),
 	}
 	sessionClient := &fakeSessionClient{}
+	participantClient := &fakeParticipantClient{
+		getParticipantErr: status.Error(codes.InvalidArgument, "participant not found or does not belong to campaign"),
+	}
 	server := &Server{}
-	handler := domain.SetContextHandler(campaignClient, sessionClient, server.setContext, server.getContext, nil)
+	handler := domain.SetContextHandler(campaignClient, sessionClient, participantClient, server.setContext, server.getContext, nil)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.SetContextInput{
 		CampaignID:    "camp-123",
@@ -2857,26 +3213,28 @@ func TestSetContextHandlerRejectsParticipantFromDifferentCampaign(t *testing.T) 
 // TestSetContextHandlerMapsRequestAndResponse ensures context is properly set and returned with all fields.
 func TestSetContextHandlerMapsRequestAndResponse(t *testing.T) {
 	campaignClient := &fakeCampaignClient{
-		getCampaignResponse: &campaignv1.GetCampaignResponse{
-			Campaign: &campaignv1.Campaign{Id: "camp-123"},
-		},
-		getParticipantResponse: &campaignv1.GetParticipantResponse{
-			Participant: &campaignv1.Participant{
-				Id:         "part-456",
-				CampaignId: "camp-123",
-			},
+		getCampaignResponse: &statev1.GetCampaignResponse{
+			Campaign: &statev1.Campaign{Id: "camp-123"},
 		},
 	}
 	sessionClient := &fakeSessionClient{
-		getSessionResponse: &sessionv1.GetSessionResponse{
-			Session: &sessionv1.Session{
+		getSessionResponse: &statev1.GetSessionResponse{
+			Session: &statev1.Session{
 				Id:         "sess-789",
 				CampaignId: "camp-123",
 			},
 		},
 	}
+	participantClient := &fakeParticipantClient{
+		getParticipantResponse: &statev1.GetParticipantResponse{
+			Participant: &statev1.Participant{
+				Id:         "part-456",
+				CampaignId: "camp-123",
+			},
+		},
+	}
 	server := &Server{}
-	handler := domain.SetContextHandler(campaignClient, sessionClient, server.setContext, server.getContext, nil)
+	handler := domain.SetContextHandler(campaignClient, sessionClient, participantClient, server.setContext, server.getContext, nil)
 
 	result, output, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.SetContextInput{
 		CampaignID:    "camp-123",
@@ -2912,13 +3270,14 @@ func TestSetContextHandlerMapsRequestAndResponse(t *testing.T) {
 // TestSetContextHandlerOptionalFields tests that optional session_id and participant_id can be omitted.
 func TestSetContextHandlerOptionalFields(t *testing.T) {
 	campaignClient := &fakeCampaignClient{
-		getCampaignResponse: &campaignv1.GetCampaignResponse{
-			Campaign: &campaignv1.Campaign{Id: "camp-123"},
+		getCampaignResponse: &statev1.GetCampaignResponse{
+			Campaign: &statev1.Campaign{Id: "camp-123"},
 		},
 	}
 	sessionClient := &fakeSessionClient{}
+	participantClient := &fakeParticipantClient{}
 	server := &Server{}
-	handler := domain.SetContextHandler(campaignClient, sessionClient, server.setContext, server.getContext, nil)
+	handler := domain.SetContextHandler(campaignClient, sessionClient, participantClient, server.setContext, server.getContext, nil)
 
 	result, output, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.SetContextInput{
 		CampaignID: "camp-123",
@@ -2953,26 +3312,28 @@ func TestSetContextHandlerOptionalFields(t *testing.T) {
 // TestSetContextHandlerClearsOptionalFields tests that omitting optional fields clears them from context.
 func TestSetContextHandlerClearsOptionalFields(t *testing.T) {
 	campaignClient := &fakeCampaignClient{
-		getCampaignResponse: &campaignv1.GetCampaignResponse{
-			Campaign: &campaignv1.Campaign{Id: "camp-123"},
-		},
-		getParticipantResponse: &campaignv1.GetParticipantResponse{
-			Participant: &campaignv1.Participant{
-				Id:         "part-456",
-				CampaignId: "camp-123",
-			},
+		getCampaignResponse: &statev1.GetCampaignResponse{
+			Campaign: &statev1.Campaign{Id: "camp-123"},
 		},
 	}
 	sessionClient := &fakeSessionClient{
-		getSessionResponse: &sessionv1.GetSessionResponse{
-			Session: &sessionv1.Session{
+		getSessionResponse: &statev1.GetSessionResponse{
+			Session: &statev1.Session{
 				Id:         "sess-789",
 				CampaignId: "camp-123",
 			},
 		},
 	}
+	participantClient := &fakeParticipantClient{
+		getParticipantResponse: &statev1.GetParticipantResponse{
+			Participant: &statev1.Participant{
+				Id:         "part-456",
+				CampaignId: "camp-123",
+			},
+		},
+	}
 	server := &Server{}
-	handler := domain.SetContextHandler(campaignClient, sessionClient, server.setContext, server.getContext, nil)
+	handler := domain.SetContextHandler(campaignClient, sessionClient, participantClient, server.setContext, server.getContext, nil)
 
 	// First set context with all fields
 	_, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.SetContextInput{
@@ -3017,26 +3378,28 @@ func TestSetContextHandlerClearsOptionalFields(t *testing.T) {
 // TestSetContextHandlerGetSetContextIntegration tests getContext/setContext integration.
 func TestSetContextHandlerGetSetContextIntegration(t *testing.T) {
 	campaignClient := &fakeCampaignClient{
-		getCampaignResponse: &campaignv1.GetCampaignResponse{
-			Campaign: &campaignv1.Campaign{Id: "camp-123"},
-		},
-		getParticipantResponse: &campaignv1.GetParticipantResponse{
-			Participant: &campaignv1.Participant{
-				Id:         "part-456",
-				CampaignId: "camp-123",
-			},
+		getCampaignResponse: &statev1.GetCampaignResponse{
+			Campaign: &statev1.Campaign{Id: "camp-123"},
 		},
 	}
 	sessionClient := &fakeSessionClient{
-		getSessionResponse: &sessionv1.GetSessionResponse{
-			Session: &sessionv1.Session{
+		getSessionResponse: &statev1.GetSessionResponse{
+			Session: &statev1.Session{
 				Id:         "sess-789",
 				CampaignId: "camp-123",
 			},
 		},
 	}
+	participantClient := &fakeParticipantClient{
+		getParticipantResponse: &statev1.GetParticipantResponse{
+			Participant: &statev1.Participant{
+				Id:         "part-456",
+				CampaignId: "camp-123",
+			},
+		},
+	}
 	server := &Server{}
-	handler := domain.SetContextHandler(campaignClient, sessionClient, server.setContext, server.getContext, nil)
+	handler := domain.SetContextHandler(campaignClient, sessionClient, participantClient, server.setContext, server.getContext, nil)
 
 	// Set context
 	_, output1, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.SetContextInput{

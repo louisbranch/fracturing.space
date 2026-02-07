@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	pb "github.com/louisbranch/fracturing.space/api/gen/go/duality/v1"
-	"github.com/louisbranch/fracturing.space/internal/grpcmeta"
+	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	grpcmeta "github.com/louisbranch/fracturing.space/internal/api/grpc/metadata"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -52,7 +52,7 @@ func runMetadataTests(t *testing.T, suite *integrationSuite, grpcAddr string) {
 		}
 		defer conn.Close()
 
-		client := pb.NewDualityServiceClient(conn)
+		client := pb.NewDaggerheartServiceClient(conn)
 		requestID := "req-abc"
 		invocationID := "inv-xyz"
 		callCtx := metadata.NewOutgoingContext(

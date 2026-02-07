@@ -33,6 +33,7 @@
       "tool": "campaign_create",
       "args": {
         "name": "Blackbox Campaign",
+        "system": "DAGGERHEART",
         "gm_mode": "HUMAN",
         "theme_prompt": "An integration test campaign"
       },
@@ -141,12 +142,6 @@
       }
     },
     {
-      "name": "session_events_subscribe",
-      "action": "subscribe",
-      "uri": "session://{{session_id}}/events",
-      "expect": "none"
-    },
-    {
       "name": "context_subscribe",
       "action": "subscribe",
       "uri": "context://current",
@@ -164,25 +159,36 @@
       "expect": "none"
     },
     {
-      "name": "session_action_roll",
+      "name": "session_end",
       "action": "tool_call",
-      "tool": "session_action_roll",
+      "tool": "session_end",
       "args": {
-        "character_id": {"ref": "character_id"},
-        "trait": "bravery",
-        "difficulty": 10,
-        "modifiers": [
-          {"source": "skill", "value": 2}
-        ]
-      },
-      "expect": "none"
+        "campaign_id": {"ref": "campaign_id"},
+        "session_id": {"ref": "session_id"}
+      }
     },
     {
-      "name": "session_events_read",
-      "action": "read_resource",
-      "uri": "session://{{session_id}}/events",
-      "expect_paths": {
-        "result.contents[0].text|json.events[0].session_id": "{{session_id}}"
+      "name": "campaign_end",
+      "action": "tool_call",
+      "tool": "campaign_end",
+      "args": {
+        "campaign_id": {"ref": "campaign_id"}
+      }
+    },
+    {
+      "name": "campaign_archive",
+      "action": "tool_call",
+      "tool": "campaign_archive",
+      "args": {
+        "campaign_id": {"ref": "campaign_id"}
+      }
+    },
+    {
+      "name": "campaign_restore",
+      "action": "tool_call",
+      "tool": "campaign_restore",
+      "args": {
+        "campaign_id": {"ref": "campaign_id"}
       }
     }
   ]

@@ -147,6 +147,8 @@ All fields except `campaign_id` are optional. To clear optional fields, omit the
 
 ### Campaign Service Tools
 
+For `campaign_end`, `campaign_archive`, and `campaign_restore`, `campaign_id` defaults to the current context when omitted.
+
 #### campaign_create
 
 Creates a new campaign metadata record.
@@ -167,10 +169,103 @@ Creates a new campaign metadata record.
 {
   "id": "camp_abc123",
   "name": "The Lost Expedition",
+  "status": "DRAFT",
   "gm_mode": "HUMAN",
   "participant_count": 0,
   "character_count": 0,
-  "theme_prompt": "A dark fantasy campaign set in a cursed forest"
+  "theme_prompt": "A dark fantasy campaign set in a cursed forest",
+  "created_at": "2025-01-15T10:00:00Z",
+  "last_activity_at": "2025-01-15T10:00:00Z",
+  "updated_at": "2025-01-15T10:00:00Z"
+}
+```
+
+#### campaign_end
+
+Marks a campaign as completed.
+
+**Input:**
+
+```json
+{
+  "campaign_id": "camp_abc123"
+}
+```
+
+**Output:**
+
+```json
+{
+  "id": "camp_abc123",
+  "name": "The Lost Expedition",
+  "status": "COMPLETED",
+  "gm_mode": "HUMAN",
+  "participant_count": 3,
+  "character_count": 2,
+  "theme_prompt": "A dark fantasy campaign set in a cursed forest",
+  "created_at": "2025-01-15T10:00:00Z",
+  "last_activity_at": "2025-01-20T18:45:00Z",
+  "updated_at": "2025-01-20T18:45:00Z",
+  "completed_at": "2025-01-20T18:45:00Z"
+}
+```
+
+#### campaign_archive
+
+Archives a campaign.
+
+**Input:**
+
+```json
+{
+  "campaign_id": "camp_abc123"
+}
+```
+
+**Output:**
+
+```json
+{
+  "id": "camp_abc123",
+  "name": "The Lost Expedition",
+  "status": "ARCHIVED",
+  "gm_mode": "HUMAN",
+  "participant_count": 3,
+  "character_count": 2,
+  "theme_prompt": "A dark fantasy campaign set in a cursed forest",
+  "created_at": "2025-01-15T10:00:00Z",
+  "last_activity_at": "2025-01-20T18:45:00Z",
+  "updated_at": "2025-01-20T18:50:00Z",
+  "archived_at": "2025-01-20T18:50:00Z"
+}
+```
+
+#### campaign_restore
+
+Restores an archived campaign to draft.
+
+**Input:**
+
+```json
+{
+  "campaign_id": "camp_abc123"
+}
+```
+
+**Output:**
+
+```json
+{
+  "id": "camp_abc123",
+  "name": "The Lost Expedition",
+  "status": "DRAFT",
+  "gm_mode": "HUMAN",
+  "participant_count": 3,
+  "character_count": 2,
+  "theme_prompt": "A dark fantasy campaign set in a cursed forest",
+  "created_at": "2025-01-15T10:00:00Z",
+  "last_activity_at": "2025-01-20T18:45:00Z",
+  "updated_at": "2025-01-21T09:00:00Z"
 }
 ```
 
@@ -186,6 +281,65 @@ Creates a participant (GM or player) for a campaign.
   "display_name": "Alice",
   "role": "PLAYER",
   "controller": "HUMAN"
+}
+```
+
+**Output:**
+
+```json
+{
+  "id": "part_xyz789",
+  "campaign_id": "camp_abc123",
+  "display_name": "Alice",
+  "role": "PLAYER",
+  "controller": "HUMAN",
+  "created_at": "2025-01-15T10:30:00Z",
+  "updated_at": "2025-01-15T10:30:00Z"
+}
+```
+
+#### participant_update
+
+Updates a participant's metadata (display name, role, controller).
+
+**Input:**
+
+```json
+{
+  "campaign_id": "camp_abc123",
+  "participant_id": "part_xyz789",
+  "display_name": "Alice B.",
+  "controller": "AI"
+}
+```
+
+At least one field (`display_name`, `role`, `controller`) is required.
+
+**Output:**
+
+```json
+{
+  "id": "part_xyz789",
+  "campaign_id": "camp_abc123",
+  "display_name": "Alice B.",
+  "role": "PLAYER",
+  "controller": "AI",
+  "created_at": "2025-01-15T10:30:00Z",
+  "updated_at": "2025-01-15T10:40:00Z"
+}
+```
+
+#### participant_delete
+
+Deletes a participant from a campaign.
+
+**Input:**
+
+```json
+{
+  "campaign_id": "camp_abc123",
+  "participant_id": "part_xyz789",
+  "reason": "Left the campaign"
 }
 ```
 
@@ -229,6 +383,65 @@ Creates a character (PC or NPC) for a campaign.
   "notes": "Dwarf warrior with a mysterious past",
   "created_at": "2025-01-15T10:35:00Z",
   "updated_at": "2025-01-15T10:35:00Z"
+}
+```
+
+#### character_update
+
+Updates a character's metadata (name, kind, notes).
+
+**Input:**
+
+```json
+{
+  "campaign_id": "camp_abc123",
+  "character_id": "character_def456",
+  "name": "Thorin the Bold",
+  "notes": "Updated backstory"
+}
+```
+
+At least one field (`name`, `kind`, `notes`) is required.
+
+**Output:**
+
+```json
+{
+  "id": "character_def456",
+  "campaign_id": "camp_abc123",
+  "name": "Thorin the Bold",
+  "kind": "PC",
+  "notes": "Updated backstory",
+  "created_at": "2025-01-15T10:35:00Z",
+  "updated_at": "2025-01-15T10:40:00Z"
+}
+```
+
+#### character_delete
+
+Deletes a character from a campaign.
+
+**Input:**
+
+```json
+{
+  "campaign_id": "camp_abc123",
+  "character_id": "character_def456",
+  "reason": "Retired from the party"
+}
+```
+
+**Output:**
+
+```json
+{
+  "id": "character_def456",
+  "campaign_id": "camp_abc123",
+  "name": "Thorin Ironforge",
+  "kind": "PC",
+  "notes": "Dwarf warrior with a mysterious past",
+  "created_at": "2025-01-15T10:35:00Z",
+  "updated_at": "2025-01-15T10:40:00Z"
 }
 ```
 
@@ -435,7 +648,7 @@ Ends a session for a campaign. Clears the active session pointer if present.
 
 #### session_action_roll
 
-Rolls Duality dice for a session and appends session events.
+Rolls Duality dice for a session and appends action events to the campaign journal.
 
 **Input:**
 
@@ -749,7 +962,7 @@ Rolls arbitrary dice pools and returns the individual results.
 
 ## Resources
 
-MCP resource registrations use placeholder URIs because the SDK requires concrete URIs for registration. Clients should read using the concrete URI format shown in each resource section. When listing resources, you may see placeholder URIs like `campaign://_/participants` or `session://_/events`.
+MCP resource registrations use placeholder URIs because the SDK requires concrete URIs for registration. Clients should read using the concrete URI format shown in each resource section. When listing resources, you may see placeholder URIs like `campaign://_/participants` or `campaign://_/events`.
 
 ### Resource Subscriptions and Updates
 
@@ -791,6 +1004,8 @@ Example SSE notification payload:
 
 Returns a JSON object with a `campaigns` array of campaign metadata records. No dependencies.
 
+When `completed_at` or `archived_at` are unset, the fields are omitted from the payload.
+
 **Response:**
 
 ```json
@@ -799,11 +1014,13 @@ Returns a JSON object with a `campaigns` array of campaign metadata records. No 
     {
       "id": "camp_abc123",
       "name": "The Lost Expedition",
+      "status": "ACTIVE",
       "gm_mode": "HUMAN",
       "participant_count": 3,
       "character_count": 2,
       "theme_prompt": "A dark fantasy campaign set in a cursed forest",
       "created_at": "2025-01-15T10:00:00Z",
+      "last_activity_at": "2025-01-17T09:15:00Z",
       "updated_at": "2025-01-15T10:00:00Z"
     }
   ]
@@ -814,6 +1031,8 @@ Returns a JSON object with a `campaigns` array of campaign metadata records. No 
 
 Returns a JSON object with a single `campaign` metadata record. Provides direct access to a campaign by ID without requiring a scan of campaigns://list. Requires `campaign_id` in the URI.
 
+When `completed_at` or `archived_at` are unset, the fields are omitted from the payload.
+
 The `{campaign_id}` must be replaced with an actual campaign identifier when reading the resource. The URI must not contain additional path segments, query parameters, or fragments (e.g., `campaign://id/participants` should use the participant list resource instead).
 
 **Response:**
@@ -823,12 +1042,15 @@ The `{campaign_id}` must be replaced with an actual campaign identifier when rea
   "campaign": {
     "id": "camp_abc123",
     "name": "The Lost Expedition",
+    "status": "COMPLETED",
     "gm_mode": "HUMAN",
     "participant_count": 3,
     "character_count": 2,
     "theme_prompt": "A dark fantasy campaign set in a cursed forest",
     "created_at": "2025-01-15T10:00:00Z",
-    "updated_at": "2025-01-15T10:00:00Z"
+    "last_activity_at": "2025-01-20T18:45:00Z",
+    "updated_at": "2025-01-20T18:45:00Z",
+    "completed_at": "2025-01-20T18:45:00Z"
   }
 }
 ```
@@ -910,31 +1132,6 @@ The `{campaign_id}` must be replaced with an actual campaign identifier when rea
 ```
 
 Note: The `ended_at` field is optional and only present for sessions that have ended.
-
-### Session Resources
-
-#### session://{session_id}/events
-
-JSON listing of session events for a session. Requires a concrete session ID.
-Events are ordered by descending sequence (latest first).
-
-**Response:**
-
-```json
-{
-  "events": [
-    {
-      "session_id": "sess_ghi789",
-      "seq": 1,
-      "ts": "2026-01-25T12:00:00Z",
-      "type": "SESSION_STARTED",
-      "request_id": "req_123",
-      "invocation_id": "inv_456",
-      "payload_json": "{\"campaign_id\":\"camp_abc123\"}"
-    }
-  ]
-}
-```
 
 ### Context Resources
 

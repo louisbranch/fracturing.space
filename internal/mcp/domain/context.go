@@ -7,8 +7,7 @@ import (
 	"strings"
 	"time"
 
-	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1"
-	sessionv1 "github.com/louisbranch/fracturing.space/api/gen/go/session/v1"
+	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/state/v1"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -44,8 +43,9 @@ func SetContextTool() *mcp.Tool {
 // The handler needs access to the Server instance to update context state,
 // so it takes both clients and a function to update the server's context.
 func SetContextHandler(
-	campaignClient campaignv1.CampaignServiceClient,
-	sessionClient sessionv1.SessionServiceClient,
+	campaignClient statev1.CampaignServiceClient,
+	sessionClient statev1.SessionServiceClient,
+	participantClient statev1.ParticipantServiceClient,
 	setContextFunc func(ctx Context),
 	getContextFunc func() Context,
 	notify ResourceUpdateNotifier,
@@ -94,7 +94,7 @@ func SetContextHandler(
 		if input.ParticipantID != "" {
 			participantID := strings.TrimSpace(input.ParticipantID)
 			if participantID != "" {
-				responseMeta, err := validateParticipantExists(runCtx, campaignClient, campaignID, participantID, invocationID)
+				responseMeta, err := validateParticipantExists(runCtx, participantClient, campaignID, participantID, invocationID)
 				if err != nil {
 					return nil, SetContextResult{}, fmt.Errorf("validate participant: %w", err)
 				}
@@ -132,14 +132,14 @@ type Context struct {
 }
 
 // validateCampaignExists checks if a campaign exists by calling GetCampaign.
-func validateCampaignExists(ctx context.Context, client campaignv1.CampaignServiceClient, campaignID string, invocationID string) (ToolCallMetadata, error) {
+func validateCampaignExists(ctx context.Context, client statev1.CampaignServiceClient, campaignID string, invocationID string) (ToolCallMetadata, error) {
 	callCtx, callMeta, err := NewOutgoingContext(ctx, invocationID)
 	if err != nil {
 		return ToolCallMetadata{}, fmt.Errorf("create request metadata: %w", err)
 	}
 
 	var header metadata.MD
-	_, err = client.GetCampaign(callCtx, &campaignv1.GetCampaignRequest{
+	_, err = client.GetCampaign(callCtx, &statev1.GetCampaignRequest{
 		CampaignId: campaignID,
 	}, grpc.Header(&header))
 	if err != nil {
@@ -156,14 +156,14 @@ func validateCampaignExists(ctx context.Context, client campaignv1.CampaignServi
 
 // validateSessionExists checks if a session exists and belongs to the campaign.
 // The GetSession gRPC method validates that the session belongs to the campaign.
-func validateSessionExists(ctx context.Context, client sessionv1.SessionServiceClient, campaignID, sessionID, invocationID string) (ToolCallMetadata, error) {
+func validateSessionExists(ctx context.Context, client statev1.SessionServiceClient, campaignID, sessionID, invocationID string) (ToolCallMetadata, error) {
 	callCtx, callMeta, err := NewOutgoingContext(ctx, invocationID)
 	if err != nil {
 		return ToolCallMetadata{}, fmt.Errorf("create request metadata: %w", err)
 	}
 
 	var header metadata.MD
-	_, err = client.GetSession(callCtx, &sessionv1.GetSessionRequest{
+	_, err = client.GetSession(callCtx, &statev1.GetSessionRequest{
 		CampaignId: campaignID,
 		SessionId:  sessionID,
 	}, grpc.Header(&header))
@@ -184,14 +184,14 @@ func validateSessionExists(ctx context.Context, client sessionv1.SessionServiceC
 
 // validateParticipantExists checks if a participant exists and belongs to the campaign.
 // The GetParticipant gRPC method validates that the participant belongs to the campaign.
-func validateParticipantExists(ctx context.Context, client campaignv1.CampaignServiceClient, campaignID, participantID, invocationID string) (ToolCallMetadata, error) {
+func validateParticipantExists(ctx context.Context, client statev1.ParticipantServiceClient, campaignID, participantID, invocationID string) (ToolCallMetadata, error) {
 	callCtx, callMeta, err := NewOutgoingContext(ctx, invocationID)
 	if err != nil {
 		return ToolCallMetadata{}, fmt.Errorf("create request metadata: %w", err)
 	}
 
 	var header metadata.MD
-	_, err = client.GetParticipant(callCtx, &campaignv1.GetParticipantRequest{
+	_, err = client.GetParticipant(callCtx, &statev1.GetParticipantRequest{
 		CampaignId:    campaignID,
 		ParticipantId: participantID,
 	}, grpc.Header(&header))

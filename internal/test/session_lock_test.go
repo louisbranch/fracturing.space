@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1"
-	sessionv1 "github.com/louisbranch/fracturing.space/api/gen/go/session/v1"
+	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/state/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -28,15 +28,17 @@ func runSessionLockTests(t *testing.T, grpcAddr string) {
 	}
 	defer conn.Close()
 
-	campaignClient := campaignv1.NewCampaignServiceClient(conn)
-	sessionClient := sessionv1.NewSessionServiceClient(conn)
+	campaignClient := statev1.NewCampaignServiceClient(conn)
+	sessionClient := statev1.NewSessionServiceClient(conn)
+	participantClient := statev1.NewParticipantServiceClient(conn)
 
 	ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
 	defer cancel()
 
-	createResp, err := campaignClient.CreateCampaign(ctx, &campaignv1.CreateCampaignRequest{
+	createResp, err := campaignClient.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
 		Name:   "Lock Test",
-		GmMode: campaignv1.GmMode_HUMAN,
+		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		GmMode: statev1.GmMode_HUMAN,
 	})
 	if err != nil {
 		t.Fatalf("create campaign: %v", err)
@@ -45,7 +47,7 @@ func runSessionLockTests(t *testing.T, grpcAddr string) {
 		t.Fatal("expected campaign response")
 	}
 
-	startResp, err := sessionClient.StartSession(ctx, &sessionv1.StartSessionRequest{
+	startResp, err := sessionClient.StartSession(ctx, &statev1.StartSessionRequest{
 		CampaignId: createResp.Campaign.Id,
 		Name:       "Session 1",
 	})
@@ -56,11 +58,11 @@ func runSessionLockTests(t *testing.T, grpcAddr string) {
 		t.Fatal("expected session response")
 	}
 
-	_, err = campaignClient.CreateParticipant(ctx, &campaignv1.CreateParticipantRequest{
+	_, err = participantClient.CreateParticipant(ctx, &statev1.CreateParticipantRequest{
 		CampaignId:  createResp.Campaign.Id,
 		DisplayName: "Player One",
-		Role:        campaignv1.ParticipantRole_PLAYER,
-		Controller:  campaignv1.Controller_CONTROLLER_HUMAN,
+		Role:        statev1.ParticipantRole_PLAYER,
+		Controller:  statev1.Controller_CONTROLLER_HUMAN,
 	})
 	if err == nil {
 		t.Fatal("expected error")
@@ -80,7 +82,7 @@ func runSessionLockTests(t *testing.T, grpcAddr string) {
 		t.Fatalf("expected active session id in message, got %q", st.Message())
 	}
 
-	endResp, err := sessionClient.EndSession(ctx, &sessionv1.EndSessionRequest{
+	endResp, err := sessionClient.EndSession(ctx, &statev1.EndSessionRequest{
 		CampaignId: createResp.Campaign.Id,
 		SessionId:  startResp.Session.Id,
 	})
@@ -90,18 +92,18 @@ func runSessionLockTests(t *testing.T, grpcAddr string) {
 	if endResp == nil || endResp.Session == nil {
 		t.Fatal("expected end session response")
 	}
-	if endResp.Session.Status != sessionv1.SessionStatus_ENDED {
+	if endResp.Session.Status != statev1.SessionStatus_SESSION_ENDED {
 		t.Fatalf("expected ended status, got %v", endResp.Session.Status)
 	}
 	if endResp.Session.EndedAt == nil {
 		t.Fatal("expected ended_at to be set")
 	}
 
-	createParticipantResp, err := campaignClient.CreateParticipant(ctx, &campaignv1.CreateParticipantRequest{
+	createParticipantResp, err := participantClient.CreateParticipant(ctx, &statev1.CreateParticipantRequest{
 		CampaignId:  createResp.Campaign.Id,
 		DisplayName: "Player One",
-		Role:        campaignv1.ParticipantRole_PLAYER,
-		Controller:  campaignv1.Controller_CONTROLLER_HUMAN,
+		Role:        statev1.ParticipantRole_PLAYER,
+		Controller:  statev1.Controller_CONTROLLER_HUMAN,
 	})
 	if err != nil {
 		t.Fatalf("create participant after end session: %v", err)
@@ -110,7 +112,7 @@ func runSessionLockTests(t *testing.T, grpcAddr string) {
 		t.Fatal("expected participant response after end session")
 	}
 
-	_, err = campaignClient.ListParticipants(ctx, &campaignv1.ListParticipantsRequest{
+	_, err = participantClient.ListParticipants(ctx, &statev1.ListParticipantsRequest{
 		CampaignId: createResp.Campaign.Id,
 	})
 	if err != nil {

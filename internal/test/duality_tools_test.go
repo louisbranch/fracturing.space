@@ -6,8 +6,8 @@ import (
 	"context"
 	"testing"
 
-	dualitydomain "github.com/louisbranch/fracturing.space/internal/duality/domain"
 	"github.com/louisbranch/fracturing.space/internal/mcp/domain"
+	daggerheartdomain "github.com/louisbranch/fracturing.space/internal/systems/daggerheart/domain"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -40,7 +40,7 @@ func runDualityToolsTests(t *testing.T, suite *integrationSuite) {
 		}
 
 		output := decodeStructuredContent[domain.DualityOutcomeResult](t, result.StructuredContent)
-		expected, err := dualitydomain.EvaluateOutcome(dualitydomain.OutcomeRequest{
+		expected, err := daggerheartdomain.EvaluateOutcome(daggerheartdomain.OutcomeRequest{
 			Hope:       10,
 			Fear:       4,
 			Modifier:   1,
@@ -71,7 +71,7 @@ func runDualityToolsTests(t *testing.T, suite *integrationSuite) {
 		}
 
 		output := decodeStructuredContent[domain.RulesVersionResult](t, result.StructuredContent)
-		expected := dualitydomain.RulesVersion()
+		expected := daggerheartdomain.RulesVersion()
 		if output.System != expected.System {
 			t.Fatalf("expected system %q, got %q", expected.System, output.System)
 		}

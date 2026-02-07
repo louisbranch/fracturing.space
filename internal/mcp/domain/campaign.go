@@ -7,20 +7,29 @@ import (
 	"strings"
 	"time"
 
-	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1"
+	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/state/v1"
+	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 // CampaignCreateInput represents the MCP tool input for campaign creation.
 type CampaignCreateInput struct {
 	Name        string `json:"name" jsonschema:"campaign name"`
+	System      string `json:"system" jsonschema:"game system (DAGGERHEART)"`
 	GmMode      string `json:"gm_mode" jsonschema:"gm mode (HUMAN, AI, HYBRID)"`
 	ThemePrompt string `json:"theme_prompt,omitempty" jsonschema:"optional theme prompt"`
+}
+
+// CampaignStatusChangeInput represents the MCP tool input for campaign lifecycle changes.
+type CampaignStatusChangeInput struct {
+	CampaignID string `json:"campaign_id,omitempty" jsonschema:"campaign identifier (defaults to context)"`
 }
 
 // CampaignCreateResult represents the MCP tool output for campaign creation.
@@ -32,19 +41,46 @@ type CampaignCreateResult struct {
 	CharacterCount   int    `json:"character_count" jsonschema:"number of all characters (PC + NPC + future kinds)"`
 	GmFear           int    `json:"gm_fear" jsonschema:"campaign-scoped GM fear"`
 	ThemePrompt      string `json:"theme_prompt" jsonschema:"theme prompt"`
+	Status           string `json:"status" jsonschema:"campaign status"`
+	CreatedAt        string `json:"created_at" jsonschema:"RFC3339 timestamp when campaign was created"`
+	LastActivityAt   string `json:"last_activity_at" jsonschema:"RFC3339 timestamp for last campaign activity"`
+	UpdatedAt        string `json:"updated_at" jsonschema:"RFC3339 timestamp when campaign was last updated"`
+	CompletedAt      string `json:"completed_at,omitempty" jsonschema:"RFC3339 timestamp when campaign was completed"`
+	ArchivedAt       string `json:"archived_at,omitempty" jsonschema:"RFC3339 timestamp when campaign was archived"`
+}
+
+// CampaignStatusResult represents the MCP tool output for campaign lifecycle changes.
+type CampaignStatusResult struct {
+	ID               string `json:"id" jsonschema:"campaign identifier"`
+	Name             string `json:"name" jsonschema:"campaign name"`
+	GmMode           string `json:"gm_mode" jsonschema:"gm mode"`
+	ParticipantCount int    `json:"participant_count" jsonschema:"number of all participants (GM + PLAYER + future roles)"`
+	CharacterCount   int    `json:"character_count" jsonschema:"number of all characters (PC + NPC + future kinds)"`
+	GmFear           int    `json:"gm_fear" jsonschema:"campaign-scoped GM fear"`
+	ThemePrompt      string `json:"theme_prompt" jsonschema:"theme prompt"`
+	Status           string `json:"status" jsonschema:"campaign status"`
+	CreatedAt        string `json:"created_at" jsonschema:"RFC3339 timestamp when campaign was created"`
+	LastActivityAt   string `json:"last_activity_at" jsonschema:"RFC3339 timestamp for last campaign activity"`
+	UpdatedAt        string `json:"updated_at" jsonschema:"RFC3339 timestamp when campaign was last updated"`
+	CompletedAt      string `json:"completed_at,omitempty" jsonschema:"RFC3339 timestamp when campaign was completed"`
+	ArchivedAt       string `json:"archived_at,omitempty" jsonschema:"RFC3339 timestamp when campaign was archived"`
 }
 
 // CampaignListEntry represents a readable campaign metadata entry.
 type CampaignListEntry struct {
 	ID               string `json:"id"`
 	Name             string `json:"name"`
+	Status           string `json:"status"`
 	GmMode           string `json:"gm_mode"`
 	ParticipantCount int    `json:"participant_count"`
 	CharacterCount   int    `json:"character_count"`
 	GmFear           int    `json:"gm_fear"`
 	ThemePrompt      string `json:"theme_prompt"`
 	CreatedAt        string `json:"created_at"`
+	LastActivityAt   string `json:"last_activity_at"`
 	UpdatedAt        string `json:"updated_at"`
+	CompletedAt      string `json:"completed_at,omitempty"`
+	ArchivedAt       string `json:"archived_at,omitempty"`
 }
 
 // CampaignListPayload represents the MCP resource payload for campaign listings.
@@ -65,8 +101,46 @@ type ParticipantCreateInput struct {
 	Controller  string `json:"controller,omitempty" jsonschema:"controller type (HUMAN, AI); optional, defaults to HUMAN if unspecified"`
 }
 
+// ParticipantUpdateInput represents the MCP tool input for participant updates.
+type ParticipantUpdateInput struct {
+	CampaignID    string  `json:"campaign_id" jsonschema:"campaign identifier"`
+	ParticipantID string  `json:"participant_id" jsonschema:"participant identifier"`
+	DisplayName   *string `json:"display_name,omitempty" jsonschema:"optional display name"`
+	Role          *string `json:"role,omitempty" jsonschema:"optional participant role (GM, PLAYER)"`
+	Controller    *string `json:"controller,omitempty" jsonschema:"optional controller (HUMAN, AI)"`
+}
+
+// ParticipantDeleteInput represents the MCP tool input for participant deletion.
+type ParticipantDeleteInput struct {
+	CampaignID    string `json:"campaign_id" jsonschema:"campaign identifier"`
+	ParticipantID string `json:"participant_id" jsonschema:"participant identifier"`
+	Reason        string `json:"reason,omitempty" jsonschema:"optional reason for deletion"`
+}
+
 // ParticipantCreateResult represents the MCP tool output for participant creation.
 type ParticipantCreateResult struct {
+	ID          string `json:"id" jsonschema:"participant identifier"`
+	CampaignID  string `json:"campaign_id" jsonschema:"campaign identifier"`
+	DisplayName string `json:"display_name" jsonschema:"display name for the participant"`
+	Role        string `json:"role" jsonschema:"participant role"`
+	Controller  string `json:"controller" jsonschema:"controller type"`
+	CreatedAt   string `json:"created_at" jsonschema:"RFC3339 timestamp when participant was created"`
+	UpdatedAt   string `json:"updated_at" jsonschema:"RFC3339 timestamp when participant was last updated"`
+}
+
+// ParticipantUpdateResult represents the MCP tool output for participant updates.
+type ParticipantUpdateResult struct {
+	ID          string `json:"id" jsonschema:"participant identifier"`
+	CampaignID  string `json:"campaign_id" jsonschema:"campaign identifier"`
+	DisplayName string `json:"display_name" jsonschema:"display name for the participant"`
+	Role        string `json:"role" jsonschema:"participant role"`
+	Controller  string `json:"controller" jsonschema:"controller type"`
+	CreatedAt   string `json:"created_at" jsonschema:"RFC3339 timestamp when participant was created"`
+	UpdatedAt   string `json:"updated_at" jsonschema:"RFC3339 timestamp when participant was last updated"`
+}
+
+// ParticipantDeleteResult represents the MCP tool output for participant deletion.
+type ParticipantDeleteResult struct {
 	ID          string `json:"id" jsonschema:"participant identifier"`
 	CampaignID  string `json:"campaign_id" jsonschema:"campaign identifier"`
 	DisplayName string `json:"display_name" jsonschema:"display name for the participant"`
@@ -127,6 +201,44 @@ type CharacterCreateResult struct {
 	UpdatedAt  string `json:"updated_at" jsonschema:"RFC3339 timestamp when character was last updated"`
 }
 
+// CharacterUpdateInput represents the MCP tool input for character updates.
+type CharacterUpdateInput struct {
+	CampaignID  string  `json:"campaign_id" jsonschema:"campaign identifier"`
+	CharacterID string  `json:"character_id" jsonschema:"character identifier"`
+	Name        *string `json:"name,omitempty" jsonschema:"optional display name for the character"`
+	Kind        *string `json:"kind,omitempty" jsonschema:"optional character kind (PC, NPC)"`
+	Notes       *string `json:"notes,omitempty" jsonschema:"optional free-form notes about the character"`
+}
+
+// CharacterUpdateResult represents the MCP tool output for character updates.
+type CharacterUpdateResult struct {
+	ID         string `json:"id" jsonschema:"character identifier"`
+	CampaignID string `json:"campaign_id" jsonschema:"campaign identifier"`
+	Name       string `json:"name" jsonschema:"display name for the character"`
+	Kind       string `json:"kind" jsonschema:"character kind"`
+	Notes      string `json:"notes" jsonschema:"free-form notes about the character"`
+	CreatedAt  string `json:"created_at" jsonschema:"RFC3339 timestamp when character was created"`
+	UpdatedAt  string `json:"updated_at" jsonschema:"RFC3339 timestamp when character was last updated"`
+}
+
+// CharacterDeleteInput represents the MCP tool input for character deletion.
+type CharacterDeleteInput struct {
+	CampaignID  string `json:"campaign_id" jsonschema:"campaign identifier"`
+	CharacterID string `json:"character_id" jsonschema:"character identifier"`
+	Reason      string `json:"reason,omitempty" jsonschema:"optional reason for deletion"`
+}
+
+// CharacterDeleteResult represents the MCP tool output for character deletion.
+type CharacterDeleteResult struct {
+	ID         string `json:"id" jsonschema:"character identifier"`
+	CampaignID string `json:"campaign_id" jsonschema:"campaign identifier"`
+	Name       string `json:"name" jsonschema:"display name for the character"`
+	Kind       string `json:"kind" jsonschema:"character kind"`
+	Notes      string `json:"notes" jsonschema:"free-form notes about the character"`
+	CreatedAt  string `json:"created_at" jsonschema:"RFC3339 timestamp when character was created"`
+	UpdatedAt  string `json:"updated_at" jsonschema:"RFC3339 timestamp when character was last updated"`
+}
+
 // CharacterControlSetInput represents the MCP tool input for setting character control.
 type CharacterControlSetInput struct {
 	CampaignID  string `json:"campaign_id" jsonschema:"campaign identifier"`
@@ -155,13 +267,19 @@ type CharacterSheetGetResult struct {
 
 // CharacterProfileResult represents character profile data in MCP responses.
 type CharacterProfileResult struct {
-	CharacterID     string         `json:"character_id" jsonschema:"character identifier"`
-	Traits          map[string]int `json:"traits" jsonschema:"trait values"`
-	HpMax           int            `json:"hp_max" jsonschema:"maximum hit points"`
-	StressMax       int            `json:"stress_max" jsonschema:"maximum stress"`
-	Evasion         int            `json:"evasion" jsonschema:"evasion difficulty"`
-	MajorThreshold  int            `json:"major_threshold" jsonschema:"major damage threshold"`
-	SevereThreshold int            `json:"severe_threshold" jsonschema:"severe damage threshold"`
+	CharacterID     string `json:"character_id" jsonschema:"character identifier"`
+	HpMax           int    `json:"hp_max" jsonschema:"maximum hit points"`
+	StressMax       int    `json:"stress_max" jsonschema:"maximum stress"`
+	Evasion         int    `json:"evasion" jsonschema:"evasion difficulty"`
+	MajorThreshold  int    `json:"major_threshold" jsonschema:"major damage threshold"`
+	SevereThreshold int    `json:"severe_threshold" jsonschema:"severe damage threshold"`
+	// Daggerheart traits
+	Agility   int `json:"agility" jsonschema:"agility trait (-2 to +4)"`
+	Strength  int `json:"strength" jsonschema:"strength trait (-2 to +4)"`
+	Finesse   int `json:"finesse" jsonschema:"finesse trait (-2 to +4)"`
+	Instinct  int `json:"instinct" jsonschema:"instinct trait (-2 to +4)"`
+	Presence  int `json:"presence" jsonschema:"presence trait (-2 to +4)"`
+	Knowledge int `json:"knowledge" jsonschema:"knowledge trait (-2 to +4)"`
 }
 
 // CharacterStateResult represents character state data in MCP responses.
@@ -174,13 +292,19 @@ type CharacterStateResult struct {
 
 // CharacterProfilePatchInput represents the MCP tool input for patching a character profile.
 type CharacterProfilePatchInput struct {
-	CharacterID     string         `json:"character_id" jsonschema:"character identifier"`
-	Traits          map[string]int `json:"traits,omitempty" jsonschema:"optional traits map (replaces entire map if provided)"`
-	HpMax           *int           `json:"hp_max,omitempty" jsonschema:"optional hp_max"`
-	StressMax       *int           `json:"stress_max,omitempty" jsonschema:"optional stress_max"`
-	Evasion         *int           `json:"evasion,omitempty" jsonschema:"optional evasion"`
-	MajorThreshold  *int           `json:"major_threshold,omitempty" jsonschema:"optional major_threshold"`
-	SevereThreshold *int           `json:"severe_threshold,omitempty" jsonschema:"optional severe_threshold"`
+	CharacterID     string `json:"character_id" jsonschema:"character identifier"`
+	HpMax           *int   `json:"hp_max,omitempty" jsonschema:"optional hp_max"`
+	StressMax       *int   `json:"stress_max,omitempty" jsonschema:"optional stress_max"`
+	Evasion         *int   `json:"evasion,omitempty" jsonschema:"optional evasion"`
+	MajorThreshold  *int   `json:"major_threshold,omitempty" jsonschema:"optional major_threshold"`
+	SevereThreshold *int   `json:"severe_threshold,omitempty" jsonschema:"optional severe_threshold"`
+	// Daggerheart traits (optional, -2 to +4)
+	Agility   *int `json:"agility,omitempty" jsonschema:"optional agility trait"`
+	Strength  *int `json:"strength,omitempty" jsonschema:"optional strength trait"`
+	Finesse   *int `json:"finesse,omitempty" jsonschema:"optional finesse trait"`
+	Instinct  *int `json:"instinct,omitempty" jsonschema:"optional instinct trait"`
+	Presence  *int `json:"presence,omitempty" jsonschema:"optional presence trait"`
+	Knowledge *int `json:"knowledge,omitempty" jsonschema:"optional knowledge trait"`
 }
 
 // CharacterProfilePatchResult represents the MCP tool output for patching a character profile.
@@ -201,11 +325,77 @@ type CharacterStatePatchResult struct {
 	State CharacterStateResult `json:"state" jsonschema:"updated character state"`
 }
 
+// characterProfileResultFromProto converts a proto CharacterProfile to MCP result type.
+// Extracts Daggerheart-specific fields from the oneof extension.
+func characterProfileResultFromProto(profile *statev1.CharacterProfile) CharacterProfileResult {
+	result := CharacterProfileResult{
+		CharacterID: profile.GetCharacterId(),
+	}
+
+	// Extract Daggerheart-specific fields if present (includes HP max)
+	if dh := profile.GetDaggerheart(); dh != nil {
+		result.HpMax = int(dh.GetHpMax())
+		result.StressMax = int(dh.GetStressMax().GetValue())
+		result.Evasion = int(dh.GetEvasion().GetValue())
+		result.MajorThreshold = int(dh.GetMajorThreshold().GetValue())
+		result.SevereThreshold = int(dh.GetSevereThreshold().GetValue())
+		result.Agility = int(dh.GetAgility().GetValue())
+		result.Strength = int(dh.GetStrength().GetValue())
+		result.Finesse = int(dh.GetFinesse().GetValue())
+		result.Instinct = int(dh.GetInstinct().GetValue())
+		result.Presence = int(dh.GetPresence().GetValue())
+		result.Knowledge = int(dh.GetKnowledge().GetValue())
+	}
+
+	return result
+}
+
+// characterStateResultFromProto converts a proto CharacterState to MCP result type.
+// Extracts Daggerheart-specific fields from the oneof extension.
+func characterStateResultFromProto(state *statev1.CharacterState) CharacterStateResult {
+	result := CharacterStateResult{
+		CharacterID: state.GetCharacterId(),
+	}
+
+	// Extract Daggerheart-specific fields if present (includes HP)
+	if dh := state.GetDaggerheart(); dh != nil {
+		result.Hp = int(dh.GetHp())
+		result.Hope = int(dh.GetHope())
+		result.Stress = int(dh.GetStress())
+	}
+
+	return result
+}
+
 // CampaignCreateTool defines the MCP tool schema for creating campaigns.
 func CampaignCreateTool() *mcp.Tool {
 	return &mcp.Tool{
 		Name:        "campaign_create",
 		Description: "Creates a new campaign metadata record",
+	}
+}
+
+// CampaignEndTool defines the MCP tool schema for ending campaigns.
+func CampaignEndTool() *mcp.Tool {
+	return &mcp.Tool{
+		Name:        "campaign_end",
+		Description: "Marks a campaign as completed",
+	}
+}
+
+// CampaignArchiveTool defines the MCP tool schema for archiving campaigns.
+func CampaignArchiveTool() *mcp.Tool {
+	return &mcp.Tool{
+		Name:        "campaign_archive",
+		Description: "Archives a campaign",
+	}
+}
+
+// CampaignRestoreTool defines the MCP tool schema for restoring campaigns.
+func CampaignRestoreTool() *mcp.Tool {
+	return &mcp.Tool{
+		Name:        "campaign_restore",
+		Description: "Restores an archived campaign to draft",
 	}
 }
 
@@ -217,11 +407,43 @@ func ParticipantCreateTool() *mcp.Tool {
 	}
 }
 
+// ParticipantUpdateTool defines the MCP tool schema for updating participants.
+func ParticipantUpdateTool() *mcp.Tool {
+	return &mcp.Tool{
+		Name:        "participant_update",
+		Description: "Updates a participant's metadata (display name, role, controller)",
+	}
+}
+
+// ParticipantDeleteTool defines the MCP tool schema for deleting participants.
+func ParticipantDeleteTool() *mcp.Tool {
+	return &mcp.Tool{
+		Name:        "participant_delete",
+		Description: "Deletes a participant from a campaign",
+	}
+}
+
 // CharacterCreateTool defines the MCP tool schema for creating characters.
 func CharacterCreateTool() *mcp.Tool {
 	return &mcp.Tool{
 		Name:        "character_create",
 		Description: "Creates a character (PC or NPC) for a campaign",
+	}
+}
+
+// CharacterUpdateTool defines the MCP tool schema for updating characters.
+func CharacterUpdateTool() *mcp.Tool {
+	return &mcp.Tool{
+		Name:        "character_update",
+		Description: "Updates a character's metadata (name, kind, notes)",
+	}
+}
+
+// CharacterDeleteTool defines the MCP tool schema for deleting characters.
+func CharacterDeleteTool() *mcp.Tool {
+	return &mcp.Tool{
+		Name:        "character_delete",
+		Description: "Deletes a character from a campaign",
 	}
 }
 
@@ -302,7 +524,7 @@ func CampaignResourceTemplate() *mcp.ResourceTemplate {
 }
 
 // CampaignCreateHandler executes a campaign creation request.
-func CampaignCreateHandler(client campaignv1.CampaignServiceClient, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[CampaignCreateInput, CampaignCreateResult] {
+func CampaignCreateHandler(client statev1.CampaignServiceClient, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[CampaignCreateInput, CampaignCreateResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input CampaignCreateInput) (*mcp.CallToolResult, CampaignCreateResult, error) {
 		invocationID, err := NewInvocationID()
 		if err != nil {
@@ -319,8 +541,9 @@ func CampaignCreateHandler(client campaignv1.CampaignServiceClient, notify Resou
 
 		var header metadata.MD
 
-		response, err := client.CreateCampaign(callCtx, &campaignv1.CreateCampaignRequest{
+		response, err := client.CreateCampaign(callCtx, &statev1.CreateCampaignRequest{
 			Name:        input.Name,
+			System:      gameSystemFromString(input.System),
 			GmMode:      gmModeFromString(input.GmMode),
 			ThemePrompt: input.ThemePrompt,
 		}, grpc.Header(&header))
@@ -337,8 +560,14 @@ func CampaignCreateHandler(client campaignv1.CampaignServiceClient, notify Resou
 			GmMode:           gmModeToString(response.Campaign.GetGmMode()),
 			ParticipantCount: int(response.Campaign.GetParticipantCount()),
 			CharacterCount:   int(response.Campaign.GetCharacterCount()),
-			GmFear:           int(response.Campaign.GetGmFear()),
+			GmFear:           0, // GM Fear is now in Snapshot, not Campaign
 			ThemePrompt:      response.Campaign.GetThemePrompt(),
+			Status:           campaignStatusToString(response.Campaign.GetStatus()),
+			CreatedAt:        formatTimestamp(response.Campaign.GetCreatedAt()),
+			LastActivityAt:   formatTimestamp(response.Campaign.GetLastActivityAt()),
+			UpdatedAt:        formatTimestamp(response.Campaign.GetUpdatedAt()),
+			CompletedAt:      formatTimestamp(response.Campaign.GetCompletedAt()),
+			ArchivedAt:       formatTimestamp(response.Campaign.GetArchivedAt()),
 		}
 
 		responseMeta := MergeResponseMetadata(callMeta, header)
@@ -352,8 +581,161 @@ func CampaignCreateHandler(client campaignv1.CampaignServiceClient, notify Resou
 	}
 }
 
+// CampaignEndHandler executes a campaign end request.
+func CampaignEndHandler(client statev1.CampaignServiceClient, getContext func() Context, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[CampaignStatusChangeInput, CampaignStatusResult] {
+	return func(ctx context.Context, _ *mcp.CallToolRequest, input CampaignStatusChangeInput) (*mcp.CallToolResult, CampaignStatusResult, error) {
+		invocationID, err := NewInvocationID()
+		if err != nil {
+			return nil, CampaignStatusResult{}, fmt.Errorf("generate invocation id: %w", err)
+		}
+
+		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+
+		mcpCtx := Context{}
+		if getContext != nil {
+			mcpCtx = getContext()
+		}
+		campaignID := input.CampaignID
+		if campaignID == "" {
+			campaignID = mcpCtx.CampaignID
+		}
+		if campaignID == "" {
+			return nil, CampaignStatusResult{}, fmt.Errorf("campaign_id is required")
+		}
+
+		callCtx, callMeta, err := NewOutgoingContext(runCtx, invocationID)
+		if err != nil {
+			return nil, CampaignStatusResult{}, fmt.Errorf("create request metadata: %w", err)
+		}
+
+		var header metadata.MD
+		response, err := client.EndCampaign(callCtx, &statev1.EndCampaignRequest{
+			CampaignId: campaignID,
+		}, grpc.Header(&header))
+		if err != nil {
+			return nil, CampaignStatusResult{}, fmt.Errorf("campaign end failed: %w", err)
+		}
+		if response == nil || response.Campaign == nil {
+			return nil, CampaignStatusResult{}, fmt.Errorf("campaign end response is missing")
+		}
+
+		result := campaignStatusResultFromProto(response.Campaign)
+		responseMeta := MergeResponseMetadata(callMeta, header)
+		NotifyResourceUpdates(
+			ctx,
+			notify,
+			CampaignListResource().URI,
+			fmt.Sprintf("campaign://%s", result.ID),
+		)
+		return CallToolResultWithMetadata(responseMeta), result, nil
+	}
+}
+
+// CampaignArchiveHandler executes a campaign archive request.
+func CampaignArchiveHandler(client statev1.CampaignServiceClient, getContext func() Context, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[CampaignStatusChangeInput, CampaignStatusResult] {
+	return func(ctx context.Context, _ *mcp.CallToolRequest, input CampaignStatusChangeInput) (*mcp.CallToolResult, CampaignStatusResult, error) {
+		invocationID, err := NewInvocationID()
+		if err != nil {
+			return nil, CampaignStatusResult{}, fmt.Errorf("generate invocation id: %w", err)
+		}
+
+		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+
+		mcpCtx := Context{}
+		if getContext != nil {
+			mcpCtx = getContext()
+		}
+		campaignID := input.CampaignID
+		if campaignID == "" {
+			campaignID = mcpCtx.CampaignID
+		}
+		if campaignID == "" {
+			return nil, CampaignStatusResult{}, fmt.Errorf("campaign_id is required")
+		}
+
+		callCtx, callMeta, err := NewOutgoingContext(runCtx, invocationID)
+		if err != nil {
+			return nil, CampaignStatusResult{}, fmt.Errorf("create request metadata: %w", err)
+		}
+
+		var header metadata.MD
+		response, err := client.ArchiveCampaign(callCtx, &statev1.ArchiveCampaignRequest{
+			CampaignId: campaignID,
+		}, grpc.Header(&header))
+		if err != nil {
+			return nil, CampaignStatusResult{}, fmt.Errorf("campaign archive failed: %w", err)
+		}
+		if response == nil || response.Campaign == nil {
+			return nil, CampaignStatusResult{}, fmt.Errorf("campaign archive response is missing")
+		}
+
+		result := campaignStatusResultFromProto(response.Campaign)
+		responseMeta := MergeResponseMetadata(callMeta, header)
+		NotifyResourceUpdates(
+			ctx,
+			notify,
+			CampaignListResource().URI,
+			fmt.Sprintf("campaign://%s", result.ID),
+		)
+		return CallToolResultWithMetadata(responseMeta), result, nil
+	}
+}
+
+// CampaignRestoreHandler executes a campaign restore request.
+func CampaignRestoreHandler(client statev1.CampaignServiceClient, getContext func() Context, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[CampaignStatusChangeInput, CampaignStatusResult] {
+	return func(ctx context.Context, _ *mcp.CallToolRequest, input CampaignStatusChangeInput) (*mcp.CallToolResult, CampaignStatusResult, error) {
+		invocationID, err := NewInvocationID()
+		if err != nil {
+			return nil, CampaignStatusResult{}, fmt.Errorf("generate invocation id: %w", err)
+		}
+
+		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+
+		mcpCtx := Context{}
+		if getContext != nil {
+			mcpCtx = getContext()
+		}
+		campaignID := input.CampaignID
+		if campaignID == "" {
+			campaignID = mcpCtx.CampaignID
+		}
+		if campaignID == "" {
+			return nil, CampaignStatusResult{}, fmt.Errorf("campaign_id is required")
+		}
+
+		callCtx, callMeta, err := NewOutgoingContext(runCtx, invocationID)
+		if err != nil {
+			return nil, CampaignStatusResult{}, fmt.Errorf("create request metadata: %w", err)
+		}
+
+		var header metadata.MD
+		response, err := client.RestoreCampaign(callCtx, &statev1.RestoreCampaignRequest{
+			CampaignId: campaignID,
+		}, grpc.Header(&header))
+		if err != nil {
+			return nil, CampaignStatusResult{}, fmt.Errorf("campaign restore failed: %w", err)
+		}
+		if response == nil || response.Campaign == nil {
+			return nil, CampaignStatusResult{}, fmt.Errorf("campaign restore response is missing")
+		}
+
+		result := campaignStatusResultFromProto(response.Campaign)
+		responseMeta := MergeResponseMetadata(callMeta, header)
+		NotifyResourceUpdates(
+			ctx,
+			notify,
+			CampaignListResource().URI,
+			fmt.Sprintf("campaign://%s", result.ID),
+		)
+		return CallToolResultWithMetadata(responseMeta), result, nil
+	}
+}
+
 // CampaignListResourceHandler returns a readable campaign listing resource.
-func CampaignListResourceHandler(client campaignv1.CampaignServiceClient) mcp.ResourceHandler {
+func CampaignListResourceHandler(client statev1.CampaignServiceClient) mcp.ResourceHandler {
 	return func(ctx context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
 		if client == nil {
 			return nil, fmt.Errorf("campaign list client is not configured")
@@ -374,7 +756,7 @@ func CampaignListResourceHandler(client campaignv1.CampaignServiceClient) mcp.Re
 
 		payload := CampaignListPayload{}
 		// TODO: Support page_size/page_token inputs and return next_page_token.
-		response, err := client.ListCampaigns(callCtx, &campaignv1.ListCampaignsRequest{
+		response, err := client.ListCampaigns(callCtx, &statev1.ListCampaignsRequest{
 			PageSize: 10,
 		})
 		if err != nil {
@@ -388,13 +770,17 @@ func CampaignListResourceHandler(client campaignv1.CampaignServiceClient) mcp.Re
 			payload.Campaigns = append(payload.Campaigns, CampaignListEntry{
 				ID:               campaign.GetId(),
 				Name:             campaign.GetName(),
+				Status:           campaignStatusToString(campaign.GetStatus()),
 				GmMode:           gmModeToString(campaign.GetGmMode()),
 				ParticipantCount: int(campaign.GetParticipantCount()),
 				CharacterCount:   int(campaign.GetCharacterCount()),
-				GmFear:           int(campaign.GetGmFear()),
+				GmFear:           0, // GM Fear is now in Snapshot, not Campaign
 				ThemePrompt:      campaign.GetThemePrompt(),
 				CreatedAt:        formatTimestamp(campaign.GetCreatedAt()),
+				LastActivityAt:   formatTimestamp(campaign.GetLastActivityAt()),
 				UpdatedAt:        formatTimestamp(campaign.GetUpdatedAt()),
+				CompletedAt:      formatTimestamp(campaign.GetCompletedAt()),
+				ArchivedAt:       formatTimestamp(campaign.GetArchivedAt()),
 			})
 		}
 
@@ -423,34 +809,76 @@ func formatTimestamp(ts *timestamppb.Timestamp) string {
 	return ts.AsTime().Format(time.RFC3339)
 }
 
-func gmModeFromString(value string) campaignv1.GmMode {
+func gameSystemFromString(value string) commonv1.GameSystem {
 	switch strings.ToUpper(strings.TrimSpace(value)) {
-	case "HUMAN":
-		return campaignv1.GmMode_HUMAN
-	case "AI":
-		return campaignv1.GmMode_AI
-	case "HYBRID":
-		return campaignv1.GmMode_HYBRID
+	case "DAGGERHEART", "GAME_SYSTEM_DAGGERHEART":
+		return commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART
 	default:
-		return campaignv1.GmMode_GM_MODE_UNSPECIFIED
+		return commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED
 	}
 }
 
-func gmModeToString(mode campaignv1.GmMode) string {
+func gmModeFromString(value string) statev1.GmMode {
+	switch strings.ToUpper(strings.TrimSpace(value)) {
+	case "HUMAN":
+		return statev1.GmMode_HUMAN
+	case "AI":
+		return statev1.GmMode_AI
+	case "HYBRID":
+		return statev1.GmMode_HYBRID
+	default:
+		return statev1.GmMode_GM_MODE_UNSPECIFIED
+	}
+}
+
+func gmModeToString(mode statev1.GmMode) string {
 	switch mode {
-	case campaignv1.GmMode_HUMAN:
+	case statev1.GmMode_HUMAN:
 		return "HUMAN"
-	case campaignv1.GmMode_AI:
+	case statev1.GmMode_AI:
 		return "AI"
-	case campaignv1.GmMode_HYBRID:
+	case statev1.GmMode_HYBRID:
 		return "HYBRID"
 	default:
 		return "UNSPECIFIED"
 	}
 }
 
+func campaignStatusToString(status statev1.CampaignStatus) string {
+	switch status {
+	case statev1.CampaignStatus_DRAFT:
+		return "DRAFT"
+	case statev1.CampaignStatus_ACTIVE:
+		return "ACTIVE"
+	case statev1.CampaignStatus_COMPLETED:
+		return "COMPLETED"
+	case statev1.CampaignStatus_ARCHIVED:
+		return "ARCHIVED"
+	default:
+		return "UNSPECIFIED"
+	}
+}
+
+func campaignStatusResultFromProto(campaign *statev1.Campaign) CampaignStatusResult {
+	return CampaignStatusResult{
+		ID:               campaign.GetId(),
+		Name:             campaign.GetName(),
+		GmMode:           gmModeToString(campaign.GetGmMode()),
+		ParticipantCount: int(campaign.GetParticipantCount()),
+		CharacterCount:   int(campaign.GetCharacterCount()),
+		GmFear:           0, // GM Fear is now in Snapshot, not Campaign
+		ThemePrompt:      campaign.GetThemePrompt(),
+		Status:           campaignStatusToString(campaign.GetStatus()),
+		CreatedAt:        formatTimestamp(campaign.GetCreatedAt()),
+		LastActivityAt:   formatTimestamp(campaign.GetLastActivityAt()),
+		UpdatedAt:        formatTimestamp(campaign.GetUpdatedAt()),
+		CompletedAt:      formatTimestamp(campaign.GetCompletedAt()),
+		ArchivedAt:       formatTimestamp(campaign.GetArchivedAt()),
+	}
+}
+
 // ParticipantCreateHandler executes a participant creation request.
-func ParticipantCreateHandler(client campaignv1.CampaignServiceClient, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[ParticipantCreateInput, ParticipantCreateResult] {
+func ParticipantCreateHandler(client statev1.ParticipantServiceClient, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[ParticipantCreateInput, ParticipantCreateResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input ParticipantCreateInput) (*mcp.CallToolResult, ParticipantCreateResult, error) {
 		invocationID, err := NewInvocationID()
 		if err != nil {
@@ -467,7 +895,7 @@ func ParticipantCreateHandler(client campaignv1.CampaignServiceClient, notify Re
 
 		var header metadata.MD
 
-		req := &campaignv1.CreateParticipantRequest{
+		req := &statev1.CreateParticipantRequest{
 			CampaignId:  input.CampaignID,
 			DisplayName: input.DisplayName,
 			Role:        participantRoleFromString(input.Role),
@@ -508,44 +936,181 @@ func ParticipantCreateHandler(client campaignv1.CampaignServiceClient, notify Re
 	}
 }
 
-func participantRoleFromString(value string) campaignv1.ParticipantRole {
-	switch strings.ToUpper(strings.TrimSpace(value)) {
-	case "GM":
-		return campaignv1.ParticipantRole_GM
-	case "PLAYER":
-		return campaignv1.ParticipantRole_PLAYER
-	default:
-		return campaignv1.ParticipantRole_ROLE_UNSPECIFIED
+// ParticipantUpdateHandler executes a participant update request.
+func ParticipantUpdateHandler(client statev1.ParticipantServiceClient, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[ParticipantUpdateInput, ParticipantUpdateResult] {
+	return func(ctx context.Context, _ *mcp.CallToolRequest, input ParticipantUpdateInput) (*mcp.CallToolResult, ParticipantUpdateResult, error) {
+		invocationID, err := NewInvocationID()
+		if err != nil {
+			return nil, ParticipantUpdateResult{}, fmt.Errorf("generate invocation id: %w", err)
+		}
+
+		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+
+		callCtx, callMeta, err := NewOutgoingContext(runCtx, invocationID)
+		if err != nil {
+			return nil, ParticipantUpdateResult{}, fmt.Errorf("create request metadata: %w", err)
+		}
+
+		if input.CampaignID == "" {
+			return nil, ParticipantUpdateResult{}, fmt.Errorf("campaign_id is required")
+		}
+		if input.ParticipantID == "" {
+			return nil, ParticipantUpdateResult{}, fmt.Errorf("participant_id is required")
+		}
+
+		req := &statev1.UpdateParticipantRequest{
+			CampaignId:    input.CampaignID,
+			ParticipantId: input.ParticipantID,
+		}
+		if input.DisplayName != nil {
+			req.DisplayName = wrapperspb.String(*input.DisplayName)
+		}
+		if input.Role != nil {
+			role := participantRoleFromString(*input.Role)
+			if role == statev1.ParticipantRole_ROLE_UNSPECIFIED {
+				return nil, ParticipantUpdateResult{}, fmt.Errorf("role must be GM or PLAYER")
+			}
+			req.Role = role
+		}
+		if input.Controller != nil {
+			controller := controllerFromString(*input.Controller)
+			if controller == statev1.Controller_CONTROLLER_UNSPECIFIED {
+				return nil, ParticipantUpdateResult{}, fmt.Errorf("controller must be HUMAN or AI")
+			}
+			req.Controller = controller
+		}
+		if req.DisplayName == nil && req.Role == statev1.ParticipantRole_ROLE_UNSPECIFIED && req.Controller == statev1.Controller_CONTROLLER_UNSPECIFIED {
+			return nil, ParticipantUpdateResult{}, fmt.Errorf("at least one field must be provided")
+		}
+
+		var header metadata.MD
+		response, err := client.UpdateParticipant(callCtx, req, grpc.Header(&header))
+		if err != nil {
+			return nil, ParticipantUpdateResult{}, fmt.Errorf("participant update failed: %w", err)
+		}
+		if response == nil || response.Participant == nil {
+			return nil, ParticipantUpdateResult{}, fmt.Errorf("participant update response is missing")
+		}
+
+		result := ParticipantUpdateResult{
+			ID:          response.Participant.GetId(),
+			CampaignID:  response.Participant.GetCampaignId(),
+			DisplayName: response.Participant.GetDisplayName(),
+			Role:        participantRoleToString(response.Participant.GetRole()),
+			Controller:  controllerToString(response.Participant.GetController()),
+			CreatedAt:   formatTimestamp(response.Participant.GetCreatedAt()),
+			UpdatedAt:   formatTimestamp(response.Participant.GetUpdatedAt()),
+		}
+
+		responseMeta := MergeResponseMetadata(callMeta, header)
+		NotifyResourceUpdates(
+			ctx,
+			notify,
+			CampaignListResource().URI,
+			fmt.Sprintf("campaign://%s", result.CampaignID),
+			fmt.Sprintf("campaign://%s/participants", result.CampaignID),
+		)
+		return CallToolResultWithMetadata(responseMeta), result, nil
 	}
 }
 
-func participantRoleToString(role campaignv1.ParticipantRole) string {
+// ParticipantDeleteHandler executes a participant delete request.
+func ParticipantDeleteHandler(client statev1.ParticipantServiceClient, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[ParticipantDeleteInput, ParticipantDeleteResult] {
+	return func(ctx context.Context, _ *mcp.CallToolRequest, input ParticipantDeleteInput) (*mcp.CallToolResult, ParticipantDeleteResult, error) {
+		invocationID, err := NewInvocationID()
+		if err != nil {
+			return nil, ParticipantDeleteResult{}, fmt.Errorf("generate invocation id: %w", err)
+		}
+
+		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+
+		callCtx, callMeta, err := NewOutgoingContext(runCtx, invocationID)
+		if err != nil {
+			return nil, ParticipantDeleteResult{}, fmt.Errorf("create request metadata: %w", err)
+		}
+
+		if input.CampaignID == "" {
+			return nil, ParticipantDeleteResult{}, fmt.Errorf("campaign_id is required")
+		}
+		if input.ParticipantID == "" {
+			return nil, ParticipantDeleteResult{}, fmt.Errorf("participant_id is required")
+		}
+
+		var header metadata.MD
+		response, err := client.DeleteParticipant(callCtx, &statev1.DeleteParticipantRequest{
+			CampaignId:    input.CampaignID,
+			ParticipantId: input.ParticipantID,
+			Reason:        input.Reason,
+		}, grpc.Header(&header))
+		if err != nil {
+			return nil, ParticipantDeleteResult{}, fmt.Errorf("participant delete failed: %w", err)
+		}
+		if response == nil || response.Participant == nil {
+			return nil, ParticipantDeleteResult{}, fmt.Errorf("participant delete response is missing")
+		}
+
+		result := ParticipantDeleteResult{
+			ID:          response.Participant.GetId(),
+			CampaignID:  response.Participant.GetCampaignId(),
+			DisplayName: response.Participant.GetDisplayName(),
+			Role:        participantRoleToString(response.Participant.GetRole()),
+			Controller:  controllerToString(response.Participant.GetController()),
+			CreatedAt:   formatTimestamp(response.Participant.GetCreatedAt()),
+			UpdatedAt:   formatTimestamp(response.Participant.GetUpdatedAt()),
+		}
+
+		responseMeta := MergeResponseMetadata(callMeta, header)
+		NotifyResourceUpdates(
+			ctx,
+			notify,
+			CampaignListResource().URI,
+			fmt.Sprintf("campaign://%s", result.CampaignID),
+			fmt.Sprintf("campaign://%s/participants", result.CampaignID),
+		)
+		return CallToolResultWithMetadata(responseMeta), result, nil
+	}
+}
+
+func participantRoleFromString(value string) statev1.ParticipantRole {
+	switch strings.ToUpper(strings.TrimSpace(value)) {
+	case "GM":
+		return statev1.ParticipantRole_GM
+	case "PLAYER":
+		return statev1.ParticipantRole_PLAYER
+	default:
+		return statev1.ParticipantRole_ROLE_UNSPECIFIED
+	}
+}
+
+func participantRoleToString(role statev1.ParticipantRole) string {
 	switch role {
-	case campaignv1.ParticipantRole_GM:
+	case statev1.ParticipantRole_GM:
 		return "GM"
-	case campaignv1.ParticipantRole_PLAYER:
+	case statev1.ParticipantRole_PLAYER:
 		return "PLAYER"
 	default:
 		return "UNSPECIFIED"
 	}
 }
 
-func controllerFromString(value string) campaignv1.Controller {
+func controllerFromString(value string) statev1.Controller {
 	switch strings.ToUpper(strings.TrimSpace(value)) {
 	case "HUMAN":
-		return campaignv1.Controller_CONTROLLER_HUMAN
+		return statev1.Controller_CONTROLLER_HUMAN
 	case "AI":
-		return campaignv1.Controller_CONTROLLER_AI
+		return statev1.Controller_CONTROLLER_AI
 	default:
-		return campaignv1.Controller_CONTROLLER_UNSPECIFIED
+		return statev1.Controller_CONTROLLER_UNSPECIFIED
 	}
 }
 
-func controllerToString(controller campaignv1.Controller) string {
+func controllerToString(controller statev1.Controller) string {
 	switch controller {
-	case campaignv1.Controller_CONTROLLER_HUMAN:
+	case statev1.Controller_CONTROLLER_HUMAN:
 		return "HUMAN"
-	case campaignv1.Controller_CONTROLLER_AI:
+	case statev1.Controller_CONTROLLER_AI:
 		return "AI"
 	default:
 		return "UNSPECIFIED"
@@ -553,7 +1118,7 @@ func controllerToString(controller campaignv1.Controller) string {
 }
 
 // CharacterCreateHandler executes a character creation request.
-func CharacterCreateHandler(client campaignv1.CampaignServiceClient, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[CharacterCreateInput, CharacterCreateResult] {
+func CharacterCreateHandler(client statev1.CharacterServiceClient, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[CharacterCreateInput, CharacterCreateResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input CharacterCreateInput) (*mcp.CallToolResult, CharacterCreateResult, error) {
 		invocationID, err := NewInvocationID()
 		if err != nil {
@@ -570,7 +1135,7 @@ func CharacterCreateHandler(client campaignv1.CampaignServiceClient, notify Reso
 
 		var header metadata.MD
 
-		req := &campaignv1.CreateCharacterRequest{
+		req := &statev1.CreateCharacterRequest{
 			CampaignId: input.CampaignID,
 			Name:       input.Name,
 			Kind:       characterKindFromString(input.Kind),
@@ -607,22 +1172,155 @@ func CharacterCreateHandler(client campaignv1.CampaignServiceClient, notify Reso
 	}
 }
 
-func characterKindFromString(value string) campaignv1.CharacterKind {
-	switch strings.ToUpper(strings.TrimSpace(value)) {
-	case "PC":
-		return campaignv1.CharacterKind_PC
-	case "NPC":
-		return campaignv1.CharacterKind_NPC
-	default:
-		return campaignv1.CharacterKind_CHARACTER_KIND_UNSPECIFIED
+// CharacterUpdateHandler executes a character update request.
+func CharacterUpdateHandler(client statev1.CharacterServiceClient, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[CharacterUpdateInput, CharacterUpdateResult] {
+	return func(ctx context.Context, _ *mcp.CallToolRequest, input CharacterUpdateInput) (*mcp.CallToolResult, CharacterUpdateResult, error) {
+		invocationID, err := NewInvocationID()
+		if err != nil {
+			return nil, CharacterUpdateResult{}, fmt.Errorf("generate invocation id: %w", err)
+		}
+
+		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+
+		callCtx, callMeta, err := NewOutgoingContext(runCtx, invocationID)
+		if err != nil {
+			return nil, CharacterUpdateResult{}, fmt.Errorf("create request metadata: %w", err)
+		}
+
+		if input.CampaignID == "" {
+			return nil, CharacterUpdateResult{}, fmt.Errorf("campaign_id is required")
+		}
+		if input.CharacterID == "" {
+			return nil, CharacterUpdateResult{}, fmt.Errorf("character_id is required")
+		}
+
+		req := &statev1.UpdateCharacterRequest{
+			CampaignId:  input.CampaignID,
+			CharacterId: input.CharacterID,
+		}
+		if input.Name != nil {
+			req.Name = wrapperspb.String(*input.Name)
+		}
+		if input.Kind != nil {
+			kind := characterKindFromString(*input.Kind)
+			if kind == statev1.CharacterKind_CHARACTER_KIND_UNSPECIFIED {
+				return nil, CharacterUpdateResult{}, fmt.Errorf("kind must be PC or NPC")
+			}
+			req.Kind = kind
+		}
+		if input.Notes != nil {
+			req.Notes = wrapperspb.String(*input.Notes)
+		}
+		if req.Name == nil && req.Kind == statev1.CharacterKind_CHARACTER_KIND_UNSPECIFIED && req.Notes == nil {
+			return nil, CharacterUpdateResult{}, fmt.Errorf("at least one field must be provided")
+		}
+
+		var header metadata.MD
+		response, err := client.UpdateCharacter(callCtx, req, grpc.Header(&header))
+		if err != nil {
+			return nil, CharacterUpdateResult{}, fmt.Errorf("character update failed: %w", err)
+		}
+		if response == nil || response.Character == nil {
+			return nil, CharacterUpdateResult{}, fmt.Errorf("character update response is missing")
+		}
+
+		result := CharacterUpdateResult{
+			ID:         response.Character.GetId(),
+			CampaignID: response.Character.GetCampaignId(),
+			Name:       response.Character.GetName(),
+			Kind:       characterKindToString(response.Character.GetKind()),
+			Notes:      response.Character.GetNotes(),
+			CreatedAt:  formatTimestamp(response.Character.GetCreatedAt()),
+			UpdatedAt:  formatTimestamp(response.Character.GetUpdatedAt()),
+		}
+
+		responseMeta := MergeResponseMetadata(callMeta, header)
+		NotifyResourceUpdates(
+			ctx,
+			notify,
+			CampaignListResource().URI,
+			fmt.Sprintf("campaign://%s", result.CampaignID),
+			fmt.Sprintf("campaign://%s/characters", result.CampaignID),
+		)
+		return CallToolResultWithMetadata(responseMeta), result, nil
 	}
 }
 
-func characterKindToString(kind campaignv1.CharacterKind) string {
+// CharacterDeleteHandler executes a character delete request.
+func CharacterDeleteHandler(client statev1.CharacterServiceClient, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[CharacterDeleteInput, CharacterDeleteResult] {
+	return func(ctx context.Context, _ *mcp.CallToolRequest, input CharacterDeleteInput) (*mcp.CallToolResult, CharacterDeleteResult, error) {
+		invocationID, err := NewInvocationID()
+		if err != nil {
+			return nil, CharacterDeleteResult{}, fmt.Errorf("generate invocation id: %w", err)
+		}
+
+		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+
+		callCtx, callMeta, err := NewOutgoingContext(runCtx, invocationID)
+		if err != nil {
+			return nil, CharacterDeleteResult{}, fmt.Errorf("create request metadata: %w", err)
+		}
+
+		if input.CampaignID == "" {
+			return nil, CharacterDeleteResult{}, fmt.Errorf("campaign_id is required")
+		}
+		if input.CharacterID == "" {
+			return nil, CharacterDeleteResult{}, fmt.Errorf("character_id is required")
+		}
+
+		var header metadata.MD
+		response, err := client.DeleteCharacter(callCtx, &statev1.DeleteCharacterRequest{
+			CampaignId:  input.CampaignID,
+			CharacterId: input.CharacterID,
+			Reason:      input.Reason,
+		}, grpc.Header(&header))
+		if err != nil {
+			return nil, CharacterDeleteResult{}, fmt.Errorf("character delete failed: %w", err)
+		}
+		if response == nil || response.Character == nil {
+			return nil, CharacterDeleteResult{}, fmt.Errorf("character delete response is missing")
+		}
+
+		result := CharacterDeleteResult{
+			ID:         response.Character.GetId(),
+			CampaignID: response.Character.GetCampaignId(),
+			Name:       response.Character.GetName(),
+			Kind:       characterKindToString(response.Character.GetKind()),
+			Notes:      response.Character.GetNotes(),
+			CreatedAt:  formatTimestamp(response.Character.GetCreatedAt()),
+			UpdatedAt:  formatTimestamp(response.Character.GetUpdatedAt()),
+		}
+
+		responseMeta := MergeResponseMetadata(callMeta, header)
+		NotifyResourceUpdates(
+			ctx,
+			notify,
+			CampaignListResource().URI,
+			fmt.Sprintf("campaign://%s", result.CampaignID),
+			fmt.Sprintf("campaign://%s/characters", result.CampaignID),
+		)
+		return CallToolResultWithMetadata(responseMeta), result, nil
+	}
+}
+
+func characterKindFromString(value string) statev1.CharacterKind {
+	switch strings.ToUpper(strings.TrimSpace(value)) {
+	case "PC":
+		return statev1.CharacterKind_PC
+	case "NPC":
+		return statev1.CharacterKind_NPC
+	default:
+		return statev1.CharacterKind_CHARACTER_KIND_UNSPECIFIED
+	}
+}
+
+func characterKindToString(kind statev1.CharacterKind) string {
 	switch kind {
-	case campaignv1.CharacterKind_PC:
+	case statev1.CharacterKind_PC:
 		return "PC"
-	case campaignv1.CharacterKind_NPC:
+	case statev1.CharacterKind_NPC:
 		return "NPC"
 	default:
 		return "UNSPECIFIED"
@@ -630,7 +1328,7 @@ func characterKindToString(kind campaignv1.CharacterKind) string {
 }
 
 // CharacterControlSetHandler executes a character control set request.
-func CharacterControlSetHandler(client campaignv1.CampaignServiceClient, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[CharacterControlSetInput, CharacterControlSetResult] {
+func CharacterControlSetHandler(client statev1.CharacterServiceClient, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[CharacterControlSetInput, CharacterControlSetResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input CharacterControlSetInput) (*mcp.CallToolResult, CharacterControlSetResult, error) {
 		invocationID, err := NewInvocationID()
 		if err != nil {
@@ -652,7 +1350,7 @@ func CharacterControlSetHandler(client campaignv1.CampaignServiceClient, notify 
 
 		var header metadata.MD
 
-		req := &campaignv1.SetDefaultControlRequest{
+		req := &statev1.SetDefaultControlRequest{
 			CampaignId:  input.CampaignID,
 			CharacterId: input.CharacterID,
 			Controller:  controller,
@@ -684,7 +1382,7 @@ func CharacterControlSetHandler(client campaignv1.CampaignServiceClient, notify 
 
 // characterControllerFromString converts a string to a protobuf CharacterController.
 // Accepts "GM" (case-insensitive) for GM control, or a participant ID for participant control.
-func characterControllerFromString(controller string) (*campaignv1.CharacterController, error) {
+func characterControllerFromString(controller string) (*statev1.CharacterController, error) {
 	controller = strings.TrimSpace(controller)
 	if controller == "" {
 		return nil, fmt.Errorf("controller is required")
@@ -692,17 +1390,17 @@ func characterControllerFromString(controller string) (*campaignv1.CharacterCont
 
 	upper := strings.ToUpper(controller)
 	if upper == "GM" {
-		return &campaignv1.CharacterController{
-			Controller: &campaignv1.CharacterController_Gm{
-				Gm: &campaignv1.GmController{},
+		return &statev1.CharacterController{
+			Controller: &statev1.CharacterController_Gm{
+				Gm: &statev1.GmController{},
 			},
 		}, nil
 	}
 
 	// Otherwise, treat as participant ID
-	return &campaignv1.CharacterController{
-		Controller: &campaignv1.CharacterController_Participant{
-			Participant: &campaignv1.ParticipantController{
+	return &statev1.CharacterController{
+		Controller: &statev1.CharacterController_Participant{
+			Participant: &statev1.ParticipantController{
 				ParticipantId: controller,
 			},
 		},
@@ -711,15 +1409,15 @@ func characterControllerFromString(controller string) (*campaignv1.CharacterCont
 
 // characterControllerToString converts a protobuf CharacterController to a string representation.
 // Returns "GM" for GM control, or the participant ID for participant control.
-func characterControllerToString(controller *campaignv1.CharacterController) string {
+func characterControllerToString(controller *statev1.CharacterController) string {
 	if controller == nil {
 		return ""
 	}
 
 	switch c := controller.GetController().(type) {
-	case *campaignv1.CharacterController_Gm:
+	case *statev1.CharacterController_Gm:
 		return "GM"
-	case *campaignv1.CharacterController_Participant:
+	case *statev1.CharacterController_Participant:
 		if c.Participant != nil {
 			return c.Participant.GetParticipantId()
 		}
@@ -730,7 +1428,7 @@ func characterControllerToString(controller *campaignv1.CharacterController) str
 }
 
 // CharacterSheetGetHandler executes a character sheet get request.
-func CharacterSheetGetHandler(client campaignv1.CampaignServiceClient, getContext func() Context) mcp.ToolHandlerFor[CharacterSheetGetInput, CharacterSheetGetResult] {
+func CharacterSheetGetHandler(client statev1.CharacterServiceClient, getContext func() Context) mcp.ToolHandlerFor[CharacterSheetGetInput, CharacterSheetGetResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input CharacterSheetGetInput) (*mcp.CallToolResult, CharacterSheetGetResult, error) {
 		invocationID, err := NewInvocationID()
 		if err != nil {
@@ -753,7 +1451,7 @@ func CharacterSheetGetHandler(client campaignv1.CampaignServiceClient, getContex
 
 		var header metadata.MD
 
-		response, err := client.GetCharacterSheet(callCtx, &campaignv1.GetCharacterSheetRequest{
+		response, err := client.GetCharacterSheet(callCtx, &statev1.GetCharacterSheetRequest{
 			CampaignId:  campaignID,
 			CharacterId: input.CharacterID,
 		}, grpc.Header(&header))
@@ -762,13 +1460,6 @@ func CharacterSheetGetHandler(client campaignv1.CampaignServiceClient, getContex
 		}
 		if response == nil {
 			return nil, CharacterSheetGetResult{}, fmt.Errorf("character sheet response is missing")
-		}
-
-		traits := make(map[string]int)
-		if response.Profile != nil {
-			for k, v := range response.Profile.GetTraits() {
-				traits[k] = int(v)
-			}
 		}
 
 		result := CharacterSheetGetResult{
@@ -781,21 +1472,8 @@ func CharacterSheetGetHandler(client campaignv1.CampaignServiceClient, getContex
 				CreatedAt:  formatTimestamp(response.Character.GetCreatedAt()),
 				UpdatedAt:  formatTimestamp(response.Character.GetUpdatedAt()),
 			},
-			Profile: CharacterProfileResult{
-				CharacterID:     response.Profile.GetCharacterId(),
-				Traits:          traits,
-				HpMax:           int(response.Profile.GetHpMax()),
-				StressMax:       int(response.Profile.GetStressMax()),
-				Evasion:         int(response.Profile.GetEvasion()),
-				MajorThreshold:  int(response.Profile.GetMajorThreshold()),
-				SevereThreshold: int(response.Profile.GetSevereThreshold()),
-			},
-			State: CharacterStateResult{
-				CharacterID: response.State.GetCharacterId(),
-				Hope:        int(response.State.GetHope()),
-				Stress:      int(response.State.GetStress()),
-				Hp:          int(response.State.GetHp()),
-			},
+			Profile: characterProfileResultFromProto(response.Profile),
+			State:   characterStateResultFromProto(response.State),
 		}
 
 		responseMeta := MergeResponseMetadata(callMeta, header)
@@ -804,7 +1482,7 @@ func CharacterSheetGetHandler(client campaignv1.CampaignServiceClient, getContex
 }
 
 // CharacterProfilePatchHandler executes a character profile patch request.
-func CharacterProfilePatchHandler(client campaignv1.CampaignServiceClient, getContext func() Context, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[CharacterProfilePatchInput, CharacterProfilePatchResult] {
+func CharacterProfilePatchHandler(client statev1.CharacterServiceClient, getContext func() Context, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[CharacterProfilePatchInput, CharacterProfilePatchResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input CharacterProfilePatchInput) (*mcp.CallToolResult, CharacterProfilePatchResult, error) {
 		invocationID, err := NewInvocationID()
 		if err != nil {
@@ -827,37 +1505,54 @@ func CharacterProfilePatchHandler(client campaignv1.CampaignServiceClient, getCo
 
 		var header metadata.MD
 
-		req := &campaignv1.PatchCharacterProfileRequest{
+		req := &statev1.PatchCharacterProfileRequest{
 			CampaignId:  campaignID,
 			CharacterId: input.CharacterID,
 		}
 
-		if input.Traits != nil {
-			traits := make(map[string]int32)
-			for k, v := range input.Traits {
-				traits[k] = int32(v)
+		// All profile fields are now Daggerheart-specific (including hp_max)
+		hasDaggerheartPatch := input.HpMax != nil || input.StressMax != nil || input.Evasion != nil ||
+			input.MajorThreshold != nil || input.SevereThreshold != nil ||
+			input.Agility != nil || input.Strength != nil || input.Finesse != nil ||
+			input.Instinct != nil || input.Presence != nil || input.Knowledge != nil
+		if hasDaggerheartPatch {
+			dhProfile := &daggerheartv1.DaggerheartProfile{}
+			if input.HpMax != nil {
+				dhProfile.HpMax = int32(*input.HpMax)
 			}
-			req.Traits = traits
-		}
-		if input.HpMax != nil {
-			hpMax := int32(*input.HpMax)
-			req.HpMax = &hpMax
-		}
-		if input.StressMax != nil {
-			stressMax := int32(*input.StressMax)
-			req.StressMax = &stressMax
-		}
-		if input.Evasion != nil {
-			evasion := int32(*input.Evasion)
-			req.Evasion = &evasion
-		}
-		if input.MajorThreshold != nil {
-			majorThreshold := int32(*input.MajorThreshold)
-			req.MajorThreshold = &majorThreshold
-		}
-		if input.SevereThreshold != nil {
-			severeThreshold := int32(*input.SevereThreshold)
-			req.SevereThreshold = &severeThreshold
+			if input.StressMax != nil {
+				dhProfile.StressMax = wrapperspb.Int32(int32(*input.StressMax))
+			}
+			if input.Evasion != nil {
+				dhProfile.Evasion = wrapperspb.Int32(int32(*input.Evasion))
+			}
+			if input.MajorThreshold != nil {
+				dhProfile.MajorThreshold = wrapperspb.Int32(int32(*input.MajorThreshold))
+			}
+			if input.SevereThreshold != nil {
+				dhProfile.SevereThreshold = wrapperspb.Int32(int32(*input.SevereThreshold))
+			}
+			if input.Agility != nil {
+				dhProfile.Agility = wrapperspb.Int32(int32(*input.Agility))
+			}
+			if input.Strength != nil {
+				dhProfile.Strength = wrapperspb.Int32(int32(*input.Strength))
+			}
+			if input.Finesse != nil {
+				dhProfile.Finesse = wrapperspb.Int32(int32(*input.Finesse))
+			}
+			if input.Instinct != nil {
+				dhProfile.Instinct = wrapperspb.Int32(int32(*input.Instinct))
+			}
+			if input.Presence != nil {
+				dhProfile.Presence = wrapperspb.Int32(int32(*input.Presence))
+			}
+			if input.Knowledge != nil {
+				dhProfile.Knowledge = wrapperspb.Int32(int32(*input.Knowledge))
+			}
+			req.SystemProfilePatch = &statev1.PatchCharacterProfileRequest_Daggerheart{
+				Daggerheart: dhProfile,
+			}
 		}
 
 		response, err := client.PatchCharacterProfile(callCtx, req, grpc.Header(&header))
@@ -868,21 +1563,8 @@ func CharacterProfilePatchHandler(client campaignv1.CampaignServiceClient, getCo
 			return nil, CharacterProfilePatchResult{}, fmt.Errorf("character profile patch response is missing")
 		}
 
-		traits := make(map[string]int)
-		for k, v := range response.Profile.GetTraits() {
-			traits[k] = int(v)
-		}
-
 		result := CharacterProfilePatchResult{
-			Profile: CharacterProfileResult{
-				CharacterID:     response.Profile.GetCharacterId(),
-				Traits:          traits,
-				HpMax:           int(response.Profile.GetHpMax()),
-				StressMax:       int(response.Profile.GetStressMax()),
-				Evasion:         int(response.Profile.GetEvasion()),
-				MajorThreshold:  int(response.Profile.GetMajorThreshold()),
-				SevereThreshold: int(response.Profile.GetSevereThreshold()),
-			},
+			Profile: characterProfileResultFromProto(response.Profile),
 		}
 
 		responseMeta := MergeResponseMetadata(callMeta, header)
@@ -896,7 +1578,7 @@ func CharacterProfilePatchHandler(client campaignv1.CampaignServiceClient, getCo
 }
 
 // CharacterStatePatchHandler executes a character state patch request.
-func CharacterStatePatchHandler(client campaignv1.CampaignServiceClient, getContext func() Context, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[CharacterStatePatchInput, CharacterStatePatchResult] {
+func CharacterStatePatchHandler(client statev1.SnapshotServiceClient, getContext func() Context, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[CharacterStatePatchInput, CharacterStatePatchResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input CharacterStatePatchInput) (*mcp.CallToolResult, CharacterStatePatchResult, error) {
 		invocationID, err := NewInvocationID()
 		if err != nil {
@@ -919,22 +1601,26 @@ func CharacterStatePatchHandler(client campaignv1.CampaignServiceClient, getCont
 
 		var header metadata.MD
 
-		req := &campaignv1.PatchCharacterStateRequest{
+		req := &statev1.PatchCharacterStateRequest{
 			CampaignId:  campaignID,
 			CharacterId: input.CharacterID,
 		}
 
-		if input.Hope != nil {
-			hope := int32(*input.Hope)
-			req.Hope = &hope
-		}
-		if input.Stress != nil {
-			stress := int32(*input.Stress)
-			req.Stress = &stress
-		}
-		if input.Hp != nil {
-			hp := int32(*input.Hp)
-			req.Hp = &hp
+		// All state fields are now Daggerheart-specific (including HP)
+		if input.Hp != nil || input.Hope != nil || input.Stress != nil {
+			dhState := &daggerheartv1.DaggerheartCharacterState{}
+			if input.Hp != nil {
+				dhState.Hp = int32(*input.Hp)
+			}
+			if input.Hope != nil {
+				dhState.Hope = int32(*input.Hope)
+			}
+			if input.Stress != nil {
+				dhState.Stress = int32(*input.Stress)
+			}
+			req.SystemStatePatch = &statev1.PatchCharacterStateRequest_Daggerheart{
+				Daggerheart: dhState,
+			}
 		}
 
 		response, err := client.PatchCharacterState(callCtx, req, grpc.Header(&header))
@@ -946,12 +1632,7 @@ func CharacterStatePatchHandler(client campaignv1.CampaignServiceClient, getCont
 		}
 
 		result := CharacterStatePatchResult{
-			State: CharacterStateResult{
-				CharacterID: response.State.GetCharacterId(),
-				Hope:        int(response.State.GetHope()),
-				Stress:      int(response.State.GetStress()),
-				Hp:          int(response.State.GetHp()),
-			},
+			State: characterStateResultFromProto(response.State),
 		}
 
 		responseMeta := MergeResponseMetadata(callMeta, header)
@@ -965,7 +1646,7 @@ func CharacterStatePatchHandler(client campaignv1.CampaignServiceClient, getCont
 }
 
 // ParticipantListResourceHandler returns a readable participant listing resource.
-func ParticipantListResourceHandler(client campaignv1.CampaignServiceClient) mcp.ResourceHandler {
+func ParticipantListResourceHandler(client statev1.ParticipantServiceClient) mcp.ResourceHandler {
 	return func(ctx context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
 		if client == nil {
 			return nil, fmt.Errorf("participant list client is not configured")
@@ -991,7 +1672,7 @@ func ParticipantListResourceHandler(client campaignv1.CampaignServiceClient) mcp
 		}
 
 		payload := ParticipantListPayload{}
-		response, err := client.ListParticipants(callCtx, &campaignv1.ListParticipantsRequest{
+		response, err := client.ListParticipants(callCtx, &statev1.ListParticipantsRequest{
 			CampaignId: campaignID,
 			PageSize:   10,
 		})
@@ -1038,7 +1719,7 @@ func parseCampaignIDFromURI(uri string) (string, error) {
 }
 
 // CharacterListResourceHandler returns a readable character listing resource.
-func CharacterListResourceHandler(client campaignv1.CampaignServiceClient) mcp.ResourceHandler {
+func CharacterListResourceHandler(client statev1.CharacterServiceClient) mcp.ResourceHandler {
 	return func(ctx context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
 		if client == nil {
 			return nil, fmt.Errorf("character list client is not configured")
@@ -1064,7 +1745,7 @@ func CharacterListResourceHandler(client campaignv1.CampaignServiceClient) mcp.R
 		}
 
 		payload := CharacterListPayload{}
-		response, err := client.ListCharacters(callCtx, &campaignv1.ListCharactersRequest{
+		response, err := client.ListCharacters(callCtx, &statev1.ListCharactersRequest{
 			CampaignId: campaignID,
 			PageSize:   10,
 		})
@@ -1142,7 +1823,7 @@ func parseCampaignIDFromCampaignURI(uri string) (string, error) {
 }
 
 // CampaignResourceHandler returns a readable single campaign resource.
-func CampaignResourceHandler(client campaignv1.CampaignServiceClient) mcp.ResourceHandler {
+func CampaignResourceHandler(client statev1.CampaignServiceClient) mcp.ResourceHandler {
 	return func(ctx context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
 		if client == nil {
 			return nil, fmt.Errorf("campaign client is not configured")
@@ -1167,7 +1848,7 @@ func CampaignResourceHandler(client campaignv1.CampaignServiceClient) mcp.Resour
 			return nil, fmt.Errorf("create request metadata: %w", err)
 		}
 
-		response, err := client.GetCampaign(callCtx, &campaignv1.GetCampaignRequest{
+		response, err := client.GetCampaign(callCtx, &statev1.GetCampaignRequest{
 			CampaignId: campaignID,
 		})
 		if err != nil {
@@ -1190,13 +1871,17 @@ func CampaignResourceHandler(client campaignv1.CampaignServiceClient) mcp.Resour
 			Campaign: CampaignListEntry{
 				ID:               campaign.GetId(),
 				Name:             campaign.GetName(),
+				Status:           campaignStatusToString(campaign.GetStatus()),
 				GmMode:           gmModeToString(campaign.GetGmMode()),
 				ParticipantCount: int(campaign.GetParticipantCount()),
 				CharacterCount:   int(campaign.GetCharacterCount()),
-				GmFear:           int(campaign.GetGmFear()),
+				GmFear:           0, // GM Fear is now in Snapshot, not Campaign
 				ThemePrompt:      campaign.GetThemePrompt(),
 				CreatedAt:        formatTimestamp(campaign.GetCreatedAt()),
+				LastActivityAt:   formatTimestamp(campaign.GetLastActivityAt()),
 				UpdatedAt:        formatTimestamp(campaign.GetUpdatedAt()),
+				CompletedAt:      formatTimestamp(campaign.GetCompletedAt()),
+				ArchivedAt:       formatTimestamp(campaign.GetArchivedAt()),
 			},
 		}
 
