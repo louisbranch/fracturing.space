@@ -1,0 +1,218 @@
+syntax = "proto3";
+
+package systems.daggerheart.v1;
+
+import "common/v1/rng.proto";
+import "systems/daggerheart/v1/mechanics.proto";
+
+option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1;daggerheartv1";
+
+// DaggerheartService provides Daggerheart-specific game mechanics.
+// This includes Duality dice rolling, outcome evaluation, and state mutations.
+service DaggerheartService {
+  // Daggerheart-style action roll:
+  // roll Hope d12 + Fear d12, apply modifier, compare to optional difficulty.
+  rpc ActionRoll(ActionRollRequest) returns (ActionRollResponse);
+
+  // Deterministically evaluate a duality outcome from known dice.
+  rpc DualityOutcome(DualityOutcomeRequest) returns (DualityOutcomeResponse);
+
+  // Provide a deterministic explanation for a duality outcome.
+  rpc DualityExplain(DualityExplainRequest) returns (DualityExplainResponse);
+
+  // Compute probabilities for duality outcomes across all dice pairs.
+  rpc DualityProbability(DualityProbabilityRequest) returns (DualityProbabilityResponse);
+
+  // Return ruleset metadata for Duality roll interpretation.
+  rpc RulesVersion(RulesVersionRequest) returns (RulesVersionResponse);
+
+  // Roll arbitrary dice sets and return the individual results.
+  rpc RollDice(RollDiceRequest) returns (RollDiceResponse);
+
+  // Roll Duality dice for a session (combines roll + event recording).
+  rpc SessionActionRoll(SessionActionRollRequest) returns (SessionActionRollResponse);
+
+  // Apply the mandatory outcome effects from a resolved action roll.
+  rpc ApplyRollOutcome(ApplyRollOutcomeRequest) returns (ApplyRollOutcomeResponse);
+}
+
+message ActionRollRequest {
+  // Additive modifier applied after summing the two d12s.
+  int32 modifier = 1;
+
+  // If omitted, the server returns a roll outcome (Hope/Fear/Crit) but does not
+  // classify as success/failure.
+  optional int32 difficulty = 2;
+
+  // Optional RNG configuration for deterministic rolls.
+  common.v1.RngRequest rng = 3;
+}
+
+message ActionRollResponse {
+  int32 hope = 1;
+  int32 fear = 2;
+  int32 modifier = 3;
+
+  // Echoed back if provided in the request.
+  optional int32 difficulty = 4;
+
+  // total = hope + fear + modifier
+  int32 total = 5;
+  bool is_crit = 6;
+  bool meets_difficulty = 7;
+  Outcome outcome = 8;
+  common.v1.RngResponse rng = 9;
+}
+
+message DualityOutcomeRequest {
+  int32 hope = 1;
+  int32 fear = 2;
+  int32 modifier = 3;
+
+  // If omitted, the server returns a roll outcome (Hope/Fear/Crit) but does not
+  // classify as success/failure.
+  optional int32 difficulty = 4;
+}
+
+message DualityOutcomeResponse {
+  int32 hope = 1;
+  int32 fear = 2;
+  int32 modifier = 3;
+
+  // Echoed back if provided in the request.
+  optional int32 difficulty = 4;
+
+  // total = hope + fear + modifier
+  int32 total = 5;
+  bool is_crit = 6;
+  bool meets_difficulty = 7;
+  Outcome outcome = 8;
+}
+
+message DualityExplainRequest {
+  int32 hope = 1;
+  int32 fear = 2;
+  int32 modifier = 3;
+
+  // If omitted, the server returns a roll outcome (Hope/Fear/Crit) but does not
+  // classify as success/failure.
+  optional int32 difficulty = 4;
+
+  // Optional correlation identifier for callers.
+  optional string request_id = 5;
+}
+
+message DualityExplainResponse {
+  int32 hope = 1;
+  int32 fear = 2;
+  int32 modifier = 3;
+
+  // Echoed back if provided in the request.
+  optional int32 difficulty = 4;
+
+  // total = hope + fear + modifier
+  int32 total = 5;
+  bool is_crit = 6;
+  bool meets_difficulty = 7;
+  Outcome outcome = 8;
+  string rules_version = 9;
+  Intermediates intermediates = 10;
+  repeated ExplainStep steps = 11;
+}
+
+message DualityProbabilityRequest {
+  int32 modifier = 1;
+  int32 difficulty = 2;
+}
+
+message DualityProbabilityResponse {
+  int32 total_outcomes = 1;
+  int32 crit_count = 2;
+  int32 success_count = 3;
+  int32 failure_count = 4;
+  repeated OutcomeCount outcome_counts = 5;
+}
+
+message RulesVersionRequest {}
+
+message RulesVersionResponse {
+  string system = 1;
+  string module = 2;
+  string rules_version = 3;
+  string dice_model = 4;
+  string total_formula = 5;
+  string crit_rule = 6;
+  string difficulty_rule = 7;
+  repeated Outcome outcomes = 8;
+}
+
+message RollDiceRequest {
+  // The dice to roll in order.
+  repeated DiceSpec dice = 1;
+
+  // Optional RNG configuration for deterministic rolls.
+  common.v1.RngRequest rng = 2;
+}
+
+message RollDiceResponse {
+  repeated DiceRoll rolls = 1;
+
+  // The sum of all rolls.
+  int32 total = 2;
+
+  // RNG details used for this roll.
+  common.v1.RngResponse rng = 3;
+}
+
+message SessionActionRollRequest {
+  // The campaign ID for validation.
+  string campaign_id = 1;
+
+  // The session ID to associate with this roll.
+  string session_id = 2;
+
+  // The character performing the roll.
+  string character_id = 3;
+
+  // The trait being rolled.
+  string trait = 4;
+
+  // The difficulty target.
+  int32 difficulty = 5;
+
+  // Optional modifiers applied to the roll.
+  repeated ActionRollModifier modifiers = 6;
+
+  // Optional RNG configuration for deterministic rolls.
+  common.v1.RngRequest rng = 7;
+}
+
+message SessionActionRollResponse {
+  uint64 roll_seq = 1;
+  int32 hope_die = 2;
+  int32 fear_die = 3;
+  int32 total = 4;
+  int32 difficulty = 5;
+  bool success = 6;
+  string flavor = 7;
+  bool crit = 8;
+  common.v1.RngResponse rng = 9;
+}
+
+message ApplyRollOutcomeRequest {
+  // The session ID to apply the outcome within.
+  string session_id = 1;
+
+  // The roll sequence number of the ACTION_ROLL_RESOLVED event.
+  uint64 roll_seq = 2;
+
+  // Optional list of character IDs to apply the outcome to.
+  // If omitted, defaults to the roller character in the roll event.
+  repeated string targets = 3;
+}
+
+message ApplyRollOutcomeResponse {
+  uint64 roll_seq = 1;
+  bool requires_complication = 2;
+  OutcomeUpdated updated = 3;
+}

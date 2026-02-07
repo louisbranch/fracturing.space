@@ -9,26 +9,26 @@ import (
 	"os"
 	"path/filepath"
 
-	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1"
-	pb "github.com/louisbranch/fracturing.space/api/gen/go/duality/v1"
-	sessionv1 "github.com/louisbranch/fracturing.space/api/gen/go/session/v1"
-	campaignservice "github.com/louisbranch/fracturing.space/internal/campaign/service"
-	dualityservice "github.com/louisbranch/fracturing.space/internal/duality/service"
-	"github.com/louisbranch/fracturing.space/internal/grpcmeta"
-	"github.com/louisbranch/fracturing.space/internal/random"
-	sessionservice "github.com/louisbranch/fracturing.space/internal/session/service"
-	storagebbolt "github.com/louisbranch/fracturing.space/internal/storage/bbolt"
+	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/state/v1"
+	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/api/grpc/interceptors"
+	grpcmeta "github.com/louisbranch/fracturing.space/internal/api/grpc/metadata"
+	stateservice "github.com/louisbranch/fracturing.space/internal/api/grpc/state"
+	daggerheartservice "github.com/louisbranch/fracturing.space/internal/api/grpc/systems/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/core/random"
+	"github.com/louisbranch/fracturing.space/internal/storage"
+	storagesqlite "github.com/louisbranch/fracturing.space/internal/storage/sqlite"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	grpc_health_v1 "google.golang.org/grpc/health/grpc_health_v1"
 )
 
-// Server hosts the Duality gRPC server.
+// Server hosts the Fracturing.Space gRPC server.
 type Server struct {
 	listener   net.Listener
 	grpcServer *grpc.Server
 	health     *health.Server
-	store      *storagebbolt.Store
+	store      storage.Store
 }
 
 // New creates a configured gRPC server listening on the provided port.
@@ -43,39 +43,55 @@ func New(port int) (*Server, error) {
 		return nil, err
 	}
 
+	stores := stateservice.Stores{
+		Campaign:       store,
+		Participant:    store,
+		Character:      store,
+		ControlDefault: store,
+		Daggerheart:    store,
+		Session:        store,
+		Event:          store,
+		Telemetry:      store,
+		Outcome:        store,
+		Snapshot:       store,
+		CampaignFork:   store,
+	}
+
 	grpcServer := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
 			grpcmeta.UnaryServerInterceptor(nil),
-			campaignservice.SessionLockInterceptor(store),
+			interceptors.TelemetryInterceptor(store),
+			interceptors.SessionLockInterceptor(store),
 		),
 		grpc.StreamInterceptor(grpcmeta.StreamServerInterceptor(nil)),
 	)
-	dualityService := dualityservice.NewDualityService(random.NewSeed)
-	campaignService := campaignservice.NewCampaignService(campaignservice.Stores{
-		Campaign:         store,
-		Participant:      store,
-		Character:        store,
-		CharacterProfile: store,
-		CharacterState:   store,
-		ControlDefault:   store,
-	})
-	sessionService := sessionservice.NewSessionService(sessionservice.Stores{
-		Campaign:       store,
-		Participant:    store,
-		ControlDefault: store,
-		Session:        store,
-		Event:          store,
-		Outcome:        store,
-	})
+	daggerheartService := daggerheartservice.NewDaggerheartService(random.NewSeed)
+	campaignService := stateservice.NewCampaignService(stores)
+	participantService := stateservice.NewParticipantService(stores)
+	characterService := stateservice.NewCharacterService(stores)
+	snapshotService := stateservice.NewSnapshotService(stores)
+	sessionService := stateservice.NewSessionService(stores)
+	forkService := stateservice.NewForkService(stores)
+	eventService := stateservice.NewEventService(stores)
 	healthServer := health.NewServer()
-	pb.RegisterDualityServiceServer(grpcServer, dualityService)
-	campaignv1.RegisterCampaignServiceServer(grpcServer, campaignService)
-	sessionv1.RegisterSessionServiceServer(grpcServer, sessionService)
+	daggerheartv1.RegisterDaggerheartServiceServer(grpcServer, daggerheartService)
+	statev1.RegisterCampaignServiceServer(grpcServer, campaignService)
+	statev1.RegisterParticipantServiceServer(grpcServer, participantService)
+	statev1.RegisterCharacterServiceServer(grpcServer, characterService)
+	statev1.RegisterSnapshotServiceServer(grpcServer, snapshotService)
+	statev1.RegisterSessionServiceServer(grpcServer, sessionService)
+	statev1.RegisterForkServiceServer(grpcServer, forkService)
+	statev1.RegisterEventServiceServer(grpcServer, eventService)
 	grpc_health_v1.RegisterHealthServer(grpcServer, healthServer)
 	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
-	healthServer.SetServingStatus("duality.v1.DualityService", grpc_health_v1.HealthCheckResponse_SERVING)
-	healthServer.SetServingStatus("campaign.v1.CampaignService", grpc_health_v1.HealthCheckResponse_SERVING)
-	healthServer.SetServingStatus("session.v1.SessionService", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus("systems.daggerheart.v1.DaggerheartService", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus("state.v1.CampaignService", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus("state.v1.ParticipantService", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus("state.v1.CharacterService", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus("state.v1.SnapshotService", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus("state.v1.SessionService", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus("state.v1.ForkService", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus("state.v1.EventService", grpc_health_v1.HealthCheckResponse_SERVING)
 
 	return &Server{
 		listener:   listener,
@@ -135,19 +151,20 @@ func (s *Server) Serve(ctx context.Context) error {
 	}
 }
 
-func openCampaignStore() (*storagebbolt.Store, error) {
+func openCampaignStore() (storage.Store, error) {
 	path := os.Getenv("DUALITY_DB_PATH")
 	if path == "" {
-		path = filepath.Join("data", "duality.db")
+		path = filepath.Join("data", "fracturing.space.db")
 	}
 	if dir := filepath.Dir(path); dir != "." {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
 			return nil, fmt.Errorf("create storage dir: %w", err)
 		}
 	}
-	store, err := storagebbolt.Open(path)
+
+	store, err := storagesqlite.Open(path)
 	if err != nil {
-		return nil, fmt.Errorf("open campaign store: %w", err)
+		return nil, fmt.Errorf("open sqlite store: %w", err)
 	}
 	return store, nil
 }

@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	pb "github.com/louisbranch/fracturing.space/api/gen/go/duality/v1"
-	"github.com/louisbranch/fracturing.space/internal/grpcmeta"
+	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	grpcmeta "github.com/louisbranch/fracturing.space/internal/api/grpc/metadata"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	grpc_health_v1 "google.golang.org/grpc/health/grpc_health_v1"
@@ -44,7 +44,7 @@ func TestServeStopsOnContext(t *testing.T) {
 	}
 	defer conn.Close()
 
-	client := pb.NewDualityServiceClient(conn)
+	client := pb.NewDaggerheartServiceClient(conn)
 	callCtx, callCancel := context.WithTimeout(context.Background(), time.Second)
 	defer callCancel()
 	if _, err := client.ActionRoll(callCtx, &pb.ActionRollRequest{}); err != nil {
@@ -91,7 +91,7 @@ func TestHealthCheckReportsServing(t *testing.T) {
 	defer conn.Close()
 
 	healthClient := grpc_health_v1.NewHealthClient(conn)
-	services := []string{"", "duality.v1.DualityService", "campaign.v1.CampaignService"}
+	services := []string{"", "systems.daggerheart.v1.DaggerheartService", "state.v1.CampaignService"}
 	for _, service := range services {
 		callCtx, callCancel := context.WithTimeout(context.Background(), time.Second)
 		response, err := healthClient.Check(callCtx, &grpc_health_v1.HealthCheckRequest{Service: service})
@@ -143,7 +143,7 @@ func TestServerMetadataHeaders(t *testing.T) {
 	}
 	defer conn.Close()
 
-	client := pb.NewDualityServiceClient(conn)
+	client := pb.NewDaggerheartServiceClient(conn)
 
 	requestID := "req-123"
 	invocationID := "inv-456"
@@ -277,6 +277,6 @@ func normalizeAddress(t *testing.T, addr string) string {
 
 func setTempDBPath(t *testing.T) {
 	t.Helper()
-	path := filepath.Join(t.TempDir(), "duality.db")
+	path := filepath.Join(t.TempDir(), "fracturing.space.db")
 	t.Setenv("DUALITY_DB_PATH", path)
 }

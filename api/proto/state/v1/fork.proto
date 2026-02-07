@@ -1,0 +1,108 @@
+syntax = "proto3";
+
+package state.v1;
+
+import "state/v1/campaign.proto";
+
+option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/state/v1;statev1";
+
+// ForkPoint specifies where in a campaign's history to fork.
+message ForkPoint {
+  // The event sequence number to fork at.
+  // If 0, forks at the latest event (current HEAD).
+  uint64 event_seq = 1;
+
+  // The session ID to fork at the end of.
+  // If set, event_seq is ignored and the fork occurs at the end of this session.
+  string session_id = 2;
+}
+
+// Lineage describes the ancestry chain of a campaign.
+message Lineage {
+  // The campaign this lineage describes.
+  string campaign_id = 1;
+
+  // The immediate parent campaign ID (empty if original).
+  string parent_campaign_id = 2;
+
+  // The event sequence at which this campaign was forked.
+  uint64 fork_event_seq = 3;
+
+  // The root of the lineage (the original campaign in the fork chain).
+  string origin_campaign_id = 4;
+
+  // The number of forks from the origin (0 for originals).
+  int32 depth = 5;
+}
+
+// ForkService provides campaign forking capabilities.
+service ForkService {
+  // Fork a campaign at a specific point in its history.
+  rpc ForkCampaign(ForkCampaignRequest) returns (ForkCampaignResponse);
+
+  // Get the lineage (ancestry) of a campaign.
+  rpc GetLineage(GetLineageRequest) returns (GetLineageResponse);
+
+  // List campaigns forked from a given campaign.
+  rpc ListForks(ListForksRequest) returns (ListForksResponse);
+}
+
+message ForkCampaignRequest {
+  // The campaign ID to fork from (required).
+  string source_campaign_id = 1;
+
+  // Where in the source campaign's history to fork.
+  ForkPoint fork_point = 2;
+
+  // Name for the new forked campaign (optional).
+  // If empty, a name is auto-generated based on the source.
+  string new_campaign_name = 3;
+
+  // Whether to copy participants from the source campaign.
+  // If false, the forked campaign starts with no participants.
+  bool copy_participants = 4;
+}
+
+message ForkCampaignResponse {
+  // The newly created forked campaign.
+  Campaign campaign = 1;
+
+  // The lineage of the new campaign.
+  Lineage lineage = 2;
+
+  // The actual event sequence at which the fork occurred.
+  uint64 fork_event_seq = 3;
+}
+
+message GetLineageRequest {
+  // The campaign ID to get lineage for.
+  string campaign_id = 1;
+}
+
+message GetLineageResponse {
+  // The lineage of the requested campaign.
+  Lineage lineage = 1;
+}
+
+message ListForksRequest {
+  // The source campaign ID to list forks of.
+  string source_campaign_id = 1;
+
+  // Maximum number of forks to return.
+  int32 page_size = 2;
+
+  // Page token from a previous response.
+  string page_token = 3;
+
+  // If true, include indirect forks (forks of forks).
+  // If false, only include direct children.
+  bool include_indirect = 4;
+}
+
+message ListForksResponse {
+  // Campaigns forked from the source.
+  repeated Campaign campaigns = 1;
+
+  // Token for the next page.
+  string next_page_token = 2;
+}

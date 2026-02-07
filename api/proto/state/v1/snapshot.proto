@@ -1,0 +1,73 @@
+syntax = "proto3";
+
+package state.v1;
+
+import "state/v1/character.proto";
+import "systems/daggerheart/v1/state.proto";
+
+option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/state/v1;statev1";
+
+// Snapshot represents the continuity layer for a campaign.
+// It tracks state that persists across sessions: character states, GM resources, progress.
+message Snapshot {
+  string campaign_id = 1;
+  // Character states indexed by character_id.
+  repeated CharacterState character_states = 2;
+
+  // System-specific snapshot extensions.
+  // Only one of these should be set, matching the campaign's game system.
+  oneof system_snapshot {
+    systems.daggerheart.v1.DaggerheartSnapshot daggerheart = 3;
+  }
+}
+
+// SnapshotService manages continuity state that persists across sessions.
+// This includes character states (system-specific resources like HP) and system-specific campaign state.
+service SnapshotService {
+  // Get the current snapshot state for a campaign.
+  rpc GetSnapshot(GetSnapshotRequest) returns (GetSnapshotResponse);
+
+  // Patch a character's state (system-specific state like HP, Hope, Stress).
+  rpc PatchCharacterState(PatchCharacterStateRequest) returns (PatchCharacterStateResponse);
+
+  // Update the system-specific snapshot state (e.g., GM Fear for Daggerheart).
+  rpc UpdateSnapshotState(UpdateSnapshotStateRequest) returns (UpdateSnapshotStateResponse);
+}
+
+message GetSnapshotRequest {
+  string campaign_id = 1;
+}
+
+message GetSnapshotResponse {
+  Snapshot snapshot = 1;
+}
+
+message PatchCharacterStateRequest {
+  // The campaign ID.
+  string campaign_id = 1;
+
+  // The character ID.
+  string character_id = 2;
+
+  // System-specific state patch (includes HP for Daggerheart).
+  oneof system_state_patch {
+    systems.daggerheart.v1.DaggerheartCharacterState daggerheart = 3;
+  }
+}
+
+message PatchCharacterStateResponse {
+  CharacterState state = 1;
+}
+
+message UpdateSnapshotStateRequest {
+  string campaign_id = 1;
+
+  // System-specific snapshot state update.
+  oneof system_snapshot_update {
+    systems.daggerheart.v1.DaggerheartSnapshot daggerheart = 10;
+  }
+}
+
+message UpdateSnapshotStateResponse {
+  Snapshot snapshot = 1;
+}

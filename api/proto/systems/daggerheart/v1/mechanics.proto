@@ -1,0 +1,87 @@
+syntax = "proto3";
+
+package systems.daggerheart.v1;
+
+import "google/protobuf/struct.proto";
+
+option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1;daggerheartv1";
+
+// DualityDice represents the paired Hope and Fear d12 dice used in Daggerheart.
+message DualityDice {
+  int32 hope_d12 = 1; // 1..12
+  int32 fear_d12 = 2; // 1..12
+}
+
+// DiceSpec describes a dice roll specification.
+message DiceSpec {
+  int32 sides = 1;
+  int32 count = 2;
+}
+
+// DiceRoll represents the results of rolling dice.
+message DiceRoll {
+  int32 sides = 1;
+  repeated int32 results = 2;
+  int32 total = 3;
+}
+
+// Outcome represents the result type of a Daggerheart roll.
+enum Outcome {
+  OUTCOME_UNSPECIFIED = 0;
+
+  // No difficulty provided: just classify the roll by the higher die (or crit).
+  ROLL_WITH_HOPE = 1;
+  ROLL_WITH_FEAR = 2;
+
+  // Difficulty provided: success/failure flavored by higher die (or crit).
+  SUCCESS_WITH_HOPE = 3;
+  SUCCESS_WITH_FEAR = 4;
+  FAILURE_WITH_HOPE = 5;
+  FAILURE_WITH_FEAR = 6;
+
+  // Matching duality dice.
+  CRITICAL_SUCCESS = 7;
+}
+
+// Intermediates contains the intermediate calculation values for rule explanation.
+message Intermediates {
+  int32 base_total = 1;
+  int32 total = 2;
+  bool is_crit = 3;
+  bool meets_difficulty = 4;
+  bool hope_gt_fear = 5;
+  bool fear_gt_hope = 6;
+}
+
+// ExplainStep represents a step in the rules explanation.
+message ExplainStep {
+  string code = 1;
+  string message = 2;
+  google.protobuf.Struct data = 3;
+}
+
+// OutcomeCount is used for probability calculations.
+message OutcomeCount {
+  Outcome outcome = 1;
+  int32 count = 2;
+}
+
+// ActionRollModifier represents a modifier applied to an action roll.
+message ActionRollModifier {
+  string source = 1;
+  int32 value = 2;
+}
+
+// OutcomeCharacterState represents the state updates for a character after outcome application.
+message OutcomeCharacterState {
+  string character_id = 1;
+  int32 hope = 2;
+  int32 stress = 3;
+  int32 hp = 4;
+}
+
+// OutcomeUpdated contains all state changes from applying an outcome.
+message OutcomeUpdated {
+  repeated OutcomeCharacterState character_states = 1;
+  optional int32 gm_fear = 2;
+}

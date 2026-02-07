@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package common.v1;
+
+option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/common/v1;commonv1";
+
+// GameSystem identifies which game system a campaign uses.
+// Each campaign is bound to exactly one system at creation time.
+enum GameSystem {
+  GAME_SYSTEM_UNSPECIFIED = 0;
+  GAME_SYSTEM_DAGGERHEART = 1;
+  // GAME_SYSTEM_DND5E = 2;  // future
+  // GAME_SYSTEM_VTM = 3;    // future
+}

@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package systems.daggerheart.v1;
+
+import "google/protobuf/wrappers.proto";
+
+option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1;daggerheartv1";
+
+// DaggerheartProfile contains Daggerheart-specific character profile extensions.
+// These are static values configured at character creation.
+// Wrapper types allow distinguishing "not provided" from "set to zero" in patches.
+message DaggerheartProfile {
+  // Maximum stress before breakdown (typically 6).
+  // Wrapper type allows setting to 0 explicitly (e.g., for NPCs).
+  google.protobuf.Int32Value stress_max = 1;
+  // Evasion target number for attacks against this character.
+  // Wrapper type allows setting to 0 explicitly.
+  google.protobuf.Int32Value evasion = 2;
+  // Damage threshold for major wounds.
+  // Wrapper type allows setting to 0 explicitly.
+  google.protobuf.Int32Value major_threshold = 3;
+  // Damage threshold for severe wounds.
+  // Wrapper type allows setting to 0 explicitly.
+  google.protobuf.Int32Value severe_threshold = 4;
+
+  // Daggerheart traits (range: -2 to +4).
+  google.protobuf.Int32Value agility = 5;
+  google.protobuf.Int32Value strength = 6;
+  google.protobuf.Int32Value finesse = 7;
+  google.protobuf.Int32Value instinct = 8;
+  google.protobuf.Int32Value presence = 9;
+  google.protobuf.Int32Value knowledge = 10;
+
+  // Maximum hit points (typically 6 for PCs, 3 for NPCs).
+  // Plain int32: 0 is never valid (can't have 0 max HP), so current behavior is correct.
+  int32 hp_max = 11;
+}
+
+// DaggerheartCharacterState contains Daggerheart-specific mutable character state.
+// This is part of the continuity layer and persists across sessions.
+message DaggerheartCharacterState {
+  // Current hope value (0-6).
+  int32 hope = 1;
+  // Current stress value (0 to stress_max from profile).
+  int32 stress = 2;
+  // Current hit points (0 to hp_max from profile).
+  int32 hp = 3;
+}
+
+// DaggerheartSnapshot contains Daggerheart-specific campaign-level state.
+// This is part of the continuity layer and persists across sessions.
+message DaggerheartSnapshot {
+  // Current GM Fear value (0-12).
+  int32 gm_fear = 1;
+}
