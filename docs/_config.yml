@@ -7,4 +7,5 @@ minima:
   skin: auto
 
 titles_from_headings:
-  enabled: false
+  enabled: true
+  strip_title: true

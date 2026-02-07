@@ -1,7 +1,3 @@
----
-title: Domain Language
----
-
 # Domain Language
 
 This document defines the canonical terms for the Fracturing.Space. The language

@@ -1,7 +1,3 @@
----
-title: Event Replay and Snapshots
----
-
 # Event Replay and Snapshots
 
 This guide explains how the event journal, projections, and snapshots work
