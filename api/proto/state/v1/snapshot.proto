@@ -8,7 +8,7 @@ import "systems/daggerheart/v1/state.proto";
 option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/state/v1;statev1";
 
 // Snapshot represents the continuity layer for a campaign.
-// It tracks state that persists across sessions: character states, GM resources, progress.
+// It tracks state captured at an event sequence: character states, GM resources, progress.
 message Snapshot {
   string campaign_id = 1;
   // Character states indexed by character_id.
@@ -21,7 +21,7 @@ message Snapshot {
   }
 }
 
-// SnapshotService manages continuity state that persists across sessions.
+// SnapshotService manages continuity state captured at event sequences.
 // This includes character states (system-specific resources like HP) and system-specific campaign state.
 service SnapshotService {
   // Get the current snapshot state for a campaign.
