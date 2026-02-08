@@ -4,12 +4,15 @@ import (
 	"context"
 	"time"
 
+	grpcmeta "github.com/louisbranch/fracturing.space/internal/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/state/campaign"
 	"github.com/louisbranch/fracturing.space/internal/state/character"
 	"github.com/louisbranch/fracturing.space/internal/state/event"
+	"github.com/louisbranch/fracturing.space/internal/state/invite"
 	"github.com/louisbranch/fracturing.space/internal/state/participant"
 	"github.com/louisbranch/fracturing.space/internal/state/session"
 	"github.com/louisbranch/fracturing.space/internal/storage"
+	"google.golang.org/grpc/metadata"
 )
 
 // fakeCampaignStore is a test double for storage.CampaignStore.
@@ -66,6 +69,65 @@ type fakeParticipantStore struct {
 	getErr       error
 	deleteErr    error
 	listErr      error
+}
+
+// fakeInviteStore is a test double for storage.InviteStore.
+type fakeInviteStore struct {
+	invites   map[string]invite.Invite
+	putErr    error
+	getErr    error
+	listErr   error
+	updateErr error
+}
+
+func newFakeInviteStore() *fakeInviteStore {
+	return &fakeInviteStore{invites: make(map[string]invite.Invite)}
+}
+
+func (s *fakeInviteStore) PutInvite(_ context.Context, inv invite.Invite) error {
+	if s.putErr != nil {
+		return s.putErr
+	}
+	s.invites[inv.ID] = inv
+	return nil
+}
+
+func (s *fakeInviteStore) GetInvite(_ context.Context, inviteID string) (invite.Invite, error) {
+	if s.getErr != nil {
+		return invite.Invite{}, s.getErr
+	}
+	inv, ok := s.invites[inviteID]
+	if !ok {
+		return invite.Invite{}, storage.ErrNotFound
+	}
+	return inv, nil
+}
+
+func (s *fakeInviteStore) ListInvites(_ context.Context, campaignID string, pageSize int, pageToken string) (storage.InvitePage, error) {
+	if s.listErr != nil {
+		return storage.InvitePage{}, s.listErr
+	}
+	result := make([]invite.Invite, 0)
+	for _, inv := range s.invites {
+		if inv.CampaignID == campaignID {
+			result = append(result, inv)
+		}
+	}
+	return storage.InvitePage{Invites: result, NextPageToken: ""}, nil
+}
+
+func (s *fakeInviteStore) UpdateInviteStatus(_ context.Context, inviteID string, status invite.Status, updatedAt time.Time) error {
+	if s.updateErr != nil {
+		return s.updateErr
+	}
+	inv, ok := s.invites[inviteID]
+	if !ok {
+		return storage.ErrNotFound
+	}
+	inv.Status = status
+	inv.UpdatedAt = updatedAt
+	s.invites[inviteID] = inv
+	return nil
 }
 
 func newFakeParticipantStore() *fakeParticipantStore {
@@ -676,10 +738,30 @@ func fixedIDGenerator(id string) func() (string, error) {
 	}
 }
 
+func fixedSequenceIDGenerator(ids ...string) func() (string, error) {
+	index := 0
+	return func() (string, error) {
+		if index >= len(ids) {
+			return ids[len(ids)-1], nil
+		}
+		id := ids[index]
+		index++
+		return id, nil
+	}
+}
+
 func sequentialIDGenerator(prefix string) func() (string, error) {
 	counter := 0
 	return func() (string, error) {
 		counter++
 		return prefix + "-" + string(rune('0'+counter)), nil
 	}
+}
+
+func contextWithParticipantID(participantID string) context.Context {
+	if participantID == "" {
+		return context.Background()
+	}
+	md := metadata.Pairs(grpcmeta.ParticipantIDHeader, participantID)
+	return metadata.NewIncomingContext(context.Background(), md)
 }

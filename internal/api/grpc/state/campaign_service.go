@@ -51,6 +51,9 @@ func (s *CampaignService) CreateCampaign(ctx context.Context, in *statev1.Create
 	if s.stores.Campaign == nil {
 		return nil, status.Error(codes.Internal, "campaign store is not configured")
 	}
+	if s.stores.Participant == nil {
+		return nil, status.Error(codes.Internal, "participant store is not configured")
+	}
 	if s.stores.Event == nil {
 		return nil, status.Error(codes.Internal, "event store is not configured")
 	}
@@ -112,6 +115,48 @@ func (s *CampaignService) CreateCampaign(ctx context.Context, in *statev1.Create
 	applier := projection.Applier{Campaign: s.stores.Campaign, Participant: s.stores.Participant}
 	if err := applier.Apply(ctx, stored); err != nil {
 		return nil, status.Errorf(codes.Internal, "apply event: %v", err)
+	}
+
+	creatorID, err := s.idGenerator()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "generate participant id: %v", err)
+	}
+
+	creatorDisplayName := strings.TrimSpace(in.GetCreatorDisplayName())
+	if creatorDisplayName == "" {
+		creatorDisplayName = "Owner"
+	}
+
+	participantPayload := event.ParticipantJoinedPayload{
+		ParticipantID: creatorID,
+		DisplayName:   creatorDisplayName,
+		Role:          "GM",
+		Controller:    "HUMAN",
+		IsOwner:       true,
+	}
+	participantPayloadJSON, err := json.Marshal(participantPayload)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "encode participant payload: %v", err)
+	}
+
+	participantEvent, err := s.stores.Event.AppendEvent(ctx, event.Event{
+		CampaignID:   campaignID,
+		Timestamp:    s.clock().UTC(),
+		Type:         event.TypeParticipantJoined,
+		RequestID:    grpcmeta.RequestIDFromContext(ctx),
+		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+		ActorType:    event.ActorTypeSystem,
+		ActorID:      "",
+		EntityType:   "participant",
+		EntityID:     creatorID,
+		PayloadJSON:  participantPayloadJSON,
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "append participant event: %v", err)
+	}
+
+	if err := applier.Apply(ctx, participantEvent); err != nil {
+		return nil, status.Errorf(codes.Internal, "apply participant event: %v", err)
 	}
 
 	created, err := s.stores.Campaign.Get(ctx, campaignID)

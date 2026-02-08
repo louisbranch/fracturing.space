@@ -25,6 +25,10 @@ const (
 	// User errors
 	CodeUserEmptyDisplayName Code = "USER_EMPTY_DISPLAY_NAME"
 
+	// Invite errors
+	CodeInviteEmptyCampaignID    Code = "INVITE_EMPTY_CAMPAIGN_ID"
+	CodeInviteEmptyParticipantID Code = "INVITE_EMPTY_PARTICIPANT_ID"
+
 	// Session errors
 	CodeSessionEmptyCampaignID Code = "SESSION_EMPTY_CAMPAIGN_ID"
 
@@ -88,6 +92,8 @@ func (c Code) GRPCCode() codes.Code {
 		CodeParticipantInvalidRole,
 		CodeParticipantEmptyCampaignID,
 		CodeUserEmptyDisplayName,
+		CodeInviteEmptyCampaignID,
+		CodeInviteEmptyParticipantID,
 		CodeSessionEmptyCampaignID,
 		CodeCharacterInvalidController,
 		CodeCharacterEmptyParticipantID,

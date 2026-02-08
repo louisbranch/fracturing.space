@@ -878,7 +878,7 @@ func campaignStatusResultFromProto(campaign *statev1.Campaign) CampaignStatusRes
 }
 
 // ParticipantCreateHandler executes a participant creation request.
-func ParticipantCreateHandler(client statev1.ParticipantServiceClient, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[ParticipantCreateInput, ParticipantCreateResult] {
+func ParticipantCreateHandler(client statev1.ParticipantServiceClient, getContext func() Context, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[ParticipantCreateInput, ParticipantCreateResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input ParticipantCreateInput) (*mcp.CallToolResult, ParticipantCreateResult, error) {
 		invocationID, err := NewInvocationID()
 		if err != nil {
@@ -888,7 +888,12 @@ func ParticipantCreateHandler(client statev1.ParticipantServiceClient, notify Re
 		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 
-		callCtx, callMeta, err := NewOutgoingContext(runCtx, invocationID)
+		mcpCtx := Context{}
+		if getContext != nil {
+			mcpCtx = getContext()
+		}
+
+		callCtx, callMeta, err := NewOutgoingContextWithContext(runCtx, invocationID, mcpCtx)
 		if err != nil {
 			return nil, ParticipantCreateResult{}, fmt.Errorf("create request metadata: %w", err)
 		}
@@ -937,7 +942,7 @@ func ParticipantCreateHandler(client statev1.ParticipantServiceClient, notify Re
 }
 
 // ParticipantUpdateHandler executes a participant update request.
-func ParticipantUpdateHandler(client statev1.ParticipantServiceClient, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[ParticipantUpdateInput, ParticipantUpdateResult] {
+func ParticipantUpdateHandler(client statev1.ParticipantServiceClient, getContext func() Context, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[ParticipantUpdateInput, ParticipantUpdateResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input ParticipantUpdateInput) (*mcp.CallToolResult, ParticipantUpdateResult, error) {
 		invocationID, err := NewInvocationID()
 		if err != nil {
@@ -947,7 +952,12 @@ func ParticipantUpdateHandler(client statev1.ParticipantServiceClient, notify Re
 		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 
-		callCtx, callMeta, err := NewOutgoingContext(runCtx, invocationID)
+		mcpCtx := Context{}
+		if getContext != nil {
+			mcpCtx = getContext()
+		}
+
+		callCtx, callMeta, err := NewOutgoingContextWithContext(runCtx, invocationID, mcpCtx)
 		if err != nil {
 			return nil, ParticipantUpdateResult{}, fmt.Errorf("create request metadata: %w", err)
 		}
@@ -1016,7 +1026,7 @@ func ParticipantUpdateHandler(client statev1.ParticipantServiceClient, notify Re
 }
 
 // ParticipantDeleteHandler executes a participant delete request.
-func ParticipantDeleteHandler(client statev1.ParticipantServiceClient, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[ParticipantDeleteInput, ParticipantDeleteResult] {
+func ParticipantDeleteHandler(client statev1.ParticipantServiceClient, getContext func() Context, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[ParticipantDeleteInput, ParticipantDeleteResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input ParticipantDeleteInput) (*mcp.CallToolResult, ParticipantDeleteResult, error) {
 		invocationID, err := NewInvocationID()
 		if err != nil {
@@ -1026,7 +1036,12 @@ func ParticipantDeleteHandler(client statev1.ParticipantServiceClient, notify Re
 		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 
-		callCtx, callMeta, err := NewOutgoingContext(runCtx, invocationID)
+		mcpCtx := Context{}
+		if getContext != nil {
+			mcpCtx = getContext()
+		}
+
+		callCtx, callMeta, err := NewOutgoingContextWithContext(runCtx, invocationID, mcpCtx)
 		if err != nil {
 			return nil, ParticipantDeleteResult{}, fmt.Errorf("create request metadata: %w", err)
 		}

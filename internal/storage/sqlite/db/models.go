@@ -99,6 +99,16 @@ type EventSeq struct {
 	NextSeq    int64  `json:"next_seq"`
 }
 
+type Invite struct {
+	ID                     string `json:"id"`
+	CampaignID             string `json:"campaign_id"`
+	ParticipantID          string `json:"participant_id"`
+	Status                 string `json:"status"`
+	CreatedByParticipantID string `json:"created_by_participant_id"`
+	CreatedAt              string `json:"created_at"`
+	UpdatedAt              string `json:"updated_at"`
+}
+
 type OutcomeApplied struct {
 	CampaignID string `json:"campaign_id"`
 	SessionID  string `json:"session_id"`
@@ -113,6 +123,7 @@ type Participant struct {
 	Controller  string `json:"controller"`
 	CreatedAt   string `json:"created_at"`
 	UpdatedAt   string `json:"updated_at"`
+	IsOwner     int64  `json:"is_owner"`
 }
 
 type Session struct {

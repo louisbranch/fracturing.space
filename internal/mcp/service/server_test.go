@@ -1835,7 +1835,7 @@ func TestCampaignResourceHandlerRejectsSuffixedURI(t *testing.T) {
 // TestParticipantCreateHandlerReturnsClientError ensures gRPC errors are returned as tool errors.
 func TestParticipantCreateHandlerReturnsClientError(t *testing.T) {
 	client := &fakeParticipantClient{createParticipantErr: errors.New("boom")}
-	handler := domain.ParticipantCreateHandler(client, nil)
+	handler := domain.ParticipantCreateHandler(client, nil, nil)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.ParticipantCreateInput{
 		CampaignID:  "camp-123",
@@ -1865,7 +1865,7 @@ func TestParticipantCreateHandlerMapsRequestAndResponse(t *testing.T) {
 			UpdatedAt:   timestamppb.New(now.Add(time.Hour)),
 		},
 	}}
-	result, output, err := domain.ParticipantCreateHandler(client, nil)(
+	result, output, err := domain.ParticipantCreateHandler(client, nil, nil)(
 		context.Background(),
 		&mcp.CallToolRequest{},
 		domain.ParticipantCreateInput{
@@ -1931,7 +1931,7 @@ func TestParticipantCreateHandlerOptionalController(t *testing.T) {
 			UpdatedAt:   timestamppb.New(now),
 		},
 	}}
-	result, output, err := domain.ParticipantCreateHandler(client, nil)(
+	result, output, err := domain.ParticipantCreateHandler(client, nil, nil)(
 		context.Background(),
 		&mcp.CallToolRequest{},
 		domain.ParticipantCreateInput{
@@ -1960,7 +1960,7 @@ func TestParticipantCreateHandlerOptionalController(t *testing.T) {
 // TestParticipantCreateHandlerRejectsEmptyResponse ensures nil responses are rejected.
 func TestParticipantCreateHandlerRejectsEmptyResponse(t *testing.T) {
 	client := &fakeParticipantClient{}
-	handler := domain.ParticipantCreateHandler(client, nil)
+	handler := domain.ParticipantCreateHandler(client, nil, nil)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.ParticipantCreateInput{
 		CampaignID:  "camp-123",

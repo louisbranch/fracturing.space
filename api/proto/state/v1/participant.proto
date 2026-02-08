@@ -16,6 +16,7 @@ message Participant {
   Controller controller = 5;
   google.protobuf.Timestamp created_at = 6;
   google.protobuf.Timestamp updated_at = 7;
+  bool is_owner = 8;
 }
 
 enum ParticipantRole {

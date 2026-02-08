@@ -9,6 +9,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/state/campaign"
 	"github.com/louisbranch/fracturing.space/internal/state/character"
 	"github.com/louisbranch/fracturing.space/internal/state/event"
+	"github.com/louisbranch/fracturing.space/internal/state/invite"
 	"github.com/louisbranch/fracturing.space/internal/state/participant"
 	"github.com/louisbranch/fracturing.space/internal/state/session"
 )
@@ -60,6 +61,20 @@ type UserStore interface {
 // UserPage describes a page of user records.
 type UserPage struct {
 	Users         []user.User
+	NextPageToken string
+}
+
+// InviteStore persists campaign invite records.
+type InviteStore interface {
+	PutInvite(ctx context.Context, inv invite.Invite) error
+	GetInvite(ctx context.Context, inviteID string) (invite.Invite, error)
+	ListInvites(ctx context.Context, campaignID string, pageSize int, pageToken string) (InvitePage, error)
+	UpdateInviteStatus(ctx context.Context, inviteID string, status invite.Status, updatedAt time.Time) error
+}
+
+// InvitePage describes a page of invites.
+type InvitePage struct {
+	Invites       []invite.Invite
 	NextPageToken string
 }
 
@@ -267,6 +282,7 @@ type Store interface {
 	CharacterStore
 	ControlDefaultStore
 	UserStore
+	InviteStore
 	DaggerheartStore
 	SessionStore
 	EventStore

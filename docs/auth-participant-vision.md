@@ -9,6 +9,7 @@ Core Principles
 - When claimed, a campaign has a 1:1 user to participant relationship.
 - Participants can control multiple characters.
 - Game service enforces permissions; auth service provides identity and join authorization.
+- Authorization decisions flow through a policy layer (v0 maps is_owner to allowed actions).
 
 Service Boundaries
 - Auth service: user creation, join grants, future authentication/OAuth.
@@ -16,7 +17,7 @@ Service Boundaries
 
 Minimal Flows
 - Create user (auth service).
-- Create invite (game service).
+- Create invite (game service, seat-targeted).
 - Authorize join (auth service issues join grant).
 - Claim seat (game service consumes join grant and binds user to participant).
 
@@ -37,9 +38,10 @@ Phase 0: Alignment and Minimal Spec
 
 Phase 1: Minimum Join Capability (No Authentication)
 - Auth service: create users; issue join grants for campaign invites.
-- Game service: create invites; create or target participant seats; claim seat via join grant.
+- Game service: create seat-targeted invites; claim seat via join grant.
 - Authorization: resolve user to participant for campaign access.
 - Auditing: record join and seat reassignment events.
+- Campaign creation: creator becomes a participant with capability to manage participants and invites.
 
 Later Phases (Not Yet Scheduled)
 - Authentication and token validation.
@@ -77,3 +79,15 @@ Validation Rules (Game Service)
 - Ensure invite is valid and unclaimed.
 - Enforce seat limits and unique (campaign_id, user_id).
 - If participant_id is present, ensure it belongs to campaign and is unclaimed.
+
+Phase 1 Constraints (Implementation)
+- Invites are seat-targeted only (participant_id is required).
+- Invites are single-use and do not expire.
+- Owners are expressed as a participant flag (is_owner) and evaluated via policy.Can(...).
+- Owners can remove participants even if already claimed.
+
+Future Cases (Documented, Not Implemented)
+- Open invites (anyone with link) and reusable tokens.
+- Invites that create a new seat on claim.
+- Seat limit checks at invite creation time.
+- Ownership transfer and multi-owner capability rules.

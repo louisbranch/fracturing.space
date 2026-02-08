@@ -102,6 +102,9 @@ func TestCreateParticipant_CampaignArchivedDisallowed(t *testing.T) {
 func TestCreateParticipant_EmptyDisplayName(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
+	participantStore.participants["c1"] = map[string]participant.Participant{
+		"owner-1": {ID: "owner-1", CampaignID: "c1", IsOwner: true},
+	}
 	campaignStore.campaigns["c1"] = campaign.Campaign{
 		ID:     "c1",
 		Status: campaign.CampaignStatusDraft,
@@ -109,7 +112,8 @@ func TestCreateParticipant_EmptyDisplayName(t *testing.T) {
 
 	eventStore := newFakeEventStore()
 	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore})
-	_, err := svc.CreateParticipant(context.Background(), &statev1.CreateParticipantRequest{
+	ctx := contextWithParticipantID("owner-1")
+	_, err := svc.CreateParticipant(ctx, &statev1.CreateParticipantRequest{
 		CampaignId: "c1",
 		Role:       statev1.ParticipantRole_PLAYER,
 	})
@@ -119,6 +123,9 @@ func TestCreateParticipant_EmptyDisplayName(t *testing.T) {
 func TestCreateParticipant_InvalidRole(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
+	participantStore.participants["c1"] = map[string]participant.Participant{
+		"owner-1": {ID: "owner-1", CampaignID: "c1", IsOwner: true},
+	}
 	campaignStore.campaigns["c1"] = campaign.Campaign{
 		ID:     "c1",
 		Status: campaign.CampaignStatusDraft,
@@ -126,7 +133,8 @@ func TestCreateParticipant_InvalidRole(t *testing.T) {
 
 	eventStore := newFakeEventStore()
 	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore})
-	_, err := svc.CreateParticipant(context.Background(), &statev1.CreateParticipantRequest{
+	ctx := contextWithParticipantID("owner-1")
+	_, err := svc.CreateParticipant(ctx, &statev1.CreateParticipantRequest{
 		CampaignId:  "c1",
 		DisplayName: "Player 1",
 	})
@@ -136,6 +144,9 @@ func TestCreateParticipant_InvalidRole(t *testing.T) {
 func TestCreateParticipant_Success_GM(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
+	participantStore.participants["c1"] = map[string]participant.Participant{
+		"owner-1": {ID: "owner-1", CampaignID: "c1", IsOwner: true},
+	}
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
 	campaignStore.campaigns["c1"] = campaign.Campaign{
@@ -150,7 +161,8 @@ func TestCreateParticipant_Success_GM(t *testing.T) {
 		idGenerator: fixedIDGenerator("participant-123"),
 	}
 
-	resp, err := svc.CreateParticipant(context.Background(), &statev1.CreateParticipantRequest{
+	ctx := contextWithParticipantID("owner-1")
+	resp, err := svc.CreateParticipant(ctx, &statev1.CreateParticipantRequest{
 		CampaignId:  "c1",
 		DisplayName: "Game Master",
 		Role:        statev1.ParticipantRole_GM,
@@ -194,6 +206,9 @@ func TestCreateParticipant_Success_GM(t *testing.T) {
 func TestCreateParticipant_Success_Player(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
+	participantStore.participants["c1"] = map[string]participant.Participant{
+		"owner-1": {ID: "owner-1", CampaignID: "c1", IsOwner: true},
+	}
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
 	campaignStore.campaigns["c1"] = campaign.Campaign{
@@ -208,7 +223,8 @@ func TestCreateParticipant_Success_Player(t *testing.T) {
 		idGenerator: fixedIDGenerator("participant-456"),
 	}
 
-	resp, err := svc.CreateParticipant(context.Background(), &statev1.CreateParticipantRequest{
+	ctx := contextWithParticipantID("owner-1")
+	resp, err := svc.CreateParticipant(ctx, &statev1.CreateParticipantRequest{
 		CampaignId:  "c1",
 		DisplayName: "Player One",
 		Role:        statev1.ParticipantRole_PLAYER,
@@ -235,11 +251,13 @@ func TestUpdateParticipant_NoFields(t *testing.T) {
 
 	campaignStore.campaigns["c1"] = campaign.Campaign{ID: "c1", Status: campaign.CampaignStatusActive}
 	participantStore.participants["c1"] = map[string]participant.Participant{
-		"p1": {ID: "p1", CampaignID: "c1", DisplayName: "Player One", Role: participant.ParticipantRolePlayer, Controller: participant.ControllerHuman},
+		"owner-1": {ID: "owner-1", CampaignID: "c1", IsOwner: true},
+		"p1":      {ID: "p1", CampaignID: "c1", DisplayName: "Player One", Role: participant.ParticipantRolePlayer, Controller: participant.ControllerHuman},
 	}
 
 	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore})
-	_, err := svc.UpdateParticipant(context.Background(), &statev1.UpdateParticipantRequest{
+	ctx := contextWithParticipantID("owner-1")
+	_, err := svc.UpdateParticipant(ctx, &statev1.UpdateParticipantRequest{
 		CampaignId:    "c1",
 		ParticipantId: "p1",
 	})
@@ -253,11 +271,13 @@ func TestUpdateParticipant_Success(t *testing.T) {
 
 	campaignStore.campaigns["c1"] = campaign.Campaign{ID: "c1", Status: campaign.CampaignStatusActive}
 	participantStore.participants["c1"] = map[string]participant.Participant{
-		"p1": {ID: "p1", CampaignID: "c1", DisplayName: "Player One", Role: participant.ParticipantRolePlayer, Controller: participant.ControllerHuman},
+		"owner-1": {ID: "owner-1", CampaignID: "c1", IsOwner: true},
+		"p1":      {ID: "p1", CampaignID: "c1", DisplayName: "Player One", Role: participant.ParticipantRolePlayer, Controller: participant.ControllerHuman},
 	}
 
 	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore})
-	resp, err := svc.UpdateParticipant(context.Background(), &statev1.UpdateParticipantRequest{
+	ctx := contextWithParticipantID("owner-1")
+	resp, err := svc.UpdateParticipant(ctx, &statev1.UpdateParticipantRequest{
 		CampaignId:    "c1",
 		ParticipantId: "p1",
 		DisplayName:   wrapperspb.String("Player Uno"),
@@ -295,11 +315,13 @@ func TestDeleteParticipant_Success(t *testing.T) {
 
 	campaignStore.campaigns["c1"] = campaign.Campaign{ID: "c1", Status: campaign.CampaignStatusActive, ParticipantCount: 1}
 	participantStore.participants["c1"] = map[string]participant.Participant{
-		"p1": {ID: "p1", CampaignID: "c1", DisplayName: "Player One", Role: participant.ParticipantRolePlayer},
+		"owner-1": {ID: "owner-1", CampaignID: "c1", IsOwner: true},
+		"p1":      {ID: "p1", CampaignID: "c1", DisplayName: "Player One", Role: participant.ParticipantRolePlayer},
 	}
 
 	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore})
-	resp, err := svc.DeleteParticipant(context.Background(), &statev1.DeleteParticipantRequest{
+	ctx := contextWithParticipantID("owner-1")
+	resp, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
 		CampaignId:    "c1",
 		ParticipantId: "p1",
 		Reason:        "left",

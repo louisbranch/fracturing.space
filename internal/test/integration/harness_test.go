@@ -123,6 +123,57 @@ func parseCampaignListPayload(t *testing.T, raw string) domain.CampaignListPaylo
 	return payload
 }
 
+// parseParticipantListPayload decodes a participant list JSON payload.
+func parseParticipantListPayload(t *testing.T, raw string) domain.ParticipantListPayload {
+	t.Helper()
+
+	var payload domain.ParticipantListPayload
+	if err := json.Unmarshal([]byte(raw), &payload); err != nil {
+		t.Fatalf("unmarshal participant list payload: %v", err)
+	}
+	return payload
+}
+
+// readParticipantList fetches the participant list resource for a campaign.
+func readParticipantList(t *testing.T, client *mcp.ClientSession, campaignID string) domain.ParticipantListPayload {
+	t.Helper()
+
+	ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
+	defer cancel()
+
+	res, err := client.ReadResource(ctx, &mcp.ReadResourceParams{URI: fmt.Sprintf("campaign://%s/participants", campaignID)})
+	if err != nil {
+		t.Fatalf("read participants resource: %v", err)
+	}
+	if res == nil || len(res.Contents) == 0 || res.Contents[0].Text == "" {
+		t.Fatal("participants resource response missing content")
+	}
+
+	return parseParticipantListPayload(t, res.Contents[0].Text)
+}
+
+// setContext sets the MCP context for campaign/participant identity.
+func setContext(t *testing.T, client *mcp.ClientSession, campaignID, participantID string) {
+	t.Helper()
+
+	ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
+	defer cancel()
+
+	result, err := client.CallTool(ctx, &mcp.CallToolParams{
+		Name: "set_context",
+		Arguments: map[string]any{
+			"campaign_id":    campaignID,
+			"participant_id": participantID,
+		},
+	})
+	if err != nil {
+		t.Fatalf("call set_context: %v", err)
+	}
+	if result == nil || result.IsError {
+		t.Fatalf("set_context failed: %+v", result)
+	}
+}
+
 // findCampaignByID searches for a campaign entry by ID.
 func findCampaignByID(payload domain.CampaignListPayload, id string) (domain.CampaignListEntry, bool) {
 	for _, campaign := range payload.Campaigns {
