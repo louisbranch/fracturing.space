@@ -4,14 +4,13 @@ import (
 	"context"
 	"time"
 
-	"github.com/louisbranch/fracturing.space/internal/services/auth/user"
+	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/session"
-	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 )
 
 // ErrNotFound indicates a requested record is missing.
@@ -48,19 +47,6 @@ type ParticipantStore interface {
 // ParticipantPage describes a page of participant records.
 type ParticipantPage struct {
 	Participants  []participant.Participant
-	NextPageToken string
-}
-
-// UserStore persists auth user records.
-type UserStore interface {
-	PutUser(ctx context.Context, u user.User) error
-	GetUser(ctx context.Context, userID string) (user.User, error)
-	ListUsers(ctx context.Context, pageSize int, pageToken string) (UserPage, error)
-}
-
-// UserPage describes a page of user records.
-type UserPage struct {
-	Users         []user.User
 	NextPageToken string
 }
 
@@ -282,7 +268,6 @@ type Store interface {
 	ParticipantStore
 	CharacterStore
 	ControlDefaultStore
-	UserStore
 	InviteStore
 	DaggerheartStore
 	SessionStore

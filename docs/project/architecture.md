@@ -7,7 +7,7 @@ Fracturing.Space is split into four layers:
 - **Transport layer**: Game server (`cmd/game`) + MCP bridge (`cmd/mcp`) + Admin dashboard (`cmd/admin`)
 - **Platform layer**: Shared infrastructure (`internal/platform/`)
 - **Domain layer**: Game systems (`internal/services/game/domain/systems/`) + Campaign model (`internal/services/game/domain/campaign/`)
-- **Storage layer**: SQLite persistence (`data/game.db`)
+- **Storage layer**: SQLite persistence (`data/game.db`, `data/auth.db`, `data/admin.db`)
 
 The MCP server is a thin adapter that forwards requests to the game services.
 All rule evaluation and state changes live in the game server and domain
@@ -106,9 +106,15 @@ character, snapshot, and session. Core primitives (dice, checks, RNG) live in
 
 ### Storage
 
-Persistent state is stored in SQLite (`modernc.org/sqlite`) with a default path
-of `data/game.db`. The database is accessed by the server and is not shared
-across processes except through the server APIs.
+Persistent state is stored in SQLite (`modernc.org/sqlite`) with separate
+databases per service boundary:
+
+- Game service: `data/game.db` (`FRACTURING_SPACE_GAME_DB_PATH`)
+- Auth service: `data/auth.db` (`FRACTURING_SPACE_AUTH_DB_PATH`)
+- Admin service: `data/admin.db` (`FRACTURING_SPACE_ADMIN_DB_PATH`)
+
+Each database is accessed only by its owning service and is not shared across
+processes except through the service APIs.
 
 ## Services and boundaries
 

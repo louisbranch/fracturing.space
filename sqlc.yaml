@@ -1,11 +1,29 @@
 version: "2"
 sql:
   - engine: "sqlite"
-    queries: "internal/storage/sqlite/queries"
-    schema: "internal/storage/sqlite/migrations"
+    queries: "internal/services/game/storage/sqlite/queries"
+    schema: "internal/services/game/storage/sqlite/migrations"
     gen:
       go:
         package: "db"
-        out: "internal/storage/sqlite/db"
+        out: "internal/services/game/storage/sqlite/db"
+        emit_json_tags: true
+        emit_empty_slices: true
+  - engine: "sqlite"
+    queries: "internal/services/auth/storage/sqlite/queries"
+    schema: "internal/services/auth/storage/sqlite/migrations"
+    gen:
+      go:
+        package: "db"
+        out: "internal/services/auth/storage/sqlite/db"
+        emit_json_tags: true
+        emit_empty_slices: true
+  - engine: "sqlite"
+    queries: "internal/services/admin/storage/sqlite/queries"
+    schema: "internal/services/admin/storage/sqlite/migrations"
+    gen:
+      go:
+        package: "db"
+        out: "internal/services/admin/storage/sqlite/db"
         emit_json_tags: true
         emit_empty_slices: true
