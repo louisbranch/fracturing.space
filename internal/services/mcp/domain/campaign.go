@@ -34,19 +34,20 @@ type CampaignStatusChangeInput struct {
 
 // CampaignCreateResult represents the MCP tool output for campaign creation.
 type CampaignCreateResult struct {
-	ID               string `json:"id" jsonschema:"campaign identifier"`
-	Name             string `json:"name" jsonschema:"campaign name"`
-	GmMode           string `json:"gm_mode" jsonschema:"gm mode"`
-	ParticipantCount int    `json:"participant_count" jsonschema:"number of all participants (GM + PLAYER + future roles)"`
-	CharacterCount   int    `json:"character_count" jsonschema:"number of all characters (PC + NPC + future kinds)"`
-	GmFear           int    `json:"gm_fear" jsonschema:"campaign-scoped GM fear"`
-	ThemePrompt      string `json:"theme_prompt" jsonschema:"theme prompt"`
-	Status           string `json:"status" jsonschema:"campaign status"`
-	CreatedAt        string `json:"created_at" jsonschema:"RFC3339 timestamp when campaign was created"`
-	LastActivityAt   string `json:"last_activity_at" jsonschema:"RFC3339 timestamp for last campaign activity"`
-	UpdatedAt        string `json:"updated_at" jsonschema:"RFC3339 timestamp when campaign was last updated"`
-	CompletedAt      string `json:"completed_at,omitempty" jsonschema:"RFC3339 timestamp when campaign was completed"`
-	ArchivedAt       string `json:"archived_at,omitempty" jsonschema:"RFC3339 timestamp when campaign was archived"`
+	ID                 string `json:"id" jsonschema:"campaign identifier"`
+	OwnerParticipantID string `json:"owner_participant_id" jsonschema:"owner participant identifier for setting context"`
+	Name               string `json:"name" jsonschema:"campaign name"`
+	GmMode             string `json:"gm_mode" jsonschema:"gm mode"`
+	ParticipantCount   int    `json:"participant_count" jsonschema:"number of all participants (GM + PLAYER + future roles)"`
+	CharacterCount     int    `json:"character_count" jsonschema:"number of all characters (PC + NPC + future kinds)"`
+	GmFear             int    `json:"gm_fear" jsonschema:"campaign-scoped GM fear"`
+	ThemePrompt        string `json:"theme_prompt" jsonschema:"theme prompt"`
+	Status             string `json:"status" jsonschema:"campaign status"`
+	CreatedAt          string `json:"created_at" jsonschema:"RFC3339 timestamp when campaign was created"`
+	LastActivityAt     string `json:"last_activity_at" jsonschema:"RFC3339 timestamp for last campaign activity"`
+	UpdatedAt          string `json:"updated_at" jsonschema:"RFC3339 timestamp when campaign was last updated"`
+	CompletedAt        string `json:"completed_at,omitempty" jsonschema:"RFC3339 timestamp when campaign was completed"`
+	ArchivedAt         string `json:"archived_at,omitempty" jsonschema:"RFC3339 timestamp when campaign was archived"`
 }
 
 // CampaignStatusResult represents the MCP tool output for campaign lifecycle changes.
@@ -553,21 +554,29 @@ func CampaignCreateHandler(client statev1.CampaignServiceClient, notify Resource
 		if response == nil || response.Campaign == nil {
 			return nil, CampaignCreateResult{}, fmt.Errorf("campaign create response is missing")
 		}
+		if response.OwnerParticipant == nil {
+			return nil, CampaignCreateResult{}, fmt.Errorf("campaign create response missing owner participant")
+		}
+		ownerParticipantID := response.OwnerParticipant.GetId()
+		if ownerParticipantID == "" {
+			return nil, CampaignCreateResult{}, fmt.Errorf("campaign create response missing owner participant id")
+		}
 
 		result := CampaignCreateResult{
-			ID:               response.Campaign.GetId(),
-			Name:             response.Campaign.GetName(),
-			GmMode:           gmModeToString(response.Campaign.GetGmMode()),
-			ParticipantCount: int(response.Campaign.GetParticipantCount()),
-			CharacterCount:   int(response.Campaign.GetCharacterCount()),
-			GmFear:           0, // GM Fear is now in Snapshot, not Campaign
-			ThemePrompt:      response.Campaign.GetThemePrompt(),
-			Status:           campaignStatusToString(response.Campaign.GetStatus()),
-			CreatedAt:        formatTimestamp(response.Campaign.GetCreatedAt()),
-			LastActivityAt:   formatTimestamp(response.Campaign.GetLastActivityAt()),
-			UpdatedAt:        formatTimestamp(response.Campaign.GetUpdatedAt()),
-			CompletedAt:      formatTimestamp(response.Campaign.GetCompletedAt()),
-			ArchivedAt:       formatTimestamp(response.Campaign.GetArchivedAt()),
+			ID:                 response.Campaign.GetId(),
+			OwnerParticipantID: ownerParticipantID,
+			Name:               response.Campaign.GetName(),
+			GmMode:             gmModeToString(response.Campaign.GetGmMode()),
+			ParticipantCount:   int(response.Campaign.GetParticipantCount()),
+			CharacterCount:     int(response.Campaign.GetCharacterCount()),
+			GmFear:             0, // GM Fear is now in Snapshot, not Campaign
+			ThemePrompt:        response.Campaign.GetThemePrompt(),
+			Status:             campaignStatusToString(response.Campaign.GetStatus()),
+			CreatedAt:          formatTimestamp(response.Campaign.GetCreatedAt()),
+			LastActivityAt:     formatTimestamp(response.Campaign.GetLastActivityAt()),
+			UpdatedAt:          formatTimestamp(response.Campaign.GetUpdatedAt()),
+			CompletedAt:        formatTimestamp(response.Campaign.GetCompletedAt()),
+			ArchivedAt:         formatTimestamp(response.Campaign.GetArchivedAt()),
 		}
 
 		responseMeta := MergeResponseMetadata(callMeta, header)

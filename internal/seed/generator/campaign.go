@@ -23,7 +23,7 @@ func (g *Generator) pickGmMode(vary bool, index int) statev1.GmMode {
 }
 
 // createCampaign creates a new campaign with the given GM mode.
-func (g *Generator) createCampaign(ctx context.Context, gmMode statev1.GmMode) (*statev1.Campaign, error) {
+func (g *Generator) createCampaign(ctx context.Context, gmMode statev1.GmMode) (*statev1.Campaign, string, error) {
 	resp, err := g.campaigns.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
 		Name:        g.wb.CampaignName(),
 		System:      g.gameSystem(),
@@ -31,9 +31,19 @@ func (g *Generator) createCampaign(ctx context.Context, gmMode statev1.GmMode) (
 		ThemePrompt: g.wb.ThemePrompt(),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("CreateCampaign: %w", err)
+		return nil, "", fmt.Errorf("CreateCampaign: %w", err)
 	}
-	return resp.Campaign, nil
+	if resp == nil {
+		return nil, "", fmt.Errorf("CreateCampaign: missing response")
+	}
+	if resp.OwnerParticipant == nil {
+		return nil, "", fmt.Errorf("CreateCampaign: missing owner participant in response")
+	}
+	ownerParticipantID := resp.OwnerParticipant.GetId()
+	if ownerParticipantID == "" {
+		return nil, "", fmt.Errorf("CreateCampaign: empty owner participant ID in response")
+	}
+	return resp.Campaign, ownerParticipantID, nil
 }
 
 // transitionCampaignStatus moves a campaign through status transitions.

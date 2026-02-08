@@ -31,8 +31,22 @@
         "theme_prompt": "A dark fantasy adventure in a cursed valley where ancient evils stir beneath the crimson-stained earth."
       },
       "capture": {
-        "campaign_id": "campaign"
+        "campaign_id": "campaign",
+        "owner_participant_id": [
+          "result.structuredContent.owner_participant_id",
+          "result.structured_content.owner_participant_id"
+        ]
       }
+    },
+    {
+      "name": "Set context for campaign owner",
+      "action": "tool_call",
+      "tool": "set_context",
+      "args": {
+        "campaign_id": {"ref": "campaign_id"},
+        "participant_id": {"ref": "owner_participant_id"}
+      },
+      "expect": "none"
     },
     {
       "name": "Create GM participant: Sarah",

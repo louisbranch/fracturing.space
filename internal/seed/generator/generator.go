@@ -128,7 +128,7 @@ func (g *Generator) generateCampaign(ctx context.Context, index int, cfg PresetC
 	gmMode := g.pickGmMode(cfg.VaryGmModes, index)
 
 	// Create the campaign
-	campaign, err := g.createCampaign(ctx, gmMode)
+	campaign, ownerParticipantID, err := g.createCampaign(ctx, gmMode)
 	if err != nil {
 		return fmt.Errorf("create campaign: %w", err)
 	}
@@ -139,7 +139,7 @@ func (g *Generator) generateCampaign(ctx context.Context, index int, cfg PresetC
 
 	// Create participants
 	numParticipants := g.randomRange(cfg.ParticipantsMin, cfg.ParticipantsMax)
-	participants, err := g.createParticipants(ctx, campaign.Id, numParticipants)
+	participants, err := g.createParticipants(ctx, campaign.Id, ownerParticipantID, numParticipants)
 	if err != nil {
 		return fmt.Errorf("create participants: %w", err)
 	}

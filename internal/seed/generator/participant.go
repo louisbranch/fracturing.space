@@ -5,16 +5,22 @@ import (
 	"fmt"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1"
+	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	"google.golang.org/grpc/metadata"
 )
 
 // createParticipants creates the specified number of participants for a campaign.
 // The first participant is always a GM, the rest are players.
-func (g *Generator) createParticipants(ctx context.Context, campaignID string, count int) ([]*statev1.Participant, error) {
+func (g *Generator) createParticipants(ctx context.Context, campaignID, ownerParticipantID string, count int) ([]*statev1.Participant, error) {
 	if count < 1 {
 		count = 1 // At minimum, we need a GM
 	}
 
 	participants := make([]*statev1.Participant, 0, count)
+	callCtx := ctx
+	if ownerParticipantID != "" {
+		callCtx = metadata.AppendToOutgoingContext(ctx, grpcmeta.ParticipantIDHeader, ownerParticipantID)
+	}
 
 	for i := 0; i < count; i++ {
 		role := statev1.ParticipantRole_PLAYER
@@ -28,7 +34,7 @@ func (g *Generator) createParticipants(ctx context.Context, campaignID string, c
 			controller = statev1.Controller_CONTROLLER_AI
 		}
 
-		resp, err := g.participants.CreateParticipant(ctx, &statev1.CreateParticipantRequest{
+		resp, err := g.participants.CreateParticipant(callCtx, &statev1.CreateParticipantRequest{
 			CampaignId:  campaignID,
 			DisplayName: g.wb.ParticipantName(),
 			Role:        role,

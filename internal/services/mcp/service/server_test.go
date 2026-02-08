@@ -1156,6 +1156,48 @@ func TestCampaignCreateHandlerReturnsClientError(t *testing.T) {
 	}
 }
 
+func TestCampaignCreateHandlerRequiresOwnerParticipant(t *testing.T) {
+	campaign := &statev1.Campaign{Id: "camp-123"}
+	cases := []struct {
+		name     string
+		response *statev1.CreateCampaignResponse
+	}{
+		{
+			name: "missing owner participant",
+			response: &statev1.CreateCampaignResponse{
+				Campaign: campaign,
+			},
+		},
+		{
+			name: "empty owner participant id",
+			response: &statev1.CreateCampaignResponse{
+				Campaign: campaign,
+				OwnerParticipant: &statev1.Participant{
+					Id: "",
+				},
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			client := &fakeCampaignClient{response: tc.response}
+			handler := domain.CampaignCreateHandler(client, nil)
+
+			result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.CampaignCreateInput{
+				Name:   "New Campaign",
+				GmMode: "HUMAN",
+			})
+			if err == nil {
+				t.Fatal("expected error")
+			}
+			if result != nil {
+				t.Fatal("expected nil result on error")
+			}
+		})
+	}
+}
+
 // TestCampaignCreateHandlerMapsRequestAndResponse ensures inputs and outputs map consistently.
 func TestCampaignCreateHandlerMapsRequestAndResponse(t *testing.T) {
 	now := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
@@ -1169,6 +1211,9 @@ func TestCampaignCreateHandlerMapsRequestAndResponse(t *testing.T) {
 			ThemePrompt:      "ice and steel",
 			CreatedAt:        timestamppb.New(now),
 			UpdatedAt:        timestamppb.New(now),
+		},
+		OwnerParticipant: &statev1.Participant{
+			Id: "part-owner",
 		},
 	}}
 	result, output, err := domain.CampaignCreateHandler(client, nil)(
@@ -1192,6 +1237,9 @@ func TestCampaignCreateHandlerMapsRequestAndResponse(t *testing.T) {
 	}
 	if output.ID != "camp-123" {
 		t.Fatalf("expected id camp-123, got %q", output.ID)
+	}
+	if output.OwnerParticipantID != "part-owner" {
+		t.Fatalf("expected owner participant id part-owner, got %q", output.OwnerParticipantID)
 	}
 	if output.GmMode != "AI" {
 		t.Fatalf("expected gm mode AI, got %q", output.GmMode)

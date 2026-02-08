@@ -9,12 +9,12 @@ import (
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/platform/id"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/projection"
-	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
-	"github.com/louisbranch/fracturing.space/internal/platform/id"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -159,13 +159,19 @@ func (s *CampaignService) CreateCampaign(ctx context.Context, in *campaignv1.Cre
 		return nil, status.Errorf(codes.Internal, "apply participant event: %v", err)
 	}
 
+	ownerParticipant, err := s.stores.Participant.GetParticipant(ctx, campaignID, creatorID)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "load owner participant: %v", err)
+	}
+
 	created, err := s.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "load campaign: %v", err)
 	}
 
 	return &campaignv1.CreateCampaignResponse{
-		Campaign: campaignToProto(created),
+		Campaign:         campaignToProto(created),
+		OwnerParticipant: participantToProto(ownerParticipant),
 	}, nil
 }
 
