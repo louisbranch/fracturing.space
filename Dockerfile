@@ -8,27 +8,27 @@ RUN go mod download
 
 COPY . .
 
-FROM base AS build-grpc
+FROM base AS build-game
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o /out/server ./cmd/server
+RUN CGO_ENABLED=0 GOOS=linux go build -o /out/game ./cmd/game
 
 FROM base AS build-mcp
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/mcp ./cmd/mcp
 
-FROM base AS build-web
+FROM base AS build-admin
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o /out/web ./cmd/web
+RUN CGO_ENABLED=0 GOOS=linux go build -o /out/admin ./cmd/admin
 
-FROM gcr.io/distroless/static-debian12:nonroot AS grpc
+FROM gcr.io/distroless/static-debian12:nonroot AS game
 
 WORKDIR /app
 
-COPY --from=build-grpc /out/server /app/server
+COPY --from=build-game /out/game /app/game
 
 EXPOSE 8080
 
-ENTRYPOINT ["/app/server"]
+ENTRYPOINT ["/app/game"]
 
 FROM gcr.io/distroless/static-debian12:nonroot AS mcp
 
@@ -40,12 +40,12 @@ EXPOSE 8081
 
 ENTRYPOINT ["/app/mcp"]
 
-FROM gcr.io/distroless/static-debian12:nonroot AS web
+FROM gcr.io/distroless/static-debian12:nonroot AS admin
 
 WORKDIR /app
 
-COPY --from=build-web /out/web /app/web
+COPY --from=build-admin /out/admin /app/admin
 
 EXPOSE 8082
 
-ENTRYPOINT ["/app/web"]
+ENTRYPOINT ["/app/admin"]

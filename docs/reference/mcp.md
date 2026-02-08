@@ -98,7 +98,7 @@ curl -sS -b /tmp/mcp-cookies.txt -X POST http://localhost:8081/mcp \
 curl http://localhost:8081/mcp/health
 ```
 
-The gRPC server must be running at `localhost:8080` (or the configured address).
+The game server must be running at `localhost:8080` (or the configured address).
 
 For an OpenCode client configuration, see `opencode.jsonc`.
 

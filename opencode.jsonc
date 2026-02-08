@@ -6,7 +6,7 @@
       "command": ["./scripts/mcp.sh"],
       "enabled": true,
       "environment": {
-        "FRACTURING_SPACE_GRPC_ADDR": "localhost:8080"
+        "FRACTURING_SPACE_GAME_ADDR": "localhost:8080"
       }
     }
   }

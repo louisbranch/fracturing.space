@@ -5,18 +5,18 @@ services:
     volumes:
       - fracturing-space-data:/data
 
-  grpc:
+  game:
     build:
       context: .
-      target: grpc
+      target: game
       args:
         GO_VERSION: ${GO_VERSION:-1.25.6}
-    image: docker.io/louisbranch/fracturing.space-grpc:dev
+    image: docker.io/louisbranch/fracturing.space-game:dev
     depends_on:
       init-data:
         condition: service_completed_successfully
     environment:
-      - FRACTURING_SPACE_DB_PATH=/data/fracturing.space.db
+      - FRACTURING_SPACE_GAME_DB_PATH=/data/game.db
     volumes:
       - fracturing-space-data:/data
     ports:
@@ -29,24 +29,24 @@ services:
       args:
         GO_VERSION: ${GO_VERSION:-1.25.6}
     image: docker.io/louisbranch/fracturing.space-mcp:dev
-    command: ["-transport=http", "-http-addr=0.0.0.0:8081", "-addr=grpc:8080"]
+    command: ["-transport=http", "-http-addr=0.0.0.0:8081", "-addr=game:8080"]
     depends_on:
-      - grpc
+      - game
     ports:
       - "127.0.0.1:8081:8081"
 
-  web:
+  admin:
     build:
       context: .
-      target: web
+      target: admin
       args:
         GO_VERSION: ${GO_VERSION:-1.25.6}
-    image: docker.io/louisbranch/fracturing.space-web:dev
+    image: docker.io/louisbranch/fracturing.space-admin:dev
     depends_on:
-      - grpc
+      - game
     environment:
-      - FRACTURING_SPACE_WEB_ADDR=0.0.0.0:8082
-      - FRACTURING_SPACE_GRPC_ADDR=grpc:8080
+      - FRACTURING_SPACE_ADMIN_ADDR=0.0.0.0:8082
+      - FRACTURING_SPACE_GAME_ADDR=game:8080
     ports:
       - "127.0.0.1:8082:8082"
 

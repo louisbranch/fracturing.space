@@ -6,7 +6,7 @@ user-invocable: true
 
 # Error Handling
 
-Use structured errors (`internal/errors`) to:
+Use structured errors (`internal/platform/errors`) to:
 
 1. Enable i18n: error messages can be translated without code changes.
 2. Separate concerns: internal messages (for logs) vs external messages (for users).
@@ -14,7 +14,7 @@ Use structured errors (`internal/errors`) to:
 
 ## Creating New Errors
 
-Step 1: Add an error code in `internal/errors/codes.go`:
+Step 1: Add an error code in `internal/platform/errors/codes.go`:
 
 ```go
 const (
@@ -32,7 +32,7 @@ case CodeMyNewError:
     return codes.InvalidArgument // or NotFound, FailedPrecondition, etc.
 ```
 
-Step 3: Add user-facing message in `internal/errors/i18n/en_us.go`:
+Step 3: Add user-facing message in `internal/platform/errors/i18n/en_us.go`:
 
 ```go
 "MY_DOMAIN_ERROR_NAME": "Human-readable message with {{.Param}} support",
@@ -41,7 +41,7 @@ Step 3: Add user-facing message in `internal/errors/i18n/en_us.go`:
 Step 4: Use in domain code:
 
 ```go
-import apperrors "github.com/louisbranch/fracturing.space/internal/errors"
+import apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 
 // Simple error
 return apperrors.New(apperrors.CodeMyNewError, "internal: detailed message")

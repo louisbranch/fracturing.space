@@ -1,5 +1,5 @@
 // Package main provides a CLI for seeding the local development database
-// with demo data by exercising the full MCP→gRPC stack, or by generating
+// with demo data by exercising the full MCP→game stack, or by generating
 // dynamic scenarios directly via gRPC.
 package main
 
@@ -28,7 +28,7 @@ func main() {
 	var seedVal int64
 	var campaigns int
 
-	flag.StringVar(&seedCfg.GRPCAddr, "grpc-addr", seedCfg.GRPCAddr, "gRPC server address")
+	flag.StringVar(&seedCfg.GRPCAddr, "grpc-addr", seedCfg.GRPCAddr, "game server address")
 	flag.StringVar(&seedCfg.Scenario, "scenario", "", "run specific scenario (default: all)")
 	flag.BoolVar(&seedCfg.Verbose, "v", false, "verbose output")
 	flag.BoolVar(&list, "list", false, "list available scenarios")

@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1"
-	"github.com/louisbranch/fracturing.space/internal/mcp/domain"
+	"github.com/louisbranch/fracturing.space/internal/services/mcp/domain"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"

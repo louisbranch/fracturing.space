@@ -15,6 +15,7 @@ management for LLM and traditional clients.
 - [Seeding the database](running/seeding.md)
 - [Integration tests](running/integration-tests.md)
 - [Architecture](project/architecture.md)
+- [Service boundaries](project/architecture.md#services-and-boundaries)
 - [Domain language](project/domain-language.md)
 - [Event replay and snapshots](project/event-replay.md)
 - [Game systems architecture](project/game-systems.md)

@@ -2,13 +2,15 @@
 
 This guide covers how to populate the development database with demo data for local testing.
 
+Seeding is a developer tool that calls the game service APIs; it is not a standalone service.
+
 ## Prerequisites
 
-The gRPC server must be running before seeding:
+The game server must be running before seeding:
 
 ```bash
-# Terminal 1: Start the gRPC server
-make server
+# Terminal 1: Start the game server
+go run ./cmd/game
 
 # Terminal 2: Run seeding commands
 make seed
@@ -27,7 +29,7 @@ make seed-fresh  # Reset DB and reseed
 
 | Flag | Description | Default |
 |------|-------------|---------|
-| `-grpc-addr` | gRPC server address | `localhost:8080` |
+| `-grpc-addr` | game server address | `localhost:8080` |
 | `-scenario` | Run specific scenario | all |
 | `-list` | List available scenarios | - |
 | `-v` | Verbose output | false |
@@ -54,7 +56,7 @@ make seed-generate-fresh   # Reset DB and generate demo data
 | `-preset` | Generation preset | `demo` |
 | `-campaigns` | Override number of campaigns | preset default |
 | `-seed` | RNG seed for reproducibility (0 = random) | 0 |
-| `-grpc-addr` | gRPC server address | `localhost:8080` |
+| `-grpc-addr` | game server address | `localhost:8080` |
 | `-v` | Verbose output | false |
 
 ### Presets

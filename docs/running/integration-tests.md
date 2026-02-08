@@ -2,7 +2,7 @@
 
 ## Overview
 
-Integration tests exercise the full request path through the gRPC server, MCP
+Integration tests exercise the full request path through the game server, MCP
 bridge, and SQLite storage using real processes and transports. These tests are
 meant to increase trust in end-to-end behavior and backward compatibility.
 
@@ -21,8 +21,8 @@ meant to increase trust in end-to-end behavior and backward compatibility.
 
 ## Execution Model
 
-1. Start the gRPC server in-process on an ephemeral port.
-2. Start the MCP server as a subprocess and point it at the gRPC address.
+1. Start the game server in-process on an ephemeral port.
+2. Start the MCP server as a subprocess and point it at the game address.
 3. Connect an MCP client over the stdio transport and exchange JSON-RPC.
 4. Assert responses using strict or normalized expectations.
 

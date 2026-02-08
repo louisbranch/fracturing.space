@@ -2,24 +2,31 @@
 
 ## Overview
 
-Fracturing.Space is split into three layers:
+Fracturing.Space is split into four layers:
 
-- **Transport layer**: gRPC server (`cmd/server`) + MCP bridge (`cmd/mcp`) + Web UI (`cmd/web`)
-- **Domain layer**: Game systems (`internal/systems/`) + Campaign model (`internal/campaign/`)
-- **Storage layer**: SQLite persistence (`data/fracturing.space.db`)
+- **Transport layer**: Game server (`cmd/game`) + MCP bridge (`cmd/mcp`) + Admin dashboard (`cmd/admin`)
+- **Platform layer**: Shared infrastructure (`internal/platform/`)
+- **Domain layer**: Game systems (`internal/services/game/domain/systems/`) + Campaign model (`internal/services/game/domain/campaign/`)
+- **Storage layer**: SQLite persistence (`data/game.db`)
 
-The MCP server is a thin adapter that forwards requests to the gRPC services.
-All rule evaluation and state changes live in the gRPC server and domain
+The MCP server is a thin adapter that forwards requests to the game services.
+All rule evaluation and state changes live in the game server and domain
 packages.
+
+Service boundaries are organized under `internal/services/`. A service owns its
+transport surface, application orchestration, domain logic, and storage adapters.
+Shared utilities that do not expose an API surface (for example, RNG seed
+generation) live in the domain or platform layers instead of being separate
+services.
 
 For domain terminology, see [domain-language.md](domain-language.md).
 
 ## Game System Architecture
 
-Fracturing.Space supports multiple tabletop RPG systems through a pluggable architecture. Each game system is a plugin under `internal/systems/`:
+Fracturing.Space supports multiple tabletop RPG systems through a pluggable architecture. Each game system is a plugin under `internal/services/game/domain/systems/`:
 
 ```
-internal/systems/
+internal/services/game/domain/systems/
 ├── registry.go          # GameSystem interface + registration
 └── daggerheart/         # Daggerheart implementation
     ├── domain/          # Duality dice, outcomes, probability
@@ -27,7 +34,7 @@ internal/systems/
     └── content/         # Compendium and starter kit data (stub)
 ```
 
-Game system gRPC services live in `internal/api/grpc/systems/{name}/`.
+Game system gRPC services live in `internal/services/game/api/grpc/systems/{name}/`.
 
 Systems are registered at startup and campaigns are bound to one system at creation.
 
@@ -62,7 +69,7 @@ Client (gRPC)            Client (MCP stdio/HTTP)
       |                            |
       | gRPC requests              | JSON-RPC requests
       v                            v
-  gRPC server <----------------- MCP bridge
+  Game server <----------------- MCP bridge
       |
       | domain service calls
       v
@@ -75,12 +82,12 @@ Client (gRPC)            Client (MCP stdio/HTTP)
 
 ## Components
 
-### gRPC server
+### Game server (gRPC)
 
-The gRPC server hosts the canonical API surface for rules and campaign state.
+The game server hosts the canonical API surface for rules and campaign state.
 It validates inputs, applies the ruleset, and persists state.
 
-Entry point: `cmd/server`
+Entry point: `cmd/game`
 
 ### MCP bridge
 
@@ -92,13 +99,27 @@ Entry point: `cmd/mcp`
 
 ### Domain packages
 
-Game system mechanics live in `internal/systems/` (e.g., `internal/systems/daggerheart/`).
-The campaign model lives in `internal/campaign/` with subpackages for participant,
+Game system mechanics live in `internal/services/game/domain/systems/` (e.g., `internal/services/game/domain/systems/daggerheart/`).
+The campaign model lives in `internal/services/game/domain/campaign/` with subpackages for participant,
 character, snapshot, and session. Core primitives (dice, checks, RNG) live in
-`internal/core/`. These packages are transport agnostic and used by the gRPC services.
+`internal/services/game/domain/core/`. These packages are transport agnostic and used by the game services.
 
 ### Storage
 
 Persistent state is stored in SQLite (`modernc.org/sqlite`) with a default path
-of `data/fracturing.space.db`. The database is accessed by the server and is not shared
+of `data/game.db`. The database is accessed by the server and is not shared
 across processes except through the server APIs.
+
+## Services and boundaries
+
+The primary service boundaries are:
+
+- **Game service** (`internal/services/game/`): Canonical rules and campaign state; gRPC APIs under `internal/services/game/api/grpc/`; owns the game database.
+- **MCP service** (`internal/services/mcp/`): JSON-RPC adapter for the MCP protocol; forwards to the game service and does not own rules or state.
+- **Admin service** (`internal/services/admin/`): HTTP admin dashboard; renders UI and calls the game service for data.
+- **Auth service** (`internal/services/auth/`): Authentication domain logic; transport/API surface is planned and not yet exposed.
+
+Non-service utilities live in shared layers:
+
+- **RNG/seed generation**: `internal/services/game/domain/core/random/` (shared domain utility, not a service).
+- **Seeding CLI**: `cmd/seed` (dev tooling that calls the game service APIs).

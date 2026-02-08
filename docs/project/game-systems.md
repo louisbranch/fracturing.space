@@ -41,17 +41,21 @@ This allows any system to define its own named resources that all work with the 
 
 ## Architecture Overview
 
+Game systems are domain packages within the game service; they are not separate
+services. The system-specific gRPC endpoints live under the game service API
+surface and are served by the game server.
+
 ```
 +---------------------------------------------------------------------+
 |                       SYSTEM-AGNOSTIC LAYER                         |
 +---------------------------------------------------------------------+
-| internal/campaign/                                                  |
+| internal/services/game/domain/campaign/                                                  |
 |   +-- (root)         Campaign metadata (name, status, theme)        |
 |   +-- participant/   Players and GM management                      |
 |   +-- character/     Character identity (name, kind, notes)         |
 |   +-- session/       Session lifecycle, event stream                |
 |                                                                     |
-| internal/core/                                                      |
+| internal/services/game/domain/core/                                                      |
 |   +-- dice/          Generic dice rolling primitives                |
 |   +-- check/         Difficulty check primitives                    |
 |   +-- random/        RNG seed generation                            |
@@ -66,12 +70,12 @@ This allows any system to define its own named resources that all work with the 
 +---------------------------------------------------------------------+
 |                      SYSTEM-SPECIFIC LAYER                          |
 +---------------------------------------------------------------------+
-| internal/systems/{system}/                                          |
+| internal/services/game/domain/systems/{system}/                                          |
 |   +-- domain/        Mechanics (dice, outcomes, probability)        |
 |   +-- state.go       CharacterState, SnapshotState implementations |
 |   +-- content/       Compendium data (classes, items, etc.)         |
 |                                                                     |
-| internal/api/grpc/systems/{system}/                                 |
+| internal/services/game/api/grpc/systems/{system}/                                 |
 |   +-- service.go     gRPC service for system mechanics              |
 |                                                                     |
 | api/proto/systems/{system}/v1/                                      |
@@ -79,7 +83,7 @@ This allows any system to define its own named resources that all work with the 
 |   +-- state.proto       CharacterState, SnapshotState              |
 |   +-- service.proto     gRPC service definition                     |
 |                                                                     |
-| internal/storage/sqlite/migrations/                                 |
+| internal/services/game/storage/sqlite/migrations/                                 |
 |   +-- 00X_{system}_tables.sql   Extension tables                    |
 +---------------------------------------------------------------------+
 ```
@@ -88,7 +92,7 @@ This allows any system to define its own named resources that all work with the 
 
 ### GameSystem Interface
 
-Every game system must implement the `GameSystem` interface in `internal/systems/registry.go`:
+Every game system must implement the `GameSystem` interface in `internal/services/game/domain/systems/registry.go`:
 
 ```go
 type GameSystem interface {
@@ -177,14 +181,14 @@ Run `make proto` to regenerate Go code.
 
 ### Step 2: Create the System Package
 
-Create `internal/systems/vtm/vtm.go`:
+Create `internal/services/game/domain/systems/vtm/vtm.go`:
 
 ```go
 package vtm
 
 import (
     commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
-    "github.com/louisbranch/fracturing.space/internal/systems"
+    "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 )
 
 func init() {
@@ -207,7 +211,7 @@ var _ systems.GameSystem = (*System)(nil)
 
 ### Step 3: Define System-Specific State
 
-Create `internal/systems/vtm/state.go` implementing the behavior interfaces:
+Create `internal/services/game/domain/systems/vtm/state.go` implementing the behavior interfaces:
 
 ```go
 package vtm
@@ -357,7 +361,7 @@ message VtMSnapshot {
 
 ### Step 5: Create Extension Tables
 
-Create `internal/storage/sqlite/migrations/003_vtm_tables.sql`:
+Create `internal/services/game/storage/sqlite/migrations/003_vtm_tables.sql`:
 
 ```sql
 -- VtM character profile extensions
@@ -403,7 +407,7 @@ CREATE TABLE vtm_domain_influence (
 
 ### Step 6: Add sqlc Queries
 
-Create query files in `internal/storage/sqlite/queries/vtm/`:
+Create query files in `internal/services/game/storage/sqlite/queries/vtm/`:
 
 ```sql
 -- name: GetVtMCharacterState :one
@@ -422,11 +426,11 @@ ON CONFLICT (campaign_id, character_id) DO UPDATE SET
 
 ### Step 7: Implement gRPC Service
 
-Create `internal/api/grpc/systems/vtm/service.go` following the pattern in `internal/api/grpc/systems/daggerheart/service.go`.
+Create `internal/services/game/api/grpc/systems/vtm/service.go` following the pattern in `internal/services/game/api/grpc/systems/daggerheart/service.go`.
 
 ### Step 8: Add MCP Tools (Optional)
 
-Create `internal/mcp/domain/vtm.go` following the pattern in `internal/mcp/domain/daggerheart.go`.
+Create `internal/services/mcp/domain/vtm.go` following the pattern in `internal/services/mcp/domain/daggerheart.go`.
 
 ### Step 9: Add Integration Tests
 
@@ -438,12 +442,12 @@ Daggerheart is the reference implementation for new systems:
 
 | Component | Location |
 |-----------|----------|
-| System registration | `internal/systems/daggerheart/daggerheart.go` |
-| State handlers | `internal/systems/daggerheart/state.go` |
-| Domain logic | `internal/systems/daggerheart/domain/` |
+| System registration | `internal/services/game/domain/systems/daggerheart/daggerheart.go` |
+| State handlers | `internal/services/game/domain/systems/daggerheart/state.go` |
+| Domain logic | `internal/services/game/domain/systems/daggerheart/domain/` |
 | Proto definitions | `api/proto/systems/daggerheart/v1/` |
-| gRPC service | `internal/api/grpc/systems/daggerheart/service.go` |
-| Extension tables | `internal/storage/sqlite/migrations/002_daggerheart_tables.sql` |
+| gRPC service | `internal/services/game/api/grpc/systems/daggerheart/service.go` |
+| Extension tables | `internal/services/game/storage/sqlite/migrations/002_daggerheart_tables.sql` |
 
 ### Daggerheart Resources
 

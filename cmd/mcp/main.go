@@ -8,14 +8,14 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/louisbranch/fracturing.space/internal/app/mcp"
+	"github.com/louisbranch/fracturing.space/internal/services/mcp/app"
 )
 
 // main starts the MCP server on stdio or HTTP.
 func main() {
-	addrDefault := getenvDefault("FRACTURING_SPACE_GRPC_ADDR", "localhost:8080")
-	httpAddrDefault := getenvDefault("FRACTURING_SPACE_MCP_HTTP_ADDR", "localhost:8081")
-	addrFlag := flag.String("addr", addrDefault, "gRPC server address")
+	addrDefault := getenvDefault([]string{"FRACTURING_SPACE_GAME_ADDR"}, "localhost:8080")
+	httpAddrDefault := getenvDefault([]string{"FRACTURING_SPACE_MCP_HTTP_ADDR"}, "localhost:8081")
+	addrFlag := flag.String("addr", addrDefault, "game server address")
 	httpAddrFlag := flag.String("http-addr", httpAddrDefault, "HTTP server address (for HTTP transport)")
 	transportFlag := flag.String("transport", "stdio", "Transport type: stdio or http")
 	flag.Parse()
@@ -29,10 +29,12 @@ func main() {
 }
 
 // getenvDefault returns the env value or a fallback when unset.
-func getenvDefault(key, fallback string) string {
-	value := os.Getenv(key)
-	if value == "" {
-		return fallback
+func getenvDefault(keys []string, fallback string) string {
+	for _, key := range keys {
+		value := os.Getenv(key)
+		if value != "" {
+			return value
+		}
 	}
-	return value
+	return fallback
 }
