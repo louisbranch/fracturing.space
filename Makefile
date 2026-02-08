@@ -5,7 +5,7 @@ COVER_EXCLUDE_REGEX := (api/gen/|_templ\.go|internal/services/game/storage/sqlit
 PROTO_FILES := \
 	$(wildcard $(PROTO_DIR)/common/v1/*.proto) \
 	$(wildcard $(PROTO_DIR)/auth/v1/*.proto) \
-	$(wildcard $(PROTO_DIR)/campaign/v1/*.proto) \
+	$(wildcard $(PROTO_DIR)/game/v1/*.proto) \
 	$(wildcard $(PROTO_DIR)/systems/daggerheart/v1/*.proto)
 
 .PHONY: all proto clean run cover test integration templ-generate

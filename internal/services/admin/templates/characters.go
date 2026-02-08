@@ -1,7 +1,7 @@
 package templates
 
 import (
-	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1"
+	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 )
 
 // CharacterRow represents a single row in the characters table.

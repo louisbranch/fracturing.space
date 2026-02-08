@@ -60,7 +60,7 @@ surface and are served by the game server.
 |   +-- check/         Difficulty check primitives                    |
 |   +-- random/        RNG seed generation                            |
 |                                                                     |
-| api/proto/campaign/v1/  System-agnostic campaign protos             |
+| api/proto/game/v1/      System-agnostic campaign protos             |
 |   +-- Campaign, Session, Character identity                         |
 +---------------------------------------------------------------------+
                               |
@@ -471,7 +471,7 @@ Daggerheart defines these resources via the `ResourceHolder` interface:
 System-specific state is added to core protos using `oneof`:
 
 ```protobuf
-// In campaign/v1/character.proto
+// In game/v1/character.proto
 message CharacterState {
   string campaign_id = 1;
   string character_id = 2;

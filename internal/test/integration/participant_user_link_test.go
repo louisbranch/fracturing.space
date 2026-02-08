@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"

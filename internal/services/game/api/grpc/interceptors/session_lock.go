@@ -6,7 +6,7 @@ import (
 	"log"
 	"strings"
 
-	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1"
+	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc"
@@ -16,9 +16,9 @@ import (
 
 // Service prefixes for session lock scope.
 const (
-	participantServicePrefix = "/campaign.v1.ParticipantService/"
-	characterServicePrefix   = "/campaign.v1.CharacterService/"
-	snapshotServicePrefix    = "/campaign.v1.SnapshotService/"
+	participantServicePrefix = "/game.v1.ParticipantService/"
+	characterServicePrefix   = "/game.v1.CharacterService/"
+	snapshotServicePrefix    = "/game.v1.SnapshotService/"
 )
 
 // blockedParticipantMethods lists ParticipantService mutators blocked during an active session.

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1"
+	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"

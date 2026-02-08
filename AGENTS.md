@@ -87,7 +87,7 @@ Campaign data is organized into three tiers by change frequency:
 ```
 api/proto/
 ├── common/v1/               # Shared types (RNG, GameSystem enum)
-├── campaign/v1/             # System-agnostic campaign model
+├── game/v1/                 # System-agnostic campaign model
 │   ├── campaign.proto       # Campaign + CampaignService
 │   ├── session.proto        # Session + SessionService
 │   ├── snapshot.proto       # Snapshot + SnapshotService

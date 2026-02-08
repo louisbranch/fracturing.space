@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1"
+	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 )
 
 // createCharacters creates the specified number of characters for a campaign.

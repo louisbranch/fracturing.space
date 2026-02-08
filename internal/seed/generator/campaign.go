@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1"
+	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 )
 
 // gmModes is the list of valid GM modes to vary across.

@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1"
+	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc"
@@ -68,7 +68,7 @@ func TestSessionLockInterceptor_NonBlockedMethod_PassesThrough(t *testing.T) {
 	interceptor := SessionLockInterceptor(sessionStore)
 
 	// ListCampaigns is not a blocked method
-	info := serverInfo("/campaign.v1.CampaignService/ListCampaigns")
+	info := serverInfo("/game.v1.CampaignService/ListCampaigns")
 	req := &statev1.ListCampaignsRequest{}
 
 	resp, err := interceptor(context.Background(), req, info, fakeHandler)
@@ -310,8 +310,8 @@ func TestIsBlockedMethod(t *testing.T) {
 		{statev1.CharacterService_GetCharacterSheet_FullMethodName, false},
 		{statev1.SnapshotService_GetSnapshot_FullMethodName, false},
 		{statev1.SnapshotService_UpdateSnapshotState_FullMethodName, false},
-		{"/campaign.v1.CampaignService/CreateCampaign", false},
-		{"/campaign.v1.SessionService/StartSession", false},
+		{"/game.v1.CampaignService/CreateCampaign", false},
+		{"/game.v1.SessionService/StartSession", false},
 	}
 
 	for _, tt := range tests {
