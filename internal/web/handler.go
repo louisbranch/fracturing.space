@@ -552,7 +552,7 @@ func (h *Handler) handleDashboardContent(w http.ResponseWriter, r *http.Request)
 					eventsResp, err := eventClient.ListEvents(ctx, &statev1.ListEventsRequest{
 						CampaignId: campaign.GetId(),
 						PageSize:   5, // Get top 5 from each campaign
-						OrderBy:    "ts desc",
+						OrderBy:    "seq desc",
 					})
 					if err == nil && eventsResp != nil {
 						for _, event := range eventsResp.GetEvents() {
