@@ -1,118 +1,98 @@
 # Fracturing.Space ![Coverage](../../raw/badges/coverage.svg)
 
-Fracturing.Space is a server-authoritative mechanics and campaign-state service for tabletop RPG campaigns. Currently supports Daggerheart (Duality Dice system), with architecture designed for additional game systems.
+Fracturing.Space is an open-source, server-authoritative platform for tabletop RPG campaigns with persistent state, deterministic mechanics, and forkable timelines.
 
-Its primary goal is enabling an AI Game Master: an LLM (or agent runtime) drives the campaign by calling MCP tools/resources to resolve mechanics and persist state, while human participants interact through whatever client you build around it.
+It treats everything in a campaign, mechanical actions, narrative developments, and participant changes, as structured events that form a complete history of play.
 
-This project focuses on rules adjudication and campaign state management. It does not generate narrative content and it does not ship any copyrighted Daggerheart material (no rulebook text, artwork, setting, or other Prohibited Content).
+## Motivation
 
-## Who this is for
+Long-running tabletop RPG campaigns often fall apart due to scheduling, fragmented notes, and a single GM holding the narrative thread. At the same time, modern tools (including AI systems) can now reason over structured state and long-lived context.
 
-Right now, Fracturing.Space is primarily for developers experimenting with AI-driven campaign runners:
+Fracturing.Space provides a neutral, open foundation for these experiments: a platform that manages rules, state, and history in a way that both humans and AI systems can reliably build upon.
 
-- You want an AI GM to call tools and get structured outcomes.
-- You want deterministic resolution you can replay, test, and audit.
-- You do not want clients to embed rules logic.
+## Why now / use cases
 
-It is not a VTT. You will need to run the service locally or remotely and integrate a client yourself.
+- AI-assisted GMing with authoritative mechanics and reproducible outcomes
+- Persistent, long-lived campaigns that do not rely on a single person or tool
+- Forkable timelines for playtesting, alternate outcomes, and experimentation
 
-## What it does
+## How it works (brief)
 
-- **Rules adjudication**: resolve Duality Dice rolls and return structured outcomes.
-- **Campaign state**: persisted campaign entities (see State Model below).
-- **Determinism**: supports auditable resolution (useful for testing, replay, and debugging).
-- **Two interfaces, same behavior**: gRPC APIs and MCP tools/resources are kept in parity.
+Fracturing.Space models a campaign as a timeline of events.
 
-## Game System Support
+- Creating or joining a campaign is an event
+- Characters, participants, and sessions are events
+- Mechanical outcomes and narrative developments are events
 
-Fracturing.Space is built with a pluggable architecture that can support multiple tabletop RPG systems:
+These events form an append-only history that represents everything that has happened so far.
 
-- **Daggerheart** (current): Duality Dice mechanics, Hope/Fear outcomes
-- **Future systems**: The plugin architecture (`internal/systems/`) is designed to support D&D 5e, Vampire: The Masquerade, and other systems
+That history can be forked. A new group can start from any point in an existing timeline and explore a different path forward, creating alternate outcomes, parallel stories, or entirely new interpretations of the same starting world.
 
-Each game system provides its own mechanics while sharing common state management (campaigns, participants, characters, sessions).
+The system organizes state into three layers:
 
-## Interfaces
+- Campaign: configuration and setup
+- Snapshot: continuity between sessions
+- Session: moment-to-moment gameplay events
 
-### MCP (primary integration surface)
+## Systems
 
-Use MCP if you are integrating with AI tooling that can call tools/resources.
+The initial rules system implements Duality Dice, a deterministic resolution mechanic built around paired dice and outcome categories. System details live in the docs.
 
-- **stdio JSON-RPC**: best fit for local agent runtimes and tooling.
-- **HTTP**: useful when you want to run the MCP server remotely or behind a gateway.
+### What it does today
 
-See [docs](#Documentation) for the tool/resource catalog.
+The project currently provides a backend platform for managing tabletop RPG campaigns with persistent state and deterministic mechanics resolution.
 
-### gRPC (service API)
+At a high level, it supports:
 
-Use gRPC if you are building a custom client (UI, automation, services) or you want a strongly-typed API. The gRPC API is the source of truth; the MCP server is a transport layer over it.
+- Creation and management of campaigns, sessions, participants, and characters
+- An event-driven campaign model where all state changes are recorded as ordered events
+- Deterministic, server-side resolution of game mechanics
+- An initial integrated rules system based on Duality Dice mechanics
+- Programmatic access via gRPC and MCP (JSON-RPC) interfaces, suitable for both custom clients and AI agents
 
-## Quickstart
+The current focus is on establishing a stable core: campaign history, rules execution, and authoritative state management. Higher-level features are intentionally minimal at this stage.
 
-### Run from source (recommended for development)
+### What it does not provide (yet)
 
-```sh
-make run
-```
+At present, it does not include:
 
-This starts the gRPC server on `localhost:8080`, the MCP server on stdio, and the web client at `http://localhost:8082`.
-Ports, endpoints, and configuration are documented in [docs](#Documentation).
+- A built-in user interface or virtual tabletop
+- Integrated chat, voice, or media playback
+- Turnkey AI narration or content generation
+- A hosted, multi-tenant deployment
 
-### Run with Docker (recommended for local-only execution)
+These are considered medium- to long-term goals and are expected to evolve as the core platform matures. The current repository focuses on the underlying engine rather than end-user experience.
 
-Download the Docker Hub images:
+### Project status
 
-```shell
-docker pull docker.io/louisbranch/fracturing.space-grpc:latest
-docker pull docker.io/louisbranch/fracturing.space-mcp:latest
-docker pull docker.io/louisbranch/fracturing.space-web:latest
-```
+Fracturing.Space is in an early and experimental stage.
 
-Notes:
-- The gRPC server listens on port 8080, the MCP HTTP transport listens on port 8081 when enabled, and the web app listens on port 8082.
-- Full port/config details live in [docs](#Documentation).
+The core architecture and APIs are usable, but the project is not yet a complete, end-to-end game platform. Interfaces may change as additional systems, integrations, and deployment models are explored.
 
-## State Model
+### Documentation (canonical)
 
-Persisted (SQLite):
+The docs are the canonical source of truth for architecture, APIs, and usage. Start with [docs](/docs/index.md) or browse the published site at [GitHub Pages](https://louisbranch.github.io/fracturing.space/).
 
-- Campaigns
-- Participants
-- Characters
-- Sessions
+### Getting involved
 
-Ephemeral:
+This project is open source and contributions are welcome.
 
-- MCP execution context
+Ways to get involved include:
 
-## Status and stability
+- Improving or extending the core platform
+- Integrating additional rules systems
+- Designing example campaigns or event models
+- Improving documentation and developer onboarding
+- Exploring client, UI, or AI-driven integrations on top of the platform
 
-- **Pre-release / prototype**
-- gRPC and MCP are kept in parity, but the API is expected to change until a release candidate is published.
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Documentation
+### Systems, content, and licensing
 
-- Published docs site: [https://louisbranch.github.io/fracturing.space/](https://louisbranch.github.io/fracturing.space/)
-- Repo docs:
-  - [Getting Started](docs/running/getting-started.md)
-  - [Configuration](docs/running/configuration.md)
-  - [MCP](docs/reference/mcp.md)
-  - [Integration Tests](docs/running/integration-tests.md)
+This repository focuses on infrastructure and mechanics, not on distributing copyrighted game content.
 
-## Near-term roadmap
+- Rules systems are implemented as mechanics only, without copyrighted text
+- Names and mechanics are referenced for compatibility and interoperability purposes
+- Contributors are responsible for ensuring that any submitted content complies with applicable licenses
 
-- Expand campaign lifecycle tools
-- Improve MCP context handling for multi-client use
-- Expand telemetry and request tracing
-- Support user-provided content packs (e.g. JSON/Markdown) to extend MCP resources without bundling copyrighted material
-
-## Attribution and licensing
-
-Fracturing.Space is an independent, fan-made project and is not affiliated with Critical Role Productions LLC, Darrington Press, or their partners.
-
-Daggerheart is a trademark of Critical Role Productions LLC. This project is intended for use under the Darrington Press Community Gaming License (DPCGL). Source code is licensed under the MIT License. See [LICENSE](LICENSE).
-
-All trademarks and copyrighted material remain the property of their respective owners.
-
-Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
-Authors: [AUTHORS](AUTHORS).
+The long-term goal is to support user-provided and community-maintained systems and content packs, with clear attribution and licensing, without bundling proprietary material directly into the core project.
