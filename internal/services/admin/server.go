@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -13,6 +15,7 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	adminsqlite "github.com/louisbranch/fracturing.space/internal/services/admin/storage/sqlite"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -39,6 +42,7 @@ type Server struct {
 	grpcAddr    string
 	grpcClients *grpcClients
 	httpServer  *http.Server
+	adminStore  *adminsqlite.Store
 }
 
 // grpcClients stores gRPC connections and clients for the admin server.
@@ -182,6 +186,11 @@ func NewServer(ctx context.Context, config Config) (*Server, error) {
 		config.GRPCDialTimeout = defaultGRPCDialTimeout
 	}
 
+	adminStore, err := openAdminStore()
+	if err != nil {
+		return nil, err
+	}
+
 	clients := &grpcClients{}
 	if strings.TrimSpace(config.GRPCAddr) != "" {
 		conn, authClient, daggerheartClient, campaignClient, sessionClient, characterClient, participantClient, snapshotClient, eventClient, err := dialGRPC(ctx, config)
@@ -205,6 +214,7 @@ func NewServer(ctx context.Context, config Config) (*Server, error) {
 		grpcAddr:    config.GRPCAddr,
 		grpcClients: clients,
 		httpServer:  httpServer,
+		adminStore:  adminStore,
 	}, nil
 }
 
@@ -242,10 +252,35 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 
 // Close releases any gRPC resources held by the server.
 func (s *Server) Close() {
-	if s == nil || s.grpcClients == nil {
+	if s == nil {
 		return
 	}
-	s.grpcClients.Close()
+	if s.grpcClients != nil {
+		s.grpcClients.Close()
+	}
+	if s.adminStore != nil {
+		if err := s.adminStore.Close(); err != nil {
+			log.Printf("close admin store: %v", err)
+		}
+	}
+}
+
+func openAdminStore() (*adminsqlite.Store, error) {
+	path := strings.TrimSpace(os.Getenv("FRACTURING_SPACE_ADMIN_DB_PATH"))
+	if path == "" {
+		path = filepath.Join("data", "admin.db")
+	}
+	if dir := filepath.Dir(path); dir != "." {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return nil, fmt.Errorf("create storage dir: %w", err)
+		}
+	}
+
+	store, err := adminsqlite.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("open admin sqlite store: %w", err)
+	}
+	return store, nil
 }
 
 // dialGRPC connects to the game server and returns a client.

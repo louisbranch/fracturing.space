@@ -13,6 +13,7 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	authsqlite "github.com/louisbranch/fracturing.space/internal/services/auth/storage/sqlite"
 	authservice "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/auth"
 	campaignservice "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/interceptors"
@@ -32,6 +33,7 @@ type Server struct {
 	grpcServer *grpc.Server
 	health     *health.Server
 	store      storage.Store
+	authStore  *authsqlite.Store
 }
 
 // New creates a configured game server listening on the provided port.
@@ -43,6 +45,12 @@ func New(port int) (*Server, error) {
 	store, err := openCampaignStore()
 	if err != nil {
 		_ = listener.Close()
+		return nil, err
+	}
+	authStore, err := openAuthStore()
+	if err != nil {
+		_ = listener.Close()
+		_ = store.Close()
 		return nil, err
 	}
 
@@ -70,7 +78,7 @@ func New(port int) (*Server, error) {
 		grpc.StreamInterceptor(grpcmeta.StreamServerInterceptor(nil)),
 	)
 	daggerheartService := daggerheartservice.NewDaggerheartService(random.NewSeed)
-	authService := authservice.NewAuthService(store)
+	authService := authservice.NewAuthService(authStore)
 	campaignService := campaignservice.NewCampaignService(stores)
 	participantService := campaignservice.NewParticipantService(stores)
 	inviteService := campaignservice.NewInviteService(stores)
@@ -108,6 +116,7 @@ func New(port int) (*Server, error) {
 		grpcServer: grpcServer,
 		health:     healthServer,
 		store:      store,
+		authStore:  authStore,
 	}, nil
 }
 
@@ -133,7 +142,7 @@ func (s *Server) Serve(ctx context.Context) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	defer s.closeStore()
+	defer s.closeStores()
 
 	log.Printf("game server listening at %v", s.listener.Addr())
 	serveErr := make(chan error, 1)
@@ -179,11 +188,36 @@ func openCampaignStore() (storage.Store, error) {
 	return store, nil
 }
 
-func (s *Server) closeStore() {
-	if s == nil || s.store == nil {
+func openAuthStore() (*authsqlite.Store, error) {
+	path := strings.TrimSpace(os.Getenv("FRACTURING_SPACE_AUTH_DB_PATH"))
+	if path == "" {
+		path = filepath.Join("data", "auth.db")
+	}
+	if dir := filepath.Dir(path); dir != "." {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return nil, fmt.Errorf("create storage dir: %w", err)
+		}
+	}
+
+	store, err := authsqlite.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("open auth sqlite store: %w", err)
+	}
+	return store, nil
+}
+
+func (s *Server) closeStores() {
+	if s == nil {
 		return
 	}
-	if err := s.store.Close(); err != nil {
-		log.Printf("close campaign store: %v", err)
+	if s.store != nil {
+		if err := s.store.Close(); err != nil {
+			log.Printf("close campaign store: %v", err)
+		}
+	}
+	if s.authStore != nil {
+		if err := s.authStore.Close(); err != nil {
+			log.Printf("close auth store: %v", err)
+		}
 	}
 }
