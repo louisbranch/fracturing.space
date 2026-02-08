@@ -40,7 +40,7 @@ Game state is organized into three tiers by change frequency:
 | Layer | Subpackages | Changes | Contents |
 |-------|-------------|---------|----------|
 | **Campaign** (Config) | `state/campaign/`, `state/participant/`, `state/character/` | Setup time | Name, system, GM mode, participants, character profiles |
-| **Snapshot** (Continuity) | `state/snapshot/` | Between sessions | Character state (HP, Hope, Stress), GM Fear, progress |
+| **Snapshot** (Continuity) | `state/snapshot/` | At any event sequence | Character state (HP, Hope, Stress), GM Fear, progress |
 | **Session** (Gameplay) | `state/session/` | Every action | Active session, events, rolls, outcomes |
 
 This model uses an event-sourced architecture where the event journal is the

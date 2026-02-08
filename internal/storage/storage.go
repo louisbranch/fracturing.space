@@ -207,7 +207,7 @@ type SessionPage struct {
 	NextPageToken string
 }
 
-// Snapshot represents a precomputed state snapshot at a session boundary.
+// Snapshot represents a precomputed state snapshot for a session as of an event sequence.
 type Snapshot struct {
 	CampaignID          string
 	SessionID           string
@@ -218,7 +218,7 @@ type Snapshot struct {
 	CreatedAt           time.Time
 }
 
-// SnapshotStore persists snapshots at session boundaries.
+// SnapshotStore persists session snapshots captured at event sequences.
 type SnapshotStore interface {
 	// PutSnapshot stores a snapshot.
 	PutSnapshot(ctx context.Context, snap Snapshot) error
