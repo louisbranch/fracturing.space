@@ -28,7 +28,7 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// SnapshotService manages continuity state that persists across sessions.
+// SnapshotService manages continuity state captured at event sequences.
 // This includes character states (system-specific resources like HP) and system-specific campaign state.
 type SnapshotServiceClient interface {
 	// Get the current snapshot state for a campaign.
@@ -81,7 +81,7 @@ func (c *snapshotServiceClient) UpdateSnapshotState(ctx context.Context, in *Upd
 // All implementations must embed UnimplementedSnapshotServiceServer
 // for forward compatibility.
 //
-// SnapshotService manages continuity state that persists across sessions.
+// SnapshotService manages continuity state captured at event sequences.
 // This includes character states (system-specific resources like HP) and system-specific campaign state.
 type SnapshotServiceServer interface {
 	// Get the current snapshot state for a campaign.

@@ -1,0 +1,91 @@
+package templates
+
+// UsersFullPage renders the users page in the base layout.
+templ UsersFullPage(view UsersPageView, lang string, loc Localizer) {
+	@Layout(T(loc, "title.users"), "Users", lang, loc) {
+		@UsersPage(view, loc)
+	}
+}
+
+// UsersPage renders the users page content.
+templ UsersPage(view UsersPageView, loc Localizer) {
+	<h2>{T(loc, "users.heading")}</h2>
+	<div class="row">
+		<div class="sm-12 md-6 col">
+			<h3>{T(loc, "users.create.heading")}</h3>
+			<form method="post" action="/users/create">
+				<label>
+					{T(loc, "users.create.display_name")}
+					<input type="text" name="display_name" required>
+				</label>
+				<button class="paper-btn" type="submit">{T(loc, "users.create.submit")}</button>
+			</form>
+		</div>
+		<div class="sm-12 md-6 col">
+			<h3>{T(loc, "users.get.heading")}</h3>
+			<form method="get" action="/users">
+				<label>
+					{T(loc, "users.get.user_id")}
+					<input type="text" name="user_id" placeholder="user-123">
+				</label>
+				<button class="paper-btn" type="submit">{T(loc, "users.get.submit")}</button>
+			</form>
+		</div>
+	</div>
+	if view.Message != "" {
+		<p class="muted">{view.Message}</p>
+	}
+	if view.Detail != nil {
+		@UserDetailCard(*view.Detail, loc)
+	}
+	<h3>{T(loc, "users.list.heading")}</h3>
+	@UsersLoading(loc)
+}
+
+// UsersLoading renders the HTMX loading placeholder.
+templ UsersLoading(loc Localizer) {
+	<div hx-get="/users/table" hx-trigger="load" hx-swap="outerHTML">
+		<p>{T(loc, "users.loading")}</p>
+	</div>
+}
+
+// UsersTable renders the users table.
+templ UsersTable(rows []UserRow, message string, loc Localizer) {
+	if len(rows) == 0 {
+		@EmptyState(message)
+	} else {
+		<table>
+			<thead>
+				<tr>
+					<th>{T(loc, "users.table.id")}</th>
+					<th>{T(loc, "users.table.display_name")}</th>
+					<th>{T(loc, "users.table.created")}</th>
+					<th>{T(loc, "users.table.updated")}</th>
+				</tr>
+			</thead>
+			<tbody>
+				for _, row := range rows {
+					<tr>
+						<td><code>{row.ID}</code></td>
+						<td>{row.DisplayName}</td>
+						<td>{row.CreatedAt}</td>
+						<td>{row.UpdatedAt}</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	}
+}
+
+// UserDetailCard renders a single user detail table.
+templ UserDetailCard(detail UserDetail, loc Localizer) {
+	<h3>{T(loc, "users.detail.heading")}</h3>
+	<table>
+		<tbody>
+			<tr><td><strong>{T(loc, "users.detail.id")}</strong></td><td><code>{detail.ID}</code></td></tr>
+			<tr><td><strong>{T(loc, "users.detail.display_name")}</strong></td><td>{detail.DisplayName}</td></tr>
+			<tr><td><strong>{T(loc, "users.detail.created")}</strong></td><td>{detail.CreatedAt}</td></tr>
+			<tr><td><strong>{T(loc, "users.detail.updated")}</strong></td><td>{detail.UpdatedAt}</td></tr>
+		</tbody>
+	</table>
+}

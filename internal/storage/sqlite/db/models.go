@@ -150,3 +150,10 @@ type TelemetryEvent struct {
 	SpanID         sql.NullString `json:"span_id"`
 	AttributesJson []byte         `json:"attributes_json"`
 }
+
+type User struct {
+	ID          string `json:"id"`
+	DisplayName string `json:"display_name"`
+	CreatedAt   string `json:"created_at"`
+	UpdatedAt   string `json:"updated_at"`
+}

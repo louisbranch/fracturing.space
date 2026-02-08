@@ -11,6 +11,7 @@ const (
 	CodeParticipantEmptyDisplayName     = "PARTICIPANT_EMPTY_DISPLAY_NAME"
 	CodeParticipantInvalidRole          = "PARTICIPANT_INVALID_ROLE"
 	CodeParticipantEmptyCampaignID      = "PARTICIPANT_EMPTY_CAMPAIGN_ID"
+	CodeUserEmptyDisplayName            = "USER_EMPTY_DISPLAY_NAME"
 	CodeSessionEmptyCampaignID          = "SESSION_EMPTY_CAMPAIGN_ID"
 	CodeCharacterInvalidController      = "CHARACTER_INVALID_CONTROLLER"
 	CodeCharacterEmptyParticipantID     = "CHARACTER_EMPTY_PARTICIPANT_ID"
@@ -18,10 +19,10 @@ const (
 	CodeCharacterEmptyName              = "CHARACTER_EMPTY_NAME"
 	CodeCharacterInvalidKind            = "CHARACTER_INVALID_KIND"
 	CodeCharacterInvalidProfileHp       = "CHARACTER_INVALID_PROFILE_HP"
-	CodeSnapshotInvalidHp              = "SNAPSHOT_INVALID_HP"
-	CodeSnapshotInvalidGMFear          = "SNAPSHOT_INVALID_GM_FEAR_AMOUNT"
-	CodeSnapshotInsufficientFear       = "SNAPSHOT_INSUFFICIENT_GM_FEAR"
-	CodeSnapshotGMFearExceedsCap       = "SNAPSHOT_GM_FEAR_EXCEEDS_CAP"
+	CodeSnapshotInvalidHp               = "SNAPSHOT_INVALID_HP"
+	CodeSnapshotInvalidGMFear           = "SNAPSHOT_INVALID_GM_FEAR_AMOUNT"
+	CodeSnapshotInsufficientFear        = "SNAPSHOT_INSUFFICIENT_GM_FEAR"
+	CodeSnapshotGMFearExceedsCap        = "SNAPSHOT_GM_FEAR_EXCEEDS_CAP"
 	CodeOutcomeAlreadyApplied           = "OUTCOME_ALREADY_APPLIED"
 	CodeOutcomeCharacterNotFound        = "OUTCOME_CHARACTER_NOT_FOUND"
 	CodeOutcomeGMFearInvalid            = "OUTCOME_GM_FEAR_INVALID"
@@ -60,6 +61,9 @@ var enUSCatalog = &Catalog{
 		CodeParticipantEmptyDisplayName: "Participant display name cannot be empty",
 		CodeParticipantInvalidRole:      "Invalid participant role specified",
 		CodeParticipantEmptyCampaignID:  "Campaign ID is required for participant",
+
+		// User errors
+		CodeUserEmptyDisplayName: "User display name cannot be empty",
 
 		// Session errors
 		CodeSessionEmptyCampaignID: "Campaign ID is required for session",

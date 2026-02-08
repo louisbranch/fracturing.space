@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/state/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"google.golang.org/grpc"
@@ -44,6 +45,7 @@ type Server struct {
 type grpcClients struct {
 	mu                sync.RWMutex
 	conn              *grpc.ClientConn
+	authClient        authv1.AuthServiceClient
 	daggerheartClient daggerheartv1.DaggerheartServiceClient
 	campaignClient    statev1.CampaignServiceClient
 	sessionClient     statev1.SessionServiceClient
@@ -61,6 +63,16 @@ func (g *grpcClients) CampaignClient() statev1.CampaignServiceClient {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 	return g.campaignClient
+}
+
+// AuthClient returns the current auth client.
+func (g *grpcClients) AuthClient() authv1.AuthServiceClient {
+	if g == nil {
+		return nil
+	}
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	return g.authClient
 }
 
 // SessionClient returns the current session client.
@@ -124,7 +136,7 @@ func (g *grpcClients) HasConnection() bool {
 }
 
 // Set stores the gRPC connection and clients.
-func (g *grpcClients) Set(conn *grpc.ClientConn, daggerheartClient daggerheartv1.DaggerheartServiceClient, campaignClient statev1.CampaignServiceClient, sessionClient statev1.SessionServiceClient, characterClient statev1.CharacterServiceClient, participantClient statev1.ParticipantServiceClient, snapshotClient statev1.SnapshotServiceClient, eventClient statev1.EventServiceClient) {
+func (g *grpcClients) Set(conn *grpc.ClientConn, authClient authv1.AuthServiceClient, daggerheartClient daggerheartv1.DaggerheartServiceClient, campaignClient statev1.CampaignServiceClient, sessionClient statev1.SessionServiceClient, characterClient statev1.CharacterServiceClient, participantClient statev1.ParticipantServiceClient, snapshotClient statev1.SnapshotServiceClient, eventClient statev1.EventServiceClient) {
 	if g == nil {
 		return
 	}
@@ -134,6 +146,7 @@ func (g *grpcClients) Set(conn *grpc.ClientConn, daggerheartClient daggerheartv1
 		return
 	}
 	g.conn = conn
+	g.authClient = authClient
 	g.daggerheartClient = daggerheartClient
 	g.campaignClient = campaignClient
 	g.sessionClient = sessionClient
@@ -171,12 +184,12 @@ func NewServer(ctx context.Context, config Config) (*Server, error) {
 
 	clients := &grpcClients{}
 	if strings.TrimSpace(config.GRPCAddr) != "" {
-		conn, daggerheartClient, campaignClient, sessionClient, characterClient, participantClient, snapshotClient, eventClient, err := dialGRPC(ctx, config)
+		conn, authClient, daggerheartClient, campaignClient, sessionClient, characterClient, participantClient, snapshotClient, eventClient, err := dialGRPC(ctx, config)
 		if err != nil {
 			log.Printf("web gRPC dial failed: %v", err)
 			go connectGRPCWithRetry(ctx, config, clients)
 		} else {
-			clients.Set(conn, daggerheartClient, campaignClient, sessionClient, characterClient, participantClient, snapshotClient, eventClient)
+			clients.Set(conn, authClient, daggerheartClient, campaignClient, sessionClient, characterClient, participantClient, snapshotClient, eventClient)
 		}
 	}
 
@@ -236,10 +249,10 @@ func (s *Server) Close() {
 }
 
 // dialGRPC connects to the gRPC server and returns a client.
-func dialGRPC(ctx context.Context, config Config) (*grpc.ClientConn, daggerheartv1.DaggerheartServiceClient, statev1.CampaignServiceClient, statev1.SessionServiceClient, statev1.CharacterServiceClient, statev1.ParticipantServiceClient, statev1.SnapshotServiceClient, statev1.EventServiceClient, error) {
+func dialGRPC(ctx context.Context, config Config) (*grpc.ClientConn, authv1.AuthServiceClient, daggerheartv1.DaggerheartServiceClient, statev1.CampaignServiceClient, statev1.SessionServiceClient, statev1.CharacterServiceClient, statev1.ParticipantServiceClient, statev1.SnapshotServiceClient, statev1.EventServiceClient, error) {
 	grpcAddr := strings.TrimSpace(config.GRPCAddr)
 	if grpcAddr == "" {
-		return nil, nil, nil, nil, nil, nil, nil, nil, nil
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil
 	}
 	if ctx == nil {
 		ctx = context.Background()
@@ -255,9 +268,10 @@ func dialGRPC(ctx context.Context, config Config) (*grpc.ClientConn, daggerheart
 		grpc.WithBlock(),
 	)
 	if err != nil {
-		return nil, nil, nil, nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 	}
 
+	authClient := authv1.NewAuthServiceClient(conn)
 	daggerheartClient := daggerheartv1.NewDaggerheartServiceClient(conn)
 	campaignClient := statev1.NewCampaignServiceClient(conn)
 	sessionClient := statev1.NewSessionServiceClient(conn)
@@ -265,7 +279,7 @@ func dialGRPC(ctx context.Context, config Config) (*grpc.ClientConn, daggerheart
 	participantClient := statev1.NewParticipantServiceClient(conn)
 	snapshotClient := statev1.NewSnapshotServiceClient(conn)
 	eventClient := statev1.NewEventServiceClient(conn)
-	return conn, daggerheartClient, campaignClient, sessionClient, characterClient, participantClient, snapshotClient, eventClient, nil
+	return conn, authClient, daggerheartClient, campaignClient, sessionClient, characterClient, participantClient, snapshotClient, eventClient, nil
 }
 
 // connectGRPCWithRetry keeps dialing until a connection is established or context ends.
@@ -287,9 +301,9 @@ func connectGRPCWithRetry(ctx context.Context, config Config, clients *grpcClien
 		if clients.HasConnection() {
 			return
 		}
-		conn, daggerheartClient, campaignClient, sessionClient, characterClient, participantClient, snapshotClient, eventClient, err := dialGRPC(ctx, config)
+		conn, authClient, daggerheartClient, campaignClient, sessionClient, characterClient, participantClient, snapshotClient, eventClient, err := dialGRPC(ctx, config)
 		if err == nil {
-			clients.Set(conn, daggerheartClient, campaignClient, sessionClient, characterClient, participantClient, snapshotClient, eventClient)
+			clients.Set(conn, authClient, daggerheartClient, campaignClient, sessionClient, characterClient, participantClient, snapshotClient, eventClient)
 			log.Printf("web gRPC connected to %s", config.GRPCAddr)
 			return
 		}

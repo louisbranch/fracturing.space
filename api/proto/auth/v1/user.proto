@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+package auth.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1;authv1";
+
+// User represents an authenticated identity record.
+message User {
+  string id = 1;
+  string display_name = 2;
+  google.protobuf.Timestamp created_at = 3;
+  google.protobuf.Timestamp updated_at = 4;
+}
+
+// AuthService provides minimal auth user operations.
+service AuthService {
+  // Create a new user record.
+  rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
+
+  // Get a user record by ID.
+  rpc GetUser(GetUserRequest) returns (GetUserResponse);
+
+  // List user records.
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse);
+}
+
+message CreateUserRequest {
+  string display_name = 1;
+}
+
+message CreateUserResponse {
+  User user = 1;
+}
+
+message GetUserRequest {
+  string user_id = 1;
+}
+
+message GetUserResponse {
+  User user = 1;
+}
+
+message ListUsersRequest {
+  // The maximum number of users to return.
+  // If zero, the server defaults to 10. The server clamps values above 50 to 50.
+  int32 page_size = 1;
+
+  // A page token received from a prior ListUsersResponse.
+  string page_token = 2;
+}
+
+message ListUsersResponse {
+  repeated User users = 1;
+  string next_page_token = 2;
+}

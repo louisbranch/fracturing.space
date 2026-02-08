@@ -22,6 +22,9 @@ const (
 	CodeParticipantInvalidRole      Code = "PARTICIPANT_INVALID_ROLE"
 	CodeParticipantEmptyCampaignID  Code = "PARTICIPANT_EMPTY_CAMPAIGN_ID"
 
+	// User errors
+	CodeUserEmptyDisplayName Code = "USER_EMPTY_DISPLAY_NAME"
+
 	// Session errors
 	CodeSessionEmptyCampaignID Code = "SESSION_EMPTY_CAMPAIGN_ID"
 
@@ -34,10 +37,10 @@ const (
 	CodeCharacterInvalidProfileHp   Code = "CHARACTER_INVALID_PROFILE_HP"
 
 	// Snapshot errors
-	CodeSnapshotInvalidHp         Code = "SNAPSHOT_INVALID_HP"
-	CodeSnapshotInvalidGMFear     Code = "SNAPSHOT_INVALID_GM_FEAR_AMOUNT"
-	CodeSnapshotInsufficientFear  Code = "SNAPSHOT_INSUFFICIENT_GM_FEAR"
-	CodeSnapshotGMFearExceedsCap  Code = "SNAPSHOT_GM_FEAR_EXCEEDS_CAP"
+	CodeSnapshotInvalidHp        Code = "SNAPSHOT_INVALID_HP"
+	CodeSnapshotInvalidGMFear    Code = "SNAPSHOT_INVALID_GM_FEAR_AMOUNT"
+	CodeSnapshotInsufficientFear Code = "SNAPSHOT_INSUFFICIENT_GM_FEAR"
+	CodeSnapshotGMFearExceedsCap Code = "SNAPSHOT_GM_FEAR_EXCEEDS_CAP"
 
 	// Outcome errors
 	CodeOutcomeAlreadyApplied    Code = "OUTCOME_ALREADY_APPLIED"
@@ -84,6 +87,7 @@ func (c Code) GRPCCode() codes.Code {
 		CodeParticipantEmptyDisplayName,
 		CodeParticipantInvalidRole,
 		CodeParticipantEmptyCampaignID,
+		CodeUserEmptyDisplayName,
 		CodeSessionEmptyCampaignID,
 		CodeCharacterInvalidController,
 		CodeCharacterEmptyParticipantID,

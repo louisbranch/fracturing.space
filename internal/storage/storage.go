@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/auth/user"
 	apperrors "github.com/louisbranch/fracturing.space/internal/errors"
 	"github.com/louisbranch/fracturing.space/internal/state/campaign"
 	"github.com/louisbranch/fracturing.space/internal/state/character"
@@ -46,6 +47,19 @@ type ParticipantStore interface {
 // ParticipantPage describes a page of participant records.
 type ParticipantPage struct {
 	Participants  []participant.Participant
+	NextPageToken string
+}
+
+// UserStore persists auth user records.
+type UserStore interface {
+	PutUser(ctx context.Context, u user.User) error
+	GetUser(ctx context.Context, userID string) (user.User, error)
+	ListUsers(ctx context.Context, pageSize int, pageToken string) (UserPage, error)
+}
+
+// UserPage describes a page of user records.
+type UserPage struct {
+	Users         []user.User
 	NextPageToken string
 }
 
@@ -252,6 +266,7 @@ type Store interface {
 	ParticipantStore
 	CharacterStore
 	ControlDefaultStore
+	UserStore
 	DaggerheartStore
 	SessionStore
 	EventStore

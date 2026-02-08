@@ -9,8 +9,10 @@ import (
 	"os"
 	"path/filepath"
 
+	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/state/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	authservice "github.com/louisbranch/fracturing.space/internal/api/grpc/auth"
 	"github.com/louisbranch/fracturing.space/internal/api/grpc/interceptors"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/api/grpc/metadata"
 	stateservice "github.com/louisbranch/fracturing.space/internal/api/grpc/state"
@@ -66,6 +68,7 @@ func New(port int) (*Server, error) {
 		grpc.StreamInterceptor(grpcmeta.StreamServerInterceptor(nil)),
 	)
 	daggerheartService := daggerheartservice.NewDaggerheartService(random.NewSeed)
+	authService := authservice.NewAuthService(store)
 	campaignService := stateservice.NewCampaignService(stores)
 	participantService := stateservice.NewParticipantService(stores)
 	characterService := stateservice.NewCharacterService(stores)
@@ -75,6 +78,7 @@ func New(port int) (*Server, error) {
 	eventService := stateservice.NewEventService(stores)
 	healthServer := health.NewServer()
 	daggerheartv1.RegisterDaggerheartServiceServer(grpcServer, daggerheartService)
+	authv1.RegisterAuthServiceServer(grpcServer, authService)
 	statev1.RegisterCampaignServiceServer(grpcServer, campaignService)
 	statev1.RegisterParticipantServiceServer(grpcServer, participantService)
 	statev1.RegisterCharacterServiceServer(grpcServer, characterService)
@@ -85,6 +89,7 @@ func New(port int) (*Server, error) {
 	grpc_health_v1.RegisterHealthServer(grpcServer, healthServer)
 	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("systems.daggerheart.v1.DaggerheartService", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus("auth.v1.AuthService", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("state.v1.CampaignService", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("state.v1.ParticipantService", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("state.v1.CharacterService", grpc_health_v1.HealthCheckResponse_SERVING)

@@ -23,7 +23,7 @@ const (
 )
 
 // Snapshot represents the continuity layer for a campaign.
-// It tracks state that persists across sessions: character states, GM resources, progress.
+// It tracks state captured at an event sequence: character states, GM resources, progress.
 type Snapshot struct {
 	state      protoimpl.MessageState `protogen:"open.v1"`
 	CampaignId string                 `protobuf:"bytes,1,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"`

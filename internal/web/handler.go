@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/a-h/templ"
+	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/state/v1"
 	"github.com/louisbranch/fracturing.space/internal/web/i18n"
@@ -30,6 +31,7 @@ const (
 
 // GRPCClientProvider supplies gRPC clients for request handling.
 type GRPCClientProvider interface {
+	AuthClient() authv1.AuthServiceClient
 	CampaignClient() statev1.CampaignServiceClient
 	SessionClient() statev1.SessionServiceClient
 	CharacterClient() statev1.CharacterServiceClient
@@ -66,7 +68,124 @@ func (h *Handler) routes() http.Handler {
 	mux.Handle("/campaigns", http.HandlerFunc(h.handleCampaignsPage))
 	mux.Handle("/campaigns/table", http.HandlerFunc(h.handleCampaignsTable))
 	mux.Handle("/campaigns/", http.HandlerFunc(h.handleCampaignRoutes))
+	mux.Handle("/users", http.HandlerFunc(h.handleUsersPage))
+	mux.Handle("/users/table", http.HandlerFunc(h.handleUsersTable))
+	mux.Handle("/users/create", http.HandlerFunc(h.handleCreateUser))
 	return mux
+}
+
+// handleUsersPage renders the users page.
+func (h *Handler) handleUsersPage(w http.ResponseWriter, r *http.Request) {
+	loc, lang := h.localizer(w, r)
+	view := templates.UsersPageView{}
+
+	if message := strings.TrimSpace(r.URL.Query().Get("message")); message != "" {
+		view.Message = message
+	}
+
+	userID := strings.TrimSpace(r.URL.Query().Get("user_id"))
+	if userID != "" {
+		client := h.authClient()
+		if client == nil {
+			view.Message = loc.Sprintf("error.user_service_unavailable")
+		} else {
+			ctx, cancel := context.WithTimeout(r.Context(), campaignsRequestTimeout)
+			defer cancel()
+
+			response, err := client.GetUser(ctx, &authv1.GetUserRequest{UserId: userID})
+			if err != nil || response.GetUser() == nil {
+				log.Printf("get user: %v", err)
+				view.Message = loc.Sprintf("error.user_not_found")
+			} else {
+				view.Detail = buildUserDetail(response.GetUser())
+			}
+		}
+	}
+
+	if isHTMXRequest(r) {
+		templ.Handler(templates.UsersPage(view, loc)).ServeHTTP(w, r)
+		return
+	}
+
+	templ.Handler(templates.UsersFullPage(view, lang, loc)).ServeHTTP(w, r)
+}
+
+// handleCreateUser creates a user from a form submission.
+func (h *Handler) handleCreateUser(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", http.MethodPost)
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	loc, lang := h.localizer(w, r)
+	view := templates.UsersPageView{}
+
+	if err := r.ParseForm(); err != nil {
+		view.Message = loc.Sprintf("error.user_create_invalid")
+		templ.Handler(templates.UsersFullPage(view, lang, loc)).ServeHTTP(w, r)
+		return
+	}
+
+	displayName := strings.TrimSpace(r.FormValue("display_name"))
+	if displayName == "" {
+		view.Message = loc.Sprintf("error.user_display_name_required")
+		templ.Handler(templates.UsersFullPage(view, lang, loc)).ServeHTTP(w, r)
+		return
+	}
+
+	client := h.authClient()
+	if client == nil {
+		view.Message = loc.Sprintf("error.user_service_unavailable")
+		templ.Handler(templates.UsersFullPage(view, lang, loc)).ServeHTTP(w, r)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), campaignsRequestTimeout)
+	defer cancel()
+
+	response, err := client.CreateUser(ctx, &authv1.CreateUserRequest{DisplayName: displayName})
+	if err != nil || response.GetUser() == nil {
+		log.Printf("create user: %v", err)
+		view.Message = loc.Sprintf("error.user_create_failed")
+		templ.Handler(templates.UsersFullPage(view, lang, loc)).ServeHTTP(w, r)
+		return
+	}
+
+	created := response.GetUser()
+	view.Detail = buildUserDetail(created)
+	view.Message = loc.Sprintf("users.create.success")
+
+	templ.Handler(templates.UsersFullPage(view, lang, loc)).ServeHTTP(w, r)
+}
+
+// handleUsersTable renders the users table via HTMX.
+func (h *Handler) handleUsersTable(w http.ResponseWriter, r *http.Request) {
+	loc, _ := h.localizer(w, r)
+	client := h.authClient()
+	if client == nil {
+		h.renderUsersTable(w, r, nil, loc.Sprintf("error.user_service_unavailable"), loc)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), campaignsRequestTimeout)
+	defer cancel()
+
+	response, err := client.ListUsers(ctx, &authv1.ListUsersRequest{PageSize: 50})
+	if err != nil {
+		log.Printf("list users: %v", err)
+		h.renderUsersTable(w, r, nil, loc.Sprintf("error.users_unavailable"), loc)
+		return
+	}
+
+	users := response.GetUsers()
+	if len(users) == 0 {
+		h.renderUsersTable(w, r, nil, loc.Sprintf("error.no_users"), loc)
+		return
+	}
+
+	rows := buildUserRows(users)
+	h.renderUsersTable(w, r, rows, "", loc)
 }
 
 // handleCampaignsTable returns the first page of campaign rows for HTMX.
@@ -278,6 +397,19 @@ func (h *Handler) renderCampaignSessions(w http.ResponseWriter, r *http.Request,
 	templ.Handler(templates.CampaignSessionsList(rows, message, loc)).ServeHTTP(w, r)
 }
 
+// renderUsersTable renders the users table component.
+func (h *Handler) renderUsersTable(w http.ResponseWriter, r *http.Request, rows []templates.UserRow, message string, loc *message.Printer) {
+	templ.Handler(templates.UsersTable(rows, message, loc)).ServeHTTP(w, r)
+}
+
+// authClient returns the currently configured auth client.
+func (h *Handler) authClient() authv1.AuthServiceClient {
+	if h == nil || h.clientProvider == nil {
+		return nil
+	}
+	return h.clientProvider.AuthClient()
+}
+
 // campaignClient returns the currently configured campaign client.
 func (h *Handler) campaignClient() statev1.CampaignServiceClient {
 	if h == nil || h.clientProvider == nil {
@@ -412,6 +544,36 @@ func buildCampaignSessionRows(sessions []*statev1.Session, loc *message.Printer)
 		rows = append(rows, row)
 	}
 	return rows
+}
+
+// buildUserRows formats user rows for the table.
+func buildUserRows(users []*authv1.User) []templates.UserRow {
+	rows := make([]templates.UserRow, 0, len(users))
+	for _, u := range users {
+		if u == nil {
+			continue
+		}
+		rows = append(rows, templates.UserRow{
+			ID:          u.GetId(),
+			DisplayName: u.GetDisplayName(),
+			CreatedAt:   formatTimestamp(u.GetCreatedAt()),
+			UpdatedAt:   formatTimestamp(u.GetUpdatedAt()),
+		})
+	}
+	return rows
+}
+
+// buildUserDetail formats a user detail view.
+func buildUserDetail(u *authv1.User) *templates.UserDetail {
+	if u == nil {
+		return nil
+	}
+	return &templates.UserDetail{
+		ID:          u.GetId(),
+		DisplayName: u.GetDisplayName(),
+		CreatedAt:   formatTimestamp(u.GetCreatedAt()),
+		UpdatedAt:   formatTimestamp(u.GetUpdatedAt()),
+	}
 }
 
 // formatGmMode returns a display label for a GM mode enum.

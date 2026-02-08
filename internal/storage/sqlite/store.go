@@ -14,6 +14,7 @@ import (
 	"time"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	"github.com/louisbranch/fracturing.space/internal/auth/user"
 	"github.com/louisbranch/fracturing.space/internal/core/encoding"
 	"github.com/louisbranch/fracturing.space/internal/state/campaign"
 	"github.com/louisbranch/fracturing.space/internal/state/character"
@@ -402,6 +403,97 @@ func (s *Store) ListParticipants(ctx context.Context, campaignID string, pageSiz
 			return storage.ParticipantPage{}, err
 		}
 		page.Participants = append(page.Participants, p)
+	}
+
+	return page, nil
+}
+
+// User methods
+
+// PutUser persists a user record.
+func (s *Store) PutUser(ctx context.Context, u user.User) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if s == nil || s.sqlDB == nil {
+		return fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(u.ID) == "" {
+		return fmt.Errorf("user id is required")
+	}
+
+	return s.q.PutUser(ctx, db.PutUserParams{
+		ID:          u.ID,
+		DisplayName: u.DisplayName,
+		CreatedAt:   u.CreatedAt.Format(timeFormat),
+		UpdatedAt:   u.UpdatedAt.Format(timeFormat),
+	})
+}
+
+// GetUser fetches a user record by ID.
+func (s *Store) GetUser(ctx context.Context, userID string) (user.User, error) {
+	if err := ctx.Err(); err != nil {
+		return user.User{}, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return user.User{}, fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(userID) == "" {
+		return user.User{}, fmt.Errorf("user id is required")
+	}
+
+	row, err := s.q.GetUser(ctx, userID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return user.User{}, storage.ErrNotFound
+		}
+		return user.User{}, fmt.Errorf("get user: %w", err)
+	}
+
+	return dbUserToDomain(row)
+}
+
+// ListUsers returns a page of user records.
+func (s *Store) ListUsers(ctx context.Context, pageSize int, pageToken string) (storage.UserPage, error) {
+	if err := ctx.Err(); err != nil {
+		return storage.UserPage{}, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return storage.UserPage{}, fmt.Errorf("storage is not configured")
+	}
+	if pageSize <= 0 {
+		return storage.UserPage{}, fmt.Errorf("page size must be greater than zero")
+	}
+
+	var rows []db.User
+	var err error
+
+	if pageToken == "" {
+		rows, err = s.q.ListUsersPagedFirst(ctx, int64(pageSize+1))
+	} else {
+		rows, err = s.q.ListUsersPaged(ctx, db.ListUsersPagedParams{
+			ID:    pageToken,
+			Limit: int64(pageSize + 1),
+		})
+	}
+	if err != nil {
+		return storage.UserPage{}, fmt.Errorf("list users: %w", err)
+	}
+
+	page := storage.UserPage{
+		Users: make([]user.User, 0, pageSize),
+	}
+
+	for i, row := range rows {
+		if i >= pageSize {
+			page.NextPageToken = rows[pageSize-1].ID
+			break
+		}
+		u, err := dbUserToDomain(row)
+		if err != nil {
+			return storage.UserPage{}, err
+		}
+		page.Users = append(page.Users, u)
 	}
 
 	return page, nil
@@ -1531,6 +1623,24 @@ func dbParticipantToDomain(row db.Participant) (participant.Participant, error) 
 		DisplayName: row.DisplayName,
 		Role:        stringToParticipantRole(row.Role),
 		Controller:  stringToParticipantController(row.Controller),
+		CreatedAt:   createdAt,
+		UpdatedAt:   updatedAt,
+	}, nil
+}
+
+func dbUserToDomain(row db.User) (user.User, error) {
+	createdAt, err := time.Parse(timeFormat, row.CreatedAt)
+	if err != nil {
+		return user.User{}, fmt.Errorf("parse created_at: %w", err)
+	}
+	updatedAt, err := time.Parse(timeFormat, row.UpdatedAt)
+	if err != nil {
+		return user.User{}, fmt.Errorf("parse updated_at: %w", err)
+	}
+
+	return user.User{
+		ID:          row.ID,
+		DisplayName: row.DisplayName,
 		CreatedAt:   createdAt,
 		UpdatedAt:   updatedAt,
 	}, nil

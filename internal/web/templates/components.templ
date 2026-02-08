@@ -29,6 +29,18 @@ templ TopNav(activePage string, lang string, loc Localizer) {
 					</li>
 					<li>
 						<a
+							href="/users"
+							hx-get="/users"
+							hx-target="#main"
+							hx-swap="innerHTML"
+							hx-push-url="true"
+							if activePage == "Users" {
+								class="active"
+							}
+						>{T(loc, "nav.users")}</a>
+					</li>
+					<li>
+						<a
 							href="/campaigns"
 							hx-get="/campaigns"
 							hx-target="#main"

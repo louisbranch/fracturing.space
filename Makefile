@@ -4,6 +4,7 @@ COVER_EXCLUDE_REGEX := (api/gen/|_templ\.go|internal/storage/sqlite/db/|internal
 
 PROTO_FILES := \
 	$(wildcard $(PROTO_DIR)/common/v1/*.proto) \
+	$(wildcard $(PROTO_DIR)/auth/v1/*.proto) \
 	$(wildcard $(PROTO_DIR)/state/v1/*.proto) \
 	$(wildcard $(PROTO_DIR)/systems/daggerheart/v1/*.proto)
 
