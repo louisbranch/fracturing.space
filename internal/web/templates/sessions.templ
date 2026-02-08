@@ -3,40 +3,40 @@ package templates
 import "strconv"
 
 // SessionsListFullPage renders the sessions list in the base layout.
-templ SessionsListFullPage(campaignID string, campaignName string) {
-	@Layout("Sessions - Fracturing.Space", "Campaigns") {
-		@SessionsListPage(campaignID, campaignName)
+templ SessionsListFullPage(campaignID string, campaignName string, lang string, loc Localizer) {
+	@Layout(T(loc, "title.sessions"), "Campaigns", lang, loc) {
+		@SessionsListPage(campaignID, campaignName, loc)
 	}
 }
 
 // SessionsListPage renders the sessions list content.
-templ SessionsListPage(campaignID string, campaignName string) {
+templ SessionsListPage(campaignID string, campaignName string, loc Localizer) {
 	<h2>{campaignName}</h2>
-	@CampaignSubNav(campaignID, "sessions")
-	<h3>Sessions</h3>
-	@SessionsLoading(campaignID)
+	@CampaignSubNav(campaignID, "sessions", loc)
+	<h3>{T(loc, "sessions.heading")}</h3>
+	@SessionsLoading(campaignID, loc)
 }
 
 // SessionsLoading renders the HTMX loading placeholder for sessions.
-templ SessionsLoading(campaignID string) {
+templ SessionsLoading(campaignID string, loc Localizer) {
 	<div
 		hx-get={"/campaigns/" + campaignID + "/sessions/table"}
 		hx-trigger="load"
 		hx-swap="outerHTML"
 	>
-		<p>Loading sessions...</p>
+		<p>{T(loc, "sessions.loading")}</p>
 	</div>
 }
 
 // SessionDetailFullPage renders the session detail in the base layout.
-templ SessionDetailFullPage(session SessionDetail) {
-	@Layout(session.Name + " - Fracturing.Space", "Campaigns") {
-		@SessionDetailPage(session)
+templ SessionDetailFullPage(session SessionDetail, lang string, loc Localizer) {
+	@Layout(T(loc, "title.session", session.Name), "Campaigns", lang, loc) {
+		@SessionDetailPage(session, loc)
 	}
 }
 
 // SessionDetailPage renders the session detail content.
-templ SessionDetailPage(session SessionDetail) {
+templ SessionDetailPage(session SessionDetail, loc Localizer) {
 	<ul class="breadcrumb">
 		<li>
 			<a
@@ -45,7 +45,7 @@ templ SessionDetailPage(session SessionDetail) {
 				hx-target="#main"
 				hx-swap="innerHTML"
 				hx-push-url="true"
-			>Campaigns</a>
+			>{T(loc, "nav.campaigns")}</a>
 		</li>
 		<li>
 			<a
@@ -61,62 +61,62 @@ templ SessionDetailPage(session SessionDetail) {
 	<h2>{session.Name}</h2>
 	<div class="row">
 		<div class="sm-12 md-6 col">
-			<h3>Session Info</h3>
+			<h3>{T(loc, "sessions.detail.info")}</h3>
 			<table>
 				<tbody>
-					<tr><td><strong>ID</strong></td><td><code>{session.ID}</code></td></tr>
-					<tr><td><strong>Name</strong></td><td>{session.Name}</td></tr>
-					<tr><td><strong>Status</strong></td><td>@StatusBadge(session.Status, session.StatusBadge)</td></tr>
-					<tr><td><strong>Started</strong></td><td>{session.StartedAt}</td></tr>
+					<tr><td><strong>{T(loc, "campaigns.detail.id")}</strong></td><td><code>{session.ID}</code></td></tr>
+					<tr><td><strong>{T(loc, "campaigns.detail.name")}</strong></td><td>{session.Name}</td></tr>
+					<tr><td><strong>{T(loc, "sessions.detail.status")}</strong></td><td>@StatusBadge(session.Status, session.StatusBadge)</td></tr>
+					<tr><td><strong>{T(loc, "sessions.detail.started")}</strong></td><td>{session.StartedAt}</td></tr>
 					if session.EndedAt != "" {
-						<tr><td><strong>Ended</strong></td><td>{session.EndedAt}</td></tr>
+						<tr><td><strong>{T(loc, "sessions.detail.ended")}</strong></td><td>{session.EndedAt}</td></tr>
 					}
-					<tr><td><strong>Events</strong></td><td>{ strconv.Itoa(int(session.EventCount)) }</td></tr>
+					<tr><td><strong>{T(loc, "sessions.detail.events")}</strong></td><td>{ strconv.Itoa(int(session.EventCount)) }</td></tr>
 				</tbody>
 			</table>
 		</div>
 		<div class="sm-12 md-6 col">
-			<h3>Event Timeline</h3>
+			<h3>{T(loc, "sessions.detail.timeline")}</h3>
 			<div id="session-events">
-				@SessionEventsLoading(session.CampaignID, session.ID)
+				@SessionEventsLoading(session.CampaignID, session.ID, loc)
 			</div>
 		</div>
 	</div>
 }
 
 // SessionEventsLoading renders the HTMX loading placeholder for session events.
-templ SessionEventsLoading(campaignID string, sessionID string) {
+templ SessionEventsLoading(campaignID string, sessionID string, loc Localizer) {
 	<div
 		hx-get={ "/campaigns/" + campaignID + "/sessions/" + sessionID + "/events" }
 		hx-trigger="load"
 		hx-swap="outerHTML"
 	>
-		<p>Loading events...</p>
+		<p>{T(loc, "sessions.events.loading")}</p>
 	</div>
 }
 
 // SessionEventsContent renders the events timeline for a session.
-templ SessionEventsContent(session SessionDetail) {
+templ SessionEventsContent(session SessionDetail, loc Localizer) {
 	if len(session.Events) == 0 {
-		@EmptyState("No events in this session")
+		@EmptyState(T(loc, "sessions.events.empty"))
 	} else {
 		<table>
 			<thead>
 				<tr>
-					<th>Event</th>
-					<th>Actor</th>
-					<th>Entity</th>
-					<th>Time</th>
+					<th>{T(loc, "sessions.events.table.event")}</th>
+					<th>{T(loc, "sessions.events.table.actor")}</th>
+					<th>{T(loc, "sessions.events.table.entity")}</th>
+					<th>{T(loc, "sessions.events.table.time")}</th>
 				</tr>
 			</thead>
 			<tbody>
 				for _, event := range session.Events {
-					@EventTableRow(event)
+					@EventTableRow(event, loc)
 				}
 			</tbody>
 		</table>
 		if session.NextToken != "" || session.PrevToken != "" {
-			@Pagination(session.NextToken, session.PrevToken, "/campaigns/"+session.CampaignID+"/sessions/"+session.ID+"/events")
+			@Pagination(session.NextToken, session.PrevToken, "/campaigns/"+session.CampaignID+"/sessions/"+session.ID+"/events", loc)
 		}
 	}
 }

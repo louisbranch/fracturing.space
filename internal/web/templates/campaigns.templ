@@ -1,36 +1,36 @@
 package templates
 
 // CampaignsFullPage renders campaigns content in the base layout.
-templ CampaignsFullPage() {
-	@Layout("Campaigns - Fracturing.Space", "Campaigns") {
-		@CampaignsPage()
+templ CampaignsFullPage(lang string, loc Localizer) {
+	@Layout(T(loc, "title.campaigns"), "Campaigns", lang, loc) {
+		@CampaignsPage(loc)
 	}
 }
 
 // CampaignsPage renders the campaigns page content.
-templ CampaignsPage() {
-	<h2>Campaigns</h2>
-	@CampaignsLoading()
+templ CampaignsPage(loc Localizer) {
+	<h2>{T(loc, "campaigns.heading")}</h2>
+	@CampaignsLoading(loc)
 }
 
 // CampaignsLoading renders the HTMX loading placeholder.
-templ CampaignsLoading() {
+templ CampaignsLoading(loc Localizer) {
 	<div hx-get="/campaigns/table" hx-trigger="load" hx-swap="outerHTML">
-		<p>Loading campaigns...</p>
+		<p>{T(loc, "campaigns.loading")}</p>
 	</div>
 }
 
 // CampaignsTable renders a campaigns table or a message when empty.
-templ CampaignsTable(rows []CampaignRow, message string) {
+templ CampaignsTable(rows []CampaignRow, message string, loc Localizer) {
 	<table class="table-hover">
 		<thead>
 			<tr>
-				<th>Campaign</th>
-				<th>System</th>
-				<th>GM Mode</th>
-				<th>Participants</th>
-				<th>Characters</th>
-				<th>Created</th>
+				<th>{T(loc, "campaigns.table.campaign")}</th>
+				<th>{T(loc, "campaigns.table.system")}</th>
+				<th>{T(loc, "campaigns.table.gm_mode")}</th>
+				<th>{T(loc, "campaigns.table.participants")}</th>
+				<th>{T(loc, "campaigns.table.characters")}</th>
+				<th>{T(loc, "campaigns.table.created")}</th>
 			</tr>
 		</thead>
 		<tbody>
@@ -62,42 +62,42 @@ templ CampaignsTable(rows []CampaignRow, message string) {
 }
 
 // CampaignDetailPage renders a single campaign with sub navigation.
-templ CampaignDetailPage(detail CampaignDetail, message string) {
+templ CampaignDetailPage(detail CampaignDetail, message string, loc Localizer) {
 	if message != "" {
-		<h2>Campaign</h2>
+		<h2>{T(loc, "campaigns.detail.heading")}</h2>
 		<p>{message}</p>
 	} else {
 		<h2>{detail.Name}</h2>
-		@CampaignSubNav(detail.ID, "overview")
-		@CampaignOverviewTab(detail)
+		@CampaignSubNav(detail.ID, "overview", loc)
+		@CampaignOverviewTab(detail, loc)
 	}
 }
 
 // CampaignOverviewTab renders the campaign overview content.
-templ CampaignOverviewTab(detail CampaignDetail) {
+templ CampaignOverviewTab(detail CampaignDetail, loc Localizer) {
 	<div class="row">
 		<div class="sm-12 md-6 col">
-			<h3>Campaign Info</h3>
+			<h3>{T(loc, "campaigns.detail.info")}</h3>
 			<table>
 				<tbody>
-					<tr><td><strong>ID</strong></td><td><code>{detail.ID}</code></td></tr>
-					<tr><td><strong>Name</strong></td><td>{detail.Name}</td></tr>
-					<tr><td><strong>System</strong></td><td>{detail.System}</td></tr>
-					<tr><td><strong>GM Mode</strong></td><td>{detail.GMMode}</td></tr>
-					<tr><td><strong>Theme Prompt</strong></td><td>{detail.ThemePrompt}</td></tr>
-					<tr><td><strong>Created</strong></td><td>{detail.CreatedAt}</td></tr>
-					<tr><td><strong>Updated</strong></td><td>{detail.UpdatedAt}</td></tr>
+					<tr><td><strong>{T(loc, "campaigns.detail.id")}</strong></td><td><code>{detail.ID}</code></td></tr>
+					<tr><td><strong>{T(loc, "campaigns.detail.name")}</strong></td><td>{detail.Name}</td></tr>
+					<tr><td><strong>{T(loc, "campaigns.detail.system")}</strong></td><td>{detail.System}</td></tr>
+					<tr><td><strong>{T(loc, "campaigns.detail.gm_mode")}</strong></td><td>{detail.GMMode}</td></tr>
+					<tr><td><strong>{T(loc, "campaigns.detail.theme_prompt")}</strong></td><td>{detail.ThemePrompt}</td></tr>
+					<tr><td><strong>{T(loc, "campaigns.detail.created")}</strong></td><td>{detail.CreatedAt}</td></tr>
+					<tr><td><strong>{T(loc, "campaigns.detail.updated")}</strong></td><td>{detail.UpdatedAt}</td></tr>
 				</tbody>
 			</table>
 		</div>
 		<div class="sm-12 md-6 col">
-			<h3>Quick Stats</h3>
+			<h3>{T(loc, "campaigns.detail.quick_stats")}</h3>
 			<div class="row">
 				<div class="col-6 col">
-					@StatCard("Participants", detail.ParticipantCount, "")
+					@StatCard(T(loc, "campaigns.table.participants"), detail.ParticipantCount, "")
 				</div>
 				<div class="col-6 col">
-					@StatCard("Characters", detail.CharacterCount, "")
+					@StatCard(T(loc, "campaigns.table.characters"), detail.CharacterCount, "")
 				</div>
 			</div>
 		</div>
@@ -105,28 +105,28 @@ templ CampaignOverviewTab(detail CampaignDetail) {
 }
 
 // CampaignSessionsLoading renders the HTMX loading placeholder for sessions.
-templ CampaignSessionsLoading(campaignID string) {
+templ CampaignSessionsLoading(campaignID string, loc Localizer) {
 	<div
 		hx-get={"/campaigns/" + campaignID + "/sessions"}
 		hx-trigger="load"
 		hx-swap="outerHTML"
 	>
-		<p>Loading sessions...</p>
+		<p>{T(loc, "campaigns.sessions.loading")}</p>
 	</div>
 }
 
 // CampaignSessionsList renders the list of sessions for a campaign.
-templ CampaignSessionsList(rows []CampaignSessionRow, message string) {
+templ CampaignSessionsList(rows []CampaignSessionRow, message string, loc Localizer) {
 	if len(rows) == 0 {
 		@EmptyState(message)
 	} else {
 		<table class="table-hover">
 			<thead>
 				<tr>
-					<th>Session</th>
-					<th>Status</th>
-					<th>Started</th>
-					<th>Ended</th>
+					<th>{T(loc, "campaigns.sessions.table.session")}</th>
+					<th>{T(loc, "campaigns.sessions.table.status")}</th>
+					<th>{T(loc, "campaigns.sessions.table.started")}</th>
+					<th>{T(loc, "campaigns.sessions.table.ended")}</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -152,8 +152,8 @@ templ CampaignSessionsList(rows []CampaignSessionRow, message string) {
 }
 
 // CampaignDetailFullPage renders campaign detail content in the base layout.
-templ CampaignDetailFullPage(detail CampaignDetail, message string) {
-	@Layout("Campaign - Fracturing.Space", "Campaigns") {
-		@CampaignDetailPage(detail, message)
+templ CampaignDetailFullPage(detail CampaignDetail, message string, lang string, loc Localizer) {
+	@Layout(T(loc, "title.campaign"), "Campaigns", lang, loc) {
+		@CampaignDetailPage(detail, message, loc)
 	}
 }

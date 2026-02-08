@@ -50,19 +50,19 @@ type EventTypeOption struct {
 }
 
 // GetEventTypeOptions returns the available event type filter options.
-func GetEventTypeOptions(current string) []EventTypeOption {
+func GetEventTypeOptions(current string, loc Localizer) []EventTypeOption {
 	types := []struct {
 		Value string
 		Label string
 	}{
-		{"", "All Types"},
-		{"campaign.created", "Campaign Created"},
-		{"session.started", "Session Started"},
-		{"session.ended", "Session Ended"},
-		{"character.created", "Character Created"},
-		{"participant.joined", "Participant Joined"},
-		{"action.roll_resolved", "Roll Made"},
-		{"action.outcome_applied", "Action Taken"},
+		{"", T(loc, "filter.all_types")},
+		{"campaign.created", T(loc, "event.campaign_created")},
+		{"session.started", T(loc, "event.session_started")},
+		{"session.ended", T(loc, "event.session_ended")},
+		{"character.created", T(loc, "event.character_created")},
+		{"participant.joined", T(loc, "event.participant_joined")},
+		{"action.roll_resolved", T(loc, "event.action_roll_resolved")},
+		{"action.outcome_applied", T(loc, "event.action_outcome_applied")},
 	}
 
 	options := make([]EventTypeOption, len(types))
@@ -77,15 +77,15 @@ func GetEventTypeOptions(current string) []EventTypeOption {
 }
 
 // GetActorTypeOptions returns the available actor type filter options.
-func GetActorTypeOptions(current string) []EventTypeOption {
+func GetActorTypeOptions(current string, loc Localizer) []EventTypeOption {
 	types := []struct {
 		Value string
 		Label string
 	}{
-		{"", "All Actors"},
-		{"system", "System"},
-		{"participant", "Participant"},
-		{"gm", "GM"},
+		{"", T(loc, "filter.all_actors")},
+		{"system", T(loc, "filter.actor.system")},
+		{"participant", T(loc, "filter.actor.participant")},
+		{"gm", T(loc, "filter.actor.gm")},
 	}
 
 	options := make([]EventTypeOption, len(types))
@@ -100,16 +100,16 @@ func GetActorTypeOptions(current string) []EventTypeOption {
 }
 
 // GetEntityTypeOptions returns the available entity type filter options.
-func GetEntityTypeOptions(current string) []EventTypeOption {
+func GetEntityTypeOptions(current string, loc Localizer) []EventTypeOption {
 	types := []struct {
 		Value string
 		Label string
 	}{
-		{"", "All Entities"},
-		{"character", "Character"},
-		{"session", "Session"},
-		{"campaign", "Campaign"},
-		{"participant", "Participant"},
+		{"", T(loc, "filter.all_entities")},
+		{"character", T(loc, "filter.entity.character")},
+		{"session", T(loc, "filter.entity.session")},
+		{"campaign", T(loc, "filter.entity.campaign")},
+		{"participant", T(loc, "filter.entity.participant")},
 	}
 
 	options := make([]EventTypeOption, len(types))

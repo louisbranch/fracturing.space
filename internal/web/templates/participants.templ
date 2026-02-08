@@ -1,43 +1,43 @@
 package templates
 
 // ParticipantsListFullPage renders the participants list in the base layout.
-templ ParticipantsListFullPage(campaignID string, campaignName string) {
-	@Layout("Participants - Fracturing.Space", "Campaigns") {
-		@ParticipantsListPage(campaignID, campaignName)
+templ ParticipantsListFullPage(campaignID string, campaignName string, lang string, loc Localizer) {
+	@Layout(T(loc, "title.participants"), "Campaigns", lang, loc) {
+		@ParticipantsListPage(campaignID, campaignName, loc)
 	}
 }
 
 // ParticipantsListPage renders the participants list content.
-templ ParticipantsListPage(campaignID string, campaignName string) {
+templ ParticipantsListPage(campaignID string, campaignName string, loc Localizer) {
 	<h2>{campaignName}</h2>
-	@CampaignSubNav(campaignID, "participants")
-	<h3>Participants</h3>
-	@ParticipantsLoading(campaignID)
+	@CampaignSubNav(campaignID, "participants", loc)
+	<h3>{T(loc, "participants.heading")}</h3>
+	@ParticipantsLoading(campaignID, loc)
 }
 
 // ParticipantsLoading renders the HTMX loading placeholder.
-templ ParticipantsLoading(campaignID string) {
+templ ParticipantsLoading(campaignID string, loc Localizer) {
 	<div
 		hx-get={ "/campaigns/" + campaignID + "/participants/table" }
 		hx-trigger="load"
 		hx-swap="outerHTML"
 	>
-		<p>Loading participants...</p>
+		<p>{T(loc, "participants.loading")}</p>
 	</div>
 }
 
 // ParticipantsTable renders the participants table.
-templ ParticipantsTable(rows []ParticipantRow, message string) {
+templ ParticipantsTable(rows []ParticipantRow, message string, loc Localizer) {
 	if len(rows) == 0 {
 		@EmptyState(message)
 	} else {
 		<table>
 			<thead>
 				<tr>
-					<th>Display Name</th>
-					<th>Role</th>
-					<th>Controller</th>
-					<th>Created</th>
+					<th>{T(loc, "participants.table.display_name")}</th>
+					<th>{T(loc, "participants.table.role")}</th>
+					<th>{T(loc, "participants.table.controller")}</th>
+					<th>{T(loc, "participants.table.created")}</th>
 				</tr>
 			</thead>
 			<tbody>

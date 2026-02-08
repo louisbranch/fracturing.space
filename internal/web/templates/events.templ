@@ -1,29 +1,28 @@
 package templates
 
 import "fmt"
-import "strconv"
 
 // EventLogFullPage renders the event log in the base layout.
-templ EventLogFullPage(view EventLogView) {
-	@Layout("Events - Fracturing.Space", "Campaigns") {
-		@EventLogPage(view)
+templ EventLogFullPage(view EventLogView, lang string, loc Localizer) {
+	@Layout(T(loc, "title.events"), "Campaigns", lang, loc) {
+		@EventLogPage(view, loc)
 	}
 }
 
 // EventLogPage renders the event log content.
-templ EventLogPage(view EventLogView) {
+templ EventLogPage(view EventLogView, loc Localizer) {
 	<h2>{view.CampaignName}</h2>
-	@CampaignSubNav(view.CampaignID, "events")
-	<h3>Event Log</h3>
-	<p>{ strconv.Itoa(int(view.TotalCount)) } events</p>
-	@EventFilterForm(view.CampaignID, view.SessionID, view.Filters)
+	@CampaignSubNav(view.CampaignID, "events", loc)
+	<h3>{T(loc, "events.heading")}</h3>
+	<p>{ T(loc, "events.count", view.TotalCount) }</p>
+	@EventFilterForm(view.CampaignID, view.SessionID, view.Filters, loc)
 	<div id="event-timeline-container">
-		@EventTimelineContent(view)
+		@EventTimelineContent(view, loc)
 	</div>
 }
 
 // EventFilterForm renders the filter controls for events.
-templ EventFilterForm(campaignID string, sessionID string, filters EventFilterOptions) {
+templ EventFilterForm(campaignID string, sessionID string, filters EventFilterOptions, loc Localizer) {
 	<form
 		class="border"
 		hx-get={ "/campaigns/" + campaignID + "/events/table" }
@@ -33,35 +32,35 @@ templ EventFilterForm(campaignID string, sessionID string, filters EventFilterOp
 	>
 		<div class="row">
 			<div class="sm-6 md-3 col">
-				<label for="event_type">Event Type</label>
+				<label for="event_type">{T(loc, "events.filter.event_type")}</label>
 				<select id="event_type" name="event_type">
-					for _, opt := range GetEventTypeOptions(filters.EventType) {
+					for _, opt := range GetEventTypeOptions(filters.EventType, loc) {
 						<option value={ opt.Value } selected?={ opt.Current }>{ opt.Label }</option>
 					}
 				</select>
 			</div>
 			<div class="sm-6 md-3 col">
-				<label for="actor_type">Actor Type</label>
+				<label for="actor_type">{T(loc, "events.filter.actor_type")}</label>
 				<select id="actor_type" name="actor_type">
-					for _, opt := range GetActorTypeOptions(filters.ActorType) {
+					for _, opt := range GetActorTypeOptions(filters.ActorType, loc) {
 						<option value={ opt.Value } selected?={ opt.Current }>{ opt.Label }</option>
 					}
 				</select>
 			</div>
 			<div class="sm-6 md-3 col">
-				<label for="entity_type">Entity Type</label>
+				<label for="entity_type">{T(loc, "events.filter.entity_type")}</label>
 				<select id="entity_type" name="entity_type">
-					for _, opt := range GetEntityTypeOptions(filters.EntityType) {
+					for _, opt := range GetEntityTypeOptions(filters.EntityType, loc) {
 						<option value={ opt.Value } selected?={ opt.Current }>{ opt.Label }</option>
 					}
 				</select>
 			</div>
 			<div class="sm-6 md-3 col">
-				<label for="start_date">From Date</label>
+				<label for="start_date">{T(loc, "events.filter.from_date")}</label>
 				<input type="date" id="start_date" name="start_date" value={ filters.StartDate }/>
 			</div>
 			<div class="sm-6 md-3 col">
-				<label for="end_date">To Date</label>
+				<label for="end_date">{T(loc, "events.filter.to_date")}</label>
 				<input type="date" id="end_date" name="end_date" value={ filters.EndDate }/>
 			</div>
 		</div>
@@ -69,31 +68,31 @@ templ EventFilterForm(campaignID string, sessionID string, filters EventFilterOp
 }
 
 // EventTimelineContent renders the event timeline with pagination.
-templ EventTimelineContent(view EventLogView) {
+templ EventTimelineContent(view EventLogView, loc Localizer) {
 	if len(view.Events) == 0 {
-		@EmptyState("No events found")
+		@EmptyState(T(loc, "events.empty"))
 	} else {
 		<table>
 			<thead>
 				<tr>
-					<th>Event</th>
-					<th>Actor</th>
-					<th>Entity</th>
-					<th>Time</th>
+					<th>{T(loc, "events.table.event")}</th>
+					<th>{T(loc, "events.table.actor")}</th>
+					<th>{T(loc, "events.table.entity")}</th>
+					<th>{T(loc, "events.table.time")}</th>
 				</tr>
 			</thead>
 			<tbody>
 				for _, event := range view.Events {
-					@EventTableRow(event)
+					@EventTableRow(event, loc)
 				}
 			</tbody>
 		</table>
-		@Pagination(view.NextToken, view.PrevToken, "/campaigns/"+view.CampaignID+"/events")
+		@Pagination(view.NextToken, view.PrevToken, "/campaigns/"+view.CampaignID+"/events", loc)
 	}
 }
 
 // EventTableRow renders a single event row in a table.
-templ EventTableRow(event EventRow) {
+templ EventTableRow(event EventRow, loc Localizer) {
 	<tr id={ "event-" + fmt.Sprintf("%d", event.Seq) }>
 		<td><strong>{ event.TypeDisplay }</strong></td>
 		<td>
@@ -112,7 +111,7 @@ templ EventTableRow(event EventRow) {
 		<tr class="payload-row">
 			<td colspan="4">
 				<details>
-					<summary><small>payload</small></summary>
+					<summary><small>{T(loc, "events.payload")}</small></summary>
 					<pre><code>{ event.PayloadJSON }</code></pre>
 				</details>
 			</td>
@@ -121,15 +120,15 @@ templ EventTableRow(event EventRow) {
 }
 
 // EventTimeline renders a simple event timeline (for embedding in other pages).
-templ EventTimeline(events []EventRow, campaignID string) {
+templ EventTimeline(events []EventRow, campaignID string, loc Localizer) {
 	if len(events) == 0 {
-		@EmptyState("No events yet")
+		@EmptyState(T(loc, "events.timeline.empty"))
 	} else {
 		<table>
 			<thead>
 				<tr>
-					<th>Event</th>
-					<th>Time</th>
+					<th>{T(loc, "events.table.event")}</th>
+					<th>{T(loc, "events.table.time")}</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -145,11 +144,11 @@ templ EventTimeline(events []EventRow, campaignID string) {
 }
 
 // EventTimelineItem renders a single event in the timeline (legacy, used by sessions).
-templ EventTimelineItem(event EventRow, campaignID string) {
-	@EventTableRow(event)
+templ EventTimelineItem(event EventRow, campaignID string, loc Localizer) {
+	@EventTableRow(event, loc)
 }
 
 // EventLogTableContent renders just the event table content (for HTMX updates).
-templ EventLogTableContent(view EventLogView) {
-	@EventTimelineContent(view)
+templ EventLogTableContent(view EventLogView, loc Localizer) {
+	@EventTimelineContent(view, loc)
 }

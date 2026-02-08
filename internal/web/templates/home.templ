@@ -1,8 +1,8 @@
 package templates
 
 // Home renders the base landing page (redirects to dashboard).
-templ Home() {
-	@Layout("Fracturing.Space", "Dashboard") {
-		@DashboardPage()
+templ Home(lang string, loc Localizer) {
+	@Layout(T(loc, "title.home"), "Dashboard", lang, loc) {
+		@DashboardPage(loc)
 	}
 }

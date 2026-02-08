@@ -1,9 +1,9 @@
 package templates
 
 // Layout wraps content in the base HTML shell with top navigation.
-templ Layout(title string, activePage string) {
+templ Layout(title string, activePage string, lang string, loc Localizer) {
 	<!DOCTYPE html>
-	<html lang="en" class="dark">
+	<html lang={ lang } class="dark">
 		<head>
 			<meta charset="utf-8">
 			<meta name="viewport" content="width=device-width, initial-scale=1">
@@ -13,7 +13,7 @@ templ Layout(title string, activePage string) {
 			<script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js"></script>
 		</head>
 		<body>
-			@TopNav(activePage)
+			@TopNav(activePage, lang, loc)
 			<div class="paper container margin-top" id="main">
 				{ children... }
 			</div>

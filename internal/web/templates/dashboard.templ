@@ -1,63 +1,63 @@
 package templates
 
 // DashboardFullPage renders the dashboard in the base layout.
-templ DashboardFullPage() {
-	@Layout("Dashboard - Fracturing.Space", "Dashboard") {
-		@DashboardPage()
+templ DashboardFullPage(lang string, loc Localizer) {
+	@Layout(T(loc, "title.dashboard"), "Dashboard", lang, loc) {
+		@DashboardPage(loc)
 	}
 }
 
 // DashboardPage renders the dashboard content.
-templ DashboardPage() {
-	<h2>Dashboard</h2>
-	@DashboardLoading()
+templ DashboardPage(loc Localizer) {
+	<h2>{T(loc, "dashboard.heading")}</h2>
+	@DashboardLoading(loc)
 }
 
 // DashboardLoading renders the HTMX loading placeholder.
-templ DashboardLoading() {
+templ DashboardLoading(loc Localizer) {
 	<div hx-get="/dashboard/content" hx-trigger="load" hx-swap="outerHTML">
-		<p>Loading dashboard...</p>
+		<p>{T(loc, "dashboard.loading")}</p>
 	</div>
 }
 
 // DashboardContent renders the main dashboard content.
-templ DashboardContent(stats DashboardStats, activities []ActivityEvent) {
+templ DashboardContent(stats DashboardStats, activities []ActivityEvent, loc Localizer) {
 	<div>
-		@DashboardStatsCards(stats)
-		<h3>Recent Activity</h3>
-		@RecentActivityFeed(activities)
+		@DashboardStatsCards(stats, loc)
+		<h3>{T(loc, "dashboard.recent_activity")}</h3>
+		@RecentActivityFeed(activities, loc)
 	</div>
 }
 
 // DashboardStatsCards renders the stat cards grid using PaperCSS flexbox.
-templ DashboardStatsCards(stats DashboardStats) {
+templ DashboardStatsCards(stats DashboardStats, loc Localizer) {
 	<div class="row">
 		<div class="sm-6 md-3 col">
-			@StatCard("Campaigns", stats.TotalCampaigns, "")
+			@StatCard(T(loc, "dashboard.stats.campaigns"), stats.TotalCampaigns, "")
 		</div>
 		<div class="sm-6 md-3 col">
-			@StatCard("Active Sessions", stats.ActiveSessions, "")
+			@StatCard(T(loc, "dashboard.stats.active_sessions"), stats.ActiveSessions, "")
 		</div>
 		<div class="sm-6 md-3 col">
-			@StatCard("Characters", stats.TotalCharacters, "")
+			@StatCard(T(loc, "dashboard.stats.characters"), stats.TotalCharacters, "")
 		</div>
 		<div class="sm-6 md-3 col">
-			@StatCard("Participants", stats.TotalParticipants, "")
+			@StatCard(T(loc, "dashboard.stats.participants"), stats.TotalParticipants, "")
 		</div>
 	</div>
 }
 
 // RecentActivityFeed renders a list of recent events.
-templ RecentActivityFeed(activities []ActivityEvent) {
+templ RecentActivityFeed(activities []ActivityEvent, loc Localizer) {
 	if len(activities) == 0 {
-		@EmptyState("No recent activity")
+		@EmptyState(T(loc, "dashboard.empty.recent_activity"))
 	} else {
 		<table class="table-hover">
 			<thead>
 				<tr>
-					<th>Campaign</th>
-					<th>Event</th>
-					<th>Time</th>
+					<th>{T(loc, "dashboard.table.campaign")}</th>
+					<th>{T(loc, "dashboard.table.event")}</th>
+					<th>{T(loc, "dashboard.table.time")}</th>
 				</tr>
 			</thead>
 			<tbody>

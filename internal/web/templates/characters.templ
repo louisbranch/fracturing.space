@@ -1,42 +1,42 @@
 package templates
 
 // CharactersListFullPage renders the characters list in the base layout.
-templ CharactersListFullPage(campaignID string, campaignName string) {
-	@Layout("Characters - Fracturing.Space", "Campaigns") {
-		@CharactersListPage(campaignID, campaignName)
+templ CharactersListFullPage(campaignID string, campaignName string, lang string, loc Localizer) {
+	@Layout(T(loc, "title.characters"), "Campaigns", lang, loc) {
+		@CharactersListPage(campaignID, campaignName, loc)
 	}
 }
 
 // CharactersListPage renders the characters list content.
-templ CharactersListPage(campaignID string, campaignName string) {
+templ CharactersListPage(campaignID string, campaignName string, loc Localizer) {
 	<h2>{campaignName}</h2>
-	@CampaignSubNav(campaignID, "characters")
-	<h3>Characters</h3>
-	@CharactersLoading(campaignID)
+	@CampaignSubNav(campaignID, "characters", loc)
+	<h3>{T(loc, "characters.heading")}</h3>
+	@CharactersLoading(campaignID, loc)
 }
 
 // CharactersLoading renders the HTMX loading placeholder.
-templ CharactersLoading(campaignID string) {
+templ CharactersLoading(campaignID string, loc Localizer) {
 	<div
 		hx-get={ "/campaigns/" + campaignID + "/characters/table" }
 		hx-trigger="load"
 		hx-swap="outerHTML"
 	>
-		<p>Loading characters...</p>
+		<p>{T(loc, "characters.loading")}</p>
 	</div>
 }
 
 // CharactersTable renders the characters table.
-templ CharactersTable(rows []CharacterRow, message string) {
+templ CharactersTable(rows []CharacterRow, message string, loc Localizer) {
 	if len(rows) == 0 {
 		@EmptyState(message)
 	} else {
 		<table class="table-hover">
 			<thead>
 				<tr>
-					<th>Name</th>
-					<th>Kind</th>
-					<th>Controller</th>
+					<th>{T(loc, "characters.table.name")}</th>
+					<th>{T(loc, "characters.table.kind")}</th>
+					<th>{T(loc, "characters.table.controller")}</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -61,14 +61,14 @@ templ CharactersTable(rows []CharacterRow, message string) {
 }
 
 // CharacterSheetFullPage renders the character sheet in the base layout.
-templ CharacterSheetFullPage(sheet CharacterSheetView) {
-	@Layout(sheet.Character.GetName() + " - Fracturing.Space", "Campaigns") {
-		@CharacterSheetPage(sheet)
+templ CharacterSheetFullPage(sheet CharacterSheetView, lang string, loc Localizer) {
+	@Layout(T(loc, "title.character_sheet", sheet.Character.GetName()), "Campaigns", lang, loc) {
+		@CharacterSheetPage(sheet, loc)
 	}
 }
 
 // CharacterSheetPage renders the character sheet content.
-templ CharacterSheetPage(sheet CharacterSheetView) {
+templ CharacterSheetPage(sheet CharacterSheetView, loc Localizer) {
 	<ul class="breadcrumb">
 		<li>
 			<a
@@ -77,7 +77,7 @@ templ CharacterSheetPage(sheet CharacterSheetView) {
 				hx-target="#main"
 				hx-swap="innerHTML"
 				hx-push-url="true"
-			>Campaigns</a>
+			>{T(loc, "nav.campaigns")}</a>
 		</li>
 		<li>
 			<a
@@ -95,32 +95,32 @@ templ CharacterSheetPage(sheet CharacterSheetView) {
 				hx-target="#main"
 				hx-swap="innerHTML"
 				hx-push-url="true"
-			>Characters</a>
+			>{T(loc, "characters.heading")}</a>
 		</li>
 		<li>{sheet.Character.GetName()}</li>
 	</ul>
 	<h2>{sheet.Character.GetName()}</h2>
-	<h3>Character Info</h3>
+	<h3>{T(loc, "characters.sheet.info")}</h3>
 	<table>
 		<tbody>
-			<tr><td><strong>ID</strong></td><td><code>{sheet.Character.GetId()}</code></td></tr>
-			<tr><td><strong>Name</strong></td><td>{sheet.Character.GetName()}</td></tr>
-			<tr><td><strong>Kind</strong></td><td>@StatusBadge(formatCharacterKind(sheet.Character.GetKind()), "secondary")</td></tr>
-			<tr><td><strong>Controller</strong></td><td>{sheet.Controller}</td></tr>
+			<tr><td><strong>{T(loc, "campaigns.detail.id")}</strong></td><td><code>{sheet.Character.GetId()}</code></td></tr>
+			<tr><td><strong>{T(loc, "campaigns.detail.name")}</strong></td><td>{sheet.Character.GetName()}</td></tr>
+			<tr><td><strong>{T(loc, "characters.table.kind")}</strong></td><td>@StatusBadge(formatCharacterKind(sheet.Character.GetKind(), loc), "secondary")</td></tr>
+			<tr><td><strong>{T(loc, "characters.table.controller")}</strong></td><td>{sheet.Controller}</td></tr>
 			if sheet.Character.GetNotes() != "" {
-				<tr><td><strong>Notes</strong></td><td>{sheet.Character.GetNotes()}</td></tr>
+				<tr><td><strong>{T(loc, "characters.sheet.notes")}</strong></td><td>{sheet.Character.GetNotes()}</td></tr>
 			}
-			<tr><td><strong>Created</strong></td><td>{sheet.CreatedAt}</td></tr>
-			<tr><td><strong>Updated</strong></td><td>{sheet.UpdatedAt}</td></tr>
+			<tr><td><strong>{T(loc, "characters.sheet.created")}</strong></td><td>{sheet.CreatedAt}</td></tr>
+			<tr><td><strong>{T(loc, "characters.sheet.updated")}</strong></td><td>{sheet.UpdatedAt}</td></tr>
 		</tbody>
 	</table>
 	if len(sheet.RecentEvents) > 0 {
-		<h3>Recent Activity</h3>
+		<h3>{T(loc, "characters.sheet.recent_activity")}</h3>
 		<table>
 			<thead>
 				<tr>
-					<th>Event</th>
-					<th>Time</th>
+					<th>{T(loc, "characters.sheet.event")}</th>
+					<th>{T(loc, "characters.sheet.time")}</th>
 				</tr>
 			</thead>
 			<tbody>

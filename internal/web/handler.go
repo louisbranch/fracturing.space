@@ -11,7 +11,9 @@ import (
 	"github.com/a-h/templ"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/state/v1"
+	"github.com/louisbranch/fracturing.space/internal/web/i18n"
 	"github.com/louisbranch/fracturing.space/internal/web/templates"
+	"golang.org/x/text/message"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -47,6 +49,14 @@ func NewHandler(clientProvider GRPCClientProvider) http.Handler {
 	return handler.routes()
 }
 
+func (h *Handler) localizer(w http.ResponseWriter, r *http.Request) (*message.Printer, string) {
+	tag, persist := i18n.ResolveTag(r)
+	if persist {
+		i18n.SetLanguageCookie(w, tag)
+	}
+	return i18n.Printer(tag), tag.String()
+}
+
 // routes wires the HTTP routes for the web handler.
 func (h *Handler) routes() http.Handler {
 	mux := http.NewServeMux()
@@ -61,9 +71,10 @@ func (h *Handler) routes() http.Handler {
 
 // handleCampaignsTable returns the first page of campaign rows for HTMX.
 func (h *Handler) handleCampaignsTable(w http.ResponseWriter, r *http.Request) {
+	loc, _ := h.localizer(w, r)
 	campaignClient := h.campaignClient()
 	if campaignClient == nil {
-		h.renderCampaignTable(w, r, nil, "Campaign service unavailable.")
+		h.renderCampaignTable(w, r, nil, loc.Sprintf("error.campaign_service_unavailable"), loc)
 		return
 	}
 
@@ -73,28 +84,29 @@ func (h *Handler) handleCampaignsTable(w http.ResponseWriter, r *http.Request) {
 	response, err := campaignClient.ListCampaigns(ctx, &statev1.ListCampaignsRequest{})
 	if err != nil {
 		log.Printf("list campaigns: %v", err)
-		h.renderCampaignTable(w, r, nil, "Campaigns unavailable.")
+		h.renderCampaignTable(w, r, nil, loc.Sprintf("error.campaigns_unavailable"), loc)
 		return
 	}
 
 	campaigns := response.GetCampaigns()
 	if len(campaigns) == 0 {
-		h.renderCampaignTable(w, r, nil, "No campaigns yet.")
+		h.renderCampaignTable(w, r, nil, loc.Sprintf("error.no_campaigns"), loc)
 		return
 	}
 
-	rows := buildCampaignRows(campaigns)
-	h.renderCampaignTable(w, r, rows, "")
+	rows := buildCampaignRows(campaigns, loc)
+	h.renderCampaignTable(w, r, rows, "", loc)
 }
 
 // handleCampaignsPage renders the campaigns page fragment or full layout.
 func (h *Handler) handleCampaignsPage(w http.ResponseWriter, r *http.Request) {
+	loc, lang := h.localizer(w, r)
 	if isHTMXRequest(r) {
-		templ.Handler(templates.CampaignsPage()).ServeHTTP(w, r)
+		templ.Handler(templates.CampaignsPage(loc)).ServeHTTP(w, r)
 		return
 	}
 
-	templ.Handler(templates.CampaignsFullPage()).ServeHTTP(w, r)
+	templ.Handler(templates.CampaignsFullPage(lang, loc)).ServeHTTP(w, r)
 }
 
 // handleCampaignRoutes dispatches detail and session subroutes.
@@ -175,9 +187,10 @@ func (h *Handler) handleCampaignRoutes(w http.ResponseWriter, r *http.Request) {
 
 // handleCampaignDetail renders the single-campaign detail content.
 func (h *Handler) handleCampaignDetail(w http.ResponseWriter, r *http.Request, campaignID string) {
+	loc, lang := h.localizer(w, r)
 	campaignClient := h.campaignClient()
 	if campaignClient == nil {
-		h.renderCampaignDetail(w, r, templates.CampaignDetail{}, "Campaign service unavailable.")
+		h.renderCampaignDetail(w, r, templates.CampaignDetail{}, loc.Sprintf("error.campaign_service_unavailable"), lang, loc)
 		return
 	}
 
@@ -187,36 +200,38 @@ func (h *Handler) handleCampaignDetail(w http.ResponseWriter, r *http.Request, c
 	response, err := campaignClient.GetCampaign(ctx, &statev1.GetCampaignRequest{CampaignId: campaignID})
 	if err != nil {
 		log.Printf("get campaign: %v", err)
-		h.renderCampaignDetail(w, r, templates.CampaignDetail{}, "Campaign unavailable.")
+		h.renderCampaignDetail(w, r, templates.CampaignDetail{}, loc.Sprintf("error.campaign_unavailable"), lang, loc)
 		return
 	}
 
 	campaign := response.GetCampaign()
 	if campaign == nil {
-		h.renderCampaignDetail(w, r, templates.CampaignDetail{}, "Campaign not found.")
+		h.renderCampaignDetail(w, r, templates.CampaignDetail{}, loc.Sprintf("error.campaign_not_found"), lang, loc)
 		return
 	}
 
-	detail := buildCampaignDetail(campaign)
-	h.renderCampaignDetail(w, r, detail, "")
+	detail := buildCampaignDetail(campaign, loc)
+	h.renderCampaignDetail(w, r, detail, "", lang, loc)
 }
 
 // handleSessionsList renders the sessions list page.
 func (h *Handler) handleSessionsList(w http.ResponseWriter, r *http.Request, campaignID string) {
-	campaignName := getCampaignName(h, r, campaignID)
+	loc, lang := h.localizer(w, r)
+	campaignName := getCampaignName(h, r, campaignID, loc)
 
 	if isHTMXRequest(r) {
-		templ.Handler(templates.SessionsListPage(campaignID, campaignName)).ServeHTTP(w, r)
+		templ.Handler(templates.SessionsListPage(campaignID, campaignName, loc)).ServeHTTP(w, r)
 		return
 	}
-	templ.Handler(templates.SessionsListFullPage(campaignID, campaignName)).ServeHTTP(w, r)
+	templ.Handler(templates.SessionsListFullPage(campaignID, campaignName, lang, loc)).ServeHTTP(w, r)
 }
 
 // handleSessionsTable renders the sessions table via HTMX.
 func (h *Handler) handleSessionsTable(w http.ResponseWriter, r *http.Request, campaignID string) {
+	loc, _ := h.localizer(w, r)
 	sessionClient := h.sessionClient()
 	if sessionClient == nil {
-		h.renderCampaignSessions(w, r, nil, "Session service unavailable.")
+		h.renderCampaignSessions(w, r, nil, loc.Sprintf("error.session_service_unavailable"), loc)
 		return
 	}
 
@@ -229,38 +244,38 @@ func (h *Handler) handleSessionsTable(w http.ResponseWriter, r *http.Request, ca
 	})
 	if err != nil {
 		log.Printf("list sessions: %v", err)
-		h.renderCampaignSessions(w, r, nil, "Sessions unavailable.")
+		h.renderCampaignSessions(w, r, nil, loc.Sprintf("error.sessions_unavailable"), loc)
 		return
 	}
 
 	sessions := response.GetSessions()
 	if len(sessions) == 0 {
-		h.renderCampaignSessions(w, r, nil, "No sessions yet.")
+		h.renderCampaignSessions(w, r, nil, loc.Sprintf("error.no_sessions"), loc)
 		return
 	}
 
-	rows := buildCampaignSessionRows(sessions)
-	h.renderCampaignSessions(w, r, rows, "")
+	rows := buildCampaignSessionRows(sessions, loc)
+	h.renderCampaignSessions(w, r, rows, "", loc)
 }
 
 // renderCampaignTable renders a campaign table with optional rows and message.
-func (h *Handler) renderCampaignTable(w http.ResponseWriter, r *http.Request, rows []templates.CampaignRow, message string) {
-	templ.Handler(templates.CampaignsTable(rows, message)).ServeHTTP(w, r)
+func (h *Handler) renderCampaignTable(w http.ResponseWriter, r *http.Request, rows []templates.CampaignRow, message string, loc *message.Printer) {
+	templ.Handler(templates.CampaignsTable(rows, message, loc)).ServeHTTP(w, r)
 }
 
 // renderCampaignDetail renders the campaign detail fragment or full layout.
-func (h *Handler) renderCampaignDetail(w http.ResponseWriter, r *http.Request, detail templates.CampaignDetail, message string) {
+func (h *Handler) renderCampaignDetail(w http.ResponseWriter, r *http.Request, detail templates.CampaignDetail, message string, lang string, loc *message.Printer) {
 	if isHTMXRequest(r) {
-		templ.Handler(templates.CampaignDetailPage(detail, message)).ServeHTTP(w, r)
+		templ.Handler(templates.CampaignDetailPage(detail, message, loc)).ServeHTTP(w, r)
 		return
 	}
 
-	templ.Handler(templates.CampaignDetailFullPage(detail, message)).ServeHTTP(w, r)
+	templ.Handler(templates.CampaignDetailFullPage(detail, message, lang, loc)).ServeHTTP(w, r)
 }
 
 // renderCampaignSessions renders the session list fragment.
-func (h *Handler) renderCampaignSessions(w http.ResponseWriter, r *http.Request, rows []templates.CampaignSessionRow, message string) {
-	templ.Handler(templates.CampaignSessionsList(rows, message)).ServeHTTP(w, r)
+func (h *Handler) renderCampaignSessions(w http.ResponseWriter, r *http.Request, rows []templates.CampaignSessionRow, message string, loc *message.Printer) {
+	templ.Handler(templates.CampaignSessionsList(rows, message, loc)).ServeHTTP(w, r)
 }
 
 // campaignClient returns the currently configured campaign client.
@@ -334,7 +349,7 @@ func splitPathParts(path string) []string {
 }
 
 // buildCampaignRows formats campaign rows for the table.
-func buildCampaignRows(campaigns []*statev1.Campaign) []templates.CampaignRow {
+func buildCampaignRows(campaigns []*statev1.Campaign, loc *message.Printer) []templates.CampaignRow {
 	rows := make([]templates.CampaignRow, 0, len(campaigns))
 	for _, campaign := range campaigns {
 		if campaign == nil {
@@ -343,8 +358,8 @@ func buildCampaignRows(campaigns []*statev1.Campaign) []templates.CampaignRow {
 		rows = append(rows, templates.CampaignRow{
 			ID:               campaign.GetId(),
 			Name:             campaign.GetName(),
-			System:           formatGameSystem(campaign.GetSystem()),
-			GMMode:           formatGmMode(campaign.GetGmMode()),
+			System:           formatGameSystem(campaign.GetSystem(), loc),
+			GMMode:           formatGmMode(campaign.GetGmMode(), loc),
 			ParticipantCount: strconv.FormatInt(int64(campaign.GetParticipantCount()), 10),
 			CharacterCount:   strconv.FormatInt(int64(campaign.GetCharacterCount()), 10),
 			ThemePrompt:      truncateText(campaign.GetThemePrompt(), campaignThemePromptLimit),
@@ -355,15 +370,15 @@ func buildCampaignRows(campaigns []*statev1.Campaign) []templates.CampaignRow {
 }
 
 // buildCampaignDetail formats a campaign into detail view data.
-func buildCampaignDetail(campaign *statev1.Campaign) templates.CampaignDetail {
+func buildCampaignDetail(campaign *statev1.Campaign, loc *message.Printer) templates.CampaignDetail {
 	if campaign == nil {
 		return templates.CampaignDetail{}
 	}
 	return templates.CampaignDetail{
 		ID:               campaign.GetId(),
 		Name:             campaign.GetName(),
-		System:           formatGameSystem(campaign.GetSystem()),
-		GMMode:           formatGmMode(campaign.GetGmMode()),
+		System:           formatGameSystem(campaign.GetSystem(), loc),
+		GMMode:           formatGmMode(campaign.GetGmMode(), loc),
 		ParticipantCount: strconv.FormatInt(int64(campaign.GetParticipantCount()), 10),
 		CharacterCount:   strconv.FormatInt(int64(campaign.GetCharacterCount()), 10),
 		ThemePrompt:      campaign.GetThemePrompt(),
@@ -373,7 +388,7 @@ func buildCampaignDetail(campaign *statev1.Campaign) templates.CampaignDetail {
 }
 
 // buildCampaignSessionRows formats session rows for the detail view.
-func buildCampaignSessionRows(sessions []*statev1.Session) []templates.CampaignSessionRow {
+func buildCampaignSessionRows(sessions []*statev1.Session, loc *message.Printer) []templates.CampaignSessionRow {
 	rows := make([]templates.CampaignSessionRow, 0, len(sessions))
 	for _, session := range sessions {
 		if session == nil {
@@ -387,7 +402,7 @@ func buildCampaignSessionRows(sessions []*statev1.Session) []templates.CampaignS
 			ID:          session.GetId(),
 			CampaignID:  session.GetCampaignId(),
 			Name:        session.GetName(),
-			Status:      formatSessionStatus(session.GetStatus()),
+			Status:      formatSessionStatus(session.GetStatus(), loc),
 			StatusBadge: statusBadge,
 			StartedAt:   formatTimestamp(session.GetStartedAt()),
 		}
@@ -400,37 +415,37 @@ func buildCampaignSessionRows(sessions []*statev1.Session) []templates.CampaignS
 }
 
 // formatGmMode returns a display label for a GM mode enum.
-func formatGmMode(mode statev1.GmMode) string {
+func formatGmMode(mode statev1.GmMode, loc *message.Printer) string {
 	switch mode {
 	case statev1.GmMode_HUMAN:
-		return "Human"
+		return loc.Sprintf("label.human")
 	case statev1.GmMode_AI:
-		return "AI"
+		return loc.Sprintf("label.ai")
 	case statev1.GmMode_HYBRID:
-		return "Hybrid"
+		return loc.Sprintf("label.hybrid")
 	default:
-		return "Unspecified"
+		return loc.Sprintf("label.unspecified")
 	}
 }
 
-func formatGameSystem(system commonv1.GameSystem) string {
+func formatGameSystem(system commonv1.GameSystem, loc *message.Printer) string {
 	switch system {
 	case commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART:
-		return "Daggerheart"
+		return loc.Sprintf("label.daggerheart")
 	default:
-		return "Unspecified"
+		return loc.Sprintf("label.unspecified")
 	}
 }
 
 // formatSessionStatus returns a display label for a session status.
-func formatSessionStatus(status statev1.SessionStatus) string {
+func formatSessionStatus(status statev1.SessionStatus, loc *message.Printer) string {
 	switch status {
 	case statev1.SessionStatus_SESSION_ACTIVE:
-		return "Active"
+		return loc.Sprintf("label.active")
 	case statev1.SessionStatus_SESSION_ENDED:
-		return "Ended"
+		return loc.Sprintf("label.ended")
 	default:
-		return "Unspecified"
+		return loc.Sprintf("label.unspecified")
 	}
 }
 
@@ -468,17 +483,19 @@ func (h *Handler) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+	loc, lang := h.localizer(w, r)
 	if isHTMXRequest(r) {
-		templ.Handler(templates.DashboardPage()).ServeHTTP(w, r)
+		templ.Handler(templates.DashboardPage(loc)).ServeHTTP(w, r)
 		return
 	}
-	templ.Handler(templates.DashboardFullPage()).ServeHTTP(w, r)
+	templ.Handler(templates.DashboardFullPage(lang, loc)).ServeHTTP(w, r)
 }
 
 // handleDashboardContent loads and renders the dashboard statistics and recent activity.
 func (h *Handler) handleDashboardContent(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), campaignsRequestTimeout)
 	defer cancel()
+	loc, _ := h.localizer(w, r)
 
 	stats := templates.DashboardStats{
 		TotalCampaigns:    "0",
@@ -588,67 +605,67 @@ func (h *Handler) handleDashboardContent(w http.ResponseWriter, r *http.Request)
 					activities = append(activities, templates.ActivityEvent{
 						CampaignID:   evt.GetCampaignId(),
 						CampaignName: allEvents[i].campaignName,
-						EventType:    formatEventType(evt.GetType()),
+						EventType:    formatEventType(evt.GetType(), loc),
 						Timestamp:    formatTimestamp(evt.GetTs()),
-						Description:  formatEventDescription(evt),
+						Description:  formatEventDescription(evt, loc),
 					})
 				}
 			}
 		}
 	}
 
-	templ.Handler(templates.DashboardContent(stats, activities)).ServeHTTP(w, r)
+	templ.Handler(templates.DashboardContent(stats, activities, loc)).ServeHTTP(w, r)
 }
 
 // formatEventType returns a display label for an event type string.
-func formatEventType(eventType string) string {
+func formatEventType(eventType string, loc *message.Printer) string {
 	switch eventType {
 	// Campaign events
 	case "campaign.created":
-		return "Campaign Created"
+		return loc.Sprintf("event.campaign_created")
 	case "campaign.forked":
-		return "Campaign Forked"
+		return loc.Sprintf("event.campaign_forked")
 	case "campaign.status_changed":
-		return "Campaign Status Changed"
+		return loc.Sprintf("event.campaign_status_changed")
 	case "campaign.updated":
-		return "Campaign Updated"
+		return loc.Sprintf("event.campaign_updated")
 	// Participant events
 	case "participant.joined":
-		return "Participant Joined"
+		return loc.Sprintf("event.participant_joined")
 	case "participant.left":
-		return "Participant Left"
+		return loc.Sprintf("event.participant_left")
 	case "participant.updated":
-		return "Participant Updated"
+		return loc.Sprintf("event.participant_updated")
 	// Character events
 	case "character.created":
-		return "Character Created"
+		return loc.Sprintf("event.character_created")
 	case "character.deleted":
-		return "Character Deleted"
+		return loc.Sprintf("event.character_deleted")
 	case "character.updated":
-		return "Character Updated"
+		return loc.Sprintf("event.character_updated")
 	case "character.profile_updated":
-		return "Profile Updated"
+		return loc.Sprintf("event.character_profile_updated")
 	case "character.controller_assigned":
-		return "Controller Assigned"
+		return loc.Sprintf("event.character_controller_assigned")
 	// Snapshot events
 	case "chronicle.character_state_changed":
-		return "Character State Changed"
+		return loc.Sprintf("event.chronicle_character_state_changed")
 	case "chronicle.gm_fear_changed":
-		return "GM Fear Changed"
+		return loc.Sprintf("event.chronicle_gm_fear_changed")
 	// Session events
 	case "session.started":
-		return "Session Started"
+		return loc.Sprintf("event.session_started")
 	case "session.ended":
-		return "Session Ended"
+		return loc.Sprintf("event.session_ended")
 	// Action events
 	case "action.roll_resolved":
-		return "Roll Resolved"
+		return loc.Sprintf("event.action_roll_resolved")
 	case "action.outcome_applied":
-		return "Outcome Applied"
+		return loc.Sprintf("event.action_outcome_applied")
 	case "action.outcome_rejected":
-		return "Outcome Rejected"
+		return loc.Sprintf("event.action_outcome_rejected")
 	case "action.note_added":
-		return "Note Added"
+		return loc.Sprintf("event.action_note_added")
 	default:
 		// Fallback: capitalize and format unknown types
 		parts := strings.Split(eventType, ".")
@@ -664,29 +681,31 @@ func formatEventType(eventType string) string {
 }
 
 // formatEventDescription generates a human-readable event description.
-func formatEventDescription(event *statev1.Event) string {
+func formatEventDescription(event *statev1.Event, loc *message.Printer) string {
 	if event == nil {
 		return ""
 	}
-	return formatEventType(event.GetType())
+	return formatEventType(event.GetType(), loc)
 }
 
 // handleCharactersList renders the characters list page.
 func (h *Handler) handleCharactersList(w http.ResponseWriter, r *http.Request, campaignID string) {
-	campaignName := getCampaignName(h, r, campaignID)
+	loc, lang := h.localizer(w, r)
+	campaignName := getCampaignName(h, r, campaignID, loc)
 
 	if isHTMXRequest(r) {
-		templ.Handler(templates.CharactersListPage(campaignID, campaignName)).ServeHTTP(w, r)
+		templ.Handler(templates.CharactersListPage(campaignID, campaignName, loc)).ServeHTTP(w, r)
 		return
 	}
-	templ.Handler(templates.CharactersListFullPage(campaignID, campaignName)).ServeHTTP(w, r)
+	templ.Handler(templates.CharactersListFullPage(campaignID, campaignName, lang, loc)).ServeHTTP(w, r)
 }
 
 // handleCharactersTable renders the characters table.
 func (h *Handler) handleCharactersTable(w http.ResponseWriter, r *http.Request, campaignID string) {
+	loc, _ := h.localizer(w, r)
 	characterClient := h.characterClient()
 	if characterClient == nil {
-		h.renderCharactersTable(w, r, nil, "Character service unavailable.")
+		h.renderCharactersTable(w, r, nil, loc.Sprintf("error.character_service_unavailable"), loc)
 		return
 	}
 
@@ -699,25 +718,26 @@ func (h *Handler) handleCharactersTable(w http.ResponseWriter, r *http.Request, 
 	})
 	if err != nil {
 		log.Printf("list characters: %v", err)
-		h.renderCharactersTable(w, r, nil, "Characters unavailable.")
+		h.renderCharactersTable(w, r, nil, loc.Sprintf("error.characters_unavailable"), loc)
 		return
 	}
 
 	characters := response.GetCharacters()
 	if len(characters) == 0 {
-		h.renderCharactersTable(w, r, nil, "No characters yet.")
+		h.renderCharactersTable(w, r, nil, loc.Sprintf("error.no_characters"), loc)
 		return
 	}
 
-	rows := buildCharacterRows(characters)
-	h.renderCharactersTable(w, r, rows, "")
+	rows := buildCharacterRows(characters, loc)
+	h.renderCharactersTable(w, r, rows, "", loc)
 }
 
 // handleCharacterSheet renders the character sheet page.
 func (h *Handler) handleCharacterSheet(w http.ResponseWriter, r *http.Request, campaignID string, characterID string) {
+	loc, lang := h.localizer(w, r)
 	characterClient := h.characterClient()
 	if characterClient == nil {
-		http.Error(w, "Character service unavailable", http.StatusServiceUnavailable)
+		http.Error(w, loc.Sprintf("error.character_service_unavailable"), http.StatusServiceUnavailable)
 		return
 	}
 
@@ -731,18 +751,18 @@ func (h *Handler) handleCharacterSheet(w http.ResponseWriter, r *http.Request, c
 	})
 	if err != nil {
 		log.Printf("get character sheet: %v", err)
-		http.Error(w, "Character unavailable", http.StatusNotFound)
+		http.Error(w, loc.Sprintf("error.character_unavailable"), http.StatusNotFound)
 		return
 	}
 
 	character := response.GetCharacter()
 	if character == nil {
-		http.Error(w, "Character not found", http.StatusNotFound)
+		http.Error(w, loc.Sprintf("error.character_not_found"), http.StatusNotFound)
 		return
 	}
 
 	// Get campaign name
-	campaignName := getCampaignName(h, r, campaignID)
+	campaignName := getCampaignName(h, r, campaignID, loc)
 
 	// Get recent events for this character
 	var recentEvents []templates.EventRow
@@ -758,9 +778,9 @@ func (h *Handler) handleCharacterSheet(w http.ResponseWriter, r *http.Request, c
 				if event != nil {
 					recentEvents = append(recentEvents, templates.EventRow{
 						Seq:         event.GetSeq(),
-						Type:        formatEventType(event.GetType()),
+						Type:        formatEventType(event.GetType(), loc),
 						Timestamp:   formatTimestamp(event.GetTs()),
-						Description: formatEventDescription(event),
+						Description: formatEventDescription(event, loc),
 						PayloadJSON: string(event.GetPayloadJson()),
 					})
 				}
@@ -768,22 +788,22 @@ func (h *Handler) handleCharacterSheet(w http.ResponseWriter, r *http.Request, c
 		}
 	}
 
-	sheet := buildCharacterSheet(campaignID, campaignName, character, recentEvents)
+	sheet := buildCharacterSheet(campaignID, campaignName, character, recentEvents, loc)
 
 	if isHTMXRequest(r) {
-		templ.Handler(templates.CharacterSheetPage(sheet)).ServeHTTP(w, r)
+		templ.Handler(templates.CharacterSheetPage(sheet, loc)).ServeHTTP(w, r)
 		return
 	}
-	templ.Handler(templates.CharacterSheetFullPage(sheet)).ServeHTTP(w, r)
+	templ.Handler(templates.CharacterSheetFullPage(sheet, lang, loc)).ServeHTTP(w, r)
 }
 
 // renderCharactersTable renders the characters table component.
-func (h *Handler) renderCharactersTable(w http.ResponseWriter, r *http.Request, rows []templates.CharacterRow, message string) {
-	templ.Handler(templates.CharactersTable(rows, message)).ServeHTTP(w, r)
+func (h *Handler) renderCharactersTable(w http.ResponseWriter, r *http.Request, rows []templates.CharacterRow, message string, loc *message.Printer) {
+	templ.Handler(templates.CharactersTable(rows, message, loc)).ServeHTTP(w, r)
 }
 
 // buildCharacterRows formats character rows for the table.
-func buildCharacterRows(characters []*statev1.Character) []templates.CharacterRow {
+func buildCharacterRows(characters []*statev1.Character, loc *message.Printer) []templates.CharacterRow {
 	rows := make([]templates.CharacterRow, 0, len(characters))
 	for _, character := range characters {
 		if character == nil {
@@ -791,14 +811,14 @@ func buildCharacterRows(characters []*statev1.Character) []templates.CharacterRo
 		}
 
 		// Format controller
-		controller := "Unknown"
+		controller := loc.Sprintf("label.unknown")
 		// TODO: Get controller information (requires join with participant data)
 
 		rows = append(rows, templates.CharacterRow{
 			ID:         character.GetId(),
 			CampaignID: character.GetCampaignId(),
 			Name:       character.GetName(),
-			Kind:       formatCharacterKind(character.GetKind()),
+			Kind:       formatCharacterKind(character.GetKind(), loc),
 			Controller: controller,
 		})
 	}
@@ -806,12 +826,12 @@ func buildCharacterRows(characters []*statev1.Character) []templates.CharacterRo
 }
 
 // buildCharacterSheet formats character sheet data.
-func buildCharacterSheet(campaignID, campaignName string, character *statev1.Character, recentEvents []templates.EventRow) templates.CharacterSheetView {
+func buildCharacterSheet(campaignID, campaignName string, character *statev1.Character, recentEvents []templates.EventRow, loc *message.Printer) templates.CharacterSheetView {
 	return templates.CharacterSheetView{
 		CampaignID:   campaignID,
 		CampaignName: campaignName,
 		Character:    character,
-		Controller:   "Unknown",
+		Controller:   loc.Sprintf("label.unknown"),
 		CreatedAt:    formatTimestamp(character.GetCreatedAt()),
 		UpdatedAt:    formatTimestamp(character.GetUpdatedAt()),
 		RecentEvents: recentEvents,
@@ -819,22 +839,22 @@ func buildCharacterSheet(campaignID, campaignName string, character *statev1.Cha
 }
 
 // formatCharacterKind returns a display label for a character kind.
-func formatCharacterKind(kind statev1.CharacterKind) string {
+func formatCharacterKind(kind statev1.CharacterKind, loc *message.Printer) string {
 	switch kind {
 	case statev1.CharacterKind_PC:
-		return "PC"
+		return loc.Sprintf("label.pc")
 	case statev1.CharacterKind_NPC:
-		return "NPC"
+		return loc.Sprintf("label.npc")
 	default:
-		return "Unspecified"
+		return loc.Sprintf("label.unspecified")
 	}
 }
 
 // getCampaignName fetches the campaign name by ID.
-func getCampaignName(h *Handler, r *http.Request, campaignID string) string {
+func getCampaignName(h *Handler, r *http.Request, campaignID string, loc *message.Printer) string {
 	campaignClient := h.campaignClient()
 	if campaignClient == nil {
-		return "Campaign"
+		return loc.Sprintf("label.campaign")
 	}
 
 	ctx, cancel := context.WithTimeout(r.Context(), campaignsRequestTimeout)
@@ -842,7 +862,7 @@ func getCampaignName(h *Handler, r *http.Request, campaignID string) string {
 
 	response, err := campaignClient.GetCampaign(ctx, &statev1.GetCampaignRequest{CampaignId: campaignID})
 	if err != nil || response == nil || response.GetCampaign() == nil {
-		return "Campaign"
+		return loc.Sprintf("label.campaign")
 	}
 
 	return response.GetCampaign().GetName()
@@ -850,20 +870,22 @@ func getCampaignName(h *Handler, r *http.Request, campaignID string) string {
 
 // handleParticipantsList renders the participants list page.
 func (h *Handler) handleParticipantsList(w http.ResponseWriter, r *http.Request, campaignID string) {
-	campaignName := getCampaignName(h, r, campaignID)
+	loc, lang := h.localizer(w, r)
+	campaignName := getCampaignName(h, r, campaignID, loc)
 
 	if isHTMXRequest(r) {
-		templ.Handler(templates.ParticipantsListPage(campaignID, campaignName)).ServeHTTP(w, r)
+		templ.Handler(templates.ParticipantsListPage(campaignID, campaignName, loc)).ServeHTTP(w, r)
 		return
 	}
-	templ.Handler(templates.ParticipantsListFullPage(campaignID, campaignName)).ServeHTTP(w, r)
+	templ.Handler(templates.ParticipantsListFullPage(campaignID, campaignName, lang, loc)).ServeHTTP(w, r)
 }
 
 // handleParticipantsTable renders the participants table.
 func (h *Handler) handleParticipantsTable(w http.ResponseWriter, r *http.Request, campaignID string) {
+	loc, _ := h.localizer(w, r)
 	participantClient := h.participantClient()
 	if participantClient == nil {
-		h.renderParticipantsTable(w, r, nil, "Participant service unavailable.")
+		h.renderParticipantsTable(w, r, nil, loc.Sprintf("error.participant_service_unavailable"), loc)
 		return
 	}
 
@@ -875,35 +897,35 @@ func (h *Handler) handleParticipantsTable(w http.ResponseWriter, r *http.Request
 	})
 	if err != nil {
 		log.Printf("list participants: %v", err)
-		h.renderParticipantsTable(w, r, nil, "Participants unavailable.")
+		h.renderParticipantsTable(w, r, nil, loc.Sprintf("error.participants_unavailable"), loc)
 		return
 	}
 
 	participants := response.GetParticipants()
 	if len(participants) == 0 {
-		h.renderParticipantsTable(w, r, nil, "No participants yet.")
+		h.renderParticipantsTable(w, r, nil, loc.Sprintf("error.no_participants"), loc)
 		return
 	}
 
-	rows := buildParticipantRows(participants)
-	h.renderParticipantsTable(w, r, rows, "")
+	rows := buildParticipantRows(participants, loc)
+	h.renderParticipantsTable(w, r, rows, "", loc)
 }
 
 // renderParticipantsTable renders the participants table component.
-func (h *Handler) renderParticipantsTable(w http.ResponseWriter, r *http.Request, rows []templates.ParticipantRow, message string) {
-	templ.Handler(templates.ParticipantsTable(rows, message)).ServeHTTP(w, r)
+func (h *Handler) renderParticipantsTable(w http.ResponseWriter, r *http.Request, rows []templates.ParticipantRow, message string, loc *message.Printer) {
+	templ.Handler(templates.ParticipantsTable(rows, message, loc)).ServeHTTP(w, r)
 }
 
 // buildParticipantRows formats participant rows for the table.
-func buildParticipantRows(participants []*statev1.Participant) []templates.ParticipantRow {
+func buildParticipantRows(participants []*statev1.Participant, loc *message.Printer) []templates.ParticipantRow {
 	rows := make([]templates.ParticipantRow, 0, len(participants))
 	for _, participant := range participants {
 		if participant == nil {
 			continue
 		}
 
-		role, roleVariant := formatParticipantRole(participant.GetRole())
-		controller, controllerVariant := formatParticipantController(participant.GetController())
+		role, roleVariant := formatParticipantRole(participant.GetRole(), loc)
+		controller, controllerVariant := formatParticipantController(participant.GetController(), loc)
 
 		rows = append(rows, templates.ParticipantRow{
 			ID:                participant.GetId(),
@@ -919,34 +941,35 @@ func buildParticipantRows(participants []*statev1.Participant) []templates.Parti
 }
 
 // formatParticipantRole returns a display label and variant for a participant role.
-func formatParticipantRole(role statev1.ParticipantRole) (string, string) {
+func formatParticipantRole(role statev1.ParticipantRole, loc *message.Printer) (string, string) {
 	switch role {
 	case statev1.ParticipantRole_GM:
-		return "GM", "info"
+		return loc.Sprintf("label.gm"), "info"
 	case statev1.ParticipantRole_PLAYER:
-		return "Player", "success"
+		return loc.Sprintf("label.player"), "success"
 	default:
-		return "Unspecified", "secondary"
+		return loc.Sprintf("label.unspecified"), "secondary"
 	}
 }
 
 // formatParticipantController returns a display label and variant for a controller type.
-func formatParticipantController(controller statev1.Controller) (string, string) {
+func formatParticipantController(controller statev1.Controller, loc *message.Printer) (string, string) {
 	switch controller {
 	case statev1.Controller_CONTROLLER_HUMAN:
-		return "Human", "success"
+		return loc.Sprintf("label.human"), "success"
 	case statev1.Controller_CONTROLLER_AI:
-		return "AI", "info"
+		return loc.Sprintf("label.ai"), "info"
 	default:
-		return "Unspecified", "secondary"
+		return loc.Sprintf("label.unspecified"), "secondary"
 	}
 }
 
 // handleSessionDetail renders the session detail page.
 func (h *Handler) handleSessionDetail(w http.ResponseWriter, r *http.Request, campaignID string, sessionID string) {
+	loc, lang := h.localizer(w, r)
 	sessionClient := h.sessionClient()
 	if sessionClient == nil {
-		http.Error(w, "Session service unavailable", http.StatusServiceUnavailable)
+		http.Error(w, loc.Sprintf("error.session_service_unavailable"), http.StatusServiceUnavailable)
 		return
 	}
 
@@ -960,17 +983,17 @@ func (h *Handler) handleSessionDetail(w http.ResponseWriter, r *http.Request, ca
 	})
 	if err != nil {
 		log.Printf("get session: %v", err)
-		http.Error(w, "Session unavailable", http.StatusNotFound)
+		http.Error(w, loc.Sprintf("error.session_unavailable"), http.StatusNotFound)
 		return
 	}
 
 	session := response.GetSession()
 	if session == nil {
-		http.Error(w, "Session not found", http.StatusNotFound)
+		http.Error(w, loc.Sprintf("error.session_not_found"), http.StatusNotFound)
 		return
 	}
 
-	campaignName := getCampaignName(h, r, campaignID)
+	campaignName := getCampaignName(h, r, campaignID, loc)
 
 	// Get event count for this session
 	var eventCount int32
@@ -985,20 +1008,21 @@ func (h *Handler) handleSessionDetail(w http.ResponseWriter, r *http.Request, ca
 		}
 	}
 
-	detail := buildSessionDetail(campaignID, campaignName, session, eventCount)
+	detail := buildSessionDetail(campaignID, campaignName, session, eventCount, loc)
 
 	if isHTMXRequest(r) {
-		templ.Handler(templates.SessionDetailPage(detail)).ServeHTTP(w, r)
+		templ.Handler(templates.SessionDetailPage(detail, loc)).ServeHTTP(w, r)
 		return
 	}
-	templ.Handler(templates.SessionDetailFullPage(detail)).ServeHTTP(w, r)
+	templ.Handler(templates.SessionDetailFullPage(detail, lang, loc)).ServeHTTP(w, r)
 }
 
 // handleSessionEvents renders the session events via HTMX.
 func (h *Handler) handleSessionEvents(w http.ResponseWriter, r *http.Request, campaignID string, sessionID string) {
+	loc, _ := h.localizer(w, r)
 	eventClient := h.eventClient()
 	if eventClient == nil {
-		templ.Handler(templates.EmptyState("Event service unavailable")).ServeHTTP(w, r)
+		templ.Handler(templates.EmptyState(loc.Sprintf("error.event_service_unavailable"))).ServeHTTP(w, r)
 		return
 	}
 
@@ -1017,14 +1041,14 @@ func (h *Handler) handleSessionEvents(w http.ResponseWriter, r *http.Request, ca
 	})
 	if err != nil {
 		log.Printf("list session events: %v", err)
-		templ.Handler(templates.EmptyState("Events unavailable")).ServeHTTP(w, r)
+		templ.Handler(templates.EmptyState(loc.Sprintf("error.events_unavailable"))).ServeHTTP(w, r)
 		return
 	}
 
-	campaignName := getCampaignName(h, r, campaignID)
-	sessionName := getSessionName(h, r, campaignID, sessionID)
+	campaignName := getCampaignName(h, r, campaignID, loc)
+	sessionName := getSessionName(h, r, campaignID, sessionID, loc)
 
-	events := buildEventRows(eventsResp.GetEvents())
+	events := buildEventRows(eventsResp.GetEvents(), loc)
 	detail := templates.SessionDetail{
 		CampaignID:   campaignID,
 		CampaignName: campaignName,
@@ -1036,12 +1060,13 @@ func (h *Handler) handleSessionEvents(w http.ResponseWriter, r *http.Request, ca
 		PrevToken:    eventsResp.GetPreviousPageToken(),
 	}
 
-	templ.Handler(templates.SessionEventsContent(detail)).ServeHTTP(w, r)
+	templ.Handler(templates.SessionEventsContent(detail, loc)).ServeHTTP(w, r)
 }
 
 // handleEventLog renders the event log page.
 func (h *Handler) handleEventLog(w http.ResponseWriter, r *http.Request, campaignID string) {
-	campaignName := getCampaignName(h, r, campaignID)
+	loc, lang := h.localizer(w, r)
+	campaignName := getCampaignName(h, r, campaignID, loc)
 	filters := parseEventFilters(r)
 
 	// Fetch events for initial load
@@ -1062,7 +1087,7 @@ func (h *Handler) handleEventLog(w http.ResponseWriter, r *http.Request, campaig
 			Filter:     filterExpr,
 		})
 		if err == nil && eventsResp != nil {
-			events = buildEventRows(eventsResp.GetEvents())
+			events = buildEventRows(eventsResp.GetEvents(), loc)
 			totalCount = eventsResp.GetTotalSize()
 			nextToken = eventsResp.GetNextPageToken()
 			prevToken = eventsResp.GetPreviousPageToken()
@@ -1080,18 +1105,19 @@ func (h *Handler) handleEventLog(w http.ResponseWriter, r *http.Request, campaig
 	}
 
 	if isHTMXRequest(r) {
-		templ.Handler(templates.EventLogPage(view)).ServeHTTP(w, r)
+		templ.Handler(templates.EventLogPage(view, loc)).ServeHTTP(w, r)
 		return
 	}
 
-	templ.Handler(templates.EventLogFullPage(view)).ServeHTTP(w, r)
+	templ.Handler(templates.EventLogFullPage(view, lang, loc)).ServeHTTP(w, r)
 }
 
 // handleEventLogTable renders the event log table via HTMX.
 func (h *Handler) handleEventLogTable(w http.ResponseWriter, r *http.Request, campaignID string) {
+	loc, _ := h.localizer(w, r)
 	eventClient := h.eventClient()
 	if eventClient == nil {
-		templ.Handler(templates.EmptyState("Event service unavailable")).ServeHTTP(w, r)
+		templ.Handler(templates.EmptyState(loc.Sprintf("error.event_service_unavailable"))).ServeHTTP(w, r)
 		return
 	}
 
@@ -1111,12 +1137,12 @@ func (h *Handler) handleEventLogTable(w http.ResponseWriter, r *http.Request, ca
 	})
 	if err != nil {
 		log.Printf("list events: %v", err)
-		templ.Handler(templates.EmptyState("Events unavailable")).ServeHTTP(w, r)
+		templ.Handler(templates.EmptyState(loc.Sprintf("error.events_unavailable"))).ServeHTTP(w, r)
 		return
 	}
 
-	campaignName := getCampaignName(h, r, campaignID)
-	events := buildEventRows(eventsResp.GetEvents())
+	campaignName := getCampaignName(h, r, campaignID, loc)
+	events := buildEventRows(eventsResp.GetEvents(), loc)
 
 	view := templates.EventLogView{
 		CampaignID:   campaignID,
@@ -1128,16 +1154,16 @@ func (h *Handler) handleEventLogTable(w http.ResponseWriter, r *http.Request, ca
 		TotalCount:   eventsResp.GetTotalSize(),
 	}
 
-	templ.Handler(templates.EventLogTableContent(view)).ServeHTTP(w, r)
+	templ.Handler(templates.EventLogTableContent(view, loc)).ServeHTTP(w, r)
 }
 
 // buildSessionDetail formats a session into detail view data.
-func buildSessionDetail(campaignID, campaignName string, session *statev1.Session, eventCount int32) templates.SessionDetail {
+func buildSessionDetail(campaignID, campaignName string, session *statev1.Session, eventCount int32, loc *message.Printer) templates.SessionDetail {
 	if session == nil {
 		return templates.SessionDetail{}
 	}
 
-	status := formatSessionStatus(session.GetStatus())
+	status := formatSessionStatus(session.GetStatus(), loc)
 	statusBadge := "secondary"
 	if session.GetStatus() == statev1.SessionStatus_SESSION_ACTIVE {
 		statusBadge = "success"
@@ -1162,7 +1188,7 @@ func buildSessionDetail(campaignID, campaignName string, session *statev1.Sessio
 }
 
 // buildEventRows formats events for display.
-func buildEventRows(events []*statev1.Event) []templates.EventRow {
+func buildEventRows(events []*statev1.Event, loc *message.Printer) []templates.EventRow {
 	rows := make([]templates.EventRow, 0, len(events))
 	for _, event := range events {
 		if event == nil {
@@ -1173,7 +1199,7 @@ func buildEventRows(events []*statev1.Event) []templates.EventRow {
 			Seq:         event.GetSeq(),
 			Hash:        event.GetHash(),
 			Type:        event.GetType(),
-			TypeDisplay: formatEventType(event.GetType()),
+			TypeDisplay: formatEventType(event.GetType(), loc),
 			Timestamp:   formatTimestamp(event.GetTs()),
 			SessionID:   event.GetSessionId(),
 			ActorType:   event.GetActorType(),
@@ -1181,7 +1207,7 @@ func buildEventRows(events []*statev1.Event) []templates.EventRow {
 			EntityType:  event.GetEntityType(),
 			EntityID:    event.GetEntityId(),
 			EntityName:  event.GetEntityId(),
-			Description: formatEventDescription(event),
+			Description: formatEventDescription(event, loc),
 			PayloadJSON: string(event.GetPayloadJson()),
 		})
 	}
@@ -1235,10 +1261,10 @@ func buildEventFilterExpression(filters templates.EventFilterOptions) string {
 }
 
 // getSessionName fetches the session name by ID.
-func getSessionName(h *Handler, r *http.Request, campaignID, sessionID string) string {
+func getSessionName(h *Handler, r *http.Request, campaignID, sessionID string, loc *message.Printer) string {
 	sessionClient := h.sessionClient()
 	if sessionClient == nil {
-		return "Session"
+		return loc.Sprintf("label.session")
 	}
 
 	ctx, cancel := context.WithTimeout(r.Context(), campaignsRequestTimeout)
@@ -1249,7 +1275,7 @@ func getSessionName(h *Handler, r *http.Request, campaignID, sessionID string) s
 		SessionId:  sessionID,
 	})
 	if err != nil || response == nil || response.GetSession() == nil {
-		return "Session"
+		return loc.Sprintf("label.session")
 	}
 
 	return response.GetSession().GetName()

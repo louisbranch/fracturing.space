@@ -1,7 +1,7 @@
 package templates
 
 // TopNav renders the top navigation bar using PaperCSS split-nav.
-templ TopNav(activePage string) {
+templ TopNav(activePage string, lang string, loc Localizer) {
 	<nav class="split-nav border fixed">
 		<div class="nav-brand">
 			<h3><a href="/">Fracturing.Space</a></h3>
@@ -25,7 +25,7 @@ templ TopNav(activePage string) {
 							if activePage == "Dashboard" {
 								class="active"
 							}
-						>Dashboard</a>
+						>{T(loc, "nav.dashboard")}</a>
 					</li>
 					<li>
 						<a
@@ -37,7 +37,23 @@ templ TopNav(activePage string) {
 							if activePage == "Campaigns" {
 								class="active"
 							}
-						>Campaigns</a>
+						>{T(loc, "nav.campaigns")}</a>
+					</li>
+					<li class="lang-selector">
+						<span>{T(loc, "nav.language")}:</span>
+						<a
+							href={ templ.SafeURL("/?lang=en") }
+							if lang == "en" {
+								class="active"
+							}
+						>{T(loc, "nav.lang_en")}</a>
+						<span>/</span>
+						<a
+							href={ templ.SafeURL("/?lang=pt-BR") }
+							if lang == "pt-BR" {
+								class="active"
+							}
+						>{T(loc, "nav.lang_pt_br")}</a>
 					</li>
 				</ul>
 			</div>
@@ -46,7 +62,7 @@ templ TopNav(activePage string) {
 }
 
 // CampaignSubNav renders the sub-navigation for campaign detail pages using PaperCSS tabs.
-templ CampaignSubNav(campaignID string, activePage string) {
+templ CampaignSubNav(campaignID string, activePage string, loc Localizer) {
 	<div class="row flex-spaces tabs">
 		<input
 			id="tab-overview"
@@ -60,7 +76,7 @@ templ CampaignSubNav(campaignID string, activePage string) {
 			hx-swap="innerHTML"
 			hx-push-url={ "/campaigns/" + campaignID }
 		/>
-		<label for="tab-overview">Overview</label>
+		<label for="tab-overview">{T(loc, "tab.overview")}</label>
 		<input
 			id="tab-sessions"
 			type="radio"
@@ -73,7 +89,7 @@ templ CampaignSubNav(campaignID string, activePage string) {
 			hx-swap="innerHTML"
 			hx-push-url={ "/campaigns/" + campaignID + "/sessions" }
 		/>
-		<label for="tab-sessions">Sessions</label>
+		<label for="tab-sessions">{T(loc, "tab.sessions")}</label>
 		<input
 			id="tab-characters"
 			type="radio"
@@ -86,7 +102,7 @@ templ CampaignSubNav(campaignID string, activePage string) {
 			hx-swap="innerHTML"
 			hx-push-url={ "/campaigns/" + campaignID + "/characters" }
 		/>
-		<label for="tab-characters">Characters</label>
+		<label for="tab-characters">{T(loc, "tab.characters")}</label>
 		<input
 			id="tab-participants"
 			type="radio"
@@ -99,7 +115,7 @@ templ CampaignSubNav(campaignID string, activePage string) {
 			hx-swap="innerHTML"
 			hx-push-url={ "/campaigns/" + campaignID + "/participants" }
 		/>
-		<label for="tab-participants">Participants</label>
+		<label for="tab-participants">{T(loc, "tab.participants")}</label>
 		<input
 			id="tab-events"
 			type="radio"
@@ -112,7 +128,7 @@ templ CampaignSubNav(campaignID string, activePage string) {
 			hx-swap="innerHTML"
 			hx-push-url={ "/campaigns/" + campaignID + "/events" }
 		/>
-		<label for="tab-events">Events</label>
+		<label for="tab-events">{T(loc, "tab.events")}</label>
 	</div>
 }
 
@@ -137,12 +153,12 @@ templ EmptyState(message string) {
 }
 
 // LoadingSpinner renders a loading message.
-templ LoadingSpinner() {
-	<p>Loading...</p>
+templ LoadingSpinner(loc Localizer) {
+	<p>{T(loc, "common.loading")}</p>
 }
 
 // Pagination renders prev/next navigation controls using PaperCSS buttons.
-templ Pagination(nextToken string, prevToken string, baseURL string) {
+templ Pagination(nextToken string, prevToken string, baseURL string, loc Localizer) {
 	<div class="row flex-center margin-top">
 		if prevToken != "" {
 			<a
@@ -150,10 +166,10 @@ templ Pagination(nextToken string, prevToken string, baseURL string) {
 				hx-get={ baseURL + "?page_token=" + prevToken }
 				hx-target="#main"
 				hx-swap="innerHTML"
-				class="paper-btn btn-small margin-right"
-			>Previous</a>
+			class="paper-btn btn-small margin-right"
+		>{T(loc, "common.previous")}</a>
 		} else {
-			<button class="btn-small margin-right" disabled>Previous</button>
+			<button class="btn-small margin-right" disabled>{T(loc, "common.previous")}</button>
 		}
 		if nextToken != "" {
 			<a
@@ -161,10 +177,10 @@ templ Pagination(nextToken string, prevToken string, baseURL string) {
 				hx-get={ baseURL + "?page_token=" + nextToken }
 				hx-target="#main"
 				hx-swap="innerHTML"
-				class="paper-btn btn-small"
-			>Next</a>
+			class="paper-btn btn-small"
+		>{T(loc, "common.next")}</a>
 		} else {
-			<button class="btn-small" disabled>Next</button>
+			<button class="btn-small" disabled>{T(loc, "common.next")}</button>
 		}
 	</div>
 }

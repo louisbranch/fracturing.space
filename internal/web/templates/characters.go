@@ -25,13 +25,13 @@ type CharacterSheetView struct {
 }
 
 // formatCharacterKind returns a display label for a character kind.
-func formatCharacterKind(kind statev1.CharacterKind) string {
+func formatCharacterKind(kind statev1.CharacterKind, loc Localizer) string {
 	switch kind {
 	case statev1.CharacterKind_PC:
-		return "PC"
+		return T(loc, "label.pc")
 	case statev1.CharacterKind_NPC:
-		return "NPC"
+		return T(loc, "label.npc")
 	default:
-		return "Unspecified"
+		return T(loc, "label.unspecified")
 	}
 }
