@@ -79,6 +79,9 @@ message CreateCampaignRequest {
 
   // Optional free-form theme prompt for assistants.
   string theme_prompt = 4;
+
+  // Optional display name for the creator's participant seat.
+  string creator_display_name = 5;
 }
 
 message CreateCampaignResponse {

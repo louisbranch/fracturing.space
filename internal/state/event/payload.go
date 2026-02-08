@@ -33,6 +33,7 @@ type ParticipantJoinedPayload struct {
 	DisplayName   string `json:"display_name"`
 	Role          string `json:"role"`
 	Controller    string `json:"controller"`
+	IsOwner       bool   `json:"is_owner"`
 }
 
 // ParticipantLeftPayload captures the payload for participant.left events.

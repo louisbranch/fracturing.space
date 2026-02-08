@@ -25,7 +25,7 @@ func (q *Queries) DeleteParticipant(ctx context.Context, arg DeleteParticipantPa
 }
 
 const getParticipant = `-- name: GetParticipant :one
-SELECT campaign_id, id, display_name, role, controller, created_at, updated_at FROM participants WHERE campaign_id = ? AND id = ?
+SELECT campaign_id, id, display_name, role, controller, created_at, updated_at, is_owner FROM participants WHERE campaign_id = ? AND id = ?
 `
 
 type GetParticipantParams struct {
@@ -44,12 +44,13 @@ func (q *Queries) GetParticipant(ctx context.Context, arg GetParticipantParams) 
 		&i.Controller,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.IsOwner,
 	)
 	return i, err
 }
 
 const listParticipantsByCampaign = `-- name: ListParticipantsByCampaign :many
-SELECT campaign_id, id, display_name, role, controller, created_at, updated_at FROM participants
+SELECT campaign_id, id, display_name, role, controller, created_at, updated_at, is_owner FROM participants
 WHERE campaign_id = ?
 ORDER BY id
 `
@@ -71,6 +72,7 @@ func (q *Queries) ListParticipantsByCampaign(ctx context.Context, campaignID str
 			&i.Controller,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.IsOwner,
 		); err != nil {
 			return nil, err
 		}
@@ -86,7 +88,7 @@ func (q *Queries) ListParticipantsByCampaign(ctx context.Context, campaignID str
 }
 
 const listParticipantsByCampaignPaged = `-- name: ListParticipantsByCampaignPaged :many
-SELECT campaign_id, id, display_name, role, controller, created_at, updated_at FROM participants
+SELECT campaign_id, id, display_name, role, controller, created_at, updated_at, is_owner FROM participants
 WHERE campaign_id = ? AND id > ?
 ORDER BY id
 LIMIT ?
@@ -115,6 +117,7 @@ func (q *Queries) ListParticipantsByCampaignPaged(ctx context.Context, arg ListP
 			&i.Controller,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.IsOwner,
 		); err != nil {
 			return nil, err
 		}
@@ -130,7 +133,7 @@ func (q *Queries) ListParticipantsByCampaignPaged(ctx context.Context, arg ListP
 }
 
 const listParticipantsByCampaignPagedFirst = `-- name: ListParticipantsByCampaignPagedFirst :many
-SELECT campaign_id, id, display_name, role, controller, created_at, updated_at FROM participants
+SELECT campaign_id, id, display_name, role, controller, created_at, updated_at, is_owner FROM participants
 WHERE campaign_id = ?
 ORDER BY id
 LIMIT ?
@@ -158,6 +161,7 @@ func (q *Queries) ListParticipantsByCampaignPagedFirst(ctx context.Context, arg 
 			&i.Controller,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.IsOwner,
 		); err != nil {
 			return nil, err
 		}
@@ -174,12 +178,13 @@ func (q *Queries) ListParticipantsByCampaignPagedFirst(ctx context.Context, arg 
 
 const putParticipant = `-- name: PutParticipant :exec
 INSERT INTO participants (
-    campaign_id, id, display_name, role, controller, created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?)
+    campaign_id, id, display_name, role, controller, is_owner, created_at, updated_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(campaign_id, id) DO UPDATE SET
     display_name = excluded.display_name,
     role = excluded.role,
     controller = excluded.controller,
+    is_owner = excluded.is_owner,
     updated_at = excluded.updated_at
 `
 
@@ -189,6 +194,7 @@ type PutParticipantParams struct {
 	DisplayName string `json:"display_name"`
 	Role        string `json:"role"`
 	Controller  string `json:"controller"`
+	IsOwner     int64  `json:"is_owner"`
 	CreatedAt   string `json:"created_at"`
 	UpdatedAt   string `json:"updated_at"`
 }
@@ -200,6 +206,7 @@ func (q *Queries) PutParticipant(ctx context.Context, arg PutParticipantParams) 
 		arg.DisplayName,
 		arg.Role,
 		arg.Controller,
+		arg.IsOwner,
 		arg.CreatedAt,
 		arg.UpdatedAt,
 	)

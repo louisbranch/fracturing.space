@@ -12,6 +12,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/state/campaign"
 	"github.com/louisbranch/fracturing.space/internal/state/event"
 	"github.com/louisbranch/fracturing.space/internal/state/participant"
+	"github.com/louisbranch/fracturing.space/internal/state/policy"
 	"github.com/louisbranch/fracturing.space/internal/state/projection"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -67,12 +68,16 @@ func (s *ParticipantService) CreateParticipant(ctx context.Context, in *statev1.
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return nil, handleDomainError(err)
 	}
+	if err := requirePolicy(ctx, s.stores, policy.ActionManageParticipants, c); err != nil {
+		return nil, err
+	}
 
 	input := participant.CreateParticipantInput{
 		CampaignID:  campaignID,
 		DisplayName: in.GetDisplayName(),
 		Role:        participantRoleFromProto(in.GetRole()),
 		Controller:  controllerFromProto(in.GetController()),
+		IsOwner:     false,
 	}
 	normalized, err := participant.NormalizeCreateParticipantInput(input)
 	if err != nil {
@@ -104,6 +109,7 @@ func (s *ParticipantService) CreateParticipant(ctx context.Context, in *statev1.
 		DisplayName:   normalized.DisplayName,
 		Role:          roleLabel,
 		Controller:    controllerLabel,
+		IsOwner:       normalized.IsOwner,
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -174,6 +180,9 @@ func (s *ParticipantService) UpdateParticipant(ctx context.Context, in *statev1.
 	}
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return nil, handleDomainError(err)
+	}
+	if err := requirePolicy(ctx, s.stores, policy.ActionManageParticipants, campaignRecord); err != nil {
+		return nil, err
 	}
 
 	participantID := strings.TrimSpace(in.GetParticipantId())

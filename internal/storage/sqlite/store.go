@@ -19,6 +19,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/state/campaign"
 	"github.com/louisbranch/fracturing.space/internal/state/character"
 	"github.com/louisbranch/fracturing.space/internal/state/event"
+	"github.com/louisbranch/fracturing.space/internal/state/invite"
 	"github.com/louisbranch/fracturing.space/internal/state/participant"
 	"github.com/louisbranch/fracturing.space/internal/state/session"
 	"github.com/louisbranch/fracturing.space/internal/state/snapshot"
@@ -271,6 +272,7 @@ func (s *Store) PutParticipant(ctx context.Context, p participant.Participant) e
 		DisplayName: p.DisplayName,
 		Role:        participantRoleToString(p.Role),
 		Controller:  participantControllerToString(p.Controller),
+		IsOwner:     boolToInt(p.IsOwner),
 		CreatedAt:   p.CreatedAt.Format(timeFormat),
 		UpdatedAt:   p.UpdatedAt.Format(timeFormat),
 	})
@@ -497,6 +499,131 @@ func (s *Store) ListUsers(ctx context.Context, pageSize int, pageToken string) (
 	}
 
 	return page, nil
+}
+
+// Invite methods
+
+// PutInvite persists an invite record.
+func (s *Store) PutInvite(ctx context.Context, inv invite.Invite) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if s == nil || s.sqlDB == nil {
+		return fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(inv.ID) == "" {
+		return fmt.Errorf("invite id is required")
+	}
+	if strings.TrimSpace(inv.CampaignID) == "" {
+		return fmt.Errorf("campaign id is required")
+	}
+	if strings.TrimSpace(inv.ParticipantID) == "" {
+		return fmt.Errorf("participant id is required")
+	}
+
+	return s.q.PutInvite(ctx, db.PutInviteParams{
+		ID:                     inv.ID,
+		CampaignID:             inv.CampaignID,
+		ParticipantID:          inv.ParticipantID,
+		Status:                 invite.StatusLabel(inv.Status),
+		CreatedByParticipantID: inv.CreatedByParticipantID,
+		CreatedAt:              inv.CreatedAt.Format(timeFormat),
+		UpdatedAt:              inv.UpdatedAt.Format(timeFormat),
+	})
+}
+
+// GetInvite fetches an invite record by ID.
+func (s *Store) GetInvite(ctx context.Context, inviteID string) (invite.Invite, error) {
+	if err := ctx.Err(); err != nil {
+		return invite.Invite{}, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return invite.Invite{}, fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(inviteID) == "" {
+		return invite.Invite{}, fmt.Errorf("invite id is required")
+	}
+
+	row, err := s.q.GetInvite(ctx, inviteID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return invite.Invite{}, storage.ErrNotFound
+		}
+		return invite.Invite{}, fmt.Errorf("get invite: %w", err)
+	}
+
+	return dbInviteToDomain(row)
+}
+
+// ListInvites returns a page of invite records for a campaign.
+func (s *Store) ListInvites(ctx context.Context, campaignID string, pageSize int, pageToken string) (storage.InvitePage, error) {
+	if err := ctx.Err(); err != nil {
+		return storage.InvitePage{}, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return storage.InvitePage{}, fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(campaignID) == "" {
+		return storage.InvitePage{}, fmt.Errorf("campaign id is required")
+	}
+	if pageSize <= 0 {
+		return storage.InvitePage{}, fmt.Errorf("page size must be greater than zero")
+	}
+
+	var rows []db.Invite
+	var err error
+	if pageToken == "" {
+		rows, err = s.q.ListInvitesByCampaignPagedFirst(ctx, db.ListInvitesByCampaignPagedFirstParams{
+			CampaignID: campaignID,
+			Limit:      int64(pageSize + 1),
+		})
+	} else {
+		rows, err = s.q.ListInvitesByCampaignPaged(ctx, db.ListInvitesByCampaignPagedParams{
+			CampaignID: campaignID,
+			ID:         pageToken,
+			Limit:      int64(pageSize + 1),
+		})
+	}
+	if err != nil {
+		return storage.InvitePage{}, fmt.Errorf("list invites: %w", err)
+	}
+
+	page := storage.InvitePage{Invites: make([]invite.Invite, 0, pageSize)}
+	for i, row := range rows {
+		if i >= pageSize {
+			page.NextPageToken = rows[pageSize-1].ID
+			break
+		}
+		inv, err := dbInviteToDomain(row)
+		if err != nil {
+			return storage.InvitePage{}, err
+		}
+		page.Invites = append(page.Invites, inv)
+	}
+
+	return page, nil
+}
+
+// UpdateInviteStatus updates the status for an invite.
+func (s *Store) UpdateInviteStatus(ctx context.Context, inviteID string, status invite.Status, updatedAt time.Time) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if s == nil || s.sqlDB == nil {
+		return fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(inviteID) == "" {
+		return fmt.Errorf("invite id is required")
+	}
+	if updatedAt.IsZero() {
+		updatedAt = time.Now().UTC()
+	}
+
+	return s.q.UpdateInviteStatus(ctx, db.UpdateInviteStatusParams{
+		Status:    invite.StatusLabel(status),
+		UpdatedAt: updatedAt.Format(timeFormat),
+		ID:        inviteID,
+	})
 }
 
 // Character methods
@@ -1415,6 +1542,17 @@ func participantControllerToString(pc participant.Controller) string {
 	}
 }
 
+func boolToInt(value bool) int64 {
+	if value {
+		return 1
+	}
+	return 0
+}
+
+func intToBool(value int64) bool {
+	return value != 0
+}
+
 func stringToParticipantController(s string) participant.Controller {
 	switch s {
 	case "HUMAN":
@@ -1623,8 +1761,30 @@ func dbParticipantToDomain(row db.Participant) (participant.Participant, error) 
 		DisplayName: row.DisplayName,
 		Role:        stringToParticipantRole(row.Role),
 		Controller:  stringToParticipantController(row.Controller),
+		IsOwner:     intToBool(row.IsOwner),
 		CreatedAt:   createdAt,
 		UpdatedAt:   updatedAt,
+	}, nil
+}
+
+func dbInviteToDomain(row db.Invite) (invite.Invite, error) {
+	createdAt, err := time.Parse(timeFormat, row.CreatedAt)
+	if err != nil {
+		return invite.Invite{}, fmt.Errorf("parse created_at: %w", err)
+	}
+	updatedAt, err := time.Parse(timeFormat, row.UpdatedAt)
+	if err != nil {
+		return invite.Invite{}, fmt.Errorf("parse updated_at: %w", err)
+	}
+
+	return invite.Invite{
+		ID:                     row.ID,
+		CampaignID:             row.CampaignID,
+		ParticipantID:          row.ParticipantID,
+		Status:                 invite.StatusFromLabel(row.Status),
+		CreatedByParticipantID: row.CreatedByParticipantID,
+		CreatedAt:              createdAt,
+		UpdatedAt:              updatedAt,
 	}, nil
 }
 

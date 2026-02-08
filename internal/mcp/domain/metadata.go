@@ -44,6 +44,19 @@ func NewOutgoingContext(ctx context.Context, invocationID string) (context.Conte
 	return callCtx, ToolCallMetadata{RequestID: requestID, InvocationID: invocationID}, nil
 }
 
+// NewOutgoingContextWithContext attaches request metadata plus MCP context identity.
+func NewOutgoingContextWithContext(ctx context.Context, invocationID string, mcpCtx Context) (context.Context, ToolCallMetadata, error) {
+	callCtx, meta, err := NewOutgoingContext(ctx, invocationID)
+	if err != nil {
+		return nil, ToolCallMetadata{}, err
+	}
+	participantID := strings.TrimSpace(mcpCtx.ParticipantID)
+	if participantID != "" {
+		callCtx = metadata.AppendToOutgoingContext(callCtx, grpcmeta.ParticipantIDHeader, participantID)
+	}
+	return callCtx, meta, nil
+}
+
 // MergeResponseMetadata overlays response headers on top of sent metadata.
 func MergeResponseMetadata(sent ToolCallMetadata, header metadata.MD) ToolCallMetadata {
 	requestID := grpcmeta.FirstMetadataValue(header, grpcmeta.RequestIDHeader)

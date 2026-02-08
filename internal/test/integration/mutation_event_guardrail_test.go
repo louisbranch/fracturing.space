@@ -51,6 +51,11 @@ func runMutationEventGuardrailTests(t *testing.T, suite *integrationSuite, grpcA
 		if campaignOutput.ID == "" {
 			t.Fatal("campaign_create returned empty id")
 		}
+		participants := readParticipantList(t, suite.client, campaignOutput.ID)
+		if len(participants.Participants) == 0 {
+			t.Fatal("expected owner participant")
+		}
+		setContext(t, suite.client, campaignOutput.ID, participants.Participants[0].ID)
 
 		lastSeq := requireEventTypesAfterSeq(t, ctx, eventClient, campaignOutput.ID, 0, "campaign.created")
 

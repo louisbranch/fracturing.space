@@ -50,8 +50,10 @@ type Participant struct {
 	DisplayName string
 	Role        ParticipantRole
 	Controller  Controller
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	// IsOwner indicates if the participant is the campaign owner.
+	IsOwner   bool
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 // CreateParticipantInput describes the metadata needed to create a participant.
@@ -60,6 +62,8 @@ type CreateParticipantInput struct {
 	DisplayName string
 	Role        ParticipantRole
 	Controller  Controller
+	// IsOwner indicates if the participant is the campaign owner.
+	IsOwner bool
 }
 
 // CreateParticipant creates a new participant with a generated ID and timestamps.
@@ -88,6 +92,7 @@ func CreateParticipant(input CreateParticipantInput, now func() time.Time, idGen
 		DisplayName: normalized.DisplayName,
 		Role:        normalized.Role,
 		Controller:  normalized.Controller,
+		IsOwner:     normalized.IsOwner,
 		CreatedAt:   createdAt,
 		UpdatedAt:   createdAt,
 	}, nil

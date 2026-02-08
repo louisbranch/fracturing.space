@@ -48,6 +48,7 @@ func New(port int) (*Server, error) {
 	stores := stateservice.Stores{
 		Campaign:       store,
 		Participant:    store,
+		Invite:         store,
 		Character:      store,
 		ControlDefault: store,
 		Daggerheart:    store,
@@ -71,6 +72,7 @@ func New(port int) (*Server, error) {
 	authService := authservice.NewAuthService(store)
 	campaignService := stateservice.NewCampaignService(stores)
 	participantService := stateservice.NewParticipantService(stores)
+	inviteService := stateservice.NewInviteService(stores)
 	characterService := stateservice.NewCharacterService(stores)
 	snapshotService := stateservice.NewSnapshotService(stores)
 	sessionService := stateservice.NewSessionService(stores)
@@ -81,6 +83,7 @@ func New(port int) (*Server, error) {
 	authv1.RegisterAuthServiceServer(grpcServer, authService)
 	statev1.RegisterCampaignServiceServer(grpcServer, campaignService)
 	statev1.RegisterParticipantServiceServer(grpcServer, participantService)
+	statev1.RegisterInviteServiceServer(grpcServer, inviteService)
 	statev1.RegisterCharacterServiceServer(grpcServer, characterService)
 	statev1.RegisterSnapshotServiceServer(grpcServer, snapshotService)
 	statev1.RegisterSessionServiceServer(grpcServer, sessionService)
@@ -92,6 +95,7 @@ func New(port int) (*Server, error) {
 	healthServer.SetServingStatus("auth.v1.AuthService", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("state.v1.CampaignService", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("state.v1.ParticipantService", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus("state.v1.InviteService", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("state.v1.CharacterService", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("state.v1.SnapshotService", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("state.v1.SessionService", grpc_health_v1.HealthCheckResponse_SERVING)

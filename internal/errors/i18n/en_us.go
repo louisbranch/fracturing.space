@@ -12,6 +12,8 @@ const (
 	CodeParticipantInvalidRole          = "PARTICIPANT_INVALID_ROLE"
 	CodeParticipantEmptyCampaignID      = "PARTICIPANT_EMPTY_CAMPAIGN_ID"
 	CodeUserEmptyDisplayName            = "USER_EMPTY_DISPLAY_NAME"
+	CodeInviteEmptyCampaignID           = "INVITE_EMPTY_CAMPAIGN_ID"
+	CodeInviteEmptyParticipantID        = "INVITE_EMPTY_PARTICIPANT_ID"
 	CodeSessionEmptyCampaignID          = "SESSION_EMPTY_CAMPAIGN_ID"
 	CodeCharacterInvalidController      = "CHARACTER_INVALID_CONTROLLER"
 	CodeCharacterEmptyParticipantID     = "CHARACTER_EMPTY_PARTICIPANT_ID"
@@ -64,6 +66,10 @@ var enUSCatalog = &Catalog{
 
 		// User errors
 		CodeUserEmptyDisplayName: "User display name cannot be empty",
+
+		// Invite errors
+		CodeInviteEmptyCampaignID:    "Campaign ID is required for invite",
+		CodeInviteEmptyParticipantID: "Participant ID is required for invite",
 
 		// Session errors
 		CodeSessionEmptyCampaignID: "Campaign ID is required for session",

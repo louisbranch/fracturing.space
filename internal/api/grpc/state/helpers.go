@@ -7,6 +7,7 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/state/v1"
 	"github.com/louisbranch/fracturing.space/internal/state/campaign"
 	"github.com/louisbranch/fracturing.space/internal/state/character"
+	"github.com/louisbranch/fracturing.space/internal/state/invite"
 	"github.com/louisbranch/fracturing.space/internal/state/participant"
 	"github.com/louisbranch/fracturing.space/internal/state/session"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -92,6 +93,7 @@ func participantToProto(p participant.Participant) *statev1.Participant {
 		Controller:  controllerToProto(p.Controller),
 		CreatedAt:   timestamppb.New(p.CreatedAt),
 		UpdatedAt:   timestamppb.New(p.UpdatedAt),
+		IsOwner:     p.IsOwner,
 	}
 }
 
@@ -136,6 +138,33 @@ func controllerToProto(controller participant.Controller) statev1.Controller {
 		return statev1.Controller_CONTROLLER_AI
 	default:
 		return statev1.Controller_CONTROLLER_UNSPECIFIED
+	}
+}
+
+// Invite proto conversion helpers
+
+func inviteToProto(inv invite.Invite) *statev1.Invite {
+	return &statev1.Invite{
+		Id:                     inv.ID,
+		CampaignId:             inv.CampaignID,
+		ParticipantId:          inv.ParticipantID,
+		Status:                 inviteStatusToProto(inv.Status),
+		CreatedByParticipantId: inv.CreatedByParticipantID,
+		CreatedAt:              timestamppb.New(inv.CreatedAt),
+		UpdatedAt:              timestamppb.New(inv.UpdatedAt),
+	}
+}
+
+func inviteStatusToProto(status invite.Status) statev1.InviteStatus {
+	switch status {
+	case invite.StatusPending:
+		return statev1.InviteStatus_PENDING
+	case invite.StatusClaimed:
+		return statev1.InviteStatus_CLAIMED
+	case invite.StatusRevoked:
+		return statev1.InviteStatus_REVOKED
+	default:
+		return statev1.InviteStatus_INVITE_STATUS_UNSPECIFIED
 	}
 }
 

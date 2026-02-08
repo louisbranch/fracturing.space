@@ -32,7 +32,20 @@ func TestCreateCampaign_MissingCampaignStore(t *testing.T) {
 
 func TestCreateCampaign_MissingEventStore(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
-	svc := NewCampaignService(Stores{Campaign: campaignStore})
+	participantStore := newFakeParticipantStore()
+	svc := NewCampaignService(Stores{Campaign: campaignStore, Participant: participantStore})
+	_, err := svc.CreateCampaign(context.Background(), &statev1.CreateCampaignRequest{
+		Name:   "Test Campaign",
+		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		GmMode: statev1.GmMode_HUMAN,
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestCreateCampaign_MissingParticipantStore(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	eventStore := newFakeEventStore()
+	svc := NewCampaignService(Stores{Campaign: campaignStore, Event: eventStore})
 	_, err := svc.CreateCampaign(context.Background(), &statev1.CreateCampaignRequest{
 		Name:   "Test Campaign",
 		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
@@ -44,7 +57,8 @@ func TestCreateCampaign_MissingEventStore(t *testing.T) {
 func TestCreateCampaign_MissingSystem(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	eventStore := newFakeEventStore()
-	svc := NewCampaignService(Stores{Campaign: campaignStore, Event: eventStore})
+	participantStore := newFakeParticipantStore()
+	svc := NewCampaignService(Stores{Campaign: campaignStore, Event: eventStore, Participant: participantStore})
 	_, err := svc.CreateCampaign(context.Background(), &statev1.CreateCampaignRequest{
 		Name:   "Test Campaign",
 		GmMode: statev1.GmMode_HUMAN,
@@ -55,7 +69,8 @@ func TestCreateCampaign_MissingSystem(t *testing.T) {
 func TestCreateCampaign_EmptyName(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	eventStore := newFakeEventStore()
-	svc := NewCampaignService(Stores{Campaign: campaignStore, Event: eventStore})
+	participantStore := newFakeParticipantStore()
+	svc := NewCampaignService(Stores{Campaign: campaignStore, Event: eventStore, Participant: participantStore})
 	_, err := svc.CreateCampaign(context.Background(), &statev1.CreateCampaignRequest{
 		Name:   "",
 		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
@@ -67,7 +82,8 @@ func TestCreateCampaign_EmptyName(t *testing.T) {
 func TestCreateCampaign_MissingGmMode(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	eventStore := newFakeEventStore()
-	svc := NewCampaignService(Stores{Campaign: campaignStore, Event: eventStore})
+	participantStore := newFakeParticipantStore()
+	svc := NewCampaignService(Stores{Campaign: campaignStore, Event: eventStore, Participant: participantStore})
 	_, err := svc.CreateCampaign(context.Background(), &statev1.CreateCampaignRequest{
 		Name:   "Test Campaign",
 		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
@@ -78,11 +94,12 @@ func TestCreateCampaign_MissingGmMode(t *testing.T) {
 func TestCreateCampaign_Success(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	eventStore := newFakeEventStore()
+	participantStore := newFakeParticipantStore()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 	svc := &CampaignService{
-		stores:      Stores{Campaign: campaignStore, Event: eventStore},
+		stores:      Stores{Campaign: campaignStore, Event: eventStore, Participant: participantStore},
 		clock:       fixedClock(now),
-		idGenerator: fixedIDGenerator("campaign-123"),
+		idGenerator: fixedSequenceIDGenerator("campaign-123", "participant-123"),
 	}
 
 	resp, err := svc.CreateCampaign(context.Background(), &statev1.CreateCampaignRequest{
@@ -116,11 +133,14 @@ func TestCreateCampaign_Success(t *testing.T) {
 	if resp.Campaign.ThemePrompt != "A dark fantasy adventure" {
 		t.Errorf("Campaign ThemePrompt = %q, want %q", resp.Campaign.ThemePrompt, "A dark fantasy adventure")
 	}
-	if got := len(eventStore.events["campaign-123"]); got != 1 {
-		t.Fatalf("expected 1 event, got %d", got)
+	if got := len(eventStore.events["campaign-123"]); got != 2 {
+		t.Fatalf("expected 2 events, got %d", got)
 	}
 	if eventStore.events["campaign-123"][0].Type != event.TypeCampaignCreated {
 		t.Fatalf("event type = %s, want %s", eventStore.events["campaign-123"][0].Type, event.TypeCampaignCreated)
+	}
+	if eventStore.events["campaign-123"][1].Type != event.TypeParticipantJoined {
+		t.Fatalf("event type = %s, want %s", eventStore.events["campaign-123"][1].Type, event.TypeParticipantJoined)
 	}
 
 	// Verify persisted

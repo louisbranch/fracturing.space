@@ -36,6 +36,11 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 			t.Fatalf("campaign_create failed: %+v", campaignResult)
 		}
 		campaignOutput := decodeStructuredContent[domain.CampaignCreateResult](t, campaignResult.StructuredContent)
+		participants := readParticipantList(t, suite.client, campaignOutput.ID)
+		if len(participants.Participants) == 0 {
+			t.Fatal("expected owner participant")
+		}
+		setContext(t, suite.client, campaignOutput.ID, participants.Participants[0].ID)
 
 		// Now create a participant
 		participantParams := &mcp.CallToolParams{
@@ -225,6 +230,12 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 		if gmControlOutput.Controller != "GM" {
 			t.Fatalf("expected controller GM, got %q", gmControlOutput.Controller)
 		}
+
+		participants := readParticipantList(t, suite.client, campaignOutput.ID)
+		if len(participants.Participants) == 0 {
+			t.Fatal("expected owner participant")
+		}
+		setContext(t, suite.client, campaignOutput.ID, participants.Participants[0].ID)
 
 		// Create a participant for participant controller test
 		participantParams := &mcp.CallToolParams{

@@ -8,6 +8,7 @@ import (
 type Stores struct {
 	Campaign       storage.CampaignStore
 	Participant    storage.ParticipantStore
+	Invite         storage.InviteStore
 	Character      storage.CharacterStore
 	ControlDefault storage.ControlDefaultStore
 	Daggerheart    storage.DaggerheartStore

@@ -188,6 +188,7 @@ func (a Applier) applyParticipantJoined(ctx context.Context, evt event.Event) er
 		DisplayName: normalized.DisplayName,
 		Role:        normalized.Role,
 		Controller:  normalized.Controller,
+		IsOwner:     payload.IsOwner,
 		CreatedAt:   createdAt,
 		UpdatedAt:   createdAt,
 	}

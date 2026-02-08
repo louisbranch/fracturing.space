@@ -12,9 +12,11 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/state/v1"
+	grpcmeta "github.com/louisbranch/fracturing.space/internal/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/web"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 )
 
 // TestWebHTMXIntegration validates web HTMX endpoints against real gRPC data.
@@ -737,7 +739,10 @@ func TestWebHTMXIntegration(t *testing.T) {
 			t.Fatalf("expected status 200, got %d", status)
 		}
 
-		assertHTMLContains(t, body, "No participants yet.")
+		assertHTMLContains(t, body,
+			"Owner",
+			"GM",
+		)
 		assertHTMLNotContains(t, body, "<!doctype html>", "<!DOCTYPE html>")
 	})
 
@@ -752,7 +757,17 @@ func TestWebHTMXIntegration(t *testing.T) {
 		}
 		campaignID := createResp.Campaign.Id
 
-		_, err = participantClient.CreateParticipant(ctx, &statev1.CreateParticipantRequest{
+		listResp, err := participantClient.ListParticipants(ctx, &statev1.ListParticipantsRequest{CampaignId: campaignID})
+		if err != nil {
+			t.Fatalf("list participants: %v", err)
+		}
+		if len(listResp.Participants) == 0 {
+			t.Fatal("expected owner participant")
+		}
+		ownerID := listResp.Participants[0].Id
+		participantCtx := metadata.NewOutgoingContext(ctx, metadata.Pairs(grpcmeta.ParticipantIDHeader, ownerID))
+
+		_, err = participantClient.CreateParticipant(participantCtx, &statev1.CreateParticipantRequest{
 			CampaignId:  campaignID,
 			DisplayName: "Test Player One",
 			Role:        statev1.ParticipantRole_PLAYER,

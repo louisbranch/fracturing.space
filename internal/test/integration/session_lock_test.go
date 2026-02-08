@@ -9,9 +9,11 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/state/v1"
+	grpcmeta "github.com/louisbranch/fracturing.space/internal/api/grpc/metadata"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -46,6 +48,17 @@ func runSessionLockTests(t *testing.T, grpcAddr string) {
 	if createResp == nil || createResp.Campaign == nil || createResp.Campaign.Id == "" {
 		t.Fatal("expected campaign response")
 	}
+	participantsResp, err := participantClient.ListParticipants(ctx, &statev1.ListParticipantsRequest{
+		CampaignId: createResp.Campaign.Id,
+	})
+	if err != nil {
+		t.Fatalf("list participants: %v", err)
+	}
+	if len(participantsResp.Participants) == 0 {
+		t.Fatal("expected owner participant")
+	}
+	ownerID := participantsResp.Participants[0].Id
+	participantCtx := metadata.NewOutgoingContext(ctx, metadata.Pairs(grpcmeta.ParticipantIDHeader, ownerID))
 	startResp, err := sessionClient.StartSession(ctx, &statev1.StartSessionRequest{
 		CampaignId: createResp.Campaign.Id,
 		Name:       "Session 1",
@@ -56,7 +69,7 @@ func runSessionLockTests(t *testing.T, grpcAddr string) {
 	if startResp == nil || startResp.Session == nil || startResp.Session.Id == "" {
 		t.Fatal("expected session response")
 	}
-	_, err = participantClient.CreateParticipant(ctx, &statev1.CreateParticipantRequest{
+	_, err = participantClient.CreateParticipant(participantCtx, &statev1.CreateParticipantRequest{
 		CampaignId:  createResp.Campaign.Id,
 		DisplayName: "Player One",
 		Role:        statev1.ParticipantRole_PLAYER,
@@ -96,7 +109,7 @@ func runSessionLockTests(t *testing.T, grpcAddr string) {
 	if endResp.Session.EndedAt == nil {
 		t.Fatal("expected ended_at to be set")
 	}
-	createParticipantResp, err := participantClient.CreateParticipant(ctx, &statev1.CreateParticipantRequest{
+	createParticipantResp, err := participantClient.CreateParticipant(participantCtx, &statev1.CreateParticipantRequest{
 		CampaignId:  createResp.Campaign.Id,
 		DisplayName: "Player One",
 		Role:        statev1.ParticipantRole_PLAYER,

@@ -287,9 +287,11 @@ type CreateCampaignRequest struct {
 	// The mode of GM participation.
 	GmMode GmMode `protobuf:"varint,3,opt,name=gm_mode,json=gmMode,proto3,enum=state.v1.GmMode" json:"gm_mode,omitempty"`
 	// Optional free-form theme prompt for assistants.
-	ThemePrompt   string `protobuf:"bytes,4,opt,name=theme_prompt,json=themePrompt,proto3" json:"theme_prompt,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	ThemePrompt string `protobuf:"bytes,4,opt,name=theme_prompt,json=themePrompt,proto3" json:"theme_prompt,omitempty"`
+	// Optional display name for the creator's participant seat.
+	CreatorDisplayName string `protobuf:"bytes,5,opt,name=creator_display_name,json=creatorDisplayName,proto3" json:"creator_display_name,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *CreateCampaignRequest) Reset() {
@@ -346,6 +348,13 @@ func (x *CreateCampaignRequest) GetGmMode() GmMode {
 func (x *CreateCampaignRequest) GetThemePrompt() string {
 	if x != nil {
 		return x.ThemePrompt
+	}
+	return ""
+}
+
+func (x *CreateCampaignRequest) GetCreatorDisplayName() string {
+	if x != nil {
+		return x.CreatorDisplayName
 	}
 	return ""
 }
@@ -887,12 +896,13 @@ const file_state_v1_campaign_proto_rawDesc = "" +
 	"updated_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12=\n" +
 	"\fcompleted_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\vcompletedAt\x12;\n" +
 	"\varchived_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"archivedAt\"\xa8\x01\n" +
+	"archivedAt\"\xda\x01\n" +
 	"\x15CreateCampaignRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12-\n" +
 	"\x06system\x18\x02 \x01(\x0e2\x15.common.v1.GameSystemR\x06system\x12)\n" +
 	"\agm_mode\x18\x03 \x01(\x0e2\x10.state.v1.GmModeR\x06gmMode\x12!\n" +
-	"\ftheme_prompt\x18\x04 \x01(\tR\vthemePrompt\"d\n" +
+	"\ftheme_prompt\x18\x04 \x01(\tR\vthemePrompt\x120\n" +
+	"\x14creator_display_name\x18\x05 \x01(\tR\x12creatorDisplayName\"d\n" +
 	"\x16CreateCampaignResponse\x12.\n" +
 	"\bcampaign\x18\x01 \x01(\v2\x12.state.v1.CampaignR\bcampaign\x12\x1a\n" +
 	"\bwarnings\x18\x02 \x03(\tR\bwarnings\"R\n" +
