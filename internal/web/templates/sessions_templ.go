@@ -11,7 +11,7 @@ import templruntime "github.com/a-h/templ/runtime"
 import "strconv"
 
 // SessionsListFullPage renders the sessions list in the base layout.
-func SessionsListFullPage(campaignID string, campaignName string, lang string, loc Localizer) templ.Component {
+func SessionsListFullPage(campaignID string, campaignName string, page PageContext) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -44,13 +44,13 @@ func SessionsListFullPage(campaignID string, campaignName string, lang string, l
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = SessionsListPage(campaignID, campaignName, loc).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = SessionsListPage(campaignID, campaignName, page.Loc).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = Layout(T(loc, "title.sessions"), "Campaigns", lang, loc).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = Layout(T(page.Loc, "title.sessions"), "Campaigns", page).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -183,7 +183,7 @@ func SessionsLoading(campaignID string, loc Localizer) templ.Component {
 }
 
 // SessionDetailFullPage renders the session detail in the base layout.
-func SessionDetailFullPage(session SessionDetail, lang string, loc Localizer) templ.Component {
+func SessionDetailFullPage(session SessionDetail, page PageContext) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -216,13 +216,13 @@ func SessionDetailFullPage(session SessionDetail, lang string, loc Localizer) te
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = SessionDetailPage(session, loc).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = SessionDetailPage(session, page.Loc).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = Layout(T(loc, "title.session", session.Name), "Campaigns", lang, loc).Render(templ.WithChildren(ctx, templ_7745c5c3_Var10), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = Layout(T(page.Loc, "title.session", session.Name), "Campaigns", page).Render(templ.WithChildren(ctx, templ_7745c5c3_Var10), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

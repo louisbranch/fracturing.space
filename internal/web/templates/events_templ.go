@@ -11,7 +11,7 @@ import templruntime "github.com/a-h/templ/runtime"
 import "fmt"
 
 // EventLogFullPage renders the event log in the base layout.
-func EventLogFullPage(view EventLogView, lang string, loc Localizer) templ.Component {
+func EventLogFullPage(view EventLogView, page PageContext) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -44,13 +44,13 @@ func EventLogFullPage(view EventLogView, lang string, loc Localizer) templ.Compo
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = EventLogPage(view, loc).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = EventLogPage(view, page.Loc).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = Layout(T(loc, "title.events"), "Campaigns", lang, loc).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = Layout(T(page.Loc, "title.events"), "Campaigns", page).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

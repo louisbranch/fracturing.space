@@ -4,17 +4,22 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/a-h/templ"
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/state/v1"
+	grpcmeta "github.com/louisbranch/fracturing.space/internal/api/grpc/metadata"
+	"github.com/louisbranch/fracturing.space/internal/id"
 	"github.com/louisbranch/fracturing.space/internal/web/i18n"
 	"github.com/louisbranch/fracturing.space/internal/web/templates"
 	"golang.org/x/text/message"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -27,6 +32,12 @@ const (
 	sessionListPageSize = 10
 	// eventListPageSize caps the number of events shown per page.
 	eventListPageSize = 50
+	// impersonationCookieName stores the active impersonation session ID.
+	impersonationCookieName = "fs-impersonation-session"
+	// impersonationSessionTTL controls how long impersonation sessions stay valid.
+	impersonationSessionTTL = 24 * time.Hour
+	// impersonationCleanupInterval controls how often expired sessions are purged.
+	impersonationCleanupInterval = 30 * time.Minute
 )
 
 // GRPCClientProvider supplies gRPC clients for request handling.
@@ -43,11 +54,83 @@ type GRPCClientProvider interface {
 // Handler routes web requests for the UI.
 type Handler struct {
 	clientProvider GRPCClientProvider
+	impersonation  *impersonationStore
+}
+
+type impersonationSession struct {
+	userID      string
+	displayName string
+	expiresAt   time.Time
+}
+
+type impersonationStore struct {
+	mu          sync.RWMutex
+	sessions    map[string]impersonationSession
+	lastCleanup time.Time
+}
+
+func newImpersonationStore() *impersonationStore {
+	return &impersonationStore{sessions: make(map[string]impersonationSession)}
+}
+
+func (s *impersonationStore) Get(sessionID string) (impersonationSession, bool) {
+	if s == nil {
+		return impersonationSession{}, false
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	now := time.Now()
+	s.cleanupLocked(now)
+	session, ok := s.sessions[sessionID]
+	if !ok {
+		return impersonationSession{}, false
+	}
+	if now.After(session.expiresAt) {
+		delete(s.sessions, sessionID)
+		return impersonationSession{}, false
+	}
+	return session, true
+}
+
+func (s *impersonationStore) Set(sessionID string, session impersonationSession) {
+	if s == nil {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	now := time.Now()
+	s.cleanupLocked(now)
+	session.expiresAt = now.Add(impersonationSessionTTL)
+	s.sessions[sessionID] = session
+}
+
+func (s *impersonationStore) Delete(sessionID string) {
+	if s == nil {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.sessions, sessionID)
+}
+
+func (s *impersonationStore) cleanupLocked(now time.Time) {
+	if now.Sub(s.lastCleanup) < impersonationCleanupInterval {
+		return
+	}
+	for key, session := range s.sessions {
+		if now.After(session.expiresAt) {
+			delete(s.sessions, key)
+		}
+	}
+	s.lastCleanup = now
 }
 
 // NewHandler builds the HTTP handler for the web server.
 func NewHandler(clientProvider GRPCClientProvider) http.Handler {
-	handler := &Handler{clientProvider: clientProvider}
+	handler := &Handler{
+		clientProvider: clientProvider,
+		impersonation:  newImpersonationStore(),
+	}
 	return handler.routes()
 }
 
@@ -57,6 +140,14 @@ func (h *Handler) localizer(w http.ResponseWriter, r *http.Request) (*message.Pr
 		i18n.SetLanguageCookie(w, tag)
 	}
 	return i18n.Printer(tag), tag.String()
+}
+
+func (h *Handler) pageContext(lang string, loc *message.Printer, r *http.Request) templates.PageContext {
+	return templates.PageContext{
+		Lang:          lang,
+		Loc:           loc,
+		Impersonation: h.impersonationView(r),
+	}
 }
 
 // routes wires the HTTP routes for the web handler.
@@ -71,13 +162,125 @@ func (h *Handler) routes() http.Handler {
 	mux.Handle("/users", http.HandlerFunc(h.handleUsersPage))
 	mux.Handle("/users/table", http.HandlerFunc(h.handleUsersTable))
 	mux.Handle("/users/create", http.HandlerFunc(h.handleCreateUser))
-	return mux
+	mux.Handle("/users/impersonate", http.HandlerFunc(h.handleImpersonateUser))
+	mux.Handle("/users/logout", http.HandlerFunc(h.handleLogout))
+	return h.withImpersonation(mux)
+}
+
+func (h *Handler) withImpersonation(next http.Handler) http.Handler {
+	if h == nil || next == nil {
+		return next
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		impersonation := h.currentImpersonation(r)
+		if impersonation != nil && impersonation.userID != "" {
+			ctx := metadata.AppendToOutgoingContext(r.Context(), grpcmeta.UserIDHeader, impersonation.userID)
+			r = r.WithContext(ctx)
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (h *Handler) impersonationView(r *http.Request) *templates.ImpersonationView {
+	impersonation := h.currentImpersonation(r)
+	if impersonation == nil {
+		return nil
+	}
+	return &templates.ImpersonationView{
+		UserID:      impersonation.userID,
+		DisplayName: impersonation.displayName,
+	}
+}
+
+func (h *Handler) currentImpersonation(r *http.Request) *impersonationSession {
+	if h == nil || h.impersonation == nil {
+		return nil
+	}
+	sessionID := impersonationSessionID(r)
+	if sessionID == "" {
+		return nil
+	}
+	session, ok := h.impersonation.Get(sessionID)
+	if !ok {
+		return nil
+	}
+	return &session
+}
+
+func impersonationSessionID(r *http.Request) string {
+	if r == nil {
+		return ""
+	}
+	cookie, err := r.Cookie(impersonationCookieName)
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(cookie.Value)
+}
+
+func requireSameOrigin(w http.ResponseWriter, r *http.Request, loc *message.Printer) bool {
+	if r == nil {
+		http.Error(w, loc.Sprintf("error.csrf_invalid"), http.StatusForbidden)
+		return false
+	}
+	if origin := strings.TrimSpace(r.Header.Get("Origin")); origin != "" {
+		if !sameOrigin(origin, r) {
+			http.Error(w, loc.Sprintf("error.csrf_invalid"), http.StatusForbidden)
+			return false
+		}
+		return true
+	}
+	if referer := strings.TrimSpace(r.Referer()); referer != "" {
+		if !sameOrigin(referer, r) {
+			http.Error(w, loc.Sprintf("error.csrf_invalid"), http.StatusForbidden)
+			return false
+		}
+		return true
+	}
+	http.Error(w, loc.Sprintf("error.csrf_invalid"), http.StatusForbidden)
+	return false
+}
+
+func sameOrigin(rawURL string, r *http.Request) bool {
+	if rawURL == "" || rawURL == "null" || r == nil {
+		return false
+	}
+	parsed, err := url.Parse(rawURL)
+	if err != nil || parsed.Host == "" {
+		return false
+	}
+	if !strings.EqualFold(parsed.Host, r.Host) {
+		return false
+	}
+	if parsed.Scheme != "" {
+		return strings.EqualFold(parsed.Scheme, requestScheme(r))
+	}
+	return true
+}
+
+func requestScheme(r *http.Request) string {
+	if r == nil {
+		return "http"
+	}
+	if proto := strings.TrimSpace(r.Header.Get("X-Forwarded-Proto")); proto != "" {
+		parts := strings.Split(proto, ",")
+		return strings.ToLower(strings.TrimSpace(parts[0]))
+	}
+	if r.TLS != nil {
+		return "https"
+	}
+	return "http"
+}
+
+func isHTTPS(r *http.Request) bool {
+	return requestScheme(r) == "https"
 }
 
 // handleUsersPage renders the users page.
 func (h *Handler) handleUsersPage(w http.ResponseWriter, r *http.Request) {
 	loc, lang := h.localizer(w, r)
-	view := templates.UsersPageView{}
+	pageCtx := h.pageContext(lang, loc, r)
+	view := templates.UsersPageView{Impersonation: pageCtx.Impersonation}
 
 	if message := strings.TrimSpace(r.URL.Query().Get("message")); message != "" {
 		view.Message = message
@@ -107,7 +310,7 @@ func (h *Handler) handleUsersPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	templ.Handler(templates.UsersFullPage(view, lang, loc)).ServeHTTP(w, r)
+	templ.Handler(templates.UsersFullPage(view, pageCtx)).ServeHTTP(w, r)
 }
 
 // handleCreateUser creates a user from a form submission.
@@ -119,25 +322,26 @@ func (h *Handler) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	loc, lang := h.localizer(w, r)
-	view := templates.UsersPageView{}
+	pageCtx := h.pageContext(lang, loc, r)
+	view := templates.UsersPageView{Impersonation: pageCtx.Impersonation}
 
 	if err := r.ParseForm(); err != nil {
 		view.Message = loc.Sprintf("error.user_create_invalid")
-		templ.Handler(templates.UsersFullPage(view, lang, loc)).ServeHTTP(w, r)
+		templ.Handler(templates.UsersFullPage(view, pageCtx)).ServeHTTP(w, r)
 		return
 	}
 
 	displayName := strings.TrimSpace(r.FormValue("display_name"))
 	if displayName == "" {
 		view.Message = loc.Sprintf("error.user_display_name_required")
-		templ.Handler(templates.UsersFullPage(view, lang, loc)).ServeHTTP(w, r)
+		templ.Handler(templates.UsersFullPage(view, pageCtx)).ServeHTTP(w, r)
 		return
 	}
 
 	client := h.authClient()
 	if client == nil {
 		view.Message = loc.Sprintf("error.user_service_unavailable")
-		templ.Handler(templates.UsersFullPage(view, lang, loc)).ServeHTTP(w, r)
+		templ.Handler(templates.UsersFullPage(view, pageCtx)).ServeHTTP(w, r)
 		return
 	}
 
@@ -148,7 +352,7 @@ func (h *Handler) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil || response.GetUser() == nil {
 		log.Printf("create user: %v", err)
 		view.Message = loc.Sprintf("error.user_create_failed")
-		templ.Handler(templates.UsersFullPage(view, lang, loc)).ServeHTTP(w, r)
+		templ.Handler(templates.UsersFullPage(view, pageCtx)).ServeHTTP(w, r)
 		return
 	}
 
@@ -156,7 +360,135 @@ func (h *Handler) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	view.Detail = buildUserDetail(created)
 	view.Message = loc.Sprintf("users.create.success")
 
-	templ.Handler(templates.UsersFullPage(view, lang, loc)).ServeHTTP(w, r)
+	templ.Handler(templates.UsersFullPage(view, pageCtx)).ServeHTTP(w, r)
+}
+
+// handleImpersonateUser creates an impersonation session for a user.
+func (h *Handler) handleImpersonateUser(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", http.MethodPost)
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	loc, lang := h.localizer(w, r)
+	pageCtx := h.pageContext(lang, loc, r)
+	view := templates.UsersPageView{Impersonation: pageCtx.Impersonation}
+	if !requireSameOrigin(w, r, loc) {
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		view.Message = loc.Sprintf("error.user_impersonate_invalid")
+		templ.Handler(templates.UsersFullPage(view, pageCtx)).ServeHTTP(w, r)
+		return
+	}
+
+	userID := strings.TrimSpace(r.FormValue("user_id"))
+	if userID == "" {
+		view.Message = loc.Sprintf("error.user_id_required")
+		templ.Handler(templates.UsersFullPage(view, pageCtx)).ServeHTTP(w, r)
+		return
+	}
+
+	client := h.authClient()
+	if client == nil {
+		view.Message = loc.Sprintf("error.user_service_unavailable")
+		templ.Handler(templates.UsersFullPage(view, pageCtx)).ServeHTTP(w, r)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), campaignsRequestTimeout)
+	defer cancel()
+
+	response, err := client.GetUser(ctx, &authv1.GetUserRequest{UserId: userID})
+	if err != nil || response.GetUser() == nil {
+		log.Printf("get user for impersonation: %v", err)
+		view.Message = loc.Sprintf("error.user_not_found")
+		templ.Handler(templates.UsersFullPage(view, pageCtx)).ServeHTTP(w, r)
+		return
+	}
+
+	user := response.GetUser()
+	if sessionID := impersonationSessionID(r); sessionID != "" {
+		if h.impersonation != nil {
+			h.impersonation.Delete(sessionID)
+		}
+	}
+	sessionID, err := id.NewID()
+	if err != nil {
+		log.Printf("impersonation session id: %v", err)
+		view.Message = loc.Sprintf("error.user_impersonate_failed")
+		templ.Handler(templates.UsersFullPage(view, pageCtx)).ServeHTTP(w, r)
+		return
+	}
+
+	if h.impersonation != nil {
+		h.impersonation.Set(sessionID, impersonationSession{
+			userID:      user.GetId(),
+			displayName: user.GetDisplayName(),
+		})
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     impersonationCookieName,
+		Value:    sessionID,
+		Path:     "/",
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		Secure:   isHTTPS(r),
+	})
+
+	view.Detail = buildUserDetail(user)
+	view.Impersonation = &templates.ImpersonationView{
+		UserID:      user.GetId(),
+		DisplayName: user.GetDisplayName(),
+	}
+	pageCtx.Impersonation = view.Impersonation
+	label := strings.TrimSpace(user.GetDisplayName())
+	if label == "" {
+		label = user.GetId()
+	}
+	view.Message = loc.Sprintf("users.impersonate.success", label)
+
+	templ.Handler(templates.UsersFullPage(view, pageCtx)).ServeHTTP(w, r)
+}
+
+// handleLogout clears the current impersonation session.
+func (h *Handler) handleLogout(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", http.MethodPost)
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	loc, lang := h.localizer(w, r)
+	pageCtx := h.pageContext(lang, loc, r)
+	view := templates.UsersPageView{}
+	if !requireSameOrigin(w, r, loc) {
+		return
+	}
+
+	if sessionID := impersonationSessionID(r); sessionID != "" {
+		if h.impersonation != nil {
+			h.impersonation.Delete(sessionID)
+		}
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     impersonationCookieName,
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		Expires:  time.Unix(0, 0),
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		Secure:   isHTTPS(r),
+	})
+
+	view.Message = loc.Sprintf("users.logout.success")
+	pageCtx.Impersonation = nil
+	templ.Handler(templates.UsersFullPage(view, pageCtx)).ServeHTTP(w, r)
 }
 
 // handleUsersTable renders the users table via HTMX.
@@ -220,12 +552,13 @@ func (h *Handler) handleCampaignsTable(w http.ResponseWriter, r *http.Request) {
 // handleCampaignsPage renders the campaigns page fragment or full layout.
 func (h *Handler) handleCampaignsPage(w http.ResponseWriter, r *http.Request) {
 	loc, lang := h.localizer(w, r)
+	pageCtx := h.pageContext(lang, loc, r)
 	if isHTMXRequest(r) {
 		templ.Handler(templates.CampaignsPage(loc)).ServeHTTP(w, r)
 		return
 	}
 
-	templ.Handler(templates.CampaignsFullPage(lang, loc)).ServeHTTP(w, r)
+	templ.Handler(templates.CampaignsFullPage(pageCtx)).ServeHTTP(w, r)
 }
 
 // handleCampaignRoutes dispatches detail and session subroutes.
@@ -342,7 +675,8 @@ func (h *Handler) handleSessionsList(w http.ResponseWriter, r *http.Request, cam
 		templ.Handler(templates.SessionsListPage(campaignID, campaignName, loc)).ServeHTTP(w, r)
 		return
 	}
-	templ.Handler(templates.SessionsListFullPage(campaignID, campaignName, lang, loc)).ServeHTTP(w, r)
+	pageCtx := h.pageContext(lang, loc, r)
+	templ.Handler(templates.SessionsListFullPage(campaignID, campaignName, pageCtx)).ServeHTTP(w, r)
 }
 
 // handleSessionsTable renders the sessions table via HTMX.
@@ -389,7 +723,8 @@ func (h *Handler) renderCampaignDetail(w http.ResponseWriter, r *http.Request, d
 		return
 	}
 
-	templ.Handler(templates.CampaignDetailFullPage(detail, message, lang, loc)).ServeHTTP(w, r)
+	pageCtx := h.pageContext(lang, loc, r)
+	templ.Handler(templates.CampaignDetailFullPage(detail, message, pageCtx)).ServeHTTP(w, r)
 }
 
 // renderCampaignSessions renders the session list fragment.
@@ -646,11 +981,12 @@ func (h *Handler) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	loc, lang := h.localizer(w, r)
+	pageCtx := h.pageContext(lang, loc, r)
 	if isHTMXRequest(r) {
 		templ.Handler(templates.DashboardPage(loc)).ServeHTTP(w, r)
 		return
 	}
-	templ.Handler(templates.DashboardFullPage(lang, loc)).ServeHTTP(w, r)
+	templ.Handler(templates.DashboardFullPage(pageCtx)).ServeHTTP(w, r)
 }
 
 // handleDashboardContent loads and renders the dashboard statistics and recent activity.
@@ -876,7 +1212,8 @@ func (h *Handler) handleCharactersList(w http.ResponseWriter, r *http.Request, c
 		templ.Handler(templates.CharactersListPage(campaignID, campaignName, loc)).ServeHTTP(w, r)
 		return
 	}
-	templ.Handler(templates.CharactersListFullPage(campaignID, campaignName, lang, loc)).ServeHTTP(w, r)
+	pageCtx := h.pageContext(lang, loc, r)
+	templ.Handler(templates.CharactersListFullPage(campaignID, campaignName, pageCtx)).ServeHTTP(w, r)
 }
 
 // handleCharactersTable renders the characters table.
@@ -973,7 +1310,8 @@ func (h *Handler) handleCharacterSheet(w http.ResponseWriter, r *http.Request, c
 		templ.Handler(templates.CharacterSheetPage(sheet, loc)).ServeHTTP(w, r)
 		return
 	}
-	templ.Handler(templates.CharacterSheetFullPage(sheet, lang, loc)).ServeHTTP(w, r)
+	pageCtx := h.pageContext(lang, loc, r)
+	templ.Handler(templates.CharacterSheetFullPage(sheet, pageCtx)).ServeHTTP(w, r)
 }
 
 // renderCharactersTable renders the characters table component.
@@ -1056,7 +1394,8 @@ func (h *Handler) handleParticipantsList(w http.ResponseWriter, r *http.Request,
 		templ.Handler(templates.ParticipantsListPage(campaignID, campaignName, loc)).ServeHTTP(w, r)
 		return
 	}
-	templ.Handler(templates.ParticipantsListFullPage(campaignID, campaignName, lang, loc)).ServeHTTP(w, r)
+	pageCtx := h.pageContext(lang, loc, r)
+	templ.Handler(templates.ParticipantsListFullPage(campaignID, campaignName, pageCtx)).ServeHTTP(w, r)
 }
 
 // handleParticipantsTable renders the participants table.
@@ -1193,7 +1532,8 @@ func (h *Handler) handleSessionDetail(w http.ResponseWriter, r *http.Request, ca
 		templ.Handler(templates.SessionDetailPage(detail, loc)).ServeHTTP(w, r)
 		return
 	}
-	templ.Handler(templates.SessionDetailFullPage(detail, lang, loc)).ServeHTTP(w, r)
+	pageCtx := h.pageContext(lang, loc, r)
+	templ.Handler(templates.SessionDetailFullPage(detail, pageCtx)).ServeHTTP(w, r)
 }
 
 // handleSessionEvents renders the session events via HTMX.
@@ -1288,7 +1628,8 @@ func (h *Handler) handleEventLog(w http.ResponseWriter, r *http.Request, campaig
 		return
 	}
 
-	templ.Handler(templates.EventLogFullPage(view, lang, loc)).ServeHTTP(w, r)
+	pageCtx := h.pageContext(lang, loc, r)
+	templ.Handler(templates.EventLogFullPage(view, pageCtx)).ServeHTTP(w, r)
 }
 
 // handleEventLogTable renders the event log table via HTMX.

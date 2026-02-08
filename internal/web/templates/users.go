@@ -2,8 +2,9 @@ package templates
 
 // UsersPageView provides data for the users page.
 type UsersPageView struct {
-	Message string
-	Detail  *UserDetail
+	Message       string
+	Detail        *UserDetail
+	Impersonation *ImpersonationView
 }
 
 // UserRow represents a row in the users table.
