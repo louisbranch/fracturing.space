@@ -290,6 +290,12 @@ func TestUpdateCharacter_Success(t *testing.T) {
 	if stored.Name != "New Hero" {
 		t.Errorf("Stored Name = %q, want %q", stored.Name, "New Hero")
 	}
+	if got := len(eventStore.events["c1"]); got != 1 {
+		t.Fatalf("expected 1 event, got %d", got)
+	}
+	if eventStore.events["c1"][0].Type != event.TypeCharacterUpdated {
+		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.TypeCharacterUpdated)
+	}
 }
 
 func TestDeleteCharacter_Success(t *testing.T) {
@@ -323,6 +329,12 @@ func TestDeleteCharacter_Success(t *testing.T) {
 	}
 	if updatedCampaign.CharacterCount != 0 {
 		t.Errorf("CharacterCount = %d, want 0", updatedCampaign.CharacterCount)
+	}
+	if got := len(eventStore.events["c1"]); got != 1 {
+		t.Fatalf("expected 1 event, got %d", got)
+	}
+	if eventStore.events["c1"][0].Type != event.TypeCharacterDeleted {
+		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.TypeCharacterDeleted)
 	}
 }
 
@@ -516,6 +528,7 @@ func TestSetDefaultControl_Success_GM(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	characterStore := newFakeCharacterStore()
 	controlStore := newFakeControlDefaultStore()
+	eventStore := newFakeEventStore()
 	now := time.Now().UTC()
 
 	campaignStore.campaigns["c1"] = campaign.Campaign{ID: "c1", Status: campaign.CampaignStatusActive}
@@ -527,7 +540,7 @@ func TestSetDefaultControl_Success_GM(t *testing.T) {
 		Campaign:       campaignStore,
 		Character:      characterStore,
 		ControlDefault: controlStore,
-		Event:          newFakeEventStore(),
+		Event:          eventStore,
 	})
 
 	resp, err := svc.SetDefaultControl(context.Background(), &statev1.SetDefaultControlRequest{
@@ -553,6 +566,12 @@ func TestSetDefaultControl_Success_GM(t *testing.T) {
 	if !ctrl.IsGM {
 		t.Error("Controller should be GM")
 	}
+	if got := len(eventStore.events["c1"]); got != 1 {
+		t.Fatalf("expected 1 event, got %d", got)
+	}
+	if eventStore.events["c1"][0].Type != event.TypeControllerAssigned {
+		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.TypeControllerAssigned)
+	}
 }
 
 func TestSetDefaultControl_Success_Participant(t *testing.T) {
@@ -560,6 +579,7 @@ func TestSetDefaultControl_Success_Participant(t *testing.T) {
 	characterStore := newFakeCharacterStore()
 	participantStore := newFakeParticipantStore()
 	controlStore := newFakeControlDefaultStore()
+	eventStore := newFakeEventStore()
 	now := time.Now().UTC()
 
 	campaignStore.campaigns["c1"] = campaign.Campaign{ID: "c1", Status: campaign.CampaignStatusActive}
@@ -575,7 +595,7 @@ func TestSetDefaultControl_Success_Participant(t *testing.T) {
 		Character:      characterStore,
 		Participant:    participantStore,
 		ControlDefault: controlStore,
-		Event:          newFakeEventStore(),
+		Event:          eventStore,
 	})
 
 	resp, err := svc.SetDefaultControl(context.Background(), &statev1.SetDefaultControlRequest{
@@ -601,6 +621,12 @@ func TestSetDefaultControl_Success_Participant(t *testing.T) {
 	}
 	if ctrl.ParticipantID != "p1" {
 		t.Errorf("Controller ParticipantID = %q, want %q", ctrl.ParticipantID, "p1")
+	}
+	if got := len(eventStore.events["c1"]); got != 1 {
+		t.Fatalf("expected 1 event, got %d", got)
+	}
+	if eventStore.events["c1"][0].Type != event.TypeControllerAssigned {
+		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.TypeControllerAssigned)
 	}
 	_ = resp
 }
@@ -766,8 +792,9 @@ func TestPatchCharacterProfile_ZeroHpMaxNoChange(t *testing.T) {
 	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 18, StressMax: 6},
 	}
+	eventStore := newFakeEventStore()
 
-	svc := NewCharacterService(Stores{Daggerheart: dhStore, Event: newFakeEventStore()})
+	svc := NewCharacterService(Stores{Daggerheart: dhStore, Event: eventStore})
 	resp, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
@@ -780,6 +807,12 @@ func TestPatchCharacterProfile_ZeroHpMaxNoChange(t *testing.T) {
 	if dh := resp.Profile.GetDaggerheart(); dh == nil || dh.GetHpMax() != 18 {
 		t.Errorf("Profile HpMax = %d, want %d (unchanged)", dh.GetHpMax(), 18)
 	}
+	if got := len(eventStore.events["c1"]); got != 1 {
+		t.Fatalf("expected 1 event, got %d", got)
+	}
+	if eventStore.events["c1"][0].Type != event.TypeProfileUpdated {
+		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.TypeProfileUpdated)
+	}
 }
 
 func TestPatchCharacterProfile_Success(t *testing.T) {
@@ -787,8 +820,9 @@ func TestPatchCharacterProfile_Success(t *testing.T) {
 	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 18, StressMax: 6, Evasion: 10, MajorThreshold: 5, SevereThreshold: 10},
 	}
+	eventStore := newFakeEventStore()
 
-	svc := NewCharacterService(Stores{Daggerheart: dhStore, Event: newFakeEventStore()})
+	svc := NewCharacterService(Stores{Daggerheart: dhStore, Event: eventStore})
 	resp, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
@@ -810,6 +844,12 @@ func TestPatchCharacterProfile_Success(t *testing.T) {
 	// Verify unchanged fields preserved
 	if dh := resp.Profile.GetDaggerheart(); dh == nil || dh.GetEvasion().GetValue() != 10 {
 		t.Errorf("Profile Evasion = %d, want %d (unchanged)", dh.GetEvasion().GetValue(), 10)
+	}
+	if got := len(eventStore.events["c1"]); got != 1 {
+		t.Fatalf("expected 1 event, got %d", got)
+	}
+	if eventStore.events["c1"][0].Type != event.TypeProfileUpdated {
+		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.TypeProfileUpdated)
 	}
 }
 
@@ -834,7 +874,8 @@ func TestPatchCharacterProfile_UpdateTraits(t *testing.T) {
 		},
 	}
 
-	svc := NewCharacterService(Stores{Daggerheart: dhStore, Event: newFakeEventStore()})
+	eventStore := newFakeEventStore()
+	svc := NewCharacterService(Stores{Daggerheart: dhStore, Event: eventStore})
 	// Patch only Agility and Strength, leaving other 4 traits unchanged
 	resp, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
 		CampaignId:  "c1",
@@ -872,6 +913,12 @@ func TestPatchCharacterProfile_UpdateTraits(t *testing.T) {
 	}
 	if dh.GetKnowledge().GetValue() != 2 {
 		t.Errorf("Profile Knowledge = %d, want %d (unchanged)", dh.GetKnowledge().GetValue(), 2)
+	}
+	if got := len(eventStore.events["c1"]); got != 1 {
+		t.Fatalf("expected 1 event, got %d", got)
+	}
+	if eventStore.events["c1"][0].Type != event.TypeProfileUpdated {
+		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.TypeProfileUpdated)
 	}
 }
 

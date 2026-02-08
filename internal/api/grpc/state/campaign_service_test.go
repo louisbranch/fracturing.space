@@ -8,6 +8,7 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/state/v1"
 	"github.com/louisbranch/fracturing.space/internal/state/campaign"
+	"github.com/louisbranch/fracturing.space/internal/state/event"
 	"github.com/louisbranch/fracturing.space/internal/state/session"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -114,6 +115,12 @@ func TestCreateCampaign_Success(t *testing.T) {
 	}
 	if resp.Campaign.ThemePrompt != "A dark fantasy adventure" {
 		t.Errorf("Campaign ThemePrompt = %q, want %q", resp.Campaign.ThemePrompt, "A dark fantasy adventure")
+	}
+	if got := len(eventStore.events["campaign-123"]); got != 1 {
+		t.Fatalf("expected 1 event, got %d", got)
+	}
+	if eventStore.events["campaign-123"][0].Type != event.TypeCampaignCreated {
+		t.Fatalf("event type = %s, want %s", eventStore.events["campaign-123"][0].Type, event.TypeCampaignCreated)
 	}
 
 	// Verify persisted
@@ -349,6 +356,12 @@ func TestEndCampaign_Success(t *testing.T) {
 	if stored.Status != campaign.CampaignStatusCompleted {
 		t.Errorf("Stored campaign Status = %v, want %v", stored.Status, campaign.CampaignStatusCompleted)
 	}
+	if got := len(eventStore.events["c1"]); got != 1 {
+		t.Fatalf("expected 1 event, got %d", got)
+	}
+	if eventStore.events["c1"][0].Type != event.TypeCampaignStatusChanged {
+		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.TypeCampaignStatusChanged)
+	}
 }
 
 func TestArchiveCampaign_NilRequest(t *testing.T) {
@@ -425,6 +438,12 @@ func TestArchiveCampaign_Success(t *testing.T) {
 	if resp.Campaign.ArchivedAt == nil {
 		t.Error("Campaign ArchivedAt is nil")
 	}
+	if got := len(eventStore.events["c1"]); got != 1 {
+		t.Fatalf("expected 1 event, got %d", got)
+	}
+	if eventStore.events["c1"][0].Type != event.TypeCampaignStatusChanged {
+		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.TypeCampaignStatusChanged)
+	}
 }
 
 func TestRestoreCampaign_NilRequest(t *testing.T) {
@@ -492,6 +511,12 @@ func TestRestoreCampaign_Success(t *testing.T) {
 	}
 	if resp.Campaign.ArchivedAt != nil {
 		t.Error("Campaign ArchivedAt should be nil after restore")
+	}
+	if got := len(eventStore.events["c1"]); got != 1 {
+		t.Fatalf("expected 1 event, got %d", got)
+	}
+	if eventStore.events["c1"][0].Type != event.TypeCampaignStatusChanged {
+		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.TypeCampaignStatusChanged)
 	}
 }
 

@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/state/v1"
 	"github.com/louisbranch/fracturing.space/internal/app/server"
 	"github.com/louisbranch/fracturing.space/internal/mcp/domain"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -144,6 +145,77 @@ func parseRFC3339(t *testing.T, value string) time.Time {
 		t.Fatalf("parse timestamp %q: %v", value, err)
 	}
 	return parsed
+}
+
+func newEventClient(t *testing.T, grpcAddr string) (statev1.EventServiceClient, func()) {
+	t.Helper()
+
+	conn, err := grpc.NewClient(
+		grpcAddr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDefaultCallOptions(grpc.WaitForReady(true)),
+	)
+	if err != nil {
+		t.Fatalf("dial gRPC: %v", err)
+	}
+
+	closeConn := func() {
+		if err := conn.Close(); err != nil {
+			t.Fatalf("close gRPC: %v", err)
+		}
+	}
+
+	return statev1.NewEventServiceClient(conn), closeConn
+}
+
+func requireLatestSeq(t *testing.T, ctx context.Context, client statev1.EventServiceClient, campaignID string) uint64 {
+	t.Helper()
+
+	response, err := client.ListEvents(ctx, &statev1.ListEventsRequest{
+		CampaignId: campaignID,
+		PageSize:   1,
+		OrderBy:    "seq desc",
+	})
+	if err != nil {
+		t.Fatalf("list events: %v", err)
+	}
+	if response == nil || len(response.Events) == 0 {
+		return 0
+	}
+	return response.Events[0].Seq
+}
+
+func requireEventAfterSeq(t *testing.T, ctx context.Context, client statev1.EventServiceClient, campaignID, eventType string, before uint64) {
+	t.Helper()
+
+	response, err := client.ListEvents(ctx, &statev1.ListEventsRequest{
+		CampaignId: campaignID,
+		PageSize:   1,
+		OrderBy:    "seq desc",
+		Filter:     "type = \"" + eventType + "\"",
+	})
+	if err != nil {
+		t.Fatalf("list events for %s: %v", eventType, err)
+	}
+	if response == nil || len(response.Events) == 0 {
+		t.Fatalf("expected event type %s in campaign %s", eventType, campaignID)
+	}
+	if response.Events[0].Seq <= before {
+		t.Fatalf("expected %s to append event: before=%d after=%d", eventType, before, response.Events[0].Seq)
+	}
+}
+
+func requireEventTypesAfterSeq(t *testing.T, ctx context.Context, client statev1.EventServiceClient, campaignID string, before uint64, eventTypes ...string) uint64 {
+	t.Helper()
+
+	after := requireLatestSeq(t, ctx, client, campaignID)
+	if after <= before {
+		t.Fatalf("expected events to append: before=%d after=%d", before, after)
+	}
+	for _, eventType := range eventTypes {
+		requireEventAfterSeq(t, ctx, client, campaignID, eventType, before)
+	}
+	return after
 }
 
 // setTempDBPath configures a temporary database for integration tests.

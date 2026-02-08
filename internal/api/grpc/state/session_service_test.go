@@ -8,6 +8,7 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/state/v1"
 	"github.com/louisbranch/fracturing.space/internal/state/campaign"
+	"github.com/louisbranch/fracturing.space/internal/state/event"
 	"github.com/louisbranch/fracturing.space/internal/state/session"
 	"google.golang.org/grpc/codes"
 )
@@ -30,10 +31,20 @@ func TestStartSession_MissingSessionStore(t *testing.T) {
 	assertStatusCode(t, err, codes.Internal)
 }
 
+func TestStartSession_MissingEventStore(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	sessionStore := newFakeSessionStore()
+	campaignStore.campaigns["c1"] = campaign.Campaign{ID: "c1", Status: campaign.CampaignStatusActive}
+	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore})
+	_, err := svc.StartSession(context.Background(), &statev1.StartSessionRequest{CampaignId: "c1"})
+	assertStatusCode(t, err, codes.Internal)
+}
+
 func TestStartSession_MissingCampaignId(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
-	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore})
+	eventStore := newFakeEventStore()
+	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore, Event: eventStore})
 	_, err := svc.StartSession(context.Background(), &statev1.StartSessionRequest{})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
@@ -41,7 +52,8 @@ func TestStartSession_MissingCampaignId(t *testing.T) {
 func TestStartSession_CampaignNotFound(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
-	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore})
+	eventStore := newFakeEventStore()
+	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore, Event: eventStore})
 	_, err := svc.StartSession(context.Background(), &statev1.StartSessionRequest{CampaignId: "nonexistent"})
 	assertStatusCode(t, err, codes.NotFound)
 }
@@ -49,12 +61,13 @@ func TestStartSession_CampaignNotFound(t *testing.T) {
 func TestStartSession_CampaignArchivedDisallowed(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
+	eventStore := newFakeEventStore()
 	campaignStore.campaigns["c1"] = campaign.Campaign{
 		ID:     "c1",
 		Status: campaign.CampaignStatusArchived,
 	}
 
-	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore})
+	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore, Event: eventStore})
 	_, err := svc.StartSession(context.Background(), &statev1.StartSessionRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.FailedPrecondition)
 }
@@ -62,6 +75,7 @@ func TestStartSession_CampaignArchivedDisallowed(t *testing.T) {
 func TestStartSession_ActiveSessionExists(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
+	eventStore := newFakeEventStore()
 	now := time.Now().UTC()
 
 	campaignStore.campaigns["c1"] = campaign.Campaign{
@@ -73,7 +87,7 @@ func TestStartSession_ActiveSessionExists(t *testing.T) {
 	}
 	sessionStore.activeSession["c1"] = "s1"
 
-	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore})
+	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore, Event: eventStore})
 	_, err := svc.StartSession(context.Background(), &statev1.StartSessionRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.FailedPrecondition)
 }
@@ -114,6 +128,12 @@ func TestStartSession_Success_ActivatesDraftCampaign(t *testing.T) {
 	if resp.Session.Status != statev1.SessionStatus_SESSION_ACTIVE {
 		t.Errorf("Session Status = %v, want %v", resp.Session.Status, statev1.SessionStatus_SESSION_ACTIVE)
 	}
+	if got := len(eventStore.events["c1"]); got != 1 {
+		t.Fatalf("expected 1 event, got %d", got)
+	}
+	if eventStore.events["c1"][0].Type != event.TypeSessionStarted {
+		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.TypeSessionStarted)
+	}
 
 	// Verify campaign was activated
 	storedCampaign, _ := campaignStore.Get(context.Background(), "c1")
@@ -145,6 +165,12 @@ func TestStartSession_Success_AlreadyActive(t *testing.T) {
 	}
 	if resp.Session == nil {
 		t.Fatal("StartSession response has nil session")
+	}
+	if got := len(eventStore.events["c1"]); got != 1 {
+		t.Fatalf("expected 1 event, got %d", got)
+	}
+	if eventStore.events["c1"][0].Type != event.TypeSessionStarted {
+		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.TypeSessionStarted)
 	}
 }
 
@@ -284,10 +310,26 @@ func TestEndSession_NilRequest(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
+func TestEndSession_MissingEventStore(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	sessionStore := newFakeSessionStore()
+	now := time.Now().UTC()
+	campaignStore.campaigns["c1"] = campaign.Campaign{ID: "c1", Status: campaign.CampaignStatusActive}
+	sessionStore.sessions["c1"] = map[string]session.Session{
+		"s1": {ID: "s1", CampaignID: "c1", Status: session.SessionStatusActive, StartedAt: now},
+	}
+	sessionStore.activeSession["c1"] = "s1"
+
+	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore})
+	_, err := svc.EndSession(context.Background(), &statev1.EndSessionRequest{CampaignId: "c1", SessionId: "s1"})
+	assertStatusCode(t, err, codes.Internal)
+}
+
 func TestEndSession_MissingCampaignId(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
-	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore})
+	eventStore := newFakeEventStore()
+	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore, Event: eventStore})
 	_, err := svc.EndSession(context.Background(), &statev1.EndSessionRequest{SessionId: "s1"})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
@@ -295,7 +337,8 @@ func TestEndSession_MissingCampaignId(t *testing.T) {
 func TestEndSession_MissingSessionId(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
-	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore})
+	eventStore := newFakeEventStore()
+	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore, Event: eventStore})
 	_, err := svc.EndSession(context.Background(), &statev1.EndSessionRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
@@ -303,7 +346,8 @@ func TestEndSession_MissingSessionId(t *testing.T) {
 func TestEndSession_CampaignNotFound(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
-	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore})
+	eventStore := newFakeEventStore()
+	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore, Event: eventStore})
 	_, err := svc.EndSession(context.Background(), &statev1.EndSessionRequest{CampaignId: "c1", SessionId: "s1"})
 	assertStatusCode(t, err, codes.NotFound)
 }
@@ -311,9 +355,10 @@ func TestEndSession_CampaignNotFound(t *testing.T) {
 func TestEndSession_SessionNotFound(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
+	eventStore := newFakeEventStore()
 	campaignStore.campaigns["c1"] = campaign.Campaign{ID: "c1", Status: campaign.CampaignStatusActive}
 
-	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore})
+	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore, Event: eventStore})
 	_, err := svc.EndSession(context.Background(), &statev1.EndSessionRequest{CampaignId: "c1", SessionId: "s1"})
 	assertStatusCode(t, err, codes.NotFound)
 }
@@ -345,6 +390,12 @@ func TestEndSession_Success(t *testing.T) {
 	}
 	if resp.Session.EndedAt == nil {
 		t.Error("Session EndedAt is nil")
+	}
+	if got := len(eventStore.events["c1"]); got != 1 {
+		t.Fatalf("expected 1 event, got %d", got)
+	}
+	if eventStore.events["c1"][0].Type != event.TypeSessionEnded {
+		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.TypeSessionEnded)
 	}
 }
 

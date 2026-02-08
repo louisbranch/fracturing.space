@@ -43,6 +43,7 @@ func runEventListTests(t *testing.T, grpcAddr string) {
 		t.Fatalf("create campaign: %v", err)
 	}
 	campaignID := createResp.Campaign.Id
+	lastSeq := requireEventTypesAfterSeq(t, ctx, eventClient, campaignID, 0, "campaign.created")
 
 	// Append events to the campaign journal.
 	for i := 0; i < 3; i++ {
@@ -56,6 +57,7 @@ func runEventListTests(t *testing.T, grpcAddr string) {
 		}); err != nil {
 			t.Fatalf("append note event %d: %v", i, err)
 		}
+		lastSeq = requireEventTypesAfterSeq(t, ctx, eventClient, campaignID, lastSeq, "action.note_added")
 		if _, err := eventClient.AppendEvent(ctx, &statev1.AppendEventRequest{
 			CampaignId:  campaignID,
 			Type:        "action.roll_resolved",
@@ -66,6 +68,7 @@ func runEventListTests(t *testing.T, grpcAddr string) {
 		}); err != nil {
 			t.Fatalf("append roll event %d: %v", i, err)
 		}
+		lastSeq = requireEventTypesAfterSeq(t, ctx, eventClient, campaignID, lastSeq, "action.roll_resolved")
 	}
 
 	t.Run("list events basic", func(t *testing.T) {

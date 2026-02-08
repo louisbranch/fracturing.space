@@ -46,7 +46,6 @@ func runSessionLockTests(t *testing.T, grpcAddr string) {
 	if createResp == nil || createResp.Campaign == nil || createResp.Campaign.Id == "" {
 		t.Fatal("expected campaign response")
 	}
-
 	startResp, err := sessionClient.StartSession(ctx, &statev1.StartSessionRequest{
 		CampaignId: createResp.Campaign.Id,
 		Name:       "Session 1",
@@ -57,7 +56,6 @@ func runSessionLockTests(t *testing.T, grpcAddr string) {
 	if startResp == nil || startResp.Session == nil || startResp.Session.Id == "" {
 		t.Fatal("expected session response")
 	}
-
 	_, err = participantClient.CreateParticipant(ctx, &statev1.CreateParticipantRequest{
 		CampaignId:  createResp.Campaign.Id,
 		DisplayName: "Player One",
@@ -98,7 +96,6 @@ func runSessionLockTests(t *testing.T, grpcAddr string) {
 	if endResp.Session.EndedAt == nil {
 		t.Fatal("expected ended_at to be set")
 	}
-
 	createParticipantResp, err := participantClient.CreateParticipant(ctx, &statev1.CreateParticipantRequest{
 		CampaignId:  createResp.Campaign.Id,
 		DisplayName: "Player One",
@@ -111,7 +108,6 @@ func runSessionLockTests(t *testing.T, grpcAddr string) {
 	if createParticipantResp == nil || createParticipantResp.Participant == nil || createParticipantResp.Participant.Id == "" {
 		t.Fatal("expected participant response after end session")
 	}
-
 	_, err = participantClient.ListParticipants(ctx, &statev1.ListParticipantsRequest{
 		CampaignId: createResp.Campaign.Id,
 	})

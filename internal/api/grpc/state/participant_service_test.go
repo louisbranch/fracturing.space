@@ -7,6 +7,7 @@ import (
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/state/v1"
 	"github.com/louisbranch/fracturing.space/internal/state/campaign"
+	"github.com/louisbranch/fracturing.space/internal/state/event"
 	"github.com/louisbranch/fracturing.space/internal/state/participant"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -173,6 +174,12 @@ func TestCreateParticipant_Success_GM(t *testing.T) {
 	if resp.Participant.Controller != statev1.Controller_CONTROLLER_AI {
 		t.Errorf("Participant Controller = %v, want %v", resp.Participant.Controller, statev1.Controller_CONTROLLER_AI)
 	}
+	if got := len(eventStore.events["c1"]); got != 1 {
+		t.Fatalf("expected 1 event, got %d", got)
+	}
+	if eventStore.events["c1"][0].Type != event.TypeParticipantJoined {
+		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.TypeParticipantJoined)
+	}
 
 	// Verify persisted
 	stored, err := participantStore.GetParticipant(context.Background(), "c1", "participant-123")
@@ -212,6 +219,12 @@ func TestCreateParticipant_Success_Player(t *testing.T) {
 	}
 	if resp.Participant.Role != statev1.ParticipantRole_PLAYER {
 		t.Errorf("Participant Role = %v, want %v", resp.Participant.Role, statev1.ParticipantRole_PLAYER)
+	}
+	if got := len(eventStore.events["c1"]); got != 1 {
+		t.Fatalf("expected 1 event, got %d", got)
+	}
+	if eventStore.events["c1"][0].Type != event.TypeParticipantJoined {
+		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.TypeParticipantJoined)
 	}
 }
 
@@ -267,6 +280,12 @@ func TestUpdateParticipant_Success(t *testing.T) {
 	if stored.DisplayName != "Player Uno" {
 		t.Errorf("Stored participant DisplayName = %q, want %q", stored.DisplayName, "Player Uno")
 	}
+	if got := len(eventStore.events["c1"]); got != 1 {
+		t.Fatalf("expected 1 event, got %d", got)
+	}
+	if eventStore.events["c1"][0].Type != event.TypeParticipantUpdated {
+		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.TypeParticipantUpdated)
+	}
 }
 
 func TestDeleteParticipant_Success(t *testing.T) {
@@ -300,6 +319,12 @@ func TestDeleteParticipant_Success(t *testing.T) {
 	}
 	if updatedCampaign.ParticipantCount != 0 {
 		t.Errorf("ParticipantCount = %d, want 0", updatedCampaign.ParticipantCount)
+	}
+	if got := len(eventStore.events["c1"]); got != 1 {
+		t.Fatalf("expected 1 event, got %d", got)
+	}
+	if eventStore.events["c1"][0].Type != event.TypeParticipantLeft {
+		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.TypeParticipantLeft)
 	}
 }
 

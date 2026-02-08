@@ -240,7 +240,6 @@ func TestWebHTMXIntegration(t *testing.T) {
 		if err != nil {
 			t.Fatalf("start session: %v", err)
 		}
-
 		status, body := htmxGet(t, httpClient, baseURL+"/dashboard/content")
 
 		if status != http.StatusOK {
@@ -333,7 +332,6 @@ func TestWebHTMXIntegration(t *testing.T) {
 		if err != nil {
 			t.Fatalf("start session: %v", err)
 		}
-
 		status, body := htmxGet(t, httpClient, baseURL+"/campaigns/"+campaignID+"/sessions/table")
 
 		if status != http.StatusOK {
@@ -406,7 +404,6 @@ func TestWebHTMXIntegration(t *testing.T) {
 			t.Fatalf("create campaign: %v", err)
 		}
 		campaignID := createResp.Campaign.Id
-
 		sessionResp, err := sessionClient.StartSession(ctx, &statev1.StartSessionRequest{
 			CampaignId: campaignID,
 			Name:       "HTMX Session Detail",
@@ -564,7 +561,6 @@ func TestWebHTMXIntegration(t *testing.T) {
 		if err != nil {
 			t.Fatalf("create character: %v", err)
 		}
-
 		status, body := htmxGet(t, httpClient, baseURL+"/campaigns/"+campaignID+"/characters/table")
 
 		if status != http.StatusOK {
@@ -588,7 +584,6 @@ func TestWebHTMXIntegration(t *testing.T) {
 			t.Fatalf("create campaign: %v", err)
 		}
 		campaignID := createResp.Campaign.Id
-
 		charResp, err := characterClient.CreateCharacter(ctx, &statev1.CreateCharacterRequest{
 			CampaignId: campaignID,
 			Name:       "Sheet Test Character",
@@ -766,7 +761,6 @@ func TestWebHTMXIntegration(t *testing.T) {
 		if err != nil {
 			t.Fatalf("create participant: %v", err)
 		}
-
 		status, body := htmxGet(t, httpClient, baseURL+"/campaigns/"+campaignID+"/participants/table")
 
 		if status != http.StatusOK {
@@ -863,7 +857,6 @@ func TestWebHTMXIntegration(t *testing.T) {
 		if err != nil {
 			t.Fatalf("start session: %v", err)
 		}
-
 		status, body := htmxGet(t, httpClient, baseURL+"/campaigns/"+campaignID+"/events/table")
 
 		if status != http.StatusOK {

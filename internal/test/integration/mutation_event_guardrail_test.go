@@ -52,10 +52,7 @@ func runMutationEventGuardrailTests(t *testing.T, suite *integrationSuite, grpcA
 			t.Fatal("campaign_create returned empty id")
 		}
 
-		lastSeq := requireLatestSeq(t, ctx, eventClient, campaignOutput.ID)
-		if lastSeq == 0 {
-			t.Fatal("expected campaign_create to emit at least one event")
-		}
+		lastSeq := requireEventTypesAfterSeq(t, ctx, eventClient, campaignOutput.ID, 0, "campaign.created")
 
 		participantResult, err := suite.client.CallTool(ctx, &mcp.CallToolParams{
 			Name: "participant_create",
@@ -73,7 +70,7 @@ func runMutationEventGuardrailTests(t *testing.T, suite *integrationSuite, grpcA
 			t.Fatalf("participant_create failed: %+v", participantResult)
 		}
 		participantOutput := decodeStructuredContent[domain.ParticipantCreateResult](t, participantResult.StructuredContent)
-		lastSeq = requireEventAppended(t, ctx, eventClient, campaignOutput.ID, "participant_create", lastSeq)
+		lastSeq = requireEventTypesAfterSeq(t, ctx, eventClient, campaignOutput.ID, lastSeq, "participant.joined")
 
 		characterResult, err := suite.client.CallTool(ctx, &mcp.CallToolParams{
 			Name: "character_create",
@@ -90,7 +87,7 @@ func runMutationEventGuardrailTests(t *testing.T, suite *integrationSuite, grpcA
 			t.Fatalf("character_create failed: %+v", characterResult)
 		}
 		characterOutput := decodeStructuredContent[domain.CharacterCreateResult](t, characterResult.StructuredContent)
-		lastSeq = requireEventAppended(t, ctx, eventClient, campaignOutput.ID, "character_create", lastSeq)
+		lastSeq = requireEventTypesAfterSeq(t, ctx, eventClient, campaignOutput.ID, lastSeq, "character.created", "character.profile_updated", "chronicle.character_state_changed")
 
 		controlResult, err := suite.client.CallTool(ctx, &mcp.CallToolParams{
 			Name: "character_control_set",
@@ -106,7 +103,7 @@ func runMutationEventGuardrailTests(t *testing.T, suite *integrationSuite, grpcA
 		if controlResult == nil || controlResult.IsError {
 			t.Fatalf("character_control_set failed: %+v", controlResult)
 		}
-		lastSeq = requireEventAppended(t, ctx, eventClient, campaignOutput.ID, "character_control_set", lastSeq)
+		lastSeq = requireEventTypesAfterSeq(t, ctx, eventClient, campaignOutput.ID, lastSeq, "character.controller_assigned")
 
 		sessionResult, err := suite.client.CallTool(ctx, &mcp.CallToolParams{
 			Name: "session_start",
@@ -122,6 +119,7 @@ func runMutationEventGuardrailTests(t *testing.T, suite *integrationSuite, grpcA
 			t.Fatalf("session_start failed: %+v", sessionResult)
 		}
 		sessionOutput := decodeStructuredContent[domain.SessionStartResult](t, sessionResult.StructuredContent)
+		lastSeq = requireEventTypesAfterSeq(t, ctx, eventClient, campaignOutput.ID, lastSeq, "session.started")
 
 		endSessionResult, err := suite.client.CallTool(ctx, &mcp.CallToolParams{
 			Name: "session_end",
@@ -136,6 +134,7 @@ func runMutationEventGuardrailTests(t *testing.T, suite *integrationSuite, grpcA
 		if endSessionResult == nil || endSessionResult.IsError {
 			t.Fatalf("session_end failed: %+v", endSessionResult)
 		}
+		lastSeq = requireEventTypesAfterSeq(t, ctx, eventClient, campaignOutput.ID, lastSeq, "session.ended")
 
 		endCampaignResult, err := suite.client.CallTool(ctx, &mcp.CallToolParams{
 			Name: "campaign_end",
@@ -149,7 +148,7 @@ func runMutationEventGuardrailTests(t *testing.T, suite *integrationSuite, grpcA
 		if endCampaignResult == nil || endCampaignResult.IsError {
 			t.Fatalf("campaign_end failed: %+v", endCampaignResult)
 		}
-		lastSeq = requireEventAppended(t, ctx, eventClient, campaignOutput.ID, "campaign_end", lastSeq)
+		lastSeq = requireEventTypesAfterSeq(t, ctx, eventClient, campaignOutput.ID, lastSeq, "campaign.status_changed")
 
 		archiveResult, err := suite.client.CallTool(ctx, &mcp.CallToolParams{
 			Name: "campaign_archive",
@@ -163,7 +162,7 @@ func runMutationEventGuardrailTests(t *testing.T, suite *integrationSuite, grpcA
 		if archiveResult == nil || archiveResult.IsError {
 			t.Fatalf("campaign_archive failed: %+v", archiveResult)
 		}
-		lastSeq = requireEventAppended(t, ctx, eventClient, campaignOutput.ID, "campaign_archive", lastSeq)
+		lastSeq = requireEventTypesAfterSeq(t, ctx, eventClient, campaignOutput.ID, lastSeq, "campaign.status_changed")
 
 		restoreResult, err := suite.client.CallTool(ctx, &mcp.CallToolParams{
 			Name: "campaign_restore",
@@ -177,7 +176,7 @@ func runMutationEventGuardrailTests(t *testing.T, suite *integrationSuite, grpcA
 		if restoreResult == nil || restoreResult.IsError {
 			t.Fatalf("campaign_restore failed: %+v", restoreResult)
 		}
-		_ = requireEventAppended(t, ctx, eventClient, campaignOutput.ID, "campaign_restore", lastSeq)
+		_ = requireEventTypesAfterSeq(t, ctx, eventClient, campaignOutput.ID, lastSeq, "campaign.status_changed")
 	})
 
 	t.Run("campaign fork emits event", func(t *testing.T) {
@@ -216,50 +215,6 @@ func runMutationEventGuardrailTests(t *testing.T, suite *integrationSuite, grpcA
 		}
 		forkOutput := decodeStructuredContent[domain.CampaignForkResult](t, forkResult.StructuredContent)
 
-		requireEventType(t, ctx, eventClient, forkOutput.CampaignID, "campaign.forked")
+		requireEventTypesAfterSeq(t, ctx, eventClient, forkOutput.CampaignID, 0, "campaign.created", "campaign.forked")
 	})
-}
-
-func requireLatestSeq(t *testing.T, ctx context.Context, client statev1.EventServiceClient, campaignID string) uint64 {
-	t.Helper()
-
-	response, err := client.ListEvents(ctx, &statev1.ListEventsRequest{
-		CampaignId: campaignID,
-		PageSize:   1,
-		OrderBy:    "seq desc",
-	})
-	if err != nil {
-		t.Fatalf("list events: %v", err)
-	}
-	if response == nil || len(response.Events) == 0 {
-		return 0
-	}
-	return response.Events[0].Seq
-}
-
-func requireEventAppended(t *testing.T, ctx context.Context, client statev1.EventServiceClient, campaignID, label string, before uint64) uint64 {
-	t.Helper()
-
-	after := requireLatestSeq(t, ctx, client, campaignID)
-	if after <= before {
-		t.Fatalf("expected %s to append event: before=%d after=%d", label, before, after)
-	}
-	return after
-}
-
-func requireEventType(t *testing.T, ctx context.Context, client statev1.EventServiceClient, campaignID, eventType string) {
-	t.Helper()
-
-	response, err := client.ListEvents(ctx, &statev1.ListEventsRequest{
-		CampaignId: campaignID,
-		PageSize:   50,
-		OrderBy:    "seq desc",
-		Filter:     "type = \"" + eventType + "\"",
-	})
-	if err != nil {
-		t.Fatalf("list events for %s: %v", eventType, err)
-	}
-	if response == nil || len(response.Events) == 0 {
-		t.Fatalf("expected event type %s in campaign %s", eventType, campaignID)
-	}
 }

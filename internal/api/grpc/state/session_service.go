@@ -2,13 +2,16 @@ package state
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 	"time"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/state/v1"
+	grpcmeta "github.com/louisbranch/fracturing.space/internal/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/id"
 	"github.com/louisbranch/fracturing.space/internal/state/campaign"
+	"github.com/louisbranch/fracturing.space/internal/state/event"
 	"github.com/louisbranch/fracturing.space/internal/state/session"
 	"github.com/louisbranch/fracturing.space/internal/storage"
 	"google.golang.org/grpc/codes"
@@ -49,6 +52,9 @@ func (s *SessionService) StartSession(ctx context.Context, in *statev1.StartSess
 	}
 	if s.stores.Session == nil {
 		return nil, status.Error(codes.Internal, "session store is not configured")
+	}
+	if s.stores.Event == nil {
+		return nil, status.Error(codes.Internal, "event store is not configured")
 	}
 
 	campaignID := strings.TrimSpace(in.GetCampaignId())
@@ -108,6 +114,37 @@ func (s *SessionService) StartSession(ctx context.Context, in *statev1.StartSess
 			return nil, handleDomainError(err)
 		}
 		return nil, status.Errorf(codes.Internal, "persist session: %v", err)
+	}
+
+	payload := event.SessionStartedPayload{
+		SessionID:   sess.ID,
+		SessionName: sess.Name,
+	}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
+	}
+
+	actorID := grpcmeta.ParticipantIDFromContext(ctx)
+	actorType := event.ActorTypeSystem
+	if actorID != "" {
+		actorType = event.ActorTypeParticipant
+	}
+
+	if _, err := s.stores.Event.AppendEvent(ctx, event.Event{
+		CampaignID:   campaignID,
+		Timestamp:    sess.StartedAt,
+		Type:         event.TypeSessionStarted,
+		SessionID:    sess.ID,
+		RequestID:    grpcmeta.RequestIDFromContext(ctx),
+		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+		ActorType:    actorType,
+		ActorID:      actorID,
+		EntityType:   "session",
+		EntityID:     sess.ID,
+		PayloadJSON:  payloadJSON,
+	}); err != nil {
+		return nil, status.Errorf(codes.Internal, "append event: %v", err)
 	}
 
 	return &statev1.StartSessionResponse{
@@ -215,6 +252,9 @@ func (s *SessionService) EndSession(ctx context.Context, in *statev1.EndSessionR
 	if s.stores.Session == nil {
 		return nil, status.Error(codes.Internal, "session store is not configured")
 	}
+	if s.stores.Event == nil {
+		return nil, status.Error(codes.Internal, "event store is not configured")
+	}
 
 	campaignID := strings.TrimSpace(in.GetCampaignId())
 	if campaignID == "" {
@@ -231,9 +271,41 @@ func (s *SessionService) EndSession(ctx context.Context, in *statev1.EndSessionR
 	}
 
 	endedAt := s.clock().UTC()
-	sess, _, err := s.stores.Session.EndSession(ctx, campaignID, sessionID, endedAt)
+	sess, transitioned, err := s.stores.Session.EndSession(ctx, campaignID, sessionID, endedAt)
 	if err != nil {
 		return nil, handleDomainError(err)
+	}
+
+	if transitioned {
+		payload := event.SessionEndedPayload{
+			SessionID: sessionID,
+		}
+		payloadJSON, err := json.Marshal(payload)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
+		}
+
+		actorID := grpcmeta.ParticipantIDFromContext(ctx)
+		actorType := event.ActorTypeSystem
+		if actorID != "" {
+			actorType = event.ActorTypeParticipant
+		}
+
+		if _, err := s.stores.Event.AppendEvent(ctx, event.Event{
+			CampaignID:   campaignID,
+			Timestamp:    endedAt,
+			Type:         event.TypeSessionEnded,
+			SessionID:    sessionID,
+			RequestID:    grpcmeta.RequestIDFromContext(ctx),
+			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+			ActorType:    actorType,
+			ActorID:      actorID,
+			EntityType:   "session",
+			EntityID:     sessionID,
+			PayloadJSON:  payloadJSON,
+		}); err != nil {
+			return nil, status.Errorf(codes.Internal, "append event: %v", err)
+		}
 	}
 
 	return &statev1.EndSessionResponse{

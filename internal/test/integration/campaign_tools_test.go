@@ -57,7 +57,6 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 		if participantResult.IsError {
 			t.Fatalf("participant_create returned error content: %+v", participantResult.Content)
 		}
-
 		output := decodeStructuredContent[domain.ParticipantCreateResult](t, participantResult.StructuredContent)
 		if output.ID == "" {
 			t.Fatal("participant_create returned empty id")
@@ -118,7 +117,6 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 		if characterResult.IsError {
 			t.Fatalf("character_create returned error content: %+v", characterResult.Content)
 		}
-
 		output := decodeStructuredContent[domain.CharacterCreateResult](t, characterResult.StructuredContent)
 		if output.ID == "" {
 			t.Fatal("character_create returned empty id")
@@ -223,7 +221,6 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 		if gmControlResult.IsError {
 			t.Fatalf("character_control_set returned error content: %+v", gmControlResult.Content)
 		}
-
 		gmControlOutput := decodeStructuredContent[domain.CharacterControlSetResult](t, gmControlResult.StructuredContent)
 		if gmControlOutput.Controller != "GM" {
 			t.Fatalf("expected controller GM, got %q", gmControlOutput.Controller)
@@ -266,7 +263,6 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 		if participantControlResult.IsError {
 			t.Fatalf("character_control_set returned error content: %+v", participantControlResult.Content)
 		}
-
 		participantControlOutput := decodeStructuredContent[domain.CharacterControlSetResult](t, participantControlResult.StructuredContent)
 		if participantControlOutput.Controller != participantOutput.ID {
 			t.Fatalf("expected controller %q, got %q", participantOutput.ID, participantControlOutput.Controller)
@@ -309,7 +305,6 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 			t.Fatalf("session_start failed: %+v", startSessionResult)
 		}
 		sessionOutput := decodeStructuredContent[domain.SessionStartResult](t, startSessionResult.StructuredContent)
-
 		endSessionParams := &mcp.CallToolParams{
 			Name: "session_end",
 			Arguments: map[string]any{
@@ -324,7 +319,6 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 		if endSessionResult == nil || endSessionResult.IsError {
 			t.Fatalf("session_end failed: %+v", endSessionResult)
 		}
-
 		endCampaignParams := &mcp.CallToolParams{
 			Name: "campaign_end",
 			Arguments: map[string]any{
