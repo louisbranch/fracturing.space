@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
-# Script to start both the gRPC server and MCP HTTP server for CI/testing.
+# Script to start both the game server and MCP HTTP server for CI/testing.
 # This script is separate from scripts/mcp.sh because:
 #   - scripts/mcp.sh runs MCP server in stdio mode for local development/Cursor integration
-#   - This script starts both gRPC server and MCP HTTP server for CI/testing scenarios
+#   - This script starts both game server and MCP HTTP server for CI/testing scenarios
 set -e
 
 # Resolve repo root relative to this script
@@ -13,8 +13,8 @@ cd "$ROOT"
 
 # Cleanup function to kill background jobs
 cleanup() {
-  if [ -n "$GRPC_PID" ]; then
-    kill "$GRPC_PID" 2>/dev/null || true
+  if [ -n "$GAME_PID" ]; then
+    kill "$GAME_PID" 2>/dev/null || true
   fi
   if [ -n "$MCP_PID" ]; then
     kill "$MCP_PID" 2>/dev/null || true
@@ -26,12 +26,12 @@ cleanup() {
 # Set up trap to cleanup on exit
 trap cleanup EXIT INT TERM
 
-# Start gRPC server in background
-echo "Starting gRPC server on port 8080..."
-go run ./cmd/server -port=8080 &
-GRPC_PID=$!
+# Start game server in background
+echo "Starting game server on port 8080..."
+go run ./cmd/game -port=8080 &
+GAME_PID=$!
 
-# Wait a moment for gRPC server to start
+# Wait a moment for game server to start
 sleep 2
 
 # Start MCP HTTP server in background

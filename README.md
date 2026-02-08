@@ -73,6 +73,17 @@ The core architecture and APIs are usable, but the project is not yet a complete
 
 The docs are the canonical source of truth for architecture, APIs, and usage. Start with [docs](/docs/index.md) or browse the published site at [GitHub Pages](https://louisbranch.github.io/fracturing.space/).
 
+### Services and boundaries (brief)
+
+Fracturing.Space is organized into service boundaries under `internal/services/`:
+
+- Game service: authoritative rules + campaign state over gRPC; owns the SQLite database
+- MCP service: JSON-RPC adapter that forwards to the game service
+- Admin service: HTTP dashboard that queries the game service
+- Auth service: domain logic only; transport/API surface is planned
+
+Shared utilities (for example, RNG seed generation) live in domain/platform code and are not separate services. See `docs/project/architecture.md` for details.
+
 ### Getting involved
 
 This project is open source and contributions are welcome.

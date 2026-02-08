@@ -38,23 +38,23 @@ contain story content, telemetry, or other non-canonical data.
 
 ## Admin CLI workflows
 
-The admin CLI can scan, validate, replay, or check integrity for a campaign.
+The maintenance CLI can scan, validate, replay, or check integrity for a campaign.
 
 ```bash
 # Scan snapshot-related events without applying projections
-cmd/admin -campaign-id camp_123 -dry-run
+cmd/maintenance -campaign-id camp_123 -dry-run
 
 # Validate snapshot event payloads
-cmd/admin -campaign-id camp_123 -validate
+cmd/maintenance -campaign-id camp_123 -validate
 
 # Replay snapshot-related events and apply projections
-cmd/admin -campaign-id camp_123
+cmd/maintenance -campaign-id camp_123
 
 # Integrity check (replay into scratch store and compare)
-cmd/admin -campaign-id camp_123 -integrity
+cmd/maintenance -campaign-id camp_123 -integrity
 
 # Batch and JSON output
-cmd/admin -campaign-ids camp_123,camp_456 -validate -json
+cmd/maintenance -campaign-ids camp_123,camp_456 -validate -json
 ```
 
 Warnings are capped by default (`-warnings-cap 25`). Set `-warnings-cap 0` to

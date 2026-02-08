@@ -6,8 +6,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/louisbranch/fracturing.space/internal/mcp/domain"
-	daggerheartdomain "github.com/louisbranch/fracturing.space/internal/systems/daggerheart/domain"
+	"github.com/louisbranch/fracturing.space/internal/services/mcp/domain"
+	daggerheartdomain "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/domain"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 

@@ -10,6 +10,6 @@ Transport-layer guidance for the Web UI and related services.
 
 ## Architecture Notes
 
-- Web UI lives under `cmd/web`.
-- Transport services include `cmd/server` (gRPC) and `cmd/mcp` (MCP bridge).
+- Admin dashboard lives under `cmd/admin`.
+- Transport services include `cmd/game` (gRPC) and `cmd/mcp` (MCP bridge).
 - Keep transport thin: rules and state logic belong in gRPC/domain packages.

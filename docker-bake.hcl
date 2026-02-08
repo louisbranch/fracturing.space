@@ -2,20 +2,20 @@ variable "GO_VERSION" {
   default = "1.25.6"
 }
 
-variable "GRPC_IMAGE" {
-  default = "docker.io/louisbranch/fracturing.space-grpc:dev"
+variable "GAME_IMAGE" {
+  default = "docker.io/louisbranch/fracturing.space-game:dev"
 }
 
 variable "MCP_IMAGE" {
   default = "docker.io/louisbranch/fracturing.space-mcp:dev"
 }
 
-variable "WEB_IMAGE" {
-  default = "docker.io/louisbranch/fracturing.space-web:dev"
+variable "ADMIN_IMAGE" {
+  default = "docker.io/louisbranch/fracturing.space-admin:dev"
 }
 
 group "default" {
-  targets = ["grpc", "mcp", "web"]
+  targets = ["game", "mcp", "admin"]
 }
 
 target "base" {
@@ -26,10 +26,10 @@ target "base" {
   }
 }
 
-target "grpc" {
+target "game" {
   inherits = ["base"]
-  target   = "grpc"
-  tags     = ["${GRPC_IMAGE}"]
+  target   = "game"
+  tags     = ["${GAME_IMAGE}"]
 }
 
 target "mcp" {
@@ -38,8 +38,8 @@ target "mcp" {
   tags     = ["${MCP_IMAGE}"]
 }
 
-target "web" {
+target "admin" {
   inherits = ["base"]
-  target   = "web"
-  tags     = ["${WEB_IMAGE}"]
+  target   = "admin"
+  tags     = ["${ADMIN_IMAGE}"]
 }

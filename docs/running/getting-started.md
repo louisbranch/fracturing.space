@@ -4,29 +4,29 @@
 
 - Go 1.25.6
 - protoc (required until binaries are published)
-- SQLite (embedded; the server creates `data/fracturing.space.db` by default)
+- SQLite (embedded; the server creates `data/game.db` by default)
 - Make (for `make run`)
 
 ## Run locally (fastest)
 
-Start the gRPC server, MCP bridge, and web client together:
+Start the game server, MCP bridge, and admin dashboard together:
 
 ```sh
 make run
 ```
 
-This runs the gRPC server on `localhost:8080`, the MCP server on stdio, and the web client on `http://localhost:8082`.
-The MCP server will wait for the gRPC server to be healthy before accepting requests.
+This runs the game server on `localhost:8080`, the MCP server on stdio, and the admin dashboard on `http://localhost:8082`.
+The MCP server will wait for the game server to be healthy before accepting requests.
 
 ## Run services individually
 
-Start the gRPC server:
+Start the game server:
 
 ```sh
-go run ./cmd/server
+go run ./cmd/game
 ```
 
-Start the MCP server after the gRPC server starts.
+Start the MCP server after the game server starts.
 
 ```sh
 go run ./cmd/mcp
@@ -34,9 +34,9 @@ go run ./cmd/mcp
 
 Default endpoints:
 
-- gRPC: `localhost:8080`
+- Game gRPC: `localhost:8080`
 - MCP (stdio): process stdin/stdout
-- Web: `http://localhost:8082`
+- Admin: `http://localhost:8082`
 
 ## MCP HTTP transport (local only)
 
@@ -56,19 +56,19 @@ Build the images with bake:
 docker buildx bake
 ```
 
-Run with Compose (MCP HTTP on loopback, gRPC internal-only):
+Run with Compose (MCP HTTP on loopback, game gRPC internal-only):
 
 ```sh
 docker compose up
 ```
 
-Compose uses a named volume for the gRPC data store. To remove it:
+Compose uses a named volume for the game data store. To remove it:
 
 ```sh
 docker compose down -v
 ```
 
-On first run, Compose initializes the volume permissions so the nonroot gRPC
+On first run, Compose initializes the volume permissions so the nonroot game
 container can write the database.
 
 Check MCP health:
@@ -83,7 +83,7 @@ For remote deployments, keep MCP bound to loopback and front it with a reverse
 proxy (Caddy/Nginx) that terminates TLS. Allow only your domain in
 `FRACTURING_SPACE_MCP_ALLOWED_HOSTS`.
 
-You can set `FRACTURING_SPACE_GRPC_ADDR` and `FRACTURING_SPACE_MCP_HTTP_ADDR` in the MCP container
+You can set `FRACTURING_SPACE_GAME_ADDR` and `FRACTURING_SPACE_MCP_HTTP_ADDR` in the MCP container
 instead of flags. Command-line flags still take precedence when provided.
 
 Example (replace `your-domain.example`):
@@ -91,26 +91,26 @@ Example (replace `your-domain.example`):
 ```sh
 docker network create fracturing-space
 
-docker run -d --name fracturing-space-grpc \
+docker run -d --name fracturing-space-game \
   --network fracturing-space \
   -p 127.0.0.1:8080:8080 \
   -v /srv/fracturing-space/data:/data \
-  -e FRACTURING_SPACE_DB_PATH=/data/fracturing.space.db \
-  docker.io/louisbranch/fracturing.space-grpc:latest
+  -e FRACTURING_SPACE_GAME_DB_PATH=/data/game.db \
+  docker.io/louisbranch/fracturing.space-game:latest
 
 docker run -d --name fracturing-space-mcp \
   --network fracturing-space \
   -p 127.0.0.1:8081:8081 \
   -e FRACTURING_SPACE_MCP_ALLOWED_HOSTS=your-domain.example \
   docker.io/louisbranch/fracturing.space-mcp:latest \
-  -transport=http -http-addr=0.0.0.0:8081 -addr=fracturing-space-grpc:8080
+  -transport=http -http-addr=0.0.0.0:8081 -addr=fracturing-space-game:8080
 
-docker run -d --name fracturing-space-web \
+docker run -d --name fracturing-space-admin \
   --network fracturing-space \
   -p 127.0.0.1:8082:8082 \
-  -e FRACTURING_SPACE_WEB_ADDR=0.0.0.0:8082 \
-  -e FRACTURING_SPACE_GRPC_ADDR=fracturing-space-grpc:8080 \
-  docker.io/louisbranch/fracturing.space-web:latest
+  -e FRACTURING_SPACE_ADMIN_ADDR=0.0.0.0:8082 \
+  -e FRACTURING_SPACE_GAME_ADDR=fracturing-space-game:8080 \
+  docker.io/louisbranch/fracturing.space-admin:latest
 ```
 
 ## Docker (Publish images)
@@ -118,8 +118,8 @@ docker run -d --name fracturing-space-web \
 Use bake to build and push all images:
 
 ```sh
-GRPC_IMAGE="docker.io/louisbranch/fracturing.space-grpc:latest" \
+GAME_IMAGE="docker.io/louisbranch/fracturing.space-game:latest" \
 MCP_IMAGE="docker.io/louisbranch/fracturing.space-mcp:latest" \
-WEB_IMAGE="docker.io/louisbranch/fracturing.space-web:latest" \
+ADMIN_IMAGE="docker.io/louisbranch/fracturing.space-admin:latest" \
 docker buildx bake --push
 ```

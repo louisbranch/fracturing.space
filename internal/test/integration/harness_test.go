@@ -15,8 +15,8 @@ import (
 	"time"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1"
-	"github.com/louisbranch/fracturing.space/internal/app/server"
-	"github.com/louisbranch/fracturing.space/internal/mcp/domain"
+	"github.com/louisbranch/fracturing.space/internal/services/game/app"
+	"github.com/louisbranch/fracturing.space/internal/services/mcp/domain"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -33,7 +33,7 @@ func integrationTimeout() time.Duration {
 	return 10 * time.Second
 }
 
-// startGRPCServer boots the gRPC server and returns its address and shutdown function.
+// startGRPCServer boots the game server and returns its address and shutdown function.
 func startGRPCServer(t *testing.T) (string, func()) {
 	t.Helper()
 
@@ -43,7 +43,7 @@ func startGRPCServer(t *testing.T) (string, func()) {
 	grpcServer, err := server.New(0)
 	if err != nil {
 		cancel()
-		t.Fatalf("new gRPC server: %v", err)
+		t.Fatalf("new game server: %v", err)
 	}
 
 	serveErr := make(chan error, 1)
@@ -58,10 +58,10 @@ func startGRPCServer(t *testing.T) (string, func()) {
 		select {
 		case err := <-serveErr:
 			if err != nil {
-				t.Fatalf("gRPC server error: %v", err)
+				t.Fatalf("game server error: %v", err)
 			}
 		case <-time.After(5 * time.Second):
-			t.Fatalf("timed out waiting for gRPC server to stop")
+			t.Fatalf("timed out waiting for game server to stop")
 		}
 	}
 
@@ -74,7 +74,7 @@ func startMCPClient(t *testing.T, grpcAddr string) (*mcp.ClientSession, func()) 
 
 	cmd := exec.Command("go", "run", "./cmd/mcp")
 	cmd.Dir = repoRoot(t)
-	cmd.Env = append(os.Environ(), fmt.Sprintf("FRACTURING_SPACE_GRPC_ADDR=%s", grpcAddr))
+	cmd.Env = append(os.Environ(), fmt.Sprintf("FRACTURING_SPACE_GAME_ADDR=%s", grpcAddr))
 	cmd.Stderr = os.Stderr
 
 	transport := &mcp.CommandTransport{Command: cmd}
@@ -273,8 +273,8 @@ func requireEventTypesAfterSeq(t *testing.T, ctx context.Context, client statev1
 func setTempDBPath(t *testing.T) {
 	t.Helper()
 
-	path := filepath.Join(t.TempDir(), "fracturing.space.db")
-	t.Setenv("FRACTURING_SPACE_DB_PATH", path)
+	path := filepath.Join(t.TempDir(), "game.db")
+	t.Setenv("FRACTURING_SPACE_GAME_DB_PATH", path)
 }
 
 // repoRoot returns the repository root by walking up to go.mod.
@@ -330,7 +330,7 @@ func waitForGRPCHealth(t *testing.T, addr string) {
 		grpc.WithDefaultCallOptions(grpc.WaitForReady(true)),
 	)
 	if err != nil {
-		t.Fatalf("dial gRPC server: %v", err)
+		t.Fatalf("dial game server: %v", err)
 	}
 	defer conn.Close()
 

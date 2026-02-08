@@ -42,9 +42,9 @@ Supports multiple game systems (Daggerheart first, with architecture for D&D 5e,
 
 ### Three-Layer Design
 
-- **Transport**: gRPC server (`cmd/server`) + MCP bridge (`cmd/mcp`) + Web UI (`cmd/web`)
-- **Domain**: Game systems (`internal/systems/`) + Campaign model (`internal/campaign/`)
-- **Storage**: SQLite persistence (`data/fracturing.space.db`)
+- **Transport**: Game server (`cmd/game`) + MCP bridge (`cmd/mcp`) + Admin dashboard (`cmd/admin`)
+- **Domain**: Game systems (`internal/services/game/domain/systems/`) + Campaign model (`internal/services/game/domain/campaign/`)
+- **Storage**: SQLite persistence (`data/game.db`)
 
 MCP is a thin transport wrapper; all rules and state logic live in gRPC/domain packages.
 
@@ -60,27 +60,27 @@ Campaign data is organized into three tiers by change frequency:
 
 ### Game System Architecture
 
-- Each game system is a plugin under `internal/systems/`.
-- Game system gRPC services live in `internal/api/grpc/systems/{name}/`.
+- Each game system is a plugin under `internal/services/game/domain/systems/`.
+- Game system gRPC services live in `internal/services/game/api/grpc/systems/{name}/`.
 - Systems are registered at startup and campaigns are bound to one system at creation.
 
 ### Key Packages
 
 | Package | Responsibility |
 |---------|----------------|
-| `internal/core/dice/` | Generic dice rolling primitives |
-| `internal/core/check/` | Difficulty check primitives |
-| `internal/core/random/` | Cryptographic seed generation |
-| `internal/systems/daggerheart/` | Daggerheart/Duality dice mechanics |
-| `internal/campaign/` | Campaign configuration and lifecycle |
-| `internal/campaign/participant/` | Player and GM management |
-| `internal/campaign/character/` | Character profiles and controllers |
-| `internal/campaign/snapshot/` | Snapshot projections (char state, GM fear) |
-| `internal/campaign/session/` | Session lifecycle and events |
-| `internal/api/grpc/` | gRPC service implementations |
-| `internal/mcp/` | MCP tool/resource handlers |
-| `internal/storage/` | Persistence interfaces |
-| `internal/telemetry/` | Events and metrics (placeholder) |
+| `internal/services/game/domain/core/dice/` | Generic dice rolling primitives |
+| `internal/services/game/domain/core/check/` | Difficulty check primitives |
+| `internal/services/game/domain/core/random/` | Cryptographic seed generation |
+| `internal/services/game/domain/systems/daggerheart/` | Daggerheart/Duality dice mechanics |
+| `internal/services/game/domain/campaign/` | Campaign configuration and lifecycle |
+| `internal/services/game/domain/campaign/participant/` | Player and GM management |
+| `internal/services/game/domain/campaign/character/` | Character profiles and controllers |
+| `internal/services/game/domain/campaign/snapshot/` | Snapshot projections (char state, GM fear) |
+| `internal/services/game/domain/campaign/session/` | Session lifecycle and events |
+| `internal/services/game/api/grpc/` | gRPC service implementations |
+| `internal/services/mcp/` | MCP tool/resource handlers |
+| `internal/services/game/storage/` | Persistence interfaces |
+| `internal/platform/telemetry/` | Events and metrics (placeholder) |
 
 ### Proto Structure
 

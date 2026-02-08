@@ -1,6 +1,6 @@
 PROTO_DIR := api/proto
 GEN_GO_DIR := api/gen/go
-COVER_EXCLUDE_REGEX := (api/gen/|_templ\.go|internal/storage/sqlite/db/|internal/seed/)
+COVER_EXCLUDE_REGEX := (api/gen/|_templ\.go|internal/services/game/storage/sqlite/db/|internal/seed/)
 
 PROTO_FILES := \
 	$(wildcard $(PROTO_DIR)/common/v1/*.proto) \
@@ -41,9 +41,9 @@ run:
 	    done; \
 	    wait || true; \
 	  }; \
-	  go run ./cmd/server 2>&1 & pids+=($$!); \
+	  go run ./cmd/game 2>&1 & pids+=($$!); \
 	  go run ./cmd/mcp 2>&1 & pids+=($$!); \
-	  go run ./cmd/web 2>&1 & pids+=($$!); \
+	  go run ./cmd/admin 2>&1 & pids+=($$!); \
 	  trap "cleanup $${pids[*]}" EXIT; \
 	  trap "interrupted=1; cleanup $${pids[*]}" INT TERM; \
 	  status=0; \
@@ -71,7 +71,7 @@ seed: ## Seed the local database with demo data (static fixtures)
 	go run ./cmd/seed -v
 
 seed-fresh: ## Reset DB and seed with static fixtures
-	rm -f data/fracturing.space.db && $(MAKE) seed
+	rm -f data/game.db && $(MAKE) seed
 
 seed-generate: ## Generate dynamic demo data
 	go run ./cmd/seed -generate -preset=demo -v
@@ -80,4 +80,4 @@ seed-variety: ## Generate variety of campaigns across all statuses
 	go run ./cmd/seed -generate -preset=variety -v
 
 seed-generate-fresh: ## Reset DB and generate demo data
-	rm -f data/fracturing.space.db && $(MAKE) seed-generate
+	rm -f data/game.db && $(MAKE) seed-generate

@@ -54,7 +54,7 @@ func New(ctx context.Context, cfg Config) (*Generator, error) {
 	rng := NewSeededRNG(cfg.Seed, cfg.Verbose)
 
 	if cfg.Verbose {
-		fmt.Fprintf(os.Stderr, "Connecting to gRPC server at %s (waiting for server to be ready)...\n", cfg.GRPCAddr)
+		fmt.Fprintf(os.Stderr, "Connecting to game server at %s (waiting for server to be ready)...\n", cfg.GRPCAddr)
 	}
 
 	conn, err := grpc.NewClient(
@@ -63,11 +63,11 @@ func New(ctx context.Context, cfg Config) (*Generator, error) {
 		grpc.WithDefaultCallOptions(grpc.WaitForReady(true)),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("connect to gRPC: %w", err)
+		return nil, fmt.Errorf("connect to game server: %w", err)
 	}
 
 	if cfg.Verbose {
-		fmt.Fprintf(os.Stderr, "Connected to gRPC server\n")
+		fmt.Fprintf(os.Stderr, "Connected to game server\n")
 	}
 
 	return &Generator{
