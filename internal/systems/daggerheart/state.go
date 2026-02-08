@@ -10,13 +10,13 @@ import (
 
 // Daggerheart-specific constants for resource ranges.
 const (
-	HopeMin      = 0
-	HopeMax      = 6
-	HopeDefault  = 2
-	StressMin    = 0
+	HopeMin       = 0
+	HopeMax       = 6
+	HopeDefault   = 2
+	StressMin     = 0
 	StressDefault = 0
-	GMFearMin    = 0
-	GMFearMax    = 12
+	GMFearMin     = 0
+	GMFearMax     = 12
 	GMFearDefault = 0
 )
 
@@ -209,7 +209,7 @@ type SnapshotStateConfig struct {
 	GMFear     int
 }
 
-// NewSnapshotState creates a new Daggerheart snapshot state from config.
+// NewSnapshotState creates a new Daggerheart snapshot projection from config.
 func NewSnapshotState(cfg SnapshotStateConfig) *SnapshotState {
 	return &SnapshotState{
 		campaignID: cfg.CampaignID,
@@ -293,7 +293,7 @@ func (f *StateFactory) NewCharacterState(campaignID, characterID string, kind sy
 	cfg := CharacterStateConfig{
 		CampaignID:  campaignID,
 		CharacterID: characterID,
-		HP:          6,  // Default HP max for PCs
+		HP:          6, // Default HP max for PCs
 		HPMax:       6,
 		Hope:        HopeDefault,
 		Stress:      StressDefault,
@@ -309,7 +309,7 @@ func (f *StateFactory) NewCharacterState(campaignID, characterID string, kind sy
 	return NewCharacterState(cfg), nil
 }
 
-// NewSnapshotState creates initial snapshot state for the given campaign.
+// NewSnapshotState creates an initial snapshot projection for the given campaign.
 func (f *StateFactory) NewSnapshotState(campaignID string) (systems.SnapshotStateHandler, error) {
 	cfg := SnapshotStateConfig{
 		CampaignID: campaignID,

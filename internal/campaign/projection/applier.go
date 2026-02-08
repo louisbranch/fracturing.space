@@ -592,7 +592,7 @@ func (a Applier) applyCharacterStateChanged(ctx context.Context, evt event.Event
 
 	var payload event.CharacterStateChangedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode chronicle.character_state_changed payload: %w", err)
+		return fmt.Errorf("decode snapshot.character_state_changed payload: %w", err)
 	}
 
 	current, err := a.Daggerheart.GetDaggerheartCharacterState(ctx, evt.CampaignID, characterID)
@@ -611,7 +611,7 @@ func (a Applier) applyCharacterStateChanged(ctx context.Context, evt event.Event
 	if dhState, ok := payload.SystemState["daggerheart"]; ok {
 		stateMap, ok := dhState.(map[string]any)
 		if !ok {
-			return fmt.Errorf("chronicle.character_state_changed daggerheart state must be object")
+			return fmt.Errorf("snapshot.character_state_changed daggerheart state must be object")
 		}
 		if value, ok := stateMap["hope_after"]; ok {
 			hope, err := parseSnapshotNumber(value, "hope_after")
@@ -657,7 +657,7 @@ func (a Applier) applyGMFearChanged(ctx context.Context, evt event.Event) error 
 
 	var payload event.GMFearChangedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode chronicle.gm_fear_changed payload: %w", err)
+		return fmt.Errorf("decode snapshot.gm_fear_changed payload: %w", err)
 	}
 
 	if err := a.Daggerheart.PutDaggerheartSnapshot(ctx, storage.DaggerheartSnapshot{

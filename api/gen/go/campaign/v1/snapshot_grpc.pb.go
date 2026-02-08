@@ -28,14 +28,14 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// SnapshotService manages continuity state captured at event sequences.
-// This includes character states (system-specific resources like HP) and system-specific campaign state.
+// SnapshotService manages snapshot projections captured at event sequences.
+// These projections are derived from events and are not authoritative.
 type SnapshotServiceClient interface {
-	// Get the current snapshot state for a campaign.
+	// Get the current snapshot projection for a campaign.
 	GetSnapshot(ctx context.Context, in *GetSnapshotRequest, opts ...grpc.CallOption) (*GetSnapshotResponse, error)
 	// Patch a character's state (system-specific state like HP, Hope, Stress).
 	PatchCharacterState(ctx context.Context, in *PatchCharacterStateRequest, opts ...grpc.CallOption) (*PatchCharacterStateResponse, error)
-	// Update the system-specific snapshot state (e.g., GM Fear for Daggerheart).
+	// Update the system-specific snapshot projection (e.g., GM Fear for Daggerheart).
 	UpdateSnapshotState(ctx context.Context, in *UpdateSnapshotStateRequest, opts ...grpc.CallOption) (*UpdateSnapshotStateResponse, error)
 }
 
@@ -81,14 +81,14 @@ func (c *snapshotServiceClient) UpdateSnapshotState(ctx context.Context, in *Upd
 // All implementations must embed UnimplementedSnapshotServiceServer
 // for forward compatibility.
 //
-// SnapshotService manages continuity state captured at event sequences.
-// This includes character states (system-specific resources like HP) and system-specific campaign state.
+// SnapshotService manages snapshot projections captured at event sequences.
+// These projections are derived from events and are not authoritative.
 type SnapshotServiceServer interface {
-	// Get the current snapshot state for a campaign.
+	// Get the current snapshot projection for a campaign.
 	GetSnapshot(context.Context, *GetSnapshotRequest) (*GetSnapshotResponse, error)
 	// Patch a character's state (system-specific state like HP, Hope, Stress).
 	PatchCharacterState(context.Context, *PatchCharacterStateRequest) (*PatchCharacterStateResponse, error)
-	// Update the system-specific snapshot state (e.g., GM Fear for Daggerheart).
+	// Update the system-specific snapshot projection (e.g., GM Fear for Daggerheart).
 	UpdateSnapshotState(context.Context, *UpdateSnapshotStateRequest) (*UpdateSnapshotStateResponse, error)
 	mustEmbedUnimplementedSnapshotServiceServer()
 }

@@ -44,13 +44,14 @@ const (
 	TypeControllerAssigned Type = "character.controller_assigned"
 )
 
-// Snapshot events (cross-session state).
-// Note: Event type strings use legacy "chronicle." prefix for backward compatibility.
+// Snapshot events (materialized projection updates).
+// FIXME: Replace snapshot.* event types with system-specific events; snapshots
+// should remain derived caches of the event journal, not a separate event domain.
 const (
 	// TypeCharacterStateChanged records a character state change.
-	TypeCharacterStateChanged Type = "chronicle.character_state_changed"
+	TypeCharacterStateChanged Type = "snapshot.character_state_changed"
 	// TypeGMFearChanged records a GM fear value change.
-	TypeGMFearChanged Type = "chronicle.gm_fear_changed"
+	TypeGMFearChanged Type = "snapshot.gm_fear_changed"
 )
 
 // Session events.

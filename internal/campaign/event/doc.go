@@ -6,7 +6,7 @@
 //   - Campaign forking at any event point
 //   - Full audit trail of all changes
 //   - State reconstruction via event replay
-//   - Snapshots at session boundaries
+//   - Snapshots captured at event sequences for replay acceleration
 //
 // Event Types:
 //
@@ -15,7 +15,7 @@
 //   - campaign.*: Campaign lifecycle (created, forked, status changes)
 //   - participant.*: Participant management (joined, left, updated)
 //   - character.*: Character definitions and profiles
-//   - snapshot.*: Cross-session state (character state, GM fear)
+//   - snapshot.*: System state change events (legacy)
 //   - action.*: Gameplay actions (rolls, outcomes)
 //   - story.*: Narrative changes (notes, canon, scene progression)
 //

@@ -161,7 +161,7 @@ func (x *DaggerheartProfile) GetHpMax() int32 {
 }
 
 // DaggerheartCharacterState contains Daggerheart-specific mutable character state.
-// This is part of the continuity layer and persists across sessions.
+// This is materialized as a projection derived from the event journal.
 type DaggerheartCharacterState struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Current hope value (0-6).
@@ -226,7 +226,7 @@ func (x *DaggerheartCharacterState) GetHp() int32 {
 }
 
 // DaggerheartSnapshot contains Daggerheart-specific campaign-level state.
-// This is part of the continuity layer and persists across sessions.
+// This is materialized as a projection derived from the event journal.
 type DaggerheartSnapshot struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Current GM Fear value (0-12).

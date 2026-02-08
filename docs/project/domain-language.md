@@ -20,7 +20,7 @@ Within a campaign, we talk about areas rather than separate buckets:
 - Participants: player/GM seats and controllers.
 - Characters: identities and profiles.
 - Events: the canonical journal of facts (the commit log).
-- Continuity: snapshot views that persist between sessions.
+- Snapshot: materialized projections derived from the event journal at a specific sequence.
 - Session: the active gameplay view.
 
 ### Event Journal (Commit History)
@@ -65,8 +65,9 @@ character state, and session summaries.
 
 ### Snapshot
 
-Snapshots are materialized projections captured at a specific event sequence.
-They exist for performance and fast replay, not as an authoritative record.
+Snapshots are materialized projections derived from the event journal at a
+specific sequence. They are not authoritative; they exist for replay and
+performance.
 
 ### Fork
 

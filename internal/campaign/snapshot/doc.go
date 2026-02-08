@@ -1,22 +1,21 @@
-// Package snapshot provides cross-session continuity state management.
+// Package snapshot provides materialized projections derived from the event journal.
 //
-// This is the "continuity layer" of state management - data that persists
-// across sessions but changes during gameplay: character state (HP, Hope,
-// Stress), GM Fear resource, story progress, quest completion.
+// Snapshots are captured at a specific event sequence to speed up replay and
+// rebuilds. They are not authoritative.
 //
 // # Snapshot Model
 //
-// The Snapshot aggregate groups all continuity state for a campaign:
+// The Snapshot aggregate groups all snapshot data for a campaign:
 //   - Character states (HP, Hope, Stress for each character)
 //   - GM Fear (campaign-level resource)
 //   - Future: story progress, quest completion, world state
 //
 // # Design Philosophy
 //
-// Snapshot state represents the "save game" - if a session is interrupted,
-// snapshot state captures what needs to persist. Campaign state (name, system,
-// participants) rarely changes; session state (events, rolls) is ephemeral.
-// Snapshot sits in between.
+// Snapshot data represents a materialized projection of the event journal used
+// for fast rebuilds. Campaign state (name, system, participants) is handled by
+// projections derived from events; session state (events, rolls) remains in the
+// journal itself.
 //
 // # GM Fear
 //

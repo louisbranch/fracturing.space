@@ -20,7 +20,7 @@
 // events can be omitted if copy_participants is false, and the fork emits a
 // campaign.forked event in the new campaign journal. When forking at the latest
 // event and snapshot projections are already available, the fork can seed
-// snapshot state (GM fear, character states) and skip re-applying snapshot
+// snapshot projections (GM fear, character states) and skip re-applying snapshot
 // events.
 //
 // # Future: Snapshot-accelerated replay
@@ -29,5 +29,5 @@
 //  1. Find the nearest snapshot before the target point
 //  2. Replay events from the snapshot to the target point
 //
-// Snapshots at session boundaries will bound replay to one session of events.
+// Snapshots captured at event sequences can bound replay to fewer events.
 package fork

@@ -31,7 +31,7 @@ That history can be forked. A new group can start from any point in an existing 
 The system organizes state into three layers:
 
 - Campaign: configuration and setup
-- Snapshot: continuity between sessions
+- Snapshot: materialized projections for replay and performance
 - Session: moment-to-moment gameplay events
 
 ## Systems

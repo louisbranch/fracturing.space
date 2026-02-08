@@ -97,7 +97,7 @@ type StateFactory interface {
 	// NewCharacterState creates initial character state for the given character.
 	NewCharacterState(campaignID, characterID string, kind CharacterKind) (CharacterStateHandler, error)
 
-	// NewSnapshotState creates initial snapshot state for the given campaign.
+	// NewSnapshotState creates an initial snapshot projection for the given campaign.
 	NewSnapshotState(campaignID string) (SnapshotStateHandler, error)
 }
 

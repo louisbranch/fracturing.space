@@ -1,7 +1,7 @@
 // Package campaign provides the campaign aggregate and its supporting areas.
 //
 // The campaign aggregate is the bucket for configuration, participants,
-// characters, events, and gameplay continuity. Events are first-class records
+// characters, events, and snapshot projections. Events are first-class records
 // in the campaign journal; projections and snapshots are derived views.
 //
 // The package organizes campaign data by change frequency:
@@ -15,14 +15,14 @@
 //   - campaign/participant: Player and GM participant management
 //   - campaign/character: Character definitions and profiles
 //
-// # Snapshot (Continuity Layer)
+// # Snapshot (Projection Layer)
 //
-// State that changes between sessions: character state (HP, Hope, Stress),
-// GM Fear resource, story progress, quest completion. This is the "save game"
-// data that persists across sessions.
+// Materialized projections derived from the event journal at a specific
+// sequence. Snapshots are not authoritative; they exist to accelerate replay
+// and rebuilds.
 //
 // Subpackage:
-//   - campaign/snapshot: Cross-session continuity state
+//   - campaign/snapshot: Snapshot projections derived from events
 //
 // # Session (Gameplay Layer)
 //
@@ -40,6 +40,5 @@
 //
 // # GM Fear
 //
-// Note: GM Fear is now managed in the snapshot package as part of continuity
-// state, not campaign configuration.
+// Note: GM Fear is stored in snapshot projections, not campaign configuration.
 package campaign

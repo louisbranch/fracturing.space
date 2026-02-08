@@ -1,7 +1,7 @@
 // Package campaign provides campaign aggregate gRPC services.
 //
 // These services handle campaign configuration, session lifecycle, participant
-// management, character profiles, and snapshot (continuity) state. They work
+// management, character profiles, and snapshot projections. They work
 // identically regardless of which game system a campaign uses.
 //
 // # Services
@@ -10,7 +10,7 @@
 //   - SessionService: Session start/end and event management
 //   - ParticipantService: Player and GM participant management
 //   - CharacterService: Character and profile management
-//   - SnapshotService: Cross-session continuity state (character state, GM fear)
+//   - SnapshotService: Snapshot projections derived from the event journal
 //
 // # Usage Pattern
 //

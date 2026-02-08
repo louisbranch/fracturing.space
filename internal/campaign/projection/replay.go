@@ -23,7 +23,7 @@ func ReplayCampaign(ctx context.Context, eventStore storage.EventStore, applier 
 	return ReplayCampaignWith(ctx, eventStore, applier, campaignID, ReplayOptions{})
 }
 
-// ReplaySnapshot replays snapshot events for a campaign and applies projections.
+// ReplaySnapshot replays snapshot-related events for a campaign and applies projections.
 func ReplaySnapshot(ctx context.Context, eventStore storage.EventStore, applier Applier, campaignID string, untilSeq uint64) (uint64, error) {
 	return ReplayCampaignWith(ctx, eventStore, applier, campaignID, ReplayOptions{
 		UntilSeq: untilSeq,

@@ -32,7 +32,7 @@ func NewSnapshotService(stores Stores) *SnapshotService {
 	}
 }
 
-// GetSnapshot returns the snapshot state for a campaign.
+// GetSnapshot returns the snapshot projection for a campaign.
 func (s *SnapshotService) GetSnapshot(ctx context.Context, in *campaignv1.GetSnapshotRequest) (*campaignv1.GetSnapshotResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "get snapshot request is required")
@@ -61,7 +61,7 @@ func (s *SnapshotService) GetSnapshot(ctx context.Context, in *campaignv1.GetSna
 		return nil, handleDomainError(err)
 	}
 
-	// Get Daggerheart snapshot state (GM Fear)
+	// Get Daggerheart snapshot projection (GM Fear)
 	dhSnapshot, err := s.stores.Daggerheart.GetDaggerheartSnapshot(ctx, campaignID)
 	if err != nil && !errors.Is(err, storage.ErrNotFound) {
 		return nil, status.Errorf(codes.Internal, "get daggerheart snapshot: %v", err)
@@ -230,10 +230,10 @@ func (s *SnapshotService) PatchCharacterState(ctx context.Context, in *campaignv
 	}, nil
 }
 
-// UpdateSnapshotState updates the system-specific snapshot state.
+// UpdateSnapshotState updates the system-specific snapshot projection.
 func (s *SnapshotService) UpdateSnapshotState(ctx context.Context, in *campaignv1.UpdateSnapshotStateRequest) (*campaignv1.UpdateSnapshotStateResponse, error) {
 	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "update snapshot state request is required")
+		return nil, status.Error(codes.InvalidArgument, "update snapshot projection request is required")
 	}
 
 	if s.stores.Campaign == nil {

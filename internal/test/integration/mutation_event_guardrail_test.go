@@ -92,7 +92,7 @@ func runMutationEventGuardrailTests(t *testing.T, suite *integrationSuite, grpcA
 			t.Fatalf("character_create failed: %+v", characterResult)
 		}
 		characterOutput := decodeStructuredContent[domain.CharacterCreateResult](t, characterResult.StructuredContent)
-		lastSeq = requireEventTypesAfterSeq(t, ctx, eventClient, campaignOutput.ID, lastSeq, "character.created", "character.profile_updated", "chronicle.character_state_changed")
+		lastSeq = requireEventTypesAfterSeq(t, ctx, eventClient, campaignOutput.ID, lastSeq, "character.created", "character.profile_updated", "snapshot.character_state_changed")
 
 		controlResult, err := suite.client.CallTool(ctx, &mcp.CallToolParams{
 			Name: "character_control_set",

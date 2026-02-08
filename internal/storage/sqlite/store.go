@@ -1993,7 +1993,7 @@ func (s *Store) GetDaggerheartCharacterState(ctx context.Context, campaignID, ch
 	}, nil
 }
 
-// PutDaggerheartSnapshot persists a Daggerheart snapshot state.
+// PutDaggerheartSnapshot persists a Daggerheart snapshot projection.
 func (s *Store) PutDaggerheartSnapshot(ctx context.Context, snap storage.DaggerheartSnapshot) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -2011,7 +2011,7 @@ func (s *Store) PutDaggerheartSnapshot(ctx context.Context, snap storage.Daggerh
 	})
 }
 
-// GetDaggerheartSnapshot retrieves the Daggerheart snapshot state for a campaign.
+// GetDaggerheartSnapshot retrieves the Daggerheart snapshot projection for a campaign.
 func (s *Store) GetDaggerheartSnapshot(ctx context.Context, campaignID string) (storage.DaggerheartSnapshot, error) {
 	if err := ctx.Err(); err != nil {
 		return storage.DaggerheartSnapshot{}, err

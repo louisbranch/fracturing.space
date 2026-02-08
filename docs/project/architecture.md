@@ -40,7 +40,7 @@ Campaign data is organized into three tiers by change frequency:
 | Layer | Subpackages | Changes | Contents |
 |-------|-------------|---------|----------|
 | **Campaign** (Config) | `campaign/`, `campaign/participant/`, `campaign/character/` | Setup time | Name, system, GM mode, participants, character profiles |
-| **Snapshot** (Continuity) | `campaign/snapshot/` | At any event sequence | Character state (HP, Hope, Stress), GM Fear, progress |
+| **Snapshot** | `campaign/snapshot/` | At any event sequence | Materialized projection cache for replay/performance |
 | **Session** (Gameplay) | `campaign/session/` | Every action | Active session, events, rolls, outcomes |
 
 This model uses an event-sourced architecture where the event journal is the

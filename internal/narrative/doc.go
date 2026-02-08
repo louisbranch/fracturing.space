@@ -18,7 +18,7 @@
 //   - Story branching and choices
 //   - Quest and objective tracking
 //   - World state management
-//   - Timeline and continuity
+//   - Timeline and state progression
 //
 // AI Integration:
 //   - Context building for AI GM
@@ -31,7 +31,7 @@
 // Narrative will integrate with:
 //   - Content package for compendium data
 //   - Event journal for in-campaign story events
-//   - Snapshot for world state persistence
+//   - Snapshot projections for world state rebuilds
 //   - MCP tools for narrative retrieval
 //
 // # Limitations

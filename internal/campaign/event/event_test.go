@@ -22,7 +22,7 @@ func TestType_IsValid(t *testing.T) {
 		{TypeCharacterUpdated, true},
 		{TypeProfileUpdated, true},
 		{TypeControllerAssigned, true},
-		// Snapshot events
+		// Snapshot-related events
 		{TypeCharacterStateChanged, true},
 		{TypeGMFearChanged, true},
 		// Session events
@@ -59,7 +59,7 @@ func TestType_Domain(t *testing.T) {
 		{TypeCampaignForked, "campaign"},
 		{TypeParticipantJoined, "participant"},
 		{TypeCharacterCreated, "character"},
-		{TypeCharacterStateChanged, "chronicle"},
+		{TypeCharacterStateChanged, "snapshot"},
 		{TypeSessionStarted, "session"},
 		{TypeRollResolved, "action"},
 		{Type("nodot"), "nodot"},

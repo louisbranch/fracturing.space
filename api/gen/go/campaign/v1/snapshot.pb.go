@@ -22,8 +22,8 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// Snapshot represents the continuity layer for a campaign.
-// It tracks state captured at an event sequence: character states, GM resources, progress.
+// Snapshot represents a materialized projection derived from the event journal.
+// It captures data at a specific event sequence for replay and performance.
 type Snapshot struct {
 	state      protoimpl.MessageState `protogen:"open.v1"`
 	CampaignId string                 `protobuf:"bytes,1,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"`
@@ -331,7 +331,7 @@ func (x *PatchCharacterStateResponse) GetState() *CharacterState {
 type UpdateSnapshotStateRequest struct {
 	state      protoimpl.MessageState `protogen:"open.v1"`
 	CampaignId string                 `protobuf:"bytes,1,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"`
-	// System-specific snapshot state update.
+	// System-specific snapshot projection update.
 	//
 	// Types that are valid to be assigned to SystemSnapshotUpdate:
 	//

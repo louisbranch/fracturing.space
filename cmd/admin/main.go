@@ -51,14 +51,14 @@ func main() {
 	var warningsCap int
 	var jsonOutput bool
 
-	flag.StringVar(&campaignID, "campaign-id", "", "campaign ID to replay snapshot events")
-	flag.StringVar(&campaignIDs, "campaign-ids", "", "comma-separated campaign IDs to replay snapshot events")
+	flag.StringVar(&campaignID, "campaign-id", "", "campaign ID to replay snapshot-related events")
+	flag.StringVar(&campaignIDs, "campaign-ids", "", "comma-separated campaign IDs to replay snapshot-related events")
 	flag.StringVar(&dbPath, "db-path", defaultDBPath(), "path to sqlite database (default: FRACTURING_SPACE_DB_PATH or data/fracturing.space.db)")
 	flag.Uint64Var(&untilSeq, "until-seq", 0, "replay up to this event sequence (0 = latest)")
 	flag.Uint64Var(&afterSeq, "after-seq", 0, "start replay after this event sequence")
-	flag.BoolVar(&dryRun, "dry-run", false, "scan snapshot events without applying projections")
+	flag.BoolVar(&dryRun, "dry-run", false, "scan snapshot-related events without applying projections")
 	flag.BoolVar(&validate, "validate", false, "validate snapshot event payloads without applying projections (implies -dry-run)")
-	flag.BoolVar(&integrity, "integrity", false, "replay snapshot events into a scratch store and compare against stored projections")
+	flag.BoolVar(&integrity, "integrity", false, "replay snapshot-related events into a scratch store and compare against stored projections")
 	flag.IntVar(&warningsCap, "warnings-cap", 25, "max warnings to print (0 = no limit)")
 	flag.BoolVar(&jsonOutput, "json", false, "output JSON reports")
 	flag.Parse()
@@ -190,7 +190,7 @@ func runCampaign(ctx context.Context, store storage.Store, campaignID string, op
 		report, warnings, err := scanSnapshotEvents(ctx, store, campaignID, options.AfterSeq, options.UntilSeq, options.Validate)
 		result.Warnings, result.WarningsTotal = capWarnings(warnings, options.WarningsCap)
 		if err != nil {
-			result.Error = fmt.Sprintf("scan snapshot events: %v", err)
+			result.Error = fmt.Sprintf("scan snapshot-related events: %v", err)
 			result.ExitCode = 1
 			return result
 		}
@@ -319,14 +319,14 @@ func printResult(result runResult, prefix string) {
 		return
 	}
 	if result.Mode == "validate" {
-		fmt.Printf("%sValidated snapshot events for campaign %s through seq %d (%d snapshot events, %d invalid, %d total)\n", prefix, result.CampaignID, report.LastSeq, report.SnapshotEvents, report.InvalidEvents, report.TotalEvents)
+		fmt.Printf("%sValidated snapshot-related events for campaign %s through seq %d (%d snapshot-related events, %d invalid, %d total)\n", prefix, result.CampaignID, report.LastSeq, report.SnapshotEvents, report.InvalidEvents, report.TotalEvents)
 		return
 	}
 	if result.Mode == "scan" {
-		fmt.Printf("%sScanned snapshot events for campaign %s through seq %d (%d snapshot events, %d total)\n", prefix, result.CampaignID, report.LastSeq, report.SnapshotEvents, report.TotalEvents)
+		fmt.Printf("%sScanned snapshot-related events for campaign %s through seq %d (%d snapshot-related events, %d total)\n", prefix, result.CampaignID, report.LastSeq, report.SnapshotEvents, report.TotalEvents)
 		return
 	}
-	fmt.Printf("%sReplayed snapshot events for campaign %s through seq %d\n", prefix, result.CampaignID, report.LastSeq)
+	fmt.Printf("%sReplayed snapshot-related events for campaign %s through seq %d\n", prefix, result.CampaignID, report.LastSeq)
 }
 
 func openStore(path string) (storage.Store, error) {

@@ -18,7 +18,7 @@ var (
 )
 
 // GmFear represents the GM's fear resource for a campaign.
-// This is part of the continuity layer and persists across sessions.
+// This value is stored in snapshot projections derived from events.
 type GmFear struct {
 	CampaignID string
 	Value      int

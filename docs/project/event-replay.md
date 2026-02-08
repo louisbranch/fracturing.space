@@ -7,8 +7,8 @@ together, and how to replay events to rebuild derived state.
 
 - **Event journal**: the append-only source of truth for a campaign.
 - **Projection**: a derived view built by applying events in order.
-- **Snapshot**: a materialized projection captured at a specific event sequence
-  to speed up replay.
+- **Snapshot**: a materialized projection derived from the event journal at a
+  specific sequence to speed up replay. Snapshots are not authoritative.
 
 Snapshots never replace the event journal; they only accelerate rebuilds.
 
@@ -31,7 +31,8 @@ targeted checks or backfills without reprocessing the full history.
 
 ## What snapshots contain
 
-Snapshots capture projection state needed for continuity and fast rebuilds.
+Snapshots capture projection state needed for fast rebuilds without replaying
+the full event journal.
 Today this includes Daggerheart character state and GM fear. Snapshots do not
 contain story content, telemetry, or other non-canonical data.
 
@@ -40,13 +41,13 @@ contain story content, telemetry, or other non-canonical data.
 The admin CLI can scan, validate, replay, or check integrity for a campaign.
 
 ```bash
-# Scan snapshot events without applying projections
+# Scan snapshot-related events without applying projections
 cmd/admin -campaign-id camp_123 -dry-run
 
 # Validate snapshot event payloads
 cmd/admin -campaign-id camp_123 -validate
 
-# Replay snapshot events and apply projections
+# Replay snapshot-related events and apply projections
 cmd/admin -campaign-id camp_123
 
 # Integrity check (replay into scratch store and compare)

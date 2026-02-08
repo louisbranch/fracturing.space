@@ -86,7 +86,7 @@ type ControllerAssignedPayload struct {
 	ParticipantID string `json:"participant_id,omitempty"`
 }
 
-// CharacterStateChangedPayload captures the payload for snapshot character state changed events.
+// CharacterStateChangedPayload captures the payload for character state change events.
 type CharacterStateChangedPayload struct {
 	CharacterID string `json:"character_id"`
 	// Core state fields (before/after for audit)
@@ -96,7 +96,7 @@ type CharacterStateChangedPayload struct {
 	SystemState map[string]any `json:"system_state,omitempty"`
 }
 
-// GMFearChangedPayload captures the payload for snapshot GM fear changed events.
+// GMFearChangedPayload captures the payload for GM fear change events.
 type GMFearChangedPayload struct {
 	Before int    `json:"before"`
 	After  int    `json:"after"`

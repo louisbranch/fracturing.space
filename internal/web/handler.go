@@ -1145,11 +1145,11 @@ func formatEventType(eventType string, loc *message.Printer) string {
 		return loc.Sprintf("event.character_profile_updated")
 	case "character.controller_assigned":
 		return loc.Sprintf("event.character_controller_assigned")
-	// Snapshot events
-	case "chronicle.character_state_changed":
-		return loc.Sprintf("event.chronicle_character_state_changed")
-	case "chronicle.gm_fear_changed":
-		return loc.Sprintf("event.chronicle_gm_fear_changed")
+	// Snapshot-related events
+	case "snapshot.character_state_changed":
+		return loc.Sprintf("event.snapshot_character_state_changed")
+	case "snapshot.gm_fear_changed":
+		return loc.Sprintf("event.snapshot_gm_fear_changed")
 	// Session events
 	case "session.started":
 		return loc.Sprintf("event.session_started")

@@ -1255,7 +1255,7 @@ func (x *PatchCharacterProfileResponse) GetProfile() *CharacterProfile {
 	return nil
 }
 
-// CharacterState represents the current mutable state of a character (continuity layer).
+// CharacterState represents the current mutable state of a character as a materialized projection.
 // This is managed by SnapshotService, but referenced here for GetCharacterSheet.
 // Note: HP is system-specific and lives in the system state extension.
 type CharacterState struct {

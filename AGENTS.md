@@ -55,7 +55,7 @@ Campaign data is organized into three tiers by change frequency:
 | Layer | Subpackages | Changes | Contents |
 |-------|-------------|---------|----------|
 | **Campaign** (Config) | `campaign/`, `campaign/participant/`, `campaign/character/` | Setup time | Name, system, GM mode, participants, character profiles |
-| **Snapshot** (Continuity) | `campaign/snapshot/` | Between sessions | Character state (HP, Hope, Stress), GM Fear, progress |
+| **Snapshot** | `campaign/snapshot/` | At any event sequence | Materialized projection cache for replay/performance |
 | **Session** (Gameplay) | `campaign/session/` | Every action | Active session, events, rolls, outcomes |
 
 ### Game System Architecture
@@ -75,7 +75,7 @@ Campaign data is organized into three tiers by change frequency:
 | `internal/campaign/` | Campaign configuration and lifecycle |
 | `internal/campaign/participant/` | Player and GM management |
 | `internal/campaign/character/` | Character profiles and controllers |
-| `internal/campaign/snapshot/` | Cross-session continuity (char state, GM fear) |
+| `internal/campaign/snapshot/` | Snapshot projections (char state, GM fear) |
 | `internal/campaign/session/` | Session lifecycle and events |
 | `internal/api/grpc/` | gRPC service implementations |
 | `internal/mcp/` | MCP tool/resource handlers |

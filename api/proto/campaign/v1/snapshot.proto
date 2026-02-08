@@ -7,8 +7,8 @@ import "systems/daggerheart/v1/state.proto";
 
 option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1;campaignv1";
 
-// Snapshot represents the continuity layer for a campaign.
-// It tracks state captured at an event sequence: character states, GM resources, progress.
+// Snapshot represents a materialized projection derived from the event journal.
+// It captures data at a specific event sequence for replay and performance.
 message Snapshot {
   string campaign_id = 1;
   // Character states indexed by character_id.
@@ -21,16 +21,16 @@ message Snapshot {
   }
 }
 
-// SnapshotService manages continuity state captured at event sequences.
-// This includes character states (system-specific resources like HP) and system-specific campaign state.
+// SnapshotService manages snapshot projections captured at event sequences.
+// These projections are derived from events and are not authoritative.
 service SnapshotService {
-  // Get the current snapshot state for a campaign.
+  // Get the current snapshot projection for a campaign.
   rpc GetSnapshot(GetSnapshotRequest) returns (GetSnapshotResponse);
 
   // Patch a character's state (system-specific state like HP, Hope, Stress).
   rpc PatchCharacterState(PatchCharacterStateRequest) returns (PatchCharacterStateResponse);
 
-  // Update the system-specific snapshot state (e.g., GM Fear for Daggerheart).
+  // Update the system-specific snapshot projection (e.g., GM Fear for Daggerheart).
   rpc UpdateSnapshotState(UpdateSnapshotStateRequest) returns (UpdateSnapshotStateResponse);
 }
 
@@ -62,7 +62,7 @@ message PatchCharacterStateResponse {
 message UpdateSnapshotStateRequest {
   string campaign_id = 1;
 
-  // System-specific snapshot state update.
+  // System-specific snapshot projection update.
   oneof system_snapshot_update {
     systems.daggerheart.v1.DaggerheartSnapshot daggerheart = 10;
   }

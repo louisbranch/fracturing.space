@@ -1,6 +1,6 @@
 package snapshot
 
-// Snapshot represents the system-agnostic continuity state for a campaign.
+// Snapshot represents a system-agnostic snapshot projection for a campaign.
 // Character-level state (HP, Hope, Stress) is now system-specific.
 // See storage.DaggerheartCharacterState for Daggerheart character state.
 type Snapshot struct {

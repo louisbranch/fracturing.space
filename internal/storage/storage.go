@@ -236,7 +236,8 @@ type SessionPage struct {
 	NextPageToken string
 }
 
-// Snapshot represents a precomputed state snapshot for a session as of an event sequence.
+// Snapshot represents a materialized projection for a campaign as of an event sequence.
+// Snapshots are derived from the event journal and are not authoritative.
 type Snapshot struct {
 	CampaignID          string
 	SessionID           string

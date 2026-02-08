@@ -5,7 +5,7 @@
 //   - Outcome evaluation and explanation
 //   - Probability calculations
 //   - Session action rolls with event recording
-//   - Outcome application (updates snapshot state)
+//   - Outcome application (updates snapshot projections)
 //
 // # Integration with State Services
 //

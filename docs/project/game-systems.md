@@ -141,7 +141,7 @@ type StateFactory interface {
     // NewCharacterState creates initial character state
     NewCharacterState(campaignID, characterID string, kind CharacterKind) (CharacterStateHandler, error)
 
-    // NewSnapshotState creates initial snapshot state for a campaign
+    // NewSnapshotState creates an initial snapshot projection for a campaign
     NewSnapshotState(campaignID string) (SnapshotStateHandler, error)
 }
 ```
@@ -348,7 +348,7 @@ message VtMCharacterState {
   int32 humanity = 4;        // Humanity score
 }
 
-// VtM-specific snapshot state (campaign-level)
+// VtM-specific snapshot projection (campaign-level)
 message VtMSnapshot {
   // Domain influence, sect politics, etc.
   map<string, int32> domain_influence = 1;
@@ -383,7 +383,7 @@ CREATE TABLE vtm_character_states (
     PRIMARY KEY (campaign_id, character_id)
 );
 
--- VtM snapshot state
+-- VtM snapshot projection
 CREATE TABLE vtm_snapshots (
     campaign_id TEXT PRIMARY KEY,
     FOREIGN KEY (campaign_id)
