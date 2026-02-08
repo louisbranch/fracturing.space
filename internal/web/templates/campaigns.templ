@@ -9,8 +9,81 @@ templ CampaignsFullPage(page PageContext) {
 
 // CampaignsPage renders the campaigns page content.
 templ CampaignsPage(loc Localizer) {
-	<h2>{T(loc, "campaigns.heading")}</h2>
+	<div class="row flex-spaces">
+		<h2>{T(loc, "campaigns.heading")}</h2>
+		<a
+			class="paper-btn"
+			href="/campaigns/create"
+			hx-get="/campaigns/create"
+			hx-target="#main"
+			hx-swap="innerHTML"
+			hx-push-url="true"
+		>{T(loc, "campaigns.create.action")}</a>
+	</div>
 	@CampaignsLoading(loc)
+}
+
+// CampaignCreateFullPage renders the campaign create page in the base layout.
+templ CampaignCreateFullPage(view CampaignCreatePageView, page PageContext) {
+	@Layout(T(page.Loc, "title.campaign_create"), "Campaigns", page) {
+		@CampaignCreatePage(view, page.Loc)
+	}
+}
+
+// CampaignCreatePage renders the campaign creation form.
+templ CampaignCreatePage(view CampaignCreatePageView, loc Localizer) {
+	<h2>{T(loc, "campaigns.create.heading")}</h2>
+	if view.Impersonation != nil {
+		<p class="muted">{T(loc, "campaigns.create.impersonation", ImpersonationLabel(view.Impersonation))}</p>
+	}
+	if view.Message != "" {
+		<p class="muted">{view.Message}</p>
+	}
+	<form method="post" action="/campaigns/create">
+		if view.Impersonation != nil {
+			<input type="hidden" name="user_id" value={view.Impersonation.UserID}>
+		} else {
+			<label>
+				{T(loc, "campaigns.create.user_id")}
+				<input type="text" name="user_id" required value={view.UserID}>
+			</label>
+		}
+		<label>
+			{T(loc, "campaigns.create.name")}
+			<input type="text" name="name" required value={view.Name}>
+		</label>
+		<label>
+			{T(loc, "campaigns.create.system")}
+			<select name="system" required>
+				<option value="daggerheart" if view.System == "" || view.System == "daggerheart" {
+					selected
+				}>{T(loc, "label.daggerheart")}</option>
+			</select>
+		</label>
+		<label>
+			{T(loc, "campaigns.create.gm_mode")}
+			<select name="gm_mode" required>
+				<option value="human" if view.GmMode == "" || view.GmMode == "human" {
+					selected
+				}>{T(loc, "label.human")}</option>
+				<option value="ai" if view.GmMode == "ai" {
+					selected
+				}>{T(loc, "label.ai")}</option>
+				<option value="hybrid" if view.GmMode == "hybrid" {
+					selected
+				}>{T(loc, "label.hybrid")}</option>
+			</select>
+		</label>
+		<label>
+			{T(loc, "campaigns.create.creator_display_name")}
+			<input type="text" name="creator_display_name" value={view.CreatorDisplayName}>
+		</label>
+		<label>
+			{T(loc, "campaigns.create.theme_prompt")}
+			<textarea name="theme_prompt" rows="4">{view.ThemePrompt}</textarea>
+		</label>
+		<button class="paper-btn" type="submit">{T(loc, "campaigns.create.submit")}</button>
+	</form>
 }
 
 // CampaignsLoading renders the HTMX loading placeholder.
