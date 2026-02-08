@@ -9,6 +9,7 @@ import (
 
 // createCharacters creates the specified number of characters for a campaign.
 // Characters are assigned as PCs to participants when available, with remaining as NPCs.
+// All characters receive a participant controller assignment (players first, then GM).
 func (g *Generator) createCharacters(ctx context.Context, campaignID string, count int, participants []*statev1.Participant) ([]*statev1.Character, error) {
 	if count < 1 {
 		return nil, nil
@@ -16,11 +17,23 @@ func (g *Generator) createCharacters(ctx context.Context, campaignID string, cou
 
 	characters := make([]*statev1.Character, 0, count)
 
-	// Count players (non-GM participants) who can control PCs
+	// Collect players and GM for controller assignment
 	var playerParticipants []*statev1.Participant
+	var gmParticipant *statev1.Participant
+	var fallbackParticipant *statev1.Participant
 	for _, p := range participants {
+		if p == nil {
+			continue
+		}
+		if fallbackParticipant == nil {
+			fallbackParticipant = p
+		}
 		if p.Role == statev1.ParticipantRole_PLAYER {
 			playerParticipants = append(playerParticipants, p)
+			continue
+		}
+		if p.Role == statev1.ParticipantRole_GM && gmParticipant == nil {
+			gmParticipant = p
 		}
 	}
 
@@ -47,23 +60,31 @@ func (g *Generator) createCharacters(ctx context.Context, campaignID string, cou
 		character := resp.Character
 		characters = append(characters, character)
 
-		// Assign PC to corresponding player
+		// Assign a controller (players first, then GM)
+		var controllerParticipant *statev1.Participant
 		if i < len(playerParticipants) {
-			player := playerParticipants[i]
-			_, err := g.characters.SetDefaultControl(ctx, &statev1.SetDefaultControlRequest{
-				CampaignId:  campaignID,
-				CharacterId: character.Id,
-				Controller: &statev1.CharacterController{
-					Controller: &statev1.CharacterController_Participant{
-						Participant: &statev1.ParticipantController{
-							ParticipantId: player.Id,
-						},
+			controllerParticipant = playerParticipants[i]
+		} else if gmParticipant != nil {
+			controllerParticipant = gmParticipant
+		} else if fallbackParticipant != nil {
+			controllerParticipant = fallbackParticipant
+		}
+		if controllerParticipant == nil {
+			return nil, fmt.Errorf("no participants available to assign controller for character %s", character.Id)
+		}
+		_, err = g.characters.SetDefaultControl(ctx, &statev1.SetDefaultControlRequest{
+			CampaignId:  campaignID,
+			CharacterId: character.Id,
+			Controller: &statev1.CharacterController{
+				Controller: &statev1.CharacterController_Participant{
+					Participant: &statev1.ParticipantController{
+						ParticipantId: controllerParticipant.Id,
 					},
 				},
-			})
-			if err != nil {
-				return nil, fmt.Errorf("SetDefaultControl for character %s: %w", character.Id, err)
-			}
+			},
+		})
+		if err != nil {
+			return nil, fmt.Errorf("SetDefaultControl for character %s: %w", character.Id, err)
 		}
 	}
 
