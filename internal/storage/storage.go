@@ -5,13 +5,13 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/auth/user"
+	"github.com/louisbranch/fracturing.space/internal/campaign"
+	"github.com/louisbranch/fracturing.space/internal/campaign/character"
+	"github.com/louisbranch/fracturing.space/internal/campaign/event"
+	"github.com/louisbranch/fracturing.space/internal/campaign/invite"
+	"github.com/louisbranch/fracturing.space/internal/campaign/participant"
+	"github.com/louisbranch/fracturing.space/internal/campaign/session"
 	apperrors "github.com/louisbranch/fracturing.space/internal/errors"
-	"github.com/louisbranch/fracturing.space/internal/state/campaign"
-	"github.com/louisbranch/fracturing.space/internal/state/character"
-	"github.com/louisbranch/fracturing.space/internal/state/event"
-	"github.com/louisbranch/fracturing.space/internal/state/invite"
-	"github.com/louisbranch/fracturing.space/internal/state/participant"
-	"github.com/louisbranch/fracturing.space/internal/state/session"
 )
 
 // ErrNotFound indicates a requested record is missing.

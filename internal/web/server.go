@@ -11,7 +11,7 @@ import (
 	"time"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
-	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/state/v1"
+	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"

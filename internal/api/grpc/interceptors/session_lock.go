@@ -6,7 +6,7 @@ import (
 	"log"
 	"strings"
 
-	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/state/v1"
+	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/storage"
 	"google.golang.org/grpc"
@@ -16,26 +16,26 @@ import (
 
 // Service prefixes for session lock scope.
 const (
-	participantServicePrefix = "/state.v1.ParticipantService/"
-	characterServicePrefix   = "/state.v1.CharacterService/"
-	snapshotServicePrefix = "/state.v1.SnapshotService/"
+	participantServicePrefix = "/campaign.v1.ParticipantService/"
+	characterServicePrefix   = "/campaign.v1.CharacterService/"
+	snapshotServicePrefix    = "/campaign.v1.SnapshotService/"
 )
 
 // blockedParticipantMethods lists ParticipantService mutators blocked during an active session.
 var blockedParticipantMethods = map[string]struct{}{
-	statev1.ParticipantService_CreateParticipant_FullMethodName: {},
+	campaignv1.ParticipantService_CreateParticipant_FullMethodName: {},
 }
 
 // blockedCharacterMethods lists CharacterService mutators blocked during an active session.
 var blockedCharacterMethods = map[string]struct{}{
-	statev1.CharacterService_CreateCharacter_FullMethodName:       {},
-	statev1.CharacterService_SetDefaultControl_FullMethodName:     {},
-	statev1.CharacterService_PatchCharacterProfile_FullMethodName: {},
+	campaignv1.CharacterService_CreateCharacter_FullMethodName:       {},
+	campaignv1.CharacterService_SetDefaultControl_FullMethodName:     {},
+	campaignv1.CharacterService_PatchCharacterProfile_FullMethodName: {},
 }
 
 // blockedSnapshotMethods lists SnapshotService mutators blocked during an active session.
 var blockedSnapshotMethods = map[string]struct{}{
-	statev1.SnapshotService_PatchCharacterState_FullMethodName: {},
+	campaignv1.SnapshotService_PatchCharacterState_FullMethodName: {},
 }
 
 // campaignIDGetter extracts campaign_id from gRPC request messages.
@@ -43,7 +43,7 @@ type campaignIDGetter interface {
 	GetCampaignId() string
 }
 
-// SessionLockInterceptor blocks state service mutators when a campaign has an active session.
+// SessionLockInterceptor blocks campaign service mutators when a campaign has an active session.
 func SessionLockInterceptor(sessionStore storage.SessionStore) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		if !isBlockedMethod(info.FullMethod) {

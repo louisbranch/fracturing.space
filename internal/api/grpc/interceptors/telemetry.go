@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/state/v1"
+	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/storage"
 	"github.com/louisbranch/fracturing.space/internal/telemetry"
@@ -96,18 +96,18 @@ func sessionIDFromRequest(req any) string {
 
 func isReadMethod(fullMethod string) bool {
 	switch fullMethod {
-	case statev1.CampaignService_ListCampaigns_FullMethodName,
-		statev1.CampaignService_GetCampaign_FullMethodName,
-		statev1.ParticipantService_ListParticipants_FullMethodName,
-		statev1.ParticipantService_GetParticipant_FullMethodName,
-		statev1.CharacterService_ListCharacters_FullMethodName,
-		statev1.CharacterService_GetCharacterSheet_FullMethodName,
-		statev1.SessionService_ListSessions_FullMethodName,
-		statev1.SessionService_GetSession_FullMethodName,
-		statev1.SnapshotService_GetSnapshot_FullMethodName,
-		statev1.EventService_ListEvents_FullMethodName,
-		statev1.ForkService_GetLineage_FullMethodName,
-		statev1.ForkService_ListForks_FullMethodName:
+	case campaignv1.CampaignService_ListCampaigns_FullMethodName,
+		campaignv1.CampaignService_GetCampaign_FullMethodName,
+		campaignv1.ParticipantService_ListParticipants_FullMethodName,
+		campaignv1.ParticipantService_GetParticipant_FullMethodName,
+		campaignv1.CharacterService_ListCharacters_FullMethodName,
+		campaignv1.CharacterService_GetCharacterSheet_FullMethodName,
+		campaignv1.SessionService_ListSessions_FullMethodName,
+		campaignv1.SessionService_GetSession_FullMethodName,
+		campaignv1.SnapshotService_GetSnapshot_FullMethodName,
+		campaignv1.EventService_ListEvents_FullMethodName,
+		campaignv1.ForkService_GetLineage_FullMethodName,
+		campaignv1.ForkService_ListForks_FullMethodName:
 		return true
 	default:
 		return false

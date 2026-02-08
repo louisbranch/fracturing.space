@@ -1,0 +1,128 @@
+syntax = "proto3";
+
+package campaign.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1;campaignv1";
+
+// EventService provides unified event listing with AIP-compliant pagination and filtering.
+service EventService {
+  // AppendEvent appends a new event to the campaign journal.
+  rpc AppendEvent(AppendEventRequest) returns (AppendEventResponse);
+  // ListEvents returns a paginated, filtered, and sorted list of events for a campaign.
+  rpc ListEvents(ListEventsRequest) returns (ListEventsResponse);
+}
+
+// ListEventsRequest describes the parameters for listing events.
+message ListEventsRequest {
+  // Required: scope to a campaign.
+  string campaign_id = 1;
+
+  // Page size (default: 50, max: 200).
+  int32 page_size = 2;
+
+  // Opaque cursor for pagination (base64 encoded).
+  string page_token = 3;
+
+  // Ordering: "seq" (default, oldest first) or "seq desc" (newest first).
+  string order_by = 4;
+
+  // AIP-160 filter expression.
+  // Filterable fields: session_id, type, actor_type, actor_id, entity_type, entity_id, ts.
+  // Examples:
+  //   session_id = "sess_123"
+  //   type = "action.roll_resolved"
+  //   ts >= timestamp("2024-01-15T00:00:00Z")
+  //   session_id = "sess_123" AND type = "action.outcome_applied"
+  string filter = 5;
+}
+
+// ListEventsResponse contains the paginated event results.
+message ListEventsResponse {
+  // The events matching the request.
+  repeated Event events = 1;
+
+  // Token to retrieve the next page. Empty when no more results.
+  string next_page_token = 2;
+
+  // Token to retrieve the previous page. Empty when at the beginning.
+  string previous_page_token = 3;
+
+  // Total number of events matching the filter (across all pages).
+  int32 total_size = 4;
+}
+
+// AppendEventRequest describes the input for appending a new event.
+message AppendEventRequest {
+  // Required: scope to a campaign.
+  string campaign_id = 1;
+
+  // The type of event (e.g., "campaign.created", "story.added").
+  string type = 2;
+
+  // The session this event belongs to (optional).
+  string session_id = 3;
+
+  // Who triggered the event: "system", "participant", or "gm".
+  string actor_type = 4;
+
+  // The participant ID if actor_type is "participant" or "gm".
+  string actor_id = 5;
+
+  // The type of entity affected (e.g., "character", "session").
+  string entity_type = 6;
+
+  // The ID of the entity affected.
+  string entity_id = 7;
+
+  // Event-specific data as JSON.
+  bytes payload_json = 8;
+}
+
+// AppendEventResponse contains the stored event.
+message AppendEventResponse {
+  Event event = 1;
+}
+
+// Event represents an immutable event in the unified event journal.
+message Event {
+  // The campaign this event belongs to.
+  string campaign_id = 1;
+
+  // The event sequence number within the campaign (starts at 1).
+  uint64 seq = 2;
+
+  // Content-addressed identity (SHA-256 truncated to 128-bit, hex encoded).
+  string hash = 3;
+
+  // When the event occurred.
+  google.protobuf.Timestamp ts = 4;
+
+  // The type of event (e.g., "session.started", "action.roll_resolved").
+  string type = 5;
+
+  // The session this event belongs to (empty for setup events).
+  string session_id = 6;
+
+  // Correlation ID for related events (e.g., roll request to resolution).
+  string request_id = 7;
+
+  // The MCP/gRPC invocation that triggered this event.
+  string invocation_id = 8;
+
+  // Who triggered the event: "system", "participant", or "gm".
+  string actor_type = 9;
+
+  // The participant ID if actor_type is "participant" or "gm".
+  string actor_id = 10;
+
+  // The type of entity affected (e.g., "character", "session").
+  string entity_type = 11;
+
+  // The ID of the entity affected.
+  string entity_id = 12;
+
+  // Event-specific data as JSON.
+  bytes payload_json = 13;
+}

@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
-	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/state/v1"
+	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/web/i18n"
 	"google.golang.org/grpc"

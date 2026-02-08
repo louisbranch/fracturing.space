@@ -5,7 +5,7 @@
 Fracturing.Space is split into three layers:
 
 - **Transport layer**: gRPC server (`cmd/server`) + MCP bridge (`cmd/mcp`) + Web UI (`cmd/web`)
-- **Domain layer**: Game systems (`internal/systems/`) + State management (`internal/state/`)
+- **Domain layer**: Game systems (`internal/systems/`) + Campaign model (`internal/campaign/`)
 - **Storage layer**: SQLite persistence (`data/fracturing.space.db`)
 
 The MCP server is a thin adapter that forwards requests to the gRPC services.
@@ -33,15 +33,15 @@ Systems are registered at startup and campaigns are bound to one system at creat
 
 For detailed information on the game system architecture, including how to add new systems, see [game-systems.md](game-systems.md).
 
-## State Management Model
+## Campaign Model
 
-Game state is organized into three tiers by change frequency:
+Campaign data is organized into three tiers by change frequency:
 
 | Layer | Subpackages | Changes | Contents |
 |-------|-------------|---------|----------|
-| **Campaign** (Config) | `state/campaign/`, `state/participant/`, `state/character/` | Setup time | Name, system, GM mode, participants, character profiles |
-| **Snapshot** (Continuity) | `state/snapshot/` | At any event sequence | Character state (HP, Hope, Stress), GM Fear, progress |
-| **Session** (Gameplay) | `state/session/` | Every action | Active session, events, rolls, outcomes |
+| **Campaign** (Config) | `campaign/`, `campaign/participant/`, `campaign/character/` | Setup time | Name, system, GM mode, participants, character profiles |
+| **Snapshot** (Continuity) | `campaign/snapshot/` | At any event sequence | Character state (HP, Hope, Stress), GM Fear, progress |
+| **Session** (Gameplay) | `campaign/session/` | Every action | Active session, events, rolls, outcomes |
 
 This model uses an event-sourced architecture where the event journal is the
 source of truth and projections/snapshots are derived views.
@@ -93,7 +93,7 @@ Entry point: `cmd/mcp`
 ### Domain packages
 
 Game system mechanics live in `internal/systems/` (e.g., `internal/systems/daggerheart/`).
-State management lives in `internal/state/` with subpackages for campaign, participant,
+The campaign model lives in `internal/campaign/` with subpackages for participant,
 character, snapshot, and session. Core primitives (dice, checks, RNG) live in
 `internal/core/`. These packages are transport agnostic and used by the gRPC services.
 

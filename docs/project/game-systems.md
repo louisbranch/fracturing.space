@@ -45,8 +45,8 @@ This allows any system to define its own named resources that all work with the 
 +---------------------------------------------------------------------+
 |                       SYSTEM-AGNOSTIC LAYER                         |
 +---------------------------------------------------------------------+
-| internal/state/                                                     |
-|   +-- campaign/      Campaign metadata (name, status, theme)        |
+| internal/campaign/                                                  |
+|   +-- (root)         Campaign metadata (name, status, theme)        |
 |   +-- participant/   Players and GM management                      |
 |   +-- character/     Character identity (name, kind, notes)         |
 |   +-- session/       Session lifecycle, event stream                |
@@ -56,7 +56,7 @@ This allows any system to define its own named resources that all work with the 
 |   +-- check/         Difficulty check primitives                    |
 |   +-- random/        RNG seed generation                            |
 |                                                                     |
-| api/proto/state/v1/  System-agnostic state protos                   |
+| api/proto/campaign/v1/  System-agnostic campaign protos             |
 |   +-- Campaign, Session, Character identity                         |
 +---------------------------------------------------------------------+
                               |
@@ -467,7 +467,7 @@ Daggerheart defines these resources via the `ResourceHolder` interface:
 System-specific state is added to core protos using `oneof`:
 
 ```protobuf
-// In state/v1/character.proto
+// In campaign/v1/character.proto
 message CharacterState {
   string campaign_id = 1;
   string character_id = 2;

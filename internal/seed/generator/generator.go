@@ -8,8 +8,8 @@ import (
 	"math/rand"
 	"os"
 
+	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
-	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/state/v1"
 	"github.com/louisbranch/fracturing.space/internal/seed/worldbuilder"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -41,7 +41,7 @@ type Generator struct {
 	wb     *worldbuilder.WorldBuilder
 	conn   *grpc.ClientConn
 
-	// gRPC service clients (state/v1)
+	// gRPC service clients (campaign/v1)
 	campaigns    statev1.CampaignServiceClient
 	participants statev1.ParticipantServiceClient
 	characters   statev1.CharacterServiceClient

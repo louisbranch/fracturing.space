@@ -47,11 +47,11 @@ use the Make targets documented in `docs/running/integration-tests.md`:
 
 | Feature Type | Location |
 |--------------|----------|
-| Campaign settings | `internal/state/campaign/` |
-| Player/GM management | `internal/state/participant/` |
-| Character definitions | `internal/state/character/` |
-| Persistent gameplay state | `internal/state/snapshot/` |
-| Session mechanics | `internal/state/session/` |
+| Campaign settings | `internal/campaign/` |
+| Player/GM management | `internal/campaign/participant/` |
+| Character definitions | `internal/campaign/character/` |
+| Persistent gameplay state | `internal/campaign/snapshot/` |
+| Session mechanics | `internal/campaign/session/` |
 | Game-system-specific rules | `internal/systems/{system}/` |
 | Generic dice mechanics | `internal/core/dice/` |
 | gRPC API endpoints | `internal/api/grpc/` |

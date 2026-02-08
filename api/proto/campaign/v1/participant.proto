@@ -1,0 +1,133 @@
+syntax = "proto3";
+
+package campaign.v1;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+
+option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1;campaignv1";
+
+// Participant represents a player or GM in a campaign.
+message Participant {
+  string id = 1;
+  string campaign_id = 2;
+  string display_name = 3;
+  ParticipantRole role = 4;
+  Controller controller = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+  bool is_owner = 8;
+}
+
+enum ParticipantRole {
+  ROLE_UNSPECIFIED = 0;
+  GM = 1;
+  PLAYER = 2;
+}
+
+enum Controller {
+  CONTROLLER_UNSPECIFIED = 0;
+  CONTROLLER_HUMAN = 1;
+  CONTROLLER_AI = 2;
+}
+
+// ParticipantService provides CRUD operations for campaign participants.
+service ParticipantService {
+  // Create a participant (GM or player) for a campaign.
+  rpc CreateParticipant(CreateParticipantRequest) returns (CreateParticipantResponse);
+
+  // Update a participant.
+  rpc UpdateParticipant(UpdateParticipantRequest) returns (UpdateParticipantResponse);
+
+  // Delete a participant.
+  rpc DeleteParticipant(DeleteParticipantRequest) returns (DeleteParticipantResponse);
+
+  // List participants for a campaign.
+  rpc ListParticipants(ListParticipantsRequest) returns (ListParticipantsResponse);
+
+  // Get a participant by campaign ID and participant ID.
+  rpc GetParticipant(GetParticipantRequest) returns (GetParticipantResponse);
+}
+
+message CreateParticipantRequest {
+  // The campaign ID to create the participant for.
+  string campaign_id = 1;
+
+  // Display name for the participant.
+  string display_name = 2;
+
+  // The role of the participant.
+  ParticipantRole role = 3;
+
+  // The controller type (defaults to HUMAN if unspecified).
+  Controller controller = 4;
+}
+
+message CreateParticipantResponse {
+  Participant participant = 1;
+}
+
+message UpdateParticipantRequest {
+  // The campaign ID.
+  string campaign_id = 1;
+
+  // The participant ID.
+  string participant_id = 2;
+
+  // Optional updated display name.
+  google.protobuf.StringValue display_name = 3;
+
+  // Optional updated role.
+  ParticipantRole role = 4;
+
+  // Optional updated controller.
+  Controller controller = 5;
+}
+
+message UpdateParticipantResponse {
+  Participant participant = 1;
+}
+
+message DeleteParticipantRequest {
+  // The campaign ID.
+  string campaign_id = 1;
+
+  // The participant ID.
+  string participant_id = 2;
+
+  // Optional reason for deletion.
+  string reason = 3;
+}
+
+message DeleteParticipantResponse {
+  Participant participant = 1;
+}
+
+message ListParticipantsRequest {
+  // The campaign ID to list participants for.
+  string campaign_id = 1;
+
+  // The maximum number of participants to return.
+  // If zero, the server defaults to 10. The server clamps values above 10 to 10.
+  int32 page_size = 2;
+
+  // A page token received from a prior ListParticipantsResponse.
+  string page_token = 3;
+}
+
+message ListParticipantsResponse {
+  repeated Participant participants = 1;
+  string next_page_token = 2;
+}
+
+message GetParticipantRequest {
+  // The campaign ID.
+  string campaign_id = 1;
+
+  // The participant ID.
+  string participant_id = 2;
+}
+
+message GetParticipantResponse {
+  Participant participant = 1;
+}

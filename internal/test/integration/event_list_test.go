@@ -6,8 +6,8 @@ import (
 	"context"
 	"testing"
 
+	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
-	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/state/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"

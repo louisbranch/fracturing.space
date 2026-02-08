@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"testing"
 
-	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/state/v1"
+	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1"
 	"github.com/louisbranch/fracturing.space/internal/mcp/domain"
 	daggerheartdomain "github.com/louisbranch/fracturing.space/internal/systems/daggerheart/domain"
 	"github.com/modelcontextprotocol/go-sdk/mcp"

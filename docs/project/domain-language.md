@@ -14,6 +14,15 @@ It is analogous to a Git repository:
 - Projections are derived state (like working trees or views).
 - A fork creates a new campaign with its own timeline.
 
+Within a campaign, we talk about areas rather than separate buckets:
+
+- Config: campaign metadata and lifecycle.
+- Participants: player/GM seats and controllers.
+- Characters: identities and profiles.
+- Events: the canonical journal of facts (the commit log).
+- Continuity: snapshot views that persist between sessions.
+- Session: the active gameplay view.
+
 ### Event Journal (Commit History)
 
 The event journal is the immutable, append-only log of everything that happens

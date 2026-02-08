@@ -10,12 +10,12 @@ import (
 	"path/filepath"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
-	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/state/v1"
+	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	authservice "github.com/louisbranch/fracturing.space/internal/api/grpc/auth"
+	campaignservice "github.com/louisbranch/fracturing.space/internal/api/grpc/campaign"
 	"github.com/louisbranch/fracturing.space/internal/api/grpc/interceptors"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/api/grpc/metadata"
-	stateservice "github.com/louisbranch/fracturing.space/internal/api/grpc/state"
 	daggerheartservice "github.com/louisbranch/fracturing.space/internal/api/grpc/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/core/random"
 	"github.com/louisbranch/fracturing.space/internal/storage"
@@ -45,7 +45,7 @@ func New(port int) (*Server, error) {
 		return nil, err
 	}
 
-	stores := stateservice.Stores{
+	stores := campaignservice.Stores{
 		Campaign:       store,
 		Participant:    store,
 		Invite:         store,
@@ -70,14 +70,14 @@ func New(port int) (*Server, error) {
 	)
 	daggerheartService := daggerheartservice.NewDaggerheartService(random.NewSeed)
 	authService := authservice.NewAuthService(store)
-	campaignService := stateservice.NewCampaignService(stores)
-	participantService := stateservice.NewParticipantService(stores)
-	inviteService := stateservice.NewInviteService(stores)
-	characterService := stateservice.NewCharacterService(stores)
-	snapshotService := stateservice.NewSnapshotService(stores)
-	sessionService := stateservice.NewSessionService(stores)
-	forkService := stateservice.NewForkService(stores)
-	eventService := stateservice.NewEventService(stores)
+	campaignService := campaignservice.NewCampaignService(stores)
+	participantService := campaignservice.NewParticipantService(stores)
+	inviteService := campaignservice.NewInviteService(stores)
+	characterService := campaignservice.NewCharacterService(stores)
+	snapshotService := campaignservice.NewSnapshotService(stores)
+	sessionService := campaignservice.NewSessionService(stores)
+	forkService := campaignservice.NewForkService(stores)
+	eventService := campaignservice.NewEventService(stores)
 	healthServer := health.NewServer()
 	daggerheartv1.RegisterDaggerheartServiceServer(grpcServer, daggerheartService)
 	authv1.RegisterAuthServiceServer(grpcServer, authService)
@@ -93,14 +93,14 @@ func New(port int) (*Server, error) {
 	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("systems.daggerheart.v1.DaggerheartService", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("auth.v1.AuthService", grpc_health_v1.HealthCheckResponse_SERVING)
-	healthServer.SetServingStatus("state.v1.CampaignService", grpc_health_v1.HealthCheckResponse_SERVING)
-	healthServer.SetServingStatus("state.v1.ParticipantService", grpc_health_v1.HealthCheckResponse_SERVING)
-	healthServer.SetServingStatus("state.v1.InviteService", grpc_health_v1.HealthCheckResponse_SERVING)
-	healthServer.SetServingStatus("state.v1.CharacterService", grpc_health_v1.HealthCheckResponse_SERVING)
-	healthServer.SetServingStatus("state.v1.SnapshotService", grpc_health_v1.HealthCheckResponse_SERVING)
-	healthServer.SetServingStatus("state.v1.SessionService", grpc_health_v1.HealthCheckResponse_SERVING)
-	healthServer.SetServingStatus("state.v1.ForkService", grpc_health_v1.HealthCheckResponse_SERVING)
-	healthServer.SetServingStatus("state.v1.EventService", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus("campaign.v1.CampaignService", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus("campaign.v1.ParticipantService", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus("campaign.v1.InviteService", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus("campaign.v1.CharacterService", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus("campaign.v1.SnapshotService", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus("campaign.v1.SessionService", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus("campaign.v1.ForkService", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus("campaign.v1.EventService", grpc_health_v1.HealthCheckResponse_SERVING)
 
 	return &Server{
 		listener:   listener,

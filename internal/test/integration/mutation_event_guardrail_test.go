@@ -6,7 +6,7 @@ import (
 	"context"
 	"testing"
 
-	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/state/v1"
+	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1"
 	"github.com/louisbranch/fracturing.space/internal/mcp/domain"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"

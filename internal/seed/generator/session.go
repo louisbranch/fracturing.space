@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/state/v1"
+	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1"
 )
 
 // createSessions creates the specified number of sessions for a campaign.

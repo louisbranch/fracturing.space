@@ -14,8 +14,8 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/louisbranch/fracturing.space/internal/state/event"
-	"github.com/louisbranch/fracturing.space/internal/state/projection"
+	"github.com/louisbranch/fracturing.space/internal/campaign/event"
+	"github.com/louisbranch/fracturing.space/internal/campaign/projection"
 	"github.com/louisbranch/fracturing.space/internal/storage"
 	"github.com/louisbranch/fracturing.space/internal/storage/sqlite"
 	"github.com/louisbranch/fracturing.space/internal/systems/daggerheart"
