@@ -4,6 +4,7 @@ package campaign.v1;
 
 import "google/protobuf/timestamp.proto";
 import "common/v1/game_system.proto";
+import "campaign/v1/participant.proto";
 
 option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1;campaignv1";
 
@@ -86,7 +87,8 @@ message CreateCampaignRequest {
 
 message CreateCampaignResponse {
   Campaign campaign = 1;
-  repeated string warnings = 2;
+  Participant owner_participant = 2;
+  repeated string warnings = 3;
 }
 
 message ListCampaignsRequest {

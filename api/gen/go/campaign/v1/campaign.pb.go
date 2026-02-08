@@ -360,11 +360,12 @@ func (x *CreateCampaignRequest) GetCreatorDisplayName() string {
 }
 
 type CreateCampaignResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Campaign      *Campaign              `protobuf:"bytes,1,opt,name=campaign,proto3" json:"campaign,omitempty"`
-	Warnings      []string               `protobuf:"bytes,2,rep,name=warnings,proto3" json:"warnings,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Campaign         *Campaign              `protobuf:"bytes,1,opt,name=campaign,proto3" json:"campaign,omitempty"`
+	OwnerParticipant *Participant           `protobuf:"bytes,2,opt,name=owner_participant,json=ownerParticipant,proto3" json:"owner_participant,omitempty"`
+	Warnings         []string               `protobuf:"bytes,3,rep,name=warnings,proto3" json:"warnings,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *CreateCampaignResponse) Reset() {
@@ -400,6 +401,13 @@ func (*CreateCampaignResponse) Descriptor() ([]byte, []int) {
 func (x *CreateCampaignResponse) GetCampaign() *Campaign {
 	if x != nil {
 		return x.Campaign
+	}
+	return nil
+}
+
+func (x *CreateCampaignResponse) GetOwnerParticipant() *Participant {
+	if x != nil {
+		return x.OwnerParticipant
 	}
 	return nil
 }
@@ -878,7 +886,7 @@ var File_campaign_v1_campaign_proto protoreflect.FileDescriptor
 
 const file_campaign_v1_campaign_proto_rawDesc = "" +
 	"\n" +
-	"\x1acampaign/v1/campaign.proto\x12\vcampaign.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bcommon/v1/game_system.proto\"\xf1\x04\n" +
+	"\x1acampaign/v1/campaign.proto\x12\vcampaign.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bcommon/v1/game_system.proto\x1a\x1dcampaign/v1/participant.proto\"\xf1\x04\n" +
 	"\bCampaign\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12-\n" +
@@ -902,10 +910,11 @@ const file_campaign_v1_campaign_proto_rawDesc = "" +
 	"\x06system\x18\x02 \x01(\x0e2\x15.common.v1.GameSystemR\x06system\x12,\n" +
 	"\agm_mode\x18\x03 \x01(\x0e2\x13.campaign.v1.GmModeR\x06gmMode\x12!\n" +
 	"\ftheme_prompt\x18\x04 \x01(\tR\vthemePrompt\x120\n" +
-	"\x14creator_display_name\x18\x05 \x01(\tR\x12creatorDisplayName\"g\n" +
+	"\x14creator_display_name\x18\x05 \x01(\tR\x12creatorDisplayName\"\xae\x01\n" +
 	"\x16CreateCampaignResponse\x121\n" +
-	"\bcampaign\x18\x01 \x01(\v2\x15.campaign.v1.CampaignR\bcampaign\x12\x1a\n" +
-	"\bwarnings\x18\x02 \x03(\tR\bwarnings\"R\n" +
+	"\bcampaign\x18\x01 \x01(\v2\x15.campaign.v1.CampaignR\bcampaign\x12E\n" +
+	"\x11owner_participant\x18\x02 \x01(\v2\x18.campaign.v1.ParticipantR\x10ownerParticipant\x12\x1a\n" +
+	"\bwarnings\x18\x03 \x03(\tR\bwarnings\"R\n" +
 	"\x14ListCampaignsRequest\x12\x1b\n" +
 	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
 	"\n" +
@@ -986,6 +995,7 @@ var file_campaign_v1_campaign_proto_goTypes = []any{
 	(*RestoreCampaignResponse)(nil), // 14: campaign.v1.RestoreCampaignResponse
 	(v1.GameSystem)(0),              // 15: common.v1.GameSystem
 	(*timestamppb.Timestamp)(nil),   // 16: google.protobuf.Timestamp
+	(*Participant)(nil),             // 17: campaign.v1.Participant
 }
 var file_campaign_v1_campaign_proto_depIdxs = []int32{
 	15, // 0: campaign.v1.Campaign.system:type_name -> common.v1.GameSystem
@@ -999,28 +1009,29 @@ var file_campaign_v1_campaign_proto_depIdxs = []int32{
 	15, // 8: campaign.v1.CreateCampaignRequest.system:type_name -> common.v1.GameSystem
 	1,  // 9: campaign.v1.CreateCampaignRequest.gm_mode:type_name -> campaign.v1.GmMode
 	2,  // 10: campaign.v1.CreateCampaignResponse.campaign:type_name -> campaign.v1.Campaign
-	2,  // 11: campaign.v1.ListCampaignsResponse.campaigns:type_name -> campaign.v1.Campaign
-	2,  // 12: campaign.v1.GetCampaignResponse.campaign:type_name -> campaign.v1.Campaign
-	2,  // 13: campaign.v1.EndCampaignResponse.campaign:type_name -> campaign.v1.Campaign
-	2,  // 14: campaign.v1.ArchiveCampaignResponse.campaign:type_name -> campaign.v1.Campaign
-	2,  // 15: campaign.v1.RestoreCampaignResponse.campaign:type_name -> campaign.v1.Campaign
-	3,  // 16: campaign.v1.CampaignService.CreateCampaign:input_type -> campaign.v1.CreateCampaignRequest
-	5,  // 17: campaign.v1.CampaignService.ListCampaigns:input_type -> campaign.v1.ListCampaignsRequest
-	7,  // 18: campaign.v1.CampaignService.GetCampaign:input_type -> campaign.v1.GetCampaignRequest
-	9,  // 19: campaign.v1.CampaignService.EndCampaign:input_type -> campaign.v1.EndCampaignRequest
-	11, // 20: campaign.v1.CampaignService.ArchiveCampaign:input_type -> campaign.v1.ArchiveCampaignRequest
-	13, // 21: campaign.v1.CampaignService.RestoreCampaign:input_type -> campaign.v1.RestoreCampaignRequest
-	4,  // 22: campaign.v1.CampaignService.CreateCampaign:output_type -> campaign.v1.CreateCampaignResponse
-	6,  // 23: campaign.v1.CampaignService.ListCampaigns:output_type -> campaign.v1.ListCampaignsResponse
-	8,  // 24: campaign.v1.CampaignService.GetCampaign:output_type -> campaign.v1.GetCampaignResponse
-	10, // 25: campaign.v1.CampaignService.EndCampaign:output_type -> campaign.v1.EndCampaignResponse
-	12, // 26: campaign.v1.CampaignService.ArchiveCampaign:output_type -> campaign.v1.ArchiveCampaignResponse
-	14, // 27: campaign.v1.CampaignService.RestoreCampaign:output_type -> campaign.v1.RestoreCampaignResponse
-	22, // [22:28] is the sub-list for method output_type
-	16, // [16:22] is the sub-list for method input_type
-	16, // [16:16] is the sub-list for extension type_name
-	16, // [16:16] is the sub-list for extension extendee
-	0,  // [0:16] is the sub-list for field type_name
+	17, // 11: campaign.v1.CreateCampaignResponse.owner_participant:type_name -> campaign.v1.Participant
+	2,  // 12: campaign.v1.ListCampaignsResponse.campaigns:type_name -> campaign.v1.Campaign
+	2,  // 13: campaign.v1.GetCampaignResponse.campaign:type_name -> campaign.v1.Campaign
+	2,  // 14: campaign.v1.EndCampaignResponse.campaign:type_name -> campaign.v1.Campaign
+	2,  // 15: campaign.v1.ArchiveCampaignResponse.campaign:type_name -> campaign.v1.Campaign
+	2,  // 16: campaign.v1.RestoreCampaignResponse.campaign:type_name -> campaign.v1.Campaign
+	3,  // 17: campaign.v1.CampaignService.CreateCampaign:input_type -> campaign.v1.CreateCampaignRequest
+	5,  // 18: campaign.v1.CampaignService.ListCampaigns:input_type -> campaign.v1.ListCampaignsRequest
+	7,  // 19: campaign.v1.CampaignService.GetCampaign:input_type -> campaign.v1.GetCampaignRequest
+	9,  // 20: campaign.v1.CampaignService.EndCampaign:input_type -> campaign.v1.EndCampaignRequest
+	11, // 21: campaign.v1.CampaignService.ArchiveCampaign:input_type -> campaign.v1.ArchiveCampaignRequest
+	13, // 22: campaign.v1.CampaignService.RestoreCampaign:input_type -> campaign.v1.RestoreCampaignRequest
+	4,  // 23: campaign.v1.CampaignService.CreateCampaign:output_type -> campaign.v1.CreateCampaignResponse
+	6,  // 24: campaign.v1.CampaignService.ListCampaigns:output_type -> campaign.v1.ListCampaignsResponse
+	8,  // 25: campaign.v1.CampaignService.GetCampaign:output_type -> campaign.v1.GetCampaignResponse
+	10, // 26: campaign.v1.CampaignService.EndCampaign:output_type -> campaign.v1.EndCampaignResponse
+	12, // 27: campaign.v1.CampaignService.ArchiveCampaign:output_type -> campaign.v1.ArchiveCampaignResponse
+	14, // 28: campaign.v1.CampaignService.RestoreCampaign:output_type -> campaign.v1.RestoreCampaignResponse
+	23, // [23:29] is the sub-list for method output_type
+	17, // [17:23] is the sub-list for method input_type
+	17, // [17:17] is the sub-list for extension type_name
+	17, // [17:17] is the sub-list for extension extendee
+	0,  // [0:17] is the sub-list for field type_name
 }
 
 func init() { file_campaign_v1_campaign_proto_init() }
@@ -1028,6 +1039,7 @@ func file_campaign_v1_campaign_proto_init() {
 	if File_campaign_v1_campaign_proto != nil {
 		return
 	}
+	file_campaign_v1_participant_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

@@ -168,10 +168,11 @@ Creates a new campaign metadata record.
 ```json
 {
   "id": "camp_abc123",
+  "owner_participant_id": "part_owner123",
   "name": "The Lost Expedition",
   "status": "DRAFT",
   "gm_mode": "HUMAN",
-  "participant_count": 0,
+  "participant_count": 1,
   "character_count": 0,
   "theme_prompt": "A dark fantasy campaign set in a cursed forest",
   "created_at": "2025-01-15T10:00:00Z",
@@ -179,6 +180,8 @@ Creates a new campaign metadata record.
   "updated_at": "2025-01-15T10:00:00Z"
 }
 ```
+
+`owner_participant_id` is the owner seat created alongside the campaign. Clients should call `set_context` with this ID to act as the owner for subsequent requests.
 
 #### campaign_end
 
