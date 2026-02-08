@@ -118,12 +118,13 @@ type OutcomeApplied struct {
 type Participant struct {
 	CampaignID  string `json:"campaign_id"`
 	ID          string `json:"id"`
+	UserID      string `json:"user_id"`
 	DisplayName string `json:"display_name"`
 	Role        string `json:"role"`
 	Controller  string `json:"controller"`
+	IsOwner     int64  `json:"is_owner"`
 	CreatedAt   string `json:"created_at"`
 	UpdatedAt   string `json:"updated_at"`
-	IsOwner     int64  `json:"is_owner"`
 }
 
 type Session struct {

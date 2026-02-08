@@ -11,6 +11,7 @@ const (
 	CodeParticipantEmptyDisplayName     = "PARTICIPANT_EMPTY_DISPLAY_NAME"
 	CodeParticipantInvalidRole          = "PARTICIPANT_INVALID_ROLE"
 	CodeParticipantEmptyCampaignID      = "PARTICIPANT_EMPTY_CAMPAIGN_ID"
+	CodeParticipantUserAlreadyClaimed   = "PARTICIPANT_USER_ALREADY_CLAIMED"
 	CodeUserEmptyDisplayName            = "USER_EMPTY_DISPLAY_NAME"
 	CodeInviteEmptyCampaignID           = "INVITE_EMPTY_CAMPAIGN_ID"
 	CodeInviteEmptyParticipantID        = "INVITE_EMPTY_PARTICIPANT_ID"
@@ -60,9 +61,10 @@ var enUSCatalog = &Catalog{
 		CodeCampaignStatusDisallowsOp:       "Campaign status {{.Status}} does not allow {{.Operation}}",
 
 		// Participant errors
-		CodeParticipantEmptyDisplayName: "Participant display name cannot be empty",
-		CodeParticipantInvalidRole:      "Invalid participant role specified",
-		CodeParticipantEmptyCampaignID:  "Campaign ID is required for participant",
+		CodeParticipantEmptyDisplayName:   "Participant display name cannot be empty",
+		CodeParticipantInvalidRole:        "Invalid participant role specified",
+		CodeParticipantEmptyCampaignID:    "Campaign ID is required for participant",
+		CodeParticipantUserAlreadyClaimed: "User is already assigned to a participant in this campaign",
 
 		// User errors
 		CodeUserEmptyDisplayName: "User display name cannot be empty",

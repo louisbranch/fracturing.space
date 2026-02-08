@@ -88,6 +88,7 @@ func participantToProto(p participant.Participant) *campaignv1.Participant {
 	return &campaignv1.Participant{
 		Id:          p.ID,
 		CampaignId:  p.CampaignID,
+		UserId:      p.UserID,
 		DisplayName: p.DisplayName,
 		Role:        participantRoleToProto(p.Role),
 		Controller:  controllerToProto(p.Controller),

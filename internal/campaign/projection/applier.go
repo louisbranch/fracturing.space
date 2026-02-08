@@ -172,6 +172,7 @@ func (a Applier) applyParticipantJoined(ctx context.Context, evt event.Event) er
 
 	input := participant.CreateParticipantInput{
 		CampaignID:  evt.CampaignID,
+		UserID:      payload.UserID,
 		DisplayName: payload.DisplayName,
 		Role:        role,
 		Controller:  controller,
@@ -185,6 +186,7 @@ func (a Applier) applyParticipantJoined(ctx context.Context, evt event.Event) er
 	p := participant.Participant{
 		ID:          participantID,
 		CampaignID:  normalized.CampaignID,
+		UserID:      normalized.UserID,
 		DisplayName: normalized.DisplayName,
 		Role:        normalized.Role,
 		Controller:  normalized.Controller,
@@ -238,6 +240,12 @@ func (a Applier) applyParticipantUpdated(ctx context.Context, evt event.Event) e
 	updated := current
 	for key, value := range payload.Fields {
 		switch key {
+		case "user_id":
+			userID, ok := value.(string)
+			if !ok {
+				return fmt.Errorf("participant.updated user_id must be string")
+			}
+			updated.UserID = strings.TrimSpace(userID)
 		case "display_name":
 			name, ok := value.(string)
 			if !ok {

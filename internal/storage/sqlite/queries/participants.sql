@@ -3,9 +3,10 @@ SELECT * FROM participants WHERE campaign_id = ? AND id = ?;
 
 -- name: PutParticipant :exec
 INSERT INTO participants (
-    campaign_id, id, display_name, role, controller, is_owner, created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    campaign_id, id, user_id, display_name, role, controller, is_owner, created_at, updated_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(campaign_id, id) DO UPDATE SET
+    user_id = excluded.user_id,
     display_name = excluded.display_name,
     role = excluded.role,
     controller = excluded.controller,

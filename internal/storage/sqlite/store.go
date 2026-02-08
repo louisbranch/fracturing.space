@@ -23,6 +23,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/campaign/session"
 	"github.com/louisbranch/fracturing.space/internal/campaign/snapshot"
 	"github.com/louisbranch/fracturing.space/internal/core/encoding"
+	apperrors "github.com/louisbranch/fracturing.space/internal/errors"
 	"github.com/louisbranch/fracturing.space/internal/storage"
 	"github.com/louisbranch/fracturing.space/internal/storage/sqlite/db"
 	"github.com/louisbranch/fracturing.space/internal/storage/sqlite/migrations"
@@ -266,16 +267,30 @@ func (s *Store) PutParticipant(ctx context.Context, p participant.Participant) e
 		return fmt.Errorf("participant id is required")
 	}
 
-	return s.q.PutParticipant(ctx, db.PutParticipantParams{
+	if err := s.q.PutParticipant(ctx, db.PutParticipantParams{
 		CampaignID:  p.CampaignID,
 		ID:          p.ID,
+		UserID:      p.UserID,
 		DisplayName: p.DisplayName,
 		Role:        participantRoleToString(p.Role),
 		Controller:  participantControllerToString(p.Controller),
 		IsOwner:     boolToInt(p.IsOwner),
 		CreatedAt:   p.CreatedAt.Format(timeFormat),
 		UpdatedAt:   p.UpdatedAt.Format(timeFormat),
-	})
+	}); err != nil {
+		if isParticipantUserConflict(err) {
+			return apperrors.WithMetadata(
+				apperrors.CodeParticipantUserAlreadyClaimed,
+				"participant user already claimed",
+				map[string]string{
+					"CampaignID": p.CampaignID,
+					"UserID":     p.UserID,
+				},
+			)
+		}
+		return err
+	}
+	return nil
 }
 
 // DeleteParticipant deletes a participant record by IDs.
@@ -1758,6 +1773,7 @@ func dbParticipantToDomain(row db.Participant) (participant.Participant, error) 
 	return participant.Participant{
 		ID:          row.ID,
 		CampaignID:  row.CampaignID,
+		UserID:      row.UserID,
 		DisplayName: row.DisplayName,
 		Role:        stringToParticipantRole(row.Role),
 		Controller:  stringToParticipantController(row.Controller),
@@ -2147,7 +2163,17 @@ func isConstraintError(err error) bool {
 	if !errors.As(err, &sqliteErr) {
 		return false
 	}
-	return sqliteErr.Code() == sqlite3.SQLITE_CONSTRAINT
+	code := sqliteErr.Code()
+	return code == sqlite3.SQLITE_CONSTRAINT || code == sqlite3.SQLITE_CONSTRAINT_UNIQUE
+}
+
+func isParticipantUserConflict(err error) bool {
+	if !isConstraintError(err) {
+		return false
+	}
+	message := strings.ToLower(err.Error())
+	return strings.Contains(message, "idx_participants_campaign_user") ||
+		(strings.Contains(message, "participant") && strings.Contains(message, "user_id"))
 }
 
 // AppendTelemetryEvent records an operational telemetry event.

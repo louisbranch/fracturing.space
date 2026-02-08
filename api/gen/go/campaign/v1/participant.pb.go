@@ -126,12 +126,13 @@ type Participant struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	CampaignId    string                 `protobuf:"bytes,2,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"`
-	DisplayName   string                 `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
-	Role          ParticipantRole        `protobuf:"varint,4,opt,name=role,proto3,enum=campaign.v1.ParticipantRole" json:"role,omitempty"`
-	Controller    Controller             `protobuf:"varint,5,opt,name=controller,proto3,enum=campaign.v1.Controller" json:"controller,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	IsOwner       bool                   `protobuf:"varint,8,opt,name=is_owner,json=isOwner,proto3" json:"is_owner,omitempty"`
+	UserId        string                 `protobuf:"bytes,3,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	DisplayName   string                 `protobuf:"bytes,4,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	Role          ParticipantRole        `protobuf:"varint,5,opt,name=role,proto3,enum=campaign.v1.ParticipantRole" json:"role,omitempty"`
+	Controller    Controller             `protobuf:"varint,6,opt,name=controller,proto3,enum=campaign.v1.Controller" json:"controller,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	IsOwner       bool                   `protobuf:"varint,9,opt,name=is_owner,json=isOwner,proto3" json:"is_owner,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -176,6 +177,13 @@ func (x *Participant) GetId() string {
 func (x *Participant) GetCampaignId() string {
 	if x != nil {
 		return x.CampaignId
+	}
+	return ""
+}
+
+func (x *Participant) GetUserId() string {
+	if x != nil {
+		return x.UserId
 	}
 	return ""
 }
@@ -226,12 +234,14 @@ type CreateParticipantRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The campaign ID to create the participant for.
 	CampaignId string `protobuf:"bytes,1,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"`
+	// Optional user ID tied to the participant seat.
+	UserId string `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	// Display name for the participant.
-	DisplayName string `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	DisplayName string `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
 	// The role of the participant.
-	Role ParticipantRole `protobuf:"varint,3,opt,name=role,proto3,enum=campaign.v1.ParticipantRole" json:"role,omitempty"`
+	Role ParticipantRole `protobuf:"varint,4,opt,name=role,proto3,enum=campaign.v1.ParticipantRole" json:"role,omitempty"`
 	// The controller type (defaults to HUMAN if unspecified).
-	Controller    Controller `protobuf:"varint,4,opt,name=controller,proto3,enum=campaign.v1.Controller" json:"controller,omitempty"`
+	Controller    Controller `protobuf:"varint,5,opt,name=controller,proto3,enum=campaign.v1.Controller" json:"controller,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -269,6 +279,13 @@ func (*CreateParticipantRequest) Descriptor() ([]byte, []int) {
 func (x *CreateParticipantRequest) GetCampaignId() string {
 	if x != nil {
 		return x.CampaignId
+	}
+	return ""
+}
+
+func (x *CreateParticipantRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
 	}
 	return ""
 }
@@ -344,12 +361,14 @@ type UpdateParticipantRequest struct {
 	CampaignId string `protobuf:"bytes,1,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"`
 	// The participant ID.
 	ParticipantId string `protobuf:"bytes,2,opt,name=participant_id,json=participantId,proto3" json:"participant_id,omitempty"`
+	// Optional updated user ID.
+	UserId *wrapperspb.StringValue `protobuf:"bytes,3,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	// Optional updated display name.
-	DisplayName *wrapperspb.StringValue `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	DisplayName *wrapperspb.StringValue `protobuf:"bytes,4,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
 	// Optional updated role.
-	Role ParticipantRole `protobuf:"varint,4,opt,name=role,proto3,enum=campaign.v1.ParticipantRole" json:"role,omitempty"`
+	Role ParticipantRole `protobuf:"varint,5,opt,name=role,proto3,enum=campaign.v1.ParticipantRole" json:"role,omitempty"`
 	// Optional updated controller.
-	Controller    Controller `protobuf:"varint,5,opt,name=controller,proto3,enum=campaign.v1.Controller" json:"controller,omitempty"`
+	Controller    Controller `protobuf:"varint,6,opt,name=controller,proto3,enum=campaign.v1.Controller" json:"controller,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -396,6 +415,13 @@ func (x *UpdateParticipantRequest) GetParticipantId() string {
 		return x.ParticipantId
 	}
 	return ""
+}
+
+func (x *UpdateParticipantRequest) GetUserId() *wrapperspb.StringValue {
+	if x != nil {
+		return x.UserId
+	}
+	return nil
 }
 
 func (x *UpdateParticipantRequest) GetDisplayName() *wrapperspb.StringValue {
@@ -788,39 +814,42 @@ var File_campaign_v1_participant_proto protoreflect.FileDescriptor
 
 const file_campaign_v1_participant_proto_rawDesc = "" +
 	"\n" +
-	"\x1dcampaign/v1/participant.proto\x12\vcampaign.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1egoogle/protobuf/wrappers.proto\"\xdd\x02\n" +
+	"\x1dcampaign/v1/participant.proto\x12\vcampaign.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1egoogle/protobuf/wrappers.proto\"\xf6\x02\n" +
 	"\vParticipant\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vcampaign_id\x18\x02 \x01(\tR\n" +
-	"campaignId\x12!\n" +
+	"campaignId\x12\x17\n" +
+	"\auser_id\x18\x03 \x01(\tR\x06userId\x12!\n" +
+	"\fdisplay_name\x18\x04 \x01(\tR\vdisplayName\x120\n" +
+	"\x04role\x18\x05 \x01(\x0e2\x1c.campaign.v1.ParticipantRoleR\x04role\x127\n" +
+	"\n" +
+	"controller\x18\x06 \x01(\x0e2\x17.campaign.v1.ControllerR\n" +
+	"controller\x129\n" +
+	"\n" +
+	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x19\n" +
+	"\bis_owner\x18\t \x01(\bR\aisOwner\"\xe2\x01\n" +
+	"\x18CreateParticipantRequest\x12\x1f\n" +
+	"\vcampaign_id\x18\x01 \x01(\tR\n" +
+	"campaignId\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12!\n" +
 	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName\x120\n" +
 	"\x04role\x18\x04 \x01(\x0e2\x1c.campaign.v1.ParticipantRoleR\x04role\x127\n" +
 	"\n" +
 	"controller\x18\x05 \x01(\x0e2\x17.campaign.v1.ControllerR\n" +
-	"controller\x129\n" +
-	"\n" +
-	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
-	"\n" +
-	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x19\n" +
-	"\bis_owner\x18\b \x01(\bR\aisOwner\"\xc9\x01\n" +
-	"\x18CreateParticipantRequest\x12\x1f\n" +
-	"\vcampaign_id\x18\x01 \x01(\tR\n" +
-	"campaignId\x12!\n" +
-	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x120\n" +
-	"\x04role\x18\x03 \x01(\x0e2\x1c.campaign.v1.ParticipantRoleR\x04role\x127\n" +
-	"\n" +
-	"controller\x18\x04 \x01(\x0e2\x17.campaign.v1.ControllerR\n" +
 	"controller\"W\n" +
 	"\x19CreateParticipantResponse\x12:\n" +
-	"\vparticipant\x18\x01 \x01(\v2\x18.campaign.v1.ParticipantR\vparticipant\"\x8e\x02\n" +
+	"\vparticipant\x18\x01 \x01(\v2\x18.campaign.v1.ParticipantR\vparticipant\"\xc5\x02\n" +
 	"\x18UpdateParticipantRequest\x12\x1f\n" +
 	"\vcampaign_id\x18\x01 \x01(\tR\n" +
 	"campaignId\x12%\n" +
-	"\x0eparticipant_id\x18\x02 \x01(\tR\rparticipantId\x12?\n" +
-	"\fdisplay_name\x18\x03 \x01(\v2\x1c.google.protobuf.StringValueR\vdisplayName\x120\n" +
-	"\x04role\x18\x04 \x01(\x0e2\x1c.campaign.v1.ParticipantRoleR\x04role\x127\n" +
+	"\x0eparticipant_id\x18\x02 \x01(\tR\rparticipantId\x125\n" +
+	"\auser_id\x18\x03 \x01(\v2\x1c.google.protobuf.StringValueR\x06userId\x12?\n" +
+	"\fdisplay_name\x18\x04 \x01(\v2\x1c.google.protobuf.StringValueR\vdisplayName\x120\n" +
+	"\x04role\x18\x05 \x01(\x0e2\x1c.campaign.v1.ParticipantRoleR\x04role\x127\n" +
 	"\n" +
-	"controller\x18\x05 \x01(\x0e2\x17.campaign.v1.ControllerR\n" +
+	"controller\x18\x06 \x01(\x0e2\x17.campaign.v1.ControllerR\n" +
 	"controller\"W\n" +
 	"\x19UpdateParticipantResponse\x12:\n" +
 	"\vparticipant\x18\x01 \x01(\v2\x18.campaign.v1.ParticipantR\vparticipant\"z\n" +
@@ -902,28 +931,29 @@ var file_campaign_v1_participant_proto_depIdxs = []int32{
 	0,  // 4: campaign.v1.CreateParticipantRequest.role:type_name -> campaign.v1.ParticipantRole
 	1,  // 5: campaign.v1.CreateParticipantRequest.controller:type_name -> campaign.v1.Controller
 	2,  // 6: campaign.v1.CreateParticipantResponse.participant:type_name -> campaign.v1.Participant
-	14, // 7: campaign.v1.UpdateParticipantRequest.display_name:type_name -> google.protobuf.StringValue
-	0,  // 8: campaign.v1.UpdateParticipantRequest.role:type_name -> campaign.v1.ParticipantRole
-	1,  // 9: campaign.v1.UpdateParticipantRequest.controller:type_name -> campaign.v1.Controller
-	2,  // 10: campaign.v1.UpdateParticipantResponse.participant:type_name -> campaign.v1.Participant
-	2,  // 11: campaign.v1.DeleteParticipantResponse.participant:type_name -> campaign.v1.Participant
-	2,  // 12: campaign.v1.ListParticipantsResponse.participants:type_name -> campaign.v1.Participant
-	2,  // 13: campaign.v1.GetParticipantResponse.participant:type_name -> campaign.v1.Participant
-	3,  // 14: campaign.v1.ParticipantService.CreateParticipant:input_type -> campaign.v1.CreateParticipantRequest
-	5,  // 15: campaign.v1.ParticipantService.UpdateParticipant:input_type -> campaign.v1.UpdateParticipantRequest
-	7,  // 16: campaign.v1.ParticipantService.DeleteParticipant:input_type -> campaign.v1.DeleteParticipantRequest
-	9,  // 17: campaign.v1.ParticipantService.ListParticipants:input_type -> campaign.v1.ListParticipantsRequest
-	11, // 18: campaign.v1.ParticipantService.GetParticipant:input_type -> campaign.v1.GetParticipantRequest
-	4,  // 19: campaign.v1.ParticipantService.CreateParticipant:output_type -> campaign.v1.CreateParticipantResponse
-	6,  // 20: campaign.v1.ParticipantService.UpdateParticipant:output_type -> campaign.v1.UpdateParticipantResponse
-	8,  // 21: campaign.v1.ParticipantService.DeleteParticipant:output_type -> campaign.v1.DeleteParticipantResponse
-	10, // 22: campaign.v1.ParticipantService.ListParticipants:output_type -> campaign.v1.ListParticipantsResponse
-	12, // 23: campaign.v1.ParticipantService.GetParticipant:output_type -> campaign.v1.GetParticipantResponse
-	19, // [19:24] is the sub-list for method output_type
-	14, // [14:19] is the sub-list for method input_type
-	14, // [14:14] is the sub-list for extension type_name
-	14, // [14:14] is the sub-list for extension extendee
-	0,  // [0:14] is the sub-list for field type_name
+	14, // 7: campaign.v1.UpdateParticipantRequest.user_id:type_name -> google.protobuf.StringValue
+	14, // 8: campaign.v1.UpdateParticipantRequest.display_name:type_name -> google.protobuf.StringValue
+	0,  // 9: campaign.v1.UpdateParticipantRequest.role:type_name -> campaign.v1.ParticipantRole
+	1,  // 10: campaign.v1.UpdateParticipantRequest.controller:type_name -> campaign.v1.Controller
+	2,  // 11: campaign.v1.UpdateParticipantResponse.participant:type_name -> campaign.v1.Participant
+	2,  // 12: campaign.v1.DeleteParticipantResponse.participant:type_name -> campaign.v1.Participant
+	2,  // 13: campaign.v1.ListParticipantsResponse.participants:type_name -> campaign.v1.Participant
+	2,  // 14: campaign.v1.GetParticipantResponse.participant:type_name -> campaign.v1.Participant
+	3,  // 15: campaign.v1.ParticipantService.CreateParticipant:input_type -> campaign.v1.CreateParticipantRequest
+	5,  // 16: campaign.v1.ParticipantService.UpdateParticipant:input_type -> campaign.v1.UpdateParticipantRequest
+	7,  // 17: campaign.v1.ParticipantService.DeleteParticipant:input_type -> campaign.v1.DeleteParticipantRequest
+	9,  // 18: campaign.v1.ParticipantService.ListParticipants:input_type -> campaign.v1.ListParticipantsRequest
+	11, // 19: campaign.v1.ParticipantService.GetParticipant:input_type -> campaign.v1.GetParticipantRequest
+	4,  // 20: campaign.v1.ParticipantService.CreateParticipant:output_type -> campaign.v1.CreateParticipantResponse
+	6,  // 21: campaign.v1.ParticipantService.UpdateParticipant:output_type -> campaign.v1.UpdateParticipantResponse
+	8,  // 22: campaign.v1.ParticipantService.DeleteParticipant:output_type -> campaign.v1.DeleteParticipantResponse
+	10, // 23: campaign.v1.ParticipantService.ListParticipants:output_type -> campaign.v1.ListParticipantsResponse
+	12, // 24: campaign.v1.ParticipantService.GetParticipant:output_type -> campaign.v1.GetParticipantResponse
+	20, // [20:25] is the sub-list for method output_type
+	15, // [15:20] is the sub-list for method input_type
+	15, // [15:15] is the sub-list for extension type_name
+	15, // [15:15] is the sub-list for extension extendee
+	0,  // [0:15] is the sub-list for field type_name
 }
 
 func init() { file_campaign_v1_participant_proto_init() }

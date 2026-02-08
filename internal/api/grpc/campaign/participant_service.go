@@ -13,6 +13,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/campaign/participant"
 	"github.com/louisbranch/fracturing.space/internal/campaign/policy"
 	"github.com/louisbranch/fracturing.space/internal/campaign/projection"
+	apperrors "github.com/louisbranch/fracturing.space/internal/errors"
 	"github.com/louisbranch/fracturing.space/internal/id"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -74,6 +75,7 @@ func (s *ParticipantService) CreateParticipant(ctx context.Context, in *campaign
 
 	input := participant.CreateParticipantInput{
 		CampaignID:  campaignID,
+		UserID:      in.GetUserId(),
 		DisplayName: in.GetDisplayName(),
 		Role:        participantRoleFromProto(in.GetRole()),
 		Controller:  controllerFromProto(in.GetController()),
@@ -106,6 +108,7 @@ func (s *ParticipantService) CreateParticipant(ctx context.Context, in *campaign
 
 	payload := event.ParticipantJoinedPayload{
 		ParticipantID: participantID,
+		UserID:        normalized.UserID,
 		DisplayName:   normalized.DisplayName,
 		Role:          roleLabel,
 		Controller:    controllerLabel,
@@ -140,6 +143,9 @@ func (s *ParticipantService) CreateParticipant(ctx context.Context, in *campaign
 
 	applier := projection.Applier{Campaign: s.stores.Campaign, Participant: s.stores.Participant}
 	if err := applier.Apply(ctx, stored); err != nil {
+		if apperrors.GetCode(err) != apperrors.CodeUnknown {
+			return nil, handleDomainError(err)
+		}
 		return nil, status.Errorf(codes.Internal, "apply event: %v", err)
 	}
 
@@ -204,6 +210,11 @@ func (s *ParticipantService) UpdateParticipant(ctx context.Context, in *campaign
 		current.DisplayName = trimmed
 		fields["display_name"] = trimmed
 	}
+	if userID := in.GetUserId(); userID != nil {
+		trimmed := strings.TrimSpace(userID.GetValue())
+		current.UserID = trimmed
+		fields["user_id"] = trimmed
+	}
 	if in.GetRole() != campaignv1.ParticipantRole_ROLE_UNSPECIFIED {
 		role := participantRoleFromProto(in.GetRole())
 		if role == participant.ParticipantRoleUnspecified {
@@ -257,6 +268,9 @@ func (s *ParticipantService) UpdateParticipant(ctx context.Context, in *campaign
 
 	applier := projection.Applier{Campaign: s.stores.Campaign, Participant: s.stores.Participant}
 	if err := applier.Apply(ctx, stored); err != nil {
+		if apperrors.GetCode(err) != apperrors.CodeUnknown {
+			return nil, handleDomainError(err)
+		}
 		return nil, status.Errorf(codes.Internal, "apply event: %v", err)
 	}
 
@@ -340,6 +354,9 @@ func (s *ParticipantService) DeleteParticipant(ctx context.Context, in *campaign
 
 	applier := projection.Applier{Campaign: s.stores.Campaign, Participant: s.stores.Participant}
 	if err := applier.Apply(ctx, stored); err != nil {
+		if apperrors.GetCode(err) != apperrors.CodeUnknown {
+			return nil, handleDomainError(err)
+		}
 		return nil, status.Errorf(codes.Internal, "apply event: %v", err)
 	}
 

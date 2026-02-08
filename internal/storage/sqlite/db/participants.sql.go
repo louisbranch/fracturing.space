@@ -25,7 +25,7 @@ func (q *Queries) DeleteParticipant(ctx context.Context, arg DeleteParticipantPa
 }
 
 const getParticipant = `-- name: GetParticipant :one
-SELECT campaign_id, id, display_name, role, controller, created_at, updated_at, is_owner FROM participants WHERE campaign_id = ? AND id = ?
+SELECT campaign_id, id, user_id, display_name, role, controller, is_owner, created_at, updated_at FROM participants WHERE campaign_id = ? AND id = ?
 `
 
 type GetParticipantParams struct {
@@ -39,18 +39,19 @@ func (q *Queries) GetParticipant(ctx context.Context, arg GetParticipantParams) 
 	err := row.Scan(
 		&i.CampaignID,
 		&i.ID,
+		&i.UserID,
 		&i.DisplayName,
 		&i.Role,
 		&i.Controller,
+		&i.IsOwner,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.IsOwner,
 	)
 	return i, err
 }
 
 const listParticipantsByCampaign = `-- name: ListParticipantsByCampaign :many
-SELECT campaign_id, id, display_name, role, controller, created_at, updated_at, is_owner FROM participants
+SELECT campaign_id, id, user_id, display_name, role, controller, is_owner, created_at, updated_at FROM participants
 WHERE campaign_id = ?
 ORDER BY id
 `
@@ -67,12 +68,13 @@ func (q *Queries) ListParticipantsByCampaign(ctx context.Context, campaignID str
 		if err := rows.Scan(
 			&i.CampaignID,
 			&i.ID,
+			&i.UserID,
 			&i.DisplayName,
 			&i.Role,
 			&i.Controller,
+			&i.IsOwner,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.IsOwner,
 		); err != nil {
 			return nil, err
 		}
@@ -88,7 +90,7 @@ func (q *Queries) ListParticipantsByCampaign(ctx context.Context, campaignID str
 }
 
 const listParticipantsByCampaignPaged = `-- name: ListParticipantsByCampaignPaged :many
-SELECT campaign_id, id, display_name, role, controller, created_at, updated_at, is_owner FROM participants
+SELECT campaign_id, id, user_id, display_name, role, controller, is_owner, created_at, updated_at FROM participants
 WHERE campaign_id = ? AND id > ?
 ORDER BY id
 LIMIT ?
@@ -112,12 +114,13 @@ func (q *Queries) ListParticipantsByCampaignPaged(ctx context.Context, arg ListP
 		if err := rows.Scan(
 			&i.CampaignID,
 			&i.ID,
+			&i.UserID,
 			&i.DisplayName,
 			&i.Role,
 			&i.Controller,
+			&i.IsOwner,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.IsOwner,
 		); err != nil {
 			return nil, err
 		}
@@ -133,7 +136,7 @@ func (q *Queries) ListParticipantsByCampaignPaged(ctx context.Context, arg ListP
 }
 
 const listParticipantsByCampaignPagedFirst = `-- name: ListParticipantsByCampaignPagedFirst :many
-SELECT campaign_id, id, display_name, role, controller, created_at, updated_at, is_owner FROM participants
+SELECT campaign_id, id, user_id, display_name, role, controller, is_owner, created_at, updated_at FROM participants
 WHERE campaign_id = ?
 ORDER BY id
 LIMIT ?
@@ -156,12 +159,13 @@ func (q *Queries) ListParticipantsByCampaignPagedFirst(ctx context.Context, arg 
 		if err := rows.Scan(
 			&i.CampaignID,
 			&i.ID,
+			&i.UserID,
 			&i.DisplayName,
 			&i.Role,
 			&i.Controller,
+			&i.IsOwner,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.IsOwner,
 		); err != nil {
 			return nil, err
 		}
@@ -178,9 +182,10 @@ func (q *Queries) ListParticipantsByCampaignPagedFirst(ctx context.Context, arg 
 
 const putParticipant = `-- name: PutParticipant :exec
 INSERT INTO participants (
-    campaign_id, id, display_name, role, controller, is_owner, created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    campaign_id, id, user_id, display_name, role, controller, is_owner, created_at, updated_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(campaign_id, id) DO UPDATE SET
+    user_id = excluded.user_id,
     display_name = excluded.display_name,
     role = excluded.role,
     controller = excluded.controller,
@@ -191,6 +196,7 @@ ON CONFLICT(campaign_id, id) DO UPDATE SET
 type PutParticipantParams struct {
 	CampaignID  string `json:"campaign_id"`
 	ID          string `json:"id"`
+	UserID      string `json:"user_id"`
 	DisplayName string `json:"display_name"`
 	Role        string `json:"role"`
 	Controller  string `json:"controller"`
@@ -203,6 +209,7 @@ func (q *Queries) PutParticipant(ctx context.Context, arg PutParticipantParams) 
 	_, err := q.db.ExecContext(ctx, putParticipant,
 		arg.CampaignID,
 		arg.ID,
+		arg.UserID,
 		arg.DisplayName,
 		arg.Role,
 		arg.Controller,

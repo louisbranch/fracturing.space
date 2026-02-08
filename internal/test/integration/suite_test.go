@@ -38,6 +38,10 @@ func TestMCPStdioEndToEnd(t *testing.T) {
 		runSessionLockTests(t, grpcAddr)
 	})
 
+	t.Run("participant user link", func(t *testing.T) {
+		runParticipantUserLinkTests(t, grpcAddr)
+	})
+
 	t.Run("event list", func(t *testing.T) {
 		runEventListTests(t, grpcAddr)
 	})

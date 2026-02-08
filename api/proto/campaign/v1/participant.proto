@@ -11,12 +11,13 @@ option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/campaign
 message Participant {
   string id = 1;
   string campaign_id = 2;
-  string display_name = 3;
-  ParticipantRole role = 4;
-  Controller controller = 5;
-  google.protobuf.Timestamp created_at = 6;
-  google.protobuf.Timestamp updated_at = 7;
-  bool is_owner = 8;
+  string user_id = 3;
+  string display_name = 4;
+  ParticipantRole role = 5;
+  Controller controller = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+  bool is_owner = 9;
 }
 
 enum ParticipantRole {
@@ -53,14 +54,17 @@ message CreateParticipantRequest {
   // The campaign ID to create the participant for.
   string campaign_id = 1;
 
+  // Optional user ID tied to the participant seat.
+  string user_id = 2;
+
   // Display name for the participant.
-  string display_name = 2;
+  string display_name = 3;
 
   // The role of the participant.
-  ParticipantRole role = 3;
+  ParticipantRole role = 4;
 
   // The controller type (defaults to HUMAN if unspecified).
-  Controller controller = 4;
+  Controller controller = 5;
 }
 
 message CreateParticipantResponse {
@@ -74,14 +78,17 @@ message UpdateParticipantRequest {
   // The participant ID.
   string participant_id = 2;
 
+  // Optional updated user ID.
+  google.protobuf.StringValue user_id = 3;
+
   // Optional updated display name.
-  google.protobuf.StringValue display_name = 3;
+  google.protobuf.StringValue display_name = 4;
 
   // Optional updated role.
-  ParticipantRole role = 4;
+  ParticipantRole role = 5;
 
   // Optional updated controller.
-  Controller controller = 5;
+  Controller controller = 6;
 }
 
 message UpdateParticipantResponse {

@@ -18,9 +18,10 @@ const (
 	CodeCampaignStatusDisallowsOp       Code = "CAMPAIGN_STATUS_DISALLOWS_OPERATION"
 
 	// Participant errors
-	CodeParticipantEmptyDisplayName Code = "PARTICIPANT_EMPTY_DISPLAY_NAME"
-	CodeParticipantInvalidRole      Code = "PARTICIPANT_INVALID_ROLE"
-	CodeParticipantEmptyCampaignID  Code = "PARTICIPANT_EMPTY_CAMPAIGN_ID"
+	CodeParticipantEmptyDisplayName   Code = "PARTICIPANT_EMPTY_DISPLAY_NAME"
+	CodeParticipantInvalidRole        Code = "PARTICIPANT_INVALID_ROLE"
+	CodeParticipantEmptyCampaignID    Code = "PARTICIPANT_EMPTY_CAMPAIGN_ID"
+	CodeParticipantUserAlreadyClaimed Code = "PARTICIPANT_USER_ALREADY_CLAIMED"
 
 	// User errors
 	CodeUserEmptyDisplayName Code = "USER_EMPTY_DISPLAY_NAME"
@@ -136,6 +137,10 @@ func (c Code) GRPCCode() codes.Code {
 	case CodeNotFound,
 		CodeOutcomeCharacterNotFound:
 		return codes.NotFound
+
+	// AlreadyExists - unique resource constraint
+	case CodeParticipantUserAlreadyClaimed:
+		return codes.AlreadyExists
 
 	default:
 		return codes.Internal

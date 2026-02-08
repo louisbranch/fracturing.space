@@ -30,6 +30,7 @@ type CampaignUpdatedPayload struct {
 // ParticipantJoinedPayload captures the payload for participant.joined events.
 type ParticipantJoinedPayload struct {
 	ParticipantID string `json:"participant_id"`
+	UserID        string `json:"user_id"`
 	DisplayName   string `json:"display_name"`
 	Role          string `json:"role"`
 	Controller    string `json:"controller"`

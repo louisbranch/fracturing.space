@@ -47,6 +47,7 @@ var (
 type Participant struct {
 	ID          string
 	CampaignID  string
+	UserID      string
 	DisplayName string
 	Role        ParticipantRole
 	Controller  Controller
@@ -59,6 +60,7 @@ type Participant struct {
 // CreateParticipantInput describes the metadata needed to create a participant.
 type CreateParticipantInput struct {
 	CampaignID  string
+	UserID      string
 	DisplayName string
 	Role        ParticipantRole
 	Controller  Controller
@@ -89,6 +91,7 @@ func CreateParticipant(input CreateParticipantInput, now func() time.Time, idGen
 	return Participant{
 		ID:          participantID,
 		CampaignID:  normalized.CampaignID,
+		UserID:      normalized.UserID,
 		DisplayName: normalized.DisplayName,
 		Role:        normalized.Role,
 		Controller:  normalized.Controller,
@@ -104,6 +107,7 @@ func NormalizeCreateParticipantInput(input CreateParticipantInput) (CreatePartic
 	if input.CampaignID == "" {
 		return CreateParticipantInput{}, ErrEmptyCampaignID
 	}
+	input.UserID = strings.TrimSpace(input.UserID)
 	input.DisplayName = strings.TrimSpace(input.DisplayName)
 	if input.DisplayName == "" {
 		return CreateParticipantInput{}, ErrEmptyDisplayName

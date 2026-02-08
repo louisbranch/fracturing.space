@@ -86,6 +86,15 @@ Phase 1 Constraints (Implementation)
 - Owners are expressed as a participant flag (is_owner) and evaluated via policy.Can(...).
 - Owners can remove participants even if already claimed.
 
+Claim Changes Needed (from current implementation)
+- Add user_id on participant records and enforce unique (campaign_id, user_id) when claimed.
+- Add a claim path in game service (InviteService.ClaimInvite or ParticipantService.ClaimSeat) that:
+  - Validates a join grant from auth service (aud/iss/exp/jti/campaign_id/invite_id/user_id).
+  - Verifies the invite is pending and targets the participant seat.
+  - Binds user_id to the participant and marks invite as CLAIMED in one transaction.
+- Auth service issues join grants for seat-targeted invites (signed token, short TTL).
+- MCP/web tooling needs a claim operation that accepts the join grant and target invite.
+
 Future Cases (Documented, Not Implemented)
 - Open invites (anyone with link) and reusable tokens.
 - Invites that create a new seat on claim.
