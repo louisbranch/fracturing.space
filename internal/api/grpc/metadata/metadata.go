@@ -20,6 +20,9 @@ const InvocationIDHeader = "x-fracturing-space-invocation-id"
 // ParticipantIDHeader is the gRPC metadata key for caller identity hints.
 const ParticipantIDHeader = "x-fracturing-space-participant-id"
 
+// UserIDHeader is the gRPC metadata key for user impersonation hints.
+const UserIDHeader = "x-fracturing-space-user-id"
+
 // CampaignIDHeader is the gRPC metadata key for campaign routing hints.
 const CampaignIDHeader = "x-fracturing-space-campaign-id"
 

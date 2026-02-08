@@ -3,9 +3,9 @@ package templates
 import "fmt"
 
 // EventLogFullPage renders the event log in the base layout.
-templ EventLogFullPage(view EventLogView, lang string, loc Localizer) {
-	@Layout(T(loc, "title.events"), "Campaigns", lang, loc) {
-		@EventLogPage(view, loc)
+templ EventLogFullPage(view EventLogView, page PageContext) {
+	@Layout(T(page.Loc, "title.events"), "Campaigns", page) {
+		@EventLogPage(view, page.Loc)
 	}
 }
 

@@ -1,9 +1,9 @@
 package templates
 
 // DashboardFullPage renders the dashboard in the base layout.
-templ DashboardFullPage(lang string, loc Localizer) {
-	@Layout(T(loc, "title.dashboard"), "Dashboard", lang, loc) {
-		@DashboardPage(loc)
+templ DashboardFullPage(page PageContext) {
+	@Layout(T(page.Loc, "title.dashboard"), "Dashboard", page) {
+		@DashboardPage(page.Loc)
 	}
 }
 

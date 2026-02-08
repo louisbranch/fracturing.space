@@ -1,12 +1,19 @@
 package web
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 
+	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
+	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/state/v1"
+	grpcmeta "github.com/louisbranch/fracturing.space/internal/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/web/i18n"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
 // TestWebPageRendering verifies layout rendering based on HTMX requests.
@@ -149,6 +156,170 @@ func TestCampaignSessionsRoute(t *testing.T) {
 		body := recorder.Body.String()
 		assertContains(t, body, "Session service unavailable.")
 	})
+}
+
+type testClientProvider struct {
+	auth authv1.AuthServiceClient
+}
+
+func (p testClientProvider) CampaignClient() statev1.CampaignServiceClient {
+	return nil
+}
+
+func (p testClientProvider) SessionClient() statev1.SessionServiceClient {
+	return nil
+}
+
+func (p testClientProvider) CharacterClient() statev1.CharacterServiceClient {
+	return nil
+}
+
+func (p testClientProvider) ParticipantClient() statev1.ParticipantServiceClient {
+	return nil
+}
+
+func (p testClientProvider) EventClient() statev1.EventServiceClient {
+	return nil
+}
+
+func (p testClientProvider) SnapshotClient() statev1.SnapshotServiceClient {
+	return nil
+}
+
+func (p testClientProvider) AuthClient() authv1.AuthServiceClient {
+	return p.auth
+}
+
+type testAuthClient struct {
+	user          *authv1.User
+	lastMetadata  metadata.MD
+	lastUserIDReq string
+}
+
+func (c *testAuthClient) CreateUser(ctx context.Context, in *authv1.CreateUserRequest, opts ...grpc.CallOption) (*authv1.CreateUserResponse, error) {
+	return &authv1.CreateUserResponse{User: c.user}, nil
+}
+
+func (c *testAuthClient) GetUser(ctx context.Context, in *authv1.GetUserRequest, opts ...grpc.CallOption) (*authv1.GetUserResponse, error) {
+	c.lastUserIDReq = in.GetUserId()
+	md, _ := metadata.FromOutgoingContext(ctx)
+	c.lastMetadata = md
+	return &authv1.GetUserResponse{User: c.user}, nil
+}
+
+func (c *testAuthClient) ListUsers(ctx context.Context, in *authv1.ListUsersRequest, opts ...grpc.CallOption) (*authv1.ListUsersResponse, error) {
+	return &authv1.ListUsersResponse{}, nil
+}
+
+func TestImpersonationFlow(t *testing.T) {
+	user := &authv1.User{Id: "user-1", DisplayName: "Test User"}
+	authClient := &testAuthClient{user: user}
+	provider := testClientProvider{auth: authClient}
+	webHandler := &Handler{clientProvider: provider, impersonation: newImpersonationStore()}
+	handler := webHandler.routes()
+
+	t.Run("csrf required", func(t *testing.T) {
+		body := strings.NewReader("user_id=user-1")
+		req := httptest.NewRequest(http.MethodPost, "http://example.com/users/impersonate", body)
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		recorder := httptest.NewRecorder()
+		handler.ServeHTTP(recorder, req)
+		if recorder.Code != http.StatusForbidden {
+			t.Fatalf("expected status %d, got %d", http.StatusForbidden, recorder.Code)
+		}
+	})
+
+	t.Run("impersonate sets cookie and indicator", func(t *testing.T) {
+		body := strings.NewReader("user_id=user-1")
+		req := httptest.NewRequest(http.MethodPost, "http://example.com/users/impersonate", body)
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Set("Origin", "http://example.com")
+		recorder := httptest.NewRecorder()
+		handler.ServeHTTP(recorder, req)
+
+		if recorder.Code != http.StatusOK {
+			t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
+		}
+		cookies := recorder.Result().Cookies()
+		var sessionCookie *http.Cookie
+		for _, cookie := range cookies {
+			if cookie.Name == impersonationCookieName {
+				sessionCookie = cookie
+				break
+			}
+		}
+		if sessionCookie == nil || sessionCookie.Value == "" {
+			t.Fatalf("expected impersonation cookie to be set")
+		}
+		bodyText := recorder.Body.String()
+		assertContains(t, bodyText, "Impersonating")
+		assertContains(t, bodyText, "Test User")
+	})
+
+	t.Run("impersonate clears previous session", func(t *testing.T) {
+		previousSessionID := "session-old"
+		webHandler.impersonation.Set(previousSessionID, impersonationSession{userID: "user-old"})
+
+		form := url.Values{}
+		form.Set("user_id", "user-1")
+		req := httptest.NewRequest(http.MethodPost, "http://example.com/users/impersonate", strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Set("Origin", "http://example.com")
+		req.AddCookie(&http.Cookie{Name: impersonationCookieName, Value: previousSessionID})
+		recorder := httptest.NewRecorder()
+		handler.ServeHTTP(recorder, req)
+
+		if _, ok := webHandler.impersonation.Get(previousSessionID); ok {
+			t.Fatalf("expected previous session to be cleared")
+		}
+	})
+
+	t.Run("logout clears cookie", func(t *testing.T) {
+		sessionID := "session-logout"
+		webHandler.impersonation.Set(sessionID, impersonationSession{userID: "user-logout"})
+
+		req := httptest.NewRequest(http.MethodPost, "http://example.com/users/logout", nil)
+		req.Header.Set("Origin", "http://example.com")
+		req.AddCookie(&http.Cookie{Name: impersonationCookieName, Value: sessionID})
+		recorder := httptest.NewRecorder()
+		handler.ServeHTTP(recorder, req)
+
+		if recorder.Code != http.StatusOK {
+			t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
+		}
+		cookies := recorder.Result().Cookies()
+		var clearedCookie *http.Cookie
+		for _, cookie := range cookies {
+			if cookie.Name == impersonationCookieName {
+				clearedCookie = cookie
+				break
+			}
+		}
+		if clearedCookie == nil || clearedCookie.MaxAge != -1 {
+			t.Fatalf("expected impersonation cookie to be cleared")
+		}
+	})
+}
+
+func TestImpersonationMetadataInjection(t *testing.T) {
+	user := &authv1.User{Id: "user-lookup", DisplayName: "Lookup"}
+	authClient := &testAuthClient{user: user}
+	provider := testClientProvider{auth: authClient}
+	webHandler := &Handler{clientProvider: provider, impersonation: newImpersonationStore()}
+	handler := webHandler.routes()
+
+	sessionID := "session-meta"
+	webHandler.impersonation.Set(sessionID, impersonationSession{userID: "user-impersonated"})
+
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/users?user_id=user-lookup", nil)
+	req.AddCookie(&http.Cookie{Name: impersonationCookieName, Value: sessionID})
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, req)
+
+	values := authClient.lastMetadata.Get(grpcmeta.UserIDHeader)
+	if len(values) != 1 || values[0] != "user-impersonated" {
+		t.Fatalf("expected metadata %s to be set, got %v", grpcmeta.UserIDHeader, values)
+	}
 }
 
 // assertContains fails the test when the body lacks the expected fragment.

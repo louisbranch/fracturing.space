@@ -1,9 +1,9 @@
 package templates
 
 // ParticipantsListFullPage renders the participants list in the base layout.
-templ ParticipantsListFullPage(campaignID string, campaignName string, lang string, loc Localizer) {
-	@Layout(T(loc, "title.participants"), "Campaigns", lang, loc) {
-		@ParticipantsListPage(campaignID, campaignName, loc)
+templ ParticipantsListFullPage(campaignID string, campaignName string, page PageContext) {
+	@Layout(T(page.Loc, "title.participants"), "Campaigns", page) {
+		@ParticipantsListPage(campaignID, campaignName, page.Loc)
 	}
 }
 

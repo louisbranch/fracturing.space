@@ -9,7 +9,7 @@ import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
 // CharactersListFullPage renders the characters list in the base layout.
-func CharactersListFullPage(campaignID string, campaignName string, lang string, loc Localizer) templ.Component {
+func CharactersListFullPage(campaignID string, campaignName string, page PageContext) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -42,13 +42,13 @@ func CharactersListFullPage(campaignID string, campaignName string, lang string,
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = CharactersListPage(campaignID, campaignName, loc).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = CharactersListPage(campaignID, campaignName, page.Loc).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = Layout(T(loc, "title.characters"), "Campaigns", lang, loc).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = Layout(T(page.Loc, "title.characters"), "Campaigns", page).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -327,7 +327,7 @@ func CharactersTable(rows []CharacterRow, message string, loc Localizer) templ.C
 }
 
 // CharacterSheetFullPage renders the character sheet in the base layout.
-func CharacterSheetFullPage(sheet CharacterSheetView, lang string, loc Localizer) templ.Component {
+func CharacterSheetFullPage(sheet CharacterSheetView, page PageContext) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -360,13 +360,13 @@ func CharacterSheetFullPage(sheet CharacterSheetView, lang string, loc Localizer
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = CharacterSheetPage(sheet, loc).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = CharacterSheetPage(sheet, page.Loc).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = Layout(T(loc, "title.character_sheet", sheet.Character.GetName()), "Campaigns", lang, loc).Render(templ.WithChildren(ctx, templ_7745c5c3_Var18), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = Layout(T(page.Loc, "title.character_sheet", sheet.Character.GetName()), "Campaigns", page).Render(templ.WithChildren(ctx, templ_7745c5c3_Var18), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

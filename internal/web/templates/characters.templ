@@ -1,9 +1,9 @@
 package templates
 
 // CharactersListFullPage renders the characters list in the base layout.
-templ CharactersListFullPage(campaignID string, campaignName string, lang string, loc Localizer) {
-	@Layout(T(loc, "title.characters"), "Campaigns", lang, loc) {
-		@CharactersListPage(campaignID, campaignName, loc)
+templ CharactersListFullPage(campaignID string, campaignName string, page PageContext) {
+	@Layout(T(page.Loc, "title.characters"), "Campaigns", page) {
+		@CharactersListPage(campaignID, campaignName, page.Loc)
 	}
 }
 
@@ -61,9 +61,9 @@ templ CharactersTable(rows []CharacterRow, message string, loc Localizer) {
 }
 
 // CharacterSheetFullPage renders the character sheet in the base layout.
-templ CharacterSheetFullPage(sheet CharacterSheetView, lang string, loc Localizer) {
-	@Layout(T(loc, "title.character_sheet", sheet.Character.GetName()), "Campaigns", lang, loc) {
-		@CharacterSheetPage(sheet, loc)
+templ CharacterSheetFullPage(sheet CharacterSheetView, page PageContext) {
+	@Layout(T(page.Loc, "title.character_sheet", sheet.Character.GetName()), "Campaigns", page) {
+		@CharacterSheetPage(sheet, page.Loc)
 	}
 }
 

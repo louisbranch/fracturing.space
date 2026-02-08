@@ -3,9 +3,9 @@ package templates
 import "strconv"
 
 // SessionsListFullPage renders the sessions list in the base layout.
-templ SessionsListFullPage(campaignID string, campaignName string, lang string, loc Localizer) {
-	@Layout(T(loc, "title.sessions"), "Campaigns", lang, loc) {
-		@SessionsListPage(campaignID, campaignName, loc)
+templ SessionsListFullPage(campaignID string, campaignName string, page PageContext) {
+	@Layout(T(page.Loc, "title.sessions"), "Campaigns", page) {
+		@SessionsListPage(campaignID, campaignName, page.Loc)
 	}
 }
 
@@ -29,9 +29,9 @@ templ SessionsLoading(campaignID string, loc Localizer) {
 }
 
 // SessionDetailFullPage renders the session detail in the base layout.
-templ SessionDetailFullPage(session SessionDetail, lang string, loc Localizer) {
-	@Layout(T(loc, "title.session", session.Name), "Campaigns", lang, loc) {
-		@SessionDetailPage(session, loc)
+templ SessionDetailFullPage(session SessionDetail, page PageContext) {
+	@Layout(T(page.Loc, "title.session", session.Name), "Campaigns", page) {
+		@SessionDetailPage(session, page.Loc)
 	}
 }
 

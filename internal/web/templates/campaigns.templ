@@ -1,9 +1,9 @@
 package templates
 
 // CampaignsFullPage renders campaigns content in the base layout.
-templ CampaignsFullPage(lang string, loc Localizer) {
-	@Layout(T(loc, "title.campaigns"), "Campaigns", lang, loc) {
-		@CampaignsPage(loc)
+templ CampaignsFullPage(page PageContext) {
+	@Layout(T(page.Loc, "title.campaigns"), "Campaigns", page) {
+		@CampaignsPage(page.Loc)
 	}
 }
 
@@ -152,8 +152,8 @@ templ CampaignSessionsList(rows []CampaignSessionRow, message string, loc Locali
 }
 
 // CampaignDetailFullPage renders campaign detail content in the base layout.
-templ CampaignDetailFullPage(detail CampaignDetail, message string, lang string, loc Localizer) {
-	@Layout(T(loc, "title.campaign"), "Campaigns", lang, loc) {
-		@CampaignDetailPage(detail, message, loc)
+templ CampaignDetailFullPage(detail CampaignDetail, message string, page PageContext) {
+	@Layout(T(page.Loc, "title.campaign"), "Campaigns", page) {
+		@CampaignDetailPage(detail, message, page.Loc)
 	}
 }

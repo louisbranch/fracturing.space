@@ -1,7 +1,7 @@
 package templates
 
 // TopNav renders the top navigation bar using PaperCSS split-nav.
-templ TopNav(activePage string, lang string, loc Localizer) {
+templ TopNav(activePage string, page PageContext) {
 	<nav class="split-nav border fixed">
 		<div class="nav-brand">
 			<h3><a href="/">Fracturing.Space</a></h3>
@@ -25,7 +25,7 @@ templ TopNav(activePage string, lang string, loc Localizer) {
 							if activePage == "Dashboard" {
 								class="active"
 							}
-						>{T(loc, "nav.dashboard")}</a>
+						>{T(page.Loc, "nav.dashboard")}</a>
 					</li>
 					<li>
 						<a
@@ -37,7 +37,7 @@ templ TopNav(activePage string, lang string, loc Localizer) {
 							if activePage == "Users" {
 								class="active"
 							}
-						>{T(loc, "nav.users")}</a>
+						>{T(page.Loc, "nav.users")}</a>
 					</li>
 					<li>
 						<a
@@ -49,23 +49,29 @@ templ TopNav(activePage string, lang string, loc Localizer) {
 							if activePage == "Campaigns" {
 								class="active"
 							}
-						>{T(loc, "nav.campaigns")}</a>
+						>{T(page.Loc, "nav.campaigns")}</a>
 					</li>
+					if page.Impersonation != nil {
+						<li class="impersonation-indicator">
+							<span class="badge secondary">{T(page.Loc, "impersonation.badge")}</span>
+							<span>{ImpersonationLabel(page.Impersonation)}</span>
+						</li>
+					}
 					<li class="lang-selector">
-						<span>{T(loc, "nav.language")}:</span>
+						<span>{T(page.Loc, "nav.language")}:</span>
 						<a
 							href={ templ.SafeURL("/?lang=en") }
-							if lang == "en" {
+							if page.Lang == "en" {
 								class="active"
 							}
-						>{T(loc, "nav.lang_en")}</a>
+						>{T(page.Loc, "nav.lang_en")}</a>
 						<span>/</span>
 						<a
 							href={ templ.SafeURL("/?lang=pt-BR") }
-							if lang == "pt-BR" {
+							if page.Lang == "pt-BR" {
 								class="active"
 							}
-						>{T(loc, "nav.lang_pt_br")}</a>
+						>{T(page.Loc, "nav.lang_pt_br")}</a>
 					</li>
 				</ul>
 			</div>
