@@ -10,6 +10,7 @@ import (
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/campaign/v1"
+	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/web/i18n"
 	"google.golang.org/grpc"
@@ -159,11 +160,12 @@ func TestCampaignSessionsRoute(t *testing.T) {
 }
 
 type testClientProvider struct {
-	auth authv1.AuthServiceClient
+	auth     authv1.AuthServiceClient
+	campaign statev1.CampaignServiceClient
 }
 
 func (p testClientProvider) CampaignClient() statev1.CampaignServiceClient {
-	return nil
+	return p.campaign
 }
 
 func (p testClientProvider) SessionClient() statev1.SessionServiceClient {
@@ -209,6 +211,220 @@ func (c *testAuthClient) GetUser(ctx context.Context, in *authv1.GetUserRequest,
 
 func (c *testAuthClient) ListUsers(ctx context.Context, in *authv1.ListUsersRequest, opts ...grpc.CallOption) (*authv1.ListUsersResponse, error) {
 	return &authv1.ListUsersResponse{}, nil
+}
+
+type testCampaignClient struct {
+	lastMetadata metadata.MD
+	lastRequest  *statev1.CreateCampaignRequest
+	response     *statev1.CreateCampaignResponse
+}
+
+func (c *testCampaignClient) CreateCampaign(ctx context.Context, in *statev1.CreateCampaignRequest, opts ...grpc.CallOption) (*statev1.CreateCampaignResponse, error) {
+	c.lastRequest = in
+	md, _ := metadata.FromOutgoingContext(ctx)
+	c.lastMetadata = md
+	if c.response != nil {
+		return c.response, nil
+	}
+	return &statev1.CreateCampaignResponse{Campaign: &statev1.Campaign{Id: "camp-123"}}, nil
+}
+
+func (c *testCampaignClient) ListCampaigns(ctx context.Context, in *statev1.ListCampaignsRequest, opts ...grpc.CallOption) (*statev1.ListCampaignsResponse, error) {
+	return &statev1.ListCampaignsResponse{}, nil
+}
+
+func (c *testCampaignClient) GetCampaign(ctx context.Context, in *statev1.GetCampaignRequest, opts ...grpc.CallOption) (*statev1.GetCampaignResponse, error) {
+	return &statev1.GetCampaignResponse{}, nil
+}
+
+func (c *testCampaignClient) EndCampaign(ctx context.Context, in *statev1.EndCampaignRequest, opts ...grpc.CallOption) (*statev1.EndCampaignResponse, error) {
+	return &statev1.EndCampaignResponse{}, nil
+}
+
+func (c *testCampaignClient) ArchiveCampaign(ctx context.Context, in *statev1.ArchiveCampaignRequest, opts ...grpc.CallOption) (*statev1.ArchiveCampaignResponse, error) {
+	return &statev1.ArchiveCampaignResponse{}, nil
+}
+
+func (c *testCampaignClient) RestoreCampaign(ctx context.Context, in *statev1.RestoreCampaignRequest, opts ...grpc.CallOption) (*statev1.RestoreCampaignResponse, error) {
+	return &statev1.RestoreCampaignResponse{}, nil
+}
+
+func TestCampaignCreateFlow(t *testing.T) {
+	campaignClient := &testCampaignClient{}
+	provider := testClientProvider{campaign: campaignClient}
+	webHandler := &Handler{clientProvider: provider, impersonation: newImpersonationStore()}
+	handler := webHandler.routes()
+
+	form := url.Values{}
+	form.Set("user_id", "user-123")
+	form.Set("name", "New Campaign")
+	form.Set("system", "daggerheart")
+	form.Set("gm_mode", "human")
+	form.Set("theme_prompt", "Misty marshes")
+	form.Set("creator_display_name", "Owner")
+
+	req := httptest.NewRequest(http.MethodPost, "http://example.com/campaigns/create", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Origin", "http://example.com")
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusSeeOther {
+		t.Fatalf("expected status %d, got %d", http.StatusSeeOther, recorder.Code)
+	}
+	location := recorder.Header().Get("Location")
+	if location != "/campaigns/camp-123" {
+		t.Fatalf("expected redirect to /campaigns/camp-123, got %q", location)
+	}
+	values := campaignClient.lastMetadata.Get(grpcmeta.UserIDHeader)
+	if len(values) != 1 || values[0] != "user-123" {
+		t.Fatalf("expected metadata %s to be set, got %v", grpcmeta.UserIDHeader, values)
+	}
+	if campaignClient.lastRequest == nil {
+		t.Fatalf("expected CreateCampaign request to be captured")
+	}
+	if campaignClient.lastRequest.GetName() != "New Campaign" {
+		t.Fatalf("expected campaign name to be set")
+	}
+	if campaignClient.lastRequest.GetSystem() != commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART {
+		t.Fatalf("expected system to be daggerheart")
+	}
+	if campaignClient.lastRequest.GetGmMode() != statev1.GmMode_HUMAN {
+		t.Fatalf("expected gm mode to be human")
+	}
+}
+
+func TestCampaignCreateHTMXRedirect(t *testing.T) {
+	campaignClient := &testCampaignClient{}
+	provider := testClientProvider{campaign: campaignClient}
+	webHandler := &Handler{clientProvider: provider, impersonation: newImpersonationStore()}
+	handler := webHandler.routes()
+
+	form := url.Values{}
+	form.Set("user_id", "user-htmx")
+	form.Set("name", "HTMX Campaign")
+	form.Set("system", "daggerheart")
+	form.Set("gm_mode", "human")
+
+	req := httptest.NewRequest(http.MethodPost, "http://example.com/campaigns/create", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Origin", "http://example.com")
+	req.Header.Set("HX-Request", "true")
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusSeeOther {
+		t.Fatalf("expected status %d, got %d", http.StatusSeeOther, recorder.Code)
+	}
+	location := recorder.Header().Get("Location")
+	if location != "/campaigns/camp-123" {
+		t.Fatalf("expected Location to /campaigns/camp-123, got %q", location)
+	}
+	redirect := recorder.Header().Get("HX-Redirect")
+	if redirect != "/campaigns/camp-123" {
+		t.Fatalf("expected HX-Redirect to /campaigns/camp-123, got %q", redirect)
+	}
+}
+
+func TestCampaignCreateValidationErrors(t *testing.T) {
+	campaignClient := &testCampaignClient{}
+	provider := testClientProvider{campaign: campaignClient}
+	webHandler := &Handler{clientProvider: provider, impersonation: newImpersonationStore()}
+	handler := webHandler.routes()
+
+	loc := i18n.Printer(i18n.Default())
+
+	tests := []struct {
+		name     string
+		form     url.Values
+		expected string
+	}{
+		{
+			name: "empty system",
+			form: url.Values{
+				"user_id": []string{"user-123"},
+				"name":    []string{"New Campaign"},
+				"gm_mode": []string{"human"},
+			},
+			expected: loc.Sprintf("error.campaign_system_required"),
+		},
+		{
+			name: "invalid system",
+			form: url.Values{
+				"user_id": []string{"user-123"},
+				"name":    []string{"New Campaign"},
+				"system":  []string{"bad"},
+				"gm_mode": []string{"human"},
+			},
+			expected: loc.Sprintf("error.campaign_system_invalid"),
+		},
+		{
+			name: "empty gm mode",
+			form: url.Values{
+				"user_id": []string{"user-123"},
+				"name":    []string{"New Campaign"},
+				"system":  []string{"daggerheart"},
+			},
+			expected: loc.Sprintf("error.campaign_gm_mode_required"),
+		},
+		{
+			name: "invalid gm mode",
+			form: url.Values{
+				"user_id": []string{"user-123"},
+				"name":    []string{"New Campaign"},
+				"system":  []string{"daggerheart"},
+				"gm_mode": []string{"robot"},
+			},
+			expected: loc.Sprintf("error.campaign_gm_mode_invalid"),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, "http://example.com/campaigns/create", strings.NewReader(tc.form.Encode()))
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			req.Header.Set("Origin", "http://example.com")
+			recorder := httptest.NewRecorder()
+			handler.ServeHTTP(recorder, req)
+
+			if recorder.Code != http.StatusOK {
+				t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
+			}
+			assertContains(t, recorder.Body.String(), tc.expected)
+		})
+	}
+}
+
+func TestCampaignCreateImpersonationOverridesUserID(t *testing.T) {
+	campaignClient := &testCampaignClient{}
+	provider := testClientProvider{campaign: campaignClient}
+	webHandler := &Handler{clientProvider: provider, impersonation: newImpersonationStore()}
+	handler := webHandler.routes()
+
+	sessionID := "session-impersonate"
+	webHandler.impersonation.Set(sessionID, impersonationSession{userID: "user-imp", displayName: "Impersonated"})
+
+	form := url.Values{}
+	form.Set("user_id", "user-other")
+	form.Set("name", "Impersonated Campaign")
+	form.Set("system", "daggerheart")
+	form.Set("gm_mode", "human")
+	form.Set("creator_display_name", "Other")
+
+	req := httptest.NewRequest(http.MethodPost, "http://example.com/campaigns/create", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Origin", "http://example.com")
+	req.AddCookie(&http.Cookie{Name: impersonationCookieName, Value: sessionID})
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, req)
+
+	values := campaignClient.lastMetadata.Get(grpcmeta.UserIDHeader)
+	if len(values) != 1 || values[0] != "user-imp" {
+		t.Fatalf("expected metadata %s to be impersonation user, got %v", grpcmeta.UserIDHeader, values)
+	}
+	if campaignClient.lastRequest == nil || campaignClient.lastRequest.GetCreatorDisplayName() != "Impersonated" {
+		t.Fatalf("expected creator display name to be impersonation display name")
+	}
 }
 
 func TestImpersonationFlow(t *testing.T) {

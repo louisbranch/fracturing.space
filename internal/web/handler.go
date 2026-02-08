@@ -158,6 +158,7 @@ func (h *Handler) routes() http.Handler {
 	mux.Handle("/dashboard/content", http.HandlerFunc(h.handleDashboardContent))
 	mux.Handle("/campaigns", http.HandlerFunc(h.handleCampaignsPage))
 	mux.Handle("/campaigns/table", http.HandlerFunc(h.handleCampaignsTable))
+	mux.Handle("/campaigns/create", http.HandlerFunc(h.handleCampaignCreate))
 	mux.Handle("/campaigns/", http.HandlerFunc(h.handleCampaignRoutes))
 	mux.Handle("/users", http.HandlerFunc(h.handleUsersPage))
 	mux.Handle("/users/table", http.HandlerFunc(h.handleUsersTable))
@@ -561,6 +562,136 @@ func (h *Handler) handleCampaignsPage(w http.ResponseWriter, r *http.Request) {
 	templ.Handler(templates.CampaignsFullPage(pageCtx)).ServeHTTP(w, r)
 }
 
+func (h *Handler) handleCampaignCreate(w http.ResponseWriter, r *http.Request) {
+	loc, lang := h.localizer(w, r)
+	pageCtx := h.pageContext(lang, loc, r)
+	view := templates.CampaignCreatePageView{
+		Impersonation: pageCtx.Impersonation,
+		System:        "daggerheart",
+		GmMode:        "human",
+	}
+	if pageCtx.Impersonation != nil {
+		view.UserID = pageCtx.Impersonation.UserID
+		view.CreatorDisplayName = pageCtx.Impersonation.DisplayName
+	}
+	renderCreate := func() {
+		if isHTMXRequest(r) {
+			templ.Handler(templates.CampaignCreatePage(view, loc)).ServeHTTP(w, r)
+			return
+		}
+		templ.Handler(templates.CampaignCreateFullPage(view, pageCtx)).ServeHTTP(w, r)
+	}
+
+	switch r.Method {
+	case http.MethodGet:
+		if message := strings.TrimSpace(r.URL.Query().Get("message")); message != "" {
+			view.Message = message
+		}
+		renderCreate()
+		return
+	case http.MethodPost:
+		if !requireSameOrigin(w, r, loc) {
+			return
+		}
+	default:
+		w.Header().Set("Allow", strings.Join([]string{http.MethodGet, http.MethodPost}, ", "))
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		view.Message = loc.Sprintf("error.campaign_create_invalid")
+		renderCreate()
+		return
+	}
+
+	if pageCtx.Impersonation == nil {
+		view.UserID = strings.TrimSpace(r.FormValue("user_id"))
+		view.CreatorDisplayName = strings.TrimSpace(r.FormValue("creator_display_name"))
+	} else {
+		view.UserID = pageCtx.Impersonation.UserID
+		view.CreatorDisplayName = pageCtx.Impersonation.DisplayName
+	}
+	view.Name = strings.TrimSpace(r.FormValue("name"))
+	view.System = strings.TrimSpace(r.FormValue("system"))
+	view.GmMode = strings.TrimSpace(r.FormValue("gm_mode"))
+	view.ThemePrompt = strings.TrimSpace(r.FormValue("theme_prompt"))
+
+	if view.UserID == "" {
+		view.Message = loc.Sprintf("error.campaign_user_id_required")
+		renderCreate()
+		return
+	}
+
+	if view.Name == "" {
+		view.Message = loc.Sprintf("error.campaign_name_required")
+		renderCreate()
+		return
+	}
+
+	system, ok := parseGameSystem(view.System)
+	if !ok {
+		if view.System == "" {
+			view.Message = loc.Sprintf("error.campaign_system_required")
+		} else {
+			view.Message = loc.Sprintf("error.campaign_system_invalid")
+		}
+		renderCreate()
+		return
+	}
+
+	gmMode, ok := parseGmMode(view.GmMode)
+	if !ok {
+		if view.GmMode == "" {
+			view.Message = loc.Sprintf("error.campaign_gm_mode_required")
+		} else {
+			view.Message = loc.Sprintf("error.campaign_gm_mode_invalid")
+		}
+		renderCreate()
+		return
+	}
+
+	client := h.campaignClient()
+	if client == nil {
+		view.Message = loc.Sprintf("error.campaign_service_unavailable")
+		renderCreate()
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), campaignsRequestTimeout)
+	defer cancel()
+	if view.UserID != "" {
+		md, _ := metadata.FromOutgoingContext(ctx)
+		md = md.Copy()
+		md.Set(grpcmeta.UserIDHeader, view.UserID)
+		ctx = metadata.NewOutgoingContext(ctx, md)
+	}
+
+	response, err := client.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
+		Name:               view.Name,
+		System:             system,
+		GmMode:             gmMode,
+		ThemePrompt:        view.ThemePrompt,
+		CreatorDisplayName: view.CreatorDisplayName,
+	})
+	if err != nil || response.GetCampaign() == nil {
+		log.Printf("create campaign: %v", err)
+		view.Message = loc.Sprintf("error.campaign_create_failed")
+		renderCreate()
+		return
+	}
+
+	campaignID := response.GetCampaign().GetId()
+	redirectURL := "/campaigns/" + campaignID
+	if isHTMXRequest(r) {
+		w.Header().Set("Location", redirectURL)
+		w.Header().Set("HX-Redirect", redirectURL)
+		w.WriteHeader(http.StatusSeeOther)
+		return
+	}
+	http.Redirect(w, r, redirectURL, http.StatusSeeOther)
+}
+
 // handleCampaignRoutes dispatches detail and session subroutes.
 func (h *Handler) handleCampaignRoutes(w http.ResponseWriter, r *http.Request) {
 	if strings.HasSuffix(r.URL.Path, "/") {
@@ -931,6 +1062,28 @@ func formatGameSystem(system commonv1.GameSystem, loc *message.Printer) string {
 		return loc.Sprintf("label.daggerheart")
 	default:
 		return loc.Sprintf("label.unspecified")
+	}
+}
+
+func parseGameSystem(value string) (commonv1.GameSystem, bool) {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "daggerheart":
+		return commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART, true
+	default:
+		return commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED, false
+	}
+}
+
+func parseGmMode(value string) (statev1.GmMode, bool) {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "human":
+		return statev1.GmMode_HUMAN, true
+	case "ai":
+		return statev1.GmMode_AI, true
+	case "hybrid":
+		return statev1.GmMode_HYBRID, true
+	default:
+		return statev1.GmMode_GM_MODE_UNSPECIFIED, false
 	}
 }
 
