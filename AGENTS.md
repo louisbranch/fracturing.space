@@ -4,7 +4,7 @@ Single source of agent directives and project context.
 
 ## Preflight
 
-- Before any changes (including plans), verify you are not on `main` with `git branch --show-current`; if you are on `main`, create or switch to a feature branch before proceeding (see the `workflow` skill for branch conventions).
+- At the start of a session, verify you are not on `main` with `git branch --show-current`; if you are on `main`, create another branch.
 
 ## Safety
 
@@ -32,6 +32,18 @@ make integration # Integration tests
 make proto       # Regenerate proto code
 ```
 
+## Commits and PRs
+
+Commit in small, task-sized increments as you work; do not batch everything into a single final commit.
+
+Use matching prefixes with a short, why-focused subject:
+- `feat:` - New features
+- `fix:` - Bug fixes
+- `chore:` - Maintenance
+- `docs:` - Documentation
+
+Example: `feat: add duality outcome tool`
+
 ## Skills
 
 Load the relevant skill when working in these areas:
@@ -40,7 +52,6 @@ Skills live in `.ai/skills/`.
 
 | skill | what | when to use |
 | --- | --- | --- |
-| `workflow` | Git branching, commits, and PR conventions | when doing git workflows or preparing commits/PRs |
 | `go-style` | Go conventions, build commands, naming, error handling patterns | when editing Go code or running Go build/test |
 | `error-handling` | Structured errors and i18n-friendly messaging workflow | when adding or changing error flows/messages |
 | `schema` | Database migrations and proto field ordering rules | when editing migrations or protos |
