@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -34,6 +35,9 @@ const (
 	// This should be longer than defaultRequestTimeout to allow in-flight requests to complete.
 	defaultShutdownTimeout = 35 * time.Second
 
+	// defaultIntrospectionTimeout caps OAuth introspection duration.
+	defaultIntrospectionTimeout = 5 * time.Second
+
 	// sessionCleanupInterval is how often the cleanup goroutine runs to remove expired sessions.
 	sessionCleanupInterval = 5 * time.Minute
 
@@ -61,6 +65,7 @@ type HTTPTransport struct {
 	serverCancel context.CancelFunc
 	serverOnceMu sync.Mutex
 	serverOnce   map[string]*sync.Once
+	oauth        *oauthAuth
 }
 
 // httpSession maintains state for an HTTP client connection.
@@ -146,6 +151,9 @@ func (t *HTTPTransport) Start(ctx context.Context) error {
 	// Update server context to use the provided context
 	t.serverCtx, t.serverCancel = context.WithCancel(ctx)
 
+	// Load OAuth configuration (optional)
+	t.oauth = loadOAuthAuthFromEnv()
+
 	// Start session cleanup goroutine
 	go t.cleanupSessions(ctx)
 
@@ -162,6 +170,10 @@ func (t *HTTPTransport) Start(ctx context.Context) error {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	})
+
+	if t.oauth != nil {
+		mux.HandleFunc("/.well-known/oauth-protected-resource", t.handleProtectedResourceMetadata)
+	}
 
 	// GET /mcp/health - Health check endpoint
 	mux.HandleFunc("/mcp/health", t.handleHealth)
@@ -232,11 +244,12 @@ func (t *HTTPTransport) cleanupSessions(ctx context.Context) {
 
 // handleMessages handles POST /mcp/messages for JSON-RPC requests.
 func (t *HTTPTransport) handleMessages(w http.ResponseWriter, r *http.Request) {
-	// TODO: Add API key/token authentication middleware
-	// TODO: Add CORS headers if web clients are expected
-
 	if err := t.validateLocalRequest(r); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if !t.authorizeRequest(w, r) {
 		return
 	}
 
@@ -465,10 +478,12 @@ func (t *HTTPTransport) handleMessages(w http.ResponseWriter, r *http.Request) {
 
 // handleSSE handles GET /mcp/sse for Server-Sent Events streaming.
 func (t *HTTPTransport) handleSSE(w http.ResponseWriter, r *http.Request) {
-	// TODO: Add authentication check before establishing SSE connection
-
 	if err := t.validateLocalRequest(r); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if !t.authorizeRequest(w, r) {
 		return
 	}
 
@@ -711,6 +726,138 @@ func (t *HTTPTransport) handleHealth(w http.ResponseWriter, r *http.Request) {
 	if _, err := w.Write([]byte("OK")); err != nil {
 		log.Printf("Failed to write health response: %v", err)
 	}
+}
+
+type oauthAuth struct {
+	issuer         string
+	resourceSecret string
+	httpClient     *http.Client
+}
+
+var errOAuthResourceSecretMissing = errors.New("oauth resource secret is not configured")
+
+type protectedResourceMetadata struct {
+	Resource               string   `json:"resource"`
+	AuthorizationServers   []string `json:"authorization_servers"`
+	BearerMethodsSupported []string `json:"bearer_methods_supported,omitempty"`
+}
+
+type introspectionPayload struct {
+	Active bool `json:"active"`
+}
+
+func loadOAuthAuthFromEnv() *oauthAuth {
+	issuer := strings.TrimSpace(os.Getenv("FRACTURING_SPACE_MCP_OAUTH_ISSUER"))
+	if issuer == "" {
+		return nil
+	}
+	resourceSecret := strings.TrimSpace(os.Getenv("FRACTURING_SPACE_MCP_OAUTH_RESOURCE_SECRET"))
+	return &oauthAuth{
+		issuer:         strings.TrimRight(issuer, "/"),
+		resourceSecret: resourceSecret,
+		httpClient:     &http.Client{Timeout: defaultIntrospectionTimeout},
+	}
+}
+
+func (t *HTTPTransport) authorizeRequest(w http.ResponseWriter, r *http.Request) bool {
+	if t.oauth == nil {
+		return true
+	}
+	authHeader := r.Header.Get("Authorization")
+	if !strings.HasPrefix(authHeader, "Bearer ") {
+		t.writeUnauthorized(w, r, "authorization required")
+		return false
+	}
+
+	token := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer "))
+	if token == "" {
+		t.writeUnauthorized(w, r, "authorization required")
+		return false
+	}
+	active, err := t.oauth.validateToken(r.Context(), token)
+	if err != nil {
+		if errors.Is(err, errOAuthResourceSecretMissing) {
+			http.Error(w, "oauth introspection misconfigured", http.StatusInternalServerError)
+			return false
+		}
+		t.writeUnauthorized(w, r, "invalid access token")
+		return false
+	}
+	if !active {
+		t.writeUnauthorized(w, r, "invalid access token")
+		return false
+	}
+	return true
+}
+
+func (t *HTTPTransport) handleProtectedResourceMetadata(w http.ResponseWriter, r *http.Request) {
+	if t.oauth == nil {
+		http.NotFound(w, r)
+		return
+	}
+	if err := t.validateLocalRequest(r); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	baseURL := baseURLFromRequest(r)
+	metadata := protectedResourceMetadata{
+		Resource:               baseURL + "/mcp",
+		AuthorizationServers:   []string{t.oauth.issuer},
+		BearerMethodsSupported: []string{"header"},
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(metadata)
+}
+
+func (t *HTTPTransport) writeUnauthorized(w http.ResponseWriter, r *http.Request, message string) {
+	metadataURL := baseURLFromRequest(r) + "/.well-known/oauth-protected-resource"
+	w.Header().Set("WWW-Authenticate", `Bearer resource_metadata="`+metadataURL+`"`)
+	http.Error(w, message, http.StatusUnauthorized)
+}
+
+func (a *oauthAuth) validateToken(ctx context.Context, token string) (bool, error) {
+	if a == nil || a.issuer == "" {
+		return false, errors.New("oauth issuer is not configured")
+	}
+	if strings.TrimSpace(a.resourceSecret) == "" {
+		return false, errOAuthResourceSecretMissing
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, a.issuer+"/introspect", nil)
+	if err != nil {
+		return false, err
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("X-Resource-Secret", a.resourceSecret)
+
+	resp, err := a.httpClient.Do(req)
+	if err != nil {
+		return false, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return false, errors.New("introspection failed")
+	}
+	var payload introspectionPayload
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		return false, err
+	}
+	return payload.Active, nil
+}
+
+func baseURLFromRequest(r *http.Request) string {
+	scheme := "http"
+	if r.TLS != nil {
+		scheme = "https"
+	}
+	if forwarded := r.Header.Get("X-Forwarded-Proto"); forwarded != "" {
+		scheme = forwarded
+	}
+	return scheme + "://" + r.Host
 }
 
 // Read implements mcp.Connection.Read.

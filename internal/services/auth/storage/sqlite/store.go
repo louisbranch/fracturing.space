@@ -27,6 +27,14 @@ type Store struct {
 	q     *db.Queries
 }
 
+// DB returns the underlying sql.DB instance.
+func (s *Store) DB() *sql.DB {
+	if s == nil {
+		return nil
+	}
+	return s.sqlDB
+}
+
 // Open opens a SQLite store at the provided path.
 func Open(path string) (*Store, error) {
 	if strings.TrimSpace(path) == "" {

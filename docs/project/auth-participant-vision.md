@@ -2,7 +2,7 @@ Auth + Participant Vision
 
 Vision
 - Separate identity from campaign participation so the participant remains the principal for game-state access and permissions.
-- Keep auth concerns (identity, external OAuth) in a dedicated service while game logic owns invitations, seats, and campaign rules.
+- Keep auth concerns (identity and join grants) in a dedicated service while game logic owns invitations, seats, and campaign rules.
 
 Core Principles
 - Participants are campaign-scoped seats; seats may be unclaimed.
@@ -12,8 +12,11 @@ Core Principles
 - Authorization decisions flow through a policy layer (v0 maps campaign_access to allowed actions).
 
 Service Boundaries
-- Auth service: user creation, join grants, future authentication/OAuth.
+- Auth service: user creation, join grants, and OAuth (see docs/project/oauth.md).
 - Game service: campaign, participant seats, invites, seat limits, authorization checks.
+
+OAuth Reference
+- OAuth server/client details live in docs/project/oauth.md.
 
 Minimal Flows
 - Create user (auth service).
@@ -27,7 +30,6 @@ Concerns and Unknowns
 - Fork policy for clearing or preserving user assignments on participants.
 - Seat limit enforcement under concurrency.
 - Auditing requirements for join, leave, and reassignment events.
-- Future authentication and OAuth provider scope strategy.
 
 Phases
 
@@ -44,8 +46,6 @@ Phase 1: Minimum Join Capability (No Authentication)
 - Campaign creation: creator becomes a participant with capability to manage participants and invites.
 
 Later Phases (Not Yet Scheduled)
-- Authentication and token validation.
-- OAuth provider integration and external token storage.
 - Voting policy framework and enforcement.
 - Seat limit policies (min, max, active) with configurable rules.
 
