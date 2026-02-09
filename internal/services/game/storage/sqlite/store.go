@@ -22,8 +22,8 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/snapshot"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/core/encoding"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage/integrity"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/db"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/migrations"
 	sqlite "modernc.org/sqlite"
@@ -55,12 +55,35 @@ func fromNullMillis(value sql.NullInt64) *time.Time {
 
 // Store provides a SQLite-backed store implementing all storage interfaces.
 type Store struct {
-	sqlDB *sql.DB
-	q     *db.Queries
+	sqlDB   *sql.DB
+	q       *db.Queries
+	keyring *integrity.Keyring
 }
 
-// Open opens a SQLite store at the provided path.
+// Open opens a SQLite projections store at the provided path.
 func Open(path string) (*Store, error) {
+	return OpenProjections(path)
+}
+
+// OpenEvents opens a SQLite event journal store at the provided path.
+func OpenEvents(path string, keyring *integrity.Keyring) (*Store, error) {
+	return openStore(path, migrations.EventsFS, "events", keyring)
+}
+
+// OpenProjections opens a SQLite projections store at the provided path.
+func OpenProjections(path string) (*Store, error) {
+	return openStore(path, migrations.ProjectionsFS, "projections", nil)
+}
+
+// Close closes the underlying SQLite database.
+func (s *Store) Close() error {
+	if s == nil || s.sqlDB == nil {
+		return nil
+	}
+	return s.sqlDB.Close()
+}
+
+func openStore(path string, migrationFS fs.FS, migrationRoot string, keyring *integrity.Keyring) (*Store, error) {
 	if strings.TrimSpace(path) == "" {
 		return nil, fmt.Errorf("storage path is required")
 	}
@@ -78,11 +101,12 @@ func Open(path string) (*Store, error) {
 	}
 
 	store := &Store{
-		sqlDB: sqlDB,
-		q:     db.New(sqlDB),
+		sqlDB:   sqlDB,
+		q:       db.New(sqlDB),
+		keyring: keyring,
 	}
 
-	if err := store.runMigrations(); err != nil {
+	if err := runMigrations(sqlDB, migrationFS, migrationRoot); err != nil {
 		_ = sqlDB.Close()
 		return nil, fmt.Errorf("run migrations: %w", err)
 	}
@@ -90,17 +114,9 @@ func Open(path string) (*Store, error) {
 	return store, nil
 }
 
-// Close closes the underlying SQLite database.
-func (s *Store) Close() error {
-	if s == nil || s.sqlDB == nil {
-		return nil
-	}
-	return s.sqlDB.Close()
-}
-
 // runMigrations runs embedded SQL migrations.
-func (s *Store) runMigrations() error {
-	entries, err := fs.ReadDir(migrations.FS, ".")
+func runMigrations(sqlDB *sql.DB, migrationFS fs.FS, migrationRoot string) error {
+	entries, err := fs.ReadDir(migrationFS, migrationRoot)
 	if err != nil {
 		return fmt.Errorf("read migrations dir: %w", err)
 	}
@@ -114,7 +130,7 @@ func (s *Store) runMigrations() error {
 	sort.Strings(sqlFiles)
 
 	for _, file := range sqlFiles {
-		content, err := fs.ReadFile(migrations.FS, file)
+		content, err := fs.ReadFile(migrationFS, filepath.Join(migrationRoot, file))
 		if err != nil {
 			return fmt.Errorf("read migration %s: %w", file, err)
 		}
@@ -124,7 +140,7 @@ func (s *Store) runMigrations() error {
 			continue
 		}
 
-		if _, err := s.sqlDB.Exec(upSQL); err != nil {
+		if _, err := sqlDB.Exec(upSQL); err != nil {
 			if !isAlreadyExistsError(err) {
 				return fmt.Errorf("exec migration %s: %w", file, err)
 			}
@@ -1049,7 +1065,7 @@ func (s *Store) ApplyRollOutcome(ctx context.Context, input storage.RollOutcomeA
 		if err != nil {
 			return storage.RollOutcomeApplyResult{}, fmt.Errorf("marshal gm fear payload: %w", err)
 		}
-		if _, err := appendEventTx(ctx, qtx, event.Event{
+		if _, err := appendEventTx(ctx, qtx, s.keyring, event.Event{
 			CampaignID:  input.CampaignID,
 			Timestamp:   evtTimestamp,
 			Type:        event.TypeGMFearChanged,
@@ -1148,7 +1164,7 @@ func (s *Store) ApplyRollOutcome(ctx context.Context, input storage.RollOutcomeA
 			if err != nil {
 				return storage.RollOutcomeApplyResult{}, fmt.Errorf("marshal character state payload: %w", err)
 			}
-			if _, err := appendEventTx(ctx, qtx, event.Event{
+			if _, err := appendEventTx(ctx, qtx, s.keyring, event.Event{
 				CampaignID:  input.CampaignID,
 				Timestamp:   evtTimestamp,
 				Type:        event.TypeCharacterStateChanged,
@@ -1196,7 +1212,7 @@ func (s *Store) ApplyRollOutcome(ctx context.Context, input storage.RollOutcomeA
 	}
 
 	// Use unified event table
-	if _, err := appendEventTx(ctx, qtx, event.Event{
+	if _, err := appendEventTx(ctx, qtx, s.keyring, event.Event{
 		CampaignID:   input.CampaignID,
 		Timestamp:    evtTimestamp,
 		Type:         event.TypeOutcomeApplied,
@@ -1226,7 +1242,7 @@ func (s *Store) ApplyRollOutcome(ctx context.Context, input storage.RollOutcomeA
 	return result, nil
 }
 
-func appendEventTx(ctx context.Context, qtx *db.Queries, evt event.Event) (event.Event, error) {
+func appendEventTx(ctx context.Context, qtx *db.Queries, keyring *integrity.Keyring, evt event.Event) (event.Event, error) {
 	if qtx == nil {
 		return event.Event{}, fmt.Errorf("event store is not configured")
 	}
@@ -1256,54 +1272,69 @@ func appendEventTx(ctx context.Context, qtx *db.Queries, evt event.Event) (event
 	}
 	evt.Seq = uint64(seq)
 
-	envelope := map[string]any{
-		"campaign_id": evt.CampaignID,
-		"event_type":  string(evt.Type),
-		"timestamp":   evt.Timestamp.Format(time.RFC3339Nano),
-		"actor_type":  string(evt.ActorType),
-		"payload":     json.RawMessage(evt.PayloadJSON),
-	}
-	if evt.SessionID != "" {
-		envelope["session_id"] = evt.SessionID
-	}
-	if evt.RequestID != "" {
-		envelope["request_id"] = evt.RequestID
-	}
-	if evt.ActorID != "" {
-		envelope["actor_id"] = evt.ActorID
-	}
-	if evt.EntityType != "" {
-		envelope["entity_type"] = evt.EntityType
-	}
-	if evt.EntityID != "" {
-		envelope["entity_id"] = evt.EntityID
+	if keyring == nil {
+		return event.Event{}, fmt.Errorf("event integrity keyring is required")
 	}
 
-	hash, err := encoding.ContentHash(envelope)
+	hash, err := integrity.EventHash(evt)
 	if err != nil {
 		return event.Event{}, fmt.Errorf("compute event hash: %w", err)
 	}
 	if strings.TrimSpace(hash) == "" {
 		return event.Event{}, fmt.Errorf("event hash is required")
 	}
+	evt.Hash = hash
+
+	prevHash := ""
+	if evt.Seq > 1 {
+		prevRow, err := qtx.GetEventBySeq(ctx, db.GetEventBySeqParams{
+			CampaignID: evt.CampaignID,
+			Seq:        int64(evt.Seq - 1),
+		})
+		if err != nil {
+			return event.Event{}, fmt.Errorf("load previous event: %w", err)
+		}
+		prevHash = prevRow.ChainHash
+	}
+
+	chainHash, err := integrity.ChainHash(evt, prevHash)
+	if err != nil {
+		return event.Event{}, fmt.Errorf("compute chain hash: %w", err)
+	}
+	if strings.TrimSpace(chainHash) == "" {
+		return event.Event{}, fmt.Errorf("chain hash is required")
+	}
+
+	signature, keyID, err := keyring.SignChainHash(evt.CampaignID, chainHash)
+	if err != nil {
+		return event.Event{}, fmt.Errorf("sign chain hash: %w", err)
+	}
+
+	evt.PrevHash = prevHash
+	evt.ChainHash = chainHash
+	evt.Signature = signature
+	evt.SignatureKeyID = keyID
 	if err := qtx.AppendEvent(ctx, db.AppendEventParams{
-		CampaignID:   evt.CampaignID,
-		Seq:          seq,
-		EventHash:    hash,
-		Timestamp:    toMillis(evt.Timestamp),
-		EventType:    string(evt.Type),
-		SessionID:    evt.SessionID,
-		RequestID:    evt.RequestID,
-		InvocationID: evt.InvocationID,
-		ActorType:    string(evt.ActorType),
-		ActorID:      evt.ActorID,
-		EntityType:   evt.EntityType,
-		EntityID:     evt.EntityID,
-		PayloadJson:  evt.PayloadJSON,
+		CampaignID:     evt.CampaignID,
+		Seq:            seq,
+		EventHash:      hash,
+		PrevEventHash:  prevHash,
+		ChainHash:      chainHash,
+		SignatureKeyID: keyID,
+		EventSignature: signature,
+		Timestamp:      toMillis(evt.Timestamp),
+		EventType:      string(evt.Type),
+		SessionID:      evt.SessionID,
+		RequestID:      evt.RequestID,
+		InvocationID:   evt.InvocationID,
+		ActorType:      string(evt.ActorType),
+		ActorID:        evt.ActorID,
+		EntityType:     evt.EntityType,
+		EntityID:       evt.EntityID,
+		PayloadJson:    evt.PayloadJSON,
 	}); err != nil {
 		return event.Event{}, fmt.Errorf("append event: %w", err)
 	}
-	evt.Hash = hash
 
 	return evt, nil
 }
@@ -1901,50 +1932,67 @@ func (s *Store) AppendEvent(ctx context.Context, evt event.Event) (event.Event, 
 		return event.Event{}, fmt.Errorf("increment event seq: %w", err)
 	}
 
-	// Compute content hash for the event (excludes seq which is assigned by storage)
-	envelope := map[string]any{
-		"campaign_id": evt.CampaignID,
-		"event_type":  string(evt.Type),
-		"timestamp":   evt.Timestamp.Format(time.RFC3339Nano),
-		"actor_type":  string(evt.ActorType),
-		"payload":     json.RawMessage(evt.PayloadJSON),
-	}
-	if evt.SessionID != "" {
-		envelope["session_id"] = evt.SessionID
-	}
-	if evt.RequestID != "" {
-		envelope["request_id"] = evt.RequestID
-	}
-	if evt.ActorID != "" {
-		envelope["actor_id"] = evt.ActorID
-	}
-	if evt.EntityType != "" {
-		envelope["entity_type"] = evt.EntityType
-	}
-	if evt.EntityID != "" {
-		envelope["entity_id"] = evt.EntityID
+	if s.keyring == nil {
+		return event.Event{}, fmt.Errorf("event integrity keyring is required")
 	}
 
-	hash, err := encoding.ContentHash(envelope)
+	hash, err := integrity.EventHash(evt)
 	if err != nil {
 		return event.Event{}, fmt.Errorf("compute event hash: %w", err)
 	}
+	if strings.TrimSpace(hash) == "" {
+		return event.Event{}, fmt.Errorf("event hash is required")
+	}
 	evt.Hash = hash
 
+	prevHash := ""
+	if evt.Seq > 1 {
+		prevRow, err := qtx.GetEventBySeq(ctx, db.GetEventBySeqParams{
+			CampaignID: evt.CampaignID,
+			Seq:        int64(evt.Seq - 1),
+		})
+		if err != nil {
+			return event.Event{}, fmt.Errorf("load previous event: %w", err)
+		}
+		prevHash = prevRow.ChainHash
+	}
+
+	chainHash, err := integrity.ChainHash(evt, prevHash)
+	if err != nil {
+		return event.Event{}, fmt.Errorf("compute chain hash: %w", err)
+	}
+	if strings.TrimSpace(chainHash) == "" {
+		return event.Event{}, fmt.Errorf("chain hash is required")
+	}
+
+	signature, keyID, err := s.keyring.SignChainHash(evt.CampaignID, chainHash)
+	if err != nil {
+		return event.Event{}, fmt.Errorf("sign chain hash: %w", err)
+	}
+
+	evt.PrevHash = prevHash
+	evt.ChainHash = chainHash
+	evt.Signature = signature
+	evt.SignatureKeyID = keyID
+
 	if err := qtx.AppendEvent(ctx, db.AppendEventParams{
-		CampaignID:   evt.CampaignID,
-		Seq:          int64(evt.Seq),
-		EventHash:    evt.Hash,
-		Timestamp:    toMillis(evt.Timestamp),
-		EventType:    string(evt.Type),
-		SessionID:    evt.SessionID,
-		RequestID:    evt.RequestID,
-		InvocationID: evt.InvocationID,
-		ActorType:    string(evt.ActorType),
-		ActorID:      evt.ActorID,
-		EntityType:   evt.EntityType,
-		EntityID:     evt.EntityID,
-		PayloadJson:  evt.PayloadJSON,
+		CampaignID:     evt.CampaignID,
+		Seq:            int64(evt.Seq),
+		EventHash:      evt.Hash,
+		PrevEventHash:  prevHash,
+		ChainHash:      chainHash,
+		SignatureKeyID: keyID,
+		EventSignature: signature,
+		Timestamp:      toMillis(evt.Timestamp),
+		EventType:      string(evt.Type),
+		SessionID:      evt.SessionID,
+		RequestID:      evt.RequestID,
+		InvocationID:   evt.InvocationID,
+		ActorType:      string(evt.ActorType),
+		ActorID:        evt.ActorID,
+		EntityType:     evt.EntityType,
+		EntityID:       evt.EntityID,
+		PayloadJson:    evt.PayloadJSON,
 	}); err != nil {
 		if isConstraintError(err) {
 			stored, lookupErr := s.GetEventByHash(ctx, evt.Hash)
@@ -1960,6 +2008,100 @@ func (s *Store) AppendEvent(ctx context.Context, evt event.Event) (event.Event, 
 	}
 
 	return evt, nil
+}
+
+// VerifyEventIntegrity validates the event chain and signatures for all campaigns.
+func (s *Store) VerifyEventIntegrity(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if s == nil || s.sqlDB == nil {
+		return fmt.Errorf("storage is not configured")
+	}
+	if s.keyring == nil {
+		return fmt.Errorf("event integrity keyring is required")
+	}
+
+	campaignIDs, err := s.listEventCampaignIDs(ctx)
+	if err != nil {
+		return err
+	}
+	for _, campaignID := range campaignIDs {
+		if err := s.verifyCampaignEvents(ctx, campaignID); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *Store) listEventCampaignIDs(ctx context.Context) ([]string, error) {
+	rows, err := s.sqlDB.QueryContext(ctx, "SELECT DISTINCT campaign_id FROM events ORDER BY campaign_id")
+	if err != nil {
+		return nil, fmt.Errorf("list campaign ids: %w", err)
+	}
+	defer rows.Close()
+
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scan campaign id: %w", err)
+		}
+		ids = append(ids, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate campaign ids: %w", err)
+	}
+	return ids, nil
+}
+
+func (s *Store) verifyCampaignEvents(ctx context.Context, campaignID string) error {
+	var lastSeq uint64
+	prevChainHash := ""
+	for {
+		events, err := s.ListEvents(ctx, campaignID, lastSeq, 200)
+		if err != nil {
+			return fmt.Errorf("list events campaign_id=%s: %w", campaignID, err)
+		}
+		if len(events) == 0 {
+			return nil
+		}
+		for _, evt := range events {
+			if evt.Seq != lastSeq+1 {
+				return fmt.Errorf("event sequence gap campaign_id=%s expected=%d got=%d", campaignID, lastSeq+1, evt.Seq)
+			}
+			if evt.Seq == 1 && evt.PrevHash != "" {
+				return fmt.Errorf("first event prev hash must be empty campaign_id=%s", campaignID)
+			}
+			if evt.Seq > 1 && evt.PrevHash != prevChainHash {
+				return fmt.Errorf("prev hash mismatch campaign_id=%s seq=%d", campaignID, evt.Seq)
+			}
+
+			hash, err := integrity.EventHash(evt)
+			if err != nil {
+				return fmt.Errorf("compute event hash campaign_id=%s seq=%d: %w", campaignID, evt.Seq, err)
+			}
+			if hash != evt.Hash {
+				return fmt.Errorf("event hash mismatch campaign_id=%s seq=%d", campaignID, evt.Seq)
+			}
+
+			chainHash, err := integrity.ChainHash(evt, prevChainHash)
+			if err != nil {
+				return fmt.Errorf("compute chain hash campaign_id=%s seq=%d: %w", campaignID, evt.Seq, err)
+			}
+			if chainHash != evt.ChainHash {
+				return fmt.Errorf("chain hash mismatch campaign_id=%s seq=%d", campaignID, evt.Seq)
+			}
+
+			if err := s.keyring.VerifyChainHash(campaignID, chainHash, evt.Signature, evt.SignatureKeyID); err != nil {
+				return fmt.Errorf("signature mismatch campaign_id=%s seq=%d: %w", campaignID, evt.Seq, err)
+			}
+
+			prevChainHash = evt.ChainHash
+			lastSeq = evt.Seq
+		}
+	}
 }
 
 func isConstraintError(err error) bool {
@@ -2243,7 +2385,7 @@ func (s *Store) ListEventsPage(ctx context.Context, req storage.ListEventsPageRe
 
 	// Build and execute the query
 	query := fmt.Sprintf(
-		"SELECT campaign_id, seq, event_hash, timestamp, event_type, session_id, request_id, invocation_id, actor_type, actor_id, entity_type, entity_id, payload_json FROM events WHERE %s %s %s",
+		"SELECT campaign_id, seq, event_hash, prev_event_hash, chain_hash, signature_key_id, event_signature, timestamp, event_type, session_id, request_id, invocation_id, actor_type, actor_id, entity_type, entity_id, payload_json FROM events WHERE %s %s %s",
 		whereClause,
 		orderClause,
 		limitClause,
@@ -2262,6 +2404,10 @@ func (s *Store) ListEventsPage(ctx context.Context, req storage.ListEventsPageRe
 			&row.CampaignID,
 			&row.Seq,
 			&row.EventHash,
+			&row.PrevEventHash,
+			&row.ChainHash,
+			&row.SignatureKeyID,
+			&row.EventSignature,
 			&row.Timestamp,
 			&row.EventType,
 			&row.SessionID,
@@ -2520,19 +2666,23 @@ func (s *Store) SetCampaignForkMetadata(ctx context.Context, campaignID string, 
 
 func dbEventToDomain(row db.Event) (event.Event, error) {
 	return event.Event{
-		CampaignID:   row.CampaignID,
-		Seq:          uint64(row.Seq),
-		Hash:         row.EventHash,
-		Timestamp:    fromMillis(row.Timestamp),
-		Type:         event.Type(row.EventType),
-		SessionID:    row.SessionID,
-		RequestID:    row.RequestID,
-		InvocationID: row.InvocationID,
-		ActorType:    event.ActorType(row.ActorType),
-		ActorID:      row.ActorID,
-		EntityType:   row.EntityType,
-		EntityID:     row.EntityID,
-		PayloadJSON:  row.PayloadJson,
+		CampaignID:     row.CampaignID,
+		Seq:            uint64(row.Seq),
+		Hash:           row.EventHash,
+		PrevHash:       row.PrevEventHash,
+		ChainHash:      row.ChainHash,
+		SignatureKeyID: row.SignatureKeyID,
+		Signature:      row.EventSignature,
+		Timestamp:      fromMillis(row.Timestamp),
+		Type:           event.Type(row.EventType),
+		SessionID:      row.SessionID,
+		RequestID:      row.RequestID,
+		InvocationID:   row.InvocationID,
+		ActorType:      event.ActorType(row.ActorType),
+		ActorID:        row.ActorID,
+		EntityType:     row.EntityType,
+		EntityID:       row.EntityID,
+		PayloadJSON:    row.PayloadJson,
 	}, nil
 }
 

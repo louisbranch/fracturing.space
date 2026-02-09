@@ -29,6 +29,13 @@ The event journal is the immutable, append-only log of everything that happens
 in a campaign. Every change to the game is an event. The event journal is the
 source of truth.
 
+### Event Authority
+
+The event journal is the only authoritative write path. Commands propose intent,
+events record accepted facts, and projections/snapshots are derived views.
+Direct mutation of derived records is a bug; corrections happen by writing
+events and replaying projections.
+
 ### Event
 
 An event is an immutable fact that happened in the game. It can describe:

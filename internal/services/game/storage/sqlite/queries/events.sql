@@ -2,25 +2,37 @@
 
 -- name: AppendEvent :exec
 INSERT INTO events (
-    campaign_id, seq, event_hash, timestamp, event_type,
+    campaign_id, seq, event_hash, prev_event_hash, chain_hash, signature_key_id, event_signature, timestamp, event_type,
     session_id, request_id, invocation_id,
     actor_type, actor_id, entity_type, entity_id, payload_json
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 -- name: GetEventByHash :one
-SELECT * FROM events WHERE event_hash = ?;
+SELECT campaign_id, seq, event_hash, prev_event_hash, chain_hash, signature_key_id, event_signature,
+    timestamp, event_type, session_id, request_id, invocation_id, actor_type, actor_id,
+    entity_type, entity_id, payload_json
+FROM events WHERE event_hash = ?;
 
 -- name: GetEventBySeq :one
-SELECT * FROM events WHERE campaign_id = ? AND seq = ?;
+SELECT campaign_id, seq, event_hash, prev_event_hash, chain_hash, signature_key_id, event_signature,
+    timestamp, event_type, session_id, request_id, invocation_id, actor_type, actor_id,
+    entity_type, entity_id, payload_json
+FROM events WHERE campaign_id = ? AND seq = ?;
 
 -- name: ListEvents :many
-SELECT * FROM events
+SELECT campaign_id, seq, event_hash, prev_event_hash, chain_hash, signature_key_id, event_signature,
+    timestamp, event_type, session_id, request_id, invocation_id, actor_type, actor_id,
+    entity_type, entity_id, payload_json
+FROM events
 WHERE campaign_id = ? AND seq > ?
 ORDER BY seq
 LIMIT ?;
 
 -- name: ListEventsBySession :many
-SELECT * FROM events
+SELECT campaign_id, seq, event_hash, prev_event_hash, chain_hash, signature_key_id, event_signature,
+    timestamp, event_type, session_id, request_id, invocation_id, actor_type, actor_id,
+    entity_type, entity_id, payload_json
+FROM events
 WHERE campaign_id = ? AND session_id = ? AND seq > ?
 ORDER BY seq
 LIMIT ?;

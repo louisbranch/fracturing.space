@@ -16,9 +16,10 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/projection"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage/integrity"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite"
 )
 
 const adminReplayPageSize = 200
@@ -42,7 +43,8 @@ type integrityReport struct {
 func main() {
 	var campaignID string
 	var campaignIDs string
-	var dbPath string
+	var eventsDBPath string
+	var projectionsDBPath string
 	var untilSeq uint64
 	var afterSeq uint64
 	var dryRun bool
@@ -53,7 +55,8 @@ func main() {
 
 	flag.StringVar(&campaignID, "campaign-id", "", "campaign ID to replay snapshot-related events")
 	flag.StringVar(&campaignIDs, "campaign-ids", "", "comma-separated campaign IDs to replay snapshot-related events")
-	flag.StringVar(&dbPath, "db-path", defaultDBPath(), "path to sqlite database (default: FRACTURING_SPACE_GAME_DB_PATH or data/game.db)")
+	flag.StringVar(&eventsDBPath, "events-db-path", defaultEventsDBPath(), "path to events sqlite database (default: FRACTURING_SPACE_GAME_EVENTS_DB_PATH or data/game-events.db)")
+	flag.StringVar(&projectionsDBPath, "projections-db-path", defaultProjectionsDBPath(), "path to projections sqlite database (default: FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH or data/game-projections.db)")
 	flag.Uint64Var(&untilSeq, "until-seq", 0, "replay up to this event sequence (0 = latest)")
 	flag.Uint64Var(&afterSeq, "after-seq", 0, "start replay after this event sequence")
 	flag.BoolVar(&dryRun, "dry-run", false, "scan snapshot-related events without applying projections")
@@ -73,14 +76,17 @@ func main() {
 		cancel()
 	}()
 
-	store, err := openStore(dbPath)
+	eventStore, projStore, err := openStores(eventsDBPath, projectionsDBPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 	defer func() {
-		if err := store.Close(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: close store: %v\n", err)
+		if err := eventStore.Close(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: close event store: %v\n", err)
+		}
+		if err := projStore.Close(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: close projection store: %v\n", err)
 		}
 	}()
 
@@ -118,7 +124,7 @@ func main() {
 
 	failed := false
 	for _, id := range ids {
-		result := runCampaign(ctx, store, id, options)
+		result := runCampaign(ctx, eventStore, projStore, id, options)
 		if options.JSONOutput {
 			outputJSON(result)
 		} else {
@@ -157,11 +163,11 @@ type runResult struct {
 	ExitCode      int             `json:"-"`
 }
 
-func runCampaign(ctx context.Context, store storage.Store, campaignID string, options runOptions) runResult {
+func runCampaign(ctx context.Context, eventStore storage.EventStore, projStore storage.ProjectionStore, campaignID string, options runOptions) runResult {
 	result := runResult{CampaignID: campaignID}
 	if options.Integrity {
 		result.Mode = "integrity"
-		report, warnings, err := checkSnapshotIntegrity(ctx, store, campaignID, options.UntilSeq)
+		report, warnings, err := checkSnapshotIntegrity(ctx, eventStore, projStore, campaignID, options.UntilSeq)
 		result.Warnings, result.WarningsTotal = capWarnings(warnings, options.WarningsCap)
 		if err != nil {
 			result.Error = fmt.Sprintf("integrity check: %v", err)
@@ -187,7 +193,7 @@ func runCampaign(ctx context.Context, store storage.Store, campaignID string, op
 			mode = "validate"
 		}
 		result.Mode = mode
-		report, warnings, err := scanSnapshotEvents(ctx, store, campaignID, options.AfterSeq, options.UntilSeq, options.Validate)
+		report, warnings, err := scanSnapshotEvents(ctx, eventStore, campaignID, options.AfterSeq, options.UntilSeq, options.Validate)
 		result.Warnings, result.WarningsTotal = capWarnings(warnings, options.WarningsCap)
 		if err != nil {
 			result.Error = fmt.Sprintf("scan snapshot-related events: %v", err)
@@ -208,12 +214,17 @@ func runCampaign(ctx context.Context, store storage.Store, campaignID string, op
 	}
 
 	result.Mode = "replay"
-	applier := projection.Applier{Campaign: store, Daggerheart: store}
+	if projStore == nil {
+		result.Error = "projection store is not configured"
+		result.ExitCode = 1
+		return result
+	}
+	applier := projection.Applier{Campaign: projStore, Daggerheart: projStore}
 
 	var lastSeq uint64
 	var err error
 	if options.AfterSeq > 0 {
-		lastSeq, err = projection.ReplayCampaignWith(ctx, store, applier, campaignID, projection.ReplayOptions{
+		lastSeq, err = projection.ReplayCampaignWith(ctx, eventStore, applier, campaignID, projection.ReplayOptions{
 			AfterSeq: options.AfterSeq,
 			UntilSeq: options.UntilSeq,
 			Filter: func(evt event.Event) bool {
@@ -221,7 +232,7 @@ func runCampaign(ctx context.Context, store storage.Store, campaignID string, op
 			},
 		})
 	} else {
-		lastSeq, err = projection.ReplaySnapshot(ctx, store, applier, campaignID, options.UntilSeq)
+		lastSeq, err = projection.ReplaySnapshot(ctx, eventStore, applier, campaignID, options.UntilSeq)
 	}
 	if err != nil {
 		result.Error = fmt.Sprintf("replay snapshot: %v", err)
@@ -329,27 +340,73 @@ func printResult(result runResult, prefix string) {
 	fmt.Printf("%sReplayed snapshot-related events for campaign %s through seq %d\n", prefix, result.CampaignID, report.LastSeq)
 }
 
-func openStore(path string) (storage.Store, error) {
+func openStores(eventsPath, projectionsPath string) (*sqlite.Store, *sqlite.Store, error) {
+	eventStore, err := openEventStore(eventsPath)
+	if err != nil {
+		return nil, nil, err
+	}
+	projStore, err := openProjectionStore(projectionsPath)
+	if err != nil {
+		_ = eventStore.Close()
+		return nil, nil, err
+	}
+	return eventStore, projStore, nil
+}
+
+func openEventStore(path string) (*sqlite.Store, error) {
 	cleanPath := filepath.Clean(path)
 	if cleanPath == "." || cleanPath == "" {
-		return nil, fmt.Errorf("db path is required")
+		return nil, fmt.Errorf("events db path is required")
 	}
 	if dir := filepath.Dir(cleanPath); dir != "." {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
 			return nil, fmt.Errorf("create storage dir: %w", err)
 		}
 	}
-	store, err := sqlite.Open(cleanPath)
+	keyring, err := integrity.KeyringFromEnv()
 	if err != nil {
-		return nil, fmt.Errorf("open sqlite store: %w", err)
+		return nil, err
+	}
+	store, err := sqlite.OpenEvents(cleanPath, keyring)
+	if err != nil {
+		return nil, fmt.Errorf("open events store: %w", err)
+	}
+	if err := store.VerifyEventIntegrity(context.Background()); err != nil {
+		_ = store.Close()
+		return nil, fmt.Errorf("verify event integrity: %w", err)
 	}
 	return store, nil
 }
 
-func defaultDBPath() string {
-	path := strings.TrimSpace(os.Getenv("FRACTURING_SPACE_GAME_DB_PATH"))
+func openProjectionStore(path string) (*sqlite.Store, error) {
+	cleanPath := filepath.Clean(path)
+	if cleanPath == "." || cleanPath == "" {
+		return nil, fmt.Errorf("projections db path is required")
+	}
+	if dir := filepath.Dir(cleanPath); dir != "." {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return nil, fmt.Errorf("create storage dir: %w", err)
+		}
+	}
+	store, err := sqlite.OpenProjections(cleanPath)
+	if err != nil {
+		return nil, fmt.Errorf("open projections store: %w", err)
+	}
+	return store, nil
+}
+
+func defaultEventsDBPath() string {
+	path := strings.TrimSpace(os.Getenv("FRACTURING_SPACE_GAME_EVENTS_DB_PATH"))
 	if path == "" {
-		path = filepath.Join("data", "game.db")
+		path = filepath.Join("data", "game-events.db")
+	}
+	return path
+}
+
+func defaultProjectionsDBPath() string {
+	path := strings.TrimSpace(os.Getenv("FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH"))
+	if path == "" {
+		path = filepath.Join("data", "game-projections.db")
 	}
 	return path
 }
@@ -480,11 +537,14 @@ func parseSnapshotNumber(value any, field string) (int, error) {
 	}
 }
 
-func checkSnapshotIntegrity(ctx context.Context, store storage.Store, campaignID string, untilSeq uint64) (integrityReport, []string, error) {
+func checkSnapshotIntegrity(ctx context.Context, eventStore storage.EventStore, projStore storage.ProjectionStore, campaignID string, untilSeq uint64) (integrityReport, []string, error) {
 	report := integrityReport{}
 	warnings := []string{}
-	if store == nil {
-		return report, warnings, fmt.Errorf("store is not configured")
+	if eventStore == nil {
+		return report, warnings, fmt.Errorf("event store is not configured")
+	}
+	if projStore == nil {
+		return report, warnings, fmt.Errorf("projection store is not configured")
 	}
 	if campaignID == "" {
 		return report, warnings, fmt.Errorf("campaign id is required")
@@ -499,7 +559,7 @@ func checkSnapshotIntegrity(ctx context.Context, store storage.Store, campaignID
 	}
 	defer os.Remove(tmpFile.Name())
 
-	scratch, err := sqlite.Open(tmpFile.Name())
+	scratch, err := sqlite.OpenProjections(tmpFile.Name())
 	if err != nil {
 		return report, warnings, fmt.Errorf("open scratch store: %w", err)
 	}
@@ -509,7 +569,7 @@ func checkSnapshotIntegrity(ctx context.Context, store storage.Store, campaignID
 		}
 	}()
 
-	campaignRecord, err := store.Get(ctx, campaignID)
+	campaignRecord, err := projStore.Get(ctx, campaignID)
 	if err != nil {
 		return report, warnings, fmt.Errorf("load campaign: %w", err)
 	}
@@ -518,13 +578,13 @@ func checkSnapshotIntegrity(ctx context.Context, store storage.Store, campaignID
 	}
 
 	applier := projection.Applier{Campaign: scratch, Daggerheart: scratch}
-	lastSeq, err := projection.ReplaySnapshot(ctx, store, applier, campaignID, untilSeq)
+	lastSeq, err := projection.ReplaySnapshot(ctx, eventStore, applier, campaignID, untilSeq)
 	if err != nil {
 		return report, warnings, fmt.Errorf("replay snapshot: %w", err)
 	}
 	report.LastSeq = lastSeq
 
-	sourceSnapshot, err := store.GetDaggerheartSnapshot(ctx, campaignID)
+	sourceSnapshot, err := projStore.GetDaggerheartSnapshot(ctx, campaignID)
 	if err != nil {
 		return report, warnings, fmt.Errorf("get source snapshot: %w", err)
 	}
@@ -538,12 +598,12 @@ func checkSnapshotIntegrity(ctx context.Context, store storage.Store, campaignID
 
 	pageToken := ""
 	for {
-		page, err := store.ListCharacters(ctx, campaignID, adminReplayPageSize, pageToken)
+		page, err := projStore.ListCharacters(ctx, campaignID, adminReplayPageSize, pageToken)
 		if err != nil {
 			return report, warnings, fmt.Errorf("list characters: %w", err)
 		}
 		for _, ch := range page.Characters {
-			sourceState, err := store.GetDaggerheartCharacterState(ctx, campaignID, ch.ID)
+			sourceState, err := projStore.GetDaggerheartCharacterState(ctx, campaignID, ch.ID)
 			if err != nil {
 				if errors.Is(err, storage.ErrNotFound) {
 					report.MissingStates++

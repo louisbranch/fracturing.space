@@ -41,7 +41,7 @@ run:
 	    done; \
 	    wait || true; \
 	  }; \
-	  go run ./cmd/game 2>&1 & pids+=($$!); \
+	  FRACTURING_SPACE_GAME_EVENT_HMAC_KEY=dev-secret go run ./cmd/game 2>&1 & pids+=($$!); \
 	  go run ./cmd/auth 2>&1 & pids+=($$!); \
 	  go run ./cmd/mcp 2>&1 & pids+=($$!); \
 	  go run ./cmd/admin 2>&1 & pids+=($$!); \
@@ -72,7 +72,7 @@ seed: ## Seed the local database with demo data (static fixtures)
 	go run ./cmd/seed -v
 
 seed-fresh: ## Reset DB and seed with static fixtures
-	rm -f data/game.db && $(MAKE) seed
+	rm -f data/game-events.db data/game-projections.db && $(MAKE) seed
 
 seed-generate: ## Generate dynamic demo data
 	go run ./cmd/seed -generate -preset=demo -v
@@ -81,4 +81,4 @@ seed-variety: ## Generate variety of campaigns across all statuses
 	go run ./cmd/seed -generate -preset=variety -v
 
 seed-generate-fresh: ## Reset DB and generate demo data
-	rm -f data/game.db && $(MAKE) seed-generate
+	rm -f data/game-events.db data/game-projections.db && $(MAKE) seed-generate

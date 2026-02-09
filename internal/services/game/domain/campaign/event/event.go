@@ -97,6 +97,18 @@ type Event struct {
 	// Hash is the content-addressed identity (SHA-256 truncated to 128-bit).
 	// Assigned by storage on append.
 	Hash string
+	// PrevHash is the previous event's chain hash (empty for the first event).
+	// Assigned by storage on append.
+	PrevHash string
+	// ChainHash links this event to the previous event hash (SHA-256).
+	// Assigned by storage on append.
+	ChainHash string
+	// SignatureKeyID identifies the HMAC key used to sign the chain hash.
+	// Assigned by storage on append.
+	SignatureKeyID string
+	// Signature is the HMAC signature of the chain hash.
+	// Assigned by storage on append.
+	Signature string
 	// Timestamp is when the event occurred.
 	Timestamp time.Time
 	// Type identifies the kind of event.

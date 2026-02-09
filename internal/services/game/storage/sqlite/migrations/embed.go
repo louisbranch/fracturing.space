@@ -3,5 +3,8 @@ package migrations
 
 import "embed"
 
-//go:embed *.sql
-var FS embed.FS
+//go:embed events/*.sql
+var EventsFS embed.FS
+
+//go:embed projections/*.sql
+var ProjectionsFS embed.FS

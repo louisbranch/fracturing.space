@@ -12,6 +12,53 @@ together, and how to replay events to rebuild derived state.
 
 Snapshots never replace the event journal; they only accelerate rebuilds.
 
+## Event integrity and tamper resistance
+
+Events are the authority. To detect tampering (including manual database edits),
+the event journal uses a hash chain plus HMAC signatures.
+
+### Hash chain
+
+- Each event stores `prev_event_hash` and `chain_hash`.
+- `chain_hash` is SHA-256 over a canonical serialization of the event metadata,
+  payload, and `prev_event_hash`.
+- Any modification, deletion, or reordering breaks the chain.
+
+### HMAC signature
+
+- Each event stores `event_signature` and `signature_key_id`.
+- `event_signature` is HMAC-SHA256 over the event `chain_hash`.
+- HMAC prevents an attacker with direct DB access from recomputing the chain
+  without the secret.
+
+### Key strategy
+
+- A single root secret is provided at runtime (never stored in the DB).
+- A per-campaign signing key is derived from the root secret using HKDF with
+  the campaign id as the context string (e.g., `campaign:<id>`).
+- `signature_key_id` allows rotation and multi-key validation.
+
+### Verification behavior
+
+- Startup and replay must verify the hash chain and HMAC signatures.
+- On failure, the default behavior is to fail startup to avoid serving
+  potentially corrupted data.
+- A read-only quarantine mode may be used for incident response, but must be
+  explicitly enabled and should display integrity warnings.
+
+### Rebuild implications
+
+- Projections can always be rebuilt from events.
+- Integrity failures cannot be repaired by replay; the events are untrusted.
+- The maintenance CLI should report signature failures distinctly from
+  projection mismatches.
+
+### Storage boundaries
+
+- Events live in a dedicated events database with append-only writes.
+- Projections live in a separate database and are rebuilt from the journal.
+- The projector is the only writer for projections; all other paths are read-only.
+
 ## Replay modes
 
 ### Full replay

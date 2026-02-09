@@ -272,9 +272,10 @@ func requireEventTypesAfterSeq(t *testing.T, ctx context.Context, client statev1
 // setTempDBPath configures a temporary database for integration tests.
 func setTempDBPath(t *testing.T) {
 	t.Helper()
-
-	path := filepath.Join(t.TempDir(), "game.db")
-	t.Setenv("FRACTURING_SPACE_GAME_DB_PATH", path)
+	base := t.TempDir()
+	t.Setenv("FRACTURING_SPACE_GAME_EVENTS_DB_PATH", filepath.Join(base, "game-events.db"))
+	t.Setenv("FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH", filepath.Join(base, "game-projections.db"))
+	t.Setenv("FRACTURING_SPACE_GAME_EVENT_HMAC_KEY", "test-key")
 }
 
 // repoRoot returns the repository root by walking up to go.mod.

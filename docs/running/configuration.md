@@ -2,7 +2,11 @@
 
 ## Environment variables
 
-- `FRACTURING_SPACE_GAME_DB_PATH`: file path for the game SQLite database. Default: `data/game.db`.
+- `FRACTURING_SPACE_GAME_EVENTS_DB_PATH`: file path for the event journal SQLite database. Default: `data/game-events.db`.
+- `FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH`: file path for the projections SQLite database. Default: `data/game-projections.db`.
+- `FRACTURING_SPACE_GAME_EVENT_HMAC_KEY`: root secret used to sign event chain hashes. Required.
+- `FRACTURING_SPACE_GAME_EVENT_HMAC_KEYS`: optional comma-separated key ring (`key_id=secret`).
+- `FRACTURING_SPACE_GAME_EVENT_HMAC_KEY_ID`: active key id for signing when using the key ring. Default: `v1`.
 - `FRACTURING_SPACE_GAME_ADDR`: default game server address used by the MCP server (when `-addr` is not set) and the admin dashboard (when `-grpc-addr` is not set). Defaults to `localhost:8080`.
 - `FRACTURING_SPACE_ADMIN_ADDR`: HTTP bind address for the admin dashboard when `-http-addr` is not set. Defaults to `:8082`.
 - `FRACTURING_SPACE_MCP_ALLOWED_HOSTS`: comma-separated list of allowed Host/Origin values for MCP HTTP transport. Defaults to loopback-only when unset.

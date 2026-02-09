@@ -17,7 +17,7 @@ import (
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	daggerheartservice "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/core/random"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage/integrity"
 	storagesqlite "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
@@ -29,7 +29,8 @@ type Server struct {
 	listener   net.Listener
 	grpcServer *grpc.Server
 	health     *health.Server
-	store      storage.Store
+	eventStore *storagesqlite.Store
+	projStore  *storagesqlite.Store
 }
 
 // New creates a configured game server listening on the provided port.
@@ -38,31 +39,31 @@ func New(port int) (*Server, error) {
 	if err != nil {
 		return nil, fmt.Errorf("listen on port %d: %w", port, err)
 	}
-	store, err := openCampaignStore()
+	eventStore, projStore, err := openStores()
 	if err != nil {
 		_ = listener.Close()
 		return nil, err
 	}
 	stores := gamegrpc.Stores{
-		Campaign:     store,
-		Participant:  store,
-		Invite:       store,
-		Character:    store,
-		Daggerheart:  store,
-		Session:      store,
-		Event:        store,
-		Telemetry:    store,
-		Statistics:   store,
-		Outcome:      store,
-		Snapshot:     store,
-		CampaignFork: store,
+		Campaign:     projStore,
+		Participant:  projStore,
+		Invite:       projStore,
+		Character:    projStore,
+		Daggerheart:  projStore,
+		Session:      projStore,
+		Event:        eventStore,
+		Telemetry:    eventStore,
+		Statistics:   projStore,
+		Outcome:      eventStore,
+		Snapshot:     projStore,
+		CampaignFork: projStore,
 	}
 
 	grpcServer := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
 			grpcmeta.UnaryServerInterceptor(nil),
-			interceptors.TelemetryInterceptor(store),
-			interceptors.SessionLockInterceptor(store),
+			interceptors.TelemetryInterceptor(eventStore),
+			interceptors.SessionLockInterceptor(projStore),
 		),
 		grpc.StreamInterceptor(grpcmeta.StreamServerInterceptor(nil)),
 	)
@@ -104,7 +105,8 @@ func New(port int) (*Server, error) {
 		listener:   listener,
 		grpcServer: grpcServer,
 		health:     healthServer,
-		store:      store,
+		eventStore: eventStore,
+		projStore:  projStore,
 	}, nil
 }
 
@@ -158,31 +160,78 @@ func (s *Server) Serve(ctx context.Context) error {
 	}
 }
 
-func openCampaignStore() (storage.Store, error) {
-	path := strings.TrimSpace(os.Getenv("FRACTURING_SPACE_GAME_DB_PATH"))
-	if path == "" {
-		path = filepath.Join("data", "game.db")
-	}
-	if dir := filepath.Dir(path); dir != "." {
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			return nil, fmt.Errorf("create storage dir: %w", err)
-		}
-	}
-
-	store, err := storagesqlite.Open(path)
+func openStores() (*storagesqlite.Store, *storagesqlite.Store, error) {
+	eventStore, err := openEventStore()
 	if err != nil {
-		return nil, fmt.Errorf("open sqlite store: %w", err)
+		return nil, nil, err
+	}
+	projStore, err := openProjectionStore()
+	if err != nil {
+		_ = eventStore.Close()
+		return nil, nil, err
+	}
+	return eventStore, projStore, nil
+}
+
+func openEventStore() (*storagesqlite.Store, error) {
+	path := strings.TrimSpace(os.Getenv("FRACTURING_SPACE_GAME_EVENTS_DB_PATH"))
+	if path == "" {
+		path = filepath.Join("data", "game-events.db")
+	}
+	if err := ensureDir(path); err != nil {
+		return nil, err
+	}
+	keyring, err := integrity.KeyringFromEnv()
+	if err != nil {
+		return nil, err
+	}
+	store, err := storagesqlite.OpenEvents(path, keyring)
+	if err != nil {
+		return nil, fmt.Errorf("open events store: %w", err)
+	}
+	if err := store.VerifyEventIntegrity(context.Background()); err != nil {
+		_ = store.Close()
+		return nil, fmt.Errorf("verify event integrity: %w", err)
 	}
 	return store, nil
+}
+
+func openProjectionStore() (*storagesqlite.Store, error) {
+	path := strings.TrimSpace(os.Getenv("FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH"))
+	if path == "" {
+		path = filepath.Join("data", "game-projections.db")
+	}
+	if err := ensureDir(path); err != nil {
+		return nil, err
+	}
+	store, err := storagesqlite.OpenProjections(path)
+	if err != nil {
+		return nil, fmt.Errorf("open projections store: %w", err)
+	}
+	return store, nil
+}
+
+func ensureDir(path string) error {
+	if dir := filepath.Dir(path); dir != "." {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return fmt.Errorf("create storage dir: %w", err)
+		}
+	}
+	return nil
 }
 
 func (s *Server) closeStores() {
 	if s == nil {
 		return
 	}
-	if s.store != nil {
-		if err := s.store.Close(); err != nil {
-			log.Printf("close campaign store: %v", err)
+	if s.eventStore != nil {
+		if err := s.eventStore.Close(); err != nil {
+			log.Printf("close event store: %v", err)
+		}
+	}
+	if s.projStore != nil {
+		if err := s.projStore.Close(); err != nil {
+			log.Printf("close projection store: %v", err)
 		}
 	}
 }

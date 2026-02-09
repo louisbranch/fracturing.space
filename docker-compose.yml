@@ -16,7 +16,9 @@ services:
       init-data:
         condition: service_completed_successfully
     environment:
-      - FRACTURING_SPACE_GAME_DB_PATH=/data/game.db
+      - FRACTURING_SPACE_GAME_EVENTS_DB_PATH=/data/game-events.db
+      - FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH=/data/game-projections.db
+      - FRACTURING_SPACE_GAME_EVENT_HMAC_KEY=dev-secret
     volumes:
       - fracturing-space-data:/data
     ports:

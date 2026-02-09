@@ -4,7 +4,7 @@
 
 - Go 1.25.6
 - protoc (required until binaries are published)
-- SQLite (embedded; the server creates `data/game.db` by default)
+- SQLite (embedded; the server creates `data/game-events.db` and `data/game-projections.db` by default)
 - Make (for `make run`)
 
 ## Run locally (fastest)
@@ -16,6 +16,7 @@ make run
 ```
 
 This runs the game server on `localhost:8080`, the auth server on `localhost:8083`, the MCP server on stdio, and the admin dashboard on `http://localhost:8082`.
+`make run` sets a local-only HMAC key (`dev-secret`) for the game server. Override it by exporting `FRACTURING_SPACE_GAME_EVENT_HMAC_KEY`.
 The MCP server will wait for the game server to be healthy before accepting requests.
 
 ## Run services individually
@@ -23,7 +24,14 @@ The MCP server will wait for the game server to be healthy before accepting requ
 Start the game server:
 
 ```sh
+FRACTURING_SPACE_GAME_EVENT_HMAC_KEY=dev-secret \
 go run ./cmd/game
+```
+
+Generate a secure HMAC key:
+
+```sh
+go run ./cmd/hmac-key
 ```
 
 Start the auth server:
@@ -98,12 +106,14 @@ Example (replace `your-domain.example`):
 ```sh
 docker network create fracturing-space
 
-docker run -d --name fracturing-space-game \
-  --network fracturing-space \
-  -p 127.0.0.1:8080:8080 \
-  -v /srv/fracturing-space/data:/data \
-  -e FRACTURING_SPACE_GAME_DB_PATH=/data/game.db \
-  docker.io/louisbranch/fracturing.space-game:latest
+	docker run -d --name fracturing-space-game \
+	  --network fracturing-space \
+	  -p 127.0.0.1:8080:8080 \
+	  -v /srv/fracturing-space/data:/data \
+	  -e FRACTURING_SPACE_GAME_EVENTS_DB_PATH=/data/game-events.db \
+	  -e FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH=/data/game-projections.db \
+	  -e FRACTURING_SPACE_GAME_EVENT_HMAC_KEY=change-me \
+	  docker.io/louisbranch/fracturing.space-game:latest
 
 docker run -d --name fracturing-space-auth \
   --network fracturing-space \

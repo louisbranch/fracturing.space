@@ -13,26 +13,30 @@ import (
 const appendEvent = `-- name: AppendEvent :exec
 
 INSERT INTO events (
-    campaign_id, seq, event_hash, timestamp, event_type,
+    campaign_id, seq, event_hash, prev_event_hash, chain_hash, signature_key_id, event_signature, timestamp, event_type,
     session_id, request_id, invocation_id,
     actor_type, actor_id, entity_type, entity_id, payload_json
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `
 
 type AppendEventParams struct {
-	CampaignID   string `json:"campaign_id"`
-	Seq          int64  `json:"seq"`
-	EventHash    string `json:"event_hash"`
-	Timestamp    int64  `json:"timestamp"`
-	EventType    string `json:"event_type"`
-	SessionID    string `json:"session_id"`
-	RequestID    string `json:"request_id"`
-	InvocationID string `json:"invocation_id"`
-	ActorType    string `json:"actor_type"`
-	ActorID      string `json:"actor_id"`
-	EntityType   string `json:"entity_type"`
-	EntityID     string `json:"entity_id"`
-	PayloadJson  []byte `json:"payload_json"`
+	CampaignID     string `json:"campaign_id"`
+	Seq            int64  `json:"seq"`
+	EventHash      string `json:"event_hash"`
+	PrevEventHash  string `json:"prev_event_hash"`
+	ChainHash      string `json:"chain_hash"`
+	SignatureKeyID string `json:"signature_key_id"`
+	EventSignature string `json:"event_signature"`
+	Timestamp      int64  `json:"timestamp"`
+	EventType      string `json:"event_type"`
+	SessionID      string `json:"session_id"`
+	RequestID      string `json:"request_id"`
+	InvocationID   string `json:"invocation_id"`
+	ActorType      string `json:"actor_type"`
+	ActorID        string `json:"actor_id"`
+	EntityType     string `json:"entity_type"`
+	EntityID       string `json:"entity_id"`
+	PayloadJson    []byte `json:"payload_json"`
 }
 
 // Unified Events Table Queries
@@ -41,6 +45,10 @@ func (q *Queries) AppendEvent(ctx context.Context, arg AppendEventParams) error 
 		arg.CampaignID,
 		arg.Seq,
 		arg.EventHash,
+		arg.PrevEventHash,
+		arg.ChainHash,
+		arg.SignatureKeyID,
+		arg.EventSignature,
 		arg.Timestamp,
 		arg.EventType,
 		arg.SessionID,
@@ -96,7 +104,10 @@ func (q *Queries) GetCampaignForkMetadata(ctx context.Context, id string) (GetCa
 }
 
 const getEventByHash = `-- name: GetEventByHash :one
-SELECT campaign_id, seq, event_hash, timestamp, event_type, session_id, request_id, invocation_id, actor_type, actor_id, entity_type, entity_id, payload_json FROM events WHERE event_hash = ?
+SELECT campaign_id, seq, event_hash, prev_event_hash, chain_hash, signature_key_id, event_signature,
+    timestamp, event_type, session_id, request_id, invocation_id, actor_type, actor_id,
+    entity_type, entity_id, payload_json
+FROM events WHERE event_hash = ?
 `
 
 func (q *Queries) GetEventByHash(ctx context.Context, eventHash string) (Event, error) {
@@ -106,6 +117,10 @@ func (q *Queries) GetEventByHash(ctx context.Context, eventHash string) (Event, 
 		&i.CampaignID,
 		&i.Seq,
 		&i.EventHash,
+		&i.PrevEventHash,
+		&i.ChainHash,
+		&i.SignatureKeyID,
+		&i.EventSignature,
 		&i.Timestamp,
 		&i.EventType,
 		&i.SessionID,
@@ -121,7 +136,10 @@ func (q *Queries) GetEventByHash(ctx context.Context, eventHash string) (Event, 
 }
 
 const getEventBySeq = `-- name: GetEventBySeq :one
-SELECT campaign_id, seq, event_hash, timestamp, event_type, session_id, request_id, invocation_id, actor_type, actor_id, entity_type, entity_id, payload_json FROM events WHERE campaign_id = ? AND seq = ?
+SELECT campaign_id, seq, event_hash, prev_event_hash, chain_hash, signature_key_id, event_signature,
+    timestamp, event_type, session_id, request_id, invocation_id, actor_type, actor_id,
+    entity_type, entity_id, payload_json
+FROM events WHERE campaign_id = ? AND seq = ?
 `
 
 type GetEventBySeqParams struct {
@@ -136,6 +154,10 @@ func (q *Queries) GetEventBySeq(ctx context.Context, arg GetEventBySeqParams) (E
 		&i.CampaignID,
 		&i.Seq,
 		&i.EventHash,
+		&i.PrevEventHash,
+		&i.ChainHash,
+		&i.SignatureKeyID,
+		&i.EventSignature,
 		&i.Timestamp,
 		&i.EventType,
 		&i.SessionID,
@@ -241,7 +263,9 @@ func (q *Queries) InitEventSeq(ctx context.Context, campaignID string) error {
 }
 
 const listEvents = `-- name: ListEvents :many
-SELECT campaign_id, seq, event_hash, timestamp, event_type, session_id, request_id, invocation_id, actor_type, actor_id, entity_type, entity_id, payload_json FROM events
+SELECT campaign_id, seq, event_hash, prev_event_hash, chain_hash, signature_key_id, event_signature,
+    timestamp, event_type, session_id, request_id, invocation_id, actor_type, actor_id,
+    entity_type, entity_id, payload_json FROM events
 WHERE campaign_id = ? AND seq > ?
 ORDER BY seq
 LIMIT ?
@@ -266,6 +290,10 @@ func (q *Queries) ListEvents(ctx context.Context, arg ListEventsParams) ([]Event
 			&i.CampaignID,
 			&i.Seq,
 			&i.EventHash,
+			&i.PrevEventHash,
+			&i.ChainHash,
+			&i.SignatureKeyID,
+			&i.EventSignature,
 			&i.Timestamp,
 			&i.EventType,
 			&i.SessionID,
@@ -291,7 +319,9 @@ func (q *Queries) ListEvents(ctx context.Context, arg ListEventsParams) ([]Event
 }
 
 const listEventsBySession = `-- name: ListEventsBySession :many
-SELECT campaign_id, seq, event_hash, timestamp, event_type, session_id, request_id, invocation_id, actor_type, actor_id, entity_type, entity_id, payload_json FROM events
+SELECT campaign_id, seq, event_hash, prev_event_hash, chain_hash, signature_key_id, event_signature,
+    timestamp, event_type, session_id, request_id, invocation_id, actor_type, actor_id,
+    entity_type, entity_id, payload_json FROM events
 WHERE campaign_id = ? AND session_id = ? AND seq > ?
 ORDER BY seq
 LIMIT ?
@@ -322,6 +352,10 @@ func (q *Queries) ListEventsBySession(ctx context.Context, arg ListEventsBySessi
 			&i.CampaignID,
 			&i.Seq,
 			&i.EventHash,
+			&i.PrevEventHash,
+			&i.ChainHash,
+			&i.SignatureKeyID,
+			&i.EventSignature,
 			&i.Timestamp,
 			&i.EventType,
 			&i.SessionID,

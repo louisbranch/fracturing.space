@@ -267,6 +267,19 @@ type CampaignForkStore interface {
 	SetCampaignForkMetadata(ctx context.Context, campaignID string, metadata ForkMetadata) error
 }
 
+// ProjectionStore groups projection-related storage interfaces.
+type ProjectionStore interface {
+	CampaignStore
+	ParticipantStore
+	InviteStore
+	CharacterStore
+	DaggerheartStore
+	SessionStore
+	SnapshotStore
+	CampaignForkStore
+	StatisticsStore
+}
+
 // Store is a composite interface for all storage concerns.
 // Storage backends (BoltDB, SQLite) implement this interface.
 type Store interface {

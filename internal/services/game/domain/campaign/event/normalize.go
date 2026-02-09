@@ -18,6 +18,12 @@ func NormalizeForAppend(evt Event) (Event, error) {
 	if strings.TrimSpace(evt.Hash) != "" {
 		return Event{}, fmt.Errorf("event hash must be assigned by storage")
 	}
+	if strings.TrimSpace(evt.PrevHash) != "" || strings.TrimSpace(evt.ChainHash) != "" {
+		return Event{}, fmt.Errorf("event chain hashes must be assigned by storage")
+	}
+	if strings.TrimSpace(evt.SignatureKeyID) != "" || strings.TrimSpace(evt.Signature) != "" {
+		return Event{}, fmt.Errorf("event signatures must be assigned by storage")
+	}
 
 	evt.Type = Type(strings.TrimSpace(string(evt.Type)))
 	if !evt.Type.IsValid() {

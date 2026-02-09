@@ -73,19 +73,23 @@ type DaggerheartSnapshot struct {
 }
 
 type Event struct {
-	CampaignID   string `json:"campaign_id"`
-	Seq          int64  `json:"seq"`
-	EventHash    string `json:"event_hash"`
-	Timestamp    int64  `json:"timestamp"`
-	EventType    string `json:"event_type"`
-	SessionID    string `json:"session_id"`
-	RequestID    string `json:"request_id"`
-	InvocationID string `json:"invocation_id"`
-	ActorType    string `json:"actor_type"`
-	ActorID      string `json:"actor_id"`
-	EntityType   string `json:"entity_type"`
-	EntityID     string `json:"entity_id"`
-	PayloadJson  []byte `json:"payload_json"`
+	CampaignID     string `json:"campaign_id"`
+	Seq            int64  `json:"seq"`
+	EventHash      string `json:"event_hash"`
+	PrevEventHash  string `json:"prev_event_hash"`
+	ChainHash      string `json:"chain_hash"`
+	SignatureKeyID string `json:"signature_key_id"`
+	EventSignature string `json:"event_signature"`
+	Timestamp      int64  `json:"timestamp"`
+	EventType      string `json:"event_type"`
+	SessionID      string `json:"session_id"`
+	RequestID      string `json:"request_id"`
+	InvocationID   string `json:"invocation_id"`
+	ActorType      string `json:"actor_type"`
+	ActorID        string `json:"actor_id"`
+	EntityType     string `json:"entity_type"`
+	EntityID       string `json:"entity_id"`
+	PayloadJson    []byte `json:"payload_json"`
 }
 
 type EventSeq struct {
