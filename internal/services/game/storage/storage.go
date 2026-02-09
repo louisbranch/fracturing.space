@@ -146,6 +146,21 @@ type TelemetryStore interface {
 	AppendTelemetryEvent(ctx context.Context, evt TelemetryEvent) error
 }
 
+// GameStatistics contains aggregate counts across the game data set.
+type GameStatistics struct {
+	CampaignCount    int64
+	SessionCount     int64
+	CharacterCount   int64
+	ParticipantCount int64
+}
+
+// StatisticsStore provides aggregate statistics.
+type StatisticsStore interface {
+	// GetGameStatistics returns aggregate counts.
+	// When since is nil, counts are for all time.
+	GetGameStatistics(ctx context.Context, since *time.Time) (GameStatistics, error)
+}
+
 // ListEventsPageRequest describes the parameters for paginated event listing.
 type ListEventsPageRequest struct {
 	// CampaignID scopes the query to a specific campaign (required).
@@ -273,6 +288,7 @@ type Store interface {
 	SessionStore
 	EventStore
 	TelemetryStore
+	StatisticsStore
 	RollOutcomeStore
 	SnapshotStore
 	CampaignForkStore

@@ -211,13 +211,13 @@ ON CONFLICT(campaign_id, id) DO UPDATE SET
 `
 
 type PutSessionParams struct {
-	CampaignID string         `json:"campaign_id"`
-	ID         string         `json:"id"`
-	Name       string         `json:"name"`
-	Status     string         `json:"status"`
-	StartedAt  string         `json:"started_at"`
-	UpdatedAt  string         `json:"updated_at"`
-	EndedAt    sql.NullString `json:"ended_at"`
+	CampaignID string        `json:"campaign_id"`
+	ID         string        `json:"id"`
+	Name       string        `json:"name"`
+	Status     string        `json:"status"`
+	StartedAt  int64         `json:"started_at"`
+	UpdatedAt  int64         `json:"updated_at"`
+	EndedAt    sql.NullInt64 `json:"ended_at"`
 }
 
 func (q *Queries) PutSession(ctx context.Context, arg PutSessionParams) error {
@@ -257,11 +257,11 @@ WHERE campaign_id = ? AND id = ?
 `
 
 type UpdateSessionStatusParams struct {
-	Status     string         `json:"status"`
-	UpdatedAt  string         `json:"updated_at"`
-	EndedAt    sql.NullString `json:"ended_at"`
-	CampaignID string         `json:"campaign_id"`
-	ID         string         `json:"id"`
+	Status     string        `json:"status"`
+	UpdatedAt  int64         `json:"updated_at"`
+	EndedAt    sql.NullInt64 `json:"ended_at"`
+	CampaignID string        `json:"campaign_id"`
+	ID         string        `json:"id"`
 }
 
 func (q *Queries) UpdateSessionStatus(ctx context.Context, arg UpdateSessionStatusParams) error {

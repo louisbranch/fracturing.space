@@ -15,6 +15,7 @@ type Stores struct {
 	Session        storage.SessionStore
 	Event          storage.EventStore
 	Telemetry      storage.TelemetryStore
+	Statistics     storage.StatisticsStore
 	Outcome        storage.RollOutcomeStore
 	Snapshot       storage.SnapshotStore
 	CampaignFork   storage.CampaignForkStore

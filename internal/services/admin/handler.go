@@ -49,6 +49,7 @@ type GRPCClientProvider interface {
 	ParticipantClient() statev1.ParticipantServiceClient
 	SnapshotClient() statev1.SnapshotServiceClient
 	EventClient() statev1.EventServiceClient
+	StatisticsClient() statev1.StatisticsServiceClient
 }
 
 // Handler routes admin dashboard requests.
@@ -924,6 +925,14 @@ func (h *Handler) eventClient() statev1.EventServiceClient {
 	return h.clientProvider.EventClient()
 }
 
+// statisticsClient returns the currently configured statistics client.
+func (h *Handler) statisticsClient() statev1.StatisticsServiceClient {
+	if h == nil || h.clientProvider == nil {
+		return nil
+	}
+	return h.clientProvider.StatisticsClient()
+}
+
 // isHTMXRequest reports whether the request originated from HTMX.
 func isHTMXRequest(r *http.Request) bool {
 	if r == nil {
@@ -1150,55 +1159,20 @@ func (h *Handler) handleDashboardContent(w http.ResponseWriter, r *http.Request)
 
 	stats := templates.DashboardStats{
 		TotalCampaigns:    "0",
-		ActiveSessions:    "0",
+		TotalSessions:     "0",
 		TotalCharacters:   "0",
 		TotalParticipants: "0",
 	}
 
 	var activities []templates.ActivityEvent
 
-	// Aggregate campaign count
-	if campaignClient := h.campaignClient(); campaignClient != nil {
-		resp, err := campaignClient.ListCampaigns(ctx, &statev1.ListCampaignsRequest{})
-		if err == nil && resp != nil {
-			stats.TotalCampaigns = strconv.FormatInt(int64(len(resp.GetCampaigns())), 10)
-
-			// Count active sessions and aggregate participants/characters
-			var totalChars, totalParts int32
-			for _, campaign := range resp.GetCampaigns() {
-				if campaign != nil {
-					totalChars += campaign.GetCharacterCount()
-					totalParts += campaign.GetParticipantCount()
-				}
-			}
-			stats.TotalCharacters = strconv.FormatInt(int64(totalChars), 10)
-			stats.TotalParticipants = strconv.FormatInt(int64(totalParts), 10)
-		}
-	}
-
-	// Count active sessions across all campaigns
-	if sessionClient := h.sessionClient(); sessionClient != nil {
-		if campaignClient := h.campaignClient(); campaignClient != nil {
-			campaignsResp, err := campaignClient.ListCampaigns(ctx, &statev1.ListCampaignsRequest{})
-			if err == nil && campaignsResp != nil {
-				var activeSessions int32
-				for _, campaign := range campaignsResp.GetCampaigns() {
-					if campaign == nil {
-						continue
-					}
-					sessionsResp, err := sessionClient.ListSessions(ctx, &statev1.ListSessionsRequest{
-						CampaignId: campaign.GetId(),
-					})
-					if err == nil && sessionsResp != nil {
-						for _, session := range sessionsResp.GetSessions() {
-							if session != nil && session.GetStatus() == statev1.SessionStatus_SESSION_ACTIVE {
-								activeSessions++
-							}
-						}
-					}
-				}
-				stats.ActiveSessions = strconv.FormatInt(int64(activeSessions), 10)
-			}
+	if statisticsClient := h.statisticsClient(); statisticsClient != nil {
+		resp, err := statisticsClient.GetGameStatistics(ctx, &statev1.GetGameStatisticsRequest{})
+		if err == nil && resp != nil && resp.GetStats() != nil {
+			stats.TotalCampaigns = strconv.FormatInt(resp.GetStats().GetCampaignCount(), 10)
+			stats.TotalSessions = strconv.FormatInt(resp.GetStats().GetSessionCount(), 10)
+			stats.TotalCharacters = strconv.FormatInt(resp.GetStats().GetCharacterCount(), 10)
+			stats.TotalParticipants = strconv.FormatInt(resp.GetStats().GetParticipantCount(), 10)
 		}
 	}
 

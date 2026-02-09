@@ -125,8 +125,8 @@ type GetDaggerheartCharacterSheetRow struct {
 	Name            string        `json:"name"`
 	Kind            string        `json:"kind"`
 	Notes           string        `json:"notes"`
-	CreatedAt       string        `json:"created_at"`
-	UpdatedAt       string        `json:"updated_at"`
+	CreatedAt       int64         `json:"created_at"`
+	UpdatedAt       int64         `json:"updated_at"`
 	HpMax           sql.NullInt64 `json:"hp_max"`
 	StressMax       sql.NullInt64 `json:"stress_max"`
 	Evasion         sql.NullInt64 `json:"evasion"`

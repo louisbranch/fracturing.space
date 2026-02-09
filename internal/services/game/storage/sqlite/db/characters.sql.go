@@ -210,8 +210,8 @@ type PutCharacterParams struct {
 	Name       string `json:"name"`
 	Kind       string `json:"kind"`
 	Notes      string `json:"notes"`
-	CreatedAt  string `json:"created_at"`
-	UpdatedAt  string `json:"updated_at"`
+	CreatedAt  int64  `json:"created_at"`
+	UpdatedAt  int64  `json:"updated_at"`
 }
 
 func (q *Queries) PutCharacter(ctx context.Context, arg PutCharacterParams) error {

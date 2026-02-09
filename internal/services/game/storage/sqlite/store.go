@@ -30,7 +30,28 @@ import (
 	sqlite3 "modernc.org/sqlite/lib"
 )
 
-const timeFormat = time.RFC3339Nano
+func toMillis(value time.Time) int64 {
+	return value.UTC().UnixMilli()
+}
+
+func fromMillis(value int64) time.Time {
+	return time.UnixMilli(value).UTC()
+}
+
+func toNullMillis(value *time.Time) sql.NullInt64 {
+	if value == nil {
+		return sql.NullInt64{}
+	}
+	return sql.NullInt64{Int64: toMillis(*value), Valid: true}
+}
+
+func fromNullMillis(value sql.NullInt64) *time.Time {
+	if !value.Valid {
+		return nil
+	}
+	t := fromMillis(value.Int64)
+	return &t
+}
 
 // Store provides a SQLite-backed store implementing all storage interfaces.
 type Store struct {
@@ -145,13 +166,8 @@ func (s *Store) Put(ctx context.Context, c campaign.Campaign) error {
 		return fmt.Errorf("campaign id is required")
 	}
 
-	var completedAt, archivedAt sql.NullString
-	if c.CompletedAt != nil {
-		completedAt = sql.NullString{String: c.CompletedAt.Format(timeFormat), Valid: true}
-	}
-	if c.ArchivedAt != nil {
-		archivedAt = sql.NullString{String: c.ArchivedAt.Format(timeFormat), Valid: true}
-	}
+	completedAt := toNullMillis(c.CompletedAt)
+	archivedAt := toNullMillis(c.ArchivedAt)
 
 	return s.q.PutCampaign(ctx, db.PutCampaignParams{
 		ID:               c.ID,
@@ -162,9 +178,9 @@ func (s *Store) Put(ctx context.Context, c campaign.Campaign) error {
 		ParticipantCount: int64(c.ParticipantCount),
 		CharacterCount:   int64(c.CharacterCount),
 		ThemePrompt:      c.ThemePrompt,
-		CreatedAt:        c.CreatedAt.Format(timeFormat),
-		LastActivityAt:   c.LastActivityAt.Format(timeFormat),
-		UpdatedAt:        c.UpdatedAt.Format(timeFormat),
+		CreatedAt:        toMillis(c.CreatedAt),
+		LastActivityAt:   toMillis(c.LastActivityAt),
+		UpdatedAt:        toMillis(c.UpdatedAt),
 		CompletedAt:      completedAt,
 		ArchivedAt:       archivedAt,
 	})
@@ -274,8 +290,8 @@ func (s *Store) PutParticipant(ctx context.Context, p participant.Participant) e
 		Role:        participantRoleToString(p.Role),
 		Controller:  participantControllerToString(p.Controller),
 		IsOwner:     boolToInt(p.IsOwner),
-		CreatedAt:   p.CreatedAt.Format(timeFormat),
-		UpdatedAt:   p.UpdatedAt.Format(timeFormat),
+		CreatedAt:   toMillis(p.CreatedAt),
+		UpdatedAt:   toMillis(p.UpdatedAt),
 	}); err != nil {
 		if isParticipantUserConflict(err) {
 			return apperrors.WithMetadata(
@@ -450,8 +466,8 @@ func (s *Store) PutInvite(ctx context.Context, inv invite.Invite) error {
 		ParticipantID:          inv.ParticipantID,
 		Status:                 invite.StatusLabel(inv.Status),
 		CreatedByParticipantID: inv.CreatedByParticipantID,
-		CreatedAt:              inv.CreatedAt.Format(timeFormat),
-		UpdatedAt:              inv.UpdatedAt.Format(timeFormat),
+		CreatedAt:              toMillis(inv.CreatedAt),
+		UpdatedAt:              toMillis(inv.UpdatedAt),
 	})
 }
 
@@ -544,7 +560,7 @@ func (s *Store) UpdateInviteStatus(ctx context.Context, inviteID string, status 
 
 	return s.q.UpdateInviteStatus(ctx, db.UpdateInviteStatusParams{
 		Status:    invite.StatusLabel(status),
-		UpdatedAt: updatedAt.Format(timeFormat),
+		UpdatedAt: toMillis(updatedAt),
 		ID:        inviteID,
 	})
 }
@@ -572,8 +588,8 @@ func (s *Store) PutCharacter(ctx context.Context, c character.Character) error {
 		Name:       c.Name,
 		Kind:       characterKindToString(c.Kind),
 		Notes:      c.Notes,
-		CreatedAt:  c.CreatedAt.Format(timeFormat),
-		UpdatedAt:  c.UpdatedAt.Format(timeFormat),
+		CreatedAt:  toMillis(c.CreatedAt),
+		UpdatedAt:  toMillis(c.UpdatedAt),
 	})
 }
 
@@ -777,18 +793,15 @@ func (s *Store) PutSession(ctx context.Context, sess session.Session) error {
 		}
 	}
 
-	var endedAt sql.NullString
-	if sess.EndedAt != nil {
-		endedAt = sql.NullString{String: sess.EndedAt.Format(timeFormat), Valid: true}
-	}
+	endedAt := toNullMillis(sess.EndedAt)
 
 	if err := qtx.PutSession(ctx, db.PutSessionParams{
 		CampaignID: sess.CampaignID,
 		ID:         sess.ID,
 		Name:       sess.Name,
 		Status:     sessionStatusToString(sess.Status),
-		StartedAt:  sess.StartedAt.Format(timeFormat),
-		UpdatedAt:  sess.UpdatedAt.Format(timeFormat),
+		StartedAt:  toMillis(sess.StartedAt),
+		UpdatedAt:  toMillis(sess.UpdatedAt),
 		EndedAt:    endedAt,
 	}); err != nil {
 		return fmt.Errorf("put session: %w", err)
@@ -854,8 +867,8 @@ func (s *Store) EndSession(ctx context.Context, campaignID, sessionID string, en
 
 		if err := qtx.UpdateSessionStatus(ctx, db.UpdateSessionStatusParams{
 			Status:     sessionStatusToString(sess.Status),
-			UpdatedAt:  sess.UpdatedAt.Format(timeFormat),
-			EndedAt:    sql.NullString{String: sess.EndedAt.Format(timeFormat), Valid: true},
+			UpdatedAt:  toMillis(sess.UpdatedAt),
+			EndedAt:    toNullMillis(sess.EndedAt),
 			CampaignID: campaignID,
 			ID:         sessionID,
 		}); err != nil {
@@ -1338,7 +1351,7 @@ func appendEventTx(ctx context.Context, qtx *db.Queries, evt event.Event) (event
 		CampaignID:   evt.CampaignID,
 		Seq:          seq,
 		EventHash:    hash,
-		Timestamp:    evt.Timestamp.Format(timeFormat),
+		Timestamp:    toMillis(evt.Timestamp),
 		EventType:    string(evt.Type),
 		SessionID:    evt.SessionID,
 		RequestID:    evt.RequestID,
@@ -1543,27 +1556,14 @@ type campaignRowData struct {
 	ParticipantCount int64
 	CharacterCount   int64
 	ThemePrompt      string
-	CreatedAt        string
-	LastActivityAt   string
-	UpdatedAt        string
-	CompletedAt      sql.NullString
-	ArchivedAt       sql.NullString
+	CreatedAt        int64
+	LastActivityAt   int64
+	UpdatedAt        int64
+	CompletedAt      sql.NullInt64
+	ArchivedAt       sql.NullInt64
 }
 
 func campaignRowDataToDomain(row campaignRowData) (campaign.Campaign, error) {
-	createdAt, err := time.Parse(timeFormat, row.CreatedAt)
-	if err != nil {
-		return campaign.Campaign{}, fmt.Errorf("parse created_at: %w", err)
-	}
-	lastActivityAt, err := time.Parse(timeFormat, row.LastActivityAt)
-	if err != nil {
-		return campaign.Campaign{}, fmt.Errorf("parse last_activity_at: %w", err)
-	}
-	updatedAt, err := time.Parse(timeFormat, row.UpdatedAt)
-	if err != nil {
-		return campaign.Campaign{}, fmt.Errorf("parse updated_at: %w", err)
-	}
-
 	c := campaign.Campaign{
 		ID:               row.ID,
 		Name:             row.Name,
@@ -1573,25 +1573,12 @@ func campaignRowDataToDomain(row campaignRowData) (campaign.Campaign, error) {
 		ParticipantCount: int(row.ParticipantCount),
 		CharacterCount:   int(row.CharacterCount),
 		ThemePrompt:      row.ThemePrompt,
-		CreatedAt:        createdAt,
-		LastActivityAt:   lastActivityAt,
-		UpdatedAt:        updatedAt,
+		CreatedAt:        fromMillis(row.CreatedAt),
+		LastActivityAt:   fromMillis(row.LastActivityAt),
+		UpdatedAt:        fromMillis(row.UpdatedAt),
 	}
-
-	if row.CompletedAt.Valid {
-		t, err := time.Parse(timeFormat, row.CompletedAt.String)
-		if err != nil {
-			return campaign.Campaign{}, fmt.Errorf("parse completed_at: %w", err)
-		}
-		c.CompletedAt = &t
-	}
-	if row.ArchivedAt.Valid {
-		t, err := time.Parse(timeFormat, row.ArchivedAt.String)
-		if err != nil {
-			return campaign.Campaign{}, fmt.Errorf("parse archived_at: %w", err)
-		}
-		c.ArchivedAt = &t
-	}
+	c.CompletedAt = fromNullMillis(row.CompletedAt)
+	c.ArchivedAt = fromNullMillis(row.ArchivedAt)
 
 	return c, nil
 }
@@ -1669,15 +1656,6 @@ func dbListAllCampaignsRowToDomain(row db.ListAllCampaignsRow) (campaign.Campaig
 }
 
 func dbParticipantToDomain(row db.Participant) (participant.Participant, error) {
-	createdAt, err := time.Parse(timeFormat, row.CreatedAt)
-	if err != nil {
-		return participant.Participant{}, fmt.Errorf("parse created_at: %w", err)
-	}
-	updatedAt, err := time.Parse(timeFormat, row.UpdatedAt)
-	if err != nil {
-		return participant.Participant{}, fmt.Errorf("parse updated_at: %w", err)
-	}
-
 	return participant.Participant{
 		ID:          row.ID,
 		CampaignID:  row.CampaignID,
@@ -1686,79 +1664,45 @@ func dbParticipantToDomain(row db.Participant) (participant.Participant, error) 
 		Role:        stringToParticipantRole(row.Role),
 		Controller:  stringToParticipantController(row.Controller),
 		IsOwner:     intToBool(row.IsOwner),
-		CreatedAt:   createdAt,
-		UpdatedAt:   updatedAt,
+		CreatedAt:   fromMillis(row.CreatedAt),
+		UpdatedAt:   fromMillis(row.UpdatedAt),
 	}, nil
 }
 
 func dbInviteToDomain(row db.Invite) (invite.Invite, error) {
-	createdAt, err := time.Parse(timeFormat, row.CreatedAt)
-	if err != nil {
-		return invite.Invite{}, fmt.Errorf("parse created_at: %w", err)
-	}
-	updatedAt, err := time.Parse(timeFormat, row.UpdatedAt)
-	if err != nil {
-		return invite.Invite{}, fmt.Errorf("parse updated_at: %w", err)
-	}
-
 	return invite.Invite{
 		ID:                     row.ID,
 		CampaignID:             row.CampaignID,
 		ParticipantID:          row.ParticipantID,
 		Status:                 invite.StatusFromLabel(row.Status),
 		CreatedByParticipantID: row.CreatedByParticipantID,
-		CreatedAt:              createdAt,
-		UpdatedAt:              updatedAt,
+		CreatedAt:              fromMillis(row.CreatedAt),
+		UpdatedAt:              fromMillis(row.UpdatedAt),
 	}, nil
 }
 
 func dbCharacterToDomain(row db.Character) (character.Character, error) {
-	createdAt, err := time.Parse(timeFormat, row.CreatedAt)
-	if err != nil {
-		return character.Character{}, fmt.Errorf("parse created_at: %w", err)
-	}
-	updatedAt, err := time.Parse(timeFormat, row.UpdatedAt)
-	if err != nil {
-		return character.Character{}, fmt.Errorf("parse updated_at: %w", err)
-	}
-
 	return character.Character{
 		ID:         row.ID,
 		CampaignID: row.CampaignID,
 		Name:       row.Name,
 		Kind:       stringToCharacterKind(row.Kind),
 		Notes:      row.Notes,
-		CreatedAt:  createdAt,
-		UpdatedAt:  updatedAt,
+		CreatedAt:  fromMillis(row.CreatedAt),
+		UpdatedAt:  fromMillis(row.UpdatedAt),
 	}, nil
 }
 
 func dbSessionToDomain(row db.Session) (session.Session, error) {
-	startedAt, err := time.Parse(timeFormat, row.StartedAt)
-	if err != nil {
-		return session.Session{}, fmt.Errorf("parse started_at: %w", err)
-	}
-	updatedAt, err := time.Parse(timeFormat, row.UpdatedAt)
-	if err != nil {
-		return session.Session{}, fmt.Errorf("parse updated_at: %w", err)
-	}
-
 	sess := session.Session{
 		ID:         row.ID,
 		CampaignID: row.CampaignID,
 		Name:       row.Name,
 		Status:     stringToSessionStatus(row.Status),
-		StartedAt:  startedAt,
-		UpdatedAt:  updatedAt,
+		StartedAt:  fromMillis(row.StartedAt),
+		UpdatedAt:  fromMillis(row.UpdatedAt),
 	}
-
-	if row.EndedAt.Valid {
-		t, err := time.Parse(timeFormat, row.EndedAt.String)
-		if err != nil {
-			return session.Session{}, fmt.Errorf("parse ended_at: %w", err)
-		}
-		sess.EndedAt = &t
-	}
+	sess.EndedAt = fromNullMillis(row.EndedAt)
 
 	return sess, nil
 }
@@ -2021,7 +1965,7 @@ func (s *Store) AppendEvent(ctx context.Context, evt event.Event) (event.Event, 
 		CampaignID:   evt.CampaignID,
 		Seq:          int64(evt.Seq),
 		EventHash:    evt.Hash,
-		Timestamp:    evt.Timestamp.Format(timeFormat),
+		Timestamp:    toMillis(evt.Timestamp),
 		EventType:    string(evt.Type),
 		SessionID:    evt.SessionID,
 		RequestID:    evt.RequestID,
@@ -2092,7 +2036,7 @@ func (s *Store) AppendTelemetryEvent(ctx context.Context, evt storage.TelemetryE
 	}
 
 	return s.q.AppendTelemetryEvent(ctx, db.AppendTelemetryEventParams{
-		Timestamp:      evt.Timestamp.Format(timeFormat),
+		Timestamp:      toMillis(evt.Timestamp),
 		EventName:      evt.EventName,
 		Severity:       evt.Severity,
 		CampaignID:     toNullString(evt.CampaignID),
@@ -2105,6 +2049,30 @@ func (s *Store) AppendTelemetryEvent(ctx context.Context, evt storage.TelemetryE
 		SpanID:         toNullString(evt.SpanID),
 		AttributesJson: evt.AttributesJSON,
 	})
+}
+
+// GetGameStatistics returns aggregate counts across the game data set.
+func (s *Store) GetGameStatistics(ctx context.Context, since *time.Time) (storage.GameStatistics, error) {
+	if err := ctx.Err(); err != nil {
+		return storage.GameStatistics{}, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return storage.GameStatistics{}, fmt.Errorf("storage is not configured")
+	}
+
+	sinceValue := toNullMillis(since)
+
+	row, err := s.q.GetGameStatistics(ctx, sinceValue)
+	if err != nil {
+		return storage.GameStatistics{}, fmt.Errorf("get game statistics: %w", err)
+	}
+
+	return storage.GameStatistics{
+		CampaignCount:    row.CampaignCount,
+		SessionCount:     row.SessionCount,
+		CharacterCount:   row.CharacterCount,
+		ParticipantCount: row.ParticipantCount,
+	}, nil
 }
 
 func toNullString(value string) sql.NullString {
@@ -2416,7 +2384,7 @@ func (s *Store) PutSnapshot(ctx context.Context, snapshot storage.Snapshot) erro
 		CharacterStatesJson: snapshot.CharacterStatesJSON,
 		GmStateJson:         snapshot.GMStateJSON,
 		SystemStateJson:     snapshot.SystemStateJSON,
-		CreatedAt:           snapshot.CreatedAt.Format(timeFormat),
+		CreatedAt:           toMillis(snapshot.CreatedAt),
 	})
 }
 
@@ -2581,16 +2549,11 @@ func (s *Store) SetCampaignForkMetadata(ctx context.Context, campaignID string, 
 // Domain conversion helpers for events
 
 func dbEventToDomain(row db.Event) (event.Event, error) {
-	ts, err := time.Parse(timeFormat, row.Timestamp)
-	if err != nil {
-		return event.Event{}, fmt.Errorf("parse timestamp: %w", err)
-	}
-
 	return event.Event{
 		CampaignID:   row.CampaignID,
 		Seq:          uint64(row.Seq),
 		Hash:         row.EventHash,
-		Timestamp:    ts,
+		Timestamp:    fromMillis(row.Timestamp),
 		Type:         event.Type(row.EventType),
 		SessionID:    row.SessionID,
 		RequestID:    row.RequestID,
@@ -2616,11 +2579,6 @@ func dbEventsToDomain(rows []db.Event) ([]event.Event, error) {
 }
 
 func dbSnapshotToDomain(row db.Snapshot) (storage.Snapshot, error) {
-	createdAt, err := time.Parse(timeFormat, row.CreatedAt)
-	if err != nil {
-		return storage.Snapshot{}, fmt.Errorf("parse created_at: %w", err)
-	}
-
 	return storage.Snapshot{
 		CampaignID:          row.CampaignID,
 		SessionID:           row.SessionID,
@@ -2628,6 +2586,6 @@ func dbSnapshotToDomain(row db.Snapshot) (storage.Snapshot, error) {
 		CharacterStatesJSON: row.CharacterStatesJson,
 		GMStateJSON:         row.GmStateJson,
 		SystemStateJSON:     row.SystemStateJson,
-		CreatedAt:           createdAt,
+		CreatedAt:           fromMillis(row.CreatedAt),
 	}, nil
 }

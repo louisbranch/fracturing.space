@@ -3,7 +3,7 @@ package templates
 // DashboardStats holds aggregate statistics for the dashboard.
 type DashboardStats struct {
 	TotalCampaigns    string
-	ActiveSessions    string
+	TotalSessions     string
 	TotalCharacters   string
 	TotalParticipants string
 }

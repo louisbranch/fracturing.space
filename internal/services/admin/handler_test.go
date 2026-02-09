@@ -188,6 +188,10 @@ func (p testClientProvider) SnapshotClient() statev1.SnapshotServiceClient {
 	return nil
 }
 
+func (p testClientProvider) StatisticsClient() statev1.StatisticsServiceClient {
+	return nil
+}
+
 func (p testClientProvider) AuthClient() authv1.AuthServiceClient {
 	return p.auth
 }

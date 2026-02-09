@@ -64,6 +64,7 @@ func New(port int) (*Server, error) {
 		Session:        store,
 		Event:          store,
 		Telemetry:      store,
+		Statistics:     store,
 		Outcome:        store,
 		Snapshot:       store,
 		CampaignFork:   store,
@@ -87,6 +88,7 @@ func New(port int) (*Server, error) {
 	sessionService := gamegrpc.NewSessionService(stores)
 	forkService := gamegrpc.NewForkService(stores)
 	eventService := gamegrpc.NewEventService(stores)
+	statisticsService := gamegrpc.NewStatisticsService(stores)
 	healthServer := health.NewServer()
 	daggerheartv1.RegisterDaggerheartServiceServer(grpcServer, daggerheartService)
 	authv1.RegisterAuthServiceServer(grpcServer, authService)
@@ -98,6 +100,7 @@ func New(port int) (*Server, error) {
 	statev1.RegisterSessionServiceServer(grpcServer, sessionService)
 	statev1.RegisterForkServiceServer(grpcServer, forkService)
 	statev1.RegisterEventServiceServer(grpcServer, eventService)
+	statev1.RegisterStatisticsServiceServer(grpcServer, statisticsService)
 	grpc_health_v1.RegisterHealthServer(grpcServer, healthServer)
 	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("systems.daggerheart.v1.DaggerheartService", grpc_health_v1.HealthCheckResponse_SERVING)
@@ -110,6 +113,7 @@ func New(port int) (*Server, error) {
 	healthServer.SetServingStatus("game.v1.SessionService", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("game.v1.ForkService", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("game.v1.EventService", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus("game.v1.StatisticsService", grpc_health_v1.HealthCheckResponse_SERVING)
 
 	return &Server{
 		listener:   listener,

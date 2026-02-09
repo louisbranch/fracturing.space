@@ -239,7 +239,7 @@ func DashboardStatsCards(stats DashboardStats, loc Localizer) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = StatCard(T(loc, "dashboard.stats.active_sessions"), stats.ActiveSessions, "").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = StatCard(T(loc, "dashboard.stats.sessions"), stats.TotalSessions, "").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

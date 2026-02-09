@@ -29,7 +29,7 @@ func init() {
 		"dashboard.loading":                      "Loading dashboard...",
 		"dashboard.recent_activity":              "Recent Activity",
 		"dashboard.stats.campaigns":              "Campaigns",
-		"dashboard.stats.active_sessions":        "Active Sessions",
+		"dashboard.stats.sessions":               "Sessions",
 		"dashboard.stats.characters":             "Characters",
 		"dashboard.stats.participants":           "Participants",
 		"dashboard.table.campaign":               "Campaign",

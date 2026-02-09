@@ -28,7 +28,7 @@ INSERT INTO telemetry_events (
 `
 
 type AppendTelemetryEventParams struct {
-	Timestamp      string         `json:"timestamp"`
+	Timestamp      int64          `json:"timestamp"`
 	EventName      string         `json:"event_name"`
 	Severity       string         `json:"severity"`
 	CampaignID     sql.NullString `json:"campaign_id"`

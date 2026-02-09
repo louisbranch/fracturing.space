@@ -30,7 +30,7 @@ func init() {
 		"dashboard.loading":                      "Carregando painel...",
 		"dashboard.recent_activity":              "Atividade recente",
 		"dashboard.stats.campaigns":              "Campanhas",
-		"dashboard.stats.active_sessions":        "Sessões ativas",
+		"dashboard.stats.sessions":               "Sessões",
 		"dashboard.stats.characters":             "Personagens",
 		"dashboard.stats.participants":           "Participantes",
 		"dashboard.table.campaign":               "Campanha",

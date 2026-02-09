@@ -201,8 +201,8 @@ type PutParticipantParams struct {
 	Role        string `json:"role"`
 	Controller  string `json:"controller"`
 	IsOwner     int64  `json:"is_owner"`
-	CreatedAt   string `json:"created_at"`
-	UpdatedAt   string `json:"updated_at"`
+	CreatedAt   int64  `json:"created_at"`
+	UpdatedAt   int64  `json:"updated_at"`
 }
 
 func (q *Queries) PutParticipant(ctx context.Context, arg PutParticipantParams) error {

@@ -20,11 +20,11 @@ type Campaign struct {
 	ParentCampaignID sql.NullString `json:"parent_campaign_id"`
 	ForkEventSeq     sql.NullInt64  `json:"fork_event_seq"`
 	OriginCampaignID sql.NullString `json:"origin_campaign_id"`
-	CreatedAt        string         `json:"created_at"`
-	LastActivityAt   string         `json:"last_activity_at"`
-	UpdatedAt        string         `json:"updated_at"`
-	CompletedAt      sql.NullString `json:"completed_at"`
-	ArchivedAt       sql.NullString `json:"archived_at"`
+	CreatedAt        int64          `json:"created_at"`
+	LastActivityAt   int64          `json:"last_activity_at"`
+	UpdatedAt        int64          `json:"updated_at"`
+	CompletedAt      sql.NullInt64  `json:"completed_at"`
+	ArchivedAt       sql.NullInt64  `json:"archived_at"`
 }
 
 type CampaignActiveSession struct {
@@ -38,8 +38,8 @@ type Character struct {
 	Name       string `json:"name"`
 	Kind       string `json:"kind"`
 	Notes      string `json:"notes"`
-	CreatedAt  string `json:"created_at"`
-	UpdatedAt  string `json:"updated_at"`
+	CreatedAt  int64  `json:"created_at"`
+	UpdatedAt  int64  `json:"updated_at"`
 }
 
 type ControlDefault struct {
@@ -82,7 +82,7 @@ type Event struct {
 	CampaignID   string `json:"campaign_id"`
 	Seq          int64  `json:"seq"`
 	EventHash    string `json:"event_hash"`
-	Timestamp    string `json:"timestamp"`
+	Timestamp    int64  `json:"timestamp"`
 	EventType    string `json:"event_type"`
 	SessionID    string `json:"session_id"`
 	RequestID    string `json:"request_id"`
@@ -105,8 +105,8 @@ type Invite struct {
 	ParticipantID          string `json:"participant_id"`
 	Status                 string `json:"status"`
 	CreatedByParticipantID string `json:"created_by_participant_id"`
-	CreatedAt              string `json:"created_at"`
-	UpdatedAt              string `json:"updated_at"`
+	CreatedAt              int64  `json:"created_at"`
+	UpdatedAt              int64  `json:"updated_at"`
 }
 
 type OutcomeApplied struct {
@@ -123,18 +123,18 @@ type Participant struct {
 	Role        string `json:"role"`
 	Controller  string `json:"controller"`
 	IsOwner     int64  `json:"is_owner"`
-	CreatedAt   string `json:"created_at"`
-	UpdatedAt   string `json:"updated_at"`
+	CreatedAt   int64  `json:"created_at"`
+	UpdatedAt   int64  `json:"updated_at"`
 }
 
 type Session struct {
-	CampaignID string         `json:"campaign_id"`
-	ID         string         `json:"id"`
-	Name       string         `json:"name"`
-	Status     string         `json:"status"`
-	StartedAt  string         `json:"started_at"`
-	UpdatedAt  string         `json:"updated_at"`
-	EndedAt    sql.NullString `json:"ended_at"`
+	CampaignID string        `json:"campaign_id"`
+	ID         string        `json:"id"`
+	Name       string        `json:"name"`
+	Status     string        `json:"status"`
+	StartedAt  int64         `json:"started_at"`
+	UpdatedAt  int64         `json:"updated_at"`
+	EndedAt    sql.NullInt64 `json:"ended_at"`
 }
 
 type Snapshot struct {
@@ -144,12 +144,12 @@ type Snapshot struct {
 	CharacterStatesJson []byte `json:"character_states_json"`
 	GmStateJson         []byte `json:"gm_state_json"`
 	SystemStateJson     []byte `json:"system_state_json"`
-	CreatedAt           string `json:"created_at"`
+	CreatedAt           int64  `json:"created_at"`
 }
 
 type TelemetryEvent struct {
 	ID             int64          `json:"id"`
-	Timestamp      string         `json:"timestamp"`
+	Timestamp      int64          `json:"timestamp"`
 	EventName      string         `json:"event_name"`
 	Severity       string         `json:"severity"`
 	CampaignID     sql.NullString `json:"campaign_id"`

@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package game.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/game/v1;gamev1";
+
+// GameStatistics captures aggregate counts across all campaigns.
+message GameStatistics {
+  int64 campaign_count = 1;
+  int64 session_count = 2;
+  int64 character_count = 3;
+  int64 participant_count = 4;
+}
+
+// GetGameStatisticsRequest requests aggregate counts.
+// When since is omitted, results are for all time.
+message GetGameStatisticsRequest {
+  google.protobuf.Timestamp since = 1;
+}
+
+message GetGameStatisticsResponse {
+  GameStatistics stats = 1;
+}
+
+// StatisticsService provides aggregate game statistics.
+service StatisticsService {
+  rpc GetGameStatistics(GetGameStatisticsRequest) returns (GetGameStatisticsResponse);
+}

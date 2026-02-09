@@ -23,7 +23,7 @@ type AppendEventParams struct {
 	CampaignID   string `json:"campaign_id"`
 	Seq          int64  `json:"seq"`
 	EventHash    string `json:"event_hash"`
-	Timestamp    string `json:"timestamp"`
+	Timestamp    int64  `json:"timestamp"`
 	EventType    string `json:"event_type"`
 	SessionID    string `json:"session_id"`
 	RequestID    string `json:"request_id"`
@@ -424,7 +424,7 @@ type PutSnapshotParams struct {
 	CharacterStatesJson []byte `json:"character_states_json"`
 	GmStateJson         []byte `json:"gm_state_json"`
 	SystemStateJson     []byte `json:"system_state_json"`
-	CreatedAt           string `json:"created_at"`
+	CreatedAt           int64  `json:"created_at"`
 }
 
 // Snapshot Queries (unchanged from campaign_events.sql)

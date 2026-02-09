@@ -130,8 +130,8 @@ type PutInviteParams struct {
 	ParticipantID          string `json:"participant_id"`
 	Status                 string `json:"status"`
 	CreatedByParticipantID string `json:"created_by_participant_id"`
-	CreatedAt              string `json:"created_at"`
-	UpdatedAt              string `json:"updated_at"`
+	CreatedAt              int64  `json:"created_at"`
+	UpdatedAt              int64  `json:"updated_at"`
 }
 
 func (q *Queries) PutInvite(ctx context.Context, arg PutInviteParams) error {
@@ -155,7 +155,7 @@ WHERE id = ?
 
 type UpdateInviteStatusParams struct {
 	Status    string `json:"status"`
-	UpdatedAt string `json:"updated_at"`
+	UpdatedAt int64  `json:"updated_at"`
 	ID        string `json:"id"`
 }
 

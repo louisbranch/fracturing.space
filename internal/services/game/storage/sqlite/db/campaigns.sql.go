@@ -32,11 +32,11 @@ type GetCampaignRow struct {
 	ParentCampaignID sql.NullString `json:"parent_campaign_id"`
 	ForkEventSeq     sql.NullInt64  `json:"fork_event_seq"`
 	OriginCampaignID sql.NullString `json:"origin_campaign_id"`
-	CreatedAt        string         `json:"created_at"`
-	LastActivityAt   string         `json:"last_activity_at"`
-	UpdatedAt        string         `json:"updated_at"`
-	CompletedAt      sql.NullString `json:"completed_at"`
-	ArchivedAt       sql.NullString `json:"archived_at"`
+	CreatedAt        int64          `json:"created_at"`
+	LastActivityAt   int64          `json:"last_activity_at"`
+	UpdatedAt        int64          `json:"updated_at"`
+	CompletedAt      sql.NullInt64  `json:"completed_at"`
+	ArchivedAt       sql.NullInt64  `json:"archived_at"`
 }
 
 func (q *Queries) GetCampaign(ctx context.Context, id string) (GetCampaignRow, error) {
@@ -87,11 +87,11 @@ type ListAllCampaignsRow struct {
 	ParentCampaignID sql.NullString `json:"parent_campaign_id"`
 	ForkEventSeq     sql.NullInt64  `json:"fork_event_seq"`
 	OriginCampaignID sql.NullString `json:"origin_campaign_id"`
-	CreatedAt        string         `json:"created_at"`
-	LastActivityAt   string         `json:"last_activity_at"`
-	UpdatedAt        string         `json:"updated_at"`
-	CompletedAt      sql.NullString `json:"completed_at"`
-	ArchivedAt       sql.NullString `json:"archived_at"`
+	CreatedAt        int64          `json:"created_at"`
+	LastActivityAt   int64          `json:"last_activity_at"`
+	UpdatedAt        int64          `json:"updated_at"`
+	CompletedAt      sql.NullInt64  `json:"completed_at"`
+	ArchivedAt       sql.NullInt64  `json:"archived_at"`
 }
 
 func (q *Queries) ListAllCampaigns(ctx context.Context, limit int64) ([]ListAllCampaignsRow, error) {
@@ -164,11 +164,11 @@ type ListCampaignsRow struct {
 	ParentCampaignID sql.NullString `json:"parent_campaign_id"`
 	ForkEventSeq     sql.NullInt64  `json:"fork_event_seq"`
 	OriginCampaignID sql.NullString `json:"origin_campaign_id"`
-	CreatedAt        string         `json:"created_at"`
-	LastActivityAt   string         `json:"last_activity_at"`
-	UpdatedAt        string         `json:"updated_at"`
-	CompletedAt      sql.NullString `json:"completed_at"`
-	ArchivedAt       sql.NullString `json:"archived_at"`
+	CreatedAt        int64          `json:"created_at"`
+	LastActivityAt   int64          `json:"last_activity_at"`
+	UpdatedAt        int64          `json:"updated_at"`
+	CompletedAt      sql.NullInt64  `json:"completed_at"`
+	ArchivedAt       sql.NullInt64  `json:"archived_at"`
 }
 
 func (q *Queries) ListCampaigns(ctx context.Context, arg ListCampaignsParams) ([]ListCampaignsRow, error) {
@@ -232,19 +232,19 @@ ON CONFLICT(id) DO UPDATE SET
 `
 
 type PutCampaignParams struct {
-	ID               string         `json:"id"`
-	Name             string         `json:"name"`
-	GameSystem       string         `json:"game_system"`
-	Status           string         `json:"status"`
-	GmMode           string         `json:"gm_mode"`
-	ParticipantCount int64          `json:"participant_count"`
-	CharacterCount   int64          `json:"character_count"`
-	ThemePrompt      string         `json:"theme_prompt"`
-	CreatedAt        string         `json:"created_at"`
-	LastActivityAt   string         `json:"last_activity_at"`
-	UpdatedAt        string         `json:"updated_at"`
-	CompletedAt      sql.NullString `json:"completed_at"`
-	ArchivedAt       sql.NullString `json:"archived_at"`
+	ID               string        `json:"id"`
+	Name             string        `json:"name"`
+	GameSystem       string        `json:"game_system"`
+	Status           string        `json:"status"`
+	GmMode           string        `json:"gm_mode"`
+	ParticipantCount int64         `json:"participant_count"`
+	CharacterCount   int64         `json:"character_count"`
+	ThemePrompt      string        `json:"theme_prompt"`
+	CreatedAt        int64         `json:"created_at"`
+	LastActivityAt   int64         `json:"last_activity_at"`
+	UpdatedAt        int64         `json:"updated_at"`
+	CompletedAt      sql.NullInt64 `json:"completed_at"`
+	ArchivedAt       sql.NullInt64 `json:"archived_at"`
 }
 
 func (q *Queries) PutCampaign(ctx context.Context, arg PutCampaignParams) error {
