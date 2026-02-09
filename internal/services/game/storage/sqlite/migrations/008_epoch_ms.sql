@@ -9,7 +9,6 @@ DROP TABLE IF EXISTS event_seq;
 DROP TABLE IF EXISTS events;
 DROP TABLE IF EXISTS campaign_active_session;
 DROP TABLE IF EXISTS sessions;
-DROP TABLE IF EXISTS control_defaults;
 DROP TABLE IF EXISTS characters;
 DROP TABLE IF EXISTS snapshots;
 DROP TABLE IF EXISTS daggerheart_snapshots;
@@ -59,6 +58,7 @@ CREATE UNIQUE INDEX idx_participants_campaign_user
 CREATE TABLE characters (
     campaign_id TEXT NOT NULL,
     id TEXT NOT NULL,
+    controller_participant_id TEXT,
     name TEXT NOT NULL,
     kind TEXT NOT NULL,
     notes TEXT NOT NULL DEFAULT '',
@@ -66,14 +66,6 @@ CREATE TABLE characters (
     updated_at INTEGER NOT NULL,
     PRIMARY KEY (campaign_id, id),
     FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE
-);
-
-CREATE TABLE control_defaults (
-    campaign_id TEXT NOT NULL,
-    character_id TEXT NOT NULL,
-    is_gm INTEGER NOT NULL DEFAULT 0,
-    participant_id TEXT NOT NULL DEFAULT '',
-    PRIMARY KEY (campaign_id, character_id)
 );
 
 -- Session Layer
@@ -241,7 +233,6 @@ DROP TABLE IF EXISTS events;
 DROP TABLE IF EXISTS campaign_active_session;
 DROP INDEX IF EXISTS idx_sessions_active;
 DROP TABLE IF EXISTS sessions;
-DROP TABLE IF EXISTS control_defaults;
 DROP TABLE IF EXISTS characters;
 DROP INDEX IF EXISTS idx_participants_campaign_user;
 DROP INDEX IF EXISTS idx_participants_user_id;

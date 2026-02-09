@@ -55,19 +55,18 @@ func New(port int) (*Server, error) {
 	}
 
 	stores := gamegrpc.Stores{
-		Campaign:       store,
-		Participant:    store,
-		Invite:         store,
-		Character:      store,
-		ControlDefault: store,
-		Daggerheart:    store,
-		Session:        store,
-		Event:          store,
-		Telemetry:      store,
-		Statistics:     store,
-		Outcome:        store,
-		Snapshot:       store,
-		CampaignFork:   store,
+		Campaign:     store,
+		Participant:  store,
+		Invite:       store,
+		Character:    store,
+		Daggerheart:  store,
+		Session:      store,
+		Event:        store,
+		Telemetry:    store,
+		Statistics:   store,
+		Outcome:      store,
+		Snapshot:     store,
+		CampaignFork: store,
 	}
 
 	grpcServer := grpc.NewServer(

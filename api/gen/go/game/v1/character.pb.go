@@ -75,14 +75,15 @@ func (CharacterKind) EnumDescriptor() ([]byte, []int) {
 
 // Character represents a character's identity and metadata (config layer).
 type Character struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	CampaignId    string                 `protobuf:"bytes,2,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"`
-	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	Kind          CharacterKind          `protobuf:"varint,4,opt,name=kind,proto3,enum=game.v1.CharacterKind" json:"kind,omitempty"`
-	Notes         string                 `protobuf:"bytes,5,opt,name=notes,proto3" json:"notes,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	state         protoimpl.MessageState  `protogen:"open.v1"`
+	Id            string                  `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	CampaignId    string                  `protobuf:"bytes,2,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"`
+	ParticipantId *wrapperspb.StringValue `protobuf:"bytes,3,opt,name=participant_id,json=participantId,proto3" json:"participant_id,omitempty"`
+	Name          string                  `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
+	Kind          CharacterKind           `protobuf:"varint,5,opt,name=kind,proto3,enum=game.v1.CharacterKind" json:"kind,omitempty"`
+	Notes         string                  `protobuf:"bytes,6,opt,name=notes,proto3" json:"notes,omitempty"`
+	CreatedAt     *timestamppb.Timestamp  `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt     *timestamppb.Timestamp  `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -129,6 +130,13 @@ func (x *Character) GetCampaignId() string {
 		return x.CampaignId
 	}
 	return ""
+}
+
+func (x *Character) GetParticipantId() *wrapperspb.StringValue {
+	if x != nil {
+		return x.ParticipantId
+	}
+	return nil
 }
 
 func (x *Character) GetName() string {
@@ -254,172 +262,6 @@ type CharacterProfile_Daggerheart struct {
 
 func (*CharacterProfile_Daggerheart) isCharacterProfile_SystemProfile() {}
 
-// CharacterController defines who controls a character.
-type CharacterController struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// Types that are valid to be assigned to Controller:
-	//
-	//	*CharacterController_Gm
-	//	*CharacterController_Participant
-	Controller    isCharacterController_Controller `protobuf_oneof:"controller"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *CharacterController) Reset() {
-	*x = CharacterController{}
-	mi := &file_game_v1_character_proto_msgTypes[2]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *CharacterController) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CharacterController) ProtoMessage() {}
-
-func (x *CharacterController) ProtoReflect() protoreflect.Message {
-	mi := &file_game_v1_character_proto_msgTypes[2]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use CharacterController.ProtoReflect.Descriptor instead.
-func (*CharacterController) Descriptor() ([]byte, []int) {
-	return file_game_v1_character_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *CharacterController) GetController() isCharacterController_Controller {
-	if x != nil {
-		return x.Controller
-	}
-	return nil
-}
-
-func (x *CharacterController) GetGm() *GmController {
-	if x != nil {
-		if x, ok := x.Controller.(*CharacterController_Gm); ok {
-			return x.Gm
-		}
-	}
-	return nil
-}
-
-func (x *CharacterController) GetParticipant() *ParticipantController {
-	if x != nil {
-		if x, ok := x.Controller.(*CharacterController_Participant); ok {
-			return x.Participant
-		}
-	}
-	return nil
-}
-
-type isCharacterController_Controller interface {
-	isCharacterController_Controller()
-}
-
-type CharacterController_Gm struct {
-	// If set, the controller is the GM.
-	Gm *GmController `protobuf:"bytes,1,opt,name=gm,proto3,oneof"`
-}
-
-type CharacterController_Participant struct {
-	// If set, the controller is a registered campaign participant.
-	Participant *ParticipantController `protobuf:"bytes,2,opt,name=participant,proto3,oneof"`
-}
-
-func (*CharacterController_Gm) isCharacterController_Controller() {}
-
-func (*CharacterController_Participant) isCharacterController_Controller() {}
-
-type GmController struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GmController) Reset() {
-	*x = GmController{}
-	mi := &file_game_v1_character_proto_msgTypes[3]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GmController) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GmController) ProtoMessage() {}
-
-func (x *GmController) ProtoReflect() protoreflect.Message {
-	mi := &file_game_v1_character_proto_msgTypes[3]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GmController.ProtoReflect.Descriptor instead.
-func (*GmController) Descriptor() ([]byte, []int) {
-	return file_game_v1_character_proto_rawDescGZIP(), []int{3}
-}
-
-type ParticipantController struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// The participant ID of the controller.
-	ParticipantId string `protobuf:"bytes,1,opt,name=participant_id,json=participantId,proto3" json:"participant_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ParticipantController) Reset() {
-	*x = ParticipantController{}
-	mi := &file_game_v1_character_proto_msgTypes[4]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ParticipantController) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ParticipantController) ProtoMessage() {}
-
-func (x *ParticipantController) ProtoReflect() protoreflect.Message {
-	mi := &file_game_v1_character_proto_msgTypes[4]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ParticipantController.ProtoReflect.Descriptor instead.
-func (*ParticipantController) Descriptor() ([]byte, []int) {
-	return file_game_v1_character_proto_rawDescGZIP(), []int{4}
-}
-
-func (x *ParticipantController) GetParticipantId() string {
-	if x != nil {
-		return x.ParticipantId
-	}
-	return ""
-}
-
 type CreateCharacterRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The campaign ID to create the character for.
@@ -436,7 +278,7 @@ type CreateCharacterRequest struct {
 
 func (x *CreateCharacterRequest) Reset() {
 	*x = CreateCharacterRequest{}
-	mi := &file_game_v1_character_proto_msgTypes[5]
+	mi := &file_game_v1_character_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -448,7 +290,7 @@ func (x *CreateCharacterRequest) String() string {
 func (*CreateCharacterRequest) ProtoMessage() {}
 
 func (x *CreateCharacterRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_game_v1_character_proto_msgTypes[5]
+	mi := &file_game_v1_character_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -461,7 +303,7 @@ func (x *CreateCharacterRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateCharacterRequest.ProtoReflect.Descriptor instead.
 func (*CreateCharacterRequest) Descriptor() ([]byte, []int) {
-	return file_game_v1_character_proto_rawDescGZIP(), []int{5}
+	return file_game_v1_character_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *CreateCharacterRequest) GetCampaignId() string {
@@ -501,7 +343,7 @@ type CreateCharacterResponse struct {
 
 func (x *CreateCharacterResponse) Reset() {
 	*x = CreateCharacterResponse{}
-	mi := &file_game_v1_character_proto_msgTypes[6]
+	mi := &file_game_v1_character_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -513,7 +355,7 @@ func (x *CreateCharacterResponse) String() string {
 func (*CreateCharacterResponse) ProtoMessage() {}
 
 func (x *CreateCharacterResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_game_v1_character_proto_msgTypes[6]
+	mi := &file_game_v1_character_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -526,7 +368,7 @@ func (x *CreateCharacterResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateCharacterResponse.ProtoReflect.Descriptor instead.
 func (*CreateCharacterResponse) Descriptor() ([]byte, []int) {
-	return file_game_v1_character_proto_rawDescGZIP(), []int{6}
+	return file_game_v1_character_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *CreateCharacterResponse) GetCharacter() *Character {
@@ -554,7 +396,7 @@ type UpdateCharacterRequest struct {
 
 func (x *UpdateCharacterRequest) Reset() {
 	*x = UpdateCharacterRequest{}
-	mi := &file_game_v1_character_proto_msgTypes[7]
+	mi := &file_game_v1_character_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -566,7 +408,7 @@ func (x *UpdateCharacterRequest) String() string {
 func (*UpdateCharacterRequest) ProtoMessage() {}
 
 func (x *UpdateCharacterRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_game_v1_character_proto_msgTypes[7]
+	mi := &file_game_v1_character_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -579,7 +421,7 @@ func (x *UpdateCharacterRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateCharacterRequest.ProtoReflect.Descriptor instead.
 func (*UpdateCharacterRequest) Descriptor() ([]byte, []int) {
-	return file_game_v1_character_proto_rawDescGZIP(), []int{7}
+	return file_game_v1_character_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *UpdateCharacterRequest) GetCampaignId() string {
@@ -626,7 +468,7 @@ type UpdateCharacterResponse struct {
 
 func (x *UpdateCharacterResponse) Reset() {
 	*x = UpdateCharacterResponse{}
-	mi := &file_game_v1_character_proto_msgTypes[8]
+	mi := &file_game_v1_character_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -638,7 +480,7 @@ func (x *UpdateCharacterResponse) String() string {
 func (*UpdateCharacterResponse) ProtoMessage() {}
 
 func (x *UpdateCharacterResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_game_v1_character_proto_msgTypes[8]
+	mi := &file_game_v1_character_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -651,7 +493,7 @@ func (x *UpdateCharacterResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateCharacterResponse.ProtoReflect.Descriptor instead.
 func (*UpdateCharacterResponse) Descriptor() ([]byte, []int) {
-	return file_game_v1_character_proto_rawDescGZIP(), []int{8}
+	return file_game_v1_character_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *UpdateCharacterResponse) GetCharacter() *Character {
@@ -675,7 +517,7 @@ type DeleteCharacterRequest struct {
 
 func (x *DeleteCharacterRequest) Reset() {
 	*x = DeleteCharacterRequest{}
-	mi := &file_game_v1_character_proto_msgTypes[9]
+	mi := &file_game_v1_character_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -687,7 +529,7 @@ func (x *DeleteCharacterRequest) String() string {
 func (*DeleteCharacterRequest) ProtoMessage() {}
 
 func (x *DeleteCharacterRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_game_v1_character_proto_msgTypes[9]
+	mi := &file_game_v1_character_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -700,7 +542,7 @@ func (x *DeleteCharacterRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteCharacterRequest.ProtoReflect.Descriptor instead.
 func (*DeleteCharacterRequest) Descriptor() ([]byte, []int) {
-	return file_game_v1_character_proto_rawDescGZIP(), []int{9}
+	return file_game_v1_character_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *DeleteCharacterRequest) GetCampaignId() string {
@@ -733,7 +575,7 @@ type DeleteCharacterResponse struct {
 
 func (x *DeleteCharacterResponse) Reset() {
 	*x = DeleteCharacterResponse{}
-	mi := &file_game_v1_character_proto_msgTypes[10]
+	mi := &file_game_v1_character_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -745,7 +587,7 @@ func (x *DeleteCharacterResponse) String() string {
 func (*DeleteCharacterResponse) ProtoMessage() {}
 
 func (x *DeleteCharacterResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_game_v1_character_proto_msgTypes[10]
+	mi := &file_game_v1_character_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -758,7 +600,7 @@ func (x *DeleteCharacterResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteCharacterResponse.ProtoReflect.Descriptor instead.
 func (*DeleteCharacterResponse) Descriptor() ([]byte, []int) {
-	return file_game_v1_character_proto_rawDescGZIP(), []int{10}
+	return file_game_v1_character_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *DeleteCharacterResponse) GetCharacter() *Character {
@@ -783,7 +625,7 @@ type ListCharactersRequest struct {
 
 func (x *ListCharactersRequest) Reset() {
 	*x = ListCharactersRequest{}
-	mi := &file_game_v1_character_proto_msgTypes[11]
+	mi := &file_game_v1_character_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -795,7 +637,7 @@ func (x *ListCharactersRequest) String() string {
 func (*ListCharactersRequest) ProtoMessage() {}
 
 func (x *ListCharactersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_game_v1_character_proto_msgTypes[11]
+	mi := &file_game_v1_character_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -808,7 +650,7 @@ func (x *ListCharactersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCharactersRequest.ProtoReflect.Descriptor instead.
 func (*ListCharactersRequest) Descriptor() ([]byte, []int) {
-	return file_game_v1_character_proto_rawDescGZIP(), []int{11}
+	return file_game_v1_character_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ListCharactersRequest) GetCampaignId() string {
@@ -842,7 +684,7 @@ type ListCharactersResponse struct {
 
 func (x *ListCharactersResponse) Reset() {
 	*x = ListCharactersResponse{}
-	mi := &file_game_v1_character_proto_msgTypes[12]
+	mi := &file_game_v1_character_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -854,7 +696,7 @@ func (x *ListCharactersResponse) String() string {
 func (*ListCharactersResponse) ProtoMessage() {}
 
 func (x *ListCharactersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_game_v1_character_proto_msgTypes[12]
+	mi := &file_game_v1_character_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -867,7 +709,7 @@ func (x *ListCharactersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCharactersResponse.ProtoReflect.Descriptor instead.
 func (*ListCharactersResponse) Descriptor() ([]byte, []int) {
-	return file_game_v1_character_proto_rawDescGZIP(), []int{12}
+	return file_game_v1_character_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ListCharactersResponse) GetCharacters() []*Character {
@@ -890,15 +732,15 @@ type SetDefaultControlRequest struct {
 	CampaignId string `protobuf:"bytes,1,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"`
 	// The character ID.
 	CharacterId string `protobuf:"bytes,2,opt,name=character_id,json=characterId,proto3" json:"character_id,omitempty"`
-	// The controller for the character.
-	Controller    *CharacterController `protobuf:"bytes,3,opt,name=controller,proto3" json:"controller,omitempty"`
+	// The participant ID of the controller (empty means unassigned).
+	ParticipantId *wrapperspb.StringValue `protobuf:"bytes,3,opt,name=participant_id,json=participantId,proto3" json:"participant_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *SetDefaultControlRequest) Reset() {
 	*x = SetDefaultControlRequest{}
-	mi := &file_game_v1_character_proto_msgTypes[13]
+	mi := &file_game_v1_character_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -910,7 +752,7 @@ func (x *SetDefaultControlRequest) String() string {
 func (*SetDefaultControlRequest) ProtoMessage() {}
 
 func (x *SetDefaultControlRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_game_v1_character_proto_msgTypes[13]
+	mi := &file_game_v1_character_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -923,7 +765,7 @@ func (x *SetDefaultControlRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetDefaultControlRequest.ProtoReflect.Descriptor instead.
 func (*SetDefaultControlRequest) Descriptor() ([]byte, []int) {
-	return file_game_v1_character_proto_rawDescGZIP(), []int{13}
+	return file_game_v1_character_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *SetDefaultControlRequest) GetCampaignId() string {
@@ -940,9 +782,9 @@ func (x *SetDefaultControlRequest) GetCharacterId() string {
 	return ""
 }
 
-func (x *SetDefaultControlRequest) GetController() *CharacterController {
+func (x *SetDefaultControlRequest) GetParticipantId() *wrapperspb.StringValue {
 	if x != nil {
-		return x.Controller
+		return x.ParticipantId
 	}
 	return nil
 }
@@ -953,15 +795,15 @@ type SetDefaultControlResponse struct {
 	CampaignId string `protobuf:"bytes,1,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"`
 	// The character ID.
 	CharacterId string `protobuf:"bytes,2,opt,name=character_id,json=characterId,proto3" json:"character_id,omitempty"`
-	// The controller for the character.
-	Controller    *CharacterController `protobuf:"bytes,3,opt,name=controller,proto3" json:"controller,omitempty"`
+	// The participant ID of the controller (empty means unassigned).
+	ParticipantId *wrapperspb.StringValue `protobuf:"bytes,3,opt,name=participant_id,json=participantId,proto3" json:"participant_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *SetDefaultControlResponse) Reset() {
 	*x = SetDefaultControlResponse{}
-	mi := &file_game_v1_character_proto_msgTypes[14]
+	mi := &file_game_v1_character_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -973,7 +815,7 @@ func (x *SetDefaultControlResponse) String() string {
 func (*SetDefaultControlResponse) ProtoMessage() {}
 
 func (x *SetDefaultControlResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_game_v1_character_proto_msgTypes[14]
+	mi := &file_game_v1_character_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -986,7 +828,7 @@ func (x *SetDefaultControlResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetDefaultControlResponse.ProtoReflect.Descriptor instead.
 func (*SetDefaultControlResponse) Descriptor() ([]byte, []int) {
-	return file_game_v1_character_proto_rawDescGZIP(), []int{14}
+	return file_game_v1_character_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *SetDefaultControlResponse) GetCampaignId() string {
@@ -1003,9 +845,9 @@ func (x *SetDefaultControlResponse) GetCharacterId() string {
 	return ""
 }
 
-func (x *SetDefaultControlResponse) GetController() *CharacterController {
+func (x *SetDefaultControlResponse) GetParticipantId() *wrapperspb.StringValue {
 	if x != nil {
-		return x.Controller
+		return x.ParticipantId
 	}
 	return nil
 }
@@ -1022,7 +864,7 @@ type GetCharacterSheetRequest struct {
 
 func (x *GetCharacterSheetRequest) Reset() {
 	*x = GetCharacterSheetRequest{}
-	mi := &file_game_v1_character_proto_msgTypes[15]
+	mi := &file_game_v1_character_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1034,7 +876,7 @@ func (x *GetCharacterSheetRequest) String() string {
 func (*GetCharacterSheetRequest) ProtoMessage() {}
 
 func (x *GetCharacterSheetRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_game_v1_character_proto_msgTypes[15]
+	mi := &file_game_v1_character_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1047,7 +889,7 @@ func (x *GetCharacterSheetRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCharacterSheetRequest.ProtoReflect.Descriptor instead.
 func (*GetCharacterSheetRequest) Descriptor() ([]byte, []int) {
-	return file_game_v1_character_proto_rawDescGZIP(), []int{15}
+	return file_game_v1_character_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *GetCharacterSheetRequest) GetCampaignId() string {
@@ -1075,7 +917,7 @@ type GetCharacterSheetResponse struct {
 
 func (x *GetCharacterSheetResponse) Reset() {
 	*x = GetCharacterSheetResponse{}
-	mi := &file_game_v1_character_proto_msgTypes[16]
+	mi := &file_game_v1_character_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1087,7 +929,7 @@ func (x *GetCharacterSheetResponse) String() string {
 func (*GetCharacterSheetResponse) ProtoMessage() {}
 
 func (x *GetCharacterSheetResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_game_v1_character_proto_msgTypes[16]
+	mi := &file_game_v1_character_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1100,7 +942,7 @@ func (x *GetCharacterSheetResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCharacterSheetResponse.ProtoReflect.Descriptor instead.
 func (*GetCharacterSheetResponse) Descriptor() ([]byte, []int) {
-	return file_game_v1_character_proto_rawDescGZIP(), []int{16}
+	return file_game_v1_character_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *GetCharacterSheetResponse) GetCharacter() *Character {
@@ -1142,7 +984,7 @@ type PatchCharacterProfileRequest struct {
 
 func (x *PatchCharacterProfileRequest) Reset() {
 	*x = PatchCharacterProfileRequest{}
-	mi := &file_game_v1_character_proto_msgTypes[17]
+	mi := &file_game_v1_character_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1154,7 +996,7 @@ func (x *PatchCharacterProfileRequest) String() string {
 func (*PatchCharacterProfileRequest) ProtoMessage() {}
 
 func (x *PatchCharacterProfileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_game_v1_character_proto_msgTypes[17]
+	mi := &file_game_v1_character_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1167,7 +1009,7 @@ func (x *PatchCharacterProfileRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PatchCharacterProfileRequest.ProtoReflect.Descriptor instead.
 func (*PatchCharacterProfileRequest) Descriptor() ([]byte, []int) {
-	return file_game_v1_character_proto_rawDescGZIP(), []int{17}
+	return file_game_v1_character_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *PatchCharacterProfileRequest) GetCampaignId() string {
@@ -1220,7 +1062,7 @@ type PatchCharacterProfileResponse struct {
 
 func (x *PatchCharacterProfileResponse) Reset() {
 	*x = PatchCharacterProfileResponse{}
-	mi := &file_game_v1_character_proto_msgTypes[18]
+	mi := &file_game_v1_character_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1232,7 +1074,7 @@ func (x *PatchCharacterProfileResponse) String() string {
 func (*PatchCharacterProfileResponse) ProtoMessage() {}
 
 func (x *PatchCharacterProfileResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_game_v1_character_proto_msgTypes[18]
+	mi := &file_game_v1_character_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1245,7 +1087,7 @@ func (x *PatchCharacterProfileResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PatchCharacterProfileResponse.ProtoReflect.Descriptor instead.
 func (*PatchCharacterProfileResponse) Descriptor() ([]byte, []int) {
-	return file_game_v1_character_proto_rawDescGZIP(), []int{18}
+	return file_game_v1_character_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *PatchCharacterProfileResponse) GetProfile() *CharacterProfile {
@@ -1275,7 +1117,7 @@ type CharacterState struct {
 
 func (x *CharacterState) Reset() {
 	*x = CharacterState{}
-	mi := &file_game_v1_character_proto_msgTypes[19]
+	mi := &file_game_v1_character_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1287,7 +1129,7 @@ func (x *CharacterState) String() string {
 func (*CharacterState) ProtoMessage() {}
 
 func (x *CharacterState) ProtoReflect() protoreflect.Message {
-	mi := &file_game_v1_character_proto_msgTypes[19]
+	mi := &file_game_v1_character_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1300,7 +1142,7 @@ func (x *CharacterState) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CharacterState.ProtoReflect.Descriptor instead.
 func (*CharacterState) Descriptor() ([]byte, []int) {
-	return file_game_v1_character_proto_rawDescGZIP(), []int{19}
+	return file_game_v1_character_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *CharacterState) GetCampaignId() string {
@@ -1347,32 +1189,25 @@ var File_game_v1_character_proto protoreflect.FileDescriptor
 
 const file_game_v1_character_proto_rawDesc = "" +
 	"\n" +
-	"\x17game/v1/character.proto\x12\agame.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\"systems/daggerheart/v1/state.proto\"\x88\x02\n" +
+	"\x17game/v1/character.proto\x12\agame.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\"systems/daggerheart/v1/state.proto\"\xcd\x02\n" +
 	"\tCharacter\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vcampaign_id\x18\x02 \x01(\tR\n" +
-	"campaignId\x12\x12\n" +
-	"\x04name\x18\x03 \x01(\tR\x04name\x12*\n" +
-	"\x04kind\x18\x04 \x01(\x0e2\x16.game.v1.CharacterKindR\x04kind\x12\x14\n" +
-	"\x05notes\x18\x05 \x01(\tR\x05notes\x129\n" +
+	"campaignId\x12C\n" +
+	"\x0eparticipant_id\x18\x03 \x01(\v2\x1c.google.protobuf.StringValueR\rparticipantId\x12\x12\n" +
+	"\x04name\x18\x04 \x01(\tR\x04name\x12*\n" +
+	"\x04kind\x18\x05 \x01(\x0e2\x16.game.v1.CharacterKindR\x04kind\x12\x14\n" +
+	"\x05notes\x18\x06 \x01(\tR\x05notes\x129\n" +
 	"\n" +
-	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xb8\x01\n" +
+	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xb8\x01\n" +
 	"\x10CharacterProfile\x12\x1f\n" +
 	"\vcampaign_id\x18\x01 \x01(\tR\n" +
 	"campaignId\x12!\n" +
 	"\fcharacter_id\x18\x02 \x01(\tR\vcharacterId\x12N\n" +
 	"\vdaggerheart\x18\x03 \x01(\v2*.systems.daggerheart.v1.DaggerheartProfileH\x00R\vdaggerheartB\x10\n" +
-	"\x0esystem_profile\"\x90\x01\n" +
-	"\x13CharacterController\x12'\n" +
-	"\x02gm\x18\x01 \x01(\v2\x15.game.v1.GmControllerH\x00R\x02gm\x12B\n" +
-	"\vparticipant\x18\x02 \x01(\v2\x1e.game.v1.ParticipantControllerH\x00R\vparticipantB\f\n" +
-	"\n" +
-	"controller\"\x0e\n" +
-	"\fGmController\">\n" +
-	"\x15ParticipantController\x12%\n" +
-	"\x0eparticipant_id\x18\x01 \x01(\tR\rparticipantId\"\x8f\x01\n" +
+	"\x0esystem_profile\"\x8f\x01\n" +
 	"\x16CreateCharacterRequest\x12\x1f\n" +
 	"\vcampaign_id\x18\x01 \x01(\tR\n" +
 	"campaignId\x12\x12\n" +
@@ -1407,21 +1242,17 @@ const file_game_v1_character_proto_rawDesc = "" +
 	"\n" +
 	"characters\x18\x01 \x03(\v2\x12.game.v1.CharacterR\n" +
 	"characters\x12&\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\x9c\x01\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\xa3\x01\n" +
 	"\x18SetDefaultControlRequest\x12\x1f\n" +
 	"\vcampaign_id\x18\x01 \x01(\tR\n" +
 	"campaignId\x12!\n" +
-	"\fcharacter_id\x18\x02 \x01(\tR\vcharacterId\x12<\n" +
-	"\n" +
-	"controller\x18\x03 \x01(\v2\x1c.game.v1.CharacterControllerR\n" +
-	"controller\"\x9d\x01\n" +
+	"\fcharacter_id\x18\x02 \x01(\tR\vcharacterId\x12C\n" +
+	"\x0eparticipant_id\x18\x03 \x01(\v2\x1c.google.protobuf.StringValueR\rparticipantId\"\xa4\x01\n" +
 	"\x19SetDefaultControlResponse\x12\x1f\n" +
 	"\vcampaign_id\x18\x01 \x01(\tR\n" +
 	"campaignId\x12!\n" +
-	"\fcharacter_id\x18\x02 \x01(\tR\vcharacterId\x12<\n" +
-	"\n" +
-	"controller\x18\x03 \x01(\v2\x1c.game.v1.CharacterControllerR\n" +
-	"controller\"^\n" +
+	"\fcharacter_id\x18\x02 \x01(\tR\vcharacterId\x12C\n" +
+	"\x0eparticipant_id\x18\x03 \x01(\v2\x1c.google.protobuf.StringValueR\rparticipantId\"^\n" +
 	"\x18GetCharacterSheetRequest\x12\x1f\n" +
 	"\vcampaign_id\x18\x01 \x01(\tR\n" +
 	"campaignId\x12!\n" +
@@ -1470,76 +1301,72 @@ func file_game_v1_character_proto_rawDescGZIP() []byte {
 }
 
 var file_game_v1_character_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_game_v1_character_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
+var file_game_v1_character_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_game_v1_character_proto_goTypes = []any{
 	(CharacterKind)(0),                    // 0: game.v1.CharacterKind
 	(*Character)(nil),                     // 1: game.v1.Character
 	(*CharacterProfile)(nil),              // 2: game.v1.CharacterProfile
-	(*CharacterController)(nil),           // 3: game.v1.CharacterController
-	(*GmController)(nil),                  // 4: game.v1.GmController
-	(*ParticipantController)(nil),         // 5: game.v1.ParticipantController
-	(*CreateCharacterRequest)(nil),        // 6: game.v1.CreateCharacterRequest
-	(*CreateCharacterResponse)(nil),       // 7: game.v1.CreateCharacterResponse
-	(*UpdateCharacterRequest)(nil),        // 8: game.v1.UpdateCharacterRequest
-	(*UpdateCharacterResponse)(nil),       // 9: game.v1.UpdateCharacterResponse
-	(*DeleteCharacterRequest)(nil),        // 10: game.v1.DeleteCharacterRequest
-	(*DeleteCharacterResponse)(nil),       // 11: game.v1.DeleteCharacterResponse
-	(*ListCharactersRequest)(nil),         // 12: game.v1.ListCharactersRequest
-	(*ListCharactersResponse)(nil),        // 13: game.v1.ListCharactersResponse
-	(*SetDefaultControlRequest)(nil),      // 14: game.v1.SetDefaultControlRequest
-	(*SetDefaultControlResponse)(nil),     // 15: game.v1.SetDefaultControlResponse
-	(*GetCharacterSheetRequest)(nil),      // 16: game.v1.GetCharacterSheetRequest
-	(*GetCharacterSheetResponse)(nil),     // 17: game.v1.GetCharacterSheetResponse
-	(*PatchCharacterProfileRequest)(nil),  // 18: game.v1.PatchCharacterProfileRequest
-	(*PatchCharacterProfileResponse)(nil), // 19: game.v1.PatchCharacterProfileResponse
-	(*CharacterState)(nil),                // 20: game.v1.CharacterState
-	(*timestamppb.Timestamp)(nil),         // 21: google.protobuf.Timestamp
-	(*v1.DaggerheartProfile)(nil),         // 22: systems.daggerheart.v1.DaggerheartProfile
-	(*wrapperspb.StringValue)(nil),        // 23: google.protobuf.StringValue
-	(*v1.DaggerheartCharacterState)(nil),  // 24: systems.daggerheart.v1.DaggerheartCharacterState
+	(*CreateCharacterRequest)(nil),        // 3: game.v1.CreateCharacterRequest
+	(*CreateCharacterResponse)(nil),       // 4: game.v1.CreateCharacterResponse
+	(*UpdateCharacterRequest)(nil),        // 5: game.v1.UpdateCharacterRequest
+	(*UpdateCharacterResponse)(nil),       // 6: game.v1.UpdateCharacterResponse
+	(*DeleteCharacterRequest)(nil),        // 7: game.v1.DeleteCharacterRequest
+	(*DeleteCharacterResponse)(nil),       // 8: game.v1.DeleteCharacterResponse
+	(*ListCharactersRequest)(nil),         // 9: game.v1.ListCharactersRequest
+	(*ListCharactersResponse)(nil),        // 10: game.v1.ListCharactersResponse
+	(*SetDefaultControlRequest)(nil),      // 11: game.v1.SetDefaultControlRequest
+	(*SetDefaultControlResponse)(nil),     // 12: game.v1.SetDefaultControlResponse
+	(*GetCharacterSheetRequest)(nil),      // 13: game.v1.GetCharacterSheetRequest
+	(*GetCharacterSheetResponse)(nil),     // 14: game.v1.GetCharacterSheetResponse
+	(*PatchCharacterProfileRequest)(nil),  // 15: game.v1.PatchCharacterProfileRequest
+	(*PatchCharacterProfileResponse)(nil), // 16: game.v1.PatchCharacterProfileResponse
+	(*CharacterState)(nil),                // 17: game.v1.CharacterState
+	(*wrapperspb.StringValue)(nil),        // 18: google.protobuf.StringValue
+	(*timestamppb.Timestamp)(nil),         // 19: google.protobuf.Timestamp
+	(*v1.DaggerheartProfile)(nil),         // 20: systems.daggerheart.v1.DaggerheartProfile
+	(*v1.DaggerheartCharacterState)(nil),  // 21: systems.daggerheart.v1.DaggerheartCharacterState
 }
 var file_game_v1_character_proto_depIdxs = []int32{
-	0,  // 0: game.v1.Character.kind:type_name -> game.v1.CharacterKind
-	21, // 1: game.v1.Character.created_at:type_name -> google.protobuf.Timestamp
-	21, // 2: game.v1.Character.updated_at:type_name -> google.protobuf.Timestamp
-	22, // 3: game.v1.CharacterProfile.daggerheart:type_name -> systems.daggerheart.v1.DaggerheartProfile
-	4,  // 4: game.v1.CharacterController.gm:type_name -> game.v1.GmController
-	5,  // 5: game.v1.CharacterController.participant:type_name -> game.v1.ParticipantController
-	0,  // 6: game.v1.CreateCharacterRequest.kind:type_name -> game.v1.CharacterKind
-	1,  // 7: game.v1.CreateCharacterResponse.character:type_name -> game.v1.Character
-	23, // 8: game.v1.UpdateCharacterRequest.name:type_name -> google.protobuf.StringValue
-	0,  // 9: game.v1.UpdateCharacterRequest.kind:type_name -> game.v1.CharacterKind
-	23, // 10: game.v1.UpdateCharacterRequest.notes:type_name -> google.protobuf.StringValue
-	1,  // 11: game.v1.UpdateCharacterResponse.character:type_name -> game.v1.Character
-	1,  // 12: game.v1.DeleteCharacterResponse.character:type_name -> game.v1.Character
-	1,  // 13: game.v1.ListCharactersResponse.characters:type_name -> game.v1.Character
-	3,  // 14: game.v1.SetDefaultControlRequest.controller:type_name -> game.v1.CharacterController
-	3,  // 15: game.v1.SetDefaultControlResponse.controller:type_name -> game.v1.CharacterController
-	1,  // 16: game.v1.GetCharacterSheetResponse.character:type_name -> game.v1.Character
-	2,  // 17: game.v1.GetCharacterSheetResponse.profile:type_name -> game.v1.CharacterProfile
-	20, // 18: game.v1.GetCharacterSheetResponse.state:type_name -> game.v1.CharacterState
-	22, // 19: game.v1.PatchCharacterProfileRequest.daggerheart:type_name -> systems.daggerheart.v1.DaggerheartProfile
-	2,  // 20: game.v1.PatchCharacterProfileResponse.profile:type_name -> game.v1.CharacterProfile
-	24, // 21: game.v1.CharacterState.daggerheart:type_name -> systems.daggerheart.v1.DaggerheartCharacterState
-	6,  // 22: game.v1.CharacterService.CreateCharacter:input_type -> game.v1.CreateCharacterRequest
-	8,  // 23: game.v1.CharacterService.UpdateCharacter:input_type -> game.v1.UpdateCharacterRequest
-	10, // 24: game.v1.CharacterService.DeleteCharacter:input_type -> game.v1.DeleteCharacterRequest
-	12, // 25: game.v1.CharacterService.ListCharacters:input_type -> game.v1.ListCharactersRequest
-	14, // 26: game.v1.CharacterService.SetDefaultControl:input_type -> game.v1.SetDefaultControlRequest
-	16, // 27: game.v1.CharacterService.GetCharacterSheet:input_type -> game.v1.GetCharacterSheetRequest
-	18, // 28: game.v1.CharacterService.PatchCharacterProfile:input_type -> game.v1.PatchCharacterProfileRequest
-	7,  // 29: game.v1.CharacterService.CreateCharacter:output_type -> game.v1.CreateCharacterResponse
-	9,  // 30: game.v1.CharacterService.UpdateCharacter:output_type -> game.v1.UpdateCharacterResponse
-	11, // 31: game.v1.CharacterService.DeleteCharacter:output_type -> game.v1.DeleteCharacterResponse
-	13, // 32: game.v1.CharacterService.ListCharacters:output_type -> game.v1.ListCharactersResponse
-	15, // 33: game.v1.CharacterService.SetDefaultControl:output_type -> game.v1.SetDefaultControlResponse
-	17, // 34: game.v1.CharacterService.GetCharacterSheet:output_type -> game.v1.GetCharacterSheetResponse
-	19, // 35: game.v1.CharacterService.PatchCharacterProfile:output_type -> game.v1.PatchCharacterProfileResponse
-	29, // [29:36] is the sub-list for method output_type
-	22, // [22:29] is the sub-list for method input_type
-	22, // [22:22] is the sub-list for extension type_name
-	22, // [22:22] is the sub-list for extension extendee
-	0,  // [0:22] is the sub-list for field type_name
+	18, // 0: game.v1.Character.participant_id:type_name -> google.protobuf.StringValue
+	0,  // 1: game.v1.Character.kind:type_name -> game.v1.CharacterKind
+	19, // 2: game.v1.Character.created_at:type_name -> google.protobuf.Timestamp
+	19, // 3: game.v1.Character.updated_at:type_name -> google.protobuf.Timestamp
+	20, // 4: game.v1.CharacterProfile.daggerheart:type_name -> systems.daggerheart.v1.DaggerheartProfile
+	0,  // 5: game.v1.CreateCharacterRequest.kind:type_name -> game.v1.CharacterKind
+	1,  // 6: game.v1.CreateCharacterResponse.character:type_name -> game.v1.Character
+	18, // 7: game.v1.UpdateCharacterRequest.name:type_name -> google.protobuf.StringValue
+	0,  // 8: game.v1.UpdateCharacterRequest.kind:type_name -> game.v1.CharacterKind
+	18, // 9: game.v1.UpdateCharacterRequest.notes:type_name -> google.protobuf.StringValue
+	1,  // 10: game.v1.UpdateCharacterResponse.character:type_name -> game.v1.Character
+	1,  // 11: game.v1.DeleteCharacterResponse.character:type_name -> game.v1.Character
+	1,  // 12: game.v1.ListCharactersResponse.characters:type_name -> game.v1.Character
+	18, // 13: game.v1.SetDefaultControlRequest.participant_id:type_name -> google.protobuf.StringValue
+	18, // 14: game.v1.SetDefaultControlResponse.participant_id:type_name -> google.protobuf.StringValue
+	1,  // 15: game.v1.GetCharacterSheetResponse.character:type_name -> game.v1.Character
+	2,  // 16: game.v1.GetCharacterSheetResponse.profile:type_name -> game.v1.CharacterProfile
+	17, // 17: game.v1.GetCharacterSheetResponse.state:type_name -> game.v1.CharacterState
+	20, // 18: game.v1.PatchCharacterProfileRequest.daggerheart:type_name -> systems.daggerheart.v1.DaggerheartProfile
+	2,  // 19: game.v1.PatchCharacterProfileResponse.profile:type_name -> game.v1.CharacterProfile
+	21, // 20: game.v1.CharacterState.daggerheart:type_name -> systems.daggerheart.v1.DaggerheartCharacterState
+	3,  // 21: game.v1.CharacterService.CreateCharacter:input_type -> game.v1.CreateCharacterRequest
+	5,  // 22: game.v1.CharacterService.UpdateCharacter:input_type -> game.v1.UpdateCharacterRequest
+	7,  // 23: game.v1.CharacterService.DeleteCharacter:input_type -> game.v1.DeleteCharacterRequest
+	9,  // 24: game.v1.CharacterService.ListCharacters:input_type -> game.v1.ListCharactersRequest
+	11, // 25: game.v1.CharacterService.SetDefaultControl:input_type -> game.v1.SetDefaultControlRequest
+	13, // 26: game.v1.CharacterService.GetCharacterSheet:input_type -> game.v1.GetCharacterSheetRequest
+	15, // 27: game.v1.CharacterService.PatchCharacterProfile:input_type -> game.v1.PatchCharacterProfileRequest
+	4,  // 28: game.v1.CharacterService.CreateCharacter:output_type -> game.v1.CreateCharacterResponse
+	6,  // 29: game.v1.CharacterService.UpdateCharacter:output_type -> game.v1.UpdateCharacterResponse
+	8,  // 30: game.v1.CharacterService.DeleteCharacter:output_type -> game.v1.DeleteCharacterResponse
+	10, // 31: game.v1.CharacterService.ListCharacters:output_type -> game.v1.ListCharactersResponse
+	12, // 32: game.v1.CharacterService.SetDefaultControl:output_type -> game.v1.SetDefaultControlResponse
+	14, // 33: game.v1.CharacterService.GetCharacterSheet:output_type -> game.v1.GetCharacterSheetResponse
+	16, // 34: game.v1.CharacterService.PatchCharacterProfile:output_type -> game.v1.PatchCharacterProfileResponse
+	28, // [28:35] is the sub-list for method output_type
+	21, // [21:28] is the sub-list for method input_type
+	21, // [21:21] is the sub-list for extension type_name
+	21, // [21:21] is the sub-list for extension extendee
+	0,  // [0:21] is the sub-list for field type_name
 }
 
 func init() { file_game_v1_character_proto_init() }
@@ -1550,14 +1377,10 @@ func file_game_v1_character_proto_init() {
 	file_game_v1_character_proto_msgTypes[1].OneofWrappers = []any{
 		(*CharacterProfile_Daggerheart)(nil),
 	}
-	file_game_v1_character_proto_msgTypes[2].OneofWrappers = []any{
-		(*CharacterController_Gm)(nil),
-		(*CharacterController_Participant)(nil),
-	}
-	file_game_v1_character_proto_msgTypes[17].OneofWrappers = []any{
+	file_game_v1_character_proto_msgTypes[14].OneofWrappers = []any{
 		(*PatchCharacterProfileRequest_Daggerheart)(nil),
 	}
-	file_game_v1_character_proto_msgTypes[19].OneofWrappers = []any{
+	file_game_v1_character_proto_msgTypes[16].OneofWrappers = []any{
 		(*CharacterState_Daggerheart)(nil),
 	}
 	type x struct{}
@@ -1566,7 +1389,7 @@ func file_game_v1_character_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_game_v1_character_proto_rawDesc), len(file_game_v1_character_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   20,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

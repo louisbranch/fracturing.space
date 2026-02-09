@@ -24,6 +24,7 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 // fakeDaggerheartClient implements DaggerheartServiceClient for tests.
@@ -2171,9 +2172,9 @@ func TestCharacterControlSetHandlerReturnsClientError(t *testing.T) {
 	handler := domain.CharacterControlSetHandler(client, nil)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.CharacterControlSetInput{
-		CampaignID:  "camp-123",
-		CharacterID: "character-456",
-		Controller:  "GM",
+		CampaignID:    "camp-123",
+		CharacterID:   "character-456",
+		ParticipantID: "",
 	})
 	if err == nil {
 		t.Fatal("expected error")
@@ -2183,24 +2184,20 @@ func TestCharacterControlSetHandlerReturnsClientError(t *testing.T) {
 	}
 }
 
-// TestCharacterControlSetHandlerMapsRequestAndResponseGM ensures GM controller inputs and outputs map consistently.
-func TestCharacterControlSetHandlerMapsRequestAndResponseGM(t *testing.T) {
+// TestCharacterControlSetHandlerMapsRequestAndResponseUnassigned ensures empty participant inputs and outputs map consistently.
+func TestCharacterControlSetHandlerMapsRequestAndResponseUnassigned(t *testing.T) {
 	client := &fakeCharacterClient{setDefaultControlResponse: &statev1.SetDefaultControlResponse{
-		CampaignId:  "camp-123",
-		CharacterId: "character-456",
-		Controller: &statev1.CharacterController{
-			Controller: &statev1.CharacterController_Gm{
-				Gm: &statev1.GmController{},
-			},
-		},
+		CampaignId:    "camp-123",
+		CharacterId:   "character-456",
+		ParticipantId: wrapperspb.String(""),
 	}}
 	result, output, err := domain.CharacterControlSetHandler(client, nil)(
 		context.Background(),
 		&mcp.CallToolRequest{},
 		domain.CharacterControlSetInput{
-			CampaignID:  "camp-123",
-			CharacterID: "character-456",
-			Controller:  "GM",
+			CampaignID:    "camp-123",
+			CharacterID:   "character-456",
+			ParticipantID: "",
 		},
 	)
 	if err != nil {
@@ -2216,12 +2213,8 @@ func TestCharacterControlSetHandlerMapsRequestAndResponseGM(t *testing.T) {
 	if client.lastSetDefaultControlRequest.GetCharacterId() != "character-456" {
 		t.Fatalf("expected character id character-456, got %q", client.lastSetDefaultControlRequest.GetCharacterId())
 	}
-	controller := client.lastSetDefaultControlRequest.GetController()
-	if controller == nil {
-		t.Fatal("expected controller in request")
-	}
-	if _, ok := controller.GetController().(*statev1.CharacterController_Gm); !ok {
-		t.Fatalf("expected GM controller, got %T", controller.GetController())
+	if client.lastSetDefaultControlRequest.GetParticipantId().GetValue() != "" {
+		t.Fatalf("expected empty participant id, got %q", client.lastSetDefaultControlRequest.GetParticipantId().GetValue())
 	}
 	if output.CampaignID != "camp-123" {
 		t.Fatalf("expected campaign id camp-123, got %q", output.CampaignID)
@@ -2229,8 +2222,8 @@ func TestCharacterControlSetHandlerMapsRequestAndResponseGM(t *testing.T) {
 	if output.CharacterID != "character-456" {
 		t.Fatalf("expected character id character-456, got %q", output.CharacterID)
 	}
-	if output.Controller != "GM" {
-		t.Fatalf("expected controller GM, got %q", output.Controller)
+	if output.ParticipantID != "" {
+		t.Fatalf("expected empty participant id, got %q", output.ParticipantID)
 	}
 }
 
@@ -2238,23 +2231,17 @@ func TestCharacterControlSetHandlerMapsRequestAndResponseGM(t *testing.T) {
 func TestCharacterControlSetHandlerMapsRequestAndResponseParticipant(t *testing.T) {
 	participantID := "part-789"
 	client := &fakeCharacterClient{setDefaultControlResponse: &statev1.SetDefaultControlResponse{
-		CampaignId:  "camp-123",
-		CharacterId: "character-456",
-		Controller: &statev1.CharacterController{
-			Controller: &statev1.CharacterController_Participant{
-				Participant: &statev1.ParticipantController{
-					ParticipantId: participantID,
-				},
-			},
-		},
+		CampaignId:    "camp-123",
+		CharacterId:   "character-456",
+		ParticipantId: wrapperspb.String(participantID),
 	}}
 	result, output, err := domain.CharacterControlSetHandler(client, nil)(
 		context.Background(),
 		&mcp.CallToolRequest{},
 		domain.CharacterControlSetInput{
-			CampaignID:  "camp-123",
-			CharacterID: "character-456",
-			Controller:  participantID,
+			CampaignID:    "camp-123",
+			CharacterID:   "character-456",
+			ParticipantID: participantID,
 		},
 	)
 	if err != nil {
@@ -2270,16 +2257,8 @@ func TestCharacterControlSetHandlerMapsRequestAndResponseParticipant(t *testing.
 	if client.lastSetDefaultControlRequest.GetCharacterId() != "character-456" {
 		t.Fatalf("expected character id character-456, got %q", client.lastSetDefaultControlRequest.GetCharacterId())
 	}
-	controller := client.lastSetDefaultControlRequest.GetController()
-	if controller == nil {
-		t.Fatal("expected controller in request")
-	}
-	participantCtrl, ok := controller.GetController().(*statev1.CharacterController_Participant)
-	if !ok {
-		t.Fatalf("expected participant controller, got %T", controller.GetController())
-	}
-	if participantCtrl.Participant.GetParticipantId() != participantID {
-		t.Fatalf("expected participant id %q, got %q", participantID, participantCtrl.Participant.GetParticipantId())
+	if client.lastSetDefaultControlRequest.GetParticipantId().GetValue() != participantID {
+		t.Fatalf("expected participant id %q, got %q", participantID, client.lastSetDefaultControlRequest.GetParticipantId().GetValue())
 	}
 	if output.CampaignID != "camp-123" {
 		t.Fatalf("expected campaign id camp-123, got %q", output.CampaignID)
@@ -2287,40 +2266,8 @@ func TestCharacterControlSetHandlerMapsRequestAndResponseParticipant(t *testing.
 	if output.CharacterID != "character-456" {
 		t.Fatalf("expected character id character-456, got %q", output.CharacterID)
 	}
-	if output.Controller != participantID {
-		t.Fatalf("expected controller %q, got %q", participantID, output.Controller)
-	}
-}
-
-// TestCharacterControlSetHandlerCaseInsensitiveGM ensures GM controller accepts case-insensitive input.
-func TestCharacterControlSetHandlerCaseInsensitiveGM(t *testing.T) {
-	client := &fakeCharacterClient{setDefaultControlResponse: &statev1.SetDefaultControlResponse{
-		CampaignId:  "camp-123",
-		CharacterId: "character-456",
-		Controller: &statev1.CharacterController{
-			Controller: &statev1.CharacterController_Gm{
-				Gm: &statev1.GmController{},
-			},
-		},
-	}}
-	for _, input := range []string{"GM", "gm", "Gm", "gM"} {
-		t.Run(input, func(t *testing.T) {
-			_, output, err := domain.CharacterControlSetHandler(client, nil)(
-				context.Background(),
-				&mcp.CallToolRequest{},
-				domain.CharacterControlSetInput{
-					CampaignID:  "camp-123",
-					CharacterID: "character-456",
-					Controller:  input,
-				},
-			)
-			if err != nil {
-				t.Fatalf("expected no error for %q, got %v", input, err)
-			}
-			if output.Controller != "GM" {
-				t.Fatalf("expected controller GM, got %q", output.Controller)
-			}
-		})
+	if output.ParticipantID != participantID {
+		t.Fatalf("expected participant id %q, got %q", participantID, output.ParticipantID)
 	}
 }
 
@@ -2330,30 +2277,12 @@ func TestCharacterControlSetHandlerRejectsEmptyResponse(t *testing.T) {
 	handler := domain.CharacterControlSetHandler(client, nil)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.CharacterControlSetInput{
-		CampaignID:  "camp-123",
-		CharacterID: "character-456",
-		Controller:  "GM",
+		CampaignID:    "camp-123",
+		CharacterID:   "character-456",
+		ParticipantID: "",
 	})
 	if err == nil {
 		t.Fatal("expected error")
-	}
-	if result != nil {
-		t.Fatal("expected nil result on error")
-	}
-}
-
-// TestCharacterControlSetHandlerRejectsEmptyController ensures empty controller is rejected.
-func TestCharacterControlSetHandlerRejectsEmptyController(t *testing.T) {
-	client := &fakeCharacterClient{}
-	handler := domain.CharacterControlSetHandler(client, nil)
-
-	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.CharacterControlSetInput{
-		CampaignID:  "camp-123",
-		CharacterID: "character-456",
-		Controller:  "",
-	})
-	if err == nil {
-		t.Fatal("expected error for empty controller")
 	}
 	if result != nil {
 		t.Fatal("expected nil result on error")

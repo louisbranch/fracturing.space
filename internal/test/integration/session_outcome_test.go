@@ -300,9 +300,9 @@ func runSessionOutcomeTests(t *testing.T, suite *integrationSuite, grpcAddr stri
 		setControlResult, err := suite.client.CallTool(ctx, &mcp.CallToolParams{
 			Name: "character_control_set",
 			Arguments: map[string]any{
-				"campaign_id":  campaignOutput.ID,
-				"character_id": characterOutput.ID,
-				"controller":   "GM",
+				"campaign_id":    campaignOutput.ID,
+				"character_id":   characterOutput.ID,
+				"participant_id": "",
 			},
 		})
 		if err != nil {

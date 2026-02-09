@@ -12,11 +12,12 @@ option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/game/v1;
 message Character {
   string id = 1;
   string campaign_id = 2;
-  string name = 3;
-  CharacterKind kind = 4;
-  string notes = 5;
-  google.protobuf.Timestamp created_at = 6;
-  google.protobuf.Timestamp updated_at = 7;
+  google.protobuf.StringValue participant_id = 3;
+  string name = 4;
+  CharacterKind kind = 5;
+  string notes = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
 }
 
 enum CharacterKind {
@@ -37,26 +38,6 @@ message CharacterProfile {
   oneof system_profile {
     systems.daggerheart.v1.DaggerheartProfile daggerheart = 3;
   }
-}
-
-// CharacterController defines who controls a character.
-message CharacterController {
-  oneof controller {
-    // If set, the controller is the GM.
-    GmController gm = 1;
-
-    // If set, the controller is a registered campaign participant.
-    ParticipantController participant = 2;
-  }
-}
-
-message GmController {
-  // Empty message to indicate GM control.
-}
-
-message ParticipantController {
-  // The participant ID of the controller.
-  string participant_id = 1;
 }
 
 // CharacterService provides CRUD operations for characters and their profiles.
@@ -161,8 +142,8 @@ message SetDefaultControlRequest {
   // The character ID.
   string character_id = 2;
 
-  // The controller for the character.
-  CharacterController controller = 3;
+  // The participant ID of the controller (empty means unassigned).
+  google.protobuf.StringValue participant_id = 3;
 }
 
 message SetDefaultControlResponse {
@@ -172,8 +153,8 @@ message SetDefaultControlResponse {
   // The character ID.
   string character_id = 2;
 
-  // The controller for the character.
-  CharacterController controller = 3;
+  // The participant ID of the controller (empty means unassigned).
+  google.protobuf.StringValue participant_id = 3;
 }
 
 message GetCharacterSheetRequest {

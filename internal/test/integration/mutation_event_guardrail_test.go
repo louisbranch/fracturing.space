@@ -97,9 +97,9 @@ func runMutationEventGuardrailTests(t *testing.T, suite *integrationSuite, grpcA
 		controlResult, err := suite.client.CallTool(ctx, &mcp.CallToolParams{
 			Name: "character_control_set",
 			Arguments: map[string]any{
-				"campaign_id":  campaignOutput.ID,
-				"character_id": characterOutput.ID,
-				"controller":   participantOutput.ID,
+				"campaign_id":    campaignOutput.ID,
+				"character_id":   characterOutput.ID,
+				"participant_id": participantOutput.ID,
 			},
 		})
 		if err != nil {

@@ -334,7 +334,6 @@ func (s *CharacterService) UpdateCharacter(ctx context.Context, in *campaignv1.U
 	applier := projection.Applier{
 		Campaign:    s.stores.Campaign,
 		Character:   s.stores.Character,
-		Control:     s.stores.ControlDefault,
 		Daggerheart: s.stores.Daggerheart,
 		Participant: s.stores.Participant,
 	}
@@ -423,7 +422,6 @@ func (s *CharacterService) DeleteCharacter(ctx context.Context, in *campaignv1.D
 	applier := projection.Applier{
 		Campaign:    s.stores.Campaign,
 		Character:   s.stores.Character,
-		Control:     s.stores.ControlDefault,
 		Daggerheart: s.stores.Daggerheart,
 		Participant: s.stores.Participant,
 	}
@@ -499,9 +497,6 @@ func (s *CharacterService) SetDefaultControl(ctx context.Context, in *campaignv1
 	if s.stores.Character == nil {
 		return nil, status.Error(codes.Internal, "character store is not configured")
 	}
-	if s.stores.ControlDefault == nil {
-		return nil, status.Error(codes.Internal, "control default store is not configured")
-	}
 	if s.stores.Event == nil {
 		return nil, status.Error(codes.Internal, "event store is not configured")
 	}
@@ -524,20 +519,15 @@ func (s *CharacterService) SetDefaultControl(ctx context.Context, in *campaignv1
 		return nil, handleDomainError(err)
 	}
 
-	if in.GetController() == nil {
-		return nil, status.Error(codes.InvalidArgument, "controller is required")
+	if in.ParticipantId == nil {
+		return nil, status.Error(codes.InvalidArgument, "participant id is required")
 	}
-	controller, err := characterControllerFromProto(in.GetController())
-	if err != nil {
-		return nil, handleDomainError(err)
-	}
-
-	// If participant controller, validate participant exists
-	if !controller.IsGM {
+	participantID := strings.TrimSpace(in.GetParticipantId().GetValue())
+	if participantID != "" {
 		if s.stores.Participant == nil {
 			return nil, status.Error(codes.Internal, "participant store is not configured")
 		}
-		_, err = s.stores.Participant.GetParticipant(ctx, campaignID, controller.ParticipantID)
+		_, err = s.stores.Participant.GetParticipant(ctx, campaignID, participantID)
 		if err != nil {
 			return nil, handleDomainError(err)
 		}
@@ -545,8 +535,7 @@ func (s *CharacterService) SetDefaultControl(ctx context.Context, in *campaignv1
 
 	payload := event.ControllerAssignedPayload{
 		CharacterID:   characterID,
-		IsGM:          controller.IsGM,
-		ParticipantID: controller.ParticipantID,
+		ParticipantID: participantID,
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -578,7 +567,6 @@ func (s *CharacterService) SetDefaultControl(ctx context.Context, in *campaignv1
 	applier := projection.Applier{
 		Campaign:    s.stores.Campaign,
 		Character:   s.stores.Character,
-		Control:     s.stores.ControlDefault,
 		Daggerheart: s.stores.Daggerheart,
 		Participant: s.stores.Participant,
 	}
@@ -586,10 +574,14 @@ func (s *CharacterService) SetDefaultControl(ctx context.Context, in *campaignv1
 		return nil, status.Errorf(codes.Internal, "apply event: %v", err)
 	}
 
+	var participantIDValue *wrapperspb.StringValue
+	if participantID != "" {
+		participantIDValue = wrapperspb.String(participantID)
+	}
 	return &campaignv1.SetDefaultControlResponse{
-		CampaignId:  campaignID,
-		CharacterId: characterID,
-		Controller:  characterControllerToProto(controller),
+		CampaignId:    campaignID,
+		CharacterId:   characterID,
+		ParticipantId: participantIDValue,
 	}, nil
 }
 
@@ -808,7 +800,6 @@ func (s *CharacterService) PatchCharacterProfile(ctx context.Context, in *campai
 	applier := projection.Applier{
 		Campaign:    s.stores.Campaign,
 		Character:   s.stores.Character,
-		Control:     s.stores.ControlDefault,
 		Daggerheart: s.stores.Daggerheart,
 		Participant: s.stores.Participant,
 	}

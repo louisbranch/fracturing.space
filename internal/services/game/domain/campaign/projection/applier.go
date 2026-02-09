@@ -21,7 +21,6 @@ import (
 type Applier struct {
 	Campaign    storage.CampaignStore
 	Character   storage.CharacterStore
-	Control     storage.ControlDefaultStore
 	Daggerheart storage.DaggerheartStore
 	Participant storage.ParticipantStore
 }
@@ -516,8 +515,11 @@ func (a Applier) applyCharacterDeleted(ctx context.Context, evt event.Event) err
 }
 
 func (a Applier) applyControllerAssigned(ctx context.Context, evt event.Event) error {
-	if a.Control == nil {
-		return fmt.Errorf("control default store is not configured")
+	if a.Character == nil {
+		return fmt.Errorf("character store is not configured")
+	}
+	if a.Campaign == nil {
+		return fmt.Errorf("campaign store is not configured")
 	}
 	if strings.TrimSpace(evt.CampaignID) == "" {
 		return fmt.Errorf("campaign id is required")
@@ -532,21 +534,28 @@ func (a Applier) applyControllerAssigned(ctx context.Context, evt event.Event) e
 		return fmt.Errorf("decode character.controller_assigned payload: %w", err)
 	}
 
-	var controller character.CharacterController
-	if payload.IsGM {
-		controller = character.NewGmController()
-	} else {
-		ctrl, err := character.NewParticipantController(payload.ParticipantID)
-		if err != nil {
-			return err
-		}
-		controller = ctrl
-	}
-	if err := controller.Validate(); err != nil {
+	current, err := a.Character.GetCharacter(ctx, evt.CampaignID, characterID)
+	if err != nil {
 		return err
 	}
 
-	return a.Control.PutControlDefault(ctx, evt.CampaignID, characterID, controller)
+	updated := current
+	updated.ParticipantID = strings.TrimSpace(payload.ParticipantID)
+	updatedAt := ensureTimestamp(evt.Timestamp)
+	updated.UpdatedAt = updatedAt
+
+	if err := a.Character.PutCharacter(ctx, updated); err != nil {
+		return err
+	}
+
+	campaignRecord, err := a.Campaign.Get(ctx, evt.CampaignID)
+	if err != nil {
+		return err
+	}
+	campaignRecord.LastActivityAt = updatedAt
+	campaignRecord.UpdatedAt = updatedAt
+
+	return a.Campaign.Put(ctx, campaignRecord)
 }
 
 func (a Applier) applyProfileUpdated(ctx context.Context, evt event.Event) error {

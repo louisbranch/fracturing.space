@@ -35,11 +35,14 @@ var (
 type Character struct {
 	ID         string
 	CampaignID string
-	Name       string
-	Kind       CharacterKind
-	Notes      string
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
+	// ParticipantID is the participant assigned to control the character.
+	// Empty means unassigned.
+	ParticipantID string
+	Name          string
+	Kind          CharacterKind
+	Notes         string
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 // CreateCharacterInput describes the metadata needed to create a character.
@@ -71,13 +74,14 @@ func CreateCharacter(input CreateCharacterInput, now func() time.Time, idGenerat
 
 	createdAt := now().UTC()
 	return Character{
-		ID:         characterID,
-		CampaignID: normalized.CampaignID,
-		Name:       normalized.Name,
-		Kind:       normalized.Kind,
-		Notes:      normalized.Notes,
-		CreatedAt:  createdAt,
-		UpdatedAt:  createdAt,
+		ID:            characterID,
+		CampaignID:    normalized.CampaignID,
+		ParticipantID: "",
+		Name:          normalized.Name,
+		Kind:          normalized.Kind,
+		Notes:         normalized.Notes,
+		CreatedAt:     createdAt,
+		UpdatedAt:     createdAt,
 	}, nil
 }
 

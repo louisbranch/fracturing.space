@@ -1371,7 +1371,23 @@ func (h *Handler) handleCharactersTable(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	rows := buildCharacterRows(characters, loc)
+	participantNames := map[string]string{}
+	if participantClient := h.participantClient(); participantClient != nil {
+		participantsResp, err := participantClient.ListParticipants(ctx, &statev1.ListParticipantsRequest{
+			CampaignId: campaignID,
+		})
+		if err != nil {
+			log.Printf("list participants for character table: %v", err)
+		} else {
+			for _, participant := range participantsResp.GetParticipants() {
+				if participant != nil {
+					participantNames[participant.GetId()] = participant.GetDisplayName()
+				}
+			}
+		}
+	}
+
+	rows := buildCharacterRows(characters, participantNames, loc)
 	h.renderCharactersTable(w, r, rows, "", loc)
 }
 
@@ -1431,7 +1447,31 @@ func (h *Handler) handleCharacterSheet(w http.ResponseWriter, r *http.Request, c
 		}
 	}
 
-	sheet := buildCharacterSheet(campaignID, campaignName, character, recentEvents, loc)
+	controller := loc.Sprintf("label.unassigned")
+	participantID := ""
+	if character.GetParticipantId() != nil {
+		participantID = strings.TrimSpace(character.GetParticipantId().GetValue())
+	}
+	if participantID != "" {
+		if participantClient := h.participantClient(); participantClient != nil {
+			participantResp, err := participantClient.GetParticipant(ctx, &statev1.GetParticipantRequest{
+				CampaignId:    campaignID,
+				ParticipantId: participantID,
+			})
+			if err != nil {
+				log.Printf("get participant for character sheet: %v", err)
+				controller = loc.Sprintf("label.unknown")
+			} else if participant := participantResp.GetParticipant(); participant != nil {
+				controller = participant.GetDisplayName()
+			} else {
+				controller = loc.Sprintf("label.unknown")
+			}
+		} else {
+			controller = loc.Sprintf("label.unknown")
+		}
+	}
+
+	sheet := buildCharacterSheet(campaignID, campaignName, character, recentEvents, controller, loc)
 
 	if isHTMXRequest(r) {
 		templ.Handler(templates.CharacterSheetPage(sheet, loc)).ServeHTTP(w, r)
@@ -1447,16 +1487,14 @@ func (h *Handler) renderCharactersTable(w http.ResponseWriter, r *http.Request, 
 }
 
 // buildCharacterRows formats character rows for the table.
-func buildCharacterRows(characters []*statev1.Character, loc *message.Printer) []templates.CharacterRow {
+func buildCharacterRows(characters []*statev1.Character, participantNames map[string]string, loc *message.Printer) []templates.CharacterRow {
 	rows := make([]templates.CharacterRow, 0, len(characters))
 	for _, character := range characters {
 		if character == nil {
 			continue
 		}
 
-		// Format controller
-		controller := loc.Sprintf("label.unknown")
-		// TODO: Get controller information (requires join with participant data)
+		controller := formatCharacterController(character, participantNames, loc)
 
 		rows = append(rows, templates.CharacterRow{
 			ID:         character.GetId(),
@@ -1470,16 +1508,33 @@ func buildCharacterRows(characters []*statev1.Character, loc *message.Printer) [
 }
 
 // buildCharacterSheet formats character sheet data.
-func buildCharacterSheet(campaignID, campaignName string, character *statev1.Character, recentEvents []templates.EventRow, loc *message.Printer) templates.CharacterSheetView {
+func buildCharacterSheet(campaignID, campaignName string, character *statev1.Character, recentEvents []templates.EventRow, controller string, loc *message.Printer) templates.CharacterSheetView {
 	return templates.CharacterSheetView{
 		CampaignID:   campaignID,
 		CampaignName: campaignName,
 		Character:    character,
-		Controller:   loc.Sprintf("label.unknown"),
+		Controller:   controller,
 		CreatedAt:    formatTimestamp(character.GetCreatedAt()),
 		UpdatedAt:    formatTimestamp(character.GetUpdatedAt()),
 		RecentEvents: recentEvents,
 	}
+}
+
+func formatCharacterController(character *statev1.Character, participantNames map[string]string, loc *message.Printer) string {
+	if character == nil {
+		return loc.Sprintf("label.unassigned")
+	}
+	participantID := ""
+	if character.GetParticipantId() != nil {
+		participantID = strings.TrimSpace(character.GetParticipantId().GetValue())
+	}
+	if participantID == "" {
+		return loc.Sprintf("label.unassigned")
+	}
+	if name, ok := participantNames[participantID]; ok {
+		return name
+	}
+	return loc.Sprintf("label.unknown")
 }
 
 // formatCharacterKind returns a display label for a character kind.

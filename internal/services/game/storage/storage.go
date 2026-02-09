@@ -79,15 +79,6 @@ type CharacterPage struct {
 	NextPageToken string
 }
 
-// ControlDefaultStore persists default controller assignments for characters.
-type ControlDefaultStore interface {
-	// PutControlDefault sets the default controller for a character in a campaign.
-	// Overwrites any existing controller for the same (campaign_id, character_id) pair.
-	PutControlDefault(ctx context.Context, campaignID, characterID string, controller character.CharacterController) error
-	// GetControlDefault retrieves the default controller for a character in a campaign.
-	GetControlDefault(ctx context.Context, campaignID, characterID string) (character.CharacterController, error)
-}
-
 // SessionStore persists session records.
 type SessionStore interface {
 	// PutSession atomically stores a session and sets it as the active session for the campaign.
@@ -282,7 +273,6 @@ type Store interface {
 	CampaignStore
 	ParticipantStore
 	CharacterStore
-	ControlDefaultStore
 	InviteStore
 	DaggerheartStore
 	SessionStore

@@ -34,12 +34,10 @@ const (
 	CodeSessionEmptyCampaignID Code = "SESSION_EMPTY_CAMPAIGN_ID"
 
 	// Character errors
-	CodeCharacterInvalidController  Code = "CHARACTER_INVALID_CONTROLLER"
-	CodeCharacterEmptyParticipantID Code = "CHARACTER_EMPTY_PARTICIPANT_ID"
-	CodeCharacterEmptyCampaignID    Code = "CHARACTER_EMPTY_CAMPAIGN_ID"
-	CodeCharacterEmptyName          Code = "CHARACTER_EMPTY_NAME"
-	CodeCharacterInvalidKind        Code = "CHARACTER_INVALID_KIND"
-	CodeCharacterInvalidProfileHp   Code = "CHARACTER_INVALID_PROFILE_HP"
+	CodeCharacterEmptyCampaignID  Code = "CHARACTER_EMPTY_CAMPAIGN_ID"
+	CodeCharacterEmptyName        Code = "CHARACTER_EMPTY_NAME"
+	CodeCharacterInvalidKind      Code = "CHARACTER_INVALID_KIND"
+	CodeCharacterInvalidProfileHp Code = "CHARACTER_INVALID_PROFILE_HP"
 
 	// Snapshot errors
 	CodeSnapshotInvalidHp        Code = "SNAPSHOT_INVALID_HP"
@@ -96,8 +94,6 @@ func (c Code) GRPCCode() codes.Code {
 		CodeInviteEmptyCampaignID,
 		CodeInviteEmptyParticipantID,
 		CodeSessionEmptyCampaignID,
-		CodeCharacterInvalidController,
-		CodeCharacterEmptyParticipantID,
 		CodeCharacterEmptyCampaignID,
 		CodeCharacterEmptyName,
 		CodeCharacterInvalidKind,

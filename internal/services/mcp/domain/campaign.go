@@ -242,16 +242,16 @@ type CharacterDeleteResult struct {
 
 // CharacterControlSetInput represents the MCP tool input for setting character control.
 type CharacterControlSetInput struct {
-	CampaignID  string `json:"campaign_id" jsonschema:"campaign identifier"`
-	CharacterID string `json:"character_id" jsonschema:"character identifier"`
-	Controller  string `json:"controller" jsonschema:"controller: 'GM' (case-insensitive) for GM control, or a participant ID for participant control"`
+	CampaignID    string `json:"campaign_id" jsonschema:"campaign identifier"`
+	CharacterID   string `json:"character_id" jsonschema:"character identifier"`
+	ParticipantID string `json:"participant_id" jsonschema:"participant id to control the character (empty to unassign)"`
 }
 
 // CharacterControlSetResult represents the MCP tool output for setting character control.
 type CharacterControlSetResult struct {
-	CampaignID  string `json:"campaign_id" jsonschema:"campaign identifier"`
-	CharacterID string `json:"character_id" jsonschema:"character identifier"`
-	Controller  string `json:"controller" jsonschema:"controller: 'GM' or the participant ID"`
+	CampaignID    string `json:"campaign_id" jsonschema:"campaign identifier"`
+	CharacterID   string `json:"character_id" jsonschema:"character identifier"`
+	ParticipantID string `json:"participant_id" jsonschema:"participant id assigned to the character"`
 }
 
 // CharacterSheetGetInput represents the MCP tool input for getting a character sheet.
@@ -452,7 +452,7 @@ func CharacterDeleteTool() *mcp.Tool {
 func CharacterControlSetTool() *mcp.Tool {
 	return &mcp.Tool{
 		Name:        "character_control_set",
-		Description: "Sets the default controller (GM or participant) for a character in a campaign",
+		Description: "Sets the participant controller for a character in a campaign",
 	}
 }
 
@@ -1362,11 +1362,6 @@ func CharacterControlSetHandler(client statev1.CharacterServiceClient, notify Re
 		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 
-		controller, err := characterControllerFromString(input.Controller)
-		if err != nil {
-			return nil, CharacterControlSetResult{}, fmt.Errorf("invalid controller: %w", err)
-		}
-
 		callCtx, callMeta, err := NewOutgoingContext(runCtx, invocationID)
 		if err != nil {
 			return nil, CharacterControlSetResult{}, fmt.Errorf("create request metadata: %w", err)
@@ -1375,9 +1370,9 @@ func CharacterControlSetHandler(client statev1.CharacterServiceClient, notify Re
 		var header metadata.MD
 
 		req := &statev1.SetDefaultControlRequest{
-			CampaignId:  input.CampaignID,
-			CharacterId: input.CharacterID,
-			Controller:  controller,
+			CampaignId:    input.CampaignID,
+			CharacterId:   input.CharacterID,
+			ParticipantId: wrapperspb.String(input.ParticipantID),
 		}
 
 		response, err := client.SetDefaultControl(callCtx, req, grpc.Header(&header))
@@ -1388,10 +1383,14 @@ func CharacterControlSetHandler(client statev1.CharacterServiceClient, notify Re
 			return nil, CharacterControlSetResult{}, fmt.Errorf("character control set response is missing")
 		}
 
+		participantID := ""
+		if response.GetParticipantId() != nil {
+			participantID = response.GetParticipantId().GetValue()
+		}
 		result := CharacterControlSetResult{
-			CampaignID:  response.GetCampaignId(),
-			CharacterID: response.GetCharacterId(),
-			Controller:  characterControllerToString(response.GetController()),
+			CampaignID:    response.GetCampaignId(),
+			CharacterID:   response.GetCharacterId(),
+			ParticipantID: participantID,
 		}
 
 		responseMeta := MergeResponseMetadata(callMeta, header)
@@ -1401,53 +1400,6 @@ func CharacterControlSetHandler(client statev1.CharacterServiceClient, notify Re
 			fmt.Sprintf("campaign://%s/characters", result.CampaignID),
 		)
 		return CallToolResultWithMetadata(responseMeta), result, nil
-	}
-}
-
-// characterControllerFromString converts a string to a protobuf CharacterController.
-// Accepts "GM" (case-insensitive) for GM control, or a participant ID for participant control.
-func characterControllerFromString(controller string) (*statev1.CharacterController, error) {
-	controller = strings.TrimSpace(controller)
-	if controller == "" {
-		return nil, fmt.Errorf("controller is required")
-	}
-
-	upper := strings.ToUpper(controller)
-	if upper == "GM" {
-		return &statev1.CharacterController{
-			Controller: &statev1.CharacterController_Gm{
-				Gm: &statev1.GmController{},
-			},
-		}, nil
-	}
-
-	// Otherwise, treat as participant ID
-	return &statev1.CharacterController{
-		Controller: &statev1.CharacterController_Participant{
-			Participant: &statev1.ParticipantController{
-				ParticipantId: controller,
-			},
-		},
-	}, nil
-}
-
-// characterControllerToString converts a protobuf CharacterController to a string representation.
-// Returns "GM" for GM control, or the participant ID for participant control.
-func characterControllerToString(controller *statev1.CharacterController) string {
-	if controller == nil {
-		return ""
-	}
-
-	switch c := controller.GetController().(type) {
-	case *statev1.CharacterController_Gm:
-		return "GM"
-	case *statev1.CharacterController_Participant:
-		if c.Participant != nil {
-			return c.Participant.GetParticipantId()
-		}
-		return ""
-	default:
-		return ""
 	}
 }
 
