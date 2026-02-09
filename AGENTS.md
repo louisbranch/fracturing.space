@@ -18,7 +18,6 @@ Single source of agent directives and project context.
 
 ## Planning sessions
 
-- After preflight, ensure the plans directory exists: `mkdir -p .ai/plans`.
 - Then create `.ai/plans/<topic>.md` before modifying any other files.
 - Plans are session-only and should include a description, task list that is updated as work progresses, plus next steps and out of scope if applicable.
 - Before any PR, move lingering knowledge or tasks from `.ai/plans` into `docs/` so it survives the worktree lifecycle.
