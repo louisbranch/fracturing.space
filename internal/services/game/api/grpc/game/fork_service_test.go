@@ -3,7 +3,6 @@ package game
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"testing"
 	"time"
 
@@ -23,7 +22,6 @@ func TestForkCampaign_ReplaysEvents_CopyParticipantsFalse(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
 	characterStore := newFakeCharacterStore()
-	controlStore := newFakeControlDefaultStore()
 	dhStore := newFakeDaggerheartStore()
 	eventStore := newFakeEventStore()
 	forkStore := newFakeCampaignForkStore()
@@ -132,13 +130,12 @@ func TestForkCampaign_ReplaysEvents_CopyParticipantsFalse(t *testing.T) {
 
 	svc := &ForkService{
 		stores: Stores{
-			Campaign:       campaignStore,
-			Participant:    participantStore,
-			Character:      characterStore,
-			ControlDefault: controlStore,
-			Daggerheart:    dhStore,
-			Event:          eventStore,
-			CampaignFork:   forkStore,
+			Campaign:     campaignStore,
+			Participant:  participantStore,
+			Character:    characterStore,
+			Daggerheart:  dhStore,
+			Event:        eventStore,
+			CampaignFork: forkStore,
 		},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("fork-1"),
@@ -174,8 +171,12 @@ func TestForkCampaign_ReplaysEvents_CopyParticipantsFalse(t *testing.T) {
 		t.Fatalf("expected daggerheart state in forked campaign: %v", err)
 	}
 
-	if _, err := controlStore.GetControlDefault(ctx, "fork-1", "char-1"); !errors.Is(err, storage.ErrNotFound) {
-		t.Fatalf("expected no control default, got %v", err)
+	forkedCharacter, err := characterStore.GetCharacter(ctx, "fork-1", "char-1")
+	if err != nil {
+		t.Fatalf("expected character in forked campaign: %v", err)
+	}
+	if forkedCharacter.ParticipantID != "" {
+		t.Fatalf("ParticipantID = %q, want empty", forkedCharacter.ParticipantID)
 	}
 
 	forkedEvents := eventStore.events["fork-1"]
@@ -217,7 +218,6 @@ func TestForkCampaign_SeedsSnapshotStateAtHead(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
 	characterStore := newFakeCharacterStore()
-	controlStore := newFakeControlDefaultStore()
 	dhStore := newFakeDaggerheartStore()
 	eventStore := newFakeEventStore()
 	forkStore := newFakeCampaignForkStore()
@@ -360,13 +360,12 @@ func TestForkCampaign_SeedsSnapshotStateAtHead(t *testing.T) {
 
 	svc := &ForkService{
 		stores: Stores{
-			Campaign:       campaignStore,
-			Participant:    participantStore,
-			Character:      characterStore,
-			ControlDefault: controlStore,
-			Daggerheart:    dhStore,
-			Event:          eventStore,
-			CampaignFork:   forkStore,
+			Campaign:     campaignStore,
+			Participant:  participantStore,
+			Character:    characterStore,
+			Daggerheart:  dhStore,
+			Event:        eventStore,
+			CampaignFork: forkStore,
 		},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("fork-1"),
@@ -412,7 +411,6 @@ func TestForkCampaign_SessionBoundaryForkPoint(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
 	characterStore := newFakeCharacterStore()
-	controlStore := newFakeControlDefaultStore()
 	dhStore := newFakeDaggerheartStore()
 	eventStore := newFakeEventStore()
 	forkStore := newFakeCampaignForkStore()
@@ -494,14 +492,13 @@ func TestForkCampaign_SessionBoundaryForkPoint(t *testing.T) {
 
 	svc := &ForkService{
 		stores: Stores{
-			Campaign:       campaignStore,
-			Participant:    participantStore,
-			Character:      characterStore,
-			ControlDefault: controlStore,
-			Daggerheart:    dhStore,
-			Event:          eventStore,
-			CampaignFork:   forkStore,
-			Session:        sessionStore,
+			Campaign:     campaignStore,
+			Participant:  participantStore,
+			Character:    characterStore,
+			Daggerheart:  dhStore,
+			Event:        eventStore,
+			CampaignFork: forkStore,
+			Session:      sessionStore,
 		},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("fork-1"),

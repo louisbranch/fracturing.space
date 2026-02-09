@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 )
 
 const deleteCharacter = `-- name: DeleteCharacter :exec
@@ -25,7 +26,7 @@ func (q *Queries) DeleteCharacter(ctx context.Context, arg DeleteCharacterParams
 }
 
 const getCharacter = `-- name: GetCharacter :one
-SELECT campaign_id, id, name, kind, notes, created_at, updated_at FROM characters WHERE campaign_id = ? AND id = ?
+SELECT campaign_id, id, controller_participant_id, name, kind, notes, created_at, updated_at FROM characters WHERE campaign_id = ? AND id = ?
 `
 
 type GetCharacterParams struct {
@@ -39,6 +40,7 @@ func (q *Queries) GetCharacter(ctx context.Context, arg GetCharacterParams) (Cha
 	err := row.Scan(
 		&i.CampaignID,
 		&i.ID,
+		&i.ControllerParticipantID,
 		&i.Name,
 		&i.Kind,
 		&i.Notes,
@@ -48,29 +50,8 @@ func (q *Queries) GetCharacter(ctx context.Context, arg GetCharacterParams) (Cha
 	return i, err
 }
 
-const getControlDefault = `-- name: GetControlDefault :one
-SELECT campaign_id, character_id, is_gm, participant_id FROM control_defaults WHERE campaign_id = ? AND character_id = ?
-`
-
-type GetControlDefaultParams struct {
-	CampaignID  string `json:"campaign_id"`
-	CharacterID string `json:"character_id"`
-}
-
-func (q *Queries) GetControlDefault(ctx context.Context, arg GetControlDefaultParams) (ControlDefault, error) {
-	row := q.db.QueryRowContext(ctx, getControlDefault, arg.CampaignID, arg.CharacterID)
-	var i ControlDefault
-	err := row.Scan(
-		&i.CampaignID,
-		&i.CharacterID,
-		&i.IsGm,
-		&i.ParticipantID,
-	)
-	return i, err
-}
-
 const listCharactersByCampaign = `-- name: ListCharactersByCampaign :many
-SELECT campaign_id, id, name, kind, notes, created_at, updated_at FROM characters
+SELECT campaign_id, id, controller_participant_id, name, kind, notes, created_at, updated_at FROM characters
 WHERE campaign_id = ?
 ORDER BY id
 `
@@ -87,6 +68,7 @@ func (q *Queries) ListCharactersByCampaign(ctx context.Context, campaignID strin
 		if err := rows.Scan(
 			&i.CampaignID,
 			&i.ID,
+			&i.ControllerParticipantID,
 			&i.Name,
 			&i.Kind,
 			&i.Notes,
@@ -107,7 +89,7 @@ func (q *Queries) ListCharactersByCampaign(ctx context.Context, campaignID strin
 }
 
 const listCharactersByCampaignPaged = `-- name: ListCharactersByCampaignPaged :many
-SELECT campaign_id, id, name, kind, notes, created_at, updated_at FROM characters
+SELECT campaign_id, id, controller_participant_id, name, kind, notes, created_at, updated_at FROM characters
 WHERE campaign_id = ? AND id > ?
 ORDER BY id
 LIMIT ?
@@ -131,6 +113,7 @@ func (q *Queries) ListCharactersByCampaignPaged(ctx context.Context, arg ListCha
 		if err := rows.Scan(
 			&i.CampaignID,
 			&i.ID,
+			&i.ControllerParticipantID,
 			&i.Name,
 			&i.Kind,
 			&i.Notes,
@@ -151,7 +134,7 @@ func (q *Queries) ListCharactersByCampaignPaged(ctx context.Context, arg ListCha
 }
 
 const listCharactersByCampaignPagedFirst = `-- name: ListCharactersByCampaignPagedFirst :many
-SELECT campaign_id, id, name, kind, notes, created_at, updated_at FROM characters
+SELECT campaign_id, id, controller_participant_id, name, kind, notes, created_at, updated_at FROM characters
 WHERE campaign_id = ?
 ORDER BY id
 LIMIT ?
@@ -174,6 +157,7 @@ func (q *Queries) ListCharactersByCampaignPagedFirst(ctx context.Context, arg Li
 		if err := rows.Scan(
 			&i.CampaignID,
 			&i.ID,
+			&i.ControllerParticipantID,
 			&i.Name,
 			&i.Kind,
 			&i.Notes,
@@ -195,9 +179,10 @@ func (q *Queries) ListCharactersByCampaignPagedFirst(ctx context.Context, arg Li
 
 const putCharacter = `-- name: PutCharacter :exec
 INSERT INTO characters (
-    campaign_id, id, name, kind, notes, created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?)
+    campaign_id, id, controller_participant_id, name, kind, notes, created_at, updated_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(campaign_id, id) DO UPDATE SET
+    controller_participant_id = excluded.controller_participant_id,
     name = excluded.name,
     kind = excluded.kind,
     notes = excluded.notes,
@@ -205,50 +190,26 @@ ON CONFLICT(campaign_id, id) DO UPDATE SET
 `
 
 type PutCharacterParams struct {
-	CampaignID string `json:"campaign_id"`
-	ID         string `json:"id"`
-	Name       string `json:"name"`
-	Kind       string `json:"kind"`
-	Notes      string `json:"notes"`
-	CreatedAt  int64  `json:"created_at"`
-	UpdatedAt  int64  `json:"updated_at"`
+	CampaignID              string         `json:"campaign_id"`
+	ID                      string         `json:"id"`
+	ControllerParticipantID sql.NullString `json:"controller_participant_id"`
+	Name                    string         `json:"name"`
+	Kind                    string         `json:"kind"`
+	Notes                   string         `json:"notes"`
+	CreatedAt               int64          `json:"created_at"`
+	UpdatedAt               int64          `json:"updated_at"`
 }
 
 func (q *Queries) PutCharacter(ctx context.Context, arg PutCharacterParams) error {
 	_, err := q.db.ExecContext(ctx, putCharacter,
 		arg.CampaignID,
 		arg.ID,
+		arg.ControllerParticipantID,
 		arg.Name,
 		arg.Kind,
 		arg.Notes,
 		arg.CreatedAt,
 		arg.UpdatedAt,
-	)
-	return err
-}
-
-const putControlDefault = `-- name: PutControlDefault :exec
-INSERT INTO control_defaults (
-    campaign_id, character_id, is_gm, participant_id
-) VALUES (?, ?, ?, ?)
-ON CONFLICT(campaign_id, character_id) DO UPDATE SET
-    is_gm = excluded.is_gm,
-    participant_id = excluded.participant_id
-`
-
-type PutControlDefaultParams struct {
-	CampaignID    string `json:"campaign_id"`
-	CharacterID   string `json:"character_id"`
-	IsGm          int64  `json:"is_gm"`
-	ParticipantID string `json:"participant_id"`
-}
-
-func (q *Queries) PutControlDefault(ctx context.Context, arg PutControlDefaultParams) error {
-	_, err := q.db.ExecContext(ctx, putControlDefault,
-		arg.CampaignID,
-		arg.CharacterID,
-		arg.IsGm,
-		arg.ParticipantID,
 	)
 	return err
 }

@@ -165,6 +165,7 @@ func init() {
 		"label.owner":                            "Proprietário",
 		"label.pc":                               "PC",
 		"label.npc":                              "NPC",
+		"label.unassigned":                       "Não atribuído",
 		"label.unknown":                          "Desconhecido",
 		"label.campaign":                         "Campanha",
 		"label.session":                          "Sessão",

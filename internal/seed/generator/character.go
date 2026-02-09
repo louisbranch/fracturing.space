@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 // createCharacters creates the specified number of characters for a campaign.
@@ -73,15 +74,9 @@ func (g *Generator) createCharacters(ctx context.Context, campaignID string, cou
 			return nil, fmt.Errorf("no participants available to assign controller for character %s", character.Id)
 		}
 		_, err = g.characters.SetDefaultControl(ctx, &statev1.SetDefaultControlRequest{
-			CampaignId:  campaignID,
-			CharacterId: character.Id,
-			Controller: &statev1.CharacterController{
-				Controller: &statev1.CharacterController_Participant{
-					Participant: &statev1.ParticipantController{
-						ParticipantId: controllerParticipant.Id,
-					},
-				},
-			},
+			CampaignId:    campaignID,
+			CharacterId:   character.Id,
+			ParticipantId: wrapperspb.String(controllerParticipant.Id),
 		})
 		if err != nil {
 			return nil, fmt.Errorf("SetDefaultControl for character %s: %w", character.Id, err)

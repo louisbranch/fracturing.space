@@ -16,8 +16,6 @@ const (
 	CodeInviteEmptyCampaignID           = "INVITE_EMPTY_CAMPAIGN_ID"
 	CodeInviteEmptyParticipantID        = "INVITE_EMPTY_PARTICIPANT_ID"
 	CodeSessionEmptyCampaignID          = "SESSION_EMPTY_CAMPAIGN_ID"
-	CodeCharacterInvalidController      = "CHARACTER_INVALID_CONTROLLER"
-	CodeCharacterEmptyParticipantID     = "CHARACTER_EMPTY_PARTICIPANT_ID"
 	CodeCharacterEmptyCampaignID        = "CHARACTER_EMPTY_CAMPAIGN_ID"
 	CodeCharacterEmptyName              = "CHARACTER_EMPTY_NAME"
 	CodeCharacterInvalidKind            = "CHARACTER_INVALID_KIND"
@@ -77,12 +75,10 @@ var enUSCatalog = &Catalog{
 		CodeSessionEmptyCampaignID: "Campaign ID is required for session",
 
 		// Character errors
-		CodeCharacterInvalidController:  "Character controller must be exactly one of: GM or participant",
-		CodeCharacterEmptyParticipantID: "Participant ID is required for player-controlled characters",
-		CodeCharacterEmptyCampaignID:    "Campaign ID is required for character",
-		CodeCharacterEmptyName:          "Character name cannot be empty",
-		CodeCharacterInvalidKind:        "Invalid character kind specified",
-		CodeCharacterInvalidProfileHp:   "HP maximum must be at least 1",
+		CodeCharacterEmptyCampaignID:  "Campaign ID is required for character",
+		CodeCharacterEmptyName:        "Character name cannot be empty",
+		CodeCharacterInvalidKind:      "Invalid character kind specified",
+		CodeCharacterInvalidProfileHp: "HP maximum must be at least 1",
 
 		// Snapshot errors
 		CodeSnapshotInvalidHp:        "HP {{.HP}} exceeds maximum {{.HPMax}}",

@@ -1,6 +1,7 @@
 package game
 
 import (
+	"strings"
 	"time"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
@@ -11,6 +12,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/session"
 	"google.golang.org/protobuf/types/known/timestamppb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 // Campaign proto conversion helpers
@@ -198,7 +200,7 @@ func inviteStatusToProto(status invite.Status) campaignv1.InviteStatus {
 // Character proto conversion helpers
 
 func characterToProto(ch character.Character) *campaignv1.Character {
-	return &campaignv1.Character{
+	pb := &campaignv1.Character{
 		Id:         ch.ID,
 		CampaignId: ch.CampaignID,
 		Name:       ch.Name,
@@ -207,6 +209,10 @@ func characterToProto(ch character.Character) *campaignv1.Character {
 		CreatedAt:  timestamppb.New(ch.CreatedAt),
 		UpdatedAt:  timestamppb.New(ch.UpdatedAt),
 	}
+	if strings.TrimSpace(ch.ParticipantID) != "" {
+		pb.ParticipantId = wrapperspb.String(ch.ParticipantID)
+	}
+	return pb
 }
 
 func characterKindFromProto(kind campaignv1.CharacterKind) character.CharacterKind {
@@ -228,44 +234,6 @@ func characterKindToProto(kind character.CharacterKind) campaignv1.CharacterKind
 		return campaignv1.CharacterKind_NPC
 	default:
 		return campaignv1.CharacterKind_CHARACTER_KIND_UNSPECIFIED
-	}
-}
-
-func characterControllerFromProto(pb *campaignv1.CharacterController) (character.CharacterController, error) {
-	if pb == nil {
-		return character.CharacterController{}, character.ErrInvalidCharacterController
-	}
-
-	switch c := pb.GetController().(type) {
-	case *campaignv1.CharacterController_Gm:
-		if c.Gm == nil {
-			return character.CharacterController{}, character.ErrInvalidCharacterController
-		}
-		return character.NewGmController(), nil
-	case *campaignv1.CharacterController_Participant:
-		if c.Participant == nil {
-			return character.CharacterController{}, character.ErrInvalidCharacterController
-		}
-		return character.NewParticipantController(c.Participant.GetParticipantId())
-	default:
-		return character.CharacterController{}, character.ErrInvalidCharacterController
-	}
-}
-
-func characterControllerToProto(ctrl character.CharacterController) *campaignv1.CharacterController {
-	if ctrl.IsGM {
-		return &campaignv1.CharacterController{
-			Controller: &campaignv1.CharacterController_Gm{
-				Gm: &campaignv1.GmController{},
-			},
-		}
-	}
-	return &campaignv1.CharacterController{
-		Controller: &campaignv1.CharacterController_Participant{
-			Participant: &campaignv1.ParticipantController{
-				ParticipantId: ctrl.ParticipantID,
-			},
-		},
 	}
 }
 

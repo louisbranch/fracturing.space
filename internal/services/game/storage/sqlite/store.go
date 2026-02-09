@@ -583,13 +583,14 @@ func (s *Store) PutCharacter(ctx context.Context, c character.Character) error {
 	}
 
 	return s.q.PutCharacter(ctx, db.PutCharacterParams{
-		CampaignID: c.CampaignID,
-		ID:         c.ID,
-		Name:       c.Name,
-		Kind:       characterKindToString(c.Kind),
-		Notes:      c.Notes,
-		CreatedAt:  toMillis(c.CreatedAt),
-		UpdatedAt:  toMillis(c.UpdatedAt),
+		CampaignID:              c.CampaignID,
+		ID:                      c.ID,
+		ControllerParticipantID: toNullString(c.ParticipantID),
+		Name:                    c.Name,
+		Kind:                    characterKindToString(c.Kind),
+		Notes:                   c.Notes,
+		CreatedAt:               toMillis(c.CreatedAt),
+		UpdatedAt:               toMillis(c.UpdatedAt),
 	})
 }
 
@@ -694,68 +695,6 @@ func (s *Store) ListCharacters(ctx context.Context, campaignID string, pageSize 
 	}
 
 	return page, nil
-}
-
-// Control Default methods
-
-// PutControlDefault sets the default controller for a character.
-func (s *Store) PutControlDefault(ctx context.Context, campaignID, characterID string, controller character.CharacterController) error {
-	if err := ctx.Err(); err != nil {
-		return err
-	}
-	if s == nil || s.sqlDB == nil {
-		return fmt.Errorf("storage is not configured")
-	}
-	if strings.TrimSpace(campaignID) == "" {
-		return fmt.Errorf("campaign id is required")
-	}
-	if strings.TrimSpace(characterID) == "" {
-		return fmt.Errorf("character id is required")
-	}
-
-	isGM := int64(0)
-	if controller.IsGM {
-		isGM = 1
-	}
-
-	return s.q.PutControlDefault(ctx, db.PutControlDefaultParams{
-		CampaignID:    campaignID,
-		CharacterID:   characterID,
-		IsGm:          isGM,
-		ParticipantID: controller.ParticipantID,
-	})
-}
-
-// GetControlDefault retrieves the default controller for a character.
-func (s *Store) GetControlDefault(ctx context.Context, campaignID, characterID string) (character.CharacterController, error) {
-	if err := ctx.Err(); err != nil {
-		return character.CharacterController{}, err
-	}
-	if s == nil || s.sqlDB == nil {
-		return character.CharacterController{}, fmt.Errorf("storage is not configured")
-	}
-	if strings.TrimSpace(campaignID) == "" {
-		return character.CharacterController{}, fmt.Errorf("campaign id is required")
-	}
-	if strings.TrimSpace(characterID) == "" {
-		return character.CharacterController{}, fmt.Errorf("character id is required")
-	}
-
-	row, err := s.q.GetControlDefault(ctx, db.GetControlDefaultParams{
-		CampaignID:  campaignID,
-		CharacterID: characterID,
-	})
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return character.CharacterController{}, storage.ErrNotFound
-		}
-		return character.CharacterController{}, fmt.Errorf("get control default: %w", err)
-	}
-
-	return character.CharacterController{
-		IsGM:          row.IsGm != 0,
-		ParticipantID: row.ParticipantID,
-	}, nil
 }
 
 // Session methods
@@ -1708,14 +1647,19 @@ func dbInviteToDomain(row db.Invite) (invite.Invite, error) {
 }
 
 func dbCharacterToDomain(row db.Character) (character.Character, error) {
+	participantID := ""
+	if row.ControllerParticipantID.Valid {
+		participantID = row.ControllerParticipantID.String
+	}
 	return character.Character{
-		ID:         row.ID,
-		CampaignID: row.CampaignID,
-		Name:       row.Name,
-		Kind:       stringToCharacterKind(row.Kind),
-		Notes:      row.Notes,
-		CreatedAt:  fromMillis(row.CreatedAt),
-		UpdatedAt:  fromMillis(row.UpdatedAt),
+		ID:            row.ID,
+		CampaignID:    row.CampaignID,
+		ParticipantID: participantID,
+		Name:          row.Name,
+		Kind:          stringToCharacterKind(row.Kind),
+		Notes:         row.Notes,
+		CreatedAt:     fromMillis(row.CreatedAt),
+		UpdatedAt:     fromMillis(row.UpdatedAt),
 	}, nil
 }
 

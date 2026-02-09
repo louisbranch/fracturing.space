@@ -33,20 +33,14 @@ type CampaignActiveSession struct {
 }
 
 type Character struct {
-	CampaignID string `json:"campaign_id"`
-	ID         string `json:"id"`
-	Name       string `json:"name"`
-	Kind       string `json:"kind"`
-	Notes      string `json:"notes"`
-	CreatedAt  int64  `json:"created_at"`
-	UpdatedAt  int64  `json:"updated_at"`
-}
-
-type ControlDefault struct {
-	CampaignID    string `json:"campaign_id"`
-	CharacterID   string `json:"character_id"`
-	IsGm          int64  `json:"is_gm"`
-	ParticipantID string `json:"participant_id"`
+	CampaignID              string         `json:"campaign_id"`
+	ID                      string         `json:"id"`
+	ControllerParticipantID sql.NullString `json:"controller_participant_id"`
+	Name                    string         `json:"name"`
+	Kind                    string         `json:"kind"`
+	Notes                   string         `json:"notes"`
+	CreatedAt               int64          `json:"created_at"`
+	UpdatedAt               int64          `json:"updated_at"`
 }
 
 type DaggerheartCharacterProfile struct {

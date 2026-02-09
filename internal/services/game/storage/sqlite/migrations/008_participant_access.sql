@@ -11,8 +11,8 @@ CREATE TABLE participants (
     role TEXT NOT NULL,
     controller TEXT NOT NULL,
     campaign_access TEXT NOT NULL DEFAULT 'MEMBER',
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
     PRIMARY KEY (campaign_id, id),
     FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE
 );
@@ -28,8 +28,8 @@ CREATE TABLE invites (
     participant_id TEXT NOT NULL,
     status TEXT NOT NULL,
     created_by_participant_id TEXT NOT NULL DEFAULT '',
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
     FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
     FOREIGN KEY (campaign_id, participant_id) REFERENCES participants(campaign_id, id) ON DELETE CASCADE
 );

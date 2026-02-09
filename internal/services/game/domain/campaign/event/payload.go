@@ -81,10 +81,9 @@ type ProfileUpdatedPayload struct {
 // ControllerAssignedPayload captures the payload for character.controller_assigned events.
 type ControllerAssignedPayload struct {
 	CharacterID string `json:"character_id"`
-	// IsGM indicates if the GM controls this character.
-	IsGM bool `json:"is_gm"`
 	// ParticipantID is set if a specific participant controls the character.
-	ParticipantID string `json:"participant_id,omitempty"`
+	// Empty means unassigned.
+	ParticipantID string `json:"participant_id"`
 }
 
 // CharacterStateChangedPayload captures the payload for character state change events.

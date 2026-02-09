@@ -35,6 +35,7 @@ CREATE TABLE participants (
 CREATE TABLE characters (
     campaign_id TEXT NOT NULL,
     id TEXT NOT NULL,
+    controller_participant_id TEXT,
     name TEXT NOT NULL,
     kind TEXT NOT NULL,
     notes TEXT NOT NULL DEFAULT '',
@@ -42,14 +43,6 @@ CREATE TABLE characters (
     updated_at TEXT NOT NULL,
     PRIMARY KEY (campaign_id, id),
     FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE
-);
-
-CREATE TABLE control_defaults (
-    campaign_id TEXT NOT NULL,
-    character_id TEXT NOT NULL,
-    is_gm INTEGER NOT NULL DEFAULT 0,
-    participant_id TEXT NOT NULL DEFAULT '',
-    PRIMARY KEY (campaign_id, character_id)
 );
 
 -- Session Layer
@@ -193,7 +186,6 @@ DROP TABLE IF EXISTS session_events;
 DROP TABLE IF EXISTS campaign_active_session;
 DROP INDEX IF EXISTS idx_sessions_active;
 DROP TABLE IF EXISTS sessions;
-DROP TABLE IF EXISTS control_defaults;
 DROP TABLE IF EXISTS characters;
 DROP TABLE IF EXISTS participants;
 DROP TABLE IF EXISTS campaigns;

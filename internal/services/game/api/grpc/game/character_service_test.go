@@ -409,14 +409,13 @@ func TestSetDefaultControl_NilRequest(t *testing.T) {
 
 func TestSetDefaultControl_MissingCampaignId(t *testing.T) {
 	svc := NewCharacterService(Stores{
-		Campaign:       newFakeCampaignStore(),
-		Character:      newFakeCharacterStore(),
-		ControlDefault: newFakeControlDefaultStore(),
-		Event:          newFakeEventStore(),
+		Campaign:  newFakeCampaignStore(),
+		Character: newFakeCharacterStore(),
+		Event:     newFakeEventStore(),
 	})
 	_, err := svc.SetDefaultControl(context.Background(), &statev1.SetDefaultControlRequest{
-		CharacterId: "ch1",
-		Controller:  &statev1.CharacterController{Controller: &statev1.CharacterController_Gm{Gm: &statev1.GmController{}}},
+		CharacterId:   "ch1",
+		ParticipantId: wrapperspb.String(""),
 	})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
@@ -426,29 +425,27 @@ func TestSetDefaultControl_MissingCharacterId(t *testing.T) {
 	campaignStore.campaigns["c1"] = campaign.Campaign{ID: "c1", Status: campaign.CampaignStatusActive}
 
 	svc := NewCharacterService(Stores{
-		Campaign:       campaignStore,
-		Character:      newFakeCharacterStore(),
-		ControlDefault: newFakeControlDefaultStore(),
-		Event:          newFakeEventStore(),
+		Campaign:  campaignStore,
+		Character: newFakeCharacterStore(),
+		Event:     newFakeEventStore(),
 	})
 	_, err := svc.SetDefaultControl(context.Background(), &statev1.SetDefaultControlRequest{
-		CampaignId: "c1",
-		Controller: &statev1.CharacterController{Controller: &statev1.CharacterController_Gm{Gm: &statev1.GmController{}}},
+		CampaignId:    "c1",
+		ParticipantId: wrapperspb.String(""),
 	})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestSetDefaultControl_CampaignNotFound(t *testing.T) {
 	svc := NewCharacterService(Stores{
-		Campaign:       newFakeCampaignStore(),
-		Character:      newFakeCharacterStore(),
-		ControlDefault: newFakeControlDefaultStore(),
-		Event:          newFakeEventStore(),
+		Campaign:  newFakeCampaignStore(),
+		Character: newFakeCharacterStore(),
+		Event:     newFakeEventStore(),
 	})
 	_, err := svc.SetDefaultControl(context.Background(), &statev1.SetDefaultControlRequest{
-		CampaignId:  "nonexistent",
-		CharacterId: "ch1",
-		Controller:  &statev1.CharacterController{Controller: &statev1.CharacterController_Gm{Gm: &statev1.GmController{}}},
+		CampaignId:    "nonexistent",
+		CharacterId:   "ch1",
+		ParticipantId: wrapperspb.String(""),
 	})
 	assertStatusCode(t, err, codes.NotFound)
 }
@@ -458,20 +455,19 @@ func TestSetDefaultControl_CharacterNotFound(t *testing.T) {
 	campaignStore.campaigns["c1"] = campaign.Campaign{ID: "c1", Status: campaign.CampaignStatusActive}
 
 	svc := NewCharacterService(Stores{
-		Campaign:       campaignStore,
-		Character:      newFakeCharacterStore(),
-		ControlDefault: newFakeControlDefaultStore(),
-		Event:          newFakeEventStore(),
+		Campaign:  campaignStore,
+		Character: newFakeCharacterStore(),
+		Event:     newFakeEventStore(),
 	})
 	_, err := svc.SetDefaultControl(context.Background(), &statev1.SetDefaultControlRequest{
-		CampaignId:  "c1",
-		CharacterId: "nonexistent",
-		Controller:  &statev1.CharacterController{Controller: &statev1.CharacterController_Gm{Gm: &statev1.GmController{}}},
+		CampaignId:    "c1",
+		CharacterId:   "nonexistent",
+		ParticipantId: wrapperspb.String(""),
 	})
 	assertStatusCode(t, err, codes.NotFound)
 }
 
-func TestSetDefaultControl_MissingController(t *testing.T) {
+func TestSetDefaultControl_MissingParticipantId(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	characterStore := newFakeCharacterStore()
 	now := time.Now().UTC()
@@ -482,10 +478,9 @@ func TestSetDefaultControl_MissingController(t *testing.T) {
 	}
 
 	svc := NewCharacterService(Stores{
-		Campaign:       campaignStore,
-		Character:      characterStore,
-		ControlDefault: newFakeControlDefaultStore(),
-		Event:          newFakeEventStore(),
+		Campaign:  campaignStore,
+		Character: characterStore,
+		Event:     newFakeEventStore(),
 	})
 	_, err := svc.SetDefaultControl(context.Background(), &statev1.SetDefaultControlRequest{
 		CampaignId:  "c1",
@@ -506,28 +501,22 @@ func TestSetDefaultControl_ParticipantNotFound(t *testing.T) {
 	}
 
 	svc := NewCharacterService(Stores{
-		Campaign:       campaignStore,
-		Character:      characterStore,
-		ControlDefault: newFakeControlDefaultStore(),
-		Participant:    participantStore,
-		Event:          newFakeEventStore(),
+		Campaign:    campaignStore,
+		Character:   characterStore,
+		Participant: participantStore,
+		Event:       newFakeEventStore(),
 	})
 	_, err := svc.SetDefaultControl(context.Background(), &statev1.SetDefaultControlRequest{
-		CampaignId:  "c1",
-		CharacterId: "ch1",
-		Controller: &statev1.CharacterController{
-			Controller: &statev1.CharacterController_Participant{
-				Participant: &statev1.ParticipantController{ParticipantId: "nonexistent"},
-			},
-		},
+		CampaignId:    "c1",
+		CharacterId:   "ch1",
+		ParticipantId: wrapperspb.String("nonexistent"),
 	})
 	assertStatusCode(t, err, codes.NotFound)
 }
 
-func TestSetDefaultControl_Success_GM(t *testing.T) {
+func TestSetDefaultControl_Success_Unassigned(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	characterStore := newFakeCharacterStore()
-	controlStore := newFakeControlDefaultStore()
 	eventStore := newFakeEventStore()
 	now := time.Now().UTC()
 
@@ -537,16 +526,15 @@ func TestSetDefaultControl_Success_GM(t *testing.T) {
 	}
 
 	svc := NewCharacterService(Stores{
-		Campaign:       campaignStore,
-		Character:      characterStore,
-		ControlDefault: controlStore,
-		Event:          eventStore,
+		Campaign:  campaignStore,
+		Character: characterStore,
+		Event:     eventStore,
 	})
 
 	resp, err := svc.SetDefaultControl(context.Background(), &statev1.SetDefaultControlRequest{
-		CampaignId:  "c1",
-		CharacterId: "ch1",
-		Controller:  &statev1.CharacterController{Controller: &statev1.CharacterController_Gm{Gm: &statev1.GmController{}}},
+		CampaignId:    "c1",
+		CharacterId:   "ch1",
+		ParticipantId: wrapperspb.String(""),
 	})
 	if err != nil {
 		t.Fatalf("SetDefaultControl returned error: %v", err)
@@ -559,12 +547,12 @@ func TestSetDefaultControl_Success_GM(t *testing.T) {
 	}
 
 	// Verify persisted
-	ctrl, err := controlStore.GetControlDefault(context.Background(), "c1", "ch1")
+	updated, err := characterStore.GetCharacter(context.Background(), "c1", "ch1")
 	if err != nil {
-		t.Fatalf("Control default not persisted: %v", err)
+		t.Fatalf("Character not persisted: %v", err)
 	}
-	if !ctrl.IsGM {
-		t.Error("Controller should be GM")
+	if updated.ParticipantID != "" {
+		t.Fatalf("ParticipantID = %q, want empty", updated.ParticipantID)
 	}
 	if got := len(eventStore.events["c1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)
@@ -578,7 +566,6 @@ func TestSetDefaultControl_Success_Participant(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	characterStore := newFakeCharacterStore()
 	participantStore := newFakeParticipantStore()
-	controlStore := newFakeControlDefaultStore()
 	eventStore := newFakeEventStore()
 	now := time.Now().UTC()
 
@@ -591,36 +578,28 @@ func TestSetDefaultControl_Success_Participant(t *testing.T) {
 	}
 
 	svc := NewCharacterService(Stores{
-		Campaign:       campaignStore,
-		Character:      characterStore,
-		Participant:    participantStore,
-		ControlDefault: controlStore,
-		Event:          eventStore,
+		Campaign:    campaignStore,
+		Character:   characterStore,
+		Participant: participantStore,
+		Event:       eventStore,
 	})
 
 	resp, err := svc.SetDefaultControl(context.Background(), &statev1.SetDefaultControlRequest{
-		CampaignId:  "c1",
-		CharacterId: "ch1",
-		Controller: &statev1.CharacterController{
-			Controller: &statev1.CharacterController_Participant{
-				Participant: &statev1.ParticipantController{ParticipantId: "p1"},
-			},
-		},
+		CampaignId:    "c1",
+		CharacterId:   "ch1",
+		ParticipantId: wrapperspb.String("p1"),
 	})
 	if err != nil {
 		t.Fatalf("SetDefaultControl returned error: %v", err)
 	}
 
 	// Verify persisted
-	ctrl, err := controlStore.GetControlDefault(context.Background(), "c1", "ch1")
+	ctrl, err := characterStore.GetCharacter(context.Background(), "c1", "ch1")
 	if err != nil {
-		t.Fatalf("Control default not persisted: %v", err)
-	}
-	if ctrl.IsGM {
-		t.Error("Controller should not be GM")
+		t.Fatalf("Character not persisted: %v", err)
 	}
 	if ctrl.ParticipantID != "p1" {
-		t.Errorf("Controller ParticipantID = %q, want %q", ctrl.ParticipantID, "p1")
+		t.Errorf("ParticipantID = %q, want %q", ctrl.ParticipantID, "p1")
 	}
 	if got := len(eventStore.events["c1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)

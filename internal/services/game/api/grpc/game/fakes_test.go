@@ -284,45 +284,6 @@ func (s *fakeCharacterStore) ListCharacters(_ context.Context, campaignID string
 	}, nil
 }
 
-// fakeControlDefaultStore is a test double for storage.ControlDefaultStore.
-type fakeControlDefaultStore struct {
-	defaults map[string]map[string]character.CharacterController // campaignID -> characterID -> Controller
-	putErr   error
-	getErr   error
-}
-
-func newFakeControlDefaultStore() *fakeControlDefaultStore {
-	return &fakeControlDefaultStore{
-		defaults: make(map[string]map[string]character.CharacterController),
-	}
-}
-
-func (s *fakeControlDefaultStore) PutControlDefault(_ context.Context, campaignID, characterID string, controller character.CharacterController) error {
-	if s.putErr != nil {
-		return s.putErr
-	}
-	if s.defaults[campaignID] == nil {
-		s.defaults[campaignID] = make(map[string]character.CharacterController)
-	}
-	s.defaults[campaignID][characterID] = controller
-	return nil
-}
-
-func (s *fakeControlDefaultStore) GetControlDefault(_ context.Context, campaignID, characterID string) (character.CharacterController, error) {
-	if s.getErr != nil {
-		return character.CharacterController{}, s.getErr
-	}
-	byID, ok := s.defaults[campaignID]
-	if !ok {
-		return character.CharacterController{}, storage.ErrNotFound
-	}
-	ctrl, ok := byID[characterID]
-	if !ok {
-		return character.CharacterController{}, storage.ErrNotFound
-	}
-	return ctrl, nil
-}
-
 // fakeDaggerheartStore is a test double for storage.DaggerheartStore.
 type fakeDaggerheartStore struct {
 	profiles  map[string]map[string]storage.DaggerheartCharacterProfile // campaignID -> characterID -> profile

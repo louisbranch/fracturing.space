@@ -211,9 +211,9 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 		gmControlParams := &mcp.CallToolParams{
 			Name: "character_control_set",
 			Arguments: map[string]any{
-				"campaign_id":  campaignOutput.ID,
-				"character_id": characterOutput.ID,
-				"controller":   "GM",
+				"campaign_id":    campaignOutput.ID,
+				"character_id":   characterOutput.ID,
+				"participant_id": "",
 			},
 		}
 		gmControlResult, err := suite.client.CallTool(ctx, gmControlParams)
@@ -227,8 +227,8 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 			t.Fatalf("character_control_set returned error content: %+v", gmControlResult.Content)
 		}
 		gmControlOutput := decodeStructuredContent[domain.CharacterControlSetResult](t, gmControlResult.StructuredContent)
-		if gmControlOutput.Controller != "GM" {
-			t.Fatalf("expected controller GM, got %q", gmControlOutput.Controller)
+		if gmControlOutput.ParticipantID != "" {
+			t.Fatalf("expected empty participant id, got %q", gmControlOutput.ParticipantID)
 		}
 
 		participants := readParticipantList(t, suite.client, campaignOutput.ID)
@@ -259,9 +259,9 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 		participantControlParams := &mcp.CallToolParams{
 			Name: "character_control_set",
 			Arguments: map[string]any{
-				"campaign_id":  campaignOutput.ID,
-				"character_id": characterOutput.ID,
-				"controller":   participantOutput.ID,
+				"campaign_id":    campaignOutput.ID,
+				"character_id":   characterOutput.ID,
+				"participant_id": participantOutput.ID,
 			},
 		}
 		participantControlResult, err := suite.client.CallTool(ctx, participantControlParams)
@@ -275,8 +275,8 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 			t.Fatalf("character_control_set returned error content: %+v", participantControlResult.Content)
 		}
 		participantControlOutput := decodeStructuredContent[domain.CharacterControlSetResult](t, participantControlResult.StructuredContent)
-		if participantControlOutput.Controller != participantOutput.ID {
-			t.Fatalf("expected controller %q, got %q", participantOutput.ID, participantControlOutput.Controller)
+		if participantControlOutput.ParticipantID != participantOutput.ID {
+			t.Fatalf("expected participant id %q, got %q", participantOutput.ID, participantControlOutput.ParticipantID)
 		}
 	})
 

@@ -59,7 +59,7 @@ func (s *ForkService) ForkCampaign(ctx context.Context, in *campaignv1.ForkCampa
 		return nil, status.Error(codes.InvalidArgument, "source campaign id is required")
 	}
 
-	if s.stores.Campaign == nil || s.stores.Event == nil || s.stores.CampaignFork == nil || s.stores.Character == nil || s.stores.ControlDefault == nil || s.stores.Daggerheart == nil {
+	if s.stores.Campaign == nil || s.stores.Event == nil || s.stores.CampaignFork == nil || s.stores.Character == nil || s.stores.Daggerheart == nil {
 		return nil, status.Error(codes.Internal, "required stores are not configured")
 	}
 	if in.GetCopyParticipants() && s.stores.Participant == nil {
@@ -145,7 +145,6 @@ func (s *ForkService) ForkCampaign(ctx context.Context, in *campaignv1.ForkCampa
 		Campaign:    s.stores.Campaign,
 		Participant: s.stores.Participant,
 		Character:   s.stores.Character,
-		Control:     s.stores.ControlDefault,
 		Daggerheart: s.stores.Daggerheart,
 	}
 	if err := applier.Apply(ctx, createdEvent); err != nil {
@@ -377,7 +376,7 @@ func shouldCopyForkEvent(evt event.Event, copyParticipants bool) (bool, error) {
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 			return false, fmt.Errorf("decode character.controller_assigned payload: %w", err)
 		}
-		return payload.IsGM || payload.ParticipantID == "", nil
+		return payload.ParticipantID == "", nil
 	default:
 		return true, nil
 	}
