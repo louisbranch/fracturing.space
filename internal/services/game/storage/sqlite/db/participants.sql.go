@@ -25,7 +25,7 @@ func (q *Queries) DeleteParticipant(ctx context.Context, arg DeleteParticipantPa
 }
 
 const getParticipant = `-- name: GetParticipant :one
-SELECT campaign_id, id, user_id, display_name, role, controller, is_owner, created_at, updated_at FROM participants WHERE campaign_id = ? AND id = ?
+SELECT campaign_id, id, user_id, display_name, role, controller, campaign_access, created_at, updated_at FROM participants WHERE campaign_id = ? AND id = ?
 `
 
 type GetParticipantParams struct {
@@ -43,7 +43,7 @@ func (q *Queries) GetParticipant(ctx context.Context, arg GetParticipantParams) 
 		&i.DisplayName,
 		&i.Role,
 		&i.Controller,
-		&i.IsOwner,
+		&i.CampaignAccess,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -51,7 +51,7 @@ func (q *Queries) GetParticipant(ctx context.Context, arg GetParticipantParams) 
 }
 
 const listParticipantsByCampaign = `-- name: ListParticipantsByCampaign :many
-SELECT campaign_id, id, user_id, display_name, role, controller, is_owner, created_at, updated_at FROM participants
+SELECT campaign_id, id, user_id, display_name, role, controller, campaign_access, created_at, updated_at FROM participants
 WHERE campaign_id = ?
 ORDER BY id
 `
@@ -72,7 +72,7 @@ func (q *Queries) ListParticipantsByCampaign(ctx context.Context, campaignID str
 			&i.DisplayName,
 			&i.Role,
 			&i.Controller,
-			&i.IsOwner,
+			&i.CampaignAccess,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -90,7 +90,7 @@ func (q *Queries) ListParticipantsByCampaign(ctx context.Context, campaignID str
 }
 
 const listParticipantsByCampaignPaged = `-- name: ListParticipantsByCampaignPaged :many
-SELECT campaign_id, id, user_id, display_name, role, controller, is_owner, created_at, updated_at FROM participants
+SELECT campaign_id, id, user_id, display_name, role, controller, campaign_access, created_at, updated_at FROM participants
 WHERE campaign_id = ? AND id > ?
 ORDER BY id
 LIMIT ?
@@ -118,7 +118,7 @@ func (q *Queries) ListParticipantsByCampaignPaged(ctx context.Context, arg ListP
 			&i.DisplayName,
 			&i.Role,
 			&i.Controller,
-			&i.IsOwner,
+			&i.CampaignAccess,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -136,7 +136,7 @@ func (q *Queries) ListParticipantsByCampaignPaged(ctx context.Context, arg ListP
 }
 
 const listParticipantsByCampaignPagedFirst = `-- name: ListParticipantsByCampaignPagedFirst :many
-SELECT campaign_id, id, user_id, display_name, role, controller, is_owner, created_at, updated_at FROM participants
+SELECT campaign_id, id, user_id, display_name, role, controller, campaign_access, created_at, updated_at FROM participants
 WHERE campaign_id = ?
 ORDER BY id
 LIMIT ?
@@ -163,7 +163,7 @@ func (q *Queries) ListParticipantsByCampaignPagedFirst(ctx context.Context, arg 
 			&i.DisplayName,
 			&i.Role,
 			&i.Controller,
-			&i.IsOwner,
+			&i.CampaignAccess,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -182,27 +182,27 @@ func (q *Queries) ListParticipantsByCampaignPagedFirst(ctx context.Context, arg 
 
 const putParticipant = `-- name: PutParticipant :exec
 INSERT INTO participants (
-    campaign_id, id, user_id, display_name, role, controller, is_owner, created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+	campaign_id, id, user_id, display_name, role, controller, campaign_access, created_at, updated_at
+ ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(campaign_id, id) DO UPDATE SET
-    user_id = excluded.user_id,
-    display_name = excluded.display_name,
-    role = excluded.role,
-    controller = excluded.controller,
-    is_owner = excluded.is_owner,
-    updated_at = excluded.updated_at
+	user_id = excluded.user_id,
+	display_name = excluded.display_name,
+	role = excluded.role,
+	controller = excluded.controller,
+	campaign_access = excluded.campaign_access,
+	updated_at = excluded.updated_at
 `
 
 type PutParticipantParams struct {
-	CampaignID  string `json:"campaign_id"`
-	ID          string `json:"id"`
-	UserID      string `json:"user_id"`
-	DisplayName string `json:"display_name"`
-	Role        string `json:"role"`
-	Controller  string `json:"controller"`
-	IsOwner     int64  `json:"is_owner"`
-	CreatedAt   int64  `json:"created_at"`
-	UpdatedAt   int64  `json:"updated_at"`
+	CampaignID     string `json:"campaign_id"`
+	ID             string `json:"id"`
+	UserID         string `json:"user_id"`
+	DisplayName    string `json:"display_name"`
+	Role           string `json:"role"`
+	Controller     string `json:"controller"`
+	CampaignAccess string `json:"campaign_access"`
+	CreatedAt      int64  `json:"created_at"`
+	UpdatedAt      int64  `json:"updated_at"`
 }
 
 func (q *Queries) PutParticipant(ctx context.Context, arg PutParticipantParams) error {
@@ -213,7 +213,7 @@ func (q *Queries) PutParticipant(ctx context.Context, arg PutParticipantParams) 
 		arg.DisplayName,
 		arg.Role,
 		arg.Controller,
-		arg.IsOwner,
+		arg.CampaignAccess,
 		arg.CreatedAt,
 		arg.UpdatedAt,
 	)

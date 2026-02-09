@@ -169,13 +169,18 @@ func (a Applier) applyParticipantJoined(ctx context.Context, evt event.Event) er
 	if err != nil {
 		return err
 	}
+	access, err := parseCampaignAccess(payload.CampaignAccess)
+	if err != nil {
+		return err
+	}
 
 	input := participant.CreateParticipantInput{
-		CampaignID:  evt.CampaignID,
-		UserID:      payload.UserID,
-		DisplayName: payload.DisplayName,
-		Role:        role,
-		Controller:  controller,
+		CampaignID:     evt.CampaignID,
+		UserID:         payload.UserID,
+		DisplayName:    payload.DisplayName,
+		Role:           role,
+		Controller:     controller,
+		CampaignAccess: access,
 	}
 	normalized, err := participant.NormalizeCreateParticipantInput(input)
 	if err != nil {
@@ -184,15 +189,15 @@ func (a Applier) applyParticipantJoined(ctx context.Context, evt event.Event) er
 
 	createdAt := ensureTimestamp(evt.Timestamp)
 	p := participant.Participant{
-		ID:          participantID,
-		CampaignID:  normalized.CampaignID,
-		UserID:      normalized.UserID,
-		DisplayName: normalized.DisplayName,
-		Role:        normalized.Role,
-		Controller:  normalized.Controller,
-		IsOwner:     payload.IsOwner,
-		CreatedAt:   createdAt,
-		UpdatedAt:   createdAt,
+		ID:             participantID,
+		CampaignID:     normalized.CampaignID,
+		UserID:         normalized.UserID,
+		DisplayName:    normalized.DisplayName,
+		Role:           normalized.Role,
+		Controller:     normalized.Controller,
+		CampaignAccess: normalized.CampaignAccess,
+		CreatedAt:      createdAt,
+		UpdatedAt:      createdAt,
 	}
 	if err := a.Participant.PutParticipant(ctx, p); err != nil {
 		return err
@@ -276,6 +281,16 @@ func (a Applier) applyParticipantUpdated(ctx context.Context, evt event.Event) e
 				return err
 			}
 			updated.Controller = controller
+		case "campaign_access":
+			accessLabel, ok := value.(string)
+			if !ok {
+				return fmt.Errorf("participant.updated campaign_access must be string")
+			}
+			access, err := parseCampaignAccess(accessLabel)
+			if err != nil {
+				return err
+			}
+			updated.CampaignAccess = access
 		}
 	}
 
@@ -768,6 +783,24 @@ func parseParticipantController(value string) (participant.Controller, error) {
 		return participant.ControllerAI, nil
 	default:
 		return participant.ControllerUnspecified, fmt.Errorf("unknown participant controller: %s", trimmed)
+	}
+}
+
+func parseCampaignAccess(value string) (participant.CampaignAccess, error) {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return participant.CampaignAccessUnspecified, fmt.Errorf("campaign access is required")
+	}
+	upper := strings.ToUpper(trimmed)
+	switch upper {
+	case "MEMBER", "CAMPAIGN_ACCESS_MEMBER":
+		return participant.CampaignAccessMember, nil
+	case "MANAGER", "CAMPAIGN_ACCESS_MANAGER":
+		return participant.CampaignAccessManager, nil
+	case "OWNER", "CAMPAIGN_ACCESS_OWNER":
+		return participant.CampaignAccessOwner, nil
+	default:
+		return participant.CampaignAccessUnspecified, fmt.Errorf("unknown campaign access: %s", trimmed)
 	}
 }
 

@@ -128,11 +128,11 @@ func (s *CampaignService) CreateCampaign(ctx context.Context, in *campaignv1.Cre
 	}
 
 	participantPayload := event.ParticipantJoinedPayload{
-		ParticipantID: creatorID,
-		DisplayName:   creatorDisplayName,
-		Role:          "GM",
-		Controller:    "HUMAN",
-		IsOwner:       true,
+		ParticipantID:  creatorID,
+		DisplayName:    creatorDisplayName,
+		Role:           "GM",
+		Controller:     "HUMAN",
+		CampaignAccess: "OWNER",
 	}
 	participantPayloadJSON, err := json.Marshal(participantPayload)
 	if err != nil {

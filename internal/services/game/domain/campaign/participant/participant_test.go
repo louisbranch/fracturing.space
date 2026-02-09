@@ -55,6 +55,9 @@ func TestCreateParticipantNormalizesInput(t *testing.T) {
 	if participant.Controller != ControllerHuman {
 		t.Fatalf("expected controller human, got %v", participant.Controller)
 	}
+	if participant.CampaignAccess != CampaignAccessMember {
+		t.Fatalf("expected access member, got %v", participant.CampaignAccess)
+	}
 	if !participant.CreatedAt.Equal(fixedTime) || !participant.UpdatedAt.Equal(fixedTime) {
 		t.Fatalf("expected timestamps to match fixed time")
 	}
@@ -78,6 +81,9 @@ func TestCreateParticipantDefaultsController(t *testing.T) {
 
 	if participant.Controller != ControllerHuman {
 		t.Fatalf("expected default controller human, got %v", participant.Controller)
+	}
+	if participant.CampaignAccess != CampaignAccessMember {
+		t.Fatalf("expected default access member, got %v", participant.CampaignAccess)
 	}
 }
 

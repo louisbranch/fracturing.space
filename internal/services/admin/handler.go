@@ -1570,6 +1570,7 @@ func buildParticipantRows(participants []*statev1.Participant, loc *message.Prin
 		}
 
 		role, roleVariant := formatParticipantRole(participant.GetRole(), loc)
+		access, accessVariant := formatParticipantAccess(participant.GetCampaignAccess(), loc)
 		controller, controllerVariant := formatParticipantController(participant.GetController(), loc)
 
 		rows = append(rows, templates.ParticipantRow{
@@ -1577,6 +1578,8 @@ func buildParticipantRows(participants []*statev1.Participant, loc *message.Prin
 			DisplayName:       participant.GetDisplayName(),
 			Role:              role,
 			RoleVariant:       roleVariant,
+			Access:            access,
+			AccessVariant:     accessVariant,
 			Controller:        controller,
 			ControllerVariant: controllerVariant,
 			CreatedDate:       formatCreatedDate(participant.GetCreatedAt()),
@@ -1604,6 +1607,20 @@ func formatParticipantController(controller statev1.Controller, loc *message.Pri
 		return loc.Sprintf("label.human"), "success"
 	case statev1.Controller_CONTROLLER_AI:
 		return loc.Sprintf("label.ai"), "info"
+	default:
+		return loc.Sprintf("label.unspecified"), "secondary"
+	}
+}
+
+// formatParticipantAccess returns a display label and variant for campaign access.
+func formatParticipantAccess(access statev1.CampaignAccess, loc *message.Printer) (string, string) {
+	switch access {
+	case statev1.CampaignAccess_CAMPAIGN_ACCESS_MEMBER:
+		return loc.Sprintf("label.member"), "secondary"
+	case statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER:
+		return loc.Sprintf("label.manager"), "info"
+	case statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER:
+		return loc.Sprintf("label.owner"), "warning"
 	default:
 		return loc.Sprintf("label.unspecified"), "secondary"
 	}

@@ -9,7 +9,7 @@ Core Principles
 - When claimed, a campaign has a 1:1 user to participant relationship.
 - Participants can control multiple characters.
 - Game service enforces permissions; auth service provides identity and join authorization.
-- Authorization decisions flow through a policy layer (v0 maps is_owner to allowed actions).
+- Authorization decisions flow through a policy layer (v0 maps campaign_access to allowed actions).
 
 Service Boundaries
 - Auth service: user creation, join grants, future authentication/OAuth.
@@ -83,8 +83,9 @@ Validation Rules (Game Service)
 Phase 1 Constraints (Implementation)
 - Invites are seat-targeted only (participant_id is required).
 - Invites are single-use and do not expire.
-- Owners are expressed as a participant flag (is_owner) and evaluated via policy.Can(...).
+- Owners are expressed as participant campaign access (campaign_access) and evaluated via policy.Can(...).
 - Owners can remove participants even if already claimed.
+- Campaign access levels: MEMBER (default), MANAGER (manage invites/participants), OWNER (full ownership).
 
 Claim Changes Needed (from current implementation)
 - Add user_id on participant records and enforce unique (campaign_id, user_id) when claimed.

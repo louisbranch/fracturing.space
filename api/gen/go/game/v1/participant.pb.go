@@ -72,6 +72,58 @@ func (ParticipantRole) EnumDescriptor() ([]byte, []int) {
 	return file_game_v1_participant_proto_rawDescGZIP(), []int{0}
 }
 
+type CampaignAccess int32
+
+const (
+	CampaignAccess_CAMPAIGN_ACCESS_UNSPECIFIED CampaignAccess = 0
+	CampaignAccess_CAMPAIGN_ACCESS_MEMBER      CampaignAccess = 1
+	CampaignAccess_CAMPAIGN_ACCESS_MANAGER     CampaignAccess = 2
+	CampaignAccess_CAMPAIGN_ACCESS_OWNER       CampaignAccess = 3
+)
+
+// Enum value maps for CampaignAccess.
+var (
+	CampaignAccess_name = map[int32]string{
+		0: "CAMPAIGN_ACCESS_UNSPECIFIED",
+		1: "CAMPAIGN_ACCESS_MEMBER",
+		2: "CAMPAIGN_ACCESS_MANAGER",
+		3: "CAMPAIGN_ACCESS_OWNER",
+	}
+	CampaignAccess_value = map[string]int32{
+		"CAMPAIGN_ACCESS_UNSPECIFIED": 0,
+		"CAMPAIGN_ACCESS_MEMBER":      1,
+		"CAMPAIGN_ACCESS_MANAGER":     2,
+		"CAMPAIGN_ACCESS_OWNER":       3,
+	}
+)
+
+func (x CampaignAccess) Enum() *CampaignAccess {
+	p := new(CampaignAccess)
+	*p = x
+	return p
+}
+
+func (x CampaignAccess) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (CampaignAccess) Descriptor() protoreflect.EnumDescriptor {
+	return file_game_v1_participant_proto_enumTypes[1].Descriptor()
+}
+
+func (CampaignAccess) Type() protoreflect.EnumType {
+	return &file_game_v1_participant_proto_enumTypes[1]
+}
+
+func (x CampaignAccess) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use CampaignAccess.Descriptor instead.
+func (CampaignAccess) EnumDescriptor() ([]byte, []int) {
+	return file_game_v1_participant_proto_rawDescGZIP(), []int{1}
+}
+
 type Controller int32
 
 const (
@@ -105,11 +157,11 @@ func (x Controller) String() string {
 }
 
 func (Controller) Descriptor() protoreflect.EnumDescriptor {
-	return file_game_v1_participant_proto_enumTypes[1].Descriptor()
+	return file_game_v1_participant_proto_enumTypes[2].Descriptor()
 }
 
 func (Controller) Type() protoreflect.EnumType {
-	return &file_game_v1_participant_proto_enumTypes[1]
+	return &file_game_v1_participant_proto_enumTypes[2]
 }
 
 func (x Controller) Number() protoreflect.EnumNumber {
@@ -118,23 +170,23 @@ func (x Controller) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use Controller.Descriptor instead.
 func (Controller) EnumDescriptor() ([]byte, []int) {
-	return file_game_v1_participant_proto_rawDescGZIP(), []int{1}
+	return file_game_v1_participant_proto_rawDescGZIP(), []int{2}
 }
 
 // Participant represents a player or GM in a campaign.
 type Participant struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	CampaignId    string                 `protobuf:"bytes,2,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"`
-	UserId        string                 `protobuf:"bytes,3,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	DisplayName   string                 `protobuf:"bytes,4,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
-	Role          ParticipantRole        `protobuf:"varint,5,opt,name=role,proto3,enum=game.v1.ParticipantRole" json:"role,omitempty"`
-	Controller    Controller             `protobuf:"varint,6,opt,name=controller,proto3,enum=game.v1.Controller" json:"controller,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	IsOwner       bool                   `protobuf:"varint,9,opt,name=is_owner,json=isOwner,proto3" json:"is_owner,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	CampaignId     string                 `protobuf:"bytes,2,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"`
+	UserId         string                 `protobuf:"bytes,3,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	DisplayName    string                 `protobuf:"bytes,4,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	Role           ParticipantRole        `protobuf:"varint,5,opt,name=role,proto3,enum=game.v1.ParticipantRole" json:"role,omitempty"`
+	CampaignAccess CampaignAccess         `protobuf:"varint,6,opt,name=campaign_access,json=campaignAccess,proto3,enum=game.v1.CampaignAccess" json:"campaign_access,omitempty"`
+	Controller     Controller             `protobuf:"varint,7,opt,name=controller,proto3,enum=game.v1.Controller" json:"controller,omitempty"`
+	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt      *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *Participant) Reset() {
@@ -202,6 +254,13 @@ func (x *Participant) GetRole() ParticipantRole {
 	return ParticipantRole_ROLE_UNSPECIFIED
 }
 
+func (x *Participant) GetCampaignAccess() CampaignAccess {
+	if x != nil {
+		return x.CampaignAccess
+	}
+	return CampaignAccess_CAMPAIGN_ACCESS_UNSPECIFIED
+}
+
 func (x *Participant) GetController() Controller {
 	if x != nil {
 		return x.Controller
@@ -221,13 +280,6 @@ func (x *Participant) GetUpdatedAt() *timestamppb.Timestamp {
 		return x.UpdatedAt
 	}
 	return nil
-}
-
-func (x *Participant) GetIsOwner() bool {
-	if x != nil {
-		return x.IsOwner
-	}
-	return false
 }
 
 type CreateParticipantRequest struct {
@@ -367,8 +419,10 @@ type UpdateParticipantRequest struct {
 	DisplayName *wrapperspb.StringValue `protobuf:"bytes,4,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
 	// Optional updated role.
 	Role ParticipantRole `protobuf:"varint,5,opt,name=role,proto3,enum=game.v1.ParticipantRole" json:"role,omitempty"`
+	// Optional updated campaign access.
+	CampaignAccess CampaignAccess `protobuf:"varint,6,opt,name=campaign_access,json=campaignAccess,proto3,enum=game.v1.CampaignAccess" json:"campaign_access,omitempty"`
 	// Optional updated controller.
-	Controller    Controller `protobuf:"varint,6,opt,name=controller,proto3,enum=game.v1.Controller" json:"controller,omitempty"`
+	Controller    Controller `protobuf:"varint,7,opt,name=controller,proto3,enum=game.v1.Controller" json:"controller,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -436,6 +490,13 @@ func (x *UpdateParticipantRequest) GetRole() ParticipantRole {
 		return x.Role
 	}
 	return ParticipantRole_ROLE_UNSPECIFIED
+}
+
+func (x *UpdateParticipantRequest) GetCampaignAccess() CampaignAccess {
+	if x != nil {
+		return x.CampaignAccess
+	}
+	return CampaignAccess_CAMPAIGN_ACCESS_UNSPECIFIED
 }
 
 func (x *UpdateParticipantRequest) GetController() Controller {
@@ -814,22 +875,22 @@ var File_game_v1_participant_proto protoreflect.FileDescriptor
 
 const file_game_v1_participant_proto_rawDesc = "" +
 	"\n" +
-	"\x19game/v1/participant.proto\x12\agame.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1egoogle/protobuf/wrappers.proto\"\xee\x02\n" +
+	"\x19game/v1/participant.proto\x12\agame.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1egoogle/protobuf/wrappers.proto\"\x95\x03\n" +
 	"\vParticipant\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vcampaign_id\x18\x02 \x01(\tR\n" +
 	"campaignId\x12\x17\n" +
 	"\auser_id\x18\x03 \x01(\tR\x06userId\x12!\n" +
 	"\fdisplay_name\x18\x04 \x01(\tR\vdisplayName\x12,\n" +
-	"\x04role\x18\x05 \x01(\x0e2\x18.game.v1.ParticipantRoleR\x04role\x123\n" +
+	"\x04role\x18\x05 \x01(\x0e2\x18.game.v1.ParticipantRoleR\x04role\x12@\n" +
+	"\x0fcampaign_access\x18\x06 \x01(\x0e2\x17.game.v1.CampaignAccessR\x0ecampaignAccess\x123\n" +
 	"\n" +
-	"controller\x18\x06 \x01(\x0e2\x13.game.v1.ControllerR\n" +
+	"controller\x18\a \x01(\x0e2\x13.game.v1.ControllerR\n" +
 	"controller\x129\n" +
 	"\n" +
-	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"created_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x19\n" +
-	"\bis_owner\x18\t \x01(\bR\aisOwner\"\xda\x01\n" +
+	"updated_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xda\x01\n" +
 	"\x18CreateParticipantRequest\x12\x1f\n" +
 	"\vcampaign_id\x18\x01 \x01(\tR\n" +
 	"campaignId\x12\x17\n" +
@@ -840,16 +901,17 @@ const file_game_v1_participant_proto_rawDesc = "" +
 	"controller\x18\x05 \x01(\x0e2\x13.game.v1.ControllerR\n" +
 	"controller\"S\n" +
 	"\x19CreateParticipantResponse\x126\n" +
-	"\vparticipant\x18\x01 \x01(\v2\x14.game.v1.ParticipantR\vparticipant\"\xbd\x02\n" +
+	"\vparticipant\x18\x01 \x01(\v2\x14.game.v1.ParticipantR\vparticipant\"\xff\x02\n" +
 	"\x18UpdateParticipantRequest\x12\x1f\n" +
 	"\vcampaign_id\x18\x01 \x01(\tR\n" +
 	"campaignId\x12%\n" +
 	"\x0eparticipant_id\x18\x02 \x01(\tR\rparticipantId\x125\n" +
 	"\auser_id\x18\x03 \x01(\v2\x1c.google.protobuf.StringValueR\x06userId\x12?\n" +
 	"\fdisplay_name\x18\x04 \x01(\v2\x1c.google.protobuf.StringValueR\vdisplayName\x12,\n" +
-	"\x04role\x18\x05 \x01(\x0e2\x18.game.v1.ParticipantRoleR\x04role\x123\n" +
+	"\x04role\x18\x05 \x01(\x0e2\x18.game.v1.ParticipantRoleR\x04role\x12@\n" +
+	"\x0fcampaign_access\x18\x06 \x01(\x0e2\x17.game.v1.CampaignAccessR\x0ecampaignAccess\x123\n" +
 	"\n" +
-	"controller\x18\x06 \x01(\x0e2\x13.game.v1.ControllerR\n" +
+	"controller\x18\a \x01(\x0e2\x13.game.v1.ControllerR\n" +
 	"controller\"S\n" +
 	"\x19UpdateParticipantResponse\x126\n" +
 	"\vparticipant\x18\x01 \x01(\v2\x14.game.v1.ParticipantR\vparticipant\"z\n" +
@@ -879,7 +941,12 @@ const file_game_v1_participant_proto_rawDesc = "" +
 	"\x10ROLE_UNSPECIFIED\x10\x00\x12\x06\n" +
 	"\x02GM\x10\x01\x12\n" +
 	"\n" +
-	"\x06PLAYER\x10\x02*Q\n" +
+	"\x06PLAYER\x10\x02*\x85\x01\n" +
+	"\x0eCampaignAccess\x12\x1f\n" +
+	"\x1bCAMPAIGN_ACCESS_UNSPECIFIED\x10\x00\x12\x1a\n" +
+	"\x16CAMPAIGN_ACCESS_MEMBER\x10\x01\x12\x1b\n" +
+	"\x17CAMPAIGN_ACCESS_MANAGER\x10\x02\x12\x19\n" +
+	"\x15CAMPAIGN_ACCESS_OWNER\x10\x03*Q\n" +
 	"\n" +
 	"Controller\x12\x1a\n" +
 	"\x16CONTROLLER_UNSPECIFIED\x10\x00\x12\x14\n" +
@@ -904,56 +971,59 @@ func file_game_v1_participant_proto_rawDescGZIP() []byte {
 	return file_game_v1_participant_proto_rawDescData
 }
 
-var file_game_v1_participant_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_game_v1_participant_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
 var file_game_v1_participant_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_game_v1_participant_proto_goTypes = []any{
 	(ParticipantRole)(0),              // 0: game.v1.ParticipantRole
-	(Controller)(0),                   // 1: game.v1.Controller
-	(*Participant)(nil),               // 2: game.v1.Participant
-	(*CreateParticipantRequest)(nil),  // 3: game.v1.CreateParticipantRequest
-	(*CreateParticipantResponse)(nil), // 4: game.v1.CreateParticipantResponse
-	(*UpdateParticipantRequest)(nil),  // 5: game.v1.UpdateParticipantRequest
-	(*UpdateParticipantResponse)(nil), // 6: game.v1.UpdateParticipantResponse
-	(*DeleteParticipantRequest)(nil),  // 7: game.v1.DeleteParticipantRequest
-	(*DeleteParticipantResponse)(nil), // 8: game.v1.DeleteParticipantResponse
-	(*ListParticipantsRequest)(nil),   // 9: game.v1.ListParticipantsRequest
-	(*ListParticipantsResponse)(nil),  // 10: game.v1.ListParticipantsResponse
-	(*GetParticipantRequest)(nil),     // 11: game.v1.GetParticipantRequest
-	(*GetParticipantResponse)(nil),    // 12: game.v1.GetParticipantResponse
-	(*timestamppb.Timestamp)(nil),     // 13: google.protobuf.Timestamp
-	(*wrapperspb.StringValue)(nil),    // 14: google.protobuf.StringValue
+	(CampaignAccess)(0),               // 1: game.v1.CampaignAccess
+	(Controller)(0),                   // 2: game.v1.Controller
+	(*Participant)(nil),               // 3: game.v1.Participant
+	(*CreateParticipantRequest)(nil),  // 4: game.v1.CreateParticipantRequest
+	(*CreateParticipantResponse)(nil), // 5: game.v1.CreateParticipantResponse
+	(*UpdateParticipantRequest)(nil),  // 6: game.v1.UpdateParticipantRequest
+	(*UpdateParticipantResponse)(nil), // 7: game.v1.UpdateParticipantResponse
+	(*DeleteParticipantRequest)(nil),  // 8: game.v1.DeleteParticipantRequest
+	(*DeleteParticipantResponse)(nil), // 9: game.v1.DeleteParticipantResponse
+	(*ListParticipantsRequest)(nil),   // 10: game.v1.ListParticipantsRequest
+	(*ListParticipantsResponse)(nil),  // 11: game.v1.ListParticipantsResponse
+	(*GetParticipantRequest)(nil),     // 12: game.v1.GetParticipantRequest
+	(*GetParticipantResponse)(nil),    // 13: game.v1.GetParticipantResponse
+	(*timestamppb.Timestamp)(nil),     // 14: google.protobuf.Timestamp
+	(*wrapperspb.StringValue)(nil),    // 15: google.protobuf.StringValue
 }
 var file_game_v1_participant_proto_depIdxs = []int32{
 	0,  // 0: game.v1.Participant.role:type_name -> game.v1.ParticipantRole
-	1,  // 1: game.v1.Participant.controller:type_name -> game.v1.Controller
-	13, // 2: game.v1.Participant.created_at:type_name -> google.protobuf.Timestamp
-	13, // 3: game.v1.Participant.updated_at:type_name -> google.protobuf.Timestamp
-	0,  // 4: game.v1.CreateParticipantRequest.role:type_name -> game.v1.ParticipantRole
-	1,  // 5: game.v1.CreateParticipantRequest.controller:type_name -> game.v1.Controller
-	2,  // 6: game.v1.CreateParticipantResponse.participant:type_name -> game.v1.Participant
-	14, // 7: game.v1.UpdateParticipantRequest.user_id:type_name -> google.protobuf.StringValue
-	14, // 8: game.v1.UpdateParticipantRequest.display_name:type_name -> google.protobuf.StringValue
-	0,  // 9: game.v1.UpdateParticipantRequest.role:type_name -> game.v1.ParticipantRole
-	1,  // 10: game.v1.UpdateParticipantRequest.controller:type_name -> game.v1.Controller
-	2,  // 11: game.v1.UpdateParticipantResponse.participant:type_name -> game.v1.Participant
-	2,  // 12: game.v1.DeleteParticipantResponse.participant:type_name -> game.v1.Participant
-	2,  // 13: game.v1.ListParticipantsResponse.participants:type_name -> game.v1.Participant
-	2,  // 14: game.v1.GetParticipantResponse.participant:type_name -> game.v1.Participant
-	3,  // 15: game.v1.ParticipantService.CreateParticipant:input_type -> game.v1.CreateParticipantRequest
-	5,  // 16: game.v1.ParticipantService.UpdateParticipant:input_type -> game.v1.UpdateParticipantRequest
-	7,  // 17: game.v1.ParticipantService.DeleteParticipant:input_type -> game.v1.DeleteParticipantRequest
-	9,  // 18: game.v1.ParticipantService.ListParticipants:input_type -> game.v1.ListParticipantsRequest
-	11, // 19: game.v1.ParticipantService.GetParticipant:input_type -> game.v1.GetParticipantRequest
-	4,  // 20: game.v1.ParticipantService.CreateParticipant:output_type -> game.v1.CreateParticipantResponse
-	6,  // 21: game.v1.ParticipantService.UpdateParticipant:output_type -> game.v1.UpdateParticipantResponse
-	8,  // 22: game.v1.ParticipantService.DeleteParticipant:output_type -> game.v1.DeleteParticipantResponse
-	10, // 23: game.v1.ParticipantService.ListParticipants:output_type -> game.v1.ListParticipantsResponse
-	12, // 24: game.v1.ParticipantService.GetParticipant:output_type -> game.v1.GetParticipantResponse
-	20, // [20:25] is the sub-list for method output_type
-	15, // [15:20] is the sub-list for method input_type
-	15, // [15:15] is the sub-list for extension type_name
-	15, // [15:15] is the sub-list for extension extendee
-	0,  // [0:15] is the sub-list for field type_name
+	1,  // 1: game.v1.Participant.campaign_access:type_name -> game.v1.CampaignAccess
+	2,  // 2: game.v1.Participant.controller:type_name -> game.v1.Controller
+	14, // 3: game.v1.Participant.created_at:type_name -> google.protobuf.Timestamp
+	14, // 4: game.v1.Participant.updated_at:type_name -> google.protobuf.Timestamp
+	0,  // 5: game.v1.CreateParticipantRequest.role:type_name -> game.v1.ParticipantRole
+	2,  // 6: game.v1.CreateParticipantRequest.controller:type_name -> game.v1.Controller
+	3,  // 7: game.v1.CreateParticipantResponse.participant:type_name -> game.v1.Participant
+	15, // 8: game.v1.UpdateParticipantRequest.user_id:type_name -> google.protobuf.StringValue
+	15, // 9: game.v1.UpdateParticipantRequest.display_name:type_name -> google.protobuf.StringValue
+	0,  // 10: game.v1.UpdateParticipantRequest.role:type_name -> game.v1.ParticipantRole
+	1,  // 11: game.v1.UpdateParticipantRequest.campaign_access:type_name -> game.v1.CampaignAccess
+	2,  // 12: game.v1.UpdateParticipantRequest.controller:type_name -> game.v1.Controller
+	3,  // 13: game.v1.UpdateParticipantResponse.participant:type_name -> game.v1.Participant
+	3,  // 14: game.v1.DeleteParticipantResponse.participant:type_name -> game.v1.Participant
+	3,  // 15: game.v1.ListParticipantsResponse.participants:type_name -> game.v1.Participant
+	3,  // 16: game.v1.GetParticipantResponse.participant:type_name -> game.v1.Participant
+	4,  // 17: game.v1.ParticipantService.CreateParticipant:input_type -> game.v1.CreateParticipantRequest
+	6,  // 18: game.v1.ParticipantService.UpdateParticipant:input_type -> game.v1.UpdateParticipantRequest
+	8,  // 19: game.v1.ParticipantService.DeleteParticipant:input_type -> game.v1.DeleteParticipantRequest
+	10, // 20: game.v1.ParticipantService.ListParticipants:input_type -> game.v1.ListParticipantsRequest
+	12, // 21: game.v1.ParticipantService.GetParticipant:input_type -> game.v1.GetParticipantRequest
+	5,  // 22: game.v1.ParticipantService.CreateParticipant:output_type -> game.v1.CreateParticipantResponse
+	7,  // 23: game.v1.ParticipantService.UpdateParticipant:output_type -> game.v1.UpdateParticipantResponse
+	9,  // 24: game.v1.ParticipantService.DeleteParticipant:output_type -> game.v1.DeleteParticipantResponse
+	11, // 25: game.v1.ParticipantService.ListParticipants:output_type -> game.v1.ListParticipantsResponse
+	13, // 26: game.v1.ParticipantService.GetParticipant:output_type -> game.v1.GetParticipantResponse
+	22, // [22:27] is the sub-list for method output_type
+	17, // [17:22] is the sub-list for method input_type
+	17, // [17:17] is the sub-list for extension type_name
+	17, // [17:17] is the sub-list for extension extendee
+	0,  // [0:17] is the sub-list for field type_name
 }
 
 func init() { file_game_v1_participant_proto_init() }
@@ -966,7 +1036,7 @@ func file_game_v1_participant_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_game_v1_participant_proto_rawDesc), len(file_game_v1_participant_proto_rawDesc)),
-			NumEnums:      2,
+			NumEnums:      3,
 			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   1,

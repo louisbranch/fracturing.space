@@ -14,16 +14,23 @@ message Participant {
   string user_id = 3;
   string display_name = 4;
   ParticipantRole role = 5;
-  Controller controller = 6;
-  google.protobuf.Timestamp created_at = 7;
-  google.protobuf.Timestamp updated_at = 8;
-  bool is_owner = 9;
+  CampaignAccess campaign_access = 6;
+  Controller controller = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
 }
 
 enum ParticipantRole {
   ROLE_UNSPECIFIED = 0;
   GM = 1;
   PLAYER = 2;
+}
+
+enum CampaignAccess {
+  CAMPAIGN_ACCESS_UNSPECIFIED = 0;
+  CAMPAIGN_ACCESS_MEMBER = 1;
+  CAMPAIGN_ACCESS_MANAGER = 2;
+  CAMPAIGN_ACCESS_OWNER = 3;
 }
 
 enum Controller {
@@ -87,8 +94,11 @@ message UpdateParticipantRequest {
   // Optional updated role.
   ParticipantRole role = 5;
 
+  // Optional updated campaign access.
+  CampaignAccess campaign_access = 6;
+
   // Optional updated controller.
-  Controller controller = 6;
+  Controller controller = 7;
 }
 
 message UpdateParticipantResponse {

@@ -103,7 +103,7 @@ func TestCreateParticipant_EmptyDisplayName(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
 	participantStore.participants["c1"] = map[string]participant.Participant{
-		"owner-1": {ID: "owner-1", CampaignID: "c1", IsOwner: true},
+		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
 	}
 	campaignStore.campaigns["c1"] = campaign.Campaign{
 		ID:     "c1",
@@ -124,7 +124,7 @@ func TestCreateParticipant_InvalidRole(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
 	participantStore.participants["c1"] = map[string]participant.Participant{
-		"owner-1": {ID: "owner-1", CampaignID: "c1", IsOwner: true},
+		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
 	}
 	campaignStore.campaigns["c1"] = campaign.Campaign{
 		ID:     "c1",
@@ -145,7 +145,7 @@ func TestCreateParticipant_Success_GM(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
 	participantStore.participants["c1"] = map[string]participant.Participant{
-		"owner-1": {ID: "owner-1", CampaignID: "c1", IsOwner: true},
+		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
 	}
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
@@ -186,6 +186,9 @@ func TestCreateParticipant_Success_GM(t *testing.T) {
 	if resp.Participant.Controller != statev1.Controller_CONTROLLER_AI {
 		t.Errorf("Participant Controller = %v, want %v", resp.Participant.Controller, statev1.Controller_CONTROLLER_AI)
 	}
+	if resp.Participant.CampaignAccess != statev1.CampaignAccess_CAMPAIGN_ACCESS_MEMBER {
+		t.Errorf("Participant CampaignAccess = %v, want %v", resp.Participant.CampaignAccess, statev1.CampaignAccess_CAMPAIGN_ACCESS_MEMBER)
+	}
 	if got := len(eventStore.events["c1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)
 	}
@@ -207,7 +210,7 @@ func TestCreateParticipant_Success_Player(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
 	participantStore.participants["c1"] = map[string]participant.Participant{
-		"owner-1": {ID: "owner-1", CampaignID: "c1", IsOwner: true},
+		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
 	}
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
@@ -236,6 +239,9 @@ func TestCreateParticipant_Success_Player(t *testing.T) {
 	if resp.Participant.Role != statev1.ParticipantRole_PLAYER {
 		t.Errorf("Participant Role = %v, want %v", resp.Participant.Role, statev1.ParticipantRole_PLAYER)
 	}
+	if resp.Participant.CampaignAccess != statev1.CampaignAccess_CAMPAIGN_ACCESS_MEMBER {
+		t.Errorf("Participant CampaignAccess = %v, want %v", resp.Participant.CampaignAccess, statev1.CampaignAccess_CAMPAIGN_ACCESS_MEMBER)
+	}
 	if got := len(eventStore.events["c1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)
 	}
@@ -251,7 +257,7 @@ func TestUpdateParticipant_NoFields(t *testing.T) {
 
 	campaignStore.campaigns["c1"] = campaign.Campaign{ID: "c1", Status: campaign.CampaignStatusActive}
 	participantStore.participants["c1"] = map[string]participant.Participant{
-		"owner-1": {ID: "owner-1", CampaignID: "c1", IsOwner: true},
+		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
 		"p1":      {ID: "p1", CampaignID: "c1", DisplayName: "Player One", Role: participant.ParticipantRolePlayer, Controller: participant.ControllerHuman},
 	}
 
@@ -271,7 +277,7 @@ func TestUpdateParticipant_Success(t *testing.T) {
 
 	campaignStore.campaigns["c1"] = campaign.Campaign{ID: "c1", Status: campaign.CampaignStatusActive}
 	participantStore.participants["c1"] = map[string]participant.Participant{
-		"owner-1": {ID: "owner-1", CampaignID: "c1", IsOwner: true},
+		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
 		"p1":      {ID: "p1", CampaignID: "c1", DisplayName: "Player One", Role: participant.ParticipantRolePlayer, Controller: participant.ControllerHuman},
 	}
 
@@ -308,6 +314,40 @@ func TestUpdateParticipant_Success(t *testing.T) {
 	}
 }
 
+func TestUpdateParticipant_CampaignAccess(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	eventStore := newFakeEventStore()
+
+	campaignStore.campaigns["c1"] = campaign.Campaign{ID: "c1", Status: campaign.CampaignStatusActive}
+	participantStore.participants["c1"] = map[string]participant.Participant{
+		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+		"p1":      {ID: "p1", CampaignID: "c1", DisplayName: "Player One", CampaignAccess: participant.CampaignAccessMember},
+	}
+
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore})
+	ctx := contextWithParticipantID("owner-1")
+	resp, err := svc.UpdateParticipant(ctx, &statev1.UpdateParticipantRequest{
+		CampaignId:     "c1",
+		ParticipantId:  "p1",
+		CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER,
+	})
+	if err != nil {
+		t.Fatalf("UpdateParticipant returned error: %v", err)
+	}
+	if resp.Participant.CampaignAccess != statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER {
+		t.Errorf("Participant CampaignAccess = %v, want %v", resp.Participant.CampaignAccess, statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER)
+	}
+
+	stored, err := participantStore.GetParticipant(context.Background(), "c1", "p1")
+	if err != nil {
+		t.Fatalf("Participant not persisted: %v", err)
+	}
+	if stored.CampaignAccess != participant.CampaignAccessManager {
+		t.Errorf("Stored participant CampaignAccess = %v, want %v", stored.CampaignAccess, participant.CampaignAccessManager)
+	}
+}
+
 func TestDeleteParticipant_Success(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
@@ -315,7 +355,7 @@ func TestDeleteParticipant_Success(t *testing.T) {
 
 	campaignStore.campaigns["c1"] = campaign.Campaign{ID: "c1", Status: campaign.CampaignStatusActive, ParticipantCount: 1}
 	participantStore.participants["c1"] = map[string]participant.Participant{
-		"owner-1": {ID: "owner-1", CampaignID: "c1", IsOwner: true},
+		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
 		"p1":      {ID: "p1", CampaignID: "c1", DisplayName: "Player One", Role: participant.ParticipantRolePlayer},
 	}
 

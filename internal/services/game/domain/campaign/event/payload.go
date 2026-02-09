@@ -29,12 +29,12 @@ type CampaignUpdatedPayload struct {
 
 // ParticipantJoinedPayload captures the payload for participant.joined events.
 type ParticipantJoinedPayload struct {
-	ParticipantID string `json:"participant_id"`
-	UserID        string `json:"user_id"`
-	DisplayName   string `json:"display_name"`
-	Role          string `json:"role"`
-	Controller    string `json:"controller"`
-	IsOwner       bool   `json:"is_owner"`
+	ParticipantID  string `json:"participant_id"`
+	UserID         string `json:"user_id"`
+	DisplayName    string `json:"display_name"`
+	Role           string `json:"role"`
+	Controller     string `json:"controller"`
+	CampaignAccess string `json:"campaign_access"`
 }
 
 // ParticipantLeftPayload captures the payload for participant.left events.

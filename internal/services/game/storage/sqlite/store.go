@@ -283,15 +283,15 @@ func (s *Store) PutParticipant(ctx context.Context, p participant.Participant) e
 	}
 
 	if err := s.q.PutParticipant(ctx, db.PutParticipantParams{
-		CampaignID:  p.CampaignID,
-		ID:          p.ID,
-		UserID:      p.UserID,
-		DisplayName: p.DisplayName,
-		Role:        participantRoleToString(p.Role),
-		Controller:  participantControllerToString(p.Controller),
-		IsOwner:     boolToInt(p.IsOwner),
-		CreatedAt:   toMillis(p.CreatedAt),
-		UpdatedAt:   toMillis(p.UpdatedAt),
+		CampaignID:     p.CampaignID,
+		ID:             p.ID,
+		UserID:         p.UserID,
+		DisplayName:    p.DisplayName,
+		Role:           participantRoleToString(p.Role),
+		Controller:     participantControllerToString(p.Controller),
+		CampaignAccess: participantAccessToString(p.CampaignAccess),
+		CreatedAt:      toMillis(p.CreatedAt),
+		UpdatedAt:      toMillis(p.UpdatedAt),
 	}); err != nil {
 		if isParticipantUserConflict(err) {
 			return apperrors.WithMetadata(
@@ -1478,6 +1478,19 @@ func participantControllerToString(pc participant.Controller) string {
 	}
 }
 
+func participantAccessToString(access participant.CampaignAccess) string {
+	switch access {
+	case participant.CampaignAccessMember:
+		return "MEMBER"
+	case participant.CampaignAccessManager:
+		return "MANAGER"
+	case participant.CampaignAccessOwner:
+		return "OWNER"
+	default:
+		return "UNSPECIFIED"
+	}
+}
+
 func boolToInt(value bool) int64 {
 	if value {
 		return 1
@@ -1497,6 +1510,19 @@ func stringToParticipantController(s string) participant.Controller {
 		return participant.ControllerAI
 	default:
 		return participant.ControllerUnspecified
+	}
+}
+
+func stringToParticipantAccess(s string) participant.CampaignAccess {
+	switch s {
+	case "MEMBER":
+		return participant.CampaignAccessMember
+	case "MANAGER":
+		return participant.CampaignAccessManager
+	case "OWNER":
+		return participant.CampaignAccessOwner
+	default:
+		return participant.CampaignAccessUnspecified
 	}
 }
 
@@ -1657,15 +1683,15 @@ func dbListAllCampaignsRowToDomain(row db.ListAllCampaignsRow) (campaign.Campaig
 
 func dbParticipantToDomain(row db.Participant) (participant.Participant, error) {
 	return participant.Participant{
-		ID:          row.ID,
-		CampaignID:  row.CampaignID,
-		UserID:      row.UserID,
-		DisplayName: row.DisplayName,
-		Role:        stringToParticipantRole(row.Role),
-		Controller:  stringToParticipantController(row.Controller),
-		IsOwner:     intToBool(row.IsOwner),
-		CreatedAt:   fromMillis(row.CreatedAt),
-		UpdatedAt:   fromMillis(row.UpdatedAt),
+		ID:             row.ID,
+		CampaignID:     row.CampaignID,
+		UserID:         row.UserID,
+		DisplayName:    row.DisplayName,
+		Role:           stringToParticipantRole(row.Role),
+		Controller:     stringToParticipantController(row.Controller),
+		CampaignAccess: stringToParticipantAccess(row.CampaignAccess),
+		CreatedAt:      fromMillis(row.CreatedAt),
+		UpdatedAt:      fromMillis(row.UpdatedAt),
 	}, nil
 }
 

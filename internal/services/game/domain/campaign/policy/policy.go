@@ -18,10 +18,10 @@ const (
 
 // Can reports whether the participant can perform the action for the campaign.
 //
-// v0 policy: owners can manage participants and invites; others cannot.
+// v0 policy: managers and owners can manage participants and invites; others cannot.
 func Can(actor participant.Participant, action Action, _ campaign.Campaign) bool {
-	if !actor.IsOwner {
+	if action != ActionManageParticipants && action != ActionManageInvites {
 		return false
 	}
-	return action == ActionManageParticipants || action == ActionManageInvites
+	return actor.CampaignAccess == participant.CampaignAccessOwner || actor.CampaignAccess == participant.CampaignAccessManager
 }

@@ -36,6 +36,7 @@ templ ParticipantsTable(rows []ParticipantRow, message string, loc Localizer) {
 				<tr>
 					<th>{T(loc, "participants.table.display_name")}</th>
 					<th>{T(loc, "participants.table.role")}</th>
+					<th>{T(loc, "participants.table.access")}</th>
 					<th>{T(loc, "participants.table.controller")}</th>
 					<th>{T(loc, "participants.table.created")}</th>
 				</tr>
@@ -45,6 +46,7 @@ templ ParticipantsTable(rows []ParticipantRow, message string, loc Localizer) {
 					<tr>
 						<td>{row.DisplayName}</td>
 						<td>@StatusBadge(row.Role, row.RoleVariant)</td>
+						<td>@StatusBadge(row.Access, row.AccessVariant)</td>
 						<td>@StatusBadge(row.Controller, row.ControllerVariant)</td>
 						<td>{row.CreatedDate}</td>
 					</tr>

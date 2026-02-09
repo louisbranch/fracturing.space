@@ -74,12 +74,12 @@ func (s *ParticipantService) CreateParticipant(ctx context.Context, in *campaign
 	}
 
 	input := participant.CreateParticipantInput{
-		CampaignID:  campaignID,
-		UserID:      in.GetUserId(),
-		DisplayName: in.GetDisplayName(),
-		Role:        participantRoleFromProto(in.GetRole()),
-		Controller:  controllerFromProto(in.GetController()),
-		IsOwner:     false,
+		CampaignID:     campaignID,
+		UserID:         in.GetUserId(),
+		DisplayName:    in.GetDisplayName(),
+		Role:           participantRoleFromProto(in.GetRole()),
+		Controller:     controllerFromProto(in.GetController()),
+		CampaignAccess: participant.CampaignAccessMember,
 	}
 	normalized, err := participant.NormalizeCreateParticipantInput(input)
 	if err != nil {
@@ -105,14 +105,21 @@ func (s *ParticipantService) CreateParticipant(ctx context.Context, in *campaign
 	case participant.ControllerAI:
 		controllerLabel = "AI"
 	}
+	accessLabel := "MEMBER"
+	switch normalized.CampaignAccess {
+	case participant.CampaignAccessManager:
+		accessLabel = "MANAGER"
+	case participant.CampaignAccessOwner:
+		accessLabel = "OWNER"
+	}
 
 	payload := event.ParticipantJoinedPayload{
-		ParticipantID: participantID,
-		UserID:        normalized.UserID,
-		DisplayName:   normalized.DisplayName,
-		Role:          roleLabel,
-		Controller:    controllerLabel,
-		IsOwner:       normalized.IsOwner,
+		ParticipantID:  participantID,
+		UserID:         normalized.UserID,
+		DisplayName:    normalized.DisplayName,
+		Role:           roleLabel,
+		Controller:     controllerLabel,
+		CampaignAccess: accessLabel,
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -230,6 +237,14 @@ func (s *ParticipantService) UpdateParticipant(ctx context.Context, in *campaign
 		}
 		current.Controller = controller
 		fields["controller"] = in.GetController().String()
+	}
+	if in.GetCampaignAccess() != campaignv1.CampaignAccess_CAMPAIGN_ACCESS_UNSPECIFIED {
+		access := campaignAccessFromProto(in.GetCampaignAccess())
+		if access == participant.CampaignAccessUnspecified {
+			return nil, status.Error(codes.InvalidArgument, "campaign_access is invalid")
+		}
+		current.CampaignAccess = access
+		fields["campaign_access"] = in.GetCampaignAccess().String()
 	}
 	if len(fields) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "at least one field must be provided")

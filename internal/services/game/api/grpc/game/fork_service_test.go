@@ -57,10 +57,11 @@ func TestForkCampaign_ReplaysEvents_CopyParticipantsFalse(t *testing.T) {
 		EntityType: "participant",
 		EntityID:   "part-1",
 		PayloadJSON: mustJSON(t, event.ParticipantJoinedPayload{
-			ParticipantID: "part-1",
-			DisplayName:   "Alice",
-			Role:          "PLAYER",
-			Controller:    "CONTROLLER_HUMAN",
+			ParticipantID:  "part-1",
+			DisplayName:    "Alice",
+			Role:           "PLAYER",
+			Controller:     "CONTROLLER_HUMAN",
+			CampaignAccess: "MEMBER",
 		}),
 	})
 	appendEvent(t, eventStore, event.Event{
@@ -273,10 +274,11 @@ func TestForkCampaign_SeedsSnapshotStateAtHead(t *testing.T) {
 		EntityType: "participant",
 		EntityID:   "part-1",
 		PayloadJSON: mustJSON(t, event.ParticipantJoinedPayload{
-			ParticipantID: "part-1",
-			DisplayName:   "Alice",
-			Role:          "PLAYER",
-			Controller:    "CONTROLLER_HUMAN",
+			ParticipantID:  "part-1",
+			DisplayName:    "Alice",
+			Role:           "PLAYER",
+			Controller:     "CONTROLLER_HUMAN",
+			CampaignAccess: "MEMBER",
 		}),
 	})
 	appendEvent(t, eventStore, event.Event{

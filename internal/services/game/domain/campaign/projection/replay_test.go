@@ -308,10 +308,11 @@ func newCampaignCreatedEvent(campaignID string, seq uint64) event.Event {
 
 func newParticipantJoinedEvent(campaignID, participantID string, seq uint64) event.Event {
 	payload := event.ParticipantJoinedPayload{
-		ParticipantID: participantID,
-		DisplayName:   "Player One",
-		Role:          "PLAYER",
-		Controller:    "CONTROLLER_HUMAN",
+		ParticipantID:  participantID,
+		DisplayName:    "Player One",
+		Role:           "PLAYER",
+		Controller:     "CONTROLLER_HUMAN",
+		CampaignAccess: "MEMBER",
 	}
 	data, _ := json.Marshal(payload)
 	return event.Event{

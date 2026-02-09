@@ -86,15 +86,15 @@ func gameSystemFromProto(system commonv1.GameSystem) commonv1.GameSystem {
 
 func participantToProto(p participant.Participant) *campaignv1.Participant {
 	return &campaignv1.Participant{
-		Id:          p.ID,
-		CampaignId:  p.CampaignID,
-		UserId:      p.UserID,
-		DisplayName: p.DisplayName,
-		Role:        participantRoleToProto(p.Role),
-		Controller:  controllerToProto(p.Controller),
-		CreatedAt:   timestamppb.New(p.CreatedAt),
-		UpdatedAt:   timestamppb.New(p.UpdatedAt),
-		IsOwner:     p.IsOwner,
+		Id:             p.ID,
+		CampaignId:     p.CampaignID,
+		UserId:         p.UserID,
+		DisplayName:    p.DisplayName,
+		Role:           participantRoleToProto(p.Role),
+		CampaignAccess: campaignAccessToProto(p.CampaignAccess),
+		Controller:     controllerToProto(p.Controller),
+		CreatedAt:      timestamppb.New(p.CreatedAt),
+		UpdatedAt:      timestamppb.New(p.UpdatedAt),
 	}
 }
 
@@ -139,6 +139,32 @@ func controllerToProto(controller participant.Controller) campaignv1.Controller 
 		return campaignv1.Controller_CONTROLLER_AI
 	default:
 		return campaignv1.Controller_CONTROLLER_UNSPECIFIED
+	}
+}
+
+func campaignAccessFromProto(access campaignv1.CampaignAccess) participant.CampaignAccess {
+	switch access {
+	case campaignv1.CampaignAccess_CAMPAIGN_ACCESS_MEMBER:
+		return participant.CampaignAccessMember
+	case campaignv1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER:
+		return participant.CampaignAccessManager
+	case campaignv1.CampaignAccess_CAMPAIGN_ACCESS_OWNER:
+		return participant.CampaignAccessOwner
+	default:
+		return participant.CampaignAccessUnspecified
+	}
+}
+
+func campaignAccessToProto(access participant.CampaignAccess) campaignv1.CampaignAccess {
+	switch access {
+	case participant.CampaignAccessMember:
+		return campaignv1.CampaignAccess_CAMPAIGN_ACCESS_MEMBER
+	case participant.CampaignAccessManager:
+		return campaignv1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER
+	case participant.CampaignAccessOwner:
+		return campaignv1.CampaignAccess_CAMPAIGN_ACCESS_OWNER
+	default:
+		return campaignv1.CampaignAccess_CAMPAIGN_ACCESS_UNSPECIFIED
 	}
 }
 

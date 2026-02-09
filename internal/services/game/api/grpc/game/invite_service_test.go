@@ -31,7 +31,7 @@ func TestCreateInvite_Success(t *testing.T) {
 
 	campaignStore.campaigns["campaign-1"] = campaign.Campaign{ID: "campaign-1", Status: campaign.CampaignStatusDraft}
 	participantStore.participants["campaign-1"] = map[string]participant.Participant{
-		"owner-1":       {ID: "owner-1", CampaignID: "campaign-1", IsOwner: true},
+		"owner-1":       {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner},
 		"participant-1": {ID: "participant-1", CampaignID: "campaign-1"},
 	}
 
@@ -64,7 +64,7 @@ func TestRevokeInvite_AlreadyClaimed(t *testing.T) {
 	campaignStore.campaigns["campaign-1"] = campaign.Campaign{ID: "campaign-1", Status: campaign.CampaignStatusDraft}
 	participantStore := newFakeParticipantStore()
 	participantStore.participants["campaign-1"] = map[string]participant.Participant{
-		"owner-1": {ID: "owner-1", CampaignID: "campaign-1", IsOwner: true},
+		"owner-1": {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner},
 	}
 
 	svc := &InviteService{
@@ -85,7 +85,7 @@ func TestCreateInvite_MissingParticipantIdentity(t *testing.T) {
 
 	campaignStore.campaigns["campaign-1"] = campaign.Campaign{ID: "campaign-1", Status: campaign.CampaignStatusDraft}
 	participantStore.participants["campaign-1"] = map[string]participant.Participant{
-		"owner-1":       {ID: "owner-1", CampaignID: "campaign-1", IsOwner: true},
+		"owner-1":       {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner},
 		"participant-1": {ID: "participant-1", CampaignID: "campaign-1"},
 	}
 

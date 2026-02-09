@@ -34,6 +34,20 @@ const (
 	ControllerAI
 )
 
+// CampaignAccess describes campaign-level permissions for a participant.
+type CampaignAccess int
+
+const (
+	// CampaignAccessUnspecified represents an invalid access value.
+	CampaignAccessUnspecified CampaignAccess = iota
+	// CampaignAccessMember indicates baseline campaign access.
+	CampaignAccessMember
+	// CampaignAccessManager indicates permissions to manage participants and invites.
+	CampaignAccessManager
+	// CampaignAccessOwner indicates full campaign ownership permissions.
+	CampaignAccessOwner
+)
+
 var (
 	// ErrEmptyDisplayName indicates a missing participant display name.
 	ErrEmptyDisplayName = apperrors.New(apperrors.CodeParticipantEmptyDisplayName, "display name is required")
@@ -51,10 +65,10 @@ type Participant struct {
 	DisplayName string
 	Role        ParticipantRole
 	Controller  Controller
-	// IsOwner indicates if the participant is the campaign owner.
-	IsOwner   bool
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	// CampaignAccess indicates campaign-level permissions.
+	CampaignAccess CampaignAccess
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 }
 
 // CreateParticipantInput describes the metadata needed to create a participant.
@@ -64,8 +78,8 @@ type CreateParticipantInput struct {
 	DisplayName string
 	Role        ParticipantRole
 	Controller  Controller
-	// IsOwner indicates if the participant is the campaign owner.
-	IsOwner bool
+	// CampaignAccess indicates campaign-level permissions.
+	CampaignAccess CampaignAccess
 }
 
 // CreateParticipant creates a new participant with a generated ID and timestamps.
@@ -89,15 +103,15 @@ func CreateParticipant(input CreateParticipantInput, now func() time.Time, idGen
 
 	createdAt := now().UTC()
 	return Participant{
-		ID:          participantID,
-		CampaignID:  normalized.CampaignID,
-		UserID:      normalized.UserID,
-		DisplayName: normalized.DisplayName,
-		Role:        normalized.Role,
-		Controller:  normalized.Controller,
-		IsOwner:     normalized.IsOwner,
-		CreatedAt:   createdAt,
-		UpdatedAt:   createdAt,
+		ID:             participantID,
+		CampaignID:     normalized.CampaignID,
+		UserID:         normalized.UserID,
+		DisplayName:    normalized.DisplayName,
+		Role:           normalized.Role,
+		Controller:     normalized.Controller,
+		CampaignAccess: normalized.CampaignAccess,
+		CreatedAt:      createdAt,
+		UpdatedAt:      createdAt,
 	}, nil
 }
 
@@ -117,6 +131,9 @@ func NormalizeCreateParticipantInput(input CreateParticipantInput) (CreatePartic
 	}
 	if input.Controller == ControllerUnspecified {
 		input.Controller = ControllerHuman
+	}
+	if input.CampaignAccess == CampaignAccessUnspecified {
+		input.CampaignAccess = CampaignAccessMember
 	}
 	return input, nil
 }

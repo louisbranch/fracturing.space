@@ -6,6 +6,8 @@ type ParticipantRow struct {
 	DisplayName       string
 	Role              string
 	RoleVariant       string
+	Access            string
+	AccessVariant     string
 	Controller        string
 	ControllerVariant string
 	CreatedDate       string
