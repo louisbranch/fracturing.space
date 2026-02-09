@@ -35,9 +35,14 @@ type Server struct {
 
 // New creates a configured game server listening on the provided port.
 func New(port int) (*Server, error) {
-	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	return NewWithAddr(fmt.Sprintf(":%d", port))
+}
+
+// NewWithAddr creates a configured game server listening on the provided address.
+func NewWithAddr(addr string) (*Server, error) {
+	listener, err := net.Listen("tcp", addr)
 	if err != nil {
-		return nil, fmt.Errorf("listen on port %d: %w", port, err)
+		return nil, fmt.Errorf("listen on %s: %w", addr, err)
 	}
 	eventStore, projStore, err := openStores()
 	if err != nil {
@@ -121,6 +126,15 @@ func (s *Server) Addr() string {
 // Run creates and serves a game server until the context ends.
 func Run(ctx context.Context, port int) error {
 	grpcServer, err := New(port)
+	if err != nil {
+		return err
+	}
+	return grpcServer.Serve(ctx)
+}
+
+// RunWithAddr creates and serves a game server until the context ends.
+func RunWithAddr(ctx context.Context, addr string) error {
+	grpcServer, err := NewWithAddr(addr)
 	if err != nil {
 		return err
 	}

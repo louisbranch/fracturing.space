@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -40,7 +39,7 @@ func startGRPCServer(t *testing.T) (string, func()) {
 	setTempDBPath(t)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	grpcServer, err := server.New(0)
+	grpcServer, err := server.NewWithAddr("127.0.0.1:0")
 	if err != nil {
 		cancel()
 		t.Fatalf("new game server: %v", err)
@@ -51,7 +50,7 @@ func startGRPCServer(t *testing.T) (string, func()) {
 		serveErr <- grpcServer.Serve(ctx)
 	}()
 
-	addr := normalizeAddress(t, grpcServer.Addr())
+	addr := grpcServer.Addr()
 	waitForGRPCHealth(t, addr)
 	stop := func() {
 		cancel()
@@ -302,20 +301,6 @@ func repoRoot(t *testing.T) string {
 
 	t.Fatalf("go.mod not found from %s", filename)
 	return ""
-}
-
-// normalizeAddress maps wildcard listener hosts to localhost.
-func normalizeAddress(t *testing.T, addr string) string {
-	t.Helper()
-
-	host, port, err := net.SplitHostPort(addr)
-	if err != nil {
-		t.Fatalf("split address %q: %v", addr, err)
-	}
-	if host == "" || host == "0.0.0.0" || host == "::" {
-		host = "127.0.0.1"
-	}
-	return net.JoinHostPort(host, port)
 }
 
 // waitForGRPCHealth waits for the gRPC health check to report SERVING.

@@ -5,27 +5,50 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   conformance:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-go@v5
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
         with:
           go-version: "1.25.6"
-
-      - name: Start MCP endpoint
+          cache: true
+      - name: Download Go modules
+        run: go mod download
+      - name: Build MCP binaries
         env:
           GOFLAGS: "-tags=conformance"
         run: |
-          ./scripts/mcp-http.sh &
-          timeout 15 bash -c 'until curl -s http://localhost:3001/mcp/health >/dev/null; do sleep 0.5; done'
+          mkdir -p bin
+          go build -o bin/game ./cmd/game
+          go build -o bin/mcp ./cmd/mcp
+      - name: Start MCP endpoint
+        env:
+          GOFLAGS: "-tags=conformance"
+          FRACTURING_SPACE_GAME_EVENT_HMAC_KEY: "test-key"
+        run: |
+          ./bin/game -addr=127.0.0.1:8080 &
+          GAME_PID=$!
+          ./bin/mcp -transport=http -http-addr=127.0.0.1:3001 -addr=127.0.0.1:8080 &
+          MCP_PID=$!
+          GAME_PID="$GAME_PID" MCP_PID="$MCP_PID" timeout 60 bash -c 'until curl -fsS http://127.0.0.1:3001/mcp/health >/dev/null; do if ! kill -0 "$GAME_PID" 2>/dev/null; then exit 1; fi; if ! kill -0 "$MCP_PID" 2>/dev/null; then exit 1; fi; sleep 0.5; done'
 
       - name: Run conformance
         uses: modelcontextprotocol/conformance@v0.1.11
         with:
           mode: server
-          url: http://localhost:3001/mcp
+          url: http://127.0.0.1:3001/mcp
           verbose: true
           expected-failures: ./conformance-baseline.yml
+
+      - name: Stop MCP endpoint
+        if: always()
+        run: |
+          pkill -f "./bin/mcp" 2>/dev/null || true
+          pkill -f "./bin/game" 2>/dev/null || true
