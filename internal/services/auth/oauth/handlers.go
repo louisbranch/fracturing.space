@@ -7,10 +7,12 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/branding"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type loginView struct {
+	AppName    string
 	PendingID  string
 	ClientID   string
 	ClientName string
@@ -18,6 +20,7 @@ type loginView struct {
 }
 
 type consentView struct {
+	AppName    string
 	PendingID  string
 	ClientID   string
 	ClientName string
@@ -26,6 +29,7 @@ type consentView struct {
 }
 
 type errorView struct {
+	AppName          string
 	Error            string
 	ErrorDescription string
 }
@@ -107,6 +111,7 @@ func (s *Server) handleAuthorize(w http.ResponseWriter, r *http.Request) {
 	}
 
 	view := loginView{
+		AppName:    branding.AppName,
 		PendingID:  pendingID,
 		ClientID:   client.ID,
 		ClientName: clientDisplayName(client),
@@ -158,6 +163,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	view := consentView{
+		AppName:    branding.AppName,
 		PendingID:  pendingID,
 		ClientID:   pending.Request.ClientID,
 		ClientName: clientDisplayName(s.clientForID(pending.Request.ClientID)),
@@ -355,12 +361,13 @@ func (s *Server) handleIntrospect(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) renderError(w http.ResponseWriter, code, description string, status int) {
 	w.WriteHeader(status)
-	_ = templates.ExecuteTemplate(w, "error.html", errorView{Error: code, ErrorDescription: description})
+	_ = templates.ExecuteTemplate(w, "error.html", errorView{AppName: branding.AppName, Error: code, ErrorDescription: description})
 }
 
 func (s *Server) renderLoginError(w http.ResponseWriter, pending *PendingAuthorization, message string) {
 	client := s.clientForID(pending.Request.ClientID)
 	view := loginView{
+		AppName:    branding.AppName,
 		PendingID:  pending.ID,
 		ClientID:   pending.Request.ClientID,
 		ClientName: clientDisplayName(client),

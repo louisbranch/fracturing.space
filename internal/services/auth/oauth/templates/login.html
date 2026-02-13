@@ -1,138 +1,48 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign In - Fracturing Space</title>
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, sans-serif;
-            background: linear-gradient(160deg, #0d1b2a 0%, #1b263b 45%, #415a77 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-        .container {
-            background: #f8f9fb;
-            border-radius: 12px;
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
-            padding: 40px;
-            width: 100%;
-            max-width: 420px;
-        }
-        h1 {
-            color: #0d1b2a;
-            font-size: 24px;
-            margin-bottom: 8px;
-            text-align: center;
-        }
-        .subtitle {
-            color: #44515f;
-            font-size: 14px;
-            text-align: center;
-            margin-bottom: 24px;
-        }
-        .client-info {
-            background: #e6ecf3;
-            border-radius: 8px;
-            padding: 12px 16px;
-            margin-bottom: 24px;
-            font-size: 14px;
-            color: #2d3640;
-        }
-        .client-info strong {
-            color: #0d1b2a;
-        }
-        .error {
-            background: #ffe8e6;
-            border: 1px solid #f1b8b2;
-            border-radius: 8px;
-            color: #7a1b15;
-            padding: 12px 16px;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-        .form-group {
-            margin-bottom: 20px;
-        }
-        label {
-            display: block;
-            color: #44515f;
-            font-size: 14px;
-            font-weight: 600;
-            margin-bottom: 6px;
-        }
-        input[type="text"],
-        input[type="password"] {
-            width: 100%;
-            padding: 12px 16px;
-            border: 2px solid #d3dbe4;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: border-color 0.2s;
-            background: #ffffff;
-        }
-        input[type="text"]:focus,
-        input[type="password"]:focus {
-            outline: none;
-            border-color: #415a77;
-        }
-        button {
-            width: 100%;
-            padding: 14px 24px;
-            background: linear-gradient(135deg, #1b263b 0%, #415a77 100%);
-            border: none;
-            border-radius: 8px;
-            color: white;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        button:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 6px 14px rgba(27, 38, 59, 0.3);
-        }
-        button:active {
-            transform: translateY(0);
-        }
-    </style>
+    <title>Sign In - {{.AppName}}</title>
+    <link rel="stylesheet" href="https://unpkg.com/papercss@1.9.2/dist/paper.min.css" integrity="sha384-wMyZfjGAQ1ZgZgPm5qchzSB5HnjMhkNztmQTcnqZSdk5nrTqgiitoN+nL0XgczcG" crossorigin="anonymous">
+    <link rel="stylesheet" href="/static/theme.css">
+    <link rel="stylesheet" href="/static/auth.css">
 </head>
 <body>
-    <div class="container">
-        <h1>Sign In</h1>
-        <p class="subtitle">Authorize the application to access your account</p>
-
-        <div class="client-info">
-            <strong>{{.ClientName}}</strong> ({{.ClientID}}) is requesting access
+    <div class="paper container margin-top oauth-shell">
+        <div class="oauth-header">
+            <h3>{{.AppName}}</h3>
+            <p class="text-center muted oauth-subtitle">Authorize the application to access your account</p>
         </div>
 
-        {{if .Error}}
-        <div class="error">{{.Error}}</div>
-        {{end}}
+        <div class="card oauth-card">
+            <div class="card-body">
+                <h4 class="card-title text-center">Sign In</h4>
+                <div class="oauth-client">
+                    <strong>{{.ClientName}}</strong> ({{.ClientID}}) is requesting access
+                </div>
 
-        <form method="POST" action="/authorize/login">
-            <input type="hidden" name="pending_id" value="{{.PendingID}}">
+                {{if .Error}}
+                <div class="oauth-alert oauth-alert-error">{{.Error}}</div>
+                {{end}}
 
-            <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" required autocomplete="username" autofocus>
+                <form method="POST" action="/authorize/login">
+                    <input type="hidden" name="pending_id" value="{{.PendingID}}">
+
+                    <div class="oauth-field">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" name="username" required autocomplete="username" autofocus>
+                    </div>
+
+                    <div class="oauth-field">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" required autocomplete="current-password">
+                    </div>
+
+                    <button type="submit" class="paper-btn oauth-button">Sign In</button>
+                </form>
             </div>
-
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" required autocomplete="current-password">
-            </div>
-
-            <button type="submit">Sign In</button>
-        </form>
+        </div>
     </div>
 </body>
 </html>

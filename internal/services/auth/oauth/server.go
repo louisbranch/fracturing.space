@@ -2,6 +2,7 @@ package oauth
 
 import (
 	"context"
+	"io/fs"
 	"net/http"
 	"time"
 
@@ -38,6 +39,12 @@ func (s *Server) RegisterRoutes(mux *http.ServeMux) {
 	if mux == nil {
 		return
 	}
+
+	staticFS, err := fs.Sub(assetsFS, "static")
+	if err != nil {
+		panic(err)
+	}
+	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
 
 	mux.HandleFunc("/authorize", s.handleAuthorize)
 	mux.HandleFunc("/authorize/login", s.handleLogin)

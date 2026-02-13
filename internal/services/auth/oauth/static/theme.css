@@ -1,0 +1,70 @@
+/* Dark mode body background */
+html.dark body {
+  background: #41403e;
+}
+
+/* Fixed navbar offset */
+nav.fixed ~ * {
+  margin-top: 4rem;
+}
+
+/* Language selector size */
+nav ul.inline li.lang-selector a {
+  font-size: 1rem;
+  border: none;
+}
+
+nav ul.inline li.lang-selector a:hover {
+  text-decoration: underline;
+}
+
+/* Clickable table rows */
+tr[data-href] {
+  cursor: pointer;
+}
+
+tr[data-href] td:first-child a {
+  color: inherit;
+  text-decoration: none;
+  background-image: none;
+}
+
+tr[data-href]:hover td {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+html.dark tr[data-href]:hover td {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Event payload row */
+tr.payload-row {
+  background: transparent;
+}
+
+tr.payload-row td {
+  padding-top: 0;
+  border-top: none;
+}
+
+tr.payload-row details {
+  font-size: 0.8rem;
+}
+
+tr.payload-row pre {
+  max-height: 200px;
+  overflow: auto;
+  margin: 0.25rem 0 0 0;
+  font-size: 0.75rem;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* Constrain table width */
+table {
+  table-layout: fixed;
+}
+
+table td, table th {
+  overflow-wrap: break-word;
+}

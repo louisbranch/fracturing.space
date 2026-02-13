@@ -1,147 +1,47 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Authorize - Fracturing Space</title>
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, sans-serif;
-            background: linear-gradient(160deg, #0d1b2a 0%, #1b263b 45%, #415a77 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-        .container {
-            background: #f8f9fb;
-            border-radius: 12px;
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
-            padding: 40px;
-            width: 100%;
-            max-width: 460px;
-        }
-        h1 {
-            color: #0d1b2a;
-            font-size: 24px;
-            margin-bottom: 8px;
-            text-align: center;
-        }
-        .subtitle {
-            color: #44515f;
-            font-size: 14px;
-            text-align: center;
-            margin-bottom: 24px;
-        }
-        .user-info {
-            background: #e6ecf3;
-            border-radius: 8px;
-            padding: 12px 16px;
-            margin-bottom: 16px;
-            font-size: 14px;
-            color: #2d3640;
-        }
-        .client-info {
-            background: #ffffff;
-            border-radius: 8px;
-            padding: 16px;
-            margin-bottom: 24px;
-            border: 1px solid #dbe3ec;
-        }
-        .client-name {
-            font-size: 18px;
-            font-weight: 600;
-            color: #0d1b2a;
-            margin-bottom: 8px;
-        }
-        .permissions {
-            margin-top: 12px;
-        }
-        .permissions h3 {
-            font-size: 14px;
-            color: #44515f;
-            margin-bottom: 8px;
-        }
-        .permission-item {
-            display: flex;
-            align-items: center;
-            padding: 6px 0;
-            font-size: 14px;
-            color: #2d3640;
-        }
-        .permission-item::before {
-            content: "-";
-            color: #415a77;
-            font-weight: bold;
-            margin-right: 8px;
-        }
-        .buttons {
-            display: flex;
-            gap: 12px;
-        }
-        button {
-            flex: 1;
-            padding: 14px 24px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        .btn-allow {
-            background: linear-gradient(135deg, #1b263b 0%, #415a77 100%);
-            color: white;
-        }
-        .btn-allow:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 6px 14px rgba(27, 38, 59, 0.3);
-        }
-        .btn-deny {
-            background: #e5e9ef;
-            color: #44515f;
-        }
-        .btn-deny:hover {
-            background: #d7dde5;
-        }
-        button:active {
-            transform: translateY(0);
-        }
-    </style>
+    <title>Authorize - {{.AppName}}</title>
+    <link rel="stylesheet" href="https://unpkg.com/papercss@1.9.2/dist/paper.min.css" integrity="sha384-wMyZfjGAQ1ZgZgPm5qchzSB5HnjMhkNztmQTcnqZSdk5nrTqgiitoN+nL0XgczcG" crossorigin="anonymous">
+    <link rel="stylesheet" href="/static/theme.css">
+    <link rel="stylesheet" href="/static/auth.css">
 </head>
 <body>
-    <div class="container">
-        <h1>Authorize Application</h1>
-        <p class="subtitle">Grant access to your account</p>
-
-        <div class="user-info">
-            Signed in as <strong>{{.Username}}</strong>
+    <div class="paper container margin-top oauth-shell">
+        <div class="oauth-header">
+            <h3>{{.AppName}}</h3>
+            <p class="text-center muted oauth-subtitle">Grant access to your account</p>
         </div>
 
-        <div class="client-info">
-            <div class="client-name">{{.ClientName}}</div>
-            <div class="permissions">
-                <h3>This application will be able to:</h3>
-                {{range .Scopes}}
-                <div class="permission-item">{{.}}</div>
-                {{end}}
+        <div class="card oauth-card">
+            <div class="card-body">
+                <h4 class="card-title text-center">Authorize Application</h4>
+                <div class="oauth-client">
+                    Signed in as <strong>{{.Username}}</strong>
+                </div>
+
+                <div class="oauth-client">
+                    <div><strong>{{.ClientName}}</strong></div>
+                    <p class="muted">This application will be able to:</p>
+                    <ul class="oauth-permissions">
+                        {{range .Scopes}}
+                        <li>{{.}}</li>
+                        {{end}}
+                    </ul>
+                </div>
+
+                <form method="POST" action="/authorize/consent">
+                    <input type="hidden" name="pending_id" value="{{.PendingID}}">
+
+                    <div class="oauth-actions">
+                        <button type="submit" name="decision" value="deny" class="paper-btn secondary">Deny</button>
+                        <button type="submit" name="decision" value="allow" class="paper-btn primary">Allow</button>
+                    </div>
+                </form>
             </div>
         </div>
-
-        <form method="POST" action="/authorize/consent">
-            <input type="hidden" name="pending_id" value="{{.PendingID}}">
-
-            <div class="buttons">
-                <button type="submit" name="decision" value="deny" class="btn-deny">Deny</button>
-                <button type="submit" name="decision" value="allow" class="btn-allow">Allow</button>
-            </div>
-        </form>
     </div>
 </body>
 </html>
