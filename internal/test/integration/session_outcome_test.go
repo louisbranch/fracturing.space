@@ -77,6 +77,7 @@ func runSessionOutcomeTests(t *testing.T, suite *integrationSuite, grpcAddr stri
 				"system":       "DAGGERHEART",
 				"gm_mode":      "HUMAN",
 				"theme_prompt": "roll outcomes",
+				"user_id":      suite.userID,
 			},
 		})
 		if err != nil {
@@ -255,6 +256,7 @@ func runSessionOutcomeTests(t *testing.T, suite *integrationSuite, grpcAddr stri
 				"system":       "DAGGERHEART",
 				"gm_mode":      "HUMAN",
 				"theme_prompt": "roll outcomes",
+				"user_id":      suite.userID,
 			},
 		})
 		if err != nil {

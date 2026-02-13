@@ -5,12 +5,16 @@ import (
 	"testing"
 	"time"
 
+	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/session"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -91,18 +95,34 @@ func TestCreateCampaign_MissingGmMode(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
+func TestCreateCampaign_MissingCreatorUserID(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	eventStore := newFakeEventStore()
+	participantStore := newFakeParticipantStore()
+	svc := NewCampaignServiceWithAuth(Stores{Campaign: campaignStore, Event: eventStore, Participant: participantStore}, &fakeAuthClient{})
+	_, err := svc.CreateCampaign(context.Background(), &statev1.CreateCampaignRequest{
+		Name:   "Test Campaign",
+		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		GmMode: statev1.GmMode_HUMAN,
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
 func TestCreateCampaign_Success(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	eventStore := newFakeEventStore()
 	participantStore := newFakeParticipantStore()
+	fakeAuth := &fakeAuthClient{user: &authv1.User{Id: "user-123", DisplayName: "Creator"}}
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 	svc := &CampaignService{
 		stores:      Stores{Campaign: campaignStore, Event: eventStore, Participant: participantStore},
 		clock:       fixedClock(now),
 		idGenerator: fixedSequenceIDGenerator("campaign-123", "participant-123"),
+		authClient:  fakeAuth,
 	}
 
-	resp, err := svc.CreateCampaign(context.Background(), &statev1.CreateCampaignRequest{
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-123"))
+	resp, err := svc.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
 		Name:        "Test Campaign",
 		System:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 		GmMode:      statev1.GmMode_HUMAN,
@@ -338,6 +358,28 @@ func TestEndCampaign_DraftStatusDisallowed(t *testing.T) {
 	svc := NewCampaignService(Stores{Campaign: campaignStore, Session: sessionStore, Event: eventStore})
 	_, err := svc.EndCampaign(context.Background(), &statev1.EndCampaignRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.FailedPrecondition)
+}
+
+type fakeAuthClient struct {
+	user               *authv1.User
+	getUserErr         error
+	lastGetUserRequest *authv1.GetUserRequest
+}
+
+func (f *fakeAuthClient) CreateUser(ctx context.Context, req *authv1.CreateUserRequest, opts ...grpc.CallOption) (*authv1.CreateUserResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
+}
+
+func (f *fakeAuthClient) GetUser(ctx context.Context, req *authv1.GetUserRequest, opts ...grpc.CallOption) (*authv1.GetUserResponse, error) {
+	f.lastGetUserRequest = req
+	if f.getUserErr != nil {
+		return nil, f.getUserErr
+	}
+	return &authv1.GetUserResponse{User: f.user}, nil
+}
+
+func (f *fakeAuthClient) ListUsers(ctx context.Context, req *authv1.ListUsersRequest, opts ...grpc.CallOption) (*authv1.ListUsersResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
 }
 
 func TestEndCampaign_Success(t *testing.T) {

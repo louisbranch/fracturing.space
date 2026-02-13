@@ -62,6 +62,11 @@ func ParticipantIDFromContext(ctx context.Context) string {
 	return metadataValueFromIncomingContext(ctx, ParticipantIDHeader)
 }
 
+// UserIDFromContext returns the user ID from incoming metadata.
+func UserIDFromContext(ctx context.Context) string {
+	return metadataValueFromIncomingContext(ctx, UserIDHeader)
+}
+
 // CampaignIDFromContext returns the campaign ID from incoming metadata.
 func CampaignIDFromContext(ctx context.Context) string {
 	return metadataValueFromIncomingContext(ctx, CampaignIDHeader)

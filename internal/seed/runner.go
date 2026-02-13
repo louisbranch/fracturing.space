@@ -5,13 +5,19 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
+
+	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 // Config holds seed runner configuration.
 type Config struct {
 	RepoRoot    string
 	GRPCAddr    string
+	AuthAddr    string
 	Scenario    string
 	Verbose     bool
 	FixturesDir string
@@ -21,6 +27,7 @@ type Config struct {
 func DefaultConfig() Config {
 	return Config{
 		GRPCAddr:    "localhost:8080",
+		AuthAddr:    "localhost:8083",
 		FixturesDir: "internal/test/integration/fixtures/seed",
 	}
 }
@@ -47,11 +54,20 @@ func Run(ctx context.Context, cfg Config) error {
 	}
 	defer client.Close()
 
+	authAddr := strings.TrimSpace(cfg.AuthAddr)
+	if authAddr == "" {
+		return fmt.Errorf("auth server address is required")
+	}
+	userID, err := createSeedUser(ctx, authAddr)
+	if err != nil {
+		return err
+	}
+
 	for _, fixture := range fixtures {
 		if cfg.Verbose {
 			fmt.Fprintf(os.Stderr, "Running scenario: %s\n", fixture.Name)
 		}
-		if err := runFixture(ctx, client, fixture, cfg.Verbose); err != nil {
+		if err := runFixture(ctx, client, fixture, cfg.Verbose, userID); err != nil {
 			return fmt.Errorf("scenario %q: %w", fixture.Name, err)
 		}
 	}
@@ -76,17 +92,17 @@ func ListScenarios(cfg Config) ([]string, error) {
 	return names, nil
 }
 
-func runFixture(ctx context.Context, client *StdioClient, fixture BlackboxFixture, verbose bool) error {
+func runFixture(ctx context.Context, client *StdioClient, fixture BlackboxFixture, verbose bool, userID string) error {
 	captures := make(map[string]string)
 	for _, step := range fixture.Steps {
-		if err := executeStep(ctx, client, step, captures, verbose); err != nil {
+		if err := executeStep(ctx, client, step, captures, verbose, userID); err != nil {
 			return fmt.Errorf("step %q: %w", step.Name, err)
 		}
 	}
 	return nil
 }
 
-func executeStep(ctx context.Context, client *StdioClient, step BlackboxStep, captures map[string]string, verbose bool) error {
+func executeStep(ctx context.Context, client *StdioClient, step BlackboxStep, captures map[string]string, verbose bool, userID string) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -101,6 +117,9 @@ func executeStep(ctx context.Context, client *StdioClient, step BlackboxStep, ca
 	requestMap, ok := request.(map[string]any)
 	if !ok {
 		return fmt.Errorf("request is not an object")
+	}
+	if userID != "" {
+		injectCampaignCreatorUserID(requestMap, userID)
 	}
 	requestID, hasID := requestMap["id"]
 
@@ -175,4 +194,54 @@ func executeStep(ctx context.Context, client *StdioClient, step BlackboxStep, ca
 	}
 
 	return nil
+}
+
+func createSeedUser(ctx context.Context, authAddr string) (string, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	conn, err := grpc.NewClient(
+		authAddr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDefaultCallOptions(grpc.WaitForReady(true)),
+	)
+	if err != nil {
+		return "", fmt.Errorf("connect auth server: %w", err)
+	}
+	defer conn.Close()
+	client := authv1.NewAuthServiceClient(conn)
+	resp, err := client.CreateUser(ctx, &authv1.CreateUserRequest{DisplayName: "Seed Creator"})
+	if err != nil {
+		return "", fmt.Errorf("create seed user: %w", err)
+	}
+	userID := resp.GetUser().GetId()
+	if userID == "" {
+		return "", fmt.Errorf("create seed user: missing user id in response")
+	}
+	return userID, nil
+}
+
+func injectCampaignCreatorUserID(request map[string]any, userID string) {
+	if request == nil {
+		return
+	}
+	method, _ := request["method"].(string)
+	if method != "tools/call" {
+		return
+	}
+	params, ok := request["params"].(map[string]any)
+	if !ok {
+		return
+	}
+	toolName, _ := params["name"].(string)
+	if toolName != "campaign_create" {
+		return
+	}
+	arguments, ok := params["arguments"].(map[string]any)
+	if !ok {
+		return
+	}
+	if _, exists := arguments["user_id"]; !exists {
+		arguments["user_id"] = userID
+	}
 }

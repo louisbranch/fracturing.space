@@ -16,6 +16,7 @@ const (
 	CodeCampaignInvalidGameSystem       Code = "CAMPAIGN_INVALID_GAME_SYSTEM"
 	CodeCampaignInvalidStatusTransition Code = "CAMPAIGN_INVALID_STATUS_TRANSITION"
 	CodeCampaignStatusDisallowsOp       Code = "CAMPAIGN_STATUS_DISALLOWS_OPERATION"
+	CodeCampaignCreatorUserMissing      Code = "CAMPAIGN_CREATOR_USER_MISSING"
 
 	// Participant errors
 	CodeParticipantEmptyDisplayName   Code = "PARTICIPANT_EMPTY_DISPLAY_NAME"
@@ -87,6 +88,7 @@ func (c Code) GRPCCode() codes.Code {
 	case CodeCampaignNameEmpty,
 		CodeCampaignInvalidGmMode,
 		CodeCampaignInvalidGameSystem,
+		CodeCampaignCreatorUserMissing,
 		CodeParticipantEmptyDisplayName,
 		CodeParticipantInvalidRole,
 		CodeParticipantEmptyCampaignID,

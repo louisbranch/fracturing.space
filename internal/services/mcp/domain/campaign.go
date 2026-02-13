@@ -10,6 +10,7 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -25,6 +26,7 @@ type CampaignCreateInput struct {
 	System      string `json:"system" jsonschema:"game system (DAGGERHEART)"`
 	GmMode      string `json:"gm_mode" jsonschema:"gm mode (HUMAN, AI, HYBRID)"`
 	ThemePrompt string `json:"theme_prompt,omitempty" jsonschema:"optional theme prompt"`
+	UserID      string `json:"user_id,omitempty" jsonschema:"creator user identifier"`
 }
 
 // CampaignStatusChangeInput represents the MCP tool input for campaign lifecycle changes.
@@ -538,6 +540,9 @@ func CampaignCreateHandler(client statev1.CampaignServiceClient, notify Resource
 		callCtx, callMeta, err := NewOutgoingContext(runCtx, invocationID)
 		if err != nil {
 			return nil, CampaignCreateResult{}, fmt.Errorf("create request metadata: %w", err)
+		}
+		if strings.TrimSpace(input.UserID) != "" {
+			callCtx = metadata.AppendToOutgoingContext(callCtx, grpcmeta.UserIDHeader, strings.TrimSpace(input.UserID))
 		}
 
 		var header metadata.MD

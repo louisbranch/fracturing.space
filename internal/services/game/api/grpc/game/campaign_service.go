@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
@@ -31,6 +32,7 @@ type CampaignService struct {
 	stores      Stores
 	clock       func() time.Time
 	idGenerator func() (string, error)
+	authClient  authv1.AuthServiceClient
 }
 
 // NewCampaignService creates a CampaignService with default dependencies.
@@ -40,6 +42,13 @@ func NewCampaignService(stores Stores) *CampaignService {
 		clock:       time.Now,
 		idGenerator: id.NewID,
 	}
+}
+
+// NewCampaignServiceWithAuth creates a CampaignService with an auth client.
+func NewCampaignServiceWithAuth(stores Stores, authClient authv1.AuthServiceClient) *CampaignService {
+	service := NewCampaignService(stores)
+	service.authClient = authClient
+	return service
 }
 
 // CreateCampaign creates a new campaign metadata record.
@@ -124,7 +133,36 @@ func (s *CampaignService) CreateCampaign(ctx context.Context, in *campaignv1.Cre
 
 	creatorDisplayName := strings.TrimSpace(in.GetCreatorDisplayName())
 	if creatorDisplayName == "" {
-		creatorDisplayName = "Owner"
+		userID := grpcmeta.UserIDFromContext(ctx)
+		if userID == "" {
+			return nil, handleDomainError(apperrors.New(
+				apperrors.CodeCampaignCreatorUserMissing,
+				"creator user id is required",
+			))
+		}
+		if s.authClient == nil {
+			return nil, status.Error(codes.Internal, "auth client is not configured")
+		}
+		userResponse, err := s.authClient.GetUser(ctx, &authv1.GetUserRequest{UserId: userID})
+		if err != nil {
+			if statusErr, ok := status.FromError(err); ok && statusErr.Code() == codes.NotFound {
+				return nil, handleDomainError(apperrors.New(
+					apperrors.CodeCampaignCreatorUserMissing,
+					"creator user not found",
+				))
+			}
+			return nil, status.Errorf(codes.Internal, "get auth user: %v", err)
+		}
+		if userResponse == nil || userResponse.GetUser() == nil {
+			return nil, status.Error(codes.Internal, "auth user response is missing")
+		}
+		creatorDisplayName = strings.TrimSpace(userResponse.GetUser().GetDisplayName())
+		if creatorDisplayName == "" {
+			return nil, handleDomainError(apperrors.New(
+				apperrors.CodeCampaignCreatorUserMissing,
+				"creator user display name is required",
+			))
+		}
 	}
 
 	participantPayload := event.ParticipantJoinedPayload{

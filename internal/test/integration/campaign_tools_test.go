@@ -26,6 +26,7 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 				"system":       "DAGGERHEART",
 				"gm_mode":      "HUMAN",
 				"theme_prompt": "",
+				"user_id":      suite.userID,
 			},
 		}
 		campaignResult, err := suite.client.CallTool(ctx, campaignParams)
@@ -91,6 +92,7 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 				"system":       "DAGGERHEART",
 				"gm_mode":      "HUMAN",
 				"theme_prompt": "",
+				"user_id":      suite.userID,
 			},
 		}
 		campaignResult, err := suite.client.CallTool(ctx, campaignParams)
@@ -178,6 +180,7 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 				"system":       "DAGGERHEART",
 				"gm_mode":      "HUMAN",
 				"theme_prompt": "",
+				"user_id":      suite.userID,
 			},
 		}
 		campaignResult, err := suite.client.CallTool(ctx, campaignParams)
@@ -291,6 +294,7 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 				"system":       "DAGGERHEART",
 				"gm_mode":      "HUMAN",
 				"theme_prompt": "",
+				"user_id":      suite.userID,
 			},
 		}
 		campaignResult, err := suite.client.CallTool(ctx, campaignParams)

@@ -13,8 +13,9 @@ import (
 
 // TestMCPStdioBlackbox validates the stdio MCP surface using the shared fixture.
 func TestMCPStdioBlackbox(t *testing.T) {
-	grpcAddr, stopGRPC := startGRPCServer(t)
+	grpcAddr, authAddr, stopGRPC := startGRPCServer(t)
 	defer stopGRPC()
+	userID := createAuthUser(t, authAddr, "Blackbox Creator")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -29,12 +30,12 @@ func TestMCPStdioBlackbox(t *testing.T) {
 	for _, fixture := range fixtures {
 		captures := make(map[string]string)
 		for _, step := range fixture.Steps {
-			executeStdioBlackboxStep(t, client, step, captures)
+			executeStdioBlackboxStep(t, client, step, captures, userID)
 		}
 	}
 }
 
-func executeStdioBlackboxStep(t *testing.T, client *seed.StdioClient, step seed.BlackboxStep, captures map[string]string) {
+func executeStdioBlackboxStep(t *testing.T, client *seed.StdioClient, step seed.BlackboxStep, captures map[string]string, userID string) {
 	t.Helper()
 
 	request, err := seed.RenderPlaceholders(step.Request, captures)
@@ -44,6 +45,9 @@ func executeStdioBlackboxStep(t *testing.T, client *seed.StdioClient, step seed.
 	requestMap, ok := request.(map[string]any)
 	if !ok {
 		t.Fatalf("%s request is not an object", step.Name)
+	}
+	if userID != "" {
+		injectCampaignCreatorUserID(requestMap, userID)
 	}
 	requestID, hasID := requestMap["id"]
 

@@ -21,7 +21,7 @@ import (
 
 // TestAdminHTMXIntegration validates admin HTMX endpoints against real gRPC data.
 func TestAdminHTMXIntegration(t *testing.T) {
-	grpcAddr, stopGRPC := startGRPCServer(t)
+	grpcAddr, authAddr, stopGRPC := startGRPCServer(t)
 	defer stopGRPC()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -29,6 +29,9 @@ func TestAdminHTMXIntegration(t *testing.T) {
 
 	adminAddr, stopAdmin := startAdminServer(ctx, t, grpcAddr)
 	defer stopAdmin()
+
+	userID := createAuthUser(t, authAddr, "Admin Creator")
+	ctxWithUser := withUserID(ctx, userID)
 
 	conn, err := grpc.NewClient(grpcAddr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -58,7 +61,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 	})
 
 	t.Run("campaigns table with data", func(t *testing.T) {
-		createResp, err := campaignClient.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
+		createResp, err := campaignClient.CreateCampaign(ctxWithUser, &statev1.CreateCampaignRequest{
 			Name:        "Admin Test Campaign",
 			System:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 			GmMode:      statev1.GmMode_HUMAN,
@@ -84,7 +87,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 	})
 
 	t.Run("campaign detail full page", func(t *testing.T) {
-		createResp, err := campaignClient.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
+		createResp, err := campaignClient.CreateCampaign(ctxWithUser, &statev1.CreateCampaignRequest{
 			Name:   "Detail Test Campaign",
 			System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 			GmMode: statev1.GmMode_AI,
@@ -124,7 +127,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 	})
 
 	t.Run("campaign detail htmx fragment", func(t *testing.T) {
-		createResp, err := campaignClient.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
+		createResp, err := campaignClient.CreateCampaign(ctxWithUser, &statev1.CreateCampaignRequest{
 			Name:   "Fragment Test Campaign",
 			System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 			GmMode: statev1.GmMode_HYBRID,
@@ -148,7 +151,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 	})
 
 	t.Run("campaign sessions htmx fragment", func(t *testing.T) {
-		createResp, err := campaignClient.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
+		createResp, err := campaignClient.CreateCampaign(ctxWithUser, &statev1.CreateCampaignRequest{
 			Name:   "Session Test Campaign",
 			System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 			GmMode: statev1.GmMode_AI,
@@ -225,7 +228,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 
 	t.Run("dashboard content with data", func(t *testing.T) {
 		// Create campaign and session to ensure dashboard has data
-		createResp, err := campaignClient.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
+		createResp, err := campaignClient.CreateCampaign(ctxWithUser, &statev1.CreateCampaignRequest{
 			Name:   "Dashboard Test Campaign",
 			System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 			GmMode: statev1.GmMode_AI,
@@ -257,7 +260,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 
 	// Sessions tests
 	t.Run("sessions list full page", func(t *testing.T) {
-		createResp, err := campaignClient.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
+		createResp, err := campaignClient.CreateCampaign(ctxWithUser, &statev1.CreateCampaignRequest{
 			Name:   "Sessions List Test Campaign",
 			System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 			GmMode: statev1.GmMode_AI,
@@ -296,7 +299,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 	})
 
 	t.Run("sessions table empty", func(t *testing.T) {
-		createResp, err := campaignClient.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
+		createResp, err := campaignClient.CreateCampaign(ctxWithUser, &statev1.CreateCampaignRequest{
 			Name:   "Empty Sessions Campaign",
 			System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 			GmMode: statev1.GmMode_AI,
@@ -317,7 +320,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 	})
 
 	t.Run("sessions table with data", func(t *testing.T) {
-		createResp, err := campaignClient.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
+		createResp, err := campaignClient.CreateCampaign(ctxWithUser, &statev1.CreateCampaignRequest{
 			Name:   "Sessions Table Test Campaign",
 			System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 			GmMode: statev1.GmMode_AI,
@@ -348,7 +351,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 	})
 
 	t.Run("session detail full page", func(t *testing.T) {
-		createResp, err := campaignClient.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
+		createResp, err := campaignClient.CreateCampaign(ctxWithUser, &statev1.CreateCampaignRequest{
 			Name:   "Session Detail Test Campaign",
 			System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 			GmMode: statev1.GmMode_AI,
@@ -397,7 +400,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 	})
 
 	t.Run("session detail htmx fragment", func(t *testing.T) {
-		createResp, err := campaignClient.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
+		createResp, err := campaignClient.CreateCampaign(ctxWithUser, &statev1.CreateCampaignRequest{
 			Name:   "Session Detail HTMX Campaign",
 			System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 			GmMode: statev1.GmMode_AI,
@@ -430,7 +433,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 	})
 
 	t.Run("session events", func(t *testing.T) {
-		createResp, err := campaignClient.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
+		createResp, err := campaignClient.CreateCampaign(ctxWithUser, &statev1.CreateCampaignRequest{
 			Name:   "Session Events Test Campaign",
 			System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 			GmMode: statev1.GmMode_AI,
@@ -461,7 +464,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 
 	// Characters tests
 	t.Run("characters list full page", func(t *testing.T) {
-		createResp, err := campaignClient.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
+		createResp, err := campaignClient.CreateCampaign(ctxWithUser, &statev1.CreateCampaignRequest{
 			Name:   "Characters List Test Campaign",
 			System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 			GmMode: statev1.GmMode_AI,
@@ -500,7 +503,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 	})
 
 	t.Run("characters list htmx fragment", func(t *testing.T) {
-		createResp, err := campaignClient.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
+		createResp, err := campaignClient.CreateCampaign(ctxWithUser, &statev1.CreateCampaignRequest{
 			Name:   "Characters HTMX Test Campaign",
 			System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 			GmMode: statev1.GmMode_AI,
@@ -524,7 +527,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 	})
 
 	t.Run("characters table empty", func(t *testing.T) {
-		createResp, err := campaignClient.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
+		createResp, err := campaignClient.CreateCampaign(ctxWithUser, &statev1.CreateCampaignRequest{
 			Name:   "Empty Characters Campaign",
 			System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 			GmMode: statev1.GmMode_AI,
@@ -545,7 +548,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 	})
 
 	t.Run("characters table with data", func(t *testing.T) {
-		createResp, err := campaignClient.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
+		createResp, err := campaignClient.CreateCampaign(ctxWithUser, &statev1.CreateCampaignRequest{
 			Name:   "Characters Data Test Campaign",
 			System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 			GmMode: statev1.GmMode_AI,
@@ -577,7 +580,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 	})
 
 	t.Run("character sheet full page", func(t *testing.T) {
-		createResp, err := campaignClient.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
+		createResp, err := campaignClient.CreateCampaign(ctxWithUser, &statev1.CreateCampaignRequest{
 			Name:   "Character Sheet Test Campaign",
 			System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 			GmMode: statev1.GmMode_AI,
@@ -625,7 +628,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 	})
 
 	t.Run("character sheet htmx fragment", func(t *testing.T) {
-		createResp, err := campaignClient.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
+		createResp, err := campaignClient.CreateCampaign(ctxWithUser, &statev1.CreateCampaignRequest{
 			Name:   "Character Sheet HTMX Campaign",
 			System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 			GmMode: statev1.GmMode_AI,
@@ -660,7 +663,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 
 	// Participants tests
 	t.Run("participants list full page", func(t *testing.T) {
-		createResp, err := campaignClient.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
+		createResp, err := campaignClient.CreateCampaign(ctxWithUser, &statev1.CreateCampaignRequest{
 			Name:   "Participants List Test Campaign",
 			System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 			GmMode: statev1.GmMode_AI,
@@ -699,7 +702,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 	})
 
 	t.Run("participants list htmx fragment", func(t *testing.T) {
-		createResp, err := campaignClient.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
+		createResp, err := campaignClient.CreateCampaign(ctxWithUser, &statev1.CreateCampaignRequest{
 			Name:   "Participants HTMX Test Campaign",
 			System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 			GmMode: statev1.GmMode_AI,
@@ -723,7 +726,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 	})
 
 	t.Run("participants table empty", func(t *testing.T) {
-		createResp, err := campaignClient.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
+		createResp, err := campaignClient.CreateCampaign(ctxWithUser, &statev1.CreateCampaignRequest{
 			Name:   "Empty Participants Campaign",
 			System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 			GmMode: statev1.GmMode_AI,
@@ -747,7 +750,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 	})
 
 	t.Run("participants table with data", func(t *testing.T) {
-		createResp, err := campaignClient.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
+		createResp, err := campaignClient.CreateCampaign(ctxWithUser, &statev1.CreateCampaignRequest{
 			Name:   "Participants Data Test Campaign",
 			System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 			GmMode: statev1.GmMode_AI,
@@ -791,7 +794,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 
 	// Event Log tests
 	t.Run("event log full page", func(t *testing.T) {
-		createResp, err := campaignClient.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
+		createResp, err := campaignClient.CreateCampaign(ctxWithUser, &statev1.CreateCampaignRequest{
 			Name:   "Event Log Test Campaign",
 			System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 			GmMode: statev1.GmMode_AI,
@@ -830,7 +833,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 	})
 
 	t.Run("event log htmx fragment", func(t *testing.T) {
-		createResp, err := campaignClient.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
+		createResp, err := campaignClient.CreateCampaign(ctxWithUser, &statev1.CreateCampaignRequest{
 			Name:   "Event Log HTMX Test Campaign",
 			System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 			GmMode: statev1.GmMode_AI,
@@ -854,7 +857,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 	})
 
 	t.Run("event log table with data", func(t *testing.T) {
-		createResp, err := campaignClient.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
+		createResp, err := campaignClient.CreateCampaign(ctxWithUser, &statev1.CreateCampaignRequest{
 			Name:   "Event Table Data Test Campaign",
 			System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 			GmMode: statev1.GmMode_AI,

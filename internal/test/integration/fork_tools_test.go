@@ -26,6 +26,7 @@ func runForkToolsTests(t *testing.T, suite *integrationSuite) {
 				"system":       "DAGGERHEART",
 				"gm_mode":      "HUMAN",
 				"theme_prompt": "A test campaign for forking",
+				"user_id":      suite.userID,
 			},
 		}
 		campaignResult, err := suite.client.CallTool(ctx, campaignParams)
@@ -91,6 +92,7 @@ func runForkToolsTests(t *testing.T, suite *integrationSuite) {
 				"system":       "DAGGERHEART",
 				"gm_mode":      "HUMAN",
 				"theme_prompt": "",
+				"user_id":      suite.userID,
 			},
 		}
 		campaignResult, err := suite.client.CallTool(ctx, campaignParams)
@@ -135,6 +137,7 @@ func runForkToolsTests(t *testing.T, suite *integrationSuite) {
 				"system":       "DAGGERHEART",
 				"gm_mode":      "HUMAN",
 				"theme_prompt": "",
+				"user_id":      suite.userID,
 			},
 		}
 		campaignResult, err := suite.client.CallTool(ctx, campaignParams)
@@ -194,6 +197,7 @@ func runForkToolsTests(t *testing.T, suite *integrationSuite) {
 				"system":       "DAGGERHEART",
 				"gm_mode":      "HUMAN",
 				"theme_prompt": "",
+				"user_id":      suite.userID,
 			},
 		}
 		campaignResult, err := suite.client.CallTool(ctx, campaignParams)
@@ -267,6 +271,7 @@ func runForkToolsTests(t *testing.T, suite *integrationSuite) {
 				"system":       "DAGGERHEART",
 				"gm_mode":      "HUMAN",
 				"theme_prompt": "",
+				"user_id":      suite.userID,
 			},
 		}
 		campaignResult, err := suite.client.CallTool(ctx, campaignParams)

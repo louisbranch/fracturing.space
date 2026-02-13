@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"strings"
 
+	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/seed/worldbuilder"
@@ -18,6 +20,7 @@ import (
 // Config holds configuration for the generator.
 type Config struct {
 	GRPCAddr  string
+	AuthAddr  string
 	Preset    Preset
 	Seed      int64
 	Campaigns int // Override preset's campaign count (0 = use preset default)
@@ -28,6 +31,7 @@ type Config struct {
 func DefaultConfig() Config {
 	return Config{
 		GRPCAddr: "localhost:8080",
+		AuthAddr: "localhost:8083",
 		Preset:   PresetDemo,
 		Seed:     0,
 		Verbose:  false,
@@ -36,10 +40,11 @@ func DefaultConfig() Config {
 
 // Generator orchestrates dynamic scenario generation.
 type Generator struct {
-	config Config
-	rng    *rand.Rand
-	wb     *worldbuilder.WorldBuilder
-	conn   *grpc.ClientConn
+	config   Config
+	rng      *rand.Rand
+	wb       *worldbuilder.WorldBuilder
+	conn     *grpc.ClientConn
+	authConn *grpc.ClientConn
 
 	// gRPC service clients (game/v1)
 	campaigns    statev1.CampaignServiceClient
@@ -47,6 +52,7 @@ type Generator struct {
 	characters   statev1.CharacterServiceClient
 	sessions     statev1.SessionServiceClient
 	events       statev1.EventServiceClient
+	authClient   authv1.AuthServiceClient
 }
 
 // New creates a new Generator with the given configuration.
@@ -70,23 +76,45 @@ func New(ctx context.Context, cfg Config) (*Generator, error) {
 		fmt.Fprintf(os.Stderr, "Connected to game server\n")
 	}
 
+	authAddr := strings.TrimSpace(cfg.AuthAddr)
+	if authAddr == "" {
+		_ = conn.Close()
+		return nil, fmt.Errorf("auth server address is required")
+	}
+	authConn, err := grpc.NewClient(
+		authAddr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDefaultCallOptions(grpc.WaitForReady(true)),
+	)
+	if err != nil {
+		_ = conn.Close()
+		return nil, fmt.Errorf("connect to auth server: %w", err)
+	}
+
 	return &Generator{
 		config:       cfg,
 		rng:          rng,
 		wb:           worldbuilder.New(rng),
 		conn:         conn,
+		authConn:     authConn,
 		campaigns:    statev1.NewCampaignServiceClient(conn),
 		participants: statev1.NewParticipantServiceClient(conn),
 		characters:   statev1.NewCharacterServiceClient(conn),
 		sessions:     statev1.NewSessionServiceClient(conn),
 		events:       statev1.NewEventServiceClient(conn),
+		authClient:   authv1.NewAuthServiceClient(authConn),
 	}, nil
 }
 
 // Close releases resources held by the generator.
 func (g *Generator) Close() error {
 	if g.conn != nil {
-		return g.conn.Close()
+		if err := g.conn.Close(); err != nil {
+			return err
+		}
+	}
+	if g.authConn != nil {
+		return g.authConn.Close()
 	}
 	return nil
 }
