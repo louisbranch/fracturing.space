@@ -40,6 +40,7 @@ func main() {
 	grpcAddr := flag.String("grpc-addr", envOrDefault([]string{"FRACTURING_SPACE_GAME_ADDR"}, defaultGRPCAddr), "game server address")
 	authAddr := flag.String("auth-addr", envOrDefault([]string{"FRACTURING_SPACE_AUTH_ADDR"}, defaultAuthAddr), "auth server address")
 	flag.Parse()
+	log.SetPrefix("[ADMIN] ")
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()

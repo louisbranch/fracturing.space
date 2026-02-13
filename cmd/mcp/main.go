@@ -8,7 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/louisbranch/fracturing.space/internal/services/mcp/app"
+	mcp "github.com/louisbranch/fracturing.space/internal/services/mcp/app"
 )
 
 // main starts the MCP server on stdio or HTTP.
@@ -19,6 +19,7 @@ func main() {
 	httpAddrFlag := flag.String("http-addr", httpAddrDefault, "HTTP server address (for HTTP transport)")
 	transportFlag := flag.String("transport", "stdio", "Transport type: stdio or http")
 	flag.Parse()
+	log.SetPrefix("[MCP] ")
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
