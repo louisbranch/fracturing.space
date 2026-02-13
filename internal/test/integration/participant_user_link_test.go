@@ -17,7 +17,7 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
-func runParticipantUserLinkTests(t *testing.T, grpcAddr string) {
+func runParticipantUserLinkTests(t *testing.T, grpcAddr string, authAddr string) {
 	t.Helper()
 
 	conn, err := grpc.NewClient(
@@ -35,8 +35,10 @@ func runParticipantUserLinkTests(t *testing.T, grpcAddr string) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
 	defer cancel()
+	userID := createAuthUser(t, authAddr, "User Link Creator")
+	ctxWithUser := withUserID(ctx, userID)
 
-	createResp, err := campaignClient.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
+	createResp, err := campaignClient.CreateCampaign(ctxWithUser, &statev1.CreateCampaignRequest{
 		Name:   "User Link Test",
 		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 		GmMode: statev1.GmMode_HUMAN,

@@ -32,8 +32,9 @@ const blackboxFixtureGlob = "internal/test/integration/fixtures/blackbox_*.json"
 
 // TestMCPHTTPBlackbox validates HTTP transport behavior using raw JSON-RPC payloads.
 func TestMCPHTTPBlackbox(t *testing.T) {
-	grpcAddr, stopGRPC := startGRPCServer(t)
+	grpcAddr, authAddr, stopGRPC := startGRPCServer(t)
 	defer stopGRPC()
+	userID := createAuthUser(t, authAddr, "Blackbox Creator")
 
 	httpAddr := pickUnusedAddress(t)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -55,7 +56,7 @@ func TestMCPHTTPBlackbox(t *testing.T) {
 		var sseResp *http.Response
 		var sseRecorder *sseCapture
 		for index, step := range fixture.Steps {
-			executeBlackboxStep(t, client, baseURL+"/mcp", step, captures)
+			executeBlackboxStep(t, client, baseURL+"/mcp", step, captures, userID)
 			if fixture.ExpectSSE && index == 0 {
 				sseClient := newSSEClient(t, client.Jar)
 				sseResp, sseRecorder = openSSE(t, sseClient, baseURL+"/mcp")
@@ -102,12 +103,15 @@ func loadBlackboxFixture(t *testing.T, path string) seed.BlackboxFixture {
 }
 
 // executeBlackboxStep issues the HTTP request and validates expectations and captures.
-func executeBlackboxStep(t *testing.T, client *http.Client, url string, step seed.BlackboxStep, captures map[string]string) {
+func executeBlackboxStep(t *testing.T, client *http.Client, url string, step seed.BlackboxStep, captures map[string]string, userID string) {
 	t.Helper()
 
 	request, err := seed.RenderPlaceholders(step.Request, captures)
 	if err != nil {
 		t.Fatalf("render placeholders for %s: %v", step.Name, err)
+	}
+	if requestMap, ok := request.(map[string]any); ok && userID != "" {
+		injectCampaignCreatorUserID(requestMap, userID)
 	}
 	body, err := json.Marshal(request)
 	if err != nil {

@@ -6,13 +6,14 @@ import "testing"
 
 // TestMCPStdioEndToEnd validates MCP stdio integration end-to-end.
 func TestMCPStdioEndToEnd(t *testing.T) {
-	grpcAddr, stopServer := startGRPCServer(t)
+	grpcAddr, authAddr, stopServer := startGRPCServer(t)
 	defer stopServer()
 
 	clientSession, closeClient := startMCPClient(t, grpcAddr)
 	defer closeClient()
 
-	suite := &integrationSuite{client: clientSession}
+	userID := createAuthUser(t, authAddr, "Test Creator")
+	suite := &integrationSuite{client: clientSession, userID: userID}
 
 	t.Run("duality tools", func(t *testing.T) {
 		runDualityToolsTests(t, suite)
@@ -35,15 +36,15 @@ func TestMCPStdioEndToEnd(t *testing.T) {
 	})
 
 	t.Run("session lock", func(t *testing.T) {
-		runSessionLockTests(t, grpcAddr)
+		runSessionLockTests(t, grpcAddr, authAddr)
 	})
 
 	t.Run("participant user link", func(t *testing.T) {
-		runParticipantUserLinkTests(t, grpcAddr)
+		runParticipantUserLinkTests(t, grpcAddr, authAddr)
 	})
 
 	t.Run("event list", func(t *testing.T) {
-		runEventListTests(t, grpcAddr)
+		runEventListTests(t, grpcAddr, authAddr)
 	})
 
 	t.Run("mutation event guardrails", func(t *testing.T) {

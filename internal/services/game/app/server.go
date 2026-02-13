@@ -9,7 +9,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
+	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	gamegrpc "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game"
@@ -20,6 +22,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/integrity"
 	storagesqlite "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/health"
 	grpc_health_v1 "google.golang.org/grpc/health/grpc_health_v1"
 )
@@ -31,7 +34,11 @@ type Server struct {
 	health     *health.Server
 	eventStore *storagesqlite.Store
 	projStore  *storagesqlite.Store
+	authConn   *grpc.ClientConn
 }
+
+// defaultAuthDialTimeout caps auth gRPC dial wait time.
+const defaultAuthDialTimeout = 2 * time.Second
 
 // New creates a configured game server listening on the provided port.
 func New(port int) (*Server, error) {
@@ -64,6 +71,14 @@ func NewWithAddr(addr string) (*Server, error) {
 		CampaignFork: projStore,
 	}
 
+	authConn, authClient, err := dialAuthGRPC(context.Background())
+	if err != nil {
+		_ = listener.Close()
+		_ = eventStore.Close()
+		_ = projStore.Close()
+		return nil, err
+	}
+
 	grpcServer := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
 			grpcmeta.UnaryServerInterceptor(nil),
@@ -73,7 +88,7 @@ func NewWithAddr(addr string) (*Server, error) {
 		grpc.StreamInterceptor(grpcmeta.StreamServerInterceptor(nil)),
 	)
 	daggerheartService := daggerheartservice.NewDaggerheartService(random.NewSeed)
-	campaignService := gamegrpc.NewCampaignService(stores)
+	campaignService := gamegrpc.NewCampaignServiceWithAuth(stores, authClient)
 	participantService := gamegrpc.NewParticipantService(stores)
 	inviteService := gamegrpc.NewInviteService(stores)
 	characterService := gamegrpc.NewCharacterService(stores)
@@ -112,6 +127,7 @@ func NewWithAddr(addr string) (*Server, error) {
 		health:     healthServer,
 		eventStore: eventStore,
 		projStore:  projStore,
+		authConn:   authConn,
 	}, nil
 }
 
@@ -187,6 +203,28 @@ func openStores() (*storagesqlite.Store, *storagesqlite.Store, error) {
 	return eventStore, projStore, nil
 }
 
+func dialAuthGRPC(ctx context.Context) (*grpc.ClientConn, authv1.AuthServiceClient, error) {
+	authAddr := strings.TrimSpace(os.Getenv("FRACTURING_SPACE_AUTH_ADDR"))
+	if authAddr == "" {
+		return nil, nil, nil
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	dialCtx, cancel := context.WithTimeout(ctx, defaultAuthDialTimeout)
+	defer cancel()
+	conn, err := grpc.DialContext(
+		dialCtx,
+		authAddr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithBlock(),
+	)
+	if err != nil {
+		return nil, nil, fmt.Errorf("dial auth gRPC %s: %w", authAddr, err)
+	}
+	return conn, authv1.NewAuthServiceClient(conn), nil
+}
+
 func openEventStore() (*storagesqlite.Store, error) {
 	path := strings.TrimSpace(os.Getenv("FRACTURING_SPACE_GAME_EVENTS_DB_PATH"))
 	if path == "" {
@@ -246,6 +284,11 @@ func (s *Server) closeStores() {
 	if s.projStore != nil {
 		if err := s.projStore.Close(); err != nil {
 			log.Printf("close projection store: %v", err)
+		}
+	}
+	if s.authConn != nil {
+		if err := s.authConn.Close(); err != nil {
+			log.Printf("close auth conn: %v", err)
 		}
 	}
 }

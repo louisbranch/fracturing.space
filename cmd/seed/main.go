@@ -29,6 +29,7 @@ func main() {
 	var campaigns int
 
 	flag.StringVar(&seedCfg.GRPCAddr, "grpc-addr", seedCfg.GRPCAddr, "game server address")
+	flag.StringVar(&seedCfg.AuthAddr, "auth-addr", seedCfg.AuthAddr, "auth server address")
 	flag.StringVar(&seedCfg.Scenario, "scenario", "", "run specific scenario (default: all)")
 	flag.BoolVar(&seedCfg.Verbose, "v", false, "verbose output")
 	flag.BoolVar(&list, "list", false, "list available scenarios")
@@ -96,6 +97,7 @@ func main() {
 		// Dynamic generation mode
 		genCfg := generator.Config{
 			GRPCAddr:  seedCfg.GRPCAddr,
+			AuthAddr:  seedCfg.AuthAddr,
 			Preset:    presetVal,
 			Seed:      seedVal,
 			Campaigns: campaigns,

@@ -13,18 +13,23 @@ import (
 	"testing"
 	"time"
 
+	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	authserver "github.com/louisbranch/fracturing.space/internal/services/auth/app"
+	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/app"
 	"github.com/louisbranch/fracturing.space/internal/services/mcp/domain"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	grpc_health_v1 "google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/metadata"
 )
 
 // integrationSuite shares resources across integration subtests.
 type integrationSuite struct {
 	client *mcp.ClientSession
+	userID string
 }
 
 // integrationTimeout returns the default timeout for integration calls.
@@ -33,15 +38,19 @@ func integrationTimeout() time.Duration {
 }
 
 // startGRPCServer boots the game server and returns its address and shutdown function.
-func startGRPCServer(t *testing.T) (string, func()) {
+func startGRPCServer(t *testing.T) (string, string, func()) {
 	t.Helper()
 
 	setTempDBPath(t)
+	setTempAuthDBPath(t)
+	authAddr, stopAuth := startAuthServer(t)
+	t.Setenv("FRACTURING_SPACE_AUTH_ADDR", authAddr)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	grpcServer, err := server.NewWithAddr("127.0.0.1:0")
 	if err != nil {
 		cancel()
+		stopAuth()
 		t.Fatalf("new game server: %v", err)
 	}
 
@@ -62,9 +71,42 @@ func startGRPCServer(t *testing.T) (string, func()) {
 		case <-time.After(5 * time.Second):
 			t.Fatalf("timed out waiting for game server to stop")
 		}
+		stopAuth()
 	}
 
-	return addr, stop
+	return addr, authAddr, stop
+}
+
+func startAuthServer(t *testing.T) (string, func()) {
+	t.Helper()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	authServer, err := authserver.New(0, "")
+	if err != nil {
+		cancel()
+		t.Fatalf("new auth server: %v", err)
+	}
+
+	serveErr := make(chan error, 1)
+	go func() {
+		serveErr <- authServer.Serve(ctx)
+	}()
+
+	authAddr := authServer.Addr()
+	waitForGRPCHealth(t, authAddr)
+	stop := func() {
+		cancel()
+		select {
+		case err := <-serveErr:
+			if err != nil {
+				t.Fatalf("auth server error: %v", err)
+			}
+		case <-time.After(5 * time.Second):
+			t.Fatalf("timed out waiting for auth server to stop")
+		}
+	}
+
+	return authAddr, stop
 }
 
 // startMCPClient boots the MCP stdio process and returns a client session and shutdown function.
@@ -94,6 +136,66 @@ func startMCPClient(t *testing.T, grpcAddr string) (*mcp.ClientSession, func()) 
 	}
 
 	return clientSession, closeClient
+}
+
+func createAuthUser(t *testing.T, authAddr, displayName string) string {
+	t.Helper()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	conn, err := grpc.NewClient(
+		authAddr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDefaultCallOptions(grpc.WaitForReady(true)),
+	)
+	if err != nil {
+		t.Fatalf("dial auth server: %v", err)
+	}
+	defer conn.Close()
+
+	client := authv1.NewAuthServiceClient(conn)
+	resp, err := client.CreateUser(ctx, &authv1.CreateUserRequest{DisplayName: displayName})
+	if err != nil {
+		t.Fatalf("create user: %v", err)
+	}
+	userID := resp.GetUser().GetId()
+	if userID == "" {
+		t.Fatal("create user: missing user id")
+	}
+	return userID
+}
+
+func withUserID(ctx context.Context, userID string) context.Context {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	return metadata.NewOutgoingContext(ctx, metadata.Pairs(grpcmeta.UserIDHeader, userID))
+}
+
+func injectCampaignCreatorUserID(request map[string]any, userID string) {
+	if request == nil {
+		return
+	}
+	method, _ := request["method"].(string)
+	if method != "tools/call" {
+		return
+	}
+	params, ok := request["params"].(map[string]any)
+	if !ok {
+		return
+	}
+	toolName, _ := params["name"].(string)
+	if toolName != "campaign_create" {
+		return
+	}
+	arguments, ok := params["arguments"].(map[string]any)
+	if !ok {
+		return
+	}
+	if _, exists := arguments["user_id"]; !exists {
+		arguments["user_id"] = userID
+	}
 }
 
 // decodeStructuredContent decodes structured MCP content into the target type.
@@ -275,6 +377,12 @@ func setTempDBPath(t *testing.T) {
 	t.Setenv("FRACTURING_SPACE_GAME_EVENTS_DB_PATH", filepath.Join(base, "game-events.db"))
 	t.Setenv("FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH", filepath.Join(base, "game-projections.db"))
 	t.Setenv("FRACTURING_SPACE_GAME_EVENT_HMAC_KEY", "test-key")
+}
+
+func setTempAuthDBPath(t *testing.T) {
+	t.Helper()
+	base := t.TempDir()
+	t.Setenv("FRACTURING_SPACE_AUTH_DB_PATH", filepath.Join(base, "auth.db"))
 }
 
 // repoRoot returns the repository root by walking up to go.mod.

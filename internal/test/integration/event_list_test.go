@@ -14,7 +14,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func runEventListTests(t *testing.T, grpcAddr string) {
+func runEventListTests(t *testing.T, grpcAddr string, authAddr string) {
 	t.Helper()
 
 	conn, err := grpc.NewClient(
@@ -32,9 +32,11 @@ func runEventListTests(t *testing.T, grpcAddr string) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
 	defer cancel()
+	userID := createAuthUser(t, authAddr, "Event List Creator")
+	ctxWithUser := withUserID(ctx, userID)
 
 	// Create a campaign
-	createResp, err := campaignClient.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
+	createResp, err := campaignClient.CreateCampaign(ctxWithUser, &statev1.CreateCampaignRequest{
 		Name:   "Event List Test",
 		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 		GmMode: statev1.GmMode_HUMAN,

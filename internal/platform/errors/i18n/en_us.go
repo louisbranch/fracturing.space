@@ -8,6 +8,7 @@ const (
 	CodeCampaignInvalidGameSystem       = "CAMPAIGN_INVALID_GAME_SYSTEM"
 	CodeCampaignInvalidStatusTransition = "CAMPAIGN_INVALID_STATUS_TRANSITION"
 	CodeCampaignStatusDisallowsOp       = "CAMPAIGN_STATUS_DISALLOWS_OPERATION"
+	CodeCampaignCreatorUserMissing      = "CAMPAIGN_CREATOR_USER_MISSING"
 	CodeParticipantEmptyDisplayName     = "PARTICIPANT_EMPTY_DISPLAY_NAME"
 	CodeParticipantInvalidRole          = "PARTICIPANT_INVALID_ROLE"
 	CodeParticipantEmptyCampaignID      = "PARTICIPANT_EMPTY_CAMPAIGN_ID"
@@ -57,6 +58,7 @@ var enUSCatalog = &Catalog{
 		CodeCampaignInvalidGameSystem:       "Invalid game system specified",
 		CodeCampaignInvalidStatusTransition: "Cannot transition campaign from {{.FromStatus}} to {{.ToStatus}}",
 		CodeCampaignStatusDisallowsOp:       "Campaign status {{.Status}} does not allow {{.Operation}}",
+		CodeCampaignCreatorUserMissing:      "Creator user is required to create a campaign",
 
 		// Participant errors
 		CodeParticipantEmptyDisplayName:   "Participant display name cannot be empty",

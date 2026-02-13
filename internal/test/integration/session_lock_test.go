@@ -17,7 +17,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func runSessionLockTests(t *testing.T, grpcAddr string) {
+func runSessionLockTests(t *testing.T, grpcAddr string, authAddr string) {
 	t.Helper()
 
 	conn, err := grpc.NewClient(
@@ -36,8 +36,10 @@ func runSessionLockTests(t *testing.T, grpcAddr string) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
 	defer cancel()
+	userID := createAuthUser(t, authAddr, "Session Lock Creator")
+	ctxWithUser := withUserID(ctx, userID)
 
-	createResp, err := campaignClient.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
+	createResp, err := campaignClient.CreateCampaign(ctxWithUser, &statev1.CreateCampaignRequest{
 		Name:   "Lock Test",
 		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 		GmMode: statev1.GmMode_HUMAN,

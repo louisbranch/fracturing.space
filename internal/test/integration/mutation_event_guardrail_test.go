@@ -39,6 +39,7 @@ func runMutationEventGuardrailTests(t *testing.T, suite *integrationSuite, grpcA
 				"system":       "DAGGERHEART",
 				"gm_mode":      "HUMAN",
 				"theme_prompt": "",
+				"user_id":      suite.userID,
 			},
 		})
 		if err != nil {
@@ -195,6 +196,7 @@ func runMutationEventGuardrailTests(t *testing.T, suite *integrationSuite, grpcA
 				"system":       "DAGGERHEART",
 				"gm_mode":      "HUMAN",
 				"theme_prompt": "",
+				"user_id":      suite.userID,
 			},
 		})
 		if err != nil {
