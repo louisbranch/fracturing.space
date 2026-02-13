@@ -7,6 +7,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"log"
 	"math"
 	"os"
 	"os/signal"
@@ -65,6 +66,7 @@ func main() {
 	flag.IntVar(&warningsCap, "warnings-cap", 25, "max warnings to print (0 = no limit)")
 	flag.BoolVar(&jsonOutput, "json", false, "output JSON reports")
 	flag.Parse()
+	log.SetPrefix("[MAINTENANCE] ")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

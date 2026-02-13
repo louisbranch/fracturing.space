@@ -9,7 +9,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/louisbranch/fracturing.space/internal/services/auth/app"
+	server "github.com/louisbranch/fracturing.space/internal/services/auth/app"
 )
 
 var (
@@ -19,6 +19,7 @@ var (
 
 func main() {
 	flag.Parse()
+	log.SetPrefix("[AUTH] ")
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 

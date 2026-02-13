@@ -8,7 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/app"
+	server "github.com/louisbranch/fracturing.space/internal/services/game/app"
 )
 
 var (
@@ -18,6 +18,7 @@ var (
 
 func main() {
 	flag.Parse()
+	log.SetPrefix("[GAME] ")
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 

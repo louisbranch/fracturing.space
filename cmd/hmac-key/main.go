@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 )
 
@@ -12,6 +13,7 @@ func main() {
 	var bytes int
 	flag.IntVar(&bytes, "bytes", 32, "number of random bytes (default: 32)")
 	flag.Parse()
+	log.SetPrefix("[HMAC-KEY] ")
 
 	if bytes <= 0 {
 		fmt.Fprintln(os.Stderr, "bytes must be greater than zero")

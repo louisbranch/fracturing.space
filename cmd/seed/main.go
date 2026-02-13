@@ -7,6 +7,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -41,6 +42,7 @@ func main() {
 	flag.IntVar(&campaigns, "campaigns", 0, "number of campaigns to generate (0 = use preset default)")
 
 	flag.Parse()
+	log.SetPrefix("[SEED] ")
 
 	seedCfg.RepoRoot = repoRoot()
 
