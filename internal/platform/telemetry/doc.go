@@ -1,27 +1,10 @@
-// Package telemetry provides observability for the Fracturing.Space.
+// Package telemetry emits operational telemetry events.
 //
-// This package separates two distinct concerns:
+// The package provides a minimal emitter and severity vocabulary for recording
+// read-only gRPC telemetry into storage.TelemetryStore. It does not model
+// gameplay events, which live in the campaign event journal.
 //
-// # Game Events
-//
-// Game events are the canonical event journal that captures gameplay actions
-// for replay and state derivation. They are stored separately from telemetry.
-//
-// # Operational Metrics (telemetry/metrics)
-//
-// Operational metrics capture system health and performance:
-//   - Request latency
-//   - Error rates
-//   - API usage patterns
-//   - Resource utilization
-//
-// These metrics support monitoring, alerting, and capacity planning.
-//
-// # Design Philosophy
-//
-// Separating game events from operational metrics ensures:
-//   - Game event storage can be optimized for replay/analysis
-//   - Operational metrics can map to OpenTelemetry later
-//   - Different retention policies for each concern
-//   - Clear ownership boundaries
+// Subpackages reserve namespaces for future telemetry work:
+//   - telemetry/events: structured telemetry event schemas (not yet implemented)
+//   - telemetry/metrics: metrics exporters and collectors (not yet implemented)
 package telemetry

@@ -1,12 +1,11 @@
-// Package storage defines the persistence interfaces for the Duality engine.
+// Package storage defines persistence interfaces for game services.
 //
-// It provides a high-level abstraction for storing campaign metadata,
-// participants, characters, and session states. Implementation of these
-// interfaces (e.g., using sqlite) can be found in subpackages.
+// It covers campaign metadata, participants, invites, characters, sessions,
+// event journaling, snapshots, forks, telemetry, statistics, roll outcomes, and
+// Daggerheart-specific extensions. Implementations (e.g., SQLite) live in
+// subpackages.
 //
-// # Error Types
-//
-// The package defines common error types used across storage implementations:
-//   - ErrNotFound: Indicates a requested record is missing.
-//   - ErrActiveSessionExists: Indicates a conflict when starting a new session.
+// Common error types:
+//   - ErrNotFound: requested record is missing
+//   - ErrActiveSessionExists: conflict starting a new session
 package storage

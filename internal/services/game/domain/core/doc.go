@@ -5,6 +5,7 @@
 //
 //   - dice: Dice rolling primitives (NdM rolls, deterministic seeding)
 //   - check: Difficulty check primitives (success/failure, margin calculation)
+//   - random: Cryptographic seed helpers
 //
 // Game-system-specific mechanics (like Daggerheart's Duality dice, D&D 5e's
 // advantage/disadvantage, or Vampire's success-counting pools) are built on

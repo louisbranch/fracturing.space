@@ -1,2 +1,2 @@
-// Package service hosts gRPC handlers for content.v1.
+// Package service reserves gRPC handlers for Daggerheart content APIs.
 package service

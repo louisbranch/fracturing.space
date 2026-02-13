@@ -1,29 +1,12 @@
-// Package auth provides authentication and authorization (FUTURE PLACEHOLDER).
+// Package auth defines the authentication boundary for Fracturing.Space.
 //
-// This package is a placeholder for future authN/authZ functionality.
+// It is an umbrella package for the auth server, OAuth flows, user model,
+// and storage implementations used by the gRPC auth service.
 //
-// # Planned Features
-//
-// Authentication:
-//   - API key authentication for MCP clients
-//   - OAuth/OIDC integration for web clients
-//   - Session token management
-//
-// Authorization:
-//   - Role-based access control (GM vs Player)
-//   - Campaign-scoped permissions
-//   - Character sheet access control
-//   - Action authorization (who can roll for whom)
-//
-// # Integration Points
-//
-// Auth will integrate with:
-//   - gRPC interceptors for request authentication
-//   - MCP tool handlers for client identification
-//   - Storage layer for permission persistence
-//   - Web handlers for session management
-//
-// # Status
-//
-// This package is not yet implemented. Current access is unauthenticated.
+// Subpackages:
+//   - app: auth server wiring and lifecycle
+//   - api/grpc/auth: gRPC AuthService handlers
+//   - oauth: OAuth endpoints, providers, and token flows
+//   - storage: persistence interfaces and SQLite implementations
+//   - user: user domain model and helpers
 package auth

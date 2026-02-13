@@ -75,9 +75,12 @@ Use the `error-handling` skill for structured error workflows and messaging rule
 
 ## Documentation
 
-- Document exported types and functions
+- Document all non-generated exported types and functions
+- For unexported helpers, add docs when behavior is complex or domain-critical
+- Explain what the function/type does and why it exists; avoid narrating how it works
+- Use inline comments to clarify non-obvious steps, invariants, or edge cases
 - Add package comments explaining intent and scope
-- Document the "why" (purpose, lifecycle), not just what
+- Create or update `doc.go` when package intent changes; capture responsibilities, boundaries, and non-goals
 - For security flows, add rationale comments explaining threats mitigated
 
 ## Dependencies

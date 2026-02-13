@@ -1,6 +1,4 @@
-// Package events provides game event logging hooks.
+// Package events reserves the namespace for structured telemetry event schemas.
 //
-// Game events are the canonical event journal used for replay and projections.
-// They are distinct from operational telemetry, which captures non-mutating
-// system observations.
+// It is intentionally empty until operational telemetry events are modeled.
 package events

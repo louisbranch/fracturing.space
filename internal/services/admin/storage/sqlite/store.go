@@ -1,4 +1,3 @@
-// Package sqlite provides a SQLite-backed implementation of admin storage interfaces.
 package sqlite
 
 import (

@@ -1,2 +1,2 @@
-// Package store declares content persistence interfaces.
+// Package store reserves persistence interfaces for Daggerheart content.
 package store

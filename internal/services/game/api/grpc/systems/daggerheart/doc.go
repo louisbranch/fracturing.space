@@ -1,20 +1,15 @@
 // Package daggerheart provides the Daggerheart gRPC service implementation.
 //
-// This service implements Daggerheart-specific game mechanics including:
+// This service exposes deterministic Daggerheart mechanics, including:
 //   - Action rolls with Duality dice (Hope d12 + Fear d12)
 //   - Outcome evaluation and explanation
-//   - Probability calculations
-//   - Session action rolls with event recording
-//   - Outcome application (updates snapshot projections)
+//   - Outcome probability calculations
+//   - Ruleset metadata for replay and validation
+//   - Generic dice rolling utilities
 //
-// # Integration with State Services
+// The service is read-only with respect to game state; it returns mechanics
+// outcomes without mutating campaigns or snapshots.
 //
-// DaggerheartService calls state services to persist gameplay effects:
-//   - SessionService: Record roll events
-//   - SnapshotService: Update character hope/stress, GM fear
-//
-// # Proto Definitions
-//
-// This service implements the systems.daggerheart.v1.DaggerheartService from
+// This package implements systems.daggerheart.v1.DaggerheartService from
 // api/proto/systems/daggerheart/v1/service.proto.
 package daggerheart

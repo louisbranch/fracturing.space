@@ -1,9 +1,10 @@
-// Package grpc contains gRPC service implementations.
+// Package grpc contains gRPC service implementations and middleware.
 //
 // This package is organized by concern:
-//
-//   - state/: System-agnostic state management (campaigns, sessions, participants, characters, snapshots)
-//   - systems/daggerheart/: Daggerheart-specific mechanics
+//   - game: system-agnostic game services
+//   - systems/daggerheart: Daggerheart-specific mechanics
+//   - metadata: request metadata helpers and interceptors
+//   - interceptors: cross-cutting gRPC middleware
 //
 // Future game systems will add their own subpackages under systems/.
 package grpc

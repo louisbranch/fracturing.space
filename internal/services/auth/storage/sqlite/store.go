@@ -1,4 +1,3 @@
-// Package sqlite provides a SQLite-backed implementation of auth storage interfaces.
 package sqlite
 
 import (

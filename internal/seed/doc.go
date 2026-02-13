@@ -1,4 +1,5 @@
-// Package seed provides fixture loading and scenario execution for seeding
-// local development databases. It shares infrastructure with integration tests
-// to exercise the full MCP→gRPC stack.
+// Package seed runs MCP-driven fixture scenarios for local development data.
+//
+// Seed fixtures are executed through the MCP stdio client to exercise the
+// full MCP -> gRPC stack and capture IDs for chained steps.
 package seed
