@@ -40,6 +40,6 @@ func Run(cfg Config, out io.Writer, reader io.Reader) error {
 	if _, err := io.ReadFull(reader, buf); err != nil {
 		return fmt.Errorf("generate random bytes: %w", err)
 	}
-	_, err := fmt.Fprintln(out, hex.EncodeToString(buf))
+	_, err := fmt.Fprintf(out, "FRACTURING_SPACE_GAME_EVENT_HMAC_KEY=%s\n", hex.EncodeToString(buf))
 	return err
 }

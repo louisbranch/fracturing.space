@@ -9,7 +9,7 @@ import (
 	"io"
 )
 
-// Run generates a join grant key pair and writes exports.
+// Run generates a join grant key pair and writes env lines.
 func Run(out io.Writer, reader io.Reader) error {
 	if out == nil {
 		return errors.New("output is required")
@@ -21,10 +21,10 @@ func Run(out io.Writer, reader io.Reader) error {
 	if err != nil {
 		return fmt.Errorf("generate join grant key: %w", err)
 	}
-	if _, err := fmt.Fprintf(out, "export FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY=%s\n", base64.RawStdEncoding.EncodeToString(privateKey)); err != nil {
+	if _, err := fmt.Fprintf(out, "FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY=%s\n", base64.RawStdEncoding.EncodeToString(privateKey)); err != nil {
 		return err
 	}
-	if _, err := fmt.Fprintf(out, "export FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY=%s\n", base64.RawStdEncoding.EncodeToString(publicKey)); err != nil {
+	if _, err := fmt.Fprintf(out, "FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY=%s\n", base64.RawStdEncoding.EncodeToString(publicKey)); err != nil {
 		return err
 	}
 	return nil

@@ -3,23 +3,27 @@ variable "GO_VERSION" {
 }
 
 variable "GAME_IMAGE" {
-  default = "docker.io/louisbranch/fracturing.space-game:dev"
+  default = "ghcr.io/fracturing-space/game:dev"
 }
 
 variable "MCP_IMAGE" {
-  default = "docker.io/louisbranch/fracturing.space-mcp:dev"
+  default = "ghcr.io/fracturing-space/mcp:dev"
 }
 
 variable "ADMIN_IMAGE" {
-  default = "docker.io/louisbranch/fracturing.space-admin:dev"
+  default = "ghcr.io/fracturing-space/admin:dev"
 }
 
 variable "AUTH_IMAGE" {
-  default = "docker.io/louisbranch/fracturing.space-auth:dev"
+  default = "ghcr.io/fracturing-space/auth:dev"
+}
+
+variable "WEB_IMAGE" {
+  default = "ghcr.io/fracturing-space/web:dev"
 }
 
 group "default" {
-  targets = ["game", "mcp", "admin", "auth"]
+  targets = ["game", "mcp", "admin", "auth", "web"]
 }
 
 target "base" {
@@ -52,4 +56,10 @@ target "auth" {
   inherits = ["base"]
   target   = "auth"
   tags     = ["${AUTH_IMAGE}"]
+}
+
+target "web" {
+  inherits = ["base"]
+  target   = "web"
+  tags     = ["${WEB_IMAGE}"]
 }

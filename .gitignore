@@ -4,6 +4,7 @@ coverage.raw
 coverage.log
 coverage-treemap.svg
 data/
+.env
 
 .ai/plans/
 .playwright-cli/

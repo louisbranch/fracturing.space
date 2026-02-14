@@ -42,8 +42,8 @@ func TestRunWritesHex(t *testing.T) {
 	if err := Run(Config{Bytes: 4}, buf, reader); err != nil {
 		t.Fatalf("run: %v", err)
 	}
-	if got := strings.TrimSpace(buf.String()); got != "01020304" {
-		t.Fatalf("expected hex output, got %q", got)
+	if got := strings.TrimSpace(buf.String()); got != "FRACTURING_SPACE_GAME_EVENT_HMAC_KEY=01020304" {
+		t.Fatalf("expected env output, got %q", got)
 	}
 }
 
@@ -58,9 +58,14 @@ func TestRunDefaultReader(t *testing.T) {
 	if err := Run(Config{Bytes: 4}, buf, nil); err != nil {
 		t.Fatalf("run: %v", err)
 	}
-	// Default reader is crypto/rand, so output should be 8 hex chars + newline.
-	if got := strings.TrimSpace(buf.String()); len(got) != 8 {
-		t.Fatalf("expected 8 hex chars, got %d: %q", len(got), got)
+	// Default reader is crypto/rand, so output should be env key + 8 hex chars.
+	got := strings.TrimSpace(buf.String())
+	const prefix = "FRACTURING_SPACE_GAME_EVENT_HMAC_KEY="
+	if !strings.HasPrefix(got, prefix) {
+		t.Fatalf("expected env prefix, got %q", got)
+	}
+	if len(strings.TrimPrefix(got, prefix)) != 8 {
+		t.Fatalf("expected 8 hex chars, got %d: %q", len(strings.TrimPrefix(got, prefix)), got)
 	}
 }
 

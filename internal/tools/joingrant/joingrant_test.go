@@ -24,8 +24,8 @@ func TestRunWritesKeys(t *testing.T) {
 		t.Fatalf("expected 2 lines, got %d", len(lines))
 	}
 
-	private := strings.TrimPrefix(lines[0], "export FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY=")
-	public := strings.TrimPrefix(lines[1], "export FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY=")
+	private := strings.TrimPrefix(lines[0], "FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY=")
+	public := strings.TrimPrefix(lines[1], "FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY=")
 	if private == lines[0] || public == lines[1] {
 		t.Fatalf("unexpected output format: %q", buf.String())
 	}

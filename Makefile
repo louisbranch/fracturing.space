@@ -59,6 +59,8 @@ run:
 	  }; \
 	  if [ -z "$${FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY:-}" ] || [ -z "$${FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY:-}" ]; then \
 	    eval "$$(go run ./cmd/join-grant-key)"; \
+	    export FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY; \
+	    export FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY; \
 	  fi; \
 	  export FRACTURING_SPACE_JOIN_GRANT_ISSUER="$${FRACTURING_SPACE_JOIN_GRANT_ISSUER:-fracturing.space/auth}"; \
 	  export FRACTURING_SPACE_JOIN_GRANT_AUDIENCE="$${FRACTURING_SPACE_JOIN_GRANT_AUDIENCE:-fracturing.space/game}"; \

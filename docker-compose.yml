@@ -11,18 +11,26 @@ services:
       target: game
       args:
         GO_VERSION: ${GO_VERSION:-1.25.6}
-    image: docker.io/louisbranch/fracturing.space-game:dev
+    image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/game:${FRACTURING_SPACE_IMAGE_TAG:-dev}"
     depends_on:
       init-data:
         condition: service_completed_successfully
     environment:
-      - FRACTURING_SPACE_GAME_EVENTS_DB_PATH=/data/game-events.db
-      - FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH=/data/game-projections.db
-      - FRACTURING_SPACE_GAME_EVENT_HMAC_KEY=dev-secret
+      FRACTURING_SPACE_GAME_EVENTS_DB_PATH: /data/game-events.db
+      FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH: /data/game-projections.db
+      FRACTURING_SPACE_GAME_CONTENT_DB_PATH: /data/game-content.db
+      FRACTURING_SPACE_GAME_EVENT_HMAC_KEY: ${FRACTURING_SPACE_GAME_EVENT_HMAC_KEY:-dev-secret}
+      FRACTURING_SPACE_GAME_EVENT_HMAC_KEYS: ${FRACTURING_SPACE_GAME_EVENT_HMAC_KEYS:-}
+      FRACTURING_SPACE_GAME_EVENT_HMAC_KEY_ID: ${FRACTURING_SPACE_GAME_EVENT_HMAC_KEY_ID:-v1}
+      FRACTURING_SPACE_AUTH_ADDR: auth:8083
+      FRACTURING_SPACE_JOIN_GRANT_ISSUER: ${FRACTURING_SPACE_JOIN_GRANT_ISSUER:-fracturing.space/auth}
+      FRACTURING_SPACE_JOIN_GRANT_AUDIENCE: ${FRACTURING_SPACE_JOIN_GRANT_AUDIENCE:-fracturing.space/game}
+      FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY: ${FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY:-}
     volumes:
       - fracturing-space-data:/data
-    ports:
-      - "127.0.0.1:8080:8080"
+    networks:
+      - internal
+    restart: unless-stopped
 
   auth:
     build:
@@ -30,16 +38,29 @@ services:
       target: auth
       args:
         GO_VERSION: ${GO_VERSION:-1.25.6}
-    image: docker.io/louisbranch/fracturing.space-auth:dev
+    image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/auth:${FRACTURING_SPACE_IMAGE_TAG:-dev}"
     depends_on:
       init-data:
         condition: service_completed_successfully
     environment:
-      - FRACTURING_SPACE_AUTH_DB_PATH=/data/auth.db
+      FRACTURING_SPACE_AUTH_DB_PATH: /data/auth.db
+      FRACTURING_SPACE_AUTH_HTTP_ADDR: 0.0.0.0:8084
+      FRACTURING_SPACE_AUTH_PORT: 8083
+      FRACTURING_SPACE_OAUTH_ISSUER: ${FRACTURING_SPACE_PUBLIC_SCHEME:-http}://auth.${FRACTURING_SPACE_DOMAIN:-localhost}${FRACTURING_SPACE_PUBLIC_PORT-:8080}
+      FRACTURING_SPACE_OAUTH_LOGIN_UI_URL: ${FRACTURING_SPACE_PUBLIC_SCHEME:-http}://${FRACTURING_SPACE_DOMAIN:-localhost}${FRACTURING_SPACE_PUBLIC_PORT-:8080}/login
+      FRACTURING_SPACE_OAUTH_LOGIN_REDIRECTS: ${FRACTURING_SPACE_PUBLIC_SCHEME:-http}://${FRACTURING_SPACE_DOMAIN:-localhost}${FRACTURING_SPACE_PUBLIC_PORT-:8080}/login
+      FRACTURING_SPACE_OAUTH_CLIENTS: ${FRACTURING_SPACE_OAUTH_CLIENTS:-}
+      FRACTURING_SPACE_OAUTH_USERS: ${FRACTURING_SPACE_OAUTH_USERS:-}
+      FRACTURING_SPACE_OAUTH_RESOURCE_SECRET: ${FRACTURING_SPACE_OAUTH_RESOURCE_SECRET:-}
+      FRACTURING_SPACE_JOIN_GRANT_ISSUER: ${FRACTURING_SPACE_JOIN_GRANT_ISSUER:-fracturing.space/auth}
+      FRACTURING_SPACE_JOIN_GRANT_AUDIENCE: ${FRACTURING_SPACE_JOIN_GRANT_AUDIENCE:-fracturing.space/game}
+      FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY: ${FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY:-}
+      FRACTURING_SPACE_JOIN_GRANT_TTL: ${FRACTURING_SPACE_JOIN_GRANT_TTL:-5m}
     volumes:
       - fracturing-space-data:/data
-    ports:
-      - "127.0.0.1:8083:8083"
+    networks:
+      - internal
+    restart: unless-stopped
 
   mcp:
     build:
@@ -47,12 +68,19 @@ services:
       target: mcp
       args:
         GO_VERSION: ${GO_VERSION:-1.25.6}
-    image: docker.io/louisbranch/fracturing.space-mcp:dev
-    command: ["-transport=http", "-http-addr=0.0.0.0:8081", "-addr=game:8080"]
+    image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/mcp:${FRACTURING_SPACE_IMAGE_TAG:-dev}"
     depends_on:
       - game
-    ports:
-      - "127.0.0.1:8081:8081"
+    environment:
+      FRACTURING_SPACE_GAME_ADDR: game:8080
+      FRACTURING_SPACE_MCP_HTTP_ADDR: 0.0.0.0:8081
+      FRACTURING_SPACE_MCP_TRANSPORT: http
+      FRACTURING_SPACE_MCP_ALLOWED_HOSTS: ${FRACTURING_SPACE_MCP_ALLOWED_HOSTS:-mcp.${FRACTURING_SPACE_DOMAIN:-localhost}}
+      FRACTURING_SPACE_MCP_OAUTH_ISSUER: ${FRACTURING_SPACE_MCP_OAUTH_ISSUER:-}
+      FRACTURING_SPACE_MCP_OAUTH_RESOURCE_SECRET: ${FRACTURING_SPACE_MCP_OAUTH_RESOURCE_SECRET:-}
+    networks:
+      - internal
+    restart: unless-stopped
 
   admin:
     build:
@@ -60,16 +88,69 @@ services:
       target: admin
       args:
         GO_VERSION: ${GO_VERSION:-1.25.6}
-    image: docker.io/louisbranch/fracturing.space-admin:dev
+    image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/admin:${FRACTURING_SPACE_IMAGE_TAG:-dev}"
     depends_on:
       - game
       - auth
     environment:
-      - FRACTURING_SPACE_ADMIN_ADDR=0.0.0.0:8082
-      - FRACTURING_SPACE_GAME_ADDR=game:8080
-      - FRACTURING_SPACE_AUTH_ADDR=auth:8083
+      FRACTURING_SPACE_ADMIN_ADDR: 0.0.0.0:8082
+      FRACTURING_SPACE_GAME_ADDR: game:8080
+      FRACTURING_SPACE_AUTH_ADDR: auth:8083
+      FRACTURING_SPACE_ADMIN_DB_PATH: /data/admin.db
+    volumes:
+      - fracturing-space-data:/data
+    networks:
+      - internal
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      target: web
+      args:
+        GO_VERSION: ${GO_VERSION:-1.25.6}
+    image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/web:${FRACTURING_SPACE_IMAGE_TAG:-dev}"
+    depends_on:
+      - auth
+    environment:
+      FRACTURING_SPACE_WEB_HTTP_ADDR: 0.0.0.0:8086
+      FRACTURING_SPACE_WEB_AUTH_BASE_URL: ${FRACTURING_SPACE_PUBLIC_SCHEME:-http}://auth.${FRACTURING_SPACE_DOMAIN:-localhost}${FRACTURING_SPACE_PUBLIC_PORT-:8080}
+      FRACTURING_SPACE_WEB_AUTH_ADDR: auth:8083
+      FRACTURING_SPACE_WEB_DIAL_TIMEOUT: ${FRACTURING_SPACE_WEB_DIAL_TIMEOUT:-2s}
+    networks:
+      - internal
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2.8.4
+    depends_on:
+      - web
+      - auth
+      - admin
+      - mcp
+    environment:
+      FRACTURING_SPACE_DOMAIN: ${FRACTURING_SPACE_DOMAIN:-localhost}
+      FRACTURING_SPACE_CADDY_AUTO_HTTPS: ${FRACTURING_SPACE_CADDY_AUTO_HTTPS:-off}
+      FRACTURING_SPACE_CADDY_EMAIL: ${FRACTURING_SPACE_CADDY_EMAIL:-}
+      FRACTURING_SPACE_CADDY_SITE_PREFIX: ${FRACTURING_SPACE_CADDY_SITE_PREFIX-http://}
     ports:
-      - "127.0.0.1:8082:8082"
+      - "${FRACTURING_SPACE_BIND_ADDR:-127.0.0.1}:${FRACTURING_SPACE_HTTP_PORT:-8080}:80"
+      - "${FRACTURING_SPACE_BIND_ADDR:-127.0.0.1}:${FRACTURING_SPACE_HTTPS_PORT:-8443}:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - internal
+      - edge
+    restart: unless-stopped
 
 volumes:
   fracturing-space-data:
+  caddy-data:
+  caddy-config:
+
+networks:
+  edge:
+  internal:
+    internal: true

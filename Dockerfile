@@ -24,6 +24,10 @@ FROM base AS build-auth
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/auth ./cmd/auth
 
+FROM base AS build-web
+
+RUN CGO_ENABLED=0 GOOS=linux go build -o /out/web ./cmd/web
+
 FROM gcr.io/distroless/static-debian12:nonroot AS game
 
 WORKDIR /app
@@ -63,3 +67,13 @@ COPY --from=build-auth /out/auth /app/auth
 EXPOSE 8083
 
 ENTRYPOINT ["/app/auth"]
+
+FROM gcr.io/distroless/static-debian12:nonroot AS web
+
+WORKDIR /app
+
+COPY --from=build-web /out/web /app/web
+
+EXPOSE 8086
+
+ENTRYPOINT ["/app/web"]
