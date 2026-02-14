@@ -40,3 +40,10 @@ func TestRollDamageCriticalAddsMaxDice(t *testing.T) {
 		t.Fatalf("total = %d, want %d", result.Total, result.BaseTotal+result.CriticalBonus)
 	}
 }
+
+func TestRollDamageNoDice(t *testing.T) {
+	_, err := RollDamage(DamageRollRequest{Dice: nil, Seed: 1})
+	if err == nil {
+		t.Fatal("expected error for no dice")
+	}
+}

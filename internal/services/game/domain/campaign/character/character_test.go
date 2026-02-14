@@ -42,6 +42,32 @@ func TestCreateCharacterNormalizesInput(t *testing.T) {
 	}
 }
 
+func TestCreateCharacterDefaults(t *testing.T) {
+	input := CreateCharacterInput{
+		CampaignID: "camp-1",
+		Name:       "Archer",
+		Kind:       CharacterKindPC,
+	}
+	_, err := CreateCharacter(input, nil, nil)
+	if err != nil {
+		t.Fatalf("create character with defaults: %v", err)
+	}
+}
+
+func TestCreateCharacterIDGeneratorError(t *testing.T) {
+	input := CreateCharacterInput{
+		CampaignID: "camp-1",
+		Name:       "Archer",
+		Kind:       CharacterKindPC,
+	}
+	_, err := CreateCharacter(input, nil, func() (string, error) {
+		return "", errors.New("id gen failed")
+	})
+	if err == nil {
+		t.Fatal("expected error for ID generator failure")
+	}
+}
+
 func TestNormalizeCreateCharacterInputValidation(t *testing.T) {
 	tests := []struct {
 		name  string

@@ -1,6 +1,7 @@
 package encoding
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -139,5 +140,92 @@ func TestContentHash_DifferentInputsDifferentHashes(t *testing.T) {
 
 	if hash1 == hash2 {
 		t.Error("Different inputs should produce different hashes")
+	}
+}
+
+func TestCanonicalJSON_MarshalError(t *testing.T) {
+	// Channels cannot be marshaled to JSON.
+	_, err := CanonicalJSON(make(chan int))
+	if err == nil {
+		t.Fatal("expected error for non-marshalable type")
+	}
+	if !strings.Contains(err.Error(), "marshal") {
+		t.Fatalf("expected marshal error, got: %v", err)
+	}
+}
+
+func TestContentHash_MarshalError(t *testing.T) {
+	_, err := ContentHash(make(chan int))
+	if err == nil {
+		t.Fatal("expected error for unmarshalable type")
+	}
+}
+
+func TestCanonicalJSON_HTMLNotEscaped(t *testing.T) {
+	input := map[string]any{"html": "<b>bold</b> & fun"}
+	got, err := CanonicalJSON(input)
+	if err != nil {
+		t.Fatalf("CanonicalJSON() error = %v", err)
+	}
+	// SetEscapeHTML(false) means < and & must NOT be escaped.
+	s := string(got)
+	if strings.Contains(s, `\u003c`) || strings.Contains(s, `\u0026`) {
+		t.Errorf("HTML characters should not be escaped: %s", s)
+	}
+	if !strings.Contains(s, "<b>") || !strings.Contains(s, "&") {
+		t.Errorf("expected literal < and &: %s", s)
+	}
+}
+
+func TestCanonicalJSON_NestedArray(t *testing.T) {
+	input := map[string]any{
+		"b": []any{map[string]any{"z": 1, "a": 2}},
+		"a": "first",
+	}
+	got, err := CanonicalJSON(input)
+	if err != nil {
+		t.Fatalf("CanonicalJSON() error = %v", err)
+	}
+	want := `{"a":"first","b":[{"a":2,"z":1}]}`
+	if string(got) != want {
+		t.Errorf("got %s, want %s", got, want)
+	}
+}
+
+func TestCanonicalJSON_ScalarTypes(t *testing.T) {
+	// String scalar
+	got, err := CanonicalJSON("hello")
+	if err != nil {
+		t.Fatalf("CanonicalJSON(string) error = %v", err)
+	}
+	if string(got) != `"hello"` {
+		t.Errorf("got %s", got)
+	}
+
+	// Number scalar
+	got, err = CanonicalJSON(42)
+	if err != nil {
+		t.Fatalf("CanonicalJSON(int) error = %v", err)
+	}
+	if string(got) != `42` {
+		t.Errorf("got %s", got)
+	}
+
+	// Boolean scalar
+	got, err = CanonicalJSON(true)
+	if err != nil {
+		t.Fatalf("CanonicalJSON(bool) error = %v", err)
+	}
+	if string(got) != `true` {
+		t.Errorf("got %s", got)
+	}
+
+	// Null
+	got, err = CanonicalJSON(nil)
+	if err != nil {
+		t.Fatalf("CanonicalJSON(nil) error = %v", err)
+	}
+	if string(got) != `null` {
+		t.Errorf("got %s", got)
 	}
 }

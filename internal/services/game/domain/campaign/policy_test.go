@@ -31,6 +31,27 @@ func TestValidateCampaignOperation(t *testing.T) {
 		{name: "archived read allowed", status: CampaignStatusArchived, op: CampaignOpRead, allowed: true},
 		{name: "archived mutate blocked", status: CampaignStatusArchived, op: CampaignOpCampaignMutate, allowed: false},
 		{name: "unspecified blocked", status: CampaignStatusUnspecified, op: CampaignOpCampaignMutate, allowed: false},
+		// Missing coverage: explicit branches
+		{name: "draft restore blocked", status: CampaignStatusDraft, op: CampaignOpRestore, allowed: false},
+		{name: "draft end blocked", status: CampaignStatusDraft, op: CampaignOpEnd, allowed: false},
+		{name: "active end allowed", status: CampaignStatusActive, op: CampaignOpEnd, allowed: true},
+		{name: "active archive allowed", status: CampaignStatusActive, op: CampaignOpArchive, allowed: true},
+		{name: "active restore blocked", status: CampaignStatusActive, op: CampaignOpRestore, allowed: false},
+		{name: "completed restore blocked", status: CampaignStatusCompleted, op: CampaignOpRestore, allowed: false},
+		{name: "completed end blocked", status: CampaignStatusCompleted, op: CampaignOpEnd, allowed: false},
+		{name: "completed session start blocked", status: CampaignStatusCompleted, op: CampaignOpSessionStart, allowed: false},
+		{name: "archived archive blocked", status: CampaignStatusArchived, op: CampaignOpArchive, allowed: false},
+		{name: "archived end blocked", status: CampaignStatusArchived, op: CampaignOpEnd, allowed: false},
+		{name: "archived session start blocked", status: CampaignStatusArchived, op: CampaignOpSessionStart, allowed: false},
+		{name: "archived session action blocked", status: CampaignStatusArchived, op: CampaignOpSessionAction, allowed: false},
+		// Unknown operation hits inner default case
+		{name: "draft unknown op blocked", status: CampaignStatusDraft, op: CampaignOperation(99), allowed: false},
+		{name: "active unknown op blocked", status: CampaignStatusActive, op: CampaignOperation(99), allowed: false},
+		{name: "completed unknown op blocked", status: CampaignStatusCompleted, op: CampaignOperation(99), allowed: false},
+		{name: "archived unknown op blocked", status: CampaignStatusArchived, op: CampaignOperation(99), allowed: false},
+		// Invalid status hits outer default case
+		{name: "invalid status read allowed", status: CampaignStatus(99), op: CampaignOpRead, allowed: true},
+		{name: "invalid status non-read blocked", status: CampaignStatus(99), op: CampaignOpCampaignMutate, allowed: false},
 	}
 
 	for _, tt := range tests {

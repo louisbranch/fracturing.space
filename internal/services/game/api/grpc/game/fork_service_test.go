@@ -14,6 +14,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	"google.golang.org/grpc/codes"
 )
 
 func TestForkCampaign_ReplaysEvents_CopyParticipantsFalse(t *testing.T) {
@@ -557,6 +558,202 @@ func (s *fakeCampaignForkStore) SetCampaignForkMetadata(_ context.Context, campa
 	}
 	s.metadata[campaignID] = metadata
 	return nil
+}
+
+func TestShouldCopyForkEvent(t *testing.T) {
+	tests := []struct {
+		name             string
+		eventType        event.Type
+		copyParticipants bool
+		payload          []byte
+		wantCopy         bool
+		wantErr          bool
+	}{
+		{
+			name:      "campaign_created_always_skipped",
+			eventType: event.TypeCampaignCreated,
+			wantCopy:  false,
+		},
+		{
+			name:      "campaign_forked_always_skipped",
+			eventType: event.TypeCampaignForked,
+			wantCopy:  false,
+		},
+		{
+			name:             "participant_joined_skip_when_no_copy",
+			eventType:        event.TypeParticipantJoined,
+			copyParticipants: false,
+			wantCopy:         false,
+		},
+		{
+			name:             "participant_joined_copy_when_enabled",
+			eventType:        event.TypeParticipantJoined,
+			copyParticipants: true,
+			wantCopy:         true,
+		},
+		{
+			name:             "participant_updated_skip_when_no_copy",
+			eventType:        event.TypeParticipantUpdated,
+			copyParticipants: false,
+			wantCopy:         false,
+		},
+		{
+			name:             "participant_left_skip_when_no_copy",
+			eventType:        event.TypeParticipantLeft,
+			copyParticipants: false,
+			wantCopy:         false,
+		},
+		{
+			name:             "character_updated_copy_when_participants_enabled",
+			eventType:        event.TypeCharacterUpdated,
+			copyParticipants: true,
+			payload:          []byte(`{"fields":{"participant_id":"p1"}}`),
+			wantCopy:         true,
+		},
+		{
+			name:             "character_updated_no_participant_field",
+			eventType:        event.TypeCharacterUpdated,
+			copyParticipants: false,
+			payload:          []byte(`{"fields":{"name":"Hero"}}`),
+			wantCopy:         true,
+		},
+		{
+			name:             "character_updated_only_participant_id_field",
+			eventType:        event.TypeCharacterUpdated,
+			copyParticipants: false,
+			payload:          []byte(`{"fields":{"participant_id":"p1"}}`),
+			wantCopy:         false,
+		},
+		{
+			name:             "character_updated_participant_id_plus_others",
+			eventType:        event.TypeCharacterUpdated,
+			copyParticipants: false,
+			payload:          []byte(`{"fields":{"participant_id":"p1","name":"Hero"}}`),
+			wantCopy:         true,
+		},
+		{
+			name:             "character_updated_empty_participant_id",
+			eventType:        event.TypeCharacterUpdated,
+			copyParticipants: false,
+			payload:          []byte(`{"fields":{"participant_id":""}}`),
+			wantCopy:         true,
+		},
+		{
+			name:      "session_started_always_copied",
+			eventType: event.TypeSessionStarted,
+			wantCopy:  true,
+		},
+		{
+			name:      "unknown_event_always_copied",
+			eventType: event.Type("custom.event"),
+			wantCopy:  true,
+		},
+		{
+			name:             "character_updated_invalid_json",
+			eventType:        event.TypeCharacterUpdated,
+			copyParticipants: false,
+			payload:          []byte(`not json`),
+			wantErr:          true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			evt := event.Event{Type: tc.eventType, PayloadJSON: tc.payload}
+			got, err := shouldCopyForkEvent(evt, tc.copyParticipants)
+			if tc.wantErr {
+				if err == nil {
+					t.Fatal("expected error")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got != tc.wantCopy {
+				t.Errorf("shouldCopyForkEvent = %v, want %v", got, tc.wantCopy)
+			}
+		})
+	}
+}
+
+func TestForkEventForCampaign(t *testing.T) {
+	evt := event.Event{
+		CampaignID: "old-camp",
+		Seq:        42,
+		Hash:       "abc",
+		EntityType: "campaign",
+		EntityID:   "old-camp",
+		Type:       event.TypeCampaignUpdated,
+	}
+	forked := forkEventForCampaign(evt, "new-camp")
+
+	if forked.CampaignID != "new-camp" {
+		t.Fatalf("CampaignID = %q, want %q", forked.CampaignID, "new-camp")
+	}
+	if forked.Seq != 0 {
+		t.Fatalf("Seq = %d, want 0", forked.Seq)
+	}
+	if forked.Hash != "" {
+		t.Fatalf("Hash = %q, want empty", forked.Hash)
+	}
+	if forked.EntityID != "new-camp" {
+		t.Fatalf("EntityID = %q, want %q (campaign entity should be updated)", forked.EntityID, "new-camp")
+	}
+
+	// Non-campaign entity type should not change EntityID
+	evt2 := event.Event{
+		CampaignID: "old-camp",
+		Seq:        10,
+		Hash:       "def",
+		EntityType: "character",
+		EntityID:   "char-1",
+	}
+	forked2 := forkEventForCampaign(evt2, "new-camp")
+	if forked2.EntityID != "char-1" {
+		t.Fatalf("EntityID = %q, want %q (non-campaign entity should stay)", forked2.EntityID, "char-1")
+	}
+}
+
+func TestListForks_NilRequest(t *testing.T) {
+	svc := &ForkService{stores: Stores{}}
+	_, err := svc.ListForks(context.Background(), nil)
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestListForks_MissingSourceCampaignId(t *testing.T) {
+	svc := &ForkService{stores: Stores{Campaign: newFakeCampaignStore()}}
+	_, err := svc.ListForks(context.Background(), &statev1.ListForksRequest{})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestListForks_Unimplemented(t *testing.T) {
+	svc := &ForkService{stores: Stores{Campaign: newFakeCampaignStore()}}
+	_, err := svc.ListForks(context.Background(), &statev1.ListForksRequest{SourceCampaignId: "camp-1"})
+	assertStatusCode(t, err, codes.Unimplemented)
+}
+
+func TestForkPointFromProto(t *testing.T) {
+	// Nil input
+	fp := forkPointFromProto(nil)
+	if fp.EventSeq != 0 || fp.SessionID != "" {
+		t.Fatalf("expected zero ForkPoint for nil input, got %+v", fp)
+	}
+
+	// With values
+	fp = forkPointFromProto(&statev1.ForkPoint{EventSeq: 42, SessionId: "sess-1"})
+	if fp.EventSeq != 42 || fp.SessionID != "sess-1" {
+		t.Fatalf("ForkPoint = %+v, want EventSeq=42 SessionID=sess-1", fp)
+	}
+}
+
+func TestIsNotFound(t *testing.T) {
+	if !isNotFound(storage.ErrNotFound) {
+		t.Fatal("expected true for ErrNotFound")
+	}
+	if isNotFound(nil) {
+		t.Fatal("expected false for nil")
+	}
 }
 
 func appendEvent(t *testing.T, store *fakeEventStore, evt event.Event) event.Event {

@@ -1,10 +1,11 @@
 package fork
 
 import (
+	"errors"
 	"testing"
 	"time"
 
-	"github.com/louisbranch/fracturing.space/internal/platform/errors"
+	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 )
 
 func TestForkRequest_Validate(t *testing.T) {
@@ -49,7 +50,7 @@ func TestForkRequest_Validate(t *testing.T) {
 			if tt.wantErr == nil && err != nil {
 				t.Errorf("expected no error, got %v", err)
 			}
-			if tt.wantErr != nil && !errors.IsCode(err, errors.Code(tt.wantErr.(*errors.Error).Code)) {
+			if tt.wantErr != nil && !apperrors.IsCode(err, apperrors.Code(tt.wantErr.(*apperrors.Error).Code)) {
 				t.Errorf("expected error %v, got %v", tt.wantErr, err)
 			}
 		})
@@ -168,6 +169,24 @@ func TestCreateFork(t *testing.T) {
 				t.Errorf("OriginCampaignID = %s, want %s", fork.OriginCampaignID, expectedOrigin)
 			}
 		})
+	}
+}
+
+func TestCreateForkDefaults(t *testing.T) {
+	input := CreateForkInput{SourceCampaignID: "camp-1", ForkPoint: ForkPoint{EventSeq: 10}}
+	_, err := CreateFork(input, "origin-1", 10, nil, nil)
+	if err != nil {
+		t.Fatalf("create fork with defaults: %v", err)
+	}
+}
+
+func TestCreateForkIDGeneratorError(t *testing.T) {
+	input := CreateForkInput{SourceCampaignID: "camp-1", ForkPoint: ForkPoint{EventSeq: 10}}
+	_, err := CreateFork(input, "origin-1", 10, nil, func() (string, error) {
+		return "", errors.New("id gen failed")
+	})
+	if err == nil {
+		t.Fatal("expected error for ID generator failure")
 	}
 }
 

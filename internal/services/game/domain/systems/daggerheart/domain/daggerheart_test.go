@@ -205,6 +205,18 @@ func TestRollReactionSemantics(t *testing.T) {
 	}
 }
 
+func TestRollReactionRejectsNegativeDifficulty(t *testing.T) {
+	difficulty := -1
+	_, err := RollReaction(ReactionRequest{
+		Modifier:   0,
+		Difficulty: &difficulty,
+		Seed:       0,
+	})
+	if !errors.Is(err, ErrInvalidDifficulty) {
+		t.Fatalf("RollReaction error = %v, want %v", err, ErrInvalidDifficulty)
+	}
+}
+
 func TestEvaluateOutcome(t *testing.T) {
 	tcs := []struct {
 		name                string

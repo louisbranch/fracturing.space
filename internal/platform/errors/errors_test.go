@@ -75,6 +75,14 @@ func TestErrorIs(t *testing.T) {
 	}
 }
 
+func TestErrorIs_NonErrorTarget(t *testing.T) {
+	err := apperrors.New(apperrors.CodeCampaignNameEmpty, "campaign name is empty")
+	plainErr := errors.New("plain error")
+	if errors.Is(err, plainErr) {
+		t.Error("errors.Is(domainErr, plainErr) = true, want false")
+	}
+}
+
 func TestErrorAs(t *testing.T) {
 	original := apperrors.WithMetadata(
 		apperrors.CodeCampaignInvalidStatusTransition,

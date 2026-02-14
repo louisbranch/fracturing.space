@@ -686,3 +686,102 @@ func newLoadoutSwappedEvent(campaignID, characterID string, seq uint64) event.Ev
 		PayloadJSON:   data,
 	}
 }
+
+type errorEventStore struct {
+	err error
+}
+
+func (s *errorEventStore) AppendEvent(context.Context, event.Event) (event.Event, error) {
+	return event.Event{}, s.err
+}
+
+func (s *errorEventStore) GetEventByHash(context.Context, string) (event.Event, error) {
+	return event.Event{}, s.err
+}
+
+func (s *errorEventStore) GetEventBySeq(context.Context, string, uint64) (event.Event, error) {
+	return event.Event{}, s.err
+}
+
+func (s *errorEventStore) ListEvents(context.Context, string, uint64, int) ([]event.Event, error) {
+	return nil, s.err
+}
+
+func (s *errorEventStore) ListEventsBySession(context.Context, string, string, uint64, int) ([]event.Event, error) {
+	return nil, s.err
+}
+
+func (s *errorEventStore) GetLatestEventSeq(context.Context, string) (uint64, error) {
+	return 0, s.err
+}
+
+func (s *errorEventStore) ListEventsPage(context.Context, storage.ListEventsPageRequest) (storage.ListEventsPageResult, error) {
+	return storage.ListEventsPageResult{}, s.err
+}
+
+func TestReplayCampaignWith_ListEventsError(t *testing.T) {
+	ctx := context.Background()
+	store := &errorEventStore{err: fmt.Errorf("list failed")}
+	applier := Applier{Campaign: newProjectionCampaignStore()}
+	_, err := ReplayCampaignWith(ctx, store, applier, "camp-1", ReplayOptions{})
+	if err == nil {
+		t.Fatal("expected error from ListEvents")
+	}
+}
+
+func TestReplayCampaignWith_UntilSeq(t *testing.T) {
+	ctx := context.Background()
+	campaignStore := newProjectionCampaignStore()
+	participantStore := newProjectionParticipantStore()
+	applier := Applier{Campaign: campaignStore, Participant: participantStore}
+	eventStore := &projectionEventStore{
+		events: []event.Event{
+			newCampaignCreatedEvent("camp-1", 1),
+			newParticipantJoinedEvent("camp-1", "part-1", 2),
+			newParticipantJoinedEvent("camp-1", "part-2", 3),
+		},
+	}
+
+	lastSeq, err := ReplayCampaignWith(ctx, eventStore, applier, "camp-1", ReplayOptions{UntilSeq: 2})
+	if err != nil {
+		t.Fatalf("ReplayCampaignWith: %v", err)
+	}
+	if lastSeq != 2 {
+		t.Fatalf("lastSeq = %d, want 2", lastSeq)
+	}
+	c, _ := campaignStore.Get(ctx, "camp-1")
+	if c.ParticipantCount != 1 {
+		t.Fatalf("ParticipantCount = %d, want 1 (only first participant)", c.ParticipantCount)
+	}
+}
+
+func TestReplayCampaignWith_NilEventStore(t *testing.T) {
+	ctx := context.Background()
+	_, err := ReplayCampaignWith(ctx, nil, Applier{}, "camp-1", ReplayOptions{})
+	if err == nil {
+		t.Fatal("expected error for nil event store")
+	}
+}
+
+func TestReplayCampaignWith_EmptyCampaignID(t *testing.T) {
+	ctx := context.Background()
+	store := &projectionEventStore{}
+	_, err := ReplayCampaignWith(ctx, store, Applier{}, "  ", ReplayOptions{})
+	if err == nil {
+		t.Fatal("expected error for empty campaign id")
+	}
+}
+
+func TestReplayCampaignWith_ApplyError(t *testing.T) {
+	ctx := context.Background()
+	applier := Applier{}
+	eventStore := &projectionEventStore{
+		events: []event.Event{
+			newCampaignCreatedEvent("camp-1", 1),
+		},
+	}
+	_, err := ReplayCampaignWith(ctx, eventStore, applier, "camp-1", ReplayOptions{})
+	if err == nil {
+		t.Fatal("expected error from applier.Apply")
+	}
+}

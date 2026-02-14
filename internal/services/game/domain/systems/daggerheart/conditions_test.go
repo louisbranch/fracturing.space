@@ -61,3 +61,34 @@ func TestDiffConditions(t *testing.T) {
 		t.Fatalf("removed = %v, want %v", removed, []string{ConditionRestrained})
 	}
 }
+
+func TestConditionsEqualDifferentValues(t *testing.T) {
+	if ConditionsEqual([]string{ConditionHidden}, []string{ConditionRestrained}) {
+		t.Fatal("expected not equal for different values")
+	}
+}
+
+func TestDiffConditionsNoChanges(t *testing.T) {
+	added, removed := DiffConditions([]string{ConditionHidden}, []string{ConditionHidden})
+	if len(added) != 0 || len(removed) != 0 {
+		t.Fatalf("expected no changes, got added=%v removed=%v", added, removed)
+	}
+}
+
+func TestConditionsEqualBothEmpty(t *testing.T) {
+	if !ConditionsEqual([]string{}, []string{}) {
+		t.Fatal("expected equal for two empty slices")
+	}
+}
+
+func TestConditionsEqualBothNil(t *testing.T) {
+	if !ConditionsEqual(nil, nil) {
+		t.Fatal("expected equal for two nil slices")
+	}
+}
+
+func TestConditionsEqualDifferentLengths(t *testing.T) {
+	if ConditionsEqual([]string{ConditionHidden}, []string{ConditionHidden, ConditionRestrained}) {
+		t.Fatal("expected not equal for different lengths")
+	}
+}

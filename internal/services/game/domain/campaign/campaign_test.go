@@ -287,6 +287,20 @@ func TestTransitionCampaignStatusDisallowedMetadata(t *testing.T) {
 	}
 }
 
+func TestCreateCampaignIDGeneratorError(t *testing.T) {
+	input := CreateCampaignInput{
+		Name:   "Camp",
+		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		GmMode: GmModeHuman,
+	}
+	_, err := CreateCampaign(input, nil, func() (string, error) {
+		return "", errors.New("id gen failed")
+	})
+	if err == nil {
+		t.Fatal("expected error for ID generator failure")
+	}
+}
+
 func TestTransitionCampaignStatusPreservesExistingTimestamps(t *testing.T) {
 	baseTime := time.Date(2026, 2, 1, 9, 0, 0, 0, time.UTC)
 	completedAt := baseTime.Add(30 * time.Minute)

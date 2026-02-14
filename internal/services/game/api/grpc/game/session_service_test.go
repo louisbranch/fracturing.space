@@ -532,6 +532,320 @@ func TestEndSession_Success(t *testing.T) {
 	}
 }
 
+func TestAbandonSessionGate_NilRequest(t *testing.T) {
+	svc := NewSessionService(Stores{})
+	_, err := svc.AbandonSessionGate(context.Background(), nil)
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestAbandonSessionGate_MissingStores(t *testing.T) {
+	svc := NewSessionService(Stores{})
+	_, err := svc.AbandonSessionGate(context.Background(), &statev1.AbandonSessionGateRequest{
+		CampaignId: "c1", SessionId: "s1", GateId: "g1",
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestAbandonSessionGate_MissingCampaignId(t *testing.T) {
+	svc := NewSessionService(Stores{
+		Campaign:    newFakeCampaignStore(),
+		Session:     newFakeSessionStore(),
+		SessionGate: newFakeSessionGateStore(),
+		Event:       newFakeEventStore(),
+	})
+	_, err := svc.AbandonSessionGate(context.Background(), &statev1.AbandonSessionGateRequest{
+		SessionId: "s1", GateId: "g1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestAbandonSessionGate_MissingSessionId(t *testing.T) {
+	svc := NewSessionService(Stores{
+		Campaign:    newFakeCampaignStore(),
+		Session:     newFakeSessionStore(),
+		SessionGate: newFakeSessionGateStore(),
+		Event:       newFakeEventStore(),
+	})
+	_, err := svc.AbandonSessionGate(context.Background(), &statev1.AbandonSessionGateRequest{
+		CampaignId: "c1", GateId: "g1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestAbandonSessionGate_MissingGateId(t *testing.T) {
+	svc := NewSessionService(Stores{
+		Campaign:    newFakeCampaignStore(),
+		Session:     newFakeSessionStore(),
+		SessionGate: newFakeSessionGateStore(),
+		Event:       newFakeEventStore(),
+	})
+	_, err := svc.AbandonSessionGate(context.Background(), &statev1.AbandonSessionGateRequest{
+		CampaignId: "c1", SessionId: "s1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestAbandonSessionGate_CampaignNotFound(t *testing.T) {
+	svc := NewSessionService(Stores{
+		Campaign:    newFakeCampaignStore(),
+		Session:     newFakeSessionStore(),
+		SessionGate: newFakeSessionGateStore(),
+		Event:       newFakeEventStore(),
+	})
+	_, err := svc.AbandonSessionGate(context.Background(), &statev1.AbandonSessionGateRequest{
+		CampaignId: "c1", SessionId: "s1", GateId: "g1",
+	})
+	assertStatusCode(t, err, codes.NotFound)
+}
+
+func TestAbandonSessionGate_AlreadyAbandoned(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	sessionStore := newFakeSessionStore()
+	gateStore := newFakeSessionGateStore()
+	eventStore := newFakeEventStore()
+	now := time.Date(2025, 2, 1, 12, 0, 0, 0, time.UTC)
+
+	campaignStore.campaigns["c1"] = campaign.Campaign{ID: "c1", Status: campaign.CampaignStatusActive}
+	sessionStore.sessions["c1"] = map[string]session.Session{
+		"s1": {ID: "s1", CampaignID: "c1", Status: session.SessionStatusActive, StartedAt: now, UpdatedAt: now},
+	}
+	gateStore.gates["c1:s1:g1"] = storage.SessionGate{
+		CampaignID: "c1", SessionID: "s1", GateID: "g1",
+		GateType: "decision", Status: string(session.GateStatusAbandoned),
+		CreatedAt: now,
+	}
+
+	svc := &SessionService{
+		stores: Stores{
+			Campaign:    campaignStore,
+			Session:     sessionStore,
+			SessionGate: gateStore,
+			Event:       eventStore,
+		},
+		clock: fixedClock(now),
+	}
+
+	resp, err := svc.AbandonSessionGate(context.Background(), &statev1.AbandonSessionGateRequest{
+		CampaignId: "c1", SessionId: "s1", GateId: "g1",
+	})
+	if err != nil {
+		t.Fatalf("AbandonSessionGate returned error: %v", err)
+	}
+	if resp.GetGate() == nil {
+		t.Fatal("expected gate in response")
+	}
+	if resp.GetGate().GetStatus() != statev1.SessionGateStatus_SESSION_GATE_ABANDONED {
+		t.Fatalf("gate status = %v, want ABANDONED", resp.GetGate().GetStatus())
+	}
+	if len(eventStore.events["c1"]) != 0 {
+		t.Fatalf("expected 0 events for already-abandoned gate, got %d", len(eventStore.events["c1"]))
+	}
+}
+
+func TestAbandonSessionGate_Success(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	sessionStore := newFakeSessionStore()
+	gateStore := newFakeSessionGateStore()
+	eventStore := newFakeEventStore()
+	now := time.Date(2025, 2, 1, 12, 0, 0, 0, time.UTC)
+
+	campaignStore.campaigns["c1"] = campaign.Campaign{ID: "c1", Status: campaign.CampaignStatusActive}
+	sessionStore.sessions["c1"] = map[string]session.Session{
+		"s1": {ID: "s1", CampaignID: "c1", Status: session.SessionStatusActive, StartedAt: now, UpdatedAt: now},
+	}
+	gateStore.gates["c1:s1:g1"] = storage.SessionGate{
+		CampaignID: "c1", SessionID: "s1", GateID: "g1",
+		GateType: "decision", Status: string(session.GateStatusOpen),
+		CreatedAt: now,
+	}
+
+	svc := &SessionService{
+		stores: Stores{
+			Campaign:    campaignStore,
+			Session:     sessionStore,
+			SessionGate: gateStore,
+			Event:       eventStore,
+		},
+		clock: fixedClock(now),
+	}
+
+	ctx := contextWithParticipantID("part-1")
+	resp, err := svc.AbandonSessionGate(ctx, &statev1.AbandonSessionGateRequest{
+		CampaignId: "c1", SessionId: "s1", GateId: "g1", Reason: "timeout",
+	})
+	if err != nil {
+		t.Fatalf("AbandonSessionGate returned error: %v", err)
+	}
+	if resp.GetGate() == nil {
+		t.Fatal("expected gate in response")
+	}
+	if got := len(eventStore.events["c1"]); got != 1 {
+		t.Fatalf("expected 1 event, got %d", got)
+	}
+	if eventStore.events["c1"][0].Type != event.TypeSessionGateAbandoned {
+		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.TypeSessionGateAbandoned)
+	}
+}
+
+func TestGetSessionSpotlight_NilRequest(t *testing.T) {
+	svc := NewSessionService(Stores{})
+	_, err := svc.GetSessionSpotlight(context.Background(), nil)
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestGetSessionSpotlight_MissingStores(t *testing.T) {
+	svc := NewSessionService(Stores{})
+	_, err := svc.GetSessionSpotlight(context.Background(), &statev1.GetSessionSpotlightRequest{
+		CampaignId: "c1", SessionId: "s1",
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestGetSessionSpotlight_MissingCampaignId(t *testing.T) {
+	svc := NewSessionService(Stores{
+		Campaign:         newFakeCampaignStore(),
+		Session:          newFakeSessionStore(),
+		SessionSpotlight: newFakeSessionSpotlightStore(),
+	})
+	_, err := svc.GetSessionSpotlight(context.Background(), &statev1.GetSessionSpotlightRequest{
+		SessionId: "s1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestGetSessionSpotlight_MissingSessionId(t *testing.T) {
+	svc := NewSessionService(Stores{
+		Campaign:         newFakeCampaignStore(),
+		Session:          newFakeSessionStore(),
+		SessionSpotlight: newFakeSessionSpotlightStore(),
+	})
+	_, err := svc.GetSessionSpotlight(context.Background(), &statev1.GetSessionSpotlightRequest{
+		CampaignId: "c1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSetSessionSpotlight_NilRequest(t *testing.T) {
+	svc := NewSessionService(Stores{})
+	_, err := svc.SetSessionSpotlight(context.Background(), nil)
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSetSessionSpotlight_MissingStores(t *testing.T) {
+	svc := NewSessionService(Stores{})
+	_, err := svc.SetSessionSpotlight(context.Background(), &statev1.SetSessionSpotlightRequest{
+		CampaignId: "c1", SessionId: "s1",
+		Type: statev1.SessionSpotlightType_SESSION_SPOTLIGHT_TYPE_GM,
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestSetSessionSpotlight_MissingCampaignId(t *testing.T) {
+	svc := NewSessionService(Stores{
+		Campaign:         newFakeCampaignStore(),
+		Session:          newFakeSessionStore(),
+		SessionSpotlight: newFakeSessionSpotlightStore(),
+		Event:            newFakeEventStore(),
+	})
+	_, err := svc.SetSessionSpotlight(context.Background(), &statev1.SetSessionSpotlightRequest{
+		SessionId: "s1",
+		Type:      statev1.SessionSpotlightType_SESSION_SPOTLIGHT_TYPE_GM,
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSetSessionSpotlight_MissingSessionId(t *testing.T) {
+	svc := NewSessionService(Stores{
+		Campaign:         newFakeCampaignStore(),
+		Session:          newFakeSessionStore(),
+		SessionSpotlight: newFakeSessionSpotlightStore(),
+		Event:            newFakeEventStore(),
+	})
+	_, err := svc.SetSessionSpotlight(context.Background(), &statev1.SetSessionSpotlightRequest{
+		CampaignId: "c1",
+		Type:       statev1.SessionSpotlightType_SESSION_SPOTLIGHT_TYPE_GM,
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSetSessionSpotlight_InvalidType(t *testing.T) {
+	svc := NewSessionService(Stores{
+		Campaign:         newFakeCampaignStore(),
+		Session:          newFakeSessionStore(),
+		SessionSpotlight: newFakeSessionSpotlightStore(),
+		Event:            newFakeEventStore(),
+	})
+	_, err := svc.SetSessionSpotlight(context.Background(), &statev1.SetSessionSpotlightRequest{
+		CampaignId: "c1", SessionId: "s1",
+		Type: statev1.SessionSpotlightType_SESSION_SPOTLIGHT_TYPE_UNSPECIFIED,
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSetSessionSpotlight_SessionNotActive(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	sessionStore := newFakeSessionStore()
+	now := time.Now().UTC()
+
+	campaignStore.campaigns["c1"] = campaign.Campaign{ID: "c1", Status: campaign.CampaignStatusActive}
+	endedAt := now.Add(-time.Hour)
+	sessionStore.sessions["c1"] = map[string]session.Session{
+		"s1": {ID: "s1", CampaignID: "c1", Status: session.SessionStatusEnded, StartedAt: now.Add(-2 * time.Hour), EndedAt: &endedAt},
+	}
+
+	svc := NewSessionService(Stores{
+		Campaign:         campaignStore,
+		Session:          sessionStore,
+		SessionSpotlight: newFakeSessionSpotlightStore(),
+		Event:            newFakeEventStore(),
+	})
+	_, err := svc.SetSessionSpotlight(context.Background(), &statev1.SetSessionSpotlightRequest{
+		CampaignId: "c1", SessionId: "s1",
+		Type: statev1.SessionSpotlightType_SESSION_SPOTLIGHT_TYPE_GM,
+	})
+	assertStatusCode(t, err, codes.FailedPrecondition)
+}
+
+func TestClearSessionSpotlight_NilRequest(t *testing.T) {
+	svc := NewSessionService(Stores{})
+	_, err := svc.ClearSessionSpotlight(context.Background(), nil)
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestClearSessionSpotlight_MissingStores(t *testing.T) {
+	svc := NewSessionService(Stores{})
+	_, err := svc.ClearSessionSpotlight(context.Background(), &statev1.ClearSessionSpotlightRequest{
+		CampaignId: "c1", SessionId: "s1",
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestClearSessionSpotlight_MissingCampaignId(t *testing.T) {
+	svc := NewSessionService(Stores{
+		Campaign:         newFakeCampaignStore(),
+		Session:          newFakeSessionStore(),
+		SessionSpotlight: newFakeSessionSpotlightStore(),
+		Event:            newFakeEventStore(),
+	})
+	_, err := svc.ClearSessionSpotlight(context.Background(), &statev1.ClearSessionSpotlightRequest{
+		SessionId: "s1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestClearSessionSpotlight_MissingSessionId(t *testing.T) {
+	svc := NewSessionService(Stores{
+		Campaign:         newFakeCampaignStore(),
+		Session:          newFakeSessionStore(),
+		SessionSpotlight: newFakeSessionSpotlightStore(),
+		Event:            newFakeEventStore(),
+	})
+	_, err := svc.ClearSessionSpotlight(context.Background(), &statev1.ClearSessionSpotlightRequest{
+		CampaignId: "c1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
 func TestEndSession_AlreadyEnded(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()

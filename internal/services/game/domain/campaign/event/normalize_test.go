@@ -47,6 +47,16 @@ func TestNormalizeForAppend(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "rejects missing actor id for gm",
+			input: Event{
+				CampaignID:  "camp-1",
+				Type:        TypeCampaignCreated,
+				ActorType:   ActorTypeGM,
+				PayloadJSON: []byte("{}"),
+			},
+			wantErr: true,
+		},
+		{
 			name: "rejects invalid payload json",
 			input: Event{
 				CampaignID:  "camp-1",
@@ -74,6 +84,52 @@ func TestNormalizeForAppend(t *testing.T) {
 				PayloadJSON: []byte("{}"),
 			},
 			wantErr: true,
+		},
+		{
+			name:    "rejects empty campaign id",
+			input:   Event{CampaignID: "  ", Type: TypeCampaignCreated, PayloadJSON: []byte("{}")},
+			wantErr: true,
+		},
+		{
+			name:    "rejects empty event type",
+			input:   Event{CampaignID: "camp-1", Type: Type("  "), PayloadJSON: []byte("{}")},
+			wantErr: true,
+		},
+		{
+			name: "rejects preset chain hashes",
+			input: Event{
+				CampaignID:  "camp-1",
+				Type:        TypeCampaignCreated,
+				PrevHash:    "prev",
+				PayloadJSON: []byte("{}"),
+			},
+			wantErr: true,
+		},
+		{
+			name: "rejects preset signatures",
+			input: Event{
+				CampaignID:     "camp-1",
+				Type:           TypeCampaignCreated,
+				SignatureKeyID: "key-1",
+				PayloadJSON:    []byte("{}"),
+			},
+			wantErr: true,
+		},
+		{
+			name: "accepts gm actor with actor id",
+			input: Event{
+				CampaignID:  "camp-1",
+				Type:        TypeCampaignCreated,
+				ActorType:   ActorTypeGM,
+				ActorID:     "gm-1",
+				PayloadJSON: []byte("{}"),
+			},
+			wantErr: false,
+			assertion: func(t *testing.T, evt Event) {
+				if evt.ActorType != ActorTypeGM {
+					t.Fatalf("ActorType = %s, want %s", evt.ActorType, ActorTypeGM)
+				}
+			},
 		},
 	}
 
