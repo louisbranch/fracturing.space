@@ -2087,24 +2087,6 @@ func campaignRowDataToDomain(row campaignRowData) (campaign.Campaign, error) {
 	return c, nil
 }
 
-func dbCampaignToDomain(row db.Campaign) (campaign.Campaign, error) {
-	return campaignRowDataToDomain(campaignRowData{
-		ID:               row.ID,
-		Name:             row.Name,
-		Locale:           row.Locale,
-		GameSystem:       row.GameSystem,
-		Status:           row.Status,
-		GmMode:           row.GmMode,
-		ParticipantCount: row.ParticipantCount,
-		CharacterCount:   row.CharacterCount,
-		ThemePrompt:      row.ThemePrompt,
-		CreatedAt:        row.CreatedAt,
-		UpdatedAt:        row.UpdatedAt,
-		CompletedAt:      row.CompletedAt,
-		ArchivedAt:       row.ArchivedAt,
-	})
-}
-
 func dbGetCampaignRowToDomain(row db.GetCampaignRow) (campaign.Campaign, error) {
 	return campaignRowDataToDomain(campaignRowData{
 		ID:               row.ID,
@@ -4747,7 +4729,7 @@ func isConstraintError(err error) bool {
 		return false
 	}
 	code := sqliteErr.Code()
-	return code == sqlite3.SQLITE_CONSTRAINT || code == sqlite3.SQLITE_CONSTRAINT_UNIQUE
+	return code == sqlite3.SQLITE_CONSTRAINT || code == sqlite3.SQLITE_CONSTRAINT_UNIQUE || code == sqlite3.SQLITE_CONSTRAINT_PRIMARYKEY
 }
 
 func isParticipantUserConflict(err error) bool {

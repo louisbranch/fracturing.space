@@ -151,6 +151,34 @@ func TestConversionHelpers(t *testing.T) {
 	}
 }
 
+func TestBoolIntHelpers(t *testing.T) {
+	if boolToInt(true) != 1 {
+		t.Fatal("expected boolToInt(true) = 1")
+	}
+	if boolToInt(false) != 0 {
+		t.Fatal("expected boolToInt(false) = 0")
+	}
+	if !intToBool(1) {
+		t.Fatal("expected intToBool(1) = true")
+	}
+	if intToBool(0) {
+		t.Fatal("expected intToBool(0) = false")
+	}
+}
+
+func TestToNullString(t *testing.T) {
+	if got := toNullString(""); got.Valid {
+		t.Fatal("expected empty string to produce invalid NullString")
+	}
+	if got := toNullString("  "); got.Valid {
+		t.Fatal("expected whitespace-only string to produce invalid NullString")
+	}
+	got := toNullString("hello")
+	if !got.Valid || got.String != "hello" {
+		t.Fatalf("expected valid NullString with value 'hello', got valid=%v string=%q", got.Valid, got.String)
+	}
+}
+
 type fakeErr string
 
 func (f fakeErr) Error() string {
