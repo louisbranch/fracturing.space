@@ -1,0 +1,20 @@
+package templates
+
+// Layout wraps public pages in the shared HTML shell.
+templ Layout(title string) {
+	<!DOCTYPE html>
+	<html lang="en" data-theme="fracturing">
+		<head>
+			<meta charset="utf-8">
+			<meta name="viewport" content="width=device-width, initial-scale=1">
+			<title>{title}</title>
+			<meta name="description" content="Open-source, server-authoritative engine for deterministic tabletop RPG campaigns and AI game masters.">
+			<link href="https://cdn.jsdelivr.net/npm/daisyui@5.5.18" rel="stylesheet" type="text/css" integrity="sha384-ww1btmC3Ah3rEb6jt/coOxyQ9JYMoxQpFSB/bxdE20ZYMK4kWSb+TwcgbHR/GFCq" crossorigin="anonymous"/>
+			<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.1.18" integrity="sha384-WrpyCFNrMmN/IC7KmMNiXxIouXEFpoDIuJ2P+ys++uYEzegAW2MSl+X6Unsahaij" crossorigin="anonymous"></script>
+			<link rel="stylesheet" href="/static/landing.css">
+		</head>
+		<body class="landing-body">
+			{ children... }
+		</body>
+	</html>
+}

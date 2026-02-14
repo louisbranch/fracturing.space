@@ -49,6 +49,43 @@ func TestLoginHandlerRendersForm(t *testing.T) {
 	}
 }
 
+func TestLandingPageRenders(t *testing.T) {
+	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "Fracturing.Space") {
+		t.Fatalf("expected app name in body")
+	}
+	if !strings.Contains(body, "Open-source, server-authoritative engine") {
+		t.Fatalf("expected hero tagline in body")
+	}
+}
+
+func TestLandingPageRejectsNonRootPath(t *testing.T) {
+	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
+	req := httptest.NewRequest(http.MethodGet, "/something", nil)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusNotFound)
+	}
+}
+
+func TestLandingPageRejectsNonGETMethod(t *testing.T) {
+	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
+	req := httptest.NewRequest(http.MethodPost, "/", nil)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	if w.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusMethodNotAllowed)
+	}
+}
+
 func TestPasskeyLoginStartRequiresClient(t *testing.T) {
 	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
 	req := httptest.NewRequest(http.MethodPost, "/passkeys/login/start", bytes.NewBufferString(`{"pending_id":"pending-1"}`))

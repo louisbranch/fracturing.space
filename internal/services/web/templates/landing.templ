@@ -1,0 +1,22 @@
+package templates
+
+// LandingPage renders the public-facing landing page.
+templ LandingPage(appName string) {
+	@Layout(appName + " | Open source AI GM engine") {
+		<main class="landing-shell">
+			@LandingHero(appName)
+		</main>
+	}
+}
+
+// LandingHero renders the minimal hero section.
+templ LandingHero(appName string) {
+	<section class="landing-hero">
+		<h1>{appName}</h1>
+		<p class="hero-tagline">Open-source, server-authoritative engine for deterministic tabletop RPG campaigns and AI game masters.</p>
+		<div class="hero-links">
+			<a class="btn btn-primary" href="https://louisbranch.github.io/fracturing.space/">Docs</a>
+			<a class="btn btn-secondary btn-outline" href="https://github.com/louisbranch/fracturing.space">GitHub</a>
+		</div>
+	</section>
+}
