@@ -2,7 +2,6 @@ package game
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"strings"
 	"time"
@@ -12,9 +11,7 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
-	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -56,7 +53,7 @@ func (s *CampaignService) CreateCampaign(ctx context.Context, in *campaignv1.Cre
 		return nil, status.Error(codes.InvalidArgument, "create campaign request is required")
 	}
 
-	created, owner, err := newCampaignCreator(s).create(ctx, in)
+	created, owner, err := newCampaignApplication(s).CreateCampaign(ctx, in)
 	if err != nil {
 		if apperrors.GetCode(err) != apperrors.CodeUnknown {
 			return nil, handleDomainError(err)
@@ -139,58 +136,12 @@ func (s *CampaignService) EndCampaign(ctx context.Context, in *campaignv1.EndCam
 		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
 	}
 
-	c, err := s.stores.Campaign.Get(ctx, campaignID)
+	updated, err := newCampaignApplication(s).EndCampaign(ctx, campaignID)
 	if err != nil {
-		return nil, handleDomainError(err)
-	}
-
-	if err := ensureNoActiveSession(ctx, s.stores.Session, campaignID); err != nil {
+		if apperrors.GetCode(err) != apperrors.CodeUnknown {
+			return nil, handleDomainError(err)
+		}
 		return nil, err
-	}
-	if _, err := campaign.TransitionCampaignStatus(c, campaign.CampaignStatusCompleted, s.now); err != nil {
-		return nil, handleDomainError(err)
-	}
-
-	payload := event.CampaignUpdatedPayload{
-		Fields: map[string]any{
-			"status": campaignStatusToProto(campaign.CampaignStatusCompleted).String(),
-		},
-	}
-	payloadJSON, err := json.Marshal(payload)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
-	}
-
-	actorID := grpcmeta.ParticipantIDFromContext(ctx)
-	actorType := event.ActorTypeSystem
-	if actorID != "" {
-		actorType = event.ActorTypeParticipant
-	}
-
-	stored, err := s.stores.Event.AppendEvent(ctx, event.Event{
-		CampaignID:   campaignID,
-		Timestamp:    s.now().UTC(),
-		Type:         event.TypeCampaignUpdated,
-		RequestID:    grpcmeta.RequestIDFromContext(ctx),
-		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-		ActorType:    actorType,
-		ActorID:      actorID,
-		EntityType:   "campaign",
-		EntityID:     campaignID,
-		PayloadJSON:  payloadJSON,
-	})
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "append event: %v", err)
-	}
-
-	applier := s.stores.Applier()
-	if err := applier.Apply(ctx, stored); err != nil {
-		return nil, status.Errorf(codes.Internal, "apply event: %v", err)
-	}
-
-	updated, err := s.stores.Campaign.Get(ctx, campaignID)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "load campaign: %v", err)
 	}
 
 	return &campaignv1.EndCampaignResponse{Campaign: campaignToProto(updated)}, nil
@@ -207,58 +158,12 @@ func (s *CampaignService) ArchiveCampaign(ctx context.Context, in *campaignv1.Ar
 		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
 	}
 
-	c, err := s.stores.Campaign.Get(ctx, campaignID)
+	updated, err := newCampaignApplication(s).ArchiveCampaign(ctx, campaignID)
 	if err != nil {
-		return nil, handleDomainError(err)
-	}
-
-	if err := ensureNoActiveSession(ctx, s.stores.Session, campaignID); err != nil {
+		if apperrors.GetCode(err) != apperrors.CodeUnknown {
+			return nil, handleDomainError(err)
+		}
 		return nil, err
-	}
-	if _, err := campaign.TransitionCampaignStatus(c, campaign.CampaignStatusArchived, s.now); err != nil {
-		return nil, handleDomainError(err)
-	}
-
-	payload := event.CampaignUpdatedPayload{
-		Fields: map[string]any{
-			"status": campaignStatusToProto(campaign.CampaignStatusArchived).String(),
-		},
-	}
-	payloadJSON, err := json.Marshal(payload)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
-	}
-
-	actorID := grpcmeta.ParticipantIDFromContext(ctx)
-	actorType := event.ActorTypeSystem
-	if actorID != "" {
-		actorType = event.ActorTypeParticipant
-	}
-
-	stored, err := s.stores.Event.AppendEvent(ctx, event.Event{
-		CampaignID:   campaignID,
-		Timestamp:    s.now().UTC(),
-		Type:         event.TypeCampaignUpdated,
-		RequestID:    grpcmeta.RequestIDFromContext(ctx),
-		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-		ActorType:    actorType,
-		ActorID:      actorID,
-		EntityType:   "campaign",
-		EntityID:     campaignID,
-		PayloadJSON:  payloadJSON,
-	})
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "append event: %v", err)
-	}
-
-	applier := s.stores.Applier()
-	if err := applier.Apply(ctx, stored); err != nil {
-		return nil, status.Errorf(codes.Internal, "apply event: %v", err)
-	}
-
-	updated, err := s.stores.Campaign.Get(ctx, campaignID)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "load campaign: %v", err)
 	}
 
 	return &campaignv1.ArchiveCampaignResponse{Campaign: campaignToProto(updated)}, nil
@@ -275,64 +180,15 @@ func (s *CampaignService) RestoreCampaign(ctx context.Context, in *campaignv1.Re
 		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
 	}
 
-	c, err := s.stores.Campaign.Get(ctx, campaignID)
+	updated, err := newCampaignApplication(s).RestoreCampaign(ctx, campaignID)
 	if err != nil {
-		return nil, handleDomainError(err)
-	}
-	if _, err := campaign.TransitionCampaignStatus(c, campaign.CampaignStatusDraft, s.now); err != nil {
-		return nil, handleDomainError(err)
-	}
-
-	payload := event.CampaignUpdatedPayload{
-		Fields: map[string]any{
-			"status": campaignStatusToProto(campaign.CampaignStatusDraft).String(),
-		},
-	}
-	payloadJSON, err := json.Marshal(payload)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
-	}
-
-	actorID := grpcmeta.ParticipantIDFromContext(ctx)
-	actorType := event.ActorTypeSystem
-	if actorID != "" {
-		actorType = event.ActorTypeParticipant
-	}
-
-	stored, err := s.stores.Event.AppendEvent(ctx, event.Event{
-		CampaignID:   campaignID,
-		Timestamp:    s.now().UTC(),
-		Type:         event.TypeCampaignUpdated,
-		RequestID:    grpcmeta.RequestIDFromContext(ctx),
-		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-		ActorType:    actorType,
-		ActorID:      actorID,
-		EntityType:   "campaign",
-		EntityID:     campaignID,
-		PayloadJSON:  payloadJSON,
-	})
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "append event: %v", err)
-	}
-
-	applier := s.stores.Applier()
-	if err := applier.Apply(ctx, stored); err != nil {
-		return nil, status.Errorf(codes.Internal, "apply event: %v", err)
-	}
-
-	updated, err := s.stores.Campaign.Get(ctx, campaignID)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "load campaign: %v", err)
+		if apperrors.GetCode(err) != apperrors.CodeUnknown {
+			return nil, handleDomainError(err)
+		}
+		return nil, err
 	}
 
 	return &campaignv1.RestoreCampaignResponse{Campaign: campaignToProto(updated)}, nil
-}
-
-func (s *CampaignService) now() time.Time {
-	if s == nil || s.clock == nil {
-		return time.Now()
-	}
-	return s.clock()
 }
 
 func ensureNoActiveSession(ctx context.Context, store storage.SessionStore, campaignID string) error {

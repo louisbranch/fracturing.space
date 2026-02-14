@@ -12,17 +12,6 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-type fakeStatisticsStore struct {
-	lastSince *time.Time
-	stats     storage.GameStatistics
-	err       error
-}
-
-func (f *fakeStatisticsStore) GetGameStatistics(_ context.Context, since *time.Time) (storage.GameStatistics, error) {
-	f.lastSince = since
-	return f.stats, f.err
-}
-
 func TestStatisticsServiceGetGameStatistics(t *testing.T) {
 	t.Run("rejects nil request", func(t *testing.T) {
 		service := NewStatisticsService(Stores{Statistics: &fakeStatisticsStore{}})

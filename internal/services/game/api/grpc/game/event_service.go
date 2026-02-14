@@ -3,11 +3,9 @@ package game
 import (
 	"context"
 	"strings"
-	"time"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
-	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/core/filter"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -40,26 +38,9 @@ func (s *EventService) AppendEvent(ctx context.Context, in *campaignv1.AppendEve
 		return nil, status.Error(codes.InvalidArgument, "append event request is required")
 	}
 
-	input, err := event.NormalizeForAppend(event.Event{
-		CampaignID:   in.GetCampaignId(),
-		Timestamp:    time.Now().UTC(),
-		Type:         event.Type(strings.TrimSpace(in.GetType())),
-		SessionID:    strings.TrimSpace(in.GetSessionId()),
-		RequestID:    grpcmeta.RequestIDFromContext(ctx),
-		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-		ActorType:    event.ActorType(strings.TrimSpace(in.GetActorType())),
-		ActorID:      strings.TrimSpace(in.GetActorId()),
-		EntityType:   strings.TrimSpace(in.GetEntityType()),
-		EntityID:     strings.TrimSpace(in.GetEntityId()),
-		PayloadJSON:  in.GetPayloadJson(),
-	})
+	stored, err := newEventApplication(s).AppendEvent(ctx, in)
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-
-	stored, err := s.stores.Event.AppendEvent(ctx, input)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "append event: %v", err)
+		return nil, err
 	}
 
 	return &campaignv1.AppendEventResponse{Event: eventToProto(stored)}, nil

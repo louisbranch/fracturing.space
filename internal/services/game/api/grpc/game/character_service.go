@@ -2,7 +2,6 @@ package game
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"strings"
 	"time"
@@ -12,10 +11,7 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
-	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -55,7 +51,7 @@ func (s *CharacterService) CreateCharacter(ctx context.Context, in *campaignv1.C
 		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
 	}
 
-	created, err := newCharacterCreator(s).create(ctx, campaignID, in)
+	created, err := newCharacterApplication(s).CreateCharacter(ctx, campaignID, in)
 	if err != nil {
 		if apperrors.GetCode(err) != apperrors.CodeUnknown {
 			return nil, handleDomainError(err)
@@ -77,7 +73,7 @@ func (s *CharacterService) UpdateCharacter(ctx context.Context, in *campaignv1.U
 		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
 	}
 
-	updated, err := newCharacterUpdater(s).update(ctx, campaignID, in)
+	updated, err := newCharacterApplication(s).UpdateCharacter(ctx, campaignID, in)
 	if err != nil {
 		if apperrors.GetCode(err) != apperrors.CodeUnknown {
 			return nil, handleDomainError(err)
@@ -99,58 +95,12 @@ func (s *CharacterService) DeleteCharacter(ctx context.Context, in *campaignv1.D
 		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
 	}
 
-	c, err := s.stores.Campaign.Get(ctx, campaignID)
+	ch, err := newCharacterApplication(s).DeleteCharacter(ctx, campaignID, in)
 	if err != nil {
-		return nil, handleDomainError(err)
-	}
-	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpCampaignMutate); err != nil {
-		return nil, handleDomainError(err)
-	}
-
-	characterID := strings.TrimSpace(in.GetCharacterId())
-	if characterID == "" {
-		return nil, status.Error(codes.InvalidArgument, "character id is required")
-	}
-
-	ch, err := s.stores.Character.GetCharacter(ctx, campaignID, characterID)
-	if err != nil {
-		return nil, handleDomainError(err)
-	}
-
-	payload := event.CharacterDeletedPayload{
-		CharacterID: characterID,
-		Reason:      strings.TrimSpace(in.GetReason()),
-	}
-	payloadJSON, err := json.Marshal(payload)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
-	}
-
-	actorID := grpcmeta.ParticipantIDFromContext(ctx)
-	actorType := event.ActorTypeSystem
-	if actorID != "" {
-		actorType = event.ActorTypeParticipant
-	}
-
-	stored, err := s.stores.Event.AppendEvent(ctx, event.Event{
-		CampaignID:   campaignID,
-		Timestamp:    s.clock().UTC(),
-		Type:         event.TypeCharacterDeleted,
-		RequestID:    grpcmeta.RequestIDFromContext(ctx),
-		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-		ActorType:    actorType,
-		ActorID:      actorID,
-		EntityType:   "character",
-		EntityID:     characterID,
-		PayloadJSON:  payloadJSON,
-	})
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "append event: %v", err)
-	}
-
-	applier := s.stores.Applier()
-	if err := applier.Apply(ctx, stored); err != nil {
-		return nil, status.Errorf(codes.Internal, "apply event: %v", err)
+		if apperrors.GetCode(err) != apperrors.CodeUnknown {
+			return nil, handleDomainError(err)
+		}
+		return nil, err
 	}
 
 	return &campaignv1.DeleteCharacterResponse{Character: characterToProto(ch)}, nil
@@ -209,70 +159,13 @@ func (s *CharacterService) SetDefaultControl(ctx context.Context, in *campaignv1
 	if campaignID == "" {
 		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
 	}
-	_, err := s.stores.Campaign.Get(ctx, campaignID)
-	if err != nil {
-		return nil, handleDomainError(err)
-	}
 
-	characterID := strings.TrimSpace(in.GetCharacterId())
-	if characterID == "" {
-		return nil, status.Error(codes.InvalidArgument, "character id is required")
-	}
-	_, err = s.stores.Character.GetCharacter(ctx, campaignID, characterID)
+	characterID, participantID, err := newCharacterApplication(s).SetDefaultControl(ctx, campaignID, in)
 	if err != nil {
-		return nil, handleDomainError(err)
-	}
-
-	if in.ParticipantId == nil {
-		return nil, status.Error(codes.InvalidArgument, "participant id is required")
-	}
-	participantID := strings.TrimSpace(in.GetParticipantId().GetValue())
-	if participantID != "" {
-		if s.stores.Participant == nil {
-			return nil, status.Error(codes.Internal, "participant store is not configured")
-		}
-		_, err = s.stores.Participant.GetParticipant(ctx, campaignID, participantID)
-		if err != nil {
+		if apperrors.GetCode(err) != apperrors.CodeUnknown {
 			return nil, handleDomainError(err)
 		}
-	}
-
-	payload := event.CharacterUpdatedPayload{
-		CharacterID: characterID,
-		Fields: map[string]any{
-			"participant_id": participantID,
-		},
-	}
-	payloadJSON, err := json.Marshal(payload)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
-	}
-
-	actorID := grpcmeta.ParticipantIDFromContext(ctx)
-	actorType := event.ActorTypeSystem
-	if actorID != "" {
-		actorType = event.ActorTypeParticipant
-	}
-
-	stored, err := s.stores.Event.AppendEvent(ctx, event.Event{
-		CampaignID:   campaignID,
-		Timestamp:    s.clock().UTC(),
-		Type:         event.TypeCharacterUpdated,
-		RequestID:    grpcmeta.RequestIDFromContext(ctx),
-		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-		ActorType:    actorType,
-		ActorID:      actorID,
-		EntityType:   "character",
-		EntityID:     characterID,
-		PayloadJSON:  payloadJSON,
-	})
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "append event: %v", err)
-	}
-
-	applier := s.stores.Applier()
-	if err := applier.Apply(ctx, stored); err != nil {
-		return nil, status.Errorf(codes.Internal, "apply event: %v", err)
+		return nil, err
 	}
 
 	var participantIDValue *wrapperspb.StringValue
@@ -343,259 +236,12 @@ func (s *CharacterService) PatchCharacterProfile(ctx context.Context, in *campai
 		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
 	}
 
-	characterID := strings.TrimSpace(in.GetCharacterId())
-	if characterID == "" {
-		return nil, status.Error(codes.InvalidArgument, "character id is required")
-	}
-
-	dhProfile, err := s.stores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
+	characterID, dhProfile, err := newCharacterApplication(s).PatchCharacterProfile(ctx, campaignID, in)
 	if err != nil {
-		return nil, handleDomainError(err)
-	}
-
-	// Apply Daggerheart-specific patches (including hp_max)
-	if dhPatch := in.GetDaggerheart(); dhPatch != nil {
-		// Validate level (plain int32: 0 is not valid)
-		if dhPatch.Level < 0 {
-			return nil, status.Error(codes.InvalidArgument, "level must be non-negative")
-		}
-		if dhPatch.Level > 0 {
-			if err := daggerheart.ValidateLevel(int(dhPatch.Level)); err != nil {
-				return nil, handleDomainError(err)
-			}
-			dhProfile.Level = int(dhPatch.Level)
-		}
-
-		// Validate hp_max (plain int32: 0 is not valid)
-		if dhPatch.HpMax < 0 {
-			return nil, status.Error(codes.InvalidArgument, "hp_max must be non-negative")
-		}
-		if dhPatch.HpMax > 0 {
-			if dhPatch.HpMax > daggerheart.HPMaxCap {
-				return nil, status.Error(codes.InvalidArgument, "hp_max must be in range 1..12")
-			}
-			dhProfile.HpMax = int(dhPatch.HpMax)
-		}
-
-		// Validate stress_max (wrapper type: nil means not provided)
-		if dhPatch.GetStressMax() != nil {
-			val := int(dhPatch.GetStressMax().GetValue())
-			if val < 0 {
-				return nil, status.Error(codes.InvalidArgument, "stress_max must be non-negative")
-			}
-			if val > daggerheart.StressMaxCap {
-				return nil, status.Error(codes.InvalidArgument, "stress_max must be in range 0..12")
-			}
-			dhProfile.StressMax = val
-		}
-
-		// Validate evasion (wrapper type: nil means not provided)
-		if dhPatch.GetEvasion() != nil {
-			val := int(dhPatch.GetEvasion().GetValue())
-			if val < 0 {
-				return nil, status.Error(codes.InvalidArgument, "evasion must be non-negative")
-			}
-			dhProfile.Evasion = val
-		}
-
-		// Validate major_threshold (wrapper type: nil means not provided)
-		if dhPatch.GetMajorThreshold() != nil {
-			val := int(dhPatch.GetMajorThreshold().GetValue())
-			if val < 0 {
-				return nil, status.Error(codes.InvalidArgument, "major_threshold must be non-negative")
-			}
-			dhProfile.MajorThreshold = val
-		}
-
-		// Validate severe_threshold (wrapper type: nil means not provided)
-		if dhPatch.GetSevereThreshold() != nil {
-			val := int(dhPatch.GetSevereThreshold().GetValue())
-			if val < 0 {
-				return nil, status.Error(codes.InvalidArgument, "severe_threshold must be non-negative")
-			}
-			dhProfile.SevereThreshold = val
-		}
-
-		// Validate proficiency (wrapper type: nil means not provided)
-		if dhPatch.GetProficiency() != nil {
-			val := int(dhPatch.GetProficiency().GetValue())
-			if val < 0 {
-				return nil, status.Error(codes.InvalidArgument, "proficiency must be non-negative")
-			}
-			dhProfile.Proficiency = val
-		}
-
-		// Validate armor_score (wrapper type: nil means not provided)
-		if dhPatch.GetArmorScore() != nil {
-			val := int(dhPatch.GetArmorScore().GetValue())
-			if val < 0 {
-				return nil, status.Error(codes.InvalidArgument, "armor_score must be non-negative")
-			}
-			dhProfile.ArmorScore = val
-		}
-
-		// Validate armor_max (wrapper type: nil means not provided)
-		if dhPatch.GetArmorMax() != nil {
-			val := int(dhPatch.GetArmorMax().GetValue())
-			if val < 0 || val > daggerheart.ArmorMaxCap {
-				return nil, status.Error(codes.InvalidArgument, "armor_max must be in range 0..12")
-			}
-			dhProfile.ArmorMax = val
-		}
-
-		// Validate and apply traits (wrapper types allow nil-checking)
-		if dhPatch.GetAgility() != nil {
-			if err := daggerheart.ValidateTrait("agility", int(dhPatch.GetAgility().GetValue())); err != nil {
-				return nil, handleDomainError(err)
-			}
-			dhProfile.Agility = int(dhPatch.GetAgility().GetValue())
-		}
-		if dhPatch.GetStrength() != nil {
-			if err := daggerheart.ValidateTrait("strength", int(dhPatch.GetStrength().GetValue())); err != nil {
-				return nil, handleDomainError(err)
-			}
-			dhProfile.Strength = int(dhPatch.GetStrength().GetValue())
-		}
-		if dhPatch.GetFinesse() != nil {
-			if err := daggerheart.ValidateTrait("finesse", int(dhPatch.GetFinesse().GetValue())); err != nil {
-				return nil, handleDomainError(err)
-			}
-			dhProfile.Finesse = int(dhPatch.GetFinesse().GetValue())
-		}
-		if dhPatch.GetInstinct() != nil {
-			if err := daggerheart.ValidateTrait("instinct", int(dhPatch.GetInstinct().GetValue())); err != nil {
-				return nil, handleDomainError(err)
-			}
-			dhProfile.Instinct = int(dhPatch.GetInstinct().GetValue())
-		}
-		if dhPatch.GetPresence() != nil {
-			if err := daggerheart.ValidateTrait("presence", int(dhPatch.GetPresence().GetValue())); err != nil {
-				return nil, handleDomainError(err)
-			}
-			dhProfile.Presence = int(dhPatch.GetPresence().GetValue())
-		}
-		if dhPatch.GetKnowledge() != nil {
-			if err := daggerheart.ValidateTrait("knowledge", int(dhPatch.GetKnowledge().GetValue())); err != nil {
-				return nil, handleDomainError(err)
-			}
-			dhProfile.Knowledge = int(dhPatch.GetKnowledge().GetValue())
-		}
-
-		if len(dhPatch.GetExperiences()) > 0 {
-			experiences := make([]storage.DaggerheartExperience, 0, len(dhPatch.GetExperiences()))
-			for _, experience := range dhPatch.GetExperiences() {
-				if strings.TrimSpace(experience.GetName()) == "" {
-					return nil, status.Error(codes.InvalidArgument, "experience name is required")
-				}
-				experiences = append(experiences, storage.DaggerheartExperience{
-					Name:     experience.GetName(),
-					Modifier: int(experience.GetModifier()),
-				})
-			}
-			dhProfile.Experiences = experiences
-		}
-		if dhProfile.Level == 0 {
-			dhProfile.Level = daggerheart.PCLevelDefault
-		}
-		dhProfile.MajorThreshold, dhProfile.SevereThreshold = daggerheart.DeriveThresholds(
-			dhProfile.Level,
-			dhProfile.ArmorScore,
-			dhProfile.MajorThreshold,
-			dhProfile.SevereThreshold,
-		)
-
-		experiences := make([]daggerheart.Experience, 0, len(dhProfile.Experiences))
-		for _, experience := range dhProfile.Experiences {
-			experiences = append(experiences, daggerheart.Experience{
-				Name:     experience.Name,
-				Modifier: experience.Modifier,
-			})
-		}
-		if err := daggerheart.ValidateProfile(
-			dhProfile.Level,
-			dhProfile.HpMax,
-			dhProfile.StressMax,
-			dhProfile.Evasion,
-			dhProfile.MajorThreshold,
-			dhProfile.SevereThreshold,
-			dhProfile.Proficiency,
-			dhProfile.ArmorScore,
-			dhProfile.ArmorMax,
-			daggerheart.Traits{
-				Agility:   dhProfile.Agility,
-				Strength:  dhProfile.Strength,
-				Finesse:   dhProfile.Finesse,
-				Instinct:  dhProfile.Instinct,
-				Presence:  dhProfile.Presence,
-				Knowledge: dhProfile.Knowledge,
-			},
-			experiences,
-		); err != nil {
+		if apperrors.GetCode(err) != apperrors.CodeUnknown {
 			return nil, handleDomainError(err)
 		}
-	}
-
-	experiencesPayload := make([]map[string]any, 0, len(dhProfile.Experiences))
-	for _, experience := range dhProfile.Experiences {
-		experiencesPayload = append(experiencesPayload, map[string]any{
-			"name":     experience.Name,
-			"modifier": experience.Modifier,
-		})
-	}
-
-	profilePayload := event.ProfileUpdatedPayload{
-		CharacterID: characterID,
-		SystemProfile: map[string]any{
-			"daggerheart": map[string]any{
-				"level":            dhProfile.Level,
-				"hp_max":           dhProfile.HpMax,
-				"stress_max":       dhProfile.StressMax,
-				"evasion":          dhProfile.Evasion,
-				"major_threshold":  dhProfile.MajorThreshold,
-				"severe_threshold": dhProfile.SevereThreshold,
-				"proficiency":      dhProfile.Proficiency,
-				"armor_score":      dhProfile.ArmorScore,
-				"armor_max":        dhProfile.ArmorMax,
-				"agility":          dhProfile.Agility,
-				"strength":         dhProfile.Strength,
-				"finesse":          dhProfile.Finesse,
-				"instinct":         dhProfile.Instinct,
-				"presence":         dhProfile.Presence,
-				"knowledge":        dhProfile.Knowledge,
-				"experiences":      experiencesPayload,
-			},
-		},
-	}
-	profilePayloadJSON, err := json.Marshal(profilePayload)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
-	}
-
-	actorID := grpcmeta.ParticipantIDFromContext(ctx)
-	actorType := event.ActorTypeSystem
-	if actorID != "" {
-		actorType = event.ActorTypeParticipant
-	}
-
-	stored, err := s.stores.Event.AppendEvent(ctx, event.Event{
-		CampaignID:   campaignID,
-		Timestamp:    s.clock().UTC(),
-		Type:         event.TypeProfileUpdated,
-		RequestID:    grpcmeta.RequestIDFromContext(ctx),
-		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-		ActorType:    actorType,
-		ActorID:      actorID,
-		EntityType:   "character",
-		EntityID:     characterID,
-		PayloadJSON:  profilePayloadJSON,
-	})
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "append event: %v", err)
-	}
-
-	applier := s.stores.Applier()
-	if err := applier.Apply(ctx, stored); err != nil {
-		return nil, status.Errorf(codes.Internal, "apply event: %v", err)
+		return nil, err
 	}
 
 	return &campaignv1.PatchCharacterProfileResponse{

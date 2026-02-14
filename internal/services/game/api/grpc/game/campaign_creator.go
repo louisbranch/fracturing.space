@@ -19,22 +19,22 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-type campaignCreator struct {
+type campaignApplication struct {
 	stores      Stores
 	clock       func() time.Time
 	idGenerator func() (string, error)
 	authClient  authv1.AuthServiceClient
 }
 
-func newCampaignCreator(service *CampaignService) campaignCreator {
-	creator := campaignCreator{stores: service.stores, clock: service.clock, idGenerator: service.idGenerator, authClient: service.authClient}
-	if creator.clock == nil {
-		creator.clock = time.Now
+func newCampaignApplication(service *CampaignService) campaignApplication {
+	app := campaignApplication{stores: service.stores, clock: service.clock, idGenerator: service.idGenerator, authClient: service.authClient}
+	if app.clock == nil {
+		app.clock = time.Now
 	}
-	return creator
+	return app
 }
 
-func (c campaignCreator) create(ctx context.Context, in *campaignv1.CreateCampaignRequest) (campaign.Campaign, participant.Participant, error) {
+func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.CreateCampaignRequest) (campaign.Campaign, participant.Participant, error) {
 	input := campaign.CreateCampaignInput{
 		Name:         in.GetName(),
 		Locale:       in.GetLocale(),
@@ -183,4 +183,174 @@ func (c campaignCreator) create(ctx context.Context, in *campaignv1.CreateCampai
 	}
 
 	return created, ownerParticipant, nil
+}
+
+func (c campaignApplication) EndCampaign(ctx context.Context, campaignID string) (campaign.Campaign, error) {
+	campaignRecord, err := c.stores.Campaign.Get(ctx, campaignID)
+	if err != nil {
+		return campaign.Campaign{}, err
+	}
+
+	if err := ensureNoActiveSession(ctx, c.stores.Session, campaignID); err != nil {
+		return campaign.Campaign{}, err
+	}
+	if _, err := campaign.TransitionCampaignStatus(campaignRecord, campaign.CampaignStatusCompleted, c.clock); err != nil {
+		return campaign.Campaign{}, err
+	}
+
+	payload := event.CampaignUpdatedPayload{
+		Fields: map[string]any{
+			"status": campaignStatusToProto(campaign.CampaignStatusCompleted).String(),
+		},
+	}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		return campaign.Campaign{}, status.Errorf(codes.Internal, "encode payload: %v", err)
+	}
+
+	actorID := grpcmeta.ParticipantIDFromContext(ctx)
+	actorType := event.ActorTypeSystem
+	if actorID != "" {
+		actorType = event.ActorTypeParticipant
+	}
+
+	stored, err := c.stores.Event.AppendEvent(ctx, event.Event{
+		CampaignID:   campaignID,
+		Timestamp:    c.clock().UTC(),
+		Type:         event.TypeCampaignUpdated,
+		RequestID:    grpcmeta.RequestIDFromContext(ctx),
+		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+		ActorType:    actorType,
+		ActorID:      actorID,
+		EntityType:   "campaign",
+		EntityID:     campaignID,
+		PayloadJSON:  payloadJSON,
+	})
+	if err != nil {
+		return campaign.Campaign{}, status.Errorf(codes.Internal, "append event: %v", err)
+	}
+
+	applier := c.stores.Applier()
+	if err := applier.Apply(ctx, stored); err != nil {
+		return campaign.Campaign{}, status.Errorf(codes.Internal, "apply event: %v", err)
+	}
+
+	updated, err := c.stores.Campaign.Get(ctx, campaignID)
+	if err != nil {
+		return campaign.Campaign{}, status.Errorf(codes.Internal, "load campaign: %v", err)
+	}
+
+	return updated, nil
+}
+
+func (c campaignApplication) ArchiveCampaign(ctx context.Context, campaignID string) (campaign.Campaign, error) {
+	campaignRecord, err := c.stores.Campaign.Get(ctx, campaignID)
+	if err != nil {
+		return campaign.Campaign{}, err
+	}
+
+	if err := ensureNoActiveSession(ctx, c.stores.Session, campaignID); err != nil {
+		return campaign.Campaign{}, err
+	}
+	if _, err := campaign.TransitionCampaignStatus(campaignRecord, campaign.CampaignStatusArchived, c.clock); err != nil {
+		return campaign.Campaign{}, err
+	}
+
+	payload := event.CampaignUpdatedPayload{
+		Fields: map[string]any{
+			"status": campaignStatusToProto(campaign.CampaignStatusArchived).String(),
+		},
+	}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		return campaign.Campaign{}, status.Errorf(codes.Internal, "encode payload: %v", err)
+	}
+
+	actorID := grpcmeta.ParticipantIDFromContext(ctx)
+	actorType := event.ActorTypeSystem
+	if actorID != "" {
+		actorType = event.ActorTypeParticipant
+	}
+
+	stored, err := c.stores.Event.AppendEvent(ctx, event.Event{
+		CampaignID:   campaignID,
+		Timestamp:    c.clock().UTC(),
+		Type:         event.TypeCampaignUpdated,
+		RequestID:    grpcmeta.RequestIDFromContext(ctx),
+		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+		ActorType:    actorType,
+		ActorID:      actorID,
+		EntityType:   "campaign",
+		EntityID:     campaignID,
+		PayloadJSON:  payloadJSON,
+	})
+	if err != nil {
+		return campaign.Campaign{}, status.Errorf(codes.Internal, "append event: %v", err)
+	}
+
+	applier := c.stores.Applier()
+	if err := applier.Apply(ctx, stored); err != nil {
+		return campaign.Campaign{}, status.Errorf(codes.Internal, "apply event: %v", err)
+	}
+
+	updated, err := c.stores.Campaign.Get(ctx, campaignID)
+	if err != nil {
+		return campaign.Campaign{}, status.Errorf(codes.Internal, "load campaign: %v", err)
+	}
+
+	return updated, nil
+}
+
+func (c campaignApplication) RestoreCampaign(ctx context.Context, campaignID string) (campaign.Campaign, error) {
+	campaignRecord, err := c.stores.Campaign.Get(ctx, campaignID)
+	if err != nil {
+		return campaign.Campaign{}, err
+	}
+	if _, err := campaign.TransitionCampaignStatus(campaignRecord, campaign.CampaignStatusDraft, c.clock); err != nil {
+		return campaign.Campaign{}, err
+	}
+
+	payload := event.CampaignUpdatedPayload{
+		Fields: map[string]any{
+			"status": campaignStatusToProto(campaign.CampaignStatusDraft).String(),
+		},
+	}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		return campaign.Campaign{}, status.Errorf(codes.Internal, "encode payload: %v", err)
+	}
+
+	actorID := grpcmeta.ParticipantIDFromContext(ctx)
+	actorType := event.ActorTypeSystem
+	if actorID != "" {
+		actorType = event.ActorTypeParticipant
+	}
+
+	stored, err := c.stores.Event.AppendEvent(ctx, event.Event{
+		CampaignID:   campaignID,
+		Timestamp:    c.clock().UTC(),
+		Type:         event.TypeCampaignUpdated,
+		RequestID:    grpcmeta.RequestIDFromContext(ctx),
+		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+		ActorType:    actorType,
+		ActorID:      actorID,
+		EntityType:   "campaign",
+		EntityID:     campaignID,
+		PayloadJSON:  payloadJSON,
+	})
+	if err != nil {
+		return campaign.Campaign{}, status.Errorf(codes.Internal, "append event: %v", err)
+	}
+
+	applier := c.stores.Applier()
+	if err := applier.Apply(ctx, stored); err != nil {
+		return campaign.Campaign{}, status.Errorf(codes.Internal, "apply event: %v", err)
+	}
+
+	updated, err := c.stores.Campaign.Get(ctx, campaignID)
+	if err != nil {
+		return campaign.Campaign{}, status.Errorf(codes.Internal, "load campaign: %v", err)
+	}
+
+	return updated, nil
 }

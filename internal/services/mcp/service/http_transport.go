@@ -17,7 +17,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/caarlos0/env/v11"
+	"github.com/louisbranch/fracturing.space/internal/platform/config"
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -105,7 +105,7 @@ func NewHTTPTransport(addr string) *HTTPTransport {
 		addr = "localhost:8081"
 	}
 	var raw mcpHTTPEnv
-	_ = env.Parse(&raw)
+	_ = config.ParseEnv(&raw)
 	ctx, cancel := context.WithCancel(context.Background())
 	return &HTTPTransport{
 		addr:         addr,

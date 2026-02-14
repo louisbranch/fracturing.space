@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -20,7 +21,10 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 // fakeCampaignStore is a test double for storage.CampaignStore.
@@ -959,6 +963,100 @@ func (s *fakeEventStore) ListEventsPage(_ context.Context, req storage.ListEvent
 		HasPrevPage: hasPrevPage,
 		TotalCount:  len(events),
 	}, nil
+}
+
+type fakeAuthClient struct {
+	user               *authv1.User
+	getUserErr         error
+	lastGetUserRequest *authv1.GetUserRequest
+}
+
+func (f *fakeAuthClient) CreateUser(ctx context.Context, req *authv1.CreateUserRequest, opts ...grpc.CallOption) (*authv1.CreateUserResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
+}
+
+func (f *fakeAuthClient) IssueJoinGrant(ctx context.Context, req *authv1.IssueJoinGrantRequest, opts ...grpc.CallOption) (*authv1.IssueJoinGrantResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
+}
+
+func (f *fakeAuthClient) GetUser(ctx context.Context, req *authv1.GetUserRequest, opts ...grpc.CallOption) (*authv1.GetUserResponse, error) {
+	f.lastGetUserRequest = req
+	if f.getUserErr != nil {
+		return nil, f.getUserErr
+	}
+	return &authv1.GetUserResponse{User: f.user}, nil
+}
+
+func (f *fakeAuthClient) ListUsers(ctx context.Context, req *authv1.ListUsersRequest, opts ...grpc.CallOption) (*authv1.ListUsersResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
+}
+
+func (f *fakeAuthClient) BeginPasskeyRegistration(ctx context.Context, req *authv1.BeginPasskeyRegistrationRequest, opts ...grpc.CallOption) (*authv1.BeginPasskeyRegistrationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
+}
+
+func (f *fakeAuthClient) FinishPasskeyRegistration(ctx context.Context, req *authv1.FinishPasskeyRegistrationRequest, opts ...grpc.CallOption) (*authv1.FinishPasskeyRegistrationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
+}
+
+func (f *fakeAuthClient) BeginPasskeyLogin(ctx context.Context, req *authv1.BeginPasskeyLoginRequest, opts ...grpc.CallOption) (*authv1.BeginPasskeyLoginResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
+}
+
+func (f *fakeAuthClient) FinishPasskeyLogin(ctx context.Context, req *authv1.FinishPasskeyLoginRequest, opts ...grpc.CallOption) (*authv1.FinishPasskeyLoginResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
+}
+
+func (f *fakeAuthClient) GenerateMagicLink(ctx context.Context, req *authv1.GenerateMagicLinkRequest, opts ...grpc.CallOption) (*authv1.GenerateMagicLinkResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
+}
+
+func (f *fakeAuthClient) ConsumeMagicLink(ctx context.Context, req *authv1.ConsumeMagicLinkRequest, opts ...grpc.CallOption) (*authv1.ConsumeMagicLinkResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
+}
+
+func (f *fakeAuthClient) ListUserEmails(ctx context.Context, req *authv1.ListUserEmailsRequest, opts ...grpc.CallOption) (*authv1.ListUserEmailsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
+}
+
+type fakeStatisticsStore struct {
+	lastSince *time.Time
+	stats     storage.GameStatistics
+	err       error
+}
+
+func (f *fakeStatisticsStore) GetGameStatistics(_ context.Context, since *time.Time) (storage.GameStatistics, error) {
+	f.lastSince = since
+	return f.stats, f.err
+}
+
+type fakeCampaignForkStore struct {
+	metadata map[string]storage.ForkMetadata
+	getErr   error
+	setErr   error
+}
+
+func newFakeCampaignForkStore() *fakeCampaignForkStore {
+	return &fakeCampaignForkStore{metadata: make(map[string]storage.ForkMetadata)}
+}
+
+func (s *fakeCampaignForkStore) GetCampaignForkMetadata(_ context.Context, campaignID string) (storage.ForkMetadata, error) {
+	if s.getErr != nil {
+		return storage.ForkMetadata{}, s.getErr
+	}
+	metadata, ok := s.metadata[campaignID]
+	if !ok {
+		return storage.ForkMetadata{}, storage.ErrNotFound
+	}
+	return metadata, nil
+}
+
+func (s *fakeCampaignForkStore) SetCampaignForkMetadata(_ context.Context, campaignID string, metadata storage.ForkMetadata) error {
+	if s.setErr != nil {
+		return s.setErr
+	}
+	s.metadata[campaignID] = metadata
+	return nil
 }
 
 // Test helper functions

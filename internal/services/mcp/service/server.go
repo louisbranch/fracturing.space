@@ -14,6 +14,7 @@ import (
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/branding"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
+	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	"github.com/louisbranch/fracturing.space/internal/services/mcp/conformance"
 	"github.com/louisbranch/fracturing.space/internal/services/mcp/domain"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -59,17 +60,20 @@ type Server struct {
 
 // New creates a configured MCP server that connects to state and game system gRPC services.
 func New(grpcAddr string) (*Server, error) {
-	mcpServer := mcp.NewServer(&mcp.Implementation{Name: serverName, Version: serverVersion}, &mcp.ServerOptions{
-		CompletionHandler:  completionHandler,
-		SubscribeHandler:   resourceSubscribeHandler,
-		UnsubscribeHandler: resourceUnsubscribeHandler,
-	})
-
 	addr := grpcAddress(grpcAddr)
 	conn, err := newGRPCConn(addr)
 	if err != nil {
 		return nil, fmt.Errorf("connect to game server at %s: %w", addr, err)
 	}
+	return newServer(conn), nil
+}
+
+func newServer(conn *grpc.ClientConn) *Server {
+	mcpServer := mcp.NewServer(&mcp.Implementation{Name: serverName, Version: serverVersion}, &mcp.ServerOptions{
+		CompletionHandler:  completionHandler,
+		SubscribeHandler:   resourceSubscribeHandler,
+		UnsubscribeHandler: resourceUnsubscribeHandler,
+	})
 
 	daggerheartClient := daggerheartv1.NewDaggerheartServiceClient(conn)
 	campaignClient := statev1.NewCampaignServiceClient(conn)
@@ -105,7 +109,7 @@ func New(grpcAddr string) (*Server, error) {
 	registerContextResources(mcpServer, server)
 	conformance.Register(mcpServer)
 
-	return server, nil
+	return server
 }
 
 // completionHandler handles completion/complete requests with empty results.
@@ -158,15 +162,13 @@ func runWithHTTPTransport(ctx context.Context, cfg Config) error {
 		httpAddr = "localhost:8081"
 	}
 
-	mcpServer, err := New(cfg.GRPCAddr)
+	addr := grpcAddress(cfg.GRPCAddr)
+	conn, err := dialGameGRPC(ctx, addr)
 	if err != nil {
 		return err
 	}
+	mcpServer := newServer(conn)
 	defer mcpServer.Close()
-
-	if err := mcpServer.waitForHealth(ctx); err != nil {
-		return err
-	}
 
 	// Start gRPC connection health monitoring in background
 	// This ensures we detect connection failures during HTTP server operation
@@ -278,18 +280,41 @@ func (s *Server) serveWithTransport(ctx context.Context, transport mcp.Transport
 
 // runWithTransport creates a server and serves it over the provided transport.
 func runWithTransport(ctx context.Context, grpcAddr string, transport mcp.Transport) error {
-	mcpServer, err := New(grpcAddr)
+	addr := grpcAddress(grpcAddr)
+	conn, err := dialGameGRPC(ctx, addr)
 	if err != nil {
 		return err
 	}
-	if err := mcpServer.waitForHealth(ctx); err != nil {
-		closeErr := mcpServer.Close()
-		if closeErr != nil {
-			return fmt.Errorf("wait for gRPC health: %v; close gRPC connection: %w", err, closeErr)
-		}
-		return err
-	}
+	mcpServer := newServer(conn)
 	return mcpServer.serveWithTransport(ctx, transport)
+}
+
+func dialGameGRPC(ctx context.Context, addr string) (*grpc.ClientConn, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	logf := func(format string, args ...any) {
+		log.Printf("game %s", fmt.Sprintf(format, args...))
+	}
+	conn, err := platformgrpc.DialWithHealth(
+		ctx,
+		nil,
+		addr,
+		timeouts.GRPCDial,
+		logf,
+		platformgrpc.DefaultClientDialOptions()...,
+	)
+	if err != nil {
+		var dialErr *platformgrpc.DialError
+		if errors.As(err, &dialErr) {
+			if dialErr.Stage == platformgrpc.DialStageConnect {
+				return nil, fmt.Errorf("connect to game server at %s: %w", addr, dialErr.Err)
+			}
+			return nil, dialErr.Err
+		}
+		return nil, err
+	}
+	return conn, nil
 }
 
 // newGRPCConn connects to the game server shared by MCP services.

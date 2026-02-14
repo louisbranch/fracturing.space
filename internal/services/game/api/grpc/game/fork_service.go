@@ -8,12 +8,10 @@ import (
 	"time"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
-	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/fork"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/projection"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -54,137 +52,12 @@ func (s *ForkService) ForkCampaign(ctx context.Context, in *campaignv1.ForkCampa
 		return nil, status.Error(codes.InvalidArgument, "source campaign id is required")
 	}
 
-	if in.GetCopyParticipants() && s.stores.Participant == nil {
-		return nil, status.Error(codes.Internal, "participant store is not configured")
-	}
-
-	// Get source campaign
-	sourceCampaign, err := s.stores.Campaign.Get(ctx, sourceCampaignID)
+	newCampaign, lineage, forkEventSeq, err := newForkApplication(s).ForkCampaign(ctx, sourceCampaignID, in)
 	if err != nil {
-		if isNotFound(err) {
-			return nil, status.Error(codes.NotFound, "source campaign not found")
+		if apperrors.GetCode(err) != apperrors.CodeUnknown {
+			return nil, handleDomainError(err)
 		}
-		return nil, status.Errorf(codes.Internal, "get source campaign: %v", err)
-	}
-
-	// Determine fork point
-	forkPoint := forkPointFromProto(in.GetForkPoint())
-	forkEventSeq, err := s.resolveForkPoint(ctx, sourceCampaignID, forkPoint)
-	if err != nil {
 		return nil, err
-	}
-
-	// Get source campaign's fork metadata to determine origin
-	sourceMetadata, err := s.stores.CampaignFork.GetCampaignForkMetadata(ctx, sourceCampaignID)
-	if err != nil && !isNotFound(err) {
-		return nil, status.Errorf(codes.Internal, "get source fork metadata: %v", err)
-	}
-
-	originCampaignID := sourceMetadata.OriginCampaignID
-	if originCampaignID == "" {
-		originCampaignID = sourceCampaignID
-	}
-
-	// Create the fork record
-	f, err := fork.CreateFork(fork.CreateForkInput{
-		SourceCampaignID: sourceCampaignID,
-		ForkPoint:        forkPoint,
-		NewCampaignName:  in.GetNewCampaignName(),
-		CopyParticipants: in.GetCopyParticipants(),
-	}, originCampaignID, forkEventSeq, s.clock, s.idGenerator)
-	if err != nil {
-		return nil, handleDomainError(err)
-	}
-
-	actorID := grpcmeta.ParticipantIDFromContext(ctx)
-	actorType := event.ActorTypeSystem
-	if actorID != "" {
-		actorType = event.ActorTypeParticipant
-	}
-
-	newCampaignName := in.GetNewCampaignName()
-	if newCampaignName == "" {
-		newCampaignName = fmt.Sprintf("%s (Fork)", sourceCampaign.Name)
-	}
-	campaignPayload := event.CampaignCreatedPayload{
-		Name:        newCampaignName,
-		GameSystem:  sourceCampaign.System.String(),
-		GmMode:      gmModeToProto(sourceCampaign.GmMode).String(),
-		ThemePrompt: sourceCampaign.ThemePrompt,
-	}
-	campaignJSON, err := json.Marshal(campaignPayload)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
-	}
-
-	createdEvent, err := s.stores.Event.AppendEvent(ctx, event.Event{
-		CampaignID:   f.NewCampaignID,
-		Timestamp:    s.clock().UTC(),
-		Type:         event.TypeCampaignCreated,
-		RequestID:    grpcmeta.RequestIDFromContext(ctx),
-		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-		ActorType:    actorType,
-		ActorID:      actorID,
-		EntityType:   "campaign",
-		EntityID:     f.NewCampaignID,
-		PayloadJSON:  campaignJSON,
-	})
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "append campaign.created: %v", err)
-	}
-
-	applier := s.stores.Applier()
-	if err := applier.Apply(ctx, createdEvent); err != nil {
-		return nil, status.Errorf(codes.Internal, "apply campaign.created: %v", err)
-	}
-
-	forkPayload := event.CampaignForkedPayload{
-		ParentCampaignID: sourceCampaignID,
-		ForkEventSeq:     forkEventSeq,
-		OriginCampaignID: originCampaignID,
-		CopyParticipants: in.GetCopyParticipants(),
-	}
-	forkJSON, err := json.Marshal(forkPayload)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
-	}
-	storedFork, err := s.stores.Event.AppendEvent(ctx, event.Event{
-		CampaignID:   f.NewCampaignID,
-		Timestamp:    s.clock().UTC(),
-		Type:         event.TypeCampaignForked,
-		RequestID:    grpcmeta.RequestIDFromContext(ctx),
-		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-		ActorType:    actorType,
-		ActorID:      actorID,
-		EntityType:   "campaign",
-		EntityID:     f.NewCampaignID,
-		PayloadJSON:  forkJSON,
-	})
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "append campaign.forked: %v", err)
-	}
-	if err := applier.Apply(ctx, storedFork); err != nil {
-		return nil, status.Errorf(codes.Internal, "apply campaign.forked: %v", err)
-	}
-
-	if _, err := s.copyForkEvents(ctx, sourceCampaignID, f.NewCampaignID, forkEventSeq, in.GetCopyParticipants(), applier); err != nil {
-		return nil, status.Errorf(codes.Internal, "copy events: %v", err)
-	}
-
-	// Calculate depth by walking the parent chain
-	depth := s.calculateDepth(ctx, sourceCampaignID) + 1
-
-	newCampaign, err := s.stores.Campaign.Get(ctx, f.NewCampaignID)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "load forked campaign: %v", err)
-	}
-
-	lineage := &campaignv1.Lineage{
-		CampaignId:       newCampaign.ID,
-		ParentCampaignId: sourceCampaignID,
-		ForkEventSeq:     forkEventSeq,
-		OriginCampaignId: originCampaignID,
-		Depth:            int32(depth),
 	}
 
 	return &campaignv1.ForkCampaignResponse{
@@ -192,53 +65,6 @@ func (s *ForkService) ForkCampaign(ctx context.Context, in *campaignv1.ForkCampa
 		Lineage:      lineage,
 		ForkEventSeq: forkEventSeq,
 	}, nil
-}
-
-func (s *ForkService) copyForkEvents(ctx context.Context, sourceCampaignID, forkCampaignID string, forkEventSeq uint64, copyParticipants bool, applier projection.Applier) (time.Time, error) {
-	if forkEventSeq == 0 {
-		return time.Time{}, nil
-	}
-
-	afterSeq := uint64(0)
-	var lastEventAt time.Time
-	for {
-		events, err := s.stores.Event.ListEvents(ctx, sourceCampaignID, afterSeq, forkEventPageSize)
-		if err != nil {
-			return lastEventAt, fmt.Errorf("list events: %w", err)
-		}
-		if len(events) == 0 {
-			return lastEventAt, nil
-		}
-
-		for _, evt := range events {
-			if evt.Seq > forkEventSeq {
-				return lastEventAt, nil
-			}
-			lastEventAt = evt.Timestamp
-			shouldCopy, err := shouldCopyForkEvent(evt, copyParticipants)
-			if err != nil {
-				return lastEventAt, fmt.Errorf("filter forked event: %w", err)
-			}
-			if !shouldCopy {
-				afterSeq = evt.Seq
-				continue
-			}
-
-			forked := forkEventForCampaign(evt, forkCampaignID)
-			stored, err := s.stores.Event.AppendEvent(ctx, forked)
-			if err != nil {
-				return lastEventAt, fmt.Errorf("append forked event: %w", err)
-			}
-			if err := applier.Apply(ctx, stored); err != nil {
-				return lastEventAt, fmt.Errorf("apply forked event: %w", err)
-			}
-			afterSeq = evt.Seq
-		}
-
-		if len(events) < forkEventPageSize {
-			return lastEventAt, nil
-		}
-	}
 }
 
 func shouldCopyForkEvent(evt event.Event, copyParticipants bool) (bool, error) {
@@ -314,7 +140,7 @@ func (s *ForkService) GetLineage(ctx context.Context, in *campaignv1.GetLineageR
 	// Calculate depth by walking up the chain
 	depth := 0
 	if metadata.ParentCampaignID != "" {
-		depth = s.calculateDepth(ctx, metadata.ParentCampaignID) + 1
+		depth = calculateDepth(ctx, s.stores.CampaignFork, metadata.ParentCampaignID) + 1
 	}
 
 	originID := metadata.OriginCampaignID
@@ -349,80 +175,13 @@ func (s *ForkService) ListForks(ctx context.Context, in *campaignv1.ListForksReq
 	return nil, status.Error(codes.Unimplemented, "list forks not yet implemented")
 }
 
-// resolveForkPoint determines the actual event sequence for a fork point.
-func (s *ForkService) resolveForkPoint(ctx context.Context, campaignID string, forkPoint fork.ForkPoint) (uint64, error) {
-	if forkPoint.IsSessionBoundary() {
-		if s.stores.Session == nil {
-			return 0, status.Error(codes.Internal, "session store is not configured")
-		}
-		sessionID := strings.TrimSpace(forkPoint.SessionID)
-		if sessionID == "" {
-			return 0, status.Error(codes.InvalidArgument, "session id is required for session-based fork points")
-		}
-		sess, err := s.stores.Session.GetSession(ctx, campaignID, sessionID)
-		if err != nil {
-			if isNotFound(err) {
-				return 0, status.Error(codes.NotFound, "session not found")
-			}
-			return 0, status.Errorf(codes.Internal, "get session: %v", err)
-		}
-		if sess.Status != session.SessionStatusEnded {
-			return 0, status.Error(codes.FailedPrecondition, "session has not ended")
-		}
-
-		lastSeq := uint64(0)
-		afterSeq := uint64(0)
-		for {
-			events, err := s.stores.Event.ListEventsBySession(ctx, campaignID, sessionID, afterSeq, forkEventPageSize)
-			if err != nil {
-				return 0, status.Errorf(codes.Internal, "list session events: %v", err)
-			}
-			if len(events) == 0 {
-				if lastSeq == 0 {
-					return 0, status.Error(codes.FailedPrecondition, "session has no events to fork at")
-				}
-				return lastSeq, nil
-			}
-			for _, evt := range events {
-				lastSeq = evt.Seq
-				afterSeq = evt.Seq
-			}
-			if len(events) < forkEventPageSize {
-				return lastSeq, nil
-			}
-		}
-	}
-
-	// If event seq is 0, use the latest event
-	if forkPoint.EventSeq == 0 {
-		latestSeq, err := s.stores.Event.GetLatestEventSeq(ctx, campaignID)
-		if err != nil {
-			return 0, status.Errorf(codes.Internal, "get latest event seq: %v", err)
-		}
-		// If no events exist, fork at seq 0 (start of campaign)
-		return latestSeq, nil
-	}
-
-	// Validate that the requested event seq exists
-	latestSeq, err := s.stores.Event.GetLatestEventSeq(ctx, campaignID)
-	if err != nil {
-		return 0, status.Errorf(codes.Internal, "get latest event seq: %v", err)
-	}
-
-	if forkPoint.EventSeq > latestSeq {
-		return 0, status.Error(codes.FailedPrecondition, "fork point is beyond current campaign state")
-	}
-
-	return forkPoint.EventSeq, nil
-}
-
 // calculateDepth calculates the fork depth by walking up the parent chain.
-func (s *ForkService) calculateDepth(ctx context.Context, campaignID string) int {
+func calculateDepth(ctx context.Context, store storage.CampaignForkStore, campaignID string) int {
 	depth := 0
 	currentID := campaignID
 
 	for i := 0; i < 100; i++ { // Limit to prevent infinite loops
-		metadata, err := s.stores.CampaignFork.GetCampaignForkMetadata(ctx, currentID)
+		metadata, err := store.GetCampaignForkMetadata(ctx, currentID)
 		if err != nil || metadata.ParentCampaignID == "" {
 			break
 		}

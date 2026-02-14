@@ -531,35 +531,6 @@ func TestForkCampaign_SessionBoundaryForkPoint(t *testing.T) {
 	}
 }
 
-type fakeCampaignForkStore struct {
-	metadata map[string]storage.ForkMetadata
-	getErr   error
-	setErr   error
-}
-
-func newFakeCampaignForkStore() *fakeCampaignForkStore {
-	return &fakeCampaignForkStore{metadata: make(map[string]storage.ForkMetadata)}
-}
-
-func (s *fakeCampaignForkStore) GetCampaignForkMetadata(_ context.Context, campaignID string) (storage.ForkMetadata, error) {
-	if s.getErr != nil {
-		return storage.ForkMetadata{}, s.getErr
-	}
-	metadata, ok := s.metadata[campaignID]
-	if !ok {
-		return storage.ForkMetadata{}, storage.ErrNotFound
-	}
-	return metadata, nil
-}
-
-func (s *fakeCampaignForkStore) SetCampaignForkMetadata(_ context.Context, campaignID string, metadata storage.ForkMetadata) error {
-	if s.setErr != nil {
-		return s.setErr
-	}
-	s.metadata[campaignID] = metadata
-	return nil
-}
-
 func TestShouldCopyForkEvent(t *testing.T) {
 	tests := []struct {
 		name             string

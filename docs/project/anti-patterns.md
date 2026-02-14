@@ -139,3 +139,27 @@ application-layer factories that validate and centralize payload mapping.
 `character.profile_updated` can be emitted even when the payload matches the
 current projection state. This makes timelines noisy and complicates change
 summaries. Consider guarding against no-op updates in the game service layer.
+
+### 19. Silent env parsing failures
+
+Multiple server bootstraps ignore `env.Parse` errors (for example auth/game/admin).
+This can mask misconfiguration and make failures non-obvious. Surface parse
+errors early and fail fast.
+
+### 20. Monolithic server constructors
+
+Service constructors mix config loading, IO, dependency wiring, and runtime
+startup logic in a single function. This makes unit testing difficult and
+encourages global side effects. Split config, wiring, and runtime concerns.
+
+### 21. Duplicated gRPC dial and health check logic
+
+Admin, game, and MCP each implement custom gRPC dial, health checks, and retry
+loops. This duplication increases drift and inconsistent behavior. Centralize
+in a shared platform helper with test seams.
+
+### 22. Oversized transport mappers
+
+`internal/services/game/api/grpc/game/helpers.go` is a large conversion hub that
+mixes multiple domains, making changes risky and hard to test. Split by domain
+and keep conversions close to their types.

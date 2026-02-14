@@ -12,9 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/caarlos0/env/v11"
-
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
+	"github.com/louisbranch/fracturing.space/internal/platform/config"
 	authservice "github.com/louisbranch/fracturing.space/internal/services/auth/api/grpc/auth"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/oauth"
 	authsqlite "github.com/louisbranch/fracturing.space/internal/services/auth/storage/sqlite"
@@ -32,7 +31,7 @@ type authServerEnv struct {
 
 func loadAuthServerEnv() authServerEnv {
 	var cfg authServerEnv
-	_ = env.Parse(&cfg)
+	_ = config.ParseEnv(&cfg)
 	if cfg.DBPath == "" {
 		cfg.DBPath = filepath.Join("data", "auth.db")
 	}
