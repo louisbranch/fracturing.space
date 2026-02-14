@@ -1,3 +1,9 @@
+---
+title: "Testing policy"
+parent: "Project"
+nav_order: 7
+---
+
 # Test-Driven Development Policy
 
 ## Intent

@@ -1,3 +1,9 @@
+---
+title: "Event replay"
+parent: "Project"
+nav_order: 4
+---
+
 # Event Replay and Snapshots
 
 This guide explains how the event journal, projections, and snapshots work

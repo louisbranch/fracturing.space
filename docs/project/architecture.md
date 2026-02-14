@@ -1,3 +1,9 @@
+---
+title: "Architecture"
+parent: "Project"
+nav_order: 2
+---
+
 # Architecture
 
 ## Overview

@@ -1,18 +1,17 @@
-remote_theme: jekyll/minima
+title: "Fracturing.Space Docs"
+description: "Developer documentation for the Fracturing.Space project"
+
+remote_theme: just-the-docs/just-the-docs
+color_scheme: dark
+search_enabled: true
+nav_sort: case_insensitive
+back_to_top: true
+back_to_top_text: "Back to top"
+aux_links_new_tab: true
+
+aux_links:
+  "GitHub repo": "https://github.com/louisbranch/fracturing.space"
+  "Issue tracker": "https://github.com/louisbranch/fracturing.space/issues"
 
 plugins:
   - jekyll-remote-theme
-
-minima:
-  skin: auto
-
-header_pages:
-  - index.md
-  - running/getting-started.md
-  - running/configuration.md
-  - project/architecture.md
-  - reference/mcp.md
-
-titles_from_headings:
-  enabled: true
-  strip_title: true

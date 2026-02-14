@@ -1,3 +1,9 @@
+---
+title: "Integration tests"
+parent: "Running"
+nav_order: 7
+---
+
 # Integration Tests
 
 ## Overview
