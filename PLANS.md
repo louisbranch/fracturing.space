@@ -39,6 +39,12 @@ ExecPlans live in the `.ai/plans/` directory and must remain in sync with this g
 - Artifacts and Notes
 - Interfaces and Dependencies
 
+## TDD evidence requirement
+
+When work changes behavior, the ExecPlan must include explicit Red/Green/Refactor evidence in `Progress` entries. Each entry should name the test file and the exact command run, plus a short failure/passing summary.
+
+Include a brief testability-first note in the plan (for example: which fakes/seams will simulate error paths) so error handling is designed before implementation.
+
 ## Guidance
 
 - Be explicit: name files, modules, functions, and commands precisely.

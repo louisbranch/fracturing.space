@@ -33,6 +33,29 @@ Single source of agent directives and project context.
 - **Non-regression**: Keep coverage from regressing versus the current baseline; CI enforces non-regression.
 - **Generated code**: When introducing new generated outputs, update `COVER_EXCLUDE_REGEX` in `Makefile` so coverage reflects hand-written code.
 
+### TDD Gate (Strict)
+
+- **No production code edits before Red**: Do not modify non-test, non-docs files until a failing test exists and is reported.
+- **Required response sequence**: State the Red intent, write the test, run it, report the failure, then implement, re-run, report passing, and only then refactor.
+- **Evidence required**: Always name the test file and the exact command used for the failing run.
+- **Refuse test-last requests**: If asked to implement without tests, refuse and propose the smallest failing test first.
+- **Exception path (rare)**: If a test is truly impossible, stop and ask for guidance. Include: (1) why it is impossible, (2) attempted testability approaches (fakes, DI, seams), (3) a proposal to add a testability seam first.
+- **Testability-first expectation**: Use existing fakes (for example `fakeStorage`) to simulate error paths; do not claim errors are hard to reproduce without checking available fakes.
+
+### TDD Example (Required Response Shape)
+
+Example response for a behavior change:
+
+"Red intent: add a test for <behavior> in <test file>. I will run `<test command>` and expect it to fail."
+
+"Red evidence: `<test command>` failed in <test file> with <short failure message>."
+
+"Green: implement the minimum code to satisfy the test."
+
+"Green evidence: `<test command>` now passes."
+
+"Refactor: optional, no behavior change."
+
 ## Planning sessions
 
 - Create `.ai/plans/<topic>.md` before modifying any other files.

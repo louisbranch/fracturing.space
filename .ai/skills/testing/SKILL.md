@@ -14,6 +14,14 @@ Test-driven development and coverage guardrails for this project.
 - **Green**: Implement the minimum code required to pass the test.
 - **Refactor**: Improve structure and clarity while keeping tests green.
 
+## TDD Gate (Strict)
+
+- No production code edits before a failing test exists and is reported.
+- Required sequence: state Red intent, write test, run and report failure, implement, re-run and report pass, then refactor.
+- Always name the test file and exact failing command.
+- If a test is truly impossible, stop and ask for guidance with: why it is impossible, attempted testability approaches, and a proposal for a testability seam.
+- Use existing fakes (for example `fakeStorage`) for error paths; do not claim errors are hard to reproduce without checking available fakes.
+
 ## Coverage Guardrails
 
 - Treat coverage as a regression signal, not a goal.
