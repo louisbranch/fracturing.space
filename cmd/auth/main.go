@@ -6,34 +6,24 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 
-	server "github.com/louisbranch/fracturing.space/internal/services/auth/app"
-)
-
-var (
-	port     = flag.Int("port", 8083, "The auth gRPC server port")
-	httpAddr = flag.String("http-addr", envOrDefault([]string{"FRACTURING_SPACE_AUTH_HTTP_ADDR"}, "localhost:8084"), "The auth HTTP server address")
+	authcmd "github.com/louisbranch/fracturing.space/internal/cmd/auth"
 )
 
 func main() {
-	flag.Parse()
+	cfg, err := authcmd.ParseConfig(flag.CommandLine, os.Args[1:], func(key string) (string, bool) {
+		value, ok := os.LookupEnv(key)
+		return value, ok
+	})
+	if err != nil {
+		log.Fatalf("parse flags: %v", err)
+	}
 	log.SetPrefix("[AUTH] ")
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	if err := server.Run(ctx, *port, *httpAddr); err != nil {
+	if err := authcmd.Run(ctx, cfg); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
-}
-
-func envOrDefault(keys []string, fallback string) string {
-	for _, key := range keys {
-		value := strings.TrimSpace(os.Getenv(key))
-		if value != "" {
-			return value
-		}
-	}
-	return fallback
 }

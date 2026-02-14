@@ -6,6 +6,7 @@ import (
 	"time"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 )
 
 func TestCreateCampaignDefaults(t *testing.T) {
@@ -260,5 +261,58 @@ func TestTransitionCampaignStatusDisallowed(t *testing.T) {
 				t.Fatalf("expected ErrInvalidCampaignStatusTransition, got %v", err)
 			}
 		})
+	}
+}
+
+func TestTransitionCampaignStatusDisallowedMetadata(t *testing.T) {
+	campaign := Campaign{ID: "camp-1", Status: CampaignStatusDraft}
+
+	_, err := TransitionCampaignStatus(campaign, CampaignStatusArchived, func() time.Time { return time.Now().UTC() })
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	var domainErr *apperrors.Error
+	if !errors.As(err, &domainErr) {
+		t.Fatalf("expected domain error, got %T", err)
+	}
+	if domainErr.Code != apperrors.CodeCampaignInvalidStatusTransition {
+		t.Fatalf("expected code %s, got %s", apperrors.CodeCampaignInvalidStatusTransition, domainErr.Code)
+	}
+	if domainErr.Metadata["FromStatus"] != "DRAFT" {
+		t.Fatalf("expected FromStatus DRAFT, got %s", domainErr.Metadata["FromStatus"])
+	}
+	if domainErr.Metadata["ToStatus"] != "ARCHIVED" {
+		t.Fatalf("expected ToStatus ARCHIVED, got %s", domainErr.Metadata["ToStatus"])
+	}
+}
+
+func TestTransitionCampaignStatusPreservesExistingTimestamps(t *testing.T) {
+	baseTime := time.Date(2026, 2, 1, 9, 0, 0, 0, time.UTC)
+	completedAt := baseTime.Add(30 * time.Minute)
+	archivedAt := baseTime.Add(90 * time.Minute)
+	updatedAt := baseTime.Add(2 * time.Hour)
+
+	campaign := Campaign{
+		ID:          "camp-1",
+		Status:      CampaignStatusActive,
+		CreatedAt:   baseTime,
+		UpdatedAt:   baseTime,
+		CompletedAt: &completedAt,
+		ArchivedAt:  &archivedAt,
+	}
+
+	updated, err := TransitionCampaignStatus(campaign, CampaignStatusCompleted, func() time.Time { return updatedAt })
+	if err != nil {
+		t.Fatalf("transition: %v", err)
+	}
+	if updated.CompletedAt == nil || !updated.CompletedAt.Equal(completedAt) {
+		t.Fatalf("expected completed_at preserved, got %v", updated.CompletedAt)
+	}
+	if updated.ArchivedAt == nil || !updated.ArchivedAt.Equal(archivedAt) {
+		t.Fatalf("expected archived_at preserved, got %v", updated.ArchivedAt)
+	}
+	if !updated.UpdatedAt.Equal(updatedAt) {
+		t.Fatalf("expected updated_at %v, got %v", updatedAt, updated.UpdatedAt)
 	}
 }

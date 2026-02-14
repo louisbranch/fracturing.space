@@ -1,30 +1,21 @@
 package main
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"flag"
 	"fmt"
-	"log"
 	"os"
+
+	"github.com/louisbranch/fracturing.space/internal/tools/hmackey"
 )
 
 func main() {
-	var bytes int
-	flag.IntVar(&bytes, "bytes", 32, "number of random bytes (default: 32)")
-	flag.Parse()
-	log.SetPrefix("[HMAC-KEY] ")
-
-	if bytes <= 0 {
-		fmt.Fprintln(os.Stderr, "bytes must be greater than zero")
+	cfg, err := hmackey.ParseConfig(flag.CommandLine, os.Args[1:])
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "parse flags: %v\n", err)
 		os.Exit(1)
 	}
-
-	buf := make([]byte, bytes)
-	if _, err := rand.Read(buf); err != nil {
-		fmt.Fprintf(os.Stderr, "generate random bytes: %v\n", err)
+	if err := hmackey.Run(cfg, os.Stdout, nil); err != nil {
+		fmt.Fprintf(os.Stderr, "generate key: %v\n", err)
 		os.Exit(1)
 	}
-
-	fmt.Println(hex.EncodeToString(buf))
 }

@@ -2,7 +2,9 @@ package grpc
 
 import (
 	"context"
+	"fmt"
 	"net"
+	"strings"
 	"testing"
 	"time"
 
@@ -24,6 +26,54 @@ func TestWaitForHealthServing(t *testing.T) {
 
 	if err := WaitForHealth(ctx, conn, "", nil); err != nil {
 		t.Fatalf("wait for health: %v", err)
+	}
+}
+
+func TestWaitForHealthNilConn(t *testing.T) {
+	err := WaitForHealth(context.Background(), nil, "", nil)
+	if err == nil {
+		t.Fatal("expected error for nil connection")
+	}
+	if !strings.Contains(err.Error(), "gRPC connection is not configured") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestWaitForHealthNilContext(t *testing.T) {
+	addr, _, stop := startHealthServer(t, grpc_health_v1.HealthCheckResponse_SERVING)
+	defer stop()
+
+	conn := dialHealthServer(t, addr)
+	defer conn.Close()
+
+	if err := WaitForHealth(nil, conn, "", nil); err != nil {
+		t.Fatalf("wait for health with nil context: %v", err)
+	}
+}
+
+func TestWaitForHealthLogsServing(t *testing.T) {
+	addr, _, stop := startHealthServer(t, grpc_health_v1.HealthCheckResponse_SERVING)
+	defer stop()
+
+	conn := dialHealthServer(t, addr)
+	defer conn.Close()
+
+	var logs []string
+	logf := func(format string, args ...any) {
+		logs = append(logs, fmt.Sprintf(format, args...))
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	if err := WaitForHealth(ctx, conn, "", logf); err != nil {
+		t.Fatalf("wait for health: %v", err)
+	}
+	if len(logs) == 0 {
+		t.Fatal("expected log entries")
+	}
+	if !strings.Contains(logs[len(logs)-1], "SERVING") {
+		t.Fatalf("expected SERVING log, got %q", logs[len(logs)-1])
 	}
 }
 

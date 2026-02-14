@@ -1,6 +1,11 @@
 package campaign
 
-import "testing"
+import (
+	"errors"
+	"testing"
+
+	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
+)
 
 func TestValidateCampaignOperation(t *testing.T) {
 	tests := []struct {
@@ -38,5 +43,58 @@ func TestValidateCampaignOperation(t *testing.T) {
 				t.Fatal("expected error")
 			}
 		})
+	}
+}
+
+func TestValidateCampaignOperationMetadata(t *testing.T) {
+	err := ValidateCampaignOperation(CampaignStatusDraft, CampaignOpArchive)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	var domainErr *apperrors.Error
+	if !errors.As(err, &domainErr) {
+		t.Fatalf("expected domain error, got %T", err)
+	}
+	if domainErr.Code != apperrors.CodeCampaignStatusDisallowsOp {
+		t.Fatalf("expected code %s, got %s", apperrors.CodeCampaignStatusDisallowsOp, domainErr.Code)
+	}
+	if domainErr.Metadata["Status"] != "DRAFT" {
+		t.Fatalf("expected status metadata DRAFT, got %s", domainErr.Metadata["Status"])
+	}
+	if domainErr.Metadata["Operation"] != "ARCHIVE" {
+		t.Fatalf("expected operation metadata ARCHIVE, got %s", domainErr.Metadata["Operation"])
+	}
+}
+
+func TestCampaignLabelsFallback(t *testing.T) {
+	if campaignStatusLabel(CampaignStatusUnspecified) != "UNSPECIFIED" {
+		t.Fatal("expected unspecified status label")
+	}
+	if campaignOperationLabel(CampaignOpUnspecified) != "UNSPECIFIED" {
+		t.Fatal("expected unspecified operation label")
+	}
+}
+
+func TestValidateCampaignOperation_UnspecifiedOp(t *testing.T) {
+	if err := ValidateCampaignOperation(CampaignStatusDraft, CampaignOpUnspecified); err == nil {
+		t.Fatal("expected error for unspecified operation")
+	}
+}
+
+func TestCampaignOperationLabels(t *testing.T) {
+	labels := map[CampaignOperation]string{
+		CampaignOpRead:           "READ",
+		CampaignOpSessionStart:   "SESSION_START",
+		CampaignOpSessionAction:  "SESSION_ACTION",
+		CampaignOpCampaignMutate: "CAMPAIGN_MUTATE",
+		CampaignOpEnd:            "END",
+		CampaignOpArchive:        "ARCHIVE",
+		CampaignOpRestore:        "RESTORE",
+	}
+	for op, label := range labels {
+		if got := campaignOperationLabel(op); got != label {
+			t.Fatalf("label for %v = %q, want %q", op, got, label)
+		}
 	}
 }

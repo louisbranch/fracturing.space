@@ -276,6 +276,16 @@ func TestServeReturnsErrorOnClosedListener(t *testing.T) {
 	}
 }
 
+func TestRunWithAddrInvalid(t *testing.T) {
+	setTempDBPath(t)
+	stopAuth := startAuthServer(t)
+	defer stopAuth()
+
+	if err := RunWithAddr(context.Background(), "invalid::addr"); err == nil {
+		t.Fatal("expected error for invalid address")
+	}
+}
+
 func normalizeAddress(t *testing.T, addr string) string {
 	t.Helper()
 

@@ -3,6 +3,7 @@
 // Package integration includes blackbox MCP transport tests that validate the public
 // request/response surface for campaign setup, session context, and action rolls.
 // They serve as a baseline for transport-focused suites (HTTP and stdio).
+
 package integration
 
 import (

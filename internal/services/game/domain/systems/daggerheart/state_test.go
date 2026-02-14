@@ -379,3 +379,100 @@ func TestStateFactory(t *testing.T) {
 		}
 	})
 }
+
+func TestCharacterState_SettersClamp(t *testing.T) {
+	state := NewCharacterState(CharacterStateConfig{
+		CampaignID:  "camp-1",
+		CharacterID: "char-1",
+		HP:          6,
+		HPMax:       6,
+		Hope:        4,
+		HopeMax:     6,
+		Stress:      2,
+		StressMax:   6,
+		Armor:       1,
+		ArmorMax:    2,
+	})
+
+	state.SetHope(10)
+	if state.Hope() != 6 {
+		t.Fatalf("Hope = %d, want %d", state.Hope(), 6)
+	}
+	state.SetHopeMax(3)
+	if state.HopeMax() != 3 {
+		t.Fatalf("HopeMax = %d, want %d", state.HopeMax(), 3)
+	}
+	if state.Hope() != 3 {
+		t.Fatalf("Hope after max clamp = %d, want %d", state.Hope(), 3)
+	}
+
+	state.SetStress(20)
+	if state.Stress() != 6 {
+		t.Fatalf("Stress = %d, want %d", state.Stress(), 6)
+	}
+
+	state.SetArmor(10)
+	if state.Armor() != 2 {
+		t.Fatalf("Armor = %d, want %d", state.Armor(), 2)
+	}
+}
+
+func TestCharacterState_ArmorResource(t *testing.T) {
+	state := NewCharacterState(CharacterStateConfig{
+		CampaignID:  "camp-1",
+		CharacterID: "char-1",
+		HP:          6,
+		HPMax:       6,
+		Hope:        2,
+		HopeMax:     6,
+		Stress:      0,
+		StressMax:   6,
+		Armor:       1,
+		ArmorMax:    2,
+	})
+
+	before, after, err := state.GainResource(ResourceArmor, 5)
+	if err != nil {
+		t.Fatalf("GainResource(armor): %v", err)
+	}
+	if before != 1 || after != 2 {
+		t.Fatalf("GainResource(armor) = %d -> %d, want 1 -> 2", before, after)
+	}
+
+	before, after, err = state.SpendResource(ResourceArmor, 1)
+	if err != nil {
+		t.Fatalf("SpendResource(armor): %v", err)
+	}
+	if before != 2 || after != 1 {
+		t.Fatalf("SpendResource(armor) = %d -> %d, want 2 -> 1", before, after)
+	}
+
+	_, _, err = state.SpendResource(ResourceArmor, 10)
+	if err == nil {
+		t.Fatal("expected insufficient armor error")
+	}
+}
+
+func TestSnapshotState_SettersClamp(t *testing.T) {
+	ss := NewSnapshotState(SnapshotStateConfig{CampaignID: "camp-1", GMFear: 1})
+
+	ss.SetGMFear(20)
+	if ss.GMFear() != GMFearMax {
+		t.Fatalf("GMFear = %d, want %d", ss.GMFear(), GMFearMax)
+	}
+	ss.SetGMFear(-1)
+	if ss.GMFear() != GMFearMin {
+		t.Fatalf("GMFear = %d, want %d", ss.GMFear(), GMFearMin)
+	}
+
+	ss.SetShortRests(-5)
+	if ss.ShortRests() != 0 {
+		t.Fatalf("ShortRests = %d, want 0", ss.ShortRests())
+	}
+}
+
+func TestClampMinGreaterThanMax(t *testing.T) {
+	if got := clamp(5, 10, 1); got != 10 {
+		t.Fatalf("clamp() = %d, want %d", got, 10)
+	}
+}

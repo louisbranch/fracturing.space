@@ -238,6 +238,62 @@ func TestIsCode(t *testing.T) {
 	}
 }
 
+func TestWrapWithMetadata(t *testing.T) {
+	cause := errors.New("boom")
+	metadata := map[string]string{"resource": "campaign"}
+	err := apperrors.WrapWithMetadata(apperrors.CodeNotFound, "missing", metadata, cause)
+
+	if err.Code != apperrors.CodeNotFound {
+		t.Fatalf("Code = %v, want %v", err.Code, apperrors.CodeNotFound)
+	}
+	if err.Message != "missing" {
+		t.Fatalf("Message = %v, want %v", err.Message, "missing")
+	}
+	if err.Metadata["resource"] != "campaign" {
+		t.Fatalf("Metadata[resource] = %v, want %v", err.Metadata["resource"], "campaign")
+	}
+	if err.Cause != cause {
+		t.Fatalf("Cause = %v, want %v", err.Cause, cause)
+	}
+	if errors.Unwrap(err) != cause {
+		t.Fatalf("Unwrap() = %v, want %v", errors.Unwrap(err), cause)
+	}
+}
+
+func TestGetMetadata(t *testing.T) {
+	metadata := map[string]string{"key": "value"}
+	err := apperrors.WithMetadata(apperrors.CodeCampaignInvalidStatusTransition, "msg", metadata)
+
+	got := apperrors.GetMetadata(err)
+	if got["key"] != "value" {
+		t.Fatalf("GetMetadata()[key] = %v, want %v", got["key"], "value")
+	}
+
+	if got := apperrors.GetMetadata(errors.New("nope")); got != nil {
+		t.Fatalf("GetMetadata() = %v, want nil", got)
+	}
+}
+
+func TestHandleErrorDefaultLocale(t *testing.T) {
+	err := apperrors.New(apperrors.CodeCampaignNameEmpty, "internal")
+	grpcErr := apperrors.HandleError(err, "")
+
+	st := status.Convert(grpcErr)
+	var localized *errdetails.LocalizedMessage
+	for _, detail := range st.Details() {
+		if msg, ok := detail.(*errdetails.LocalizedMessage); ok {
+			localized = msg
+			break
+		}
+	}
+	if localized == nil {
+		t.Fatal("expected LocalizedMessage detail")
+	}
+	if localized.Locale != apperrors.DefaultLocale {
+		t.Fatalf("LocalizedMessage.Locale = %v, want %v", localized.Locale, apperrors.DefaultLocale)
+	}
+}
+
 func TestI18nCatalogFormat(t *testing.T) {
 	catalog := i18n.GetCatalog("en-US")
 
