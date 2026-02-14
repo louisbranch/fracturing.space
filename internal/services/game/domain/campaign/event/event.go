@@ -14,8 +14,6 @@ const (
 	TypeCampaignCreated Type = "campaign.created"
 	// TypeCampaignForked records the forking of a campaign.
 	TypeCampaignForked Type = "campaign.forked"
-	// TypeCampaignStatusChanged records a campaign status transition.
-	TypeCampaignStatusChanged Type = "campaign.status_changed"
 	// TypeCampaignUpdated records updates to campaign metadata.
 	TypeCampaignUpdated Type = "campaign.updated"
 )
@@ -44,6 +42,8 @@ const (
 	TypeInviteClaimed Type = "invite.claimed"
 	// TypeInviteRevoked records an invite being revoked.
 	TypeInviteRevoked Type = "invite.revoked"
+	// TypeInviteUpdated records updates to an invite.
+	TypeInviteUpdated Type = "invite.updated"
 )
 
 // Character events.
@@ -56,18 +56,6 @@ const (
 	TypeCharacterUpdated Type = "character.updated"
 	// TypeProfileUpdated records updates to a character profile.
 	TypeProfileUpdated Type = "character.profile_updated"
-	// TypeControllerAssigned records a controller assignment change.
-	TypeControllerAssigned Type = "character.controller_assigned"
-)
-
-// Snapshot events (materialized projection updates).
-// FIXME: Replace snapshot.* event types with system-specific events; snapshots
-// should remain derived caches of the event journal, not a separate event domain.
-const (
-	// TypeCharacterStateChanged records a character state change.
-	TypeCharacterStateChanged Type = "snapshot.character_state_changed"
-	// TypeGMFearChanged records a GM fear value change.
-	TypeGMFearChanged Type = "snapshot.gm_fear_changed"
 )
 
 // Session events.
@@ -143,6 +131,10 @@ type Event struct {
 	EntityType string
 	// EntityID is the ID of the entity affected.
 	EntityID string
+	// SystemID identifies the game system for this event (optional for core-only events).
+	SystemID string
+	// SystemVersion identifies the system ruleset version (optional for core-only events).
+	SystemVersion string
 	// PayloadJSON holds event-specific data as JSON.
 	PayloadJSON []byte
 }

@@ -28,7 +28,7 @@ func ReplaySnapshot(ctx context.Context, eventStore storage.EventStore, applier 
 	return ReplayCampaignWith(ctx, eventStore, applier, campaignID, ReplayOptions{
 		UntilSeq: untilSeq,
 		Filter: func(evt event.Event) bool {
-			return evt.Type == event.TypeCharacterStateChanged || evt.Type == event.TypeGMFearChanged
+			return strings.TrimSpace(evt.SystemID) != ""
 		},
 	})
 }

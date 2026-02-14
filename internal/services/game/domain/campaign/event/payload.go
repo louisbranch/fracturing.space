@@ -16,12 +16,6 @@ type CampaignForkedPayload struct {
 	CopyParticipants bool   `json:"copy_participants"`
 }
 
-// CampaignStatusChangedPayload captures the payload for campaign.status_changed events.
-type CampaignStatusChangedPayload struct {
-	FromStatus string `json:"from_status"`
-	ToStatus   string `json:"to_status"`
-}
-
 // CampaignUpdatedPayload captures the payload for campaign.updated events.
 type CampaignUpdatedPayload struct {
 	Fields map[string]any `json:"fields"`
@@ -93,35 +87,8 @@ type CharacterUpdatedPayload struct {
 // ProfileUpdatedPayload captures the payload for character.profile_updated events.
 type ProfileUpdatedPayload struct {
 	CharacterID string `json:"character_id"`
-	// Core profile fields
-	HpMax *int `json:"hp_max,omitempty"`
 	// SystemProfile holds game-system-specific profile updates.
 	SystemProfile map[string]any `json:"system_profile,omitempty"`
-}
-
-// ControllerAssignedPayload captures the payload for character.controller_assigned events.
-type ControllerAssignedPayload struct {
-	CharacterID string `json:"character_id"`
-	// ParticipantID is set if a specific participant controls the character.
-	// Empty means unassigned.
-	ParticipantID string `json:"participant_id"`
-}
-
-// CharacterStateChangedPayload captures the payload for character state change events.
-type CharacterStateChangedPayload struct {
-	CharacterID string `json:"character_id"`
-	// Core state fields (before/after for audit)
-	HpBefore *int `json:"hp_before,omitempty"`
-	HpAfter  *int `json:"hp_after,omitempty"`
-	// SystemState holds game-system-specific state changes.
-	SystemState map[string]any `json:"system_state,omitempty"`
-}
-
-// GMFearChangedPayload captures the payload for GM fear change events.
-type GMFearChangedPayload struct {
-	Before int    `json:"before"`
-	After  int    `json:"after"`
-	Reason string `json:"reason,omitempty"`
 }
 
 // SessionStartedPayload captures the payload for session.started events.
@@ -133,6 +100,20 @@ type SessionStartedPayload struct {
 // SessionEndedPayload captures the payload for session.ended events.
 type SessionEndedPayload struct {
 	SessionID string `json:"session_id"`
+}
+
+// InviteCreatedPayload captures the payload for invite.created events.
+type InviteCreatedPayload struct {
+	InviteID               string `json:"invite_id"`
+	ParticipantID          string `json:"participant_id"`
+	Status                 string `json:"status"`
+	CreatedByParticipantID string `json:"created_by_participant_id,omitempty"`
+}
+
+// InviteUpdatedPayload captures the payload for invite.updated events.
+type InviteUpdatedPayload struct {
+	InviteID string `json:"invite_id"`
+	Status   string `json:"status"`
 }
 
 // RollResolvedPayload captures the payload for action.roll_resolved events.
@@ -176,14 +157,6 @@ type OutcomeRejectedPayload struct {
 type NoteAddedPayload struct {
 	Content     string `json:"content"`
 	CharacterID string `json:"character_id,omitempty"`
-}
-
-// InviteCreatedPayload captures the payload for invite.created events.
-type InviteCreatedPayload struct {
-	InviteID               string `json:"invite_id"`
-	ParticipantID          string `json:"participant_id"`
-	Status                 string `json:"status"`
-	CreatedByParticipantID string `json:"created_by_participant_id,omitempty"`
 }
 
 // InviteClaimedPayload captures the payload for invite.claimed events.

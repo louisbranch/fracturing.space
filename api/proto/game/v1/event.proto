@@ -29,7 +29,7 @@ message ListEventsRequest {
   string order_by = 4;
 
   // AIP-160 filter expression.
-  // Filterable fields: session_id, type, actor_type, actor_id, entity_type, entity_id, ts.
+  // Filterable fields: session_id, type, system_id, system_version, actor_type, actor_id, entity_type, entity_id, ts.
   // Examples:
   //   session_id = "sess_123"
   //   type = "action.roll_resolved"
@@ -102,27 +102,33 @@ message Event {
   // The type of event (e.g., "session.started", "action.roll_resolved").
   string type = 5;
 
+  // Game system identifier for system-specific events.
+  string system_id = 6;
+
+  // Game system version for system-specific events.
+  string system_version = 7;
+
   // The session this event belongs to (empty for setup events).
-  string session_id = 6;
+  string session_id = 8;
 
   // Correlation ID for related events (e.g., roll request to resolution).
-  string request_id = 7;
+  string request_id = 9;
 
   // The MCP/gRPC invocation that triggered this event.
-  string invocation_id = 8;
+  string invocation_id = 10;
 
   // Who triggered the event: "system", "participant", or "gm".
-  string actor_type = 9;
+  string actor_type = 11;
 
   // The participant ID if actor_type is "participant" or "gm".
-  string actor_id = 10;
+  string actor_id = 12;
 
   // The type of entity affected (e.g., "character", "session").
-  string entity_type = 11;
+  string entity_type = 13;
 
   // The ID of the entity affected.
-  string entity_id = 12;
+  string entity_id = 14;
 
   // Event-specific data as JSON.
-  bytes payload_json = 13;
+  bytes payload_json = 15;
 }

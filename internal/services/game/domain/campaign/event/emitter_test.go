@@ -107,33 +107,6 @@ func TestEmitter_EmitSessionStarted(t *testing.T) {
 	}
 }
 
-func TestEmitter_EmitCharacterStateChanged(t *testing.T) {
-	store := &mockStore{}
-	emitter := NewEmitter(store)
-
-	hpBefore := 10
-	hpAfter := 8
-	evt, err := emitter.EmitCharacterStateChanged(context.Background(), "camp-1", "sess-1", "participant-1", CharacterStateChangedPayload{
-		CharacterID: "char-1",
-		HpBefore:    &hpBefore,
-		HpAfter:     &hpAfter,
-		SystemState: map[string]any{"hope_before": 3, "hope_after": 4},
-	})
-	if err != nil {
-		t.Fatalf("EmitCharacterStateChanged failed: %v", err)
-	}
-
-	if evt.Type != TypeCharacterStateChanged {
-		t.Errorf("expected type %s, got %s", TypeCharacterStateChanged, evt.Type)
-	}
-	if evt.SessionID != "sess-1" {
-		t.Errorf("expected session ID sess-1, got %s", evt.SessionID)
-	}
-	if evt.ActorID != "participant-1" {
-		t.Errorf("expected actor ID participant-1, got %s", evt.ActorID)
-	}
-}
-
 func TestEmitter_NilStore(t *testing.T) {
 	emitter := &Emitter{store: nil}
 

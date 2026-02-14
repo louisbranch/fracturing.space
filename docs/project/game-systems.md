@@ -88,6 +88,34 @@ surface and are served by the game server.
 +---------------------------------------------------------------------+
 ```
 
+## System-Specific Events
+
+System mechanics emit events into the core event stream, tagged with `system_id` and `system_version`. Core services must treat these as opaque and only interpret them through system adapters. Example: `action.damage_applied` is Daggerheart-specific and should be processed by the Daggerheart adapter, not core.
+
+## Event and Projection Boundaries
+
+The event stream is a single, ordered journal for a campaign, but ownership is split:
+
+- **Core-owned events**: Created and validated by core services only. These cover campaign/session/participant/character identity and lifecycle changes.
+- **System-owned events**: Created by a system service (via its gRPC API) and tagged with `system_id` and `system_version`. Core treats payloads as opaque.
+
+Rules:
+
+- **Authorship**: Core must not emit system-owned events, and system services must not emit core-owned events.
+- **Tagging**: Every system-owned event must include `system_id` and `system_version` to ensure adapter routing and replay stability.
+- **Interpretation**: Core logic never inspects system payloads. It delegates to the system adapter for apply/replay.
+
+Projection boundaries mirror event ownership:
+
+- **Core projections** (campaign/session/character identity) are computed solely from core-owned events.
+- **System projections** (system state, mechanics-derived data) are computed by the system adapter and persisted in system extension tables.
+- **Replay**: When replaying the journal, core replays core events directly and hands system events to the adapter for projection updates.
+
+Examples:
+
+- Core: `campaign.created`, `session.started`, `character.renamed`
+- Daggerheart: `action.damage_applied`, `action.rest_applied`
+
 ## Core Interfaces
 
 ### GameSystem Interface

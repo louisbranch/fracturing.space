@@ -15,7 +15,7 @@ func EvaluateOutcome(request OutcomeRequest) (OutcomeResult, error) {
 	if request.Difficulty != nil {
 		meetsDifficulty = total >= *request.Difficulty
 	}
-	if isCrit && request.Difficulty != nil {
+	if isCrit {
 		meetsDifficulty = true
 	}
 

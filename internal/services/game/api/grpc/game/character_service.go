@@ -149,21 +149,34 @@ func (s *CharacterService) CreateCharacter(ctx context.Context, in *campaignv1.C
 		profileActorType = event.ActorTypeGM
 	}
 
+	experiencesPayload := make([]map[string]any, 0, len(dhDefaults.Experiences))
+	for _, experience := range dhDefaults.Experiences {
+		experiencesPayload = append(experiencesPayload, map[string]any{
+			"name":     experience.Name,
+			"modifier": experience.Modifier,
+		})
+	}
+
 	profilePayload := event.ProfileUpdatedPayload{
 		CharacterID: created.ID,
 		SystemProfile: map[string]any{
 			"daggerheart": map[string]any{
+				"level":            dhDefaults.Level,
 				"hp_max":           dhDefaults.HpMax,
 				"stress_max":       dhDefaults.StressMax,
 				"evasion":          dhDefaults.Evasion,
 				"major_threshold":  dhDefaults.MajorThreshold,
 				"severe_threshold": dhDefaults.SevereThreshold,
+				"proficiency":      dhDefaults.Proficiency,
+				"armor_score":      dhDefaults.ArmorScore,
+				"armor_max":        dhDefaults.ArmorMax,
 				"agility":          dhDefaults.Traits.Agility,
 				"strength":         dhDefaults.Traits.Strength,
 				"finesse":          dhDefaults.Traits.Finesse,
 				"instinct":         dhDefaults.Traits.Instinct,
 				"presence":         dhDefaults.Traits.Presence,
 				"knowledge":        dhDefaults.Traits.Knowledge,
+				"experiences":      experiencesPayload,
 			},
 		},
 	}
@@ -188,32 +201,38 @@ func (s *CharacterService) CreateCharacter(ctx context.Context, in *campaignv1.C
 	}
 
 	hpAfter := dhDefaults.HpMax
-	statePayload := event.CharacterStateChangedPayload{
-		CharacterID: created.ID,
-		HpAfter:     &hpAfter,
-		SystemState: map[string]any{
-			"daggerheart": map[string]any{
-				"hope_after":   daggerheart.HopeDefault,
-				"stress_after": daggerheart.StressDefault,
-			},
-		},
+	hopeAfter := daggerheart.HopeDefault
+	hopeMaxAfter := daggerheart.HopeMax
+	stressAfter := daggerheart.StressDefault
+	armorAfter := 0
+	lifeStateAfter := daggerheart.LifeStateAlive
+	statePayload := daggerheart.CharacterStatePatchedPayload{
+		CharacterID:    created.ID,
+		HpAfter:        &hpAfter,
+		HopeAfter:      &hopeAfter,
+		HopeMaxAfter:   &hopeMaxAfter,
+		StressAfter:    &stressAfter,
+		ArmorAfter:     &armorAfter,
+		LifeStateAfter: &lifeStateAfter,
 	}
 	stateJSON, err := json.Marshal(statePayload)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "encode state payload: %v", err)
 	}
 	stateEvent, err := s.stores.Event.AppendEvent(ctx, event.Event{
-		CampaignID:   campaignID,
-		Timestamp:    s.clock().UTC(),
-		Type:         event.TypeCharacterStateChanged,
-		SessionID:    grpcmeta.SessionIDFromContext(ctx),
-		RequestID:    reqID,
-		InvocationID: invocationID,
-		ActorType:    profileActorType,
-		ActorID:      actorID,
-		EntityType:   "character",
-		EntityID:     created.ID,
-		PayloadJSON:  stateJSON,
+		CampaignID:    campaignID,
+		Timestamp:     s.clock().UTC(),
+		Type:          daggerheart.EventTypeCharacterStatePatched,
+		SessionID:     grpcmeta.SessionIDFromContext(ctx),
+		RequestID:     reqID,
+		InvocationID:  invocationID,
+		ActorType:     profileActorType,
+		ActorID:       actorID,
+		EntityType:    "character",
+		EntityID:      created.ID,
+		SystemID:      c.System.String(),
+		SystemVersion: daggerheart.SystemVersion,
+		PayloadJSON:   stateJSON,
 	})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "append state event: %v", err)
@@ -227,7 +246,8 @@ func (s *CharacterService) CreateCharacter(ctx context.Context, in *campaignv1.C
 	if err := projectionApplier.Apply(ctx, profileEvent); err != nil {
 		return nil, status.Errorf(codes.Internal, "apply profile event: %v", err)
 	}
-	if err := projectionApplier.Apply(ctx, stateEvent); err != nil {
+	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
+	if err := adapter.ApplyEvent(ctx, stateEvent); err != nil {
 		return nil, status.Errorf(codes.Internal, "apply state event: %v", err)
 	}
 
@@ -535,9 +555,11 @@ func (s *CharacterService) SetDefaultControl(ctx context.Context, in *campaignv1
 		}
 	}
 
-	payload := event.ControllerAssignedPayload{
-		CharacterID:   characterID,
-		ParticipantID: participantID,
+	payload := event.CharacterUpdatedPayload{
+		CharacterID: characterID,
+		Fields: map[string]any{
+			"participant_id": participantID,
+		},
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -553,7 +575,7 @@ func (s *CharacterService) SetDefaultControl(ctx context.Context, in *campaignv1
 	stored, err := s.stores.Event.AppendEvent(ctx, event.Event{
 		CampaignID:   campaignID,
 		Timestamp:    s.clock().UTC(),
-		Type:         event.TypeControllerAssigned,
+		Type:         event.TypeCharacterUpdated,
 		RequestID:    grpcmeta.RequestIDFromContext(ctx),
 		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
 		ActorType:    actorType,
@@ -671,11 +693,25 @@ func (s *CharacterService) PatchCharacterProfile(ctx context.Context, in *campai
 
 	// Apply Daggerheart-specific patches (including hp_max)
 	if dhPatch := in.GetDaggerheart(); dhPatch != nil {
+		// Validate level (plain int32: 0 is not valid)
+		if dhPatch.Level < 0 {
+			return nil, status.Error(codes.InvalidArgument, "level must be non-negative")
+		}
+		if dhPatch.Level > 0 {
+			if err := daggerheart.ValidateLevel(int(dhPatch.Level)); err != nil {
+				return nil, handleDomainError(err)
+			}
+			dhProfile.Level = int(dhPatch.Level)
+		}
+
 		// Validate hp_max (plain int32: 0 is not valid)
 		if dhPatch.HpMax < 0 {
 			return nil, status.Error(codes.InvalidArgument, "hp_max must be non-negative")
 		}
 		if dhPatch.HpMax > 0 {
+			if dhPatch.HpMax > daggerheart.HPMaxCap {
+				return nil, status.Error(codes.InvalidArgument, "hp_max must be in range 1..12")
+			}
 			dhProfile.HpMax = int(dhPatch.HpMax)
 		}
 
@@ -684,6 +720,9 @@ func (s *CharacterService) PatchCharacterProfile(ctx context.Context, in *campai
 			val := int(dhPatch.GetStressMax().GetValue())
 			if val < 0 {
 				return nil, status.Error(codes.InvalidArgument, "stress_max must be non-negative")
+			}
+			if val > daggerheart.StressMaxCap {
+				return nil, status.Error(codes.InvalidArgument, "stress_max must be in range 0..12")
 			}
 			dhProfile.StressMax = val
 		}
@@ -713,6 +752,33 @@ func (s *CharacterService) PatchCharacterProfile(ctx context.Context, in *campai
 				return nil, status.Error(codes.InvalidArgument, "severe_threshold must be non-negative")
 			}
 			dhProfile.SevereThreshold = val
+		}
+
+		// Validate proficiency (wrapper type: nil means not provided)
+		if dhPatch.GetProficiency() != nil {
+			val := int(dhPatch.GetProficiency().GetValue())
+			if val < 0 {
+				return nil, status.Error(codes.InvalidArgument, "proficiency must be non-negative")
+			}
+			dhProfile.Proficiency = val
+		}
+
+		// Validate armor_score (wrapper type: nil means not provided)
+		if dhPatch.GetArmorScore() != nil {
+			val := int(dhPatch.GetArmorScore().GetValue())
+			if val < 0 {
+				return nil, status.Error(codes.InvalidArgument, "armor_score must be non-negative")
+			}
+			dhProfile.ArmorScore = val
+		}
+
+		// Validate armor_max (wrapper type: nil means not provided)
+		if dhPatch.GetArmorMax() != nil {
+			val := int(dhPatch.GetArmorMax().GetValue())
+			if val < 0 || val > daggerheart.ArmorMaxCap {
+				return nil, status.Error(codes.InvalidArgument, "armor_max must be in range 0..12")
+			}
+			dhProfile.ArmorMax = val
 		}
 
 		// Validate and apply traits (wrapper types allow nil-checking)
@@ -753,23 +819,82 @@ func (s *CharacterService) PatchCharacterProfile(ctx context.Context, in *campai
 			dhProfile.Knowledge = int(dhPatch.GetKnowledge().GetValue())
 		}
 
+		if len(dhPatch.GetExperiences()) > 0 {
+			experiences := make([]storage.DaggerheartExperience, 0, len(dhPatch.GetExperiences()))
+			for _, experience := range dhPatch.GetExperiences() {
+				if strings.TrimSpace(experience.GetName()) == "" {
+					return nil, status.Error(codes.InvalidArgument, "experience name is required")
+				}
+				experiences = append(experiences, storage.DaggerheartExperience{
+					Name:     experience.GetName(),
+					Modifier: int(experience.GetModifier()),
+				})
+			}
+			dhProfile.Experiences = experiences
+		}
+		if dhProfile.Level == 0 {
+			dhProfile.Level = daggerheart.PCLevelDefault
+		}
+
+		experiences := make([]daggerheart.Experience, 0, len(dhProfile.Experiences))
+		for _, experience := range dhProfile.Experiences {
+			experiences = append(experiences, daggerheart.Experience{
+				Name:     experience.Name,
+				Modifier: experience.Modifier,
+			})
+		}
+		if err := daggerheart.ValidateProfile(
+			dhProfile.Level,
+			dhProfile.HpMax,
+			dhProfile.StressMax,
+			dhProfile.Evasion,
+			dhProfile.MajorThreshold,
+			dhProfile.SevereThreshold,
+			dhProfile.Proficiency,
+			dhProfile.ArmorScore,
+			dhProfile.ArmorMax,
+			daggerheart.Traits{
+				Agility:   dhProfile.Agility,
+				Strength:  dhProfile.Strength,
+				Finesse:   dhProfile.Finesse,
+				Instinct:  dhProfile.Instinct,
+				Presence:  dhProfile.Presence,
+				Knowledge: dhProfile.Knowledge,
+			},
+			experiences,
+		); err != nil {
+			return nil, handleDomainError(err)
+		}
+	}
+
+	experiencesPayload := make([]map[string]any, 0, len(dhProfile.Experiences))
+	for _, experience := range dhProfile.Experiences {
+		experiencesPayload = append(experiencesPayload, map[string]any{
+			"name":     experience.Name,
+			"modifier": experience.Modifier,
+		})
 	}
 
 	profilePayload := event.ProfileUpdatedPayload{
 		CharacterID: characterID,
 		SystemProfile: map[string]any{
 			"daggerheart": map[string]any{
+				"level":            dhProfile.Level,
 				"hp_max":           dhProfile.HpMax,
 				"stress_max":       dhProfile.StressMax,
 				"evasion":          dhProfile.Evasion,
 				"major_threshold":  dhProfile.MajorThreshold,
 				"severe_threshold": dhProfile.SevereThreshold,
+				"proficiency":      dhProfile.Proficiency,
+				"armor_score":      dhProfile.ArmorScore,
+				"armor_max":        dhProfile.ArmorMax,
 				"agility":          dhProfile.Agility,
 				"strength":         dhProfile.Strength,
 				"finesse":          dhProfile.Finesse,
 				"instinct":         dhProfile.Instinct,
 				"presence":         dhProfile.Presence,
 				"knowledge":        dhProfile.Knowledge,
+				"experiences":      experiencesPayload,
 			},
 		},
 	}
@@ -823,17 +948,22 @@ func daggerheartProfileToProto(campaignID, characterID string, dh storage.Dagger
 		CharacterId: characterID,
 		SystemProfile: &campaignv1.CharacterProfile_Daggerheart{
 			Daggerheart: &daggerheartv1.DaggerheartProfile{
+				Level:           int32(dh.Level),
 				HpMax:           int32(dh.HpMax),
 				StressMax:       wrapperspb.Int32(int32(dh.StressMax)),
 				Evasion:         wrapperspb.Int32(int32(dh.Evasion)),
 				MajorThreshold:  wrapperspb.Int32(int32(dh.MajorThreshold)),
 				SevereThreshold: wrapperspb.Int32(int32(dh.SevereThreshold)),
+				Proficiency:     wrapperspb.Int32(int32(dh.Proficiency)),
+				ArmorScore:      wrapperspb.Int32(int32(dh.ArmorScore)),
+				ArmorMax:        wrapperspb.Int32(int32(dh.ArmorMax)),
 				Agility:         wrapperspb.Int32(int32(dh.Agility)),
 				Strength:        wrapperspb.Int32(int32(dh.Strength)),
 				Finesse:         wrapperspb.Int32(int32(dh.Finesse)),
 				Instinct:        wrapperspb.Int32(int32(dh.Instinct)),
 				Presence:        wrapperspb.Int32(int32(dh.Presence)),
 				Knowledge:       wrapperspb.Int32(int32(dh.Knowledge)),
+				Experiences:     daggerheartExperiencesToProto(dh.Experiences),
 			},
 		},
 	}
@@ -846,10 +976,28 @@ func daggerheartStateToProto(campaignID, characterID string, dh storage.Daggerhe
 		CharacterId: characterID,
 		SystemState: &campaignv1.CharacterState_Daggerheart{
 			Daggerheart: &daggerheartv1.DaggerheartCharacterState{
-				Hp:     int32(dh.Hp),
-				Hope:   int32(dh.Hope),
-				Stress: int32(dh.Stress),
+				Hp:         int32(dh.Hp),
+				Hope:       int32(dh.Hope),
+				HopeMax:    int32(dh.HopeMax),
+				Stress:     int32(dh.Stress),
+				Armor:      int32(dh.Armor),
+				Conditions: daggerheartConditionsToProto(dh.Conditions),
+				LifeState:  daggerheartLifeStateToProto(dh.LifeState),
 			},
 		},
 	}
+}
+
+func daggerheartExperiencesToProto(experiences []storage.DaggerheartExperience) []*daggerheartv1.DaggerheartExperience {
+	if len(experiences) == 0 {
+		return nil
+	}
+	result := make([]*daggerheartv1.DaggerheartExperience, 0, len(experiences))
+	for _, experience := range experiences {
+		result = append(result, &daggerheartv1.DaggerheartExperience{
+			Name:     experience.Name,
+			Modifier: int32(experience.Modifier),
+		})
+	}
+	return result
 }

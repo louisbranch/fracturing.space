@@ -58,6 +58,7 @@ source of truth and projections/snapshots are derived views.
 - All game changes are events in the campaign journal.
 - Projections are derived through an explicit apply pipeline.
 - Snapshots are derived for performance and replay acceleration.
+- Only event emitters append to `game-events`; only appliers/adapters write to `game-projections`.
 - Session is a query label; session events are not a separate journal.
 - Story changes are first-class events in the same journal.
 - Telemetry is stored separately from the game event log.

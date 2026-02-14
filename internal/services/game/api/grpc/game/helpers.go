@@ -28,7 +28,6 @@ func campaignToProto(c campaign.Campaign) *campaignv1.Campaign {
 		CharacterCount:   int32(c.CharacterCount),
 		ThemePrompt:      c.ThemePrompt,
 		CreatedAt:        timestamppb.New(c.CreatedAt),
-		LastActivityAt:   timestamppb.New(c.LastActivityAt),
 		UpdatedAt:        timestamppb.New(c.UpdatedAt),
 		CompletedAt:      timestampOrNil(c.CompletedAt),
 		ArchivedAt:       timestampOrNil(c.ArchivedAt),

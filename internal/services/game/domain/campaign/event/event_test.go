@@ -10,7 +10,6 @@ func TestType_IsValid(t *testing.T) {
 		// Campaign events
 		{TypeCampaignCreated, true},
 		{TypeCampaignForked, true},
-		{TypeCampaignStatusChanged, true},
 		{TypeCampaignUpdated, true},
 		// Participant events
 		{TypeParticipantJoined, true},
@@ -21,13 +20,12 @@ func TestType_IsValid(t *testing.T) {
 		{TypeCharacterDeleted, true},
 		{TypeCharacterUpdated, true},
 		{TypeProfileUpdated, true},
-		{TypeControllerAssigned, true},
-		// Snapshot-related events
-		{TypeCharacterStateChanged, true},
-		{TypeGMFearChanged, true},
 		// Session events
 		{TypeSessionStarted, true},
 		{TypeSessionEnded, true},
+		// Invite events
+		{TypeInviteCreated, true},
+		{TypeInviteUpdated, true},
 		// Action events (facts, not commands)
 		{TypeRollResolved, true},
 		{TypeOutcomeApplied, true},
@@ -59,8 +57,8 @@ func TestType_Domain(t *testing.T) {
 		{TypeCampaignForked, "campaign"},
 		{TypeParticipantJoined, "participant"},
 		{TypeCharacterCreated, "character"},
-		{TypeCharacterStateChanged, "snapshot"},
 		{TypeSessionStarted, "session"},
+		{TypeInviteCreated, "invite"},
 		{TypeRollResolved, "action"},
 		{Type("nodot"), "nodot"},
 		{Type(""), ""},

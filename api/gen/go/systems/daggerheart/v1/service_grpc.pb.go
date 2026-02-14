@@ -19,14 +19,40 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	DaggerheartService_ActionRoll_FullMethodName         = "/systems.daggerheart.v1.DaggerheartService/ActionRoll"
-	DaggerheartService_DualityOutcome_FullMethodName     = "/systems.daggerheart.v1.DaggerheartService/DualityOutcome"
-	DaggerheartService_DualityExplain_FullMethodName     = "/systems.daggerheart.v1.DaggerheartService/DualityExplain"
-	DaggerheartService_DualityProbability_FullMethodName = "/systems.daggerheart.v1.DaggerheartService/DualityProbability"
-	DaggerheartService_RulesVersion_FullMethodName       = "/systems.daggerheart.v1.DaggerheartService/RulesVersion"
-	DaggerheartService_RollDice_FullMethodName           = "/systems.daggerheart.v1.DaggerheartService/RollDice"
-	DaggerheartService_SessionActionRoll_FullMethodName  = "/systems.daggerheart.v1.DaggerheartService/SessionActionRoll"
-	DaggerheartService_ApplyRollOutcome_FullMethodName   = "/systems.daggerheart.v1.DaggerheartService/ApplyRollOutcome"
+	DaggerheartService_ActionRoll_FullMethodName                  = "/systems.daggerheart.v1.DaggerheartService/ActionRoll"
+	DaggerheartService_DualityOutcome_FullMethodName              = "/systems.daggerheart.v1.DaggerheartService/DualityOutcome"
+	DaggerheartService_DualityExplain_FullMethodName              = "/systems.daggerheart.v1.DaggerheartService/DualityExplain"
+	DaggerheartService_DualityProbability_FullMethodName          = "/systems.daggerheart.v1.DaggerheartService/DualityProbability"
+	DaggerheartService_RulesVersion_FullMethodName                = "/systems.daggerheart.v1.DaggerheartService/RulesVersion"
+	DaggerheartService_RollDice_FullMethodName                    = "/systems.daggerheart.v1.DaggerheartService/RollDice"
+	DaggerheartService_ApplyDamage_FullMethodName                 = "/systems.daggerheart.v1.DaggerheartService/ApplyDamage"
+	DaggerheartService_ApplyRest_FullMethodName                   = "/systems.daggerheart.v1.DaggerheartService/ApplyRest"
+	DaggerheartService_ApplyDowntimeMove_FullMethodName           = "/systems.daggerheart.v1.DaggerheartService/ApplyDowntimeMove"
+	DaggerheartService_SwapLoadout_FullMethodName                 = "/systems.daggerheart.v1.DaggerheartService/SwapLoadout"
+	DaggerheartService_ApplyDeathMove_FullMethodName              = "/systems.daggerheart.v1.DaggerheartService/ApplyDeathMove"
+	DaggerheartService_ApplyConditions_FullMethodName             = "/systems.daggerheart.v1.DaggerheartService/ApplyConditions"
+	DaggerheartService_ApplyGmMove_FullMethodName                 = "/systems.daggerheart.v1.DaggerheartService/ApplyGmMove"
+	DaggerheartService_CreateCountdown_FullMethodName             = "/systems.daggerheart.v1.DaggerheartService/CreateCountdown"
+	DaggerheartService_UpdateCountdown_FullMethodName             = "/systems.daggerheart.v1.DaggerheartService/UpdateCountdown"
+	DaggerheartService_DeleteCountdown_FullMethodName             = "/systems.daggerheart.v1.DaggerheartService/DeleteCountdown"
+	DaggerheartService_CreateAdversary_FullMethodName             = "/systems.daggerheart.v1.DaggerheartService/CreateAdversary"
+	DaggerheartService_UpdateAdversary_FullMethodName             = "/systems.daggerheart.v1.DaggerheartService/UpdateAdversary"
+	DaggerheartService_DeleteAdversary_FullMethodName             = "/systems.daggerheart.v1.DaggerheartService/DeleteAdversary"
+	DaggerheartService_GetAdversary_FullMethodName                = "/systems.daggerheart.v1.DaggerheartService/GetAdversary"
+	DaggerheartService_ListAdversaries_FullMethodName             = "/systems.daggerheart.v1.DaggerheartService/ListAdversaries"
+	DaggerheartService_ResolveBlazeOfGlory_FullMethodName         = "/systems.daggerheart.v1.DaggerheartService/ResolveBlazeOfGlory"
+	DaggerheartService_SessionActionRoll_FullMethodName           = "/systems.daggerheart.v1.DaggerheartService/SessionActionRoll"
+	DaggerheartService_SessionDamageRoll_FullMethodName           = "/systems.daggerheart.v1.DaggerheartService/SessionDamageRoll"
+	DaggerheartService_SessionAttackFlow_FullMethodName           = "/systems.daggerheart.v1.DaggerheartService/SessionAttackFlow"
+	DaggerheartService_SessionReactionFlow_FullMethodName         = "/systems.daggerheart.v1.DaggerheartService/SessionReactionFlow"
+	DaggerheartService_SessionAdversaryAttackRoll_FullMethodName  = "/systems.daggerheart.v1.DaggerheartService/SessionAdversaryAttackRoll"
+	DaggerheartService_SessionAdversaryAttackFlow_FullMethodName  = "/systems.daggerheart.v1.DaggerheartService/SessionAdversaryAttackFlow"
+	DaggerheartService_SessionGroupActionFlow_FullMethodName      = "/systems.daggerheart.v1.DaggerheartService/SessionGroupActionFlow"
+	DaggerheartService_SessionTagTeamFlow_FullMethodName          = "/systems.daggerheart.v1.DaggerheartService/SessionTagTeamFlow"
+	DaggerheartService_ApplyRollOutcome_FullMethodName            = "/systems.daggerheart.v1.DaggerheartService/ApplyRollOutcome"
+	DaggerheartService_ApplyAttackOutcome_FullMethodName          = "/systems.daggerheart.v1.DaggerheartService/ApplyAttackOutcome"
+	DaggerheartService_ApplyAdversaryAttackOutcome_FullMethodName = "/systems.daggerheart.v1.DaggerheartService/ApplyAdversaryAttackOutcome"
+	DaggerheartService_ApplyReactionOutcome_FullMethodName        = "/systems.daggerheart.v1.DaggerheartService/ApplyReactionOutcome"
 )
 
 // DaggerheartServiceClient is the client API for DaggerheartService service.
@@ -49,10 +75,62 @@ type DaggerheartServiceClient interface {
 	RulesVersion(ctx context.Context, in *RulesVersionRequest, opts ...grpc.CallOption) (*RulesVersionResponse, error)
 	// Roll arbitrary dice sets and return the individual results.
 	RollDice(ctx context.Context, in *RollDiceRequest, opts ...grpc.CallOption) (*RollDiceResponse, error)
+	// Apply damage to a character (system-specific).
+	ApplyDamage(ctx context.Context, in *DaggerheartApplyDamageRequest, opts ...grpc.CallOption) (*DaggerheartApplyDamageResponse, error)
+	// Apply a rest outcome (system-specific).
+	ApplyRest(ctx context.Context, in *DaggerheartApplyRestRequest, opts ...grpc.CallOption) (*DaggerheartApplyRestResponse, error)
+	// Apply a downtime move (system-specific).
+	ApplyDowntimeMove(ctx context.Context, in *DaggerheartApplyDowntimeMoveRequest, opts ...grpc.CallOption) (*DaggerheartApplyDowntimeMoveResponse, error)
+	// Swap a loadout card (system-specific).
+	SwapLoadout(ctx context.Context, in *DaggerheartSwapLoadoutRequest, opts ...grpc.CallOption) (*DaggerheartSwapLoadoutResponse, error)
+	// Apply a death move (system-specific).
+	ApplyDeathMove(ctx context.Context, in *DaggerheartApplyDeathMoveRequest, opts ...grpc.CallOption) (*DaggerheartApplyDeathMoveResponse, error)
+	// Apply or clear conditions on a character (system-specific).
+	ApplyConditions(ctx context.Context, in *DaggerheartApplyConditionsRequest, opts ...grpc.CallOption) (*DaggerheartApplyConditionsResponse, error)
+	// Apply a GM move (system-specific).
+	ApplyGmMove(ctx context.Context, in *DaggerheartApplyGmMoveRequest, opts ...grpc.CallOption) (*DaggerheartApplyGmMoveResponse, error)
+	// Create a countdown (system-specific).
+	CreateCountdown(ctx context.Context, in *DaggerheartCreateCountdownRequest, opts ...grpc.CallOption) (*DaggerheartCreateCountdownResponse, error)
+	// Update a countdown (system-specific).
+	UpdateCountdown(ctx context.Context, in *DaggerheartUpdateCountdownRequest, opts ...grpc.CallOption) (*DaggerheartUpdateCountdownResponse, error)
+	// Delete a countdown (system-specific).
+	DeleteCountdown(ctx context.Context, in *DaggerheartDeleteCountdownRequest, opts ...grpc.CallOption) (*DaggerheartDeleteCountdownResponse, error)
+	// Create an adversary (system-specific).
+	CreateAdversary(ctx context.Context, in *DaggerheartCreateAdversaryRequest, opts ...grpc.CallOption) (*DaggerheartCreateAdversaryResponse, error)
+	// Update an adversary (system-specific).
+	UpdateAdversary(ctx context.Context, in *DaggerheartUpdateAdversaryRequest, opts ...grpc.CallOption) (*DaggerheartUpdateAdversaryResponse, error)
+	// Delete an adversary (system-specific).
+	DeleteAdversary(ctx context.Context, in *DaggerheartDeleteAdversaryRequest, opts ...grpc.CallOption) (*DaggerheartDeleteAdversaryResponse, error)
+	// Get an adversary (system-specific).
+	GetAdversary(ctx context.Context, in *DaggerheartGetAdversaryRequest, opts ...grpc.CallOption) (*DaggerheartGetAdversaryResponse, error)
+	// List adversaries (system-specific).
+	ListAdversaries(ctx context.Context, in *DaggerheartListAdversariesRequest, opts ...grpc.CallOption) (*DaggerheartListAdversariesResponse, error)
+	// Resolve a Blaze of Glory finale (system-specific).
+	ResolveBlazeOfGlory(ctx context.Context, in *DaggerheartResolveBlazeOfGloryRequest, opts ...grpc.CallOption) (*DaggerheartResolveBlazeOfGloryResponse, error)
 	// Roll Duality dice for a session (combines roll + event recording).
 	SessionActionRoll(ctx context.Context, in *SessionActionRollRequest, opts ...grpc.CallOption) (*SessionActionRollResponse, error)
+	// Roll damage dice for a session (combines roll + event recording).
+	SessionDamageRoll(ctx context.Context, in *SessionDamageRollRequest, opts ...grpc.CallOption) (*SessionDamageRollResponse, error)
+	// Run a full attack flow (roll, outcome, damage roll, apply damage).
+	SessionAttackFlow(ctx context.Context, in *SessionAttackFlowRequest, opts ...grpc.CallOption) (*SessionAttackFlowResponse, error)
+	// Run a full reaction flow (roll, outcome, reaction outcome).
+	SessionReactionFlow(ctx context.Context, in *SessionReactionFlowRequest, opts ...grpc.CallOption) (*SessionReactionFlowResponse, error)
+	// Roll adversary attack dice (d20-based).
+	SessionAdversaryAttackRoll(ctx context.Context, in *SessionAdversaryAttackRollRequest, opts ...grpc.CallOption) (*SessionAdversaryAttackRollResponse, error)
+	// Run a full adversary attack flow (roll, outcome, damage roll, apply damage).
+	SessionAdversaryAttackFlow(ctx context.Context, in *SessionAdversaryAttackFlowRequest, opts ...grpc.CallOption) (*SessionAdversaryAttackFlowResponse, error)
+	// Run a group action flow (supporter reactions + leader roll + outcome).
+	SessionGroupActionFlow(ctx context.Context, in *SessionGroupActionFlowRequest, opts ...grpc.CallOption) (*SessionGroupActionFlowResponse, error)
+	// Run a tag team flow (two rolls + selected outcome).
+	SessionTagTeamFlow(ctx context.Context, in *SessionTagTeamFlowRequest, opts ...grpc.CallOption) (*SessionTagTeamFlowResponse, error)
 	// Apply the mandatory outcome effects from a resolved action roll.
 	ApplyRollOutcome(ctx context.Context, in *ApplyRollOutcomeRequest, opts ...grpc.CallOption) (*ApplyRollOutcomeResponse, error)
+	// Apply an attack outcome from a resolved action roll.
+	ApplyAttackOutcome(ctx context.Context, in *DaggerheartApplyAttackOutcomeRequest, opts ...grpc.CallOption) (*DaggerheartApplyAttackOutcomeResponse, error)
+	// Apply an adversary attack outcome from a resolved adversary roll.
+	ApplyAdversaryAttackOutcome(ctx context.Context, in *DaggerheartApplyAdversaryAttackOutcomeRequest, opts ...grpc.CallOption) (*DaggerheartApplyAdversaryAttackOutcomeResponse, error)
+	// Apply a reaction outcome from a resolved reaction roll.
+	ApplyReactionOutcome(ctx context.Context, in *DaggerheartApplyReactionOutcomeRequest, opts ...grpc.CallOption) (*DaggerheartApplyReactionOutcomeResponse, error)
 }
 
 type daggerheartServiceClient struct {
@@ -123,6 +201,166 @@ func (c *daggerheartServiceClient) RollDice(ctx context.Context, in *RollDiceReq
 	return out, nil
 }
 
+func (c *daggerheartServiceClient) ApplyDamage(ctx context.Context, in *DaggerheartApplyDamageRequest, opts ...grpc.CallOption) (*DaggerheartApplyDamageResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartApplyDamageResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_ApplyDamage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) ApplyRest(ctx context.Context, in *DaggerheartApplyRestRequest, opts ...grpc.CallOption) (*DaggerheartApplyRestResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartApplyRestResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_ApplyRest_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) ApplyDowntimeMove(ctx context.Context, in *DaggerheartApplyDowntimeMoveRequest, opts ...grpc.CallOption) (*DaggerheartApplyDowntimeMoveResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartApplyDowntimeMoveResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_ApplyDowntimeMove_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) SwapLoadout(ctx context.Context, in *DaggerheartSwapLoadoutRequest, opts ...grpc.CallOption) (*DaggerheartSwapLoadoutResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartSwapLoadoutResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_SwapLoadout_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) ApplyDeathMove(ctx context.Context, in *DaggerheartApplyDeathMoveRequest, opts ...grpc.CallOption) (*DaggerheartApplyDeathMoveResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartApplyDeathMoveResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_ApplyDeathMove_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) ApplyConditions(ctx context.Context, in *DaggerheartApplyConditionsRequest, opts ...grpc.CallOption) (*DaggerheartApplyConditionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartApplyConditionsResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_ApplyConditions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) ApplyGmMove(ctx context.Context, in *DaggerheartApplyGmMoveRequest, opts ...grpc.CallOption) (*DaggerheartApplyGmMoveResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartApplyGmMoveResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_ApplyGmMove_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) CreateCountdown(ctx context.Context, in *DaggerheartCreateCountdownRequest, opts ...grpc.CallOption) (*DaggerheartCreateCountdownResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartCreateCountdownResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_CreateCountdown_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) UpdateCountdown(ctx context.Context, in *DaggerheartUpdateCountdownRequest, opts ...grpc.CallOption) (*DaggerheartUpdateCountdownResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartUpdateCountdownResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_UpdateCountdown_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) DeleteCountdown(ctx context.Context, in *DaggerheartDeleteCountdownRequest, opts ...grpc.CallOption) (*DaggerheartDeleteCountdownResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartDeleteCountdownResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_DeleteCountdown_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) CreateAdversary(ctx context.Context, in *DaggerheartCreateAdversaryRequest, opts ...grpc.CallOption) (*DaggerheartCreateAdversaryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartCreateAdversaryResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_CreateAdversary_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) UpdateAdversary(ctx context.Context, in *DaggerheartUpdateAdversaryRequest, opts ...grpc.CallOption) (*DaggerheartUpdateAdversaryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartUpdateAdversaryResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_UpdateAdversary_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) DeleteAdversary(ctx context.Context, in *DaggerheartDeleteAdversaryRequest, opts ...grpc.CallOption) (*DaggerheartDeleteAdversaryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartDeleteAdversaryResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_DeleteAdversary_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) GetAdversary(ctx context.Context, in *DaggerheartGetAdversaryRequest, opts ...grpc.CallOption) (*DaggerheartGetAdversaryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartGetAdversaryResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_GetAdversary_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) ListAdversaries(ctx context.Context, in *DaggerheartListAdversariesRequest, opts ...grpc.CallOption) (*DaggerheartListAdversariesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartListAdversariesResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_ListAdversaries_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) ResolveBlazeOfGlory(ctx context.Context, in *DaggerheartResolveBlazeOfGloryRequest, opts ...grpc.CallOption) (*DaggerheartResolveBlazeOfGloryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartResolveBlazeOfGloryResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_ResolveBlazeOfGlory_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *daggerheartServiceClient) SessionActionRoll(ctx context.Context, in *SessionActionRollRequest, opts ...grpc.CallOption) (*SessionActionRollResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(SessionActionRollResponse)
@@ -133,10 +371,110 @@ func (c *daggerheartServiceClient) SessionActionRoll(ctx context.Context, in *Se
 	return out, nil
 }
 
+func (c *daggerheartServiceClient) SessionDamageRoll(ctx context.Context, in *SessionDamageRollRequest, opts ...grpc.CallOption) (*SessionDamageRollResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SessionDamageRollResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_SessionDamageRoll_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) SessionAttackFlow(ctx context.Context, in *SessionAttackFlowRequest, opts ...grpc.CallOption) (*SessionAttackFlowResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SessionAttackFlowResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_SessionAttackFlow_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) SessionReactionFlow(ctx context.Context, in *SessionReactionFlowRequest, opts ...grpc.CallOption) (*SessionReactionFlowResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SessionReactionFlowResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_SessionReactionFlow_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) SessionAdversaryAttackRoll(ctx context.Context, in *SessionAdversaryAttackRollRequest, opts ...grpc.CallOption) (*SessionAdversaryAttackRollResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SessionAdversaryAttackRollResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_SessionAdversaryAttackRoll_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) SessionAdversaryAttackFlow(ctx context.Context, in *SessionAdversaryAttackFlowRequest, opts ...grpc.CallOption) (*SessionAdversaryAttackFlowResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SessionAdversaryAttackFlowResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_SessionAdversaryAttackFlow_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) SessionGroupActionFlow(ctx context.Context, in *SessionGroupActionFlowRequest, opts ...grpc.CallOption) (*SessionGroupActionFlowResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SessionGroupActionFlowResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_SessionGroupActionFlow_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) SessionTagTeamFlow(ctx context.Context, in *SessionTagTeamFlowRequest, opts ...grpc.CallOption) (*SessionTagTeamFlowResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SessionTagTeamFlowResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_SessionTagTeamFlow_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *daggerheartServiceClient) ApplyRollOutcome(ctx context.Context, in *ApplyRollOutcomeRequest, opts ...grpc.CallOption) (*ApplyRollOutcomeResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ApplyRollOutcomeResponse)
 	err := c.cc.Invoke(ctx, DaggerheartService_ApplyRollOutcome_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) ApplyAttackOutcome(ctx context.Context, in *DaggerheartApplyAttackOutcomeRequest, opts ...grpc.CallOption) (*DaggerheartApplyAttackOutcomeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartApplyAttackOutcomeResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_ApplyAttackOutcome_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) ApplyAdversaryAttackOutcome(ctx context.Context, in *DaggerheartApplyAdversaryAttackOutcomeRequest, opts ...grpc.CallOption) (*DaggerheartApplyAdversaryAttackOutcomeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartApplyAdversaryAttackOutcomeResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_ApplyAdversaryAttackOutcome_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) ApplyReactionOutcome(ctx context.Context, in *DaggerheartApplyReactionOutcomeRequest, opts ...grpc.CallOption) (*DaggerheartApplyReactionOutcomeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartApplyReactionOutcomeResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_ApplyReactionOutcome_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -163,10 +501,62 @@ type DaggerheartServiceServer interface {
 	RulesVersion(context.Context, *RulesVersionRequest) (*RulesVersionResponse, error)
 	// Roll arbitrary dice sets and return the individual results.
 	RollDice(context.Context, *RollDiceRequest) (*RollDiceResponse, error)
+	// Apply damage to a character (system-specific).
+	ApplyDamage(context.Context, *DaggerheartApplyDamageRequest) (*DaggerheartApplyDamageResponse, error)
+	// Apply a rest outcome (system-specific).
+	ApplyRest(context.Context, *DaggerheartApplyRestRequest) (*DaggerheartApplyRestResponse, error)
+	// Apply a downtime move (system-specific).
+	ApplyDowntimeMove(context.Context, *DaggerheartApplyDowntimeMoveRequest) (*DaggerheartApplyDowntimeMoveResponse, error)
+	// Swap a loadout card (system-specific).
+	SwapLoadout(context.Context, *DaggerheartSwapLoadoutRequest) (*DaggerheartSwapLoadoutResponse, error)
+	// Apply a death move (system-specific).
+	ApplyDeathMove(context.Context, *DaggerheartApplyDeathMoveRequest) (*DaggerheartApplyDeathMoveResponse, error)
+	// Apply or clear conditions on a character (system-specific).
+	ApplyConditions(context.Context, *DaggerheartApplyConditionsRequest) (*DaggerheartApplyConditionsResponse, error)
+	// Apply a GM move (system-specific).
+	ApplyGmMove(context.Context, *DaggerheartApplyGmMoveRequest) (*DaggerheartApplyGmMoveResponse, error)
+	// Create a countdown (system-specific).
+	CreateCountdown(context.Context, *DaggerheartCreateCountdownRequest) (*DaggerheartCreateCountdownResponse, error)
+	// Update a countdown (system-specific).
+	UpdateCountdown(context.Context, *DaggerheartUpdateCountdownRequest) (*DaggerheartUpdateCountdownResponse, error)
+	// Delete a countdown (system-specific).
+	DeleteCountdown(context.Context, *DaggerheartDeleteCountdownRequest) (*DaggerheartDeleteCountdownResponse, error)
+	// Create an adversary (system-specific).
+	CreateAdversary(context.Context, *DaggerheartCreateAdversaryRequest) (*DaggerheartCreateAdversaryResponse, error)
+	// Update an adversary (system-specific).
+	UpdateAdversary(context.Context, *DaggerheartUpdateAdversaryRequest) (*DaggerheartUpdateAdversaryResponse, error)
+	// Delete an adversary (system-specific).
+	DeleteAdversary(context.Context, *DaggerheartDeleteAdversaryRequest) (*DaggerheartDeleteAdversaryResponse, error)
+	// Get an adversary (system-specific).
+	GetAdversary(context.Context, *DaggerheartGetAdversaryRequest) (*DaggerheartGetAdversaryResponse, error)
+	// List adversaries (system-specific).
+	ListAdversaries(context.Context, *DaggerheartListAdversariesRequest) (*DaggerheartListAdversariesResponse, error)
+	// Resolve a Blaze of Glory finale (system-specific).
+	ResolveBlazeOfGlory(context.Context, *DaggerheartResolveBlazeOfGloryRequest) (*DaggerheartResolveBlazeOfGloryResponse, error)
 	// Roll Duality dice for a session (combines roll + event recording).
 	SessionActionRoll(context.Context, *SessionActionRollRequest) (*SessionActionRollResponse, error)
+	// Roll damage dice for a session (combines roll + event recording).
+	SessionDamageRoll(context.Context, *SessionDamageRollRequest) (*SessionDamageRollResponse, error)
+	// Run a full attack flow (roll, outcome, damage roll, apply damage).
+	SessionAttackFlow(context.Context, *SessionAttackFlowRequest) (*SessionAttackFlowResponse, error)
+	// Run a full reaction flow (roll, outcome, reaction outcome).
+	SessionReactionFlow(context.Context, *SessionReactionFlowRequest) (*SessionReactionFlowResponse, error)
+	// Roll adversary attack dice (d20-based).
+	SessionAdversaryAttackRoll(context.Context, *SessionAdversaryAttackRollRequest) (*SessionAdversaryAttackRollResponse, error)
+	// Run a full adversary attack flow (roll, outcome, damage roll, apply damage).
+	SessionAdversaryAttackFlow(context.Context, *SessionAdversaryAttackFlowRequest) (*SessionAdversaryAttackFlowResponse, error)
+	// Run a group action flow (supporter reactions + leader roll + outcome).
+	SessionGroupActionFlow(context.Context, *SessionGroupActionFlowRequest) (*SessionGroupActionFlowResponse, error)
+	// Run a tag team flow (two rolls + selected outcome).
+	SessionTagTeamFlow(context.Context, *SessionTagTeamFlowRequest) (*SessionTagTeamFlowResponse, error)
 	// Apply the mandatory outcome effects from a resolved action roll.
 	ApplyRollOutcome(context.Context, *ApplyRollOutcomeRequest) (*ApplyRollOutcomeResponse, error)
+	// Apply an attack outcome from a resolved action roll.
+	ApplyAttackOutcome(context.Context, *DaggerheartApplyAttackOutcomeRequest) (*DaggerheartApplyAttackOutcomeResponse, error)
+	// Apply an adversary attack outcome from a resolved adversary roll.
+	ApplyAdversaryAttackOutcome(context.Context, *DaggerheartApplyAdversaryAttackOutcomeRequest) (*DaggerheartApplyAdversaryAttackOutcomeResponse, error)
+	// Apply a reaction outcome from a resolved reaction roll.
+	ApplyReactionOutcome(context.Context, *DaggerheartApplyReactionOutcomeRequest) (*DaggerheartApplyReactionOutcomeResponse, error)
 	mustEmbedUnimplementedDaggerheartServiceServer()
 }
 
@@ -195,11 +585,89 @@ func (UnimplementedDaggerheartServiceServer) RulesVersion(context.Context, *Rule
 func (UnimplementedDaggerheartServiceServer) RollDice(context.Context, *RollDiceRequest) (*RollDiceResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RollDice not implemented")
 }
+func (UnimplementedDaggerheartServiceServer) ApplyDamage(context.Context, *DaggerheartApplyDamageRequest) (*DaggerheartApplyDamageResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ApplyDamage not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) ApplyRest(context.Context, *DaggerheartApplyRestRequest) (*DaggerheartApplyRestResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ApplyRest not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) ApplyDowntimeMove(context.Context, *DaggerheartApplyDowntimeMoveRequest) (*DaggerheartApplyDowntimeMoveResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ApplyDowntimeMove not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) SwapLoadout(context.Context, *DaggerheartSwapLoadoutRequest) (*DaggerheartSwapLoadoutResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SwapLoadout not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) ApplyDeathMove(context.Context, *DaggerheartApplyDeathMoveRequest) (*DaggerheartApplyDeathMoveResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ApplyDeathMove not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) ApplyConditions(context.Context, *DaggerheartApplyConditionsRequest) (*DaggerheartApplyConditionsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ApplyConditions not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) ApplyGmMove(context.Context, *DaggerheartApplyGmMoveRequest) (*DaggerheartApplyGmMoveResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ApplyGmMove not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) CreateCountdown(context.Context, *DaggerheartCreateCountdownRequest) (*DaggerheartCreateCountdownResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateCountdown not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) UpdateCountdown(context.Context, *DaggerheartUpdateCountdownRequest) (*DaggerheartUpdateCountdownResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateCountdown not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) DeleteCountdown(context.Context, *DaggerheartDeleteCountdownRequest) (*DaggerheartDeleteCountdownResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteCountdown not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) CreateAdversary(context.Context, *DaggerheartCreateAdversaryRequest) (*DaggerheartCreateAdversaryResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateAdversary not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) UpdateAdversary(context.Context, *DaggerheartUpdateAdversaryRequest) (*DaggerheartUpdateAdversaryResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateAdversary not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) DeleteAdversary(context.Context, *DaggerheartDeleteAdversaryRequest) (*DaggerheartDeleteAdversaryResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteAdversary not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) GetAdversary(context.Context, *DaggerheartGetAdversaryRequest) (*DaggerheartGetAdversaryResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetAdversary not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) ListAdversaries(context.Context, *DaggerheartListAdversariesRequest) (*DaggerheartListAdversariesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListAdversaries not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) ResolveBlazeOfGlory(context.Context, *DaggerheartResolveBlazeOfGloryRequest) (*DaggerheartResolveBlazeOfGloryResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ResolveBlazeOfGlory not implemented")
+}
 func (UnimplementedDaggerheartServiceServer) SessionActionRoll(context.Context, *SessionActionRollRequest) (*SessionActionRollResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SessionActionRoll not implemented")
 }
+func (UnimplementedDaggerheartServiceServer) SessionDamageRoll(context.Context, *SessionDamageRollRequest) (*SessionDamageRollResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SessionDamageRoll not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) SessionAttackFlow(context.Context, *SessionAttackFlowRequest) (*SessionAttackFlowResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SessionAttackFlow not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) SessionReactionFlow(context.Context, *SessionReactionFlowRequest) (*SessionReactionFlowResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SessionReactionFlow not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) SessionAdversaryAttackRoll(context.Context, *SessionAdversaryAttackRollRequest) (*SessionAdversaryAttackRollResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SessionAdversaryAttackRoll not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) SessionAdversaryAttackFlow(context.Context, *SessionAdversaryAttackFlowRequest) (*SessionAdversaryAttackFlowResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SessionAdversaryAttackFlow not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) SessionGroupActionFlow(context.Context, *SessionGroupActionFlowRequest) (*SessionGroupActionFlowResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SessionGroupActionFlow not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) SessionTagTeamFlow(context.Context, *SessionTagTeamFlowRequest) (*SessionTagTeamFlowResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SessionTagTeamFlow not implemented")
+}
 func (UnimplementedDaggerheartServiceServer) ApplyRollOutcome(context.Context, *ApplyRollOutcomeRequest) (*ApplyRollOutcomeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ApplyRollOutcome not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) ApplyAttackOutcome(context.Context, *DaggerheartApplyAttackOutcomeRequest) (*DaggerheartApplyAttackOutcomeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ApplyAttackOutcome not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) ApplyAdversaryAttackOutcome(context.Context, *DaggerheartApplyAdversaryAttackOutcomeRequest) (*DaggerheartApplyAdversaryAttackOutcomeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ApplyAdversaryAttackOutcome not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) ApplyReactionOutcome(context.Context, *DaggerheartApplyReactionOutcomeRequest) (*DaggerheartApplyReactionOutcomeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ApplyReactionOutcome not implemented")
 }
 func (UnimplementedDaggerheartServiceServer) mustEmbedUnimplementedDaggerheartServiceServer() {}
 func (UnimplementedDaggerheartServiceServer) testEmbeddedByValue()                            {}
@@ -330,6 +798,294 @@ func _DaggerheartService_RollDice_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _DaggerheartService_ApplyDamage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartApplyDamageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).ApplyDamage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_ApplyDamage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).ApplyDamage(ctx, req.(*DaggerheartApplyDamageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_ApplyRest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartApplyRestRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).ApplyRest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_ApplyRest_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).ApplyRest(ctx, req.(*DaggerheartApplyRestRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_ApplyDowntimeMove_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartApplyDowntimeMoveRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).ApplyDowntimeMove(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_ApplyDowntimeMove_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).ApplyDowntimeMove(ctx, req.(*DaggerheartApplyDowntimeMoveRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_SwapLoadout_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartSwapLoadoutRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).SwapLoadout(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_SwapLoadout_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).SwapLoadout(ctx, req.(*DaggerheartSwapLoadoutRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_ApplyDeathMove_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartApplyDeathMoveRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).ApplyDeathMove(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_ApplyDeathMove_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).ApplyDeathMove(ctx, req.(*DaggerheartApplyDeathMoveRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_ApplyConditions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartApplyConditionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).ApplyConditions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_ApplyConditions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).ApplyConditions(ctx, req.(*DaggerheartApplyConditionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_ApplyGmMove_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartApplyGmMoveRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).ApplyGmMove(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_ApplyGmMove_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).ApplyGmMove(ctx, req.(*DaggerheartApplyGmMoveRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_CreateCountdown_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartCreateCountdownRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).CreateCountdown(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_CreateCountdown_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).CreateCountdown(ctx, req.(*DaggerheartCreateCountdownRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_UpdateCountdown_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartUpdateCountdownRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).UpdateCountdown(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_UpdateCountdown_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).UpdateCountdown(ctx, req.(*DaggerheartUpdateCountdownRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_DeleteCountdown_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartDeleteCountdownRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).DeleteCountdown(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_DeleteCountdown_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).DeleteCountdown(ctx, req.(*DaggerheartDeleteCountdownRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_CreateAdversary_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartCreateAdversaryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).CreateAdversary(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_CreateAdversary_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).CreateAdversary(ctx, req.(*DaggerheartCreateAdversaryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_UpdateAdversary_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartUpdateAdversaryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).UpdateAdversary(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_UpdateAdversary_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).UpdateAdversary(ctx, req.(*DaggerheartUpdateAdversaryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_DeleteAdversary_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartDeleteAdversaryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).DeleteAdversary(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_DeleteAdversary_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).DeleteAdversary(ctx, req.(*DaggerheartDeleteAdversaryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_GetAdversary_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartGetAdversaryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).GetAdversary(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_GetAdversary_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).GetAdversary(ctx, req.(*DaggerheartGetAdversaryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_ListAdversaries_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartListAdversariesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).ListAdversaries(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_ListAdversaries_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).ListAdversaries(ctx, req.(*DaggerheartListAdversariesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_ResolveBlazeOfGlory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartResolveBlazeOfGloryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).ResolveBlazeOfGlory(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_ResolveBlazeOfGlory_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).ResolveBlazeOfGlory(ctx, req.(*DaggerheartResolveBlazeOfGloryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _DaggerheartService_SessionActionRoll_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(SessionActionRollRequest)
 	if err := dec(in); err != nil {
@@ -348,6 +1104,132 @@ func _DaggerheartService_SessionActionRoll_Handler(srv interface{}, ctx context.
 	return interceptor(ctx, in, info, handler)
 }
 
+func _DaggerheartService_SessionDamageRoll_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SessionDamageRollRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).SessionDamageRoll(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_SessionDamageRoll_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).SessionDamageRoll(ctx, req.(*SessionDamageRollRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_SessionAttackFlow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SessionAttackFlowRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).SessionAttackFlow(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_SessionAttackFlow_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).SessionAttackFlow(ctx, req.(*SessionAttackFlowRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_SessionReactionFlow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SessionReactionFlowRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).SessionReactionFlow(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_SessionReactionFlow_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).SessionReactionFlow(ctx, req.(*SessionReactionFlowRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_SessionAdversaryAttackRoll_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SessionAdversaryAttackRollRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).SessionAdversaryAttackRoll(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_SessionAdversaryAttackRoll_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).SessionAdversaryAttackRoll(ctx, req.(*SessionAdversaryAttackRollRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_SessionAdversaryAttackFlow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SessionAdversaryAttackFlowRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).SessionAdversaryAttackFlow(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_SessionAdversaryAttackFlow_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).SessionAdversaryAttackFlow(ctx, req.(*SessionAdversaryAttackFlowRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_SessionGroupActionFlow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SessionGroupActionFlowRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).SessionGroupActionFlow(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_SessionGroupActionFlow_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).SessionGroupActionFlow(ctx, req.(*SessionGroupActionFlowRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_SessionTagTeamFlow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SessionTagTeamFlowRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).SessionTagTeamFlow(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_SessionTagTeamFlow_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).SessionTagTeamFlow(ctx, req.(*SessionTagTeamFlowRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _DaggerheartService_ApplyRollOutcome_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ApplyRollOutcomeRequest)
 	if err := dec(in); err != nil {
@@ -362,6 +1244,60 @@ func _DaggerheartService_ApplyRollOutcome_Handler(srv interface{}, ctx context.C
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DaggerheartServiceServer).ApplyRollOutcome(ctx, req.(*ApplyRollOutcomeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_ApplyAttackOutcome_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartApplyAttackOutcomeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).ApplyAttackOutcome(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_ApplyAttackOutcome_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).ApplyAttackOutcome(ctx, req.(*DaggerheartApplyAttackOutcomeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_ApplyAdversaryAttackOutcome_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartApplyAdversaryAttackOutcomeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).ApplyAdversaryAttackOutcome(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_ApplyAdversaryAttackOutcome_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).ApplyAdversaryAttackOutcome(ctx, req.(*DaggerheartApplyAdversaryAttackOutcomeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_ApplyReactionOutcome_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartApplyReactionOutcomeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).ApplyReactionOutcome(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_ApplyReactionOutcome_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).ApplyReactionOutcome(ctx, req.(*DaggerheartApplyReactionOutcomeRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -398,12 +1334,116 @@ var DaggerheartService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _DaggerheartService_RollDice_Handler,
 		},
 		{
+			MethodName: "ApplyDamage",
+			Handler:    _DaggerheartService_ApplyDamage_Handler,
+		},
+		{
+			MethodName: "ApplyRest",
+			Handler:    _DaggerheartService_ApplyRest_Handler,
+		},
+		{
+			MethodName: "ApplyDowntimeMove",
+			Handler:    _DaggerheartService_ApplyDowntimeMove_Handler,
+		},
+		{
+			MethodName: "SwapLoadout",
+			Handler:    _DaggerheartService_SwapLoadout_Handler,
+		},
+		{
+			MethodName: "ApplyDeathMove",
+			Handler:    _DaggerheartService_ApplyDeathMove_Handler,
+		},
+		{
+			MethodName: "ApplyConditions",
+			Handler:    _DaggerheartService_ApplyConditions_Handler,
+		},
+		{
+			MethodName: "ApplyGmMove",
+			Handler:    _DaggerheartService_ApplyGmMove_Handler,
+		},
+		{
+			MethodName: "CreateCountdown",
+			Handler:    _DaggerheartService_CreateCountdown_Handler,
+		},
+		{
+			MethodName: "UpdateCountdown",
+			Handler:    _DaggerheartService_UpdateCountdown_Handler,
+		},
+		{
+			MethodName: "DeleteCountdown",
+			Handler:    _DaggerheartService_DeleteCountdown_Handler,
+		},
+		{
+			MethodName: "CreateAdversary",
+			Handler:    _DaggerheartService_CreateAdversary_Handler,
+		},
+		{
+			MethodName: "UpdateAdversary",
+			Handler:    _DaggerheartService_UpdateAdversary_Handler,
+		},
+		{
+			MethodName: "DeleteAdversary",
+			Handler:    _DaggerheartService_DeleteAdversary_Handler,
+		},
+		{
+			MethodName: "GetAdversary",
+			Handler:    _DaggerheartService_GetAdversary_Handler,
+		},
+		{
+			MethodName: "ListAdversaries",
+			Handler:    _DaggerheartService_ListAdversaries_Handler,
+		},
+		{
+			MethodName: "ResolveBlazeOfGlory",
+			Handler:    _DaggerheartService_ResolveBlazeOfGlory_Handler,
+		},
+		{
 			MethodName: "SessionActionRoll",
 			Handler:    _DaggerheartService_SessionActionRoll_Handler,
 		},
 		{
+			MethodName: "SessionDamageRoll",
+			Handler:    _DaggerheartService_SessionDamageRoll_Handler,
+		},
+		{
+			MethodName: "SessionAttackFlow",
+			Handler:    _DaggerheartService_SessionAttackFlow_Handler,
+		},
+		{
+			MethodName: "SessionReactionFlow",
+			Handler:    _DaggerheartService_SessionReactionFlow_Handler,
+		},
+		{
+			MethodName: "SessionAdversaryAttackRoll",
+			Handler:    _DaggerheartService_SessionAdversaryAttackRoll_Handler,
+		},
+		{
+			MethodName: "SessionAdversaryAttackFlow",
+			Handler:    _DaggerheartService_SessionAdversaryAttackFlow_Handler,
+		},
+		{
+			MethodName: "SessionGroupActionFlow",
+			Handler:    _DaggerheartService_SessionGroupActionFlow_Handler,
+		},
+		{
+			MethodName: "SessionTagTeamFlow",
+			Handler:    _DaggerheartService_SessionTagTeamFlow_Handler,
+		},
+		{
 			MethodName: "ApplyRollOutcome",
 			Handler:    _DaggerheartService_ApplyRollOutcome_Handler,
+		},
+		{
+			MethodName: "ApplyAttackOutcome",
+			Handler:    _DaggerheartService_ApplyAttackOutcome_Handler,
+		},
+		{
+			MethodName: "ApplyAdversaryAttackOutcome",
+			Handler:    _DaggerheartService_ApplyAdversaryAttackOutcome_Handler,
+		},
+		{
+			MethodName: "ApplyReactionOutcome",
+			Handler:    _DaggerheartService_ApplyReactionOutcome_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

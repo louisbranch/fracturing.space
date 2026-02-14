@@ -10,11 +10,15 @@ import (
 
 // Daggerheart-specific constants for resource ranges.
 const (
+	HPMin         = 0
+	HPMaxCap      = 12
 	HopeMin       = 0
 	HopeMax       = 6
 	HopeDefault   = 2
 	StressMin     = 0
+	StressMaxCap  = 12
 	StressDefault = 0
+	ArmorMin      = 0
 	GMFearMin     = 0
 	GMFearMax     = 12
 	GMFearDefault = 0
@@ -25,6 +29,7 @@ const (
 	ResourceHope   = "hope"
 	ResourceStress = "stress"
 	ResourceGMFear = "gm_fear"
+	ResourceArmor  = "armor"
 )
 
 var (
@@ -44,8 +49,12 @@ type CharacterState struct {
 	hp          int
 	hpMax       int
 	hope        int
+	hopeMax     int
 	stress      int
 	stressMax   int
+	armor       int
+	armorMax    int
+	lifeState   string
 }
 
 // CharacterStateConfig contains the configuration for creating a CharacterState.
@@ -55,20 +64,29 @@ type CharacterStateConfig struct {
 	HP          int
 	HPMax       int
 	Hope        int
+	HopeMax     int
 	Stress      int
 	StressMax   int
+	Armor       int
+	ArmorMax    int
+	LifeState   string
 }
 
 // NewCharacterState creates a new Daggerheart character state from config.
 func NewCharacterState(cfg CharacterStateConfig) *CharacterState {
+	cfg = clampCharacterConfig(cfg)
 	return &CharacterState{
 		campaignID:  cfg.CampaignID,
 		characterID: cfg.CharacterID,
 		hp:          cfg.HP,
 		hpMax:       cfg.HPMax,
 		hope:        cfg.Hope,
+		hopeMax:     cfg.HopeMax,
 		stress:      cfg.Stress,
 		stressMax:   cfg.StressMax,
+		armor:       cfg.Armor,
+		armorMax:    cfg.ArmorMax,
+		lifeState:   cfg.LifeState,
 	}
 }
 
@@ -111,12 +129,16 @@ func (s *CharacterState) GainResource(name string, amount int) (before, after in
 	switch name {
 	case ResourceHope:
 		before = s.hope
-		s.hope = min(s.hope+amount, HopeMax)
+		s.hope = min(s.hope+amount, s.hopeMax)
 		return before, s.hope, nil
 	case ResourceStress:
 		before = s.stress
 		s.stress = min(s.stress+amount, s.stressMax)
 		return before, s.stress, nil
+	case ResourceArmor:
+		before = s.armor
+		s.armor = min(s.armor+amount, s.armorMax)
+		return before, s.armor, nil
 	default:
 		return 0, 0, unknownResourceError(name)
 	}
@@ -139,6 +161,13 @@ func (s *CharacterState) SpendResource(name string, amount int) (before, after i
 		before = s.stress
 		s.stress -= amount
 		return before, s.stress, nil
+	case ResourceArmor:
+		if s.armor < amount {
+			return 0, 0, insufficientResourceError(name, s.armor, amount)
+		}
+		before = s.armor
+		s.armor -= amount
+		return before, s.armor, nil
 	default:
 		return 0, 0, unknownResourceError(name)
 	}
@@ -151,6 +180,8 @@ func (s *CharacterState) ResourceValue(name string) int {
 		return s.hope
 	case ResourceStress:
 		return s.stress
+	case ResourceArmor:
+		return s.armor
 	default:
 		return 0
 	}
@@ -160,9 +191,11 @@ func (s *CharacterState) ResourceValue(name string) int {
 func (s *CharacterState) ResourceCap(name string) int {
 	switch name {
 	case ResourceHope:
-		return HopeMax
+		return s.hopeMax
 	case ResourceStress:
 		return s.stressMax
+	case ResourceArmor:
+		return s.armorMax
 	default:
 		return 0
 	}
@@ -170,7 +203,7 @@ func (s *CharacterState) ResourceCap(name string) int {
 
 // ResourceNames returns the names of all resources this holder manages.
 func (s *CharacterState) ResourceNames() []string {
-	return []string{ResourceHope, ResourceStress}
+	return []string{ResourceHope, ResourceStress, ResourceArmor}
 }
 
 // Hope returns the current hope value.
@@ -178,19 +211,42 @@ func (s *CharacterState) Hope() int {
 	return s.hope
 }
 
+// HopeMax returns the maximum hope value.
+func (s *CharacterState) HopeMax() int {
+	return s.hopeMax
+}
+
 // Stress returns the current stress value.
 func (s *CharacterState) Stress() int {
 	return s.stress
 }
 
+// Armor returns the current armor slots.
+func (s *CharacterState) Armor() int {
+	return s.armor
+}
+
 // SetHope sets the hope value directly (for storage layer).
 func (s *CharacterState) SetHope(v int) {
-	s.hope = min(max(v, HopeMin), HopeMax)
+	s.hope = min(max(v, HopeMin), s.hopeMax)
+}
+
+// SetHopeMax sets the hope max value directly (for storage layer).
+func (s *CharacterState) SetHopeMax(v int) {
+	s.hopeMax = min(max(v, HopeMin), HopeMax)
+	if s.hope > s.hopeMax {
+		s.hope = s.hopeMax
+	}
 }
 
 // SetStress sets the stress value directly (for storage layer).
 func (s *CharacterState) SetStress(v int) {
 	s.stress = min(max(v, StressMin), s.stressMax)
+}
+
+// SetArmor sets the armor slots directly (for storage layer).
+func (s *CharacterState) SetArmor(v int) {
+	s.armor = min(max(v, ArmorMin), s.armorMax)
 }
 
 // Ensure CharacterState implements CharacterStateHandler.
@@ -201,12 +257,14 @@ var _ systems.CharacterStateHandler = (*CharacterState)(nil)
 type SnapshotState struct {
 	campaignID string
 	gmFear     int
+	shortRests int
 }
 
 // SnapshotStateConfig contains the configuration for creating a SnapshotState.
 type SnapshotStateConfig struct {
 	CampaignID string
 	GMFear     int
+	ShortRests int
 }
 
 // NewSnapshotState creates a new Daggerheart snapshot projection from config.
@@ -214,6 +272,7 @@ func NewSnapshotState(cfg SnapshotStateConfig) *SnapshotState {
 	return &SnapshotState{
 		campaignID: cfg.CampaignID,
 		gmFear:     cfg.GMFear,
+		shortRests: cfg.ShortRests,
 	}
 }
 
@@ -271,9 +330,22 @@ func (s *SnapshotState) GMFear() int {
 	return s.gmFear
 }
 
+// ShortRests returns the consecutive short rest count.
+func (s *SnapshotState) ShortRests() int {
+	return s.shortRests
+}
+
 // SetGMFear sets the GM Fear value directly (for storage layer).
 func (s *SnapshotState) SetGMFear(v int) {
 	s.gmFear = min(max(v, GMFearMin), GMFearMax)
+}
+
+// SetShortRests sets the consecutive short rest count directly (for storage layer).
+func (s *SnapshotState) SetShortRests(v int) {
+	if v < 0 {
+		v = 0
+	}
+	s.shortRests = v
 }
 
 // Ensure SnapshotState implements SnapshotStateHandler.
@@ -296,8 +368,12 @@ func (f *StateFactory) NewCharacterState(campaignID, characterID string, kind sy
 		HP:          6, // Default HP max for PCs
 		HPMax:       6,
 		Hope:        HopeDefault,
+		HopeMax:     HopeMax,
 		Stress:      StressDefault,
 		StressMax:   6, // Default stress max
+		Armor:       0,
+		ArmorMax:    0,
+		LifeState:   LifeStateAlive,
 	}
 
 	// NPCs may have different defaults
@@ -314,6 +390,7 @@ func (f *StateFactory) NewSnapshotState(campaignID string) (systems.SnapshotStat
 	cfg := SnapshotStateConfig{
 		CampaignID: campaignID,
 		GMFear:     GMFearDefault,
+		ShortRests: 0,
 	}
 	return NewSnapshotState(cfg), nil
 }
@@ -346,6 +423,34 @@ func unknownResourceError(name string) *apperrors.Error {
 		fmt.Sprintf("unknown resource: %s", name),
 		map[string]string{"Resource": name},
 	)
+}
+
+func clampCharacterConfig(cfg CharacterStateConfig) CharacterStateConfig {
+	cfg.HPMax = clamp(cfg.HPMax, HPMin, HPMaxCap)
+	cfg.HP = clamp(cfg.HP, HPMin, cfg.HPMax)
+	cfg.StressMax = clamp(cfg.StressMax, StressMin, StressMaxCap)
+	cfg.Stress = clamp(cfg.Stress, StressMin, cfg.StressMax)
+	cfg.HopeMax = clamp(cfg.HopeMax, HopeMin, HopeMax)
+	cfg.Hope = clamp(cfg.Hope, HopeMin, cfg.HopeMax)
+	cfg.ArmorMax = clamp(cfg.ArmorMax, ArmorMin, ArmorMaxCap)
+	cfg.Armor = clamp(cfg.Armor, ArmorMin, cfg.ArmorMax)
+	if cfg.LifeState == "" {
+		cfg.LifeState = LifeStateAlive
+	}
+	return cfg
+}
+
+func clamp(value, minValue, maxValue int) int {
+	if minValue > maxValue {
+		return minValue
+	}
+	if value < minValue {
+		return minValue
+	}
+	if value > maxValue {
+		return maxValue
+	}
+	return value
 }
 
 // insufficientResourceError creates a structured error for insufficient resources.

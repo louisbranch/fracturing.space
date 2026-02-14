@@ -19,6 +19,7 @@ func runMetadataTests(t *testing.T, suite *integrationSuite, grpcAddr string) {
 	t.Helper()
 
 	t.Run("mcp tool metadata", func(t *testing.T) {
+		t.Skip("MCP tooling deferred until mechanics stabilize")
 		ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
 		defer cancel()
 

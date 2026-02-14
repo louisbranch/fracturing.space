@@ -1276,8 +1276,6 @@ func formatEventType(eventType string, loc *message.Printer) string {
 		return loc.Sprintf("event.campaign_created")
 	case "campaign.forked":
 		return loc.Sprintf("event.campaign_forked")
-	case "campaign.status_changed":
-		return loc.Sprintf("event.campaign_status_changed")
 	case "campaign.updated":
 		return loc.Sprintf("event.campaign_updated")
 	// Participant events
@@ -1296,18 +1294,16 @@ func formatEventType(eventType string, loc *message.Printer) string {
 		return loc.Sprintf("event.character_updated")
 	case "character.profile_updated":
 		return loc.Sprintf("event.character_profile_updated")
-	case "character.controller_assigned":
-		return loc.Sprintf("event.character_controller_assigned")
-	// Snapshot-related events
-	case "snapshot.character_state_changed":
-		return loc.Sprintf("event.snapshot_character_state_changed")
-	case "snapshot.gm_fear_changed":
-		return loc.Sprintf("event.snapshot_gm_fear_changed")
 	// Session events
 	case "session.started":
 		return loc.Sprintf("event.session_started")
 	case "session.ended":
 		return loc.Sprintf("event.session_ended")
+	// Invite events
+	case "invite.created":
+		return loc.Sprintf("event.invite_created")
+	case "invite.updated":
+		return loc.Sprintf("event.invite_updated")
 	// Action events
 	case "action.roll_resolved":
 		return loc.Sprintf("event.action_roll_resolved")
@@ -1317,6 +1313,20 @@ func formatEventType(eventType string, loc *message.Printer) string {
 		return loc.Sprintf("event.action_outcome_rejected")
 	case "action.note_added":
 		return loc.Sprintf("event.action_note_added")
+	case "action.character_state_patched":
+		return loc.Sprintf("event.action_character_state_patched")
+	case "action.gm_fear_changed":
+		return loc.Sprintf("event.action_gm_fear_changed")
+	case "action.death_move_resolved":
+		return loc.Sprintf("event.action_death_move_resolved")
+	case "action.blaze_of_glory_resolved":
+		return loc.Sprintf("event.action_blaze_of_glory_resolved")
+	case "action.attack_resolved":
+		return loc.Sprintf("event.action_attack_resolved")
+	case "action.reaction_resolved":
+		return loc.Sprintf("event.action_reaction_resolved")
+	case "action.damage_roll_resolved":
+		return loc.Sprintf("event.action_damage_roll_resolved")
 	default:
 		// Fallback: capitalize and format unknown types
 		parts := strings.Split(eventType, ".")

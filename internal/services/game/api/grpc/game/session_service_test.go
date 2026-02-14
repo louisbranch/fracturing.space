@@ -128,11 +128,14 @@ func TestStartSession_Success_ActivatesDraftCampaign(t *testing.T) {
 	if resp.Session.Status != statev1.SessionStatus_SESSION_ACTIVE {
 		t.Errorf("Session Status = %v, want %v", resp.Session.Status, statev1.SessionStatus_SESSION_ACTIVE)
 	}
-	if got := len(eventStore.events["c1"]); got != 1 {
-		t.Fatalf("expected 1 event, got %d", got)
+	if got := len(eventStore.events["c1"]); got != 2 {
+		t.Fatalf("expected 2 events, got %d", got)
 	}
-	if eventStore.events["c1"][0].Type != event.TypeSessionStarted {
-		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.TypeSessionStarted)
+	if eventStore.events["c1"][0].Type != event.TypeCampaignUpdated {
+		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.TypeCampaignUpdated)
+	}
+	if eventStore.events["c1"][1].Type != event.TypeSessionStarted {
+		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][1].Type, event.TypeSessionStarted)
 	}
 
 	// Verify campaign was activated

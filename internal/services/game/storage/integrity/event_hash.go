@@ -38,6 +38,12 @@ func EventHash(evt event.Event) (string, error) {
 	if evt.EntityID != "" {
 		envelope["entity_id"] = evt.EntityID
 	}
+	if evt.SystemID != "" {
+		envelope["system_id"] = evt.SystemID
+	}
+	if evt.SystemVersion != "" {
+		envelope["system_version"] = evt.SystemVersion
+	}
 	return encoding.ContentHash(envelope)
 }
 
@@ -73,6 +79,12 @@ func ChainHash(evt event.Event, prevHash string) (string, error) {
 	}
 	if evt.EntityID != "" {
 		envelope["entity_id"] = evt.EntityID
+	}
+	if evt.SystemID != "" {
+		envelope["system_id"] = evt.SystemID
+	}
+	if evt.SystemVersion != "" {
+		envelope["system_version"] = evt.SystemVersion
 	}
 
 	canonical, err := encoding.CanonicalJSON(envelope)

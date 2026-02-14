@@ -84,21 +84,43 @@ type ExplainResult struct {
 
 // ActionRequest describes an action roll request.
 type ActionRequest struct {
-	Modifier   int
-	Difficulty *int
-	Seed       int64
+	Modifier     int
+	Difficulty   *int
+	Seed         int64
+	Advantage    int
+	Disadvantage int
 }
 
 // ActionResult contains the outcome of an action roll.
 type ActionResult struct {
-	Hope            int
-	Fear            int
-	Modifier        int
-	Difficulty      *int
-	Total           int
-	IsCrit          bool
-	MeetsDifficulty bool
-	Outcome         Outcome
+	Hope              int
+	Fear              int
+	Modifier          int
+	AdvantageDie      int
+	AdvantageModifier int
+	Difficulty        *int
+	Total             int
+	IsCrit            bool
+	MeetsDifficulty   bool
+	Outcome           Outcome
+}
+
+// ReactionRequest describes a reaction roll request.
+type ReactionRequest struct {
+	Modifier     int
+	Difficulty   *int
+	Seed         int64
+	Advantage    int
+	Disadvantage int
+}
+
+// ReactionResult contains the outcome of a reaction roll.
+type ReactionResult struct {
+	ActionResult
+	GeneratesHopeFear  bool
+	AidAllowed         bool
+	TriggersGMMove     bool
+	CritNegatesEffects bool
 }
 
 // OutcomeRequest describes a deterministic duality outcome evaluation.

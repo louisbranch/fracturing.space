@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -11,6 +12,8 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/participant"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -87,7 +90,7 @@ func TestReplaySnapshot_AppliesSnapshotEvents(t *testing.T) {
 	ctx := context.Background()
 	campaignStore := newProjectionCampaignStore()
 	daggerheartStore := newProjectionDaggerheartStore()
-	applier := Applier{Campaign: campaignStore, Daggerheart: daggerheartStore}
+	applier := newProjectionApplier(campaignStore, daggerheartStore)
 	campaignStore.campaigns["camp-1"] = campaign.Campaign{ID: "camp-1"}
 	eventStore := &projectionEventStore{
 		events: []event.Event{
@@ -119,6 +122,144 @@ func TestReplaySnapshot_AppliesSnapshotEvents(t *testing.T) {
 	}
 	if state.Hp != 6 || state.Hope != 2 || state.Stress != 1 {
 		t.Fatalf("state = %+v, want hp=6 hope=2 stress=1", state)
+	}
+}
+
+func TestReplaySnapshot_RejectsInvalidState(t *testing.T) {
+	ctx := context.Background()
+	campaignStore := newProjectionCampaignStore()
+	daggerheartStore := newProjectionDaggerheartStore()
+	applier := newProjectionApplier(campaignStore, daggerheartStore)
+	campaignStore.campaigns["camp-1"] = campaign.Campaign{ID: "camp-1"}
+	eventStore := &projectionEventStore{
+		events: []event.Event{
+			newCampaignCreatedEvent("camp-1", 1),
+			newCharacterStateChangedEvent("camp-1", "char-1", 2, 6, 7, 1),
+		},
+	}
+
+	_, err := ReplaySnapshot(ctx, eventStore, applier, "camp-1", 0)
+	if err == nil {
+		t.Fatal("expected error for invalid hope value")
+	}
+}
+
+func TestReplaySnapshot_RejectsInvalidGMFear(t *testing.T) {
+	ctx := context.Background()
+	campaignStore := newProjectionCampaignStore()
+	daggerheartStore := newProjectionDaggerheartStore()
+	applier := newProjectionApplier(campaignStore, daggerheartStore)
+	campaignStore.campaigns["camp-1"] = campaign.Campaign{ID: "camp-1"}
+	eventStore := &projectionEventStore{
+		events: []event.Event{
+			newCampaignCreatedEvent("camp-1", 1),
+			newGMFearChangedEvent("camp-1", 2, 13),
+		},
+	}
+
+	_, err := ReplaySnapshot(ctx, eventStore, applier, "camp-1", 0)
+	if err == nil {
+		t.Fatal("expected error for invalid gm fear value")
+	}
+}
+
+func TestReplaySnapshot_AppliesDamageApplied(t *testing.T) {
+	ctx := context.Background()
+	campaignStore := newProjectionCampaignStore()
+	daggerheartStore := newProjectionDaggerheartStore()
+	applier := newProjectionApplier(campaignStore, daggerheartStore)
+	campaignStore.campaigns["camp-1"] = campaign.Campaign{ID: "camp-1"}
+	daggerheartStore.states["camp-1:char-1"] = storage.DaggerheartCharacterState{CampaignID: "camp-1", CharacterID: "char-1", Hp: 6, Hope: 2, Stress: 1, Armor: 2}
+	eventStore := &projectionEventStore{
+		events: []event.Event{
+			newCampaignCreatedEvent("camp-1", 1),
+			newDamageAppliedEvent("camp-1", "char-1", 2, 4, 1),
+		},
+	}
+
+	_, err := ReplaySnapshot(ctx, eventStore, applier, "camp-1", 0)
+	if err != nil {
+		t.Fatalf("ReplaySnapshot returned error: %v", err)
+	}
+	state := daggerheartStore.states["camp-1:char-1"]
+	if state.Hp != 4 || state.Armor != 1 {
+		t.Fatalf("state = %+v, want hp=4 armor=1", state)
+	}
+}
+
+func TestReplaySnapshot_AppliesRestTaken(t *testing.T) {
+	ctx := context.Background()
+	campaignStore := newProjectionCampaignStore()
+	daggerheartStore := newProjectionDaggerheartStore()
+	applier := newProjectionApplier(campaignStore, daggerheartStore)
+	campaignStore.campaigns["camp-1"] = campaign.Campaign{ID: "camp-1"}
+	daggerheartStore.snapshots["camp-1"] = storage.DaggerheartSnapshot{CampaignID: "camp-1", GMFear: 0}
+	daggerheartStore.states["camp-1:char-1"] = storage.DaggerheartCharacterState{CampaignID: "camp-1", CharacterID: "char-1", Hp: 6, Hope: 1, Stress: 3, Armor: 0}
+	eventStore := &projectionEventStore{
+		events: []event.Event{
+			newCampaignCreatedEvent("camp-1", 1),
+			newRestTakenEvent("camp-1", "char-1", 2),
+		},
+	}
+
+	_, err := ReplaySnapshot(ctx, eventStore, applier, "camp-1", 0)
+	if err != nil {
+		t.Fatalf("ReplaySnapshot returned error: %v", err)
+	}
+	if snap := daggerheartStore.snapshots["camp-1"]; snap.GMFear != 2 {
+		t.Fatalf("gm_fear = %d, want 2", snap.GMFear)
+	}
+	state := daggerheartStore.states["camp-1:char-1"]
+	if state.Hope != 2 || state.Stress != 0 {
+		t.Fatalf("state = %+v, want hope=2 stress=0", state)
+	}
+}
+
+func TestReplaySnapshot_AppliesDowntimeMove(t *testing.T) {
+	ctx := context.Background()
+	campaignStore := newProjectionCampaignStore()
+	daggerheartStore := newProjectionDaggerheartStore()
+	applier := newProjectionApplier(campaignStore, daggerheartStore)
+	campaignStore.campaigns["camp-1"] = campaign.Campaign{ID: "camp-1"}
+	daggerheartStore.states["camp-1:char-1"] = storage.DaggerheartCharacterState{CampaignID: "camp-1", CharacterID: "char-1", Hp: 6, Hope: 1, Stress: 3, Armor: 0}
+	eventStore := &projectionEventStore{
+		events: []event.Event{
+			newCampaignCreatedEvent("camp-1", 1),
+			newDowntimeMoveAppliedEvent("camp-1", "char-1", 2),
+		},
+	}
+
+	_, err := ReplaySnapshot(ctx, eventStore, applier, "camp-1", 0)
+	if err != nil {
+		t.Fatalf("ReplaySnapshot returned error: %v", err)
+	}
+	state := daggerheartStore.states["camp-1:char-1"]
+	if state.Hope != 3 {
+		t.Fatalf("hope = %d, want 3", state.Hope)
+	}
+}
+
+func TestReplaySnapshot_AppliesLoadoutSwap(t *testing.T) {
+	ctx := context.Background()
+	campaignStore := newProjectionCampaignStore()
+	daggerheartStore := newProjectionDaggerheartStore()
+	applier := newProjectionApplier(campaignStore, daggerheartStore)
+	campaignStore.campaigns["camp-1"] = campaign.Campaign{ID: "camp-1"}
+	daggerheartStore.states["camp-1:char-1"] = storage.DaggerheartCharacterState{CampaignID: "camp-1", CharacterID: "char-1", Hp: 6, Hope: 1, Stress: 3, Armor: 0}
+	eventStore := &projectionEventStore{
+		events: []event.Event{
+			newCampaignCreatedEvent("camp-1", 1),
+			newLoadoutSwappedEvent("camp-1", "char-1", 2),
+		},
+	}
+
+	_, err := ReplaySnapshot(ctx, eventStore, applier, "camp-1", 0)
+	if err != nil {
+		t.Fatalf("ReplaySnapshot returned error: %v", err)
+	}
+	state := daggerheartStore.states["camp-1:char-1"]
+	if state.Stress != 2 {
+		t.Fatalf("stress = %d, want 2", state.Stress)
 	}
 }
 
@@ -232,17 +373,27 @@ func (s *projectionParticipantStore) ListParticipants(context.Context, string, i
 }
 
 type projectionDaggerheartStore struct {
-	profiles  map[string]storage.DaggerheartCharacterProfile
-	states    map[string]storage.DaggerheartCharacterState
-	snapshots map[string]storage.DaggerheartSnapshot
+	profiles    map[string]storage.DaggerheartCharacterProfile
+	states      map[string]storage.DaggerheartCharacterState
+	snapshots   map[string]storage.DaggerheartSnapshot
+	countdowns  map[string]storage.DaggerheartCountdown
+	adversaries map[string]storage.DaggerheartAdversary
 }
 
 func newProjectionDaggerheartStore() *projectionDaggerheartStore {
 	return &projectionDaggerheartStore{
-		profiles:  make(map[string]storage.DaggerheartCharacterProfile),
-		states:    make(map[string]storage.DaggerheartCharacterState),
-		snapshots: make(map[string]storage.DaggerheartSnapshot),
+		profiles:    make(map[string]storage.DaggerheartCharacterProfile),
+		states:      make(map[string]storage.DaggerheartCharacterState),
+		snapshots:   make(map[string]storage.DaggerheartSnapshot),
+		countdowns:  make(map[string]storage.DaggerheartCountdown),
+		adversaries: make(map[string]storage.DaggerheartAdversary),
 	}
+}
+
+func newProjectionApplier(campaignStore *projectionCampaignStore, daggerheartStore *projectionDaggerheartStore) Applier {
+	registry := systems.NewAdapterRegistry()
+	registry.Register(daggerheart.NewAdapter(daggerheartStore))
+	return Applier{Campaign: campaignStore, Daggerheart: daggerheartStore, Adapters: registry}
 }
 
 func (s *projectionDaggerheartStore) PutDaggerheartCharacterProfile(_ context.Context, profile storage.DaggerheartCharacterProfile) error {
@@ -288,6 +439,78 @@ func (s *projectionDaggerheartStore) GetDaggerheartSnapshot(_ context.Context, c
 	return snap, nil
 }
 
+func (s *projectionDaggerheartStore) PutDaggerheartCountdown(_ context.Context, countdown storage.DaggerheartCountdown) error {
+	key := countdown.CampaignID + ":" + countdown.CountdownID
+	s.countdowns[key] = countdown
+	return nil
+}
+
+func (s *projectionDaggerheartStore) GetDaggerheartCountdown(_ context.Context, campaignID, countdownID string) (storage.DaggerheartCountdown, error) {
+	key := campaignID + ":" + countdownID
+	countdown, ok := s.countdowns[key]
+	if !ok {
+		return storage.DaggerheartCountdown{}, storage.ErrNotFound
+	}
+	return countdown, nil
+}
+
+func (s *projectionDaggerheartStore) ListDaggerheartCountdowns(_ context.Context, campaignID string) ([]storage.DaggerheartCountdown, error) {
+	results := make([]storage.DaggerheartCountdown, 0)
+	for _, countdown := range s.countdowns {
+		if countdown.CampaignID == campaignID {
+			results = append(results, countdown)
+		}
+	}
+	return results, nil
+}
+
+func (s *projectionDaggerheartStore) DeleteDaggerheartCountdown(_ context.Context, campaignID, countdownID string) error {
+	key := campaignID + ":" + countdownID
+	if _, ok := s.countdowns[key]; !ok {
+		return storage.ErrNotFound
+	}
+	delete(s.countdowns, key)
+	return nil
+}
+
+func (s *projectionDaggerheartStore) PutDaggerheartAdversary(_ context.Context, adversary storage.DaggerheartAdversary) error {
+	key := adversary.CampaignID + ":" + adversary.AdversaryID
+	s.adversaries[key] = adversary
+	return nil
+}
+
+func (s *projectionDaggerheartStore) GetDaggerheartAdversary(_ context.Context, campaignID, adversaryID string) (storage.DaggerheartAdversary, error) {
+	key := campaignID + ":" + adversaryID
+	adversary, ok := s.adversaries[key]
+	if !ok {
+		return storage.DaggerheartAdversary{}, storage.ErrNotFound
+	}
+	return adversary, nil
+}
+
+func (s *projectionDaggerheartStore) ListDaggerheartAdversaries(_ context.Context, campaignID, sessionID string) ([]storage.DaggerheartAdversary, error) {
+	results := make([]storage.DaggerheartAdversary, 0)
+	for _, adversary := range s.adversaries {
+		if adversary.CampaignID != campaignID {
+			continue
+		}
+		if strings.TrimSpace(sessionID) != "" && adversary.SessionID != sessionID {
+			continue
+		}
+		results = append(results, adversary)
+	}
+	return results, nil
+}
+
+func (s *projectionDaggerheartStore) DeleteDaggerheartAdversary(_ context.Context, campaignID, adversaryID string) error {
+	key := campaignID + ":" + adversaryID
+	if _, ok := s.adversaries[key]; !ok {
+		return storage.ErrNotFound
+	}
+	delete(s.adversaries, key)
+	return nil
+}
+
 func newCampaignCreatedEvent(campaignID string, seq uint64) event.Event {
 	payload := event.CampaignCreatedPayload{
 		Name:       "Test Campaign",
@@ -327,39 +550,139 @@ func newParticipantJoinedEvent(campaignID, participantID string, seq uint64) eve
 }
 
 func newGMFearChangedEvent(campaignID string, seq uint64, gmFear int) event.Event {
-	payload := event.GMFearChangedPayload{Before: 0, After: gmFear}
+	payload := daggerheart.GMFearChangedPayload{Before: 0, After: gmFear}
 	data, _ := json.Marshal(payload)
 	return event.Event{
-		CampaignID:  campaignID,
-		Seq:         seq,
-		Timestamp:   time.Date(2025, 1, 10, 12, 0, 0, 0, time.UTC),
-		Type:        event.TypeGMFearChanged,
-		EntityType:  "snapshot",
-		EntityID:    campaignID,
-		PayloadJSON: data,
+		CampaignID:    campaignID,
+		Seq:           seq,
+		Timestamp:     time.Date(2025, 1, 10, 12, 0, 0, 0, time.UTC),
+		Type:          daggerheart.EventTypeGMFearChanged,
+		SystemID:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART.String(),
+		SystemVersion: daggerheart.SystemVersion,
+		EntityType:    "campaign",
+		EntityID:      campaignID,
+		PayloadJSON:   data,
 	}
 }
 
 func newCharacterStateChangedEvent(campaignID, characterID string, seq uint64, hp, hope, stress int) event.Event {
 	hpAfter := hp
-	payload := event.CharacterStateChangedPayload{
+	hopeAfter := hope
+	stressAfter := stress
+	payload := daggerheart.CharacterStatePatchedPayload{
 		CharacterID: characterID,
 		HpAfter:     &hpAfter,
-		SystemState: map[string]any{
-			"daggerheart": map[string]any{
-				"hope_after":   hope,
-				"stress_after": stress,
-			},
-		},
+		HopeAfter:   &hopeAfter,
+		StressAfter: &stressAfter,
 	}
 	data, _ := json.Marshal(payload)
 	return event.Event{
-		CampaignID:  campaignID,
-		Seq:         seq,
-		Timestamp:   time.Date(2025, 1, 10, 12, 5, 0, 0, time.UTC),
-		Type:        event.TypeCharacterStateChanged,
-		EntityType:  "character",
-		EntityID:    characterID,
-		PayloadJSON: data,
+		CampaignID:    campaignID,
+		Seq:           seq,
+		Timestamp:     time.Date(2025, 1, 10, 12, 5, 0, 0, time.UTC),
+		Type:          daggerheart.EventTypeCharacterStatePatched,
+		SystemID:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART.String(),
+		SystemVersion: daggerheart.SystemVersion,
+		EntityType:    "character",
+		EntityID:      characterID,
+		PayloadJSON:   data,
+	}
+}
+
+func newDamageAppliedEvent(campaignID, characterID string, seq uint64, hpAfter, armorAfter int) event.Event {
+	payload := daggerheart.DamageAppliedPayload{
+		CharacterID: characterID,
+		HpAfter:     &hpAfter,
+		ArmorAfter:  &armorAfter,
+		Severity:    "major",
+		Marks:       2,
+	}
+	data, _ := json.Marshal(payload)
+	return event.Event{
+		CampaignID:    campaignID,
+		Seq:           seq,
+		Timestamp:     time.Date(2025, 1, 10, 12, 6, 0, 0, time.UTC),
+		Type:          daggerheart.EventTypeDamageApplied,
+		SystemID:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART.String(),
+		SystemVersion: daggerheart.SystemVersion,
+		EntityType:    "character",
+		EntityID:      characterID,
+		PayloadJSON:   data,
+	}
+}
+
+func newRestTakenEvent(campaignID, characterID string, seq uint64) event.Event {
+	hopeAfter := 2
+	stressAfter := 0
+	payload := daggerheart.RestTakenPayload{
+		RestType:         "short",
+		Interrupted:      false,
+		GMFearBefore:     0,
+		GMFearAfter:      2,
+		ShortRestsBefore: 0,
+		ShortRestsAfter:  1,
+		RefreshRest:      true,
+		CharacterStates: []daggerheart.RestCharacterStatePatch{{
+			CharacterID: characterID,
+			HopeAfter:   &hopeAfter,
+			StressAfter: &stressAfter,
+		}},
+	}
+	data, _ := json.Marshal(payload)
+	return event.Event{
+		CampaignID:    campaignID,
+		Seq:           seq,
+		Timestamp:     time.Date(2025, 1, 10, 12, 7, 0, 0, time.UTC),
+		Type:          daggerheart.EventTypeRestTaken,
+		SystemID:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART.String(),
+		SystemVersion: daggerheart.SystemVersion,
+		EntityType:    "session",
+		EntityID:      campaignID,
+		PayloadJSON:   data,
+	}
+}
+
+func newDowntimeMoveAppliedEvent(campaignID, characterID string, seq uint64) event.Event {
+	hopeAfter := 3
+	payload := daggerheart.DowntimeMoveAppliedPayload{
+		CharacterID: characterID,
+		Move:        "prepare",
+		HopeAfter:   &hopeAfter,
+	}
+	data, _ := json.Marshal(payload)
+	return event.Event{
+		CampaignID:    campaignID,
+		Seq:           seq,
+		Timestamp:     time.Date(2025, 1, 10, 12, 8, 0, 0, time.UTC),
+		Type:          daggerheart.EventTypeDowntimeMoveApplied,
+		SystemID:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART.String(),
+		SystemVersion: daggerheart.SystemVersion,
+		EntityType:    "character",
+		EntityID:      characterID,
+		PayloadJSON:   data,
+	}
+}
+
+func newLoadoutSwappedEvent(campaignID, characterID string, seq uint64) event.Event {
+	stressAfter := 2
+	payload := daggerheart.LoadoutSwappedPayload{
+		CharacterID: characterID,
+		CardID:      "card-1",
+		From:        "vault",
+		To:          "active",
+		RecallCost:  1,
+		StressAfter: &stressAfter,
+	}
+	data, _ := json.Marshal(payload)
+	return event.Event{
+		CampaignID:    campaignID,
+		Seq:           seq,
+		Timestamp:     time.Date(2025, 1, 10, 12, 9, 0, 0, time.UTC),
+		Type:          daggerheart.EventTypeLoadoutSwapped,
+		SystemID:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART.String(),
+		SystemVersion: daggerheart.SystemVersion,
+		EntityType:    "character",
+		EntityID:      characterID,
+		PayloadJSON:   data,
 	}
 }

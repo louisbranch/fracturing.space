@@ -16,7 +16,7 @@ SELECT
     (SELECT COUNT(*) FROM participants p WHERE p.campaign_id = c.id) AS participant_count,
     (SELECT COUNT(*) FROM characters ch WHERE ch.campaign_id = c.id) AS character_count,
     c.theme_prompt, c.parent_campaign_id, c.fork_event_seq, c.origin_campaign_id,
-    c.created_at, c.last_activity_at, c.updated_at, c.completed_at, c.archived_at
+    c.created_at, c.updated_at, c.completed_at, c.archived_at
 FROM campaigns c WHERE c.id = ?
 `
 
@@ -33,7 +33,6 @@ type GetCampaignRow struct {
 	ForkEventSeq     sql.NullInt64  `json:"fork_event_seq"`
 	OriginCampaignID sql.NullString `json:"origin_campaign_id"`
 	CreatedAt        int64          `json:"created_at"`
-	LastActivityAt   int64          `json:"last_activity_at"`
 	UpdatedAt        int64          `json:"updated_at"`
 	CompletedAt      sql.NullInt64  `json:"completed_at"`
 	ArchivedAt       sql.NullInt64  `json:"archived_at"`
@@ -55,7 +54,6 @@ func (q *Queries) GetCampaign(ctx context.Context, id string) (GetCampaignRow, e
 		&i.ForkEventSeq,
 		&i.OriginCampaignID,
 		&i.CreatedAt,
-		&i.LastActivityAt,
 		&i.UpdatedAt,
 		&i.CompletedAt,
 		&i.ArchivedAt,
@@ -69,7 +67,7 @@ SELECT
     (SELECT COUNT(*) FROM participants p WHERE p.campaign_id = c.id) AS participant_count,
     (SELECT COUNT(*) FROM characters ch WHERE ch.campaign_id = c.id) AS character_count,
     c.theme_prompt, c.parent_campaign_id, c.fork_event_seq, c.origin_campaign_id,
-    c.created_at, c.last_activity_at, c.updated_at, c.completed_at, c.archived_at
+    c.created_at, c.updated_at, c.completed_at, c.archived_at
 FROM campaigns c
 ORDER BY c.id
 LIMIT ?
@@ -88,7 +86,6 @@ type ListAllCampaignsRow struct {
 	ForkEventSeq     sql.NullInt64  `json:"fork_event_seq"`
 	OriginCampaignID sql.NullString `json:"origin_campaign_id"`
 	CreatedAt        int64          `json:"created_at"`
-	LastActivityAt   int64          `json:"last_activity_at"`
 	UpdatedAt        int64          `json:"updated_at"`
 	CompletedAt      sql.NullInt64  `json:"completed_at"`
 	ArchivedAt       sql.NullInt64  `json:"archived_at"`
@@ -116,7 +113,6 @@ func (q *Queries) ListAllCampaigns(ctx context.Context, limit int64) ([]ListAllC
 			&i.ForkEventSeq,
 			&i.OriginCampaignID,
 			&i.CreatedAt,
-			&i.LastActivityAt,
 			&i.UpdatedAt,
 			&i.CompletedAt,
 			&i.ArchivedAt,
@@ -140,7 +136,7 @@ SELECT
     (SELECT COUNT(*) FROM participants p WHERE p.campaign_id = c.id) AS participant_count,
     (SELECT COUNT(*) FROM characters ch WHERE ch.campaign_id = c.id) AS character_count,
     c.theme_prompt, c.parent_campaign_id, c.fork_event_seq, c.origin_campaign_id,
-    c.created_at, c.last_activity_at, c.updated_at, c.completed_at, c.archived_at
+    c.created_at, c.updated_at, c.completed_at, c.archived_at
 FROM campaigns c
 WHERE c.id > ?
 ORDER BY c.id
@@ -165,7 +161,6 @@ type ListCampaignsRow struct {
 	ForkEventSeq     sql.NullInt64  `json:"fork_event_seq"`
 	OriginCampaignID sql.NullString `json:"origin_campaign_id"`
 	CreatedAt        int64          `json:"created_at"`
-	LastActivityAt   int64          `json:"last_activity_at"`
 	UpdatedAt        int64          `json:"updated_at"`
 	CompletedAt      sql.NullInt64  `json:"completed_at"`
 	ArchivedAt       sql.NullInt64  `json:"archived_at"`
@@ -193,7 +188,6 @@ func (q *Queries) ListCampaigns(ctx context.Context, arg ListCampaignsParams) ([
 			&i.ForkEventSeq,
 			&i.OriginCampaignID,
 			&i.CreatedAt,
-			&i.LastActivityAt,
 			&i.UpdatedAt,
 			&i.CompletedAt,
 			&i.ArchivedAt,
@@ -215,8 +209,8 @@ const putCampaign = `-- name: PutCampaign :exec
 INSERT INTO campaigns (
     id, name, game_system, status, gm_mode,
     participant_count, character_count, theme_prompt,
-    created_at, last_activity_at, updated_at, completed_at, archived_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    created_at, updated_at, completed_at, archived_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
     name = excluded.name,
     game_system = excluded.game_system,
@@ -225,7 +219,6 @@ ON CONFLICT(id) DO UPDATE SET
     participant_count = excluded.participant_count,
     character_count = excluded.character_count,
     theme_prompt = excluded.theme_prompt,
-    last_activity_at = excluded.last_activity_at,
     updated_at = excluded.updated_at,
     completed_at = excluded.completed_at,
     archived_at = excluded.archived_at
@@ -241,7 +234,6 @@ type PutCampaignParams struct {
 	CharacterCount   int64         `json:"character_count"`
 	ThemePrompt      string        `json:"theme_prompt"`
 	CreatedAt        int64         `json:"created_at"`
-	LastActivityAt   int64         `json:"last_activity_at"`
 	UpdatedAt        int64         `json:"updated_at"`
 	CompletedAt      sql.NullInt64 `json:"completed_at"`
 	ArchivedAt       sql.NullInt64 `json:"archived_at"`
@@ -258,7 +250,6 @@ func (q *Queries) PutCampaign(ctx context.Context, arg PutCampaignParams) error 
 		arg.CharacterCount,
 		arg.ThemePrompt,
 		arg.CreatedAt,
-		arg.LastActivityAt,
 		arg.UpdatedAt,
 		arg.CompletedAt,
 		arg.ArchivedAt,

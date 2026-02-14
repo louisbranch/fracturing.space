@@ -39,12 +39,18 @@ const (
 	CodeSeedOutOfRange                  = "SEED_OUT_OF_RANGE"
 	CodeDaggerheartInvalidDifficulty    = "DAGGERHEART_INVALID_DIFFICULTY"
 	CodeDaggerheartInvalidDualityDie    = "DAGGERHEART_INVALID_DUALITY_DIE"
+	CodeDaggerheartInvalidLevel         = "DAGGERHEART_INVALID_LEVEL"
 	CodeDaggerheartInvalidTraitValue    = "DAGGERHEART_INVALID_TRAIT_VALUE"
 	CodeDaggerheartInvalidStressMax     = "DAGGERHEART_INVALID_STRESS_MAX"
 	CodeDaggerheartInvalidHpMax         = "DAGGERHEART_INVALID_HP_MAX"
 	CodeDaggerheartInvalidHp            = "DAGGERHEART_INVALID_HP"
 	CodeDaggerheartInvalidEvasion       = "DAGGERHEART_INVALID_EVASION"
 	CodeDaggerheartInvalidThresholds    = "DAGGERHEART_INVALID_THRESHOLDS"
+	CodeDaggerheartInvalidProficiency   = "DAGGERHEART_INVALID_PROFICIENCY"
+	CodeDaggerheartInvalidArmorMax      = "DAGGERHEART_INVALID_ARMOR_MAX"
+	CodeDaggerheartInvalidArmorScore    = "DAGGERHEART_INVALID_ARMOR_SCORE"
+	CodeDaggerheartInvalidExperience    = "DAGGERHEART_INVALID_EXPERIENCE"
+	CodeDaggerheartInvalidRestSequence  = "DAGGERHEART_INVALID_REST_SEQUENCE"
 	CodeDaggerheartUnknownResource      = "DAGGERHEART_UNKNOWN_RESOURCE"
 	CodeDaggerheartInsufficientResource = "DAGGERHEART_INSUFFICIENT_RESOURCE"
 	CodeDaggerheartResourceAtCap        = "DAGGERHEART_RESOURCE_AT_CAP"
@@ -115,12 +121,18 @@ var enUSCatalog = &Catalog{
 		// Daggerheart-specific errors
 		CodeDaggerheartInvalidDifficulty:    "Difficulty must be non-negative",
 		CodeDaggerheartInvalidDualityDie:    "Duality dice must be between 1 and 12",
+		CodeDaggerheartInvalidLevel:         "Level must be in range 1..10",
 		CodeDaggerheartInvalidTraitValue:    "Trait {{.Trait}} value {{.Value}} must be in range -2 to +4",
-		CodeDaggerheartInvalidStressMax:     "Stress maximum must be non-negative",
-		CodeDaggerheartInvalidHpMax:         "HP maximum must be at least 1",
+		CodeDaggerheartInvalidStressMax:     "Stress maximum must be in range 0..12",
+		CodeDaggerheartInvalidHpMax:         "HP maximum must be in range 1..12",
 		CodeDaggerheartInvalidHp:            "HP {{.HP}} exceeds maximum {{.HPMax}}",
 		CodeDaggerheartInvalidEvasion:       "Evasion must be non-negative",
 		CodeDaggerheartInvalidThresholds:    "Severe threshold must be >= major threshold >= 0",
+		CodeDaggerheartInvalidProficiency:   "Proficiency must be non-negative",
+		CodeDaggerheartInvalidArmorMax:      "Armor max must be in range 0..12",
+		CodeDaggerheartInvalidArmorScore:    "Armor score must be non-negative",
+		CodeDaggerheartInvalidExperience:    "Experience name must be set",
+		CodeDaggerheartInvalidRestSequence:  "Too many short rests in a row",
 		CodeDaggerheartUnknownResource:      "Unknown resource: {{.Resource}}",
 		CodeDaggerheartInsufficientResource: "Insufficient {{.Resource}}: have {{.Have}}, need {{.Need}}",
 		CodeDaggerheartResourceAtCap:        "Resource {{.Resource}} is already at maximum",

@@ -9,6 +9,7 @@ Single source of agent directives and project context.
 ## Safety
 
 - Do not commit files containing secrets (.env, credentials).
+- Game service writes are event-driven: mutate state by emitting events and applying projections; do not write projection/storage records directly from non-read handlers.
 
 ## Documentation culture
 

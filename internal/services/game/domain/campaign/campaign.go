@@ -66,8 +66,6 @@ type Campaign struct {
 	ThemePrompt string
 	// CreatedAt is the timestamp when the campaign was created.
 	CreatedAt time.Time
-	// LastActivityAt is the timestamp of the most recent campaign activity.
-	LastActivityAt time.Time
 	// UpdatedAt is the timestamp when campaign metadata last changed.
 	UpdatedAt time.Time
 	// CompletedAt is the timestamp when the campaign was completed.
@@ -114,7 +112,6 @@ func CreateCampaign(input CreateCampaignInput, now func() time.Time, idGenerator
 		CharacterCount:   0,
 		ThemePrompt:      normalized.ThemePrompt,
 		CreatedAt:        createdAt,
-		LastActivityAt:   createdAt,
 		UpdatedAt:        createdAt,
 	}, nil
 }

@@ -50,6 +50,8 @@ func NormalizeForAppend(evt Event) (Event, error) {
 	evt.InvocationID = strings.TrimSpace(evt.InvocationID)
 	evt.EntityType = strings.TrimSpace(evt.EntityType)
 	evt.EntityID = strings.TrimSpace(evt.EntityID)
+	evt.SystemID = strings.TrimSpace(evt.SystemID)
+	evt.SystemVersion = strings.TrimSpace(evt.SystemVersion)
 
 	if len(evt.PayloadJSON) == 0 {
 		evt.PayloadJSON = []byte("{}")

@@ -3,7 +3,10 @@ syntax = "proto3";
 package systems.daggerheart.v1;
 
 import "common/v1/rng.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
 import "systems/daggerheart/v1/mechanics.proto";
+import "systems/daggerheart/v1/state.proto";
 
 option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1;daggerheartv1";
 
@@ -29,11 +32,364 @@ service DaggerheartService {
   // Roll arbitrary dice sets and return the individual results.
   rpc RollDice(RollDiceRequest) returns (RollDiceResponse);
 
+  // Apply damage to a character (system-specific).
+  rpc ApplyDamage(DaggerheartApplyDamageRequest) returns (DaggerheartApplyDamageResponse);
+
+  // Apply a rest outcome (system-specific).
+  rpc ApplyRest(DaggerheartApplyRestRequest) returns (DaggerheartApplyRestResponse);
+
+  // Apply a downtime move (system-specific).
+  rpc ApplyDowntimeMove(DaggerheartApplyDowntimeMoveRequest) returns (DaggerheartApplyDowntimeMoveResponse);
+
+  // Swap a loadout card (system-specific).
+  rpc SwapLoadout(DaggerheartSwapLoadoutRequest) returns (DaggerheartSwapLoadoutResponse);
+
+  // Apply a death move (system-specific).
+  rpc ApplyDeathMove(DaggerheartApplyDeathMoveRequest) returns (DaggerheartApplyDeathMoveResponse);
+
+  // Apply or clear conditions on a character (system-specific).
+  rpc ApplyConditions(DaggerheartApplyConditionsRequest) returns (DaggerheartApplyConditionsResponse);
+
+  // Apply a GM move (system-specific).
+  rpc ApplyGmMove(DaggerheartApplyGmMoveRequest) returns (DaggerheartApplyGmMoveResponse);
+
+  // Create a countdown (system-specific).
+  rpc CreateCountdown(DaggerheartCreateCountdownRequest) returns (DaggerheartCreateCountdownResponse);
+
+  // Update a countdown (system-specific).
+  rpc UpdateCountdown(DaggerheartUpdateCountdownRequest) returns (DaggerheartUpdateCountdownResponse);
+
+  // Delete a countdown (system-specific).
+  rpc DeleteCountdown(DaggerheartDeleteCountdownRequest) returns (DaggerheartDeleteCountdownResponse);
+
+  // Create an adversary (system-specific).
+  rpc CreateAdversary(DaggerheartCreateAdversaryRequest) returns (DaggerheartCreateAdversaryResponse);
+
+  // Update an adversary (system-specific).
+  rpc UpdateAdversary(DaggerheartUpdateAdversaryRequest) returns (DaggerheartUpdateAdversaryResponse);
+
+  // Delete an adversary (system-specific).
+  rpc DeleteAdversary(DaggerheartDeleteAdversaryRequest) returns (DaggerheartDeleteAdversaryResponse);
+
+  // Get an adversary (system-specific).
+  rpc GetAdversary(DaggerheartGetAdversaryRequest) returns (DaggerheartGetAdversaryResponse);
+
+  // List adversaries (system-specific).
+  rpc ListAdversaries(DaggerheartListAdversariesRequest) returns (DaggerheartListAdversariesResponse);
+
+  // Resolve a Blaze of Glory finale (system-specific).
+  rpc ResolveBlazeOfGlory(DaggerheartResolveBlazeOfGloryRequest) returns (DaggerheartResolveBlazeOfGloryResponse);
+
   // Roll Duality dice for a session (combines roll + event recording).
   rpc SessionActionRoll(SessionActionRollRequest) returns (SessionActionRollResponse);
 
+  // Roll damage dice for a session (combines roll + event recording).
+  rpc SessionDamageRoll(SessionDamageRollRequest) returns (SessionDamageRollResponse);
+
+  // Run a full attack flow (roll, outcome, damage roll, apply damage).
+  rpc SessionAttackFlow(SessionAttackFlowRequest) returns (SessionAttackFlowResponse);
+
+  // Run a full reaction flow (roll, outcome, reaction outcome).
+  rpc SessionReactionFlow(SessionReactionFlowRequest) returns (SessionReactionFlowResponse);
+
+  // Roll adversary attack dice (d20-based).
+  rpc SessionAdversaryAttackRoll(SessionAdversaryAttackRollRequest) returns (SessionAdversaryAttackRollResponse);
+
+  // Run a full adversary attack flow (roll, outcome, damage roll, apply damage).
+  rpc SessionAdversaryAttackFlow(SessionAdversaryAttackFlowRequest) returns (SessionAdversaryAttackFlowResponse);
+
+  // Run a group action flow (supporter reactions + leader roll + outcome).
+  rpc SessionGroupActionFlow(SessionGroupActionFlowRequest) returns (SessionGroupActionFlowResponse);
+
+  // Run a tag team flow (two rolls + selected outcome).
+  rpc SessionTagTeamFlow(SessionTagTeamFlowRequest) returns (SessionTagTeamFlowResponse);
+
   // Apply the mandatory outcome effects from a resolved action roll.
   rpc ApplyRollOutcome(ApplyRollOutcomeRequest) returns (ApplyRollOutcomeResponse);
+
+  // Apply an attack outcome from a resolved action roll.
+  rpc ApplyAttackOutcome(DaggerheartApplyAttackOutcomeRequest) returns (DaggerheartApplyAttackOutcomeResponse);
+
+  // Apply an adversary attack outcome from a resolved adversary roll.
+  rpc ApplyAdversaryAttackOutcome(DaggerheartApplyAdversaryAttackOutcomeRequest) returns (DaggerheartApplyAdversaryAttackOutcomeResponse);
+
+  // Apply a reaction outcome from a resolved reaction roll.
+  rpc ApplyReactionOutcome(DaggerheartApplyReactionOutcomeRequest) returns (DaggerheartApplyReactionOutcomeResponse);
+}
+
+message DaggerheartApplyDamageRequest {
+  string campaign_id = 1;
+  string character_id = 2;
+  DaggerheartDamageRequest damage = 3;
+  optional uint64 roll_seq = 4;
+  bool require_damage_roll = 5;
+}
+
+message DaggerheartApplyDamageResponse {
+  string character_id = 1;
+  DaggerheartCharacterState state = 2;
+}
+
+message DaggerheartApplyRestRequest {
+  string campaign_id = 1;
+  repeated string character_ids = 2;
+  DaggerheartRestRequest rest = 3;
+}
+
+message DaggerheartCharacterStateEntry {
+  string character_id = 1;
+  DaggerheartCharacterState state = 2;
+}
+
+message DaggerheartApplyRestResponse {
+  DaggerheartSnapshot snapshot = 1;
+  repeated DaggerheartCharacterStateEntry character_states = 2;
+}
+
+message DaggerheartApplyDowntimeMoveRequest {
+  string campaign_id = 1;
+  string character_id = 2;
+  DaggerheartDowntimeRequest move = 3;
+}
+
+message DaggerheartApplyDowntimeMoveResponse {
+  string character_id = 1;
+  DaggerheartCharacterState state = 2;
+}
+
+message DaggerheartSwapLoadoutRequest {
+  string campaign_id = 1;
+  string character_id = 2;
+  DaggerheartLoadoutSwapRequest swap = 3;
+}
+
+message DaggerheartSwapLoadoutResponse {
+  string character_id = 1;
+  DaggerheartCharacterState state = 2;
+}
+
+message DaggerheartApplyDeathMoveRequest {
+  string campaign_id = 1;
+  string character_id = 2;
+  DaggerheartDeathMove move = 3;
+  optional int32 hp_clear = 4;
+  optional int32 stress_clear = 5;
+  common.v1.RngRequest rng = 6;
+}
+
+message DaggerheartDeathMoveResult {
+  DaggerheartDeathMove move = 1;
+  DaggerheartLifeState life_state = 2;
+  optional int32 hope_die = 3;
+  optional int32 fear_die = 4;
+  int32 hp_cleared = 5;
+  int32 stress_cleared = 6;
+  bool scar_gained = 7;
+}
+
+message DaggerheartApplyDeathMoveResponse {
+  string character_id = 1;
+  DaggerheartCharacterState state = 2;
+  DaggerheartDeathMoveResult result = 3;
+}
+
+message DaggerheartApplyConditionsRequest {
+  string campaign_id = 1;
+  string character_id = 2;
+  repeated DaggerheartCondition add = 3;
+  repeated DaggerheartCondition remove = 4;
+  string source = 5;
+  optional uint64 roll_seq = 6;
+}
+
+message DaggerheartApplyConditionsResponse {
+  string character_id = 1;
+  DaggerheartCharacterState state = 2;
+  repeated DaggerheartCondition added = 3;
+  repeated DaggerheartCondition removed = 4;
+}
+
+message DaggerheartApplyGmMoveRequest {
+  string campaign_id = 1;
+  string session_id = 2;
+  string move = 3;
+  string description = 4;
+  int32 fear_spent = 5;
+  string source = 6;
+}
+
+message DaggerheartApplyGmMoveResponse {
+  string campaign_id = 1;
+  int32 gm_fear_before = 2;
+  int32 gm_fear_after = 3;
+}
+
+enum DaggerheartCountdownKind {
+  DAGGERHEART_COUNTDOWN_KIND_UNSPECIFIED = 0;
+  DAGGERHEART_COUNTDOWN_KIND_PROGRESS = 1;
+  DAGGERHEART_COUNTDOWN_KIND_CONSEQUENCE = 2;
+}
+
+enum DaggerheartCountdownDirection {
+  DAGGERHEART_COUNTDOWN_DIRECTION_UNSPECIFIED = 0;
+  DAGGERHEART_COUNTDOWN_DIRECTION_INCREASE = 1;
+  DAGGERHEART_COUNTDOWN_DIRECTION_DECREASE = 2;
+}
+
+message DaggerheartCountdown {
+  string countdown_id = 1;
+  string name = 2;
+  DaggerheartCountdownKind kind = 3;
+  int32 current = 4;
+  int32 max = 5;
+  DaggerheartCountdownDirection direction = 6;
+  bool looping = 7;
+}
+
+message DaggerheartCreateCountdownRequest {
+  string campaign_id = 1;
+  string session_id = 2;
+  string countdown_id = 3;
+  string name = 4;
+  DaggerheartCountdownKind kind = 5;
+  int32 current = 6;
+  int32 max = 7;
+  DaggerheartCountdownDirection direction = 8;
+  bool looping = 9;
+}
+
+message DaggerheartCreateCountdownResponse {
+  DaggerheartCountdown countdown = 1;
+}
+
+message DaggerheartUpdateCountdownRequest {
+  string campaign_id = 1;
+  string session_id = 2;
+  string countdown_id = 3;
+  int32 delta = 4;
+  optional int32 current = 5;
+  string reason = 6;
+}
+
+message DaggerheartUpdateCountdownResponse {
+  DaggerheartCountdown countdown = 1;
+  int32 before = 2;
+  int32 after = 3;
+  int32 delta = 4;
+}
+
+message DaggerheartDeleteCountdownRequest {
+  string campaign_id = 1;
+  string session_id = 2;
+  string countdown_id = 3;
+  string reason = 4;
+}
+
+message DaggerheartDeleteCountdownResponse {
+  string countdown_id = 1;
+}
+
+message DaggerheartAdversary {
+  string id = 1;
+  string campaign_id = 2;
+  string name = 3;
+  string kind = 4;
+  google.protobuf.StringValue session_id = 5;
+  string notes = 6;
+  int32 hp = 7;
+  int32 hp_max = 8;
+  int32 stress = 9;
+  int32 stress_max = 10;
+  int32 evasion = 11;
+  int32 major_threshold = 12;
+  int32 severe_threshold = 13;
+  int32 armor = 14;
+  google.protobuf.Timestamp created_at = 15;
+  google.protobuf.Timestamp updated_at = 16;
+}
+
+message DaggerheartCreateAdversaryRequest {
+  string campaign_id = 1;
+  string name = 2;
+  string kind = 3;
+  google.protobuf.StringValue session_id = 4;
+  string notes = 5;
+  google.protobuf.Int32Value hp = 6;
+  google.protobuf.Int32Value hp_max = 7;
+  google.protobuf.Int32Value stress = 8;
+  google.protobuf.Int32Value stress_max = 9;
+  google.protobuf.Int32Value evasion = 10;
+  google.protobuf.Int32Value major_threshold = 11;
+  google.protobuf.Int32Value severe_threshold = 12;
+  google.protobuf.Int32Value armor = 13;
+}
+
+message DaggerheartCreateAdversaryResponse {
+  DaggerheartAdversary adversary = 1;
+}
+
+message DaggerheartUpdateAdversaryRequest {
+  string campaign_id = 1;
+  string adversary_id = 2;
+  google.protobuf.StringValue name = 3;
+  google.protobuf.StringValue kind = 4;
+  google.protobuf.StringValue session_id = 5;
+  google.protobuf.StringValue notes = 6;
+  google.protobuf.Int32Value hp = 7;
+  google.protobuf.Int32Value hp_max = 8;
+  google.protobuf.Int32Value stress = 9;
+  google.protobuf.Int32Value stress_max = 10;
+  google.protobuf.Int32Value evasion = 11;
+  google.protobuf.Int32Value major_threshold = 12;
+  google.protobuf.Int32Value severe_threshold = 13;
+  google.protobuf.Int32Value armor = 14;
+}
+
+message DaggerheartUpdateAdversaryResponse {
+  DaggerheartAdversary adversary = 1;
+}
+
+message DaggerheartDeleteAdversaryRequest {
+  string campaign_id = 1;
+  string adversary_id = 2;
+  string reason = 3;
+}
+
+message DaggerheartDeleteAdversaryResponse {
+  DaggerheartAdversary adversary = 1;
+}
+
+message DaggerheartGetAdversaryRequest {
+  string campaign_id = 1;
+  string adversary_id = 2;
+}
+
+message DaggerheartGetAdversaryResponse {
+  DaggerheartAdversary adversary = 1;
+}
+
+message DaggerheartListAdversariesRequest {
+  string campaign_id = 1;
+  google.protobuf.StringValue session_id = 2;
+}
+
+message DaggerheartListAdversariesResponse {
+  repeated DaggerheartAdversary adversaries = 1;
+}
+
+message DaggerheartResolveBlazeOfGloryRequest {
+  string campaign_id = 1;
+  string character_id = 2;
+}
+
+message DaggerheartBlazeOfGloryResult {
+  DaggerheartLifeState life_state = 1;
+}
+
+message DaggerheartResolveBlazeOfGloryResponse {
+  string character_id = 1;
+  DaggerheartCharacterState state = 2;
+  DaggerheartBlazeOfGloryResult result = 3;
 }
 
 message ActionRollRequest {
@@ -44,8 +400,14 @@ message ActionRollRequest {
   // classify as success/failure.
   optional int32 difficulty = 2;
 
+  // Count of advantage dice (d6). Cancels against disadvantage.
+  int32 advantage = 3;
+
+  // Count of disadvantage dice (d6). Cancels against advantage.
+  int32 disadvantage = 4;
+
   // Optional RNG configuration for deterministic rolls.
-  common.v1.RngRequest rng = 3;
+  common.v1.RngRequest rng = 5;
 }
 
 message ActionRollResponse {
@@ -53,15 +415,21 @@ message ActionRollResponse {
   int32 fear = 2;
   int32 modifier = 3;
 
+  // Applied d6 roll when advantage/disadvantage is present.
+  int32 advantage_die = 4;
+
+  // Signed modifier derived from advantage_die.
+  int32 advantage_modifier = 5;
+
   // Echoed back if provided in the request.
-  optional int32 difficulty = 4;
+  optional int32 difficulty = 6;
 
   // total = hope + fear + modifier
-  int32 total = 5;
-  bool is_crit = 6;
-  bool meets_difficulty = 7;
-  Outcome outcome = 8;
-  common.v1.RngResponse rng = 9;
+  int32 total = 7;
+  bool is_crit = 8;
+  bool meets_difficulty = 9;
+  Outcome outcome = 10;
+  common.v1.RngResponse rng = 11;
 }
 
 message DualityOutcomeRequest {
@@ -177,14 +545,17 @@ message SessionActionRollRequest {
   // The trait being rolled.
   string trait = 4;
 
+  // The kind of roll (action or reaction).
+  RollKind roll_kind = 5;
+
   // The difficulty target.
-  int32 difficulty = 5;
+  int32 difficulty = 6;
 
   // Optional modifiers applied to the roll.
-  repeated ActionRollModifier modifiers = 6;
+  repeated ActionRollModifier modifiers = 7;
 
   // Optional RNG configuration for deterministic rolls.
-  common.v1.RngRequest rng = 7;
+  common.v1.RngRequest rng = 8;
 }
 
 message SessionActionRollResponse {
@@ -197,6 +568,199 @@ message SessionActionRollResponse {
   string flavor = 7;
   bool crit = 8;
   common.v1.RngResponse rng = 9;
+}
+
+message SessionDamageRollRequest {
+  // The campaign ID for validation.
+  string campaign_id = 1;
+
+  // The session ID to associate with this roll.
+  string session_id = 2;
+
+  // The character performing the roll.
+  string character_id = 3;
+
+  // Damage dice to roll.
+  repeated DiceSpec dice = 4;
+
+  // Flat modifier applied after summing rolls.
+  int32 modifier = 5;
+
+  // Whether to apply critical damage bonus.
+  bool critical = 6;
+
+  // Optional RNG configuration for deterministic rolls.
+  common.v1.RngRequest rng = 7;
+}
+
+message SessionDamageRollResponse {
+  uint64 roll_seq = 1;
+  repeated DiceRoll rolls = 2;
+  int32 base_total = 3;
+  int32 modifier = 4;
+  int32 critical_bonus = 5;
+  int32 total = 6;
+  bool critical = 7;
+  common.v1.RngResponse rng = 8;
+}
+
+message DaggerheartAttackDamageSpec {
+  DaggerheartDamageType damage_type = 1;
+  bool resist_physical = 2;
+  bool resist_magic = 3;
+  bool immune_physical = 4;
+  bool immune_magic = 5;
+  bool direct = 6;
+  bool massive_damage = 7;
+  string source = 8;
+  repeated string source_character_ids = 9;
+}
+
+message SessionAttackFlowRequest {
+  string campaign_id = 1;
+  string session_id = 2;
+  string character_id = 3;
+  string trait = 4;
+  int32 difficulty = 5;
+  repeated ActionRollModifier modifiers = 6;
+  string target_id = 7;
+  repeated DiceSpec damage_dice = 8;
+  int32 damage_modifier = 9;
+  DaggerheartAttackDamageSpec damage = 10;
+  bool require_damage_roll = 11;
+  bool damage_critical = 12;
+  common.v1.RngRequest action_rng = 13;
+  common.v1.RngRequest damage_rng = 14;
+}
+
+message SessionAttackFlowResponse {
+  SessionActionRollResponse action_roll = 1;
+  ApplyRollOutcomeResponse roll_outcome = 2;
+  DaggerheartApplyAttackOutcomeResponse attack_outcome = 3;
+  SessionDamageRollResponse damage_roll = 4;
+  DaggerheartApplyDamageResponse damage_applied = 5;
+}
+
+message SessionReactionFlowRequest {
+  string campaign_id = 1;
+  string session_id = 2;
+  string character_id = 3;
+  string trait = 4;
+  int32 difficulty = 5;
+  repeated ActionRollModifier modifiers = 6;
+  common.v1.RngRequest reaction_rng = 7;
+}
+
+message SessionReactionFlowResponse {
+  SessionActionRollResponse action_roll = 1;
+  ApplyRollOutcomeResponse roll_outcome = 2;
+  DaggerheartApplyReactionOutcomeResponse reaction_outcome = 3;
+}
+
+message SessionAdversaryAttackRollRequest {
+  string campaign_id = 1;
+  string session_id = 2;
+  string adversary_id = 3;
+  int32 attack_modifier = 4;
+  int32 advantage = 5;
+  int32 disadvantage = 6;
+  common.v1.RngRequest rng = 7;
+}
+
+message SessionAdversaryAttackRollResponse {
+  uint64 roll_seq = 1;
+  int32 roll = 2;
+  int32 total = 3;
+  repeated int32 rolls = 4;
+  common.v1.RngResponse rng = 5;
+}
+
+message SessionAdversaryAttackFlowRequest {
+  string campaign_id = 1;
+  string session_id = 2;
+  string adversary_id = 3;
+  string target_id = 4;
+  int32 difficulty = 5;
+  int32 attack_modifier = 6;
+  int32 advantage = 7;
+  int32 disadvantage = 8;
+  repeated DiceSpec damage_dice = 9;
+  int32 damage_modifier = 10;
+  DaggerheartAttackDamageSpec damage = 11;
+  bool require_damage_roll = 12;
+  bool damage_critical = 13;
+  common.v1.RngRequest attack_rng = 14;
+  common.v1.RngRequest damage_rng = 15;
+}
+
+message SessionAdversaryAttackFlowResponse {
+  SessionAdversaryAttackRollResponse attack_roll = 1;
+  DaggerheartApplyAdversaryAttackOutcomeResponse attack_outcome = 2;
+  SessionDamageRollResponse damage_roll = 3;
+  DaggerheartApplyDamageResponse damage_applied = 4;
+}
+
+message GroupActionSupporter {
+  string character_id = 1;
+  string trait = 2;
+  repeated ActionRollModifier modifiers = 3;
+  common.v1.RngRequest rng = 4;
+}
+
+message GroupActionSupporterRoll {
+  string character_id = 1;
+  SessionActionRollResponse action_roll = 2;
+  bool success = 3;
+}
+
+message SessionGroupActionFlowRequest {
+  string campaign_id = 1;
+  string session_id = 2;
+  string leader_character_id = 3;
+  string leader_trait = 4;
+  int32 difficulty = 5;
+  repeated ActionRollModifier leader_modifiers = 6;
+  repeated GroupActionSupporter supporters = 7;
+  common.v1.RngRequest leader_rng = 8;
+}
+
+message SessionGroupActionFlowResponse {
+  SessionActionRollResponse leader_roll = 1;
+  ApplyRollOutcomeResponse leader_outcome = 2;
+  repeated GroupActionSupporterRoll supporter_rolls = 3;
+  int32 support_modifier = 4;
+  int32 support_successes = 5;
+  int32 support_failures = 6;
+}
+
+message TagTeamParticipant {
+  string character_id = 1;
+  string trait = 2;
+  repeated ActionRollModifier modifiers = 3;
+  common.v1.RngRequest rng = 4;
+}
+
+message SessionTagTeamFlowRequest {
+  string campaign_id = 1;
+  string session_id = 2;
+  TagTeamParticipant first = 3;
+  TagTeamParticipant second = 4;
+  int32 difficulty = 5;
+  string selected_character_id = 6;
+}
+
+message SessionTagTeamFlowResponse {
+  SessionActionRollResponse first_roll = 1;
+  SessionActionRollResponse second_roll = 2;
+  ApplyRollOutcomeResponse selected_outcome = 3;
+  string selected_character_id = 4;
+  uint64 selected_roll_seq = 5;
+}
+
+enum RollKind {
+  ROLL_KIND_UNSPECIFIED = 0;
+  ROLL_KIND_ACTION = 1;
+  ROLL_KIND_REACTION = 2;
 }
 
 message ApplyRollOutcomeRequest {
@@ -215,4 +779,65 @@ message ApplyRollOutcomeResponse {
   uint64 roll_seq = 1;
   bool requires_complication = 2;
   OutcomeUpdated updated = 3;
+}
+
+message DaggerheartApplyAttackOutcomeRequest {
+  string session_id = 1;
+  uint64 roll_seq = 2;
+  repeated string targets = 3;
+}
+
+message DaggerheartApplyAdversaryAttackOutcomeRequest {
+  string session_id = 1;
+  uint64 roll_seq = 2;
+  repeated string targets = 3;
+  int32 difficulty = 4;
+}
+
+message DaggerheartAttackOutcomeResult {
+  Outcome outcome = 1;
+  bool success = 2;
+  bool crit = 3;
+  string flavor = 4;
+}
+
+message DaggerheartApplyAttackOutcomeResponse {
+  uint64 roll_seq = 1;
+  string character_id = 2;
+  repeated string targets = 3;
+  DaggerheartAttackOutcomeResult result = 4;
+}
+
+message DaggerheartAdversaryAttackOutcomeResult {
+  bool success = 1;
+  bool crit = 2;
+  int32 roll = 3;
+  int32 total = 4;
+  int32 difficulty = 5;
+}
+
+message DaggerheartApplyAdversaryAttackOutcomeResponse {
+  uint64 roll_seq = 1;
+  string adversary_id = 2;
+  repeated string targets = 3;
+  DaggerheartAdversaryAttackOutcomeResult result = 4;
+}
+
+message DaggerheartApplyReactionOutcomeRequest {
+  string session_id = 1;
+  uint64 roll_seq = 2;
+}
+
+message DaggerheartReactionOutcomeResult {
+  Outcome outcome = 1;
+  bool success = 2;
+  bool crit = 3;
+  bool crit_negates_effects = 4;
+  bool effects_negated = 5;
+}
+
+message DaggerheartApplyReactionOutcomeResponse {
+  uint64 roll_seq = 1;
+  string character_id = 2;
+  DaggerheartReactionOutcomeResult result = 3;
 }

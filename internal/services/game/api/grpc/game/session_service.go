@@ -12,6 +12,7 @@ import (
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -87,20 +88,6 @@ func (s *SessionService) StartSession(ctx context.Context, in *campaignv1.StartS
 		return nil, status.Errorf(codes.Internal, "check active session: %v", err)
 	}
 
-	if c.Status == campaign.CampaignStatusDraft {
-		updated, err := campaign.TransitionCampaignStatus(
-			c,
-			campaign.CampaignStatusActive,
-			s.clock,
-		)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "activate campaign: %v", err)
-		}
-		if err := s.stores.Campaign.Put(ctx, updated); err != nil {
-			return nil, status.Errorf(codes.Internal, "persist campaign status: %v", err)
-		}
-	}
-
 	sess, err := session.CreateSession(session.CreateSessionInput{
 		CampaignID: campaignID,
 		Name:       in.GetName(),
@@ -109,11 +96,46 @@ func (s *SessionService) StartSession(ctx context.Context, in *campaignv1.StartS
 		return nil, handleDomainError(err)
 	}
 
-	if err := s.stores.Session.PutSession(ctx, sess); err != nil {
-		if errors.Is(err, storage.ErrActiveSessionExists) {
-			return nil, handleDomainError(err)
+	applier := projection.Applier{
+		Campaign: s.stores.Campaign,
+		Session:  s.stores.Session,
+	}
+
+	if c.Status == campaign.CampaignStatusDraft {
+		payload := event.CampaignUpdatedPayload{
+			Fields: map[string]any{
+				"status": campaignStatusToProto(campaign.CampaignStatusActive).String(),
+			},
 		}
-		return nil, status.Errorf(codes.Internal, "persist session: %v", err)
+		payloadJSON, err := json.Marshal(payload)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
+		}
+
+		actorID := grpcmeta.ParticipantIDFromContext(ctx)
+		actorType := event.ActorTypeSystem
+		if actorID != "" {
+			actorType = event.ActorTypeParticipant
+		}
+
+		stored, err := s.stores.Event.AppendEvent(ctx, event.Event{
+			CampaignID:   campaignID,
+			Timestamp:    sess.StartedAt,
+			Type:         event.TypeCampaignUpdated,
+			RequestID:    grpcmeta.RequestIDFromContext(ctx),
+			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+			ActorType:    actorType,
+			ActorID:      actorID,
+			EntityType:   "campaign",
+			EntityID:     campaignID,
+			PayloadJSON:  payloadJSON,
+		})
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "append event: %v", err)
+		}
+		if err := applier.Apply(ctx, stored); err != nil {
+			return nil, status.Errorf(codes.Internal, "apply event: %v", err)
+		}
 	}
 
 	payload := event.SessionStartedPayload{
@@ -131,7 +153,7 @@ func (s *SessionService) StartSession(ctx context.Context, in *campaignv1.StartS
 		actorType = event.ActorTypeParticipant
 	}
 
-	if _, err := s.stores.Event.AppendEvent(ctx, event.Event{
+	stored, err := s.stores.Event.AppendEvent(ctx, event.Event{
 		CampaignID:   campaignID,
 		Timestamp:    sess.StartedAt,
 		Type:         event.TypeSessionStarted,
@@ -143,8 +165,12 @@ func (s *SessionService) StartSession(ctx context.Context, in *campaignv1.StartS
 		EntityType:   "session",
 		EntityID:     sess.ID,
 		PayloadJSON:  payloadJSON,
-	}); err != nil {
+	})
+	if err != nil {
 		return nil, status.Errorf(codes.Internal, "append event: %v", err)
+	}
+	if err := applier.Apply(ctx, stored); err != nil {
+		return nil, status.Errorf(codes.Internal, "apply event: %v", err)
 	}
 
 	return &campaignv1.StartSessionResponse{
@@ -270,45 +296,59 @@ func (s *SessionService) EndSession(ctx context.Context, in *campaignv1.EndSessi
 		return nil, handleDomainError(err)
 	}
 
-	endedAt := s.clock().UTC()
-	sess, transitioned, err := s.stores.Session.EndSession(ctx, campaignID, sessionID, endedAt)
+	current, err := s.stores.Session.GetSession(ctx, campaignID, sessionID)
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
+	if current.Status == session.SessionStatusEnded {
+		return &campaignv1.EndSessionResponse{
+			Session: sessionToProto(current),
+		}, nil
+	}
 
-	if transitioned {
-		payload := event.SessionEndedPayload{
-			SessionID: sessionID,
-		}
-		payloadJSON, err := json.Marshal(payload)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
-		}
+	endedAt := s.clock().UTC()
+	payload := event.SessionEndedPayload{
+		SessionID: sessionID,
+	}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
+	}
 
-		actorID := grpcmeta.ParticipantIDFromContext(ctx)
-		actorType := event.ActorTypeSystem
-		if actorID != "" {
-			actorType = event.ActorTypeParticipant
-		}
+	actorID := grpcmeta.ParticipantIDFromContext(ctx)
+	actorType := event.ActorTypeSystem
+	if actorID != "" {
+		actorType = event.ActorTypeParticipant
+	}
 
-		if _, err := s.stores.Event.AppendEvent(ctx, event.Event{
-			CampaignID:   campaignID,
-			Timestamp:    endedAt,
-			Type:         event.TypeSessionEnded,
-			SessionID:    sessionID,
-			RequestID:    grpcmeta.RequestIDFromContext(ctx),
-			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-			ActorType:    actorType,
-			ActorID:      actorID,
-			EntityType:   "session",
-			EntityID:     sessionID,
-			PayloadJSON:  payloadJSON,
-		}); err != nil {
-			return nil, status.Errorf(codes.Internal, "append event: %v", err)
-		}
+	stored, err := s.stores.Event.AppendEvent(ctx, event.Event{
+		CampaignID:   campaignID,
+		Timestamp:    endedAt,
+		Type:         event.TypeSessionEnded,
+		SessionID:    sessionID,
+		RequestID:    grpcmeta.RequestIDFromContext(ctx),
+		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+		ActorType:    actorType,
+		ActorID:      actorID,
+		EntityType:   "session",
+		EntityID:     sessionID,
+		PayloadJSON:  payloadJSON,
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "append event: %v", err)
+	}
+
+	applier := projection.Applier{Session: s.stores.Session}
+	if err := applier.Apply(ctx, stored); err != nil {
+		return nil, status.Errorf(codes.Internal, "apply event: %v", err)
+	}
+
+	updated, err := s.stores.Session.GetSession(ctx, campaignID, sessionID)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "load session: %v", err)
 	}
 
 	return &campaignv1.EndSessionResponse{
-		Session: sessionToProto(sess),
+		Session: sessionToProto(updated),
 	}, nil
 }

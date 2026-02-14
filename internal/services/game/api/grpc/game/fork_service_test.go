@@ -12,6 +12,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/session"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -102,29 +103,29 @@ func TestForkCampaign_ReplaysEvents_CopyParticipantsFalse(t *testing.T) {
 	appendEvent(t, eventStore, event.Event{
 		CampaignID: "source",
 		Timestamp:  now.Add(-6 * time.Hour),
-		Type:       event.TypeControllerAssigned,
+		Type:       event.TypeCharacterUpdated,
 		EntityType: "character",
 		EntityID:   "char-1",
-		PayloadJSON: mustJSON(t, event.ControllerAssignedPayload{
-			CharacterID:   "char-1",
-			ParticipantID: "part-1",
+		PayloadJSON: mustJSON(t, event.CharacterUpdatedPayload{
+			CharacterID: "char-1",
+			Fields: map[string]any{
+				"participant_id": "part-1",
+			},
 		}),
 	})
 	appendEvent(t, eventStore, event.Event{
-		CampaignID: "source",
-		Timestamp:  now.Add(-5 * time.Hour),
-		Type:       event.TypeCharacterStateChanged,
-		EntityType: "character",
-		EntityID:   "char-1",
-		PayloadJSON: mustJSON(t, event.CharacterStateChangedPayload{
+		CampaignID:    "source",
+		Timestamp:     now.Add(-5 * time.Hour),
+		Type:          daggerheart.EventTypeCharacterStatePatched,
+		EntityType:    "character",
+		EntityID:      "char-1",
+		SystemID:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART.String(),
+		SystemVersion: daggerheart.SystemVersion,
+		PayloadJSON: mustJSON(t, daggerheart.CharacterStatePatchedPayload{
 			CharacterID: "char-1",
 			HpAfter:     intPtr(6),
-			SystemState: map[string]any{
-				"daggerheart": map[string]any{
-					"hope_after":   2,
-					"stress_after": 1,
-				},
-			},
+			HopeAfter:   intPtr(2),
+			StressAfter: intPtr(1),
 		}),
 	})
 
@@ -195,8 +196,8 @@ func TestForkCampaign_ReplaysEvents_CopyParticipantsFalse(t *testing.T) {
 	if forkedEvents[3].Type != event.TypeProfileUpdated {
 		t.Fatalf("event[3] type = %s, want %s", forkedEvents[3].Type, event.TypeProfileUpdated)
 	}
-	if forkedEvents[4].Type != event.TypeCharacterStateChanged {
-		t.Fatalf("event[4] type = %s, want %s", forkedEvents[4].Type, event.TypeCharacterStateChanged)
+	if forkedEvents[4].Type != daggerheart.EventTypeCharacterStatePatched {
+		t.Fatalf("event[4] type = %s, want %s", forkedEvents[4].Type, daggerheart.EventTypeCharacterStatePatched)
 	}
 
 	metadata, err := forkStore.GetCampaignForkMetadata(ctx, "fork-1")
@@ -321,38 +322,40 @@ func TestForkCampaign_SeedsSnapshotStateAtHead(t *testing.T) {
 	appendEvent(t, eventStore, event.Event{
 		CampaignID: "source",
 		Timestamp:  now.Add(-6 * time.Hour),
-		Type:       event.TypeControllerAssigned,
+		Type:       event.TypeCharacterUpdated,
 		EntityType: "character",
 		EntityID:   "char-1",
-		PayloadJSON: mustJSON(t, event.ControllerAssignedPayload{
-			CharacterID:   "char-1",
-			ParticipantID: "part-1",
-		}),
-	})
-	appendEvent(t, eventStore, event.Event{
-		CampaignID: "source",
-		Timestamp:  now.Add(-5 * time.Hour),
-		Type:       event.TypeCharacterStateChanged,
-		EntityType: "character",
-		EntityID:   "char-1",
-		PayloadJSON: mustJSON(t, event.CharacterStateChangedPayload{
+		PayloadJSON: mustJSON(t, event.CharacterUpdatedPayload{
 			CharacterID: "char-1",
-			HpAfter:     intPtr(6),
-			SystemState: map[string]any{
-				"daggerheart": map[string]any{
-					"hope_after":   2,
-					"stress_after": 1,
-				},
+			Fields: map[string]any{
+				"participant_id": "part-1",
 			},
 		}),
 	})
 	appendEvent(t, eventStore, event.Event{
-		CampaignID: "source",
-		Timestamp:  now.Add(-4 * time.Hour),
-		Type:       event.TypeGMFearChanged,
-		EntityType: "snapshot",
-		EntityID:   "source",
-		PayloadJSON: mustJSON(t, event.GMFearChangedPayload{
+		CampaignID:    "source",
+		Timestamp:     now.Add(-5 * time.Hour),
+		Type:          daggerheart.EventTypeCharacterStatePatched,
+		EntityType:    "character",
+		EntityID:      "char-1",
+		SystemID:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART.String(),
+		SystemVersion: daggerheart.SystemVersion,
+		PayloadJSON: mustJSON(t, daggerheart.CharacterStatePatchedPayload{
+			CharacterID: "char-1",
+			HpAfter:     intPtr(6),
+			HopeAfter:   intPtr(2),
+			StressAfter: intPtr(1),
+		}),
+	})
+	appendEvent(t, eventStore, event.Event{
+		CampaignID:    "source",
+		Timestamp:     now.Add(-4 * time.Hour),
+		Type:          daggerheart.EventTypeGMFearChanged,
+		EntityType:    "campaign",
+		EntityID:      "source",
+		SystemID:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART.String(),
+		SystemVersion: daggerheart.SystemVersion,
+		PayloadJSON: mustJSON(t, daggerheart.GMFearChangedPayload{
 			Before: 2,
 			After:  4,
 		}),
@@ -464,13 +467,15 @@ func TestForkCampaign_SessionBoundaryForkPoint(t *testing.T) {
 		}),
 	})
 	appendEvent(t, eventStore, event.Event{
-		CampaignID: "source",
-		Timestamp:  now.Add(-90 * time.Minute),
-		Type:       event.TypeGMFearChanged,
-		EntityType: "snapshot",
-		EntityID:   "source",
-		SessionID:  "sess-1",
-		PayloadJSON: mustJSON(t, event.GMFearChangedPayload{
+		CampaignID:    "source",
+		Timestamp:     now.Add(-90 * time.Minute),
+		Type:          daggerheart.EventTypeGMFearChanged,
+		EntityType:    "campaign",
+		EntityID:      "source",
+		SessionID:     "sess-1",
+		SystemID:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART.String(),
+		SystemVersion: daggerheart.SystemVersion,
+		PayloadJSON: mustJSON(t, daggerheart.GMFearChangedPayload{
 			Before: 1,
 			After:  2,
 		}),

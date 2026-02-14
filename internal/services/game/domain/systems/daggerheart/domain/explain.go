@@ -19,9 +19,10 @@ func ExplainOutcome(request OutcomeRequest) (ExplainResult, error) {
 	}
 
 	checkDifficultyData := map[string]any{
-		"total":             total,
-		"meets_difficulty":  result.MeetsDifficulty,
-		"critical_override": result.IsCrit && request.Difficulty != nil,
+		"total":                 total,
+		"meets_difficulty":      result.MeetsDifficulty,
+		"critical_auto_success": result.IsCrit,
+		"difficulty_present":    request.Difficulty != nil,
 	}
 	if request.Difficulty != nil {
 		checkDifficultyData["difficulty"] = *request.Difficulty

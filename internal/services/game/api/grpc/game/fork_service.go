@@ -26,11 +26,6 @@ const (
 	forkSnapshotPageSize     = 200
 )
 
-type snapshotSeedResult struct {
-	gmFearCopied            bool
-	characterStatesComplete bool
-}
-
 // ForkService implements the game.v1.ForkService gRPC API.
 type ForkService struct {
 	campaignv1.UnimplementedForkServiceServer
@@ -142,11 +137,14 @@ func (s *ForkService) ForkCampaign(ctx context.Context, in *campaignv1.ForkCampa
 	}
 
 	applier := projection.Applier{
-		Campaign:    s.stores.Campaign,
-		Participant: s.stores.Participant,
-		Character:   s.stores.Character,
-		Daggerheart: s.stores.Daggerheart,
-		ClaimIndex:  s.stores.ClaimIndex,
+		Campaign:     s.stores.Campaign,
+		CampaignFork: s.stores.CampaignFork,
+		Participant:  s.stores.Participant,
+		Character:    s.stores.Character,
+		Daggerheart:  s.stores.Daggerheart,
+		Session:      s.stores.Session,
+		ClaimIndex:   s.stores.ClaimIndex,
+		Adapters:     adapterRegistryForStores(s.stores),
 	}
 	if err := applier.Apply(ctx, createdEvent); err != nil {
 		return nil, status.Errorf(codes.Internal, "apply campaign.created: %v", err)
@@ -181,34 +179,8 @@ func (s *ForkService) ForkCampaign(ctx context.Context, in *campaignv1.ForkCampa
 		return nil, status.Errorf(codes.Internal, "apply campaign.forked: %v", err)
 	}
 
-	latestSeq, err := s.stores.Event.GetLatestEventSeq(ctx, sourceCampaignID)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "get latest event seq: %v", err)
-	}
-	seedResult := snapshotSeedResult{}
-	if forkEventSeq > 0 && forkEventSeq == latestSeq {
-		seedResult, err = s.seedSnapshotProjections(ctx, sourceCampaignID, f.NewCampaignID)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "seed snapshot projections: %v", err)
-		}
-	}
-
-	lastEventAt, err := s.copyForkEvents(ctx, sourceCampaignID, f.NewCampaignID, forkEventSeq, in.GetCopyParticipants(), seedResult.characterStatesComplete, seedResult.gmFearCopied, applier)
-	if err != nil {
+	if _, err := s.copyForkEvents(ctx, sourceCampaignID, f.NewCampaignID, forkEventSeq, in.GetCopyParticipants(), applier); err != nil {
 		return nil, status.Errorf(codes.Internal, "copy events: %v", err)
-	}
-	if seedResult.characterStatesComplete || seedResult.gmFearCopied {
-		if err := s.syncForkCampaignActivity(ctx, f.NewCampaignID, lastEventAt); err != nil {
-			return nil, status.Errorf(codes.Internal, "sync forked campaign activity: %v", err)
-		}
-	}
-
-	if err := s.stores.CampaignFork.SetCampaignForkMetadata(ctx, f.NewCampaignID, storage.ForkMetadata{
-		ParentCampaignID: sourceCampaignID,
-		ForkEventSeq:     forkEventSeq,
-		OriginCampaignID: originCampaignID,
-	}); err != nil {
-		return nil, status.Errorf(codes.Internal, "set fork metadata: %v", err)
 	}
 
 	// Calculate depth by walking the parent chain
@@ -234,7 +206,7 @@ func (s *ForkService) ForkCampaign(ctx context.Context, in *campaignv1.ForkCampa
 	}, nil
 }
 
-func (s *ForkService) copyForkEvents(ctx context.Context, sourceCampaignID, forkCampaignID string, forkEventSeq uint64, copyParticipants bool, skipCharacterStateApply, skipGMFearApply bool, applier projection.Applier) (time.Time, error) {
+func (s *ForkService) copyForkEvents(ctx context.Context, sourceCampaignID, forkCampaignID string, forkEventSeq uint64, copyParticipants bool, applier projection.Applier) (time.Time, error) {
 	if forkEventSeq == 0 {
 		return time.Time{}, nil
 	}
@@ -269,10 +241,6 @@ func (s *ForkService) copyForkEvents(ctx context.Context, sourceCampaignID, fork
 			if err != nil {
 				return lastEventAt, fmt.Errorf("append forked event: %w", err)
 			}
-			if (skipCharacterStateApply && evt.Type == event.TypeCharacterStateChanged) || (skipGMFearApply && evt.Type == event.TypeGMFearChanged) {
-				afterSeq = evt.Seq
-				continue
-			}
 			if err := applier.Apply(ctx, stored); err != nil {
 				return lastEventAt, fmt.Errorf("apply forked event: %w", err)
 			}
@@ -285,99 +253,35 @@ func (s *ForkService) copyForkEvents(ctx context.Context, sourceCampaignID, fork
 	}
 }
 
-func (s *ForkService) seedSnapshotProjections(ctx context.Context, sourceCampaignID, forkCampaignID string) (snapshotSeedResult, error) {
-	result := snapshotSeedResult{}
-	if s.stores.Daggerheart == nil || s.stores.Character == nil {
-		return result, nil
-	}
-
-	snap, err := s.stores.Daggerheart.GetDaggerheartSnapshot(ctx, sourceCampaignID)
-	if err != nil {
-		if !isNotFound(err) {
-			return result, fmt.Errorf("get daggerheart snapshot: %w", err)
-		}
-	} else {
-		snap.CampaignID = forkCampaignID
-		if err := s.stores.Daggerheart.PutDaggerheartSnapshot(ctx, snap); err != nil {
-			return result, fmt.Errorf("put daggerheart snapshot: %w", err)
-		}
-		result.gmFearCopied = true
-	}
-
-	pageToken := ""
-	hasCharacters := false
-	allStatesPresent := true
-	for {
-		page, err := s.stores.Character.ListCharacters(ctx, sourceCampaignID, forkSnapshotPageSize, pageToken)
-		if err != nil {
-			return result, fmt.Errorf("list characters: %w", err)
-		}
-		if len(page.Characters) > 0 {
-			hasCharacters = true
-		}
-		for _, ch := range page.Characters {
-			state, err := s.stores.Daggerheart.GetDaggerheartCharacterState(ctx, sourceCampaignID, ch.ID)
-			if err != nil {
-				if isNotFound(err) {
-					allStatesPresent = false
-					continue
-				}
-				return result, fmt.Errorf("get daggerheart character state: %w", err)
-			}
-			state.CampaignID = forkCampaignID
-			if err := s.stores.Daggerheart.PutDaggerheartCharacterState(ctx, state); err != nil {
-				return result, fmt.Errorf("put daggerheart character state: %w", err)
-			}
-		}
-		if page.NextPageToken == "" {
-			break
-		}
-		pageToken = page.NextPageToken
-	}
-	if hasCharacters && allStatesPresent {
-		result.characterStatesComplete = true
-	}
-
-	return result, nil
-}
-
-func (s *ForkService) syncForkCampaignActivity(ctx context.Context, campaignID string, lastEventAt time.Time) error {
-	if lastEventAt.IsZero() {
-		return nil
-	}
-	if s.stores.Campaign == nil {
-		return fmt.Errorf("campaign store is not configured")
-	}
-
-	campaignRecord, err := s.stores.Campaign.Get(ctx, campaignID)
-	if err != nil {
-		return err
-	}
-	if campaignRecord.LastActivityAt.IsZero() || campaignRecord.LastActivityAt.Before(lastEventAt) {
-		campaignRecord.LastActivityAt = lastEventAt
-	}
-	if campaignRecord.UpdatedAt.IsZero() || campaignRecord.UpdatedAt.Before(lastEventAt) {
-		campaignRecord.UpdatedAt = lastEventAt
-	}
-
-	return s.stores.Campaign.Put(ctx, campaignRecord)
-}
-
 func shouldCopyForkEvent(evt event.Event, copyParticipants bool) (bool, error) {
 	switch evt.Type {
 	case event.TypeCampaignCreated, event.TypeCampaignForked:
 		return false, nil
 	case event.TypeParticipantJoined, event.TypeParticipantUpdated, event.TypeParticipantLeft:
 		return copyParticipants, nil
-	case event.TypeControllerAssigned:
+	case event.TypeCharacterUpdated:
 		if copyParticipants {
 			return true, nil
 		}
-		var payload event.ControllerAssignedPayload
+		var payload event.CharacterUpdatedPayload
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-			return false, fmt.Errorf("decode character.controller_assigned payload: %w", err)
+			return false, fmt.Errorf("decode character.updated payload: %w", err)
 		}
-		return payload.ParticipantID == "", nil
+		participantValue, hasParticipant := payload.Fields["participant_id"]
+		if !hasParticipant {
+			return true, nil
+		}
+		participantID, ok := participantValue.(string)
+		if !ok {
+			return false, fmt.Errorf("character.updated participant_id must be string")
+		}
+		if strings.TrimSpace(participantID) == "" {
+			return true, nil
+		}
+		if len(payload.Fields) == 1 {
+			return false, nil
+		}
+		return true, nil
 	default:
 		return true, nil
 	}

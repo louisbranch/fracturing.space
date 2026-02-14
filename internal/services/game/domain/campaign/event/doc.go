@@ -9,7 +9,8 @@
 //   - character.*: character definitions and profile updates
 //   - snapshot.*: snapshot state changes (character state, GM fear)
 //   - session.*: session lifecycle
-//   - action.*: gameplay actions (rolls, outcomes, notes)
+//   - action.*: gameplay actions (rolls, outcomes, notes). System-owned action
+//     events live in system packages and are tagged with system metadata.
 //
 // Each event type has a corresponding payload struct serialized as JSON.
 package event

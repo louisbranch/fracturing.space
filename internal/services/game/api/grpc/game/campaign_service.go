@@ -312,9 +312,10 @@ func (s *CampaignService) EndCampaign(ctx context.Context, in *campaignv1.EndCam
 		return nil, handleDomainError(err)
 	}
 
-	payload := event.CampaignStatusChangedPayload{
-		FromStatus: campaignStatusToProto(c.Status).String(),
-		ToStatus:   campaignStatusToProto(campaign.CampaignStatusCompleted).String(),
+	payload := event.CampaignUpdatedPayload{
+		Fields: map[string]any{
+			"status": campaignStatusToProto(campaign.CampaignStatusCompleted).String(),
+		},
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -330,7 +331,7 @@ func (s *CampaignService) EndCampaign(ctx context.Context, in *campaignv1.EndCam
 	stored, err := s.stores.Event.AppendEvent(ctx, event.Event{
 		CampaignID:   campaignID,
 		Timestamp:    s.now().UTC(),
-		Type:         event.TypeCampaignStatusChanged,
+		Type:         event.TypeCampaignUpdated,
 		RequestID:    grpcmeta.RequestIDFromContext(ctx),
 		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
 		ActorType:    actorType,
@@ -389,9 +390,10 @@ func (s *CampaignService) ArchiveCampaign(ctx context.Context, in *campaignv1.Ar
 		return nil, handleDomainError(err)
 	}
 
-	payload := event.CampaignStatusChangedPayload{
-		FromStatus: campaignStatusToProto(c.Status).String(),
-		ToStatus:   campaignStatusToProto(campaign.CampaignStatusArchived).String(),
+	payload := event.CampaignUpdatedPayload{
+		Fields: map[string]any{
+			"status": campaignStatusToProto(campaign.CampaignStatusArchived).String(),
+		},
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -407,7 +409,7 @@ func (s *CampaignService) ArchiveCampaign(ctx context.Context, in *campaignv1.Ar
 	stored, err := s.stores.Event.AppendEvent(ctx, event.Event{
 		CampaignID:   campaignID,
 		Timestamp:    s.now().UTC(),
-		Type:         event.TypeCampaignStatusChanged,
+		Type:         event.TypeCampaignUpdated,
 		RequestID:    grpcmeta.RequestIDFromContext(ctx),
 		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
 		ActorType:    actorType,
@@ -459,9 +461,10 @@ func (s *CampaignService) RestoreCampaign(ctx context.Context, in *campaignv1.Re
 		return nil, handleDomainError(err)
 	}
 
-	payload := event.CampaignStatusChangedPayload{
-		FromStatus: campaignStatusToProto(c.Status).String(),
-		ToStatus:   campaignStatusToProto(campaign.CampaignStatusDraft).String(),
+	payload := event.CampaignUpdatedPayload{
+		Fields: map[string]any{
+			"status": campaignStatusToProto(campaign.CampaignStatusDraft).String(),
+		},
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -477,7 +480,7 @@ func (s *CampaignService) RestoreCampaign(ctx context.Context, in *campaignv1.Re
 	stored, err := s.stores.Event.AppendEvent(ctx, event.Event{
 		CampaignID:   campaignID,
 		Timestamp:    s.now().UTC(),
-		Type:         event.TypeCampaignStatusChanged,
+		Type:         event.TypeCampaignUpdated,
 		RequestID:    grpcmeta.RequestIDFromContext(ctx),
 		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
 		ActorType:    actorType,

@@ -9,7 +9,7 @@ import (
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/character"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 )
@@ -386,8 +386,8 @@ func TestPatchCharacterState_Success(t *testing.T) {
 	if len(eventStore.events["c1"]) != 1 {
 		t.Fatalf("expected 1 event, got %d", len(eventStore.events["c1"]))
 	}
-	if eventStore.events["c1"][0].Type != event.TypeCharacterStateChanged {
-		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.TypeCharacterStateChanged)
+	if eventStore.events["c1"][0].Type != daggerheart.EventTypeCharacterStatePatched {
+		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, daggerheart.EventTypeCharacterStatePatched)
 	}
 }
 
@@ -555,8 +555,8 @@ func TestUpdateSnapshotState_Success(t *testing.T) {
 	if len(eventStore.events["c1"]) != 1 {
 		t.Fatalf("expected 1 event, got %d", len(eventStore.events["c1"]))
 	}
-	if eventStore.events["c1"][0].Type != event.TypeGMFearChanged {
-		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.TypeGMFearChanged)
+	if eventStore.events["c1"][0].Type != daggerheart.EventTypeGMFearChanged {
+		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, daggerheart.EventTypeGMFearChanged)
 	}
 }
 

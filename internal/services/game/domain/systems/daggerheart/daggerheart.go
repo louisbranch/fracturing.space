@@ -11,9 +11,16 @@ type System struct {
 	outcomeApplier systems.OutcomeApplier
 }
 
+const SystemVersion = "1.0.0"
+
 // ID returns the system identifier.
 func (s *System) ID() commonv1.GameSystem {
 	return commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART
+}
+
+// Version returns the system ruleset version.
+func (s *System) Version() string {
+	return SystemVersion
 }
 
 // Name returns the human-readable system name.

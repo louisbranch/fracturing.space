@@ -194,18 +194,20 @@ func (s *EventService) ListEvents(ctx context.Context, in *campaignv1.ListEvents
 // eventToProto converts a domain event to a proto Event message.
 func eventToProto(evt event.Event) *campaignv1.Event {
 	return &campaignv1.Event{
-		CampaignId:   evt.CampaignID,
-		Seq:          evt.Seq,
-		Hash:         evt.Hash,
-		Ts:           timestamppb.New(evt.Timestamp),
-		Type:         string(evt.Type),
-		SessionId:    evt.SessionID,
-		RequestId:    evt.RequestID,
-		InvocationId: evt.InvocationID,
-		ActorType:    string(evt.ActorType),
-		ActorId:      evt.ActorID,
-		EntityType:   evt.EntityType,
-		EntityId:     evt.EntityID,
-		PayloadJson:  evt.PayloadJSON,
+		CampaignId:    evt.CampaignID,
+		Seq:           evt.Seq,
+		Hash:          evt.Hash,
+		Ts:            timestamppb.New(evt.Timestamp),
+		Type:          string(evt.Type),
+		SystemId:      evt.SystemID,
+		SystemVersion: evt.SystemVersion,
+		SessionId:     evt.SessionID,
+		RequestId:     evt.RequestID,
+		InvocationId:  evt.InvocationID,
+		ActorType:     string(evt.ActorType),
+		ActorId:       evt.ActorID,
+		EntityType:    evt.EntityType,
+		EntityId:      evt.EntityID,
+		PayloadJson:   evt.PayloadJSON,
 	}
 }

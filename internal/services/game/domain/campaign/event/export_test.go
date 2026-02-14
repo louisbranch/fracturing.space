@@ -104,7 +104,7 @@ func TestExportHumanReadable_WithSessionAndCorrelation(t *testing.T) {
 			Seq:          1,
 			Hash:         "hash1",
 			Timestamp:    ts,
-			Type:         TypeCharacterStateChanged,
+			Type:         TypeCharacterUpdated,
 			SessionID:    "sess_123",
 			RequestID:    "req_456",
 			InvocationID: "inv_789",
@@ -112,7 +112,7 @@ func TestExportHumanReadable_WithSessionAndCorrelation(t *testing.T) {
 			ActorID:      "part_xyz",
 			EntityType:   "character",
 			EntityID:     "char_abc",
-			PayloadJSON:  []byte(`{"hp_before":10,"hp_after":8}`),
+			PayloadJSON:  []byte(`{"fields":{"name":"test"}}`),
 		},
 	}
 

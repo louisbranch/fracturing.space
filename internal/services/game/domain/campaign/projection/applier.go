@@ -3,9 +3,7 @@ package projection
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"math"
 	"strings"
 	"time"
 
@@ -15,17 +13,23 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/participant"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/session"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
 // Applier applies event journal entries to projection stores.
 type Applier struct {
-	Campaign    storage.CampaignStore
-	Character   storage.CharacterStore
-	Daggerheart storage.DaggerheartStore
-	ClaimIndex  storage.ClaimIndexStore
-	Invite      storage.InviteStore
-	Participant storage.ParticipantStore
+	Campaign     storage.CampaignStore
+	Character    storage.CharacterStore
+	CampaignFork storage.CampaignForkStore
+	Daggerheart  storage.DaggerheartStore
+	ClaimIndex   storage.ClaimIndexStore
+	Invite       storage.InviteStore
+	Participant  storage.ParticipantStore
+	Session      storage.SessionStore
+	Adapters     *systems.AdapterRegistry
 }
 
 // Apply applies an event to projection stores.
@@ -33,8 +37,10 @@ func (a Applier) Apply(ctx context.Context, evt event.Event) error {
 	switch evt.Type {
 	case event.TypeCampaignCreated:
 		return a.applyCampaignCreated(ctx, evt)
-	case event.TypeCampaignStatusChanged:
-		return a.applyCampaignStatusChanged(ctx, evt)
+	case event.TypeCampaignForked:
+		return a.applyCampaignForked(ctx, evt)
+	case event.TypeCampaignUpdated:
+		return a.applyCampaignUpdated(ctx, evt)
 	case event.TypeParticipantJoined:
 		return a.applyParticipantJoined(ctx, evt)
 	case event.TypeParticipantUpdated:
@@ -59,15 +65,18 @@ func (a Applier) Apply(ctx context.Context, evt event.Event) error {
 		return a.applyCharacterUpdated(ctx, evt)
 	case event.TypeCharacterDeleted:
 		return a.applyCharacterDeleted(ctx, evt)
-	case event.TypeControllerAssigned:
-		return a.applyControllerAssigned(ctx, evt)
 	case event.TypeProfileUpdated:
 		return a.applyProfileUpdated(ctx, evt)
-	case event.TypeCharacterStateChanged:
-		return a.applyCharacterStateChanged(ctx, evt)
-	case event.TypeGMFearChanged:
-		return a.applyGMFearChanged(ctx, evt)
+	case event.TypeInviteUpdated:
+		return a.applyInviteUpdated(ctx, evt)
+	case event.TypeSessionStarted:
+		return a.applySessionStarted(ctx, evt)
+	case event.TypeSessionEnded:
+		return a.applySessionEnded(ctx, evt)
 	default:
+		if strings.TrimSpace(evt.SystemID) != "" {
+			return a.applySystemEvent(ctx, evt)
+		}
 		return nil
 	}
 }
@@ -115,27 +124,43 @@ func (a Applier) applyCampaignCreated(ctx context.Context, evt event.Event) erro
 		CharacterCount:   0,
 		ThemePrompt:      normalized.ThemePrompt,
 		CreatedAt:        createdAt,
-		LastActivityAt:   createdAt,
 		UpdatedAt:        createdAt,
 	}
 
 	return a.Campaign.Put(ctx, c)
 }
 
-func (a Applier) applyCampaignStatusChanged(ctx context.Context, evt event.Event) error {
+func (a Applier) applyCampaignForked(ctx context.Context, evt event.Event) error {
+	if a.CampaignFork == nil {
+		return fmt.Errorf("campaign fork store is not configured")
+	}
+	if strings.TrimSpace(evt.CampaignID) == "" {
+		return fmt.Errorf("campaign id is required")
+	}
+	var payload event.CampaignForkedPayload
+	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+		return fmt.Errorf("decode campaign.forked payload: %w", err)
+	}
+	return a.CampaignFork.SetCampaignForkMetadata(ctx, evt.CampaignID, storage.ForkMetadata{
+		ParentCampaignID: payload.ParentCampaignID,
+		ForkEventSeq:     payload.ForkEventSeq,
+		OriginCampaignID: payload.OriginCampaignID,
+	})
+}
+
+func (a Applier) applyCampaignUpdated(ctx context.Context, evt event.Event) error {
 	if a.Campaign == nil {
 		return fmt.Errorf("campaign store is not configured")
 	}
 	if strings.TrimSpace(evt.CampaignID) == "" {
 		return fmt.Errorf("campaign id is required")
 	}
-	var payload event.CampaignStatusChangedPayload
+	var payload event.CampaignUpdatedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode campaign.status_changed payload: %w", err)
+		return fmt.Errorf("decode campaign.updated payload: %w", err)
 	}
-	status, err := parseCampaignStatus(payload.ToStatus)
-	if err != nil {
-		return err
+	if len(payload.Fields) == 0 {
+		return nil
 	}
 
 	current, err := a.Campaign.Get(ctx, evt.CampaignID)
@@ -143,14 +168,45 @@ func (a Applier) applyCampaignStatusChanged(ctx context.Context, evt event.Event
 		return err
 	}
 
-	updated, err := campaign.TransitionCampaignStatus(current, status, func() time.Time {
-		return ensureTimestamp(evt.Timestamp)
-	})
-	if err != nil {
-		return err
+	updated := current
+	for key, value := range payload.Fields {
+		switch key {
+		case "status":
+			statusLabel, ok := value.(string)
+			if !ok {
+				return fmt.Errorf("campaign.updated status must be string")
+			}
+			status, err := parseCampaignStatus(statusLabel)
+			if err != nil {
+				return err
+			}
+			updated, err = campaign.TransitionCampaignStatus(updated, status, func() time.Time {
+				return ensureTimestamp(evt.Timestamp)
+			})
+			if err != nil {
+				return err
+			}
+		case "name":
+			name, ok := value.(string)
+			if !ok {
+				return fmt.Errorf("campaign.updated name must be string")
+			}
+			name = strings.TrimSpace(name)
+			if name == "" {
+				return fmt.Errorf("campaign name is required")
+			}
+			updated.Name = name
+		case "theme_prompt":
+			prompt, ok := value.(string)
+			if !ok {
+				return fmt.Errorf("campaign.updated theme_prompt must be string")
+			}
+			updated.ThemePrompt = strings.TrimSpace(prompt)
+		}
 	}
-	updated.LastActivityAt = ensureTimestamp(evt.Timestamp)
-	updated.UpdatedAt = ensureTimestamp(evt.Timestamp)
+
+	updatedAt := ensureTimestamp(evt.Timestamp)
+	updated.UpdatedAt = updatedAt
 
 	return a.Campaign.Put(ctx, updated)
 }
@@ -222,7 +278,6 @@ func (a Applier) applyParticipantJoined(ctx context.Context, evt event.Event) er
 		return err
 	}
 	campaignRecord.ParticipantCount++
-	campaignRecord.LastActivityAt = createdAt
 	campaignRecord.UpdatedAt = createdAt
 
 	return a.Campaign.Put(ctx, campaignRecord)
@@ -319,7 +374,6 @@ func (a Applier) applyParticipantUpdated(ctx context.Context, evt event.Event) e
 	if err != nil {
 		return err
 	}
-	campaignRecord.LastActivityAt = updatedAt
 	campaignRecord.UpdatedAt = updatedAt
 
 	return a.Campaign.Put(ctx, campaignRecord)
@@ -352,7 +406,6 @@ func (a Applier) applyParticipantLeft(ctx context.Context, evt event.Event) erro
 		campaignRecord.ParticipantCount--
 	}
 	updatedAt := ensureTimestamp(evt.Timestamp)
-	campaignRecord.LastActivityAt = updatedAt
 	campaignRecord.UpdatedAt = updatedAt
 
 	return a.Campaign.Put(ctx, campaignRecord)
@@ -406,7 +459,6 @@ func (a Applier) applyParticipantBound(ctx context.Context, evt event.Event) err
 	if err != nil {
 		return err
 	}
-	campaignRecord.LastActivityAt = updatedAt
 	campaignRecord.UpdatedAt = updatedAt
 
 	return a.Campaign.Put(ctx, campaignRecord)
@@ -461,7 +513,6 @@ func (a Applier) applyParticipantUnbound(ctx context.Context, evt event.Event) e
 	if err != nil {
 		return err
 	}
-	campaignRecord.LastActivityAt = updatedAt
 	campaignRecord.UpdatedAt = updatedAt
 
 	return a.Campaign.Put(ctx, campaignRecord)
@@ -525,7 +576,6 @@ func (a Applier) applySeatReassigned(ctx context.Context, evt event.Event) error
 	if err != nil {
 		return err
 	}
-	campaignRecord.LastActivityAt = updatedAt
 	campaignRecord.UpdatedAt = updatedAt
 
 	return a.Campaign.Put(ctx, campaignRecord)
@@ -541,22 +591,24 @@ func (a Applier) applyInviteCreated(ctx context.Context, evt event.Event) error 
 	if strings.TrimSpace(evt.CampaignID) == "" {
 		return fmt.Errorf("campaign id is required")
 	}
-	inviteID := strings.TrimSpace(evt.EntityID)
-	if inviteID == "" {
-		return fmt.Errorf("invite id is required")
-	}
-
 	var payload event.InviteCreatedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 		return fmt.Errorf("decode invite.created payload: %w", err)
+	}
+	inviteID := strings.TrimSpace(payload.InviteID)
+	if inviteID == "" {
+		inviteID = strings.TrimSpace(evt.EntityID)
+	}
+	if inviteID == "" {
+		return fmt.Errorf("invite id is required")
 	}
 	participantID := strings.TrimSpace(payload.ParticipantID)
 	if participantID == "" {
 		return fmt.Errorf("invite.created participant_id is required")
 	}
-	status := invite.StatusFromLabel(payload.Status)
-	if status == invite.StatusUnspecified {
-		return fmt.Errorf("invite.created status is required")
+	status, err := parseInviteStatus(payload.Status)
+	if err != nil {
+		return err
 	}
 
 	createdAt := ensureTimestamp(evt.Timestamp)
@@ -578,7 +630,6 @@ func (a Applier) applyInviteCreated(ctx context.Context, evt event.Event) error 
 	if err != nil {
 		return err
 	}
-	campaignRecord.LastActivityAt = createdAt
 	campaignRecord.UpdatedAt = createdAt
 
 	return a.Campaign.Put(ctx, campaignRecord)
@@ -613,7 +664,6 @@ func (a Applier) applyInviteClaimed(ctx context.Context, evt event.Event) error 
 	if err != nil {
 		return err
 	}
-	campaignRecord.LastActivityAt = updatedAt
 	campaignRecord.UpdatedAt = updatedAt
 
 	return a.Campaign.Put(ctx, campaignRecord)
@@ -648,7 +698,6 @@ func (a Applier) applyInviteRevoked(ctx context.Context, evt event.Event) error 
 	if err != nil {
 		return err
 	}
-	campaignRecord.LastActivityAt = updatedAt
 	campaignRecord.UpdatedAt = updatedAt
 
 	return a.Campaign.Put(ctx, campaignRecord)
@@ -709,7 +758,6 @@ func (a Applier) applyCharacterCreated(ctx context.Context, evt event.Event) err
 		return err
 	}
 	campaignRecord.CharacterCount++
-	campaignRecord.LastActivityAt = createdAt
 	campaignRecord.UpdatedAt = createdAt
 
 	return a.Campaign.Put(ctx, campaignRecord)
@@ -772,6 +820,12 @@ func (a Applier) applyCharacterUpdated(ctx context.Context, evt event.Event) err
 				return fmt.Errorf("character.updated notes must be string")
 			}
 			updated.Notes = strings.TrimSpace(notes)
+		case "participant_id":
+			participantID, ok := value.(string)
+			if !ok {
+				return fmt.Errorf("character.updated participant_id must be string")
+			}
+			updated.ParticipantID = strings.TrimSpace(participantID)
 		}
 	}
 
@@ -786,7 +840,6 @@ func (a Applier) applyCharacterUpdated(ctx context.Context, evt event.Event) err
 	if err != nil {
 		return err
 	}
-	campaignRecord.LastActivityAt = updatedAt
 	campaignRecord.UpdatedAt = updatedAt
 
 	return a.Campaign.Put(ctx, campaignRecord)
@@ -819,51 +872,6 @@ func (a Applier) applyCharacterDeleted(ctx context.Context, evt event.Event) err
 		campaignRecord.CharacterCount--
 	}
 	updatedAt := ensureTimestamp(evt.Timestamp)
-	campaignRecord.LastActivityAt = updatedAt
-	campaignRecord.UpdatedAt = updatedAt
-
-	return a.Campaign.Put(ctx, campaignRecord)
-}
-
-func (a Applier) applyControllerAssigned(ctx context.Context, evt event.Event) error {
-	if a.Character == nil {
-		return fmt.Errorf("character store is not configured")
-	}
-	if a.Campaign == nil {
-		return fmt.Errorf("campaign store is not configured")
-	}
-	if strings.TrimSpace(evt.CampaignID) == "" {
-		return fmt.Errorf("campaign id is required")
-	}
-	characterID := strings.TrimSpace(evt.EntityID)
-	if characterID == "" {
-		return fmt.Errorf("character id is required")
-	}
-
-	var payload event.ControllerAssignedPayload
-	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode character.controller_assigned payload: %w", err)
-	}
-
-	current, err := a.Character.GetCharacter(ctx, evt.CampaignID, characterID)
-	if err != nil {
-		return err
-	}
-
-	updated := current
-	updated.ParticipantID = strings.TrimSpace(payload.ParticipantID)
-	updatedAt := ensureTimestamp(evt.Timestamp)
-	updated.UpdatedAt = updatedAt
-
-	if err := a.Character.PutCharacter(ctx, updated); err != nil {
-		return err
-	}
-
-	campaignRecord, err := a.Campaign.Get(ctx, evt.CampaignID)
-	if err != nil {
-		return err
-	}
-	campaignRecord.LastActivityAt = updatedAt
 	campaignRecord.UpdatedAt = updatedAt
 
 	return a.Campaign.Put(ctx, campaignRecord)
@@ -900,15 +908,60 @@ func (a Applier) applyProfileUpdated(ctx context.Context, evt event.Event) error
 	if err := json.Unmarshal(rawProfile, &dhProfile); err != nil {
 		return fmt.Errorf("decode daggerheart profile payload: %w", err)
 	}
+	experiences := make([]daggerheart.Experience, 0, len(dhProfile.Experiences))
+	for _, experience := range dhProfile.Experiences {
+		experiences = append(experiences, daggerheart.Experience{
+			Name:     experience.Name,
+			Modifier: experience.Modifier,
+		})
+	}
+	level := dhProfile.Level
+	if level == 0 {
+		level = daggerheart.PCLevelDefault
+	}
+	if err := daggerheart.ValidateProfile(
+		level,
+		dhProfile.HpMax,
+		dhProfile.StressMax,
+		dhProfile.Evasion,
+		dhProfile.MajorThreshold,
+		dhProfile.SevereThreshold,
+		dhProfile.Proficiency,
+		dhProfile.ArmorScore,
+		dhProfile.ArmorMax,
+		daggerheart.Traits{
+			Agility:   dhProfile.Agility,
+			Strength:  dhProfile.Strength,
+			Finesse:   dhProfile.Finesse,
+			Instinct:  dhProfile.Instinct,
+			Presence:  dhProfile.Presence,
+			Knowledge: dhProfile.Knowledge,
+		},
+		experiences,
+	); err != nil {
+		return fmt.Errorf("validate daggerheart profile payload: %w", err)
+	}
 
+	experienceStorage := make([]storage.DaggerheartExperience, 0, len(dhProfile.Experiences))
+	for _, experience := range dhProfile.Experiences {
+		experienceStorage = append(experienceStorage, storage.DaggerheartExperience{
+			Name:     experience.Name,
+			Modifier: experience.Modifier,
+		})
+	}
 	return a.Daggerheart.PutDaggerheartCharacterProfile(ctx, storage.DaggerheartCharacterProfile{
 		CampaignID:      evt.CampaignID,
 		CharacterID:     characterID,
+		Level:           level,
 		HpMax:           dhProfile.HpMax,
 		StressMax:       dhProfile.StressMax,
 		Evasion:         dhProfile.Evasion,
 		MajorThreshold:  dhProfile.MajorThreshold,
 		SevereThreshold: dhProfile.SevereThreshold,
+		Proficiency:     dhProfile.Proficiency,
+		ArmorScore:      dhProfile.ArmorScore,
+		ArmorMax:        dhProfile.ArmorMax,
+		Experiences:     experienceStorage,
 		Agility:         dhProfile.Agility,
 		Strength:        dhProfile.Strength,
 		Finesse:         dhProfile.Finesse,
@@ -918,107 +971,78 @@ func (a Applier) applyProfileUpdated(ctx context.Context, evt event.Event) error
 	})
 }
 
-func (a Applier) applyCharacterStateChanged(ctx context.Context, evt event.Event) error {
-	if a.Daggerheart == nil {
-		return fmt.Errorf("daggerheart store is not configured")
+func (a Applier) applyInviteUpdated(ctx context.Context, evt event.Event) error {
+	if a.Invite == nil {
+		return fmt.Errorf("invite store is not configured")
 	}
-	if a.Campaign == nil {
-		return fmt.Errorf("campaign store is not configured")
-	}
-	if strings.TrimSpace(evt.CampaignID) == "" {
-		return fmt.Errorf("campaign id is required")
-	}
-	characterID := strings.TrimSpace(evt.EntityID)
-	if characterID == "" {
-		return fmt.Errorf("character id is required")
-	}
-
-	var payload event.CharacterStateChangedPayload
+	var payload event.InviteUpdatedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode snapshot.character_state_changed payload: %w", err)
+		return fmt.Errorf("decode invite.updated payload: %w", err)
 	}
-
-	current, err := a.Daggerheart.GetDaggerheartCharacterState(ctx, evt.CampaignID, characterID)
-	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			current = storage.DaggerheartCharacterState{CampaignID: evt.CampaignID, CharacterID: characterID}
-		} else {
-			return err
-		}
+	inviteID := strings.TrimSpace(payload.InviteID)
+	if inviteID == "" {
+		inviteID = strings.TrimSpace(evt.EntityID)
 	}
-
-	updated := current
-	if payload.HpAfter != nil {
-		updated.Hp = *payload.HpAfter
+	if inviteID == "" {
+		return fmt.Errorf("invite id is required")
 	}
-	if dhState, ok := payload.SystemState["daggerheart"]; ok {
-		stateMap, ok := dhState.(map[string]any)
-		if !ok {
-			return fmt.Errorf("snapshot.character_state_changed daggerheart state must be object")
-		}
-		if value, ok := stateMap["hope_after"]; ok {
-			hope, err := parseSnapshotNumber(value, "hope_after")
-			if err != nil {
-				return err
-			}
-			updated.Hope = hope
-		}
-		if value, ok := stateMap["stress_after"]; ok {
-			stress, err := parseSnapshotNumber(value, "stress_after")
-			if err != nil {
-				return err
-			}
-			updated.Stress = stress
-		}
-	}
-
-	if err := a.Daggerheart.PutDaggerheartCharacterState(ctx, updated); err != nil {
-		return err
-	}
-
-	campaignRecord, err := a.Campaign.Get(ctx, evt.CampaignID)
+	status, err := parseInviteStatus(payload.Status)
 	if err != nil {
 		return err
 	}
 	updatedAt := ensureTimestamp(evt.Timestamp)
-	campaignRecord.LastActivityAt = updatedAt
-	campaignRecord.UpdatedAt = updatedAt
-
-	return a.Campaign.Put(ctx, campaignRecord)
+	return a.Invite.UpdateInviteStatus(ctx, inviteID, status, updatedAt)
 }
 
-func (a Applier) applyGMFearChanged(ctx context.Context, evt event.Event) error {
-	if a.Daggerheart == nil {
-		return fmt.Errorf("daggerheart store is not configured")
-	}
-	if a.Campaign == nil {
-		return fmt.Errorf("campaign store is not configured")
+func (a Applier) applySessionStarted(ctx context.Context, evt event.Event) error {
+	if a.Session == nil {
+		return fmt.Errorf("session store is not configured")
 	}
 	if strings.TrimSpace(evt.CampaignID) == "" {
 		return fmt.Errorf("campaign id is required")
 	}
-
-	var payload event.GMFearChangedPayload
+	var payload event.SessionStartedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode snapshot.gm_fear_changed payload: %w", err)
+		return fmt.Errorf("decode session.started payload: %w", err)
 	}
-
-	if err := a.Daggerheart.PutDaggerheartSnapshot(ctx, storage.DaggerheartSnapshot{
+	sessionID := strings.TrimSpace(payload.SessionID)
+	if sessionID == "" {
+		sessionID = strings.TrimSpace(evt.EntityID)
+	}
+	if sessionID == "" {
+		return fmt.Errorf("session id is required")
+	}
+	startedAt := ensureTimestamp(evt.Timestamp)
+	return a.Session.PutSession(ctx, session.Session{
+		ID:         sessionID,
 		CampaignID: evt.CampaignID,
-		GMFear:     payload.After,
-	}); err != nil {
-		return err
-	}
+		Name:       strings.TrimSpace(payload.SessionName),
+		Status:     session.SessionStatusActive,
+		StartedAt:  startedAt,
+		UpdatedAt:  startedAt,
+	})
+}
 
-	campaignRecord, err := a.Campaign.Get(ctx, evt.CampaignID)
-	if err != nil {
-		return err
+func (a Applier) applySessionEnded(ctx context.Context, evt event.Event) error {
+	if a.Session == nil {
+		return fmt.Errorf("session store is not configured")
 	}
-	updatedAt := ensureTimestamp(evt.Timestamp)
-	campaignRecord.LastActivityAt = updatedAt
-	campaignRecord.UpdatedAt = updatedAt
-
-	return a.Campaign.Put(ctx, campaignRecord)
+	if strings.TrimSpace(evt.CampaignID) == "" {
+		return fmt.Errorf("campaign id is required")
+	}
+	var payload event.SessionEndedPayload
+	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+		return fmt.Errorf("decode session.ended payload: %w", err)
+	}
+	sessionID := strings.TrimSpace(payload.SessionID)
+	if sessionID == "" {
+		sessionID = strings.TrimSpace(evt.EntityID)
+	}
+	if sessionID == "" {
+		return fmt.Errorf("session id is required")
+	}
+	_, _, err := a.Session.EndSession(ctx, evt.CampaignID, sessionID, ensureTimestamp(evt.Timestamp))
+	return err
 }
 
 func parseGameSystem(value string) (commonv1.GameSystem, error) {
@@ -1034,6 +1058,24 @@ func parseGameSystem(value string) (commonv1.GameSystem, error) {
 		return commonv1.GameSystem(system), nil
 	}
 	return commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED, fmt.Errorf("unknown game system: %s", trimmed)
+}
+
+func (a Applier) applySystemEvent(ctx context.Context, evt event.Event) error {
+	if a.Adapters == nil {
+		return fmt.Errorf("system adapters are not configured")
+	}
+	if strings.TrimSpace(evt.SystemID) == "" {
+		return fmt.Errorf("system_id is required for system events")
+	}
+	gameSystem, err := parseGameSystem(evt.SystemID)
+	if err != nil {
+		return err
+	}
+	adapter := a.Adapters.Get(gameSystem, evt.SystemVersion)
+	if adapter == nil {
+		return fmt.Errorf("system adapter not found for %s (%s)", evt.SystemID, evt.SystemVersion)
+	}
+	return adapter.ApplyEvent(ctx, evt)
 }
 
 func parseCampaignStatus(value string) (campaign.CampaignStatus, error) {
@@ -1124,6 +1166,18 @@ func parseCampaignAccess(value string) (participant.CampaignAccess, error) {
 	}
 }
 
+func parseInviteStatus(value string) (invite.Status, error) {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return invite.StatusUnspecified, fmt.Errorf("invite status is required")
+	}
+	status := invite.StatusFromLabel(trimmed)
+	if status == invite.StatusUnspecified {
+		return invite.StatusUnspecified, fmt.Errorf("unknown invite status: %s", trimmed)
+	}
+	return status, nil
+}
+
 func parseCharacterKind(value string) (character.CharacterKind, error) {
 	trimmed := strings.TrimSpace(value)
 	if trimmed == "" {
@@ -1147,45 +1201,26 @@ func ensureTimestamp(ts time.Time) time.Time {
 	return ts.UTC()
 }
 
-func parseSnapshotNumber(value any, field string) (int, error) {
-	switch v := value.(type) {
-	case float64:
-		if v != math.Trunc(v) {
-			return 0, fmt.Errorf("%s must be an integer", field)
-		}
-		return int(v), nil
-	case float32:
-		if v != float32(math.Trunc(float64(v))) {
-			return 0, fmt.Errorf("%s must be an integer", field)
-		}
-		return int(v), nil
-	case int:
-		return v, nil
-	case int32:
-		return int(v), nil
-	case int64:
-		return int(v), nil
-	case json.Number:
-		parsed, err := v.Int64()
-		if err != nil {
-			return 0, fmt.Errorf("%s must be an integer", field)
-		}
-		return int(parsed), nil
-	default:
-		return 0, fmt.Errorf("%s must be a number", field)
-	}
+type daggerheartProfilePayload struct {
+	Level           int                            `json:"level"`
+	HpMax           int                            `json:"hp_max"`
+	StressMax       int                            `json:"stress_max"`
+	Evasion         int                            `json:"evasion"`
+	MajorThreshold  int                            `json:"major_threshold"`
+	SevereThreshold int                            `json:"severe_threshold"`
+	Proficiency     int                            `json:"proficiency"`
+	ArmorScore      int                            `json:"armor_score"`
+	ArmorMax        int                            `json:"armor_max"`
+	Experiences     []daggerheartExperiencePayload `json:"experiences"`
+	Agility         int                            `json:"agility"`
+	Strength        int                            `json:"strength"`
+	Finesse         int                            `json:"finesse"`
+	Instinct        int                            `json:"instinct"`
+	Presence        int                            `json:"presence"`
+	Knowledge       int                            `json:"knowledge"`
 }
 
-type daggerheartProfilePayload struct {
-	HpMax           int `json:"hp_max"`
-	StressMax       int `json:"stress_max"`
-	Evasion         int `json:"evasion"`
-	MajorThreshold  int `json:"major_threshold"`
-	SevereThreshold int `json:"severe_threshold"`
-	Agility         int `json:"agility"`
-	Strength        int `json:"strength"`
-	Finesse         int `json:"finesse"`
-	Instinct        int `json:"instinct"`
-	Presence        int `json:"presence"`
-	Knowledge       int `json:"knowledge"`
+type daggerheartExperiencePayload struct {
+	Name     string `json:"name"`
+	Modifier int    `json:"modifier"`
 }

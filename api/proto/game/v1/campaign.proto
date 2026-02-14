@@ -23,13 +23,11 @@ message Campaign {
   int32 character_count = 7;
   string theme_prompt = 8;
   google.protobuf.Timestamp created_at = 9;
-  // Timestamp of the most recent campaign activity.
-  google.protobuf.Timestamp last_activity_at = 10;
-  google.protobuf.Timestamp updated_at = 11;
+  google.protobuf.Timestamp updated_at = 10;
   // Timestamp when the campaign was completed.
-  google.protobuf.Timestamp completed_at = 12;
+  google.protobuf.Timestamp completed_at = 11;
   // Timestamp when the campaign was archived.
-  google.protobuf.Timestamp archived_at = 13;
+  google.protobuf.Timestamp archived_at = 12;
 }
 
 enum CampaignStatus {

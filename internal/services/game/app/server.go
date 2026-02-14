@@ -92,7 +92,14 @@ func NewWithAddr(addr string) (*Server, error) {
 		),
 		grpc.StreamInterceptor(grpcmeta.StreamServerInterceptor(nil)),
 	)
-	daggerheartService := daggerheartservice.NewDaggerheartService(random.NewSeed)
+	daggerheartStores := daggerheartservice.Stores{
+		Campaign:    projStore,
+		Character:   projStore,
+		Session:     projStore,
+		Daggerheart: projStore,
+		Event:       eventStore,
+	}
+	daggerheartService := daggerheartservice.NewDaggerheartService(daggerheartStores, random.NewSeed)
 	campaignService := gamegrpc.NewCampaignServiceWithAuth(stores, authClient)
 	participantService := gamegrpc.NewParticipantService(stores)
 	inviteService := gamegrpc.NewInviteService(stores)

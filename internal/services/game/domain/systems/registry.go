@@ -3,6 +3,7 @@ package systems
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
@@ -14,6 +15,9 @@ import (
 type GameSystem interface {
 	// ID returns the system identifier (matches GameSystem proto enum).
 	ID() commonv1.GameSystem
+
+	// Version returns the system ruleset version.
+	Version() string
 
 	// Name returns the human-readable system name.
 	Name() string
@@ -131,14 +135,22 @@ type OutcomeApplier interface {
 
 // Registry manages registered game systems.
 type Registry struct {
-	mu      sync.RWMutex
-	systems map[commonv1.GameSystem]GameSystem
+	mu       sync.RWMutex
+	systems  map[SystemKey]GameSystem
+	defaults map[commonv1.GameSystem]string
+}
+
+// SystemKey identifies a specific version of a system.
+type SystemKey struct {
+	ID      commonv1.GameSystem
+	Version string
 }
 
 // NewRegistry creates a new game system registry.
 func NewRegistry() *Registry {
 	return &Registry{
-		systems: make(map[commonv1.GameSystem]GameSystem),
+		systems:  make(map[SystemKey]GameSystem),
+		defaults: make(map[commonv1.GameSystem]string),
 	}
 }
 
@@ -149,17 +161,39 @@ func (r *Registry) Register(system GameSystem) {
 	defer r.mu.Unlock()
 
 	id := system.ID()
-	if _, exists := r.systems[id]; exists {
-		panic(fmt.Sprintf("game system %s already registered", id))
+	version := strings.TrimSpace(system.Version())
+	if version == "" {
+		panic(fmt.Sprintf("game system %s must define a version", id))
 	}
-	r.systems[id] = system
+	key := SystemKey{ID: id, Version: version}
+	if _, exists := r.systems[key]; exists {
+		panic(fmt.Sprintf("game system %s version %s already registered", id, version))
+	}
+	if _, exists := r.defaults[id]; !exists {
+		r.defaults[id] = version
+	}
+	r.systems[key] = system
 }
 
 // Get returns the game system for the given ID, or nil if not found.
 func (r *Registry) Get(id commonv1.GameSystem) GameSystem {
+	return r.GetVersion(id, "")
+}
+
+// GetVersion returns the game system for the given ID and version.
+// If version is empty, the default registered version is returned.
+func (r *Registry) GetVersion(id commonv1.GameSystem, version string) GameSystem {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	return r.systems[id]
+
+	resolved := strings.TrimSpace(version)
+	if resolved == "" {
+		resolved = r.defaults[id]
+	}
+	if resolved == "" {
+		return nil
+	}
+	return r.systems[SystemKey{ID: id, Version: resolved}]
 }
 
 // MustGet returns the game system for the given ID, or panics if not found.

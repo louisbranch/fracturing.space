@@ -322,11 +322,16 @@ type Store interface {
 type DaggerheartCharacterProfile struct {
 	CampaignID      string
 	CharacterID     string
+	Level           int
 	HpMax           int
 	StressMax       int
 	Evasion         int
 	MajorThreshold  int
 	SevereThreshold int
+	Proficiency     int
+	ArmorScore      int
+	ArmorMax        int
+	Experiences     []DaggerheartExperience
 	// Daggerheart traits
 	Agility   int
 	Strength  int
@@ -336,19 +341,62 @@ type DaggerheartCharacterProfile struct {
 	Knowledge int
 }
 
+// DaggerheartExperience captures experience modifiers.
+type DaggerheartExperience struct {
+	Name     string
+	Modifier int
+}
+
 // DaggerheartCharacterState contains Daggerheart-specific character state data.
 type DaggerheartCharacterState struct {
 	CampaignID  string
 	CharacterID string
 	Hp          int
 	Hope        int
+	HopeMax     int
 	Stress      int
+	Armor       int
+	Conditions  []string
+	LifeState   string
 }
 
 // DaggerheartSnapshot contains Daggerheart-specific campaign-level state.
 type DaggerheartSnapshot struct {
-	CampaignID string
-	GMFear     int
+	CampaignID            string
+	GMFear                int
+	ConsecutiveShortRests int
+}
+
+// DaggerheartCountdown contains countdown state for a campaign.
+type DaggerheartCountdown struct {
+	CampaignID  string
+	CountdownID string
+	Name        string
+	Kind        string
+	Current     int
+	Max         int
+	Direction   string
+	Looping     bool
+}
+
+// DaggerheartAdversary contains adversary metadata for a campaign.
+type DaggerheartAdversary struct {
+	CampaignID  string
+	AdversaryID string
+	Name        string
+	Kind        string
+	SessionID   string
+	Notes       string
+	HP          int
+	HPMax       int
+	Stress      int
+	StressMax   int
+	Evasion     int
+	Major       int
+	Severe      int
+	Armor       int
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 // DaggerheartStore provides Daggerheart-specific storage operations.
@@ -365,4 +413,16 @@ type DaggerheartStore interface {
 	// Snapshot Extensions
 	PutDaggerheartSnapshot(ctx context.Context, snap DaggerheartSnapshot) error
 	GetDaggerheartSnapshot(ctx context.Context, campaignID string) (DaggerheartSnapshot, error)
+
+	// Countdown Extensions
+	PutDaggerheartCountdown(ctx context.Context, countdown DaggerheartCountdown) error
+	GetDaggerheartCountdown(ctx context.Context, campaignID, countdownID string) (DaggerheartCountdown, error)
+	ListDaggerheartCountdowns(ctx context.Context, campaignID string) ([]DaggerheartCountdown, error)
+	DeleteDaggerheartCountdown(ctx context.Context, campaignID, countdownID string) error
+
+	// Adversary Extensions
+	PutDaggerheartAdversary(ctx context.Context, adversary DaggerheartAdversary) error
+	GetDaggerheartAdversary(ctx context.Context, campaignID, adversaryID string) (DaggerheartAdversary, error)
+	ListDaggerheartAdversaries(ctx context.Context, campaignID, sessionID string) ([]DaggerheartAdversary, error)
+	DeleteDaggerheartAdversary(ctx context.Context, campaignID, adversaryID string) error
 }

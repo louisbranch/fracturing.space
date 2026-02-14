@@ -46,7 +46,6 @@ type CampaignCreateResult struct {
 	ThemePrompt        string `json:"theme_prompt" jsonschema:"theme prompt"`
 	Status             string `json:"status" jsonschema:"campaign status"`
 	CreatedAt          string `json:"created_at" jsonschema:"RFC3339 timestamp when campaign was created"`
-	LastActivityAt     string `json:"last_activity_at" jsonschema:"RFC3339 timestamp for last campaign activity"`
 	UpdatedAt          string `json:"updated_at" jsonschema:"RFC3339 timestamp when campaign was last updated"`
 	CompletedAt        string `json:"completed_at,omitempty" jsonschema:"RFC3339 timestamp when campaign was completed"`
 	ArchivedAt         string `json:"archived_at,omitempty" jsonschema:"RFC3339 timestamp when campaign was archived"`
@@ -63,7 +62,6 @@ type CampaignStatusResult struct {
 	ThemePrompt      string `json:"theme_prompt" jsonschema:"theme prompt"`
 	Status           string `json:"status" jsonschema:"campaign status"`
 	CreatedAt        string `json:"created_at" jsonschema:"RFC3339 timestamp when campaign was created"`
-	LastActivityAt   string `json:"last_activity_at" jsonschema:"RFC3339 timestamp for last campaign activity"`
 	UpdatedAt        string `json:"updated_at" jsonschema:"RFC3339 timestamp when campaign was last updated"`
 	CompletedAt      string `json:"completed_at,omitempty" jsonschema:"RFC3339 timestamp when campaign was completed"`
 	ArchivedAt       string `json:"archived_at,omitempty" jsonschema:"RFC3339 timestamp when campaign was archived"`
@@ -80,7 +78,6 @@ type CampaignListEntry struct {
 	GmFear           int    `json:"gm_fear"`
 	ThemePrompt      string `json:"theme_prompt"`
 	CreatedAt        string `json:"created_at"`
-	LastActivityAt   string `json:"last_activity_at"`
 	UpdatedAt        string `json:"updated_at"`
 	CompletedAt      string `json:"completed_at,omitempty"`
 	ArchivedAt       string `json:"archived_at,omitempty"`
@@ -578,7 +575,6 @@ func CampaignCreateHandler(client statev1.CampaignServiceClient, notify Resource
 			ThemePrompt:        response.Campaign.GetThemePrompt(),
 			Status:             campaignStatusToString(response.Campaign.GetStatus()),
 			CreatedAt:          formatTimestamp(response.Campaign.GetCreatedAt()),
-			LastActivityAt:     formatTimestamp(response.Campaign.GetLastActivityAt()),
 			UpdatedAt:          formatTimestamp(response.Campaign.GetUpdatedAt()),
 			CompletedAt:        formatTimestamp(response.Campaign.GetCompletedAt()),
 			ArchivedAt:         formatTimestamp(response.Campaign.GetArchivedAt()),
@@ -791,7 +787,6 @@ func CampaignListResourceHandler(client statev1.CampaignServiceClient) mcp.Resou
 				GmFear:           0, // GM Fear is now in Snapshot, not Campaign
 				ThemePrompt:      campaign.GetThemePrompt(),
 				CreatedAt:        formatTimestamp(campaign.GetCreatedAt()),
-				LastActivityAt:   formatTimestamp(campaign.GetLastActivityAt()),
 				UpdatedAt:        formatTimestamp(campaign.GetUpdatedAt()),
 				CompletedAt:      formatTimestamp(campaign.GetCompletedAt()),
 				ArchivedAt:       formatTimestamp(campaign.GetArchivedAt()),
@@ -884,7 +879,6 @@ func campaignStatusResultFromProto(campaign *statev1.Campaign) CampaignStatusRes
 		ThemePrompt:      campaign.GetThemePrompt(),
 		Status:           campaignStatusToString(campaign.GetStatus()),
 		CreatedAt:        formatTimestamp(campaign.GetCreatedAt()),
-		LastActivityAt:   formatTimestamp(campaign.GetLastActivityAt()),
 		UpdatedAt:        formatTimestamp(campaign.GetUpdatedAt()),
 		CompletedAt:      formatTimestamp(campaign.GetCompletedAt()),
 		ArchivedAt:       formatTimestamp(campaign.GetArchivedAt()),
@@ -1859,7 +1853,6 @@ func CampaignResourceHandler(client statev1.CampaignServiceClient) mcp.ResourceH
 				GmFear:           0, // GM Fear is now in Snapshot, not Campaign
 				ThemePrompt:      campaign.GetThemePrompt(),
 				CreatedAt:        formatTimestamp(campaign.GetCreatedAt()),
-				LastActivityAt:   formatTimestamp(campaign.GetLastActivityAt()),
 				UpdatedAt:        formatTimestamp(campaign.GetUpdatedAt()),
 				CompletedAt:      formatTimestamp(campaign.GetCompletedAt()),
 				ArchivedAt:       formatTimestamp(campaign.GetArchivedAt()),

@@ -11,6 +11,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/participant"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -190,8 +191,8 @@ func TestCreateCharacter_Success_PC(t *testing.T) {
 	if eventStore.events["c1"][1].Type != event.TypeProfileUpdated {
 		t.Fatalf("event[1] type = %s, want %s", eventStore.events["c1"][1].Type, event.TypeProfileUpdated)
 	}
-	if eventStore.events["c1"][2].Type != event.TypeCharacterStateChanged {
-		t.Fatalf("event[2] type = %s, want %s", eventStore.events["c1"][2].Type, event.TypeCharacterStateChanged)
+	if eventStore.events["c1"][2].Type != daggerheart.EventTypeCharacterStatePatched {
+		t.Fatalf("event[2] type = %s, want %s", eventStore.events["c1"][2].Type, daggerheart.EventTypeCharacterStatePatched)
 	}
 }
 
@@ -557,8 +558,8 @@ func TestSetDefaultControl_Success_Unassigned(t *testing.T) {
 	if got := len(eventStore.events["c1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)
 	}
-	if eventStore.events["c1"][0].Type != event.TypeControllerAssigned {
-		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.TypeControllerAssigned)
+	if eventStore.events["c1"][0].Type != event.TypeCharacterUpdated {
+		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.TypeCharacterUpdated)
 	}
 }
 
@@ -604,8 +605,8 @@ func TestSetDefaultControl_Success_Participant(t *testing.T) {
 	if got := len(eventStore.events["c1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)
 	}
-	if eventStore.events["c1"][0].Type != event.TypeControllerAssigned {
-		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.TypeControllerAssigned)
+	if eventStore.events["c1"][0].Type != event.TypeCharacterUpdated {
+		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.TypeCharacterUpdated)
 	}
 	_ = resp
 }
@@ -679,7 +680,7 @@ func TestGetCharacterSheet_Success(t *testing.T) {
 		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", Kind: character.CharacterKindPC, CreatedAt: now},
 	}
 	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
-		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 18, StressMax: 6, Evasion: 10, MajorThreshold: 5, SevereThreshold: 10, Agility: 2, Strength: 1},
+		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6, Evasion: 10, MajorThreshold: 5, SevereThreshold: 10, Agility: 2, Strength: 1},
 	}
 	dhStore.states["c1"] = map[string]storage.DaggerheartCharacterState{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", Hp: 15, Hope: 3, Stress: 1},
@@ -710,8 +711,8 @@ func TestGetCharacterSheet_Success(t *testing.T) {
 	if resp.Character.Name != "Hero" {
 		t.Errorf("Character Name = %q, want %q", resp.Character.Name, "Hero")
 	}
-	if dh := resp.Profile.GetDaggerheart(); dh == nil || dh.GetHpMax() != 18 {
-		t.Errorf("Profile HpMax = %d, want %d", dh.GetHpMax(), 18)
+	if dh := resp.Profile.GetDaggerheart(); dh == nil || dh.GetHpMax() != 12 {
+		t.Errorf("Profile HpMax = %d, want %d", dh.GetHpMax(), 12)
 	}
 	if dh := resp.State.GetDaggerheart(); dh == nil || dh.GetHope() != 3 {
 		t.Errorf("State Hope = %d, want %d", dh.GetHope(), 3)
@@ -752,7 +753,7 @@ func TestPatchCharacterProfile_ProfileNotFound(t *testing.T) {
 func TestPatchCharacterProfile_NegativeHpMax(t *testing.T) {
 	dhStore := newFakeDaggerheartStore()
 	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
-		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 18},
+		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12},
 	}
 
 	svc := NewCharacterService(Stores{Daggerheart: dhStore, Event: newFakeEventStore()})
@@ -769,7 +770,7 @@ func TestPatchCharacterProfile_ZeroHpMaxNoChange(t *testing.T) {
 	// The original HpMax should be preserved.
 	dhStore := newFakeDaggerheartStore()
 	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
-		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 18, StressMax: 6},
+		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
 	}
 	eventStore := newFakeEventStore()
 
@@ -782,9 +783,9 @@ func TestPatchCharacterProfile_ZeroHpMaxNoChange(t *testing.T) {
 	if err != nil {
 		t.Fatalf("PatchCharacterProfile returned error: %v", err)
 	}
-	// HpMax should remain unchanged at 18
-	if dh := resp.Profile.GetDaggerheart(); dh == nil || dh.GetHpMax() != 18 {
-		t.Errorf("Profile HpMax = %d, want %d (unchanged)", dh.GetHpMax(), 18)
+	// HpMax should remain unchanged at 12
+	if dh := resp.Profile.GetDaggerheart(); dh == nil || dh.GetHpMax() != 12 {
+		t.Errorf("Profile HpMax = %d, want %d (unchanged)", dh.GetHpMax(), 12)
 	}
 	if got := len(eventStore.events["c1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)
@@ -797,7 +798,7 @@ func TestPatchCharacterProfile_ZeroHpMaxNoChange(t *testing.T) {
 func TestPatchCharacterProfile_Success(t *testing.T) {
 	dhStore := newFakeDaggerheartStore()
 	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
-		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 18, StressMax: 6, Evasion: 10, MajorThreshold: 5, SevereThreshold: 10},
+		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6, Evasion: 10, MajorThreshold: 5, SevereThreshold: 10},
 	}
 	eventStore := newFakeEventStore()
 
@@ -805,7 +806,7 @@ func TestPatchCharacterProfile_Success(t *testing.T) {
 	resp, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
-		SystemProfilePatch: &statev1.PatchCharacterProfileRequest_Daggerheart{Daggerheart: &daggerheartv1.DaggerheartProfile{HpMax: 24, StressMax: wrapperspb.Int32(8)}},
+		SystemProfilePatch: &statev1.PatchCharacterProfileRequest_Daggerheart{Daggerheart: &daggerheartv1.DaggerheartProfile{HpMax: 10, StressMax: wrapperspb.Int32(8)}},
 	})
 	if err != nil {
 		t.Fatalf("PatchCharacterProfile returned error: %v", err)
@@ -813,8 +814,8 @@ func TestPatchCharacterProfile_Success(t *testing.T) {
 	if resp.Profile == nil {
 		t.Fatal("PatchCharacterProfile response has nil profile")
 	}
-	if dh := resp.Profile.GetDaggerheart(); dh == nil || dh.GetHpMax() != 24 {
-		t.Errorf("Profile HpMax = %d, want %d", dh.GetHpMax(), 24)
+	if dh := resp.Profile.GetDaggerheart(); dh == nil || dh.GetHpMax() != 10 {
+		t.Errorf("Profile HpMax = %d, want %d", dh.GetHpMax(), 10)
 	}
 	if dh := resp.Profile.GetDaggerheart(); dh == nil || dh.GetStressMax().GetValue() != 8 {
 		t.Errorf("Profile StressMax = %d, want %d", dh.GetStressMax().GetValue(), 8)
@@ -839,7 +840,7 @@ func TestPatchCharacterProfile_UpdateTraits(t *testing.T) {
 		"ch1": {
 			CampaignID:      "c1",
 			CharacterID:     "ch1",
-			HpMax:           18,
+			HpMax:           12,
 			StressMax:       6,
 			Evasion:         10,
 			MajorThreshold:  5,
@@ -904,7 +905,7 @@ func TestPatchCharacterProfile_UpdateTraits(t *testing.T) {
 func TestPatchCharacterProfile_NegativeStressMax(t *testing.T) {
 	dhStore := newFakeDaggerheartStore()
 	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
-		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 18, StressMax: 6},
+		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
 	}
 
 	svc := NewCharacterService(Stores{Daggerheart: dhStore, Event: newFakeEventStore()})

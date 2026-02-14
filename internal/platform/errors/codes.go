@@ -69,12 +69,18 @@ const (
 	// Daggerheart-specific errors
 	CodeDaggerheartInvalidDifficulty    Code = "DAGGERHEART_INVALID_DIFFICULTY"
 	CodeDaggerheartInvalidDualityDie    Code = "DAGGERHEART_INVALID_DUALITY_DIE"
+	CodeDaggerheartInvalidLevel         Code = "DAGGERHEART_INVALID_LEVEL"
 	CodeDaggerheartInvalidTraitValue    Code = "DAGGERHEART_INVALID_TRAIT_VALUE"
 	CodeDaggerheartInvalidStressMax     Code = "DAGGERHEART_INVALID_STRESS_MAX"
 	CodeDaggerheartInvalidHpMax         Code = "DAGGERHEART_INVALID_HP_MAX"
 	CodeDaggerheartInvalidHp            Code = "DAGGERHEART_INVALID_HP"
 	CodeDaggerheartInvalidEvasion       Code = "DAGGERHEART_INVALID_EVASION"
 	CodeDaggerheartInvalidThresholds    Code = "DAGGERHEART_INVALID_THRESHOLDS"
+	CodeDaggerheartInvalidProficiency   Code = "DAGGERHEART_INVALID_PROFICIENCY"
+	CodeDaggerheartInvalidArmorMax      Code = "DAGGERHEART_INVALID_ARMOR_MAX"
+	CodeDaggerheartInvalidArmorScore    Code = "DAGGERHEART_INVALID_ARMOR_SCORE"
+	CodeDaggerheartInvalidExperience    Code = "DAGGERHEART_INVALID_EXPERIENCE"
+	CodeDaggerheartInvalidRestSequence  Code = "DAGGERHEART_INVALID_REST_SEQUENCE"
 	CodeDaggerheartUnknownResource      Code = "DAGGERHEART_UNKNOWN_RESOURCE"
 	CodeDaggerheartInsufficientResource Code = "DAGGERHEART_INSUFFICIENT_RESOURCE"
 	CodeDaggerheartResourceAtCap        Code = "DAGGERHEART_RESOURCE_AT_CAP"
@@ -113,12 +119,18 @@ func (c Code) GRPCCode() codes.Code {
 		CodeSeedOutOfRange,
 		CodeDaggerheartInvalidDifficulty,
 		CodeDaggerheartInvalidDualityDie,
+		CodeDaggerheartInvalidLevel,
 		CodeDaggerheartInvalidTraitValue,
 		CodeDaggerheartInvalidStressMax,
 		CodeDaggerheartInvalidHpMax,
 		CodeDaggerheartInvalidHp,
 		CodeDaggerheartInvalidEvasion,
 		CodeDaggerheartInvalidThresholds,
+		CodeDaggerheartInvalidProficiency,
+		CodeDaggerheartInvalidArmorMax,
+		CodeDaggerheartInvalidArmorScore,
+		CodeDaggerheartInvalidExperience,
+		CodeDaggerheartInvalidRestSequence,
 		CodeDaggerheartUnknownResource,
 		CodeForkEmptyCampaignID,
 		CodeForkInvalidForkPoint:

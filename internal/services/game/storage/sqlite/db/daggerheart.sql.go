@@ -10,6 +10,21 @@ import (
 	"database/sql"
 )
 
+const deleteDaggerheartAdversary = `-- name: DeleteDaggerheartAdversary :exec
+DELETE FROM daggerheart_adversaries
+WHERE campaign_id = ? AND adversary_id = ?
+`
+
+type DeleteDaggerheartAdversaryParams struct {
+	CampaignID  string `json:"campaign_id"`
+	AdversaryID string `json:"adversary_id"`
+}
+
+func (q *Queries) DeleteDaggerheartAdversary(ctx context.Context, arg DeleteDaggerheartAdversaryParams) error {
+	_, err := q.db.ExecContext(ctx, deleteDaggerheartAdversary, arg.CampaignID, arg.AdversaryID)
+	return err
+}
+
 const deleteDaggerheartCharacterProfile = `-- name: DeleteDaggerheartCharacterProfile :exec
 DELETE FROM daggerheart_character_profiles
 WHERE campaign_id = ? AND character_id = ?
@@ -40,6 +55,21 @@ func (q *Queries) DeleteDaggerheartCharacterState(ctx context.Context, arg Delet
 	return err
 }
 
+const deleteDaggerheartCountdown = `-- name: DeleteDaggerheartCountdown :exec
+DELETE FROM daggerheart_countdowns
+WHERE campaign_id = ? AND countdown_id = ?
+`
+
+type DeleteDaggerheartCountdownParams struct {
+	CampaignID  string `json:"campaign_id"`
+	CountdownID string `json:"countdown_id"`
+}
+
+func (q *Queries) DeleteDaggerheartCountdown(ctx context.Context, arg DeleteDaggerheartCountdownParams) error {
+	_, err := q.db.ExecContext(ctx, deleteDaggerheartCountdown, arg.CampaignID, arg.CountdownID)
+	return err
+}
+
 const deleteDaggerheartSnapshot = `-- name: DeleteDaggerheartSnapshot :exec
 DELETE FROM daggerheart_snapshots WHERE campaign_id = ?
 `
@@ -49,10 +79,46 @@ func (q *Queries) DeleteDaggerheartSnapshot(ctx context.Context, campaignID stri
 	return err
 }
 
+const getDaggerheartAdversary = `-- name: GetDaggerheartAdversary :one
+
+SELECT campaign_id, adversary_id, name, kind, session_id, notes, hp, hp_max, stress, stress_max, evasion, major_threshold, severe_threshold, armor, created_at, updated_at FROM daggerheart_adversaries
+WHERE campaign_id = ? AND adversary_id = ?
+`
+
+type GetDaggerheartAdversaryParams struct {
+	CampaignID  string `json:"campaign_id"`
+	AdversaryID string `json:"adversary_id"`
+}
+
+// Adversary Extensions
+func (q *Queries) GetDaggerheartAdversary(ctx context.Context, arg GetDaggerheartAdversaryParams) (DaggerheartAdversary, error) {
+	row := q.db.QueryRowContext(ctx, getDaggerheartAdversary, arg.CampaignID, arg.AdversaryID)
+	var i DaggerheartAdversary
+	err := row.Scan(
+		&i.CampaignID,
+		&i.AdversaryID,
+		&i.Name,
+		&i.Kind,
+		&i.SessionID,
+		&i.Notes,
+		&i.Hp,
+		&i.HpMax,
+		&i.Stress,
+		&i.StressMax,
+		&i.Evasion,
+		&i.MajorThreshold,
+		&i.SevereThreshold,
+		&i.Armor,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getDaggerheartCharacterProfile = `-- name: GetDaggerheartCharacterProfile :one
 
 
-SELECT campaign_id, character_id, hp_max, stress_max, evasion, major_threshold, severe_threshold, agility, strength, finesse, instinct, presence, knowledge FROM daggerheart_character_profiles
+SELECT campaign_id, character_id, level, hp_max, stress_max, evasion, major_threshold, severe_threshold, agility, strength, finesse, instinct, presence, knowledge, proficiency, armor_score, armor_max, experiences_json FROM daggerheart_character_profiles
 WHERE campaign_id = ? AND character_id = ?
 `
 
@@ -69,6 +135,7 @@ func (q *Queries) GetDaggerheartCharacterProfile(ctx context.Context, arg GetDag
 	err := row.Scan(
 		&i.CampaignID,
 		&i.CharacterID,
+		&i.Level,
 		&i.HpMax,
 		&i.StressMax,
 		&i.Evasion,
@@ -80,6 +147,10 @@ func (q *Queries) GetDaggerheartCharacterProfile(ctx context.Context, arg GetDag
 		&i.Instinct,
 		&i.Presence,
 		&i.Knowledge,
+		&i.Proficiency,
+		&i.ArmorScore,
+		&i.ArmorMax,
+		&i.ExperiencesJson,
 	)
 	return i, err
 }
@@ -94,6 +165,7 @@ SELECT
     c.notes,
     c.created_at,
     c.updated_at,
+    dcp.level,
     dcp.hp_max,
     dcp.stress_max,
     dcp.evasion,
@@ -105,9 +177,17 @@ SELECT
     dcp.instinct,
     dcp.presence,
     dcp.knowledge,
+    dcp.proficiency,
+    dcp.armor_score,
+    dcp.armor_max,
+    dcp.experiences_json,
     dcs.hp,
     dcs.hope,
-    dcs.stress
+    dcs.hope_max,
+    dcs.stress,
+    dcs.armor,
+    dcs.conditions_json,
+    dcs.life_state
 FROM characters c
 LEFT JOIN daggerheart_character_profiles dcp ON c.campaign_id = dcp.campaign_id AND c.id = dcp.character_id
 LEFT JOIN daggerheart_character_states dcs ON c.campaign_id = dcs.campaign_id AND c.id = dcs.character_id
@@ -120,27 +200,36 @@ type GetDaggerheartCharacterSheetParams struct {
 }
 
 type GetDaggerheartCharacterSheetRow struct {
-	CampaignID      string        `json:"campaign_id"`
-	CharacterID     string        `json:"character_id"`
-	Name            string        `json:"name"`
-	Kind            string        `json:"kind"`
-	Notes           string        `json:"notes"`
-	CreatedAt       int64         `json:"created_at"`
-	UpdatedAt       int64         `json:"updated_at"`
-	HpMax           sql.NullInt64 `json:"hp_max"`
-	StressMax       sql.NullInt64 `json:"stress_max"`
-	Evasion         sql.NullInt64 `json:"evasion"`
-	MajorThreshold  sql.NullInt64 `json:"major_threshold"`
-	SevereThreshold sql.NullInt64 `json:"severe_threshold"`
-	Agility         sql.NullInt64 `json:"agility"`
-	Strength        sql.NullInt64 `json:"strength"`
-	Finesse         sql.NullInt64 `json:"finesse"`
-	Instinct        sql.NullInt64 `json:"instinct"`
-	Presence        sql.NullInt64 `json:"presence"`
-	Knowledge       sql.NullInt64 `json:"knowledge"`
-	Hp              sql.NullInt64 `json:"hp"`
-	Hope            sql.NullInt64 `json:"hope"`
-	Stress          sql.NullInt64 `json:"stress"`
+	CampaignID      string         `json:"campaign_id"`
+	CharacterID     string         `json:"character_id"`
+	Name            string         `json:"name"`
+	Kind            string         `json:"kind"`
+	Notes           string         `json:"notes"`
+	CreatedAt       int64          `json:"created_at"`
+	UpdatedAt       int64          `json:"updated_at"`
+	Level           sql.NullInt64  `json:"level"`
+	HpMax           sql.NullInt64  `json:"hp_max"`
+	StressMax       sql.NullInt64  `json:"stress_max"`
+	Evasion         sql.NullInt64  `json:"evasion"`
+	MajorThreshold  sql.NullInt64  `json:"major_threshold"`
+	SevereThreshold sql.NullInt64  `json:"severe_threshold"`
+	Agility         sql.NullInt64  `json:"agility"`
+	Strength        sql.NullInt64  `json:"strength"`
+	Finesse         sql.NullInt64  `json:"finesse"`
+	Instinct        sql.NullInt64  `json:"instinct"`
+	Presence        sql.NullInt64  `json:"presence"`
+	Knowledge       sql.NullInt64  `json:"knowledge"`
+	Proficiency     sql.NullInt64  `json:"proficiency"`
+	ArmorScore      sql.NullInt64  `json:"armor_score"`
+	ArmorMax        sql.NullInt64  `json:"armor_max"`
+	ExperiencesJson sql.NullString `json:"experiences_json"`
+	Hp              sql.NullInt64  `json:"hp"`
+	Hope            sql.NullInt64  `json:"hope"`
+	HopeMax         sql.NullInt64  `json:"hope_max"`
+	Stress          sql.NullInt64  `json:"stress"`
+	Armor           sql.NullInt64  `json:"armor"`
+	ConditionsJson  sql.NullString `json:"conditions_json"`
+	LifeState       sql.NullString `json:"life_state"`
 }
 
 // Joined queries for convenience
@@ -155,6 +244,7 @@ func (q *Queries) GetDaggerheartCharacterSheet(ctx context.Context, arg GetDagge
 		&i.Notes,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Level,
 		&i.HpMax,
 		&i.StressMax,
 		&i.Evasion,
@@ -166,16 +256,24 @@ func (q *Queries) GetDaggerheartCharacterSheet(ctx context.Context, arg GetDagge
 		&i.Instinct,
 		&i.Presence,
 		&i.Knowledge,
+		&i.Proficiency,
+		&i.ArmorScore,
+		&i.ArmorMax,
+		&i.ExperiencesJson,
 		&i.Hp,
 		&i.Hope,
+		&i.HopeMax,
 		&i.Stress,
+		&i.Armor,
+		&i.ConditionsJson,
+		&i.LifeState,
 	)
 	return i, err
 }
 
 const getDaggerheartCharacterState = `-- name: GetDaggerheartCharacterState :one
 
-SELECT campaign_id, character_id, hp, hope, stress FROM daggerheart_character_states
+SELECT campaign_id, character_id, hp, hope, hope_max, stress, armor, conditions_json, life_state FROM daggerheart_character_states
 WHERE campaign_id = ? AND character_id = ?
 `
 
@@ -193,22 +291,151 @@ func (q *Queries) GetDaggerheartCharacterState(ctx context.Context, arg GetDagge
 		&i.CharacterID,
 		&i.Hp,
 		&i.Hope,
+		&i.HopeMax,
 		&i.Stress,
+		&i.Armor,
+		&i.ConditionsJson,
+		&i.LifeState,
+	)
+	return i, err
+}
+
+const getDaggerheartCountdown = `-- name: GetDaggerheartCountdown :one
+
+SELECT campaign_id, countdown_id, name, kind, "current", max, direction, looping FROM daggerheart_countdowns
+WHERE campaign_id = ? AND countdown_id = ?
+`
+
+type GetDaggerheartCountdownParams struct {
+	CampaignID  string `json:"campaign_id"`
+	CountdownID string `json:"countdown_id"`
+}
+
+// Countdown Extensions
+func (q *Queries) GetDaggerheartCountdown(ctx context.Context, arg GetDaggerheartCountdownParams) (DaggerheartCountdown, error) {
+	row := q.db.QueryRowContext(ctx, getDaggerheartCountdown, arg.CampaignID, arg.CountdownID)
+	var i DaggerheartCountdown
+	err := row.Scan(
+		&i.CampaignID,
+		&i.CountdownID,
+		&i.Name,
+		&i.Kind,
+		&i.Current,
+		&i.Max,
+		&i.Direction,
+		&i.Looping,
 	)
 	return i, err
 }
 
 const getDaggerheartSnapshot = `-- name: GetDaggerheartSnapshot :one
 
-SELECT campaign_id, gm_fear FROM daggerheart_snapshots WHERE campaign_id = ?
+SELECT campaign_id, gm_fear, consecutive_short_rests FROM daggerheart_snapshots WHERE campaign_id = ?
 `
 
 // Snapshot Extensions
 func (q *Queries) GetDaggerheartSnapshot(ctx context.Context, campaignID string) (DaggerheartSnapshot, error) {
 	row := q.db.QueryRowContext(ctx, getDaggerheartSnapshot, campaignID)
 	var i DaggerheartSnapshot
-	err := row.Scan(&i.CampaignID, &i.GmFear)
+	err := row.Scan(&i.CampaignID, &i.GmFear, &i.ConsecutiveShortRests)
 	return i, err
+}
+
+const listDaggerheartAdversariesByCampaign = `-- name: ListDaggerheartAdversariesByCampaign :many
+SELECT campaign_id, adversary_id, name, kind, session_id, notes, hp, hp_max, stress, stress_max, evasion, major_threshold, severe_threshold, armor, created_at, updated_at FROM daggerheart_adversaries
+WHERE campaign_id = ?
+ORDER BY name ASC, adversary_id ASC
+`
+
+func (q *Queries) ListDaggerheartAdversariesByCampaign(ctx context.Context, campaignID string) ([]DaggerheartAdversary, error) {
+	rows, err := q.db.QueryContext(ctx, listDaggerheartAdversariesByCampaign, campaignID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []DaggerheartAdversary{}
+	for rows.Next() {
+		var i DaggerheartAdversary
+		if err := rows.Scan(
+			&i.CampaignID,
+			&i.AdversaryID,
+			&i.Name,
+			&i.Kind,
+			&i.SessionID,
+			&i.Notes,
+			&i.Hp,
+			&i.HpMax,
+			&i.Stress,
+			&i.StressMax,
+			&i.Evasion,
+			&i.MajorThreshold,
+			&i.SevereThreshold,
+			&i.Armor,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listDaggerheartAdversariesBySession = `-- name: ListDaggerheartAdversariesBySession :many
+SELECT campaign_id, adversary_id, name, kind, session_id, notes, hp, hp_max, stress, stress_max, evasion, major_threshold, severe_threshold, armor, created_at, updated_at FROM daggerheart_adversaries
+WHERE campaign_id = ? AND session_id = ?
+ORDER BY name ASC, adversary_id ASC
+`
+
+type ListDaggerheartAdversariesBySessionParams struct {
+	CampaignID string         `json:"campaign_id"`
+	SessionID  sql.NullString `json:"session_id"`
+}
+
+func (q *Queries) ListDaggerheartAdversariesBySession(ctx context.Context, arg ListDaggerheartAdversariesBySessionParams) ([]DaggerheartAdversary, error) {
+	rows, err := q.db.QueryContext(ctx, listDaggerheartAdversariesBySession, arg.CampaignID, arg.SessionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []DaggerheartAdversary{}
+	for rows.Next() {
+		var i DaggerheartAdversary
+		if err := rows.Scan(
+			&i.CampaignID,
+			&i.AdversaryID,
+			&i.Name,
+			&i.Kind,
+			&i.SessionID,
+			&i.Notes,
+			&i.Hp,
+			&i.HpMax,
+			&i.Stress,
+			&i.StressMax,
+			&i.Evasion,
+			&i.MajorThreshold,
+			&i.SevereThreshold,
+			&i.Armor,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listDaggerheartCharacterStates = `-- name: ListDaggerheartCharacterStates :many
@@ -217,7 +444,11 @@ SELECT
     character_id,
     hp,
     hope,
-    stress
+    hope_max,
+    stress,
+    armor,
+    conditions_json,
+    life_state
 FROM daggerheart_character_states
 WHERE campaign_id = ?
 `
@@ -236,7 +467,11 @@ func (q *Queries) ListDaggerheartCharacterStates(ctx context.Context, campaignID
 			&i.CharacterID,
 			&i.Hp,
 			&i.Hope,
+			&i.HopeMax,
 			&i.Stress,
+			&i.Armor,
+			&i.ConditionsJson,
+			&i.LifeState,
 		); err != nil {
 			return nil, err
 		}
@@ -251,12 +486,114 @@ func (q *Queries) ListDaggerheartCharacterStates(ctx context.Context, campaignID
 	return items, nil
 }
 
+const listDaggerheartCountdowns = `-- name: ListDaggerheartCountdowns :many
+SELECT campaign_id, countdown_id, name, kind, "current", max, direction, looping FROM daggerheart_countdowns
+WHERE campaign_id = ?
+`
+
+func (q *Queries) ListDaggerheartCountdowns(ctx context.Context, campaignID string) ([]DaggerheartCountdown, error) {
+	rows, err := q.db.QueryContext(ctx, listDaggerheartCountdowns, campaignID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []DaggerheartCountdown{}
+	for rows.Next() {
+		var i DaggerheartCountdown
+		if err := rows.Scan(
+			&i.CampaignID,
+			&i.CountdownID,
+			&i.Name,
+			&i.Kind,
+			&i.Current,
+			&i.Max,
+			&i.Direction,
+			&i.Looping,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const putDaggerheartAdversary = `-- name: PutDaggerheartAdversary :exec
+INSERT INTO daggerheart_adversaries (
+    campaign_id, adversary_id, name, kind, session_id, notes, hp, hp_max, stress, stress_max,
+    evasion, major_threshold, severe_threshold, armor, created_at, updated_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(campaign_id, adversary_id) DO UPDATE SET
+    name = excluded.name,
+    kind = excluded.kind,
+    session_id = excluded.session_id,
+    notes = excluded.notes,
+    hp = excluded.hp,
+    hp_max = excluded.hp_max,
+    stress = excluded.stress,
+    stress_max = excluded.stress_max,
+    evasion = excluded.evasion,
+    major_threshold = excluded.major_threshold,
+    severe_threshold = excluded.severe_threshold,
+    armor = excluded.armor,
+    created_at = excluded.created_at,
+    updated_at = excluded.updated_at
+`
+
+type PutDaggerheartAdversaryParams struct {
+	CampaignID      string         `json:"campaign_id"`
+	AdversaryID     string         `json:"adversary_id"`
+	Name            string         `json:"name"`
+	Kind            string         `json:"kind"`
+	SessionID       sql.NullString `json:"session_id"`
+	Notes           string         `json:"notes"`
+	Hp              int64          `json:"hp"`
+	HpMax           int64          `json:"hp_max"`
+	Stress          int64          `json:"stress"`
+	StressMax       int64          `json:"stress_max"`
+	Evasion         int64          `json:"evasion"`
+	MajorThreshold  int64          `json:"major_threshold"`
+	SevereThreshold int64          `json:"severe_threshold"`
+	Armor           int64          `json:"armor"`
+	CreatedAt       int64          `json:"created_at"`
+	UpdatedAt       int64          `json:"updated_at"`
+}
+
+func (q *Queries) PutDaggerheartAdversary(ctx context.Context, arg PutDaggerheartAdversaryParams) error {
+	_, err := q.db.ExecContext(ctx, putDaggerheartAdversary,
+		arg.CampaignID,
+		arg.AdversaryID,
+		arg.Name,
+		arg.Kind,
+		arg.SessionID,
+		arg.Notes,
+		arg.Hp,
+		arg.HpMax,
+		arg.Stress,
+		arg.StressMax,
+		arg.Evasion,
+		arg.MajorThreshold,
+		arg.SevereThreshold,
+		arg.Armor,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+	)
+	return err
+}
+
 const putDaggerheartCharacterProfile = `-- name: PutDaggerheartCharacterProfile :exec
 INSERT INTO daggerheart_character_profiles (
-    campaign_id, character_id, hp_max, stress_max, evasion, major_threshold, severe_threshold,
-    agility, strength, finesse, instinct, presence, knowledge
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    campaign_id, character_id, level, hp_max, stress_max, evasion, major_threshold, severe_threshold,
+    agility, strength, finesse, instinct, presence, knowledge, proficiency, armor_score, armor_max,
+    experiences_json
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(campaign_id, character_id) DO UPDATE SET
+    level = excluded.level,
     hp_max = excluded.hp_max,
     stress_max = excluded.stress_max,
     evasion = excluded.evasion,
@@ -267,12 +604,17 @@ ON CONFLICT(campaign_id, character_id) DO UPDATE SET
     finesse = excluded.finesse,
     instinct = excluded.instinct,
     presence = excluded.presence,
-    knowledge = excluded.knowledge
+    knowledge = excluded.knowledge,
+    proficiency = excluded.proficiency,
+    armor_score = excluded.armor_score,
+    armor_max = excluded.armor_max,
+    experiences_json = excluded.experiences_json
 `
 
 type PutDaggerheartCharacterProfileParams struct {
 	CampaignID      string `json:"campaign_id"`
 	CharacterID     string `json:"character_id"`
+	Level           int64  `json:"level"`
 	HpMax           int64  `json:"hp_max"`
 	StressMax       int64  `json:"stress_max"`
 	Evasion         int64  `json:"evasion"`
@@ -284,12 +626,17 @@ type PutDaggerheartCharacterProfileParams struct {
 	Instinct        int64  `json:"instinct"`
 	Presence        int64  `json:"presence"`
 	Knowledge       int64  `json:"knowledge"`
+	Proficiency     int64  `json:"proficiency"`
+	ArmorScore      int64  `json:"armor_score"`
+	ArmorMax        int64  `json:"armor_max"`
+	ExperiencesJson string `json:"experiences_json"`
 }
 
 func (q *Queries) PutDaggerheartCharacterProfile(ctx context.Context, arg PutDaggerheartCharacterProfileParams) error {
 	_, err := q.db.ExecContext(ctx, putDaggerheartCharacterProfile,
 		arg.CampaignID,
 		arg.CharacterID,
+		arg.Level,
 		arg.HpMax,
 		arg.StressMax,
 		arg.Evasion,
@@ -301,26 +648,38 @@ func (q *Queries) PutDaggerheartCharacterProfile(ctx context.Context, arg PutDag
 		arg.Instinct,
 		arg.Presence,
 		arg.Knowledge,
+		arg.Proficiency,
+		arg.ArmorScore,
+		arg.ArmorMax,
+		arg.ExperiencesJson,
 	)
 	return err
 }
 
 const putDaggerheartCharacterState = `-- name: PutDaggerheartCharacterState :exec
 INSERT INTO daggerheart_character_states (
-    campaign_id, character_id, hp, hope, stress
-) VALUES (?, ?, ?, ?, ?)
+    campaign_id, character_id, hp, hope, hope_max, stress, armor, conditions_json, life_state
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(campaign_id, character_id) DO UPDATE SET
     hp = excluded.hp,
     hope = excluded.hope,
-    stress = excluded.stress
+    hope_max = excluded.hope_max,
+    stress = excluded.stress,
+    armor = excluded.armor,
+    conditions_json = excluded.conditions_json,
+    life_state = excluded.life_state
 `
 
 type PutDaggerheartCharacterStateParams struct {
-	CampaignID  string `json:"campaign_id"`
-	CharacterID string `json:"character_id"`
-	Hp          int64  `json:"hp"`
-	Hope        int64  `json:"hope"`
-	Stress      int64  `json:"stress"`
+	CampaignID     string `json:"campaign_id"`
+	CharacterID    string `json:"character_id"`
+	Hp             int64  `json:"hp"`
+	Hope           int64  `json:"hope"`
+	HopeMax        int64  `json:"hope_max"`
+	Stress         int64  `json:"stress"`
+	Armor          int64  `json:"armor"`
+	ConditionsJson string `json:"conditions_json"`
+	LifeState      string `json:"life_state"`
 }
 
 func (q *Queries) PutDaggerheartCharacterState(ctx context.Context, arg PutDaggerheartCharacterStateParams) error {
@@ -329,47 +688,99 @@ func (q *Queries) PutDaggerheartCharacterState(ctx context.Context, arg PutDagge
 		arg.CharacterID,
 		arg.Hp,
 		arg.Hope,
+		arg.HopeMax,
 		arg.Stress,
+		arg.Armor,
+		arg.ConditionsJson,
+		arg.LifeState,
+	)
+	return err
+}
+
+const putDaggerheartCountdown = `-- name: PutDaggerheartCountdown :exec
+INSERT INTO daggerheart_countdowns (
+    campaign_id, countdown_id, name, kind, current, max, direction, looping
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(campaign_id, countdown_id) DO UPDATE SET
+    name = excluded.name,
+    kind = excluded.kind,
+    current = excluded.current,
+    max = excluded.max,
+    direction = excluded.direction,
+    looping = excluded.looping
+`
+
+type PutDaggerheartCountdownParams struct {
+	CampaignID  string `json:"campaign_id"`
+	CountdownID string `json:"countdown_id"`
+	Name        string `json:"name"`
+	Kind        string `json:"kind"`
+	Current     int64  `json:"current"`
+	Max         int64  `json:"max"`
+	Direction   string `json:"direction"`
+	Looping     int64  `json:"looping"`
+}
+
+func (q *Queries) PutDaggerheartCountdown(ctx context.Context, arg PutDaggerheartCountdownParams) error {
+	_, err := q.db.ExecContext(ctx, putDaggerheartCountdown,
+		arg.CampaignID,
+		arg.CountdownID,
+		arg.Name,
+		arg.Kind,
+		arg.Current,
+		arg.Max,
+		arg.Direction,
+		arg.Looping,
 	)
 	return err
 }
 
 const putDaggerheartSnapshot = `-- name: PutDaggerheartSnapshot :exec
-INSERT INTO daggerheart_snapshots (campaign_id, gm_fear)
-VALUES (?, ?)
+INSERT INTO daggerheart_snapshots (campaign_id, gm_fear, consecutive_short_rests)
+VALUES (?, ?, ?)
 ON CONFLICT(campaign_id) DO UPDATE SET
-    gm_fear = excluded.gm_fear
+    gm_fear = excluded.gm_fear,
+    consecutive_short_rests = excluded.consecutive_short_rests
 `
 
 type PutDaggerheartSnapshotParams struct {
-	CampaignID string `json:"campaign_id"`
-	GmFear     int64  `json:"gm_fear"`
+	CampaignID            string `json:"campaign_id"`
+	GmFear                int64  `json:"gm_fear"`
+	ConsecutiveShortRests int64  `json:"consecutive_short_rests"`
 }
 
 func (q *Queries) PutDaggerheartSnapshot(ctx context.Context, arg PutDaggerheartSnapshotParams) error {
-	_, err := q.db.ExecContext(ctx, putDaggerheartSnapshot, arg.CampaignID, arg.GmFear)
+	_, err := q.db.ExecContext(ctx, putDaggerheartSnapshot, arg.CampaignID, arg.GmFear, arg.ConsecutiveShortRests)
 	return err
 }
 
 const updateDaggerheartCharacterState = `-- name: UpdateDaggerheartCharacterState :exec
 UPDATE daggerheart_character_states
-SET hp = ?, hope = ?, stress = ?
+SET hp = ?, hope = ?, hope_max = ?, stress = ?, armor = ?, conditions_json = ?, life_state = ?
 WHERE campaign_id = ? AND character_id = ?
 `
 
 type UpdateDaggerheartCharacterStateParams struct {
-	Hp          int64  `json:"hp"`
-	Hope        int64  `json:"hope"`
-	Stress      int64  `json:"stress"`
-	CampaignID  string `json:"campaign_id"`
-	CharacterID string `json:"character_id"`
+	Hp             int64  `json:"hp"`
+	Hope           int64  `json:"hope"`
+	HopeMax        int64  `json:"hope_max"`
+	Stress         int64  `json:"stress"`
+	Armor          int64  `json:"armor"`
+	ConditionsJson string `json:"conditions_json"`
+	LifeState      string `json:"life_state"`
+	CampaignID     string `json:"campaign_id"`
+	CharacterID    string `json:"character_id"`
 }
 
 func (q *Queries) UpdateDaggerheartCharacterState(ctx context.Context, arg UpdateDaggerheartCharacterStateParams) error {
 	_, err := q.db.ExecContext(ctx, updateDaggerheartCharacterState,
 		arg.Hp,
 		arg.Hope,
+		arg.HopeMax,
 		arg.Stress,
+		arg.Armor,
+		arg.ConditionsJson,
+		arg.LifeState,
 		arg.CampaignID,
 		arg.CharacterID,
 	)

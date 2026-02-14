@@ -21,6 +21,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/snapshot"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/integrity"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/db"
@@ -194,7 +195,6 @@ func (s *Store) Put(ctx context.Context, c campaign.Campaign) error {
 		CharacterCount:   int64(c.CharacterCount),
 		ThemePrompt:      c.ThemePrompt,
 		CreatedAt:        toMillis(c.CreatedAt),
-		LastActivityAt:   toMillis(c.LastActivityAt),
 		UpdatedAt:        toMillis(c.UpdatedAt),
 		CompletedAt:      completedAt,
 		ArchivedAt:       archivedAt,
@@ -1143,6 +1143,7 @@ func (s *Store) ApplyRollOutcome(ctx context.Context, input storage.RollOutcomeA
 		}
 
 		var fear snapshot.GmFear
+		shortRests := 0
 		row, err := qtx.GetDaggerheartSnapshot(ctx, input.CampaignID)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
@@ -1152,6 +1153,7 @@ func (s *Store) ApplyRollOutcome(ctx context.Context, input storage.RollOutcomeA
 			}
 		} else {
 			fear = snapshot.GmFear{CampaignID: row.CampaignID, Value: int(row.GmFear)}
+			shortRests = int(row.ConsecutiveShortRests)
 		}
 
 		updated, before, after, err := snapshot.ApplyGmFearGain(fear, input.GMFearDelta)
@@ -1160,8 +1162,9 @@ func (s *Store) ApplyRollOutcome(ctx context.Context, input storage.RollOutcomeA
 		}
 
 		if err := qtx.PutDaggerheartSnapshot(ctx, db.PutDaggerheartSnapshotParams{
-			CampaignID: updated.CampaignID,
-			GmFear:     int64(updated.Value),
+			CampaignID:            updated.CampaignID,
+			GmFear:                int64(updated.Value),
+			ConsecutiveShortRests: int64(shortRests),
 		}); err != nil {
 			return storage.RollOutcomeApplyResult{}, fmt.Errorf("put daggerheart snapshot: %w", err)
 		}
@@ -1175,7 +1178,7 @@ func (s *Store) ApplyRollOutcome(ctx context.Context, input storage.RollOutcomeA
 			After:  after,
 		})
 
-		payloadJSON, err := json.Marshal(event.GMFearChangedPayload{
+		payloadJSON, err := json.Marshal(daggerheart.GMFearChangedPayload{
 			Before: before,
 			After:  after,
 		})
@@ -1183,15 +1186,17 @@ func (s *Store) ApplyRollOutcome(ctx context.Context, input storage.RollOutcomeA
 			return storage.RollOutcomeApplyResult{}, fmt.Errorf("marshal gm fear payload: %w", err)
 		}
 		if _, err := appendEventTx(ctx, qtx, s.keyring, event.Event{
-			CampaignID:  input.CampaignID,
-			Timestamp:   evtTimestamp,
-			Type:        event.TypeGMFearChanged,
-			SessionID:   input.SessionID,
-			RequestID:   input.RequestID,
-			ActorType:   event.ActorTypeSystem,
-			EntityType:  "snapshot",
-			EntityID:    input.CampaignID,
-			PayloadJSON: payloadJSON,
+			CampaignID:    input.CampaignID,
+			Timestamp:     evtTimestamp,
+			Type:          daggerheart.EventTypeGMFearChanged,
+			SessionID:     input.SessionID,
+			RequestID:     input.RequestID,
+			ActorType:     event.ActorTypeSystem,
+			EntityType:    "campaign",
+			EntityID:      input.CampaignID,
+			SystemID:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART.String(),
+			SystemVersion: daggerheart.SystemVersion,
+			PayloadJSON:   payloadJSON,
 		}); err != nil {
 			return storage.RollOutcomeApplyResult{}, fmt.Errorf("append gm fear event: %w", err)
 		}
@@ -1223,10 +1228,11 @@ func (s *Store) ApplyRollOutcome(ctx context.Context, input storage.RollOutcomeA
 
 		delta := perTargetDelta[target]
 		beforeHope := int(dhStateRow.Hope)
+		hopeMax := int(dhStateRow.HopeMax)
 		beforeStress := int(dhStateRow.Stress)
 		afterHope := beforeHope + delta.HopeDelta
-		if afterHope > 6 {
-			afterHope = 6
+		if afterHope > hopeMax {
+			afterHope = hopeMax
 		}
 		if afterHope < 0 {
 			afterHope = 0
@@ -1266,31 +1272,29 @@ func (s *Store) ApplyRollOutcome(ctx context.Context, input storage.RollOutcomeA
 				return storage.RollOutcomeApplyResult{}, fmt.Errorf("update daggerheart character state: %w", err)
 			}
 
-			payload := event.CharacterStateChangedPayload{
-				CharacterID: target,
-				SystemState: map[string]any{
-					"daggerheart": map[string]any{
-						"hope_before":   beforeHope,
-						"hope_after":    afterHope,
-						"stress_before": beforeStress,
-						"stress_after":  afterStress,
-					},
-				},
+			payload := daggerheart.CharacterStatePatchedPayload{
+				CharacterID:  target,
+				HopeBefore:   &beforeHope,
+				HopeAfter:    &afterHope,
+				StressBefore: &beforeStress,
+				StressAfter:  &afterStress,
 			}
 			payloadJSON, err := json.Marshal(payload)
 			if err != nil {
 				return storage.RollOutcomeApplyResult{}, fmt.Errorf("marshal character state payload: %w", err)
 			}
 			if _, err := appendEventTx(ctx, qtx, s.keyring, event.Event{
-				CampaignID:  input.CampaignID,
-				Timestamp:   evtTimestamp,
-				Type:        event.TypeCharacterStateChanged,
-				SessionID:   input.SessionID,
-				RequestID:   input.RequestID,
-				ActorType:   event.ActorTypeSystem,
-				EntityType:  "character",
-				EntityID:    target,
-				PayloadJSON: payloadJSON,
+				CampaignID:    input.CampaignID,
+				Timestamp:     evtTimestamp,
+				Type:          daggerheart.EventTypeCharacterStatePatched,
+				SessionID:     input.SessionID,
+				RequestID:     input.RequestID,
+				ActorType:     event.ActorTypeSystem,
+				EntityType:    "character",
+				EntityID:      target,
+				SystemID:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART.String(),
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   payloadJSON,
 			}); err != nil {
 				return storage.RollOutcomeApplyResult{}, fmt.Errorf("append character state event: %w", err)
 			}
@@ -1302,7 +1306,9 @@ func (s *Store) ApplyRollOutcome(ctx context.Context, input storage.RollOutcomeA
 			CharacterID: target,
 			Hp:          int(dhStateRow.Hp),
 			Hope:        afterHope,
+			HopeMax:     hopeMax,
 			Stress:      afterStress,
+			LifeState:   dhStateRow.LifeState,
 		})
 	}
 
@@ -1448,6 +1454,8 @@ func appendEventTx(ctx context.Context, qtx *db.Queries, keyring *integrity.Keyr
 		ActorID:        evt.ActorID,
 		EntityType:     evt.EntityType,
 		EntityID:       evt.EntityID,
+		SystemID:       evt.SystemID,
+		SystemVersion:  evt.SystemVersion,
 		PayloadJson:    evt.PayloadJSON,
 	}); err != nil {
 		return event.Event{}, fmt.Errorf("append event: %w", err)
@@ -1670,7 +1678,6 @@ type campaignRowData struct {
 	CharacterCount   int64
 	ThemePrompt      string
 	CreatedAt        int64
-	LastActivityAt   int64
 	UpdatedAt        int64
 	CompletedAt      sql.NullInt64
 	ArchivedAt       sql.NullInt64
@@ -1687,7 +1694,6 @@ func campaignRowDataToDomain(row campaignRowData) (campaign.Campaign, error) {
 		CharacterCount:   int(row.CharacterCount),
 		ThemePrompt:      row.ThemePrompt,
 		CreatedAt:        fromMillis(row.CreatedAt),
-		LastActivityAt:   fromMillis(row.LastActivityAt),
 		UpdatedAt:        fromMillis(row.UpdatedAt),
 	}
 	c.CompletedAt = fromNullMillis(row.CompletedAt)
@@ -1707,7 +1713,6 @@ func dbCampaignToDomain(row db.Campaign) (campaign.Campaign, error) {
 		CharacterCount:   row.CharacterCount,
 		ThemePrompt:      row.ThemePrompt,
 		CreatedAt:        row.CreatedAt,
-		LastActivityAt:   row.LastActivityAt,
 		UpdatedAt:        row.UpdatedAt,
 		CompletedAt:      row.CompletedAt,
 		ArchivedAt:       row.ArchivedAt,
@@ -1725,7 +1730,6 @@ func dbGetCampaignRowToDomain(row db.GetCampaignRow) (campaign.Campaign, error) 
 		CharacterCount:   row.CharacterCount,
 		ThemePrompt:      row.ThemePrompt,
 		CreatedAt:        row.CreatedAt,
-		LastActivityAt:   row.LastActivityAt,
 		UpdatedAt:        row.UpdatedAt,
 		CompletedAt:      row.CompletedAt,
 		ArchivedAt:       row.ArchivedAt,
@@ -1743,7 +1747,6 @@ func dbListCampaignsRowToDomain(row db.ListCampaignsRow) (campaign.Campaign, err
 		CharacterCount:   row.CharacterCount,
 		ThemePrompt:      row.ThemePrompt,
 		CreatedAt:        row.CreatedAt,
-		LastActivityAt:   row.LastActivityAt,
 		UpdatedAt:        row.UpdatedAt,
 		CompletedAt:      row.CompletedAt,
 		ArchivedAt:       row.ArchivedAt,
@@ -1761,7 +1764,6 @@ func dbListAllCampaignsRowToDomain(row db.ListAllCampaignsRow) (campaign.Campaig
 		CharacterCount:   row.CharacterCount,
 		ThemePrompt:      row.ThemePrompt,
 		CreatedAt:        row.CreatedAt,
-		LastActivityAt:   row.LastActivityAt,
 		UpdatedAt:        row.UpdatedAt,
 		CompletedAt:      row.CompletedAt,
 		ArchivedAt:       row.ArchivedAt,
@@ -1842,14 +1844,24 @@ func (s *Store) PutDaggerheartCharacterProfile(ctx context.Context, profile stor
 		return fmt.Errorf("character id is required")
 	}
 
+	experiencesJSON, err := json.Marshal(profile.Experiences)
+	if err != nil {
+		return fmt.Errorf("marshal experiences: %w", err)
+	}
+
 	return s.q.PutDaggerheartCharacterProfile(ctx, db.PutDaggerheartCharacterProfileParams{
 		CampaignID:      profile.CampaignID,
 		CharacterID:     profile.CharacterID,
+		Level:           int64(profile.Level),
 		HpMax:           int64(profile.HpMax),
 		StressMax:       int64(profile.StressMax),
 		Evasion:         int64(profile.Evasion),
 		MajorThreshold:  int64(profile.MajorThreshold),
 		SevereThreshold: int64(profile.SevereThreshold),
+		Proficiency:     int64(profile.Proficiency),
+		ArmorScore:      int64(profile.ArmorScore),
+		ArmorMax:        int64(profile.ArmorMax),
+		ExperiencesJson: string(experiencesJSON),
 		Agility:         int64(profile.Agility),
 		Strength:        int64(profile.Strength),
 		Finesse:         int64(profile.Finesse),
@@ -1885,21 +1897,31 @@ func (s *Store) GetDaggerheartCharacterProfile(ctx context.Context, campaignID, 
 		return storage.DaggerheartCharacterProfile{}, fmt.Errorf("get daggerheart character profile: %w", err)
 	}
 
-	return storage.DaggerheartCharacterProfile{
+	profile := storage.DaggerheartCharacterProfile{
 		CampaignID:      row.CampaignID,
 		CharacterID:     row.CharacterID,
+		Level:           int(row.Level),
 		HpMax:           int(row.HpMax),
 		StressMax:       int(row.StressMax),
 		Evasion:         int(row.Evasion),
 		MajorThreshold:  int(row.MajorThreshold),
 		SevereThreshold: int(row.SevereThreshold),
+		Proficiency:     int(row.Proficiency),
+		ArmorScore:      int(row.ArmorScore),
+		ArmorMax:        int(row.ArmorMax),
 		Agility:         int(row.Agility),
 		Strength:        int(row.Strength),
 		Finesse:         int(row.Finesse),
 		Instinct:        int(row.Instinct),
 		Presence:        int(row.Presence),
 		Knowledge:       int(row.Knowledge),
-	}, nil
+	}
+	if row.ExperiencesJson != "" {
+		if err := json.Unmarshal([]byte(row.ExperiencesJson), &profile.Experiences); err != nil {
+			return storage.DaggerheartCharacterProfile{}, fmt.Errorf("decode experiences: %w", err)
+		}
+	}
+	return profile, nil
 }
 
 // PutDaggerheartCharacterState persists a Daggerheart character state extension.
@@ -1917,12 +1939,35 @@ func (s *Store) PutDaggerheartCharacterState(ctx context.Context, state storage.
 		return fmt.Errorf("character id is required")
 	}
 
+	conditions := state.Conditions
+	if conditions == nil {
+		conditions = []string{}
+	}
+	conditionsJSON, err := json.Marshal(conditions)
+	if err != nil {
+		return fmt.Errorf("encode conditions: %w", err)
+	}
+
+	hopeMax := state.HopeMax
+	if hopeMax == 0 {
+		hopeMax = daggerheart.HopeMax
+	}
+
+	lifeState := state.LifeState
+	if strings.TrimSpace(lifeState) == "" {
+		lifeState = daggerheart.LifeStateAlive
+	}
+
 	return s.q.PutDaggerheartCharacterState(ctx, db.PutDaggerheartCharacterStateParams{
-		CampaignID:  state.CampaignID,
-		CharacterID: state.CharacterID,
-		Hp:          int64(state.Hp),
-		Hope:        int64(state.Hope),
-		Stress:      int64(state.Stress),
+		CampaignID:     state.CampaignID,
+		CharacterID:    state.CharacterID,
+		Hp:             int64(state.Hp),
+		Hope:           int64(state.Hope),
+		HopeMax:        int64(hopeMax),
+		Stress:         int64(state.Stress),
+		Armor:          int64(state.Armor),
+		ConditionsJson: string(conditionsJSON),
+		LifeState:      lifeState,
 	})
 }
 
@@ -1952,12 +1997,28 @@ func (s *Store) GetDaggerheartCharacterState(ctx context.Context, campaignID, ch
 		return storage.DaggerheartCharacterState{}, fmt.Errorf("get daggerheart character state: %w", err)
 	}
 
+	var conditions []string
+	if row.ConditionsJson != "" {
+		if err := json.Unmarshal([]byte(row.ConditionsJson), &conditions); err != nil {
+			return storage.DaggerheartCharacterState{}, fmt.Errorf("decode conditions: %w", err)
+		}
+	}
+
+	lifeState := row.LifeState
+	if strings.TrimSpace(lifeState) == "" {
+		lifeState = daggerheart.LifeStateAlive
+	}
+
 	return storage.DaggerheartCharacterState{
 		CampaignID:  row.CampaignID,
 		CharacterID: row.CharacterID,
 		Hp:          int(row.Hp),
 		Hope:        int(row.Hope),
+		HopeMax:     int(row.HopeMax),
 		Stress:      int(row.Stress),
+		Armor:       int(row.Armor),
+		Conditions:  conditions,
+		LifeState:   lifeState,
 	}, nil
 }
 
@@ -1974,8 +2035,9 @@ func (s *Store) PutDaggerheartSnapshot(ctx context.Context, snap storage.Daggerh
 	}
 
 	return s.q.PutDaggerheartSnapshot(ctx, db.PutDaggerheartSnapshotParams{
-		CampaignID: snap.CampaignID,
-		GmFear:     int64(snap.GMFear),
+		CampaignID:            snap.CampaignID,
+		GmFear:                int64(snap.GMFear),
+		ConsecutiveShortRests: int64(snap.ConsecutiveShortRests),
 	})
 }
 
@@ -1995,15 +2057,306 @@ func (s *Store) GetDaggerheartSnapshot(ctx context.Context, campaignID string) (
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			// Return zero-value for not found (consistent with GetGmFear behavior)
-			return storage.DaggerheartSnapshot{CampaignID: campaignID, GMFear: 0}, nil
+			return storage.DaggerheartSnapshot{CampaignID: campaignID, GMFear: 0, ConsecutiveShortRests: 0}, nil
 		}
 		return storage.DaggerheartSnapshot{}, fmt.Errorf("get daggerheart snapshot: %w", err)
 	}
 
 	return storage.DaggerheartSnapshot{
-		CampaignID: row.CampaignID,
-		GMFear:     int(row.GmFear),
+		CampaignID:            row.CampaignID,
+		GMFear:                int(row.GmFear),
+		ConsecutiveShortRests: int(row.ConsecutiveShortRests),
 	}, nil
+}
+
+// PutDaggerheartCountdown persists a Daggerheart countdown projection.
+func (s *Store) PutDaggerheartCountdown(ctx context.Context, countdown storage.DaggerheartCountdown) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if s == nil || s.sqlDB == nil {
+		return fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(countdown.CampaignID) == "" {
+		return fmt.Errorf("campaign id is required")
+	}
+	if strings.TrimSpace(countdown.CountdownID) == "" {
+		return fmt.Errorf("countdown id is required")
+	}
+
+	looping := int64(0)
+	if countdown.Looping {
+		looping = 1
+	}
+
+	return s.q.PutDaggerheartCountdown(ctx, db.PutDaggerheartCountdownParams{
+		CampaignID:  countdown.CampaignID,
+		CountdownID: countdown.CountdownID,
+		Name:        countdown.Name,
+		Kind:        countdown.Kind,
+		Current:     int64(countdown.Current),
+		Max:         int64(countdown.Max),
+		Direction:   countdown.Direction,
+		Looping:     looping,
+	})
+}
+
+// GetDaggerheartCountdown retrieves a Daggerheart countdown projection for a campaign.
+func (s *Store) GetDaggerheartCountdown(ctx context.Context, campaignID, countdownID string) (storage.DaggerheartCountdown, error) {
+	if err := ctx.Err(); err != nil {
+		return storage.DaggerheartCountdown{}, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return storage.DaggerheartCountdown{}, fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(campaignID) == "" {
+		return storage.DaggerheartCountdown{}, fmt.Errorf("campaign id is required")
+	}
+	if strings.TrimSpace(countdownID) == "" {
+		return storage.DaggerheartCountdown{}, fmt.Errorf("countdown id is required")
+	}
+
+	row, err := s.q.GetDaggerheartCountdown(ctx, db.GetDaggerheartCountdownParams{
+		CampaignID:  campaignID,
+		CountdownID: countdownID,
+	})
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return storage.DaggerheartCountdown{}, storage.ErrNotFound
+		}
+		return storage.DaggerheartCountdown{}, fmt.Errorf("get daggerheart countdown: %w", err)
+	}
+
+	return storage.DaggerheartCountdown{
+		CampaignID:  row.CampaignID,
+		CountdownID: row.CountdownID,
+		Name:        row.Name,
+		Kind:        row.Kind,
+		Current:     int(row.Current),
+		Max:         int(row.Max),
+		Direction:   row.Direction,
+		Looping:     row.Looping != 0,
+	}, nil
+}
+
+// ListDaggerheartCountdowns retrieves countdown projections for a campaign.
+func (s *Store) ListDaggerheartCountdowns(ctx context.Context, campaignID string) ([]storage.DaggerheartCountdown, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return nil, fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(campaignID) == "" {
+		return nil, fmt.Errorf("campaign id is required")
+	}
+
+	rows, err := s.q.ListDaggerheartCountdowns(ctx, campaignID)
+	if err != nil {
+		return nil, fmt.Errorf("list daggerheart countdowns: %w", err)
+	}
+
+	countdowns := make([]storage.DaggerheartCountdown, 0, len(rows))
+	for _, row := range rows {
+		countdowns = append(countdowns, storage.DaggerheartCountdown{
+			CampaignID:  row.CampaignID,
+			CountdownID: row.CountdownID,
+			Name:        row.Name,
+			Kind:        row.Kind,
+			Current:     int(row.Current),
+			Max:         int(row.Max),
+			Direction:   row.Direction,
+			Looping:     row.Looping != 0,
+		})
+	}
+
+	return countdowns, nil
+}
+
+// DeleteDaggerheartCountdown removes a countdown projection for a campaign.
+func (s *Store) DeleteDaggerheartCountdown(ctx context.Context, campaignID, countdownID string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if s == nil || s.sqlDB == nil {
+		return fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(campaignID) == "" {
+		return fmt.Errorf("campaign id is required")
+	}
+	if strings.TrimSpace(countdownID) == "" {
+		return fmt.Errorf("countdown id is required")
+	}
+
+	return s.q.DeleteDaggerheartCountdown(ctx, db.DeleteDaggerheartCountdownParams{
+		CampaignID:  campaignID,
+		CountdownID: countdownID,
+	})
+}
+
+// PutDaggerheartAdversary persists a Daggerheart adversary projection.
+func (s *Store) PutDaggerheartAdversary(ctx context.Context, adversary storage.DaggerheartAdversary) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if s == nil || s.sqlDB == nil {
+		return fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(adversary.CampaignID) == "" {
+		return fmt.Errorf("campaign id is required")
+	}
+	if strings.TrimSpace(adversary.AdversaryID) == "" {
+		return fmt.Errorf("adversary id is required")
+	}
+	if strings.TrimSpace(adversary.Name) == "" {
+		return fmt.Errorf("adversary name is required")
+	}
+
+	return s.q.PutDaggerheartAdversary(ctx, db.PutDaggerheartAdversaryParams{
+		CampaignID:      adversary.CampaignID,
+		AdversaryID:     adversary.AdversaryID,
+		Name:            adversary.Name,
+		Kind:            adversary.Kind,
+		SessionID:       toNullString(adversary.SessionID),
+		Notes:           adversary.Notes,
+		Hp:              int64(adversary.HP),
+		HpMax:           int64(adversary.HPMax),
+		Stress:          int64(adversary.Stress),
+		StressMax:       int64(adversary.StressMax),
+		Evasion:         int64(adversary.Evasion),
+		MajorThreshold:  int64(adversary.Major),
+		SevereThreshold: int64(adversary.Severe),
+		Armor:           int64(adversary.Armor),
+		CreatedAt:       toMillis(adversary.CreatedAt),
+		UpdatedAt:       toMillis(adversary.UpdatedAt),
+	})
+}
+
+// GetDaggerheartAdversary retrieves a Daggerheart adversary projection for a campaign.
+func (s *Store) GetDaggerheartAdversary(ctx context.Context, campaignID, adversaryID string) (storage.DaggerheartAdversary, error) {
+	if err := ctx.Err(); err != nil {
+		return storage.DaggerheartAdversary{}, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return storage.DaggerheartAdversary{}, fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(campaignID) == "" {
+		return storage.DaggerheartAdversary{}, fmt.Errorf("campaign id is required")
+	}
+	if strings.TrimSpace(adversaryID) == "" {
+		return storage.DaggerheartAdversary{}, fmt.Errorf("adversary id is required")
+	}
+
+	row, err := s.q.GetDaggerheartAdversary(ctx, db.GetDaggerheartAdversaryParams{
+		CampaignID:  campaignID,
+		AdversaryID: adversaryID,
+	})
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return storage.DaggerheartAdversary{}, storage.ErrNotFound
+		}
+		return storage.DaggerheartAdversary{}, fmt.Errorf("get daggerheart adversary: %w", err)
+	}
+
+	sessionID := ""
+	if row.SessionID.Valid {
+		sessionID = row.SessionID.String
+	}
+
+	return storage.DaggerheartAdversary{
+		CampaignID:  row.CampaignID,
+		AdversaryID: row.AdversaryID,
+		Name:        row.Name,
+		Kind:        row.Kind,
+		SessionID:   sessionID,
+		Notes:       row.Notes,
+		HP:          int(row.Hp),
+		HPMax:       int(row.HpMax),
+		Stress:      int(row.Stress),
+		StressMax:   int(row.StressMax),
+		Evasion:     int(row.Evasion),
+		Major:       int(row.MajorThreshold),
+		Severe:      int(row.SevereThreshold),
+		Armor:       int(row.Armor),
+		CreatedAt:   fromMillis(row.CreatedAt),
+		UpdatedAt:   fromMillis(row.UpdatedAt),
+	}, nil
+}
+
+// ListDaggerheartAdversaries retrieves adversary projections for a campaign.
+func (s *Store) ListDaggerheartAdversaries(ctx context.Context, campaignID, sessionID string) ([]storage.DaggerheartAdversary, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return nil, fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(campaignID) == "" {
+		return nil, fmt.Errorf("campaign id is required")
+	}
+
+	var rows []db.DaggerheartAdversary
+	var err error
+	if strings.TrimSpace(sessionID) == "" {
+		rows, err = s.q.ListDaggerheartAdversariesByCampaign(ctx, campaignID)
+	} else {
+		rows, err = s.q.ListDaggerheartAdversariesBySession(ctx, db.ListDaggerheartAdversariesBySessionParams{
+			CampaignID: campaignID,
+			SessionID:  toNullString(sessionID),
+		})
+	}
+	if err != nil {
+		return nil, fmt.Errorf("list daggerheart adversaries: %w", err)
+	}
+
+	adversaries := make([]storage.DaggerheartAdversary, 0, len(rows))
+	for _, row := range rows {
+		rowSessionID := ""
+		if row.SessionID.Valid {
+			rowSessionID = row.SessionID.String
+		}
+		adversaries = append(adversaries, storage.DaggerheartAdversary{
+			CampaignID:  row.CampaignID,
+			AdversaryID: row.AdversaryID,
+			Name:        row.Name,
+			Kind:        row.Kind,
+			SessionID:   rowSessionID,
+			Notes:       row.Notes,
+			HP:          int(row.Hp),
+			HPMax:       int(row.HpMax),
+			Stress:      int(row.Stress),
+			StressMax:   int(row.StressMax),
+			Evasion:     int(row.Evasion),
+			Major:       int(row.MajorThreshold),
+			Severe:      int(row.SevereThreshold),
+			Armor:       int(row.Armor),
+			CreatedAt:   fromMillis(row.CreatedAt),
+			UpdatedAt:   fromMillis(row.UpdatedAt),
+		})
+	}
+
+	return adversaries, nil
+}
+
+// DeleteDaggerheartAdversary removes an adversary projection for a campaign.
+func (s *Store) DeleteDaggerheartAdversary(ctx context.Context, campaignID, adversaryID string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if s == nil || s.sqlDB == nil {
+		return fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(campaignID) == "" {
+		return fmt.Errorf("campaign id is required")
+	}
+	if strings.TrimSpace(adversaryID) == "" {
+		return fmt.Errorf("adversary id is required")
+	}
+
+	return s.q.DeleteDaggerheartAdversary(ctx, db.DeleteDaggerheartAdversaryParams{
+		CampaignID:  campaignID,
+		AdversaryID: adversaryID,
+	})
 }
 
 // EventStore methods (unified event journal)
@@ -2109,6 +2462,8 @@ func (s *Store) AppendEvent(ctx context.Context, evt event.Event) (event.Event, 
 		ActorID:        evt.ActorID,
 		EntityType:     evt.EntityType,
 		EntityID:       evt.EntityID,
+		SystemID:       evt.SystemID,
+		SystemVersion:  evt.SystemVersion,
 		PayloadJson:    evt.PayloadJSON,
 	}); err != nil {
 		if isConstraintError(err) {
@@ -2340,7 +2695,7 @@ func (s *Store) GetEventByHash(ctx context.Context, hash string) (event.Event, e
 		return event.Event{}, fmt.Errorf("get event by hash: %w", err)
 	}
 
-	return dbEventToDomain(row)
+	return eventRowDataToDomain(eventRowDataFromGetEventByHashRow(row))
 }
 
 // GetEventBySeq retrieves a specific event by sequence number.
@@ -2366,7 +2721,7 @@ func (s *Store) GetEventBySeq(ctx context.Context, campaignID string, seq uint64
 		return event.Event{}, fmt.Errorf("get event by seq: %w", err)
 	}
 
-	return dbEventToDomain(row)
+	return eventRowDataToDomain(eventRowDataFromGetEventBySeqRow(row))
 }
 
 // ListEvents returns events ordered by sequence ascending.
@@ -2393,7 +2748,7 @@ func (s *Store) ListEvents(ctx context.Context, campaignID string, afterSeq uint
 		return nil, fmt.Errorf("list events: %w", err)
 	}
 
-	return dbEventsToDomain(rows)
+	return eventRowsToDomain(rows)
 }
 
 // ListEventsBySession returns events for a specific session.
@@ -2424,7 +2779,7 @@ func (s *Store) ListEventsBySession(ctx context.Context, campaignID, sessionID s
 		return nil, fmt.Errorf("list events by session: %w", err)
 	}
 
-	return dbEventsToDomain(rows)
+	return eventRowsBySessionToDomain(rows)
 }
 
 // GetLatestEventSeq returns the latest event sequence number for a campaign.
@@ -2548,7 +2903,7 @@ func (s *Store) ListEventsPage(ctx context.Context, req storage.ListEventsPageRe
 			return storage.ListEventsPageResult{}, fmt.Errorf("scan event: %w", err)
 		}
 
-		evt, err := dbEventToDomain(row)
+		evt, err := eventRowDataToDomain(eventRowDataFromEvent(row))
 		if err != nil {
 			return storage.ListEventsPageResult{}, err
 		}
@@ -2790,7 +3145,29 @@ func (s *Store) SetCampaignForkMetadata(ctx context.Context, campaignID string, 
 
 // Domain conversion helpers for events
 
-func dbEventToDomain(row db.Event) (event.Event, error) {
+type eventRowData struct {
+	CampaignID     string
+	Seq            int64
+	EventHash      string
+	PrevEventHash  string
+	ChainHash      string
+	SignatureKeyID string
+	EventSignature string
+	Timestamp      int64
+	EventType      string
+	SessionID      string
+	RequestID      string
+	InvocationID   string
+	ActorType      string
+	ActorID        string
+	EntityType     string
+	EntityID       string
+	SystemID       string
+	SystemVersion  string
+	PayloadJSON    []byte
+}
+
+func eventRowDataToDomain(row eventRowData) (event.Event, error) {
 	return event.Event{
 		CampaignID:     row.CampaignID,
 		Seq:            uint64(row.Seq),
@@ -2808,14 +3185,148 @@ func dbEventToDomain(row db.Event) (event.Event, error) {
 		ActorID:        row.ActorID,
 		EntityType:     row.EntityType,
 		EntityID:       row.EntityID,
-		PayloadJSON:    row.PayloadJson,
+		SystemID:       row.SystemID,
+		SystemVersion:  row.SystemVersion,
+		PayloadJSON:    row.PayloadJSON,
 	}, nil
 }
 
-func dbEventsToDomain(rows []db.Event) ([]event.Event, error) {
+func eventRowDataFromEvent(row db.Event) eventRowData {
+	return eventRowData{
+		CampaignID:     row.CampaignID,
+		Seq:            row.Seq,
+		EventHash:      row.EventHash,
+		PrevEventHash:  row.PrevEventHash,
+		ChainHash:      row.ChainHash,
+		SignatureKeyID: row.SignatureKeyID,
+		EventSignature: row.EventSignature,
+		Timestamp:      row.Timestamp,
+		EventType:      row.EventType,
+		SessionID:      row.SessionID,
+		RequestID:      row.RequestID,
+		InvocationID:   row.InvocationID,
+		ActorType:      row.ActorType,
+		ActorID:        row.ActorID,
+		EntityType:     row.EntityType,
+		EntityID:       row.EntityID,
+		SystemID:       row.SystemID,
+		SystemVersion:  row.SystemVersion,
+		PayloadJSON:    row.PayloadJson,
+	}
+}
+
+func eventRowDataFromGetEventByHashRow(row db.GetEventByHashRow) eventRowData {
+	return eventRowData{
+		CampaignID:     row.CampaignID,
+		Seq:            row.Seq,
+		EventHash:      row.EventHash,
+		PrevEventHash:  row.PrevEventHash,
+		ChainHash:      row.ChainHash,
+		SignatureKeyID: row.SignatureKeyID,
+		EventSignature: row.EventSignature,
+		Timestamp:      row.Timestamp,
+		EventType:      row.EventType,
+		SessionID:      row.SessionID,
+		RequestID:      row.RequestID,
+		InvocationID:   row.InvocationID,
+		ActorType:      row.ActorType,
+		ActorID:        row.ActorID,
+		EntityType:     row.EntityType,
+		EntityID:       row.EntityID,
+		SystemID:       row.SystemID,
+		SystemVersion:  row.SystemVersion,
+		PayloadJSON:    row.PayloadJson,
+	}
+}
+
+func eventRowDataFromGetEventBySeqRow(row db.GetEventBySeqRow) eventRowData {
+	return eventRowData{
+		CampaignID:     row.CampaignID,
+		Seq:            row.Seq,
+		EventHash:      row.EventHash,
+		PrevEventHash:  row.PrevEventHash,
+		ChainHash:      row.ChainHash,
+		SignatureKeyID: row.SignatureKeyID,
+		EventSignature: row.EventSignature,
+		Timestamp:      row.Timestamp,
+		EventType:      row.EventType,
+		SessionID:      row.SessionID,
+		RequestID:      row.RequestID,
+		InvocationID:   row.InvocationID,
+		ActorType:      row.ActorType,
+		ActorID:        row.ActorID,
+		EntityType:     row.EntityType,
+		EntityID:       row.EntityID,
+		SystemID:       row.SystemID,
+		SystemVersion:  row.SystemVersion,
+		PayloadJSON:    row.PayloadJson,
+	}
+}
+
+func eventRowDataFromListEventsRow(row db.ListEventsRow) eventRowData {
+	return eventRowData{
+		CampaignID:     row.CampaignID,
+		Seq:            row.Seq,
+		EventHash:      row.EventHash,
+		PrevEventHash:  row.PrevEventHash,
+		ChainHash:      row.ChainHash,
+		SignatureKeyID: row.SignatureKeyID,
+		EventSignature: row.EventSignature,
+		Timestamp:      row.Timestamp,
+		EventType:      row.EventType,
+		SessionID:      row.SessionID,
+		RequestID:      row.RequestID,
+		InvocationID:   row.InvocationID,
+		ActorType:      row.ActorType,
+		ActorID:        row.ActorID,
+		EntityType:     row.EntityType,
+		EntityID:       row.EntityID,
+		SystemID:       row.SystemID,
+		SystemVersion:  row.SystemVersion,
+		PayloadJSON:    row.PayloadJson,
+	}
+}
+
+func eventRowDataFromListEventsBySessionRow(row db.ListEventsBySessionRow) eventRowData {
+	return eventRowData{
+		CampaignID:     row.CampaignID,
+		Seq:            row.Seq,
+		EventHash:      row.EventHash,
+		PrevEventHash:  row.PrevEventHash,
+		ChainHash:      row.ChainHash,
+		SignatureKeyID: row.SignatureKeyID,
+		EventSignature: row.EventSignature,
+		Timestamp:      row.Timestamp,
+		EventType:      row.EventType,
+		SessionID:      row.SessionID,
+		RequestID:      row.RequestID,
+		InvocationID:   row.InvocationID,
+		ActorType:      row.ActorType,
+		ActorID:        row.ActorID,
+		EntityType:     row.EntityType,
+		EntityID:       row.EntityID,
+		SystemID:       row.SystemID,
+		SystemVersion:  row.SystemVersion,
+		PayloadJSON:    row.PayloadJson,
+	}
+}
+
+func eventRowsToDomain(rows []db.ListEventsRow) ([]event.Event, error) {
 	events := make([]event.Event, 0, len(rows))
 	for _, row := range rows {
-		evt, err := dbEventToDomain(row)
+		evt, err := eventRowDataToDomain(eventRowDataFromListEventsRow(row))
+		if err != nil {
+			return nil, err
+		}
+		events = append(events, evt)
+	}
+	return events, nil
+}
+
+func eventRowsBySessionToDomain(rows []db.ListEventsBySessionRow) ([]event.Event, error) {
+	events := make([]event.Event, 0, len(rows))
+	for _, row := range rows {
+		evt, err := eventRowDataToDomain(eventRowDataFromListEventsBySessionRow(row))
 		if err != nil {
 			return nil, err
 		}

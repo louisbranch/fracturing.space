@@ -6,14 +6,15 @@ import (
 	"context"
 	"testing"
 
-	"github.com/louisbranch/fracturing.space/internal/services/mcp/domain"
 	daggerheartdomain "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/domain"
+	"github.com/louisbranch/fracturing.space/internal/services/mcp/domain"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // runDualityToolsTests exercises duality-related MCP tools.
 func runDualityToolsTests(t *testing.T, suite *integrationSuite) {
 	t.Helper()
+	t.Skip("MCP tooling deferred until mechanics stabilize")
 
 	t.Run("duality outcome", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())

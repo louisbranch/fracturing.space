@@ -9,8 +9,8 @@ import (
 
 func registerDaggerheartTools(mcpServer *mcp.Server, client daggerheartv1.DaggerheartServiceClient) {
 	mcp.AddTool(mcpServer, domain.ActionRollTool(), domain.ActionRollHandler(client))
-	mcp.AddTool(mcpServer, domain.DualityOutcomeTool(), domain.DualityOutcomeHandler(client))
 	mcp.AddTool(mcpServer, domain.DualityExplainTool(), domain.DualityExplainHandler(client))
+	mcp.AddTool(mcpServer, domain.DualityOutcomeTool(), domain.DualityOutcomeHandler(client))
 	mcp.AddTool(mcpServer, domain.DualityProbabilityTool(), domain.DualityProbabilityHandler(client))
 	mcp.AddTool(mcpServer, domain.RulesVersionTool(), domain.RulesVersionHandler(client))
 	mcp.AddTool(mcpServer, domain.RollDiceTool(), domain.RollDiceHandler(client))

@@ -425,8 +425,8 @@ func TestEndCampaign_Success(t *testing.T) {
 	if got := len(eventStore.events["c1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)
 	}
-	if eventStore.events["c1"][0].Type != event.TypeCampaignStatusChanged {
-		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.TypeCampaignStatusChanged)
+	if eventStore.events["c1"][0].Type != event.TypeCampaignUpdated {
+		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.TypeCampaignUpdated)
 	}
 }
 
@@ -507,8 +507,8 @@ func TestArchiveCampaign_Success(t *testing.T) {
 	if got := len(eventStore.events["c1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)
 	}
-	if eventStore.events["c1"][0].Type != event.TypeCampaignStatusChanged {
-		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.TypeCampaignStatusChanged)
+	if eventStore.events["c1"][0].Type != event.TypeCampaignUpdated {
+		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.TypeCampaignUpdated)
 	}
 }
 
@@ -581,8 +581,8 @@ func TestRestoreCampaign_Success(t *testing.T) {
 	if got := len(eventStore.events["c1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)
 	}
-	if eventStore.events["c1"][0].Type != event.TypeCampaignStatusChanged {
-		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.TypeCampaignStatusChanged)
+	if eventStore.events["c1"][0].Type != event.TypeCampaignUpdated {
+		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.TypeCampaignUpdated)
 	}
 }
 

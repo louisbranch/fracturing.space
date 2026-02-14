@@ -18,12 +18,13 @@ import (
 // DaggerheartService implements the Daggerheart gRPC API.
 type DaggerheartService struct {
 	pb.UnimplementedDaggerheartServiceServer
+	stores   Stores
 	seedFunc func() (int64, error) // Generates per-request random seeds.
 }
 
 // NewDaggerheartService creates a configured gRPC handler with a seed generator.
-func NewDaggerheartService(seedFunc func() (int64, error)) *DaggerheartService {
-	return &DaggerheartService{seedFunc: seedFunc}
+func NewDaggerheartService(stores Stores, seedFunc func() (int64, error)) *DaggerheartService {
+	return &DaggerheartService{stores: stores, seedFunc: seedFunc}
 }
 
 // ActionRoll handles action roll requests.
@@ -56,9 +57,11 @@ func (s *DaggerheartService) ActionRoll(ctx context.Context, in *pb.ActionRollRe
 	}
 
 	result, err := daggerheartdomain.RollAction(daggerheartdomain.ActionRequest{
-		Modifier:   int(in.GetModifier()),
-		Difficulty: difficulty,
-		Seed:       seed,
+		Modifier:     int(in.GetModifier()),
+		Difficulty:   difficulty,
+		Seed:         seed,
+		Advantage:    int(in.GetAdvantage()),
+		Disadvantage: int(in.GetDisadvantage()),
 	})
 	if err != nil {
 		if errors.Is(err, daggerheartdomain.ErrInvalidDifficulty) {
@@ -68,13 +71,15 @@ func (s *DaggerheartService) ActionRoll(ctx context.Context, in *pb.ActionRollRe
 	}
 
 	response := &pb.ActionRollResponse{
-		Hope:            int32(result.Hope),
-		Fear:            int32(result.Fear),
-		Modifier:        int32(result.Modifier),
-		Total:           int32(result.Total),
-		IsCrit:          result.IsCrit,
-		MeetsDifficulty: result.MeetsDifficulty,
-		Outcome:         outcomeToProto(result.Outcome),
+		Hope:              int32(result.Hope),
+		Fear:              int32(result.Fear),
+		Modifier:          int32(result.Modifier),
+		AdvantageDie:      int32(result.AdvantageDie),
+		AdvantageModifier: int32(result.AdvantageModifier),
+		Total:             int32(result.Total),
+		IsCrit:            result.IsCrit,
+		MeetsDifficulty:   result.MeetsDifficulty,
+		Outcome:           outcomeToProto(result.Outcome),
 		Rng: &commonv1.RngResponse{
 			SeedUsed:   uint64(seed),
 			RngAlgo:    random.RngAlgoMathRandV1,

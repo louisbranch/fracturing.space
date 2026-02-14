@@ -1,4 +1,7 @@
 // Package service tests the MCP server wiring.
+//go:build mcp
+// +build mcp
+
 package service
 
 import (
@@ -1258,14 +1261,13 @@ func TestCampaignEndHandlerMapsRequestAndResponse(t *testing.T) {
 	now := time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC)
 	client := &fakeCampaignClient{endCampaignResponse: &statev1.EndCampaignResponse{
 		Campaign: &statev1.Campaign{
-			Id:             "camp-123",
-			Name:           "Finale",
-			Status:         statev1.CampaignStatus_COMPLETED,
-			GmMode:         statev1.GmMode_HUMAN,
-			CreatedAt:      timestamppb.New(now.Add(-2 * time.Hour)),
-			LastActivityAt: timestamppb.New(now.Add(-time.Hour)),
-			UpdatedAt:      timestamppb.New(now),
-			CompletedAt:    timestamppb.New(now),
+			Id:          "camp-123",
+			Name:        "Finale",
+			Status:      statev1.CampaignStatus_COMPLETED,
+			GmMode:      statev1.GmMode_HUMAN,
+			CreatedAt:   timestamppb.New(now.Add(-2 * time.Hour)),
+			UpdatedAt:   timestamppb.New(now),
+			CompletedAt: timestamppb.New(now),
 		},
 	}}
 
@@ -1371,14 +1373,13 @@ func TestCampaignArchiveHandlerMapsRequestAndResponse(t *testing.T) {
 	now := time.Date(2026, 2, 1, 11, 0, 0, 0, time.UTC)
 	client := &fakeCampaignClient{archiveCampaignResponse: &statev1.ArchiveCampaignResponse{
 		Campaign: &statev1.Campaign{
-			Id:             "camp-123",
-			Name:           "Finale",
-			Status:         statev1.CampaignStatus_ARCHIVED,
-			GmMode:         statev1.GmMode_AI,
-			CreatedAt:      timestamppb.New(now.Add(-2 * time.Hour)),
-			LastActivityAt: timestamppb.New(now.Add(-time.Hour)),
-			UpdatedAt:      timestamppb.New(now),
-			ArchivedAt:     timestamppb.New(now),
+			Id:         "camp-123",
+			Name:       "Finale",
+			Status:     statev1.CampaignStatus_ARCHIVED,
+			GmMode:     statev1.GmMode_AI,
+			CreatedAt:  timestamppb.New(now.Add(-2 * time.Hour)),
+			UpdatedAt:  timestamppb.New(now),
+			ArchivedAt: timestamppb.New(now),
 		},
 	}}
 
@@ -1481,13 +1482,12 @@ func TestCampaignRestoreHandlerMapsRequestAndResponse(t *testing.T) {
 	now := time.Date(2026, 2, 1, 12, 0, 0, 0, time.UTC)
 	client := &fakeCampaignClient{restoreCampaignResponse: &statev1.RestoreCampaignResponse{
 		Campaign: &statev1.Campaign{
-			Id:             "camp-123",
-			Name:           "Finale",
-			Status:         statev1.CampaignStatus_DRAFT,
-			GmMode:         statev1.GmMode_HYBRID,
-			CreatedAt:      timestamppb.New(now.Add(-2 * time.Hour)),
-			LastActivityAt: timestamppb.New(now.Add(-time.Hour)),
-			UpdatedAt:      timestamppb.New(now),
+			Id:        "camp-123",
+			Name:      "Finale",
+			Status:    statev1.CampaignStatus_DRAFT,
+			GmMode:    statev1.GmMode_HYBRID,
+			CreatedAt: timestamppb.New(now.Add(-2 * time.Hour)),
+			UpdatedAt: timestamppb.New(now),
 		},
 	}}
 

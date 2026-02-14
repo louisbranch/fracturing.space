@@ -18,6 +18,8 @@ func EventDeclarations() (*filtering.Declarations, error) {
 		filtering.DeclareIdent("type", filtering.TypeString),
 		filtering.DeclareIdent("actor_type", filtering.TypeString),
 		filtering.DeclareIdent("actor_id", filtering.TypeString),
+		filtering.DeclareIdent("system_id", filtering.TypeString),
+		filtering.DeclareIdent("system_version", filtering.TypeString),
 		filtering.DeclareIdent("entity_type", filtering.TypeString),
 		filtering.DeclareIdent("entity_id", filtering.TypeString),
 		filtering.DeclareIdent("ts", filtering.TypeTimestamp),
@@ -34,13 +36,15 @@ type SQLCondition struct {
 
 // fieldMapping maps filter field names to SQL column names.
 var fieldMapping = map[string]string{
-	"session_id":  "session_id",
-	"type":        "event_type",
-	"actor_type":  "actor_type",
-	"actor_id":    "actor_id",
-	"entity_type": "entity_type",
-	"entity_id":   "entity_id",
-	"ts":          "timestamp",
+	"session_id":     "session_id",
+	"type":           "event_type",
+	"actor_type":     "actor_type",
+	"actor_id":       "actor_id",
+	"system_id":      "system_id",
+	"system_version": "system_version",
+	"entity_type":    "entity_type",
+	"entity_id":      "entity_id",
+	"ts":             "timestamp",
 }
 
 // ParseEventFilter parses an AIP-160 filter expression and returns a SQL condition.

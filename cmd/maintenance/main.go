@@ -8,7 +8,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"math"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -230,7 +229,7 @@ func runCampaign(ctx context.Context, eventStore storage.EventStore, projStore s
 			AfterSeq: options.AfterSeq,
 			UntilSeq: options.UntilSeq,
 			Filter: func(evt event.Event) bool {
-				return evt.Type == event.TypeCharacterStateChanged || evt.Type == event.TypeGMFearChanged
+				return strings.TrimSpace(evt.SystemID) != ""
 			},
 		})
 	} else {
@@ -459,47 +458,134 @@ func scanSnapshotEvents(ctx context.Context, eventStore storage.EventStore, camp
 }
 
 func isSnapshotEvent(evt event.Event) bool {
-	switch evt.Type {
-	case event.TypeCharacterStateChanged, event.TypeGMFearChanged:
-		return true
-	default:
-		return false
-	}
+	return strings.TrimSpace(evt.SystemID) != ""
 }
 
 func validateSnapshotEvent(evt event.Event) error {
 	switch evt.Type {
-	case event.TypeCharacterStateChanged:
-		var payload event.CharacterStateChangedPayload
+	case daggerheart.EventTypeCharacterStatePatched:
+		var payload daggerheart.CharacterStatePatchedPayload
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 			return fmt.Errorf("decode character state payload: %w", err)
 		}
 		if payload.CharacterID == "" {
 			return fmt.Errorf("character id is required")
 		}
-		if payload.SystemState == nil {
-			return nil
+		if payload.HpAfter != nil && (*payload.HpAfter < daggerheart.HPMin || *payload.HpAfter > daggerheart.HPMaxCap) {
+			return fmt.Errorf("hp %d exceeds range %d..%d", *payload.HpAfter, daggerheart.HPMin, daggerheart.HPMaxCap)
 		}
-		dhState, ok := payload.SystemState["daggerheart"]
-		if !ok {
-			return nil
+		if payload.HopeMaxAfter != nil && (*payload.HopeMaxAfter < daggerheart.HopeMin || *payload.HopeMaxAfter > daggerheart.HopeMax) {
+			return fmt.Errorf("hope_max %d exceeds range %d..%d", *payload.HopeMaxAfter, daggerheart.HopeMin, daggerheart.HopeMax)
 		}
-		stateMap, ok := dhState.(map[string]any)
-		if !ok {
-			return fmt.Errorf("daggerheart system state must be object")
-		}
-		if value, ok := stateMap["hope_after"]; ok {
-			if _, err := parseSnapshotNumber(value, "hope_after"); err != nil {
-				return err
+		if payload.HopeAfter != nil {
+			maxHope := daggerheart.HopeMax
+			if payload.HopeMaxAfter != nil {
+				maxHope = *payload.HopeMaxAfter
+			}
+			if *payload.HopeAfter < daggerheart.HopeMin || *payload.HopeAfter > maxHope {
+				return fmt.Errorf("hope %d exceeds range %d..%d", *payload.HopeAfter, daggerheart.HopeMin, maxHope)
 			}
 		}
-		if value, ok := stateMap["stress_after"]; ok {
-			if _, err := parseSnapshotNumber(value, "stress_after"); err != nil {
-				return err
+		if payload.StressAfter != nil && (*payload.StressAfter < daggerheart.StressMin || *payload.StressAfter > daggerheart.StressMaxCap) {
+			return fmt.Errorf("stress %d exceeds range %d..%d", *payload.StressAfter, daggerheart.StressMin, daggerheart.StressMaxCap)
+		}
+		if payload.ArmorAfter != nil && (*payload.ArmorAfter < daggerheart.ArmorMin || *payload.ArmorAfter > daggerheart.ArmorMaxCap) {
+			return fmt.Errorf("armor %d exceeds range %d..%d", *payload.ArmorAfter, daggerheart.ArmorMin, daggerheart.ArmorMaxCap)
+		}
+		if payload.LifeStateAfter != nil {
+			if _, err := daggerheart.NormalizeLifeState(*payload.LifeStateAfter); err != nil {
+				return fmt.Errorf("life_state %v is invalid", *payload.LifeStateAfter)
 			}
 		}
-	case event.TypeGMFearChanged:
-		var payload event.GMFearChangedPayload
+	case daggerheart.EventTypeDeathMoveResolved:
+		var payload daggerheart.DeathMoveResolvedPayload
+		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+			return fmt.Errorf("decode death move payload: %w", err)
+		}
+		if payload.CharacterID == "" {
+			return fmt.Errorf("character id is required")
+		}
+		if _, err := daggerheart.NormalizeDeathMove(payload.Move); err != nil {
+			return fmt.Errorf("death move %v is invalid", payload.Move)
+		}
+		if payload.LifeStateAfter == "" {
+			return fmt.Errorf("life_state_after is required")
+		}
+		if _, err := daggerheart.NormalizeLifeState(payload.LifeStateAfter); err != nil {
+			return fmt.Errorf("life_state_after %v is invalid", payload.LifeStateAfter)
+		}
+		if payload.HopeDie != nil && (*payload.HopeDie < 1 || *payload.HopeDie > 12) {
+			return fmt.Errorf("hope_die %d exceeds range 1..12", *payload.HopeDie)
+		}
+		if payload.FearDie != nil && (*payload.FearDie < 1 || *payload.FearDie > 12) {
+			return fmt.Errorf("fear_die %d exceeds range 1..12", *payload.FearDie)
+		}
+	case daggerheart.EventTypeBlazeOfGloryResolved:
+		var payload daggerheart.BlazeOfGloryResolvedPayload
+		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+			return fmt.Errorf("decode blaze of glory payload: %w", err)
+		}
+		if payload.CharacterID == "" {
+			return fmt.Errorf("character id is required")
+		}
+		if payload.LifeStateAfter == "" {
+			return fmt.Errorf("life_state_after is required")
+		}
+		if _, err := daggerheart.NormalizeLifeState(payload.LifeStateAfter); err != nil {
+			return fmt.Errorf("life_state_after %v is invalid", payload.LifeStateAfter)
+		}
+	case daggerheart.EventTypeAttackResolved:
+		var payload daggerheart.AttackResolvedPayload
+		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+			return fmt.Errorf("decode attack payload: %w", err)
+		}
+		if payload.CharacterID == "" {
+			return fmt.Errorf("character id is required")
+		}
+		if payload.RollSeq == 0 {
+			return fmt.Errorf("roll_seq is required")
+		}
+		if len(payload.Targets) == 0 {
+			return fmt.Errorf("targets are required")
+		}
+		for _, target := range payload.Targets {
+			if strings.TrimSpace(target) == "" {
+				return fmt.Errorf("targets must not contain empty values")
+			}
+		}
+		if payload.Outcome == "" {
+			return fmt.Errorf("outcome is required")
+		}
+	case daggerheart.EventTypeReactionResolved:
+		var payload daggerheart.ReactionResolvedPayload
+		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+			return fmt.Errorf("decode reaction payload: %w", err)
+		}
+		if payload.CharacterID == "" {
+			return fmt.Errorf("character id is required")
+		}
+		if payload.RollSeq == 0 {
+			return fmt.Errorf("roll_seq is required")
+		}
+		if payload.Outcome == "" {
+			return fmt.Errorf("outcome is required")
+		}
+	case daggerheart.EventTypeDamageRollResolved:
+		var payload daggerheart.DamageRollResolvedPayload
+		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+			return fmt.Errorf("decode damage roll payload: %w", err)
+		}
+		if payload.CharacterID == "" {
+			return fmt.Errorf("character id is required")
+		}
+		if payload.RollSeq == 0 {
+			return fmt.Errorf("roll_seq is required")
+		}
+		if len(payload.Rolls) == 0 {
+			return fmt.Errorf("rolls are required")
+		}
+	case daggerheart.EventTypeGMFearChanged:
+		var payload daggerheart.GMFearChangedPayload
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 			return fmt.Errorf("decode gm fear payload: %w", err)
 		}
@@ -508,35 +594,6 @@ func validateSnapshotEvent(evt event.Event) error {
 		}
 	}
 	return nil
-}
-
-func parseSnapshotNumber(value any, field string) (int, error) {
-	switch v := value.(type) {
-	case float64:
-		if v != math.Trunc(v) {
-			return 0, fmt.Errorf("%s must be an integer", field)
-		}
-		return int(v), nil
-	case float32:
-		if v != float32(math.Trunc(float64(v))) {
-			return 0, fmt.Errorf("%s must be an integer", field)
-		}
-		return int(v), nil
-	case int:
-		return v, nil
-	case int32:
-		return int(v), nil
-	case int64:
-		return int(v), nil
-	case json.Number:
-		parsed, err := v.Int64()
-		if err != nil {
-			return 0, fmt.Errorf("%s must be an integer", field)
-		}
-		return int(parsed), nil
-	default:
-		return 0, fmt.Errorf("%s must be a number", field)
-	}
 }
 
 func checkSnapshotIntegrity(ctx context.Context, eventStore storage.EventStore, projStore storage.ProjectionStore, campaignID string, untilSeq uint64) (integrityReport, []string, error) {

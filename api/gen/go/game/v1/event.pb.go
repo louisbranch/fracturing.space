@@ -34,7 +34,7 @@ type ListEventsRequest struct {
 	// Ordering: "seq" (default, oldest first) or "seq desc" (newest first).
 	OrderBy string `protobuf:"bytes,4,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
 	// AIP-160 filter expression.
-	// Filterable fields: session_id, type, actor_type, actor_id, entity_type, entity_id, ts.
+	// Filterable fields: session_id, type, system_id, system_version, actor_type, actor_id, entity_type, entity_id, ts.
 	// Examples:
 	//
 	//	session_id = "sess_123"
@@ -351,22 +351,26 @@ type Event struct {
 	Ts *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=ts,proto3" json:"ts,omitempty"`
 	// The type of event (e.g., "session.started", "action.roll_resolved").
 	Type string `protobuf:"bytes,5,opt,name=type,proto3" json:"type,omitempty"`
+	// Game system identifier for system-specific events.
+	SystemId string `protobuf:"bytes,6,opt,name=system_id,json=systemId,proto3" json:"system_id,omitempty"`
+	// Game system version for system-specific events.
+	SystemVersion string `protobuf:"bytes,7,opt,name=system_version,json=systemVersion,proto3" json:"system_version,omitempty"`
 	// The session this event belongs to (empty for setup events).
-	SessionId string `protobuf:"bytes,6,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	SessionId string `protobuf:"bytes,8,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
 	// Correlation ID for related events (e.g., roll request to resolution).
-	RequestId string `protobuf:"bytes,7,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	RequestId string `protobuf:"bytes,9,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
 	// The MCP/gRPC invocation that triggered this event.
-	InvocationId string `protobuf:"bytes,8,opt,name=invocation_id,json=invocationId,proto3" json:"invocation_id,omitempty"`
+	InvocationId string `protobuf:"bytes,10,opt,name=invocation_id,json=invocationId,proto3" json:"invocation_id,omitempty"`
 	// Who triggered the event: "system", "participant", or "gm".
-	ActorType string `protobuf:"bytes,9,opt,name=actor_type,json=actorType,proto3" json:"actor_type,omitempty"`
+	ActorType string `protobuf:"bytes,11,opt,name=actor_type,json=actorType,proto3" json:"actor_type,omitempty"`
 	// The participant ID if actor_type is "participant" or "gm".
-	ActorId string `protobuf:"bytes,10,opt,name=actor_id,json=actorId,proto3" json:"actor_id,omitempty"`
+	ActorId string `protobuf:"bytes,12,opt,name=actor_id,json=actorId,proto3" json:"actor_id,omitempty"`
 	// The type of entity affected (e.g., "character", "session").
-	EntityType string `protobuf:"bytes,11,opt,name=entity_type,json=entityType,proto3" json:"entity_type,omitempty"`
+	EntityType string `protobuf:"bytes,13,opt,name=entity_type,json=entityType,proto3" json:"entity_type,omitempty"`
 	// The ID of the entity affected.
-	EntityId string `protobuf:"bytes,12,opt,name=entity_id,json=entityId,proto3" json:"entity_id,omitempty"`
+	EntityId string `protobuf:"bytes,14,opt,name=entity_id,json=entityId,proto3" json:"entity_id,omitempty"`
 	// Event-specific data as JSON.
-	PayloadJson   []byte `protobuf:"bytes,13,opt,name=payload_json,json=payloadJson,proto3" json:"payload_json,omitempty"`
+	PayloadJson   []byte `protobuf:"bytes,15,opt,name=payload_json,json=payloadJson,proto3" json:"payload_json,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -432,6 +436,20 @@ func (x *Event) GetTs() *timestamppb.Timestamp {
 func (x *Event) GetType() string {
 	if x != nil {
 		return x.Type
+	}
+	return ""
+}
+
+func (x *Event) GetSystemId() string {
+	if x != nil {
+		return x.SystemId
+	}
+	return ""
+}
+
+func (x *Event) GetSystemVersion() string {
+	if x != nil {
+		return x.SystemVersion
 	}
 	return ""
 }
@@ -525,27 +543,29 @@ const file_game_v1_event_proto_rawDesc = "" +
 	"\tentity_id\x18\a \x01(\tR\bentityId\x12!\n" +
 	"\fpayload_json\x18\b \x01(\fR\vpayloadJson\";\n" +
 	"\x13AppendEventResponse\x12$\n" +
-	"\x05event\x18\x01 \x01(\v2\x0e.game.v1.EventR\x05event\"\x8c\x03\n" +
+	"\x05event\x18\x01 \x01(\v2\x0e.game.v1.EventR\x05event\"\xd0\x03\n" +
 	"\x05Event\x12\x1f\n" +
 	"\vcampaign_id\x18\x01 \x01(\tR\n" +
 	"campaignId\x12\x10\n" +
 	"\x03seq\x18\x02 \x01(\x04R\x03seq\x12\x12\n" +
 	"\x04hash\x18\x03 \x01(\tR\x04hash\x12*\n" +
 	"\x02ts\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\x02ts\x12\x12\n" +
-	"\x04type\x18\x05 \x01(\tR\x04type\x12\x1d\n" +
+	"\x04type\x18\x05 \x01(\tR\x04type\x12\x1b\n" +
+	"\tsystem_id\x18\x06 \x01(\tR\bsystemId\x12%\n" +
+	"\x0esystem_version\x18\a \x01(\tR\rsystemVersion\x12\x1d\n" +
 	"\n" +
-	"session_id\x18\x06 \x01(\tR\tsessionId\x12\x1d\n" +
+	"session_id\x18\b \x01(\tR\tsessionId\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\a \x01(\tR\trequestId\x12#\n" +
-	"\rinvocation_id\x18\b \x01(\tR\finvocationId\x12\x1d\n" +
+	"request_id\x18\t \x01(\tR\trequestId\x12#\n" +
+	"\rinvocation_id\x18\n" +
+	" \x01(\tR\finvocationId\x12\x1d\n" +
 	"\n" +
-	"actor_type\x18\t \x01(\tR\tactorType\x12\x19\n" +
-	"\bactor_id\x18\n" +
-	" \x01(\tR\aactorId\x12\x1f\n" +
-	"\ventity_type\x18\v \x01(\tR\n" +
+	"actor_type\x18\v \x01(\tR\tactorType\x12\x19\n" +
+	"\bactor_id\x18\f \x01(\tR\aactorId\x12\x1f\n" +
+	"\ventity_type\x18\r \x01(\tR\n" +
 	"entityType\x12\x1b\n" +
-	"\tentity_id\x18\f \x01(\tR\bentityId\x12!\n" +
-	"\fpayload_json\x18\r \x01(\fR\vpayloadJson2\x9f\x01\n" +
+	"\tentity_id\x18\x0e \x01(\tR\bentityId\x12!\n" +
+	"\fpayload_json\x18\x0f \x01(\fR\vpayloadJson2\x9f\x01\n" +
 	"\fEventService\x12H\n" +
 	"\vAppendEvent\x12\x1b.game.v1.AppendEventRequest\x1a\x1c.game.v1.AppendEventResponse\x12E\n" +
 	"\n" +

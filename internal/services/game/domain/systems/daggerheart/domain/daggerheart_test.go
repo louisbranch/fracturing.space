@@ -30,7 +30,7 @@ func TestRollAction(t *testing.T) {
 			wantFear:            7,
 			wantTotal:           14,
 			wantIsCrit:          true,
-			wantMeetsDifficulty: false,
+			wantMeetsDifficulty: true,
 		},
 		{
 			wantOutcome:         OutcomeRollWithHope,
@@ -124,6 +124,84 @@ func TestRollActionRejectsNegativeDifficulty(t *testing.T) {
 	})
 	if !errors.Is(err, ErrInvalidDifficulty) {
 		t.Fatalf("RollAction error = %v, want %v", err, ErrInvalidDifficulty)
+	}
+}
+
+func TestRollActionAdvantageModifier(t *testing.T) {
+	base, err := RollAction(ActionRequest{
+		Modifier:   1,
+		Difficulty: nil,
+		Seed:       9,
+	})
+	if err != nil {
+		t.Fatalf("RollAction returned error: %v", err)
+	}
+	advantaged, err := RollAction(ActionRequest{
+		Modifier:   1,
+		Difficulty: nil,
+		Seed:       9,
+		Advantage:  1,
+	})
+	if err != nil {
+		t.Fatalf("RollAction returned error: %v", err)
+	}
+	if advantaged.Hope != base.Hope || advantaged.Fear != base.Fear {
+		t.Fatalf("expected hope/fear to match without advantage")
+	}
+	if advantaged.AdvantageDie < 1 || advantaged.AdvantageDie > 6 {
+		t.Fatalf("advantage die out of range: %d", advantaged.AdvantageDie)
+	}
+	if advantaged.AdvantageModifier != advantaged.AdvantageDie {
+		t.Fatalf("advantage modifier = %d, want %d", advantaged.AdvantageModifier, advantaged.AdvantageDie)
+	}
+	if advantaged.Total != base.Total+advantaged.AdvantageDie {
+		t.Fatalf("total = %d, want %d", advantaged.Total, base.Total+advantaged.AdvantageDie)
+	}
+
+	disadvantaged, err := RollAction(ActionRequest{
+		Modifier:     1,
+		Difficulty:   nil,
+		Seed:         9,
+		Disadvantage: 1,
+	})
+	if err != nil {
+		t.Fatalf("RollAction returned error: %v", err)
+	}
+	if disadvantaged.Hope != base.Hope || disadvantaged.Fear != base.Fear {
+		t.Fatalf("expected hope/fear to match without disadvantage")
+	}
+	if disadvantaged.AdvantageDie < 1 || disadvantaged.AdvantageDie > 6 {
+		t.Fatalf("disadvantage die out of range: %d", disadvantaged.AdvantageDie)
+	}
+	if disadvantaged.AdvantageModifier != -disadvantaged.AdvantageDie {
+		t.Fatalf("disadvantage modifier = %d, want %d", disadvantaged.AdvantageModifier, -disadvantaged.AdvantageDie)
+	}
+	if disadvantaged.Total != base.Total-disadvantaged.AdvantageDie {
+		t.Fatalf("total = %d, want %d", disadvantaged.Total, base.Total-disadvantaged.AdvantageDie)
+	}
+}
+
+func TestRollReactionSemantics(t *testing.T) {
+	result, err := RollReaction(ReactionRequest{
+		Modifier:   1,
+		Difficulty: nil,
+		Seed:       11,
+		Advantage:  1,
+	})
+	if err != nil {
+		t.Fatalf("RollReaction returned error: %v", err)
+	}
+	if result.GeneratesHopeFear {
+		t.Fatal("expected reaction roll to not generate hope/fear")
+	}
+	if result.AidAllowed {
+		t.Fatal("expected reaction roll to disallow aid")
+	}
+	if result.TriggersGMMove {
+		t.Fatal("expected reaction roll to not trigger GM moves")
+	}
+	if !result.CritNegatesEffects {
+		t.Fatal("expected reaction crit to negate effects")
 	}
 }
 

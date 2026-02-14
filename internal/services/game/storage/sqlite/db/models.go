@@ -21,7 +21,6 @@ type Campaign struct {
 	ForkEventSeq     sql.NullInt64  `json:"fork_event_seq"`
 	OriginCampaignID sql.NullString `json:"origin_campaign_id"`
 	CreatedAt        int64          `json:"created_at"`
-	LastActivityAt   int64          `json:"last_activity_at"`
 	UpdatedAt        int64          `json:"updated_at"`
 	CompletedAt      sql.NullInt64  `json:"completed_at"`
 	ArchivedAt       sql.NullInt64  `json:"archived_at"`
@@ -43,9 +42,29 @@ type Character struct {
 	UpdatedAt               int64          `json:"updated_at"`
 }
 
+type DaggerheartAdversary struct {
+	CampaignID      string         `json:"campaign_id"`
+	AdversaryID     string         `json:"adversary_id"`
+	Name            string         `json:"name"`
+	Kind            string         `json:"kind"`
+	SessionID       sql.NullString `json:"session_id"`
+	Notes           string         `json:"notes"`
+	Hp              int64          `json:"hp"`
+	HpMax           int64          `json:"hp_max"`
+	Stress          int64          `json:"stress"`
+	StressMax       int64          `json:"stress_max"`
+	Evasion         int64          `json:"evasion"`
+	MajorThreshold  int64          `json:"major_threshold"`
+	SevereThreshold int64          `json:"severe_threshold"`
+	Armor           int64          `json:"armor"`
+	CreatedAt       int64          `json:"created_at"`
+	UpdatedAt       int64          `json:"updated_at"`
+}
+
 type DaggerheartCharacterProfile struct {
 	CampaignID      string `json:"campaign_id"`
 	CharacterID     string `json:"character_id"`
+	Level           int64  `json:"level"`
 	HpMax           int64  `json:"hp_max"`
 	StressMax       int64  `json:"stress_max"`
 	Evasion         int64  `json:"evasion"`
@@ -57,19 +76,39 @@ type DaggerheartCharacterProfile struct {
 	Instinct        int64  `json:"instinct"`
 	Presence        int64  `json:"presence"`
 	Knowledge       int64  `json:"knowledge"`
+	Proficiency     int64  `json:"proficiency"`
+	ArmorScore      int64  `json:"armor_score"`
+	ArmorMax        int64  `json:"armor_max"`
+	ExperiencesJson string `json:"experiences_json"`
 }
 
 type DaggerheartCharacterState struct {
+	CampaignID     string `json:"campaign_id"`
+	CharacterID    string `json:"character_id"`
+	Hp             int64  `json:"hp"`
+	Hope           int64  `json:"hope"`
+	HopeMax        int64  `json:"hope_max"`
+	Stress         int64  `json:"stress"`
+	Armor          int64  `json:"armor"`
+	ConditionsJson string `json:"conditions_json"`
+	LifeState      string `json:"life_state"`
+}
+
+type DaggerheartCountdown struct {
 	CampaignID  string `json:"campaign_id"`
-	CharacterID string `json:"character_id"`
-	Hp          int64  `json:"hp"`
-	Hope        int64  `json:"hope"`
-	Stress      int64  `json:"stress"`
+	CountdownID string `json:"countdown_id"`
+	Name        string `json:"name"`
+	Kind        string `json:"kind"`
+	Current     int64  `json:"current"`
+	Max         int64  `json:"max"`
+	Direction   string `json:"direction"`
+	Looping     int64  `json:"looping"`
 }
 
 type DaggerheartSnapshot struct {
-	CampaignID string `json:"campaign_id"`
-	GmFear     int64  `json:"gm_fear"`
+	CampaignID            string `json:"campaign_id"`
+	GmFear                int64  `json:"gm_fear"`
+	ConsecutiveShortRests int64  `json:"consecutive_short_rests"`
 }
 
 type Event struct {
@@ -90,6 +129,8 @@ type Event struct {
 	EntityType     string `json:"entity_type"`
 	EntityID       string `json:"entity_id"`
 	PayloadJson    []byte `json:"payload_json"`
+	SystemID       string `json:"system_id"`
+	SystemVersion  string `json:"system_version"`
 }
 
 type EventSeq struct {

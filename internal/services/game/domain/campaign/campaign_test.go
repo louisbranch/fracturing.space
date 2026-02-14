@@ -62,9 +62,6 @@ func TestCreateCampaignNormalizesInput(t *testing.T) {
 	if !campaign.CreatedAt.Equal(fixedTime) || !campaign.UpdatedAt.Equal(fixedTime) {
 		t.Fatalf("expected timestamps to match fixed time")
 	}
-	if !campaign.LastActivityAt.Equal(fixedTime) {
-		t.Fatalf("expected last_activity_at %v, got %v", fixedTime, campaign.LastActivityAt)
-	}
 }
 
 func TestNormalizeCreateCampaignInputValidation(t *testing.T) {
@@ -118,11 +115,10 @@ func TestTransitionCampaignStatusAllowed(t *testing.T) {
 
 	t.Run("draft to active", func(t *testing.T) {
 		campaign := Campaign{
-			ID:             "camp-1",
-			Status:         CampaignStatusDraft,
-			CreatedAt:      baseTime,
-			LastActivityAt: baseTime,
-			UpdatedAt:      baseTime,
+			ID:        "camp-1",
+			Status:    CampaignStatusDraft,
+			CreatedAt: baseTime,
+			UpdatedAt: baseTime,
 		}
 		updated, err := TransitionCampaignStatus(campaign, CampaignStatusActive, func() time.Time {
 			return transitionTime
@@ -146,11 +142,10 @@ func TestTransitionCampaignStatusAllowed(t *testing.T) {
 
 	t.Run("active to completed", func(t *testing.T) {
 		campaign := Campaign{
-			ID:             "camp-2",
-			Status:         CampaignStatusActive,
-			CreatedAt:      baseTime,
-			LastActivityAt: baseTime,
-			UpdatedAt:      baseTime,
+			ID:        "camp-2",
+			Status:    CampaignStatusActive,
+			CreatedAt: baseTime,
+			UpdatedAt: baseTime,
 		}
 		updated, err := TransitionCampaignStatus(campaign, CampaignStatusCompleted, func() time.Time {
 			return transitionTime
@@ -165,11 +160,10 @@ func TestTransitionCampaignStatusAllowed(t *testing.T) {
 
 	t.Run("active to archived", func(t *testing.T) {
 		campaign := Campaign{
-			ID:             "camp-3",
-			Status:         CampaignStatusActive,
-			CreatedAt:      baseTime,
-			LastActivityAt: baseTime,
-			UpdatedAt:      baseTime,
+			ID:        "camp-3",
+			Status:    CampaignStatusActive,
+			CreatedAt: baseTime,
+			UpdatedAt: baseTime,
 		}
 		updated, err := TransitionCampaignStatus(campaign, CampaignStatusArchived, func() time.Time {
 			return transitionTime
@@ -188,12 +182,11 @@ func TestTransitionCampaignStatusAllowed(t *testing.T) {
 	t.Run("completed to archived preserves completed_at", func(t *testing.T) {
 		completedAt := baseTime.Add(30 * time.Minute)
 		campaign := Campaign{
-			ID:             "camp-4",
-			Status:         CampaignStatusCompleted,
-			CreatedAt:      baseTime,
-			LastActivityAt: baseTime,
-			UpdatedAt:      baseTime,
-			CompletedAt:    &completedAt,
+			ID:          "camp-4",
+			Status:      CampaignStatusCompleted,
+			CreatedAt:   baseTime,
+			UpdatedAt:   baseTime,
+			CompletedAt: &completedAt,
 		}
 		updated, err := TransitionCampaignStatus(campaign, CampaignStatusArchived, func() time.Time {
 			return transitionTime
@@ -213,13 +206,12 @@ func TestTransitionCampaignStatusAllowed(t *testing.T) {
 		completedAt := baseTime.Add(time.Hour)
 		archivedAt := baseTime.Add(2 * time.Hour)
 		campaign := Campaign{
-			ID:             "camp-5",
-			Status:         CampaignStatusArchived,
-			CreatedAt:      baseTime,
-			LastActivityAt: baseTime,
-			UpdatedAt:      baseTime,
-			CompletedAt:    &completedAt,
-			ArchivedAt:     &archivedAt,
+			ID:          "camp-5",
+			Status:      CampaignStatusArchived,
+			CreatedAt:   baseTime,
+			UpdatedAt:   baseTime,
+			CompletedAt: &completedAt,
+			ArchivedAt:  &archivedAt,
 		}
 		updated, err := TransitionCampaignStatus(campaign, CampaignStatusDraft, func() time.Time {
 			return transitionTime

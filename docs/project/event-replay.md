@@ -10,6 +10,11 @@ together, and how to replay events to rebuild derived state.
 - **Snapshot**: a materialized projection derived from the event journal at a
   specific sequence to speed up replay. Snapshots are not authoritative.
 
+## Invariant
+
+- **Events-only writes**: services must not write to projection stores directly.
+- **Emitter/applier split**: emitters append to `game-events`; appliers/adapters are the only writers to `game-projections`.
+
 Snapshots never replace the event journal; they only accelerate rebuilds.
 
 ## Event integrity and tamper resistance

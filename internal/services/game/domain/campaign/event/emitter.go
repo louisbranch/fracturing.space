@@ -92,23 +92,6 @@ func (e *Emitter) EmitCampaignForked(ctx context.Context, campaignID string, pay
 	})
 }
 
-// EmitCampaignStatusChanged emits a campaign.status_changed event.
-func (e *Emitter) EmitCampaignStatusChanged(ctx context.Context, campaignID, actorID string, payload CampaignStatusChangedPayload) (Event, error) {
-	actorType := ActorTypeSystem
-	if actorID != "" {
-		actorType = ActorTypeParticipant
-	}
-	return e.Emit(ctx, EmitInput{
-		CampaignID: campaignID,
-		Type:       TypeCampaignStatusChanged,
-		ActorType:  actorType,
-		ActorID:    actorID,
-		EntityType: "campaign",
-		EntityID:   campaignID,
-		Payload:    payload,
-	})
-}
-
 // EmitParticipantJoined emits a participant.joined event.
 func (e *Emitter) EmitParticipantJoined(ctx context.Context, campaignID string, payload ParticipantJoinedPayload) (Event, error) {
 	return e.Emit(ctx, EmitInput{
@@ -146,59 +129,6 @@ func (e *Emitter) EmitProfileUpdated(ctx context.Context, campaignID, actorID st
 		ActorID:    actorID,
 		EntityType: "character",
 		EntityID:   payload.CharacterID,
-		Payload:    payload,
-	})
-}
-
-// EmitControllerAssigned emits a character.controller_assigned event.
-func (e *Emitter) EmitControllerAssigned(ctx context.Context, campaignID, actorID string, payload ControllerAssignedPayload) (Event, error) {
-	actorType := ActorTypeSystem
-	if actorID != "" {
-		actorType = ActorTypeGM
-	}
-	return e.Emit(ctx, EmitInput{
-		CampaignID: campaignID,
-		Type:       TypeControllerAssigned,
-		ActorType:  actorType,
-		ActorID:    actorID,
-		EntityType: "character",
-		EntityID:   payload.CharacterID,
-		Payload:    payload,
-	})
-}
-
-// EmitCharacterStateChanged emits a snapshot character state changed event.
-func (e *Emitter) EmitCharacterStateChanged(ctx context.Context, campaignID, sessionID, actorID string, payload CharacterStateChangedPayload) (Event, error) {
-	actorType := ActorTypeSystem
-	if actorID != "" {
-		actorType = ActorTypeGM
-	}
-	return e.Emit(ctx, EmitInput{
-		CampaignID: campaignID,
-		Type:       TypeCharacterStateChanged,
-		SessionID:  sessionID,
-		ActorType:  actorType,
-		ActorID:    actorID,
-		EntityType: "character",
-		EntityID:   payload.CharacterID,
-		Payload:    payload,
-	})
-}
-
-// EmitGMFearChanged emits a snapshot GM fear changed event.
-func (e *Emitter) EmitGMFearChanged(ctx context.Context, campaignID, sessionID, actorID string, payload GMFearChangedPayload) (Event, error) {
-	actorType := ActorTypeSystem
-	if actorID != "" {
-		actorType = ActorTypeGM
-	}
-	return e.Emit(ctx, EmitInput{
-		CampaignID: campaignID,
-		Type:       TypeGMFearChanged,
-		SessionID:  sessionID,
-		ActorType:  actorType,
-		ActorID:    actorID,
-		EntityType: "snapshot",
-		EntityID:   campaignID,
 		Payload:    payload,
 	})
 }

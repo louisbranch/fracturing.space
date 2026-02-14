@@ -11,8 +11,11 @@ func TestCharacterState_ResourceHolder(t *testing.T) {
 		HP:          10,
 		HPMax:       10,
 		Hope:        2,
+		HopeMax:     HopeMax,
 		Stress:      0,
 		StressMax:   6,
+		Armor:       1,
+		ArmorMax:    2,
 	})
 
 	// Test GainResource for Hope
@@ -96,6 +99,9 @@ func TestCharacterState_ResourceHolder(t *testing.T) {
 		if v := state.ResourceValue(ResourceStress); v != 2 {
 			t.Errorf("stress = %d, want 2", v)
 		}
+		if v := state.ResourceValue(ResourceArmor); v != 1 {
+			t.Errorf("armor = %d, want 1", v)
+		}
 		if v := state.ResourceValue("unknown"); v != 0 {
 			t.Errorf("unknown = %d, want 0", v)
 		}
@@ -109,16 +115,20 @@ func TestCharacterState_ResourceHolder(t *testing.T) {
 		if v := state.ResourceCap(ResourceStress); v != 6 {
 			t.Errorf("stress cap = %d, want 6", v)
 		}
+		if v := state.ResourceCap(ResourceArmor); v != 2 {
+			t.Errorf("armor cap = %d, want 2", v)
+		}
 	})
 
 	// Test ResourceNames
 	t.Run("ResourceNames", func(t *testing.T) {
 		names := state.ResourceNames()
-		if len(names) != 2 {
-			t.Fatalf("len(names) = %d, want 2", len(names))
+		if len(names) != 3 {
+			t.Fatalf("len(names) = %d, want 3", len(names))
 		}
 		hasHope := false
 		hasStress := false
+		hasArmor := false
 		for _, name := range names {
 			if name == ResourceHope {
 				hasHope = true
@@ -126,11 +136,51 @@ func TestCharacterState_ResourceHolder(t *testing.T) {
 			if name == ResourceStress {
 				hasStress = true
 			}
+			if name == ResourceArmor {
+				hasArmor = true
+			}
 		}
-		if !hasHope || !hasStress {
-			t.Errorf("expected hope and stress in names, got %v", names)
+		if !hasHope || !hasStress || !hasArmor {
+			t.Errorf("expected hope, stress, armor in names, got %v", names)
 		}
 	})
+}
+
+func TestCharacterState_ClampsConfig(t *testing.T) {
+	state := NewCharacterState(CharacterStateConfig{
+		CampaignID:  "camp-1",
+		CharacterID: "char-1",
+		HP:          20,
+		HPMax:       20,
+		Hope:        10,
+		HopeMax:     HopeMax,
+		Stress:      20,
+		StressMax:   20,
+		Armor:       5,
+		ArmorMax:    20,
+	})
+
+	if v := state.MaxHP(); v != HPMaxCap {
+		t.Fatalf("MaxHP = %d, want %d", v, HPMaxCap)
+	}
+	if v := state.CurrentHP(); v != HPMaxCap {
+		t.Fatalf("CurrentHP = %d, want %d", v, HPMaxCap)
+	}
+	if v := state.ResourceCap(ResourceStress); v != StressMaxCap {
+		t.Fatalf("Stress cap = %d, want %d", v, StressMaxCap)
+	}
+	if v := state.ResourceValue(ResourceStress); v != StressMaxCap {
+		t.Fatalf("Stress = %d, want %d", v, StressMaxCap)
+	}
+	if v := state.ResourceCap(ResourceArmor); v != ArmorMaxCap {
+		t.Fatalf("Armor cap = %d, want %d", v, ArmorMaxCap)
+	}
+	if v := state.ResourceValue(ResourceArmor); v != 5 {
+		t.Fatalf("Armor = %d, want %d", v, 5)
+	}
+	if v := state.ResourceValue(ResourceHope); v != HopeMax {
+		t.Fatalf("Hope = %d, want %d", v, HopeMax)
+	}
 }
 
 func TestCharacterState_Healable(t *testing.T) {
@@ -140,6 +190,7 @@ func TestCharacterState_Healable(t *testing.T) {
 		HP:          5,
 		HPMax:       10,
 		Hope:        2,
+		HopeMax:     HopeMax,
 		Stress:      0,
 		StressMax:   6,
 	})
@@ -176,6 +227,7 @@ func TestCharacterState_Damageable(t *testing.T) {
 		HP:          10,
 		HPMax:       10,
 		Hope:        2,
+		HopeMax:     HopeMax,
 		Stress:      0,
 		StressMax:   6,
 	})

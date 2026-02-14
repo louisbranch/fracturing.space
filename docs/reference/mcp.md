@@ -176,7 +176,6 @@ Creates a new campaign metadata record.
   "character_count": 0,
   "theme_prompt": "A dark fantasy campaign set in a cursed forest",
   "created_at": "2025-01-15T10:00:00Z",
-  "last_activity_at": "2025-01-15T10:00:00Z",
   "updated_at": "2025-01-15T10:00:00Z"
 }
 ```
@@ -207,7 +206,6 @@ Marks a campaign as completed.
   "character_count": 2,
   "theme_prompt": "A dark fantasy campaign set in a cursed forest",
   "created_at": "2025-01-15T10:00:00Z",
-  "last_activity_at": "2025-01-20T18:45:00Z",
   "updated_at": "2025-01-20T18:45:00Z",
   "completed_at": "2025-01-20T18:45:00Z"
 }
@@ -237,7 +235,6 @@ Archives a campaign.
   "character_count": 2,
   "theme_prompt": "A dark fantasy campaign set in a cursed forest",
   "created_at": "2025-01-15T10:00:00Z",
-  "last_activity_at": "2025-01-20T18:45:00Z",
   "updated_at": "2025-01-20T18:50:00Z",
   "archived_at": "2025-01-20T18:50:00Z"
 }
@@ -267,7 +264,6 @@ Restores an archived campaign to draft.
   "character_count": 2,
   "theme_prompt": "A dark fantasy campaign set in a cursed forest",
   "created_at": "2025-01-15T10:00:00Z",
-  "last_activity_at": "2025-01-20T18:45:00Z",
   "updated_at": "2025-01-21T09:00:00Z"
 }
 ```
@@ -1023,7 +1019,6 @@ When `completed_at` or `archived_at` are unset, the fields are omitted from the 
       "character_count": 2,
       "theme_prompt": "A dark fantasy campaign set in a cursed forest",
       "created_at": "2025-01-15T10:00:00Z",
-      "last_activity_at": "2025-01-17T09:15:00Z",
       "updated_at": "2025-01-15T10:00:00Z"
     }
   ]
@@ -1051,7 +1046,6 @@ The `{campaign_id}` must be replaced with an actual campaign identifier when rea
     "character_count": 2,
     "theme_prompt": "A dark fantasy campaign set in a cursed forest",
     "created_at": "2025-01-15T10:00:00Z",
-    "last_activity_at": "2025-01-20T18:45:00Z",
     "updated_at": "2025-01-20T18:45:00Z",
     "completed_at": "2025-01-20T18:45:00Z"
   }

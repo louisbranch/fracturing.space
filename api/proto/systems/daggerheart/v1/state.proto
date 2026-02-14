@@ -2,49 +2,101 @@ syntax = "proto3";
 
 package systems.daggerheart.v1;
 
+import "common/v1/rng.proto";
 import "google/protobuf/wrappers.proto";
 
 option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1;daggerheartv1";
+
+// DaggerheartExperience captures a named experience and modifier.
+message DaggerheartExperience {
+  string name = 1;
+  int32 modifier = 2;
+}
 
 // DaggerheartProfile contains Daggerheart-specific character profile extensions.
 // These are static values configured at character creation.
 // Wrapper types allow distinguishing "not provided" from "set to zero" in patches.
 message DaggerheartProfile {
-  // Maximum stress before breakdown (typically 6).
-  // Wrapper type allows setting to 0 explicitly (e.g., for NPCs).
-  google.protobuf.Int32Value stress_max = 1;
-  // Evasion target number for attacks against this character.
-  // Wrapper type allows setting to 0 explicitly.
-  google.protobuf.Int32Value evasion = 2;
-  // Damage threshold for major wounds.
-  // Wrapper type allows setting to 0 explicitly.
-  google.protobuf.Int32Value major_threshold = 3;
-  // Damage threshold for severe wounds.
-  // Wrapper type allows setting to 0 explicitly.
-  google.protobuf.Int32Value severe_threshold = 4;
-
-  // Daggerheart traits (range: -2 to +4).
-  google.protobuf.Int32Value agility = 5;
-  google.protobuf.Int32Value strength = 6;
-  google.protobuf.Int32Value finesse = 7;
-  google.protobuf.Int32Value instinct = 8;
-  google.protobuf.Int32Value presence = 9;
-  google.protobuf.Int32Value knowledge = 10;
-
+  // Character level (1-10).
+  // Plain int32: 0 is never valid, so 0 means "not provided" in patches.
+  int32 level = 1;
   // Maximum hit points (typically 6 for PCs, 3 for NPCs).
   // Plain int32: 0 is never valid (can't have 0 max HP), so current behavior is correct.
-  int32 hp_max = 11;
+  int32 hp_max = 2;
+  // Maximum stress before breakdown (typically 6).
+  // Wrapper type allows setting to 0 explicitly (e.g., for NPCs).
+  google.protobuf.Int32Value stress_max = 3;
+  // Evasion target number for attacks against this character.
+  // Wrapper type allows setting to 0 explicitly.
+  google.protobuf.Int32Value evasion = 4;
+  // Damage threshold for major wounds.
+  // Wrapper type allows setting to 0 explicitly.
+  google.protobuf.Int32Value major_threshold = 5;
+  // Damage threshold for severe wounds.
+  // Wrapper type allows setting to 0 explicitly.
+  google.protobuf.Int32Value severe_threshold = 6;
+
+  // Damage proficiency for weapons and attacks.
+  google.protobuf.Int32Value proficiency = 7;
+  // Armor base score.
+  google.protobuf.Int32Value armor_score = 8;
+  // Maximum armor slots.
+  google.protobuf.Int32Value armor_max = 9;
+
+  // Daggerheart traits (range: -2 to +4).
+  google.protobuf.Int32Value agility = 10;
+  google.protobuf.Int32Value strength = 11;
+  google.protobuf.Int32Value finesse = 12;
+  google.protobuf.Int32Value instinct = 13;
+  google.protobuf.Int32Value presence = 14;
+  google.protobuf.Int32Value knowledge = 15;
+
+  // Character experiences.
+  repeated DaggerheartExperience experiences = 16;
+}
+
+// DaggerheartCondition enumerates supported character conditions.
+enum DaggerheartCondition {
+  DAGGERHEART_CONDITION_UNSPECIFIED = 0;
+  DAGGERHEART_CONDITION_HIDDEN = 1;
+  DAGGERHEART_CONDITION_RESTRAINED = 2;
+  DAGGERHEART_CONDITION_VULNERABLE = 3;
+}
+
+// DaggerheartLifeState represents a character's life state.
+enum DaggerheartLifeState {
+  DAGGERHEART_LIFE_STATE_UNSPECIFIED = 0;
+  DAGGERHEART_LIFE_STATE_ALIVE = 1;
+  DAGGERHEART_LIFE_STATE_UNCONSCIOUS = 2;
+  DAGGERHEART_LIFE_STATE_BLAZE_OF_GLORY = 3;
+  DAGGERHEART_LIFE_STATE_DEAD = 4;
+}
+
+// DaggerheartDeathMove enumerates supported death move options.
+enum DaggerheartDeathMove {
+  DAGGERHEART_DEATH_MOVE_UNSPECIFIED = 0;
+  DAGGERHEART_DEATH_MOVE_BLAZE_OF_GLORY = 1;
+  DAGGERHEART_DEATH_MOVE_AVOID_DEATH = 2;
+  DAGGERHEART_DEATH_MOVE_RISK_IT_ALL = 3;
 }
 
 // DaggerheartCharacterState contains Daggerheart-specific mutable character state.
 // This is materialized as a projection derived from the event journal.
 message DaggerheartCharacterState {
-  // Current hope value (0-6).
-  int32 hope = 1;
-  // Current stress value (0 to stress_max from profile).
-  int32 stress = 2;
   // Current hit points (0 to hp_max from profile).
-  int32 hp = 3;
+  int32 hp = 1;
+  // Current hope value (0-6).
+  int32 hope = 2;
+  // Maximum hope slots (reduced by scars).
+  int32 hope_max = 3;
+  // Current stress value (0 to stress_max from profile).
+  int32 stress = 4;
+  // Current armor slots (0 to armor_max from profile).
+  int32 armor = 5;
+  // Active conditions for the character.
+  repeated DaggerheartCondition conditions = 6;
+  // Current life state.
+  DaggerheartLifeState life_state = 7;
 }
 
 // DaggerheartSnapshot contains Daggerheart-specific campaign-level state.
@@ -52,4 +104,58 @@ message DaggerheartCharacterState {
 message DaggerheartSnapshot {
   // Current GM Fear value (0-12).
   int32 gm_fear = 1;
+  // Count of consecutive short rests.
+  int32 consecutive_short_rests = 2;
+}
+
+enum DaggerheartRestType {
+  DAGGERHEART_REST_TYPE_UNSPECIFIED = 0;
+  DAGGERHEART_REST_TYPE_SHORT = 1;
+  DAGGERHEART_REST_TYPE_LONG = 2;
+}
+
+enum DaggerheartDowntimeMove {
+  DAGGERHEART_DOWNTIME_MOVE_UNSPECIFIED = 0;
+  DAGGERHEART_DOWNTIME_MOVE_CLEAR_ALL_STRESS = 1;
+  DAGGERHEART_DOWNTIME_MOVE_REPAIR_ALL_ARMOR = 2;
+  DAGGERHEART_DOWNTIME_MOVE_PREPARE = 3;
+  DAGGERHEART_DOWNTIME_MOVE_WORK_ON_PROJECT = 4;
+}
+
+enum DaggerheartDamageType {
+  DAGGERHEART_DAMAGE_TYPE_UNSPECIFIED = 0;
+  DAGGERHEART_DAMAGE_TYPE_PHYSICAL = 1;
+  DAGGERHEART_DAMAGE_TYPE_MAGIC = 2;
+  DAGGERHEART_DAMAGE_TYPE_MIXED = 3;
+}
+
+message DaggerheartDamageRequest {
+  int32 amount = 1;
+  DaggerheartDamageType damage_type = 2;
+  bool resist_physical = 3;
+  bool resist_magic = 4;
+  bool immune_physical = 5;
+  bool immune_magic = 6;
+  bool direct = 7;
+  bool massive_damage = 8;
+  string source = 9;
+  repeated string source_character_ids = 10;
+}
+
+message DaggerheartRestRequest {
+  DaggerheartRestType rest_type = 1;
+  bool interrupted = 2;
+  int32 party_size = 3;
+  common.v1.RngRequest rng = 4;
+}
+
+message DaggerheartDowntimeRequest {
+  DaggerheartDowntimeMove move = 1;
+  bool prepare_with_group = 2;
+}
+
+message DaggerheartLoadoutSwapRequest {
+  string card_id = 1;
+  int32 recall_cost = 2;
+  bool in_rest = 3;
 }

@@ -78,6 +78,26 @@ func TestActionRollAcceptsReplaySeed(t *testing.T) {
 	assertResponseMatches(t, response, int64(seed), random.SeedSourceClient, commonv1.RollMode_REPLAY, 1, nil)
 }
 
+func TestActionRollWithAdvantage(t *testing.T) {
+	seed := uint64(77)
+	server := newTestService(11)
+
+	response, err := server.ActionRoll(context.Background(), &pb.ActionRollRequest{
+		Modifier:  1,
+		Advantage: 1,
+		Rng: &commonv1.RngRequest{
+			Seed:     &seed,
+			RollMode: commonv1.RollMode_REPLAY,
+		},
+	})
+	if err != nil {
+		t.Fatalf("ActionRoll returned error: %v", err)
+	}
+	if response.GetAdvantageDie() == 0 {
+		t.Fatal("expected advantage_die to be set")
+	}
+}
+
 func TestActionRollSeedFailure(t *testing.T) {
 	server := &DaggerheartService{
 		seedFunc: func() (int64, error) {
@@ -166,6 +186,71 @@ func TestDualityExplainReturnsExplanation(t *testing.T) {
 		Modifier:   1,
 		Difficulty: intPointer(&difficulty),
 	})
+}
+
+func TestMechanicsOutcomeConsistency(t *testing.T) {
+	server := newTestService(42)
+
+	difficulty := int32(12)
+	modifier := int32(-1)
+	seed := uint64(100)
+
+	actionResponse, err := server.ActionRoll(context.Background(), &pb.ActionRollRequest{
+		Modifier:   modifier,
+		Difficulty: &difficulty,
+		Rng: &commonv1.RngRequest{
+			Seed:     &seed,
+			RollMode: commonv1.RollMode_REPLAY,
+		},
+	})
+	if err != nil {
+		t.Fatalf("ActionRoll returned error: %v", err)
+	}
+
+	outcomeResponse, err := server.DualityOutcome(context.Background(), &pb.DualityOutcomeRequest{
+		Hope:       actionResponse.GetHope(),
+		Fear:       actionResponse.GetFear(),
+		Modifier:   modifier,
+		Difficulty: &difficulty,
+	})
+	if err != nil {
+		t.Fatalf("DualityOutcome returned error: %v", err)
+	}
+
+	explainResponse, err := server.DualityExplain(context.Background(), &pb.DualityExplainRequest{
+		Hope:       actionResponse.GetHope(),
+		Fear:       actionResponse.GetFear(),
+		Modifier:   modifier,
+		Difficulty: &difficulty,
+	})
+	if err != nil {
+		t.Fatalf("DualityExplain returned error: %v", err)
+	}
+
+	if outcomeResponse.GetOutcome() != actionResponse.GetOutcome() {
+		t.Fatalf("outcome mismatch: action %v, outcome %v", actionResponse.GetOutcome(), outcomeResponse.GetOutcome())
+	}
+	if explainResponse.GetOutcome() != actionResponse.GetOutcome() {
+		t.Fatalf("outcome mismatch: action %v, explain %v", actionResponse.GetOutcome(), explainResponse.GetOutcome())
+	}
+	if outcomeResponse.GetTotal() != actionResponse.GetTotal() {
+		t.Fatalf("total mismatch: action %d, outcome %d", actionResponse.GetTotal(), outcomeResponse.GetTotal())
+	}
+	if explainResponse.GetTotal() != actionResponse.GetTotal() {
+		t.Fatalf("total mismatch: action %d, explain %d", actionResponse.GetTotal(), explainResponse.GetTotal())
+	}
+	if outcomeResponse.GetIsCrit() != actionResponse.GetIsCrit() {
+		t.Fatalf("crit mismatch: action %t, outcome %t", actionResponse.GetIsCrit(), outcomeResponse.GetIsCrit())
+	}
+	if explainResponse.GetIsCrit() != actionResponse.GetIsCrit() {
+		t.Fatalf("crit mismatch: action %t, explain %t", actionResponse.GetIsCrit(), explainResponse.GetIsCrit())
+	}
+	if outcomeResponse.GetMeetsDifficulty() != actionResponse.GetMeetsDifficulty() {
+		t.Fatalf("meets difficulty mismatch: action %t, outcome %t", actionResponse.GetMeetsDifficulty(), outcomeResponse.GetMeetsDifficulty())
+	}
+	if explainResponse.GetMeetsDifficulty() != actionResponse.GetMeetsDifficulty() {
+		t.Fatalf("meets difficulty mismatch: action %t, explain %t", actionResponse.GetMeetsDifficulty(), explainResponse.GetMeetsDifficulty())
+	}
 }
 
 func TestDualityProbabilityRejectsNilRequest(t *testing.T) {
@@ -388,6 +473,12 @@ func assertResponseMatches(t *testing.T, response *pb.ActionRollResponse, seed i
 	}
 	if response.GetModifier() != int32(result.Modifier) {
 		t.Fatalf("ActionRoll modifier = %d, want %d", response.GetModifier(), result.Modifier)
+	}
+	if response.GetAdvantageDie() != int32(result.AdvantageDie) {
+		t.Fatalf("ActionRoll advantage_die = %d, want %d", response.GetAdvantageDie(), result.AdvantageDie)
+	}
+	if response.GetAdvantageModifier() != int32(result.AdvantageModifier) {
+		t.Fatalf("ActionRoll advantage_modifier = %d, want %d", response.GetAdvantageModifier(), result.AdvantageModifier)
 	}
 	if response.Total != int32(result.Total) {
 		t.Fatalf("ActionRoll total = %d, want %d", response.Total, result.Total)

@@ -57,6 +57,9 @@ func TestCreateInvite_Success(t *testing.T) {
 	if resp.Invite.Id != "invite-123" {
 		t.Fatalf("invite id = %s, want invite-123", resp.Invite.Id)
 	}
+	if eventStore.events["campaign-1"][0].Type != event.TypeInviteCreated {
+		t.Fatalf("event type = %s, want %s", eventStore.events["campaign-1"][0].Type, event.TypeInviteCreated)
+	}
 }
 
 func TestRevokeInvite_AlreadyClaimed(t *testing.T) {
