@@ -118,6 +118,7 @@ func NewWithAddr(addr string) (*Server, error) {
 	forkService := gamegrpc.NewForkService(stores)
 	eventService := gamegrpc.NewEventService(stores)
 	statisticsService := gamegrpc.NewStatisticsService(stores)
+	systemService := gamegrpc.NewSystemService(nil)
 	healthServer := health.NewServer()
 	daggerheartv1.RegisterDaggerheartServiceServer(grpcServer, daggerheartService)
 	daggerheartv1.RegisterDaggerheartContentServiceServer(grpcServer, contentService)
@@ -130,6 +131,7 @@ func NewWithAddr(addr string) (*Server, error) {
 	statev1.RegisterForkServiceServer(grpcServer, forkService)
 	statev1.RegisterEventServiceServer(grpcServer, eventService)
 	statev1.RegisterStatisticsServiceServer(grpcServer, statisticsService)
+	statev1.RegisterSystemServiceServer(grpcServer, systemService)
 	grpc_health_v1.RegisterHealthServer(grpcServer, healthServer)
 	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("systems.daggerheart.v1.DaggerheartService", grpc_health_v1.HealthCheckResponse_SERVING)
@@ -143,6 +145,7 @@ func NewWithAddr(addr string) (*Server, error) {
 	healthServer.SetServingStatus("game.v1.ForkService", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("game.v1.EventService", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("game.v1.StatisticsService", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus("game.v1.SystemService", grpc_health_v1.HealthCheckResponse_SERVING)
 
 	return &Server{
 		listener:     listener,

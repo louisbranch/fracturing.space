@@ -33,6 +33,9 @@ templ DashboardContent(stats DashboardStats, activities []ActivityEvent, loc Loc
 templ DashboardStatsCards(stats DashboardStats, loc Localizer) {
 	<div class="row">
 		<div class="sm-6 md-2 col">
+			@StatCard(T(loc, "dashboard.stats.systems"), stats.TotalSystems, "")
+		</div>
+		<div class="sm-6 md-2 col">
 			@StatCard(T(loc, "dashboard.stats.users"), stats.TotalUsers, "")
 		</div>
 		<div class="sm-6 md-2 col">

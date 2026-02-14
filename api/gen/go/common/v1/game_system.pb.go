@@ -69,6 +69,174 @@ func (GameSystem) EnumDescriptor() ([]byte, []int) {
 	return file_common_v1_game_system_proto_rawDescGZIP(), []int{0}
 }
 
+// GameSystemImplementationStage indicates how complete a system is.
+type GameSystemImplementationStage int32
+
+const (
+	GameSystemImplementationStage_GAME_SYSTEM_IMPLEMENTATION_STAGE_UNSPECIFIED GameSystemImplementationStage = 0
+	GameSystemImplementationStage_GAME_SYSTEM_IMPLEMENTATION_STAGE_PLANNED     GameSystemImplementationStage = 1
+	GameSystemImplementationStage_GAME_SYSTEM_IMPLEMENTATION_STAGE_PARTIAL     GameSystemImplementationStage = 2
+	GameSystemImplementationStage_GAME_SYSTEM_IMPLEMENTATION_STAGE_COMPLETE    GameSystemImplementationStage = 3
+	GameSystemImplementationStage_GAME_SYSTEM_IMPLEMENTATION_STAGE_DEPRECATED  GameSystemImplementationStage = 4
+)
+
+// Enum value maps for GameSystemImplementationStage.
+var (
+	GameSystemImplementationStage_name = map[int32]string{
+		0: "GAME_SYSTEM_IMPLEMENTATION_STAGE_UNSPECIFIED",
+		1: "GAME_SYSTEM_IMPLEMENTATION_STAGE_PLANNED",
+		2: "GAME_SYSTEM_IMPLEMENTATION_STAGE_PARTIAL",
+		3: "GAME_SYSTEM_IMPLEMENTATION_STAGE_COMPLETE",
+		4: "GAME_SYSTEM_IMPLEMENTATION_STAGE_DEPRECATED",
+	}
+	GameSystemImplementationStage_value = map[string]int32{
+		"GAME_SYSTEM_IMPLEMENTATION_STAGE_UNSPECIFIED": 0,
+		"GAME_SYSTEM_IMPLEMENTATION_STAGE_PLANNED":     1,
+		"GAME_SYSTEM_IMPLEMENTATION_STAGE_PARTIAL":     2,
+		"GAME_SYSTEM_IMPLEMENTATION_STAGE_COMPLETE":    3,
+		"GAME_SYSTEM_IMPLEMENTATION_STAGE_DEPRECATED":  4,
+	}
+)
+
+func (x GameSystemImplementationStage) Enum() *GameSystemImplementationStage {
+	p := new(GameSystemImplementationStage)
+	*p = x
+	return p
+}
+
+func (x GameSystemImplementationStage) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (GameSystemImplementationStage) Descriptor() protoreflect.EnumDescriptor {
+	return file_common_v1_game_system_proto_enumTypes[1].Descriptor()
+}
+
+func (GameSystemImplementationStage) Type() protoreflect.EnumType {
+	return &file_common_v1_game_system_proto_enumTypes[1]
+}
+
+func (x GameSystemImplementationStage) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use GameSystemImplementationStage.Descriptor instead.
+func (GameSystemImplementationStage) EnumDescriptor() ([]byte, []int) {
+	return file_common_v1_game_system_proto_rawDescGZIP(), []int{1}
+}
+
+// GameSystemOperationalStatus indicates runtime availability.
+type GameSystemOperationalStatus int32
+
+const (
+	GameSystemOperationalStatus_GAME_SYSTEM_OPERATIONAL_STATUS_UNSPECIFIED GameSystemOperationalStatus = 0
+	GameSystemOperationalStatus_GAME_SYSTEM_OPERATIONAL_STATUS_OFFLINE     GameSystemOperationalStatus = 1
+	GameSystemOperationalStatus_GAME_SYSTEM_OPERATIONAL_STATUS_DEGRADED    GameSystemOperationalStatus = 2
+	GameSystemOperationalStatus_GAME_SYSTEM_OPERATIONAL_STATUS_OPERATIONAL GameSystemOperationalStatus = 3
+	GameSystemOperationalStatus_GAME_SYSTEM_OPERATIONAL_STATUS_MAINTENANCE GameSystemOperationalStatus = 4
+)
+
+// Enum value maps for GameSystemOperationalStatus.
+var (
+	GameSystemOperationalStatus_name = map[int32]string{
+		0: "GAME_SYSTEM_OPERATIONAL_STATUS_UNSPECIFIED",
+		1: "GAME_SYSTEM_OPERATIONAL_STATUS_OFFLINE",
+		2: "GAME_SYSTEM_OPERATIONAL_STATUS_DEGRADED",
+		3: "GAME_SYSTEM_OPERATIONAL_STATUS_OPERATIONAL",
+		4: "GAME_SYSTEM_OPERATIONAL_STATUS_MAINTENANCE",
+	}
+	GameSystemOperationalStatus_value = map[string]int32{
+		"GAME_SYSTEM_OPERATIONAL_STATUS_UNSPECIFIED": 0,
+		"GAME_SYSTEM_OPERATIONAL_STATUS_OFFLINE":     1,
+		"GAME_SYSTEM_OPERATIONAL_STATUS_DEGRADED":    2,
+		"GAME_SYSTEM_OPERATIONAL_STATUS_OPERATIONAL": 3,
+		"GAME_SYSTEM_OPERATIONAL_STATUS_MAINTENANCE": 4,
+	}
+)
+
+func (x GameSystemOperationalStatus) Enum() *GameSystemOperationalStatus {
+	p := new(GameSystemOperationalStatus)
+	*p = x
+	return p
+}
+
+func (x GameSystemOperationalStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (GameSystemOperationalStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_common_v1_game_system_proto_enumTypes[2].Descriptor()
+}
+
+func (GameSystemOperationalStatus) Type() protoreflect.EnumType {
+	return &file_common_v1_game_system_proto_enumTypes[2]
+}
+
+func (x GameSystemOperationalStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use GameSystemOperationalStatus.Descriptor instead.
+func (GameSystemOperationalStatus) EnumDescriptor() ([]byte, []int) {
+	return file_common_v1_game_system_proto_rawDescGZIP(), []int{2}
+}
+
+// GameSystemAccessLevel indicates who can access a system.
+type GameSystemAccessLevel int32
+
+const (
+	GameSystemAccessLevel_GAME_SYSTEM_ACCESS_LEVEL_UNSPECIFIED GameSystemAccessLevel = 0
+	GameSystemAccessLevel_GAME_SYSTEM_ACCESS_LEVEL_INTERNAL    GameSystemAccessLevel = 1
+	GameSystemAccessLevel_GAME_SYSTEM_ACCESS_LEVEL_BETA        GameSystemAccessLevel = 2
+	GameSystemAccessLevel_GAME_SYSTEM_ACCESS_LEVEL_PUBLIC      GameSystemAccessLevel = 3
+	GameSystemAccessLevel_GAME_SYSTEM_ACCESS_LEVEL_RETIRED     GameSystemAccessLevel = 4
+)
+
+// Enum value maps for GameSystemAccessLevel.
+var (
+	GameSystemAccessLevel_name = map[int32]string{
+		0: "GAME_SYSTEM_ACCESS_LEVEL_UNSPECIFIED",
+		1: "GAME_SYSTEM_ACCESS_LEVEL_INTERNAL",
+		2: "GAME_SYSTEM_ACCESS_LEVEL_BETA",
+		3: "GAME_SYSTEM_ACCESS_LEVEL_PUBLIC",
+		4: "GAME_SYSTEM_ACCESS_LEVEL_RETIRED",
+	}
+	GameSystemAccessLevel_value = map[string]int32{
+		"GAME_SYSTEM_ACCESS_LEVEL_UNSPECIFIED": 0,
+		"GAME_SYSTEM_ACCESS_LEVEL_INTERNAL":    1,
+		"GAME_SYSTEM_ACCESS_LEVEL_BETA":        2,
+		"GAME_SYSTEM_ACCESS_LEVEL_PUBLIC":      3,
+		"GAME_SYSTEM_ACCESS_LEVEL_RETIRED":     4,
+	}
+)
+
+func (x GameSystemAccessLevel) Enum() *GameSystemAccessLevel {
+	p := new(GameSystemAccessLevel)
+	*p = x
+	return p
+}
+
+func (x GameSystemAccessLevel) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (GameSystemAccessLevel) Descriptor() protoreflect.EnumDescriptor {
+	return file_common_v1_game_system_proto_enumTypes[3].Descriptor()
+}
+
+func (GameSystemAccessLevel) Type() protoreflect.EnumType {
+	return &file_common_v1_game_system_proto_enumTypes[3]
+}
+
+func (x GameSystemAccessLevel) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use GameSystemAccessLevel.Descriptor instead.
+func (GameSystemAccessLevel) EnumDescriptor() ([]byte, []int) {
+	return file_common_v1_game_system_proto_rawDescGZIP(), []int{3}
+}
+
 var File_common_v1_game_system_proto protoreflect.FileDescriptor
 
 const file_common_v1_game_system_proto_rawDesc = "" +
@@ -77,7 +245,25 @@ const file_common_v1_game_system_proto_rawDesc = "" +
 	"\n" +
 	"GameSystem\x12\x1b\n" +
 	"\x17GAME_SYSTEM_UNSPECIFIED\x10\x00\x12\x1b\n" +
-	"\x17GAME_SYSTEM_DAGGERHEART\x10\x01BGZEgithub.com/louisbranch/fracturing.space/api/gen/go/common/v1;commonv1b\x06proto3"
+	"\x17GAME_SYSTEM_DAGGERHEART\x10\x01*\x8d\x02\n" +
+	"\x1dGameSystemImplementationStage\x120\n" +
+	",GAME_SYSTEM_IMPLEMENTATION_STAGE_UNSPECIFIED\x10\x00\x12,\n" +
+	"(GAME_SYSTEM_IMPLEMENTATION_STAGE_PLANNED\x10\x01\x12,\n" +
+	"(GAME_SYSTEM_IMPLEMENTATION_STAGE_PARTIAL\x10\x02\x12-\n" +
+	")GAME_SYSTEM_IMPLEMENTATION_STAGE_COMPLETE\x10\x03\x12/\n" +
+	"+GAME_SYSTEM_IMPLEMENTATION_STAGE_DEPRECATED\x10\x04*\x86\x02\n" +
+	"\x1bGameSystemOperationalStatus\x12.\n" +
+	"*GAME_SYSTEM_OPERATIONAL_STATUS_UNSPECIFIED\x10\x00\x12*\n" +
+	"&GAME_SYSTEM_OPERATIONAL_STATUS_OFFLINE\x10\x01\x12+\n" +
+	"'GAME_SYSTEM_OPERATIONAL_STATUS_DEGRADED\x10\x02\x12.\n" +
+	"*GAME_SYSTEM_OPERATIONAL_STATUS_OPERATIONAL\x10\x03\x12.\n" +
+	"*GAME_SYSTEM_OPERATIONAL_STATUS_MAINTENANCE\x10\x04*\xd6\x01\n" +
+	"\x15GameSystemAccessLevel\x12(\n" +
+	"$GAME_SYSTEM_ACCESS_LEVEL_UNSPECIFIED\x10\x00\x12%\n" +
+	"!GAME_SYSTEM_ACCESS_LEVEL_INTERNAL\x10\x01\x12!\n" +
+	"\x1dGAME_SYSTEM_ACCESS_LEVEL_BETA\x10\x02\x12#\n" +
+	"\x1fGAME_SYSTEM_ACCESS_LEVEL_PUBLIC\x10\x03\x12$\n" +
+	" GAME_SYSTEM_ACCESS_LEVEL_RETIRED\x10\x04BGZEgithub.com/louisbranch/fracturing.space/api/gen/go/common/v1;commonv1b\x06proto3"
 
 var (
 	file_common_v1_game_system_proto_rawDescOnce sync.Once
@@ -91,9 +277,12 @@ func file_common_v1_game_system_proto_rawDescGZIP() []byte {
 	return file_common_v1_game_system_proto_rawDescData
 }
 
-var file_common_v1_game_system_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_common_v1_game_system_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
 var file_common_v1_game_system_proto_goTypes = []any{
-	(GameSystem)(0), // 0: common.v1.GameSystem
+	(GameSystem)(0),                    // 0: common.v1.GameSystem
+	(GameSystemImplementationStage)(0), // 1: common.v1.GameSystemImplementationStage
+	(GameSystemOperationalStatus)(0),   // 2: common.v1.GameSystemOperationalStatus
+	(GameSystemAccessLevel)(0),         // 3: common.v1.GameSystemAccessLevel
 }
 var file_common_v1_game_system_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -113,7 +302,7 @@ func file_common_v1_game_system_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_common_v1_game_system_proto_rawDesc), len(file_common_v1_game_system_proto_rawDesc)),
-			NumEnums:      1,
+			NumEnums:      4,
 			NumMessages:   0,
 			NumExtensions: 0,
 			NumServices:   0,

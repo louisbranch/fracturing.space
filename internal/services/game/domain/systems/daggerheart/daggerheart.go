@@ -28,6 +28,16 @@ func (s *System) Name() string {
 	return "Daggerheart"
 }
 
+// RegistryMetadata describes how Daggerheart is published and operated.
+func (s *System) RegistryMetadata() systems.RegistryMetadata {
+	return systems.RegistryMetadata{
+		ImplementationStage: commonv1.GameSystemImplementationStage_GAME_SYSTEM_IMPLEMENTATION_STAGE_PARTIAL,
+		OperationalStatus:   commonv1.GameSystemOperationalStatus_GAME_SYSTEM_OPERATIONAL_STATUS_OPERATIONAL,
+		AccessLevel:         commonv1.GameSystemAccessLevel_GAME_SYSTEM_ACCESS_LEVEL_BETA,
+		Notes:               "partial support",
+	}
+}
+
 // StateFactory returns the factory for creating Daggerheart-specific state.
 func (s *System) StateFactory() systems.StateFactory {
 	return s.stateFactory

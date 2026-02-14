@@ -63,6 +63,28 @@ func TestWebPageRendering(t *testing.T) {
 			},
 		},
 		{
+			name: "systems full page",
+			path: "/systems",
+			contains: []string{
+				"<!doctype html>",
+				branding.AppName,
+				"<h2>Systems</h2>",
+			},
+		},
+		{
+			name: "systems htmx",
+			path: "/systems",
+			htmx: true,
+			contains: []string{
+				"<h2>Systems</h2>",
+			},
+			notContains: []string{
+				"<!doctype html>",
+				branding.AppName,
+				"<html",
+			},
+		},
+		{
 			name: "campaign detail full page",
 			path: "/campaigns/camp-123",
 			contains: []string{
@@ -110,6 +132,38 @@ func TestWebPageRendering(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestSystemsTableRendersDefaultBadge(t *testing.T) {
+	systemClient := &testSystemClient{
+		listResponse: &statev1.ListGameSystemsResponse{
+			Systems: []*statev1.GameSystemInfo{
+				{
+					Id:                  commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+					Name:                "Daggerheart",
+					Version:             "1.0.0",
+					ImplementationStage: commonv1.GameSystemImplementationStage_GAME_SYSTEM_IMPLEMENTATION_STAGE_PARTIAL,
+					OperationalStatus:   commonv1.GameSystemOperationalStatus_GAME_SYSTEM_OPERATIONAL_STATUS_OPERATIONAL,
+					AccessLevel:         commonv1.GameSystemAccessLevel_GAME_SYSTEM_ACCESS_LEVEL_BETA,
+					IsDefault:           true,
+				},
+			},
+		},
+	}
+	handler := NewHandler(testClientProvider{system: systemClient})
+
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/systems/table", nil)
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
+	}
+
+	body := recorder.Body.String()
+	assertContains(t, body, "Daggerheart")
+	assertContains(t, body, "1.0.0")
+	assertContains(t, body, "Default")
 }
 
 // TestCampaignSessionsRoute verifies session routes render pages correctly.
@@ -165,6 +219,7 @@ type testClientProvider struct {
 	campaign    statev1.CampaignServiceClient
 	invite      statev1.InviteServiceClient
 	participant statev1.ParticipantServiceClient
+	system      statev1.SystemServiceClient
 }
 
 func (p testClientProvider) CampaignClient() statev1.CampaignServiceClient {
@@ -199,6 +254,10 @@ func (p testClientProvider) StatisticsClient() statev1.StatisticsServiceClient {
 	return nil
 }
 
+func (p testClientProvider) SystemClient() statev1.SystemServiceClient {
+	return p.system
+}
+
 func (p testClientProvider) AuthClient() authv1.AuthServiceClient {
 	return p.auth
 }
@@ -207,6 +266,19 @@ type testAuthClient struct {
 	user          *authv1.User
 	lastMetadata  metadata.MD
 	lastUserIDReq string
+}
+
+type testSystemClient struct {
+	listResponse *statev1.ListGameSystemsResponse
+	getResponse  *statev1.GetGameSystemResponse
+}
+
+func (c *testSystemClient) ListGameSystems(ctx context.Context, in *statev1.ListGameSystemsRequest, opts ...grpc.CallOption) (*statev1.ListGameSystemsResponse, error) {
+	return c.listResponse, nil
+}
+
+func (c *testSystemClient) GetGameSystem(ctx context.Context, in *statev1.GetGameSystemRequest, opts ...grpc.CallOption) (*statev1.GetGameSystemResponse, error) {
+	return c.getResponse, nil
 }
 
 func (c *testAuthClient) CreateUser(ctx context.Context, in *authv1.CreateUserRequest, opts ...grpc.CallOption) (*authv1.CreateUserResponse, error) {

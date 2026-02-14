@@ -23,6 +23,10 @@ func (t *testSystem) Name() string {
 	return "Test"
 }
 
+func (t *testSystem) RegistryMetadata() RegistryMetadata {
+	return RegistryMetadata{}
+}
+
 func (t *testSystem) StateFactory() StateFactory {
 	return nil
 }
@@ -42,8 +46,18 @@ func TestRegistryDefaultsToFirstVersion(t *testing.T) {
 	if got := registry.Get(primary.ID()); got != primary {
 		t.Fatalf("Get default = %v, want primary", got)
 	}
+	if got := registry.DefaultVersion(primary.ID()); got != "1.0.0" {
+		t.Fatalf("DefaultVersion = %q, want %q", got, "1.0.0")
+	}
 	if got := registry.GetVersion(primary.ID(), "1.1.0"); got != secondary {
 		t.Fatalf("GetVersion = %v, want secondary", got)
+	}
+}
+
+func TestRegistryDefaultVersionUnknownSystem(t *testing.T) {
+	registry := NewRegistry()
+	if got := registry.DefaultVersion(commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART); got != "" {
+		t.Fatalf("DefaultVersion = %q, want empty", got)
 	}
 }
 

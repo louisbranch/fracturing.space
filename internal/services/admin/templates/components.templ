@@ -29,6 +29,18 @@ templ TopNav(activePage string, page PageContext) {
 					</li>
 					<li>
 						<a
+							href="/systems"
+							hx-get="/systems"
+							hx-target="#main"
+							hx-swap="innerHTML"
+							hx-push-url="true"
+							if activePage == "Systems" {
+								class="active"
+							}
+						>{T(page.Loc, "nav.systems")}</a>
+					</li>
+					<li>
+						<a
 							href="/users"
 							hx-get="/users"
 							hx-target="#main"

@@ -22,6 +22,9 @@ type GameSystem interface {
 	// Name returns the human-readable system name.
 	Name() string
 
+	// RegistryMetadata describes the system's availability and access.
+	RegistryMetadata() RegistryMetadata
+
 	// StateFactory returns the factory for creating system-specific state.
 	// May return nil if the system doesn't manage state.
 	StateFactory() StateFactory
@@ -29,6 +32,14 @@ type GameSystem interface {
 	// OutcomeApplier returns the handler for applying roll outcomes.
 	// May return nil if the system doesn't support outcome application.
 	OutcomeApplier() OutcomeApplier
+}
+
+// RegistryMetadata describes how a system is published and operated.
+type RegistryMetadata struct {
+	ImplementationStage commonv1.GameSystemImplementationStage
+	OperationalStatus   commonv1.GameSystemOperationalStatus
+	AccessLevel         commonv1.GameSystemAccessLevel
+	Notes               string
 }
 
 // CharacterKind represents the type of character (PC or NPC).
@@ -194,6 +205,14 @@ func (r *Registry) GetVersion(id commonv1.GameSystem, version string) GameSystem
 		return nil
 	}
 	return r.systems[SystemKey{ID: id, Version: resolved}]
+}
+
+// DefaultVersion returns the default registered version for the given system.
+func (r *Registry) DefaultVersion(id commonv1.GameSystem) string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	return r.defaults[id]
 }
 
 // MustGet returns the game system for the given ID, or panics if not found.

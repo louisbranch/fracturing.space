@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package game.v1;
+
+import "common/v1/game_system.proto";
+
+option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/game/v1;gamev1";
+
+// GameSystemInfo describes a registered game system and its availability.
+message GameSystemInfo {
+  common.v1.GameSystem id = 1;
+  string name = 2;
+  string version = 3;
+  common.v1.GameSystemImplementationStage implementation_stage = 4;
+  common.v1.GameSystemOperationalStatus operational_status = 5;
+  common.v1.GameSystemAccessLevel access_level = 6;
+  bool is_default = 7;
+  string notes = 8;
+}
+
+message ListGameSystemsRequest {}
+
+message ListGameSystemsResponse {
+  repeated GameSystemInfo systems = 1;
+}
+
+message GetGameSystemRequest {
+  common.v1.GameSystem id = 1;
+  string version = 2;
+}
+
+message GetGameSystemResponse {
+  GameSystemInfo system = 1;
+}
+
+// SystemService exposes registered game systems.
+service SystemService {
+  rpc ListGameSystems(ListGameSystemsRequest) returns (ListGameSystemsResponse);
+  rpc GetGameSystem(GetGameSystemRequest) returns (GetGameSystemResponse);
+}

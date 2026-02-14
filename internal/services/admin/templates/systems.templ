@@ -1,0 +1,101 @@
+package templates
+
+// SystemsFullPage renders systems content in the base layout.
+templ SystemsFullPage(page PageContext) {
+	@Layout(T(page.Loc, "title.systems", AppName()), "Systems", page) {
+		@SystemsPage(page.Loc)
+	}
+}
+
+// SystemsPage renders the systems page content.
+templ SystemsPage(loc Localizer) {
+	<div class="row flex-spaces">
+		<h2>{T(loc, "systems.heading")}</h2>
+	</div>
+	@SystemsLoading(loc)
+}
+
+// SystemsLoading renders the HTMX loading placeholder.
+templ SystemsLoading(loc Localizer) {
+	<div hx-get="/systems/table" hx-trigger="load" hx-swap="outerHTML">
+		<p>{T(loc, "systems.loading")}</p>
+	</div>
+}
+
+// SystemsTable renders a systems table or a message when empty.
+templ SystemsTable(rows []SystemRow, message string, loc Localizer) {
+	<table class="table-hover">
+		<thead>
+			<tr>
+				<th>{T(loc, "systems.table.system")}</th>
+				<th>{T(loc, "systems.table.version")}</th>
+				<th>{T(loc, "systems.table.implementation")}</th>
+				<th>{T(loc, "systems.table.status")}</th>
+				<th>{T(loc, "systems.table.access")}</th>
+			</tr>
+		</thead>
+		<tbody>
+			if len(rows) == 0 {
+				<tr>
+					<td colspan="5">{message}</td>
+				</tr>
+			}
+			for _, row := range rows {
+				<tr>
+					<td>
+						<a
+							href={ templ.SafeURL(row.DetailURL) }
+							hx-get={ row.DetailURL }
+							hx-target="#main"
+							hx-swap="innerHTML"
+							hx-push-url="true"
+						>{row.Name}</a>
+					</td>
+					<td>
+						{row.Version}
+						if row.IsDefault {
+							<span class="badge secondary margin-left">{T(loc, "systems.default")}</span>
+						}
+					</td>
+					<td>{row.ImplementationStage}</td>
+					<td>{row.OperationalStatus}</td>
+					<td>{row.AccessLevel}</td>
+				</tr>
+			}
+		</tbody>
+	</table>
+}
+
+// SystemDetailFullPage renders system detail content in the base layout.
+templ SystemDetailFullPage(detail SystemDetail, message string, page PageContext) {
+	@Layout(T(page.Loc, "title.system", AppName()), "Systems", page) {
+		@SystemDetailPage(detail, message, page.Loc)
+	}
+}
+
+// SystemDetailPage renders a single system detail page.
+templ SystemDetailPage(detail SystemDetail, message string, loc Localizer) {
+	if message != "" {
+		<h2>{T(loc, "systems.detail.heading")}</h2>
+		<p>{message}</p>
+	} else {
+		<h2>{detail.Name}</h2>
+		<table>
+			<tbody>
+				<tr><td><strong>{T(loc, "systems.detail.id")}</strong></td><td><code>{detail.ID}</code></td></tr>
+				<tr><td><strong>{T(loc, "systems.detail.name")}</strong></td><td>{detail.Name}</td></tr>
+				<tr><td><strong>{T(loc, "systems.detail.version")}</strong></td><td>{detail.Version}</td></tr>
+				<tr><td><strong>{T(loc, "systems.detail.implementation")}</strong></td><td>{detail.ImplementationStage}</td></tr>
+				<tr><td><strong>{T(loc, "systems.detail.status")}</strong></td><td>{detail.OperationalStatus}</td></tr>
+				<tr><td><strong>{T(loc, "systems.detail.access")}</strong></td><td>{detail.AccessLevel}</td></tr>
+				<tr><td><strong>{T(loc, "systems.detail.default")}</strong></td><td>
+					if detail.IsDefault {
+						{T(loc, "label.yes")}
+					} else {
+						{T(loc, "label.no")}
+					}
+				</td></tr>
+			</tbody>
+		</table>
+	}
+}

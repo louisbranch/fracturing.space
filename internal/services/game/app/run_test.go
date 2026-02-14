@@ -97,7 +97,7 @@ func TestHealthCheckReportsServing(t *testing.T) {
 	defer conn.Close()
 
 	healthClient := grpc_health_v1.NewHealthClient(conn)
-	services := []string{"", "systems.daggerheart.v1.DaggerheartService", "game.v1.CampaignService"}
+	services := []string{"", "systems.daggerheart.v1.DaggerheartService", "game.v1.CampaignService", "game.v1.SystemService"}
 	for _, service := range services {
 		callCtx, callCancel := context.WithTimeout(context.Background(), time.Second)
 		response, err := healthClient.Check(callCtx, &grpc_health_v1.HealthCheckRequest{Service: service})

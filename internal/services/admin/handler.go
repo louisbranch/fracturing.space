@@ -20,13 +20,15 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/admin/templates"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"golang.org/x/text/message"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
-	// campaignsRequestTimeout caps the gRPC request time for campaigns.
-	campaignsRequestTimeout = 2 * time.Second
+	// grpcRequestTimeout caps the gRPC request time for admin requests.
+	grpcRequestTimeout = 2 * time.Second
 	// campaignThemePromptLimit caps the number of characters shown in the table.
 	campaignThemePromptLimit = 80
 	// sessionListPageSize caps the number of sessions shown in the UI.
@@ -54,6 +56,7 @@ type GRPCClientProvider interface {
 	SnapshotClient() statev1.SnapshotServiceClient
 	EventClient() statev1.EventServiceClient
 	StatisticsClient() statev1.StatisticsServiceClient
+	SystemClient() statev1.SystemServiceClient
 }
 
 // Handler routes admin dashboard requests.
@@ -165,6 +168,9 @@ func (h *Handler) routes() http.Handler {
 	mux.Handle("/campaigns/table", http.HandlerFunc(h.handleCampaignsTable))
 	mux.Handle("/campaigns/create", http.HandlerFunc(h.handleCampaignCreate))
 	mux.Handle("/campaigns/", http.HandlerFunc(h.handleCampaignRoutes))
+	mux.Handle("/systems", http.HandlerFunc(h.handleSystemsPage))
+	mux.Handle("/systems/table", http.HandlerFunc(h.handleSystemsTable))
+	mux.Handle("/systems/", http.HandlerFunc(h.handleSystemRoutes))
 	mux.Handle("/users", http.HandlerFunc(h.handleUsersPage))
 	mux.Handle("/users/table", http.HandlerFunc(h.handleUsersTable))
 	mux.Handle("/users/lookup", http.HandlerFunc(h.handleUserLookup))
@@ -362,7 +368,7 @@ func (h *Handler) handleUserDetail(w http.ResponseWriter, r *http.Request, userI
 		view.Message = message
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), campaignsRequestTimeout)
+	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
 	defer cancel()
 
 	detail, message := h.loadUserDetail(ctx, userID, loc)
@@ -407,7 +413,7 @@ func (h *Handler) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), campaignsRequestTimeout)
+	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
 	defer cancel()
 
 	response, err := client.CreateUser(ctx, &authv1.CreateUserRequest{DisplayName: displayName})
@@ -466,7 +472,7 @@ func (h *Handler) handleImpersonateUser(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), campaignsRequestTimeout)
+	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
 	defer cancel()
 
 	response, err := client.GetUser(ctx, &authv1.GetUserRequest{UserId: userID})
@@ -512,7 +518,7 @@ func (h *Handler) handleImpersonateUser(w http.ResponseWriter, r *http.Request) 
 		UserID:      user.GetId(),
 		DisplayName: user.GetDisplayName(),
 	}
-	invitesCtx, invitesCancel := context.WithTimeout(r.Context(), campaignsRequestTimeout)
+	invitesCtx, invitesCancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
 	defer invitesCancel()
 	h.populateUserInvitesIfImpersonating(invitesCtx, view.Detail, view.Impersonation, loc)
 	pageCtx.Impersonation = view.Impersonation
@@ -562,7 +568,7 @@ func (h *Handler) handleLogout(w http.ResponseWriter, r *http.Request) {
 
 	if err := r.ParseForm(); err == nil {
 		if userID := strings.TrimSpace(r.FormValue("user_id")); userID != "" {
-			ctx, cancel := context.WithTimeout(r.Context(), campaignsRequestTimeout)
+			ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
 			defer cancel()
 			detail, message := h.loadUserDetail(ctx, userID, loc)
 			view.Detail = detail
@@ -587,7 +593,7 @@ func (h *Handler) handleUsersTable(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), campaignsRequestTimeout)
+	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
 	defer cancel()
 
 	response, err := client.ListUsers(ctx, &authv1.ListUsersRequest{PageSize: 50})
@@ -616,7 +622,7 @@ func (h *Handler) handleCampaignsTable(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), campaignsRequestTimeout)
+	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
 	defer cancel()
 
 	response, err := campaignClient.ListCampaigns(ctx, &statev1.ListCampaignsRequest{})
@@ -646,6 +652,106 @@ func (h *Handler) handleCampaignsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	templ.Handler(templates.CampaignsFullPage(pageCtx)).ServeHTTP(w, r)
+}
+
+// handleSystemsPage renders the systems page fragment or full layout.
+func (h *Handler) handleSystemsPage(w http.ResponseWriter, r *http.Request) {
+	loc, lang := h.localizer(w, r)
+	pageCtx := h.pageContext(lang, loc, r)
+	if isHTMXRequest(r) {
+		templ.Handler(templates.SystemsPage(loc)).ServeHTTP(w, r)
+		return
+	}
+
+	templ.Handler(templates.SystemsFullPage(pageCtx)).ServeHTTP(w, r)
+}
+
+// handleSystemsTable renders the systems table via HTMX.
+func (h *Handler) handleSystemsTable(w http.ResponseWriter, r *http.Request) {
+	loc, _ := h.localizer(w, r)
+	client := h.systemClient()
+	if client == nil {
+		h.renderSystemsTable(w, r, nil, loc.Sprintf("error.system_service_unavailable"), loc)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
+	defer cancel()
+
+	response, err := client.ListGameSystems(ctx, &statev1.ListGameSystemsRequest{})
+	if err != nil {
+		log.Printf("list game systems: %v", err)
+		h.renderSystemsTable(w, r, nil, loc.Sprintf("error.systems_unavailable"), loc)
+		return
+	}
+
+	systemsList := response.GetSystems()
+	if len(systemsList) == 0 {
+		h.renderSystemsTable(w, r, nil, loc.Sprintf("error.no_systems"), loc)
+		return
+	}
+
+	rows := buildSystemRows(systemsList, loc)
+	h.renderSystemsTable(w, r, rows, "", loc)
+}
+
+// handleSystemRoutes dispatches the system detail route.
+func (h *Handler) handleSystemRoutes(w http.ResponseWriter, r *http.Request) {
+	if strings.HasSuffix(r.URL.Path, "/") {
+		canonical := strings.TrimRight(r.URL.Path, "/")
+		if canonical == "" {
+			canonical = "/"
+		}
+		http.Redirect(w, r, canonical, http.StatusMovedPermanently)
+		return
+	}
+	systemPath := strings.TrimPrefix(r.URL.Path, "/systems/")
+	parts := splitPathParts(systemPath)
+	if len(parts) == 1 && strings.TrimSpace(parts[0]) != "" {
+		h.handleSystemDetail(w, r, parts[0])
+		return
+	}
+	http.NotFound(w, r)
+}
+
+// handleSystemDetail renders the system detail page.
+func (h *Handler) handleSystemDetail(w http.ResponseWriter, r *http.Request, systemID string) {
+	loc, lang := h.localizer(w, r)
+	client := h.systemClient()
+	if client == nil {
+		h.renderSystemDetail(w, r, templates.SystemDetail{}, loc.Sprintf("error.system_service_unavailable"), lang, loc)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
+	defer cancel()
+
+	version := strings.TrimSpace(r.URL.Query().Get("version"))
+	parsedID := parseSystemID(systemID)
+	if parsedID == commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED {
+		h.renderSystemDetail(w, r, templates.SystemDetail{}, loc.Sprintf("error.system_not_found"), lang, loc)
+		return
+	}
+	response, err := client.GetGameSystem(ctx, &statev1.GetGameSystemRequest{
+		Id:      parsedID,
+		Version: version,
+	})
+	if err != nil {
+		if status.Code(err) == codes.NotFound {
+			h.renderSystemDetail(w, r, templates.SystemDetail{}, loc.Sprintf("error.system_not_found"), lang, loc)
+			return
+		}
+		log.Printf("get game system: %v", err)
+		h.renderSystemDetail(w, r, templates.SystemDetail{}, loc.Sprintf("error.system_unavailable"), lang, loc)
+		return
+	}
+	if response.GetSystem() == nil {
+		h.renderSystemDetail(w, r, templates.SystemDetail{}, loc.Sprintf("error.system_not_found"), lang, loc)
+		return
+	}
+
+	detail := buildSystemDetail(response.GetSystem(), loc)
+	h.renderSystemDetail(w, r, detail, "", lang, loc)
 }
 
 func (h *Handler) handleCampaignCreate(w http.ResponseWriter, r *http.Request) {
@@ -744,7 +850,7 @@ func (h *Handler) handleCampaignCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), campaignsRequestTimeout)
+	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
 	defer cancel()
 	if view.UserID != "" {
 		md, _ := metadata.FromOutgoingContext(ctx)
@@ -873,7 +979,7 @@ func (h *Handler) handleCampaignDetail(w http.ResponseWriter, r *http.Request, c
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), campaignsRequestTimeout)
+	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
 	defer cancel()
 
 	response, err := campaignClient.GetCampaign(ctx, &statev1.GetCampaignRequest{CampaignId: campaignID})
@@ -915,7 +1021,7 @@ func (h *Handler) handleSessionsTable(w http.ResponseWriter, r *http.Request, ca
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), campaignsRequestTimeout)
+	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
 	defer cancel()
 
 	response, err := sessionClient.ListSessions(ctx, &statev1.ListSessionsRequest{
@@ -952,6 +1058,22 @@ func (h *Handler) renderCampaignDetail(w http.ResponseWriter, r *http.Request, d
 
 	pageCtx := h.pageContext(lang, loc, r)
 	templ.Handler(templates.CampaignDetailFullPage(detail, message, pageCtx)).ServeHTTP(w, r)
+}
+
+// renderSystemsTable renders a systems table with optional rows and message.
+func (h *Handler) renderSystemsTable(w http.ResponseWriter, r *http.Request, rows []templates.SystemRow, message string, loc *message.Printer) {
+	templ.Handler(templates.SystemsTable(rows, message, loc)).ServeHTTP(w, r)
+}
+
+// renderSystemDetail renders the system detail fragment or full layout.
+func (h *Handler) renderSystemDetail(w http.ResponseWriter, r *http.Request, detail templates.SystemDetail, message string, lang string, loc *message.Printer) {
+	if isHTMXRequest(r) {
+		templ.Handler(templates.SystemDetailPage(detail, message, loc)).ServeHTTP(w, r)
+		return
+	}
+
+	pageCtx := h.pageContext(lang, loc, r)
+	templ.Handler(templates.SystemDetailFullPage(detail, message, pageCtx)).ServeHTTP(w, r)
 }
 
 // renderCampaignSessions renders the session list fragment.
@@ -1079,6 +1201,14 @@ func (h *Handler) statisticsClient() statev1.StatisticsServiceClient {
 	return h.clientProvider.StatisticsClient()
 }
 
+// systemClient returns the currently configured system client.
+func (h *Handler) systemClient() statev1.SystemServiceClient {
+	if h == nil || h.clientProvider == nil {
+		return nil
+	}
+	return h.clientProvider.SystemClient()
+}
+
 // isHTMXRequest reports whether the request originated from HTMX.
 func isHTMXRequest(r *http.Request) bool {
 	if r == nil {
@@ -1122,6 +1252,31 @@ func buildCampaignRows(campaigns []*statev1.Campaign, loc *message.Printer) []te
 	return rows
 }
 
+// buildSystemRows formats system rows for the systems table.
+func buildSystemRows(systemsList []*statev1.GameSystemInfo, loc *message.Printer) []templates.SystemRow {
+	rows := make([]templates.SystemRow, 0, len(systemsList))
+	for _, system := range systemsList {
+		if system == nil {
+			continue
+		}
+		detailURL := "/systems/" + system.GetId().String()
+		version := strings.TrimSpace(system.GetVersion())
+		if version != "" {
+			detailURL = detailURL + "?version=" + url.QueryEscape(version)
+		}
+		rows = append(rows, templates.SystemRow{
+			Name:                system.GetName(),
+			Version:             version,
+			ImplementationStage: formatImplementationStage(system.GetImplementationStage(), loc),
+			OperationalStatus:   formatOperationalStatus(system.GetOperationalStatus(), loc),
+			AccessLevel:         formatAccessLevel(system.GetAccessLevel(), loc),
+			IsDefault:           system.GetIsDefault(),
+			DetailURL:           detailURL,
+		})
+	}
+	return rows
+}
+
 // buildCampaignDetail formats a campaign into detail view data.
 func buildCampaignDetail(campaign *statev1.Campaign, loc *message.Printer) templates.CampaignDetail {
 	if campaign == nil {
@@ -1137,6 +1292,22 @@ func buildCampaignDetail(campaign *statev1.Campaign, loc *message.Printer) templ
 		ThemePrompt:      campaign.GetThemePrompt(),
 		CreatedAt:        formatTimestamp(campaign.GetCreatedAt()),
 		UpdatedAt:        formatTimestamp(campaign.GetUpdatedAt()),
+	}
+}
+
+// buildSystemDetail formats a system into detail view data.
+func buildSystemDetail(system *statev1.GameSystemInfo, loc *message.Printer) templates.SystemDetail {
+	if system == nil {
+		return templates.SystemDetail{}
+	}
+	return templates.SystemDetail{
+		ID:                  system.GetId().String(),
+		Name:                system.GetName(),
+		Version:             system.GetVersion(),
+		ImplementationStage: formatImplementationStage(system.GetImplementationStage(), loc),
+		OperationalStatus:   formatOperationalStatus(system.GetOperationalStatus(), loc),
+		AccessLevel:         formatAccessLevel(system.GetAccessLevel(), loc),
+		IsDefault:           system.GetIsDefault(),
 	}
 }
 
@@ -1324,6 +1495,65 @@ func formatGameSystem(system commonv1.GameSystem, loc *message.Printer) string {
 	}
 }
 
+func formatImplementationStage(stage commonv1.GameSystemImplementationStage, loc *message.Printer) string {
+	switch stage {
+	case commonv1.GameSystemImplementationStage_GAME_SYSTEM_IMPLEMENTATION_STAGE_PLANNED:
+		return loc.Sprintf("label.system_stage_planned")
+	case commonv1.GameSystemImplementationStage_GAME_SYSTEM_IMPLEMENTATION_STAGE_PARTIAL:
+		return loc.Sprintf("label.system_stage_partial")
+	case commonv1.GameSystemImplementationStage_GAME_SYSTEM_IMPLEMENTATION_STAGE_COMPLETE:
+		return loc.Sprintf("label.system_stage_complete")
+	case commonv1.GameSystemImplementationStage_GAME_SYSTEM_IMPLEMENTATION_STAGE_DEPRECATED:
+		return loc.Sprintf("label.system_stage_deprecated")
+	default:
+		return loc.Sprintf("label.unspecified")
+	}
+}
+
+func formatOperationalStatus(status commonv1.GameSystemOperationalStatus, loc *message.Printer) string {
+	switch status {
+	case commonv1.GameSystemOperationalStatus_GAME_SYSTEM_OPERATIONAL_STATUS_OFFLINE:
+		return loc.Sprintf("label.system_status_offline")
+	case commonv1.GameSystemOperationalStatus_GAME_SYSTEM_OPERATIONAL_STATUS_DEGRADED:
+		return loc.Sprintf("label.system_status_degraded")
+	case commonv1.GameSystemOperationalStatus_GAME_SYSTEM_OPERATIONAL_STATUS_OPERATIONAL:
+		return loc.Sprintf("label.system_status_operational")
+	case commonv1.GameSystemOperationalStatus_GAME_SYSTEM_OPERATIONAL_STATUS_MAINTENANCE:
+		return loc.Sprintf("label.system_status_maintenance")
+	default:
+		return loc.Sprintf("label.unspecified")
+	}
+}
+
+func formatAccessLevel(level commonv1.GameSystemAccessLevel, loc *message.Printer) string {
+	switch level {
+	case commonv1.GameSystemAccessLevel_GAME_SYSTEM_ACCESS_LEVEL_INTERNAL:
+		return loc.Sprintf("label.system_access_internal")
+	case commonv1.GameSystemAccessLevel_GAME_SYSTEM_ACCESS_LEVEL_BETA:
+		return loc.Sprintf("label.system_access_beta")
+	case commonv1.GameSystemAccessLevel_GAME_SYSTEM_ACCESS_LEVEL_PUBLIC:
+		return loc.Sprintf("label.system_access_public")
+	case commonv1.GameSystemAccessLevel_GAME_SYSTEM_ACCESS_LEVEL_RETIRED:
+		return loc.Sprintf("label.system_access_retired")
+	default:
+		return loc.Sprintf("label.unspecified")
+	}
+}
+
+func parseSystemID(value string) commonv1.GameSystem {
+	trimmed := strings.ToUpper(strings.TrimSpace(value))
+	if trimmed == "" {
+		return commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED
+	}
+	if trimmed == "DAGGERHEART" {
+		return commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART
+	}
+	if enumValue, ok := commonv1.GameSystem_value[trimmed]; ok {
+		return commonv1.GameSystem(enumValue)
+	}
+	return commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED
+}
+
 func parseGameSystem(value string) (commonv1.GameSystem, bool) {
 	switch strings.ToLower(strings.TrimSpace(value)) {
 	case "daggerheart":
@@ -1416,11 +1646,12 @@ func (h *Handler) handleDashboard(w http.ResponseWriter, r *http.Request) {
 
 // handleDashboardContent loads and renders the dashboard statistics and recent activity.
 func (h *Handler) handleDashboardContent(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), campaignsRequestTimeout)
+	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
 	defer cancel()
 	loc, _ := h.localizer(w, r)
 
 	stats := templates.DashboardStats{
+		TotalSystems:      "0",
 		TotalCampaigns:    "0",
 		TotalSessions:     "0",
 		TotalCharacters:   "0",
@@ -1437,6 +1668,13 @@ func (h *Handler) handleDashboardContent(w http.ResponseWriter, r *http.Request)
 			stats.TotalSessions = strconv.FormatInt(resp.GetStats().GetSessionCount(), 10)
 			stats.TotalCharacters = strconv.FormatInt(resp.GetStats().GetCharacterCount(), 10)
 			stats.TotalParticipants = strconv.FormatInt(resp.GetStats().GetParticipantCount(), 10)
+		}
+	}
+
+	if systemClient := h.systemClient(); systemClient != nil {
+		systemsResp, err := systemClient.ListGameSystems(ctx, &statev1.ListGameSystemsRequest{})
+		if err == nil && systemsResp != nil {
+			stats.TotalSystems = strconv.FormatInt(int64(len(systemsResp.GetSystems())), 10)
 		}
 	}
 
@@ -1663,7 +1901,7 @@ func (h *Handler) handleCharactersTable(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), campaignsRequestTimeout)
+	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
 	defer cancel()
 
 	// Get characters
@@ -1711,7 +1949,7 @@ func (h *Handler) handleCharacterSheet(w http.ResponseWriter, r *http.Request, c
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), campaignsRequestTimeout)
+	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
 	defer cancel()
 
 	// Get character sheet
@@ -1867,7 +2105,7 @@ func getCampaignName(h *Handler, r *http.Request, campaignID string, loc *messag
 		return loc.Sprintf("label.campaign")
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), campaignsRequestTimeout)
+	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
 	defer cancel()
 
 	response, err := campaignClient.GetCampaign(ctx, &statev1.GetCampaignRequest{CampaignId: campaignID})
@@ -1900,7 +2138,7 @@ func (h *Handler) handleParticipantsTable(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), campaignsRequestTimeout)
+	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
 	defer cancel()
 
 	response, err := participantClient.ListParticipants(ctx, &statev1.ListParticipantsRequest{
@@ -1944,7 +2182,7 @@ func (h *Handler) handleInvitesTable(w http.ResponseWriter, r *http.Request, cam
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), campaignsRequestTimeout)
+	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
 	defer cancel()
 
 	if impersonation := h.currentImpersonation(r); impersonation != nil {
@@ -2178,7 +2416,7 @@ func (h *Handler) handleSessionDetail(w http.ResponseWriter, r *http.Request, ca
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), campaignsRequestTimeout)
+	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
 	defer cancel()
 
 	// Get session details
@@ -2232,7 +2470,7 @@ func (h *Handler) handleSessionEvents(w http.ResponseWriter, r *http.Request, ca
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), campaignsRequestTimeout)
+	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
 	defer cancel()
 
 	pageToken := r.URL.Query().Get("page_token")
@@ -2281,7 +2519,7 @@ func (h *Handler) handleEventLog(w http.ResponseWriter, r *http.Request, campaig
 	var nextToken, prevToken string
 
 	if eventClient := h.eventClient(); eventClient != nil {
-		ctx, cancel := context.WithTimeout(r.Context(), campaignsRequestTimeout)
+		ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
 		defer cancel()
 
 		filterExpr := buildEventFilterExpression(filters)
@@ -2328,7 +2566,7 @@ func (h *Handler) handleEventLogTable(w http.ResponseWriter, r *http.Request, ca
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), campaignsRequestTimeout)
+	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
 	defer cancel()
 
 	filters := parseEventFilters(r)
@@ -2475,7 +2713,7 @@ func getSessionName(h *Handler, r *http.Request, campaignID, sessionID string, l
 		return loc.Sprintf("label.session")
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), campaignsRequestTimeout)
+	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
 	defer cancel()
 
 	response, err := sessionClient.GetSession(ctx, &statev1.GetSessionRequest{
