@@ -26,6 +26,34 @@ func TestKeyringFromEnvSingleKey(t *testing.T) {
 	}
 }
 
+func TestKeyringFromEnvWhitespaceKeySpecFallsBack(t *testing.T) {
+	t.Setenv("FRACTURING_SPACE_GAME_EVENT_HMAC_KEY", "secret")
+	t.Setenv("FRACTURING_SPACE_GAME_EVENT_HMAC_KEYS", "   ")
+	t.Setenv("FRACTURING_SPACE_GAME_EVENT_HMAC_KEY_ID", "")
+
+	ring, err := KeyringFromEnv()
+	if err != nil {
+		t.Fatalf("keyring from env: %v", err)
+	}
+	if ring.ActiveKeyID() != "v1" {
+		t.Fatalf("expected default key id v1, got %s", ring.ActiveKeyID())
+	}
+}
+
+func TestKeyringFromEnvWhitespaceKeyIDUsesDefault(t *testing.T) {
+	t.Setenv("FRACTURING_SPACE_GAME_EVENT_HMAC_KEY", "secret")
+	t.Setenv("FRACTURING_SPACE_GAME_EVENT_HMAC_KEYS", "")
+	t.Setenv("FRACTURING_SPACE_GAME_EVENT_HMAC_KEY_ID", "   ")
+
+	ring, err := KeyringFromEnv()
+	if err != nil {
+		t.Fatalf("keyring from env: %v", err)
+	}
+	if ring.ActiveKeyID() != "v1" {
+		t.Fatalf("expected default key id v1, got %s", ring.ActiveKeyID())
+	}
+}
+
 func TestKeyringFromEnvKeySpec(t *testing.T) {
 	t.Setenv("FRACTURING_SPACE_GAME_EVENT_HMAC_KEY", "")
 	t.Setenv("FRACTURING_SPACE_GAME_EVENT_HMAC_KEYS", "k1=one,k2=two")

@@ -82,6 +82,19 @@ func TestParseConfigDefaults(t *testing.T) {
 	}
 }
 
+func TestParseConfigIgnoresUntaggedEnv(t *testing.T) {
+	t.Setenv("CAMPAIGNID", "c1")
+
+	fs := flag.NewFlagSet("maintenance", flag.ContinueOnError)
+	cfg, err := ParseConfig(fs, nil)
+	if err != nil {
+		t.Fatalf("parse config: %v", err)
+	}
+	if cfg.CampaignID != "" {
+		t.Fatalf("expected empty campaign id, got %q", cfg.CampaignID)
+	}
+}
+
 func TestParseConfigOverrides(t *testing.T) {
 	t.Setenv("FRACTURING_SPACE_GAME_EVENTS_DB_PATH", "env-events")
 	t.Setenv("FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH", "env-projections")

@@ -40,6 +40,22 @@ func TestLoadJoinGrantConfigFromEnv(t *testing.T) {
 	}
 }
 
+func TestLoadJoinGrantConfigFromEnvTrimsIssuer(t *testing.T) {
+	pubKey, _, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatalf("generate key: %v", err)
+	}
+
+	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_ISSUER", "   ")
+	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_AUDIENCE", "audience")
+	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY", base64.RawStdEncoding.EncodeToString(pubKey))
+
+	_, err = LoadJoinGrantConfigFromEnv(nil)
+	if err == nil || !strings.Contains(err.Error(), "required") {
+		t.Fatalf("expected required error, got %v", err)
+	}
+}
+
 func TestValidateJoinGrantSuccess(t *testing.T) {
 	pub, priv, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {

@@ -57,3 +57,16 @@ func TestLoadConfigFromEnvValidSessionTTL(t *testing.T) {
 		t.Fatalf("SessionTTL = %v, want %v", cfg.SessionTTL, 10*time.Minute)
 	}
 }
+
+func TestLoadConfigFromEnvInvalidSessionTTLKeepsRPID(t *testing.T) {
+	t.Setenv("FRACTURING_SPACE_WEBAUTHN_RP_ID", "example.com")
+	t.Setenv("FRACTURING_SPACE_WEBAUTHN_SESSION_TTL", "bad-duration")
+
+	cfg := LoadConfigFromEnv()
+	if cfg.RPID != "example.com" {
+		t.Fatalf("RPID = %q, want %q", cfg.RPID, "example.com")
+	}
+	if cfg.SessionTTL != 5*time.Minute {
+		t.Fatalf("SessionTTL = %v, want %v", cfg.SessionTTL, 5*time.Minute)
+	}
+}

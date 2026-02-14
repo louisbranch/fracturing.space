@@ -39,11 +39,24 @@ type Config struct {
 	JSONOutput        bool
 }
 
+type envConfig struct {
+	EventsDBPath      string        `env:"FRACTURING_SPACE_GAME_EVENTS_DB_PATH"`
+	ProjectionsDBPath string        `env:"FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH"`
+	Timeout           time.Duration `env:"FRACTURING_SPACE_MAINTENANCE_TIMEOUT" envDefault:"10m"`
+}
+
 // ParseConfig parses flags into a Config.
 func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
-	var cfg Config
-	if err := env.Parse(&cfg); err != nil {
+	var envCfg envConfig
+	if err := env.Parse(&envCfg); err != nil {
 		return Config{}, fmt.Errorf("parse env: %w", err)
+	}
+
+	cfg := Config{
+		EventsDBPath:      envCfg.EventsDBPath,
+		ProjectionsDBPath: envCfg.ProjectionsDBPath,
+		Timeout:           envCfg.Timeout,
+		WarningsCap:       25,
 	}
 	if cfg.EventsDBPath == "" {
 		cfg.EventsDBPath = filepath.Join("data", "game-events.db")
@@ -51,7 +64,6 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	if cfg.ProjectionsDBPath == "" {
 		cfg.ProjectionsDBPath = filepath.Join("data", "game-projections.db")
 	}
-	cfg.WarningsCap = 25
 
 	fs.StringVar(&cfg.CampaignID, "campaign-id", "", "campaign ID to replay snapshot-related events")
 	fs.StringVar(&cfg.CampaignIDs, "campaign-ids", "", "comma-separated campaign IDs to replay snapshot-related events")

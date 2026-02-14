@@ -30,3 +30,16 @@ func TestLoadConfigFromEnvValidTTL(t *testing.T) {
 		t.Fatalf("TTL = %v, want %v", cfg.TTL, 30*time.Minute)
 	}
 }
+
+func TestLoadConfigFromEnvInvalidTTLKeepsBaseURL(t *testing.T) {
+	t.Setenv("FRACTURING_SPACE_MAGIC_LINK_BASE_URL", "https://example.com/magic")
+	t.Setenv("FRACTURING_SPACE_MAGIC_LINK_TTL", "not-a-duration")
+
+	cfg := LoadConfigFromEnv()
+	if cfg.BaseURL != "https://example.com/magic" {
+		t.Fatalf("BaseURL = %q, want %q", cfg.BaseURL, "https://example.com/magic")
+	}
+	if cfg.TTL != 15*time.Minute {
+		t.Fatalf("TTL = %v, want %v", cfg.TTL, 15*time.Minute)
+	}
+}

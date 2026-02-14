@@ -26,19 +26,18 @@ type Config struct {
 // LoadConfigFromEnv returns passkey configuration with defaults.
 func LoadConfigFromEnv() Config {
 	var cfg Config
-	if err := env.Parse(&cfg); err != nil {
-		return Config{
-			RPDisplayName: branding.AppName,
-			RPID:          "localhost",
-			RPOrigins:     []string{"http://localhost:8086"},
-			SessionTTL:    5 * time.Minute,
-		}
-	}
+	_ = env.Parse(&cfg)
 	if cfg.RPDisplayName == "" {
 		cfg.RPDisplayName = branding.AppName
 	}
+	if cfg.RPID == "" {
+		cfg.RPID = "localhost"
+	}
 	if len(cfg.RPOrigins) == 0 {
 		cfg.RPOrigins = []string{"http://localhost:8086"}
+	}
+	if cfg.SessionTTL == 0 {
+		cfg.SessionTTL = 5 * time.Minute
 	}
 	return cfg
 }

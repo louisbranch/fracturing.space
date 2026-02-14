@@ -54,6 +54,17 @@ func TestLoadJoinGrantConfigFromEnv(t *testing.T) {
 		}
 	})
 
+	t.Run("issuer whitespace", func(t *testing.T) {
+		_, key, _ := ed25519.GenerateKey(nil)
+		t.Setenv("FRACTURING_SPACE_JOIN_GRANT_ISSUER", "  ")
+		t.Setenv("FRACTURING_SPACE_JOIN_GRANT_AUDIENCE", "test-audience")
+		t.Setenv("FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY", base64.StdEncoding.EncodeToString(key))
+		_, err := loadJoinGrantConfigFromEnv()
+		if err == nil {
+			t.Fatal("expected error for whitespace issuer")
+		}
+	})
+
 	t.Run("missing audience", func(t *testing.T) {
 		t.Setenv("FRACTURING_SPACE_JOIN_GRANT_ISSUER", "test-issuer")
 		t.Setenv("FRACTURING_SPACE_JOIN_GRANT_AUDIENCE", "")

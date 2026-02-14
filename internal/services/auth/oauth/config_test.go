@@ -125,3 +125,16 @@ func TestLoadConfigFromEnvInvalidClientsJSON(t *testing.T) {
 		t.Fatalf("Clients = %v, want nil", config.Clients)
 	}
 }
+
+func TestLoadConfigFromEnvInvalidTokenTTLKeepsIssuer(t *testing.T) {
+	t.Setenv("FRACTURING_SPACE_OAUTH_ISSUER", "https://issuer.example.com")
+	t.Setenv("FRACTURING_SPACE_OAUTH_TOKEN_TTL", "not-a-duration")
+
+	config := LoadConfigFromEnv()
+	if config.Issuer != "https://issuer.example.com" {
+		t.Fatalf("Issuer = %q, want %q", config.Issuer, "https://issuer.example.com")
+	}
+	if config.TokenTTL != time.Hour {
+		t.Fatalf("TokenTTL = %v, want %v", config.TokenTTL, time.Hour)
+	}
+}

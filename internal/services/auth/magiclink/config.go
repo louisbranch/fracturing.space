@@ -15,11 +15,12 @@ type Config struct {
 // LoadConfigFromEnv loads config from environment variables.
 func LoadConfigFromEnv() Config {
 	var cfg Config
-	if err := env.Parse(&cfg); err != nil {
-		return Config{
-			BaseURL: "http://localhost:8086/magic",
-			TTL:     15 * time.Minute,
-		}
+	_ = env.Parse(&cfg)
+	if cfg.BaseURL == "" {
+		cfg.BaseURL = "http://localhost:8086/magic"
+	}
+	if cfg.TTL == 0 {
+		cfg.TTL = 15 * time.Minute
 	}
 	return cfg
 }

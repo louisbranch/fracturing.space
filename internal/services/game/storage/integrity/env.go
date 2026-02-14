@@ -20,6 +20,12 @@ func KeyringFromEnv() (*Keyring, error) {
 	if err := env.Parse(&raw); err != nil {
 		return nil, fmt.Errorf("parse hmac keyring env: %w", err)
 	}
+	raw.Keys = strings.TrimSpace(raw.Keys)
+	raw.Key = strings.TrimSpace(raw.Key)
+	raw.KeyID = strings.TrimSpace(raw.KeyID)
+	if raw.KeyID == "" {
+		raw.KeyID = "v1"
+	}
 
 	if raw.Keys == "" {
 		if raw.Key == "" {

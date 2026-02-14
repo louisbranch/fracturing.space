@@ -63,17 +63,19 @@ func LoadJoinGrantConfigFromEnv(now func() time.Time) (JoinGrantConfig, error) {
 	if err := env.Parse(&raw); err != nil {
 		return JoinGrantConfig{}, fmt.Errorf("parse join grant env: %w", err)
 	}
-
-	if raw.Issuer == "" {
+	issuer := strings.TrimSpace(raw.Issuer)
+	audience := strings.TrimSpace(raw.Audience)
+	publicKey := strings.TrimSpace(raw.PublicKey)
+	if issuer == "" {
 		return JoinGrantConfig{}, fmt.Errorf("FRACTURING_SPACE_JOIN_GRANT_ISSUER is required")
 	}
-	if raw.Audience == "" {
+	if audience == "" {
 		return JoinGrantConfig{}, fmt.Errorf("FRACTURING_SPACE_JOIN_GRANT_AUDIENCE is required")
 	}
-	if raw.PublicKey == "" {
+	if publicKey == "" {
 		return JoinGrantConfig{}, fmt.Errorf("FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY is required")
 	}
-	keyBytes, err := decodeBase64(raw.PublicKey)
+	keyBytes, err := decodeBase64(publicKey)
 	if err != nil {
 		return JoinGrantConfig{}, fmt.Errorf("decode join grant public key: %w", err)
 	}
@@ -84,8 +86,8 @@ func LoadJoinGrantConfigFromEnv(now func() time.Time) (JoinGrantConfig, error) {
 		now = time.Now
 	}
 	return JoinGrantConfig{
-		Issuer:   raw.Issuer,
-		Audience: raw.Audience,
+		Issuer:   issuer,
+		Audience: audience,
 		Key:      ed25519.PublicKey(keyBytes),
 		Now:      now,
 	}, nil

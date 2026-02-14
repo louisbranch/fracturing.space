@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/caarlos0/env/v11"
@@ -31,17 +32,19 @@ func loadJoinGrantConfigFromEnv() (joinGrantConfig, error) {
 	if err := env.Parse(&raw); err != nil {
 		return joinGrantConfig{}, fmt.Errorf("parse join grant env: %w", err)
 	}
-
-	if raw.Issuer == "" {
+	issuer := strings.TrimSpace(raw.Issuer)
+	audience := strings.TrimSpace(raw.Audience)
+	privateKey := strings.TrimSpace(raw.PrivateKey)
+	if issuer == "" {
 		return joinGrantConfig{}, fmt.Errorf("FRACTURING_SPACE_JOIN_GRANT_ISSUER is required")
 	}
-	if raw.Audience == "" {
+	if audience == "" {
 		return joinGrantConfig{}, fmt.Errorf("FRACTURING_SPACE_JOIN_GRANT_AUDIENCE is required")
 	}
-	if raw.PrivateKey == "" {
+	if privateKey == "" {
 		return joinGrantConfig{}, fmt.Errorf("FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY is required")
 	}
-	keyBytes, err := decodeBase64(raw.PrivateKey)
+	keyBytes, err := decodeBase64(privateKey)
 	if err != nil {
 		return joinGrantConfig{}, fmt.Errorf("decode join grant private key: %w", err)
 	}
@@ -53,8 +56,8 @@ func loadJoinGrantConfigFromEnv() (joinGrantConfig, error) {
 	}
 
 	return joinGrantConfig{
-		issuer:   raw.Issuer,
-		audience: raw.Audience,
+		issuer:   issuer,
+		audience: audience,
 		key:      ed25519.PrivateKey(keyBytes),
 		ttl:      raw.TTL,
 	}, nil

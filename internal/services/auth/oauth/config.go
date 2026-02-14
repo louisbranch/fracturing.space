@@ -74,12 +74,15 @@ type oauthEnv struct {
 // LoadConfigFromEnv loads OAuth server configuration from environment variables.
 func LoadConfigFromEnv() Config {
 	var raw oauthEnv
-	if err := env.Parse(&raw); err != nil {
-		return Config{
-			TokenTTL:                time.Hour,
-			AuthorizationCodeTTL:    10 * time.Minute,
-			PendingAuthorizationTTL: 15 * time.Minute,
-		}
+	_ = env.Parse(&raw)
+	if raw.TokenTTL == 0 {
+		raw.TokenTTL = time.Hour
+	}
+	if raw.AuthorizationCodeTTL == 0 {
+		raw.AuthorizationCodeTTL = 10 * time.Minute
+	}
+	if raw.PendingAuthorizationTTL == 0 {
+		raw.PendingAuthorizationTTL = 15 * time.Minute
 	}
 
 	var clients []Client
