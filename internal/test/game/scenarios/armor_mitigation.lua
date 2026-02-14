@@ -16,11 +16,20 @@ scene:start_session("Armor")
 scene:gm_fear(2)
 
 -- Nazgul lands a hit; Frodo is expected to mitigate with armor.
--- Missing DSL: specify damage roll totals and assert armor slot spend/HP loss.
 scene:adversary_attack{
   actor = "Nazgul",
   target = "Frodo",
   difficulty = 0,
+  expect_hope_delta = 0,
+  expect_stress_delta = 0,
+  expect_hp_delta = -1,
+  expect_armor_delta = -1,
+  expect_damage_total = 4,
+  expect_damage_severity = "minor",
+  expect_damage_marks = 1,
+  expect_armor_spent = 1,
+  expect_damage_mitigated = true,
+  expect_damage_critical = false,
   damage_type = "physical"
 }
 

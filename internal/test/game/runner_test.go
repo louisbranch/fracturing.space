@@ -148,6 +148,10 @@ func runStep(t *testing.T, env scenarioEnv, state *scenarioState, step Step) {
 		runReactionStep(t, ctx, env, state, step)
 	case "gm_spend_fear":
 		runGMSpendFearStep(t, ctx, env, state, step)
+	case "set_spotlight":
+		runSetSpotlightStep(t, ctx, env, state, step)
+	case "clear_spotlight":
+		runClearSpotlightStep(t, ctx, env, state, step)
 	case "apply_condition":
 		runApplyConditionStep(t, ctx, env, state, step)
 	case "group_action":
@@ -418,6 +422,8 @@ func runGMSpendFearStep(t *testing.T, ctx context.Context, env scenarioEnv, stat
 		}
 	}
 
+	expectedSpec, expectedBefore := captureExpectedDeltas(t, ctx, env, state, step.Args, "")
+
 	before := latestSeq(t, ctx, env, state)
 	response, err := env.daggerheartClient.ApplyGmMove(ctx, &daggerheartv1.DaggerheartApplyGmMoveRequest{
 		CampaignId:  state.campaignID,
@@ -431,6 +437,59 @@ func runGMSpendFearStep(t *testing.T, ctx context.Context, env scenarioEnv, stat
 	}
 	requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeGMFearChanged, daggerheart.EventTypeGMMoveApplied)
 	state.gmFear = int(response.GetGmFearAfter())
+	assertExpectedGMMove(t, ctx, env, state, before, step.Args)
+	assertExpectedDeltas(t, ctx, env, state, expectedSpec, expectedBefore)
+}
+
+func runSetSpotlightStep(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, step Step) {
+	ensureSession(t, ctx, env, state)
+	spotlightType := strings.ToLower(strings.TrimSpace(optionalString(step.Args, "type", "")))
+	name := optionalString(step.Args, "target", "")
+	request := &gamev1.SetSessionSpotlightRequest{
+		CampaignId: state.campaignID,
+		SessionId:  state.sessionID,
+	}
+	if spotlightType == "" {
+		if strings.TrimSpace(name) == "" {
+			spotlightType = "gm"
+		} else {
+			spotlightType = "character"
+		}
+	}
+	switch spotlightType {
+	case "gm":
+		request.Type = gamev1.SessionSpotlightType_SESSION_SPOTLIGHT_TYPE_GM
+	case "character":
+		if strings.TrimSpace(name) == "" {
+			t.Fatal("set_spotlight character requires target")
+		}
+		request.Type = gamev1.SessionSpotlightType_SESSION_SPOTLIGHT_TYPE_CHARACTER
+		request.CharacterId = actorID(t, state, name)
+	default:
+		t.Fatalf("unsupported spotlight type %q", spotlightType)
+	}
+
+	before := latestSeq(t, ctx, env, state)
+	_, err := env.sessionClient.SetSessionSpotlight(ctx, request)
+	if err != nil {
+		t.Fatalf("set spotlight: %v", err)
+	}
+	requireEventTypesAfterSeq(t, ctx, env, state, before, event.TypeSessionSpotlightSet)
+	assertExpectedSpotlight(t, ctx, env, state, step.Args)
+}
+
+func runClearSpotlightStep(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, step Step) {
+	ensureSession(t, ctx, env, state)
+	before := latestSeq(t, ctx, env, state)
+	_, err := env.sessionClient.ClearSessionSpotlight(ctx, &gamev1.ClearSessionSpotlightRequest{
+		CampaignId: state.campaignID,
+		SessionId:  state.sessionID,
+	})
+	if err != nil {
+		t.Fatalf("clear spotlight: %v", err)
+	}
+	requireEventTypesAfterSeq(t, ctx, env, state, before, event.TypeSessionSpotlightCleared)
+	assertExpectedSpotlight(t, ctx, env, state, step.Args)
 }
 
 func runApplyConditionStep(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, step Step) {
@@ -439,7 +498,7 @@ func runApplyConditionStep(t *testing.T, ctx context.Context, env scenarioEnv, s
 	if name == "" {
 		t.Fatal("apply_condition target is required")
 	}
-	characterID := actorID(t, state, name)
+	targetID, targetIsAdversary := resolveTargetID(t, state, name)
 	add := readStringSlice(step.Args, "add")
 	remove := readStringSlice(step.Args, "remove")
 	if len(add) == 0 && len(remove) == 0 {
@@ -447,17 +506,34 @@ func runApplyConditionStep(t *testing.T, ctx context.Context, env scenarioEnv, s
 	}
 
 	before := latestSeq(t, ctx, env, state)
-	_, err := env.daggerheartClient.ApplyConditions(withSessionID(ctx, state.sessionID), &daggerheartv1.DaggerheartApplyConditionsRequest{
+	if !targetIsAdversary {
+		response, err := env.daggerheartClient.ApplyConditions(withSessionID(ctx, state.sessionID), &daggerheartv1.DaggerheartApplyConditionsRequest{
+			CampaignId:  state.campaignID,
+			CharacterId: targetID,
+			Add:         parseConditions(t, add),
+			Remove:      parseConditions(t, remove),
+			Source:      optionalString(step.Args, "source", ""),
+		})
+		if err != nil {
+			t.Fatalf("apply conditions: %v", err)
+		}
+		requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeConditionChanged)
+		assertExpectedConditions(t, ctx, env, state, targetID, step.Args, response)
+		return
+	}
+
+	response, err := env.daggerheartClient.ApplyAdversaryConditions(withSessionID(ctx, state.sessionID), &daggerheartv1.DaggerheartApplyAdversaryConditionsRequest{
 		CampaignId:  state.campaignID,
-		CharacterId: characterID,
+		AdversaryId: targetID,
 		Add:         parseConditions(t, add),
 		Remove:      parseConditions(t, remove),
 		Source:      optionalString(step.Args, "source", ""),
 	})
 	if err != nil {
-		t.Fatalf("apply conditions: %v", err)
+		t.Fatalf("apply adversary conditions: %v", err)
 	}
-	requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeConditionChanged)
+	requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeAdversaryConditionChanged)
+	assertExpectedAdversaryConditions(t, ctx, env, state, targetID, step.Args, response)
 }
 
 func runGroupActionStep(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, step Step) {
@@ -559,7 +635,7 @@ func runTagTeamStep(t *testing.T, ctx context.Context, env scenarioEnv, state *s
 	selectedID := actorID(t, state, selectedName)
 
 	before := latestSeq(t, ctx, env, state)
-	_, err := env.daggerheartClient.SessionTagTeamFlow(ctx, &daggerheartv1.SessionTagTeamFlowRequest{
+	response, err := env.daggerheartClient.SessionTagTeamFlow(ctx, &daggerheartv1.SessionTagTeamFlowRequest{
 		CampaignId:          state.campaignID,
 		SessionId:           state.sessionID,
 		Difficulty:          int32(difficulty),
@@ -587,7 +663,12 @@ func runTagTeamStep(t *testing.T, ctx context.Context, env scenarioEnv, state *s
 		t.Fatalf("tag_team: %v", err)
 	}
 	requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeTagTeamResolved)
+	if response != nil {
+		assertExpectedOutcome(t, ctx, env, state, before, response.GetSelectedRollSeq(), step.Args)
+		assertExpectedComplication(t, response.GetSelectedOutcome(), step.Args)
+	}
 	assertExpectedDeltas(t, ctx, env, state, expectedSpec, expectedBefore)
+	assertExpectedSpotlight(t, ctx, env, state, step.Args)
 }
 
 func runRestStep(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, step Step) {
@@ -642,6 +723,7 @@ func runRestStep(t *testing.T, ctx context.Context, env scenarioEnv, state *scen
 		t.Fatalf("rest: %v", err)
 	}
 	requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeRestTaken)
+	assertExpectedRestTaken(t, ctx, env, state, before, step.Args)
 	assertExpectedDeltas(t, ctx, env, state, expectedSpec, expectedBefore)
 }
 
@@ -673,6 +755,7 @@ func runDowntimeMoveStep(t *testing.T, ctx context.Context, env scenarioEnv, sta
 		t.Fatalf("downtime_move: %v", err)
 	}
 	requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeDowntimeMoveApplied)
+	assertExpectedDowntimeMove(t, ctx, env, state, before, step.Args)
 	assertExpectedDeltas(t, ctx, env, state, expectedSpec, expectedBefore)
 }
 
@@ -715,11 +798,12 @@ func runDeathMoveStep(t *testing.T, ctx context.Context, env scenarioEnv, state 
 
 	before := latestSeq(t, ctx, env, state)
 	ctxWithSession := withSessionID(ctx, state.sessionID)
-	_, err := env.daggerheartClient.ApplyDeathMove(ctxWithSession, request)
+	response, err := env.daggerheartClient.ApplyDeathMove(ctxWithSession, request)
 	if err != nil {
 		t.Fatalf("death_move: %v", err)
 	}
 	requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeDeathMoveResolved)
+	assertExpectedDeathMove(t, response, step.Args)
 	assertExpectedDeltas(t, ctx, env, state, expectedSpec, expectedBefore)
 }
 
@@ -755,6 +839,7 @@ func runAttackStep(t *testing.T, ctx context.Context, env scenarioEnv, state *sc
 	targetID, targetIsAdversary := resolveTargetID(t, state, targetName)
 
 	expectedSpec, expectedBefore := captureExpectedDeltas(t, ctx, env, state, step.Args, actorName)
+	expectedAdversary := readExpectedAdversaryDeltas(t, step.Args, targetName)
 
 	actionSeed := chooseActionSeed(t, step.Args, difficulty)
 	damageSeed := actionSeed + 1
@@ -786,9 +871,13 @@ func runAttackStep(t *testing.T, ctx context.Context, env scenarioEnv, state *sc
 			t.Fatalf("attack flow: %v", err)
 		}
 		requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeAttackResolved)
+		assertExpectedSpotlight(t, ctx, env, state, step.Args)
+		assertExpectedComplication(t, response.GetRollOutcome(), step.Args)
 		if response.GetDamageApplied() != nil {
 			requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeDamageApplied)
 			assertDamageFlags(t, ctx, env, state, before, targetID, step.Args)
+			assertDamageAppliedExpectations(t, ctx, env, state, before, targetID, step.Args)
+			assertExpectedDamageRoll(t, ctx, env, state, response.GetDamageRoll().GetRollSeq(), step.Args)
 			if expectDamageEffect(step.Args, response.GetDamageRoll()) {
 				stateAfter := getCharacterState(t, ctx, env, state, targetID)
 				if stateAfter.GetHp() >= stateBefore.GetHp() && stateAfter.GetArmor() >= stateBefore.GetArmor() {
@@ -817,14 +906,17 @@ func runAttackStep(t *testing.T, ctx context.Context, env scenarioEnv, state *sc
 	if err != nil {
 		t.Fatalf("attack action roll: %v", err)
 	}
+	assertExpectedOutcome(t, ctx, env, state, before, rollResp.GetRollSeq(), step.Args)
 
-	_, err = env.daggerheartClient.ApplyRollOutcome(ctxWithMeta, &daggerheartv1.ApplyRollOutcomeRequest{
+	rollOutcomeResponse, err := env.daggerheartClient.ApplyRollOutcome(ctxWithMeta, &daggerheartv1.ApplyRollOutcomeRequest{
 		SessionId: state.sessionID,
 		RollSeq:   rollResp.GetRollSeq(),
 	})
 	if err != nil {
 		t.Fatalf("attack roll outcome: %v", err)
 	}
+	assertExpectedSpotlight(t, ctx, env, state, step.Args)
+	assertExpectedComplication(t, rollOutcomeResponse, step.Args)
 
 	attackOutcome, err := env.daggerheartClient.ApplyAttackOutcome(ctxWithMeta, &daggerheartv1.DaggerheartApplyAttackOutcomeRequest{
 		SessionId: state.sessionID,
@@ -857,7 +949,8 @@ func runAttackStep(t *testing.T, ctx context.Context, env scenarioEnv, state *sc
 		if err != nil {
 			t.Fatalf("attack damage roll: %v", err)
 		}
-		if applyAdversaryDamage(t, ctx, env, state, targetID, targetName, damageRoll, step.Args) {
+		assertExpectedDamageRoll(t, ctx, env, state, damageRoll.GetRollSeq(), step.Args)
+		if applyAdversaryDamage(t, ctx, env, state, targetID, targetName, damageRoll, step.Args, expectedAdversary) {
 			requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeAdversaryUpdated)
 		}
 	}
@@ -895,6 +988,7 @@ func runMultiAttackStep(t *testing.T, ctx context.Context, env scenarioEnv, stat
 	}
 
 	expectedSpec, expectedBefore := captureExpectedDeltas(t, ctx, env, state, step.Args, actorName)
+	expectedAdversary := readExpectedAdversaryDeltas(t, step.Args, "")
 
 	actionSeed := chooseActionSeed(t, step.Args, difficulty)
 	damageSeed := actionSeed + 1
@@ -918,13 +1012,14 @@ func runMultiAttackStep(t *testing.T, ctx context.Context, env scenarioEnv, stat
 	}
 
 	ctxWithMeta := withCampaignID(withSessionID(ctx, state.sessionID), state.campaignID)
-	_, err = env.daggerheartClient.ApplyRollOutcome(ctxWithMeta, &daggerheartv1.ApplyRollOutcomeRequest{
+	rollOutcomeResponse, err := env.daggerheartClient.ApplyRollOutcome(ctxWithMeta, &daggerheartv1.ApplyRollOutcomeRequest{
 		SessionId: state.sessionID,
 		RollSeq:   rollResp.GetRollSeq(),
 	})
 	if err != nil {
 		t.Fatalf("multi_attack roll outcome: %v", err)
 	}
+	assertExpectedComplication(t, rollOutcomeResponse, step.Args)
 
 	attackOutcome, err := env.daggerheartClient.ApplyAttackOutcome(ctxWithMeta, &daggerheartv1.DaggerheartApplyAttackOutcomeRequest{
 		SessionId: state.sessionID,
@@ -955,11 +1050,12 @@ func runMultiAttackStep(t *testing.T, ctx context.Context, env scenarioEnv, stat
 		if err != nil {
 			t.Fatalf("multi_attack damage roll: %v", err)
 		}
+		assertExpectedDamageRoll(t, ctx, env, state, damageRoll.GetRollSeq(), step.Args)
 
 		expectedChange := adjustedDamageAmount(step.Args, damageRoll.GetTotal()) > 0
 		for _, target := range targets {
 			if target.adversary {
-				if applyAdversaryDamage(t, ctx, env, state, target.id, target.name, damageRoll, step.Args) {
+				if applyAdversaryDamage(t, ctx, env, state, target.id, target.name, damageRoll, step.Args, expectedAdversary) {
 					requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeAdversaryUpdated)
 				}
 				continue
@@ -977,6 +1073,7 @@ func runMultiAttackStep(t *testing.T, ctx context.Context, env scenarioEnv, stat
 			}
 			requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeDamageApplied)
 			assertDamageFlags(t, ctx, env, state, before, target.id, step.Args)
+			assertDamageAppliedExpectations(t, ctx, env, state, before, target.id, step.Args)
 			if expectedChange {
 				stateAfter := getCharacterState(t, ctx, env, state, target.id)
 				if stateAfter.GetHp() >= stateBefore.GetHp() && stateAfter.GetArmor() >= stateBefore.GetArmor() {
@@ -994,7 +1091,10 @@ func runCombinedDamageStep(t *testing.T, ctx context.Context, env scenarioEnv, s
 	if name == "" {
 		t.Fatal("combined_damage target is required")
 	}
-	targetID := actorID(t, state, name)
+	targetID, targetIsAdversary := resolveTargetID(t, state, name)
+
+	expectedSpec, expectedBefore := captureExpectedDeltas(t, ctx, env, state, step.Args, name)
+	expectedAdversary := readExpectedAdversaryDeltas(t, step.Args, name)
 
 	sourcesRaw, ok := step.Args["sources"]
 	if !ok {
@@ -1026,11 +1126,40 @@ func runCombinedDamageStep(t *testing.T, ctx context.Context, env scenarioEnv, s
 	}
 
 	before := latestSeq(t, ctx, env, state)
-	stateBefore := getCharacterState(t, ctx, env, state, targetID)
 	ctxWithSession := withSessionID(ctx, state.sessionID)
-	_, err := env.daggerheartClient.ApplyDamage(ctxWithSession, &daggerheartv1.DaggerheartApplyDamageRequest{
+	if !targetIsAdversary {
+		stateBefore := getCharacterState(t, ctx, env, state, targetID)
+		_, err := env.daggerheartClient.ApplyDamage(ctxWithSession, &daggerheartv1.DaggerheartApplyDamageRequest{
+			CampaignId:  state.campaignID,
+			CharacterId: targetID,
+			Damage: buildDamageRequestWithSources(
+				step.Args,
+				optionalString(step.Args, "source", "combined"),
+				int32(amountTotal),
+				sourceIDs,
+			),
+			RequireDamageRoll: false,
+		})
+		if err != nil {
+			t.Fatalf("combined_damage apply damage: %v", err)
+		}
+		requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeDamageApplied)
+		assertDamageFlags(t, ctx, env, state, before, targetID, step.Args)
+		assertDamageAppliedExpectations(t, ctx, env, state, before, targetID, step.Args)
+		if adjustedDamageAmount(step.Args, int32(amountTotal)) > 0 {
+			stateAfter := getCharacterState(t, ctx, env, state, targetID)
+			if stateAfter.GetHp() >= stateBefore.GetHp() && stateAfter.GetArmor() >= stateBefore.GetArmor() {
+				t.Fatalf("expected damage to affect hp or armor for %s", name)
+			}
+		}
+		assertExpectedDeltas(t, ctx, env, state, expectedSpec, expectedBefore)
+		return
+	}
+
+	adversaryBefore := getAdversary(t, ctx, env, state, targetID)
+	_, err := env.daggerheartClient.ApplyAdversaryDamage(ctxWithSession, &daggerheartv1.DaggerheartApplyAdversaryDamageRequest{
 		CampaignId:  state.campaignID,
-		CharacterId: targetID,
+		AdversaryId: targetID,
 		Damage: buildDamageRequestWithSources(
 			step.Args,
 			optionalString(step.Args, "source", "combined"),
@@ -1040,16 +1169,39 @@ func runCombinedDamageStep(t *testing.T, ctx context.Context, env scenarioEnv, s
 		RequireDamageRoll: false,
 	})
 	if err != nil {
-		t.Fatalf("combined_damage apply damage: %v", err)
+		t.Fatalf("combined_damage apply adversary damage: %v", err)
 	}
-	requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeDamageApplied)
-	assertDamageFlags(t, ctx, env, state, before, targetID, step.Args)
+	requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeAdversaryDamageApplied)
+	assertAdversaryDamageAppliedExpectations(t, ctx, env, state, before, targetID, step.Args)
+	adversaryAfter := getAdversary(t, ctx, env, state, targetID)
 	if adjustedDamageAmount(step.Args, int32(amountTotal)) > 0 {
-		stateAfter := getCharacterState(t, ctx, env, state, targetID)
-		if stateAfter.GetHp() >= stateBefore.GetHp() && stateAfter.GetArmor() >= stateBefore.GetArmor() {
+		if adversaryAfter.GetHp() >= adversaryBefore.GetHp() && adversaryAfter.GetArmor() >= adversaryBefore.GetArmor() {
 			t.Fatalf("expected damage to affect hp or armor for %s", name)
 		}
 	}
+	if expectedAdversary != nil {
+		if expectation, ok := expectedAdversary[name]; ok {
+			if expectation.hpDelta != nil {
+				delta := int(adversaryAfter.GetHp()) - int(adversaryBefore.GetHp())
+				if delta != *expectation.hpDelta {
+					t.Fatalf("adversary hp delta for %s = %d, want %d", name, delta, *expectation.hpDelta)
+				}
+			}
+			if expectation.armorDelta != nil {
+				delta := int(adversaryAfter.GetArmor()) - int(adversaryBefore.GetArmor())
+				if delta != *expectation.armorDelta {
+					t.Fatalf("adversary armor delta for %s = %d, want %d", name, delta, *expectation.armorDelta)
+				}
+			}
+			if expectation.mitigated != nil {
+				payload := findAdversaryDamageAppliedPayload(t, ctx, env, state, before, targetID)
+				if payload.Mitigated != *expectation.mitigated {
+					t.Fatalf("adversary damage mitigated for %s = %v, want %v", name, payload.Mitigated, *expectation.mitigated)
+				}
+			}
+		}
+	}
+	assertExpectedDeltas(t, ctx, env, state, expectedSpec, expectedBefore)
 }
 
 func runAdversaryAttackStep(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, step Step) {
@@ -1101,6 +1253,8 @@ func runAdversaryAttackStep(t *testing.T, ctx context.Context, env scenarioEnv, 
 	if response.GetDamageApplied() != nil {
 		requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeDamageApplied)
 		assertDamageFlags(t, ctx, env, state, before, targetCharacterID, step.Args)
+		assertDamageAppliedExpectations(t, ctx, env, state, before, targetCharacterID, step.Args)
+		assertExpectedDamageRoll(t, ctx, env, state, response.GetDamageRoll().GetRollSeq(), step.Args)
 		if expectDamageEffect(step.Args, response.GetDamageRoll()) {
 			stateAfter := getCharacterState(t, ctx, env, state, targetCharacterID)
 			if stateAfter.GetHp() >= stateBefore.GetHp() && stateAfter.GetArmor() >= stateBefore.GetArmor() {
@@ -1265,6 +1419,7 @@ func runActionRollStep(t *testing.T, ctx context.Context, env scenarioEnv, state
 	}
 	state.lastRollSeq = response.GetRollSeq()
 	requireEventTypesAfterSeq(t, ctx, env, state, before, event.TypeRollResolved)
+	assertExpectedOutcome(t, ctx, env, state, before, response.GetRollSeq(), step.Args)
 }
 
 func runReactionRollStep(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, step Step) {
@@ -1299,6 +1454,7 @@ func runReactionRollStep(t *testing.T, ctx context.Context, env scenarioEnv, sta
 	}
 	state.lastRollSeq = response.GetRollSeq()
 	requireEventTypesAfterSeq(t, ctx, env, state, before, event.TypeRollResolved)
+	assertExpectedOutcome(t, ctx, env, state, before, response.GetRollSeq(), step.Args)
 }
 
 func runDamageRollStep(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, step Step) {
@@ -1334,6 +1490,7 @@ func runDamageRollStep(t *testing.T, ctx context.Context, env scenarioEnv, state
 	}
 	state.lastDamageRollSeq = response.GetRollSeq()
 	requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeDamageRollResolved)
+	assertExpectedDamageRoll(t, ctx, env, state, response.GetRollSeq(), step.Args)
 }
 
 func runAdversaryAttackRollStep(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, step Step) {
@@ -1386,11 +1543,13 @@ func runApplyRollOutcomeStep(t *testing.T, ctx context.Context, env scenarioEnv,
 	}
 
 	before := latestSeq(t, ctx, env, state)
-	_, err := env.daggerheartClient.ApplyRollOutcome(withCampaignID(withSessionID(ctx, state.sessionID), state.campaignID), request)
+	response, err := env.daggerheartClient.ApplyRollOutcome(withCampaignID(withSessionID(ctx, state.sessionID), state.campaignID), request)
 	if err != nil {
 		t.Fatalf("apply_roll_outcome: %v", err)
 	}
 	requireAnyEventTypesAfterSeq(t, ctx, env, state, before, event.TypeOutcomeApplied, event.TypeOutcomeRejected)
+	assertExpectedSpotlight(t, ctx, env, state, step.Args)
+	assertExpectedComplication(t, response, step.Args)
 }
 
 func runApplyAttackOutcomeStep(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, step Step) {
@@ -1775,6 +1934,422 @@ func matchesOutcomeHint(result daggerheartdomain.ActionResult, hint string) bool
 	}
 }
 
+func assertExpectedOutcome(
+	t *testing.T,
+	ctx context.Context,
+	env scenarioEnv,
+	state *scenarioState,
+	before uint64,
+	rollSeq uint64,
+	args map[string]any,
+) {
+	expected := optionalString(args, "expect_outcome", "")
+	if expected == "" {
+		return
+	}
+	if rollSeq == 0 {
+		t.Fatal("expect_outcome requires a roll sequence")
+	}
+	payload := findRollResolvedPayload(t, ctx, env, state, before, rollSeq)
+	if payload.Outcome == "" {
+		t.Fatal("roll resolved payload missing outcome")
+	}
+	match, reason := matchesOutcomeExpectation(expected, payload.Outcome)
+	if !match {
+		if reason == "" {
+			reason = "outcome did not match"
+		}
+		t.Fatalf("roll outcome = %s, want %s (%s)", payload.Outcome, expected, reason)
+	}
+}
+
+func findRollResolvedPayload(
+	t *testing.T,
+	ctx context.Context,
+	env scenarioEnv,
+	state *scenarioState,
+	before uint64,
+	rollSeq uint64,
+) event.RollResolvedPayload {
+	filter := fmt.Sprintf("type = \"%s\"", event.TypeRollResolved)
+	if state.sessionID != "" {
+		filter = filter + fmt.Sprintf(" AND session_id = \"%s\"", state.sessionID)
+	}
+	response, err := env.eventClient.ListEvents(ctx, &gamev1.ListEventsRequest{
+		CampaignId: state.campaignID,
+		PageSize:   20,
+		OrderBy:    "seq desc",
+		Filter:     filter,
+	})
+	if err != nil {
+		t.Fatalf("list events for %s: %v", event.TypeRollResolved, err)
+	}
+	for _, evt := range response.GetEvents() {
+		if evt.GetSeq() <= before {
+			continue
+		}
+		var payload event.RollResolvedPayload
+		if err := json.Unmarshal(evt.GetPayloadJson(), &payload); err != nil {
+			t.Fatalf("decode roll resolved payload: %v", err)
+		}
+		if payload.RollSeq != rollSeq {
+			continue
+		}
+		return payload
+	}
+	t.Fatalf("roll resolved payload not found for roll seq %d", rollSeq)
+	return event.RollResolvedPayload{}
+}
+
+func matchesOutcomeExpectation(expected, actual string) (bool, string) {
+	expected = strings.TrimSpace(expected)
+	if expected == "" {
+		return true, ""
+	}
+	actualUpper := strings.ToUpper(strings.TrimSpace(actual))
+	expectedUpper := strings.ToUpper(expected)
+	switch expectedUpper {
+	case "HOPE":
+		return strings.Contains(actualUpper, "HOPE"), "expected HOPE outcome"
+	case "FEAR":
+		return strings.Contains(actualUpper, "FEAR"), "expected FEAR outcome"
+	case "CRIT", "CRITICAL":
+		return actualUpper == "OUTCOME_CRITICAL_SUCCESS", "expected OUTCOME_CRITICAL_SUCCESS"
+	}
+	if strings.HasPrefix(expectedUpper, "OUTCOME_") {
+		return actualUpper == expectedUpper, fmt.Sprintf("expected %s", expectedUpper)
+	}
+	if strings.Contains(expectedUpper, "WITH_") || strings.HasPrefix(expectedUpper, "ROLL_") || strings.HasPrefix(expectedUpper, "SUCCESS_") || strings.HasPrefix(expectedUpper, "FAILURE_") || strings.HasPrefix(expectedUpper, "CRITICAL_") {
+		expectedUpper = "OUTCOME_" + expectedUpper
+		return actualUpper == expectedUpper, fmt.Sprintf("expected %s", expectedUpper)
+	}
+	return false, "unknown expected outcome"
+}
+
+func assertExpectedSpotlight(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, args map[string]any) {
+	expected := strings.ToLower(strings.TrimSpace(optionalString(args, "expect_spotlight", "")))
+	if expected == "" {
+		return
+	}
+	if state.sessionID == "" {
+		t.Fatal("expect_spotlight requires an active session")
+	}
+	request := &gamev1.GetSessionSpotlightRequest{
+		CampaignId: state.campaignID,
+		SessionId:  state.sessionID,
+	}
+	if expected == "none" {
+		if _, err := env.sessionClient.GetSessionSpotlight(ctx, request); err == nil {
+			t.Fatal("expected no session spotlight")
+		}
+		return
+	}
+	response, err := env.sessionClient.GetSessionSpotlight(ctx, request)
+	if err != nil {
+		t.Fatalf("get session spotlight: %v", err)
+	}
+	spotlight := response.GetSpotlight()
+	if spotlight == nil {
+		t.Fatal("expected session spotlight")
+	}
+	if expected == "gm" {
+		if spotlight.GetType() != gamev1.SessionSpotlightType_SESSION_SPOTLIGHT_TYPE_GM {
+			t.Fatalf("spotlight type = %v, want GM", spotlight.GetType())
+		}
+		if spotlight.GetCharacterId() != "" {
+			t.Fatalf("spotlight character id = %q, want empty", spotlight.GetCharacterId())
+		}
+		return
+	}
+	characterID := actorID(t, state, expected)
+	if spotlight.GetType() != gamev1.SessionSpotlightType_SESSION_SPOTLIGHT_TYPE_CHARACTER {
+		t.Fatalf("spotlight type = %v, want CHARACTER", spotlight.GetType())
+	}
+	if spotlight.GetCharacterId() != characterID {
+		t.Fatalf("spotlight character id = %q, want %q", spotlight.GetCharacterId(), characterID)
+	}
+}
+
+func assertExpectedComplication(t *testing.T, response *daggerheartv1.ApplyRollOutcomeResponse, args map[string]any) {
+	value, ok := readBool(args, "expect_requires_complication")
+	if !ok {
+		return
+	}
+	if response == nil {
+		t.Fatal("roll outcome response is missing")
+	}
+	if response.GetRequiresComplication() != value {
+		t.Fatalf("requires_complication = %v, want %v", response.GetRequiresComplication(), value)
+	}
+}
+
+type gmMoveExpect struct {
+	move        string
+	fearSpent   *int
+	source      string
+	description string
+	severity    string
+}
+
+type restExpect struct {
+	restType        string
+	interrupted     *bool
+	gmFearDelta     *int
+	refreshRest     *bool
+	refreshLongRest *bool
+	shortRestsAfter *int
+}
+
+type downtimeExpect struct {
+	move string
+}
+
+func readGMMoveExpect(args map[string]any) (gmMoveExpect, bool) {
+	expect := gmMoveExpect{}
+	if value := strings.TrimSpace(optionalString(args, "expect_gm_move", "")); value != "" {
+		expect.move = strings.ToLower(value)
+	}
+	if value, ok := readInt(args, "expect_gm_fear_spent"); ok {
+		expect.fearSpent = &value
+	}
+	if value := strings.TrimSpace(optionalString(args, "expect_gm_move_source", "")); value != "" {
+		expect.source = value
+	}
+	if value := strings.TrimSpace(optionalString(args, "expect_gm_move_description", "")); value != "" {
+		expect.description = value
+	}
+	if value := strings.TrimSpace(optionalString(args, "expect_gm_move_severity", "")); value != "" {
+		expect.severity = strings.ToLower(value)
+	}
+	if expect.move == "" && expect.fearSpent == nil && expect.source == "" && expect.description == "" && expect.severity == "" {
+		return gmMoveExpect{}, false
+	}
+	return expect, true
+}
+
+func readRestExpect(args map[string]any) (restExpect, bool) {
+	expect := restExpect{}
+	if value := strings.TrimSpace(optionalString(args, "expect_rest_type", "")); value != "" {
+		expect.restType = strings.ToLower(value)
+	}
+	if value, ok := readBool(args, "expect_rest_interrupted"); ok {
+		expect.interrupted = &value
+	}
+	if value, ok := readInt(args, "expect_gm_fear_delta"); ok {
+		expect.gmFearDelta = &value
+	}
+	if value, ok := readBool(args, "expect_refresh_rest"); ok {
+		expect.refreshRest = &value
+	}
+	if value, ok := readBool(args, "expect_refresh_long_rest"); ok {
+		expect.refreshLongRest = &value
+	}
+	if value, ok := readInt(args, "expect_short_rests_after"); ok {
+		expect.shortRestsAfter = &value
+	}
+	if expect.restType == "" && expect.interrupted == nil && expect.gmFearDelta == nil && expect.refreshRest == nil && expect.refreshLongRest == nil && expect.shortRestsAfter == nil {
+		return restExpect{}, false
+	}
+	return expect, true
+}
+
+func readDowntimeExpect(args map[string]any) (downtimeExpect, bool) {
+	expect := downtimeExpect{}
+	if value := strings.TrimSpace(optionalString(args, "expect_downtime_move", "")); value != "" {
+		expect.move = strings.ToLower(value)
+	}
+	if expect.move == "" {
+		return downtimeExpect{}, false
+	}
+	return expect, true
+}
+
+func assertExpectedGMMove(
+	t *testing.T,
+	ctx context.Context,
+	env scenarioEnv,
+	state *scenarioState,
+	before uint64,
+	args map[string]any,
+) {
+	expect, ok := readGMMoveExpect(args)
+	if !ok {
+		return
+	}
+	payload := findGMMoveAppliedPayload(t, ctx, env, state, before)
+	if expect.move != "" && strings.ToLower(payload.Move) != expect.move {
+		t.Fatalf("gm move = %s, want %s", payload.Move, expect.move)
+	}
+	if expect.fearSpent != nil && payload.FearSpent != *expect.fearSpent {
+		t.Fatalf("gm fear_spent = %d, want %d", payload.FearSpent, *expect.fearSpent)
+	}
+	if expect.source != "" && payload.Source != expect.source {
+		t.Fatalf("gm move source = %s, want %s", payload.Source, expect.source)
+	}
+	if expect.description != "" && payload.Description != expect.description {
+		t.Fatalf("gm move description = %s, want %s", payload.Description, expect.description)
+	}
+	if expect.severity != "" && strings.ToLower(payload.Severity) != expect.severity {
+		t.Fatalf("gm move severity = %s, want %s", payload.Severity, expect.severity)
+	}
+}
+
+func assertExpectedRestTaken(
+	t *testing.T,
+	ctx context.Context,
+	env scenarioEnv,
+	state *scenarioState,
+	before uint64,
+	args map[string]any,
+) {
+	expect, ok := readRestExpect(args)
+	if !ok {
+		return
+	}
+	payload := findRestTakenPayload(t, ctx, env, state, before)
+	if expect.restType != "" && strings.ToLower(payload.RestType) != expect.restType {
+		t.Fatalf("rest_type = %s, want %s", payload.RestType, expect.restType)
+	}
+	if expect.interrupted != nil && payload.Interrupted != *expect.interrupted {
+		t.Fatalf("rest interrupted = %v, want %v", payload.Interrupted, *expect.interrupted)
+	}
+	if expect.gmFearDelta != nil {
+		delta := payload.GMFearAfter - payload.GMFearBefore
+		if delta != *expect.gmFearDelta {
+			t.Fatalf("rest gm_fear_delta = %d, want %d", delta, *expect.gmFearDelta)
+		}
+	}
+	if expect.refreshRest != nil && payload.RefreshRest != *expect.refreshRest {
+		t.Fatalf("rest refresh_rest = %v, want %v", payload.RefreshRest, *expect.refreshRest)
+	}
+	if expect.refreshLongRest != nil && payload.RefreshLongRest != *expect.refreshLongRest {
+		t.Fatalf("rest refresh_long_rest = %v, want %v", payload.RefreshLongRest, *expect.refreshLongRest)
+	}
+	if expect.shortRestsAfter != nil && payload.ShortRestsAfter != *expect.shortRestsAfter {
+		t.Fatalf("rest short_rests_after = %d, want %d", payload.ShortRestsAfter, *expect.shortRestsAfter)
+	}
+}
+
+func assertExpectedDowntimeMove(
+	t *testing.T,
+	ctx context.Context,
+	env scenarioEnv,
+	state *scenarioState,
+	before uint64,
+	args map[string]any,
+) {
+	expect, ok := readDowntimeExpect(args)
+	if !ok {
+		return
+	}
+	payload := findDowntimeMovePayload(t, ctx, env, state, before)
+	if expect.move != "" && strings.ToLower(payload.Move) != expect.move {
+		t.Fatalf("downtime move = %s, want %s", payload.Move, expect.move)
+	}
+}
+
+func findRestTakenPayload(
+	t *testing.T,
+	ctx context.Context,
+	env scenarioEnv,
+	state *scenarioState,
+	before uint64,
+) daggerheart.RestTakenPayload {
+	filter := fmt.Sprintf("type = \"%s\"", daggerheart.EventTypeRestTaken)
+	if state.sessionID != "" {
+		filter = filter + fmt.Sprintf(" AND session_id = \"%s\"", state.sessionID)
+	}
+	response, err := env.eventClient.ListEvents(ctx, &gamev1.ListEventsRequest{
+		CampaignId: state.campaignID,
+		PageSize:   20,
+		OrderBy:    "seq desc",
+		Filter:     filter,
+	})
+	if err != nil {
+		t.Fatalf("list rest events: %v", err)
+	}
+	for _, evt := range response.GetEvents() {
+		if evt.GetSeq() <= before {
+			continue
+		}
+		var payload daggerheart.RestTakenPayload
+		if err := json.Unmarshal(evt.GetPayloadJson(), &payload); err != nil {
+			t.Fatalf("decode rest payload: %v", err)
+		}
+		return payload
+	}
+	t.Fatalf("expected rest_taken after seq %d", before)
+	return daggerheart.RestTakenPayload{}
+}
+
+func findDowntimeMovePayload(
+	t *testing.T,
+	ctx context.Context,
+	env scenarioEnv,
+	state *scenarioState,
+	before uint64,
+) daggerheart.DowntimeMoveAppliedPayload {
+	filter := fmt.Sprintf("type = \"%s\"", daggerheart.EventTypeDowntimeMoveApplied)
+	if state.sessionID != "" {
+		filter = filter + fmt.Sprintf(" AND session_id = \"%s\"", state.sessionID)
+	}
+	response, err := env.eventClient.ListEvents(ctx, &gamev1.ListEventsRequest{
+		CampaignId: state.campaignID,
+		PageSize:   20,
+		OrderBy:    "seq desc",
+		Filter:     filter,
+	})
+	if err != nil {
+		t.Fatalf("list downtime events: %v", err)
+	}
+	for _, evt := range response.GetEvents() {
+		if evt.GetSeq() <= before {
+			continue
+		}
+		var payload daggerheart.DowntimeMoveAppliedPayload
+		if err := json.Unmarshal(evt.GetPayloadJson(), &payload); err != nil {
+			t.Fatalf("decode downtime payload: %v", err)
+		}
+		return payload
+	}
+	t.Fatalf("expected downtime_move_applied after seq %d", before)
+	return daggerheart.DowntimeMoveAppliedPayload{}
+}
+
+func findGMMoveAppliedPayload(
+	t *testing.T,
+	ctx context.Context,
+	env scenarioEnv,
+	state *scenarioState,
+	before uint64,
+) daggerheart.GMMoveAppliedPayload {
+	filter := fmt.Sprintf("type = \"%s\"", daggerheart.EventTypeGMMoveApplied)
+	if state.sessionID != "" {
+		filter = filter + fmt.Sprintf(" AND session_id = \"%s\"", state.sessionID)
+	}
+	response, err := env.eventClient.ListEvents(ctx, &gamev1.ListEventsRequest{
+		CampaignId: state.campaignID,
+		PageSize:   20,
+		OrderBy:    "seq desc",
+		Filter:     filter,
+	})
+	if err != nil {
+		t.Fatalf("list gm move events: %v", err)
+	}
+	for _, evt := range response.GetEvents() {
+		if evt.GetSeq() <= before {
+			continue
+		}
+		var payload daggerheart.GMMoveAppliedPayload
+		if err := json.Unmarshal(evt.GetPayloadJson(), &payload); err != nil {
+			t.Fatalf("decode gm move payload: %v", err)
+		}
+		return payload
+	}
+	t.Fatalf("expected gm_move_applied after seq %d", before)
+	return daggerheart.GMMoveAppliedPayload{}
+}
+
 func resolveOutcomeSeed(t *testing.T, args map[string]any, key string, difficulty int, fallback uint64) uint64 {
 	hint := optionalString(args, key, "")
 	if hint == "" {
@@ -1896,6 +2471,7 @@ func applyAdversaryDamage(
 	name string,
 	damageRoll *daggerheartv1.SessionDamageRollResponse,
 	args map[string]any,
+	expected map[string]expectedAdversaryDelta,
 ) bool {
 	t.Helper()
 	before := getAdversary(t, ctx, env, state, adversaryID)
@@ -1912,6 +2488,7 @@ func applyAdversaryDamage(
 		ImmuneMagic:    optionalBool(args, "immune_magic", false),
 	}
 	adjusted := daggerheart.ApplyResistance(amount, damageTypesForArgs(args), resistance)
+	mitigated := amount > 0 && adjusted < amount
 	if adjusted <= 0 {
 		return false
 	}
@@ -1958,6 +2535,27 @@ func applyAdversaryDamage(
 	after := getAdversary(t, ctx, env, state, adversaryID)
 	if after.GetHp() >= before.GetHp() && after.GetArmor() >= before.GetArmor() {
 		t.Fatalf("expected damage to affect hp or armor for %s", name)
+	}
+	if expected != nil {
+		if expectation, ok := expected[name]; ok {
+			if expectation.hpDelta != nil {
+				delta := int(after.GetHp()) - int(before.GetHp())
+				if delta != *expectation.hpDelta {
+					t.Fatalf("adversary hp delta for %s = %d, want %d", name, delta, *expectation.hpDelta)
+				}
+			}
+			if expectation.armorDelta != nil {
+				delta := int(after.GetArmor()) - int(before.GetArmor())
+				if delta != *expectation.armorDelta {
+					t.Fatalf("adversary armor delta for %s = %d, want %d", name, delta, *expectation.armorDelta)
+				}
+			}
+			if expectation.mitigated != nil {
+				if mitigated != *expectation.mitigated {
+					t.Fatalf("adversary damage mitigated for %s = %v, want %v", name, mitigated, *expectation.mitigated)
+				}
+			}
+		}
 	}
 	return true
 }
@@ -2016,6 +2614,188 @@ func parseConditions(t *testing.T, values []string) []daggerheartv1.DaggerheartC
 		}
 	}
 	return result
+}
+
+func assertExpectedConditions(
+	t *testing.T,
+	ctx context.Context,
+	env scenarioEnv,
+	state *scenarioState,
+	characterID string,
+	args map[string]any,
+	response *daggerheartv1.DaggerheartApplyConditionsResponse,
+) {
+	expected := readStringSlice(args, "expect_conditions")
+	if len(expected) > 0 {
+		stateAfter := getCharacterState(t, ctx, env, state, characterID)
+		actual := normalizeConditionsFromProto(t, stateAfter.GetConditions())
+		want := normalizeConditionNames(t, expected)
+		if !daggerheart.ConditionsEqual(actual, want) {
+			t.Fatalf("conditions = %v, want %v", actual, want)
+		}
+	}
+
+	expectedAdded := readStringSlice(args, "expect_added")
+	if len(expectedAdded) > 0 {
+		actual := normalizeConditionsFromProto(t, response.GetAdded())
+		want := normalizeConditionNames(t, expectedAdded)
+		if !daggerheart.ConditionsEqual(actual, want) {
+			t.Fatalf("conditions added = %v, want %v", actual, want)
+		}
+	}
+
+	expectedRemoved := readStringSlice(args, "expect_removed")
+	if len(expectedRemoved) > 0 {
+		actual := normalizeConditionsFromProto(t, response.GetRemoved())
+		want := normalizeConditionNames(t, expectedRemoved)
+		if !daggerheart.ConditionsEqual(actual, want) {
+			t.Fatalf("conditions removed = %v, want %v", actual, want)
+		}
+	}
+}
+
+func assertExpectedAdversaryConditions(
+	t *testing.T,
+	ctx context.Context,
+	env scenarioEnv,
+	state *scenarioState,
+	adversaryID string,
+	args map[string]any,
+	response *daggerheartv1.DaggerheartApplyAdversaryConditionsResponse,
+) {
+	expected := readStringSlice(args, "expect_conditions")
+	if len(expected) > 0 {
+		adversary := getAdversary(t, ctx, env, state, adversaryID)
+		actual := normalizeConditionsFromProto(t, adversary.GetConditions())
+		want := normalizeConditionNames(t, expected)
+		if !daggerheart.ConditionsEqual(actual, want) {
+			t.Fatalf("adversary conditions = %v, want %v", actual, want)
+		}
+	}
+
+	expectedAdded := readStringSlice(args, "expect_added")
+	if len(expectedAdded) > 0 {
+		actual := normalizeConditionsFromProto(t, response.GetAdded())
+		want := normalizeConditionNames(t, expectedAdded)
+		if !daggerheart.ConditionsEqual(actual, want) {
+			t.Fatalf("adversary conditions added = %v, want %v", actual, want)
+		}
+	}
+
+	expectedRemoved := readStringSlice(args, "expect_removed")
+	if len(expectedRemoved) > 0 {
+		actual := normalizeConditionsFromProto(t, response.GetRemoved())
+		want := normalizeConditionNames(t, expectedRemoved)
+		if !daggerheart.ConditionsEqual(actual, want) {
+			t.Fatalf("adversary conditions removed = %v, want %v", actual, want)
+		}
+	}
+}
+
+func normalizeConditionNames(t *testing.T, values []string) []string {
+	result, err := daggerheart.NormalizeConditions(values)
+	if err != nil {
+		t.Fatalf("normalize conditions: %v", err)
+	}
+	return result
+}
+
+func normalizeConditionsFromProto(t *testing.T, conditions []daggerheartv1.DaggerheartCondition) []string {
+	if len(conditions) == 0 {
+		return []string{}
+	}
+	result := make([]string, 0, len(conditions))
+	for _, condition := range conditions {
+		switch condition {
+		case daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN:
+			result = append(result, daggerheart.ConditionHidden)
+		case daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_RESTRAINED:
+			result = append(result, daggerheart.ConditionRestrained)
+		case daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE:
+			result = append(result, daggerheart.ConditionVulnerable)
+		default:
+			t.Fatalf("unknown condition %v", condition)
+		}
+	}
+	normalized, err := daggerheart.NormalizeConditions(result)
+	if err != nil {
+		t.Fatalf("normalize conditions from proto: %v", err)
+	}
+	return normalized
+}
+
+func assertExpectedDeathMove(
+	t *testing.T,
+	response *daggerheartv1.DaggerheartApplyDeathMoveResponse,
+	args map[string]any,
+) {
+	if response == nil {
+		return
+	}
+	if value := strings.TrimSpace(optionalString(args, "expect_life_state", "")); value != "" {
+		result := response.GetResult()
+		if result == nil {
+			t.Fatal("death_move result is missing")
+		}
+		expected := parseLifeState(t, value)
+		if result.GetLifeState() != expected {
+			t.Fatalf("death_move life_state = %v, want %v", result.GetLifeState(), expected)
+		}
+	}
+	if value, ok := readBool(args, "expect_scar_gained"); ok {
+		result := response.GetResult()
+		if result == nil {
+			t.Fatal("death_move result is missing")
+		}
+		if result.GetScarGained() != value {
+			t.Fatalf("death_move scar_gained = %v, want %v", result.GetScarGained(), value)
+		}
+	}
+	if value, ok := readInt(args, "expect_hope_die"); ok {
+		result := response.GetResult()
+		if result == nil || result.HopeDie == nil {
+			t.Fatal("death_move hope_die is missing")
+		}
+		if int(result.GetHopeDie()) != value {
+			t.Fatalf("death_move hope_die = %d, want %d", result.GetHopeDie(), value)
+		}
+	}
+	if value, ok := readInt(args, "expect_fear_die"); ok {
+		result := response.GetResult()
+		if result == nil || result.FearDie == nil {
+			t.Fatal("death_move fear_die is missing")
+		}
+		if int(result.GetFearDie()) != value {
+			t.Fatalf("death_move fear_die = %d, want %d", result.GetFearDie(), value)
+		}
+	}
+	if value, ok := readInt(args, "expect_hp_cleared"); ok {
+		result := response.GetResult()
+		if result == nil {
+			t.Fatal("death_move result is missing")
+		}
+		if int(result.GetHpCleared()) != value {
+			t.Fatalf("death_move hp_cleared = %d, want %d", result.GetHpCleared(), value)
+		}
+	}
+	if value, ok := readInt(args, "expect_stress_cleared"); ok {
+		result := response.GetResult()
+		if result == nil {
+			t.Fatal("death_move result is missing")
+		}
+		if int(result.GetStressCleared()) != value {
+			t.Fatalf("death_move stress_cleared = %d, want %d", result.GetStressCleared(), value)
+		}
+	}
+	if value, ok := readInt(args, "expect_hope_max"); ok {
+		state := response.GetState()
+		if state == nil {
+			t.Fatal("death_move state is missing")
+		}
+		if int(state.GetHopeMax()) != value {
+			t.Fatalf("death_move hope_max = %d, want %d", state.GetHopeMax(), value)
+		}
+	}
 }
 
 func parseGameSystem(t *testing.T, value string) commonv1.GameSystem {
@@ -2267,10 +3047,118 @@ func readBool(args map[string]any, key string) (bool, bool) {
 }
 
 type expectedDeltas struct {
-	name        string
-	characterID string
+	name         string
+	characterID  string
+	hopeDelta    *int
+	stressDelta  *int
+	hpDelta      *int
+	armorDelta   *int
+	gmFearDelta  *int
+	gmFearBefore int
+}
+
+type expectedAdversaryDelta struct {
+	name       string
+	hpDelta    *int
+	armorDelta *int
+	mitigated  *bool
+}
+
+type expectedDeltaInput struct {
 	hopeDelta   *int
 	stressDelta *int
+	hpDelta     *int
+	armorDelta  *int
+	gmFearDelta *int
+}
+
+func readExpectedDeltas(args map[string]any) (expectedDeltaInput, bool) {
+	input := expectedDeltaInput{}
+	if value, ok := readInt(args, "expect_hope_delta"); ok {
+		input.hopeDelta = &value
+	}
+	if value, ok := readInt(args, "expect_stress_delta"); ok {
+		input.stressDelta = &value
+	}
+	if value, ok := readInt(args, "expect_hp_delta"); ok {
+		input.hpDelta = &value
+	}
+	if value, ok := readInt(args, "expect_armor_delta"); ok {
+		input.armorDelta = &value
+	}
+	if value, ok := readInt(args, "expect_gm_fear_delta"); ok {
+		input.gmFearDelta = &value
+	}
+	if input.hopeDelta == nil && input.stressDelta == nil && input.hpDelta == nil && input.armorDelta == nil && input.gmFearDelta == nil {
+		return expectedDeltaInput{}, false
+	}
+	return input, true
+}
+
+func readExpectedAdversaryDeltas(t *testing.T, args map[string]any, defaultTarget string) map[string]expectedAdversaryDelta {
+	entries := make(map[string]expectedAdversaryDelta)
+	listRaw, hasList := args["expect_adversary_deltas"]
+	if hasList {
+		list, ok := listRaw.([]any)
+		if !ok || len(list) == 0 {
+			t.Fatal("expect_adversary_deltas must be a list")
+		}
+		for index, entry := range list {
+			item, ok := entry.(map[string]any)
+			if !ok {
+				t.Fatalf("expect_adversary_deltas entry %d must be an object", index)
+			}
+			name := optionalString(item, "target", "")
+			if strings.TrimSpace(name) == "" {
+				t.Fatalf("expect_adversary_deltas entry %d requires target", index)
+			}
+			hpDelta, hpOk := readInt(item, "hp_delta")
+			armorDelta, armorOk := readInt(item, "armor_delta")
+			mitigated, mitigatedOk := readBool(item, "damage_mitigated")
+			if !hpOk && !armorOk && !mitigatedOk {
+				t.Fatalf("expect_adversary_deltas entry %d requires hp_delta, armor_delta, or damage_mitigated", index)
+			}
+			expected := expectedAdversaryDelta{name: name}
+			if hpOk {
+				expected.hpDelta = &hpDelta
+			}
+			if armorOk {
+				expected.armorDelta = &armorDelta
+			}
+			if mitigatedOk {
+				expected.mitigated = &mitigated
+			}
+			entries[name] = expected
+		}
+		return entries
+	}
+
+	hpDelta, hpOk := readInt(args, "expect_adversary_hp_delta")
+	armorDelta, armorOk := readInt(args, "expect_adversary_armor_delta")
+	mitigated, mitigatedOk := readBool(args, "expect_adversary_damage_mitigated")
+	if !hpOk && !armorOk && !mitigatedOk {
+		return nil
+	}
+	name := optionalString(args, "expect_adversary", defaultTarget)
+	if strings.TrimSpace(name) == "" {
+		t.Fatal("expect_adversary_* requires expect_adversary or default target")
+	}
+	expected := expectedAdversaryDelta{name: name}
+	if hpOk {
+		expected.hpDelta = &hpDelta
+	}
+	if armorOk {
+		expected.armorDelta = &armorDelta
+	}
+	if mitigatedOk {
+		expected.mitigated = &mitigated
+	}
+	entries[name] = expected
+	return entries
+}
+
+func hasCharacterDeltas(input expectedDeltaInput) bool {
+	return input.hopeDelta != nil || input.stressDelta != nil || input.hpDelta != nil || input.armorDelta != nil
 }
 
 func captureExpectedDeltas(
@@ -2281,23 +3169,30 @@ func captureExpectedDeltas(
 	args map[string]any,
 	fallbackName string,
 ) (*expectedDeltas, *daggerheartv1.DaggerheartCharacterState) {
-	hopeDelta, hopeOk := readInt(args, "expect_hope_delta")
-	stressDelta, stressOk := readInt(args, "expect_stress_delta")
-	if !hopeOk && !stressOk {
+	input, ok := readExpectedDeltas(args)
+	if !ok {
 		return nil, nil
 	}
-	name := optionalString(args, "expect_target", fallbackName)
-	if strings.TrimSpace(name) == "" {
-		t.Fatal("expect_*_delta requires expect_target or a default character")
+	spec := &expectedDeltas{}
+	var before *daggerheartv1.DaggerheartCharacterState
+	if hasCharacterDeltas(input) {
+		name := optionalString(args, "expect_target", fallbackName)
+		if strings.TrimSpace(name) == "" {
+			t.Fatal("expect_*_delta requires expect_target or a default character")
+		}
+		characterID := actorID(t, state, name)
+		before = getCharacterState(t, ctx, env, state, characterID)
+		spec.name = name
+		spec.characterID = characterID
+		spec.hopeDelta = input.hopeDelta
+		spec.stressDelta = input.stressDelta
+		spec.hpDelta = input.hpDelta
+		spec.armorDelta = input.armorDelta
 	}
-	characterID := actorID(t, state, name)
-	before := getCharacterState(t, ctx, env, state, characterID)
-	spec := &expectedDeltas{name: name, characterID: characterID}
-	if hopeOk {
-		spec.hopeDelta = &hopeDelta
-	}
-	if stressOk {
-		spec.stressDelta = &stressDelta
+	if input.gmFearDelta != nil {
+		snapshot := getSnapshot(t, ctx, env, state)
+		spec.gmFearBefore = int(snapshot.GetGmFear())
+		spec.gmFearDelta = input.gmFearDelta
 	}
 	return spec, before
 }
@@ -2310,20 +3205,41 @@ func assertExpectedDeltas(
 	spec *expectedDeltas,
 	before *daggerheartv1.DaggerheartCharacterState,
 ) {
-	if spec == nil || before == nil {
+	if spec == nil {
 		return
 	}
-	after := getCharacterState(t, ctx, env, state, spec.characterID)
-	if spec.hopeDelta != nil {
-		delta := int(after.GetHope()) - int(before.GetHope())
-		if delta != *spec.hopeDelta {
-			t.Fatalf("hope delta for %s = %d, want %d", spec.name, delta, *spec.hopeDelta)
+	if before != nil {
+		after := getCharacterState(t, ctx, env, state, spec.characterID)
+		if spec.hopeDelta != nil {
+			delta := int(after.GetHope()) - int(before.GetHope())
+			if delta != *spec.hopeDelta {
+				t.Fatalf("hope delta for %s = %d, want %d", spec.name, delta, *spec.hopeDelta)
+			}
+		}
+		if spec.stressDelta != nil {
+			delta := int(after.GetStress()) - int(before.GetStress())
+			if delta != *spec.stressDelta {
+				t.Fatalf("stress delta for %s = %d, want %d", spec.name, delta, *spec.stressDelta)
+			}
+		}
+		if spec.hpDelta != nil {
+			delta := int(after.GetHp()) - int(before.GetHp())
+			if delta != *spec.hpDelta {
+				t.Fatalf("hp delta for %s = %d, want %d", spec.name, delta, *spec.hpDelta)
+			}
+		}
+		if spec.armorDelta != nil {
+			delta := int(after.GetArmor()) - int(before.GetArmor())
+			if delta != *spec.armorDelta {
+				t.Fatalf("armor delta for %s = %d, want %d", spec.name, delta, *spec.armorDelta)
+			}
 		}
 	}
-	if spec.stressDelta != nil {
-		delta := int(after.GetStress()) - int(before.GetStress())
-		if delta != *spec.stressDelta {
-			t.Fatalf("stress delta for %s = %d, want %d", spec.name, delta, *spec.stressDelta)
+	if spec.gmFearDelta != nil {
+		after := getSnapshot(t, ctx, env, state)
+		delta := int(after.GetGmFear()) - spec.gmFearBefore
+		if delta != *spec.gmFearDelta {
+			t.Fatalf("gm_fear delta = %d, want %d", delta, *spec.gmFearDelta)
 		}
 	}
 }
@@ -2333,6 +3249,21 @@ type damageFlagExpect struct {
 	resistMagic    *bool
 	immunePhysical *bool
 	immuneMagic    *bool
+}
+
+type damageAppliedExpect struct {
+	severity   *string
+	marks      *int
+	armorSpent *int
+	mitigated  *bool
+}
+
+type damageRollExpect struct {
+	baseTotal     *int
+	modifier      *int
+	criticalBonus *int
+	total         *int
+	critical      *bool
 }
 
 func readDamageFlagExpect(args map[string]any) (damageFlagExpect, bool) {
@@ -2355,6 +3286,83 @@ func readDamageFlagExpect(args map[string]any) (damageFlagExpect, bool) {
 	return expect, true
 }
 
+func readDamageAppliedExpect(args map[string]any) (damageAppliedExpect, bool) {
+	expect := damageAppliedExpect{}
+	if value := strings.TrimSpace(optionalString(args, "expect_damage_severity", "")); value != "" {
+		normalized := strings.ToLower(value)
+		expect.severity = &normalized
+	}
+	if value, ok := readInt(args, "expect_damage_marks"); ok {
+		expect.marks = &value
+	}
+	if value, ok := readInt(args, "expect_armor_spent"); ok {
+		expect.armorSpent = &value
+	}
+	if value, ok := readBool(args, "expect_damage_mitigated"); ok {
+		expect.mitigated = &value
+	}
+	if expect.severity == nil && expect.marks == nil && expect.armorSpent == nil && expect.mitigated == nil {
+		return damageAppliedExpect{}, false
+	}
+	return expect, true
+}
+
+func readDamageRollExpect(args map[string]any) (damageRollExpect, bool) {
+	expect := damageRollExpect{}
+	if value, ok := readInt(args, "expect_damage_base_total"); ok {
+		expect.baseTotal = &value
+	}
+	if value, ok := readInt(args, "expect_damage_modifier"); ok {
+		expect.modifier = &value
+	}
+	if value, ok := readInt(args, "expect_damage_critical_bonus"); ok {
+		expect.criticalBonus = &value
+	}
+	if value, ok := readInt(args, "expect_damage_total"); ok {
+		expect.total = &value
+	}
+	if value, ok := readBool(args, "expect_damage_critical"); ok {
+		expect.critical = &value
+	}
+	if expect.baseTotal == nil && expect.modifier == nil && expect.criticalBonus == nil && expect.total == nil && expect.critical == nil {
+		return damageRollExpect{}, false
+	}
+	return expect, true
+}
+
+func assertExpectedDamageRoll(
+	t *testing.T,
+	ctx context.Context,
+	env scenarioEnv,
+	state *scenarioState,
+	rollSeq uint64,
+	args map[string]any,
+) {
+	expect, ok := readDamageRollExpect(args)
+	if !ok {
+		return
+	}
+	if rollSeq == 0 {
+		t.Fatal("damage roll expectations require a roll sequence")
+	}
+	payload := findDamageRollResolvedPayload(t, ctx, env, state, rollSeq)
+	if expect.baseTotal != nil && payload.BaseTotal != *expect.baseTotal {
+		t.Fatalf("damage base_total = %d, want %d", payload.BaseTotal, *expect.baseTotal)
+	}
+	if expect.modifier != nil && payload.Modifier != *expect.modifier {
+		t.Fatalf("damage modifier = %d, want %d", payload.Modifier, *expect.modifier)
+	}
+	if expect.criticalBonus != nil && payload.CriticalBonus != *expect.criticalBonus {
+		t.Fatalf("damage critical_bonus = %d, want %d", payload.CriticalBonus, *expect.criticalBonus)
+	}
+	if expect.total != nil && payload.Total != *expect.total {
+		t.Fatalf("damage total = %d, want %d", payload.Total, *expect.total)
+	}
+	if expect.critical != nil && payload.Critical != *expect.critical {
+		t.Fatalf("damage critical = %v, want %v", payload.Critical, *expect.critical)
+	}
+}
+
 func assertDamageFlags(
 	t *testing.T,
 	ctx context.Context,
@@ -2368,6 +3376,85 @@ func assertDamageFlags(
 	if !ok {
 		return
 	}
+	payload := findDamageAppliedPayload(t, ctx, env, state, before, targetID)
+	if expect.resistPhysical != nil && payload.ResistPhysical != *expect.resistPhysical {
+		t.Fatalf("resist_physical = %v, want %v", payload.ResistPhysical, *expect.resistPhysical)
+	}
+	if expect.resistMagic != nil && payload.ResistMagic != *expect.resistMagic {
+		t.Fatalf("resist_magic = %v, want %v", payload.ResistMagic, *expect.resistMagic)
+	}
+	if expect.immunePhysical != nil && payload.ImmunePhysical != *expect.immunePhysical {
+		t.Fatalf("immune_physical = %v, want %v", payload.ImmunePhysical, *expect.immunePhysical)
+	}
+	if expect.immuneMagic != nil && payload.ImmuneMagic != *expect.immuneMagic {
+		t.Fatalf("immune_magic = %v, want %v", payload.ImmuneMagic, *expect.immuneMagic)
+	}
+}
+
+func assertDamageAppliedExpectations(
+	t *testing.T,
+	ctx context.Context,
+	env scenarioEnv,
+	state *scenarioState,
+	before uint64,
+	targetID string,
+	args map[string]any,
+) {
+	expect, ok := readDamageAppliedExpect(args)
+	if !ok {
+		return
+	}
+	payload := findDamageAppliedPayload(t, ctx, env, state, before, targetID)
+	if expect.severity != nil && strings.ToLower(payload.Severity) != *expect.severity {
+		t.Fatalf("damage severity = %s, want %s", payload.Severity, *expect.severity)
+	}
+	if expect.marks != nil && payload.Marks != *expect.marks {
+		t.Fatalf("damage marks = %d, want %d", payload.Marks, *expect.marks)
+	}
+	if expect.armorSpent != nil && payload.ArmorSpent != *expect.armorSpent {
+		t.Fatalf("damage armor_spent = %d, want %d", payload.ArmorSpent, *expect.armorSpent)
+	}
+	if expect.mitigated != nil && payload.Mitigated != *expect.mitigated {
+		t.Fatalf("damage mitigated = %v, want %v", payload.Mitigated, *expect.mitigated)
+	}
+}
+
+func assertAdversaryDamageAppliedExpectations(
+	t *testing.T,
+	ctx context.Context,
+	env scenarioEnv,
+	state *scenarioState,
+	before uint64,
+	adversaryID string,
+	args map[string]any,
+) {
+	expect, ok := readDamageAppliedExpect(args)
+	if !ok {
+		return
+	}
+	payload := findAdversaryDamageAppliedPayload(t, ctx, env, state, before, adversaryID)
+	if expect.severity != nil && strings.ToLower(payload.Severity) != *expect.severity {
+		t.Fatalf("adversary damage severity = %s, want %s", payload.Severity, *expect.severity)
+	}
+	if expect.marks != nil && payload.Marks != *expect.marks {
+		t.Fatalf("adversary damage marks = %d, want %d", payload.Marks, *expect.marks)
+	}
+	if expect.armorSpent != nil && payload.ArmorSpent != *expect.armorSpent {
+		t.Fatalf("adversary damage armor_spent = %d, want %d", payload.ArmorSpent, *expect.armorSpent)
+	}
+	if expect.mitigated != nil && payload.Mitigated != *expect.mitigated {
+		t.Fatalf("adversary damage mitigated = %v, want %v", payload.Mitigated, *expect.mitigated)
+	}
+}
+
+func findDamageAppliedPayload(
+	t *testing.T,
+	ctx context.Context,
+	env scenarioEnv,
+	state *scenarioState,
+	before uint64,
+	targetID string,
+) daggerheart.DamageAppliedPayload {
 	filter := fmt.Sprintf("type = \"%s\"", daggerheart.EventTypeDamageApplied)
 	if state.sessionID != "" {
 		filter = filter + fmt.Sprintf(" AND session_id = \"%s\"", state.sessionID)
@@ -2392,21 +3479,81 @@ func assertDamageFlags(
 		if targetID != "" && payload.CharacterID != targetID {
 			continue
 		}
-		if expect.resistPhysical != nil && payload.ResistPhysical != *expect.resistPhysical {
-			t.Fatalf("resist_physical = %v, want %v", payload.ResistPhysical, *expect.resistPhysical)
-		}
-		if expect.resistMagic != nil && payload.ResistMagic != *expect.resistMagic {
-			t.Fatalf("resist_magic = %v, want %v", payload.ResistMagic, *expect.resistMagic)
-		}
-		if expect.immunePhysical != nil && payload.ImmunePhysical != *expect.immunePhysical {
-			t.Fatalf("immune_physical = %v, want %v", payload.ImmunePhysical, *expect.immunePhysical)
-		}
-		if expect.immuneMagic != nil && payload.ImmuneMagic != *expect.immuneMagic {
-			t.Fatalf("immune_magic = %v, want %v", payload.ImmuneMagic, *expect.immuneMagic)
-		}
-		return
+		return payload
 	}
 	t.Fatalf("expected damage_applied after seq %d", before)
+	return daggerheart.DamageAppliedPayload{}
+}
+
+func findAdversaryDamageAppliedPayload(
+	t *testing.T,
+	ctx context.Context,
+	env scenarioEnv,
+	state *scenarioState,
+	before uint64,
+	adversaryID string,
+) daggerheart.AdversaryDamageAppliedPayload {
+	filter := fmt.Sprintf("type = \"%s\"", daggerheart.EventTypeAdversaryDamageApplied)
+	if state.sessionID != "" {
+		filter = filter + fmt.Sprintf(" AND session_id = \"%s\"", state.sessionID)
+	}
+	response, err := env.eventClient.ListEvents(ctx, &gamev1.ListEventsRequest{
+		CampaignId: state.campaignID,
+		PageSize:   20,
+		OrderBy:    "seq desc",
+		Filter:     filter,
+	})
+	if err != nil {
+		t.Fatalf("list adversary damage events: %v", err)
+	}
+	var payload daggerheart.AdversaryDamageAppliedPayload
+	for _, evt := range response.GetEvents() {
+		if evt.GetSeq() <= before {
+			continue
+		}
+		if err := json.Unmarshal(evt.GetPayloadJson(), &payload); err != nil {
+			t.Fatalf("decode adversary damage payload: %v", err)
+		}
+		if adversaryID != "" && payload.AdversaryID != adversaryID {
+			continue
+		}
+		return payload
+	}
+	t.Fatalf("expected adversary_damage_applied after seq %d", before)
+	return daggerheart.AdversaryDamageAppliedPayload{}
+}
+
+func findDamageRollResolvedPayload(
+	t *testing.T,
+	ctx context.Context,
+	env scenarioEnv,
+	state *scenarioState,
+	rollSeq uint64,
+) daggerheart.DamageRollResolvedPayload {
+	filter := fmt.Sprintf("type = \"%s\"", daggerheart.EventTypeDamageRollResolved)
+	if state.sessionID != "" {
+		filter = filter + fmt.Sprintf(" AND session_id = \"%s\"", state.sessionID)
+	}
+	response, err := env.eventClient.ListEvents(ctx, &gamev1.ListEventsRequest{
+		CampaignId: state.campaignID,
+		PageSize:   20,
+		OrderBy:    "seq desc",
+		Filter:     filter,
+	})
+	if err != nil {
+		t.Fatalf("list damage roll events: %v", err)
+	}
+	for _, evt := range response.GetEvents() {
+		var payload daggerheart.DamageRollResolvedPayload
+		if err := json.Unmarshal(evt.GetPayloadJson(), &payload); err != nil {
+			t.Fatalf("decode damage roll payload: %v", err)
+		}
+		if payload.RollSeq == rollSeq {
+			return payload
+		}
+	}
+	t.Fatalf("damage roll payload not found for roll seq %d", rollSeq)
+	return daggerheart.DamageRollResolvedPayload{}
 }
 
 func isHopeSpendSource(source string) bool {

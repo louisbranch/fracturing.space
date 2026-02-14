@@ -258,6 +258,8 @@ var scenarioMethods = []lua.RegistryFunction{
 	{Name: "adversary_attack", Function: scenarioAdversaryAttack},
 	{Name: "apply_condition", Function: scenarioApplyCondition},
 	{Name: "gm_spend_fear", Function: scenarioGMSpendFear},
+	{Name: "set_spotlight", Function: scenarioSetSpotlight},
+	{Name: "clear_spotlight", Function: scenarioClearSpotlight},
 	{Name: "group_action", Function: scenarioGroupAction},
 	{Name: "tag_team", Function: scenarioTagTeam},
 	{Name: "rest", Function: scenarioRest},
@@ -347,6 +349,20 @@ func scenarioGMFear(state *lua.State) int {
 	scenario := checkScenario(state)
 	value := int(lua.CheckNumber(state, 2))
 	appendStep(scenario, "gm_fear", map[string]any{"value": value})
+	return 0
+}
+
+func scenarioSetSpotlight(state *lua.State) int {
+	scenario := checkScenario(state)
+	lua.CheckType(state, 2, lua.TypeTable)
+	data := tableToMap(state, 2)
+	appendStep(scenario, "set_spotlight", data)
+	return 0
+}
+
+func scenarioClearSpotlight(state *lua.State) int {
+	scenario := checkScenario(state)
+	appendStep(scenario, "clear_spotlight", nil)
 	return 0
 }
 
@@ -579,6 +595,12 @@ func gmActionSpotlight(state *lua.State) int {
 		step.Args = map[string]any{}
 	}
 	step.Args["target"] = name
+	if state.Top() >= 3 && state.TypeOf(3) == lua.TypeTable {
+		overrides := tableToMap(state, 3)
+		for key, value := range overrides {
+			step.Args[key] = value
+		}
+	}
 	return 0
 }
 

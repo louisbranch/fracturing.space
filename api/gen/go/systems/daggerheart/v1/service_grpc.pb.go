@@ -26,11 +26,13 @@ const (
 	DaggerheartService_RulesVersion_FullMethodName                = "/systems.daggerheart.v1.DaggerheartService/RulesVersion"
 	DaggerheartService_RollDice_FullMethodName                    = "/systems.daggerheart.v1.DaggerheartService/RollDice"
 	DaggerheartService_ApplyDamage_FullMethodName                 = "/systems.daggerheart.v1.DaggerheartService/ApplyDamage"
+	DaggerheartService_ApplyAdversaryDamage_FullMethodName        = "/systems.daggerheart.v1.DaggerheartService/ApplyAdversaryDamage"
 	DaggerheartService_ApplyRest_FullMethodName                   = "/systems.daggerheart.v1.DaggerheartService/ApplyRest"
 	DaggerheartService_ApplyDowntimeMove_FullMethodName           = "/systems.daggerheart.v1.DaggerheartService/ApplyDowntimeMove"
 	DaggerheartService_SwapLoadout_FullMethodName                 = "/systems.daggerheart.v1.DaggerheartService/SwapLoadout"
 	DaggerheartService_ApplyDeathMove_FullMethodName              = "/systems.daggerheart.v1.DaggerheartService/ApplyDeathMove"
 	DaggerheartService_ApplyConditions_FullMethodName             = "/systems.daggerheart.v1.DaggerheartService/ApplyConditions"
+	DaggerheartService_ApplyAdversaryConditions_FullMethodName    = "/systems.daggerheart.v1.DaggerheartService/ApplyAdversaryConditions"
 	DaggerheartService_ApplyGmMove_FullMethodName                 = "/systems.daggerheart.v1.DaggerheartService/ApplyGmMove"
 	DaggerheartService_CreateCountdown_FullMethodName             = "/systems.daggerheart.v1.DaggerheartService/CreateCountdown"
 	DaggerheartService_UpdateCountdown_FullMethodName             = "/systems.daggerheart.v1.DaggerheartService/UpdateCountdown"
@@ -78,6 +80,8 @@ type DaggerheartServiceClient interface {
 	RollDice(ctx context.Context, in *RollDiceRequest, opts ...grpc.CallOption) (*RollDiceResponse, error)
 	// Apply damage to a character (system-specific).
 	ApplyDamage(ctx context.Context, in *DaggerheartApplyDamageRequest, opts ...grpc.CallOption) (*DaggerheartApplyDamageResponse, error)
+	// Apply damage to an adversary (system-specific).
+	ApplyAdversaryDamage(ctx context.Context, in *DaggerheartApplyAdversaryDamageRequest, opts ...grpc.CallOption) (*DaggerheartApplyAdversaryDamageResponse, error)
 	// Apply a rest outcome (system-specific).
 	ApplyRest(ctx context.Context, in *DaggerheartApplyRestRequest, opts ...grpc.CallOption) (*DaggerheartApplyRestResponse, error)
 	// Apply a downtime move (system-specific).
@@ -88,6 +92,8 @@ type DaggerheartServiceClient interface {
 	ApplyDeathMove(ctx context.Context, in *DaggerheartApplyDeathMoveRequest, opts ...grpc.CallOption) (*DaggerheartApplyDeathMoveResponse, error)
 	// Apply or clear conditions on a character (system-specific).
 	ApplyConditions(ctx context.Context, in *DaggerheartApplyConditionsRequest, opts ...grpc.CallOption) (*DaggerheartApplyConditionsResponse, error)
+	// Apply or clear conditions on an adversary (system-specific).
+	ApplyAdversaryConditions(ctx context.Context, in *DaggerheartApplyAdversaryConditionsRequest, opts ...grpc.CallOption) (*DaggerheartApplyAdversaryConditionsResponse, error)
 	// Apply a GM move (system-specific).
 	ApplyGmMove(ctx context.Context, in *DaggerheartApplyGmMoveRequest, opts ...grpc.CallOption) (*DaggerheartApplyGmMoveResponse, error)
 	// Create a countdown (system-specific).
@@ -214,6 +220,16 @@ func (c *daggerheartServiceClient) ApplyDamage(ctx context.Context, in *Daggerhe
 	return out, nil
 }
 
+func (c *daggerheartServiceClient) ApplyAdversaryDamage(ctx context.Context, in *DaggerheartApplyAdversaryDamageRequest, opts ...grpc.CallOption) (*DaggerheartApplyAdversaryDamageResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartApplyAdversaryDamageResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_ApplyAdversaryDamage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *daggerheartServiceClient) ApplyRest(ctx context.Context, in *DaggerheartApplyRestRequest, opts ...grpc.CallOption) (*DaggerheartApplyRestResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(DaggerheartApplyRestResponse)
@@ -258,6 +274,16 @@ func (c *daggerheartServiceClient) ApplyConditions(ctx context.Context, in *Dagg
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(DaggerheartApplyConditionsResponse)
 	err := c.cc.Invoke(ctx, DaggerheartService_ApplyConditions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) ApplyAdversaryConditions(ctx context.Context, in *DaggerheartApplyAdversaryConditionsRequest, opts ...grpc.CallOption) (*DaggerheartApplyAdversaryConditionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartApplyAdversaryConditionsResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_ApplyAdversaryConditions_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -516,6 +542,8 @@ type DaggerheartServiceServer interface {
 	RollDice(context.Context, *RollDiceRequest) (*RollDiceResponse, error)
 	// Apply damage to a character (system-specific).
 	ApplyDamage(context.Context, *DaggerheartApplyDamageRequest) (*DaggerheartApplyDamageResponse, error)
+	// Apply damage to an adversary (system-specific).
+	ApplyAdversaryDamage(context.Context, *DaggerheartApplyAdversaryDamageRequest) (*DaggerheartApplyAdversaryDamageResponse, error)
 	// Apply a rest outcome (system-specific).
 	ApplyRest(context.Context, *DaggerheartApplyRestRequest) (*DaggerheartApplyRestResponse, error)
 	// Apply a downtime move (system-specific).
@@ -526,6 +554,8 @@ type DaggerheartServiceServer interface {
 	ApplyDeathMove(context.Context, *DaggerheartApplyDeathMoveRequest) (*DaggerheartApplyDeathMoveResponse, error)
 	// Apply or clear conditions on a character (system-specific).
 	ApplyConditions(context.Context, *DaggerheartApplyConditionsRequest) (*DaggerheartApplyConditionsResponse, error)
+	// Apply or clear conditions on an adversary (system-specific).
+	ApplyAdversaryConditions(context.Context, *DaggerheartApplyAdversaryConditionsRequest) (*DaggerheartApplyAdversaryConditionsResponse, error)
 	// Apply a GM move (system-specific).
 	ApplyGmMove(context.Context, *DaggerheartApplyGmMoveRequest) (*DaggerheartApplyGmMoveResponse, error)
 	// Create a countdown (system-specific).
@@ -603,6 +633,9 @@ func (UnimplementedDaggerheartServiceServer) RollDice(context.Context, *RollDice
 func (UnimplementedDaggerheartServiceServer) ApplyDamage(context.Context, *DaggerheartApplyDamageRequest) (*DaggerheartApplyDamageResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ApplyDamage not implemented")
 }
+func (UnimplementedDaggerheartServiceServer) ApplyAdversaryDamage(context.Context, *DaggerheartApplyAdversaryDamageRequest) (*DaggerheartApplyAdversaryDamageResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ApplyAdversaryDamage not implemented")
+}
 func (UnimplementedDaggerheartServiceServer) ApplyRest(context.Context, *DaggerheartApplyRestRequest) (*DaggerheartApplyRestResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ApplyRest not implemented")
 }
@@ -617,6 +650,9 @@ func (UnimplementedDaggerheartServiceServer) ApplyDeathMove(context.Context, *Da
 }
 func (UnimplementedDaggerheartServiceServer) ApplyConditions(context.Context, *DaggerheartApplyConditionsRequest) (*DaggerheartApplyConditionsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ApplyConditions not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) ApplyAdversaryConditions(context.Context, *DaggerheartApplyAdversaryConditionsRequest) (*DaggerheartApplyAdversaryConditionsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ApplyAdversaryConditions not implemented")
 }
 func (UnimplementedDaggerheartServiceServer) ApplyGmMove(context.Context, *DaggerheartApplyGmMoveRequest) (*DaggerheartApplyGmMoveResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ApplyGmMove not implemented")
@@ -834,6 +870,24 @@ func _DaggerheartService_ApplyDamage_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _DaggerheartService_ApplyAdversaryDamage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartApplyAdversaryDamageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).ApplyAdversaryDamage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_ApplyAdversaryDamage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).ApplyAdversaryDamage(ctx, req.(*DaggerheartApplyAdversaryDamageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _DaggerheartService_ApplyRest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(DaggerheartApplyRestRequest)
 	if err := dec(in); err != nil {
@@ -920,6 +974,24 @@ func _DaggerheartService_ApplyConditions_Handler(srv interface{}, ctx context.Co
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DaggerheartServiceServer).ApplyConditions(ctx, req.(*DaggerheartApplyConditionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_ApplyAdversaryConditions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartApplyAdversaryConditionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).ApplyAdversaryConditions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_ApplyAdversaryConditions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).ApplyAdversaryConditions(ctx, req.(*DaggerheartApplyAdversaryConditionsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1374,6 +1446,10 @@ var DaggerheartService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _DaggerheartService_ApplyDamage_Handler,
 		},
 		{
+			MethodName: "ApplyAdversaryDamage",
+			Handler:    _DaggerheartService_ApplyAdversaryDamage_Handler,
+		},
+		{
 			MethodName: "ApplyRest",
 			Handler:    _DaggerheartService_ApplyRest_Handler,
 		},
@@ -1392,6 +1468,10 @@ var DaggerheartService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ApplyConditions",
 			Handler:    _DaggerheartService_ApplyConditions_Handler,
+		},
+		{
+			MethodName: "ApplyAdversaryConditions",
+			Handler:    _DaggerheartService_ApplyAdversaryConditions_Handler,
 		},
 		{
 			MethodName: "ApplyGmMove",

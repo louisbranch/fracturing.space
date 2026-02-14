@@ -15,13 +15,22 @@ scene:adversary("Saruman")
 scene:start_session("Ambush")
 
 -- Advantage and an attack modifier tilt the roll in Saruman's favor.
--- Missing DSL: specify damage rolls and armor/HP consequences.
 scene:adversary_attack{
   actor = "Saruman",
   target = "Frodo",
   difficulty = 0,
   attack_modifier = 2,
   advantage = 1,
+  expect_hope_delta = 0,
+  expect_stress_delta = 0,
+  expect_hp_delta = -1,
+  expect_armor_delta = -1,
+  expect_damage_total = 4,
+  expect_damage_severity = "minor",
+  expect_damage_marks = 1,
+  expect_armor_spent = 1,
+  expect_damage_mitigated = true,
+  expect_damage_critical = false,
   damage_type = "physical"
 }
 

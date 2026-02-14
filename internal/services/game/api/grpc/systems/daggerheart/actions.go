@@ -181,6 +181,159 @@ func (s *DaggerheartService) ApplyDamage(ctx context.Context, in *pb.Daggerheart
 	}, nil
 }
 
+func (s *DaggerheartService) ApplyAdversaryDamage(ctx context.Context, in *pb.DaggerheartApplyAdversaryDamageRequest) (*pb.DaggerheartApplyAdversaryDamageResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "apply adversary damage request is required")
+	}
+	if s.stores.Campaign == nil {
+		return nil, status.Error(codes.Internal, "campaign store is not configured")
+	}
+	if s.stores.Daggerheart == nil {
+		return nil, status.Error(codes.Internal, "daggerheart store is not configured")
+	}
+	if s.stores.Event == nil {
+		return nil, status.Error(codes.Internal, "event store is not configured")
+	}
+
+	campaignID := strings.TrimSpace(in.GetCampaignId())
+	if campaignID == "" {
+		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	}
+	adversaryID := strings.TrimSpace(in.GetAdversaryId())
+	if adversaryID == "" {
+		return nil, status.Error(codes.InvalidArgument, "adversary id is required")
+	}
+
+	c, err := s.stores.Campaign.Get(ctx, campaignID)
+	if err != nil {
+		return nil, handleDomainError(err)
+	}
+	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpCampaignMutate); err != nil {
+		return nil, handleDomainError(err)
+	}
+	if c.System != commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART {
+		return nil, status.Error(codes.FailedPrecondition, "campaign system does not support daggerheart damage")
+	}
+
+	sessionID := strings.TrimSpace(grpcmeta.SessionIDFromContext(ctx))
+	if sessionID == "" {
+		return nil, status.Error(codes.InvalidArgument, "session id is required")
+	}
+	if err := s.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
+		return nil, err
+	}
+
+	if in.Damage == nil {
+		return nil, status.Error(codes.InvalidArgument, "damage is required")
+	}
+	if in.Damage.Amount < 0 {
+		return nil, status.Error(codes.InvalidArgument, "damage amount must be non-negative")
+	}
+	if in.Damage.DamageType == pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_UNSPECIFIED {
+		return nil, status.Error(codes.InvalidArgument, "damage_type is required")
+	}
+
+	adversary, err := s.loadAdversaryForSession(ctx, campaignID, sessionID, adversaryID)
+	if err != nil {
+		return nil, err
+	}
+
+	result, mitigated, err := applyDaggerheartAdversaryDamage(in.Damage, adversary)
+	if err != nil {
+		return nil, handleDomainError(err)
+	}
+
+	hpBefore := result.HPBefore
+	hpAfter := result.HPAfter
+	armorBefore := result.ArmorBefore
+	armorAfter := result.ArmorAfter
+	requireDamageRoll := in.GetRequireDamageRoll()
+	var rollSeq *uint64
+	if in.RollSeq != nil {
+		value := in.GetRollSeq()
+		rollSeq = &value
+	}
+	sourceCharacterIDs := normalizeTargets(in.Damage.GetSourceCharacterIds())
+	if requireDamageRoll && rollSeq == nil {
+		return nil, status.Error(codes.InvalidArgument, "roll_seq is required when require_damage_roll is true")
+	}
+	if rollSeq != nil {
+		rollEvent, err := s.stores.Event.GetEventBySeq(ctx, campaignID, *rollSeq)
+		if err != nil {
+			return nil, handleDomainError(err)
+		}
+		if rollEvent.Type != daggerheart.EventTypeDamageRollResolved {
+			return nil, status.Error(codes.InvalidArgument, "roll_seq must reference action.damage_roll_resolved")
+		}
+		var rollPayload daggerheart.DamageRollResolvedPayload
+		if err := json.Unmarshal(rollEvent.PayloadJSON, &rollPayload); err != nil {
+			return nil, status.Errorf(codes.Internal, "decode damage roll payload: %v", err)
+		}
+		if len(sourceCharacterIDs) > 0 && !containsString(sourceCharacterIDs, rollPayload.CharacterID) {
+			return nil, status.Error(codes.InvalidArgument, "roll_seq does not match source character")
+		}
+	}
+
+	payload := daggerheart.AdversaryDamageAppliedPayload{
+		AdversaryID:        adversaryID,
+		HpBefore:           &hpBefore,
+		HpAfter:            &hpAfter,
+		ArmorBefore:        &armorBefore,
+		ArmorAfter:         &armorAfter,
+		ArmorSpent:         result.ArmorSpent,
+		Severity:           daggerheartSeverityToString(result.Result.Severity),
+		Marks:              result.Result.Marks,
+		DamageType:         daggerheartDamageTypeToString(in.Damage.DamageType),
+		RollSeq:            rollSeq,
+		ResistPhysical:     in.Damage.ResistPhysical,
+		ResistMagic:        in.Damage.ResistMagic,
+		ImmunePhysical:     in.Damage.ImmunePhysical,
+		ImmuneMagic:        in.Damage.ImmuneMagic,
+		Direct:             in.Damage.Direct,
+		MassiveDamage:      in.Damage.MassiveDamage,
+		Mitigated:          mitigated,
+		Source:             in.Damage.Source,
+		SourceCharacterIDs: sourceCharacterIDs,
+	}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
+	}
+
+	stored, err := s.stores.Event.AppendEvent(ctx, event.Event{
+		CampaignID:    campaignID,
+		Timestamp:     time.Now().UTC(),
+		Type:          daggerheart.EventTypeAdversaryDamageApplied,
+		SessionID:     grpcmeta.SessionIDFromContext(ctx),
+		RequestID:     grpcmeta.RequestIDFromContext(ctx),
+		InvocationID:  grpcmeta.InvocationIDFromContext(ctx),
+		ActorType:     event.ActorTypeSystem,
+		EntityType:    "adversary",
+		EntityID:      adversaryID,
+		SystemID:      c.System.String(),
+		SystemVersion: daggerheart.SystemVersion,
+		PayloadJSON:   payloadJSON,
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "append event: %v", err)
+	}
+
+	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
+	if err := adapter.ApplyEvent(ctx, stored); err != nil {
+		return nil, status.Errorf(codes.Internal, "apply event: %v", err)
+	}
+
+	updated, err := s.stores.Daggerheart.GetDaggerheartAdversary(ctx, campaignID, adversaryID)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "load daggerheart adversary: %v", err)
+	}
+
+	return &pb.DaggerheartApplyAdversaryDamageResponse{
+		AdversaryId: adversaryID,
+		Adversary:   daggerheartAdversaryToProto(updated),
+	}, nil
+}
+
 func (s *DaggerheartService) ApplyRest(ctx context.Context, in *pb.DaggerheartApplyRestRequest) (*pb.DaggerheartApplyRestResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "apply rest request is required")
@@ -1038,6 +1191,183 @@ func (s *DaggerheartService) ApplyConditions(ctx context.Context, in *pb.Daggerh
 	}, nil
 }
 
+func (s *DaggerheartService) ApplyAdversaryConditions(ctx context.Context, in *pb.DaggerheartApplyAdversaryConditionsRequest) (*pb.DaggerheartApplyAdversaryConditionsResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "apply adversary conditions request is required")
+	}
+	if s.stores.Campaign == nil {
+		return nil, status.Error(codes.Internal, "campaign store is not configured")
+	}
+	if s.stores.Daggerheart == nil {
+		return nil, status.Error(codes.Internal, "daggerheart store is not configured")
+	}
+	if s.stores.Event == nil {
+		return nil, status.Error(codes.Internal, "event store is not configured")
+	}
+
+	campaignID := strings.TrimSpace(in.GetCampaignId())
+	if campaignID == "" {
+		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	}
+	adversaryID := strings.TrimSpace(in.GetAdversaryId())
+	if adversaryID == "" {
+		return nil, status.Error(codes.InvalidArgument, "adversary id is required")
+	}
+
+	c, err := s.stores.Campaign.Get(ctx, campaignID)
+	if err != nil {
+		return nil, handleDomainError(err)
+	}
+	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpCampaignMutate); err != nil {
+		return nil, handleDomainError(err)
+	}
+	if c.System != commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART {
+		return nil, status.Error(codes.FailedPrecondition, "campaign system does not support daggerheart conditions")
+	}
+
+	sessionID := strings.TrimSpace(grpcmeta.SessionIDFromContext(ctx))
+	if sessionID == "" {
+		return nil, status.Error(codes.InvalidArgument, "session id is required")
+	}
+	if err := s.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
+		return nil, err
+	}
+
+	addConditions, err := daggerheartConditionsFromProto(in.GetAdd())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	removeConditions, err := daggerheartConditionsFromProto(in.GetRemove())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	if len(addConditions) == 0 && len(removeConditions) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "conditions to add or remove are required")
+	}
+
+	normalizedAdd := []string{}
+	if len(addConditions) > 0 {
+		normalizedAdd, err = daggerheart.NormalizeConditions(addConditions)
+		if err != nil {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+	}
+	normalizedRemove := []string{}
+	if len(removeConditions) > 0 {
+		normalizedRemove, err = daggerheart.NormalizeConditions(removeConditions)
+		if err != nil {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+	}
+
+	removeSet := make(map[string]struct{}, len(normalizedRemove))
+	for _, value := range normalizedRemove {
+		removeSet[value] = struct{}{}
+	}
+	for _, value := range normalizedAdd {
+		if _, ok := removeSet[value]; ok {
+			return nil, status.Error(codes.InvalidArgument, "conditions cannot be both added and removed")
+		}
+	}
+
+	adversary, err := s.loadAdversaryForSession(ctx, campaignID, sessionID, adversaryID)
+	if err != nil {
+		return nil, err
+	}
+	before, err := daggerheart.NormalizeConditions(adversary.Conditions)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "invalid stored conditions: %v", err)
+	}
+
+	afterSet := make(map[string]struct{}, len(before)+len(normalizedAdd))
+	for _, value := range before {
+		afterSet[value] = struct{}{}
+	}
+	for _, value := range normalizedRemove {
+		delete(afterSet, value)
+	}
+	for _, value := range normalizedAdd {
+		afterSet[value] = struct{}{}
+	}
+
+	afterList := make([]string, 0, len(afterSet))
+	for value := range afterSet {
+		afterList = append(afterList, value)
+	}
+	after, err := daggerheart.NormalizeConditions(afterList)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "invalid condition set: %v", err)
+	}
+
+	added, removed := daggerheart.DiffConditions(before, after)
+	if len(added) == 0 && len(removed) == 0 {
+		return nil, status.Error(codes.FailedPrecondition, "no condition changes to apply")
+	}
+
+	source := strings.TrimSpace(in.GetSource())
+	var rollSeq *uint64
+	if in.RollSeq != nil {
+		value := in.GetRollSeq()
+		rollSeq = &value
+		rollEvent, err := s.stores.Event.GetEventBySeq(ctx, campaignID, value)
+		if err != nil {
+			return nil, handleDomainError(err)
+		}
+		if sessionID != "" && rollEvent.SessionID != sessionID {
+			return nil, status.Error(codes.InvalidArgument, "roll seq does not match session")
+		}
+	}
+
+	payload := daggerheart.AdversaryConditionChangedPayload{
+		AdversaryID:      adversaryID,
+		ConditionsBefore: before,
+		ConditionsAfter:  after,
+		Added:            added,
+		Removed:          removed,
+		Source:           source,
+		RollSeq:          rollSeq,
+	}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "encode condition payload: %v", err)
+	}
+
+	stored, err := s.stores.Event.AppendEvent(ctx, event.Event{
+		CampaignID:    campaignID,
+		Timestamp:     time.Now().UTC(),
+		Type:          daggerheart.EventTypeAdversaryConditionChanged,
+		SessionID:     grpcmeta.SessionIDFromContext(ctx),
+		RequestID:     grpcmeta.RequestIDFromContext(ctx),
+		InvocationID:  grpcmeta.InvocationIDFromContext(ctx),
+		ActorType:     event.ActorTypeSystem,
+		EntityType:    "adversary",
+		EntityID:      adversaryID,
+		SystemID:      c.System.String(),
+		SystemVersion: daggerheart.SystemVersion,
+		PayloadJSON:   payloadJSON,
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "append condition event: %v", err)
+	}
+
+	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
+	if err := adapter.ApplyEvent(ctx, stored); err != nil {
+		return nil, status.Errorf(codes.Internal, "apply condition event: %v", err)
+	}
+
+	updated, err := s.stores.Daggerheart.GetDaggerheartAdversary(ctx, campaignID, adversaryID)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "load daggerheart adversary: %v", err)
+	}
+
+	return &pb.DaggerheartApplyAdversaryConditionsResponse{
+		AdversaryId: adversaryID,
+		Adversary:   daggerheartAdversaryToProto(updated),
+		Added:       daggerheartConditionsToProto(added),
+		Removed:     daggerheartConditionsToProto(removed),
+	}, nil
+}
+
 func (s *DaggerheartService) ApplyGmMove(ctx context.Context, in *pb.DaggerheartApplyGmMoveRequest) (*pb.DaggerheartApplyGmMoveResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "apply gm move request is required")
@@ -1137,10 +1467,15 @@ func (s *DaggerheartService) ApplyGmMove(ctx context.Context, in *pb.Daggerheart
 		}
 	}
 
+	severity := "soft"
+	if fearSpent >= 2 {
+		severity = "hard"
+	}
 	payload := daggerheart.GMMoveAppliedPayload{
 		Move:        move,
 		Description: strings.TrimSpace(in.GetDescription()),
 		FearSpent:   fearSpent,
+		Severity:    severity,
 		Source:      strings.TrimSpace(in.GetSource()),
 	}
 	payloadJSON, err := json.Marshal(payload)
@@ -4495,6 +4830,42 @@ func applyDaggerheartDamage(req *pb.DaggerheartDamageRequest, profile storage.Da
 		return app, mitigated, err
 	}
 	app := daggerheart.ApplyDamageWithArmor(state.Hp, state.Armor, result)
+	if app.ArmorSpent > 0 {
+		mitigated = true
+	}
+	return app, mitigated, nil
+}
+
+func applyDaggerheartAdversaryDamage(req *pb.DaggerheartDamageRequest, adversary storage.DaggerheartAdversary) (daggerheart.DamageApplication, bool, error) {
+	damageTypes := daggerheart.DamageTypes{}
+	switch req.DamageType {
+	case pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_PHYSICAL:
+		damageTypes.Physical = true
+	case pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_MAGIC:
+		damageTypes.Magic = true
+	case pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_MIXED:
+		damageTypes.Physical = true
+		damageTypes.Magic = true
+	}
+
+	resistance := daggerheart.ResistanceProfile{
+		ResistPhysical: req.ResistPhysical,
+		ResistMagic:    req.ResistMagic,
+		ImmunePhysical: req.ImmunePhysical,
+		ImmuneMagic:    req.ImmuneMagic,
+	}
+	adjusted := daggerheart.ApplyResistance(int(req.Amount), damageTypes, resistance)
+	mitigated := adjusted < int(req.Amount)
+	options := daggerheart.DamageOptions{EnableMassiveDamage: req.MassiveDamage}
+	result, err := daggerheart.EvaluateDamage(adjusted, adversary.Major, adversary.Severe, options)
+	if err != nil {
+		return daggerheart.DamageApplication{}, mitigated, err
+	}
+	if req.Direct {
+		app, err := daggerheart.ApplyDamage(adversary.HP, adjusted, adversary.Major, adversary.Severe, options)
+		return app, mitigated, err
+	}
+	app := daggerheart.ApplyDamageWithArmor(adversary.HP, adversary.Armor, result)
 	if app.ArmorSpent > 0 {
 		mitigated = true
 	}

@@ -16,14 +16,12 @@ scene:start_session("Severity")
 scene:gm_fear(3)
 
 -- Frodo rolls with Fear, handing control back to the GM.
--- Missing DSL: assert fear increases by 1.
-scene:attack{ actor = "Frodo", target = "Nazgul", trait = "instinct", difficulty = 0, outcome = "fear" }
+scene:attack{ actor = "Frodo", target = "Nazgul", trait = "instinct", difficulty = 0, outcome = "fear", expect_gm_fear_delta = 1, expect_spotlight = "gm", expect_requires_complication = true }
 
 -- A small fear spend suggests a softer GM move.
-scene:gm_spend_fear(1):spotlight("Nazgul")
+scene:gm_spend_fear(1):spotlight("Nazgul", { expect_gm_fear_delta = -1, expect_gm_move = "spotlight", expect_gm_fear_spent = 1, expect_gm_move_description = "spotlight Nazgul", expect_gm_move_severity = "soft" })
 -- A larger fear spend hints at a harder, more costly move.
--- Missing DSL: annotate soft vs hard move consequences.
-scene:gm_spend_fear(2):spotlight("Nazgul")
+scene:gm_spend_fear(2):spotlight("Nazgul", { expect_gm_fear_delta = -2, expect_gm_move = "spotlight", expect_gm_fear_spent = 2, expect_gm_move_description = "spotlight Nazgul", expect_gm_move_severity = "hard" })
 
 -- Close the session after the GM move cadence.
 scene:end_session()

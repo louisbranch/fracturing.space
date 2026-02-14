@@ -51,6 +51,8 @@ func (a *Adapter) ApplyEvent(ctx context.Context, evt event.Event) error {
 		return a.applyCharacterStatePatched(ctx, evt)
 	case EventTypeConditionChanged:
 		return a.applyConditionChanged(ctx, evt)
+	case EventTypeAdversaryConditionChanged:
+		return a.applyAdversaryConditionChanged(ctx, evt)
 	case EventTypeGMFearChanged:
 		return a.applyGMFearChanged(ctx, evt)
 	case EventTypeGMMoveApplied:
@@ -81,6 +83,8 @@ func (a *Adapter) ApplyEvent(ctx context.Context, evt event.Event) error {
 		return a.applyAdversaryAttackResolved(ctx, evt)
 	case EventTypeAdversaryCreated:
 		return a.applyAdversaryCreated(ctx, evt)
+	case EventTypeAdversaryDamageApplied:
+		return a.applyAdversaryDamageApplied(ctx, evt)
 	case EventTypeAdversaryUpdated:
 		return a.applyAdversaryUpdated(ctx, evt)
 	case EventTypeAdversaryDeleted:
@@ -227,6 +231,37 @@ func (a *Adapter) applyConditionChanged(ctx context.Context, evt event.Event) er
 	return a.applyConditionPatch(ctx, evt.CampaignID, payload.CharacterID, normalizedAfter)
 }
 
+func (a *Adapter) applyAdversaryConditionChanged(ctx context.Context, evt event.Event) error {
+	var payload AdversaryConditionChangedPayload
+	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+		return fmt.Errorf("decode action.adversary_condition_changed payload: %w", err)
+	}
+	if strings.TrimSpace(payload.AdversaryID) == "" {
+		return fmt.Errorf("adversary_id is required")
+	}
+	if payload.RollSeq != nil && *payload.RollSeq == 0 {
+		return fmt.Errorf("adversary_condition_changed roll_seq must be positive")
+	}
+	if payload.ConditionsAfter == nil {
+		return fmt.Errorf("adversary_condition_changed conditions_after is required")
+	}
+	normalizedAfter, err := NormalizeConditions(payload.ConditionsAfter)
+	if err != nil {
+		return fmt.Errorf("adversary_condition_changed conditions_after: %w", err)
+	}
+	if len(payload.Added) > 0 {
+		if _, err := NormalizeConditions(payload.Added); err != nil {
+			return fmt.Errorf("adversary_condition_changed added: %w", err)
+		}
+	}
+	if len(payload.Removed) > 0 {
+		if _, err := NormalizeConditions(payload.Removed); err != nil {
+			return fmt.Errorf("adversary_condition_changed removed: %w", err)
+		}
+	}
+	return a.applyAdversaryConditionPatch(ctx, evt.CampaignID, payload.AdversaryID, normalizedAfter)
+}
+
 func (a *Adapter) applyGMFearChanged(ctx context.Context, evt event.Event) error {
 	var payload GMFearChangedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
@@ -257,6 +292,11 @@ func (a *Adapter) applyGMMoveApplied(ctx context.Context, evt event.Event) error
 	}
 	if payload.FearSpent < 0 {
 		return fmt.Errorf("gm move fear_spent must be non-negative")
+	}
+	if strings.TrimSpace(payload.Severity) != "" {
+		if payload.Severity != "soft" && payload.Severity != "hard" {
+			return fmt.Errorf("gm move severity must be soft or hard")
+		}
 	}
 	return nil
 }
@@ -639,6 +679,56 @@ func (a *Adapter) applyAdversaryUpdated(ctx context.Context, evt event.Event) er
 		Major:       payload.Major,
 		Severe:      payload.Severe,
 		Armor:       payload.Armor,
+		Conditions:  current.Conditions,
+		CreatedAt:   current.CreatedAt,
+		UpdatedAt:   updatedAt,
+	})
+}
+
+func (a *Adapter) applyAdversaryDamageApplied(ctx context.Context, evt event.Event) error {
+	var payload AdversaryDamageAppliedPayload
+	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+		return fmt.Errorf("decode action.adversary_damage_applied payload: %w", err)
+	}
+	adversaryID := strings.TrimSpace(payload.AdversaryID)
+	if adversaryID == "" {
+		return fmt.Errorf("adversary_id is required")
+	}
+	if payload.HpAfter == nil && payload.ArmorAfter == nil {
+		return fmt.Errorf("adversary_damage_applied requires hp_after or armor_after")
+	}
+	current, err := a.store.GetDaggerheartAdversary(ctx, evt.CampaignID, adversaryID)
+	if err != nil {
+		return err
+	}
+	hp := current.HP
+	armor := current.Armor
+	if payload.HpAfter != nil {
+		hp = *payload.HpAfter
+	}
+	if payload.ArmorAfter != nil {
+		armor = *payload.ArmorAfter
+	}
+	if err := validateAdversaryStats(hp, current.HPMax, current.Stress, current.StressMax, current.Evasion, current.Major, current.Severe, armor); err != nil {
+		return err
+	}
+	updatedAt := evt.Timestamp.UTC()
+	return a.store.PutDaggerheartAdversary(ctx, storage.DaggerheartAdversary{
+		CampaignID:  evt.CampaignID,
+		AdversaryID: adversaryID,
+		Name:        current.Name,
+		Kind:        current.Kind,
+		SessionID:   current.SessionID,
+		Notes:       current.Notes,
+		HP:          hp,
+		HPMax:       current.HPMax,
+		Stress:      current.Stress,
+		StressMax:   current.StressMax,
+		Evasion:     current.Evasion,
+		Major:       current.Major,
+		Severe:      current.Severe,
+		Armor:       armor,
+		Conditions:  current.Conditions,
 		CreatedAt:   current.CreatedAt,
 		UpdatedAt:   updatedAt,
 	})
@@ -752,6 +842,18 @@ func (a *Adapter) applyConditionPatch(ctx context.Context, campaignID, character
 	state.Conditions = conditions
 	if err := a.store.PutDaggerheartCharacterState(ctx, state); err != nil {
 		return fmt.Errorf("put daggerheart character state: %w", err)
+	}
+	return nil
+}
+
+func (a *Adapter) applyAdversaryConditionPatch(ctx context.Context, campaignID, adversaryID string, conditions []string) error {
+	adversary, err := a.store.GetDaggerheartAdversary(ctx, campaignID, adversaryID)
+	if err != nil {
+		return fmt.Errorf("get daggerheart adversary: %w", err)
+	}
+	adversary.Conditions = conditions
+	if err := a.store.PutDaggerheartAdversary(ctx, adversary); err != nil {
+		return fmt.Errorf("put daggerheart adversary: %w", err)
 	}
 	return nil
 }

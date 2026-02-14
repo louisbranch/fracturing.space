@@ -16,8 +16,8 @@ scene:start_session("GM Fear")
 scene:gm_fear(5)
 
 -- Two spotlight spends show how fear accelerates the GM's cadence.
-scene:gm_spend_fear(1):spotlight("Nazgul")
-scene:gm_spend_fear(2):spotlight("Nazgul")
+scene:gm_spend_fear(1):spotlight("Nazgul", { expect_gm_fear_delta = -1, expect_gm_move = "spotlight", expect_gm_fear_spent = 1 })
+scene:gm_spend_fear(2):spotlight("Nazgul", { expect_gm_fear_delta = -2, expect_gm_move = "spotlight", expect_gm_fear_spent = 2 })
 
 -- Close the session after the fear spend chain.
 scene:end_session()

@@ -202,3 +202,47 @@ func TestAdapterApplyConditionChangedRejectsUnknown(t *testing.T) {
 		t.Fatal("expected error")
 	}
 }
+
+func TestAdapterApplyAdversaryConditionChanged(t *testing.T) {
+	store := newMemoryDaggerheartStore()
+	store.adversaries["camp-1:adv-1"] = storage.DaggerheartAdversary{
+		CampaignID:  "camp-1",
+		AdversaryID: "adv-1",
+		Name:        "Shade",
+		HP:          6,
+		HPMax:       6,
+		Stress:      0,
+		StressMax:   6,
+		Evasion:     10,
+		Major:       8,
+		Severe:      12,
+		Armor:       0,
+		Conditions:  []string{ConditionHidden},
+	}
+
+	payload := AdversaryConditionChangedPayload{
+		AdversaryID:     "adv-1",
+		ConditionsAfter: []string{ConditionVulnerable, ConditionHidden},
+	}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("marshal payload: %v", err)
+	}
+
+	adapter := NewAdapter(store)
+	if err := adapter.ApplyEvent(context.Background(), event.Event{
+		CampaignID:  "camp-1",
+		Type:        EventTypeAdversaryConditionChanged,
+		PayloadJSON: payloadJSON,
+	}); err != nil {
+		t.Fatalf("apply event: %v", err)
+	}
+
+	adversary, err := store.GetDaggerheartAdversary(context.Background(), "camp-1", "adv-1")
+	if err != nil {
+		t.Fatalf("get adversary: %v", err)
+	}
+	if !ConditionsEqual(adversary.Conditions, []string{ConditionHidden, ConditionVulnerable}) {
+		t.Fatalf("adversary conditions = %v, want %v", adversary.Conditions, []string{ConditionHidden, ConditionVulnerable})
+	}
+}

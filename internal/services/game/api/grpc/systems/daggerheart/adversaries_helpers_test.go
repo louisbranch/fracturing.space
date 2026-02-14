@@ -18,6 +18,7 @@ func TestDaggerheartAdversaryToProtoSession(t *testing.T) {
 		SessionID:   "sess-1",
 		HP:          4,
 		HPMax:       6,
+		Conditions:  []string{"hidden"},
 		CreatedAt:   created,
 		UpdatedAt:   updated,
 	})
@@ -26,6 +27,9 @@ func TestDaggerheartAdversaryToProtoSession(t *testing.T) {
 	}
 	if proto.GetCreatedAt().AsTime().UTC() != created {
 		t.Fatal("expected created time to map")
+	}
+	if len(proto.GetConditions()) != 1 {
+		t.Fatalf("expected conditions to map, got %v", proto.GetConditions())
 	}
 }
 
@@ -100,6 +104,7 @@ func TestDaggerheartAdversaryToProtoNoSession(t *testing.T) {
 		Major:       7,
 		Severe:      14,
 		Armor:       2,
+		Conditions:  []string{"vulnerable"},
 	})
 	if proto.GetSessionId() != nil {
 		t.Fatal("expected nil session id wrapper when no session")
@@ -118,6 +123,9 @@ func TestDaggerheartAdversaryToProtoNoSession(t *testing.T) {
 	}
 	if proto.GetMajorThreshold() != 7 || proto.GetSevereThreshold() != 14 {
 		t.Fatalf("proto thresholds mismatch")
+	}
+	if len(proto.GetConditions()) != 1 {
+		t.Fatalf("expected conditions to map, got %v", proto.GetConditions())
 	}
 }
 

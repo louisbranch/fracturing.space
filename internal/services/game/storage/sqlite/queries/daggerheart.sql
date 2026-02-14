@@ -130,8 +130,8 @@ ORDER BY name ASC, adversary_id ASC;
 -- name: PutDaggerheartAdversary :exec
 INSERT INTO daggerheart_adversaries (
     campaign_id, adversary_id, name, kind, session_id, notes, hp, hp_max, stress, stress_max,
-    evasion, major_threshold, severe_threshold, armor, created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    evasion, major_threshold, severe_threshold, armor, conditions_json, created_at, updated_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(campaign_id, adversary_id) DO UPDATE SET
     name = excluded.name,
     kind = excluded.kind,
@@ -145,6 +145,7 @@ ON CONFLICT(campaign_id, adversary_id) DO UPDATE SET
     major_threshold = excluded.major_threshold,
     severe_threshold = excluded.severe_threshold,
     armor = excluded.armor,
+    conditions_json = excluded.conditions_json,
     created_at = excluded.created_at,
     updated_at = excluded.updated_at;
 

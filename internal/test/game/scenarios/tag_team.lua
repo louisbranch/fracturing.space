@@ -15,14 +15,17 @@ scene:pc("Sam")
 scene:start_session("Tag Team")
 
 -- Frodo is selected as the final roller after both contribute.
--- Missing DSL: specify the chosen outcome and any resource effects.
 scene:tag_team{
   first = "Frodo",
   first_trait = "instinct",
   second = "Sam",
   second_trait = "agility",
   selected = "Frodo",
-  difficulty = 10
+  difficulty = 10,
+  expect_outcome = "fear",
+  expect_hope_delta = 0,
+  expect_stress_delta = 0,
+  expect_gm_fear_delta = 2
 }
 
 -- Close the session after the tag team attempt.

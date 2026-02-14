@@ -446,6 +446,7 @@ type DaggerheartAdversary struct {
 	Major       int
 	Severe      int
 	Armor       int
+	Conditions  []string
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }

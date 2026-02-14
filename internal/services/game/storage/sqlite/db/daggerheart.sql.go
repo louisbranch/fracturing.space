@@ -216,7 +216,7 @@ func (q *Queries) DeleteDaggerheartWeapon(ctx context.Context, id string) error 
 
 const getDaggerheartAdversary = `-- name: GetDaggerheartAdversary :one
 
-SELECT campaign_id, adversary_id, name, kind, session_id, notes, hp, hp_max, stress, stress_max, evasion, major_threshold, severe_threshold, armor, created_at, updated_at FROM daggerheart_adversaries
+SELECT campaign_id, adversary_id, name, kind, session_id, notes, hp, hp_max, stress, stress_max, evasion, major_threshold, severe_threshold, armor, conditions_json, created_at, updated_at FROM daggerheart_adversaries
 WHERE campaign_id = ? AND adversary_id = ?
 `
 
@@ -244,6 +244,7 @@ func (q *Queries) GetDaggerheartAdversary(ctx context.Context, arg GetDaggerhear
 		&i.MajorThreshold,
 		&i.SevereThreshold,
 		&i.Armor,
+		&i.ConditionsJson,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -790,7 +791,7 @@ func (q *Queries) GetDaggerheartWeapon(ctx context.Context, id string) (Daggerhe
 }
 
 const listDaggerheartAdversariesByCampaign = `-- name: ListDaggerheartAdversariesByCampaign :many
-SELECT campaign_id, adversary_id, name, kind, session_id, notes, hp, hp_max, stress, stress_max, evasion, major_threshold, severe_threshold, armor, created_at, updated_at FROM daggerheart_adversaries
+SELECT campaign_id, adversary_id, name, kind, session_id, notes, hp, hp_max, stress, stress_max, evasion, major_threshold, severe_threshold, armor, conditions_json, created_at, updated_at FROM daggerheart_adversaries
 WHERE campaign_id = ?
 ORDER BY name ASC, adversary_id ASC
 `
@@ -819,6 +820,7 @@ func (q *Queries) ListDaggerheartAdversariesByCampaign(ctx context.Context, camp
 			&i.MajorThreshold,
 			&i.SevereThreshold,
 			&i.Armor,
+			&i.ConditionsJson,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -836,7 +838,7 @@ func (q *Queries) ListDaggerheartAdversariesByCampaign(ctx context.Context, camp
 }
 
 const listDaggerheartAdversariesBySession = `-- name: ListDaggerheartAdversariesBySession :many
-SELECT campaign_id, adversary_id, name, kind, session_id, notes, hp, hp_max, stress, stress_max, evasion, major_threshold, severe_threshold, armor, created_at, updated_at FROM daggerheart_adversaries
+SELECT campaign_id, adversary_id, name, kind, session_id, notes, hp, hp_max, stress, stress_max, evasion, major_threshold, severe_threshold, armor, conditions_json, created_at, updated_at FROM daggerheart_adversaries
 WHERE campaign_id = ? AND session_id = ?
 ORDER BY name ASC, adversary_id ASC
 `
@@ -870,6 +872,7 @@ func (q *Queries) ListDaggerheartAdversariesBySession(ctx context.Context, arg L
 			&i.MajorThreshold,
 			&i.SevereThreshold,
 			&i.Armor,
+			&i.ConditionsJson,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -1563,8 +1566,8 @@ func (q *Queries) ListDaggerheartWeapons(ctx context.Context) ([]DaggerheartWeap
 const putDaggerheartAdversary = `-- name: PutDaggerheartAdversary :exec
 INSERT INTO daggerheart_adversaries (
     campaign_id, adversary_id, name, kind, session_id, notes, hp, hp_max, stress, stress_max,
-    evasion, major_threshold, severe_threshold, armor, created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    evasion, major_threshold, severe_threshold, armor, conditions_json, created_at, updated_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(campaign_id, adversary_id) DO UPDATE SET
     name = excluded.name,
     kind = excluded.kind,
@@ -1578,6 +1581,7 @@ ON CONFLICT(campaign_id, adversary_id) DO UPDATE SET
     major_threshold = excluded.major_threshold,
     severe_threshold = excluded.severe_threshold,
     armor = excluded.armor,
+    conditions_json = excluded.conditions_json,
     created_at = excluded.created_at,
     updated_at = excluded.updated_at
 `
@@ -1597,6 +1601,7 @@ type PutDaggerheartAdversaryParams struct {
 	MajorThreshold  int64          `json:"major_threshold"`
 	SevereThreshold int64          `json:"severe_threshold"`
 	Armor           int64          `json:"armor"`
+	ConditionsJson  string         `json:"conditions_json"`
 	CreatedAt       int64          `json:"created_at"`
 	UpdatedAt       int64          `json:"updated_at"`
 }
@@ -1617,6 +1622,7 @@ func (q *Queries) PutDaggerheartAdversary(ctx context.Context, arg PutDaggerhear
 		arg.MajorThreshold,
 		arg.SevereThreshold,
 		arg.Armor,
+		arg.ConditionsJson,
 		arg.CreatedAt,
 		arg.UpdatedAt,
 	)

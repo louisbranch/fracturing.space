@@ -6,32 +6,34 @@ import (
 )
 
 const (
-	EventTypeDamageApplied           event.Type = "action.damage_applied"
-	EventTypeRestTaken               event.Type = "action.rest_taken"
-	EventTypeDowntimeMoveApplied     event.Type = "action.downtime_move_applied"
-	EventTypeLoadoutSwapped          event.Type = "action.loadout_swapped"
-	EventTypeCharacterStatePatched   event.Type = "action.character_state_patched"
-	EventTypeConditionChanged        event.Type = "action.condition_changed"
-	EventTypeGMFearChanged           event.Type = "action.gm_fear_changed"
-	EventTypeGMMoveApplied           event.Type = "action.gm_move_applied"
-	EventTypeHopeSpent               event.Type = "action.hope_spent"
-	EventTypeStressSpent             event.Type = "action.stress_spent"
-	EventTypeDeathMoveResolved       event.Type = "action.death_move_resolved"
-	EventTypeBlazeOfGloryResolved    event.Type = "action.blaze_of_glory_resolved"
-	EventTypeAttackResolved          event.Type = "action.attack_resolved"
-	EventTypeReactionResolved        event.Type = "action.reaction_resolved"
-	EventTypeDamageRollResolved      event.Type = "action.damage_roll_resolved"
-	EventTypeGroupActionResolved     event.Type = "action.group_action_resolved"
-	EventTypeTagTeamResolved         event.Type = "action.tag_team_resolved"
-	EventTypeCountdownCreated        event.Type = "action.countdown_created"
-	EventTypeCountdownUpdated        event.Type = "action.countdown_updated"
-	EventTypeCountdownDeleted        event.Type = "action.countdown_deleted"
-	EventTypeAdversaryRollResolved   event.Type = "action.adversary_roll_resolved"
-	EventTypeAdversaryActionResolved event.Type = "action.adversary_action_resolved"
-	EventTypeAdversaryAttackResolved event.Type = "action.adversary_attack_resolved"
-	EventTypeAdversaryCreated        event.Type = "action.adversary_created"
-	EventTypeAdversaryUpdated        event.Type = "action.adversary_updated"
-	EventTypeAdversaryDeleted        event.Type = "action.adversary_deleted"
+	EventTypeDamageApplied             event.Type = "action.damage_applied"
+	EventTypeRestTaken                 event.Type = "action.rest_taken"
+	EventTypeDowntimeMoveApplied       event.Type = "action.downtime_move_applied"
+	EventTypeLoadoutSwapped            event.Type = "action.loadout_swapped"
+	EventTypeCharacterStatePatched     event.Type = "action.character_state_patched"
+	EventTypeConditionChanged          event.Type = "action.condition_changed"
+	EventTypeGMFearChanged             event.Type = "action.gm_fear_changed"
+	EventTypeGMMoveApplied             event.Type = "action.gm_move_applied"
+	EventTypeHopeSpent                 event.Type = "action.hope_spent"
+	EventTypeStressSpent               event.Type = "action.stress_spent"
+	EventTypeDeathMoveResolved         event.Type = "action.death_move_resolved"
+	EventTypeBlazeOfGloryResolved      event.Type = "action.blaze_of_glory_resolved"
+	EventTypeAttackResolved            event.Type = "action.attack_resolved"
+	EventTypeReactionResolved          event.Type = "action.reaction_resolved"
+	EventTypeDamageRollResolved        event.Type = "action.damage_roll_resolved"
+	EventTypeGroupActionResolved       event.Type = "action.group_action_resolved"
+	EventTypeTagTeamResolved           event.Type = "action.tag_team_resolved"
+	EventTypeCountdownCreated          event.Type = "action.countdown_created"
+	EventTypeCountdownUpdated          event.Type = "action.countdown_updated"
+	EventTypeCountdownDeleted          event.Type = "action.countdown_deleted"
+	EventTypeAdversaryRollResolved     event.Type = "action.adversary_roll_resolved"
+	EventTypeAdversaryActionResolved   event.Type = "action.adversary_action_resolved"
+	EventTypeAdversaryAttackResolved   event.Type = "action.adversary_attack_resolved"
+	EventTypeAdversaryCreated          event.Type = "action.adversary_created"
+	EventTypeAdversaryConditionChanged event.Type = "action.adversary_condition_changed"
+	EventTypeAdversaryDamageApplied    event.Type = "action.adversary_damage_applied"
+	EventTypeAdversaryUpdated          event.Type = "action.adversary_updated"
+	EventTypeAdversaryDeleted          event.Type = "action.adversary_deleted"
 )
 
 // DamageAppliedPayload captures the payload for action.damage_applied events.
@@ -132,6 +134,17 @@ type ConditionChangedPayload struct {
 	RollSeq          *uint64  `json:"roll_seq,omitempty"`
 }
 
+// AdversaryConditionChangedPayload captures the payload for action.adversary_condition_changed events.
+type AdversaryConditionChangedPayload struct {
+	AdversaryID      string   `json:"adversary_id"`
+	ConditionsBefore []string `json:"conditions_before,omitempty"`
+	ConditionsAfter  []string `json:"conditions_after"`
+	Added            []string `json:"added,omitempty"`
+	Removed          []string `json:"removed,omitempty"`
+	Source           string   `json:"source,omitempty"`
+	RollSeq          *uint64  `json:"roll_seq,omitempty"`
+}
+
 // GMFearChangedPayload captures the payload for action.gm_fear_changed events.
 type GMFearChangedPayload struct {
 	Before int    `json:"before"`
@@ -144,7 +157,31 @@ type GMMoveAppliedPayload struct {
 	Move        string `json:"move"`
 	Description string `json:"description,omitempty"`
 	FearSpent   int    `json:"fear_spent,omitempty"`
+	Severity    string `json:"severity,omitempty"`
 	Source      string `json:"source,omitempty"`
+}
+
+// AdversaryDamageAppliedPayload captures the payload for action.adversary_damage_applied events.
+type AdversaryDamageAppliedPayload struct {
+	AdversaryID        string   `json:"adversary_id"`
+	HpBefore           *int     `json:"hp_before,omitempty"`
+	HpAfter            *int     `json:"hp_after,omitempty"`
+	ArmorBefore        *int     `json:"armor_before,omitempty"`
+	ArmorAfter         *int     `json:"armor_after,omitempty"`
+	ArmorSpent         int      `json:"armor_spent,omitempty"`
+	Severity           string   `json:"severity,omitempty"`
+	Marks              int      `json:"marks,omitempty"`
+	DamageType         string   `json:"damage_type,omitempty"`
+	RollSeq            *uint64  `json:"roll_seq,omitempty"`
+	ResistPhysical     bool     `json:"resist_physical,omitempty"`
+	ResistMagic        bool     `json:"resist_magic,omitempty"`
+	ImmunePhysical     bool     `json:"immune_physical,omitempty"`
+	ImmuneMagic        bool     `json:"immune_magic,omitempty"`
+	Direct             bool     `json:"direct,omitempty"`
+	MassiveDamage      bool     `json:"massive_damage,omitempty"`
+	Mitigated          bool     `json:"mitigated,omitempty"`
+	Source             string   `json:"source,omitempty"`
+	SourceCharacterIDs []string `json:"source_character_ids,omitempty"`
 }
 
 // HopeSpentPayload captures the payload for action.hope_spent events.

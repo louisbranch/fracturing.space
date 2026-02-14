@@ -23,6 +23,13 @@ func TestActionHandlersRejectNilRequests(t *testing.T) {
 			},
 		},
 		{
+			name: "ApplyAdversaryDamage",
+			call: func(s *DaggerheartService) error {
+				_, err := s.ApplyAdversaryDamage(ctx, nil)
+				return err
+			},
+		},
+		{
 			name: "ApplyRest",
 			call: func(s *DaggerheartService) error {
 				_, err := s.ApplyRest(ctx, nil)
@@ -54,6 +61,13 @@ func TestActionHandlersRejectNilRequests(t *testing.T) {
 			name: "ApplyConditions",
 			call: func(s *DaggerheartService) error {
 				_, err := s.ApplyConditions(ctx, nil)
+				return err
+			},
+		},
+		{
+			name: "ApplyAdversaryConditions",
+			call: func(s *DaggerheartService) error {
+				_, err := s.ApplyAdversaryConditions(ctx, nil)
 				return err
 			},
 		},

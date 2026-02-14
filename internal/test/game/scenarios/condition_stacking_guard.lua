@@ -9,16 +9,26 @@ scene:campaign{
 }
 
 scene:pc("Frodo")
-scene:npc("Galadriel")
+scene:adversary("Galadriel")
 
 -- The GM applies conditions and tries to stack the same one twice.
 scene:start_session("Condition Guard")
 
 -- Vulnerable is applied, then requested again alongside a new condition.
--- Missing DSL: apply conditions to adversaries; Galadriel stands in.
--- Missing DSL: assert the duplicate is ignored while the new one sticks.
-scene:apply_condition{ target = "Galadriel", add = { "VULNERABLE" }, source = "spotlight" }
-scene:apply_condition{ target = "Galadriel", add = { "VULNERABLE", "HIDDEN" }, source = "spotlight" }
+scene:apply_condition{
+  target = "Galadriel",
+  add = { "VULNERABLE" },
+  source = "spotlight",
+  expect_conditions = { "VULNERABLE" },
+  expect_added = { "VULNERABLE" }
+}
+scene:apply_condition{
+  target = "Galadriel",
+  add = { "VULNERABLE", "HIDDEN" },
+  source = "spotlight",
+  expect_conditions = { "HIDDEN", "VULNERABLE" },
+  expect_added = { "HIDDEN" }
+}
 
 -- Close the session after the stacking attempt.
 scene:end_session()

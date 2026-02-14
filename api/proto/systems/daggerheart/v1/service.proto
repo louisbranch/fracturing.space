@@ -35,6 +35,9 @@ service DaggerheartService {
   // Apply damage to a character (system-specific).
   rpc ApplyDamage(DaggerheartApplyDamageRequest) returns (DaggerheartApplyDamageResponse);
 
+  // Apply damage to an adversary (system-specific).
+  rpc ApplyAdversaryDamage(DaggerheartApplyAdversaryDamageRequest) returns (DaggerheartApplyAdversaryDamageResponse);
+
   // Apply a rest outcome (system-specific).
   rpc ApplyRest(DaggerheartApplyRestRequest) returns (DaggerheartApplyRestResponse);
 
@@ -49,6 +52,9 @@ service DaggerheartService {
 
   // Apply or clear conditions on a character (system-specific).
   rpc ApplyConditions(DaggerheartApplyConditionsRequest) returns (DaggerheartApplyConditionsResponse);
+
+  // Apply or clear conditions on an adversary (system-specific).
+  rpc ApplyAdversaryConditions(DaggerheartApplyAdversaryConditionsRequest) returns (DaggerheartApplyAdversaryConditionsResponse);
 
   // Apply a GM move (system-specific).
   rpc ApplyGmMove(DaggerheartApplyGmMoveRequest) returns (DaggerheartApplyGmMoveResponse);
@@ -133,6 +139,19 @@ message DaggerheartApplyDamageResponse {
   DaggerheartCharacterState state = 2;
 }
 
+message DaggerheartApplyAdversaryDamageRequest {
+  string campaign_id = 1;
+  string adversary_id = 2;
+  DaggerheartDamageRequest damage = 3;
+  optional uint64 roll_seq = 4;
+  bool require_damage_roll = 5;
+}
+
+message DaggerheartApplyAdversaryDamageResponse {
+  string adversary_id = 1;
+  DaggerheartAdversary adversary = 2;
+}
+
 message DaggerheartApplyRestRequest {
   string campaign_id = 1;
   repeated string character_ids = 2;
@@ -208,6 +227,22 @@ message DaggerheartApplyConditionsRequest {
 message DaggerheartApplyConditionsResponse {
   string character_id = 1;
   DaggerheartCharacterState state = 2;
+  repeated DaggerheartCondition added = 3;
+  repeated DaggerheartCondition removed = 4;
+}
+
+message DaggerheartApplyAdversaryConditionsRequest {
+  string campaign_id = 1;
+  string adversary_id = 2;
+  repeated DaggerheartCondition add = 3;
+  repeated DaggerheartCondition remove = 4;
+  string source = 5;
+  optional uint64 roll_seq = 6;
+}
+
+message DaggerheartApplyAdversaryConditionsResponse {
+  string adversary_id = 1;
+  DaggerheartAdversary adversary = 2;
   repeated DaggerheartCondition added = 3;
   repeated DaggerheartCondition removed = 4;
 }
@@ -307,8 +342,9 @@ message DaggerheartAdversary {
   int32 major_threshold = 12;
   int32 severe_threshold = 13;
   int32 armor = 14;
-  google.protobuf.Timestamp created_at = 15;
-  google.protobuf.Timestamp updated_at = 16;
+  repeated DaggerheartCondition conditions = 15;
+  google.protobuf.Timestamp created_at = 16;
+  google.protobuf.Timestamp updated_at = 17;
 }
 
 message DaggerheartCreateAdversaryRequest {

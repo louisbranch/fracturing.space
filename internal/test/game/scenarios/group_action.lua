@@ -16,11 +16,13 @@ scene:pc("Gandalf")
 scene:start_session("Group Action")
 
 -- Sam and Gandalf support Frodo's roll with their own traits.
--- Missing DSL: assert who succeeds/fails and any hope/stress shifts.
 scene:group_action{
   leader = "Frodo",
   leader_trait = "instinct",
   difficulty = 10,
+  expect_hope_delta = 0,
+  expect_stress_delta = 0,
+  expect_gm_fear_delta = 1,
   supporters = {
     { name = "Sam", trait = "agility" },
     { name = "Gandalf", trait = "presence" }

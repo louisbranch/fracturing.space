@@ -15,7 +15,6 @@ scene:adversary("Nazgul")
 scene:start_session("Help and Resistance")
 
 -- Help spends hope, and resistance should blunt the physical damage.
--- Missing DSL: assert the mitigated damage amount.
 scene:attack{
   actor = "Frodo",
   target = "Nazgul",
@@ -27,7 +26,12 @@ scene:attack{
     Modifiers.hope("help"),
     Modifiers.mod("training", 10)
   },
-  expect_hope_delta = -1
+  expect_hope_delta = -1,
+  expect_stress_delta = 0,
+  expect_damage_total = 6,
+  expect_damage_critical = false,
+  expect_adversary_hp_delta = -1,
+  expect_adversary_damage_mitigated = true
 }
 
 -- Close the session after the assisted strike lands.

@@ -254,8 +254,8 @@ func TestApplyRestTaken(t *testing.T) {
 	a := NewAdapter(store)
 
 	err := applyEvent(t, a, "camp-1", EventTypeRestTaken, RestTakenPayload{
-		RestType:     "short",
-		GMFearAfter:  2,
+		RestType:    "short",
+		GMFearAfter: 2,
 		CharacterStates: []RestCharacterStatePatch{
 			{CharacterID: "char-1", HopeAfter: intPtr(3), StressAfter: intPtr(0)},
 		},
@@ -540,6 +540,16 @@ func TestApplyGMMoveAppliedNegativeFearSpent(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("expected error for negative fear_spent")
+	}
+}
+
+func TestApplyGMMoveAppliedInvalidSeverity(t *testing.T) {
+	a := NewAdapter(newMemoryDaggerheartStore())
+	err := applyEvent(t, a, "camp-1", EventTypeGMMoveApplied, GMMoveAppliedPayload{
+		Move: "test", FearSpent: 1, Severity: "medium",
+	})
+	if err == nil {
+		t.Fatal("expected error for invalid severity")
 	}
 }
 
@@ -1510,7 +1520,8 @@ func TestApplyAdversaryUpdated(t *testing.T) {
 	store.adversaries["camp-1:adv-1"] = storage.DaggerheartAdversary{
 		CampaignID: "camp-1", AdversaryID: "adv-1", Name: "Goblin",
 		HP: 3, HPMax: 5, StressMax: 2, Evasion: 10, Major: 5, Severe: 10,
-		CreatedAt: created,
+		Conditions: []string{ConditionHidden},
+		CreatedAt:  created,
 	}
 	a := NewAdapter(store)
 	err := applyEvent(t, a, "camp-1", EventTypeAdversaryUpdated, AdversaryUpdatedPayload{
@@ -1526,6 +1537,9 @@ func TestApplyAdversaryUpdated(t *testing.T) {
 	}
 	if adv.CreatedAt != created {
 		t.Fatal("created_at should be preserved")
+	}
+	if !ConditionsEqual(adv.Conditions, []string{ConditionHidden}) {
+		t.Fatalf("conditions = %v, want %v", adv.Conditions, []string{ConditionHidden})
 	}
 }
 
@@ -1556,6 +1570,32 @@ func TestApplyAdversaryUpdatedEmptyName(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("expected error")
+	}
+}
+
+// --- AdversaryDamageApplied tests ---
+
+func TestApplyAdversaryDamageApplied(t *testing.T) {
+	store := newMemoryDaggerheartStore()
+	store.adversaries["camp-1:adv-1"] = storage.DaggerheartAdversary{
+		CampaignID: "camp-1", AdversaryID: "adv-1", Name: "Goblin",
+		HP: 6, HPMax: 6, Stress: 0, StressMax: 6, Evasion: 10, Major: 5, Severe: 10,
+		Armor: 1, CreatedAt: time.Now().Add(-time.Hour), UpdatedAt: time.Now().Add(-time.Hour),
+	}
+
+	a := NewAdapter(store)
+	err := applyEvent(t, a, "camp-1", EventTypeAdversaryDamageApplied, AdversaryDamageAppliedPayload{
+		AdversaryID: "adv-1",
+		HpAfter:     intPtr(3),
+		ArmorAfter:  intPtr(0),
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	adv := store.adversaries["camp-1:adv-1"]
+	if adv.HP != 3 || adv.Armor != 0 {
+		t.Fatalf("adversary hp/armor = %d/%d, want 3/0", adv.HP, adv.Armor)
 	}
 }
 
@@ -1599,9 +1639,9 @@ func TestApplyAdversaryDeletedEmptyID(t *testing.T) {
 
 func TestValidateAdversaryStats(t *testing.T) {
 	tests := []struct {
-		name      string
+		name                                                        string
 		hp, hpMax, stress, stressMax, evasion, major, severe, armor int
-		wantError bool
+		wantError                                                   bool
 	}{
 		{"valid", 3, 5, 1, 2, 10, 5, 10, 2, false},
 		{"zero_hp_max", 0, 0, 0, 0, 10, 5, 10, 0, true},
@@ -1783,8 +1823,8 @@ func TestApplyRestTakenWithRestType(t *testing.T) {
 	store := newMemoryDaggerheartStore()
 	a := NewAdapter(store)
 	err := applyEvent(t, a, "camp-1", EventTypeRestTaken, RestTakenPayload{
-		RestType:     "long",
-		GMFearAfter:  3,
+		RestType:    "long",
+		GMFearAfter: 3,
 		CharacterStates: []RestCharacterStatePatch{
 			{CharacterID: "char-1", ArmorAfter: intPtr(2)},
 		},

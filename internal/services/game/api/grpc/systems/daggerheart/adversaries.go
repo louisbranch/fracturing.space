@@ -504,6 +504,7 @@ func daggerheartAdversaryToProto(adversary storage.DaggerheartAdversary) *pb.Dag
 		MajorThreshold:  int32(adversary.Major),
 		SevereThreshold: int32(adversary.Severe),
 		Armor:           int32(adversary.Armor),
+		Conditions:      daggerheartConditionsToProto(adversary.Conditions),
 		CreatedAt:       timestamppb.New(adversary.CreatedAt),
 		UpdatedAt:       timestamppb.New(adversary.UpdatedAt),
 	}

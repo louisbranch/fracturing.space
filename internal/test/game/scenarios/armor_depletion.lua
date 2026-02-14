@@ -15,29 +15,56 @@ scene:adversary("Saruman")
 scene:start_session("Armor Depletion")
 
 -- First hit starts chipping away at Frodo's armor.
--- Missing DSL: specify damage totals and assert armor slot spend.
 scene:adversary_attack{
   actor = "Saruman",
   target = "Frodo",
   difficulty = 0,
+  expect_hope_delta = 0,
+  expect_stress_delta = 0,
+  expect_hp_delta = -1,
+  expect_armor_delta = -1,
+  expect_damage_total = 4,
+  expect_damage_severity = "minor",
+  expect_damage_marks = 1,
+  expect_armor_spent = 1,
+  expect_damage_mitigated = true,
+  expect_damage_critical = false,
   damage_type = "physical"
 }
 
 -- Second hit should push armor closer to depletion.
--- Missing DSL: assert armor at 0 after repeated hits.
 scene:adversary_attack{
   actor = "Saruman",
   target = "Frodo",
   difficulty = 0,
+  expect_hope_delta = 0,
+  expect_stress_delta = 0,
+  expect_hp_delta = -1,
+  expect_armor_delta = -1,
+  expect_damage_total = 4,
+  expect_damage_severity = "minor",
+  expect_damage_marks = 1,
+  expect_armor_spent = 1,
+  expect_damage_mitigated = true,
+  expect_damage_critical = false,
   damage_type = "physical"
 }
 
 -- Third hit should start eating into HP once armor is gone.
--- Missing DSL: assert HP loss after armor depletion.
 scene:adversary_attack{
   actor = "Saruman",
   target = "Frodo",
   difficulty = 0,
+  expect_hope_delta = 0,
+  expect_stress_delta = 0,
+  expect_hp_delta = -2,
+  expect_armor_delta = 0,
+  expect_damage_total = 4,
+  expect_damage_severity = "major",
+  expect_damage_marks = 2,
+  expect_armor_spent = 0,
+  expect_damage_mitigated = false,
+  expect_damage_critical = false,
   damage_type = "physical"
 }
 

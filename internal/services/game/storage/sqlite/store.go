@@ -2907,6 +2907,14 @@ func (s *Store) PutDaggerheartAdversary(ctx context.Context, adversary storage.D
 	if strings.TrimSpace(adversary.Name) == "" {
 		return fmt.Errorf("adversary name is required")
 	}
+	conditions := adversary.Conditions
+	if conditions == nil {
+		conditions = []string{}
+	}
+	conditionsJSON, err := json.Marshal(conditions)
+	if err != nil {
+		return fmt.Errorf("marshal adversary conditions: %w", err)
+	}
 
 	return s.q.PutDaggerheartAdversary(ctx, db.PutDaggerheartAdversaryParams{
 		CampaignID:      adversary.CampaignID,
@@ -2923,6 +2931,7 @@ func (s *Store) PutDaggerheartAdversary(ctx context.Context, adversary storage.D
 		MajorThreshold:  int64(adversary.Major),
 		SevereThreshold: int64(adversary.Severe),
 		Armor:           int64(adversary.Armor),
+		ConditionsJson:  string(conditionsJSON),
 		CreatedAt:       toMillis(adversary.CreatedAt),
 		UpdatedAt:       toMillis(adversary.UpdatedAt),
 	})
@@ -2958,6 +2967,12 @@ func (s *Store) GetDaggerheartAdversary(ctx context.Context, campaignID, adversa
 	if row.SessionID.Valid {
 		sessionID = row.SessionID.String
 	}
+	conditions := []string{}
+	if row.ConditionsJson != "" {
+		if err := json.Unmarshal([]byte(row.ConditionsJson), &conditions); err != nil {
+			return storage.DaggerheartAdversary{}, fmt.Errorf("decode daggerheart adversary conditions: %w", err)
+		}
+	}
 
 	return storage.DaggerheartAdversary{
 		CampaignID:  row.CampaignID,
@@ -2974,6 +2989,7 @@ func (s *Store) GetDaggerheartAdversary(ctx context.Context, campaignID, adversa
 		Major:       int(row.MajorThreshold),
 		Severe:      int(row.SevereThreshold),
 		Armor:       int(row.Armor),
+		Conditions:  conditions,
 		CreatedAt:   fromMillis(row.CreatedAt),
 		UpdatedAt:   fromMillis(row.UpdatedAt),
 	}, nil
@@ -3011,6 +3027,12 @@ func (s *Store) ListDaggerheartAdversaries(ctx context.Context, campaignID, sess
 		if row.SessionID.Valid {
 			rowSessionID = row.SessionID.String
 		}
+		conditions := []string{}
+		if row.ConditionsJson != "" {
+			if err := json.Unmarshal([]byte(row.ConditionsJson), &conditions); err != nil {
+				return nil, fmt.Errorf("decode daggerheart adversary conditions: %w", err)
+			}
+		}
 		adversaries = append(adversaries, storage.DaggerheartAdversary{
 			CampaignID:  row.CampaignID,
 			AdversaryID: row.AdversaryID,
@@ -3026,6 +3048,7 @@ func (s *Store) ListDaggerheartAdversaries(ctx context.Context, campaignID, sess
 			Major:       int(row.MajorThreshold),
 			Severe:      int(row.SevereThreshold),
 			Armor:       int(row.Armor),
+			Conditions:  conditions,
 			CreatedAt:   fromMillis(row.CreatedAt),
 			UpdatedAt:   fromMillis(row.UpdatedAt),
 		})

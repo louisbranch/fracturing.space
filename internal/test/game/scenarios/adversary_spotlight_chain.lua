@@ -17,9 +17,9 @@ scene:start_session("Spotlight Chain")
 scene:gm_fear(3)
 
 -- Each fear spend yanks the spotlight to a different adversary.
-scene:gm_spend_fear(1):spotlight("Nazgul")
-scene:gm_spend_fear(1):spotlight("Golum")
-scene:gm_spend_fear(1):spotlight("Nazgul")
+scene:gm_spend_fear(1):spotlight("Nazgul", { expect_gm_fear_delta = -1, expect_gm_move = "spotlight", expect_gm_fear_spent = 1 })
+scene:gm_spend_fear(1):spotlight("Golum", { expect_gm_fear_delta = -1, expect_gm_move = "spotlight", expect_gm_fear_spent = 1 })
+scene:gm_spend_fear(1):spotlight("Nazgul", { expect_gm_fear_delta = -1, expect_gm_move = "spotlight", expect_gm_fear_spent = 1 })
 
 -- Close the session after the spotlight volley.
 scene:end_session()

@@ -16,9 +16,8 @@ scene:start_session("Fear Floor")
 scene:gm_fear(2)
 
 -- Two spends should bring fear to zero without going negative.
--- Missing DSL: assert fear floor behavior explicitly.
-scene:gm_spend_fear(1):spotlight("Nazgul")
-scene:gm_spend_fear(1):spotlight("Nazgul")
+scene:gm_spend_fear(1):spotlight("Nazgul", { expect_gm_fear_delta = -1, expect_gm_move = "spotlight", expect_gm_fear_spent = 1 })
+scene:gm_spend_fear(1):spotlight("Nazgul", { expect_gm_fear_delta = -1, expect_gm_move = "spotlight", expect_gm_fear_spent = 1 })
 scene:gm_fear(0)
 
 -- Close the session once fear hits the floor.

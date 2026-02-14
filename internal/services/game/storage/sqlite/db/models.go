@@ -58,6 +58,7 @@ type DaggerheartAdversary struct {
 	MajorThreshold  int64          `json:"major_threshold"`
 	SevereThreshold int64          `json:"severe_threshold"`
 	Armor           int64          `json:"armor"`
+	ConditionsJson  string         `json:"conditions_json"`
 	CreatedAt       int64          `json:"created_at"`
 	UpdatedAt       int64          `json:"updated_at"`
 }
@@ -308,6 +309,8 @@ type Event struct {
 	EventSignature string `json:"event_signature"`
 	Timestamp      int64  `json:"timestamp"`
 	EventType      string `json:"event_type"`
+	SystemID       string `json:"system_id"`
+	SystemVersion  string `json:"system_version"`
 	SessionID      string `json:"session_id"`
 	RequestID      string `json:"request_id"`
 	InvocationID   string `json:"invocation_id"`
@@ -316,8 +319,6 @@ type Event struct {
 	EntityType     string `json:"entity_type"`
 	EntityID       string `json:"entity_id"`
 	PayloadJson    []byte `json:"payload_json"`
-	SystemID       string `json:"system_id"`
-	SystemVersion  string `json:"system_version"`
 }
 
 type EventSeq struct {

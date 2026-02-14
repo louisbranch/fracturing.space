@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/character"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -324,6 +325,7 @@ func TestDaggerheartAdversaryLifecycle(t *testing.T) {
 		Major:       8,
 		Severe:      15,
 		Armor:       3,
+		Conditions:  []string{"hidden", "vulnerable"},
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
@@ -353,6 +355,9 @@ func TestDaggerheartAdversaryLifecycle(t *testing.T) {
 	}
 	if got.Armor != expected.Armor {
 		t.Fatalf("expected armor to match")
+	}
+	if !daggerheart.ConditionsEqual(got.Conditions, expected.Conditions) {
+		t.Fatalf("expected conditions to match")
 	}
 
 	// Adversary without session (nullable SessionID)
