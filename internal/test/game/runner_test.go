@@ -37,12 +37,16 @@ type scenarioEnv struct {
 }
 
 type scenarioState struct {
-	campaignID  string
-	sessionID   string
-	actors      map[string]string
-	adversaries map[string]string
-	gmFear      int
-	userID      string
+	campaignID           string
+	sessionID            string
+	actors               map[string]string
+	adversaries          map[string]string
+	countdowns           map[string]string
+	gmFear               int
+	userID               string
+	lastRollSeq          uint64
+	lastDamageRollSeq    uint64
+	lastAdversaryRollSeq uint64
 }
 
 func TestScenarioScripts(t *testing.T) {
@@ -108,6 +112,7 @@ func runScenario(t *testing.T, env scenarioEnv, scenario *Scenario) {
 	state := &scenarioState{
 		actors:      map[string]string{},
 		adversaries: map[string]string{},
+		countdowns:  map[string]string{},
 		userID:      env.userID,
 	}
 	for index, step := range scenario.Steps {
@@ -139,6 +144,8 @@ func runStep(t *testing.T, env scenarioEnv, state *scenarioState, step Step) {
 		runAdversaryStep(t, ctx, env, state, step)
 	case "gm_fear":
 		runGMFearStep(t, ctx, env, state, step)
+	case "reaction":
+		runReactionStep(t, ctx, env, state, step)
 	case "gm_spend_fear":
 		runGMSpendFearStep(t, ctx, env, state, step)
 	case "apply_condition":
@@ -153,6 +160,8 @@ func runStep(t *testing.T, env scenarioEnv, state *scenarioState, step Step) {
 		runDowntimeMoveStep(t, ctx, env, state, step)
 	case "death_move":
 		runDeathMoveStep(t, ctx, env, state, step)
+	case "blaze_of_glory":
+		runBlazeOfGloryStep(t, ctx, env, state, step)
 	case "attack":
 		runAttackStep(t, ctx, env, state, step)
 	case "multi_attack":
@@ -161,6 +170,30 @@ func runStep(t *testing.T, env scenarioEnv, state *scenarioState, step Step) {
 		runCombinedDamageStep(t, ctx, env, state, step)
 	case "adversary_attack":
 		runAdversaryAttackStep(t, ctx, env, state, step)
+	case "swap_loadout":
+		runSwapLoadoutStep(t, ctx, env, state, step)
+	case "countdown_create":
+		runCountdownCreateStep(t, ctx, env, state, step)
+	case "countdown_update":
+		runCountdownUpdateStep(t, ctx, env, state, step)
+	case "countdown_delete":
+		runCountdownDeleteStep(t, ctx, env, state, step)
+	case "action_roll":
+		runActionRollStep(t, ctx, env, state, step)
+	case "reaction_roll":
+		runReactionRollStep(t, ctx, env, state, step)
+	case "damage_roll":
+		runDamageRollStep(t, ctx, env, state, step)
+	case "adversary_attack_roll":
+		runAdversaryAttackRollStep(t, ctx, env, state, step)
+	case "apply_roll_outcome":
+		runApplyRollOutcomeStep(t, ctx, env, state, step)
+	case "apply_attack_outcome":
+		runApplyAttackOutcomeStep(t, ctx, env, state, step)
+	case "apply_adversary_attack_outcome":
+		runApplyAdversaryAttackOutcomeStep(t, ctx, env, state, step)
+	case "apply_reaction_outcome":
+		runApplyReactionOutcomeStep(t, ctx, env, state, step)
 	case "mitigate_damage":
 		runMitigateDamageStep(t, ctx, env, state, step)
 	default:
@@ -330,6 +363,45 @@ func runGMFearStep(t *testing.T, ctx context.Context, env scenarioEnv, state *sc
 		t.Fatalf("gm_fear = %d, want %d", snapshot.GetGmFear(), value)
 	}
 	state.gmFear = value
+}
+
+func runReactionStep(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, step Step) {
+	ensureSession(t, ctx, env, state)
+	actorName := requiredString(step.Args, "actor")
+	if actorName == "" {
+		t.Fatal("reaction requires actor")
+	}
+	trait := optionalString(step.Args, "trait", "instinct")
+	difficulty := optionalInt(step.Args, "difficulty", 10)
+	seed := uint64(optionalInt(step.Args, "seed", 0))
+	if seed == 0 {
+		seed = chooseActionSeed(t, step.Args, difficulty)
+	}
+
+	expectedSpec, expectedBefore := captureExpectedDeltas(t, ctx, env, state, step.Args, actorName)
+
+	before := latestSeq(t, ctx, env, state)
+	response, err := env.daggerheartClient.SessionReactionFlow(ctx, &daggerheartv1.SessionReactionFlowRequest{
+		CampaignId:  state.campaignID,
+		SessionId:   state.sessionID,
+		CharacterId: actorID(t, state, actorName),
+		Trait:       trait,
+		Difficulty:  int32(difficulty),
+		Modifiers:   buildActionRollModifiers(step.Args, "modifiers"),
+		ReactionRng: &commonv1.RngRequest{
+			Seed:     &seed,
+			RollMode: commonv1.RollMode_REPLAY,
+		},
+	})
+	if err != nil {
+		t.Fatalf("reaction flow: %v", err)
+	}
+	if response.GetActionRoll() == nil {
+		t.Fatal("expected reaction action roll")
+	}
+	state.lastRollSeq = response.GetActionRoll().GetRollSeq()
+	requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeReactionResolved)
+	assertExpectedDeltas(t, ctx, env, state, expectedSpec, expectedBefore)
 }
 
 func runGMSpendFearStep(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, step Step) {
@@ -649,6 +721,25 @@ func runDeathMoveStep(t *testing.T, ctx context.Context, env scenarioEnv, state 
 	}
 	requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeDeathMoveResolved)
 	assertExpectedDeltas(t, ctx, env, state, expectedSpec, expectedBefore)
+}
+
+func runBlazeOfGloryStep(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, step Step) {
+	ensureSession(t, ctx, env, state)
+	name := requiredString(step.Args, "target")
+	if name == "" {
+		t.Fatal("blaze_of_glory target is required")
+	}
+
+	before := latestSeq(t, ctx, env, state)
+	ctxWithSession := withSessionID(ctx, state.sessionID)
+	_, err := env.daggerheartClient.ResolveBlazeOfGlory(ctxWithSession, &daggerheartv1.DaggerheartResolveBlazeOfGloryRequest{
+		CampaignId:  state.campaignID,
+		CharacterId: actorID(t, state, name),
+	})
+	if err != nil {
+		t.Fatalf("blaze_of_glory: %v", err)
+	}
+	requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeBlazeOfGloryResolved, event.TypeCharacterDeleted)
 }
 
 func runAttackStep(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, step Step) {
@@ -1020,6 +1111,363 @@ func runAdversaryAttackStep(t *testing.T, ctx context.Context, env scenarioEnv, 
 	assertExpectedDeltas(t, ctx, env, state, expectedSpec, expectedBefore)
 }
 
+func runSwapLoadoutStep(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, step Step) {
+	ensureSession(t, ctx, env, state)
+	name := requiredString(step.Args, "target")
+	if name == "" {
+		t.Fatal("swap_loadout target is required")
+	}
+	cardID := requiredString(step.Args, "card_id")
+	if cardID == "" {
+		t.Fatal("swap_loadout card_id is required")
+	}
+	recallCost := optionalInt(step.Args, "recall_cost", 0)
+	inRest := optionalBool(step.Args, "in_rest", false)
+
+	before := latestSeq(t, ctx, env, state)
+	ctxWithSession := withSessionID(ctx, state.sessionID)
+	_, err := env.daggerheartClient.SwapLoadout(ctxWithSession, &daggerheartv1.DaggerheartSwapLoadoutRequest{
+		CampaignId:  state.campaignID,
+		CharacterId: actorID(t, state, name),
+		Swap: &daggerheartv1.DaggerheartLoadoutSwapRequest{
+			CardId:     cardID,
+			RecallCost: int32(recallCost),
+			InRest:     inRest,
+		},
+	})
+	if err != nil {
+		t.Fatalf("swap_loadout: %v", err)
+	}
+	requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeLoadoutSwapped)
+}
+
+func runCountdownCreateStep(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, step Step) {
+	ensureSession(t, ctx, env, state)
+	name := requiredString(step.Args, "name")
+	if name == "" {
+		t.Fatal("countdown_create name is required")
+	}
+	maxValue := optionalInt(step.Args, "max", 0)
+	if maxValue <= 0 {
+		maxValue = 4
+	}
+
+	before := latestSeq(t, ctx, env, state)
+	request := &daggerheartv1.DaggerheartCreateCountdownRequest{
+		CampaignId: state.campaignID,
+		SessionId:  state.sessionID,
+		Name:       name,
+		Kind:       parseCountdownKind(t, optionalString(step.Args, "kind", "progress")),
+		Current:    int32(optionalInt(step.Args, "current", 0)),
+		Max:        int32(maxValue),
+		Direction:  parseCountdownDirection(t, optionalString(step.Args, "direction", "increase")),
+		Looping:    optionalBool(step.Args, "looping", false),
+	}
+	if countdownID := optionalString(step.Args, "countdown_id", ""); countdownID != "" {
+		request.CountdownId = countdownID
+	}
+	response, err := env.daggerheartClient.CreateCountdown(ctx, request)
+	if err != nil {
+		t.Fatalf("countdown_create: %v", err)
+	}
+	if response.GetCountdown() == nil {
+		t.Fatal("expected countdown")
+	}
+	state.countdowns[name] = response.GetCountdown().GetCountdownId()
+	requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeCountdownCreated)
+}
+
+func runCountdownUpdateStep(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, step Step) {
+	ensureSession(t, ctx, env, state)
+	countdownID := resolveCountdownID(t, state, step.Args)
+	if countdownID == "" {
+		t.Fatal("countdown_update countdown_id or name is required")
+	}
+
+	delta := optionalInt(step.Args, "delta", 0)
+	current, hasCurrent := readInt(step.Args, "current")
+	if delta == 0 && !hasCurrent {
+		t.Fatal("countdown_update requires delta or current")
+	}
+
+	request := &daggerheartv1.DaggerheartUpdateCountdownRequest{
+		CampaignId:  state.campaignID,
+		SessionId:   state.sessionID,
+		CountdownId: countdownID,
+		Delta:       int32(delta),
+		Reason:      optionalString(step.Args, "reason", ""),
+	}
+	if hasCurrent {
+		value := int32(current)
+		request.Current = &value
+	}
+
+	before := latestSeq(t, ctx, env, state)
+	_, err := env.daggerheartClient.UpdateCountdown(ctx, request)
+	if err != nil {
+		t.Fatalf("countdown_update: %v", err)
+	}
+	requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeCountdownUpdated)
+}
+
+func runCountdownDeleteStep(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, step Step) {
+	ensureSession(t, ctx, env, state)
+	countdownID := resolveCountdownID(t, state, step.Args)
+	if countdownID == "" {
+		t.Fatal("countdown_delete countdown_id or name is required")
+	}
+
+	before := latestSeq(t, ctx, env, state)
+	_, err := env.daggerheartClient.DeleteCountdown(ctx, &daggerheartv1.DaggerheartDeleteCountdownRequest{
+		CampaignId:  state.campaignID,
+		SessionId:   state.sessionID,
+		CountdownId: countdownID,
+		Reason:      optionalString(step.Args, "reason", ""),
+	})
+	if err != nil {
+		t.Fatalf("countdown_delete: %v", err)
+	}
+	requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeCountdownDeleted)
+	if name := optionalString(step.Args, "name", ""); name != "" {
+		delete(state.countdowns, name)
+	}
+}
+
+func runActionRollStep(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, step Step) {
+	ensureSession(t, ctx, env, state)
+	actorName := requiredString(step.Args, "actor")
+	if actorName == "" {
+		t.Fatal("action_roll requires actor")
+	}
+	trait := optionalString(step.Args, "trait", "instinct")
+	difficulty := optionalInt(step.Args, "difficulty", 10)
+	seed := uint64(optionalInt(step.Args, "seed", 0))
+	if seed == 0 {
+		seed = chooseActionSeed(t, step.Args, difficulty)
+	}
+
+	before := latestSeq(t, ctx, env, state)
+	response, err := env.daggerheartClient.SessionActionRoll(ctx, &daggerheartv1.SessionActionRollRequest{
+		CampaignId:  state.campaignID,
+		SessionId:   state.sessionID,
+		CharacterId: actorID(t, state, actorName),
+		Trait:       trait,
+		RollKind:    daggerheartv1.RollKind_ROLL_KIND_ACTION,
+		Difficulty:  int32(difficulty),
+		Modifiers:   buildActionRollModifiers(step.Args, "modifiers"),
+		Rng: &commonv1.RngRequest{
+			Seed:     &seed,
+			RollMode: commonv1.RollMode_REPLAY,
+		},
+	})
+	if err != nil {
+		t.Fatalf("action_roll: %v", err)
+	}
+	state.lastRollSeq = response.GetRollSeq()
+	requireEventTypesAfterSeq(t, ctx, env, state, before, event.TypeRollResolved)
+}
+
+func runReactionRollStep(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, step Step) {
+	ensureSession(t, ctx, env, state)
+	actorName := requiredString(step.Args, "actor")
+	if actorName == "" {
+		t.Fatal("reaction_roll requires actor")
+	}
+	trait := optionalString(step.Args, "trait", "instinct")
+	difficulty := optionalInt(step.Args, "difficulty", 10)
+	seed := uint64(optionalInt(step.Args, "seed", 0))
+	if seed == 0 {
+		seed = chooseActionSeed(t, step.Args, difficulty)
+	}
+
+	before := latestSeq(t, ctx, env, state)
+	response, err := env.daggerheartClient.SessionActionRoll(ctx, &daggerheartv1.SessionActionRollRequest{
+		CampaignId:  state.campaignID,
+		SessionId:   state.sessionID,
+		CharacterId: actorID(t, state, actorName),
+		Trait:       trait,
+		RollKind:    daggerheartv1.RollKind_ROLL_KIND_REACTION,
+		Difficulty:  int32(difficulty),
+		Modifiers:   buildActionRollModifiers(step.Args, "modifiers"),
+		Rng: &commonv1.RngRequest{
+			Seed:     &seed,
+			RollMode: commonv1.RollMode_REPLAY,
+		},
+	})
+	if err != nil {
+		t.Fatalf("reaction_roll: %v", err)
+	}
+	state.lastRollSeq = response.GetRollSeq()
+	requireEventTypesAfterSeq(t, ctx, env, state, before, event.TypeRollResolved)
+}
+
+func runDamageRollStep(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, step Step) {
+	ensureSession(t, ctx, env, state)
+	actorName := requiredString(step.Args, "actor")
+	if actorName == "" {
+		t.Fatal("damage_roll requires actor")
+	}
+	seed := optionalInt(step.Args, "seed", 0)
+	modifier := optionalInt(step.Args, "modifier", optionalInt(step.Args, "damage_modifier", 0))
+	critical := optionalBool(step.Args, "critical", false)
+
+	request := &daggerheartv1.SessionDamageRollRequest{
+		CampaignId:  state.campaignID,
+		SessionId:   state.sessionID,
+		CharacterId: actorID(t, state, actorName),
+		Dice:        buildDamageDice(step.Args),
+		Modifier:    int32(modifier),
+		Critical:    critical,
+	}
+	if seed != 0 {
+		seedValue := uint64(seed)
+		request.Rng = &commonv1.RngRequest{
+			Seed:     &seedValue,
+			RollMode: commonv1.RollMode_REPLAY,
+		}
+	}
+
+	before := latestSeq(t, ctx, env, state)
+	response, err := env.daggerheartClient.SessionDamageRoll(ctx, request)
+	if err != nil {
+		t.Fatalf("damage_roll: %v", err)
+	}
+	state.lastDamageRollSeq = response.GetRollSeq()
+	requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeDamageRollResolved)
+}
+
+func runAdversaryAttackRollStep(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, step Step) {
+	ensureSession(t, ctx, env, state)
+	actorName := requiredString(step.Args, "actor")
+	if actorName == "" {
+		t.Fatal("adversary_attack_roll requires actor")
+	}
+	seed := optionalInt(step.Args, "seed", 0)
+	request := &daggerheartv1.SessionAdversaryAttackRollRequest{
+		CampaignId:     state.campaignID,
+		SessionId:      state.sessionID,
+		AdversaryId:    adversaryID(t, state, actorName),
+		AttackModifier: int32(optionalInt(step.Args, "attack_modifier", 0)),
+		Advantage:      int32(optionalInt(step.Args, "advantage", 0)),
+		Disadvantage:   int32(optionalInt(step.Args, "disadvantage", 0)),
+	}
+	if seed != 0 {
+		seedValue := uint64(seed)
+		request.Rng = &commonv1.RngRequest{
+			Seed:     &seedValue,
+			RollMode: commonv1.RollMode_REPLAY,
+		}
+	}
+
+	before := latestSeq(t, ctx, env, state)
+	response, err := env.daggerheartClient.SessionAdversaryAttackRoll(ctx, request)
+	if err != nil {
+		t.Fatalf("adversary_attack_roll: %v", err)
+	}
+	state.lastAdversaryRollSeq = response.GetRollSeq()
+	requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeAdversaryRollResolved)
+}
+
+func runApplyRollOutcomeStep(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, step Step) {
+	ensureSession(t, ctx, env, state)
+	rollSeq := uint64(optionalInt(step.Args, "roll_seq", 0))
+	if rollSeq == 0 {
+		rollSeq = state.lastRollSeq
+	}
+	if rollSeq == 0 {
+		t.Fatal("apply_roll_outcome requires roll_seq")
+	}
+	request := &daggerheartv1.ApplyRollOutcomeRequest{
+		SessionId: state.sessionID,
+		RollSeq:   rollSeq,
+	}
+	if targets := resolveOutcomeTargets(t, state, step.Args); len(targets) > 0 {
+		request.Targets = targets
+	}
+
+	before := latestSeq(t, ctx, env, state)
+	_, err := env.daggerheartClient.ApplyRollOutcome(withCampaignID(withSessionID(ctx, state.sessionID), state.campaignID), request)
+	if err != nil {
+		t.Fatalf("apply_roll_outcome: %v", err)
+	}
+	requireAnyEventTypesAfterSeq(t, ctx, env, state, before, event.TypeOutcomeApplied, event.TypeOutcomeRejected)
+}
+
+func runApplyAttackOutcomeStep(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, step Step) {
+	ensureSession(t, ctx, env, state)
+	rollSeq := uint64(optionalInt(step.Args, "roll_seq", 0))
+	if rollSeq == 0 {
+		rollSeq = state.lastRollSeq
+	}
+	if rollSeq == 0 {
+		t.Fatal("apply_attack_outcome requires roll_seq")
+	}
+	targets := resolveAttackTargets(t, state, step.Args)
+	if len(targets) == 0 {
+		t.Fatal("apply_attack_outcome requires targets")
+	}
+
+	before := latestSeq(t, ctx, env, state)
+	_, err := env.daggerheartClient.ApplyAttackOutcome(withCampaignID(withSessionID(ctx, state.sessionID), state.campaignID), &daggerheartv1.DaggerheartApplyAttackOutcomeRequest{
+		SessionId: state.sessionID,
+		RollSeq:   rollSeq,
+		Targets:   targets,
+	})
+	if err != nil {
+		t.Fatalf("apply_attack_outcome: %v", err)
+	}
+	requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeAttackResolved)
+}
+
+func runApplyAdversaryAttackOutcomeStep(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, step Step) {
+	ensureSession(t, ctx, env, state)
+	rollSeq := uint64(optionalInt(step.Args, "roll_seq", 0))
+	if rollSeq == 0 {
+		rollSeq = state.lastAdversaryRollSeq
+	}
+	if rollSeq == 0 {
+		t.Fatal("apply_adversary_attack_outcome requires roll_seq")
+	}
+	difficulty := optionalInt(step.Args, "difficulty", 10)
+	targets := resolveOutcomeTargets(t, state, step.Args)
+	if len(targets) == 0 {
+		t.Fatal("apply_adversary_attack_outcome requires targets")
+	}
+
+	before := latestSeq(t, ctx, env, state)
+	_, err := env.daggerheartClient.ApplyAdversaryAttackOutcome(withCampaignID(withSessionID(ctx, state.sessionID), state.campaignID), &daggerheartv1.DaggerheartApplyAdversaryAttackOutcomeRequest{
+		SessionId:  state.sessionID,
+		RollSeq:    rollSeq,
+		Targets:    targets,
+		Difficulty: int32(difficulty),
+	})
+	if err != nil {
+		t.Fatalf("apply_adversary_attack_outcome: %v", err)
+	}
+	requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeAdversaryAttackResolved)
+}
+
+func runApplyReactionOutcomeStep(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, step Step) {
+	ensureSession(t, ctx, env, state)
+	rollSeq := uint64(optionalInt(step.Args, "roll_seq", 0))
+	if rollSeq == 0 {
+		rollSeq = state.lastRollSeq
+	}
+	if rollSeq == 0 {
+		t.Fatal("apply_reaction_outcome requires roll_seq")
+	}
+
+	before := latestSeq(t, ctx, env, state)
+	_, err := env.daggerheartClient.ApplyReactionOutcome(withCampaignID(withSessionID(ctx, state.sessionID), state.campaignID), &daggerheartv1.DaggerheartApplyReactionOutcomeRequest{
+		SessionId: state.sessionID,
+		RollSeq:   rollSeq,
+	})
+	if err != nil {
+		t.Fatalf("apply_reaction_outcome: %v", err)
+	}
+	requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeReactionResolved)
+}
+
 func runMitigateDamageStep(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, step Step) {
 	ensureCampaign(t, state)
 	name := requiredString(step.Args, "target")
@@ -1116,6 +1564,41 @@ func requireEventTypesAfterSeq(t *testing.T, ctx context.Context, env scenarioEn
 	}
 }
 
+func requireAnyEventTypesAfterSeq(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, before uint64, types ...event.Type) {
+	t.Helper()
+	for _, eventType := range types {
+		if hasEventTypeAfterSeq(t, ctx, env, state, before, eventType) {
+			return
+		}
+	}
+	labels := make([]string, 0, len(types))
+	for _, eventType := range types {
+		labels = append(labels, string(eventType))
+	}
+	t.Fatalf("expected event after seq %d: %s", before, strings.Join(labels, ", "))
+}
+
+func hasEventTypeAfterSeq(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, before uint64, eventType event.Type) bool {
+	t.Helper()
+	filter := fmt.Sprintf("type = \"%s\"", eventType)
+	if state.sessionID != "" && isSessionEvent(string(eventType)) {
+		filter = filter + fmt.Sprintf(" AND session_id = \"%s\"", state.sessionID)
+	}
+	response, err := env.eventClient.ListEvents(ctx, &gamev1.ListEventsRequest{
+		CampaignId: state.campaignID,
+		PageSize:   1,
+		OrderBy:    "seq desc",
+		Filter:     filter,
+	})
+	if err != nil {
+		t.Fatalf("list events for %s: %v", eventType, err)
+	}
+	if len(response.GetEvents()) == 0 {
+		return false
+	}
+	return response.GetEvents()[0].GetSeq() > before
+}
+
 func isSessionEvent(eventType string) bool {
 	return strings.HasPrefix(eventType, "action.") || strings.HasPrefix(eventType, "session.")
 }
@@ -1171,6 +1654,10 @@ func applyOptionalCharacterState(t *testing.T, ctx context.Context, env scenario
 	}
 	if stress, ok := readInt(args, "stress"); ok {
 		patch.Stress = int32(stress)
+		hasPatch = true
+	}
+	if lifeState := optionalString(args, "life_state", ""); lifeState != "" {
+		patch.LifeState = parseLifeState(t, lifeState)
 		hasPatch = true
 	}
 	if !hasPatch {
@@ -1452,6 +1939,9 @@ func applyAdversaryDamage(
 		CampaignId:  state.campaignID,
 		AdversaryId: adversaryID,
 	}
+	if state.sessionID != "" {
+		update.SessionId = wrapperspb.String(state.sessionID)
+	}
 	if app.HPAfter != hpBefore {
 		update.Hp = wrapperspb.Int32(int32(app.HPAfter))
 	}
@@ -1461,7 +1951,8 @@ func applyAdversaryDamage(
 	if update.Hp == nil && update.Armor == nil {
 		t.Fatalf("expected adversary damage to change hp or armor for %s", name)
 	}
-	if _, err := env.daggerheartClient.UpdateAdversary(ctx, update); err != nil {
+	ctxWithSession := withSessionID(ctx, state.sessionID)
+	if _, err := env.daggerheartClient.UpdateAdversary(ctxWithSession, update); err != nil {
 		t.Fatalf("update adversary damage: %v", err)
 	}
 	after := getAdversary(t, ctx, env, state, adversaryID)
@@ -1603,6 +2094,56 @@ func resolveTargetID(t *testing.T, state *scenarioState, name string) (string, b
 	}
 	t.Fatalf("unknown target %q", name)
 	return "", false
+}
+
+func resolveCountdownID(t *testing.T, state *scenarioState, args map[string]any) string {
+	if countdownID := optionalString(args, "countdown_id", ""); countdownID != "" {
+		return countdownID
+	}
+	name := optionalString(args, "name", "")
+	if name == "" {
+		return ""
+	}
+	countdownID, ok := state.countdowns[name]
+	if !ok {
+		t.Fatalf("unknown countdown %q", name)
+	}
+	return countdownID
+}
+
+func resolveOutcomeTargets(t *testing.T, state *scenarioState, args map[string]any) []string {
+	list := readStringSlice(args, "targets")
+	if len(list) == 0 {
+		if name := optionalString(args, "target", ""); name != "" {
+			list = []string{name}
+		}
+	}
+	if len(list) == 0 {
+		return nil
+	}
+	ids := make([]string, 0, len(list))
+	for _, name := range list {
+		ids = append(ids, actorID(t, state, name))
+	}
+	return ids
+}
+
+func resolveAttackTargets(t *testing.T, state *scenarioState, args map[string]any) []string {
+	list := readStringSlice(args, "targets")
+	if len(list) == 0 {
+		if name := optionalString(args, "target", ""); name != "" {
+			list = []string{name}
+		}
+	}
+	if len(list) == 0 {
+		return nil
+	}
+	ids := make([]string, 0, len(list))
+	for _, name := range list {
+		id, _ := resolveTargetID(t, state, name)
+		ids = append(ids, id)
+	}
+	return ids
 }
 
 func requireDamageDice(t *testing.T, args map[string]any, context string) {
@@ -1970,6 +2511,30 @@ func parseRestType(t *testing.T, value string) daggerheartv1.DaggerheartRestType
 	}
 }
 
+func parseCountdownKind(t *testing.T, value string) daggerheartv1.DaggerheartCountdownKind {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "progress":
+		return daggerheartv1.DaggerheartCountdownKind_DAGGERHEART_COUNTDOWN_KIND_PROGRESS
+	case "consequence":
+		return daggerheartv1.DaggerheartCountdownKind_DAGGERHEART_COUNTDOWN_KIND_CONSEQUENCE
+	default:
+		t.Fatalf("unsupported countdown kind %q", value)
+		return daggerheartv1.DaggerheartCountdownKind_DAGGERHEART_COUNTDOWN_KIND_UNSPECIFIED
+	}
+}
+
+func parseCountdownDirection(t *testing.T, value string) daggerheartv1.DaggerheartCountdownDirection {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "increase":
+		return daggerheartv1.DaggerheartCountdownDirection_DAGGERHEART_COUNTDOWN_DIRECTION_INCREASE
+	case "decrease":
+		return daggerheartv1.DaggerheartCountdownDirection_DAGGERHEART_COUNTDOWN_DIRECTION_DECREASE
+	default:
+		t.Fatalf("unsupported countdown direction %q", value)
+		return daggerheartv1.DaggerheartCountdownDirection_DAGGERHEART_COUNTDOWN_DIRECTION_UNSPECIFIED
+	}
+}
+
 func parseDowntimeMove(t *testing.T, value string) daggerheartv1.DaggerheartDowntimeMove {
 	switch strings.ToLower(strings.TrimSpace(value)) {
 	case "clear_all_stress":
@@ -1997,6 +2562,22 @@ func parseDeathMove(t *testing.T, value string) daggerheartv1.DaggerheartDeathMo
 	default:
 		t.Fatalf("unsupported death move %q", value)
 		return daggerheartv1.DaggerheartDeathMove_DAGGERHEART_DEATH_MOVE_UNSPECIFIED
+	}
+}
+
+func parseLifeState(t *testing.T, value string) daggerheartv1.DaggerheartLifeState {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "alive":
+		return daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_ALIVE
+	case "unconscious":
+		return daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_UNCONSCIOUS
+	case "blaze_of_glory":
+		return daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_BLAZE_OF_GLORY
+	case "dead":
+		return daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_DEAD
+	default:
+		t.Fatalf("unsupported life_state %q", value)
+		return daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_UNSPECIFIED
 	}
 }
 

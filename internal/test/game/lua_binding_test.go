@@ -140,6 +140,7 @@ var scenarioMethods = []lua.RegistryFunction{
 	{Name: "prefab", Function: scenarioPrefab},
 	{Name: "adversary", Function: scenarioAdversary},
 	{Name: "gm_fear", Function: scenarioGMFear},
+	{Name: "reaction", Function: scenarioReaction},
 	{Name: "attack", Function: scenarioAttack},
 	{Name: "multi_attack", Function: scenarioMultiAttack},
 	{Name: "combined_damage", Function: scenarioCombinedDamage},
@@ -151,6 +152,19 @@ var scenarioMethods = []lua.RegistryFunction{
 	{Name: "rest", Function: scenarioRest},
 	{Name: "downtime_move", Function: scenarioDowntimeMove},
 	{Name: "death_move", Function: scenarioDeathMove},
+	{Name: "blaze_of_glory", Function: scenarioBlazeOfGlory},
+	{Name: "swap_loadout", Function: scenarioSwapLoadout},
+	{Name: "countdown_create", Function: scenarioCountdownCreate},
+	{Name: "countdown_update", Function: scenarioCountdownUpdate},
+	{Name: "countdown_delete", Function: scenarioCountdownDelete},
+	{Name: "action_roll", Function: scenarioActionRoll},
+	{Name: "reaction_roll", Function: scenarioReactionRoll},
+	{Name: "damage_roll", Function: scenarioDamageRoll},
+	{Name: "adversary_attack_roll", Function: scenarioAdversaryAttackRoll},
+	{Name: "apply_roll_outcome", Function: scenarioApplyRollOutcome},
+	{Name: "apply_attack_outcome", Function: scenarioApplyAttackOutcome},
+	{Name: "apply_adversary_attack_outcome", Function: scenarioApplyAdversaryAttackOutcome},
+	{Name: "apply_reaction_outcome", Function: scenarioApplyReactionOutcome},
 	{Name: "mitigate_damage", Function: scenarioMitigateDamage},
 }
 
@@ -222,6 +236,14 @@ func scenarioGMFear(state *lua.State) int {
 	scenario := checkScenario(state)
 	value := int(lua.CheckNumber(state, 2))
 	appendStep(scenario, "gm_fear", map[string]any{"value": value})
+	return 0
+}
+
+func scenarioReaction(state *lua.State) int {
+	scenario := checkScenario(state)
+	lua.CheckType(state, 2, lua.TypeTable)
+	data := tableToMap(state, 2)
+	appendStep(scenario, "reaction", data)
 	return 0
 }
 
@@ -305,6 +327,13 @@ func scenarioDeathMove(state *lua.State) int {
 	return 0
 }
 
+func scenarioBlazeOfGlory(state *lua.State) int {
+	scenario := checkScenario(state)
+	name := lua.CheckString(state, 2)
+	appendStep(scenario, "blaze_of_glory", map[string]any{"target": name})
+	return 0
+}
+
 func scenarioGMSpendFear(state *lua.State) int {
 	scenario := checkScenario(state)
 	amount := int(lua.CheckNumber(state, 2))
@@ -312,6 +341,102 @@ func scenarioGMSpendFear(state *lua.State) int {
 	state.PushUserData(&gmAction{scenario: scenario, stepIndex: stepIndex})
 	lua.SetMetaTableNamed(state, gmActionTypeName)
 	return 1
+}
+
+func scenarioSwapLoadout(state *lua.State) int {
+	scenario := checkScenario(state)
+	lua.CheckType(state, 2, lua.TypeTable)
+	data := tableToMap(state, 2)
+	appendStep(scenario, "swap_loadout", data)
+	return 0
+}
+
+func scenarioCountdownCreate(state *lua.State) int {
+	scenario := checkScenario(state)
+	lua.CheckType(state, 2, lua.TypeTable)
+	data := tableToMap(state, 2)
+	appendStep(scenario, "countdown_create", data)
+	return 0
+}
+
+func scenarioCountdownUpdate(state *lua.State) int {
+	scenario := checkScenario(state)
+	lua.CheckType(state, 2, lua.TypeTable)
+	data := tableToMap(state, 2)
+	appendStep(scenario, "countdown_update", data)
+	return 0
+}
+
+func scenarioCountdownDelete(state *lua.State) int {
+	scenario := checkScenario(state)
+	lua.CheckType(state, 2, lua.TypeTable)
+	data := tableToMap(state, 2)
+	appendStep(scenario, "countdown_delete", data)
+	return 0
+}
+
+func scenarioActionRoll(state *lua.State) int {
+	scenario := checkScenario(state)
+	lua.CheckType(state, 2, lua.TypeTable)
+	data := tableToMap(state, 2)
+	appendStep(scenario, "action_roll", data)
+	return 0
+}
+
+func scenarioReactionRoll(state *lua.State) int {
+	scenario := checkScenario(state)
+	lua.CheckType(state, 2, lua.TypeTable)
+	data := tableToMap(state, 2)
+	appendStep(scenario, "reaction_roll", data)
+	return 0
+}
+
+func scenarioDamageRoll(state *lua.State) int {
+	scenario := checkScenario(state)
+	lua.CheckType(state, 2, lua.TypeTable)
+	data := tableToMap(state, 2)
+	appendStep(scenario, "damage_roll", data)
+	return 0
+}
+
+func scenarioAdversaryAttackRoll(state *lua.State) int {
+	scenario := checkScenario(state)
+	lua.CheckType(state, 2, lua.TypeTable)
+	data := tableToMap(state, 2)
+	appendStep(scenario, "adversary_attack_roll", data)
+	return 0
+}
+
+func scenarioApplyRollOutcome(state *lua.State) int {
+	scenario := checkScenario(state)
+	lua.CheckType(state, 2, lua.TypeTable)
+	data := tableToMap(state, 2)
+	appendStep(scenario, "apply_roll_outcome", data)
+	return 0
+}
+
+func scenarioApplyAttackOutcome(state *lua.State) int {
+	scenario := checkScenario(state)
+	lua.CheckType(state, 2, lua.TypeTable)
+	data := tableToMap(state, 2)
+	appendStep(scenario, "apply_attack_outcome", data)
+	return 0
+}
+
+func scenarioApplyAdversaryAttackOutcome(state *lua.State) int {
+	scenario := checkScenario(state)
+	lua.CheckType(state, 2, lua.TypeTable)
+	data := tableToMap(state, 2)
+	appendStep(scenario, "apply_adversary_attack_outcome", data)
+	return 0
+}
+
+func scenarioApplyReactionOutcome(state *lua.State) int {
+	scenario := checkScenario(state)
+	lua.CheckType(state, 2, lua.TypeTable)
+	data := tableToMap(state, 2)
+	appendStep(scenario, "apply_reaction_outcome", data)
+	return 0
 }
 
 func scenarioMitigateDamage(state *lua.State) int {

@@ -1528,13 +1528,12 @@ func (s *DaggerheartService) ResolveBlazeOfGlory(ctx context.Context, in *pb.Dag
 	if err := adapter.ApplyEvent(ctx, stored); err != nil {
 		return nil, status.Errorf(codes.Internal, "apply event: %v", err)
 	}
-	if err := s.appendCharacterDeletedEvent(ctx, campaignID, characterID, daggerheart.LifeStateBlazeOfGlory); err != nil {
-		return nil, err
-	}
-
 	updated, err := s.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "load daggerheart state: %v", err)
+	}
+	if err := s.appendCharacterDeletedEvent(ctx, campaignID, characterID, daggerheart.LifeStateBlazeOfGlory); err != nil {
+		return nil, err
 	}
 
 	return &pb.DaggerheartResolveBlazeOfGloryResponse{

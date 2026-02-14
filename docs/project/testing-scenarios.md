@@ -35,6 +35,7 @@ return scene
 - `pc(name, opts)` / `npc(name, opts)` / `prefab(name)`
 - `adversary(name, opts)`
 - `gm_fear(value)`
+- `reaction{ actor, trait, difficulty, modifiers, outcome, seed, expect_hope_delta, expect_stress_delta, expect_target }`
 - `gm_spend_fear(amount):spotlight(target)`
 - `attack{ actor, target, trait, difficulty, damage_type, outcome, damage_dice, modifiers, resist_physical, resist_magic, immune_physical, immune_magic, direct, massive_damage, expect_hope_delta, expect_stress_delta, expect_target }`
 - `multi_attack{ actor, targets, trait, difficulty, outcome, damage_type, damage_dice, modifiers, resist_physical, resist_magic, immune_physical, immune_magic, direct, massive_damage, expect_hope_delta, expect_stress_delta, expect_target }`
@@ -46,6 +47,19 @@ return scene
 - `rest{ type, party_size, interrupted, characters, expect_hope_delta, expect_stress_delta, expect_target }`
 - `downtime_move{ target, move, prepare_with_group, expect_hope_delta, expect_stress_delta, expect_target }`
 - `death_move{ target, move, hp_clear, stress_clear, expect_hope_delta, expect_stress_delta, expect_target }`
+- `blaze_of_glory(target)`
+- `swap_loadout{ target, card_id, recall_cost, in_rest }`
+- `countdown_create{ name, kind, current, max, direction, looping, countdown_id }`
+- `countdown_update{ name, countdown_id, delta, current, reason }`
+- `countdown_delete{ name, countdown_id, reason }`
+- `action_roll{ actor, trait, difficulty, modifiers, outcome, seed }`
+- `reaction_roll{ actor, trait, difficulty, modifiers, outcome, seed }`
+- `damage_roll{ actor, damage_dice, modifier, critical, seed }`
+- `adversary_attack_roll{ actor, attack_modifier, advantage, disadvantage, seed }`
+- `apply_roll_outcome{ roll_seq, target, targets }`
+- `apply_attack_outcome{ roll_seq, target, targets }`
+- `apply_adversary_attack_outcome{ roll_seq, targets, difficulty }`
+- `apply_reaction_outcome{ roll_seq }`
 - `mitigate_damage{ target, armor }` (sets armor slots)
 
 ## Auto-assertions
@@ -140,10 +154,25 @@ Attack and multi-target attack steps can target adversaries. The runner applies 
 - `internal/test/game/scenarios/adversary_spotlight_chain.lua`
   - Multiple fear spends to spotlight adversaries.
   - SRD: spotlight, fear spend.
+- `internal/test/game/scenarios/reaction_flow.lua`
+  - Reaction flow, roll outcomes, and reaction resolution.
+  - SRD: reaction rolls.
+- `internal/test/game/scenarios/countdown_lifecycle.lua`
+  - Countdown creation, update, and deletion.
+  - SRD: countdowns.
+- `internal/test/game/scenarios/blaze_of_glory.lua`
+  - Death move blaze of glory resolution.
+  - SRD: death moves, blaze of glory.
+- `internal/test/game/scenarios/loadout_swap.lua`
+  - Loadout swap with recall cost.
+  - SRD: loadout swaps.
+- `internal/test/game/scenarios/low_level_rolls.lua`
+  - Low-level roll + outcome APIs.
+  - SRD: rolls, outcomes, and adversary attacks.
 
 ## Additional scenarios (ready now)
 
-None.
+See scenario map.
 
 ## Minor DSL additions (next tier)
 
