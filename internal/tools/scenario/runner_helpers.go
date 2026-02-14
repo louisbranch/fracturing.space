@@ -189,6 +189,9 @@ func isSessionEvent(eventType string) bool {
 }
 
 func (r *Runner) applyDefaultDaggerheartProfile(ctx context.Context, state *scenarioState, characterID string, args map[string]any) error {
+	if !hasDaggerheartProfileOverrides(args) {
+		return nil
+	}
 	armorValue := optionalInt(args, "armor", 0)
 	armorMaxValue := optionalInt(args, "armor_max", 0)
 	profile := &daggerheartv1.DaggerheartProfile{
@@ -225,6 +228,35 @@ func (r *Runner) applyDefaultDaggerheartProfile(ctx context.Context, state *scen
 		return fmt.Errorf("patch character profile: %w", err)
 	}
 	return nil
+}
+
+func hasDaggerheartProfileOverrides(args map[string]any) bool {
+	if len(args) == 0 {
+		return false
+	}
+	keys := []string{
+		"level",
+		"hp_max",
+		"stress_max",
+		"evasion",
+		"major_threshold",
+		"severe_threshold",
+		"armor",
+		"armor_max",
+		"armor_score",
+		"agility",
+		"strength",
+		"finesse",
+		"instinct",
+		"presence",
+		"knowledge",
+	}
+	for _, key := range keys {
+		if _, ok := args[key]; ok {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *Runner) applyOptionalCharacterState(ctx context.Context, state *scenarioState, characterID string, args map[string]any) error {

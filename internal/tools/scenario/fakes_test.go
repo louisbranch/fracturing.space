@@ -143,6 +143,11 @@ func (f *fakeEventClient) ListEvents(context.Context, *gamev1.ListEventsRequest,
 	}, nil
 }
 
+// ListTimelineEntries is a stub so the fake satisfies EventServiceClient.
+func (f *fakeEventClient) ListTimelineEntries(context.Context, *gamev1.ListTimelineEntriesRequest, ...grpc.CallOption) (*gamev1.ListTimelineEntriesResponse, error) {
+	return nil, unimplemented("ListTimelineEntries")
+}
+
 type fakeSnapshotClient struct {
 	patchState     func(context.Context, *gamev1.PatchCharacterStateRequest, ...grpc.CallOption) (*gamev1.PatchCharacterStateResponse, error)
 	getSnapshot    func(context.Context, *gamev1.GetSnapshotRequest, ...grpc.CallOption) (*gamev1.GetSnapshotResponse, error)

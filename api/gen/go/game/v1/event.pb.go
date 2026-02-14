@@ -11,6 +11,7 @@ import (
 	sync "sync"
 	unsafe "unsafe"
 
+	v1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -185,6 +186,379 @@ func (x *ListEventsResponse) GetTotalSize() int32 {
 	return 0
 }
 
+// ListTimelineEntriesRequest describes the parameters for listing timeline entries.
+type ListTimelineEntriesRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required: scope to a campaign.
+	CampaignId string `protobuf:"bytes,1,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"`
+	// Page size (default: 50, max: 200).
+	PageSize int32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// Opaque cursor for pagination (base64 encoded).
+	PageToken string `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	// Ordering: "seq" (default, oldest first) or "seq desc" (newest first).
+	OrderBy string `protobuf:"bytes,4,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
+	// AIP-160 filter expression.
+	// Filterable fields: session_id, type, system_id, system_version, actor_type, actor_id, entity_type, entity_id, ts.
+	Filter        string `protobuf:"bytes,5,opt,name=filter,proto3" json:"filter,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListTimelineEntriesRequest) Reset() {
+	*x = ListTimelineEntriesRequest{}
+	mi := &file_game_v1_event_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListTimelineEntriesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListTimelineEntriesRequest) ProtoMessage() {}
+
+func (x *ListTimelineEntriesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_game_v1_event_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListTimelineEntriesRequest.ProtoReflect.Descriptor instead.
+func (*ListTimelineEntriesRequest) Descriptor() ([]byte, []int) {
+	return file_game_v1_event_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *ListTimelineEntriesRequest) GetCampaignId() string {
+	if x != nil {
+		return x.CampaignId
+	}
+	return ""
+}
+
+func (x *ListTimelineEntriesRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListTimelineEntriesRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+func (x *ListTimelineEntriesRequest) GetOrderBy() string {
+	if x != nil {
+		return x.OrderBy
+	}
+	return ""
+}
+
+func (x *ListTimelineEntriesRequest) GetFilter() string {
+	if x != nil {
+		return x.Filter
+	}
+	return ""
+}
+
+// ListTimelineEntriesResponse contains the paginated timeline results.
+type ListTimelineEntriesResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The timeline entries matching the request.
+	Entries []*TimelineEntry `protobuf:"bytes,1,rep,name=entries,proto3" json:"entries,omitempty"`
+	// Token to retrieve the next page. Empty when no more results.
+	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	// Token to retrieve the previous page. Empty when at the beginning.
+	PreviousPageToken string `protobuf:"bytes,3,opt,name=previous_page_token,json=previousPageToken,proto3" json:"previous_page_token,omitempty"`
+	// Total number of events matching the filter (across all pages).
+	TotalSize     int32 `protobuf:"varint,4,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListTimelineEntriesResponse) Reset() {
+	*x = ListTimelineEntriesResponse{}
+	mi := &file_game_v1_event_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListTimelineEntriesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListTimelineEntriesResponse) ProtoMessage() {}
+
+func (x *ListTimelineEntriesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_game_v1_event_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListTimelineEntriesResponse.ProtoReflect.Descriptor instead.
+func (*ListTimelineEntriesResponse) Descriptor() ([]byte, []int) {
+	return file_game_v1_event_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *ListTimelineEntriesResponse) GetEntries() []*TimelineEntry {
+	if x != nil {
+		return x.Entries
+	}
+	return nil
+}
+
+func (x *ListTimelineEntriesResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
+func (x *ListTimelineEntriesResponse) GetPreviousPageToken() string {
+	if x != nil {
+		return x.PreviousPageToken
+	}
+	return ""
+}
+
+func (x *ListTimelineEntriesResponse) GetTotalSize() int32 {
+	if x != nil {
+		return x.TotalSize
+	}
+	return 0
+}
+
+// TimelineEntry represents a timeline row with projection context.
+type TimelineEntry struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The event sequence number within the campaign (starts at 1).
+	Seq uint64 `protobuf:"varint,1,opt,name=seq,proto3" json:"seq,omitempty"`
+	// The type of event (e.g., "session.started", "action.roll_resolved").
+	EventType string `protobuf:"bytes,2,opt,name=event_type,json=eventType,proto3" json:"event_type,omitempty"`
+	// When the event occurred.
+	EventTime *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=event_time,json=eventTime,proto3" json:"event_time,omitempty"`
+	// The icon identifier for this timeline entry.
+	IconId v1.IconId `protobuf:"varint,4,opt,name=icon_id,json=iconId,proto3,enum=common.v1.IconId" json:"icon_id,omitempty"`
+	// Projection display data for rendering the entry.
+	Projection *ProjectionDisplay `protobuf:"bytes,5,opt,name=projection,proto3" json:"projection,omitempty"`
+	// Event payload JSON for inspection.
+	EventPayloadJson string `protobuf:"bytes,6,opt,name=event_payload_json,json=eventPayloadJson,proto3" json:"event_payload_json,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *TimelineEntry) Reset() {
+	*x = TimelineEntry{}
+	mi := &file_game_v1_event_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TimelineEntry) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TimelineEntry) ProtoMessage() {}
+
+func (x *TimelineEntry) ProtoReflect() protoreflect.Message {
+	mi := &file_game_v1_event_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TimelineEntry.ProtoReflect.Descriptor instead.
+func (*TimelineEntry) Descriptor() ([]byte, []int) {
+	return file_game_v1_event_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *TimelineEntry) GetSeq() uint64 {
+	if x != nil {
+		return x.Seq
+	}
+	return 0
+}
+
+func (x *TimelineEntry) GetEventType() string {
+	if x != nil {
+		return x.EventType
+	}
+	return ""
+}
+
+func (x *TimelineEntry) GetEventTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.EventTime
+	}
+	return nil
+}
+
+func (x *TimelineEntry) GetIconId() v1.IconId {
+	if x != nil {
+		return x.IconId
+	}
+	return v1.IconId(0)
+}
+
+func (x *TimelineEntry) GetProjection() *ProjectionDisplay {
+	if x != nil {
+		return x.Projection
+	}
+	return nil
+}
+
+func (x *TimelineEntry) GetEventPayloadJson() string {
+	if x != nil {
+		return x.EventPayloadJson
+	}
+	return ""
+}
+
+// ProjectionDisplay describes a projection summary for UI rendering.
+type ProjectionDisplay struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Title for the projection (primary label).
+	Title string `protobuf:"bytes,1,opt,name=title,proto3" json:"title,omitempty"`
+	// Subtitle for the projection (secondary label).
+	Subtitle string `protobuf:"bytes,2,opt,name=subtitle,proto3" json:"subtitle,omitempty"`
+	// Status label for the projection.
+	Status string `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
+	// Field/value pairs for projection detail.
+	Fields        []*ProjectionField `protobuf:"bytes,4,rep,name=fields,proto3" json:"fields,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ProjectionDisplay) Reset() {
+	*x = ProjectionDisplay{}
+	mi := &file_game_v1_event_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProjectionDisplay) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProjectionDisplay) ProtoMessage() {}
+
+func (x *ProjectionDisplay) ProtoReflect() protoreflect.Message {
+	mi := &file_game_v1_event_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProjectionDisplay.ProtoReflect.Descriptor instead.
+func (*ProjectionDisplay) Descriptor() ([]byte, []int) {
+	return file_game_v1_event_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *ProjectionDisplay) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *ProjectionDisplay) GetSubtitle() string {
+	if x != nil {
+		return x.Subtitle
+	}
+	return ""
+}
+
+func (x *ProjectionDisplay) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *ProjectionDisplay) GetFields() []*ProjectionField {
+	if x != nil {
+		return x.Fields
+	}
+	return nil
+}
+
+// ProjectionField is a display label/value pair.
+type ProjectionField struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Label         string                 `protobuf:"bytes,1,opt,name=label,proto3" json:"label,omitempty"`
+	Value         string                 `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ProjectionField) Reset() {
+	*x = ProjectionField{}
+	mi := &file_game_v1_event_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProjectionField) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProjectionField) ProtoMessage() {}
+
+func (x *ProjectionField) ProtoReflect() protoreflect.Message {
+	mi := &file_game_v1_event_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProjectionField.ProtoReflect.Descriptor instead.
+func (*ProjectionField) Descriptor() ([]byte, []int) {
+	return file_game_v1_event_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *ProjectionField) GetLabel() string {
+	if x != nil {
+		return x.Label
+	}
+	return ""
+}
+
+func (x *ProjectionField) GetValue() string {
+	if x != nil {
+		return x.Value
+	}
+	return ""
+}
+
 // AppendEventRequest describes the input for appending a new event.
 type AppendEventRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -210,7 +584,7 @@ type AppendEventRequest struct {
 
 func (x *AppendEventRequest) Reset() {
 	*x = AppendEventRequest{}
-	mi := &file_game_v1_event_proto_msgTypes[2]
+	mi := &file_game_v1_event_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -222,7 +596,7 @@ func (x *AppendEventRequest) String() string {
 func (*AppendEventRequest) ProtoMessage() {}
 
 func (x *AppendEventRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_game_v1_event_proto_msgTypes[2]
+	mi := &file_game_v1_event_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -235,7 +609,7 @@ func (x *AppendEventRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AppendEventRequest.ProtoReflect.Descriptor instead.
 func (*AppendEventRequest) Descriptor() ([]byte, []int) {
-	return file_game_v1_event_proto_rawDescGZIP(), []int{2}
+	return file_game_v1_event_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *AppendEventRequest) GetCampaignId() string {
@@ -304,7 +678,7 @@ type AppendEventResponse struct {
 
 func (x *AppendEventResponse) Reset() {
 	*x = AppendEventResponse{}
-	mi := &file_game_v1_event_proto_msgTypes[3]
+	mi := &file_game_v1_event_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -316,7 +690,7 @@ func (x *AppendEventResponse) String() string {
 func (*AppendEventResponse) ProtoMessage() {}
 
 func (x *AppendEventResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_game_v1_event_proto_msgTypes[3]
+	mi := &file_game_v1_event_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -329,7 +703,7 @@ func (x *AppendEventResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AppendEventResponse.ProtoReflect.Descriptor instead.
 func (*AppendEventResponse) Descriptor() ([]byte, []int) {
-	return file_game_v1_event_proto_rawDescGZIP(), []int{3}
+	return file_game_v1_event_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *AppendEventResponse) GetEvent() *Event {
@@ -378,7 +752,7 @@ type Event struct {
 
 func (x *Event) Reset() {
 	*x = Event{}
-	mi := &file_game_v1_event_proto_msgTypes[4]
+	mi := &file_game_v1_event_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -390,7 +764,7 @@ func (x *Event) String() string {
 func (*Event) ProtoMessage() {}
 
 func (x *Event) ProtoReflect() protoreflect.Message {
-	mi := &file_game_v1_event_proto_msgTypes[4]
+	mi := &file_game_v1_event_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -403,7 +777,7 @@ func (x *Event) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Event.ProtoReflect.Descriptor instead.
 func (*Event) Descriptor() ([]byte, []int) {
-	return file_game_v1_event_proto_rawDescGZIP(), []int{4}
+	return file_game_v1_event_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *Event) GetCampaignId() string {
@@ -515,7 +889,7 @@ var File_game_v1_event_proto protoreflect.FileDescriptor
 
 const file_game_v1_event_proto_rawDesc = "" +
 	"\n" +
-	"\x13game/v1/event.proto\x12\agame.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xa3\x01\n" +
+	"\x13game/v1/event.proto\x12\agame.v1\x1a\x14common/v1/icon.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xa3\x01\n" +
 	"\x11ListEventsRequest\x12\x1f\n" +
 	"\vcampaign_id\x18\x01 \x01(\tR\n" +
 	"campaignId\x12\x1b\n" +
@@ -529,7 +903,40 @@ const file_game_v1_event_proto_rawDesc = "" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12.\n" +
 	"\x13previous_page_token\x18\x03 \x01(\tR\x11previousPageToken\x12\x1d\n" +
 	"\n" +
-	"total_size\x18\x04 \x01(\x05R\ttotalSize\"\x83\x02\n" +
+	"total_size\x18\x04 \x01(\x05R\ttotalSize\"\xac\x01\n" +
+	"\x1aListTimelineEntriesRequest\x12\x1f\n" +
+	"\vcampaign_id\x18\x01 \x01(\tR\n" +
+	"campaignId\x12\x1b\n" +
+	"\tpage_size\x18\x02 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x03 \x01(\tR\tpageToken\x12\x19\n" +
+	"\border_by\x18\x04 \x01(\tR\aorderBy\x12\x16\n" +
+	"\x06filter\x18\x05 \x01(\tR\x06filter\"\xc6\x01\n" +
+	"\x1bListTimelineEntriesResponse\x120\n" +
+	"\aentries\x18\x01 \x03(\v2\x16.game.v1.TimelineEntryR\aentries\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12.\n" +
+	"\x13previous_page_token\x18\x03 \x01(\tR\x11previousPageToken\x12\x1d\n" +
+	"\n" +
+	"total_size\x18\x04 \x01(\x05R\ttotalSize\"\x91\x02\n" +
+	"\rTimelineEntry\x12\x10\n" +
+	"\x03seq\x18\x01 \x01(\x04R\x03seq\x12\x1d\n" +
+	"\n" +
+	"event_type\x18\x02 \x01(\tR\teventType\x129\n" +
+	"\n" +
+	"event_time\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\teventTime\x12*\n" +
+	"\aicon_id\x18\x04 \x01(\x0e2\x11.common.v1.IconIdR\x06iconId\x12:\n" +
+	"\n" +
+	"projection\x18\x05 \x01(\v2\x1a.game.v1.ProjectionDisplayR\n" +
+	"projection\x12,\n" +
+	"\x12event_payload_json\x18\x06 \x01(\tR\x10eventPayloadJson\"\x8f\x01\n" +
+	"\x11ProjectionDisplay\x12\x14\n" +
+	"\x05title\x18\x01 \x01(\tR\x05title\x12\x1a\n" +
+	"\bsubtitle\x18\x02 \x01(\tR\bsubtitle\x12\x16\n" +
+	"\x06status\x18\x03 \x01(\tR\x06status\x120\n" +
+	"\x06fields\x18\x04 \x03(\v2\x18.game.v1.ProjectionFieldR\x06fields\"=\n" +
+	"\x0fProjectionField\x12\x14\n" +
+	"\x05label\x18\x01 \x01(\tR\x05label\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value\"\x83\x02\n" +
 	"\x12AppendEventRequest\x12\x1f\n" +
 	"\vcampaign_id\x18\x01 \x01(\tR\n" +
 	"campaignId\x12\x12\n" +
@@ -566,11 +973,12 @@ const file_game_v1_event_proto_rawDesc = "" +
 	"\ventity_type\x18\r \x01(\tR\n" +
 	"entityType\x12\x1b\n" +
 	"\tentity_id\x18\x0e \x01(\tR\bentityId\x12!\n" +
-	"\fpayload_json\x18\x0f \x01(\fR\vpayloadJson2\x9f\x01\n" +
+	"\fpayload_json\x18\x0f \x01(\fR\vpayloadJson2\x81\x02\n" +
 	"\fEventService\x12H\n" +
 	"\vAppendEvent\x12\x1b.game.v1.AppendEventRequest\x1a\x1c.game.v1.AppendEventResponse\x12E\n" +
 	"\n" +
-	"ListEvents\x12\x1a.game.v1.ListEventsRequest\x1a\x1b.game.v1.ListEventsResponseBCZAgithub.com/louisbranch/fracturing.space/api/gen/go/game/v1;gamev1b\x06proto3"
+	"ListEvents\x12\x1a.game.v1.ListEventsRequest\x1a\x1b.game.v1.ListEventsResponse\x12`\n" +
+	"\x13ListTimelineEntries\x12#.game.v1.ListTimelineEntriesRequest\x1a$.game.v1.ListTimelineEntriesResponseBCZAgithub.com/louisbranch/fracturing.space/api/gen/go/game/v1;gamev1b\x06proto3"
 
 var (
 	file_game_v1_event_proto_rawDescOnce sync.Once
@@ -584,28 +992,41 @@ func file_game_v1_event_proto_rawDescGZIP() []byte {
 	return file_game_v1_event_proto_rawDescData
 }
 
-var file_game_v1_event_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_game_v1_event_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_game_v1_event_proto_goTypes = []any{
-	(*ListEventsRequest)(nil),     // 0: game.v1.ListEventsRequest
-	(*ListEventsResponse)(nil),    // 1: game.v1.ListEventsResponse
-	(*AppendEventRequest)(nil),    // 2: game.v1.AppendEventRequest
-	(*AppendEventResponse)(nil),   // 3: game.v1.AppendEventResponse
-	(*Event)(nil),                 // 4: game.v1.Event
-	(*timestamppb.Timestamp)(nil), // 5: google.protobuf.Timestamp
+	(*ListEventsRequest)(nil),           // 0: game.v1.ListEventsRequest
+	(*ListEventsResponse)(nil),          // 1: game.v1.ListEventsResponse
+	(*ListTimelineEntriesRequest)(nil),  // 2: game.v1.ListTimelineEntriesRequest
+	(*ListTimelineEntriesResponse)(nil), // 3: game.v1.ListTimelineEntriesResponse
+	(*TimelineEntry)(nil),               // 4: game.v1.TimelineEntry
+	(*ProjectionDisplay)(nil),           // 5: game.v1.ProjectionDisplay
+	(*ProjectionField)(nil),             // 6: game.v1.ProjectionField
+	(*AppendEventRequest)(nil),          // 7: game.v1.AppendEventRequest
+	(*AppendEventResponse)(nil),         // 8: game.v1.AppendEventResponse
+	(*Event)(nil),                       // 9: game.v1.Event
+	(*timestamppb.Timestamp)(nil),       // 10: google.protobuf.Timestamp
+	(v1.IconId)(0),                      // 11: common.v1.IconId
 }
 var file_game_v1_event_proto_depIdxs = []int32{
-	4, // 0: game.v1.ListEventsResponse.events:type_name -> game.v1.Event
-	4, // 1: game.v1.AppendEventResponse.event:type_name -> game.v1.Event
-	5, // 2: game.v1.Event.ts:type_name -> google.protobuf.Timestamp
-	2, // 3: game.v1.EventService.AppendEvent:input_type -> game.v1.AppendEventRequest
-	0, // 4: game.v1.EventService.ListEvents:input_type -> game.v1.ListEventsRequest
-	3, // 5: game.v1.EventService.AppendEvent:output_type -> game.v1.AppendEventResponse
-	1, // 6: game.v1.EventService.ListEvents:output_type -> game.v1.ListEventsResponse
-	5, // [5:7] is the sub-list for method output_type
-	3, // [3:5] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	9,  // 0: game.v1.ListEventsResponse.events:type_name -> game.v1.Event
+	4,  // 1: game.v1.ListTimelineEntriesResponse.entries:type_name -> game.v1.TimelineEntry
+	10, // 2: game.v1.TimelineEntry.event_time:type_name -> google.protobuf.Timestamp
+	11, // 3: game.v1.TimelineEntry.icon_id:type_name -> common.v1.IconId
+	5,  // 4: game.v1.TimelineEntry.projection:type_name -> game.v1.ProjectionDisplay
+	6,  // 5: game.v1.ProjectionDisplay.fields:type_name -> game.v1.ProjectionField
+	9,  // 6: game.v1.AppendEventResponse.event:type_name -> game.v1.Event
+	10, // 7: game.v1.Event.ts:type_name -> google.protobuf.Timestamp
+	7,  // 8: game.v1.EventService.AppendEvent:input_type -> game.v1.AppendEventRequest
+	0,  // 9: game.v1.EventService.ListEvents:input_type -> game.v1.ListEventsRequest
+	2,  // 10: game.v1.EventService.ListTimelineEntries:input_type -> game.v1.ListTimelineEntriesRequest
+	8,  // 11: game.v1.EventService.AppendEvent:output_type -> game.v1.AppendEventResponse
+	1,  // 12: game.v1.EventService.ListEvents:output_type -> game.v1.ListEventsResponse
+	3,  // 13: game.v1.EventService.ListTimelineEntries:output_type -> game.v1.ListTimelineEntriesResponse
+	11, // [11:14] is the sub-list for method output_type
+	8,  // [8:11] is the sub-list for method input_type
+	8,  // [8:8] is the sub-list for extension type_name
+	8,  // [8:8] is the sub-list for extension extendee
+	0,  // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_game_v1_event_proto_init() }
@@ -619,7 +1040,7 @@ func file_game_v1_event_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_game_v1_event_proto_rawDesc), len(file_game_v1_event_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   5,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -20,8 +20,9 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	EventService_AppendEvent_FullMethodName = "/game.v1.EventService/AppendEvent"
-	EventService_ListEvents_FullMethodName  = "/game.v1.EventService/ListEvents"
+	EventService_AppendEvent_FullMethodName         = "/game.v1.EventService/AppendEvent"
+	EventService_ListEvents_FullMethodName          = "/game.v1.EventService/ListEvents"
+	EventService_ListTimelineEntries_FullMethodName = "/game.v1.EventService/ListTimelineEntries"
 )
 
 // EventServiceClient is the client API for EventService service.
@@ -34,6 +35,8 @@ type EventServiceClient interface {
 	AppendEvent(ctx context.Context, in *AppendEventRequest, opts ...grpc.CallOption) (*AppendEventResponse, error)
 	// ListEvents returns a paginated, filtered, and sorted list of events for a campaign.
 	ListEvents(ctx context.Context, in *ListEventsRequest, opts ...grpc.CallOption) (*ListEventsResponse, error)
+	// ListTimelineEntries returns a paginated timeline view for a campaign.
+	ListTimelineEntries(ctx context.Context, in *ListTimelineEntriesRequest, opts ...grpc.CallOption) (*ListTimelineEntriesResponse, error)
 }
 
 type eventServiceClient struct {
@@ -64,6 +67,16 @@ func (c *eventServiceClient) ListEvents(ctx context.Context, in *ListEventsReque
 	return out, nil
 }
 
+func (c *eventServiceClient) ListTimelineEntries(ctx context.Context, in *ListTimelineEntriesRequest, opts ...grpc.CallOption) (*ListTimelineEntriesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListTimelineEntriesResponse)
+	err := c.cc.Invoke(ctx, EventService_ListTimelineEntries_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // EventServiceServer is the server API for EventService service.
 // All implementations must embed UnimplementedEventServiceServer
 // for forward compatibility.
@@ -74,6 +87,8 @@ type EventServiceServer interface {
 	AppendEvent(context.Context, *AppendEventRequest) (*AppendEventResponse, error)
 	// ListEvents returns a paginated, filtered, and sorted list of events for a campaign.
 	ListEvents(context.Context, *ListEventsRequest) (*ListEventsResponse, error)
+	// ListTimelineEntries returns a paginated timeline view for a campaign.
+	ListTimelineEntries(context.Context, *ListTimelineEntriesRequest) (*ListTimelineEntriesResponse, error)
 	mustEmbedUnimplementedEventServiceServer()
 }
 
@@ -89,6 +104,9 @@ func (UnimplementedEventServiceServer) AppendEvent(context.Context, *AppendEvent
 }
 func (UnimplementedEventServiceServer) ListEvents(context.Context, *ListEventsRequest) (*ListEventsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListEvents not implemented")
+}
+func (UnimplementedEventServiceServer) ListTimelineEntries(context.Context, *ListTimelineEntriesRequest) (*ListTimelineEntriesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListTimelineEntries not implemented")
 }
 func (UnimplementedEventServiceServer) mustEmbedUnimplementedEventServiceServer() {}
 func (UnimplementedEventServiceServer) testEmbeddedByValue()                      {}
@@ -147,6 +165,24 @@ func _EventService_ListEvents_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _EventService_ListTimelineEntries_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListTimelineEntriesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EventServiceServer).ListTimelineEntries(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EventService_ListTimelineEntries_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EventServiceServer).ListTimelineEntries(ctx, req.(*ListTimelineEntriesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // EventService_ServiceDesc is the grpc.ServiceDesc for EventService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -161,6 +197,10 @@ var EventService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListEvents",
 			Handler:    _EventService_ListEvents_Handler,
+		},
+		{
+			MethodName: "ListTimelineEntries",
+			Handler:    _EventService_ListTimelineEntries_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

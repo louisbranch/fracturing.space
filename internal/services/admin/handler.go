@@ -277,6 +277,10 @@ func (h *Handler) handleScenarioRoutes(w http.ResponseWriter, r *http.Request) {
 		h.handleScenarioEventsTable(w, r, parts[0])
 		return
 	}
+	if len(parts) == 3 && parts[1] == "timeline" && parts[2] == "table" {
+		h.handleScenarioTimelineTable(w, r, parts[0])
+		return
+	}
 
 	http.NotFound(w, r)
 }
@@ -328,12 +332,10 @@ func (h *Handler) handleScenarioRun(w http.ResponseWriter, r *http.Request) {
 	}
 	view.Logs = logs
 	view.CampaignID = campaignID
-	if campaignID != "" {
-		view.EventsURL = "/scenarios/" + campaignID + "/events"
-	}
 	view.HasRun = true
 	if campaignID != "" {
 		view.CampaignName = getCampaignName(h, r, campaignID, loc)
+		view.Events = h.buildScenarioEventsView(r, campaignID, loc)
 	}
 
 	h.renderScenarioResponse(w, r, view, loc, lang)
@@ -346,49 +348,7 @@ func (h *Handler) renderScenarioResponse(w http.ResponseWriter, r *http.Request,
 
 func (h *Handler) handleScenarioEvents(w http.ResponseWriter, r *http.Request, campaignID string) {
 	loc, lang := h.localizer(w, r)
-	message := ""
-	var events []templates.EventRow
-	var totalCount int32
-	var nextToken, prevToken string
-	filters := parseEventFilters(r)
-	pageToken := r.URL.Query().Get("page_token")
-
-	if eventClient := h.eventClient(); eventClient != nil {
-		ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
-		defer cancel()
-
-		filterExpr := buildEventFilterExpression(filters)
-		eventsResp, err := eventClient.ListEvents(ctx, &statev1.ListEventsRequest{
-			CampaignId: campaignID,
-			PageSize:   eventListPageSize,
-			PageToken:  pageToken,
-			OrderBy:    "seq desc",
-			Filter:     filterExpr,
-		})
-		if err != nil {
-			log.Printf("list scenario events: %v", err)
-			message = loc.Sprintf("error.events_unavailable")
-		} else if eventsResp != nil {
-			events = buildEventRows(eventsResp.GetEvents(), loc)
-			totalCount = eventsResp.GetTotalSize()
-			nextToken = eventsResp.GetNextPageToken()
-			prevToken = eventsResp.GetPreviousPageToken()
-		}
-	} else {
-		message = loc.Sprintf("error.event_service_unavailable")
-	}
-
-	campaignName := getCampaignName(h, r, campaignID, loc)
-	view := templates.ScenarioEventsView{
-		CampaignID:   campaignID,
-		CampaignName: campaignName,
-		Events:       events,
-		Filters:      filters,
-		TotalCount:   totalCount,
-		NextToken:    nextToken,
-		PrevToken:    prevToken,
-		Message:      message,
-	}
+	view := h.buildScenarioEventsView(r, campaignID, loc)
 
 	pageCtx := h.pageContext(lang, loc, r)
 	renderPage(w, r, templates.ScenarioEventsPage(view, loc), templates.ScenarioEventsFullPage(view, pageCtx))
@@ -443,6 +403,99 @@ func (h *Handler) handleScenarioEventsTable(w http.ResponseWriter, r *http.Reque
 	}
 
 	templ.Handler(templates.ScenarioEventsTableContent(view, loc)).ServeHTTP(w, r)
+}
+
+func (h *Handler) handleScenarioTimelineTable(w http.ResponseWriter, r *http.Request, campaignID string) {
+	loc, _ := h.localizer(w, r)
+	view := h.buildScenarioTimelineView(r, campaignID, loc)
+
+	templ.Handler(templates.ScenarioTimelineTableContent(view, loc)).ServeHTTP(w, r)
+}
+
+func (h *Handler) buildScenarioEventsView(r *http.Request, campaignID string, loc *message.Printer) templates.ScenarioEventsView {
+	message := ""
+	var events []templates.EventRow
+	var totalCount int32
+	var nextToken, prevToken string
+	filters := parseEventFilters(r)
+	pageToken := r.URL.Query().Get("page_token")
+
+	if eventClient := h.eventClient(); eventClient != nil {
+		ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
+		defer cancel()
+
+		filterExpr := buildEventFilterExpression(filters)
+		eventsResp, err := eventClient.ListEvents(ctx, &statev1.ListEventsRequest{
+			CampaignId: campaignID,
+			PageSize:   eventListPageSize,
+			PageToken:  pageToken,
+			OrderBy:    "seq desc",
+			Filter:     filterExpr,
+		})
+		if err != nil {
+			log.Printf("list scenario events: %v", err)
+			message = loc.Sprintf("error.events_unavailable")
+		} else if eventsResp != nil {
+			events = buildEventRows(eventsResp.GetEvents(), loc)
+			totalCount = eventsResp.GetTotalSize()
+			nextToken = eventsResp.GetNextPageToken()
+			prevToken = eventsResp.GetPreviousPageToken()
+		}
+	} else {
+		message = loc.Sprintf("error.event_service_unavailable")
+	}
+
+	campaignName := getCampaignName(h, r, campaignID, loc)
+	return templates.ScenarioEventsView{
+		CampaignID:   campaignID,
+		CampaignName: campaignName,
+		Events:       events,
+		Filters:      filters,
+		TotalCount:   totalCount,
+		NextToken:    nextToken,
+		PrevToken:    prevToken,
+		Message:      message,
+	}
+}
+
+func (h *Handler) buildScenarioTimelineView(r *http.Request, campaignID string, loc *message.Printer) templates.ScenarioTimelineView {
+	message := ""
+	var entries []templates.ScenarioTimelineEntry
+	var totalCount int32
+	var nextToken, prevToken string
+	pageToken := r.URL.Query().Get("page_token")
+
+	if eventClient := h.eventClient(); eventClient != nil {
+		ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
+		defer cancel()
+
+		resp, err := eventClient.ListTimelineEntries(ctx, &statev1.ListTimelineEntriesRequest{
+			CampaignId: campaignID,
+			PageSize:   eventListPageSize,
+			PageToken:  pageToken,
+			OrderBy:    "seq",
+		})
+		if err != nil {
+			log.Printf("list scenario timeline: %v", err)
+			message = loc.Sprintf("error.events_unavailable")
+		} else if resp != nil {
+			entries = buildScenarioTimelineEntries(resp.GetEntries(), loc)
+			totalCount = resp.GetTotalSize()
+			nextToken = resp.GetNextPageToken()
+			prevToken = resp.GetPreviousPageToken()
+		}
+	} else {
+		message = loc.Sprintf("error.event_service_unavailable")
+	}
+
+	return templates.ScenarioTimelineView{
+		CampaignID: campaignID,
+		Entries:    entries,
+		TotalCount: totalCount,
+		NextToken:  nextToken,
+		PrevToken:  prevToken,
+		Message:    message,
+	}
 }
 
 func (h *Handler) runScenarioScript(ctx context.Context, script string) (string, string, error) {
@@ -3047,6 +3100,82 @@ func buildEventRows(events []*statev1.Event, loc *message.Printer) []templates.E
 		})
 	}
 	return rows
+}
+
+func buildScenarioTimelineEntries(entries []*statev1.TimelineEntry, loc *message.Printer) []templates.ScenarioTimelineEntry {
+	rows := make([]templates.ScenarioTimelineEntry, 0, len(entries))
+	for _, entry := range entries {
+		if entry == nil {
+			continue
+		}
+		projection := entry.GetProjection()
+		title := strings.TrimSpace(projection.GetTitle())
+		eventTypeDisplay := formatEventType(entry.GetEventType(), loc)
+		if title == "" {
+			title = eventTypeDisplay
+		}
+		subtitle := strings.TrimSpace(projection.GetSubtitle())
+		status := strings.TrimSpace(projection.GetStatus())
+		iconID := entry.GetIconId()
+		if iconID == commonv1.IconId_ICON_ID_UNSPECIFIED {
+			iconID = commonv1.IconId_ICON_ID_GENERIC
+		}
+		rows = append(rows, templates.ScenarioTimelineEntry{
+			Seq:              entry.GetSeq(),
+			EventType:        entry.GetEventType(),
+			EventTypeDisplay: eventTypeDisplay,
+			EventTime:        formatTimestamp(entry.GetEventTime()),
+			IconID:           iconID,
+			Title:            title,
+			Subtitle:         subtitle,
+			Status:           status,
+			StatusBadge:      timelineStatusBadgeVariant(status),
+			Fields:           buildScenarioTimelineFields(projection.GetFields()),
+			PayloadJSON:      strings.TrimSpace(entry.GetEventPayloadJson()),
+		})
+	}
+	return rows
+}
+
+func buildScenarioTimelineFields(fields []*statev1.ProjectionField) []templates.ScenarioTimelineField {
+	if len(fields) == 0 {
+		return nil
+	}
+	result := make([]templates.ScenarioTimelineField, 0, len(fields))
+	for _, field := range fields {
+		if field == nil {
+			continue
+		}
+		label := strings.TrimSpace(field.GetLabel())
+		value := strings.TrimSpace(field.GetValue())
+		if label == "" && value == "" {
+			continue
+		}
+		result = append(result, templates.ScenarioTimelineField{
+			Label: label,
+			Value: value,
+		})
+	}
+	return result
+}
+
+func timelineStatusBadgeVariant(status string) string {
+	if status == "" {
+		return "secondary"
+	}
+	normalized := strings.ToUpper(strings.TrimSpace(status))
+	switch normalized {
+	case "ACTIVE":
+		return "success"
+	case "DRAFT":
+		return "warning"
+	case "COMPLETED":
+		return "success"
+	case "ARCHIVED", "ENDED":
+		return "neutral"
+	default:
+		return "secondary"
+	}
 }
 
 // parseEventFilters extracts filter parameters from the request.

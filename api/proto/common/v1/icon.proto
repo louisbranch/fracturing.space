@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package common.v1;
+
+option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/common/v1;commonv1";
+
+// IconId identifies a core icon used for timeline and UI rendering.
+enum IconId {
+  ICON_ID_UNSPECIFIED = 0;
+  ICON_ID_GENERIC = 1;
+  ICON_ID_CAMPAIGN = 2;
+  ICON_ID_PARTICIPANT = 3;
+  ICON_ID_CHARACTER = 4;
+  ICON_ID_SESSION = 5;
+}

@@ -101,6 +101,10 @@ func TestWebPageRendering(t *testing.T) {
 				"<!doctype html>",
 				branding.AppName,
 				"<h2>Scenarios</h2>",
+				"Cheat Sheet",
+			},
+			notContains: []string{
+				"Lua Script",
 			},
 		},
 		{
@@ -109,11 +113,13 @@ func TestWebPageRendering(t *testing.T) {
 			htmx: true,
 			contains: []string{
 				"<h2>Scenarios</h2>",
+				"Cheat Sheet",
 			},
 			notContains: []string{
 				"<!doctype html>",
 				branding.AppName,
 				"<html",
+				"Lua Script",
 			},
 		},
 		{
@@ -123,6 +129,8 @@ func TestWebPageRendering(t *testing.T) {
 				"<!doctype html>",
 				branding.AppName,
 				"<h2>Scenarios</h2>",
+			},
+			notContains: []string{
 				"<h3>Events</h3>",
 			},
 		},
@@ -132,12 +140,12 @@ func TestWebPageRendering(t *testing.T) {
 			htmx: true,
 			contains: []string{
 				"<h2>Scenarios</h2>",
-				"<h3>Events</h3>",
 			},
 			notContains: []string{
 				"<!doctype html>",
 				branding.AppName,
 				"<html",
+				"<h3>Events</h3>",
 			},
 		},
 		{
@@ -237,6 +245,7 @@ func TestScenarioPostEmptyScript(t *testing.T) {
 		t.Fatalf("expected 200, got %d", rec.Code)
 	}
 	assertContains(t, rec.Body.String(), "Scenario script is required")
+	assertContains(t, rec.Body.String(), "scenario-results-tabs")
 	assertNotContains(t, rec.Body.String(), "<!doctype html>")
 }
 
@@ -274,6 +283,66 @@ func TestScenarioPostScriptTooLarge(t *testing.T) {
 	}
 	assertContains(t, rec.Body.String(), "Scenario script exceeds the 100KB limit")
 	assertNotContains(t, rec.Body.String(), "<!doctype html>")
+}
+
+func TestScenarioTimelineTable(t *testing.T) {
+	when := time.Date(2026, 2, 13, 12, 34, 56, 0, time.UTC)
+	client := &testEventClient{
+		timelineResponse: &statev1.ListTimelineEntriesResponse{
+			Entries: []*statev1.TimelineEntry{
+				{
+					Seq:       1,
+					EventType: "campaign.created",
+					EventTime: timestamppb.New(when),
+					IconId:    commonv1.IconId_ICON_ID_CAMPAIGN,
+					Projection: &statev1.ProjectionDisplay{
+						Title:    "Riverfall",
+						Subtitle: "DAGGERHEART",
+						Status:   "DRAFT",
+						Fields: []*statev1.ProjectionField{
+							{Label: "GM Mode", Value: "AI"},
+							{Label: "HP", Value: "= 6"},
+						},
+					},
+					EventPayloadJson: "{\"name\":\"Riverfall\"}",
+				},
+			},
+			TotalSize: 1,
+		},
+	}
+	provider := testFullClientProvider{event: client}
+	handler := NewHandler(provider)
+
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/scenarios/camp-123/timeline/table", nil)
+	req.Header.Set("HX-Request", "true")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	body := rec.Body.String()
+	if client.timelineRequest == nil {
+		t.Fatal("expected timeline request")
+	}
+	if got := client.timelineRequest.GetOrderBy(); got != "seq" {
+		t.Fatalf("expected order_by seq, got %q", got)
+	}
+	assertContains(t, body, "Riverfall")
+	assertContains(t, body, "DAGGERHEART")
+	assertContains(t, body, "DRAFT")
+	assertContains(t, body, "Campaign Created")
+	assertContains(t, body, "2026-02-13 12:34:56")
+	assertContains(t, body, "GM Mode")
+	assertContains(t, body, "AI")
+	assertContains(t, body, "HP")
+	assertContains(t, body, "= 6")
+	assertContains(t, body, "flex h-10 w-10 shrink-0 items-center justify-center")
+	assertContains(t, body, "overflow-x-auto")
+	assertContains(t, body, "whitespace-pre-wrap")
+	assertContains(t, body, "min-w-0")
+	assertContains(t, body, "overflow-x-auto")
+	assertContains(t, body, "break-all")
 }
 
 // TestRunScenarioScriptTempDirInvalid verifies invalid temp dir env returns an error.
@@ -1085,8 +1154,11 @@ func (c *testCharacterClient) PatchCharacterProfile(ctx context.Context, in *sta
 }
 
 type testEventClient struct {
-	listResponse *statev1.ListEventsResponse
-	listErr      error
+	listResponse     *statev1.ListEventsResponse
+	listErr          error
+	timelineResponse *statev1.ListTimelineEntriesResponse
+	timelineErr      error
+	timelineRequest  *statev1.ListTimelineEntriesRequest
 }
 
 func (c *testEventClient) AppendEvent(ctx context.Context, in *statev1.AppendEventRequest, opts ...grpc.CallOption) (*statev1.AppendEventResponse, error) {
@@ -1101,6 +1173,18 @@ func (c *testEventClient) ListEvents(ctx context.Context, in *statev1.ListEvents
 		return c.listResponse, nil
 	}
 	return &statev1.ListEventsResponse{}, nil
+}
+
+// ListTimelineEntries is a stub so the test client satisfies EventServiceClient.
+func (c *testEventClient) ListTimelineEntries(ctx context.Context, in *statev1.ListTimelineEntriesRequest, opts ...grpc.CallOption) (*statev1.ListTimelineEntriesResponse, error) {
+	c.timelineRequest = in
+	if c.timelineErr != nil {
+		return nil, c.timelineErr
+	}
+	if c.timelineResponse != nil {
+		return c.timelineResponse, nil
+	}
+	return &statev1.ListTimelineEntriesResponse{}, nil
 }
 
 type testStatisticsClient struct {

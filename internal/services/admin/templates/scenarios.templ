@@ -1,5 +1,7 @@
 package templates
 
+import commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+
 // ScenariosFullPage renders the scenarios page in the base layout.
 templ ScenariosFullPage(view ScenarioPageView, page PageContext) {
 	@Layout(T(page.Loc, "title.scenarios", AppName()), "Scenarios", page) {
@@ -10,9 +12,7 @@ templ ScenariosFullPage(view ScenarioPageView, page PageContext) {
 // ScenariosPage renders the scenarios page content.
 templ ScenariosPage(view ScenarioPageView, loc Localizer) {
 	@PageHeader(PageHeading{Title: T(loc, "scenarios.heading")})
-	@ScenarioSubNav(view.EventsURL, "script", loc) {
-		@ScenarioScriptPanel(view, loc)
-	}
+	@ScenarioScriptPanel(view, loc)
 }
 
 // ScenarioScriptPanel renders the script tab content with logs.
@@ -39,35 +39,7 @@ templ ScenarioScriptPanel(view ScenarioPageView, loc Localizer) {
 						<p class="text-xs opacity-60 mt-2">{T(loc, "scenarios.script.hint")}</p>
 					</div>
 					<button class="btn btn-soft" type="submit">{T(loc, "scenarios.script.submit")}</button>
-				</form>
-				<div>
-					<div class="flex items-center gap-2">
-						<h3 class="mb-0">{T(loc, "scenarios.logs.heading")}</h3>
-						if view.Status != "" {
-							@StatusBadge(view.Status, view.StatusBadge)
-						}
-					</div>
-					if view.Logs != "" {
-						<pre class="bg-base-200 border border-base-300 rounded-lg p-4 text-xs whitespace-pre-wrap font-mono">{view.Logs}</pre>
-					} else {
-						@EmptyState(T(loc, "scenarios.logs.empty"))
-					}
-				</div>
-				if view.EventsURL != "" {
-					<div class="flex items-center gap-2">
-						<a
-							class="btn btn-soft btn-sm"
-							href={ templ.SafeURL(view.EventsURL) }
-							hx-get={ view.EventsURL }
-							hx-target="#main"
-							hx-swap="innerHTML"
-							hx-push-url="true"
-						>{T(loc, "scenarios.events.link")}</a>
-						if view.CampaignName != "" {
-							<span class="text-xs opacity-60">{view.CampaignName}</span>
-						}
-					</div>
-				}
+					</form>
 			</div>
 			<div>
 				<h4>{T(loc, "scenarios.cheatsheet.heading")}</h4>
@@ -90,6 +62,7 @@ templ ScenarioScriptPanel(view ScenarioPageView, loc Localizer) {
 						{T(loc, "scenarios.cheatsheet.basics")}
 					</label>
 					<div class="tab-content bg-base-200 border-base-300 p-4 text-sm overflow-y-auto max-h-100">
+						<p class="text-xs opacity-70 mb-3">Quick start for building a scenario with a campaign and participants.</p>
 						<div class="space-y-2 font-mono">
 							<div><code>local scene = Scenario.new("My Scenario")</code></div>
 							<div><code>scene:campaign(&#123;name = "Test", system = "DAGGERHEART"&#125;)</code></div>
@@ -118,6 +91,7 @@ templ ScenarioScriptPanel(view ScenarioPageView, loc Localizer) {
 						{T(loc, "scenarios.cheatsheet.characters")}
 					</label>
 					<div class="tab-content bg-base-200 border-base-300 p-4 text-sm overflow-y-auto max-h-100">
+						<p class="text-xs opacity-70 mb-3">Create PCs and NPCs and reference them later in the script.</p>
 						<div class="space-y-2 font-mono">
 							<div><code>scene:participant(&#123;name = "John"&#125;):character(&#123;name = "Frodo"&#125;)</code></div>
 							<div><code>scene:participant(&#123;name = "Ada", role = "GM", controller = "AI"&#125;):character(&#123;name = "Sam", kind = "NPC", control = "gm"&#125;)</code></div>
@@ -151,6 +125,7 @@ templ ScenarioScriptPanel(view ScenarioPageView, loc Localizer) {
 						{T(loc, "scenarios.cheatsheet.sessions")}
 					</label>
 					<div class="tab-content bg-base-200 border-base-300 p-4 text-sm overflow-y-auto max-h-100">
+						<p class="text-xs opacity-70 mb-3">Control the active session lifecycle for the scenario.</p>
 						<div class="space-y-2 font-mono">
 							<div><code>scene:start_session("Session 1")</code></div>
 							<div><code>scene:end_session()</code></div>
@@ -177,6 +152,7 @@ templ ScenarioScriptPanel(view ScenarioPageView, loc Localizer) {
 						{T(loc, "scenarios.cheatsheet.spotlight")}
 					</label>
 					<div class="tab-content bg-base-200 border-base-300 p-4 text-sm overflow-y-auto max-h-100">
+						<p class="text-xs opacity-70 mb-3">Focus the spotlight on a character or clear it.</p>
 						<div class="space-y-2 font-mono">
 							<div><code>scene:set_spotlight(&#123;target = "Frodo"&#125;)</code></div>
 							<div><code>scene:clear_spotlight()</code></div>
@@ -204,6 +180,7 @@ templ ScenarioScriptPanel(view ScenarioPageView, loc Localizer) {
 						{T(loc, "scenarios.cheatsheet.actions")}
 					</label>
 					<div class="tab-content bg-base-200 border-base-300 p-4 text-sm overflow-y-auto max-h-100">
+						<p class="text-xs opacity-70 mb-3">Trigger action, reaction, and damage rolls.</p>
 						<div class="space-y-2 font-mono">
 							<div><code>scene:action_roll(&#123;actor = "Frodo", modifier = Modifiers.mod("bonus", 1)&#125;)</code></div>
 							<div><code>scene:reaction_roll(&#123;actor = "Frodo"&#125;)</code></div>
@@ -213,6 +190,213 @@ templ ScenarioScriptPanel(view ScenarioPageView, loc Localizer) {
 				</div>
 			</div>
 		</div>
+		if view.HasRun {
+			<div id="scenario-results-tabs" class="tabs tabs-box">
+				<input
+					type="radio"
+					name="scenario-results-tabs"
+					class="tab"
+					aria-label={ T(loc, "tab.logs") }
+					checked
+				/>
+				<div class="tab-content p-4 space-y-4">
+					if view.Status != "" {
+						<div class="flex items-center gap-2">
+							@StatusBadge(view.Status, view.StatusBadge)
+						</div>
+					}
+					if view.Logs != "" {
+						<pre class="bg-base-200 border border-base-300 rounded-lg p-4 text-xs whitespace-pre-wrap font-mono">{view.Logs}</pre>
+					} else {
+						@EmptyState(T(loc, "scenarios.logs.empty"))
+					}
+				</div>
+				<input
+					type="radio"
+					name="scenario-results-tabs"
+					class="tab"
+					aria-label={ T(loc, "tab.timeline") }
+				/>
+				<div class="tab-content p-4">
+					if view.CampaignID != "" {
+						@ScenarioTimelinePanel(view.CampaignID, loc)
+					} else {
+						@EmptyState(T(loc, "events.timeline.empty"))
+					}
+				</div>
+				<input
+					type="radio"
+					name="scenario-results-tabs"
+					class="tab"
+					aria-label={ T(loc, "tab.events") }
+				/>
+				<div class="tab-content p-4 space-y-4">
+					if view.Events.CampaignID != "" {
+						@ScenarioEventsPanel(view.Events, loc)
+					} else {
+						@EmptyState(T(loc, "scenarios.events.empty"))
+					}
+				</div>
+			</div>
+		}
+	</div>
+}
+
+// ScenarioTimelinePanel renders the timeline tab content.
+templ ScenarioTimelinePanel(campaignID string, loc Localizer) {
+	<div id="scenario-timeline-container">
+		@LazyLoad("/scenarios/"+campaignID+"/timeline/table", T(loc, "common.loading"))
+	</div>
+}
+
+// ScenarioTimelineTableContent renders the timeline table content.
+templ ScenarioTimelineTableContent(view ScenarioTimelineView, loc Localizer) {
+	if view.Message != "" {
+		@EmptyState(view.Message)
+	} else if len(view.Entries) == 0 {
+		@EmptyState(T(loc, "events.timeline.empty"))
+	} else {
+		if view.TotalCount > 0 {
+			<p>{T(loc, "events.count", view.TotalCount)}</p>
+		}
+		<div class="space-y-4">
+			for _, entry := range view.Entries {
+				@ScenarioTimelineEntryRow(entry, loc)
+			}
+		</div>
+		if view.NextToken != "" || view.PrevToken != "" {
+			@PaginationTargeted(
+				view.NextToken,
+				view.PrevToken,
+				"/scenarios/"+view.CampaignID+"/timeline/table",
+				"/scenarios/"+view.CampaignID+"/timeline/table",
+				"#scenario-timeline-container",
+				false,
+				loc,
+			)
+		}
+	}
+}
+
+// ScenarioTimelineEntryRow renders a timeline entry row.
+templ ScenarioTimelineEntryRow(entry ScenarioTimelineEntry, loc Localizer) {
+	<div class="flex flex-col gap-4 rounded-lg border border-base-300 bg-base-100 p-4 md:flex-row md:items-start">
+		<div class="flex items-center gap-3 md:w-48">
+			@ScenarioTimelineIcon(entry.IconID)
+			<div class="text-xs uppercase tracking-wide opacity-70">
+				<div>{entry.EventTypeDisplay}</div>
+				if entry.EventTime != "" {
+					<div class="mt-1 text-[0.7rem] opacity-80">{entry.EventTime}</div>
+				}
+			</div>
+		</div>
+		<div class="flex-1 min-w-0 space-y-2">
+			<div class="flex flex-wrap items-center gap-2">
+				<span class="text-base font-semibold">{entry.Title}</span>
+				if entry.Subtitle != "" {
+					<span class="badge badge-ghost">{entry.Subtitle}</span>
+				}
+				if entry.Status != "" {
+					@StatusBadge(entry.Status, entry.StatusBadge)
+				}
+			</div>
+			if len(entry.Fields) > 0 {
+				<dl class="grid gap-2 text-sm sm:grid-cols-2">
+					for _, field := range entry.Fields {
+						<div class="flex items-start justify-between gap-4">
+							<dt class="opacity-70">{field.Label}</dt>
+							<dd class="text-right font-medium">{field.Value}</dd>
+						</div>
+					}
+				</dl>
+			}
+			if entry.PayloadJSON != "" && entry.PayloadJSON != "{}" && entry.PayloadJSON != "null" {
+				<details class="max-w-full">
+					<summary>{T(loc, "events.payload")}</summary>
+					<pre class="bg-base-200 border border-base-300 rounded-lg p-3 text-xs max-h-64 max-w-full overflow-x-auto"><code class="block whitespace-pre-wrap break-all">{ entry.PayloadJSON }</code></pre>
+				</details>
+			}
+		</div>
+	</div>
+}
+
+// ScenarioTimelineIcon renders the icon for a timeline entry.
+templ ScenarioTimelineIcon(iconID commonv1.IconId) {
+	<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-base-300 bg-base-200">
+		if iconID == commonv1.IconId_ICON_ID_CAMPAIGN {
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				class="size-4"
+			>
+				<path d="M12 7v14" />
+				<path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" />
+			</svg>
+		} else if iconID == commonv1.IconId_ICON_ID_PARTICIPANT {
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				class="size-4"
+			>
+				<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+				<circle cx="9" cy="7" r="4" />
+				<path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+				<path d="M16 3.13a4 4 0 0 1 0 7.75" />
+			</svg>
+		} else if iconID == commonv1.IconId_ICON_ID_CHARACTER {
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				class="size-4"
+			>
+				<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+				<circle cx="12" cy="7" r="4" />
+			</svg>
+		} else if iconID == commonv1.IconId_ICON_ID_SESSION {
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				class="size-4"
+			>
+				<path d="M8 2v4" />
+				<path d="M16 2v4" />
+				<rect width="18" height="18" x="3" y="4" rx="2" />
+				<path d="M3 10h18" />
+			</svg>
+		} else {
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				class="size-4"
+			>
+				<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
+			</svg>
+		}
 	</div>
 }
 
@@ -226,14 +410,11 @@ templ ScenarioEventsFullPage(view ScenarioEventsView, page PageContext) {
 // ScenarioEventsPage renders the scenario events content.
 templ ScenarioEventsPage(view ScenarioEventsView, loc Localizer) {
 	@PageHeader(PageHeading{Breadcrumbs: []Breadcrumb{{T(loc, "nav.scenarios"), "/scenarios"}, {view.CampaignName, ""}}, Title: T(loc, "scenarios.heading")})
-	@ScenarioSubNav("/scenarios/"+view.CampaignID+"/events", "events", loc) {
-		@ScenarioEventsPanel(view, loc)
-	}
+	@ScenarioEventsPanel(view, loc)
 }
 
 // ScenarioEventsPanel renders the events tab content.
 templ ScenarioEventsPanel(view ScenarioEventsView, loc Localizer) {
-	<h3>{T(loc, "scenarios.events.heading")}</h3>
 	if view.Message == "" {
 		<p>{T(loc, "events.count", view.TotalCount)}</p>
 	}
