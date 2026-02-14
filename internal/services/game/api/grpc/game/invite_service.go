@@ -11,6 +11,7 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -440,13 +441,10 @@ func (s *InviteService) ListInvites(ctx context.Context, in *campaignv1.ListInvi
 		return nil, err
 	}
 
-	pageSize := int(in.GetPageSize())
-	if pageSize <= 0 {
-		pageSize = defaultListInvitesPageSize
-	}
-	if pageSize > maxListInvitesPageSize {
-		pageSize = maxListInvitesPageSize
-	}
+	pageSize := pagination.ClampPageSize(in.GetPageSize(), pagination.PageSizeConfig{
+		Default: defaultListInvitesPageSize,
+		Max:     maxListInvitesPageSize,
+	})
 
 	statusFilter := invite.StatusUnspecified
 	if in.GetStatus() != campaignv1.InviteStatus_INVITE_STATUS_UNSPECIFIED {
@@ -498,13 +496,10 @@ func (s *InviteService) ListPendingInvites(ctx context.Context, in *campaignv1.L
 		return nil, err
 	}
 
-	pageSize := int(in.GetPageSize())
-	if pageSize <= 0 {
-		pageSize = defaultListInvitesPageSize
-	}
-	if pageSize > maxListInvitesPageSize {
-		pageSize = maxListInvitesPageSize
-	}
+	pageSize := pagination.ClampPageSize(in.GetPageSize(), pagination.PageSizeConfig{
+		Default: defaultListInvitesPageSize,
+		Max:     maxListInvitesPageSize,
+	})
 
 	page, err := s.stores.Invite.ListPendingInvites(ctx, campaignID, pageSize, in.GetPageToken())
 	if err != nil {
@@ -590,13 +585,10 @@ func (s *InviteService) ListPendingInvitesForUser(ctx context.Context, in *campa
 		return nil, status.Error(codes.InvalidArgument, "user id is required")
 	}
 
-	pageSize := int(in.GetPageSize())
-	if pageSize <= 0 {
-		pageSize = defaultListInvitesPageSize
-	}
-	if pageSize > maxListInvitesPageSize {
-		pageSize = maxListInvitesPageSize
-	}
+	pageSize := pagination.ClampPageSize(in.GetPageSize(), pagination.PageSizeConfig{
+		Default: defaultListInvitesPageSize,
+		Max:     maxListInvitesPageSize,
+	})
 
 	page, err := s.stores.Invite.ListPendingInvitesForRecipient(ctx, userID, pageSize, in.GetPageToken())
 	if err != nil {

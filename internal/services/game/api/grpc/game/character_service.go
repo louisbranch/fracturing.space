@@ -9,6 +9,7 @@ import (
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -479,13 +480,10 @@ func (s *CharacterService) ListCharacters(ctx context.Context, in *campaignv1.Li
 		return nil, handleDomainError(err)
 	}
 
-	pageSize := int(in.GetPageSize())
-	if pageSize <= 0 {
-		pageSize = defaultListCharactersPageSize
-	}
-	if pageSize > maxListCharactersPageSize {
-		pageSize = maxListCharactersPageSize
-	}
+	pageSize := pagination.ClampPageSize(in.GetPageSize(), pagination.PageSizeConfig{
+		Default: defaultListCharactersPageSize,
+		Max:     maxListCharactersPageSize,
+	})
 
 	page, err := s.stores.Character.ListCharacters(ctx, campaignID, pageSize, in.GetPageToken())
 	if err != nil {

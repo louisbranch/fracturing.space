@@ -11,6 +11,7 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
@@ -228,13 +229,10 @@ func (s *CampaignService) ListCampaigns(ctx context.Context, in *campaignv1.List
 		return nil, status.Error(codes.Internal, "campaign store is not configured")
 	}
 
-	pageSize := int(in.GetPageSize())
-	if pageSize <= 0 {
-		pageSize = defaultListCampaignsPageSize
-	}
-	if pageSize > maxListCampaignsPageSize {
-		pageSize = maxListCampaignsPageSize
-	}
+	pageSize := pagination.ClampPageSize(in.GetPageSize(), pagination.PageSizeConfig{
+		Default: defaultListCampaignsPageSize,
+		Max:     maxListCampaignsPageSize,
+	})
 
 	page, err := s.stores.Campaign.List(ctx, pageSize, in.GetPageToken())
 	if err != nil {

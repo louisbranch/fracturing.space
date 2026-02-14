@@ -8,6 +8,7 @@ import (
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -403,13 +404,10 @@ func (s *ParticipantService) ListParticipants(ctx context.Context, in *campaignv
 		return nil, handleDomainError(err)
 	}
 
-	pageSize := int(in.GetPageSize())
-	if pageSize <= 0 {
-		pageSize = defaultListParticipantsPageSize
-	}
-	if pageSize > maxListParticipantsPageSize {
-		pageSize = maxListParticipantsPageSize
-	}
+	pageSize := pagination.ClampPageSize(in.GetPageSize(), pagination.PageSizeConfig{
+		Default: defaultListParticipantsPageSize,
+		Max:     maxListParticipantsPageSize,
+	})
 
 	page, err := s.stores.Participant.ListParticipants(ctx, campaignID, pageSize, in.GetPageToken())
 	if err != nil {

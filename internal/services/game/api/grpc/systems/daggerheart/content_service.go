@@ -6,9 +6,16 @@ import (
 	"strings"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
+	contentfilter "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/content/filter"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+)
+
+const (
+	defaultListDaggerheartContentPageSize = 50
+	maxListDaggerheartContentPageSize     = 200
 )
 
 // DaggerheartContentService implements the Daggerheart content gRPC API.
@@ -132,8 +139,11 @@ func (s *DaggerheartContentService) GetClass(ctx context.Context, in *pb.GetDagg
 	return &pb.GetDaggerheartClassResponse{Class: toProtoDaggerheartClass(class)}, nil
 }
 
-// ListClasses returns all Daggerheart classes.
-func (s *DaggerheartContentService) ListClasses(ctx context.Context, _ *pb.ListDaggerheartClassesRequest) (*pb.ListDaggerheartClassesResponse, error) {
+// ListClasses returns Daggerheart classes.
+func (s *DaggerheartContentService) ListClasses(ctx context.Context, in *pb.ListDaggerheartClassesRequest) (*pb.ListDaggerheartClassesResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "list classes request is required")
+	}
 	store, err := s.contentStore()
 	if err != nil {
 		return nil, err
@@ -143,7 +153,56 @@ func (s *DaggerheartContentService) ListClasses(ctx context.Context, _ *pb.ListD
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "list classes: %v", err)
 	}
-	return &pb.ListDaggerheartClassesResponse{Classes: toProtoDaggerheartClasses(classes)}, nil
+
+	page, err := listContentPage(classes, contentListRequest{
+		PageSize:  in.GetPageSize(),
+		PageToken: in.GetPageToken(),
+		OrderBy:   in.GetOrderBy(),
+		Filter:    in.GetFilter(),
+	}, contentListConfig[storage.DaggerheartClass]{
+		PageSizeConfig: pagination.PageSizeConfig{
+			Default: defaultListDaggerheartContentPageSize,
+			Max:     maxListDaggerheartContentPageSize,
+		},
+		OrderByConfig: pagination.OrderByConfig{
+			Default: "name",
+			Allowed: []string{"name", "name desc"},
+		},
+		FilterFields: contentfilter.Fields{
+			"id":   contentfilter.FieldString,
+			"name": contentfilter.FieldString,
+		},
+		KeySpec: []contentKeySpec{
+			{Name: "name", Kind: pagination.CursorValueString},
+			{Name: "id", Kind: pagination.CursorValueString},
+		},
+		KeyFunc: func(item storage.DaggerheartClass) []pagination.CursorValue {
+			return []pagination.CursorValue{
+				pagination.StringValue("name", item.Name),
+				pagination.StringValue("id", item.ID),
+			}
+		},
+		Resolver: func(item storage.DaggerheartClass, field string) (any, bool) {
+			switch field {
+			case "id":
+				return item.ID, true
+			case "name":
+				return item.Name, true
+			default:
+				return nil, false
+			}
+		},
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "list classes: %v", err)
+	}
+
+	return &pb.ListDaggerheartClassesResponse{
+		Classes:           toProtoDaggerheartClasses(page.Items),
+		NextPageToken:     page.NextPageToken,
+		PreviousPageToken: page.PreviousPageToken,
+		TotalSize:         int32(page.TotalSize),
+	}, nil
 }
 
 // GetSubclass returns a single Daggerheart subclass.
@@ -167,8 +226,11 @@ func (s *DaggerheartContentService) GetSubclass(ctx context.Context, in *pb.GetD
 	return &pb.GetDaggerheartSubclassResponse{Subclass: toProtoDaggerheartSubclass(subclass)}, nil
 }
 
-// ListSubclasses returns all Daggerheart subclasses.
-func (s *DaggerheartContentService) ListSubclasses(ctx context.Context, _ *pb.ListDaggerheartSubclassesRequest) (*pb.ListDaggerheartSubclassesResponse, error) {
+// ListSubclasses returns Daggerheart subclasses.
+func (s *DaggerheartContentService) ListSubclasses(ctx context.Context, in *pb.ListDaggerheartSubclassesRequest) (*pb.ListDaggerheartSubclassesResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "list subclasses request is required")
+	}
 	store, err := s.contentStore()
 	if err != nil {
 		return nil, err
@@ -178,7 +240,59 @@ func (s *DaggerheartContentService) ListSubclasses(ctx context.Context, _ *pb.Li
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "list subclasses: %v", err)
 	}
-	return &pb.ListDaggerheartSubclassesResponse{Subclasses: toProtoDaggerheartSubclasses(subclasses)}, nil
+
+	page, err := listContentPage(subclasses, contentListRequest{
+		PageSize:  in.GetPageSize(),
+		PageToken: in.GetPageToken(),
+		OrderBy:   in.GetOrderBy(),
+		Filter:    in.GetFilter(),
+	}, contentListConfig[storage.DaggerheartSubclass]{
+		PageSizeConfig: pagination.PageSizeConfig{
+			Default: defaultListDaggerheartContentPageSize,
+			Max:     maxListDaggerheartContentPageSize,
+		},
+		OrderByConfig: pagination.OrderByConfig{
+			Default: "name",
+			Allowed: []string{"name", "name desc"},
+		},
+		FilterFields: contentfilter.Fields{
+			"id":              contentfilter.FieldString,
+			"name":            contentfilter.FieldString,
+			"spellcast_trait": contentfilter.FieldString,
+		},
+		KeySpec: []contentKeySpec{
+			{Name: "name", Kind: pagination.CursorValueString},
+			{Name: "id", Kind: pagination.CursorValueString},
+		},
+		KeyFunc: func(item storage.DaggerheartSubclass) []pagination.CursorValue {
+			return []pagination.CursorValue{
+				pagination.StringValue("name", item.Name),
+				pagination.StringValue("id", item.ID),
+			}
+		},
+		Resolver: func(item storage.DaggerheartSubclass, field string) (any, bool) {
+			switch field {
+			case "id":
+				return item.ID, true
+			case "name":
+				return item.Name, true
+			case "spellcast_trait":
+				return item.SpellcastTrait, true
+			default:
+				return nil, false
+			}
+		},
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "list subclasses: %v", err)
+	}
+
+	return &pb.ListDaggerheartSubclassesResponse{
+		Subclasses:        toProtoDaggerheartSubclasses(page.Items),
+		NextPageToken:     page.NextPageToken,
+		PreviousPageToken: page.PreviousPageToken,
+		TotalSize:         int32(page.TotalSize),
+	}, nil
 }
 
 // GetHeritage returns a single Daggerheart heritage.
@@ -202,8 +316,11 @@ func (s *DaggerheartContentService) GetHeritage(ctx context.Context, in *pb.GetD
 	return &pb.GetDaggerheartHeritageResponse{Heritage: toProtoDaggerheartHeritage(heritage)}, nil
 }
 
-// ListHeritages returns all Daggerheart heritages.
-func (s *DaggerheartContentService) ListHeritages(ctx context.Context, _ *pb.ListDaggerheartHeritagesRequest) (*pb.ListDaggerheartHeritagesResponse, error) {
+// ListHeritages returns Daggerheart heritages.
+func (s *DaggerheartContentService) ListHeritages(ctx context.Context, in *pb.ListDaggerheartHeritagesRequest) (*pb.ListDaggerheartHeritagesResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "list heritages request is required")
+	}
 	store, err := s.contentStore()
 	if err != nil {
 		return nil, err
@@ -213,7 +330,59 @@ func (s *DaggerheartContentService) ListHeritages(ctx context.Context, _ *pb.Lis
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "list heritages: %v", err)
 	}
-	return &pb.ListDaggerheartHeritagesResponse{Heritages: toProtoDaggerheartHeritages(heritages)}, nil
+
+	page, err := listContentPage(heritages, contentListRequest{
+		PageSize:  in.GetPageSize(),
+		PageToken: in.GetPageToken(),
+		OrderBy:   in.GetOrderBy(),
+		Filter:    in.GetFilter(),
+	}, contentListConfig[storage.DaggerheartHeritage]{
+		PageSizeConfig: pagination.PageSizeConfig{
+			Default: defaultListDaggerheartContentPageSize,
+			Max:     maxListDaggerheartContentPageSize,
+		},
+		OrderByConfig: pagination.OrderByConfig{
+			Default: "name",
+			Allowed: []string{"name", "name desc"},
+		},
+		FilterFields: contentfilter.Fields{
+			"id":   contentfilter.FieldString,
+			"name": contentfilter.FieldString,
+			"kind": contentfilter.FieldString,
+		},
+		KeySpec: []contentKeySpec{
+			{Name: "name", Kind: pagination.CursorValueString},
+			{Name: "id", Kind: pagination.CursorValueString},
+		},
+		KeyFunc: func(item storage.DaggerheartHeritage) []pagination.CursorValue {
+			return []pagination.CursorValue{
+				pagination.StringValue("name", item.Name),
+				pagination.StringValue("id", item.ID),
+			}
+		},
+		Resolver: func(item storage.DaggerheartHeritage, field string) (any, bool) {
+			switch field {
+			case "id":
+				return item.ID, true
+			case "name":
+				return item.Name, true
+			case "kind":
+				return item.Kind, true
+			default:
+				return nil, false
+			}
+		},
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "list heritages: %v", err)
+	}
+
+	return &pb.ListDaggerheartHeritagesResponse{
+		Heritages:         toProtoDaggerheartHeritages(page.Items),
+		NextPageToken:     page.NextPageToken,
+		PreviousPageToken: page.PreviousPageToken,
+		TotalSize:         int32(page.TotalSize),
+	}, nil
 }
 
 // GetExperience returns a single Daggerheart experience.
@@ -237,8 +406,11 @@ func (s *DaggerheartContentService) GetExperience(ctx context.Context, in *pb.Ge
 	return &pb.GetDaggerheartExperienceResponse{Experience: toProtoDaggerheartExperience(experience)}, nil
 }
 
-// ListExperiences returns all Daggerheart experiences.
-func (s *DaggerheartContentService) ListExperiences(ctx context.Context, _ *pb.ListDaggerheartExperiencesRequest) (*pb.ListDaggerheartExperiencesResponse, error) {
+// ListExperiences returns Daggerheart experiences.
+func (s *DaggerheartContentService) ListExperiences(ctx context.Context, in *pb.ListDaggerheartExperiencesRequest) (*pb.ListDaggerheartExperiencesResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "list experiences request is required")
+	}
 	store, err := s.contentStore()
 	if err != nil {
 		return nil, err
@@ -248,7 +420,56 @@ func (s *DaggerheartContentService) ListExperiences(ctx context.Context, _ *pb.L
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "list experiences: %v", err)
 	}
-	return &pb.ListDaggerheartExperiencesResponse{Experiences: toProtoDaggerheartExperiences(experiences)}, nil
+
+	page, err := listContentPage(experiences, contentListRequest{
+		PageSize:  in.GetPageSize(),
+		PageToken: in.GetPageToken(),
+		OrderBy:   in.GetOrderBy(),
+		Filter:    in.GetFilter(),
+	}, contentListConfig[storage.DaggerheartExperienceEntry]{
+		PageSizeConfig: pagination.PageSizeConfig{
+			Default: defaultListDaggerheartContentPageSize,
+			Max:     maxListDaggerheartContentPageSize,
+		},
+		OrderByConfig: pagination.OrderByConfig{
+			Default: "name",
+			Allowed: []string{"name", "name desc"},
+		},
+		FilterFields: contentfilter.Fields{
+			"id":   contentfilter.FieldString,
+			"name": contentfilter.FieldString,
+		},
+		KeySpec: []contentKeySpec{
+			{Name: "name", Kind: pagination.CursorValueString},
+			{Name: "id", Kind: pagination.CursorValueString},
+		},
+		KeyFunc: func(item storage.DaggerheartExperienceEntry) []pagination.CursorValue {
+			return []pagination.CursorValue{
+				pagination.StringValue("name", item.Name),
+				pagination.StringValue("id", item.ID),
+			}
+		},
+		Resolver: func(item storage.DaggerheartExperienceEntry, field string) (any, bool) {
+			switch field {
+			case "id":
+				return item.ID, true
+			case "name":
+				return item.Name, true
+			default:
+				return nil, false
+			}
+		},
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "list experiences: %v", err)
+	}
+
+	return &pb.ListDaggerheartExperiencesResponse{
+		Experiences:       toProtoDaggerheartExperiences(page.Items),
+		NextPageToken:     page.NextPageToken,
+		PreviousPageToken: page.PreviousPageToken,
+		TotalSize:         int32(page.TotalSize),
+	}, nil
 }
 
 // GetAdversary returns a single Daggerheart adversary catalog entry.
@@ -272,8 +493,11 @@ func (s *DaggerheartContentService) GetAdversary(ctx context.Context, in *pb.Get
 	return &pb.GetDaggerheartAdversaryResponse{Adversary: toProtoDaggerheartAdversaryEntry(adversary)}, nil
 }
 
-// ListAdversaries returns all Daggerheart adversary catalog entries.
-func (s *DaggerheartContentService) ListAdversaries(ctx context.Context, _ *pb.ListDaggerheartAdversariesRequest) (*pb.ListDaggerheartAdversariesResponse, error) {
+// ListAdversaries returns Daggerheart adversary catalog entries.
+func (s *DaggerheartContentService) ListAdversaries(ctx context.Context, in *pb.ListDaggerheartAdversariesRequest) (*pb.ListDaggerheartAdversariesResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "list adversaries request is required")
+	}
 	store, err := s.contentStore()
 	if err != nil {
 		return nil, err
@@ -283,7 +507,62 @@ func (s *DaggerheartContentService) ListAdversaries(ctx context.Context, _ *pb.L
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "list adversaries: %v", err)
 	}
-	return &pb.ListDaggerheartAdversariesResponse{Adversaries: toProtoDaggerheartAdversaryEntries(adversaries)}, nil
+
+	page, err := listContentPage(adversaries, contentListRequest{
+		PageSize:  in.GetPageSize(),
+		PageToken: in.GetPageToken(),
+		OrderBy:   in.GetOrderBy(),
+		Filter:    in.GetFilter(),
+	}, contentListConfig[storage.DaggerheartAdversaryEntry]{
+		PageSizeConfig: pagination.PageSizeConfig{
+			Default: defaultListDaggerheartContentPageSize,
+			Max:     maxListDaggerheartContentPageSize,
+		},
+		OrderByConfig: pagination.OrderByConfig{
+			Default: "name",
+			Allowed: []string{"name", "name desc"},
+		},
+		FilterFields: contentfilter.Fields{
+			"id":   contentfilter.FieldString,
+			"name": contentfilter.FieldString,
+			"tier": contentfilter.FieldInt,
+			"role": contentfilter.FieldString,
+		},
+		KeySpec: []contentKeySpec{
+			{Name: "name", Kind: pagination.CursorValueString},
+			{Name: "id", Kind: pagination.CursorValueString},
+		},
+		KeyFunc: func(item storage.DaggerheartAdversaryEntry) []pagination.CursorValue {
+			return []pagination.CursorValue{
+				pagination.StringValue("name", item.Name),
+				pagination.StringValue("id", item.ID),
+			}
+		},
+		Resolver: func(item storage.DaggerheartAdversaryEntry, field string) (any, bool) {
+			switch field {
+			case "id":
+				return item.ID, true
+			case "name":
+				return item.Name, true
+			case "tier":
+				return int64(item.Tier), true
+			case "role":
+				return item.Role, true
+			default:
+				return nil, false
+			}
+		},
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "list adversaries: %v", err)
+	}
+
+	return &pb.ListDaggerheartAdversariesResponse{
+		Adversaries:       toProtoDaggerheartAdversaryEntries(page.Items),
+		NextPageToken:     page.NextPageToken,
+		PreviousPageToken: page.PreviousPageToken,
+		TotalSize:         int32(page.TotalSize),
+	}, nil
 }
 
 // GetBeastform returns a single Daggerheart beastform catalog entry.
@@ -307,8 +586,11 @@ func (s *DaggerheartContentService) GetBeastform(ctx context.Context, in *pb.Get
 	return &pb.GetDaggerheartBeastformResponse{Beastform: toProtoDaggerheartBeastform(beastform)}, nil
 }
 
-// ListBeastforms returns all Daggerheart beastform catalog entries.
-func (s *DaggerheartContentService) ListBeastforms(ctx context.Context, _ *pb.ListDaggerheartBeastformsRequest) (*pb.ListDaggerheartBeastformsResponse, error) {
+// ListBeastforms returns Daggerheart beastform catalog entries.
+func (s *DaggerheartContentService) ListBeastforms(ctx context.Context, in *pb.ListDaggerheartBeastformsRequest) (*pb.ListDaggerheartBeastformsResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "list beastforms request is required")
+	}
 	store, err := s.contentStore()
 	if err != nil {
 		return nil, err
@@ -318,7 +600,62 @@ func (s *DaggerheartContentService) ListBeastforms(ctx context.Context, _ *pb.Li
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "list beastforms: %v", err)
 	}
-	return &pb.ListDaggerheartBeastformsResponse{Beastforms: toProtoDaggerheartBeastforms(beastforms)}, nil
+
+	page, err := listContentPage(beastforms, contentListRequest{
+		PageSize:  in.GetPageSize(),
+		PageToken: in.GetPageToken(),
+		OrderBy:   in.GetOrderBy(),
+		Filter:    in.GetFilter(),
+	}, contentListConfig[storage.DaggerheartBeastformEntry]{
+		PageSizeConfig: pagination.PageSizeConfig{
+			Default: defaultListDaggerheartContentPageSize,
+			Max:     maxListDaggerheartContentPageSize,
+		},
+		OrderByConfig: pagination.OrderByConfig{
+			Default: "name",
+			Allowed: []string{"name", "name desc"},
+		},
+		FilterFields: contentfilter.Fields{
+			"id":    contentfilter.FieldString,
+			"name":  contentfilter.FieldString,
+			"tier":  contentfilter.FieldInt,
+			"trait": contentfilter.FieldString,
+		},
+		KeySpec: []contentKeySpec{
+			{Name: "name", Kind: pagination.CursorValueString},
+			{Name: "id", Kind: pagination.CursorValueString},
+		},
+		KeyFunc: func(item storage.DaggerheartBeastformEntry) []pagination.CursorValue {
+			return []pagination.CursorValue{
+				pagination.StringValue("name", item.Name),
+				pagination.StringValue("id", item.ID),
+			}
+		},
+		Resolver: func(item storage.DaggerheartBeastformEntry, field string) (any, bool) {
+			switch field {
+			case "id":
+				return item.ID, true
+			case "name":
+				return item.Name, true
+			case "tier":
+				return int64(item.Tier), true
+			case "trait":
+				return item.Trait, true
+			default:
+				return nil, false
+			}
+		},
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "list beastforms: %v", err)
+	}
+
+	return &pb.ListDaggerheartBeastformsResponse{
+		Beastforms:        toProtoDaggerheartBeastforms(page.Items),
+		NextPageToken:     page.NextPageToken,
+		PreviousPageToken: page.PreviousPageToken,
+		TotalSize:         int32(page.TotalSize),
+	}, nil
 }
 
 // GetCompanionExperience returns a single Daggerheart companion experience catalog entry.
@@ -342,8 +679,11 @@ func (s *DaggerheartContentService) GetCompanionExperience(ctx context.Context, 
 	return &pb.GetDaggerheartCompanionExperienceResponse{Experience: toProtoDaggerheartCompanionExperience(experience)}, nil
 }
 
-// ListCompanionExperiences returns all Daggerheart companion experience catalog entries.
-func (s *DaggerheartContentService) ListCompanionExperiences(ctx context.Context, _ *pb.ListDaggerheartCompanionExperiencesRequest) (*pb.ListDaggerheartCompanionExperiencesResponse, error) {
+// ListCompanionExperiences returns Daggerheart companion experience catalog entries.
+func (s *DaggerheartContentService) ListCompanionExperiences(ctx context.Context, in *pb.ListDaggerheartCompanionExperiencesRequest) (*pb.ListDaggerheartCompanionExperiencesResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "list companion experiences request is required")
+	}
 	store, err := s.contentStore()
 	if err != nil {
 		return nil, err
@@ -353,7 +693,56 @@ func (s *DaggerheartContentService) ListCompanionExperiences(ctx context.Context
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "list companion experiences: %v", err)
 	}
-	return &pb.ListDaggerheartCompanionExperiencesResponse{Experiences: toProtoDaggerheartCompanionExperiences(experiences)}, nil
+
+	page, err := listContentPage(experiences, contentListRequest{
+		PageSize:  in.GetPageSize(),
+		PageToken: in.GetPageToken(),
+		OrderBy:   in.GetOrderBy(),
+		Filter:    in.GetFilter(),
+	}, contentListConfig[storage.DaggerheartCompanionExperienceEntry]{
+		PageSizeConfig: pagination.PageSizeConfig{
+			Default: defaultListDaggerheartContentPageSize,
+			Max:     maxListDaggerheartContentPageSize,
+		},
+		OrderByConfig: pagination.OrderByConfig{
+			Default: "name",
+			Allowed: []string{"name", "name desc"},
+		},
+		FilterFields: contentfilter.Fields{
+			"id":   contentfilter.FieldString,
+			"name": contentfilter.FieldString,
+		},
+		KeySpec: []contentKeySpec{
+			{Name: "name", Kind: pagination.CursorValueString},
+			{Name: "id", Kind: pagination.CursorValueString},
+		},
+		KeyFunc: func(item storage.DaggerheartCompanionExperienceEntry) []pagination.CursorValue {
+			return []pagination.CursorValue{
+				pagination.StringValue("name", item.Name),
+				pagination.StringValue("id", item.ID),
+			}
+		},
+		Resolver: func(item storage.DaggerheartCompanionExperienceEntry, field string) (any, bool) {
+			switch field {
+			case "id":
+				return item.ID, true
+			case "name":
+				return item.Name, true
+			default:
+				return nil, false
+			}
+		},
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "list companion experiences: %v", err)
+	}
+
+	return &pb.ListDaggerheartCompanionExperiencesResponse{
+		Experiences:       toProtoDaggerheartCompanionExperiences(page.Items),
+		NextPageToken:     page.NextPageToken,
+		PreviousPageToken: page.PreviousPageToken,
+		TotalSize:         int32(page.TotalSize),
+	}, nil
 }
 
 // GetLootEntry returns a single Daggerheart loot catalog entry.
@@ -377,8 +766,11 @@ func (s *DaggerheartContentService) GetLootEntry(ctx context.Context, in *pb.Get
 	return &pb.GetDaggerheartLootEntryResponse{Entry: toProtoDaggerheartLootEntry(entry)}, nil
 }
 
-// ListLootEntries returns all Daggerheart loot catalog entries.
-func (s *DaggerheartContentService) ListLootEntries(ctx context.Context, _ *pb.ListDaggerheartLootEntriesRequest) (*pb.ListDaggerheartLootEntriesResponse, error) {
+// ListLootEntries returns Daggerheart loot catalog entries.
+func (s *DaggerheartContentService) ListLootEntries(ctx context.Context, in *pb.ListDaggerheartLootEntriesRequest) (*pb.ListDaggerheartLootEntriesResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "list loot entries request is required")
+	}
 	store, err := s.contentStore()
 	if err != nil {
 		return nil, err
@@ -388,7 +780,59 @@ func (s *DaggerheartContentService) ListLootEntries(ctx context.Context, _ *pb.L
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "list loot entries: %v", err)
 	}
-	return &pb.ListDaggerheartLootEntriesResponse{Entries: toProtoDaggerheartLootEntries(entries)}, nil
+
+	page, err := listContentPage(entries, contentListRequest{
+		PageSize:  in.GetPageSize(),
+		PageToken: in.GetPageToken(),
+		OrderBy:   in.GetOrderBy(),
+		Filter:    in.GetFilter(),
+	}, contentListConfig[storage.DaggerheartLootEntry]{
+		PageSizeConfig: pagination.PageSizeConfig{
+			Default: defaultListDaggerheartContentPageSize,
+			Max:     maxListDaggerheartContentPageSize,
+		},
+		OrderByConfig: pagination.OrderByConfig{
+			Default: "roll",
+			Allowed: []string{"roll", "roll desc"},
+		},
+		FilterFields: contentfilter.Fields{
+			"id":   contentfilter.FieldString,
+			"name": contentfilter.FieldString,
+			"roll": contentfilter.FieldInt,
+		},
+		KeySpec: []contentKeySpec{
+			{Name: "roll", Kind: pagination.CursorValueInt},
+			{Name: "id", Kind: pagination.CursorValueString},
+		},
+		KeyFunc: func(item storage.DaggerheartLootEntry) []pagination.CursorValue {
+			return []pagination.CursorValue{
+				pagination.IntValue("roll", int64(item.Roll)),
+				pagination.StringValue("id", item.ID),
+			}
+		},
+		Resolver: func(item storage.DaggerheartLootEntry, field string) (any, bool) {
+			switch field {
+			case "id":
+				return item.ID, true
+			case "name":
+				return item.Name, true
+			case "roll":
+				return int64(item.Roll), true
+			default:
+				return nil, false
+			}
+		},
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "list loot entries: %v", err)
+	}
+
+	return &pb.ListDaggerheartLootEntriesResponse{
+		Entries:           toProtoDaggerheartLootEntries(page.Items),
+		NextPageToken:     page.NextPageToken,
+		PreviousPageToken: page.PreviousPageToken,
+		TotalSize:         int32(page.TotalSize),
+	}, nil
 }
 
 // GetDamageType returns a single Daggerheart damage type catalog entry.
@@ -412,8 +856,11 @@ func (s *DaggerheartContentService) GetDamageType(ctx context.Context, in *pb.Ge
 	return &pb.GetDaggerheartDamageTypeResponse{DamageType: toProtoDaggerheartDamageType(entry)}, nil
 }
 
-// ListDamageTypes returns all Daggerheart damage type catalog entries.
-func (s *DaggerheartContentService) ListDamageTypes(ctx context.Context, _ *pb.ListDaggerheartDamageTypesRequest) (*pb.ListDaggerheartDamageTypesResponse, error) {
+// ListDamageTypes returns Daggerheart damage type catalog entries.
+func (s *DaggerheartContentService) ListDamageTypes(ctx context.Context, in *pb.ListDaggerheartDamageTypesRequest) (*pb.ListDaggerheartDamageTypesResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "list damage types request is required")
+	}
 	store, err := s.contentStore()
 	if err != nil {
 		return nil, err
@@ -423,7 +870,56 @@ func (s *DaggerheartContentService) ListDamageTypes(ctx context.Context, _ *pb.L
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "list damage types: %v", err)
 	}
-	return &pb.ListDaggerheartDamageTypesResponse{DamageTypes: toProtoDaggerheartDamageTypes(entries)}, nil
+
+	page, err := listContentPage(entries, contentListRequest{
+		PageSize:  in.GetPageSize(),
+		PageToken: in.GetPageToken(),
+		OrderBy:   in.GetOrderBy(),
+		Filter:    in.GetFilter(),
+	}, contentListConfig[storage.DaggerheartDamageTypeEntry]{
+		PageSizeConfig: pagination.PageSizeConfig{
+			Default: defaultListDaggerheartContentPageSize,
+			Max:     maxListDaggerheartContentPageSize,
+		},
+		OrderByConfig: pagination.OrderByConfig{
+			Default: "name",
+			Allowed: []string{"name", "name desc"},
+		},
+		FilterFields: contentfilter.Fields{
+			"id":   contentfilter.FieldString,
+			"name": contentfilter.FieldString,
+		},
+		KeySpec: []contentKeySpec{
+			{Name: "name", Kind: pagination.CursorValueString},
+			{Name: "id", Kind: pagination.CursorValueString},
+		},
+		KeyFunc: func(item storage.DaggerheartDamageTypeEntry) []pagination.CursorValue {
+			return []pagination.CursorValue{
+				pagination.StringValue("name", item.Name),
+				pagination.StringValue("id", item.ID),
+			}
+		},
+		Resolver: func(item storage.DaggerheartDamageTypeEntry, field string) (any, bool) {
+			switch field {
+			case "id":
+				return item.ID, true
+			case "name":
+				return item.Name, true
+			default:
+				return nil, false
+			}
+		},
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "list damage types: %v", err)
+	}
+
+	return &pb.ListDaggerheartDamageTypesResponse{
+		DamageTypes:       toProtoDaggerheartDamageTypes(page.Items),
+		NextPageToken:     page.NextPageToken,
+		PreviousPageToken: page.PreviousPageToken,
+		TotalSize:         int32(page.TotalSize),
+	}, nil
 }
 
 // GetDomain returns a single Daggerheart domain.
@@ -447,8 +943,11 @@ func (s *DaggerheartContentService) GetDomain(ctx context.Context, in *pb.GetDag
 	return &pb.GetDaggerheartDomainResponse{Domain: toProtoDaggerheartDomain(domain)}, nil
 }
 
-// ListDomains returns all Daggerheart domains.
-func (s *DaggerheartContentService) ListDomains(ctx context.Context, _ *pb.ListDaggerheartDomainsRequest) (*pb.ListDaggerheartDomainsResponse, error) {
+// ListDomains returns Daggerheart domains.
+func (s *DaggerheartContentService) ListDomains(ctx context.Context, in *pb.ListDaggerheartDomainsRequest) (*pb.ListDaggerheartDomainsResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "list domains request is required")
+	}
 	store, err := s.contentStore()
 	if err != nil {
 		return nil, err
@@ -458,7 +957,56 @@ func (s *DaggerheartContentService) ListDomains(ctx context.Context, _ *pb.ListD
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "list domains: %v", err)
 	}
-	return &pb.ListDaggerheartDomainsResponse{Domains: toProtoDaggerheartDomains(domains)}, nil
+
+	page, err := listContentPage(domains, contentListRequest{
+		PageSize:  in.GetPageSize(),
+		PageToken: in.GetPageToken(),
+		OrderBy:   in.GetOrderBy(),
+		Filter:    in.GetFilter(),
+	}, contentListConfig[storage.DaggerheartDomain]{
+		PageSizeConfig: pagination.PageSizeConfig{
+			Default: defaultListDaggerheartContentPageSize,
+			Max:     maxListDaggerheartContentPageSize,
+		},
+		OrderByConfig: pagination.OrderByConfig{
+			Default: "name",
+			Allowed: []string{"name", "name desc"},
+		},
+		FilterFields: contentfilter.Fields{
+			"id":   contentfilter.FieldString,
+			"name": contentfilter.FieldString,
+		},
+		KeySpec: []contentKeySpec{
+			{Name: "name", Kind: pagination.CursorValueString},
+			{Name: "id", Kind: pagination.CursorValueString},
+		},
+		KeyFunc: func(item storage.DaggerheartDomain) []pagination.CursorValue {
+			return []pagination.CursorValue{
+				pagination.StringValue("name", item.Name),
+				pagination.StringValue("id", item.ID),
+			}
+		},
+		Resolver: func(item storage.DaggerheartDomain, field string) (any, bool) {
+			switch field {
+			case "id":
+				return item.ID, true
+			case "name":
+				return item.Name, true
+			default:
+				return nil, false
+			}
+		},
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "list domains: %v", err)
+	}
+
+	return &pb.ListDaggerheartDomainsResponse{
+		Domains:           toProtoDaggerheartDomains(page.Items),
+		NextPageToken:     page.NextPageToken,
+		PreviousPageToken: page.PreviousPageToken,
+		TotalSize:         int32(page.TotalSize),
+	}, nil
 }
 
 // GetDomainCard returns a single Daggerheart domain card.
@@ -484,14 +1032,18 @@ func (s *DaggerheartContentService) GetDomainCard(ctx context.Context, in *pb.Ge
 
 // ListDomainCards returns Daggerheart domain cards, optionally filtered by domain.
 func (s *DaggerheartContentService) ListDomainCards(ctx context.Context, in *pb.ListDaggerheartDomainCardsRequest) (*pb.ListDaggerheartDomainCardsResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "list domain cards request is required")
+	}
 	store, err := s.contentStore()
 	if err != nil {
 		return nil, err
 	}
 
 	var cards []storage.DaggerheartDomainCard
-	if in != nil && strings.TrimSpace(in.GetDomainId()) != "" {
-		cards, err = store.ListDaggerheartDomainCardsByDomain(ctx, in.GetDomainId())
+	domainID := strings.TrimSpace(in.GetDomainId())
+	if domainID != "" {
+		cards, err = store.ListDaggerheartDomainCardsByDomain(ctx, domainID)
 	} else {
 		cards, err = store.ListDaggerheartDomainCards(ctx)
 	}
@@ -499,7 +1051,72 @@ func (s *DaggerheartContentService) ListDomainCards(ctx context.Context, in *pb.
 		return nil, status.Errorf(codes.Internal, "list domain cards: %v", err)
 	}
 
-	return &pb.ListDaggerheartDomainCardsResponse{DomainCards: toProtoDaggerheartDomainCards(cards)}, nil
+	filterHashSeed := ""
+	if domainID != "" {
+		filterHashSeed = "domain_id=" + domainID
+	}
+
+	page, err := listContentPage(cards, contentListRequest{
+		PageSize:  in.GetPageSize(),
+		PageToken: in.GetPageToken(),
+		OrderBy:   in.GetOrderBy(),
+		Filter:    in.GetFilter(),
+	}, contentListConfig[storage.DaggerheartDomainCard]{
+		PageSizeConfig: pagination.PageSizeConfig{
+			Default: defaultListDaggerheartContentPageSize,
+			Max:     maxListDaggerheartContentPageSize,
+		},
+		OrderByConfig: pagination.OrderByConfig{
+			Default: "level",
+			Allowed: []string{"level", "level desc"},
+		},
+		FilterFields: contentfilter.Fields{
+			"id":        contentfilter.FieldString,
+			"name":      contentfilter.FieldString,
+			"domain_id": contentfilter.FieldString,
+			"level":     contentfilter.FieldInt,
+			"type":      contentfilter.FieldString,
+		},
+		KeySpec: []contentKeySpec{
+			{Name: "level", Kind: pagination.CursorValueInt},
+			{Name: "name", Kind: pagination.CursorValueString},
+			{Name: "id", Kind: pagination.CursorValueString},
+		},
+		KeyFunc: func(item storage.DaggerheartDomainCard) []pagination.CursorValue {
+			return []pagination.CursorValue{
+				pagination.IntValue("level", int64(item.Level)),
+				pagination.StringValue("name", item.Name),
+				pagination.StringValue("id", item.ID),
+			}
+		},
+		Resolver: func(item storage.DaggerheartDomainCard, field string) (any, bool) {
+			switch field {
+			case "id":
+				return item.ID, true
+			case "name":
+				return item.Name, true
+			case "domain_id":
+				return item.DomainID, true
+			case "level":
+				return int64(item.Level), true
+			case "type":
+				return item.Type, true
+			default:
+				return nil, false
+			}
+		},
+		FilterHashSeed: filterHashSeed,
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "list domain cards: %v", err)
+	}
+
+	return &pb.ListDaggerheartDomainCardsResponse{
+		DomainCards:       toProtoDaggerheartDomainCards(page.Items),
+		NextPageToken:     page.NextPageToken,
+		PreviousPageToken: page.PreviousPageToken,
+		TotalSize:         int32(page.TotalSize),
+	}, nil
 }
 
 // GetWeapon returns a single Daggerheart weapon.
@@ -523,8 +1140,11 @@ func (s *DaggerheartContentService) GetWeapon(ctx context.Context, in *pb.GetDag
 	return &pb.GetDaggerheartWeaponResponse{Weapon: toProtoDaggerheartWeapon(weapon)}, nil
 }
 
-// ListWeapons returns all Daggerheart weapons.
-func (s *DaggerheartContentService) ListWeapons(ctx context.Context, _ *pb.ListDaggerheartWeaponsRequest) (*pb.ListDaggerheartWeaponsResponse, error) {
+// ListWeapons returns Daggerheart weapons.
+func (s *DaggerheartContentService) ListWeapons(ctx context.Context, in *pb.ListDaggerheartWeaponsRequest) (*pb.ListDaggerheartWeaponsResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "list weapons request is required")
+	}
 	store, err := s.contentStore()
 	if err != nil {
 		return nil, err
@@ -534,7 +1154,68 @@ func (s *DaggerheartContentService) ListWeapons(ctx context.Context, _ *pb.ListD
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "list weapons: %v", err)
 	}
-	return &pb.ListDaggerheartWeaponsResponse{Weapons: toProtoDaggerheartWeapons(weapons)}, nil
+
+	page, err := listContentPage(weapons, contentListRequest{
+		PageSize:  in.GetPageSize(),
+		PageToken: in.GetPageToken(),
+		OrderBy:   in.GetOrderBy(),
+		Filter:    in.GetFilter(),
+	}, contentListConfig[storage.DaggerheartWeapon]{
+		PageSizeConfig: pagination.PageSizeConfig{
+			Default: defaultListDaggerheartContentPageSize,
+			Max:     maxListDaggerheartContentPageSize,
+		},
+		OrderByConfig: pagination.OrderByConfig{
+			Default: "name",
+			Allowed: []string{"name", "name desc"},
+		},
+		FilterFields: contentfilter.Fields{
+			"id":          contentfilter.FieldString,
+			"name":        contentfilter.FieldString,
+			"category":    contentfilter.FieldString,
+			"tier":        contentfilter.FieldInt,
+			"trait":       contentfilter.FieldString,
+			"damage_type": contentfilter.FieldString,
+		},
+		KeySpec: []contentKeySpec{
+			{Name: "name", Kind: pagination.CursorValueString},
+			{Name: "id", Kind: pagination.CursorValueString},
+		},
+		KeyFunc: func(item storage.DaggerheartWeapon) []pagination.CursorValue {
+			return []pagination.CursorValue{
+				pagination.StringValue("name", item.Name),
+				pagination.StringValue("id", item.ID),
+			}
+		},
+		Resolver: func(item storage.DaggerheartWeapon, field string) (any, bool) {
+			switch field {
+			case "id":
+				return item.ID, true
+			case "name":
+				return item.Name, true
+			case "category":
+				return item.Category, true
+			case "tier":
+				return int64(item.Tier), true
+			case "trait":
+				return item.Trait, true
+			case "damage_type":
+				return item.DamageType, true
+			default:
+				return nil, false
+			}
+		},
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "list weapons: %v", err)
+	}
+
+	return &pb.ListDaggerheartWeaponsResponse{
+		Weapons:           toProtoDaggerheartWeapons(page.Items),
+		NextPageToken:     page.NextPageToken,
+		PreviousPageToken: page.PreviousPageToken,
+		TotalSize:         int32(page.TotalSize),
+	}, nil
 }
 
 // GetArmor returns a single Daggerheart armor entry.
@@ -558,8 +1239,11 @@ func (s *DaggerheartContentService) GetArmor(ctx context.Context, in *pb.GetDagg
 	return &pb.GetDaggerheartArmorResponse{Armor: toProtoDaggerheartArmor(armor)}, nil
 }
 
-// ListArmor returns all Daggerheart armor entries.
-func (s *DaggerheartContentService) ListArmor(ctx context.Context, _ *pb.ListDaggerheartArmorRequest) (*pb.ListDaggerheartArmorResponse, error) {
+// ListArmor returns Daggerheart armor entries.
+func (s *DaggerheartContentService) ListArmor(ctx context.Context, in *pb.ListDaggerheartArmorRequest) (*pb.ListDaggerheartArmorResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "list armor request is required")
+	}
 	store, err := s.contentStore()
 	if err != nil {
 		return nil, err
@@ -569,7 +1253,59 @@ func (s *DaggerheartContentService) ListArmor(ctx context.Context, _ *pb.ListDag
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "list armor: %v", err)
 	}
-	return &pb.ListDaggerheartArmorResponse{Armor: toProtoDaggerheartArmorList(armor)}, nil
+
+	page, err := listContentPage(armor, contentListRequest{
+		PageSize:  in.GetPageSize(),
+		PageToken: in.GetPageToken(),
+		OrderBy:   in.GetOrderBy(),
+		Filter:    in.GetFilter(),
+	}, contentListConfig[storage.DaggerheartArmor]{
+		PageSizeConfig: pagination.PageSizeConfig{
+			Default: defaultListDaggerheartContentPageSize,
+			Max:     maxListDaggerheartContentPageSize,
+		},
+		OrderByConfig: pagination.OrderByConfig{
+			Default: "name",
+			Allowed: []string{"name", "name desc"},
+		},
+		FilterFields: contentfilter.Fields{
+			"id":   contentfilter.FieldString,
+			"name": contentfilter.FieldString,
+			"tier": contentfilter.FieldInt,
+		},
+		KeySpec: []contentKeySpec{
+			{Name: "name", Kind: pagination.CursorValueString},
+			{Name: "id", Kind: pagination.CursorValueString},
+		},
+		KeyFunc: func(item storage.DaggerheartArmor) []pagination.CursorValue {
+			return []pagination.CursorValue{
+				pagination.StringValue("name", item.Name),
+				pagination.StringValue("id", item.ID),
+			}
+		},
+		Resolver: func(item storage.DaggerheartArmor, field string) (any, bool) {
+			switch field {
+			case "id":
+				return item.ID, true
+			case "name":
+				return item.Name, true
+			case "tier":
+				return int64(item.Tier), true
+			default:
+				return nil, false
+			}
+		},
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "list armor: %v", err)
+	}
+
+	return &pb.ListDaggerheartArmorResponse{
+		Armor:             toProtoDaggerheartArmorList(page.Items),
+		NextPageToken:     page.NextPageToken,
+		PreviousPageToken: page.PreviousPageToken,
+		TotalSize:         int32(page.TotalSize),
+	}, nil
 }
 
 // GetItem returns a single Daggerheart item.
@@ -593,8 +1329,11 @@ func (s *DaggerheartContentService) GetItem(ctx context.Context, in *pb.GetDagge
 	return &pb.GetDaggerheartItemResponse{Item: toProtoDaggerheartItem(item)}, nil
 }
 
-// ListItems returns all Daggerheart items.
-func (s *DaggerheartContentService) ListItems(ctx context.Context, _ *pb.ListDaggerheartItemsRequest) (*pb.ListDaggerheartItemsResponse, error) {
+// ListItems returns Daggerheart items.
+func (s *DaggerheartContentService) ListItems(ctx context.Context, in *pb.ListDaggerheartItemsRequest) (*pb.ListDaggerheartItemsResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "list items request is required")
+	}
 	store, err := s.contentStore()
 	if err != nil {
 		return nil, err
@@ -604,7 +1343,62 @@ func (s *DaggerheartContentService) ListItems(ctx context.Context, _ *pb.ListDag
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "list items: %v", err)
 	}
-	return &pb.ListDaggerheartItemsResponse{Items: toProtoDaggerheartItems(items)}, nil
+
+	page, err := listContentPage(items, contentListRequest{
+		PageSize:  in.GetPageSize(),
+		PageToken: in.GetPageToken(),
+		OrderBy:   in.GetOrderBy(),
+		Filter:    in.GetFilter(),
+	}, contentListConfig[storage.DaggerheartItem]{
+		PageSizeConfig: pagination.PageSizeConfig{
+			Default: defaultListDaggerheartContentPageSize,
+			Max:     maxListDaggerheartContentPageSize,
+		},
+		OrderByConfig: pagination.OrderByConfig{
+			Default: "name",
+			Allowed: []string{"name", "name desc"},
+		},
+		FilterFields: contentfilter.Fields{
+			"id":     contentfilter.FieldString,
+			"name":   contentfilter.FieldString,
+			"rarity": contentfilter.FieldString,
+			"kind":   contentfilter.FieldString,
+		},
+		KeySpec: []contentKeySpec{
+			{Name: "name", Kind: pagination.CursorValueString},
+			{Name: "id", Kind: pagination.CursorValueString},
+		},
+		KeyFunc: func(item storage.DaggerheartItem) []pagination.CursorValue {
+			return []pagination.CursorValue{
+				pagination.StringValue("name", item.Name),
+				pagination.StringValue("id", item.ID),
+			}
+		},
+		Resolver: func(item storage.DaggerheartItem, field string) (any, bool) {
+			switch field {
+			case "id":
+				return item.ID, true
+			case "name":
+				return item.Name, true
+			case "rarity":
+				return item.Rarity, true
+			case "kind":
+				return item.Kind, true
+			default:
+				return nil, false
+			}
+		},
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "list items: %v", err)
+	}
+
+	return &pb.ListDaggerheartItemsResponse{
+		Items:             toProtoDaggerheartItems(page.Items),
+		NextPageToken:     page.NextPageToken,
+		PreviousPageToken: page.PreviousPageToken,
+		TotalSize:         int32(page.TotalSize),
+	}, nil
 }
 
 // GetEnvironment returns a single Daggerheart environment.
@@ -628,8 +1422,11 @@ func (s *DaggerheartContentService) GetEnvironment(ctx context.Context, in *pb.G
 	return &pb.GetDaggerheartEnvironmentResponse{Environment: toProtoDaggerheartEnvironment(env)}, nil
 }
 
-// ListEnvironments returns all Daggerheart environments.
-func (s *DaggerheartContentService) ListEnvironments(ctx context.Context, _ *pb.ListDaggerheartEnvironmentsRequest) (*pb.ListDaggerheartEnvironmentsResponse, error) {
+// ListEnvironments returns Daggerheart environments.
+func (s *DaggerheartContentService) ListEnvironments(ctx context.Context, in *pb.ListDaggerheartEnvironmentsRequest) (*pb.ListDaggerheartEnvironmentsResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "list environments request is required")
+	}
 	store, err := s.contentStore()
 	if err != nil {
 		return nil, err
@@ -639,7 +1436,65 @@ func (s *DaggerheartContentService) ListEnvironments(ctx context.Context, _ *pb.
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "list environments: %v", err)
 	}
-	return &pb.ListDaggerheartEnvironmentsResponse{Environments: toProtoDaggerheartEnvironments(items)}, nil
+
+	page, err := listContentPage(items, contentListRequest{
+		PageSize:  in.GetPageSize(),
+		PageToken: in.GetPageToken(),
+		OrderBy:   in.GetOrderBy(),
+		Filter:    in.GetFilter(),
+	}, contentListConfig[storage.DaggerheartEnvironment]{
+		PageSizeConfig: pagination.PageSizeConfig{
+			Default: defaultListDaggerheartContentPageSize,
+			Max:     maxListDaggerheartContentPageSize,
+		},
+		OrderByConfig: pagination.OrderByConfig{
+			Default: "name",
+			Allowed: []string{"name", "name desc"},
+		},
+		FilterFields: contentfilter.Fields{
+			"id":         contentfilter.FieldString,
+			"name":       contentfilter.FieldString,
+			"tier":       contentfilter.FieldInt,
+			"type":       contentfilter.FieldString,
+			"difficulty": contentfilter.FieldInt,
+		},
+		KeySpec: []contentKeySpec{
+			{Name: "name", Kind: pagination.CursorValueString},
+			{Name: "id", Kind: pagination.CursorValueString},
+		},
+		KeyFunc: func(item storage.DaggerheartEnvironment) []pagination.CursorValue {
+			return []pagination.CursorValue{
+				pagination.StringValue("name", item.Name),
+				pagination.StringValue("id", item.ID),
+			}
+		},
+		Resolver: func(item storage.DaggerheartEnvironment, field string) (any, bool) {
+			switch field {
+			case "id":
+				return item.ID, true
+			case "name":
+				return item.Name, true
+			case "tier":
+				return int64(item.Tier), true
+			case "type":
+				return item.Type, true
+			case "difficulty":
+				return int64(item.Difficulty), true
+			default:
+				return nil, false
+			}
+		},
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "list environments: %v", err)
+	}
+
+	return &pb.ListDaggerheartEnvironmentsResponse{
+		Environments:      toProtoDaggerheartEnvironments(page.Items),
+		NextPageToken:     page.NextPageToken,
+		PreviousPageToken: page.PreviousPageToken,
+		TotalSize:         int32(page.TotalSize),
+	}, nil
 }
 
 func (s *DaggerheartContentService) contentStore() (storage.DaggerheartContentStore, error) {

@@ -6,11 +6,11 @@ import (
 	"time"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/core/filter"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage/cursor"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -84,26 +84,19 @@ func (s *EventService) ListEvents(ctx context.Context, in *campaignv1.ListEvents
 		return nil, status.Error(codes.InvalidArgument, "campaign_id is required")
 	}
 
-	// Validate page size
-	pageSize := int(in.GetPageSize())
-	if pageSize <= 0 {
-		pageSize = defaultListEventsPageSize
-	}
-	if pageSize > maxListEventsPageSize {
-		pageSize = maxListEventsPageSize
-	}
+	pageSize := pagination.ClampPageSize(in.GetPageSize(), pagination.PageSizeConfig{
+		Default: defaultListEventsPageSize,
+		Max:     maxListEventsPageSize,
+	})
 
-	// Parse ordering
-	descending := false
-	orderBy := strings.TrimSpace(in.GetOrderBy())
-	switch orderBy {
-	case "", "seq":
-		descending = false
-	case "seq desc":
-		descending = true
-	default:
-		return nil, status.Errorf(codes.InvalidArgument, "invalid order_by: %s (must be 'seq' or 'seq desc')", orderBy)
+	orderBy, err := pagination.NormalizeOrderBy(strings.TrimSpace(in.GetOrderBy()), pagination.OrderByConfig{
+		Default: "seq",
+		Allowed: []string{"seq", "seq desc"},
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid order_by: %s (must be 'seq' or 'seq desc')", strings.TrimSpace(in.GetOrderBy()))
 	}
+	descending := orderBy == "seq desc"
 
 	// Parse filter
 	filterStr := strings.TrimSpace(in.GetFilter())
@@ -124,19 +117,23 @@ func (s *EventService) ListEvents(ctx context.Context, in *campaignv1.ListEvents
 	var cursorReverse bool
 	pageToken := strings.TrimSpace(in.GetPageToken())
 	if pageToken != "" {
-		c, err := cursor.Decode(pageToken)
+		c, err := pagination.Decode(pageToken)
 		if err != nil {
 			return nil, status.Errorf(codes.InvalidArgument, "invalid page_token: %v", err)
 		}
 		// Validate filter hasn't changed
-		if err := cursor.ValidateFilterHash(c, filterStr); err != nil {
+		if err := pagination.ValidateFilterHash(c, filterStr); err != nil {
 			return nil, status.Errorf(codes.InvalidArgument, "page_token invalid: %v", err)
 		}
 		// Validate order_by hasn't changed
-		if err := cursor.ValidateOrderHash(c, orderBy); err != nil {
+		if err := pagination.ValidateOrderHash(c, orderBy); err != nil {
 			return nil, status.Errorf(codes.InvalidArgument, "page_token invalid: %v", err)
 		}
-		cursorSeq = c.Seq
+		seqValue, err := pagination.ValueUint(c, "seq")
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "page_token invalid: %v", err)
+		}
+		cursorSeq = seqValue
 		cursorDir = string(c.Dir)
 		cursorReverse = c.Reverse
 	}
@@ -172,16 +169,26 @@ func (s *EventService) ListEvents(ctx context.Context, in *campaignv1.ListEvents
 	if len(result.Events) > 0 {
 		if result.HasNextPage {
 			lastSeq := result.Events[len(result.Events)-1].Seq
-			nextCursor := cursor.NewNextPageCursor(lastSeq, descending, filterStr, orderBy)
-			token, err := cursor.Encode(nextCursor)
+			nextCursor := pagination.NewNextPageCursor(
+				[]pagination.CursorValue{pagination.UintValue("seq", lastSeq)},
+				descending,
+				filterStr,
+				orderBy,
+			)
+			token, err := pagination.Encode(nextCursor)
 			if err == nil {
 				response.NextPageToken = token
 			}
 		}
 		if result.HasPrevPage {
 			firstSeq := result.Events[0].Seq
-			prevCursor := cursor.NewPrevPageCursor(firstSeq, descending, filterStr, orderBy)
-			token, err := cursor.Encode(prevCursor)
+			prevCursor := pagination.NewPrevPageCursor(
+				[]pagination.CursorValue{pagination.UintValue("seq", firstSeq)},
+				descending,
+				filterStr,
+				orderBy,
+			)
+			token, err := pagination.Encode(prevCursor)
 			if err == nil {
 				response.PreviousPageToken = token
 			}
