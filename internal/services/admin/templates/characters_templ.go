@@ -5,8 +5,10 @@ package templates
 
 //lint:file-ignore SA4006 This context is only used if a nested component is present.
 
-import "github.com/a-h/templ"
-import templruntime "github.com/a-h/templ/runtime"
+import (
+	"github.com/a-h/templ"
+	templruntime "github.com/a-h/templ/runtime"
+)
 
 // CharactersListFullPage renders the characters list in the base layout.
 func CharactersListFullPage(campaignID string, campaignName string, page PageContext) templ.Component {

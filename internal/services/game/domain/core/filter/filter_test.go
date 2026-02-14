@@ -306,9 +306,9 @@ func TestExtractConstValue_Nil(t *testing.T) {
 
 func TestExtractConstValue_Types(t *testing.T) {
 	tests := []struct {
-		name  string
-		c     *expr.Constant
-		want  any
+		name string
+		c    *expr.Constant
+		want any
 	}{
 		{"int64", &expr.Constant{ConstantKind: &expr.Constant_Int64Value{Int64Value: 42}}, int64(42)},
 		{"uint64", &expr.Constant{ConstantKind: &expr.Constant_Uint64Value{Uint64Value: 42}}, uint64(42)},

@@ -21,7 +21,7 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	authserver "github.com/louisbranch/fracturing.space/internal/services/auth/app"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
-	"github.com/louisbranch/fracturing.space/internal/services/game/app"
+	server "github.com/louisbranch/fracturing.space/internal/services/game/app"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/mcp/domain"
 	"github.com/modelcontextprotocol/go-sdk/mcp"

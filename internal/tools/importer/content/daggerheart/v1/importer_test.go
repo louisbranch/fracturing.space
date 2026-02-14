@@ -353,7 +353,7 @@ func TestToStorageDamageDice(t *testing.T) {
 func TestToStorageAdversaryAttack(t *testing.T) {
 	input := adversaryAttackRecord{
 		Name: "Slash", Range: "melee",
-		DamageDice: []damageDieRecord{{Sides: 6, Count: 1}},
+		DamageDice:  []damageDieRecord{{Sides: 6, Count: 1}},
 		DamageBonus: 2, DamageType: "physical",
 	}
 	got := toStorageAdversaryAttack(input)
@@ -386,7 +386,7 @@ func TestToStorageAdversaryFeatures(t *testing.T) {
 func TestToStorageBeastformAttack(t *testing.T) {
 	input := beastformAttackRecord{
 		Range: "close", Trait: "ferocity",
-		DamageDice: []damageDieRecord{{Sides: 8, Count: 2}},
+		DamageDice:  []damageDieRecord{{Sides: 8, Count: 2}},
 		DamageBonus: 1, DamageType: "physical",
 	}
 	got := toStorageBeastformAttack(input)
@@ -660,7 +660,7 @@ func TestUpsertEnvironments(t *testing.T) {
 	store := newFakeContentStore()
 	items := []environmentRecord{{
 		ID: "env-1", Name: "Forest", Tier: 1, Type: "wilderness",
-		Difficulty: 2,
+		Difficulty:            2,
 		Impulses:              []string{"hide", "ambush"},
 		PotentialAdversaryIDs: []string{"adv-1"},
 		Features: []featureRecord{

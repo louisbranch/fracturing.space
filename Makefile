@@ -8,7 +8,7 @@ PROTO_FILES := \
 	$(wildcard $(PROTO_DIR)/game/v1/*.proto) \
 	$(wildcard $(PROTO_DIR)/systems/daggerheart/v1/*.proto)
 
-.PHONY: all proto clean run cover cover-treemap test integration scenario templ-generate event-catalog-check
+.PHONY: all proto clean run cover cover-treemap test integration scenario templ-generate event-catalog-check fmt fmt-check
 
 all: proto
 
@@ -24,6 +24,20 @@ proto:
 
 templ-generate:
 	go run github.com/a-h/templ/cmd/templ@v0.3.977 generate ./...
+
+fmt:
+	goimports -w .
+
+fmt-check:
+	@bash -euo pipefail -c '\
+	  unformatted="$$(goimports -l .)"; \
+	  if [ -n "$$unformatted" ]; then \
+	    echo "Go files need formatting:"; \
+	    printf "%s\n" "$$unformatted"; \
+	    exit 1; \
+	  fi; \
+	  echo "Go formatting check passed." \
+	'
 
 clean:
 	rm -rf $(GEN_GO_DIR)

@@ -16,7 +16,7 @@ import (
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	authserver "github.com/louisbranch/fracturing.space/internal/services/auth/app"
-	"github.com/louisbranch/fracturing.space/internal/services/game/app"
+	server "github.com/louisbranch/fracturing.space/internal/services/game/app"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/invite"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"

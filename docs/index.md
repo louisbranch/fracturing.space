@@ -20,6 +20,7 @@ management for LLM and traditional clients.
 - [Event replay and snapshots](project/event-replay.md)
 - [Game systems architecture](project/game-systems.md)
 - [MCP tools and resources](reference/mcp.md)
+- [Go formatting baseline](notes/goimports-formatting.md)
 
 ## Key concepts
 

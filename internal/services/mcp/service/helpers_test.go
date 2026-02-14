@@ -43,9 +43,9 @@ func TestIsLoopbackHost(t *testing.T) {
 
 func TestNormalizeHost(t *testing.T) {
 	tests := []struct {
-		input   string
-		want    string
-		wantOk  bool
+		input  string
+		want   string
+		wantOk bool
 	}{
 		{"localhost:8081", "localhost", true},
 		{"example.com:443", "example.com", true},

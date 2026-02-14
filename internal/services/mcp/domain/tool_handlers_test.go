@@ -1327,18 +1327,18 @@ func TestCharacterProfilePatchHandler_AllFields(t *testing.T) {
 		getCtx := func() Context { return Context{CampaignID: "c1"} }
 		handler := CharacterProfilePatchHandler(client, getCtx, nil)
 		_, _, err := handler(context.Background(), nil, CharacterProfilePatchInput{
-			CharacterID:    "ch1",
-			HpMax:          intPtr(25),
-			StressMax:      intPtr(6),
-			Evasion:        intPtr(10),
-			MajorThreshold: intPtr(7),
+			CharacterID:     "ch1",
+			HpMax:           intPtr(25),
+			StressMax:       intPtr(6),
+			Evasion:         intPtr(10),
+			MajorThreshold:  intPtr(7),
 			SevereThreshold: intPtr(14),
-			Agility:        intPtr(2),
-			Strength:       intPtr(1),
-			Finesse:        intPtr(3),
-			Instinct:       intPtr(0),
-			Presence:       intPtr(2),
-			Knowledge:      intPtr(1),
+			Agility:         intPtr(2),
+			Strength:        intPtr(1),
+			Finesse:         intPtr(3),
+			Instinct:        intPtr(0),
+			Presence:        intPtr(2),
+			Knowledge:       intPtr(1),
 		})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)

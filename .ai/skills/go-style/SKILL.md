@@ -20,6 +20,8 @@ go test -cover ./...                # Run with coverage
 go test ./path/to/pkg -run '^TestName$' # Run single test
 go vet ./...                        # Vet all packages
 goimports -w .                      # Format with import sorting
+goimports -l .                      # List unformatted files
+make fmt-check                      # CI formatting check
 go mod tidy                         # Clean up dependencies
 ```
 
@@ -30,6 +32,7 @@ Group imports: standard library, third-party, local. Use `goimports` to manage o
 ## Formatting
 
 - Run `goimports` on edited files
+- Use `make fmt-check` before pushing or rely on CI
 - Prefer early returns to reduce nesting
 - Keep line length reasonable; break long expressions
 - Avoid inline `if err := ...` for multi-line bodies

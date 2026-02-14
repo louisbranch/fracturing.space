@@ -220,11 +220,11 @@ func TestLookupDotPath(t *testing.T) {
 
 func TestParseSegment(t *testing.T) {
 	tests := []struct {
-		name       string
-		segment    string
-		wantField  string
-		wantLen    int
-		wantErr    bool
+		name      string
+		segment   string
+		wantField string
+		wantLen   int
+		wantErr   bool
 	}{
 		{"simple field", "name", "name", 0, false},
 		{"with index", "items[0]", "items", 1, false},

@@ -18,7 +18,7 @@ func Run(ctx context.Context, grpcAddr, httpAddr, transport string) error {
 	default:
 		return fmt.Errorf("invalid transport %q: must be 'stdio' or 'http'", transport)
 	}
-	
+
 	return service.Run(ctx, service.Config{
 		GRPCAddr:  grpcAddr,
 		HTTPAddr:  httpAddr,

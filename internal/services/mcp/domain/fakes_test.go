@@ -122,20 +122,20 @@ func (f *fakeParticipantClient) GetParticipant(_ context.Context, _ *statev1.Get
 type fakeCharacterClient struct {
 	statev1.CharacterServiceClient
 
-	createResp      *statev1.CreateCharacterResponse
-	createErr       error
-	updateResp      *statev1.UpdateCharacterResponse
-	updateErr       error
-	deleteResp      *statev1.DeleteCharacterResponse
-	deleteErr       error
-	listResp        *statev1.ListCharactersResponse
-	listErr         error
-	controlResp     *statev1.SetDefaultControlResponse
-	controlErr      error
-	sheetResp       *statev1.GetCharacterSheetResponse
-	sheetErr        error
-	profileResp     *statev1.PatchCharacterProfileResponse
-	profileErr      error
+	createResp  *statev1.CreateCharacterResponse
+	createErr   error
+	updateResp  *statev1.UpdateCharacterResponse
+	updateErr   error
+	deleteResp  *statev1.DeleteCharacterResponse
+	deleteErr   error
+	listResp    *statev1.ListCharactersResponse
+	listErr     error
+	controlResp *statev1.SetDefaultControlResponse
+	controlErr  error
+	sheetResp   *statev1.GetCharacterSheetResponse
+	sheetErr    error
+	profileResp *statev1.PatchCharacterProfileResponse
+	profileErr  error
 }
 
 func (f *fakeCharacterClient) CreateCharacter(_ context.Context, _ *statev1.CreateCharacterRequest, _ ...grpc.CallOption) (*statev1.CreateCharacterResponse, error) {

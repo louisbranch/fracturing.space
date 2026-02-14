@@ -22,7 +22,7 @@ type fakeDaggerheartAdversaryStore struct {
 func newFakeDaggerheartAdversaryStore() *fakeDaggerheartAdversaryStore {
 	return &fakeDaggerheartAdversaryStore{
 		fakeDaggerheartStore: *newFakeDaggerheartStore(),
-		adversaries:         make(map[string]storage.DaggerheartAdversary),
+		adversaries:          make(map[string]storage.DaggerheartAdversary),
 	}
 }
 

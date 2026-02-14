@@ -945,16 +945,20 @@ type testFullClientProvider struct {
 	snapshot    statev1.SnapshotServiceClient
 }
 
-func (p testFullClientProvider) CampaignClient() statev1.CampaignServiceClient     { return p.campaign }
-func (p testFullClientProvider) SessionClient() statev1.SessionServiceClient        { return p.session }
-func (p testFullClientProvider) CharacterClient() statev1.CharacterServiceClient    { return p.character }
-func (p testFullClientProvider) ParticipantClient() statev1.ParticipantServiceClient { return p.participant }
-func (p testFullClientProvider) InviteClient() statev1.InviteServiceClient          { return p.invite }
-func (p testFullClientProvider) EventClient() statev1.EventServiceClient            { return p.event }
-func (p testFullClientProvider) SnapshotClient() statev1.SnapshotServiceClient      { return p.snapshot }
-func (p testFullClientProvider) StatisticsClient() statev1.StatisticsServiceClient  { return p.statistics }
-func (p testFullClientProvider) SystemClient() statev1.SystemServiceClient          { return p.system }
-func (p testFullClientProvider) AuthClient() authv1.AuthServiceClient               { return p.auth }
+func (p testFullClientProvider) CampaignClient() statev1.CampaignServiceClient   { return p.campaign }
+func (p testFullClientProvider) SessionClient() statev1.SessionServiceClient     { return p.session }
+func (p testFullClientProvider) CharacterClient() statev1.CharacterServiceClient { return p.character }
+func (p testFullClientProvider) ParticipantClient() statev1.ParticipantServiceClient {
+	return p.participant
+}
+func (p testFullClientProvider) InviteClient() statev1.InviteServiceClient     { return p.invite }
+func (p testFullClientProvider) EventClient() statev1.EventServiceClient       { return p.event }
+func (p testFullClientProvider) SnapshotClient() statev1.SnapshotServiceClient { return p.snapshot }
+func (p testFullClientProvider) StatisticsClient() statev1.StatisticsServiceClient {
+	return p.statistics
+}
+func (p testFullClientProvider) SystemClient() statev1.SystemServiceClient { return p.system }
+func (p testFullClientProvider) AuthClient() authv1.AuthServiceClient      { return p.auth }
 
 // --- Handler route tests ---
 
@@ -2709,10 +2713,10 @@ func TestRenderCharacterSheet(t *testing.T) {
 		characterClient := &testCharacterClient{
 			sheetResponse: &statev1.GetCharacterSheetResponse{
 				Character: &statev1.Character{
-					Id:         "ch-1",
-					CampaignId: "camp-1",
-					Name:       "Warrior",
-					Kind:       statev1.CharacterKind_PC,
+					Id:            "ch-1",
+					CampaignId:    "camp-1",
+					Name:          "Warrior",
+					Kind:          statev1.CharacterKind_PC,
 					ParticipantId: wrapperspb.String("p-1"),
 				},
 			},
@@ -3691,10 +3695,10 @@ func TestSystemDetailGetError(t *testing.T) {
 func TestCampaignCreateNilClient(t *testing.T) {
 	handler := NewHandler(testClientProvider{}) // no campaign client
 	form := url.Values{
-		"user_id":  {"user-1"},
-		"name":     {"Test Campaign"},
-		"system":   {"daggerheart"},
-		"gm_mode":  {"human"},
+		"user_id": {"user-1"},
+		"name":    {"Test Campaign"},
+		"system":  {"daggerheart"},
+		"gm_mode": {"human"},
 	}
 	req := httptest.NewRequest(http.MethodPost, "http://example.com/campaigns/create", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -4326,4 +4330,3 @@ func TestDashboardContentNilClients(t *testing.T) {
 		t.Fatalf("expected 200, got %d", rec.Code)
 	}
 }
-

@@ -1228,7 +1228,10 @@ func TestListContentEndpoints_NoStore(t *testing.T) {
 		{"ListWeapons", func() error { _, err := svc.ListWeapons(ctx, &pb.ListDaggerheartWeaponsRequest{}); return err }},
 		{"ListArmor", func() error { _, err := svc.ListArmor(ctx, &pb.ListDaggerheartArmorRequest{}); return err }},
 		{"ListItems", func() error { _, err := svc.ListItems(ctx, &pb.ListDaggerheartItemsRequest{}); return err }},
-		{"ListEnvironments", func() error { _, err := svc.ListEnvironments(ctx, &pb.ListDaggerheartEnvironmentsRequest{}); return err }},
+		{"ListEnvironments", func() error {
+			_, err := svc.ListEnvironments(ctx, &pb.ListDaggerheartEnvironmentsRequest{})
+			return err
+		}},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -1249,7 +1252,10 @@ func TestGetContentEndpoints_NoStore(t *testing.T) {
 		{"GetClass", func() error { _, err := svc.GetClass(ctx, &pb.GetDaggerheartClassRequest{Id: "x"}); return err }},
 		{"GetSubclass", func() error { _, err := svc.GetSubclass(ctx, &pb.GetDaggerheartSubclassRequest{Id: "x"}); return err }},
 		{"GetHeritage", func() error { _, err := svc.GetHeritage(ctx, &pb.GetDaggerheartHeritageRequest{Id: "x"}); return err }},
-		{"GetExperience", func() error { _, err := svc.GetExperience(ctx, &pb.GetDaggerheartExperienceRequest{Id: "x"}); return err }},
+		{"GetExperience", func() error {
+			_, err := svc.GetExperience(ctx, &pb.GetDaggerheartExperienceRequest{Id: "x"})
+			return err
+		}},
 		{"GetAdversary", func() error { _, err := svc.GetAdversary(ctx, &pb.GetDaggerheartAdversaryRequest{Id: "x"}); return err }},
 		{"GetBeastform", func() error { _, err := svc.GetBeastform(ctx, &pb.GetDaggerheartBeastformRequest{Id: "x"}); return err }},
 		{"GetCompanionExperience", func() error {
@@ -1257,13 +1263,22 @@ func TestGetContentEndpoints_NoStore(t *testing.T) {
 			return err
 		}},
 		{"GetLootEntry", func() error { _, err := svc.GetLootEntry(ctx, &pb.GetDaggerheartLootEntryRequest{Id: "x"}); return err }},
-		{"GetDamageType", func() error { _, err := svc.GetDamageType(ctx, &pb.GetDaggerheartDamageTypeRequest{Id: "x"}); return err }},
+		{"GetDamageType", func() error {
+			_, err := svc.GetDamageType(ctx, &pb.GetDaggerheartDamageTypeRequest{Id: "x"})
+			return err
+		}},
 		{"GetDomain", func() error { _, err := svc.GetDomain(ctx, &pb.GetDaggerheartDomainRequest{Id: "x"}); return err }},
-		{"GetDomainCard", func() error { _, err := svc.GetDomainCard(ctx, &pb.GetDaggerheartDomainCardRequest{Id: "x"}); return err }},
+		{"GetDomainCard", func() error {
+			_, err := svc.GetDomainCard(ctx, &pb.GetDaggerheartDomainCardRequest{Id: "x"})
+			return err
+		}},
 		{"GetWeapon", func() error { _, err := svc.GetWeapon(ctx, &pb.GetDaggerheartWeaponRequest{Id: "x"}); return err }},
 		{"GetArmor", func() error { _, err := svc.GetArmor(ctx, &pb.GetDaggerheartArmorRequest{Id: "x"}); return err }},
 		{"GetItem", func() error { _, err := svc.GetItem(ctx, &pb.GetDaggerheartItemRequest{Id: "x"}); return err }},
-		{"GetEnvironment", func() error { _, err := svc.GetEnvironment(ctx, &pb.GetDaggerheartEnvironmentRequest{Id: "x"}); return err }},
+		{"GetEnvironment", func() error {
+			_, err := svc.GetEnvironment(ctx, &pb.GetDaggerheartEnvironmentRequest{Id: "x"})
+			return err
+		}},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -1283,7 +1298,10 @@ func TestGetContentEndpoints_EmptyID(t *testing.T) {
 	}{
 		{"GetSubclass", func() error { _, err := svc.GetSubclass(ctx, &pb.GetDaggerheartSubclassRequest{Id: ""}); return err }},
 		{"GetHeritage", func() error { _, err := svc.GetHeritage(ctx, &pb.GetDaggerheartHeritageRequest{Id: ""}); return err }},
-		{"GetExperience", func() error { _, err := svc.GetExperience(ctx, &pb.GetDaggerheartExperienceRequest{Id: ""}); return err }},
+		{"GetExperience", func() error {
+			_, err := svc.GetExperience(ctx, &pb.GetDaggerheartExperienceRequest{Id: ""})
+			return err
+		}},
 		{"GetAdversary", func() error { _, err := svc.GetAdversary(ctx, &pb.GetDaggerheartAdversaryRequest{Id: ""}); return err }},
 		{"GetBeastform", func() error { _, err := svc.GetBeastform(ctx, &pb.GetDaggerheartBeastformRequest{Id: ""}); return err }},
 		{"GetCompanionExperience", func() error {
@@ -1291,13 +1309,22 @@ func TestGetContentEndpoints_EmptyID(t *testing.T) {
 			return err
 		}},
 		{"GetLootEntry", func() error { _, err := svc.GetLootEntry(ctx, &pb.GetDaggerheartLootEntryRequest{Id: ""}); return err }},
-		{"GetDamageType", func() error { _, err := svc.GetDamageType(ctx, &pb.GetDaggerheartDamageTypeRequest{Id: ""}); return err }},
+		{"GetDamageType", func() error {
+			_, err := svc.GetDamageType(ctx, &pb.GetDaggerheartDamageTypeRequest{Id: ""})
+			return err
+		}},
 		{"GetDomain", func() error { _, err := svc.GetDomain(ctx, &pb.GetDaggerheartDomainRequest{Id: ""}); return err }},
-		{"GetDomainCard", func() error { _, err := svc.GetDomainCard(ctx, &pb.GetDaggerheartDomainCardRequest{Id: ""}); return err }},
+		{"GetDomainCard", func() error {
+			_, err := svc.GetDomainCard(ctx, &pb.GetDaggerheartDomainCardRequest{Id: ""})
+			return err
+		}},
 		{"GetWeapon", func() error { _, err := svc.GetWeapon(ctx, &pb.GetDaggerheartWeaponRequest{Id: ""}); return err }},
 		{"GetArmor", func() error { _, err := svc.GetArmor(ctx, &pb.GetDaggerheartArmorRequest{Id: ""}); return err }},
 		{"GetItem", func() error { _, err := svc.GetItem(ctx, &pb.GetDaggerheartItemRequest{Id: ""}); return err }},
-		{"GetEnvironment", func() error { _, err := svc.GetEnvironment(ctx, &pb.GetDaggerheartEnvironmentRequest{Id: ""}); return err }},
+		{"GetEnvironment", func() error {
+			_, err := svc.GetEnvironment(ctx, &pb.GetDaggerheartEnvironmentRequest{Id: ""})
+			return err
+		}},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -1315,23 +1342,50 @@ func TestGetContentEndpoints_NotFound(t *testing.T) {
 		name string
 		fn   func() error
 	}{
-		{"GetSubclass", func() error { _, err := svc.GetSubclass(ctx, &pb.GetDaggerheartSubclassRequest{Id: "missing"}); return err }},
-		{"GetHeritage", func() error { _, err := svc.GetHeritage(ctx, &pb.GetDaggerheartHeritageRequest{Id: "missing"}); return err }},
-		{"GetExperience", func() error { _, err := svc.GetExperience(ctx, &pb.GetDaggerheartExperienceRequest{Id: "missing"}); return err }},
-		{"GetAdversary", func() error { _, err := svc.GetAdversary(ctx, &pb.GetDaggerheartAdversaryRequest{Id: "missing"}); return err }},
-		{"GetBeastform", func() error { _, err := svc.GetBeastform(ctx, &pb.GetDaggerheartBeastformRequest{Id: "missing"}); return err }},
+		{"GetSubclass", func() error {
+			_, err := svc.GetSubclass(ctx, &pb.GetDaggerheartSubclassRequest{Id: "missing"})
+			return err
+		}},
+		{"GetHeritage", func() error {
+			_, err := svc.GetHeritage(ctx, &pb.GetDaggerheartHeritageRequest{Id: "missing"})
+			return err
+		}},
+		{"GetExperience", func() error {
+			_, err := svc.GetExperience(ctx, &pb.GetDaggerheartExperienceRequest{Id: "missing"})
+			return err
+		}},
+		{"GetAdversary", func() error {
+			_, err := svc.GetAdversary(ctx, &pb.GetDaggerheartAdversaryRequest{Id: "missing"})
+			return err
+		}},
+		{"GetBeastform", func() error {
+			_, err := svc.GetBeastform(ctx, &pb.GetDaggerheartBeastformRequest{Id: "missing"})
+			return err
+		}},
 		{"GetCompanionExperience", func() error {
 			_, err := svc.GetCompanionExperience(ctx, &pb.GetDaggerheartCompanionExperienceRequest{Id: "missing"})
 			return err
 		}},
-		{"GetLootEntry", func() error { _, err := svc.GetLootEntry(ctx, &pb.GetDaggerheartLootEntryRequest{Id: "missing"}); return err }},
-		{"GetDamageType", func() error { _, err := svc.GetDamageType(ctx, &pb.GetDaggerheartDamageTypeRequest{Id: "missing"}); return err }},
+		{"GetLootEntry", func() error {
+			_, err := svc.GetLootEntry(ctx, &pb.GetDaggerheartLootEntryRequest{Id: "missing"})
+			return err
+		}},
+		{"GetDamageType", func() error {
+			_, err := svc.GetDamageType(ctx, &pb.GetDaggerheartDamageTypeRequest{Id: "missing"})
+			return err
+		}},
 		{"GetDomain", func() error { _, err := svc.GetDomain(ctx, &pb.GetDaggerheartDomainRequest{Id: "missing"}); return err }},
-		{"GetDomainCard", func() error { _, err := svc.GetDomainCard(ctx, &pb.GetDaggerheartDomainCardRequest{Id: "missing"}); return err }},
+		{"GetDomainCard", func() error {
+			_, err := svc.GetDomainCard(ctx, &pb.GetDaggerheartDomainCardRequest{Id: "missing"})
+			return err
+		}},
 		{"GetWeapon", func() error { _, err := svc.GetWeapon(ctx, &pb.GetDaggerheartWeaponRequest{Id: "missing"}); return err }},
 		{"GetArmor", func() error { _, err := svc.GetArmor(ctx, &pb.GetDaggerheartArmorRequest{Id: "missing"}); return err }},
 		{"GetItem", func() error { _, err := svc.GetItem(ctx, &pb.GetDaggerheartItemRequest{Id: "missing"}); return err }},
-		{"GetEnvironment", func() error { _, err := svc.GetEnvironment(ctx, &pb.GetDaggerheartEnvironmentRequest{Id: "missing"}); return err }},
+		{"GetEnvironment", func() error {
+			_, err := svc.GetEnvironment(ctx, &pb.GetDaggerheartEnvironmentRequest{Id: "missing"})
+			return err
+		}},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
