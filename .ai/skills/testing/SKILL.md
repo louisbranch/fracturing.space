@@ -31,6 +31,10 @@ Examples:
 - "Coverage: ran `make cover`, total 82.4% (baseline 82.5%, -0.1%)."
 - "Coverage: not run (reason), CI non-regression gate will validate."
 
+## Testability
+
+See [Testability Practices](../../../docs/project/testability.md) for dependency injection and constructor patterns.
+
 ## Verification
 
 Project-wide verification commands live in `AGENTS.md`.

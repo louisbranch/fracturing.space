@@ -28,6 +28,10 @@ If you introduce new generated outputs, update the regex to exclude them. Exampl
 - `internal/services/*/storage/sqlite/db/` (sqlc output)
 - `*_templ.go` or `internal/services/admin/templates/` (templ output)
 
+## Structuring code for testability
+
+See [Testability Practices](testability.md) for dependency injection and constructor patterns that keep new code testable from the start.
+
 ## Raising the bar
 
 Once the baseline is consistently stable, we can add a fixed target threshold on top of the non-regression gate.
