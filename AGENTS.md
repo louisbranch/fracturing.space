@@ -59,6 +59,7 @@ Skills live in `.ai/skills/`.
 | `game-system` | Steps and checklists for adding a new game system | when implementing a new system |
 | `mcp` | MCP tool/resource guidance and parity rules with gRPC | when touching MCP tooling or MCP endpoints |
 | `web-server` | Web UI and transport layer conventions | when working on web UI or HTTP transport |
+| `pr-issues` | PR review triage, fixes, testing, and auto-merge workflow | when triaging or fixing PR review comments |
 
 ## Docs
 
