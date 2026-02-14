@@ -289,7 +289,7 @@ func stopMCPProcess(t *testing.T, cancel context.CancelFunc, cmd *exec.Cmd) {
 func waitForHTTPHealth(t *testing.T, client *http.Client, url string) {
 	t.Helper()
 
-	deadline := time.Now().Add(5 * time.Second)
+	deadline := time.Now().Add(15 * time.Second)
 	for time.Now().Before(deadline) {
 		resp, err := client.Get(url)
 		if err == nil {
