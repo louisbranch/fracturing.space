@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/caarlos0/env/v11"
+
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	authservice "github.com/louisbranch/fracturing.space/internal/services/auth/api/grpc/auth"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/oauth"
@@ -22,6 +24,20 @@ import (
 	"google.golang.org/grpc/health"
 	grpc_health_v1 "google.golang.org/grpc/health/grpc_health_v1"
 )
+
+// authServerEnv holds env-parsed configuration for the auth server.
+type authServerEnv struct {
+	DBPath string `env:"FRACTURING_SPACE_AUTH_DB_PATH"`
+}
+
+func loadAuthServerEnv() authServerEnv {
+	var cfg authServerEnv
+	_ = env.Parse(&cfg)
+	if cfg.DBPath == "" {
+		cfg.DBPath = filepath.Join("data", "auth.db")
+	}
+	return cfg
+}
 
 // Server hosts the auth service.
 type Server struct {
@@ -37,11 +53,12 @@ type Server struct {
 
 // New creates a configured auth server listening on the provided port.
 func New(port int, httpAddr string) (*Server, error) {
+	srvEnv := loadAuthServerEnv()
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		return nil, fmt.Errorf("listen on port %d: %w", port, err)
 	}
-	store, err := openAuthStore()
+	store, err := openAuthStore(srvEnv.DBPath)
 	if err != nil {
 		_ = listener.Close()
 		return nil, err
@@ -184,11 +201,7 @@ func (s *Server) Serve(ctx context.Context) error {
 	}
 }
 
-func openAuthStore() (*authsqlite.Store, error) {
-	path := strings.TrimSpace(os.Getenv("FRACTURING_SPACE_AUTH_DB_PATH"))
-	if path == "" {
-		path = filepath.Join("data", "auth.db")
-	}
+func openAuthStore(path string) (*authsqlite.Store, error) {
 	if dir := filepath.Dir(path); dir != "." {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
 			return nil, fmt.Errorf("create storage dir: %w", err)

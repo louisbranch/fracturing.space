@@ -23,33 +23,6 @@ func TestCreateCharacter_NilRequest(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
-func TestCreateCharacter_MissingCharacterStore(t *testing.T) {
-	svc := NewCharacterService(Stores{
-		Campaign:    newFakeCampaignStore(),
-		Daggerheart: newFakeDaggerheartStore(),
-	})
-	_, err := svc.CreateCharacter(context.Background(), &statev1.CreateCharacterRequest{
-		CampaignId: "c1",
-		Name:       "Hero",
-		Kind:       statev1.CharacterKind_PC,
-	})
-	assertStatusCode(t, err, codes.Internal)
-}
-
-func TestCreateCharacter_MissingEventStore(t *testing.T) {
-	svc := NewCharacterService(Stores{
-		Campaign:    newFakeCampaignStore(),
-		Character:   newFakeCharacterStore(),
-		Daggerheart: newFakeDaggerheartStore(),
-	})
-	_, err := svc.CreateCharacter(context.Background(), &statev1.CreateCharacterRequest{
-		CampaignId: "c1",
-		Name:       "Hero",
-		Kind:       statev1.CharacterKind_PC,
-	})
-	assertStatusCode(t, err, codes.Internal)
-}
-
 func TestCreateCharacter_MissingCampaignId(t *testing.T) {
 	svc := NewCharacterService(Stores{
 		Campaign:    newFakeCampaignStore(),
@@ -935,15 +908,6 @@ func TestDeleteCharacter_NilRequest(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
-func TestDeleteCharacter_MissingStores(t *testing.T) {
-	svc := NewCharacterService(Stores{Campaign: newFakeCampaignStore()})
-	_, err := svc.DeleteCharacter(context.Background(), &statev1.DeleteCharacterRequest{
-		CampaignId:  "c1",
-		CharacterId: "ch1",
-	})
-	assertStatusCode(t, err, codes.Internal)
-}
-
 func TestDeleteCharacter_MissingCampaignId(t *testing.T) {
 	svc := NewCharacterService(Stores{Campaign: newFakeCampaignStore(), Character: newFakeCharacterStore(), Event: newFakeEventStore()})
 	_, err := svc.DeleteCharacter(context.Background(), &statev1.DeleteCharacterRequest{
@@ -980,15 +944,6 @@ func TestDeleteCharacter_CharacterNotFound(t *testing.T) {
 		CharacterId: "ch1",
 	})
 	assertStatusCode(t, err, codes.NotFound)
-}
-
-func TestPatchCharacterProfile_MissingDaggerheartStore(t *testing.T) {
-	svc := NewCharacterService(Stores{Event: newFakeEventStore()})
-	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
-		CampaignId:  "c1",
-		CharacterId: "ch1",
-	})
-	assertStatusCode(t, err, codes.Internal)
 }
 
 func TestPatchCharacterProfile_HpMaxTooHigh(t *testing.T) {

@@ -4,10 +4,11 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/louisbranch/fracturing.space/internal/platform/config"
 
 	scenariocmd "github.com/louisbranch/fracturing.space/internal/cmd/scenario"
 )
@@ -15,22 +16,13 @@ import (
 func main() {
 	cfg, err := scenariocmd.ParseConfig(flag.CommandLine, os.Args[1:])
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+		config.Exitf("Error: %v", err)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		<-sigChan
-		cancel()
-	}()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
 	if err := scenariocmd.Run(ctx, cfg, os.Stdout, os.Stderr); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+		config.Exitf("Error: %v", err)
 	}
 }

@@ -13,7 +13,6 @@ import (
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -47,16 +46,6 @@ func NewSessionService(stores Stores) *SessionService {
 func (s *SessionService) StartSession(ctx context.Context, in *campaignv1.StartSessionRequest) (*campaignv1.StartSessionResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "start session request is required")
-	}
-
-	if s.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if s.stores.Session == nil {
-		return nil, status.Error(codes.Internal, "session store is not configured")
-	}
-	if s.stores.Event == nil {
-		return nil, status.Error(codes.Internal, "event store is not configured")
 	}
 
 	campaignID := strings.TrimSpace(in.GetCampaignId())
@@ -97,11 +86,7 @@ func (s *SessionService) StartSession(ctx context.Context, in *campaignv1.StartS
 		return nil, handleDomainError(err)
 	}
 
-	applier := projection.Applier{
-		Campaign:    s.stores.Campaign,
-		Session:     s.stores.Session,
-		SessionGate: s.stores.SessionGate,
-	}
+	applier := s.stores.Applier()
 
 	if c.Status == campaign.CampaignStatusDraft {
 		payload := event.CampaignUpdatedPayload{
@@ -186,13 +171,6 @@ func (s *SessionService) ListSessions(ctx context.Context, in *campaignv1.ListSe
 		return nil, status.Error(codes.InvalidArgument, "list sessions request is required")
 	}
 
-	if s.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if s.stores.Session == nil {
-		return nil, status.Error(codes.Internal, "session store is not configured")
-	}
-
 	campaignID := strings.TrimSpace(in.GetCampaignId())
 	if campaignID == "" {
 		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
@@ -233,13 +211,6 @@ func (s *SessionService) GetSession(ctx context.Context, in *campaignv1.GetSessi
 		return nil, status.Error(codes.InvalidArgument, "get session request is required")
 	}
 
-	if s.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if s.stores.Session == nil {
-		return nil, status.Error(codes.Internal, "session store is not configured")
-	}
-
 	campaignID := strings.TrimSpace(in.GetCampaignId())
 	if campaignID == "" {
 		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
@@ -269,16 +240,6 @@ func (s *SessionService) GetSession(ctx context.Context, in *campaignv1.GetSessi
 func (s *SessionService) EndSession(ctx context.Context, in *campaignv1.EndSessionRequest) (*campaignv1.EndSessionResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "end session request is required")
-	}
-
-	if s.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if s.stores.Session == nil {
-		return nil, status.Error(codes.Internal, "session store is not configured")
-	}
-	if s.stores.Event == nil {
-		return nil, status.Error(codes.Internal, "event store is not configured")
 	}
 
 	campaignID := strings.TrimSpace(in.GetCampaignId())
@@ -337,7 +298,7 @@ func (s *SessionService) EndSession(ctx context.Context, in *campaignv1.EndSessi
 		return nil, status.Errorf(codes.Internal, "append event: %v", err)
 	}
 
-	applier := projection.Applier{Session: s.stores.Session}
+	applier := s.stores.Applier()
 	if err := applier.Apply(ctx, stored); err != nil {
 		return nil, status.Errorf(codes.Internal, "apply event: %v", err)
 	}
@@ -357,19 +318,6 @@ func (s *SessionService) OpenSessionGate(ctx context.Context, in *campaignv1.Ope
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "open session gate request is required")
 	}
-	if s.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if s.stores.Session == nil {
-		return nil, status.Error(codes.Internal, "session store is not configured")
-	}
-	if s.stores.SessionGate == nil {
-		return nil, status.Error(codes.Internal, "session gate store is not configured")
-	}
-	if s.stores.Event == nil {
-		return nil, status.Error(codes.Internal, "event store is not configured")
-	}
-
 	campaignID := strings.TrimSpace(in.GetCampaignId())
 	if campaignID == "" {
 		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
@@ -451,7 +399,7 @@ func (s *SessionService) OpenSessionGate(ctx context.Context, in *campaignv1.Ope
 		return nil, status.Errorf(codes.Internal, "append event: %v", err)
 	}
 
-	applier := projection.Applier{SessionGate: s.stores.SessionGate}
+	applier := s.stores.Applier()
 	if err := applier.Apply(ctx, stored); err != nil {
 		return nil, status.Errorf(codes.Internal, "apply event: %v", err)
 	}
@@ -473,19 +421,6 @@ func (s *SessionService) ResolveSessionGate(ctx context.Context, in *campaignv1.
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "resolve session gate request is required")
 	}
-	if s.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if s.stores.Session == nil {
-		return nil, status.Error(codes.Internal, "session store is not configured")
-	}
-	if s.stores.SessionGate == nil {
-		return nil, status.Error(codes.Internal, "session gate store is not configured")
-	}
-	if s.stores.Event == nil {
-		return nil, status.Error(codes.Internal, "event store is not configured")
-	}
-
 	campaignID := strings.TrimSpace(in.GetCampaignId())
 	if campaignID == "" {
 		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
@@ -555,7 +490,7 @@ func (s *SessionService) ResolveSessionGate(ctx context.Context, in *campaignv1.
 		return nil, status.Errorf(codes.Internal, "append event: %v", err)
 	}
 
-	applier := projection.Applier{SessionGate: s.stores.SessionGate}
+	applier := s.stores.Applier()
 	if err := applier.Apply(ctx, stored); err != nil {
 		return nil, status.Errorf(codes.Internal, "apply event: %v", err)
 	}
@@ -577,19 +512,6 @@ func (s *SessionService) AbandonSessionGate(ctx context.Context, in *campaignv1.
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "abandon session gate request is required")
 	}
-	if s.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if s.stores.Session == nil {
-		return nil, status.Error(codes.Internal, "session store is not configured")
-	}
-	if s.stores.SessionGate == nil {
-		return nil, status.Error(codes.Internal, "session gate store is not configured")
-	}
-	if s.stores.Event == nil {
-		return nil, status.Error(codes.Internal, "event store is not configured")
-	}
-
 	campaignID := strings.TrimSpace(in.GetCampaignId())
 	if campaignID == "" {
 		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
@@ -654,7 +576,7 @@ func (s *SessionService) AbandonSessionGate(ctx context.Context, in *campaignv1.
 		return nil, status.Errorf(codes.Internal, "append event: %v", err)
 	}
 
-	applier := projection.Applier{SessionGate: s.stores.SessionGate}
+	applier := s.stores.Applier()
 	if err := applier.Apply(ctx, stored); err != nil {
 		return nil, status.Errorf(codes.Internal, "apply event: %v", err)
 	}
@@ -676,16 +598,6 @@ func (s *SessionService) GetSessionSpotlight(ctx context.Context, in *campaignv1
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "get session spotlight request is required")
 	}
-	if s.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if s.stores.Session == nil {
-		return nil, status.Error(codes.Internal, "session store is not configured")
-	}
-	if s.stores.SessionSpotlight == nil {
-		return nil, status.Error(codes.Internal, "session spotlight store is not configured")
-	}
-
 	campaignID := strings.TrimSpace(in.GetCampaignId())
 	if campaignID == "" {
 		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
@@ -717,19 +629,6 @@ func (s *SessionService) SetSessionSpotlight(ctx context.Context, in *campaignv1
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "set session spotlight request is required")
 	}
-	if s.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if s.stores.Session == nil {
-		return nil, status.Error(codes.Internal, "session store is not configured")
-	}
-	if s.stores.SessionSpotlight == nil {
-		return nil, status.Error(codes.Internal, "session spotlight store is not configured")
-	}
-	if s.stores.Event == nil {
-		return nil, status.Error(codes.Internal, "event store is not configured")
-	}
-
 	campaignID := strings.TrimSpace(in.GetCampaignId())
 	if campaignID == "" {
 		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
@@ -794,7 +693,7 @@ func (s *SessionService) SetSessionSpotlight(ctx context.Context, in *campaignv1
 		return nil, status.Errorf(codes.Internal, "append event: %v", err)
 	}
 
-	applier := projection.Applier{SessionSpotlight: s.stores.SessionSpotlight}
+	applier := s.stores.Applier()
 	if err := applier.Apply(ctx, stored); err != nil {
 		return nil, status.Errorf(codes.Internal, "apply event: %v", err)
 	}
@@ -812,19 +711,6 @@ func (s *SessionService) ClearSessionSpotlight(ctx context.Context, in *campaign
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "clear session spotlight request is required")
 	}
-	if s.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if s.stores.Session == nil {
-		return nil, status.Error(codes.Internal, "session store is not configured")
-	}
-	if s.stores.SessionSpotlight == nil {
-		return nil, status.Error(codes.Internal, "session spotlight store is not configured")
-	}
-	if s.stores.Event == nil {
-		return nil, status.Error(codes.Internal, "event store is not configured")
-	}
-
 	campaignID := strings.TrimSpace(in.GetCampaignId())
 	if campaignID == "" {
 		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
@@ -876,7 +762,7 @@ func (s *SessionService) ClearSessionSpotlight(ctx context.Context, in *campaign
 		return nil, status.Errorf(codes.Internal, "append event: %v", err)
 	}
 
-	applier := projection.Applier{SessionSpotlight: s.stores.SessionSpotlight}
+	applier := s.stores.Applier()
 	if err := applier.Apply(ctx, stored); err != nil {
 		return nil, status.Errorf(codes.Internal, "apply event: %v", err)
 	}

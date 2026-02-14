@@ -20,7 +20,7 @@ func TestValidatePreset(t *testing.T) {
 
 func TestParseConfigDefaults(t *testing.T) {
 	fs := flag.NewFlagSet("seed", flag.ContinueOnError)
-	cfg, err := ParseConfig(fs, nil, func(string) (string, bool) { return "", false })
+	cfg, err := ParseConfig(fs, nil)
 	if err != nil {
 		t.Fatalf("parse config: %v", err)
 	}
@@ -37,7 +37,7 @@ func TestParseConfigDefaults(t *testing.T) {
 
 func TestParseConfigListFlag(t *testing.T) {
 	fs := flag.NewFlagSet("seed", flag.ContinueOnError)
-	cfg, err := ParseConfig(fs, []string{"-list"}, func(string) (string, bool) { return "", false })
+	cfg, err := ParseConfig(fs, []string{"-list"})
 	if err != nil {
 		t.Fatalf("parse config: %v", err)
 	}

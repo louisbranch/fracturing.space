@@ -12,15 +12,22 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/caarlos0/env/v11"
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
+
+// mcpHTTPEnv holds env-parsed configuration for MCP HTTP transport.
+type mcpHTTPEnv struct {
+	AllowedHosts []string `env:"FRACTURING_SPACE_MCP_ALLOWED_HOSTS"          envSeparator:","`
+	OAuthIssuer  string   `env:"FRACTURING_SPACE_MCP_OAUTH_ISSUER"`
+	OAuthSecret  string   `env:"FRACTURING_SPACE_MCP_OAUTH_RESOURCE_SECRET"`
+}
 
 const (
 	// defaultChannelBufferSize is the buffer size for request, response, and notification channels.
@@ -97,14 +104,17 @@ func NewHTTPTransport(addr string) *HTTPTransport {
 	if addr == "" {
 		addr = "localhost:8081"
 	}
+	var raw mcpHTTPEnv
+	_ = env.Parse(&raw)
 	ctx, cancel := context.WithCancel(context.Background())
 	return &HTTPTransport{
 		addr:         addr,
-		allowedHosts: parseAllowedHosts(),
+		allowedHosts: parseAllowedHosts(raw.AllowedHosts),
 		sessions:     make(map[string]*httpSession),
 		serverCtx:    ctx,
 		serverCancel: cancel,
 		serverOnce:   make(map[string]*sync.Once),
+		oauth:        loadOAuthAuthFromEnv(raw),
 	}
 }
 
@@ -150,9 +160,6 @@ func (t *HTTPTransport) Connect(ctx context.Context) (mcp.Connection, error) {
 func (t *HTTPTransport) Start(ctx context.Context) error {
 	// Update server context to use the provided context
 	t.serverCtx, t.serverCancel = context.WithCancel(ctx)
-
-	// Load OAuth configuration (optional)
-	t.oauth = loadOAuthAuthFromEnv()
 
 	// Start session cleanup goroutine
 	go t.cleanupSessions(ctx)
@@ -665,11 +672,10 @@ func isLoopbackHost(host string) bool {
 	}
 }
 
-// parseAllowedHosts parses allowed hosts from env (comma-separated, hostnames only).
-func parseAllowedHosts() map[string]struct{} {
-	entries := strings.Split(os.Getenv("FRACTURING_SPACE_MCP_ALLOWED_HOSTS"), ",")
-	result := make(map[string]struct{}, len(entries))
-	for _, entry := range entries {
+// parseAllowedHosts parses allowed hosts from env-loaded values.
+func parseAllowedHosts(hosts []string) map[string]struct{} {
+	result := make(map[string]struct{}, len(hosts))
+	for _, entry := range hosts {
 		trimmed := strings.TrimSpace(entry)
 		if trimmed == "" {
 			continue
@@ -746,15 +752,14 @@ type introspectionPayload struct {
 	Active bool `json:"active"`
 }
 
-func loadOAuthAuthFromEnv() *oauthAuth {
-	issuer := strings.TrimSpace(os.Getenv("FRACTURING_SPACE_MCP_OAUTH_ISSUER"))
+func loadOAuthAuthFromEnv(raw mcpHTTPEnv) *oauthAuth {
+	issuer := strings.TrimSpace(raw.OAuthIssuer)
 	if issuer == "" {
 		return nil
 	}
-	resourceSecret := strings.TrimSpace(os.Getenv("FRACTURING_SPACE_MCP_OAUTH_RESOURCE_SECRET"))
 	return &oauthAuth{
 		issuer:         strings.TrimRight(issuer, "/"),
-		resourceSecret: resourceSecret,
+		resourceSecret: raw.OAuthSecret,
 		httpClient:     &http.Client{Timeout: defaultIntrospectionTimeout},
 	}
 }

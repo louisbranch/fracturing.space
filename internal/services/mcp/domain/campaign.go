@@ -539,7 +539,7 @@ func CampaignCreateHandler(client statev1.CampaignServiceClient, notify Resource
 			return nil, CampaignCreateResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
 
-		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		runCtx, cancel := context.WithTimeout(ctx, grpcCallTimeout)
 		defer cancel()
 
 		callCtx, callMeta, err := NewOutgoingContext(runCtx, invocationID)
@@ -611,7 +611,7 @@ func CampaignEndHandler(client statev1.CampaignServiceClient, getContext func() 
 			return nil, CampaignStatusResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
 
-		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		runCtx, cancel := context.WithTimeout(ctx, grpcCallTimeout)
 		defer cancel()
 
 		mcpCtx := Context{}
@@ -662,7 +662,7 @@ func CampaignArchiveHandler(client statev1.CampaignServiceClient, getContext fun
 			return nil, CampaignStatusResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
 
-		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		runCtx, cancel := context.WithTimeout(ctx, grpcCallTimeout)
 		defer cancel()
 
 		mcpCtx := Context{}
@@ -713,7 +713,7 @@ func CampaignRestoreHandler(client statev1.CampaignServiceClient, getContext fun
 			return nil, CampaignStatusResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
 
-		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		runCtx, cancel := context.WithTimeout(ctx, grpcCallTimeout)
 		defer cancel()
 
 		mcpCtx := Context{}
@@ -768,7 +768,7 @@ func CampaignListResourceHandler(client statev1.CampaignServiceClient) mcp.Resou
 			uri = req.Params.URI
 		}
 
-		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		runCtx, cancel := context.WithTimeout(ctx, grpcCallTimeout)
 		defer cancel()
 
 		callCtx, _, err := NewOutgoingContext(runCtx, "")
@@ -961,7 +961,7 @@ func ParticipantCreateHandler(client statev1.ParticipantServiceClient, getContex
 			return nil, ParticipantCreateResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
 
-		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		runCtx, cancel := context.WithTimeout(ctx, grpcCallTimeout)
 		defer cancel()
 
 		mcpCtx := Context{}
@@ -1025,7 +1025,7 @@ func ParticipantUpdateHandler(client statev1.ParticipantServiceClient, getContex
 			return nil, ParticipantUpdateResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
 
-		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		runCtx, cancel := context.WithTimeout(ctx, grpcCallTimeout)
 		defer cancel()
 
 		mcpCtx := Context{}
@@ -1109,7 +1109,7 @@ func ParticipantDeleteHandler(client statev1.ParticipantServiceClient, getContex
 			return nil, ParticipantDeleteResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
 
-		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		runCtx, cancel := context.WithTimeout(ctx, grpcCallTimeout)
 		defer cancel()
 
 		mcpCtx := Context{}
@@ -1216,7 +1216,7 @@ func CharacterCreateHandler(client statev1.CharacterServiceClient, notify Resour
 			return nil, CharacterCreateResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
 
-		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		runCtx, cancel := context.WithTimeout(ctx, grpcCallTimeout)
 		defer cancel()
 
 		callCtx, callMeta, err := NewOutgoingContext(runCtx, invocationID)
@@ -1271,7 +1271,7 @@ func CharacterUpdateHandler(client statev1.CharacterServiceClient, notify Resour
 			return nil, CharacterUpdateResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
 
-		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		runCtx, cancel := context.WithTimeout(ctx, grpcCallTimeout)
 		defer cancel()
 
 		callCtx, callMeta, err := NewOutgoingContext(runCtx, invocationID)
@@ -1346,7 +1346,7 @@ func CharacterDeleteHandler(client statev1.CharacterServiceClient, notify Resour
 			return nil, CharacterDeleteResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
 
-		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		runCtx, cancel := context.WithTimeout(ctx, grpcCallTimeout)
 		defer cancel()
 
 		callCtx, callMeta, err := NewOutgoingContext(runCtx, invocationID)
@@ -1426,7 +1426,7 @@ func CharacterControlSetHandler(client statev1.CharacterServiceClient, notify Re
 			return nil, CharacterControlSetResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
 
-		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		runCtx, cancel := context.WithTimeout(ctx, grpcCallTimeout)
 		defer cancel()
 
 		callCtx, callMeta, err := NewOutgoingContext(runCtx, invocationID)
@@ -1478,7 +1478,7 @@ func CharacterSheetGetHandler(client statev1.CharacterServiceClient, getContext 
 			return nil, CharacterSheetGetResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
 
-		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		runCtx, cancel := context.WithTimeout(ctx, grpcCallTimeout)
 		defer cancel()
 
 		mcpCtx := getContext()
@@ -1532,7 +1532,7 @@ func CharacterProfilePatchHandler(client statev1.CharacterServiceClient, getCont
 			return nil, CharacterProfilePatchResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
 
-		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		runCtx, cancel := context.WithTimeout(ctx, grpcCallTimeout)
 		defer cancel()
 
 		mcpCtx := getContext()
@@ -1628,7 +1628,7 @@ func CharacterStatePatchHandler(client statev1.SnapshotServiceClient, getContext
 			return nil, CharacterStatePatchResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
 
-		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		runCtx, cancel := context.WithTimeout(ctx, grpcCallTimeout)
 		defer cancel()
 
 		mcpCtx := getContext()
@@ -1706,7 +1706,7 @@ func ParticipantListResourceHandler(client statev1.ParticipantServiceClient) mcp
 			return nil, fmt.Errorf("parse campaign ID from URI: %w", err)
 		}
 
-		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		runCtx, cancel := context.WithTimeout(ctx, grpcCallTimeout)
 		defer cancel()
 
 		callCtx, _, err := NewOutgoingContext(runCtx, "")
@@ -1779,7 +1779,7 @@ func CharacterListResourceHandler(client statev1.CharacterServiceClient) mcp.Res
 			return nil, fmt.Errorf("parse campaign ID from URI: %w", err)
 		}
 
-		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		runCtx, cancel := context.WithTimeout(ctx, grpcCallTimeout)
 		defer cancel()
 
 		callCtx, _, err := NewOutgoingContext(runCtx, "")
@@ -1883,7 +1883,7 @@ func CampaignResourceHandler(client statev1.CampaignServiceClient) mcp.ResourceH
 			return nil, fmt.Errorf("parse campaign ID from URI: %w", err)
 		}
 
-		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		runCtx, cancel := context.WithTimeout(ctx, grpcCallTimeout)
 		defer cancel()
 
 		callCtx, _, err := NewOutgoingContext(runCtx, "")

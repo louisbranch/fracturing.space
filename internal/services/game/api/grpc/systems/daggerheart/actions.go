@@ -13,7 +13,6 @@ import (
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/snapshot"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/core/dice"
@@ -2072,7 +2071,7 @@ func (s *DaggerheartService) appendCharacterDeletedEvent(ctx context.Context, ca
 	if err != nil {
 		return status.Errorf(codes.Internal, "append event: %v", err)
 	}
-	applier := projection.Applier{Campaign: s.stores.Campaign, Character: s.stores.Character}
+	applier := s.stores.Applier()
 	if err := applier.Apply(ctx, stored); err != nil {
 		return status.Errorf(codes.Internal, "apply event: %v", err)
 	}
@@ -3884,7 +3883,7 @@ func (s *DaggerheartService) openGMConsequenceGate(ctx context.Context, campaign
 	if err != nil {
 		return status.Errorf(codes.Internal, "append session gate event: %v", err)
 	}
-	gateApplier := projection.Applier{SessionGate: s.stores.SessionGate}
+	gateApplier := s.stores.Applier()
 	if err := gateApplier.Apply(ctx, storedGate); err != nil {
 		return status.Errorf(codes.Internal, "apply session gate event: %v", err)
 	}
@@ -3911,7 +3910,7 @@ func (s *DaggerheartService) openGMConsequenceGate(ctx context.Context, campaign
 	if err != nil {
 		return status.Errorf(codes.Internal, "append spotlight event: %v", err)
 	}
-	spotlightApplier := projection.Applier{SessionSpotlight: s.stores.SessionSpotlight}
+	spotlightApplier := s.stores.Applier()
 	if err := spotlightApplier.Apply(ctx, storedSpotlight); err != nil {
 		return status.Errorf(codes.Internal, "apply spotlight event: %v", err)
 	}

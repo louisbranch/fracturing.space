@@ -9,8 +9,9 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
+	"time"
 
+	"github.com/caarlos0/env/v11"
 	"github.com/louisbranch/fracturing.space/internal/tools/seed"
 	"github.com/louisbranch/fracturing.space/internal/tools/seed/generator"
 )
@@ -18,6 +19,7 @@ import (
 // Config holds seed command configuration.
 type Config struct {
 	SeedConfig seed.Config
+	Timeout    time.Duration
 	List       bool
 	Generate   bool
 	Preset     generator.Preset
@@ -25,13 +27,22 @@ type Config struct {
 	Campaigns  int
 }
 
-// EnvLookup returns the value for a key when present.
-type EnvLookup func(string) (string, bool)
+// seedEnv holds env-tagged fields for the seed command.
+type seedEnv struct {
+	AuthAddr string        `env:"FRACTURING_SPACE_AUTH_ADDR"    envDefault:"localhost:8083"`
+	Timeout  time.Duration `env:"FRACTURING_SPACE_SEED_TIMEOUT" envDefault:"10m"`
+}
 
 // ParseConfig parses flags into a Config.
-func ParseConfig(fs *flag.FlagSet, args []string, lookup EnvLookup) (Config, error) {
+func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
+	var se seedEnv
+	if err := env.Parse(&se); err != nil {
+		return Config{}, fmt.Errorf("parse env: %w", err)
+	}
+
 	seedCfg := seed.DefaultConfig()
-	seedCfg.AuthAddr = envOrDefault(lookup, []string{"FRACTURING_SPACE_AUTH_ADDR"}, seedCfg.AuthAddr)
+	seedCfg.AuthAddr = se.AuthAddr
+	timeout := se.Timeout
 	var list bool
 	var generate bool
 	var preset string
@@ -40,6 +51,7 @@ func ParseConfig(fs *flag.FlagSet, args []string, lookup EnvLookup) (Config, err
 
 	fs.StringVar(&seedCfg.GRPCAddr, "grpc-addr", seedCfg.GRPCAddr, "game server address")
 	fs.StringVar(&seedCfg.AuthAddr, "auth-addr", seedCfg.AuthAddr, "auth server address")
+	fs.DurationVar(&timeout, "timeout", timeout, "overall timeout")
 	fs.StringVar(&seedCfg.Scenario, "scenario", "", "run specific scenario (default: all)")
 	fs.BoolVar(&seedCfg.Verbose, "v", false, "verbose output")
 	fs.BoolVar(&list, "list", false, "list available scenarios")
@@ -59,6 +71,7 @@ func ParseConfig(fs *flag.FlagSet, args []string, lookup EnvLookup) (Config, err
 
 	return Config{
 		SeedConfig: seedCfg,
+		Timeout:    timeout,
 		List:       list,
 		Generate:   generate,
 		Preset:     generator.Preset(preset),
@@ -158,20 +171,4 @@ func repoRoot() (string, error) {
 	}
 
 	return "", fmt.Errorf("go.mod not found from %s", filename)
-}
-
-func envOrDefault(lookup EnvLookup, keys []string, fallback string) string {
-	for _, key := range keys {
-		if lookup == nil {
-			break
-		}
-		value, ok := lookup(key)
-		if ok {
-			trimmed := strings.TrimSpace(value)
-			if trimmed != "" {
-				return trimmed
-			}
-		}
-	}
-	return fallback
 }

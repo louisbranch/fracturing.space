@@ -6,19 +6,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
-	"strings"
 	"time"
+
+	"github.com/caarlos0/env/v11"
 )
 
-const (
-	envJoinGrantIssuer     = "FRACTURING_SPACE_JOIN_GRANT_ISSUER"
-	envJoinGrantAudience   = "FRACTURING_SPACE_JOIN_GRANT_AUDIENCE"
-	envJoinGrantPrivateKey = "FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY"
-	envJoinGrantTTL        = "FRACTURING_SPACE_JOIN_GRANT_TTL"
-)
-
-const defaultJoinGrantTTL = 5 * time.Minute
+// joinGrantEnv holds raw env values before post-parse validation.
+type joinGrantEnv struct {
+	Issuer     string        `env:"FRACTURING_SPACE_JOIN_GRANT_ISSUER"`
+	Audience   string        `env:"FRACTURING_SPACE_JOIN_GRANT_AUDIENCE"`
+	PrivateKey string        `env:"FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY"`
+	TTL        time.Duration `env:"FRACTURING_SPACE_JOIN_GRANT_TTL"         envDefault:"5m"`
+}
 
 type joinGrantConfig struct {
 	issuer   string
@@ -28,43 +27,36 @@ type joinGrantConfig struct {
 }
 
 func loadJoinGrantConfigFromEnv() (joinGrantConfig, error) {
-	issuer := strings.TrimSpace(os.Getenv(envJoinGrantIssuer))
-	if issuer == "" {
-		return joinGrantConfig{}, fmt.Errorf("%s is required", envJoinGrantIssuer)
+	var raw joinGrantEnv
+	if err := env.Parse(&raw); err != nil {
+		return joinGrantConfig{}, fmt.Errorf("parse join grant env: %w", err)
 	}
-	audience := strings.TrimSpace(os.Getenv(envJoinGrantAudience))
-	if audience == "" {
-		return joinGrantConfig{}, fmt.Errorf("%s is required", envJoinGrantAudience)
+
+	if raw.Issuer == "" {
+		return joinGrantConfig{}, fmt.Errorf("FRACTURING_SPACE_JOIN_GRANT_ISSUER is required")
 	}
-	keyRaw := strings.TrimSpace(os.Getenv(envJoinGrantPrivateKey))
-	if keyRaw == "" {
-		return joinGrantConfig{}, fmt.Errorf("%s is required", envJoinGrantPrivateKey)
+	if raw.Audience == "" {
+		return joinGrantConfig{}, fmt.Errorf("FRACTURING_SPACE_JOIN_GRANT_AUDIENCE is required")
 	}
-	keyBytes, err := decodeBase64(keyRaw)
+	if raw.PrivateKey == "" {
+		return joinGrantConfig{}, fmt.Errorf("FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY is required")
+	}
+	keyBytes, err := decodeBase64(raw.PrivateKey)
 	if err != nil {
 		return joinGrantConfig{}, fmt.Errorf("decode join grant private key: %w", err)
 	}
 	if len(keyBytes) != ed25519.PrivateKeySize {
 		return joinGrantConfig{}, fmt.Errorf("join grant private key must be %d bytes", ed25519.PrivateKeySize)
 	}
-
-	ttl := defaultJoinGrantTTL
-	if rawTTL := strings.TrimSpace(os.Getenv(envJoinGrantTTL)); rawTTL != "" {
-		parsed, err := time.ParseDuration(rawTTL)
-		if err != nil {
-			return joinGrantConfig{}, fmt.Errorf("parse join grant ttl: %w", err)
-		}
-		if parsed <= 0 {
-			return joinGrantConfig{}, fmt.Errorf("join grant ttl must be positive")
-		}
-		ttl = parsed
+	if raw.TTL <= 0 {
+		return joinGrantConfig{}, fmt.Errorf("join grant ttl must be positive")
 	}
 
 	return joinGrantConfig{
-		issuer:   issuer,
-		audience: audience,
+		issuer:   raw.Issuer,
+		audience: raw.Audience,
 		key:      ed25519.PrivateKey(keyBytes),
-		ttl:      ttl,
+		ttl:      raw.TTL,
 	}, nil
 }
 

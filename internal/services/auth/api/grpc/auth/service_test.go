@@ -169,10 +169,10 @@ func TestIssueJoinGrant_Success(t *testing.T) {
 	}
 	issuer := "test-issuer"
 	audience := "game-service"
-	t.Setenv(envJoinGrantIssuer, issuer)
-	t.Setenv(envJoinGrantAudience, audience)
-	t.Setenv(envJoinGrantPrivateKey, base64.RawStdEncoding.EncodeToString(privateKey))
-	t.Setenv(envJoinGrantTTL, "5m")
+	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_ISSUER", issuer)
+	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_AUDIENCE", audience)
+	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY", base64.RawStdEncoding.EncodeToString(privateKey))
+	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_TTL", "5m")
 
 	svc := NewAuthService(store, nil, nil)
 	fixedTime := time.Date(2026, 1, 23, 10, 0, 0, 0, time.UTC)

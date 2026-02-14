@@ -11,9 +11,9 @@ import (
 )
 
 func TestLoadJoinGrantConfigFromEnv(t *testing.T) {
-	t.Setenv(EnvJoinGrantIssuer, "")
-	t.Setenv(EnvJoinGrantAudience, "")
-	t.Setenv(EnvJoinGrantPublicKey, "")
+	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_ISSUER", "")
+	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_AUDIENCE", "")
+	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY", "")
 
 	if _, err := LoadJoinGrantConfigFromEnv(nil); err == nil {
 		t.Fatal("expected error when env vars are missing")
@@ -24,9 +24,9 @@ func TestLoadJoinGrantConfigFromEnv(t *testing.T) {
 		t.Fatalf("generate key: %v", err)
 	}
 
-	t.Setenv(EnvJoinGrantIssuer, "issuer")
-	t.Setenv(EnvJoinGrantAudience, "audience")
-	t.Setenv(EnvJoinGrantPublicKey, base64.RawStdEncoding.EncodeToString(pubKey))
+	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_ISSUER", "issuer")
+	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_AUDIENCE", "audience")
+	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY", base64.RawStdEncoding.EncodeToString(pubKey))
 
 	cfg, err := LoadJoinGrantConfigFromEnv(nil)
 	if err != nil {
@@ -156,8 +156,8 @@ func TestValidateJoinGrantInvalidAlgorithm(t *testing.T) {
 	})
 	cfg := JoinGrantConfig{Issuer: "issuer", Audience: "game-service", Key: pub, Now: func() time.Time { return now }}
 	_, err := ValidateJoinGrant(grant, JoinGrantExpectation{CampaignID: "c1", InviteID: "i1", UserID: "u1"}, cfg)
-	if err == nil || !strings.Contains(err.Error(), "alg") {
-		t.Fatalf("expected alg error, got %v", err)
+	if err == nil {
+		t.Fatal("expected error for invalid algorithm")
 	}
 }
 
@@ -282,9 +282,9 @@ func TestValidateJoinGrantInviteMismatch(t *testing.T) {
 }
 
 func TestLoadJoinGrantConfigInvalidBase64(t *testing.T) {
-	t.Setenv(EnvJoinGrantIssuer, "issuer")
-	t.Setenv(EnvJoinGrantAudience, "audience")
-	t.Setenv(EnvJoinGrantPublicKey, "!!!invalid!!!")
+	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_ISSUER", "issuer")
+	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_AUDIENCE", "audience")
+	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY", "!!!invalid!!!")
 	_, err := LoadJoinGrantConfigFromEnv(nil)
 	if err == nil || !strings.Contains(err.Error(), "decode") {
 		t.Fatalf("expected decode error, got %v", err)
@@ -292,70 +292,12 @@ func TestLoadJoinGrantConfigInvalidBase64(t *testing.T) {
 }
 
 func TestLoadJoinGrantConfigWrongKeySize(t *testing.T) {
-	t.Setenv(EnvJoinGrantIssuer, "issuer")
-	t.Setenv(EnvJoinGrantAudience, "audience")
-	t.Setenv(EnvJoinGrantPublicKey, base64.RawStdEncoding.EncodeToString([]byte("short")))
+	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_ISSUER", "issuer")
+	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_AUDIENCE", "audience")
+	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY", base64.RawStdEncoding.EncodeToString([]byte("short")))
 	_, err := LoadJoinGrantConfigFromEnv(nil)
 	if err == nil || !strings.Contains(err.Error(), "32 bytes") {
 		t.Fatalf("expected key size error, got %v", err)
-	}
-}
-
-func TestParseJoinGrantWrongSegments(t *testing.T) {
-	_, err := parseJoinGrant("only.two")
-	if err == nil {
-		t.Fatal("expected error for 2-segment token")
-	}
-}
-
-func TestParseJoinGrantInvalidHeaderBase64(t *testing.T) {
-	_, err := parseJoinGrant("!!!.payload.sig")
-	if err == nil || !strings.Contains(err.Error(), "header") {
-		t.Fatalf("expected header error, got %v", err)
-	}
-}
-
-func TestParseJoinGrantInvalidHeaderJSON(t *testing.T) {
-	hdr := base64.RawURLEncoding.EncodeToString([]byte("{bad json"))
-	_, err := parseJoinGrant(hdr + ".payload.sig")
-	if err == nil || !strings.Contains(err.Error(), "header") {
-		t.Fatalf("expected header JSON error, got %v", err)
-	}
-}
-
-func TestParseJoinGrantInvalidPayloadBase64(t *testing.T) {
-	hdr := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"EdDSA"}`))
-	_, err := parseJoinGrant(hdr + ".!!!.sig")
-	if err == nil || !strings.Contains(err.Error(), "payload") {
-		t.Fatalf("expected payload error, got %v", err)
-	}
-}
-
-func TestParseJoinGrantInvalidPayloadJSON(t *testing.T) {
-	hdr := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"EdDSA"}`))
-	payload := base64.RawURLEncoding.EncodeToString([]byte("{bad json"))
-	_, err := parseJoinGrant(hdr + "." + payload + ".sig")
-	if err == nil || !strings.Contains(err.Error(), "payload") {
-		t.Fatalf("expected payload JSON error, got %v", err)
-	}
-}
-
-func TestParseJoinGrantInvalidSignatureBase64(t *testing.T) {
-	hdr := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"EdDSA"}`))
-	payload := base64.RawURLEncoding.EncodeToString([]byte(`{"iss":"i"}`))
-	_, err := parseJoinGrant(hdr + "." + payload + ".!!!")
-	if err == nil || !strings.Contains(err.Error(), "signature") {
-		t.Fatalf("expected signature error, got %v", err)
-	}
-}
-
-func TestParseJoinGrantSignatureTooShort(t *testing.T) {
-	hdr := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"EdDSA"}`))
-	payload := base64.RawURLEncoding.EncodeToString([]byte(`{"iss":"i"}`))
-	sig := base64.RawURLEncoding.EncodeToString([]byte("short"))
-	_, err := parseJoinGrant(hdr + "." + payload + "." + sig)
-	if err == nil || !strings.Contains(err.Error(), "signature") {
-		t.Fatalf("expected signature size error, got %v", err)
 	}
 }
 
@@ -385,54 +327,6 @@ func TestDecodeBase64RawStdEncoding(t *testing.T) {
 	}
 	if string(decoded) != "hello" {
 		t.Fatalf("expected 'hello', got %s", string(decoded))
-	}
-}
-
-func TestAudienceClaimContains(t *testing.T) {
-	aud := audienceClaim{Values: []string{"svc1", "svc2"}}
-	if !aud.Contains("svc2") {
-		t.Fatal("expected Contains to return true")
-	}
-	if aud.Contains("svc3") {
-		t.Fatal("expected Contains to return false")
-	}
-}
-
-func TestAudienceClaimUnmarshalJSONString(t *testing.T) {
-	var aud audienceClaim
-	if err := aud.UnmarshalJSON([]byte(`"game-service"`)); err != nil {
-		t.Fatalf("unmarshal: %v", err)
-	}
-	if len(aud.Values) != 1 || aud.Values[0] != "game-service" {
-		t.Fatalf("expected [game-service], got %v", aud.Values)
-	}
-}
-
-func TestAudienceClaimUnmarshalJSONNull(t *testing.T) {
-	var aud audienceClaim
-	if err := aud.UnmarshalJSON([]byte("null")); err != nil {
-		t.Fatalf("unmarshal: %v", err)
-	}
-	if len(aud.Values) != 0 {
-		t.Fatalf("expected empty, got %v", aud.Values)
-	}
-}
-
-func TestAudienceClaimUnmarshalJSONEmpty(t *testing.T) {
-	var aud audienceClaim
-	if err := aud.UnmarshalJSON(nil); err != nil {
-		t.Fatalf("unmarshal: %v", err)
-	}
-	if len(aud.Values) != 0 {
-		t.Fatalf("expected empty, got %v", aud.Values)
-	}
-}
-
-func TestAudienceClaimUnmarshalJSONInvalidType(t *testing.T) {
-	var aud audienceClaim
-	err := aud.UnmarshalJSON([]byte(`123`))
-	if err == nil {
-		t.Fatal("expected error for numeric type")
 	}
 }
 

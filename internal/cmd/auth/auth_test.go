@@ -7,7 +7,7 @@ import (
 
 func TestParseConfigDefaults(t *testing.T) {
 	fs := flag.NewFlagSet("auth", flag.ContinueOnError)
-	cfg, err := ParseConfig(fs, nil, func(string) (string, bool) { return "", false })
+	cfg, err := ParseConfig(fs, nil)
 	if err != nil {
 		t.Fatalf("parse config: %v", err)
 	}
@@ -20,15 +20,11 @@ func TestParseConfigDefaults(t *testing.T) {
 }
 
 func TestParseConfigOverrides(t *testing.T) {
+	t.Setenv("FRACTURING_SPACE_AUTH_HTTP_ADDR", "env-http")
+
 	fs := flag.NewFlagSet("auth", flag.ContinueOnError)
-	lookup := func(key string) (string, bool) {
-		if key == "FRACTURING_SPACE_AUTH_HTTP_ADDR" {
-			return "env-http", true
-		}
-		return "", false
-	}
 	args := []string{"-port", "9000", "-http-addr", "flag-http"}
-	cfg, err := ParseConfig(fs, args, lookup)
+	cfg, err := ParseConfig(fs, args)
 	if err != nil {
 		t.Fatalf("parse config: %v", err)
 	}

@@ -38,16 +38,6 @@ func (s *SnapshotService) GetSnapshot(ctx context.Context, in *campaignv1.GetSna
 		return nil, status.Error(codes.InvalidArgument, "get snapshot request is required")
 	}
 
-	if s.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if s.stores.Daggerheart == nil {
-		return nil, status.Error(codes.Internal, "daggerheart store is not configured")
-	}
-	if s.stores.Character == nil {
-		return nil, status.Error(codes.Internal, "character store is not configured")
-	}
-
 	campaignID := strings.TrimSpace(in.GetCampaignId())
 	if campaignID == "" {
 		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
@@ -105,13 +95,6 @@ func (s *SnapshotService) GetSnapshot(ctx context.Context, in *campaignv1.GetSna
 func (s *SnapshotService) PatchCharacterState(ctx context.Context, in *campaignv1.PatchCharacterStateRequest) (*campaignv1.PatchCharacterStateResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "patch character state request is required")
-	}
-
-	if s.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if s.stores.Daggerheart == nil {
-		return nil, status.Error(codes.Internal, "daggerheart store is not configured")
 	}
 
 	campaignID := strings.TrimSpace(in.GetCampaignId())
@@ -460,16 +443,6 @@ func applyStressVulnerableCondition(
 func (s *SnapshotService) UpdateSnapshotState(ctx context.Context, in *campaignv1.UpdateSnapshotStateRequest) (*campaignv1.UpdateSnapshotStateResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "update snapshot projection request is required")
-	}
-
-	if s.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if s.stores.Daggerheart == nil {
-		return nil, status.Error(codes.Internal, "daggerheart store is not configured")
-	}
-	if s.stores.Event == nil {
-		return nil, status.Error(codes.Internal, "event store is not configured")
 	}
 
 	campaignID := strings.TrimSpace(in.GetCampaignId())

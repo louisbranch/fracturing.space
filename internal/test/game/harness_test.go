@@ -17,7 +17,6 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	authserver "github.com/louisbranch/fracturing.space/internal/services/auth/app"
 	server "github.com/louisbranch/fracturing.space/internal/services/game/app"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/invite"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	grpc_health_v1 "google.golang.org/grpc/health/grpc_health_v1"
@@ -87,9 +86,9 @@ func setJoinGrantEnv(t *testing.T) {
 		joinGrantPrivateKey = privateKey
 	})
 
-	t.Setenv(invite.EnvJoinGrantIssuer, joinGrantIssuer)
-	t.Setenv(invite.EnvJoinGrantAudience, joinGrantAudience)
-	t.Setenv(invite.EnvJoinGrantPublicKey, base64.RawStdEncoding.EncodeToString(joinGrantPublicKey))
+	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_ISSUER", joinGrantIssuer)
+	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_AUDIENCE", joinGrantAudience)
+	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY", base64.RawStdEncoding.EncodeToString(joinGrantPublicKey))
 	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY", base64.RawStdEncoding.EncodeToString(joinGrantPrivateKey))
 }
 

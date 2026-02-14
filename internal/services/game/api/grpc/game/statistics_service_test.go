@@ -32,14 +32,6 @@ func TestStatisticsServiceGetGameStatistics(t *testing.T) {
 		}
 	})
 
-	t.Run("rejects missing store", func(t *testing.T) {
-		service := NewStatisticsService(Stores{})
-		_, err := service.GetGameStatistics(context.Background(), &gamev1.GetGameStatisticsRequest{})
-		if status.Code(err) != codes.Internal {
-			t.Fatalf("expected internal error, got %v", err)
-		}
-	})
-
 	t.Run("returns stats", func(t *testing.T) {
 		since := time.Date(2025, 12, 1, 10, 30, 0, 0, time.UTC)
 		store := &fakeStatisticsStore{

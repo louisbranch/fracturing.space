@@ -17,7 +17,6 @@ import (
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -57,16 +56,6 @@ func NewCampaignServiceWithAuth(stores Stores, authClient authv1.AuthServiceClie
 func (s *CampaignService) CreateCampaign(ctx context.Context, in *campaignv1.CreateCampaignRequest) (*campaignv1.CreateCampaignResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "create campaign request is required")
-	}
-
-	if s.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if s.stores.Participant == nil {
-		return nil, status.Error(codes.Internal, "participant store is not configured")
-	}
-	if s.stores.Event == nil {
-		return nil, status.Error(codes.Internal, "event store is not configured")
 	}
 
 	system := in.GetSystem()
@@ -137,7 +126,7 @@ func (s *CampaignService) CreateCampaign(ctx context.Context, in *campaignv1.Cre
 		return nil, status.Errorf(codes.Internal, "append event: %v", err)
 	}
 
-	applier := projection.Applier{Campaign: s.stores.Campaign, Participant: s.stores.Participant, ClaimIndex: s.stores.ClaimIndex}
+	applier := s.stores.Applier()
 	if err := applier.Apply(ctx, stored); err != nil {
 		return nil, status.Errorf(codes.Internal, "apply event: %v", err)
 	}
@@ -229,10 +218,6 @@ func (s *CampaignService) ListCampaigns(ctx context.Context, in *campaignv1.List
 		return nil, status.Error(codes.InvalidArgument, "list campaigns request is required")
 	}
 
-	if s.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-
 	pageSize := pagination.ClampPageSize(in.GetPageSize(), pagination.PageSizeConfig{
 		Default: defaultListCampaignsPageSize,
 		Max:     maxListCampaignsPageSize,
@@ -266,10 +251,6 @@ func (s *CampaignService) GetCampaign(ctx context.Context, in *campaignv1.GetCam
 		return nil, status.Error(codes.InvalidArgument, "get campaign request is required")
 	}
 
-	if s.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-
 	campaignID := strings.TrimSpace(in.GetCampaignId())
 	if campaignID == "" {
 		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
@@ -293,16 +274,6 @@ func (s *CampaignService) GetCampaign(ctx context.Context, in *campaignv1.GetCam
 func (s *CampaignService) EndCampaign(ctx context.Context, in *campaignv1.EndCampaignRequest) (*campaignv1.EndCampaignResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "end campaign request is required")
-	}
-
-	if s.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if s.stores.Session == nil {
-		return nil, status.Error(codes.Internal, "session store is not configured")
-	}
-	if s.stores.Event == nil {
-		return nil, status.Error(codes.Internal, "event store is not configured")
 	}
 
 	campaignID := strings.TrimSpace(in.GetCampaignId())
@@ -354,7 +325,7 @@ func (s *CampaignService) EndCampaign(ctx context.Context, in *campaignv1.EndCam
 		return nil, status.Errorf(codes.Internal, "append event: %v", err)
 	}
 
-	applier := projection.Applier{Campaign: s.stores.Campaign, Participant: s.stores.Participant, Character: s.stores.Character, ClaimIndex: s.stores.ClaimIndex}
+	applier := s.stores.Applier()
 	if err := applier.Apply(ctx, stored); err != nil {
 		return nil, status.Errorf(codes.Internal, "apply event: %v", err)
 	}
@@ -371,16 +342,6 @@ func (s *CampaignService) EndCampaign(ctx context.Context, in *campaignv1.EndCam
 func (s *CampaignService) ArchiveCampaign(ctx context.Context, in *campaignv1.ArchiveCampaignRequest) (*campaignv1.ArchiveCampaignResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "archive campaign request is required")
-	}
-
-	if s.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if s.stores.Session == nil {
-		return nil, status.Error(codes.Internal, "session store is not configured")
-	}
-	if s.stores.Event == nil {
-		return nil, status.Error(codes.Internal, "event store is not configured")
 	}
 
 	campaignID := strings.TrimSpace(in.GetCampaignId())
@@ -432,7 +393,7 @@ func (s *CampaignService) ArchiveCampaign(ctx context.Context, in *campaignv1.Ar
 		return nil, status.Errorf(codes.Internal, "append event: %v", err)
 	}
 
-	applier := projection.Applier{Campaign: s.stores.Campaign, Participant: s.stores.Participant, Character: s.stores.Character, ClaimIndex: s.stores.ClaimIndex}
+	applier := s.stores.Applier()
 	if err := applier.Apply(ctx, stored); err != nil {
 		return nil, status.Errorf(codes.Internal, "apply event: %v", err)
 	}
@@ -449,13 +410,6 @@ func (s *CampaignService) ArchiveCampaign(ctx context.Context, in *campaignv1.Ar
 func (s *CampaignService) RestoreCampaign(ctx context.Context, in *campaignv1.RestoreCampaignRequest) (*campaignv1.RestoreCampaignResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "restore campaign request is required")
-	}
-
-	if s.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if s.stores.Event == nil {
-		return nil, status.Error(codes.Internal, "event store is not configured")
 	}
 
 	campaignID := strings.TrimSpace(in.GetCampaignId())
@@ -503,7 +457,7 @@ func (s *CampaignService) RestoreCampaign(ctx context.Context, in *campaignv1.Re
 		return nil, status.Errorf(codes.Internal, "append event: %v", err)
 	}
 
-	applier := projection.Applier{Campaign: s.stores.Campaign, Participant: s.stores.Participant, Character: s.stores.Character, ClaimIndex: s.stores.ClaimIndex}
+	applier := s.stores.Applier()
 	if err := applier.Apply(ctx, stored); err != nil {
 		return nil, status.Errorf(codes.Internal, "apply event: %v", err)
 	}

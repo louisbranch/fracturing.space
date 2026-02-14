@@ -20,27 +20,6 @@ func TestStartSession_NilRequest(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
-func TestStartSession_MissingCampaignStore(t *testing.T) {
-	svc := NewSessionService(Stores{Session: newFakeSessionStore()})
-	_, err := svc.StartSession(context.Background(), &statev1.StartSessionRequest{CampaignId: "c1"})
-	assertStatusCode(t, err, codes.Internal)
-}
-
-func TestStartSession_MissingSessionStore(t *testing.T) {
-	svc := NewSessionService(Stores{Campaign: newFakeCampaignStore()})
-	_, err := svc.StartSession(context.Background(), &statev1.StartSessionRequest{CampaignId: "c1"})
-	assertStatusCode(t, err, codes.Internal)
-}
-
-func TestStartSession_MissingEventStore(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	sessionStore := newFakeSessionStore()
-	campaignStore.campaigns["c1"] = campaign.Campaign{ID: "c1", Status: campaign.CampaignStatusActive}
-	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore})
-	_, err := svc.StartSession(context.Background(), &statev1.StartSessionRequest{CampaignId: "c1"})
-	assertStatusCode(t, err, codes.Internal)
-}
-
 func TestStartSession_MissingCampaignId(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
@@ -443,21 +422,6 @@ func TestEndSession_NilRequest(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
-func TestEndSession_MissingEventStore(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	sessionStore := newFakeSessionStore()
-	now := time.Now().UTC()
-	campaignStore.campaigns["c1"] = campaign.Campaign{ID: "c1", Status: campaign.CampaignStatusActive}
-	sessionStore.sessions["c1"] = map[string]session.Session{
-		"s1": {ID: "s1", CampaignID: "c1", Status: session.SessionStatusActive, StartedAt: now},
-	}
-	sessionStore.activeSession["c1"] = "s1"
-
-	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore})
-	_, err := svc.EndSession(context.Background(), &statev1.EndSessionRequest{CampaignId: "c1", SessionId: "s1"})
-	assertStatusCode(t, err, codes.Internal)
-}
-
 func TestEndSession_MissingCampaignId(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
@@ -536,14 +500,6 @@ func TestAbandonSessionGate_NilRequest(t *testing.T) {
 	svc := NewSessionService(Stores{})
 	_, err := svc.AbandonSessionGate(context.Background(), nil)
 	assertStatusCode(t, err, codes.InvalidArgument)
-}
-
-func TestAbandonSessionGate_MissingStores(t *testing.T) {
-	svc := NewSessionService(Stores{})
-	_, err := svc.AbandonSessionGate(context.Background(), &statev1.AbandonSessionGateRequest{
-		CampaignId: "c1", SessionId: "s1", GateId: "g1",
-	})
-	assertStatusCode(t, err, codes.Internal)
 }
 
 func TestAbandonSessionGate_MissingCampaignId(t *testing.T) {
@@ -693,14 +649,6 @@ func TestGetSessionSpotlight_NilRequest(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
-func TestGetSessionSpotlight_MissingStores(t *testing.T) {
-	svc := NewSessionService(Stores{})
-	_, err := svc.GetSessionSpotlight(context.Background(), &statev1.GetSessionSpotlightRequest{
-		CampaignId: "c1", SessionId: "s1",
-	})
-	assertStatusCode(t, err, codes.Internal)
-}
-
 func TestGetSessionSpotlight_MissingCampaignId(t *testing.T) {
 	svc := NewSessionService(Stores{
 		Campaign:         newFakeCampaignStore(),
@@ -729,15 +677,6 @@ func TestSetSessionSpotlight_NilRequest(t *testing.T) {
 	svc := NewSessionService(Stores{})
 	_, err := svc.SetSessionSpotlight(context.Background(), nil)
 	assertStatusCode(t, err, codes.InvalidArgument)
-}
-
-func TestSetSessionSpotlight_MissingStores(t *testing.T) {
-	svc := NewSessionService(Stores{})
-	_, err := svc.SetSessionSpotlight(context.Background(), &statev1.SetSessionSpotlightRequest{
-		CampaignId: "c1", SessionId: "s1",
-		Type: statev1.SessionSpotlightType_SESSION_SPOTLIGHT_TYPE_GM,
-	})
-	assertStatusCode(t, err, codes.Internal)
 }
 
 func TestSetSessionSpotlight_MissingCampaignId(t *testing.T) {
@@ -810,14 +749,6 @@ func TestClearSessionSpotlight_NilRequest(t *testing.T) {
 	svc := NewSessionService(Stores{})
 	_, err := svc.ClearSessionSpotlight(context.Background(), nil)
 	assertStatusCode(t, err, codes.InvalidArgument)
-}
-
-func TestClearSessionSpotlight_MissingStores(t *testing.T) {
-	svc := NewSessionService(Stores{})
-	_, err := svc.ClearSessionSpotlight(context.Background(), &statev1.ClearSessionSpotlightRequest{
-		CampaignId: "c1", SessionId: "s1",
-	})
-	assertStatusCode(t, err, codes.Internal)
 }
 
 func TestClearSessionSpotlight_MissingCampaignId(t *testing.T) {

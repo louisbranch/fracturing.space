@@ -42,13 +42,6 @@ func (f authzParticipantStore) ListParticipants(ctx context.Context, campaignID 
 	return storage.ParticipantPage{}, nil
 }
 
-func TestRequirePolicyMissingStore(t *testing.T) {
-	err := requirePolicy(context.Background(), Stores{}, policy.ActionManageParticipants, campaign.Campaign{})
-	if status.Code(err) != codes.Internal {
-		t.Fatalf("expected internal error, got %v", err)
-	}
-}
-
 func TestRequirePolicyMissingActor(t *testing.T) {
 	stores := Stores{Participant: authzParticipantStore{}}
 	err := requirePolicy(context.Background(), stores, policy.ActionManageParticipants, campaign.Campaign{ID: "camp"})

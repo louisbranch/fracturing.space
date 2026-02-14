@@ -25,10 +25,6 @@ func (s *StatisticsService) GetGameStatistics(ctx context.Context, in *gamev1.Ge
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "get game statistics request is required")
 	}
-	if s.stores.Statistics == nil {
-		return nil, status.Error(codes.Internal, "statistics store is not configured")
-	}
-
 	var since *time.Time
 	if ts := in.GetSince(); ts != nil {
 		value := ts.AsTime().UTC()

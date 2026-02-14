@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"time"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -45,7 +44,7 @@ func SessionStartHandler(client statev1.SessionServiceClient, notify ResourceUpd
 			return nil, SessionStartResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
 
-		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		runCtx, cancel := context.WithTimeout(ctx, grpcCallTimeout)
 		defer cancel()
 
 		callCtx, callMeta, err := NewOutgoingContext(runCtx, invocationID)
@@ -123,7 +122,7 @@ func SessionEndHandler(client statev1.SessionServiceClient, getContext func() Co
 			return nil, SessionEndResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
 
-		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		runCtx, cancel := context.WithTimeout(ctx, grpcCallTimeout)
 		defer cancel()
 
 		mcpCtx := Context{}
@@ -246,7 +245,7 @@ func SessionListResourceHandler(client statev1.SessionServiceClient) mcp.Resourc
 			return nil, fmt.Errorf("parse campaign ID from URI: %w", err)
 		}
 
-		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		runCtx, cancel := context.WithTimeout(ctx, grpcCallTimeout)
 		defer cancel()
 
 		callCtx, _, err := NewOutgoingContext(runCtx, "")

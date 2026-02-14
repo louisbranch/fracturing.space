@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
@@ -249,7 +248,7 @@ func ActionRollHandler(client pb.DaggerheartServiceClient) mcp.ToolHandlerFor[Ac
 			difficulty = &value
 		}
 
-		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		runCtx, cancel := context.WithTimeout(ctx, grpcCallTimeout)
 		defer cancel()
 
 		callCtx, callMeta, err := NewOutgoingContext(runCtx, invocationID)
@@ -320,7 +319,7 @@ func DualityOutcomeHandler(client pb.DaggerheartServiceClient) mcp.ToolHandlerFo
 			difficulty = &value
 		}
 
-		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		runCtx, cancel := context.WithTimeout(ctx, grpcCallTimeout)
 		defer cancel()
 
 		callCtx, callMeta, err := NewOutgoingContext(runCtx, invocationID)
@@ -380,7 +379,7 @@ func DualityExplainHandler(client pb.DaggerheartServiceClient) mcp.ToolHandlerFo
 			requestID = input.RequestID
 		}
 
-		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		runCtx, cancel := context.WithTimeout(ctx, grpcCallTimeout)
 		defer cancel()
 
 		callCtx, callMeta, err := NewOutgoingContext(runCtx, invocationID)
@@ -456,7 +455,7 @@ func DualityProbabilityHandler(client pb.DaggerheartServiceClient) mcp.ToolHandl
 			return nil, DualityProbabilityResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
 
-		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		runCtx, cancel := context.WithTimeout(ctx, grpcCallTimeout)
 		defer cancel()
 
 		callCtx, callMeta, err := NewOutgoingContext(runCtx, invocationID)
@@ -506,7 +505,7 @@ func RulesVersionHandler(client pb.DaggerheartServiceClient) mcp.ToolHandlerFor[
 			return nil, RulesVersionResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
 
-		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		runCtx, cancel := context.WithTimeout(ctx, grpcCallTimeout)
 		defer cancel()
 
 		callCtx, callMeta, err := NewOutgoingContext(runCtx, invocationID)
@@ -559,7 +558,7 @@ func RollDiceHandler(client pb.DaggerheartServiceClient) mcp.ToolHandlerFor[Roll
 			})
 		}
 
-		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		runCtx, cancel := context.WithTimeout(ctx, grpcCallTimeout)
 		defer cancel()
 
 		callCtx, callMeta, err := NewOutgoingContext(runCtx, invocationID)

@@ -511,26 +511,24 @@ func TestServerClose(t *testing.T) {
 
 func TestLoadOAuthAuthFromEnv(t *testing.T) {
 	t.Run("empty issuer returns nil", func(t *testing.T) {
-		t.Setenv("FRACTURING_SPACE_MCP_OAUTH_ISSUER", "")
-		t.Setenv("FRACTURING_SPACE_MCP_OAUTH_RESOURCE_SECRET", "")
-		auth := loadOAuthAuthFromEnv()
+		auth := loadOAuthAuthFromEnv(mcpHTTPEnv{})
 		if auth != nil {
 			t.Error("expected nil when issuer is empty")
 		}
 	})
 
 	t.Run("whitespace issuer returns nil", func(t *testing.T) {
-		t.Setenv("FRACTURING_SPACE_MCP_OAUTH_ISSUER", "  ")
-		auth := loadOAuthAuthFromEnv()
+		auth := loadOAuthAuthFromEnv(mcpHTTPEnv{OAuthIssuer: "  "})
 		if auth != nil {
 			t.Error("expected nil for whitespace issuer")
 		}
 	})
 
 	t.Run("configured issuer returns auth", func(t *testing.T) {
-		t.Setenv("FRACTURING_SPACE_MCP_OAUTH_ISSUER", "http://issuer.test/")
-		t.Setenv("FRACTURING_SPACE_MCP_OAUTH_RESOURCE_SECRET", "my-secret")
-		auth := loadOAuthAuthFromEnv()
+		auth := loadOAuthAuthFromEnv(mcpHTTPEnv{
+			OAuthIssuer: "http://issuer.test/",
+			OAuthSecret: "my-secret",
+		})
 		if auth == nil {
 			t.Fatal("expected non-nil auth")
 		}

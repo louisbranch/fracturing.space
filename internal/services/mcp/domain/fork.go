@@ -3,7 +3,6 @@ package domain
 import (
 	"context"
 	"fmt"
-	"time"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -71,7 +70,7 @@ func CampaignForkHandler(client statev1.ForkServiceClient, notify ResourceUpdate
 			return nil, CampaignForkResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
 
-		runCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		runCtx, cancel := context.WithTimeout(ctx, grpcLongCallTimeout)
 		defer cancel()
 
 		callCtx, callMeta, err := NewOutgoingContext(runCtx, invocationID)
@@ -138,7 +137,7 @@ func CampaignLineageHandler(client statev1.ForkServiceClient) mcp.ToolHandlerFor
 			return nil, CampaignLineageResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
 
-		runCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		runCtx, cancel := context.WithTimeout(ctx, grpcCallTimeout)
 		defer cancel()
 
 		callCtx, callMeta, err := NewOutgoingContext(runCtx, invocationID)

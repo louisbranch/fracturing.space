@@ -19,43 +19,6 @@ func TestCreateParticipant_NilRequest(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
-func TestCreateParticipant_MissingCampaignStore(t *testing.T) {
-	svc := NewParticipantService(Stores{Participant: newFakeParticipantStore()})
-	_, err := svc.CreateParticipant(context.Background(), &statev1.CreateParticipantRequest{
-		CampaignId:  "c1",
-		DisplayName: "Player 1",
-		Role:        statev1.ParticipantRole_PLAYER,
-	})
-	assertStatusCode(t, err, codes.Internal)
-}
-
-func TestCreateParticipant_MissingParticipantStore(t *testing.T) {
-	svc := NewParticipantService(Stores{Campaign: newFakeCampaignStore()})
-	_, err := svc.CreateParticipant(context.Background(), &statev1.CreateParticipantRequest{
-		CampaignId:  "c1",
-		DisplayName: "Player 1",
-		Role:        statev1.ParticipantRole_PLAYER,
-	})
-	assertStatusCode(t, err, codes.Internal)
-}
-
-func TestCreateParticipant_MissingEventStore(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	participantStore := newFakeParticipantStore()
-	campaignStore.campaigns["c1"] = campaign.Campaign{
-		ID:     "c1",
-		Status: campaign.CampaignStatusDraft,
-	}
-
-	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore})
-	_, err := svc.CreateParticipant(context.Background(), &statev1.CreateParticipantRequest{
-		CampaignId:  "c1",
-		DisplayName: "Player 1",
-		Role:        statev1.ParticipantRole_PLAYER,
-	})
-	assertStatusCode(t, err, codes.Internal)
-}
-
 func TestCreateParticipant_MissingCampaignId(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()

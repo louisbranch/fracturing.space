@@ -4,36 +4,29 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"strings"
 	"time"
 
+	"github.com/caarlos0/env/v11"
+	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	"github.com/louisbranch/fracturing.space/internal/services/admin"
-)
-
-const (
-	defaultHTTPAddr = ":8082"
-	defaultGRPCAddr = "localhost:8080"
-	defaultAuthAddr = "localhost:8083"
 )
 
 // Config holds the admin command configuration.
 type Config struct {
-	HTTPAddr        string
-	GRPCAddr        string
-	AuthAddr        string
-	GRPCDialTimeout time.Duration
+	HTTPAddr        string        `env:"FRACTURING_SPACE_ADMIN_ADDR"         envDefault:":8082"`
+	GRPCAddr        string        `env:"FRACTURING_SPACE_GAME_ADDR"          envDefault:"localhost:8080"`
+	AuthAddr        string        `env:"FRACTURING_SPACE_AUTH_ADDR"          envDefault:"localhost:8083"`
+	GRPCDialTimeout time.Duration `env:"FRACTURING_SPACE_ADMIN_DIAL_TIMEOUT" envDefault:"2s"`
 }
 
-// EnvLookup returns the value for a key when present.
-type EnvLookup func(string) (string, bool)
-
 // ParseConfig parses flags into a Config.
-func ParseConfig(fs *flag.FlagSet, args []string, lookup EnvLookup) (Config, error) {
-	cfg := Config{
-		HTTPAddr:        envOrDefault(lookup, []string{"FRACTURING_SPACE_ADMIN_ADDR"}, defaultHTTPAddr),
-		GRPCAddr:        envOrDefault(lookup, []string{"FRACTURING_SPACE_GAME_ADDR"}, defaultGRPCAddr),
-		AuthAddr:        envOrDefault(lookup, []string{"FRACTURING_SPACE_AUTH_ADDR"}, defaultAuthAddr),
-		GRPCDialTimeout: 2 * time.Second,
+func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
+	var cfg Config
+	if err := env.Parse(&cfg); err != nil {
+		return Config{}, fmt.Errorf("parse env: %w", err)
+	}
+	if cfg.GRPCDialTimeout <= 0 {
+		cfg.GRPCDialTimeout = timeouts.GRPCDial
 	}
 
 	fs.StringVar(&cfg.HTTPAddr, "http-addr", cfg.HTTPAddr, "HTTP listen address")
@@ -63,20 +56,4 @@ func Run(ctx context.Context, cfg Config) error {
 		return fmt.Errorf("serve web: %w", err)
 	}
 	return nil
-}
-
-func envOrDefault(lookup EnvLookup, keys []string, fallback string) string {
-	for _, key := range keys {
-		if lookup == nil {
-			break
-		}
-		value, ok := lookup(key)
-		if ok {
-			trimmed := strings.TrimSpace(value)
-			if trimmed != "" {
-				return trimmed
-			}
-		}
-	}
-	return fallback
 }

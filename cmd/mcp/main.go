@@ -13,10 +13,7 @@ import (
 
 // main starts the MCP server on stdio or HTTP.
 func main() {
-	cfg, err := mcpcmd.ParseConfig(flag.CommandLine, os.Args[1:], func(key string) (string, bool) {
-		value, ok := os.LookupEnv(key)
-		return value, ok
-	})
+	cfg, err := mcpcmd.ParseConfig(flag.CommandLine, os.Args[1:])
 	if err != nil {
 		log.Fatalf("parse flags: %v", err)
 	}

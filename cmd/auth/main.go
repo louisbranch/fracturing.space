@@ -12,10 +12,7 @@ import (
 )
 
 func main() {
-	cfg, err := authcmd.ParseConfig(flag.CommandLine, os.Args[1:], func(key string) (string, bool) {
-		value, ok := os.LookupEnv(key)
-		return value, ok
-	})
+	cfg, err := authcmd.ParseConfig(flag.CommandLine, os.Args[1:])
 	if err != nil {
 		log.Fatalf("parse flags: %v", err)
 	}

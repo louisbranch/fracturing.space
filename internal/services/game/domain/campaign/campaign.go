@@ -219,6 +219,92 @@ func campaignStatusLabel(status CampaignStatus) string {
 	}
 }
 
+// CampaignStatusFromLabel parses a string label into a CampaignStatus.
+// It trims whitespace and matches case-insensitively. Both short ("DRAFT")
+// and prefixed ("CAMPAIGN_STATUS_DRAFT") forms are accepted.
+func CampaignStatusFromLabel(value string) (CampaignStatus, error) {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return CampaignStatusUnspecified, fmt.Errorf("campaign status is required")
+	}
+	upper := strings.ToUpper(trimmed)
+	switch upper {
+	case "DRAFT", "CAMPAIGN_STATUS_DRAFT":
+		return CampaignStatusDraft, nil
+	case "ACTIVE", "CAMPAIGN_STATUS_ACTIVE":
+		return CampaignStatusActive, nil
+	case "COMPLETED", "CAMPAIGN_STATUS_COMPLETED":
+		return CampaignStatusCompleted, nil
+	case "ARCHIVED", "CAMPAIGN_STATUS_ARCHIVED":
+		return CampaignStatusArchived, nil
+	default:
+		return CampaignStatusUnspecified, fmt.Errorf("unknown campaign status: %s", trimmed)
+	}
+}
+
+// GmModeFromLabel parses a string label into a GmMode.
+// It trims whitespace and matches case-insensitively. Both short ("HUMAN")
+// and prefixed ("GM_MODE_HUMAN") forms are accepted.
+func GmModeFromLabel(value string) (GmMode, error) {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return GmModeUnspecified, fmt.Errorf("gm mode is required")
+	}
+	upper := strings.ToUpper(trimmed)
+	switch upper {
+	case "HUMAN", "GM_MODE_HUMAN":
+		return GmModeHuman, nil
+	case "AI", "GM_MODE_AI":
+		return GmModeAI, nil
+	case "HYBRID", "GM_MODE_HYBRID":
+		return GmModeHybrid, nil
+	default:
+		return GmModeUnspecified, fmt.Errorf("unknown gm mode: %s", trimmed)
+	}
+}
+
+// CampaignIntentFromLabel parses a string label into a CampaignIntent.
+// It trims whitespace and matches case-insensitively. Returns
+// CampaignIntentStandard for empty or unrecognized values.
+func CampaignIntentFromLabel(value string) CampaignIntent {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return CampaignIntentStandard
+	}
+	upper := strings.ToUpper(trimmed)
+	switch upper {
+	case "STANDARD", "CAMPAIGN_INTENT_STANDARD":
+		return CampaignIntentStandard
+	case "STARTER", "CAMPAIGN_INTENT_STARTER":
+		return CampaignIntentStarter
+	case "SANDBOX", "CAMPAIGN_INTENT_SANDBOX":
+		return CampaignIntentSandbox
+	default:
+		return CampaignIntentStandard
+	}
+}
+
+// CampaignAccessPolicyFromLabel parses a string label into a CampaignAccessPolicy.
+// It trims whitespace and matches case-insensitively. Returns
+// CampaignAccessPolicyPrivate for empty or unrecognized values.
+func CampaignAccessPolicyFromLabel(value string) CampaignAccessPolicy {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return CampaignAccessPolicyPrivate
+	}
+	upper := strings.ToUpper(trimmed)
+	switch upper {
+	case "PRIVATE", "CAMPAIGN_ACCESS_POLICY_PRIVATE":
+		return CampaignAccessPolicyPrivate
+	case "RESTRICTED", "CAMPAIGN_ACCESS_POLICY_RESTRICTED":
+		return CampaignAccessPolicyRestricted
+	case "PUBLIC", "CAMPAIGN_ACCESS_POLICY_PUBLIC":
+		return CampaignAccessPolicyPublic
+	default:
+		return CampaignAccessPolicyPrivate
+	}
+}
+
 // NormalizeCreateCampaignInput trims and validates campaign input metadata.
 func NormalizeCreateCampaignInput(input CreateCampaignInput) (CreateCampaignInput, error) {
 	input.Name = strings.TrimSpace(input.Name)

@@ -31,9 +31,8 @@ func TestOpenAuthStoreInvalidDir(t *testing.T) {
 	}
 
 	path := filepath.Join(file, "auth.db")
-	t.Setenv("FRACTURING_SPACE_AUTH_DB_PATH", path)
 
-	if _, err := openAuthStore(); err == nil {
+	if _, err := openAuthStore(path); err == nil {
 		t.Fatal("expected error for invalid storage dir")
 	}
 }

@@ -53,25 +53,19 @@ func TestLoadConfigFromEnvDefaults(t *testing.T) {
 	}
 }
 
-func TestParseCSVEnv(t *testing.T) {
-	t.Setenv("TEST_CSV", " a, ,b ,c ")
-	got := parseCSVEnv("TEST_CSV")
+func TestTrimCSV(t *testing.T) {
+	got := trimCSV([]string{" a", " ", "b ", "c "})
 	want := []string{"a", "b", "c"}
 	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("parseCSVEnv() = %v, want %v", got, want)
+		t.Fatalf("trimCSV() = %v, want %v", got, want)
 	}
 
-	t.Setenv("TEST_CSV", "")
-	if got := parseCSVEnv("TEST_CSV"); got != nil {
-		t.Fatalf("parseCSVEnv(empty) = %v, want nil", got)
+	if got := trimCSV(nil); got != nil {
+		t.Fatalf("trimCSV(nil) = %v, want nil", got)
 	}
-}
 
-func TestParseCSVEnvWithDefault(t *testing.T) {
-	fallback := []string{"one", "two"}
-	t.Setenv("TEST_DEFAULT", "")
-	if got := parseCSVEnvWithDefault("TEST_DEFAULT", fallback); !reflect.DeepEqual(got, fallback) {
-		t.Fatalf("parseCSVEnvWithDefault() = %v, want %v", got, fallback)
+	if got := trimCSV([]string{"", " "}); got != nil {
+		t.Fatalf("trimCSV(empty) = %v, want nil", got)
 	}
 }
 
@@ -124,9 +118,10 @@ func TestLoadConfigFromEnvProviders(t *testing.T) {
 	}
 }
 
-func TestParseClientsEnvInvalidJSON(t *testing.T) {
+func TestLoadConfigFromEnvInvalidClientsJSON(t *testing.T) {
 	t.Setenv("FRACTURING_SPACE_OAUTH_CLIENTS", "not-json")
-	if clients := parseClientsEnv(); clients != nil {
-		t.Fatalf("parseClientsEnv() = %v, want nil", clients)
+	config := LoadConfigFromEnv()
+	if config.Clients != nil {
+		t.Fatalf("Clients = %v, want nil", config.Clients)
 	}
 }

@@ -15,7 +15,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/policy"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/projection"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -46,16 +45,6 @@ func NewParticipantService(stores Stores) *ParticipantService {
 func (s *ParticipantService) CreateParticipant(ctx context.Context, in *campaignv1.CreateParticipantRequest) (*campaignv1.CreateParticipantResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "create participant request is required")
-	}
-
-	if s.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if s.stores.Participant == nil {
-		return nil, status.Error(codes.Internal, "participant store is not configured")
-	}
-	if s.stores.Event == nil {
-		return nil, status.Error(codes.Internal, "event store is not configured")
 	}
 
 	campaignID := strings.TrimSpace(in.GetCampaignId())
@@ -149,7 +138,7 @@ func (s *ParticipantService) CreateParticipant(ctx context.Context, in *campaign
 		return nil, status.Errorf(codes.Internal, "append event: %v", err)
 	}
 
-	applier := projection.Applier{Campaign: s.stores.Campaign, Participant: s.stores.Participant, ClaimIndex: s.stores.ClaimIndex}
+	applier := s.stores.Applier()
 	if err := applier.Apply(ctx, stored); err != nil {
 		if apperrors.GetCode(err) != apperrors.CodeUnknown {
 			return nil, handleDomainError(err)
@@ -171,16 +160,6 @@ func (s *ParticipantService) CreateParticipant(ctx context.Context, in *campaign
 func (s *ParticipantService) UpdateParticipant(ctx context.Context, in *campaignv1.UpdateParticipantRequest) (*campaignv1.UpdateParticipantResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "update participant request is required")
-	}
-
-	if s.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if s.stores.Participant == nil {
-		return nil, status.Error(codes.Internal, "participant store is not configured")
-	}
-	if s.stores.Event == nil {
-		return nil, status.Error(codes.Internal, "event store is not configured")
 	}
 
 	campaignID := strings.TrimSpace(in.GetCampaignId())
@@ -282,7 +261,7 @@ func (s *ParticipantService) UpdateParticipant(ctx context.Context, in *campaign
 		return nil, status.Errorf(codes.Internal, "append event: %v", err)
 	}
 
-	applier := projection.Applier{Campaign: s.stores.Campaign, Participant: s.stores.Participant, ClaimIndex: s.stores.ClaimIndex}
+	applier := s.stores.Applier()
 	if err := applier.Apply(ctx, stored); err != nil {
 		if apperrors.GetCode(err) != apperrors.CodeUnknown {
 			return nil, handleDomainError(err)
@@ -302,16 +281,6 @@ func (s *ParticipantService) UpdateParticipant(ctx context.Context, in *campaign
 func (s *ParticipantService) DeleteParticipant(ctx context.Context, in *campaignv1.DeleteParticipantRequest) (*campaignv1.DeleteParticipantResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "delete participant request is required")
-	}
-
-	if s.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if s.stores.Participant == nil {
-		return nil, status.Error(codes.Internal, "participant store is not configured")
-	}
-	if s.stores.Event == nil {
-		return nil, status.Error(codes.Internal, "event store is not configured")
 	}
 
 	campaignID := strings.TrimSpace(in.GetCampaignId())
@@ -368,7 +337,7 @@ func (s *ParticipantService) DeleteParticipant(ctx context.Context, in *campaign
 		return nil, status.Errorf(codes.Internal, "append event: %v", err)
 	}
 
-	applier := projection.Applier{Campaign: s.stores.Campaign, Participant: s.stores.Participant, ClaimIndex: s.stores.ClaimIndex}
+	applier := s.stores.Applier()
 	if err := applier.Apply(ctx, stored); err != nil {
 		if apperrors.GetCode(err) != apperrors.CodeUnknown {
 			return nil, handleDomainError(err)
@@ -383,13 +352,6 @@ func (s *ParticipantService) DeleteParticipant(ctx context.Context, in *campaign
 func (s *ParticipantService) ListParticipants(ctx context.Context, in *campaignv1.ListParticipantsRequest) (*campaignv1.ListParticipantsResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "list participants request is required")
-	}
-
-	if s.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if s.stores.Participant == nil {
-		return nil, status.Error(codes.Internal, "participant store is not configured")
 	}
 
 	campaignID := strings.TrimSpace(in.GetCampaignId())
@@ -433,13 +395,6 @@ func (s *ParticipantService) ListParticipants(ctx context.Context, in *campaignv
 func (s *ParticipantService) GetParticipant(ctx context.Context, in *campaignv1.GetParticipantRequest) (*campaignv1.GetParticipantResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "get participant request is required")
-	}
-
-	if s.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if s.stores.Participant == nil {
-		return nil, status.Error(codes.Internal, "participant store is not configured")
 	}
 
 	campaignID := strings.TrimSpace(in.GetCampaignId())

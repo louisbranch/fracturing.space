@@ -1025,9 +1025,9 @@ func newJoinGrantSigner(t *testing.T) joinGrantSigner {
 	}
 	issuer := "test-issuer"
 	audience := "game-service"
-	t.Setenv(invite.EnvJoinGrantIssuer, issuer)
-	t.Setenv(invite.EnvJoinGrantAudience, audience)
-	t.Setenv(invite.EnvJoinGrantPublicKey, base64.RawStdEncoding.EncodeToString(publicKey))
+	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_ISSUER", issuer)
+	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_AUDIENCE", audience)
+	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY", base64.RawStdEncoding.EncodeToString(publicKey))
 	return joinGrantSigner{
 		issuer:   issuer,
 		audience: audience,

@@ -20,15 +20,6 @@ func TestGetSnapshot_NilRequest(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
-func TestGetSnapshot_MissingCampaignStore(t *testing.T) {
-	svc := NewSnapshotService(Stores{
-		Daggerheart: newFakeDaggerheartStore(),
-		Character:   newFakeCharacterStore(),
-	})
-	_, err := svc.GetSnapshot(context.Background(), &statev1.GetSnapshotRequest{CampaignId: "c1"})
-	assertStatusCode(t, err, codes.Internal)
-}
-
 func TestGetSnapshot_MissingCampaignId(t *testing.T) {
 	svc := NewSnapshotService(Stores{
 		Campaign:    newFakeCampaignStore(),
@@ -174,17 +165,6 @@ func TestPatchCharacterState_NilRequest(t *testing.T) {
 	svc := NewSnapshotService(Stores{})
 	_, err := svc.PatchCharacterState(context.Background(), nil)
 	assertStatusCode(t, err, codes.InvalidArgument)
-}
-
-func TestPatchCharacterState_MissingCampaignStore(t *testing.T) {
-	svc := NewSnapshotService(Stores{
-		Daggerheart: newFakeDaggerheartStore(),
-	})
-	_, err := svc.PatchCharacterState(context.Background(), &statev1.PatchCharacterStateRequest{
-		CampaignId:  "c1",
-		CharacterId: "ch1",
-	})
-	assertStatusCode(t, err, codes.Internal)
 }
 
 func TestPatchCharacterState_MissingCampaignId(t *testing.T) {
@@ -439,17 +419,6 @@ func TestUpdateSnapshotState_NilRequest(t *testing.T) {
 	svc := NewSnapshotService(Stores{})
 	_, err := svc.UpdateSnapshotState(context.Background(), nil)
 	assertStatusCode(t, err, codes.InvalidArgument)
-}
-
-func TestUpdateSnapshotState_MissingCampaignStore(t *testing.T) {
-	svc := NewSnapshotService(Stores{Daggerheart: newFakeDaggerheartStore()})
-	_, err := svc.UpdateSnapshotState(context.Background(), &statev1.UpdateSnapshotStateRequest{
-		CampaignId: "c1",
-		SystemSnapshotUpdate: &statev1.UpdateSnapshotStateRequest_Daggerheart{
-			Daggerheart: &daggerheartv1.DaggerheartSnapshot{GmFear: 5},
-		},
-	})
-	assertStatusCode(t, err, codes.Internal)
 }
 
 func TestUpdateSnapshotState_MissingCampaignId(t *testing.T) {

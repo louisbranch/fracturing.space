@@ -15,7 +15,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -49,19 +48,6 @@ func NewCharacterService(stores Stores) *CharacterService {
 func (s *CharacterService) CreateCharacter(ctx context.Context, in *campaignv1.CreateCharacterRequest) (*campaignv1.CreateCharacterResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "create character request is required")
-	}
-
-	if s.stores.Character == nil {
-		return nil, status.Error(codes.Internal, "character store is not configured")
-	}
-	if s.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if s.stores.Daggerheart == nil {
-		return nil, status.Error(codes.Internal, "daggerheart store is not configured")
-	}
-	if s.stores.Event == nil {
-		return nil, status.Error(codes.Internal, "event store is not configured")
 	}
 
 	campaignID := strings.TrimSpace(in.GetCampaignId())
@@ -126,7 +112,7 @@ func (s *CharacterService) CreateCharacter(ctx context.Context, in *campaignv1.C
 		return nil, status.Errorf(codes.Internal, "append event: %v", err)
 	}
 
-	applier := projection.Applier{Campaign: s.stores.Campaign, Participant: s.stores.Participant, Character: s.stores.Character, ClaimIndex: s.stores.ClaimIndex}
+	applier := s.stores.Applier()
 	if err := applier.Apply(ctx, stored); err != nil {
 		return nil, status.Errorf(codes.Internal, "apply event: %v", err)
 	}
@@ -239,11 +225,7 @@ func (s *CharacterService) CreateCharacter(ctx context.Context, in *campaignv1.C
 		return nil, status.Errorf(codes.Internal, "append state event: %v", err)
 	}
 
-	projectionApplier := projection.Applier{
-		Campaign:    s.stores.Campaign,
-		Character:   s.stores.Character,
-		Daggerheart: s.stores.Daggerheart,
-	}
+	projectionApplier := s.stores.Applier()
 	if err := projectionApplier.Apply(ctx, profileEvent); err != nil {
 		return nil, status.Errorf(codes.Internal, "apply profile event: %v", err)
 	}
@@ -261,16 +243,6 @@ func (s *CharacterService) CreateCharacter(ctx context.Context, in *campaignv1.C
 func (s *CharacterService) UpdateCharacter(ctx context.Context, in *campaignv1.UpdateCharacterRequest) (*campaignv1.UpdateCharacterResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "update character request is required")
-	}
-
-	if s.stores.Character == nil {
-		return nil, status.Error(codes.Internal, "character store is not configured")
-	}
-	if s.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if s.stores.Event == nil {
-		return nil, status.Error(codes.Internal, "event store is not configured")
 	}
 
 	campaignID := strings.TrimSpace(in.GetCampaignId())
@@ -352,13 +324,7 @@ func (s *CharacterService) UpdateCharacter(ctx context.Context, in *campaignv1.U
 		return nil, status.Errorf(codes.Internal, "append event: %v", err)
 	}
 
-	applier := projection.Applier{
-		Campaign:    s.stores.Campaign,
-		Character:   s.stores.Character,
-		Daggerheart: s.stores.Daggerheart,
-		Participant: s.stores.Participant,
-		ClaimIndex:  s.stores.ClaimIndex,
-	}
+	applier := s.stores.Applier()
 	if err := applier.Apply(ctx, stored); err != nil {
 		return nil, status.Errorf(codes.Internal, "apply event: %v", err)
 	}
@@ -375,16 +341,6 @@ func (s *CharacterService) UpdateCharacter(ctx context.Context, in *campaignv1.U
 func (s *CharacterService) DeleteCharacter(ctx context.Context, in *campaignv1.DeleteCharacterRequest) (*campaignv1.DeleteCharacterResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "delete character request is required")
-	}
-
-	if s.stores.Character == nil {
-		return nil, status.Error(codes.Internal, "character store is not configured")
-	}
-	if s.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if s.stores.Event == nil {
-		return nil, status.Error(codes.Internal, "event store is not configured")
 	}
 
 	campaignID := strings.TrimSpace(in.GetCampaignId())
@@ -441,13 +397,7 @@ func (s *CharacterService) DeleteCharacter(ctx context.Context, in *campaignv1.D
 		return nil, status.Errorf(codes.Internal, "append event: %v", err)
 	}
 
-	applier := projection.Applier{
-		Campaign:    s.stores.Campaign,
-		Character:   s.stores.Character,
-		Daggerheart: s.stores.Daggerheart,
-		Participant: s.stores.Participant,
-		ClaimIndex:  s.stores.ClaimIndex,
-	}
+	applier := s.stores.Applier()
 	if err := applier.Apply(ctx, stored); err != nil {
 		return nil, status.Errorf(codes.Internal, "apply event: %v", err)
 	}
@@ -459,13 +409,6 @@ func (s *CharacterService) DeleteCharacter(ctx context.Context, in *campaignv1.D
 func (s *CharacterService) ListCharacters(ctx context.Context, in *campaignv1.ListCharactersRequest) (*campaignv1.ListCharactersResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "list characters request is required")
-	}
-
-	if s.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if s.stores.Character == nil {
-		return nil, status.Error(codes.Internal, "character store is not configured")
 	}
 
 	campaignID := strings.TrimSpace(in.GetCampaignId())
@@ -509,16 +452,6 @@ func (s *CharacterService) ListCharacters(ctx context.Context, in *campaignv1.Li
 func (s *CharacterService) SetDefaultControl(ctx context.Context, in *campaignv1.SetDefaultControlRequest) (*campaignv1.SetDefaultControlResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "set default control request is required")
-	}
-
-	if s.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if s.stores.Character == nil {
-		return nil, status.Error(codes.Internal, "character store is not configured")
-	}
-	if s.stores.Event == nil {
-		return nil, status.Error(codes.Internal, "event store is not configured")
 	}
 
 	campaignID := strings.TrimSpace(in.GetCampaignId())
@@ -586,13 +519,7 @@ func (s *CharacterService) SetDefaultControl(ctx context.Context, in *campaignv1
 		return nil, status.Errorf(codes.Internal, "append event: %v", err)
 	}
 
-	applier := projection.Applier{
-		Campaign:    s.stores.Campaign,
-		Character:   s.stores.Character,
-		Daggerheart: s.stores.Daggerheart,
-		Participant: s.stores.Participant,
-		ClaimIndex:  s.stores.ClaimIndex,
-	}
+	applier := s.stores.Applier()
 	if err := applier.Apply(ctx, stored); err != nil {
 		return nil, status.Errorf(codes.Internal, "apply event: %v", err)
 	}
@@ -612,16 +539,6 @@ func (s *CharacterService) SetDefaultControl(ctx context.Context, in *campaignv1
 func (s *CharacterService) GetCharacterSheet(ctx context.Context, in *campaignv1.GetCharacterSheetRequest) (*campaignv1.GetCharacterSheetResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "get character sheet request is required")
-	}
-
-	if s.stores.Character == nil {
-		return nil, status.Error(codes.Internal, "character store is not configured")
-	}
-	if s.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if s.stores.Daggerheart == nil {
-		return nil, status.Error(codes.Internal, "daggerheart store is not configured")
 	}
 
 	campaignID := strings.TrimSpace(in.GetCampaignId())
@@ -668,10 +585,6 @@ func (s *CharacterService) GetCharacterSheet(ctx context.Context, in *campaignv1
 func (s *CharacterService) PatchCharacterProfile(ctx context.Context, in *campaignv1.PatchCharacterProfileRequest) (*campaignv1.PatchCharacterProfileResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "patch character profile request is required")
-	}
-
-	if s.stores.Daggerheart == nil {
-		return nil, status.Error(codes.Internal, "daggerheart store is not configured")
 	}
 
 	campaignID := strings.TrimSpace(in.GetCampaignId())
@@ -929,13 +842,7 @@ func (s *CharacterService) PatchCharacterProfile(ctx context.Context, in *campai
 		return nil, status.Errorf(codes.Internal, "append event: %v", err)
 	}
 
-	applier := projection.Applier{
-		Campaign:    s.stores.Campaign,
-		Character:   s.stores.Character,
-		Daggerheart: s.stores.Daggerheart,
-		Participant: s.stores.Participant,
-		ClaimIndex:  s.stores.ClaimIndex,
-	}
+	applier := s.stores.Applier()
 	if err := applier.Apply(ctx, stored); err != nil {
 		return nil, status.Errorf(codes.Internal, "apply event: %v", err)
 	}

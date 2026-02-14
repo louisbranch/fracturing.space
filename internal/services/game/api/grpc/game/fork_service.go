@@ -54,9 +54,6 @@ func (s *ForkService) ForkCampaign(ctx context.Context, in *campaignv1.ForkCampa
 		return nil, status.Error(codes.InvalidArgument, "source campaign id is required")
 	}
 
-	if s.stores.Campaign == nil || s.stores.Event == nil || s.stores.CampaignFork == nil || s.stores.Character == nil || s.stores.Daggerheart == nil {
-		return nil, status.Error(codes.Internal, "required stores are not configured")
-	}
 	if in.GetCopyParticipants() && s.stores.Participant == nil {
 		return nil, status.Error(codes.Internal, "participant store is not configured")
 	}
@@ -136,16 +133,7 @@ func (s *ForkService) ForkCampaign(ctx context.Context, in *campaignv1.ForkCampa
 		return nil, status.Errorf(codes.Internal, "append campaign.created: %v", err)
 	}
 
-	applier := projection.Applier{
-		Campaign:     s.stores.Campaign,
-		CampaignFork: s.stores.CampaignFork,
-		Participant:  s.stores.Participant,
-		Character:    s.stores.Character,
-		Daggerheart:  s.stores.Daggerheart,
-		Session:      s.stores.Session,
-		ClaimIndex:   s.stores.ClaimIndex,
-		Adapters:     adapterRegistryForStores(s.stores),
-	}
+	applier := s.stores.Applier()
 	if err := applier.Apply(ctx, createdEvent); err != nil {
 		return nil, status.Errorf(codes.Internal, "apply campaign.created: %v", err)
 	}
@@ -309,10 +297,6 @@ func (s *ForkService) GetLineage(ctx context.Context, in *campaignv1.GetLineageR
 		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
 	}
 
-	if s.stores.Campaign == nil || s.stores.CampaignFork == nil {
-		return nil, status.Error(codes.Internal, "required stores are not configured")
-	}
-
 	// Verify campaign exists
 	_, err := s.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
@@ -358,10 +342,6 @@ func (s *ForkService) ListForks(ctx context.Context, in *campaignv1.ListForksReq
 	sourceCampaignID := strings.TrimSpace(in.GetSourceCampaignId())
 	if sourceCampaignID == "" {
 		return nil, status.Error(codes.InvalidArgument, "source campaign id is required")
-	}
-
-	if s.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
 	}
 
 	// Listing forks requires querying campaigns by parent_campaign_id,

@@ -1,21 +1,10 @@
 package passkey
 
 import (
-	"os"
-	"strings"
 	"time"
 
+	"github.com/caarlos0/env/v11"
 	"github.com/louisbranch/fracturing.space/internal/platform/branding"
-)
-
-const (
-	envRPID        = "FRACTURING_SPACE_WEBAUTHN_RP_ID"
-	envRPName      = "FRACTURING_SPACE_WEBAUTHN_RP_DISPLAY_NAME"
-	envRPOrigins   = "FRACTURING_SPACE_WEBAUTHN_RP_ORIGINS"
-	envSessionTTL  = "FRACTURING_SPACE_WEBAUTHN_SESSION_TTL"
-	defaultRPID    = "localhost"
-	defaultOrigin  = "http://localhost:8086"
-	defaultSession = 5 * time.Minute
 )
 
 // SessionKind describes the WebAuthn session purpose.
@@ -28,55 +17,28 @@ const (
 
 // Config controls WebAuthn relying party settings.
 type Config struct {
-	RPDisplayName string
-	RPID          string
-	RPOrigins     []string
-	SessionTTL    time.Duration
+	RPDisplayName string        `env:"FRACTURING_SPACE_WEBAUTHN_RP_DISPLAY_NAME"`
+	RPID          string        `env:"FRACTURING_SPACE_WEBAUTHN_RP_ID"           envDefault:"localhost"`
+	RPOrigins     []string      `env:"FRACTURING_SPACE_WEBAUTHN_RP_ORIGINS"      envSeparator:","`
+	SessionTTL    time.Duration `env:"FRACTURING_SPACE_WEBAUTHN_SESSION_TTL"     envDefault:"5m"`
 }
 
 // LoadConfigFromEnv returns passkey configuration with defaults.
 func LoadConfigFromEnv() Config {
-	rpID := strings.TrimSpace(os.Getenv(envRPID))
-	if rpID == "" {
-		rpID = defaultRPID
-	}
-	rpName := strings.TrimSpace(os.Getenv(envRPName))
-	if rpName == "" {
-		rpName = branding.AppName
-	}
-
-	origins := parseCSVEnv(envRPOrigins)
-	if len(origins) == 0 {
-		origins = []string{defaultOrigin}
-	}
-
-	sessionTTL := defaultSession
-	if raw := strings.TrimSpace(os.Getenv(envSessionTTL)); raw != "" {
-		if parsed, err := time.ParseDuration(raw); err == nil {
-			sessionTTL = parsed
+	var cfg Config
+	if err := env.Parse(&cfg); err != nil {
+		return Config{
+			RPDisplayName: branding.AppName,
+			RPID:          "localhost",
+			RPOrigins:     []string{"http://localhost:8086"},
+			SessionTTL:    5 * time.Minute,
 		}
 	}
-
-	return Config{
-		RPDisplayName: rpName,
-		RPID:          rpID,
-		RPOrigins:     origins,
-		SessionTTL:    sessionTTL,
+	if cfg.RPDisplayName == "" {
+		cfg.RPDisplayName = branding.AppName
 	}
-}
-
-func parseCSVEnv(key string) []string {
-	value := strings.TrimSpace(os.Getenv(key))
-	if value == "" {
-		return nil
+	if len(cfg.RPOrigins) == 0 {
+		cfg.RPOrigins = []string{"http://localhost:8086"}
 	}
-	parts := strings.Split(value, ",")
-	values := make([]string, 0, len(parts))
-	for _, part := range parts {
-		trimmed := strings.TrimSpace(part)
-		if trimmed != "" {
-			values = append(values, trimmed)
-		}
-	}
-	return values
+	return cfg
 }

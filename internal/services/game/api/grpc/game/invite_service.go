@@ -19,7 +19,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/policy"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -60,19 +59,6 @@ func (s *InviteService) CreateInvite(ctx context.Context, in *campaignv1.CreateI
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "create invite request is required")
 	}
-	if s.stores.Invite == nil {
-		return nil, status.Error(codes.Internal, "invite store is not configured")
-	}
-	if s.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if s.stores.Participant == nil {
-		return nil, status.Error(codes.Internal, "participant store is not configured")
-	}
-	if s.stores.Event == nil {
-		return nil, status.Error(codes.Internal, "event store is not configured")
-	}
-
 	campaignID := strings.TrimSpace(in.GetCampaignId())
 	if campaignID == "" {
 		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
@@ -159,7 +145,7 @@ func (s *InviteService) CreateInvite(ctx context.Context, in *campaignv1.CreateI
 		return nil, status.Errorf(codes.Internal, "append event: %v", err)
 	}
 
-	applier := projection.Applier{Campaign: s.stores.Campaign, Invite: s.stores.Invite, ClaimIndex: s.stores.ClaimIndex}
+	applier := s.stores.Applier()
 	if err := applier.Apply(ctx, stored); err != nil {
 		return nil, status.Errorf(codes.Internal, "apply event: %v", err)
 	}
@@ -177,19 +163,6 @@ func (s *InviteService) ClaimInvite(ctx context.Context, in *campaignv1.ClaimInv
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "claim invite request is required")
 	}
-	if s.stores.Invite == nil {
-		return nil, status.Error(codes.Internal, "invite store is not configured")
-	}
-	if s.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if s.stores.Participant == nil {
-		return nil, status.Error(codes.Internal, "participant store is not configured")
-	}
-	if s.stores.Event == nil {
-		return nil, status.Error(codes.Internal, "event store is not configured")
-	}
-
 	campaignID := strings.TrimSpace(in.GetCampaignId())
 	if campaignID == "" {
 		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
@@ -353,7 +326,7 @@ func (s *InviteService) ClaimInvite(ctx context.Context, in *campaignv1.ClaimInv
 		return nil, status.Errorf(codes.Internal, "append invite claimed event: %v", err)
 	}
 
-	applier := projection.Applier{Campaign: s.stores.Campaign, Participant: s.stores.Participant, Invite: s.stores.Invite, ClaimIndex: s.stores.ClaimIndex}
+	applier := s.stores.Applier()
 	if err := applier.Apply(ctx, boundEvent); err != nil {
 		if apperrors.GetCode(err) != apperrors.CodeUnknown {
 			return nil, handleDomainError(err)
@@ -384,13 +357,6 @@ func (s *InviteService) GetInvite(ctx context.Context, in *campaignv1.GetInviteR
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "get invite request is required")
 	}
-	if s.stores.Invite == nil {
-		return nil, status.Error(codes.Internal, "invite store is not configured")
-	}
-	if s.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-
 	inviteID := strings.TrimSpace(in.GetInviteId())
 	if inviteID == "" {
 		return nil, status.Error(codes.InvalidArgument, "invite id is required")
@@ -419,13 +385,6 @@ func (s *InviteService) ListInvites(ctx context.Context, in *campaignv1.ListInvi
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "list invites request is required")
 	}
-	if s.stores.Invite == nil {
-		return nil, status.Error(codes.Internal, "invite store is not configured")
-	}
-	if s.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-
 	campaignID := strings.TrimSpace(in.GetCampaignId())
 	if campaignID == "" {
 		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
@@ -474,16 +433,6 @@ func (s *InviteService) ListPendingInvites(ctx context.Context, in *campaignv1.L
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "list pending invites request is required")
 	}
-	if s.stores.Invite == nil {
-		return nil, status.Error(codes.Internal, "invite store is not configured")
-	}
-	if s.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if s.stores.Participant == nil {
-		return nil, status.Error(codes.Internal, "participant store is not configured")
-	}
-
 	campaignID := strings.TrimSpace(in.GetCampaignId())
 	if campaignID == "" {
 		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
@@ -570,16 +519,6 @@ func (s *InviteService) ListPendingInvitesForUser(ctx context.Context, in *campa
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "list pending invites for user request is required")
 	}
-	if s.stores.Invite == nil {
-		return nil, status.Error(codes.Internal, "invite store is not configured")
-	}
-	if s.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if s.stores.Participant == nil {
-		return nil, status.Error(codes.Internal, "participant store is not configured")
-	}
-
 	userID := strings.TrimSpace(grpcmeta.UserIDFromContext(ctx))
 	if userID == "" {
 		return nil, status.Error(codes.InvalidArgument, "user id is required")
@@ -640,16 +579,6 @@ func (s *InviteService) RevokeInvite(ctx context.Context, in *campaignv1.RevokeI
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "revoke invite request is required")
 	}
-	if s.stores.Invite == nil {
-		return nil, status.Error(codes.Internal, "invite store is not configured")
-	}
-	if s.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if s.stores.Event == nil {
-		return nil, status.Error(codes.Internal, "event store is not configured")
-	}
-
 	inviteID := strings.TrimSpace(in.GetInviteId())
 	if inviteID == "" {
 		return nil, status.Error(codes.InvalidArgument, "invite id is required")
@@ -701,7 +630,7 @@ func (s *InviteService) RevokeInvite(ctx context.Context, in *campaignv1.RevokeI
 		return nil, status.Errorf(codes.Internal, "append event: %v", err)
 	}
 
-	applier := projection.Applier{Campaign: s.stores.Campaign, Invite: s.stores.Invite, ClaimIndex: s.stores.ClaimIndex}
+	applier := s.stores.Applier()
 	if err := applier.Apply(ctx, stored); err != nil {
 		return nil, status.Errorf(codes.Internal, "apply event: %v", err)
 	}

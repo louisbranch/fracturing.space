@@ -7,7 +7,7 @@ import (
 
 func TestParseConfigDefaults(t *testing.T) {
 	fs := flag.NewFlagSet("mcp", flag.ContinueOnError)
-	cfg, err := ParseConfig(fs, nil, func(string) (string, bool) { return "", false })
+	cfg, err := ParseConfig(fs, nil)
 	if err != nil {
 		t.Fatalf("parse config: %v", err)
 	}
@@ -23,19 +23,12 @@ func TestParseConfigDefaults(t *testing.T) {
 }
 
 func TestParseConfigOverrides(t *testing.T) {
+	t.Setenv("FRACTURING_SPACE_GAME_ADDR", "env-game")
+	t.Setenv("FRACTURING_SPACE_MCP_HTTP_ADDR", "env-http")
+
 	fs := flag.NewFlagSet("mcp", flag.ContinueOnError)
-	lookup := func(key string) (string, bool) {
-		switch key {
-		case "FRACTURING_SPACE_GAME_ADDR":
-			return "env-game", true
-		case "FRACTURING_SPACE_MCP_HTTP_ADDR":
-			return "env-http", true
-		default:
-			return "", false
-		}
-	}
 	args := []string{"-addr", "flag-game", "-http-addr", "flag-http", "-transport", "http"}
-	cfg, err := ParseConfig(fs, args, lookup)
+	cfg, err := ParseConfig(fs, args)
 	if err != nil {
 		t.Fatalf("parse config: %v", err)
 	}

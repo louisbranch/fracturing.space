@@ -2,35 +2,34 @@ package integrity
 
 import (
 	"fmt"
-	"os"
 	"strings"
+
+	"github.com/caarlos0/env/v11"
 )
 
-const (
-	envHMACKeys  = "FRACTURING_SPACE_GAME_EVENT_HMAC_KEYS"
-	envHMACKey   = "FRACTURING_SPACE_GAME_EVENT_HMAC_KEY"
-	envHMACKeyID = "FRACTURING_SPACE_GAME_EVENT_HMAC_KEY_ID"
-	defaultKeyID = "v1"
-)
+// keyringEnv holds raw env values for HMAC keyring configuration.
+type keyringEnv struct {
+	Keys  string `env:"FRACTURING_SPACE_GAME_EVENT_HMAC_KEYS"`
+	Key   string `env:"FRACTURING_SPACE_GAME_EVENT_HMAC_KEY"`
+	KeyID string `env:"FRACTURING_SPACE_GAME_EVENT_HMAC_KEY_ID" envDefault:"v1"`
+}
 
 // KeyringFromEnv loads the HMAC keyring configuration from environment variables.
 func KeyringFromEnv() (*Keyring, error) {
-	keyID := strings.TrimSpace(os.Getenv(envHMACKeyID))
-	if keyID == "" {
-		keyID = defaultKeyID
+	var raw keyringEnv
+	if err := env.Parse(&raw); err != nil {
+		return nil, fmt.Errorf("parse hmac keyring env: %w", err)
 	}
 
-	keySpec := strings.TrimSpace(os.Getenv(envHMACKeys))
-	if keySpec == "" {
-		raw := strings.TrimSpace(os.Getenv(envHMACKey))
-		if raw == "" {
-			return nil, fmt.Errorf("%s is required", envHMACKey)
+	if raw.Keys == "" {
+		if raw.Key == "" {
+			return nil, fmt.Errorf("FRACTURING_SPACE_GAME_EVENT_HMAC_KEY is required")
 		}
-		return NewKeyring(map[string][]byte{keyID: []byte(raw)}, keyID)
+		return NewKeyring(map[string][]byte{raw.KeyID: []byte(raw.Key)}, raw.KeyID)
 	}
 
 	keys := make(map[string][]byte)
-	entries := strings.Split(keySpec, ",")
+	entries := strings.Split(raw.Keys, ",")
 	for _, entry := range entries {
 		entry = strings.TrimSpace(entry)
 		if entry == "" {
@@ -38,14 +37,14 @@ func KeyringFromEnv() (*Keyring, error) {
 		}
 		parts := strings.SplitN(entry, "=", 2)
 		if len(parts) != 2 {
-			return nil, fmt.Errorf("invalid %s entry", envHMACKeys)
+			return nil, fmt.Errorf("invalid FRACTURING_SPACE_GAME_EVENT_HMAC_KEYS entry")
 		}
 		id := strings.TrimSpace(parts[0])
 		value := strings.TrimSpace(parts[1])
 		if id == "" || value == "" {
-			return nil, fmt.Errorf("invalid %s entry", envHMACKeys)
+			return nil, fmt.Errorf("invalid FRACTURING_SPACE_GAME_EVENT_HMAC_KEYS entry")
 		}
 		keys[id] = []byte(value)
 	}
-	return NewKeyring(keys, keyID)
+	return NewKeyring(keys, raw.KeyID)
 }

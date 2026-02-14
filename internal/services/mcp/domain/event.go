@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"time"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -75,7 +74,7 @@ func EventListHandler(client statev1.EventServiceClient, getContext func() Conte
 			return nil, EventListResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
 
-		runCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		runCtx, cancel := context.WithTimeout(ctx, grpcLongCallTimeout)
 		defer cancel()
 
 		// Use context campaign_id if not provided
@@ -175,7 +174,7 @@ func EventsListResourceHandler(client statev1.EventServiceClient) mcp.ResourceHa
 			return nil, fmt.Errorf("parse campaign ID from URI: %w", err)
 		}
 
-		runCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		runCtx, cancel := context.WithTimeout(ctx, grpcLongCallTimeout)
 		defer cancel()
 
 		callCtx, _, err := NewOutgoingContext(runCtx, "")

@@ -8,17 +8,17 @@ import (
 
 func TestParseConfigDefaults(t *testing.T) {
 	fs := flag.NewFlagSet("admin", flag.ContinueOnError)
-	cfg, err := ParseConfig(fs, nil, func(string) (string, bool) { return "", false })
+	cfg, err := ParseConfig(fs, nil)
 	if err != nil {
 		t.Fatalf("parse config: %v", err)
 	}
-	if cfg.HTTPAddr != defaultHTTPAddr {
+	if cfg.HTTPAddr != ":8082" {
 		t.Fatalf("expected default http addr, got %q", cfg.HTTPAddr)
 	}
-	if cfg.GRPCAddr != defaultGRPCAddr {
+	if cfg.GRPCAddr != "localhost:8080" {
 		t.Fatalf("expected default grpc addr, got %q", cfg.GRPCAddr)
 	}
-	if cfg.AuthAddr != defaultAuthAddr {
+	if cfg.AuthAddr != "localhost:8083" {
 		t.Fatalf("expected default auth addr, got %q", cfg.AuthAddr)
 	}
 	if cfg.GRPCDialTimeout != 2*time.Second {
@@ -27,21 +27,13 @@ func TestParseConfigDefaults(t *testing.T) {
 }
 
 func TestParseConfigOverrides(t *testing.T) {
+	t.Setenv("FRACTURING_SPACE_ADMIN_ADDR", "env-admin")
+	t.Setenv("FRACTURING_SPACE_GAME_ADDR", "env-game")
+	t.Setenv("FRACTURING_SPACE_AUTH_ADDR", "env-auth")
+
 	fs := flag.NewFlagSet("admin", flag.ContinueOnError)
-	lookup := func(key string) (string, bool) {
-		switch key {
-		case "FRACTURING_SPACE_ADMIN_ADDR":
-			return "env-admin", true
-		case "FRACTURING_SPACE_GAME_ADDR":
-			return "env-game", true
-		case "FRACTURING_SPACE_AUTH_ADDR":
-			return "env-auth", true
-		default:
-			return "", false
-		}
-	}
 	args := []string{"-http-addr", "flag-admin", "-grpc-addr", "flag-game", "-auth-addr", "flag-auth"}
-	cfg, err := ParseConfig(fs, args, lookup)
+	cfg, err := ParseConfig(fs, args)
 	if err != nil {
 		t.Fatalf("parse config: %v", err)
 	}

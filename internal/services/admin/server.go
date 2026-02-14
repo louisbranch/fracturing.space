@@ -12,17 +12,31 @@ import (
 	"sync"
 	"time"
 
+	"github.com/caarlos0/env/v11"
+
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
+	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	adminsqlite "github.com/louisbranch/fracturing.space/internal/services/admin/storage/sqlite"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-// defaultGRPCDialTimeout caps the dial wait time for gRPC connections.
-const defaultGRPCDialTimeout = 2 * time.Second
+// adminServerEnv holds env-parsed configuration for the admin server.
+type adminServerEnv struct {
+	DBPath string `env:"FRACTURING_SPACE_ADMIN_DB_PATH"`
+}
+
+func loadAdminServerEnv() adminServerEnv {
+	var cfg adminServerEnv
+	_ = env.Parse(&cfg)
+	if cfg.DBPath == "" {
+		cfg.DBPath = filepath.Join("data", "admin.db")
+	}
+	return cfg
+}
 
 // defaultGRPCRetryDelay sets the initial wait time between gRPC dial attempts.
 const defaultGRPCRetryDelay = 500 * time.Millisecond
@@ -251,10 +265,11 @@ func NewServer(ctx context.Context, config Config) (*Server, error) {
 		return nil, errors.New("http address is required")
 	}
 	if config.GRPCDialTimeout <= 0 {
-		config.GRPCDialTimeout = defaultGRPCDialTimeout
+		config.GRPCDialTimeout = timeouts.GRPCDial
 	}
 
-	adminStore, err := openAdminStore()
+	adminEnv := loadAdminServerEnv()
+	adminStore, err := openAdminStore(adminEnv.DBPath)
 	if err != nil {
 		return nil, err
 	}
@@ -283,7 +298,7 @@ func NewServer(ctx context.Context, config Config) (*Server, error) {
 	httpServer := &http.Server{
 		Addr:              httpAddr,
 		Handler:           handler,
-		ReadHeaderTimeout: 5 * time.Second,
+		ReadHeaderTimeout: timeouts.ReadHeader,
 	}
 
 	return &Server{
@@ -313,7 +328,7 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 
 	select {
 	case <-ctx.Done():
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), timeouts.Shutdown)
 		err := s.httpServer.Shutdown(shutdownCtx)
 		cancel()
 		if err != nil {
@@ -343,11 +358,7 @@ func (s *Server) Close() {
 	}
 }
 
-func openAdminStore() (*adminsqlite.Store, error) {
-	path := strings.TrimSpace(os.Getenv("FRACTURING_SPACE_ADMIN_DB_PATH"))
-	if path == "" {
-		path = filepath.Join("data", "admin.db")
-	}
+func openAdminStore(path string) (*adminsqlite.Store, error) {
 	if dir := filepath.Dir(path); dir != "." {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
 			return nil, fmt.Errorf("create storage dir: %w", err)

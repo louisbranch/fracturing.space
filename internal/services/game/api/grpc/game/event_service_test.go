@@ -17,12 +17,6 @@ func TestListEvents_NilRequest(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
-func TestListEvents_MissingEventStore(t *testing.T) {
-	svc := NewEventService(Stores{})
-	_, err := svc.ListEvents(context.Background(), &campaignv1.ListEventsRequest{CampaignId: "c1"})
-	assertStatusCode(t, err, codes.Internal)
-}
-
 func TestListEvents_MissingCampaignId(t *testing.T) {
 	eventStore := newFakeEventStore()
 	svc := NewEventService(Stores{Event: eventStore})

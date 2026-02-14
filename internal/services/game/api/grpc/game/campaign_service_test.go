@@ -24,40 +24,6 @@ func TestCreateCampaign_NilRequest(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
-func TestCreateCampaign_MissingCampaignStore(t *testing.T) {
-	svc := NewCampaignService(Stores{})
-	_, err := svc.CreateCampaign(context.Background(), &statev1.CreateCampaignRequest{
-		Name:   "Test Campaign",
-		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		GmMode: statev1.GmMode_HUMAN,
-	})
-	assertStatusCode(t, err, codes.Internal)
-}
-
-func TestCreateCampaign_MissingEventStore(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	participantStore := newFakeParticipantStore()
-	svc := NewCampaignService(Stores{Campaign: campaignStore, Participant: participantStore})
-	_, err := svc.CreateCampaign(context.Background(), &statev1.CreateCampaignRequest{
-		Name:   "Test Campaign",
-		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		GmMode: statev1.GmMode_HUMAN,
-	})
-	assertStatusCode(t, err, codes.Internal)
-}
-
-func TestCreateCampaign_MissingParticipantStore(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	eventStore := newFakeEventStore()
-	svc := NewCampaignService(Stores{Campaign: campaignStore, Event: eventStore})
-	_, err := svc.CreateCampaign(context.Background(), &statev1.CreateCampaignRequest{
-		Name:   "Test Campaign",
-		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		GmMode: statev1.GmMode_HUMAN,
-	})
-	assertStatusCode(t, err, codes.Internal)
-}
-
 func TestCreateCampaign_MissingSystem(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	eventStore := newFakeEventStore()
@@ -186,12 +152,6 @@ func TestListCampaigns_NilRequest(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
-func TestListCampaigns_MissingCampaignStore(t *testing.T) {
-	svc := NewCampaignService(Stores{})
-	_, err := svc.ListCampaigns(context.Background(), &statev1.ListCampaignsRequest{})
-	assertStatusCode(t, err, codes.Internal)
-}
-
 func TestListCampaigns_EmptyList(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	svc := NewCampaignService(Stores{Campaign: campaignStore})
@@ -241,12 +201,6 @@ func TestGetCampaign_NilRequest(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
-func TestGetCampaign_MissingCampaignStore(t *testing.T) {
-	svc := NewCampaignService(Stores{})
-	_, err := svc.GetCampaign(context.Background(), &statev1.GetCampaignRequest{CampaignId: "c1"})
-	assertStatusCode(t, err, codes.Internal)
-}
-
 func TestGetCampaign_MissingCampaignId(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	svc := NewCampaignService(Stores{Campaign: campaignStore})
@@ -294,18 +248,6 @@ func TestEndCampaign_NilRequest(t *testing.T) {
 	svc := NewCampaignService(Stores{})
 	_, err := svc.EndCampaign(context.Background(), nil)
 	assertStatusCode(t, err, codes.InvalidArgument)
-}
-
-func TestEndCampaign_MissingCampaignStore(t *testing.T) {
-	svc := NewCampaignService(Stores{Session: newFakeSessionStore()})
-	_, err := svc.EndCampaign(context.Background(), &statev1.EndCampaignRequest{CampaignId: "c1"})
-	assertStatusCode(t, err, codes.Internal)
-}
-
-func TestEndCampaign_MissingSessionStore(t *testing.T) {
-	svc := NewCampaignService(Stores{Campaign: newFakeCampaignStore()})
-	_, err := svc.EndCampaign(context.Background(), &statev1.EndCampaignRequest{CampaignId: "c1"})
-	assertStatusCode(t, err, codes.Internal)
 }
 
 func TestEndCampaign_MissingCampaignId(t *testing.T) {

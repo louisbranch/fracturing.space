@@ -20,6 +20,7 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
+	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/templates"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
@@ -33,7 +34,7 @@ import (
 
 const (
 	// grpcRequestTimeout caps the gRPC request time for admin requests.
-	grpcRequestTimeout = 2 * time.Second
+	grpcRequestTimeout = timeouts.GRPCRequest
 	// campaignThemePromptLimit caps the number of characters shown in the table.
 	campaignThemePromptLimit = 80
 	// sessionListPageSize caps the number of sessions shown in the UI.

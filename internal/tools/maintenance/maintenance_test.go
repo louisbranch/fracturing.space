@@ -67,7 +67,7 @@ func TestCapWarnings(t *testing.T) {
 
 func TestParseConfigDefaults(t *testing.T) {
 	fs := flag.NewFlagSet("maintenance", flag.ContinueOnError)
-	cfg, err := ParseConfig(fs, nil, func(string) (string, bool) { return "", false })
+	cfg, err := ParseConfig(fs, nil)
 	if err != nil {
 		t.Fatalf("parse config: %v", err)
 	}
@@ -83,23 +83,16 @@ func TestParseConfigDefaults(t *testing.T) {
 }
 
 func TestParseConfigOverrides(t *testing.T) {
+	t.Setenv("FRACTURING_SPACE_GAME_EVENTS_DB_PATH", "env-events")
+	t.Setenv("FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH", "env-projections")
+
 	fs := flag.NewFlagSet("maintenance", flag.ContinueOnError)
-	lookup := func(key string) (string, bool) {
-		switch key {
-		case "FRACTURING_SPACE_GAME_EVENTS_DB_PATH":
-			return "env-events", true
-		case "FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH":
-			return "env-projections", true
-		default:
-			return "", false
-		}
-	}
 	args := []string{
 		"-events-db-path", "flag-events",
 		"-projections-db-path", "flag-projections",
 		"-warnings-cap", "5",
 	}
-	cfg, err := ParseConfig(fs, args, lookup)
+	cfg, err := ParseConfig(fs, args)
 	if err != nil {
 		t.Fatalf("parse config: %v", err)
 	}
@@ -112,112 +105,6 @@ func TestParseConfigOverrides(t *testing.T) {
 	if cfg.WarningsCap != 5 {
 		t.Fatalf("expected warnings cap 5, got %d", cfg.WarningsCap)
 	}
-}
-
-func TestEnvOrDefault(t *testing.T) {
-	t.Run("nil lookup returns fallback", func(t *testing.T) {
-		got := envOrDefault(nil, []string{"KEY"}, "fb")
-		if got != "fb" {
-			t.Errorf("expected %q, got %q", "fb", got)
-		}
-	})
-
-	t.Run("key found", func(t *testing.T) {
-		lookup := func(key string) (string, bool) {
-			if key == "A" {
-				return "found", true
-			}
-			return "", false
-		}
-		got := envOrDefault(lookup, []string{"A"}, "fb")
-		if got != "found" {
-			t.Errorf("expected %q, got %q", "found", got)
-		}
-	})
-
-	t.Run("whitespace value falls through", func(t *testing.T) {
-		lookup := func(key string) (string, bool) {
-			if key == "A" {
-				return "  ", true
-			}
-			return "", false
-		}
-		got := envOrDefault(lookup, []string{"A"}, "fb")
-		if got != "fb" {
-			t.Errorf("expected %q, got %q", "fb", got)
-		}
-	})
-
-	t.Run("first matching key wins", func(t *testing.T) {
-		lookup := func(key string) (string, bool) {
-			switch key {
-			case "A":
-				return "", false
-			case "B":
-				return "b-val", true
-			default:
-				return "", false
-			}
-		}
-		got := envOrDefault(lookup, []string{"A", "B"}, "fb")
-		if got != "b-val" {
-			t.Errorf("expected %q, got %q", "b-val", got)
-		}
-	})
-
-	t.Run("no keys returns fallback", func(t *testing.T) {
-		lookup := func(string) (string, bool) { return "", false }
-		got := envOrDefault(lookup, nil, "fb")
-		if got != "fb" {
-			t.Errorf("expected %q, got %q", "fb", got)
-		}
-	})
-}
-
-func TestDefaultEventsDBPath(t *testing.T) {
-	t.Run("no env", func(t *testing.T) {
-		lookup := func(string) (string, bool) { return "", false }
-		got := defaultEventsDBPath(lookup)
-		if got != "data/game-events.db" {
-			t.Errorf("expected default path, got %q", got)
-		}
-	})
-
-	t.Run("env set", func(t *testing.T) {
-		lookup := func(key string) (string, bool) {
-			if key == "FRACTURING_SPACE_GAME_EVENTS_DB_PATH" {
-				return "/custom/events.db", true
-			}
-			return "", false
-		}
-		got := defaultEventsDBPath(lookup)
-		if got != "/custom/events.db" {
-			t.Errorf("expected %q, got %q", "/custom/events.db", got)
-		}
-	})
-}
-
-func TestDefaultProjectionsDBPath(t *testing.T) {
-	t.Run("no env", func(t *testing.T) {
-		lookup := func(string) (string, bool) { return "", false }
-		got := defaultProjectionsDBPath(lookup)
-		if got != "data/game-projections.db" {
-			t.Errorf("expected default path, got %q", got)
-		}
-	})
-
-	t.Run("env set", func(t *testing.T) {
-		lookup := func(key string) (string, bool) {
-			if key == "FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH" {
-				return "/custom/proj.db", true
-			}
-			return "", false
-		}
-		got := defaultProjectionsDBPath(lookup)
-		if got != "/custom/proj.db" {
-			t.Errorf("expected %q, got %q", "/custom/proj.db", got)
-		}
-	})
 }
 
 func TestOutputJSON(t *testing.T) {

@@ -10,7 +10,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
+	"github.com/caarlos0/env/v11"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
@@ -25,8 +27,9 @@ const adminReplayPageSize = 200
 type Config struct {
 	CampaignID        string
 	CampaignIDs       string
-	EventsDBPath      string
-	ProjectionsDBPath string
+	EventsDBPath      string        `env:"FRACTURING_SPACE_GAME_EVENTS_DB_PATH"`
+	ProjectionsDBPath string        `env:"FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH"`
+	Timeout           time.Duration `env:"FRACTURING_SPACE_MAINTENANCE_TIMEOUT" envDefault:"10m"`
 	UntilSeq          uint64
 	AfterSeq          uint64
 	DryRun            bool
@@ -36,16 +39,19 @@ type Config struct {
 	JSONOutput        bool
 }
 
-// EnvLookup returns the value for a key when present.
-type EnvLookup func(string) (string, bool)
-
 // ParseConfig parses flags into a Config.
-func ParseConfig(fs *flag.FlagSet, args []string, lookup EnvLookup) (Config, error) {
-	cfg := Config{
-		EventsDBPath:      defaultEventsDBPath(lookup),
-		ProjectionsDBPath: defaultProjectionsDBPath(lookup),
-		WarningsCap:       25,
+func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
+	var cfg Config
+	if err := env.Parse(&cfg); err != nil {
+		return Config{}, fmt.Errorf("parse env: %w", err)
 	}
+	if cfg.EventsDBPath == "" {
+		cfg.EventsDBPath = filepath.Join("data", "game-events.db")
+	}
+	if cfg.ProjectionsDBPath == "" {
+		cfg.ProjectionsDBPath = filepath.Join("data", "game-projections.db")
+	}
+	cfg.WarningsCap = 25
 
 	fs.StringVar(&cfg.CampaignID, "campaign-id", "", "campaign ID to replay snapshot-related events")
 	fs.StringVar(&cfg.CampaignIDs, "campaign-ids", "", "comma-separated campaign IDs to replay snapshot-related events")
@@ -58,6 +64,7 @@ func ParseConfig(fs *flag.FlagSet, args []string, lookup EnvLookup) (Config, err
 	fs.BoolVar(&cfg.Integrity, "integrity", false, "replay snapshot-related events into a scratch store and compare against stored projections")
 	fs.IntVar(&cfg.WarningsCap, "warnings-cap", cfg.WarningsCap, "max warnings to print (0 = no limit)")
 	fs.BoolVar(&cfg.JSONOutput, "json", false, "output JSON reports")
+	fs.DurationVar(&cfg.Timeout, "timeout", cfg.Timeout, "overall timeout")
 	if err := fs.Parse(args); err != nil {
 		return Config{}, err
 	}
@@ -427,38 +434,6 @@ func openProjectionStore(path string) (*sqlite.Store, error) {
 		return nil, fmt.Errorf("open projections store: %w", err)
 	}
 	return store, nil
-}
-
-func defaultEventsDBPath(lookup EnvLookup) string {
-	path := envOrDefault(lookup, []string{"FRACTURING_SPACE_GAME_EVENTS_DB_PATH"}, "")
-	if path == "" {
-		path = filepath.Join("data", "game-events.db")
-	}
-	return path
-}
-
-func defaultProjectionsDBPath(lookup EnvLookup) string {
-	path := envOrDefault(lookup, []string{"FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH"}, "")
-	if path == "" {
-		path = filepath.Join("data", "game-projections.db")
-	}
-	return path
-}
-
-func envOrDefault(lookup EnvLookup, keys []string, fallback string) string {
-	for _, key := range keys {
-		if lookup == nil {
-			break
-		}
-		value, ok := lookup(key)
-		if ok {
-			trimmed := strings.TrimSpace(value)
-			if trimmed != "" {
-				return trimmed
-			}
-		}
-	}
-	return fallback
 }
 
 func scanSnapshotEvents(ctx context.Context, eventStore storage.EventStore, campaignID string, afterSeq, untilSeq uint64, validate bool) (snapshotScanReport, []string, error) {

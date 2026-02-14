@@ -14,6 +14,7 @@ import (
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/branding"
+	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -135,7 +136,7 @@ func NewServer(config Config) (*Server, error) {
 		return nil, errors.New("auth base url is required")
 	}
 	if config.GRPCDialTimeout <= 0 {
-		config.GRPCDialTimeout = 2 * time.Second
+		config.GRPCDialTimeout = timeouts.GRPCDial
 	}
 
 	var authConn *grpc.ClientConn
@@ -153,7 +154,7 @@ func NewServer(config Config) (*Server, error) {
 	httpServer := &http.Server{
 		Addr:              httpAddr,
 		Handler:           handler,
-		ReadHeaderTimeout: 5 * time.Second,
+		ReadHeaderTimeout: timeouts.ReadHeader,
 	}
 
 	return &Server{
@@ -180,7 +181,7 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 
 	select {
 	case <-ctx.Done():
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), timeouts.Shutdown)
 		err := s.httpServer.Shutdown(shutdownCtx)
 		cancel()
 		if err != nil {

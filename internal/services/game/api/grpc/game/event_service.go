@@ -40,10 +40,6 @@ func (s *EventService) AppendEvent(ctx context.Context, in *campaignv1.AppendEve
 		return nil, status.Error(codes.InvalidArgument, "append event request is required")
 	}
 
-	if s.stores.Event == nil {
-		return nil, status.Error(codes.Internal, "event store is not configured")
-	}
-
 	input, err := event.NormalizeForAppend(event.Event{
 		CampaignID:   in.GetCampaignId(),
 		Timestamp:    time.Now().UTC(),
@@ -73,10 +69,6 @@ func (s *EventService) AppendEvent(ctx context.Context, in *campaignv1.AppendEve
 func (s *EventService) ListEvents(ctx context.Context, in *campaignv1.ListEventsRequest) (*campaignv1.ListEventsResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "request is required")
-	}
-
-	if s.stores.Event == nil {
-		return nil, status.Error(codes.Internal, "event store is not configured")
 	}
 
 	campaignID := strings.TrimSpace(in.GetCampaignId())

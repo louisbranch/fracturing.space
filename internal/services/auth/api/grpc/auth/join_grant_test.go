@@ -4,6 +4,7 @@ import (
 	"crypto/ed25519"
 	"encoding/base64"
 	"testing"
+	"time"
 )
 
 func TestDecodeBase64(t *testing.T) {
@@ -46,7 +47,7 @@ func TestDecodeBase64(t *testing.T) {
 
 func TestLoadJoinGrantConfigFromEnv(t *testing.T) {
 	t.Run("missing issuer", func(t *testing.T) {
-		t.Setenv(envJoinGrantIssuer, "")
+		t.Setenv("FRACTURING_SPACE_JOIN_GRANT_ISSUER", "")
 		_, err := loadJoinGrantConfigFromEnv()
 		if err == nil {
 			t.Fatal("expected error for missing issuer")
@@ -54,8 +55,8 @@ func TestLoadJoinGrantConfigFromEnv(t *testing.T) {
 	})
 
 	t.Run("missing audience", func(t *testing.T) {
-		t.Setenv(envJoinGrantIssuer, "test-issuer")
-		t.Setenv(envJoinGrantAudience, "")
+		t.Setenv("FRACTURING_SPACE_JOIN_GRANT_ISSUER", "test-issuer")
+		t.Setenv("FRACTURING_SPACE_JOIN_GRANT_AUDIENCE", "")
 		_, err := loadJoinGrantConfigFromEnv()
 		if err == nil {
 			t.Fatal("expected error for missing audience")
@@ -63,9 +64,9 @@ func TestLoadJoinGrantConfigFromEnv(t *testing.T) {
 	})
 
 	t.Run("missing private key", func(t *testing.T) {
-		t.Setenv(envJoinGrantIssuer, "test-issuer")
-		t.Setenv(envJoinGrantAudience, "test-audience")
-		t.Setenv(envJoinGrantPrivateKey, "")
+		t.Setenv("FRACTURING_SPACE_JOIN_GRANT_ISSUER", "test-issuer")
+		t.Setenv("FRACTURING_SPACE_JOIN_GRANT_AUDIENCE", "test-audience")
+		t.Setenv("FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY", "")
 		_, err := loadJoinGrantConfigFromEnv()
 		if err == nil {
 			t.Fatal("expected error for missing private key")
@@ -73,9 +74,9 @@ func TestLoadJoinGrantConfigFromEnv(t *testing.T) {
 	})
 
 	t.Run("invalid base64 key", func(t *testing.T) {
-		t.Setenv(envJoinGrantIssuer, "test-issuer")
-		t.Setenv(envJoinGrantAudience, "test-audience")
-		t.Setenv(envJoinGrantPrivateKey, "!!!not-base64!!!")
+		t.Setenv("FRACTURING_SPACE_JOIN_GRANT_ISSUER", "test-issuer")
+		t.Setenv("FRACTURING_SPACE_JOIN_GRANT_AUDIENCE", "test-audience")
+		t.Setenv("FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY", "!!!not-base64!!!")
 		_, err := loadJoinGrantConfigFromEnv()
 		if err == nil {
 			t.Fatal("expected error for invalid base64 key")
@@ -83,10 +84,10 @@ func TestLoadJoinGrantConfigFromEnv(t *testing.T) {
 	})
 
 	t.Run("wrong key size", func(t *testing.T) {
-		t.Setenv(envJoinGrantIssuer, "test-issuer")
-		t.Setenv(envJoinGrantAudience, "test-audience")
+		t.Setenv("FRACTURING_SPACE_JOIN_GRANT_ISSUER", "test-issuer")
+		t.Setenv("FRACTURING_SPACE_JOIN_GRANT_AUDIENCE", "test-audience")
 		// 16 bytes instead of 64
-		t.Setenv(envJoinGrantPrivateKey, base64.StdEncoding.EncodeToString(make([]byte, 16)))
+		t.Setenv("FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY", base64.StdEncoding.EncodeToString(make([]byte, 16)))
 		_, err := loadJoinGrantConfigFromEnv()
 		if err == nil {
 			t.Fatal("expected error for wrong key size")
@@ -95,10 +96,10 @@ func TestLoadJoinGrantConfigFromEnv(t *testing.T) {
 
 	t.Run("invalid TTL", func(t *testing.T) {
 		_, key, _ := ed25519.GenerateKey(nil)
-		t.Setenv(envJoinGrantIssuer, "test-issuer")
-		t.Setenv(envJoinGrantAudience, "test-audience")
-		t.Setenv(envJoinGrantPrivateKey, base64.StdEncoding.EncodeToString(key))
-		t.Setenv(envJoinGrantTTL, "not-a-duration")
+		t.Setenv("FRACTURING_SPACE_JOIN_GRANT_ISSUER", "test-issuer")
+		t.Setenv("FRACTURING_SPACE_JOIN_GRANT_AUDIENCE", "test-audience")
+		t.Setenv("FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY", base64.StdEncoding.EncodeToString(key))
+		t.Setenv("FRACTURING_SPACE_JOIN_GRANT_TTL", "not-a-duration")
 		_, err := loadJoinGrantConfigFromEnv()
 		if err == nil {
 			t.Fatal("expected error for invalid TTL")
@@ -107,10 +108,10 @@ func TestLoadJoinGrantConfigFromEnv(t *testing.T) {
 
 	t.Run("negative TTL", func(t *testing.T) {
 		_, key, _ := ed25519.GenerateKey(nil)
-		t.Setenv(envJoinGrantIssuer, "test-issuer")
-		t.Setenv(envJoinGrantAudience, "test-audience")
-		t.Setenv(envJoinGrantPrivateKey, base64.StdEncoding.EncodeToString(key))
-		t.Setenv(envJoinGrantTTL, "-5m")
+		t.Setenv("FRACTURING_SPACE_JOIN_GRANT_ISSUER", "test-issuer")
+		t.Setenv("FRACTURING_SPACE_JOIN_GRANT_AUDIENCE", "test-audience")
+		t.Setenv("FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY", base64.StdEncoding.EncodeToString(key))
+		t.Setenv("FRACTURING_SPACE_JOIN_GRANT_TTL", "-5m")
 		_, err := loadJoinGrantConfigFromEnv()
 		if err == nil {
 			t.Fatal("expected error for negative TTL")
@@ -119,10 +120,10 @@ func TestLoadJoinGrantConfigFromEnv(t *testing.T) {
 
 	t.Run("success with default TTL", func(t *testing.T) {
 		_, key, _ := ed25519.GenerateKey(nil)
-		t.Setenv(envJoinGrantIssuer, "test-issuer")
-		t.Setenv(envJoinGrantAudience, "test-audience")
-		t.Setenv(envJoinGrantPrivateKey, base64.StdEncoding.EncodeToString(key))
-		t.Setenv(envJoinGrantTTL, "")
+		t.Setenv("FRACTURING_SPACE_JOIN_GRANT_ISSUER", "test-issuer")
+		t.Setenv("FRACTURING_SPACE_JOIN_GRANT_AUDIENCE", "test-audience")
+		t.Setenv("FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY", base64.StdEncoding.EncodeToString(key))
+		t.Setenv("FRACTURING_SPACE_JOIN_GRANT_TTL", "")
 		cfg, err := loadJoinGrantConfigFromEnv()
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -133,17 +134,17 @@ func TestLoadJoinGrantConfigFromEnv(t *testing.T) {
 		if cfg.audience != "test-audience" {
 			t.Errorf("audience = %q, want %q", cfg.audience, "test-audience")
 		}
-		if cfg.ttl != defaultJoinGrantTTL {
-			t.Errorf("ttl = %v, want %v", cfg.ttl, defaultJoinGrantTTL)
+		if cfg.ttl != 5*time.Minute {
+			t.Errorf("ttl = %v, want %v", cfg.ttl, 5*time.Minute)
 		}
 	})
 
 	t.Run("success with custom TTL", func(t *testing.T) {
 		_, key, _ := ed25519.GenerateKey(nil)
-		t.Setenv(envJoinGrantIssuer, "test-issuer")
-		t.Setenv(envJoinGrantAudience, "test-audience")
-		t.Setenv(envJoinGrantPrivateKey, base64.StdEncoding.EncodeToString(key))
-		t.Setenv(envJoinGrantTTL, "10m")
+		t.Setenv("FRACTURING_SPACE_JOIN_GRANT_ISSUER", "test-issuer")
+		t.Setenv("FRACTURING_SPACE_JOIN_GRANT_AUDIENCE", "test-audience")
+		t.Setenv("FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY", base64.StdEncoding.EncodeToString(key))
+		t.Setenv("FRACTURING_SPACE_JOIN_GRANT_TTL", "10m")
 		cfg, err := loadJoinGrantConfigFromEnv()
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)

@@ -85,6 +85,25 @@ func CreateCharacter(input CreateCharacterInput, now func() time.Time, idGenerat
 	}, nil
 }
 
+// CharacterKindFromLabel parses a string label into a CharacterKind.
+// It trims whitespace and matches case-insensitively. Both short ("PC")
+// and prefixed ("CHARACTER_KIND_PC") forms are accepted.
+func CharacterKindFromLabel(value string) (CharacterKind, error) {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return CharacterKindUnspecified, fmt.Errorf("character kind is required")
+	}
+	upper := strings.ToUpper(trimmed)
+	switch upper {
+	case "PC", "CHARACTER_KIND_PC":
+		return CharacterKindPC, nil
+	case "NPC", "CHARACTER_KIND_NPC":
+		return CharacterKindNPC, nil
+	default:
+		return CharacterKindUnspecified, fmt.Errorf("unknown character kind: %s", trimmed)
+	}
+}
+
 // NormalizeCreateCharacterInput trims and validates character input metadata.
 func NormalizeCreateCharacterInput(input CreateCharacterInput) (CreateCharacterInput, error) {
 	input.CampaignID = strings.TrimSpace(input.CampaignID)

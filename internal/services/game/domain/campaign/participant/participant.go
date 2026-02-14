@@ -115,6 +115,64 @@ func CreateParticipant(input CreateParticipantInput, now func() time.Time, idGen
 	}, nil
 }
 
+// ParticipantRoleFromLabel parses a string label into a ParticipantRole.
+// It trims whitespace and matches case-insensitively.
+func ParticipantRoleFromLabel(value string) (ParticipantRole, error) {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return ParticipantRoleUnspecified, fmt.Errorf("participant role is required")
+	}
+	upper := strings.ToUpper(trimmed)
+	switch upper {
+	case "GM":
+		return ParticipantRoleGM, nil
+	case "PLAYER":
+		return ParticipantRolePlayer, nil
+	default:
+		return ParticipantRoleUnspecified, fmt.Errorf("unknown participant role: %s", trimmed)
+	}
+}
+
+// ControllerFromLabel parses a string label into a Controller.
+// It trims whitespace and matches case-insensitively. Both short ("HUMAN")
+// and prefixed ("CONTROLLER_HUMAN") forms are accepted.
+func ControllerFromLabel(value string) (Controller, error) {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return ControllerUnspecified, fmt.Errorf("participant controller is required")
+	}
+	upper := strings.ToUpper(trimmed)
+	switch upper {
+	case "HUMAN", "CONTROLLER_HUMAN":
+		return ControllerHuman, nil
+	case "AI", "CONTROLLER_AI":
+		return ControllerAI, nil
+	default:
+		return ControllerUnspecified, fmt.Errorf("unknown participant controller: %s", trimmed)
+	}
+}
+
+// CampaignAccessFromLabel parses a string label into a CampaignAccess.
+// It trims whitespace and matches case-insensitively. Both short ("MEMBER")
+// and prefixed ("CAMPAIGN_ACCESS_MEMBER") forms are accepted.
+func CampaignAccessFromLabel(value string) (CampaignAccess, error) {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return CampaignAccessUnspecified, fmt.Errorf("campaign access is required")
+	}
+	upper := strings.ToUpper(trimmed)
+	switch upper {
+	case "MEMBER", "CAMPAIGN_ACCESS_MEMBER":
+		return CampaignAccessMember, nil
+	case "MANAGER", "CAMPAIGN_ACCESS_MANAGER":
+		return CampaignAccessManager, nil
+	case "OWNER", "CAMPAIGN_ACCESS_OWNER":
+		return CampaignAccessOwner, nil
+	default:
+		return CampaignAccessUnspecified, fmt.Errorf("unknown campaign access: %s", trimmed)
+	}
+}
+
 // NormalizeCreateParticipantInput trims and validates participant input metadata.
 func NormalizeCreateParticipantInput(input CreateParticipantInput) (CreateParticipantInput, error) {
 	input.CampaignID = strings.TrimSpace(input.CampaignID)

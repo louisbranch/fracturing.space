@@ -20,12 +20,6 @@ func TestCreateInvite_NilRequest(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
-func TestCreateInvite_MissingStore(t *testing.T) {
-	svc := NewInviteService(Stores{})
-	_, err := svc.CreateInvite(context.Background(), &statev1.CreateInviteRequest{CampaignId: "campaign-1", ParticipantId: "participant-1"})
-	assertStatusCode(t, err, codes.Internal)
-}
-
 func TestCreateInvite_Success(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
@@ -305,12 +299,6 @@ func TestRevokeInvite_NilRequest(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
-func TestRevokeInvite_MissingStores(t *testing.T) {
-	svc := NewInviteService(Stores{})
-	_, err := svc.RevokeInvite(context.Background(), &statev1.RevokeInviteRequest{InviteId: "inv-1"})
-	assertStatusCode(t, err, codes.Internal)
-}
-
 func TestRevokeInvite_MissingInviteId(t *testing.T) {
 	svc := NewInviteService(Stores{Invite: newFakeInviteStore(), Campaign: newFakeCampaignStore(), Event: newFakeEventStore()})
 	_, err := svc.RevokeInvite(context.Background(), &statev1.RevokeInviteRequest{InviteId: ""})
@@ -384,16 +372,6 @@ func TestClaimInvite_NilRequest(t *testing.T) {
 	svc := NewInviteService(Stores{})
 	_, err := svc.ClaimInvite(context.Background(), nil)
 	assertStatusCode(t, err, codes.InvalidArgument)
-}
-
-func TestClaimInvite_MissingStores(t *testing.T) {
-	svc := NewInviteService(Stores{})
-	_, err := svc.ClaimInvite(context.Background(), &statev1.ClaimInviteRequest{
-		CampaignId: "c1",
-		InviteId:   "inv-1",
-		JoinGrant:  "grant",
-	})
-	assertStatusCode(t, err, codes.Internal)
 }
 
 func TestClaimInvite_MissingCampaignId(t *testing.T) {
@@ -513,12 +491,6 @@ func TestGetInvite_NilRequest(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
-func TestGetInvite_MissingStores(t *testing.T) {
-	svc := NewInviteService(Stores{})
-	_, err := svc.GetInvite(context.Background(), &statev1.GetInviteRequest{InviteId: "inv-1"})
-	assertStatusCode(t, err, codes.Internal)
-}
-
 func TestGetInvite_MissingInviteId(t *testing.T) {
 	svc := NewInviteService(Stores{
 		Invite:   newFakeInviteStore(),
@@ -601,12 +573,6 @@ func TestListInvites_NilRequest(t *testing.T) {
 	svc := NewInviteService(Stores{})
 	_, err := svc.ListInvites(context.Background(), nil)
 	assertStatusCode(t, err, codes.InvalidArgument)
-}
-
-func TestListInvites_MissingStores(t *testing.T) {
-	svc := NewInviteService(Stores{})
-	_, err := svc.ListInvites(context.Background(), &statev1.ListInvitesRequest{CampaignId: "c1"})
-	assertStatusCode(t, err, codes.Internal)
 }
 
 func TestListInvites_MissingCampaignId(t *testing.T) {

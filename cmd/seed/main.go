@@ -1,41 +1,33 @@
 // Package main provides a CLI for seeding the local development database
-// with demo data by exercising the full MCP→game stack, or by generating
+// with demo data by exercising the full MCP->game stack, or by generating
 // dynamic scenarios directly via gRPC.
 package main
 
 import (
 	"context"
 	"flag"
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/louisbranch/fracturing.space/internal/platform/config"
 
 	seedcmd "github.com/louisbranch/fracturing.space/internal/cmd/seed"
 )
 
 func main() {
-	cfg, err := seedcmd.ParseConfig(flag.CommandLine, os.Args[1:], func(key string) (string, bool) {
-		value, ok := os.LookupEnv(key)
-		return value, ok
-	})
+	cfg, err := seedcmd.ParseConfig(flag.CommandLine, os.Args[1:])
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+		config.Exitf("Error: %v", err)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	ctx, cancel := context.WithTimeout(ctx, cfg.Timeout)
 	defer cancel()
 
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		<-sigChan
-		cancel()
-	}()
-
 	if err := seedcmd.Run(ctx, cfg, os.Stdout, os.Stderr); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+		config.Exitf("Error: %v", err)
 	}
 }
