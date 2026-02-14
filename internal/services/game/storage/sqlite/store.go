@@ -265,6 +265,8 @@ func (s *Store) Put(ctx context.Context, c campaign.Campaign) error {
 		GameSystem:       gameSystemToString(c.System),
 		Status:           campaignStatusToString(c.Status),
 		GmMode:           gmModeToString(c.GmMode),
+		Intent:           campaignIntentToString(c.Intent),
+		AccessPolicy:     campaignAccessPolicyToString(c.AccessPolicy),
 		ParticipantCount: int64(c.ParticipantCount),
 		CharacterCount:   int64(c.CharacterCount),
 		ThemePrompt:      c.ThemePrompt,
@@ -1919,6 +1921,58 @@ func stringToGmMode(s string) campaign.GmMode {
 	}
 }
 
+func campaignIntentToString(intent campaign.CampaignIntent) string {
+	switch intent {
+	case campaign.CampaignIntentStandard:
+		return "STANDARD"
+	case campaign.CampaignIntentStarter:
+		return "STARTER"
+	case campaign.CampaignIntentSandbox:
+		return "SANDBOX"
+	default:
+		return "UNSPECIFIED"
+	}
+}
+
+func stringToCampaignIntent(s string) campaign.CampaignIntent {
+	switch s {
+	case "STANDARD":
+		return campaign.CampaignIntentStandard
+	case "STARTER":
+		return campaign.CampaignIntentStarter
+	case "SANDBOX":
+		return campaign.CampaignIntentSandbox
+	default:
+		return campaign.CampaignIntentUnspecified
+	}
+}
+
+func campaignAccessPolicyToString(policy campaign.CampaignAccessPolicy) string {
+	switch policy {
+	case campaign.CampaignAccessPolicyPrivate:
+		return "PRIVATE"
+	case campaign.CampaignAccessPolicyRestricted:
+		return "RESTRICTED"
+	case campaign.CampaignAccessPolicyPublic:
+		return "PUBLIC"
+	default:
+		return "UNSPECIFIED"
+	}
+}
+
+func stringToCampaignAccessPolicy(s string) campaign.CampaignAccessPolicy {
+	switch s {
+	case "PRIVATE":
+		return campaign.CampaignAccessPolicyPrivate
+	case "RESTRICTED":
+		return campaign.CampaignAccessPolicyRestricted
+	case "PUBLIC":
+		return campaign.CampaignAccessPolicyPublic
+	default:
+		return campaign.CampaignAccessPolicyUnspecified
+	}
+}
+
 func participantRoleToString(pr participant.ParticipantRole) string {
 	switch pr {
 	case participant.ParticipantRoleGM:
@@ -2054,6 +2108,8 @@ type campaignRowData struct {
 	GameSystem       string
 	Status           string
 	GmMode           string
+	Intent           string
+	AccessPolicy     string
 	ParticipantCount int64
 	CharacterCount   int64
 	ThemePrompt      string
@@ -2075,6 +2131,8 @@ func campaignRowDataToDomain(row campaignRowData) (campaign.Campaign, error) {
 		System:           stringToGameSystem(row.GameSystem),
 		Status:           stringToCampaignStatus(row.Status),
 		GmMode:           stringToGmMode(row.GmMode),
+		Intent:           stringToCampaignIntent(row.Intent),
+		AccessPolicy:     stringToCampaignAccessPolicy(row.AccessPolicy),
 		ParticipantCount: int(row.ParticipantCount),
 		CharacterCount:   int(row.CharacterCount),
 		ThemePrompt:      row.ThemePrompt,
@@ -2095,6 +2153,8 @@ func dbGetCampaignRowToDomain(row db.GetCampaignRow) (campaign.Campaign, error) 
 		GameSystem:       row.GameSystem,
 		Status:           row.Status,
 		GmMode:           row.GmMode,
+		Intent:           row.Intent,
+		AccessPolicy:     row.AccessPolicy,
 		ParticipantCount: row.ParticipantCount,
 		CharacterCount:   row.CharacterCount,
 		ThemePrompt:      row.ThemePrompt,
@@ -2113,6 +2173,8 @@ func dbListCampaignsRowToDomain(row db.ListCampaignsRow) (campaign.Campaign, err
 		GameSystem:       row.GameSystem,
 		Status:           row.Status,
 		GmMode:           row.GmMode,
+		Intent:           row.Intent,
+		AccessPolicy:     row.AccessPolicy,
 		ParticipantCount: row.ParticipantCount,
 		CharacterCount:   row.CharacterCount,
 		ThemePrompt:      row.ThemePrompt,
@@ -2130,6 +2192,8 @@ func dbListAllCampaignsRowToDomain(row db.ListAllCampaignsRow) (campaign.Campaig
 		GameSystem:       row.GameSystem,
 		Status:           row.Status,
 		GmMode:           row.GmMode,
+		Intent:           row.Intent,
+		AccessPolicy:     row.AccessPolicy,
 		ParticipantCount: row.ParticipantCount,
 		CharacterCount:   row.CharacterCount,
 		ThemePrompt:      row.ThemePrompt,

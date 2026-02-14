@@ -37,6 +37,8 @@ CREATE TABLE campaigns (
     game_system TEXT NOT NULL,
     status TEXT NOT NULL,
     gm_mode TEXT NOT NULL,
+    intent TEXT NOT NULL DEFAULT 'STANDARD',
+    access_policy TEXT NOT NULL DEFAULT 'PRIVATE',
     participant_count INTEGER NOT NULL DEFAULT 0,
     character_count INTEGER NOT NULL DEFAULT 0,
     theme_prompt TEXT NOT NULL DEFAULT '',

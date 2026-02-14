@@ -114,17 +114,21 @@ func (a Applier) applyCampaignCreated(ctx context.Context, evt event.Event) erro
 	if err != nil {
 		return err
 	}
+	intent := parseCampaignIntent(payload.Intent)
+	accessPolicy := parseCampaignAccessPolicy(payload.AccessPolicy)
 	locale := platformi18n.DefaultLocale()
 	if parsed, ok := platformi18n.ParseLocale(payload.Locale); ok {
 		locale = parsed
 	}
 
 	input := campaign.CreateCampaignInput{
-		Name:        payload.Name,
-		Locale:      locale,
-		System:      system,
-		GmMode:      gmMode,
-		ThemePrompt: payload.ThemePrompt,
+		Name:         payload.Name,
+		Locale:       locale,
+		System:       system,
+		GmMode:       gmMode,
+		Intent:       intent,
+		AccessPolicy: accessPolicy,
+		ThemePrompt:  payload.ThemePrompt,
 	}
 	normalized, err := campaign.NormalizeCreateCampaignInput(input)
 	if err != nil {
@@ -139,6 +143,8 @@ func (a Applier) applyCampaignCreated(ctx context.Context, evt event.Event) erro
 		System:           normalized.System,
 		Status:           campaign.CampaignStatusDraft,
 		GmMode:           normalized.GmMode,
+		Intent:           normalized.Intent,
+		AccessPolicy:     normalized.AccessPolicy,
 		ParticipantCount: 0,
 		CharacterCount:   0,
 		ThemePrompt:      normalized.ThemePrompt,
@@ -1315,6 +1321,42 @@ func parseGmMode(value string) (campaign.GmMode, error) {
 		return campaign.GmModeHybrid, nil
 	default:
 		return campaign.GmModeUnspecified, fmt.Errorf("unknown gm mode: %s", trimmed)
+	}
+}
+
+func parseCampaignIntent(value string) campaign.CampaignIntent {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return campaign.CampaignIntentStandard
+	}
+	upper := strings.ToUpper(trimmed)
+	switch upper {
+	case "STANDARD", "CAMPAIGN_INTENT_STANDARD":
+		return campaign.CampaignIntentStandard
+	case "STARTER", "CAMPAIGN_INTENT_STARTER":
+		return campaign.CampaignIntentStarter
+	case "SANDBOX", "CAMPAIGN_INTENT_SANDBOX":
+		return campaign.CampaignIntentSandbox
+	default:
+		return campaign.CampaignIntentStandard
+	}
+}
+
+func parseCampaignAccessPolicy(value string) campaign.CampaignAccessPolicy {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return campaign.CampaignAccessPolicyPrivate
+	}
+	upper := strings.ToUpper(trimmed)
+	switch upper {
+	case "PRIVATE", "CAMPAIGN_ACCESS_POLICY_PRIVATE":
+		return campaign.CampaignAccessPolicyPrivate
+	case "RESTRICTED", "CAMPAIGN_ACCESS_POLICY_RESTRICTED":
+		return campaign.CampaignAccessPolicyRestricted
+	case "PUBLIC", "CAMPAIGN_ACCESS_POLICY_PUBLIC":
+		return campaign.CampaignAccessPolicyPublic
+	default:
+		return campaign.CampaignAccessPolicyPrivate
 	}
 }
 

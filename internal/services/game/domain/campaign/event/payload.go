@@ -2,11 +2,13 @@ package event
 
 // CampaignCreatedPayload captures the payload for campaign.created events.
 type CampaignCreatedPayload struct {
-	Name        string `json:"name"`
-	Locale      string `json:"locale"`
-	GameSystem  string `json:"game_system"`
-	GmMode      string `json:"gm_mode"`
-	ThemePrompt string `json:"theme_prompt,omitempty"`
+	Name         string `json:"name"`
+	Locale       string `json:"locale"`
+	GameSystem   string `json:"game_system"`
+	GmMode       string `json:"gm_mode"`
+	Intent       string `json:"intent,omitempty"`
+	AccessPolicy string `json:"access_policy,omitempty"`
+	ThemePrompt  string `json:"theme_prompt,omitempty"`
 }
 
 // CampaignForkedPayload captures the payload for campaign.forked events.

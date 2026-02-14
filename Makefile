@@ -21,6 +21,7 @@ proto:
 		--go-grpc_out=$(GEN_GO_DIR) \
 		--go-grpc_opt=paths=source_relative \
 		$(PROTO_FILES)
+	goimports -w $(GEN_GO_DIR)
 
 templ-generate:
 	go run github.com/a-h/templ/cmd/templ@v0.3.977 generate ./...

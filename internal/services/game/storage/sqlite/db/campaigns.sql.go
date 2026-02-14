@@ -12,7 +12,7 @@ import (
 
 const getCampaign = `-- name: GetCampaign :one
 SELECT
-	c.id, c.name, c.locale, c.game_system, c.status, c.gm_mode,
+	c.id, c.name, c.locale, c.game_system, c.status, c.gm_mode, c.intent, c.access_policy,
 	(SELECT COUNT(*) FROM participants p WHERE p.campaign_id = c.id) AS participant_count,
 	(SELECT COUNT(*) FROM characters ch WHERE ch.campaign_id = c.id) AS character_count,
 	c.theme_prompt, c.parent_campaign_id, c.fork_event_seq, c.origin_campaign_id,
@@ -27,6 +27,8 @@ type GetCampaignRow struct {
 	GameSystem       string         `json:"game_system"`
 	Status           string         `json:"status"`
 	GmMode           string         `json:"gm_mode"`
+	Intent           string         `json:"intent"`
+	AccessPolicy     string         `json:"access_policy"`
 	ParticipantCount int64          `json:"participant_count"`
 	CharacterCount   int64          `json:"character_count"`
 	ThemePrompt      string         `json:"theme_prompt"`
@@ -49,6 +51,8 @@ func (q *Queries) GetCampaign(ctx context.Context, id string) (GetCampaignRow, e
 		&i.GameSystem,
 		&i.Status,
 		&i.GmMode,
+		&i.Intent,
+		&i.AccessPolicy,
 		&i.ParticipantCount,
 		&i.CharacterCount,
 		&i.ThemePrompt,
@@ -65,7 +69,7 @@ func (q *Queries) GetCampaign(ctx context.Context, id string) (GetCampaignRow, e
 
 const listAllCampaigns = `-- name: ListAllCampaigns :many
 SELECT
-	c.id, c.name, c.locale, c.game_system, c.status, c.gm_mode,
+	c.id, c.name, c.locale, c.game_system, c.status, c.gm_mode, c.intent, c.access_policy,
 	(SELECT COUNT(*) FROM participants p WHERE p.campaign_id = c.id) AS participant_count,
 	(SELECT COUNT(*) FROM characters ch WHERE ch.campaign_id = c.id) AS character_count,
 	c.theme_prompt, c.parent_campaign_id, c.fork_event_seq, c.origin_campaign_id,
@@ -82,6 +86,8 @@ type ListAllCampaignsRow struct {
 	GameSystem       string         `json:"game_system"`
 	Status           string         `json:"status"`
 	GmMode           string         `json:"gm_mode"`
+	Intent           string         `json:"intent"`
+	AccessPolicy     string         `json:"access_policy"`
 	ParticipantCount int64          `json:"participant_count"`
 	CharacterCount   int64          `json:"character_count"`
 	ThemePrompt      string         `json:"theme_prompt"`
@@ -110,6 +116,8 @@ func (q *Queries) ListAllCampaigns(ctx context.Context, limit int64) ([]ListAllC
 			&i.GameSystem,
 			&i.Status,
 			&i.GmMode,
+			&i.Intent,
+			&i.AccessPolicy,
 			&i.ParticipantCount,
 			&i.CharacterCount,
 			&i.ThemePrompt,
@@ -136,7 +144,7 @@ func (q *Queries) ListAllCampaigns(ctx context.Context, limit int64) ([]ListAllC
 
 const listCampaigns = `-- name: ListCampaigns :many
 SELECT
-	c.id, c.name, c.locale, c.game_system, c.status, c.gm_mode,
+	c.id, c.name, c.locale, c.game_system, c.status, c.gm_mode, c.intent, c.access_policy,
 	(SELECT COUNT(*) FROM participants p WHERE p.campaign_id = c.id) AS participant_count,
 	(SELECT COUNT(*) FROM characters ch WHERE ch.campaign_id = c.id) AS character_count,
 	c.theme_prompt, c.parent_campaign_id, c.fork_event_seq, c.origin_campaign_id,
@@ -159,6 +167,8 @@ type ListCampaignsRow struct {
 	GameSystem       string         `json:"game_system"`
 	Status           string         `json:"status"`
 	GmMode           string         `json:"gm_mode"`
+	Intent           string         `json:"intent"`
+	AccessPolicy     string         `json:"access_policy"`
 	ParticipantCount int64          `json:"participant_count"`
 	CharacterCount   int64          `json:"character_count"`
 	ThemePrompt      string         `json:"theme_prompt"`
@@ -187,6 +197,8 @@ func (q *Queries) ListCampaigns(ctx context.Context, arg ListCampaignsParams) ([
 			&i.GameSystem,
 			&i.Status,
 			&i.GmMode,
+			&i.Intent,
+			&i.AccessPolicy,
 			&i.ParticipantCount,
 			&i.CharacterCount,
 			&i.ThemePrompt,
@@ -213,16 +225,18 @@ func (q *Queries) ListCampaigns(ctx context.Context, arg ListCampaignsParams) ([
 
 const putCampaign = `-- name: PutCampaign :exec
 INSERT INTO campaigns (
-	id, name, locale, game_system, status, gm_mode,
+	id, name, locale, game_system, status, gm_mode, intent, access_policy,
 	participant_count, character_count, theme_prompt,
 	created_at, updated_at, completed_at, archived_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
 	name = excluded.name,
 	locale = excluded.locale,
 	game_system = excluded.game_system,
 	status = excluded.status,
 	gm_mode = excluded.gm_mode,
+	intent = excluded.intent,
+	access_policy = excluded.access_policy,
     participant_count = excluded.participant_count,
     character_count = excluded.character_count,
     theme_prompt = excluded.theme_prompt,
@@ -238,6 +252,8 @@ type PutCampaignParams struct {
 	GameSystem       string        `json:"game_system"`
 	Status           string        `json:"status"`
 	GmMode           string        `json:"gm_mode"`
+	Intent           string        `json:"intent"`
+	AccessPolicy     string        `json:"access_policy"`
 	ParticipantCount int64         `json:"participant_count"`
 	CharacterCount   int64         `json:"character_count"`
 	ThemePrompt      string        `json:"theme_prompt"`
@@ -255,6 +271,8 @@ func (q *Queries) PutCampaign(ctx context.Context, arg PutCampaignParams) error 
 		arg.GameSystem,
 		arg.Status,
 		arg.GmMode,
+		arg.Intent,
+		arg.AccessPolicy,
 		arg.ParticipantCount,
 		arg.CharacterCount,
 		arg.ThemePrompt,

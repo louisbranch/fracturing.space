@@ -30,6 +30,8 @@ func campaignToProto(c campaign.Campaign) *campaignv1.Campaign {
 		System:           gameSystemToProto(c.System),
 		Status:           campaignStatusToProto(c.Status),
 		GmMode:           gmModeToProto(c.GmMode),
+		Intent:           campaignIntentToProto(c.Intent),
+		AccessPolicy:     campaignAccessPolicyToProto(c.AccessPolicy),
 		ParticipantCount: int32(c.ParticipantCount),
 		CharacterCount:   int32(c.CharacterCount),
 		ThemePrompt:      c.ThemePrompt,
@@ -78,6 +80,58 @@ func gmModeToProto(mode campaign.GmMode) campaignv1.GmMode {
 		return campaignv1.GmMode_HYBRID
 	default:
 		return campaignv1.GmMode_GM_MODE_UNSPECIFIED
+	}
+}
+
+func campaignIntentFromProto(intent campaignv1.CampaignIntent) campaign.CampaignIntent {
+	switch intent {
+	case campaignv1.CampaignIntent_STANDARD:
+		return campaign.CampaignIntentStandard
+	case campaignv1.CampaignIntent_STARTER:
+		return campaign.CampaignIntentStarter
+	case campaignv1.CampaignIntent_SANDBOX:
+		return campaign.CampaignIntentSandbox
+	default:
+		return campaign.CampaignIntentUnspecified
+	}
+}
+
+func campaignIntentToProto(intent campaign.CampaignIntent) campaignv1.CampaignIntent {
+	switch intent {
+	case campaign.CampaignIntentStandard:
+		return campaignv1.CampaignIntent_STANDARD
+	case campaign.CampaignIntentStarter:
+		return campaignv1.CampaignIntent_STARTER
+	case campaign.CampaignIntentSandbox:
+		return campaignv1.CampaignIntent_SANDBOX
+	default:
+		return campaignv1.CampaignIntent_CAMPAIGN_INTENT_UNSPECIFIED
+	}
+}
+
+func campaignAccessPolicyFromProto(policy campaignv1.CampaignAccessPolicy) campaign.CampaignAccessPolicy {
+	switch policy {
+	case campaignv1.CampaignAccessPolicy_PRIVATE:
+		return campaign.CampaignAccessPolicyPrivate
+	case campaignv1.CampaignAccessPolicy_RESTRICTED:
+		return campaign.CampaignAccessPolicyRestricted
+	case campaignv1.CampaignAccessPolicy_PUBLIC:
+		return campaign.CampaignAccessPolicyPublic
+	default:
+		return campaign.CampaignAccessPolicyUnspecified
+	}
+}
+
+func campaignAccessPolicyToProto(policy campaign.CampaignAccessPolicy) campaignv1.CampaignAccessPolicy {
+	switch policy {
+	case campaign.CampaignAccessPolicyPrivate:
+		return campaignv1.CampaignAccessPolicy_PRIVATE
+	case campaign.CampaignAccessPolicyRestricted:
+		return campaignv1.CampaignAccessPolicy_RESTRICTED
+	case campaign.CampaignAccessPolicyPublic:
+		return campaignv1.CampaignAccessPolicy_PUBLIC
+	default:
+		return campaignv1.CampaignAccessPolicy_CAMPAIGN_ACCESS_POLICY_UNSPECIFIED
 	}
 }
 

@@ -75,11 +75,13 @@ func (s *CampaignService) CreateCampaign(ctx context.Context, in *campaignv1.Cre
 	}
 
 	input := campaign.CreateCampaignInput{
-		Name:        in.GetName(),
-		Locale:      in.GetLocale(),
-		System:      system,
-		GmMode:      gmModeFromProto(in.GetGmMode()),
-		ThemePrompt: in.GetThemePrompt(),
+		Name:         in.GetName(),
+		Locale:       in.GetLocale(),
+		System:       system,
+		GmMode:       gmModeFromProto(in.GetGmMode()),
+		Intent:       campaignIntentFromProto(in.GetIntent()),
+		AccessPolicy: campaignAccessPolicyFromProto(in.GetAccessPolicy()),
+		ThemePrompt:  in.GetThemePrompt(),
 	}
 	normalized, err := campaign.NormalizeCreateCampaignInput(input)
 	if err != nil {
@@ -100,11 +102,13 @@ func (s *CampaignService) CreateCampaign(ctx context.Context, in *campaignv1.Cre
 	}
 
 	payload := event.CampaignCreatedPayload{
-		Name:        normalized.Name,
-		Locale:      platformi18n.LocaleString(normalized.Locale),
-		GameSystem:  normalized.System.String(),
-		GmMode:      gmModeToProto(normalized.GmMode).String(),
-		ThemePrompt: normalized.ThemePrompt,
+		Name:         normalized.Name,
+		Locale:       platformi18n.LocaleString(normalized.Locale),
+		GameSystem:   normalized.System.String(),
+		GmMode:       gmModeToProto(normalized.GmMode).String(),
+		Intent:       campaignIntentToProto(normalized.Intent).String(),
+		AccessPolicy: campaignAccessPolicyToProto(normalized.AccessPolicy).String(),
+		ThemePrompt:  normalized.ThemePrompt,
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -234,6 +238,8 @@ func (s *CampaignService) ListCampaigns(ctx context.Context, in *campaignv1.List
 		Max:     maxListCampaignsPageSize,
 	})
 
+	// TODO: Apply access policy/intent gates for campaign listing.
+
 	page, err := s.stores.Campaign.List(ctx, pageSize, in.GetPageToken())
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "list campaigns: %v", err)
@@ -273,6 +279,7 @@ func (s *CampaignService) GetCampaign(ctx context.Context, in *campaignv1.GetCam
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
+	// TODO: Apply access policy/intent gates for campaign read.
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpRead); err != nil {
 		return nil, handleDomainError(err)
 	}

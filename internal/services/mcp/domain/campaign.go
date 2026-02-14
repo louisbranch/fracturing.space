@@ -22,11 +22,13 @@ import (
 
 // CampaignCreateInput represents the MCP tool input for campaign creation.
 type CampaignCreateInput struct {
-	Name        string `json:"name" jsonschema:"campaign name"`
-	System      string `json:"system" jsonschema:"game system (DAGGERHEART)"`
-	GmMode      string `json:"gm_mode" jsonschema:"gm mode (HUMAN, AI, HYBRID)"`
-	ThemePrompt string `json:"theme_prompt,omitempty" jsonschema:"optional theme prompt"`
-	UserID      string `json:"user_id,omitempty" jsonschema:"creator user identifier"`
+	Name         string `json:"name" jsonschema:"campaign name"`
+	System       string `json:"system" jsonschema:"game system (DAGGERHEART)"`
+	GmMode       string `json:"gm_mode" jsonschema:"gm mode (HUMAN, AI, HYBRID)"`
+	Intent       string `json:"intent,omitempty" jsonschema:"campaign intent (STANDARD, STARTER, SANDBOX)"`
+	AccessPolicy string `json:"access_policy,omitempty" jsonschema:"campaign access policy (PRIVATE, RESTRICTED, PUBLIC)"`
+	ThemePrompt  string `json:"theme_prompt,omitempty" jsonschema:"optional theme prompt"`
+	UserID       string `json:"user_id,omitempty" jsonschema:"creator user identifier"`
 }
 
 // CampaignStatusChangeInput represents the MCP tool input for campaign lifecycle changes.
@@ -40,6 +42,8 @@ type CampaignCreateResult struct {
 	OwnerParticipantID string `json:"owner_participant_id" jsonschema:"owner participant identifier for setting context"`
 	Name               string `json:"name" jsonschema:"campaign name"`
 	GmMode             string `json:"gm_mode" jsonschema:"gm mode"`
+	Intent             string `json:"intent" jsonschema:"campaign intent"`
+	AccessPolicy       string `json:"access_policy" jsonschema:"campaign access policy"`
 	ParticipantCount   int    `json:"participant_count" jsonschema:"number of all participants (GM + PLAYER + future roles)"`
 	CharacterCount     int    `json:"character_count" jsonschema:"number of all characters (PC + NPC + future kinds)"`
 	GmFear             int    `json:"gm_fear" jsonschema:"campaign-scoped GM fear"`
@@ -56,6 +60,8 @@ type CampaignStatusResult struct {
 	ID               string `json:"id" jsonschema:"campaign identifier"`
 	Name             string `json:"name" jsonschema:"campaign name"`
 	GmMode           string `json:"gm_mode" jsonschema:"gm mode"`
+	Intent           string `json:"intent" jsonschema:"campaign intent"`
+	AccessPolicy     string `json:"access_policy" jsonschema:"campaign access policy"`
 	ParticipantCount int    `json:"participant_count" jsonschema:"number of all participants (GM + PLAYER + future roles)"`
 	CharacterCount   int    `json:"character_count" jsonschema:"number of all characters (PC + NPC + future kinds)"`
 	GmFear           int    `json:"gm_fear" jsonschema:"campaign-scoped GM fear"`
@@ -73,6 +79,8 @@ type CampaignListEntry struct {
 	Name             string `json:"name"`
 	Status           string `json:"status"`
 	GmMode           string `json:"gm_mode"`
+	Intent           string `json:"intent"`
+	AccessPolicy     string `json:"access_policy"`
 	ParticipantCount int    `json:"participant_count"`
 	CharacterCount   int    `json:"character_count"`
 	GmFear           int    `json:"gm_fear"`
@@ -545,10 +553,12 @@ func CampaignCreateHandler(client statev1.CampaignServiceClient, notify Resource
 		var header metadata.MD
 
 		response, err := client.CreateCampaign(callCtx, &statev1.CreateCampaignRequest{
-			Name:        input.Name,
-			System:      gameSystemFromString(input.System),
-			GmMode:      gmModeFromString(input.GmMode),
-			ThemePrompt: input.ThemePrompt,
+			Name:         input.Name,
+			System:       gameSystemFromString(input.System),
+			GmMode:       gmModeFromString(input.GmMode),
+			Intent:       campaignIntentFromString(input.Intent),
+			AccessPolicy: campaignAccessPolicyFromString(input.AccessPolicy),
+			ThemePrompt:  input.ThemePrompt,
 		}, grpc.Header(&header))
 		if err != nil {
 			return nil, CampaignCreateResult{}, fmt.Errorf("campaign create failed: %w", err)
@@ -569,6 +579,8 @@ func CampaignCreateHandler(client statev1.CampaignServiceClient, notify Resource
 			OwnerParticipantID: ownerParticipantID,
 			Name:               response.Campaign.GetName(),
 			GmMode:             gmModeToString(response.Campaign.GetGmMode()),
+			Intent:             campaignIntentToString(response.Campaign.GetIntent()),
+			AccessPolicy:       campaignAccessPolicyToString(response.Campaign.GetAccessPolicy()),
 			ParticipantCount:   int(response.Campaign.GetParticipantCount()),
 			CharacterCount:     int(response.Campaign.GetCharacterCount()),
 			GmFear:             0, // GM Fear is now in Snapshot, not Campaign
@@ -782,6 +794,8 @@ func CampaignListResourceHandler(client statev1.CampaignServiceClient) mcp.Resou
 				Name:             campaign.GetName(),
 				Status:           campaignStatusToString(campaign.GetStatus()),
 				GmMode:           gmModeToString(campaign.GetGmMode()),
+				Intent:           campaignIntentToString(campaign.GetIntent()),
+				AccessPolicy:     campaignAccessPolicyToString(campaign.GetAccessPolicy()),
 				ParticipantCount: int(campaign.GetParticipantCount()),
 				CharacterCount:   int(campaign.GetCharacterCount()),
 				GmFear:           0, // GM Fear is now in Snapshot, not Campaign
@@ -853,6 +867,58 @@ func gmModeToString(mode statev1.GmMode) string {
 	}
 }
 
+func campaignIntentFromString(value string) statev1.CampaignIntent {
+	switch strings.ToUpper(strings.TrimSpace(value)) {
+	case "STANDARD", "CAMPAIGN_INTENT_STANDARD":
+		return statev1.CampaignIntent_STANDARD
+	case "STARTER", "CAMPAIGN_INTENT_STARTER":
+		return statev1.CampaignIntent_STARTER
+	case "SANDBOX", "CAMPAIGN_INTENT_SANDBOX":
+		return statev1.CampaignIntent_SANDBOX
+	default:
+		return statev1.CampaignIntent_CAMPAIGN_INTENT_UNSPECIFIED
+	}
+}
+
+func campaignIntentToString(intent statev1.CampaignIntent) string {
+	switch intent {
+	case statev1.CampaignIntent_STANDARD:
+		return "STANDARD"
+	case statev1.CampaignIntent_STARTER:
+		return "STARTER"
+	case statev1.CampaignIntent_SANDBOX:
+		return "SANDBOX"
+	default:
+		return "UNSPECIFIED"
+	}
+}
+
+func campaignAccessPolicyFromString(value string) statev1.CampaignAccessPolicy {
+	switch strings.ToUpper(strings.TrimSpace(value)) {
+	case "PRIVATE", "CAMPAIGN_ACCESS_POLICY_PRIVATE":
+		return statev1.CampaignAccessPolicy_PRIVATE
+	case "RESTRICTED", "CAMPAIGN_ACCESS_POLICY_RESTRICTED":
+		return statev1.CampaignAccessPolicy_RESTRICTED
+	case "PUBLIC", "CAMPAIGN_ACCESS_POLICY_PUBLIC":
+		return statev1.CampaignAccessPolicy_PUBLIC
+	default:
+		return statev1.CampaignAccessPolicy_CAMPAIGN_ACCESS_POLICY_UNSPECIFIED
+	}
+}
+
+func campaignAccessPolicyToString(policy statev1.CampaignAccessPolicy) string {
+	switch policy {
+	case statev1.CampaignAccessPolicy_PRIVATE:
+		return "PRIVATE"
+	case statev1.CampaignAccessPolicy_RESTRICTED:
+		return "RESTRICTED"
+	case statev1.CampaignAccessPolicy_PUBLIC:
+		return "PUBLIC"
+	default:
+		return "UNSPECIFIED"
+	}
+}
+
 func campaignStatusToString(status statev1.CampaignStatus) string {
 	switch status {
 	case statev1.CampaignStatus_DRAFT:
@@ -873,6 +939,8 @@ func campaignStatusResultFromProto(campaign *statev1.Campaign) CampaignStatusRes
 		ID:               campaign.GetId(),
 		Name:             campaign.GetName(),
 		GmMode:           gmModeToString(campaign.GetGmMode()),
+		Intent:           campaignIntentToString(campaign.GetIntent()),
+		AccessPolicy:     campaignAccessPolicyToString(campaign.GetAccessPolicy()),
 		ParticipantCount: int(campaign.GetParticipantCount()),
 		CharacterCount:   int(campaign.GetCharacterCount()),
 		GmFear:           0, // GM Fear is now in Snapshot, not Campaign

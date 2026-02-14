@@ -23,6 +23,12 @@ Within a campaign, we talk about areas rather than separate buckets:
 - Snapshot: materialized projections derived from the event journal at a specific sequence.
 - Session: the active gameplay view.
 
+Campaign metadata splits into three distinct concerns:
+
+- Status: gameplay progress (draft, active, completed, archived).
+- Intent: why the campaign exists (standard, starter, sandbox).
+- Access policy: who can discover it (private, restricted, public).
+
 ### Session Gate
 
 A session gate is a decision checkpoint that temporarily blocks session action

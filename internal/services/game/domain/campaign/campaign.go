@@ -17,6 +17,12 @@ type GmMode int
 // CampaignStatus describes the lifecycle of a campaign.
 type CampaignStatus int
 
+// CampaignIntent describes the purpose of a campaign.
+type CampaignIntent int
+
+// CampaignAccessPolicy describes who can discover a campaign.
+type CampaignAccessPolicy int
+
 const (
 	// GmModeUnspecified represents an invalid GM mode value.
 	GmModeUnspecified GmMode = iota
@@ -41,6 +47,28 @@ const (
 	CampaignStatusArchived
 )
 
+const (
+	// CampaignIntentUnspecified represents an invalid campaign intent value.
+	CampaignIntentUnspecified CampaignIntent = iota
+	// CampaignIntentStandard indicates a regular campaign.
+	CampaignIntentStandard
+	// CampaignIntentStarter indicates a beginner-friendly starter campaign.
+	CampaignIntentStarter
+	// CampaignIntentSandbox indicates an ephemeral campaign for testing.
+	CampaignIntentSandbox
+)
+
+const (
+	// CampaignAccessPolicyUnspecified represents an invalid access policy value.
+	CampaignAccessPolicyUnspecified CampaignAccessPolicy = iota
+	// CampaignAccessPolicyPrivate limits access to participants.
+	CampaignAccessPolicyPrivate
+	// CampaignAccessPolicyRestricted limits access to an allowlist.
+	CampaignAccessPolicyRestricted
+	// CampaignAccessPolicyPublic allows public discovery.
+	CampaignAccessPolicyPublic
+)
+
 var (
 	// ErrEmptyName indicates a missing campaign name.
 	ErrEmptyName = apperrors.New(apperrors.CodeCampaignNameEmpty, "campaign name is required")
@@ -63,6 +91,8 @@ type Campaign struct {
 	System           commonv1.GameSystem
 	Status           CampaignStatus
 	GmMode           GmMode
+	Intent           CampaignIntent
+	AccessPolicy     CampaignAccessPolicy
 	ParticipantCount int
 	CharacterCount   int
 	// ThemePrompt provides optional free-form campaign notes.
@@ -79,11 +109,13 @@ type Campaign struct {
 
 // CreateCampaignInput describes the metadata needed to create a campaign.
 type CreateCampaignInput struct {
-	Name        string
-	Locale      commonv1.Locale
-	System      commonv1.GameSystem
-	GmMode      GmMode
-	ThemePrompt string
+	Name         string
+	Locale       commonv1.Locale
+	System       commonv1.GameSystem
+	GmMode       GmMode
+	Intent       CampaignIntent
+	AccessPolicy CampaignAccessPolicy
+	ThemePrompt  string
 }
 
 // CreateCampaign creates a new campaign with a generated ID and timestamps.
@@ -113,6 +145,8 @@ func CreateCampaign(input CreateCampaignInput, now func() time.Time, idGenerator
 		System:           normalized.System,
 		Status:           CampaignStatusDraft,
 		GmMode:           normalized.GmMode,
+		Intent:           normalized.Intent,
+		AccessPolicy:     normalized.AccessPolicy,
 		ParticipantCount: 0,
 		CharacterCount:   0,
 		ThemePrompt:      normalized.ThemePrompt,
@@ -198,5 +232,11 @@ func NormalizeCreateCampaignInput(input CreateCampaignInput) (CreateCampaignInpu
 		return CreateCampaignInput{}, ErrInvalidGmMode
 	}
 	input.Locale = platformi18n.NormalizeLocale(input.Locale)
+	if input.Intent == CampaignIntentUnspecified {
+		input.Intent = CampaignIntentStandard
+	}
+	if input.AccessPolicy == CampaignAccessPolicyUnspecified {
+		input.AccessPolicy = CampaignAccessPolicyPrivate
+	}
 	return input, nil
 }

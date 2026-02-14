@@ -28,6 +28,8 @@ func TestCampaignToProto(t *testing.T) {
 		System:           commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 		Status:           campaign.CampaignStatusActive,
 		GmMode:           campaign.GmModeHybrid,
+		Intent:           campaign.CampaignIntentStarter,
+		AccessPolicy:     campaign.CampaignAccessPolicyRestricted,
 		ParticipantCount: 2,
 		CharacterCount:   3,
 		ThemePrompt:      "storm",
@@ -45,6 +47,12 @@ func TestCampaignToProto(t *testing.T) {
 	}
 	if proto.GetGmMode() != campaignv1.GmMode_HYBRID {
 		t.Fatalf("expected hybrid gm mode, got %v", proto.GetGmMode())
+	}
+	if proto.GetIntent() != campaignv1.CampaignIntent_STARTER {
+		t.Fatalf("expected starter intent, got %v", proto.GetIntent())
+	}
+	if proto.GetAccessPolicy() != campaignv1.CampaignAccessPolicy_RESTRICTED {
+		t.Fatalf("expected restricted access policy, got %v", proto.GetAccessPolicy())
 	}
 	if proto.GetLocale() != commonv1.Locale_LOCALE_PT_BR {
 		t.Fatalf("expected locale %v, got %v", commonv1.Locale_LOCALE_PT_BR, proto.GetLocale())
@@ -79,6 +87,20 @@ func TestEnumConversions(t *testing.T) {
 	}
 	if gmModeFromProto(campaignv1.GmMode_GM_MODE_UNSPECIFIED) != campaign.GmModeUnspecified {
 		t.Fatal("expected gm mode unspecified")
+	}
+
+	if campaignIntentFromProto(campaignv1.CampaignIntent_STARTER) != campaign.CampaignIntentStarter {
+		t.Fatal("expected starter intent")
+	}
+	if campaignIntentFromProto(campaignv1.CampaignIntent_CAMPAIGN_INTENT_UNSPECIFIED) != campaign.CampaignIntentUnspecified {
+		t.Fatal("expected unspecified intent")
+	}
+
+	if campaignAccessPolicyFromProto(campaignv1.CampaignAccessPolicy_PUBLIC) != campaign.CampaignAccessPolicyPublic {
+		t.Fatal("expected public access policy")
+	}
+	if campaignAccessPolicyFromProto(campaignv1.CampaignAccessPolicy_CAMPAIGN_ACCESS_POLICY_UNSPECIFIED) != campaign.CampaignAccessPolicyUnspecified {
+		t.Fatal("expected unspecified access policy")
 	}
 
 	if participantRoleFromProto(campaignv1.ParticipantRole_GM) != participant.ParticipantRoleGM {
@@ -547,6 +569,34 @@ func TestEnumConversionsExtended(t *testing.T) {
 	}
 	if gmModeToProto(campaign.GmModeUnspecified) != campaignv1.GmMode_GM_MODE_UNSPECIFIED {
 		t.Fatal("expected GM_MODE_UNSPECIFIED")
+	}
+
+	// campaignIntentToProto all branches
+	if campaignIntentToProto(campaign.CampaignIntentStandard) != campaignv1.CampaignIntent_STANDARD {
+		t.Fatal("expected STANDARD")
+	}
+	if campaignIntentToProto(campaign.CampaignIntentStarter) != campaignv1.CampaignIntent_STARTER {
+		t.Fatal("expected STARTER")
+	}
+	if campaignIntentToProto(campaign.CampaignIntentSandbox) != campaignv1.CampaignIntent_SANDBOX {
+		t.Fatal("expected SANDBOX")
+	}
+	if campaignIntentToProto(campaign.CampaignIntentUnspecified) != campaignv1.CampaignIntent_CAMPAIGN_INTENT_UNSPECIFIED {
+		t.Fatal("expected CAMPAIGN_INTENT_UNSPECIFIED")
+	}
+
+	// campaignAccessPolicyToProto all branches
+	if campaignAccessPolicyToProto(campaign.CampaignAccessPolicyPrivate) != campaignv1.CampaignAccessPolicy_PRIVATE {
+		t.Fatal("expected PRIVATE")
+	}
+	if campaignAccessPolicyToProto(campaign.CampaignAccessPolicyRestricted) != campaignv1.CampaignAccessPolicy_RESTRICTED {
+		t.Fatal("expected RESTRICTED")
+	}
+	if campaignAccessPolicyToProto(campaign.CampaignAccessPolicyPublic) != campaignv1.CampaignAccessPolicy_PUBLIC {
+		t.Fatal("expected PUBLIC")
+	}
+	if campaignAccessPolicyToProto(campaign.CampaignAccessPolicyUnspecified) != campaignv1.CampaignAccessPolicy_CAMPAIGN_ACCESS_POLICY_UNSPECIFIED {
+		t.Fatal("expected CAMPAIGN_ACCESS_POLICY_UNSPECIFIED")
 	}
 
 	// participantRoleFromProto player

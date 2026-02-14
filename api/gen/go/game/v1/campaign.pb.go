@@ -131,6 +131,110 @@ func (GmMode) EnumDescriptor() ([]byte, []int) {
 	return file_game_v1_campaign_proto_rawDescGZIP(), []int{1}
 }
 
+type CampaignIntent int32
+
+const (
+	CampaignIntent_CAMPAIGN_INTENT_UNSPECIFIED CampaignIntent = 0
+	CampaignIntent_STANDARD                    CampaignIntent = 1
+	CampaignIntent_STARTER                     CampaignIntent = 2
+	CampaignIntent_SANDBOX                     CampaignIntent = 3
+)
+
+// Enum value maps for CampaignIntent.
+var (
+	CampaignIntent_name = map[int32]string{
+		0: "CAMPAIGN_INTENT_UNSPECIFIED",
+		1: "STANDARD",
+		2: "STARTER",
+		3: "SANDBOX",
+	}
+	CampaignIntent_value = map[string]int32{
+		"CAMPAIGN_INTENT_UNSPECIFIED": 0,
+		"STANDARD":                    1,
+		"STARTER":                     2,
+		"SANDBOX":                     3,
+	}
+)
+
+func (x CampaignIntent) Enum() *CampaignIntent {
+	p := new(CampaignIntent)
+	*p = x
+	return p
+}
+
+func (x CampaignIntent) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (CampaignIntent) Descriptor() protoreflect.EnumDescriptor {
+	return file_game_v1_campaign_proto_enumTypes[2].Descriptor()
+}
+
+func (CampaignIntent) Type() protoreflect.EnumType {
+	return &file_game_v1_campaign_proto_enumTypes[2]
+}
+
+func (x CampaignIntent) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use CampaignIntent.Descriptor instead.
+func (CampaignIntent) EnumDescriptor() ([]byte, []int) {
+	return file_game_v1_campaign_proto_rawDescGZIP(), []int{2}
+}
+
+type CampaignAccessPolicy int32
+
+const (
+	CampaignAccessPolicy_CAMPAIGN_ACCESS_POLICY_UNSPECIFIED CampaignAccessPolicy = 0
+	CampaignAccessPolicy_PRIVATE                            CampaignAccessPolicy = 1
+	CampaignAccessPolicy_RESTRICTED                         CampaignAccessPolicy = 2
+	CampaignAccessPolicy_PUBLIC                             CampaignAccessPolicy = 3
+)
+
+// Enum value maps for CampaignAccessPolicy.
+var (
+	CampaignAccessPolicy_name = map[int32]string{
+		0: "CAMPAIGN_ACCESS_POLICY_UNSPECIFIED",
+		1: "PRIVATE",
+		2: "RESTRICTED",
+		3: "PUBLIC",
+	}
+	CampaignAccessPolicy_value = map[string]int32{
+		"CAMPAIGN_ACCESS_POLICY_UNSPECIFIED": 0,
+		"PRIVATE":                            1,
+		"RESTRICTED":                         2,
+		"PUBLIC":                             3,
+	}
+)
+
+func (x CampaignAccessPolicy) Enum() *CampaignAccessPolicy {
+	p := new(CampaignAccessPolicy)
+	*p = x
+	return p
+}
+
+func (x CampaignAccessPolicy) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (CampaignAccessPolicy) Descriptor() protoreflect.EnumDescriptor {
+	return file_game_v1_campaign_proto_enumTypes[3].Descriptor()
+}
+
+func (CampaignAccessPolicy) Type() protoreflect.EnumType {
+	return &file_game_v1_campaign_proto_enumTypes[3]
+}
+
+func (x CampaignAccessPolicy) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use CampaignAccessPolicy.Descriptor instead.
+func (CampaignAccessPolicy) EnumDescriptor() ([]byte, []int) {
+	return file_game_v1_campaign_proto_rawDescGZIP(), []int{3}
+}
+
 // Campaign represents a game campaign's configuration.
 // This is the "config layer" - settings that rarely change after setup.
 type Campaign struct {
@@ -139,20 +243,22 @@ type Campaign struct {
 	Name   string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	Locale v1.Locale              `protobuf:"varint,3,opt,name=locale,proto3,enum=common.v1.Locale" json:"locale,omitempty"`
 	// The game system this campaign uses. Required at creation, immutable.
-	System v1.GameSystem  `protobuf:"varint,4,opt,name=system,proto3,enum=common.v1.GameSystem" json:"system,omitempty"`
-	Status CampaignStatus `protobuf:"varint,5,opt,name=status,proto3,enum=game.v1.CampaignStatus" json:"status,omitempty"`
-	GmMode GmMode         `protobuf:"varint,6,opt,name=gm_mode,json=gmMode,proto3,enum=game.v1.GmMode" json:"gm_mode,omitempty"`
+	System       v1.GameSystem        `protobuf:"varint,4,opt,name=system,proto3,enum=common.v1.GameSystem" json:"system,omitempty"`
+	Status       CampaignStatus       `protobuf:"varint,5,opt,name=status,proto3,enum=game.v1.CampaignStatus" json:"status,omitempty"`
+	GmMode       GmMode               `protobuf:"varint,6,opt,name=gm_mode,json=gmMode,proto3,enum=game.v1.GmMode" json:"gm_mode,omitempty"`
+	Intent       CampaignIntent       `protobuf:"varint,7,opt,name=intent,proto3,enum=game.v1.CampaignIntent" json:"intent,omitempty"`
+	AccessPolicy CampaignAccessPolicy `protobuf:"varint,8,opt,name=access_policy,json=accessPolicy,proto3,enum=game.v1.CampaignAccessPolicy" json:"access_policy,omitempty"`
 	// Number of all participants (GM + PLAYER + future roles) for this campaign.
-	ParticipantCount int32 `protobuf:"varint,7,opt,name=participant_count,json=participantCount,proto3" json:"participant_count,omitempty"`
+	ParticipantCount int32 `protobuf:"varint,9,opt,name=participant_count,json=participantCount,proto3" json:"participant_count,omitempty"`
 	// Number of all characters (PC + NPC + future kinds) for this campaign.
-	CharacterCount int32                  `protobuf:"varint,8,opt,name=character_count,json=characterCount,proto3" json:"character_count,omitempty"`
-	ThemePrompt    string                 `protobuf:"bytes,9,opt,name=theme_prompt,json=themePrompt,proto3" json:"theme_prompt,omitempty"`
-	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt      *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	CharacterCount int32                  `protobuf:"varint,10,opt,name=character_count,json=characterCount,proto3" json:"character_count,omitempty"`
+	ThemePrompt    string                 `protobuf:"bytes,11,opt,name=theme_prompt,json=themePrompt,proto3" json:"theme_prompt,omitempty"`
+	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt      *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	// Timestamp when the campaign was completed.
-	CompletedAt *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=completed_at,json=completedAt,proto3" json:"completed_at,omitempty"`
+	CompletedAt *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=completed_at,json=completedAt,proto3" json:"completed_at,omitempty"`
 	// Timestamp when the campaign was archived.
-	ArchivedAt    *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=archived_at,json=archivedAt,proto3" json:"archived_at,omitempty"`
+	ArchivedAt    *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=archived_at,json=archivedAt,proto3" json:"archived_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -229,6 +335,20 @@ func (x *Campaign) GetGmMode() GmMode {
 	return GmMode_GM_MODE_UNSPECIFIED
 }
 
+func (x *Campaign) GetIntent() CampaignIntent {
+	if x != nil {
+		return x.Intent
+	}
+	return CampaignIntent_CAMPAIGN_INTENT_UNSPECIFIED
+}
+
+func (x *Campaign) GetAccessPolicy() CampaignAccessPolicy {
+	if x != nil {
+		return x.AccessPolicy
+	}
+	return CampaignAccessPolicy_CAMPAIGN_ACCESS_POLICY_UNSPECIFIED
+}
+
 func (x *Campaign) GetParticipantCount() int32 {
 	if x != nil {
 		return x.ParticipantCount
@@ -288,10 +408,14 @@ type CreateCampaignRequest struct {
 	System v1.GameSystem `protobuf:"varint,3,opt,name=system,proto3,enum=common.v1.GameSystem" json:"system,omitempty"`
 	// The mode of GM participation.
 	GmMode GmMode `protobuf:"varint,4,opt,name=gm_mode,json=gmMode,proto3,enum=game.v1.GmMode" json:"gm_mode,omitempty"`
+	// Intent for the campaign (e.g. standard, starter, sandbox).
+	Intent CampaignIntent `protobuf:"varint,5,opt,name=intent,proto3,enum=game.v1.CampaignIntent" json:"intent,omitempty"`
+	// Visibility/access policy for the campaign.
+	AccessPolicy CampaignAccessPolicy `protobuf:"varint,6,opt,name=access_policy,json=accessPolicy,proto3,enum=game.v1.CampaignAccessPolicy" json:"access_policy,omitempty"`
 	// Optional free-form theme prompt for assistants.
-	ThemePrompt string `protobuf:"bytes,5,opt,name=theme_prompt,json=themePrompt,proto3" json:"theme_prompt,omitempty"`
+	ThemePrompt string `protobuf:"bytes,7,opt,name=theme_prompt,json=themePrompt,proto3" json:"theme_prompt,omitempty"`
 	// Optional display name for the creator's participant seat.
-	CreatorDisplayName string `protobuf:"bytes,6,opt,name=creator_display_name,json=creatorDisplayName,proto3" json:"creator_display_name,omitempty"`
+	CreatorDisplayName string `protobuf:"bytes,8,opt,name=creator_display_name,json=creatorDisplayName,proto3" json:"creator_display_name,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -352,6 +476,20 @@ func (x *CreateCampaignRequest) GetGmMode() GmMode {
 		return x.GmMode
 	}
 	return GmMode_GM_MODE_UNSPECIFIED
+}
+
+func (x *CreateCampaignRequest) GetIntent() CampaignIntent {
+	if x != nil {
+		return x.Intent
+	}
+	return CampaignIntent_CAMPAIGN_INTENT_UNSPECIFIED
+}
+
+func (x *CreateCampaignRequest) GetAccessPolicy() CampaignAccessPolicy {
+	if x != nil {
+		return x.AccessPolicy
+	}
+	return CampaignAccessPolicy_CAMPAIGN_ACCESS_POLICY_UNSPECIFIED
 }
 
 func (x *CreateCampaignRequest) GetThemePrompt() string {
@@ -895,32 +1033,36 @@ var File_game_v1_campaign_proto protoreflect.FileDescriptor
 
 const file_game_v1_campaign_proto_rawDesc = "" +
 	"\n" +
-	"\x16game/v1/campaign.proto\x12\agame.v1\x1a\x16common/v1/locale.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bcommon/v1/game_system.proto\x1a\x19game/v1/participant.proto\"\xce\x04\n" +
+	"\x16game/v1/campaign.proto\x12\agame.v1\x1a\x16common/v1/locale.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bcommon/v1/game_system.proto\x1a\x19game/v1/participant.proto\"\xc3\x05\n" +
 	"\bCampaign\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12)\n" +
 	"\x06locale\x18\x03 \x01(\x0e2\x11.common.v1.LocaleR\x06locale\x12-\n" +
 	"\x06system\x18\x04 \x01(\x0e2\x15.common.v1.GameSystemR\x06system\x12/\n" +
 	"\x06status\x18\x05 \x01(\x0e2\x17.game.v1.CampaignStatusR\x06status\x12(\n" +
-	"\agm_mode\x18\x06 \x01(\x0e2\x0f.game.v1.GmModeR\x06gmMode\x12+\n" +
-	"\x11participant_count\x18\a \x01(\x05R\x10participantCount\x12'\n" +
-	"\x0fcharacter_count\x18\b \x01(\x05R\x0echaracterCount\x12!\n" +
-	"\ftheme_prompt\x18\t \x01(\tR\vthemePrompt\x129\n" +
+	"\agm_mode\x18\x06 \x01(\x0e2\x0f.game.v1.GmModeR\x06gmMode\x12/\n" +
+	"\x06intent\x18\a \x01(\x0e2\x17.game.v1.CampaignIntentR\x06intent\x12B\n" +
+	"\raccess_policy\x18\b \x01(\x0e2\x1d.game.v1.CampaignAccessPolicyR\faccessPolicy\x12+\n" +
+	"\x11participant_count\x18\t \x01(\x05R\x10participantCount\x12'\n" +
+	"\x0fcharacter_count\x18\n" +
+	" \x01(\x05R\x0echaracterCount\x12!\n" +
+	"\ftheme_prompt\x18\v \x01(\tR\vthemePrompt\x129\n" +
 	"\n" +
-	"created_at\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"created_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12=\n" +
-	"\fcompleted_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\vcompletedAt\x12;\n" +
-	"\varchived_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"archivedAt\"\x84\x02\n" +
+	"updated_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12=\n" +
+	"\fcompleted_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\vcompletedAt\x12;\n" +
+	"\varchived_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"archivedAt\"\xf9\x02\n" +
 	"\x15CreateCampaignRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12)\n" +
 	"\x06locale\x18\x02 \x01(\x0e2\x11.common.v1.LocaleR\x06locale\x12-\n" +
 	"\x06system\x18\x03 \x01(\x0e2\x15.common.v1.GameSystemR\x06system\x12(\n" +
-	"\agm_mode\x18\x04 \x01(\x0e2\x0f.game.v1.GmModeR\x06gmMode\x12!\n" +
-	"\ftheme_prompt\x18\x05 \x01(\tR\vthemePrompt\x120\n" +
-	"\x14creator_display_name\x18\x06 \x01(\tR\x12creatorDisplayName\"\xa6\x01\n" +
+	"\agm_mode\x18\x04 \x01(\x0e2\x0f.game.v1.GmModeR\x06gmMode\x12/\n" +
+	"\x06intent\x18\x05 \x01(\x0e2\x17.game.v1.CampaignIntentR\x06intent\x12B\n" +
+	"\raccess_policy\x18\x06 \x01(\x0e2\x1d.game.v1.CampaignAccessPolicyR\faccessPolicy\x12!\n" +
+	"\ftheme_prompt\x18\a \x01(\tR\vthemePrompt\x120\n" +
+	"\x14creator_display_name\x18\b \x01(\tR\x12creatorDisplayName\"\xa6\x01\n" +
 	"\x16CreateCampaignResponse\x12-\n" +
 	"\bcampaign\x18\x01 \x01(\v2\x11.game.v1.CampaignR\bcampaign\x12A\n" +
 	"\x11owner_participant\x18\x02 \x01(\v2\x14.game.v1.ParticipantR\x10ownerParticipant\x12\x1a\n" +
@@ -964,7 +1106,19 @@ const file_game_v1_campaign_proto_rawDesc = "" +
 	"\x05HUMAN\x10\x01\x12\x06\n" +
 	"\x02AI\x10\x02\x12\n" +
 	"\n" +
-	"\x06HYBRID\x10\x032\xf4\x03\n" +
+	"\x06HYBRID\x10\x03*Y\n" +
+	"\x0eCampaignIntent\x12\x1f\n" +
+	"\x1bCAMPAIGN_INTENT_UNSPECIFIED\x10\x00\x12\f\n" +
+	"\bSTANDARD\x10\x01\x12\v\n" +
+	"\aSTARTER\x10\x02\x12\v\n" +
+	"\aSANDBOX\x10\x03*g\n" +
+	"\x14CampaignAccessPolicy\x12&\n" +
+	"\"CAMPAIGN_ACCESS_POLICY_UNSPECIFIED\x10\x00\x12\v\n" +
+	"\aPRIVATE\x10\x01\x12\x0e\n" +
+	"\n" +
+	"RESTRICTED\x10\x02\x12\n" +
+	"\n" +
+	"\x06PUBLIC\x10\x032\xf4\x03\n" +
 	"\x0fCampaignService\x12Q\n" +
 	"\x0eCreateCampaign\x12\x1e.game.v1.CreateCampaignRequest\x1a\x1f.game.v1.CreateCampaignResponse\x12N\n" +
 	"\rListCampaigns\x12\x1d.game.v1.ListCampaignsRequest\x1a\x1e.game.v1.ListCampaignsResponse\x12H\n" +
@@ -985,65 +1139,71 @@ func file_game_v1_campaign_proto_rawDescGZIP() []byte {
 	return file_game_v1_campaign_proto_rawDescData
 }
 
-var file_game_v1_campaign_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_game_v1_campaign_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
 var file_game_v1_campaign_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_game_v1_campaign_proto_goTypes = []any{
 	(CampaignStatus)(0),             // 0: game.v1.CampaignStatus
 	(GmMode)(0),                     // 1: game.v1.GmMode
-	(*Campaign)(nil),                // 2: game.v1.Campaign
-	(*CreateCampaignRequest)(nil),   // 3: game.v1.CreateCampaignRequest
-	(*CreateCampaignResponse)(nil),  // 4: game.v1.CreateCampaignResponse
-	(*ListCampaignsRequest)(nil),    // 5: game.v1.ListCampaignsRequest
-	(*ListCampaignsResponse)(nil),   // 6: game.v1.ListCampaignsResponse
-	(*GetCampaignRequest)(nil),      // 7: game.v1.GetCampaignRequest
-	(*GetCampaignResponse)(nil),     // 8: game.v1.GetCampaignResponse
-	(*EndCampaignRequest)(nil),      // 9: game.v1.EndCampaignRequest
-	(*EndCampaignResponse)(nil),     // 10: game.v1.EndCampaignResponse
-	(*ArchiveCampaignRequest)(nil),  // 11: game.v1.ArchiveCampaignRequest
-	(*ArchiveCampaignResponse)(nil), // 12: game.v1.ArchiveCampaignResponse
-	(*RestoreCampaignRequest)(nil),  // 13: game.v1.RestoreCampaignRequest
-	(*RestoreCampaignResponse)(nil), // 14: game.v1.RestoreCampaignResponse
-	(v1.Locale)(0),                  // 15: common.v1.Locale
-	(v1.GameSystem)(0),              // 16: common.v1.GameSystem
-	(*timestamppb.Timestamp)(nil),   // 17: google.protobuf.Timestamp
-	(*Participant)(nil),             // 18: game.v1.Participant
+	(CampaignIntent)(0),             // 2: game.v1.CampaignIntent
+	(CampaignAccessPolicy)(0),       // 3: game.v1.CampaignAccessPolicy
+	(*Campaign)(nil),                // 4: game.v1.Campaign
+	(*CreateCampaignRequest)(nil),   // 5: game.v1.CreateCampaignRequest
+	(*CreateCampaignResponse)(nil),  // 6: game.v1.CreateCampaignResponse
+	(*ListCampaignsRequest)(nil),    // 7: game.v1.ListCampaignsRequest
+	(*ListCampaignsResponse)(nil),   // 8: game.v1.ListCampaignsResponse
+	(*GetCampaignRequest)(nil),      // 9: game.v1.GetCampaignRequest
+	(*GetCampaignResponse)(nil),     // 10: game.v1.GetCampaignResponse
+	(*EndCampaignRequest)(nil),      // 11: game.v1.EndCampaignRequest
+	(*EndCampaignResponse)(nil),     // 12: game.v1.EndCampaignResponse
+	(*ArchiveCampaignRequest)(nil),  // 13: game.v1.ArchiveCampaignRequest
+	(*ArchiveCampaignResponse)(nil), // 14: game.v1.ArchiveCampaignResponse
+	(*RestoreCampaignRequest)(nil),  // 15: game.v1.RestoreCampaignRequest
+	(*RestoreCampaignResponse)(nil), // 16: game.v1.RestoreCampaignResponse
+	(v1.Locale)(0),                  // 17: common.v1.Locale
+	(v1.GameSystem)(0),              // 18: common.v1.GameSystem
+	(*timestamppb.Timestamp)(nil),   // 19: google.protobuf.Timestamp
+	(*Participant)(nil),             // 20: game.v1.Participant
 }
 var file_game_v1_campaign_proto_depIdxs = []int32{
-	15, // 0: game.v1.Campaign.locale:type_name -> common.v1.Locale
-	16, // 1: game.v1.Campaign.system:type_name -> common.v1.GameSystem
+	17, // 0: game.v1.Campaign.locale:type_name -> common.v1.Locale
+	18, // 1: game.v1.Campaign.system:type_name -> common.v1.GameSystem
 	0,  // 2: game.v1.Campaign.status:type_name -> game.v1.CampaignStatus
 	1,  // 3: game.v1.Campaign.gm_mode:type_name -> game.v1.GmMode
-	17, // 4: game.v1.Campaign.created_at:type_name -> google.protobuf.Timestamp
-	17, // 5: game.v1.Campaign.updated_at:type_name -> google.protobuf.Timestamp
-	17, // 6: game.v1.Campaign.completed_at:type_name -> google.protobuf.Timestamp
-	17, // 7: game.v1.Campaign.archived_at:type_name -> google.protobuf.Timestamp
-	15, // 8: game.v1.CreateCampaignRequest.locale:type_name -> common.v1.Locale
-	16, // 9: game.v1.CreateCampaignRequest.system:type_name -> common.v1.GameSystem
-	1,  // 10: game.v1.CreateCampaignRequest.gm_mode:type_name -> game.v1.GmMode
-	2,  // 11: game.v1.CreateCampaignResponse.campaign:type_name -> game.v1.Campaign
-	18, // 12: game.v1.CreateCampaignResponse.owner_participant:type_name -> game.v1.Participant
-	2,  // 13: game.v1.ListCampaignsResponse.campaigns:type_name -> game.v1.Campaign
-	2,  // 14: game.v1.GetCampaignResponse.campaign:type_name -> game.v1.Campaign
-	2,  // 15: game.v1.EndCampaignResponse.campaign:type_name -> game.v1.Campaign
-	2,  // 16: game.v1.ArchiveCampaignResponse.campaign:type_name -> game.v1.Campaign
-	2,  // 17: game.v1.RestoreCampaignResponse.campaign:type_name -> game.v1.Campaign
-	3,  // 18: game.v1.CampaignService.CreateCampaign:input_type -> game.v1.CreateCampaignRequest
-	5,  // 19: game.v1.CampaignService.ListCampaigns:input_type -> game.v1.ListCampaignsRequest
-	7,  // 20: game.v1.CampaignService.GetCampaign:input_type -> game.v1.GetCampaignRequest
-	9,  // 21: game.v1.CampaignService.EndCampaign:input_type -> game.v1.EndCampaignRequest
-	11, // 22: game.v1.CampaignService.ArchiveCampaign:input_type -> game.v1.ArchiveCampaignRequest
-	13, // 23: game.v1.CampaignService.RestoreCampaign:input_type -> game.v1.RestoreCampaignRequest
-	4,  // 24: game.v1.CampaignService.CreateCampaign:output_type -> game.v1.CreateCampaignResponse
-	6,  // 25: game.v1.CampaignService.ListCampaigns:output_type -> game.v1.ListCampaignsResponse
-	8,  // 26: game.v1.CampaignService.GetCampaign:output_type -> game.v1.GetCampaignResponse
-	10, // 27: game.v1.CampaignService.EndCampaign:output_type -> game.v1.EndCampaignResponse
-	12, // 28: game.v1.CampaignService.ArchiveCampaign:output_type -> game.v1.ArchiveCampaignResponse
-	14, // 29: game.v1.CampaignService.RestoreCampaign:output_type -> game.v1.RestoreCampaignResponse
-	24, // [24:30] is the sub-list for method output_type
-	18, // [18:24] is the sub-list for method input_type
-	18, // [18:18] is the sub-list for extension type_name
-	18, // [18:18] is the sub-list for extension extendee
-	0,  // [0:18] is the sub-list for field type_name
+	2,  // 4: game.v1.Campaign.intent:type_name -> game.v1.CampaignIntent
+	3,  // 5: game.v1.Campaign.access_policy:type_name -> game.v1.CampaignAccessPolicy
+	19, // 6: game.v1.Campaign.created_at:type_name -> google.protobuf.Timestamp
+	19, // 7: game.v1.Campaign.updated_at:type_name -> google.protobuf.Timestamp
+	19, // 8: game.v1.Campaign.completed_at:type_name -> google.protobuf.Timestamp
+	19, // 9: game.v1.Campaign.archived_at:type_name -> google.protobuf.Timestamp
+	17, // 10: game.v1.CreateCampaignRequest.locale:type_name -> common.v1.Locale
+	18, // 11: game.v1.CreateCampaignRequest.system:type_name -> common.v1.GameSystem
+	1,  // 12: game.v1.CreateCampaignRequest.gm_mode:type_name -> game.v1.GmMode
+	2,  // 13: game.v1.CreateCampaignRequest.intent:type_name -> game.v1.CampaignIntent
+	3,  // 14: game.v1.CreateCampaignRequest.access_policy:type_name -> game.v1.CampaignAccessPolicy
+	4,  // 15: game.v1.CreateCampaignResponse.campaign:type_name -> game.v1.Campaign
+	20, // 16: game.v1.CreateCampaignResponse.owner_participant:type_name -> game.v1.Participant
+	4,  // 17: game.v1.ListCampaignsResponse.campaigns:type_name -> game.v1.Campaign
+	4,  // 18: game.v1.GetCampaignResponse.campaign:type_name -> game.v1.Campaign
+	4,  // 19: game.v1.EndCampaignResponse.campaign:type_name -> game.v1.Campaign
+	4,  // 20: game.v1.ArchiveCampaignResponse.campaign:type_name -> game.v1.Campaign
+	4,  // 21: game.v1.RestoreCampaignResponse.campaign:type_name -> game.v1.Campaign
+	5,  // 22: game.v1.CampaignService.CreateCampaign:input_type -> game.v1.CreateCampaignRequest
+	7,  // 23: game.v1.CampaignService.ListCampaigns:input_type -> game.v1.ListCampaignsRequest
+	9,  // 24: game.v1.CampaignService.GetCampaign:input_type -> game.v1.GetCampaignRequest
+	11, // 25: game.v1.CampaignService.EndCampaign:input_type -> game.v1.EndCampaignRequest
+	13, // 26: game.v1.CampaignService.ArchiveCampaign:input_type -> game.v1.ArchiveCampaignRequest
+	15, // 27: game.v1.CampaignService.RestoreCampaign:input_type -> game.v1.RestoreCampaignRequest
+	6,  // 28: game.v1.CampaignService.CreateCampaign:output_type -> game.v1.CreateCampaignResponse
+	8,  // 29: game.v1.CampaignService.ListCampaigns:output_type -> game.v1.ListCampaignsResponse
+	10, // 30: game.v1.CampaignService.GetCampaign:output_type -> game.v1.GetCampaignResponse
+	12, // 31: game.v1.CampaignService.EndCampaign:output_type -> game.v1.EndCampaignResponse
+	14, // 32: game.v1.CampaignService.ArchiveCampaign:output_type -> game.v1.ArchiveCampaignResponse
+	16, // 33: game.v1.CampaignService.RestoreCampaign:output_type -> game.v1.RestoreCampaignResponse
+	28, // [28:34] is the sub-list for method output_type
+	22, // [22:28] is the sub-list for method input_type
+	22, // [22:22] is the sub-list for extension type_name
+	22, // [22:22] is the sub-list for extension extendee
+	0,  // [0:22] is the sub-list for field type_name
 }
 
 func init() { file_game_v1_campaign_proto_init() }
@@ -1057,7 +1217,7 @@ func file_game_v1_campaign_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_game_v1_campaign_proto_rawDesc), len(file_game_v1_campaign_proto_rawDesc)),
-			NumEnums:      2,
+			NumEnums:      4,
 			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   1,

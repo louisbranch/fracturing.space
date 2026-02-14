@@ -19,17 +19,19 @@ message Campaign {
   common.v1.GameSystem system = 4;
   CampaignStatus status = 5;
   GmMode gm_mode = 6;
+  CampaignIntent intent = 7;
+  CampaignAccessPolicy access_policy = 8;
   // Number of all participants (GM + PLAYER + future roles) for this campaign.
-  int32 participant_count = 7;
+  int32 participant_count = 9;
   // Number of all characters (PC + NPC + future kinds) for this campaign.
-  int32 character_count = 8;
-  string theme_prompt = 9;
-  google.protobuf.Timestamp created_at = 10;
-  google.protobuf.Timestamp updated_at = 11;
+  int32 character_count = 10;
+  string theme_prompt = 11;
+  google.protobuf.Timestamp created_at = 12;
+  google.protobuf.Timestamp updated_at = 13;
   // Timestamp when the campaign was completed.
-  google.protobuf.Timestamp completed_at = 12;
+  google.protobuf.Timestamp completed_at = 14;
   // Timestamp when the campaign was archived.
-  google.protobuf.Timestamp archived_at = 13;
+  google.protobuf.Timestamp archived_at = 15;
 }
 
 enum CampaignStatus {
@@ -45,6 +47,20 @@ enum GmMode {
   HUMAN = 1;
   AI = 2;
   HYBRID = 3;
+}
+
+enum CampaignIntent {
+  CAMPAIGN_INTENT_UNSPECIFIED = 0;
+  STANDARD = 1;
+  STARTER = 2;
+  SANDBOX = 3;
+}
+
+enum CampaignAccessPolicy {
+  CAMPAIGN_ACCESS_POLICY_UNSPECIFIED = 0;
+  PRIVATE = 1;
+  RESTRICTED = 2;
+  PUBLIC = 3;
 }
 
 // CampaignService provides CRUD operations for campaigns.
@@ -81,11 +97,17 @@ message CreateCampaignRequest {
   // The mode of GM participation.
   GmMode gm_mode = 4;
 
+  // Intent for the campaign (e.g. standard, starter, sandbox).
+  CampaignIntent intent = 5;
+
+  // Visibility/access policy for the campaign.
+  CampaignAccessPolicy access_policy = 6;
+
   // Optional free-form theme prompt for assistants.
-  string theme_prompt = 5;
+  string theme_prompt = 7;
 
   // Optional display name for the creator's participant seat.
-  string creator_display_name = 6;
+  string creator_display_name = 8;
 }
 
 message CreateCampaignResponse {

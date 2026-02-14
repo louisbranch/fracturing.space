@@ -25,6 +25,12 @@ func TestCreateCampaignDefaults(t *testing.T) {
 	if created.Locale != platformi18n.DefaultLocale() {
 		t.Fatalf("expected default locale %v, got %v", platformi18n.DefaultLocale(), created.Locale)
 	}
+	if created.Intent != CampaignIntentStandard {
+		t.Fatalf("expected standard intent, got %v", created.Intent)
+	}
+	if created.AccessPolicy != CampaignAccessPolicyPrivate {
+		t.Fatalf("expected private access policy, got %v", created.AccessPolicy)
+	}
 }
 
 func TestCreateCampaignNormalizesInput(t *testing.T) {
@@ -55,6 +61,12 @@ func TestCreateCampaignNormalizesInput(t *testing.T) {
 	}
 	if campaign.GmMode != GmModeHuman {
 		t.Fatalf("expected gm mode human, got %v", campaign.GmMode)
+	}
+	if campaign.Intent != CampaignIntentStandard {
+		t.Fatalf("expected standard intent, got %v", campaign.Intent)
+	}
+	if campaign.AccessPolicy != CampaignAccessPolicyPrivate {
+		t.Fatalf("expected private access policy, got %v", campaign.AccessPolicy)
 	}
 	if campaign.ParticipantCount != 0 {
 		t.Fatalf("expected 0 participant count, got %d", campaign.ParticipantCount)

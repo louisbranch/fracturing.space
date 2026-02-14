@@ -15,6 +15,8 @@ type Campaign struct {
 	GameSystem       string         `json:"game_system"`
 	Status           string         `json:"status"`
 	GmMode           string         `json:"gm_mode"`
+	Intent           string         `json:"intent"`
+	AccessPolicy     string         `json:"access_policy"`
 	ParticipantCount int64          `json:"participant_count"`
 	CharacterCount   int64          `json:"character_count"`
 	ThemePrompt      string         `json:"theme_prompt"`

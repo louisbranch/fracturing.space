@@ -6,7 +6,9 @@ This file defines how to write and maintain an execution plan (ExecPlan). ExecPl
 
 Use an ExecPlan for complex features or significant refactors. The plan is the single source of truth for both design and implementation steps. If you are authoring or updating a plan, read this file first and follow it to the letter.
 
-ExecPlans live in the `plans/` directory and must remain in sync with this guidance.
+When the work changes behavior, follow TDD explicitly: state the Red/Green/Refactor intent, write the failing test first, run it, then implement.
+
+ExecPlans live in the `.ai/plans/` directory and must remain in sync with this guidance.
 
 ## Non-negotiable requirements
 

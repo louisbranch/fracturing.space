@@ -90,6 +90,80 @@ func TestGmModeFromString(t *testing.T) {
 	}
 }
 
+func TestCampaignIntentConversions(t *testing.T) {
+	t.Run("from string", func(t *testing.T) {
+		tests := []struct {
+			input string
+			want  statev1.CampaignIntent
+		}{
+			{"STANDARD", statev1.CampaignIntent_STANDARD},
+			{"starter", statev1.CampaignIntent_STARTER},
+			{"campaign_intent_sandbox", statev1.CampaignIntent_SANDBOX},
+			{"", statev1.CampaignIntent_CAMPAIGN_INTENT_UNSPECIFIED},
+			{"invalid", statev1.CampaignIntent_CAMPAIGN_INTENT_UNSPECIFIED},
+		}
+		for _, tt := range tests {
+			if got := campaignIntentFromString(tt.input); got != tt.want {
+				t.Errorf("campaignIntentFromString(%q) = %v, want %v", tt.input, got, tt.want)
+			}
+		}
+	})
+
+	t.Run("to string", func(t *testing.T) {
+		tests := []struct {
+			intent statev1.CampaignIntent
+			want   string
+		}{
+			{statev1.CampaignIntent_STANDARD, "STANDARD"},
+			{statev1.CampaignIntent_STARTER, "STARTER"},
+			{statev1.CampaignIntent_SANDBOX, "SANDBOX"},
+			{statev1.CampaignIntent_CAMPAIGN_INTENT_UNSPECIFIED, "UNSPECIFIED"},
+		}
+		for _, tt := range tests {
+			if got := campaignIntentToString(tt.intent); got != tt.want {
+				t.Errorf("campaignIntentToString(%v) = %q, want %q", tt.intent, got, tt.want)
+			}
+		}
+	})
+}
+
+func TestCampaignAccessPolicyConversions(t *testing.T) {
+	t.Run("from string", func(t *testing.T) {
+		tests := []struct {
+			input string
+			want  statev1.CampaignAccessPolicy
+		}{
+			{"PRIVATE", statev1.CampaignAccessPolicy_PRIVATE},
+			{"restricted", statev1.CampaignAccessPolicy_RESTRICTED},
+			{"campaign_access_policy_public", statev1.CampaignAccessPolicy_PUBLIC},
+			{"", statev1.CampaignAccessPolicy_CAMPAIGN_ACCESS_POLICY_UNSPECIFIED},
+			{"invalid", statev1.CampaignAccessPolicy_CAMPAIGN_ACCESS_POLICY_UNSPECIFIED},
+		}
+		for _, tt := range tests {
+			if got := campaignAccessPolicyFromString(tt.input); got != tt.want {
+				t.Errorf("campaignAccessPolicyFromString(%q) = %v, want %v", tt.input, got, tt.want)
+			}
+		}
+	})
+
+	t.Run("to string", func(t *testing.T) {
+		tests := []struct {
+			policy statev1.CampaignAccessPolicy
+			want   string
+		}{
+			{statev1.CampaignAccessPolicy_PRIVATE, "PRIVATE"},
+			{statev1.CampaignAccessPolicy_RESTRICTED, "RESTRICTED"},
+			{statev1.CampaignAccessPolicy_PUBLIC, "PUBLIC"},
+			{statev1.CampaignAccessPolicy_CAMPAIGN_ACCESS_POLICY_UNSPECIFIED, "UNSPECIFIED"},
+		}
+		for _, tt := range tests {
+			if got := campaignAccessPolicyToString(tt.policy); got != tt.want {
+				t.Errorf("campaignAccessPolicyToString(%v) = %q, want %q", tt.policy, got, tt.want)
+			}
+		}
+	})
+}
+
 func TestGameSystemFromString(t *testing.T) {
 	tests := []struct {
 		input string
