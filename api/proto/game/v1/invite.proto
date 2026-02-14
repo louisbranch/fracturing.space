@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package game.v1;
 
+import "auth/v1/user.proto";
+import "game/v1/campaign.proto";
 import "game/v1/participant.proto";
 import "google/protobuf/timestamp.proto";
 
@@ -12,10 +14,11 @@ message Invite {
   string id = 1;
   string campaign_id = 2;
   string participant_id = 3;
-  InviteStatus status = 4;
-  string created_by_participant_id = 5;
-  google.protobuf.Timestamp created_at = 6;
-  google.protobuf.Timestamp updated_at = 7;
+  string recipient_user_id = 4;
+  InviteStatus status = 5;
+  string created_by_participant_id = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
 }
 
 enum InviteStatus {
@@ -39,6 +42,12 @@ service InviteService {
   // List invites for a campaign.
   rpc ListInvites(ListInvitesRequest) returns (ListInvitesResponse);
 
+  // List pending invites for a campaign.
+  rpc ListPendingInvites(ListPendingInvitesRequest) returns (ListPendingInvitesResponse);
+
+  // List pending invites for the current user.
+  rpc ListPendingInvitesForUser(ListPendingInvitesForUserRequest) returns (ListPendingInvitesForUserResponse);
+
   // Revoke an invite.
   rpc RevokeInvite(RevokeInviteRequest) returns (RevokeInviteResponse);
 }
@@ -49,6 +58,9 @@ message CreateInviteRequest {
 
   // The participant seat this invite targets.
   string participant_id = 2;
+
+  // Optional recipient user ID for this invite.
+  string recipient_user_id = 3;
 }
 
 message CreateInviteResponse {
@@ -94,6 +106,49 @@ message ListInvitesRequest {
 message ListInvitesResponse {
   repeated Invite invites = 1;
   string next_page_token = 2;
+}
+
+message ListPendingInvitesRequest {
+  // The campaign ID to list pending invites for.
+  string campaign_id = 1;
+
+  // The maximum number of invites to return.
+  // If zero, the server defaults to 10. The server clamps values above 10 to 10.
+  int32 page_size = 2;
+
+  // A page token received from a prior ListPendingInvitesResponse.
+  string page_token = 3;
+}
+
+message ListPendingInvitesResponse {
+  repeated PendingInvite invites = 1;
+  string next_page_token = 2;
+}
+
+message ListPendingInvitesForUserRequest {
+  // The maximum number of invites to return.
+  // If zero, the server defaults to 10. The server clamps values above 10 to 10.
+  int32 page_size = 1;
+
+  // A page token received from a prior ListPendingInvitesForUserResponse.
+  string page_token = 2;
+}
+
+message ListPendingInvitesForUserResponse {
+  repeated PendingUserInvite invites = 1;
+  string next_page_token = 2;
+}
+
+message PendingInvite {
+  Invite invite = 1;
+  Participant participant = 2;
+  auth.v1.User created_by_user = 3;
+}
+
+message PendingUserInvite {
+  Invite invite = 1;
+  Campaign campaign = 2;
+  Participant participant = 3;
 }
 
 message RevokeInviteRequest {

@@ -19,11 +19,13 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	InviteService_CreateInvite_FullMethodName = "/game.v1.InviteService/CreateInvite"
-	InviteService_ClaimInvite_FullMethodName  = "/game.v1.InviteService/ClaimInvite"
-	InviteService_GetInvite_FullMethodName    = "/game.v1.InviteService/GetInvite"
-	InviteService_ListInvites_FullMethodName  = "/game.v1.InviteService/ListInvites"
-	InviteService_RevokeInvite_FullMethodName = "/game.v1.InviteService/RevokeInvite"
+	InviteService_CreateInvite_FullMethodName              = "/game.v1.InviteService/CreateInvite"
+	InviteService_ClaimInvite_FullMethodName               = "/game.v1.InviteService/ClaimInvite"
+	InviteService_GetInvite_FullMethodName                 = "/game.v1.InviteService/GetInvite"
+	InviteService_ListInvites_FullMethodName               = "/game.v1.InviteService/ListInvites"
+	InviteService_ListPendingInvites_FullMethodName        = "/game.v1.InviteService/ListPendingInvites"
+	InviteService_ListPendingInvitesForUser_FullMethodName = "/game.v1.InviteService/ListPendingInvitesForUser"
+	InviteService_RevokeInvite_FullMethodName              = "/game.v1.InviteService/RevokeInvite"
 )
 
 // InviteServiceClient is the client API for InviteService service.
@@ -40,6 +42,10 @@ type InviteServiceClient interface {
 	GetInvite(ctx context.Context, in *GetInviteRequest, opts ...grpc.CallOption) (*GetInviteResponse, error)
 	// List invites for a campaign.
 	ListInvites(ctx context.Context, in *ListInvitesRequest, opts ...grpc.CallOption) (*ListInvitesResponse, error)
+	// List pending invites for a campaign.
+	ListPendingInvites(ctx context.Context, in *ListPendingInvitesRequest, opts ...grpc.CallOption) (*ListPendingInvitesResponse, error)
+	// List pending invites for the current user.
+	ListPendingInvitesForUser(ctx context.Context, in *ListPendingInvitesForUserRequest, opts ...grpc.CallOption) (*ListPendingInvitesForUserResponse, error)
 	// Revoke an invite.
 	RevokeInvite(ctx context.Context, in *RevokeInviteRequest, opts ...grpc.CallOption) (*RevokeInviteResponse, error)
 }
@@ -92,6 +98,26 @@ func (c *inviteServiceClient) ListInvites(ctx context.Context, in *ListInvitesRe
 	return out, nil
 }
 
+func (c *inviteServiceClient) ListPendingInvites(ctx context.Context, in *ListPendingInvitesRequest, opts ...grpc.CallOption) (*ListPendingInvitesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListPendingInvitesResponse)
+	err := c.cc.Invoke(ctx, InviteService_ListPendingInvites_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *inviteServiceClient) ListPendingInvitesForUser(ctx context.Context, in *ListPendingInvitesForUserRequest, opts ...grpc.CallOption) (*ListPendingInvitesForUserResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListPendingInvitesForUserResponse)
+	err := c.cc.Invoke(ctx, InviteService_ListPendingInvitesForUser_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *inviteServiceClient) RevokeInvite(ctx context.Context, in *RevokeInviteRequest, opts ...grpc.CallOption) (*RevokeInviteResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(RevokeInviteResponse)
@@ -116,6 +142,10 @@ type InviteServiceServer interface {
 	GetInvite(context.Context, *GetInviteRequest) (*GetInviteResponse, error)
 	// List invites for a campaign.
 	ListInvites(context.Context, *ListInvitesRequest) (*ListInvitesResponse, error)
+	// List pending invites for a campaign.
+	ListPendingInvites(context.Context, *ListPendingInvitesRequest) (*ListPendingInvitesResponse, error)
+	// List pending invites for the current user.
+	ListPendingInvitesForUser(context.Context, *ListPendingInvitesForUserRequest) (*ListPendingInvitesForUserResponse, error)
 	// Revoke an invite.
 	RevokeInvite(context.Context, *RevokeInviteRequest) (*RevokeInviteResponse, error)
 	mustEmbedUnimplementedInviteServiceServer()
@@ -139,6 +169,12 @@ func (UnimplementedInviteServiceServer) GetInvite(context.Context, *GetInviteReq
 }
 func (UnimplementedInviteServiceServer) ListInvites(context.Context, *ListInvitesRequest) (*ListInvitesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListInvites not implemented")
+}
+func (UnimplementedInviteServiceServer) ListPendingInvites(context.Context, *ListPendingInvitesRequest) (*ListPendingInvitesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListPendingInvites not implemented")
+}
+func (UnimplementedInviteServiceServer) ListPendingInvitesForUser(context.Context, *ListPendingInvitesForUserRequest) (*ListPendingInvitesForUserResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListPendingInvitesForUser not implemented")
 }
 func (UnimplementedInviteServiceServer) RevokeInvite(context.Context, *RevokeInviteRequest) (*RevokeInviteResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RevokeInvite not implemented")
@@ -236,6 +272,42 @@ func _InviteService_ListInvites_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _InviteService_ListPendingInvites_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListPendingInvitesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InviteServiceServer).ListPendingInvites(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: InviteService_ListPendingInvites_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InviteServiceServer).ListPendingInvites(ctx, req.(*ListPendingInvitesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _InviteService_ListPendingInvitesForUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListPendingInvitesForUserRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InviteServiceServer).ListPendingInvitesForUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: InviteService_ListPendingInvitesForUser_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InviteServiceServer).ListPendingInvitesForUser(ctx, req.(*ListPendingInvitesForUserRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _InviteService_RevokeInvite_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RevokeInviteRequest)
 	if err := dec(in); err != nil {
@@ -276,6 +348,14 @@ var InviteService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListInvites",
 			Handler:    _InviteService_ListInvites_Handler,
+		},
+		{
+			MethodName: "ListPendingInvites",
+			Handler:    _InviteService_ListPendingInvites_Handler,
+		},
+		{
+			MethodName: "ListPendingInvitesForUser",
+			Handler:    _InviteService_ListPendingInvitesForUser_Handler,
 		},
 		{
 			MethodName: "RevokeInvite",

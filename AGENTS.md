@@ -70,4 +70,4 @@ Use these project docs for architecture and domain guidance:
 | `docs/project/domain-language.md` | Canonical domain terms and naming principles | when naming new APIs/packages/events |
 | `docs/project/event-replay.md` | Event journal, replay modes, snapshots | when working on replay, snapshots, maintenance CLI |
 | `docs/project/game-systems.md` | Pluggable game-system architecture and add-a-system guide | when adding or modifying a game system |
-| `docs/project/auth-participant-vision.md` | Auth/participant model vision, flows, and phases | when designing auth or participant flows |
+| `docs/project/participant-invitation.md` | Participant invitation flow and follow-ups | when designing auth or participant flows |

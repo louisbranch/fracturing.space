@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
@@ -15,6 +16,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/invite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/policy"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -33,6 +35,7 @@ type InviteService struct {
 	stores      Stores
 	clock       func() time.Time
 	idGenerator func() (string, error)
+	authClient  authv1.AuthServiceClient
 }
 
 // NewInviteService creates an InviteService with default dependencies.
@@ -42,6 +45,13 @@ func NewInviteService(stores Stores) *InviteService {
 		clock:       time.Now,
 		idGenerator: id.NewID,
 	}
+}
+
+// NewInviteServiceWithAuth creates an InviteService with an auth client.
+func NewInviteServiceWithAuth(stores Stores, authClient authv1.AuthServiceClient) *InviteService {
+	service := NewInviteService(stores)
+	service.authClient = authClient
+	return service
 }
 
 // CreateInvite creates a seat-targeted invite.
@@ -88,6 +98,7 @@ func (s *InviteService) CreateInvite(ctx context.Context, in *campaignv1.CreateI
 	created, err := invite.CreateInvite(invite.CreateInviteInput{
 		CampaignID:             campaignID,
 		ParticipantID:          participantID,
+		RecipientUserID:        strings.TrimSpace(in.GetRecipientUserId()),
 		CreatedByParticipantID: strings.TrimSpace(grpcmeta.ParticipantIDFromContext(ctx)),
 	}, s.clock, s.idGenerator)
 	if err != nil {
@@ -97,6 +108,7 @@ func (s *InviteService) CreateInvite(ctx context.Context, in *campaignv1.CreateI
 	payload := event.InviteCreatedPayload{
 		InviteID:               created.ID,
 		ParticipantID:          created.ParticipantID,
+		RecipientUserID:        created.RecipientUserID,
 		Status:                 invite.StatusLabel(created.Status),
 		CreatedByParticipantID: created.CreatedByParticipantID,
 	}
@@ -180,6 +192,9 @@ func (s *InviteService) ClaimInvite(ctx context.Context, in *campaignv1.ClaimInv
 	}
 	if inv.CampaignID != campaignID {
 		return nil, status.Error(codes.InvalidArgument, "invite campaign does not match")
+	}
+	if recipient := strings.TrimSpace(inv.RecipientUserID); recipient != "" && recipient != userID {
+		return nil, status.Error(codes.PermissionDenied, "invite recipient does not match")
 	}
 	campaignRecord, err := s.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
@@ -424,6 +439,178 @@ func (s *InviteService) ListInvites(ctx context.Context, in *campaignv1.ListInvi
 	response.Invites = make([]*campaignv1.Invite, 0, len(page.Invites))
 	for _, inv := range page.Invites {
 		response.Invites = append(response.Invites, inviteToProto(inv))
+	}
+
+	return response, nil
+}
+
+// ListPendingInvites returns a page of pending invites for a campaign.
+func (s *InviteService) ListPendingInvites(ctx context.Context, in *campaignv1.ListPendingInvitesRequest) (*campaignv1.ListPendingInvitesResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "list pending invites request is required")
+	}
+	if s.stores.Invite == nil {
+		return nil, status.Error(codes.Internal, "invite store is not configured")
+	}
+	if s.stores.Campaign == nil {
+		return nil, status.Error(codes.Internal, "campaign store is not configured")
+	}
+	if s.stores.Participant == nil {
+		return nil, status.Error(codes.Internal, "participant store is not configured")
+	}
+
+	campaignID := strings.TrimSpace(in.GetCampaignId())
+	if campaignID == "" {
+		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	}
+	campaignRecord, err := s.stores.Campaign.Get(ctx, campaignID)
+	if err != nil {
+		return nil, handleDomainError(err)
+	}
+	if err := requirePolicy(ctx, s.stores, policy.ActionManageInvites, campaignRecord); err != nil {
+		return nil, err
+	}
+
+	pageSize := int(in.GetPageSize())
+	if pageSize <= 0 {
+		pageSize = defaultListInvitesPageSize
+	}
+	if pageSize > maxListInvitesPageSize {
+		pageSize = maxListInvitesPageSize
+	}
+
+	page, err := s.stores.Invite.ListPendingInvites(ctx, campaignID, pageSize, in.GetPageToken())
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "list pending invites: %v", err)
+	}
+
+	response := &campaignv1.ListPendingInvitesResponse{NextPageToken: page.NextPageToken}
+	if len(page.Invites) == 0 {
+		return response, nil
+	}
+
+	participants, err := s.stores.Participant.ListParticipantsByCampaign(ctx, campaignID)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "list participants: %v", err)
+	}
+	participantsByID := make(map[string]participant.Participant, len(participants))
+	for _, p := range participants {
+		participantsByID[p.ID] = p
+	}
+
+	userCache := make(map[string]*authv1.User)
+	response.Invites = make([]*campaignv1.PendingInvite, 0, len(page.Invites))
+	for _, inv := range page.Invites {
+		seat, ok := participantsByID[inv.ParticipantID]
+		if !ok {
+			return nil, status.Errorf(codes.Internal, "participant seat not found: %s", inv.ParticipantID)
+		}
+		var createdByUser *authv1.User
+		creatorID := strings.TrimSpace(inv.CreatedByParticipantID)
+		if creatorID != "" {
+			creator, ok := participantsByID[creatorID]
+			if !ok {
+				return nil, status.Errorf(codes.Internal, "creator participant not found: %s", creatorID)
+			}
+			creatorUserID := strings.TrimSpace(creator.UserID)
+			if creatorUserID != "" {
+				if s.authClient == nil {
+					return nil, status.Error(codes.Internal, "auth client is not configured")
+				}
+				cached, ok := userCache[creatorUserID]
+				if !ok {
+					userResponse, err := s.authClient.GetUser(ctx, &authv1.GetUserRequest{UserId: creatorUserID})
+					if err != nil {
+						return nil, status.Errorf(codes.Internal, "get auth user: %v", err)
+					}
+					if userResponse == nil || userResponse.GetUser() == nil {
+						return nil, status.Error(codes.Internal, "auth user response is missing")
+					}
+					cached = userResponse.GetUser()
+					userCache[creatorUserID] = cached
+				}
+				createdByUser = cached
+			}
+		}
+
+		response.Invites = append(response.Invites, &campaignv1.PendingInvite{
+			Invite:        inviteToProto(inv),
+			Participant:   participantToProto(seat),
+			CreatedByUser: createdByUser,
+		})
+	}
+
+	return response, nil
+}
+
+// ListPendingInvitesForUser returns a page of pending invites for the current user.
+func (s *InviteService) ListPendingInvitesForUser(ctx context.Context, in *campaignv1.ListPendingInvitesForUserRequest) (*campaignv1.ListPendingInvitesForUserResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "list pending invites for user request is required")
+	}
+	if s.stores.Invite == nil {
+		return nil, status.Error(codes.Internal, "invite store is not configured")
+	}
+	if s.stores.Campaign == nil {
+		return nil, status.Error(codes.Internal, "campaign store is not configured")
+	}
+	if s.stores.Participant == nil {
+		return nil, status.Error(codes.Internal, "participant store is not configured")
+	}
+
+	userID := strings.TrimSpace(grpcmeta.UserIDFromContext(ctx))
+	if userID == "" {
+		return nil, status.Error(codes.InvalidArgument, "user id is required")
+	}
+
+	pageSize := int(in.GetPageSize())
+	if pageSize <= 0 {
+		pageSize = defaultListInvitesPageSize
+	}
+	if pageSize > maxListInvitesPageSize {
+		pageSize = maxListInvitesPageSize
+	}
+
+	page, err := s.stores.Invite.ListPendingInvitesForRecipient(ctx, userID, pageSize, in.GetPageToken())
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "list pending invites for user: %v", err)
+	}
+
+	response := &campaignv1.ListPendingInvitesForUserResponse{NextPageToken: page.NextPageToken}
+	if len(page.Invites) == 0 {
+		return response, nil
+	}
+
+	campaignsByID := make(map[string]campaign.Campaign)
+	participantsByID := make(map[string]participant.Participant)
+	response.Invites = make([]*campaignv1.PendingUserInvite, 0, len(page.Invites))
+	for _, inv := range page.Invites {
+		campaignRecord, ok := campaignsByID[inv.CampaignID]
+		if !ok {
+			record, err := s.stores.Campaign.Get(ctx, inv.CampaignID)
+			if err != nil {
+				return nil, handleDomainError(err)
+			}
+			campaignRecord = record
+			campaignsByID[inv.CampaignID] = campaignRecord
+		}
+
+		participantKey := inv.CampaignID + ":" + inv.ParticipantID
+		seat, ok := participantsByID[participantKey]
+		if !ok {
+			record, err := s.stores.Participant.GetParticipant(ctx, inv.CampaignID, inv.ParticipantID)
+			if err != nil {
+				return nil, handleDomainError(err)
+			}
+			seat = record
+			participantsByID[participantKey] = seat
+		}
+
+		response.Invites = append(response.Invites, &campaignv1.PendingUserInvite{
+			Invite:      inviteToProto(inv),
+			Campaign:    campaignToProto(campaignRecord),
+			Participant: participantToProto(seat),
+		})
 	}
 
 	return response, nil

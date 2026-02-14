@@ -3,8 +3,8 @@ SELECT * FROM invites WHERE id = ?;
 
 -- name: PutInvite :exec
 INSERT INTO invites (
-    id, campaign_id, participant_id, status, created_by_participant_id, created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?)
+    id, campaign_id, participant_id, recipient_user_id, status, created_by_participant_id, created_at, updated_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
     status = excluded.status,
     updated_at = excluded.updated_at;
@@ -23,5 +23,29 @@ LIMIT ?;
 -- name: ListInvitesByCampaignPagedFirst :many
 SELECT * FROM invites
 WHERE campaign_id = ?
+ORDER BY id
+LIMIT ?;
+
+-- name: ListPendingInvitesByCampaignPaged :many
+SELECT * FROM invites
+WHERE campaign_id = ? AND status = ? AND id > ?
+ORDER BY id
+LIMIT ?;
+
+-- name: ListPendingInvitesByCampaignPagedFirst :many
+SELECT * FROM invites
+WHERE campaign_id = ? AND status = ?
+ORDER BY id
+LIMIT ?;
+
+-- name: ListPendingInvitesByRecipientPaged :many
+SELECT * FROM invites
+WHERE recipient_user_id = ? AND status = ? AND id > ?
+ORDER BY id
+LIMIT ?;
+
+-- name: ListPendingInvitesByRecipientPagedFirst :many
+SELECT * FROM invites
+WHERE recipient_user_id = ? AND status = ?
 ORDER BY id
 LIMIT ?;

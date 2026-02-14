@@ -124,6 +124,32 @@ func (s *fakeInviteStore) ListInvites(_ context.Context, campaignID string, page
 	return storage.InvitePage{Invites: result, NextPageToken: ""}, nil
 }
 
+func (s *fakeInviteStore) ListPendingInvites(_ context.Context, campaignID string, pageSize int, pageToken string) (storage.InvitePage, error) {
+	if s.listErr != nil {
+		return storage.InvitePage{}, s.listErr
+	}
+	result := make([]invite.Invite, 0)
+	for _, inv := range s.invites {
+		if inv.CampaignID == campaignID && inv.Status == invite.StatusPending {
+			result = append(result, inv)
+		}
+	}
+	return storage.InvitePage{Invites: result, NextPageToken: ""}, nil
+}
+
+func (s *fakeInviteStore) ListPendingInvitesForRecipient(_ context.Context, userID string, pageSize int, pageToken string) (storage.InvitePage, error) {
+	if s.listErr != nil {
+		return storage.InvitePage{}, s.listErr
+	}
+	result := make([]invite.Invite, 0)
+	for _, inv := range s.invites {
+		if inv.RecipientUserID == userID && inv.Status == invite.StatusPending {
+			result = append(result, inv)
+		}
+	}
+	return storage.InvitePage{Invites: result, NextPageToken: ""}, nil
+}
+
 func (s *fakeInviteStore) UpdateInviteStatus(_ context.Context, inviteID string, status invite.Status, updatedAt time.Time) error {
 	if s.updateErr != nil {
 		return s.updateErr

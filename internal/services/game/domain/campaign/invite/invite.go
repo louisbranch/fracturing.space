@@ -36,6 +36,7 @@ type Invite struct {
 	ID                     string
 	CampaignID             string
 	ParticipantID          string
+	RecipientUserID        string
 	Status                 Status
 	CreatedByParticipantID string
 	CreatedAt              time.Time
@@ -46,6 +47,7 @@ type Invite struct {
 type CreateInviteInput struct {
 	CampaignID             string
 	ParticipantID          string
+	RecipientUserID        string
 	CreatedByParticipantID string
 }
 
@@ -73,6 +75,7 @@ func CreateInvite(input CreateInviteInput, now func() time.Time, idGenerator fun
 		ID:                     inviteID,
 		CampaignID:             normalized.CampaignID,
 		ParticipantID:          normalized.ParticipantID,
+		RecipientUserID:        normalized.RecipientUserID,
 		Status:                 StatusPending,
 		CreatedByParticipantID: normalized.CreatedByParticipantID,
 		CreatedAt:              createdAt,
@@ -90,6 +93,7 @@ func NormalizeCreateInviteInput(input CreateInviteInput) (CreateInviteInput, err
 	if input.ParticipantID == "" {
 		return CreateInviteInput{}, ErrEmptyParticipantID
 	}
+	input.RecipientUserID = strings.TrimSpace(input.RecipientUserID)
 	input.CreatedByParticipantID = strings.TrimSpace(input.CreatedByParticipantID)
 	return input, nil
 }

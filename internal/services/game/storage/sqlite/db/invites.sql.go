@@ -10,7 +10,7 @@ import (
 )
 
 const getInvite = `-- name: GetInvite :one
-SELECT id, campaign_id, participant_id, status, created_by_participant_id, created_at, updated_at FROM invites WHERE id = ?
+SELECT id, campaign_id, participant_id, recipient_user_id, status, created_by_participant_id, created_at, updated_at FROM invites WHERE id = ?
 `
 
 func (q *Queries) GetInvite(ctx context.Context, id string) (Invite, error) {
@@ -20,6 +20,7 @@ func (q *Queries) GetInvite(ctx context.Context, id string) (Invite, error) {
 		&i.ID,
 		&i.CampaignID,
 		&i.ParticipantID,
+		&i.RecipientUserID,
 		&i.Status,
 		&i.CreatedByParticipantID,
 		&i.CreatedAt,
@@ -29,7 +30,7 @@ func (q *Queries) GetInvite(ctx context.Context, id string) (Invite, error) {
 }
 
 const listInvitesByCampaignPaged = `-- name: ListInvitesByCampaignPaged :many
-SELECT id, campaign_id, participant_id, status, created_by_participant_id, created_at, updated_at FROM invites
+SELECT id, campaign_id, participant_id, recipient_user_id, status, created_by_participant_id, created_at, updated_at FROM invites
 WHERE campaign_id = ? AND id > ?
 ORDER BY id
 LIMIT ?
@@ -54,6 +55,7 @@ func (q *Queries) ListInvitesByCampaignPaged(ctx context.Context, arg ListInvite
 			&i.ID,
 			&i.CampaignID,
 			&i.ParticipantID,
+			&i.RecipientUserID,
 			&i.Status,
 			&i.CreatedByParticipantID,
 			&i.CreatedAt,
@@ -73,7 +75,7 @@ func (q *Queries) ListInvitesByCampaignPaged(ctx context.Context, arg ListInvite
 }
 
 const listInvitesByCampaignPagedFirst = `-- name: ListInvitesByCampaignPagedFirst :many
-SELECT id, campaign_id, participant_id, status, created_by_participant_id, created_at, updated_at FROM invites
+SELECT id, campaign_id, participant_id, recipient_user_id, status, created_by_participant_id, created_at, updated_at FROM invites
 WHERE campaign_id = ?
 ORDER BY id
 LIMIT ?
@@ -97,6 +99,199 @@ func (q *Queries) ListInvitesByCampaignPagedFirst(ctx context.Context, arg ListI
 			&i.ID,
 			&i.CampaignID,
 			&i.ParticipantID,
+			&i.RecipientUserID,
+			&i.Status,
+			&i.CreatedByParticipantID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPendingInvitesByCampaignPaged = `-- name: ListPendingInvitesByCampaignPaged :many
+SELECT id, campaign_id, participant_id, recipient_user_id, status, created_by_participant_id, created_at, updated_at FROM invites
+WHERE campaign_id = ? AND status = ? AND id > ?
+ORDER BY id
+LIMIT ?
+`
+
+type ListPendingInvitesByCampaignPagedParams struct {
+	CampaignID string `json:"campaign_id"`
+	Status     string `json:"status"`
+	ID         string `json:"id"`
+	Limit      int64  `json:"limit"`
+}
+
+func (q *Queries) ListPendingInvitesByCampaignPaged(ctx context.Context, arg ListPendingInvitesByCampaignPagedParams) ([]Invite, error) {
+	rows, err := q.db.QueryContext(ctx, listPendingInvitesByCampaignPaged,
+		arg.CampaignID,
+		arg.Status,
+		arg.ID,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Invite{}
+	for rows.Next() {
+		var i Invite
+		if err := rows.Scan(
+			&i.ID,
+			&i.CampaignID,
+			&i.ParticipantID,
+			&i.RecipientUserID,
+			&i.Status,
+			&i.CreatedByParticipantID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPendingInvitesByCampaignPagedFirst = `-- name: ListPendingInvitesByCampaignPagedFirst :many
+SELECT id, campaign_id, participant_id, recipient_user_id, status, created_by_participant_id, created_at, updated_at FROM invites
+WHERE campaign_id = ? AND status = ?
+ORDER BY id
+LIMIT ?
+`
+
+type ListPendingInvitesByCampaignPagedFirstParams struct {
+	CampaignID string `json:"campaign_id"`
+	Status     string `json:"status"`
+	Limit      int64  `json:"limit"`
+}
+
+func (q *Queries) ListPendingInvitesByCampaignPagedFirst(ctx context.Context, arg ListPendingInvitesByCampaignPagedFirstParams) ([]Invite, error) {
+	rows, err := q.db.QueryContext(ctx, listPendingInvitesByCampaignPagedFirst, arg.CampaignID, arg.Status, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Invite{}
+	for rows.Next() {
+		var i Invite
+		if err := rows.Scan(
+			&i.ID,
+			&i.CampaignID,
+			&i.ParticipantID,
+			&i.RecipientUserID,
+			&i.Status,
+			&i.CreatedByParticipantID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPendingInvitesByRecipientPaged = `-- name: ListPendingInvitesByRecipientPaged :many
+SELECT id, campaign_id, participant_id, recipient_user_id, status, created_by_participant_id, created_at, updated_at FROM invites
+WHERE recipient_user_id = ? AND status = ? AND id > ?
+ORDER BY id
+LIMIT ?
+`
+
+type ListPendingInvitesByRecipientPagedParams struct {
+	RecipientUserID string `json:"recipient_user_id"`
+	Status          string `json:"status"`
+	ID              string `json:"id"`
+	Limit           int64  `json:"limit"`
+}
+
+func (q *Queries) ListPendingInvitesByRecipientPaged(ctx context.Context, arg ListPendingInvitesByRecipientPagedParams) ([]Invite, error) {
+	rows, err := q.db.QueryContext(ctx, listPendingInvitesByRecipientPaged,
+		arg.RecipientUserID,
+		arg.Status,
+		arg.ID,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Invite{}
+	for rows.Next() {
+		var i Invite
+		if err := rows.Scan(
+			&i.ID,
+			&i.CampaignID,
+			&i.ParticipantID,
+			&i.RecipientUserID,
+			&i.Status,
+			&i.CreatedByParticipantID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPendingInvitesByRecipientPagedFirst = `-- name: ListPendingInvitesByRecipientPagedFirst :many
+SELECT id, campaign_id, participant_id, recipient_user_id, status, created_by_participant_id, created_at, updated_at FROM invites
+WHERE recipient_user_id = ? AND status = ?
+ORDER BY id
+LIMIT ?
+`
+
+type ListPendingInvitesByRecipientPagedFirstParams struct {
+	RecipientUserID string `json:"recipient_user_id"`
+	Status          string `json:"status"`
+	Limit           int64  `json:"limit"`
+}
+
+func (q *Queries) ListPendingInvitesByRecipientPagedFirst(ctx context.Context, arg ListPendingInvitesByRecipientPagedFirstParams) ([]Invite, error) {
+	rows, err := q.db.QueryContext(ctx, listPendingInvitesByRecipientPagedFirst, arg.RecipientUserID, arg.Status, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Invite{}
+	for rows.Next() {
+		var i Invite
+		if err := rows.Scan(
+			&i.ID,
+			&i.CampaignID,
+			&i.ParticipantID,
+			&i.RecipientUserID,
 			&i.Status,
 			&i.CreatedByParticipantID,
 			&i.CreatedAt,
@@ -117,8 +312,8 @@ func (q *Queries) ListInvitesByCampaignPagedFirst(ctx context.Context, arg ListI
 
 const putInvite = `-- name: PutInvite :exec
 INSERT INTO invites (
-    id, campaign_id, participant_id, status, created_by_participant_id, created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?)
+    id, campaign_id, participant_id, recipient_user_id, status, created_by_participant_id, created_at, updated_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
     status = excluded.status,
     updated_at = excluded.updated_at
@@ -128,6 +323,7 @@ type PutInviteParams struct {
 	ID                     string `json:"id"`
 	CampaignID             string `json:"campaign_id"`
 	ParticipantID          string `json:"participant_id"`
+	RecipientUserID        string `json:"recipient_user_id"`
 	Status                 string `json:"status"`
 	CreatedByParticipantID string `json:"created_by_participant_id"`
 	CreatedAt              int64  `json:"created_at"`
@@ -139,6 +335,7 @@ func (q *Queries) PutInvite(ctx context.Context, arg PutInviteParams) error {
 		arg.ID,
 		arg.CampaignID,
 		arg.ParticipantID,
+		arg.RecipientUserID,
 		arg.Status,
 		arg.CreatedByParticipantID,
 		arg.CreatedAt,

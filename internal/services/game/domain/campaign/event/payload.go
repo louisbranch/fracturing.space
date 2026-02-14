@@ -106,6 +106,7 @@ type SessionEndedPayload struct {
 type InviteCreatedPayload struct {
 	InviteID               string `json:"invite_id"`
 	ParticipantID          string `json:"participant_id"`
+	RecipientUserID        string `json:"recipient_user_id,omitempty"`
 	Status                 string `json:"status"`
 	CreatedByParticipantID string `json:"created_by_participant_id,omitempty"`
 }

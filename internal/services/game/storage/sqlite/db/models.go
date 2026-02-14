@@ -142,6 +142,7 @@ type Invite struct {
 	ID                     string `json:"id"`
 	CampaignID             string `json:"campaign_id"`
 	ParticipantID          string `json:"participant_id"`
+	RecipientUserID        string `json:"recipient_user_id"`
 	Status                 string `json:"status"`
 	CreatedByParticipantID string `json:"created_by_participant_id"`
 	CreatedAt              int64  `json:"created_at"`
@@ -164,6 +165,13 @@ type Participant struct {
 	CampaignAccess string `json:"campaign_access"`
 	CreatedAt      int64  `json:"created_at"`
 	UpdatedAt      int64  `json:"updated_at"`
+}
+
+type ParticipantClaim struct {
+	CampaignID    string `json:"campaign_id"`
+	UserID        string `json:"user_id"`
+	ParticipantID string `json:"participant_id"`
+	ClaimedAt     int64  `json:"claimed_at"`
 }
 
 type Session struct {

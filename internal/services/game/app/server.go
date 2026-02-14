@@ -102,7 +102,7 @@ func NewWithAddr(addr string) (*Server, error) {
 	daggerheartService := daggerheartservice.NewDaggerheartService(daggerheartStores, random.NewSeed)
 	campaignService := gamegrpc.NewCampaignServiceWithAuth(stores, authClient)
 	participantService := gamegrpc.NewParticipantService(stores)
-	inviteService := gamegrpc.NewInviteService(stores)
+	inviteService := gamegrpc.NewInviteServiceWithAuth(stores, authClient)
 	characterService := gamegrpc.NewCharacterService(stores)
 	snapshotService := gamegrpc.NewSnapshotService(stores)
 	sessionService := gamegrpc.NewSessionService(stores)

@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
@@ -296,4 +297,111 @@ func TestClaimInvite_UserAlreadyClaimed(t *testing.T) {
 		JoinGrant:  joinGrant,
 	})
 	assertStatusCode(t, err, codes.AlreadyExists)
+}
+
+func TestListPendingInvites_Success(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	inviteStore := newFakeInviteStore()
+
+	campaignStore.campaigns["campaign-1"] = campaign.Campaign{ID: "campaign-1", Status: campaign.CampaignStatusDraft}
+	participantStore.participants["campaign-1"] = map[string]participant.Participant{
+		"owner-1": {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner, UserID: "user-1"},
+		"seat-1":  {ID: "seat-1", CampaignID: "campaign-1", DisplayName: "Seat 1", Role: participant.ParticipantRolePlayer},
+	}
+	inviteStore.invites["invite-1"] = invite.Invite{
+		ID:                     "invite-1",
+		CampaignID:             "campaign-1",
+		ParticipantID:          "seat-1",
+		Status:                 invite.StatusPending,
+		CreatedByParticipantID: "owner-1",
+	}
+	inviteStore.invites["invite-2"] = invite.Invite{
+		ID:            "invite-2",
+		CampaignID:    "campaign-1",
+		ParticipantID: "seat-1",
+		Status:        invite.StatusClaimed,
+	}
+
+	svc := &InviteService{
+		stores: Stores{
+			Campaign:    campaignStore,
+			Participant: participantStore,
+			Invite:      inviteStore,
+		},
+		authClient: &fakeAuthClient{user: &authv1.User{Id: "user-1", DisplayName: "Owner"}},
+	}
+
+	ctx := contextWithParticipantID("owner-1")
+	resp, err := svc.ListPendingInvites(ctx, &statev1.ListPendingInvitesRequest{CampaignId: "campaign-1"})
+	if err != nil {
+		t.Fatalf("ListPendingInvites returned error: %v", err)
+	}
+	if len(resp.Invites) != 1 {
+		t.Fatalf("pending invite count = %d, want 1", len(resp.Invites))
+	}
+	entry := resp.Invites[0]
+	if entry.Invite.Id != "invite-1" {
+		t.Fatalf("invite id = %s, want invite-1", entry.Invite.Id)
+	}
+	if entry.Participant == nil || entry.Participant.Id != "seat-1" {
+		t.Fatalf("participant id = %v, want seat-1", entry.Participant)
+	}
+	if entry.CreatedByUser == nil || entry.CreatedByUser.Id != "user-1" {
+		t.Fatalf("created_by_user id = %v, want user-1", entry.CreatedByUser)
+	}
+}
+
+func TestListPendingInvitesForUser_Success(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	inviteStore := newFakeInviteStore()
+
+	campaignStore.campaigns["campaign-1"] = campaign.Campaign{ID: "campaign-1", Status: campaign.CampaignStatusDraft}
+	participantStore.participants["campaign-1"] = map[string]participant.Participant{
+		"seat-1": {ID: "seat-1", CampaignID: "campaign-1", DisplayName: "Seat 1", Role: participant.ParticipantRolePlayer},
+	}
+	inviteStore.invites["invite-1"] = invite.Invite{
+		ID:              "invite-1",
+		CampaignID:      "campaign-1",
+		ParticipantID:   "seat-1",
+		RecipientUserID: "user-1",
+		Status:          invite.StatusPending,
+		CreatedAt:       time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+		UpdatedAt:       time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+	}
+	inviteStore.invites["invite-2"] = invite.Invite{
+		ID:              "invite-2",
+		CampaignID:      "campaign-1",
+		ParticipantID:   "seat-1",
+		RecipientUserID: "user-2",
+		Status:          invite.StatusPending,
+	}
+
+	svc := &InviteService{
+		stores: Stores{
+			Campaign:    campaignStore,
+			Participant: participantStore,
+			Invite:      inviteStore,
+		},
+	}
+
+	ctx := contextWithUserID("user-1")
+	resp, err := svc.ListPendingInvitesForUser(ctx, &statev1.ListPendingInvitesForUserRequest{})
+	if err != nil {
+		t.Fatalf("ListPendingInvitesForUser returned error: %v", err)
+	}
+	if len(resp.Invites) != 1 {
+		t.Fatalf("pending invite count = %d, want 1", len(resp.Invites))
+	}
+	entry := resp.Invites[0]
+	if entry.Invite.Id != "invite-1" {
+		t.Fatalf("invite id = %s, want invite-1", entry.Invite.Id)
+	}
+	if entry.Campaign == nil || entry.Campaign.Id != "campaign-1" {
+		t.Fatalf("campaign id = %v, want campaign-1", entry.Campaign)
+	}
+	if entry.Participant == nil || entry.Participant.Id != "seat-1" {
+		t.Fatalf("participant id = %v, want seat-1", entry.Participant)
+	}
 }

@@ -616,6 +616,7 @@ func (a Applier) applyInviteCreated(ctx context.Context, evt event.Event) error 
 		ID:                     inviteID,
 		CampaignID:             evt.CampaignID,
 		ParticipantID:          participantID,
+		RecipientUserID:        strings.TrimSpace(payload.RecipientUserID),
 		Status:                 status,
 		CreatedByParticipantID: strings.TrimSpace(payload.CreatedByParticipantID),
 		CreatedAt:              createdAt,

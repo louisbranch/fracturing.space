@@ -87,6 +87,7 @@ CREATE TABLE invites (
     id TEXT PRIMARY KEY,
     campaign_id TEXT NOT NULL,
     participant_id TEXT NOT NULL,
+    recipient_user_id TEXT NOT NULL DEFAULT '',
     status TEXT NOT NULL,
     created_by_participant_id TEXT NOT NULL DEFAULT '',
     created_at INTEGER NOT NULL,
@@ -97,6 +98,7 @@ CREATE TABLE invites (
 
 CREATE INDEX idx_invites_campaign ON invites(campaign_id);
 CREATE INDEX idx_invites_participant ON invites(participant_id);
+CREATE INDEX idx_invites_recipient_status ON invites(recipient_user_id, status);
 
 CREATE TABLE snapshots (
     campaign_id TEXT NOT NULL,
@@ -157,6 +159,7 @@ DROP INDEX IF EXISTS idx_snapshots_seq;
 DROP TABLE IF EXISTS snapshots;
 DROP INDEX IF EXISTS idx_invites_participant;
 DROP INDEX IF EXISTS idx_invites_campaign;
+DROP INDEX IF EXISTS idx_invites_recipient_status;
 DROP TABLE IF EXISTS invites;
 DROP TABLE IF EXISTS campaign_active_session;
 DROP INDEX IF EXISTS idx_sessions_active;

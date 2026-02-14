@@ -7,6 +7,7 @@
 package gamev1
 
 import (
+	v1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -80,10 +81,11 @@ type Invite struct {
 	Id                     string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	CampaignId             string                 `protobuf:"bytes,2,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"`
 	ParticipantId          string                 `protobuf:"bytes,3,opt,name=participant_id,json=participantId,proto3" json:"participant_id,omitempty"`
-	Status                 InviteStatus           `protobuf:"varint,4,opt,name=status,proto3,enum=game.v1.InviteStatus" json:"status,omitempty"`
-	CreatedByParticipantId string                 `protobuf:"bytes,5,opt,name=created_by_participant_id,json=createdByParticipantId,proto3" json:"created_by_participant_id,omitempty"`
-	CreatedAt              *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt              *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	RecipientUserId        string                 `protobuf:"bytes,4,opt,name=recipient_user_id,json=recipientUserId,proto3" json:"recipient_user_id,omitempty"`
+	Status                 InviteStatus           `protobuf:"varint,5,opt,name=status,proto3,enum=game.v1.InviteStatus" json:"status,omitempty"`
+	CreatedByParticipantId string                 `protobuf:"bytes,6,opt,name=created_by_participant_id,json=createdByParticipantId,proto3" json:"created_by_participant_id,omitempty"`
+	CreatedAt              *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt              *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	unknownFields          protoimpl.UnknownFields
 	sizeCache              protoimpl.SizeCache
 }
@@ -139,6 +141,13 @@ func (x *Invite) GetParticipantId() string {
 	return ""
 }
 
+func (x *Invite) GetRecipientUserId() string {
+	if x != nil {
+		return x.RecipientUserId
+	}
+	return ""
+}
+
 func (x *Invite) GetStatus() InviteStatus {
 	if x != nil {
 		return x.Status
@@ -173,8 +182,10 @@ type CreateInviteRequest struct {
 	CampaignId string `protobuf:"bytes,1,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"`
 	// The participant seat this invite targets.
 	ParticipantId string `protobuf:"bytes,2,opt,name=participant_id,json=participantId,proto3" json:"participant_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// Optional recipient user ID for this invite.
+	RecipientUserId string `protobuf:"bytes,3,opt,name=recipient_user_id,json=recipientUserId,proto3" json:"recipient_user_id,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *CreateInviteRequest) Reset() {
@@ -217,6 +228,13 @@ func (x *CreateInviteRequest) GetCampaignId() string {
 func (x *CreateInviteRequest) GetParticipantId() string {
 	if x != nil {
 		return x.ParticipantId
+	}
+	return ""
+}
+
+func (x *CreateInviteRequest) GetRecipientUserId() string {
+	if x != nil {
+		return x.RecipientUserId
 	}
 	return ""
 }
@@ -584,6 +602,349 @@ func (x *ListInvitesResponse) GetNextPageToken() string {
 	return ""
 }
 
+type ListPendingInvitesRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The campaign ID to list pending invites for.
+	CampaignId string `protobuf:"bytes,1,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"`
+	// The maximum number of invites to return.
+	// If zero, the server defaults to 10. The server clamps values above 10 to 10.
+	PageSize int32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// A page token received from a prior ListPendingInvitesResponse.
+	PageToken     string `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListPendingInvitesRequest) Reset() {
+	*x = ListPendingInvitesRequest{}
+	mi := &file_game_v1_invite_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListPendingInvitesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListPendingInvitesRequest) ProtoMessage() {}
+
+func (x *ListPendingInvitesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_game_v1_invite_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListPendingInvitesRequest.ProtoReflect.Descriptor instead.
+func (*ListPendingInvitesRequest) Descriptor() ([]byte, []int) {
+	return file_game_v1_invite_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *ListPendingInvitesRequest) GetCampaignId() string {
+	if x != nil {
+		return x.CampaignId
+	}
+	return ""
+}
+
+func (x *ListPendingInvitesRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListPendingInvitesRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+type ListPendingInvitesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Invites       []*PendingInvite       `protobuf:"bytes,1,rep,name=invites,proto3" json:"invites,omitempty"`
+	NextPageToken string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListPendingInvitesResponse) Reset() {
+	*x = ListPendingInvitesResponse{}
+	mi := &file_game_v1_invite_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListPendingInvitesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListPendingInvitesResponse) ProtoMessage() {}
+
+func (x *ListPendingInvitesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_game_v1_invite_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListPendingInvitesResponse.ProtoReflect.Descriptor instead.
+func (*ListPendingInvitesResponse) Descriptor() ([]byte, []int) {
+	return file_game_v1_invite_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *ListPendingInvitesResponse) GetInvites() []*PendingInvite {
+	if x != nil {
+		return x.Invites
+	}
+	return nil
+}
+
+func (x *ListPendingInvitesResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
+type ListPendingInvitesForUserRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The maximum number of invites to return.
+	// If zero, the server defaults to 10. The server clamps values above 10 to 10.
+	PageSize int32 `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// A page token received from a prior ListPendingInvitesForUserResponse.
+	PageToken     string `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListPendingInvitesForUserRequest) Reset() {
+	*x = ListPendingInvitesForUserRequest{}
+	mi := &file_game_v1_invite_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListPendingInvitesForUserRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListPendingInvitesForUserRequest) ProtoMessage() {}
+
+func (x *ListPendingInvitesForUserRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_game_v1_invite_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListPendingInvitesForUserRequest.ProtoReflect.Descriptor instead.
+func (*ListPendingInvitesForUserRequest) Descriptor() ([]byte, []int) {
+	return file_game_v1_invite_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *ListPendingInvitesForUserRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListPendingInvitesForUserRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+type ListPendingInvitesForUserResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Invites       []*PendingUserInvite   `protobuf:"bytes,1,rep,name=invites,proto3" json:"invites,omitempty"`
+	NextPageToken string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListPendingInvitesForUserResponse) Reset() {
+	*x = ListPendingInvitesForUserResponse{}
+	mi := &file_game_v1_invite_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListPendingInvitesForUserResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListPendingInvitesForUserResponse) ProtoMessage() {}
+
+func (x *ListPendingInvitesForUserResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_game_v1_invite_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListPendingInvitesForUserResponse.ProtoReflect.Descriptor instead.
+func (*ListPendingInvitesForUserResponse) Descriptor() ([]byte, []int) {
+	return file_game_v1_invite_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *ListPendingInvitesForUserResponse) GetInvites() []*PendingUserInvite {
+	if x != nil {
+		return x.Invites
+	}
+	return nil
+}
+
+func (x *ListPendingInvitesForUserResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
+type PendingInvite struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Invite        *Invite                `protobuf:"bytes,1,opt,name=invite,proto3" json:"invite,omitempty"`
+	Participant   *Participant           `protobuf:"bytes,2,opt,name=participant,proto3" json:"participant,omitempty"`
+	CreatedByUser *v1.User               `protobuf:"bytes,3,opt,name=created_by_user,json=createdByUser,proto3" json:"created_by_user,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PendingInvite) Reset() {
+	*x = PendingInvite{}
+	mi := &file_game_v1_invite_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PendingInvite) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PendingInvite) ProtoMessage() {}
+
+func (x *PendingInvite) ProtoReflect() protoreflect.Message {
+	mi := &file_game_v1_invite_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PendingInvite.ProtoReflect.Descriptor instead.
+func (*PendingInvite) Descriptor() ([]byte, []int) {
+	return file_game_v1_invite_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *PendingInvite) GetInvite() *Invite {
+	if x != nil {
+		return x.Invite
+	}
+	return nil
+}
+
+func (x *PendingInvite) GetParticipant() *Participant {
+	if x != nil {
+		return x.Participant
+	}
+	return nil
+}
+
+func (x *PendingInvite) GetCreatedByUser() *v1.User {
+	if x != nil {
+		return x.CreatedByUser
+	}
+	return nil
+}
+
+type PendingUserInvite struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Invite        *Invite                `protobuf:"bytes,1,opt,name=invite,proto3" json:"invite,omitempty"`
+	Campaign      *Campaign              `protobuf:"bytes,2,opt,name=campaign,proto3" json:"campaign,omitempty"`
+	Participant   *Participant           `protobuf:"bytes,3,opt,name=participant,proto3" json:"participant,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PendingUserInvite) Reset() {
+	*x = PendingUserInvite{}
+	mi := &file_game_v1_invite_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PendingUserInvite) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PendingUserInvite) ProtoMessage() {}
+
+func (x *PendingUserInvite) ProtoReflect() protoreflect.Message {
+	mi := &file_game_v1_invite_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PendingUserInvite.ProtoReflect.Descriptor instead.
+func (*PendingUserInvite) Descriptor() ([]byte, []int) {
+	return file_game_v1_invite_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *PendingUserInvite) GetInvite() *Invite {
+	if x != nil {
+		return x.Invite
+	}
+	return nil
+}
+
+func (x *PendingUserInvite) GetCampaign() *Campaign {
+	if x != nil {
+		return x.Campaign
+	}
+	return nil
+}
+
+func (x *PendingUserInvite) GetParticipant() *Participant {
+	if x != nil {
+		return x.Participant
+	}
+	return nil
+}
+
 type RevokeInviteRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	InviteId      string                 `protobuf:"bytes,1,opt,name=invite_id,json=inviteId,proto3" json:"invite_id,omitempty"`
@@ -593,7 +954,7 @@ type RevokeInviteRequest struct {
 
 func (x *RevokeInviteRequest) Reset() {
 	*x = RevokeInviteRequest{}
-	mi := &file_game_v1_invite_proto_msgTypes[9]
+	mi := &file_game_v1_invite_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -605,7 +966,7 @@ func (x *RevokeInviteRequest) String() string {
 func (*RevokeInviteRequest) ProtoMessage() {}
 
 func (x *RevokeInviteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_game_v1_invite_proto_msgTypes[9]
+	mi := &file_game_v1_invite_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -618,7 +979,7 @@ func (x *RevokeInviteRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokeInviteRequest.ProtoReflect.Descriptor instead.
 func (*RevokeInviteRequest) Descriptor() ([]byte, []int) {
-	return file_game_v1_invite_proto_rawDescGZIP(), []int{9}
+	return file_game_v1_invite_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *RevokeInviteRequest) GetInviteId() string {
@@ -637,7 +998,7 @@ type RevokeInviteResponse struct {
 
 func (x *RevokeInviteResponse) Reset() {
 	*x = RevokeInviteResponse{}
-	mi := &file_game_v1_invite_proto_msgTypes[10]
+	mi := &file_game_v1_invite_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -649,7 +1010,7 @@ func (x *RevokeInviteResponse) String() string {
 func (*RevokeInviteResponse) ProtoMessage() {}
 
 func (x *RevokeInviteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_game_v1_invite_proto_msgTypes[10]
+	mi := &file_game_v1_invite_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -662,7 +1023,7 @@ func (x *RevokeInviteResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokeInviteResponse.ProtoReflect.Descriptor instead.
 func (*RevokeInviteResponse) Descriptor() ([]byte, []int) {
-	return file_game_v1_invite_proto_rawDescGZIP(), []int{10}
+	return file_game_v1_invite_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *RevokeInviteResponse) GetInvite() *Invite {
@@ -676,22 +1037,24 @@ var File_game_v1_invite_proto protoreflect.FileDescriptor
 
 const file_game_v1_invite_proto_rawDesc = "" +
 	"\n" +
-	"\x14game/v1/invite.proto\x12\agame.v1\x1a\x19game/v1/participant.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc0\x02\n" +
+	"\x14game/v1/invite.proto\x12\agame.v1\x1a\x12auth/v1/user.proto\x1a\x16game/v1/campaign.proto\x1a\x19game/v1/participant.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xec\x02\n" +
 	"\x06Invite\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vcampaign_id\x18\x02 \x01(\tR\n" +
 	"campaignId\x12%\n" +
-	"\x0eparticipant_id\x18\x03 \x01(\tR\rparticipantId\x12-\n" +
-	"\x06status\x18\x04 \x01(\x0e2\x15.game.v1.InviteStatusR\x06status\x129\n" +
-	"\x19created_by_participant_id\x18\x05 \x01(\tR\x16createdByParticipantId\x129\n" +
+	"\x0eparticipant_id\x18\x03 \x01(\tR\rparticipantId\x12*\n" +
+	"\x11recipient_user_id\x18\x04 \x01(\tR\x0frecipientUserId\x12-\n" +
+	"\x06status\x18\x05 \x01(\x0e2\x15.game.v1.InviteStatusR\x06status\x129\n" +
+	"\x19created_by_participant_id\x18\x06 \x01(\tR\x16createdByParticipantId\x129\n" +
 	"\n" +
-	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"]\n" +
+	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\x89\x01\n" +
 	"\x13CreateInviteRequest\x12\x1f\n" +
 	"\vcampaign_id\x18\x01 \x01(\tR\n" +
 	"campaignId\x12%\n" +
-	"\x0eparticipant_id\x18\x02 \x01(\tR\rparticipantId\"?\n" +
+	"\x0eparticipant_id\x18\x02 \x01(\tR\rparticipantId\x12*\n" +
+	"\x11recipient_user_id\x18\x03 \x01(\tR\x0frecipientUserId\"?\n" +
 	"\x14CreateInviteResponse\x12'\n" +
 	"\x06invite\x18\x01 \x01(\v2\x0f.game.v1.InviteR\x06invite\"q\n" +
 	"\x12ClaimInviteRequest\x12\x1f\n" +
@@ -715,7 +1078,31 @@ const file_game_v1_invite_proto_rawDesc = "" +
 	"page_token\x18\x03 \x01(\tR\tpageToken\"h\n" +
 	"\x13ListInvitesResponse\x12)\n" +
 	"\ainvites\x18\x01 \x03(\v2\x0f.game.v1.InviteR\ainvites\x12&\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"2\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"x\n" +
+	"\x19ListPendingInvitesRequest\x12\x1f\n" +
+	"\vcampaign_id\x18\x01 \x01(\tR\n" +
+	"campaignId\x12\x1b\n" +
+	"\tpage_size\x18\x02 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x03 \x01(\tR\tpageToken\"v\n" +
+	"\x1aListPendingInvitesResponse\x120\n" +
+	"\ainvites\x18\x01 \x03(\v2\x16.game.v1.PendingInviteR\ainvites\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"^\n" +
+	" ListPendingInvitesForUserRequest\x12\x1b\n" +
+	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x02 \x01(\tR\tpageToken\"\x81\x01\n" +
+	"!ListPendingInvitesForUserResponse\x124\n" +
+	"\ainvites\x18\x01 \x03(\v2\x1a.game.v1.PendingUserInviteR\ainvites\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\xa7\x01\n" +
+	"\rPendingInvite\x12'\n" +
+	"\x06invite\x18\x01 \x01(\v2\x0f.game.v1.InviteR\x06invite\x126\n" +
+	"\vparticipant\x18\x02 \x01(\v2\x14.game.v1.ParticipantR\vparticipant\x125\n" +
+	"\x0fcreated_by_user\x18\x03 \x01(\v2\r.auth.v1.UserR\rcreatedByUser\"\xa3\x01\n" +
+	"\x11PendingUserInvite\x12'\n" +
+	"\x06invite\x18\x01 \x01(\v2\x0f.game.v1.InviteR\x06invite\x12-\n" +
+	"\bcampaign\x18\x02 \x01(\v2\x11.game.v1.CampaignR\bcampaign\x126\n" +
+	"\vparticipant\x18\x03 \x01(\v2\x14.game.v1.ParticipantR\vparticipant\"2\n" +
 	"\x13RevokeInviteRequest\x12\x1b\n" +
 	"\tinvite_id\x18\x01 \x01(\tR\binviteId\"?\n" +
 	"\x14RevokeInviteResponse\x12'\n" +
@@ -724,12 +1111,14 @@ const file_game_v1_invite_proto_rawDesc = "" +
 	"\x19INVITE_STATUS_UNSPECIFIED\x10\x00\x12\v\n" +
 	"\aPENDING\x10\x01\x12\v\n" +
 	"\aCLAIMED\x10\x02\x12\v\n" +
-	"\aREVOKED\x10\x032\x81\x03\n" +
+	"\aREVOKED\x10\x032\xd4\x04\n" +
 	"\rInviteService\x12K\n" +
 	"\fCreateInvite\x12\x1c.game.v1.CreateInviteRequest\x1a\x1d.game.v1.CreateInviteResponse\x12H\n" +
 	"\vClaimInvite\x12\x1b.game.v1.ClaimInviteRequest\x1a\x1c.game.v1.ClaimInviteResponse\x12B\n" +
 	"\tGetInvite\x12\x19.game.v1.GetInviteRequest\x1a\x1a.game.v1.GetInviteResponse\x12H\n" +
-	"\vListInvites\x12\x1b.game.v1.ListInvitesRequest\x1a\x1c.game.v1.ListInvitesResponse\x12K\n" +
+	"\vListInvites\x12\x1b.game.v1.ListInvitesRequest\x1a\x1c.game.v1.ListInvitesResponse\x12]\n" +
+	"\x12ListPendingInvites\x12\".game.v1.ListPendingInvitesRequest\x1a#.game.v1.ListPendingInvitesResponse\x12r\n" +
+	"\x19ListPendingInvitesForUser\x12).game.v1.ListPendingInvitesForUserRequest\x1a*.game.v1.ListPendingInvitesForUserResponse\x12K\n" +
 	"\fRevokeInvite\x12\x1c.game.v1.RevokeInviteRequest\x1a\x1d.game.v1.RevokeInviteResponseBCZAgithub.com/louisbranch/fracturing.space/api/gen/go/game/v1;gamev1b\x06proto3"
 
 var (
@@ -745,48 +1134,68 @@ func file_game_v1_invite_proto_rawDescGZIP() []byte {
 }
 
 var file_game_v1_invite_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_game_v1_invite_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_game_v1_invite_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_game_v1_invite_proto_goTypes = []any{
-	(InviteStatus)(0),             // 0: game.v1.InviteStatus
-	(*Invite)(nil),                // 1: game.v1.Invite
-	(*CreateInviteRequest)(nil),   // 2: game.v1.CreateInviteRequest
-	(*CreateInviteResponse)(nil),  // 3: game.v1.CreateInviteResponse
-	(*ClaimInviteRequest)(nil),    // 4: game.v1.ClaimInviteRequest
-	(*ClaimInviteResponse)(nil),   // 5: game.v1.ClaimInviteResponse
-	(*GetInviteRequest)(nil),      // 6: game.v1.GetInviteRequest
-	(*GetInviteResponse)(nil),     // 7: game.v1.GetInviteResponse
-	(*ListInvitesRequest)(nil),    // 8: game.v1.ListInvitesRequest
-	(*ListInvitesResponse)(nil),   // 9: game.v1.ListInvitesResponse
-	(*RevokeInviteRequest)(nil),   // 10: game.v1.RevokeInviteRequest
-	(*RevokeInviteResponse)(nil),  // 11: game.v1.RevokeInviteResponse
-	(*timestamppb.Timestamp)(nil), // 12: google.protobuf.Timestamp
-	(*Participant)(nil),           // 13: game.v1.Participant
+	(InviteStatus)(0),                         // 0: game.v1.InviteStatus
+	(*Invite)(nil),                            // 1: game.v1.Invite
+	(*CreateInviteRequest)(nil),               // 2: game.v1.CreateInviteRequest
+	(*CreateInviteResponse)(nil),              // 3: game.v1.CreateInviteResponse
+	(*ClaimInviteRequest)(nil),                // 4: game.v1.ClaimInviteRequest
+	(*ClaimInviteResponse)(nil),               // 5: game.v1.ClaimInviteResponse
+	(*GetInviteRequest)(nil),                  // 6: game.v1.GetInviteRequest
+	(*GetInviteResponse)(nil),                 // 7: game.v1.GetInviteResponse
+	(*ListInvitesRequest)(nil),                // 8: game.v1.ListInvitesRequest
+	(*ListInvitesResponse)(nil),               // 9: game.v1.ListInvitesResponse
+	(*ListPendingInvitesRequest)(nil),         // 10: game.v1.ListPendingInvitesRequest
+	(*ListPendingInvitesResponse)(nil),        // 11: game.v1.ListPendingInvitesResponse
+	(*ListPendingInvitesForUserRequest)(nil),  // 12: game.v1.ListPendingInvitesForUserRequest
+	(*ListPendingInvitesForUserResponse)(nil), // 13: game.v1.ListPendingInvitesForUserResponse
+	(*PendingInvite)(nil),                     // 14: game.v1.PendingInvite
+	(*PendingUserInvite)(nil),                 // 15: game.v1.PendingUserInvite
+	(*RevokeInviteRequest)(nil),               // 16: game.v1.RevokeInviteRequest
+	(*RevokeInviteResponse)(nil),              // 17: game.v1.RevokeInviteResponse
+	(*timestamppb.Timestamp)(nil),             // 18: google.protobuf.Timestamp
+	(*Participant)(nil),                       // 19: game.v1.Participant
+	(*v1.User)(nil),                           // 20: auth.v1.User
+	(*Campaign)(nil),                          // 21: game.v1.Campaign
 }
 var file_game_v1_invite_proto_depIdxs = []int32{
 	0,  // 0: game.v1.Invite.status:type_name -> game.v1.InviteStatus
-	12, // 1: game.v1.Invite.created_at:type_name -> google.protobuf.Timestamp
-	12, // 2: game.v1.Invite.updated_at:type_name -> google.protobuf.Timestamp
+	18, // 1: game.v1.Invite.created_at:type_name -> google.protobuf.Timestamp
+	18, // 2: game.v1.Invite.updated_at:type_name -> google.protobuf.Timestamp
 	1,  // 3: game.v1.CreateInviteResponse.invite:type_name -> game.v1.Invite
 	1,  // 4: game.v1.ClaimInviteResponse.invite:type_name -> game.v1.Invite
-	13, // 5: game.v1.ClaimInviteResponse.participant:type_name -> game.v1.Participant
+	19, // 5: game.v1.ClaimInviteResponse.participant:type_name -> game.v1.Participant
 	1,  // 6: game.v1.GetInviteResponse.invite:type_name -> game.v1.Invite
 	1,  // 7: game.v1.ListInvitesResponse.invites:type_name -> game.v1.Invite
-	1,  // 8: game.v1.RevokeInviteResponse.invite:type_name -> game.v1.Invite
-	2,  // 9: game.v1.InviteService.CreateInvite:input_type -> game.v1.CreateInviteRequest
-	4,  // 10: game.v1.InviteService.ClaimInvite:input_type -> game.v1.ClaimInviteRequest
-	6,  // 11: game.v1.InviteService.GetInvite:input_type -> game.v1.GetInviteRequest
-	8,  // 12: game.v1.InviteService.ListInvites:input_type -> game.v1.ListInvitesRequest
-	10, // 13: game.v1.InviteService.RevokeInvite:input_type -> game.v1.RevokeInviteRequest
-	3,  // 14: game.v1.InviteService.CreateInvite:output_type -> game.v1.CreateInviteResponse
-	5,  // 15: game.v1.InviteService.ClaimInvite:output_type -> game.v1.ClaimInviteResponse
-	7,  // 16: game.v1.InviteService.GetInvite:output_type -> game.v1.GetInviteResponse
-	9,  // 17: game.v1.InviteService.ListInvites:output_type -> game.v1.ListInvitesResponse
-	11, // 18: game.v1.InviteService.RevokeInvite:output_type -> game.v1.RevokeInviteResponse
-	14, // [14:19] is the sub-list for method output_type
-	9,  // [9:14] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	14, // 8: game.v1.ListPendingInvitesResponse.invites:type_name -> game.v1.PendingInvite
+	15, // 9: game.v1.ListPendingInvitesForUserResponse.invites:type_name -> game.v1.PendingUserInvite
+	1,  // 10: game.v1.PendingInvite.invite:type_name -> game.v1.Invite
+	19, // 11: game.v1.PendingInvite.participant:type_name -> game.v1.Participant
+	20, // 12: game.v1.PendingInvite.created_by_user:type_name -> auth.v1.User
+	1,  // 13: game.v1.PendingUserInvite.invite:type_name -> game.v1.Invite
+	21, // 14: game.v1.PendingUserInvite.campaign:type_name -> game.v1.Campaign
+	19, // 15: game.v1.PendingUserInvite.participant:type_name -> game.v1.Participant
+	1,  // 16: game.v1.RevokeInviteResponse.invite:type_name -> game.v1.Invite
+	2,  // 17: game.v1.InviteService.CreateInvite:input_type -> game.v1.CreateInviteRequest
+	4,  // 18: game.v1.InviteService.ClaimInvite:input_type -> game.v1.ClaimInviteRequest
+	6,  // 19: game.v1.InviteService.GetInvite:input_type -> game.v1.GetInviteRequest
+	8,  // 20: game.v1.InviteService.ListInvites:input_type -> game.v1.ListInvitesRequest
+	10, // 21: game.v1.InviteService.ListPendingInvites:input_type -> game.v1.ListPendingInvitesRequest
+	12, // 22: game.v1.InviteService.ListPendingInvitesForUser:input_type -> game.v1.ListPendingInvitesForUserRequest
+	16, // 23: game.v1.InviteService.RevokeInvite:input_type -> game.v1.RevokeInviteRequest
+	3,  // 24: game.v1.InviteService.CreateInvite:output_type -> game.v1.CreateInviteResponse
+	5,  // 25: game.v1.InviteService.ClaimInvite:output_type -> game.v1.ClaimInviteResponse
+	7,  // 26: game.v1.InviteService.GetInvite:output_type -> game.v1.GetInviteResponse
+	9,  // 27: game.v1.InviteService.ListInvites:output_type -> game.v1.ListInvitesResponse
+	11, // 28: game.v1.InviteService.ListPendingInvites:output_type -> game.v1.ListPendingInvitesResponse
+	13, // 29: game.v1.InviteService.ListPendingInvitesForUser:output_type -> game.v1.ListPendingInvitesForUserResponse
+	17, // 30: game.v1.InviteService.RevokeInvite:output_type -> game.v1.RevokeInviteResponse
+	24, // [24:31] is the sub-list for method output_type
+	17, // [17:24] is the sub-list for method input_type
+	17, // [17:17] is the sub-list for extension type_name
+	17, // [17:17] is the sub-list for extension extendee
+	0,  // [0:17] is the sub-list for field type_name
 }
 
 func init() { file_game_v1_invite_proto_init() }
@@ -794,6 +1203,7 @@ func file_game_v1_invite_proto_init() {
 	if File_game_v1_invite_proto != nil {
 		return
 	}
+	file_game_v1_campaign_proto_init()
 	file_game_v1_participant_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -801,7 +1211,7 @@ func file_game_v1_invite_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_game_v1_invite_proto_rawDesc), len(file_game_v1_invite_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   11,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

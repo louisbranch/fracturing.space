@@ -176,6 +176,7 @@ func inviteToProto(inv invite.Invite) *campaignv1.Invite {
 		Id:                     inv.ID,
 		CampaignId:             inv.CampaignID,
 		ParticipantId:          inv.ParticipantID,
+		RecipientUserId:        inv.RecipientUserID,
 		Status:                 inviteStatusToProto(inv.Status),
 		CreatedByParticipantId: inv.CreatedByParticipantID,
 		CreatedAt:              timestamppb.New(inv.CreatedAt),
