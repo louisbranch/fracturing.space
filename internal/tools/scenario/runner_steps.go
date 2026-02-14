@@ -146,12 +146,22 @@ func (r *Runner) runCampaignStep(ctx context.Context, state *scenarioState, step
 	}
 	system := optionalString(step.Args, "system", "DAGGERHEART")
 	gmMode := optionalString(step.Args, "gm_mode", "HUMAN")
+	intent := optionalString(step.Args, "intent", "SANDBOX")
+	accessPolicy := optionalString(step.Args, "access_policy", "PRIVATE")
 
 	systemValue, err := parseGameSystem(system)
 	if err != nil {
 		return err
 	}
 	gmModeValue, err := parseGmMode(gmMode)
+	if err != nil {
+		return err
+	}
+	intentValue, err := parseCampaignIntent(intent)
+	if err != nil {
+		return err
+	}
+	accessPolicyValue, err := parseCampaignAccessPolicy(accessPolicy)
 	if err != nil {
 		return err
 	}
@@ -164,6 +174,8 @@ func (r *Runner) runCampaignStep(ctx context.Context, state *scenarioState, step
 		Name:               name,
 		System:             systemValue,
 		GmMode:             gmModeValue,
+		Intent:             intentValue,
+		AccessPolicy:       accessPolicyValue,
 		CreatorDisplayName: creator,
 	}
 	if theme := optionalString(step.Args, "theme", ""); theme != "" {

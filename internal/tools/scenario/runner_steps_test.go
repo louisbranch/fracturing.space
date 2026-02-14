@@ -270,6 +270,79 @@ func TestRunCampaignStepVerboseLogging(t *testing.T) {
 	}
 }
 
+func TestRunCampaignStepDefaults(t *testing.T) {
+	var gotRequest *gamev1.CreateCampaignRequest
+	runner := &Runner{
+		assertions: Assertions{Mode: AssertionStrict},
+		env: scenarioEnv{
+			campaignClient: &fakeCampaignClient{
+				create: func(_ context.Context, req *gamev1.CreateCampaignRequest, _ ...grpc.CallOption) (*gamev1.CreateCampaignResponse, error) {
+					gotRequest = req
+					return &gamev1.CreateCampaignResponse{
+						Campaign:         &gamev1.Campaign{Id: "campaign-1"},
+						OwnerParticipant: &gamev1.Participant{Id: "owner-1"},
+					}, nil
+				},
+			},
+			eventClient: &fakeEventClient{},
+		},
+	}
+
+	state := &scenarioState{}
+	step := Step{Kind: "campaign", Args: map[string]any{"name": "Test", "system": "DAGGERHEART"}}
+	if err := runner.runCampaignStep(context.Background(), state, step); err != nil {
+		t.Fatalf("runCampaignStep: %v", err)
+	}
+	if gotRequest == nil {
+		t.Fatal("expected create campaign request")
+	}
+	if got := gotRequest.GetIntent(); got != gamev1.CampaignIntent_SANDBOX {
+		t.Fatalf("intent = %s, want SANDBOX", got.String())
+	}
+	if got := gotRequest.GetAccessPolicy(); got != gamev1.CampaignAccessPolicy_PRIVATE {
+		t.Fatalf("access policy = %s, want PRIVATE", got.String())
+	}
+}
+
+func TestRunCampaignStepOverridesDefaults(t *testing.T) {
+	var gotRequest *gamev1.CreateCampaignRequest
+	runner := &Runner{
+		assertions: Assertions{Mode: AssertionStrict},
+		env: scenarioEnv{
+			campaignClient: &fakeCampaignClient{
+				create: func(_ context.Context, req *gamev1.CreateCampaignRequest, _ ...grpc.CallOption) (*gamev1.CreateCampaignResponse, error) {
+					gotRequest = req
+					return &gamev1.CreateCampaignResponse{
+						Campaign:         &gamev1.Campaign{Id: "campaign-1"},
+						OwnerParticipant: &gamev1.Participant{Id: "owner-1"},
+					}, nil
+				},
+			},
+			eventClient: &fakeEventClient{},
+		},
+	}
+
+	state := &scenarioState{}
+	step := Step{Kind: "campaign", Args: map[string]any{
+		"name":          "Test",
+		"system":        "DAGGERHEART",
+		"intent":        "STANDARD",
+		"access_policy": "PUBLIC",
+	}}
+	if err := runner.runCampaignStep(context.Background(), state, step); err != nil {
+		t.Fatalf("runCampaignStep: %v", err)
+	}
+	if gotRequest == nil {
+		t.Fatal("expected create campaign request")
+	}
+	if got := gotRequest.GetIntent(); got != gamev1.CampaignIntent_STANDARD {
+		t.Fatalf("intent = %s, want STANDARD", got.String())
+	}
+	if got := gotRequest.GetAccessPolicy(); got != gamev1.CampaignAccessPolicy_PUBLIC {
+		t.Fatalf("access policy = %s, want PUBLIC", got.String())
+	}
+}
+
 func TestRunCampaignStepRequiresOwnerParticipant(t *testing.T) {
 	runner := &Runner{
 		assertions: Assertions{Mode: AssertionStrict},
@@ -1329,6 +1402,10 @@ func TestParseFunctions(t *testing.T) {
 		{"parseGameSystem invalid", func() error { _, err := parseGameSystem("BOGUS"); return err }},
 		{"parseGmMode valid", func() error { _, err := parseGmMode("HUMAN"); return err }},
 		{"parseGmMode invalid", func() error { _, err := parseGmMode("BOGUS"); return err }},
+		{"parseCampaignIntent valid", func() error { _, err := parseCampaignIntent("SANDBOX"); return err }},
+		{"parseCampaignIntent invalid", func() error { _, err := parseCampaignIntent("BOGUS"); return err }},
+		{"parseCampaignAccessPolicy valid", func() error { _, err := parseCampaignAccessPolicy("PRIVATE"); return err }},
+		{"parseCampaignAccessPolicy invalid", func() error { _, err := parseCampaignAccessPolicy("BOGUS"); return err }},
 		{"parseCharacterKind valid", func() error { _, err := parseCharacterKind("NPC"); return err }},
 		{"parseCharacterKind invalid", func() error { _, err := parseCharacterKind("BOGUS"); return err }},
 		{"parseRestType valid", func() error { _, err := parseRestType("long"); return err }},

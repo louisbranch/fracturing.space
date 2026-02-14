@@ -693,6 +693,32 @@ func parseGmMode(value string) (gamev1.GmMode, error) {
 	}
 }
 
+func parseCampaignIntent(value string) (gamev1.CampaignIntent, error) {
+	switch strings.ToUpper(strings.TrimSpace(value)) {
+	case "STANDARD":
+		return gamev1.CampaignIntent_STANDARD, nil
+	case "STARTER":
+		return gamev1.CampaignIntent_STARTER, nil
+	case "SANDBOX":
+		return gamev1.CampaignIntent_SANDBOX, nil
+	default:
+		return gamev1.CampaignIntent_CAMPAIGN_INTENT_UNSPECIFIED, fmt.Errorf("unsupported intent %q", value)
+	}
+}
+
+func parseCampaignAccessPolicy(value string) (gamev1.CampaignAccessPolicy, error) {
+	switch strings.ToUpper(strings.TrimSpace(value)) {
+	case "PRIVATE":
+		return gamev1.CampaignAccessPolicy_PRIVATE, nil
+	case "RESTRICTED":
+		return gamev1.CampaignAccessPolicy_RESTRICTED, nil
+	case "PUBLIC":
+		return gamev1.CampaignAccessPolicy_PUBLIC, nil
+	default:
+		return gamev1.CampaignAccessPolicy_CAMPAIGN_ACCESS_POLICY_UNSPECIFIED, fmt.Errorf("unsupported access policy %q", value)
+	}
+}
+
 func parseCharacterKind(value string) (gamev1.CharacterKind, error) {
 	switch strings.ToUpper(strings.TrimSpace(value)) {
 	case "PC":
