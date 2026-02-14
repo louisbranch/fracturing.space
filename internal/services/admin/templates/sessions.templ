@@ -84,7 +84,15 @@ templ SessionEventsContent(session SessionDetail, loc Localizer) {
 			</tbody>
 		</table>
 		if session.NextToken != "" || session.PrevToken != "" {
-			@Pagination(session.NextToken, session.PrevToken, "/campaigns/"+session.CampaignID+"/sessions/"+session.ID+"/events", loc)
+			@PaginationTargeted(
+				session.NextToken,
+				session.PrevToken,
+				"/campaigns/"+session.CampaignID+"/sessions/"+session.ID+"/events",
+				"/campaigns/"+session.CampaignID+"/sessions/"+session.ID+"/events",
+				"#session-events",
+				false,
+				loc,
+			)
 		}
 	}
 }

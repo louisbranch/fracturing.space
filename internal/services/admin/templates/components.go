@@ -1,22 +1,36 @@
 package templates
 
-// Breadcrumb represents a single breadcrumb navigation item.
-// If URL is empty the item is rendered as plain text (current page).
+import (
+	"net/url"
+	"strings"
+)
+
+// PageHeading holds header metadata for pages.
+type PageHeading struct {
+	// Title is the page heading.
+	Title string
+	// Breadcrumbs renders a path trail for the page.
+	Breadcrumbs []Breadcrumb
+	// ActionURL renders a CTA button when set.
+	ActionURL string
+	// ActionLabel is the CTA button label.
+	ActionLabel string
+}
+
+// Breadcrumb represents a single breadcrumb item.
 type Breadcrumb struct {
-	// Label is the display text for this breadcrumb.
+	// Label is the visible label.
 	Label string
-	// URL is the navigation target. Empty means current (final) page.
+	// URL is the optional navigation target.
 	URL string
 }
 
-// PageHeading provides data for the PageHeader component.
-type PageHeading struct {
-	// Breadcrumbs is the breadcrumb trail. Empty means no breadcrumbs.
-	Breadcrumbs []Breadcrumb
-	// Title is the page heading text.
-	Title string
-	// ActionURL is the optional action button target. Empty means no button.
-	ActionURL string
-	// ActionLabel is the display text for the action button.
-	ActionLabel string
+// AppendQueryParam appends a single query parameter to a URL.
+func AppendQueryParam(baseURL string, key string, value string) string {
+	encodedKey := url.QueryEscape(key)
+	encodedValue := url.QueryEscape(value)
+	if strings.Contains(baseURL, "?") {
+		return baseURL + "&" + encodedKey + "=" + encodedValue
+	}
+	return baseURL + "?" + encodedKey + "=" + encodedValue
 }

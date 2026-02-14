@@ -29,6 +29,7 @@ templ EventFilterForm(campaignID string, sessionID string, filters EventFilterOp
 		hx-get={ "/campaigns/" + campaignID + "/events/table" }
 		hx-target="#event-timeline-container"
 		hx-swap="innerHTML"
+		hx-push-url="true"
 		hx-trigger="change from:select, change from:input[type=date]"
 	>
 		<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -88,7 +89,15 @@ templ EventTimelineContent(view EventLogView, loc Localizer) {
 				}
 			</tbody>
 		</table>
-		@Pagination(view.NextToken, view.PrevToken, "/campaigns/"+view.CampaignID+"/events", loc)
+		@PaginationTargeted(
+			view.NextToken,
+			view.PrevToken,
+			EventFilterBaseURL("/campaigns/"+view.CampaignID+"/events", view.Filters),
+			EventFilterBaseURL("/campaigns/"+view.CampaignID+"/events/table", view.Filters),
+			"#event-timeline-container",
+			true,
+			loc,
+		)
 	}
 }
 

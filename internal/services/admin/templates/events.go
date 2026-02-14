@@ -1,5 +1,7 @@
 package templates
 
+import "net/url"
+
 // EventRow represents an event in the timeline (enhanced version).
 type EventRow struct {
 	CampaignID       string
@@ -28,6 +30,34 @@ type EventFilterOptions struct {
 	EntityType string
 	StartDate  string
 	EndDate    string
+}
+
+// EventFilterBaseURL returns a base URL with filter query parameters applied.
+func EventFilterBaseURL(baseURL string, filters EventFilterOptions) string {
+	query := url.Values{}
+	if filters.SessionID != "" {
+		query.Set("session_id", filters.SessionID)
+	}
+	if filters.EventType != "" {
+		query.Set("event_type", filters.EventType)
+	}
+	if filters.ActorType != "" {
+		query.Set("actor_type", filters.ActorType)
+	}
+	if filters.EntityType != "" {
+		query.Set("entity_type", filters.EntityType)
+	}
+	if filters.StartDate != "" {
+		query.Set("start_date", filters.StartDate)
+	}
+	if filters.EndDate != "" {
+		query.Set("end_date", filters.EndDate)
+	}
+	encoded := query.Encode()
+	if encoded == "" {
+		return baseURL
+	}
+	return baseURL + "?" + encoded
 }
 
 // EventLogView holds data for rendering the event log page.

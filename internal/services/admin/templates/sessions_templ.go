@@ -473,7 +473,15 @@ func SessionEventsContent(session SessionDetail, loc Localizer) templ.Component 
 				return templ_7745c5c3_Err
 			}
 			if session.NextToken != "" || session.PrevToken != "" {
-				templ_7745c5c3_Err = Pagination(session.NextToken, session.PrevToken, "/campaigns/"+session.CampaignID+"/sessions/"+session.ID+"/events", loc).Render(ctx, templ_7745c5c3_Buffer)
+				templ_7745c5c3_Err = PaginationTargeted(
+					session.NextToken,
+					session.PrevToken,
+					"/campaigns/"+session.CampaignID+"/sessions/"+session.ID+"/events",
+					"/campaigns/"+session.CampaignID+"/sessions/"+session.ID+"/events",
+					"#session-events",
+					false,
+					loc,
+				).Render(ctx, templ_7745c5c3_Buffer)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}

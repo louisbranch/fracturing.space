@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -94,6 +95,52 @@ func TestWebPageRendering(t *testing.T) {
 			},
 		},
 		{
+			name: "scenarios full page",
+			path: "/scenarios",
+			contains: []string{
+				"<!doctype html>",
+				branding.AppName,
+				"<h2>Scenarios</h2>",
+			},
+		},
+		{
+			name: "scenarios htmx",
+			path: "/scenarios",
+			htmx: true,
+			contains: []string{
+				"<h2>Scenarios</h2>",
+			},
+			notContains: []string{
+				"<!doctype html>",
+				branding.AppName,
+				"<html",
+			},
+		},
+		{
+			name: "scenario events full page",
+			path: "/scenarios/camp-123/events",
+			contains: []string{
+				"<!doctype html>",
+				branding.AppName,
+				"<h2>Scenarios</h2>",
+				"<h3>Events</h3>",
+			},
+		},
+		{
+			name: "scenario events htmx",
+			path: "/scenarios/camp-123/events",
+			htmx: true,
+			contains: []string{
+				"<h2>Scenarios</h2>",
+				"<h3>Events</h3>",
+			},
+			notContains: []string{
+				"<!doctype html>",
+				branding.AppName,
+				"<html",
+			},
+		},
+		{
 			name: "campaign detail full page",
 			path: "/campaigns/camp-123",
 			contains: []string{
@@ -173,6 +220,95 @@ func TestSystemsTableRendersDefaultBadge(t *testing.T) {
 	assertContains(t, body, "Daggerheart")
 	assertContains(t, body, "1.0.0")
 	assertContains(t, body, "Default")
+}
+
+// TestScenarioPostEmptyScript verifies POST /scenarios rejects empty scripts.
+func TestScenarioPostEmptyScript(t *testing.T) {
+	handler := NewHandler(nil)
+	form := url.Values{"script": {""}}
+	req := httptest.NewRequest(http.MethodPost, "http://example.com/scenarios", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Origin", "http://example.com")
+	req.Header.Set("HX-Request", "true")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	assertContains(t, rec.Body.String(), "Scenario script is required")
+	assertNotContains(t, rec.Body.String(), "<!doctype html>")
+}
+
+// TestScenarioPostRejectsCrossOrigin verifies POST /scenarios enforces CSRF checks.
+func TestScenarioPostRejectsCrossOrigin(t *testing.T) {
+	handler := NewHandler(nil)
+	form := url.Values{"script": {"print('ok')"}}
+	req := httptest.NewRequest(http.MethodPost, "http://example.com/scenarios", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Origin", "http://evil.example.com")
+	req.Header.Set("HX-Request", "true")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d", rec.Code)
+	}
+	assertContains(t, rec.Body.String(), "Invalid request origin")
+}
+
+// TestScenarioPostScriptTooLarge verifies POST /scenarios rejects oversized scripts.
+func TestScenarioPostScriptTooLarge(t *testing.T) {
+	handler := NewHandler(nil)
+	oversized := strings.Repeat("a", maxScenarioScriptSize+1)
+	form := url.Values{"script": {oversized}}
+	req := httptest.NewRequest(http.MethodPost, "http://example.com/scenarios", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Origin", "http://example.com")
+	req.Header.Set("HX-Request", "true")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	assertContains(t, rec.Body.String(), "Scenario script exceeds the 100KB limit")
+	assertNotContains(t, rec.Body.String(), "<!doctype html>")
+}
+
+// TestRunScenarioScriptTempDirInvalid verifies invalid temp dir env returns an error.
+func TestRunScenarioScriptTempDirInvalid(t *testing.T) {
+	handler := &Handler{}
+	file, err := os.CreateTemp(t.TempDir(), "not-a-dir-*")
+	if err != nil {
+		t.Fatalf("create temp file: %v", err)
+	}
+	if err := file.Close(); err != nil {
+		t.Fatalf("close temp file: %v", err)
+	}
+	t.Setenv(scenarioTempDirEnv, file.Name())
+
+	_, _, err = handler.runScenarioScript(context.Background(), "print('ok')")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+// TestRunScenarioScriptTempDirOverride verifies temp dir override runs the script.
+func TestRunScenarioScriptTempDirOverride(t *testing.T) {
+	handler := &Handler{}
+	t.Setenv(scenarioTempDirEnv, t.TempDir())
+	t.Setenv("FRACTURING_SPACE_GAME_ADDR", "127.0.0.1:1")
+	script := "local scene = Scenario.new(\"empty\")\nreturn scene\n"
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	logs, _, err := handler.runScenarioScript(ctx, script)
+	if err != nil {
+		t.Fatalf("run scenario script: %v", err)
+	}
+	assertContains(t, logs, "scenario start")
+	assertContains(t, logs, "scenario done")
 }
 
 // TestCampaignSessionsRoute verifies session routes render pages correctly.
@@ -1348,6 +1484,24 @@ func TestEventLogTable(t *testing.T) {
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+}
+
+func TestEventLogTablePushURL(t *testing.T) {
+	eventClient := &testEventClient{listResponse: &statev1.ListEventsResponse{}}
+	provider := testFullClientProvider{event: eventClient}
+	handler := NewHandler(provider)
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/events/table?actor_type=system&event_type=campaign.started&page_token=next", nil)
+	req.Header.Set("HX-Request", "true")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	pushURL := rec.Header().Get("HX-Push-Url")
+	if pushURL != "/campaigns/camp-1/events?actor_type=system&event_type=campaign.started&page_token=next" {
+		t.Fatalf("expected push url set, got %q", pushURL)
 	}
 }
 
@@ -4403,6 +4557,24 @@ func TestEventLogTableErrorPaths(t *testing.T) {
 			t.Fatalf("expected 200, got %d", rec.Code)
 		}
 	})
+}
+
+func TestScenarioEventsTablePushURL(t *testing.T) {
+	eventClient := &testEventClient{listResponse: &statev1.ListEventsResponse{}}
+	provider := testFullClientProvider{event: eventClient}
+	handler := NewHandler(provider)
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/scenarios/camp-1/events/table?event_type=campaign.created&start_date=2024-02-01&page_token=next", nil)
+	req.Header.Set("HX-Request", "true")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	pushURL := rec.Header().Get("HX-Push-Url")
+	if pushURL != "/scenarios/camp-1/events?event_type=campaign.created&start_date=2024-02-01&page_token=next" {
+		t.Fatalf("expected push url set, got %q", pushURL)
+	}
 }
 
 // TestUserDetailWithMessage verifies the message query parameter in user detail.
