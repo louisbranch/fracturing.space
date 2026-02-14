@@ -27,12 +27,16 @@ jobs:
         run: |
           mkdir -p bin
           go build -o bin/game ./cmd/game
+          go build -o bin/auth ./cmd/auth
           go build -o bin/mcp ./cmd/mcp
       - name: Start MCP endpoint
         env:
           GOFLAGS: "-tags=conformance"
           FRACTURING_SPACE_GAME_EVENT_HMAC_KEY: "test-key"
+          FRACTURING_SPACE_AUTH_ADDR: "127.0.0.1:8083"
         run: |
+          ./bin/auth -port=8083 &
+          AUTH_PID=$!
           ./bin/game -addr=127.0.0.1:8080 &
           GAME_PID=$!
           ./bin/mcp -transport=http -http-addr=127.0.0.1:3001 -addr=127.0.0.1:8080 &
@@ -52,3 +56,4 @@ jobs:
         run: |
           pkill -f "./bin/mcp" 2>/dev/null || true
           pkill -f "./bin/game" 2>/dev/null || true
+          pkill -f "./bin/auth" 2>/dev/null || true

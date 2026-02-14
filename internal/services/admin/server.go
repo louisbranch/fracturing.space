@@ -15,6 +15,7 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	adminsqlite "github.com/louisbranch/fracturing.space/internal/services/admin/storage/sqlite"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -358,6 +359,13 @@ func dialGameGRPC(ctx context.Context, config Config) (*grpc.ClientConn, daggerh
 	if err != nil {
 		return nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 	}
+	logf := func(format string, args ...any) {
+		log.Printf("admin game %s", fmt.Sprintf(format, args...))
+	}
+	if err := platformgrpc.WaitForHealth(ctx, conn, "", logf); err != nil {
+		_ = conn.Close()
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("admin game gRPC health check failed for %s: %w", grpcAddr, err)
+	}
 
 	daggerheartClient := daggerheartv1.NewDaggerheartServiceClient(conn)
 	campaignClient := statev1.NewCampaignServiceClient(conn)
@@ -391,6 +399,13 @@ func dialAuthGRPC(ctx context.Context, config Config) (*grpc.ClientConn, authv1.
 	)
 	if err != nil {
 		return nil, nil, err
+	}
+	logf := func(format string, args ...any) {
+		log.Printf("admin auth %s", fmt.Sprintf(format, args...))
+	}
+	if err := platformgrpc.WaitForHealth(ctx, conn, "", logf); err != nil {
+		_ = conn.Close()
+		return nil, nil, fmt.Errorf("admin auth gRPC health check failed for %s: %w", authAddr, err)
 	}
 
 	authClient := authv1.NewAuthServiceClient(conn)

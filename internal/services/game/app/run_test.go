@@ -9,6 +9,8 @@ import (
 	"time"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
+	authserver "github.com/louisbranch/fracturing.space/internal/services/auth/app"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -19,6 +21,8 @@ import (
 // TestServeStopsOnContext verifies the server serves and stops on cancel.
 func TestServeStopsOnContext(t *testing.T) {
 	setTempDBPath(t)
+	stopAuth := startAuthServer(t)
+	defer stopAuth()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -66,6 +70,8 @@ func TestServeStopsOnContext(t *testing.T) {
 // TestHealthCheckReportsServing ensures gRPC health checks report SERVING.
 func TestHealthCheckReportsServing(t *testing.T) {
 	setTempDBPath(t)
+	stopAuth := startAuthServer(t)
+	defer stopAuth()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -119,6 +125,8 @@ func TestHealthCheckReportsServing(t *testing.T) {
 // TestServerMetadataHeaders ensures request metadata is echoed in headers.
 func TestServerMetadataHeaders(t *testing.T) {
 	setTempDBPath(t)
+	stopAuth := startAuthServer(t)
+	defer stopAuth()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -195,6 +203,8 @@ func TestServerMetadataHeaders(t *testing.T) {
 // TestRunPortInUse verifies Run returns an error when the port is occupied.
 func TestRunPortInUse(t *testing.T) {
 	setTempDBPath(t)
+	stopAuth := startAuthServer(t)
+	defer stopAuth()
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("listen: %v", err)
@@ -218,6 +228,8 @@ func TestRunPortInUse(t *testing.T) {
 // TestServeReturnsOnCancel verifies Serve returns promptly on cancel without connections.
 func TestServeReturnsOnCancel(t *testing.T) {
 	setTempDBPath(t)
+	stopAuth := startAuthServer(t)
+	defer stopAuth()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -246,6 +258,8 @@ func TestServeReturnsOnCancel(t *testing.T) {
 // TestServeReturnsErrorOnClosedListener verifies Serve reports listener errors.
 func TestServeReturnsErrorOnClosedListener(t *testing.T) {
 	setTempDBPath(t)
+	stopAuth := startAuthServer(t)
+	defer stopAuth()
 	grpcServer, err := New(0)
 	if err != nil {
 		t.Fatalf("new server: %v", err)
@@ -281,4 +295,63 @@ func setTempDBPath(t *testing.T) {
 	t.Setenv("FRACTURING_SPACE_GAME_EVENTS_DB_PATH", filepath.Join(base, "game-events.db"))
 	t.Setenv("FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH", filepath.Join(base, "game-projections.db"))
 	t.Setenv("FRACTURING_SPACE_GAME_EVENT_HMAC_KEY", "test-key")
+}
+
+func setTempAuthDBPath(t *testing.T) {
+	t.Helper()
+	base := t.TempDir()
+	t.Setenv("FRACTURING_SPACE_AUTH_DB_PATH", filepath.Join(base, "auth.db"))
+}
+
+func startAuthServer(t *testing.T) func() {
+	t.Helper()
+
+	setTempAuthDBPath(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	authServer, err := authserver.New(0, "")
+	if err != nil {
+		cancel()
+		t.Fatalf("new auth server: %v", err)
+	}
+
+	serveErr := make(chan error, 1)
+	go func() {
+		serveErr <- authServer.Serve(ctx)
+	}()
+
+	authAddr := authServer.Addr()
+	waitForGRPCHealth(t, authAddr)
+	t.Setenv("FRACTURING_SPACE_AUTH_ADDR", authAddr)
+
+	return func() {
+		cancel()
+		select {
+		case err := <-serveErr:
+			if err != nil {
+				t.Fatalf("auth server error: %v", err)
+			}
+		case <-time.After(5 * time.Second):
+			t.Fatalf("timed out waiting for auth server to stop")
+		}
+	}
+}
+
+func waitForGRPCHealth(t *testing.T, addr string) {
+	t.Helper()
+
+	conn, err := grpc.NewClient(
+		addr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDefaultCallOptions(grpc.WaitForReady(true)),
+	)
+	if err != nil {
+		t.Fatalf("dial server: %v", err)
+	}
+	defer conn.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := platformgrpc.WaitForHealth(ctx, conn, "", nil); err != nil {
+		t.Fatalf("wait for gRPC health: %v", err)
+	}
 }

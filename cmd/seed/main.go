@@ -12,6 +12,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"syscall"
 
 	"github.com/louisbranch/fracturing.space/internal/seed"
@@ -21,6 +22,7 @@ import (
 func main() {
 	// Static fixture flags
 	seedCfg := seed.DefaultConfig()
+	seedCfg.AuthAddr = envOrDefault([]string{"FRACTURING_SPACE_AUTH_ADDR"}, seedCfg.AuthAddr)
 	var list bool
 
 	// Dynamic generation flags
@@ -150,4 +152,14 @@ func repoRoot() string {
 	fmt.Fprintf(os.Stderr, "go.mod not found from %s\n", filename)
 	os.Exit(1)
 	return ""
+}
+
+func envOrDefault(keys []string, fallback string) string {
+	for _, key := range keys {
+		value := strings.TrimSpace(os.Getenv(key))
+		if value != "" {
+			return value
+		}
+	}
+	return fallback
 }

@@ -14,6 +14,7 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	gamegrpc "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/interceptors"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
@@ -39,6 +40,9 @@ type Server struct {
 
 // defaultAuthDialTimeout caps auth gRPC dial wait time.
 const defaultAuthDialTimeout = 2 * time.Second
+
+// defaultAuthAddr defines the fallback auth gRPC address.
+const defaultAuthAddr = "localhost:8083"
 
 // New creates a configured game server listening on the provided port.
 func New(port int) (*Server, error) {
@@ -206,7 +210,7 @@ func openStores() (*storagesqlite.Store, *storagesqlite.Store, error) {
 func dialAuthGRPC(ctx context.Context) (*grpc.ClientConn, authv1.AuthServiceClient, error) {
 	authAddr := strings.TrimSpace(os.Getenv("FRACTURING_SPACE_AUTH_ADDR"))
 	if authAddr == "" {
-		return nil, nil, nil
+		authAddr = defaultAuthAddr
 	}
 	if ctx == nil {
 		ctx = context.Background()
@@ -221,6 +225,13 @@ func dialAuthGRPC(ctx context.Context) (*grpc.ClientConn, authv1.AuthServiceClie
 	)
 	if err != nil {
 		return nil, nil, fmt.Errorf("dial auth gRPC %s: %w", authAddr, err)
+	}
+	logf := func(format string, args ...any) {
+		log.Printf("auth %s", fmt.Sprintf(format, args...))
+	}
+	if err := platformgrpc.WaitForHealth(ctx, conn, "", logf); err != nil {
+		_ = conn.Close()
+		return nil, nil, fmt.Errorf("auth gRPC health check failed for %s: %w", authAddr, err)
 	}
 	return conn, authv1.NewAuthServiceClient(conn), nil
 }

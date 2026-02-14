@@ -30,6 +30,7 @@ make seed-fresh  # Reset DB and reseed
 | Flag | Description | Default |
 |------|-------------|---------|
 | `-grpc-addr` | game server address | `localhost:8080` |
+| `-auth-addr` | auth server address (uses `FRACTURING_SPACE_AUTH_ADDR` when set) | `localhost:8083` |
 | `-scenario` | Run specific scenario | all |
 | `-list` | List available scenarios | - |
 | `-v` | Verbose output | false |
@@ -57,6 +58,7 @@ make seed-generate-fresh   # Reset DB and generate demo data
 | `-campaigns` | Override number of campaigns | preset default |
 | `-seed` | RNG seed for reproducibility (0 = random) | 0 |
 | `-grpc-addr` | game server address | `localhost:8080` |
+| `-auth-addr` | auth server address (uses `FRACTURING_SPACE_AUTH_ADDR` when set) | `localhost:8083` |
 | `-v` | Verbose output | false |
 
 ### Presets

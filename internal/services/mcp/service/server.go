@@ -13,6 +13,7 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/branding"
+	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	"github.com/louisbranch/fracturing.space/internal/services/mcp/conformance"
 	"github.com/louisbranch/fracturing.space/internal/services/mcp/domain"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -316,33 +317,8 @@ func (s *Server) waitForHealth(ctx context.Context) error {
 		return fmt.Errorf("gRPC connection is not configured")
 	}
 
-	healthClient := grpc_health_v1.NewHealthClient(s.conn)
-	backoff := 200 * time.Millisecond
-	for {
-		callCtx, cancel := context.WithTimeout(ctx, time.Second)
-		response, err := healthClient.Check(callCtx, &grpc_health_v1.HealthCheckRequest{Service: ""})
-		cancel()
-		if err == nil && response.GetStatus() == grpc_health_v1.HealthCheckResponse_SERVING {
-			log.Printf("gRPC health check is SERVING")
-			return nil
-		}
-		if err != nil {
-			log.Printf("waiting for gRPC health: %v", err)
-		} else {
-			log.Printf("waiting for gRPC health: status %s", response.GetStatus().String())
-		}
-
-		select {
-		case <-ctx.Done():
-			return fmt.Errorf("wait for gRPC health: %w", ctx.Err())
-		case <-time.After(backoff):
-		}
-
-		if backoff < time.Second {
-			backoff *= 2
-			if backoff > time.Second {
-				backoff = time.Second
-			}
-		}
+	logf := func(format string, args ...any) {
+		log.Printf("game %s", fmt.Sprintf(format, args...))
 	}
+	return platformgrpc.WaitForHealth(ctx, s.conn, "", logf)
 }
