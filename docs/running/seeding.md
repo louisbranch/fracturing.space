@@ -1,3 +1,9 @@
+---
+title: "Seeding"
+parent: "Running"
+nav_order: 6
+---
+
 # Seeding the Development Database
 
 This guide covers how to populate the development database with demo data for local testing.

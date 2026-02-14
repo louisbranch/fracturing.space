@@ -1,4 +1,13 @@
+---
+title: "Configuration"
+parent: "Running"
+nav_order: 5
+---
+
 # Configuration
+
+This is the full environment variable reference. For setup steps, see
+`quickstart.md` or `local-dev.md`.
 
 ## Environment variables
 
@@ -92,7 +101,7 @@ is omitted. Command-line flags take precedence over env values.
 ### Transport Selection
 
 The MCP server supports `stdio` (default) and `http` transports. See
-[Getting started](getting-started.md) for run commands and
+[Quickstart](quickstart.md) or [Local development](local-dev.md) for run commands and
 [MCP tools and resources](../reference/mcp.md) for HTTP endpoint details.
 
 ## Admin Dashboard Configuration

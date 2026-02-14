@@ -1,51 +1,67 @@
-# Systems: From Zero to Playable
+---
+title: "Systems checklist"
+parent: "Project"
+nav_order: 6
+---
 
-This guide summarizes the system-level work required to bring a new ruleset into Fracturing.Space, from initial definition to a playable mechanical core. It is system-agnostic and focused on what/why, not implementation details.
+# Systems checklist
 
-## 1) Define the System Surface
-- **Ruleset identity**: name, version, and canonical dice model.
-- **Outcome taxonomy**: the result categories players/GM must reason about.
-- **Resource model**: player and GM currencies, caps, and default values.
-- **State scope**: what belongs in profile (static) vs state (dynamic) vs snapshot (campaign-level).
+Use this as the high-level design checklist for a new rules system. For the
+architecture and implementation steps, see `game-systems.md`.
 
-## 2) Deterministic Resolution Core
-- **Deterministic rolls**: seedable randomness with explicit input/output.
-- **Outcome evaluation**: pure functions that map inputs to results.
-- **Explainability**: a rules explanation surface for debugging and audit.
+## System surface
 
-## 3) Profiles, State, and Projections
-- **Profile schema**: traits, thresholds, and static modifiers.
-- **State schema**: mutable resources and combat state.
-- **Snapshots**: campaign-level state and GM resources.
-- **Projections**: derive all state from append-only events.
+- Ruleset identity: name, version, dice model
+- Outcome taxonomy: result categories players/GM must reason about
+- Resource model: player/GM currencies, caps, defaults
+- State scope: profile (static) vs state (dynamic) vs snapshot (campaign-level)
 
-## 4) Core Combat Mechanics
-- **Attack resolution**: hit/avoid flow and difficulty targets.
-- **Damage system**: damage rolls, thresholds, and severity mapping.
-- **Mitigation**: resistance, immunity, and armor rules.
-- **Critical rules**: critical hit/defense effects.
+## Deterministic resolution
 
-## 5) Recovery and Downtime
-- **Rest cadence**: short/long rest semantics and interruption rules.
-- **Downtime moves**: recovery moves and project progression.
-- **Refresh model**: per-rest and per-long-rest feature refresh.
+- Seeded randomness with explicit inputs and outputs
+- Pure outcome evaluation functions
+- Explainability surface for debugging/audit
 
-## 6) Ability Modules and Loadouts
-- **Ability types**: spells/abilities/techniques and their common fields.
-- **Loadout rules**: active vs vaulted capacity.
-- **Swap constraints**: recall costs or swap rules outside rest.
+## State and projections
 
-## 7) Validation and Guardrails
-- **Caps and ranges**: enforce system constraints at domain and projection layers.
-- **Event safety**: reject invalid payloads in projections.
-- **Versioning**: system version compatibility for future rulesets.
+- Profile schema: traits, thresholds, static modifiers
+- State schema: mutable resources and combat state
+- Snapshots for campaign-level state
+- Projections derived only from events
 
-## 8) Exposed Surfaces
-- **Internal domain API** first (for mechanics).
-- **Transport APIs** after mechanics stabilize.
-- **Interface layers** (e.g., MCP) last.
+## Core mechanics
 
-## Success Criteria
-- All deterministic mechanics are reproducible with seeded inputs.
-- Profiles and state can be rebuilt solely from event history.
-- Core combat, recovery, and ability loadout rules are mechanically complete.
+- Attack resolution and difficulty targets
+- Damage rules, thresholds, severity mapping
+- Mitigation: resistance, immunity, armor
+- Critical success rules
+
+## Recovery and downtime
+
+- Rest cadence and interruption rules
+- Downtime move set
+- Refresh model for per-rest features
+
+## Abilities and loadouts
+
+- Ability types and common fields
+- Loadout rules (active vs vaulted)
+- Swap constraints and costs
+
+## Validation and guardrails
+
+- Caps and ranges enforced at domain and projection layers
+- Event safety: reject invalid payloads
+- Versioning and compatibility
+
+## Surfaces and sequencing
+
+- Domain mechanics first
+- Transport APIs after mechanics stabilize
+- MCP and other interfaces last
+
+## Where to go next
+
+- Game system architecture and implementation: `game-systems.md`
+- Event sourcing and replay: `event-replay.md`
+- Domain language: `domain-language.md`

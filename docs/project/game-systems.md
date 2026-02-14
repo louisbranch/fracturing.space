@@ -1,6 +1,14 @@
+---
+title: "Game systems"
+parent: "Project"
+nav_order: 5
+---
+
 # Game Systems Architecture
 
 This document describes how Fracturing.Space supports multiple tabletop RPG systems through a pluggable architecture that separates system-agnostic core functionality from system-specific mechanics.
+
+For the high-level design checklist, see `systems.md`.
 
 ## Design Rationale
 

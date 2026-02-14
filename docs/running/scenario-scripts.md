@@ -1,3 +1,9 @@
+---
+title: "Scenario scripts"
+parent: "Running"
+nav_order: 8
+---
+
 # Running Lua Scenario Scripts
 
 Lua scenarios can be executed against the game gRPC API for testing, seeding, or playtesting.

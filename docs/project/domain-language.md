@@ -1,3 +1,9 @@
+---
+title: "Domain language"
+parent: "Project"
+nav_order: 3
+---
+
 # Domain Language
 
 This document defines the canonical terms for the Fracturing.Space. The language
