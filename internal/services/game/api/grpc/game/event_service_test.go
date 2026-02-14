@@ -6,8 +6,8 @@ import (
 	"time"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage/cursor"
 	"google.golang.org/grpc/codes"
 )
 
@@ -65,8 +65,14 @@ func TestListEvents_TokenWithChangedFilter(t *testing.T) {
 	svc := NewEventService(Stores{Event: eventStore})
 
 	// Create a token with one filter
-	tokenCursor := cursor.NewForwardCursor(10, "type=session.started", "seq")
-	token, err := cursor.Encode(tokenCursor)
+	tokenCursor := pagination.NewCursor(
+		[]pagination.CursorValue{pagination.UintValue("seq", 10)},
+		pagination.DirectionForward,
+		false,
+		"type=session.started",
+		"seq",
+	)
+	token, err := pagination.Encode(tokenCursor)
 	if err != nil {
 		t.Fatalf("encode cursor: %v", err)
 	}
@@ -85,8 +91,14 @@ func TestListEvents_TokenWithChangedOrderBy(t *testing.T) {
 	svc := NewEventService(Stores{Event: eventStore})
 
 	// Create a token with ASC order
-	tokenCursor := cursor.NewForwardCursor(10, "", "seq")
-	token, err := cursor.Encode(tokenCursor)
+	tokenCursor := pagination.NewCursor(
+		[]pagination.CursorValue{pagination.UintValue("seq", 10)},
+		pagination.DirectionForward,
+		false,
+		"",
+		"seq",
+	)
+	token, err := pagination.Encode(tokenCursor)
 	if err != nil {
 		t.Fatalf("encode cursor: %v", err)
 	}
@@ -276,12 +288,12 @@ func TestListEvents_TokenWithInvalidDirection(t *testing.T) {
 	svc := NewEventService(Stores{Event: eventStore})
 
 	// Manually create a token with invalid direction
-	invalidCursor := cursor.Cursor{
-		Seq:        10,
-		Dir:        "invalid",
+	invalidCursor := pagination.Cursor{
+		Values:     []pagination.CursorValue{pagination.UintValue("seq", 10)},
+		Dir:        pagination.Direction("invalid"),
 		FilterHash: "",
 	}
-	token, err := cursor.Encode(invalidCursor)
+	token, err := pagination.Encode(invalidCursor)
 	if err != nil {
 		t.Fatalf("encode cursor: %v", err)
 	}

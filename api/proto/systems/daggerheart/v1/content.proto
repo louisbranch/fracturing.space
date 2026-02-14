@@ -70,10 +70,26 @@ message GetDaggerheartClassResponse {
   DaggerheartClass class = 1;
 }
 
-message ListDaggerheartClassesRequest {}
+message ListDaggerheartClassesRequest {
+  // The maximum number of classes to return.
+  int32 page_size = 1;
+
+  // A page token received from a prior ListDaggerheartClassesResponse.
+  string page_token = 2;
+
+  // Ordering: "name" (default) or "name desc".
+  string order_by = 3;
+
+  // AIP-160 filter expression.
+  // Filterable fields: id, name.
+  string filter = 4;
+}
 
 message ListDaggerheartClassesResponse {
   repeated DaggerheartClass classes = 1;
+  string next_page_token = 2;
+  string previous_page_token = 3;
+  int32 total_size = 4;
 }
 
 message GetDaggerheartSubclassRequest {
@@ -84,10 +100,26 @@ message GetDaggerheartSubclassResponse {
   DaggerheartSubclass subclass = 1;
 }
 
-message ListDaggerheartSubclassesRequest {}
+message ListDaggerheartSubclassesRequest {
+  // The maximum number of subclasses to return.
+  int32 page_size = 1;
+
+  // A page token received from a prior ListDaggerheartSubclassesResponse.
+  string page_token = 2;
+
+  // Ordering: "name" (default) or "name desc".
+  string order_by = 3;
+
+  // AIP-160 filter expression.
+  // Filterable fields: id, name, spellcast_trait.
+  string filter = 4;
+}
 
 message ListDaggerheartSubclassesResponse {
   repeated DaggerheartSubclass subclasses = 1;
+  string next_page_token = 2;
+  string previous_page_token = 3;
+  int32 total_size = 4;
 }
 
 message GetDaggerheartHeritageRequest {
@@ -98,10 +130,26 @@ message GetDaggerheartHeritageResponse {
   DaggerheartHeritage heritage = 1;
 }
 
-message ListDaggerheartHeritagesRequest {}
+message ListDaggerheartHeritagesRequest {
+  // The maximum number of heritages to return.
+  int32 page_size = 1;
+
+  // A page token received from a prior ListDaggerheartHeritagesResponse.
+  string page_token = 2;
+
+  // Ordering: "name" (default) or "name desc".
+  string order_by = 3;
+
+  // AIP-160 filter expression.
+  // Filterable fields: id, name, kind.
+  string filter = 4;
+}
 
 message ListDaggerheartHeritagesResponse {
   repeated DaggerheartHeritage heritages = 1;
+  string next_page_token = 2;
+  string previous_page_token = 3;
+  int32 total_size = 4;
 }
 
 message GetDaggerheartExperienceRequest {
@@ -112,10 +160,26 @@ message GetDaggerheartExperienceResponse {
   DaggerheartExperienceEntry experience = 1;
 }
 
-message ListDaggerheartExperiencesRequest {}
+message ListDaggerheartExperiencesRequest {
+  // The maximum number of experiences to return.
+  int32 page_size = 1;
+
+  // A page token received from a prior ListDaggerheartExperiencesResponse.
+  string page_token = 2;
+
+  // Ordering: "name" (default) or "name desc".
+  string order_by = 3;
+
+  // AIP-160 filter expression.
+  // Filterable fields: id, name.
+  string filter = 4;
+}
 
 message ListDaggerheartExperiencesResponse {
   repeated DaggerheartExperienceEntry experiences = 1;
+  string next_page_token = 2;
+  string previous_page_token = 3;
+  int32 total_size = 4;
 }
 
 message GetDaggerheartAdversaryRequest {
@@ -126,10 +190,26 @@ message GetDaggerheartAdversaryResponse {
   DaggerheartAdversaryEntry adversary = 1;
 }
 
-message ListDaggerheartAdversariesRequest {}
+message ListDaggerheartAdversariesRequest {
+  // The maximum number of adversaries to return.
+  int32 page_size = 1;
+
+  // A page token received from a prior ListDaggerheartAdversariesResponse.
+  string page_token = 2;
+
+  // Ordering: "name" (default) or "name desc".
+  string order_by = 3;
+
+  // AIP-160 filter expression.
+  // Filterable fields: id, name, tier, role.
+  string filter = 4;
+}
 
 message ListDaggerheartAdversariesResponse {
   repeated DaggerheartAdversaryEntry adversaries = 1;
+  string next_page_token = 2;
+  string previous_page_token = 3;
+  int32 total_size = 4;
 }
 
 message GetDaggerheartBeastformRequest {
@@ -140,10 +220,26 @@ message GetDaggerheartBeastformResponse {
   DaggerheartBeastformEntry beastform = 1;
 }
 
-message ListDaggerheartBeastformsRequest {}
+message ListDaggerheartBeastformsRequest {
+  // The maximum number of beastforms to return.
+  int32 page_size = 1;
+
+  // A page token received from a prior ListDaggerheartBeastformsResponse.
+  string page_token = 2;
+
+  // Ordering: "name" (default) or "name desc".
+  string order_by = 3;
+
+  // AIP-160 filter expression.
+  // Filterable fields: id, name, tier, trait.
+  string filter = 4;
+}
 
 message ListDaggerheartBeastformsResponse {
   repeated DaggerheartBeastformEntry beastforms = 1;
+  string next_page_token = 2;
+  string previous_page_token = 3;
+  int32 total_size = 4;
 }
 
 message GetDaggerheartCompanionExperienceRequest {
@@ -154,10 +250,26 @@ message GetDaggerheartCompanionExperienceResponse {
   DaggerheartCompanionExperienceEntry experience = 1;
 }
 
-message ListDaggerheartCompanionExperiencesRequest {}
+message ListDaggerheartCompanionExperiencesRequest {
+  // The maximum number of companion experiences to return.
+  int32 page_size = 1;
+
+  // A page token received from a prior ListDaggerheartCompanionExperiencesResponse.
+  string page_token = 2;
+
+  // Ordering: "name" (default) or "name desc".
+  string order_by = 3;
+
+  // AIP-160 filter expression.
+  // Filterable fields: id, name.
+  string filter = 4;
+}
 
 message ListDaggerheartCompanionExperiencesResponse {
   repeated DaggerheartCompanionExperienceEntry experiences = 1;
+  string next_page_token = 2;
+  string previous_page_token = 3;
+  int32 total_size = 4;
 }
 
 message GetDaggerheartLootEntryRequest {
@@ -168,10 +280,26 @@ message GetDaggerheartLootEntryResponse {
   DaggerheartLootEntry entry = 1;
 }
 
-message ListDaggerheartLootEntriesRequest {}
+message ListDaggerheartLootEntriesRequest {
+  // The maximum number of loot entries to return.
+  int32 page_size = 1;
+
+  // A page token received from a prior ListDaggerheartLootEntriesResponse.
+  string page_token = 2;
+
+  // Ordering: "roll" (default) or "roll desc".
+  string order_by = 3;
+
+  // AIP-160 filter expression.
+  // Filterable fields: id, name, roll.
+  string filter = 4;
+}
 
 message ListDaggerheartLootEntriesResponse {
   repeated DaggerheartLootEntry entries = 1;
+  string next_page_token = 2;
+  string previous_page_token = 3;
+  int32 total_size = 4;
 }
 
 message GetDaggerheartDamageTypeRequest {
@@ -182,10 +310,26 @@ message GetDaggerheartDamageTypeResponse {
   DaggerheartDamageTypeEntry damage_type = 1;
 }
 
-message ListDaggerheartDamageTypesRequest {}
+message ListDaggerheartDamageTypesRequest {
+  // The maximum number of damage types to return.
+  int32 page_size = 1;
+
+  // A page token received from a prior ListDaggerheartDamageTypesResponse.
+  string page_token = 2;
+
+  // Ordering: "name" (default) or "name desc".
+  string order_by = 3;
+
+  // AIP-160 filter expression.
+  // Filterable fields: id, name.
+  string filter = 4;
+}
 
 message ListDaggerheartDamageTypesResponse {
   repeated DaggerheartDamageTypeEntry damage_types = 1;
+  string next_page_token = 2;
+  string previous_page_token = 3;
+  int32 total_size = 4;
 }
 
 message GetDaggerheartDomainRequest {
@@ -196,10 +340,26 @@ message GetDaggerheartDomainResponse {
   DaggerheartDomain domain = 1;
 }
 
-message ListDaggerheartDomainsRequest {}
+message ListDaggerheartDomainsRequest {
+  // The maximum number of domains to return.
+  int32 page_size = 1;
+
+  // A page token received from a prior ListDaggerheartDomainsResponse.
+  string page_token = 2;
+
+  // Ordering: "name" (default) or "name desc".
+  string order_by = 3;
+
+  // AIP-160 filter expression.
+  // Filterable fields: id, name.
+  string filter = 4;
+}
 
 message ListDaggerheartDomainsResponse {
   repeated DaggerheartDomain domains = 1;
+  string next_page_token = 2;
+  string previous_page_token = 3;
+  int32 total_size = 4;
 }
 
 message GetDaggerheartDomainCardRequest {
@@ -211,11 +371,28 @@ message GetDaggerheartDomainCardResponse {
 }
 
 message ListDaggerheartDomainCardsRequest {
+  // Optional filter for a specific domain.
   string domain_id = 1;
+
+  // The maximum number of domain cards to return.
+  int32 page_size = 2;
+
+  // A page token received from a prior ListDaggerheartDomainCardsResponse.
+  string page_token = 3;
+
+  // Ordering: "level" (default) or "level desc".
+  string order_by = 4;
+
+  // AIP-160 filter expression.
+  // Filterable fields: id, name, domain_id, level, type.
+  string filter = 5;
 }
 
 message ListDaggerheartDomainCardsResponse {
   repeated DaggerheartDomainCard domain_cards = 1;
+  string next_page_token = 2;
+  string previous_page_token = 3;
+  int32 total_size = 4;
 }
 
 message GetDaggerheartWeaponRequest {
@@ -226,10 +403,26 @@ message GetDaggerheartWeaponResponse {
   DaggerheartWeapon weapon = 1;
 }
 
-message ListDaggerheartWeaponsRequest {}
+message ListDaggerheartWeaponsRequest {
+  // The maximum number of weapons to return.
+  int32 page_size = 1;
+
+  // A page token received from a prior ListDaggerheartWeaponsResponse.
+  string page_token = 2;
+
+  // Ordering: "name" (default) or "name desc".
+  string order_by = 3;
+
+  // AIP-160 filter expression.
+  // Filterable fields: id, name, category, tier, trait, damage_type.
+  string filter = 4;
+}
 
 message ListDaggerheartWeaponsResponse {
   repeated DaggerheartWeapon weapons = 1;
+  string next_page_token = 2;
+  string previous_page_token = 3;
+  int32 total_size = 4;
 }
 
 message GetDaggerheartArmorRequest {
@@ -240,10 +433,26 @@ message GetDaggerheartArmorResponse {
   DaggerheartArmor armor = 1;
 }
 
-message ListDaggerheartArmorRequest {}
+message ListDaggerheartArmorRequest {
+  // The maximum number of armor entries to return.
+  int32 page_size = 1;
+
+  // A page token received from a prior ListDaggerheartArmorResponse.
+  string page_token = 2;
+
+  // Ordering: "name" (default) or "name desc".
+  string order_by = 3;
+
+  // AIP-160 filter expression.
+  // Filterable fields: id, name, tier.
+  string filter = 4;
+}
 
 message ListDaggerheartArmorResponse {
   repeated DaggerheartArmor armor = 1;
+  string next_page_token = 2;
+  string previous_page_token = 3;
+  int32 total_size = 4;
 }
 
 message GetDaggerheartItemRequest {
@@ -254,10 +463,26 @@ message GetDaggerheartItemResponse {
   DaggerheartItem item = 1;
 }
 
-message ListDaggerheartItemsRequest {}
+message ListDaggerheartItemsRequest {
+  // The maximum number of items to return.
+  int32 page_size = 1;
+
+  // A page token received from a prior ListDaggerheartItemsResponse.
+  string page_token = 2;
+
+  // Ordering: "name" (default) or "name desc".
+  string order_by = 3;
+
+  // AIP-160 filter expression.
+  // Filterable fields: id, name, rarity, kind.
+  string filter = 4;
+}
 
 message ListDaggerheartItemsResponse {
   repeated DaggerheartItem items = 1;
+  string next_page_token = 2;
+  string previous_page_token = 3;
+  int32 total_size = 4;
 }
 
 message GetDaggerheartEnvironmentRequest {
@@ -268,10 +493,26 @@ message GetDaggerheartEnvironmentResponse {
   DaggerheartEnvironment environment = 1;
 }
 
-message ListDaggerheartEnvironmentsRequest {}
+message ListDaggerheartEnvironmentsRequest {
+  // The maximum number of environments to return.
+  int32 page_size = 1;
+
+  // A page token received from a prior ListDaggerheartEnvironmentsResponse.
+  string page_token = 2;
+
+  // Ordering: "name" (default) or "name desc".
+  string order_by = 3;
+
+  // AIP-160 filter expression.
+  // Filterable fields: id, name, tier, type, difficulty.
+  string filter = 4;
+}
 
 message ListDaggerheartEnvironmentsResponse {
   repeated DaggerheartEnvironment environments = 1;
+  string next_page_token = 2;
+  string previous_page_token = 3;
+  int32 total_size = 4;
 }
 
 message DaggerheartFeature {

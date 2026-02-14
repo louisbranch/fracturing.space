@@ -502,7 +502,16 @@ func (x *GetDaggerheartClassResponse) GetClass() *DaggerheartClass {
 }
 
 type ListDaggerheartClassesRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The maximum number of classes to return.
+	PageSize int32 `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// A page token received from a prior ListDaggerheartClassesResponse.
+	PageToken string `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	// Ordering: "name" (default) or "name desc".
+	OrderBy string `protobuf:"bytes,3,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
+	// AIP-160 filter expression.
+	// Filterable fields: id, name.
+	Filter        string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -537,11 +546,42 @@ func (*ListDaggerheartClassesRequest) Descriptor() ([]byte, []int) {
 	return file_systems_daggerheart_v1_content_proto_rawDescGZIP(), []int{4}
 }
 
+func (x *ListDaggerheartClassesRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListDaggerheartClassesRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartClassesRequest) GetOrderBy() string {
+	if x != nil {
+		return x.OrderBy
+	}
+	return ""
+}
+
+func (x *ListDaggerheartClassesRequest) GetFilter() string {
+	if x != nil {
+		return x.Filter
+	}
+	return ""
+}
+
 type ListDaggerheartClassesResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Classes       []*DaggerheartClass    `protobuf:"bytes,1,rep,name=classes,proto3" json:"classes,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Classes           []*DaggerheartClass    `protobuf:"bytes,1,rep,name=classes,proto3" json:"classes,omitempty"`
+	NextPageToken     string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	PreviousPageToken string                 `protobuf:"bytes,3,opt,name=previous_page_token,json=previousPageToken,proto3" json:"previous_page_token,omitempty"`
+	TotalSize         int32                  `protobuf:"varint,4,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *ListDaggerheartClassesResponse) Reset() {
@@ -579,6 +619,27 @@ func (x *ListDaggerheartClassesResponse) GetClasses() []*DaggerheartClass {
 		return x.Classes
 	}
 	return nil
+}
+
+func (x *ListDaggerheartClassesResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartClassesResponse) GetPreviousPageToken() string {
+	if x != nil {
+		return x.PreviousPageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartClassesResponse) GetTotalSize() int32 {
+	if x != nil {
+		return x.TotalSize
+	}
+	return 0
 }
 
 type GetDaggerheartSubclassRequest struct {
@@ -670,7 +731,16 @@ func (x *GetDaggerheartSubclassResponse) GetSubclass() *DaggerheartSubclass {
 }
 
 type ListDaggerheartSubclassesRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The maximum number of subclasses to return.
+	PageSize int32 `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// A page token received from a prior ListDaggerheartSubclassesResponse.
+	PageToken string `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	// Ordering: "name" (default) or "name desc".
+	OrderBy string `protobuf:"bytes,3,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
+	// AIP-160 filter expression.
+	// Filterable fields: id, name, spellcast_trait.
+	Filter        string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -705,11 +775,42 @@ func (*ListDaggerheartSubclassesRequest) Descriptor() ([]byte, []int) {
 	return file_systems_daggerheart_v1_content_proto_rawDescGZIP(), []int{8}
 }
 
+func (x *ListDaggerheartSubclassesRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListDaggerheartSubclassesRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartSubclassesRequest) GetOrderBy() string {
+	if x != nil {
+		return x.OrderBy
+	}
+	return ""
+}
+
+func (x *ListDaggerheartSubclassesRequest) GetFilter() string {
+	if x != nil {
+		return x.Filter
+	}
+	return ""
+}
+
 type ListDaggerheartSubclassesResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Subclasses    []*DaggerheartSubclass `protobuf:"bytes,1,rep,name=subclasses,proto3" json:"subclasses,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Subclasses        []*DaggerheartSubclass `protobuf:"bytes,1,rep,name=subclasses,proto3" json:"subclasses,omitempty"`
+	NextPageToken     string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	PreviousPageToken string                 `protobuf:"bytes,3,opt,name=previous_page_token,json=previousPageToken,proto3" json:"previous_page_token,omitempty"`
+	TotalSize         int32                  `protobuf:"varint,4,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *ListDaggerheartSubclassesResponse) Reset() {
@@ -747,6 +848,27 @@ func (x *ListDaggerheartSubclassesResponse) GetSubclasses() []*DaggerheartSubcla
 		return x.Subclasses
 	}
 	return nil
+}
+
+func (x *ListDaggerheartSubclassesResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartSubclassesResponse) GetPreviousPageToken() string {
+	if x != nil {
+		return x.PreviousPageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartSubclassesResponse) GetTotalSize() int32 {
+	if x != nil {
+		return x.TotalSize
+	}
+	return 0
 }
 
 type GetDaggerheartHeritageRequest struct {
@@ -838,7 +960,16 @@ func (x *GetDaggerheartHeritageResponse) GetHeritage() *DaggerheartHeritage {
 }
 
 type ListDaggerheartHeritagesRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The maximum number of heritages to return.
+	PageSize int32 `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// A page token received from a prior ListDaggerheartHeritagesResponse.
+	PageToken string `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	// Ordering: "name" (default) or "name desc".
+	OrderBy string `protobuf:"bytes,3,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
+	// AIP-160 filter expression.
+	// Filterable fields: id, name, kind.
+	Filter        string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -873,11 +1004,42 @@ func (*ListDaggerheartHeritagesRequest) Descriptor() ([]byte, []int) {
 	return file_systems_daggerheart_v1_content_proto_rawDescGZIP(), []int{12}
 }
 
+func (x *ListDaggerheartHeritagesRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListDaggerheartHeritagesRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartHeritagesRequest) GetOrderBy() string {
+	if x != nil {
+		return x.OrderBy
+	}
+	return ""
+}
+
+func (x *ListDaggerheartHeritagesRequest) GetFilter() string {
+	if x != nil {
+		return x.Filter
+	}
+	return ""
+}
+
 type ListDaggerheartHeritagesResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Heritages     []*DaggerheartHeritage `protobuf:"bytes,1,rep,name=heritages,proto3" json:"heritages,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Heritages         []*DaggerheartHeritage `protobuf:"bytes,1,rep,name=heritages,proto3" json:"heritages,omitempty"`
+	NextPageToken     string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	PreviousPageToken string                 `protobuf:"bytes,3,opt,name=previous_page_token,json=previousPageToken,proto3" json:"previous_page_token,omitempty"`
+	TotalSize         int32                  `protobuf:"varint,4,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *ListDaggerheartHeritagesResponse) Reset() {
@@ -915,6 +1077,27 @@ func (x *ListDaggerheartHeritagesResponse) GetHeritages() []*DaggerheartHeritage
 		return x.Heritages
 	}
 	return nil
+}
+
+func (x *ListDaggerheartHeritagesResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartHeritagesResponse) GetPreviousPageToken() string {
+	if x != nil {
+		return x.PreviousPageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartHeritagesResponse) GetTotalSize() int32 {
+	if x != nil {
+		return x.TotalSize
+	}
+	return 0
 }
 
 type GetDaggerheartExperienceRequest struct {
@@ -1006,7 +1189,16 @@ func (x *GetDaggerheartExperienceResponse) GetExperience() *DaggerheartExperienc
 }
 
 type ListDaggerheartExperiencesRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The maximum number of experiences to return.
+	PageSize int32 `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// A page token received from a prior ListDaggerheartExperiencesResponse.
+	PageToken string `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	// Ordering: "name" (default) or "name desc".
+	OrderBy string `protobuf:"bytes,3,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
+	// AIP-160 filter expression.
+	// Filterable fields: id, name.
+	Filter        string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1041,11 +1233,42 @@ func (*ListDaggerheartExperiencesRequest) Descriptor() ([]byte, []int) {
 	return file_systems_daggerheart_v1_content_proto_rawDescGZIP(), []int{16}
 }
 
+func (x *ListDaggerheartExperiencesRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListDaggerheartExperiencesRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartExperiencesRequest) GetOrderBy() string {
+	if x != nil {
+		return x.OrderBy
+	}
+	return ""
+}
+
+func (x *ListDaggerheartExperiencesRequest) GetFilter() string {
+	if x != nil {
+		return x.Filter
+	}
+	return ""
+}
+
 type ListDaggerheartExperiencesResponse struct {
-	state         protoimpl.MessageState        `protogen:"open.v1"`
-	Experiences   []*DaggerheartExperienceEntry `protobuf:"bytes,1,rep,name=experiences,proto3" json:"experiences,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState        `protogen:"open.v1"`
+	Experiences       []*DaggerheartExperienceEntry `protobuf:"bytes,1,rep,name=experiences,proto3" json:"experiences,omitempty"`
+	NextPageToken     string                        `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	PreviousPageToken string                        `protobuf:"bytes,3,opt,name=previous_page_token,json=previousPageToken,proto3" json:"previous_page_token,omitempty"`
+	TotalSize         int32                         `protobuf:"varint,4,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *ListDaggerheartExperiencesResponse) Reset() {
@@ -1083,6 +1306,27 @@ func (x *ListDaggerheartExperiencesResponse) GetExperiences() []*DaggerheartExpe
 		return x.Experiences
 	}
 	return nil
+}
+
+func (x *ListDaggerheartExperiencesResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartExperiencesResponse) GetPreviousPageToken() string {
+	if x != nil {
+		return x.PreviousPageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartExperiencesResponse) GetTotalSize() int32 {
+	if x != nil {
+		return x.TotalSize
+	}
+	return 0
 }
 
 type GetDaggerheartAdversaryRequest struct {
@@ -1174,7 +1418,16 @@ func (x *GetDaggerheartAdversaryResponse) GetAdversary() *DaggerheartAdversaryEn
 }
 
 type ListDaggerheartAdversariesRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The maximum number of adversaries to return.
+	PageSize int32 `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// A page token received from a prior ListDaggerheartAdversariesResponse.
+	PageToken string `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	// Ordering: "name" (default) or "name desc".
+	OrderBy string `protobuf:"bytes,3,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
+	// AIP-160 filter expression.
+	// Filterable fields: id, name, tier, role.
+	Filter        string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1209,11 +1462,42 @@ func (*ListDaggerheartAdversariesRequest) Descriptor() ([]byte, []int) {
 	return file_systems_daggerheart_v1_content_proto_rawDescGZIP(), []int{20}
 }
 
+func (x *ListDaggerheartAdversariesRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListDaggerheartAdversariesRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartAdversariesRequest) GetOrderBy() string {
+	if x != nil {
+		return x.OrderBy
+	}
+	return ""
+}
+
+func (x *ListDaggerheartAdversariesRequest) GetFilter() string {
+	if x != nil {
+		return x.Filter
+	}
+	return ""
+}
+
 type ListDaggerheartAdversariesResponse struct {
-	state         protoimpl.MessageState       `protogen:"open.v1"`
-	Adversaries   []*DaggerheartAdversaryEntry `protobuf:"bytes,1,rep,name=adversaries,proto3" json:"adversaries,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState       `protogen:"open.v1"`
+	Adversaries       []*DaggerheartAdversaryEntry `protobuf:"bytes,1,rep,name=adversaries,proto3" json:"adversaries,omitempty"`
+	NextPageToken     string                       `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	PreviousPageToken string                       `protobuf:"bytes,3,opt,name=previous_page_token,json=previousPageToken,proto3" json:"previous_page_token,omitempty"`
+	TotalSize         int32                        `protobuf:"varint,4,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *ListDaggerheartAdversariesResponse) Reset() {
@@ -1251,6 +1535,27 @@ func (x *ListDaggerheartAdversariesResponse) GetAdversaries() []*DaggerheartAdve
 		return x.Adversaries
 	}
 	return nil
+}
+
+func (x *ListDaggerheartAdversariesResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartAdversariesResponse) GetPreviousPageToken() string {
+	if x != nil {
+		return x.PreviousPageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartAdversariesResponse) GetTotalSize() int32 {
+	if x != nil {
+		return x.TotalSize
+	}
+	return 0
 }
 
 type GetDaggerheartBeastformRequest struct {
@@ -1342,7 +1647,16 @@ func (x *GetDaggerheartBeastformResponse) GetBeastform() *DaggerheartBeastformEn
 }
 
 type ListDaggerheartBeastformsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The maximum number of beastforms to return.
+	PageSize int32 `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// A page token received from a prior ListDaggerheartBeastformsResponse.
+	PageToken string `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	// Ordering: "name" (default) or "name desc".
+	OrderBy string `protobuf:"bytes,3,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
+	// AIP-160 filter expression.
+	// Filterable fields: id, name, tier, trait.
+	Filter        string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1377,11 +1691,42 @@ func (*ListDaggerheartBeastformsRequest) Descriptor() ([]byte, []int) {
 	return file_systems_daggerheart_v1_content_proto_rawDescGZIP(), []int{24}
 }
 
+func (x *ListDaggerheartBeastformsRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListDaggerheartBeastformsRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartBeastformsRequest) GetOrderBy() string {
+	if x != nil {
+		return x.OrderBy
+	}
+	return ""
+}
+
+func (x *ListDaggerheartBeastformsRequest) GetFilter() string {
+	if x != nil {
+		return x.Filter
+	}
+	return ""
+}
+
 type ListDaggerheartBeastformsResponse struct {
-	state         protoimpl.MessageState       `protogen:"open.v1"`
-	Beastforms    []*DaggerheartBeastformEntry `protobuf:"bytes,1,rep,name=beastforms,proto3" json:"beastforms,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState       `protogen:"open.v1"`
+	Beastforms        []*DaggerheartBeastformEntry `protobuf:"bytes,1,rep,name=beastforms,proto3" json:"beastforms,omitempty"`
+	NextPageToken     string                       `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	PreviousPageToken string                       `protobuf:"bytes,3,opt,name=previous_page_token,json=previousPageToken,proto3" json:"previous_page_token,omitempty"`
+	TotalSize         int32                        `protobuf:"varint,4,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *ListDaggerheartBeastformsResponse) Reset() {
@@ -1419,6 +1764,27 @@ func (x *ListDaggerheartBeastformsResponse) GetBeastforms() []*DaggerheartBeastf
 		return x.Beastforms
 	}
 	return nil
+}
+
+func (x *ListDaggerheartBeastformsResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartBeastformsResponse) GetPreviousPageToken() string {
+	if x != nil {
+		return x.PreviousPageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartBeastformsResponse) GetTotalSize() int32 {
+	if x != nil {
+		return x.TotalSize
+	}
+	return 0
 }
 
 type GetDaggerheartCompanionExperienceRequest struct {
@@ -1510,7 +1876,16 @@ func (x *GetDaggerheartCompanionExperienceResponse) GetExperience() *Daggerheart
 }
 
 type ListDaggerheartCompanionExperiencesRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The maximum number of companion experiences to return.
+	PageSize int32 `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// A page token received from a prior ListDaggerheartCompanionExperiencesResponse.
+	PageToken string `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	// Ordering: "name" (default) or "name desc".
+	OrderBy string `protobuf:"bytes,3,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
+	// AIP-160 filter expression.
+	// Filterable fields: id, name.
+	Filter        string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1545,11 +1920,42 @@ func (*ListDaggerheartCompanionExperiencesRequest) Descriptor() ([]byte, []int) 
 	return file_systems_daggerheart_v1_content_proto_rawDescGZIP(), []int{28}
 }
 
+func (x *ListDaggerheartCompanionExperiencesRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListDaggerheartCompanionExperiencesRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartCompanionExperiencesRequest) GetOrderBy() string {
+	if x != nil {
+		return x.OrderBy
+	}
+	return ""
+}
+
+func (x *ListDaggerheartCompanionExperiencesRequest) GetFilter() string {
+	if x != nil {
+		return x.Filter
+	}
+	return ""
+}
+
 type ListDaggerheartCompanionExperiencesResponse struct {
-	state         protoimpl.MessageState                 `protogen:"open.v1"`
-	Experiences   []*DaggerheartCompanionExperienceEntry `protobuf:"bytes,1,rep,name=experiences,proto3" json:"experiences,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState                 `protogen:"open.v1"`
+	Experiences       []*DaggerheartCompanionExperienceEntry `protobuf:"bytes,1,rep,name=experiences,proto3" json:"experiences,omitempty"`
+	NextPageToken     string                                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	PreviousPageToken string                                 `protobuf:"bytes,3,opt,name=previous_page_token,json=previousPageToken,proto3" json:"previous_page_token,omitempty"`
+	TotalSize         int32                                  `protobuf:"varint,4,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *ListDaggerheartCompanionExperiencesResponse) Reset() {
@@ -1587,6 +1993,27 @@ func (x *ListDaggerheartCompanionExperiencesResponse) GetExperiences() []*Dagger
 		return x.Experiences
 	}
 	return nil
+}
+
+func (x *ListDaggerheartCompanionExperiencesResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartCompanionExperiencesResponse) GetPreviousPageToken() string {
+	if x != nil {
+		return x.PreviousPageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartCompanionExperiencesResponse) GetTotalSize() int32 {
+	if x != nil {
+		return x.TotalSize
+	}
+	return 0
 }
 
 type GetDaggerheartLootEntryRequest struct {
@@ -1678,7 +2105,16 @@ func (x *GetDaggerheartLootEntryResponse) GetEntry() *DaggerheartLootEntry {
 }
 
 type ListDaggerheartLootEntriesRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The maximum number of loot entries to return.
+	PageSize int32 `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// A page token received from a prior ListDaggerheartLootEntriesResponse.
+	PageToken string `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	// Ordering: "roll" (default) or "roll desc".
+	OrderBy string `protobuf:"bytes,3,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
+	// AIP-160 filter expression.
+	// Filterable fields: id, name, roll.
+	Filter        string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1713,11 +2149,42 @@ func (*ListDaggerheartLootEntriesRequest) Descriptor() ([]byte, []int) {
 	return file_systems_daggerheart_v1_content_proto_rawDescGZIP(), []int{32}
 }
 
+func (x *ListDaggerheartLootEntriesRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListDaggerheartLootEntriesRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartLootEntriesRequest) GetOrderBy() string {
+	if x != nil {
+		return x.OrderBy
+	}
+	return ""
+}
+
+func (x *ListDaggerheartLootEntriesRequest) GetFilter() string {
+	if x != nil {
+		return x.Filter
+	}
+	return ""
+}
+
 type ListDaggerheartLootEntriesResponse struct {
-	state         protoimpl.MessageState  `protogen:"open.v1"`
-	Entries       []*DaggerheartLootEntry `protobuf:"bytes,1,rep,name=entries,proto3" json:"entries,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState  `protogen:"open.v1"`
+	Entries           []*DaggerheartLootEntry `protobuf:"bytes,1,rep,name=entries,proto3" json:"entries,omitempty"`
+	NextPageToken     string                  `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	PreviousPageToken string                  `protobuf:"bytes,3,opt,name=previous_page_token,json=previousPageToken,proto3" json:"previous_page_token,omitempty"`
+	TotalSize         int32                   `protobuf:"varint,4,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *ListDaggerheartLootEntriesResponse) Reset() {
@@ -1755,6 +2222,27 @@ func (x *ListDaggerheartLootEntriesResponse) GetEntries() []*DaggerheartLootEntr
 		return x.Entries
 	}
 	return nil
+}
+
+func (x *ListDaggerheartLootEntriesResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartLootEntriesResponse) GetPreviousPageToken() string {
+	if x != nil {
+		return x.PreviousPageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartLootEntriesResponse) GetTotalSize() int32 {
+	if x != nil {
+		return x.TotalSize
+	}
+	return 0
 }
 
 type GetDaggerheartDamageTypeRequest struct {
@@ -1846,7 +2334,16 @@ func (x *GetDaggerheartDamageTypeResponse) GetDamageType() *DaggerheartDamageTyp
 }
 
 type ListDaggerheartDamageTypesRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The maximum number of damage types to return.
+	PageSize int32 `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// A page token received from a prior ListDaggerheartDamageTypesResponse.
+	PageToken string `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	// Ordering: "name" (default) or "name desc".
+	OrderBy string `protobuf:"bytes,3,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
+	// AIP-160 filter expression.
+	// Filterable fields: id, name.
+	Filter        string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1881,11 +2378,42 @@ func (*ListDaggerheartDamageTypesRequest) Descriptor() ([]byte, []int) {
 	return file_systems_daggerheart_v1_content_proto_rawDescGZIP(), []int{36}
 }
 
+func (x *ListDaggerheartDamageTypesRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListDaggerheartDamageTypesRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartDamageTypesRequest) GetOrderBy() string {
+	if x != nil {
+		return x.OrderBy
+	}
+	return ""
+}
+
+func (x *ListDaggerheartDamageTypesRequest) GetFilter() string {
+	if x != nil {
+		return x.Filter
+	}
+	return ""
+}
+
 type ListDaggerheartDamageTypesResponse struct {
-	state         protoimpl.MessageState        `protogen:"open.v1"`
-	DamageTypes   []*DaggerheartDamageTypeEntry `protobuf:"bytes,1,rep,name=damage_types,json=damageTypes,proto3" json:"damage_types,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState        `protogen:"open.v1"`
+	DamageTypes       []*DaggerheartDamageTypeEntry `protobuf:"bytes,1,rep,name=damage_types,json=damageTypes,proto3" json:"damage_types,omitempty"`
+	NextPageToken     string                        `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	PreviousPageToken string                        `protobuf:"bytes,3,opt,name=previous_page_token,json=previousPageToken,proto3" json:"previous_page_token,omitempty"`
+	TotalSize         int32                         `protobuf:"varint,4,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *ListDaggerheartDamageTypesResponse) Reset() {
@@ -1923,6 +2451,27 @@ func (x *ListDaggerheartDamageTypesResponse) GetDamageTypes() []*DaggerheartDama
 		return x.DamageTypes
 	}
 	return nil
+}
+
+func (x *ListDaggerheartDamageTypesResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartDamageTypesResponse) GetPreviousPageToken() string {
+	if x != nil {
+		return x.PreviousPageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartDamageTypesResponse) GetTotalSize() int32 {
+	if x != nil {
+		return x.TotalSize
+	}
+	return 0
 }
 
 type GetDaggerheartDomainRequest struct {
@@ -2014,7 +2563,16 @@ func (x *GetDaggerheartDomainResponse) GetDomain() *DaggerheartDomain {
 }
 
 type ListDaggerheartDomainsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The maximum number of domains to return.
+	PageSize int32 `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// A page token received from a prior ListDaggerheartDomainsResponse.
+	PageToken string `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	// Ordering: "name" (default) or "name desc".
+	OrderBy string `protobuf:"bytes,3,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
+	// AIP-160 filter expression.
+	// Filterable fields: id, name.
+	Filter        string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2049,11 +2607,42 @@ func (*ListDaggerheartDomainsRequest) Descriptor() ([]byte, []int) {
 	return file_systems_daggerheart_v1_content_proto_rawDescGZIP(), []int{40}
 }
 
+func (x *ListDaggerheartDomainsRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListDaggerheartDomainsRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartDomainsRequest) GetOrderBy() string {
+	if x != nil {
+		return x.OrderBy
+	}
+	return ""
+}
+
+func (x *ListDaggerheartDomainsRequest) GetFilter() string {
+	if x != nil {
+		return x.Filter
+	}
+	return ""
+}
+
 type ListDaggerheartDomainsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Domains       []*DaggerheartDomain   `protobuf:"bytes,1,rep,name=domains,proto3" json:"domains,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Domains           []*DaggerheartDomain   `protobuf:"bytes,1,rep,name=domains,proto3" json:"domains,omitempty"`
+	NextPageToken     string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	PreviousPageToken string                 `protobuf:"bytes,3,opt,name=previous_page_token,json=previousPageToken,proto3" json:"previous_page_token,omitempty"`
+	TotalSize         int32                  `protobuf:"varint,4,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *ListDaggerheartDomainsResponse) Reset() {
@@ -2091,6 +2680,27 @@ func (x *ListDaggerheartDomainsResponse) GetDomains() []*DaggerheartDomain {
 		return x.Domains
 	}
 	return nil
+}
+
+func (x *ListDaggerheartDomainsResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartDomainsResponse) GetPreviousPageToken() string {
+	if x != nil {
+		return x.PreviousPageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartDomainsResponse) GetTotalSize() int32 {
+	if x != nil {
+		return x.TotalSize
+	}
+	return 0
 }
 
 type GetDaggerheartDomainCardRequest struct {
@@ -2182,8 +2792,18 @@ func (x *GetDaggerheartDomainCardResponse) GetDomainCard() *DaggerheartDomainCar
 }
 
 type ListDaggerheartDomainCardsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	DomainId      string                 `protobuf:"bytes,1,opt,name=domain_id,json=domainId,proto3" json:"domain_id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Optional filter for a specific domain.
+	DomainId string `protobuf:"bytes,1,opt,name=domain_id,json=domainId,proto3" json:"domain_id,omitempty"`
+	// The maximum number of domain cards to return.
+	PageSize int32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// A page token received from a prior ListDaggerheartDomainCardsResponse.
+	PageToken string `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	// Ordering: "level" (default) or "level desc".
+	OrderBy string `protobuf:"bytes,4,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
+	// AIP-160 filter expression.
+	// Filterable fields: id, name, domain_id, level, type.
+	Filter        string `protobuf:"bytes,5,opt,name=filter,proto3" json:"filter,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2225,11 +2845,42 @@ func (x *ListDaggerheartDomainCardsRequest) GetDomainId() string {
 	return ""
 }
 
+func (x *ListDaggerheartDomainCardsRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListDaggerheartDomainCardsRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartDomainCardsRequest) GetOrderBy() string {
+	if x != nil {
+		return x.OrderBy
+	}
+	return ""
+}
+
+func (x *ListDaggerheartDomainCardsRequest) GetFilter() string {
+	if x != nil {
+		return x.Filter
+	}
+	return ""
+}
+
 type ListDaggerheartDomainCardsResponse struct {
-	state         protoimpl.MessageState   `protogen:"open.v1"`
-	DomainCards   []*DaggerheartDomainCard `protobuf:"bytes,1,rep,name=domain_cards,json=domainCards,proto3" json:"domain_cards,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState   `protogen:"open.v1"`
+	DomainCards       []*DaggerheartDomainCard `protobuf:"bytes,1,rep,name=domain_cards,json=domainCards,proto3" json:"domain_cards,omitempty"`
+	NextPageToken     string                   `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	PreviousPageToken string                   `protobuf:"bytes,3,opt,name=previous_page_token,json=previousPageToken,proto3" json:"previous_page_token,omitempty"`
+	TotalSize         int32                    `protobuf:"varint,4,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *ListDaggerheartDomainCardsResponse) Reset() {
@@ -2267,6 +2918,27 @@ func (x *ListDaggerheartDomainCardsResponse) GetDomainCards() []*DaggerheartDoma
 		return x.DomainCards
 	}
 	return nil
+}
+
+func (x *ListDaggerheartDomainCardsResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartDomainCardsResponse) GetPreviousPageToken() string {
+	if x != nil {
+		return x.PreviousPageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartDomainCardsResponse) GetTotalSize() int32 {
+	if x != nil {
+		return x.TotalSize
+	}
+	return 0
 }
 
 type GetDaggerheartWeaponRequest struct {
@@ -2358,7 +3030,16 @@ func (x *GetDaggerheartWeaponResponse) GetWeapon() *DaggerheartWeapon {
 }
 
 type ListDaggerheartWeaponsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The maximum number of weapons to return.
+	PageSize int32 `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// A page token received from a prior ListDaggerheartWeaponsResponse.
+	PageToken string `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	// Ordering: "name" (default) or "name desc".
+	OrderBy string `protobuf:"bytes,3,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
+	// AIP-160 filter expression.
+	// Filterable fields: id, name, category, tier, trait, damage_type.
+	Filter        string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2393,11 +3074,42 @@ func (*ListDaggerheartWeaponsRequest) Descriptor() ([]byte, []int) {
 	return file_systems_daggerheart_v1_content_proto_rawDescGZIP(), []int{48}
 }
 
+func (x *ListDaggerheartWeaponsRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListDaggerheartWeaponsRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartWeaponsRequest) GetOrderBy() string {
+	if x != nil {
+		return x.OrderBy
+	}
+	return ""
+}
+
+func (x *ListDaggerheartWeaponsRequest) GetFilter() string {
+	if x != nil {
+		return x.Filter
+	}
+	return ""
+}
+
 type ListDaggerheartWeaponsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Weapons       []*DaggerheartWeapon   `protobuf:"bytes,1,rep,name=weapons,proto3" json:"weapons,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Weapons           []*DaggerheartWeapon   `protobuf:"bytes,1,rep,name=weapons,proto3" json:"weapons,omitempty"`
+	NextPageToken     string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	PreviousPageToken string                 `protobuf:"bytes,3,opt,name=previous_page_token,json=previousPageToken,proto3" json:"previous_page_token,omitempty"`
+	TotalSize         int32                  `protobuf:"varint,4,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *ListDaggerheartWeaponsResponse) Reset() {
@@ -2435,6 +3147,27 @@ func (x *ListDaggerheartWeaponsResponse) GetWeapons() []*DaggerheartWeapon {
 		return x.Weapons
 	}
 	return nil
+}
+
+func (x *ListDaggerheartWeaponsResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartWeaponsResponse) GetPreviousPageToken() string {
+	if x != nil {
+		return x.PreviousPageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartWeaponsResponse) GetTotalSize() int32 {
+	if x != nil {
+		return x.TotalSize
+	}
+	return 0
 }
 
 type GetDaggerheartArmorRequest struct {
@@ -2526,7 +3259,16 @@ func (x *GetDaggerheartArmorResponse) GetArmor() *DaggerheartArmor {
 }
 
 type ListDaggerheartArmorRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The maximum number of armor entries to return.
+	PageSize int32 `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// A page token received from a prior ListDaggerheartArmorResponse.
+	PageToken string `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	// Ordering: "name" (default) or "name desc".
+	OrderBy string `protobuf:"bytes,3,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
+	// AIP-160 filter expression.
+	// Filterable fields: id, name, tier.
+	Filter        string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2561,11 +3303,42 @@ func (*ListDaggerheartArmorRequest) Descriptor() ([]byte, []int) {
 	return file_systems_daggerheart_v1_content_proto_rawDescGZIP(), []int{52}
 }
 
+func (x *ListDaggerheartArmorRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListDaggerheartArmorRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartArmorRequest) GetOrderBy() string {
+	if x != nil {
+		return x.OrderBy
+	}
+	return ""
+}
+
+func (x *ListDaggerheartArmorRequest) GetFilter() string {
+	if x != nil {
+		return x.Filter
+	}
+	return ""
+}
+
 type ListDaggerheartArmorResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Armor         []*DaggerheartArmor    `protobuf:"bytes,1,rep,name=armor,proto3" json:"armor,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Armor             []*DaggerheartArmor    `protobuf:"bytes,1,rep,name=armor,proto3" json:"armor,omitempty"`
+	NextPageToken     string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	PreviousPageToken string                 `protobuf:"bytes,3,opt,name=previous_page_token,json=previousPageToken,proto3" json:"previous_page_token,omitempty"`
+	TotalSize         int32                  `protobuf:"varint,4,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *ListDaggerheartArmorResponse) Reset() {
@@ -2603,6 +3376,27 @@ func (x *ListDaggerheartArmorResponse) GetArmor() []*DaggerheartArmor {
 		return x.Armor
 	}
 	return nil
+}
+
+func (x *ListDaggerheartArmorResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartArmorResponse) GetPreviousPageToken() string {
+	if x != nil {
+		return x.PreviousPageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartArmorResponse) GetTotalSize() int32 {
+	if x != nil {
+		return x.TotalSize
+	}
+	return 0
 }
 
 type GetDaggerheartItemRequest struct {
@@ -2694,7 +3488,16 @@ func (x *GetDaggerheartItemResponse) GetItem() *DaggerheartItem {
 }
 
 type ListDaggerheartItemsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The maximum number of items to return.
+	PageSize int32 `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// A page token received from a prior ListDaggerheartItemsResponse.
+	PageToken string `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	// Ordering: "name" (default) or "name desc".
+	OrderBy string `protobuf:"bytes,3,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
+	// AIP-160 filter expression.
+	// Filterable fields: id, name, rarity, kind.
+	Filter        string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2729,11 +3532,42 @@ func (*ListDaggerheartItemsRequest) Descriptor() ([]byte, []int) {
 	return file_systems_daggerheart_v1_content_proto_rawDescGZIP(), []int{56}
 }
 
+func (x *ListDaggerheartItemsRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListDaggerheartItemsRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartItemsRequest) GetOrderBy() string {
+	if x != nil {
+		return x.OrderBy
+	}
+	return ""
+}
+
+func (x *ListDaggerheartItemsRequest) GetFilter() string {
+	if x != nil {
+		return x.Filter
+	}
+	return ""
+}
+
 type ListDaggerheartItemsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Items         []*DaggerheartItem     `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Items             []*DaggerheartItem     `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	NextPageToken     string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	PreviousPageToken string                 `protobuf:"bytes,3,opt,name=previous_page_token,json=previousPageToken,proto3" json:"previous_page_token,omitempty"`
+	TotalSize         int32                  `protobuf:"varint,4,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *ListDaggerheartItemsResponse) Reset() {
@@ -2771,6 +3605,27 @@ func (x *ListDaggerheartItemsResponse) GetItems() []*DaggerheartItem {
 		return x.Items
 	}
 	return nil
+}
+
+func (x *ListDaggerheartItemsResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartItemsResponse) GetPreviousPageToken() string {
+	if x != nil {
+		return x.PreviousPageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartItemsResponse) GetTotalSize() int32 {
+	if x != nil {
+		return x.TotalSize
+	}
+	return 0
 }
 
 type GetDaggerheartEnvironmentRequest struct {
@@ -2862,7 +3717,16 @@ func (x *GetDaggerheartEnvironmentResponse) GetEnvironment() *DaggerheartEnviron
 }
 
 type ListDaggerheartEnvironmentsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The maximum number of environments to return.
+	PageSize int32 `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// A page token received from a prior ListDaggerheartEnvironmentsResponse.
+	PageToken string `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	// Ordering: "name" (default) or "name desc".
+	OrderBy string `protobuf:"bytes,3,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
+	// AIP-160 filter expression.
+	// Filterable fields: id, name, tier, type, difficulty.
+	Filter        string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2897,11 +3761,42 @@ func (*ListDaggerheartEnvironmentsRequest) Descriptor() ([]byte, []int) {
 	return file_systems_daggerheart_v1_content_proto_rawDescGZIP(), []int{60}
 }
 
+func (x *ListDaggerheartEnvironmentsRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListDaggerheartEnvironmentsRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartEnvironmentsRequest) GetOrderBy() string {
+	if x != nil {
+		return x.OrderBy
+	}
+	return ""
+}
+
+func (x *ListDaggerheartEnvironmentsRequest) GetFilter() string {
+	if x != nil {
+		return x.Filter
+	}
+	return ""
+}
+
 type ListDaggerheartEnvironmentsResponse struct {
-	state         protoimpl.MessageState    `protogen:"open.v1"`
-	Environments  []*DaggerheartEnvironment `protobuf:"bytes,1,rep,name=environments,proto3" json:"environments,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState    `protogen:"open.v1"`
+	Environments      []*DaggerheartEnvironment `protobuf:"bytes,1,rep,name=environments,proto3" json:"environments,omitempty"`
+	NextPageToken     string                    `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	PreviousPageToken string                    `protobuf:"bytes,3,opt,name=previous_page_token,json=previousPageToken,proto3" json:"previous_page_token,omitempty"`
+	TotalSize         int32                     `protobuf:"varint,4,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *ListDaggerheartEnvironmentsResponse) Reset() {
@@ -2939,6 +3834,27 @@ func (x *ListDaggerheartEnvironmentsResponse) GetEnvironments() []*DaggerheartEn
 		return x.Environments
 	}
 	return nil
+}
+
+func (x *ListDaggerheartEnvironmentsResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartEnvironmentsResponse) GetPreviousPageToken() string {
+	if x != nil {
+		return x.PreviousPageToken
+	}
+	return ""
+}
+
+func (x *ListDaggerheartEnvironmentsResponse) GetTotalSize() int32 {
+	if x != nil {
+		return x.TotalSize
+	}
+	return 0
 }
 
 type DaggerheartFeature struct {
@@ -4932,119 +5848,254 @@ const file_systems_daggerheart_v1_content_proto_rawDesc = "" +
 	"\x1aGetDaggerheartClassRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"]\n" +
 	"\x1bGetDaggerheartClassResponse\x12>\n" +
-	"\x05class\x18\x01 \x01(\v2(.systems.daggerheart.v1.DaggerheartClassR\x05class\"\x1f\n" +
-	"\x1dListDaggerheartClassesRequest\"d\n" +
+	"\x05class\x18\x01 \x01(\v2(.systems.daggerheart.v1.DaggerheartClassR\x05class\"\x8e\x01\n" +
+	"\x1dListDaggerheartClassesRequest\x12\x1b\n" +
+	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x02 \x01(\tR\tpageToken\x12\x19\n" +
+	"\border_by\x18\x03 \x01(\tR\aorderBy\x12\x16\n" +
+	"\x06filter\x18\x04 \x01(\tR\x06filter\"\xdb\x01\n" +
 	"\x1eListDaggerheartClassesResponse\x12B\n" +
-	"\aclasses\x18\x01 \x03(\v2(.systems.daggerheart.v1.DaggerheartClassR\aclasses\"/\n" +
+	"\aclasses\x18\x01 \x03(\v2(.systems.daggerheart.v1.DaggerheartClassR\aclasses\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12.\n" +
+	"\x13previous_page_token\x18\x03 \x01(\tR\x11previousPageToken\x12\x1d\n" +
+	"\n" +
+	"total_size\x18\x04 \x01(\x05R\ttotalSize\"/\n" +
 	"\x1dGetDaggerheartSubclassRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"i\n" +
 	"\x1eGetDaggerheartSubclassResponse\x12G\n" +
-	"\bsubclass\x18\x01 \x01(\v2+.systems.daggerheart.v1.DaggerheartSubclassR\bsubclass\"\"\n" +
-	" ListDaggerheartSubclassesRequest\"p\n" +
+	"\bsubclass\x18\x01 \x01(\v2+.systems.daggerheart.v1.DaggerheartSubclassR\bsubclass\"\x91\x01\n" +
+	" ListDaggerheartSubclassesRequest\x12\x1b\n" +
+	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x02 \x01(\tR\tpageToken\x12\x19\n" +
+	"\border_by\x18\x03 \x01(\tR\aorderBy\x12\x16\n" +
+	"\x06filter\x18\x04 \x01(\tR\x06filter\"\xe7\x01\n" +
 	"!ListDaggerheartSubclassesResponse\x12K\n" +
 	"\n" +
 	"subclasses\x18\x01 \x03(\v2+.systems.daggerheart.v1.DaggerheartSubclassR\n" +
-	"subclasses\"/\n" +
+	"subclasses\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12.\n" +
+	"\x13previous_page_token\x18\x03 \x01(\tR\x11previousPageToken\x12\x1d\n" +
+	"\n" +
+	"total_size\x18\x04 \x01(\x05R\ttotalSize\"/\n" +
 	"\x1dGetDaggerheartHeritageRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"i\n" +
 	"\x1eGetDaggerheartHeritageResponse\x12G\n" +
-	"\bheritage\x18\x01 \x01(\v2+.systems.daggerheart.v1.DaggerheartHeritageR\bheritage\"!\n" +
-	"\x1fListDaggerheartHeritagesRequest\"m\n" +
+	"\bheritage\x18\x01 \x01(\v2+.systems.daggerheart.v1.DaggerheartHeritageR\bheritage\"\x90\x01\n" +
+	"\x1fListDaggerheartHeritagesRequest\x12\x1b\n" +
+	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x02 \x01(\tR\tpageToken\x12\x19\n" +
+	"\border_by\x18\x03 \x01(\tR\aorderBy\x12\x16\n" +
+	"\x06filter\x18\x04 \x01(\tR\x06filter\"\xe4\x01\n" +
 	" ListDaggerheartHeritagesResponse\x12I\n" +
-	"\theritages\x18\x01 \x03(\v2+.systems.daggerheart.v1.DaggerheartHeritageR\theritages\"1\n" +
+	"\theritages\x18\x01 \x03(\v2+.systems.daggerheart.v1.DaggerheartHeritageR\theritages\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12.\n" +
+	"\x13previous_page_token\x18\x03 \x01(\tR\x11previousPageToken\x12\x1d\n" +
+	"\n" +
+	"total_size\x18\x04 \x01(\x05R\ttotalSize\"1\n" +
 	"\x1fGetDaggerheartExperienceRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"v\n" +
 	" GetDaggerheartExperienceResponse\x12R\n" +
 	"\n" +
 	"experience\x18\x01 \x01(\v22.systems.daggerheart.v1.DaggerheartExperienceEntryR\n" +
-	"experience\"#\n" +
-	"!ListDaggerheartExperiencesRequest\"z\n" +
+	"experience\"\x92\x01\n" +
+	"!ListDaggerheartExperiencesRequest\x12\x1b\n" +
+	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x02 \x01(\tR\tpageToken\x12\x19\n" +
+	"\border_by\x18\x03 \x01(\tR\aorderBy\x12\x16\n" +
+	"\x06filter\x18\x04 \x01(\tR\x06filter\"\xf1\x01\n" +
 	"\"ListDaggerheartExperiencesResponse\x12T\n" +
-	"\vexperiences\x18\x01 \x03(\v22.systems.daggerheart.v1.DaggerheartExperienceEntryR\vexperiences\"0\n" +
+	"\vexperiences\x18\x01 \x03(\v22.systems.daggerheart.v1.DaggerheartExperienceEntryR\vexperiences\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12.\n" +
+	"\x13previous_page_token\x18\x03 \x01(\tR\x11previousPageToken\x12\x1d\n" +
+	"\n" +
+	"total_size\x18\x04 \x01(\x05R\ttotalSize\"0\n" +
 	"\x1eGetDaggerheartAdversaryRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"r\n" +
 	"\x1fGetDaggerheartAdversaryResponse\x12O\n" +
-	"\tadversary\x18\x01 \x01(\v21.systems.daggerheart.v1.DaggerheartAdversaryEntryR\tadversary\"#\n" +
-	"!ListDaggerheartAdversariesRequest\"y\n" +
+	"\tadversary\x18\x01 \x01(\v21.systems.daggerheart.v1.DaggerheartAdversaryEntryR\tadversary\"\x92\x01\n" +
+	"!ListDaggerheartAdversariesRequest\x12\x1b\n" +
+	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x02 \x01(\tR\tpageToken\x12\x19\n" +
+	"\border_by\x18\x03 \x01(\tR\aorderBy\x12\x16\n" +
+	"\x06filter\x18\x04 \x01(\tR\x06filter\"\xf0\x01\n" +
 	"\"ListDaggerheartAdversariesResponse\x12S\n" +
-	"\vadversaries\x18\x01 \x03(\v21.systems.daggerheart.v1.DaggerheartAdversaryEntryR\vadversaries\"0\n" +
+	"\vadversaries\x18\x01 \x03(\v21.systems.daggerheart.v1.DaggerheartAdversaryEntryR\vadversaries\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12.\n" +
+	"\x13previous_page_token\x18\x03 \x01(\tR\x11previousPageToken\x12\x1d\n" +
+	"\n" +
+	"total_size\x18\x04 \x01(\x05R\ttotalSize\"0\n" +
 	"\x1eGetDaggerheartBeastformRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"r\n" +
 	"\x1fGetDaggerheartBeastformResponse\x12O\n" +
-	"\tbeastform\x18\x01 \x01(\v21.systems.daggerheart.v1.DaggerheartBeastformEntryR\tbeastform\"\"\n" +
-	" ListDaggerheartBeastformsRequest\"v\n" +
+	"\tbeastform\x18\x01 \x01(\v21.systems.daggerheart.v1.DaggerheartBeastformEntryR\tbeastform\"\x91\x01\n" +
+	" ListDaggerheartBeastformsRequest\x12\x1b\n" +
+	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x02 \x01(\tR\tpageToken\x12\x19\n" +
+	"\border_by\x18\x03 \x01(\tR\aorderBy\x12\x16\n" +
+	"\x06filter\x18\x04 \x01(\tR\x06filter\"\xed\x01\n" +
 	"!ListDaggerheartBeastformsResponse\x12Q\n" +
 	"\n" +
 	"beastforms\x18\x01 \x03(\v21.systems.daggerheart.v1.DaggerheartBeastformEntryR\n" +
-	"beastforms\":\n" +
+	"beastforms\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12.\n" +
+	"\x13previous_page_token\x18\x03 \x01(\tR\x11previousPageToken\x12\x1d\n" +
+	"\n" +
+	"total_size\x18\x04 \x01(\x05R\ttotalSize\":\n" +
 	"(GetDaggerheartCompanionExperienceRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"\x88\x01\n" +
 	")GetDaggerheartCompanionExperienceResponse\x12[\n" +
 	"\n" +
 	"experience\x18\x01 \x01(\v2;.systems.daggerheart.v1.DaggerheartCompanionExperienceEntryR\n" +
-	"experience\",\n" +
-	"*ListDaggerheartCompanionExperiencesRequest\"\x8c\x01\n" +
+	"experience\"\x9b\x01\n" +
+	"*ListDaggerheartCompanionExperiencesRequest\x12\x1b\n" +
+	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x02 \x01(\tR\tpageToken\x12\x19\n" +
+	"\border_by\x18\x03 \x01(\tR\aorderBy\x12\x16\n" +
+	"\x06filter\x18\x04 \x01(\tR\x06filter\"\x83\x02\n" +
 	"+ListDaggerheartCompanionExperiencesResponse\x12]\n" +
-	"\vexperiences\x18\x01 \x03(\v2;.systems.daggerheart.v1.DaggerheartCompanionExperienceEntryR\vexperiences\"0\n" +
+	"\vexperiences\x18\x01 \x03(\v2;.systems.daggerheart.v1.DaggerheartCompanionExperienceEntryR\vexperiences\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12.\n" +
+	"\x13previous_page_token\x18\x03 \x01(\tR\x11previousPageToken\x12\x1d\n" +
+	"\n" +
+	"total_size\x18\x04 \x01(\x05R\ttotalSize\"0\n" +
 	"\x1eGetDaggerheartLootEntryRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"e\n" +
 	"\x1fGetDaggerheartLootEntryResponse\x12B\n" +
-	"\x05entry\x18\x01 \x01(\v2,.systems.daggerheart.v1.DaggerheartLootEntryR\x05entry\"#\n" +
-	"!ListDaggerheartLootEntriesRequest\"l\n" +
+	"\x05entry\x18\x01 \x01(\v2,.systems.daggerheart.v1.DaggerheartLootEntryR\x05entry\"\x92\x01\n" +
+	"!ListDaggerheartLootEntriesRequest\x12\x1b\n" +
+	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x02 \x01(\tR\tpageToken\x12\x19\n" +
+	"\border_by\x18\x03 \x01(\tR\aorderBy\x12\x16\n" +
+	"\x06filter\x18\x04 \x01(\tR\x06filter\"\xe3\x01\n" +
 	"\"ListDaggerheartLootEntriesResponse\x12F\n" +
-	"\aentries\x18\x01 \x03(\v2,.systems.daggerheart.v1.DaggerheartLootEntryR\aentries\"1\n" +
+	"\aentries\x18\x01 \x03(\v2,.systems.daggerheart.v1.DaggerheartLootEntryR\aentries\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12.\n" +
+	"\x13previous_page_token\x18\x03 \x01(\tR\x11previousPageToken\x12\x1d\n" +
+	"\n" +
+	"total_size\x18\x04 \x01(\x05R\ttotalSize\"1\n" +
 	"\x1fGetDaggerheartDamageTypeRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"w\n" +
 	" GetDaggerheartDamageTypeResponse\x12S\n" +
 	"\vdamage_type\x18\x01 \x01(\v22.systems.daggerheart.v1.DaggerheartDamageTypeEntryR\n" +
-	"damageType\"#\n" +
-	"!ListDaggerheartDamageTypesRequest\"{\n" +
+	"damageType\"\x92\x01\n" +
+	"!ListDaggerheartDamageTypesRequest\x12\x1b\n" +
+	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x02 \x01(\tR\tpageToken\x12\x19\n" +
+	"\border_by\x18\x03 \x01(\tR\aorderBy\x12\x16\n" +
+	"\x06filter\x18\x04 \x01(\tR\x06filter\"\xf2\x01\n" +
 	"\"ListDaggerheartDamageTypesResponse\x12U\n" +
-	"\fdamage_types\x18\x01 \x03(\v22.systems.daggerheart.v1.DaggerheartDamageTypeEntryR\vdamageTypes\"-\n" +
+	"\fdamage_types\x18\x01 \x03(\v22.systems.daggerheart.v1.DaggerheartDamageTypeEntryR\vdamageTypes\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12.\n" +
+	"\x13previous_page_token\x18\x03 \x01(\tR\x11previousPageToken\x12\x1d\n" +
+	"\n" +
+	"total_size\x18\x04 \x01(\x05R\ttotalSize\"-\n" +
 	"\x1bGetDaggerheartDomainRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"a\n" +
 	"\x1cGetDaggerheartDomainResponse\x12A\n" +
-	"\x06domain\x18\x01 \x01(\v2).systems.daggerheart.v1.DaggerheartDomainR\x06domain\"\x1f\n" +
-	"\x1dListDaggerheartDomainsRequest\"e\n" +
+	"\x06domain\x18\x01 \x01(\v2).systems.daggerheart.v1.DaggerheartDomainR\x06domain\"\x8e\x01\n" +
+	"\x1dListDaggerheartDomainsRequest\x12\x1b\n" +
+	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x02 \x01(\tR\tpageToken\x12\x19\n" +
+	"\border_by\x18\x03 \x01(\tR\aorderBy\x12\x16\n" +
+	"\x06filter\x18\x04 \x01(\tR\x06filter\"\xdc\x01\n" +
 	"\x1eListDaggerheartDomainsResponse\x12C\n" +
-	"\adomains\x18\x01 \x03(\v2).systems.daggerheart.v1.DaggerheartDomainR\adomains\"1\n" +
+	"\adomains\x18\x01 \x03(\v2).systems.daggerheart.v1.DaggerheartDomainR\adomains\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12.\n" +
+	"\x13previous_page_token\x18\x03 \x01(\tR\x11previousPageToken\x12\x1d\n" +
+	"\n" +
+	"total_size\x18\x04 \x01(\x05R\ttotalSize\"1\n" +
 	"\x1fGetDaggerheartDomainCardRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"r\n" +
 	" GetDaggerheartDomainCardResponse\x12N\n" +
 	"\vdomain_card\x18\x01 \x01(\v2-.systems.daggerheart.v1.DaggerheartDomainCardR\n" +
-	"domainCard\"@\n" +
+	"domainCard\"\xaf\x01\n" +
 	"!ListDaggerheartDomainCardsRequest\x12\x1b\n" +
-	"\tdomain_id\x18\x01 \x01(\tR\bdomainId\"v\n" +
+	"\tdomain_id\x18\x01 \x01(\tR\bdomainId\x12\x1b\n" +
+	"\tpage_size\x18\x02 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x03 \x01(\tR\tpageToken\x12\x19\n" +
+	"\border_by\x18\x04 \x01(\tR\aorderBy\x12\x16\n" +
+	"\x06filter\x18\x05 \x01(\tR\x06filter\"\xed\x01\n" +
 	"\"ListDaggerheartDomainCardsResponse\x12P\n" +
-	"\fdomain_cards\x18\x01 \x03(\v2-.systems.daggerheart.v1.DaggerheartDomainCardR\vdomainCards\"-\n" +
+	"\fdomain_cards\x18\x01 \x03(\v2-.systems.daggerheart.v1.DaggerheartDomainCardR\vdomainCards\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12.\n" +
+	"\x13previous_page_token\x18\x03 \x01(\tR\x11previousPageToken\x12\x1d\n" +
+	"\n" +
+	"total_size\x18\x04 \x01(\x05R\ttotalSize\"-\n" +
 	"\x1bGetDaggerheartWeaponRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"a\n" +
 	"\x1cGetDaggerheartWeaponResponse\x12A\n" +
-	"\x06weapon\x18\x01 \x01(\v2).systems.daggerheart.v1.DaggerheartWeaponR\x06weapon\"\x1f\n" +
-	"\x1dListDaggerheartWeaponsRequest\"e\n" +
+	"\x06weapon\x18\x01 \x01(\v2).systems.daggerheart.v1.DaggerheartWeaponR\x06weapon\"\x8e\x01\n" +
+	"\x1dListDaggerheartWeaponsRequest\x12\x1b\n" +
+	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x02 \x01(\tR\tpageToken\x12\x19\n" +
+	"\border_by\x18\x03 \x01(\tR\aorderBy\x12\x16\n" +
+	"\x06filter\x18\x04 \x01(\tR\x06filter\"\xdc\x01\n" +
 	"\x1eListDaggerheartWeaponsResponse\x12C\n" +
-	"\aweapons\x18\x01 \x03(\v2).systems.daggerheart.v1.DaggerheartWeaponR\aweapons\",\n" +
+	"\aweapons\x18\x01 \x03(\v2).systems.daggerheart.v1.DaggerheartWeaponR\aweapons\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12.\n" +
+	"\x13previous_page_token\x18\x03 \x01(\tR\x11previousPageToken\x12\x1d\n" +
+	"\n" +
+	"total_size\x18\x04 \x01(\x05R\ttotalSize\",\n" +
 	"\x1aGetDaggerheartArmorRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"]\n" +
 	"\x1bGetDaggerheartArmorResponse\x12>\n" +
-	"\x05armor\x18\x01 \x01(\v2(.systems.daggerheart.v1.DaggerheartArmorR\x05armor\"\x1d\n" +
-	"\x1bListDaggerheartArmorRequest\"^\n" +
+	"\x05armor\x18\x01 \x01(\v2(.systems.daggerheart.v1.DaggerheartArmorR\x05armor\"\x8c\x01\n" +
+	"\x1bListDaggerheartArmorRequest\x12\x1b\n" +
+	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x02 \x01(\tR\tpageToken\x12\x19\n" +
+	"\border_by\x18\x03 \x01(\tR\aorderBy\x12\x16\n" +
+	"\x06filter\x18\x04 \x01(\tR\x06filter\"\xd5\x01\n" +
 	"\x1cListDaggerheartArmorResponse\x12>\n" +
-	"\x05armor\x18\x01 \x03(\v2(.systems.daggerheart.v1.DaggerheartArmorR\x05armor\"+\n" +
+	"\x05armor\x18\x01 \x03(\v2(.systems.daggerheart.v1.DaggerheartArmorR\x05armor\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12.\n" +
+	"\x13previous_page_token\x18\x03 \x01(\tR\x11previousPageToken\x12\x1d\n" +
+	"\n" +
+	"total_size\x18\x04 \x01(\x05R\ttotalSize\"+\n" +
 	"\x19GetDaggerheartItemRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"Y\n" +
 	"\x1aGetDaggerheartItemResponse\x12;\n" +
-	"\x04item\x18\x01 \x01(\v2'.systems.daggerheart.v1.DaggerheartItemR\x04item\"\x1d\n" +
-	"\x1bListDaggerheartItemsRequest\"]\n" +
+	"\x04item\x18\x01 \x01(\v2'.systems.daggerheart.v1.DaggerheartItemR\x04item\"\x8c\x01\n" +
+	"\x1bListDaggerheartItemsRequest\x12\x1b\n" +
+	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x02 \x01(\tR\tpageToken\x12\x19\n" +
+	"\border_by\x18\x03 \x01(\tR\aorderBy\x12\x16\n" +
+	"\x06filter\x18\x04 \x01(\tR\x06filter\"\xd4\x01\n" +
 	"\x1cListDaggerheartItemsResponse\x12=\n" +
-	"\x05items\x18\x01 \x03(\v2'.systems.daggerheart.v1.DaggerheartItemR\x05items\"2\n" +
+	"\x05items\x18\x01 \x03(\v2'.systems.daggerheart.v1.DaggerheartItemR\x05items\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12.\n" +
+	"\x13previous_page_token\x18\x03 \x01(\tR\x11previousPageToken\x12\x1d\n" +
+	"\n" +
+	"total_size\x18\x04 \x01(\x05R\ttotalSize\"2\n" +
 	" GetDaggerheartEnvironmentRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"u\n" +
 	"!GetDaggerheartEnvironmentResponse\x12P\n" +
-	"\venvironment\x18\x01 \x01(\v2..systems.daggerheart.v1.DaggerheartEnvironmentR\venvironment\"$\n" +
-	"\"ListDaggerheartEnvironmentsRequest\"y\n" +
+	"\venvironment\x18\x01 \x01(\v2..systems.daggerheart.v1.DaggerheartEnvironmentR\venvironment\"\x93\x01\n" +
+	"\"ListDaggerheartEnvironmentsRequest\x12\x1b\n" +
+	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x02 \x01(\tR\tpageToken\x12\x19\n" +
+	"\border_by\x18\x03 \x01(\tR\aorderBy\x12\x16\n" +
+	"\x06filter\x18\x04 \x01(\tR\x06filter\"\xf0\x01\n" +
 	"#ListDaggerheartEnvironmentsResponse\x12R\n" +
-	"\fenvironments\x18\x01 \x03(\v2..systems.daggerheart.v1.DaggerheartEnvironmentR\fenvironments\"p\n" +
+	"\fenvironments\x18\x01 \x03(\v2..systems.daggerheart.v1.DaggerheartEnvironmentR\fenvironments\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12.\n" +
+	"\x13previous_page_token\x18\x03 \x01(\tR\x11previousPageToken\x12\x1d\n" +
+	"\n" +
+	"total_size\x18\x04 \x01(\x05R\ttotalSize\"p\n" +
 	"\x12DaggerheartFeature\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +

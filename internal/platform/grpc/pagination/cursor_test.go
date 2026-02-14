@@ -1,14 +1,15 @@
-package cursor
+package pagination
 
 import (
 	"encoding/base64"
 	"encoding/json"
+	"reflect"
 	"testing"
 )
 
 func TestEncodeDecodeRoundTrip(t *testing.T) {
 	original := Cursor{
-		Seq:        42,
+		Values:     []CursorValue{UintValue("seq", 42)},
 		Dir:        DirectionForward,
 		Reverse:    true,
 		FilterHash: HashFilter("status = 'active'"),
@@ -25,7 +26,7 @@ func TestEncodeDecodeRoundTrip(t *testing.T) {
 		t.Fatalf("decode cursor: %v", err)
 	}
 
-	if decoded != original {
+	if !reflect.DeepEqual(decoded, original) {
 		t.Fatalf("cursor mismatch: %+v != %+v", decoded, original)
 	}
 }
@@ -45,7 +46,7 @@ func TestDecodeInvalidBase64(t *testing.T) {
 }
 
 func TestDecodeInvalidDirection(t *testing.T) {
-	raw, err := json.Marshal(Cursor{Seq: 1, Dir: "sideways"})
+	raw, err := json.Marshal(Cursor{Values: []CursorValue{UintValue("seq", 1)}, Dir: "sideways"})
 	if err != nil {
 		t.Fatalf("marshal cursor: %v", err)
 	}
@@ -73,7 +74,7 @@ func TestHashFilter(t *testing.T) {
 }
 
 func TestValidateFilterHash(t *testing.T) {
-	c := NewForwardCursor(10, "status = 'active'", "seq asc")
+	c := NewCursor([]CursorValue{UintValue("seq", 10)}, DirectionForward, false, "status = 'active'", "seq asc")
 	if err := ValidateFilterHash(c, "status = 'active'"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -83,7 +84,7 @@ func TestValidateFilterHash(t *testing.T) {
 }
 
 func TestValidateOrderHash(t *testing.T) {
-	c := NewForwardCursor(10, "status = 'active'", "seq asc")
+	c := NewCursor([]CursorValue{UintValue("seq", 10)}, DirectionForward, false, "status = 'active'", "seq asc")
 	if err := ValidateOrderHash(c, "seq asc"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -93,7 +94,9 @@ func TestValidateOrderHash(t *testing.T) {
 }
 
 func TestPageCursorDirections(t *testing.T) {
-	nextAsc := NewNextPageCursor(100, false, "", "")
+	values := []CursorValue{UintValue("seq", 100)}
+
+	nextAsc := NewNextPageCursor(values, false, "", "")
 	if nextAsc.Dir != DirectionForward {
 		t.Fatalf("expected forward dir, got %s", nextAsc.Dir)
 	}
@@ -101,12 +104,12 @@ func TestPageCursorDirections(t *testing.T) {
 		t.Fatal("expected forward cursor without reverse")
 	}
 
-	nextDesc := NewNextPageCursor(100, true, "", "")
+	nextDesc := NewNextPageCursor(values, true, "", "")
 	if nextDesc.Dir != DirectionBackward {
 		t.Fatalf("expected backward dir, got %s", nextDesc.Dir)
 	}
 
-	prevAsc := NewPrevPageCursor(50, false, "", "")
+	prevAsc := NewPrevPageCursor([]CursorValue{UintValue("seq", 50)}, false, "", "")
 	if prevAsc.Dir != DirectionBackward {
 		t.Fatalf("expected backward dir, got %s", prevAsc.Dir)
 	}
@@ -114,7 +117,7 @@ func TestPageCursorDirections(t *testing.T) {
 		t.Fatal("expected reverse for prev cursor")
 	}
 
-	prevDesc := NewPrevPageCursor(50, true, "", "")
+	prevDesc := NewPrevPageCursor([]CursorValue{UintValue("seq", 50)}, true, "", "")
 	if prevDesc.Dir != DirectionForward {
 		t.Fatalf("expected forward dir, got %s", prevDesc.Dir)
 	}
@@ -124,7 +127,7 @@ func TestPageCursorDirections(t *testing.T) {
 }
 
 func TestFilterAndOrderHashesDiffer(t *testing.T) {
-	c := NewForwardCursor(10, "filter-a", "order-b")
+	c := NewCursor([]CursorValue{UintValue("seq", 10)}, DirectionForward, false, "filter-a", "order-b")
 	if c.FilterHash == "" || c.OrderHash == "" {
 		t.Fatal("expected non-empty hashes")
 	}

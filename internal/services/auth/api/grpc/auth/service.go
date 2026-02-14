@@ -7,6 +7,7 @@ import (
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/user"
@@ -158,13 +159,10 @@ func (s *AuthService) ListUsers(ctx context.Context, in *authv1.ListUsersRequest
 		return nil, status.Error(codes.Internal, "user store is not configured")
 	}
 
-	pageSize := int(in.GetPageSize())
-	if pageSize <= 0 {
-		pageSize = defaultListUsersPageSize
-	}
-	if pageSize > maxListUsersPageSize {
-		pageSize = maxListUsersPageSize
-	}
+	pageSize := pagination.ClampPageSize(in.GetPageSize(), pagination.PageSizeConfig{
+		Default: defaultListUsersPageSize,
+		Max:     maxListUsersPageSize,
+	})
 
 	page, err := s.store.ListUsers(ctx, pageSize, in.GetPageToken())
 	if err != nil {
