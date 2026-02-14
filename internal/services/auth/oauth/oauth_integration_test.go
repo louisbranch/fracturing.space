@@ -3,28 +3,24 @@
 package oauth
 
 import (
-	"context"
 	"encoding/json"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"regexp"
 	"strings"
 	"testing"
 	"time"
 
 	authsqlite "github.com/louisbranch/fracturing.space/internal/services/auth/storage/sqlite"
-	"github.com/louisbranch/fracturing.space/internal/services/auth/user"
-	"golang.org/x/crypto/bcrypt"
 )
 
+// TestOAuthAuthorizationCodeFlow exercises the authorize → consent → token → introspect
+// flow end-to-end. Since password login has been removed, the test directly sets the
+// pending authorization's user ID to simulate authentication (e.g. via passkey or
+// external provider).
 func TestOAuthAuthorizationCodeFlow(t *testing.T) {
 	store := openAuthStoreForTest(t)
 	oauthStore := NewStore(store.DB())
-	username := "demo-user"
-	password := "s3cret-pass"
-	userID := seedOAuthUser(t, store, oauthStore, username, password)
 
 	redirectURI := "http://localhost:5555/callback"
 	config := Config{
@@ -45,6 +41,7 @@ func TestOAuthAuthorizationCodeFlow(t *testing.T) {
 	codeChallenge := ComputeS256Challenge(codeVerifier)
 	state := "state-123"
 
+	// Step 1: /authorize → redirects to login UI with pending_id.
 	authorizeURL, err := url.Parse(httpServer.URL + "/authorize")
 	if err != nil {
 		t.Fatalf("parse authorize url: %v", err)
@@ -77,24 +74,13 @@ func TestOAuthAuthorizationCodeFlow(t *testing.T) {
 		t.Fatalf("missing pending_id in login redirect")
 	}
 
-	loginForm := url.Values{}
-	loginForm.Set("pending_id", pendingID)
-	loginForm.Set("username", username)
-	loginForm.Set("password", password)
-	loginResp, err := http.PostForm(httpServer.URL+"/authorize/login", loginForm)
-	if err != nil {
-		t.Fatalf("login request: %v", err)
-	}
-	defer loginResp.Body.Close()
-	if loginResp.StatusCode != http.StatusOK {
-		t.Fatalf("login status = %d", loginResp.StatusCode)
-	}
-	consentHTML := readBody(t, loginResp)
-	consentPending := extractPendingID(t, consentHTML)
-	if consentPending != pendingID {
-		t.Fatalf("pending id mismatch: %s != %s", consentPending, pendingID)
+	// Step 2: Simulate authentication by setting the user ID on the pending authorization.
+	userID := "integration-user-1"
+	if err := oauthStore.UpdatePendingAuthorizationUserID(pendingID, userID); err != nil {
+		t.Fatalf("set pending user id: %v", err)
 	}
 
+	// Step 3: Consent (allow).
 	consentForm := url.Values{}
 	consentForm.Set("pending_id", pendingID)
 	consentForm.Set("decision", "allow")
@@ -127,6 +113,7 @@ func TestOAuthAuthorizationCodeFlow(t *testing.T) {
 		t.Fatalf("missing authorization code")
 	}
 
+	// Step 4: Token exchange.
 	tokenForm := url.Values{}
 	tokenForm.Set("grant_type", "authorization_code")
 	tokenForm.Set("code", code)
@@ -149,6 +136,7 @@ func TestOAuthAuthorizationCodeFlow(t *testing.T) {
 		t.Fatalf("access_token missing")
 	}
 
+	// Step 5: Introspect.
 	introspectReq, err := http.NewRequest(http.MethodPost, httpServer.URL+"/introspect", nil)
 	if err != nil {
 		t.Fatalf("introspect request: %v", err)
@@ -174,6 +162,7 @@ func TestOAuthAuthorizationCodeFlow(t *testing.T) {
 		t.Fatalf("introspect user_id mismatch: %s != %s", introspect.UserID, userID)
 	}
 
+	// Step 6: Invalid token returns inactive.
 	invalidReq, err := http.NewRequest(http.MethodPost, httpServer.URL+"/introspect", nil)
 	if err != nil {
 		t.Fatalf("introspect invalid request: %v", err)
@@ -202,42 +191,4 @@ func openAuthStoreForTest(t *testing.T) *authsqlite.Store {
 		t.Fatalf("open auth store: %v", err)
 	}
 	return store
-}
-
-func seedOAuthUser(t *testing.T, store *authsqlite.Store, oauthStore *Store, username, password string) string {
-	t.Helper()
-	created, err := user.CreateUser(user.CreateUserInput{DisplayName: "OAuth Tester"}, time.Now, nil)
-	if err != nil {
-		t.Fatalf("create user: %v", err)
-	}
-	if err := store.PutUser(context.Background(), created); err != nil {
-		t.Fatalf("store user: %v", err)
-	}
-	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		t.Fatalf("hash password: %v", err)
-	}
-	if err := oauthStore.UpsertOAuthUserCredentials(created.ID, username, string(passwordHash), time.Now().UTC()); err != nil {
-		t.Fatalf("store credentials: %v", err)
-	}
-	return created.ID
-}
-
-func extractPendingID(t *testing.T, html string) string {
-	t.Helper()
-	re := regexp.MustCompile(`name="pending_id" value="([^"]+)"`)
-	matches := re.FindStringSubmatch(html)
-	if len(matches) < 2 {
-		t.Fatalf("pending_id not found")
-	}
-	return matches[1]
-}
-
-func readBody(t *testing.T, resp *http.Response) string {
-	t.Helper()
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatalf("read body: %v", err)
-	}
-	return string(data)
 }

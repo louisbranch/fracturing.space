@@ -74,6 +74,8 @@ type Handler struct {
 	clientProvider GRPCClientProvider
 	impersonation  *impersonationStore
 	grpcAddr       string
+	authConfig     *AuthConfig
+	introspector   TokenIntrospector
 }
 
 type impersonationSession struct {
@@ -144,19 +146,29 @@ func (s *impersonationStore) cleanupLocked(now time.Time) {
 	s.lastCleanup = now
 }
 
-// NewHandler builds the HTTP handler for the admin server.
+// NewHandler builds the HTTP handler for the admin server (no auth).
 func NewHandler(clientProvider GRPCClientProvider) http.Handler {
-	return NewHandlerWithConfig(clientProvider, "")
+	return NewHandlerWithConfig(clientProvider, "", nil)
 }
 
 // NewHandlerWithConfig builds the HTTP handler with explicit configuration.
-func NewHandlerWithConfig(clientProvider GRPCClientProvider, grpcAddr string) http.Handler {
+// When authCfg is non-nil and fully populated, requests are guarded by
+// token introspection; otherwise admin runs without authentication.
+func NewHandlerWithConfig(clientProvider GRPCClientProvider, grpcAddr string, authCfg *AuthConfig) http.Handler {
 	handler := &Handler{
 		clientProvider: clientProvider,
 		impersonation:  newImpersonationStore(),
 		grpcAddr:       strings.TrimSpace(grpcAddr),
+		authConfig:     authCfg,
 	}
-	return handler.routes()
+	if authCfg != nil && authCfg.IntrospectURL != "" && authCfg.LoginURL != "" {
+		handler.introspector = newHTTPIntrospector(authCfg.IntrospectURL, authCfg.ResourceSecret)
+	}
+	mux := handler.routes()
+	if handler.introspector != nil {
+		return requireAuth(mux, handler.introspector, authCfg.LoginURL)
+	}
+	return mux
 }
 
 func (h *Handler) localizer(w http.ResponseWriter, r *http.Request) (*message.Printer, string) {
@@ -771,9 +783,9 @@ func (h *Handler) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	displayName := strings.TrimSpace(r.FormValue("display_name"))
+	displayName := strings.TrimSpace(r.FormValue("username"))
 	if displayName == "" {
-		view.Message = loc.Sprintf("error.user_display_name_required")
+		view.Message = loc.Sprintf("error.user_username_required")
 		templ.Handler(templates.UsersFullPage(view, pageCtx)).ServeHTTP(w, r)
 		return
 	}
@@ -790,8 +802,8 @@ func (h *Handler) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 
 	locale := localeFromTag(lang)
 	response, err := client.CreateUser(ctx, &authv1.CreateUserRequest{
-		DisplayName: displayName,
-		Locale:      locale,
+		Username: displayName,
+		Locale:   locale,
 	})
 	if err != nil || response.GetUser() == nil {
 		log.Printf("create user: %v", err)
@@ -941,7 +953,7 @@ func (h *Handler) handleImpersonateUser(w http.ResponseWriter, r *http.Request) 
 	if h.impersonation != nil {
 		h.impersonation.Set(sessionID, impersonationSession{
 			userID:      user.GetId(),
-			displayName: user.GetDisplayName(),
+			displayName: user.GetUsername(),
 		})
 	}
 
@@ -957,13 +969,13 @@ func (h *Handler) handleImpersonateUser(w http.ResponseWriter, r *http.Request) 
 	view.Detail = buildUserDetail(user)
 	view.Impersonation = &templates.ImpersonationView{
 		UserID:      user.GetId(),
-		DisplayName: user.GetDisplayName(),
+		DisplayName: user.GetUsername(),
 	}
 	invitesCtx, invitesCancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
 	defer invitesCancel()
 	h.populateUserInvitesIfImpersonating(invitesCtx, view.Detail, view.Impersonation, loc)
 	pageCtx.Impersonation = view.Impersonation
-	label := strings.TrimSpace(user.GetDisplayName())
+	label := strings.TrimSpace(user.GetUsername())
 	if label == "" {
 		label = user.GetId()
 	}
@@ -1783,10 +1795,10 @@ func buildUserRows(users []*authv1.User) []templates.UserRow {
 			continue
 		}
 		rows = append(rows, templates.UserRow{
-			ID:          u.GetId(),
-			DisplayName: u.GetDisplayName(),
-			CreatedAt:   formatTimestamp(u.GetCreatedAt()),
-			UpdatedAt:   formatTimestamp(u.GetUpdatedAt()),
+			ID:        u.GetId(),
+			Username:  u.GetUsername(),
+			CreatedAt: formatTimestamp(u.GetCreatedAt()),
+			UpdatedAt: formatTimestamp(u.GetUpdatedAt()),
 		})
 	}
 	return rows
@@ -1798,10 +1810,10 @@ func buildUserDetail(u *authv1.User) *templates.UserDetail {
 		return nil
 	}
 	return &templates.UserDetail{
-		ID:          u.GetId(),
-		DisplayName: u.GetDisplayName(),
-		CreatedAt:   formatTimestamp(u.GetCreatedAt()),
-		UpdatedAt:   formatTimestamp(u.GetUpdatedAt()),
+		ID:        u.GetId(),
+		Username:  u.GetUsername(),
+		CreatedAt: formatTimestamp(u.GetCreatedAt()),
+		UpdatedAt: formatTimestamp(u.GetUpdatedAt()),
 	}
 }
 
@@ -2699,7 +2711,7 @@ func (h *Handler) handleInvitesTable(w http.ResponseWriter, r *http.Request, cam
 				continue
 			}
 			if user := userResp.GetUser(); user != nil {
-				recipientNames[recipientID] = user.GetDisplayName()
+				recipientNames[recipientID] = user.GetUsername()
 			}
 		}
 	}

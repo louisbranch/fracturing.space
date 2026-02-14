@@ -169,7 +169,7 @@ func startMCPClient(t *testing.T, grpcAddr string) (*mcp.ClientSession, func()) 
 	return clientSession, closeClient
 }
 
-func createAuthUser(t *testing.T, authAddr, displayName string) string {
+func createAuthUser(t *testing.T, authAddr, username string) string {
 	t.Helper()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -186,7 +186,7 @@ func createAuthUser(t *testing.T, authAddr, displayName string) string {
 	defer conn.Close()
 
 	client := authv1.NewAuthServiceClient(conn)
-	resp, err := client.CreateUser(ctx, &authv1.CreateUserRequest{DisplayName: displayName})
+	resp, err := client.CreateUser(ctx, &authv1.CreateUserRequest{Username: username})
 	if err != nil {
 		t.Fatalf("create user: %v", err)
 	}

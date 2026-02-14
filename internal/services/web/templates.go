@@ -1,11 +1,6 @@
 package web
 
-import (
-	"embed"
-	"html/template"
-)
+import "embed"
 
-//go:embed templates/*.html static/*.css
+//go:embed static/*.css
 var assetsFS embed.FS
-
-var templates = template.Must(template.ParseFS(assetsFS, "templates/*.html"))

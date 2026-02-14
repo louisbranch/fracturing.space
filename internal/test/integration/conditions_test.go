@@ -50,7 +50,7 @@ func TestDaggerheartApplyConditions(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
 	defer cancel()
-	userID := createAuthUser(t, authAddr, "Conditions GM")
+	userID := createAuthUser(t, authAddr, "conditions-gm")
 	ctx = withUserID(ctx, userID)
 
 	createCampaign, err := campaignClient.CreateCampaign(ctx, &gamev1.CreateCampaignRequest{
@@ -146,7 +146,7 @@ func TestDaggerheartApplyAdversaryConditions(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
 	defer cancel()
-	userID := createAuthUser(t, authAddr, "Adversary Conditions GM")
+	userID := createAuthUser(t, authAddr, "adversary-conditions-gm")
 	ctx = withUserID(ctx, userID)
 
 	createCampaign, err := campaignClient.CreateCampaign(ctx, &gamev1.CreateCampaignRequest{

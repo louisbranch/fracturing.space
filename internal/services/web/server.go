@@ -17,7 +17,9 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/platform/branding"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
+	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/i18n"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
+	"golang.org/x/text/message"
 	"google.golang.org/grpc"
 )
 
@@ -28,6 +30,14 @@ type Config struct {
 	AuthAddr        string
 	AppName         string
 	GRPCDialTimeout time.Duration
+	// OAuthClientID is the first-party OAuth client ID for web login.
+	OAuthClientID string
+	// CallbackURL is the public URL for the OAuth callback endpoint.
+	CallbackURL string
+	// AuthTokenURL is the internal auth token endpoint for code exchange.
+	AuthTokenURL string
+	// Domain is the parent domain used for cross-subdomain cookie scoping.
+	Domain string
 }
 
 // Server hosts the web login HTTP server.
@@ -37,28 +47,21 @@ type Server struct {
 	authConn   *grpc.ClientConn
 }
 
-type loginView struct {
-	AppName      string
-	PendingID    string
-	ClientID     string
-	ClientName   string
-	AuthLoginURL string
-	Error        string
-}
-
-type magicView struct {
-	AppName   string
-	Title     string
-	Message   string
-	Detail    string
-	Success   bool
-	LinkURL   string
-	LinkLabel string
-}
-
 type handler struct {
-	config     Config
-	authClient authv1.AuthServiceClient
+	config       Config
+	authClient   authv1.AuthServiceClient
+	sessions     *sessionStore
+	pendingFlows *pendingFlowStore
+}
+
+// localizer resolves the request locale, optionally persists a cookie,
+// and returns a message printer with the resolved language tag string.
+func localizer(w http.ResponseWriter, r *http.Request) (*message.Printer, string) {
+	tag, setCookie := webi18n.ResolveTag(r)
+	if setCookie {
+		webi18n.SetLanguageCookie(w, tag)
+	}
+	return webi18n.Printer(tag), tag.String()
 }
 
 // NewHandler creates the HTTP handler for the login UX.
@@ -70,12 +73,23 @@ func NewHandler(config Config, authClient authv1.AuthServiceClient) http.Handler
 	}
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
 
-	authLoginURL := buildAuthLoginURL(config.AuthBaseURL)
 	appName := strings.TrimSpace(config.AppName)
 	if appName == "" {
 		appName = branding.AppName
 	}
-	h := &handler{config: config, authClient: authClient}
+	h := &handler{
+		config:       config,
+		authClient:   authClient,
+		sessions:     newSessionStore(),
+		pendingFlows: newPendingFlowStore(),
+	}
+
+	// Register OAuth client routes when configured.
+	if strings.TrimSpace(config.OAuthClientID) != "" {
+		mux.HandleFunc("/auth/login", h.handleAuthLogin)
+		mux.HandleFunc("/auth/callback", h.handleAuthCallback)
+		mux.HandleFunc("/auth/logout", h.handleAuthLogout)
+	}
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
@@ -87,7 +101,25 @@ func NewHandler(config Config, authClient authv1.AuthServiceClient) http.Handler
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		templ.Handler(webtemplates.LandingPage(appName)).ServeHTTP(w, r)
+		printer, lang := localizer(w, r)
+		page := webtemplates.PageContext{
+			Lang:         lang,
+			Loc:          printer,
+			CurrentPath:  r.URL.Path,
+			CurrentQuery: r.URL.RawQuery,
+		}
+		params := webtemplates.LandingParams{}
+		if strings.TrimSpace(config.OAuthClientID) != "" {
+			params.SignInURL = "/auth/login"
+		}
+		if sess := sessionFromRequest(r, h.sessions); sess != nil {
+			name := sess.displayName
+			if name == "" {
+				name = "User"
+			}
+			params.UserName = name
+		}
+		templ.Handler(webtemplates.LandingPage(page, appName, params)).ServeHTTP(w, r)
 	})
 
 	mux.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
@@ -98,6 +130,10 @@ func NewHandler(config Config, authClient authv1.AuthServiceClient) http.Handler
 
 		pendingID := strings.TrimSpace(r.URL.Query().Get("pending_id"))
 		if pendingID == "" {
+			if strings.TrimSpace(config.OAuthClientID) != "" {
+				http.Redirect(w, r, "/auth/login", http.StatusFound)
+				return
+			}
 			http.Error(w, "pending_id is required", http.StatusBadRequest)
 			return
 		}
@@ -112,17 +148,17 @@ func NewHandler(config Config, authClient authv1.AuthServiceClient) http.Handler
 			}
 		}
 
-		view := loginView{
-			AppName:      appName,
-			PendingID:    pendingID,
-			ClientID:     clientID,
-			ClientName:   clientName,
-			AuthLoginURL: authLoginURL,
-			Error:        errorMessage,
+		printer, lang := localizer(w, r)
+		params := webtemplates.LoginParams{
+			AppName:    appName,
+			PendingID:  pendingID,
+			ClientID:   clientID,
+			ClientName: clientName,
+			Error:      errorMessage,
+			Lang:       lang,
+			Loc:        printer,
 		}
-		if err := templates.ExecuteTemplate(w, "login.html", view); err != nil {
-			http.Error(w, "failed to render login", http.StatusInternalServerError)
-		}
+		templ.Handler(webtemplates.LoginPage(params)).ServeHTTP(w, r)
 	})
 
 	mux.HandleFunc("/magic", h.handleMagicLink)
@@ -219,14 +255,6 @@ func (s *Server) Close() {
 	if err := s.authConn.Close(); err != nil {
 		log.Printf("close auth gRPC connection: %v", err)
 	}
-}
-
-func buildAuthLoginURL(base string) string {
-	base = strings.TrimSpace(base)
-	if base == "" {
-		return "/authorize/login"
-	}
-	return strings.TrimRight(base, "/") + "/authorize/login"
 }
 
 func buildAuthConsentURL(base string, pendingID string) string {
@@ -365,19 +393,19 @@ func (h *handler) handlePasskeyRegisterStart(w http.ResponseWriter, r *http.Requ
 	}
 
 	var payload struct {
-		DisplayName string `json:"display_name"`
-		PendingID   string `json:"pending_id"`
+		Username  string `json:"username"`
+		PendingID string `json:"pending_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		http.Error(w, "invalid json body", http.StatusBadRequest)
 		return
 	}
-	if strings.TrimSpace(payload.DisplayName) == "" {
-		http.Error(w, "display_name is required", http.StatusBadRequest)
+	if strings.TrimSpace(payload.Username) == "" {
+		http.Error(w, "username is required", http.StatusBadRequest)
 		return
 	}
 
-	createResp, err := h.authClient.CreateUser(r.Context(), &authv1.CreateUserRequest{DisplayName: payload.DisplayName})
+	createResp, err := h.authClient.CreateUser(r.Context(), &authv1.CreateUserRequest{Username: payload.Username})
 	if err != nil || createResp.GetUser() == nil {
 		http.Error(w, "failed to create user", http.StatusBadRequest)
 		return
@@ -450,37 +478,41 @@ func (h *handler) handleMagicLink(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+	printer, lang := localizer(w, r)
 	if h == nil || h.authClient == nil {
-		renderMagicPage(w, http.StatusInternalServerError, magicView{
+		renderMagicPage(w, r, http.StatusInternalServerError, webtemplates.MagicParams{
 			AppName: branding.AppName,
-			Title:   "Magic link unavailable",
-			Message: "We could not reach the authentication service.",
-			Detail:  "Please try again in a moment.",
+			Title:   printer.Sprintf("magic.unavailable.title"),
+			Message: printer.Sprintf("magic.unavailable.message"),
+			Detail:  printer.Sprintf("magic.unavailable.detail"),
 			Success: false,
+			Lang:    lang,
 		})
 		return
 	}
 
 	token := strings.TrimSpace(r.URL.Query().Get("token"))
 	if token == "" {
-		renderMagicPage(w, http.StatusBadRequest, magicView{
+		renderMagicPage(w, r, http.StatusBadRequest, webtemplates.MagicParams{
 			AppName: branding.AppName,
-			Title:   "Magic link missing",
-			Message: "This link is missing its token.",
-			Detail:  "Please request a new magic link and try again.",
+			Title:   printer.Sprintf("magic.missing.title"),
+			Message: printer.Sprintf("magic.missing.message"),
+			Detail:  printer.Sprintf("magic.missing.detail"),
 			Success: false,
+			Lang:    lang,
 		})
 		return
 	}
 
 	resp, err := h.authClient.ConsumeMagicLink(r.Context(), &authv1.ConsumeMagicLinkRequest{Token: token})
 	if err != nil {
-		renderMagicPage(w, http.StatusBadRequest, magicView{
+		renderMagicPage(w, r, http.StatusBadRequest, webtemplates.MagicParams{
 			AppName: branding.AppName,
-			Title:   "Magic link invalid",
-			Message: "We could not validate this magic link.",
-			Detail:  "It may have expired or already been used.",
+			Title:   printer.Sprintf("magic.invalid.title"),
+			Message: printer.Sprintf("magic.invalid.message"),
+			Detail:  printer.Sprintf("magic.invalid.detail"),
 			Success: false,
+			Lang:    lang,
 		})
 		return
 	}
@@ -490,22 +522,137 @@ func (h *handler) handleMagicLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	renderMagicPage(w, http.StatusOK, magicView{
+	renderMagicPage(w, r, http.StatusOK, webtemplates.MagicParams{
 		AppName:   branding.AppName,
-		Title:     "Magic link verified",
-		Message:   "Your link is valid and your email has been confirmed.",
-		Detail:    "You can return to the app and continue sign in.",
+		Title:     printer.Sprintf("magic.verified.title"),
+		Message:   printer.Sprintf("magic.verified.message"),
+		Detail:    printer.Sprintf("magic.verified.detail"),
 		Success:   true,
 		LinkURL:   "/",
-		LinkLabel: "Return to the app",
+		LinkLabel: printer.Sprintf("magic.verified.link"),
+		Lang:      lang,
 	})
 }
 
-func renderMagicPage(w http.ResponseWriter, status int, view magicView) {
+// renderMagicPage writes the status code and renders the magic-link templ page.
+func renderMagicPage(w http.ResponseWriter, r *http.Request, status int, params webtemplates.MagicParams) {
 	w.WriteHeader(status)
-	if err := templates.ExecuteTemplate(w, "magic.html", view); err != nil {
-		http.Error(w, "failed to render magic link page", http.StatusInternalServerError)
+	templ.Handler(webtemplates.MagicPage(params)).ServeHTTP(w, r)
+}
+
+// handleAuthLogin initiates the OAuth PKCE flow by redirecting to the auth server.
+func (h *handler) handleAuthLogin(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
 	}
+
+	verifier, err := generateCodeVerifier()
+	if err != nil {
+		http.Error(w, "failed to generate PKCE verifier", http.StatusInternalServerError)
+		return
+	}
+	challenge := computeS256Challenge(verifier)
+	state := h.pendingFlows.create(verifier)
+
+	authorizeURL := strings.TrimRight(strings.TrimSpace(h.config.AuthBaseURL), "/") + "/authorize"
+	redirectURL, err := url.Parse(authorizeURL)
+	if err != nil {
+		http.Error(w, "invalid auth base url", http.StatusInternalServerError)
+		return
+	}
+	q := redirectURL.Query()
+	q.Set("response_type", "code")
+	q.Set("client_id", h.config.OAuthClientID)
+	q.Set("redirect_uri", h.config.CallbackURL)
+	q.Set("code_challenge", challenge)
+	q.Set("code_challenge_method", "S256")
+	q.Set("state", state)
+	redirectURL.RawQuery = q.Encode()
+
+	http.Redirect(w, r, redirectURL.String(), http.StatusFound)
+}
+
+// handleAuthCallback exchanges the authorization code for a token and creates a session.
+func (h *handler) handleAuthCallback(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	code := strings.TrimSpace(r.URL.Query().Get("code"))
+	state := strings.TrimSpace(r.URL.Query().Get("state"))
+
+	if code == "" || state == "" {
+		http.Error(w, "missing code or state", http.StatusBadRequest)
+		return
+	}
+
+	flow := h.pendingFlows.consume(state)
+	if flow == nil {
+		http.Error(w, "invalid or expired state", http.StatusBadRequest)
+		return
+	}
+
+	tokenURL := strings.TrimSpace(h.config.AuthTokenURL)
+	if tokenURL == "" {
+		tokenURL = strings.TrimRight(strings.TrimSpace(h.config.AuthBaseURL), "/") + "/token"
+	}
+
+	form := url.Values{
+		"grant_type":    {"authorization_code"},
+		"code":          {code},
+		"redirect_uri":  {h.config.CallbackURL},
+		"code_verifier": {flow.codeVerifier},
+		"client_id":     {h.config.OAuthClientID},
+	}
+
+	resp, err := http.PostForm(tokenURL, form)
+	if err != nil {
+		http.Error(w, "token exchange failed", http.StatusBadGateway)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		http.Error(w, "token exchange returned "+resp.Status, http.StatusBadGateway)
+		return
+	}
+
+	var tokenResp struct {
+		AccessToken string `json:"access_token"`
+		ExpiresIn   int64  `json:"expires_in"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&tokenResp); err != nil {
+		http.Error(w, "failed to decode token response", http.StatusBadGateway)
+		return
+	}
+
+	if tokenResp.AccessToken == "" {
+		http.Error(w, "empty access token", http.StatusBadGateway)
+		return
+	}
+
+	expiry := time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second)
+	sessionID := h.sessions.create(tokenResp.AccessToken, "", expiry)
+	setSessionCookie(w, sessionID)
+	setTokenCookie(w, tokenResp.AccessToken, h.config.Domain, int(tokenResp.ExpiresIn))
+	http.Redirect(w, r, "/", http.StatusFound)
+}
+
+// handleAuthLogout clears the session and redirects to the landing page.
+func (h *handler) handleAuthLogout(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if cookie, err := r.Cookie(sessionCookieName); err == nil {
+		h.sessions.delete(cookie.Value)
+	}
+	clearSessionCookie(w)
+	clearTokenCookie(w, h.config.Domain)
+	http.Redirect(w, r, "/", http.StatusFound)
 }
 
 func writeJSON(w http.ResponseWriter, status int, payload any) {

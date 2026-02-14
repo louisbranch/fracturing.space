@@ -153,11 +153,11 @@ func (s *Store) PutUser(ctx context.Context, u user.User) error {
 	}
 
 	return s.q.PutUser(ctx, db.PutUserParams{
-		ID:          u.ID,
-		DisplayName: u.DisplayName,
-		Locale:      platformi18n.LocaleString(u.Locale),
-		CreatedAt:   toMillis(u.CreatedAt),
-		UpdatedAt:   toMillis(u.UpdatedAt),
+		ID:        u.ID,
+		Username:  u.Username,
+		Locale:    platformi18n.LocaleString(u.Locale),
+		CreatedAt: toMillis(u.CreatedAt),
+		UpdatedAt: toMillis(u.UpdatedAt),
 	})
 }
 
@@ -257,11 +257,11 @@ func dbUserToDomain(row db.User) (user.User, error) {
 		locale = parsed
 	}
 	return user.User{
-		ID:          row.ID,
-		DisplayName: row.DisplayName,
-		Locale:      locale,
-		CreatedAt:   fromMillis(row.CreatedAt),
-		UpdatedAt:   fromMillis(row.UpdatedAt),
+		ID:        row.ID,
+		Username:  row.Username,
+		Locale:    locale,
+		CreatedAt: fromMillis(row.CreatedAt),
+		UpdatedAt: fromMillis(row.UpdatedAt),
 	}, nil
 }
 

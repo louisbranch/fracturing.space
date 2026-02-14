@@ -224,7 +224,7 @@ func createAuthUser(t *testing.T, authAddr, displayName string) string {
 	defer conn.Close()
 
 	client := authv1.NewAuthServiceClient(conn)
-	resp, err := client.CreateUser(ctx, &authv1.CreateUserRequest{DisplayName: displayName})
+	resp, err := client.CreateUser(ctx, &authv1.CreateUserRequest{Username: displayName})
 	if err != nil {
 		t.Fatalf("create user: %v", err)
 	}

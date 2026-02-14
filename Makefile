@@ -69,6 +69,7 @@ run:
 	  go run ./cmd/auth 2>&1 & pids+=($$!); \
 	  go run ./cmd/mcp 2>&1 & pids+=($$!); \
 	  go run ./cmd/admin 2>&1 & pids+=($$!); \
+	  go run ./cmd/web 2>&1 & pids+=($$!); \
 	  trap "cleanup $${pids[*]}" EXIT; \
 	  trap "interrupted=1; cleanup $${pids[*]}" INT TERM; \
 	  status=0; \

@@ -3,6 +3,7 @@ package user
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -13,23 +14,35 @@ import (
 )
 
 var (
-	// ErrEmptyDisplayName indicates a missing user display name.
-	ErrEmptyDisplayName = apperrors.New(apperrors.CodeUserEmptyDisplayName, "display name is required")
+	// ErrEmptyUsername indicates a missing username.
+	ErrEmptyUsername = apperrors.New(apperrors.CodeUserEmptyUsername, "username is required")
+	// ErrInvalidUsername indicates a username that does not match the required format.
+	ErrInvalidUsername = apperrors.New(apperrors.CodeUserInvalidUsername, "username must be 3-32 lowercase alphanumeric, dot, dash, or underscore characters")
+
+	usernamePattern = regexp.MustCompile(`^[a-z0-9_.\-]{3,32}$`)
 )
 
 // User represents an authenticated identity record.
 type User struct {
-	ID          string
-	DisplayName string
-	Locale      commonv1.Locale
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID        string
+	Username  string
+	Locale    commonv1.Locale
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 // CreateUserInput describes the metadata needed to create a user.
 type CreateUserInput struct {
-	DisplayName string
-	Locale      commonv1.Locale
+	Username string
+	Locale   commonv1.Locale
+}
+
+// ValidateUsername checks that a username matches ^[a-z0-9_.-]{3,32}$.
+func ValidateUsername(s string) error {
+	if !usernamePattern.MatchString(s) {
+		return ErrInvalidUsername
+	}
+	return nil
 }
 
 // CreateUser creates a new user with a generated ID and timestamps.
@@ -53,19 +66,22 @@ func CreateUser(input CreateUserInput, now func() time.Time, idGenerator func() 
 
 	createdAt := now().UTC()
 	return User{
-		ID:          userID,
-		DisplayName: normalized.DisplayName,
-		Locale:      normalized.Locale,
-		CreatedAt:   createdAt,
-		UpdatedAt:   createdAt,
+		ID:        userID,
+		Username:  normalized.Username,
+		Locale:    normalized.Locale,
+		CreatedAt: createdAt,
+		UpdatedAt: createdAt,
 	}, nil
 }
 
-// NormalizeCreateUserInput trims and validates user input metadata.
+// NormalizeCreateUserInput trims, lowercases, and validates user input metadata.
 func NormalizeCreateUserInput(input CreateUserInput) (CreateUserInput, error) {
-	input.DisplayName = strings.TrimSpace(input.DisplayName)
-	if input.DisplayName == "" {
-		return CreateUserInput{}, ErrEmptyDisplayName
+	input.Username = strings.ToLower(strings.TrimSpace(input.Username))
+	if input.Username == "" {
+		return CreateUserInput{}, ErrEmptyUsername
+	}
+	if err := ValidateUsername(input.Username); err != nil {
+		return CreateUserInput{}, err
 	}
 	input.Locale = platformi18n.NormalizeLocale(input.Locale)
 	return input, nil

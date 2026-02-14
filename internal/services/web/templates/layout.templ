@@ -1,9 +1,9 @@
 package templates
 
 // Layout wraps public pages in the shared HTML shell.
-templ Layout(title string) {
+templ Layout(title string, lang string) {
 	<!DOCTYPE html>
-	<html lang="en" data-theme="fracturing">
+	<html lang={ lang } data-theme="fracturing">
 		<head>
 			<meta charset="utf-8">
 			<meta name="viewport" content="width=device-width, initial-scale=1">

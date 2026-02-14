@@ -303,7 +303,7 @@ func (s *Server) ensureUserForProfile(ctx context.Context, providerID string, pr
 	if s.userStore == nil {
 		return "", errors.New("user store not configured")
 	}
-	created, err := user.CreateUser(user.CreateUserInput{DisplayName: profile.DisplayName}, s.clock, id.NewID)
+	created, err := user.CreateUser(user.CreateUserInput{Username: sanitizeUsername(profile.DisplayName)}, s.clock, id.NewID)
 	if err != nil {
 		return "", err
 	}
@@ -331,6 +331,40 @@ func isAllowedRedirect(uri string, allowlist []string) bool {
 		}
 	}
 	return false
+}
+
+// sanitizeUsername converts a provider display name into a valid username
+// by lowercasing, replacing spaces/special characters with dashes, and
+// truncating to the max length. If the result is too short, it appends
+// random hex to reach the minimum length.
+func sanitizeUsername(name string) string {
+	s := strings.ToLower(strings.TrimSpace(name))
+	var b strings.Builder
+	for _, ch := range s {
+		switch {
+		case ch >= 'a' && ch <= 'z', ch >= '0' && ch <= '9', ch == '_', ch == '.', ch == '-':
+			b.WriteRune(ch)
+		case ch == ' ' || ch == '@':
+			b.WriteRune('-')
+		}
+	}
+	result := b.String()
+	// Trim leading/trailing dashes.
+	result = strings.Trim(result, "-")
+	if len(result) > 32 {
+		result = result[:32]
+	}
+	if len(result) < 3 {
+		suffix, _ := generateToken(4)
+		if suffix == "" {
+			suffix = "usr"
+		}
+		result = result + suffix
+		if len(result) > 32 {
+			result = result[:32]
+		}
+	}
+	return result
 }
 
 func firstNonEmpty(values ...string) string {

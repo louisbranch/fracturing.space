@@ -35,46 +35,6 @@ func generateToken(length int) (string, error) {
 	return hex.EncodeToString(bytes), nil
 }
 
-// UpsertOAuthUserCredentials stores credentials for a user.
-func (s *Store) UpsertOAuthUserCredentials(userID, username, passwordHash string, now time.Time) error {
-	if err := s.ensureDB(); err != nil {
-		return err
-	}
-	_, err := s.db.Exec(
-		`INSERT INTO oauth_user_credentials (user_id, username, password_hash, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?)
-		ON CONFLICT(user_id) DO UPDATE SET
-			username = excluded.username,
-			password_hash = excluded.password_hash,
-			updated_at = excluded.updated_at`,
-		userID, username, passwordHash, now.Format(oauthTimeFormat), now.Format(oauthTimeFormat),
-	)
-	return err
-}
-
-// GetOAuthUserByUsername returns the oauth user credentials by username.
-func (s *Store) GetOAuthUserByUsername(username string) (*OAuthUser, error) {
-	if err := s.ensureDB(); err != nil {
-		return nil, err
-	}
-
-	var user OAuthUser
-	err := s.db.QueryRow(
-		`SELECT c.user_id, c.username, c.password_hash, u.display_name
-		FROM oauth_user_credentials c
-		JOIN users u ON u.id = c.user_id
-		WHERE c.username = ?`,
-		username,
-	).Scan(&user.UserID, &user.Username, &user.PasswordHash, &user.DisplayName)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return &user, nil
-}
-
 // CreateAuthorizationCode stores a new authorization code.
 func (s *Store) CreateAuthorizationCode(request AuthorizationRequest, userID string, ttl time.Duration) (*AuthorizationCode, error) {
 	if err := s.ensureDB(); err != nil {

@@ -462,7 +462,7 @@ func TestListPendingInvites_Success(t *testing.T) {
 			Participant: participantStore,
 			Invite:      inviteStore,
 		},
-		authClient: &fakeAuthClient{user: &authv1.User{Id: "user-1", DisplayName: "Owner"}},
+		authClient: &fakeAuthClient{user: &authv1.User{Id: "user-1", Username: "owner"}},
 	}
 
 	ctx := contextWithParticipantID("owner-1")

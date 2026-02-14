@@ -39,7 +39,7 @@ func TestSessionGateBlocksDaggerheartActions(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
 	defer cancel()
 
-	userID := createAuthUser(t, authAddr, "Gate GM")
+	userID := createAuthUser(t, authAddr, "gate-gm")
 	ctxWithUser := withUserID(ctx, userID)
 
 	createCampaign, err := campaignClient.CreateCampaign(ctxWithUser, &gamev1.CreateCampaignRequest{

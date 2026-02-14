@@ -31,7 +31,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 	adminAddr, stopAdmin := startAdminServer(ctx, t, grpcAddr)
 	defer stopAdmin()
 
-	userID := createAuthUser(t, authAddr, "Admin Creator")
+	userID := createAuthUser(t, authAddr, "admin-creator")
 	ctxWithUser := withUserID(ctx, userID)
 
 	conn, err := grpc.NewClient(grpcAddr,

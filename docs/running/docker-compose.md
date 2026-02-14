@@ -27,6 +27,7 @@ Key settings:
 - `FRACTURING_SPACE_PUBLIC_PORT` (default `:8080`)
 - `FRACTURING_SPACE_GAME_EVENT_HMAC_KEY` (defaults to `dev-secret`)
 - Join-grant keys (dev-only defaults in `docker-compose.yml` and `.env.example`)
+- WebAuthn passkey config (Compose provides defaults matching the local domain and port)
 
 See [configuration](configuration.md) for the full list.
 

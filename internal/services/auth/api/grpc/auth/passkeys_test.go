@@ -100,7 +100,7 @@ func (s *fakePasskeyStore) DeleteExpiredPasskeySessions(_ context.Context, _ tim
 
 func TestBeginPasskeyRegistration_Success(t *testing.T) {
 	userStore := newFakeUserStore()
-	userStore.users["user-1"] = user.User{ID: "user-1", DisplayName: "Alpha", CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	userStore.users["user-1"] = user.User{ID: "user-1", Username: "alpha", CreatedAt: time.Now(), UpdatedAt: time.Now()}
 	passkeyStore := newFakePasskeyStore()
 
 	svc := NewAuthService(userStore, passkeyStore, nil)
@@ -196,7 +196,7 @@ func TestBeginPasskeyRegistration_UserNotFound(t *testing.T) {
 
 func TestBeginPasskeyRegistration_StoreSessionError(t *testing.T) {
 	userStore := newFakeUserStore()
-	userStore.users["user-1"] = user.User{ID: "user-1", DisplayName: "Alpha", CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	userStore.users["user-1"] = user.User{ID: "user-1", Username: "alpha", CreatedAt: time.Now(), UpdatedAt: time.Now()}
 	passkeyStore := newFakePasskeyStore()
 	passkeyStore.putErr = status.Error(codes.Internal, "store failed")
 
@@ -211,7 +211,7 @@ func TestBeginPasskeyRegistration_StoreSessionError(t *testing.T) {
 
 func TestBeginPasskeyRegistration_WithExistingCredentials(t *testing.T) {
 	userStore := newFakeUserStore()
-	userStore.users["user-1"] = user.User{ID: "user-1", DisplayName: "Alpha", CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	userStore.users["user-1"] = user.User{ID: "user-1", Username: "alpha", CreatedAt: time.Now(), UpdatedAt: time.Now()}
 	passkeyStore := newFakePasskeyStore()
 
 	credential := webauthn.Credential{ID: []byte("cred-1")}
@@ -334,7 +334,7 @@ func TestBeginPasskeyLogin_StoreSessionError(t *testing.T) {
 
 func TestBeginPasskeyLogin_WithUserID(t *testing.T) {
 	userStore := newFakeUserStore()
-	userStore.users["user-1"] = user.User{ID: "user-1", DisplayName: "Alpha", CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	userStore.users["user-1"] = user.User{ID: "user-1", Username: "alpha", CreatedAt: time.Now(), UpdatedAt: time.Now()}
 	passkeyStore := newFakePasskeyStore()
 
 	credential := webauthn.Credential{ID: []byte("cred-1")}
@@ -447,7 +447,7 @@ func TestFinishPasskeyRegistration_MissingFields(t *testing.T) {
 
 func TestFinishPasskeyRegistration_InvalidCredentialJSON(t *testing.T) {
 	userStore := newFakeUserStore()
-	userStore.users["user-1"] = user.User{ID: "user-1", DisplayName: "Alpha", CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	userStore.users["user-1"] = user.User{ID: "user-1", Username: "alpha", CreatedAt: time.Now(), UpdatedAt: time.Now()}
 	passkeyStore := newFakePasskeyStore()
 	svc := NewAuthService(userStore, passkeyStore, nil)
 
@@ -579,14 +579,14 @@ func TestDefaultPasskeyParserErrors(t *testing.T) {
 
 func TestPasskeyUserMethods(t *testing.T) {
 	credential := webauthn.Credential{ID: []byte("cred-1")}
-	user := passkeyUser{user: user.User{ID: "user-1", DisplayName: "Alpha"}, credentials: []webauthn.Credential{credential}}
+	user := passkeyUser{user: user.User{ID: "user-1", Username: "alpha"}, credentials: []webauthn.Credential{credential}}
 	if string(user.WebAuthnID()) != "user-1" {
 		t.Fatalf("expected WebAuthnID")
 	}
 	if user.WebAuthnName() != "user-1" {
 		t.Fatalf("expected WebAuthnName to be user id")
 	}
-	if user.WebAuthnDisplayName() != "Alpha" {
+	if user.WebAuthnDisplayName() != "alpha" {
 		t.Fatalf("expected WebAuthnDisplayName")
 	}
 	if user.WebAuthnIcon() != "" {
@@ -600,7 +600,7 @@ func TestPasskeyUserMethods(t *testing.T) {
 func TestLoadPasskeyUser(t *testing.T) {
 	userStore := newFakeUserStore()
 	passkeyStore := newFakePasskeyStore()
-	base := user.User{ID: "user-1", DisplayName: "Alpha", CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	base := user.User{ID: "user-1", Username: "alpha", CreatedAt: time.Now(), UpdatedAt: time.Now()}
 	userStore.users["user-1"] = base
 
 	credential := webauthn.Credential{ID: []byte("cred-1")}
@@ -648,7 +648,7 @@ func TestStorePasskeySession(t *testing.T) {
 func TestPasskeyUserHandler(t *testing.T) {
 	userStore := newFakeUserStore()
 	passkeyStore := newFakePasskeyStore()
-	base := user.User{ID: "user-1", DisplayName: "Alpha", CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	base := user.User{ID: "user-1", Username: "alpha", CreatedAt: time.Now(), UpdatedAt: time.Now()}
 	userStore.users["user-1"] = base
 
 	credential := webauthn.Credential{ID: []byte("cred-1")}
@@ -801,7 +801,7 @@ func TestAttachPendingAuthorizationNoStore(t *testing.T) {
 
 func TestFinishPasskeyRegistration_Success(t *testing.T) {
 	userStore := newFakeUserStore()
-	userStore.users["user-1"] = user.User{ID: "user-1", DisplayName: "Alpha", CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	userStore.users["user-1"] = user.User{ID: "user-1", Username: "alpha", CreatedAt: time.Now(), UpdatedAt: time.Now()}
 	passkeyStore := newFakePasskeyStore()
 
 	store := openTempOAuthStore(t)
@@ -866,7 +866,7 @@ func TestFinishPasskeyRegistrationMissingUserID(t *testing.T) {
 
 func TestFinishPasskeyLogin_AttachesPendingAuthorization(t *testing.T) {
 	userStore := newFakeUserStore()
-	userStore.users["user-1"] = user.User{ID: "user-1", DisplayName: "Alpha", CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	userStore.users["user-1"] = user.User{ID: "user-1", Username: "alpha", CreatedAt: time.Now(), UpdatedAt: time.Now()}
 	passkeyStore := newFakePasskeyStore()
 
 	oauthStore := openTempOAuthStore(t)

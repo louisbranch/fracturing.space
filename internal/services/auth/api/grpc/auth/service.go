@@ -173,11 +173,11 @@ func (s *AuthService) ListUsers(ctx context.Context, in *authv1.ListUsersRequest
 
 func userToProto(u user.User) *authv1.User {
 	return &authv1.User{
-		Id:          u.ID,
-		DisplayName: u.DisplayName,
-		Locale:      u.Locale,
-		CreatedAt:   timestamppb.New(u.CreatedAt),
-		UpdatedAt:   timestamppb.New(u.UpdatedAt),
+		Id:        u.ID,
+		Username:  u.Username,
+		Locale:    u.Locale,
+		CreatedAt: timestamppb.New(u.CreatedAt),
+		UpdatedAt: timestamppb.New(u.UpdatedAt),
 	}
 }
 

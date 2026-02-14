@@ -35,7 +35,7 @@ const blackboxFixtureGlob = "internal/test/integration/fixtures/blackbox_*.json"
 func TestMCPHTTPBlackbox(t *testing.T) {
 	grpcAddr, authAddr, stopGRPC := startGRPCServer(t)
 	defer stopGRPC()
-	userID := createAuthUser(t, authAddr, "Blackbox Creator")
+	userID := createAuthUser(t, authAddr, "blackbox-creator")
 
 	httpAddr := pickUnusedAddress(t)
 	ctx, cancel := context.WithCancel(context.Background())

@@ -1,0 +1,273 @@
+package templates
+
+// LoginParams holds values for the sign-in page.
+type LoginParams struct {
+	AppName    string
+	PendingID  string
+	ClientID   string
+	ClientName string
+	Error      string
+	Lang       string
+	Loc        Localizer
+}
+
+// LoginPage renders the passkey sign-in / registration page.
+templ LoginPage(params LoginParams) {
+	@Layout(T(params.Loc, "title.login", params.AppName), params.Lang) {
+		<main class="flex justify-center px-5 py-12">
+			<div class="w-full max-w-xl grid gap-8">
+				<header class="grid gap-3">
+					<h1 class="text-3xl font-bold">{ T(params.Loc, "login.heading") }</h1>
+					<p class="opacity-70">{ T(params.Loc, "login.requesting_access", params.ClientName, params.ClientID) }</p>
+				</header>
+				<div class="card bg-base-200 border border-base-300 shadow-xl">
+					<div class="card-body">
+						<h2 class="card-title text-xl">{ T(params.Loc, "login.card_title") }</h2>
+						<p class="opacity-70">{ T(params.Loc, "login.card_subtitle") }</p>
+						if params.Error != "" {
+							<div class="alert alert-error mt-4">{ params.Error }</div>
+						}
+						<div id="passkey-error" class="alert alert-error mt-4" hidden></div>
+						<div id="register-error" class="alert alert-error mt-4" hidden></div>
+						<div id="register-success" class="alert alert-success mt-4" hidden></div>
+						<form class="grid gap-4 mt-4" id="register-form">
+							<label class="form-control w-full">
+								<div class="label"><span class="label-text">{ T(params.Loc, "login.username") }</span></div>
+								<input type="text" id="username" name="username" autocomplete="username" required class="input input-bordered w-full"/>
+							</label>
+							<button type="button" class="btn btn-primary" id="passkey-register" data-pending-id={ params.PendingID }>{ T(params.Loc, "login.create_passkey") }</button>
+						</form>
+						<div class="divider">{ T(params.Loc, "login.divider") }</div>
+						<button type="button" class="btn btn-secondary btn-outline" id="passkey-login" data-pending-id={ params.PendingID }>{ T(params.Loc, "login.sign_in_passkey") }</button>
+					</div>
+				</div>
+			</div>
+		</main>
+		<div
+			id="i18n-strings"
+			hidden
+			data-missing-session={ T(params.Loc, "login.js.missing_session") }
+			data-passkey-failed={ T(params.Loc, "login.js.passkey_failed") }
+			data-username-required={ T(params.Loc, "login.js.username_required") }
+			data-passkey-created={ T(params.Loc, "login.js.passkey_created") }
+			data-register-failed={ T(params.Loc, "login.js.register_failed") }
+			data-login-start-error={ T(params.Loc, "login.js.login_start_error") }
+			data-login-finish-error={ T(params.Loc, "login.js.login_finish_error") }
+			data-register-start-error={ T(params.Loc, "login.js.register_start_error") }
+			data-register-finish-error={ T(params.Loc, "login.js.register_finish_error") }
+		></div>
+		@loginScript()
+	}
+}
+
+// loginScript emits the client-side passkey JS.
+templ loginScript() {
+	<script>
+		const i18nEl = document.getElementById("i18n-strings");
+		const i18n = i18nEl ? i18nEl.dataset : {};
+
+		const passkeyButton = document.getElementById("passkey-login");
+		const passkeyError = document.getElementById("passkey-error");
+		const registerButton = document.getElementById("passkey-register");
+		const registerName = document.getElementById("username");
+		const registerError = document.getElementById("register-error");
+		const registerSuccess = document.getElementById("register-success");
+
+		function showPasskeyError(message) {
+			if (!passkeyError) return;
+			passkeyError.textContent = message;
+			passkeyError.hidden = false;
+		}
+
+		function showRegisterError(message) {
+			if (!registerError) return;
+			registerError.textContent = message;
+			registerError.hidden = false;
+		}
+
+		function showRegisterSuccess(message) {
+			if (!registerSuccess) return;
+			registerSuccess.textContent = message;
+			registerSuccess.hidden = false;
+		}
+
+		function bufferToBase64Url(buffer) {
+			const bytes = new Uint8Array(buffer);
+			let binary = "";
+			bytes.forEach((b) => binary += String.fromCharCode(b));
+			return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+		}
+
+		function base64UrlToBuffer(base64Url) {
+			const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+			const pad = base64.length % 4 ? "=".repeat(4 - (base64.length % 4)) : "";
+			const binary = atob(base64 + pad);
+			const bytes = new Uint8Array(binary.length);
+			for (let i = 0; i < binary.length; i += 1) {
+				bytes[i] = binary.charCodeAt(i);
+			}
+			return bytes.buffer;
+		}
+
+		function credentialToJSON(credential) {
+			if (!credential) return null;
+			const response = credential.response;
+			const data = {
+				id: credential.id,
+				rawId: bufferToBase64Url(credential.rawId),
+				type: credential.type,
+			};
+			if (response) {
+				data.response = {
+					clientDataJSON: bufferToBase64Url(response.clientDataJSON),
+					attestationObject: response.attestationObject ? bufferToBase64Url(response.attestationObject) : undefined,
+					authenticatorData: response.authenticatorData ? bufferToBase64Url(response.authenticatorData) : undefined,
+					signature: response.signature ? bufferToBase64Url(response.signature) : undefined,
+					userHandle: response.userHandle ? bufferToBase64Url(response.userHandle) : undefined,
+				};
+			}
+			return data;
+		}
+
+		function normalizeRequestOptions(options) {
+			const publicKey = options;
+			publicKey.challenge = base64UrlToBuffer(publicKey.challenge);
+			if (Array.isArray(publicKey.allowCredentials)) {
+				publicKey.allowCredentials = publicKey.allowCredentials.map((cred) => ({
+					...cred,
+					id: base64UrlToBuffer(cred.id),
+				}));
+			}
+			return publicKey;
+		}
+
+		function normalizeCreationOptions(options) {
+			const publicKey = options;
+			publicKey.challenge = base64UrlToBuffer(publicKey.challenge);
+			if (publicKey.user && publicKey.user.id) {
+				publicKey.user.id = base64UrlToBuffer(publicKey.user.id);
+			}
+			if (Array.isArray(publicKey.excludeCredentials)) {
+				publicKey.excludeCredentials = publicKey.excludeCredentials.map((cred) => ({
+					...cred,
+					id: base64UrlToBuffer(cred.id),
+				}));
+			}
+			return publicKey;
+		}
+
+		async function startPasskeyLogin(pendingId) {
+			const response = await fetch("/passkeys/login/start", {
+				method: "POST",
+				headers: {"Content-Type": "application/json"},
+				body: JSON.stringify({pending_id: pendingId}),
+			});
+			if (!response.ok) {
+				throw new Error(i18n.loginStartError || "Unable to start passkey login.");
+			}
+			return response.json();
+		}
+
+		async function finishPasskeyLogin(pendingId, sessionId, credential) {
+			const response = await fetch("/passkeys/login/finish", {
+				method: "POST",
+				headers: {"Content-Type": "application/json"},
+				body: JSON.stringify({
+					pending_id: pendingId,
+					session_id: sessionId,
+					credential,
+				}),
+			});
+			if (!response.ok) {
+				throw new Error(i18n.loginFinishError || "Unable to finish passkey login.");
+			}
+			return response.json();
+		}
+
+		async function startPasskeyRegister(displayName, pendingId) {
+			const response = await fetch("/passkeys/register/start", {
+				method: "POST",
+				headers: {"Content-Type": "application/json"},
+				body: JSON.stringify({
+					username: displayName,
+					pending_id: pendingId,
+				}),
+			});
+			if (!response.ok) {
+				throw new Error(i18n.registerStartError || "An error occurred creating your account. If you already have an account, use Sign In With Passkey below.");
+			}
+			return response.json();
+		}
+
+		async function finishPasskeyRegister(sessionId, userId, credential, pendingId) {
+			const response = await fetch("/passkeys/register/finish", {
+				method: "POST",
+				headers: {"Content-Type": "application/json"},
+				body: JSON.stringify({
+					session_id: sessionId,
+					user_id: userId,
+					credential,
+					pending_id: pendingId,
+				}),
+			});
+			if (!response.ok) {
+				throw new Error(i18n.registerFinishError || "Unable to finish passkey registration.");
+			}
+			return response.json();
+		}
+
+		async function performPasskeyLogin(pendingId) {
+			const start = await startPasskeyLogin(pendingId);
+			const publicKey = normalizeRequestOptions(start.public_key.publicKey);
+			const assertion = await navigator.credentials.get({publicKey});
+			const credentialJSON = credentialToJSON(assertion);
+			const finish = await finishPasskeyLogin(pendingId, start.session_id, credentialJSON);
+			if (finish.redirect_url) {
+				window.location = finish.redirect_url;
+			}
+		}
+
+		if (passkeyButton && window.PublicKeyCredential) {
+			passkeyButton.addEventListener("click", async () => {
+				passkeyError.hidden = true;
+				const pendingId = passkeyButton.dataset.pendingId;
+				if (!pendingId) {
+					showPasskeyError(i18n.missingSession || "Missing login session.");
+					return;
+				}
+				try {
+					await performPasskeyLogin(pendingId);
+				} catch (err) {
+					showPasskeyError(err.message || i18n.passkeyFailed || "Passkey login failed.");
+				}
+			});
+		}
+
+		if (registerButton && window.PublicKeyCredential) {
+			registerButton.addEventListener("click", async () => {
+				registerError.hidden = true;
+				registerSuccess.hidden = true;
+				const pendingId = registerButton.dataset.pendingId || "";
+				const displayName = registerName ? registerName.value.trim() : "";
+				if (!displayName) {
+					showRegisterError(i18n.usernameRequired || "Username is required.");
+					return;
+				}
+				try {
+					const start = await startPasskeyRegister(displayName, pendingId);
+					const publicKey = normalizeCreationOptions(start.public_key.publicKey);
+					const credential = await navigator.credentials.create({publicKey});
+					const credentialJSON = credentialToJSON(credential);
+					await finishPasskeyRegister(start.session_id, start.user_id, credentialJSON, pendingId);
+					if (pendingId) {
+						await performPasskeyLogin(pendingId);
+						return;
+					}
+					showRegisterSuccess(i18n.passkeyCreated || "Passkey created. You can now sign in.");
+				} catch (err) {
+					showRegisterError(err.message || i18n.registerFailed || "Passkey registration failed.");
+				}
+			});
+		}
+	</script>
+}

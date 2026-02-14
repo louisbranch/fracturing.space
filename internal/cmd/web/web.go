@@ -13,10 +13,14 @@ import (
 
 // Config holds the web command configuration.
 type Config struct {
-	HTTPAddr        string        `env:"FRACTURING_SPACE_WEB_HTTP_ADDR"      envDefault:"localhost:8086"`
-	AuthBaseURL     string        `env:"FRACTURING_SPACE_WEB_AUTH_BASE_URL"  envDefault:"http://localhost:8084"`
-	AuthAddr        string        `env:"FRACTURING_SPACE_WEB_AUTH_ADDR"      envDefault:"localhost:8083"`
-	GRPCDialTimeout time.Duration `env:"FRACTURING_SPACE_WEB_DIAL_TIMEOUT"   envDefault:"2s"`
+	HTTPAddr        string        `env:"FRACTURING_SPACE_WEB_HTTP_ADDR"           envDefault:"localhost:8086"`
+	AuthBaseURL     string        `env:"FRACTURING_SPACE_WEB_AUTH_BASE_URL"       envDefault:"http://localhost:8084"`
+	AuthAddr        string        `env:"FRACTURING_SPACE_WEB_AUTH_ADDR"           envDefault:"localhost:8083"`
+	GRPCDialTimeout time.Duration `env:"FRACTURING_SPACE_WEB_DIAL_TIMEOUT"        envDefault:"2s"`
+	OAuthClientID   string        `env:"FRACTURING_SPACE_WEB_OAUTH_CLIENT_ID"     envDefault:"fracturing-space-web"`
+	CallbackURL     string        `env:"FRACTURING_SPACE_WEB_CALLBACK_URL"`
+	AuthTokenURL    string        `env:"FRACTURING_SPACE_WEB_AUTH_TOKEN_URL"`
+	Domain          string        `env:"FRACTURING_SPACE_DOMAIN"`
 }
 
 // ParseConfig parses flags into a Config.
@@ -46,6 +50,10 @@ func Run(ctx context.Context, cfg Config) error {
 		AuthBaseURL:     cfg.AuthBaseURL,
 		AuthAddr:        cfg.AuthAddr,
 		GRPCDialTimeout: cfg.GRPCDialTimeout,
+		OAuthClientID:   cfg.OAuthClientID,
+		CallbackURL:     cfg.CallbackURL,
+		AuthTokenURL:    cfg.AuthTokenURL,
+		Domain:          cfg.Domain,
 	})
 	if err != nil {
 		return fmt.Errorf("init web server: %w", err)

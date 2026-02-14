@@ -99,11 +99,11 @@ type PasskeySession struct {
 }
 
 type User struct {
-	ID          string `json:"id"`
-	DisplayName string `json:"display_name"`
-	Locale      string `json:"locale"`
-	CreatedAt   int64  `json:"created_at"`
-	UpdatedAt   int64  `json:"updated_at"`
+	ID        string `json:"id"`
+	Username  string `json:"username"`
+	Locale    string `json:"locale"`
+	CreatedAt int64  `json:"created_at"`
+	UpdatedAt int64  `json:"updated_at"`
 }
 
 type UserEmail struct {

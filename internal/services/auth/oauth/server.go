@@ -48,7 +48,6 @@ func (s *Server) RegisterRoutes(mux *http.ServeMux) {
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
 
 	mux.HandleFunc("/authorize", s.handleAuthorize)
-	mux.HandleFunc("/authorize/login", s.handleLogin)
 	mux.HandleFunc("/authorize/consent", s.handleConsent)
 	mux.HandleFunc("/token", s.handleToken)
 	mux.HandleFunc("/introspect", s.handleIntrospect)
