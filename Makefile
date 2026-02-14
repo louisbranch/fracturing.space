@@ -62,14 +62,14 @@ run:
 	'
 
 cover:
-	rm -f coverage.raw coverage.out coverage.html
+	rm -f coverage.raw coverage.out coverage.html coverage-treemap.svg
 	@bash -euo pipefail -c 'go test -tags=integration -v -coverpkg=./... -coverprofile=coverage.raw ./... | tee coverage.log'
 	awk -v exclude='$(COVER_EXCLUDE_REGEX)' 'NR==1 || $$1 !~ exclude' coverage.raw > coverage.out
 	go tool cover -func coverage.out
 	go tool cover -html=coverage.out -o coverage.html
 
 cover-treemap: cover
-	go run github.com/nikolaydubina/go-cover-treemap -coverprofile=coverage.out -percent > docs/project/testing-coverage.svg
+	go run github.com/nikolaydubina/go-cover-treemap -coverprofile=coverage.out -percent > coverage-treemap.svg
 
 test:
 	go test ./...

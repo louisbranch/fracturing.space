@@ -2,6 +2,7 @@ coverage.out
 coverage.html
 coverage.raw
 coverage.log
+coverage-treemap.svg
 data/
 
 .ai/plans/

@@ -50,6 +50,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.6"
       - name: Configure git identity
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
@@ -71,6 +75,8 @@ jobs:
           elif awk "BEGIN {exit !($COVERAGE_PERCENT >= 50)}"; then
             COLOR=yellow
           fi
+          TMP_DIR=$(mktemp -d)
+          mv coverage.out "$TMP_DIR/coverage.out"
           if git ls-remote --exit-code --heads origin badges; then
             git fetch origin badges
             git checkout -B badges origin/badges
@@ -80,8 +86,10 @@ jobs:
             git clean -fdx
             git commit --allow-empty -m "chore: initialize badges branch"
           fi
+          mv "$TMP_DIR/coverage.out" ./coverage.out
+          go run github.com/nikolaydubina/go-cover-treemap -coverprofile=coverage.out -percent > coverage-treemap.svg
           curl -f -o coverage.svg "https://img.shields.io/badge/coverage-${COVERAGE_PERCENT}%25-${COLOR}"
-          git add coverage.svg
+          git add coverage.svg coverage-treemap.svg
           if git diff --cached --quiet; then
             echo "No changes to coverage badge."
             exit 0

@@ -88,6 +88,13 @@ Fracturing.Space is in an early and experimental stage.
 
 The core architecture and APIs are usable, but the project is not yet a complete, end-to-end game platform. Interfaces may change as additional systems, integrations, and deployment models are explored.
 
+<details>
+<summary>Coverage Treemap</summary>
+
+![Coverage Treemap](../../raw/badges/coverage-treemap.svg)
+
+</details>
+
 ### Documentation (canonical)
 
 The docs are the canonical source of truth for architecture, APIs, and usage. Start with [docs](/docs/index.md) or browse the published site at [GitHub Pages](https://louisbranch.github.io/fracturing.space/).
@@ -126,4 +133,3 @@ This repository focuses on infrastructure and mechanics, not on distributing cop
 - Contributors are responsible for ensuring that any submitted content complies with applicable licenses
 
 The long-term goal is to support user-provided and community-maintained systems and content packs, with clear attribution and licensing, without bundling proprietary material directly into the core project.
-
