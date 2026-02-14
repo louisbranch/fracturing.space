@@ -14,6 +14,8 @@ management for LLM and traditional clients.
 - [Configuration](running/configuration.md)
 - [Seeding the database](running/seeding.md)
 - [Integration tests](running/integration-tests.md)
+- [Playwright CLI guide](guides/playwright-cli.md)
+- [Playwright CLI specs](specs/playwright-cli-qa-workflows.md)
 - [Architecture](project/architecture.md)
 - [Service boundaries](project/architecture.md#services-and-boundaries)
 - [Domain language](project/domain-language.md)

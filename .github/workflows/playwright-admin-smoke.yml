@@ -1,0 +1,72 @@
+name: Admin Smoke (Playwright CLI)
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  admin-smoke:
+    runs-on: ubuntu-latest
+    env:
+      PLAYWRIGHT_CLI_PKG: "@playwright/cli@0.1.0"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.6"
+          cache: true
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install Playwright CLI browsers
+        run: npx -y $PLAYWRIGHT_CLI_PKG install
+      - name: Build services
+        run: |
+          set -euo pipefail
+          mkdir -p bin
+          go build -o ./bin/join-grant-key ./cmd/join-grant-key
+          go build -o ./bin/game ./cmd/game
+          go build -o ./bin/auth ./cmd/auth
+          go build -o ./bin/admin ./cmd/admin
+      - name: Start services
+        env:
+          FRACTURING_SPACE_GAME_EVENT_HMAC_KEY: "dev-secret"
+        run: |
+          set -euo pipefail
+          eval "$(./bin/join-grant-key)"
+          export FRACTURING_SPACE_JOIN_GRANT_ISSUER="fracturing.space/auth"
+          export FRACTURING_SPACE_JOIN_GRANT_AUDIENCE="fracturing.space/game"
+          export FRACTURING_SPACE_JOIN_GRANT_TTL="5m"
+          FRACTURING_SPACE_GAME_EVENT_HMAC_KEY="${FRACTURING_SPACE_GAME_EVENT_HMAC_KEY}" ./bin/game 2>&1 &
+          FRACTURING_SPACE_AUTH_ADDR=127.0.0.1:8083 ./bin/auth 2>&1 &
+          FRACTURING_SPACE_ADMIN_ADDR=127.0.0.1:8082 FRACTURING_SPACE_GAME_ADDR=127.0.0.1:8080 FRACTURING_SPACE_AUTH_ADDR=127.0.0.1:8083 ./bin/admin 2>&1 &
+          timeout 60 bash -c 'until curl -fsS http://127.0.0.1:8082/ >/dev/null; do sleep 0.5; done'
+      - name: Seed variety data
+        run: make seed-variety
+      - name: Run admin smoke flow
+        env:
+          BASE_URL: "http://127.0.0.1:8082"
+        run: scripts/playwright-admin-smoke.sh
+      - name: Upload Playwright artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-admin-smoke
+          path: |
+            .playwright-cli
+            artifacts
+          if-no-files-found: warn
+      - name: Stop services
+        if: always()
+        run: |
+          pkill -f "/bin/game" 2>/dev/null || true
+          pkill -f "/bin/auth" 2>/dev/null || true
+          pkill -f "/bin/admin" 2>/dev/null || true
