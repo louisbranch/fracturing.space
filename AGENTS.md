@@ -6,6 +6,11 @@ Single source of agent directives and project context.
 
 - At the start of a session, verify you are not on `main` with `git branch --show-current`; if you are on `main`, stop, and ask for instructions.
 
+## ExecPlans
+
+- For complex features or significant refactors, write an ExecPlan and follow `PLANS.md`.
+- ExecPlans live in `plans/` and must be kept up to date as work progresses.
+
 ## Safety
 
 - Do not commit files containing secrets (.env, credentials).

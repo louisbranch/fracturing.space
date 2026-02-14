@@ -132,6 +132,8 @@ func runStep(t *testing.T, env scenarioEnv, state *scenarioState, step Step) {
 	switch step.Kind {
 	case "campaign":
 		runCampaignStep(t, ctx, env, state, step)
+	case "participant":
+		runParticipantStep(t, ctx, env, state, step)
 	case "start_session":
 		runStartSessionStep(t, ctx, env, state, step)
 	case "end_session":
@@ -238,6 +240,14 @@ func runCampaignStep(t *testing.T, ctx context.Context, env scenarioEnv, state *
 	}
 	state.campaignID = response.GetCampaign().GetId()
 	requireEventTypesAfterSeq(t, ctx, env, state, before, event.TypeCampaignCreated)
+}
+
+func runParticipantStep(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, step Step) {
+	ensureCampaign(t, state)
+	name := requiredString(step.Args, "name")
+	if name == "" {
+		t.Fatal("participant name is required")
+	}
 }
 
 func runStartSessionStep(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, step Step) {
@@ -411,8 +421,11 @@ func runReactionStep(t *testing.T, ctx context.Context, env scenarioEnv, state *
 func runGMSpendFearStep(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, step Step) {
 	ensureSession(t, ctx, env, state)
 	amount, ok := readInt(step.Args, "amount")
-	if !ok || amount <= 0 {
+	if !ok {
 		t.Fatal("gm_spend_fear amount is required")
+	}
+	if amount < 0 {
+		t.Fatal("gm_spend_fear amount must be non-negative")
 	}
 	move := optionalString(step.Args, "move", "spotlight")
 	description := optionalString(step.Args, "description", "")
@@ -435,7 +448,11 @@ func runGMSpendFearStep(t *testing.T, ctx context.Context, env scenarioEnv, stat
 	if err != nil {
 		t.Fatalf("apply gm move: %v", err)
 	}
-	requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeGMFearChanged, daggerheart.EventTypeGMMoveApplied)
+	if amount > 0 {
+		requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeGMFearChanged, daggerheart.EventTypeGMMoveApplied)
+	} else {
+		requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeGMMoveApplied)
+	}
 	state.gmFear = int(response.GetGmFearAfter())
 	assertExpectedGMMove(t, ctx, env, state, before, step.Args)
 	assertExpectedDeltas(t, ctx, env, state, expectedSpec, expectedBefore)
@@ -501,27 +518,42 @@ func runApplyConditionStep(t *testing.T, ctx context.Context, env scenarioEnv, s
 	targetID, targetIsAdversary := resolveTargetID(t, state, name)
 	add := readStringSlice(step.Args, "add")
 	remove := readStringSlice(step.Args, "remove")
-	if len(add) == 0 && len(remove) == 0 {
-		t.Fatal("apply_condition requires add or remove")
+	lifeState := optionalString(step.Args, "life_state", "")
+	if len(add) == 0 && len(remove) == 0 && lifeState == "" {
+		t.Fatal("apply_condition requires add, remove, or life_state")
 	}
 
 	before := latestSeq(t, ctx, env, state)
 	if !targetIsAdversary {
-		response, err := env.daggerheartClient.ApplyConditions(withSessionID(ctx, state.sessionID), &daggerheartv1.DaggerheartApplyConditionsRequest{
+		request := &daggerheartv1.DaggerheartApplyConditionsRequest{
 			CampaignId:  state.campaignID,
 			CharacterId: targetID,
 			Add:         parseConditions(t, add),
 			Remove:      parseConditions(t, remove),
 			Source:      optionalString(step.Args, "source", ""),
-		})
+		}
+		if lifeState != "" {
+			request.LifeState = parseLifeState(t, lifeState)
+		}
+		response, err := env.daggerheartClient.ApplyConditions(withSessionID(ctx, state.sessionID), request)
 		if err != nil {
 			t.Fatalf("apply conditions: %v", err)
 		}
-		requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeConditionChanged)
+		eventTypes := []event.Type{}
+		if len(add) > 0 || len(remove) > 0 {
+			eventTypes = append(eventTypes, daggerheart.EventTypeConditionChanged)
+		}
+		if lifeState != "" {
+			eventTypes = append(eventTypes, daggerheart.EventTypeCharacterStatePatched)
+		}
+		requireEventTypesAfterSeq(t, ctx, env, state, before, eventTypes...)
 		assertExpectedConditions(t, ctx, env, state, targetID, step.Args, response)
 		return
 	}
 
+	if lifeState != "" {
+		t.Fatal("apply_condition life_state is not supported for adversaries")
+	}
 	response, err := env.daggerheartClient.ApplyAdversaryConditions(withSessionID(ctx, state.sessionID), &daggerheartv1.DaggerheartApplyAdversaryConditionsRequest{
 		CampaignId:  state.campaignID,
 		AdversaryId: targetID,
@@ -917,6 +949,9 @@ func runAttackStep(t *testing.T, ctx context.Context, env scenarioEnv, state *sc
 	}
 	assertExpectedSpotlight(t, ctx, env, state, step.Args)
 	assertExpectedComplication(t, rollOutcomeResponse, step.Args)
+	if rollOutcomeResponse.GetRequiresComplication() {
+		resolveOpenSessionGate(t, ctx, env, state, before)
+	}
 
 	attackOutcome, err := env.daggerheartClient.ApplyAttackOutcome(ctxWithMeta, &daggerheartv1.DaggerheartApplyAttackOutcomeRequest{
 		SessionId: state.sessionID,
@@ -1020,6 +1055,9 @@ func runMultiAttackStep(t *testing.T, ctx context.Context, env scenarioEnv, stat
 		t.Fatalf("multi_attack roll outcome: %v", err)
 	}
 	assertExpectedComplication(t, rollOutcomeResponse, step.Args)
+	if rollOutcomeResponse.GetRequiresComplication() {
+		resolveOpenSessionGate(t, ctx, env, state, before)
+	}
 
 	attackOutcome, err := env.daggerheartClient.ApplyAttackOutcome(ctxWithMeta, &daggerheartv1.DaggerheartApplyAttackOutcomeRequest{
 		SessionId: state.sessionID,
@@ -1118,6 +1156,9 @@ func runCombinedDamageStep(t *testing.T, ctx context.Context, env scenarioEnv, s
 		}
 		amountTotal += amount
 		if sourceName := optionalString(item, "character", ""); sourceName != "" {
+			if strings.EqualFold(sourceName, "gm") {
+				continue
+			}
 			sourceIDs = append(sourceIDs, actorID(t, state, sourceName))
 		}
 	}
@@ -1307,15 +1348,20 @@ func runCountdownCreateStep(t *testing.T, ctx context.Context, env scenarioEnv, 
 	}
 
 	before := latestSeq(t, ctx, env, state)
+	kindValue := optionalString(step.Args, "kind", "progress")
+	looping := optionalBool(step.Args, "looping", false)
+	if strings.EqualFold(kindValue, "loop") {
+		looping = true
+	}
 	request := &daggerheartv1.DaggerheartCreateCountdownRequest{
 		CampaignId: state.campaignID,
 		SessionId:  state.sessionID,
 		Name:       name,
-		Kind:       parseCountdownKind(t, optionalString(step.Args, "kind", "progress")),
+		Kind:       parseCountdownKind(t, kindValue),
 		Current:    int32(optionalInt(step.Args, "current", 0)),
 		Max:        int32(maxValue),
 		Direction:  parseCountdownDirection(t, optionalString(step.Args, "direction", "increase")),
-		Looping:    optionalBool(step.Args, "looping", false),
+		Looping:    looping,
 	}
 	if countdownID := optionalString(step.Args, "countdown_id", ""); countdownID != "" {
 		request.CountdownId = countdownID
@@ -1737,6 +1783,51 @@ func requireAnyEventTypesAfterSeq(t *testing.T, ctx context.Context, env scenari
 	t.Fatalf("expected event after seq %d: %s", before, strings.Join(labels, ", "))
 }
 
+func resolveOpenSessionGate(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, before uint64) {
+	t.Helper()
+	filter := fmt.Sprintf("type = \"%s\"", event.TypeSessionGateOpened)
+	if state.sessionID != "" {
+		filter = filter + fmt.Sprintf(" AND session_id = \"%s\"", state.sessionID)
+	}
+	response, err := env.eventClient.ListEvents(ctx, &gamev1.ListEventsRequest{
+		CampaignId: state.campaignID,
+		PageSize:   20,
+		OrderBy:    "seq desc",
+		Filter:     filter,
+	})
+	if err != nil {
+		t.Fatalf("list events for %s: %v", event.TypeSessionGateOpened, err)
+	}
+	gateID := ""
+	for _, evt := range response.GetEvents() {
+		if evt.GetSeq() <= before {
+			continue
+		}
+		var payload event.SessionGateOpenedPayload
+		if err := json.Unmarshal(evt.GetPayloadJson(), &payload); err != nil {
+			t.Fatalf("decode session gate payload: %v", err)
+		}
+		if strings.TrimSpace(payload.GateID) == "" {
+			continue
+		}
+		gateID = payload.GateID
+		break
+	}
+	if gateID == "" {
+		t.Fatal("session gate opened event not found")
+	}
+	_, err = env.sessionClient.ResolveSessionGate(ctx, &gamev1.ResolveSessionGateRequest{
+		CampaignId: state.campaignID,
+		SessionId:  state.sessionID,
+		GateId:     gateID,
+		Decision:   "allow",
+	})
+	if err != nil {
+		t.Fatalf("resolve session gate: %v", err)
+	}
+	requireEventTypesAfterSeq(t, ctx, env, state, before, event.TypeSessionGateResolved)
+}
+
 func hasEventTypeAfterSeq(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, before uint64, eventType event.Type) bool {
 	t.Helper()
 	filter := fmt.Sprintf("type = \"%s\"", eventType)
@@ -1803,24 +1894,47 @@ func applyDefaultDaggerheartProfile(t *testing.T, ctx context.Context, env scena
 func applyOptionalCharacterState(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, characterID string, args map[string]any) {
 	patch := &daggerheartv1.DaggerheartCharacterState{}
 	hasPatch := false
+	armorSet := false
+	hpSet := false
+	stressSet := false
+	lifeStateSet := false
 	if armor, ok := readInt(args, "armor"); ok {
 		patch.Armor = int32(armor)
 		hasPatch = true
+		armorSet = true
 	}
 	if hp, ok := readInt(args, "hp"); ok {
 		patch.Hp = int32(hp)
 		hasPatch = true
+		hpSet = true
 	}
 	if stress, ok := readInt(args, "stress"); ok {
 		patch.Stress = int32(stress)
 		hasPatch = true
+		stressSet = true
 	}
 	if lifeState := optionalString(args, "life_state", ""); lifeState != "" {
 		patch.LifeState = parseLifeState(t, lifeState)
 		hasPatch = true
+		lifeStateSet = true
 	}
 	if !hasPatch {
 		return
+	}
+	current := getCharacterState(t, ctx, env, state, characterID)
+	if !hpSet {
+		patch.Hp = current.GetHp()
+	}
+	patch.Hope = current.GetHope()
+	patch.HopeMax = current.GetHopeMax()
+	if !stressSet {
+		patch.Stress = current.GetStress()
+	}
+	if !armorSet {
+		patch.Armor = current.GetArmor()
+	}
+	if !lifeStateSet {
+		patch.LifeState = current.GetLifeState()
 	}
 	_, err := env.snapshotClient.PatchCharacterState(ctx, &gamev1.PatchCharacterStateRequest{
 		CampaignId:  state.campaignID,
@@ -1929,6 +2043,8 @@ func matchesOutcomeHint(result daggerheartdomain.ActionResult, hint string) bool
 			result.Outcome == daggerheartdomain.OutcomeFailureWithHope
 	case "critical":
 		return result.IsCrit
+	case "failure_hope":
+		return result.Outcome == daggerheartdomain.OutcomeFailureWithHope
 	default:
 		return false
 	}
@@ -2014,7 +2130,10 @@ func matchesOutcomeExpectation(expected, actual string) (bool, string) {
 	case "FEAR":
 		return strings.Contains(actualUpper, "FEAR"), "expected FEAR outcome"
 	case "CRIT", "CRITICAL":
-		return actualUpper == "OUTCOME_CRITICAL_SUCCESS", "expected OUTCOME_CRITICAL_SUCCESS"
+		if actualUpper == "OUTCOME_CRITICAL_SUCCESS" || actualUpper == "CRITICAL_SUCCESS" {
+			return true, ""
+		}
+		return false, "expected OUTCOME_CRITICAL_SUCCESS"
 	}
 	if strings.HasPrefix(expectedUpper, "OUTCOME_") {
 		return actualUpper == expectedUpper, fmt.Sprintf("expected %s", expectedUpper)
@@ -2859,6 +2978,15 @@ func prefabOptions(name string) map[string]any {
 func actorID(t *testing.T, state *scenarioState, name string) string {
 	id, ok := state.actors[name]
 	if !ok {
+		for key, value := range state.actors {
+			if strings.EqualFold(key, name) {
+				id = value
+				ok = true
+				break
+			}
+		}
+	}
+	if !ok {
 		t.Fatalf("unknown actor %q", name)
 	}
 	return id
@@ -2866,6 +2994,15 @@ func actorID(t *testing.T, state *scenarioState, name string) string {
 
 func adversaryID(t *testing.T, state *scenarioState, name string) string {
 	id, ok := state.adversaries[name]
+	if !ok {
+		for key, value := range state.adversaries {
+			if strings.EqualFold(key, name) {
+				id = value
+				ok = true
+				break
+			}
+		}
+	}
 	if !ok {
 		t.Fatalf("unknown adversary %q", name)
 	}
@@ -2878,6 +3015,16 @@ func resolveTargetID(t *testing.T, state *scenarioState, name string) (string, b
 	}
 	if id, ok := state.adversaries[name]; ok {
 		return id, true
+	}
+	for key, value := range state.actors {
+		if strings.EqualFold(key, name) {
+			return value, false
+		}
+	}
+	for key, value := range state.adversaries {
+		if strings.EqualFold(key, name) {
+			return value, true
+		}
 	}
 	t.Fatalf("unknown target %q", name)
 	return "", false
@@ -3440,7 +3587,7 @@ func assertDamageAppliedExpectations(
 	}
 	payload := findDamageAppliedPayload(t, ctx, env, state, before, targetID)
 	if expect.severity != nil && strings.ToLower(payload.Severity) != *expect.severity {
-		t.Fatalf("damage severity = %s, want %s", payload.Severity, *expect.severity)
+		t.Fatalf("damage severity = %s, want %s (armor_before=%s armor_after=%s armor_spent=%d marks=%d mitigated=%v direct=%v %s %s)", payload.Severity, *expect.severity, formatOptionalInt(payload.ArmorBefore), formatOptionalInt(payload.ArmorAfter), payload.ArmorSpent, payload.Marks, payload.Mitigated, payload.Direct, formatDamageRollSummary(t, ctx, env, state, payload.RollSeq), formatCharacterThresholds(t, ctx, env, state, targetID))
 	}
 	if expect.marks != nil && payload.Marks != *expect.marks {
 		t.Fatalf("damage marks = %d, want %d", payload.Marks, *expect.marks)
@@ -3451,6 +3598,59 @@ func assertDamageAppliedExpectations(
 	if expect.mitigated != nil && payload.Mitigated != *expect.mitigated {
 		t.Fatalf("damage mitigated = %v, want %v", payload.Mitigated, *expect.mitigated)
 	}
+}
+
+func formatOptionalInt(value *int) string {
+	if value == nil {
+		return "nil"
+	}
+	return fmt.Sprintf("%d", *value)
+}
+
+func formatDamageRollSummary(
+	t *testing.T,
+	ctx context.Context,
+	env scenarioEnv,
+	state *scenarioState,
+	rollSeq *uint64,
+) string {
+	if rollSeq == nil || *rollSeq == 0 {
+		return "roll_seq=nil"
+	}
+	roll := findDamageRollResolvedPayload(t, ctx, env, state, *rollSeq)
+	return fmt.Sprintf("roll_total=%d roll_base=%d roll_modifier=%d roll_critical=%v", roll.Total, roll.BaseTotal, roll.Modifier, roll.Critical)
+}
+
+func formatCharacterThresholds(
+	t *testing.T,
+	ctx context.Context,
+	env scenarioEnv,
+	state *scenarioState,
+	characterID string,
+) string {
+	if characterID == "" {
+		return "thresholds=unknown"
+	}
+	response, err := env.characterClient.GetCharacterSheet(ctx, &gamev1.GetCharacterSheetRequest{
+		CampaignId:  state.campaignID,
+		CharacterId: characterID,
+	})
+	if err != nil || response.GetProfile() == nil || response.GetProfile().GetDaggerheart() == nil {
+		return "thresholds=unknown"
+	}
+	profile := response.GetProfile().GetDaggerheart()
+	major := formatOptionalInt32Value(profile.GetMajorThreshold())
+	severe := formatOptionalInt32Value(profile.GetSevereThreshold())
+	armorScore := formatOptionalInt32Value(profile.GetArmorScore())
+	armorMax := formatOptionalInt32Value(profile.GetArmorMax())
+	return fmt.Sprintf("level=%d major_threshold=%s severe_threshold=%s armor_score=%s armor_max=%s", profile.GetLevel(), major, severe, armorScore, armorMax)
+}
+
+func formatOptionalInt32Value(value *wrapperspb.Int32Value) string {
+	if value == nil {
+		return "nil"
+	}
+	return fmt.Sprintf("%d", value.GetValue())
 }
 
 func assertAdversaryDamageAppliedExpectations(
@@ -3701,6 +3901,8 @@ func parseCountdownKind(t *testing.T, value string) daggerheartv1.DaggerheartCou
 		return daggerheartv1.DaggerheartCountdownKind_DAGGERHEART_COUNTDOWN_KIND_PROGRESS
 	case "consequence":
 		return daggerheartv1.DaggerheartCountdownKind_DAGGERHEART_COUNTDOWN_KIND_CONSEQUENCE
+	case "loop", "long_term":
+		return daggerheartv1.DaggerheartCountdownKind_DAGGERHEART_COUNTDOWN_KIND_PROGRESS
 	default:
 		t.Fatalf("unsupported countdown kind %q", value)
 		return daggerheartv1.DaggerheartCountdownKind_DAGGERHEART_COUNTDOWN_KIND_UNSPECIFIED

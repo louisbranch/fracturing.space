@@ -120,6 +120,50 @@ func (r *Runner) requireAnyEventTypesAfterSeq(ctx context.Context, state *scenar
 	return r.assertf("expected event after seq %d: %s", before, strings.Join(labels, ", "))
 }
 
+func (r *Runner) resolveOpenSessionGate(ctx context.Context, state *scenarioState, before uint64) error {
+	filter := fmt.Sprintf("type = \"%s\"", event.TypeSessionGateOpened)
+	if state.sessionID != "" {
+		filter = filter + fmt.Sprintf(" AND session_id = \"%s\"", state.sessionID)
+	}
+	response, err := r.env.eventClient.ListEvents(ctx, &gamev1.ListEventsRequest{
+		CampaignId: state.campaignID,
+		PageSize:   20,
+		OrderBy:    "seq desc",
+		Filter:     filter,
+	})
+	if err != nil {
+		return fmt.Errorf("list events for %s: %w", event.TypeSessionGateOpened, err)
+	}
+	gateID := ""
+	for _, evt := range response.GetEvents() {
+		if evt.GetSeq() <= before {
+			continue
+		}
+		var payload event.SessionGateOpenedPayload
+		if err := json.Unmarshal(evt.GetPayloadJson(), &payload); err != nil {
+			return fmt.Errorf("decode session gate payload: %w", err)
+		}
+		if strings.TrimSpace(payload.GateID) == "" {
+			continue
+		}
+		gateID = payload.GateID
+		break
+	}
+	if gateID == "" {
+		return r.failf("session gate opened event not found")
+	}
+	_, err = r.env.sessionClient.ResolveSessionGate(ctx, &gamev1.ResolveSessionGateRequest{
+		CampaignId: state.campaignID,
+		SessionId:  state.sessionID,
+		GateId:     gateID,
+		Decision:   "allow",
+	})
+	if err != nil {
+		return fmt.Errorf("resolve session gate: %w", err)
+	}
+	return r.requireEventTypesAfterSeq(ctx, state, before, event.TypeSessionGateResolved)
+}
+
 func (r *Runner) hasEventTypeAfterSeq(ctx context.Context, state *scenarioState, before uint64, eventType event.Type) (bool, error) {
 	filter := fmt.Sprintf("type = \"%s\"", eventType)
 	if state.sessionID != "" && isSessionEvent(string(eventType)) {
@@ -186,17 +230,24 @@ func (r *Runner) applyDefaultDaggerheartProfile(ctx context.Context, state *scen
 func (r *Runner) applyOptionalCharacterState(ctx context.Context, state *scenarioState, characterID string, args map[string]any) error {
 	patch := &daggerheartv1.DaggerheartCharacterState{}
 	hasPatch := false
+	armorSet := false
+	hpSet := false
+	stressSet := false
+	lifeStateSet := false
 	if armor, ok := readInt(args, "armor"); ok {
 		patch.Armor = int32(armor)
 		hasPatch = true
+		armorSet = true
 	}
 	if hp, ok := readInt(args, "hp"); ok {
 		patch.Hp = int32(hp)
 		hasPatch = true
+		hpSet = true
 	}
 	if stress, ok := readInt(args, "stress"); ok {
 		patch.Stress = int32(stress)
 		hasPatch = true
+		stressSet = true
 	}
 	if lifeState := optionalString(args, "life_state", ""); lifeState != "" {
 		value, err := parseLifeState(lifeState)
@@ -205,11 +256,31 @@ func (r *Runner) applyOptionalCharacterState(ctx context.Context, state *scenari
 		}
 		patch.LifeState = value
 		hasPatch = true
+		lifeStateSet = true
 	}
 	if !hasPatch {
 		return nil
 	}
-	_, err := r.env.snapshotClient.PatchCharacterState(ctx, &gamev1.PatchCharacterStateRequest{
+	// PatchCharacterState overwrites the full state, so merge with current values.
+	current, err := r.getCharacterState(ctx, state, characterID)
+	if err != nil {
+		return err
+	}
+	if !hpSet {
+		patch.Hp = current.GetHp()
+	}
+	patch.Hope = current.GetHope()
+	patch.HopeMax = current.GetHopeMax()
+	if !stressSet {
+		patch.Stress = current.GetStress()
+	}
+	if !armorSet {
+		patch.Armor = current.GetArmor()
+	}
+	if !lifeStateSet {
+		patch.LifeState = current.GetLifeState()
+	}
+	_, err = r.env.snapshotClient.PatchCharacterState(ctx, &gamev1.PatchCharacterStateRequest{
 		CampaignId:  state.campaignID,
 		CharacterId: characterID,
 		SystemStatePatch: &gamev1.PatchCharacterStateRequest_Daggerheart{
@@ -343,6 +414,8 @@ func matchesOutcomeHint(result daggerheartdomain.ActionResult, hint string) bool
 			result.Outcome == daggerheartdomain.OutcomeFailureWithHope
 	case "critical":
 		return result.IsCrit
+	case "failure_hope":
+		return result.Outcome == daggerheartdomain.OutcomeFailureWithHope
 	default:
 		return false
 	}
@@ -686,6 +759,15 @@ func prefabOptions(name string) map[string]any {
 func actorID(state *scenarioState, name string) (string, error) {
 	id, ok := state.actors[name]
 	if !ok {
+		for key, value := range state.actors {
+			if strings.EqualFold(key, name) {
+				id = value
+				ok = true
+				break
+			}
+		}
+	}
+	if !ok {
 		return "", fmt.Errorf("unknown actor %q", name)
 	}
 	return id, nil
@@ -693,6 +775,15 @@ func actorID(state *scenarioState, name string) (string, error) {
 
 func adversaryID(state *scenarioState, name string) (string, error) {
 	id, ok := state.adversaries[name]
+	if !ok {
+		for key, value := range state.adversaries {
+			if strings.EqualFold(key, name) {
+				id = value
+				ok = true
+				break
+			}
+		}
+	}
 	if !ok {
 		return "", fmt.Errorf("unknown adversary %q", name)
 	}
@@ -705,6 +796,16 @@ func resolveTargetID(state *scenarioState, name string) (string, bool, error) {
 	}
 	if id, ok := state.adversaries[name]; ok {
 		return id, true, nil
+	}
+	for key, value := range state.actors {
+		if strings.EqualFold(key, name) {
+			return value, false, nil
+		}
+	}
+	for key, value := range state.adversaries {
+		if strings.EqualFold(key, name) {
+			return value, true, nil
+		}
 	}
 	return "", false, fmt.Errorf("unknown target %q", name)
 }
@@ -944,6 +1045,54 @@ func (r *Runner) assertExpectedDeltas(
 	return nil
 }
 
+func (r *Runner) assertExpectedSpotlight(ctx context.Context, state *scenarioState, args map[string]any) error {
+	expected := strings.ToLower(strings.TrimSpace(optionalString(args, "expect_spotlight", "")))
+	if expected == "" {
+		return nil
+	}
+	if state.sessionID == "" {
+		return r.failf("expect_spotlight requires an active session")
+	}
+	request := &gamev1.GetSessionSpotlightRequest{
+		CampaignId: state.campaignID,
+		SessionId:  state.sessionID,
+	}
+	if expected == "none" {
+		if _, err := r.env.sessionClient.GetSessionSpotlight(ctx, request); err == nil {
+			return r.failf("expected no session spotlight")
+		}
+		return nil
+	}
+	response, err := r.env.sessionClient.GetSessionSpotlight(ctx, request)
+	if err != nil {
+		return fmt.Errorf("get session spotlight: %w", err)
+	}
+	spotlight := response.GetSpotlight()
+	if spotlight == nil {
+		return r.failf("expected session spotlight")
+	}
+	if expected == "gm" {
+		if spotlight.GetType() != gamev1.SessionSpotlightType_SESSION_SPOTLIGHT_TYPE_GM {
+			return r.failf("spotlight type = %v, want GM", spotlight.GetType())
+		}
+		if spotlight.GetCharacterId() != "" {
+			return r.failf("spotlight character id = %q, want empty", spotlight.GetCharacterId())
+		}
+		return nil
+	}
+	characterID, err := actorID(state, expected)
+	if err != nil {
+		return err
+	}
+	if spotlight.GetType() != gamev1.SessionSpotlightType_SESSION_SPOTLIGHT_TYPE_CHARACTER {
+		return r.failf("spotlight type = %v, want CHARACTER", spotlight.GetType())
+	}
+	if spotlight.GetCharacterId() != characterID {
+		return r.failf("spotlight character id = %q, want %q", spotlight.GetCharacterId(), characterID)
+	}
+	return nil
+}
+
 type damageFlagExpect struct {
 	resistPhysical *bool
 	resistMagic    *bool
@@ -1134,6 +1283,8 @@ func parseCountdownKind(value string) (daggerheartv1.DaggerheartCountdownKind, e
 		return daggerheartv1.DaggerheartCountdownKind_DAGGERHEART_COUNTDOWN_KIND_PROGRESS, nil
 	case "consequence":
 		return daggerheartv1.DaggerheartCountdownKind_DAGGERHEART_COUNTDOWN_KIND_CONSEQUENCE, nil
+	case "loop", "long_term":
+		return daggerheartv1.DaggerheartCountdownKind_DAGGERHEART_COUNTDOWN_KIND_PROGRESS, nil
 	default:
 		return daggerheartv1.DaggerheartCountdownKind_DAGGERHEART_COUNTDOWN_KIND_UNSPECIFIED, fmt.Errorf("unsupported countdown kind %q", value)
 	}

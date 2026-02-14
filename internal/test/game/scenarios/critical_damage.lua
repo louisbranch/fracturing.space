@@ -8,7 +8,7 @@ scene:campaign{
   theme = "crit"
 }
 
-scene:pc("Frodo")
+scene:pc("Frodo", { stress = 1 })
 scene:adversary("Saruman")
 
 -- Frodo pushes for a critical strike.

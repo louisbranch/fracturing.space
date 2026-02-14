@@ -1057,8 +1057,9 @@ type DaggerheartApplyConditionsRequest struct {
 	CharacterId   string                 `protobuf:"bytes,2,opt,name=character_id,json=characterId,proto3" json:"character_id,omitempty"`
 	Add           []DaggerheartCondition `protobuf:"varint,3,rep,packed,name=add,proto3,enum=systems.daggerheart.v1.DaggerheartCondition" json:"add,omitempty"`
 	Remove        []DaggerheartCondition `protobuf:"varint,4,rep,packed,name=remove,proto3,enum=systems.daggerheart.v1.DaggerheartCondition" json:"remove,omitempty"`
-	Source        string                 `protobuf:"bytes,5,opt,name=source,proto3" json:"source,omitempty"`
-	RollSeq       *uint64                `protobuf:"varint,6,opt,name=roll_seq,json=rollSeq,proto3,oneof" json:"roll_seq,omitempty"`
+	LifeState     DaggerheartLifeState   `protobuf:"varint,5,opt,name=life_state,json=lifeState,proto3,enum=systems.daggerheart.v1.DaggerheartLifeState" json:"life_state,omitempty"`
+	Source        string                 `protobuf:"bytes,6,opt,name=source,proto3" json:"source,omitempty"`
+	RollSeq       *uint64                `protobuf:"varint,7,opt,name=roll_seq,json=rollSeq,proto3,oneof" json:"roll_seq,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1119,6 +1120,13 @@ func (x *DaggerheartApplyConditionsRequest) GetRemove() []DaggerheartCondition {
 		return x.Remove
 	}
 	return nil
+}
+
+func (x *DaggerheartApplyConditionsRequest) GetLifeState() DaggerheartLifeState {
+	if x != nil {
+		return x.LifeState
+	}
+	return DaggerheartLifeState_DAGGERHEART_LIFE_STATE_UNSPECIFIED
 }
 
 func (x *DaggerheartApplyConditionsRequest) GetSource() string {
@@ -6841,15 +6849,17 @@ const file_systems_daggerheart_v1_service_proto_rawDesc = "" +
 	"!DaggerheartApplyDeathMoveResponse\x12!\n" +
 	"\fcharacter_id\x18\x01 \x01(\tR\vcharacterId\x12G\n" +
 	"\x05state\x18\x02 \x01(\v21.systems.daggerheart.v1.DaggerheartCharacterStateR\x05state\x12J\n" +
-	"\x06result\x18\x03 \x01(\v22.systems.daggerheart.v1.DaggerheartDeathMoveResultR\x06result\"\xb2\x02\n" +
+	"\x06result\x18\x03 \x01(\v22.systems.daggerheart.v1.DaggerheartDeathMoveResultR\x06result\"\xff\x02\n" +
 	"!DaggerheartApplyConditionsRequest\x12\x1f\n" +
 	"\vcampaign_id\x18\x01 \x01(\tR\n" +
 	"campaignId\x12!\n" +
 	"\fcharacter_id\x18\x02 \x01(\tR\vcharacterId\x12>\n" +
 	"\x03add\x18\x03 \x03(\x0e2,.systems.daggerheart.v1.DaggerheartConditionR\x03add\x12D\n" +
-	"\x06remove\x18\x04 \x03(\x0e2,.systems.daggerheart.v1.DaggerheartConditionR\x06remove\x12\x16\n" +
-	"\x06source\x18\x05 \x01(\tR\x06source\x12\x1e\n" +
-	"\broll_seq\x18\x06 \x01(\x04H\x00R\arollSeq\x88\x01\x01B\v\n" +
+	"\x06remove\x18\x04 \x03(\x0e2,.systems.daggerheart.v1.DaggerheartConditionR\x06remove\x12K\n" +
+	"\n" +
+	"life_state\x18\x05 \x01(\x0e2,.systems.daggerheart.v1.DaggerheartLifeStateR\tlifeState\x12\x16\n" +
+	"\x06source\x18\x06 \x01(\tR\x06source\x12\x1e\n" +
+	"\broll_seq\x18\a \x01(\x04H\x00R\arollSeq\x88\x01\x01B\v\n" +
 	"\t_roll_seq\"\x9c\x02\n" +
 	"\"DaggerheartApplyConditionsResponse\x12!\n" +
 	"\fcharacter_id\x18\x01 \x01(\tR\vcharacterId\x12G\n" +
@@ -7632,204 +7642,205 @@ var file_systems_daggerheart_v1_service_proto_depIdxs = []int32{
 	15,  // 17: systems.daggerheart.v1.DaggerheartApplyDeathMoveResponse.result:type_name -> systems.daggerheart.v1.DaggerheartDeathMoveResult
 	98,  // 18: systems.daggerheart.v1.DaggerheartApplyConditionsRequest.add:type_name -> systems.daggerheart.v1.DaggerheartCondition
 	98,  // 19: systems.daggerheart.v1.DaggerheartApplyConditionsRequest.remove:type_name -> systems.daggerheart.v1.DaggerheartCondition
-	90,  // 20: systems.daggerheart.v1.DaggerheartApplyConditionsResponse.state:type_name -> systems.daggerheart.v1.DaggerheartCharacterState
-	98,  // 21: systems.daggerheart.v1.DaggerheartApplyConditionsResponse.added:type_name -> systems.daggerheart.v1.DaggerheartCondition
-	98,  // 22: systems.daggerheart.v1.DaggerheartApplyConditionsResponse.removed:type_name -> systems.daggerheart.v1.DaggerheartCondition
-	98,  // 23: systems.daggerheart.v1.DaggerheartApplyAdversaryConditionsRequest.add:type_name -> systems.daggerheart.v1.DaggerheartCondition
-	98,  // 24: systems.daggerheart.v1.DaggerheartApplyAdversaryConditionsRequest.remove:type_name -> systems.daggerheart.v1.DaggerheartCondition
-	30,  // 25: systems.daggerheart.v1.DaggerheartApplyAdversaryConditionsResponse.adversary:type_name -> systems.daggerheart.v1.DaggerheartAdversary
-	98,  // 26: systems.daggerheart.v1.DaggerheartApplyAdversaryConditionsResponse.added:type_name -> systems.daggerheart.v1.DaggerheartCondition
-	98,  // 27: systems.daggerheart.v1.DaggerheartApplyAdversaryConditionsResponse.removed:type_name -> systems.daggerheart.v1.DaggerheartCondition
-	0,   // 28: systems.daggerheart.v1.DaggerheartCountdown.kind:type_name -> systems.daggerheart.v1.DaggerheartCountdownKind
-	1,   // 29: systems.daggerheart.v1.DaggerheartCountdown.direction:type_name -> systems.daggerheart.v1.DaggerheartCountdownDirection
-	0,   // 30: systems.daggerheart.v1.DaggerheartCreateCountdownRequest.kind:type_name -> systems.daggerheart.v1.DaggerheartCountdownKind
-	1,   // 31: systems.daggerheart.v1.DaggerheartCreateCountdownRequest.direction:type_name -> systems.daggerheart.v1.DaggerheartCountdownDirection
-	23,  // 32: systems.daggerheart.v1.DaggerheartCreateCountdownResponse.countdown:type_name -> systems.daggerheart.v1.DaggerheartCountdown
-	23,  // 33: systems.daggerheart.v1.DaggerheartUpdateCountdownResponse.countdown:type_name -> systems.daggerheart.v1.DaggerheartCountdown
-	99,  // 34: systems.daggerheart.v1.DaggerheartAdversary.session_id:type_name -> google.protobuf.StringValue
-	98,  // 35: systems.daggerheart.v1.DaggerheartAdversary.conditions:type_name -> systems.daggerheart.v1.DaggerheartCondition
-	100, // 36: systems.daggerheart.v1.DaggerheartAdversary.created_at:type_name -> google.protobuf.Timestamp
-	100, // 37: systems.daggerheart.v1.DaggerheartAdversary.updated_at:type_name -> google.protobuf.Timestamp
-	99,  // 38: systems.daggerheart.v1.DaggerheartCreateAdversaryRequest.session_id:type_name -> google.protobuf.StringValue
-	101, // 39: systems.daggerheart.v1.DaggerheartCreateAdversaryRequest.hp:type_name -> google.protobuf.Int32Value
-	101, // 40: systems.daggerheart.v1.DaggerheartCreateAdversaryRequest.hp_max:type_name -> google.protobuf.Int32Value
-	101, // 41: systems.daggerheart.v1.DaggerheartCreateAdversaryRequest.stress:type_name -> google.protobuf.Int32Value
-	101, // 42: systems.daggerheart.v1.DaggerheartCreateAdversaryRequest.stress_max:type_name -> google.protobuf.Int32Value
-	101, // 43: systems.daggerheart.v1.DaggerheartCreateAdversaryRequest.evasion:type_name -> google.protobuf.Int32Value
-	101, // 44: systems.daggerheart.v1.DaggerheartCreateAdversaryRequest.major_threshold:type_name -> google.protobuf.Int32Value
-	101, // 45: systems.daggerheart.v1.DaggerheartCreateAdversaryRequest.severe_threshold:type_name -> google.protobuf.Int32Value
-	101, // 46: systems.daggerheart.v1.DaggerheartCreateAdversaryRequest.armor:type_name -> google.protobuf.Int32Value
-	30,  // 47: systems.daggerheart.v1.DaggerheartCreateAdversaryResponse.adversary:type_name -> systems.daggerheart.v1.DaggerheartAdversary
-	99,  // 48: systems.daggerheart.v1.DaggerheartUpdateAdversaryRequest.name:type_name -> google.protobuf.StringValue
-	99,  // 49: systems.daggerheart.v1.DaggerheartUpdateAdversaryRequest.kind:type_name -> google.protobuf.StringValue
-	99,  // 50: systems.daggerheart.v1.DaggerheartUpdateAdversaryRequest.session_id:type_name -> google.protobuf.StringValue
-	99,  // 51: systems.daggerheart.v1.DaggerheartUpdateAdversaryRequest.notes:type_name -> google.protobuf.StringValue
-	101, // 52: systems.daggerheart.v1.DaggerheartUpdateAdversaryRequest.hp:type_name -> google.protobuf.Int32Value
-	101, // 53: systems.daggerheart.v1.DaggerheartUpdateAdversaryRequest.hp_max:type_name -> google.protobuf.Int32Value
-	101, // 54: systems.daggerheart.v1.DaggerheartUpdateAdversaryRequest.stress:type_name -> google.protobuf.Int32Value
-	101, // 55: systems.daggerheart.v1.DaggerheartUpdateAdversaryRequest.stress_max:type_name -> google.protobuf.Int32Value
-	101, // 56: systems.daggerheart.v1.DaggerheartUpdateAdversaryRequest.evasion:type_name -> google.protobuf.Int32Value
-	101, // 57: systems.daggerheart.v1.DaggerheartUpdateAdversaryRequest.major_threshold:type_name -> google.protobuf.Int32Value
-	101, // 58: systems.daggerheart.v1.DaggerheartUpdateAdversaryRequest.severe_threshold:type_name -> google.protobuf.Int32Value
-	101, // 59: systems.daggerheart.v1.DaggerheartUpdateAdversaryRequest.armor:type_name -> google.protobuf.Int32Value
-	30,  // 60: systems.daggerheart.v1.DaggerheartUpdateAdversaryResponse.adversary:type_name -> systems.daggerheart.v1.DaggerheartAdversary
-	30,  // 61: systems.daggerheart.v1.DaggerheartDeleteAdversaryResponse.adversary:type_name -> systems.daggerheart.v1.DaggerheartAdversary
-	30,  // 62: systems.daggerheart.v1.DaggerheartGetAdversaryResponse.adversary:type_name -> systems.daggerheart.v1.DaggerheartAdversary
-	99,  // 63: systems.daggerheart.v1.DaggerheartListAdversariesRequest.session_id:type_name -> google.protobuf.StringValue
-	30,  // 64: systems.daggerheart.v1.DaggerheartListAdversariesResponse.adversaries:type_name -> systems.daggerheart.v1.DaggerheartAdversary
-	97,  // 65: systems.daggerheart.v1.DaggerheartBlazeOfGloryResult.life_state:type_name -> systems.daggerheart.v1.DaggerheartLifeState
-	90,  // 66: systems.daggerheart.v1.DaggerheartResolveBlazeOfGloryResponse.state:type_name -> systems.daggerheart.v1.DaggerheartCharacterState
-	42,  // 67: systems.daggerheart.v1.DaggerheartResolveBlazeOfGloryResponse.result:type_name -> systems.daggerheart.v1.DaggerheartBlazeOfGloryResult
-	96,  // 68: systems.daggerheart.v1.ActionRollRequest.rng:type_name -> common.v1.RngRequest
-	102, // 69: systems.daggerheart.v1.ActionRollResponse.outcome:type_name -> systems.daggerheart.v1.Outcome
-	103, // 70: systems.daggerheart.v1.ActionRollResponse.rng:type_name -> common.v1.RngResponse
-	102, // 71: systems.daggerheart.v1.DualityOutcomeResponse.outcome:type_name -> systems.daggerheart.v1.Outcome
-	102, // 72: systems.daggerheart.v1.DualityExplainResponse.outcome:type_name -> systems.daggerheart.v1.Outcome
-	104, // 73: systems.daggerheart.v1.DualityExplainResponse.intermediates:type_name -> systems.daggerheart.v1.Intermediates
-	105, // 74: systems.daggerheart.v1.DualityExplainResponse.steps:type_name -> systems.daggerheart.v1.ExplainStep
-	106, // 75: systems.daggerheart.v1.DualityProbabilityResponse.outcome_counts:type_name -> systems.daggerheart.v1.OutcomeCount
-	102, // 76: systems.daggerheart.v1.RulesVersionResponse.outcomes:type_name -> systems.daggerheart.v1.Outcome
-	107, // 77: systems.daggerheart.v1.RollDiceRequest.dice:type_name -> systems.daggerheart.v1.DiceSpec
-	96,  // 78: systems.daggerheart.v1.RollDiceRequest.rng:type_name -> common.v1.RngRequest
-	108, // 79: systems.daggerheart.v1.RollDiceResponse.rolls:type_name -> systems.daggerheart.v1.DiceRoll
-	103, // 80: systems.daggerheart.v1.RollDiceResponse.rng:type_name -> common.v1.RngResponse
-	2,   // 81: systems.daggerheart.v1.SessionActionRollRequest.roll_kind:type_name -> systems.daggerheart.v1.RollKind
-	109, // 82: systems.daggerheart.v1.SessionActionRollRequest.modifiers:type_name -> systems.daggerheart.v1.ActionRollModifier
-	96,  // 83: systems.daggerheart.v1.SessionActionRollRequest.rng:type_name -> common.v1.RngRequest
-	103, // 84: systems.daggerheart.v1.SessionActionRollResponse.rng:type_name -> common.v1.RngResponse
-	107, // 85: systems.daggerheart.v1.SessionDamageRollRequest.dice:type_name -> systems.daggerheart.v1.DiceSpec
-	96,  // 86: systems.daggerheart.v1.SessionDamageRollRequest.rng:type_name -> common.v1.RngRequest
-	108, // 87: systems.daggerheart.v1.SessionDamageRollResponse.rolls:type_name -> systems.daggerheart.v1.DiceRoll
-	103, // 88: systems.daggerheart.v1.SessionDamageRollResponse.rng:type_name -> common.v1.RngResponse
-	110, // 89: systems.daggerheart.v1.DaggerheartAttackDamageSpec.damage_type:type_name -> systems.daggerheart.v1.DaggerheartDamageType
-	109, // 90: systems.daggerheart.v1.SessionAttackFlowRequest.modifiers:type_name -> systems.daggerheart.v1.ActionRollModifier
-	107, // 91: systems.daggerheart.v1.SessionAttackFlowRequest.damage_dice:type_name -> systems.daggerheart.v1.DiceSpec
-	60,  // 92: systems.daggerheart.v1.SessionAttackFlowRequest.damage:type_name -> systems.daggerheart.v1.DaggerheartAttackDamageSpec
-	96,  // 93: systems.daggerheart.v1.SessionAttackFlowRequest.action_rng:type_name -> common.v1.RngRequest
-	96,  // 94: systems.daggerheart.v1.SessionAttackFlowRequest.damage_rng:type_name -> common.v1.RngRequest
-	57,  // 95: systems.daggerheart.v1.SessionAttackFlowResponse.action_roll:type_name -> systems.daggerheart.v1.SessionActionRollResponse
-	79,  // 96: systems.daggerheart.v1.SessionAttackFlowResponse.roll_outcome:type_name -> systems.daggerheart.v1.ApplyRollOutcomeResponse
-	83,  // 97: systems.daggerheart.v1.SessionAttackFlowResponse.attack_outcome:type_name -> systems.daggerheart.v1.DaggerheartApplyAttackOutcomeResponse
-	59,  // 98: systems.daggerheart.v1.SessionAttackFlowResponse.damage_roll:type_name -> systems.daggerheart.v1.SessionDamageRollResponse
-	4,   // 99: systems.daggerheart.v1.SessionAttackFlowResponse.damage_applied:type_name -> systems.daggerheart.v1.DaggerheartApplyDamageResponse
-	109, // 100: systems.daggerheart.v1.SessionReactionFlowRequest.modifiers:type_name -> systems.daggerheart.v1.ActionRollModifier
-	96,  // 101: systems.daggerheart.v1.SessionReactionFlowRequest.reaction_rng:type_name -> common.v1.RngRequest
-	57,  // 102: systems.daggerheart.v1.SessionReactionFlowResponse.action_roll:type_name -> systems.daggerheart.v1.SessionActionRollResponse
-	79,  // 103: systems.daggerheart.v1.SessionReactionFlowResponse.roll_outcome:type_name -> systems.daggerheart.v1.ApplyRollOutcomeResponse
-	88,  // 104: systems.daggerheart.v1.SessionReactionFlowResponse.reaction_outcome:type_name -> systems.daggerheart.v1.DaggerheartApplyReactionOutcomeResponse
-	96,  // 105: systems.daggerheart.v1.SessionAdversaryAttackRollRequest.rng:type_name -> common.v1.RngRequest
-	96,  // 106: systems.daggerheart.v1.SessionAdversaryActionCheckRequest.rng:type_name -> common.v1.RngRequest
-	103, // 107: systems.daggerheart.v1.SessionAdversaryActionCheckResponse.rng:type_name -> common.v1.RngResponse
-	103, // 108: systems.daggerheart.v1.SessionAdversaryAttackRollResponse.rng:type_name -> common.v1.RngResponse
-	107, // 109: systems.daggerheart.v1.SessionAdversaryAttackFlowRequest.damage_dice:type_name -> systems.daggerheart.v1.DiceSpec
-	60,  // 110: systems.daggerheart.v1.SessionAdversaryAttackFlowRequest.damage:type_name -> systems.daggerheart.v1.DaggerheartAttackDamageSpec
-	96,  // 111: systems.daggerheart.v1.SessionAdversaryAttackFlowRequest.attack_rng:type_name -> common.v1.RngRequest
-	96,  // 112: systems.daggerheart.v1.SessionAdversaryAttackFlowRequest.damage_rng:type_name -> common.v1.RngRequest
-	68,  // 113: systems.daggerheart.v1.SessionAdversaryAttackFlowResponse.attack_roll:type_name -> systems.daggerheart.v1.SessionAdversaryAttackRollResponse
-	85,  // 114: systems.daggerheart.v1.SessionAdversaryAttackFlowResponse.attack_outcome:type_name -> systems.daggerheart.v1.DaggerheartApplyAdversaryAttackOutcomeResponse
-	59,  // 115: systems.daggerheart.v1.SessionAdversaryAttackFlowResponse.damage_roll:type_name -> systems.daggerheart.v1.SessionDamageRollResponse
-	4,   // 116: systems.daggerheart.v1.SessionAdversaryAttackFlowResponse.damage_applied:type_name -> systems.daggerheart.v1.DaggerheartApplyDamageResponse
-	109, // 117: systems.daggerheart.v1.GroupActionSupporter.modifiers:type_name -> systems.daggerheart.v1.ActionRollModifier
-	96,  // 118: systems.daggerheart.v1.GroupActionSupporter.rng:type_name -> common.v1.RngRequest
-	57,  // 119: systems.daggerheart.v1.GroupActionSupporterRoll.action_roll:type_name -> systems.daggerheart.v1.SessionActionRollResponse
-	109, // 120: systems.daggerheart.v1.SessionGroupActionFlowRequest.leader_modifiers:type_name -> systems.daggerheart.v1.ActionRollModifier
-	71,  // 121: systems.daggerheart.v1.SessionGroupActionFlowRequest.supporters:type_name -> systems.daggerheart.v1.GroupActionSupporter
-	96,  // 122: systems.daggerheart.v1.SessionGroupActionFlowRequest.leader_rng:type_name -> common.v1.RngRequest
-	57,  // 123: systems.daggerheart.v1.SessionGroupActionFlowResponse.leader_roll:type_name -> systems.daggerheart.v1.SessionActionRollResponse
-	79,  // 124: systems.daggerheart.v1.SessionGroupActionFlowResponse.leader_outcome:type_name -> systems.daggerheart.v1.ApplyRollOutcomeResponse
-	72,  // 125: systems.daggerheart.v1.SessionGroupActionFlowResponse.supporter_rolls:type_name -> systems.daggerheart.v1.GroupActionSupporterRoll
-	109, // 126: systems.daggerheart.v1.TagTeamParticipant.modifiers:type_name -> systems.daggerheart.v1.ActionRollModifier
-	96,  // 127: systems.daggerheart.v1.TagTeamParticipant.rng:type_name -> common.v1.RngRequest
-	75,  // 128: systems.daggerheart.v1.SessionTagTeamFlowRequest.first:type_name -> systems.daggerheart.v1.TagTeamParticipant
-	75,  // 129: systems.daggerheart.v1.SessionTagTeamFlowRequest.second:type_name -> systems.daggerheart.v1.TagTeamParticipant
-	57,  // 130: systems.daggerheart.v1.SessionTagTeamFlowResponse.first_roll:type_name -> systems.daggerheart.v1.SessionActionRollResponse
-	57,  // 131: systems.daggerheart.v1.SessionTagTeamFlowResponse.second_roll:type_name -> systems.daggerheart.v1.SessionActionRollResponse
-	79,  // 132: systems.daggerheart.v1.SessionTagTeamFlowResponse.selected_outcome:type_name -> systems.daggerheart.v1.ApplyRollOutcomeResponse
-	111, // 133: systems.daggerheart.v1.ApplyRollOutcomeResponse.updated:type_name -> systems.daggerheart.v1.OutcomeUpdated
-	102, // 134: systems.daggerheart.v1.DaggerheartAttackOutcomeResult.outcome:type_name -> systems.daggerheart.v1.Outcome
-	82,  // 135: systems.daggerheart.v1.DaggerheartApplyAttackOutcomeResponse.result:type_name -> systems.daggerheart.v1.DaggerheartAttackOutcomeResult
-	84,  // 136: systems.daggerheart.v1.DaggerheartApplyAdversaryAttackOutcomeResponse.result:type_name -> systems.daggerheart.v1.DaggerheartAdversaryAttackOutcomeResult
-	102, // 137: systems.daggerheart.v1.DaggerheartReactionOutcomeResult.outcome:type_name -> systems.daggerheart.v1.Outcome
-	87,  // 138: systems.daggerheart.v1.DaggerheartApplyReactionOutcomeResponse.result:type_name -> systems.daggerheart.v1.DaggerheartReactionOutcomeResult
-	44,  // 139: systems.daggerheart.v1.DaggerheartService.ActionRoll:input_type -> systems.daggerheart.v1.ActionRollRequest
-	46,  // 140: systems.daggerheart.v1.DaggerheartService.DualityOutcome:input_type -> systems.daggerheart.v1.DualityOutcomeRequest
-	48,  // 141: systems.daggerheart.v1.DaggerheartService.DualityExplain:input_type -> systems.daggerheart.v1.DualityExplainRequest
-	50,  // 142: systems.daggerheart.v1.DaggerheartService.DualityProbability:input_type -> systems.daggerheart.v1.DualityProbabilityRequest
-	52,  // 143: systems.daggerheart.v1.DaggerheartService.RulesVersion:input_type -> systems.daggerheart.v1.RulesVersionRequest
-	54,  // 144: systems.daggerheart.v1.DaggerheartService.RollDice:input_type -> systems.daggerheart.v1.RollDiceRequest
-	3,   // 145: systems.daggerheart.v1.DaggerheartService.ApplyDamage:input_type -> systems.daggerheart.v1.DaggerheartApplyDamageRequest
-	5,   // 146: systems.daggerheart.v1.DaggerheartService.ApplyAdversaryDamage:input_type -> systems.daggerheart.v1.DaggerheartApplyAdversaryDamageRequest
-	7,   // 147: systems.daggerheart.v1.DaggerheartService.ApplyRest:input_type -> systems.daggerheart.v1.DaggerheartApplyRestRequest
-	10,  // 148: systems.daggerheart.v1.DaggerheartService.ApplyDowntimeMove:input_type -> systems.daggerheart.v1.DaggerheartApplyDowntimeMoveRequest
-	12,  // 149: systems.daggerheart.v1.DaggerheartService.SwapLoadout:input_type -> systems.daggerheart.v1.DaggerheartSwapLoadoutRequest
-	14,  // 150: systems.daggerheart.v1.DaggerheartService.ApplyDeathMove:input_type -> systems.daggerheart.v1.DaggerheartApplyDeathMoveRequest
-	17,  // 151: systems.daggerheart.v1.DaggerheartService.ApplyConditions:input_type -> systems.daggerheart.v1.DaggerheartApplyConditionsRequest
-	19,  // 152: systems.daggerheart.v1.DaggerheartService.ApplyAdversaryConditions:input_type -> systems.daggerheart.v1.DaggerheartApplyAdversaryConditionsRequest
-	21,  // 153: systems.daggerheart.v1.DaggerheartService.ApplyGmMove:input_type -> systems.daggerheart.v1.DaggerheartApplyGmMoveRequest
-	24,  // 154: systems.daggerheart.v1.DaggerheartService.CreateCountdown:input_type -> systems.daggerheart.v1.DaggerheartCreateCountdownRequest
-	26,  // 155: systems.daggerheart.v1.DaggerheartService.UpdateCountdown:input_type -> systems.daggerheart.v1.DaggerheartUpdateCountdownRequest
-	28,  // 156: systems.daggerheart.v1.DaggerheartService.DeleteCountdown:input_type -> systems.daggerheart.v1.DaggerheartDeleteCountdownRequest
-	31,  // 157: systems.daggerheart.v1.DaggerheartService.CreateAdversary:input_type -> systems.daggerheart.v1.DaggerheartCreateAdversaryRequest
-	33,  // 158: systems.daggerheart.v1.DaggerheartService.UpdateAdversary:input_type -> systems.daggerheart.v1.DaggerheartUpdateAdversaryRequest
-	35,  // 159: systems.daggerheart.v1.DaggerheartService.DeleteAdversary:input_type -> systems.daggerheart.v1.DaggerheartDeleteAdversaryRequest
-	37,  // 160: systems.daggerheart.v1.DaggerheartService.GetAdversary:input_type -> systems.daggerheart.v1.DaggerheartGetAdversaryRequest
-	39,  // 161: systems.daggerheart.v1.DaggerheartService.ListAdversaries:input_type -> systems.daggerheart.v1.DaggerheartListAdversariesRequest
-	41,  // 162: systems.daggerheart.v1.DaggerheartService.ResolveBlazeOfGlory:input_type -> systems.daggerheart.v1.DaggerheartResolveBlazeOfGloryRequest
-	56,  // 163: systems.daggerheart.v1.DaggerheartService.SessionActionRoll:input_type -> systems.daggerheart.v1.SessionActionRollRequest
-	58,  // 164: systems.daggerheart.v1.DaggerheartService.SessionDamageRoll:input_type -> systems.daggerheart.v1.SessionDamageRollRequest
-	61,  // 165: systems.daggerheart.v1.DaggerheartService.SessionAttackFlow:input_type -> systems.daggerheart.v1.SessionAttackFlowRequest
-	63,  // 166: systems.daggerheart.v1.DaggerheartService.SessionReactionFlow:input_type -> systems.daggerheart.v1.SessionReactionFlowRequest
-	65,  // 167: systems.daggerheart.v1.DaggerheartService.SessionAdversaryAttackRoll:input_type -> systems.daggerheart.v1.SessionAdversaryAttackRollRequest
-	66,  // 168: systems.daggerheart.v1.DaggerheartService.SessionAdversaryActionCheck:input_type -> systems.daggerheart.v1.SessionAdversaryActionCheckRequest
-	69,  // 169: systems.daggerheart.v1.DaggerheartService.SessionAdversaryAttackFlow:input_type -> systems.daggerheart.v1.SessionAdversaryAttackFlowRequest
-	73,  // 170: systems.daggerheart.v1.DaggerheartService.SessionGroupActionFlow:input_type -> systems.daggerheart.v1.SessionGroupActionFlowRequest
-	76,  // 171: systems.daggerheart.v1.DaggerheartService.SessionTagTeamFlow:input_type -> systems.daggerheart.v1.SessionTagTeamFlowRequest
-	78,  // 172: systems.daggerheart.v1.DaggerheartService.ApplyRollOutcome:input_type -> systems.daggerheart.v1.ApplyRollOutcomeRequest
-	80,  // 173: systems.daggerheart.v1.DaggerheartService.ApplyAttackOutcome:input_type -> systems.daggerheart.v1.DaggerheartApplyAttackOutcomeRequest
-	81,  // 174: systems.daggerheart.v1.DaggerheartService.ApplyAdversaryAttackOutcome:input_type -> systems.daggerheart.v1.DaggerheartApplyAdversaryAttackOutcomeRequest
-	86,  // 175: systems.daggerheart.v1.DaggerheartService.ApplyReactionOutcome:input_type -> systems.daggerheart.v1.DaggerheartApplyReactionOutcomeRequest
-	45,  // 176: systems.daggerheart.v1.DaggerheartService.ActionRoll:output_type -> systems.daggerheart.v1.ActionRollResponse
-	47,  // 177: systems.daggerheart.v1.DaggerheartService.DualityOutcome:output_type -> systems.daggerheart.v1.DualityOutcomeResponse
-	49,  // 178: systems.daggerheart.v1.DaggerheartService.DualityExplain:output_type -> systems.daggerheart.v1.DualityExplainResponse
-	51,  // 179: systems.daggerheart.v1.DaggerheartService.DualityProbability:output_type -> systems.daggerheart.v1.DualityProbabilityResponse
-	53,  // 180: systems.daggerheart.v1.DaggerheartService.RulesVersion:output_type -> systems.daggerheart.v1.RulesVersionResponse
-	55,  // 181: systems.daggerheart.v1.DaggerheartService.RollDice:output_type -> systems.daggerheart.v1.RollDiceResponse
-	4,   // 182: systems.daggerheart.v1.DaggerheartService.ApplyDamage:output_type -> systems.daggerheart.v1.DaggerheartApplyDamageResponse
-	6,   // 183: systems.daggerheart.v1.DaggerheartService.ApplyAdversaryDamage:output_type -> systems.daggerheart.v1.DaggerheartApplyAdversaryDamageResponse
-	9,   // 184: systems.daggerheart.v1.DaggerheartService.ApplyRest:output_type -> systems.daggerheart.v1.DaggerheartApplyRestResponse
-	11,  // 185: systems.daggerheart.v1.DaggerheartService.ApplyDowntimeMove:output_type -> systems.daggerheart.v1.DaggerheartApplyDowntimeMoveResponse
-	13,  // 186: systems.daggerheart.v1.DaggerheartService.SwapLoadout:output_type -> systems.daggerheart.v1.DaggerheartSwapLoadoutResponse
-	16,  // 187: systems.daggerheart.v1.DaggerheartService.ApplyDeathMove:output_type -> systems.daggerheart.v1.DaggerheartApplyDeathMoveResponse
-	18,  // 188: systems.daggerheart.v1.DaggerheartService.ApplyConditions:output_type -> systems.daggerheart.v1.DaggerheartApplyConditionsResponse
-	20,  // 189: systems.daggerheart.v1.DaggerheartService.ApplyAdversaryConditions:output_type -> systems.daggerheart.v1.DaggerheartApplyAdversaryConditionsResponse
-	22,  // 190: systems.daggerheart.v1.DaggerheartService.ApplyGmMove:output_type -> systems.daggerheart.v1.DaggerheartApplyGmMoveResponse
-	25,  // 191: systems.daggerheart.v1.DaggerheartService.CreateCountdown:output_type -> systems.daggerheart.v1.DaggerheartCreateCountdownResponse
-	27,  // 192: systems.daggerheart.v1.DaggerheartService.UpdateCountdown:output_type -> systems.daggerheart.v1.DaggerheartUpdateCountdownResponse
-	29,  // 193: systems.daggerheart.v1.DaggerheartService.DeleteCountdown:output_type -> systems.daggerheart.v1.DaggerheartDeleteCountdownResponse
-	32,  // 194: systems.daggerheart.v1.DaggerheartService.CreateAdversary:output_type -> systems.daggerheart.v1.DaggerheartCreateAdversaryResponse
-	34,  // 195: systems.daggerheart.v1.DaggerheartService.UpdateAdversary:output_type -> systems.daggerheart.v1.DaggerheartUpdateAdversaryResponse
-	36,  // 196: systems.daggerheart.v1.DaggerheartService.DeleteAdversary:output_type -> systems.daggerheart.v1.DaggerheartDeleteAdversaryResponse
-	38,  // 197: systems.daggerheart.v1.DaggerheartService.GetAdversary:output_type -> systems.daggerheart.v1.DaggerheartGetAdversaryResponse
-	40,  // 198: systems.daggerheart.v1.DaggerheartService.ListAdversaries:output_type -> systems.daggerheart.v1.DaggerheartListAdversariesResponse
-	43,  // 199: systems.daggerheart.v1.DaggerheartService.ResolveBlazeOfGlory:output_type -> systems.daggerheart.v1.DaggerheartResolveBlazeOfGloryResponse
-	57,  // 200: systems.daggerheart.v1.DaggerheartService.SessionActionRoll:output_type -> systems.daggerheart.v1.SessionActionRollResponse
-	59,  // 201: systems.daggerheart.v1.DaggerheartService.SessionDamageRoll:output_type -> systems.daggerheart.v1.SessionDamageRollResponse
-	62,  // 202: systems.daggerheart.v1.DaggerheartService.SessionAttackFlow:output_type -> systems.daggerheart.v1.SessionAttackFlowResponse
-	64,  // 203: systems.daggerheart.v1.DaggerheartService.SessionReactionFlow:output_type -> systems.daggerheart.v1.SessionReactionFlowResponse
-	68,  // 204: systems.daggerheart.v1.DaggerheartService.SessionAdversaryAttackRoll:output_type -> systems.daggerheart.v1.SessionAdversaryAttackRollResponse
-	67,  // 205: systems.daggerheart.v1.DaggerheartService.SessionAdversaryActionCheck:output_type -> systems.daggerheart.v1.SessionAdversaryActionCheckResponse
-	70,  // 206: systems.daggerheart.v1.DaggerheartService.SessionAdversaryAttackFlow:output_type -> systems.daggerheart.v1.SessionAdversaryAttackFlowResponse
-	74,  // 207: systems.daggerheart.v1.DaggerheartService.SessionGroupActionFlow:output_type -> systems.daggerheart.v1.SessionGroupActionFlowResponse
-	77,  // 208: systems.daggerheart.v1.DaggerheartService.SessionTagTeamFlow:output_type -> systems.daggerheart.v1.SessionTagTeamFlowResponse
-	79,  // 209: systems.daggerheart.v1.DaggerheartService.ApplyRollOutcome:output_type -> systems.daggerheart.v1.ApplyRollOutcomeResponse
-	83,  // 210: systems.daggerheart.v1.DaggerheartService.ApplyAttackOutcome:output_type -> systems.daggerheart.v1.DaggerheartApplyAttackOutcomeResponse
-	85,  // 211: systems.daggerheart.v1.DaggerheartService.ApplyAdversaryAttackOutcome:output_type -> systems.daggerheart.v1.DaggerheartApplyAdversaryAttackOutcomeResponse
-	88,  // 212: systems.daggerheart.v1.DaggerheartService.ApplyReactionOutcome:output_type -> systems.daggerheart.v1.DaggerheartApplyReactionOutcomeResponse
-	176, // [176:213] is the sub-list for method output_type
-	139, // [139:176] is the sub-list for method input_type
-	139, // [139:139] is the sub-list for extension type_name
-	139, // [139:139] is the sub-list for extension extendee
-	0,   // [0:139] is the sub-list for field type_name
+	97,  // 20: systems.daggerheart.v1.DaggerheartApplyConditionsRequest.life_state:type_name -> systems.daggerheart.v1.DaggerheartLifeState
+	90,  // 21: systems.daggerheart.v1.DaggerheartApplyConditionsResponse.state:type_name -> systems.daggerheart.v1.DaggerheartCharacterState
+	98,  // 22: systems.daggerheart.v1.DaggerheartApplyConditionsResponse.added:type_name -> systems.daggerheart.v1.DaggerheartCondition
+	98,  // 23: systems.daggerheart.v1.DaggerheartApplyConditionsResponse.removed:type_name -> systems.daggerheart.v1.DaggerheartCondition
+	98,  // 24: systems.daggerheart.v1.DaggerheartApplyAdversaryConditionsRequest.add:type_name -> systems.daggerheart.v1.DaggerheartCondition
+	98,  // 25: systems.daggerheart.v1.DaggerheartApplyAdversaryConditionsRequest.remove:type_name -> systems.daggerheart.v1.DaggerheartCondition
+	30,  // 26: systems.daggerheart.v1.DaggerheartApplyAdversaryConditionsResponse.adversary:type_name -> systems.daggerheart.v1.DaggerheartAdversary
+	98,  // 27: systems.daggerheart.v1.DaggerheartApplyAdversaryConditionsResponse.added:type_name -> systems.daggerheart.v1.DaggerheartCondition
+	98,  // 28: systems.daggerheart.v1.DaggerheartApplyAdversaryConditionsResponse.removed:type_name -> systems.daggerheart.v1.DaggerheartCondition
+	0,   // 29: systems.daggerheart.v1.DaggerheartCountdown.kind:type_name -> systems.daggerheart.v1.DaggerheartCountdownKind
+	1,   // 30: systems.daggerheart.v1.DaggerheartCountdown.direction:type_name -> systems.daggerheart.v1.DaggerheartCountdownDirection
+	0,   // 31: systems.daggerheart.v1.DaggerheartCreateCountdownRequest.kind:type_name -> systems.daggerheart.v1.DaggerheartCountdownKind
+	1,   // 32: systems.daggerheart.v1.DaggerheartCreateCountdownRequest.direction:type_name -> systems.daggerheart.v1.DaggerheartCountdownDirection
+	23,  // 33: systems.daggerheart.v1.DaggerheartCreateCountdownResponse.countdown:type_name -> systems.daggerheart.v1.DaggerheartCountdown
+	23,  // 34: systems.daggerheart.v1.DaggerheartUpdateCountdownResponse.countdown:type_name -> systems.daggerheart.v1.DaggerheartCountdown
+	99,  // 35: systems.daggerheart.v1.DaggerheartAdversary.session_id:type_name -> google.protobuf.StringValue
+	98,  // 36: systems.daggerheart.v1.DaggerheartAdversary.conditions:type_name -> systems.daggerheart.v1.DaggerheartCondition
+	100, // 37: systems.daggerheart.v1.DaggerheartAdversary.created_at:type_name -> google.protobuf.Timestamp
+	100, // 38: systems.daggerheart.v1.DaggerheartAdversary.updated_at:type_name -> google.protobuf.Timestamp
+	99,  // 39: systems.daggerheart.v1.DaggerheartCreateAdversaryRequest.session_id:type_name -> google.protobuf.StringValue
+	101, // 40: systems.daggerheart.v1.DaggerheartCreateAdversaryRequest.hp:type_name -> google.protobuf.Int32Value
+	101, // 41: systems.daggerheart.v1.DaggerheartCreateAdversaryRequest.hp_max:type_name -> google.protobuf.Int32Value
+	101, // 42: systems.daggerheart.v1.DaggerheartCreateAdversaryRequest.stress:type_name -> google.protobuf.Int32Value
+	101, // 43: systems.daggerheart.v1.DaggerheartCreateAdversaryRequest.stress_max:type_name -> google.protobuf.Int32Value
+	101, // 44: systems.daggerheart.v1.DaggerheartCreateAdversaryRequest.evasion:type_name -> google.protobuf.Int32Value
+	101, // 45: systems.daggerheart.v1.DaggerheartCreateAdversaryRequest.major_threshold:type_name -> google.protobuf.Int32Value
+	101, // 46: systems.daggerheart.v1.DaggerheartCreateAdversaryRequest.severe_threshold:type_name -> google.protobuf.Int32Value
+	101, // 47: systems.daggerheart.v1.DaggerheartCreateAdversaryRequest.armor:type_name -> google.protobuf.Int32Value
+	30,  // 48: systems.daggerheart.v1.DaggerheartCreateAdversaryResponse.adversary:type_name -> systems.daggerheart.v1.DaggerheartAdversary
+	99,  // 49: systems.daggerheart.v1.DaggerheartUpdateAdversaryRequest.name:type_name -> google.protobuf.StringValue
+	99,  // 50: systems.daggerheart.v1.DaggerheartUpdateAdversaryRequest.kind:type_name -> google.protobuf.StringValue
+	99,  // 51: systems.daggerheart.v1.DaggerheartUpdateAdversaryRequest.session_id:type_name -> google.protobuf.StringValue
+	99,  // 52: systems.daggerheart.v1.DaggerheartUpdateAdversaryRequest.notes:type_name -> google.protobuf.StringValue
+	101, // 53: systems.daggerheart.v1.DaggerheartUpdateAdversaryRequest.hp:type_name -> google.protobuf.Int32Value
+	101, // 54: systems.daggerheart.v1.DaggerheartUpdateAdversaryRequest.hp_max:type_name -> google.protobuf.Int32Value
+	101, // 55: systems.daggerheart.v1.DaggerheartUpdateAdversaryRequest.stress:type_name -> google.protobuf.Int32Value
+	101, // 56: systems.daggerheart.v1.DaggerheartUpdateAdversaryRequest.stress_max:type_name -> google.protobuf.Int32Value
+	101, // 57: systems.daggerheart.v1.DaggerheartUpdateAdversaryRequest.evasion:type_name -> google.protobuf.Int32Value
+	101, // 58: systems.daggerheart.v1.DaggerheartUpdateAdversaryRequest.major_threshold:type_name -> google.protobuf.Int32Value
+	101, // 59: systems.daggerheart.v1.DaggerheartUpdateAdversaryRequest.severe_threshold:type_name -> google.protobuf.Int32Value
+	101, // 60: systems.daggerheart.v1.DaggerheartUpdateAdversaryRequest.armor:type_name -> google.protobuf.Int32Value
+	30,  // 61: systems.daggerheart.v1.DaggerheartUpdateAdversaryResponse.adversary:type_name -> systems.daggerheart.v1.DaggerheartAdversary
+	30,  // 62: systems.daggerheart.v1.DaggerheartDeleteAdversaryResponse.adversary:type_name -> systems.daggerheart.v1.DaggerheartAdversary
+	30,  // 63: systems.daggerheart.v1.DaggerheartGetAdversaryResponse.adversary:type_name -> systems.daggerheart.v1.DaggerheartAdversary
+	99,  // 64: systems.daggerheart.v1.DaggerheartListAdversariesRequest.session_id:type_name -> google.protobuf.StringValue
+	30,  // 65: systems.daggerheart.v1.DaggerheartListAdversariesResponse.adversaries:type_name -> systems.daggerheart.v1.DaggerheartAdversary
+	97,  // 66: systems.daggerheart.v1.DaggerheartBlazeOfGloryResult.life_state:type_name -> systems.daggerheart.v1.DaggerheartLifeState
+	90,  // 67: systems.daggerheart.v1.DaggerheartResolveBlazeOfGloryResponse.state:type_name -> systems.daggerheart.v1.DaggerheartCharacterState
+	42,  // 68: systems.daggerheart.v1.DaggerheartResolveBlazeOfGloryResponse.result:type_name -> systems.daggerheart.v1.DaggerheartBlazeOfGloryResult
+	96,  // 69: systems.daggerheart.v1.ActionRollRequest.rng:type_name -> common.v1.RngRequest
+	102, // 70: systems.daggerheart.v1.ActionRollResponse.outcome:type_name -> systems.daggerheart.v1.Outcome
+	103, // 71: systems.daggerheart.v1.ActionRollResponse.rng:type_name -> common.v1.RngResponse
+	102, // 72: systems.daggerheart.v1.DualityOutcomeResponse.outcome:type_name -> systems.daggerheart.v1.Outcome
+	102, // 73: systems.daggerheart.v1.DualityExplainResponse.outcome:type_name -> systems.daggerheart.v1.Outcome
+	104, // 74: systems.daggerheart.v1.DualityExplainResponse.intermediates:type_name -> systems.daggerheart.v1.Intermediates
+	105, // 75: systems.daggerheart.v1.DualityExplainResponse.steps:type_name -> systems.daggerheart.v1.ExplainStep
+	106, // 76: systems.daggerheart.v1.DualityProbabilityResponse.outcome_counts:type_name -> systems.daggerheart.v1.OutcomeCount
+	102, // 77: systems.daggerheart.v1.RulesVersionResponse.outcomes:type_name -> systems.daggerheart.v1.Outcome
+	107, // 78: systems.daggerheart.v1.RollDiceRequest.dice:type_name -> systems.daggerheart.v1.DiceSpec
+	96,  // 79: systems.daggerheart.v1.RollDiceRequest.rng:type_name -> common.v1.RngRequest
+	108, // 80: systems.daggerheart.v1.RollDiceResponse.rolls:type_name -> systems.daggerheart.v1.DiceRoll
+	103, // 81: systems.daggerheart.v1.RollDiceResponse.rng:type_name -> common.v1.RngResponse
+	2,   // 82: systems.daggerheart.v1.SessionActionRollRequest.roll_kind:type_name -> systems.daggerheart.v1.RollKind
+	109, // 83: systems.daggerheart.v1.SessionActionRollRequest.modifiers:type_name -> systems.daggerheart.v1.ActionRollModifier
+	96,  // 84: systems.daggerheart.v1.SessionActionRollRequest.rng:type_name -> common.v1.RngRequest
+	103, // 85: systems.daggerheart.v1.SessionActionRollResponse.rng:type_name -> common.v1.RngResponse
+	107, // 86: systems.daggerheart.v1.SessionDamageRollRequest.dice:type_name -> systems.daggerheart.v1.DiceSpec
+	96,  // 87: systems.daggerheart.v1.SessionDamageRollRequest.rng:type_name -> common.v1.RngRequest
+	108, // 88: systems.daggerheart.v1.SessionDamageRollResponse.rolls:type_name -> systems.daggerheart.v1.DiceRoll
+	103, // 89: systems.daggerheart.v1.SessionDamageRollResponse.rng:type_name -> common.v1.RngResponse
+	110, // 90: systems.daggerheart.v1.DaggerheartAttackDamageSpec.damage_type:type_name -> systems.daggerheart.v1.DaggerheartDamageType
+	109, // 91: systems.daggerheart.v1.SessionAttackFlowRequest.modifiers:type_name -> systems.daggerheart.v1.ActionRollModifier
+	107, // 92: systems.daggerheart.v1.SessionAttackFlowRequest.damage_dice:type_name -> systems.daggerheart.v1.DiceSpec
+	60,  // 93: systems.daggerheart.v1.SessionAttackFlowRequest.damage:type_name -> systems.daggerheart.v1.DaggerheartAttackDamageSpec
+	96,  // 94: systems.daggerheart.v1.SessionAttackFlowRequest.action_rng:type_name -> common.v1.RngRequest
+	96,  // 95: systems.daggerheart.v1.SessionAttackFlowRequest.damage_rng:type_name -> common.v1.RngRequest
+	57,  // 96: systems.daggerheart.v1.SessionAttackFlowResponse.action_roll:type_name -> systems.daggerheart.v1.SessionActionRollResponse
+	79,  // 97: systems.daggerheart.v1.SessionAttackFlowResponse.roll_outcome:type_name -> systems.daggerheart.v1.ApplyRollOutcomeResponse
+	83,  // 98: systems.daggerheart.v1.SessionAttackFlowResponse.attack_outcome:type_name -> systems.daggerheart.v1.DaggerheartApplyAttackOutcomeResponse
+	59,  // 99: systems.daggerheart.v1.SessionAttackFlowResponse.damage_roll:type_name -> systems.daggerheart.v1.SessionDamageRollResponse
+	4,   // 100: systems.daggerheart.v1.SessionAttackFlowResponse.damage_applied:type_name -> systems.daggerheart.v1.DaggerheartApplyDamageResponse
+	109, // 101: systems.daggerheart.v1.SessionReactionFlowRequest.modifiers:type_name -> systems.daggerheart.v1.ActionRollModifier
+	96,  // 102: systems.daggerheart.v1.SessionReactionFlowRequest.reaction_rng:type_name -> common.v1.RngRequest
+	57,  // 103: systems.daggerheart.v1.SessionReactionFlowResponse.action_roll:type_name -> systems.daggerheart.v1.SessionActionRollResponse
+	79,  // 104: systems.daggerheart.v1.SessionReactionFlowResponse.roll_outcome:type_name -> systems.daggerheart.v1.ApplyRollOutcomeResponse
+	88,  // 105: systems.daggerheart.v1.SessionReactionFlowResponse.reaction_outcome:type_name -> systems.daggerheart.v1.DaggerheartApplyReactionOutcomeResponse
+	96,  // 106: systems.daggerheart.v1.SessionAdversaryAttackRollRequest.rng:type_name -> common.v1.RngRequest
+	96,  // 107: systems.daggerheart.v1.SessionAdversaryActionCheckRequest.rng:type_name -> common.v1.RngRequest
+	103, // 108: systems.daggerheart.v1.SessionAdversaryActionCheckResponse.rng:type_name -> common.v1.RngResponse
+	103, // 109: systems.daggerheart.v1.SessionAdversaryAttackRollResponse.rng:type_name -> common.v1.RngResponse
+	107, // 110: systems.daggerheart.v1.SessionAdversaryAttackFlowRequest.damage_dice:type_name -> systems.daggerheart.v1.DiceSpec
+	60,  // 111: systems.daggerheart.v1.SessionAdversaryAttackFlowRequest.damage:type_name -> systems.daggerheart.v1.DaggerheartAttackDamageSpec
+	96,  // 112: systems.daggerheart.v1.SessionAdversaryAttackFlowRequest.attack_rng:type_name -> common.v1.RngRequest
+	96,  // 113: systems.daggerheart.v1.SessionAdversaryAttackFlowRequest.damage_rng:type_name -> common.v1.RngRequest
+	68,  // 114: systems.daggerheart.v1.SessionAdversaryAttackFlowResponse.attack_roll:type_name -> systems.daggerheart.v1.SessionAdversaryAttackRollResponse
+	85,  // 115: systems.daggerheart.v1.SessionAdversaryAttackFlowResponse.attack_outcome:type_name -> systems.daggerheart.v1.DaggerheartApplyAdversaryAttackOutcomeResponse
+	59,  // 116: systems.daggerheart.v1.SessionAdversaryAttackFlowResponse.damage_roll:type_name -> systems.daggerheart.v1.SessionDamageRollResponse
+	4,   // 117: systems.daggerheart.v1.SessionAdversaryAttackFlowResponse.damage_applied:type_name -> systems.daggerheart.v1.DaggerheartApplyDamageResponse
+	109, // 118: systems.daggerheart.v1.GroupActionSupporter.modifiers:type_name -> systems.daggerheart.v1.ActionRollModifier
+	96,  // 119: systems.daggerheart.v1.GroupActionSupporter.rng:type_name -> common.v1.RngRequest
+	57,  // 120: systems.daggerheart.v1.GroupActionSupporterRoll.action_roll:type_name -> systems.daggerheart.v1.SessionActionRollResponse
+	109, // 121: systems.daggerheart.v1.SessionGroupActionFlowRequest.leader_modifiers:type_name -> systems.daggerheart.v1.ActionRollModifier
+	71,  // 122: systems.daggerheart.v1.SessionGroupActionFlowRequest.supporters:type_name -> systems.daggerheart.v1.GroupActionSupporter
+	96,  // 123: systems.daggerheart.v1.SessionGroupActionFlowRequest.leader_rng:type_name -> common.v1.RngRequest
+	57,  // 124: systems.daggerheart.v1.SessionGroupActionFlowResponse.leader_roll:type_name -> systems.daggerheart.v1.SessionActionRollResponse
+	79,  // 125: systems.daggerheart.v1.SessionGroupActionFlowResponse.leader_outcome:type_name -> systems.daggerheart.v1.ApplyRollOutcomeResponse
+	72,  // 126: systems.daggerheart.v1.SessionGroupActionFlowResponse.supporter_rolls:type_name -> systems.daggerheart.v1.GroupActionSupporterRoll
+	109, // 127: systems.daggerheart.v1.TagTeamParticipant.modifiers:type_name -> systems.daggerheart.v1.ActionRollModifier
+	96,  // 128: systems.daggerheart.v1.TagTeamParticipant.rng:type_name -> common.v1.RngRequest
+	75,  // 129: systems.daggerheart.v1.SessionTagTeamFlowRequest.first:type_name -> systems.daggerheart.v1.TagTeamParticipant
+	75,  // 130: systems.daggerheart.v1.SessionTagTeamFlowRequest.second:type_name -> systems.daggerheart.v1.TagTeamParticipant
+	57,  // 131: systems.daggerheart.v1.SessionTagTeamFlowResponse.first_roll:type_name -> systems.daggerheart.v1.SessionActionRollResponse
+	57,  // 132: systems.daggerheart.v1.SessionTagTeamFlowResponse.second_roll:type_name -> systems.daggerheart.v1.SessionActionRollResponse
+	79,  // 133: systems.daggerheart.v1.SessionTagTeamFlowResponse.selected_outcome:type_name -> systems.daggerheart.v1.ApplyRollOutcomeResponse
+	111, // 134: systems.daggerheart.v1.ApplyRollOutcomeResponse.updated:type_name -> systems.daggerheart.v1.OutcomeUpdated
+	102, // 135: systems.daggerheart.v1.DaggerheartAttackOutcomeResult.outcome:type_name -> systems.daggerheart.v1.Outcome
+	82,  // 136: systems.daggerheart.v1.DaggerheartApplyAttackOutcomeResponse.result:type_name -> systems.daggerheart.v1.DaggerheartAttackOutcomeResult
+	84,  // 137: systems.daggerheart.v1.DaggerheartApplyAdversaryAttackOutcomeResponse.result:type_name -> systems.daggerheart.v1.DaggerheartAdversaryAttackOutcomeResult
+	102, // 138: systems.daggerheart.v1.DaggerheartReactionOutcomeResult.outcome:type_name -> systems.daggerheart.v1.Outcome
+	87,  // 139: systems.daggerheart.v1.DaggerheartApplyReactionOutcomeResponse.result:type_name -> systems.daggerheart.v1.DaggerheartReactionOutcomeResult
+	44,  // 140: systems.daggerheart.v1.DaggerheartService.ActionRoll:input_type -> systems.daggerheart.v1.ActionRollRequest
+	46,  // 141: systems.daggerheart.v1.DaggerheartService.DualityOutcome:input_type -> systems.daggerheart.v1.DualityOutcomeRequest
+	48,  // 142: systems.daggerheart.v1.DaggerheartService.DualityExplain:input_type -> systems.daggerheart.v1.DualityExplainRequest
+	50,  // 143: systems.daggerheart.v1.DaggerheartService.DualityProbability:input_type -> systems.daggerheart.v1.DualityProbabilityRequest
+	52,  // 144: systems.daggerheart.v1.DaggerheartService.RulesVersion:input_type -> systems.daggerheart.v1.RulesVersionRequest
+	54,  // 145: systems.daggerheart.v1.DaggerheartService.RollDice:input_type -> systems.daggerheart.v1.RollDiceRequest
+	3,   // 146: systems.daggerheart.v1.DaggerheartService.ApplyDamage:input_type -> systems.daggerheart.v1.DaggerheartApplyDamageRequest
+	5,   // 147: systems.daggerheart.v1.DaggerheartService.ApplyAdversaryDamage:input_type -> systems.daggerheart.v1.DaggerheartApplyAdversaryDamageRequest
+	7,   // 148: systems.daggerheart.v1.DaggerheartService.ApplyRest:input_type -> systems.daggerheart.v1.DaggerheartApplyRestRequest
+	10,  // 149: systems.daggerheart.v1.DaggerheartService.ApplyDowntimeMove:input_type -> systems.daggerheart.v1.DaggerheartApplyDowntimeMoveRequest
+	12,  // 150: systems.daggerheart.v1.DaggerheartService.SwapLoadout:input_type -> systems.daggerheart.v1.DaggerheartSwapLoadoutRequest
+	14,  // 151: systems.daggerheart.v1.DaggerheartService.ApplyDeathMove:input_type -> systems.daggerheart.v1.DaggerheartApplyDeathMoveRequest
+	17,  // 152: systems.daggerheart.v1.DaggerheartService.ApplyConditions:input_type -> systems.daggerheart.v1.DaggerheartApplyConditionsRequest
+	19,  // 153: systems.daggerheart.v1.DaggerheartService.ApplyAdversaryConditions:input_type -> systems.daggerheart.v1.DaggerheartApplyAdversaryConditionsRequest
+	21,  // 154: systems.daggerheart.v1.DaggerheartService.ApplyGmMove:input_type -> systems.daggerheart.v1.DaggerheartApplyGmMoveRequest
+	24,  // 155: systems.daggerheart.v1.DaggerheartService.CreateCountdown:input_type -> systems.daggerheart.v1.DaggerheartCreateCountdownRequest
+	26,  // 156: systems.daggerheart.v1.DaggerheartService.UpdateCountdown:input_type -> systems.daggerheart.v1.DaggerheartUpdateCountdownRequest
+	28,  // 157: systems.daggerheart.v1.DaggerheartService.DeleteCountdown:input_type -> systems.daggerheart.v1.DaggerheartDeleteCountdownRequest
+	31,  // 158: systems.daggerheart.v1.DaggerheartService.CreateAdversary:input_type -> systems.daggerheart.v1.DaggerheartCreateAdversaryRequest
+	33,  // 159: systems.daggerheart.v1.DaggerheartService.UpdateAdversary:input_type -> systems.daggerheart.v1.DaggerheartUpdateAdversaryRequest
+	35,  // 160: systems.daggerheart.v1.DaggerheartService.DeleteAdversary:input_type -> systems.daggerheart.v1.DaggerheartDeleteAdversaryRequest
+	37,  // 161: systems.daggerheart.v1.DaggerheartService.GetAdversary:input_type -> systems.daggerheart.v1.DaggerheartGetAdversaryRequest
+	39,  // 162: systems.daggerheart.v1.DaggerheartService.ListAdversaries:input_type -> systems.daggerheart.v1.DaggerheartListAdversariesRequest
+	41,  // 163: systems.daggerheart.v1.DaggerheartService.ResolveBlazeOfGlory:input_type -> systems.daggerheart.v1.DaggerheartResolveBlazeOfGloryRequest
+	56,  // 164: systems.daggerheart.v1.DaggerheartService.SessionActionRoll:input_type -> systems.daggerheart.v1.SessionActionRollRequest
+	58,  // 165: systems.daggerheart.v1.DaggerheartService.SessionDamageRoll:input_type -> systems.daggerheart.v1.SessionDamageRollRequest
+	61,  // 166: systems.daggerheart.v1.DaggerheartService.SessionAttackFlow:input_type -> systems.daggerheart.v1.SessionAttackFlowRequest
+	63,  // 167: systems.daggerheart.v1.DaggerheartService.SessionReactionFlow:input_type -> systems.daggerheart.v1.SessionReactionFlowRequest
+	65,  // 168: systems.daggerheart.v1.DaggerheartService.SessionAdversaryAttackRoll:input_type -> systems.daggerheart.v1.SessionAdversaryAttackRollRequest
+	66,  // 169: systems.daggerheart.v1.DaggerheartService.SessionAdversaryActionCheck:input_type -> systems.daggerheart.v1.SessionAdversaryActionCheckRequest
+	69,  // 170: systems.daggerheart.v1.DaggerheartService.SessionAdversaryAttackFlow:input_type -> systems.daggerheart.v1.SessionAdversaryAttackFlowRequest
+	73,  // 171: systems.daggerheart.v1.DaggerheartService.SessionGroupActionFlow:input_type -> systems.daggerheart.v1.SessionGroupActionFlowRequest
+	76,  // 172: systems.daggerheart.v1.DaggerheartService.SessionTagTeamFlow:input_type -> systems.daggerheart.v1.SessionTagTeamFlowRequest
+	78,  // 173: systems.daggerheart.v1.DaggerheartService.ApplyRollOutcome:input_type -> systems.daggerheart.v1.ApplyRollOutcomeRequest
+	80,  // 174: systems.daggerheart.v1.DaggerheartService.ApplyAttackOutcome:input_type -> systems.daggerheart.v1.DaggerheartApplyAttackOutcomeRequest
+	81,  // 175: systems.daggerheart.v1.DaggerheartService.ApplyAdversaryAttackOutcome:input_type -> systems.daggerheart.v1.DaggerheartApplyAdversaryAttackOutcomeRequest
+	86,  // 176: systems.daggerheart.v1.DaggerheartService.ApplyReactionOutcome:input_type -> systems.daggerheart.v1.DaggerheartApplyReactionOutcomeRequest
+	45,  // 177: systems.daggerheart.v1.DaggerheartService.ActionRoll:output_type -> systems.daggerheart.v1.ActionRollResponse
+	47,  // 178: systems.daggerheart.v1.DaggerheartService.DualityOutcome:output_type -> systems.daggerheart.v1.DualityOutcomeResponse
+	49,  // 179: systems.daggerheart.v1.DaggerheartService.DualityExplain:output_type -> systems.daggerheart.v1.DualityExplainResponse
+	51,  // 180: systems.daggerheart.v1.DaggerheartService.DualityProbability:output_type -> systems.daggerheart.v1.DualityProbabilityResponse
+	53,  // 181: systems.daggerheart.v1.DaggerheartService.RulesVersion:output_type -> systems.daggerheart.v1.RulesVersionResponse
+	55,  // 182: systems.daggerheart.v1.DaggerheartService.RollDice:output_type -> systems.daggerheart.v1.RollDiceResponse
+	4,   // 183: systems.daggerheart.v1.DaggerheartService.ApplyDamage:output_type -> systems.daggerheart.v1.DaggerheartApplyDamageResponse
+	6,   // 184: systems.daggerheart.v1.DaggerheartService.ApplyAdversaryDamage:output_type -> systems.daggerheart.v1.DaggerheartApplyAdversaryDamageResponse
+	9,   // 185: systems.daggerheart.v1.DaggerheartService.ApplyRest:output_type -> systems.daggerheart.v1.DaggerheartApplyRestResponse
+	11,  // 186: systems.daggerheart.v1.DaggerheartService.ApplyDowntimeMove:output_type -> systems.daggerheart.v1.DaggerheartApplyDowntimeMoveResponse
+	13,  // 187: systems.daggerheart.v1.DaggerheartService.SwapLoadout:output_type -> systems.daggerheart.v1.DaggerheartSwapLoadoutResponse
+	16,  // 188: systems.daggerheart.v1.DaggerheartService.ApplyDeathMove:output_type -> systems.daggerheart.v1.DaggerheartApplyDeathMoveResponse
+	18,  // 189: systems.daggerheart.v1.DaggerheartService.ApplyConditions:output_type -> systems.daggerheart.v1.DaggerheartApplyConditionsResponse
+	20,  // 190: systems.daggerheart.v1.DaggerheartService.ApplyAdversaryConditions:output_type -> systems.daggerheart.v1.DaggerheartApplyAdversaryConditionsResponse
+	22,  // 191: systems.daggerheart.v1.DaggerheartService.ApplyGmMove:output_type -> systems.daggerheart.v1.DaggerheartApplyGmMoveResponse
+	25,  // 192: systems.daggerheart.v1.DaggerheartService.CreateCountdown:output_type -> systems.daggerheart.v1.DaggerheartCreateCountdownResponse
+	27,  // 193: systems.daggerheart.v1.DaggerheartService.UpdateCountdown:output_type -> systems.daggerheart.v1.DaggerheartUpdateCountdownResponse
+	29,  // 194: systems.daggerheart.v1.DaggerheartService.DeleteCountdown:output_type -> systems.daggerheart.v1.DaggerheartDeleteCountdownResponse
+	32,  // 195: systems.daggerheart.v1.DaggerheartService.CreateAdversary:output_type -> systems.daggerheart.v1.DaggerheartCreateAdversaryResponse
+	34,  // 196: systems.daggerheart.v1.DaggerheartService.UpdateAdversary:output_type -> systems.daggerheart.v1.DaggerheartUpdateAdversaryResponse
+	36,  // 197: systems.daggerheart.v1.DaggerheartService.DeleteAdversary:output_type -> systems.daggerheart.v1.DaggerheartDeleteAdversaryResponse
+	38,  // 198: systems.daggerheart.v1.DaggerheartService.GetAdversary:output_type -> systems.daggerheart.v1.DaggerheartGetAdversaryResponse
+	40,  // 199: systems.daggerheart.v1.DaggerheartService.ListAdversaries:output_type -> systems.daggerheart.v1.DaggerheartListAdversariesResponse
+	43,  // 200: systems.daggerheart.v1.DaggerheartService.ResolveBlazeOfGlory:output_type -> systems.daggerheart.v1.DaggerheartResolveBlazeOfGloryResponse
+	57,  // 201: systems.daggerheart.v1.DaggerheartService.SessionActionRoll:output_type -> systems.daggerheart.v1.SessionActionRollResponse
+	59,  // 202: systems.daggerheart.v1.DaggerheartService.SessionDamageRoll:output_type -> systems.daggerheart.v1.SessionDamageRollResponse
+	62,  // 203: systems.daggerheart.v1.DaggerheartService.SessionAttackFlow:output_type -> systems.daggerheart.v1.SessionAttackFlowResponse
+	64,  // 204: systems.daggerheart.v1.DaggerheartService.SessionReactionFlow:output_type -> systems.daggerheart.v1.SessionReactionFlowResponse
+	68,  // 205: systems.daggerheart.v1.DaggerheartService.SessionAdversaryAttackRoll:output_type -> systems.daggerheart.v1.SessionAdversaryAttackRollResponse
+	67,  // 206: systems.daggerheart.v1.DaggerheartService.SessionAdversaryActionCheck:output_type -> systems.daggerheart.v1.SessionAdversaryActionCheckResponse
+	70,  // 207: systems.daggerheart.v1.DaggerheartService.SessionAdversaryAttackFlow:output_type -> systems.daggerheart.v1.SessionAdversaryAttackFlowResponse
+	74,  // 208: systems.daggerheart.v1.DaggerheartService.SessionGroupActionFlow:output_type -> systems.daggerheart.v1.SessionGroupActionFlowResponse
+	77,  // 209: systems.daggerheart.v1.DaggerheartService.SessionTagTeamFlow:output_type -> systems.daggerheart.v1.SessionTagTeamFlowResponse
+	79,  // 210: systems.daggerheart.v1.DaggerheartService.ApplyRollOutcome:output_type -> systems.daggerheart.v1.ApplyRollOutcomeResponse
+	83,  // 211: systems.daggerheart.v1.DaggerheartService.ApplyAttackOutcome:output_type -> systems.daggerheart.v1.DaggerheartApplyAttackOutcomeResponse
+	85,  // 212: systems.daggerheart.v1.DaggerheartService.ApplyAdversaryAttackOutcome:output_type -> systems.daggerheart.v1.DaggerheartApplyAdversaryAttackOutcomeResponse
+	88,  // 213: systems.daggerheart.v1.DaggerheartService.ApplyReactionOutcome:output_type -> systems.daggerheart.v1.DaggerheartApplyReactionOutcomeResponse
+	177, // [177:214] is the sub-list for method output_type
+	140, // [140:177] is the sub-list for method input_type
+	140, // [140:140] is the sub-list for extension type_name
+	140, // [140:140] is the sub-list for extension extendee
+	0,   // [0:140] is the sub-list for field type_name
 }
 
 func init() { file_systems_daggerheart_v1_service_proto_init() }

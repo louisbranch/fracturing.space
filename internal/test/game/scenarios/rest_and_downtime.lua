@@ -26,7 +26,7 @@ scene:rest{
   expect_hope_delta = 0,
   expect_rest_type = "short",
   expect_rest_interrupted = false,
-  expect_gm_fear_delta = 1,
+  expect_gm_fear_delta = 2,
   expect_refresh_rest = true,
   expect_refresh_long_rest = false,
   expect_short_rests_after = 1

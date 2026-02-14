@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/core/dice"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/core/dice"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -319,6 +319,7 @@ func TestCritFromSystemData(t *testing.T) {
 		{"from data", map[string]any{"crit": true}, "", true},
 		{"from data false", map[string]any{"crit": false}, pb.Outcome_CRITICAL_SUCCESS.String(), false},
 		{"from outcome string", nil, pb.Outcome_CRITICAL_SUCCESS.String(), true},
+		{"from outcome short string", nil, "CRITICAL_SUCCESS", true},
 		{"neither", nil, "ROLL_WITH_HOPE", false},
 		{"wrong type in data", map[string]any{"crit": "yes"}, pb.Outcome_CRITICAL_SUCCESS.String(), true},
 	}
