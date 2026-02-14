@@ -4,6 +4,20 @@
 
 package db
 
+import (
+	"database/sql"
+)
+
+type MagicLink struct {
+	Token     string         `json:"token"`
+	UserID    string         `json:"user_id"`
+	Email     string         `json:"email"`
+	PendingID sql.NullString `json:"pending_id"`
+	CreatedAt int64          `json:"created_at"`
+	ExpiresAt int64          `json:"expires_at"`
+	UsedAt    sql.NullInt64  `json:"used_at"`
+}
+
 type OauthAccessToken struct {
 	Token     string `json:"token"`
 	ClientID  string `json:"client_id"`
@@ -67,10 +81,36 @@ type OauthUserCredential struct {
 	UpdatedAt    string `json:"updated_at"`
 }
 
+type Passkey struct {
+	CredentialID   string        `json:"credential_id"`
+	UserID         string        `json:"user_id"`
+	CredentialJson string        `json:"credential_json"`
+	CreatedAt      int64         `json:"created_at"`
+	UpdatedAt      int64         `json:"updated_at"`
+	LastUsedAt     sql.NullInt64 `json:"last_used_at"`
+}
+
+type PasskeySession struct {
+	ID          string         `json:"id"`
+	Kind        string         `json:"kind"`
+	UserID      sql.NullString `json:"user_id"`
+	SessionJson string         `json:"session_json"`
+	ExpiresAt   int64          `json:"expires_at"`
+}
+
 type User struct {
 	ID          string `json:"id"`
 	DisplayName string `json:"display_name"`
 	Locale      string `json:"locale"`
 	CreatedAt   int64  `json:"created_at"`
 	UpdatedAt   int64  `json:"updated_at"`
+}
+
+type UserEmail struct {
+	ID         string        `json:"id"`
+	UserID     string        `json:"user_id"`
+	Email      string        `json:"email"`
+	VerifiedAt sql.NullInt64 `json:"verified_at"`
+	CreatedAt  int64         `json:"created_at"`
+	UpdatedAt  int64         `json:"updated_at"`
 }

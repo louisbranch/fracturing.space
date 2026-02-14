@@ -58,26 +58,26 @@ func (s *fakeUserStore) ListUsers(_ context.Context, pageSize int, pageToken str
 }
 
 func TestCreateUser_NilRequest(t *testing.T) {
-	svc := NewAuthService(newFakeUserStore())
+	svc := NewAuthService(newFakeUserStore(), nil, nil)
 	_, err := svc.CreateUser(context.Background(), nil)
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestCreateUser_MissingStore(t *testing.T) {
-	svc := NewAuthService(nil)
+	svc := NewAuthService(nil, nil, nil)
 	_, err := svc.CreateUser(context.Background(), &authv1.CreateUserRequest{DisplayName: "Alice"})
 	assertStatusCode(t, err, codes.Internal)
 }
 
 func TestCreateUser_EmptyDisplayName(t *testing.T) {
-	svc := NewAuthService(newFakeUserStore())
+	svc := NewAuthService(newFakeUserStore(), nil, nil)
 	_, err := svc.CreateUser(context.Background(), &authv1.CreateUserRequest{DisplayName: "  "})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestCreateUser_Success(t *testing.T) {
 	store := newFakeUserStore()
-	svc := NewAuthService(store)
+	svc := NewAuthService(store, nil, nil)
 	fixedTime := time.Date(2026, 1, 23, 10, 0, 0, 0, time.UTC)
 	svc.clock = func() time.Time { return fixedTime }
 	svc.idGenerator = func() (string, error) { return "user-123", nil }
@@ -95,25 +95,25 @@ func TestCreateUser_Success(t *testing.T) {
 }
 
 func TestGetUser_NilRequest(t *testing.T) {
-	svc := NewAuthService(newFakeUserStore())
+	svc := NewAuthService(newFakeUserStore(), nil, nil)
 	_, err := svc.GetUser(context.Background(), nil)
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestGetUser_MissingStore(t *testing.T) {
-	svc := NewAuthService(nil)
+	svc := NewAuthService(nil, nil, nil)
 	_, err := svc.GetUser(context.Background(), &authv1.GetUserRequest{UserId: "user-1"})
 	assertStatusCode(t, err, codes.Internal)
 }
 
 func TestGetUser_EmptyID(t *testing.T) {
-	svc := NewAuthService(newFakeUserStore())
+	svc := NewAuthService(newFakeUserStore(), nil, nil)
 	_, err := svc.GetUser(context.Background(), &authv1.GetUserRequest{UserId: "  "})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestGetUser_NotFound(t *testing.T) {
-	svc := NewAuthService(newFakeUserStore())
+	svc := NewAuthService(newFakeUserStore(), nil, nil)
 	_, err := svc.GetUser(context.Background(), &authv1.GetUserRequest{UserId: "missing"})
 	assertStatusCode(t, err, codes.NotFound)
 }
@@ -121,7 +121,7 @@ func TestGetUser_NotFound(t *testing.T) {
 func TestGetUser_Success(t *testing.T) {
 	store := newFakeUserStore()
 	store.users["user-123"] = user.User{ID: "user-123", DisplayName: "Alice", CreatedAt: time.Now(), UpdatedAt: time.Now()}
-	svc := NewAuthService(store)
+	svc := NewAuthService(store, nil, nil)
 
 	resp, err := svc.GetUser(context.Background(), &authv1.GetUserRequest{UserId: "user-123"})
 	if err != nil {
@@ -133,13 +133,13 @@ func TestGetUser_Success(t *testing.T) {
 }
 
 func TestListUsers_NilRequest(t *testing.T) {
-	svc := NewAuthService(newFakeUserStore())
+	svc := NewAuthService(newFakeUserStore(), nil, nil)
 	_, err := svc.ListUsers(context.Background(), nil)
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestListUsers_MissingStore(t *testing.T) {
-	svc := NewAuthService(nil)
+	svc := NewAuthService(nil, nil, nil)
 	_, err := svc.ListUsers(context.Background(), &authv1.ListUsersRequest{})
 	assertStatusCode(t, err, codes.Internal)
 }
@@ -149,7 +149,7 @@ func TestListUsers_Success(t *testing.T) {
 	store.users["user-1"] = user.User{ID: "user-1", DisplayName: "Alpha", CreatedAt: time.Now(), UpdatedAt: time.Now()}
 	store.users["user-2"] = user.User{ID: "user-2", DisplayName: "Beta", CreatedAt: time.Now(), UpdatedAt: time.Now()}
 
-	svc := NewAuthService(store)
+	svc := NewAuthService(store, nil, nil)
 	resp, err := svc.ListUsers(context.Background(), &authv1.ListUsersRequest{PageSize: 10})
 	if err != nil {
 		t.Fatalf("list users: %v", err)
@@ -174,7 +174,7 @@ func TestIssueJoinGrant_Success(t *testing.T) {
 	t.Setenv(envJoinGrantPrivateKey, base64.RawStdEncoding.EncodeToString(privateKey))
 	t.Setenv(envJoinGrantTTL, "5m")
 
-	svc := NewAuthService(store)
+	svc := NewAuthService(store, nil, nil)
 	fixedTime := time.Date(2026, 1, 23, 10, 0, 0, 0, time.UTC)
 	svc.clock = func() time.Time { return fixedTime }
 

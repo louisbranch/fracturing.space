@@ -197,6 +197,778 @@ func (x *CreateUserResponse) GetUser() *User {
 	return nil
 }
 
+type BeginPasskeyRegistrationRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BeginPasskeyRegistrationRequest) Reset() {
+	*x = BeginPasskeyRegistrationRequest{}
+	mi := &file_auth_v1_user_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BeginPasskeyRegistrationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BeginPasskeyRegistrationRequest) ProtoMessage() {}
+
+func (x *BeginPasskeyRegistrationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_v1_user_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BeginPasskeyRegistrationRequest.ProtoReflect.Descriptor instead.
+func (*BeginPasskeyRegistrationRequest) Descriptor() ([]byte, []int) {
+	return file_auth_v1_user_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *BeginPasskeyRegistrationRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+type BeginPasskeyRegistrationResponse struct {
+	state                         protoimpl.MessageState `protogen:"open.v1"`
+	SessionId                     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	CredentialCreationOptionsJson []byte                 `protobuf:"bytes,2,opt,name=credential_creation_options_json,json=credentialCreationOptionsJson,proto3" json:"credential_creation_options_json,omitempty"`
+	unknownFields                 protoimpl.UnknownFields
+	sizeCache                     protoimpl.SizeCache
+}
+
+func (x *BeginPasskeyRegistrationResponse) Reset() {
+	*x = BeginPasskeyRegistrationResponse{}
+	mi := &file_auth_v1_user_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BeginPasskeyRegistrationResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BeginPasskeyRegistrationResponse) ProtoMessage() {}
+
+func (x *BeginPasskeyRegistrationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_v1_user_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BeginPasskeyRegistrationResponse.ProtoReflect.Descriptor instead.
+func (*BeginPasskeyRegistrationResponse) Descriptor() ([]byte, []int) {
+	return file_auth_v1_user_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *BeginPasskeyRegistrationResponse) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *BeginPasskeyRegistrationResponse) GetCredentialCreationOptionsJson() []byte {
+	if x != nil {
+		return x.CredentialCreationOptionsJson
+	}
+	return nil
+}
+
+type FinishPasskeyRegistrationRequest struct {
+	state                  protoimpl.MessageState `protogen:"open.v1"`
+	SessionId              string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	CredentialResponseJson []byte                 `protobuf:"bytes,2,opt,name=credential_response_json,json=credentialResponseJson,proto3" json:"credential_response_json,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *FinishPasskeyRegistrationRequest) Reset() {
+	*x = FinishPasskeyRegistrationRequest{}
+	mi := &file_auth_v1_user_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FinishPasskeyRegistrationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FinishPasskeyRegistrationRequest) ProtoMessage() {}
+
+func (x *FinishPasskeyRegistrationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_v1_user_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FinishPasskeyRegistrationRequest.ProtoReflect.Descriptor instead.
+func (*FinishPasskeyRegistrationRequest) Descriptor() ([]byte, []int) {
+	return file_auth_v1_user_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *FinishPasskeyRegistrationRequest) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *FinishPasskeyRegistrationRequest) GetCredentialResponseJson() []byte {
+	if x != nil {
+		return x.CredentialResponseJson
+	}
+	return nil
+}
+
+type FinishPasskeyRegistrationResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	User          *User                  `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
+	CredentialId  string                 `protobuf:"bytes,2,opt,name=credential_id,json=credentialId,proto3" json:"credential_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FinishPasskeyRegistrationResponse) Reset() {
+	*x = FinishPasskeyRegistrationResponse{}
+	mi := &file_auth_v1_user_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FinishPasskeyRegistrationResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FinishPasskeyRegistrationResponse) ProtoMessage() {}
+
+func (x *FinishPasskeyRegistrationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_v1_user_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FinishPasskeyRegistrationResponse.ProtoReflect.Descriptor instead.
+func (*FinishPasskeyRegistrationResponse) Descriptor() ([]byte, []int) {
+	return file_auth_v1_user_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *FinishPasskeyRegistrationResponse) GetUser() *User {
+	if x != nil {
+		return x.User
+	}
+	return nil
+}
+
+func (x *FinishPasskeyRegistrationResponse) GetCredentialId() string {
+	if x != nil {
+		return x.CredentialId
+	}
+	return ""
+}
+
+type BeginPasskeyLoginRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BeginPasskeyLoginRequest) Reset() {
+	*x = BeginPasskeyLoginRequest{}
+	mi := &file_auth_v1_user_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BeginPasskeyLoginRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BeginPasskeyLoginRequest) ProtoMessage() {}
+
+func (x *BeginPasskeyLoginRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_v1_user_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BeginPasskeyLoginRequest.ProtoReflect.Descriptor instead.
+func (*BeginPasskeyLoginRequest) Descriptor() ([]byte, []int) {
+	return file_auth_v1_user_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *BeginPasskeyLoginRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+type BeginPasskeyLoginResponse struct {
+	state                        protoimpl.MessageState `protogen:"open.v1"`
+	SessionId                    string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	CredentialRequestOptionsJson []byte                 `protobuf:"bytes,2,opt,name=credential_request_options_json,json=credentialRequestOptionsJson,proto3" json:"credential_request_options_json,omitempty"`
+	unknownFields                protoimpl.UnknownFields
+	sizeCache                    protoimpl.SizeCache
+}
+
+func (x *BeginPasskeyLoginResponse) Reset() {
+	*x = BeginPasskeyLoginResponse{}
+	mi := &file_auth_v1_user_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BeginPasskeyLoginResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BeginPasskeyLoginResponse) ProtoMessage() {}
+
+func (x *BeginPasskeyLoginResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_v1_user_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BeginPasskeyLoginResponse.ProtoReflect.Descriptor instead.
+func (*BeginPasskeyLoginResponse) Descriptor() ([]byte, []int) {
+	return file_auth_v1_user_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *BeginPasskeyLoginResponse) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *BeginPasskeyLoginResponse) GetCredentialRequestOptionsJson() []byte {
+	if x != nil {
+		return x.CredentialRequestOptionsJson
+	}
+	return nil
+}
+
+type FinishPasskeyLoginRequest struct {
+	state                  protoimpl.MessageState `protogen:"open.v1"`
+	SessionId              string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	CredentialResponseJson []byte                 `protobuf:"bytes,2,opt,name=credential_response_json,json=credentialResponseJson,proto3" json:"credential_response_json,omitempty"`
+	PendingId              string                 `protobuf:"bytes,3,opt,name=pending_id,json=pendingId,proto3" json:"pending_id,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *FinishPasskeyLoginRequest) Reset() {
+	*x = FinishPasskeyLoginRequest{}
+	mi := &file_auth_v1_user_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FinishPasskeyLoginRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FinishPasskeyLoginRequest) ProtoMessage() {}
+
+func (x *FinishPasskeyLoginRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_v1_user_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FinishPasskeyLoginRequest.ProtoReflect.Descriptor instead.
+func (*FinishPasskeyLoginRequest) Descriptor() ([]byte, []int) {
+	return file_auth_v1_user_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *FinishPasskeyLoginRequest) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *FinishPasskeyLoginRequest) GetCredentialResponseJson() []byte {
+	if x != nil {
+		return x.CredentialResponseJson
+	}
+	return nil
+}
+
+func (x *FinishPasskeyLoginRequest) GetPendingId() string {
+	if x != nil {
+		return x.PendingId
+	}
+	return ""
+}
+
+type FinishPasskeyLoginResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	User          *User                  `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
+	CredentialId  string                 `protobuf:"bytes,2,opt,name=credential_id,json=credentialId,proto3" json:"credential_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FinishPasskeyLoginResponse) Reset() {
+	*x = FinishPasskeyLoginResponse{}
+	mi := &file_auth_v1_user_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FinishPasskeyLoginResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FinishPasskeyLoginResponse) ProtoMessage() {}
+
+func (x *FinishPasskeyLoginResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_v1_user_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FinishPasskeyLoginResponse.ProtoReflect.Descriptor instead.
+func (*FinishPasskeyLoginResponse) Descriptor() ([]byte, []int) {
+	return file_auth_v1_user_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *FinishPasskeyLoginResponse) GetUser() *User {
+	if x != nil {
+		return x.User
+	}
+	return nil
+}
+
+func (x *FinishPasskeyLoginResponse) GetCredentialId() string {
+	if x != nil {
+		return x.CredentialId
+	}
+	return ""
+}
+
+type GenerateMagicLinkRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Email         string                 `protobuf:"bytes,2,opt,name=email,proto3" json:"email,omitempty"`
+	PendingId     string                 `protobuf:"bytes,3,opt,name=pending_id,json=pendingId,proto3" json:"pending_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GenerateMagicLinkRequest) Reset() {
+	*x = GenerateMagicLinkRequest{}
+	mi := &file_auth_v1_user_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GenerateMagicLinkRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GenerateMagicLinkRequest) ProtoMessage() {}
+
+func (x *GenerateMagicLinkRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_v1_user_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GenerateMagicLinkRequest.ProtoReflect.Descriptor instead.
+func (*GenerateMagicLinkRequest) Descriptor() ([]byte, []int) {
+	return file_auth_v1_user_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *GenerateMagicLinkRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *GenerateMagicLinkRequest) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
+func (x *GenerateMagicLinkRequest) GetPendingId() string {
+	if x != nil {
+		return x.PendingId
+	}
+	return ""
+}
+
+type GenerateMagicLinkResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	MagicLinkUrl  string                 `protobuf:"bytes,1,opt,name=magic_link_url,json=magicLinkUrl,proto3" json:"magic_link_url,omitempty"`
+	ExpiresAt     *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GenerateMagicLinkResponse) Reset() {
+	*x = GenerateMagicLinkResponse{}
+	mi := &file_auth_v1_user_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GenerateMagicLinkResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GenerateMagicLinkResponse) ProtoMessage() {}
+
+func (x *GenerateMagicLinkResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_v1_user_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GenerateMagicLinkResponse.ProtoReflect.Descriptor instead.
+func (*GenerateMagicLinkResponse) Descriptor() ([]byte, []int) {
+	return file_auth_v1_user_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *GenerateMagicLinkResponse) GetMagicLinkUrl() string {
+	if x != nil {
+		return x.MagicLinkUrl
+	}
+	return ""
+}
+
+func (x *GenerateMagicLinkResponse) GetExpiresAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return nil
+}
+
+type ConsumeMagicLinkRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Token         string                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ConsumeMagicLinkRequest) Reset() {
+	*x = ConsumeMagicLinkRequest{}
+	mi := &file_auth_v1_user_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ConsumeMagicLinkRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ConsumeMagicLinkRequest) ProtoMessage() {}
+
+func (x *ConsumeMagicLinkRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_v1_user_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ConsumeMagicLinkRequest.ProtoReflect.Descriptor instead.
+func (*ConsumeMagicLinkRequest) Descriptor() ([]byte, []int) {
+	return file_auth_v1_user_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *ConsumeMagicLinkRequest) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
+}
+
+type ConsumeMagicLinkResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	User          *User                  `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
+	PendingId     string                 `protobuf:"bytes,2,opt,name=pending_id,json=pendingId,proto3" json:"pending_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ConsumeMagicLinkResponse) Reset() {
+	*x = ConsumeMagicLinkResponse{}
+	mi := &file_auth_v1_user_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ConsumeMagicLinkResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ConsumeMagicLinkResponse) ProtoMessage() {}
+
+func (x *ConsumeMagicLinkResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_v1_user_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ConsumeMagicLinkResponse.ProtoReflect.Descriptor instead.
+func (*ConsumeMagicLinkResponse) Descriptor() ([]byte, []int) {
+	return file_auth_v1_user_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *ConsumeMagicLinkResponse) GetUser() *User {
+	if x != nil {
+		return x.User
+	}
+	return nil
+}
+
+func (x *ConsumeMagicLinkResponse) GetPendingId() string {
+	if x != nil {
+		return x.PendingId
+	}
+	return ""
+}
+
+type ListUserEmailsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListUserEmailsRequest) Reset() {
+	*x = ListUserEmailsRequest{}
+	mi := &file_auth_v1_user_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListUserEmailsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListUserEmailsRequest) ProtoMessage() {}
+
+func (x *ListUserEmailsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_v1_user_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListUserEmailsRequest.ProtoReflect.Descriptor instead.
+func (*ListUserEmailsRequest) Descriptor() ([]byte, []int) {
+	return file_auth_v1_user_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *ListUserEmailsRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+type ListUserEmailsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Emails        []*UserEmail           `protobuf:"bytes,1,rep,name=emails,proto3" json:"emails,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListUserEmailsResponse) Reset() {
+	*x = ListUserEmailsResponse{}
+	mi := &file_auth_v1_user_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListUserEmailsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListUserEmailsResponse) ProtoMessage() {}
+
+func (x *ListUserEmailsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_v1_user_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListUserEmailsResponse.ProtoReflect.Descriptor instead.
+func (*ListUserEmailsResponse) Descriptor() ([]byte, []int) {
+	return file_auth_v1_user_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *ListUserEmailsResponse) GetEmails() []*UserEmail {
+	if x != nil {
+		return x.Emails
+	}
+	return nil
+}
+
+type UserEmail struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Email         string                 `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
+	VerifiedAt    *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=verified_at,json=verifiedAt,proto3" json:"verified_at,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UserEmail) Reset() {
+	*x = UserEmail{}
+	mi := &file_auth_v1_user_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UserEmail) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UserEmail) ProtoMessage() {}
+
+func (x *UserEmail) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_v1_user_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UserEmail.ProtoReflect.Descriptor instead.
+func (*UserEmail) Descriptor() ([]byte, []int) {
+	return file_auth_v1_user_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *UserEmail) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
+func (x *UserEmail) GetVerifiedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.VerifiedAt
+	}
+	return nil
+}
+
+func (x *UserEmail) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *UserEmail) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
 type IssueJoinGrantRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
@@ -209,7 +981,7 @@ type IssueJoinGrantRequest struct {
 
 func (x *IssueJoinGrantRequest) Reset() {
 	*x = IssueJoinGrantRequest{}
-	mi := &file_auth_v1_user_proto_msgTypes[3]
+	mi := &file_auth_v1_user_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -221,7 +993,7 @@ func (x *IssueJoinGrantRequest) String() string {
 func (*IssueJoinGrantRequest) ProtoMessage() {}
 
 func (x *IssueJoinGrantRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_user_proto_msgTypes[3]
+	mi := &file_auth_v1_user_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -234,7 +1006,7 @@ func (x *IssueJoinGrantRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IssueJoinGrantRequest.ProtoReflect.Descriptor instead.
 func (*IssueJoinGrantRequest) Descriptor() ([]byte, []int) {
-	return file_auth_v1_user_proto_rawDescGZIP(), []int{3}
+	return file_auth_v1_user_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *IssueJoinGrantRequest) GetUserId() string {
@@ -276,7 +1048,7 @@ type IssueJoinGrantResponse struct {
 
 func (x *IssueJoinGrantResponse) Reset() {
 	*x = IssueJoinGrantResponse{}
-	mi := &file_auth_v1_user_proto_msgTypes[4]
+	mi := &file_auth_v1_user_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -288,7 +1060,7 @@ func (x *IssueJoinGrantResponse) String() string {
 func (*IssueJoinGrantResponse) ProtoMessage() {}
 
 func (x *IssueJoinGrantResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_user_proto_msgTypes[4]
+	mi := &file_auth_v1_user_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -301,7 +1073,7 @@ func (x *IssueJoinGrantResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IssueJoinGrantResponse.ProtoReflect.Descriptor instead.
 func (*IssueJoinGrantResponse) Descriptor() ([]byte, []int) {
-	return file_auth_v1_user_proto_rawDescGZIP(), []int{4}
+	return file_auth_v1_user_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *IssueJoinGrantResponse) GetJoinGrant() string {
@@ -334,7 +1106,7 @@ type GetUserRequest struct {
 
 func (x *GetUserRequest) Reset() {
 	*x = GetUserRequest{}
-	mi := &file_auth_v1_user_proto_msgTypes[5]
+	mi := &file_auth_v1_user_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -346,7 +1118,7 @@ func (x *GetUserRequest) String() string {
 func (*GetUserRequest) ProtoMessage() {}
 
 func (x *GetUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_user_proto_msgTypes[5]
+	mi := &file_auth_v1_user_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -359,7 +1131,7 @@ func (x *GetUserRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetUserRequest.ProtoReflect.Descriptor instead.
 func (*GetUserRequest) Descriptor() ([]byte, []int) {
-	return file_auth_v1_user_proto_rawDescGZIP(), []int{5}
+	return file_auth_v1_user_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *GetUserRequest) GetUserId() string {
@@ -378,7 +1150,7 @@ type GetUserResponse struct {
 
 func (x *GetUserResponse) Reset() {
 	*x = GetUserResponse{}
-	mi := &file_auth_v1_user_proto_msgTypes[6]
+	mi := &file_auth_v1_user_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -390,7 +1162,7 @@ func (x *GetUserResponse) String() string {
 func (*GetUserResponse) ProtoMessage() {}
 
 func (x *GetUserResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_user_proto_msgTypes[6]
+	mi := &file_auth_v1_user_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -403,7 +1175,7 @@ func (x *GetUserResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetUserResponse.ProtoReflect.Descriptor instead.
 func (*GetUserResponse) Descriptor() ([]byte, []int) {
-	return file_auth_v1_user_proto_rawDescGZIP(), []int{6}
+	return file_auth_v1_user_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *GetUserResponse) GetUser() *User {
@@ -426,7 +1198,7 @@ type ListUsersRequest struct {
 
 func (x *ListUsersRequest) Reset() {
 	*x = ListUsersRequest{}
-	mi := &file_auth_v1_user_proto_msgTypes[7]
+	mi := &file_auth_v1_user_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -438,7 +1210,7 @@ func (x *ListUsersRequest) String() string {
 func (*ListUsersRequest) ProtoMessage() {}
 
 func (x *ListUsersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_user_proto_msgTypes[7]
+	mi := &file_auth_v1_user_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -451,7 +1223,7 @@ func (x *ListUsersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListUsersRequest.ProtoReflect.Descriptor instead.
 func (*ListUsersRequest) Descriptor() ([]byte, []int) {
-	return file_auth_v1_user_proto_rawDescGZIP(), []int{7}
+	return file_auth_v1_user_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *ListUsersRequest) GetPageSize() int32 {
@@ -478,7 +1250,7 @@ type ListUsersResponse struct {
 
 func (x *ListUsersResponse) Reset() {
 	*x = ListUsersResponse{}
-	mi := &file_auth_v1_user_proto_msgTypes[8]
+	mi := &file_auth_v1_user_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -490,7 +1262,7 @@ func (x *ListUsersResponse) String() string {
 func (*ListUsersResponse) ProtoMessage() {}
 
 func (x *ListUsersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_v1_user_proto_msgTypes[8]
+	mi := &file_auth_v1_user_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -503,7 +1275,7 @@ func (x *ListUsersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListUsersResponse.ProtoReflect.Descriptor instead.
 func (*ListUsersResponse) Descriptor() ([]byte, []int) {
-	return file_auth_v1_user_proto_rawDescGZIP(), []int{8}
+	return file_auth_v1_user_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *ListUsersResponse) GetUsers() []*User {
@@ -537,7 +1309,62 @@ const file_auth_v1_user_proto_rawDesc = "" +
 	"\fdisplay_name\x18\x01 \x01(\tR\vdisplayName\x12)\n" +
 	"\x06locale\x18\x02 \x01(\x0e2\x11.common.v1.LocaleR\x06locale\"7\n" +
 	"\x12CreateUserResponse\x12!\n" +
-	"\x04user\x18\x01 \x01(\v2\r.auth.v1.UserR\x04user\"\x95\x01\n" +
+	"\x04user\x18\x01 \x01(\v2\r.auth.v1.UserR\x04user\":\n" +
+	"\x1fBeginPasskeyRegistrationRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\"\x8a\x01\n" +
+	" BeginPasskeyRegistrationResponse\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\x12G\n" +
+	" credential_creation_options_json\x18\x02 \x01(\fR\x1dcredentialCreationOptionsJson\"{\n" +
+	" FinishPasskeyRegistrationRequest\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\x128\n" +
+	"\x18credential_response_json\x18\x02 \x01(\fR\x16credentialResponseJson\"k\n" +
+	"!FinishPasskeyRegistrationResponse\x12!\n" +
+	"\x04user\x18\x01 \x01(\v2\r.auth.v1.UserR\x04user\x12#\n" +
+	"\rcredential_id\x18\x02 \x01(\tR\fcredentialId\"3\n" +
+	"\x18BeginPasskeyLoginRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\"\x81\x01\n" +
+	"\x19BeginPasskeyLoginResponse\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\x12E\n" +
+	"\x1fcredential_request_options_json\x18\x02 \x01(\fR\x1ccredentialRequestOptionsJson\"\x93\x01\n" +
+	"\x19FinishPasskeyLoginRequest\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\x128\n" +
+	"\x18credential_response_json\x18\x02 \x01(\fR\x16credentialResponseJson\x12\x1d\n" +
+	"\n" +
+	"pending_id\x18\x03 \x01(\tR\tpendingId\"d\n" +
+	"\x1aFinishPasskeyLoginResponse\x12!\n" +
+	"\x04user\x18\x01 \x01(\v2\r.auth.v1.UserR\x04user\x12#\n" +
+	"\rcredential_id\x18\x02 \x01(\tR\fcredentialId\"h\n" +
+	"\x18GenerateMagicLinkRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x14\n" +
+	"\x05email\x18\x02 \x01(\tR\x05email\x12\x1d\n" +
+	"\n" +
+	"pending_id\x18\x03 \x01(\tR\tpendingId\"|\n" +
+	"\x19GenerateMagicLinkResponse\x12$\n" +
+	"\x0emagic_link_url\x18\x01 \x01(\tR\fmagicLinkUrl\x129\n" +
+	"\n" +
+	"expires_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\"/\n" +
+	"\x17ConsumeMagicLinkRequest\x12\x14\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token\"\\\n" +
+	"\x18ConsumeMagicLinkResponse\x12!\n" +
+	"\x04user\x18\x01 \x01(\v2\r.auth.v1.UserR\x04user\x12\x1d\n" +
+	"\n" +
+	"pending_id\x18\x02 \x01(\tR\tpendingId\"0\n" +
+	"\x15ListUserEmailsRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\"D\n" +
+	"\x16ListUserEmailsResponse\x12*\n" +
+	"\x06emails\x18\x01 \x03(\v2\x12.auth.v1.UserEmailR\x06emails\"\xd4\x01\n" +
+	"\tUserEmail\x12\x14\n" +
+	"\x05email\x18\x01 \x01(\tR\x05email\x12;\n" +
+	"\vverified_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"verifiedAt\x129\n" +
+	"\n" +
+	"created_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\x95\x01\n" +
 	"\x15IssueJoinGrantRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1f\n" +
 	"\vcampaign_id\x18\x02 \x01(\tR\n" +
@@ -560,10 +1387,17 @@ const file_auth_v1_user_proto_rawDesc = "" +
 	"page_token\x18\x02 \x01(\tR\tpageToken\"`\n" +
 	"\x11ListUsersResponse\x12#\n" +
 	"\x05users\x18\x01 \x03(\v2\r.auth.v1.UserR\x05users\x12&\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken2\xa9\x02\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken2\xd1\a\n" +
 	"\vAuthService\x12E\n" +
 	"\n" +
-	"CreateUser\x12\x1a.auth.v1.CreateUserRequest\x1a\x1b.auth.v1.CreateUserResponse\x12Q\n" +
+	"CreateUser\x12\x1a.auth.v1.CreateUserRequest\x1a\x1b.auth.v1.CreateUserResponse\x12o\n" +
+	"\x18BeginPasskeyRegistration\x12(.auth.v1.BeginPasskeyRegistrationRequest\x1a).auth.v1.BeginPasskeyRegistrationResponse\x12r\n" +
+	"\x19FinishPasskeyRegistration\x12).auth.v1.FinishPasskeyRegistrationRequest\x1a*.auth.v1.FinishPasskeyRegistrationResponse\x12Z\n" +
+	"\x11BeginPasskeyLogin\x12!.auth.v1.BeginPasskeyLoginRequest\x1a\".auth.v1.BeginPasskeyLoginResponse\x12]\n" +
+	"\x12FinishPasskeyLogin\x12\".auth.v1.FinishPasskeyLoginRequest\x1a#.auth.v1.FinishPasskeyLoginResponse\x12Z\n" +
+	"\x11GenerateMagicLink\x12!.auth.v1.GenerateMagicLinkRequest\x1a\".auth.v1.GenerateMagicLinkResponse\x12W\n" +
+	"\x10ConsumeMagicLink\x12 .auth.v1.ConsumeMagicLinkRequest\x1a!.auth.v1.ConsumeMagicLinkResponse\x12Q\n" +
+	"\x0eListUserEmails\x12\x1e.auth.v1.ListUserEmailsRequest\x1a\x1f.auth.v1.ListUserEmailsResponse\x12Q\n" +
 	"\x0eIssueJoinGrant\x12\x1e.auth.v1.IssueJoinGrantRequest\x1a\x1f.auth.v1.IssueJoinGrantResponse\x12<\n" +
 	"\aGetUser\x12\x17.auth.v1.GetUserRequest\x1a\x18.auth.v1.GetUserResponse\x12B\n" +
 	"\tListUsers\x12\x19.auth.v1.ListUsersRequest\x1a\x1a.auth.v1.ListUsersResponseBCZAgithub.com/louisbranch/fracturing.space/api/gen/go/auth/v1;authv1b\x06proto3"
@@ -580,42 +1414,79 @@ func file_auth_v1_user_proto_rawDescGZIP() []byte {
 	return file_auth_v1_user_proto_rawDescData
 }
 
-var file_auth_v1_user_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_auth_v1_user_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
 var file_auth_v1_user_proto_goTypes = []any{
-	(*User)(nil),                   // 0: auth.v1.User
-	(*CreateUserRequest)(nil),      // 1: auth.v1.CreateUserRequest
-	(*CreateUserResponse)(nil),     // 2: auth.v1.CreateUserResponse
-	(*IssueJoinGrantRequest)(nil),  // 3: auth.v1.IssueJoinGrantRequest
-	(*IssueJoinGrantResponse)(nil), // 4: auth.v1.IssueJoinGrantResponse
-	(*GetUserRequest)(nil),         // 5: auth.v1.GetUserRequest
-	(*GetUserResponse)(nil),        // 6: auth.v1.GetUserResponse
-	(*ListUsersRequest)(nil),       // 7: auth.v1.ListUsersRequest
-	(*ListUsersResponse)(nil),      // 8: auth.v1.ListUsersResponse
-	(v1.Locale)(0),                 // 9: common.v1.Locale
-	(*timestamppb.Timestamp)(nil),  // 10: google.protobuf.Timestamp
+	(*User)(nil),                              // 0: auth.v1.User
+	(*CreateUserRequest)(nil),                 // 1: auth.v1.CreateUserRequest
+	(*CreateUserResponse)(nil),                // 2: auth.v1.CreateUserResponse
+	(*BeginPasskeyRegistrationRequest)(nil),   // 3: auth.v1.BeginPasskeyRegistrationRequest
+	(*BeginPasskeyRegistrationResponse)(nil),  // 4: auth.v1.BeginPasskeyRegistrationResponse
+	(*FinishPasskeyRegistrationRequest)(nil),  // 5: auth.v1.FinishPasskeyRegistrationRequest
+	(*FinishPasskeyRegistrationResponse)(nil), // 6: auth.v1.FinishPasskeyRegistrationResponse
+	(*BeginPasskeyLoginRequest)(nil),          // 7: auth.v1.BeginPasskeyLoginRequest
+	(*BeginPasskeyLoginResponse)(nil),         // 8: auth.v1.BeginPasskeyLoginResponse
+	(*FinishPasskeyLoginRequest)(nil),         // 9: auth.v1.FinishPasskeyLoginRequest
+	(*FinishPasskeyLoginResponse)(nil),        // 10: auth.v1.FinishPasskeyLoginResponse
+	(*GenerateMagicLinkRequest)(nil),          // 11: auth.v1.GenerateMagicLinkRequest
+	(*GenerateMagicLinkResponse)(nil),         // 12: auth.v1.GenerateMagicLinkResponse
+	(*ConsumeMagicLinkRequest)(nil),           // 13: auth.v1.ConsumeMagicLinkRequest
+	(*ConsumeMagicLinkResponse)(nil),          // 14: auth.v1.ConsumeMagicLinkResponse
+	(*ListUserEmailsRequest)(nil),             // 15: auth.v1.ListUserEmailsRequest
+	(*ListUserEmailsResponse)(nil),            // 16: auth.v1.ListUserEmailsResponse
+	(*UserEmail)(nil),                         // 17: auth.v1.UserEmail
+	(*IssueJoinGrantRequest)(nil),             // 18: auth.v1.IssueJoinGrantRequest
+	(*IssueJoinGrantResponse)(nil),            // 19: auth.v1.IssueJoinGrantResponse
+	(*GetUserRequest)(nil),                    // 20: auth.v1.GetUserRequest
+	(*GetUserResponse)(nil),                   // 21: auth.v1.GetUserResponse
+	(*ListUsersRequest)(nil),                  // 22: auth.v1.ListUsersRequest
+	(*ListUsersResponse)(nil),                 // 23: auth.v1.ListUsersResponse
+	(v1.Locale)(0),                            // 24: common.v1.Locale
+	(*timestamppb.Timestamp)(nil),             // 25: google.protobuf.Timestamp
 }
 var file_auth_v1_user_proto_depIdxs = []int32{
-	9,  // 0: auth.v1.User.locale:type_name -> common.v1.Locale
-	10, // 1: auth.v1.User.created_at:type_name -> google.protobuf.Timestamp
-	10, // 2: auth.v1.User.updated_at:type_name -> google.protobuf.Timestamp
-	9,  // 3: auth.v1.CreateUserRequest.locale:type_name -> common.v1.Locale
+	24, // 0: auth.v1.User.locale:type_name -> common.v1.Locale
+	25, // 1: auth.v1.User.created_at:type_name -> google.protobuf.Timestamp
+	25, // 2: auth.v1.User.updated_at:type_name -> google.protobuf.Timestamp
+	24, // 3: auth.v1.CreateUserRequest.locale:type_name -> common.v1.Locale
 	0,  // 4: auth.v1.CreateUserResponse.user:type_name -> auth.v1.User
-	10, // 5: auth.v1.IssueJoinGrantResponse.expires_at:type_name -> google.protobuf.Timestamp
-	0,  // 6: auth.v1.GetUserResponse.user:type_name -> auth.v1.User
-	0,  // 7: auth.v1.ListUsersResponse.users:type_name -> auth.v1.User
-	1,  // 8: auth.v1.AuthService.CreateUser:input_type -> auth.v1.CreateUserRequest
-	3,  // 9: auth.v1.AuthService.IssueJoinGrant:input_type -> auth.v1.IssueJoinGrantRequest
-	5,  // 10: auth.v1.AuthService.GetUser:input_type -> auth.v1.GetUserRequest
-	7,  // 11: auth.v1.AuthService.ListUsers:input_type -> auth.v1.ListUsersRequest
-	2,  // 12: auth.v1.AuthService.CreateUser:output_type -> auth.v1.CreateUserResponse
-	4,  // 13: auth.v1.AuthService.IssueJoinGrant:output_type -> auth.v1.IssueJoinGrantResponse
-	6,  // 14: auth.v1.AuthService.GetUser:output_type -> auth.v1.GetUserResponse
-	8,  // 15: auth.v1.AuthService.ListUsers:output_type -> auth.v1.ListUsersResponse
-	12, // [12:16] is the sub-list for method output_type
-	8,  // [8:12] is the sub-list for method input_type
-	8,  // [8:8] is the sub-list for extension type_name
-	8,  // [8:8] is the sub-list for extension extendee
-	0,  // [0:8] is the sub-list for field type_name
+	0,  // 5: auth.v1.FinishPasskeyRegistrationResponse.user:type_name -> auth.v1.User
+	0,  // 6: auth.v1.FinishPasskeyLoginResponse.user:type_name -> auth.v1.User
+	25, // 7: auth.v1.GenerateMagicLinkResponse.expires_at:type_name -> google.protobuf.Timestamp
+	0,  // 8: auth.v1.ConsumeMagicLinkResponse.user:type_name -> auth.v1.User
+	17, // 9: auth.v1.ListUserEmailsResponse.emails:type_name -> auth.v1.UserEmail
+	25, // 10: auth.v1.UserEmail.verified_at:type_name -> google.protobuf.Timestamp
+	25, // 11: auth.v1.UserEmail.created_at:type_name -> google.protobuf.Timestamp
+	25, // 12: auth.v1.UserEmail.updated_at:type_name -> google.protobuf.Timestamp
+	25, // 13: auth.v1.IssueJoinGrantResponse.expires_at:type_name -> google.protobuf.Timestamp
+	0,  // 14: auth.v1.GetUserResponse.user:type_name -> auth.v1.User
+	0,  // 15: auth.v1.ListUsersResponse.users:type_name -> auth.v1.User
+	1,  // 16: auth.v1.AuthService.CreateUser:input_type -> auth.v1.CreateUserRequest
+	3,  // 17: auth.v1.AuthService.BeginPasskeyRegistration:input_type -> auth.v1.BeginPasskeyRegistrationRequest
+	5,  // 18: auth.v1.AuthService.FinishPasskeyRegistration:input_type -> auth.v1.FinishPasskeyRegistrationRequest
+	7,  // 19: auth.v1.AuthService.BeginPasskeyLogin:input_type -> auth.v1.BeginPasskeyLoginRequest
+	9,  // 20: auth.v1.AuthService.FinishPasskeyLogin:input_type -> auth.v1.FinishPasskeyLoginRequest
+	11, // 21: auth.v1.AuthService.GenerateMagicLink:input_type -> auth.v1.GenerateMagicLinkRequest
+	13, // 22: auth.v1.AuthService.ConsumeMagicLink:input_type -> auth.v1.ConsumeMagicLinkRequest
+	15, // 23: auth.v1.AuthService.ListUserEmails:input_type -> auth.v1.ListUserEmailsRequest
+	18, // 24: auth.v1.AuthService.IssueJoinGrant:input_type -> auth.v1.IssueJoinGrantRequest
+	20, // 25: auth.v1.AuthService.GetUser:input_type -> auth.v1.GetUserRequest
+	22, // 26: auth.v1.AuthService.ListUsers:input_type -> auth.v1.ListUsersRequest
+	2,  // 27: auth.v1.AuthService.CreateUser:output_type -> auth.v1.CreateUserResponse
+	4,  // 28: auth.v1.AuthService.BeginPasskeyRegistration:output_type -> auth.v1.BeginPasskeyRegistrationResponse
+	6,  // 29: auth.v1.AuthService.FinishPasskeyRegistration:output_type -> auth.v1.FinishPasskeyRegistrationResponse
+	8,  // 30: auth.v1.AuthService.BeginPasskeyLogin:output_type -> auth.v1.BeginPasskeyLoginResponse
+	10, // 31: auth.v1.AuthService.FinishPasskeyLogin:output_type -> auth.v1.FinishPasskeyLoginResponse
+	12, // 32: auth.v1.AuthService.GenerateMagicLink:output_type -> auth.v1.GenerateMagicLinkResponse
+	14, // 33: auth.v1.AuthService.ConsumeMagicLink:output_type -> auth.v1.ConsumeMagicLinkResponse
+	16, // 34: auth.v1.AuthService.ListUserEmails:output_type -> auth.v1.ListUserEmailsResponse
+	19, // 35: auth.v1.AuthService.IssueJoinGrant:output_type -> auth.v1.IssueJoinGrantResponse
+	21, // 36: auth.v1.AuthService.GetUser:output_type -> auth.v1.GetUserResponse
+	23, // 37: auth.v1.AuthService.ListUsers:output_type -> auth.v1.ListUsersResponse
+	27, // [27:38] is the sub-list for method output_type
+	16, // [16:27] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_auth_v1_user_proto_init() }
@@ -629,7 +1500,7 @@ func file_auth_v1_user_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_auth_v1_user_proto_rawDesc), len(file_auth_v1_user_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   24,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

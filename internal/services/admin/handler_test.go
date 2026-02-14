@@ -18,8 +18,11 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/admin/templates"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"golang.org/x/text/language"
+	"golang.org/x/text/message"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
@@ -269,13 +272,17 @@ func (p testClientProvider) AuthClient() authv1.AuthServiceClient {
 }
 
 type testAuthClient struct {
-	user          *authv1.User
-	users         []*authv1.User
-	lastMetadata  metadata.MD
-	lastUserIDReq string
-	getUserErr    error
-	listUsersErr  error
-	createUserErr error
+	user               *authv1.User
+	users              []*authv1.User
+	lastMetadata       metadata.MD
+	lastUserIDReq      string
+	getUserErr         error
+	listUsersErr       error
+	createUserErr      error
+	magicLinkResp      *authv1.GenerateMagicLinkResponse
+	magicLinkErr       error
+	listUserEmailsResp *authv1.ListUserEmailsResponse
+	listUserEmailsErr  error
 }
 
 type testSystemClient struct {
@@ -325,6 +332,46 @@ func (c *testAuthClient) ListUsers(ctx context.Context, in *authv1.ListUsersRequ
 		return nil, c.listUsersErr
 	}
 	return &authv1.ListUsersResponse{Users: c.users}, nil
+}
+
+func (c *testAuthClient) ListUserEmails(ctx context.Context, in *authv1.ListUserEmailsRequest, opts ...grpc.CallOption) (*authv1.ListUserEmailsResponse, error) {
+	if c.listUserEmailsErr != nil {
+		return nil, c.listUserEmailsErr
+	}
+	if c.listUserEmailsResp != nil {
+		return c.listUserEmailsResp, nil
+	}
+	return &authv1.ListUserEmailsResponse{}, nil
+}
+
+func (c *testAuthClient) GenerateMagicLink(ctx context.Context, in *authv1.GenerateMagicLinkRequest, opts ...grpc.CallOption) (*authv1.GenerateMagicLinkResponse, error) {
+	if c.magicLinkErr != nil {
+		return nil, c.magicLinkErr
+	}
+	if c.magicLinkResp != nil {
+		return c.magicLinkResp, nil
+	}
+	return nil, status.Error(codes.Unimplemented, "not implemented in test auth client")
+}
+
+func (c *testAuthClient) ConsumeMagicLink(ctx context.Context, in *authv1.ConsumeMagicLinkRequest, opts ...grpc.CallOption) (*authv1.ConsumeMagicLinkResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented in test auth client")
+}
+
+func (c *testAuthClient) BeginPasskeyRegistration(ctx context.Context, in *authv1.BeginPasskeyRegistrationRequest, opts ...grpc.CallOption) (*authv1.BeginPasskeyRegistrationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented in test auth client")
+}
+
+func (c *testAuthClient) FinishPasskeyRegistration(ctx context.Context, in *authv1.FinishPasskeyRegistrationRequest, opts ...grpc.CallOption) (*authv1.FinishPasskeyRegistrationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented in test auth client")
+}
+
+func (c *testAuthClient) BeginPasskeyLogin(ctx context.Context, in *authv1.BeginPasskeyLoginRequest, opts ...grpc.CallOption) (*authv1.BeginPasskeyLoginResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented in test auth client")
+}
+
+func (c *testAuthClient) FinishPasskeyLogin(ctx context.Context, in *authv1.FinishPasskeyLoginRequest, opts ...grpc.CallOption) (*authv1.FinishPasskeyLoginResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented in test auth client")
 }
 
 type testCampaignClient struct {
@@ -1106,6 +1153,59 @@ func TestCreateUser(t *testing.T) {
 			t.Fatalf("expected 200, got %d", rec.Code)
 		}
 	})
+}
+
+func TestGenerateMagicLink(t *testing.T) {
+	user := &authv1.User{Id: "user-1", DisplayName: "Test User"}
+	authClient := &testAuthClient{
+		user: user,
+		magicLinkResp: &authv1.GenerateMagicLinkResponse{
+			MagicLinkUrl: "http://magic.local/link",
+			ExpiresAt:    timestamppb.Now(),
+		},
+	}
+	provider := testClientProvider{auth: authClient}
+	webHandler := &Handler{clientProvider: provider, impersonation: newImpersonationStore()}
+	handler := webHandler.routes()
+
+	form := url.Values{}
+	form.Set("user_id", "user-1")
+	form.Set("email", "test@example.com")
+	form.Set("origin", "http://example.com")
+	formEncoded := form.Encode()
+
+	req := httptest.NewRequest(http.MethodPost, "http://example.com/users/magic-link", strings.NewReader(formEncoded))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Origin", "http://example.com")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	assertContains(t, rec.Body.String(), "http://magic.local/link")
+}
+
+func TestUserDetailShowsEmails(t *testing.T) {
+	user := &authv1.User{Id: "user-1", DisplayName: "Test User"}
+	authClient := &testAuthClient{
+		user: user,
+		listUserEmailsResp: &authv1.ListUserEmailsResponse{
+			Emails: []*authv1.UserEmail{{Email: "alpha@example.com"}},
+		},
+	}
+	provider := testClientProvider{auth: authClient}
+	webHandler := &Handler{clientProvider: provider, impersonation: newImpersonationStore()}
+	handler := webHandler.routes()
+
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/users/user-1", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	assertContains(t, rec.Body.String(), "alpha@example.com")
 }
 
 func TestUsersTable(t *testing.T) {
@@ -4329,4 +4429,135 @@ func TestDashboardContentNilClients(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", rec.Code)
 	}
+}
+
+func TestGenerateMagicLinkMethodNotAllowed(t *testing.T) {
+	webHandler := &Handler{impersonation: newImpersonationStore()}
+	handler := webHandler.routes()
+
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/users/magic-link", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("expected 405, got %d", rec.Code)
+	}
+}
+
+func TestGenerateMagicLinkMissingFields(t *testing.T) {
+	authClient := &testAuthClient{user: &authv1.User{Id: "user-1"}}
+	provider := testClientProvider{auth: authClient}
+	webHandler := &Handler{clientProvider: provider, impersonation: newImpersonationStore()}
+	handler := webHandler.routes()
+
+	form := url.Values{}
+	form.Set("origin", "http://example.com")
+
+	req := httptest.NewRequest(http.MethodPost, "http://example.com/users/magic-link", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Origin", "http://example.com")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+}
+
+func TestGenerateMagicLinkNilAuthClient(t *testing.T) {
+	webHandler := &Handler{impersonation: newImpersonationStore()}
+	handler := webHandler.routes()
+
+	form := url.Values{}
+	form.Set("user_id", "user-1")
+	form.Set("email", "test@example.com")
+	form.Set("origin", "http://example.com")
+
+	req := httptest.NewRequest(http.MethodPost, "http://example.com/users/magic-link", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Origin", "http://example.com")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+}
+
+func TestGenerateMagicLinkGRPCError(t *testing.T) {
+	authClient := &testAuthClient{
+		user:         &authv1.User{Id: "user-1", DisplayName: "Test User"},
+		magicLinkErr: status.Error(codes.Internal, "boom"),
+	}
+	provider := testClientProvider{auth: authClient}
+	webHandler := &Handler{clientProvider: provider, impersonation: newImpersonationStore()}
+	handler := webHandler.routes()
+
+	form := url.Values{}
+	form.Set("user_id", "user-1")
+	form.Set("email", "test@example.com")
+	form.Set("origin", "http://example.com")
+
+	req := httptest.NewRequest(http.MethodPost, "http://example.com/users/magic-link", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Origin", "http://example.com")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+}
+
+func TestBuildUserEmailRows(t *testing.T) {
+	loc := message.NewPrinter(language.English)
+
+	t.Run("nil list returns nil", func(t *testing.T) {
+		result := buildUserEmailRows(nil, loc)
+		if result != nil {
+			t.Fatalf("expected nil, got %v", result)
+		}
+	})
+
+	t.Run("empty list returns nil", func(t *testing.T) {
+		result := buildUserEmailRows([]*authv1.UserEmail{}, loc)
+		if result != nil {
+			t.Fatalf("expected nil, got %v", result)
+		}
+	})
+
+	t.Run("nil email skipped", func(t *testing.T) {
+		result := buildUserEmailRows([]*authv1.UserEmail{nil}, loc)
+		if result != nil {
+			t.Fatalf("expected nil, got %v", result)
+		}
+	})
+
+	t.Run("unverified email", func(t *testing.T) {
+		result := buildUserEmailRows([]*authv1.UserEmail{
+			{Email: "a@b.com"},
+		}, loc)
+		if len(result) != 1 {
+			t.Fatalf("len = %d, want 1", len(result))
+		}
+		if result[0].Email != "a@b.com" {
+			t.Fatalf("email = %q", result[0].Email)
+		}
+		if result[0].VerifiedAt != "-" {
+			t.Fatalf("verified_at = %q, want %q", result[0].VerifiedAt, "-")
+		}
+	})
+
+	t.Run("verified email", func(t *testing.T) {
+		now := timestamppb.Now()
+		result := buildUserEmailRows([]*authv1.UserEmail{
+			{Email: "a@b.com", VerifiedAt: now},
+		}, loc)
+		if len(result) != 1 {
+			t.Fatalf("len = %d, want 1", len(result))
+		}
+		if result[0].VerifiedAt == "-" {
+			t.Fatalf("expected verified timestamp, got %q", result[0].VerifiedAt)
+		}
+	})
 }

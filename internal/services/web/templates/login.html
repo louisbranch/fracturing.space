@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In - {{.AppName}}</title>
+    <link rel="stylesheet" href="/static/auth.css">
+</head>
+<body>
+    <main class="page">
+        <section class="shell">
+            <header class="hero">
+                <div class="brand">
+                    <div class="brand-mark"></div>
+                    <div>
+                        <p class="brand-kicker">{{.AppName}}</p>
+                        <h1>Sign in to continue</h1>
+                    </div>
+                </div>
+                <p class="hero-copy">{{.ClientName}} ({{.ClientID}}) is requesting access to your account.</p>
+            </header>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>Account Access</h2>
+                    <p class="card-subtitle">Use a passkey for fast sign in, or fall back to existing credentials.</p>
+                </div>
+                {{if .Error}}
+                <div class="alert">{{.Error}}</div>
+                {{end}}
+                <div id="passkey-error" class="alert" hidden></div>
+                <div id="register-error" class="alert" hidden></div>
+                <div id="register-success" class="success" hidden></div>
+                <form method="POST" action="{{.AuthLoginURL}}" class="form">
+                    <input type="hidden" name="pending_id" value="{{.PendingID}}">
+
+                    <label class="field">
+                        <span>Username</span>
+                        <input type="text" name="username" autocomplete="username" required>
+                    </label>
+
+                    <label class="field">
+                        <span>Password</span>
+                        <input type="password" name="password" autocomplete="current-password" required>
+                    </label>
+
+                    <button type="submit" class="primary">Sign In</button>
+                </form>
+                <div class="divider">
+                    <span>or</span>
+                </div>
+                <button type="button" class="secondary" id="passkey-login" data-pending-id="{{.PendingID}}">Use a Passkey</button>
+                <div class="divider">
+                    <span>new here?</span>
+                </div>
+                <form class="form" id="register-form">
+                    <label class="field">
+                        <span>Display name</span>
+                        <input type="text" id="display-name" name="display_name" autocomplete="name" required>
+                    </label>
+                    <button type="button" class="secondary" id="passkey-register" data-pending-id="{{.PendingID}}">Create Account With Passkey</button>
+                </form>
+                <div class="helper">
+                    <p>New here? Create an account with a passkey and continue the login flow.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+    <script>
+        const passkeyButton = document.getElementById("passkey-login");
+        const passkeyError = document.getElementById("passkey-error");
+        const registerButton = document.getElementById("passkey-register");
+        const registerName = document.getElementById("display-name");
+        const registerError = document.getElementById("register-error");
+        const registerSuccess = document.getElementById("register-success");
+
+        function showPasskeyError(message) {
+            if (!passkeyError) return;
+            passkeyError.textContent = message;
+            passkeyError.hidden = false;
+        }
+
+        function showRegisterError(message) {
+            if (!registerError) return;
+            registerError.textContent = message;
+            registerError.hidden = false;
+        }
+
+        function showRegisterSuccess(message) {
+            if (!registerSuccess) return;
+            registerSuccess.textContent = message;
+            registerSuccess.hidden = false;
+        }
+
+        function bufferToBase64Url(buffer) {
+            const bytes = new Uint8Array(buffer);
+            let binary = "";
+            bytes.forEach((b) => binary += String.fromCharCode(b));
+            return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+        }
+
+        function base64UrlToBuffer(base64Url) {
+            const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+            const pad = base64.length % 4 ? "=".repeat(4 - (base64.length % 4)) : "";
+            const binary = atob(base64 + pad);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i += 1) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        function credentialToJSON(credential) {
+            if (!credential) return null;
+            const response = credential.response;
+            const data = {
+                id: credential.id,
+                rawId: bufferToBase64Url(credential.rawId),
+                type: credential.type,
+            };
+            if (response) {
+                data.response = {
+                    clientDataJSON: bufferToBase64Url(response.clientDataJSON),
+                    attestationObject: response.attestationObject ? bufferToBase64Url(response.attestationObject) : undefined,
+                    authenticatorData: response.authenticatorData ? bufferToBase64Url(response.authenticatorData) : undefined,
+                    signature: response.signature ? bufferToBase64Url(response.signature) : undefined,
+                    userHandle: response.userHandle ? bufferToBase64Url(response.userHandle) : undefined,
+                };
+            }
+            return data;
+        }
+
+        function normalizeRequestOptions(options) {
+            const publicKey = options;
+            publicKey.challenge = base64UrlToBuffer(publicKey.challenge);
+            if (Array.isArray(publicKey.allowCredentials)) {
+                publicKey.allowCredentials = publicKey.allowCredentials.map((cred) => ({
+                    ...cred,
+                    id: base64UrlToBuffer(cred.id),
+                }));
+            }
+            return publicKey;
+        }
+
+        function normalizeCreationOptions(options) {
+            const publicKey = options;
+            publicKey.challenge = base64UrlToBuffer(publicKey.challenge);
+            if (publicKey.user && publicKey.user.id) {
+                publicKey.user.id = base64UrlToBuffer(publicKey.user.id);
+            }
+            if (Array.isArray(publicKey.excludeCredentials)) {
+                publicKey.excludeCredentials = publicKey.excludeCredentials.map((cred) => ({
+                    ...cred,
+                    id: base64UrlToBuffer(cred.id),
+                }));
+            }
+            return publicKey;
+        }
+
+        async function startPasskeyLogin(pendingId) {
+            const response = await fetch("/passkeys/login/start", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({pending_id: pendingId}),
+            });
+            if (!response.ok) {
+                throw new Error("Unable to start passkey login.");
+            }
+            return response.json();
+        }
+
+        async function finishPasskeyLogin(pendingId, sessionId, credential) {
+            const response = await fetch("/passkeys/login/finish", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({
+                    pending_id: pendingId,
+                    session_id: sessionId,
+                    credential,
+                }),
+            });
+            if (!response.ok) {
+                throw new Error("Unable to finish passkey login.");
+            }
+            return response.json();
+        }
+
+        async function startPasskeyRegister(displayName, pendingId) {
+            const response = await fetch("/passkeys/register/start", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({
+                    display_name: displayName,
+                    pending_id: pendingId,
+                }),
+            });
+            if (!response.ok) {
+                throw new Error("Unable to start passkey registration.");
+            }
+            return response.json();
+        }
+
+        async function finishPasskeyRegister(sessionId, userId, credential, pendingId) {
+            const response = await fetch("/passkeys/register/finish", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({
+                    session_id: sessionId,
+                    user_id: userId,
+                    credential,
+                    pending_id: pendingId,
+                }),
+            });
+            if (!response.ok) {
+                throw new Error("Unable to finish passkey registration.");
+            }
+            return response.json();
+        }
+
+        async function performPasskeyLogin(pendingId) {
+            const start = await startPasskeyLogin(pendingId);
+            const publicKey = normalizeRequestOptions(start.public_key);
+            const assertion = await navigator.credentials.get({publicKey});
+            const credentialJSON = credentialToJSON(assertion);
+            const finish = await finishPasskeyLogin(pendingId, start.session_id, credentialJSON);
+            if (finish.redirect_url) {
+                window.location = finish.redirect_url;
+            }
+        }
+
+        if (passkeyButton && window.PublicKeyCredential) {
+            passkeyButton.addEventListener("click", async () => {
+                passkeyError.hidden = true;
+                const pendingId = passkeyButton.dataset.pendingId;
+                if (!pendingId) {
+                    showPasskeyError("Missing login session.");
+                    return;
+                }
+                try {
+                    await performPasskeyLogin(pendingId);
+                } catch (err) {
+                    showPasskeyError(err.message || "Passkey login failed.");
+                }
+            });
+        }
+
+        if (registerButton && window.PublicKeyCredential) {
+            registerButton.addEventListener("click", async () => {
+                registerError.hidden = true;
+                registerSuccess.hidden = true;
+                const pendingId = registerButton.dataset.pendingId || "";
+                const displayName = registerName ? registerName.value.trim() : "";
+                if (!displayName) {
+                    showRegisterError("Display name is required.");
+                    return;
+                }
+                try {
+                    const start = await startPasskeyRegister(displayName, pendingId);
+                    const publicKey = normalizeCreationOptions(start.public_key);
+                    const credential = await navigator.credentials.create({publicKey});
+                    const credentialJSON = credentialToJSON(credential);
+                    await finishPasskeyRegister(start.session_id, start.user_id, credentialJSON, pendingId);
+                    if (pendingId) {
+                        await performPasskeyLogin(pendingId);
+                        return;
+                    }
+                    showRegisterSuccess("Passkey created. You can now sign in.");
+                } catch (err) {
+                    showRegisterError(err.message || "Passkey registration failed.");
+                }
+            });
+        }
+    </script>
+</body>
+</html>

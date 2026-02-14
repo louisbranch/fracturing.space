@@ -187,6 +187,222 @@ func TestGetAuthStatisticsAllTime(t *testing.T) {
 	}
 }
 
+func TestPasskeyCredentialRoundTrip(t *testing.T) {
+	store := openTempStore(t)
+	now := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)
+
+	if err := store.PutUser(context.Background(), user.User{
+		ID:          "user-1",
+		DisplayName: "User",
+		Locale:      platformi18n.DefaultLocale(),
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	}); err != nil {
+		t.Fatalf("put user: %v", err)
+	}
+
+	lastUsed := now.Add(time.Minute)
+	input := storage.PasskeyCredential{
+		CredentialID:   "cred-1",
+		UserID:         "user-1",
+		CredentialJSON: "{}",
+		CreatedAt:      now,
+		UpdatedAt:      now,
+		LastUsedAt:     &lastUsed,
+	}
+	if err := store.PutPasskeyCredential(context.Background(), input); err != nil {
+		t.Fatalf("put passkey: %v", err)
+	}
+
+	got, err := store.GetPasskeyCredential(context.Background(), "cred-1")
+	if err != nil {
+		t.Fatalf("get passkey: %v", err)
+	}
+	if got.CredentialID != input.CredentialID || got.UserID != input.UserID {
+		t.Fatalf("unexpected credential: %+v", got)
+	}
+	if got.LastUsedAt == nil {
+		t.Fatalf("expected last used at")
+	}
+
+	list, err := store.ListPasskeyCredentials(context.Background(), "user-1")
+	if err != nil {
+		t.Fatalf("list passkeys: %v", err)
+	}
+	if len(list) != 1 {
+		t.Fatalf("expected 1 credential, got %d", len(list))
+	}
+
+	if err := store.DeletePasskeyCredential(context.Background(), "cred-1"); err != nil {
+		t.Fatalf("delete passkey: %v", err)
+	}
+	if _, err := store.GetPasskeyCredential(context.Background(), "cred-1"); !errors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("expected not found, got %v", err)
+	}
+}
+
+func TestPasskeyCredentialRequiresFields(t *testing.T) {
+	store := openTempStore(t)
+
+	if err := store.PutPasskeyCredential(context.Background(), storage.PasskeyCredential{}); err == nil {
+		t.Fatalf("expected error for empty credential")
+	}
+}
+
+func TestPasskeySessionRoundTrip(t *testing.T) {
+	store := openTempStore(t)
+	now := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)
+
+	input := storage.PasskeySession{
+		ID:          "session-1",
+		Kind:        "login",
+		UserID:      "user-1",
+		SessionJSON: "{}",
+		ExpiresAt:   now.Add(5 * time.Minute),
+	}
+	if err := store.PutPasskeySession(context.Background(), input); err != nil {
+		t.Fatalf("put session: %v", err)
+	}
+
+	got, err := store.GetPasskeySession(context.Background(), "session-1")
+	if err != nil {
+		t.Fatalf("get session: %v", err)
+	}
+	if got.ID != input.ID || got.Kind != input.Kind {
+		t.Fatalf("unexpected session: %+v", got)
+	}
+
+	if err := store.DeletePasskeySession(context.Background(), "session-1"); err != nil {
+		t.Fatalf("delete session: %v", err)
+	}
+	if _, err := store.GetPasskeySession(context.Background(), "session-1"); !errors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("expected not found, got %v", err)
+	}
+}
+
+func TestDeleteExpiredPasskeySessions(t *testing.T) {
+	store := openTempStore(t)
+	now := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)
+
+	if err := store.PutPasskeySession(context.Background(), storage.PasskeySession{
+		ID:          "expired",
+		Kind:        "login",
+		SessionJSON: "{}",
+		ExpiresAt:   now.Add(-time.Minute),
+	}); err != nil {
+		t.Fatalf("put session: %v", err)
+	}
+	if err := store.PutPasskeySession(context.Background(), storage.PasskeySession{
+		ID:          "active",
+		Kind:        "login",
+		SessionJSON: "{}",
+		ExpiresAt:   now.Add(time.Minute),
+	}); err != nil {
+		t.Fatalf("put session: %v", err)
+	}
+
+	if err := store.DeleteExpiredPasskeySessions(context.Background(), now); err != nil {
+		t.Fatalf("delete expired sessions: %v", err)
+	}
+	if _, err := store.GetPasskeySession(context.Background(), "expired"); !errors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("expected expired session deleted")
+	}
+	if _, err := store.GetPasskeySession(context.Background(), "active"); err != nil {
+		t.Fatalf("expected active session retained: %v", err)
+	}
+}
+
+func TestUserEmailRoundTrip(t *testing.T) {
+	store := openTempStore(t)
+	now := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)
+
+	if err := store.PutUser(context.Background(), user.User{
+		ID:          "user-1",
+		DisplayName: "User",
+		Locale:      platformi18n.DefaultLocale(),
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	}); err != nil {
+		t.Fatalf("put user: %v", err)
+	}
+
+	input := storage.UserEmail{
+		ID:        "email-1",
+		UserID:    "user-1",
+		Email:     "alpha@example.com",
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+	if err := store.PutUserEmail(context.Background(), input); err != nil {
+		t.Fatalf("put email: %v", err)
+	}
+
+	got, err := store.GetUserEmailByEmail(context.Background(), "alpha@example.com")
+	if err != nil {
+		t.Fatalf("get email: %v", err)
+	}
+	if got.Email != input.Email || got.UserID != input.UserID {
+		t.Fatalf("unexpected email: %+v", got)
+	}
+
+	list, err := store.ListUserEmailsByUser(context.Background(), "user-1")
+	if err != nil {
+		t.Fatalf("list emails: %v", err)
+	}
+	if len(list) != 1 {
+		t.Fatalf("expected 1 email, got %d", len(list))
+	}
+
+	verifiedAt := now.Add(time.Minute)
+	if err := store.VerifyUserEmail(context.Background(), "user-1", "alpha@example.com", verifiedAt); err != nil {
+		t.Fatalf("verify email: %v", err)
+	}
+	verified, err := store.GetUserEmailByEmail(context.Background(), "alpha@example.com")
+	if err != nil {
+		t.Fatalf("get email: %v", err)
+	}
+	if verified.VerifiedAt == nil {
+		t.Fatalf("expected verified_at")
+	}
+}
+
+func TestMagicLinkRoundTrip(t *testing.T) {
+	store := openTempStore(t)
+	now := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)
+
+	link := storage.MagicLink{
+		Token:     "token-1",
+		UserID:    "user-1",
+		Email:     "alpha@example.com",
+		PendingID: "pending-1",
+		CreatedAt: now,
+		ExpiresAt: now.Add(10 * time.Minute),
+	}
+	if err := store.PutMagicLink(context.Background(), link); err != nil {
+		t.Fatalf("put magic link: %v", err)
+	}
+
+	got, err := store.GetMagicLink(context.Background(), "token-1")
+	if err != nil {
+		t.Fatalf("get magic link: %v", err)
+	}
+	if got.Token != link.Token || got.PendingID != link.PendingID {
+		t.Fatalf("unexpected magic link: %+v", got)
+	}
+
+	usedAt := now.Add(time.Minute)
+	if err := store.MarkMagicLinkUsed(context.Background(), "token-1", usedAt); err != nil {
+		t.Fatalf("mark used: %v", err)
+	}
+	used, err := store.GetMagicLink(context.Background(), "token-1")
+	if err != nil {
+		t.Fatalf("get magic link: %v", err)
+	}
+	if used.UsedAt == nil {
+		t.Fatalf("expected used_at")
+	}
+}
+
 func TestExtractUpMigration(t *testing.T) {
 	content := strings.Join([]string{
 		"-- +migrate Up",

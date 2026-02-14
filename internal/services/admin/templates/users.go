@@ -22,9 +22,12 @@ type UserFormCardView struct {
 
 // UserDetailPageView provides data for the single user detail page.
 type UserDetailPageView struct {
-	Message       string
-	Detail        *UserDetail
-	Impersonation *ImpersonationView
+	Message            string
+	Detail             *UserDetail
+	Impersonation      *ImpersonationView
+	MagicLinkURL       string
+	MagicLinkEmail     string
+	MagicLinkExpiresAt string
 }
 
 // UserRow represents a row in the users table.
@@ -41,6 +44,15 @@ type UserDetail struct {
 	DisplayName           string
 	CreatedAt             string
 	UpdatedAt             string
+	Emails                []UserEmailRow
 	PendingInvites        []InviteRow
 	PendingInvitesMessage string
+}
+
+// UserEmailRow represents an email entry for a user.
+type UserEmailRow struct {
+	Email      string
+	VerifiedAt string
+	CreatedAt  string
+	UpdatedAt  string
 }

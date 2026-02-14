@@ -33,6 +33,7 @@ func TestOAuthAuthorizationCodeFlow(t *testing.T) {
 		AuthorizationCodeTTL:    10 * time.Minute,
 		PendingAuthorizationTTL: 15 * time.Minute,
 		TokenTTL:                time.Hour,
+		LoginUIURL:              "http://web.local/login",
 	}
 	server := NewServer(config, oauthStore, store)
 	mux := http.NewServeMux()
@@ -58,16 +59,23 @@ func TestOAuthAuthorizationCodeFlow(t *testing.T) {
 	query.Set("code_challenge_method", "S256")
 	authorizeURL.RawQuery = query.Encode()
 
-	resp, err := http.Get(authorizeURL.String())
+	authorizeClient := &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	resp, err := authorizeClient.Get(authorizeURL.String())
 	if err != nil {
 		t.Fatalf("authorize request: %v", err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusFound {
 		t.Fatalf("authorize status = %d", resp.StatusCode)
 	}
-	loginHTML := readBody(t, resp)
-	pendingID := extractPendingID(t, loginHTML)
+	redirected, err := url.Parse(resp.Header.Get("Location"))
+	if err != nil {
+		t.Fatalf("parse login redirect: %v", err)
+	}
+	pendingID := redirected.Query().Get("pending_id")
+	if pendingID == "" {
+		t.Fatalf("missing pending_id in login redirect")
+	}
 
 	loginForm := url.Values{}
 	loginForm.Set("pending_id", pendingID)
@@ -110,7 +118,7 @@ func TestOAuthAuthorizationCodeFlow(t *testing.T) {
 	if location == "" {
 		t.Fatalf("missing redirect location")
 	}
-	redirected, err := url.Parse(location)
+	redirected, err = url.Parse(location)
 	if err != nil {
 		t.Fatalf("parse redirect: %v", err)
 	}

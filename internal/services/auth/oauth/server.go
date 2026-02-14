@@ -9,22 +9,23 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/auth/user"
 )
 
-// UserWriter persists auth user records.
-type UserWriter interface {
+// UserStore persists and retrieves auth user records.
+type UserStore interface {
 	PutUser(ctx context.Context, u user.User) error
+	GetUser(ctx context.Context, userID string) (user.User, error)
 }
 
 // Server hosts OAuth endpoints and external provider flows.
 type Server struct {
 	config     Config
 	store      *Store
-	userStore  UserWriter
+	userStore  UserStore
 	clock      func() time.Time
 	httpClient *http.Client
 }
 
 // NewServer creates a new OAuth server.
-func NewServer(config Config, store *Store, userStore UserWriter) *Server {
+func NewServer(config Config, store *Store, userStore UserStore) *Server {
 	return &Server{
 		config:     config,
 		store:      store,

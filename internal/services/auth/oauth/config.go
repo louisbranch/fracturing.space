@@ -20,6 +20,7 @@ type Config struct {
 	Clients                 []Client
 	BootstrapUsers          []BootstrapUser
 	LoginRedirectAllowlist  []string
+	LoginUIURL              string
 	Providers               map[string]ProviderConfig
 	TokenTTL                time.Duration
 	AuthorizationCodeTTL    time.Duration
@@ -61,6 +62,7 @@ func LoadConfigFromEnv() Config {
 	clients := parseClientsEnv()
 	users := parseBootstrapUsersEnv()
 	loginRedirects := parseCSVEnv("FRACTURING_SPACE_OAUTH_LOGIN_REDIRECTS")
+	loginUIURL := strings.TrimSpace(os.Getenv("FRACTURING_SPACE_OAUTH_LOGIN_UI_URL"))
 	providers := loadProvidersFromEnv()
 
 	return Config{
@@ -69,6 +71,7 @@ func LoadConfigFromEnv() Config {
 		Clients:                 clients,
 		BootstrapUsers:          users,
 		LoginRedirectAllowlist:  loginRedirects,
+		LoginUIURL:              loginUIURL,
 		Providers:               providers,
 		TokenTTL:                defaultTokenTTL,
 		AuthorizationCodeTTL:    defaultCodeTTL,

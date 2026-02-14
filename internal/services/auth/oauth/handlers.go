@@ -110,6 +110,22 @@ func (s *Server) handleAuthorize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	loginUIURL := strings.TrimSpace(s.config.LoginUIURL)
+	if loginUIURL != "" {
+		redirectURL, err := url.Parse(loginUIURL)
+		if err != nil {
+			s.renderError(w, "server_error", "invalid login ui url", http.StatusInternalServerError)
+			return
+		}
+		query := redirectURL.Query()
+		query.Set("pending_id", pendingID)
+		query.Set("client_id", client.ID)
+		query.Set("client_name", clientDisplayName(client))
+		redirectURL.RawQuery = query.Encode()
+		http.Redirect(w, r, redirectURL.String(), http.StatusFound)
+		return
+	}
+
 	view := loginView{
 		AppName:    branding.AppName,
 		PendingID:  pendingID,
@@ -149,11 +165,11 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 
 	user, err := s.store.GetOAuthUserByUsername(username)
 	if err != nil || user == nil {
-		s.renderLoginError(w, pending, "invalid username or password")
+		s.renderLoginError(w, r, pending, "invalid username or password")
 		return
 	}
 	if bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)) != nil {
-		s.renderLoginError(w, pending, "invalid username or password")
+		s.renderLoginError(w, r, pending, "invalid username or password")
 		return
 	}
 
@@ -176,6 +192,25 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleConsent(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		pendingID := strings.TrimSpace(r.URL.Query().Get("pending_id"))
+		pending, err := s.store.GetPendingAuthorization(pendingID)
+		if err != nil || pending == nil {
+			s.renderError(w, "invalid_request", "authorization session expired", http.StatusBadRequest)
+			return
+		}
+		if pending.ExpiresAt.Before(s.clock().UTC()) {
+			s.store.DeletePendingAuthorization(pendingID)
+			s.renderError(w, "invalid_request", "authorization session expired", http.StatusBadRequest)
+			return
+		}
+		if pending.UserID == "" {
+			s.renderError(w, "invalid_request", "user not authenticated", http.StatusBadRequest)
+			return
+		}
+		s.renderConsentView(w, r, pending)
+		return
+	}
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -364,8 +399,24 @@ func (s *Server) renderError(w http.ResponseWriter, code, description string, st
 	_ = templates.ExecuteTemplate(w, "error.html", errorView{AppName: branding.AppName, Error: code, ErrorDescription: description})
 }
 
-func (s *Server) renderLoginError(w http.ResponseWriter, pending *PendingAuthorization, message string) {
+func (s *Server) renderLoginError(w http.ResponseWriter, r *http.Request, pending *PendingAuthorization, message string) {
 	client := s.clientForID(pending.Request.ClientID)
+	loginUIURL := strings.TrimSpace(s.config.LoginUIURL)
+	if loginUIURL != "" {
+		redirectURL, err := url.Parse(loginUIURL)
+		if err != nil {
+			s.renderError(w, "server_error", "invalid login ui url", http.StatusInternalServerError)
+			return
+		}
+		query := redirectURL.Query()
+		query.Set("pending_id", pending.ID)
+		query.Set("client_id", pending.Request.ClientID)
+		query.Set("client_name", clientDisplayName(client))
+		query.Set("error", message)
+		redirectURL.RawQuery = query.Encode()
+		http.Redirect(w, r, redirectURL.String(), http.StatusFound)
+		return
+	}
 	view := loginView{
 		AppName:    branding.AppName,
 		PendingID:  pending.ID,
@@ -374,6 +425,27 @@ func (s *Server) renderLoginError(w http.ResponseWriter, pending *PendingAuthori
 		Error:      message,
 	}
 	_ = templates.ExecuteTemplate(w, "login.html", view)
+}
+
+func (s *Server) renderConsentView(w http.ResponseWriter, r *http.Request, pending *PendingAuthorization) {
+	client := s.clientForID(pending.Request.ClientID)
+	username := pending.UserID
+	if s.userStore != nil {
+		if user, err := s.userStore.GetUser(r.Context(), pending.UserID); err == nil {
+			if strings.TrimSpace(user.DisplayName) != "" {
+				username = user.DisplayName
+			}
+		}
+	}
+	view := consentView{
+		AppName:    branding.AppName,
+		PendingID:  pending.ID,
+		ClientID:   pending.Request.ClientID,
+		ClientName: clientDisplayName(client),
+		Username:   username,
+		Scopes:     formatScopes(pending.Request.Scope),
+	}
+	_ = templates.ExecuteTemplate(w, "consent.html", view)
 }
 
 func (s *Server) redirectError(w http.ResponseWriter, r *http.Request, request AuthorizationRequest, code, description string) {

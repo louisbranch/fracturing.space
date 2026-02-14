@@ -184,6 +184,7 @@ func (h *Handler) routes() http.Handler {
 	mux.Handle("/users/table", http.HandlerFunc(h.handleUsersTable))
 	mux.Handle("/users/lookup", http.HandlerFunc(h.handleUserLookup))
 	mux.Handle("/users/create", http.HandlerFunc(h.handleCreateUser))
+	mux.Handle("/users/magic-link", http.HandlerFunc(h.handleMagicLink))
 	mux.Handle("/users/impersonate", http.HandlerFunc(h.handleImpersonateUser))
 	mux.Handle("/users/logout", http.HandlerFunc(h.handleLogout))
 	mux.Handle("/users/", http.HandlerFunc(h.handleUserRoutes))
@@ -476,6 +477,71 @@ func (h *Handler) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(w, r, redirectURL, http.StatusSeeOther)
+}
+
+// handleMagicLink generates a magic link for a user email.
+func (h *Handler) handleMagicLink(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", http.MethodPost)
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	loc, lang := h.localizer(w, r)
+	pageCtx := h.pageContext(lang, loc, r)
+	view := templates.UserDetailPageView{Impersonation: pageCtx.Impersonation}
+	if !requireSameOrigin(w, r, loc) {
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		view.Message = loc.Sprintf("error.magic_link_invalid")
+		h.renderUserDetail(w, r, view, pageCtx, loc, "details")
+		return
+	}
+
+	userID := strings.TrimSpace(r.FormValue("user_id"))
+	email := strings.TrimSpace(r.FormValue("email"))
+	if userID == "" || email == "" {
+		view.Message = loc.Sprintf("error.magic_link_invalid")
+		h.renderUserDetail(w, r, view, pageCtx, loc, "details")
+		return
+	}
+
+	client := h.authClient()
+	if client == nil {
+		view.Message = loc.Sprintf("error.user_service_unavailable")
+		h.renderUserDetail(w, r, view, pageCtx, loc, "details")
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
+	defer cancel()
+	response, err := client.GenerateMagicLink(ctx, &authv1.GenerateMagicLinkRequest{
+		UserId: userID,
+		Email:  email,
+	})
+	if err != nil || response.GetMagicLinkUrl() == "" {
+		log.Printf("generate magic link: %v", err)
+		view.Message = loc.Sprintf("error.magic_link_failed")
+		view.Detail, _ = h.loadUserDetail(ctx, userID, loc)
+		h.renderUserDetail(w, r, view, pageCtx, loc, "details")
+		return
+	}
+
+	detail, message := h.loadUserDetail(ctx, userID, loc)
+	view.Detail = detail
+	if message != "" && view.Message == "" {
+		view.Message = message
+	}
+	view.MagicLinkURL = response.GetMagicLinkUrl()
+	view.MagicLinkEmail = email
+	if response.GetExpiresAt() != nil {
+		view.MagicLinkExpiresAt = formatTimestamp(response.GetExpiresAt())
+	}
+
+	view.Message = loc.Sprintf("users.magic.success")
+	h.renderUserDetail(w, r, view, pageCtx, loc, "details")
 }
 
 // handleImpersonateUser creates an impersonation session for a user.
@@ -1174,6 +1240,14 @@ func (h *Handler) loadUserDetail(ctx context.Context, userID string, loc *messag
 		return nil, loc.Sprintf("error.user_not_found")
 	}
 	detail := buildUserDetail(response.GetUser())
+	if detail != nil {
+		emails, err := client.ListUserEmails(ctx, &authv1.ListUserEmailsRequest{UserId: userID})
+		if err != nil {
+			log.Printf("list user emails: %v", err)
+		} else {
+			detail.Emails = buildUserEmailRows(emails.GetEmails(), loc)
+		}
+	}
 	return detail, ""
 }
 
@@ -1414,6 +1488,29 @@ func buildUserDetail(u *authv1.User) *templates.UserDetail {
 		CreatedAt:   formatTimestamp(u.GetCreatedAt()),
 		UpdatedAt:   formatTimestamp(u.GetUpdatedAt()),
 	}
+}
+
+func buildUserEmailRows(emails []*authv1.UserEmail, loc *message.Printer) []templates.UserEmailRow {
+	rows := make([]templates.UserEmailRow, 0, len(emails))
+	for _, email := range emails {
+		if email == nil {
+			continue
+		}
+		verified := "-"
+		if email.GetVerifiedAt() != nil {
+			verified = formatTimestamp(email.GetVerifiedAt())
+		}
+		rows = append(rows, templates.UserEmailRow{
+			Email:      email.GetEmail(),
+			VerifiedAt: verified,
+			CreatedAt:  formatTimestamp(email.GetCreatedAt()),
+			UpdatedAt:  formatTimestamp(email.GetUpdatedAt()),
+		})
+	}
+	if len(rows) == 0 {
+		return nil
+	}
+	return rows
 }
 
 func (h *Handler) populateUserInvites(ctx context.Context, detail *templates.UserDetail, loc *message.Printer) {

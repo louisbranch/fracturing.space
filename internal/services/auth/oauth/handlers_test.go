@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	authsqlite "github.com/louisbranch/fracturing.space/internal/services/auth/storage/sqlite"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/user"
 	"golang.org/x/crypto/bcrypt"
@@ -154,8 +155,9 @@ func TestHandleAuthorize(t *testing.T) {
 		}
 	})
 
-	t.Run("success renders login", func(t *testing.T) {
+	t.Run("success redirects to login ui when configured", func(t *testing.T) {
 		server, _ := testServer(t)
+		server.config.LoginUIURL = "http://web.local/login"
 		codeVerifier := "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
 		codeChallenge := ComputeS256Challenge(codeVerifier)
 		q := url.Values{
@@ -169,12 +171,28 @@ func TestHandleAuthorize(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/authorize?"+q.Encode(), nil)
 		w := httptest.NewRecorder()
 		server.handleAuthorize(w, req)
-		if w.Code != http.StatusOK {
-			t.Errorf("expected 200, got %d", w.Code)
+		if w.Code != http.StatusFound {
+			t.Errorf("expected 302, got %d", w.Code)
 		}
-		body := w.Body.String()
-		if !strings.Contains(body, "pending_id") {
-			t.Error("expected login form with pending_id")
+		location := w.Header().Get("Location")
+		redirected, err := url.Parse(location)
+		if err != nil {
+			t.Fatalf("parse redirect: %v", err)
+		}
+		if redirected.Host != "web.local" {
+			t.Fatalf("redirect host = %q, want %q", redirected.Host, "web.local")
+		}
+		if redirected.Path != "/login" {
+			t.Fatalf("redirect path = %q, want %q", redirected.Path, "/login")
+		}
+		if redirected.Query().Get("pending_id") == "" {
+			t.Fatal("expected pending_id in redirect query")
+		}
+		if redirected.Query().Get("client_id") != "test-client" {
+			t.Fatalf("client_id = %q, want %q", redirected.Query().Get("client_id"), "test-client")
+		}
+		if redirected.Query().Get("client_name") != "Test Client" {
+			t.Fatalf("client_name = %q, want %q", redirected.Query().Get("client_name"), "Test Client")
 		}
 	})
 }
@@ -244,13 +262,13 @@ func TestHandleLogin(t *testing.T) {
 }
 
 func TestHandleConsent(t *testing.T) {
-	t.Run("method not allowed", func(t *testing.T) {
+	t.Run("missing pending id", func(t *testing.T) {
 		server, _ := testServer(t)
 		req := httptest.NewRequest(http.MethodGet, "/authorize/consent", nil)
 		w := httptest.NewRecorder()
 		server.handleConsent(w, req)
-		if w.Code != http.StatusMethodNotAllowed {
-			t.Errorf("expected 405, got %d", w.Code)
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("expected 400, got %d", w.Code)
 		}
 	})
 
@@ -332,6 +350,46 @@ func TestHandleConsent(t *testing.T) {
 		}
 		if !strings.Contains(location, "state=my-state") {
 			t.Errorf("expected state in redirect, got %q", location)
+		}
+	})
+
+	t.Run("get renders consent view", func(t *testing.T) {
+		server, oauthStore := testServer(t)
+		if err := server.userStore.PutUser(context.Background(), user.User{
+			ID:          "user-1",
+			DisplayName: "Alice",
+			Locale:      platformi18n.DefaultLocale(),
+			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
+		}); err != nil {
+			t.Fatalf("put user: %v", err)
+		}
+
+		pendingID, err := oauthStore.CreatePendingAuthorization(AuthorizationRequest{
+			ResponseType:        "code",
+			ClientID:            "test-client",
+			RedirectURI:         "http://localhost:5555/callback",
+			CodeChallenge:       "test-challenge",
+			CodeChallengeMethod: "S256",
+		}, 15*time.Minute)
+		if err != nil {
+			t.Fatalf("create pending: %v", err)
+		}
+		if err := oauthStore.UpdatePendingAuthorizationUserID(pendingID, "user-1"); err != nil {
+			t.Fatalf("update pending: %v", err)
+		}
+
+		req := httptest.NewRequest(http.MethodGet, "/authorize/consent?pending_id="+pendingID, nil)
+		w := httptest.NewRecorder()
+		server.handleConsent(w, req)
+		if w.Code != http.StatusOK {
+			t.Errorf("expected 200, got %d", w.Code)
+		}
+		if !strings.Contains(w.Body.String(), "Signed in as") {
+			t.Errorf("expected consent view")
+		}
+		if !strings.Contains(w.Body.String(), "Alice") {
+			t.Errorf("expected display name")
 		}
 	})
 }
@@ -776,6 +834,7 @@ func TestFullAuthorizeLoginConsentFlow(t *testing.T) {
 
 	oauthStore := NewStore(authStore.DB())
 	server := NewServer(testServerConfig(), oauthStore, authStore)
+	server.config.LoginUIURL = "http://web.local/login"
 	userID := seedUser(t, authStore, oauthStore, "testuser", "testpass")
 	_ = userID
 
@@ -799,16 +858,23 @@ func TestFullAuthorizeLoginConsentFlow(t *testing.T) {
 	q.Set("code_challenge_method", "S256")
 	authorizeURL.RawQuery = q.Encode()
 
-	resp, err := http.Get(authorizeURL.String())
+	authorizeClient := &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	resp, err := authorizeClient.Get(authorizeURL.String())
 	if err != nil {
 		t.Fatalf("authorize: %v", err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusFound {
 		t.Fatalf("authorize status = %d", resp.StatusCode)
 	}
-	body := readBodyHelper(t, resp)
-	pendingID := extractPendingIDHelper(t, body)
+	redirected, err := url.Parse(resp.Header.Get("Location"))
+	if err != nil {
+		t.Fatalf("parse login redirect: %v", err)
+	}
+	pendingID := redirected.Query().Get("pending_id")
+	if pendingID == "" {
+		t.Fatalf("missing pending_id in login redirect")
+	}
 
 	// Step 2: Login
 	loginForm := url.Values{

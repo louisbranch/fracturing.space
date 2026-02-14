@@ -75,7 +75,7 @@ func New(port int, httpAddr string) (*Server, error) {
 	}
 
 	grpcServer := grpc.NewServer()
-	authService := authservice.NewAuthService(store)
+	authService := authservice.NewAuthService(store, store, oauthStore)
 	statisticsService := authservice.NewStatisticsService(store)
 	healthServer := health.NewServer()
 	authv1.RegisterAuthServiceServer(grpcServer, authService)

@@ -265,5 +265,426 @@ func dbUserToDomain(row db.User) (user.User, error) {
 	}, nil
 }
 
+// PutPasskeyCredential stores a WebAuthn credential.
+func (s *Store) PutPasskeyCredential(ctx context.Context, credential storage.PasskeyCredential) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if s == nil || s.sqlDB == nil {
+		return fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(credential.CredentialID) == "" {
+		return fmt.Errorf("credential id is required")
+	}
+	if strings.TrimSpace(credential.UserID) == "" {
+		return fmt.Errorf("user id is required")
+	}
+	if strings.TrimSpace(credential.CredentialJSON) == "" {
+		return fmt.Errorf("credential json is required")
+	}
+
+	lastUsed := sql.NullInt64{}
+	if credential.LastUsedAt != nil {
+		lastUsed = sql.NullInt64{Int64: toMillis(*credential.LastUsedAt), Valid: true}
+	}
+
+	return s.q.PutPasskey(ctx, db.PutPasskeyParams{
+		CredentialID:   credential.CredentialID,
+		UserID:         credential.UserID,
+		CredentialJson: credential.CredentialJSON,
+		CreatedAt:      toMillis(credential.CreatedAt),
+		UpdatedAt:      toMillis(credential.UpdatedAt),
+		LastUsedAt:     lastUsed,
+	})
+}
+
+// GetPasskeyCredential fetches a stored WebAuthn credential.
+func (s *Store) GetPasskeyCredential(ctx context.Context, credentialID string) (storage.PasskeyCredential, error) {
+	if err := ctx.Err(); err != nil {
+		return storage.PasskeyCredential{}, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return storage.PasskeyCredential{}, fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(credentialID) == "" {
+		return storage.PasskeyCredential{}, fmt.Errorf("credential id is required")
+	}
+
+	row, err := s.q.GetPasskey(ctx, credentialID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return storage.PasskeyCredential{}, storage.ErrNotFound
+		}
+		return storage.PasskeyCredential{}, fmt.Errorf("get passkey: %w", err)
+	}
+
+	return dbPasskeyToDomain(row), nil
+}
+
+// ListPasskeyCredentials returns passkeys for a user.
+func (s *Store) ListPasskeyCredentials(ctx context.Context, userID string) ([]storage.PasskeyCredential, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return nil, fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(userID) == "" {
+		return nil, fmt.Errorf("user id is required")
+	}
+
+	rows, err := s.q.ListPasskeysByUser(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("list passkeys: %w", err)
+	}
+
+	credentials := make([]storage.PasskeyCredential, 0, len(rows))
+	for _, row := range rows {
+		credentials = append(credentials, dbPasskeyToDomain(row))
+	}
+	return credentials, nil
+}
+
+// DeletePasskeyCredential removes a passkey credential.
+func (s *Store) DeletePasskeyCredential(ctx context.Context, credentialID string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if s == nil || s.sqlDB == nil {
+		return fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(credentialID) == "" {
+		return fmt.Errorf("credential id is required")
+	}
+	return s.q.DeletePasskey(ctx, credentialID)
+}
+
+// PutPasskeySession stores a WebAuthn session.
+func (s *Store) PutPasskeySession(ctx context.Context, session storage.PasskeySession) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if s == nil || s.sqlDB == nil {
+		return fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(session.ID) == "" {
+		return fmt.Errorf("session id is required")
+	}
+	if strings.TrimSpace(session.Kind) == "" {
+		return fmt.Errorf("session kind is required")
+	}
+	if strings.TrimSpace(session.SessionJSON) == "" {
+		return fmt.Errorf("session json is required")
+	}
+
+	userID := sql.NullString{}
+	if strings.TrimSpace(session.UserID) != "" {
+		userID = sql.NullString{String: session.UserID, Valid: true}
+	}
+
+	return s.q.PutPasskeySession(ctx, db.PutPasskeySessionParams{
+		ID:          session.ID,
+		Kind:        session.Kind,
+		UserID:      userID,
+		SessionJson: session.SessionJSON,
+		ExpiresAt:   toMillis(session.ExpiresAt),
+	})
+}
+
+// GetPasskeySession fetches a stored WebAuthn session.
+func (s *Store) GetPasskeySession(ctx context.Context, id string) (storage.PasskeySession, error) {
+	if err := ctx.Err(); err != nil {
+		return storage.PasskeySession{}, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return storage.PasskeySession{}, fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(id) == "" {
+		return storage.PasskeySession{}, fmt.Errorf("session id is required")
+	}
+
+	row, err := s.q.GetPasskeySession(ctx, id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return storage.PasskeySession{}, storage.ErrNotFound
+		}
+		return storage.PasskeySession{}, fmt.Errorf("get passkey session: %w", err)
+	}
+
+	return dbPasskeySessionToDomain(row), nil
+}
+
+// DeletePasskeySession removes a WebAuthn session.
+func (s *Store) DeletePasskeySession(ctx context.Context, id string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if s == nil || s.sqlDB == nil {
+		return fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(id) == "" {
+		return fmt.Errorf("session id is required")
+	}
+	return s.q.DeletePasskeySession(ctx, id)
+}
+
+// DeleteExpiredPasskeySessions removes expired WebAuthn sessions.
+func (s *Store) DeleteExpiredPasskeySessions(ctx context.Context, now time.Time) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if s == nil || s.sqlDB == nil {
+		return fmt.Errorf("storage is not configured")
+	}
+	return s.q.DeleteExpiredPasskeySessions(ctx, toMillis(now))
+}
+
+func dbPasskeyToDomain(row db.Passkey) storage.PasskeyCredential {
+	var lastUsed *time.Time
+	if row.LastUsedAt.Valid {
+		value := fromMillis(row.LastUsedAt.Int64)
+		lastUsed = &value
+	}
+	return storage.PasskeyCredential{
+		CredentialID:   row.CredentialID,
+		UserID:         row.UserID,
+		CredentialJSON: row.CredentialJson,
+		CreatedAt:      fromMillis(row.CreatedAt),
+		UpdatedAt:      fromMillis(row.UpdatedAt),
+		LastUsedAt:     lastUsed,
+	}
+}
+
+func dbPasskeySessionToDomain(row db.PasskeySession) storage.PasskeySession {
+	userID := ""
+	if row.UserID.Valid {
+		userID = row.UserID.String
+	}
+	return storage.PasskeySession{
+		ID:          row.ID,
+		Kind:        row.Kind,
+		UserID:      userID,
+		SessionJSON: row.SessionJson,
+		ExpiresAt:   fromMillis(row.ExpiresAt),
+	}
+}
+
+// PutUserEmail stores a user email record.
+func (s *Store) PutUserEmail(ctx context.Context, email storage.UserEmail) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if s == nil || s.sqlDB == nil {
+		return fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(email.ID) == "" {
+		return fmt.Errorf("email id is required")
+	}
+	if strings.TrimSpace(email.UserID) == "" {
+		return fmt.Errorf("user id is required")
+	}
+	if strings.TrimSpace(email.Email) == "" {
+		return fmt.Errorf("email is required")
+	}
+
+	verified := sql.NullInt64{}
+	if email.VerifiedAt != nil {
+		verified = sql.NullInt64{Int64: toMillis(*email.VerifiedAt), Valid: true}
+	}
+
+	return s.q.PutUserEmail(ctx, db.PutUserEmailParams{
+		ID:         email.ID,
+		UserID:     email.UserID,
+		Email:      email.Email,
+		VerifiedAt: verified,
+		CreatedAt:  toMillis(email.CreatedAt),
+		UpdatedAt:  toMillis(email.UpdatedAt),
+	})
+}
+
+// GetUserEmailByEmail fetches a user email by email address.
+func (s *Store) GetUserEmailByEmail(ctx context.Context, email string) (storage.UserEmail, error) {
+	if err := ctx.Err(); err != nil {
+		return storage.UserEmail{}, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return storage.UserEmail{}, fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(email) == "" {
+		return storage.UserEmail{}, fmt.Errorf("email is required")
+	}
+
+	row, err := s.q.GetUserEmailByEmail(ctx, email)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return storage.UserEmail{}, storage.ErrNotFound
+		}
+		return storage.UserEmail{}, fmt.Errorf("get user email: %w", err)
+	}
+	return dbUserEmailToDomain(row), nil
+}
+
+// ListUserEmailsByUser lists emails for a user.
+func (s *Store) ListUserEmailsByUser(ctx context.Context, userID string) ([]storage.UserEmail, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return nil, fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(userID) == "" {
+		return nil, fmt.Errorf("user id is required")
+	}
+
+	rows, err := s.q.ListUserEmailsByUser(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("list user emails: %w", err)
+	}
+	emails := make([]storage.UserEmail, 0, len(rows))
+	for _, row := range rows {
+		emails = append(emails, dbUserEmailToDomain(row))
+	}
+	return emails, nil
+}
+
+// VerifyUserEmail marks an email as verified.
+func (s *Store) VerifyUserEmail(ctx context.Context, userID string, email string, verifiedAt time.Time) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if s == nil || s.sqlDB == nil {
+		return fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(userID) == "" {
+		return fmt.Errorf("user id is required")
+	}
+	if strings.TrimSpace(email) == "" {
+		return fmt.Errorf("email is required")
+	}
+	return s.q.UpdateUserEmailVerified(ctx, db.UpdateUserEmailVerifiedParams{
+		VerifiedAt: sql.NullInt64{Int64: toMillis(verifiedAt), Valid: true},
+		UpdatedAt:  toMillis(verifiedAt),
+		Email:      email,
+		UserID:     userID,
+	})
+}
+
+// PutMagicLink stores a magic link token.
+func (s *Store) PutMagicLink(ctx context.Context, link storage.MagicLink) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if s == nil || s.sqlDB == nil {
+		return fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(link.Token) == "" {
+		return fmt.Errorf("token is required")
+	}
+	if strings.TrimSpace(link.UserID) == "" {
+		return fmt.Errorf("user id is required")
+	}
+	if strings.TrimSpace(link.Email) == "" {
+		return fmt.Errorf("email is required")
+	}
+
+	pending := sql.NullString{}
+	if strings.TrimSpace(link.PendingID) != "" {
+		pending = sql.NullString{String: link.PendingID, Valid: true}
+	}
+	used := sql.NullInt64{}
+	if link.UsedAt != nil {
+		used = sql.NullInt64{Int64: toMillis(*link.UsedAt), Valid: true}
+	}
+
+	return s.q.PutMagicLink(ctx, db.PutMagicLinkParams{
+		Token:     link.Token,
+		UserID:    link.UserID,
+		Email:     link.Email,
+		PendingID: pending,
+		CreatedAt: toMillis(link.CreatedAt),
+		ExpiresAt: toMillis(link.ExpiresAt),
+		UsedAt:    used,
+	})
+}
+
+// GetMagicLink fetches a magic link token.
+func (s *Store) GetMagicLink(ctx context.Context, token string) (storage.MagicLink, error) {
+	if err := ctx.Err(); err != nil {
+		return storage.MagicLink{}, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return storage.MagicLink{}, fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(token) == "" {
+		return storage.MagicLink{}, fmt.Errorf("token is required")
+	}
+
+	row, err := s.q.GetMagicLink(ctx, token)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return storage.MagicLink{}, storage.ErrNotFound
+		}
+		return storage.MagicLink{}, fmt.Errorf("get magic link: %w", err)
+	}
+	return dbMagicLinkToDomain(row), nil
+}
+
+// MarkMagicLinkUsed marks a magic link as used.
+func (s *Store) MarkMagicLinkUsed(ctx context.Context, token string, usedAt time.Time) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if s == nil || s.sqlDB == nil {
+		return fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(token) == "" {
+		return fmt.Errorf("token is required")
+	}
+	return s.q.MarkMagicLinkUsed(ctx, db.MarkMagicLinkUsedParams{
+		UsedAt: sql.NullInt64{Int64: toMillis(usedAt), Valid: true},
+		Token:  token,
+	})
+}
+
+func dbUserEmailToDomain(row db.UserEmail) storage.UserEmail {
+	var verified *time.Time
+	if row.VerifiedAt.Valid {
+		value := fromMillis(row.VerifiedAt.Int64)
+		verified = &value
+	}
+	return storage.UserEmail{
+		ID:         row.ID,
+		UserID:     row.UserID,
+		Email:      row.Email,
+		VerifiedAt: verified,
+		CreatedAt:  fromMillis(row.CreatedAt),
+		UpdatedAt:  fromMillis(row.UpdatedAt),
+	}
+}
+
+func dbMagicLinkToDomain(row db.MagicLink) storage.MagicLink {
+	pendingID := ""
+	if row.PendingID.Valid {
+		pendingID = row.PendingID.String
+	}
+	var used *time.Time
+	if row.UsedAt.Valid {
+		value := fromMillis(row.UsedAt.Int64)
+		used = &value
+	}
+	return storage.MagicLink{
+		Token:     row.Token,
+		UserID:    row.UserID,
+		Email:     row.Email,
+		PendingID: pendingID,
+		CreatedAt: fromMillis(row.CreatedAt),
+		ExpiresAt: fromMillis(row.ExpiresAt),
+		UsedAt:    used,
+	}
+}
+
 var _ storage.UserStore = (*Store)(nil)
 var _ storage.StatisticsStore = (*Store)(nil)
+var _ storage.PasskeyStore = (*Store)(nil)
+var _ storage.EmailStore = (*Store)(nil)
+var _ storage.MagicLinkStore = (*Store)(nil)

@@ -41,6 +41,33 @@ templ UserDetailPage(view UserDetailPageView, activePage string, loc Localizer) 
 		} else {
 			@UserSubNav(view.Detail.ID, "details", loc) {
 				@UserDetailCard(*view.Detail, view.Impersonation, loc)
+				<div class="mt-6">
+					<h3>{T(loc, "users.magic.heading")}</h3>
+					<form method="post" action="/users/magic-link">
+						<input type="hidden" name="user_id" value={view.Detail.ID}>
+						<div class="form-control">
+							<label class="label">
+								<span class="label-text">{T(loc, "users.magic.email")}</span>
+							</label>
+							<input class="input input-bordered" type="email" name="email" required>
+						</div>
+						<div class="mt-3">
+							<button class="btn btn-soft" type="submit">{T(loc, "users.magic.submit")}</button>
+						</div>
+					</form>
+					if view.MagicLinkURL != "" {
+						<div class="mt-3">
+							<p><strong>{T(loc, "users.magic.link")}</strong></p>
+							<p><a class="link" href={view.MagicLinkURL}>{view.MagicLinkURL}</a></p>
+							if view.MagicLinkExpiresAt != "" {
+								<p class="text-xs opacity-70">{T(loc, "users.magic.expires", view.MagicLinkExpiresAt)}</p>
+							}
+							if view.MagicLinkEmail != "" {
+								<p class="text-xs opacity-70">{T(loc, "users.magic.for", view.MagicLinkEmail)}</p>
+							}
+						</div>
+					}
+				</div>
 			}
 		}
 	}
@@ -172,6 +199,33 @@ templ UserDetailCard(detail UserDetail, impersonation *ImpersonationView, loc Lo
 			@DetailRow(T(loc, "users.detail.updated"), detail.UpdatedAt)
 		</tbody>
 	</table>
+	<div class="mt-6">
+		<h4>{T(loc, "users.emails.heading")}</h4>
+		if len(detail.Emails) == 0 {
+			@EmptyState(T(loc, "users.emails.empty"))
+		} else {
+			<table class="table table-zebra">
+				<thead>
+					<tr>
+						<th>{T(loc, "users.emails.email")}</th>
+						<th>{T(loc, "users.emails.verified")}</th>
+						<th>{T(loc, "users.emails.created")}</th>
+						<th>{T(loc, "users.emails.updated")}</th>
+					</tr>
+				</thead>
+				<tbody>
+					for _, row := range detail.Emails {
+						<tr>
+							<td>{row.Email}</td>
+							<td>{row.VerifiedAt}</td>
+							<td>{row.CreatedAt}</td>
+							<td>{row.UpdatedAt}</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		}
+	</div>
 }
 
 // UserPendingInvitesTab renders the pending invites tab content.

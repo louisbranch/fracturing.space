@@ -5,6 +5,13 @@ here drives how we name packages, APIs, and documentation.
 
 ## Core Concepts
 
+### Identity
+
+- **User**: Core identity record, independent of any email address.
+- **Email**: Optional contact record linked to a user, supporting multiple or zero emails.
+- **Passkey**: Primary authentication credential; users may register multiple passkeys.
+- **Magic link**: Single-use recovery token issued to an email address.
+
 ### Campaign (Repository)
 
 A campaign is the complete history and derived views for a game timeline.

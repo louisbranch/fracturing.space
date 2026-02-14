@@ -5,10 +5,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-webauthn/webauthn/webauthn"
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
+	"github.com/louisbranch/fracturing.space/internal/services/auth/magiclink"
+	"github.com/louisbranch/fracturing.space/internal/services/auth/oauth"
+	"github.com/louisbranch/fracturing.space/internal/services/auth/passkey"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/user"
 	"google.golang.org/grpc/codes"
@@ -24,17 +28,54 @@ const (
 // AuthService implements the auth.v1.AuthService gRPC API.
 type AuthService struct {
 	authv1.UnimplementedAuthServiceServer
-	store       storage.UserStore
-	clock       func() time.Time
-	idGenerator func() (string, error)
+	store              storage.UserStore
+	passkeyStore       storage.PasskeyStore
+	emailStore         storage.EmailStore
+	magicLinkStore     storage.MagicLinkStore
+	oauthStore         *oauth.Store
+	passkeyConfig      passkey.Config
+	magicLinkConfig    magiclink.Config
+	passkeyWebAuthn    passkeyProvider
+	passkeyInitErr     error
+	passkeyParser      passkeyParser
+	clock              func() time.Time
+	idGenerator        func() (string, error)
+	passkeyIDGenerator func() (string, error)
 }
 
 // NewAuthService creates an AuthService with default dependencies.
-func NewAuthService(store storage.UserStore) *AuthService {
+func NewAuthService(store storage.UserStore, passkeyStore storage.PasskeyStore, oauthStore *oauth.Store) *AuthService {
+	config := passkey.LoadConfigFromEnv()
+	magicConfig := magiclink.LoadConfigFromEnv()
+	webAuthn, err := webauthn.New(&webauthn.Config{
+		RPDisplayName: config.RPDisplayName,
+		RPID:          config.RPID,
+		RPOrigins:     config.RPOrigins,
+	})
+	var emailStore storage.EmailStore
+	var magicLinkStore storage.MagicLinkStore
+	if store != nil {
+		if typed, ok := store.(storage.EmailStore); ok {
+			emailStore = typed
+		}
+		if typed, ok := store.(storage.MagicLinkStore); ok {
+			magicLinkStore = typed
+		}
+	}
 	return &AuthService{
-		store:       store,
-		clock:       time.Now,
-		idGenerator: id.NewID,
+		store:              store,
+		passkeyStore:       passkeyStore,
+		emailStore:         emailStore,
+		magicLinkStore:     magicLinkStore,
+		oauthStore:         oauthStore,
+		passkeyConfig:      config,
+		magicLinkConfig:    magicConfig,
+		passkeyWebAuthn:    webAuthn,
+		passkeyInitErr:     err,
+		passkeyParser:      defaultPasskeyParser{},
+		clock:              time.Now,
+		idGenerator:        id.NewID,
+		passkeyIDGenerator: id.NewID,
 	}
 }
 

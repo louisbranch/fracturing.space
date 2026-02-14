@@ -1,0 +1,223 @@
+:root {
+    color-scheme: light;
+    --bg: #f5f0e8;
+    --bg-accent: #fbe3c0;
+    --ink: #1b1b1f;
+    --muted: #5a5a66;
+    --card: #fffaf3;
+    --accent: #c2552f;
+    --accent-dark: #8e3d21;
+    --border: #e3d7c6;
+    --shadow: 0 18px 50px rgba(27, 27, 31, 0.15);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: "Space Grotesk", "Avenir Next", "Trebuchet MS", sans-serif;
+    color: var(--ink);
+    background: radial-gradient(circle at top right, rgba(251, 227, 192, 0.9), transparent 55%),
+        radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.8), transparent 45%),
+        var(--bg);
+    min-height: 100vh;
+}
+
+.page {
+    display: flex;
+    justify-content: center;
+    padding: 48px 20px 72px;
+}
+
+.shell {
+    width: min(960px, 100%);
+    display: grid;
+    gap: 32px;
+}
+
+.hero {
+    display: grid;
+    gap: 14px;
+}
+
+.brand {
+    display: flex;
+    gap: 18px;
+    align-items: center;
+}
+
+.brand-mark {
+    width: 56px;
+    height: 56px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #f4c48f 0%, #c2552f 100%);
+    box-shadow: 0 12px 28px rgba(194, 85, 47, 0.3);
+}
+
+.brand-kicker {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-size: 0.7rem;
+    color: var(--muted);
+}
+
+h1 {
+    margin: 6px 0 0;
+    font-family: "Fraunces", "Iowan Old Style", "Palatino Linotype", serif;
+    font-size: clamp(2rem, 3vw, 3rem);
+    font-weight: 600;
+}
+
+.hero-copy {
+    margin: 0;
+    max-width: 560px;
+    color: var(--muted);
+    font-size: 1.05rem;
+    line-height: 1.6;
+}
+
+.card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    box-shadow: var(--shadow);
+    padding: 28px;
+}
+
+.card-header {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+h2 {
+    margin: 0;
+    font-size: 1.6rem;
+    font-family: "Fraunces", "Iowan Old Style", "Palatino Linotype", serif;
+}
+
+.card-subtitle {
+    margin: 0;
+    color: var(--muted);
+}
+
+.form {
+    display: grid;
+    gap: 16px;
+}
+
+.alert {
+    background: rgba(194, 85, 47, 0.12);
+    border: 1px solid rgba(194, 85, 47, 0.3);
+    color: var(--accent-dark);
+    padding: 12px 14px;
+    border-radius: 14px;
+    font-weight: 600;
+    margin-bottom: 16px;
+}
+
+.success {
+    background: rgba(64, 122, 83, 0.14);
+    border: 1px solid rgba(64, 122, 83, 0.32);
+    color: #2f6a45;
+    padding: 12px 14px;
+    border-radius: 14px;
+    font-weight: 600;
+    margin-bottom: 16px;
+}
+
+.field {
+    display: grid;
+    gap: 8px;
+    font-weight: 500;
+}
+
+input {
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: #fff;
+    font-size: 1rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(194, 85, 47, 0.2);
+}
+
+.primary {
+    border: none;
+    background: linear-gradient(120deg, var(--accent) 0%, var(--accent-dark) 100%);
+    color: #fff;
+    padding: 12px 16px;
+    border-radius: 999px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 12px 24px rgba(194, 85, 47, 0.28);
+}
+
+.primary:hover {
+    transform: translateY(-1px);
+}
+
+.secondary {
+    border: 1px solid var(--border);
+    background: #fff;
+    color: var(--accent-dark);
+    padding: 12px 16px;
+    border-radius: 999px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    width: 100%;
+}
+
+.secondary:hover {
+    border-color: var(--accent);
+    box-shadow: 0 10px 22px rgba(194, 85, 47, 0.16);
+}
+
+.divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin: 20px 0 12px;
+}
+
+#register-form {
+    margin-top: 8px;
+}
+
+.divider::before,
+.divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+}
+
+.helper {
+    margin-top: 18px;
+    color: var(--muted);
+    font-size: 0.95rem;
+}
+
+@media (max-width: 640px) {
+    .page {
+        padding: 32px 16px 48px;
+    }
+
+    .card {
+        padding: 22px;
+    }
+}

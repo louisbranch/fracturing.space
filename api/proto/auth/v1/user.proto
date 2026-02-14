@@ -21,6 +21,27 @@ service AuthService {
   // Create a new user record.
   rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
 
+  // Begin a passkey registration ceremony.
+  rpc BeginPasskeyRegistration(BeginPasskeyRegistrationRequest) returns (BeginPasskeyRegistrationResponse);
+
+  // Finish a passkey registration ceremony.
+  rpc FinishPasskeyRegistration(FinishPasskeyRegistrationRequest) returns (FinishPasskeyRegistrationResponse);
+
+  // Begin a passkey login ceremony.
+  rpc BeginPasskeyLogin(BeginPasskeyLoginRequest) returns (BeginPasskeyLoginResponse);
+
+  // Finish a passkey login ceremony.
+  rpc FinishPasskeyLogin(FinishPasskeyLoginRequest) returns (FinishPasskeyLoginResponse);
+
+  // Generate a magic link token for email recovery.
+  rpc GenerateMagicLink(GenerateMagicLinkRequest) returns (GenerateMagicLinkResponse);
+
+  // Consume a magic link token.
+  rpc ConsumeMagicLink(ConsumeMagicLinkRequest) returns (ConsumeMagicLinkResponse);
+
+  // List email addresses for a user.
+  rpc ListUserEmails(ListUserEmailsRequest) returns (ListUserEmailsResponse);
+
   // Issue a join grant for a campaign invite.
   rpc IssueJoinGrant(IssueJoinGrantRequest) returns (IssueJoinGrantResponse);
 
@@ -38,6 +59,80 @@ message CreateUserRequest {
 
 message CreateUserResponse {
   User user = 1;
+}
+
+message BeginPasskeyRegistrationRequest {
+  string user_id = 1;
+}
+
+message BeginPasskeyRegistrationResponse {
+  string session_id = 1;
+  bytes credential_creation_options_json = 2;
+}
+
+message FinishPasskeyRegistrationRequest {
+  string session_id = 1;
+  bytes credential_response_json = 2;
+}
+
+message FinishPasskeyRegistrationResponse {
+  User user = 1;
+  string credential_id = 2;
+}
+
+message BeginPasskeyLoginRequest {
+  string user_id = 1;
+}
+
+message BeginPasskeyLoginResponse {
+  string session_id = 1;
+  bytes credential_request_options_json = 2;
+}
+
+message FinishPasskeyLoginRequest {
+  string session_id = 1;
+  bytes credential_response_json = 2;
+  string pending_id = 3;
+}
+
+message FinishPasskeyLoginResponse {
+  User user = 1;
+  string credential_id = 2;
+}
+
+message GenerateMagicLinkRequest {
+  string user_id = 1;
+  string email = 2;
+  string pending_id = 3;
+}
+
+message GenerateMagicLinkResponse {
+  string magic_link_url = 1;
+  google.protobuf.Timestamp expires_at = 2;
+}
+
+message ConsumeMagicLinkRequest {
+  string token = 1;
+}
+
+message ConsumeMagicLinkResponse {
+  User user = 1;
+  string pending_id = 2;
+}
+
+message ListUserEmailsRequest {
+  string user_id = 1;
+}
+
+message ListUserEmailsResponse {
+  repeated UserEmail emails = 1;
+}
+
+message UserEmail {
+  string email = 1;
+  google.protobuf.Timestamp verified_at = 2;
+  google.protobuf.Timestamp created_at = 3;
+  google.protobuf.Timestamp updated_at = 4;
 }
 
 message IssueJoinGrantRequest {

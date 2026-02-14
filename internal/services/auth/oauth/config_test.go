@@ -12,6 +12,7 @@ func TestLoadConfigFromEnvDefaults(t *testing.T) {
 	t.Setenv("FRACTURING_SPACE_OAUTH_CLIENTS", "")
 	t.Setenv("FRACTURING_SPACE_OAUTH_USERS", "")
 	t.Setenv("FRACTURING_SPACE_OAUTH_LOGIN_REDIRECTS", "")
+	t.Setenv("FRACTURING_SPACE_OAUTH_LOGIN_UI_URL", "")
 	t.Setenv("FRACTURING_SPACE_OAUTH_GOOGLE_CLIENT_ID", "")
 	t.Setenv("FRACTURING_SPACE_OAUTH_GOOGLE_CLIENT_SECRET", "")
 	t.Setenv("FRACTURING_SPACE_OAUTH_GOOGLE_REDIRECT_URI", "")
@@ -44,6 +45,9 @@ func TestLoadConfigFromEnvDefaults(t *testing.T) {
 	if config.LoginRedirectAllowlist != nil {
 		t.Fatal("expected LoginRedirectAllowlist to be nil")
 	}
+	if config.LoginUIURL != "" {
+		t.Fatalf("LoginUIURL = %q, want empty", config.LoginUIURL)
+	}
 	if config.Providers != nil {
 		t.Fatal("expected Providers to be nil")
 	}
@@ -74,6 +78,7 @@ func TestParseCSVEnvWithDefault(t *testing.T) {
 func TestLoadConfigFromEnvParsesClientsAndUsers(t *testing.T) {
 	t.Setenv("FRACTURING_SPACE_OAUTH_CLIENTS", `[{"client_id":"cli","client_secret":"secret","redirect_uris":["https://example.com/callback"],"token_endpoint_auth_method":"client_secret_post"}]`)
 	t.Setenv("FRACTURING_SPACE_OAUTH_USERS", `[{"username":"u","password":"p","display_name":"User"}]`)
+	t.Setenv("FRACTURING_SPACE_OAUTH_LOGIN_UI_URL", "https://web.example.com/login")
 
 	config := LoadConfigFromEnv()
 	if len(config.Clients) != 1 {
@@ -87,6 +92,9 @@ func TestLoadConfigFromEnvParsesClientsAndUsers(t *testing.T) {
 	}
 	if config.BootstrapUsers[0].Username != "u" {
 		t.Fatalf("BootstrapUsers[0].Username = %q, want %q", config.BootstrapUsers[0].Username, "u")
+	}
+	if config.LoginUIURL != "https://web.example.com/login" {
+		t.Fatalf("LoginUIURL = %q, want %q", config.LoginUIURL, "https://web.example.com/login")
 	}
 }
 

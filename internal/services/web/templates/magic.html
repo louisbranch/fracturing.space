@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}} - {{.AppName}}</title>
+    <link rel="stylesheet" href="/static/auth.css">
+</head>
+<body>
+    <main class="page">
+        <section class="shell">
+            <header class="hero">
+                <div class="brand">
+                    <div class="brand-mark"></div>
+                    <div>
+                        <p class="brand-kicker">{{.AppName}}</p>
+                        <h1>{{.Title}}</h1>
+                    </div>
+                </div>
+                <p class="hero-copy">{{.Message}}</p>
+            </header>
+
+            <div class="card">
+                {{if .Success}}
+                <div class="success">{{.Detail}}</div>
+                {{else}}
+                <div class="alert">{{.Detail}}</div>
+                {{end}}
+                {{if .LinkURL}}
+                <a class="secondary" href="{{.LinkURL}}">{{.LinkLabel}}</a>
+                {{end}}
+            </div>
+        </section>
+    </main>
+</body>
+</html>
