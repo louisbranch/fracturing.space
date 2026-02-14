@@ -8,6 +8,8 @@ import (
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/core/dice"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	daggerheartdomain "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/domain"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -503,5 +505,244 @@ func TestWithCampaignSessionMetadata(t *testing.T) {
 	}
 	if got := md.Get(grpcmeta.SessionIDHeader); len(got) == 0 || got[0] != "sess-1" {
 		t.Errorf("session ID = %v, want sess-1", got)
+	}
+}
+
+// --- resolveRoll tests ---
+
+func TestResolveRoll_ActionKind(t *testing.T) {
+	difficulty := 10
+	result, genHopeFear, triggersGM, critNegates, err := resolveRoll(
+		pb.RollKind_ROLL_KIND_ACTION,
+		daggerheartdomain.ActionRequest{Seed: 42, Difficulty: &difficulty},
+	)
+	if err != nil {
+		t.Fatalf("resolveRoll(ACTION) error: %v", err)
+	}
+	if !genHopeFear {
+		t.Error("action roll should generate hope/fear")
+	}
+	if !triggersGM {
+		t.Error("action roll should trigger GM move")
+	}
+	if critNegates {
+		t.Error("action roll should not have crit negates")
+	}
+	if result.Hope == 0 && result.Fear == 0 {
+		t.Error("expected non-zero dice values")
+	}
+}
+
+func TestResolveRoll_ReactionKind(t *testing.T) {
+	difficulty := 10
+	_, genHopeFear, triggersGM, critNegates, err := resolveRoll(
+		pb.RollKind_ROLL_KIND_REACTION,
+		daggerheartdomain.ActionRequest{Seed: 42, Difficulty: &difficulty},
+	)
+	if err != nil {
+		t.Fatalf("resolveRoll(REACTION) error: %v", err)
+	}
+	// Reaction rolls have different hope/fear/gm rules than action rolls.
+	// The exact booleans depend on the outcome, but the function should not error.
+	_ = genHopeFear
+	_ = triggersGM
+	_ = critNegates
+}
+
+func TestResolveRoll_UnspecifiedDefaultsToAction(t *testing.T) {
+	difficulty := 10
+	_, genHopeFear, triggersGM, critNegates, err := resolveRoll(
+		pb.RollKind_ROLL_KIND_UNSPECIFIED,
+		daggerheartdomain.ActionRequest{Seed: 42, Difficulty: &difficulty},
+	)
+	if err != nil {
+		t.Fatalf("resolveRoll(UNSPECIFIED) error: %v", err)
+	}
+	if !genHopeFear || !triggersGM {
+		t.Error("unspecified should default to action kind")
+	}
+	if critNegates {
+		t.Error("action roll should not have crit negates")
+	}
+}
+
+// --- normalizeTargets tests ---
+
+func TestNormalizeTargets(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   []string
+		want    int
+		wantNil bool
+	}{
+		{"nil", nil, 0, true},
+		{"empty", []string{}, 0, true},
+		{"whitespace only", []string{"", "  "}, 0, false},
+		{"single valid", []string{"char-1"}, 1, false},
+		{"trims whitespace", []string{"  char-1  "}, 1, false},
+		{"dedup", []string{"char-1", "char-1"}, 1, false},
+		{"dedup with whitespace", []string{"char-1", "  char-1  "}, 1, false},
+		{"mixed empty and valid", []string{"", "char-1", "  ", "char-2"}, 2, false},
+		{"preserves order", []string{"b", "a", "c"}, 3, false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := normalizeTargets(tc.input)
+			if len(got) != tc.want {
+				t.Fatalf("len = %d, want %d (got %v)", len(got), tc.want, got)
+			}
+			if tc.wantNil && got != nil {
+				t.Fatalf("expected nil, got %v", got)
+			}
+		})
+	}
+
+	// Verify order preservation explicitly.
+	got := normalizeTargets([]string{"b", "a", "c"})
+	if got[0] != "b" || got[1] != "a" || got[2] != "c" {
+		t.Fatalf("expected [b a c], got %v", got)
+	}
+}
+
+// --- applyDaggerheartAdversaryDamage tests ---
+
+func TestApplyDaggerheartAdversaryDamage_PhysicalWithArmor(t *testing.T) {
+	adversary := storage.DaggerheartAdversary{
+		HP: 10, HPMax: 10, Armor: 2, Major: 5, Severe: 8,
+	}
+	result, mitigated, err := applyDaggerheartAdversaryDamage(
+		&pb.DaggerheartDamageRequest{
+			Amount:     6, // major damage (>=5, <8), 2 marks, armor reduces to minor (1 mark)
+			DamageType: pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_PHYSICAL,
+		},
+		adversary,
+	)
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+	if result.ArmorSpent == 0 {
+		t.Error("expected armor to be spent")
+	}
+	if result.HPAfter >= result.HPBefore {
+		t.Error("expected HP marks to decrease")
+	}
+	if !mitigated {
+		t.Error("expected mitigated=true when armor absorbs damage")
+	}
+}
+
+func TestApplyDaggerheartAdversaryDamage_Direct(t *testing.T) {
+	adversary := storage.DaggerheartAdversary{
+		HP: 10, HPMax: 10, Armor: 5, Major: 5, Severe: 8,
+	}
+	result, _, err := applyDaggerheartAdversaryDamage(
+		&pb.DaggerheartDamageRequest{
+			Amount:     3, // minor damage (<5), 1 mark applied directly
+			DamageType: pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_PHYSICAL,
+			Direct:     true,
+		},
+		adversary,
+	)
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+	// Direct bypasses armor.
+	if result.ArmorSpent != 0 {
+		t.Errorf("armor_spent = %d, want 0 for direct damage", result.ArmorSpent)
+	}
+	// Minor = 1 mark, 10 - 1 = 9.
+	if result.HPAfter != 9 {
+		t.Errorf("hp_after = %d, want 9 (10 - 1 mark for minor)", result.HPAfter)
+	}
+}
+
+func TestApplyDaggerheartAdversaryDamage_MagicResist(t *testing.T) {
+	adversary := storage.DaggerheartAdversary{
+		HP: 10, HPMax: 10, Armor: 0, Major: 5, Severe: 8,
+	}
+	result, mitigated, err := applyDaggerheartAdversaryDamage(
+		&pb.DaggerheartDamageRequest{
+			Amount:      6, // major (>=5), but resistance halves to 3 (minor)
+			DamageType:  pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_MAGIC,
+			ResistMagic: true,
+			Direct:      true,
+		},
+		adversary,
+	)
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+	if !mitigated {
+		t.Error("expected mitigated=true when resistance applies")
+	}
+	// 6 resisted to 3 (minor, 1 mark), direct: 10 - 1 = 9.
+	if result.HPAfter != 9 {
+		t.Errorf("hp_after = %d, want 9 (10 - 1 mark for resisted minor)", result.HPAfter)
+	}
+}
+
+func TestApplyDaggerheartAdversaryDamage_ZeroDamage(t *testing.T) {
+	adversary := storage.DaggerheartAdversary{
+		HP: 10, HPMax: 10, Armor: 0, Major: 5, Severe: 8,
+	}
+	result, _, err := applyDaggerheartAdversaryDamage(
+		&pb.DaggerheartDamageRequest{
+			Amount:     0,
+			DamageType: pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_PHYSICAL,
+		},
+		adversary,
+	)
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+	if result.HPBefore != result.HPAfter {
+		t.Errorf("zero damage should not change HP: before=%d after=%d", result.HPBefore, result.HPAfter)
+	}
+}
+
+func TestApplyDaggerheartAdversaryDamage_MixedType(t *testing.T) {
+	adversary := storage.DaggerheartAdversary{
+		HP: 10, HPMax: 10, Armor: 0, Major: 5, Severe: 8,
+	}
+	result, _, err := applyDaggerheartAdversaryDamage(
+		&pb.DaggerheartDamageRequest{
+			Amount:     7, // major damage (>=5, <8), 2 marks
+			DamageType: pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_MIXED,
+			Direct:     true,
+		},
+		adversary,
+	)
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+	// Major = 2 marks, 10 - 2 = 8.
+	if result.HPAfter != 8 {
+		t.Errorf("hp_after = %d, want 8 (10 - 2 marks for major)", result.HPAfter)
+	}
+}
+
+// --- daggerheartRestTypeFromProto tests ---
+
+func TestDaggerheartRestTypeFromProto(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   pb.DaggerheartRestType
+		want    daggerheart.RestType
+		wantErr bool
+	}{
+		{"short", pb.DaggerheartRestType_DAGGERHEART_REST_TYPE_SHORT, daggerheart.RestTypeShort, false},
+		{"long", pb.DaggerheartRestType_DAGGERHEART_REST_TYPE_LONG, daggerheart.RestTypeLong, false},
+		{"unspecified", pb.DaggerheartRestType_DAGGERHEART_REST_TYPE_UNSPECIFIED, daggerheart.RestTypeShort, true},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := daggerheartRestTypeFromProto(tc.input)
+			if (err != nil) != tc.wantErr {
+				t.Errorf("error = %v, wantErr %v", err, tc.wantErr)
+			}
+			if got != tc.want {
+				t.Errorf("got %v, want %v", got, tc.want)
+			}
+		})
 	}
 }

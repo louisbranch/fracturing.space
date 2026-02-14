@@ -41,7 +41,7 @@ type Runner struct {
 	logger     *log.Logger
 	verbose    bool
 	timeout    time.Duration
-	auth       *MockAuth
+	auth       authProvider
 	userID     string
 }
 
@@ -50,11 +50,6 @@ func NewRunner(ctx context.Context, cfg Config) (*Runner, error) {
 	if cfg.GRPCAddr == "" {
 		return nil, errors.New("grpc address is required")
 	}
-	logger := cfg.Logger
-	if logger == nil {
-		logger = log.New(os.Stderr, "", 0)
-	}
-	assertions := Assertions{Mode: cfg.Assertions, Logger: logger}
 
 	conn, err := grpc.NewClient(
 		cfg.GRPCAddr,
@@ -66,12 +61,6 @@ func NewRunner(ctx context.Context, cfg Config) (*Runner, error) {
 	}
 
 	auth := NewMockAuth()
-	userID := auth.CreateUser("Scenario Runner")
-	if userID == "" {
-		_ = conn.Close()
-		return nil, errors.New("mock auth returned empty user id")
-	}
-
 	env := scenarioEnv{
 		campaignClient:    gamev1.NewCampaignServiceClient(conn),
 		participantClient: gamev1.NewParticipantServiceClient(conn),
@@ -80,7 +69,23 @@ func NewRunner(ctx context.Context, cfg Config) (*Runner, error) {
 		snapshotClient:    gamev1.NewSnapshotServiceClient(conn),
 		eventClient:       gamev1.NewEventServiceClient(conn),
 		daggerheartClient: daggerheartv1.NewDaggerheartServiceClient(conn),
-		userID:            userID,
+	}
+
+	r, err := newRunnerWithDeps(cfg, runnerDeps{env: env, auth: auth})
+	if err != nil {
+		_ = conn.Close()
+		return nil, err
+	}
+	r.conn = conn
+	return r, nil
+}
+
+// newRunnerWithDeps builds a Runner from pre-built dependencies.
+// Config defaults (logger, timeout) are applied here so they are testable.
+func newRunnerWithDeps(cfg Config, deps runnerDeps) (*Runner, error) {
+	logger := cfg.Logger
+	if logger == nil {
+		logger = log.New(os.Stderr, "", 0)
 	}
 
 	timeout := cfg.Timeout
@@ -88,14 +93,21 @@ func NewRunner(ctx context.Context, cfg Config) (*Runner, error) {
 		timeout = 10 * time.Second
 	}
 
+	userID := deps.auth.CreateUser("Scenario Runner")
+	if userID == "" {
+		return nil, errors.New("auth returned empty user id")
+	}
+	deps.env.userID = userID
+
+	assertions := Assertions{Mode: cfg.Assertions, Logger: logger}
+
 	return &Runner{
-		conn:       conn,
-		env:        env,
+		env:        deps.env,
 		assertions: assertions,
 		logger:     logger,
 		verbose:    cfg.Verbose,
 		timeout:    timeout,
-		auth:       auth,
+		auth:       deps.auth,
 		userID:     userID,
 	}, nil
 }

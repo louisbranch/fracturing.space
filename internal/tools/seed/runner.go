@@ -63,19 +63,7 @@ func Run(ctx context.Context, cfg Config) error {
 		return err
 	}
 
-	for _, fixture := range fixtures {
-		if cfg.Verbose {
-			fmt.Fprintf(os.Stderr, "Running scenario: %s\n", fixture.Name)
-		}
-		if err := runFixture(ctx, client, fixture, cfg.Verbose, userID); err != nil {
-			return fmt.Errorf("scenario %q: %w", fixture.Name, err)
-		}
-	}
-
-	if cfg.Verbose {
-		fmt.Fprintf(os.Stderr, "Seeding complete\n")
-	}
-	return nil
+	return runFixtures(ctx, client, fixtures, cfg.Verbose, userID)
 }
 
 // ListScenarios returns available scenario names.
@@ -92,7 +80,24 @@ func ListScenarios(cfg Config) ([]string, error) {
 	return names, nil
 }
 
-func runFixture(ctx context.Context, client *StdioClient, fixture BlackboxFixture, verbose bool, userID string) error {
+// runFixtures iterates over fixtures and runs each one. Extracted from Run
+// so tests can inject a fake mcpClient.
+func runFixtures(ctx context.Context, client mcpClient, fixtures []BlackboxFixture, verbose bool, userID string) error {
+	for _, fixture := range fixtures {
+		if verbose {
+			fmt.Fprintf(os.Stderr, "Running scenario: %s\n", fixture.Name)
+		}
+		if err := runFixture(ctx, client, fixture, verbose, userID); err != nil {
+			return fmt.Errorf("scenario %q: %w", fixture.Name, err)
+		}
+	}
+	if verbose {
+		fmt.Fprintf(os.Stderr, "Seeding complete\n")
+	}
+	return nil
+}
+
+func runFixture(ctx context.Context, client mcpClient, fixture BlackboxFixture, verbose bool, userID string) error {
 	captures := make(map[string]string)
 	for _, step := range fixture.Steps {
 		if err := executeStep(ctx, client, step, captures, verbose, userID); err != nil {
@@ -102,7 +107,7 @@ func runFixture(ctx context.Context, client *StdioClient, fixture BlackboxFixtur
 	return nil
 }
 
-func executeStep(ctx context.Context, client *StdioClient, step BlackboxStep, captures map[string]string, verbose bool, userID string) error {
+func executeStep(ctx context.Context, client mcpClient, step BlackboxStep, captures map[string]string, verbose bool, userID string) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}

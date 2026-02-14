@@ -2,8 +2,6 @@ package scenario
 
 import (
 	"context"
-	"log"
-	"os"
 	"time"
 
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
@@ -523,14 +521,13 @@ func (f *fakeDaggerheartClient) ApplyReactionOutcome(ctx context.Context, in *da
 // newTestRunner creates a Runner with pre-built clients for testing.
 // Production code should use NewRunner which dials the real gRPC server.
 func newTestRunner(env scenarioEnv, opts ...func(*Runner)) *Runner {
-	r := &Runner{
-		env:        env,
-		assertions: Assertions{Mode: AssertionStrict},
-		logger:     log.New(os.Stderr, "", 0),
-		timeout:    5 * time.Second,
-		auth:       NewMockAuth(),
+	r, err := newRunnerWithDeps(Config{
+		Assertions: AssertionStrict,
+		Timeout:    5 * time.Second,
+	}, runnerDeps{env: env, auth: NewMockAuth()})
+	if err != nil {
+		panic("newTestRunner: " + err.Error())
 	}
-	r.userID = r.auth.CreateUser("Test Runner")
 	for _, opt := range opts {
 		opt(r)
 	}

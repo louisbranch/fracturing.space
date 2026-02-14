@@ -270,6 +270,20 @@ func (s *fakeSessionGateStore) GetOpenSessionGate(_ context.Context, _, _ string
 	return storage.SessionGate{}, storage.ErrNotFound
 }
 
+type fakeSessionSpotlightStore struct{}
+
+func (s *fakeSessionSpotlightStore) PutSessionSpotlight(_ context.Context, _ storage.SessionSpotlight) error {
+	return nil
+}
+
+func (s *fakeSessionSpotlightStore) GetSessionSpotlight(_ context.Context, _, _ string) (storage.SessionSpotlight, error) {
+	return storage.SessionSpotlight{}, storage.ErrNotFound
+}
+
+func (s *fakeSessionSpotlightStore) ClearSessionSpotlight(_ context.Context, _, _ string) error {
+	return nil
+}
+
 type fakeSessionStore struct {
 	sessions map[string]session.Session // campaignID:sessionID -> session
 }
@@ -334,6 +348,23 @@ func newActionTestService() *DaggerheartService {
 		Armor:       0,
 		LifeState:   daggerheart.LifeStateAlive,
 	}
+	dhStore.profiles["camp-1:char-2"] = storage.DaggerheartCharacterProfile{
+		CampaignID:  "camp-1",
+		CharacterID: "char-2",
+		HpMax:       8,
+		StressMax:   6,
+		ArmorMax:    1,
+	}
+	dhStore.states["camp-1:char-2"] = storage.DaggerheartCharacterState{
+		CampaignID:  "camp-1",
+		CharacterID: "char-2",
+		Hp:          8,
+		Hope:        3,
+		HopeMax:     daggerheart.HopeMax,
+		Stress:      1,
+		Armor:       0,
+		LifeState:   daggerheart.LifeStateAlive,
+	}
 
 	sessStore := newFakeSessionStore()
 	sessStore.sessions["camp-1:sess-1"] = session.Session{
@@ -344,12 +375,13 @@ func newActionTestService() *DaggerheartService {
 
 	return &DaggerheartService{
 		stores: Stores{
-			Campaign:    campaignStore,
-			Daggerheart: dhStore,
-			Event:       newFakeActionEventStore(),
-			SessionGate: &fakeSessionGateStore{},
-			Character:   newFakeCharacterStore(),
-			Session:     sessStore,
+			Campaign:         campaignStore,
+			Daggerheart:      dhStore,
+			Event:            newFakeActionEventStore(),
+			SessionGate:      &fakeSessionGateStore{},
+			SessionSpotlight: &fakeSessionSpotlightStore{},
+			Character:        newFakeCharacterStore(),
+			Session:          sessStore,
 		},
 		seedFunc: func() (int64, error) { return 42, nil },
 	}
@@ -1392,5 +1424,1271 @@ func TestDeleteCountdown_Success(t *testing.T) {
 	}
 	if resp.CountdownId != cdID {
 		t.Fatalf("countdown_id = %q, want %q", resp.CountdownId, cdID)
+	}
+}
+
+// --- ApplyAdversaryDamage tests ---
+
+func newAdversaryDamageTestService() *DaggerheartService {
+	svc := newAdversaryTestService()
+	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartAdversaryStore)
+	dhStore.adversaries["camp-1:adv-1"] = storage.DaggerheartAdversary{
+		AdversaryID: "adv-1",
+		CampaignID:  "camp-1",
+		SessionID:   "sess-1",
+		Name:        "Goblin",
+		HP:          8,
+		HPMax:       8,
+		Armor:       1,
+		Major:       4,
+		Severe:      7,
+	}
+	return svc
+}
+
+func TestApplyAdversaryDamage_MissingStores(t *testing.T) {
+	svc := &DaggerheartService{}
+	_, err := svc.ApplyAdversaryDamage(context.Background(), &pb.DaggerheartApplyAdversaryDamageRequest{
+		CampaignId: "c1", AdversaryId: "a1",
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestApplyAdversaryDamage_MissingCampaignId(t *testing.T) {
+	svc := newAdversaryDamageTestService()
+	ctx := contextWithSessionID("sess-1")
+	_, err := svc.ApplyAdversaryDamage(ctx, &pb.DaggerheartApplyAdversaryDamageRequest{
+		AdversaryId: "adv-1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestApplyAdversaryDamage_MissingAdversaryId(t *testing.T) {
+	svc := newAdversaryDamageTestService()
+	ctx := contextWithSessionID("sess-1")
+	_, err := svc.ApplyAdversaryDamage(ctx, &pb.DaggerheartApplyAdversaryDamageRequest{
+		CampaignId: "camp-1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestApplyAdversaryDamage_MissingSessionId(t *testing.T) {
+	svc := newAdversaryDamageTestService()
+	_, err := svc.ApplyAdversaryDamage(context.Background(), &pb.DaggerheartApplyAdversaryDamageRequest{
+		CampaignId: "camp-1", AdversaryId: "adv-1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestApplyAdversaryDamage_MissingDamage(t *testing.T) {
+	svc := newAdversaryDamageTestService()
+	ctx := contextWithSessionID("sess-1")
+	_, err := svc.ApplyAdversaryDamage(ctx, &pb.DaggerheartApplyAdversaryDamageRequest{
+		CampaignId: "camp-1", AdversaryId: "adv-1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestApplyAdversaryDamage_NegativeAmount(t *testing.T) {
+	svc := newAdversaryDamageTestService()
+	ctx := contextWithSessionID("sess-1")
+	_, err := svc.ApplyAdversaryDamage(ctx, &pb.DaggerheartApplyAdversaryDamageRequest{
+		CampaignId:  "camp-1",
+		AdversaryId: "adv-1",
+		Damage: &pb.DaggerheartDamageRequest{
+			Amount:     -1,
+			DamageType: pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_PHYSICAL,
+		},
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestApplyAdversaryDamage_UnspecifiedType(t *testing.T) {
+	svc := newAdversaryDamageTestService()
+	ctx := contextWithSessionID("sess-1")
+	_, err := svc.ApplyAdversaryDamage(ctx, &pb.DaggerheartApplyAdversaryDamageRequest{
+		CampaignId:  "camp-1",
+		AdversaryId: "adv-1",
+		Damage: &pb.DaggerheartDamageRequest{
+			Amount:     2,
+			DamageType: pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_UNSPECIFIED,
+		},
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestApplyAdversaryDamage_Success(t *testing.T) {
+	svc := newAdversaryDamageTestService()
+	ctx := contextWithSessionID("sess-1")
+	resp, err := svc.ApplyAdversaryDamage(ctx, &pb.DaggerheartApplyAdversaryDamageRequest{
+		CampaignId:  "camp-1",
+		AdversaryId: "adv-1",
+		Damage: &pb.DaggerheartDamageRequest{
+			Amount:     5, // major damage (>=4, <7)
+			DamageType: pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_PHYSICAL,
+		},
+	})
+	if err != nil {
+		t.Fatalf("ApplyAdversaryDamage returned error: %v", err)
+	}
+	if resp.AdversaryId != "adv-1" {
+		t.Fatalf("adversary_id = %q, want adv-1", resp.AdversaryId)
+	}
+	if resp.Adversary == nil {
+		t.Fatal("expected adversary in response")
+	}
+}
+
+func TestApplyAdversaryDamage_DirectDamage(t *testing.T) {
+	svc := newAdversaryDamageTestService()
+	ctx := contextWithSessionID("sess-1")
+	resp, err := svc.ApplyAdversaryDamage(ctx, &pb.DaggerheartApplyAdversaryDamageRequest{
+		CampaignId:  "camp-1",
+		AdversaryId: "adv-1",
+		Damage: &pb.DaggerheartDamageRequest{
+			Amount:     3,
+			DamageType: pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_PHYSICAL,
+			Direct:     true,
+		},
+	})
+	if err != nil {
+		t.Fatalf("ApplyAdversaryDamage returned error: %v", err)
+	}
+	if resp.Adversary == nil {
+		t.Fatal("expected adversary in response")
+	}
+}
+
+// --- ApplyAdversaryConditions tests ---
+
+func TestApplyAdversaryConditions_MissingStores(t *testing.T) {
+	svc := &DaggerheartService{}
+	_, err := svc.ApplyAdversaryConditions(context.Background(), &pb.DaggerheartApplyAdversaryConditionsRequest{
+		CampaignId: "c1", AdversaryId: "a1",
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestApplyAdversaryConditions_MissingCampaignId(t *testing.T) {
+	svc := newAdversaryDamageTestService()
+	ctx := contextWithSessionID("sess-1")
+	_, err := svc.ApplyAdversaryConditions(ctx, &pb.DaggerheartApplyAdversaryConditionsRequest{
+		AdversaryId: "adv-1",
+		Add:         []pb.DaggerheartCondition{pb.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE},
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestApplyAdversaryConditions_MissingAdversaryId(t *testing.T) {
+	svc := newAdversaryDamageTestService()
+	ctx := contextWithSessionID("sess-1")
+	_, err := svc.ApplyAdversaryConditions(ctx, &pb.DaggerheartApplyAdversaryConditionsRequest{
+		CampaignId: "camp-1",
+		Add:        []pb.DaggerheartCondition{pb.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE},
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestApplyAdversaryConditions_MissingSessionId(t *testing.T) {
+	svc := newAdversaryDamageTestService()
+	_, err := svc.ApplyAdversaryConditions(context.Background(), &pb.DaggerheartApplyAdversaryConditionsRequest{
+		CampaignId:  "camp-1",
+		AdversaryId: "adv-1",
+		Add:         []pb.DaggerheartCondition{pb.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE},
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestApplyAdversaryConditions_NoConditions(t *testing.T) {
+	svc := newAdversaryDamageTestService()
+	ctx := contextWithSessionID("sess-1")
+	_, err := svc.ApplyAdversaryConditions(ctx, &pb.DaggerheartApplyAdversaryConditionsRequest{
+		CampaignId:  "camp-1",
+		AdversaryId: "adv-1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestApplyAdversaryConditions_ConflictAddRemoveSame(t *testing.T) {
+	svc := newAdversaryDamageTestService()
+	ctx := contextWithSessionID("sess-1")
+	_, err := svc.ApplyAdversaryConditions(ctx, &pb.DaggerheartApplyAdversaryConditionsRequest{
+		CampaignId:  "camp-1",
+		AdversaryId: "adv-1",
+		Add:         []pb.DaggerheartCondition{pb.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE},
+		Remove:      []pb.DaggerheartCondition{pb.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE},
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestApplyAdversaryConditions_AddCondition_Success(t *testing.T) {
+	svc := newAdversaryDamageTestService()
+	ctx := contextWithSessionID("sess-1")
+	resp, err := svc.ApplyAdversaryConditions(ctx, &pb.DaggerheartApplyAdversaryConditionsRequest{
+		CampaignId:  "camp-1",
+		AdversaryId: "adv-1",
+		Add:         []pb.DaggerheartCondition{pb.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE},
+	})
+	if err != nil {
+		t.Fatalf("ApplyAdversaryConditions returned error: %v", err)
+	}
+	if resp.AdversaryId != "adv-1" {
+		t.Fatalf("adversary_id = %q, want adv-1", resp.AdversaryId)
+	}
+	if len(resp.Added) == 0 {
+		t.Fatal("expected added conditions")
+	}
+}
+
+func TestApplyAdversaryConditions_RemoveCondition_Success(t *testing.T) {
+	svc := newAdversaryDamageTestService()
+	// Pre-populate a condition on the adversary.
+	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartAdversaryStore)
+	adv := dhStore.adversaries["camp-1:adv-1"]
+	adv.Conditions = []string{"vulnerable"}
+	dhStore.adversaries["camp-1:adv-1"] = adv
+
+	ctx := contextWithSessionID("sess-1")
+	resp, err := svc.ApplyAdversaryConditions(ctx, &pb.DaggerheartApplyAdversaryConditionsRequest{
+		CampaignId:  "camp-1",
+		AdversaryId: "adv-1",
+		Remove:      []pb.DaggerheartCondition{pb.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE},
+	})
+	if err != nil {
+		t.Fatalf("ApplyAdversaryConditions returned error: %v", err)
+	}
+	if len(resp.Removed) == 0 {
+		t.Fatal("expected removed conditions")
+	}
+}
+
+func TestApplyAdversaryConditions_NoChanges(t *testing.T) {
+	svc := newAdversaryDamageTestService()
+	// Pre-populate a condition that we try to re-add.
+	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartAdversaryStore)
+	adv := dhStore.adversaries["camp-1:adv-1"]
+	adv.Conditions = []string{"vulnerable"}
+	dhStore.adversaries["camp-1:adv-1"] = adv
+
+	ctx := contextWithSessionID("sess-1")
+	_, err := svc.ApplyAdversaryConditions(ctx, &pb.DaggerheartApplyAdversaryConditionsRequest{
+		CampaignId:  "camp-1",
+		AdversaryId: "adv-1",
+		Add:         []pb.DaggerheartCondition{pb.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE},
+	})
+	assertStatusCode(t, err, codes.FailedPrecondition)
+}
+
+// --- ApplyConditions gap fills ---
+
+func TestApplyConditions_AddCondition_Success(t *testing.T) {
+	svc := newActionTestService()
+	ctx := contextWithSessionID("sess-1")
+	resp, err := svc.ApplyConditions(ctx, &pb.DaggerheartApplyConditionsRequest{
+		CampaignId:  "camp-1",
+		CharacterId: "char-1",
+		Add:         []pb.DaggerheartCondition{pb.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN},
+	})
+	if err != nil {
+		t.Fatalf("ApplyConditions returned error: %v", err)
+	}
+	if len(resp.Added) == 0 {
+		t.Fatal("expected added conditions")
+	}
+}
+
+func TestApplyConditions_RemoveCondition_Success(t *testing.T) {
+	svc := newActionTestService()
+	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
+	state := dhStore.states["camp-1:char-1"]
+	state.Conditions = []string{"hidden", "vulnerable"}
+	dhStore.states["camp-1:char-1"] = state
+
+	ctx := contextWithSessionID("sess-1")
+	resp, err := svc.ApplyConditions(ctx, &pb.DaggerheartApplyConditionsRequest{
+		CampaignId:  "camp-1",
+		CharacterId: "char-1",
+		Remove:      []pb.DaggerheartCondition{pb.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN},
+	})
+	if err != nil {
+		t.Fatalf("ApplyConditions returned error: %v", err)
+	}
+	if len(resp.Removed) == 0 {
+		t.Fatal("expected removed conditions")
+	}
+}
+
+func TestApplyConditions_AddAndRemove(t *testing.T) {
+	svc := newActionTestService()
+	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
+	state := dhStore.states["camp-1:char-1"]
+	state.Conditions = []string{"hidden"}
+	dhStore.states["camp-1:char-1"] = state
+
+	ctx := contextWithSessionID("sess-1")
+	resp, err := svc.ApplyConditions(ctx, &pb.DaggerheartApplyConditionsRequest{
+		CampaignId:  "camp-1",
+		CharacterId: "char-1",
+		Add:         []pb.DaggerheartCondition{pb.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE},
+		Remove:      []pb.DaggerheartCondition{pb.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN},
+	})
+	if err != nil {
+		t.Fatalf("ApplyConditions returned error: %v", err)
+	}
+	if len(resp.Added) == 0 {
+		t.Fatal("expected added conditions")
+	}
+	if len(resp.Removed) == 0 {
+		t.Fatal("expected removed conditions")
+	}
+}
+
+func TestApplyConditions_ConflictAddRemoveSame(t *testing.T) {
+	svc := newActionTestService()
+	ctx := contextWithSessionID("sess-1")
+	_, err := svc.ApplyConditions(ctx, &pb.DaggerheartApplyConditionsRequest{
+		CampaignId:  "camp-1",
+		CharacterId: "char-1",
+		Add:         []pb.DaggerheartCondition{pb.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN},
+		Remove:      []pb.DaggerheartCondition{pb.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN},
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+// --- ApplyGmMove gap fills ---
+
+func TestApplyGmMove_FearSpentExceedsAvailable(t *testing.T) {
+	svc := newActionTestService()
+	// Snapshot has 0 fear.
+	_, err := svc.ApplyGmMove(context.Background(), &pb.DaggerheartApplyGmMoveRequest{
+		CampaignId: "camp-1", SessionId: "sess-1", Move: "test_move", FearSpent: 10,
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestApplyGmMove_CampaignNotFound(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.ApplyGmMove(context.Background(), &pb.DaggerheartApplyGmMoveRequest{
+		CampaignId: "nonexistent", SessionId: "sess-1", Move: "test",
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestApplyGmMove_SessionNotFound(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.ApplyGmMove(context.Background(), &pb.DaggerheartApplyGmMoveRequest{
+		CampaignId: "camp-1", SessionId: "nonexistent", Move: "test",
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+// --- SessionActionRoll tests ---
+
+func TestSessionActionRoll_MissingStores(t *testing.T) {
+	svc := &DaggerheartService{}
+	_, err := svc.SessionActionRoll(context.Background(), &pb.SessionActionRollRequest{
+		CampaignId: "c1",
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestSessionActionRoll_MissingCampaignId(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.SessionActionRoll(context.Background(), &pb.SessionActionRollRequest{
+		SessionId: "sess-1", CharacterId: "char-1", Trait: "agility",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSessionActionRoll_MissingSessionId(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.SessionActionRoll(context.Background(), &pb.SessionActionRollRequest{
+		CampaignId: "camp-1", CharacterId: "char-1", Trait: "agility",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSessionActionRoll_MissingCharacterId(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.SessionActionRoll(context.Background(), &pb.SessionActionRollRequest{
+		CampaignId: "camp-1", SessionId: "sess-1", Trait: "agility",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSessionActionRoll_MissingTrait(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.SessionActionRoll(context.Background(), &pb.SessionActionRollRequest{
+		CampaignId: "camp-1", SessionId: "sess-1", CharacterId: "char-1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSessionActionRoll_Success(t *testing.T) {
+	svc := newActionTestService()
+	resp, err := svc.SessionActionRoll(context.Background(), &pb.SessionActionRollRequest{
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		CharacterId: "char-1",
+		Trait:       "agility",
+		Difficulty:  10,
+	})
+	if err != nil {
+		t.Fatalf("SessionActionRoll returned error: %v", err)
+	}
+	if resp.RollSeq == 0 {
+		t.Fatal("expected non-zero roll seq")
+	}
+	if resp.Rng == nil {
+		t.Fatal("expected rng in response")
+	}
+}
+
+func TestSessionActionRoll_WithModifiers(t *testing.T) {
+	svc := newActionTestService()
+	resp, err := svc.SessionActionRoll(context.Background(), &pb.SessionActionRollRequest{
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		CharacterId: "char-1",
+		Trait:       "agility",
+		Difficulty:  10,
+		Modifiers: []*pb.ActionRollModifier{
+			{Value: 2, Source: "experience"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("SessionActionRoll returned error: %v", err)
+	}
+	if resp.RollSeq == 0 {
+		t.Fatal("expected non-zero roll seq")
+	}
+}
+
+// --- SessionDamageRoll tests ---
+
+func TestSessionDamageRoll_MissingStores(t *testing.T) {
+	svc := &DaggerheartService{}
+	_, err := svc.SessionDamageRoll(context.Background(), &pb.SessionDamageRollRequest{
+		CampaignId: "c1",
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestSessionDamageRoll_MissingCampaignId(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.SessionDamageRoll(context.Background(), &pb.SessionDamageRollRequest{
+		SessionId: "sess-1", CharacterId: "char-1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSessionDamageRoll_MissingSessionId(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.SessionDamageRoll(context.Background(), &pb.SessionDamageRollRequest{
+		CampaignId: "camp-1", CharacterId: "char-1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSessionDamageRoll_MissingCharacterId(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.SessionDamageRoll(context.Background(), &pb.SessionDamageRollRequest{
+		CampaignId: "camp-1", SessionId: "sess-1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSessionDamageRoll_MissingDice(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.SessionDamageRoll(context.Background(), &pb.SessionDamageRollRequest{
+		CampaignId: "camp-1", SessionId: "sess-1", CharacterId: "char-1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSessionDamageRoll_Success(t *testing.T) {
+	svc := newActionTestService()
+	resp, err := svc.SessionDamageRoll(context.Background(), &pb.SessionDamageRollRequest{
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		CharacterId: "char-1",
+		Dice:        []*pb.DiceSpec{{Sides: 6, Count: 2}},
+	})
+	if err != nil {
+		t.Fatalf("SessionDamageRoll returned error: %v", err)
+	}
+	if resp.RollSeq == 0 {
+		t.Fatal("expected non-zero roll seq")
+	}
+	if resp.Total == 0 {
+		t.Fatal("expected non-zero total")
+	}
+}
+
+// --- SessionAttackFlow tests ---
+
+func TestSessionAttackFlow_MissingStores(t *testing.T) {
+	svc := &DaggerheartService{}
+	_, err := svc.SessionAttackFlow(context.Background(), &pb.SessionAttackFlowRequest{
+		CampaignId: "c1",
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestSessionAttackFlow_MissingCampaignId(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.SessionAttackFlow(context.Background(), &pb.SessionAttackFlowRequest{
+		SessionId: "sess-1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSessionAttackFlow_MissingSessionId(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.SessionAttackFlow(context.Background(), &pb.SessionAttackFlowRequest{
+		CampaignId: "camp-1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSessionAttackFlow_MissingCharacterId(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.SessionAttackFlow(context.Background(), &pb.SessionAttackFlowRequest{
+		CampaignId: "camp-1", SessionId: "sess-1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSessionAttackFlow_MissingTrait(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.SessionAttackFlow(context.Background(), &pb.SessionAttackFlowRequest{
+		CampaignId: "camp-1", SessionId: "sess-1", CharacterId: "char-1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSessionAttackFlow_MissingTargetId(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.SessionAttackFlow(context.Background(), &pb.SessionAttackFlowRequest{
+		CampaignId: "camp-1", SessionId: "sess-1", CharacterId: "char-1", Trait: "agility",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSessionAttackFlow_MissingDamage(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.SessionAttackFlow(context.Background(), &pb.SessionAttackFlowRequest{
+		CampaignId: "camp-1", SessionId: "sess-1", CharacterId: "char-1", Trait: "agility", TargetId: "adv-1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSessionAttackFlow_MissingDamageType(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.SessionAttackFlow(context.Background(), &pb.SessionAttackFlowRequest{
+		CampaignId: "camp-1", SessionId: "sess-1", CharacterId: "char-1", Trait: "agility", TargetId: "adv-1",
+		Damage: &pb.DaggerheartAttackDamageSpec{},
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+// --- SessionReactionFlow tests ---
+
+func TestSessionReactionFlow_MissingStores(t *testing.T) {
+	svc := &DaggerheartService{}
+	_, err := svc.SessionReactionFlow(context.Background(), &pb.SessionReactionFlowRequest{
+		CampaignId: "c1",
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestSessionReactionFlow_MissingCampaignId(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.SessionReactionFlow(context.Background(), &pb.SessionReactionFlowRequest{
+		SessionId: "sess-1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSessionReactionFlow_MissingSessionId(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.SessionReactionFlow(context.Background(), &pb.SessionReactionFlowRequest{
+		CampaignId: "camp-1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSessionReactionFlow_MissingCharacterId(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.SessionReactionFlow(context.Background(), &pb.SessionReactionFlowRequest{
+		CampaignId: "camp-1", SessionId: "sess-1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSessionReactionFlow_MissingTrait(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.SessionReactionFlow(context.Background(), &pb.SessionReactionFlowRequest{
+		CampaignId: "camp-1", SessionId: "sess-1", CharacterId: "char-1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSessionReactionFlow_Success(t *testing.T) {
+	svc := newActionTestService()
+	ctx := grpcmeta.WithRequestID(context.Background(), "req-reaction-1")
+	resp, err := svc.SessionReactionFlow(ctx, &pb.SessionReactionFlowRequest{
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		CharacterId: "char-1",
+		Trait:       "agility",
+		Difficulty:  10,
+	})
+	if err != nil {
+		t.Fatalf("SessionReactionFlow returned error: %v", err)
+	}
+	if resp.ActionRoll == nil {
+		t.Fatal("expected action roll in response")
+	}
+	if resp.RollOutcome == nil {
+		t.Fatal("expected roll outcome in response")
+	}
+	if resp.ReactionOutcome == nil {
+		t.Fatal("expected reaction outcome in response")
+	}
+}
+
+// --- SessionAdversaryAttackRoll tests ---
+
+func TestSessionAdversaryAttackRoll_MissingStores(t *testing.T) {
+	svc := &DaggerheartService{}
+	_, err := svc.SessionAdversaryAttackRoll(context.Background(), &pb.SessionAdversaryAttackRollRequest{
+		CampaignId: "c1",
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestSessionAdversaryAttackRoll_MissingCampaignId(t *testing.T) {
+	svc := newAdversaryDamageTestService()
+	_, err := svc.SessionAdversaryAttackRoll(context.Background(), &pb.SessionAdversaryAttackRollRequest{
+		SessionId: "sess-1", AdversaryId: "adv-1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSessionAdversaryAttackRoll_MissingSessionId(t *testing.T) {
+	svc := newAdversaryDamageTestService()
+	_, err := svc.SessionAdversaryAttackRoll(context.Background(), &pb.SessionAdversaryAttackRollRequest{
+		CampaignId: "camp-1", AdversaryId: "adv-1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSessionAdversaryAttackRoll_MissingAdversaryId(t *testing.T) {
+	svc := newAdversaryDamageTestService()
+	_, err := svc.SessionAdversaryAttackRoll(context.Background(), &pb.SessionAdversaryAttackRollRequest{
+		CampaignId: "camp-1", SessionId: "sess-1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSessionAdversaryAttackRoll_Success(t *testing.T) {
+	svc := newAdversaryDamageTestService()
+	resp, err := svc.SessionAdversaryAttackRoll(context.Background(), &pb.SessionAdversaryAttackRollRequest{
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		AdversaryId: "adv-1",
+	})
+	if err != nil {
+		t.Fatalf("SessionAdversaryAttackRoll returned error: %v", err)
+	}
+	if resp.RollSeq == 0 {
+		t.Fatal("expected non-zero roll seq")
+	}
+}
+
+// --- SessionAdversaryActionCheck tests ---
+
+func TestSessionAdversaryActionCheck_MissingStores(t *testing.T) {
+	svc := &DaggerheartService{}
+	_, err := svc.SessionAdversaryActionCheck(context.Background(), &pb.SessionAdversaryActionCheckRequest{
+		CampaignId: "c1",
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestSessionAdversaryActionCheck_MissingCampaignId(t *testing.T) {
+	svc := newAdversaryDamageTestService()
+	_, err := svc.SessionAdversaryActionCheck(context.Background(), &pb.SessionAdversaryActionCheckRequest{
+		SessionId: "sess-1", AdversaryId: "adv-1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSessionAdversaryActionCheck_MissingSessionId(t *testing.T) {
+	svc := newAdversaryDamageTestService()
+	_, err := svc.SessionAdversaryActionCheck(context.Background(), &pb.SessionAdversaryActionCheckRequest{
+		CampaignId: "camp-1", AdversaryId: "adv-1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSessionAdversaryActionCheck_MissingAdversaryId(t *testing.T) {
+	svc := newAdversaryDamageTestService()
+	_, err := svc.SessionAdversaryActionCheck(context.Background(), &pb.SessionAdversaryActionCheckRequest{
+		CampaignId: "camp-1", SessionId: "sess-1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSessionAdversaryActionCheck_Success(t *testing.T) {
+	svc := newAdversaryDamageTestService()
+	resp, err := svc.SessionAdversaryActionCheck(context.Background(), &pb.SessionAdversaryActionCheckRequest{
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		AdversaryId: "adv-1",
+		Difficulty:  10,
+	})
+	if err != nil {
+		t.Fatalf("SessionAdversaryActionCheck returned error: %v", err)
+	}
+	if resp.RollSeq == 0 {
+		t.Fatal("expected non-zero roll seq")
+	}
+}
+
+// --- SessionAdversaryAttackFlow tests ---
+
+func TestSessionAdversaryAttackFlow_MissingStores(t *testing.T) {
+	svc := &DaggerheartService{}
+	_, err := svc.SessionAdversaryAttackFlow(context.Background(), &pb.SessionAdversaryAttackFlowRequest{
+		CampaignId: "c1",
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestSessionAdversaryAttackFlow_MissingCampaignId(t *testing.T) {
+	svc := newAdversaryDamageTestService()
+	_, err := svc.SessionAdversaryAttackFlow(context.Background(), &pb.SessionAdversaryAttackFlowRequest{
+		SessionId: "sess-1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSessionAdversaryAttackFlow_MissingSessionId(t *testing.T) {
+	svc := newAdversaryDamageTestService()
+	_, err := svc.SessionAdversaryAttackFlow(context.Background(), &pb.SessionAdversaryAttackFlowRequest{
+		CampaignId: "camp-1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSessionAdversaryAttackFlow_MissingAdversaryId(t *testing.T) {
+	svc := newAdversaryDamageTestService()
+	_, err := svc.SessionAdversaryAttackFlow(context.Background(), &pb.SessionAdversaryAttackFlowRequest{
+		CampaignId: "camp-1", SessionId: "sess-1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSessionAdversaryAttackFlow_MissingTargetId(t *testing.T) {
+	svc := newAdversaryDamageTestService()
+	_, err := svc.SessionAdversaryAttackFlow(context.Background(), &pb.SessionAdversaryAttackFlowRequest{
+		CampaignId: "camp-1", SessionId: "sess-1", AdversaryId: "adv-1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSessionAdversaryAttackFlow_MissingDamage(t *testing.T) {
+	svc := newAdversaryDamageTestService()
+	_, err := svc.SessionAdversaryAttackFlow(context.Background(), &pb.SessionAdversaryAttackFlowRequest{
+		CampaignId: "camp-1", SessionId: "sess-1", AdversaryId: "adv-1", TargetId: "char-1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSessionAdversaryAttackFlow_MissingDamageType(t *testing.T) {
+	svc := newAdversaryDamageTestService()
+	_, err := svc.SessionAdversaryAttackFlow(context.Background(), &pb.SessionAdversaryAttackFlowRequest{
+		CampaignId: "camp-1", SessionId: "sess-1", AdversaryId: "adv-1", TargetId: "char-1",
+		Damage: &pb.DaggerheartAttackDamageSpec{},
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+// --- SessionGroupActionFlow tests ---
+
+func TestSessionGroupActionFlow_MissingStores(t *testing.T) {
+	svc := &DaggerheartService{}
+	_, err := svc.SessionGroupActionFlow(context.Background(), &pb.SessionGroupActionFlowRequest{
+		CampaignId: "c1",
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestSessionGroupActionFlow_MissingCampaignId(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.SessionGroupActionFlow(context.Background(), &pb.SessionGroupActionFlowRequest{
+		SessionId: "sess-1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSessionGroupActionFlow_MissingSessionId(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.SessionGroupActionFlow(context.Background(), &pb.SessionGroupActionFlowRequest{
+		CampaignId: "camp-1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSessionGroupActionFlow_MissingLeader(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.SessionGroupActionFlow(context.Background(), &pb.SessionGroupActionFlowRequest{
+		CampaignId: "camp-1", SessionId: "sess-1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSessionGroupActionFlow_MissingLeaderTrait(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.SessionGroupActionFlow(context.Background(), &pb.SessionGroupActionFlowRequest{
+		CampaignId: "camp-1", SessionId: "sess-1", LeaderCharacterId: "char-1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSessionGroupActionFlow_MissingDifficulty(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.SessionGroupActionFlow(context.Background(), &pb.SessionGroupActionFlowRequest{
+		CampaignId: "camp-1", SessionId: "sess-1", LeaderCharacterId: "char-1", LeaderTrait: "agility",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSessionGroupActionFlow_MissingSupporters(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.SessionGroupActionFlow(context.Background(), &pb.SessionGroupActionFlowRequest{
+		CampaignId: "camp-1", SessionId: "sess-1", LeaderCharacterId: "char-1", LeaderTrait: "agility", Difficulty: 10,
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+// --- SessionTagTeamFlow tests ---
+
+func TestSessionTagTeamFlow_MissingStores(t *testing.T) {
+	svc := &DaggerheartService{}
+	_, err := svc.SessionTagTeamFlow(context.Background(), &pb.SessionTagTeamFlowRequest{
+		CampaignId: "c1",
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestSessionTagTeamFlow_MissingCampaignId(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.SessionTagTeamFlow(context.Background(), &pb.SessionTagTeamFlowRequest{
+		SessionId: "sess-1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSessionTagTeamFlow_MissingSessionId(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.SessionTagTeamFlow(context.Background(), &pb.SessionTagTeamFlowRequest{
+		CampaignId: "camp-1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSessionTagTeamFlow_MissingDifficulty(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.SessionTagTeamFlow(context.Background(), &pb.SessionTagTeamFlowRequest{
+		CampaignId: "camp-1", SessionId: "sess-1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSessionTagTeamFlow_MissingFirst(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.SessionTagTeamFlow(context.Background(), &pb.SessionTagTeamFlowRequest{
+		CampaignId: "camp-1", SessionId: "sess-1", Difficulty: 10,
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSessionTagTeamFlow_MissingSecond(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.SessionTagTeamFlow(context.Background(), &pb.SessionTagTeamFlowRequest{
+		CampaignId: "camp-1", SessionId: "sess-1", Difficulty: 10,
+		First: &pb.TagTeamParticipant{CharacterId: "char-1", Trait: "agility"},
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSessionTagTeamFlow_SameParticipant(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.SessionTagTeamFlow(context.Background(), &pb.SessionTagTeamFlowRequest{
+		CampaignId: "camp-1", SessionId: "sess-1", Difficulty: 10,
+		First:               &pb.TagTeamParticipant{CharacterId: "char-1", Trait: "agility"},
+		Second:              &pb.TagTeamParticipant{CharacterId: "char-1", Trait: "strength"},
+		SelectedCharacterId: "char-1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+// --- ApplyRollOutcome tests ---
+
+func TestApplyRollOutcome_MissingStores(t *testing.T) {
+	svc := &DaggerheartService{}
+	_, err := svc.ApplyRollOutcome(context.Background(), &pb.ApplyRollOutcomeRequest{
+		SessionId: "s1",
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestApplyRollOutcome_MissingCampaignId(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.ApplyRollOutcome(context.Background(), &pb.ApplyRollOutcomeRequest{
+		SessionId: "sess-1", RollSeq: 1,
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestApplyRollOutcome_MissingSessionId(t *testing.T) {
+	svc := newActionTestService()
+	ctx := withCampaignSessionMetadata(context.Background(), "camp-1", "")
+	_, err := svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
+		RollSeq: 1,
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestApplyRollOutcome_MissingRollSeq(t *testing.T) {
+	svc := newActionTestService()
+	ctx := withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1")
+	_, err := svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
+		SessionId: "sess-1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestApplyRollOutcome_Success(t *testing.T) {
+	svc := newActionTestService()
+	// First create a roll event via SessionActionRoll.
+	// Must include request ID as ApplyRollOutcome requires it.
+	rollCtx := grpcmeta.WithRequestID(context.Background(), "req-roll-1")
+	rollResp, err := svc.SessionActionRoll(rollCtx, &pb.SessionActionRollRequest{
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		CharacterId: "char-1",
+		Trait:       "agility",
+		Difficulty:  10,
+	})
+	if err != nil {
+		t.Fatalf("SessionActionRoll returned error: %v", err)
+	}
+
+	ctx := grpcmeta.WithRequestID(withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1"), "req-roll-1")
+	resp, err := svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
+		SessionId: "sess-1",
+		RollSeq:   rollResp.RollSeq,
+	})
+	if err != nil {
+		t.Fatalf("ApplyRollOutcome returned error: %v", err)
+	}
+	if resp.RollSeq == 0 {
+		t.Fatal("expected roll seq in response")
+	}
+}
+
+// --- ApplyAttackOutcome tests ---
+
+func TestApplyAttackOutcome_MissingStores(t *testing.T) {
+	svc := &DaggerheartService{}
+	_, err := svc.ApplyAttackOutcome(context.Background(), &pb.DaggerheartApplyAttackOutcomeRequest{
+		SessionId: "s1",
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestApplyAttackOutcome_MissingCampaignId(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.ApplyAttackOutcome(context.Background(), &pb.DaggerheartApplyAttackOutcomeRequest{
+		SessionId: "sess-1", RollSeq: 1, Targets: []string{"adv-1"},
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestApplyAttackOutcome_MissingSessionId(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.ApplyAttackOutcome(context.Background(), &pb.DaggerheartApplyAttackOutcomeRequest{
+		RollSeq: 1, Targets: []string{"adv-1"},
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestApplyAttackOutcome_MissingRollSeq(t *testing.T) {
+	svc := newActionTestService()
+	ctx := withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1")
+	_, err := svc.ApplyAttackOutcome(ctx, &pb.DaggerheartApplyAttackOutcomeRequest{
+		SessionId: "sess-1", Targets: []string{"adv-1"},
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestApplyAttackOutcome_MissingTargets(t *testing.T) {
+	svc := newActionTestService()
+	ctx := withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1")
+	_, err := svc.ApplyAttackOutcome(ctx, &pb.DaggerheartApplyAttackOutcomeRequest{
+		SessionId: "sess-1", RollSeq: 1,
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+// --- ApplyAdversaryAttackOutcome tests ---
+
+func TestApplyAdversaryAttackOutcome_MissingStores(t *testing.T) {
+	svc := &DaggerheartService{}
+	_, err := svc.ApplyAdversaryAttackOutcome(context.Background(), &pb.DaggerheartApplyAdversaryAttackOutcomeRequest{
+		SessionId: "s1",
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestApplyAdversaryAttackOutcome_MissingCampaignId(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.ApplyAdversaryAttackOutcome(context.Background(), &pb.DaggerheartApplyAdversaryAttackOutcomeRequest{
+		SessionId: "sess-1", RollSeq: 1, Targets: []string{"char-1"},
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestApplyAdversaryAttackOutcome_MissingSessionId(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.ApplyAdversaryAttackOutcome(context.Background(), &pb.DaggerheartApplyAdversaryAttackOutcomeRequest{
+		RollSeq: 1, Targets: []string{"char-1"},
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestApplyAdversaryAttackOutcome_MissingRollSeq(t *testing.T) {
+	svc := newActionTestService()
+	ctx := withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1")
+	_, err := svc.ApplyAdversaryAttackOutcome(ctx, &pb.DaggerheartApplyAdversaryAttackOutcomeRequest{
+		SessionId: "sess-1", Targets: []string{"char-1"},
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestApplyAdversaryAttackOutcome_MissingTargets(t *testing.T) {
+	svc := newActionTestService()
+	ctx := withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1")
+	_, err := svc.ApplyAdversaryAttackOutcome(ctx, &pb.DaggerheartApplyAdversaryAttackOutcomeRequest{
+		SessionId: "sess-1", RollSeq: 1,
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+// --- ApplyReactionOutcome tests ---
+
+func TestApplyReactionOutcome_MissingStores(t *testing.T) {
+	svc := &DaggerheartService{}
+	_, err := svc.ApplyReactionOutcome(context.Background(), &pb.DaggerheartApplyReactionOutcomeRequest{
+		SessionId: "s1",
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestApplyReactionOutcome_MissingCampaignId(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.ApplyReactionOutcome(context.Background(), &pb.DaggerheartApplyReactionOutcomeRequest{
+		SessionId: "sess-1", RollSeq: 1,
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestApplyReactionOutcome_MissingSessionId(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.ApplyReactionOutcome(context.Background(), &pb.DaggerheartApplyReactionOutcomeRequest{
+		RollSeq: 1,
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestApplyReactionOutcome_MissingRollSeq(t *testing.T) {
+	svc := newActionTestService()
+	ctx := withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1")
+	_, err := svc.ApplyReactionOutcome(ctx, &pb.DaggerheartApplyReactionOutcomeRequest{
+		SessionId: "sess-1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+// --- Success path tests for flow handlers ---
+
+func TestSessionAttackFlow_Success(t *testing.T) {
+	svc := newActionTestService()
+	ctx := grpcmeta.WithRequestID(context.Background(), "req-attack-1")
+	resp, err := svc.SessionAttackFlow(ctx, &pb.SessionAttackFlowRequest{
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		CharacterId: "char-1",
+		Trait:       "agility",
+		Difficulty:  10,
+		TargetId:    "char-2",
+		Damage: &pb.DaggerheartAttackDamageSpec{
+			DamageType:         pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_PHYSICAL,
+			SourceCharacterIds: []string{"char-1"},
+		},
+		DamageDice: []*pb.DiceSpec{{Sides: 6, Count: 1}},
+	})
+	if err != nil {
+		t.Fatalf("SessionAttackFlow returned error: %v", err)
+	}
+	if resp.ActionRoll == nil {
+		t.Fatal("expected action roll in response")
+	}
+	if resp.AttackOutcome == nil {
+		t.Fatal("expected attack outcome in response")
+	}
+}
+
+func TestSessionAdversaryAttackFlow_Success(t *testing.T) {
+	svc := newAdversaryDamageTestService()
+	ctx := grpcmeta.WithRequestID(context.Background(), "req-adv-attack-1")
+	resp, err := svc.SessionAdversaryAttackFlow(ctx, &pb.SessionAdversaryAttackFlowRequest{
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		AdversaryId: "adv-1",
+		TargetId:    "char-1",
+		Difficulty:  10,
+		Damage: &pb.DaggerheartAttackDamageSpec{
+			DamageType: pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_PHYSICAL,
+		},
+		DamageDice: []*pb.DiceSpec{{Sides: 6, Count: 1}},
+	})
+	if err != nil {
+		t.Fatalf("SessionAdversaryAttackFlow returned error: %v", err)
+	}
+	if resp.AttackRoll == nil {
+		t.Fatal("expected attack roll in response")
+	}
+	if resp.AttackOutcome == nil {
+		t.Fatal("expected attack outcome in response")
+	}
+}
+
+func TestSessionGroupActionFlow_Success(t *testing.T) {
+	svc := newActionTestService()
+	ctx := grpcmeta.WithRequestID(context.Background(), "req-group-1")
+	resp, err := svc.SessionGroupActionFlow(ctx, &pb.SessionGroupActionFlowRequest{
+		CampaignId:        "camp-1",
+		SessionId:         "sess-1",
+		LeaderCharacterId: "char-1",
+		LeaderTrait:       "agility",
+		Difficulty:        10,
+		Supporters: []*pb.GroupActionSupporter{
+			{CharacterId: "char-2", Trait: "strength"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("SessionGroupActionFlow returned error: %v", err)
+	}
+	if resp.LeaderRoll == nil {
+		t.Fatal("expected leader roll in response")
+	}
+	if len(resp.SupporterRolls) == 0 {
+		t.Fatal("expected supporter rolls in response")
+	}
+}
+
+func TestSessionTagTeamFlow_Success(t *testing.T) {
+	svc := newActionTestService()
+	ctx := grpcmeta.WithRequestID(context.Background(), "req-tagteam-1")
+	resp, err := svc.SessionTagTeamFlow(ctx, &pb.SessionTagTeamFlowRequest{
+		CampaignId:          "camp-1",
+		SessionId:           "sess-1",
+		Difficulty:          10,
+		First:               &pb.TagTeamParticipant{CharacterId: "char-1", Trait: "agility"},
+		Second:              &pb.TagTeamParticipant{CharacterId: "char-2", Trait: "strength"},
+		SelectedCharacterId: "char-1",
+	})
+	if err != nil {
+		t.Fatalf("SessionTagTeamFlow returned error: %v", err)
+	}
+	if resp.FirstRoll == nil {
+		t.Fatal("expected first roll in response")
+	}
+	if resp.SecondRoll == nil {
+		t.Fatal("expected second roll in response")
+	}
+}
+
+func TestApplyAttackOutcome_Success(t *testing.T) {
+	svc := newActionTestService()
+	// Create an action roll event first.
+	rollCtx := grpcmeta.WithRequestID(context.Background(), "req-atk-outcome-1")
+	rollResp, err := svc.SessionActionRoll(rollCtx, &pb.SessionActionRollRequest{
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		CharacterId: "char-1",
+		Trait:       "agility",
+		Difficulty:  10,
+	})
+	if err != nil {
+		t.Fatalf("SessionActionRoll returned error: %v", err)
+	}
+
+	ctx := grpcmeta.WithRequestID(
+		withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1"),
+		"req-atk-outcome-1",
+	)
+	resp, err := svc.ApplyAttackOutcome(ctx, &pb.DaggerheartApplyAttackOutcomeRequest{
+		SessionId: "sess-1",
+		RollSeq:   rollResp.RollSeq,
+		Targets:   []string{"char-2"},
+	})
+	if err != nil {
+		t.Fatalf("ApplyAttackOutcome returned error: %v", err)
+	}
+	if resp.Result == nil {
+		t.Fatal("expected result in response")
+	}
+	if resp.CharacterId != "char-1" {
+		t.Fatalf("expected attacker char-1, got %s", resp.CharacterId)
+	}
+}
+
+func TestApplyAdversaryAttackOutcome_Success(t *testing.T) {
+	svc := newAdversaryDamageTestService()
+	// Create an adversary attack roll event first.
+	rollCtx := grpcmeta.WithRequestID(context.Background(), "req-adv-atk-outcome-1")
+	rollResp, err := svc.SessionAdversaryAttackRoll(rollCtx, &pb.SessionAdversaryAttackRollRequest{
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		AdversaryId: "adv-1",
+	})
+	if err != nil {
+		t.Fatalf("SessionAdversaryAttackRoll returned error: %v", err)
+	}
+
+	ctx := grpcmeta.WithRequestID(
+		withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1"),
+		"req-adv-atk-outcome-1",
+	)
+	resp, err := svc.ApplyAdversaryAttackOutcome(ctx, &pb.DaggerheartApplyAdversaryAttackOutcomeRequest{
+		SessionId:  "sess-1",
+		RollSeq:    rollResp.RollSeq,
+		Targets:    []string{"char-1"},
+		Difficulty: 10,
+	})
+	if err != nil {
+		t.Fatalf("ApplyAdversaryAttackOutcome returned error: %v", err)
+	}
+	if resp.Result == nil {
+		t.Fatal("expected result in response")
+	}
+	if resp.AdversaryId != "adv-1" {
+		t.Fatalf("expected adversary adv-1, got %s", resp.AdversaryId)
 	}
 }

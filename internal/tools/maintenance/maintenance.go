@@ -83,8 +83,7 @@ func Run(ctx context.Context, cfg Config, out io.Writer, errOut io.Writer) error
 		return errors.New("-integrity does not support -after-seq; replay must start at the beginning")
 	}
 
-	ids, err := resolveCampaignIDs(cfg.CampaignID, cfg.CampaignIDs)
-	if err != nil {
+	if _, err := resolveCampaignIDs(cfg.CampaignID, cfg.CampaignIDs); err != nil {
 		return err
 	}
 	if cfg.WarningsCap < 0 {
@@ -95,6 +94,20 @@ func Run(ctx context.Context, cfg Config, out io.Writer, errOut io.Writer) error
 	if err != nil {
 		return err
 	}
+
+	return runWithDeps(ctx, cfg, eventStore, projStore, out, errOut)
+}
+
+// runWithDeps contains the core maintenance logic with injectable dependencies.
+// It owns the lifecycle of the stores (closing them on return).
+func runWithDeps(ctx context.Context, cfg Config, eventStore closableEventStore, projStore closableProjectionStore, out io.Writer, errOut io.Writer) error {
+	if out == nil {
+		out = io.Discard
+	}
+	if errOut == nil {
+		errOut = io.Discard
+	}
+
 	defer func() {
 		if err := eventStore.Close(); err != nil {
 			fmt.Fprintf(errOut, "Error: close event store: %v\n", err)
@@ -103,6 +116,15 @@ func Run(ctx context.Context, cfg Config, out io.Writer, errOut io.Writer) error
 			fmt.Fprintf(errOut, "Error: close projection store: %v\n", err)
 		}
 	}()
+
+	if cfg.Validate {
+		cfg.DryRun = true
+	}
+
+	ids, err := resolveCampaignIDs(cfg.CampaignID, cfg.CampaignIDs)
+	if err != nil {
+		return err
+	}
 
 	options := runOptions{
 		AfterSeq:    cfg.AfterSeq,
@@ -657,7 +679,17 @@ func checkSnapshotIntegrity(ctx context.Context, eventStore storage.EventStore, 
 		}
 	}()
 
-	campaignRecord, err := projStore.Get(ctx, campaignID)
+	return checkIntegrityWithStores(ctx, eventStore, projStore, scratch, campaignID, untilSeq, errOut)
+}
+
+// checkIntegrityWithStores contains the testable integrity logic. It seeds the
+// scratch store, replays events, and compares projections between source and
+// scratch.
+func checkIntegrityWithStores(ctx context.Context, eventStore storage.EventStore, source storage.ProjectionStore, scratch storage.ProjectionStore, campaignID string, untilSeq uint64, errOut io.Writer) (integrityReport, []string, error) {
+	report := integrityReport{}
+	warnings := []string{}
+
+	campaignRecord, err := source.Get(ctx, campaignID)
 	if err != nil {
 		return report, warnings, fmt.Errorf("load campaign: %w", err)
 	}
@@ -672,7 +704,7 @@ func checkSnapshotIntegrity(ctx context.Context, eventStore storage.EventStore, 
 	}
 	report.LastSeq = lastSeq
 
-	sourceSnapshot, err := projStore.GetDaggerheartSnapshot(ctx, campaignID)
+	sourceSnapshot, err := source.GetDaggerheartSnapshot(ctx, campaignID)
 	if err != nil {
 		return report, warnings, fmt.Errorf("get source snapshot: %w", err)
 	}
@@ -686,12 +718,12 @@ func checkSnapshotIntegrity(ctx context.Context, eventStore storage.EventStore, 
 
 	pageToken := ""
 	for {
-		page, err := projStore.ListCharacters(ctx, campaignID, adminReplayPageSize, pageToken)
+		page, err := source.ListCharacters(ctx, campaignID, adminReplayPageSize, pageToken)
 		if err != nil {
 			return report, warnings, fmt.Errorf("list characters: %w", err)
 		}
 		for _, ch := range page.Characters {
-			sourceState, err := projStore.GetDaggerheartCharacterState(ctx, campaignID, ch.ID)
+			sourceState, err := source.GetDaggerheartCharacterState(ctx, campaignID, ch.ID)
 			if err != nil {
 				if errors.Is(err, storage.ErrNotFound) {
 					report.MissingStates++

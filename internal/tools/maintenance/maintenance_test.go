@@ -11,6 +11,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -457,55 +459,6 @@ func TestRunValidationErrors(t *testing.T) {
 			t.Fatalf("expected warnings-cap error, got %v", err)
 		}
 	})
-}
-
-// --- fake event store ---
-
-// fakeEventStore implements storage.EventStore with canned events.
-type fakeEventStore struct {
-	events  map[string][]event.Event // keyed by campaignID
-	listErr error
-}
-
-func (f *fakeEventStore) AppendEvent(_ context.Context, _ event.Event) (event.Event, error) {
-	return event.Event{}, fmt.Errorf("not implemented")
-}
-
-func (f *fakeEventStore) GetEventByHash(_ context.Context, _ string) (event.Event, error) {
-	return event.Event{}, fmt.Errorf("not implemented")
-}
-
-func (f *fakeEventStore) GetEventBySeq(_ context.Context, _ string, _ uint64) (event.Event, error) {
-	return event.Event{}, fmt.Errorf("not implemented")
-}
-
-func (f *fakeEventStore) ListEvents(_ context.Context, campaignID string, afterSeq uint64, limit int) ([]event.Event, error) {
-	if f.listErr != nil {
-		return nil, f.listErr
-	}
-	all := f.events[campaignID]
-	var result []event.Event
-	for _, evt := range all {
-		if evt.Seq > afterSeq {
-			result = append(result, evt)
-			if len(result) >= limit {
-				break
-			}
-		}
-	}
-	return result, nil
-}
-
-func (f *fakeEventStore) ListEventsBySession(_ context.Context, _, _ string, _ uint64, _ int) ([]event.Event, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (f *fakeEventStore) GetLatestEventSeq(_ context.Context, _ string) (uint64, error) {
-	return 0, fmt.Errorf("not implemented")
-}
-
-func (f *fakeEventStore) ListEventsPage(_ context.Context, _ storage.ListEventsPageRequest) (storage.ListEventsPageResult, error) {
-	return storage.ListEventsPageResult{}, fmt.Errorf("not implemented")
 }
 
 // --- scanSnapshotEvents tests ---
@@ -1075,5 +1028,324 @@ func TestRunCampaignDryRunWithJSONOutput(t *testing.T) {
 	outputJSON(&out, io.Discard, result)
 	if !strings.Contains(out.String(), `"campaign_id":"c1"`) {
 		t.Fatalf("expected campaign_id in JSON output: %s", out.String())
+	}
+}
+
+// --- runWithDeps tests ---
+
+func TestRunWithDeps_MultiCampaign(t *testing.T) {
+	evtStore := &fakeClosableEventStore{
+		fakeEventStore: fakeEventStore{events: map[string][]event.Event{
+			"c1": {{Seq: 1, Type: event.TypeCampaignCreated}},
+			"c2": {{Seq: 1, Type: event.TypeCampaignCreated}},
+		}},
+	}
+	projStore := &fakeClosableProjectionStore{}
+
+	cfg := Config{
+		CampaignIDs: "c1, c2",
+		DryRun:      true,
+		WarningsCap: 25,
+	}
+	var out, errOut bytes.Buffer
+	err := runWithDeps(t.Context(), cfg, evtStore, projStore, &out, &errOut)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	output := out.String()
+	if !strings.Contains(output, "c1") {
+		t.Errorf("expected c1 in output: %s", output)
+	}
+	if !strings.Contains(output, "c2") {
+		t.Errorf("expected c2 in output: %s", output)
+	}
+}
+
+func TestRunWithDeps_OneCampaignFails(t *testing.T) {
+	evtStore := &fakeClosableEventStore{
+		fakeEventStore: fakeEventStore{events: map[string][]event.Event{
+			"c1": {{Seq: 1, Type: daggerheart.EventTypeCharacterStatePatched, SystemID: "dh", PayloadJSON: []byte(`{invalid`)}},
+			"c2": {{Seq: 1, Type: event.TypeCampaignCreated}},
+		}},
+	}
+	projStore := &fakeClosableProjectionStore{}
+
+	cfg := Config{
+		CampaignIDs: "c1, c2",
+		DryRun:      true,
+		Validate:    true,
+		WarningsCap: 25,
+	}
+	var out, errOut bytes.Buffer
+	err := runWithDeps(t.Context(), cfg, evtStore, projStore, &out, &errOut)
+	// One campaign has invalid events, so the overall run should fail.
+	if err == nil {
+		t.Fatal("expected error when one campaign fails")
+	}
+	// But c2 should still have been processed.
+	if !strings.Contains(out.String(), "c2") {
+		t.Errorf("expected c2 to be processed despite c1 failure: %s", out.String())
+	}
+}
+
+func TestRunWithDeps_JSONOutputMode(t *testing.T) {
+	evtStore := &fakeClosableEventStore{
+		fakeEventStore: fakeEventStore{events: map[string][]event.Event{
+			"c1": {{Seq: 1, Type: event.TypeCampaignCreated}},
+		}},
+	}
+	projStore := &fakeClosableProjectionStore{}
+
+	cfg := Config{
+		CampaignID:  "c1",
+		DryRun:      true,
+		JSONOutput:  true,
+		WarningsCap: 25,
+	}
+	var out, errOut bytes.Buffer
+	err := runWithDeps(t.Context(), cfg, evtStore, projStore, &out, &errOut)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out.String(), `"campaign_id":"c1"`) {
+		t.Errorf("expected JSON output with campaign_id: %s", out.String())
+	}
+}
+
+func TestRunWithDeps_StoreCloseError(t *testing.T) {
+	evtStore := &fakeClosableEventStore{
+		fakeEventStore: fakeEventStore{events: map[string][]event.Event{
+			"c1": {{Seq: 1, Type: event.TypeCampaignCreated}},
+		}},
+		closeErr: fmt.Errorf("event close failed"),
+	}
+	projStore := &fakeClosableProjectionStore{
+		closeErr: fmt.Errorf("proj close failed"),
+	}
+
+	cfg := Config{
+		CampaignID:  "c1",
+		DryRun:      true,
+		WarningsCap: 25,
+	}
+	var out, errOut bytes.Buffer
+	err := runWithDeps(t.Context(), cfg, evtStore, projStore, &out, &errOut)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Close errors should be written to errOut.
+	errOutput := errOut.String()
+	if !strings.Contains(errOutput, "event close failed") {
+		t.Errorf("expected event close error in errOut: %s", errOutput)
+	}
+	if !strings.Contains(errOutput, "proj close failed") {
+		t.Errorf("expected proj close error in errOut: %s", errOutput)
+	}
+	// Both stores should be closed.
+	if !evtStore.closed {
+		t.Error("expected event store to be closed")
+	}
+	if !projStore.closed {
+		t.Error("expected projection store to be closed")
+	}
+}
+
+// --- runCampaign replay path tests ---
+
+func TestRunCampaignReplayEmptyEvents(t *testing.T) {
+	evtStore := &fakeEventStore{events: map[string][]event.Event{}}
+	projStore := &fakeProjectionStore{}
+	result := runCampaign(t.Context(), evtStore, projStore, "c1", runOptions{WarningsCap: 25}, io.Discard)
+	if result.ExitCode != 0 {
+		t.Fatalf("expected exit code 0, got %d (error: %s)", result.ExitCode, result.Error)
+	}
+	if result.Mode != "replay" {
+		t.Fatalf("expected mode replay, got %s", result.Mode)
+	}
+}
+
+func TestRunCampaignReplayAfterSeqEmptyEvents(t *testing.T) {
+	evtStore := &fakeEventStore{events: map[string][]event.Event{}}
+	projStore := &fakeProjectionStore{}
+	result := runCampaign(t.Context(), evtStore, projStore, "c1", runOptions{AfterSeq: 5, WarningsCap: 25}, io.Discard)
+	if result.ExitCode != 0 {
+		t.Fatalf("expected exit code 0, got %d (error: %s)", result.ExitCode, result.Error)
+	}
+}
+
+func TestRunCampaignReplayEventStoreError(t *testing.T) {
+	evtStore := &fakeEventStore{listErr: fmt.Errorf("disk error")}
+	projStore := &fakeProjectionStore{}
+	result := runCampaign(t.Context(), evtStore, projStore, "c1", runOptions{WarningsCap: 25}, io.Discard)
+	if result.ExitCode != 1 {
+		t.Fatalf("expected exit code 1, got %d", result.ExitCode)
+	}
+	if !strings.Contains(result.Error, "replay snapshot") {
+		t.Fatalf("expected replay error, got: %s", result.Error)
+	}
+}
+
+func TestRunCampaignReplayAfterSeqEventStoreError(t *testing.T) {
+	evtStore := &fakeEventStore{listErr: fmt.Errorf("disk error")}
+	projStore := &fakeProjectionStore{}
+	result := runCampaign(t.Context(), evtStore, projStore, "c1", runOptions{AfterSeq: 5, WarningsCap: 25}, io.Discard)
+	if result.ExitCode != 1 {
+		t.Fatalf("expected exit code 1, got %d", result.ExitCode)
+	}
+	if !strings.Contains(result.Error, "replay snapshot") {
+		t.Fatalf("expected replay error, got: %s", result.Error)
+	}
+}
+
+// --- checkIntegrityWithStores tests ---
+
+func TestCheckIntegrityWithStores_GMFearMismatch(t *testing.T) {
+	evtStore := &fakeEventStore{events: map[string][]event.Event{}}
+	source := &fakeProjectionStore{
+		get: func(_ context.Context, _ string) (campaign.Campaign, error) {
+			return campaign.Campaign{ID: "c1"}, nil
+		},
+		getDaggerheartSnapshot: func(_ context.Context, _ string) (storage.DaggerheartSnapshot, error) {
+			return storage.DaggerheartSnapshot{GMFear: 5}, nil
+		},
+		listCharacters: func(_ context.Context, _ string, _ int, _ string) (storage.CharacterPage, error) {
+			return storage.CharacterPage{}, nil
+		},
+	}
+	scratch := &fakeProjectionStore{
+		put: func(_ context.Context, _ campaign.Campaign) error { return nil },
+		getDaggerheartSnapshot: func(_ context.Context, _ string) (storage.DaggerheartSnapshot, error) {
+			return storage.DaggerheartSnapshot{GMFear: 3}, nil
+		},
+	}
+	report, _, err := checkIntegrityWithStores(t.Context(), evtStore, source, scratch, "c1", 0, io.Discard)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if report.GmFearMatch {
+		t.Fatal("expected GM fear mismatch")
+	}
+	if report.GmFearSource != 5 || report.GmFearReplay != 3 {
+		t.Fatalf("expected source=5 replay=3, got source=%d replay=%d", report.GmFearSource, report.GmFearReplay)
+	}
+}
+
+func TestCheckIntegrityWithStores_GMFearMatch(t *testing.T) {
+	evtStore := &fakeEventStore{events: map[string][]event.Event{}}
+	source := &fakeProjectionStore{
+		get: func(_ context.Context, _ string) (campaign.Campaign, error) {
+			return campaign.Campaign{ID: "c1"}, nil
+		},
+		getDaggerheartSnapshot: func(_ context.Context, _ string) (storage.DaggerheartSnapshot, error) {
+			return storage.DaggerheartSnapshot{GMFear: 5}, nil
+		},
+		listCharacters: func(_ context.Context, _ string, _ int, _ string) (storage.CharacterPage, error) {
+			return storage.CharacterPage{}, nil
+		},
+	}
+	scratch := &fakeProjectionStore{
+		put: func(_ context.Context, _ campaign.Campaign) error { return nil },
+		getDaggerheartSnapshot: func(_ context.Context, _ string) (storage.DaggerheartSnapshot, error) {
+			return storage.DaggerheartSnapshot{GMFear: 5}, nil
+		},
+	}
+	report, _, err := checkIntegrityWithStores(t.Context(), evtStore, source, scratch, "c1", 0, io.Discard)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !report.GmFearMatch {
+		t.Fatal("expected GM fear match")
+	}
+}
+
+func TestCheckIntegrityWithStores_CharacterMismatch(t *testing.T) {
+	evtStore := &fakeEventStore{events: map[string][]event.Event{}}
+	source := &fakeProjectionStore{
+		get: func(_ context.Context, _ string) (campaign.Campaign, error) {
+			return campaign.Campaign{ID: "c1"}, nil
+		},
+		getDaggerheartSnapshot: func(_ context.Context, _ string) (storage.DaggerheartSnapshot, error) {
+			return storage.DaggerheartSnapshot{GMFear: 0}, nil
+		},
+		listCharacters: func(_ context.Context, _ string, _ int, _ string) (storage.CharacterPage, error) {
+			return storage.CharacterPage{
+				Characters: []character.Character{{ID: "ch1"}},
+			}, nil
+		},
+		getDaggerheartCharState: func(_ context.Context, _, charID string) (storage.DaggerheartCharacterState, error) {
+			return storage.DaggerheartCharacterState{Hp: 10, Hope: 5, Stress: 2}, nil
+		},
+	}
+	scratch := &fakeProjectionStore{
+		put: func(_ context.Context, _ campaign.Campaign) error { return nil },
+		getDaggerheartSnapshot: func(_ context.Context, _ string) (storage.DaggerheartSnapshot, error) {
+			return storage.DaggerheartSnapshot{GMFear: 0}, nil
+		},
+		getDaggerheartCharState: func(_ context.Context, _, charID string) (storage.DaggerheartCharacterState, error) {
+			return storage.DaggerheartCharacterState{Hp: 8, Hope: 3, Stress: 2}, nil
+		},
+	}
+	report, warnings, err := checkIntegrityWithStores(t.Context(), evtStore, source, scratch, "c1", 0, io.Discard)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if report.CharacterMismatches != 1 {
+		t.Fatalf("expected 1 character mismatch, got %d", report.CharacterMismatches)
+	}
+	if len(warnings) != 1 {
+		t.Fatalf("expected 1 warning, got %d", len(warnings))
+	}
+}
+
+func TestCheckIntegrityWithStores_MissingSourceState(t *testing.T) {
+	evtStore := &fakeEventStore{events: map[string][]event.Event{}}
+	source := &fakeProjectionStore{
+		get: func(_ context.Context, _ string) (campaign.Campaign, error) {
+			return campaign.Campaign{ID: "c1"}, nil
+		},
+		getDaggerheartSnapshot: func(_ context.Context, _ string) (storage.DaggerheartSnapshot, error) {
+			return storage.DaggerheartSnapshot{}, nil
+		},
+		listCharacters: func(_ context.Context, _ string, _ int, _ string) (storage.CharacterPage, error) {
+			return storage.CharacterPage{
+				Characters: []character.Character{{ID: "ch1"}},
+			}, nil
+		},
+		getDaggerheartCharState: func(_ context.Context, _, _ string) (storage.DaggerheartCharacterState, error) {
+			return storage.DaggerheartCharacterState{}, storage.ErrNotFound
+		},
+	}
+	scratch := &fakeProjectionStore{
+		put: func(_ context.Context, _ campaign.Campaign) error { return nil },
+		getDaggerheartSnapshot: func(_ context.Context, _ string) (storage.DaggerheartSnapshot, error) {
+			return storage.DaggerheartSnapshot{}, nil
+		},
+	}
+	report, warnings, err := checkIntegrityWithStores(t.Context(), evtStore, source, scratch, "c1", 0, io.Discard)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if report.MissingStates != 1 {
+		t.Fatalf("expected 1 missing state, got %d", report.MissingStates)
+	}
+	if len(warnings) != 1 || !strings.Contains(warnings[0], "missing source state") {
+		t.Fatalf("expected missing source state warning, got %v", warnings)
+	}
+}
+
+func TestCheckIntegrityWithStores_CampaignLoadError(t *testing.T) {
+	evtStore := &fakeEventStore{events: map[string][]event.Event{}}
+	source := &fakeProjectionStore{
+		get: func(_ context.Context, _ string) (campaign.Campaign, error) {
+			return campaign.Campaign{}, fmt.Errorf("load failed")
+		},
+	}
+	scratch := &fakeProjectionStore{}
+	_, _, err := checkIntegrityWithStores(t.Context(), evtStore, source, scratch, "c1", 0, io.Discard)
+	if err == nil {
+		t.Fatal("expected error for campaign load failure")
+	}
+	if !strings.Contains(err.Error(), "load campaign") {
+		t.Fatalf("expected load campaign error, got: %v", err)
 	}
 }

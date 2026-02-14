@@ -76,6 +76,8 @@ make proto       # Regenerate proto code
 
 Commit in small, task-sized increments as you work; do not batch everything into a single final commit.
 
+Before committing, run `make fmt` to ensure consistent formatting.
+
 Use matching prefixes with a short, why-focused subject:
 - `feat:` - New features
 - `fix:` - Bug fixes
