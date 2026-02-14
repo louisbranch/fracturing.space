@@ -42,3 +42,22 @@ func TestTranslateLocalizer(t *testing.T) {
 		t.Fatal("expected translated value")
 	}
 }
+
+func TestAppendQueryParam(t *testing.T) {
+	if got := AppendQueryParam("/campaigns", "page_token", "abc"); got != "/campaigns?page_token=abc" {
+		t.Fatalf("expected query param appended, got %q", got)
+	}
+	if got := AppendQueryParam("/campaigns?event_type=foo", "page_token", "a b"); got != "/campaigns?event_type=foo&page_token=a+b" {
+		t.Fatalf("expected encoded param appended, got %q", got)
+	}
+}
+
+func TestEventFilterBaseURL(t *testing.T) {
+	filters := EventFilterOptions{EventType: "session.started", StartDate: "2024-02-01"}
+	if got := EventFilterBaseURL("/campaigns/camp-1/events", filters); got != "/campaigns/camp-1/events?event_type=session.started&start_date=2024-02-01" {
+		t.Fatalf("expected filters encoded, got %q", got)
+	}
+	if got := EventFilterBaseURL("/campaigns/camp-1/events", EventFilterOptions{}); got != "/campaigns/camp-1/events" {
+		t.Fatalf("expected base url, got %q", got)
+	}
+}

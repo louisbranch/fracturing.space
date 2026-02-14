@@ -25,6 +25,7 @@ proto:
 
 templ-generate:
 	go run github.com/a-h/templ/cmd/templ@v0.3.977 generate ./...
+	goimports -w .
 
 fmt:
 	goimports -w .

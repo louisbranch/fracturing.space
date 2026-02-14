@@ -279,7 +279,7 @@ func NewServer(ctx context.Context, config Config) (*Server, error) {
 		}
 	}
 
-	handler := NewHandler(clients)
+	handler := NewHandlerWithConfig(clients, config.GRPCAddr)
 	httpServer := &http.Server{
 		Addr:              httpAddr,
 		Handler:           handler,

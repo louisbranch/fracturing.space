@@ -1,11 +1,14 @@
 package admin
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -20,6 +23,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/admin/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/templates"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	"github.com/louisbranch/fracturing.space/internal/tools/scenario"
 	"golang.org/x/text/message"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -44,6 +48,10 @@ const (
 	impersonationSessionTTL = 24 * time.Hour
 	// impersonationCleanupInterval controls how often expired sessions are purged.
 	impersonationCleanupInterval = 30 * time.Minute
+	// maxScenarioScriptSize caps scenario scripts to limit resource usage.
+	maxScenarioScriptSize = 100 * 1024
+	// scenarioTempDirEnv configures the temp directory for scenario scripts.
+	scenarioTempDirEnv = "FRACTURING_SPACE_SCENARIO_TMPDIR"
 )
 
 // GRPCClientProvider supplies gRPC clients for request handling.
@@ -64,6 +72,7 @@ type GRPCClientProvider interface {
 type Handler struct {
 	clientProvider GRPCClientProvider
 	impersonation  *impersonationStore
+	grpcAddr       string
 }
 
 type impersonationSession struct {
@@ -136,9 +145,15 @@ func (s *impersonationStore) cleanupLocked(now time.Time) {
 
 // NewHandler builds the HTTP handler for the admin server.
 func NewHandler(clientProvider GRPCClientProvider) http.Handler {
+	return NewHandlerWithConfig(clientProvider, "")
+}
+
+// NewHandlerWithConfig builds the HTTP handler with explicit configuration.
+func NewHandlerWithConfig(clientProvider GRPCClientProvider, grpcAddr string) http.Handler {
 	handler := &Handler{
 		clientProvider: clientProvider,
 		impersonation:  newImpersonationStore(),
+		grpcAddr:       strings.TrimSpace(grpcAddr),
 	}
 	return handler.routes()
 }
@@ -188,6 +203,8 @@ func (h *Handler) routes() http.Handler {
 	mux.Handle("/users/impersonate", http.HandlerFunc(h.handleImpersonateUser))
 	mux.Handle("/users/logout", http.HandlerFunc(h.handleLogout))
 	mux.Handle("/users/", http.HandlerFunc(h.handleUserRoutes))
+	mux.Handle("/scenarios", http.HandlerFunc(h.handleScenarios))
+	mux.Handle("/scenarios/", http.HandlerFunc(h.handleScenarioRoutes))
 	return h.withImpersonation(mux)
 }
 
@@ -203,6 +220,314 @@ func (h *Handler) withImpersonation(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+// handleScenarios renders the scenarios page or runs a scenario script.
+func (h *Handler) handleScenarios(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		h.handleScenarioRun(w, r)
+		return
+	}
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	loc, lang := h.localizer(w, r)
+	view := templates.ScenarioPageView{}
+	if shouldPrefillScenarioScript(r) {
+		view.Script = defaultScenarioScript()
+	}
+	if isHTMXRequest(r) {
+		templ.Handler(templates.ScenariosPage(view, loc)).ServeHTTP(w, r)
+		return
+	}
+	pageCtx := h.pageContext(lang, loc, r)
+	templ.Handler(templates.ScenariosFullPage(view, pageCtx)).ServeHTTP(w, r)
+}
+
+func defaultScenarioScript() string {
+	return `local scene = Scenario.new("My Scenario")
+scene:campaign({name = "My campaign"})
+
+-- You must gather your party before venturing forth!
+
+
+
+return scene`
+}
+
+func shouldPrefillScenarioScript(r *http.Request) bool {
+	if !isHTMXRequest(r) {
+		return true
+	}
+	return r.URL.Query().Get("prefill") == "1"
+}
+
+// handleScenarioRoutes dispatches scenario subroutes.
+func (h *Handler) handleScenarioRoutes(w http.ResponseWriter, r *http.Request) {
+	if strings.HasSuffix(r.URL.Path, "/") {
+		canonical := strings.TrimRight(r.URL.Path, "/")
+		if canonical == "" {
+			canonical = "/"
+		}
+		http.Redirect(w, r, canonical, http.StatusMovedPermanently)
+		return
+	}
+	scenarioPath := strings.TrimPrefix(r.URL.Path, "/scenarios/")
+	parts := splitPathParts(scenarioPath)
+
+	if len(parts) == 2 && parts[1] == "events" {
+		h.handleScenarioEvents(w, r, parts[0])
+		return
+	}
+	if len(parts) == 3 && parts[1] == "events" && parts[2] == "table" {
+		h.handleScenarioEventsTable(w, r, parts[0])
+		return
+	}
+
+	http.NotFound(w, r)
+}
+
+func (h *Handler) handleScenarioRun(w http.ResponseWriter, r *http.Request) {
+	loc, lang := h.localizer(w, r)
+	if !requireSameOrigin(w, r, loc) {
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		log.Printf("parse scenario form: %v", err)
+		view := templates.ScenarioPageView{
+			Logs:        loc.Sprintf("scenarios.error.parse_failed"),
+			Status:      loc.Sprintf("scenarios.status.failed"),
+			StatusBadge: "error",
+		}
+		view.HasRun = true
+		h.renderScenarioResponse(w, r, view, loc, lang)
+		return
+	}
+
+	script := strings.TrimSpace(r.FormValue("script"))
+	view := templates.ScenarioPageView{Script: script}
+	if script == "" {
+		view.Logs = loc.Sprintf("scenarios.error.empty_script")
+		view.Status = loc.Sprintf("scenarios.status.failed")
+		view.StatusBadge = "error"
+		view.HasRun = true
+		h.renderScenarioResponse(w, r, view, loc, lang)
+		return
+	}
+	if len(script) > maxScenarioScriptSize {
+		view.Logs = loc.Sprintf("scenarios.error.script_too_large")
+		view.Status = loc.Sprintf("scenarios.status.failed")
+		view.StatusBadge = "error"
+		view.HasRun = true
+		h.renderScenarioResponse(w, r, view, loc, lang)
+		return
+	}
+
+	logs, campaignID, runErr := h.runScenarioScript(r.Context(), script)
+	if runErr != nil {
+		logs = strings.TrimSpace(strings.Join([]string{logs, loc.Sprintf("scenarios.log.error_prefix", runErr.Error())}, "\n"))
+		view.Status = loc.Sprintf("scenarios.status.failed")
+		view.StatusBadge = "error"
+	} else {
+		view.Status = loc.Sprintf("scenarios.status.success")
+		view.StatusBadge = "success"
+	}
+	view.Logs = logs
+	view.CampaignID = campaignID
+	if campaignID != "" {
+		view.EventsURL = "/scenarios/" + campaignID + "/events"
+	}
+	view.HasRun = true
+	if campaignID != "" {
+		view.CampaignName = getCampaignName(h, r, campaignID, loc)
+	}
+
+	h.renderScenarioResponse(w, r, view, loc, lang)
+}
+
+func (h *Handler) renderScenarioResponse(w http.ResponseWriter, r *http.Request, view templates.ScenarioPageView, loc *message.Printer, lang string) {
+	if isHTMXRequest(r) {
+		templ.Handler(templates.ScenarioScriptPanel(view, loc)).ServeHTTP(w, r)
+		return
+	}
+	pageCtx := h.pageContext(lang, loc, r)
+	templ.Handler(templates.ScenariosFullPage(view, pageCtx)).ServeHTTP(w, r)
+}
+
+func (h *Handler) handleScenarioEvents(w http.ResponseWriter, r *http.Request, campaignID string) {
+	loc, lang := h.localizer(w, r)
+	message := ""
+	var events []templates.EventRow
+	var totalCount int32
+	var nextToken, prevToken string
+	filters := parseEventFilters(r)
+	pageToken := r.URL.Query().Get("page_token")
+
+	if eventClient := h.eventClient(); eventClient != nil {
+		ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
+		defer cancel()
+
+		filterExpr := buildEventFilterExpression(filters)
+		eventsResp, err := eventClient.ListEvents(ctx, &statev1.ListEventsRequest{
+			CampaignId: campaignID,
+			PageSize:   eventListPageSize,
+			PageToken:  pageToken,
+			OrderBy:    "seq desc",
+			Filter:     filterExpr,
+		})
+		if err != nil {
+			log.Printf("list scenario events: %v", err)
+			message = loc.Sprintf("error.events_unavailable")
+		} else if eventsResp != nil {
+			events = buildEventRows(eventsResp.GetEvents(), loc)
+			totalCount = eventsResp.GetTotalSize()
+			nextToken = eventsResp.GetNextPageToken()
+			prevToken = eventsResp.GetPreviousPageToken()
+		}
+	} else {
+		message = loc.Sprintf("error.event_service_unavailable")
+	}
+
+	campaignName := getCampaignName(h, r, campaignID, loc)
+	view := templates.ScenarioEventsView{
+		CampaignID:   campaignID,
+		CampaignName: campaignName,
+		Events:       events,
+		Filters:      filters,
+		TotalCount:   totalCount,
+		NextToken:    nextToken,
+		PrevToken:    prevToken,
+		Message:      message,
+	}
+
+	if isHTMXRequest(r) {
+		templ.Handler(templates.ScenarioEventsPage(view, loc)).ServeHTTP(w, r)
+		return
+	}
+	pageCtx := h.pageContext(lang, loc, r)
+	templ.Handler(templates.ScenarioEventsFullPage(view, pageCtx)).ServeHTTP(w, r)
+}
+
+func (h *Handler) handleScenarioEventsTable(w http.ResponseWriter, r *http.Request, campaignID string) {
+	loc, _ := h.localizer(w, r)
+	message := ""
+	var events []templates.EventRow
+	var totalCount int32
+	var nextToken, prevToken string
+	filters := parseEventFilters(r)
+	pageToken := r.URL.Query().Get("page_token")
+
+	if eventClient := h.eventClient(); eventClient != nil {
+		ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
+		defer cancel()
+
+		filterExpr := buildEventFilterExpression(filters)
+		eventsResp, err := eventClient.ListEvents(ctx, &statev1.ListEventsRequest{
+			CampaignId: campaignID,
+			PageSize:   eventListPageSize,
+			PageToken:  pageToken,
+			OrderBy:    "seq desc",
+			Filter:     filterExpr,
+		})
+		if err != nil {
+			log.Printf("list scenario events: %v", err)
+			message = loc.Sprintf("error.events_unavailable")
+		} else if eventsResp != nil {
+			events = buildEventRows(eventsResp.GetEvents(), loc)
+			totalCount = eventsResp.GetTotalSize()
+			nextToken = eventsResp.GetNextPageToken()
+			prevToken = eventsResp.GetPreviousPageToken()
+		}
+	} else {
+		message = loc.Sprintf("error.event_service_unavailable")
+	}
+
+	view := templates.ScenarioEventsView{
+		CampaignID: campaignID,
+		Events:     events,
+		Filters:    filters,
+		TotalCount: totalCount,
+		NextToken:  nextToken,
+		PrevToken:  prevToken,
+		Message:    message,
+	}
+
+	if pushURL := eventFilterPushURL("/scenarios/"+campaignID+"/events", filters, pageToken); pushURL != "" {
+		w.Header().Set("HX-Push-Url", pushURL)
+	}
+
+	templ.Handler(templates.ScenarioEventsTableContent(view, loc)).ServeHTTP(w, r)
+}
+
+func (h *Handler) runScenarioScript(ctx context.Context, script string) (string, string, error) {
+	tempDir := strings.TrimSpace(os.Getenv(scenarioTempDirEnv))
+	if tempDir != "" {
+		if err := os.MkdirAll(tempDir, 0o755); err != nil {
+			return "", "", err
+		}
+	}
+	file, err := os.CreateTemp(tempDir, "scenario-*.lua")
+	if err != nil {
+		return "", "", err
+	}
+	path := file.Name()
+	defer func() {
+		if err := file.Close(); err != nil {
+			log.Printf("close scenario temp file: %v", err)
+		}
+		if err := os.Remove(path); err != nil {
+			log.Printf("remove scenario temp file: %v", err)
+		}
+	}()
+
+	if _, err := io.WriteString(file, script); err != nil {
+		return "", "", err
+	}
+
+	var output bytes.Buffer
+	logger := log.New(&output, "", 0)
+	config := scenario.Config{
+		GRPCAddr:   h.scenarioGRPCAddr(),
+		Timeout:    10 * time.Second,
+		Assertions: scenario.AssertionStrict,
+		Verbose:    true,
+		Logger:     logger,
+	}
+	if err := scenario.RunFile(ctx, config, path); err != nil {
+		return strings.TrimSpace(output.String()), parseScenarioCampaignID(output.String()), err
+	}
+	return strings.TrimSpace(output.String()), parseScenarioCampaignID(output.String()), nil
+}
+
+func (h *Handler) scenarioGRPCAddr() string {
+	if h == nil {
+		return "localhost:8080"
+	}
+	if strings.TrimSpace(h.grpcAddr) != "" {
+		return h.grpcAddr
+	}
+	if env := strings.TrimSpace(os.Getenv("FRACTURING_SPACE_GAME_ADDR")); env != "" {
+		return env
+	}
+	return "localhost:8080"
+}
+
+func parseScenarioCampaignID(logs string) string {
+	const prefix = "campaign created: id="
+	for _, line := range strings.Split(logs, "\n") {
+		index := strings.Index(line, prefix)
+		if index == -1 {
+			continue
+		}
+		remainder := strings.TrimSpace(line[index+len(prefix):])
+		parts := strings.Fields(remainder)
+		if len(parts) > 0 {
+			return parts[0]
+		}
+	}
+	return ""
 }
 
 func (h *Handler) impersonationView(r *http.Request) *templates.ImpersonationView {
@@ -2757,6 +3082,10 @@ func (h *Handler) handleEventLogTable(w http.ResponseWriter, r *http.Request, ca
 		TotalCount:   eventsResp.GetTotalSize(),
 	}
 
+	if pushURL := eventFilterPushURL("/campaigns/"+campaignID+"/events", filters, pageToken); pushURL != "" {
+		w.Header().Set("HX-Push-Url", pushURL)
+	}
+
 	templ.Handler(templates.EventLogTableContent(view, loc)).ServeHTTP(w, r)
 }
 
@@ -2828,6 +3157,14 @@ func parseEventFilters(r *http.Request) templates.EventFilterOptions {
 		StartDate:  r.URL.Query().Get("start_date"),
 		EndDate:    r.URL.Query().Get("end_date"),
 	}
+}
+
+func eventFilterPushURL(basePath string, filters templates.EventFilterOptions, pageToken string) string {
+	pushURL := templates.EventFilterBaseURL(basePath, filters)
+	if pageToken != "" {
+		return templates.AppendQueryParam(pushURL, "page_token", pageToken)
+	}
+	return pushURL
 }
 
 // escapeAIP160StringLiteral escapes special characters for AIP-160 string literals.

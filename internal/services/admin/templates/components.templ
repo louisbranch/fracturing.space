@@ -34,6 +34,18 @@ templ TopNav(activePage string, page PageContext) {
 				</li>
 				<li>
 					<a
+						href="/scenarios?prefill=1"
+						hx-get="/scenarios?prefill=1"
+						hx-target="#main"
+						hx-swap="innerHTML"
+						hx-push-url="true"
+						if activePage == "Scenarios" {
+							class="active"
+						}
+					>{T(page.Loc, "nav.scenarios")}</a>
+				</li>
+				<li>
+					<a
 						href="/users"
 						hx-get="/users"
 						hx-target="#main"
@@ -100,21 +112,33 @@ templ TopNav(activePage string, page PageContext) {
 							}
 						>{T(page.Loc, "nav.dashboard")}</a>
 					</li>
-					<li>
-						<a
-							href="/systems"
-							hx-get="/systems"
-							hx-target="#main"
-							hx-swap="innerHTML"
-							hx-push-url="true"
-							if activePage == "Systems" {
-								class="active"
-							}
-						>{T(page.Loc, "nav.systems")}</a>
-					</li>
-					<li>
-						<a
-							href="/users"
+				<li>
+					<a
+						href="/systems"
+						hx-get="/systems"
+						hx-target="#main"
+						hx-swap="innerHTML"
+						hx-push-url="true"
+						if activePage == "Systems" {
+							class="active"
+						}
+					>{T(page.Loc, "nav.systems")}</a>
+				</li>
+				<li>
+					<a
+						href="/scenarios?prefill=1"
+						hx-get="/scenarios?prefill=1"
+						hx-target="#main"
+						hx-swap="innerHTML"
+						hx-push-url="true"
+						if activePage == "Scenarios" {
+							class="active"
+						}
+					>{T(page.Loc, "nav.scenarios")}</a>
+				</li>
+				<li>
+					<a
+						href="/users"
 							hx-get="/users"
 							hx-target="#main"
 							hx-swap="innerHTML"
@@ -312,6 +336,33 @@ templ CharacterSubNav(campaignID string, characterID string, activePage string, 
 	</div>
 }
 
+// ScenarioSubNav renders the sub-navigation for scenario pages using DaisyUI tabs.
+// The active tab's content is rendered inside a tab-content panel via children.
+templ ScenarioSubNav(eventsURL string, activePage string, loc Localizer) {
+	<div class="tabs tabs-box">
+		@scenarioTabInput("script", activePage, "/scenarios?prefill=1", T(loc, "tab.script"))
+		if activePage == "script" {
+			<div class="tab-content p-4">
+				{ children... }
+			</div>
+		} else {
+			<div class="tab-content"></div>
+		}
+		if eventsURL != "" {
+			@scenarioTabInput("events", activePage, eventsURL, T(loc, "tab.events"))
+		} else {
+			@scenarioTabInputDisabled("events", activePage, T(loc, "tab.events"))
+		}
+		if activePage == "events" {
+			<div class="tab-content p-4">
+				{ children... }
+			</div>
+		} else {
+			<div class="tab-content"></div>
+		}
+	</div>
+}
+
 // characterTabInput renders a single radio-input tab.
 // The active tab is checked; inactive tabs use HTMX to navigate.
 templ characterTabInput(campaignID string, characterID string, page string, activePage string, url string, label string) {
@@ -335,6 +386,44 @@ templ characterTabInput(campaignID string, characterID string, page string, acti
 			hx-push-url={ url }
 		/>
 	}
+}
+
+// scenarioTabInput renders a scenario tab input with HTMX navigation.
+templ scenarioTabInput(page string, activePage string, url string, label string) {
+	if page == activePage {
+		<input
+			type="radio"
+			name="scenario-tabs"
+			class="tab"
+			aria-label={ label }
+			checked
+		/>
+	} else {
+		<input
+			type="radio"
+			name="scenario-tabs"
+			class="tab"
+			aria-label={ label }
+			hx-get={ url }
+			hx-target="#main"
+			hx-swap="innerHTML"
+			hx-push-url={ url }
+		/>
+	}
+}
+
+// scenarioTabInputDisabled renders a disabled scenario tab input.
+templ scenarioTabInputDisabled(page string, activePage string, label string) {
+	<input
+		type="radio"
+		name="scenario-tabs"
+		class="tab"
+		aria-label={ label }
+		disabled
+		if page == activePage {
+			checked
+		}
+	/>
 }
 
 // PageHeader renders a consistent page header with optional breadcrumbs,
@@ -431,8 +520,8 @@ templ Pagination(nextToken string, prevToken string, baseURL string, loc Localiz
 	<div class="flex justify-center mt-4 gap-2">
 		if prevToken != "" {
 			<a
-				href={ templ.SafeURL(baseURL + "?page_token=" + prevToken) }
-				hx-get={ baseURL + "?page_token=" + prevToken }
+				href={ templ.SafeURL(AppendQueryParam(baseURL, "page_token", prevToken)) }
+				hx-get={ AppendQueryParam(baseURL, "page_token", prevToken) }
 				hx-target="#main"
 				hx-swap="innerHTML"
 			class="btn btn-soft btn-sm"
@@ -442,10 +531,44 @@ templ Pagination(nextToken string, prevToken string, baseURL string, loc Localiz
 		}
 		if nextToken != "" {
 			<a
-				href={ templ.SafeURL(baseURL + "?page_token=" + nextToken) }
-				hx-get={ baseURL + "?page_token=" + nextToken }
+				href={ templ.SafeURL(AppendQueryParam(baseURL, "page_token", nextToken)) }
+				hx-get={ AppendQueryParam(baseURL, "page_token", nextToken) }
 				hx-target="#main"
 				hx-swap="innerHTML"
+			class="btn btn-soft btn-sm"
+		>{T(loc, "common.next")}</a>
+		} else {
+			<button class="btn btn-soft btn-sm btn-disabled" disabled>{T(loc, "common.next")}</button>
+		}
+	</div>
+}
+
+// PaginationTargeted renders prev/next navigation with a custom HTMX target.
+templ PaginationTargeted(nextToken string, prevToken string, hrefBaseURL string, htmxBaseURL string, targetID string, pushURL bool, loc Localizer) {
+	<div class="flex justify-center mt-4 gap-2">
+		if prevToken != "" {
+			<a
+				href={ templ.SafeURL(AppendQueryParam(hrefBaseURL, "page_token", prevToken)) }
+				hx-get={ AppendQueryParam(htmxBaseURL, "page_token", prevToken) }
+				hx-target={ targetID }
+				hx-swap="innerHTML"
+				if pushURL {
+					hx-push-url={ AppendQueryParam(hrefBaseURL, "page_token", prevToken) }
+				}
+			class="btn btn-soft btn-sm"
+		>{T(loc, "common.previous")}</a>
+		} else {
+			<button class="btn btn-soft btn-sm btn-disabled" disabled>{T(loc, "common.previous")}</button>
+		}
+		if nextToken != "" {
+			<a
+				href={ templ.SafeURL(AppendQueryParam(hrefBaseURL, "page_token", nextToken)) }
+				hx-get={ AppendQueryParam(htmxBaseURL, "page_token", nextToken) }
+				hx-target={ targetID }
+				hx-swap="innerHTML"
+				if pushURL {
+					hx-push-url={ AppendQueryParam(hrefBaseURL, "page_token", nextToken) }
+				}
 			class="btn btn-soft btn-sm"
 		>{T(loc, "common.next")}</a>
 		} else {
