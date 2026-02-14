@@ -9,11 +9,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/caarlos0/env/v11"
-
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/platform/config"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	gamegrpc "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game"
@@ -24,7 +23,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/integrity"
 	storagesqlite "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/health"
 	grpc_health_v1 "google.golang.org/grpc/health/grpc_health_v1"
 )
@@ -39,7 +37,7 @@ type serverEnv struct {
 
 func loadServerEnv() serverEnv {
 	var cfg serverEnv
-	_ = env.Parse(&cfg)
+	_ = config.ParseEnv(&cfg)
 	if cfg.EventsDBPath == "" {
 		cfg.EventsDBPath = filepath.Join("data", "game-events.db")
 	}
@@ -292,23 +290,26 @@ func dialAuthGRPC(ctx context.Context, authAddr string) (*grpc.ClientConn, authv
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	dialCtx, cancel := context.WithTimeout(ctx, timeouts.GRPCDial)
-	defer cancel()
-	conn, err := grpc.DialContext(
-		dialCtx,
-		authAddr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithBlock(),
-	)
-	if err != nil {
-		return nil, nil, fmt.Errorf("dial auth gRPC %s: %w", authAddr, err)
-	}
 	logf := func(format string, args ...any) {
 		log.Printf("auth %s", fmt.Sprintf(format, args...))
 	}
-	if err := platformgrpc.WaitForHealth(ctx, conn, "", logf); err != nil {
-		_ = conn.Close()
-		return nil, nil, fmt.Errorf("auth gRPC health check failed for %s: %w", authAddr, err)
+	conn, err := platformgrpc.DialWithHealth(
+		ctx,
+		nil,
+		authAddr,
+		timeouts.GRPCDial,
+		logf,
+		platformgrpc.DefaultClientDialOptions()...,
+	)
+	if err != nil {
+		var dialErr *platformgrpc.DialError
+		if errors.As(err, &dialErr) {
+			if dialErr.Stage == platformgrpc.DialStageHealth {
+				return nil, nil, fmt.Errorf("auth gRPC health check failed for %s: %w", authAddr, dialErr.Err)
+			}
+			return nil, nil, fmt.Errorf("dial auth gRPC %s: %w", authAddr, dialErr.Err)
+		}
+		return nil, nil, fmt.Errorf("dial auth gRPC %s: %w", authAddr, err)
 	}
 	return conn, authv1.NewAuthServiceClient(conn), nil
 }

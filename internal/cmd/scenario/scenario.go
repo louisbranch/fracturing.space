@@ -4,12 +4,11 @@ import (
 	"context"
 	"errors"
 	"flag"
-	"fmt"
 	"io"
 	"log"
 	"time"
 
-	"github.com/caarlos0/env/v11"
+	"github.com/louisbranch/fracturing.space/internal/platform/config"
 	"github.com/louisbranch/fracturing.space/internal/tools/scenario"
 )
 
@@ -25,8 +24,8 @@ type Config struct {
 // ParseConfig parses flags into a Config.
 func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	var cfg Config
-	if err := env.Parse(&cfg); err != nil {
-		return Config{}, fmt.Errorf("parse env: %w", err)
+	if err := config.ParseEnv(&cfg); err != nil {
+		return Config{}, err
 	}
 
 	fs.StringVar(&cfg.GRPCAddr, "grpc-addr", cfg.GRPCAddr, "game server address")

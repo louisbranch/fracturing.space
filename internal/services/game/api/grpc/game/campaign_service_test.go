@@ -12,7 +12,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/session"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -307,60 +306,6 @@ func TestEndCampaign_DraftStatusDisallowed(t *testing.T) {
 	svc := NewCampaignService(Stores{Campaign: campaignStore, Session: sessionStore, Event: eventStore})
 	_, err := svc.EndCampaign(context.Background(), &statev1.EndCampaignRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.FailedPrecondition)
-}
-
-type fakeAuthClient struct {
-	user               *authv1.User
-	getUserErr         error
-	lastGetUserRequest *authv1.GetUserRequest
-}
-
-func (f *fakeAuthClient) CreateUser(ctx context.Context, req *authv1.CreateUserRequest, opts ...grpc.CallOption) (*authv1.CreateUserResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
-}
-
-func (f *fakeAuthClient) IssueJoinGrant(ctx context.Context, req *authv1.IssueJoinGrantRequest, opts ...grpc.CallOption) (*authv1.IssueJoinGrantResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
-}
-
-func (f *fakeAuthClient) GetUser(ctx context.Context, req *authv1.GetUserRequest, opts ...grpc.CallOption) (*authv1.GetUserResponse, error) {
-	f.lastGetUserRequest = req
-	if f.getUserErr != nil {
-		return nil, f.getUserErr
-	}
-	return &authv1.GetUserResponse{User: f.user}, nil
-}
-
-func (f *fakeAuthClient) ListUsers(ctx context.Context, req *authv1.ListUsersRequest, opts ...grpc.CallOption) (*authv1.ListUsersResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
-}
-
-func (f *fakeAuthClient) BeginPasskeyRegistration(ctx context.Context, req *authv1.BeginPasskeyRegistrationRequest, opts ...grpc.CallOption) (*authv1.BeginPasskeyRegistrationResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
-}
-
-func (f *fakeAuthClient) FinishPasskeyRegistration(ctx context.Context, req *authv1.FinishPasskeyRegistrationRequest, opts ...grpc.CallOption) (*authv1.FinishPasskeyRegistrationResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
-}
-
-func (f *fakeAuthClient) BeginPasskeyLogin(ctx context.Context, req *authv1.BeginPasskeyLoginRequest, opts ...grpc.CallOption) (*authv1.BeginPasskeyLoginResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
-}
-
-func (f *fakeAuthClient) FinishPasskeyLogin(ctx context.Context, req *authv1.FinishPasskeyLoginRequest, opts ...grpc.CallOption) (*authv1.FinishPasskeyLoginResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
-}
-
-func (f *fakeAuthClient) GenerateMagicLink(ctx context.Context, req *authv1.GenerateMagicLinkRequest, opts ...grpc.CallOption) (*authv1.GenerateMagicLinkResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
-}
-
-func (f *fakeAuthClient) ConsumeMagicLink(ctx context.Context, req *authv1.ConsumeMagicLinkRequest, opts ...grpc.CallOption) (*authv1.ConsumeMagicLinkResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
-}
-
-func (f *fakeAuthClient) ListUserEmails(ctx context.Context, req *authv1.ListUserEmailsRequest, opts ...grpc.CallOption) (*authv1.ListUserEmailsResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
 }
 
 func TestEndCampaign_Success(t *testing.T) {

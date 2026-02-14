@@ -11,6 +11,7 @@ We follow test-driven development (TDD) for behavior changes. Coverage is a regr
 - When you add or change production code, add or update tests for the behavior.
 - If a change is test-neutral (docs-only, refactor with no behavior change), call it out explicitly.
 - Run `make cover` and report the coverage impact with your changes.
+- If `make cover` reports deleted files, retry with a fresh Go cache (for example `GOCACHE="$(mktemp -d)" make cover`).
 
 ## CI non-regression gate
 

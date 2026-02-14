@@ -2,7 +2,6 @@ package game
 
 import (
 	"context"
-	"encoding/json"
 	"strings"
 	"time"
 
@@ -10,9 +9,7 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
-	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -50,7 +47,7 @@ func (s *ParticipantService) CreateParticipant(ctx context.Context, in *campaign
 		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
 	}
 
-	created, err := newParticipantCreator(s).create(ctx, campaignID, in)
+	created, err := newParticipantApplication(s).CreateParticipant(ctx, campaignID, in)
 	if err != nil {
 		if apperrors.GetCode(err) != apperrors.CodeUnknown {
 			return nil, handleDomainError(err)
@@ -72,7 +69,7 @@ func (s *ParticipantService) UpdateParticipant(ctx context.Context, in *campaign
 		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
 	}
 
-	updated, err := newParticipantUpdater(s).update(ctx, campaignID, in)
+	updated, err := newParticipantApplication(s).UpdateParticipant(ctx, campaignID, in)
 	if err != nil {
 		if apperrors.GetCode(err) != apperrors.CodeUnknown {
 			return nil, handleDomainError(err)
@@ -94,61 +91,12 @@ func (s *ParticipantService) DeleteParticipant(ctx context.Context, in *campaign
 		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
 	}
 
-	campaignRecord, err := s.stores.Campaign.Get(ctx, campaignID)
+	current, err := newParticipantApplication(s).DeleteParticipant(ctx, campaignID, in)
 	if err != nil {
-		return nil, handleDomainError(err)
-	}
-	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
-		return nil, handleDomainError(err)
-	}
-
-	participantID := strings.TrimSpace(in.GetParticipantId())
-	if participantID == "" {
-		return nil, status.Error(codes.InvalidArgument, "participant id is required")
-	}
-
-	current, err := s.stores.Participant.GetParticipant(ctx, campaignID, participantID)
-	if err != nil {
-		return nil, handleDomainError(err)
-	}
-
-	payload := event.ParticipantLeftPayload{
-		ParticipantID: participantID,
-		Reason:        strings.TrimSpace(in.GetReason()),
-	}
-	payloadJSON, err := json.Marshal(payload)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
-	}
-
-	actorID := grpcmeta.ParticipantIDFromContext(ctx)
-	actorType := event.ActorTypeSystem
-	if actorID != "" {
-		actorType = event.ActorTypeParticipant
-	}
-
-	stored, err := s.stores.Event.AppendEvent(ctx, event.Event{
-		CampaignID:   campaignID,
-		Timestamp:    s.clock().UTC(),
-		Type:         event.TypeParticipantLeft,
-		RequestID:    grpcmeta.RequestIDFromContext(ctx),
-		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-		ActorType:    actorType,
-		ActorID:      actorID,
-		EntityType:   "participant",
-		EntityID:     participantID,
-		PayloadJSON:  payloadJSON,
-	})
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "append event: %v", err)
-	}
-
-	applier := s.stores.Applier()
-	if err := applier.Apply(ctx, stored); err != nil {
 		if apperrors.GetCode(err) != apperrors.CodeUnknown {
 			return nil, handleDomainError(err)
 		}
-		return nil, status.Errorf(codes.Internal, "apply event: %v", err)
+		return nil, err
 	}
 
 	return &campaignv1.DeleteParticipantResponse{Participant: participantToProto(current)}, nil

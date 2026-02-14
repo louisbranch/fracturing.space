@@ -14,6 +14,8 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/health"
+	grpc_health_v1 "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/status"
 )
 
@@ -245,6 +247,22 @@ func TestDialAuthGRPCNilAddr(t *testing.T) {
 	}
 }
 
+func TestDialAuthGRPCNilContextUsesDefaultTimeout(t *testing.T) {
+	listener, server := startGRPCServer(t)
+	defer server.Stop()
+
+	conn, client, err := dialAuthGRPC(nil, Config{
+		AuthAddr: listener.Addr().String(),
+	})
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	if conn == nil || client == nil {
+		t.Fatalf("expected conn and client")
+	}
+	_ = conn.Close()
+}
+
 func TestDialAuthGRPCSuccess(t *testing.T) {
 	listener, server := startGRPCServer(t)
 	defer server.Stop()
@@ -260,6 +278,123 @@ func TestDialAuthGRPCSuccess(t *testing.T) {
 		t.Fatalf("expected conn and client")
 	}
 	_ = conn.Close()
+}
+
+func TestDialAuthGRPCDialError(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
+	_, _, err := dialAuthGRPC(ctx, Config{
+		AuthAddr:        "127.0.0.1:1",
+		GRPCDialTimeout: 50 * time.Millisecond,
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "dial auth gRPC") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestDialAuthGRPCHealthError(t *testing.T) {
+	listener, server := startHealthServer(t, grpc_health_v1.HealthCheckResponse_NOT_SERVING)
+	defer server.Stop()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+
+	_, _, err := dialAuthGRPC(ctx, Config{
+		AuthAddr:        listener.Addr().String(),
+		GRPCDialTimeout: 100 * time.Millisecond,
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "auth gRPC health check failed") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestBuildAuthLoginURL(t *testing.T) {
+	cases := []struct {
+		name string
+		base string
+		want string
+	}{
+		{
+			name: "empty base",
+			base: "",
+			want: "/authorize/login",
+		},
+		{
+			name: "base trims slash",
+			base: "http://auth.local/",
+			want: "http://auth.local/authorize/login",
+		},
+		{
+			name: "whitespace base",
+			base: "  ",
+			want: "/authorize/login",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := buildAuthLoginURL(tc.base); got != tc.want {
+				t.Fatalf("buildAuthLoginURL(%q) = %q, want %q", tc.base, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestBuildAuthConsentURL(t *testing.T) {
+	cases := []struct {
+		name      string
+		base      string
+		pendingID string
+		want      string
+	}{
+		{
+			name:      "empty base",
+			base:      "",
+			pendingID: "pending 1",
+			want:      "/authorize/consent?pending_id=pending+1",
+		},
+		{
+			name:      "base trims slash",
+			base:      "http://auth.local/",
+			pendingID: "pending 1",
+			want:      "http://auth.local/authorize/consent?pending_id=pending+1",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := buildAuthConsentURL(tc.base, tc.pendingID); got != tc.want {
+				t.Fatalf("buildAuthConsentURL(%q, %q) = %q, want %q", tc.base, tc.pendingID, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestWriteJSON(t *testing.T) {
+	w := httptest.NewRecorder()
+	writeJSON(w, http.StatusAccepted, map[string]any{"ok": true})
+
+	if w.Code != http.StatusAccepted {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusAccepted)
+	}
+	if got := w.Header().Get("Content-Type"); got != "application/json" {
+		t.Fatalf("content-type = %q, want %q", got, "application/json")
+	}
+
+	var payload map[string]any
+	if err := json.NewDecoder(w.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if payload["ok"] != true {
+		t.Fatalf("ok = %v, want true", payload["ok"])
+	}
 }
 
 func TestNewServerSuccessAndClose(t *testing.T) {
@@ -304,6 +439,21 @@ func TestListenAndServeShutsDown(t *testing.T) {
 		}
 	case <-time.After(500 * time.Millisecond):
 		t.Fatalf("timeout waiting for shutdown")
+	}
+}
+
+func TestListenAndServeReturnsServeError(t *testing.T) {
+	server := &Server{
+		httpAddr:   "127.0.0.1:-1",
+		httpServer: &http.Server{Addr: "127.0.0.1:-1"},
+	}
+
+	err := server.ListenAndServe(context.Background())
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "serve http") {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
@@ -532,12 +682,19 @@ func TestPasskeyRegisterFinishError(t *testing.T) {
 }
 
 func startGRPCServer(t *testing.T) (net.Listener, *grpc.Server) {
+	return startHealthServer(t, grpc_health_v1.HealthCheckResponse_SERVING)
+}
+
+func startHealthServer(t *testing.T, status grpc_health_v1.HealthCheckResponse_ServingStatus) (net.Listener, *grpc.Server) {
 	t.Helper()
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("listen: %v", err)
 	}
 	server := grpc.NewServer()
+	healthServer := health.NewServer()
+	grpc_health_v1.RegisterHealthServer(server, healthServer)
+	healthServer.SetServingStatus("", status)
 	go func() {
 		_ = server.Serve(listener)
 	}()

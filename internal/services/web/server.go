@@ -14,9 +14,9 @@ import (
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/branding"
+	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 // Config defines the inputs for the web login server.
@@ -231,17 +231,29 @@ func dialAuthGRPC(ctx context.Context, config Config) (*grpc.ClientConn, authv1.
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	dialCtx, cancel := context.WithTimeout(ctx, config.GRPCDialTimeout)
-	defer cancel()
-
-	conn, err := grpc.DialContext(
-		dialCtx,
+	if config.GRPCDialTimeout <= 0 {
+		config.GRPCDialTimeout = timeouts.GRPCDial
+	}
+	logf := func(format string, args ...any) {
+		log.Printf("auth %s", fmt.Sprintf(format, args...))
+	}
+	conn, err := platformgrpc.DialWithHealth(
+		ctx,
+		nil,
 		authAddr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithBlock(),
+		config.GRPCDialTimeout,
+		logf,
+		platformgrpc.DefaultClientDialOptions()...,
 	)
 	if err != nil {
-		return nil, nil, err
+		var dialErr *platformgrpc.DialError
+		if errors.As(err, &dialErr) {
+			if dialErr.Stage == platformgrpc.DialStageHealth {
+				return nil, nil, fmt.Errorf("auth gRPC health check failed for %s: %w", authAddr, dialErr.Err)
+			}
+			return nil, nil, fmt.Errorf("dial auth gRPC %s: %w", authAddr, dialErr.Err)
+		}
+		return nil, nil, fmt.Errorf("dial auth gRPC %s: %w", authAddr, err)
 	}
 	client := authv1.NewAuthServiceClient(conn)
 	return conn, client, nil

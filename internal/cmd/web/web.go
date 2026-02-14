@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/caarlos0/env/v11"
+	"github.com/louisbranch/fracturing.space/internal/platform/config"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	"github.com/louisbranch/fracturing.space/internal/services/web"
 )
@@ -22,8 +22,8 @@ type Config struct {
 // ParseConfig parses flags into a Config.
 func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	var cfg Config
-	if err := env.Parse(&cfg); err != nil {
-		return Config{}, fmt.Errorf("parse env: %w", err)
+	if err := config.ParseEnv(&cfg); err != nil {
+		return Config{}, err
 	}
 	if cfg.GRPCDialTimeout <= 0 {
 		cfg.GRPCDialTimeout = timeouts.GRPCDial

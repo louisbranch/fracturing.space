@@ -14,11 +14,13 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/mcp/domain"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/health"
 	grpc_health_v1 "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/status"
@@ -374,6 +376,23 @@ func (f *fakeSessionClient) GetSession(ctx context.Context, req *statev1.GetSess
 	return f.getSessionResponse, f.getSessionErr
 }
 
+type fakeCampaignServiceServer struct {
+	statev1.UnimplementedCampaignServiceServer
+}
+
+func (f *fakeCampaignServiceServer) CreateCampaign(ctx context.Context, req *statev1.CreateCampaignRequest) (*statev1.CreateCampaignResponse, error) {
+	return &statev1.CreateCampaignResponse{
+		Campaign: &statev1.Campaign{
+			Id:           "camp-123",
+			Name:         req.GetName(),
+			GmMode:       req.GetGmMode(),
+			Intent:       req.GetIntent(),
+			AccessPolicy: req.GetAccessPolicy(),
+		},
+		OwnerParticipant: &statev1.Participant{Id: "part-123"},
+	}, nil
+}
+
 // TestGRPCAddressUsesFallbackOverEnv ensures the fallback wins over env.
 func TestGRPCAddressUsesFallbackOverEnv(t *testing.T) {
 	t.Setenv("FRACTURING_SPACE_GAME_ADDR", "env:123")
@@ -403,6 +422,136 @@ func TestGRPCAddressFallback(t *testing.T) {
 	t.Setenv("FRACTURING_SPACE_GAME_ADDR", "")
 	if got := grpcAddress("fallback"); got != "fallback" {
 		t.Fatalf("expected fallback address, got %q", got)
+	}
+}
+
+func TestCompletionHandlerReturnsEmptyValues(t *testing.T) {
+	result, err := completionHandler(context.Background(), &mcp.CompleteRequest{})
+	if err != nil {
+		t.Fatalf("completion handler error: %v", err)
+	}
+	if result == nil {
+		t.Fatal("expected result")
+	}
+	if len(result.Completion.Values) != 0 {
+		t.Fatalf("expected empty values, got %v", result.Completion.Values)
+	}
+}
+
+func TestResourceSubscribeHandlerRequiresURI(t *testing.T) {
+	cases := []struct {
+		name string
+		req  *mcp.SubscribeRequest
+	}{
+		{
+			name: "nil request",
+			req:  nil,
+		},
+		{
+			name: "nil params",
+			req:  &mcp.SubscribeRequest{},
+		},
+		{
+			name: "empty uri",
+			req:  &mcp.SubscribeRequest{Params: &mcp.SubscribeParams{URI: ""}},
+		},
+		{
+			name: "whitespace uri",
+			req:  &mcp.SubscribeRequest{Params: &mcp.SubscribeParams{URI: "  "}},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if err := resourceSubscribeHandler(context.Background(), tc.req); err == nil {
+				t.Fatal("expected error")
+			}
+		})
+	}
+}
+
+func TestResourceSubscribeHandlerAcceptsURI(t *testing.T) {
+	req := &mcp.SubscribeRequest{Params: &mcp.SubscribeParams{URI: "campaigns://list"}}
+	if err := resourceSubscribeHandler(context.Background(), req); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestResourceUnsubscribeHandlerRequiresURI(t *testing.T) {
+	cases := []struct {
+		name string
+		req  *mcp.UnsubscribeRequest
+	}{
+		{
+			name: "nil request",
+			req:  nil,
+		},
+		{
+			name: "nil params",
+			req:  &mcp.UnsubscribeRequest{},
+		},
+		{
+			name: "empty uri",
+			req:  &mcp.UnsubscribeRequest{Params: &mcp.UnsubscribeParams{URI: ""}},
+		},
+		{
+			name: "whitespace uri",
+			req:  &mcp.UnsubscribeRequest{Params: &mcp.UnsubscribeParams{URI: "  "}},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if err := resourceUnsubscribeHandler(context.Background(), tc.req); err == nil {
+				t.Fatal("expected error")
+			}
+		})
+	}
+}
+
+func TestResourceUnsubscribeHandlerAcceptsURI(t *testing.T) {
+	req := &mcp.UnsubscribeRequest{Params: &mcp.UnsubscribeParams{URI: "campaigns://list"}}
+	if err := resourceUnsubscribeHandler(context.Background(), req); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestServerCloseHandlesNilConn(t *testing.T) {
+	var nilServer *Server
+	if err := nilServer.Close(); err != nil {
+		t.Fatalf("expected nil error, got %v", err)
+	}
+
+	server := &Server{}
+	if err := server.Close(); err != nil {
+		t.Fatalf("expected nil error, got %v", err)
+	}
+}
+
+func TestServerContextAccessors(t *testing.T) {
+	var nilServer *Server
+	if got := nilServer.getContext(); got != (domain.Context{}) {
+		t.Fatalf("expected empty context, got %+v", got)
+	}
+	nilServer.setContext(domain.Context{CampaignID: "ignored"})
+
+	server := &Server{}
+	expected := domain.Context{CampaignID: "camp-1", SessionID: "sess-1", ParticipantID: "part-1"}
+	server.setContext(expected)
+	if got := server.getContext(); got != expected {
+		t.Fatalf("expected context %+v, got %+v", expected, got)
+	}
+}
+
+func TestServerWaitForHealthRequiresConn(t *testing.T) {
+	var nilServer *Server
+	if err := nilServer.waitForHealth(context.Background()); err == nil {
+		t.Fatal("expected error")
+	}
+
+	server := &Server{}
+	if err := server.waitForHealth(context.Background()); err == nil {
+		t.Fatal("expected error")
 	}
 }
 
@@ -494,6 +643,128 @@ func TestRunStopsOnContext(t *testing.T) {
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatal("run did not stop after cancel")
+	}
+}
+
+func TestRunWithHTTPTransportStopsOnContext(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	addr, _, stop := startHealthServer(t, grpc_health_v1.HealthCheckResponse_SERVING)
+	defer stop()
+
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- runWithHTTPTransport(ctx, Config{
+			GRPCAddr: addr,
+			HTTPAddr: "127.0.0.1:0",
+		})
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+	cancel()
+
+	select {
+	case err := <-errCh:
+		if err != nil {
+			t.Fatalf("run with HTTP transport: %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("run with HTTP transport did not stop after cancel")
+	}
+}
+
+func TestRunWithHTTPTransportReturnsServeError(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	addr, _, stop := startHealthServer(t, grpc_health_v1.HealthCheckResponse_SERVING)
+	defer stop()
+
+	err := runWithHTTPTransport(ctx, Config{
+		GRPCAddr: addr,
+		HTTPAddr: "127.0.0.1:-1",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "HTTP server error") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestNewServerNotifiesCampaignListUpdates(t *testing.T) {
+	addr, stop := startCampaignServer(t)
+	defer stop()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	conn, err := grpc.DialContext(ctx, addr, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
+	if err != nil {
+		t.Fatalf("dial campaign server: %v", err)
+	}
+	defer conn.Close()
+
+	server := newServer(conn)
+	serverTransport, clientTransport := mcp.NewInMemoryTransports()
+	serveErr := make(chan error, 1)
+	go func() {
+		serveErr <- server.serveWithTransport(ctx, serverTransport)
+	}()
+
+	updates := make(chan string, 1)
+	client := mcp.NewClient(&mcp.Implementation{Name: "client", Version: "v0.0.1"}, &mcp.ClientOptions{
+		ResourceUpdatedHandler: func(_ context.Context, req *mcp.ResourceUpdatedNotificationRequest) {
+			if req == nil || req.Params == nil {
+				return
+			}
+			updates <- req.Params.URI
+		},
+	})
+	clientCtx, clientCancel := context.WithTimeout(context.Background(), time.Second)
+	defer clientCancel()
+
+	session, err := client.Connect(clientCtx, clientTransport, nil)
+	if err != nil {
+		t.Fatalf("connect client: %v", err)
+	}
+	defer session.Close()
+
+	if err := session.Subscribe(ctx, &mcp.SubscribeParams{URI: domain.CampaignListResource().URI}); err != nil {
+		t.Fatalf("subscribe: %v", err)
+	}
+
+	_, err = session.CallTool(ctx, &mcp.CallToolParams{
+		Name: domain.CampaignCreateTool().Name,
+		Arguments: map[string]any{
+			"name":    "New Campaign",
+			"system":  "DAGGERHEART",
+			"gm_mode": "HUMAN",
+		},
+	})
+	if err != nil {
+		t.Fatalf("call tool: %v", err)
+	}
+
+	select {
+	case uri := <-updates:
+		if uri != domain.CampaignListResource().URI {
+			t.Fatalf("expected campaign list update, got %q", uri)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("expected resource update notification")
+	}
+
+	cancel()
+
+	select {
+	case err := <-serveErr:
+		if err != nil {
+			t.Fatalf("serve returned error: %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("server did not stop after cancel")
 	}
 }
 
@@ -3652,6 +3923,52 @@ func TestWaitForHealthMissingConn(t *testing.T) {
 	}
 }
 
+func TestDialGameGRPCConnectError(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
+	_, err := dialGameGRPC(ctx, "127.0.0.1:1")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "connect to game server") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestDialGameGRPCUsesDefaultTimeout(t *testing.T) {
+	addr, _, stop := startHealthServer(t, grpc_health_v1.HealthCheckResponse_NOT_SERVING)
+	defer stop()
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeouts.GRPCDial+time.Second)
+	defer cancel()
+
+	start := time.Now()
+	_, err := dialGameGRPC(ctx, addr)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if elapsed := time.Since(start); elapsed > timeouts.GRPCDial+700*time.Millisecond {
+		t.Fatalf("expected default dial timeout to cap health wait, took %v", elapsed)
+	}
+}
+
+func TestDialGameGRPCHealthError(t *testing.T) {
+	addr, _, stop := startHealthServer(t, grpc_health_v1.HealthCheckResponse_NOT_SERVING)
+	defer stop()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+
+	_, err := dialGameGRPC(ctx, addr)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "wait for gRPC health") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func startHealthServer(t *testing.T, status grpc_health_v1.HealthCheckResponse_ServingStatus) (string, func(grpc_health_v1.HealthCheckResponse_ServingStatus), func()) {
 	t.Helper()
 
@@ -3680,6 +3997,34 @@ func startHealthServer(t *testing.T, status grpc_health_v1.HealthCheckResponse_S
 	}
 
 	return listener.Addr().String(), setStatus, stop
+}
+
+func startCampaignServer(t *testing.T) (string, func()) {
+	t.Helper()
+
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+
+	grpcServer := grpc.NewServer()
+	statev1.RegisterCampaignServiceServer(grpcServer, &fakeCampaignServiceServer{})
+
+	serveErr := make(chan error, 1)
+	go func() {
+		serveErr <- grpcServer.Serve(listener)
+	}()
+
+	stop := func() {
+		grpcServer.GracefulStop()
+		_ = listener.Close()
+		select {
+		case <-serveErr:
+		case <-time.After(time.Second):
+		}
+	}
+
+	return listener.Addr().String(), stop
 }
 
 // TestRunWithTransportServesAndStops ensures runWithTransport connects, serves, and exits on cancel.

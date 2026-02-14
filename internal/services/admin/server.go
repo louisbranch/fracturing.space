@@ -12,16 +12,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/caarlos0/env/v11"
-
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/platform/config"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	adminsqlite "github.com/louisbranch/fracturing.space/internal/services/admin/storage/sqlite"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 // adminServerEnv holds env-parsed configuration for the admin server.
@@ -31,7 +29,7 @@ type adminServerEnv struct {
 
 func loadAdminServerEnv() adminServerEnv {
 	var cfg adminServerEnv
-	_ = env.Parse(&cfg)
+	_ = config.ParseEnv(&cfg)
 	if cfg.DBPath == "" {
 		cfg.DBPath = filepath.Join("data", "admin.db")
 	}
@@ -382,24 +380,26 @@ func dialGameGRPC(ctx context.Context, config Config) (*grpc.ClientConn, daggerh
 		ctx = context.Background()
 	}
 
-	dialCtx, cancel := context.WithTimeout(ctx, config.GRPCDialTimeout)
-	defer cancel()
-
-	conn, err := grpc.DialContext(
-		dialCtx,
-		grpcAddr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithBlock(),
-	)
-	if err != nil {
-		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
-	}
 	logf := func(format string, args ...any) {
 		log.Printf("admin game %s", fmt.Sprintf(format, args...))
 	}
-	if err := platformgrpc.WaitForHealth(ctx, conn, "", logf); err != nil {
-		_ = conn.Close()
-		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("admin game gRPC health check failed for %s: %w", grpcAddr, err)
+	conn, err := platformgrpc.DialWithHealth(
+		ctx,
+		nil,
+		grpcAddr,
+		config.GRPCDialTimeout,
+		logf,
+		platformgrpc.DefaultClientDialOptions()...,
+	)
+	if err != nil {
+		var dialErr *platformgrpc.DialError
+		if errors.As(err, &dialErr) {
+			if dialErr.Stage == platformgrpc.DialStageHealth {
+				return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("admin game gRPC health check failed for %s: %w", grpcAddr, dialErr.Err)
+			}
+			return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, dialErr.Err
+		}
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 	}
 
 	daggerheartClient := daggerheartv1.NewDaggerheartServiceClient(conn)
@@ -425,24 +425,26 @@ func dialAuthGRPC(ctx context.Context, config Config) (*grpc.ClientConn, authv1.
 		ctx = context.Background()
 	}
 
-	dialCtx, cancel := context.WithTimeout(ctx, config.GRPCDialTimeout)
-	defer cancel()
-
-	conn, err := grpc.DialContext(
-		dialCtx,
-		authAddr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithBlock(),
-	)
-	if err != nil {
-		return nil, nil, err
-	}
 	logf := func(format string, args ...any) {
 		log.Printf("admin auth %s", fmt.Sprintf(format, args...))
 	}
-	if err := platformgrpc.WaitForHealth(ctx, conn, "", logf); err != nil {
-		_ = conn.Close()
-		return nil, nil, fmt.Errorf("admin auth gRPC health check failed for %s: %w", authAddr, err)
+	conn, err := platformgrpc.DialWithHealth(
+		ctx,
+		nil,
+		authAddr,
+		config.GRPCDialTimeout,
+		logf,
+		platformgrpc.DefaultClientDialOptions()...,
+	)
+	if err != nil {
+		var dialErr *platformgrpc.DialError
+		if errors.As(err, &dialErr) {
+			if dialErr.Stage == platformgrpc.DialStageHealth {
+				return nil, nil, fmt.Errorf("admin auth gRPC health check failed for %s: %w", authAddr, dialErr.Err)
+			}
+			return nil, nil, dialErr.Err
+		}
+		return nil, nil, err
 	}
 
 	authClient := authv1.NewAuthServiceClient(conn)

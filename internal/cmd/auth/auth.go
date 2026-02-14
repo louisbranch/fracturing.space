@@ -3,9 +3,8 @@ package auth
 import (
 	"context"
 	"flag"
-	"fmt"
 
-	"github.com/caarlos0/env/v11"
+	"github.com/louisbranch/fracturing.space/internal/platform/config"
 	server "github.com/louisbranch/fracturing.space/internal/services/auth/app"
 )
 
@@ -18,8 +17,8 @@ type Config struct {
 // ParseConfig parses flags into a Config.
 func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	var cfg Config
-	if err := env.Parse(&cfg); err != nil {
-		return Config{}, fmt.Errorf("parse env: %w", err)
+	if err := config.ParseEnv(&cfg); err != nil {
+		return Config{}, err
 	}
 
 	fs.IntVar(&cfg.Port, "port", cfg.Port, "The auth gRPC server port")

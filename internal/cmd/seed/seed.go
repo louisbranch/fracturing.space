@@ -11,7 +11,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/caarlos0/env/v11"
+	"github.com/louisbranch/fracturing.space/internal/platform/config"
 	"github.com/louisbranch/fracturing.space/internal/tools/seed"
 	"github.com/louisbranch/fracturing.space/internal/tools/seed/generator"
 )
@@ -36,8 +36,8 @@ type seedEnv struct {
 // ParseConfig parses flags into a Config.
 func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	var se seedEnv
-	if err := env.Parse(&se); err != nil {
-		return Config{}, fmt.Errorf("parse env: %w", err)
+	if err := config.ParseEnv(&se); err != nil {
+		return Config{}, err
 	}
 
 	seedCfg := seed.DefaultConfig()
