@@ -8,7 +8,7 @@ Fracturing.Space is built for tables experimenting with AI GMs or mixed human/AI
 
 - AI or programmatic GMs can reason over a full, authoritative history
 - Outcomes can be replayed and audited, not guessed or reinterpreted
-- Branching a campaign is safe and explicit, enabling “what if” timelines without rewriting history
+- Branching a campaign is safe and explicit, enabling "what if" timelines without rewriting history
 
 ## Quickstart (Docker)
 
@@ -37,6 +37,13 @@ Service URLs and Docker Compose details: [docs/running/docker-compose.md](docs/r
 ## Project status
 
 Early and experimental. APIs and internal structure may change.
+
+<details>
+<summary>Coverage Treemap</summary>
+
+![Coverage Treemap](../../raw/badges/coverage-treemap.svg)
+
+</details>
 
 ## Systems, content, and licensing
 

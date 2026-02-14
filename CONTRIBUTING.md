@@ -24,7 +24,7 @@ workflow, standards, and expectations used in this repo.
 - Keep `go.mod` tidy: `go mod tidy`
 
 Integration tests exercise the full gRPC + MCP + storage path. You can also
-use the Make targets documented in `docs/running/integration-tests.md`:
+use the Make targets documented in [integration tests](docs/running/integration-tests.md):
 
 - `make test`
 - `make integration`
@@ -78,7 +78,7 @@ See [AGENTS.md](AGENTS.md) for detailed architecture documentation.
 - Document exported types and functions.
 - Add or update doc comments for any modified identifiers.
 - Update `docs/` and `README.md` when user-facing behavior changes.
-- Keep `docs/index.md` and README links current.
+- Keep [docs/index.md](docs/index.md) and README links current.
 
 ------------------------------------------------------------------------
 

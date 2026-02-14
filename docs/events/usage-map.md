@@ -1,7 +1,7 @@
 # Event Usage Map
 
 ## Regenerating
-This usage map was assembled by reading `docs/events/event-catalog.md` and scanning code for emitters and appliers. To regenerate the catalog first:
+This usage map was assembled by reading the [event catalog](event-catalog.md) and scanning code for emitters and appliers. To regenerate the catalog first:
 
 ```bash
 go generate ./internal/services/game/domain/campaign/event

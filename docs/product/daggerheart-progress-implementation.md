@@ -4,7 +4,7 @@
 Describe implemented mechanics, current PRD coverage, and remaining Phase 2 work based on the Daggerheart SRD mechanics analysis.
 
 ## Sources
-- PRD: `docs/product/daggerheart-PRD.md`
+- PRD: [Daggerheart PRD](daggerheart-PRD.md)
 - SRD mechanics extraction: `.ai/plans/daggerheart-srd-mechanics.md`
 
 ## Implemented Outcomes (Phase 0/1)
@@ -60,5 +60,5 @@ Describe implemented mechanics, current PRD coverage, and remaining Phase 2 work
 | Determinism and Judgment Boundaries | Partial | Deterministic rolls/outcomes implemented; GM inputs/narrative consequences not modeled. |
 
 ## References
-- PRD: `docs/product/daggerheart-PRD.md`
+- PRD: [Daggerheart PRD](daggerheart-PRD.md)
 - SRD mechanics extraction: `.ai/plans/daggerheart-srd-mechanics.md`
