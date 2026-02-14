@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package game.v1;
 
+import "common/v1/icon.proto";
 import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/game/v1;gamev1";
@@ -12,6 +13,8 @@ service EventService {
   rpc AppendEvent(AppendEventRequest) returns (AppendEventResponse);
   // ListEvents returns a paginated, filtered, and sorted list of events for a campaign.
   rpc ListEvents(ListEventsRequest) returns (ListEventsResponse);
+  // ListTimelineEntries returns a paginated timeline view for a campaign.
+  rpc ListTimelineEntries(ListTimelineEntriesRequest) returns (ListTimelineEntriesResponse);
 }
 
 // ListEventsRequest describes the parameters for listing events.
@@ -51,6 +54,82 @@ message ListEventsResponse {
 
   // Total number of events matching the filter (across all pages).
   int32 total_size = 4;
+}
+
+// ListTimelineEntriesRequest describes the parameters for listing timeline entries.
+message ListTimelineEntriesRequest {
+  // Required: scope to a campaign.
+  string campaign_id = 1;
+
+  // Page size (default: 50, max: 200).
+  int32 page_size = 2;
+
+  // Opaque cursor for pagination (base64 encoded).
+  string page_token = 3;
+
+  // Ordering: "seq" (default, oldest first) or "seq desc" (newest first).
+  string order_by = 4;
+
+  // AIP-160 filter expression.
+  // Filterable fields: session_id, type, system_id, system_version, actor_type, actor_id, entity_type, entity_id, ts.
+  string filter = 5;
+}
+
+// ListTimelineEntriesResponse contains the paginated timeline results.
+message ListTimelineEntriesResponse {
+  // The timeline entries matching the request.
+  repeated TimelineEntry entries = 1;
+
+  // Token to retrieve the next page. Empty when no more results.
+  string next_page_token = 2;
+
+  // Token to retrieve the previous page. Empty when at the beginning.
+  string previous_page_token = 3;
+
+  // Total number of events matching the filter (across all pages).
+  int32 total_size = 4;
+}
+
+// TimelineEntry represents a timeline row with projection context.
+message TimelineEntry {
+  // The event sequence number within the campaign (starts at 1).
+  uint64 seq = 1;
+
+  // The type of event (e.g., "session.started", "action.roll_resolved").
+  string event_type = 2;
+
+  // When the event occurred.
+  google.protobuf.Timestamp event_time = 3;
+
+  // The icon identifier for this timeline entry.
+  common.v1.IconId icon_id = 4;
+
+  // Projection display data for rendering the entry.
+  ProjectionDisplay projection = 5;
+
+  // Event payload JSON for inspection.
+  string event_payload_json = 6;
+}
+
+// ProjectionDisplay describes a projection summary for UI rendering.
+message ProjectionDisplay {
+  // Title for the projection (primary label).
+  string title = 1;
+
+  // Subtitle for the projection (secondary label).
+  string subtitle = 2;
+
+  // Status label for the projection.
+  string status = 3;
+
+  // Field/value pairs for projection detail.
+  repeated ProjectionField fields = 4;
+}
+
+// ProjectionField is a display label/value pair.
+message ProjectionField {
+  string label = 1;
+  string value = 2;
 }
 
 // AppendEventRequest describes the input for appending a new event.

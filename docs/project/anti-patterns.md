@@ -133,3 +133,9 @@ application-layer command handler to keep transport thin and testable.
 Transport code builds event payloads directly from enum `.String()` values,
 which hides validation and makes payload evolution harder. Prefer domain or
 application-layer factories that validate and centralize payload mapping.
+
+### 18. No-op event emissions
+
+`character.profile_updated` can be emitted even when the payload matches the
+current projection state. This makes timelines noisy and complicates change
+summaries. Consider guarding against no-op updates in the game service layer.

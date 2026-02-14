@@ -1175,22 +1175,25 @@ func TestApplyDefaultDaggerheartProfile(t *testing.T) {
 	state := &scenarioState{campaignID: "c-1"}
 
 	t.Run("defaults", func(t *testing.T) {
-		err := r.applyDefaultDaggerheartProfile(context.Background(), state, "char-1", map[string]any{})
+		patchedProfile = nil
+		args := map[string]any{"name": "Frodo", "kind": "PC"}
+		err := r.applyDefaultDaggerheartProfile(context.Background(), state, "char-1", args)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if patchedProfile.Level != 1 {
-			t.Fatalf("expected level=1, got %d", patchedProfile.Level)
-		}
-		if patchedProfile.HpMax != 6 {
-			t.Fatalf("expected hp_max=6, got %d", patchedProfile.HpMax)
+		if patchedProfile != nil {
+			t.Fatalf("expected no default profile patch")
 		}
 	})
 	t.Run("custom_overrides", func(t *testing.T) {
+		patchedProfile = nil
 		args := map[string]any{"level": 5, "hp_max": 20, "armor": 3, "agility": 2}
 		err := r.applyDefaultDaggerheartProfile(context.Background(), state, "char-1", args)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
+		}
+		if patchedProfile == nil {
+			t.Fatal("expected profile patch")
 		}
 		if patchedProfile.Level != 5 {
 			t.Fatalf("expected level=5, got %d", patchedProfile.Level)
@@ -1206,10 +1209,14 @@ func TestApplyDefaultDaggerheartProfile(t *testing.T) {
 		}
 	})
 	t.Run("armor_max_overrides_armor", func(t *testing.T) {
+		patchedProfile = nil
 		args := map[string]any{"armor": 3, "armor_max": 5}
 		err := r.applyDefaultDaggerheartProfile(context.Background(), state, "char-1", args)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
+		}
+		if patchedProfile == nil {
+			t.Fatal("expected profile patch")
 		}
 		if patchedProfile.ArmorMax.GetValue() != 5 {
 			t.Fatalf("expected armor_max=5, got %d", patchedProfile.ArmorMax.GetValue())
