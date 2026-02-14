@@ -1056,6 +1056,36 @@ func (s *DaggerheartService) ApplyConditions(ctx context.Context, in *pb.Daggerh
 		return nil, err
 	}
 
+	state, err := s.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
+	if err != nil {
+		return nil, handleDomainError(err)
+	}
+
+	lifeStateProvided := in.GetLifeState() != pb.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_UNSPECIFIED
+	var lifeStateAfter string
+	if lifeStateProvided {
+		lifeStateAfter, err = daggerheartLifeStateFromProto(in.GetLifeState())
+		if err != nil {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+	}
+	lifeStateBefore := state.LifeState
+	if lifeStateBefore == "" {
+		lifeStateBefore = daggerheart.LifeStateAlive
+	}
+	lifeStateChanged := false
+	if lifeStateProvided {
+		beforeValue, err := daggerheart.NormalizeLifeState(lifeStateBefore)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "invalid stored life_state: %v", err)
+		}
+		afterValue, err := daggerheart.NormalizeLifeState(lifeStateAfter)
+		if err != nil {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+		lifeStateChanged = beforeValue != afterValue
+	}
+
 	addConditions, err := daggerheartConditionsFromProto(in.GetAdd())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
@@ -1064,8 +1094,8 @@ func (s *DaggerheartService) ApplyConditions(ctx context.Context, in *pb.Daggerh
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
-	if len(addConditions) == 0 && len(removeConditions) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "conditions to add or remove are required")
+	if len(addConditions) == 0 && len(removeConditions) == 0 && !lifeStateProvided {
+		return nil, status.Error(codes.InvalidArgument, "conditions or life_state are required")
 	}
 
 	normalizedAdd := []string{}
@@ -1093,38 +1123,44 @@ func (s *DaggerheartService) ApplyConditions(ctx context.Context, in *pb.Daggerh
 		}
 	}
 
-	state, err := s.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
-	if err != nil {
-		return nil, handleDomainError(err)
-	}
-	before, err := daggerheart.NormalizeConditions(state.Conditions)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "invalid stored conditions: %v", err)
-	}
+	var before []string
+	var after []string
+	var added []string
+	var removed []string
+	conditionChanged := false
+	if len(normalizedAdd) > 0 || len(normalizedRemove) > 0 {
+		before, err = daggerheart.NormalizeConditions(state.Conditions)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "invalid stored conditions: %v", err)
+		}
 
-	afterSet := make(map[string]struct{}, len(before)+len(normalizedAdd))
-	for _, value := range before {
-		afterSet[value] = struct{}{}
-	}
-	for _, value := range normalizedRemove {
-		delete(afterSet, value)
-	}
-	for _, value := range normalizedAdd {
-		afterSet[value] = struct{}{}
-	}
+		afterSet := make(map[string]struct{}, len(before)+len(normalizedAdd))
+		for _, value := range before {
+			afterSet[value] = struct{}{}
+		}
+		for _, value := range normalizedRemove {
+			delete(afterSet, value)
+		}
+		for _, value := range normalizedAdd {
+			afterSet[value] = struct{}{}
+		}
 
-	afterList := make([]string, 0, len(afterSet))
-	for value := range afterSet {
-		afterList = append(afterList, value)
-	}
-	after, err := daggerheart.NormalizeConditions(afterList)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "invalid condition set: %v", err)
-	}
+		afterList := make([]string, 0, len(afterSet))
+		for value := range afterSet {
+			afterList = append(afterList, value)
+		}
+		after, err = daggerheart.NormalizeConditions(afterList)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "invalid condition set: %v", err)
+		}
 
-	added, removed := daggerheart.DiffConditions(before, after)
-	if len(added) == 0 && len(removed) == 0 {
-		return nil, status.Error(codes.FailedPrecondition, "no condition changes to apply")
+		added, removed = daggerheart.DiffConditions(before, after)
+		conditionChanged = len(added) > 0 || len(removed) > 0
+		if !conditionChanged && !lifeStateChanged {
+			return nil, status.Error(codes.FailedPrecondition, "no condition or life_state changes to apply")
+		}
+	} else if !lifeStateChanged {
+		return nil, status.Error(codes.FailedPrecondition, "no condition or life_state changes to apply")
 	}
 
 	source := strings.TrimSpace(in.GetSource())
@@ -1141,41 +1177,75 @@ func (s *DaggerheartService) ApplyConditions(ctx context.Context, in *pb.Daggerh
 		}
 	}
 
-	payload := daggerheart.ConditionChangedPayload{
-		CharacterID:      characterID,
-		ConditionsBefore: before,
-		ConditionsAfter:  after,
-		Added:            added,
-		Removed:          removed,
-		Source:           source,
-		RollSeq:          rollSeq,
-	}
-	payloadJSON, err := json.Marshal(payload)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode condition payload: %v", err)
-	}
-
-	stored, err := s.stores.Event.AppendEvent(ctx, event.Event{
-		CampaignID:    campaignID,
-		Timestamp:     time.Now().UTC(),
-		Type:          daggerheart.EventTypeConditionChanged,
-		SessionID:     grpcmeta.SessionIDFromContext(ctx),
-		RequestID:     grpcmeta.RequestIDFromContext(ctx),
-		InvocationID:  grpcmeta.InvocationIDFromContext(ctx),
-		ActorType:     event.ActorTypeSystem,
-		EntityType:    "character",
-		EntityID:      characterID,
-		SystemID:      c.System.String(),
-		SystemVersion: daggerheart.SystemVersion,
-		PayloadJSON:   payloadJSON,
-	})
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "append condition event: %v", err)
-	}
-
 	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
-	if err := adapter.ApplyEvent(ctx, stored); err != nil {
-		return nil, status.Errorf(codes.Internal, "apply condition event: %v", err)
+	if conditionChanged {
+		payload := daggerheart.ConditionChangedPayload{
+			CharacterID:      characterID,
+			ConditionsBefore: before,
+			ConditionsAfter:  after,
+			Added:            added,
+			Removed:          removed,
+			Source:           source,
+			RollSeq:          rollSeq,
+		}
+		payloadJSON, err := json.Marshal(payload)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "encode condition payload: %v", err)
+		}
+
+		stored, err := s.stores.Event.AppendEvent(ctx, event.Event{
+			CampaignID:    campaignID,
+			Timestamp:     time.Now().UTC(),
+			Type:          daggerheart.EventTypeConditionChanged,
+			SessionID:     grpcmeta.SessionIDFromContext(ctx),
+			RequestID:     grpcmeta.RequestIDFromContext(ctx),
+			InvocationID:  grpcmeta.InvocationIDFromContext(ctx),
+			ActorType:     event.ActorTypeSystem,
+			EntityType:    "character",
+			EntityID:      characterID,
+			SystemID:      c.System.String(),
+			SystemVersion: daggerheart.SystemVersion,
+			PayloadJSON:   payloadJSON,
+		})
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "append condition event: %v", err)
+		}
+
+		if err := adapter.ApplyEvent(ctx, stored); err != nil {
+			return nil, status.Errorf(codes.Internal, "apply condition event: %v", err)
+		}
+	}
+
+	if lifeStateChanged {
+		payload := daggerheart.CharacterStatePatchedPayload{
+			CharacterID:     characterID,
+			LifeStateBefore: &lifeStateBefore,
+			LifeStateAfter:  &lifeStateAfter,
+		}
+		payloadJSON, err := json.Marshal(payload)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "encode character state payload: %v", err)
+		}
+		storedState, err := s.stores.Event.AppendEvent(ctx, event.Event{
+			CampaignID:    campaignID,
+			Timestamp:     time.Now().UTC(),
+			Type:          daggerheart.EventTypeCharacterStatePatched,
+			SessionID:     grpcmeta.SessionIDFromContext(ctx),
+			RequestID:     grpcmeta.RequestIDFromContext(ctx),
+			InvocationID:  grpcmeta.InvocationIDFromContext(ctx),
+			ActorType:     event.ActorTypeSystem,
+			EntityType:    "character",
+			EntityID:      characterID,
+			SystemID:      c.System.String(),
+			SystemVersion: daggerheart.SystemVersion,
+			PayloadJSON:   payloadJSON,
+		})
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "append character state event: %v", err)
+		}
+		if err := adapter.ApplyEvent(ctx, storedState); err != nil {
+			return nil, status.Errorf(codes.Internal, "apply character state event: %v", err)
+		}
 	}
 
 	updated, err := s.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)

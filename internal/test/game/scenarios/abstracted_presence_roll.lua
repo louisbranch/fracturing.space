@@ -8,6 +8,7 @@ scene:campaign{
   theme = "social"
 }
 
+-- Add the party member taking the roll.
 scene:pc("Frodo")
 
 -- Frodo works the crowd for leads, resolved by a single roll.

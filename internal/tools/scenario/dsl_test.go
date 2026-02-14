@@ -137,6 +137,62 @@ return scene
 	}
 }
 
+func TestScenarioSetSpotlightCreatesStep(t *testing.T) {
+	path := writeScenarioFixture(t, `-- Setup
+local scene = Scenario.new("spotlight")
+scene:campaign({name = "Test", system = "DAGGERHEART"})
+
+-- Force spotlight to a character
+scene:set_spotlight({target = "Frodo", expect_spotlight = "Frodo"})
+
+return scene
+`)
+
+	scenario, err := LoadScenarioFromFile(path)
+	if err != nil {
+		t.Fatalf("load scenario: %v", err)
+	}
+	if len(scenario.Steps) != 2 {
+		t.Fatalf("steps = %d, want %d", len(scenario.Steps), 2)
+	}
+
+	step := scenario.Steps[1]
+	if step.Kind != "set_spotlight" {
+		t.Fatalf("step kind = %q, want %q", step.Kind, "set_spotlight")
+	}
+	if step.Args["target"] != "Frodo" {
+		t.Fatalf("target = %v, want Frodo", step.Args["target"])
+	}
+	if step.Args["expect_spotlight"] != "Frodo" {
+		t.Fatalf("expect_spotlight = %v, want Frodo", step.Args["expect_spotlight"])
+	}
+}
+
+func TestScenarioClearSpotlightCreatesStep(t *testing.T) {
+	path := writeScenarioFixture(t, `-- Setup
+local scene = Scenario.new("clear_spotlight")
+scene:campaign({name = "Test", system = "DAGGERHEART"})
+
+-- Clear spotlight when needed
+scene:clear_spotlight()
+
+return scene
+`)
+
+	scenario, err := LoadScenarioFromFile(path)
+	if err != nil {
+		t.Fatalf("load scenario: %v", err)
+	}
+	if len(scenario.Steps) != 2 {
+		t.Fatalf("steps = %d, want %d", len(scenario.Steps), 2)
+	}
+
+	step := scenario.Steps[1]
+	if step.Kind != "clear_spotlight" {
+		t.Fatalf("step kind = %q, want %q", step.Kind, "clear_spotlight")
+	}
+}
+
 func writeScenarioFixture(t *testing.T, content string) string {
 	t.Helper()
 

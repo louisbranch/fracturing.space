@@ -2,13 +2,13 @@ package daggerheart
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
+	"time"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
-	"time"
-
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
@@ -881,6 +881,58 @@ func TestApplyDamage_Success(t *testing.T) {
 	}
 }
 
+func TestApplyDamage_WithArmorMitigation(t *testing.T) {
+	svc := newActionTestService()
+	ctx := contextWithSessionID("sess-1")
+
+	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
+	profile := dhStore.profiles["camp-1:char-1"]
+	profile.MajorThreshold = 3
+	profile.SevereThreshold = 6
+	profile.ArmorMax = 1
+	dhStore.profiles["camp-1:char-1"] = profile
+
+	state := dhStore.states["camp-1:char-1"]
+	state.Hp = 6
+	state.Armor = 1
+	dhStore.states["camp-1:char-1"] = state
+
+	_, err := svc.ApplyDamage(ctx, &pb.DaggerheartApplyDamageRequest{
+		CampaignId:  "camp-1",
+		CharacterId: "char-1",
+		Damage: &pb.DaggerheartDamageRequest{
+			Amount:     4,
+			DamageType: pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_PHYSICAL,
+		},
+	})
+	if err != nil {
+		t.Fatalf("ApplyDamage returned error: %v", err)
+	}
+
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	events := eventStore.events["camp-1"]
+	if len(events) == 0 {
+		t.Fatal("expected damage event")
+	}
+	last := events[len(events)-1]
+	if last.Type != daggerheart.EventTypeDamageApplied {
+		t.Fatalf("last event type = %s, want %s", last.Type, daggerheart.EventTypeDamageApplied)
+	}
+	var payload daggerheart.DamageAppliedPayload
+	if err := json.Unmarshal(last.PayloadJSON, &payload); err != nil {
+		t.Fatalf("decode damage payload: %v", err)
+	}
+	if payload.ArmorSpent != 1 {
+		t.Fatalf("armor_spent = %d, want 1", payload.ArmorSpent)
+	}
+	if payload.Marks != 1 {
+		t.Fatalf("marks = %d, want 1", payload.Marks)
+	}
+	if payload.Severity != "minor" {
+		t.Fatalf("severity = %s, want minor", payload.Severity)
+	}
+}
+
 func TestApplyDamage_RequireDamageRollWithoutSeq(t *testing.T) {
 	svc := newActionTestService()
 	ctx := contextWithSessionID("sess-1")
@@ -894,6 +946,78 @@ func TestApplyDamage_RequireDamageRollWithoutSeq(t *testing.T) {
 		RequireDamageRoll: true,
 	})
 	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestApplyConditions_LifeStateOnly(t *testing.T) {
+	svc := newActionTestService()
+	ctx := contextWithSessionID("sess-1")
+	resp, err := svc.ApplyConditions(ctx, &pb.DaggerheartApplyConditionsRequest{
+		CampaignId:  "camp-1",
+		CharacterId: "char-1",
+		LifeState:   pb.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_UNCONSCIOUS,
+	})
+	if err != nil {
+		t.Fatalf("ApplyConditions returned error: %v", err)
+	}
+	if resp.State == nil {
+		t.Fatal("expected state in response")
+	}
+	if resp.State.LifeState != pb.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_UNCONSCIOUS {
+		t.Fatalf("life_state = %v, want UNCONSCIOUS", resp.State.LifeState)
+	}
+
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	events := eventStore.events["camp-1"]
+	if len(events) == 0 {
+		t.Fatal("expected events")
+	}
+	last := events[len(events)-1]
+	if last.Type != daggerheart.EventTypeCharacterStatePatched {
+		t.Fatalf("last event type = %s, want %s", last.Type, daggerheart.EventTypeCharacterStatePatched)
+	}
+}
+
+func TestApplyConditions_LifeStateNoChange(t *testing.T) {
+	svc := newActionTestService()
+	ctx := contextWithSessionID("sess-1")
+	_, err := svc.ApplyConditions(ctx, &pb.DaggerheartApplyConditionsRequest{
+		CampaignId:  "camp-1",
+		CharacterId: "char-1",
+		LifeState:   pb.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_ALIVE,
+	})
+	assertStatusCode(t, err, codes.FailedPrecondition)
+}
+
+func TestApplyConditions_InvalidStoredLifeState(t *testing.T) {
+	svc := newActionTestService()
+	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
+	state := dhStore.states["camp-1:char-1"]
+	state.LifeState = "not-a-life-state"
+	dhStore.states["camp-1:char-1"] = state
+
+	ctx := contextWithSessionID("sess-1")
+	_, err := svc.ApplyConditions(ctx, &pb.DaggerheartApplyConditionsRequest{
+		CampaignId:  "camp-1",
+		CharacterId: "char-1",
+		LifeState:   pb.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_UNCONSCIOUS,
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestApplyConditions_NoConditionChanges(t *testing.T) {
+	svc := newActionTestService()
+	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
+	state := dhStore.states["camp-1:char-1"]
+	state.Conditions = []string{"vulnerable"}
+	dhStore.states["camp-1:char-1"] = state
+
+	ctx := contextWithSessionID("sess-1")
+	_, err := svc.ApplyConditions(ctx, &pb.DaggerheartApplyConditionsRequest{
+		CampaignId:  "camp-1",
+		CharacterId: "char-1",
+		Add:         []pb.DaggerheartCondition{pb.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE},
+	})
+	assertStatusCode(t, err, codes.FailedPrecondition)
 }
 
 // --- ApplyRest tests ---

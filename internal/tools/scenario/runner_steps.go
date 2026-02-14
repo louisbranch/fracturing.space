@@ -3,6 +3,7 @@ package scenario
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
@@ -34,6 +35,10 @@ func (r *Runner) runStep(ctx context.Context, state *scenarioState, step Step) e
 		return r.runReactionStep(ctx, state, step)
 	case "gm_spend_fear":
 		return r.runGMSpendFearStep(ctx, state, step)
+	case "set_spotlight":
+		return r.runSetSpotlightStep(ctx, state, step)
+	case "clear_spotlight":
+		return r.runClearSpotlightStep(ctx, state, step)
 	case "apply_condition":
 		return r.runApplyConditionStep(ctx, state, step)
 	case "group_action":
@@ -453,8 +458,11 @@ func (r *Runner) runGMSpendFearStep(ctx context.Context, state *scenarioState, s
 		return err
 	}
 	amount, ok := readInt(step.Args, "amount")
-	if !ok || amount <= 0 {
+	if !ok {
 		return r.failf("gm_spend_fear amount is required")
+	}
+	if amount < 0 {
+		return r.failf("gm_spend_fear amount must be non-negative")
 	}
 	move := optionalString(step.Args, "move", "spotlight")
 	description := optionalString(step.Args, "description", "")
@@ -478,11 +486,84 @@ func (r *Runner) runGMSpendFearStep(ctx context.Context, state *scenarioState, s
 	if err != nil {
 		return fmt.Errorf("apply gm move: %w", err)
 	}
-	if err := r.requireEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeGMFearChanged, daggerheart.EventTypeGMMoveApplied); err != nil {
-		return err
+	if amount > 0 {
+		if err := r.requireEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeGMFearChanged, daggerheart.EventTypeGMMoveApplied); err != nil {
+			return err
+		}
+	} else {
+		if err := r.requireEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeGMMoveApplied); err != nil {
+			return err
+		}
 	}
 	state.gmFear = int(response.GetGmFearAfter())
 	return nil
+}
+
+func (r *Runner) runSetSpotlightStep(ctx context.Context, state *scenarioState, step Step) error {
+	if err := r.ensureSession(ctx, state); err != nil {
+		return err
+	}
+	spotlightType := strings.ToLower(strings.TrimSpace(optionalString(step.Args, "type", "")))
+	name := optionalString(step.Args, "target", "")
+	request := &gamev1.SetSessionSpotlightRequest{
+		CampaignId: state.campaignID,
+		SessionId:  state.sessionID,
+	}
+	if spotlightType == "" {
+		if strings.TrimSpace(name) == "" {
+			spotlightType = "gm"
+		} else {
+			spotlightType = "character"
+		}
+	}
+	switch spotlightType {
+	case "gm":
+		request.Type = gamev1.SessionSpotlightType_SESSION_SPOTLIGHT_TYPE_GM
+	case "character":
+		if strings.TrimSpace(name) == "" {
+			return r.failf("set_spotlight character requires target")
+		}
+		request.Type = gamev1.SessionSpotlightType_SESSION_SPOTLIGHT_TYPE_CHARACTER
+		characterID, err := actorID(state, name)
+		if err != nil {
+			return err
+		}
+		request.CharacterId = characterID
+	default:
+		return r.failf("unsupported spotlight type %q", spotlightType)
+	}
+
+	before, err := r.latestSeq(ctx, state)
+	if err != nil {
+		return err
+	}
+	if _, err := r.env.sessionClient.SetSessionSpotlight(ctx, request); err != nil {
+		return fmt.Errorf("set spotlight: %w", err)
+	}
+	if err := r.requireEventTypesAfterSeq(ctx, state, before, event.TypeSessionSpotlightSet); err != nil {
+		return err
+	}
+	return r.assertExpectedSpotlight(ctx, state, step.Args)
+}
+
+func (r *Runner) runClearSpotlightStep(ctx context.Context, state *scenarioState, step Step) error {
+	if err := r.ensureSession(ctx, state); err != nil {
+		return err
+	}
+	before, err := r.latestSeq(ctx, state)
+	if err != nil {
+		return err
+	}
+	if _, err := r.env.sessionClient.ClearSessionSpotlight(ctx, &gamev1.ClearSessionSpotlightRequest{
+		CampaignId: state.campaignID,
+		SessionId:  state.sessionID,
+	}); err != nil {
+		return fmt.Errorf("clear spotlight: %w", err)
+	}
+	if err := r.requireEventTypesAfterSeq(ctx, state, before, event.TypeSessionSpotlightCleared); err != nil {
+		return err
+	}
+	return r.assertExpectedSpotlight(ctx, state, step.Args)
 }
 
 func (r *Runner) runApplyConditionStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -499,8 +580,9 @@ func (r *Runner) runApplyConditionStep(ctx context.Context, state *scenarioState
 	}
 	add := readStringSlice(step.Args, "add")
 	remove := readStringSlice(step.Args, "remove")
-	if len(add) == 0 && len(remove) == 0 {
-		return r.failf("apply_condition requires add or remove")
+	lifeState := optionalString(step.Args, "life_state", "")
+	if len(add) == 0 && len(remove) == 0 && lifeState == "" {
+		return r.failf("apply_condition requires add, remove, or life_state")
 	}
 	addValues, err := parseConditions(add)
 	if err != nil {
@@ -510,22 +592,42 @@ func (r *Runner) runApplyConditionStep(ctx context.Context, state *scenarioState
 	if err != nil {
 		return err
 	}
+	if lifeState != "" {
+		if _, err := parseLifeState(lifeState); err != nil {
+			return err
+		}
+	}
 
 	before, err := r.latestSeq(ctx, state)
 	if err != nil {
 		return err
 	}
-	_, err = r.env.daggerheartClient.ApplyConditions(withSessionID(ctx, state.sessionID), &daggerheartv1.DaggerheartApplyConditionsRequest{
+	request := &daggerheartv1.DaggerheartApplyConditionsRequest{
 		CampaignId:  state.campaignID,
 		CharacterId: characterID,
 		Add:         addValues,
 		Remove:      removeValues,
 		Source:      optionalString(step.Args, "source", ""),
-	})
+	}
+	if lifeState != "" {
+		value, err := parseLifeState(lifeState)
+		if err != nil {
+			return err
+		}
+		request.LifeState = value
+	}
+	_, err = r.env.daggerheartClient.ApplyConditions(withSessionID(ctx, state.sessionID), request)
 	if err != nil {
 		return fmt.Errorf("apply conditions: %w", err)
 	}
-	return r.requireEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeConditionChanged)
+	eventTypes := []event.Type{}
+	if len(add) > 0 || len(remove) > 0 {
+		eventTypes = append(eventTypes, daggerheart.EventTypeConditionChanged)
+	}
+	if lifeState != "" {
+		eventTypes = append(eventTypes, daggerheart.EventTypeCharacterStatePatched)
+	}
+	return r.requireEventTypesAfterSeq(ctx, state, before, eventTypes...)
 }
 
 func (r *Runner) runGroupActionStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -1034,12 +1136,17 @@ func (r *Runner) runAttackStep(ctx context.Context, state *scenarioState, step S
 		return fmt.Errorf("attack action roll: %w", err)
 	}
 
-	_, err = r.env.daggerheartClient.ApplyRollOutcome(ctxWithMeta, &daggerheartv1.ApplyRollOutcomeRequest{
+	rollOutcomeResponse, err := r.env.daggerheartClient.ApplyRollOutcome(ctxWithMeta, &daggerheartv1.ApplyRollOutcomeRequest{
 		SessionId: state.sessionID,
 		RollSeq:   rollResp.GetRollSeq(),
 	})
 	if err != nil {
 		return fmt.Errorf("attack roll outcome: %w", err)
+	}
+	if rollOutcomeResponse.GetRequiresComplication() {
+		if err := r.resolveOpenSessionGate(ctx, state, before); err != nil {
+			return err
+		}
 	}
 
 	attackOutcome, err := r.env.daggerheartClient.ApplyAttackOutcome(ctxWithMeta, &daggerheartv1.DaggerheartApplyAttackOutcomeRequest{
@@ -1153,12 +1260,17 @@ func (r *Runner) runMultiAttackStep(ctx context.Context, state *scenarioState, s
 	}
 
 	ctxWithMeta := withCampaignID(withSessionID(ctx, state.sessionID), state.campaignID)
-	_, err = r.env.daggerheartClient.ApplyRollOutcome(ctxWithMeta, &daggerheartv1.ApplyRollOutcomeRequest{
+	rollOutcomeResponse, err := r.env.daggerheartClient.ApplyRollOutcome(ctxWithMeta, &daggerheartv1.ApplyRollOutcomeRequest{
 		SessionId: state.sessionID,
 		RollSeq:   rollResp.GetRollSeq(),
 	})
 	if err != nil {
 		return fmt.Errorf("multi_attack roll outcome: %w", err)
+	}
+	if rollOutcomeResponse.GetRequiresComplication() {
+		if err := r.resolveOpenSessionGate(ctx, state, before); err != nil {
+			return err
+		}
 	}
 
 	attackOutcome, err := r.env.daggerheartClient.ApplyAttackOutcome(ctxWithMeta, &daggerheartv1.DaggerheartApplyAttackOutcomeRequest{
@@ -1280,6 +1392,9 @@ func (r *Runner) runCombinedDamageStep(ctx context.Context, state *scenarioState
 		}
 		amountTotal += amount
 		if sourceName := optionalString(item, "character", ""); sourceName != "" {
+			if strings.EqualFold(sourceName, "gm") {
+				continue
+			}
 			id, err := actorID(state, sourceName)
 			if err != nil {
 				return err
@@ -1470,7 +1585,8 @@ func (r *Runner) runCountdownCreateStep(ctx context.Context, state *scenarioStat
 	if maxValue <= 0 {
 		maxValue = 4
 	}
-	parsedKind, err := parseCountdownKind(optionalString(step.Args, "kind", "progress"))
+	kindValue := optionalString(step.Args, "kind", "progress")
+	parsedKind, err := parseCountdownKind(kindValue)
 	if err != nil {
 		return err
 	}
@@ -1483,6 +1599,10 @@ func (r *Runner) runCountdownCreateStep(ctx context.Context, state *scenarioStat
 	if err != nil {
 		return err
 	}
+	looping := optionalBool(step.Args, "looping", false)
+	if strings.EqualFold(kindValue, "loop") {
+		looping = true
+	}
 	request := &daggerheartv1.DaggerheartCreateCountdownRequest{
 		CampaignId: state.campaignID,
 		SessionId:  state.sessionID,
@@ -1491,7 +1611,7 @@ func (r *Runner) runCountdownCreateStep(ctx context.Context, state *scenarioStat
 		Current:    int32(optionalInt(step.Args, "current", 0)),
 		Max:        int32(maxValue),
 		Direction:  parsedDirection,
-		Looping:    optionalBool(step.Args, "looping", false),
+		Looping:    looping,
 	}
 	if countdownID := optionalString(step.Args, "countdown_id", ""); countdownID != "" {
 		request.CountdownId = countdownID

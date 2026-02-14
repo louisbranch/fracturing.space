@@ -8,7 +8,7 @@ scene:campaign{
   theme = "damage"
 }
 
-scene:npc("Galadriel", { hp_max = 4, major_threshold = 8, severe_threshold = 16 })
+scene:npc("Galadriel", { hp_max = 12, hp = 12, major_threshold = 8, severe_threshold = 16 })
 
 -- A sequence of hits crosses Minor, Major, Severe, and Massive tiers.
 scene:start_session("Thresholds")

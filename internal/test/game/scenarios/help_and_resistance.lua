@@ -28,7 +28,7 @@ scene:attack{
   },
   expect_hope_delta = -1,
   expect_stress_delta = 0,
-  expect_damage_total = 6,
+  expect_damage_total = 4,
   expect_damage_critical = false,
   expect_adversary_hp_delta = -1,
   expect_adversary_damage_mitigated = true

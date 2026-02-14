@@ -18,7 +18,7 @@ scene:gm_fear(2)
 -- Example: No Hospitality action and There Will Be Peace reaction.
 -- Missing DSL: apply hospitality ban, Hope loss, Stress, and unconscious condition.
 scene:gm_spend_fear(2):spotlight("Shire Elder")
-scene:apply_condition{ target = "Frodo", add = { "UNCONSCIOUS" }, source = "there_will_be_peace" }
+scene:apply_condition{ target = "Frodo", life_state = "unconscious", source = "there_will_be_peace" }
 
 scene:end_session()
 

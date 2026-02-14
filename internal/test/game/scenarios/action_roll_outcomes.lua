@@ -8,7 +8,7 @@ scene:campaign{
   theme = "outcomes"
 }
 
-scene:pc("Frodo")
+scene:pc("Frodo", { stress = 1 })
 scene:adversary("Nazgul")
 scene:adversary("Golum")
 scene:adversary("Saruman")
