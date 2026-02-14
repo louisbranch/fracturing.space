@@ -815,6 +815,123 @@ func TestValidateSnapshotEventGMFearChanged(t *testing.T) {
 	}
 }
 
+func TestValidateCharacterStatePatchedHopeConstrainedByHopeMax(t *testing.T) {
+	// When hope_max_after is set, hope_after must be <= hope_max_after.
+	hopeMax := 3
+	hopeOK := 3
+	hopeBad := 4
+	tests := []struct {
+		name    string
+		payload daggerheart.CharacterStatePatchedPayload
+		wantErr bool
+	}{
+		{
+			name:    "hope equals hope_max",
+			payload: daggerheart.CharacterStatePatchedPayload{CharacterID: "ch1", HopeMaxAfter: &hopeMax, HopeAfter: &hopeOK},
+			wantErr: false,
+		},
+		{
+			name:    "hope exceeds custom hope_max",
+			payload: daggerheart.CharacterStatePatchedPayload{CharacterID: "ch1", HopeMaxAfter: &hopeMax, HopeAfter: &hopeBad},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data, _ := json.Marshal(tt.payload)
+			evt := event.Event{Type: daggerheart.EventTypeCharacterStatePatched, PayloadJSON: data}
+			err := validateSnapshotEvent(evt)
+			if tt.wantErr && err == nil {
+				t.Fatal("expected error")
+			}
+			if !tt.wantErr && err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+	}
+}
+
+func TestValidateCharacterStatePatchedHpNegative(t *testing.T) {
+	hp := -1
+	payload := daggerheart.CharacterStatePatchedPayload{CharacterID: "ch1", HpAfter: &hp}
+	data, _ := json.Marshal(payload)
+	evt := event.Event{Type: daggerheart.EventTypeCharacterStatePatched, PayloadJSON: data}
+	if err := validateSnapshotEvent(evt); err == nil {
+		t.Fatal("expected error for negative hp_after")
+	}
+}
+
+func TestValidateDeathMoveResolvedDieBoundaries(t *testing.T) {
+	// Valid boundaries: 1 and 12; invalid: 0 and 13.
+	validLow := 1
+	validHigh := 12
+	invalidLow := 0
+	invalidHigh := 13
+
+	tests := []struct {
+		name    string
+		hopeDie *int
+		fearDie *int
+		wantErr bool
+	}{
+		{"hope_die=1 valid", &validLow, nil, false},
+		{"hope_die=12 valid", &validHigh, nil, false},
+		{"hope_die=0 invalid", &invalidLow, nil, true},
+		{"hope_die=13 invalid", &invalidHigh, nil, true},
+		{"fear_die=1 valid", nil, &validLow, false},
+		{"fear_die=12 valid", nil, &validHigh, false},
+		{"fear_die=0 invalid", nil, &invalidLow, true},
+		{"fear_die=13 invalid", nil, &invalidHigh, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			payload := daggerheart.DeathMoveResolvedPayload{
+				CharacterID:    "ch1",
+				Move:           "risk_it_all",
+				LifeStateAfter: "dead",
+				HopeDie:        tt.hopeDie,
+				FearDie:        tt.fearDie,
+			}
+			data, _ := json.Marshal(payload)
+			evt := event.Event{Type: daggerheart.EventTypeDeathMoveResolved, PayloadJSON: data}
+			err := validateSnapshotEvent(evt)
+			if tt.wantErr && err == nil {
+				t.Fatal("expected error")
+			}
+			if !tt.wantErr && err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+	}
+}
+
+func TestValidateGMFearChangedBoundaries(t *testing.T) {
+	tests := []struct {
+		name    string
+		after   int
+		wantErr bool
+	}{
+		{"min valid", daggerheart.GMFearMin, false},
+		{"max valid", daggerheart.GMFearMax, false},
+		{"below min", daggerheart.GMFearMin - 1, true},
+		{"above max", daggerheart.GMFearMax + 1, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			payload := daggerheart.GMFearChangedPayload{After: tt.after}
+			data, _ := json.Marshal(payload)
+			evt := event.Event{Type: daggerheart.EventTypeGMFearChanged, PayloadJSON: data}
+			err := validateSnapshotEvent(evt)
+			if tt.wantErr && err == nil {
+				t.Fatal("expected error")
+			}
+			if !tt.wantErr && err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+	}
+}
+
 func TestValidateSnapshotEventUnknownType(t *testing.T) {
 	evt := event.Event{Type: "unknown.type", PayloadJSON: []byte(`{}`)}
 	if err := validateSnapshotEvent(evt); err != nil {
@@ -911,6 +1028,27 @@ func TestRunCampaignIntegrityNilProjStore(t *testing.T) {
 // checkSnapshotIntegrity empty-campaign requires a non-nil ProjectionStore,
 // which is a large composite interface. We test the nil-store branches above
 // and leave deeper integrity testing to integration tests.
+
+func TestRunCampaignScanWarningsCapped(t *testing.T) {
+	// Build events that each produce a validation warning when validated.
+	var events []event.Event
+	for i := 1; i <= 5; i++ {
+		events = append(events, event.Event{
+			Seq:         uint64(i),
+			Type:        daggerheart.EventTypeCharacterStatePatched,
+			SystemID:    "dh",
+			PayloadJSON: []byte(`{invalid`),
+		})
+	}
+	store := &fakeEventStore{events: map[string][]event.Event{"c1": events}}
+	result := runCampaign(t.Context(), store, nil, "c1", runOptions{DryRun: true, Validate: true, WarningsCap: 3}, io.Discard)
+	if len(result.Warnings) != 3 {
+		t.Fatalf("expected 3 capped warnings, got %d", len(result.Warnings))
+	}
+	if result.WarningsTotal != 5 {
+		t.Fatalf("expected 5 total warnings, got %d", result.WarningsTotal)
+	}
+}
 
 func TestRunCampaignValidateNoInvalid(t *testing.T) {
 	store := &fakeEventStore{events: map[string][]event.Event{

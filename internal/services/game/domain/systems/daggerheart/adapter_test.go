@@ -3,6 +3,8 @@ package daggerheart
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -1599,6 +1601,148 @@ func TestApplyAdversaryDamageApplied(t *testing.T) {
 	}
 }
 
+func TestApplyAdversaryDamageAppliedInvalidJSON(t *testing.T) {
+	a := NewAdapter(newMemoryDaggerheartStore())
+	err := a.ApplyEvent(context.Background(), event.Event{
+		CampaignID: "camp-1", Type: EventTypeAdversaryDamageApplied, PayloadJSON: []byte(`{bad`),
+	})
+	if err == nil {
+		t.Fatal("expected error for invalid JSON")
+	}
+}
+
+func TestApplyAdversaryDamageAppliedEmptyAdversaryID(t *testing.T) {
+	a := NewAdapter(newMemoryDaggerheartStore())
+	err := applyEvent(t, a, "camp-1", EventTypeAdversaryDamageApplied, AdversaryDamageAppliedPayload{
+		AdversaryID: "  ",
+		HpAfter:     intPtr(3),
+	})
+	if err == nil {
+		t.Fatal("expected error for empty adversary_id")
+	}
+}
+
+func TestApplyAdversaryDamageAppliedNilHpAndArmor(t *testing.T) {
+	a := NewAdapter(newMemoryDaggerheartStore())
+	err := applyEvent(t, a, "camp-1", EventTypeAdversaryDamageApplied, AdversaryDamageAppliedPayload{
+		AdversaryID: "adv-1",
+	})
+	if err == nil {
+		t.Fatal("expected error when both hp_after and armor_after are nil")
+	}
+}
+
+func TestApplyAdversaryDamageAppliedNotFound(t *testing.T) {
+	a := NewAdapter(newMemoryDaggerheartStore())
+	err := applyEvent(t, a, "camp-1", EventTypeAdversaryDamageApplied, AdversaryDamageAppliedPayload{
+		AdversaryID: "missing",
+		HpAfter:     intPtr(3),
+	})
+	if err == nil {
+		t.Fatal("expected error for adversary not found")
+	}
+}
+
+func TestApplyAdversaryDamageAppliedHpOnlyUpdate(t *testing.T) {
+	store := newMemoryDaggerheartStore()
+	store.adversaries["camp-1:adv-1"] = storage.DaggerheartAdversary{
+		CampaignID: "camp-1", AdversaryID: "adv-1", Name: "Goblin",
+		HP: 6, HPMax: 6, Evasion: 10, Major: 5, Severe: 10, Armor: 2,
+	}
+	a := NewAdapter(store)
+	err := applyEvent(t, a, "camp-1", EventTypeAdversaryDamageApplied, AdversaryDamageAppliedPayload{
+		AdversaryID: "adv-1",
+		HpAfter:     intPtr(3),
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	adv := store.adversaries["camp-1:adv-1"]
+	if adv.HP != 3 {
+		t.Fatalf("hp = %d, want 3", adv.HP)
+	}
+	if adv.Armor != 2 {
+		t.Fatalf("armor = %d, want 2 (unchanged)", adv.Armor)
+	}
+}
+
+func TestApplyAdversaryDamageAppliedArmorOnlyUpdate(t *testing.T) {
+	store := newMemoryDaggerheartStore()
+	store.adversaries["camp-1:adv-1"] = storage.DaggerheartAdversary{
+		CampaignID: "camp-1", AdversaryID: "adv-1", Name: "Goblin",
+		HP: 6, HPMax: 6, Evasion: 10, Major: 5, Severe: 10, Armor: 2,
+	}
+	a := NewAdapter(store)
+	err := applyEvent(t, a, "camp-1", EventTypeAdversaryDamageApplied, AdversaryDamageAppliedPayload{
+		AdversaryID: "adv-1",
+		ArmorAfter:  intPtr(0),
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	adv := store.adversaries["camp-1:adv-1"]
+	if adv.HP != 6 {
+		t.Fatalf("hp = %d, want 6 (unchanged)", adv.HP)
+	}
+	if adv.Armor != 0 {
+		t.Fatalf("armor = %d, want 0", adv.Armor)
+	}
+}
+
+// --- Storage error injection: applyRestTaken ---
+
+func TestApplyRestTakenPutSnapshotError(t *testing.T) {
+	store := newMemoryDaggerheartStore()
+	store.putSnapshotErr = fmt.Errorf("snapshot write failure")
+	a := NewAdapter(store)
+	err := applyEvent(t, a, "camp-1", EventTypeRestTaken, RestTakenPayload{
+		GMFearAfter: 0,
+	})
+	if err == nil {
+		t.Fatal("expected error from put snapshot failure")
+	}
+	if !strings.Contains(err.Error(), "snapshot write failure") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// --- Storage error injection: applyStatePatch ---
+
+func TestApplyStatePatchGetStateError(t *testing.T) {
+	store := newMemoryDaggerheartStore()
+	store.getStateErr = fmt.Errorf("state read failure")
+	a := NewAdapter(store)
+	err := applyEvent(t, a, "camp-1", EventTypeDamageApplied, DamageAppliedPayload{
+		CharacterID: "char-1",
+		HpAfter:     intPtr(4),
+	})
+	if err == nil {
+		t.Fatal("expected error from get state failure")
+	}
+	if !strings.Contains(err.Error(), "state read failure") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestApplyStatePatchPutStateError(t *testing.T) {
+	store := newMemoryDaggerheartStore()
+	store.states["camp-1:char-1"] = storage.DaggerheartCharacterState{
+		CampaignID: "camp-1", CharacterID: "char-1", Hp: 6, HopeMax: HopeMax,
+	}
+	store.putStateErr = fmt.Errorf("state write failure")
+	a := NewAdapter(store)
+	err := applyEvent(t, a, "camp-1", EventTypeDamageApplied, DamageAppliedPayload{
+		CharacterID: "char-1",
+		HpAfter:     intPtr(4),
+	})
+	if err == nil {
+		t.Fatal("expected error from put state failure")
+	}
+	if !strings.Contains(err.Error(), "state write failure") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 // --- AdversaryDeleted tests ---
 
 func TestApplyAdversaryDeleted(t *testing.T) {
@@ -1899,5 +2043,53 @@ func TestApplyConditionPatchCreatesNewState(t *testing.T) {
 	state := store.states["camp-1:char-new"]
 	if len(state.Conditions) != 1 || state.Conditions[0] != ConditionHidden {
 		t.Fatalf("expected [hidden], got %v", state.Conditions)
+	}
+}
+
+// --- Coverage edge cases: remaining uncovered branches ---
+
+func TestApplyAdversaryUpdatedInvalidStats(t *testing.T) {
+	store := newMemoryDaggerheartStore()
+	store.adversaries["camp-1:adv-1"] = storage.DaggerheartAdversary{
+		CampaignID: "camp-1", AdversaryID: "adv-1", Name: "Goblin",
+		HP: 5, HPMax: 5, Evasion: 10, Major: 5, Severe: 10,
+	}
+	a := NewAdapter(store)
+	err := applyEvent(t, a, "camp-1", EventTypeAdversaryUpdated, AdversaryUpdatedPayload{
+		AdversaryID: "adv-1", Name: "Goblin",
+		HP: -1, HPMax: 5, Major: 5, Severe: 10,
+	})
+	if err == nil {
+		t.Fatal("expected error for invalid stats on adversary update")
+	}
+}
+
+func TestApplyAdversaryDamageAppliedInvalidResultStats(t *testing.T) {
+	store := newMemoryDaggerheartStore()
+	store.adversaries["camp-1:adv-1"] = storage.DaggerheartAdversary{
+		CampaignID: "camp-1", AdversaryID: "adv-1", Name: "Goblin",
+		HP: 6, HPMax: 6, Evasion: 10, Major: 5, Severe: 10,
+	}
+	a := NewAdapter(store)
+	err := applyEvent(t, a, "camp-1", EventTypeAdversaryDamageApplied, AdversaryDamageAppliedPayload{
+		AdversaryID: "adv-1",
+		HpAfter:     intPtr(-1),
+	})
+	if err == nil {
+		t.Fatal("expected error for negative hp_after on existing adversary")
+	}
+}
+
+func TestApplyRestTakenCharacterPatchFails(t *testing.T) {
+	store := newMemoryDaggerheartStore()
+	a := NewAdapter(store)
+	err := applyEvent(t, a, "camp-1", EventTypeRestTaken, RestTakenPayload{
+		GMFearAfter: 0,
+		CharacterStates: []RestCharacterStatePatch{
+			{CharacterID: "char-1", HopeAfter: intPtr(HopeMax + 1)},
+		},
+	})
+	if err == nil {
+		t.Fatal("expected error when character state patch has out-of-range hope")
 	}
 }

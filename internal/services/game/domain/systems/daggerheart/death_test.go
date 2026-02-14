@@ -299,6 +299,83 @@ func TestResolveDeathMoveRiskItAllDefaultClear(t *testing.T) {
 	}
 }
 
+func TestResolveDeathMoveAvoidDeathHopeClampedByScar(t *testing.T) {
+	// Find a seed where hopeDie <= level, causing a scar (hopeMax decreases).
+	// With hope at the current hopeMax, the clamp path triggers.
+	level := 12 // Guarantees hopeDie <= level for any d12 roll.
+	seed := int64(1)
+	roll, err := dice.RollDice(dice.Request{Dice: []dice.Spec{{Sides: 12, Count: 1}}, Seed: seed})
+	if err != nil {
+		t.Fatalf("RollDice: %v", err)
+	}
+	hopeDie := roll.Rolls[0].Results[0]
+	if hopeDie > level {
+		t.Fatal("expected hopeDie <= level with level=12")
+	}
+
+	outcome, err := ResolveDeathMove(DeathMoveInput{
+		Move:      DeathMoveAvoidDeath,
+		Level:     level,
+		HP:        0,
+		HPMax:     6,
+		Hope:      HopeMax, // At max, scar will force clamp.
+		HopeMax:   HopeMax,
+		Stress:    0,
+		StressMax: 6,
+		Seed:      seed,
+	})
+	if err != nil {
+		t.Fatalf("ResolveDeathMove: %v", err)
+	}
+	if !outcome.ScarGained {
+		t.Fatal("expected scar gained")
+	}
+	if outcome.HopeMaxAfter != HopeMax-1 {
+		t.Fatalf("HopeMaxAfter = %d, want %d", outcome.HopeMaxAfter, HopeMax-1)
+	}
+	if outcome.HopeAfter != HopeMax-1 {
+		t.Fatalf("HopeAfter = %d, want %d (clamped to new max)", outcome.HopeAfter, HopeMax-1)
+	}
+}
+
+func TestResolveDeathMoveRiskItAllHPClearToExactMax(t *testing.T) {
+	// Set up HP so that hp + hpClear == hpMax exactly.
+	seed := findDeathSeed(t, func(hope, fear int) bool { return hope > fear })
+	roll, err := dice.RollDice(dice.Request{Dice: []dice.Spec{{Sides: 12, Count: 2}}, Seed: seed})
+	if err != nil {
+		t.Fatalf("RollDice: %v", err)
+	}
+	hopeDie := roll.Rolls[0].Results[0]
+
+	// Set HP such that hp + hopeDie == hpMax exactly (i.e. the clear fills to max).
+	hpMax := 6
+	hp := max(hpMax-hopeDie, 0)
+	hpClear := hopeDie // All budget to HP.
+
+	outcome, err := ResolveDeathMove(DeathMoveInput{
+		Move:             DeathMoveRiskItAll,
+		Level:            1,
+		HP:               hp,
+		HPMax:            hpMax,
+		Hope:             2,
+		HopeMax:          HopeMax,
+		Stress:           0,
+		StressMax:        6,
+		RiskItAllHPClear: &hpClear,
+		Seed:             seed,
+	})
+	if err != nil {
+		t.Fatalf("ResolveDeathMove: %v", err)
+	}
+	if outcome.LifeState != LifeStateAlive {
+		t.Fatalf("life_state = %q, want alive", outcome.LifeState)
+	}
+	expectedHP := min(hp+hpClear, hpMax)
+	if outcome.HPAfter != expectedHP {
+		t.Fatalf("HPAfter = %d, want %d", outcome.HPAfter, expectedHP)
+	}
+}
+
 func findDeathSeed(t *testing.T, predicate func(hope, fear int) bool) int64 {
 	t.Helper()
 	for seed := int64(1); seed < 5000; seed++ {
