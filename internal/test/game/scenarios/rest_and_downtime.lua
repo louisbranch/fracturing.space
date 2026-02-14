@@ -1,5 +1,6 @@
 local scene = Scenario.new("rest_and_downtime")
 
+-- Frame Frodo between encounters for rest and downtime.
 scene:campaign{
   name = "Rest and Downtime",
   system = "DAGGERHEART",
@@ -17,6 +18,7 @@ scene:start_session("Rest")
 scene:rest{ type = "short", party_size = 1 }
 scene:downtime_move{ target = "Frodo", move = "prepare", prepare_with_group = false }
 
+-- Close the session once the rest is done.
 scene:end_session()
 
 return scene

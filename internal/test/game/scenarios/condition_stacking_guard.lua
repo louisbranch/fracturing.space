@@ -1,5 +1,6 @@
 local scene = Scenario.new("condition_stacking_guard")
 
+-- Set up Galadriel to test stacking the same condition.
 scene:campaign{
   name = "Condition Stacking Guard",
   system = "DAGGERHEART",
@@ -19,6 +20,7 @@ scene:start_session("Condition Guard")
 scene:apply_condition{ target = "Galadriel", add = { "VULNERABLE" }, source = "spotlight" }
 scene:apply_condition{ target = "Galadriel", add = { "VULNERABLE", "HIDDEN" }, source = "spotlight" }
 
+-- Close the session after the stacking attempt.
 scene:end_session()
 
 return scene

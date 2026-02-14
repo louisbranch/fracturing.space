@@ -1,5 +1,6 @@
 local scene = Scenario.new("gm_move_severity")
 
+-- Stage a tense clash to show soft vs hard GM moves.
 scene:campaign{
   name = "GM Move Severity",
   system = "DAGGERHEART",
@@ -24,6 +25,7 @@ scene:gm_spend_fear(1):spotlight("Nazgul")
 -- Missing DSL: annotate soft vs hard move consequences.
 scene:gm_spend_fear(2):spotlight("Nazgul")
 
+-- Close the session after the GM move cadence.
 scene:end_session()
 
 return scene

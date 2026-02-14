@@ -1,5 +1,6 @@
 local scene = Scenario.new("action_roll_outcomes")
 
+-- Introduce Frodo and three foes to showcase roll outcomes.
 scene:campaign{
   name = "Action Roll Outcomes",
   system = "DAGGERHEART",
@@ -48,6 +49,7 @@ scene:attack{
   damage_type = "physical"
 }
 
+-- Close the session after all outcomes land.
 scene:end_session()
 
 return scene

@@ -1,5 +1,6 @@
 local scene = Scenario.new("condition_lifecycle")
 
+-- Introduce Galadriel so conditions can be applied then cleared.
 scene:campaign{
   name = "Condition Lifecycle",
   system = "DAGGERHEART",
@@ -20,6 +21,7 @@ scene:apply_condition{ target = "Galadriel", add = { "VULNERABLE" } }
 scene:gm_spend_fear(1):spotlight("Galadriel")
 scene:apply_condition{ target = "Galadriel", remove = { "VULNERABLE" }, source = "break_free" }
 
+-- Close the session after the condition clears.
 scene:end_session()
 
 return scene

@@ -1,5 +1,6 @@
 local scene = Scenario.new("death_move")
 
+-- Frame Frodo at 0 HP to trigger a death move.
 scene:campaign{
   name = "Death Move",
   system = "DAGGERHEART",
@@ -16,6 +17,7 @@ scene:start_session("Death")
 -- Missing DSL: assert the resulting recovery or consequence.
 scene:death_move{ target = "Frodo", move = "avoid_death" }
 
+-- Close the session after the death move resolves.
 scene:end_session()
 
 return scene

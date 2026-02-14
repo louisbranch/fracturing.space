@@ -5,8 +5,10 @@ package game
 import (
 	"fmt"
 	"math"
+	"os"
 	"path/filepath"
 	"strings"
+	"testing"
 
 	"github.com/Shopify/go-lua"
 )
@@ -32,6 +34,9 @@ type gmAction struct {
 }
 
 func loadScenarioFromFile(path string) (*Scenario, error) {
+	if err := validateScenarioComments(path); err != nil {
+		return nil, err
+	}
 	state := lua.NewState()
 	lua.OpenLibraries(state)
 
@@ -58,6 +63,112 @@ func loadScenarioFromFile(path string) (*Scenario, error) {
 		scenario.Name = strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
 	}
 	return scenario, nil
+}
+
+// validateScenarioComments fails fast so scenarios always ship with block intent.
+func validateScenarioComments(path string) error {
+	contents, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("read scenario: %w", err)
+	}
+	lines := strings.Split(string(contents), "\n")
+	blockStart := 0
+	// Iterate one past the end to validate the final block without a trailing blank line.
+	for i := 0; i <= len(lines); i++ {
+		if i < len(lines) && strings.TrimSpace(lines[i]) != "" {
+			continue
+		}
+		if err := validateScenarioBlock(path, lines, blockStart, i); err != nil {
+			return err
+		}
+		blockStart = i + 1
+	}
+	return nil
+}
+
+func TestValidateScenarioCommentsMissingComment(t *testing.T) {
+	path := writeScenarioFixture(t, "scene:campaign({name = \"Test\"})\n\n-- Start session\nscene:start_session({name = \"Session\"})\n")
+
+	err := validateScenarioComments(path)
+	if err == nil {
+		t.Fatal("expected missing comment error")
+	}
+	want := fmt.Sprintf("scenario block missing comment at %s:1", path)
+	if err.Error() != want {
+		t.Fatalf("error = %q, want %q", err.Error(), want)
+	}
+}
+
+func TestValidateScenarioCommentsPassesWithComments(t *testing.T) {
+	path := writeScenarioFixture(t, "-- Setup\nscene:campaign({name = \"Test\"})\n\n-- Start session\nscene:start_session({name = \"Session\"})\n")
+
+	if err := validateScenarioComments(path); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestValidateScenarioCommentsEdgeCases(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+	}{
+		{
+			name:    "empty file",
+			content: "",
+		},
+		{
+			name:    "comments only",
+			content: "-- Setup\n-- More context\n",
+		},
+		{
+			name:    "no scene calls",
+			content: "print(\"hello\")\n\nlocal value = 1\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			path := writeScenarioFixture(t, tt.content)
+			if err := validateScenarioComments(path); err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+	}
+}
+
+func writeScenarioFixture(t *testing.T, content string) string {
+	t.Helper()
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "scenario.lua")
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		t.Fatalf("write scenario: %v", err)
+	}
+	return path
+}
+
+// validateScenarioBlock enforces comment-first blocks for scenario steps.
+func validateScenarioBlock(path string, lines []string, start int, end int) error {
+	firstLineIndex := -1
+	firstLineContent := ""
+	hasSceneCall := false
+	for i := start; i < end; i++ {
+		trimmed := strings.TrimSpace(lines[i])
+		if trimmed == "" {
+			continue
+		}
+		if firstLineIndex == -1 {
+			firstLineIndex = i
+			firstLineContent = trimmed
+		}
+		if strings.HasPrefix(trimmed, "scene:") {
+			hasSceneCall = true
+		}
+	}
+	if hasSceneCall && firstLineIndex != -1 && !strings.HasPrefix(firstLineContent, "--") {
+		return fmt.Errorf("scenario block missing comment at %s:%d", path, firstLineIndex+1)
+	}
+	return nil
 }
 
 func registerLuaTypes(state *lua.State) {

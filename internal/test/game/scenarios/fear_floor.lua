@@ -1,5 +1,6 @@
 local scene = Scenario.new("fear_floor")
 
+-- Set a simple scene to drain the fear pool to zero.
 scene:campaign{
   name = "Fear Floor",
   system = "DAGGERHEART",
@@ -20,6 +21,7 @@ scene:gm_spend_fear(1):spotlight("Nazgul")
 scene:gm_spend_fear(1):spotlight("Nazgul")
 scene:gm_fear(0)
 
+-- Close the session once fear hits the floor.
 scene:end_session()
 
 return scene

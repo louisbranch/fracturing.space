@@ -1,5 +1,6 @@
 local scene = Scenario.new("gm_fear_spend_chain")
 
+-- Establish a scene for rapid fear spending.
 scene:campaign{
   name = "GM Fear Spend Chain",
   system = "DAGGERHEART",
@@ -18,6 +19,7 @@ scene:gm_fear(5)
 scene:gm_spend_fear(1):spotlight("Nazgul")
 scene:gm_spend_fear(2):spotlight("Nazgul")
 
+-- Close the session after the fear spend chain.
 scene:end_session()
 
 return scene

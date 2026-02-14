@@ -1,5 +1,6 @@
 local scene = Scenario.new("critical_damage")
 
+-- Frame a duel to showcase critical damage.
 scene:campaign{
   name = "Critical Damage",
   system = "DAGGERHEART",
@@ -24,6 +25,7 @@ scene:attack{
   damage_type = "physical"
 }
 
+-- Close the session after the critical blow.
 scene:end_session()
 
 return scene

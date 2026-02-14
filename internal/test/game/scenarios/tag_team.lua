@@ -1,5 +1,6 @@
 local scene = Scenario.new("tag_team")
 
+-- Pair Frodo and Sam for a tag team maneuver.
 scene:campaign{
   name = "Tag Team",
   system = "DAGGERHEART",
@@ -24,6 +25,7 @@ scene:tag_team{
   difficulty = 10
 }
 
+-- Close the session after the tag team attempt.
 scene:end_session()
 
 return scene

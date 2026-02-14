@@ -1,5 +1,6 @@
 local scene = Scenario.new("group_action")
 
+-- Assemble Frodo, Sam, and Gandalf for a group action.
 scene:campaign{
   name = "Group Action",
   system = "DAGGERHEART",
@@ -26,6 +27,7 @@ scene:group_action{
   }
 }
 
+-- Close the session after the group action.
 scene:end_session()
 
 return scene

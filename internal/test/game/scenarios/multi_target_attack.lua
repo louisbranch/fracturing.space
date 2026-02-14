@@ -1,5 +1,6 @@
 local scene = Scenario.new("multi_target_attack")
 
+-- Introduce two targets for a sweeping strike.
 scene:campaign{
   name = "Multi Target Attack",
   system = "DAGGERHEART",
@@ -26,6 +27,7 @@ scene:multi_attack{
   damage_dice = { { sides = 6, count = 1 } }
 }
 
+-- Close the session after the sweeping strike.
 scene:end_session()
 
 return scene

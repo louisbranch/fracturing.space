@@ -1,5 +1,6 @@
 local scene = Scenario.new("help_and_resistance")
 
+-- Frame a duel where help meets resistance.
 scene:campaign{
   name = "Help and Resistance",
   system = "DAGGERHEART",
@@ -29,6 +30,7 @@ scene:attack{
   expect_hope_delta = -1
 }
 
+-- Close the session after the assisted strike lands.
 scene:end_session()
 
 return scene

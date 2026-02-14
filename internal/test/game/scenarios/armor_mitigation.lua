@@ -1,5 +1,6 @@
 local scene = Scenario.new("armor_mitigation")
 
+-- Frame a duel where armor mitigation should matter.
 scene:campaign{
   name = "Armor Mitigation",
   system = "DAGGERHEART",
@@ -23,6 +24,7 @@ scene:adversary_attack{
   damage_type = "physical"
 }
 
+-- Close the session after the mitigation check.
 scene:end_session()
 
 return scene

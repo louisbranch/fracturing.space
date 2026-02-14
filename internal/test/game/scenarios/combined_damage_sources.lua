@@ -1,5 +1,6 @@
 local scene = Scenario.new("combined_damage_sources")
 
+-- Introduce two attackers to combine their damage against Bilbo.
 scene:campaign{
   name = "Combined Damage Sources",
   system = "DAGGERHEART",
@@ -26,6 +27,7 @@ scene:combined_damage{
   }
 }
 
+-- Close the session after the combined damage check.
 scene:end_session()
 
 return scene

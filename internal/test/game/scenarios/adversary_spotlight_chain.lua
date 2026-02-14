@@ -1,5 +1,6 @@
 local scene = Scenario.new("adversary_spotlight_chain")
 
+-- Gather threats so the spotlight can bounce between them.
 scene:campaign{
   name = "Adversary Spotlight Chain",
   system = "DAGGERHEART",
@@ -20,6 +21,7 @@ scene:gm_spend_fear(1):spotlight("Nazgul")
 scene:gm_spend_fear(1):spotlight("Golum")
 scene:gm_spend_fear(1):spotlight("Nazgul")
 
+-- Close the session after the spotlight volley.
 scene:end_session()
 
 return scene

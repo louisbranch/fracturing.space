@@ -1,5 +1,6 @@
 local scene = Scenario.new("basic_flow")
 
+-- Open a barebones campaign to show a quiet session.
 scene:campaign{
   name = "Basic Flow Campaign",
   system = "DAGGERHEART",

@@ -1,5 +1,6 @@
 local scene = Scenario.new("adversary_attack_advantage")
 
+-- Stage Saruman's ambush with a clear edge.
 scene:campaign{
   name = "Adversary Attack Advantage",
   system = "DAGGERHEART",
@@ -24,6 +25,7 @@ scene:adversary_attack{
   damage_type = "physical"
 }
 
+-- Close the session after the ambush resolves.
 scene:end_session()
 
 return scene

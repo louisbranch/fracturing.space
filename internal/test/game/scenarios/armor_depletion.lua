@@ -1,5 +1,6 @@
 local scene = Scenario.new("armor_depletion")
 
+-- Stage a relentless assault to grind through armor.
 scene:campaign{
   name = "Armor Depletion",
   system = "DAGGERHEART",
@@ -40,6 +41,7 @@ scene:adversary_attack{
   damage_type = "physical"
 }
 
+-- Close the session once armor gives way.
 scene:end_session()
 
 return scene
