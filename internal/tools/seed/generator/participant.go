@@ -50,7 +50,7 @@ func (g *Generator) createParticipants(ctx context.Context, campaignID, ownerPar
 
 		if controller == statev1.Controller_CONTROLLER_HUMAN {
 			userResp, err := g.authClient.CreateUser(ctx, &authv1.CreateUserRequest{
-				DisplayName: created.GetDisplayName(),
+				Username: created.GetDisplayName(),
 			})
 			if err != nil {
 				return nil, fmt.Errorf("CreateUser for participant %d: %w", i+1, err)

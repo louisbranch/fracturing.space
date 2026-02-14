@@ -15,7 +15,7 @@ import (
 func TestMCPStdioBlackbox(t *testing.T) {
 	grpcAddr, authAddr, stopGRPC := startGRPCServer(t)
 	defer stopGRPC()
-	userID := createAuthUser(t, authAddr, "Blackbox Creator")
+	userID := createAuthUser(t, authAddr, "blackbox-creator")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

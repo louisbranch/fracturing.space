@@ -17,8 +17,6 @@ import (
 	authservice "github.com/louisbranch/fracturing.space/internal/services/auth/api/grpc/auth"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/oauth"
 	authsqlite "github.com/louisbranch/fracturing.space/internal/services/auth/storage/sqlite"
-	"github.com/louisbranch/fracturing.space/internal/services/auth/user"
-	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	grpc_health_v1 "google.golang.org/grpc/health/grpc_health_v1"
@@ -68,12 +66,6 @@ func New(port int, httpAddr string) (*Server, error) {
 	if oauthConfig.Issuer == "" {
 		oauthConfig.Issuer = defaultOAuthIssuer(httpAddr)
 	}
-	if err := bootstrapOAuthUsers(store, oauthStore, oauthConfig); err != nil {
-		_ = listener.Close()
-		_ = store.Close()
-		return nil, err
-	}
-
 	var httpListener net.Listener
 	var httpServer *http.Server
 	var oauthServer *oauth.Server
@@ -237,44 +229,4 @@ func defaultOAuthIssuer(httpAddr string) string {
 		return "http://localhost" + addr
 	}
 	return "http://" + addr
-}
-
-func bootstrapOAuthUsers(store *authsqlite.Store, oauthStore *oauth.Store, config oauth.Config) error {
-	if store == nil || oauthStore == nil {
-		return nil
-	}
-	for _, bootstrap := range config.BootstrapUsers {
-		username := strings.TrimSpace(bootstrap.Username)
-		password := strings.TrimSpace(bootstrap.Password)
-		displayName := strings.TrimSpace(bootstrap.DisplayName)
-		if username == "" || password == "" || displayName == "" {
-			continue
-		}
-		existing, err := oauthStore.GetOAuthUserByUsername(username)
-		if err != nil {
-			return fmt.Errorf("lookup oauth user: %w", err)
-		}
-		userID := ""
-		if existing != nil {
-			userID = existing.UserID
-		}
-		if userID == "" {
-			created, err := user.CreateUser(user.CreateUserInput{DisplayName: displayName}, time.Now, nil)
-			if err != nil {
-				return fmt.Errorf("create oauth user: %w", err)
-			}
-			if err := store.PutUser(context.Background(), created); err != nil {
-				return fmt.Errorf("store oauth user: %w", err)
-			}
-			userID = created.ID
-		}
-		hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-		if err != nil {
-			return fmt.Errorf("hash oauth password: %w", err)
-		}
-		if err := oauthStore.UpsertOAuthUserCredentials(userID, username, string(hash), time.Now().UTC()); err != nil {
-			return fmt.Errorf("store oauth credentials: %w", err)
-		}
-	}
-	return nil
 }

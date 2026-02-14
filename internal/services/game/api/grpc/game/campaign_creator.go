@@ -130,7 +130,7 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 		if userResponse == nil || userResponse.GetUser() == nil {
 			return campaign.Campaign{}, participant.Participant{}, status.Error(codes.Internal, "auth user response is missing")
 		}
-		creatorDisplayName = strings.TrimSpace(userResponse.GetUser().GetDisplayName())
+		creatorDisplayName = strings.TrimSpace(userResponse.GetUser().GetUsername())
 		if creatorDisplayName == "" {
 			return campaign.Campaign{}, participant.Participant{}, apperrors.New(
 				apperrors.CodeCampaignCreatorUserMissing,

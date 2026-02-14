@@ -48,6 +48,8 @@ type Config struct {
 	GRPCAddr        string
 	AuthAddr        string
 	GRPCDialTimeout time.Duration
+	// AuthConfig enables token-based authentication when set.
+	AuthConfig *AuthConfig
 }
 
 // Server hosts the admin dashboard HTTP server and optional gRPC connection.
@@ -292,7 +294,7 @@ func NewServer(ctx context.Context, config Config) (*Server, error) {
 		}
 	}
 
-	handler := NewHandlerWithConfig(clients, config.GRPCAddr)
+	handler := NewHandlerWithConfig(clients, config.GRPCAddr, config.AuthConfig)
 	httpServer := &http.Server{
 		Addr:              httpAddr,
 		Handler:           handler,

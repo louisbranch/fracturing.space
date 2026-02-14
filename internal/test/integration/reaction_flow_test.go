@@ -43,7 +43,7 @@ func TestDaggerheartReactionFlow(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
 	defer cancel()
-	userID := createAuthUser(t, authAddr, "Reaction GM")
+	userID := createAuthUser(t, authAddr, "reaction-gm")
 	ctx = withUserID(ctx, userID)
 
 	createCampaign, err := campaignClient.CreateCampaign(ctx, &gamev1.CreateCampaignRequest{

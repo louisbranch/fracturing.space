@@ -13,7 +13,6 @@ type Config struct {
 	Issuer                  string
 	ResourceSecret          string
 	Clients                 []Client
-	BootstrapUsers          []BootstrapUser
 	LoginRedirectAllowlist  []string
 	LoginUIURL              string
 	Providers               map[string]ProviderConfig
@@ -29,13 +28,8 @@ type Client struct {
 	RedirectURIs            []string `json:"redirect_uris"`
 	Name                    string   `json:"client_name,omitempty"`
 	TokenEndpointAuthMethod string   `json:"token_endpoint_auth_method,omitempty"`
-}
-
-// BootstrapUser seeds a local credentialed user.
-type BootstrapUser struct {
-	Username    string `json:"username"`
-	Password    string `json:"password"`
-	DisplayName string `json:"display_name"`
+	// Trusted marks first-party clients that skip the consent screen.
+	Trusted bool `json:"-"`
 }
 
 // ProviderConfig describes an external OAuth provider configuration.
@@ -55,12 +49,13 @@ type oauthEnv struct {
 	Issuer                  string        `env:"FRACTURING_SPACE_OAUTH_ISSUER"`
 	ResourceSecret          string        `env:"FRACTURING_SPACE_OAUTH_RESOURCE_SECRET"`
 	ClientsJSON             string        `env:"FRACTURING_SPACE_OAUTH_CLIENTS"`
-	UsersJSON               string        `env:"FRACTURING_SPACE_OAUTH_USERS"`
 	LoginRedirects          []string      `env:"FRACTURING_SPACE_OAUTH_LOGIN_REDIRECTS"    envSeparator:","`
 	LoginUIURL              string        `env:"FRACTURING_SPACE_OAUTH_LOGIN_UI_URL"`
 	TokenTTL                time.Duration `env:"FRACTURING_SPACE_OAUTH_TOKEN_TTL"           envDefault:"1h"`
 	AuthorizationCodeTTL    time.Duration `env:"FRACTURING_SPACE_OAUTH_CODE_TTL"            envDefault:"10m"`
 	PendingAuthorizationTTL time.Duration `env:"FRACTURING_SPACE_OAUTH_PENDING_TTL"         envDefault:"15m"`
+	FirstPartyClientID      string        `env:"FRACTURING_SPACE_OAUTH_FIRST_PARTY_CLIENT_ID"`
+	FirstPartyRedirectURI   string        `env:"FRACTURING_SPACE_OAUTH_FIRST_PARTY_REDIRECT_URI"`
 	GoogleClientID          string        `env:"FRACTURING_SPACE_OAUTH_GOOGLE_CLIENT_ID"`
 	GoogleClientSecret      string        `env:"FRACTURING_SPACE_OAUTH_GOOGLE_CLIENT_SECRET"`
 	GoogleRedirectURI       string        `env:"FRACTURING_SPACE_OAUTH_GOOGLE_REDIRECT_URI"`
@@ -92,11 +87,18 @@ func LoadConfigFromEnv() Config {
 		}
 	}
 
-	var users []BootstrapUser
-	if raw.UsersJSON != "" {
-		if err := json.Unmarshal([]byte(raw.UsersJSON), &users); err != nil {
-			users = nil
+	// Prepend trusted first-party client when both ID and redirect URI are set.
+	fpID := strings.TrimSpace(raw.FirstPartyClientID)
+	fpRedirect := strings.TrimSpace(raw.FirstPartyRedirectURI)
+	if fpID != "" && fpRedirect != "" {
+		fp := Client{
+			ID:                      fpID,
+			RedirectURIs:            []string{fpRedirect},
+			Name:                    "Fracturing Space",
+			TokenEndpointAuthMethod: "none",
+			Trusted:                 true,
 		}
+		clients = append([]Client{fp}, clients...)
 	}
 
 	// Trim empty entries from CSV-split slices.
@@ -108,7 +110,6 @@ func LoadConfigFromEnv() Config {
 		Issuer:                  raw.Issuer,
 		ResourceSecret:          raw.ResourceSecret,
 		Clients:                 clients,
-		BootstrapUsers:          users,
 		LoginRedirectAllowlist:  loginRedirects,
 		LoginUIURL:              raw.LoginUIURL,
 		Providers:               providers,

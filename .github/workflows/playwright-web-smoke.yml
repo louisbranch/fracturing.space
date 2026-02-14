@@ -1,0 +1,61 @@
+name: Web Smoke (Playwright CLI)
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  web-smoke:
+    runs-on: ubuntu-latest
+    env:
+      PLAYWRIGHT_CLI_PKG: "@playwright/cli@0.1.0"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.6"
+          cache: true
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install Playwright CLI browsers
+        run: npx -y $PLAYWRIGHT_CLI_PKG install
+      - name: Build web service
+        run: |
+          set -euo pipefail
+          mkdir -p bin
+          go build -o ./bin/web ./cmd/web
+      - name: Start web service
+        env:
+          FRACTURING_SPACE_WEB_HTTP_ADDR: "127.0.0.1:8086"
+          FRACTURING_SPACE_WEB_AUTH_BASE_URL: "http://localhost:8084"
+          FRACTURING_SPACE_WEB_OAUTH_CLIENT_ID: "fracturing-space-web"
+        run: |
+          set -euo pipefail
+          ./bin/web -auth-addr="" 2>&1 &
+          timeout 30 bash -c 'until curl -fsS http://127.0.0.1:8086/up >/dev/null; do sleep 0.5; done'
+      - name: Run web smoke flow
+        env:
+          BASE_URL: "http://127.0.0.1:8086"
+        run: scripts/playwright-web-smoke.sh
+      - name: Upload Playwright artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-web-smoke
+          path: |
+            .playwright-cli
+            artifacts
+          if-no-files-found: warn
+      - name: Stop web service
+        if: always()
+        run: |
+          pkill -f "/bin/web" 2>/dev/null || true

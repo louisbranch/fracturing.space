@@ -16,8 +16,8 @@ templ UserDetailFullPage(view UserDetailPageView, activePage string, page PageCo
 
 // UserDetailPage renders a single user detail page.
 templ UserDetailPage(view UserDetailPageView, activePage string, loc Localizer) {
-	if view.Detail != nil && view.Detail.DisplayName != "" {
-		@PageHeader(PageHeading{Breadcrumbs: []Breadcrumb{{T(loc, "nav.users"), "/users"}, {view.Detail.DisplayName, ""}}, Title: view.Detail.DisplayName})
+	if view.Detail != nil && view.Detail.Username != "" {
+		@PageHeader(PageHeading{Breadcrumbs: []Breadcrumb{{T(loc, "nav.users"), "/users"}, {view.Detail.Username, ""}}, Title: view.Detail.Username})
 	} else if view.Detail != nil {
 		@PageHeader(PageHeading{Breadcrumbs: []Breadcrumb{{T(loc, "nav.users"), "/users"}, {view.Detail.ID, ""}}, Title: view.Detail.ID})
 	} else {
@@ -81,8 +81,8 @@ templ UsersPage(view UsersPageView, loc Localizer) {
 			Title:       T(loc, "users.create.heading"),
 			Action:      "/users/create",
 			Method:      "post",
-			FieldLabel:  T(loc, "users.create.display_name"),
-			FieldName:   "display_name",
+			FieldLabel:  T(loc, "users.create.username"),
+			FieldName:   "username",
 			FieldValue:  "",
 			FieldType:   "text",
 			Placeholder: "",
@@ -154,7 +154,7 @@ templ UsersTable(rows []UserRow, message string, loc Localizer) {
 			<thead>
 				<tr>
 					<th>{T(loc, "users.table.id")}</th>
-					<th>{T(loc, "users.table.display_name")}</th>
+					<th>{T(loc, "users.table.username")}</th>
 					<th>{T(loc, "users.table.created")}</th>
 					<th>{T(loc, "users.table.updated")}</th>
 				</tr>
@@ -169,7 +169,7 @@ templ UsersTable(rows []UserRow, message string, loc Localizer) {
 						</td>
 						<td>
 							@NavLink("/users/" + row.ID) {
-								{row.DisplayName}
+								{row.Username}
 							}
 						</td>
 						<td>{row.CreatedAt}</td>
@@ -194,7 +194,7 @@ templ UserDetailCard(detail UserDetail, impersonation *ImpersonationView, loc Lo
 	<table class="table table-zebra">
 		<tbody>
 			<tr><td><strong>{T(loc, "users.detail.id")}</strong></td><td><code>{detail.ID}</code></td></tr>
-			@DetailRow(T(loc, "users.detail.display_name"), detail.DisplayName)
+			@DetailRow(T(loc, "users.detail.username"), detail.Username)
 			@DetailRow(T(loc, "users.detail.created"), detail.CreatedAt)
 			@DetailRow(T(loc, "users.detail.updated"), detail.UpdatedAt)
 		</tbody>

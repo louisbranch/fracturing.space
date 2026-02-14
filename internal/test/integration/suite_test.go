@@ -12,7 +12,7 @@ func TestMCPStdioEndToEnd(t *testing.T) {
 	clientSession, closeClient := startMCPClient(t, grpcAddr)
 	defer closeClient()
 
-	userID := createAuthUser(t, authAddr, "Test Creator")
+	userID := createAuthUser(t, authAddr, "test-creator")
 	suite := &integrationSuite{client: clientSession, userID: userID}
 
 	t.Run("duality tools", func(t *testing.T) {

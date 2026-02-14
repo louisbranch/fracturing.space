@@ -32,7 +32,7 @@ func runEventListTests(t *testing.T, grpcAddr string, authAddr string) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
 	defer cancel()
-	userID := createAuthUser(t, authAddr, "Event List Creator")
+	userID := createAuthUser(t, authAddr, "event-list-creator")
 	ctxWithUser := withUserID(ctx, userID)
 
 	// Create a campaign

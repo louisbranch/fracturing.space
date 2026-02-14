@@ -44,7 +44,7 @@ func TestDaggerheartAdversaryAttackFlow(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
 	defer cancel()
-	userID := createAuthUser(t, authAddr, "Adversary GM")
+	userID := createAuthUser(t, authAddr, "adversary-gm")
 	ctx = withUserID(ctx, userID)
 
 	createCampaign, err := campaignClient.CreateCampaign(ctx, &gamev1.CreateCampaignRequest{

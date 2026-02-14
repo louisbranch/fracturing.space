@@ -29,8 +29,16 @@ This is the full environment variable reference. For setup steps, see
 - `FRACTURING_SPACE_OAUTH_LOGIN_UI_URL`: external login UI URL for redirects (web login server).
 - `FRACTURING_SPACE_OAUTH_LOGIN_REDIRECTS`: comma-separated list of allowed login redirect URLs.
 - `FRACTURING_SPACE_OAUTH_CLIENTS`: JSON array of registered OAuth clients.
-- `FRACTURING_SPACE_OAUTH_USERS`: JSON array of bootstrap users.
 - `FRACTURING_SPACE_OAUTH_RESOURCE_SECRET`: shared secret for resource introspection.
+- `FRACTURING_SPACE_OAUTH_FIRST_PARTY_CLIENT_ID`: client ID for the first-party web login client. When set (along with redirect URI), registers a trusted OAuth client that skips the consent screen. Default: unset.
+- `FRACTURING_SPACE_OAUTH_FIRST_PARTY_REDIRECT_URI`: redirect URI for the first-party web login client. Required together with the client ID.
+
+### WebAuthn / Passkeys
+
+- `FRACTURING_SPACE_WEBAUTHN_RP_ID`: WebAuthn relying party ID (the domain the user sees). Default: `localhost`.
+- `FRACTURING_SPACE_WEBAUTHN_RP_DISPLAY_NAME`: display name shown during passkey prompts. Defaults to the app name.
+- `FRACTURING_SPACE_WEBAUTHN_RP_ORIGINS`: comma-separated list of allowed WebAuthn origins. Default: `http://localhost:8086`.
+- `FRACTURING_SPACE_WEBAUTHN_SESSION_TTL`: passkey session TTL. Default: `5m`.
 
 ### Join grants
 
@@ -61,6 +69,9 @@ This is the full environment variable reference. For setup steps, see
 - `FRACTURING_SPACE_WEB_AUTH_BASE_URL`: external auth base URL for login redirects.
 - `FRACTURING_SPACE_WEB_AUTH_ADDR`: auth gRPC address used by the web login server.
 - `FRACTURING_SPACE_WEB_DIAL_TIMEOUT`: gRPC dial timeout for the web login server. Default: `2s`.
+- `FRACTURING_SPACE_WEB_OAUTH_CLIENT_ID`: first-party OAuth client ID used by the web server. Default: `fracturing-space-web`.
+- `FRACTURING_SPACE_WEB_CALLBACK_URL`: public OAuth callback URL (e.g., `http://localhost:8080/auth/callback`).
+- `FRACTURING_SPACE_WEB_AUTH_TOKEN_URL`: internal auth token endpoint for server-to-server code exchange. Defaults to `{AuthBaseURL}/token`.
 
 ### Docker + Caddy (Compose defaults)
 

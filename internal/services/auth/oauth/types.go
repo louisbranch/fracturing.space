@@ -2,14 +2,6 @@ package oauth
 
 import "time"
 
-// OAuthUser represents a local credentialed OAuth user.
-type OAuthUser struct {
-	UserID       string
-	Username     string
-	PasswordHash string
-	DisplayName  string
-}
-
 // AuthorizationRequest captures inbound /authorize parameters.
 type AuthorizationRequest struct {
 	ResponseType        string

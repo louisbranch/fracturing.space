@@ -36,7 +36,7 @@ func runSessionLockTests(t *testing.T, grpcAddr string, authAddr string) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
 	defer cancel()
-	userID := createAuthUser(t, authAddr, "Session Lock Creator")
+	userID := createAuthUser(t, authAddr, "session-lock-creator")
 	ctxWithUser := withUserID(ctx, userID)
 
 	createResp, err := campaignClient.CreateCampaign(ctxWithUser, &statev1.CreateCampaignRequest{

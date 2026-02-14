@@ -11,7 +11,7 @@ import (
 )
 
 // Layout wraps public pages in the shared HTML shell.
-func Layout(title string) templ.Component {
+func Layout(title string, lang string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -32,20 +32,33 @@ func Layout(title string) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<!doctype html><html lang=\"en\" data-theme=\"fracturing\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<!doctype html><html lang=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var2 string
-		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(title)
+		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(lang)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/layout.templ`, Line: 10, Col: 16}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/layout.templ`, Line: 6, Col: 18}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</title><meta name=\"description\" content=\"Open-source, server-authoritative engine for deterministic tabletop RPG campaigns and AI game masters.\"><link href=\"https://cdn.jsdelivr.net/npm/daisyui@5.5.18\" rel=\"stylesheet\" type=\"text/css\" integrity=\"sha384-ww1btmC3Ah3rEb6jt/coOxyQ9JYMoxQpFSB/bxdE20ZYMK4kWSb+TwcgbHR/GFCq\" crossorigin=\"anonymous\"><script src=\"https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.1.18\" integrity=\"sha384-WrpyCFNrMmN/IC7KmMNiXxIouXEFpoDIuJ2P+ys++uYEzegAW2MSl+X6Unsahaij\" crossorigin=\"anonymous\"></script><link rel=\"stylesheet\" href=\"/static/landing.css\"></head><body class=\"landing-body\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\" data-theme=\"fracturing\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var3 string
+		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(title)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/layout.templ`, Line: 10, Col: 16}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</title><meta name=\"description\" content=\"Open-source, server-authoritative engine for deterministic tabletop RPG campaigns and AI game masters.\"><link href=\"https://cdn.jsdelivr.net/npm/daisyui@5.5.18\" rel=\"stylesheet\" type=\"text/css\" integrity=\"sha384-ww1btmC3Ah3rEb6jt/coOxyQ9JYMoxQpFSB/bxdE20ZYMK4kWSb+TwcgbHR/GFCq\" crossorigin=\"anonymous\"><script src=\"https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.1.18\" integrity=\"sha384-WrpyCFNrMmN/IC7KmMNiXxIouXEFpoDIuJ2P+ys++uYEzegAW2MSl+X6Unsahaij\" crossorigin=\"anonymous\"></script><link rel=\"stylesheet\" href=\"/static/landing.css\"></head><body class=\"landing-body\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -53,7 +66,7 @@ func Layout(title string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</body></html>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</body></html>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

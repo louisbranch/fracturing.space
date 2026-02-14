@@ -18,7 +18,7 @@ This document describes the OAuth surface owned by the auth service and the MCP 
 
 Endpoints:
 
-- `GET /authorize` + `POST /authorize/login` + `POST /authorize/consent`
+- `GET /authorize` + `POST /authorize/consent`
 - `POST /token`
 - `POST /introspect` (opaque tokens, protected by `X-Resource-Secret`)
 - `GET /.well-known/oauth-authorization-server`
@@ -54,7 +54,6 @@ Auth service:
 - `FRACTURING_SPACE_OAUTH_ISSUER`: Issuer base URL for OAuth metadata (should match the auth HTTP base URL).
 - `FRACTURING_SPACE_OAUTH_RESOURCE_SECRET`: Shared secret required by `/introspect`.
 - `FRACTURING_SPACE_OAUTH_CLIENTS`: JSON array of OAuth clients (id, redirect URIs, name, auth method).
-- `FRACTURING_SPACE_OAUTH_USERS`: JSON array of bootstrap users (username, password, display name).
 - `FRACTURING_SPACE_OAUTH_LOGIN_REDIRECTS`: Comma-separated allowlist for external provider redirect URIs.
 - `FRACTURING_SPACE_OAUTH_LOGIN_UI_URL`: Web login URL used by `/authorize` to redirect to the login UX.
 - `FRACTURING_SPACE_OAUTH_GOOGLE_CLIENT_ID`: Google OAuth client ID.
@@ -96,14 +95,3 @@ Web login service:
 ]
 ```
 
-## Example OAuth User Bootstrap (JSON)
-
-```json
-[
-  {
-    "username": "demo",
-    "password": "change-me",
-    "display_name": "Demo User"
-  }
-]
-```

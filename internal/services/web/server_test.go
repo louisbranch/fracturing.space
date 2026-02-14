@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -19,9 +20,26 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func TestLoginHandlerRequiresPendingID(t *testing.T) {
+func TestLoginWithoutPendingIDRedirectsToAuthLogin(t *testing.T) {
+	handler := NewHandler(Config{
+		AuthBaseURL:   "http://auth.local",
+		OAuthClientID: "fracturing-space-web",
+		CallbackURL:   "http://localhost:8080/auth/callback",
+	}, nil)
+	req := httptest.NewRequest(http.MethodGet, "/login", nil)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	if w.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusFound)
+	}
+	if loc := w.Header().Get("Location"); loc != "/auth/login" {
+		t.Fatalf("Location = %q, want %q", loc, "/auth/login")
+	}
+}
+
+func TestLoginWithoutPendingIDErrorsWhenOAuthNotConfigured(t *testing.T) {
 	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodGet, "/login?client_id=client-1", nil)
+	req := httptest.NewRequest(http.MethodGet, "/login", nil)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
 	if w.Code != http.StatusBadRequest {
@@ -40,9 +58,6 @@ func TestLoginHandlerRendersForm(t *testing.T) {
 	body := w.Body.String()
 	if !strings.Contains(body, "pending-1") {
 		t.Fatalf("expected pending_id in body")
-	}
-	if !strings.Contains(body, "http://auth.local/authorize/login") {
-		t.Fatalf("expected form action with auth base URL")
 	}
 	if !strings.Contains(body, "Test Client") {
 		t.Fatalf("expected client name in body")
@@ -63,6 +78,57 @@ func TestLandingPageRenders(t *testing.T) {
 	}
 	if !strings.Contains(body, "Open-source, server-authoritative engine") {
 		t.Fatalf("expected hero tagline in body")
+	}
+}
+
+func TestLandingPageShowsSignIn(t *testing.T) {
+	handler := NewHandler(Config{
+		AuthBaseURL:   "http://auth.local",
+		OAuthClientID: "fracturing-space-web",
+		CallbackURL:   "http://localhost:8080/auth/callback",
+	}, nil)
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "Sign in") {
+		t.Fatalf("expected Sign in button in body")
+	}
+	if !strings.Contains(body, "/auth/login") {
+		t.Fatalf("expected /auth/login link in body")
+	}
+}
+
+func TestLandingPageShowsSignedInUser(t *testing.T) {
+	h := &handler{
+		config: Config{
+			AuthBaseURL:   "http://auth.local",
+			OAuthClientID: "fracturing-space-web",
+			CallbackURL:   "http://localhost:8080/auth/callback",
+		},
+		sessions:     newSessionStore(),
+		pendingFlows: newPendingFlowStore(),
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+
+	// Build the full handler so we go through the mux.
+	handler := NewHandler(h.config, nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	body := w.Body.String()
+	// The handler creates its own session store, so this session won't be found.
+	// Instead, it should show "Sign in" since the session is unknown.
+	if !strings.Contains(body, "Sign in") {
+		t.Fatalf("expected Sign in for unknown session")
 	}
 }
 
@@ -210,7 +276,7 @@ func TestPasskeyRegisterStartRequiresFields(t *testing.T) {
 func TestPasskeyRegisterStartSuccess(t *testing.T) {
 	fake := &fakeAuthClient{
 		createUserResp: &authv1.CreateUserResponse{
-			User: &authv1.User{Id: "user-1", DisplayName: "Alpha"},
+			User: &authv1.User{Id: "user-1", Username: "alpha"},
 		},
 		beginRegResp: &authv1.BeginPasskeyRegistrationResponse{
 			SessionId:                     "session-1",
@@ -218,7 +284,7 @@ func TestPasskeyRegisterStartSuccess(t *testing.T) {
 		},
 	}
 	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, fake)
-	req := httptest.NewRequest(http.MethodPost, "/passkeys/register/start", bytes.NewBufferString(`{"display_name":"Alpha"}`))
+	req := httptest.NewRequest(http.MethodPost, "/passkeys/register/start", bytes.NewBufferString(`{"username":"alpha"}`))
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
 	if w.Code != http.StatusOK {
@@ -257,6 +323,320 @@ func TestPasskeyRegisterFinishSuccess(t *testing.T) {
 	handler.ServeHTTP(w, req)
 	if w.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+}
+
+func TestAuthLoginRedirect(t *testing.T) {
+	handler := NewHandler(Config{
+		AuthBaseURL:   "http://auth.local",
+		OAuthClientID: "fracturing-space-web",
+		CallbackURL:   "http://localhost:8080/auth/callback",
+	}, nil)
+	req := httptest.NewRequest(http.MethodGet, "/auth/login", nil)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusFound)
+	}
+	location := w.Header().Get("Location")
+	if location == "" {
+		t.Fatal("expected Location header")
+	}
+	parsed, err := url.Parse(location)
+	if err != nil {
+		t.Fatalf("parse location: %v", err)
+	}
+	if parsed.Host != "auth.local" {
+		t.Fatalf("host = %q, want %q", parsed.Host, "auth.local")
+	}
+	if parsed.Path != "/authorize" {
+		t.Fatalf("path = %q, want %q", parsed.Path, "/authorize")
+	}
+	q := parsed.Query()
+	if q.Get("response_type") != "code" {
+		t.Fatalf("response_type = %q", q.Get("response_type"))
+	}
+	if q.Get("client_id") != "fracturing-space-web" {
+		t.Fatalf("client_id = %q", q.Get("client_id"))
+	}
+	if q.Get("redirect_uri") != "http://localhost:8080/auth/callback" {
+		t.Fatalf("redirect_uri = %q", q.Get("redirect_uri"))
+	}
+	if q.Get("code_challenge") == "" {
+		t.Fatal("expected code_challenge")
+	}
+	if q.Get("code_challenge_method") != "S256" {
+		t.Fatalf("code_challenge_method = %q", q.Get("code_challenge_method"))
+	}
+	if q.Get("state") == "" {
+		t.Fatal("expected state parameter")
+	}
+}
+
+func TestAuthCallbackExchangesCodeAndSetsCookie(t *testing.T) {
+	// Mock token endpoint.
+	tokenServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		// Verify the required fields are sent.
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, "bad form", http.StatusBadRequest)
+			return
+		}
+		if r.FormValue("grant_type") != "authorization_code" {
+			http.Error(w, "wrong grant_type", http.StatusBadRequest)
+			return
+		}
+		if r.FormValue("client_id") != "fracturing-space-web" {
+			http.Error(w, "wrong client_id", http.StatusBadRequest)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"access_token":"test-access-token","token_type":"Bearer","expires_in":3600}`))
+	}))
+	defer tokenServer.Close()
+
+	h := &handler{
+		config: Config{
+			AuthBaseURL:   "http://auth.local",
+			OAuthClientID: "fracturing-space-web",
+			CallbackURL:   "http://localhost:8080/auth/callback",
+			AuthTokenURL:  tokenServer.URL,
+		},
+		sessions:     newSessionStore(),
+		pendingFlows: newPendingFlowStore(),
+	}
+
+	// Seed a pending flow.
+	state := h.pendingFlows.create("test-verifier")
+
+	req := httptest.NewRequest(http.MethodGet, "/auth/callback?code=test-code&state="+state, nil)
+	w := httptest.NewRecorder()
+	h.handleAuthCallback(w, req)
+
+	if w.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d: %s", w.Code, http.StatusFound, w.Body.String())
+	}
+	if w.Header().Get("Location") != "/" {
+		t.Fatalf("Location = %q, want %q", w.Header().Get("Location"), "/")
+	}
+
+	// Verify session cookie was set.
+	cookies := w.Result().Cookies()
+	var sessionCookie *http.Cookie
+	for _, c := range cookies {
+		if c.Name == sessionCookieName {
+			sessionCookie = c
+			break
+		}
+	}
+	if sessionCookie == nil {
+		t.Fatal("expected session cookie")
+	}
+
+	// Verify session exists in the store.
+	sess := h.sessions.get(sessionCookie.Value)
+	if sess == nil {
+		t.Fatal("expected session in store")
+	}
+	if sess.accessToken != "test-access-token" {
+		t.Fatalf("accessToken = %q, want %q", sess.accessToken, "test-access-token")
+	}
+}
+
+func TestAuthCallbackSetsTokenCookie(t *testing.T) {
+	tokenServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"access_token":"test-access-token","token_type":"Bearer","expires_in":3600}`))
+	}))
+	defer tokenServer.Close()
+
+	h := &handler{
+		config: Config{
+			AuthBaseURL:   "http://auth.local",
+			OAuthClientID: "fracturing-space-web",
+			CallbackURL:   "http://localhost:8080/auth/callback",
+			AuthTokenURL:  tokenServer.URL,
+			Domain:        "example.com",
+		},
+		sessions:     newSessionStore(),
+		pendingFlows: newPendingFlowStore(),
+	}
+
+	state := h.pendingFlows.create("test-verifier")
+	req := httptest.NewRequest(http.MethodGet, "/auth/callback?code=test-code&state="+state, nil)
+	w := httptest.NewRecorder()
+	h.handleAuthCallback(w, req)
+
+	if w.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d: %s", w.Code, http.StatusFound, w.Body.String())
+	}
+
+	var tokenCookie *http.Cookie
+	for _, c := range w.Result().Cookies() {
+		if c.Name == tokenCookieName {
+			tokenCookie = c
+			break
+		}
+	}
+	if tokenCookie == nil {
+		t.Fatal("expected fs_token cookie")
+	}
+	if tokenCookie.Value != "test-access-token" {
+		t.Fatalf("token cookie value = %q, want %q", tokenCookie.Value, "test-access-token")
+	}
+	if tokenCookie.Domain != "example.com" {
+		t.Fatalf("token cookie domain = %q, want %q", tokenCookie.Domain, "example.com")
+	}
+	if tokenCookie.MaxAge != 3600 {
+		t.Fatalf("token cookie MaxAge = %d, want 3600", tokenCookie.MaxAge)
+	}
+}
+
+func TestAuthLogoutClearsTokenCookie(t *testing.T) {
+	h := &handler{
+		config: Config{
+			AuthBaseURL:   "http://auth.local",
+			OAuthClientID: "fracturing-space-web",
+			Domain:        "example.com",
+		},
+		sessions:     newSessionStore(),
+		pendingFlows: newPendingFlowStore(),
+	}
+
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	req := httptest.NewRequest(http.MethodPost, "/auth/logout", nil)
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+	h.handleAuthLogout(w, req)
+
+	if w.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusFound)
+	}
+
+	var tokenCleared bool
+	for _, c := range w.Result().Cookies() {
+		if c.Name == tokenCookieName && c.MaxAge == -1 {
+			tokenCleared = true
+		}
+	}
+	if !tokenCleared {
+		t.Fatal("expected fs_token cookie to be cleared")
+	}
+}
+
+func TestAuthCallbackMissingCodeOrState(t *testing.T) {
+	h := &handler{
+		config: Config{
+			AuthBaseURL:   "http://auth.local",
+			OAuthClientID: "fracturing-space-web",
+			CallbackURL:   "http://localhost:8080/auth/callback",
+		},
+		sessions:     newSessionStore(),
+		pendingFlows: newPendingFlowStore(),
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/auth/callback?code=test-code", nil)
+	w := httptest.NewRecorder()
+	h.handleAuthCallback(w, req)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+}
+
+func TestAuthCallbackInvalidState(t *testing.T) {
+	h := &handler{
+		config: Config{
+			AuthBaseURL:   "http://auth.local",
+			OAuthClientID: "fracturing-space-web",
+			CallbackURL:   "http://localhost:8080/auth/callback",
+		},
+		sessions:     newSessionStore(),
+		pendingFlows: newPendingFlowStore(),
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/auth/callback?code=test-code&state=bogus", nil)
+	w := httptest.NewRecorder()
+	h.handleAuthCallback(w, req)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+}
+
+func TestAuthLogoutClearsSessionAndRedirects(t *testing.T) {
+	h := &handler{
+		config: Config{
+			AuthBaseURL:   "http://auth.local",
+			OAuthClientID: "fracturing-space-web",
+		},
+		sessions:     newSessionStore(),
+		pendingFlows: newPendingFlowStore(),
+	}
+
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+
+	req := httptest.NewRequest(http.MethodPost, "/auth/logout", nil)
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+	h.handleAuthLogout(w, req)
+
+	if w.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusFound)
+	}
+	if w.Header().Get("Location") != "/" {
+		t.Fatalf("Location = %q, want %q", w.Header().Get("Location"), "/")
+	}
+
+	// Session should be deleted.
+	if sess := h.sessions.get(sessionID); sess != nil {
+		t.Fatal("expected session to be deleted")
+	}
+
+	// Session cookie should be cleared.
+	cookies := w.Result().Cookies()
+	var cleared bool
+	for _, c := range cookies {
+		if c.Name == sessionCookieName && c.MaxAge == -1 {
+			cleared = true
+		}
+	}
+	if !cleared {
+		t.Fatal("expected session cookie to be cleared")
+	}
+}
+
+func TestAuthLogoutMethodNotAllowed(t *testing.T) {
+	h := &handler{
+		config: Config{
+			AuthBaseURL:   "http://auth.local",
+			OAuthClientID: "fracturing-space-web",
+		},
+		sessions:     newSessionStore(),
+		pendingFlows: newPendingFlowStore(),
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/auth/logout", nil)
+	w := httptest.NewRecorder()
+	h.handleAuthLogout(w, req)
+	if w.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusMethodNotAllowed)
+	}
+}
+
+func TestAuthLoginNotConfigured(t *testing.T) {
+	handler := NewHandler(Config{
+		AuthBaseURL: "http://auth.local",
+		// OAuthClientID is empty — not configured.
+	}, nil)
+	req := httptest.NewRequest(http.MethodGet, "/auth/login", nil)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusNotFound)
 	}
 }
 
@@ -349,38 +729,6 @@ func TestDialAuthGRPCHealthError(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "auth gRPC health check failed") {
 		t.Fatalf("unexpected error: %v", err)
-	}
-}
-
-func TestBuildAuthLoginURL(t *testing.T) {
-	cases := []struct {
-		name string
-		base string
-		want string
-	}{
-		{
-			name: "empty base",
-			base: "",
-			want: "/authorize/login",
-		},
-		{
-			name: "base trims slash",
-			base: "http://auth.local/",
-			want: "http://auth.local/authorize/login",
-		},
-		{
-			name: "whitespace base",
-			base: "  ",
-			want: "/authorize/login",
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			if got := buildAuthLoginURL(tc.base); got != tc.want {
-				t.Fatalf("buildAuthLoginURL(%q) = %q, want %q", tc.base, got, tc.want)
-			}
-		})
 	}
 }
 

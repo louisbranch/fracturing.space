@@ -60,7 +60,7 @@ func TestDaggerheartGroupActionFlow(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
 	defer cancel()
-	userID := createAuthUser(t, authAddr, "Group Action GM")
+	userID := createAuthUser(t, authAddr, "group-action-gm")
 	ctx = withUserID(ctx, userID)
 
 	createCampaign, err := campaignClient.CreateCampaign(ctx, &gamev1.CreateCampaignRequest{
@@ -164,7 +164,7 @@ func TestDaggerheartTagTeamFlow(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
 	defer cancel()
-	userID := createAuthUser(t, authAddr, "Tag Team GM")
+	userID := createAuthUser(t, authAddr, "tag-team-gm")
 	ctx = withUserID(ctx, userID)
 
 	createCampaign, err := campaignClient.CreateCampaign(ctx, &gamev1.CreateCampaignRequest{

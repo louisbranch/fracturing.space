@@ -128,8 +128,8 @@ func UserDetailPage(view UserDetailPageView, activePage string, loc Localizer) t
 			templ_7745c5c3_Var5 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		if view.Detail != nil && view.Detail.DisplayName != "" {
-			templ_7745c5c3_Err = PageHeader(PageHeading{Breadcrumbs: []Breadcrumb{{T(loc, "nav.users"), "/users"}, {view.Detail.DisplayName, ""}}, Title: view.Detail.DisplayName}).Render(ctx, templ_7745c5c3_Buffer)
+		if view.Detail != nil && view.Detail.Username != "" {
+			templ_7745c5c3_Err = PageHeader(PageHeading{Breadcrumbs: []Breadcrumb{{T(loc, "nav.users"), "/users"}, {view.Detail.Username, ""}}, Title: view.Detail.Username}).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -446,8 +446,8 @@ func UsersPage(view UsersPageView, loc Localizer) templ.Component {
 			Title:       T(loc, "users.create.heading"),
 			Action:      "/users/create",
 			Method:      "post",
-			FieldLabel:  T(loc, "users.create.display_name"),
-			FieldName:   "display_name",
+			FieldLabel:  T(loc, "users.create.username"),
+			FieldName:   "username",
 			FieldValue:  "",
 			FieldType:   "text",
 			Placeholder: "",
@@ -785,9 +785,9 @@ func UsersTable(rows []UserRow, message string, loc Localizer) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var39 string
-			templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "users.table.display_name"))
+			templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "users.table.username"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/users.templ`, Line: 157, Col: 44}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/users.templ`, Line: 157, Col: 40}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var39))
 			if templ_7745c5c3_Err != nil {
@@ -880,9 +880,9 @@ func UsersTable(rows []UserRow, message string, loc Localizer) templ.Component {
 					}
 					ctx = templ.InitializeContext(ctx)
 					var templ_7745c5c3_Var45 string
-					templ_7745c5c3_Var45, templ_7745c5c3_Err = templ.JoinStringErrs(row.DisplayName)
+					templ_7745c5c3_Var45, templ_7745c5c3_Err = templ.JoinStringErrs(row.Username)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/users.templ`, Line: 172, Col: 24}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/users.templ`, Line: 172, Col: 21}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var45))
 					if templ_7745c5c3_Err != nil {
@@ -1048,7 +1048,7 @@ func UserDetailCard(detail UserDetail, impersonation *ImpersonationView, loc Loc
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = DetailRow(T(loc, "users.detail.display_name"), detail.DisplayName).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = DetailRow(T(loc, "users.detail.username"), detail.Username).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

@@ -27,6 +27,8 @@ go run ./cmd/join-grant-key
    - `FRACTURING_SPACE_PUBLIC_SCHEME=https`
    - `FRACTURING_SPACE_PUBLIC_PORT=` (empty)
    - `FRACTURING_SPACE_CADDY_AUTO_HTTPS=on`
+   - `FRACTURING_SPACE_WEBAUTHN_RP_ID` (must match `FRACTURING_SPACE_DOMAIN`)
+   - `FRACTURING_SPACE_WEBAUTHN_RP_ORIGINS` (e.g., `https://example.com`)
 5. Pull and run:
 
 ```sh

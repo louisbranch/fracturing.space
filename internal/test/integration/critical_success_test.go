@@ -39,7 +39,7 @@ func TestDaggerheartActionRollCriticalEffects(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
 	defer cancel()
 
-	userID := createAuthUser(t, authAddr, "Critical GM")
+	userID := createAuthUser(t, authAddr, "critical-gm")
 	ctxWithUser := withUserID(ctx, userID)
 
 	createCampaign, err := campaignClient.CreateCampaign(ctxWithUser, &gamev1.CreateCampaignRequest{
@@ -152,7 +152,7 @@ func TestDaggerheartAttackFlowCriticalDamageBonus(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
 	defer cancel()
 
-	userID := createAuthUser(t, authAddr, "Critical Attack GM")
+	userID := createAuthUser(t, authAddr, "critical-attack-gm")
 	ctxWithUser := withUserID(ctx, userID)
 
 	createCampaign, err := campaignClient.CreateCampaign(ctxWithUser, &gamev1.CreateCampaignRequest{

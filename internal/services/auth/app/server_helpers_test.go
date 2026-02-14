@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/louisbranch/fracturing.space/internal/services/auth/oauth"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/storage/sqlite"
 )
 
@@ -34,47 +33,6 @@ func TestOpenAuthStoreInvalidDir(t *testing.T) {
 
 	if _, err := openAuthStore(path); err == nil {
 		t.Fatal("expected error for invalid storage dir")
-	}
-}
-
-func TestBootstrapOAuthUsersSkipsInvalid(t *testing.T) {
-	store := openTempAuthStore(t)
-	oauthStore := oauth.NewStore(store.DB())
-	config := oauth.Config{
-		BootstrapUsers: []oauth.BootstrapUser{{Username: "", Password: "", DisplayName: ""}},
-	}
-
-	if err := bootstrapOAuthUsers(store, oauthStore, config); err != nil {
-		t.Fatalf("bootstrap oauth users: %v", err)
-	}
-}
-
-func TestBootstrapOAuthUsersNilStores(t *testing.T) {
-	config := oauth.Config{
-		BootstrapUsers: []oauth.BootstrapUser{{Username: "user", Password: "pass", DisplayName: "User"}},
-	}
-	if err := bootstrapOAuthUsers(nil, nil, config); err != nil {
-		t.Fatalf("expected nil error, got %v", err)
-	}
-}
-
-func TestBootstrapOAuthUsersCreatesCredentials(t *testing.T) {
-	store := openTempAuthStore(t)
-	oauthStore := oauth.NewStore(store.DB())
-	config := oauth.Config{
-		BootstrapUsers: []oauth.BootstrapUser{{Username: "user", Password: "pass", DisplayName: "User"}},
-	}
-
-	if err := bootstrapOAuthUsers(store, oauthStore, config); err != nil {
-		t.Fatalf("bootstrap oauth users: %v", err)
-	}
-
-	creds, err := oauthStore.GetOAuthUserByUsername("user")
-	if err != nil {
-		t.Fatalf("get oauth user: %v", err)
-	}
-	if creds == nil || creds.UserID == "" {
-		t.Fatal("expected credentials to be created")
 	}
 }
 

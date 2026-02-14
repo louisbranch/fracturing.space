@@ -37,7 +37,7 @@ func TestDaggerheartRestConsequences(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
 	defer cancel()
 
-	userID := createAuthUser(t, authAddr, "Rest GM")
+	userID := createAuthUser(t, authAddr, "rest-gm")
 	ctxWithUser := withUserID(ctx, userID)
 
 	createCampaign, err := campaignClient.CreateCampaign(ctxWithUser, &gamev1.CreateCampaignRequest{

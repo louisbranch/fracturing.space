@@ -1,0 +1,39 @@
+package templates
+
+// MagicParams holds values for the magic-link result page.
+type MagicParams struct {
+	AppName   string
+	Title     string
+	Message   string
+	Detail    string
+	Success   bool
+	LinkURL   string
+	LinkLabel string
+	Lang      string
+}
+
+// MagicPage renders the magic-link verification result page.
+templ MagicPage(params MagicParams) {
+	@Layout(params.Title + " - " + params.AppName, params.Lang) {
+		<main class="flex justify-center px-5 py-12">
+			<div class="w-full max-w-xl grid gap-8">
+				<header class="grid gap-3">
+					<h1 class="text-3xl font-bold">{ params.Title }</h1>
+					<p class="opacity-70">{ params.Message }</p>
+				</header>
+				<div class="card bg-base-200 border border-base-300 shadow-xl">
+					<div class="card-body">
+						if params.Success {
+							<div class="alert alert-success">{ params.Detail }</div>
+						} else {
+							<div class="alert alert-error">{ params.Detail }</div>
+						}
+						if params.LinkURL != "" {
+							<a class="btn btn-secondary btn-outline" href={ templ.SafeURL(params.LinkURL) }>{ params.LinkLabel }</a>
+						}
+					</div>
+				</div>
+			</div>
+		</main>
+	}
+}

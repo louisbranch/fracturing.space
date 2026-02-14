@@ -3,10 +3,10 @@ SELECT * FROM users WHERE id = ?;
 
 -- name: PutUser :exec
 INSERT INTO users (
-    id, display_name, locale, created_at, updated_at
+    id, username, locale, created_at, updated_at
 ) VALUES (?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
-    display_name = excluded.display_name,
+    username = excluded.username,
     locale = excluded.locale,
     updated_at = excluded.updated_at;
 

@@ -69,7 +69,7 @@ func TestDaggerheartGmMoveSpendFear(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
 	defer cancel()
-	userID := createAuthUser(t, authAddr, "GM")
+	userID := createAuthUser(t, authAddr, "gm-user")
 	ctx = withUserID(ctx, userID)
 
 	createCampaign, err := campaignClient.CreateCampaign(ctx, &gamev1.CreateCampaignRequest{
@@ -167,7 +167,7 @@ func TestDaggerheartCountdownLifecycle(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
 	defer cancel()
-	userID := createAuthUser(t, authAddr, "Countdown GM")
+	userID := createAuthUser(t, authAddr, "countdown-gm")
 	ctx = withUserID(ctx, userID)
 
 	createCampaign, err := campaignClient.CreateCampaign(ctx, &gamev1.CreateCampaignRequest{
@@ -274,7 +274,7 @@ func TestDaggerheartAdversaryAttackRoll(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
 	defer cancel()
-	userID := createAuthUser(t, authAddr, "Adversary GM")
+	userID := createAuthUser(t, authAddr, "adversary-gm")
 	ctx = withUserID(ctx, userID)
 
 	createCampaign, err := campaignClient.CreateCampaign(ctx, &gamev1.CreateCampaignRequest{
