@@ -89,7 +89,7 @@ jobs:
           mv "$TMP_DIR/coverage.out" ./coverage.out
           go run github.com/nikolaydubina/go-cover-treemap -coverprofile=coverage.out -percent > coverage-treemap.svg
           curl -f -o coverage.svg "https://img.shields.io/badge/coverage-${COVERAGE_PERCENT}%25-${COLOR}"
-          git add coverage.svg coverage-treemap.svg
+          git add -f coverage.svg coverage-treemap.svg
           if git diff --cached --quiet; then
             echo "No changes to coverage badge."
             exit 0
