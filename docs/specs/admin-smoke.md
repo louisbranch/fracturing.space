@@ -5,7 +5,9 @@ Quick regression coverage for the admin UI: navigation, user creation, impersona
 and campaign creation.
 
 ## Preconditions
-- Services running (`make run`)
+- Services running (`make run`). This will automatically generate and export dev join-grant keys when missing.
+- If starting services manually (not via `make run`), ensure join-grant configuration is exported, for example:
+  `eval "$(go run ./cmd/join-grant-key)"; export FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY FRACTURING_SPACE_JOIN_GRANT_ISSUER FRACTURING_SPACE_JOIN_GRANT_AUDIENCE`
 - Demo data seeded (recommended): `make seed-variety`
 
 ## Automation

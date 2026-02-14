@@ -42,6 +42,7 @@ jobs:
         run: |
           set -euo pipefail
           eval "$(./bin/join-grant-key)"
+          export FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY
           export FRACTURING_SPACE_JOIN_GRANT_ISSUER="fracturing.space/auth"
           export FRACTURING_SPACE_JOIN_GRANT_AUDIENCE="fracturing.space/game"
           export FRACTURING_SPACE_JOIN_GRANT_TTL="5m"
