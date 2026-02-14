@@ -35,4 +35,12 @@ func TestApplyDowntimeMove(t *testing.T) {
 	if result.HopeAfter != 4 {
 		t.Fatalf("hope after = %d, want 4", result.HopeAfter)
 	}
+
+	result = ApplyDowntimeMove(state, DowntimeWorkOnProject, DowntimeOptions{})
+	if result.HopeAfter != result.HopeBefore {
+		t.Fatalf("work_on_project should not change hope")
+	}
+	if result.StressAfter != result.StressBefore {
+		t.Fatalf("work_on_project should not change stress")
+	}
 }

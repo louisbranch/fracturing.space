@@ -148,6 +148,61 @@ func TestExportHumanReadable_EmptyEvents(t *testing.T) {
 	}
 }
 
+func TestExportHumanReadable_EntityWithoutID(t *testing.T) {
+	ts := time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC)
+	events := []Event{
+		{
+			CampaignID: "camp_abc123",
+			Seq:        1,
+			Timestamp:  ts,
+			Type:       TypeCampaignCreated,
+			ActorType:  ActorTypeSystem,
+			EntityType: "campaign",
+		},
+	}
+
+	var buf bytes.Buffer
+	if err := ExportHumanReadable(events, &buf); err != nil {
+		t.Fatalf("ExportHumanReadable failed: %v", err)
+	}
+
+	output := buf.String()
+	// Entity type without ID should show just the type
+	if !strings.Contains(output, "entity: campaign") {
+		t.Errorf("expected entity without ID, got:\n%s", output)
+	}
+	// Should NOT contain a slash for entity without ID
+	if strings.Contains(output, "entity: campaign/") {
+		t.Errorf("should not have slash for entity without ID, got:\n%s", output)
+	}
+}
+
+func TestExportHumanReadable_NoHashNoPayload(t *testing.T) {
+	ts := time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC)
+	events := []Event{
+		{
+			CampaignID: "camp_abc123",
+			Seq:        1,
+			Timestamp:  ts,
+			Type:       TypeCampaignCreated,
+			ActorType:  ActorTypeSystem,
+		},
+	}
+
+	var buf bytes.Buffer
+	if err := ExportHumanReadable(events, &buf); err != nil {
+		t.Fatalf("ExportHumanReadable failed: %v", err)
+	}
+
+	output := buf.String()
+	if strings.Contains(output, "hash:") {
+		t.Error("should not contain hash line when hash is empty")
+	}
+	if strings.Contains(output, "payload:") {
+		t.Error("should not contain payload line when payload is empty")
+	}
+}
+
 func TestExportHumanReadable_InvalidJSON(t *testing.T) {
 	ts := time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC)
 	events := []Event{

@@ -118,3 +118,193 @@ func TestEmitter_NilStore(t *testing.T) {
 		t.Error("expected error for nil store")
 	}
 }
+
+func TestEmitter_EmitCampaignForked(t *testing.T) {
+	store := &mockStore{}
+	emitter := NewEmitter(store)
+
+	evt, err := emitter.EmitCampaignForked(context.Background(), "camp-2", CampaignForkedPayload{
+		ParentCampaignID: "camp-1",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if evt.Type != TypeCampaignForked {
+		t.Errorf("expected type %s, got %s", TypeCampaignForked, evt.Type)
+	}
+	if evt.EntityType != "campaign" {
+		t.Errorf("expected entity type campaign, got %s", evt.EntityType)
+	}
+}
+
+func TestEmitter_EmitParticipantJoined(t *testing.T) {
+	store := &mockStore{}
+	emitter := NewEmitter(store)
+
+	evt, err := emitter.EmitParticipantJoined(context.Background(), "camp-1", ParticipantJoinedPayload{
+		ParticipantID: "part-1",
+		UserID:        "user-1",
+		DisplayName:   "Player",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if evt.Type != TypeParticipantJoined {
+		t.Errorf("expected type %s, got %s", TypeParticipantJoined, evt.Type)
+	}
+	if evt.EntityID != "part-1" {
+		t.Errorf("expected entity id part-1, got %s", evt.EntityID)
+	}
+}
+
+func TestEmitter_EmitCharacterCreated(t *testing.T) {
+	store := &mockStore{}
+	emitter := NewEmitter(store)
+
+	evt, err := emitter.EmitCharacterCreated(context.Background(), "camp-1", CharacterCreatedPayload{
+		CharacterID: "char-1",
+		Name:        "Hero",
+		Kind:        "PC",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if evt.Type != TypeCharacterCreated {
+		t.Errorf("expected type %s, got %s", TypeCharacterCreated, evt.Type)
+	}
+	if evt.EntityID != "char-1" {
+		t.Errorf("expected entity id char-1, got %s", evt.EntityID)
+	}
+}
+
+func TestEmitter_EmitProfileUpdated(t *testing.T) {
+	store := &mockStore{}
+	emitter := NewEmitter(store)
+
+	// With actor ID (GM)
+	evt, err := emitter.EmitProfileUpdated(context.Background(), "camp-1", "actor-1", ProfileUpdatedPayload{
+		CharacterID: "char-1",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if evt.ActorType != ActorTypeGM {
+		t.Errorf("expected actor type GM, got %s", evt.ActorType)
+	}
+	if evt.ActorID != "actor-1" {
+		t.Errorf("expected actor id actor-1, got %s", evt.ActorID)
+	}
+
+	// Without actor ID (system)
+	evt, err = emitter.EmitProfileUpdated(context.Background(), "camp-1", "", ProfileUpdatedPayload{
+		CharacterID: "char-2",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if evt.ActorType != ActorTypeSystem {
+		t.Errorf("expected actor type system, got %s", evt.ActorType)
+	}
+}
+
+func TestEmitter_EmitSessionEnded(t *testing.T) {
+	store := &mockStore{}
+	emitter := NewEmitter(store)
+
+	evt, err := emitter.EmitSessionEnded(context.Background(), "camp-1", SessionEndedPayload{
+		SessionID: "sess-1",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if evt.Type != TypeSessionEnded {
+		t.Errorf("expected type %s, got %s", TypeSessionEnded, evt.Type)
+	}
+	if evt.SessionID != "sess-1" {
+		t.Errorf("expected session id sess-1, got %s", evt.SessionID)
+	}
+}
+
+func TestEmitter_EmitRollResolved(t *testing.T) {
+	store := &mockStore{}
+	emitter := NewEmitter(store)
+
+	evt, err := emitter.EmitRollResolved(context.Background(), "camp-1", "sess-1", RollResolvedPayload{
+		RequestID: "req-1",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if evt.Type != TypeRollResolved {
+		t.Errorf("expected type %s, got %s", TypeRollResolved, evt.Type)
+	}
+	if evt.SessionID != "sess-1" {
+		t.Errorf("expected session id sess-1, got %s", evt.SessionID)
+	}
+}
+
+func TestEmitter_EmitOutcomeApplied(t *testing.T) {
+	store := &mockStore{}
+	emitter := NewEmitter(store)
+
+	evt, err := emitter.EmitOutcomeApplied(context.Background(), "camp-1", "sess-1", OutcomeAppliedPayload{
+		RequestID: "req-1",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if evt.Type != TypeOutcomeApplied {
+		t.Errorf("expected type %s, got %s", TypeOutcomeApplied, evt.Type)
+	}
+}
+
+func TestEmitter_EmitOutcomeRejected(t *testing.T) {
+	store := &mockStore{}
+	emitter := NewEmitter(store)
+
+	evt, err := emitter.EmitOutcomeRejected(context.Background(), "camp-1", "sess-1", OutcomeRejectedPayload{
+		RequestID: "req-1",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if evt.Type != TypeOutcomeRejected {
+		t.Errorf("expected type %s, got %s", TypeOutcomeRejected, evt.Type)
+	}
+}
+
+func TestEmitter_EmitNoteAdded(t *testing.T) {
+	store := &mockStore{}
+	emitter := NewEmitter(store)
+
+	evt, err := emitter.EmitNoteAdded(context.Background(), "camp-1", "sess-1", "actor-1", NoteAddedPayload{
+		Content: "A note",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if evt.Type != TypeNoteAdded {
+		t.Errorf("expected type %s, got %s", TypeNoteAdded, evt.Type)
+	}
+	if evt.ActorType != ActorTypeParticipant {
+		t.Errorf("expected actor type participant, got %s", evt.ActorType)
+	}
+	if evt.ActorID != "actor-1" {
+		t.Errorf("expected actor id actor-1, got %s", evt.ActorID)
+	}
+}
+
+func TestEmitter_EmitUnmarshalablePayload(t *testing.T) {
+	store := &mockStore{}
+	emitter := NewEmitter(store)
+
+	// Use a channel (not JSON-serializable)
+	_, err := emitter.Emit(context.Background(), EmitInput{
+		CampaignID: "camp-1",
+		Type:       TypeNoteAdded,
+		Payload:    make(chan int),
+	})
+	if err == nil {
+		t.Fatal("expected error for unmarshalable payload")
+	}
+}

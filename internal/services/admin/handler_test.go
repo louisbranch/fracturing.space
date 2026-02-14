@@ -753,3 +753,193 @@ func TestFormatActorType(t *testing.T) {
 		})
 	}
 }
+
+func TestFormatEventType(t *testing.T) {
+	loc := i18n.Printer(i18n.Default())
+
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{"campaign_created", "campaign.created", loc.Sprintf("event.campaign_created")},
+		{"campaign_forked", "campaign.forked", loc.Sprintf("event.campaign_forked")},
+		{"campaign_updated", "campaign.updated", loc.Sprintf("event.campaign_updated")},
+		{"participant_joined", "participant.joined", loc.Sprintf("event.participant_joined")},
+		{"participant_left", "participant.left", loc.Sprintf("event.participant_left")},
+		{"participant_updated", "participant.updated", loc.Sprintf("event.participant_updated")},
+		{"character_created", "character.created", loc.Sprintf("event.character_created")},
+		{"character_deleted", "character.deleted", loc.Sprintf("event.character_deleted")},
+		{"character_updated", "character.updated", loc.Sprintf("event.character_updated")},
+		{"character_profile_updated", "character.profile_updated", loc.Sprintf("event.character_profile_updated")},
+		{"session_started", "session.started", loc.Sprintf("event.session_started")},
+		{"session_ended", "session.ended", loc.Sprintf("event.session_ended")},
+		{"session_gate_opened", "session.gate_opened", loc.Sprintf("event.session_gate_opened")},
+		{"session_gate_resolved", "session.gate_resolved", loc.Sprintf("event.session_gate_resolved")},
+		{"session_gate_abandoned", "session.gate_abandoned", loc.Sprintf("event.session_gate_abandoned")},
+		{"session_spotlight_set", "session.spotlight_set", loc.Sprintf("event.session_spotlight_set")},
+		{"session_spotlight_cleared", "session.spotlight_cleared", loc.Sprintf("event.session_spotlight_cleared")},
+		{"invite_created", "invite.created", loc.Sprintf("event.invite_created")},
+		{"invite_updated", "invite.updated", loc.Sprintf("event.invite_updated")},
+		{"action_roll_resolved", "action.roll_resolved", loc.Sprintf("event.action_roll_resolved")},
+		{"action_outcome_applied", "action.outcome_applied", loc.Sprintf("event.action_outcome_applied")},
+		{"action_outcome_rejected", "action.outcome_rejected", loc.Sprintf("event.action_outcome_rejected")},
+		{"action_note_added", "action.note_added", loc.Sprintf("event.action_note_added")},
+		{"action_character_state_patched", "action.character_state_patched", loc.Sprintf("event.action_character_state_patched")},
+		{"action_gm_fear_changed", "action.gm_fear_changed", loc.Sprintf("event.action_gm_fear_changed")},
+		{"action_death_move_resolved", "action.death_move_resolved", loc.Sprintf("event.action_death_move_resolved")},
+		{"action_blaze_of_glory_resolved", "action.blaze_of_glory_resolved", loc.Sprintf("event.action_blaze_of_glory_resolved")},
+		{"action_attack_resolved", "action.attack_resolved", loc.Sprintf("event.action_attack_resolved")},
+		{"action_reaction_resolved", "action.reaction_resolved", loc.Sprintf("event.action_reaction_resolved")},
+		{"action_damage_roll_resolved", "action.damage_roll_resolved", loc.Sprintf("event.action_damage_roll_resolved")},
+		{"action_adversary_action_resolved", "action.adversary_action_resolved", loc.Sprintf("event.action_adversary_action_resolved")},
+		{"fallback_underscore", "custom.some_event_type", "Some event type"},
+		{"fallback_simple", "custom.hello", "Hello"},
+		{"empty", "", ""},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := formatEventType(tc.input, loc)
+			if result != tc.expected {
+				t.Errorf("formatEventType(%q) = %q, want %q", tc.input, result, tc.expected)
+			}
+		})
+	}
+}
+
+func TestRequestScheme(t *testing.T) {
+	// Default (no TLS, no header)
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	if got := requestScheme(r); got != "http" {
+		t.Errorf("requestScheme default = %q, want %q", got, "http")
+	}
+
+	// X-Forwarded-Proto header
+	r = httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set("X-Forwarded-Proto", "https")
+	if got := requestScheme(r); got != "https" {
+		t.Errorf("requestScheme X-Forwarded-Proto = %q, want %q", got, "https")
+	}
+
+	// X-Forwarded-Proto with multiple values (comma-separated)
+	r = httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set("X-Forwarded-Proto", "https, http")
+	if got := requestScheme(r); got != "https" {
+		t.Errorf("requestScheme X-Forwarded-Proto multi = %q, want %q", got, "https")
+	}
+
+	// Nil request
+	if got := requestScheme(nil); got != "http" {
+		t.Errorf("requestScheme nil = %q, want %q", got, "http")
+	}
+}
+
+func TestSameOrigin(t *testing.T) {
+	r := httptest.NewRequest(http.MethodGet, "http://example.com/page", nil)
+	r.Host = "example.com"
+
+	// Valid same origin
+	if !sameOrigin("http://example.com", r) {
+		t.Error("expected same origin for matching host")
+	}
+
+	// Case-insensitive host
+	if !sameOrigin("http://EXAMPLE.COM", r) {
+		t.Error("expected same origin for case-insensitive host")
+	}
+
+	// Different host
+	if sameOrigin("http://other.com", r) {
+		t.Error("expected different origin for different host")
+	}
+
+	// Empty URL
+	if sameOrigin("", r) {
+		t.Error("expected false for empty URL")
+	}
+
+	// Null string
+	if sameOrigin("null", r) {
+		t.Error("expected false for null string")
+	}
+
+	// Invalid URL
+	if sameOrigin("://invalid", r) {
+		t.Error("expected false for invalid URL")
+	}
+
+	// Nil request
+	if sameOrigin("http://example.com", nil) {
+		t.Error("expected false for nil request")
+	}
+
+	// Different scheme
+	r2 := httptest.NewRequest(http.MethodGet, "http://example.com/page", nil)
+	r2.Host = "example.com"
+	if sameOrigin("https://example.com", r2) {
+		t.Error("expected different origin for different scheme")
+	}
+
+	// No scheme in URL (should pass if host matches)
+	if !sameOrigin("//example.com/path", r) {
+		t.Error("expected same origin when no scheme in URL")
+	}
+}
+
+func TestRequireSameOrigin(t *testing.T) {
+	loc := i18n.Printer(i18n.Default())
+
+	// With valid Origin header
+	r := httptest.NewRequest(http.MethodPost, "http://example.com/page", nil)
+	r.Host = "example.com"
+	r.Header.Set("Origin", "http://example.com")
+	w := httptest.NewRecorder()
+	if !requireSameOrigin(w, r, loc) {
+		t.Error("expected true for valid Origin header")
+	}
+
+	// With valid Referer header (no Origin)
+	r = httptest.NewRequest(http.MethodPost, "http://example.com/page", nil)
+	r.Host = "example.com"
+	r.Header.Set("Referer", "http://example.com/other")
+	w = httptest.NewRecorder()
+	if !requireSameOrigin(w, r, loc) {
+		t.Error("expected true for valid Referer header")
+	}
+
+	// Missing both Origin and Referer
+	r = httptest.NewRequest(http.MethodPost, "http://example.com/page", nil)
+	r.Host = "example.com"
+	w = httptest.NewRecorder()
+	if requireSameOrigin(w, r, loc) {
+		t.Error("expected false when both Origin and Referer missing")
+	}
+	if w.Code != http.StatusForbidden {
+		t.Errorf("expected 403 status, got %d", w.Code)
+	}
+
+	// Nil request
+	w = httptest.NewRecorder()
+	if requireSameOrigin(w, nil, loc) {
+		t.Error("expected false for nil request")
+	}
+
+	// Invalid Origin
+	r = httptest.NewRequest(http.MethodPost, "http://example.com/page", nil)
+	r.Host = "example.com"
+	r.Header.Set("Origin", "http://evil.com")
+	w = httptest.NewRecorder()
+	if requireSameOrigin(w, r, loc) {
+		t.Error("expected false for invalid Origin")
+	}
+
+	// Invalid Referer (no Origin)
+	r = httptest.NewRequest(http.MethodPost, "http://example.com/page", nil)
+	r.Host = "example.com"
+	r.Header.Set("Referer", "http://evil.com/page")
+	w = httptest.NewRecorder()
+	if requireSameOrigin(w, r, loc) {
+		t.Error("expected false for invalid Referer")
+	}
+}

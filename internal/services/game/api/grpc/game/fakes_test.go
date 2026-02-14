@@ -555,6 +555,50 @@ func (s *fakeDaggerheartStore) DeleteDaggerheartAdversary(_ context.Context, cam
 	return nil
 }
 
+// fakeSessionGateStore is a test double for storage.SessionGateStore.
+type fakeSessionGateStore struct {
+	gates  map[string]storage.SessionGate
+	putErr error
+	getErr error
+}
+
+func newFakeSessionGateStore() *fakeSessionGateStore {
+	return &fakeSessionGateStore{gates: make(map[string]storage.SessionGate)}
+}
+
+func (s *fakeSessionGateStore) PutSessionGate(_ context.Context, gate storage.SessionGate) error {
+	if s.putErr != nil {
+		return s.putErr
+	}
+	key := gate.CampaignID + ":" + gate.SessionID + ":" + gate.GateID
+	s.gates[key] = gate
+	return nil
+}
+
+func (s *fakeSessionGateStore) GetSessionGate(_ context.Context, campaignID, sessionID, gateID string) (storage.SessionGate, error) {
+	if s.getErr != nil {
+		return storage.SessionGate{}, s.getErr
+	}
+	key := campaignID + ":" + sessionID + ":" + gateID
+	gate, ok := s.gates[key]
+	if !ok {
+		return storage.SessionGate{}, storage.ErrNotFound
+	}
+	return gate, nil
+}
+
+func (s *fakeSessionGateStore) GetOpenSessionGate(_ context.Context, campaignID, sessionID string) (storage.SessionGate, error) {
+	if s.getErr != nil {
+		return storage.SessionGate{}, s.getErr
+	}
+	for _, gate := range s.gates {
+		if gate.CampaignID == campaignID && gate.SessionID == sessionID && gate.Status == string(session.GateStatusOpen) {
+			return gate, nil
+		}
+	}
+	return storage.SessionGate{}, storage.ErrNotFound
+}
+
 // fakeSessionStore is a test double for storage.SessionStore.
 type fakeSessionStore struct {
 	sessions      map[string]map[string]session.Session // campaignID -> sessionID -> Session

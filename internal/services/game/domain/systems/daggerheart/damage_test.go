@@ -147,3 +147,66 @@ func TestApplyDamageWithArmor(t *testing.T) {
 		t.Fatalf("hp after = %d, want 4", app.HPAfter)
 	}
 }
+
+func TestApplyDamageWithArmorNoArmor(t *testing.T) {
+	result := DamageResult{Severity: DamageMajor, Marks: 2}
+	app := ApplyDamageWithArmor(6, 0, result)
+	if app.ArmorSpent != 0 {
+		t.Fatalf("armor spent = %d, want 0", app.ArmorSpent)
+	}
+	if app.HPAfter != 4 {
+		t.Fatalf("hp after = %d, want 4", app.HPAfter)
+	}
+}
+
+func TestApplyDamageInvalidThresholds(t *testing.T) {
+	_, err := ApplyDamage(6, 10, 10, 8, DamageOptions{})
+	if err == nil {
+		t.Fatal("expected error for invalid thresholds")
+	}
+}
+
+func TestApplyResistanceNegativeAmount(t *testing.T) {
+	got := ApplyResistance(-5, DamageTypes{Physical: true}, ResistanceProfile{})
+	if got != 0 {
+		t.Fatalf("expected 0 for negative amount, got %d", got)
+	}
+}
+
+func TestApplyResistanceMagicImmune(t *testing.T) {
+	got := ApplyResistance(10, DamageTypes{Magic: true}, ResistanceProfile{ImmuneMagic: true})
+	if got != 0 {
+		t.Fatalf("expected 0 for magic immune, got %d", got)
+	}
+}
+
+func TestApplyResistanceMagicNoResist(t *testing.T) {
+	got := ApplyResistance(10, DamageTypes{Magic: true}, ResistanceProfile{})
+	if got != 10 {
+		t.Fatalf("expected 10 for no resist, got %d", got)
+	}
+}
+
+func TestReduceDamageWithArmorNoMarks(t *testing.T) {
+	result, spent := ReduceDamageWithArmor(DamageResult{Severity: DamageNone, Marks: 0}, 2)
+	if spent != 0 || result.Marks != 0 {
+		t.Fatalf("expected no reduction for zero marks")
+	}
+}
+
+func TestEvaluateDamageNegativeAmount(t *testing.T) {
+	result, err := EvaluateDamage(-1, 5, 10, DamageOptions{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Severity != DamageNone || result.Marks != 0 {
+		t.Fatalf("expected no damage for negative amount")
+	}
+}
+
+func TestEvaluateDamageNegativeMajorThreshold(t *testing.T) {
+	_, err := EvaluateDamage(5, -1, 10, DamageOptions{})
+	if err == nil {
+		t.Fatal("expected error for negative major threshold")
+	}
+}

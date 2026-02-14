@@ -138,6 +138,304 @@ func TestValidateJoinGrantInvalidSignature(t *testing.T) {
 	}
 }
 
+func TestValidateJoinGrantEmpty(t *testing.T) {
+	pub, _, _ := ed25519.GenerateKey(rand.Reader)
+	cfg := JoinGrantConfig{Issuer: "issuer", Audience: "game-service", Key: pub, Now: time.Now}
+	_, err := ValidateJoinGrant("", JoinGrantExpectation{}, cfg)
+	if err == nil || !strings.Contains(err.Error(), "required") {
+		t.Fatalf("expected required error, got %v", err)
+	}
+}
+
+func TestValidateJoinGrantInvalidAlgorithm(t *testing.T) {
+	pub, priv, _ := ed25519.GenerateKey(rand.Reader)
+	now := time.Date(2024, 2, 1, 12, 0, 0, 0, time.UTC)
+	grant := signJoinGrant(t, priv, map[string]any{"alg": "HS256"}, map[string]any{
+		"iss": "issuer", "aud": "game-service", "exp": now.Add(time.Hour).Unix(),
+		"jti": "jti-1", "campaign_id": "c1", "invite_id": "i1", "user_id": "u1",
+	})
+	cfg := JoinGrantConfig{Issuer: "issuer", Audience: "game-service", Key: pub, Now: func() time.Time { return now }}
+	_, err := ValidateJoinGrant(grant, JoinGrantExpectation{CampaignID: "c1", InviteID: "i1", UserID: "u1"}, cfg)
+	if err == nil || !strings.Contains(err.Error(), "alg") {
+		t.Fatalf("expected alg error, got %v", err)
+	}
+}
+
+func TestValidateJoinGrantIssuerMismatch(t *testing.T) {
+	pub, priv, _ := ed25519.GenerateKey(rand.Reader)
+	now := time.Date(2024, 2, 1, 12, 0, 0, 0, time.UTC)
+	grant := signJoinGrant(t, priv, map[string]any{"alg": "EdDSA"}, map[string]any{
+		"iss": "wrong-issuer", "aud": "game-service", "exp": now.Add(time.Hour).Unix(),
+		"jti": "jti-1", "campaign_id": "c1", "invite_id": "i1", "user_id": "u1",
+	})
+	cfg := JoinGrantConfig{Issuer: "issuer", Audience: "game-service", Key: pub, Now: func() time.Time { return now }}
+	_, err := ValidateJoinGrant(grant, JoinGrantExpectation{CampaignID: "c1", InviteID: "i1", UserID: "u1"}, cfg)
+	if err == nil || !strings.Contains(err.Error(), "issuer") {
+		t.Fatalf("expected issuer error, got %v", err)
+	}
+}
+
+func TestValidateJoinGrantAudienceMismatch(t *testing.T) {
+	pub, priv, _ := ed25519.GenerateKey(rand.Reader)
+	now := time.Date(2024, 2, 1, 12, 0, 0, 0, time.UTC)
+	grant := signJoinGrant(t, priv, map[string]any{"alg": "EdDSA"}, map[string]any{
+		"iss": "issuer", "aud": []string{"wrong-service"}, "exp": now.Add(time.Hour).Unix(),
+		"jti": "jti-1", "campaign_id": "c1", "invite_id": "i1", "user_id": "u1",
+	})
+	cfg := JoinGrantConfig{Issuer: "issuer", Audience: "game-service", Key: pub, Now: func() time.Time { return now }}
+	_, err := ValidateJoinGrant(grant, JoinGrantExpectation{CampaignID: "c1", InviteID: "i1", UserID: "u1"}, cfg)
+	if err == nil || !strings.Contains(err.Error(), "audience") {
+		t.Fatalf("expected audience error, got %v", err)
+	}
+}
+
+func TestValidateJoinGrantMissingJTI(t *testing.T) {
+	pub, priv, _ := ed25519.GenerateKey(rand.Reader)
+	now := time.Date(2024, 2, 1, 12, 0, 0, 0, time.UTC)
+	grant := signJoinGrant(t, priv, map[string]any{"alg": "EdDSA"}, map[string]any{
+		"iss": "issuer", "aud": "game-service", "exp": now.Add(time.Hour).Unix(),
+		"campaign_id": "c1", "invite_id": "i1", "user_id": "u1",
+	})
+	cfg := JoinGrantConfig{Issuer: "issuer", Audience: "game-service", Key: pub, Now: func() time.Time { return now }}
+	_, err := ValidateJoinGrant(grant, JoinGrantExpectation{CampaignID: "c1", InviteID: "i1", UserID: "u1"}, cfg)
+	if err == nil || !strings.Contains(err.Error(), "jti") {
+		t.Fatalf("expected jti error, got %v", err)
+	}
+}
+
+func TestValidateJoinGrantMissingExp(t *testing.T) {
+	pub, priv, _ := ed25519.GenerateKey(rand.Reader)
+	now := time.Date(2024, 2, 1, 12, 0, 0, 0, time.UTC)
+	grant := signJoinGrant(t, priv, map[string]any{"alg": "EdDSA"}, map[string]any{
+		"iss": "issuer", "aud": "game-service",
+		"jti": "jti-1", "campaign_id": "c1", "invite_id": "i1", "user_id": "u1",
+	})
+	cfg := JoinGrantConfig{Issuer: "issuer", Audience: "game-service", Key: pub, Now: func() time.Time { return now }}
+	_, err := ValidateJoinGrant(grant, JoinGrantExpectation{CampaignID: "c1", InviteID: "i1", UserID: "u1"}, cfg)
+	if err == nil || !strings.Contains(err.Error(), "exp") {
+		t.Fatalf("expected exp error, got %v", err)
+	}
+}
+
+func TestValidateJoinGrantNotYetActive(t *testing.T) {
+	pub, priv, _ := ed25519.GenerateKey(rand.Reader)
+	now := time.Date(2024, 2, 1, 12, 0, 0, 0, time.UTC)
+	grant := signJoinGrant(t, priv, map[string]any{"alg": "EdDSA"}, map[string]any{
+		"iss": "issuer", "aud": "game-service", "exp": now.Add(time.Hour).Unix(),
+		"nbf": now.Add(time.Minute).Unix(), // future
+		"jti": "jti-1", "campaign_id": "c1", "invite_id": "i1", "user_id": "u1",
+	})
+	cfg := JoinGrantConfig{Issuer: "issuer", Audience: "game-service", Key: pub, Now: func() time.Time { return now }}
+	_, err := ValidateJoinGrant(grant, JoinGrantExpectation{CampaignID: "c1", InviteID: "i1", UserID: "u1"}, cfg)
+	if err == nil || !strings.Contains(err.Error(), "not active") {
+		t.Fatalf("expected not active error, got %v", err)
+	}
+}
+
+func TestValidateJoinGrantWithNbfAndIat(t *testing.T) {
+	pub, priv, _ := ed25519.GenerateKey(rand.Reader)
+	now := time.Date(2024, 2, 1, 12, 0, 0, 0, time.UTC)
+	grant := signJoinGrant(t, priv, map[string]any{"alg": "EdDSA"}, map[string]any{
+		"iss": "issuer", "aud": "game-service", "exp": now.Add(time.Hour).Unix(),
+		"nbf": now.Add(-time.Minute).Unix(), "iat": now.Add(-time.Minute).Unix(),
+		"jti": "jti-1", "campaign_id": "c1", "invite_id": "i1", "user_id": "u1",
+	})
+	cfg := JoinGrantConfig{Issuer: "issuer", Audience: "game-service", Key: pub, Now: func() time.Time { return now }}
+	claims, err := ValidateJoinGrant(grant, JoinGrantExpectation{CampaignID: "c1", InviteID: "i1", UserID: "u1"}, cfg)
+	if err != nil {
+		t.Fatalf("validate: %v", err)
+	}
+	if claims.NotBefore.IsZero() {
+		t.Fatal("expected NotBefore to be set")
+	}
+	if claims.IssuedAt.IsZero() {
+		t.Fatal("expected IssuedAt to be set")
+	}
+}
+
+func TestValidateJoinGrantCampaignMismatch(t *testing.T) {
+	pub, priv, _ := ed25519.GenerateKey(rand.Reader)
+	now := time.Date(2024, 2, 1, 12, 0, 0, 0, time.UTC)
+	grant := signJoinGrant(t, priv, map[string]any{"alg": "EdDSA"}, map[string]any{
+		"iss": "issuer", "aud": "game-service", "exp": now.Add(time.Hour).Unix(),
+		"jti": "jti-1", "campaign_id": "c2", "invite_id": "i1", "user_id": "u1",
+	})
+	cfg := JoinGrantConfig{Issuer: "issuer", Audience: "game-service", Key: pub, Now: func() time.Time { return now }}
+	_, err := ValidateJoinGrant(grant, JoinGrantExpectation{CampaignID: "c1", InviteID: "i1", UserID: "u1"}, cfg)
+	if err == nil || !strings.Contains(err.Error(), "campaign") {
+		t.Fatalf("expected campaign mismatch error, got %v", err)
+	}
+}
+
+func TestValidateJoinGrantInviteMismatch(t *testing.T) {
+	pub, priv, _ := ed25519.GenerateKey(rand.Reader)
+	now := time.Date(2024, 2, 1, 12, 0, 0, 0, time.UTC)
+	grant := signJoinGrant(t, priv, map[string]any{"alg": "EdDSA"}, map[string]any{
+		"iss": "issuer", "aud": "game-service", "exp": now.Add(time.Hour).Unix(),
+		"jti": "jti-1", "campaign_id": "c1", "invite_id": "i2", "user_id": "u1",
+	})
+	cfg := JoinGrantConfig{Issuer: "issuer", Audience: "game-service", Key: pub, Now: func() time.Time { return now }}
+	_, err := ValidateJoinGrant(grant, JoinGrantExpectation{CampaignID: "c1", InviteID: "i1", UserID: "u1"}, cfg)
+	if err == nil || !strings.Contains(err.Error(), "invite") {
+		t.Fatalf("expected invite mismatch error, got %v", err)
+	}
+}
+
+func TestLoadJoinGrantConfigInvalidBase64(t *testing.T) {
+	t.Setenv(EnvJoinGrantIssuer, "issuer")
+	t.Setenv(EnvJoinGrantAudience, "audience")
+	t.Setenv(EnvJoinGrantPublicKey, "!!!invalid!!!")
+	_, err := LoadJoinGrantConfigFromEnv(nil)
+	if err == nil || !strings.Contains(err.Error(), "decode") {
+		t.Fatalf("expected decode error, got %v", err)
+	}
+}
+
+func TestLoadJoinGrantConfigWrongKeySize(t *testing.T) {
+	t.Setenv(EnvJoinGrantIssuer, "issuer")
+	t.Setenv(EnvJoinGrantAudience, "audience")
+	t.Setenv(EnvJoinGrantPublicKey, base64.RawStdEncoding.EncodeToString([]byte("short")))
+	_, err := LoadJoinGrantConfigFromEnv(nil)
+	if err == nil || !strings.Contains(err.Error(), "32 bytes") {
+		t.Fatalf("expected key size error, got %v", err)
+	}
+}
+
+func TestParseJoinGrantWrongSegments(t *testing.T) {
+	_, err := parseJoinGrant("only.two")
+	if err == nil {
+		t.Fatal("expected error for 2-segment token")
+	}
+}
+
+func TestParseJoinGrantInvalidHeaderBase64(t *testing.T) {
+	_, err := parseJoinGrant("!!!.payload.sig")
+	if err == nil || !strings.Contains(err.Error(), "header") {
+		t.Fatalf("expected header error, got %v", err)
+	}
+}
+
+func TestParseJoinGrantInvalidHeaderJSON(t *testing.T) {
+	hdr := base64.RawURLEncoding.EncodeToString([]byte("{bad json"))
+	_, err := parseJoinGrant(hdr + ".payload.sig")
+	if err == nil || !strings.Contains(err.Error(), "header") {
+		t.Fatalf("expected header JSON error, got %v", err)
+	}
+}
+
+func TestParseJoinGrantInvalidPayloadBase64(t *testing.T) {
+	hdr := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"EdDSA"}`))
+	_, err := parseJoinGrant(hdr + ".!!!.sig")
+	if err == nil || !strings.Contains(err.Error(), "payload") {
+		t.Fatalf("expected payload error, got %v", err)
+	}
+}
+
+func TestParseJoinGrantInvalidPayloadJSON(t *testing.T) {
+	hdr := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"EdDSA"}`))
+	payload := base64.RawURLEncoding.EncodeToString([]byte("{bad json"))
+	_, err := parseJoinGrant(hdr + "." + payload + ".sig")
+	if err == nil || !strings.Contains(err.Error(), "payload") {
+		t.Fatalf("expected payload JSON error, got %v", err)
+	}
+}
+
+func TestParseJoinGrantInvalidSignatureBase64(t *testing.T) {
+	hdr := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"EdDSA"}`))
+	payload := base64.RawURLEncoding.EncodeToString([]byte(`{"iss":"i"}`))
+	_, err := parseJoinGrant(hdr + "." + payload + ".!!!")
+	if err == nil || !strings.Contains(err.Error(), "signature") {
+		t.Fatalf("expected signature error, got %v", err)
+	}
+}
+
+func TestParseJoinGrantSignatureTooShort(t *testing.T) {
+	hdr := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"EdDSA"}`))
+	payload := base64.RawURLEncoding.EncodeToString([]byte(`{"iss":"i"}`))
+	sig := base64.RawURLEncoding.EncodeToString([]byte("short"))
+	_, err := parseJoinGrant(hdr + "." + payload + "." + sig)
+	if err == nil || !strings.Contains(err.Error(), "signature") {
+		t.Fatalf("expected signature size error, got %v", err)
+	}
+}
+
+func TestDecodeBase64Empty(t *testing.T) {
+	_, err := decodeBase64("")
+	if err == nil {
+		t.Fatal("expected error for empty string")
+	}
+}
+
+func TestDecodeBase64StdEncoding(t *testing.T) {
+	encoded := base64.StdEncoding.EncodeToString([]byte("hello"))
+	decoded, err := decodeBase64(encoded)
+	if err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if string(decoded) != "hello" {
+		t.Fatalf("expected 'hello', got %s", string(decoded))
+	}
+}
+
+func TestDecodeBase64RawStdEncoding(t *testing.T) {
+	encoded := base64.RawStdEncoding.EncodeToString([]byte("hello"))
+	decoded, err := decodeBase64(encoded)
+	if err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if string(decoded) != "hello" {
+		t.Fatalf("expected 'hello', got %s", string(decoded))
+	}
+}
+
+func TestAudienceClaimContains(t *testing.T) {
+	aud := audienceClaim{Values: []string{"svc1", "svc2"}}
+	if !aud.Contains("svc2") {
+		t.Fatal("expected Contains to return true")
+	}
+	if aud.Contains("svc3") {
+		t.Fatal("expected Contains to return false")
+	}
+}
+
+func TestAudienceClaimUnmarshalJSONString(t *testing.T) {
+	var aud audienceClaim
+	if err := aud.UnmarshalJSON([]byte(`"game-service"`)); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if len(aud.Values) != 1 || aud.Values[0] != "game-service" {
+		t.Fatalf("expected [game-service], got %v", aud.Values)
+	}
+}
+
+func TestAudienceClaimUnmarshalJSONNull(t *testing.T) {
+	var aud audienceClaim
+	if err := aud.UnmarshalJSON([]byte("null")); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if len(aud.Values) != 0 {
+		t.Fatalf("expected empty, got %v", aud.Values)
+	}
+}
+
+func TestAudienceClaimUnmarshalJSONEmpty(t *testing.T) {
+	var aud audienceClaim
+	if err := aud.UnmarshalJSON(nil); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if len(aud.Values) != 0 {
+		t.Fatalf("expected empty, got %v", aud.Values)
+	}
+}
+
+func TestAudienceClaimUnmarshalJSONInvalidType(t *testing.T) {
+	var aud audienceClaim
+	err := aud.UnmarshalJSON([]byte(`123`))
+	if err == nil {
+		t.Fatal("expected error for numeric type")
+	}
+}
+
 func signJoinGrant(t *testing.T, privateKey ed25519.PrivateKey, header, payload map[string]any) string {
 	t.Helper()
 

@@ -1,6 +1,7 @@
 package invite
 
 import (
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -40,6 +41,30 @@ func TestCreateInviteSuccess(t *testing.T) {
 	}
 	if !invite.CreatedAt.Equal(fixedTime) || !invite.UpdatedAt.Equal(fixedTime) {
 		t.Fatal("expected created and updated timestamps to match fixed time")
+	}
+}
+
+func TestCreateInviteDefaults(t *testing.T) {
+	input := CreateInviteInput{
+		CampaignID:    "c1",
+		ParticipantID: "p1",
+	}
+	_, err := CreateInvite(input, nil, nil)
+	if err != nil {
+		t.Fatalf("create invite with defaults: %v", err)
+	}
+}
+
+func TestCreateInviteIDGeneratorError(t *testing.T) {
+	input := CreateInviteInput{
+		CampaignID:    "c1",
+		ParticipantID: "p1",
+	}
+	_, err := CreateInvite(input, nil, func() (string, error) {
+		return "", errors.New("id gen failed")
+	})
+	if err == nil {
+		t.Fatal("expected error for ID generator failure")
 	}
 }
 

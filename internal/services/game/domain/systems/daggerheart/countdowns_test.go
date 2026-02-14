@@ -153,6 +153,34 @@ func TestApplyCountdownUpdate(t *testing.T) {
 	}
 }
 
+func TestApplyCountdownUpdateOverflowLoop(t *testing.T) {
+	cd := Countdown{Current: 5, Max: 6, Looping: true}
+	update, err := ApplyCountdownUpdate(cd, 3, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !update.Looped {
+		t.Fatal("expected looped")
+	}
+	if update.After != 0 {
+		t.Fatalf("after = %d, want 0", update.After)
+	}
+}
+
+func TestApplyCountdownUpdateClampNoLoop(t *testing.T) {
+	cd := Countdown{Current: 1, Max: 4}
+	update, err := ApplyCountdownUpdate(cd, -3, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if update.Looped {
+		t.Fatal("expected no loop")
+	}
+	if update.After != 0 {
+		t.Fatalf("after = %d, want 0", update.After)
+	}
+}
+
 func intPointer(value int) *int {
 	return &value
 }

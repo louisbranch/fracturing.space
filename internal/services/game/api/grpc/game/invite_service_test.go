@@ -299,6 +299,161 @@ func TestClaimInvite_UserAlreadyClaimed(t *testing.T) {
 	assertStatusCode(t, err, codes.AlreadyExists)
 }
 
+func TestRevokeInvite_NilRequest(t *testing.T) {
+	svc := NewInviteService(Stores{})
+	_, err := svc.RevokeInvite(context.Background(), nil)
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestRevokeInvite_MissingStores(t *testing.T) {
+	svc := NewInviteService(Stores{})
+	_, err := svc.RevokeInvite(context.Background(), &statev1.RevokeInviteRequest{InviteId: "inv-1"})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestRevokeInvite_MissingInviteId(t *testing.T) {
+	svc := NewInviteService(Stores{Invite: newFakeInviteStore(), Campaign: newFakeCampaignStore(), Event: newFakeEventStore()})
+	_, err := svc.RevokeInvite(context.Background(), &statev1.RevokeInviteRequest{InviteId: ""})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestRevokeInvite_InviteNotFound(t *testing.T) {
+	svc := NewInviteService(Stores{Invite: newFakeInviteStore(), Campaign: newFakeCampaignStore(), Event: newFakeEventStore()})
+	_, err := svc.RevokeInvite(context.Background(), &statev1.RevokeInviteRequest{InviteId: "nonexistent"})
+	assertStatusCode(t, err, codes.NotFound)
+}
+
+func TestRevokeInvite_AlreadyRevoked(t *testing.T) {
+	inviteStore := newFakeInviteStore()
+	inviteStore.invites["invite-1"] = invite.Invite{ID: "invite-1", CampaignID: "campaign-1", Status: invite.StatusRevoked}
+	campaignStore := newFakeCampaignStore()
+	campaignStore.campaigns["campaign-1"] = campaign.Campaign{ID: "campaign-1", Status: campaign.CampaignStatusDraft}
+	participantStore := newFakeParticipantStore()
+	participantStore.participants["campaign-1"] = map[string]participant.Participant{
+		"owner-1": {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner},
+	}
+
+	svc := &InviteService{
+		stores:      Stores{Invite: inviteStore, Participant: participantStore, Campaign: campaignStore, Event: newFakeEventStore()},
+		clock:       fixedClock(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
+		idGenerator: fixedIDGenerator("x"),
+	}
+
+	ctx := contextWithParticipantID("owner-1")
+	_, err := svc.RevokeInvite(ctx, &statev1.RevokeInviteRequest{InviteId: "invite-1"})
+	assertStatusCode(t, err, codes.FailedPrecondition)
+}
+
+func TestRevokeInvite_Success(t *testing.T) {
+	inviteStore := newFakeInviteStore()
+	inviteStore.invites["invite-1"] = invite.Invite{ID: "invite-1", CampaignID: "campaign-1", Status: invite.StatusPending}
+	campaignStore := newFakeCampaignStore()
+	campaignStore.campaigns["campaign-1"] = campaign.Campaign{ID: "campaign-1", Status: campaign.CampaignStatusDraft}
+	participantStore := newFakeParticipantStore()
+	participantStore.participants["campaign-1"] = map[string]participant.Participant{
+		"owner-1": {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner},
+	}
+	eventStore := newFakeEventStore()
+
+	svc := &InviteService{
+		stores:      Stores{Invite: inviteStore, Participant: participantStore, Campaign: campaignStore, Event: eventStore},
+		clock:       fixedClock(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
+		idGenerator: fixedIDGenerator("x"),
+	}
+
+	ctx := contextWithParticipantID("owner-1")
+	resp, err := svc.RevokeInvite(ctx, &statev1.RevokeInviteRequest{InviteId: "invite-1"})
+	if err != nil {
+		t.Fatalf("RevokeInvite returned error: %v", err)
+	}
+	if resp.Invite == nil {
+		t.Fatal("RevokeInvite response has nil invite")
+	}
+	if resp.Invite.Status != statev1.InviteStatus_REVOKED {
+		t.Fatalf("invite status = %v, want REVOKED", resp.Invite.Status)
+	}
+	if len(eventStore.events["campaign-1"]) != 1 {
+		t.Fatalf("event count = %d, want 1", len(eventStore.events["campaign-1"]))
+	}
+	if eventStore.events["campaign-1"][0].Type != event.TypeInviteRevoked {
+		t.Fatalf("event type = %s, want %s", eventStore.events["campaign-1"][0].Type, event.TypeInviteRevoked)
+	}
+}
+
+func TestClaimInvite_NilRequest(t *testing.T) {
+	svc := NewInviteService(Stores{})
+	_, err := svc.ClaimInvite(context.Background(), nil)
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestClaimInvite_MissingStores(t *testing.T) {
+	svc := NewInviteService(Stores{})
+	_, err := svc.ClaimInvite(context.Background(), &statev1.ClaimInviteRequest{
+		CampaignId: "c1",
+		InviteId:   "inv-1",
+		JoinGrant:  "grant",
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestClaimInvite_MissingCampaignId(t *testing.T) {
+	svc := NewInviteService(Stores{
+		Invite:      newFakeInviteStore(),
+		Campaign:    newFakeCampaignStore(),
+		Participant: newFakeParticipantStore(),
+		Event:       newFakeEventStore(),
+	})
+	ctx := contextWithUserID("user-1")
+	_, err := svc.ClaimInvite(ctx, &statev1.ClaimInviteRequest{InviteId: "inv-1", JoinGrant: "grant"})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestClaimInvite_MissingInviteId(t *testing.T) {
+	svc := NewInviteService(Stores{
+		Invite:      newFakeInviteStore(),
+		Campaign:    newFakeCampaignStore(),
+		Participant: newFakeParticipantStore(),
+		Event:       newFakeEventStore(),
+	})
+	ctx := contextWithUserID("user-1")
+	_, err := svc.ClaimInvite(ctx, &statev1.ClaimInviteRequest{CampaignId: "c1", JoinGrant: "grant"})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestClaimInvite_MissingJoinGrant(t *testing.T) {
+	svc := NewInviteService(Stores{
+		Invite:      newFakeInviteStore(),
+		Campaign:    newFakeCampaignStore(),
+		Participant: newFakeParticipantStore(),
+		Event:       newFakeEventStore(),
+	})
+	ctx := contextWithUserID("user-1")
+	_, err := svc.ClaimInvite(ctx, &statev1.ClaimInviteRequest{CampaignId: "c1", InviteId: "inv-1"})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestCreateInvite_MissingCampaignId(t *testing.T) {
+	svc := NewInviteService(Stores{
+		Invite:      newFakeInviteStore(),
+		Campaign:    newFakeCampaignStore(),
+		Participant: newFakeParticipantStore(),
+		Event:       newFakeEventStore(),
+	})
+	_, err := svc.CreateInvite(context.Background(), &statev1.CreateInviteRequest{ParticipantId: "p1"})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestCreateInvite_MissingParticipantId(t *testing.T) {
+	svc := NewInviteService(Stores{
+		Invite:      newFakeInviteStore(),
+		Campaign:    newFakeCampaignStore(),
+		Participant: newFakeParticipantStore(),
+		Event:       newFakeEventStore(),
+	})
+	_, err := svc.CreateInvite(context.Background(), &statev1.CreateInviteRequest{CampaignId: "c1"})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
 func TestListPendingInvites_Success(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
@@ -349,6 +504,236 @@ func TestListPendingInvites_Success(t *testing.T) {
 	}
 	if entry.CreatedByUser == nil || entry.CreatedByUser.Id != "user-1" {
 		t.Fatalf("created_by_user id = %v, want user-1", entry.CreatedByUser)
+	}
+}
+
+func TestGetInvite_NilRequest(t *testing.T) {
+	svc := NewInviteService(Stores{})
+	_, err := svc.GetInvite(context.Background(), nil)
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestGetInvite_MissingStores(t *testing.T) {
+	svc := NewInviteService(Stores{})
+	_, err := svc.GetInvite(context.Background(), &statev1.GetInviteRequest{InviteId: "inv-1"})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestGetInvite_MissingInviteId(t *testing.T) {
+	svc := NewInviteService(Stores{
+		Invite:   newFakeInviteStore(),
+		Campaign: newFakeCampaignStore(),
+	})
+	_, err := svc.GetInvite(context.Background(), &statev1.GetInviteRequest{})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestGetInvite_InviteNotFound(t *testing.T) {
+	svc := NewInviteService(Stores{
+		Invite:   newFakeInviteStore(),
+		Campaign: newFakeCampaignStore(),
+	})
+	_, err := svc.GetInvite(context.Background(), &statev1.GetInviteRequest{InviteId: "nonexistent"})
+	assertStatusCode(t, err, codes.NotFound)
+}
+
+func TestGetInvite_Success(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	inviteStore := newFakeInviteStore()
+
+	campaignStore.campaigns["campaign-1"] = campaign.Campaign{ID: "campaign-1", Status: campaign.CampaignStatusDraft}
+	participantStore.participants["campaign-1"] = map[string]participant.Participant{
+		"owner-1": {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner},
+	}
+	inviteStore.invites["invite-1"] = invite.Invite{
+		ID:         "invite-1",
+		CampaignID: "campaign-1",
+		Status:     invite.StatusPending,
+	}
+
+	svc := &InviteService{
+		stores: Stores{
+			Campaign:    campaignStore,
+			Participant: participantStore,
+			Invite:      inviteStore,
+		},
+	}
+
+	ctx := contextWithParticipantID("owner-1")
+	resp, err := svc.GetInvite(ctx, &statev1.GetInviteRequest{InviteId: "invite-1"})
+	if err != nil {
+		t.Fatalf("GetInvite returned error: %v", err)
+	}
+	if resp.Invite == nil {
+		t.Fatal("GetInvite response has nil invite")
+	}
+	if resp.Invite.Id != "invite-1" {
+		t.Fatalf("invite id = %s, want invite-1", resp.Invite.Id)
+	}
+}
+
+func TestGetInvite_MissingParticipantIdentity(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	inviteStore := newFakeInviteStore()
+	participantStore := newFakeParticipantStore()
+
+	campaignStore.campaigns["campaign-1"] = campaign.Campaign{ID: "campaign-1", Status: campaign.CampaignStatusDraft}
+	inviteStore.invites["invite-1"] = invite.Invite{
+		ID:         "invite-1",
+		CampaignID: "campaign-1",
+		Status:     invite.StatusPending,
+	}
+
+	svc := &InviteService{
+		stores: Stores{
+			Campaign:    campaignStore,
+			Participant: participantStore,
+			Invite:      inviteStore,
+		},
+	}
+
+	_, err := svc.GetInvite(context.Background(), &statev1.GetInviteRequest{InviteId: "invite-1"})
+	assertStatusCode(t, err, codes.PermissionDenied)
+}
+
+func TestListInvites_NilRequest(t *testing.T) {
+	svc := NewInviteService(Stores{})
+	_, err := svc.ListInvites(context.Background(), nil)
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestListInvites_MissingStores(t *testing.T) {
+	svc := NewInviteService(Stores{})
+	_, err := svc.ListInvites(context.Background(), &statev1.ListInvitesRequest{CampaignId: "c1"})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestListInvites_MissingCampaignId(t *testing.T) {
+	svc := NewInviteService(Stores{
+		Invite:   newFakeInviteStore(),
+		Campaign: newFakeCampaignStore(),
+	})
+	_, err := svc.ListInvites(context.Background(), &statev1.ListInvitesRequest{})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestListInvites_CampaignNotFound(t *testing.T) {
+	svc := NewInviteService(Stores{
+		Invite:   newFakeInviteStore(),
+		Campaign: newFakeCampaignStore(),
+	})
+	_, err := svc.ListInvites(context.Background(), &statev1.ListInvitesRequest{CampaignId: "nonexistent"})
+	assertStatusCode(t, err, codes.NotFound)
+}
+
+func TestListInvites_Success(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	inviteStore := newFakeInviteStore()
+
+	campaignStore.campaigns["campaign-1"] = campaign.Campaign{ID: "campaign-1", Status: campaign.CampaignStatusDraft}
+	participantStore.participants["campaign-1"] = map[string]participant.Participant{
+		"owner-1": {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner},
+	}
+	inviteStore.invites["invite-1"] = invite.Invite{
+		ID:         "invite-1",
+		CampaignID: "campaign-1",
+		Status:     invite.StatusPending,
+	}
+	inviteStore.invites["invite-2"] = invite.Invite{
+		ID:         "invite-2",
+		CampaignID: "campaign-1",
+		Status:     invite.StatusClaimed,
+	}
+
+	svc := &InviteService{
+		stores: Stores{
+			Campaign:    campaignStore,
+			Participant: participantStore,
+			Invite:      inviteStore,
+		},
+	}
+
+	ctx := contextWithParticipantID("owner-1")
+	resp, err := svc.ListInvites(ctx, &statev1.ListInvitesRequest{CampaignId: "campaign-1"})
+	if err != nil {
+		t.Fatalf("ListInvites returned error: %v", err)
+	}
+	if len(resp.Invites) != 2 {
+		t.Fatalf("invite count = %d, want 2", len(resp.Invites))
+	}
+}
+
+func TestListInvites_WithStatusFilter(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	inviteStore := newFakeInviteStore()
+
+	campaignStore.campaigns["campaign-1"] = campaign.Campaign{ID: "campaign-1", Status: campaign.CampaignStatusDraft}
+	participantStore.participants["campaign-1"] = map[string]participant.Participant{
+		"owner-1": {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner},
+	}
+	inviteStore.invites["invite-1"] = invite.Invite{
+		ID:         "invite-1",
+		CampaignID: "campaign-1",
+		Status:     invite.StatusPending,
+	}
+	inviteStore.invites["invite-2"] = invite.Invite{
+		ID:         "invite-2",
+		CampaignID: "campaign-1",
+		Status:     invite.StatusClaimed,
+	}
+
+	svc := &InviteService{
+		stores: Stores{
+			Campaign:    campaignStore,
+			Participant: participantStore,
+			Invite:      inviteStore,
+		},
+	}
+
+	ctx := contextWithParticipantID("owner-1")
+	resp, err := svc.ListInvites(ctx, &statev1.ListInvitesRequest{
+		CampaignId: "campaign-1",
+		Status:     statev1.InviteStatus_PENDING,
+	})
+	if err != nil {
+		t.Fatalf("ListInvites returned error: %v", err)
+	}
+	if len(resp.Invites) != 1 {
+		t.Fatalf("invite count = %d, want 1", len(resp.Invites))
+	}
+	if resp.Invites[0].Id != "invite-1" {
+		t.Fatalf("invite id = %s, want invite-1", resp.Invites[0].Id)
+	}
+}
+
+func TestListInvites_EmptyResult(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	inviteStore := newFakeInviteStore()
+
+	campaignStore.campaigns["campaign-1"] = campaign.Campaign{ID: "campaign-1", Status: campaign.CampaignStatusDraft}
+	participantStore.participants["campaign-1"] = map[string]participant.Participant{
+		"owner-1": {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner},
+	}
+
+	svc := &InviteService{
+		stores: Stores{
+			Campaign:    campaignStore,
+			Participant: participantStore,
+			Invite:      inviteStore,
+		},
+	}
+
+	ctx := contextWithParticipantID("owner-1")
+	resp, err := svc.ListInvites(ctx, &statev1.ListInvitesRequest{CampaignId: "campaign-1"})
+	if err != nil {
+		t.Fatalf("ListInvites returned error: %v", err)
+	}
+	if len(resp.Invites) != 0 {
+		t.Fatalf("invite count = %d, want 0", len(resp.Invites))
 	}
 }
 

@@ -77,6 +77,22 @@ func TestAdapterRegistryRejectsEmptyVersion(t *testing.T) {
 	registry.Register(&testAdapter{id: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART, version: " "})
 }
 
+func TestAdapterRegistryGetUnregistered(t *testing.T) {
+	registry := NewAdapterRegistry()
+	if got := registry.Get(commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART, ""); got != nil {
+		t.Fatalf("expected nil for unregistered system, got %v", got)
+	}
+}
+
+func TestAdapterRegistryGetUnknownVersion(t *testing.T) {
+	registry := NewAdapterRegistry()
+	primary := &testAdapter{id: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART, version: "1.0.0"}
+	registry.Register(primary)
+	if got := registry.Get(primary.ID(), "9.9.9"); got != nil {
+		t.Fatalf("expected nil for unknown version, got %v", got)
+	}
+}
+
 func TestAdapterRegistryRejectsDuplicateVersion(t *testing.T) {
 	registry := NewAdapterRegistry()
 	primary := &testAdapter{id: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART, version: "1.0.0"}

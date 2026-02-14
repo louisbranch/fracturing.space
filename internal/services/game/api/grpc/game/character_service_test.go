@@ -902,6 +902,237 @@ func TestPatchCharacterProfile_UpdateTraits(t *testing.T) {
 	}
 }
 
+func TestDaggerheartExperiencesToProto(t *testing.T) {
+	// Nil/empty input
+	result := daggerheartExperiencesToProto(nil)
+	if result != nil {
+		t.Fatalf("expected nil for nil input, got %v", result)
+	}
+	result = daggerheartExperiencesToProto([]storage.DaggerheartExperience{})
+	if result != nil {
+		t.Fatalf("expected nil for empty input, got %v", result)
+	}
+
+	// Normal conversion
+	result = daggerheartExperiencesToProto([]storage.DaggerheartExperience{
+		{Name: "Stealth", Modifier: 3},
+		{Name: "Insight", Modifier: -1},
+	})
+	if len(result) != 2 {
+		t.Fatalf("expected 2 experiences, got %d", len(result))
+	}
+	if result[0].GetName() != "Stealth" || result[0].GetModifier() != 3 {
+		t.Fatalf("experience 0 mismatch: %v", result[0])
+	}
+	if result[1].GetName() != "Insight" || result[1].GetModifier() != -1 {
+		t.Fatalf("experience 1 mismatch: %v", result[1])
+	}
+}
+
+func TestDeleteCharacter_NilRequest(t *testing.T) {
+	svc := NewCharacterService(Stores{})
+	_, err := svc.DeleteCharacter(context.Background(), nil)
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestDeleteCharacter_MissingStores(t *testing.T) {
+	svc := NewCharacterService(Stores{Campaign: newFakeCampaignStore()})
+	_, err := svc.DeleteCharacter(context.Background(), &statev1.DeleteCharacterRequest{
+		CampaignId:  "c1",
+		CharacterId: "ch1",
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestDeleteCharacter_MissingCampaignId(t *testing.T) {
+	svc := NewCharacterService(Stores{Campaign: newFakeCampaignStore(), Character: newFakeCharacterStore(), Event: newFakeEventStore()})
+	_, err := svc.DeleteCharacter(context.Background(), &statev1.DeleteCharacterRequest{
+		CharacterId: "ch1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestDeleteCharacter_CampaignNotFound(t *testing.T) {
+	svc := NewCharacterService(Stores{Campaign: newFakeCampaignStore(), Character: newFakeCharacterStore(), Event: newFakeEventStore()})
+	_, err := svc.DeleteCharacter(context.Background(), &statev1.DeleteCharacterRequest{
+		CampaignId:  "nonexistent",
+		CharacterId: "ch1",
+	})
+	assertStatusCode(t, err, codes.NotFound)
+}
+
+func TestDeleteCharacter_MissingCharacterId(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	campaignStore.campaigns["c1"] = campaign.Campaign{ID: "c1", Status: campaign.CampaignStatusActive}
+	svc := NewCharacterService(Stores{Campaign: campaignStore, Character: newFakeCharacterStore(), Event: newFakeEventStore()})
+	_, err := svc.DeleteCharacter(context.Background(), &statev1.DeleteCharacterRequest{
+		CampaignId: "c1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestDeleteCharacter_CharacterNotFound(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	campaignStore.campaigns["c1"] = campaign.Campaign{ID: "c1", Status: campaign.CampaignStatusActive}
+	svc := NewCharacterService(Stores{Campaign: campaignStore, Character: newFakeCharacterStore(), Event: newFakeEventStore()})
+	_, err := svc.DeleteCharacter(context.Background(), &statev1.DeleteCharacterRequest{
+		CampaignId:  "c1",
+		CharacterId: "ch1",
+	})
+	assertStatusCode(t, err, codes.NotFound)
+}
+
+func TestPatchCharacterProfile_MissingDaggerheartStore(t *testing.T) {
+	svc := NewCharacterService(Stores{Event: newFakeEventStore()})
+	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
+		CampaignId:  "c1",
+		CharacterId: "ch1",
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestPatchCharacterProfile_HpMaxTooHigh(t *testing.T) {
+	dhStore := newFakeDaggerheartStore()
+	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
+	}
+	svc := NewCharacterService(Stores{Daggerheart: dhStore, Event: newFakeEventStore()})
+	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
+		CampaignId:         "c1",
+		CharacterId:        "ch1",
+		SystemProfilePatch: &statev1.PatchCharacterProfileRequest_Daggerheart{Daggerheart: &daggerheartv1.DaggerheartProfile{HpMax: 13}},
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestPatchCharacterProfile_StressMaxTooHigh(t *testing.T) {
+	dhStore := newFakeDaggerheartStore()
+	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
+	}
+	svc := NewCharacterService(Stores{Daggerheart: dhStore, Event: newFakeEventStore()})
+	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
+		CampaignId:         "c1",
+		CharacterId:        "ch1",
+		SystemProfilePatch: &statev1.PatchCharacterProfileRequest_Daggerheart{Daggerheart: &daggerheartv1.DaggerheartProfile{StressMax: wrapperspb.Int32(13)}},
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestPatchCharacterProfile_NegativeEvasion(t *testing.T) {
+	dhStore := newFakeDaggerheartStore()
+	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
+	}
+	svc := NewCharacterService(Stores{Daggerheart: dhStore, Event: newFakeEventStore()})
+	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
+		CampaignId:         "c1",
+		CharacterId:        "ch1",
+		SystemProfilePatch: &statev1.PatchCharacterProfileRequest_Daggerheart{Daggerheart: &daggerheartv1.DaggerheartProfile{Evasion: wrapperspb.Int32(-1)}},
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestPatchCharacterProfile_NegativeMajorThreshold(t *testing.T) {
+	dhStore := newFakeDaggerheartStore()
+	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
+	}
+	svc := NewCharacterService(Stores{Daggerheart: dhStore, Event: newFakeEventStore()})
+	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
+		CampaignId:         "c1",
+		CharacterId:        "ch1",
+		SystemProfilePatch: &statev1.PatchCharacterProfileRequest_Daggerheart{Daggerheart: &daggerheartv1.DaggerheartProfile{MajorThreshold: wrapperspb.Int32(-1)}},
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestPatchCharacterProfile_NegativeSevereThreshold(t *testing.T) {
+	dhStore := newFakeDaggerheartStore()
+	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
+	}
+	svc := NewCharacterService(Stores{Daggerheart: dhStore, Event: newFakeEventStore()})
+	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
+		CampaignId:         "c1",
+		CharacterId:        "ch1",
+		SystemProfilePatch: &statev1.PatchCharacterProfileRequest_Daggerheart{Daggerheart: &daggerheartv1.DaggerheartProfile{SevereThreshold: wrapperspb.Int32(-1)}},
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestPatchCharacterProfile_NegativeProficiency(t *testing.T) {
+	dhStore := newFakeDaggerheartStore()
+	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
+	}
+	svc := NewCharacterService(Stores{Daggerheart: dhStore, Event: newFakeEventStore()})
+	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
+		CampaignId:         "c1",
+		CharacterId:        "ch1",
+		SystemProfilePatch: &statev1.PatchCharacterProfileRequest_Daggerheart{Daggerheart: &daggerheartv1.DaggerheartProfile{Proficiency: wrapperspb.Int32(-1)}},
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestPatchCharacterProfile_NegativeArmorScore(t *testing.T) {
+	dhStore := newFakeDaggerheartStore()
+	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
+	}
+	svc := NewCharacterService(Stores{Daggerheart: dhStore, Event: newFakeEventStore()})
+	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
+		CampaignId:         "c1",
+		CharacterId:        "ch1",
+		SystemProfilePatch: &statev1.PatchCharacterProfileRequest_Daggerheart{Daggerheart: &daggerheartv1.DaggerheartProfile{ArmorScore: wrapperspb.Int32(-1)}},
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestPatchCharacterProfile_ArmorMaxTooHigh(t *testing.T) {
+	dhStore := newFakeDaggerheartStore()
+	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
+	}
+	svc := NewCharacterService(Stores{Daggerheart: dhStore, Event: newFakeEventStore()})
+	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
+		CampaignId:         "c1",
+		CharacterId:        "ch1",
+		SystemProfilePatch: &statev1.PatchCharacterProfileRequest_Daggerheart{Daggerheart: &daggerheartv1.DaggerheartProfile{ArmorMax: wrapperspb.Int32(13)}},
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestPatchCharacterProfile_NegativeArmorMax(t *testing.T) {
+	dhStore := newFakeDaggerheartStore()
+	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
+	}
+	svc := NewCharacterService(Stores{Daggerheart: dhStore, Event: newFakeEventStore()})
+	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
+		CampaignId:         "c1",
+		CharacterId:        "ch1",
+		SystemProfilePatch: &statev1.PatchCharacterProfileRequest_Daggerheart{Daggerheart: &daggerheartv1.DaggerheartProfile{ArmorMax: wrapperspb.Int32(-1)}},
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestPatchCharacterProfile_EmptyExperienceName(t *testing.T) {
+	dhStore := newFakeDaggerheartStore()
+	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
+	}
+	svc := NewCharacterService(Stores{Daggerheart: dhStore, Event: newFakeEventStore()})
+	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
+		CampaignId:  "c1",
+		CharacterId: "ch1",
+		SystemProfilePatch: &statev1.PatchCharacterProfileRequest_Daggerheart{Daggerheart: &daggerheartv1.DaggerheartProfile{
+			Experiences: []*daggerheartv1.DaggerheartExperience{{Name: "", Modifier: 1}},
+		}},
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
 func TestPatchCharacterProfile_NegativeStressMax(t *testing.T) {
 	dhStore := newFakeDaggerheartStore()
 	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{

@@ -74,3 +74,14 @@ func TestResolveRestOutcomeRejectsFourthShort(t *testing.T) {
 		t.Fatal("expected error for fourth short rest")
 	}
 }
+
+func TestResolveRestOutcomeNegativePartySize(t *testing.T) {
+	state := RestState{}
+	outcome, err := ResolveRestOutcome(state, RestTypeLong, false, 1, -1)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if outcome.GMFearGain == 0 {
+		t.Fatal("expected GM fear gain")
+	}
+}

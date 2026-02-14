@@ -71,3 +71,71 @@ func TestRegistryRejectsDuplicateVersion(t *testing.T) {
 
 	registry.Register(primary)
 }
+
+func TestRegistryGetVersionWhitespace(t *testing.T) {
+	registry := NewRegistry()
+	primary := &testSystem{id: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART, version: "1.0.0"}
+	registry.Register(primary)
+
+	// Whitespace version should fallback to default
+	if got := registry.GetVersion(primary.ID(), "  "); got != primary {
+		t.Fatalf("GetVersion with whitespace = %v, want primary", got)
+	}
+}
+
+func TestRegistryGetVersionUnregistered(t *testing.T) {
+	registry := NewRegistry()
+	if got := registry.GetVersion(commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART, "1.0.0"); got != nil {
+		t.Fatalf("expected nil for unregistered system, got %v", got)
+	}
+}
+
+func TestRegistryGetVersionNoDefault(t *testing.T) {
+	registry := NewRegistry()
+	// No systems registered, empty version should return nil
+	if got := registry.GetVersion(commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART, ""); got != nil {
+		t.Fatalf("expected nil for no-default system, got %v", got)
+	}
+}
+
+func TestRegistryMustGet(t *testing.T) {
+	registry := NewRegistry()
+	primary := &testSystem{id: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART, version: "1.0.0"}
+	registry.Register(primary)
+
+	if got := registry.MustGet(primary.ID()); got != primary {
+		t.Fatalf("MustGet = %v, want primary", got)
+	}
+}
+
+func TestRegistryMustGetPanics(t *testing.T) {
+	registry := NewRegistry()
+	defer func() {
+		if recover() == nil {
+			t.Fatal("expected panic for unregistered system")
+		}
+	}()
+	registry.MustGet(commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART)
+}
+
+func TestRegistryList(t *testing.T) {
+	registry := NewRegistry()
+	primary := &testSystem{id: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART, version: "1.0.0"}
+	registry.Register(primary)
+
+	systems := registry.List()
+	if len(systems) != 1 {
+		t.Fatalf("List() returned %d systems, want 1", len(systems))
+	}
+	if systems[0] != primary {
+		t.Fatalf("List()[0] = %v, want primary", systems[0])
+	}
+}
+
+func TestRegistryListEmpty(t *testing.T) {
+	registry := NewRegistry()
+	systems := registry.List()
+	if len(systems) != 0 {
+		t.Fatalf("List() returned %d systems, want 0", len(systems))
+	}
+}

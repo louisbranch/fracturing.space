@@ -2,6 +2,9 @@ package daggerheart
 
 import (
 	"testing"
+
+	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 )
 
 func TestCharacterState_ResourceHolder(t *testing.T) {
@@ -494,5 +497,207 @@ func TestSnapshotState_SettersClamp(t *testing.T) {
 func TestClampMinGreaterThanMax(t *testing.T) {
 	if got := clamp(5, 10, 1); got != 10 {
 		t.Fatalf("clamp() = %d, want %d", got, 10)
+	}
+}
+
+func TestGainStressEdgeCases(t *testing.T) {
+	t.Run("ZeroAmount", func(t *testing.T) {
+		state := NewCharacterState(CharacterStateConfig{
+			HP: 6, HPMax: 6, Stress: 2, StressMax: 6,
+			HopeMax: HopeMax,
+		})
+		result, err := state.GainStress(0)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if result.StressBefore != 2 || result.StressAfter != 2 {
+			t.Fatalf("expected no change, got before=%d after=%d", result.StressBefore, result.StressAfter)
+		}
+		if result.HPBefore != 6 || result.HPAfter != 6 {
+			t.Fatal("hp should not change")
+		}
+	})
+
+	t.Run("NegativeAmount", func(t *testing.T) {
+		state := NewCharacterState(CharacterStateConfig{
+			HP: 6, HPMax: 6, Stress: 2, StressMax: 6,
+			HopeMax: HopeMax,
+		})
+		result, err := state.GainStress(-1)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if result.StressAfter != 2 {
+			t.Fatal("stress should not change for negative amount")
+		}
+	})
+
+	t.Run("AlreadyAtMax", func(t *testing.T) {
+		state := NewCharacterState(CharacterStateConfig{
+			HP: 6, HPMax: 6, Stress: 6, StressMax: 6,
+			HopeMax: HopeMax,
+		})
+		result, err := state.GainStress(3)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if result.StressAfter != 6 {
+			t.Fatalf("expected stress capped at 6, got %d", result.StressAfter)
+		}
+		if result.Overflow != 3 {
+			t.Fatalf("expected overflow=3, got %d", result.Overflow)
+		}
+		if result.HPAfter != 3 {
+			t.Fatalf("expected hp=3 after overflow, got %d", result.HPAfter)
+		}
+	})
+
+	t.Run("FillsExactly", func(t *testing.T) {
+		state := NewCharacterState(CharacterStateConfig{
+			HP: 6, HPMax: 6, Stress: 4, StressMax: 6,
+			HopeMax: HopeMax,
+		})
+		result, err := state.GainStress(2)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !result.LastStressMarked {
+			t.Fatal("expected last_stress_marked")
+		}
+		if result.Overflow != 0 {
+			t.Fatalf("expected no overflow, got %d", result.Overflow)
+		}
+		if result.StressAfter != 6 {
+			t.Fatalf("expected stress=6, got %d", result.StressAfter)
+		}
+	})
+
+	t.Run("OverflowWithHPDamage", func(t *testing.T) {
+		state := NewCharacterState(CharacterStateConfig{
+			HP: 6, HPMax: 6, Stress: 5, StressMax: 6,
+			HopeMax: HopeMax,
+		})
+		result, err := state.GainStress(3)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !result.LastStressMarked {
+			t.Fatal("expected last_stress_marked")
+		}
+		if result.Overflow != 2 {
+			t.Fatalf("expected overflow=2, got %d", result.Overflow)
+		}
+		if result.HPAfter != 4 {
+			t.Fatalf("expected hp=4, got %d", result.HPAfter)
+		}
+	})
+}
+
+func TestResourceCapUnknown(t *testing.T) {
+	state := NewCharacterState(CharacterStateConfig{
+		HP: 6, HPMax: 6, HopeMax: HopeMax, StressMax: 6, ArmorMax: 2,
+	})
+	if v := state.ResourceCap("unknown"); v != 0 {
+		t.Fatalf("expected 0 for unknown, got %d", v)
+	}
+}
+
+func TestSnapshotResourceCapUnknown(t *testing.T) {
+	ss := NewSnapshotState(SnapshotStateConfig{CampaignID: "camp-1"})
+	if v := ss.ResourceCap("unknown"); v != 0 {
+		t.Fatalf("expected 0 for unknown, got %d", v)
+	}
+}
+
+func TestSnapshotSpendUnknownResource(t *testing.T) {
+	ss := NewSnapshotState(SnapshotStateConfig{CampaignID: "camp-1", GMFear: 5})
+	_, _, err := ss.SpendResource("unknown", 1)
+	if err == nil {
+		t.Fatal("expected error for unknown resource")
+	}
+}
+
+func TestCharacterSpendStress(t *testing.T) {
+	state := NewCharacterState(CharacterStateConfig{
+		HP: 6, HPMax: 6, Stress: 3, StressMax: 6,
+		HopeMax: HopeMax,
+	})
+	before, after, err := state.SpendResource(ResourceStress, 2)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if before != 3 || after != 1 {
+		t.Fatalf("expected 3->1, got %d->%d", before, after)
+	}
+
+	_, _, err = state.SpendResource(ResourceStress, 10)
+	if err == nil {
+		t.Fatal("expected error for insufficient stress")
+	}
+}
+
+func TestCharacterSpendUnknownResource(t *testing.T) {
+	state := NewCharacterState(CharacterStateConfig{
+		HP: 6, HPMax: 6, HopeMax: HopeMax, StressMax: 6,
+	})
+	_, _, err := state.SpendResource("unknown", 1)
+	if err == nil {
+		t.Fatal("expected error for unknown resource")
+	}
+}
+
+func TestStateFactory_NPC(t *testing.T) {
+	factory := NewStateFactory()
+	state, err := factory.NewCharacterState("camp-1", "npc-1", systems.CharacterKindNPC)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// NPC should have Hope=0 and StressMax=0
+	if v := state.ResourceValue(ResourceHope); v != 0 {
+		t.Errorf("NPC Hope = %d, want 0", v)
+	}
+	if v := state.ResourceCap(ResourceStress); v != 0 {
+		t.Errorf("NPC Stress cap = %d, want 0", v)
+	}
+}
+
+func TestNewCharacterStateDefaultLifeState(t *testing.T) {
+	state := NewCharacterState(CharacterStateConfig{
+		CampaignID:  "camp-1",
+		CharacterID: "char-1",
+		HP:          6,
+		HPMax:       6,
+		HopeMax:     HopeMax,
+	})
+	// LifeState should default to "alive"
+	if state.lifeState != LifeStateAlive {
+		t.Fatalf("expected life state alive, got %s", state.lifeState)
+	}
+}
+
+func TestOutcomeApplier(t *testing.T) {
+	applier := NewOutcomeApplier()
+	changes, err := applier.ApplyOutcome(nil, systems.OutcomeContext{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if changes != nil {
+		t.Fatalf("expected nil changes, got %v", changes)
+	}
+}
+
+func TestSystemMethods(t *testing.T) {
+	sys := systems.DefaultRegistry.Get(commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART)
+	if sys == nil {
+		t.Fatal("expected daggerheart system registered")
+	}
+	if sys.Name() != "Daggerheart" {
+		t.Fatalf("Name() = %q, want Daggerheart", sys.Name())
+	}
+	if sys.StateFactory() == nil {
+		t.Fatal("expected non-nil StateFactory")
+	}
+	if sys.OutcomeApplier() == nil {
+		t.Fatal("expected non-nil OutcomeApplier")
 	}
 }

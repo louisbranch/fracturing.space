@@ -159,6 +159,146 @@ func TestResolveDeathMoveRiskItAllCrit(t *testing.T) {
 	}
 }
 
+func TestNormalizeDeathMove(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		want    string
+		wantErr bool
+	}{
+		{"valid blaze", " Blaze_Of_Glory ", DeathMoveBlazeOfGlory, false},
+		{"valid avoid", "avoid_death", DeathMoveAvoidDeath, false},
+		{"valid risk", "RISK_IT_ALL", DeathMoveRiskItAll, false},
+		{"empty", "  ", "", true},
+		{"invalid", "unknown_move", "", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := NormalizeDeathMove(tt.input)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected error")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got != tt.want {
+				t.Fatalf("got %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestNormalizeLifeState(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		want    string
+		wantErr bool
+	}{
+		{"alive", " Alive ", LifeStateAlive, false},
+		{"unconscious", "UNCONSCIOUS", LifeStateUnconscious, false},
+		{"blaze", "blaze_of_glory", LifeStateBlazeOfGlory, false},
+		{"dead", "dead", LifeStateDead, false},
+		{"empty", "", "", true},
+		{"invalid", "sleeping", "", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := NormalizeLifeState(tt.input)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected error")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got != tt.want {
+				t.Fatalf("got %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestResolveDeathMoveValidationErrors(t *testing.T) {
+	t.Run("invalid move", func(t *testing.T) {
+		_, err := ResolveDeathMove(DeathMoveInput{Move: "invalid", Level: 1, HPMax: 6, HopeMax: HopeMax, StressMax: 6})
+		if err == nil {
+			t.Fatal("expected error")
+		}
+	})
+	t.Run("zero level", func(t *testing.T) {
+		_, err := ResolveDeathMove(DeathMoveInput{Move: DeathMoveBlazeOfGlory, Level: 0, HPMax: 6, HopeMax: HopeMax, StressMax: 6})
+		if err == nil {
+			t.Fatal("expected error for zero level")
+		}
+	})
+	t.Run("negative hp max", func(t *testing.T) {
+		_, err := ResolveDeathMove(DeathMoveInput{Move: DeathMoveBlazeOfGlory, Level: 1, HPMax: -1, HopeMax: HopeMax, StressMax: 6})
+		if err == nil {
+			t.Fatal("expected error for negative hp_max")
+		}
+	})
+	t.Run("negative stress max", func(t *testing.T) {
+		_, err := ResolveDeathMove(DeathMoveInput{Move: DeathMoveBlazeOfGlory, Level: 1, HPMax: 6, HopeMax: HopeMax, StressMax: -1})
+		if err == nil {
+			t.Fatal("expected error for negative stress_max")
+		}
+	})
+	t.Run("invalid hope max", func(t *testing.T) {
+		_, err := ResolveDeathMove(DeathMoveInput{Move: DeathMoveBlazeOfGlory, Level: 1, HPMax: 6, HopeMax: HopeMax + 1, StressMax: 6})
+		if err == nil {
+			t.Fatal("expected error for hope_max out of range")
+		}
+	})
+}
+
+func TestResolveDeathMoveRiskItAllNegativeClearValues(t *testing.T) {
+	seed := findDeathSeed(t, func(hope, fear int) bool { return hope > fear })
+	neg := -1
+	_, err := ResolveDeathMove(DeathMoveInput{
+		Move: DeathMoveRiskItAll, Level: 1, HP: 0, HPMax: 6,
+		Hope: 2, HopeMax: HopeMax, Stress: 3, StressMax: 6,
+		RiskItAllHPClear: &neg, Seed: seed,
+	})
+	if err == nil {
+		t.Fatal("expected error for negative clear values")
+	}
+}
+
+func TestResolveDeathMoveRiskItAllClearExceedsHopeDie(t *testing.T) {
+	seed := findDeathSeed(t, func(hope, fear int) bool { return hope > fear })
+	roll, _ := dice.RollDice(dice.Request{Dice: []dice.Spec{{Sides: 12, Count: 2}}, Seed: seed})
+	hopeDie := roll.Rolls[0].Results[0]
+	hpClear := hopeDie + 1
+	_, err := ResolveDeathMove(DeathMoveInput{
+		Move: DeathMoveRiskItAll, Level: 1, HP: 0, HPMax: 6,
+		Hope: 2, HopeMax: HopeMax, Stress: 3, StressMax: 6,
+		RiskItAllHPClear: &hpClear, Seed: seed,
+	})
+	if err == nil {
+		t.Fatal("expected error for clear values exceeding hope die")
+	}
+}
+
+func TestResolveDeathMoveRiskItAllDefaultClear(t *testing.T) {
+	seed := findDeathSeed(t, func(hope, fear int) bool { return hope > fear })
+	outcome, err := ResolveDeathMove(DeathMoveInput{
+		Move: DeathMoveRiskItAll, Level: 1, HP: 0, HPMax: 6,
+		Hope: 2, HopeMax: HopeMax, Stress: 3, StressMax: 6, Seed: seed,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if outcome.HPCleared != *outcome.HopeDie {
+		t.Fatalf("expected hp_cleared = hope_die (%d), got %d", *outcome.HopeDie, outcome.HPCleared)
+	}
+}
+
 func findDeathSeed(t *testing.T, predicate func(hope, fear int) bool) int64 {
 	t.Helper()
 	for seed := int64(1); seed < 5000; seed++ {
