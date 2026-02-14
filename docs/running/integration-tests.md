@@ -135,6 +135,6 @@ make cover
 ## Checklist
 
 - If event definitions changed, run `go generate ./internal/services/game/domain/campaign/event`
-  and confirm `docs/events/event-catalog.md` is updated in the diff.
+  and confirm the [event catalog](../events/event-catalog.md) is updated in the diff.
 
 - CI should run the integration tag via make (for example: make cover).

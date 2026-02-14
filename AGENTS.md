@@ -109,8 +109,8 @@ Use these project docs for architecture and domain guidance:
 
 | doc | what | when to use |
 | --- | --- | --- |
-| `docs/project/architecture.md` | System architecture, service boundaries, layers | when orienting to overall system design |
-| `docs/project/domain-language.md` | Canonical domain terms and naming principles | when naming new APIs/packages/events |
-| `docs/project/event-replay.md` | Event journal, replay modes, snapshots | when working on replay, snapshots, maintenance CLI |
-| `docs/project/game-systems.md` | Pluggable game-system architecture and add-a-system guide | when adding or modifying a game system |
-| `docs/project/participant-invitation.md` | Participant invitation flow and follow-ups | when designing auth or participant flows |
+| [docs/project/architecture.md](docs/project/architecture.md) | System architecture, service boundaries, layers | when orienting to overall system design |
+| [docs/project/domain-language.md](docs/project/domain-language.md) | Canonical domain terms and naming principles | when naming new APIs/packages/events |
+| [docs/project/event-replay.md](docs/project/event-replay.md) | Event journal, replay modes, snapshots | when working on replay, snapshots, maintenance CLI |
+| [docs/project/game-systems.md](docs/project/game-systems.md) | Pluggable game-system architecture and add-a-system guide | when adding or modifying a game system |
+| [docs/project/participant-invitation.md](docs/project/participant-invitation.md) | Participant invitation flow and follow-ups | when designing auth or participant flows |

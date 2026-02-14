@@ -53,14 +53,14 @@ scripts/playwright-admin-smoke.sh
 
 ### Specs
 
-The admin smoke flow lives in `docs/specs/admin-smoke.md` and is executed by
+The admin smoke flow lives in [admin smoke spec](../specs/admin-smoke.md) and is executed by
 the spec runner:
 
 ```bash
 scripts/playwright-run-spec.sh docs/specs/admin-smoke.md
 ```
 
-See `docs/specs/playwright-cli-qa-workflows.md` for the spec format.
+See [Playwright CLI QA workflows](../specs/playwright-cli-qa-workflows.md) for the spec format.
 
 ### Config file
 

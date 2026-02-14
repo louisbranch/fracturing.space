@@ -59,7 +59,7 @@ Follow-Ups and Open Questions
 - Determine whether to add a stored join grant or recipient binding for invite listings.
 
 Related Docs
-- docs/project/oauth.md
+- [OAuth](oauth.md)
 
 Join Grant Configuration (Current)
 - Env: FRACTURING_SPACE_JOIN_GRANT_ISSUER
