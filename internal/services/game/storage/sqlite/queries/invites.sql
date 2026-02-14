@@ -16,13 +16,18 @@ WHERE id = ?;
 
 -- name: ListInvitesByCampaignPaged :many
 SELECT * FROM invites
-WHERE campaign_id = ? AND id > ?
+WHERE campaign_id = ?
+  AND id > ?
+  AND (? = '' OR recipient_user_id = ?)
+  AND (? = '' OR status = ?)
 ORDER BY id
 LIMIT ?;
 
 -- name: ListInvitesByCampaignPagedFirst :many
 SELECT * FROM invites
 WHERE campaign_id = ?
+  AND (? = '' OR recipient_user_id = ?)
+  AND (? = '' OR status = ?)
 ORDER BY id
 LIMIT ?;
 

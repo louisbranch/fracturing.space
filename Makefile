@@ -8,7 +8,7 @@ PROTO_FILES := \
 	$(wildcard $(PROTO_DIR)/game/v1/*.proto) \
 	$(wildcard $(PROTO_DIR)/systems/daggerheart/v1/*.proto)
 
-.PHONY: all proto clean run cover test integration templ-generate
+.PHONY: all proto clean run cover test integration templ-generate event-catalog-check
 
 all: proto
 
@@ -72,7 +72,11 @@ test:
 	go test ./...
 
 integration:
+	$(MAKE) event-catalog-check
 	go test -tags=integration ./...
+
+event-catalog-check:
+	@bash -euo pipefail -c 'go generate ./internal/services/game/domain/campaign/event >/dev/null 2>&1; git diff --exit-code -- docs/events/event-catalog.md'
 
 seed: ## Seed the local database with demo data (static fixtures)
 	go run ./cmd/seed -v

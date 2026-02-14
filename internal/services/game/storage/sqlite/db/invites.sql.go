@@ -31,19 +31,34 @@ func (q *Queries) GetInvite(ctx context.Context, id string) (Invite, error) {
 
 const listInvitesByCampaignPaged = `-- name: ListInvitesByCampaignPaged :many
 SELECT id, campaign_id, participant_id, recipient_user_id, status, created_by_participant_id, created_at, updated_at FROM invites
-WHERE campaign_id = ? AND id > ?
+WHERE campaign_id = ?
+  AND id > ?
+  AND (? = '' OR recipient_user_id = ?)
+  AND (? = '' OR status = ?)
 ORDER BY id
 LIMIT ?
 `
 
 type ListInvitesByCampaignPagedParams struct {
-	CampaignID string `json:"campaign_id"`
-	ID         string `json:"id"`
-	Limit      int64  `json:"limit"`
+	CampaignID      string      `json:"campaign_id"`
+	ID              string      `json:"id"`
+	Column3         interface{} `json:"column_3"`
+	RecipientUserID string      `json:"recipient_user_id"`
+	Column5         interface{} `json:"column_5"`
+	Status          string      `json:"status"`
+	Limit           int64       `json:"limit"`
 }
 
 func (q *Queries) ListInvitesByCampaignPaged(ctx context.Context, arg ListInvitesByCampaignPagedParams) ([]Invite, error) {
-	rows, err := q.db.QueryContext(ctx, listInvitesByCampaignPaged, arg.CampaignID, arg.ID, arg.Limit)
+	rows, err := q.db.QueryContext(ctx, listInvitesByCampaignPaged,
+		arg.CampaignID,
+		arg.ID,
+		arg.Column3,
+		arg.RecipientUserID,
+		arg.Column5,
+		arg.Status,
+		arg.Limit,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -77,17 +92,30 @@ func (q *Queries) ListInvitesByCampaignPaged(ctx context.Context, arg ListInvite
 const listInvitesByCampaignPagedFirst = `-- name: ListInvitesByCampaignPagedFirst :many
 SELECT id, campaign_id, participant_id, recipient_user_id, status, created_by_participant_id, created_at, updated_at FROM invites
 WHERE campaign_id = ?
+  AND (? = '' OR recipient_user_id = ?)
+  AND (? = '' OR status = ?)
 ORDER BY id
 LIMIT ?
 `
 
 type ListInvitesByCampaignPagedFirstParams struct {
-	CampaignID string `json:"campaign_id"`
-	Limit      int64  `json:"limit"`
+	CampaignID      string      `json:"campaign_id"`
+	Column2         interface{} `json:"column_2"`
+	RecipientUserID string      `json:"recipient_user_id"`
+	Column4         interface{} `json:"column_4"`
+	Status          string      `json:"status"`
+	Limit           int64       `json:"limit"`
 }
 
 func (q *Queries) ListInvitesByCampaignPagedFirst(ctx context.Context, arg ListInvitesByCampaignPagedFirstParams) ([]Invite, error) {
-	rows, err := q.db.QueryContext(ctx, listInvitesByCampaignPagedFirst, arg.CampaignID, arg.Limit)
+	rows, err := q.db.QueryContext(ctx, listInvitesByCampaignPagedFirst,
+		arg.CampaignID,
+		arg.Column2,
+		arg.RecipientUserID,
+		arg.Column4,
+		arg.Status,
+		arg.Limit,
+	)
 	if err != nil {
 		return nil, err
 	}

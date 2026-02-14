@@ -16,6 +16,7 @@ const (
 	CodeUserEmptyDisplayName            = "USER_EMPTY_DISPLAY_NAME"
 	CodeInviteEmptyCampaignID           = "INVITE_EMPTY_CAMPAIGN_ID"
 	CodeInviteEmptyParticipantID        = "INVITE_EMPTY_PARTICIPANT_ID"
+	CodeInviteRecipientUserMissing      = "INVITE_RECIPIENT_USER_MISSING"
 	CodeInviteJoinGrantInvalid          = "INVITE_JOIN_GRANT_INVALID"
 	CodeInviteJoinGrantExpired          = "INVITE_JOIN_GRANT_EXPIRED"
 	CodeInviteJoinGrantMismatch         = "INVITE_JOIN_GRANT_MISMATCH"
@@ -80,12 +81,13 @@ var enUSCatalog = &Catalog{
 		CodeUserEmptyDisplayName: "User display name cannot be empty",
 
 		// Invite errors
-		CodeInviteEmptyCampaignID:    "Campaign ID is required for invite",
-		CodeInviteEmptyParticipantID: "Participant ID is required for invite",
-		CodeInviteJoinGrantInvalid:   "Join grant is invalid",
-		CodeInviteJoinGrantExpired:   "Join grant has expired",
-		CodeInviteJoinGrantMismatch:  "Join grant {{.Field}} does not match",
-		CodeInviteJoinGrantUsed:      "Join grant has already been used",
+		CodeInviteEmptyCampaignID:      "Campaign ID is required for invite",
+		CodeInviteEmptyParticipantID:   "Participant ID is required for invite",
+		CodeInviteRecipientUserMissing: "Invite recipient user was not found",
+		CodeInviteJoinGrantInvalid:     "Join grant is invalid",
+		CodeInviteJoinGrantExpired:     "Join grant has expired",
+		CodeInviteJoinGrantMismatch:    "Join grant {{.Field}} does not match",
+		CodeInviteJoinGrantUsed:        "Join grant has already been used",
 
 		// Session errors
 		CodeSessionEmptyCampaignID: "Campaign ID is required for session",

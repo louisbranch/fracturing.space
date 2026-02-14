@@ -54,7 +54,7 @@ type ParticipantPage struct {
 type InviteStore interface {
 	PutInvite(ctx context.Context, inv invite.Invite) error
 	GetInvite(ctx context.Context, inviteID string) (invite.Invite, error)
-	ListInvites(ctx context.Context, campaignID string, pageSize int, pageToken string) (InvitePage, error)
+	ListInvites(ctx context.Context, campaignID string, recipientUserID string, status invite.Status, pageSize int, pageToken string) (InvitePage, error)
 	ListPendingInvites(ctx context.Context, campaignID string, pageSize int, pageToken string) (InvitePage, error)
 	ListPendingInvitesForRecipient(ctx context.Context, userID string, pageSize int, pageToken string) (InvitePage, error)
 	UpdateInviteStatus(ctx context.Context, inviteID string, status invite.Status, updatedAt time.Time) error

@@ -197,6 +197,19 @@ func inviteStatusToProto(status invite.Status) campaignv1.InviteStatus {
 	}
 }
 
+func inviteStatusFromProto(status campaignv1.InviteStatus) invite.Status {
+	switch status {
+	case campaignv1.InviteStatus_PENDING:
+		return invite.StatusPending
+	case campaignv1.InviteStatus_CLAIMED:
+		return invite.StatusClaimed
+	case campaignv1.InviteStatus_REVOKED:
+		return invite.StatusRevoked
+	default:
+		return invite.StatusUnspecified
+	}
+}
+
 // Character proto conversion helpers
 
 func characterToProto(ch character.Character) *campaignv1.Character {

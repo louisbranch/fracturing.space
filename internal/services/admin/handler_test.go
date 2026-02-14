@@ -163,6 +163,7 @@ func TestCampaignSessionsRoute(t *testing.T) {
 type testClientProvider struct {
 	auth     authv1.AuthServiceClient
 	campaign statev1.CampaignServiceClient
+	invite   statev1.InviteServiceClient
 }
 
 func (p testClientProvider) CampaignClient() statev1.CampaignServiceClient {
@@ -179,6 +180,10 @@ func (p testClientProvider) CharacterClient() statev1.CharacterServiceClient {
 
 func (p testClientProvider) ParticipantClient() statev1.ParticipantServiceClient {
 	return nil
+}
+
+func (p testClientProvider) InviteClient() statev1.InviteServiceClient {
+	return p.invite
 }
 
 func (p testClientProvider) EventClient() statev1.EventServiceClient {

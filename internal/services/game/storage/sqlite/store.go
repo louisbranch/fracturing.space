@@ -664,7 +664,7 @@ func (s *Store) PutInvite(ctx context.Context, inv invite.Invite) error {
 		ID:                     inv.ID,
 		CampaignID:             inv.CampaignID,
 		ParticipantID:          inv.ParticipantID,
-		RecipientUserID:        inv.RecipientUserID,
+		RecipientUserID:        strings.TrimSpace(inv.RecipientUserID),
 		Status:                 invite.StatusLabel(inv.Status),
 		CreatedByParticipantID: inv.CreatedByParticipantID,
 		CreatedAt:              toMillis(inv.CreatedAt),
@@ -696,7 +696,7 @@ func (s *Store) GetInvite(ctx context.Context, inviteID string) (invite.Invite, 
 }
 
 // ListInvites returns a page of invite records for a campaign.
-func (s *Store) ListInvites(ctx context.Context, campaignID string, pageSize int, pageToken string) (storage.InvitePage, error) {
+func (s *Store) ListInvites(ctx context.Context, campaignID string, recipientUserID string, status invite.Status, pageSize int, pageToken string) (storage.InvitePage, error) {
 	if err := ctx.Err(); err != nil {
 		return storage.InvitePage{}, err
 	}
@@ -709,19 +709,32 @@ func (s *Store) ListInvites(ctx context.Context, campaignID string, pageSize int
 	if pageSize <= 0 {
 		return storage.InvitePage{}, fmt.Errorf("page size must be greater than zero")
 	}
+	recipientUserID = strings.TrimSpace(recipientUserID)
+	statusFilter := ""
+	if status != invite.StatusUnspecified {
+		statusFilter = invite.StatusLabel(status)
+	}
 
 	var rows []db.Invite
 	var err error
 	if pageToken == "" {
 		rows, err = s.q.ListInvitesByCampaignPagedFirst(ctx, db.ListInvitesByCampaignPagedFirstParams{
-			CampaignID: campaignID,
-			Limit:      int64(pageSize + 1),
+			CampaignID:      campaignID,
+			Column2:         recipientUserID,
+			RecipientUserID: recipientUserID,
+			Column4:         statusFilter,
+			Status:          statusFilter,
+			Limit:           int64(pageSize + 1),
 		})
 	} else {
 		rows, err = s.q.ListInvitesByCampaignPaged(ctx, db.ListInvitesByCampaignPagedParams{
-			CampaignID: campaignID,
-			ID:         pageToken,
-			Limit:      int64(pageSize + 1),
+			CampaignID:      campaignID,
+			ID:              pageToken,
+			Column3:         recipientUserID,
+			RecipientUserID: recipientUserID,
+			Column5:         statusFilter,
+			Status:          statusFilter,
+			Limit:           int64(pageSize + 1),
 		})
 	}
 	if err != nil {

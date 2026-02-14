@@ -101,4 +101,42 @@ templ UserDetailCard(detail UserDetail, impersonation *ImpersonationView, loc Lo
 			<span class="badge success">{T(loc, "users.impersonate.active")}</span>
 		}
 	</form>
+	<h3>{T(loc, "users.invites.heading")}</h3>
+	@UserPendingInvitesTable(detail.PendingInvites, detail.PendingInvitesMessage, loc)
+}
+
+// UserPendingInvitesTable renders pending invites targeting a user.
+templ UserPendingInvitesTable(rows []InviteRow, message string, loc Localizer) {
+	if len(rows) == 0 {
+		@EmptyState(message)
+	} else {
+		<table>
+			<thead>
+				<tr>
+					<th>{T(loc, "invites.table.campaign")}</th>
+					<th>{T(loc, "invites.table.participant")}</th>
+					<th>{T(loc, "invites.table.status")}</th>
+					<th>{T(loc, "invites.table.created")}</th>
+				</tr>
+			</thead>
+			<tbody>
+				for _, row := range rows {
+					<tr>
+						<td>
+							<a
+								href={ "/campaigns/" + row.CampaignID + "/invites" }
+								hx-get={ "/campaigns/" + row.CampaignID + "/invites" }
+								hx-target="#main"
+								hx-swap="innerHTML"
+								hx-push-url="true"
+							>{row.CampaignName}</a>
+						</td>
+						<td>{row.Participant}</td>
+						<td>@StatusBadge(row.Status, row.StatusVariant)</td>
+						<td>{row.CreatedAt}</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	}
 }

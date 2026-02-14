@@ -490,11 +490,15 @@ type ListInvitesRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The campaign ID to list invites for.
 	CampaignId string `protobuf:"bytes,1,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"`
+	// Optional user ID to filter invites by recipient.
+	RecipientUserId string `protobuf:"bytes,2,opt,name=recipient_user_id,json=recipientUserId,proto3" json:"recipient_user_id,omitempty"`
+	// Optional status to filter invites.
+	Status InviteStatus `protobuf:"varint,3,opt,name=status,proto3,enum=game.v1.InviteStatus" json:"status,omitempty"`
 	// The maximum number of invites to return.
 	// If zero, the server defaults to 10. The server clamps values above 10 to 10.
-	PageSize int32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	PageSize int32 `protobuf:"varint,4,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 	// A page token received from a prior ListInvitesResponse.
-	PageToken     string `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	PageToken     string `protobuf:"bytes,5,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -534,6 +538,20 @@ func (x *ListInvitesRequest) GetCampaignId() string {
 		return x.CampaignId
 	}
 	return ""
+}
+
+func (x *ListInvitesRequest) GetRecipientUserId() string {
+	if x != nil {
+		return x.RecipientUserId
+	}
+	return ""
+}
+
+func (x *ListInvitesRequest) GetStatus() InviteStatus {
+	if x != nil {
+		return x.Status
+	}
+	return InviteStatus_INVITE_STATUS_UNSPECIFIED
 }
 
 func (x *ListInvitesRequest) GetPageSize() int32 {
@@ -1069,13 +1087,15 @@ const file_game_v1_invite_proto_rawDesc = "" +
 	"\x10GetInviteRequest\x12\x1b\n" +
 	"\tinvite_id\x18\x01 \x01(\tR\binviteId\"<\n" +
 	"\x11GetInviteResponse\x12'\n" +
-	"\x06invite\x18\x01 \x01(\v2\x0f.game.v1.InviteR\x06invite\"q\n" +
+	"\x06invite\x18\x01 \x01(\v2\x0f.game.v1.InviteR\x06invite\"\xcc\x01\n" +
 	"\x12ListInvitesRequest\x12\x1f\n" +
 	"\vcampaign_id\x18\x01 \x01(\tR\n" +
-	"campaignId\x12\x1b\n" +
-	"\tpage_size\x18\x02 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"campaignId\x12*\n" +
+	"\x11recipient_user_id\x18\x02 \x01(\tR\x0frecipientUserId\x12-\n" +
+	"\x06status\x18\x03 \x01(\x0e2\x15.game.v1.InviteStatusR\x06status\x12\x1b\n" +
+	"\tpage_size\x18\x04 \x01(\x05R\bpageSize\x12\x1d\n" +
 	"\n" +
-	"page_token\x18\x03 \x01(\tR\tpageToken\"h\n" +
+	"page_token\x18\x05 \x01(\tR\tpageToken\"h\n" +
 	"\x13ListInvitesResponse\x12)\n" +
 	"\ainvites\x18\x01 \x03(\v2\x0f.game.v1.InviteR\ainvites\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"x\n" +
@@ -1167,35 +1187,36 @@ var file_game_v1_invite_proto_depIdxs = []int32{
 	1,  // 4: game.v1.ClaimInviteResponse.invite:type_name -> game.v1.Invite
 	19, // 5: game.v1.ClaimInviteResponse.participant:type_name -> game.v1.Participant
 	1,  // 6: game.v1.GetInviteResponse.invite:type_name -> game.v1.Invite
-	1,  // 7: game.v1.ListInvitesResponse.invites:type_name -> game.v1.Invite
-	14, // 8: game.v1.ListPendingInvitesResponse.invites:type_name -> game.v1.PendingInvite
-	15, // 9: game.v1.ListPendingInvitesForUserResponse.invites:type_name -> game.v1.PendingUserInvite
-	1,  // 10: game.v1.PendingInvite.invite:type_name -> game.v1.Invite
-	19, // 11: game.v1.PendingInvite.participant:type_name -> game.v1.Participant
-	20, // 12: game.v1.PendingInvite.created_by_user:type_name -> auth.v1.User
-	1,  // 13: game.v1.PendingUserInvite.invite:type_name -> game.v1.Invite
-	21, // 14: game.v1.PendingUserInvite.campaign:type_name -> game.v1.Campaign
-	19, // 15: game.v1.PendingUserInvite.participant:type_name -> game.v1.Participant
-	1,  // 16: game.v1.RevokeInviteResponse.invite:type_name -> game.v1.Invite
-	2,  // 17: game.v1.InviteService.CreateInvite:input_type -> game.v1.CreateInviteRequest
-	4,  // 18: game.v1.InviteService.ClaimInvite:input_type -> game.v1.ClaimInviteRequest
-	6,  // 19: game.v1.InviteService.GetInvite:input_type -> game.v1.GetInviteRequest
-	8,  // 20: game.v1.InviteService.ListInvites:input_type -> game.v1.ListInvitesRequest
-	10, // 21: game.v1.InviteService.ListPendingInvites:input_type -> game.v1.ListPendingInvitesRequest
-	12, // 22: game.v1.InviteService.ListPendingInvitesForUser:input_type -> game.v1.ListPendingInvitesForUserRequest
-	16, // 23: game.v1.InviteService.RevokeInvite:input_type -> game.v1.RevokeInviteRequest
-	3,  // 24: game.v1.InviteService.CreateInvite:output_type -> game.v1.CreateInviteResponse
-	5,  // 25: game.v1.InviteService.ClaimInvite:output_type -> game.v1.ClaimInviteResponse
-	7,  // 26: game.v1.InviteService.GetInvite:output_type -> game.v1.GetInviteResponse
-	9,  // 27: game.v1.InviteService.ListInvites:output_type -> game.v1.ListInvitesResponse
-	11, // 28: game.v1.InviteService.ListPendingInvites:output_type -> game.v1.ListPendingInvitesResponse
-	13, // 29: game.v1.InviteService.ListPendingInvitesForUser:output_type -> game.v1.ListPendingInvitesForUserResponse
-	17, // 30: game.v1.InviteService.RevokeInvite:output_type -> game.v1.RevokeInviteResponse
-	24, // [24:31] is the sub-list for method output_type
-	17, // [17:24] is the sub-list for method input_type
-	17, // [17:17] is the sub-list for extension type_name
-	17, // [17:17] is the sub-list for extension extendee
-	0,  // [0:17] is the sub-list for field type_name
+	0,  // 7: game.v1.ListInvitesRequest.status:type_name -> game.v1.InviteStatus
+	1,  // 8: game.v1.ListInvitesResponse.invites:type_name -> game.v1.Invite
+	14, // 9: game.v1.ListPendingInvitesResponse.invites:type_name -> game.v1.PendingInvite
+	15, // 10: game.v1.ListPendingInvitesForUserResponse.invites:type_name -> game.v1.PendingUserInvite
+	1,  // 11: game.v1.PendingInvite.invite:type_name -> game.v1.Invite
+	19, // 12: game.v1.PendingInvite.participant:type_name -> game.v1.Participant
+	20, // 13: game.v1.PendingInvite.created_by_user:type_name -> auth.v1.User
+	1,  // 14: game.v1.PendingUserInvite.invite:type_name -> game.v1.Invite
+	21, // 15: game.v1.PendingUserInvite.campaign:type_name -> game.v1.Campaign
+	19, // 16: game.v1.PendingUserInvite.participant:type_name -> game.v1.Participant
+	1,  // 17: game.v1.RevokeInviteResponse.invite:type_name -> game.v1.Invite
+	2,  // 18: game.v1.InviteService.CreateInvite:input_type -> game.v1.CreateInviteRequest
+	4,  // 19: game.v1.InviteService.ClaimInvite:input_type -> game.v1.ClaimInviteRequest
+	6,  // 20: game.v1.InviteService.GetInvite:input_type -> game.v1.GetInviteRequest
+	8,  // 21: game.v1.InviteService.ListInvites:input_type -> game.v1.ListInvitesRequest
+	10, // 22: game.v1.InviteService.ListPendingInvites:input_type -> game.v1.ListPendingInvitesRequest
+	12, // 23: game.v1.InviteService.ListPendingInvitesForUser:input_type -> game.v1.ListPendingInvitesForUserRequest
+	16, // 24: game.v1.InviteService.RevokeInvite:input_type -> game.v1.RevokeInviteRequest
+	3,  // 25: game.v1.InviteService.CreateInvite:output_type -> game.v1.CreateInviteResponse
+	5,  // 26: game.v1.InviteService.ClaimInvite:output_type -> game.v1.ClaimInviteResponse
+	7,  // 27: game.v1.InviteService.GetInvite:output_type -> game.v1.GetInviteResponse
+	9,  // 28: game.v1.InviteService.ListInvites:output_type -> game.v1.ListInvitesResponse
+	11, // 29: game.v1.InviteService.ListPendingInvites:output_type -> game.v1.ListPendingInvitesResponse
+	13, // 30: game.v1.InviteService.ListPendingInvitesForUser:output_type -> game.v1.ListPendingInvitesForUserResponse
+	17, // 31: game.v1.InviteService.RevokeInvite:output_type -> game.v1.RevokeInviteResponse
+	25, // [25:32] is the sub-list for method output_type
+	18, // [18:25] is the sub-list for method input_type
+	18, // [18:18] is the sub-list for extension type_name
+	18, // [18:18] is the sub-list for extension extendee
+	0,  // [0:18] is the sub-list for field type_name
 }
 
 func init() { file_game_v1_invite_proto_init() }

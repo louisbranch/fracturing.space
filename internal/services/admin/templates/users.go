@@ -17,8 +17,10 @@ type UserRow struct {
 
 // UserDetail represents a single user detail view.
 type UserDetail struct {
-	ID          string
-	DisplayName string
-	CreatedAt   string
-	UpdatedAt   string
+	ID                    string
+	DisplayName           string
+	CreatedAt             string
+	UpdatedAt             string
+	PendingInvites        []InviteRow
+	PendingInvitesMessage string
 }

@@ -32,6 +32,8 @@ const (
 	sessionListPageSize = 10
 	// eventListPageSize caps the number of events shown per page.
 	eventListPageSize = 50
+	// inviteListPageSize caps the number of invites shown per page.
+	inviteListPageSize = 50
 	// impersonationCookieName stores the active impersonation session ID.
 	impersonationCookieName = "fs-impersonation-session"
 	// impersonationSessionTTL controls how long impersonation sessions stay valid.
@@ -47,6 +49,7 @@ type GRPCClientProvider interface {
 	SessionClient() statev1.SessionServiceClient
 	CharacterClient() statev1.CharacterServiceClient
 	ParticipantClient() statev1.ParticipantServiceClient
+	InviteClient() statev1.InviteServiceClient
 	SnapshotClient() statev1.SnapshotServiceClient
 	EventClient() statev1.EventServiceClient
 	StatisticsClient() statev1.StatisticsServiceClient
@@ -303,6 +306,7 @@ func (h *Handler) handleUsersPage(w http.ResponseWriter, r *http.Request) {
 				view.Message = loc.Sprintf("error.user_not_found")
 			} else {
 				view.Detail = buildUserDetail(response.GetUser())
+				h.populateUserInvites(ctx, view.Detail, loc)
 			}
 		}
 	}
@@ -361,6 +365,9 @@ func (h *Handler) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	created := response.GetUser()
 	view.Detail = buildUserDetail(created)
 	view.Message = loc.Sprintf("users.create.success")
+	invitesCtx, invitesCancel := context.WithTimeout(r.Context(), campaignsRequestTimeout)
+	defer invitesCancel()
+	h.populateUserInvites(invitesCtx, view.Detail, loc)
 
 	templ.Handler(templates.UsersFullPage(view, pageCtx)).ServeHTTP(w, r)
 }
@@ -446,6 +453,9 @@ func (h *Handler) handleImpersonateUser(w http.ResponseWriter, r *http.Request) 
 		UserID:      user.GetId(),
 		DisplayName: user.GetDisplayName(),
 	}
+	invitesCtx, invitesCancel := context.WithTimeout(r.Context(), campaignsRequestTimeout)
+	defer invitesCancel()
+	h.populateUserInvites(invitesCtx, view.Detail, loc)
 	pageCtx.Impersonation = view.Impersonation
 	label := strings.TrimSpace(user.GetDisplayName())
 	if label == "" {
@@ -731,6 +741,16 @@ func (h *Handler) handleCampaignRoutes(w http.ResponseWriter, r *http.Request) {
 		h.handleParticipantsTable(w, r, parts[0])
 		return
 	}
+	// /campaigns/{id}/invites
+	if len(parts) == 2 && parts[1] == "invites" {
+		h.handleInvitesList(w, r, parts[0])
+		return
+	}
+	// /campaigns/{id}/invites/table
+	if len(parts) == 3 && parts[1] == "invites" && parts[2] == "table" {
+		h.handleInvitesTable(w, r, parts[0])
+		return
+	}
 	// /campaigns/{id}/sessions
 	if len(parts) == 2 && strings.TrimSpace(parts[0]) != "" && parts[1] == "sessions" {
 		h.handleSessionsList(w, r, parts[0])
@@ -909,6 +929,14 @@ func (h *Handler) participantClient() statev1.ParticipantServiceClient {
 	return h.clientProvider.ParticipantClient()
 }
 
+// inviteClient returns the currently configured invite client.
+func (h *Handler) inviteClient() statev1.InviteServiceClient {
+	if h == nil || h.clientProvider == nil {
+		return nil
+	}
+	return h.clientProvider.InviteClient()
+}
+
 // snapshotClient returns the currently configured snapshot client.
 func (h *Handler) snapshotClient() statev1.SnapshotServiceClient {
 	if h == nil || h.clientProvider == nil {
@@ -1051,6 +1079,120 @@ func buildUserDetail(u *authv1.User) *templates.UserDetail {
 	}
 }
 
+func (h *Handler) populateUserInvites(ctx context.Context, detail *templates.UserDetail, loc *message.Printer) {
+	if detail == nil {
+		return
+	}
+	rows, message := h.listPendingInvitesForUser(ctx, detail.ID, loc)
+	detail.PendingInvites = rows
+	detail.PendingInvitesMessage = message
+}
+
+func (h *Handler) listPendingInvitesForUser(ctx context.Context, userID string, loc *message.Printer) ([]templates.InviteRow, string) {
+	userID = strings.TrimSpace(userID)
+	if userID == "" {
+		return nil, loc.Sprintf("users.invites.empty")
+	}
+	inviteClient := h.inviteClient()
+	campaignClient := h.campaignClient()
+	if inviteClient == nil || campaignClient == nil {
+		return nil, loc.Sprintf("error.pending_invites_unavailable")
+	}
+
+	rows := make([]templates.InviteRow, 0)
+	campaigns := make(map[string]string)
+	pageToken := ""
+	for {
+		resp, err := campaignClient.ListCampaigns(ctx, &statev1.ListCampaignsRequest{PageToken: pageToken})
+		if err != nil {
+			log.Printf("list campaigns for pending invites: %v", err)
+			return nil, loc.Sprintf("error.pending_invites_unavailable")
+		}
+		for _, campaign := range resp.GetCampaigns() {
+			if campaign == nil {
+				continue
+			}
+			name := strings.TrimSpace(campaign.GetName())
+			if name == "" {
+				name = campaign.GetId()
+			}
+			campaigns[campaign.GetId()] = name
+		}
+		pageToken = strings.TrimSpace(resp.GetNextPageToken())
+		if pageToken == "" {
+			break
+		}
+	}
+
+	participantCache := make(map[string]map[string]string)
+	statusLabel, statusVariant := formatInviteStatus(statev1.InviteStatus_PENDING, loc)
+	for campaignID, campaignName := range campaigns {
+		inviteToken := ""
+		for {
+			resp, err := inviteClient.ListInvites(ctx, &statev1.ListInvitesRequest{
+				CampaignId:      campaignID,
+				RecipientUserId: userID,
+				Status:          statev1.InviteStatus_PENDING,
+				PageSize:        inviteListPageSize,
+				PageToken:       inviteToken,
+			})
+			if err != nil {
+				log.Printf("list pending invites: %v", err)
+				break
+			}
+			invites := resp.GetInvites()
+			if len(invites) > 0 {
+				participantNames, ok := participantCache[campaignID]
+				if !ok {
+					participantNames = map[string]string{}
+					if participantClient := h.participantClient(); participantClient != nil {
+						participantsResp, err := participantClient.ListParticipants(ctx, &statev1.ListParticipantsRequest{
+							CampaignId: campaignID,
+						})
+						if err != nil {
+							log.Printf("list participants for pending invites: %v", err)
+						} else {
+							for _, participant := range participantsResp.GetParticipants() {
+								if participant != nil {
+									participantNames[participant.GetId()] = participant.GetDisplayName()
+								}
+							}
+						}
+					}
+					participantCache[campaignID] = participantNames
+				}
+				for _, inv := range invites {
+					if inv == nil {
+						continue
+					}
+					participantLabel := participantCache[campaignID][inv.GetParticipantId()]
+					if participantLabel == "" {
+						participantLabel = loc.Sprintf("label.unknown")
+					}
+					rows = append(rows, templates.InviteRow{
+						ID:            inv.GetId(),
+						CampaignID:    campaignID,
+						CampaignName:  campaignName,
+						Participant:   participantLabel,
+						Status:        statusLabel,
+						StatusVariant: statusVariant,
+						CreatedAt:     formatTimestamp(inv.GetCreatedAt()),
+					})
+				}
+			}
+			inviteToken = strings.TrimSpace(resp.GetNextPageToken())
+			if inviteToken == "" {
+				break
+			}
+		}
+	}
+
+	if len(rows) == 0 {
+		return nil, loc.Sprintf("users.invites.empty")
+	}
+	return rows, ""
+}
+
 // formatGmMode returns a display label for a GM mode enum.
 func formatGmMode(mode statev1.GmMode, loc *message.Printer) string {
 	switch mode {
@@ -1105,6 +1247,19 @@ func formatSessionStatus(status statev1.SessionStatus, loc *message.Printer) str
 		return loc.Sprintf("label.ended")
 	default:
 		return loc.Sprintf("label.unspecified")
+	}
+}
+
+func formatInviteStatus(status statev1.InviteStatus, loc *message.Printer) (string, string) {
+	switch status {
+	case statev1.InviteStatus_PENDING:
+		return loc.Sprintf("label.invite_pending"), "warning"
+	case statev1.InviteStatus_CLAIMED:
+		return loc.Sprintf("label.invite_claimed"), "success"
+	case statev1.InviteStatus_REVOKED:
+		return loc.Sprintf("label.invite_revoked"), "danger"
+	default:
+		return loc.Sprintf("label.unspecified"), "secondary"
 	}
 }
 
@@ -1645,6 +1800,135 @@ func (h *Handler) handleParticipantsTable(w http.ResponseWriter, r *http.Request
 
 	rows := buildParticipantRows(participants, loc)
 	h.renderParticipantsTable(w, r, rows, "", loc)
+}
+
+// handleInvitesList renders the invites list page.
+func (h *Handler) handleInvitesList(w http.ResponseWriter, r *http.Request, campaignID string) {
+	loc, lang := h.localizer(w, r)
+	campaignName := getCampaignName(h, r, campaignID, loc)
+
+	if isHTMXRequest(r) {
+		templ.Handler(templates.InvitesListPage(campaignID, campaignName, loc)).ServeHTTP(w, r)
+		return
+	}
+	pageCtx := h.pageContext(lang, loc, r)
+	templ.Handler(templates.InvitesListFullPage(campaignID, campaignName, pageCtx)).ServeHTTP(w, r)
+}
+
+// handleInvitesTable renders the invites table.
+func (h *Handler) handleInvitesTable(w http.ResponseWriter, r *http.Request, campaignID string) {
+	loc, _ := h.localizer(w, r)
+	inviteClient := h.inviteClient()
+	if inviteClient == nil {
+		h.renderInvitesTable(w, r, nil, loc.Sprintf("error.invite_service_unavailable"), loc)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), campaignsRequestTimeout)
+	defer cancel()
+
+	response, err := inviteClient.ListInvites(ctx, &statev1.ListInvitesRequest{
+		CampaignId: campaignID,
+		PageSize:   inviteListPageSize,
+	})
+	if err != nil {
+		log.Printf("list invites: %v", err)
+		h.renderInvitesTable(w, r, nil, loc.Sprintf("error.invites_unavailable"), loc)
+		return
+	}
+
+	invites := response.GetInvites()
+	if len(invites) == 0 {
+		h.renderInvitesTable(w, r, nil, loc.Sprintf("error.no_invites"), loc)
+		return
+	}
+
+	participantNames := map[string]string{}
+	if participantClient := h.participantClient(); participantClient != nil {
+		participantsResp, err := participantClient.ListParticipants(ctx, &statev1.ListParticipantsRequest{
+			CampaignId: campaignID,
+		})
+		if err != nil {
+			log.Printf("list participants for invites: %v", err)
+		} else {
+			for _, participant := range participantsResp.GetParticipants() {
+				if participant != nil {
+					participantNames[participant.GetId()] = participant.GetDisplayName()
+				}
+			}
+		}
+	}
+
+	recipientNames := map[string]string{}
+	if authClient := h.authClient(); authClient != nil {
+		for _, inv := range invites {
+			if inv == nil {
+				continue
+			}
+			recipientID := strings.TrimSpace(inv.GetRecipientUserId())
+			if recipientID == "" {
+				continue
+			}
+			if _, ok := recipientNames[recipientID]; ok {
+				continue
+			}
+			userResp, err := authClient.GetUser(ctx, &authv1.GetUserRequest{UserId: recipientID})
+			if err != nil {
+				log.Printf("get invite recipient: %v", err)
+				recipientNames[recipientID] = ""
+				continue
+			}
+			if user := userResp.GetUser(); user != nil {
+				recipientNames[recipientID] = user.GetDisplayName()
+			}
+		}
+	}
+
+	rows := buildInviteRows(invites, participantNames, recipientNames, loc)
+	h.renderInvitesTable(w, r, rows, "", loc)
+}
+
+// renderInvitesTable renders the invites table component.
+func (h *Handler) renderInvitesTable(w http.ResponseWriter, r *http.Request, rows []templates.InviteRow, message string, loc *message.Printer) {
+	templ.Handler(templates.InvitesTable(rows, message, loc)).ServeHTTP(w, r)
+}
+
+// buildInviteRows formats invite rows for the table.
+func buildInviteRows(invites []*statev1.Invite, participantNames map[string]string, recipientNames map[string]string, loc *message.Printer) []templates.InviteRow {
+	rows := make([]templates.InviteRow, 0, len(invites))
+	for _, inv := range invites {
+		if inv == nil {
+			continue
+		}
+
+		participantLabel := participantNames[inv.GetParticipantId()]
+		if participantLabel == "" {
+			participantLabel = loc.Sprintf("label.unknown")
+		}
+
+		recipientLabel := loc.Sprintf("label.unassigned")
+		recipientID := strings.TrimSpace(inv.GetRecipientUserId())
+		if recipientID != "" {
+			recipientLabel = recipientNames[recipientID]
+			if recipientLabel == "" {
+				recipientLabel = recipientID
+			}
+		}
+
+		statusLabel, statusVariant := formatInviteStatus(inv.GetStatus(), loc)
+
+		rows = append(rows, templates.InviteRow{
+			ID:            inv.GetId(),
+			CampaignID:    inv.GetCampaignId(),
+			Participant:   participantLabel,
+			Recipient:     recipientLabel,
+			Status:        statusLabel,
+			StatusVariant: statusVariant,
+			CreatedAt:     formatTimestamp(inv.GetCreatedAt()),
+			UpdatedAt:     formatTimestamp(inv.GetUpdatedAt()),
+		})
+	}
+	return rows
 }
 
 // renderParticipantsTable renders the participants table component.

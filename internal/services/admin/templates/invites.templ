@@ -1,0 +1,59 @@
+package templates
+
+// InvitesListFullPage renders the invites list in the base layout.
+templ InvitesListFullPage(campaignID string, campaignName string, page PageContext) {
+	@Layout(T(page.Loc, "title.invites", AppName()), "Campaigns", page) {
+		@InvitesListPage(campaignID, campaignName, page.Loc)
+	}
+}
+
+// InvitesListPage renders the invites list content.
+templ InvitesListPage(campaignID string, campaignName string, loc Localizer) {
+	<h2>{campaignName}</h2>
+	@CampaignSubNav(campaignID, "invites", loc)
+	<h3>{T(loc, "invites.heading")}</h3>
+	@InvitesLoading(campaignID, loc)
+}
+
+// InvitesLoading renders the HTMX loading placeholder.
+templ InvitesLoading(campaignID string, loc Localizer) {
+	<div
+		hx-get={ "/campaigns/" + campaignID + "/invites/table" }
+		hx-trigger="load"
+		hx-swap="outerHTML"
+	>
+		<p>{T(loc, "invites.loading")}</p>
+	</div>
+}
+
+// InvitesTable renders the invites table.
+templ InvitesTable(rows []InviteRow, message string, loc Localizer) {
+	if len(rows) == 0 {
+		@EmptyState(message)
+	} else {
+		<table>
+			<thead>
+				<tr>
+					<th>{T(loc, "invites.table.id")}</th>
+					<th>{T(loc, "invites.table.participant")}</th>
+					<th>{T(loc, "invites.table.recipient")}</th>
+					<th>{T(loc, "invites.table.status")}</th>
+					<th>{T(loc, "invites.table.created")}</th>
+					<th>{T(loc, "invites.table.updated")}</th>
+				</tr>
+			</thead>
+			<tbody>
+				for _, row := range rows {
+					<tr>
+						<td><code>{row.ID}</code></td>
+						<td>{row.Participant}</td>
+						<td>{row.Recipient}</td>
+						<td>@StatusBadge(row.Status, row.StatusVariant)</td>
+						<td>{row.CreatedAt}</td>
+						<td>{row.UpdatedAt}</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	}
+}

@@ -135,6 +135,19 @@ templ CampaignSubNav(campaignID string, activePage string, loc Localizer) {
 		/>
 		<label for="tab-participants">{T(loc, "tab.participants")}</label>
 		<input
+			id="tab-invites"
+			type="radio"
+			name="campaign-tabs"
+			if activePage == "invites" {
+				checked
+			}
+			hx-get={ "/campaigns/" + campaignID + "/invites" }
+			hx-target="#main"
+			hx-swap="innerHTML"
+			hx-push-url={ "/campaigns/" + campaignID + "/invites" }
+		/>
+		<label for="tab-invites">{T(loc, "tab.invites")}</label>
+		<input
 			id="tab-events"
 			type="radio"
 			name="campaign-tabs"

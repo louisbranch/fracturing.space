@@ -80,6 +80,7 @@ func (s *InviteService) CreateInvite(ctx context.Context, in *campaignv1.CreateI
 	if participantID == "" {
 		return nil, status.Error(codes.InvalidArgument, "participant id is required")
 	}
+	recipientUserID := strings.TrimSpace(in.GetRecipientUserId())
 
 	campaignRecord, err := s.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
@@ -94,11 +95,29 @@ func (s *InviteService) CreateInvite(ctx context.Context, in *campaignv1.CreateI
 	if _, err := s.stores.Participant.GetParticipant(ctx, campaignID, participantID); err != nil {
 		return nil, handleDomainError(err)
 	}
+	if recipientUserID != "" {
+		if s.authClient == nil {
+			return nil, status.Error(codes.Internal, "auth client is not configured")
+		}
+		userResponse, err := s.authClient.GetUser(ctx, &authv1.GetUserRequest{UserId: recipientUserID})
+		if err != nil {
+			if statusErr, ok := status.FromError(err); ok && statusErr.Code() == codes.NotFound {
+				return nil, handleDomainError(apperrors.New(
+					apperrors.CodeInviteRecipientUserMissing,
+					"invite recipient user not found",
+				))
+			}
+			return nil, status.Errorf(codes.Internal, "get auth user: %v", err)
+		}
+		if userResponse == nil || userResponse.GetUser() == nil {
+			return nil, status.Error(codes.Internal, "auth user response is missing")
+		}
+	}
 
 	created, err := invite.CreateInvite(invite.CreateInviteInput{
 		CampaignID:             campaignID,
 		ParticipantID:          participantID,
-		RecipientUserID:        strings.TrimSpace(in.GetRecipientUserId()),
+		RecipientUserID:        recipientUserID,
 		CreatedByParticipantID: strings.TrimSpace(grpcmeta.ParticipantIDFromContext(ctx)),
 	}, s.clock, s.idGenerator)
 	if err != nil {
@@ -414,6 +433,9 @@ func (s *InviteService) ListInvites(ctx context.Context, in *campaignv1.ListInvi
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
+	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpRead); err != nil {
+		return nil, handleDomainError(err)
+	}
 	if err := requirePolicy(ctx, s.stores, policy.ActionManageInvites, campaignRecord); err != nil {
 		return nil, err
 	}
@@ -426,7 +448,12 @@ func (s *InviteService) ListInvites(ctx context.Context, in *campaignv1.ListInvi
 		pageSize = maxListInvitesPageSize
 	}
 
-	page, err := s.stores.Invite.ListInvites(ctx, campaignID, pageSize, in.GetPageToken())
+	statusFilter := invite.StatusUnspecified
+	if in.GetStatus() != campaignv1.InviteStatus_INVITE_STATUS_UNSPECIFIED {
+		statusFilter = inviteStatusFromProto(in.GetStatus())
+	}
+
+	page, err := s.stores.Invite.ListInvites(ctx, campaignID, strings.TrimSpace(in.GetRecipientUserId()), statusFilter, pageSize, in.GetPageToken())
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "list invites: %v", err)
 	}

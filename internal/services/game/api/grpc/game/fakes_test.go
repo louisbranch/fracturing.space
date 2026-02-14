@@ -111,15 +111,22 @@ func (s *fakeInviteStore) GetInvite(_ context.Context, inviteID string) (invite.
 	return inv, nil
 }
 
-func (s *fakeInviteStore) ListInvites(_ context.Context, campaignID string, pageSize int, pageToken string) (storage.InvitePage, error) {
+func (s *fakeInviteStore) ListInvites(_ context.Context, campaignID string, recipientUserID string, status invite.Status, pageSize int, pageToken string) (storage.InvitePage, error) {
 	if s.listErr != nil {
 		return storage.InvitePage{}, s.listErr
 	}
 	result := make([]invite.Invite, 0)
 	for _, inv := range s.invites {
-		if inv.CampaignID == campaignID {
-			result = append(result, inv)
+		if inv.CampaignID != campaignID {
+			continue
 		}
+		if recipientUserID != "" && inv.RecipientUserID != recipientUserID {
+			continue
+		}
+		if status != invite.StatusUnspecified && inv.Status != status {
+			continue
+		}
+		result = append(result, inv)
 	}
 	return storage.InvitePage{Invites: result, NextPageToken: ""}, nil
 }
