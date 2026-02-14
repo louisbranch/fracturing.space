@@ -2359,6 +2359,9 @@ func resolveOutcomeSeed(t *testing.T, args map[string]any, key string, difficult
 }
 
 func buildActionRollModifiers(args map[string]any, key string) []*daggerheartv1.ActionRollModifier {
+	if args == nil {
+		return nil
+	}
 	value, ok := args[key]
 	if !ok {
 		return nil
@@ -2391,6 +2394,9 @@ func buildActionRollModifiers(args map[string]any, key string) []*daggerheartv1.
 }
 
 func buildDamageDice(args map[string]any) []*daggerheartv1.DiceSpec {
+	if args == nil {
+		return []*daggerheartv1.DiceSpec{{Sides: 6, Count: 1}}
+	}
 	value, ok := args["damage_dice"]
 	if !ok {
 		return []*daggerheartv1.DiceSpec{{Sides: 6, Count: 1}}
@@ -2508,6 +2514,7 @@ func applyAdversaryDamage(
 	} else {
 		app = daggerheart.ApplyDamageWithArmor(hpBefore, armorBefore, result)
 	}
+	mitigated = mitigated || app.ArmorSpent > 0
 	if app.HPAfter >= hpBefore && app.ArmorAfter >= armorBefore {
 		t.Fatalf("expected damage to affect hp or armor for %s", name)
 	}
@@ -2927,6 +2934,9 @@ func resolveAttackTargets(t *testing.T, state *scenarioState, args map[string]an
 }
 
 func requireDamageDice(t *testing.T, args map[string]any, context string) {
+	if args == nil {
+		t.Fatalf("%s requires damage_dice", context)
+	}
 	value, ok := args["damage_dice"]
 	if !ok {
 		t.Fatalf("%s requires damage_dice", context)
@@ -2938,6 +2948,9 @@ func requireDamageDice(t *testing.T, args map[string]any, context string) {
 }
 
 func requiredString(args map[string]any, key string) string {
+	if args == nil {
+		return ""
+	}
 	value, ok := args[key]
 	if !ok {
 		return ""
@@ -2950,6 +2963,9 @@ func requiredString(args map[string]any, key string) string {
 }
 
 func requiredInt(args map[string]any, key string) int {
+	if args == nil {
+		return 0
+	}
 	value, ok := args[key]
 	if !ok {
 		return 0
@@ -2965,6 +2981,9 @@ func requiredInt(args map[string]any, key string) int {
 }
 
 func readInt(args map[string]any, key string) (int, bool) {
+	if args == nil {
+		return 0, false
+	}
 	value, ok := args[key]
 	if !ok {
 		return 0, false
@@ -2980,6 +2999,9 @@ func readInt(args map[string]any, key string) (int, bool) {
 }
 
 func optionalString(args map[string]any, key, fallback string) string {
+	if args == nil {
+		return fallback
+	}
 	value, ok := args[key]
 	if !ok {
 		return fallback
@@ -2992,6 +3014,9 @@ func optionalString(args map[string]any, key, fallback string) string {
 }
 
 func optionalInt(args map[string]any, key string, fallback int) int {
+	if args == nil {
+		return fallback
+	}
 	value, ok := args[key]
 	if !ok {
 		return fallback
@@ -3007,6 +3032,9 @@ func optionalInt(args map[string]any, key string, fallback int) int {
 }
 
 func optionalBool(args map[string]any, key string, fallback bool) bool {
+	if args == nil {
+		return fallback
+	}
 	value, ok := args[key]
 	if !ok {
 		return fallback
@@ -3027,6 +3055,9 @@ func optionalBool(args map[string]any, key string, fallback bool) bool {
 }
 
 func readBool(args map[string]any, key string) (bool, bool) {
+	if args == nil {
+		return false, false
+	}
 	value, ok := args[key]
 	if !ok {
 		return false, false
@@ -3096,6 +3127,9 @@ func readExpectedDeltas(args map[string]any) (expectedDeltaInput, bool) {
 }
 
 func readExpectedAdversaryDeltas(t *testing.T, args map[string]any, defaultTarget string) map[string]expectedAdversaryDelta {
+	if args == nil {
+		return nil
+	}
 	entries := make(map[string]expectedAdversaryDelta)
 	listRaw, hasList := args["expect_adversary_deltas"]
 	if hasList {
@@ -3576,6 +3610,9 @@ func normalizeModifierSource(source string) string {
 }
 
 func readStringSlice(args map[string]any, key string) []string {
+	if args == nil {
+		return nil
+	}
 	value, ok := args[key]
 	if !ok {
 		return nil
