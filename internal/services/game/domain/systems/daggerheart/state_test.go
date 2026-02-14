@@ -500,6 +500,19 @@ func TestClampMinGreaterThanMax(t *testing.T) {
 	}
 }
 
+func TestClampMinEqualsMax(t *testing.T) {
+	// When min==max the only valid result is that value.
+	if got := clamp(0, 5, 5); got != 5 {
+		t.Fatalf("clamp(0,5,5) = %d, want 5", got)
+	}
+	if got := clamp(10, 5, 5); got != 5 {
+		t.Fatalf("clamp(10,5,5) = %d, want 5", got)
+	}
+	if got := clamp(5, 5, 5); got != 5 {
+		t.Fatalf("clamp(5,5,5) = %d, want 5", got)
+	}
+}
+
 func TestGainStressEdgeCases(t *testing.T) {
 	t.Run("ZeroAmount", func(t *testing.T) {
 		state := NewCharacterState(CharacterStateConfig{

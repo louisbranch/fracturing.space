@@ -85,3 +85,19 @@ func TestResolveRestOutcomeNegativePartySize(t *testing.T) {
 		t.Fatal("expected GM fear gain")
 	}
 }
+
+func TestResolveRestOutcomeZeroPartySize(t *testing.T) {
+	state := RestState{}
+	outcome, err := ResolveRestOutcome(state, RestTypeLong, false, 1, 0)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// With party size 0, long rest GM fear = dice roll + 0.
+	// This should still produce a valid outcome.
+	if !outcome.Applied {
+		t.Fatal("expected rest to be applied")
+	}
+	if !outcome.AdvanceCountdown {
+		t.Fatal("expected countdown advance on long rest")
+	}
+}

@@ -17,6 +17,34 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+// newGenerator constructs a Generator from pre-built dependencies.
+// Used by tests to inject fakes without establishing gRPC connections.
+func newGenerator(cfg Config, rng *rand.Rand, wb *worldbuilder.WorldBuilder, deps generatorDeps) *Generator {
+	return &Generator{
+		config:       cfg,
+		rng:          rng,
+		wb:           wb,
+		campaigns:    deps.campaigns,
+		participants: deps.participants,
+		invites:      deps.invites,
+		characters:   deps.characters,
+		sessions:     deps.sessions,
+		events:       deps.events,
+		authClient:   deps.authClient,
+	}
+}
+
+// generatorDeps bundles the service dependencies for newGenerator.
+type generatorDeps struct {
+	campaigns    campaignCreator
+	participants participantCreator
+	invites      inviteManager
+	characters   characterCreator
+	sessions     sessionManager
+	events       eventAppender
+	authClient   authProvider
+}
+
 // Config holds configuration for the generator.
 type Config struct {
 	GRPCAddr  string
@@ -46,14 +74,15 @@ type Generator struct {
 	conn     *grpc.ClientConn
 	authConn *grpc.ClientConn
 
-	// gRPC service clients (game/v1)
-	campaigns    statev1.CampaignServiceClient
-	participants statev1.ParticipantServiceClient
-	invites      statev1.InviteServiceClient
-	characters   statev1.CharacterServiceClient
-	sessions     statev1.SessionServiceClient
-	events       statev1.EventServiceClient
-	authClient   authv1.AuthServiceClient
+	// Service dependencies (satisfied by gRPC clients in production,
+	// fakes in tests).
+	campaigns    campaignCreator
+	participants participantCreator
+	invites      inviteManager
+	characters   characterCreator
+	sessions     sessionManager
+	events       eventAppender
+	authClient   authProvider
 }
 
 // New creates a new Generator with the given configuration.
