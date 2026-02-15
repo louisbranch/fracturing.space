@@ -4,7 +4,9 @@ import (
 	"context"
 	"testing"
 
+	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 )
@@ -28,6 +30,13 @@ type fakeContentStore struct {
 	armor                map[string]storage.DaggerheartArmor
 	items                map[string]storage.DaggerheartItem
 	environments         map[string]storage.DaggerheartEnvironment
+	contentStrings       map[fakeContentStringKey]storage.DaggerheartContentString
+}
+
+type fakeContentStringKey struct {
+	ContentID string
+	Field     string
+	Locale    string
 }
 
 func newFakeContentStore() *fakeContentStore {
@@ -47,6 +56,7 @@ func newFakeContentStore() *fakeContentStore {
 		armor:                make(map[string]storage.DaggerheartArmor),
 		items:                make(map[string]storage.DaggerheartItem),
 		environments:         make(map[string]storage.DaggerheartEnvironment),
+		contentStrings:       make(map[fakeContentStringKey]storage.DaggerheartContentString),
 	}
 }
 
@@ -374,7 +384,36 @@ func (s *fakeContentStore) DeleteDaggerheartEnvironment(_ context.Context, _ str
 	return nil
 }
 
-func (s *fakeContentStore) PutDaggerheartContentString(_ context.Context, _ storage.DaggerheartContentString) error {
+func (s *fakeContentStore) ListDaggerheartContentStrings(_ context.Context, contentType string, contentIDs []string, locale string) ([]storage.DaggerheartContentString, error) {
+	if s == nil {
+		return nil, nil
+	}
+	if len(contentIDs) == 0 {
+		return nil, nil
+	}
+	idSet := make(map[string]struct{}, len(contentIDs))
+	for _, id := range contentIDs {
+		idSet[id] = struct{}{}
+	}
+	results := make([]storage.DaggerheartContentString, 0, len(contentIDs))
+	for _, entry := range s.contentStrings {
+		if entry.ContentType != contentType || entry.Locale != locale {
+			continue
+		}
+		if _, ok := idSet[entry.ContentID]; !ok {
+			continue
+		}
+		results = append(results, entry)
+	}
+	return results, nil
+}
+
+func (s *fakeContentStore) PutDaggerheartContentString(_ context.Context, entry storage.DaggerheartContentString) error {
+	if s == nil {
+		return nil
+	}
+	key := fakeContentStringKey{ContentID: entry.ContentID, Field: entry.Field, Locale: entry.Locale}
+	s.contentStrings[key] = entry
 	return nil
 }
 
@@ -460,6 +499,35 @@ func TestGetClass_Success(t *testing.T) {
 	}
 	if resp.GetClass().GetName() != "Guardian" {
 		t.Errorf("name = %q, want Guardian", resp.GetClass().GetName())
+	}
+}
+
+func TestGetClass_LocaleOverride(t *testing.T) {
+	svc := newContentTestService()
+	store, ok := svc.stores.DaggerheartContent.(*fakeContentStore)
+	if !ok {
+		t.Fatalf("expected fake content store, got %T", svc.stores.DaggerheartContent)
+	}
+	locale := i18n.LocaleString(commonv1.Locale_LOCALE_PT_BR)
+	if err := store.PutDaggerheartContentString(context.Background(), storage.DaggerheartContentString{
+		ContentID:   "class-1",
+		ContentType: "class",
+		Field:       "name",
+		Locale:      locale,
+		Text:        "Guardiao",
+	}); err != nil {
+		t.Fatalf("put content string: %v", err)
+	}
+
+	resp, err := svc.GetClass(context.Background(), &pb.GetDaggerheartClassRequest{
+		Id:     "class-1",
+		Locale: commonv1.Locale_LOCALE_PT_BR,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp.GetClass().GetName() != "Guardiao" {
+		t.Errorf("name = %q, want Guardiao", resp.GetClass().GetName())
 	}
 }
 

@@ -18,6 +18,7 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
@@ -29,6 +30,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -43,6 +46,10 @@ const (
 	eventListPageSize = 50
 	// inviteListPageSize caps the number of invites shown per page.
 	inviteListPageSize = 50
+	// catalogListPageSize caps the number of catalog entries shown per page.
+	catalogListPageSize = 25
+	// catalogDescriptionLimit caps the number of characters shown in catalog tables.
+	catalogDescriptionLimit = 80
 	// impersonationCookieName stores the active impersonation session ID.
 	impersonationCookieName = "fs-impersonation-session"
 	// impersonationSessionTTL controls how long impersonation sessions stay valid.
@@ -67,6 +74,7 @@ type GRPCClientProvider interface {
 	EventClient() statev1.EventServiceClient
 	StatisticsClient() statev1.StatisticsServiceClient
 	SystemClient() statev1.SystemServiceClient
+	DaggerheartContentClient() daggerheartv1.DaggerheartContentServiceClient
 }
 
 // Handler routes admin dashboard requests.
@@ -208,6 +216,8 @@ func (h *Handler) routes() http.Handler {
 	mux.Handle("/systems", http.HandlerFunc(h.handleSystemsPage))
 	mux.Handle("/systems/table", http.HandlerFunc(h.handleSystemsTable))
 	mux.Handle("/systems/", http.HandlerFunc(h.handleSystemRoutes))
+	mux.Handle("/catalog", http.HandlerFunc(h.handleCatalogPage))
+	mux.Handle("/catalog/", http.HandlerFunc(h.handleCatalogRoutes))
 	mux.Handle("/users", http.HandlerFunc(h.handleUsersPage))
 	mux.Handle("/users/table", http.HandlerFunc(h.handleUsersTable))
 	mux.Handle("/users/lookup", http.HandlerFunc(h.handleUserLookup))
@@ -1109,6 +1119,404 @@ func (h *Handler) handleSystemsPage(w http.ResponseWriter, r *http.Request) {
 	renderPage(w, r, templates.SystemsPage(loc), templates.SystemsFullPage(pageCtx))
 }
 
+// handleCatalogPage renders the catalog page fragment or full layout.
+func (h *Handler) handleCatalogPage(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.Header().Set("Allow", http.MethodGet)
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	loc, lang := h.localizer(w, r)
+	pageCtx := h.pageContext(lang, loc, r)
+	sectionID := templates.DefaultDaggerheartCatalogSection()
+	renderPage(w, r, templates.CatalogPage(sectionID, loc), templates.CatalogFullPage(sectionID, pageCtx))
+}
+
+// handleCatalogRoutes dispatches catalog section routes.
+func (h *Handler) handleCatalogRoutes(w http.ResponseWriter, r *http.Request) {
+	if redirectTrailingSlash(w, r) {
+		return
+	}
+	path := strings.TrimPrefix(r.URL.Path, "/catalog/")
+	parts := splitPathParts(path)
+	if len(parts) == 3 && parts[0] == "daggerheart" && parts[2] == "table" {
+		sectionID := strings.TrimSpace(parts[1])
+		if !templates.IsDaggerheartCatalogSection(sectionID) {
+			http.NotFound(w, r)
+			return
+		}
+		h.handleCatalogSectionTable(w, r, sectionID)
+		return
+	}
+	if len(parts) == 3 && parts[0] == "daggerheart" {
+		sectionID := strings.TrimSpace(parts[1])
+		entryID := strings.TrimSpace(parts[2])
+		if !templates.IsDaggerheartCatalogSection(sectionID) || entryID == "" {
+			http.NotFound(w, r)
+			return
+		}
+		h.handleCatalogSectionDetail(w, r, sectionID, entryID)
+		return
+	}
+	if len(parts) == 2 && parts[0] == "daggerheart" {
+		sectionID := strings.TrimSpace(parts[1])
+		if !templates.IsDaggerheartCatalogSection(sectionID) {
+			http.NotFound(w, r)
+			return
+		}
+		loc, lang := h.localizer(w, r)
+		pageCtx := h.pageContext(lang, loc, r)
+		renderPage(w, r, templates.CatalogSectionPanel(sectionID, loc), templates.CatalogFullPage(sectionID, pageCtx))
+		return
+	}
+	http.NotFound(w, r)
+}
+
+func (h *Handler) handleCatalogSectionTable(w http.ResponseWriter, r *http.Request, sectionID string) {
+	loc, lang := h.localizer(w, r)
+	columns := catalogSectionColumns(sectionID, loc)
+	view := templates.CatalogTableView{
+		SectionID:   sectionID,
+		Columns:     columns,
+		Message:     loc.Sprintf("catalog.loading"),
+		HrefBaseURL: "/catalog/daggerheart/" + sectionID,
+		HTMXBaseURL: "/catalog/daggerheart/" + sectionID + "/table",
+	}
+
+	contentClient := h.daggerheartContentClient()
+	if contentClient == nil {
+		view.Message = loc.Sprintf("catalog.error.service_unavailable")
+		templ.Handler(templates.CatalogTable(view, loc)).ServeHTTP(w, r)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
+	defer cancel()
+
+	pageToken := r.URL.Query().Get("page_token")
+	locale := localeFromTag(lang)
+	message := ""
+	var nextToken, prevToken string
+	var rows []templates.CatalogTableRow
+
+	switch sectionID {
+	case templates.CatalogSectionClasses:
+		resp, err := contentClient.ListClasses(ctx, &daggerheartv1.ListDaggerheartClassesRequest{
+			PageSize:  catalogListPageSize,
+			PageToken: pageToken,
+			OrderBy:   "name",
+			Locale:    locale,
+		})
+		if err != nil {
+			log.Printf("list classes: %v", err)
+			message = loc.Sprintf("catalog.error.entries_unavailable")
+		} else if resp != nil {
+			rows = buildCatalogClassRows(resp.GetClasses())
+			nextToken = resp.GetNextPageToken()
+			prevToken = resp.GetPreviousPageToken()
+		}
+	case templates.CatalogSectionSubclasses:
+		resp, err := contentClient.ListSubclasses(ctx, &daggerheartv1.ListDaggerheartSubclassesRequest{
+			PageSize:  catalogListPageSize,
+			PageToken: pageToken,
+			OrderBy:   "name",
+			Locale:    locale,
+		})
+		if err != nil {
+			log.Printf("list subclasses: %v", err)
+			message = loc.Sprintf("catalog.error.entries_unavailable")
+		} else if resp != nil {
+			rows = buildCatalogSubclassRows(resp.GetSubclasses())
+			nextToken = resp.GetNextPageToken()
+			prevToken = resp.GetPreviousPageToken()
+		}
+	case templates.CatalogSectionHeritages:
+		resp, err := contentClient.ListHeritages(ctx, &daggerheartv1.ListDaggerheartHeritagesRequest{
+			PageSize:  catalogListPageSize,
+			PageToken: pageToken,
+			OrderBy:   "name",
+			Locale:    locale,
+		})
+		if err != nil {
+			log.Printf("list heritages: %v", err)
+			message = loc.Sprintf("catalog.error.entries_unavailable")
+		} else if resp != nil {
+			rows = buildCatalogHeritageRows(resp.GetHeritages())
+			nextToken = resp.GetNextPageToken()
+			prevToken = resp.GetPreviousPageToken()
+		}
+	case templates.CatalogSectionExperiences:
+		resp, err := contentClient.ListExperiences(ctx, &daggerheartv1.ListDaggerheartExperiencesRequest{
+			PageSize:  catalogListPageSize,
+			PageToken: pageToken,
+			OrderBy:   "name",
+			Locale:    locale,
+		})
+		if err != nil {
+			log.Printf("list experiences: %v", err)
+			message = loc.Sprintf("catalog.error.entries_unavailable")
+		} else if resp != nil {
+			rows = buildCatalogExperienceRows(resp.GetExperiences())
+			nextToken = resp.GetNextPageToken()
+			prevToken = resp.GetPreviousPageToken()
+		}
+	case templates.CatalogSectionDomains:
+		resp, err := contentClient.ListDomains(ctx, &daggerheartv1.ListDaggerheartDomainsRequest{
+			PageSize:  catalogListPageSize,
+			PageToken: pageToken,
+			OrderBy:   "name",
+			Locale:    locale,
+		})
+		if err != nil {
+			log.Printf("list domains: %v", err)
+			message = loc.Sprintf("catalog.error.entries_unavailable")
+		} else if resp != nil {
+			rows = buildCatalogDomainRows(resp.GetDomains())
+			nextToken = resp.GetNextPageToken()
+			prevToken = resp.GetPreviousPageToken()
+		}
+	case templates.CatalogSectionDomainCards:
+		resp, err := contentClient.ListDomainCards(ctx, &daggerheartv1.ListDaggerheartDomainCardsRequest{
+			PageSize:  catalogListPageSize,
+			PageToken: pageToken,
+			OrderBy:   "name",
+			Locale:    locale,
+		})
+		if err != nil {
+			log.Printf("list domain cards: %v", err)
+			message = loc.Sprintf("catalog.error.entries_unavailable")
+		} else if resp != nil {
+			rows = buildCatalogDomainCardRows(resp.GetDomainCards())
+			nextToken = resp.GetNextPageToken()
+			prevToken = resp.GetPreviousPageToken()
+		}
+	case templates.CatalogSectionItems:
+		resp, err := contentClient.ListItems(ctx, &daggerheartv1.ListDaggerheartItemsRequest{
+			PageSize:  catalogListPageSize,
+			PageToken: pageToken,
+			OrderBy:   "name",
+			Locale:    locale,
+		})
+		if err != nil {
+			log.Printf("list items: %v", err)
+			message = loc.Sprintf("catalog.error.entries_unavailable")
+		} else if resp != nil {
+			rows = buildCatalogItemRows(resp.GetItems())
+			nextToken = resp.GetNextPageToken()
+			prevToken = resp.GetPreviousPageToken()
+		}
+	case templates.CatalogSectionWeapons:
+		resp, err := contentClient.ListWeapons(ctx, &daggerheartv1.ListDaggerheartWeaponsRequest{
+			PageSize:  catalogListPageSize,
+			PageToken: pageToken,
+			OrderBy:   "name",
+			Locale:    locale,
+		})
+		if err != nil {
+			log.Printf("list weapons: %v", err)
+			message = loc.Sprintf("catalog.error.entries_unavailable")
+		} else if resp != nil {
+			rows = buildCatalogWeaponRows(resp.GetWeapons())
+			nextToken = resp.GetNextPageToken()
+			prevToken = resp.GetPreviousPageToken()
+		}
+	case templates.CatalogSectionArmor:
+		resp, err := contentClient.ListArmor(ctx, &daggerheartv1.ListDaggerheartArmorRequest{
+			PageSize:  catalogListPageSize,
+			PageToken: pageToken,
+			OrderBy:   "name",
+			Locale:    locale,
+		})
+		if err != nil {
+			log.Printf("list armor: %v", err)
+			message = loc.Sprintf("catalog.error.entries_unavailable")
+		} else if resp != nil {
+			rows = buildCatalogArmorRows(resp.GetArmor())
+			nextToken = resp.GetNextPageToken()
+			prevToken = resp.GetPreviousPageToken()
+		}
+	case templates.CatalogSectionLoot:
+		resp, err := contentClient.ListLootEntries(ctx, &daggerheartv1.ListDaggerheartLootEntriesRequest{
+			PageSize:  catalogListPageSize,
+			PageToken: pageToken,
+			OrderBy:   "name",
+			Locale:    locale,
+		})
+		if err != nil {
+			log.Printf("list loot: %v", err)
+			message = loc.Sprintf("catalog.error.entries_unavailable")
+		} else if resp != nil {
+			rows = buildCatalogLootRows(resp.GetEntries())
+			nextToken = resp.GetNextPageToken()
+			prevToken = resp.GetPreviousPageToken()
+		}
+	case templates.CatalogSectionDamageTypes:
+		resp, err := contentClient.ListDamageTypes(ctx, &daggerheartv1.ListDaggerheartDamageTypesRequest{
+			PageSize:  catalogListPageSize,
+			PageToken: pageToken,
+			OrderBy:   "name",
+			Locale:    locale,
+		})
+		if err != nil {
+			log.Printf("list damage types: %v", err)
+			message = loc.Sprintf("catalog.error.entries_unavailable")
+		} else if resp != nil {
+			rows = buildCatalogDamageTypeRows(resp.GetDamageTypes())
+			nextToken = resp.GetNextPageToken()
+			prevToken = resp.GetPreviousPageToken()
+		}
+	case templates.CatalogSectionAdversaries:
+		resp, err := contentClient.ListAdversaries(ctx, &daggerheartv1.ListDaggerheartAdversariesRequest{
+			PageSize:  catalogListPageSize,
+			PageToken: pageToken,
+			OrderBy:   "name",
+			Locale:    locale,
+		})
+		if err != nil {
+			log.Printf("list adversaries: %v", err)
+			message = loc.Sprintf("catalog.error.entries_unavailable")
+		} else if resp != nil {
+			rows = buildCatalogAdversaryRows(resp.GetAdversaries())
+			nextToken = resp.GetNextPageToken()
+			prevToken = resp.GetPreviousPageToken()
+		}
+	case templates.CatalogSectionBeastforms:
+		resp, err := contentClient.ListBeastforms(ctx, &daggerheartv1.ListDaggerheartBeastformsRequest{
+			PageSize:  catalogListPageSize,
+			PageToken: pageToken,
+			OrderBy:   "name",
+			Locale:    locale,
+		})
+		if err != nil {
+			log.Printf("list beastforms: %v", err)
+			message = loc.Sprintf("catalog.error.entries_unavailable")
+		} else if resp != nil {
+			rows = buildCatalogBeastformRows(resp.GetBeastforms())
+			nextToken = resp.GetNextPageToken()
+			prevToken = resp.GetPreviousPageToken()
+		}
+	case templates.CatalogSectionCompanionExperiences:
+		resp, err := contentClient.ListCompanionExperiences(ctx, &daggerheartv1.ListDaggerheartCompanionExperiencesRequest{
+			PageSize:  catalogListPageSize,
+			PageToken: pageToken,
+			OrderBy:   "name",
+			Locale:    locale,
+		})
+		if err != nil {
+			log.Printf("list companion experiences: %v", err)
+			message = loc.Sprintf("catalog.error.entries_unavailable")
+		} else if resp != nil {
+			rows = buildCatalogCompanionExperienceRows(resp.GetExperiences())
+			nextToken = resp.GetNextPageToken()
+			prevToken = resp.GetPreviousPageToken()
+		}
+	case templates.CatalogSectionEnvironments:
+		resp, err := contentClient.ListEnvironments(ctx, &daggerheartv1.ListDaggerheartEnvironmentsRequest{
+			PageSize:  catalogListPageSize,
+			PageToken: pageToken,
+			OrderBy:   "name",
+			Locale:    locale,
+		})
+		if err != nil {
+			log.Printf("list environments: %v", err)
+			message = loc.Sprintf("catalog.error.entries_unavailable")
+		} else if resp != nil {
+			rows = buildCatalogEnvironmentRows(resp.GetEnvironments())
+			nextToken = resp.GetNextPageToken()
+			prevToken = resp.GetPreviousPageToken()
+		}
+	default:
+		message = loc.Sprintf("catalog.error.entries_unavailable")
+	}
+
+	if len(rows) == 0 && message == "" {
+		message = loc.Sprintf("catalog.empty")
+	}
+
+	view.Rows = rows
+	view.Message = message
+	view.NextToken = nextToken
+	view.PrevToken = prevToken
+
+	templ.Handler(templates.CatalogTable(view, loc)).ServeHTTP(w, r)
+}
+
+func (h *Handler) handleCatalogSectionDetail(w http.ResponseWriter, r *http.Request, sectionID, entryID string) {
+	loc, lang := h.localizer(w, r)
+	pageCtx := h.pageContext(lang, loc, r)
+	contentClient := h.daggerheartContentClient()
+	if contentClient == nil {
+		view := templates.CatalogDetailView{
+			SectionID: sectionID,
+			Title:     templates.DaggerheartCatalogSectionLabel(loc, sectionID),
+			Message:   loc.Sprintf("catalog.error.service_unavailable"),
+			BackURL:   "/catalog/daggerheart/" + sectionID,
+		}
+		renderPage(w, r, templates.CatalogDetailPanel(view, loc), templates.CatalogFullPageWithContent(sectionID, templates.CatalogDetailPanel(view, loc), pageCtx))
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
+	defer cancel()
+
+	locale := localeFromTag(lang)
+	view := templates.CatalogDetailView{SectionID: sectionID, BackURL: "/catalog/daggerheart/" + sectionID}
+
+	switch sectionID {
+	case templates.CatalogSectionClasses:
+		resp, err := contentClient.GetClass(ctx, &daggerheartv1.GetDaggerheartClassRequest{Id: entryID, Locale: locale})
+		view = buildCatalogClassDetail(sectionID, entryID, resp.GetClass(), err, loc)
+	case templates.CatalogSectionSubclasses:
+		resp, err := contentClient.GetSubclass(ctx, &daggerheartv1.GetDaggerheartSubclassRequest{Id: entryID, Locale: locale})
+		view = buildCatalogSubclassDetail(sectionID, entryID, resp.GetSubclass(), err, loc)
+	case templates.CatalogSectionHeritages:
+		resp, err := contentClient.GetHeritage(ctx, &daggerheartv1.GetDaggerheartHeritageRequest{Id: entryID, Locale: locale})
+		view = buildCatalogHeritageDetail(sectionID, entryID, resp.GetHeritage(), err, loc)
+	case templates.CatalogSectionExperiences:
+		resp, err := contentClient.GetExperience(ctx, &daggerheartv1.GetDaggerheartExperienceRequest{Id: entryID, Locale: locale})
+		view = buildCatalogExperienceDetail(sectionID, entryID, resp.GetExperience(), err, loc)
+	case templates.CatalogSectionDomains:
+		resp, err := contentClient.GetDomain(ctx, &daggerheartv1.GetDaggerheartDomainRequest{Id: entryID, Locale: locale})
+		view = buildCatalogDomainDetail(sectionID, entryID, resp.GetDomain(), err, loc)
+	case templates.CatalogSectionDomainCards:
+		resp, err := contentClient.GetDomainCard(ctx, &daggerheartv1.GetDaggerheartDomainCardRequest{Id: entryID, Locale: locale})
+		view = buildCatalogDomainCardDetail(sectionID, entryID, resp.GetDomainCard(), err, loc)
+	case templates.CatalogSectionItems:
+		resp, err := contentClient.GetItem(ctx, &daggerheartv1.GetDaggerheartItemRequest{Id: entryID, Locale: locale})
+		view = buildCatalogItemDetail(sectionID, entryID, resp.GetItem(), err, loc)
+	case templates.CatalogSectionWeapons:
+		resp, err := contentClient.GetWeapon(ctx, &daggerheartv1.GetDaggerheartWeaponRequest{Id: entryID, Locale: locale})
+		view = buildCatalogWeaponDetail(sectionID, entryID, resp.GetWeapon(), err, loc)
+	case templates.CatalogSectionArmor:
+		resp, err := contentClient.GetArmor(ctx, &daggerheartv1.GetDaggerheartArmorRequest{Id: entryID, Locale: locale})
+		view = buildCatalogArmorDetail(sectionID, entryID, resp.GetArmor(), err, loc)
+	case templates.CatalogSectionLoot:
+		resp, err := contentClient.GetLootEntry(ctx, &daggerheartv1.GetDaggerheartLootEntryRequest{Id: entryID, Locale: locale})
+		view = buildCatalogLootDetail(sectionID, entryID, resp.GetEntry(), err, loc)
+	case templates.CatalogSectionDamageTypes:
+		resp, err := contentClient.GetDamageType(ctx, &daggerheartv1.GetDaggerheartDamageTypeRequest{Id: entryID, Locale: locale})
+		view = buildCatalogDamageTypeDetail(sectionID, entryID, resp.GetDamageType(), err, loc)
+	case templates.CatalogSectionAdversaries:
+		resp, err := contentClient.GetAdversary(ctx, &daggerheartv1.GetDaggerheartAdversaryRequest{Id: entryID, Locale: locale})
+		view = buildCatalogAdversaryDetail(sectionID, entryID, resp.GetAdversary(), err, loc)
+	case templates.CatalogSectionBeastforms:
+		resp, err := contentClient.GetBeastform(ctx, &daggerheartv1.GetDaggerheartBeastformRequest{Id: entryID, Locale: locale})
+		view = buildCatalogBeastformDetail(sectionID, entryID, resp.GetBeastform(), err, loc)
+	case templates.CatalogSectionCompanionExperiences:
+		resp, err := contentClient.GetCompanionExperience(ctx, &daggerheartv1.GetDaggerheartCompanionExperienceRequest{Id: entryID, Locale: locale})
+		view = buildCatalogCompanionExperienceDetail(sectionID, entryID, resp.GetExperience(), err, loc)
+	case templates.CatalogSectionEnvironments:
+		resp, err := contentClient.GetEnvironment(ctx, &daggerheartv1.GetDaggerheartEnvironmentRequest{Id: entryID, Locale: locale})
+		view = buildCatalogEnvironmentDetail(sectionID, entryID, resp.GetEnvironment(), err, loc)
+	default:
+		view.Title = templates.DaggerheartCatalogSectionLabel(loc, sectionID)
+		view.Message = loc.Sprintf("catalog.error.not_found")
+		view.BackURL = "/catalog/daggerheart/" + sectionID
+	}
+
+	renderPage(w, r, templates.CatalogDetailPanel(view, loc), templates.CatalogFullPageWithContent(sectionID, templates.CatalogDetailPanel(view, loc), pageCtx))
+}
+
 // handleSystemsTable renders the systems table via HTMX.
 func (h *Handler) handleSystemsTable(w http.ResponseWriter, r *http.Request) {
 	loc, _ := h.localizer(w, r)
@@ -1561,6 +1969,14 @@ func (h *Handler) authClient() authv1.AuthServiceClient {
 	return h.clientProvider.AuthClient()
 }
 
+// daggerheartContentClient returns the Daggerheart content client.
+func (h *Handler) daggerheartContentClient() daggerheartv1.DaggerheartContentServiceClient {
+	if h == nil || h.clientProvider == nil {
+		return nil
+	}
+	return h.clientProvider.DaggerheartContentClient()
+}
+
 // campaignClient returns the currently configured campaign client.
 func (h *Handler) campaignClient() statev1.CampaignServiceClient {
 	if h == nil || h.clientProvider == nil {
@@ -1802,6 +2218,613 @@ func buildUserRows(users []*authv1.User) []templates.UserRow {
 		})
 	}
 	return rows
+}
+
+// catalogSectionColumns defines which columns to show per catalog section.
+func catalogSectionColumns(sectionID string, loc *message.Printer) []string {
+	switch sectionID {
+	case templates.CatalogSectionClasses:
+		return []string{loc.Sprintf("catalog.table.starting_hp"), loc.Sprintf("catalog.table.starting_evasion")}
+	case templates.CatalogSectionSubclasses:
+		return []string{loc.Sprintf("catalog.table.spellcast_trait"), loc.Sprintf("catalog.table.feature_count")}
+	case templates.CatalogSectionHeritages:
+		return []string{loc.Sprintf("catalog.table.kind"), loc.Sprintf("catalog.table.feature_count")}
+	case templates.CatalogSectionExperiences:
+		return []string{loc.Sprintf("catalog.table.description")}
+	case templates.CatalogSectionDomains:
+		return []string{loc.Sprintf("catalog.table.description")}
+	case templates.CatalogSectionDomainCards:
+		return []string{loc.Sprintf("catalog.table.domain"), loc.Sprintf("catalog.table.level"), loc.Sprintf("catalog.table.type")}
+	case templates.CatalogSectionItems:
+		return []string{loc.Sprintf("catalog.table.rarity"), loc.Sprintf("catalog.table.kind"), loc.Sprintf("catalog.table.stack_max")}
+	case templates.CatalogSectionWeapons:
+		return []string{loc.Sprintf("catalog.table.category"), loc.Sprintf("catalog.table.tier"), loc.Sprintf("catalog.table.damage_type")}
+	case templates.CatalogSectionArmor:
+		return []string{loc.Sprintf("catalog.table.tier"), loc.Sprintf("catalog.table.armor_score")}
+	case templates.CatalogSectionLoot:
+		return []string{loc.Sprintf("catalog.table.roll"), loc.Sprintf("catalog.table.description")}
+	case templates.CatalogSectionDamageTypes:
+		return []string{loc.Sprintf("catalog.table.description")}
+	case templates.CatalogSectionAdversaries:
+		return []string{loc.Sprintf("catalog.table.tier"), loc.Sprintf("catalog.table.role")}
+	case templates.CatalogSectionBeastforms:
+		return []string{loc.Sprintf("catalog.table.tier"), loc.Sprintf("catalog.table.trait")}
+	case templates.CatalogSectionCompanionExperiences:
+		return []string{loc.Sprintf("catalog.table.description")}
+	case templates.CatalogSectionEnvironments:
+		return []string{loc.Sprintf("catalog.table.type"), loc.Sprintf("catalog.table.difficulty")}
+	default:
+		return nil
+	}
+}
+
+// buildCatalogClassRows formats class entries for tables.
+func buildCatalogClassRows(classes []*daggerheartv1.DaggerheartClass) []templates.CatalogTableRow {
+	rows := make([]templates.CatalogTableRow, 0, len(classes))
+	for _, entry := range classes {
+		if entry == nil {
+			continue
+		}
+		rows = append(rows, catalogRow(templates.CatalogSectionClasses, entry.GetId(), entry.GetName(), []string{
+			strconv.Itoa(int(entry.GetStartingHp())),
+			strconv.Itoa(int(entry.GetStartingEvasion())),
+		}))
+	}
+	return rows
+}
+
+// buildCatalogSubclassRows formats subclass entries for tables.
+func buildCatalogSubclassRows(subclasses []*daggerheartv1.DaggerheartSubclass) []templates.CatalogTableRow {
+	rows := make([]templates.CatalogTableRow, 0, len(subclasses))
+	for _, entry := range subclasses {
+		if entry == nil {
+			continue
+		}
+		featureCount := len(entry.GetFoundationFeatures()) + len(entry.GetSpecializationFeatures()) + len(entry.GetMasteryFeatures())
+		rows = append(rows, catalogRow(templates.CatalogSectionSubclasses, entry.GetId(), entry.GetName(), []string{
+			entry.GetSpellcastTrait(),
+			strconv.Itoa(featureCount),
+		}))
+	}
+	return rows
+}
+
+// buildCatalogHeritageRows formats heritage entries for tables.
+func buildCatalogHeritageRows(heritages []*daggerheartv1.DaggerheartHeritage) []templates.CatalogTableRow {
+	rows := make([]templates.CatalogTableRow, 0, len(heritages))
+	for _, entry := range heritages {
+		if entry == nil {
+			continue
+		}
+		rows = append(rows, catalogRow(templates.CatalogSectionHeritages, entry.GetId(), entry.GetName(), []string{
+			formatEnumValue(entry.GetKind().String()),
+			strconv.Itoa(len(entry.GetFeatures())),
+		}))
+	}
+	return rows
+}
+
+// buildCatalogExperienceRows formats experience entries for tables.
+func buildCatalogExperienceRows(entries []*daggerheartv1.DaggerheartExperienceEntry) []templates.CatalogTableRow {
+	rows := make([]templates.CatalogTableRow, 0, len(entries))
+	for _, entry := range entries {
+		if entry == nil {
+			continue
+		}
+		rows = append(rows, catalogRow(templates.CatalogSectionExperiences, entry.GetId(), entry.GetName(), []string{
+			truncateText(entry.GetDescription(), catalogDescriptionLimit),
+		}))
+	}
+	return rows
+}
+
+// buildCatalogDomainRows formats domain entries for tables.
+func buildCatalogDomainRows(domains []*daggerheartv1.DaggerheartDomain) []templates.CatalogTableRow {
+	rows := make([]templates.CatalogTableRow, 0, len(domains))
+	for _, entry := range domains {
+		if entry == nil {
+			continue
+		}
+		rows = append(rows, catalogRow(templates.CatalogSectionDomains, entry.GetId(), entry.GetName(), []string{
+			truncateText(entry.GetDescription(), catalogDescriptionLimit),
+		}))
+	}
+	return rows
+}
+
+// buildCatalogDomainCardRows formats domain card entries for tables.
+func buildCatalogDomainCardRows(cards []*daggerheartv1.DaggerheartDomainCard) []templates.CatalogTableRow {
+	rows := make([]templates.CatalogTableRow, 0, len(cards))
+	for _, entry := range cards {
+		if entry == nil {
+			continue
+		}
+		rows = append(rows, catalogRow(templates.CatalogSectionDomainCards, entry.GetId(), entry.GetName(), []string{
+			entry.GetDomainId(),
+			strconv.Itoa(int(entry.GetLevel())),
+			formatEnumValue(entry.GetType().String()),
+		}))
+	}
+	return rows
+}
+
+// buildCatalogItemRows formats item entries for tables.
+func buildCatalogItemRows(items []*daggerheartv1.DaggerheartItem) []templates.CatalogTableRow {
+	rows := make([]templates.CatalogTableRow, 0, len(items))
+	for _, entry := range items {
+		if entry == nil {
+			continue
+		}
+		rows = append(rows, catalogRow(templates.CatalogSectionItems, entry.GetId(), entry.GetName(), []string{
+			formatEnumValue(entry.GetRarity().String()),
+			formatEnumValue(entry.GetKind().String()),
+			strconv.Itoa(int(entry.GetStackMax())),
+		}))
+	}
+	return rows
+}
+
+// buildCatalogWeaponRows formats weapon entries for tables.
+func buildCatalogWeaponRows(weapons []*daggerheartv1.DaggerheartWeapon) []templates.CatalogTableRow {
+	rows := make([]templates.CatalogTableRow, 0, len(weapons))
+	for _, entry := range weapons {
+		if entry == nil {
+			continue
+		}
+		rows = append(rows, catalogRow(templates.CatalogSectionWeapons, entry.GetId(), entry.GetName(), []string{
+			formatEnumValue(entry.GetCategory().String()),
+			strconv.Itoa(int(entry.GetTier())),
+			formatEnumValue(entry.GetDamageType().String()),
+		}))
+	}
+	return rows
+}
+
+// buildCatalogArmorRows formats armor entries for tables.
+func buildCatalogArmorRows(armor []*daggerheartv1.DaggerheartArmor) []templates.CatalogTableRow {
+	rows := make([]templates.CatalogTableRow, 0, len(armor))
+	for _, entry := range armor {
+		if entry == nil {
+			continue
+		}
+		rows = append(rows, catalogRow(templates.CatalogSectionArmor, entry.GetId(), entry.GetName(), []string{
+			strconv.Itoa(int(entry.GetTier())),
+			strconv.Itoa(int(entry.GetArmorScore())),
+		}))
+	}
+	return rows
+}
+
+// buildCatalogLootRows formats loot entries for tables.
+func buildCatalogLootRows(entries []*daggerheartv1.DaggerheartLootEntry) []templates.CatalogTableRow {
+	rows := make([]templates.CatalogTableRow, 0, len(entries))
+	for _, entry := range entries {
+		if entry == nil {
+			continue
+		}
+		rows = append(rows, catalogRow(templates.CatalogSectionLoot, entry.GetId(), entry.GetName(), []string{
+			strconv.Itoa(int(entry.GetRoll())),
+			truncateText(entry.GetDescription(), catalogDescriptionLimit),
+		}))
+	}
+	return rows
+}
+
+// buildCatalogDamageTypeRows formats damage type entries for tables.
+func buildCatalogDamageTypeRows(entries []*daggerheartv1.DaggerheartDamageTypeEntry) []templates.CatalogTableRow {
+	rows := make([]templates.CatalogTableRow, 0, len(entries))
+	for _, entry := range entries {
+		if entry == nil {
+			continue
+		}
+		rows = append(rows, catalogRow(templates.CatalogSectionDamageTypes, entry.GetId(), entry.GetName(), []string{
+			truncateText(entry.GetDescription(), catalogDescriptionLimit),
+		}))
+	}
+	return rows
+}
+
+// buildCatalogAdversaryRows formats adversary entries for tables.
+func buildCatalogAdversaryRows(entries []*daggerheartv1.DaggerheartAdversaryEntry) []templates.CatalogTableRow {
+	rows := make([]templates.CatalogTableRow, 0, len(entries))
+	for _, entry := range entries {
+		if entry == nil {
+			continue
+		}
+		rows = append(rows, catalogRow(templates.CatalogSectionAdversaries, entry.GetId(), entry.GetName(), []string{
+			strconv.Itoa(int(entry.GetTier())),
+			entry.GetRole(),
+		}))
+	}
+	return rows
+}
+
+// buildCatalogBeastformRows formats beastform entries for tables.
+func buildCatalogBeastformRows(entries []*daggerheartv1.DaggerheartBeastformEntry) []templates.CatalogTableRow {
+	rows := make([]templates.CatalogTableRow, 0, len(entries))
+	for _, entry := range entries {
+		if entry == nil {
+			continue
+		}
+		rows = append(rows, catalogRow(templates.CatalogSectionBeastforms, entry.GetId(), entry.GetName(), []string{
+			strconv.Itoa(int(entry.GetTier())),
+			entry.GetTrait(),
+		}))
+	}
+	return rows
+}
+
+// buildCatalogCompanionExperienceRows formats companion experience entries for tables.
+func buildCatalogCompanionExperienceRows(entries []*daggerheartv1.DaggerheartCompanionExperienceEntry) []templates.CatalogTableRow {
+	rows := make([]templates.CatalogTableRow, 0, len(entries))
+	for _, entry := range entries {
+		if entry == nil {
+			continue
+		}
+		rows = append(rows, catalogRow(templates.CatalogSectionCompanionExperiences, entry.GetId(), entry.GetName(), []string{
+			truncateText(entry.GetDescription(), catalogDescriptionLimit),
+		}))
+	}
+	return rows
+}
+
+// buildCatalogEnvironmentRows formats environment entries for tables.
+func buildCatalogEnvironmentRows(entries []*daggerheartv1.DaggerheartEnvironment) []templates.CatalogTableRow {
+	rows := make([]templates.CatalogTableRow, 0, len(entries))
+	for _, entry := range entries {
+		if entry == nil {
+			continue
+		}
+		rows = append(rows, catalogRow(templates.CatalogSectionEnvironments, entry.GetId(), entry.GetName(), []string{
+			formatEnumValue(entry.GetType().String()),
+			strconv.Itoa(int(entry.GetDifficulty())),
+		}))
+	}
+	return rows
+}
+
+// buildCatalogClassDetail formats class details for the catalog panel.
+func buildCatalogClassDetail(sectionID, entryID string, entry *daggerheartv1.DaggerheartClass, err error, loc *message.Printer) templates.CatalogDetailView {
+	if err != nil {
+		log.Printf("get class: %v", err)
+	}
+	message := catalogDetailErrorMessage(err, loc, entry == nil)
+	if entry == nil {
+		return catalogDetailView(sectionID, entryID, "", nil, nil, message, loc)
+	}
+	fields := []templates.CatalogDetailField{
+		{Label: loc.Sprintf("catalog.detail.id"), Value: entry.GetId()},
+		{Label: loc.Sprintf("catalog.table.name"), Value: entry.GetName()},
+		{Label: loc.Sprintf("catalog.table.starting_hp"), Value: strconv.Itoa(int(entry.GetStartingHp()))},
+		{Label: loc.Sprintf("catalog.table.starting_evasion"), Value: strconv.Itoa(int(entry.GetStartingEvasion()))},
+	}
+	return catalogDetailView(sectionID, entry.GetId(), catalogPrimaryLabel(entry.GetName(), entry.GetId()), fields, entry, message, loc)
+}
+
+// buildCatalogSubclassDetail formats subclass details for the catalog panel.
+func buildCatalogSubclassDetail(sectionID, entryID string, entry *daggerheartv1.DaggerheartSubclass, err error, loc *message.Printer) templates.CatalogDetailView {
+	if err != nil {
+		log.Printf("get subclass: %v", err)
+	}
+	message := catalogDetailErrorMessage(err, loc, entry == nil)
+	if entry == nil {
+		return catalogDetailView(sectionID, entryID, "", nil, nil, message, loc)
+	}
+	featureCount := len(entry.GetFoundationFeatures()) + len(entry.GetSpecializationFeatures()) + len(entry.GetMasteryFeatures())
+	fields := []templates.CatalogDetailField{
+		{Label: loc.Sprintf("catalog.detail.id"), Value: entry.GetId()},
+		{Label: loc.Sprintf("catalog.table.name"), Value: entry.GetName()},
+		{Label: loc.Sprintf("catalog.table.spellcast_trait"), Value: entry.GetSpellcastTrait()},
+		{Label: loc.Sprintf("catalog.table.feature_count"), Value: strconv.Itoa(featureCount)},
+	}
+	return catalogDetailView(sectionID, entry.GetId(), catalogPrimaryLabel(entry.GetName(), entry.GetId()), fields, entry, message, loc)
+}
+
+// buildCatalogHeritageDetail formats heritage details for the catalog panel.
+func buildCatalogHeritageDetail(sectionID, entryID string, entry *daggerheartv1.DaggerheartHeritage, err error, loc *message.Printer) templates.CatalogDetailView {
+	if err != nil {
+		log.Printf("get heritage: %v", err)
+	}
+	message := catalogDetailErrorMessage(err, loc, entry == nil)
+	if entry == nil {
+		return catalogDetailView(sectionID, entryID, "", nil, nil, message, loc)
+	}
+	fields := []templates.CatalogDetailField{
+		{Label: loc.Sprintf("catalog.detail.id"), Value: entry.GetId()},
+		{Label: loc.Sprintf("catalog.table.name"), Value: entry.GetName()},
+		{Label: loc.Sprintf("catalog.table.kind"), Value: formatEnumValue(entry.GetKind().String())},
+		{Label: loc.Sprintf("catalog.table.feature_count"), Value: strconv.Itoa(len(entry.GetFeatures()))},
+	}
+	return catalogDetailView(sectionID, entry.GetId(), catalogPrimaryLabel(entry.GetName(), entry.GetId()), fields, entry, message, loc)
+}
+
+// buildCatalogExperienceDetail formats experience details for the catalog panel.
+func buildCatalogExperienceDetail(sectionID, entryID string, entry *daggerheartv1.DaggerheartExperienceEntry, err error, loc *message.Printer) templates.CatalogDetailView {
+	if err != nil {
+		log.Printf("get experience: %v", err)
+	}
+	message := catalogDetailErrorMessage(err, loc, entry == nil)
+	if entry == nil {
+		return catalogDetailView(sectionID, entryID, "", nil, nil, message, loc)
+	}
+	fields := []templates.CatalogDetailField{
+		{Label: loc.Sprintf("catalog.detail.id"), Value: entry.GetId()},
+		{Label: loc.Sprintf("catalog.table.name"), Value: entry.GetName()},
+		{Label: loc.Sprintf("catalog.table.description"), Value: entry.GetDescription()},
+	}
+	return catalogDetailView(sectionID, entry.GetId(), catalogPrimaryLabel(entry.GetName(), entry.GetId()), fields, entry, message, loc)
+}
+
+// buildCatalogDomainDetail formats domain details for the catalog panel.
+func buildCatalogDomainDetail(sectionID, entryID string, entry *daggerheartv1.DaggerheartDomain, err error, loc *message.Printer) templates.CatalogDetailView {
+	if err != nil {
+		log.Printf("get domain: %v", err)
+	}
+	message := catalogDetailErrorMessage(err, loc, entry == nil)
+	if entry == nil {
+		return catalogDetailView(sectionID, entryID, "", nil, nil, message, loc)
+	}
+	fields := []templates.CatalogDetailField{
+		{Label: loc.Sprintf("catalog.detail.id"), Value: entry.GetId()},
+		{Label: loc.Sprintf("catalog.table.name"), Value: entry.GetName()},
+		{Label: loc.Sprintf("catalog.table.description"), Value: entry.GetDescription()},
+	}
+	return catalogDetailView(sectionID, entry.GetId(), catalogPrimaryLabel(entry.GetName(), entry.GetId()), fields, entry, message, loc)
+}
+
+// buildCatalogDomainCardDetail formats domain card details for the catalog panel.
+func buildCatalogDomainCardDetail(sectionID, entryID string, entry *daggerheartv1.DaggerheartDomainCard, err error, loc *message.Printer) templates.CatalogDetailView {
+	if err != nil {
+		log.Printf("get domain card: %v", err)
+	}
+	message := catalogDetailErrorMessage(err, loc, entry == nil)
+	if entry == nil {
+		return catalogDetailView(sectionID, entryID, "", nil, nil, message, loc)
+	}
+	fields := []templates.CatalogDetailField{
+		{Label: loc.Sprintf("catalog.detail.id"), Value: entry.GetId()},
+		{Label: loc.Sprintf("catalog.table.name"), Value: entry.GetName()},
+		{Label: loc.Sprintf("catalog.table.domain"), Value: entry.GetDomainId()},
+		{Label: loc.Sprintf("catalog.table.level"), Value: strconv.Itoa(int(entry.GetLevel()))},
+		{Label: loc.Sprintf("catalog.table.type"), Value: formatEnumValue(entry.GetType().String())},
+	}
+	return catalogDetailView(sectionID, entry.GetId(), catalogPrimaryLabel(entry.GetName(), entry.GetId()), fields, entry, message, loc)
+}
+
+// buildCatalogItemDetail formats item details for the catalog panel.
+func buildCatalogItemDetail(sectionID, entryID string, entry *daggerheartv1.DaggerheartItem, err error, loc *message.Printer) templates.CatalogDetailView {
+	if err != nil {
+		log.Printf("get item: %v", err)
+	}
+	message := catalogDetailErrorMessage(err, loc, entry == nil)
+	if entry == nil {
+		return catalogDetailView(sectionID, entryID, "", nil, nil, message, loc)
+	}
+	fields := []templates.CatalogDetailField{
+		{Label: loc.Sprintf("catalog.detail.id"), Value: entry.GetId()},
+		{Label: loc.Sprintf("catalog.table.name"), Value: entry.GetName()},
+		{Label: loc.Sprintf("catalog.table.rarity"), Value: formatEnumValue(entry.GetRarity().String())},
+		{Label: loc.Sprintf("catalog.table.kind"), Value: formatEnumValue(entry.GetKind().String())},
+		{Label: loc.Sprintf("catalog.table.stack_max"), Value: strconv.Itoa(int(entry.GetStackMax()))},
+		{Label: loc.Sprintf("catalog.table.description"), Value: entry.GetDescription()},
+	}
+	return catalogDetailView(sectionID, entry.GetId(), catalogPrimaryLabel(entry.GetName(), entry.GetId()), fields, entry, message, loc)
+}
+
+// buildCatalogWeaponDetail formats weapon details for the catalog panel.
+func buildCatalogWeaponDetail(sectionID, entryID string, entry *daggerheartv1.DaggerheartWeapon, err error, loc *message.Printer) templates.CatalogDetailView {
+	if err != nil {
+		log.Printf("get weapon: %v", err)
+	}
+	message := catalogDetailErrorMessage(err, loc, entry == nil)
+	if entry == nil {
+		return catalogDetailView(sectionID, entryID, "", nil, nil, message, loc)
+	}
+	fields := []templates.CatalogDetailField{
+		{Label: loc.Sprintf("catalog.detail.id"), Value: entry.GetId()},
+		{Label: loc.Sprintf("catalog.table.name"), Value: entry.GetName()},
+		{Label: loc.Sprintf("catalog.table.category"), Value: formatEnumValue(entry.GetCategory().String())},
+		{Label: loc.Sprintf("catalog.table.tier"), Value: strconv.Itoa(int(entry.GetTier()))},
+		{Label: loc.Sprintf("catalog.table.damage_type"), Value: formatEnumValue(entry.GetDamageType().String())},
+	}
+	return catalogDetailView(sectionID, entry.GetId(), catalogPrimaryLabel(entry.GetName(), entry.GetId()), fields, entry, message, loc)
+}
+
+// buildCatalogArmorDetail formats armor details for the catalog panel.
+func buildCatalogArmorDetail(sectionID, entryID string, entry *daggerheartv1.DaggerheartArmor, err error, loc *message.Printer) templates.CatalogDetailView {
+	if err != nil {
+		log.Printf("get armor: %v", err)
+	}
+	message := catalogDetailErrorMessage(err, loc, entry == nil)
+	if entry == nil {
+		return catalogDetailView(sectionID, entryID, "", nil, nil, message, loc)
+	}
+	fields := []templates.CatalogDetailField{
+		{Label: loc.Sprintf("catalog.detail.id"), Value: entry.GetId()},
+		{Label: loc.Sprintf("catalog.table.name"), Value: entry.GetName()},
+		{Label: loc.Sprintf("catalog.table.tier"), Value: strconv.Itoa(int(entry.GetTier()))},
+		{Label: loc.Sprintf("catalog.table.armor_score"), Value: strconv.Itoa(int(entry.GetArmorScore()))},
+	}
+	return catalogDetailView(sectionID, entry.GetId(), catalogPrimaryLabel(entry.GetName(), entry.GetId()), fields, entry, message, loc)
+}
+
+// buildCatalogLootDetail formats loot details for the catalog panel.
+func buildCatalogLootDetail(sectionID, entryID string, entry *daggerheartv1.DaggerheartLootEntry, err error, loc *message.Printer) templates.CatalogDetailView {
+	if err != nil {
+		log.Printf("get loot entry: %v", err)
+	}
+	message := catalogDetailErrorMessage(err, loc, entry == nil)
+	if entry == nil {
+		return catalogDetailView(sectionID, entryID, "", nil, nil, message, loc)
+	}
+	fields := []templates.CatalogDetailField{
+		{Label: loc.Sprintf("catalog.detail.id"), Value: entry.GetId()},
+		{Label: loc.Sprintf("catalog.table.name"), Value: entry.GetName()},
+		{Label: loc.Sprintf("catalog.table.roll"), Value: strconv.Itoa(int(entry.GetRoll()))},
+		{Label: loc.Sprintf("catalog.table.description"), Value: entry.GetDescription()},
+	}
+	return catalogDetailView(sectionID, entry.GetId(), catalogPrimaryLabel(entry.GetName(), entry.GetId()), fields, entry, message, loc)
+}
+
+// buildCatalogDamageTypeDetail formats damage type details for the catalog panel.
+func buildCatalogDamageTypeDetail(sectionID, entryID string, entry *daggerheartv1.DaggerheartDamageTypeEntry, err error, loc *message.Printer) templates.CatalogDetailView {
+	if err != nil {
+		log.Printf("get damage type: %v", err)
+	}
+	message := catalogDetailErrorMessage(err, loc, entry == nil)
+	if entry == nil {
+		return catalogDetailView(sectionID, entryID, "", nil, nil, message, loc)
+	}
+	fields := []templates.CatalogDetailField{
+		{Label: loc.Sprintf("catalog.detail.id"), Value: entry.GetId()},
+		{Label: loc.Sprintf("catalog.table.name"), Value: entry.GetName()},
+		{Label: loc.Sprintf("catalog.table.description"), Value: entry.GetDescription()},
+	}
+	return catalogDetailView(sectionID, entry.GetId(), catalogPrimaryLabel(entry.GetName(), entry.GetId()), fields, entry, message, loc)
+}
+
+// buildCatalogAdversaryDetail formats adversary details for the catalog panel.
+func buildCatalogAdversaryDetail(sectionID, entryID string, entry *daggerheartv1.DaggerheartAdversaryEntry, err error, loc *message.Printer) templates.CatalogDetailView {
+	if err != nil {
+		log.Printf("get adversary: %v", err)
+	}
+	message := catalogDetailErrorMessage(err, loc, entry == nil)
+	if entry == nil {
+		return catalogDetailView(sectionID, entryID, "", nil, nil, message, loc)
+	}
+	fields := []templates.CatalogDetailField{
+		{Label: loc.Sprintf("catalog.detail.id"), Value: entry.GetId()},
+		{Label: loc.Sprintf("catalog.table.name"), Value: entry.GetName()},
+		{Label: loc.Sprintf("catalog.table.tier"), Value: strconv.Itoa(int(entry.GetTier()))},
+		{Label: loc.Sprintf("catalog.table.role"), Value: entry.GetRole()},
+	}
+	return catalogDetailView(sectionID, entry.GetId(), catalogPrimaryLabel(entry.GetName(), entry.GetId()), fields, entry, message, loc)
+}
+
+// buildCatalogBeastformDetail formats beastform details for the catalog panel.
+func buildCatalogBeastformDetail(sectionID, entryID string, entry *daggerheartv1.DaggerheartBeastformEntry, err error, loc *message.Printer) templates.CatalogDetailView {
+	if err != nil {
+		log.Printf("get beastform: %v", err)
+	}
+	message := catalogDetailErrorMessage(err, loc, entry == nil)
+	if entry == nil {
+		return catalogDetailView(sectionID, entryID, "", nil, nil, message, loc)
+	}
+	fields := []templates.CatalogDetailField{
+		{Label: loc.Sprintf("catalog.detail.id"), Value: entry.GetId()},
+		{Label: loc.Sprintf("catalog.table.name"), Value: entry.GetName()},
+		{Label: loc.Sprintf("catalog.table.tier"), Value: strconv.Itoa(int(entry.GetTier()))},
+		{Label: loc.Sprintf("catalog.table.trait"), Value: entry.GetTrait()},
+	}
+	return catalogDetailView(sectionID, entry.GetId(), catalogPrimaryLabel(entry.GetName(), entry.GetId()), fields, entry, message, loc)
+}
+
+// buildCatalogCompanionExperienceDetail formats companion experience details for the catalog panel.
+func buildCatalogCompanionExperienceDetail(sectionID, entryID string, entry *daggerheartv1.DaggerheartCompanionExperienceEntry, err error, loc *message.Printer) templates.CatalogDetailView {
+	if err != nil {
+		log.Printf("get companion experience: %v", err)
+	}
+	message := catalogDetailErrorMessage(err, loc, entry == nil)
+	if entry == nil {
+		return catalogDetailView(sectionID, entryID, "", nil, nil, message, loc)
+	}
+	fields := []templates.CatalogDetailField{
+		{Label: loc.Sprintf("catalog.detail.id"), Value: entry.GetId()},
+		{Label: loc.Sprintf("catalog.table.name"), Value: entry.GetName()},
+		{Label: loc.Sprintf("catalog.table.description"), Value: entry.GetDescription()},
+	}
+	return catalogDetailView(sectionID, entry.GetId(), catalogPrimaryLabel(entry.GetName(), entry.GetId()), fields, entry, message, loc)
+}
+
+// buildCatalogEnvironmentDetail formats environment details for the catalog panel.
+func buildCatalogEnvironmentDetail(sectionID, entryID string, entry *daggerheartv1.DaggerheartEnvironment, err error, loc *message.Printer) templates.CatalogDetailView {
+	if err != nil {
+		log.Printf("get environment: %v", err)
+	}
+	message := catalogDetailErrorMessage(err, loc, entry == nil)
+	if entry == nil {
+		return catalogDetailView(sectionID, entryID, "", nil, nil, message, loc)
+	}
+	fields := []templates.CatalogDetailField{
+		{Label: loc.Sprintf("catalog.detail.id"), Value: entry.GetId()},
+		{Label: loc.Sprintf("catalog.table.name"), Value: entry.GetName()},
+		{Label: loc.Sprintf("catalog.table.type"), Value: formatEnumValue(entry.GetType().String())},
+		{Label: loc.Sprintf("catalog.table.difficulty"), Value: strconv.Itoa(int(entry.GetDifficulty()))},
+	}
+	return catalogDetailView(sectionID, entry.GetId(), catalogPrimaryLabel(entry.GetName(), entry.GetId()), fields, entry, message, loc)
+}
+
+// catalogRow builds a table row with a detail link for a section.
+func catalogRow(sectionID, entryID, name string, cells []string) templates.CatalogTableRow {
+	return templates.CatalogTableRow{
+		Primary:   catalogPrimaryLabel(name, entryID),
+		DetailURL: "/catalog/daggerheart/" + sectionID + "/" + entryID,
+		Cells:     cells,
+	}
+}
+
+// catalogPrimaryLabel picks a user-facing label for a row.
+func catalogPrimaryLabel(name, entryID string) string {
+	if strings.TrimSpace(name) == "" {
+		return entryID
+	}
+	return name
+}
+
+// catalogDetailErrorMessage normalizes not-found vs. unavailable states.
+func catalogDetailErrorMessage(err error, loc *message.Printer, missing bool) string {
+	if !missing {
+		return ""
+	}
+	if err == nil {
+		return loc.Sprintf("catalog.error.not_found")
+	}
+	if status.Code(err) == codes.NotFound {
+		return loc.Sprintf("catalog.error.not_found")
+	}
+	return loc.Sprintf("catalog.error.entry_unavailable")
+}
+
+// catalogDetailView builds the shared detail view model with raw JSON.
+func catalogDetailView(sectionID, entryID, title string, fields []templates.CatalogDetailField, raw proto.Message, message string, loc *message.Printer) templates.CatalogDetailView {
+	if title == "" {
+		title = templates.DaggerheartCatalogSectionLabel(loc, sectionID)
+	}
+	return templates.CatalogDetailView{
+		SectionID: sectionID,
+		Title:     title,
+		ID:        entryID,
+		Fields:    fields,
+		Message:   message,
+		RawJSON:   formatProtoJSON(raw),
+		BackURL:   "/catalog/daggerheart/" + sectionID,
+	}
+}
+
+// formatProtoJSON renders raw proto data for the detail panel.
+func formatProtoJSON(message proto.Message) string {
+	if message == nil {
+		return ""
+	}
+	data, err := protojson.MarshalOptions{Multiline: true, Indent: "  "}.Marshal(message)
+	if err != nil {
+		return ""
+	}
+	return string(data)
+}
+
+// formatEnumValue normalizes enum strings to title case labels.
+func formatEnumValue(value string) string {
+	if value == "" {
+		return ""
+	}
+	parts := strings.Split(value, "_")
+	label := parts[len(parts)-1]
+	if label == "UNSPECIFIED" {
+		return ""
+	}
+	label = strings.ToLower(label)
+	return strings.ToUpper(label[:1]) + label[1:]
 }
 
 // buildUserDetail formats a user detail view.

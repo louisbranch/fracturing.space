@@ -516,6 +516,13 @@ ON CONFLICT(content_id, field, locale) DO UPDATE SET
     created_at = excluded.created_at,
     updated_at = excluded.updated_at;
 
+-- name: ListDaggerheartContentStringsByIDs :many
+SELECT content_id, content_type, field, locale, text, created_at, updated_at
+FROM daggerheart_content_strings
+WHERE content_type = sqlc.arg(content_type)
+  AND locale = sqlc.arg(locale)
+  AND content_id IN (sqlc.slice(content_ids));
+
 -- Joined queries for convenience
 
 -- name: GetDaggerheartCharacterSheet :one

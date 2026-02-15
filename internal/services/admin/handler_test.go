@@ -14,6 +14,7 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/branding"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/templates"
@@ -87,6 +88,28 @@ func TestWebPageRendering(t *testing.T) {
 			htmx: true,
 			contains: []string{
 				"<h2>Systems</h2>",
+			},
+			notContains: []string{
+				"<!doctype html>",
+				branding.AppName,
+				"<html",
+			},
+		},
+		{
+			name: "catalog full page",
+			path: "/catalog",
+			contains: []string{
+				"<!doctype html>",
+				branding.AppName,
+				"<h2>Catalog</h2>",
+			},
+		},
+		{
+			name: "catalog htmx",
+			path: "/catalog",
+			htmx: true,
+			contains: []string{
+				"<h2>Catalog</h2>",
 			},
 			notContains: []string{
 				"<!doctype html>",
@@ -194,6 +217,128 @@ func TestWebPageRendering(t *testing.T) {
 			for _, unexpected := range tc.notContains {
 				assertNotContains(t, body, unexpected)
 			}
+		})
+	}
+}
+
+func TestCatalogTablesAndDetails(t *testing.T) {
+	contentClient := &testContentClient{
+		listClassesResponse: &daggerheartv1.ListDaggerheartClassesResponse{
+			Classes: []*daggerheartv1.DaggerheartClass{{
+				Id:              "class-1",
+				Name:            "Sentinel",
+				StartingEvasion: 10,
+				StartingHp:      12,
+			}},
+		},
+		getClassResponse: &daggerheartv1.GetDaggerheartClassResponse{Class: &daggerheartv1.DaggerheartClass{Id: "class-1", Name: "Sentinel"}},
+		listSubclassesResponse: &daggerheartv1.ListDaggerheartSubclassesResponse{
+			Subclasses: []*daggerheartv1.DaggerheartSubclass{{Id: "subclass-1", Name: "Warden", SpellcastTrait: "Cunning"}},
+		},
+		getSubclassResponse: &daggerheartv1.GetDaggerheartSubclassResponse{Subclass: &daggerheartv1.DaggerheartSubclass{Id: "subclass-1", Name: "Warden"}},
+		listHeritagesResponse: &daggerheartv1.ListDaggerheartHeritagesResponse{
+			Heritages: []*daggerheartv1.DaggerheartHeritage{{Id: "heritage-1", Name: "Elder", Kind: daggerheartv1.DaggerheartHeritageKind_DAGGERHEART_HERITAGE_KIND_ANCESTRY}},
+		},
+		getHeritageResponse: &daggerheartv1.GetDaggerheartHeritageResponse{Heritage: &daggerheartv1.DaggerheartHeritage{Id: "heritage-1", Name: "Elder"}},
+		listExperiencesResponse: &daggerheartv1.ListDaggerheartExperiencesResponse{
+			Experiences: []*daggerheartv1.DaggerheartExperienceEntry{{Id: "exp-1", Name: "Scholar", Description: "Archivist"}},
+		},
+		getExperienceResponse: &daggerheartv1.GetDaggerheartExperienceResponse{Experience: &daggerheartv1.DaggerheartExperienceEntry{Id: "exp-1", Name: "Scholar"}},
+		listDomainsResponse: &daggerheartv1.ListDaggerheartDomainsResponse{
+			Domains: []*daggerheartv1.DaggerheartDomain{{Id: "domain-1", Name: "Arcana", Description: "Magic"}},
+		},
+		getDomainResponse: &daggerheartv1.GetDaggerheartDomainResponse{Domain: &daggerheartv1.DaggerheartDomain{Id: "domain-1", Name: "Arcana"}},
+		listDomainCardsResponse: &daggerheartv1.ListDaggerheartDomainCardsResponse{
+			DomainCards: []*daggerheartv1.DaggerheartDomainCard{{Id: "card-1", Name: "Flare", DomainId: "domain-1", Level: 2, Type: daggerheartv1.DaggerheartDomainCardType_DAGGERHEART_DOMAIN_CARD_TYPE_ABILITY}},
+		},
+		getDomainCardResponse: &daggerheartv1.GetDaggerheartDomainCardResponse{DomainCard: &daggerheartv1.DaggerheartDomainCard{Id: "card-1", Name: "Flare"}},
+		listItemsResponse: &daggerheartv1.ListDaggerheartItemsResponse{
+			Items: []*daggerheartv1.DaggerheartItem{{Id: "item-1", Name: "Healing Draught", Rarity: daggerheartv1.DaggerheartItemRarity_DAGGERHEART_ITEM_RARITY_COMMON, Kind: daggerheartv1.DaggerheartItemKind_DAGGERHEART_ITEM_KIND_CONSUMABLE, StackMax: 2}},
+		},
+		getItemResponse: &daggerheartv1.GetDaggerheartItemResponse{Item: &daggerheartv1.DaggerheartItem{Id: "item-1", Name: "Healing Draught"}},
+		listWeaponsResponse: &daggerheartv1.ListDaggerheartWeaponsResponse{
+			Weapons: []*daggerheartv1.DaggerheartWeapon{{Id: "weapon-1", Name: "Longsword", Category: daggerheartv1.DaggerheartWeaponCategory_DAGGERHEART_WEAPON_CATEGORY_PRIMARY, Tier: 1, DamageType: daggerheartv1.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_PHYSICAL}},
+		},
+		getWeaponResponse: &daggerheartv1.GetDaggerheartWeaponResponse{Weapon: &daggerheartv1.DaggerheartWeapon{Id: "weapon-1", Name: "Longsword"}},
+		listArmorResponse: &daggerheartv1.ListDaggerheartArmorResponse{
+			Armor: []*daggerheartv1.DaggerheartArmor{{Id: "armor-1", Name: "Chainmail", Tier: 2, ArmorScore: 3}},
+		},
+		getArmorResponse: &daggerheartv1.GetDaggerheartArmorResponse{Armor: &daggerheartv1.DaggerheartArmor{Id: "armor-1", Name: "Chainmail"}},
+		listLootEntriesResponse: &daggerheartv1.ListDaggerheartLootEntriesResponse{
+			Entries: []*daggerheartv1.DaggerheartLootEntry{{Id: "loot-1", Name: "Ancient Coin", Roll: 6, Description: "Forgotten mint"}},
+		},
+		getLootEntryResponse: &daggerheartv1.GetDaggerheartLootEntryResponse{Entry: &daggerheartv1.DaggerheartLootEntry{Id: "loot-1", Name: "Ancient Coin"}},
+		listDamageTypesResponse: &daggerheartv1.ListDaggerheartDamageTypesResponse{
+			DamageTypes: []*daggerheartv1.DaggerheartDamageTypeEntry{{Id: "damage-1", Name: "Fire", Description: "Burns"}},
+		},
+		getDamageTypeResponse: &daggerheartv1.GetDaggerheartDamageTypeResponse{DamageType: &daggerheartv1.DaggerheartDamageTypeEntry{Id: "damage-1", Name: "Fire"}},
+		listAdversariesResponse: &daggerheartv1.ListDaggerheartAdversariesResponse{
+			Adversaries: []*daggerheartv1.DaggerheartAdversaryEntry{{Id: "adv-1", Name: "Razorclaw", Tier: 2, Role: "Skirmisher"}},
+		},
+		getAdversaryResponse: &daggerheartv1.GetDaggerheartAdversaryResponse{Adversary: &daggerheartv1.DaggerheartAdversaryEntry{Id: "adv-1", Name: "Razorclaw"}},
+		listBeastformsResponse: &daggerheartv1.ListDaggerheartBeastformsResponse{
+			Beastforms: []*daggerheartv1.DaggerheartBeastformEntry{{Id: "beast-1", Name: "Dire Wolf", Tier: 1, Trait: "Instinct"}},
+		},
+		getBeastformResponse: &daggerheartv1.GetDaggerheartBeastformResponse{Beastform: &daggerheartv1.DaggerheartBeastformEntry{Id: "beast-1", Name: "Dire Wolf"}},
+		listCompanionExperiencesResponse: &daggerheartv1.ListDaggerheartCompanionExperiencesResponse{
+			Experiences: []*daggerheartv1.DaggerheartCompanionExperienceEntry{{Id: "comp-1", Name: "Tracker", Description: "Loyal"}},
+		},
+		getCompanionExperienceResponse: &daggerheartv1.GetDaggerheartCompanionExperienceResponse{Experience: &daggerheartv1.DaggerheartCompanionExperienceEntry{Id: "comp-1", Name: "Tracker"}},
+		listEnvironmentsResponse: &daggerheartv1.ListDaggerheartEnvironmentsResponse{
+			Environments: []*daggerheartv1.DaggerheartEnvironment{{Id: "env-1", Name: "Haunted Keep", Tier: 3, Type: daggerheartv1.DaggerheartEnvironmentType_DAGGERHEART_ENVIRONMENT_TYPE_EXPLORATION, Difficulty: 4}},
+		},
+		getEnvironmentResponse: &daggerheartv1.GetDaggerheartEnvironmentResponse{Environment: &daggerheartv1.DaggerheartEnvironment{Id: "env-1", Name: "Haunted Keep"}},
+	}
+	provider := testFullClientProvider{content: contentClient}
+	webHandler := &Handler{clientProvider: provider, impersonation: newImpersonationStore()}
+	handler := webHandler.routes()
+
+	sections := []struct {
+		section    string
+		listPath   string
+		detailPath string
+		expected   string
+	}{
+		{section: templates.CatalogSectionClasses, listPath: "/catalog/daggerheart/classes/table", detailPath: "/catalog/daggerheart/classes/class-1", expected: "Sentinel"},
+		{section: templates.CatalogSectionSubclasses, listPath: "/catalog/daggerheart/subclasses/table", detailPath: "/catalog/daggerheart/subclasses/subclass-1", expected: "Warden"},
+		{section: templates.CatalogSectionHeritages, listPath: "/catalog/daggerheart/heritages/table", detailPath: "/catalog/daggerheart/heritages/heritage-1", expected: "Elder"},
+		{section: templates.CatalogSectionExperiences, listPath: "/catalog/daggerheart/experiences/table", detailPath: "/catalog/daggerheart/experiences/exp-1", expected: "Scholar"},
+		{section: templates.CatalogSectionDomains, listPath: "/catalog/daggerheart/domains/table", detailPath: "/catalog/daggerheart/domains/domain-1", expected: "Arcana"},
+		{section: templates.CatalogSectionDomainCards, listPath: "/catalog/daggerheart/domain-cards/table", detailPath: "/catalog/daggerheart/domain-cards/card-1", expected: "Flare"},
+		{section: templates.CatalogSectionItems, listPath: "/catalog/daggerheart/items/table", detailPath: "/catalog/daggerheart/items/item-1", expected: "Healing Draught"},
+		{section: templates.CatalogSectionWeapons, listPath: "/catalog/daggerheart/weapons/table", detailPath: "/catalog/daggerheart/weapons/weapon-1", expected: "Longsword"},
+		{section: templates.CatalogSectionArmor, listPath: "/catalog/daggerheart/armor/table", detailPath: "/catalog/daggerheart/armor/armor-1", expected: "Chainmail"},
+		{section: templates.CatalogSectionLoot, listPath: "/catalog/daggerheart/loot/table", detailPath: "/catalog/daggerheart/loot/loot-1", expected: "Ancient Coin"},
+		{section: templates.CatalogSectionDamageTypes, listPath: "/catalog/daggerheart/damage-types/table", detailPath: "/catalog/daggerheart/damage-types/damage-1", expected: "Fire"},
+		{section: templates.CatalogSectionAdversaries, listPath: "/catalog/daggerheart/adversaries/table", detailPath: "/catalog/daggerheart/adversaries/adv-1", expected: "Razorclaw"},
+		{section: templates.CatalogSectionBeastforms, listPath: "/catalog/daggerheart/beastforms/table", detailPath: "/catalog/daggerheart/beastforms/beast-1", expected: "Dire Wolf"},
+		{section: templates.CatalogSectionCompanionExperiences, listPath: "/catalog/daggerheart/companion-experiences/table", detailPath: "/catalog/daggerheart/companion-experiences/comp-1", expected: "Tracker"},
+		{section: templates.CatalogSectionEnvironments, listPath: "/catalog/daggerheart/environments/table", detailPath: "/catalog/daggerheart/environments/env-1", expected: "Haunted Keep"},
+	}
+
+	for _, tc := range sections {
+		t.Run(tc.section+" table", func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "http://example.com"+tc.listPath, nil)
+			req.Header.Set("HX-Request", "true")
+			rec := httptest.NewRecorder()
+			handler.ServeHTTP(rec, req)
+
+			if rec.Code != http.StatusOK {
+				t.Fatalf("expected 200, got %d", rec.Code)
+			}
+			assertContains(t, rec.Body.String(), tc.expected)
+		})
+
+		t.Run(tc.section+" detail", func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "http://example.com"+tc.detailPath, nil)
+			rec := httptest.NewRecorder()
+			handler.ServeHTTP(rec, req)
+
+			if rec.Code != http.StatusOK {
+				t.Fatalf("expected 200, got %d", rec.Code)
+			}
+			assertContains(t, rec.Body.String(), "<!doctype html>")
+			assertContains(t, rec.Body.String(), tc.expected)
 		})
 	}
 }
@@ -434,6 +579,7 @@ type testClientProvider struct {
 	invite      statev1.InviteServiceClient
 	participant statev1.ParticipantServiceClient
 	system      statev1.SystemServiceClient
+	content     daggerheartv1.DaggerheartContentServiceClient
 }
 
 func (p testClientProvider) CampaignClient() statev1.CampaignServiceClient {
@@ -476,6 +622,10 @@ func (p testClientProvider) AuthClient() authv1.AuthServiceClient {
 	return p.auth
 }
 
+func (p testClientProvider) DaggerheartContentClient() daggerheartv1.DaggerheartContentServiceClient {
+	return p.content
+}
+
 type testAuthClient struct {
 	user               *authv1.User
 	users              []*authv1.User
@@ -509,6 +659,280 @@ func (c *testSystemClient) GetGameSystem(ctx context.Context, in *statev1.GetGam
 		return nil, c.getErr
 	}
 	return c.getResponse, nil
+}
+
+type testContentClient struct {
+	daggerheartv1.DaggerheartContentServiceClient
+	listClassesResponse              *daggerheartv1.ListDaggerheartClassesResponse
+	listClassesErr                   error
+	getClassResponse                 *daggerheartv1.GetDaggerheartClassResponse
+	getClassErr                      error
+	listSubclassesResponse           *daggerheartv1.ListDaggerheartSubclassesResponse
+	listSubclassesErr                error
+	getSubclassResponse              *daggerheartv1.GetDaggerheartSubclassResponse
+	getSubclassErr                   error
+	listHeritagesResponse            *daggerheartv1.ListDaggerheartHeritagesResponse
+	listHeritagesErr                 error
+	getHeritageResponse              *daggerheartv1.GetDaggerheartHeritageResponse
+	getHeritageErr                   error
+	listExperiencesResponse          *daggerheartv1.ListDaggerheartExperiencesResponse
+	listExperiencesErr               error
+	getExperienceResponse            *daggerheartv1.GetDaggerheartExperienceResponse
+	getExperienceErr                 error
+	listDomainsResponse              *daggerheartv1.ListDaggerheartDomainsResponse
+	listDomainsErr                   error
+	getDomainResponse                *daggerheartv1.GetDaggerheartDomainResponse
+	getDomainErr                     error
+	listDomainCardsResponse          *daggerheartv1.ListDaggerheartDomainCardsResponse
+	listDomainCardsErr               error
+	getDomainCardResponse            *daggerheartv1.GetDaggerheartDomainCardResponse
+	getDomainCardErr                 error
+	listItemsResponse                *daggerheartv1.ListDaggerheartItemsResponse
+	listItemsErr                     error
+	getItemResponse                  *daggerheartv1.GetDaggerheartItemResponse
+	getItemErr                       error
+	listWeaponsResponse              *daggerheartv1.ListDaggerheartWeaponsResponse
+	listWeaponsErr                   error
+	getWeaponResponse                *daggerheartv1.GetDaggerheartWeaponResponse
+	getWeaponErr                     error
+	listArmorResponse                *daggerheartv1.ListDaggerheartArmorResponse
+	listArmorErr                     error
+	getArmorResponse                 *daggerheartv1.GetDaggerheartArmorResponse
+	getArmorErr                      error
+	listLootEntriesResponse          *daggerheartv1.ListDaggerheartLootEntriesResponse
+	listLootEntriesErr               error
+	getLootEntryResponse             *daggerheartv1.GetDaggerheartLootEntryResponse
+	getLootEntryErr                  error
+	listDamageTypesResponse          *daggerheartv1.ListDaggerheartDamageTypesResponse
+	listDamageTypesErr               error
+	getDamageTypeResponse            *daggerheartv1.GetDaggerheartDamageTypeResponse
+	getDamageTypeErr                 error
+	listAdversariesResponse          *daggerheartv1.ListDaggerheartAdversariesResponse
+	listAdversariesErr               error
+	getAdversaryResponse             *daggerheartv1.GetDaggerheartAdversaryResponse
+	getAdversaryErr                  error
+	listBeastformsResponse           *daggerheartv1.ListDaggerheartBeastformsResponse
+	listBeastformsErr                error
+	getBeastformResponse             *daggerheartv1.GetDaggerheartBeastformResponse
+	getBeastformErr                  error
+	listCompanionExperiencesResponse *daggerheartv1.ListDaggerheartCompanionExperiencesResponse
+	listCompanionExperiencesErr      error
+	getCompanionExperienceResponse   *daggerheartv1.GetDaggerheartCompanionExperienceResponse
+	getCompanionExperienceErr        error
+	listEnvironmentsResponse         *daggerheartv1.ListDaggerheartEnvironmentsResponse
+	listEnvironmentsErr              error
+	getEnvironmentResponse           *daggerheartv1.GetDaggerheartEnvironmentResponse
+	getEnvironmentErr                error
+}
+
+func (c *testContentClient) ListClasses(ctx context.Context, in *daggerheartv1.ListDaggerheartClassesRequest, opts ...grpc.CallOption) (*daggerheartv1.ListDaggerheartClassesResponse, error) {
+	if c.listClassesErr != nil {
+		return nil, c.listClassesErr
+	}
+	return c.listClassesResponse, nil
+}
+
+func (c *testContentClient) GetClass(ctx context.Context, in *daggerheartv1.GetDaggerheartClassRequest, opts ...grpc.CallOption) (*daggerheartv1.GetDaggerheartClassResponse, error) {
+	if c.getClassErr != nil {
+		return nil, c.getClassErr
+	}
+	return c.getClassResponse, nil
+}
+
+func (c *testContentClient) ListSubclasses(ctx context.Context, in *daggerheartv1.ListDaggerheartSubclassesRequest, opts ...grpc.CallOption) (*daggerheartv1.ListDaggerheartSubclassesResponse, error) {
+	if c.listSubclassesErr != nil {
+		return nil, c.listSubclassesErr
+	}
+	return c.listSubclassesResponse, nil
+}
+
+func (c *testContentClient) GetSubclass(ctx context.Context, in *daggerheartv1.GetDaggerheartSubclassRequest, opts ...grpc.CallOption) (*daggerheartv1.GetDaggerheartSubclassResponse, error) {
+	if c.getSubclassErr != nil {
+		return nil, c.getSubclassErr
+	}
+	return c.getSubclassResponse, nil
+}
+
+func (c *testContentClient) ListHeritages(ctx context.Context, in *daggerheartv1.ListDaggerheartHeritagesRequest, opts ...grpc.CallOption) (*daggerheartv1.ListDaggerheartHeritagesResponse, error) {
+	if c.listHeritagesErr != nil {
+		return nil, c.listHeritagesErr
+	}
+	return c.listHeritagesResponse, nil
+}
+
+func (c *testContentClient) GetHeritage(ctx context.Context, in *daggerheartv1.GetDaggerheartHeritageRequest, opts ...grpc.CallOption) (*daggerheartv1.GetDaggerheartHeritageResponse, error) {
+	if c.getHeritageErr != nil {
+		return nil, c.getHeritageErr
+	}
+	return c.getHeritageResponse, nil
+}
+
+func (c *testContentClient) ListExperiences(ctx context.Context, in *daggerheartv1.ListDaggerheartExperiencesRequest, opts ...grpc.CallOption) (*daggerheartv1.ListDaggerheartExperiencesResponse, error) {
+	if c.listExperiencesErr != nil {
+		return nil, c.listExperiencesErr
+	}
+	return c.listExperiencesResponse, nil
+}
+
+func (c *testContentClient) GetExperience(ctx context.Context, in *daggerheartv1.GetDaggerheartExperienceRequest, opts ...grpc.CallOption) (*daggerheartv1.GetDaggerheartExperienceResponse, error) {
+	if c.getExperienceErr != nil {
+		return nil, c.getExperienceErr
+	}
+	return c.getExperienceResponse, nil
+}
+
+func (c *testContentClient) ListDomains(ctx context.Context, in *daggerheartv1.ListDaggerheartDomainsRequest, opts ...grpc.CallOption) (*daggerheartv1.ListDaggerheartDomainsResponse, error) {
+	if c.listDomainsErr != nil {
+		return nil, c.listDomainsErr
+	}
+	return c.listDomainsResponse, nil
+}
+
+func (c *testContentClient) GetDomain(ctx context.Context, in *daggerheartv1.GetDaggerheartDomainRequest, opts ...grpc.CallOption) (*daggerheartv1.GetDaggerheartDomainResponse, error) {
+	if c.getDomainErr != nil {
+		return nil, c.getDomainErr
+	}
+	return c.getDomainResponse, nil
+}
+
+func (c *testContentClient) ListDomainCards(ctx context.Context, in *daggerheartv1.ListDaggerheartDomainCardsRequest, opts ...grpc.CallOption) (*daggerheartv1.ListDaggerheartDomainCardsResponse, error) {
+	if c.listDomainCardsErr != nil {
+		return nil, c.listDomainCardsErr
+	}
+	return c.listDomainCardsResponse, nil
+}
+
+func (c *testContentClient) GetDomainCard(ctx context.Context, in *daggerheartv1.GetDaggerheartDomainCardRequest, opts ...grpc.CallOption) (*daggerheartv1.GetDaggerheartDomainCardResponse, error) {
+	if c.getDomainCardErr != nil {
+		return nil, c.getDomainCardErr
+	}
+	return c.getDomainCardResponse, nil
+}
+
+func (c *testContentClient) ListItems(ctx context.Context, in *daggerheartv1.ListDaggerheartItemsRequest, opts ...grpc.CallOption) (*daggerheartv1.ListDaggerheartItemsResponse, error) {
+	if c.listItemsErr != nil {
+		return nil, c.listItemsErr
+	}
+	return c.listItemsResponse, nil
+}
+
+func (c *testContentClient) GetItem(ctx context.Context, in *daggerheartv1.GetDaggerheartItemRequest, opts ...grpc.CallOption) (*daggerheartv1.GetDaggerheartItemResponse, error) {
+	if c.getItemErr != nil {
+		return nil, c.getItemErr
+	}
+	return c.getItemResponse, nil
+}
+
+func (c *testContentClient) ListWeapons(ctx context.Context, in *daggerheartv1.ListDaggerheartWeaponsRequest, opts ...grpc.CallOption) (*daggerheartv1.ListDaggerheartWeaponsResponse, error) {
+	if c.listWeaponsErr != nil {
+		return nil, c.listWeaponsErr
+	}
+	return c.listWeaponsResponse, nil
+}
+
+func (c *testContentClient) GetWeapon(ctx context.Context, in *daggerheartv1.GetDaggerheartWeaponRequest, opts ...grpc.CallOption) (*daggerheartv1.GetDaggerheartWeaponResponse, error) {
+	if c.getWeaponErr != nil {
+		return nil, c.getWeaponErr
+	}
+	return c.getWeaponResponse, nil
+}
+
+func (c *testContentClient) ListArmor(ctx context.Context, in *daggerheartv1.ListDaggerheartArmorRequest, opts ...grpc.CallOption) (*daggerheartv1.ListDaggerheartArmorResponse, error) {
+	if c.listArmorErr != nil {
+		return nil, c.listArmorErr
+	}
+	return c.listArmorResponse, nil
+}
+
+func (c *testContentClient) GetArmor(ctx context.Context, in *daggerheartv1.GetDaggerheartArmorRequest, opts ...grpc.CallOption) (*daggerheartv1.GetDaggerheartArmorResponse, error) {
+	if c.getArmorErr != nil {
+		return nil, c.getArmorErr
+	}
+	return c.getArmorResponse, nil
+}
+
+func (c *testContentClient) ListLootEntries(ctx context.Context, in *daggerheartv1.ListDaggerheartLootEntriesRequest, opts ...grpc.CallOption) (*daggerheartv1.ListDaggerheartLootEntriesResponse, error) {
+	if c.listLootEntriesErr != nil {
+		return nil, c.listLootEntriesErr
+	}
+	return c.listLootEntriesResponse, nil
+}
+
+func (c *testContentClient) GetLootEntry(ctx context.Context, in *daggerheartv1.GetDaggerheartLootEntryRequest, opts ...grpc.CallOption) (*daggerheartv1.GetDaggerheartLootEntryResponse, error) {
+	if c.getLootEntryErr != nil {
+		return nil, c.getLootEntryErr
+	}
+	return c.getLootEntryResponse, nil
+}
+
+func (c *testContentClient) ListDamageTypes(ctx context.Context, in *daggerheartv1.ListDaggerheartDamageTypesRequest, opts ...grpc.CallOption) (*daggerheartv1.ListDaggerheartDamageTypesResponse, error) {
+	if c.listDamageTypesErr != nil {
+		return nil, c.listDamageTypesErr
+	}
+	return c.listDamageTypesResponse, nil
+}
+
+func (c *testContentClient) GetDamageType(ctx context.Context, in *daggerheartv1.GetDaggerheartDamageTypeRequest, opts ...grpc.CallOption) (*daggerheartv1.GetDaggerheartDamageTypeResponse, error) {
+	if c.getDamageTypeErr != nil {
+		return nil, c.getDamageTypeErr
+	}
+	return c.getDamageTypeResponse, nil
+}
+
+func (c *testContentClient) ListAdversaries(ctx context.Context, in *daggerheartv1.ListDaggerheartAdversariesRequest, opts ...grpc.CallOption) (*daggerheartv1.ListDaggerheartAdversariesResponse, error) {
+	if c.listAdversariesErr != nil {
+		return nil, c.listAdversariesErr
+	}
+	return c.listAdversariesResponse, nil
+}
+
+func (c *testContentClient) GetAdversary(ctx context.Context, in *daggerheartv1.GetDaggerheartAdversaryRequest, opts ...grpc.CallOption) (*daggerheartv1.GetDaggerheartAdversaryResponse, error) {
+	if c.getAdversaryErr != nil {
+		return nil, c.getAdversaryErr
+	}
+	return c.getAdversaryResponse, nil
+}
+
+func (c *testContentClient) ListBeastforms(ctx context.Context, in *daggerheartv1.ListDaggerheartBeastformsRequest, opts ...grpc.CallOption) (*daggerheartv1.ListDaggerheartBeastformsResponse, error) {
+	if c.listBeastformsErr != nil {
+		return nil, c.listBeastformsErr
+	}
+	return c.listBeastformsResponse, nil
+}
+
+func (c *testContentClient) GetBeastform(ctx context.Context, in *daggerheartv1.GetDaggerheartBeastformRequest, opts ...grpc.CallOption) (*daggerheartv1.GetDaggerheartBeastformResponse, error) {
+	if c.getBeastformErr != nil {
+		return nil, c.getBeastformErr
+	}
+	return c.getBeastformResponse, nil
+}
+
+func (c *testContentClient) ListCompanionExperiences(ctx context.Context, in *daggerheartv1.ListDaggerheartCompanionExperiencesRequest, opts ...grpc.CallOption) (*daggerheartv1.ListDaggerheartCompanionExperiencesResponse, error) {
+	if c.listCompanionExperiencesErr != nil {
+		return nil, c.listCompanionExperiencesErr
+	}
+	return c.listCompanionExperiencesResponse, nil
+}
+
+func (c *testContentClient) GetCompanionExperience(ctx context.Context, in *daggerheartv1.GetDaggerheartCompanionExperienceRequest, opts ...grpc.CallOption) (*daggerheartv1.GetDaggerheartCompanionExperienceResponse, error) {
+	if c.getCompanionExperienceErr != nil {
+		return nil, c.getCompanionExperienceErr
+	}
+	return c.getCompanionExperienceResponse, nil
+}
+
+func (c *testContentClient) ListEnvironments(ctx context.Context, in *daggerheartv1.ListDaggerheartEnvironmentsRequest, opts ...grpc.CallOption) (*daggerheartv1.ListDaggerheartEnvironmentsResponse, error) {
+	if c.listEnvironmentsErr != nil {
+		return nil, c.listEnvironmentsErr
+	}
+	return c.listEnvironmentsResponse, nil
+}
+
+func (c *testContentClient) GetEnvironment(ctx context.Context, in *daggerheartv1.GetDaggerheartEnvironmentRequest, opts ...grpc.CallOption) (*daggerheartv1.GetDaggerheartEnvironmentResponse, error) {
+	if c.getEnvironmentErr != nil {
+		return nil, c.getEnvironmentErr
+	}
+	return c.getEnvironmentResponse, nil
 }
 
 func (c *testAuthClient) CreateUser(ctx context.Context, in *authv1.CreateUserRequest, opts ...grpc.CallOption) (*authv1.CreateUserResponse, error) {
@@ -1210,6 +1634,7 @@ type testFullClientProvider struct {
 	event       statev1.EventServiceClient
 	statistics  statev1.StatisticsServiceClient
 	snapshot    statev1.SnapshotServiceClient
+	content     daggerheartv1.DaggerheartContentServiceClient
 }
 
 func (p testFullClientProvider) CampaignClient() statev1.CampaignServiceClient   { return p.campaign }
@@ -1226,6 +1651,9 @@ func (p testFullClientProvider) StatisticsClient() statev1.StatisticsServiceClie
 }
 func (p testFullClientProvider) SystemClient() statev1.SystemServiceClient { return p.system }
 func (p testFullClientProvider) AuthClient() authv1.AuthServiceClient      { return p.auth }
+func (p testFullClientProvider) DaggerheartContentClient() daggerheartv1.DaggerheartContentServiceClient {
+	return p.content
+}
 
 // --- Handler route tests ---
 

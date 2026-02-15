@@ -304,6 +304,27 @@ func (f *fakeContentStore) DeleteDaggerheartEnvironment(_ context.Context, _ str
 	return nil
 }
 
+func (f *fakeContentStore) ListDaggerheartContentStrings(_ context.Context, contentType string, contentIDs []string, locale string) ([]storage.DaggerheartContentString, error) {
+	if len(contentIDs) == 0 {
+		return nil, nil
+	}
+	idSet := make(map[string]struct{}, len(contentIDs))
+	for _, id := range contentIDs {
+		idSet[id] = struct{}{}
+	}
+	results := make([]storage.DaggerheartContentString, 0)
+	for _, entry := range f.contentStrings {
+		if entry.ContentType != contentType || entry.Locale != locale {
+			continue
+		}
+		if _, ok := idSet[entry.ContentID]; !ok {
+			continue
+		}
+		results = append(results, entry)
+	}
+	return results, nil
+}
+
 func (f *fakeContentStore) PutDaggerheartContentString(_ context.Context, s storage.DaggerheartContentString) error {
 	f.contentStrings = append(f.contentStrings, s)
 	return nil
