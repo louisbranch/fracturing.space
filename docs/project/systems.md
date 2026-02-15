@@ -7,7 +7,7 @@ nav_order: 6
 # Systems checklist
 
 Use this as the high-level design checklist for a new rules system. For the
-architecture and implementation steps, see `game-systems.md`.
+architecture and implementation steps, see [game systems](game-systems.md).
 
 ## System surface
 
@@ -62,6 +62,6 @@ architecture and implementation steps, see `game-systems.md`.
 
 ## Where to go next
 
-- Game system architecture and implementation: `game-systems.md`
-- Event sourcing and replay: `event-replay.md`
-- Domain language: `domain-language.md`
+- [Game system architecture and implementation](game-systems.md)
+- [Event sourcing and replay](event-replay.md)
+- [Domain language](domain-language.md)

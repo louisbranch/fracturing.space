@@ -7,7 +7,7 @@ nav_order: 5
 # Configuration
 
 This is the full environment variable reference. For setup steps, see
-`quickstart.md` or `local-dev.md`.
+[quickstart](quickstart.md) or [local development](local-dev.md).
 
 ## Environment variables
 
