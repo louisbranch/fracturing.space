@@ -10,8 +10,9 @@ import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/fork"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/fork"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -69,15 +70,15 @@ func (s *ForkService) ForkCampaign(ctx context.Context, in *campaignv1.ForkCampa
 
 func shouldCopyForkEvent(evt event.Event, copyParticipants bool) (bool, error) {
 	switch evt.Type {
-	case event.TypeCampaignCreated, event.TypeCampaignForked:
+	case event.Type("campaign.created"), event.Type("campaign.forked"):
 		return false, nil
-	case event.TypeParticipantJoined, event.TypeParticipantUpdated, event.TypeParticipantLeft:
+	case event.Type("participant.joined"), event.Type("participant.updated"), event.Type("participant.left"):
 		return copyParticipants, nil
-	case event.TypeCharacterUpdated:
+	case event.Type("character.updated"):
 		if copyParticipants {
 			return true, nil
 		}
-		var payload event.CharacterUpdatedPayload
+		var payload character.UpdatePayload
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 			return false, fmt.Errorf("decode character.updated payload: %w", err)
 		}
@@ -85,10 +86,7 @@ func shouldCopyForkEvent(evt event.Event, copyParticipants bool) (bool, error) {
 		if !hasParticipant {
 			return true, nil
 		}
-		participantID, ok := participantValue.(string)
-		if !ok {
-			return false, fmt.Errorf("character.updated participant_id must be string")
-		}
+		participantID := strings.TrimSpace(participantValue)
 		if strings.TrimSpace(participantID) == "" {
 			return true, nil
 		}
@@ -106,6 +104,10 @@ func forkEventForCampaign(evt event.Event, campaignID string) event.Event {
 	forked.CampaignID = campaignID
 	forked.Seq = 0
 	forked.Hash = ""
+	forked.PrevHash = ""
+	forked.ChainHash = ""
+	forked.Signature = ""
+	forked.SignatureKeyID = ""
 	if strings.EqualFold(evt.EntityType, "campaign") {
 		forked.EntityID = campaignID
 	}

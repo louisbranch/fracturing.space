@@ -1,9 +1,18 @@
 package daggerheart
 
 import (
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/projection"
+	"context"
+
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
+	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
+
+// Domain executes domain commands and returns the result.
+type Domain interface {
+	Execute(ctx context.Context, cmd command.Command) (engine.Result, error)
+}
 
 // Stores groups storage interfaces used by the Daggerheart service.
 type Stores struct {
@@ -15,6 +24,7 @@ type Stores struct {
 	Daggerheart        storage.DaggerheartStore
 	DaggerheartContent storage.DaggerheartContentStore
 	Event              storage.EventStore
+	Domain             Domain
 }
 
 // Applier returns a projection Applier wired to the stores in this bundle.

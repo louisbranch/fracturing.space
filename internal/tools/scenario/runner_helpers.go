@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"sort"
 	"strings"
 	"sync"
@@ -101,6 +102,29 @@ func (r *Runner) requireEventTypesAfterSeq(ctx context.Context, state *scenarioS
 		}
 	}
 	return nil
+}
+
+func (r *Runner) requireDaggerheartEventTypesAfterSeq(ctx context.Context, state *scenarioState, before uint64, types ...any) error {
+	eventTypes, err := convertDaggerheartEventTypes(types...)
+	if err != nil {
+		return fmt.Errorf("convert daggerheart event type: %w", err)
+	}
+	return r.requireEventTypesAfterSeq(ctx, state, before, eventTypes...)
+}
+
+func convertDaggerheartEventTypes(types ...any) ([]event.Type, error) {
+	if len(types) == 0 {
+		return nil, nil
+	}
+	converted := make([]event.Type, 0, len(types))
+	for _, eventType := range types {
+		value := reflect.ValueOf(eventType)
+		if !value.IsValid() || value.Kind() != reflect.String {
+			return nil, fmt.Errorf("unsupported event type %T", eventType)
+		}
+		converted = append(converted, event.Type(value.String()))
+	}
+	return converted, nil
 }
 
 func (r *Runner) requireAnyEventTypesAfterSeq(ctx context.Context, state *scenarioState, before uint64, types ...event.Type) error {

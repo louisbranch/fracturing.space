@@ -9,9 +9,12 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/character"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/session"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -28,10 +31,10 @@ func TestForkCampaign_ReplaysEvents_CopyParticipantsFalse(t *testing.T) {
 	eventStore := newFakeEventStore()
 	forkStore := newFakeCampaignForkStore()
 
-	campaignStore.campaigns["source"] = campaign.Campaign{
+	campaignStore.campaigns["source"] = storage.CampaignRecord{
 		ID:          "source",
 		Name:        "Source Campaign",
-		Status:      campaign.CampaignStatusActive,
+		Status:      campaign.StatusActive,
 		System:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 		GmMode:      campaign.GmModeHuman,
 		ThemePrompt: "theme",
@@ -40,10 +43,10 @@ func TestForkCampaign_ReplaysEvents_CopyParticipantsFalse(t *testing.T) {
 	appendEvent(t, eventStore, event.Event{
 		CampaignID: "source",
 		Timestamp:  now.Add(-10 * time.Hour),
-		Type:       event.TypeCampaignCreated,
+		Type:       event.Type("campaign.created"),
 		EntityType: "campaign",
 		EntityID:   "source",
-		PayloadJSON: mustJSON(t, event.CampaignCreatedPayload{
+		PayloadJSON: mustJSON(t, campaign.CreatePayload{
 			Name:        "Source Campaign",
 			GameSystem:  commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART.String(),
 			GmMode:      statev1.GmMode_HUMAN.String(),
@@ -53,10 +56,10 @@ func TestForkCampaign_ReplaysEvents_CopyParticipantsFalse(t *testing.T) {
 	appendEvent(t, eventStore, event.Event{
 		CampaignID: "source",
 		Timestamp:  now.Add(-9 * time.Hour),
-		Type:       event.TypeParticipantJoined,
+		Type:       event.Type("participant.joined"),
 		EntityType: "participant",
 		EntityID:   "part-1",
-		PayloadJSON: mustJSON(t, event.ParticipantJoinedPayload{
+		PayloadJSON: mustJSON(t, participant.JoinPayload{
 			ParticipantID:  "part-1",
 			DisplayName:    "Alice",
 			Role:           "PLAYER",
@@ -67,10 +70,10 @@ func TestForkCampaign_ReplaysEvents_CopyParticipantsFalse(t *testing.T) {
 	appendEvent(t, eventStore, event.Event{
 		CampaignID: "source",
 		Timestamp:  now.Add(-8 * time.Hour),
-		Type:       event.TypeCharacterCreated,
+		Type:       event.Type("character.created"),
 		EntityType: "character",
 		EntityID:   "char-1",
-		PayloadJSON: mustJSON(t, event.CharacterCreatedPayload{
+		PayloadJSON: mustJSON(t, character.CreatePayload{
 			CharacterID: "char-1",
 			Name:        "Hero",
 			Kind:        "PC",
@@ -79,10 +82,10 @@ func TestForkCampaign_ReplaysEvents_CopyParticipantsFalse(t *testing.T) {
 	appendEvent(t, eventStore, event.Event{
 		CampaignID: "source",
 		Timestamp:  now.Add(-7 * time.Hour),
-		Type:       event.TypeProfileUpdated,
+		Type:       event.Type("character.profile_updated"),
 		EntityType: "character",
 		EntityID:   "char-1",
-		PayloadJSON: mustJSON(t, event.ProfileUpdatedPayload{
+		PayloadJSON: mustJSON(t, character.ProfileUpdatePayload{
 			CharacterID: "char-1",
 			SystemProfile: map[string]any{
 				"daggerheart": map[string]any{
@@ -104,12 +107,12 @@ func TestForkCampaign_ReplaysEvents_CopyParticipantsFalse(t *testing.T) {
 	appendEvent(t, eventStore, event.Event{
 		CampaignID: "source",
 		Timestamp:  now.Add(-6 * time.Hour),
-		Type:       event.TypeCharacterUpdated,
+		Type:       event.Type("character.updated"),
 		EntityType: "character",
 		EntityID:   "char-1",
-		PayloadJSON: mustJSON(t, event.CharacterUpdatedPayload{
+		PayloadJSON: mustJSON(t, character.UpdatePayload{
 			CharacterID: "char-1",
-			Fields: map[string]any{
+			Fields: map[string]string{
 				"participant_id": "part-1",
 			},
 		}),
@@ -117,18 +120,64 @@ func TestForkCampaign_ReplaysEvents_CopyParticipantsFalse(t *testing.T) {
 	appendEvent(t, eventStore, event.Event{
 		CampaignID:    "source",
 		Timestamp:     now.Add(-5 * time.Hour),
-		Type:          daggerheart.EventTypeCharacterStatePatched,
+		Type:          event.Type("action.character_state_patched"),
 		EntityType:    "character",
 		EntityID:      "char-1",
 		SystemID:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART.String(),
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON: mustJSON(t, daggerheart.CharacterStatePatchedPayload{
 			CharacterID: "char-1",
-			HpAfter:     intPtr(6),
+			HPAfter:     intPtr(6),
 			HopeAfter:   intPtr(2),
 			StressAfter: intPtr(1),
 		}),
 	})
+
+	createdPayload := campaign.CreatePayload{
+		Name:        "Forked Campaign",
+		GameSystem:  commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART.String(),
+		GmMode:      statev1.GmMode_HUMAN.String(),
+		ThemePrompt: "theme",
+	}
+	createdJSON, err := json.Marshal(createdPayload)
+	if err != nil {
+		t.Fatalf("encode created payload: %v", err)
+	}
+	forkedPayload := campaign.ForkPayload{
+		ParentCampaignID: "source",
+		ForkEventSeq:     6,
+		OriginCampaignID: "source",
+		CopyParticipants: false,
+	}
+	forkedJSON, err := json.Marshal(forkedPayload)
+	if err != nil {
+		t.Fatalf("encode fork payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("campaign.create"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "fork-1",
+				Type:        event.Type("campaign.created"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				EntityType:  "campaign",
+				EntityID:    "fork-1",
+				PayloadJSON: createdJSON,
+			}),
+		},
+		command.Type("campaign.fork"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "fork-1",
+				Type:        event.Type("campaign.forked"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				EntityType:  "campaign",
+				EntityID:    "fork-1",
+				PayloadJSON: forkedJSON,
+			}),
+		},
+	}}
 
 	svc := &ForkService{
 		stores: Stores{
@@ -138,6 +187,7 @@ func TestForkCampaign_ReplaysEvents_CopyParticipantsFalse(t *testing.T) {
 			Daggerheart:  dhStore,
 			Event:        eventStore,
 			CampaignFork: forkStore,
+			Domain:       domain,
 		},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("fork-1"),
@@ -185,20 +235,20 @@ func TestForkCampaign_ReplaysEvents_CopyParticipantsFalse(t *testing.T) {
 	if len(forkedEvents) != 5 {
 		t.Fatalf("expected 5 forked events, got %d", len(forkedEvents))
 	}
-	if forkedEvents[0].Type != event.TypeCampaignCreated {
-		t.Fatalf("event[0] type = %s, want %s", forkedEvents[0].Type, event.TypeCampaignCreated)
+	if forkedEvents[0].Type != event.Type("campaign.created") {
+		t.Fatalf("event[0] type = %s, want %s", forkedEvents[0].Type, event.Type("campaign.created"))
 	}
-	if forkedEvents[1].Type != event.TypeCampaignForked {
-		t.Fatalf("event[1] type = %s, want %s", forkedEvents[1].Type, event.TypeCampaignForked)
+	if forkedEvents[1].Type != event.Type("campaign.forked") {
+		t.Fatalf("event[1] type = %s, want %s", forkedEvents[1].Type, event.Type("campaign.forked"))
 	}
-	if forkedEvents[2].Type != event.TypeCharacterCreated {
-		t.Fatalf("event[2] type = %s, want %s", forkedEvents[2].Type, event.TypeCharacterCreated)
+	if forkedEvents[2].Type != event.Type("character.created") {
+		t.Fatalf("event[2] type = %s, want %s", forkedEvents[2].Type, event.Type("character.created"))
 	}
-	if forkedEvents[3].Type != event.TypeProfileUpdated {
-		t.Fatalf("event[3] type = %s, want %s", forkedEvents[3].Type, event.TypeProfileUpdated)
+	if forkedEvents[3].Type != event.Type("character.profile_updated") {
+		t.Fatalf("event[3] type = %s, want %s", forkedEvents[3].Type, event.Type("character.profile_updated"))
 	}
-	if forkedEvents[4].Type != daggerheart.EventTypeCharacterStatePatched {
-		t.Fatalf("event[4] type = %s, want %s", forkedEvents[4].Type, daggerheart.EventTypeCharacterStatePatched)
+	if forkedEvents[4].Type != event.Type("action.character_state_patched") {
+		t.Fatalf("event[4] type = %s, want %s", forkedEvents[4].Type, event.Type("action.character_state_patched"))
 	}
 
 	metadata, err := forkStore.GetCampaignForkMetadata(ctx, "fork-1")
@@ -213,6 +263,61 @@ func TestForkCampaign_ReplaysEvents_CopyParticipantsFalse(t *testing.T) {
 	}
 }
 
+func TestForkCampaign_RequiresDomainEngine(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2025, 2, 1, 10, 0, 0, 0, time.UTC)
+
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	characterStore := newFakeCharacterStore()
+	dhStore := newFakeDaggerheartStore()
+	eventStore := newFakeEventStore()
+	forkStore := newFakeCampaignForkStore()
+
+	campaignStore.campaigns["source"] = storage.CampaignRecord{
+		ID:          "source",
+		Name:        "Source Campaign",
+		Status:      campaign.StatusActive,
+		System:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		GmMode:      campaign.GmModeHuman,
+		ThemePrompt: "theme",
+	}
+
+	appendEvent(t, eventStore, event.Event{
+		CampaignID: "source",
+		Timestamp:  now.Add(-10 * time.Hour),
+		Type:       event.Type("campaign.created"),
+		EntityType: "campaign",
+		EntityID:   "source",
+		PayloadJSON: mustJSON(t, campaign.CreatePayload{
+			Name:        "Source Campaign",
+			GameSystem:  commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART.String(),
+			GmMode:      statev1.GmMode_HUMAN.String(),
+			ThemePrompt: "theme",
+		}),
+	})
+
+	svc := &ForkService{
+		stores: Stores{
+			Campaign:     campaignStore,
+			Participant:  participantStore,
+			Character:    characterStore,
+			Daggerheart:  dhStore,
+			Event:        eventStore,
+			CampaignFork: forkStore,
+		},
+		clock:       fixedClock(now),
+		idGenerator: fixedIDGenerator("fork-1"),
+	}
+
+	_, err := svc.ForkCampaign(ctx, &statev1.ForkCampaignRequest{
+		SourceCampaignId: "source",
+		NewCampaignName:  "Forked Campaign",
+		CopyParticipants: false,
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
 func TestForkCampaign_SeedsSnapshotStateAtHead(t *testing.T) {
 	ctx := context.Background()
 	now := time.Date(2025, 2, 1, 10, 0, 0, 0, time.UTC)
@@ -224,20 +329,20 @@ func TestForkCampaign_SeedsSnapshotStateAtHead(t *testing.T) {
 	eventStore := newFakeEventStore()
 	forkStore := newFakeCampaignForkStore()
 
-	campaignStore.campaigns["source"] = campaign.Campaign{
+	campaignStore.campaigns["source"] = storage.CampaignRecord{
 		ID:          "source",
 		Name:        "Source Campaign",
-		Status:      campaign.CampaignStatusActive,
+		Status:      campaign.StatusActive,
 		System:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 		GmMode:      campaign.GmModeHuman,
 		ThemePrompt: "theme",
 	}
-	characterStore.characters["source"] = map[string]character.Character{
+	characterStore.characters["source"] = map[string]storage.CharacterRecord{
 		"char-1": {
 			ID:         "char-1",
 			CampaignID: "source",
 			Name:       "Hero",
-			Kind:       character.CharacterKindPC,
+			Kind:       character.KindPC,
 			CreatedAt:  now.Add(-8 * time.Hour),
 			UpdatedAt:  now.Add(-8 * time.Hour),
 		},
@@ -259,10 +364,10 @@ func TestForkCampaign_SeedsSnapshotStateAtHead(t *testing.T) {
 	appendEvent(t, eventStore, event.Event{
 		CampaignID: "source",
 		Timestamp:  now.Add(-10 * time.Hour),
-		Type:       event.TypeCampaignCreated,
+		Type:       event.Type("campaign.created"),
 		EntityType: "campaign",
 		EntityID:   "source",
-		PayloadJSON: mustJSON(t, event.CampaignCreatedPayload{
+		PayloadJSON: mustJSON(t, campaign.CreatePayload{
 			Name:        "Source Campaign",
 			GameSystem:  commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART.String(),
 			GmMode:      statev1.GmMode_HUMAN.String(),
@@ -272,10 +377,10 @@ func TestForkCampaign_SeedsSnapshotStateAtHead(t *testing.T) {
 	appendEvent(t, eventStore, event.Event{
 		CampaignID: "source",
 		Timestamp:  now.Add(-9 * time.Hour),
-		Type:       event.TypeParticipantJoined,
+		Type:       event.Type("participant.joined"),
 		EntityType: "participant",
 		EntityID:   "part-1",
-		PayloadJSON: mustJSON(t, event.ParticipantJoinedPayload{
+		PayloadJSON: mustJSON(t, participant.JoinPayload{
 			ParticipantID:  "part-1",
 			DisplayName:    "Alice",
 			Role:           "PLAYER",
@@ -286,10 +391,10 @@ func TestForkCampaign_SeedsSnapshotStateAtHead(t *testing.T) {
 	appendEvent(t, eventStore, event.Event{
 		CampaignID: "source",
 		Timestamp:  now.Add(-8 * time.Hour),
-		Type:       event.TypeCharacterCreated,
+		Type:       event.Type("character.created"),
 		EntityType: "character",
 		EntityID:   "char-1",
-		PayloadJSON: mustJSON(t, event.CharacterCreatedPayload{
+		PayloadJSON: mustJSON(t, character.CreatePayload{
 			CharacterID: "char-1",
 			Name:        "Hero",
 			Kind:        "PC",
@@ -298,10 +403,10 @@ func TestForkCampaign_SeedsSnapshotStateAtHead(t *testing.T) {
 	appendEvent(t, eventStore, event.Event{
 		CampaignID: "source",
 		Timestamp:  now.Add(-7 * time.Hour),
-		Type:       event.TypeProfileUpdated,
+		Type:       event.Type("character.profile_updated"),
 		EntityType: "character",
 		EntityID:   "char-1",
-		PayloadJSON: mustJSON(t, event.ProfileUpdatedPayload{
+		PayloadJSON: mustJSON(t, character.ProfileUpdatePayload{
 			CharacterID: "char-1",
 			SystemProfile: map[string]any{
 				"daggerheart": map[string]any{
@@ -323,12 +428,12 @@ func TestForkCampaign_SeedsSnapshotStateAtHead(t *testing.T) {
 	appendEvent(t, eventStore, event.Event{
 		CampaignID: "source",
 		Timestamp:  now.Add(-6 * time.Hour),
-		Type:       event.TypeCharacterUpdated,
+		Type:       event.Type("character.updated"),
 		EntityType: "character",
 		EntityID:   "char-1",
-		PayloadJSON: mustJSON(t, event.CharacterUpdatedPayload{
+		PayloadJSON: mustJSON(t, character.UpdatePayload{
 			CharacterID: "char-1",
-			Fields: map[string]any{
+			Fields: map[string]string{
 				"participant_id": "part-1",
 			},
 		}),
@@ -336,14 +441,14 @@ func TestForkCampaign_SeedsSnapshotStateAtHead(t *testing.T) {
 	appendEvent(t, eventStore, event.Event{
 		CampaignID:    "source",
 		Timestamp:     now.Add(-5 * time.Hour),
-		Type:          daggerheart.EventTypeCharacterStatePatched,
+		Type:          event.Type("action.character_state_patched"),
 		EntityType:    "character",
 		EntityID:      "char-1",
 		SystemID:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART.String(),
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON: mustJSON(t, daggerheart.CharacterStatePatchedPayload{
 			CharacterID: "char-1",
-			HpAfter:     intPtr(6),
+			HPAfter:     intPtr(6),
 			HopeAfter:   intPtr(2),
 			StressAfter: intPtr(1),
 		}),
@@ -351,7 +456,7 @@ func TestForkCampaign_SeedsSnapshotStateAtHead(t *testing.T) {
 	appendEvent(t, eventStore, event.Event{
 		CampaignID:    "source",
 		Timestamp:     now.Add(-4 * time.Hour),
-		Type:          daggerheart.EventTypeGMFearChanged,
+		Type:          event.Type("action.gm_fear_changed"),
 		EntityType:    "campaign",
 		EntityID:      "source",
 		SystemID:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART.String(),
@@ -362,6 +467,52 @@ func TestForkCampaign_SeedsSnapshotStateAtHead(t *testing.T) {
 		}),
 	})
 
+	createdPayload := campaign.CreatePayload{
+		Name:        "Forked Campaign",
+		GameSystem:  commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART.String(),
+		GmMode:      statev1.GmMode_HUMAN.String(),
+		ThemePrompt: "theme",
+	}
+	createdJSON, err := json.Marshal(createdPayload)
+	if err != nil {
+		t.Fatalf("encode created payload: %v", err)
+	}
+	forkedPayload := campaign.ForkPayload{
+		ParentCampaignID: "source",
+		ForkEventSeq:     7,
+		OriginCampaignID: "source",
+		CopyParticipants: false,
+	}
+	forkedJSON, err := json.Marshal(forkedPayload)
+	if err != nil {
+		t.Fatalf("encode fork payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("campaign.create"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "fork-1",
+				Type:        event.Type("campaign.created"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				EntityType:  "campaign",
+				EntityID:    "fork-1",
+				PayloadJSON: createdJSON,
+			}),
+		},
+		command.Type("campaign.fork"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "fork-1",
+				Type:        event.Type("campaign.forked"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				EntityType:  "campaign",
+				EntityID:    "fork-1",
+				PayloadJSON: forkedJSON,
+			}),
+		},
+	}}
+
 	svc := &ForkService{
 		stores: Stores{
 			Campaign:     campaignStore,
@@ -370,12 +521,13 @@ func TestForkCampaign_SeedsSnapshotStateAtHead(t *testing.T) {
 			Daggerheart:  dhStore,
 			Event:        eventStore,
 			CampaignFork: forkStore,
+			Domain:       domain,
 		},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("fork-1"),
 	}
 
-	_, err := svc.ForkCampaign(ctx, &statev1.ForkCampaignRequest{
+	_, err = svc.ForkCampaign(ctx, &statev1.ForkCampaignRequest{
 		SourceCampaignId: "source",
 		NewCampaignName:  "Forked Campaign",
 		CopyParticipants: false,
@@ -408,6 +560,117 @@ func TestForkCampaign_SeedsSnapshotStateAtHead(t *testing.T) {
 	}
 }
 
+func TestForkCampaign_UsesDomainEngine(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2025, 2, 1, 10, 0, 0, 0, time.UTC)
+
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	characterStore := newFakeCharacterStore()
+	dhStore := newFakeDaggerheartStore()
+	eventStore := newFakeEventStore()
+	forkStore := newFakeCampaignForkStore()
+
+	campaignStore.campaigns["source"] = storage.CampaignRecord{
+		ID:          "source",
+		Name:        "Source Campaign",
+		Status:      campaign.StatusActive,
+		System:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		GmMode:      campaign.GmModeHuman,
+		ThemePrompt: "theme",
+	}
+
+	createdPayload := campaign.CreatePayload{
+		Name:        "Forked Campaign",
+		GameSystem:  commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART.String(),
+		GmMode:      statev1.GmMode_HUMAN.String(),
+		ThemePrompt: "theme",
+	}
+	createdJSON, err := json.Marshal(createdPayload)
+	if err != nil {
+		t.Fatalf("encode created payload: %v", err)
+	}
+	forkedPayload := campaign.ForkPayload{
+		ParentCampaignID: "source",
+		ForkEventSeq:     0,
+		OriginCampaignID: "source",
+		CopyParticipants: false,
+	}
+	forkedJSON, err := json.Marshal(forkedPayload)
+	if err != nil {
+		t.Fatalf("encode fork payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("campaign.create"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "fork-1",
+				Type:        event.Type("campaign.created"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				EntityType:  "campaign",
+				EntityID:    "fork-1",
+				PayloadJSON: createdJSON,
+			}),
+		},
+		command.Type("campaign.fork"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "fork-1",
+				Type:        event.Type("campaign.forked"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				EntityType:  "campaign",
+				EntityID:    "fork-1",
+				PayloadJSON: forkedJSON,
+			}),
+		},
+	}}
+
+	svc := &ForkService{
+		stores: Stores{
+			Campaign:     campaignStore,
+			Participant:  participantStore,
+			Character:    characterStore,
+			Daggerheart:  dhStore,
+			Event:        eventStore,
+			CampaignFork: forkStore,
+			Domain:       domain,
+		},
+		clock:       fixedClock(now),
+		idGenerator: fixedIDGenerator("fork-1"),
+	}
+
+	_, err = svc.ForkCampaign(ctx, &statev1.ForkCampaignRequest{
+		SourceCampaignId: "source",
+		NewCampaignName:  "Forked Campaign",
+		CopyParticipants: false,
+	})
+	if err != nil {
+		t.Fatalf("ForkCampaign returned error: %v", err)
+	}
+	if domain.calls != 2 {
+		t.Fatalf("expected domain to be called twice, got %d", domain.calls)
+	}
+	if len(domain.commands) != 2 {
+		t.Fatalf("expected 2 domain commands, got %d", len(domain.commands))
+	}
+	if domain.commands[0].Type != command.Type("campaign.create") {
+		t.Fatalf("command[0] type = %s, want %s", domain.commands[0].Type, "campaign.create")
+	}
+	if domain.commands[1].Type != command.Type("campaign.fork") {
+		t.Fatalf("command[1] type = %s, want %s", domain.commands[1].Type, "campaign.fork")
+	}
+	if got := len(eventStore.events["fork-1"]); got != 2 {
+		t.Fatalf("expected 2 events, got %d", got)
+	}
+	if eventStore.events["fork-1"][0].Type != event.Type("campaign.created") {
+		t.Fatalf("event[0] type = %s, want %s", eventStore.events["fork-1"][0].Type, event.Type("campaign.created"))
+	}
+	if eventStore.events["fork-1"][1].Type != event.Type("campaign.forked") {
+		t.Fatalf("event[1] type = %s, want %s", eventStore.events["fork-1"][1].Type, event.Type("campaign.forked"))
+	}
+}
+
 func TestForkCampaign_SessionBoundaryForkPoint(t *testing.T) {
 	ctx := context.Background()
 	now := time.Date(2025, 2, 2, 9, 0, 0, 0, time.UTC)
@@ -420,21 +683,21 @@ func TestForkCampaign_SessionBoundaryForkPoint(t *testing.T) {
 	forkStore := newFakeCampaignForkStore()
 	sessionStore := newFakeSessionStore()
 
-	campaignStore.campaigns["source"] = campaign.Campaign{
+	campaignStore.campaigns["source"] = storage.CampaignRecord{
 		ID:          "source",
 		Name:        "Source Campaign",
-		Status:      campaign.CampaignStatusActive,
+		Status:      campaign.StatusActive,
 		System:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 		GmMode:      campaign.GmModeHuman,
 		ThemePrompt: "theme",
 	}
 	endedAt := now.Add(-30 * time.Minute)
-	sessionStore.sessions["source"] = map[string]session.Session{
+	sessionStore.sessions["source"] = map[string]storage.SessionRecord{
 		"sess-1": {
 			ID:         "sess-1",
 			CampaignID: "source",
 			Name:       "Session 1",
-			Status:     session.SessionStatusEnded,
+			Status:     session.StatusEnded,
 			StartedAt:  now.Add(-2 * time.Hour),
 			UpdatedAt:  endedAt,
 			EndedAt:    &endedAt,
@@ -444,10 +707,10 @@ func TestForkCampaign_SessionBoundaryForkPoint(t *testing.T) {
 	appendEvent(t, eventStore, event.Event{
 		CampaignID: "source",
 		Timestamp:  now.Add(-3 * time.Hour),
-		Type:       event.TypeCampaignCreated,
+		Type:       event.Type("campaign.created"),
 		EntityType: "campaign",
 		EntityID:   "source",
-		PayloadJSON: mustJSON(t, event.CampaignCreatedPayload{
+		PayloadJSON: mustJSON(t, campaign.CreatePayload{
 			Name:        "Source Campaign",
 			GameSystem:  commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART.String(),
 			GmMode:      statev1.GmMode_HUMAN.String(),
@@ -457,11 +720,11 @@ func TestForkCampaign_SessionBoundaryForkPoint(t *testing.T) {
 	appendEvent(t, eventStore, event.Event{
 		CampaignID: "source",
 		Timestamp:  now.Add(-2 * time.Hour),
-		Type:       event.TypeCharacterCreated,
+		Type:       event.Type("character.created"),
 		EntityType: "character",
 		EntityID:   "char-1",
 		SessionID:  "sess-1",
-		PayloadJSON: mustJSON(t, event.CharacterCreatedPayload{
+		PayloadJSON: mustJSON(t, character.CreatePayload{
 			CharacterID: "char-1",
 			Name:        "Hero",
 			Kind:        "PC",
@@ -470,7 +733,7 @@ func TestForkCampaign_SessionBoundaryForkPoint(t *testing.T) {
 	appendEvent(t, eventStore, event.Event{
 		CampaignID:    "source",
 		Timestamp:     now.Add(-90 * time.Minute),
-		Type:          daggerheart.EventTypeGMFearChanged,
+		Type:          event.Type("action.gm_fear_changed"),
 		EntityType:    "campaign",
 		EntityID:      "source",
 		SessionID:     "sess-1",
@@ -484,17 +747,63 @@ func TestForkCampaign_SessionBoundaryForkPoint(t *testing.T) {
 	appendEvent(t, eventStore, event.Event{
 		CampaignID: "source",
 		Timestamp:  now.Add(-45 * time.Minute),
-		Type:       event.TypeCharacterUpdated,
+		Type:       event.Type("character.updated"),
 		EntityType: "character",
 		EntityID:   "char-1",
 		SessionID:  "sess-2",
-		PayloadJSON: mustJSON(t, event.CharacterUpdatedPayload{
+		PayloadJSON: mustJSON(t, character.UpdatePayload{
 			CharacterID: "char-1",
-			Fields: map[string]any{
+			Fields: map[string]string{
 				"notes": "after session",
 			},
 		}),
 	})
+
+	createdPayload := campaign.CreatePayload{
+		Name:        "Forked Campaign",
+		GameSystem:  commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART.String(),
+		GmMode:      statev1.GmMode_HUMAN.String(),
+		ThemePrompt: "theme",
+	}
+	createdJSON, err := json.Marshal(createdPayload)
+	if err != nil {
+		t.Fatalf("encode created payload: %v", err)
+	}
+	forkedPayload := campaign.ForkPayload{
+		ParentCampaignID: "source",
+		ForkEventSeq:     3,
+		OriginCampaignID: "source",
+		CopyParticipants: false,
+	}
+	forkedJSON, err := json.Marshal(forkedPayload)
+	if err != nil {
+		t.Fatalf("encode fork payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("campaign.create"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "fork-1",
+				Type:        event.Type("campaign.created"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				EntityType:  "campaign",
+				EntityID:    "fork-1",
+				PayloadJSON: createdJSON,
+			}),
+		},
+		command.Type("campaign.fork"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "fork-1",
+				Type:        event.Type("campaign.forked"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				EntityType:  "campaign",
+				EntityID:    "fork-1",
+				PayloadJSON: forkedJSON,
+			}),
+		},
+	}}
 
 	svc := &ForkService{
 		stores: Stores{
@@ -505,6 +814,7 @@ func TestForkCampaign_SessionBoundaryForkPoint(t *testing.T) {
 			Event:        eventStore,
 			CampaignFork: forkStore,
 			Session:      sessionStore,
+			Domain:       domain,
 		},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("fork-1"),
@@ -542,76 +852,76 @@ func TestShouldCopyForkEvent(t *testing.T) {
 	}{
 		{
 			name:      "campaign_created_always_skipped",
-			eventType: event.TypeCampaignCreated,
+			eventType: event.Type("campaign.created"),
 			wantCopy:  false,
 		},
 		{
 			name:      "campaign_forked_always_skipped",
-			eventType: event.TypeCampaignForked,
+			eventType: event.Type("campaign.forked"),
 			wantCopy:  false,
 		},
 		{
 			name:             "participant_joined_skip_when_no_copy",
-			eventType:        event.TypeParticipantJoined,
+			eventType:        event.Type("participant.joined"),
 			copyParticipants: false,
 			wantCopy:         false,
 		},
 		{
 			name:             "participant_joined_copy_when_enabled",
-			eventType:        event.TypeParticipantJoined,
+			eventType:        event.Type("participant.joined"),
 			copyParticipants: true,
 			wantCopy:         true,
 		},
 		{
 			name:             "participant_updated_skip_when_no_copy",
-			eventType:        event.TypeParticipantUpdated,
+			eventType:        event.Type("participant.updated"),
 			copyParticipants: false,
 			wantCopy:         false,
 		},
 		{
 			name:             "participant_left_skip_when_no_copy",
-			eventType:        event.TypeParticipantLeft,
+			eventType:        event.Type("participant.left"),
 			copyParticipants: false,
 			wantCopy:         false,
 		},
 		{
 			name:             "character_updated_copy_when_participants_enabled",
-			eventType:        event.TypeCharacterUpdated,
+			eventType:        event.Type("character.updated"),
 			copyParticipants: true,
 			payload:          []byte(`{"fields":{"participant_id":"p1"}}`),
 			wantCopy:         true,
 		},
 		{
 			name:             "character_updated_no_participant_field",
-			eventType:        event.TypeCharacterUpdated,
+			eventType:        event.Type("character.updated"),
 			copyParticipants: false,
 			payload:          []byte(`{"fields":{"name":"Hero"}}`),
 			wantCopy:         true,
 		},
 		{
 			name:             "character_updated_only_participant_id_field",
-			eventType:        event.TypeCharacterUpdated,
+			eventType:        event.Type("character.updated"),
 			copyParticipants: false,
 			payload:          []byte(`{"fields":{"participant_id":"p1"}}`),
 			wantCopy:         false,
 		},
 		{
 			name:             "character_updated_participant_id_plus_others",
-			eventType:        event.TypeCharacterUpdated,
+			eventType:        event.Type("character.updated"),
 			copyParticipants: false,
 			payload:          []byte(`{"fields":{"participant_id":"p1","name":"Hero"}}`),
 			wantCopy:         true,
 		},
 		{
 			name:             "character_updated_empty_participant_id",
-			eventType:        event.TypeCharacterUpdated,
+			eventType:        event.Type("character.updated"),
 			copyParticipants: false,
 			payload:          []byte(`{"fields":{"participant_id":""}}`),
 			wantCopy:         true,
 		},
 		{
 			name:      "session_started_always_copied",
-			eventType: event.TypeSessionStarted,
+			eventType: event.Type("session.started"),
 			wantCopy:  true,
 		},
 		{
@@ -621,7 +931,7 @@ func TestShouldCopyForkEvent(t *testing.T) {
 		},
 		{
 			name:             "character_updated_invalid_json",
-			eventType:        event.TypeCharacterUpdated,
+			eventType:        event.Type("character.updated"),
 			copyParticipants: false,
 			payload:          []byte(`not json`),
 			wantErr:          true,
@@ -655,7 +965,7 @@ func TestForkEventForCampaign(t *testing.T) {
 		Hash:       "abc",
 		EntityType: "campaign",
 		EntityID:   "old-camp",
-		Type:       event.TypeCampaignUpdated,
+		Type:       event.Type("campaign.updated"),
 	}
 	forked := forkEventForCampaign(evt, "new-camp")
 

@@ -5,13 +5,13 @@ import (
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/session"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // Session proto conversion helpers.
-func sessionToProto(sess session.Session) *campaignv1.Session {
+func sessionToProto(sess storage.SessionRecord) *campaignv1.Session {
 	pb := &campaignv1.Session{
 		Id:         sess.ID,
 		CampaignId: sess.CampaignID,
@@ -26,11 +26,11 @@ func sessionToProto(sess session.Session) *campaignv1.Session {
 	return pb
 }
 
-func sessionStatusToProto(status session.SessionStatus) campaignv1.SessionStatus {
+func sessionStatusToProto(status session.Status) campaignv1.SessionStatus {
 	switch status {
-	case session.SessionStatusActive:
+	case session.StatusActive:
 		return campaignv1.SessionStatus_SESSION_ACTIVE
-	case session.SessionStatusEnded:
+	case session.StatusEnded:
 		return campaignv1.SessionStatus_SESSION_ENDED
 	default:
 		return campaignv1.SessionStatus_SESSION_STATUS_UNSPECIFIED
@@ -64,8 +64,8 @@ func sessionGateToProto(gate storage.SessionGate) (*campaignv1.SessionGate, erro
 	}, nil
 }
 
-func sessionGateStatusToProto(status string) campaignv1.SessionGateStatus {
-	switch strings.ToLower(strings.TrimSpace(status)) {
+func sessionGateStatusToProto(status session.GateStatus) campaignv1.SessionGateStatus {
+	switch strings.ToLower(strings.TrimSpace(string(status))) {
 	case string(session.GateStatusOpen):
 		return campaignv1.SessionGateStatus_SESSION_GATE_OPEN
 	case string(session.GateStatusResolved):
@@ -89,8 +89,8 @@ func sessionSpotlightToProto(spotlight storage.SessionSpotlight) *campaignv1.Ses
 	}
 }
 
-func sessionSpotlightTypeToProto(value string) campaignv1.SessionSpotlightType {
-	trimmed := strings.ToLower(strings.TrimSpace(value))
+func sessionSpotlightTypeToProto(value session.SpotlightType) campaignv1.SessionSpotlightType {
+	trimmed := strings.ToLower(strings.TrimSpace(string(value)))
 	switch trimmed {
 	case string(session.SpotlightTypeGM):
 		return campaignv1.SessionSpotlightType_SESSION_SPOTLIGHT_TYPE_GM

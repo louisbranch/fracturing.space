@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/character"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -16,12 +16,12 @@ func TestCharacterCRUD(t *testing.T) {
 	seedCampaign(t, store, "camp-char", now)
 	seedParticipant(t, store, "camp-char", "part-1", "user-1", now)
 
-	expected := character.Character{
+	expected := storage.CharacterRecord{
 		ID:            "char-1",
 		CampaignID:    "camp-char",
 		ParticipantID: "part-1",
 		Name:          "Aria Starweaver",
-		Kind:          character.CharacterKindPC,
+		Kind:          character.KindPC,
 		Notes:         "Brave adventurer",
 		CreatedAt:     now,
 		UpdatedAt:     now.Add(5 * time.Minute),
@@ -55,11 +55,11 @@ func TestCharacterCRUD(t *testing.T) {
 	}
 
 	// Test with empty ParticipantID (NPC without owner)
-	npc := character.Character{
+	npc := storage.CharacterRecord{
 		ID:         "char-npc",
 		CampaignID: "camp-char",
 		Name:       "Goblin",
-		Kind:       character.CharacterKindNPC,
+		Kind:       character.KindNPC,
 		CreatedAt:  now,
 		UpdatedAt:  now,
 	}
@@ -101,7 +101,7 @@ func TestCharacterListPaging(t *testing.T) {
 	seedCampaign(t, store, "camp-list", now)
 
 	for _, id := range []string{"char-a", "char-b", "char-c"} {
-		seedCharacter(t, store, "camp-list", id, "Name-"+id, character.CharacterKindPC, now)
+		seedCharacter(t, store, "camp-list", id, "Name-"+id, character.KindPC, now)
 	}
 
 	page, err := store.ListCharacters(context.Background(), "camp-list", 2, "")

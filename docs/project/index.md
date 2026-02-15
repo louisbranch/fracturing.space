@@ -6,4 +6,4 @@ has_children: true
 
 # Project
 
-Architecture, domain language, and system design guidance.
+Architecture, event-driven domain, and system design guidance.

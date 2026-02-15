@@ -4,13 +4,15 @@ import (
 	"context"
 	"time"
 
+	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/character"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/invite"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/participant"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/session"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 )
 
 // ErrNotFound indicates a requested record is missing.
@@ -19,41 +21,108 @@ var ErrNotFound = apperrors.New(apperrors.CodeNotFound, "record not found")
 // ErrActiveSessionExists indicates an active session already exists for a campaign.
 var ErrActiveSessionExists = apperrors.New(apperrors.CodeActiveSessionExists, "active session already exists for campaign")
 
+// CampaignRecord captures persisted campaign metadata.
+type CampaignRecord struct {
+	ID               string
+	Name             string
+	Locale           commonv1.Locale
+	System           commonv1.GameSystem
+	Status           campaign.Status
+	GmMode           campaign.GmMode
+	Intent           campaign.Intent
+	AccessPolicy     campaign.AccessPolicy
+	ParticipantCount int
+	CharacterCount   int
+	ThemePrompt      string
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	CompletedAt      *time.Time
+	ArchivedAt       *time.Time
+}
+
+// ParticipantRecord captures persisted participant metadata.
+type ParticipantRecord struct {
+	ID             string
+	CampaignID     string
+	UserID         string
+	DisplayName    string
+	Role           participant.Role
+	Controller     participant.Controller
+	CampaignAccess participant.CampaignAccess
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+// InviteRecord captures persisted invite metadata.
+type InviteRecord struct {
+	ID                     string
+	CampaignID             string
+	ParticipantID          string
+	RecipientUserID        string
+	Status                 invite.Status
+	CreatedByParticipantID string
+	CreatedAt              time.Time
+	UpdatedAt              time.Time
+}
+
+// CharacterRecord captures persisted character metadata.
+type CharacterRecord struct {
+	ID            string
+	CampaignID    string
+	ParticipantID string
+	Name          string
+	Kind          character.Kind
+	Notes         string
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+}
+
+// SessionRecord captures persisted session metadata.
+type SessionRecord struct {
+	ID         string
+	CampaignID string
+	Name       string
+	Status     session.Status
+	StartedAt  time.Time
+	UpdatedAt  time.Time
+	EndedAt    *time.Time
+}
+
 // CampaignStore persists campaign metadata records.
 type CampaignStore interface {
-	Put(ctx context.Context, c campaign.Campaign) error
-	Get(ctx context.Context, id string) (campaign.Campaign, error)
+	Put(ctx context.Context, c CampaignRecord) error
+	Get(ctx context.Context, id string) (CampaignRecord, error)
 	// List returns a page of campaign records starting after the page token.
 	List(ctx context.Context, pageSize int, pageToken string) (CampaignPage, error)
 }
 
 // CampaignPage describes a page of campaign records.
 type CampaignPage struct {
-	Campaigns     []campaign.Campaign
+	Campaigns     []CampaignRecord
 	NextPageToken string
 }
 
 // ParticipantStore persists participant records.
 type ParticipantStore interface {
-	PutParticipant(ctx context.Context, p participant.Participant) error
-	GetParticipant(ctx context.Context, campaignID, participantID string) (participant.Participant, error)
+	PutParticipant(ctx context.Context, p ParticipantRecord) error
+	GetParticipant(ctx context.Context, campaignID, participantID string) (ParticipantRecord, error)
 	DeleteParticipant(ctx context.Context, campaignID, participantID string) error
 	// ListParticipantsByCampaign returns all participants for a campaign.
-	ListParticipantsByCampaign(ctx context.Context, campaignID string) ([]participant.Participant, error)
+	ListParticipantsByCampaign(ctx context.Context, campaignID string) ([]ParticipantRecord, error)
 	// ListParticipants returns a page of participant records for a campaign starting after the page token.
 	ListParticipants(ctx context.Context, campaignID string, pageSize int, pageToken string) (ParticipantPage, error)
 }
 
 // ParticipantPage describes a page of participant records.
 type ParticipantPage struct {
-	Participants  []participant.Participant
+	Participants  []ParticipantRecord
 	NextPageToken string
 }
 
 // InviteStore persists campaign invite records.
 type InviteStore interface {
-	PutInvite(ctx context.Context, inv invite.Invite) error
-	GetInvite(ctx context.Context, inviteID string) (invite.Invite, error)
+	PutInvite(ctx context.Context, inv InviteRecord) error
+	GetInvite(ctx context.Context, inviteID string) (InviteRecord, error)
 	ListInvites(ctx context.Context, campaignID string, recipientUserID string, status invite.Status, pageSize int, pageToken string) (InvitePage, error)
 	ListPendingInvites(ctx context.Context, campaignID string, pageSize int, pageToken string) (InvitePage, error)
 	ListPendingInvitesForRecipient(ctx context.Context, userID string, pageSize int, pageToken string) (InvitePage, error)
@@ -62,14 +131,14 @@ type InviteStore interface {
 
 // InvitePage describes a page of invites.
 type InvitePage struct {
-	Invites       []invite.Invite
+	Invites       []InviteRecord
 	NextPageToken string
 }
 
 // CharacterStore persists character records.
 type CharacterStore interface {
-	PutCharacter(ctx context.Context, c character.Character) error
-	GetCharacter(ctx context.Context, campaignID, characterID string) (character.Character, error)
+	PutCharacter(ctx context.Context, c CharacterRecord) error
+	GetCharacter(ctx context.Context, campaignID, characterID string) (CharacterRecord, error)
 	DeleteCharacter(ctx context.Context, campaignID, characterID string) error
 	// ListCharacters returns a page of character records for a campaign starting after the page token.
 	ListCharacters(ctx context.Context, campaignID string, pageSize int, pageToken string) (CharacterPage, error)
@@ -77,7 +146,7 @@ type CharacterStore interface {
 
 // CharacterPage describes a page of character records.
 type CharacterPage struct {
-	Characters    []character.Character
+	Characters    []CharacterRecord
 	NextPageToken string
 }
 
@@ -85,15 +154,15 @@ type CharacterPage struct {
 type SessionStore interface {
 	// PutSession atomically stores a session and sets it as the active session for the campaign.
 	// Returns ErrActiveSessionExists if an active session already exists for the campaign.
-	PutSession(ctx context.Context, s session.Session) error
+	PutSession(ctx context.Context, s SessionRecord) error
 	// EndSession marks a session as ended and clears it as active for the campaign.
 	// The boolean return value reports whether the session transitioned to ENDED.
-	EndSession(ctx context.Context, campaignID, sessionID string, endedAt time.Time) (session.Session, bool, error)
+	EndSession(ctx context.Context, campaignID, sessionID string, endedAt time.Time) (SessionRecord, bool, error)
 	// GetSession retrieves a session by campaign ID and session ID.
-	GetSession(ctx context.Context, campaignID, sessionID string) (session.Session, error)
+	GetSession(ctx context.Context, campaignID, sessionID string) (SessionRecord, error)
 	// GetActiveSession retrieves the active session for a campaign, if one exists.
 	// Returns ErrNotFound if no active session exists.
-	GetActiveSession(ctx context.Context, campaignID string) (session.Session, error)
+	GetActiveSession(ctx context.Context, campaignID string) (SessionRecord, error)
 	// ListSessions returns a page of session records for a campaign starting after the page token.
 	ListSessions(ctx context.Context, campaignID string, pageSize int, pageToken string) (SessionPage, error)
 }
@@ -213,7 +282,7 @@ type RollOutcomeApplyInput struct {
 // RollOutcomeApplyResult describes the outcome application result from storage.
 type RollOutcomeApplyResult struct {
 	UpdatedCharacterStates []DaggerheartCharacterState
-	AppliedChanges         []session.OutcomeAppliedChange
+	AppliedChanges         []action.OutcomeAppliedChange
 	GMFearChanged          bool
 	GMFearBefore           int
 	GMFearAfter            int
@@ -226,7 +295,7 @@ type RollOutcomeStore interface {
 
 // SessionPage describes a page of session records.
 type SessionPage struct {
-	Sessions      []session.Session
+	Sessions      []SessionRecord
 	NextPageToken string
 }
 
@@ -236,7 +305,7 @@ type SessionGate struct {
 	SessionID           string
 	GateID              string
 	GateType            string
-	Status              string
+	Status              session.GateStatus
 	Reason              string
 	CreatedAt           time.Time
 	CreatedByActorType  string
@@ -262,7 +331,7 @@ type SessionGateStore interface {
 type SessionSpotlight struct {
 	CampaignID         string
 	SessionID          string
-	SpotlightType      string
+	SpotlightType      session.SpotlightType
 	CharacterID        string
 	UpdatedAt          time.Time
 	UpdatedByActorType string

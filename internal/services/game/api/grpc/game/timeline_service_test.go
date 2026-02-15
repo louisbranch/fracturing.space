@@ -10,11 +10,12 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/character"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/participant"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/session"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 )
 
@@ -47,36 +48,36 @@ func TestListTimelineEntries_ProjectionDisplayByDomain(t *testing.T) {
 	eventStore := newFakeEventStore()
 
 	now := time.Now().UTC()
-	campaignStore.campaigns["c1"] = campaign.Campaign{
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
 		Name:   "Riverfall",
 		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		Status: campaign.CampaignStatusDraft,
+		Status: campaign.StatusDraft,
 	}
-	participantStore.participants["c1"] = map[string]participant.Participant{
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
 		"p1": {
 			ID:             "p1",
 			CampaignID:     "c1",
 			DisplayName:    "Ada",
-			Role:           participant.ParticipantRoleGM,
+			Role:           participant.RoleGM,
 			Controller:     participant.ControllerAI,
 			CampaignAccess: participant.CampaignAccessOwner,
 		},
 	}
-	characterStore.characters["c1"] = map[string]character.Character{
+	characterStore.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {
 			ID:         "ch1",
 			CampaignID: "c1",
 			Name:       "Frodo",
-			Kind:       character.CharacterKindPC,
+			Kind:       character.KindPC,
 		},
 	}
-	sessionStore.sessions["c1"] = map[string]session.Session{
+	sessionStore.sessions["c1"] = map[string]storage.SessionRecord{
 		"s1": {
 			ID:         "s1",
 			CampaignID: "c1",
 			Name:       "Session 1",
-			Status:     session.SessionStatusActive,
+			Status:     session.StatusActive,
 			StartedAt:  now,
 		},
 	}
@@ -93,38 +94,38 @@ func TestListTimelineEntries_ProjectionDisplayByDomain(t *testing.T) {
 		{
 			CampaignID:  "c1",
 			Seq:         1,
-			Type:        event.TypeCampaignCreated,
+			Type:        event.Type("campaign.created"),
 			EntityType:  "campaign",
 			EntityID:    "c1",
 			Timestamp:   now,
-			PayloadJSON: seedPayload(event.CampaignCreatedPayload{Name: "Riverfall"}),
+			PayloadJSON: seedPayload(campaign.CreatePayload{Name: "Riverfall"}),
 		},
 		{
 			CampaignID:  "c1",
 			Seq:         2,
-			Type:        event.TypeParticipantJoined,
+			Type:        event.Type("participant.joined"),
 			EntityType:  "participant",
 			EntityID:    "p1",
 			Timestamp:   now,
-			PayloadJSON: seedPayload(event.ParticipantJoinedPayload{ParticipantID: "p1"}),
+			PayloadJSON: seedPayload(participant.JoinPayload{ParticipantID: "p1"}),
 		},
 		{
 			CampaignID:  "c1",
 			Seq:         3,
-			Type:        event.TypeCharacterCreated,
+			Type:        event.Type("character.created"),
 			EntityType:  "character",
 			EntityID:    "ch1",
 			Timestamp:   now,
-			PayloadJSON: seedPayload(event.CharacterCreatedPayload{CharacterID: "ch1"}),
+			PayloadJSON: seedPayload(character.CreatePayload{CharacterID: "ch1"}),
 		},
 		{
 			CampaignID:  "c1",
 			Seq:         4,
-			Type:        event.TypeSessionStarted,
+			Type:        event.Type("session.started"),
 			EntityType:  "session",
 			EntityID:    "s1",
 			Timestamp:   now,
-			PayloadJSON: seedPayload(event.SessionStartedPayload{SessionID: "s1"}),
+			PayloadJSON: seedPayload(session.StartPayload{SessionID: "s1"}),
 		},
 	}
 
@@ -174,12 +175,12 @@ func TestListTimelineEntries_CharacterStateChanges(t *testing.T) {
 	eventStore := newFakeEventStore()
 
 	now := time.Now().UTC()
-	characterStore.characters["c1"] = map[string]character.Character{
+	characterStore.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {
 			ID:         "ch1",
 			CampaignID: "c1",
 			Name:       "Frodo",
-			Kind:       character.CharacterKindPC,
+			Kind:       character.KindPC,
 		},
 	}
 
@@ -191,7 +192,7 @@ func TestListTimelineEntries_CharacterStateChanges(t *testing.T) {
 	lifeStateAfter := "alive"
 	payload := daggerheart.CharacterStatePatchedPayload{
 		CharacterID:    "ch1",
-		HpAfter:        &hpAfter,
+		HPAfter:        &hpAfter,
 		HopeAfter:      &hopeAfter,
 		HopeMaxAfter:   &hopeMaxAfter,
 		StressAfter:    &stressAfter,
@@ -207,7 +208,7 @@ func TestListTimelineEntries_CharacterStateChanges(t *testing.T) {
 		{
 			CampaignID:  "c1",
 			Seq:         1,
-			Type:        daggerheart.EventTypeCharacterStatePatched,
+			Type:        event.Type("action.character_state_patched"),
 			EntityType:  "character",
 			EntityID:    "ch1",
 			Timestamp:   now,
@@ -258,12 +259,12 @@ func TestListTimelineEntries_CharacterStateChanges_WithBefore(t *testing.T) {
 	eventStore := newFakeEventStore()
 
 	now := time.Now().UTC()
-	characterStore.characters["c1"] = map[string]character.Character{
+	characterStore.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {
 			ID:         "ch1",
 			CampaignID: "c1",
 			Name:       "Frodo",
-			Kind:       character.CharacterKindPC,
+			Kind:       character.KindPC,
 		},
 	}
 
@@ -281,8 +282,8 @@ func TestListTimelineEntries_CharacterStateChanges_WithBefore(t *testing.T) {
 	lifeStateAfter := "dying"
 	payload := daggerheart.CharacterStatePatchedPayload{
 		CharacterID:     "ch1",
-		HpBefore:        &hpBefore,
-		HpAfter:         &hpAfter,
+		HPBefore:        &hpBefore,
+		HPAfter:         &hpAfter,
 		HopeBefore:      &hopeBefore,
 		HopeAfter:       &hopeAfter,
 		HopeMaxBefore:   &hopeMaxBefore,
@@ -303,7 +304,7 @@ func TestListTimelineEntries_CharacterStateChanges_WithBefore(t *testing.T) {
 		{
 			CampaignID:  "c1",
 			Seq:         1,
-			Type:        daggerheart.EventTypeCharacterStatePatched,
+			Type:        event.Type("action.character_state_patched"),
 			EntityType:  "character",
 			EntityID:    "ch1",
 			Timestamp:   now,

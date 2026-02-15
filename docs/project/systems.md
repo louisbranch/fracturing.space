@@ -62,6 +62,7 @@ architecture and implementation steps, see [game systems](game-systems.md).
 
 ## Where to go next
 
-- [Game system architecture and implementation](game-systems.md)
-- [Event sourcing and replay](event-replay.md)
-- [Domain language](domain-language.md)
+- Event model and write-path lifecycle: [Event-driven system](event-driven-system.md)
+- Game system architecture and implementation: [Game systems](game-systems.md)
+- Event sourcing and replay: [Event replay](event-replay.md)
+- Domain language: [Domain language](domain-language.md)

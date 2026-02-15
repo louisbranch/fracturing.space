@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/core/encoding"
+	"github.com/louisbranch/fracturing.space/internal/services/game/core/encoding"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 )
 
 // EventHash computes the content hash for an event.
@@ -43,6 +43,12 @@ func EventHash(evt event.Event) (string, error) {
 	}
 	if evt.SystemVersion != "" {
 		envelope["system_version"] = evt.SystemVersion
+	}
+	if evt.CorrelationID != "" {
+		envelope["correlation_id"] = evt.CorrelationID
+	}
+	if evt.CausationID != "" {
+		envelope["causation_id"] = evt.CausationID
 	}
 	return encoding.ContentHash(envelope)
 }
@@ -85,6 +91,12 @@ func ChainHash(evt event.Event, prevHash string) (string, error) {
 	}
 	if evt.SystemVersion != "" {
 		envelope["system_version"] = evt.SystemVersion
+	}
+	if evt.CorrelationID != "" {
+		envelope["correlation_id"] = evt.CorrelationID
+	}
+	if evt.CausationID != "" {
+		envelope["causation_id"] = evt.CausationID
 	}
 
 	canonical, err := encoding.CanonicalJSON(envelope)

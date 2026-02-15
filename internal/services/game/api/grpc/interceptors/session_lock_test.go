@@ -7,7 +7,7 @@ import (
 	"time"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/session"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -16,35 +16,35 @@ import (
 
 // fakeSessionStore is a test double for storage.SessionStore.
 type fakeSessionStore struct {
-	activeSession map[string]session.Session // campaignID -> Session
+	activeSession map[string]storage.SessionRecord // campaignID -> Session
 	activeErr     error
 }
 
 func newFakeSessionStore() *fakeSessionStore {
 	return &fakeSessionStore{
-		activeSession: make(map[string]session.Session),
+		activeSession: make(map[string]storage.SessionRecord),
 	}
 }
 
-func (s *fakeSessionStore) PutSession(_ context.Context, sess session.Session) error {
+func (s *fakeSessionStore) PutSession(_ context.Context, sess storage.SessionRecord) error {
 	return nil
 }
 
-func (s *fakeSessionStore) EndSession(_ context.Context, campaignID, sessionID string, endedAt time.Time) (session.Session, bool, error) {
-	return session.Session{}, false, nil
+func (s *fakeSessionStore) EndSession(_ context.Context, campaignID, sessionID string, endedAt time.Time) (storage.SessionRecord, bool, error) {
+	return storage.SessionRecord{}, false, nil
 }
 
-func (s *fakeSessionStore) GetSession(_ context.Context, campaignID, sessionID string) (session.Session, error) {
-	return session.Session{}, nil
+func (s *fakeSessionStore) GetSession(_ context.Context, campaignID, sessionID string) (storage.SessionRecord, error) {
+	return storage.SessionRecord{}, nil
 }
 
-func (s *fakeSessionStore) GetActiveSession(_ context.Context, campaignID string) (session.Session, error) {
+func (s *fakeSessionStore) GetActiveSession(_ context.Context, campaignID string) (storage.SessionRecord, error) {
 	if s.activeErr != nil {
-		return session.Session{}, s.activeErr
+		return storage.SessionRecord{}, s.activeErr
 	}
 	sess, ok := s.activeSession[campaignID]
 	if !ok {
-		return session.Session{}, storage.ErrNotFound
+		return storage.SessionRecord{}, storage.ErrNotFound
 	}
 	return sess, nil
 }
@@ -100,7 +100,7 @@ func TestSessionLockInterceptor_BlockedMethod_NoActiveSession_PassesThrough(t *t
 func TestSessionLockInterceptor_CreateParticipant_WithActiveSession_Blocks(t *testing.T) {
 	sessionStore := newFakeSessionStore()
 	now := time.Now().UTC()
-	sessionStore.activeSession["c1"] = session.Session{ID: "s1", CampaignID: "c1", Status: session.SessionStatusActive, StartedAt: now}
+	sessionStore.activeSession["c1"] = storage.SessionRecord{ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now}
 
 	interceptor := SessionLockInterceptor(sessionStore)
 	info := serverInfo(statev1.ParticipantService_CreateParticipant_FullMethodName)
@@ -113,7 +113,7 @@ func TestSessionLockInterceptor_CreateParticipant_WithActiveSession_Blocks(t *te
 func TestSessionLockInterceptor_CreateCharacter_WithActiveSession_Blocks(t *testing.T) {
 	sessionStore := newFakeSessionStore()
 	now := time.Now().UTC()
-	sessionStore.activeSession["c1"] = session.Session{ID: "s1", CampaignID: "c1", Status: session.SessionStatusActive, StartedAt: now}
+	sessionStore.activeSession["c1"] = storage.SessionRecord{ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now}
 
 	interceptor := SessionLockInterceptor(sessionStore)
 	info := serverInfo(statev1.CharacterService_CreateCharacter_FullMethodName)
@@ -126,7 +126,7 @@ func TestSessionLockInterceptor_CreateCharacter_WithActiveSession_Blocks(t *test
 func TestSessionLockInterceptor_SetDefaultControl_WithActiveSession_Blocks(t *testing.T) {
 	sessionStore := newFakeSessionStore()
 	now := time.Now().UTC()
-	sessionStore.activeSession["c1"] = session.Session{ID: "s1", CampaignID: "c1", Status: session.SessionStatusActive, StartedAt: now}
+	sessionStore.activeSession["c1"] = storage.SessionRecord{ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now}
 
 	interceptor := SessionLockInterceptor(sessionStore)
 	info := serverInfo(statev1.CharacterService_SetDefaultControl_FullMethodName)
@@ -139,7 +139,7 @@ func TestSessionLockInterceptor_SetDefaultControl_WithActiveSession_Blocks(t *te
 func TestSessionLockInterceptor_PatchCharacterProfile_WithActiveSession_Blocks(t *testing.T) {
 	sessionStore := newFakeSessionStore()
 	now := time.Now().UTC()
-	sessionStore.activeSession["c1"] = session.Session{ID: "s1", CampaignID: "c1", Status: session.SessionStatusActive, StartedAt: now}
+	sessionStore.activeSession["c1"] = storage.SessionRecord{ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now}
 
 	interceptor := SessionLockInterceptor(sessionStore)
 	info := serverInfo(statev1.CharacterService_PatchCharacterProfile_FullMethodName)
@@ -152,7 +152,7 @@ func TestSessionLockInterceptor_PatchCharacterProfile_WithActiveSession_Blocks(t
 func TestSessionLockInterceptor_PatchCharacterState_WithActiveSession_Blocks(t *testing.T) {
 	sessionStore := newFakeSessionStore()
 	now := time.Now().UTC()
-	sessionStore.activeSession["c1"] = session.Session{ID: "s1", CampaignID: "c1", Status: session.SessionStatusActive, StartedAt: now}
+	sessionStore.activeSession["c1"] = storage.SessionRecord{ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now}
 
 	interceptor := SessionLockInterceptor(sessionStore)
 	info := serverInfo(statev1.SnapshotService_PatchCharacterState_FullMethodName)
@@ -199,7 +199,7 @@ func TestSessionLockInterceptor_DifferentCampaigns_NotBlocked(t *testing.T) {
 	sessionStore := newFakeSessionStore()
 	now := time.Now().UTC()
 	// Active session for campaign c1
-	sessionStore.activeSession["c1"] = session.Session{ID: "s1", CampaignID: "c1", Status: session.SessionStatusActive, StartedAt: now}
+	sessionStore.activeSession["c1"] = storage.SessionRecord{ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now}
 
 	interceptor := SessionLockInterceptor(sessionStore)
 	info := serverInfo(statev1.ParticipantService_CreateParticipant_FullMethodName)
@@ -218,7 +218,7 @@ func TestSessionLockInterceptor_DifferentCampaigns_NotBlocked(t *testing.T) {
 func TestSessionLockInterceptor_GetCharacterSheet_NotBlocked(t *testing.T) {
 	sessionStore := newFakeSessionStore()
 	now := time.Now().UTC()
-	sessionStore.activeSession["c1"] = session.Session{ID: "s1", CampaignID: "c1", Status: session.SessionStatusActive, StartedAt: now}
+	sessionStore.activeSession["c1"] = storage.SessionRecord{ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now}
 
 	interceptor := SessionLockInterceptor(sessionStore)
 	// GetCharacterSheet is a read method, not blocked
@@ -237,7 +237,7 @@ func TestSessionLockInterceptor_GetCharacterSheet_NotBlocked(t *testing.T) {
 func TestSessionLockInterceptor_ListCharacters_NotBlocked(t *testing.T) {
 	sessionStore := newFakeSessionStore()
 	now := time.Now().UTC()
-	sessionStore.activeSession["c1"] = session.Session{ID: "s1", CampaignID: "c1", Status: session.SessionStatusActive, StartedAt: now}
+	sessionStore.activeSession["c1"] = storage.SessionRecord{ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now}
 
 	interceptor := SessionLockInterceptor(sessionStore)
 	// ListCharacters is a read method, not blocked
@@ -256,7 +256,7 @@ func TestSessionLockInterceptor_ListCharacters_NotBlocked(t *testing.T) {
 func TestSessionLockInterceptor_GetSnapshot_NotBlocked(t *testing.T) {
 	sessionStore := newFakeSessionStore()
 	now := time.Now().UTC()
-	sessionStore.activeSession["c1"] = session.Session{ID: "s1", CampaignID: "c1", Status: session.SessionStatusActive, StartedAt: now}
+	sessionStore.activeSession["c1"] = storage.SessionRecord{ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now}
 
 	interceptor := SessionLockInterceptor(sessionStore)
 	// GetSnapshot is a read method, not blocked
@@ -275,7 +275,7 @@ func TestSessionLockInterceptor_GetSnapshot_NotBlocked(t *testing.T) {
 func TestSessionLockInterceptor_UpdateSnapshotState_NotBlocked(t *testing.T) {
 	sessionStore := newFakeSessionStore()
 	now := time.Now().UTC()
-	sessionStore.activeSession["c1"] = session.Session{ID: "s1", CampaignID: "c1", Status: session.SessionStatusActive, StartedAt: now}
+	sessionStore.activeSession["c1"] = storage.SessionRecord{ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now}
 
 	interceptor := SessionLockInterceptor(sessionStore)
 	// UpdateSnapshotState is a gameplay action, allowed during active session

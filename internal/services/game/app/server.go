@@ -19,7 +19,9 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/interceptors"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	daggerheartservice "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/core/random"
+	"github.com/louisbranch/fracturing.space/internal/services/game/core/random"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/integrity"
 	storagesqlite "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite"
 	"google.golang.org/grpc"
@@ -33,6 +35,7 @@ type serverEnv struct {
 	EventsDBPath      string `env:"FRACTURING_SPACE_GAME_EVENTS_DB_PATH"`
 	ProjectionsDBPath string `env:"FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH"`
 	ContentDBPath     string `env:"FRACTURING_SPACE_GAME_CONTENT_DB_PATH"`
+	DomainEnabled     bool   `env:"FRACTURING_SPACE_GAME_DOMAIN_ENABLED"       envDefault:"true"`
 }
 
 func loadServerEnv() serverEnv {
@@ -128,6 +131,11 @@ func NewWithAddr(addr string) (*Server, error) {
 		bundle.Close()
 		return nil, fmt.Errorf("validate stores: %w", err)
 	}
+	if err := configureDomain(srvEnv, &stores); err != nil {
+		_ = listener.Close()
+		bundle.Close()
+		return nil, fmt.Errorf("configure domain: %w", err)
+	}
 
 	authConn, authClient, err := dialAuthGRPC(context.Background(), srvEnv.AuthAddr)
 	if err != nil {
@@ -153,6 +161,7 @@ func NewWithAddr(addr string) (*Server, error) {
 		Daggerheart:        bundle.projections,
 		DaggerheartContent: bundle.content,
 		Event:              bundle.events,
+		Domain:             stores.Domain,
 	}
 	daggerheartService := daggerheartservice.NewDaggerheartService(daggerheartStores, random.NewSeed)
 	contentService := daggerheartservice.NewDaggerheartContentService(daggerheartStores)
@@ -322,7 +331,11 @@ func openEventStore(path string) (*storagesqlite.Store, error) {
 	if err != nil {
 		return nil, err
 	}
-	store, err := storagesqlite.OpenEvents(path, keyring)
+	registries, err := engine.BuildRegistries(daggerheart.NewModule())
+	if err != nil {
+		return nil, fmt.Errorf("build registries: %w", err)
+	}
+	store, err := storagesqlite.OpenEvents(path, keyring, registries.Events)
 	if err != nil {
 		return nil, fmt.Errorf("open events store: %w", err)
 	}

@@ -10,8 +10,8 @@ import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/session"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -31,174 +31,175 @@ func newSessionApplication(service *SessionService) sessionApplication {
 	return app
 }
 
-func (a sessionApplication) StartSession(ctx context.Context, campaignID string, in *campaignv1.StartSessionRequest) (session.Session, error) {
+func (a sessionApplication) StartSession(ctx context.Context, campaignID string, in *campaignv1.StartSessionRequest) (storage.SessionRecord, error) {
 	c, err := a.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return session.Session{}, err
+		return storage.SessionRecord{}, err
 	}
 
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionStart); err != nil {
-		return session.Session{}, err
+		return storage.SessionRecord{}, err
 	}
 
 	switch c.Status {
-	case campaign.CampaignStatusDraft, campaign.CampaignStatusActive:
+	case campaign.StatusDraft, campaign.StatusActive:
 		// Allowed to start a session.
 	default:
-		return session.Session{}, status.Error(codes.FailedPrecondition, "campaign status does not allow session start")
+		return storage.SessionRecord{}, status.Error(codes.FailedPrecondition, "campaign status does not allow session start")
 	}
 
 	_, err = a.stores.Session.GetActiveSession(ctx, campaignID)
 	if err == nil {
-		return session.Session{}, storage.ErrActiveSessionExists
+		return storage.SessionRecord{}, storage.ErrActiveSessionExists
 	}
 	if !errors.Is(err, storage.ErrNotFound) {
-		return session.Session{}, status.Errorf(codes.Internal, "check active session: %v", err)
+		return storage.SessionRecord{}, status.Errorf(codes.Internal, "check active session: %v", err)
 	}
 
-	sess, err := session.CreateSession(session.CreateSessionInput{
-		CampaignID: campaignID,
-		Name:       in.GetName(),
-	}, a.clock, a.idGenerator)
+	sessionID, err := a.idGenerator()
 	if err != nil {
-		return session.Session{}, err
+		return storage.SessionRecord{}, status.Errorf(codes.Internal, "generate session id: %v", err)
 	}
+	sessionName := strings.TrimSpace(in.GetName())
 
 	applier := a.stores.Applier()
-
-	if c.Status == campaign.CampaignStatusDraft {
-		payload := event.CampaignUpdatedPayload{
-			Fields: map[string]any{
-				"status": campaignStatusToProto(campaign.CampaignStatusActive).String(),
-			},
-		}
+	if a.stores.Domain == nil {
+		return storage.SessionRecord{}, status.Error(codes.Internal, "domain engine is not configured")
+	}
+	actorID := grpcmeta.ParticipantIDFromContext(ctx)
+	actorType := command.ActorTypeSystem
+	if actorID != "" {
+		actorType = command.ActorTypeParticipant
+	}
+	if c.Status == campaign.StatusDraft {
+		payload := campaign.UpdatePayload{Fields: map[string]string{"status": "active"}}
 		payloadJSON, err := json.Marshal(payload)
 		if err != nil {
-			return session.Session{}, status.Errorf(codes.Internal, "encode payload: %v", err)
+			return storage.SessionRecord{}, status.Errorf(codes.Internal, "encode payload: %v", err)
 		}
-
-		actorID := grpcmeta.ParticipantIDFromContext(ctx)
-		actorType := event.ActorTypeSystem
-		if actorID != "" {
-			actorType = event.ActorTypeParticipant
-		}
-
-		stored, err := a.stores.Event.AppendEvent(ctx, event.Event{
+		result, err := a.stores.Domain.Execute(ctx, command.Command{
 			CampaignID:   campaignID,
-			Timestamp:    sess.StartedAt,
-			Type:         event.TypeCampaignUpdated,
-			RequestID:    grpcmeta.RequestIDFromContext(ctx),
-			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+			Type:         command.Type("campaign.update"),
 			ActorType:    actorType,
 			ActorID:      actorID,
+			RequestID:    grpcmeta.RequestIDFromContext(ctx),
+			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
 			EntityType:   "campaign",
 			EntityID:     campaignID,
 			PayloadJSON:  payloadJSON,
 		})
 		if err != nil {
-			return session.Session{}, status.Errorf(codes.Internal, "append event: %v", err)
+			return storage.SessionRecord{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
 		}
-		if err := applier.Apply(ctx, stored); err != nil {
-			return session.Session{}, status.Errorf(codes.Internal, "apply event: %v", err)
+		if len(result.Decision.Rejections) > 0 {
+			return storage.SessionRecord{}, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
+		}
+		for _, evt := range result.Decision.Events {
+			if err := applier.Apply(ctx, evt); err != nil {
+				return storage.SessionRecord{}, status.Errorf(codes.Internal, "apply event: %v", err)
+			}
 		}
 	}
 
-	payload := event.SessionStartedPayload{
-		SessionID:   sess.ID,
-		SessionName: sess.Name,
+	payload := session.StartPayload{
+		SessionID:   sessionID,
+		SessionName: sessionName,
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return session.Session{}, status.Errorf(codes.Internal, "encode payload: %v", err)
+		return storage.SessionRecord{}, status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
-
-	actorID := grpcmeta.ParticipantIDFromContext(ctx)
-	actorType := event.ActorTypeSystem
-	if actorID != "" {
-		actorType = event.ActorTypeParticipant
-	}
-
-	stored, err := a.stores.Event.AppendEvent(ctx, event.Event{
+	result, err := a.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:   campaignID,
-		Timestamp:    sess.StartedAt,
-		Type:         event.TypeSessionStarted,
-		SessionID:    sess.ID,
-		RequestID:    grpcmeta.RequestIDFromContext(ctx),
-		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+		Type:         command.Type("session.start"),
 		ActorType:    actorType,
 		ActorID:      actorID,
-		EntityType:   "session",
-		EntityID:     sess.ID,
-		PayloadJSON:  payloadJSON,
-	})
-	if err != nil {
-		return session.Session{}, status.Errorf(codes.Internal, "append event: %v", err)
-	}
-	if err := applier.Apply(ctx, stored); err != nil {
-		return session.Session{}, status.Errorf(codes.Internal, "apply event: %v", err)
-	}
-
-	return sess, nil
-}
-
-func (a sessionApplication) EndSession(ctx context.Context, campaignID string, in *campaignv1.EndSessionRequest) (session.Session, error) {
-	sessionID := strings.TrimSpace(in.GetSessionId())
-	if sessionID == "" {
-		return session.Session{}, status.Error(codes.InvalidArgument, "session id is required")
-	}
-
-	if _, err := a.stores.Campaign.Get(ctx, campaignID); err != nil {
-		return session.Session{}, err
-	}
-
-	current, err := a.stores.Session.GetSession(ctx, campaignID, sessionID)
-	if err != nil {
-		return session.Session{}, err
-	}
-	if current.Status == session.SessionStatusEnded {
-		return current, nil
-	}
-
-	endedAt := a.clock().UTC()
-	payload := event.SessionEndedPayload{
-		SessionID: sessionID,
-	}
-	payloadJSON, err := json.Marshal(payload)
-	if err != nil {
-		return session.Session{}, status.Errorf(codes.Internal, "encode payload: %v", err)
-	}
-
-	actorID := grpcmeta.ParticipantIDFromContext(ctx)
-	actorType := event.ActorTypeSystem
-	if actorID != "" {
-		actorType = event.ActorTypeParticipant
-	}
-
-	stored, err := a.stores.Event.AppendEvent(ctx, event.Event{
-		CampaignID:   campaignID,
-		Timestamp:    endedAt,
-		Type:         event.TypeSessionEnded,
 		SessionID:    sessionID,
 		RequestID:    grpcmeta.RequestIDFromContext(ctx),
 		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-		ActorType:    actorType,
-		ActorID:      actorID,
 		EntityType:   "session",
 		EntityID:     sessionID,
 		PayloadJSON:  payloadJSON,
 	})
 	if err != nil {
-		return session.Session{}, status.Errorf(codes.Internal, "append event: %v", err)
+		return storage.SessionRecord{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
+	}
+	if len(result.Decision.Rejections) > 0 {
+		return storage.SessionRecord{}, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
+	}
+	for _, evt := range result.Decision.Events {
+		if err := applier.Apply(ctx, evt); err != nil {
+			return storage.SessionRecord{}, status.Errorf(codes.Internal, "apply event: %v", err)
+		}
 	}
 
+	sess, err := a.stores.Session.GetSession(ctx, campaignID, sessionID)
+	if err != nil {
+		return storage.SessionRecord{}, status.Errorf(codes.Internal, "load session: %v", err)
+	}
+	return sess, nil
+}
+
+func (a sessionApplication) EndSession(ctx context.Context, campaignID string, in *campaignv1.EndSessionRequest) (storage.SessionRecord, error) {
+	sessionID := strings.TrimSpace(in.GetSessionId())
+	if sessionID == "" {
+		return storage.SessionRecord{}, status.Error(codes.InvalidArgument, "session id is required")
+	}
+
+	if _, err := a.stores.Campaign.Get(ctx, campaignID); err != nil {
+		return storage.SessionRecord{}, err
+	}
+
+	current, err := a.stores.Session.GetSession(ctx, campaignID, sessionID)
+	if err != nil {
+		return storage.SessionRecord{}, err
+	}
+	if current.Status == session.StatusEnded {
+		return current, nil
+	}
+	if a.stores.Domain == nil {
+		return storage.SessionRecord{}, status.Error(codes.Internal, "domain engine is not configured")
+	}
+	payload := session.EndPayload{SessionID: sessionID}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		return storage.SessionRecord{}, status.Errorf(codes.Internal, "encode payload: %v", err)
+	}
+
+	actorID := grpcmeta.ParticipantIDFromContext(ctx)
+	actorType := command.ActorTypeSystem
+	if actorID != "" {
+		actorType = command.ActorTypeParticipant
+	}
+
+	result, err := a.stores.Domain.Execute(ctx, command.Command{
+		CampaignID:   campaignID,
+		Type:         command.Type("session.end"),
+		ActorType:    actorType,
+		ActorID:      actorID,
+		SessionID:    sessionID,
+		RequestID:    grpcmeta.RequestIDFromContext(ctx),
+		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+		EntityType:   "session",
+		EntityID:     sessionID,
+		PayloadJSON:  payloadJSON,
+	})
+	if err != nil {
+		return storage.SessionRecord{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
+	}
+	if len(result.Decision.Rejections) > 0 {
+		return storage.SessionRecord{}, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
+	}
 	applier := a.stores.Applier()
-	if err := applier.Apply(ctx, stored); err != nil {
-		return session.Session{}, status.Errorf(codes.Internal, "apply event: %v", err)
+	for _, evt := range result.Decision.Events {
+		if err := applier.Apply(ctx, evt); err != nil {
+			return storage.SessionRecord{}, status.Errorf(codes.Internal, "apply event: %v", err)
+		}
 	}
 
 	updated, err := a.stores.Session.GetSession(ctx, campaignID, sessionID)
 	if err != nil {
-		return session.Session{}, status.Errorf(codes.Internal, "load session: %v", err)
+		return storage.SessionRecord{}, status.Errorf(codes.Internal, "load session: %v", err)
 	}
 
 	return updated, nil
@@ -225,7 +226,7 @@ func (a sessionApplication) OpenSessionGate(ctx context.Context, campaignID stri
 	if err != nil {
 		return storage.SessionGate{}, err
 	}
-	if sess.Status != session.SessionStatusActive {
+	if sess.Status != session.StatusActive {
 		return storage.SessionGate{}, status.Error(codes.FailedPrecondition, "session is not active")
 	}
 
@@ -247,8 +248,10 @@ func (a sessionApplication) OpenSessionGate(ctx context.Context, campaignID stri
 	if err := validateStructPayload(metadata); err != nil {
 		return storage.SessionGate{}, status.Error(codes.InvalidArgument, err.Error())
 	}
-
-	payload := event.SessionGateOpenedPayload{
+	if a.stores.Domain == nil {
+		return storage.SessionGate{}, status.Error(codes.Internal, "domain engine is not configured")
+	}
+	payload := session.GateOpenedPayload{
 		GateID:   gateID,
 		GateType: gateType,
 		Reason:   reason,
@@ -260,33 +263,35 @@ func (a sessionApplication) OpenSessionGate(ctx context.Context, campaignID stri
 	}
 
 	actorID := grpcmeta.ParticipantIDFromContext(ctx)
-	actorType := event.ActorTypeSystem
+	actorType := command.ActorTypeSystem
 	if actorID != "" {
-		actorType = event.ActorTypeParticipant
+		actorType = command.ActorTypeParticipant
 	}
 
-	stored, err := a.stores.Event.AppendEvent(ctx, event.Event{
+	result, err := a.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:   campaignID,
-		Timestamp:    a.clock().UTC(),
-		Type:         event.TypeSessionGateOpened,
+		Type:         command.Type("session.gate_open"),
+		ActorType:    actorType,
+		ActorID:      actorID,
 		SessionID:    sessionID,
 		RequestID:    grpcmeta.RequestIDFromContext(ctx),
 		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-		ActorType:    actorType,
-		ActorID:      actorID,
 		EntityType:   "session_gate",
 		EntityID:     gateID,
 		PayloadJSON:  payloadJSON,
 	})
 	if err != nil {
-		return storage.SessionGate{}, status.Errorf(codes.Internal, "append event: %v", err)
+		return storage.SessionGate{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
 	}
-
+	if len(result.Decision.Rejections) > 0 {
+		return storage.SessionGate{}, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
+	}
 	applier := a.stores.Applier()
-	if err := applier.Apply(ctx, stored); err != nil {
-		return storage.SessionGate{}, status.Errorf(codes.Internal, "apply event: %v", err)
+	for _, evt := range result.Decision.Events {
+		if err := applier.Apply(ctx, evt); err != nil {
+			return storage.SessionGate{}, status.Errorf(codes.Internal, "apply event: %v", err)
+		}
 	}
-
 	gate, err := a.stores.SessionGate.GetSessionGate(ctx, campaignID, sessionID, gateID)
 	if err != nil {
 		return storage.SessionGate{}, status.Errorf(codes.Internal, "load session gate: %v", err)
@@ -316,7 +321,7 @@ func (a sessionApplication) ResolveSessionGate(ctx context.Context, campaignID s
 	if err != nil {
 		return storage.SessionGate{}, err
 	}
-	if gate.Status != string(session.GateStatusOpen) {
+	if gate.Status != session.GateStatusOpen {
 		return gate, nil
 	}
 
@@ -324,7 +329,10 @@ func (a sessionApplication) ResolveSessionGate(ctx context.Context, campaignID s
 	if err := validateStructPayload(resolution); err != nil {
 		return storage.SessionGate{}, status.Error(codes.InvalidArgument, err.Error())
 	}
-	payload := event.SessionGateResolvedPayload{
+	if a.stores.Domain == nil {
+		return storage.SessionGate{}, status.Error(codes.Internal, "domain engine is not configured")
+	}
+	payload := session.GateResolvedPayload{
 		GateID:     gateID,
 		Decision:   strings.TrimSpace(in.GetDecision()),
 		Resolution: resolution,
@@ -335,33 +343,35 @@ func (a sessionApplication) ResolveSessionGate(ctx context.Context, campaignID s
 	}
 
 	actorID := grpcmeta.ParticipantIDFromContext(ctx)
-	actorType := event.ActorTypeSystem
+	actorType := command.ActorTypeSystem
 	if actorID != "" {
-		actorType = event.ActorTypeParticipant
+		actorType = command.ActorTypeParticipant
 	}
 
-	stored, err := a.stores.Event.AppendEvent(ctx, event.Event{
+	result, err := a.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:   campaignID,
-		Timestamp:    a.clock().UTC(),
-		Type:         event.TypeSessionGateResolved,
+		Type:         command.Type("session.gate_resolve"),
+		ActorType:    actorType,
+		ActorID:      actorID,
 		SessionID:    sessionID,
 		RequestID:    grpcmeta.RequestIDFromContext(ctx),
 		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-		ActorType:    actorType,
-		ActorID:      actorID,
 		EntityType:   "session_gate",
 		EntityID:     gateID,
 		PayloadJSON:  payloadJSON,
 	})
 	if err != nil {
-		return storage.SessionGate{}, status.Errorf(codes.Internal, "append event: %v", err)
+		return storage.SessionGate{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
 	}
-
+	if len(result.Decision.Rejections) > 0 {
+		return storage.SessionGate{}, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
+	}
 	applier := a.stores.Applier()
-	if err := applier.Apply(ctx, stored); err != nil {
-		return storage.SessionGate{}, status.Errorf(codes.Internal, "apply event: %v", err)
+	for _, evt := range result.Decision.Events {
+		if err := applier.Apply(ctx, evt); err != nil {
+			return storage.SessionGate{}, status.Errorf(codes.Internal, "apply event: %v", err)
+		}
 	}
-
 	updated, err := a.stores.SessionGate.GetSessionGate(ctx, campaignID, sessionID, gateID)
 	if err != nil {
 		return storage.SessionGate{}, status.Errorf(codes.Internal, "load session gate: %v", err)
@@ -391,11 +401,13 @@ func (a sessionApplication) AbandonSessionGate(ctx context.Context, campaignID s
 	if err != nil {
 		return storage.SessionGate{}, err
 	}
-	if gate.Status != string(session.GateStatusOpen) {
+	if gate.Status != session.GateStatusOpen {
 		return gate, nil
 	}
-
-	payload := event.SessionGateAbandonedPayload{
+	if a.stores.Domain == nil {
+		return storage.SessionGate{}, status.Error(codes.Internal, "domain engine is not configured")
+	}
+	payload := session.GateAbandonedPayload{
 		GateID: gateID,
 		Reason: session.NormalizeGateReason(in.GetReason()),
 	}
@@ -405,33 +417,35 @@ func (a sessionApplication) AbandonSessionGate(ctx context.Context, campaignID s
 	}
 
 	actorID := grpcmeta.ParticipantIDFromContext(ctx)
-	actorType := event.ActorTypeSystem
+	actorType := command.ActorTypeSystem
 	if actorID != "" {
-		actorType = event.ActorTypeParticipant
+		actorType = command.ActorTypeParticipant
 	}
 
-	stored, err := a.stores.Event.AppendEvent(ctx, event.Event{
+	result, err := a.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:   campaignID,
-		Timestamp:    a.clock().UTC(),
-		Type:         event.TypeSessionGateAbandoned,
+		Type:         command.Type("session.gate_abandon"),
+		ActorType:    actorType,
+		ActorID:      actorID,
 		SessionID:    sessionID,
 		RequestID:    grpcmeta.RequestIDFromContext(ctx),
 		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-		ActorType:    actorType,
-		ActorID:      actorID,
 		EntityType:   "session_gate",
 		EntityID:     gateID,
 		PayloadJSON:  payloadJSON,
 	})
 	if err != nil {
-		return storage.SessionGate{}, status.Errorf(codes.Internal, "append event: %v", err)
+		return storage.SessionGate{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
 	}
-
+	if len(result.Decision.Rejections) > 0 {
+		return storage.SessionGate{}, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
+	}
 	applier := a.stores.Applier()
-	if err := applier.Apply(ctx, stored); err != nil {
-		return storage.SessionGate{}, status.Errorf(codes.Internal, "apply event: %v", err)
+	for _, evt := range result.Decision.Events {
+		if err := applier.Apply(ctx, evt); err != nil {
+			return storage.SessionGate{}, status.Errorf(codes.Internal, "apply event: %v", err)
+		}
 	}
-
 	updated, err := a.stores.SessionGate.GetSessionGate(ctx, campaignID, sessionID, gateID)
 	if err != nil {
 		return storage.SessionGate{}, status.Errorf(codes.Internal, "load session gate: %v", err)
@@ -465,11 +479,13 @@ func (a sessionApplication) SetSessionSpotlight(ctx context.Context, campaignID 
 	if err != nil {
 		return storage.SessionSpotlight{}, err
 	}
-	if sess.Status != session.SessionStatusActive {
+	if sess.Status != session.StatusActive {
 		return storage.SessionSpotlight{}, status.Error(codes.FailedPrecondition, "session is not active")
 	}
-
-	payload := event.SessionSpotlightSetPayload{
+	if a.stores.Domain == nil {
+		return storage.SessionSpotlight{}, status.Error(codes.Internal, "domain engine is not configured")
+	}
+	payload := session.SpotlightSetPayload{
 		SpotlightType: string(spotlightType),
 		CharacterID:   characterID,
 	}
@@ -479,33 +495,35 @@ func (a sessionApplication) SetSessionSpotlight(ctx context.Context, campaignID 
 	}
 
 	actorID := grpcmeta.ParticipantIDFromContext(ctx)
-	actorType := event.ActorTypeSystem
+	actorType := command.ActorTypeSystem
 	if actorID != "" {
-		actorType = event.ActorTypeParticipant
+		actorType = command.ActorTypeParticipant
 	}
 
-	stored, err := a.stores.Event.AppendEvent(ctx, event.Event{
+	result, err := a.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:   campaignID,
-		Timestamp:    a.clock().UTC(),
-		Type:         event.TypeSessionSpotlightSet,
+		Type:         command.Type("session.spotlight_set"),
+		ActorType:    actorType,
+		ActorID:      actorID,
 		SessionID:    sessionID,
 		RequestID:    grpcmeta.RequestIDFromContext(ctx),
 		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-		ActorType:    actorType,
-		ActorID:      actorID,
-		EntityType:   "session_spotlight",
+		EntityType:   "session",
 		EntityID:     sessionID,
 		PayloadJSON:  payloadJSON,
 	})
 	if err != nil {
-		return storage.SessionSpotlight{}, status.Errorf(codes.Internal, "append event: %v", err)
+		return storage.SessionSpotlight{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
 	}
-
+	if len(result.Decision.Rejections) > 0 {
+		return storage.SessionSpotlight{}, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
+	}
 	applier := a.stores.Applier()
-	if err := applier.Apply(ctx, stored); err != nil {
-		return storage.SessionSpotlight{}, status.Errorf(codes.Internal, "apply event: %v", err)
+	for _, evt := range result.Decision.Events {
+		if err := applier.Apply(ctx, evt); err != nil {
+			return storage.SessionSpotlight{}, status.Errorf(codes.Internal, "apply event: %v", err)
+		}
 	}
-
 	spotlight, err := a.stores.SessionSpotlight.GetSessionSpotlight(ctx, campaignID, sessionID)
 	if err != nil {
 		return storage.SessionSpotlight{}, status.Errorf(codes.Internal, "load session spotlight: %v", err)
@@ -532,39 +550,44 @@ func (a sessionApplication) ClearSessionSpotlight(ctx context.Context, campaignI
 	if err != nil {
 		return storage.SessionSpotlight{}, err
 	}
-
-	payload := event.SessionSpotlightClearedPayload{Reason: reason}
+	if a.stores.Domain == nil {
+		return storage.SessionSpotlight{}, status.Error(codes.Internal, "domain engine is not configured")
+	}
+	payload := session.SpotlightClearedPayload{Reason: reason}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
 		return storage.SessionSpotlight{}, status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
 
 	actorID := grpcmeta.ParticipantIDFromContext(ctx)
-	actorType := event.ActorTypeSystem
+	actorType := command.ActorTypeSystem
 	if actorID != "" {
-		actorType = event.ActorTypeParticipant
+		actorType = command.ActorTypeParticipant
 	}
 
-	stored, err := a.stores.Event.AppendEvent(ctx, event.Event{
+	result, err := a.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:   campaignID,
-		Timestamp:    a.clock().UTC(),
-		Type:         event.TypeSessionSpotlightCleared,
+		Type:         command.Type("session.spotlight_clear"),
+		ActorType:    actorType,
+		ActorID:      actorID,
 		SessionID:    sessionID,
 		RequestID:    grpcmeta.RequestIDFromContext(ctx),
 		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-		ActorType:    actorType,
-		ActorID:      actorID,
-		EntityType:   "session_spotlight",
+		EntityType:   "session",
 		EntityID:     sessionID,
 		PayloadJSON:  payloadJSON,
 	})
 	if err != nil {
-		return storage.SessionSpotlight{}, status.Errorf(codes.Internal, "append event: %v", err)
+		return storage.SessionSpotlight{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
 	}
-
+	if len(result.Decision.Rejections) > 0 {
+		return storage.SessionSpotlight{}, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
+	}
 	applier := a.stores.Applier()
-	if err := applier.Apply(ctx, stored); err != nil {
-		return storage.SessionSpotlight{}, status.Errorf(codes.Internal, "apply event: %v", err)
+	for _, evt := range result.Decision.Events {
+		if err := applier.Apply(ctx, evt); err != nil {
+			return storage.SessionSpotlight{}, status.Errorf(codes.Internal, "apply event: %v", err)
+		}
 	}
 
 	return spotlight, nil

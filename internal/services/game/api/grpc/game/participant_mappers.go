@@ -2,12 +2,13 @@ package game
 
 import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/participant"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // Participant proto conversion helpers.
-func participantToProto(p participant.Participant) *campaignv1.Participant {
+func participantToProto(p storage.ParticipantRecord) *campaignv1.Participant {
 	return &campaignv1.Participant{
 		Id:             p.ID,
 		CampaignId:     p.CampaignID,
@@ -21,22 +22,22 @@ func participantToProto(p participant.Participant) *campaignv1.Participant {
 	}
 }
 
-func participantRoleFromProto(role campaignv1.ParticipantRole) participant.ParticipantRole {
+func participantRoleFromProto(role campaignv1.ParticipantRole) participant.Role {
 	switch role {
 	case campaignv1.ParticipantRole_GM:
-		return participant.ParticipantRoleGM
+		return participant.RoleGM
 	case campaignv1.ParticipantRole_PLAYER:
-		return participant.ParticipantRolePlayer
+		return participant.RolePlayer
 	default:
-		return participant.ParticipantRoleUnspecified
+		return participant.RoleUnspecified
 	}
 }
 
-func participantRoleToProto(role participant.ParticipantRole) campaignv1.ParticipantRole {
+func participantRoleToProto(role participant.Role) campaignv1.ParticipantRole {
 	switch role {
-	case participant.ParticipantRoleGM:
+	case participant.RoleGM:
 		return campaignv1.ParticipantRole_GM
-	case participant.ParticipantRolePlayer:
+	case participant.RolePlayer:
 		return campaignv1.ParticipantRole_PLAYER
 	default:
 		return campaignv1.ParticipantRole_ROLE_UNSPECIFIED

@@ -1,49 +1,59 @@
 package daggerheart
 
-import "testing"
+import (
+	"errors"
+	"testing"
 
-func TestRollDamage(t *testing.T) {
-	result, err := RollDamage(DamageRollRequest{
-		Dice:     []DamageDieSpec{{Sides: 8, Count: 2}},
-		Modifier: 2,
-		Seed:     1,
-		Critical: false,
-	})
-	if err != nil {
-		t.Fatalf("RollDamage returned error: %v", err)
-	}
-	if result.BaseTotal == 0 {
-		t.Fatal("expected base total")
-	}
-	if result.CriticalBonus != 0 {
-		t.Fatalf("critical bonus = %d, want 0", result.CriticalBonus)
-	}
-	if result.Total != result.BaseTotal {
-		t.Fatalf("total = %d, want %d", result.Total, result.BaseTotal)
+	"github.com/louisbranch/fracturing.space/internal/services/game/core/dice"
+)
+
+func TestRollDamageMissingDice(t *testing.T) {
+	_, err := RollDamage(DamageRollRequest{})
+	if !errors.Is(err, dice.ErrMissingDice) {
+		t.Fatalf("expected missing dice error, got %v", err)
 	}
 }
 
-func TestRollDamageCriticalAddsMaxDice(t *testing.T) {
-	result, err := RollDamage(DamageRollRequest{
-		Dice:     []DamageDieSpec{{Sides: 6, Count: 2}, {Sides: 4, Count: 1}},
-		Modifier: 1,
-		Seed:     2,
+func TestRollDamageAppliesModifierAndCritical(t *testing.T) {
+	request := DamageRollRequest{
+		Dice: []DamageDieSpec{
+			{Sides: 6, Count: 2},
+		},
+		Modifier: 3,
+		Seed:     424242,
 		Critical: true,
+	}
+
+	rollResult, err := RollDamage(request)
+	if err != nil {
+		t.Fatalf("RollDamage failed: %v", err)
+	}
+
+	expectedRoll, err := dice.RollDice(dice.Request{
+		Dice: []dice.Spec{{Sides: request.Dice[0].Sides, Count: request.Dice[0].Count}},
+		Seed: request.Seed,
 	})
 	if err != nil {
-		t.Fatalf("RollDamage returned error: %v", err)
+		t.Fatalf("expected dice roll: %v", err)
 	}
-	if result.CriticalBonus != 16 {
-		t.Fatalf("critical bonus = %d, want 16", result.CriticalBonus)
+	expectedBase := expectedRoll.Total + request.Modifier
+	expectedCritical := request.Dice[0].Sides * request.Dice[0].Count
+	if rollResult.BaseTotal != expectedBase {
+		t.Fatalf("base total = %d, want %d", rollResult.BaseTotal, expectedBase)
 	}
-	if result.Total != result.BaseTotal+result.CriticalBonus {
-		t.Fatalf("total = %d, want %d", result.Total, result.BaseTotal+result.CriticalBonus)
+	if rollResult.CriticalBonus != expectedCritical {
+		t.Fatalf("critical bonus = %d, want %d", rollResult.CriticalBonus, expectedCritical)
+	}
+	if rollResult.Total != expectedBase+expectedCritical {
+		t.Fatalf("total = %d, want %d", rollResult.Total, expectedBase+expectedCritical)
 	}
 }
 
-func TestRollDamageNoDice(t *testing.T) {
-	_, err := RollDamage(DamageRollRequest{Dice: nil, Seed: 1})
-	if err == nil {
-		t.Fatal("expected error for no dice")
+func TestRollDamageInvalidDice(t *testing.T) {
+	_, err := RollDamage(DamageRollRequest{
+		Dice: []DamageDieSpec{{Sides: 6, Count: 0}},
+	})
+	if !errors.Is(err, dice.ErrInvalidDiceSpec) {
+		t.Fatalf("expected invalid dice spec error, got %v", err)
 	}
 }

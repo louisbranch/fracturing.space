@@ -7,11 +7,13 @@ import (
 	"time"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/character"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -31,77 +33,81 @@ func newCharacterApplication(service *CharacterService) characterApplication {
 	return app
 }
 
-func (c characterApplication) CreateCharacter(ctx context.Context, campaignID string, in *campaignv1.CreateCharacterRequest) (character.Character, error) {
+func (c characterApplication) CreateCharacter(ctx context.Context, campaignID string, in *campaignv1.CreateCharacterRequest) (storage.CharacterRecord, error) {
 	campaignRecord, err := c.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return character.Character{}, err
+		return storage.CharacterRecord{}, err
 	}
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpRead); err != nil {
-		return character.Character{}, err
+		return storage.CharacterRecord{}, err
 	}
 
-	input := character.CreateCharacterInput{
-		CampaignID: campaignID,
-		Name:       in.GetName(),
-		Kind:       characterKindFromProto(in.GetKind()),
-		Notes:      in.GetNotes(),
+	name := strings.TrimSpace(in.GetName())
+	if name == "" {
+		return storage.CharacterRecord{}, apperrors.New(apperrors.CodeCharacterEmptyName, "character name is required")
 	}
-	normalized, err := character.NormalizeCreateCharacterInput(input)
-	if err != nil {
-		return character.Character{}, err
+	kind := characterKindFromProto(in.GetKind())
+	if kind == character.KindUnspecified {
+		return storage.CharacterRecord{}, apperrors.New(apperrors.CodeCharacterInvalidKind, "character kind is required")
 	}
+	notes := strings.TrimSpace(in.GetNotes())
 
 	characterID, err := c.idGenerator()
 	if err != nil {
-		return character.Character{}, status.Errorf(codes.Internal, "generate character id: %v", err)
-	}
-
-	payload := event.CharacterCreatedPayload{
-		CharacterID: characterID,
-		Name:        normalized.Name,
-		Kind:        in.GetKind().String(),
-		Notes:       normalized.Notes,
-	}
-	payloadJSON, err := json.Marshal(payload)
-	if err != nil {
-		return character.Character{}, status.Errorf(codes.Internal, "encode payload: %v", err)
+		return storage.CharacterRecord{}, status.Errorf(codes.Internal, "generate character id: %v", err)
 	}
 
 	actorID := grpcmeta.ParticipantIDFromContext(ctx)
-	actorType := event.ActorTypeSystem
-	if actorID != "" {
-		actorType = event.ActorTypeParticipant
+	applier := c.stores.Applier()
+	if c.stores.Domain == nil {
+		return storage.CharacterRecord{}, status.Error(codes.Internal, "domain engine is not configured")
+	}
+	payload := character.CreatePayload{
+		CharacterID: characterID,
+		Name:        name,
+		Kind:        in.GetKind().String(),
+		Notes:       notes,
+	}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		return storage.CharacterRecord{}, status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
 
-	stored, err := c.stores.Event.AppendEvent(ctx, event.Event{
+	actorType := command.ActorTypeSystem
+	if actorID != "" {
+		actorType = command.ActorTypeParticipant
+	}
+	result, err := c.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:   campaignID,
-		Timestamp:    c.clock().UTC(),
-		Type:         event.TypeCharacterCreated,
-		RequestID:    grpcmeta.RequestIDFromContext(ctx),
-		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+		Type:         command.Type("character.create"),
 		ActorType:    actorType,
 		ActorID:      actorID,
+		RequestID:    grpcmeta.RequestIDFromContext(ctx),
+		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
 		EntityType:   "character",
 		EntityID:     characterID,
 		PayloadJSON:  payloadJSON,
 	})
 	if err != nil {
-		return character.Character{}, status.Errorf(codes.Internal, "append event: %v", err)
+		return storage.CharacterRecord{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
 	}
-
-	applier := c.stores.Applier()
-	if err := applier.Apply(ctx, stored); err != nil {
-		return character.Character{}, status.Errorf(codes.Internal, "apply event: %v", err)
+	if len(result.Decision.Rejections) > 0 {
+		return storage.CharacterRecord{}, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
+	}
+	for _, evt := range result.Decision.Events {
+		if err := applier.Apply(ctx, evt); err != nil {
+			return storage.CharacterRecord{}, status.Errorf(codes.Internal, "apply event: %v", err)
+		}
 	}
 
 	created, err := c.stores.Character.GetCharacter(ctx, campaignID, characterID)
 	if err != nil {
-		return character.Character{}, status.Errorf(codes.Internal, "load character: %v", err)
+		return storage.CharacterRecord{}, status.Errorf(codes.Internal, "load character: %v", err)
 	}
 
 	// Get Daggerheart defaults for the character kind
 	kindStr := "PC"
-	if created.Kind == character.CharacterKindNPC {
+	if created.Kind == character.KindNPC {
 		kindStr = "NPC"
 	}
 	dhDefaults := daggerheart.GetProfileDefaults(kindStr)
@@ -121,47 +127,61 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 		})
 	}
 
-	profilePayload := event.ProfileUpdatedPayload{
-		CharacterID: created.ID,
-		SystemProfile: map[string]any{
-			"daggerheart": map[string]any{
-				"level":            dhDefaults.Level,
-				"hp_max":           dhDefaults.HpMax,
-				"stress_max":       dhDefaults.StressMax,
-				"evasion":          dhDefaults.Evasion,
-				"major_threshold":  dhDefaults.MajorThreshold,
-				"severe_threshold": dhDefaults.SevereThreshold,
-				"proficiency":      dhDefaults.Proficiency,
-				"armor_score":      dhDefaults.ArmorScore,
-				"armor_max":        dhDefaults.ArmorMax,
-				"agility":          dhDefaults.Traits.Agility,
-				"strength":         dhDefaults.Traits.Strength,
-				"finesse":          dhDefaults.Traits.Finesse,
-				"instinct":         dhDefaults.Traits.Instinct,
-				"presence":         dhDefaults.Traits.Presence,
-				"knowledge":        dhDefaults.Traits.Knowledge,
-				"experiences":      experiencesPayload,
-			},
+	systemProfile := map[string]any{
+		"daggerheart": map[string]any{
+			"level":            dhDefaults.Level,
+			"hp_max":           dhDefaults.HpMax,
+			"stress_max":       dhDefaults.StressMax,
+			"evasion":          dhDefaults.Evasion,
+			"major_threshold":  dhDefaults.MajorThreshold,
+			"severe_threshold": dhDefaults.SevereThreshold,
+			"proficiency":      dhDefaults.Proficiency,
+			"armor_score":      dhDefaults.ArmorScore,
+			"armor_max":        dhDefaults.ArmorMax,
+			"agility":          dhDefaults.Traits.Agility,
+			"strength":         dhDefaults.Traits.Strength,
+			"finesse":          dhDefaults.Traits.Finesse,
+			"instinct":         dhDefaults.Traits.Instinct,
+			"presence":         dhDefaults.Traits.Presence,
+			"knowledge":        dhDefaults.Traits.Knowledge,
+			"experiences":      experiencesPayload,
 		},
 	}
-	profileJSON, err := json.Marshal(profilePayload)
-	if err != nil {
-		return character.Character{}, status.Errorf(codes.Internal, "encode profile payload: %v", err)
+	projectionApplier := c.stores.Applier()
+	commandPayload := character.ProfileUpdatePayload{
+		CharacterID:   created.ID,
+		SystemProfile: systemProfile,
 	}
-	profileEvent, err := c.stores.Event.AppendEvent(ctx, event.Event{
+	commandPayloadJSON, err := json.Marshal(commandPayload)
+	if err != nil {
+		return storage.CharacterRecord{}, status.Errorf(codes.Internal, "encode profile payload: %v", err)
+	}
+
+	profileCommandActorType := command.ActorTypeSystem
+	if actorID != "" {
+		profileCommandActorType = command.ActorTypeGM
+	}
+	profileResult, err := c.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:   campaignID,
-		Timestamp:    c.clock().UTC(),
-		Type:         event.TypeProfileUpdated,
+		Type:         command.Type("character.profile_update"),
+		ActorType:    profileCommandActorType,
+		ActorID:      actorID,
 		RequestID:    reqID,
 		InvocationID: invocationID,
-		ActorType:    profileActorType,
-		ActorID:      actorID,
 		EntityType:   "character",
 		EntityID:     created.ID,
-		PayloadJSON:  profileJSON,
+		PayloadJSON:  commandPayloadJSON,
 	})
 	if err != nil {
-		return character.Character{}, status.Errorf(codes.Internal, "append profile event: %v", err)
+		return storage.CharacterRecord{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
+	}
+	if len(profileResult.Decision.Rejections) > 0 {
+		return storage.CharacterRecord{}, status.Error(codes.FailedPrecondition, profileResult.Decision.Rejections[0].Message)
+	}
+	for _, evt := range profileResult.Decision.Events {
+		if err := projectionApplier.Apply(ctx, evt); err != nil {
+			return storage.CharacterRecord{}, status.Errorf(codes.Internal, "apply profile event: %v", err)
+		}
 	}
 
 	hpAfter := dhDefaults.HpMax
@@ -172,7 +192,7 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 	lifeStateAfter := daggerheart.LifeStateAlive
 	statePayload := daggerheart.CharacterStatePatchedPayload{
 		CharacterID:    created.ID,
-		HpAfter:        &hpAfter,
+		HPAfter:        &hpAfter,
 		HopeAfter:      &hopeAfter,
 		HopeMaxAfter:   &hopeMaxAfter,
 		StressAfter:    &stressAfter,
@@ -181,12 +201,12 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 	}
 	stateJSON, err := json.Marshal(statePayload)
 	if err != nil {
-		return character.Character{}, status.Errorf(codes.Internal, "encode state payload: %v", err)
+		return storage.CharacterRecord{}, status.Errorf(codes.Internal, "encode state payload: %v", err)
 	}
 	stateEvent, err := c.stores.Event.AppendEvent(ctx, event.Event{
 		CampaignID:    campaignID,
 		Timestamp:     c.clock().UTC(),
-		Type:          daggerheart.EventTypeCharacterStatePatched,
+		Type:          event.Type("action.character_state_patched"),
 		SessionID:     grpcmeta.SessionIDFromContext(ctx),
 		RequestID:     reqID,
 		InvocationID:  invocationID,
@@ -194,58 +214,52 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 		ActorID:       actorID,
 		EntityType:    "character",
 		EntityID:      created.ID,
-		SystemID:      campaignRecord.System.String(),
+		SystemID:      daggerheart.SystemID,
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON:   stateJSON,
 	})
 	if err != nil {
-		return character.Character{}, status.Errorf(codes.Internal, "append state event: %v", err)
+		return storage.CharacterRecord{}, status.Errorf(codes.Internal, "append state event: %v", err)
 	}
-
-	projectionApplier := c.stores.Applier()
-	if err := projectionApplier.Apply(ctx, profileEvent); err != nil {
-		return character.Character{}, status.Errorf(codes.Internal, "apply profile event: %v", err)
-	}
-	adapter := daggerheart.NewAdapter(c.stores.Daggerheart)
-	if err := adapter.ApplyEvent(ctx, stateEvent); err != nil {
-		return character.Character{}, status.Errorf(codes.Internal, "apply state event: %v", err)
+	if err := c.stores.Applier().Apply(ctx, stateEvent); err != nil {
+		return storage.CharacterRecord{}, status.Errorf(codes.Internal, "apply state event: %v", err)
 	}
 
 	return created, nil
 }
 
-func (c characterApplication) UpdateCharacter(ctx context.Context, campaignID string, in *campaignv1.UpdateCharacterRequest) (character.Character, error) {
+func (c characterApplication) UpdateCharacter(ctx context.Context, campaignID string, in *campaignv1.UpdateCharacterRequest) (storage.CharacterRecord, error) {
 	campaignRecord, err := c.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return character.Character{}, err
+		return storage.CharacterRecord{}, err
 	}
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
-		return character.Character{}, err
+		return storage.CharacterRecord{}, err
 	}
 
 	characterID := strings.TrimSpace(in.GetCharacterId())
 	if characterID == "" {
-		return character.Character{}, status.Error(codes.InvalidArgument, "character id is required")
+		return storage.CharacterRecord{}, status.Error(codes.InvalidArgument, "character id is required")
 	}
 
 	ch, err := c.stores.Character.GetCharacter(ctx, campaignID, characterID)
 	if err != nil {
-		return character.Character{}, err
+		return storage.CharacterRecord{}, err
 	}
 
 	fields := make(map[string]any)
 	if name := in.GetName(); name != nil {
 		trimmed := strings.TrimSpace(name.GetValue())
 		if trimmed == "" {
-			return character.Character{}, status.Error(codes.InvalidArgument, "name must not be empty")
+			return storage.CharacterRecord{}, status.Error(codes.InvalidArgument, "name must not be empty")
 		}
 		ch.Name = trimmed
 		fields["name"] = trimmed
 	}
 	if in.GetKind() != campaignv1.CharacterKind_CHARACTER_KIND_UNSPECIFIED {
 		kind := characterKindFromProto(in.GetKind())
-		if kind == character.CharacterKindUnspecified {
-			return character.Character{}, status.Error(codes.InvalidArgument, "character kind is invalid")
+		if kind == character.KindUnspecified {
+			return storage.CharacterRecord{}, status.Error(codes.InvalidArgument, "character kind is invalid")
 		}
 		ch.Kind = kind
 		fields["kind"] = in.GetKind().String()
@@ -255,106 +269,125 @@ func (c characterApplication) UpdateCharacter(ctx context.Context, campaignID st
 		fields["notes"] = ch.Notes
 	}
 	if len(fields) == 0 {
-		return character.Character{}, status.Error(codes.InvalidArgument, "at least one field must be provided")
-	}
-
-	payload := event.CharacterUpdatedPayload{
-		CharacterID: characterID,
-		Fields:      fields,
-	}
-	payloadJSON, err := json.Marshal(payload)
-	if err != nil {
-		return character.Character{}, status.Errorf(codes.Internal, "encode payload: %v", err)
+		return storage.CharacterRecord{}, status.Error(codes.InvalidArgument, "at least one field must be provided")
 	}
 
 	actorID := grpcmeta.ParticipantIDFromContext(ctx)
-	actorType := event.ActorTypeSystem
-	if actorID != "" {
-		actorType = event.ActorTypeParticipant
+	applier := c.stores.Applier()
+	if c.stores.Domain == nil {
+		return storage.CharacterRecord{}, status.Error(codes.Internal, "domain engine is not configured")
+	}
+	payloadFields := make(map[string]string, len(fields))
+	for key, value := range fields {
+		stringValue, ok := value.(string)
+		if !ok {
+			return storage.CharacterRecord{}, status.Errorf(codes.Internal, "character update field %s must be string", key)
+		}
+		payloadFields[key] = stringValue
+	}
+	payload := character.UpdatePayload{
+		CharacterID: characterID,
+		Fields:      payloadFields,
+	}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		return storage.CharacterRecord{}, status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
 
-	stored, err := c.stores.Event.AppendEvent(ctx, event.Event{
+	actorType := command.ActorTypeSystem
+	if actorID != "" {
+		actorType = command.ActorTypeParticipant
+	}
+	result, err := c.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:   campaignID,
-		Timestamp:    c.clock().UTC(),
-		Type:         event.TypeCharacterUpdated,
-		RequestID:    grpcmeta.RequestIDFromContext(ctx),
-		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+		Type:         command.Type("character.update"),
 		ActorType:    actorType,
 		ActorID:      actorID,
+		RequestID:    grpcmeta.RequestIDFromContext(ctx),
+		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
 		EntityType:   "character",
 		EntityID:     characterID,
 		PayloadJSON:  payloadJSON,
 	})
 	if err != nil {
-		return character.Character{}, status.Errorf(codes.Internal, "append event: %v", err)
+		return storage.CharacterRecord{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
 	}
-
-	applier := c.stores.Applier()
-	if err := applier.Apply(ctx, stored); err != nil {
-		return character.Character{}, status.Errorf(codes.Internal, "apply event: %v", err)
+	if len(result.Decision.Rejections) > 0 {
+		return storage.CharacterRecord{}, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
+	}
+	for _, evt := range result.Decision.Events {
+		if err := applier.Apply(ctx, evt); err != nil {
+			return storage.CharacterRecord{}, status.Errorf(codes.Internal, "apply event: %v", err)
+		}
 	}
 
 	updated, err := c.stores.Character.GetCharacter(ctx, campaignID, characterID)
 	if err != nil {
-		return character.Character{}, status.Errorf(codes.Internal, "load character: %v", err)
+		return storage.CharacterRecord{}, status.Errorf(codes.Internal, "load character: %v", err)
 	}
 
 	return updated, nil
 }
 
-func (c characterApplication) DeleteCharacter(ctx context.Context, campaignID string, in *campaignv1.DeleteCharacterRequest) (character.Character, error) {
+func (c characterApplication) DeleteCharacter(ctx context.Context, campaignID string, in *campaignv1.DeleteCharacterRequest) (storage.CharacterRecord, error) {
 	campaignRecord, err := c.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return character.Character{}, err
+		return storage.CharacterRecord{}, err
 	}
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
-		return character.Character{}, err
+		return storage.CharacterRecord{}, err
 	}
 
 	characterID := strings.TrimSpace(in.GetCharacterId())
 	if characterID == "" {
-		return character.Character{}, status.Error(codes.InvalidArgument, "character id is required")
+		return storage.CharacterRecord{}, status.Error(codes.InvalidArgument, "character id is required")
 	}
 
 	ch, err := c.stores.Character.GetCharacter(ctx, campaignID, characterID)
 	if err != nil {
-		return character.Character{}, err
-	}
-
-	payload := event.CharacterDeletedPayload{
-		CharacterID: characterID,
-		Reason:      strings.TrimSpace(in.GetReason()),
-	}
-	payloadJSON, err := json.Marshal(payload)
-	if err != nil {
-		return character.Character{}, status.Errorf(codes.Internal, "encode payload: %v", err)
+		return storage.CharacterRecord{}, err
 	}
 
 	actorID := grpcmeta.ParticipantIDFromContext(ctx)
-	actorType := event.ActorTypeSystem
-	if actorID != "" {
-		actorType = event.ActorTypeParticipant
+	reason := strings.TrimSpace(in.GetReason())
+	applier := c.stores.Applier()
+	if c.stores.Domain == nil {
+		return storage.CharacterRecord{}, status.Error(codes.Internal, "domain engine is not configured")
+	}
+	payload := character.DeletePayload{
+		CharacterID: characterID,
+		Reason:      reason,
+	}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		return storage.CharacterRecord{}, status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
 
-	stored, err := c.stores.Event.AppendEvent(ctx, event.Event{
+	actorType := command.ActorTypeSystem
+	if actorID != "" {
+		actorType = command.ActorTypeParticipant
+	}
+	result, err := c.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:   campaignID,
-		Timestamp:    c.clock().UTC(),
-		Type:         event.TypeCharacterDeleted,
-		RequestID:    grpcmeta.RequestIDFromContext(ctx),
-		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+		Type:         command.Type("character.delete"),
 		ActorType:    actorType,
 		ActorID:      actorID,
+		RequestID:    grpcmeta.RequestIDFromContext(ctx),
+		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
 		EntityType:   "character",
 		EntityID:     characterID,
 		PayloadJSON:  payloadJSON,
 	})
 	if err != nil {
-		return character.Character{}, status.Errorf(codes.Internal, "append event: %v", err)
+		return storage.CharacterRecord{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
 	}
-
-	applier := c.stores.Applier()
-	if err := applier.Apply(ctx, stored); err != nil {
-		return character.Character{}, status.Errorf(codes.Internal, "apply event: %v", err)
+	if len(result.Decision.Rejections) > 0 {
+		return storage.CharacterRecord{}, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
+	}
+	for _, evt := range result.Decision.Events {
+		if err := applier.Apply(ctx, evt); err != nil {
+			return storage.CharacterRecord{}, status.Errorf(codes.Internal, "apply event: %v", err)
+		}
 	}
 
 	return ch, nil
@@ -386,9 +419,14 @@ func (c characterApplication) SetDefaultControl(ctx context.Context, campaignID 
 		}
 	}
 
-	payload := event.CharacterUpdatedPayload{
+	actorID := grpcmeta.ParticipantIDFromContext(ctx)
+	applier := c.stores.Applier()
+	if c.stores.Domain == nil {
+		return "", "", status.Error(codes.Internal, "domain engine is not configured")
+	}
+	payload := character.UpdatePayload{
 		CharacterID: characterID,
-		Fields: map[string]any{
+		Fields: map[string]string{
 			"participant_id": participantID,
 		},
 	}
@@ -397,31 +435,31 @@ func (c characterApplication) SetDefaultControl(ctx context.Context, campaignID 
 		return "", "", status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
 
-	actorID := grpcmeta.ParticipantIDFromContext(ctx)
-	actorType := event.ActorTypeSystem
+	actorType := command.ActorTypeSystem
 	if actorID != "" {
-		actorType = event.ActorTypeParticipant
+		actorType = command.ActorTypeParticipant
 	}
-
-	stored, err := c.stores.Event.AppendEvent(ctx, event.Event{
+	result, err := c.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:   campaignID,
-		Timestamp:    c.clock().UTC(),
-		Type:         event.TypeCharacterUpdated,
-		RequestID:    grpcmeta.RequestIDFromContext(ctx),
-		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+		Type:         command.Type("character.update"),
 		ActorType:    actorType,
 		ActorID:      actorID,
+		RequestID:    grpcmeta.RequestIDFromContext(ctx),
+		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
 		EntityType:   "character",
 		EntityID:     characterID,
 		PayloadJSON:  payloadJSON,
 	})
 	if err != nil {
-		return "", "", status.Errorf(codes.Internal, "append event: %v", err)
+		return "", "", status.Errorf(codes.Internal, "execute domain command: %v", err)
 	}
-
-	applier := c.stores.Applier()
-	if err := applier.Apply(ctx, stored); err != nil {
-		return "", "", status.Errorf(codes.Internal, "apply event: %v", err)
+	if len(result.Decision.Rejections) > 0 {
+		return "", "", status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
+	}
+	for _, evt := range result.Decision.Events {
+		if err := applier.Apply(ctx, evt); err != nil {
+			return "", "", status.Errorf(codes.Internal, "apply event: %v", err)
+		}
 	}
 
 	return characterID, participantID, nil
@@ -628,59 +666,65 @@ func (c characterApplication) PatchCharacterProfile(ctx context.Context, campaig
 		})
 	}
 
-	profilePayload := event.ProfileUpdatedPayload{
-		CharacterID: characterID,
-		SystemProfile: map[string]any{
-			"daggerheart": map[string]any{
-				"level":            dhProfile.Level,
-				"hp_max":           dhProfile.HpMax,
-				"stress_max":       dhProfile.StressMax,
-				"evasion":          dhProfile.Evasion,
-				"major_threshold":  dhProfile.MajorThreshold,
-				"severe_threshold": dhProfile.SevereThreshold,
-				"proficiency":      dhProfile.Proficiency,
-				"armor_score":      dhProfile.ArmorScore,
-				"armor_max":        dhProfile.ArmorMax,
-				"agility":          dhProfile.Agility,
-				"strength":         dhProfile.Strength,
-				"finesse":          dhProfile.Finesse,
-				"instinct":         dhProfile.Instinct,
-				"presence":         dhProfile.Presence,
-				"knowledge":        dhProfile.Knowledge,
-				"experiences":      experiencesPayload,
-			},
+	systemProfile := map[string]any{
+		"daggerheart": map[string]any{
+			"level":            dhProfile.Level,
+			"hp_max":           dhProfile.HpMax,
+			"stress_max":       dhProfile.StressMax,
+			"evasion":          dhProfile.Evasion,
+			"major_threshold":  dhProfile.MajorThreshold,
+			"severe_threshold": dhProfile.SevereThreshold,
+			"proficiency":      dhProfile.Proficiency,
+			"armor_score":      dhProfile.ArmorScore,
+			"armor_max":        dhProfile.ArmorMax,
+			"agility":          dhProfile.Agility,
+			"strength":         dhProfile.Strength,
+			"finesse":          dhProfile.Finesse,
+			"instinct":         dhProfile.Instinct,
+			"presence":         dhProfile.Presence,
+			"knowledge":        dhProfile.Knowledge,
+			"experiences":      experiencesPayload,
 		},
 	}
-	profilePayloadJSON, err := json.Marshal(profilePayload)
+	actorID := grpcmeta.ParticipantIDFromContext(ctx)
+	applier := c.stores.Applier()
+	if c.stores.Domain == nil {
+		return "", storage.DaggerheartCharacterProfile{}, status.Error(codes.Internal, "domain engine is not configured")
+	}
+	commandPayload := character.ProfileUpdatePayload{
+		CharacterID:   characterID,
+		SystemProfile: systemProfile,
+	}
+	commandPayloadJSON, err := json.Marshal(commandPayload)
 	if err != nil {
 		return "", storage.DaggerheartCharacterProfile{}, status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
 
-	actorID := grpcmeta.ParticipantIDFromContext(ctx)
-	actorType := event.ActorTypeSystem
+	actorType := command.ActorTypeSystem
 	if actorID != "" {
-		actorType = event.ActorTypeParticipant
+		actorType = command.ActorTypeParticipant
 	}
-
-	stored, err := c.stores.Event.AppendEvent(ctx, event.Event{
+	result, err := c.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:   campaignID,
-		Timestamp:    c.clock().UTC(),
-		Type:         event.TypeProfileUpdated,
-		RequestID:    grpcmeta.RequestIDFromContext(ctx),
-		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+		Type:         command.Type("character.profile_update"),
 		ActorType:    actorType,
 		ActorID:      actorID,
+		RequestID:    grpcmeta.RequestIDFromContext(ctx),
+		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
 		EntityType:   "character",
 		EntityID:     characterID,
-		PayloadJSON:  profilePayloadJSON,
+		PayloadJSON:  commandPayloadJSON,
 	})
 	if err != nil {
-		return "", storage.DaggerheartCharacterProfile{}, status.Errorf(codes.Internal, "append event: %v", err)
+		return "", storage.DaggerheartCharacterProfile{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
 	}
-
-	applier := c.stores.Applier()
-	if err := applier.Apply(ctx, stored); err != nil {
-		return "", storage.DaggerheartCharacterProfile{}, status.Errorf(codes.Internal, "apply event: %v", err)
+	if len(result.Decision.Rejections) > 0 {
+		return "", storage.DaggerheartCharacterProfile{}, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
+	}
+	for _, evt := range result.Decision.Events {
+		if err := applier.Apply(ctx, evt); err != nil {
+			return "", storage.DaggerheartCharacterProfile{}, status.Errorf(codes.Internal, "apply event: %v", err)
+		}
 	}
 
 	return characterID, dhProfile, nil

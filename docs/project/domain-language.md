@@ -61,6 +61,9 @@ events record accepted facts, and projections/snapshots are derived views.
 Direct mutation of derived records is a bug; corrections happen by writing
 events and replaying projections.
 
+For concrete command/event field semantics and write-path routing, see
+[Event-driven system](event-driven-system.md).
+
 ### Event
 
 An event is an immutable fact that happened in the game. It can describe:

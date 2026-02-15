@@ -11,10 +11,10 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/character"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/invite"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/participant"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/session"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -39,12 +39,12 @@ func TestOpenAlias(t *testing.T) {
 	defer store.Close()
 
 	// Verify it behaves like a projections store
-	if err := store.Put(context.Background(), campaign.Campaign{
+	if err := store.Put(context.Background(), storage.CampaignRecord{
 		ID:        "camp-open",
 		Name:      "Test",
 		Locale:    platformi18n.DefaultLocale(),
 		System:    commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		Status:    campaign.CampaignStatusActive,
+		Status:    campaign.StatusActive,
 		GmMode:    campaign.GmModeHuman,
 		CreatedAt: time.Now().UTC(),
 		UpdatedAt: time.Now().UTC(),
@@ -58,12 +58,12 @@ func TestPutParticipantDuplicateUser(t *testing.T) {
 	now := time.Date(2026, 2, 3, 10, 0, 0, 0, time.UTC)
 	seedCampaign(t, store, "camp-dup-user", now)
 
-	p1 := participant.Participant{
+	p1 := storage.ParticipantRecord{
 		CampaignID:     "camp-dup-user",
 		ID:             "part-1",
 		UserID:         "user-shared",
 		DisplayName:    "Player 1",
-		Role:           participant.ParticipantRolePlayer,
+		Role:           participant.RolePlayer,
 		Controller:     participant.ControllerHuman,
 		CampaignAccess: participant.CampaignAccessMember,
 		CreatedAt:      now,
@@ -73,12 +73,12 @@ func TestPutParticipantDuplicateUser(t *testing.T) {
 		t.Fatalf("put first participant: %v", err)
 	}
 
-	p2 := participant.Participant{
+	p2 := storage.ParticipantRecord{
 		CampaignID:     "camp-dup-user",
 		ID:             "part-2",
 		UserID:         "user-shared",
 		DisplayName:    "Player 2",
-		Role:           participant.ParticipantRolePlayer,
+		Role:           participant.RolePlayer,
 		Controller:     participant.ControllerHuman,
 		CampaignAccess: participant.CampaignAccessMember,
 		CreatedAt:      now,
@@ -145,11 +145,11 @@ func TestEndSessionAlreadyEnded(t *testing.T) {
 	now := time.Date(2026, 2, 3, 10, 0, 0, 0, time.UTC)
 	seedCampaign(t, store, "camp-end-twice", now)
 
-	sess := session.Session{
+	sess := storage.SessionRecord{
 		ID:         "sess-1",
 		CampaignID: "camp-end-twice",
 		Name:       "Session One",
-		Status:     session.SessionStatusActive,
+		Status:     session.StatusActive,
 		StartedAt:  now,
 		UpdatedAt:  now,
 	}
@@ -225,7 +225,7 @@ func TestUpdateInviteStatusZeroTime(t *testing.T) {
 	seedCampaign(t, store, "camp-inv-zero", now)
 	seedParticipant(t, store, "camp-inv-zero", "part-1", "user-1", now)
 
-	inv := invite.Invite{
+	inv := storage.InviteRecord{
 		ID:                     "inv-zero",
 		CampaignID:             "camp-inv-zero",
 		ParticipantID:          "part-1",
@@ -259,12 +259,12 @@ func TestListInvitesWithRecipientFilter(t *testing.T) {
 	seedParticipant(t, store, "camp-inv-recip", "part-1", "user-1", now)
 	seedParticipant(t, store, "camp-inv-recip", "part-2", "user-2", now)
 
-	inv1 := invite.Invite{
+	inv1 := storage.InviteRecord{
 		ID: "inv-r1", CampaignID: "camp-inv-recip", ParticipantID: "part-1",
 		RecipientUserID: "user-1", Status: invite.StatusPending,
 		CreatedByParticipantID: "part-1", CreatedAt: now, UpdatedAt: now,
 	}
-	inv2 := invite.Invite{
+	inv2 := storage.InviteRecord{
 		ID: "inv-r2", CampaignID: "camp-inv-recip", ParticipantID: "part-2",
 		RecipientUserID: "user-2", Status: invite.StatusPending,
 		CreatedByParticipantID: "part-2", CreatedAt: now, UpdatedAt: now,
@@ -311,11 +311,11 @@ func TestPutSessionNonActive(t *testing.T) {
 
 	// Storing a session with non-active status skips the active check
 	endedAt := now.Add(time.Hour)
-	sess := session.Session{
+	sess := storage.SessionRecord{
 		ID:         "sess-ended",
 		CampaignID: "camp-non-active",
 		Name:       "Ended Session",
-		Status:     session.SessionStatusEnded,
+		Status:     session.StatusEnded,
 		StartedAt:  now,
 		UpdatedAt:  now,
 		EndedAt:    &endedAt,
@@ -328,7 +328,7 @@ func TestPutSessionNonActive(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get session: %v", err)
 	}
-	if got.Status != session.SessionStatusEnded {
+	if got.Status != session.StatusEnded {
 		t.Fatalf("expected ended status, got %v", got.Status)
 	}
 	if got.EndedAt == nil {
@@ -383,12 +383,12 @@ func TestCampaignPutUpdate(t *testing.T) {
 	store := openTestStore(t)
 	now := time.Date(2026, 2, 3, 10, 0, 0, 0, time.UTC)
 
-	c := campaign.Campaign{
+	c := storage.CampaignRecord{
 		ID:        "camp-update",
 		Name:      "Original",
 		Locale:    platformi18n.DefaultLocale(),
 		System:    commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		Status:    campaign.CampaignStatusDraft,
+		Status:    campaign.StatusDraft,
 		GmMode:    campaign.GmModeAI,
 		CreatedAt: now,
 		UpdatedAt: now,
@@ -399,7 +399,7 @@ func TestCampaignPutUpdate(t *testing.T) {
 
 	// Update with new fields
 	c.Name = "Updated"
-	c.Status = campaign.CampaignStatusActive
+	c.Status = campaign.StatusActive
 	c.GmMode = campaign.GmModeHybrid
 	c.UpdatedAt = now.Add(time.Hour)
 	if err := store.Put(context.Background(), c); err != nil {
@@ -413,26 +413,26 @@ func TestCampaignPutUpdate(t *testing.T) {
 	if got.Name != "Updated" {
 		t.Fatalf("expected updated name, got %q", got.Name)
 	}
-	if got.Status != campaign.CampaignStatusActive {
+	if got.Status != campaign.StatusActive {
 		t.Fatalf("expected active status")
 	}
 }
 
 func TestConversionHelpersCoverage(t *testing.T) {
 	// Draft status
-	if campaignStatusToString(campaign.CampaignStatusDraft) != "DRAFT" {
+	if campaignStatusToString(campaign.StatusDraft) != "DRAFT" {
 		t.Fatal("expected DRAFT")
 	}
-	if campaignStatusToString(campaign.CampaignStatusCompleted) != "COMPLETED" {
+	if campaignStatusToString(campaign.StatusCompleted) != "COMPLETED" {
 		t.Fatal("expected COMPLETED")
 	}
-	if stringToCampaignStatus("DRAFT") != campaign.CampaignStatusDraft {
+	if stringToCampaignStatus("DRAFT") != campaign.StatusDraft {
 		t.Fatal("expected draft status")
 	}
-	if stringToCampaignStatus("COMPLETED") != campaign.CampaignStatusCompleted {
+	if stringToCampaignStatus("COMPLETED") != campaign.StatusCompleted {
 		t.Fatal("expected completed status")
 	}
-	if stringToCampaignStatus("ARCHIVED") != campaign.CampaignStatusArchived {
+	if stringToCampaignStatus("ARCHIVED") != campaign.StatusArchived {
 		t.Fatal("expected archived status")
 	}
 
@@ -464,17 +464,17 @@ func TestConversionHelpersCoverage(t *testing.T) {
 	}
 
 	// Character: Unspecified kind
-	if characterKindToString(character.CharacterKindUnspecified) != "UNSPECIFIED" {
+	if characterKindToString(character.KindUnspecified) != "UNSPECIFIED" {
 		t.Fatal("expected UNSPECIFIED kind")
 	}
 
 	// Session: Unspecified status
-	if sessionStatusToString(session.SessionStatusUnspecified) != "UNSPECIFIED" {
+	if sessionStatusToString(session.StatusUnspecified) != "UNSPECIFIED" {
 		t.Fatal("expected UNSPECIFIED session status")
 	}
 
 	// Participant role: Unspecified
-	if participantRoleToString(participant.ParticipantRoleUnspecified) != "UNSPECIFIED" {
+	if participantRoleToString(participant.RoleUnspecified) != "UNSPECIFIED" {
 		t.Fatal("expected UNSPECIFIED role")
 	}
 
@@ -484,7 +484,7 @@ func TestConversionHelpersCoverage(t *testing.T) {
 	}
 
 	// stringToParticipantRole: GM case
-	if stringToParticipantRole("GM") != participant.ParticipantRoleGM {
+	if stringToParticipantRole("GM") != participant.RoleGM {
 		t.Fatal("expected GM role")
 	}
 
@@ -499,12 +499,12 @@ func TestConversionHelpersCoverage(t *testing.T) {
 	}
 
 	// participantRoleToString: GM case
-	if participantRoleToString(participant.ParticipantRoleGM) != "GM" {
+	if participantRoleToString(participant.RoleGM) != "GM" {
 		t.Fatal("expected GM string")
 	}
 
 	// campaignStatusToString: Archived
-	if campaignStatusToString(campaign.CampaignStatusArchived) != "ARCHIVED" {
+	if campaignStatusToString(campaign.StatusArchived) != "ARCHIVED" {
 		t.Fatal("expected ARCHIVED")
 	}
 
@@ -523,10 +523,10 @@ func TestConversionHelpersCoverage(t *testing.T) {
 	}
 
 	// campaignStatusToString: Unspecified
-	if campaignStatusToString(campaign.CampaignStatusUnspecified) != "UNSPECIFIED" {
+	if campaignStatusToString(campaign.StatusUnspecified) != "UNSPECIFIED" {
 		t.Fatal("expected UNSPECIFIED campaign status")
 	}
-	if stringToCampaignStatus("UNKNOWN") != campaign.CampaignStatusUnspecified {
+	if stringToCampaignStatus("UNKNOWN") != campaign.StatusUnspecified {
 		t.Fatal("expected unspecified status for unknown string")
 	}
 }

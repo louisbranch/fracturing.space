@@ -6,6 +6,12 @@ nav_order: 1
 
 # Project Overview
 
+## Read this first
+
+- Event model and write flow: [Event-driven system](event-driven-system.md)
+- Replay and recovery: [Event replay](event-replay.md)
+- System extension model: [Game systems](game-systems.md)
+
 ## What it is
 
 Fracturing.Space models a tabletop RPG campaign as a deterministic, event-sourced state machine. Every change is an ordered event, enabling full replay, inspection, and branching from any point in history.

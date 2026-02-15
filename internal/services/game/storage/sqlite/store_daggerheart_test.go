@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/character"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
@@ -15,7 +15,7 @@ func TestDaggerheartCharacterProfilePutGet(t *testing.T) {
 	store := openTestStore(t)
 	now := time.Date(2026, 2, 3, 11, 0, 0, 0, time.UTC)
 	seedCampaign(t, store, "camp-dhp", now)
-	seedCharacter(t, store, "camp-dhp", "char-1", "Aria", character.CharacterKindPC, now)
+	seedCharacter(t, store, "camp-dhp", "char-1", "Aria", character.KindPC, now)
 
 	expected := storage.DaggerheartCharacterProfile{
 		CampaignID:      "camp-dhp",
@@ -92,7 +92,7 @@ func TestDaggerheartCharacterStatePutGet(t *testing.T) {
 	store := openTestStore(t)
 	now := time.Date(2026, 2, 3, 11, 0, 0, 0, time.UTC)
 	seedCampaign(t, store, "camp-dhs", now)
-	seedCharacter(t, store, "camp-dhs", "char-1", "Brim", character.CharacterKindPC, now)
+	seedCharacter(t, store, "camp-dhs", "char-1", "Brim", character.KindPC, now)
 
 	expected := storage.DaggerheartCharacterState{
 		CampaignID:  "camp-dhs",
@@ -142,7 +142,7 @@ func TestDaggerheartCharacterStateConditions(t *testing.T) {
 	store := openTestStore(t)
 	now := time.Date(2026, 2, 3, 11, 0, 0, 0, time.UTC)
 	seedCampaign(t, store, "camp-cond", now)
-	seedCharacter(t, store, "camp-cond", "char-1", "Cass", character.CharacterKindPC, now)
+	seedCharacter(t, store, "camp-cond", "char-1", "Cass", character.KindPC, now)
 
 	// Nil conditions should round-trip as empty/nil slice
 	state := storage.DaggerheartCharacterState{

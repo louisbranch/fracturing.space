@@ -1,0 +1,35 @@
+package daggerheart
+
+import event "github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+
+// EventType constants for Daggerheart projection and adapter event handling.
+const (
+	EventTypeDamageApplied             event.Type = "action.damage_applied"
+	EventTypeRestTaken                 event.Type = "action.rest_taken"
+	EventTypeDowntimeMoveApplied       event.Type = "action.downtime_move_applied"
+	EventTypeLoadoutSwapped            event.Type = "action.loadout_swapped"
+	EventTypeCharacterStatePatched     event.Type = "action.character_state_patched"
+	EventTypeConditionChanged          event.Type = "action.condition_changed"
+	EventTypeGMFearChanged             event.Type = "action.gm_fear_changed"
+	EventTypeGMMoveApplied             event.Type = "action.gm_move_applied"
+	EventTypeHopeSpent                 event.Type = "action.hope_spent"
+	EventTypeStressSpent               event.Type = "action.stress_spent"
+	EventTypeDeathMoveResolved         event.Type = "action.death_move_resolved"
+	EventTypeBlazeOfGloryResolved      event.Type = "action.blaze_of_glory_resolved"
+	EventTypeAttackResolved            event.Type = "action.attack_resolved"
+	EventTypeReactionResolved          event.Type = "action.reaction_resolved"
+	EventTypeDamageRollResolved        event.Type = "action.damage_roll_resolved"
+	EventTypeGroupActionResolved       event.Type = "action.group_action_resolved"
+	EventTypeTagTeamResolved           event.Type = "action.tag_team_resolved"
+	EventTypeCountdownCreated          event.Type = "action.countdown_created"
+	EventTypeCountdownUpdated          event.Type = "action.countdown_updated"
+	EventTypeCountdownDeleted          event.Type = "action.countdown_deleted"
+	EventTypeAdversaryRollResolved     event.Type = "action.adversary_roll_resolved"
+	EventTypeAdversaryActionResolved   event.Type = "action.adversary_action_resolved"
+	EventTypeAdversaryAttackResolved   event.Type = "action.adversary_attack_resolved"
+	EventTypeAdversaryCreated          event.Type = "action.adversary_created"
+	EventTypeAdversaryConditionChanged event.Type = "action.adversary_condition_changed"
+	EventTypeAdversaryDamageApplied    event.Type = "action.adversary_damage_applied"
+	EventTypeAdversaryUpdated          event.Type = "action.adversary_updated"
+	EventTypeAdversaryDeleted          event.Type = "action.adversary_deleted"
+)
