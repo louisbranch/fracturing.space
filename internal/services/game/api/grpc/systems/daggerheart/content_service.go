@@ -30,7 +30,7 @@ func NewDaggerheartContentService(stores Stores) *DaggerheartContentService {
 }
 
 // GetContentCatalog returns the entire Daggerheart content catalog.
-func (s *DaggerheartContentService) GetContentCatalog(ctx context.Context, _ *pb.GetDaggerheartContentCatalogRequest) (*pb.GetDaggerheartContentCatalogResponse, error) {
+func (s *DaggerheartContentService) GetContentCatalog(ctx context.Context, in *pb.GetDaggerheartContentCatalogRequest) (*pb.GetDaggerheartContentCatalogResponse, error) {
 	store, err := s.contentStore()
 	if err != nil {
 		return nil, err
@@ -97,6 +97,52 @@ func (s *DaggerheartContentService) GetContentCatalog(ctx context.Context, _ *pb
 		return nil, status.Errorf(codes.Internal, "list environments: %v", err)
 	}
 
+	if err := localizeClasses(ctx, store, in.GetLocale(), classes); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize classes: %v", err)
+	}
+	if err := localizeSubclasses(ctx, store, in.GetLocale(), subclasses); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize subclasses: %v", err)
+	}
+	if err := localizeHeritages(ctx, store, in.GetLocale(), heritages); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize heritages: %v", err)
+	}
+	if err := localizeExperiences(ctx, store, in.GetLocale(), experiences); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize experiences: %v", err)
+	}
+	if err := localizeAdversaries(ctx, store, in.GetLocale(), adversaries); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize adversaries: %v", err)
+	}
+	if err := localizeBeastforms(ctx, store, in.GetLocale(), beastforms); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize beastforms: %v", err)
+	}
+	if err := localizeCompanionExperiences(ctx, store, in.GetLocale(), companionExperiences); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize companion experiences: %v", err)
+	}
+	if err := localizeLootEntries(ctx, store, in.GetLocale(), lootEntries); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize loot entries: %v", err)
+	}
+	if err := localizeDamageTypes(ctx, store, in.GetLocale(), damageTypes); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize damage types: %v", err)
+	}
+	if err := localizeDomains(ctx, store, in.GetLocale(), domains); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize domains: %v", err)
+	}
+	if err := localizeDomainCards(ctx, store, in.GetLocale(), domainCards); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize domain cards: %v", err)
+	}
+	if err := localizeWeapons(ctx, store, in.GetLocale(), weapons); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize weapons: %v", err)
+	}
+	if err := localizeArmor(ctx, store, in.GetLocale(), armor); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize armor: %v", err)
+	}
+	if err := localizeItems(ctx, store, in.GetLocale(), items); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize items: %v", err)
+	}
+	if err := localizeEnvironments(ctx, store, in.GetLocale(), environments); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize environments: %v", err)
+	}
+
 	return &pb.GetDaggerheartContentCatalogResponse{
 		Catalog: &pb.DaggerheartContentCatalog{
 			Classes:              toProtoDaggerheartClasses(classes),
@@ -135,6 +181,11 @@ func (s *DaggerheartContentService) GetClass(ctx context.Context, in *pb.GetDagg
 	if err != nil {
 		return nil, mapContentErr("get class", err)
 	}
+	classes := []storage.DaggerheartClass{class}
+	if err := localizeClasses(ctx, store, in.GetLocale(), classes); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize classes: %v", err)
+	}
+	class = classes[0]
 
 	return &pb.GetDaggerheartClassResponse{Class: toProtoDaggerheartClass(class)}, nil
 }
@@ -196,6 +247,9 @@ func (s *DaggerheartContentService) ListClasses(ctx context.Context, in *pb.List
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "list classes: %v", err)
 	}
+	if err := localizeClasses(ctx, store, in.GetLocale(), page.Items); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize classes: %v", err)
+	}
 
 	return &pb.ListDaggerheartClassesResponse{
 		Classes:           toProtoDaggerheartClasses(page.Items),
@@ -222,6 +276,11 @@ func (s *DaggerheartContentService) GetSubclass(ctx context.Context, in *pb.GetD
 	if err != nil {
 		return nil, mapContentErr("get subclass", err)
 	}
+	subclasses := []storage.DaggerheartSubclass{subclass}
+	if err := localizeSubclasses(ctx, store, in.GetLocale(), subclasses); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize subclasses: %v", err)
+	}
+	subclass = subclasses[0]
 
 	return &pb.GetDaggerheartSubclassResponse{Subclass: toProtoDaggerheartSubclass(subclass)}, nil
 }
@@ -286,6 +345,9 @@ func (s *DaggerheartContentService) ListSubclasses(ctx context.Context, in *pb.L
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "list subclasses: %v", err)
 	}
+	if err := localizeSubclasses(ctx, store, in.GetLocale(), page.Items); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize subclasses: %v", err)
+	}
 
 	return &pb.ListDaggerheartSubclassesResponse{
 		Subclasses:        toProtoDaggerheartSubclasses(page.Items),
@@ -312,6 +374,11 @@ func (s *DaggerheartContentService) GetHeritage(ctx context.Context, in *pb.GetD
 	if err != nil {
 		return nil, mapContentErr("get heritage", err)
 	}
+	heritages := []storage.DaggerheartHeritage{heritage}
+	if err := localizeHeritages(ctx, store, in.GetLocale(), heritages); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize heritages: %v", err)
+	}
+	heritage = heritages[0]
 
 	return &pb.GetDaggerheartHeritageResponse{Heritage: toProtoDaggerheartHeritage(heritage)}, nil
 }
@@ -376,6 +443,9 @@ func (s *DaggerheartContentService) ListHeritages(ctx context.Context, in *pb.Li
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "list heritages: %v", err)
 	}
+	if err := localizeHeritages(ctx, store, in.GetLocale(), page.Items); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize heritages: %v", err)
+	}
 
 	return &pb.ListDaggerheartHeritagesResponse{
 		Heritages:         toProtoDaggerheartHeritages(page.Items),
@@ -402,6 +472,11 @@ func (s *DaggerheartContentService) GetExperience(ctx context.Context, in *pb.Ge
 	if err != nil {
 		return nil, mapContentErr("get experience", err)
 	}
+	experiences := []storage.DaggerheartExperienceEntry{experience}
+	if err := localizeExperiences(ctx, store, in.GetLocale(), experiences); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize experiences: %v", err)
+	}
+	experience = experiences[0]
 
 	return &pb.GetDaggerheartExperienceResponse{Experience: toProtoDaggerheartExperience(experience)}, nil
 }
@@ -463,6 +538,9 @@ func (s *DaggerheartContentService) ListExperiences(ctx context.Context, in *pb.
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "list experiences: %v", err)
 	}
+	if err := localizeExperiences(ctx, store, in.GetLocale(), page.Items); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize experiences: %v", err)
+	}
 
 	return &pb.ListDaggerheartExperiencesResponse{
 		Experiences:       toProtoDaggerheartExperiences(page.Items),
@@ -489,6 +567,11 @@ func (s *DaggerheartContentService) GetAdversary(ctx context.Context, in *pb.Get
 	if err != nil {
 		return nil, mapContentErr("get adversary", err)
 	}
+	adversaries := []storage.DaggerheartAdversaryEntry{adversary}
+	if err := localizeAdversaries(ctx, store, in.GetLocale(), adversaries); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize adversaries: %v", err)
+	}
+	adversary = adversaries[0]
 
 	return &pb.GetDaggerheartAdversaryResponse{Adversary: toProtoDaggerheartAdversaryEntry(adversary)}, nil
 }
@@ -556,6 +639,9 @@ func (s *DaggerheartContentService) ListAdversaries(ctx context.Context, in *pb.
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "list adversaries: %v", err)
 	}
+	if err := localizeAdversaries(ctx, store, in.GetLocale(), page.Items); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize adversaries: %v", err)
+	}
 
 	return &pb.ListDaggerheartAdversariesResponse{
 		Adversaries:       toProtoDaggerheartAdversaryEntries(page.Items),
@@ -582,6 +668,11 @@ func (s *DaggerheartContentService) GetBeastform(ctx context.Context, in *pb.Get
 	if err != nil {
 		return nil, mapContentErr("get beastform", err)
 	}
+	beastforms := []storage.DaggerheartBeastformEntry{beastform}
+	if err := localizeBeastforms(ctx, store, in.GetLocale(), beastforms); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize beastforms: %v", err)
+	}
+	beastform = beastforms[0]
 
 	return &pb.GetDaggerheartBeastformResponse{Beastform: toProtoDaggerheartBeastform(beastform)}, nil
 }
@@ -649,6 +740,9 @@ func (s *DaggerheartContentService) ListBeastforms(ctx context.Context, in *pb.L
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "list beastforms: %v", err)
 	}
+	if err := localizeBeastforms(ctx, store, in.GetLocale(), page.Items); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize beastforms: %v", err)
+	}
 
 	return &pb.ListDaggerheartBeastformsResponse{
 		Beastforms:        toProtoDaggerheartBeastforms(page.Items),
@@ -675,6 +769,11 @@ func (s *DaggerheartContentService) GetCompanionExperience(ctx context.Context, 
 	if err != nil {
 		return nil, mapContentErr("get companion experience", err)
 	}
+	experiences := []storage.DaggerheartCompanionExperienceEntry{experience}
+	if err := localizeCompanionExperiences(ctx, store, in.GetLocale(), experiences); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize companion experiences: %v", err)
+	}
+	experience = experiences[0]
 
 	return &pb.GetDaggerheartCompanionExperienceResponse{Experience: toProtoDaggerheartCompanionExperience(experience)}, nil
 }
@@ -736,6 +835,9 @@ func (s *DaggerheartContentService) ListCompanionExperiences(ctx context.Context
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "list companion experiences: %v", err)
 	}
+	if err := localizeCompanionExperiences(ctx, store, in.GetLocale(), page.Items); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize companion experiences: %v", err)
+	}
 
 	return &pb.ListDaggerheartCompanionExperiencesResponse{
 		Experiences:       toProtoDaggerheartCompanionExperiences(page.Items),
@@ -762,6 +864,11 @@ func (s *DaggerheartContentService) GetLootEntry(ctx context.Context, in *pb.Get
 	if err != nil {
 		return nil, mapContentErr("get loot entry", err)
 	}
+	entries := []storage.DaggerheartLootEntry{entry}
+	if err := localizeLootEntries(ctx, store, in.GetLocale(), entries); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize loot entries: %v", err)
+	}
+	entry = entries[0]
 
 	return &pb.GetDaggerheartLootEntryResponse{Entry: toProtoDaggerheartLootEntry(entry)}, nil
 }
@@ -826,6 +933,9 @@ func (s *DaggerheartContentService) ListLootEntries(ctx context.Context, in *pb.
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "list loot entries: %v", err)
 	}
+	if err := localizeLootEntries(ctx, store, in.GetLocale(), page.Items); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize loot entries: %v", err)
+	}
 
 	return &pb.ListDaggerheartLootEntriesResponse{
 		Entries:           toProtoDaggerheartLootEntries(page.Items),
@@ -852,6 +962,11 @@ func (s *DaggerheartContentService) GetDamageType(ctx context.Context, in *pb.Ge
 	if err != nil {
 		return nil, mapContentErr("get damage type", err)
 	}
+	entries := []storage.DaggerheartDamageTypeEntry{entry}
+	if err := localizeDamageTypes(ctx, store, in.GetLocale(), entries); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize damage types: %v", err)
+	}
+	entry = entries[0]
 
 	return &pb.GetDaggerheartDamageTypeResponse{DamageType: toProtoDaggerheartDamageType(entry)}, nil
 }
@@ -913,6 +1028,9 @@ func (s *DaggerheartContentService) ListDamageTypes(ctx context.Context, in *pb.
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "list damage types: %v", err)
 	}
+	if err := localizeDamageTypes(ctx, store, in.GetLocale(), page.Items); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize damage types: %v", err)
+	}
 
 	return &pb.ListDaggerheartDamageTypesResponse{
 		DamageTypes:       toProtoDaggerheartDamageTypes(page.Items),
@@ -939,6 +1057,11 @@ func (s *DaggerheartContentService) GetDomain(ctx context.Context, in *pb.GetDag
 	if err != nil {
 		return nil, mapContentErr("get domain", err)
 	}
+	domains := []storage.DaggerheartDomain{domain}
+	if err := localizeDomains(ctx, store, in.GetLocale(), domains); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize domains: %v", err)
+	}
+	domain = domains[0]
 
 	return &pb.GetDaggerheartDomainResponse{Domain: toProtoDaggerheartDomain(domain)}, nil
 }
@@ -1000,6 +1123,9 @@ func (s *DaggerheartContentService) ListDomains(ctx context.Context, in *pb.List
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "list domains: %v", err)
 	}
+	if err := localizeDomains(ctx, store, in.GetLocale(), page.Items); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize domains: %v", err)
+	}
 
 	return &pb.ListDaggerheartDomainsResponse{
 		Domains:           toProtoDaggerheartDomains(page.Items),
@@ -1026,6 +1152,11 @@ func (s *DaggerheartContentService) GetDomainCard(ctx context.Context, in *pb.Ge
 	if err != nil {
 		return nil, mapContentErr("get domain card", err)
 	}
+	cards := []storage.DaggerheartDomainCard{card}
+	if err := localizeDomainCards(ctx, store, in.GetLocale(), cards); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize domain cards: %v", err)
+	}
+	card = cards[0]
 
 	return &pb.GetDaggerheartDomainCardResponse{DomainCard: toProtoDaggerheartDomainCard(card)}, nil
 }
@@ -1110,6 +1241,9 @@ func (s *DaggerheartContentService) ListDomainCards(ctx context.Context, in *pb.
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "list domain cards: %v", err)
 	}
+	if err := localizeDomainCards(ctx, store, in.GetLocale(), page.Items); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize domain cards: %v", err)
+	}
 
 	return &pb.ListDaggerheartDomainCardsResponse{
 		DomainCards:       toProtoDaggerheartDomainCards(page.Items),
@@ -1136,6 +1270,11 @@ func (s *DaggerheartContentService) GetWeapon(ctx context.Context, in *pb.GetDag
 	if err != nil {
 		return nil, mapContentErr("get weapon", err)
 	}
+	weapons := []storage.DaggerheartWeapon{weapon}
+	if err := localizeWeapons(ctx, store, in.GetLocale(), weapons); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize weapons: %v", err)
+	}
+	weapon = weapons[0]
 
 	return &pb.GetDaggerheartWeaponResponse{Weapon: toProtoDaggerheartWeapon(weapon)}, nil
 }
@@ -1209,6 +1348,9 @@ func (s *DaggerheartContentService) ListWeapons(ctx context.Context, in *pb.List
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "list weapons: %v", err)
 	}
+	if err := localizeWeapons(ctx, store, in.GetLocale(), page.Items); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize weapons: %v", err)
+	}
 
 	return &pb.ListDaggerheartWeaponsResponse{
 		Weapons:           toProtoDaggerheartWeapons(page.Items),
@@ -1235,6 +1377,11 @@ func (s *DaggerheartContentService) GetArmor(ctx context.Context, in *pb.GetDagg
 	if err != nil {
 		return nil, mapContentErr("get armor", err)
 	}
+	armorItems := []storage.DaggerheartArmor{armor}
+	if err := localizeArmor(ctx, store, in.GetLocale(), armorItems); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize armor: %v", err)
+	}
+	armor = armorItems[0]
 
 	return &pb.GetDaggerheartArmorResponse{Armor: toProtoDaggerheartArmor(armor)}, nil
 }
@@ -1299,6 +1446,9 @@ func (s *DaggerheartContentService) ListArmor(ctx context.Context, in *pb.ListDa
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "list armor: %v", err)
 	}
+	if err := localizeArmor(ctx, store, in.GetLocale(), page.Items); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize armor: %v", err)
+	}
 
 	return &pb.ListDaggerheartArmorResponse{
 		Armor:             toProtoDaggerheartArmorList(page.Items),
@@ -1325,6 +1475,11 @@ func (s *DaggerheartContentService) GetItem(ctx context.Context, in *pb.GetDagge
 	if err != nil {
 		return nil, mapContentErr("get item", err)
 	}
+	items := []storage.DaggerheartItem{item}
+	if err := localizeItems(ctx, store, in.GetLocale(), items); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize items: %v", err)
+	}
+	item = items[0]
 
 	return &pb.GetDaggerheartItemResponse{Item: toProtoDaggerheartItem(item)}, nil
 }
@@ -1392,6 +1547,9 @@ func (s *DaggerheartContentService) ListItems(ctx context.Context, in *pb.ListDa
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "list items: %v", err)
 	}
+	if err := localizeItems(ctx, store, in.GetLocale(), page.Items); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize items: %v", err)
+	}
 
 	return &pb.ListDaggerheartItemsResponse{
 		Items:             toProtoDaggerheartItems(page.Items),
@@ -1418,6 +1576,11 @@ func (s *DaggerheartContentService) GetEnvironment(ctx context.Context, in *pb.G
 	if err != nil {
 		return nil, mapContentErr("get environment", err)
 	}
+	envs := []storage.DaggerheartEnvironment{env}
+	if err := localizeEnvironments(ctx, store, in.GetLocale(), envs); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize environments: %v", err)
+	}
+	env = envs[0]
 
 	return &pb.GetDaggerheartEnvironmentResponse{Environment: toProtoDaggerheartEnvironment(env)}, nil
 }
@@ -1487,6 +1650,9 @@ func (s *DaggerheartContentService) ListEnvironments(ctx context.Context, in *pb
 	})
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "list environments: %v", err)
+	}
+	if err := localizeEnvironments(ctx, store, in.GetLocale(), page.Items); err != nil {
+		return nil, status.Errorf(codes.Internal, "localize environments: %v", err)
 	}
 
 	return &pb.ListDaggerheartEnvironmentsResponse{

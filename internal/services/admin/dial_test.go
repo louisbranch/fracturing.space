@@ -16,7 +16,7 @@ func TestDialGameGRPCDialError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
-	_, _, _, _, _, _, _, _, _, _, _, err := dialGameGRPC(ctx, Config{
+	_, _, _, _, _, _, _, _, _, _, _, _, err := dialGameGRPC(ctx, Config{
 		GRPCAddr:        "127.0.0.1:1",
 		GRPCDialTimeout: 50 * time.Millisecond,
 	})
@@ -32,7 +32,7 @@ func TestDialGameGRPCHealthError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
 
-	_, _, _, _, _, _, _, _, _, _, _, err := dialGameGRPC(ctx, Config{
+	_, _, _, _, _, _, _, _, _, _, _, _, err := dialGameGRPC(ctx, Config{
 		GRPCAddr:        addr,
 		GRPCDialTimeout: 100 * time.Millisecond,
 	})
@@ -70,7 +70,7 @@ func TestDialGameGRPCSuccess(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	conn, _, campaignClient, _, _, _, _, _, _, _, _, err := dialGameGRPC(ctx, Config{
+	conn, _, _, campaignClient, _, _, _, _, _, _, _, _, err := dialGameGRPC(ctx, Config{
 		GRPCAddr:        addr,
 		GRPCDialTimeout: 100 * time.Millisecond,
 	})

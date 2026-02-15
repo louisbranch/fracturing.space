@@ -1,0 +1,165 @@
+package templates
+
+import "strconv"
+
+// CatalogFullPage renders the catalog content in the base layout.
+templ CatalogFullPage(activeSection string, page PageContext) {
+	@CatalogFullPageWithContent(activeSection, CatalogSectionPanel(activeSection, page.Loc), page)
+}
+
+// CatalogFullPageWithContent renders the catalog content with a custom panel.
+templ CatalogFullPageWithContent(activeSection string, content templ.Component, page PageContext) {
+	@Layout(T(page.Loc, "title.catalog", AppName()), "Catalog", page) {
+		@CatalogPageWithContent(activeSection, content, page.Loc)
+	}
+}
+
+// CatalogPage renders the catalog page content.
+templ CatalogPage(activeSection string, loc Localizer) {
+	@CatalogPageWithContent(activeSection, CatalogSectionPanel(activeSection, loc), loc)
+}
+
+// CatalogPageWithContent renders the catalog layout with a custom panel.
+templ CatalogPageWithContent(activeSection string, content templ.Component, loc Localizer) {
+	@PageHeader(PageHeading{Title: T(loc, "catalog.heading")})
+	<div class="flex flex-col gap-6 md:flex-row">
+		<aside class="md:w-64">
+			@CatalogSidebar(activeSection, loc)
+		</aside>
+		<section class="flex-1" id="catalog-content">
+			@content
+		</section>
+	</div>
+}
+
+// CatalogSidebar renders the left navigation menu for catalog sections.
+templ CatalogSidebar(activeSection string, loc Localizer) {
+	<ul class="menu bg-base-200 rounded-box w-full md:w-64">
+		<li>
+			<a>{T(loc, "label.daggerheart")}</a>
+			<ul>
+				for _, section := range DaggerheartCatalogSections(loc) {
+					<li>
+						<a
+							href={ templ.SafeURL(section.URL) }
+							hx-get={ section.URL }
+							hx-target="#catalog-content"
+							hx-swap="innerHTML"
+							hx-push-url="true"
+							if section.ID == activeSection {
+								class="active"
+							}
+						>{section.Label}</a>
+					</li>
+				}
+			</ul>
+		</li>
+	</ul>
+}
+
+// CatalogSectionPanel renders the content panel for a selected section.
+templ CatalogSectionPanel(activeSection string, loc Localizer) {
+	<div class="space-y-3">
+		<h3>{DaggerheartCatalogSectionLabel(loc, activeSection)}</h3>
+		<div id="catalog-section-table">
+			@CatalogTableLoading(activeSection, loc)
+		</div>
+	</div>
+}
+
+// CatalogTableLoading renders the HTMX loading placeholder for catalog tables.
+templ CatalogTableLoading(sectionID string, loc Localizer) {
+	@LazyLoad("/catalog/daggerheart/"+sectionID+"/table", T(loc, "catalog.loading"))
+}
+
+// CatalogTable renders a catalog table with pagination.
+templ CatalogTable(view CatalogTableView, loc Localizer) {
+	<div class="space-y-3">
+		<table class="table table-zebra">
+			<thead>
+				<tr>
+					<th>{T(loc, "catalog.table.name")}</th>
+					for _, column := range view.Columns {
+						<th>{column}</th>
+					}
+				</tr>
+			</thead>
+			<tbody>
+				if len(view.Rows) == 0 {
+					<tr>
+						<td colspan={ strconv.Itoa(len(view.Columns) + 1) }>{view.Message}</td>
+					</tr>
+				}
+				for _, row := range view.Rows {
+					<tr>
+						<td>
+							<a
+								href={ templ.SafeURL(row.DetailURL) }
+								hx-get={ row.DetailURL }
+								hx-target="#catalog-content"
+								hx-swap="innerHTML"
+								hx-push-url="true"
+								class="link"
+							>{row.Primary}</a>
+						</td>
+						for _, cell := range row.Cells {
+							<td>{cell}</td>
+						}
+					</tr>
+				}
+			</tbody>
+		</table>
+		if view.NextToken != "" || view.PrevToken != "" {
+			@PaginationTargeted(
+				view.NextToken,
+				view.PrevToken,
+				view.HrefBaseURL,
+				view.HTMXBaseURL,
+				"#catalog-section-table",
+				true,
+				loc,
+			)
+		}
+	</div>
+}
+
+// CatalogDetailPanel renders the detail panel for a catalog entry.
+templ CatalogDetailPanel(view CatalogDetailView, loc Localizer) {
+	<div class="space-y-4">
+		<div class="flex flex-wrap items-start justify-between gap-2">
+			<div>
+				<h3>{view.Title}</h3>
+				if view.ID != "" {
+					<p class="text-xs opacity-70"><code>{view.ID}</code></p>
+				}
+			</div>
+			if view.BackURL != "" {
+				<a
+					href={ templ.SafeURL(view.BackURL) }
+					hx-get={ view.BackURL }
+					hx-target="#catalog-content"
+					hx-swap="innerHTML"
+					hx-push-url="true"
+					class="btn btn-soft btn-sm"
+				>{T(loc, "catalog.detail.back")}</a>
+			}
+		</div>
+		if view.Message != "" {
+			<p class="opacity-60">{view.Message}</p>
+		} else {
+			<table class="table table-zebra">
+				<tbody>
+					for _, field := range view.Fields {
+						@DetailRow(field.Label, field.Value)
+					}
+				</tbody>
+			</table>
+			if view.RawJSON != "" {
+				<div>
+					<h4>{T(loc, "catalog.detail.raw")}</h4>
+					<pre class="text-xs whitespace-pre-wrap">{view.RawJSON}</pre>
+				</div>
+			}
+		}
+	</div>
+}

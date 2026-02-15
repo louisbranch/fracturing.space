@@ -2587,6 +2587,18 @@ func dbDaggerheartEnvironmentToStorage(row db.DaggerheartEnvironment) (storage.D
 	return env, nil
 }
 
+func dbDaggerheartContentStringToStorage(row db.DaggerheartContentString) storage.DaggerheartContentString {
+	return storage.DaggerheartContentString{
+		ContentID:   row.ContentID,
+		ContentType: row.ContentType,
+		Field:       row.Field,
+		Locale:      row.Locale,
+		Text:        row.Text,
+		CreatedAt:   fromMillis(row.CreatedAt),
+		UpdatedAt:   fromMillis(row.UpdatedAt),
+	}
+}
+
 // Daggerheart-specific storage methods
 
 // PutDaggerheartCharacterProfile persists a Daggerheart character profile extension.
@@ -4553,6 +4565,39 @@ func (s *Store) DeleteDaggerheartEnvironment(ctx context.Context, id string) err
 	}
 
 	return s.q.DeleteDaggerheartEnvironment(ctx, id)
+}
+
+// ListDaggerheartContentStrings returns localized content strings for content ids.
+func (s *Store) ListDaggerheartContentStrings(ctx context.Context, contentType string, contentIDs []string, locale string) ([]storage.DaggerheartContentString, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return nil, fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(contentType) == "" {
+		return nil, fmt.Errorf("content type is required")
+	}
+	if strings.TrimSpace(locale) == "" {
+		return nil, fmt.Errorf("locale is required")
+	}
+	if len(contentIDs) == 0 {
+		return []storage.DaggerheartContentString{}, nil
+	}
+
+	rows, err := s.q.ListDaggerheartContentStringsByIDs(ctx, db.ListDaggerheartContentStringsByIDsParams{
+		ContentType: contentType,
+		Locale:      locale,
+		ContentIds:  contentIDs,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("list daggerheart content strings: %w", err)
+	}
+	entries := make([]storage.DaggerheartContentString, 0, len(rows))
+	for _, row := range rows {
+		entries = append(entries, dbDaggerheartContentStringToStorage(row))
+	}
+	return entries, nil
 }
 
 // PutDaggerheartContentString upserts a localized content string.

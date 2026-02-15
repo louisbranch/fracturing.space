@@ -48,7 +48,7 @@ func TestGrpcClientsNilSafe(t *testing.T) {
 	}
 
 	// nil-safe set and close
-	g.SetGameConn(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	g.SetGameConn(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	g.SetAuthConn(nil, nil)
 	g.Close()
 }
@@ -82,7 +82,7 @@ func TestGrpcClientsSetAndRead(t *testing.T) {
 
 	// SetGameConn with nil conn still marks it as set (conn field is assigned).
 	// Use nil clients to test accessor coverage without a real gRPC connection.
-	g.SetGameConn(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	g.SetGameConn(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 
 	// After first set, HasGameConnection is false since conn is nil.
 	// But the guard (g.gameConn != nil) won't trigger since we passed nil.
@@ -130,7 +130,7 @@ func TestGrpcClientsSetGameConnIdempotent(t *testing.T) {
 	// Simulate a set connection by directly setting gameConn.
 	g.gameConn = &grpc.ClientConn{}
 	// Second call should be a no-op (returns early).
-	g.SetGameConn(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	g.SetGameConn(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	if !g.HasGameConnection() {
 		t.Error("expected game connection to remain after idempotent set")
 	}

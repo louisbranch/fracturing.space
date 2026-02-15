@@ -36,6 +36,18 @@ templ TopNav(activePage string, page PageContext) {
 				</li>
 				<li>
 					<a
+						href="/catalog"
+						hx-get="/catalog"
+						hx-target="#main"
+						hx-swap="innerHTML"
+						hx-push-url="true"
+						if activePage == "Catalog" {
+							class="active"
+						}
+					>{T(page.Loc, "nav.catalog")}</a>
+				</li>
+				<li>
+					<a
 						href="/scenarios?prefill=1"
 						hx-get="/scenarios?prefill=1"
 						hx-target="#main"
@@ -96,9 +108,9 @@ templ TopNav(activePage string, page PageContext) {
 		</div>
 		<div class="navbar-end md:hidden">
 			<div class="dropdown dropdown-end">
-			<div tabindex="0" role="button" class="btn btn-soft btn-ghost">
-				@sharedtemplates.LucideIcon("menu", "h-5 w-5")
-			</div>
+				<div tabindex="0" role="button" class="btn btn-soft btn-ghost">
+					@sharedtemplates.LucideIcon("menu", "h-5 w-5")
+				</div>
 				<ul tabindex="0" class="menu menu-sm dropdown-content bg-base-200 rounded-box z-10 mt-3 w-52 p-2 shadow">
 					<li>
 						<a
@@ -112,33 +124,45 @@ templ TopNav(activePage string, page PageContext) {
 							}
 						>{T(page.Loc, "nav.dashboard")}</a>
 					</li>
-				<li>
-					<a
-						href="/systems"
-						hx-get="/systems"
-						hx-target="#main"
-						hx-swap="innerHTML"
-						hx-push-url="true"
-						if activePage == "Systems" {
-							class="active"
-						}
-					>{T(page.Loc, "nav.systems")}</a>
-				</li>
-				<li>
-					<a
-						href="/scenarios?prefill=1"
-						hx-get="/scenarios?prefill=1"
-						hx-target="#main"
-						hx-swap="innerHTML"
-						hx-push-url="true"
-						if activePage == "Scenarios" {
-							class="active"
-						}
-					>{T(page.Loc, "nav.scenarios")}</a>
-				</li>
-				<li>
-					<a
-						href="/users"
+					<li>
+						<a
+							href="/systems"
+							hx-get="/systems"
+							hx-target="#main"
+							hx-swap="innerHTML"
+							hx-push-url="true"
+							if activePage == "Systems" {
+								class="active"
+							}
+						>{T(page.Loc, "nav.systems")}</a>
+					</li>
+					<li>
+						<a
+							href="/catalog"
+							hx-get="/catalog"
+							hx-target="#main"
+							hx-swap="innerHTML"
+							hx-push-url="true"
+							if activePage == "Catalog" {
+								class="active"
+							}
+						>{T(page.Loc, "nav.catalog")}</a>
+					</li>
+					<li>
+						<a
+							href="/scenarios?prefill=1"
+							hx-get="/scenarios?prefill=1"
+							hx-target="#main"
+							hx-swap="innerHTML"
+							hx-push-url="true"
+							if activePage == "Scenarios" {
+								class="active"
+							}
+						>{T(page.Loc, "nav.scenarios")}</a>
+					</li>
+					<li>
+						<a
+							href="/users"
 							hx-get="/users"
 							hx-target="#main"
 							hx-swap="innerHTML"
