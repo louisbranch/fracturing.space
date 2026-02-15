@@ -24,6 +24,7 @@ func newGenerator(cfg Config, rng *rand.Rand, wb *worldbuilder.WorldBuilder, dep
 		config:       cfg,
 		rng:          rng,
 		wb:           wb,
+		nameRegistry: newNameRegistry(),
 		campaigns:    deps.campaigns,
 		participants: deps.participants,
 		invites:      deps.invites,
@@ -68,11 +69,12 @@ func DefaultConfig() Config {
 
 // Generator orchestrates dynamic scenario generation.
 type Generator struct {
-	config   Config
-	rng      *rand.Rand
-	wb       *worldbuilder.WorldBuilder
-	conn     *grpc.ClientConn
-	authConn *grpc.ClientConn
+	config       Config
+	rng          *rand.Rand
+	wb           *worldbuilder.WorldBuilder
+	nameRegistry *nameRegistry
+	conn         *grpc.ClientConn
+	authConn     *grpc.ClientConn
 
 	// Service dependencies (satisfied by gRPC clients in production,
 	// fakes in tests).
@@ -125,6 +127,7 @@ func New(ctx context.Context, cfg Config) (*Generator, error) {
 		config:       cfg,
 		rng:          rng,
 		wb:           worldbuilder.New(rng),
+		nameRegistry: newNameRegistry(),
 		conn:         conn,
 		authConn:     authConn,
 		campaigns:    statev1.NewCampaignServiceClient(conn),

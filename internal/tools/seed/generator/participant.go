@@ -35,9 +35,10 @@ func (g *Generator) createParticipants(ctx context.Context, campaignID, ownerPar
 			controller = statev1.Controller_CONTROLLER_AI
 		}
 
+		displayName := g.uniqueDisplayName(g.wb.ParticipantName())
 		resp, err := g.participants.CreateParticipant(callCtx, &statev1.CreateParticipantRequest{
 			CampaignId:  campaignID,
-			DisplayName: g.wb.ParticipantName(),
+			DisplayName: displayName,
 			Role:        role,
 			Controller:  controller,
 		})
@@ -50,7 +51,7 @@ func (g *Generator) createParticipants(ctx context.Context, campaignID, ownerPar
 
 		if controller == statev1.Controller_CONTROLLER_HUMAN {
 			userResp, err := g.authClient.CreateUser(ctx, &authv1.CreateUserRequest{
-				Username: created.GetDisplayName(),
+				Username: displayName,
 			})
 			if err != nil {
 				return nil, fmt.Errorf("CreateUser for participant %d: %w", i+1, err)

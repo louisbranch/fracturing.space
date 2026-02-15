@@ -97,6 +97,8 @@ The generator uses a seeded random number generator. Running with the same `-see
 Using seed: 1707234567890123456
 ```
 
+Usernames are uniquified within a run to satisfy auth username uniqueness constraints. When duplicates occur, the generator appends a numeric suffix (for example, `alex-2`).
+
 ### Entity Variations
 
 The dynamic generator creates diverse test data:
