@@ -28,7 +28,7 @@ step "Run admin smoke flow"
 cli run-code "$(cat <<'EOF'
 async page => {
   const ts = Date.now();
-  const displayName = "Playwright Smoke " + ts;
+  const username = "playwright-smoke-" + ts;
   const campaignName = "Playwright Campaign " + ts;
 
   await page.setViewportSize({ width: 1280, height: 720 });
@@ -54,11 +54,11 @@ async page => {
     return table || text.includes("No users yet.") || text.includes("Users unavailable.") || text.includes("User service unavailable.");
   });
 
-  const displayInput = page.locator("form[action=\"/users/create\"] input[name=\"display_name\"]");
-  await displayInput.waitFor();
-  await displayInput.fill(displayName);
+  const usernameInput = page.locator("form[action=\"/users/create\"] input[name=\"username\"]");
+  await usernameInput.waitFor();
+  await usernameInput.fill(username);
   await page.locator("form[action=\"/users/create\"]").getByRole("button", { name: "Create" }).click();
-  await page.getByRole("heading", { name: displayName, level: 2 }).waitFor();
+  await page.getByRole("heading", { name: username, level: 2 }).waitFor();
 
   await page.getByRole("button", { name: "Impersonate" }).click();
   await page.getByText("Currently impersonating").waitFor();
@@ -75,7 +75,7 @@ async page => {
   await page.waitForURL(/\/campaigns\/[a-z0-9]+$/);
   await page.getByRole("heading", { name: campaignName, level: 2 }).waitFor();
 
-  console.log("Created user: " + displayName);
+  console.log("Created user: " + username);
   console.log("Created campaign: " + campaignName);
 }
 EOF
