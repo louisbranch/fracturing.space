@@ -8,6 +8,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"strings"
 )
 
 const deleteDaggerheartAdversary = `-- name: DeleteDaggerheartAdversary :exec
@@ -1115,6 +1116,63 @@ func (q *Queries) ListDaggerheartCompanionExperiences(ctx context.Context) ([]Da
 			&i.ID,
 			&i.Name,
 			&i.Description,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listDaggerheartContentStringsByIDs = `-- name: ListDaggerheartContentStringsByIDs :many
+SELECT content_id, content_type, field, locale, text, created_at, updated_at
+FROM daggerheart_content_strings
+WHERE content_type = ?1
+  AND locale = ?2
+  AND content_id IN (/*SLICE:content_ids*/?)
+`
+
+type ListDaggerheartContentStringsByIDsParams struct {
+	ContentType string   `json:"content_type"`
+	Locale      string   `json:"locale"`
+	ContentIds  []string `json:"content_ids"`
+}
+
+func (q *Queries) ListDaggerheartContentStringsByIDs(ctx context.Context, arg ListDaggerheartContentStringsByIDsParams) ([]DaggerheartContentString, error) {
+	query := listDaggerheartContentStringsByIDs
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.ContentType)
+	queryParams = append(queryParams, arg.Locale)
+	if len(arg.ContentIds) > 0 {
+		for _, v := range arg.ContentIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:content_ids*/?", strings.Repeat(",?", len(arg.ContentIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:content_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []DaggerheartContentString{}
+	for rows.Next() {
+		var i DaggerheartContentString
+		if err := rows.Scan(
+			&i.ContentID,
+			&i.ContentType,
+			&i.Field,
+			&i.Locale,
+			&i.Text,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {

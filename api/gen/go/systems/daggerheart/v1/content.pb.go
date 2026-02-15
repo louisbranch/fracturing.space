@@ -11,6 +11,7 @@ import (
 	sync "sync"
 	unsafe "unsafe"
 
+	v1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
@@ -335,7 +336,9 @@ func (DaggerheartEnvironmentType) EnumDescriptor() ([]byte, []int) {
 }
 
 type GetDaggerheartContentCatalogRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Optional locale for localized text fields.
+	Locale        v1.Locale `protobuf:"varint,1,opt,name=locale,proto3,enum=common.v1.Locale" json:"locale,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -368,6 +371,13 @@ func (x *GetDaggerheartContentCatalogRequest) ProtoReflect() protoreflect.Messag
 // Deprecated: Use GetDaggerheartContentCatalogRequest.ProtoReflect.Descriptor instead.
 func (*GetDaggerheartContentCatalogRequest) Descriptor() ([]byte, []int) {
 	return file_systems_daggerheart_v1_content_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *GetDaggerheartContentCatalogRequest) GetLocale() v1.Locale {
+	if x != nil {
+		return x.Locale
+	}
+	return v1.Locale(0)
 }
 
 type GetDaggerheartContentCatalogResponse struct {
@@ -415,8 +425,10 @@ func (x *GetDaggerheartContentCatalogResponse) GetCatalog() *DaggerheartContentC
 }
 
 type GetDaggerheartClassRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Optional locale for localized text fields.
+	Locale        v1.Locale `protobuf:"varint,2,opt,name=locale,proto3,enum=common.v1.Locale" json:"locale,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -456,6 +468,13 @@ func (x *GetDaggerheartClassRequest) GetId() string {
 		return x.Id
 	}
 	return ""
+}
+
+func (x *GetDaggerheartClassRequest) GetLocale() v1.Locale {
+	if x != nil {
+		return x.Locale
+	}
+	return v1.Locale(0)
 }
 
 type GetDaggerheartClassResponse struct {
@@ -512,7 +531,9 @@ type ListDaggerheartClassesRequest struct {
 	OrderBy string `protobuf:"bytes,3,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
 	// AIP-160 filter expression.
 	// Filterable fields: id, name.
-	Filter        string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
+	Filter string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
+	// Optional locale for localized text fields.
+	Locale        v1.Locale `protobuf:"varint,5,opt,name=locale,proto3,enum=common.v1.Locale" json:"locale,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -573,6 +594,13 @@ func (x *ListDaggerheartClassesRequest) GetFilter() string {
 		return x.Filter
 	}
 	return ""
+}
+
+func (x *ListDaggerheartClassesRequest) GetLocale() v1.Locale {
+	if x != nil {
+		return x.Locale
+	}
+	return v1.Locale(0)
 }
 
 type ListDaggerheartClassesResponse struct {
@@ -644,8 +672,10 @@ func (x *ListDaggerheartClassesResponse) GetTotalSize() int32 {
 }
 
 type GetDaggerheartSubclassRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Optional locale for localized text fields.
+	Locale        v1.Locale `protobuf:"varint,2,opt,name=locale,proto3,enum=common.v1.Locale" json:"locale,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -685,6 +715,13 @@ func (x *GetDaggerheartSubclassRequest) GetId() string {
 		return x.Id
 	}
 	return ""
+}
+
+func (x *GetDaggerheartSubclassRequest) GetLocale() v1.Locale {
+	if x != nil {
+		return x.Locale
+	}
+	return v1.Locale(0)
 }
 
 type GetDaggerheartSubclassResponse struct {
@@ -741,7 +778,9 @@ type ListDaggerheartSubclassesRequest struct {
 	OrderBy string `protobuf:"bytes,3,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
 	// AIP-160 filter expression.
 	// Filterable fields: id, name, spellcast_trait.
-	Filter        string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
+	Filter string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
+	// Optional locale for localized text fields.
+	Locale        v1.Locale `protobuf:"varint,5,opt,name=locale,proto3,enum=common.v1.Locale" json:"locale,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -802,6 +841,13 @@ func (x *ListDaggerheartSubclassesRequest) GetFilter() string {
 		return x.Filter
 	}
 	return ""
+}
+
+func (x *ListDaggerheartSubclassesRequest) GetLocale() v1.Locale {
+	if x != nil {
+		return x.Locale
+	}
+	return v1.Locale(0)
 }
 
 type ListDaggerheartSubclassesResponse struct {
@@ -873,8 +919,10 @@ func (x *ListDaggerheartSubclassesResponse) GetTotalSize() int32 {
 }
 
 type GetDaggerheartHeritageRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Optional locale for localized text fields.
+	Locale        v1.Locale `protobuf:"varint,2,opt,name=locale,proto3,enum=common.v1.Locale" json:"locale,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -914,6 +962,13 @@ func (x *GetDaggerheartHeritageRequest) GetId() string {
 		return x.Id
 	}
 	return ""
+}
+
+func (x *GetDaggerheartHeritageRequest) GetLocale() v1.Locale {
+	if x != nil {
+		return x.Locale
+	}
+	return v1.Locale(0)
 }
 
 type GetDaggerheartHeritageResponse struct {
@@ -970,7 +1025,9 @@ type ListDaggerheartHeritagesRequest struct {
 	OrderBy string `protobuf:"bytes,3,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
 	// AIP-160 filter expression.
 	// Filterable fields: id, name, kind.
-	Filter        string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
+	Filter string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
+	// Optional locale for localized text fields.
+	Locale        v1.Locale `protobuf:"varint,5,opt,name=locale,proto3,enum=common.v1.Locale" json:"locale,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1031,6 +1088,13 @@ func (x *ListDaggerheartHeritagesRequest) GetFilter() string {
 		return x.Filter
 	}
 	return ""
+}
+
+func (x *ListDaggerheartHeritagesRequest) GetLocale() v1.Locale {
+	if x != nil {
+		return x.Locale
+	}
+	return v1.Locale(0)
 }
 
 type ListDaggerheartHeritagesResponse struct {
@@ -1102,8 +1166,10 @@ func (x *ListDaggerheartHeritagesResponse) GetTotalSize() int32 {
 }
 
 type GetDaggerheartExperienceRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Optional locale for localized text fields.
+	Locale        v1.Locale `protobuf:"varint,2,opt,name=locale,proto3,enum=common.v1.Locale" json:"locale,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1143,6 +1209,13 @@ func (x *GetDaggerheartExperienceRequest) GetId() string {
 		return x.Id
 	}
 	return ""
+}
+
+func (x *GetDaggerheartExperienceRequest) GetLocale() v1.Locale {
+	if x != nil {
+		return x.Locale
+	}
+	return v1.Locale(0)
 }
 
 type GetDaggerheartExperienceResponse struct {
@@ -1199,7 +1272,9 @@ type ListDaggerheartExperiencesRequest struct {
 	OrderBy string `protobuf:"bytes,3,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
 	// AIP-160 filter expression.
 	// Filterable fields: id, name.
-	Filter        string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
+	Filter string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
+	// Optional locale for localized text fields.
+	Locale        v1.Locale `protobuf:"varint,5,opt,name=locale,proto3,enum=common.v1.Locale" json:"locale,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1260,6 +1335,13 @@ func (x *ListDaggerheartExperiencesRequest) GetFilter() string {
 		return x.Filter
 	}
 	return ""
+}
+
+func (x *ListDaggerheartExperiencesRequest) GetLocale() v1.Locale {
+	if x != nil {
+		return x.Locale
+	}
+	return v1.Locale(0)
 }
 
 type ListDaggerheartExperiencesResponse struct {
@@ -1331,8 +1413,10 @@ func (x *ListDaggerheartExperiencesResponse) GetTotalSize() int32 {
 }
 
 type GetDaggerheartAdversaryRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Optional locale for localized text fields.
+	Locale        v1.Locale `protobuf:"varint,2,opt,name=locale,proto3,enum=common.v1.Locale" json:"locale,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1372,6 +1456,13 @@ func (x *GetDaggerheartAdversaryRequest) GetId() string {
 		return x.Id
 	}
 	return ""
+}
+
+func (x *GetDaggerheartAdversaryRequest) GetLocale() v1.Locale {
+	if x != nil {
+		return x.Locale
+	}
+	return v1.Locale(0)
 }
 
 type GetDaggerheartAdversaryResponse struct {
@@ -1428,7 +1519,9 @@ type ListDaggerheartAdversariesRequest struct {
 	OrderBy string `protobuf:"bytes,3,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
 	// AIP-160 filter expression.
 	// Filterable fields: id, name, tier, role.
-	Filter        string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
+	Filter string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
+	// Optional locale for localized text fields.
+	Locale        v1.Locale `protobuf:"varint,5,opt,name=locale,proto3,enum=common.v1.Locale" json:"locale,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1489,6 +1582,13 @@ func (x *ListDaggerheartAdversariesRequest) GetFilter() string {
 		return x.Filter
 	}
 	return ""
+}
+
+func (x *ListDaggerheartAdversariesRequest) GetLocale() v1.Locale {
+	if x != nil {
+		return x.Locale
+	}
+	return v1.Locale(0)
 }
 
 type ListDaggerheartAdversariesResponse struct {
@@ -1560,8 +1660,10 @@ func (x *ListDaggerheartAdversariesResponse) GetTotalSize() int32 {
 }
 
 type GetDaggerheartBeastformRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Optional locale for localized text fields.
+	Locale        v1.Locale `protobuf:"varint,2,opt,name=locale,proto3,enum=common.v1.Locale" json:"locale,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1601,6 +1703,13 @@ func (x *GetDaggerheartBeastformRequest) GetId() string {
 		return x.Id
 	}
 	return ""
+}
+
+func (x *GetDaggerheartBeastformRequest) GetLocale() v1.Locale {
+	if x != nil {
+		return x.Locale
+	}
+	return v1.Locale(0)
 }
 
 type GetDaggerheartBeastformResponse struct {
@@ -1657,7 +1766,9 @@ type ListDaggerheartBeastformsRequest struct {
 	OrderBy string `protobuf:"bytes,3,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
 	// AIP-160 filter expression.
 	// Filterable fields: id, name, tier, trait.
-	Filter        string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
+	Filter string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
+	// Optional locale for localized text fields.
+	Locale        v1.Locale `protobuf:"varint,5,opt,name=locale,proto3,enum=common.v1.Locale" json:"locale,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1718,6 +1829,13 @@ func (x *ListDaggerheartBeastformsRequest) GetFilter() string {
 		return x.Filter
 	}
 	return ""
+}
+
+func (x *ListDaggerheartBeastformsRequest) GetLocale() v1.Locale {
+	if x != nil {
+		return x.Locale
+	}
+	return v1.Locale(0)
 }
 
 type ListDaggerheartBeastformsResponse struct {
@@ -1789,8 +1907,10 @@ func (x *ListDaggerheartBeastformsResponse) GetTotalSize() int32 {
 }
 
 type GetDaggerheartCompanionExperienceRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Optional locale for localized text fields.
+	Locale        v1.Locale `protobuf:"varint,2,opt,name=locale,proto3,enum=common.v1.Locale" json:"locale,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1830,6 +1950,13 @@ func (x *GetDaggerheartCompanionExperienceRequest) GetId() string {
 		return x.Id
 	}
 	return ""
+}
+
+func (x *GetDaggerheartCompanionExperienceRequest) GetLocale() v1.Locale {
+	if x != nil {
+		return x.Locale
+	}
+	return v1.Locale(0)
 }
 
 type GetDaggerheartCompanionExperienceResponse struct {
@@ -1886,7 +2013,9 @@ type ListDaggerheartCompanionExperiencesRequest struct {
 	OrderBy string `protobuf:"bytes,3,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
 	// AIP-160 filter expression.
 	// Filterable fields: id, name.
-	Filter        string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
+	Filter string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
+	// Optional locale for localized text fields.
+	Locale        v1.Locale `protobuf:"varint,5,opt,name=locale,proto3,enum=common.v1.Locale" json:"locale,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1947,6 +2076,13 @@ func (x *ListDaggerheartCompanionExperiencesRequest) GetFilter() string {
 		return x.Filter
 	}
 	return ""
+}
+
+func (x *ListDaggerheartCompanionExperiencesRequest) GetLocale() v1.Locale {
+	if x != nil {
+		return x.Locale
+	}
+	return v1.Locale(0)
 }
 
 type ListDaggerheartCompanionExperiencesResponse struct {
@@ -2018,8 +2154,10 @@ func (x *ListDaggerheartCompanionExperiencesResponse) GetTotalSize() int32 {
 }
 
 type GetDaggerheartLootEntryRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Optional locale for localized text fields.
+	Locale        v1.Locale `protobuf:"varint,2,opt,name=locale,proto3,enum=common.v1.Locale" json:"locale,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2059,6 +2197,13 @@ func (x *GetDaggerheartLootEntryRequest) GetId() string {
 		return x.Id
 	}
 	return ""
+}
+
+func (x *GetDaggerheartLootEntryRequest) GetLocale() v1.Locale {
+	if x != nil {
+		return x.Locale
+	}
+	return v1.Locale(0)
 }
 
 type GetDaggerheartLootEntryResponse struct {
@@ -2115,7 +2260,9 @@ type ListDaggerheartLootEntriesRequest struct {
 	OrderBy string `protobuf:"bytes,3,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
 	// AIP-160 filter expression.
 	// Filterable fields: id, name, roll.
-	Filter        string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
+	Filter string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
+	// Optional locale for localized text fields.
+	Locale        v1.Locale `protobuf:"varint,5,opt,name=locale,proto3,enum=common.v1.Locale" json:"locale,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2176,6 +2323,13 @@ func (x *ListDaggerheartLootEntriesRequest) GetFilter() string {
 		return x.Filter
 	}
 	return ""
+}
+
+func (x *ListDaggerheartLootEntriesRequest) GetLocale() v1.Locale {
+	if x != nil {
+		return x.Locale
+	}
+	return v1.Locale(0)
 }
 
 type ListDaggerheartLootEntriesResponse struct {
@@ -2247,8 +2401,10 @@ func (x *ListDaggerheartLootEntriesResponse) GetTotalSize() int32 {
 }
 
 type GetDaggerheartDamageTypeRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Optional locale for localized text fields.
+	Locale        v1.Locale `protobuf:"varint,2,opt,name=locale,proto3,enum=common.v1.Locale" json:"locale,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2288,6 +2444,13 @@ func (x *GetDaggerheartDamageTypeRequest) GetId() string {
 		return x.Id
 	}
 	return ""
+}
+
+func (x *GetDaggerheartDamageTypeRequest) GetLocale() v1.Locale {
+	if x != nil {
+		return x.Locale
+	}
+	return v1.Locale(0)
 }
 
 type GetDaggerheartDamageTypeResponse struct {
@@ -2344,7 +2507,9 @@ type ListDaggerheartDamageTypesRequest struct {
 	OrderBy string `protobuf:"bytes,3,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
 	// AIP-160 filter expression.
 	// Filterable fields: id, name.
-	Filter        string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
+	Filter string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
+	// Optional locale for localized text fields.
+	Locale        v1.Locale `protobuf:"varint,5,opt,name=locale,proto3,enum=common.v1.Locale" json:"locale,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2405,6 +2570,13 @@ func (x *ListDaggerheartDamageTypesRequest) GetFilter() string {
 		return x.Filter
 	}
 	return ""
+}
+
+func (x *ListDaggerheartDamageTypesRequest) GetLocale() v1.Locale {
+	if x != nil {
+		return x.Locale
+	}
+	return v1.Locale(0)
 }
 
 type ListDaggerheartDamageTypesResponse struct {
@@ -2476,8 +2648,10 @@ func (x *ListDaggerheartDamageTypesResponse) GetTotalSize() int32 {
 }
 
 type GetDaggerheartDomainRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Optional locale for localized text fields.
+	Locale        v1.Locale `protobuf:"varint,2,opt,name=locale,proto3,enum=common.v1.Locale" json:"locale,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2517,6 +2691,13 @@ func (x *GetDaggerheartDomainRequest) GetId() string {
 		return x.Id
 	}
 	return ""
+}
+
+func (x *GetDaggerheartDomainRequest) GetLocale() v1.Locale {
+	if x != nil {
+		return x.Locale
+	}
+	return v1.Locale(0)
 }
 
 type GetDaggerheartDomainResponse struct {
@@ -2573,7 +2754,9 @@ type ListDaggerheartDomainsRequest struct {
 	OrderBy string `protobuf:"bytes,3,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
 	// AIP-160 filter expression.
 	// Filterable fields: id, name.
-	Filter        string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
+	Filter string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
+	// Optional locale for localized text fields.
+	Locale        v1.Locale `protobuf:"varint,5,opt,name=locale,proto3,enum=common.v1.Locale" json:"locale,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2634,6 +2817,13 @@ func (x *ListDaggerheartDomainsRequest) GetFilter() string {
 		return x.Filter
 	}
 	return ""
+}
+
+func (x *ListDaggerheartDomainsRequest) GetLocale() v1.Locale {
+	if x != nil {
+		return x.Locale
+	}
+	return v1.Locale(0)
 }
 
 type ListDaggerheartDomainsResponse struct {
@@ -2705,8 +2895,10 @@ func (x *ListDaggerheartDomainsResponse) GetTotalSize() int32 {
 }
 
 type GetDaggerheartDomainCardRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Optional locale for localized text fields.
+	Locale        v1.Locale `protobuf:"varint,2,opt,name=locale,proto3,enum=common.v1.Locale" json:"locale,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2746,6 +2938,13 @@ func (x *GetDaggerheartDomainCardRequest) GetId() string {
 		return x.Id
 	}
 	return ""
+}
+
+func (x *GetDaggerheartDomainCardRequest) GetLocale() v1.Locale {
+	if x != nil {
+		return x.Locale
+	}
+	return v1.Locale(0)
 }
 
 type GetDaggerheartDomainCardResponse struct {
@@ -2804,7 +3003,9 @@ type ListDaggerheartDomainCardsRequest struct {
 	OrderBy string `protobuf:"bytes,4,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
 	// AIP-160 filter expression.
 	// Filterable fields: id, name, domain_id, level, type.
-	Filter        string `protobuf:"bytes,5,opt,name=filter,proto3" json:"filter,omitempty"`
+	Filter string `protobuf:"bytes,5,opt,name=filter,proto3" json:"filter,omitempty"`
+	// Optional locale for localized text fields.
+	Locale        v1.Locale `protobuf:"varint,6,opt,name=locale,proto3,enum=common.v1.Locale" json:"locale,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2872,6 +3073,13 @@ func (x *ListDaggerheartDomainCardsRequest) GetFilter() string {
 		return x.Filter
 	}
 	return ""
+}
+
+func (x *ListDaggerheartDomainCardsRequest) GetLocale() v1.Locale {
+	if x != nil {
+		return x.Locale
+	}
+	return v1.Locale(0)
 }
 
 type ListDaggerheartDomainCardsResponse struct {
@@ -2943,8 +3151,10 @@ func (x *ListDaggerheartDomainCardsResponse) GetTotalSize() int32 {
 }
 
 type GetDaggerheartWeaponRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Optional locale for localized text fields.
+	Locale        v1.Locale `protobuf:"varint,2,opt,name=locale,proto3,enum=common.v1.Locale" json:"locale,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2984,6 +3194,13 @@ func (x *GetDaggerheartWeaponRequest) GetId() string {
 		return x.Id
 	}
 	return ""
+}
+
+func (x *GetDaggerheartWeaponRequest) GetLocale() v1.Locale {
+	if x != nil {
+		return x.Locale
+	}
+	return v1.Locale(0)
 }
 
 type GetDaggerheartWeaponResponse struct {
@@ -3040,7 +3257,9 @@ type ListDaggerheartWeaponsRequest struct {
 	OrderBy string `protobuf:"bytes,3,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
 	// AIP-160 filter expression.
 	// Filterable fields: id, name, category, tier, trait, damage_type.
-	Filter        string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
+	Filter string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
+	// Optional locale for localized text fields.
+	Locale        v1.Locale `protobuf:"varint,5,opt,name=locale,proto3,enum=common.v1.Locale" json:"locale,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3101,6 +3320,13 @@ func (x *ListDaggerheartWeaponsRequest) GetFilter() string {
 		return x.Filter
 	}
 	return ""
+}
+
+func (x *ListDaggerheartWeaponsRequest) GetLocale() v1.Locale {
+	if x != nil {
+		return x.Locale
+	}
+	return v1.Locale(0)
 }
 
 type ListDaggerheartWeaponsResponse struct {
@@ -3172,8 +3398,10 @@ func (x *ListDaggerheartWeaponsResponse) GetTotalSize() int32 {
 }
 
 type GetDaggerheartArmorRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Optional locale for localized text fields.
+	Locale        v1.Locale `protobuf:"varint,2,opt,name=locale,proto3,enum=common.v1.Locale" json:"locale,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3213,6 +3441,13 @@ func (x *GetDaggerheartArmorRequest) GetId() string {
 		return x.Id
 	}
 	return ""
+}
+
+func (x *GetDaggerheartArmorRequest) GetLocale() v1.Locale {
+	if x != nil {
+		return x.Locale
+	}
+	return v1.Locale(0)
 }
 
 type GetDaggerheartArmorResponse struct {
@@ -3269,7 +3504,9 @@ type ListDaggerheartArmorRequest struct {
 	OrderBy string `protobuf:"bytes,3,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
 	// AIP-160 filter expression.
 	// Filterable fields: id, name, tier.
-	Filter        string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
+	Filter string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
+	// Optional locale for localized text fields.
+	Locale        v1.Locale `protobuf:"varint,5,opt,name=locale,proto3,enum=common.v1.Locale" json:"locale,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3330,6 +3567,13 @@ func (x *ListDaggerheartArmorRequest) GetFilter() string {
 		return x.Filter
 	}
 	return ""
+}
+
+func (x *ListDaggerheartArmorRequest) GetLocale() v1.Locale {
+	if x != nil {
+		return x.Locale
+	}
+	return v1.Locale(0)
 }
 
 type ListDaggerheartArmorResponse struct {
@@ -3401,8 +3645,10 @@ func (x *ListDaggerheartArmorResponse) GetTotalSize() int32 {
 }
 
 type GetDaggerheartItemRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Optional locale for localized text fields.
+	Locale        v1.Locale `protobuf:"varint,2,opt,name=locale,proto3,enum=common.v1.Locale" json:"locale,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3442,6 +3688,13 @@ func (x *GetDaggerheartItemRequest) GetId() string {
 		return x.Id
 	}
 	return ""
+}
+
+func (x *GetDaggerheartItemRequest) GetLocale() v1.Locale {
+	if x != nil {
+		return x.Locale
+	}
+	return v1.Locale(0)
 }
 
 type GetDaggerheartItemResponse struct {
@@ -3498,7 +3751,9 @@ type ListDaggerheartItemsRequest struct {
 	OrderBy string `protobuf:"bytes,3,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
 	// AIP-160 filter expression.
 	// Filterable fields: id, name, rarity, kind.
-	Filter        string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
+	Filter string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
+	// Optional locale for localized text fields.
+	Locale        v1.Locale `protobuf:"varint,5,opt,name=locale,proto3,enum=common.v1.Locale" json:"locale,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3559,6 +3814,13 @@ func (x *ListDaggerheartItemsRequest) GetFilter() string {
 		return x.Filter
 	}
 	return ""
+}
+
+func (x *ListDaggerheartItemsRequest) GetLocale() v1.Locale {
+	if x != nil {
+		return x.Locale
+	}
+	return v1.Locale(0)
 }
 
 type ListDaggerheartItemsResponse struct {
@@ -3630,8 +3892,10 @@ func (x *ListDaggerheartItemsResponse) GetTotalSize() int32 {
 }
 
 type GetDaggerheartEnvironmentRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Optional locale for localized text fields.
+	Locale        v1.Locale `protobuf:"varint,2,opt,name=locale,proto3,enum=common.v1.Locale" json:"locale,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3671,6 +3935,13 @@ func (x *GetDaggerheartEnvironmentRequest) GetId() string {
 		return x.Id
 	}
 	return ""
+}
+
+func (x *GetDaggerheartEnvironmentRequest) GetLocale() v1.Locale {
+	if x != nil {
+		return x.Locale
+	}
+	return v1.Locale(0)
 }
 
 type GetDaggerheartEnvironmentResponse struct {
@@ -3727,7 +3998,9 @@ type ListDaggerheartEnvironmentsRequest struct {
 	OrderBy string `protobuf:"bytes,3,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
 	// AIP-160 filter expression.
 	// Filterable fields: id, name, tier, type, difficulty.
-	Filter        string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
+	Filter string `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
+	// Optional locale for localized text fields.
+	Locale        v1.Locale `protobuf:"varint,5,opt,name=locale,proto3,enum=common.v1.Locale" json:"locale,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3788,6 +4061,13 @@ func (x *ListDaggerheartEnvironmentsRequest) GetFilter() string {
 		return x.Filter
 	}
 	return ""
+}
+
+func (x *ListDaggerheartEnvironmentsRequest) GetLocale() v1.Locale {
+	if x != nil {
+		return x.Locale
+	}
+	return v1.Locale(0)
 }
 
 type ListDaggerheartEnvironmentsResponse struct {
@@ -5842,36 +6122,41 @@ var File_systems_daggerheart_v1_content_proto protoreflect.FileDescriptor
 
 const file_systems_daggerheart_v1_content_proto_rawDesc = "" +
 	"\n" +
-	"$systems/daggerheart/v1/content.proto\x12\x16systems.daggerheart.v1\x1a&systems/daggerheart/v1/mechanics.proto\x1a\"systems/daggerheart/v1/state.proto\"%\n" +
-	"#GetDaggerheartContentCatalogRequest\"s\n" +
+	"$systems/daggerheart/v1/content.proto\x12\x16systems.daggerheart.v1\x1a\x16common/v1/locale.proto\x1a&systems/daggerheart/v1/mechanics.proto\x1a\"systems/daggerheart/v1/state.proto\"P\n" +
+	"#GetDaggerheartContentCatalogRequest\x12)\n" +
+	"\x06locale\x18\x01 \x01(\x0e2\x11.common.v1.LocaleR\x06locale\"s\n" +
 	"$GetDaggerheartContentCatalogResponse\x12K\n" +
-	"\acatalog\x18\x01 \x01(\v21.systems.daggerheart.v1.DaggerheartContentCatalogR\acatalog\",\n" +
+	"\acatalog\x18\x01 \x01(\v21.systems.daggerheart.v1.DaggerheartContentCatalogR\acatalog\"W\n" +
 	"\x1aGetDaggerheartClassRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"]\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12)\n" +
+	"\x06locale\x18\x02 \x01(\x0e2\x11.common.v1.LocaleR\x06locale\"]\n" +
 	"\x1bGetDaggerheartClassResponse\x12>\n" +
-	"\x05class\x18\x01 \x01(\v2(.systems.daggerheart.v1.DaggerheartClassR\x05class\"\x8e\x01\n" +
+	"\x05class\x18\x01 \x01(\v2(.systems.daggerheart.v1.DaggerheartClassR\x05class\"\xb9\x01\n" +
 	"\x1dListDaggerheartClassesRequest\x12\x1b\n" +
 	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
 	"\n" +
 	"page_token\x18\x02 \x01(\tR\tpageToken\x12\x19\n" +
 	"\border_by\x18\x03 \x01(\tR\aorderBy\x12\x16\n" +
-	"\x06filter\x18\x04 \x01(\tR\x06filter\"\xdb\x01\n" +
+	"\x06filter\x18\x04 \x01(\tR\x06filter\x12)\n" +
+	"\x06locale\x18\x05 \x01(\x0e2\x11.common.v1.LocaleR\x06locale\"\xdb\x01\n" +
 	"\x1eListDaggerheartClassesResponse\x12B\n" +
 	"\aclasses\x18\x01 \x03(\v2(.systems.daggerheart.v1.DaggerheartClassR\aclasses\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12.\n" +
 	"\x13previous_page_token\x18\x03 \x01(\tR\x11previousPageToken\x12\x1d\n" +
 	"\n" +
-	"total_size\x18\x04 \x01(\x05R\ttotalSize\"/\n" +
+	"total_size\x18\x04 \x01(\x05R\ttotalSize\"Z\n" +
 	"\x1dGetDaggerheartSubclassRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"i\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12)\n" +
+	"\x06locale\x18\x02 \x01(\x0e2\x11.common.v1.LocaleR\x06locale\"i\n" +
 	"\x1eGetDaggerheartSubclassResponse\x12G\n" +
-	"\bsubclass\x18\x01 \x01(\v2+.systems.daggerheart.v1.DaggerheartSubclassR\bsubclass\"\x91\x01\n" +
+	"\bsubclass\x18\x01 \x01(\v2+.systems.daggerheart.v1.DaggerheartSubclassR\bsubclass\"\xbc\x01\n" +
 	" ListDaggerheartSubclassesRequest\x12\x1b\n" +
 	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
 	"\n" +
 	"page_token\x18\x02 \x01(\tR\tpageToken\x12\x19\n" +
 	"\border_by\x18\x03 \x01(\tR\aorderBy\x12\x16\n" +
-	"\x06filter\x18\x04 \x01(\tR\x06filter\"\xe7\x01\n" +
+	"\x06filter\x18\x04 \x01(\tR\x06filter\x12)\n" +
+	"\x06locale\x18\x05 \x01(\x0e2\x11.common.v1.LocaleR\x06locale\"\xe7\x01\n" +
 	"!ListDaggerheartSubclassesResponse\x12K\n" +
 	"\n" +
 	"subclasses\x18\x01 \x03(\v2+.systems.daggerheart.v1.DaggerheartSubclassR\n" +
@@ -5879,67 +6164,75 @@ const file_systems_daggerheart_v1_content_proto_rawDesc = "" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12.\n" +
 	"\x13previous_page_token\x18\x03 \x01(\tR\x11previousPageToken\x12\x1d\n" +
 	"\n" +
-	"total_size\x18\x04 \x01(\x05R\ttotalSize\"/\n" +
+	"total_size\x18\x04 \x01(\x05R\ttotalSize\"Z\n" +
 	"\x1dGetDaggerheartHeritageRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"i\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12)\n" +
+	"\x06locale\x18\x02 \x01(\x0e2\x11.common.v1.LocaleR\x06locale\"i\n" +
 	"\x1eGetDaggerheartHeritageResponse\x12G\n" +
-	"\bheritage\x18\x01 \x01(\v2+.systems.daggerheart.v1.DaggerheartHeritageR\bheritage\"\x90\x01\n" +
+	"\bheritage\x18\x01 \x01(\v2+.systems.daggerheart.v1.DaggerheartHeritageR\bheritage\"\xbb\x01\n" +
 	"\x1fListDaggerheartHeritagesRequest\x12\x1b\n" +
 	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
 	"\n" +
 	"page_token\x18\x02 \x01(\tR\tpageToken\x12\x19\n" +
 	"\border_by\x18\x03 \x01(\tR\aorderBy\x12\x16\n" +
-	"\x06filter\x18\x04 \x01(\tR\x06filter\"\xe4\x01\n" +
+	"\x06filter\x18\x04 \x01(\tR\x06filter\x12)\n" +
+	"\x06locale\x18\x05 \x01(\x0e2\x11.common.v1.LocaleR\x06locale\"\xe4\x01\n" +
 	" ListDaggerheartHeritagesResponse\x12I\n" +
 	"\theritages\x18\x01 \x03(\v2+.systems.daggerheart.v1.DaggerheartHeritageR\theritages\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12.\n" +
 	"\x13previous_page_token\x18\x03 \x01(\tR\x11previousPageToken\x12\x1d\n" +
 	"\n" +
-	"total_size\x18\x04 \x01(\x05R\ttotalSize\"1\n" +
+	"total_size\x18\x04 \x01(\x05R\ttotalSize\"\\\n" +
 	"\x1fGetDaggerheartExperienceRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"v\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12)\n" +
+	"\x06locale\x18\x02 \x01(\x0e2\x11.common.v1.LocaleR\x06locale\"v\n" +
 	" GetDaggerheartExperienceResponse\x12R\n" +
 	"\n" +
 	"experience\x18\x01 \x01(\v22.systems.daggerheart.v1.DaggerheartExperienceEntryR\n" +
-	"experience\"\x92\x01\n" +
+	"experience\"\xbd\x01\n" +
 	"!ListDaggerheartExperiencesRequest\x12\x1b\n" +
 	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
 	"\n" +
 	"page_token\x18\x02 \x01(\tR\tpageToken\x12\x19\n" +
 	"\border_by\x18\x03 \x01(\tR\aorderBy\x12\x16\n" +
-	"\x06filter\x18\x04 \x01(\tR\x06filter\"\xf1\x01\n" +
+	"\x06filter\x18\x04 \x01(\tR\x06filter\x12)\n" +
+	"\x06locale\x18\x05 \x01(\x0e2\x11.common.v1.LocaleR\x06locale\"\xf1\x01\n" +
 	"\"ListDaggerheartExperiencesResponse\x12T\n" +
 	"\vexperiences\x18\x01 \x03(\v22.systems.daggerheart.v1.DaggerheartExperienceEntryR\vexperiences\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12.\n" +
 	"\x13previous_page_token\x18\x03 \x01(\tR\x11previousPageToken\x12\x1d\n" +
 	"\n" +
-	"total_size\x18\x04 \x01(\x05R\ttotalSize\"0\n" +
+	"total_size\x18\x04 \x01(\x05R\ttotalSize\"[\n" +
 	"\x1eGetDaggerheartAdversaryRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"r\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12)\n" +
+	"\x06locale\x18\x02 \x01(\x0e2\x11.common.v1.LocaleR\x06locale\"r\n" +
 	"\x1fGetDaggerheartAdversaryResponse\x12O\n" +
-	"\tadversary\x18\x01 \x01(\v21.systems.daggerheart.v1.DaggerheartAdversaryEntryR\tadversary\"\x92\x01\n" +
+	"\tadversary\x18\x01 \x01(\v21.systems.daggerheart.v1.DaggerheartAdversaryEntryR\tadversary\"\xbd\x01\n" +
 	"!ListDaggerheartAdversariesRequest\x12\x1b\n" +
 	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
 	"\n" +
 	"page_token\x18\x02 \x01(\tR\tpageToken\x12\x19\n" +
 	"\border_by\x18\x03 \x01(\tR\aorderBy\x12\x16\n" +
-	"\x06filter\x18\x04 \x01(\tR\x06filter\"\xf0\x01\n" +
+	"\x06filter\x18\x04 \x01(\tR\x06filter\x12)\n" +
+	"\x06locale\x18\x05 \x01(\x0e2\x11.common.v1.LocaleR\x06locale\"\xf0\x01\n" +
 	"\"ListDaggerheartAdversariesResponse\x12S\n" +
 	"\vadversaries\x18\x01 \x03(\v21.systems.daggerheart.v1.DaggerheartAdversaryEntryR\vadversaries\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12.\n" +
 	"\x13previous_page_token\x18\x03 \x01(\tR\x11previousPageToken\x12\x1d\n" +
 	"\n" +
-	"total_size\x18\x04 \x01(\x05R\ttotalSize\"0\n" +
+	"total_size\x18\x04 \x01(\x05R\ttotalSize\"[\n" +
 	"\x1eGetDaggerheartBeastformRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"r\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12)\n" +
+	"\x06locale\x18\x02 \x01(\x0e2\x11.common.v1.LocaleR\x06locale\"r\n" +
 	"\x1fGetDaggerheartBeastformResponse\x12O\n" +
-	"\tbeastform\x18\x01 \x01(\v21.systems.daggerheart.v1.DaggerheartBeastformEntryR\tbeastform\"\x91\x01\n" +
+	"\tbeastform\x18\x01 \x01(\v21.systems.daggerheart.v1.DaggerheartBeastformEntryR\tbeastform\"\xbc\x01\n" +
 	" ListDaggerheartBeastformsRequest\x12\x1b\n" +
 	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
 	"\n" +
 	"page_token\x18\x02 \x01(\tR\tpageToken\x12\x19\n" +
 	"\border_by\x18\x03 \x01(\tR\aorderBy\x12\x16\n" +
-	"\x06filter\x18\x04 \x01(\tR\x06filter\"\xed\x01\n" +
+	"\x06filter\x18\x04 \x01(\tR\x06filter\x12)\n" +
+	"\x06locale\x18\x05 \x01(\x0e2\x11.common.v1.LocaleR\x06locale\"\xed\x01\n" +
 	"!ListDaggerheartBeastformsResponse\x12Q\n" +
 	"\n" +
 	"beastforms\x18\x01 \x03(\v21.systems.daggerheart.v1.DaggerheartBeastformEntryR\n" +
@@ -5947,150 +6240,168 @@ const file_systems_daggerheart_v1_content_proto_rawDesc = "" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12.\n" +
 	"\x13previous_page_token\x18\x03 \x01(\tR\x11previousPageToken\x12\x1d\n" +
 	"\n" +
-	"total_size\x18\x04 \x01(\x05R\ttotalSize\":\n" +
+	"total_size\x18\x04 \x01(\x05R\ttotalSize\"e\n" +
 	"(GetDaggerheartCompanionExperienceRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\x88\x01\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12)\n" +
+	"\x06locale\x18\x02 \x01(\x0e2\x11.common.v1.LocaleR\x06locale\"\x88\x01\n" +
 	")GetDaggerheartCompanionExperienceResponse\x12[\n" +
 	"\n" +
 	"experience\x18\x01 \x01(\v2;.systems.daggerheart.v1.DaggerheartCompanionExperienceEntryR\n" +
-	"experience\"\x9b\x01\n" +
+	"experience\"\xc6\x01\n" +
 	"*ListDaggerheartCompanionExperiencesRequest\x12\x1b\n" +
 	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
 	"\n" +
 	"page_token\x18\x02 \x01(\tR\tpageToken\x12\x19\n" +
 	"\border_by\x18\x03 \x01(\tR\aorderBy\x12\x16\n" +
-	"\x06filter\x18\x04 \x01(\tR\x06filter\"\x83\x02\n" +
+	"\x06filter\x18\x04 \x01(\tR\x06filter\x12)\n" +
+	"\x06locale\x18\x05 \x01(\x0e2\x11.common.v1.LocaleR\x06locale\"\x83\x02\n" +
 	"+ListDaggerheartCompanionExperiencesResponse\x12]\n" +
 	"\vexperiences\x18\x01 \x03(\v2;.systems.daggerheart.v1.DaggerheartCompanionExperienceEntryR\vexperiences\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12.\n" +
 	"\x13previous_page_token\x18\x03 \x01(\tR\x11previousPageToken\x12\x1d\n" +
 	"\n" +
-	"total_size\x18\x04 \x01(\x05R\ttotalSize\"0\n" +
+	"total_size\x18\x04 \x01(\x05R\ttotalSize\"[\n" +
 	"\x1eGetDaggerheartLootEntryRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12)\n" +
+	"\x06locale\x18\x02 \x01(\x0e2\x11.common.v1.LocaleR\x06locale\"e\n" +
 	"\x1fGetDaggerheartLootEntryResponse\x12B\n" +
-	"\x05entry\x18\x01 \x01(\v2,.systems.daggerheart.v1.DaggerheartLootEntryR\x05entry\"\x92\x01\n" +
+	"\x05entry\x18\x01 \x01(\v2,.systems.daggerheart.v1.DaggerheartLootEntryR\x05entry\"\xbd\x01\n" +
 	"!ListDaggerheartLootEntriesRequest\x12\x1b\n" +
 	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
 	"\n" +
 	"page_token\x18\x02 \x01(\tR\tpageToken\x12\x19\n" +
 	"\border_by\x18\x03 \x01(\tR\aorderBy\x12\x16\n" +
-	"\x06filter\x18\x04 \x01(\tR\x06filter\"\xe3\x01\n" +
+	"\x06filter\x18\x04 \x01(\tR\x06filter\x12)\n" +
+	"\x06locale\x18\x05 \x01(\x0e2\x11.common.v1.LocaleR\x06locale\"\xe3\x01\n" +
 	"\"ListDaggerheartLootEntriesResponse\x12F\n" +
 	"\aentries\x18\x01 \x03(\v2,.systems.daggerheart.v1.DaggerheartLootEntryR\aentries\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12.\n" +
 	"\x13previous_page_token\x18\x03 \x01(\tR\x11previousPageToken\x12\x1d\n" +
 	"\n" +
-	"total_size\x18\x04 \x01(\x05R\ttotalSize\"1\n" +
+	"total_size\x18\x04 \x01(\x05R\ttotalSize\"\\\n" +
 	"\x1fGetDaggerheartDamageTypeRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"w\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12)\n" +
+	"\x06locale\x18\x02 \x01(\x0e2\x11.common.v1.LocaleR\x06locale\"w\n" +
 	" GetDaggerheartDamageTypeResponse\x12S\n" +
 	"\vdamage_type\x18\x01 \x01(\v22.systems.daggerheart.v1.DaggerheartDamageTypeEntryR\n" +
-	"damageType\"\x92\x01\n" +
+	"damageType\"\xbd\x01\n" +
 	"!ListDaggerheartDamageTypesRequest\x12\x1b\n" +
 	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
 	"\n" +
 	"page_token\x18\x02 \x01(\tR\tpageToken\x12\x19\n" +
 	"\border_by\x18\x03 \x01(\tR\aorderBy\x12\x16\n" +
-	"\x06filter\x18\x04 \x01(\tR\x06filter\"\xf2\x01\n" +
+	"\x06filter\x18\x04 \x01(\tR\x06filter\x12)\n" +
+	"\x06locale\x18\x05 \x01(\x0e2\x11.common.v1.LocaleR\x06locale\"\xf2\x01\n" +
 	"\"ListDaggerheartDamageTypesResponse\x12U\n" +
 	"\fdamage_types\x18\x01 \x03(\v22.systems.daggerheart.v1.DaggerheartDamageTypeEntryR\vdamageTypes\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12.\n" +
 	"\x13previous_page_token\x18\x03 \x01(\tR\x11previousPageToken\x12\x1d\n" +
 	"\n" +
-	"total_size\x18\x04 \x01(\x05R\ttotalSize\"-\n" +
+	"total_size\x18\x04 \x01(\x05R\ttotalSize\"X\n" +
 	"\x1bGetDaggerheartDomainRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"a\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12)\n" +
+	"\x06locale\x18\x02 \x01(\x0e2\x11.common.v1.LocaleR\x06locale\"a\n" +
 	"\x1cGetDaggerheartDomainResponse\x12A\n" +
-	"\x06domain\x18\x01 \x01(\v2).systems.daggerheart.v1.DaggerheartDomainR\x06domain\"\x8e\x01\n" +
+	"\x06domain\x18\x01 \x01(\v2).systems.daggerheart.v1.DaggerheartDomainR\x06domain\"\xb9\x01\n" +
 	"\x1dListDaggerheartDomainsRequest\x12\x1b\n" +
 	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
 	"\n" +
 	"page_token\x18\x02 \x01(\tR\tpageToken\x12\x19\n" +
 	"\border_by\x18\x03 \x01(\tR\aorderBy\x12\x16\n" +
-	"\x06filter\x18\x04 \x01(\tR\x06filter\"\xdc\x01\n" +
+	"\x06filter\x18\x04 \x01(\tR\x06filter\x12)\n" +
+	"\x06locale\x18\x05 \x01(\x0e2\x11.common.v1.LocaleR\x06locale\"\xdc\x01\n" +
 	"\x1eListDaggerheartDomainsResponse\x12C\n" +
 	"\adomains\x18\x01 \x03(\v2).systems.daggerheart.v1.DaggerheartDomainR\adomains\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12.\n" +
 	"\x13previous_page_token\x18\x03 \x01(\tR\x11previousPageToken\x12\x1d\n" +
 	"\n" +
-	"total_size\x18\x04 \x01(\x05R\ttotalSize\"1\n" +
+	"total_size\x18\x04 \x01(\x05R\ttotalSize\"\\\n" +
 	"\x1fGetDaggerheartDomainCardRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"r\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12)\n" +
+	"\x06locale\x18\x02 \x01(\x0e2\x11.common.v1.LocaleR\x06locale\"r\n" +
 	" GetDaggerheartDomainCardResponse\x12N\n" +
 	"\vdomain_card\x18\x01 \x01(\v2-.systems.daggerheart.v1.DaggerheartDomainCardR\n" +
-	"domainCard\"\xaf\x01\n" +
+	"domainCard\"\xda\x01\n" +
 	"!ListDaggerheartDomainCardsRequest\x12\x1b\n" +
 	"\tdomain_id\x18\x01 \x01(\tR\bdomainId\x12\x1b\n" +
 	"\tpage_size\x18\x02 \x01(\x05R\bpageSize\x12\x1d\n" +
 	"\n" +
 	"page_token\x18\x03 \x01(\tR\tpageToken\x12\x19\n" +
 	"\border_by\x18\x04 \x01(\tR\aorderBy\x12\x16\n" +
-	"\x06filter\x18\x05 \x01(\tR\x06filter\"\xed\x01\n" +
+	"\x06filter\x18\x05 \x01(\tR\x06filter\x12)\n" +
+	"\x06locale\x18\x06 \x01(\x0e2\x11.common.v1.LocaleR\x06locale\"\xed\x01\n" +
 	"\"ListDaggerheartDomainCardsResponse\x12P\n" +
 	"\fdomain_cards\x18\x01 \x03(\v2-.systems.daggerheart.v1.DaggerheartDomainCardR\vdomainCards\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12.\n" +
 	"\x13previous_page_token\x18\x03 \x01(\tR\x11previousPageToken\x12\x1d\n" +
 	"\n" +
-	"total_size\x18\x04 \x01(\x05R\ttotalSize\"-\n" +
+	"total_size\x18\x04 \x01(\x05R\ttotalSize\"X\n" +
 	"\x1bGetDaggerheartWeaponRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"a\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12)\n" +
+	"\x06locale\x18\x02 \x01(\x0e2\x11.common.v1.LocaleR\x06locale\"a\n" +
 	"\x1cGetDaggerheartWeaponResponse\x12A\n" +
-	"\x06weapon\x18\x01 \x01(\v2).systems.daggerheart.v1.DaggerheartWeaponR\x06weapon\"\x8e\x01\n" +
+	"\x06weapon\x18\x01 \x01(\v2).systems.daggerheart.v1.DaggerheartWeaponR\x06weapon\"\xb9\x01\n" +
 	"\x1dListDaggerheartWeaponsRequest\x12\x1b\n" +
 	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
 	"\n" +
 	"page_token\x18\x02 \x01(\tR\tpageToken\x12\x19\n" +
 	"\border_by\x18\x03 \x01(\tR\aorderBy\x12\x16\n" +
-	"\x06filter\x18\x04 \x01(\tR\x06filter\"\xdc\x01\n" +
+	"\x06filter\x18\x04 \x01(\tR\x06filter\x12)\n" +
+	"\x06locale\x18\x05 \x01(\x0e2\x11.common.v1.LocaleR\x06locale\"\xdc\x01\n" +
 	"\x1eListDaggerheartWeaponsResponse\x12C\n" +
 	"\aweapons\x18\x01 \x03(\v2).systems.daggerheart.v1.DaggerheartWeaponR\aweapons\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12.\n" +
 	"\x13previous_page_token\x18\x03 \x01(\tR\x11previousPageToken\x12\x1d\n" +
 	"\n" +
-	"total_size\x18\x04 \x01(\x05R\ttotalSize\",\n" +
+	"total_size\x18\x04 \x01(\x05R\ttotalSize\"W\n" +
 	"\x1aGetDaggerheartArmorRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"]\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12)\n" +
+	"\x06locale\x18\x02 \x01(\x0e2\x11.common.v1.LocaleR\x06locale\"]\n" +
 	"\x1bGetDaggerheartArmorResponse\x12>\n" +
-	"\x05armor\x18\x01 \x01(\v2(.systems.daggerheart.v1.DaggerheartArmorR\x05armor\"\x8c\x01\n" +
+	"\x05armor\x18\x01 \x01(\v2(.systems.daggerheart.v1.DaggerheartArmorR\x05armor\"\xb7\x01\n" +
 	"\x1bListDaggerheartArmorRequest\x12\x1b\n" +
 	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
 	"\n" +
 	"page_token\x18\x02 \x01(\tR\tpageToken\x12\x19\n" +
 	"\border_by\x18\x03 \x01(\tR\aorderBy\x12\x16\n" +
-	"\x06filter\x18\x04 \x01(\tR\x06filter\"\xd5\x01\n" +
+	"\x06filter\x18\x04 \x01(\tR\x06filter\x12)\n" +
+	"\x06locale\x18\x05 \x01(\x0e2\x11.common.v1.LocaleR\x06locale\"\xd5\x01\n" +
 	"\x1cListDaggerheartArmorResponse\x12>\n" +
 	"\x05armor\x18\x01 \x03(\v2(.systems.daggerheart.v1.DaggerheartArmorR\x05armor\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12.\n" +
 	"\x13previous_page_token\x18\x03 \x01(\tR\x11previousPageToken\x12\x1d\n" +
 	"\n" +
-	"total_size\x18\x04 \x01(\x05R\ttotalSize\"+\n" +
+	"total_size\x18\x04 \x01(\x05R\ttotalSize\"V\n" +
 	"\x19GetDaggerheartItemRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"Y\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12)\n" +
+	"\x06locale\x18\x02 \x01(\x0e2\x11.common.v1.LocaleR\x06locale\"Y\n" +
 	"\x1aGetDaggerheartItemResponse\x12;\n" +
-	"\x04item\x18\x01 \x01(\v2'.systems.daggerheart.v1.DaggerheartItemR\x04item\"\x8c\x01\n" +
+	"\x04item\x18\x01 \x01(\v2'.systems.daggerheart.v1.DaggerheartItemR\x04item\"\xb7\x01\n" +
 	"\x1bListDaggerheartItemsRequest\x12\x1b\n" +
 	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
 	"\n" +
 	"page_token\x18\x02 \x01(\tR\tpageToken\x12\x19\n" +
 	"\border_by\x18\x03 \x01(\tR\aorderBy\x12\x16\n" +
-	"\x06filter\x18\x04 \x01(\tR\x06filter\"\xd4\x01\n" +
+	"\x06filter\x18\x04 \x01(\tR\x06filter\x12)\n" +
+	"\x06locale\x18\x05 \x01(\x0e2\x11.common.v1.LocaleR\x06locale\"\xd4\x01\n" +
 	"\x1cListDaggerheartItemsResponse\x12=\n" +
 	"\x05items\x18\x01 \x03(\v2'.systems.daggerheart.v1.DaggerheartItemR\x05items\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12.\n" +
 	"\x13previous_page_token\x18\x03 \x01(\tR\x11previousPageToken\x12\x1d\n" +
 	"\n" +
-	"total_size\x18\x04 \x01(\x05R\ttotalSize\"2\n" +
+	"total_size\x18\x04 \x01(\x05R\ttotalSize\"]\n" +
 	" GetDaggerheartEnvironmentRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"u\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12)\n" +
+	"\x06locale\x18\x02 \x01(\x0e2\x11.common.v1.LocaleR\x06locale\"u\n" +
 	"!GetDaggerheartEnvironmentResponse\x12P\n" +
-	"\venvironment\x18\x01 \x01(\v2..systems.daggerheart.v1.DaggerheartEnvironmentR\venvironment\"\x93\x01\n" +
+	"\venvironment\x18\x01 \x01(\v2..systems.daggerheart.v1.DaggerheartEnvironmentR\venvironment\"\xbe\x01\n" +
 	"\"ListDaggerheartEnvironmentsRequest\x12\x1b\n" +
 	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
 	"\n" +
 	"page_token\x18\x02 \x01(\tR\tpageToken\x12\x19\n" +
 	"\border_by\x18\x03 \x01(\tR\aorderBy\x12\x16\n" +
-	"\x06filter\x18\x04 \x01(\tR\x06filter\"\xf0\x01\n" +
+	"\x06filter\x18\x04 \x01(\tR\x06filter\x12)\n" +
+	"\x06locale\x18\x05 \x01(\x0e2\x11.common.v1.LocaleR\x06locale\"\xf0\x01\n" +
 	"#ListDaggerheartEnvironmentsResponse\x12R\n" +
 	"\fenvironments\x18\x01 \x03(\v2..systems.daggerheart.v1.DaggerheartEnvironmentR\fenvironments\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12.\n" +
@@ -6460,147 +6771,179 @@ var file_systems_daggerheart_v1_content_proto_goTypes = []any{
 	(*DaggerheartItem)(nil),                             // 88: systems.daggerheart.v1.DaggerheartItem
 	(*DaggerheartEnvironment)(nil),                      // 89: systems.daggerheart.v1.DaggerheartEnvironment
 	(*DaggerheartContentCatalog)(nil),                   // 90: systems.daggerheart.v1.DaggerheartContentCatalog
-	(*DiceSpec)(nil),                                    // 91: systems.daggerheart.v1.DiceSpec
-	(DaggerheartDamageType)(0),                          // 92: systems.daggerheart.v1.DaggerheartDamageType
+	(v1.Locale)(0),                                      // 91: common.v1.Locale
+	(*DiceSpec)(nil),                                    // 92: systems.daggerheart.v1.DiceSpec
+	(DaggerheartDamageType)(0),                          // 93: systems.daggerheart.v1.DaggerheartDamageType
 }
 var file_systems_daggerheart_v1_content_proto_depIdxs = []int32{
-	90,  // 0: systems.daggerheart.v1.GetDaggerheartContentCatalogResponse.catalog:type_name -> systems.daggerheart.v1.DaggerheartContentCatalog
-	70,  // 1: systems.daggerheart.v1.GetDaggerheartClassResponse.class:type_name -> systems.daggerheart.v1.DaggerheartClass
-	70,  // 2: systems.daggerheart.v1.ListDaggerheartClassesResponse.classes:type_name -> systems.daggerheart.v1.DaggerheartClass
-	71,  // 3: systems.daggerheart.v1.GetDaggerheartSubclassResponse.subclass:type_name -> systems.daggerheart.v1.DaggerheartSubclass
-	71,  // 4: systems.daggerheart.v1.ListDaggerheartSubclassesResponse.subclasses:type_name -> systems.daggerheart.v1.DaggerheartSubclass
-	72,  // 5: systems.daggerheart.v1.GetDaggerheartHeritageResponse.heritage:type_name -> systems.daggerheart.v1.DaggerheartHeritage
-	72,  // 6: systems.daggerheart.v1.ListDaggerheartHeritagesResponse.heritages:type_name -> systems.daggerheart.v1.DaggerheartHeritage
-	73,  // 7: systems.daggerheart.v1.GetDaggerheartExperienceResponse.experience:type_name -> systems.daggerheart.v1.DaggerheartExperienceEntry
-	73,  // 8: systems.daggerheart.v1.ListDaggerheartExperiencesResponse.experiences:type_name -> systems.daggerheart.v1.DaggerheartExperienceEntry
-	77,  // 9: systems.daggerheart.v1.GetDaggerheartAdversaryResponse.adversary:type_name -> systems.daggerheart.v1.DaggerheartAdversaryEntry
-	77,  // 10: systems.daggerheart.v1.ListDaggerheartAdversariesResponse.adversaries:type_name -> systems.daggerheart.v1.DaggerheartAdversaryEntry
-	80,  // 11: systems.daggerheart.v1.GetDaggerheartBeastformResponse.beastform:type_name -> systems.daggerheart.v1.DaggerheartBeastformEntry
-	80,  // 12: systems.daggerheart.v1.ListDaggerheartBeastformsResponse.beastforms:type_name -> systems.daggerheart.v1.DaggerheartBeastformEntry
-	81,  // 13: systems.daggerheart.v1.GetDaggerheartCompanionExperienceResponse.experience:type_name -> systems.daggerheart.v1.DaggerheartCompanionExperienceEntry
-	81,  // 14: systems.daggerheart.v1.ListDaggerheartCompanionExperiencesResponse.experiences:type_name -> systems.daggerheart.v1.DaggerheartCompanionExperienceEntry
-	82,  // 15: systems.daggerheart.v1.GetDaggerheartLootEntryResponse.entry:type_name -> systems.daggerheart.v1.DaggerheartLootEntry
-	82,  // 16: systems.daggerheart.v1.ListDaggerheartLootEntriesResponse.entries:type_name -> systems.daggerheart.v1.DaggerheartLootEntry
-	83,  // 17: systems.daggerheart.v1.GetDaggerheartDamageTypeResponse.damage_type:type_name -> systems.daggerheart.v1.DaggerheartDamageTypeEntry
-	83,  // 18: systems.daggerheart.v1.ListDaggerheartDamageTypesResponse.damage_types:type_name -> systems.daggerheart.v1.DaggerheartDamageTypeEntry
-	84,  // 19: systems.daggerheart.v1.GetDaggerheartDomainResponse.domain:type_name -> systems.daggerheart.v1.DaggerheartDomain
-	84,  // 20: systems.daggerheart.v1.ListDaggerheartDomainsResponse.domains:type_name -> systems.daggerheart.v1.DaggerheartDomain
-	85,  // 21: systems.daggerheart.v1.GetDaggerheartDomainCardResponse.domain_card:type_name -> systems.daggerheart.v1.DaggerheartDomainCard
-	85,  // 22: systems.daggerheart.v1.ListDaggerheartDomainCardsResponse.domain_cards:type_name -> systems.daggerheart.v1.DaggerheartDomainCard
-	86,  // 23: systems.daggerheart.v1.GetDaggerheartWeaponResponse.weapon:type_name -> systems.daggerheart.v1.DaggerheartWeapon
-	86,  // 24: systems.daggerheart.v1.ListDaggerheartWeaponsResponse.weapons:type_name -> systems.daggerheart.v1.DaggerheartWeapon
-	87,  // 25: systems.daggerheart.v1.GetDaggerheartArmorResponse.armor:type_name -> systems.daggerheart.v1.DaggerheartArmor
-	87,  // 26: systems.daggerheart.v1.ListDaggerheartArmorResponse.armor:type_name -> systems.daggerheart.v1.DaggerheartArmor
-	88,  // 27: systems.daggerheart.v1.GetDaggerheartItemResponse.item:type_name -> systems.daggerheart.v1.DaggerheartItem
-	88,  // 28: systems.daggerheart.v1.ListDaggerheartItemsResponse.items:type_name -> systems.daggerheart.v1.DaggerheartItem
-	89,  // 29: systems.daggerheart.v1.GetDaggerheartEnvironmentResponse.environment:type_name -> systems.daggerheart.v1.DaggerheartEnvironment
-	89,  // 30: systems.daggerheart.v1.ListDaggerheartEnvironmentsResponse.environments:type_name -> systems.daggerheart.v1.DaggerheartEnvironment
-	68,  // 31: systems.daggerheart.v1.DaggerheartClass.features:type_name -> systems.daggerheart.v1.DaggerheartFeature
-	69,  // 32: systems.daggerheart.v1.DaggerheartClass.hope_feature:type_name -> systems.daggerheart.v1.DaggerheartHopeFeature
-	68,  // 33: systems.daggerheart.v1.DaggerheartSubclass.foundation_features:type_name -> systems.daggerheart.v1.DaggerheartFeature
-	68,  // 34: systems.daggerheart.v1.DaggerheartSubclass.specialization_features:type_name -> systems.daggerheart.v1.DaggerheartFeature
-	68,  // 35: systems.daggerheart.v1.DaggerheartSubclass.mastery_features:type_name -> systems.daggerheart.v1.DaggerheartFeature
-	0,   // 36: systems.daggerheart.v1.DaggerheartHeritage.kind:type_name -> systems.daggerheart.v1.DaggerheartHeritageKind
-	68,  // 37: systems.daggerheart.v1.DaggerheartHeritage.features:type_name -> systems.daggerheart.v1.DaggerheartFeature
-	91,  // 38: systems.daggerheart.v1.DaggerheartAdversaryAttack.damage_dice:type_name -> systems.daggerheart.v1.DiceSpec
-	92,  // 39: systems.daggerheart.v1.DaggerheartAdversaryAttack.damage_type:type_name -> systems.daggerheart.v1.DaggerheartDamageType
-	74,  // 40: systems.daggerheart.v1.DaggerheartAdversaryEntry.standard_attack:type_name -> systems.daggerheart.v1.DaggerheartAdversaryAttack
-	75,  // 41: systems.daggerheart.v1.DaggerheartAdversaryEntry.experiences:type_name -> systems.daggerheart.v1.DaggerheartAdversaryExperience
-	76,  // 42: systems.daggerheart.v1.DaggerheartAdversaryEntry.features:type_name -> systems.daggerheart.v1.DaggerheartAdversaryFeature
-	91,  // 43: systems.daggerheart.v1.DaggerheartBeastformAttack.damage_dice:type_name -> systems.daggerheart.v1.DiceSpec
-	92,  // 44: systems.daggerheart.v1.DaggerheartBeastformAttack.damage_type:type_name -> systems.daggerheart.v1.DaggerheartDamageType
-	78,  // 45: systems.daggerheart.v1.DaggerheartBeastformEntry.attack:type_name -> systems.daggerheart.v1.DaggerheartBeastformAttack
-	79,  // 46: systems.daggerheart.v1.DaggerheartBeastformEntry.features:type_name -> systems.daggerheart.v1.DaggerheartBeastformFeature
-	1,   // 47: systems.daggerheart.v1.DaggerheartDomainCard.type:type_name -> systems.daggerheart.v1.DaggerheartDomainCardType
-	2,   // 48: systems.daggerheart.v1.DaggerheartWeapon.category:type_name -> systems.daggerheart.v1.DaggerheartWeaponCategory
-	91,  // 49: systems.daggerheart.v1.DaggerheartWeapon.damage_dice:type_name -> systems.daggerheart.v1.DiceSpec
-	92,  // 50: systems.daggerheart.v1.DaggerheartWeapon.damage_type:type_name -> systems.daggerheart.v1.DaggerheartDamageType
-	3,   // 51: systems.daggerheart.v1.DaggerheartItem.rarity:type_name -> systems.daggerheart.v1.DaggerheartItemRarity
-	4,   // 52: systems.daggerheart.v1.DaggerheartItem.kind:type_name -> systems.daggerheart.v1.DaggerheartItemKind
-	5,   // 53: systems.daggerheart.v1.DaggerheartEnvironment.type:type_name -> systems.daggerheart.v1.DaggerheartEnvironmentType
-	68,  // 54: systems.daggerheart.v1.DaggerheartEnvironment.features:type_name -> systems.daggerheart.v1.DaggerheartFeature
-	70,  // 55: systems.daggerheart.v1.DaggerheartContentCatalog.classes:type_name -> systems.daggerheart.v1.DaggerheartClass
-	71,  // 56: systems.daggerheart.v1.DaggerheartContentCatalog.subclasses:type_name -> systems.daggerheart.v1.DaggerheartSubclass
-	72,  // 57: systems.daggerheart.v1.DaggerheartContentCatalog.heritages:type_name -> systems.daggerheart.v1.DaggerheartHeritage
-	73,  // 58: systems.daggerheart.v1.DaggerheartContentCatalog.experiences:type_name -> systems.daggerheart.v1.DaggerheartExperienceEntry
-	77,  // 59: systems.daggerheart.v1.DaggerheartContentCatalog.adversaries:type_name -> systems.daggerheart.v1.DaggerheartAdversaryEntry
-	80,  // 60: systems.daggerheart.v1.DaggerheartContentCatalog.beastforms:type_name -> systems.daggerheart.v1.DaggerheartBeastformEntry
-	81,  // 61: systems.daggerheart.v1.DaggerheartContentCatalog.companion_experiences:type_name -> systems.daggerheart.v1.DaggerheartCompanionExperienceEntry
-	82,  // 62: systems.daggerheart.v1.DaggerheartContentCatalog.loot_entries:type_name -> systems.daggerheart.v1.DaggerheartLootEntry
-	83,  // 63: systems.daggerheart.v1.DaggerheartContentCatalog.damage_types:type_name -> systems.daggerheart.v1.DaggerheartDamageTypeEntry
-	84,  // 64: systems.daggerheart.v1.DaggerheartContentCatalog.domains:type_name -> systems.daggerheart.v1.DaggerheartDomain
-	85,  // 65: systems.daggerheart.v1.DaggerheartContentCatalog.domain_cards:type_name -> systems.daggerheart.v1.DaggerheartDomainCard
-	86,  // 66: systems.daggerheart.v1.DaggerheartContentCatalog.weapons:type_name -> systems.daggerheart.v1.DaggerheartWeapon
-	87,  // 67: systems.daggerheart.v1.DaggerheartContentCatalog.armor:type_name -> systems.daggerheart.v1.DaggerheartArmor
-	88,  // 68: systems.daggerheart.v1.DaggerheartContentCatalog.items:type_name -> systems.daggerheart.v1.DaggerheartItem
-	89,  // 69: systems.daggerheart.v1.DaggerheartContentCatalog.environments:type_name -> systems.daggerheart.v1.DaggerheartEnvironment
-	6,   // 70: systems.daggerheart.v1.DaggerheartContentService.GetContentCatalog:input_type -> systems.daggerheart.v1.GetDaggerheartContentCatalogRequest
-	8,   // 71: systems.daggerheart.v1.DaggerheartContentService.GetClass:input_type -> systems.daggerheart.v1.GetDaggerheartClassRequest
-	10,  // 72: systems.daggerheart.v1.DaggerheartContentService.ListClasses:input_type -> systems.daggerheart.v1.ListDaggerheartClassesRequest
-	12,  // 73: systems.daggerheart.v1.DaggerheartContentService.GetSubclass:input_type -> systems.daggerheart.v1.GetDaggerheartSubclassRequest
-	14,  // 74: systems.daggerheart.v1.DaggerheartContentService.ListSubclasses:input_type -> systems.daggerheart.v1.ListDaggerheartSubclassesRequest
-	16,  // 75: systems.daggerheart.v1.DaggerheartContentService.GetHeritage:input_type -> systems.daggerheart.v1.GetDaggerheartHeritageRequest
-	18,  // 76: systems.daggerheart.v1.DaggerheartContentService.ListHeritages:input_type -> systems.daggerheart.v1.ListDaggerheartHeritagesRequest
-	20,  // 77: systems.daggerheart.v1.DaggerheartContentService.GetExperience:input_type -> systems.daggerheart.v1.GetDaggerheartExperienceRequest
-	22,  // 78: systems.daggerheart.v1.DaggerheartContentService.ListExperiences:input_type -> systems.daggerheart.v1.ListDaggerheartExperiencesRequest
-	24,  // 79: systems.daggerheart.v1.DaggerheartContentService.GetAdversary:input_type -> systems.daggerheart.v1.GetDaggerheartAdversaryRequest
-	26,  // 80: systems.daggerheart.v1.DaggerheartContentService.ListAdversaries:input_type -> systems.daggerheart.v1.ListDaggerheartAdversariesRequest
-	28,  // 81: systems.daggerheart.v1.DaggerheartContentService.GetBeastform:input_type -> systems.daggerheart.v1.GetDaggerheartBeastformRequest
-	30,  // 82: systems.daggerheart.v1.DaggerheartContentService.ListBeastforms:input_type -> systems.daggerheart.v1.ListDaggerheartBeastformsRequest
-	32,  // 83: systems.daggerheart.v1.DaggerheartContentService.GetCompanionExperience:input_type -> systems.daggerheart.v1.GetDaggerheartCompanionExperienceRequest
-	34,  // 84: systems.daggerheart.v1.DaggerheartContentService.ListCompanionExperiences:input_type -> systems.daggerheart.v1.ListDaggerheartCompanionExperiencesRequest
-	36,  // 85: systems.daggerheart.v1.DaggerheartContentService.GetLootEntry:input_type -> systems.daggerheart.v1.GetDaggerheartLootEntryRequest
-	38,  // 86: systems.daggerheart.v1.DaggerheartContentService.ListLootEntries:input_type -> systems.daggerheart.v1.ListDaggerheartLootEntriesRequest
-	40,  // 87: systems.daggerheart.v1.DaggerheartContentService.GetDamageType:input_type -> systems.daggerheart.v1.GetDaggerheartDamageTypeRequest
-	42,  // 88: systems.daggerheart.v1.DaggerheartContentService.ListDamageTypes:input_type -> systems.daggerheart.v1.ListDaggerheartDamageTypesRequest
-	44,  // 89: systems.daggerheart.v1.DaggerheartContentService.GetDomain:input_type -> systems.daggerheart.v1.GetDaggerheartDomainRequest
-	46,  // 90: systems.daggerheart.v1.DaggerheartContentService.ListDomains:input_type -> systems.daggerheart.v1.ListDaggerheartDomainsRequest
-	48,  // 91: systems.daggerheart.v1.DaggerheartContentService.GetDomainCard:input_type -> systems.daggerheart.v1.GetDaggerheartDomainCardRequest
-	50,  // 92: systems.daggerheart.v1.DaggerheartContentService.ListDomainCards:input_type -> systems.daggerheart.v1.ListDaggerheartDomainCardsRequest
-	52,  // 93: systems.daggerheart.v1.DaggerheartContentService.GetWeapon:input_type -> systems.daggerheart.v1.GetDaggerheartWeaponRequest
-	54,  // 94: systems.daggerheart.v1.DaggerheartContentService.ListWeapons:input_type -> systems.daggerheart.v1.ListDaggerheartWeaponsRequest
-	56,  // 95: systems.daggerheart.v1.DaggerheartContentService.GetArmor:input_type -> systems.daggerheart.v1.GetDaggerheartArmorRequest
-	58,  // 96: systems.daggerheart.v1.DaggerheartContentService.ListArmor:input_type -> systems.daggerheart.v1.ListDaggerheartArmorRequest
-	60,  // 97: systems.daggerheart.v1.DaggerheartContentService.GetItem:input_type -> systems.daggerheart.v1.GetDaggerheartItemRequest
-	62,  // 98: systems.daggerheart.v1.DaggerheartContentService.ListItems:input_type -> systems.daggerheart.v1.ListDaggerheartItemsRequest
-	64,  // 99: systems.daggerheart.v1.DaggerheartContentService.GetEnvironment:input_type -> systems.daggerheart.v1.GetDaggerheartEnvironmentRequest
-	66,  // 100: systems.daggerheart.v1.DaggerheartContentService.ListEnvironments:input_type -> systems.daggerheart.v1.ListDaggerheartEnvironmentsRequest
-	7,   // 101: systems.daggerheart.v1.DaggerheartContentService.GetContentCatalog:output_type -> systems.daggerheart.v1.GetDaggerheartContentCatalogResponse
-	9,   // 102: systems.daggerheart.v1.DaggerheartContentService.GetClass:output_type -> systems.daggerheart.v1.GetDaggerheartClassResponse
-	11,  // 103: systems.daggerheart.v1.DaggerheartContentService.ListClasses:output_type -> systems.daggerheart.v1.ListDaggerheartClassesResponse
-	13,  // 104: systems.daggerheart.v1.DaggerheartContentService.GetSubclass:output_type -> systems.daggerheart.v1.GetDaggerheartSubclassResponse
-	15,  // 105: systems.daggerheart.v1.DaggerheartContentService.ListSubclasses:output_type -> systems.daggerheart.v1.ListDaggerheartSubclassesResponse
-	17,  // 106: systems.daggerheart.v1.DaggerheartContentService.GetHeritage:output_type -> systems.daggerheart.v1.GetDaggerheartHeritageResponse
-	19,  // 107: systems.daggerheart.v1.DaggerheartContentService.ListHeritages:output_type -> systems.daggerheart.v1.ListDaggerheartHeritagesResponse
-	21,  // 108: systems.daggerheart.v1.DaggerheartContentService.GetExperience:output_type -> systems.daggerheart.v1.GetDaggerheartExperienceResponse
-	23,  // 109: systems.daggerheart.v1.DaggerheartContentService.ListExperiences:output_type -> systems.daggerheart.v1.ListDaggerheartExperiencesResponse
-	25,  // 110: systems.daggerheart.v1.DaggerheartContentService.GetAdversary:output_type -> systems.daggerheart.v1.GetDaggerheartAdversaryResponse
-	27,  // 111: systems.daggerheart.v1.DaggerheartContentService.ListAdversaries:output_type -> systems.daggerheart.v1.ListDaggerheartAdversariesResponse
-	29,  // 112: systems.daggerheart.v1.DaggerheartContentService.GetBeastform:output_type -> systems.daggerheart.v1.GetDaggerheartBeastformResponse
-	31,  // 113: systems.daggerheart.v1.DaggerheartContentService.ListBeastforms:output_type -> systems.daggerheart.v1.ListDaggerheartBeastformsResponse
-	33,  // 114: systems.daggerheart.v1.DaggerheartContentService.GetCompanionExperience:output_type -> systems.daggerheart.v1.GetDaggerheartCompanionExperienceResponse
-	35,  // 115: systems.daggerheart.v1.DaggerheartContentService.ListCompanionExperiences:output_type -> systems.daggerheart.v1.ListDaggerheartCompanionExperiencesResponse
-	37,  // 116: systems.daggerheart.v1.DaggerheartContentService.GetLootEntry:output_type -> systems.daggerheart.v1.GetDaggerheartLootEntryResponse
-	39,  // 117: systems.daggerheart.v1.DaggerheartContentService.ListLootEntries:output_type -> systems.daggerheart.v1.ListDaggerheartLootEntriesResponse
-	41,  // 118: systems.daggerheart.v1.DaggerheartContentService.GetDamageType:output_type -> systems.daggerheart.v1.GetDaggerheartDamageTypeResponse
-	43,  // 119: systems.daggerheart.v1.DaggerheartContentService.ListDamageTypes:output_type -> systems.daggerheart.v1.ListDaggerheartDamageTypesResponse
-	45,  // 120: systems.daggerheart.v1.DaggerheartContentService.GetDomain:output_type -> systems.daggerheart.v1.GetDaggerheartDomainResponse
-	47,  // 121: systems.daggerheart.v1.DaggerheartContentService.ListDomains:output_type -> systems.daggerheart.v1.ListDaggerheartDomainsResponse
-	49,  // 122: systems.daggerheart.v1.DaggerheartContentService.GetDomainCard:output_type -> systems.daggerheart.v1.GetDaggerheartDomainCardResponse
-	51,  // 123: systems.daggerheart.v1.DaggerheartContentService.ListDomainCards:output_type -> systems.daggerheart.v1.ListDaggerheartDomainCardsResponse
-	53,  // 124: systems.daggerheart.v1.DaggerheartContentService.GetWeapon:output_type -> systems.daggerheart.v1.GetDaggerheartWeaponResponse
-	55,  // 125: systems.daggerheart.v1.DaggerheartContentService.ListWeapons:output_type -> systems.daggerheart.v1.ListDaggerheartWeaponsResponse
-	57,  // 126: systems.daggerheart.v1.DaggerheartContentService.GetArmor:output_type -> systems.daggerheart.v1.GetDaggerheartArmorResponse
-	59,  // 127: systems.daggerheart.v1.DaggerheartContentService.ListArmor:output_type -> systems.daggerheart.v1.ListDaggerheartArmorResponse
-	61,  // 128: systems.daggerheart.v1.DaggerheartContentService.GetItem:output_type -> systems.daggerheart.v1.GetDaggerheartItemResponse
-	63,  // 129: systems.daggerheart.v1.DaggerheartContentService.ListItems:output_type -> systems.daggerheart.v1.ListDaggerheartItemsResponse
-	65,  // 130: systems.daggerheart.v1.DaggerheartContentService.GetEnvironment:output_type -> systems.daggerheart.v1.GetDaggerheartEnvironmentResponse
-	67,  // 131: systems.daggerheart.v1.DaggerheartContentService.ListEnvironments:output_type -> systems.daggerheart.v1.ListDaggerheartEnvironmentsResponse
-	101, // [101:132] is the sub-list for method output_type
-	70,  // [70:101] is the sub-list for method input_type
-	70,  // [70:70] is the sub-list for extension type_name
-	70,  // [70:70] is the sub-list for extension extendee
-	0,   // [0:70] is the sub-list for field type_name
+	91,  // 0: systems.daggerheart.v1.GetDaggerheartContentCatalogRequest.locale:type_name -> common.v1.Locale
+	90,  // 1: systems.daggerheart.v1.GetDaggerheartContentCatalogResponse.catalog:type_name -> systems.daggerheart.v1.DaggerheartContentCatalog
+	91,  // 2: systems.daggerheart.v1.GetDaggerheartClassRequest.locale:type_name -> common.v1.Locale
+	70,  // 3: systems.daggerheart.v1.GetDaggerheartClassResponse.class:type_name -> systems.daggerheart.v1.DaggerheartClass
+	91,  // 4: systems.daggerheart.v1.ListDaggerheartClassesRequest.locale:type_name -> common.v1.Locale
+	70,  // 5: systems.daggerheart.v1.ListDaggerheartClassesResponse.classes:type_name -> systems.daggerheart.v1.DaggerheartClass
+	91,  // 6: systems.daggerheart.v1.GetDaggerheartSubclassRequest.locale:type_name -> common.v1.Locale
+	71,  // 7: systems.daggerheart.v1.GetDaggerheartSubclassResponse.subclass:type_name -> systems.daggerheart.v1.DaggerheartSubclass
+	91,  // 8: systems.daggerheart.v1.ListDaggerheartSubclassesRequest.locale:type_name -> common.v1.Locale
+	71,  // 9: systems.daggerheart.v1.ListDaggerheartSubclassesResponse.subclasses:type_name -> systems.daggerheart.v1.DaggerheartSubclass
+	91,  // 10: systems.daggerheart.v1.GetDaggerheartHeritageRequest.locale:type_name -> common.v1.Locale
+	72,  // 11: systems.daggerheart.v1.GetDaggerheartHeritageResponse.heritage:type_name -> systems.daggerheart.v1.DaggerheartHeritage
+	91,  // 12: systems.daggerheart.v1.ListDaggerheartHeritagesRequest.locale:type_name -> common.v1.Locale
+	72,  // 13: systems.daggerheart.v1.ListDaggerheartHeritagesResponse.heritages:type_name -> systems.daggerheart.v1.DaggerheartHeritage
+	91,  // 14: systems.daggerheart.v1.GetDaggerheartExperienceRequest.locale:type_name -> common.v1.Locale
+	73,  // 15: systems.daggerheart.v1.GetDaggerheartExperienceResponse.experience:type_name -> systems.daggerheart.v1.DaggerheartExperienceEntry
+	91,  // 16: systems.daggerheart.v1.ListDaggerheartExperiencesRequest.locale:type_name -> common.v1.Locale
+	73,  // 17: systems.daggerheart.v1.ListDaggerheartExperiencesResponse.experiences:type_name -> systems.daggerheart.v1.DaggerheartExperienceEntry
+	91,  // 18: systems.daggerheart.v1.GetDaggerheartAdversaryRequest.locale:type_name -> common.v1.Locale
+	77,  // 19: systems.daggerheart.v1.GetDaggerheartAdversaryResponse.adversary:type_name -> systems.daggerheart.v1.DaggerheartAdversaryEntry
+	91,  // 20: systems.daggerheart.v1.ListDaggerheartAdversariesRequest.locale:type_name -> common.v1.Locale
+	77,  // 21: systems.daggerheart.v1.ListDaggerheartAdversariesResponse.adversaries:type_name -> systems.daggerheart.v1.DaggerheartAdversaryEntry
+	91,  // 22: systems.daggerheart.v1.GetDaggerheartBeastformRequest.locale:type_name -> common.v1.Locale
+	80,  // 23: systems.daggerheart.v1.GetDaggerheartBeastformResponse.beastform:type_name -> systems.daggerheart.v1.DaggerheartBeastformEntry
+	91,  // 24: systems.daggerheart.v1.ListDaggerheartBeastformsRequest.locale:type_name -> common.v1.Locale
+	80,  // 25: systems.daggerheart.v1.ListDaggerheartBeastformsResponse.beastforms:type_name -> systems.daggerheart.v1.DaggerheartBeastformEntry
+	91,  // 26: systems.daggerheart.v1.GetDaggerheartCompanionExperienceRequest.locale:type_name -> common.v1.Locale
+	81,  // 27: systems.daggerheart.v1.GetDaggerheartCompanionExperienceResponse.experience:type_name -> systems.daggerheart.v1.DaggerheartCompanionExperienceEntry
+	91,  // 28: systems.daggerheart.v1.ListDaggerheartCompanionExperiencesRequest.locale:type_name -> common.v1.Locale
+	81,  // 29: systems.daggerheart.v1.ListDaggerheartCompanionExperiencesResponse.experiences:type_name -> systems.daggerheart.v1.DaggerheartCompanionExperienceEntry
+	91,  // 30: systems.daggerheart.v1.GetDaggerheartLootEntryRequest.locale:type_name -> common.v1.Locale
+	82,  // 31: systems.daggerheart.v1.GetDaggerheartLootEntryResponse.entry:type_name -> systems.daggerheart.v1.DaggerheartLootEntry
+	91,  // 32: systems.daggerheart.v1.ListDaggerheartLootEntriesRequest.locale:type_name -> common.v1.Locale
+	82,  // 33: systems.daggerheart.v1.ListDaggerheartLootEntriesResponse.entries:type_name -> systems.daggerheart.v1.DaggerheartLootEntry
+	91,  // 34: systems.daggerheart.v1.GetDaggerheartDamageTypeRequest.locale:type_name -> common.v1.Locale
+	83,  // 35: systems.daggerheart.v1.GetDaggerheartDamageTypeResponse.damage_type:type_name -> systems.daggerheart.v1.DaggerheartDamageTypeEntry
+	91,  // 36: systems.daggerheart.v1.ListDaggerheartDamageTypesRequest.locale:type_name -> common.v1.Locale
+	83,  // 37: systems.daggerheart.v1.ListDaggerheartDamageTypesResponse.damage_types:type_name -> systems.daggerheart.v1.DaggerheartDamageTypeEntry
+	91,  // 38: systems.daggerheart.v1.GetDaggerheartDomainRequest.locale:type_name -> common.v1.Locale
+	84,  // 39: systems.daggerheart.v1.GetDaggerheartDomainResponse.domain:type_name -> systems.daggerheart.v1.DaggerheartDomain
+	91,  // 40: systems.daggerheart.v1.ListDaggerheartDomainsRequest.locale:type_name -> common.v1.Locale
+	84,  // 41: systems.daggerheart.v1.ListDaggerheartDomainsResponse.domains:type_name -> systems.daggerheart.v1.DaggerheartDomain
+	91,  // 42: systems.daggerheart.v1.GetDaggerheartDomainCardRequest.locale:type_name -> common.v1.Locale
+	85,  // 43: systems.daggerheart.v1.GetDaggerheartDomainCardResponse.domain_card:type_name -> systems.daggerheart.v1.DaggerheartDomainCard
+	91,  // 44: systems.daggerheart.v1.ListDaggerheartDomainCardsRequest.locale:type_name -> common.v1.Locale
+	85,  // 45: systems.daggerheart.v1.ListDaggerheartDomainCardsResponse.domain_cards:type_name -> systems.daggerheart.v1.DaggerheartDomainCard
+	91,  // 46: systems.daggerheart.v1.GetDaggerheartWeaponRequest.locale:type_name -> common.v1.Locale
+	86,  // 47: systems.daggerheart.v1.GetDaggerheartWeaponResponse.weapon:type_name -> systems.daggerheart.v1.DaggerheartWeapon
+	91,  // 48: systems.daggerheart.v1.ListDaggerheartWeaponsRequest.locale:type_name -> common.v1.Locale
+	86,  // 49: systems.daggerheart.v1.ListDaggerheartWeaponsResponse.weapons:type_name -> systems.daggerheart.v1.DaggerheartWeapon
+	91,  // 50: systems.daggerheart.v1.GetDaggerheartArmorRequest.locale:type_name -> common.v1.Locale
+	87,  // 51: systems.daggerheart.v1.GetDaggerheartArmorResponse.armor:type_name -> systems.daggerheart.v1.DaggerheartArmor
+	91,  // 52: systems.daggerheart.v1.ListDaggerheartArmorRequest.locale:type_name -> common.v1.Locale
+	87,  // 53: systems.daggerheart.v1.ListDaggerheartArmorResponse.armor:type_name -> systems.daggerheart.v1.DaggerheartArmor
+	91,  // 54: systems.daggerheart.v1.GetDaggerheartItemRequest.locale:type_name -> common.v1.Locale
+	88,  // 55: systems.daggerheart.v1.GetDaggerheartItemResponse.item:type_name -> systems.daggerheart.v1.DaggerheartItem
+	91,  // 56: systems.daggerheart.v1.ListDaggerheartItemsRequest.locale:type_name -> common.v1.Locale
+	88,  // 57: systems.daggerheart.v1.ListDaggerheartItemsResponse.items:type_name -> systems.daggerheart.v1.DaggerheartItem
+	91,  // 58: systems.daggerheart.v1.GetDaggerheartEnvironmentRequest.locale:type_name -> common.v1.Locale
+	89,  // 59: systems.daggerheart.v1.GetDaggerheartEnvironmentResponse.environment:type_name -> systems.daggerheart.v1.DaggerheartEnvironment
+	91,  // 60: systems.daggerheart.v1.ListDaggerheartEnvironmentsRequest.locale:type_name -> common.v1.Locale
+	89,  // 61: systems.daggerheart.v1.ListDaggerheartEnvironmentsResponse.environments:type_name -> systems.daggerheart.v1.DaggerheartEnvironment
+	68,  // 62: systems.daggerheart.v1.DaggerheartClass.features:type_name -> systems.daggerheart.v1.DaggerheartFeature
+	69,  // 63: systems.daggerheart.v1.DaggerheartClass.hope_feature:type_name -> systems.daggerheart.v1.DaggerheartHopeFeature
+	68,  // 64: systems.daggerheart.v1.DaggerheartSubclass.foundation_features:type_name -> systems.daggerheart.v1.DaggerheartFeature
+	68,  // 65: systems.daggerheart.v1.DaggerheartSubclass.specialization_features:type_name -> systems.daggerheart.v1.DaggerheartFeature
+	68,  // 66: systems.daggerheart.v1.DaggerheartSubclass.mastery_features:type_name -> systems.daggerheart.v1.DaggerheartFeature
+	0,   // 67: systems.daggerheart.v1.DaggerheartHeritage.kind:type_name -> systems.daggerheart.v1.DaggerheartHeritageKind
+	68,  // 68: systems.daggerheart.v1.DaggerheartHeritage.features:type_name -> systems.daggerheart.v1.DaggerheartFeature
+	92,  // 69: systems.daggerheart.v1.DaggerheartAdversaryAttack.damage_dice:type_name -> systems.daggerheart.v1.DiceSpec
+	93,  // 70: systems.daggerheart.v1.DaggerheartAdversaryAttack.damage_type:type_name -> systems.daggerheart.v1.DaggerheartDamageType
+	74,  // 71: systems.daggerheart.v1.DaggerheartAdversaryEntry.standard_attack:type_name -> systems.daggerheart.v1.DaggerheartAdversaryAttack
+	75,  // 72: systems.daggerheart.v1.DaggerheartAdversaryEntry.experiences:type_name -> systems.daggerheart.v1.DaggerheartAdversaryExperience
+	76,  // 73: systems.daggerheart.v1.DaggerheartAdversaryEntry.features:type_name -> systems.daggerheart.v1.DaggerheartAdversaryFeature
+	92,  // 74: systems.daggerheart.v1.DaggerheartBeastformAttack.damage_dice:type_name -> systems.daggerheart.v1.DiceSpec
+	93,  // 75: systems.daggerheart.v1.DaggerheartBeastformAttack.damage_type:type_name -> systems.daggerheart.v1.DaggerheartDamageType
+	78,  // 76: systems.daggerheart.v1.DaggerheartBeastformEntry.attack:type_name -> systems.daggerheart.v1.DaggerheartBeastformAttack
+	79,  // 77: systems.daggerheart.v1.DaggerheartBeastformEntry.features:type_name -> systems.daggerheart.v1.DaggerheartBeastformFeature
+	1,   // 78: systems.daggerheart.v1.DaggerheartDomainCard.type:type_name -> systems.daggerheart.v1.DaggerheartDomainCardType
+	2,   // 79: systems.daggerheart.v1.DaggerheartWeapon.category:type_name -> systems.daggerheart.v1.DaggerheartWeaponCategory
+	92,  // 80: systems.daggerheart.v1.DaggerheartWeapon.damage_dice:type_name -> systems.daggerheart.v1.DiceSpec
+	93,  // 81: systems.daggerheart.v1.DaggerheartWeapon.damage_type:type_name -> systems.daggerheart.v1.DaggerheartDamageType
+	3,   // 82: systems.daggerheart.v1.DaggerheartItem.rarity:type_name -> systems.daggerheart.v1.DaggerheartItemRarity
+	4,   // 83: systems.daggerheart.v1.DaggerheartItem.kind:type_name -> systems.daggerheart.v1.DaggerheartItemKind
+	5,   // 84: systems.daggerheart.v1.DaggerheartEnvironment.type:type_name -> systems.daggerheart.v1.DaggerheartEnvironmentType
+	68,  // 85: systems.daggerheart.v1.DaggerheartEnvironment.features:type_name -> systems.daggerheart.v1.DaggerheartFeature
+	70,  // 86: systems.daggerheart.v1.DaggerheartContentCatalog.classes:type_name -> systems.daggerheart.v1.DaggerheartClass
+	71,  // 87: systems.daggerheart.v1.DaggerheartContentCatalog.subclasses:type_name -> systems.daggerheart.v1.DaggerheartSubclass
+	72,  // 88: systems.daggerheart.v1.DaggerheartContentCatalog.heritages:type_name -> systems.daggerheart.v1.DaggerheartHeritage
+	73,  // 89: systems.daggerheart.v1.DaggerheartContentCatalog.experiences:type_name -> systems.daggerheart.v1.DaggerheartExperienceEntry
+	77,  // 90: systems.daggerheart.v1.DaggerheartContentCatalog.adversaries:type_name -> systems.daggerheart.v1.DaggerheartAdversaryEntry
+	80,  // 91: systems.daggerheart.v1.DaggerheartContentCatalog.beastforms:type_name -> systems.daggerheart.v1.DaggerheartBeastformEntry
+	81,  // 92: systems.daggerheart.v1.DaggerheartContentCatalog.companion_experiences:type_name -> systems.daggerheart.v1.DaggerheartCompanionExperienceEntry
+	82,  // 93: systems.daggerheart.v1.DaggerheartContentCatalog.loot_entries:type_name -> systems.daggerheart.v1.DaggerheartLootEntry
+	83,  // 94: systems.daggerheart.v1.DaggerheartContentCatalog.damage_types:type_name -> systems.daggerheart.v1.DaggerheartDamageTypeEntry
+	84,  // 95: systems.daggerheart.v1.DaggerheartContentCatalog.domains:type_name -> systems.daggerheart.v1.DaggerheartDomain
+	85,  // 96: systems.daggerheart.v1.DaggerheartContentCatalog.domain_cards:type_name -> systems.daggerheart.v1.DaggerheartDomainCard
+	86,  // 97: systems.daggerheart.v1.DaggerheartContentCatalog.weapons:type_name -> systems.daggerheart.v1.DaggerheartWeapon
+	87,  // 98: systems.daggerheart.v1.DaggerheartContentCatalog.armor:type_name -> systems.daggerheart.v1.DaggerheartArmor
+	88,  // 99: systems.daggerheart.v1.DaggerheartContentCatalog.items:type_name -> systems.daggerheart.v1.DaggerheartItem
+	89,  // 100: systems.daggerheart.v1.DaggerheartContentCatalog.environments:type_name -> systems.daggerheart.v1.DaggerheartEnvironment
+	6,   // 101: systems.daggerheart.v1.DaggerheartContentService.GetContentCatalog:input_type -> systems.daggerheart.v1.GetDaggerheartContentCatalogRequest
+	8,   // 102: systems.daggerheart.v1.DaggerheartContentService.GetClass:input_type -> systems.daggerheart.v1.GetDaggerheartClassRequest
+	10,  // 103: systems.daggerheart.v1.DaggerheartContentService.ListClasses:input_type -> systems.daggerheart.v1.ListDaggerheartClassesRequest
+	12,  // 104: systems.daggerheart.v1.DaggerheartContentService.GetSubclass:input_type -> systems.daggerheart.v1.GetDaggerheartSubclassRequest
+	14,  // 105: systems.daggerheart.v1.DaggerheartContentService.ListSubclasses:input_type -> systems.daggerheart.v1.ListDaggerheartSubclassesRequest
+	16,  // 106: systems.daggerheart.v1.DaggerheartContentService.GetHeritage:input_type -> systems.daggerheart.v1.GetDaggerheartHeritageRequest
+	18,  // 107: systems.daggerheart.v1.DaggerheartContentService.ListHeritages:input_type -> systems.daggerheart.v1.ListDaggerheartHeritagesRequest
+	20,  // 108: systems.daggerheart.v1.DaggerheartContentService.GetExperience:input_type -> systems.daggerheart.v1.GetDaggerheartExperienceRequest
+	22,  // 109: systems.daggerheart.v1.DaggerheartContentService.ListExperiences:input_type -> systems.daggerheart.v1.ListDaggerheartExperiencesRequest
+	24,  // 110: systems.daggerheart.v1.DaggerheartContentService.GetAdversary:input_type -> systems.daggerheart.v1.GetDaggerheartAdversaryRequest
+	26,  // 111: systems.daggerheart.v1.DaggerheartContentService.ListAdversaries:input_type -> systems.daggerheart.v1.ListDaggerheartAdversariesRequest
+	28,  // 112: systems.daggerheart.v1.DaggerheartContentService.GetBeastform:input_type -> systems.daggerheart.v1.GetDaggerheartBeastformRequest
+	30,  // 113: systems.daggerheart.v1.DaggerheartContentService.ListBeastforms:input_type -> systems.daggerheart.v1.ListDaggerheartBeastformsRequest
+	32,  // 114: systems.daggerheart.v1.DaggerheartContentService.GetCompanionExperience:input_type -> systems.daggerheart.v1.GetDaggerheartCompanionExperienceRequest
+	34,  // 115: systems.daggerheart.v1.DaggerheartContentService.ListCompanionExperiences:input_type -> systems.daggerheart.v1.ListDaggerheartCompanionExperiencesRequest
+	36,  // 116: systems.daggerheart.v1.DaggerheartContentService.GetLootEntry:input_type -> systems.daggerheart.v1.GetDaggerheartLootEntryRequest
+	38,  // 117: systems.daggerheart.v1.DaggerheartContentService.ListLootEntries:input_type -> systems.daggerheart.v1.ListDaggerheartLootEntriesRequest
+	40,  // 118: systems.daggerheart.v1.DaggerheartContentService.GetDamageType:input_type -> systems.daggerheart.v1.GetDaggerheartDamageTypeRequest
+	42,  // 119: systems.daggerheart.v1.DaggerheartContentService.ListDamageTypes:input_type -> systems.daggerheart.v1.ListDaggerheartDamageTypesRequest
+	44,  // 120: systems.daggerheart.v1.DaggerheartContentService.GetDomain:input_type -> systems.daggerheart.v1.GetDaggerheartDomainRequest
+	46,  // 121: systems.daggerheart.v1.DaggerheartContentService.ListDomains:input_type -> systems.daggerheart.v1.ListDaggerheartDomainsRequest
+	48,  // 122: systems.daggerheart.v1.DaggerheartContentService.GetDomainCard:input_type -> systems.daggerheart.v1.GetDaggerheartDomainCardRequest
+	50,  // 123: systems.daggerheart.v1.DaggerheartContentService.ListDomainCards:input_type -> systems.daggerheart.v1.ListDaggerheartDomainCardsRequest
+	52,  // 124: systems.daggerheart.v1.DaggerheartContentService.GetWeapon:input_type -> systems.daggerheart.v1.GetDaggerheartWeaponRequest
+	54,  // 125: systems.daggerheart.v1.DaggerheartContentService.ListWeapons:input_type -> systems.daggerheart.v1.ListDaggerheartWeaponsRequest
+	56,  // 126: systems.daggerheart.v1.DaggerheartContentService.GetArmor:input_type -> systems.daggerheart.v1.GetDaggerheartArmorRequest
+	58,  // 127: systems.daggerheart.v1.DaggerheartContentService.ListArmor:input_type -> systems.daggerheart.v1.ListDaggerheartArmorRequest
+	60,  // 128: systems.daggerheart.v1.DaggerheartContentService.GetItem:input_type -> systems.daggerheart.v1.GetDaggerheartItemRequest
+	62,  // 129: systems.daggerheart.v1.DaggerheartContentService.ListItems:input_type -> systems.daggerheart.v1.ListDaggerheartItemsRequest
+	64,  // 130: systems.daggerheart.v1.DaggerheartContentService.GetEnvironment:input_type -> systems.daggerheart.v1.GetDaggerheartEnvironmentRequest
+	66,  // 131: systems.daggerheart.v1.DaggerheartContentService.ListEnvironments:input_type -> systems.daggerheart.v1.ListDaggerheartEnvironmentsRequest
+	7,   // 132: systems.daggerheart.v1.DaggerheartContentService.GetContentCatalog:output_type -> systems.daggerheart.v1.GetDaggerheartContentCatalogResponse
+	9,   // 133: systems.daggerheart.v1.DaggerheartContentService.GetClass:output_type -> systems.daggerheart.v1.GetDaggerheartClassResponse
+	11,  // 134: systems.daggerheart.v1.DaggerheartContentService.ListClasses:output_type -> systems.daggerheart.v1.ListDaggerheartClassesResponse
+	13,  // 135: systems.daggerheart.v1.DaggerheartContentService.GetSubclass:output_type -> systems.daggerheart.v1.GetDaggerheartSubclassResponse
+	15,  // 136: systems.daggerheart.v1.DaggerheartContentService.ListSubclasses:output_type -> systems.daggerheart.v1.ListDaggerheartSubclassesResponse
+	17,  // 137: systems.daggerheart.v1.DaggerheartContentService.GetHeritage:output_type -> systems.daggerheart.v1.GetDaggerheartHeritageResponse
+	19,  // 138: systems.daggerheart.v1.DaggerheartContentService.ListHeritages:output_type -> systems.daggerheart.v1.ListDaggerheartHeritagesResponse
+	21,  // 139: systems.daggerheart.v1.DaggerheartContentService.GetExperience:output_type -> systems.daggerheart.v1.GetDaggerheartExperienceResponse
+	23,  // 140: systems.daggerheart.v1.DaggerheartContentService.ListExperiences:output_type -> systems.daggerheart.v1.ListDaggerheartExperiencesResponse
+	25,  // 141: systems.daggerheart.v1.DaggerheartContentService.GetAdversary:output_type -> systems.daggerheart.v1.GetDaggerheartAdversaryResponse
+	27,  // 142: systems.daggerheart.v1.DaggerheartContentService.ListAdversaries:output_type -> systems.daggerheart.v1.ListDaggerheartAdversariesResponse
+	29,  // 143: systems.daggerheart.v1.DaggerheartContentService.GetBeastform:output_type -> systems.daggerheart.v1.GetDaggerheartBeastformResponse
+	31,  // 144: systems.daggerheart.v1.DaggerheartContentService.ListBeastforms:output_type -> systems.daggerheart.v1.ListDaggerheartBeastformsResponse
+	33,  // 145: systems.daggerheart.v1.DaggerheartContentService.GetCompanionExperience:output_type -> systems.daggerheart.v1.GetDaggerheartCompanionExperienceResponse
+	35,  // 146: systems.daggerheart.v1.DaggerheartContentService.ListCompanionExperiences:output_type -> systems.daggerheart.v1.ListDaggerheartCompanionExperiencesResponse
+	37,  // 147: systems.daggerheart.v1.DaggerheartContentService.GetLootEntry:output_type -> systems.daggerheart.v1.GetDaggerheartLootEntryResponse
+	39,  // 148: systems.daggerheart.v1.DaggerheartContentService.ListLootEntries:output_type -> systems.daggerheart.v1.ListDaggerheartLootEntriesResponse
+	41,  // 149: systems.daggerheart.v1.DaggerheartContentService.GetDamageType:output_type -> systems.daggerheart.v1.GetDaggerheartDamageTypeResponse
+	43,  // 150: systems.daggerheart.v1.DaggerheartContentService.ListDamageTypes:output_type -> systems.daggerheart.v1.ListDaggerheartDamageTypesResponse
+	45,  // 151: systems.daggerheart.v1.DaggerheartContentService.GetDomain:output_type -> systems.daggerheart.v1.GetDaggerheartDomainResponse
+	47,  // 152: systems.daggerheart.v1.DaggerheartContentService.ListDomains:output_type -> systems.daggerheart.v1.ListDaggerheartDomainsResponse
+	49,  // 153: systems.daggerheart.v1.DaggerheartContentService.GetDomainCard:output_type -> systems.daggerheart.v1.GetDaggerheartDomainCardResponse
+	51,  // 154: systems.daggerheart.v1.DaggerheartContentService.ListDomainCards:output_type -> systems.daggerheart.v1.ListDaggerheartDomainCardsResponse
+	53,  // 155: systems.daggerheart.v1.DaggerheartContentService.GetWeapon:output_type -> systems.daggerheart.v1.GetDaggerheartWeaponResponse
+	55,  // 156: systems.daggerheart.v1.DaggerheartContentService.ListWeapons:output_type -> systems.daggerheart.v1.ListDaggerheartWeaponsResponse
+	57,  // 157: systems.daggerheart.v1.DaggerheartContentService.GetArmor:output_type -> systems.daggerheart.v1.GetDaggerheartArmorResponse
+	59,  // 158: systems.daggerheart.v1.DaggerheartContentService.ListArmor:output_type -> systems.daggerheart.v1.ListDaggerheartArmorResponse
+	61,  // 159: systems.daggerheart.v1.DaggerheartContentService.GetItem:output_type -> systems.daggerheart.v1.GetDaggerheartItemResponse
+	63,  // 160: systems.daggerheart.v1.DaggerheartContentService.ListItems:output_type -> systems.daggerheart.v1.ListDaggerheartItemsResponse
+	65,  // 161: systems.daggerheart.v1.DaggerheartContentService.GetEnvironment:output_type -> systems.daggerheart.v1.GetDaggerheartEnvironmentResponse
+	67,  // 162: systems.daggerheart.v1.DaggerheartContentService.ListEnvironments:output_type -> systems.daggerheart.v1.ListDaggerheartEnvironmentsResponse
+	132, // [132:163] is the sub-list for method output_type
+	101, // [101:132] is the sub-list for method input_type
+	101, // [101:101] is the sub-list for extension type_name
+	101, // [101:101] is the sub-list for extension extendee
+	0,   // [0:101] is the sub-list for field type_name
 }
 
 func init() { file_systems_daggerheart_v1_content_proto_init() }

@@ -821,5 +821,7 @@ type DaggerheartContentStore interface {
 	ListDaggerheartEnvironments(ctx context.Context) ([]DaggerheartEnvironment, error)
 	DeleteDaggerheartEnvironment(ctx context.Context, id string) error
 
+	ListDaggerheartContentStrings(ctx context.Context, contentType string, contentIDs []string, locale string) ([]DaggerheartContentString, error)
+
 	PutDaggerheartContentString(ctx context.Context, entry DaggerheartContentString) error
 }

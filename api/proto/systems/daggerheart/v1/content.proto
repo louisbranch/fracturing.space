@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package systems.daggerheart.v1;
 
+import "common/v1/locale.proto";
 import "systems/daggerheart/v1/mechanics.proto";
 import "systems/daggerheart/v1/state.proto";
 
@@ -56,7 +57,10 @@ service DaggerheartContentService {
   rpc ListEnvironments(ListDaggerheartEnvironmentsRequest) returns (ListDaggerheartEnvironmentsResponse);
 }
 
-message GetDaggerheartContentCatalogRequest {}
+message GetDaggerheartContentCatalogRequest {
+  // Optional locale for localized text fields.
+  common.v1.Locale locale = 1;
+}
 
 message GetDaggerheartContentCatalogResponse {
   DaggerheartContentCatalog catalog = 1;
@@ -64,6 +68,8 @@ message GetDaggerheartContentCatalogResponse {
 
 message GetDaggerheartClassRequest {
   string id = 1;
+  // Optional locale for localized text fields.
+  common.v1.Locale locale = 2;
 }
 
 message GetDaggerheartClassResponse {
@@ -83,6 +89,9 @@ message ListDaggerheartClassesRequest {
   // AIP-160 filter expression.
   // Filterable fields: id, name.
   string filter = 4;
+
+  // Optional locale for localized text fields.
+  common.v1.Locale locale = 5;
 }
 
 message ListDaggerheartClassesResponse {
@@ -94,6 +103,8 @@ message ListDaggerheartClassesResponse {
 
 message GetDaggerheartSubclassRequest {
   string id = 1;
+  // Optional locale for localized text fields.
+  common.v1.Locale locale = 2;
 }
 
 message GetDaggerheartSubclassResponse {
@@ -113,6 +124,9 @@ message ListDaggerheartSubclassesRequest {
   // AIP-160 filter expression.
   // Filterable fields: id, name, spellcast_trait.
   string filter = 4;
+
+  // Optional locale for localized text fields.
+  common.v1.Locale locale = 5;
 }
 
 message ListDaggerheartSubclassesResponse {
@@ -124,6 +138,8 @@ message ListDaggerheartSubclassesResponse {
 
 message GetDaggerheartHeritageRequest {
   string id = 1;
+  // Optional locale for localized text fields.
+  common.v1.Locale locale = 2;
 }
 
 message GetDaggerheartHeritageResponse {
@@ -143,6 +159,9 @@ message ListDaggerheartHeritagesRequest {
   // AIP-160 filter expression.
   // Filterable fields: id, name, kind.
   string filter = 4;
+
+  // Optional locale for localized text fields.
+  common.v1.Locale locale = 5;
 }
 
 message ListDaggerheartHeritagesResponse {
@@ -154,6 +173,8 @@ message ListDaggerheartHeritagesResponse {
 
 message GetDaggerheartExperienceRequest {
   string id = 1;
+  // Optional locale for localized text fields.
+  common.v1.Locale locale = 2;
 }
 
 message GetDaggerheartExperienceResponse {
@@ -173,6 +194,9 @@ message ListDaggerheartExperiencesRequest {
   // AIP-160 filter expression.
   // Filterable fields: id, name.
   string filter = 4;
+
+  // Optional locale for localized text fields.
+  common.v1.Locale locale = 5;
 }
 
 message ListDaggerheartExperiencesResponse {
@@ -184,6 +208,8 @@ message ListDaggerheartExperiencesResponse {
 
 message GetDaggerheartAdversaryRequest {
   string id = 1;
+  // Optional locale for localized text fields.
+  common.v1.Locale locale = 2;
 }
 
 message GetDaggerheartAdversaryResponse {
@@ -203,6 +229,9 @@ message ListDaggerheartAdversariesRequest {
   // AIP-160 filter expression.
   // Filterable fields: id, name, tier, role.
   string filter = 4;
+
+  // Optional locale for localized text fields.
+  common.v1.Locale locale = 5;
 }
 
 message ListDaggerheartAdversariesResponse {
@@ -214,6 +243,8 @@ message ListDaggerheartAdversariesResponse {
 
 message GetDaggerheartBeastformRequest {
   string id = 1;
+  // Optional locale for localized text fields.
+  common.v1.Locale locale = 2;
 }
 
 message GetDaggerheartBeastformResponse {
@@ -233,6 +264,9 @@ message ListDaggerheartBeastformsRequest {
   // AIP-160 filter expression.
   // Filterable fields: id, name, tier, trait.
   string filter = 4;
+
+  // Optional locale for localized text fields.
+  common.v1.Locale locale = 5;
 }
 
 message ListDaggerheartBeastformsResponse {
@@ -244,6 +278,8 @@ message ListDaggerheartBeastformsResponse {
 
 message GetDaggerheartCompanionExperienceRequest {
   string id = 1;
+  // Optional locale for localized text fields.
+  common.v1.Locale locale = 2;
 }
 
 message GetDaggerheartCompanionExperienceResponse {
@@ -263,6 +299,9 @@ message ListDaggerheartCompanionExperiencesRequest {
   // AIP-160 filter expression.
   // Filterable fields: id, name.
   string filter = 4;
+
+  // Optional locale for localized text fields.
+  common.v1.Locale locale = 5;
 }
 
 message ListDaggerheartCompanionExperiencesResponse {
@@ -274,6 +313,8 @@ message ListDaggerheartCompanionExperiencesResponse {
 
 message GetDaggerheartLootEntryRequest {
   string id = 1;
+  // Optional locale for localized text fields.
+  common.v1.Locale locale = 2;
 }
 
 message GetDaggerheartLootEntryResponse {
@@ -293,6 +334,9 @@ message ListDaggerheartLootEntriesRequest {
   // AIP-160 filter expression.
   // Filterable fields: id, name, roll.
   string filter = 4;
+
+  // Optional locale for localized text fields.
+  common.v1.Locale locale = 5;
 }
 
 message ListDaggerheartLootEntriesResponse {
@@ -304,6 +348,8 @@ message ListDaggerheartLootEntriesResponse {
 
 message GetDaggerheartDamageTypeRequest {
   string id = 1;
+  // Optional locale for localized text fields.
+  common.v1.Locale locale = 2;
 }
 
 message GetDaggerheartDamageTypeResponse {
@@ -323,6 +369,9 @@ message ListDaggerheartDamageTypesRequest {
   // AIP-160 filter expression.
   // Filterable fields: id, name.
   string filter = 4;
+
+  // Optional locale for localized text fields.
+  common.v1.Locale locale = 5;
 }
 
 message ListDaggerheartDamageTypesResponse {
@@ -334,6 +383,8 @@ message ListDaggerheartDamageTypesResponse {
 
 message GetDaggerheartDomainRequest {
   string id = 1;
+  // Optional locale for localized text fields.
+  common.v1.Locale locale = 2;
 }
 
 message GetDaggerheartDomainResponse {
@@ -353,6 +404,9 @@ message ListDaggerheartDomainsRequest {
   // AIP-160 filter expression.
   // Filterable fields: id, name.
   string filter = 4;
+
+  // Optional locale for localized text fields.
+  common.v1.Locale locale = 5;
 }
 
 message ListDaggerheartDomainsResponse {
@@ -364,6 +418,8 @@ message ListDaggerheartDomainsResponse {
 
 message GetDaggerheartDomainCardRequest {
   string id = 1;
+  // Optional locale for localized text fields.
+  common.v1.Locale locale = 2;
 }
 
 message GetDaggerheartDomainCardResponse {
@@ -386,6 +442,9 @@ message ListDaggerheartDomainCardsRequest {
   // AIP-160 filter expression.
   // Filterable fields: id, name, domain_id, level, type.
   string filter = 5;
+
+  // Optional locale for localized text fields.
+  common.v1.Locale locale = 6;
 }
 
 message ListDaggerheartDomainCardsResponse {
@@ -397,6 +456,8 @@ message ListDaggerheartDomainCardsResponse {
 
 message GetDaggerheartWeaponRequest {
   string id = 1;
+  // Optional locale for localized text fields.
+  common.v1.Locale locale = 2;
 }
 
 message GetDaggerheartWeaponResponse {
@@ -416,6 +477,9 @@ message ListDaggerheartWeaponsRequest {
   // AIP-160 filter expression.
   // Filterable fields: id, name, category, tier, trait, damage_type.
   string filter = 4;
+
+  // Optional locale for localized text fields.
+  common.v1.Locale locale = 5;
 }
 
 message ListDaggerheartWeaponsResponse {
@@ -427,6 +491,8 @@ message ListDaggerheartWeaponsResponse {
 
 message GetDaggerheartArmorRequest {
   string id = 1;
+  // Optional locale for localized text fields.
+  common.v1.Locale locale = 2;
 }
 
 message GetDaggerheartArmorResponse {
@@ -446,6 +512,9 @@ message ListDaggerheartArmorRequest {
   // AIP-160 filter expression.
   // Filterable fields: id, name, tier.
   string filter = 4;
+
+  // Optional locale for localized text fields.
+  common.v1.Locale locale = 5;
 }
 
 message ListDaggerheartArmorResponse {
@@ -457,6 +526,8 @@ message ListDaggerheartArmorResponse {
 
 message GetDaggerheartItemRequest {
   string id = 1;
+  // Optional locale for localized text fields.
+  common.v1.Locale locale = 2;
 }
 
 message GetDaggerheartItemResponse {
@@ -476,6 +547,9 @@ message ListDaggerheartItemsRequest {
   // AIP-160 filter expression.
   // Filterable fields: id, name, rarity, kind.
   string filter = 4;
+
+  // Optional locale for localized text fields.
+  common.v1.Locale locale = 5;
 }
 
 message ListDaggerheartItemsResponse {
@@ -487,6 +561,8 @@ message ListDaggerheartItemsResponse {
 
 message GetDaggerheartEnvironmentRequest {
   string id = 1;
+  // Optional locale for localized text fields.
+  common.v1.Locale locale = 2;
 }
 
 message GetDaggerheartEnvironmentResponse {
@@ -506,6 +582,9 @@ message ListDaggerheartEnvironmentsRequest {
   // AIP-160 filter expression.
   // Filterable fields: id, name, tier, type, difficulty.
   string filter = 4;
+
+  // Optional locale for localized text fields.
+  common.v1.Locale locale = 5;
 }
 
 message ListDaggerheartEnvironmentsResponse {
