@@ -22,6 +22,23 @@ go run ./cmd/game
 make seed
 ```
 
+## Catalog Content Import
+
+Use the catalog importer to load Daggerheart content into the SQLite catalog database.
+
+```bash
+make catalog-importer
+```
+
+### CLI Options
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `-dir` | Directory containing locale subfolders | required |
+| `-db-path` | Content database path | `data/game-content.db` |
+| `-base-locale` | Base locale used for catalog data | `en-US` |
+| `-dry-run` | Validate without writing to the database | false |
+
 ## Static Fixtures (JSON-based)
 
 Run predefined scenarios from JSON fixture files:
