@@ -48,6 +48,18 @@ templ TopNav(activePage string, page PageContext) {
 				</li>
 				<li>
 					<a
+						href="/icons"
+						hx-get="/icons"
+						hx-target="#main"
+						hx-swap="innerHTML"
+						hx-push-url="true"
+						if activePage == "Icons" {
+							class="active"
+						}
+					>{T(page.Loc, "nav.icons")}</a>
+				</li>
+				<li>
+					<a
 						href="/scenarios?prefill=1"
 						hx-get="/scenarios?prefill=1"
 						hx-target="#main"
@@ -147,6 +159,18 @@ templ TopNav(activePage string, page PageContext) {
 								class="active"
 							}
 						>{T(page.Loc, "nav.catalog")}</a>
+					</li>
+					<li>
+						<a
+							href="/icons"
+							hx-get="/icons"
+							hx-target="#main"
+							hx-swap="innerHTML"
+							hx-push-url="true"
+							if activePage == "Icons" {
+								class="active"
+							}
+						>{T(page.Loc, "nav.icons")}</a>
 					</li>
 					<li>
 						<a

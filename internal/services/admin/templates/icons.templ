@@ -1,0 +1,52 @@
+package templates
+
+import sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
+
+// IconsFullPage renders icon catalog content in the base layout.
+templ IconsFullPage(page PageContext) {
+	@Layout(T(page.Loc, "title.icons", AppName()), "Icons", page) {
+		@IconsPage(page.Loc)
+	}
+}
+
+// IconsPage renders the icon catalog page content.
+templ IconsPage(loc Localizer) {
+	@PageHeader(PageHeading{Title: T(loc, "icons.heading")})
+	@IconsLoading(loc)
+}
+
+// IconsLoading renders the HTMX loading placeholder.
+templ IconsLoading(loc Localizer) {
+	@LazyLoad("/icons/table", T(loc, "icons.loading"))
+}
+
+// IconsTable renders the icon catalog table.
+templ IconsTable(rows []IconRow, message string, loc Localizer) {
+	<table class="table table-zebra">
+		<thead>
+			<tr>
+				<th>{T(loc, "icons.table.id")}</th>
+				<th>{T(loc, "icons.table.name")}</th>
+				<th>{T(loc, "icons.table.description")}</th>
+				<th>{T(loc, "icons.table.lucide")}</th>
+				<th>{T(loc, "icons.table.icon")}</th>
+			</tr>
+		</thead>
+		<tbody>
+			if len(rows) == 0 {
+				<tr>
+					<td colspan="5">{message}</td>
+				</tr>
+			}
+			for _, row := range rows {
+				<tr>
+					<td><code>{row.ID.String()}</code></td>
+					<td>{row.Name}</td>
+					<td>{row.Description}</td>
+					<td><code>{row.LucideName}</code></td>
+					<td>@sharedtemplates.LucideIconID(row.ID, "h-5 w-5")</td>
+				</tr>
+			}
+		</tbody>
+	</table>
+}
