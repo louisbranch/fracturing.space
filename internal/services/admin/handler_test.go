@@ -118,6 +118,28 @@ func TestWebPageRendering(t *testing.T) {
 			},
 		},
 		{
+			name: "icons full page",
+			path: "/icons",
+			contains: []string{
+				"<!doctype html>",
+				branding.AppName,
+				"<h2>Icons</h2>",
+			},
+		},
+		{
+			name: "icons htmx",
+			path: "/icons",
+			htmx: true,
+			contains: []string{
+				"<h2>Icons</h2>",
+			},
+			notContains: []string{
+				"<!doctype html>",
+				branding.AppName,
+				"<html",
+			},
+		},
+		{
 			name: "scenarios full page",
 			path: "/scenarios",
 			contains: []string{
@@ -373,6 +395,25 @@ func TestSystemsTableRendersDefaultBadge(t *testing.T) {
 	assertContains(t, body, "Daggerheart")
 	assertContains(t, body, "1.0.0")
 	assertContains(t, body, "Default")
+}
+
+func TestIconsTableRendersCatalog(t *testing.T) {
+	handler := NewHandler(nil)
+
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/icons/table", nil)
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
+	}
+
+	body := recorder.Body.String()
+	assertContains(t, body, "Lucide Name")
+	assertContains(t, body, "ICON_ID_CAMPAIGN")
+	assertContains(t, body, "Campaign")
+	assertContains(t, body, "book-open")
+	assertContains(t, body, "#lucide-book-open")
 }
 
 // TestScenarioPostEmptyScript verifies POST /scenarios rejects empty scripts.

@@ -29,28 +29,106 @@ const (
 	IconId_ICON_ID_UNSPECIFIED IconId = 0
 	IconId_ICON_ID_GENERIC     IconId = 1
 	IconId_ICON_ID_CAMPAIGN    IconId = 2
-	IconId_ICON_ID_PARTICIPANT IconId = 3
-	IconId_ICON_ID_CHARACTER   IconId = 4
-	IconId_ICON_ID_SESSION     IconId = 5
+	IconId_ICON_ID_SESSION     IconId = 3
+	IconId_ICON_ID_PARTICIPANT IconId = 4
+	IconId_ICON_ID_CHARACTER   IconId = 5
+	IconId_ICON_ID_GM          IconId = 6
+	IconId_ICON_ID_CHAT        IconId = 7
+	IconId_ICON_ID_DECISION    IconId = 8
+	IconId_ICON_ID_NOTE        IconId = 9
+	IconId_ICON_ID_ROLL        IconId = 10
+	IconId_ICON_ID_COMBAT      IconId = 11
+	IconId_ICON_ID_DAMAGE      IconId = 12
+	IconId_ICON_ID_ARMOR       IconId = 13
+	IconId_ICON_ID_CONDITION   IconId = 14
+	IconId_ICON_ID_DEATH       IconId = 15
+	IconId_ICON_ID_REST        IconId = 16
+	IconId_ICON_ID_COUNTDOWN   IconId = 17
+	IconId_ICON_ID_HOPE        IconId = 18
+	IconId_ICON_ID_STRESS      IconId = 19
+	IconId_ICON_ID_GM_FEAR     IconId = 20
+	IconId_ICON_ID_DOMAIN      IconId = 21
+	IconId_ICON_ID_DOMAIN_CARD IconId = 22
+	IconId_ICON_ID_CLASS       IconId = 23
+	IconId_ICON_ID_SUBCLASS    IconId = 24
+	IconId_ICON_ID_HERITAGE    IconId = 25
+	IconId_ICON_ID_EXPERIENCE  IconId = 26
+	IconId_ICON_ID_WEAPON      IconId = 27
+	IconId_ICON_ID_ITEM        IconId = 28
+	IconId_ICON_ID_LOOT        IconId = 29
+	IconId_ICON_ID_ADVERSARY   IconId = 30
+	IconId_ICON_ID_ENVIRONMENT IconId = 31
 )
 
 // Enum value maps for IconId.
 var (
 	IconId_name = map[int32]string{
-		0: "ICON_ID_UNSPECIFIED",
-		1: "ICON_ID_GENERIC",
-		2: "ICON_ID_CAMPAIGN",
-		3: "ICON_ID_PARTICIPANT",
-		4: "ICON_ID_CHARACTER",
-		5: "ICON_ID_SESSION",
+		0:  "ICON_ID_UNSPECIFIED",
+		1:  "ICON_ID_GENERIC",
+		2:  "ICON_ID_CAMPAIGN",
+		3:  "ICON_ID_SESSION",
+		4:  "ICON_ID_PARTICIPANT",
+		5:  "ICON_ID_CHARACTER",
+		6:  "ICON_ID_GM",
+		7:  "ICON_ID_CHAT",
+		8:  "ICON_ID_DECISION",
+		9:  "ICON_ID_NOTE",
+		10: "ICON_ID_ROLL",
+		11: "ICON_ID_COMBAT",
+		12: "ICON_ID_DAMAGE",
+		13: "ICON_ID_ARMOR",
+		14: "ICON_ID_CONDITION",
+		15: "ICON_ID_DEATH",
+		16: "ICON_ID_REST",
+		17: "ICON_ID_COUNTDOWN",
+		18: "ICON_ID_HOPE",
+		19: "ICON_ID_STRESS",
+		20: "ICON_ID_GM_FEAR",
+		21: "ICON_ID_DOMAIN",
+		22: "ICON_ID_DOMAIN_CARD",
+		23: "ICON_ID_CLASS",
+		24: "ICON_ID_SUBCLASS",
+		25: "ICON_ID_HERITAGE",
+		26: "ICON_ID_EXPERIENCE",
+		27: "ICON_ID_WEAPON",
+		28: "ICON_ID_ITEM",
+		29: "ICON_ID_LOOT",
+		30: "ICON_ID_ADVERSARY",
+		31: "ICON_ID_ENVIRONMENT",
 	}
 	IconId_value = map[string]int32{
 		"ICON_ID_UNSPECIFIED": 0,
 		"ICON_ID_GENERIC":     1,
 		"ICON_ID_CAMPAIGN":    2,
-		"ICON_ID_PARTICIPANT": 3,
-		"ICON_ID_CHARACTER":   4,
-		"ICON_ID_SESSION":     5,
+		"ICON_ID_SESSION":     3,
+		"ICON_ID_PARTICIPANT": 4,
+		"ICON_ID_CHARACTER":   5,
+		"ICON_ID_GM":          6,
+		"ICON_ID_CHAT":        7,
+		"ICON_ID_DECISION":    8,
+		"ICON_ID_NOTE":        9,
+		"ICON_ID_ROLL":        10,
+		"ICON_ID_COMBAT":      11,
+		"ICON_ID_DAMAGE":      12,
+		"ICON_ID_ARMOR":       13,
+		"ICON_ID_CONDITION":   14,
+		"ICON_ID_DEATH":       15,
+		"ICON_ID_REST":        16,
+		"ICON_ID_COUNTDOWN":   17,
+		"ICON_ID_HOPE":        18,
+		"ICON_ID_STRESS":      19,
+		"ICON_ID_GM_FEAR":     20,
+		"ICON_ID_DOMAIN":      21,
+		"ICON_ID_DOMAIN_CARD": 22,
+		"ICON_ID_CLASS":       23,
+		"ICON_ID_SUBCLASS":    24,
+		"ICON_ID_HERITAGE":    25,
+		"ICON_ID_EXPERIENCE":  26,
+		"ICON_ID_WEAPON":      27,
+		"ICON_ID_ITEM":        28,
+		"ICON_ID_LOOT":        29,
+		"ICON_ID_ADVERSARY":   30,
+		"ICON_ID_ENVIRONMENT": 31,
 	}
 )
 
@@ -85,14 +163,42 @@ var File_common_v1_icon_proto protoreflect.FileDescriptor
 
 const file_common_v1_icon_proto_rawDesc = "" +
 	"\n" +
-	"\x14common/v1/icon.proto\x12\tcommon.v1*\x91\x01\n" +
+	"\x14common/v1/icon.proto\x12\tcommon.v1*\xa2\x05\n" +
 	"\x06IconId\x12\x17\n" +
 	"\x13ICON_ID_UNSPECIFIED\x10\x00\x12\x13\n" +
 	"\x0fICON_ID_GENERIC\x10\x01\x12\x14\n" +
-	"\x10ICON_ID_CAMPAIGN\x10\x02\x12\x17\n" +
-	"\x13ICON_ID_PARTICIPANT\x10\x03\x12\x15\n" +
-	"\x11ICON_ID_CHARACTER\x10\x04\x12\x13\n" +
-	"\x0fICON_ID_SESSION\x10\x05BGZEgithub.com/louisbranch/fracturing.space/api/gen/go/common/v1;commonv1b\x06proto3"
+	"\x10ICON_ID_CAMPAIGN\x10\x02\x12\x13\n" +
+	"\x0fICON_ID_SESSION\x10\x03\x12\x17\n" +
+	"\x13ICON_ID_PARTICIPANT\x10\x04\x12\x15\n" +
+	"\x11ICON_ID_CHARACTER\x10\x05\x12\x0e\n" +
+	"\n" +
+	"ICON_ID_GM\x10\x06\x12\x10\n" +
+	"\fICON_ID_CHAT\x10\a\x12\x14\n" +
+	"\x10ICON_ID_DECISION\x10\b\x12\x10\n" +
+	"\fICON_ID_NOTE\x10\t\x12\x10\n" +
+	"\fICON_ID_ROLL\x10\n" +
+	"\x12\x12\n" +
+	"\x0eICON_ID_COMBAT\x10\v\x12\x12\n" +
+	"\x0eICON_ID_DAMAGE\x10\f\x12\x11\n" +
+	"\rICON_ID_ARMOR\x10\r\x12\x15\n" +
+	"\x11ICON_ID_CONDITION\x10\x0e\x12\x11\n" +
+	"\rICON_ID_DEATH\x10\x0f\x12\x10\n" +
+	"\fICON_ID_REST\x10\x10\x12\x15\n" +
+	"\x11ICON_ID_COUNTDOWN\x10\x11\x12\x10\n" +
+	"\fICON_ID_HOPE\x10\x12\x12\x12\n" +
+	"\x0eICON_ID_STRESS\x10\x13\x12\x13\n" +
+	"\x0fICON_ID_GM_FEAR\x10\x14\x12\x12\n" +
+	"\x0eICON_ID_DOMAIN\x10\x15\x12\x17\n" +
+	"\x13ICON_ID_DOMAIN_CARD\x10\x16\x12\x11\n" +
+	"\rICON_ID_CLASS\x10\x17\x12\x14\n" +
+	"\x10ICON_ID_SUBCLASS\x10\x18\x12\x14\n" +
+	"\x10ICON_ID_HERITAGE\x10\x19\x12\x16\n" +
+	"\x12ICON_ID_EXPERIENCE\x10\x1a\x12\x12\n" +
+	"\x0eICON_ID_WEAPON\x10\x1b\x12\x10\n" +
+	"\fICON_ID_ITEM\x10\x1c\x12\x10\n" +
+	"\fICON_ID_LOOT\x10\x1d\x12\x15\n" +
+	"\x11ICON_ID_ADVERSARY\x10\x1e\x12\x17\n" +
+	"\x13ICON_ID_ENVIRONMENT\x10\x1fBGZEgithub.com/louisbranch/fracturing.space/api/gen/go/common/v1;commonv1b\x06proto3"
 
 var (
 	file_common_v1_icon_proto_rawDescOnce sync.Once

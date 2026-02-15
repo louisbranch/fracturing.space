@@ -20,6 +20,7 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
+	platformicons "github.com/louisbranch/fracturing.space/internal/platform/icons"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/i18n"
@@ -218,6 +219,8 @@ func (h *Handler) routes() http.Handler {
 	mux.Handle("/systems/", http.HandlerFunc(h.handleSystemRoutes))
 	mux.Handle("/catalog", http.HandlerFunc(h.handleCatalogPage))
 	mux.Handle("/catalog/", http.HandlerFunc(h.handleCatalogRoutes))
+	mux.Handle("/icons", http.HandlerFunc(h.handleIconsPage))
+	mux.Handle("/icons/table", http.HandlerFunc(h.handleIconsTable))
 	mux.Handle("/users", http.HandlerFunc(h.handleUsersPage))
 	mux.Handle("/users/table", http.HandlerFunc(h.handleUsersTable))
 	mux.Handle("/users/lookup", http.HandlerFunc(h.handleUserLookup))
@@ -1119,6 +1122,13 @@ func (h *Handler) handleSystemsPage(w http.ResponseWriter, r *http.Request) {
 	renderPage(w, r, templates.SystemsPage(loc), templates.SystemsFullPage(pageCtx))
 }
 
+// handleIconsPage renders the icons page fragment or full layout.
+func (h *Handler) handleIconsPage(w http.ResponseWriter, r *http.Request) {
+	loc, lang := h.localizer(w, r)
+	pageCtx := h.pageContext(lang, loc, r)
+	renderPage(w, r, templates.IconsPage(loc), templates.IconsFullPage(pageCtx))
+}
+
 // handleCatalogPage renders the catalog page fragment or full layout.
 func (h *Handler) handleCatalogPage(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
@@ -1546,6 +1556,19 @@ func (h *Handler) handleSystemsTable(w http.ResponseWriter, r *http.Request) {
 	h.renderSystemsTable(w, r, rows, "", loc)
 }
 
+// handleIconsTable renders the icon catalog table via HTMX.
+func (h *Handler) handleIconsTable(w http.ResponseWriter, r *http.Request) {
+	loc, _ := h.localizer(w, r)
+	definitions := platformicons.Catalog()
+	if len(definitions) == 0 {
+		h.renderIconsTable(w, r, nil, loc.Sprintf("icons.empty"), loc)
+		return
+	}
+
+	rows := buildIconRows(definitions)
+	h.renderIconsTable(w, r, rows, "", loc)
+}
+
 // handleSystemRoutes dispatches the system detail route.
 func (h *Handler) handleSystemRoutes(w http.ResponseWriter, r *http.Request) {
 	if redirectTrailingSlash(w, r) {
@@ -1899,6 +1922,11 @@ func (h *Handler) renderSystemsTable(w http.ResponseWriter, r *http.Request, row
 	templ.Handler(templates.SystemsTable(rows, message, loc)).ServeHTTP(w, r)
 }
 
+// renderIconsTable renders an icon catalog table with optional rows and message.
+func (h *Handler) renderIconsTable(w http.ResponseWriter, r *http.Request, rows []templates.IconRow, message string, loc *message.Printer) {
+	templ.Handler(templates.IconsTable(rows, message, loc)).ServeHTTP(w, r)
+}
+
 // renderSystemDetail renders the system detail fragment or full layout.
 func (h *Handler) renderSystemDetail(w http.ResponseWriter, r *http.Request, detail templates.SystemDetail, message string, lang string, loc *message.Printer) {
 	pageCtx := h.pageContext(lang, loc, r)
@@ -2137,6 +2165,20 @@ func buildSystemRows(systemsList []*statev1.GameSystemInfo, loc *message.Printer
 			AccessLevel:         formatAccessLevel(system.GetAccessLevel(), loc),
 			IsDefault:           system.GetIsDefault(),
 			DetailURL:           detailURL,
+		})
+	}
+	return rows
+}
+
+// buildIconRows formats icon catalog rows for the icons table.
+func buildIconRows(definitions []platformicons.Definition) []templates.IconRow {
+	rows := make([]templates.IconRow, 0, len(definitions))
+	for _, def := range definitions {
+		rows = append(rows, templates.IconRow{
+			ID:          def.ID,
+			Name:        def.Name,
+			Description: def.Description,
+			LucideName:  platformicons.LucideNameOrDefault(def.ID),
 		})
 	}
 	return rows
