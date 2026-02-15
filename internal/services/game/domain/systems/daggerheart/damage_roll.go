@@ -1,6 +1,6 @@
 package daggerheart
 
-import "github.com/louisbranch/fracturing.space/internal/services/game/domain/core/dice"
+import "github.com/louisbranch/fracturing.space/internal/services/game/core/dice"
 
 // DamageDieSpec describes damage dice to roll.
 type DamageDieSpec struct {

@@ -9,19 +9,20 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/participant"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
 func TestCampaignPaging(t *testing.T) {
 	store := openTestStore(t)
 
 	for _, id := range []string{"camp-1", "camp-2", "camp-3"} {
-		if err := store.Put(context.Background(), campaign.Campaign{
+		if err := store.Put(context.Background(), storage.CampaignRecord{
 			ID:        id,
 			Name:      "Campaign",
 			Locale:    platformi18n.DefaultLocale(),
 			System:    commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-			Status:    campaign.CampaignStatusActive,
+			Status:    campaign.StatusActive,
 			GmMode:    campaign.GmModeHuman,
 			CreatedAt: time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC),
 			UpdatedAt: time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC),
@@ -56,12 +57,12 @@ func TestCampaignPaging(t *testing.T) {
 func TestParticipantPaging(t *testing.T) {
 	store := openTestStore(t)
 
-	if err := store.Put(context.Background(), campaign.Campaign{
+	if err := store.Put(context.Background(), storage.CampaignRecord{
 		ID:        "camp-1",
 		Name:      "Campaign",
 		Locale:    platformi18n.DefaultLocale(),
 		System:    commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		Status:    campaign.CampaignStatusActive,
+		Status:    campaign.StatusActive,
 		GmMode:    campaign.GmModeHuman,
 		CreatedAt: time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC),
 		UpdatedAt: time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC),
@@ -70,10 +71,12 @@ func TestParticipantPaging(t *testing.T) {
 	}
 
 	for _, id := range []string{"p-1", "p-2", "p-3"} {
-		if err := store.PutParticipant(context.Background(), participant.Participant{
+		if err := store.PutParticipant(context.Background(), storage.ParticipantRecord{
 			CampaignID:     "camp-1",
 			ID:             id,
-			Role:           participant.ParticipantRolePlayer,
+			UserID:         "user-" + id,
+			DisplayName:    "Player " + id,
+			Role:           participant.RolePlayer,
 			Controller:     participant.ControllerHuman,
 			CampaignAccess: participant.CampaignAccessMember,
 			CreatedAt:      time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC),

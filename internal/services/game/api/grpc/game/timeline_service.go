@@ -10,12 +10,12 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
+	"github.com/louisbranch/fracturing.space/internal/services/game/core/filter"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/character"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/participant"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/session"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/core/filter"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -153,10 +153,10 @@ type timelineProjectionResolver struct {
 	characterStore   storage.CharacterStore
 	sessionStore     storage.SessionStore
 
-	campaignCache    map[string]campaign.Campaign
-	participantCache map[string]participant.Participant
-	characterCache   map[string]character.Character
-	sessionCache     map[string]session.Session
+	campaignCache    map[string]storage.CampaignRecord
+	participantCache map[string]storage.ParticipantRecord
+	characterCache   map[string]storage.CharacterRecord
+	sessionCache     map[string]storage.SessionRecord
 }
 
 // newTimelineProjectionResolver prepares a resolver for projection lookups.
@@ -166,10 +166,10 @@ func newTimelineProjectionResolver(stores Stores) *timelineProjectionResolver {
 		participantStore: stores.Participant,
 		characterStore:   stores.Character,
 		sessionStore:     stores.Session,
-		campaignCache:    make(map[string]campaign.Campaign),
-		participantCache: make(map[string]participant.Participant),
-		characterCache:   make(map[string]character.Character),
-		sessionCache:     make(map[string]session.Session),
+		campaignCache:    make(map[string]storage.CampaignRecord),
+		participantCache: make(map[string]storage.ParticipantRecord),
+		characterCache:   make(map[string]storage.CharacterRecord),
+		sessionCache:     make(map[string]storage.SessionRecord),
 	}
 }
 
@@ -198,7 +198,7 @@ func timelineEntryFromEvent(ctx context.Context, resolver *timelineProjectionRes
 
 func timelineChangeFields(evt event.Event) []*campaignv1.ProjectionField {
 	switch evt.Type {
-	case daggerheart.EventTypeCharacterStatePatched:
+	case event.Type("action.character_state_patched"):
 		return daggerheartStateChangeFields(evt.PayloadJSON)
 	default:
 		return nil
@@ -214,7 +214,7 @@ func daggerheartStateChangeFields(payloadJSON []byte) []*campaignv1.ProjectionFi
 		return nil
 	}
 	fields := make([]*campaignv1.ProjectionField, 0, 6)
-	appendIntChange(&fields, "HP", payload.HpBefore, payload.HpAfter)
+	appendIntChange(&fields, "HP", payload.HPBefore, payload.HPAfter)
 	appendIntChange(&fields, "Hope", payload.HopeBefore, payload.HopeAfter)
 	appendIntChange(&fields, "Hope Max", payload.HopeMaxBefore, payload.HopeMaxAfter)
 	appendIntChange(&fields, "Stress", payload.StressBefore, payload.StressAfter)
@@ -270,11 +270,23 @@ func appendStringChange(fields *[]*campaignv1.ProjectionField, label string, bef
 	})
 }
 
+func eventDomainFromType(evtType event.Type) string {
+	value := strings.TrimSpace(string(evtType))
+	if value == "" {
+		return ""
+	}
+	parts := strings.SplitN(value, ".", 2)
+	if len(parts) == 0 {
+		return ""
+	}
+	return parts[0]
+}
+
 // resolve maps an event to the icon and projection display used in the timeline.
 func (r *timelineProjectionResolver) resolve(ctx context.Context, evt event.Event) (commonv1.IconId, *campaignv1.ProjectionDisplay, error) {
 	domain := strings.TrimSpace(evt.EntityType)
 	if domain == "" {
-		domain = strings.TrimSpace(evt.Type.Domain())
+		domain = strings.TrimSpace(eventDomainFromType(evt.Type))
 	}
 	domain = strings.ToLower(domain)
 
@@ -331,10 +343,10 @@ func (r *timelineProjectionResolver) resolve(ctx context.Context, evt event.Even
 }
 
 // lookupCampaign fetches campaign projection data, using cache when available.
-func (r *timelineProjectionResolver) lookupCampaign(ctx context.Context, campaignID string) (campaign.Campaign, bool, error) {
+func (r *timelineProjectionResolver) lookupCampaign(ctx context.Context, campaignID string) (storage.CampaignRecord, bool, error) {
 	campaignID = strings.TrimSpace(campaignID)
 	if campaignID == "" || r.campaignStore == nil {
-		return campaign.Campaign{}, false, nil
+		return storage.CampaignRecord{}, false, nil
 	}
 	if cached, ok := r.campaignCache[campaignID]; ok {
 		return cached, true, nil
@@ -342,20 +354,20 @@ func (r *timelineProjectionResolver) lookupCampaign(ctx context.Context, campaig
 	entry, err := r.campaignStore.Get(ctx, campaignID)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
-			return campaign.Campaign{}, false, nil
+			return storage.CampaignRecord{}, false, nil
 		}
-		return campaign.Campaign{}, false, err
+		return storage.CampaignRecord{}, false, err
 	}
 	r.campaignCache[campaignID] = entry
 	return entry, true, nil
 }
 
 // lookupParticipant fetches participant projection data, using cache when available.
-func (r *timelineProjectionResolver) lookupParticipant(ctx context.Context, campaignID, participantID string) (participant.Participant, bool, error) {
+func (r *timelineProjectionResolver) lookupParticipant(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, bool, error) {
 	campaignID = strings.TrimSpace(campaignID)
 	participantID = strings.TrimSpace(participantID)
 	if campaignID == "" || participantID == "" || r.participantStore == nil {
-		return participant.Participant{}, false, nil
+		return storage.ParticipantRecord{}, false, nil
 	}
 	key := campaignID + ":" + participantID
 	if cached, ok := r.participantCache[key]; ok {
@@ -364,20 +376,20 @@ func (r *timelineProjectionResolver) lookupParticipant(ctx context.Context, camp
 	entry, err := r.participantStore.GetParticipant(ctx, campaignID, participantID)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
-			return participant.Participant{}, false, nil
+			return storage.ParticipantRecord{}, false, nil
 		}
-		return participant.Participant{}, false, err
+		return storage.ParticipantRecord{}, false, err
 	}
 	r.participantCache[key] = entry
 	return entry, true, nil
 }
 
 // lookupCharacter fetches character projection data, using cache when available.
-func (r *timelineProjectionResolver) lookupCharacter(ctx context.Context, campaignID, characterID string) (character.Character, bool, error) {
+func (r *timelineProjectionResolver) lookupCharacter(ctx context.Context, campaignID, characterID string) (storage.CharacterRecord, bool, error) {
 	campaignID = strings.TrimSpace(campaignID)
 	characterID = strings.TrimSpace(characterID)
 	if campaignID == "" || characterID == "" || r.characterStore == nil {
-		return character.Character{}, false, nil
+		return storage.CharacterRecord{}, false, nil
 	}
 	key := campaignID + ":" + characterID
 	if cached, ok := r.characterCache[key]; ok {
@@ -386,20 +398,20 @@ func (r *timelineProjectionResolver) lookupCharacter(ctx context.Context, campai
 	entry, err := r.characterStore.GetCharacter(ctx, campaignID, characterID)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
-			return character.Character{}, false, nil
+			return storage.CharacterRecord{}, false, nil
 		}
-		return character.Character{}, false, err
+		return storage.CharacterRecord{}, false, err
 	}
 	r.characterCache[key] = entry
 	return entry, true, nil
 }
 
 // lookupSession fetches session projection data, using cache when available.
-func (r *timelineProjectionResolver) lookupSession(ctx context.Context, campaignID, sessionID string) (session.Session, bool, error) {
+func (r *timelineProjectionResolver) lookupSession(ctx context.Context, campaignID, sessionID string) (storage.SessionRecord, bool, error) {
 	campaignID = strings.TrimSpace(campaignID)
 	sessionID = strings.TrimSpace(sessionID)
 	if campaignID == "" || sessionID == "" || r.sessionStore == nil {
-		return session.Session{}, false, nil
+		return storage.SessionRecord{}, false, nil
 	}
 	key := campaignID + ":" + sessionID
 	if cached, ok := r.sessionCache[key]; ok {
@@ -408,16 +420,16 @@ func (r *timelineProjectionResolver) lookupSession(ctx context.Context, campaign
 	entry, err := r.sessionStore.GetSession(ctx, campaignID, sessionID)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
-			return session.Session{}, false, nil
+			return storage.SessionRecord{}, false, nil
 		}
-		return session.Session{}, false, err
+		return storage.SessionRecord{}, false, err
 	}
 	r.sessionCache[key] = entry
 	return entry, true, nil
 }
 
 // campaignProjectionDisplay builds a display summary for campaign projections.
-func campaignProjectionDisplay(entry campaign.Campaign) *campaignv1.ProjectionDisplay {
+func campaignProjectionDisplay(entry storage.CampaignRecord) *campaignv1.ProjectionDisplay {
 	display := &campaignv1.ProjectionDisplay{
 		Title: entry.Name,
 	}
@@ -426,27 +438,27 @@ func campaignProjectionDisplay(entry campaign.Campaign) *campaignv1.ProjectionDi
 		display.Subtitle = "DAGGERHEART"
 	}
 	switch entry.Status {
-	case campaign.CampaignStatusDraft:
+	case campaign.StatusDraft:
 		display.Status = "DRAFT"
-	case campaign.CampaignStatusActive:
+	case campaign.StatusActive:
 		display.Status = "ACTIVE"
-	case campaign.CampaignStatusCompleted:
+	case campaign.StatusCompleted:
 		display.Status = "COMPLETED"
-	case campaign.CampaignStatusArchived:
+	case campaign.StatusArchived:
 		display.Status = "ARCHIVED"
 	}
 	return display
 }
 
 // participantProjectionDisplay builds a display summary for participant projections.
-func participantProjectionDisplay(entry participant.Participant) *campaignv1.ProjectionDisplay {
+func participantProjectionDisplay(entry storage.ParticipantRecord) *campaignv1.ProjectionDisplay {
 	display := &campaignv1.ProjectionDisplay{
 		Title: entry.DisplayName,
 	}
 	switch entry.Role {
-	case participant.ParticipantRoleGM:
+	case participant.RoleGM:
 		display.Subtitle = "GM"
-	case participant.ParticipantRolePlayer:
+	case participant.RolePlayer:
 		display.Subtitle = "PLAYER"
 	}
 	switch entry.Controller {
@@ -459,28 +471,28 @@ func participantProjectionDisplay(entry participant.Participant) *campaignv1.Pro
 }
 
 // characterProjectionDisplay builds a display summary for character projections.
-func characterProjectionDisplay(entry character.Character) *campaignv1.ProjectionDisplay {
+func characterProjectionDisplay(entry storage.CharacterRecord) *campaignv1.ProjectionDisplay {
 	display := &campaignv1.ProjectionDisplay{
 		Title: entry.Name,
 	}
 	switch entry.Kind {
-	case character.CharacterKindPC:
+	case character.KindPC:
 		display.Subtitle = "PC"
-	case character.CharacterKindNPC:
+	case character.KindNPC:
 		display.Subtitle = "NPC"
 	}
 	return display
 }
 
 // sessionProjectionDisplay builds a display summary for session projections.
-func sessionProjectionDisplay(entry session.Session) *campaignv1.ProjectionDisplay {
+func sessionProjectionDisplay(entry storage.SessionRecord) *campaignv1.ProjectionDisplay {
 	display := &campaignv1.ProjectionDisplay{
 		Title: entry.Name,
 	}
 	switch entry.Status {
-	case session.SessionStatusActive:
+	case session.StatusActive:
 		display.Status = "ACTIVE"
-	case session.SessionStatusEnded:
+	case session.StatusEnded:
 		display.Status = "ENDED"
 	}
 	return display

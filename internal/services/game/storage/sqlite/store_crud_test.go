@@ -9,10 +9,10 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/character"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/invite"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/participant"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/session"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -22,12 +22,12 @@ func TestCampaignPutGet(t *testing.T) {
 	completed := now.Add(2 * time.Hour)
 	archived := now.Add(24 * time.Hour)
 
-	expected := campaign.Campaign{
+	expected := storage.CampaignRecord{
 		ID:               "camp-crud",
 		Name:             "Shimmering Fields",
 		Locale:           commonv1.Locale_LOCALE_PT_BR,
 		System:           commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		Status:           campaign.CampaignStatusCompleted,
+		Status:           campaign.StatusCompleted,
 		GmMode:           campaign.GmModeHybrid,
 		ParticipantCount: 1,
 		CharacterCount:   2,
@@ -43,21 +43,21 @@ func TestCampaignPutGet(t *testing.T) {
 	}
 
 	seedParticipant(t, store, expected.ID, "part-1", "user-1", now)
-	if err := store.PutCharacter(context.Background(), character.Character{
+	if err := store.PutCharacter(context.Background(), storage.CharacterRecord{
 		CampaignID: expected.ID,
 		ID:         "char-1",
 		Name:       "Aria",
-		Kind:       character.CharacterKindPC,
+		Kind:       character.KindPC,
 		CreatedAt:  now,
 		UpdatedAt:  now,
 	}); err != nil {
 		t.Fatalf("put character: %v", err)
 	}
-	if err := store.PutCharacter(context.Background(), character.Character{
+	if err := store.PutCharacter(context.Background(), storage.CharacterRecord{
 		CampaignID: expected.ID,
 		ID:         "char-2",
 		Name:       "Brim",
-		Kind:       character.CharacterKindNPC,
+		Kind:       character.KindNPC,
 		CreatedAt:  now,
 		UpdatedAt:  now,
 	}); err != nil {
@@ -136,7 +136,7 @@ func TestInviteListingAndUpdate(t *testing.T) {
 	seedParticipant(t, store, "camp-invites", "seat-1", "user-1", now)
 	seedParticipant(t, store, "camp-invites", "seat-2", "user-2", now)
 
-	invitePending := invite.Invite{
+	invitePending := storage.InviteRecord{
 		ID:                     "inv-1",
 		CampaignID:             "camp-invites",
 		ParticipantID:          "seat-1",
@@ -146,7 +146,7 @@ func TestInviteListingAndUpdate(t *testing.T) {
 		CreatedAt:              now,
 		UpdatedAt:              now,
 	}
-	inviteClaimed := invite.Invite{
+	inviteClaimed := storage.InviteRecord{
 		ID:                     "inv-2",
 		CampaignID:             "camp-invites",
 		ParticipantID:          "seat-2",
@@ -211,11 +211,11 @@ func TestSessionLifecycle(t *testing.T) {
 
 	seedCampaign(t, store, "camp-sessions", now)
 
-	sess := session.Session{
+	sess := storage.SessionRecord{
 		ID:         "sess-1",
 		CampaignID: "camp-sessions",
 		Name:       "First Session",
-		Status:     session.SessionStatusActive,
+		Status:     session.StatusActive,
 		StartedAt:  now,
 		UpdatedAt:  now,
 	}
@@ -227,15 +227,15 @@ func TestSessionLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get active session: %v", err)
 	}
-	if active.ID != sess.ID || active.Status != session.SessionStatusActive {
+	if active.ID != sess.ID || active.Status != session.StatusActive {
 		t.Fatalf("expected active session to match")
 	}
 
-	other := session.Session{
+	other := storage.SessionRecord{
 		ID:         "sess-2",
 		CampaignID: "camp-sessions",
 		Name:       "Second Session",
-		Status:     session.SessionStatusActive,
+		Status:     session.StatusActive,
 		StartedAt:  now.Add(30 * time.Minute),
 		UpdatedAt:  now.Add(30 * time.Minute),
 	}
@@ -252,7 +252,7 @@ func TestSessionLifecycle(t *testing.T) {
 	if !transitioned {
 		t.Fatalf("expected session to transition to ended")
 	}
-	if ended.Status != session.SessionStatusEnded {
+	if ended.Status != session.StatusEnded {
 		t.Fatalf("expected session status to be ended")
 	}
 	if ended.EndedAt == nil || !ended.EndedAt.Equal(endedAt.UTC()) {
@@ -276,7 +276,7 @@ func TestSessionGateAndSpotlight(t *testing.T) {
 		SessionID:          "sess-1",
 		GateID:             "gate-1",
 		GateType:           "prompt",
-		Status:             "open",
+		Status:             session.GateStatusOpen,
 		Reason:             "Need consent",
 		CreatedAt:          now,
 		CreatedByActorType: "system",
@@ -311,7 +311,7 @@ func TestSessionGateAndSpotlight(t *testing.T) {
 	spotlight := storage.SessionSpotlight{
 		CampaignID:         "camp-gates",
 		SessionID:          "sess-1",
-		SpotlightType:      "character",
+		SpotlightType:      session.SpotlightTypeCharacter,
 		CharacterID:        "char-1",
 		UpdatedAt:          now,
 		UpdatedByActorType: "participant",
@@ -338,15 +338,15 @@ func TestSessionGateAndSpotlight(t *testing.T) {
 	}
 }
 
-func seedCampaign(t *testing.T, store *Store, id string, now time.Time) campaign.Campaign {
+func seedCampaign(t *testing.T, store *Store, id string, now time.Time) storage.CampaignRecord {
 	t.Helper()
 
-	c := campaign.Campaign{
+	c := storage.CampaignRecord{
 		ID:        id,
 		Name:      "Campaign",
 		Locale:    platformi18n.DefaultLocale(),
 		System:    commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		Status:    campaign.CampaignStatusActive,
+		Status:    campaign.StatusActive,
 		GmMode:    campaign.GmModeHuman,
 		CreatedAt: now,
 		UpdatedAt: now,
@@ -357,15 +357,15 @@ func seedCampaign(t *testing.T, store *Store, id string, now time.Time) campaign
 	return c
 }
 
-func seedParticipant(t *testing.T, store *Store, campaignID, participantID, userID string, now time.Time) participant.Participant {
+func seedParticipant(t *testing.T, store *Store, campaignID, participantID, userID string, now time.Time) storage.ParticipantRecord {
 	t.Helper()
 
-	p := participant.Participant{
+	p := storage.ParticipantRecord{
 		CampaignID:     campaignID,
 		ID:             participantID,
 		UserID:         userID,
 		DisplayName:    participantID,
-		Role:           participant.ParticipantRolePlayer,
+		Role:           participant.RolePlayer,
 		Controller:     participant.ControllerHuman,
 		CampaignAccess: participant.CampaignAccessMember,
 		CreatedAt:      now,

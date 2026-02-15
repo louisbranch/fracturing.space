@@ -7,9 +7,9 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/character"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/participant"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/session"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 )
 
 func TestMillisHelpers(t *testing.T) {
@@ -80,13 +80,13 @@ func TestConversionHelpers(t *testing.T) {
 		t.Fatal("expected fallback game system daggerheart")
 	}
 
-	if campaignStatusToString(campaign.CampaignStatusArchived) != "ARCHIVED" {
+	if campaignStatusToString(campaign.StatusArchived) != "ARCHIVED" {
 		t.Fatal("expected archived status string")
 	}
-	if stringToCampaignStatus("ACTIVE") != campaign.CampaignStatusActive {
+	if stringToCampaignStatus("ACTIVE") != campaign.StatusActive {
 		t.Fatal("expected active status")
 	}
-	if stringToCampaignStatus("bogus") != campaign.CampaignStatusUnspecified {
+	if stringToCampaignStatus("bogus") != campaign.StatusUnspecified {
 		t.Fatal("expected unspecified status fallback")
 	}
 
@@ -100,13 +100,13 @@ func TestConversionHelpers(t *testing.T) {
 		t.Fatal("expected unspecified gm mode")
 	}
 
-	if participantRoleToString(participant.ParticipantRoleGM) != "GM" {
+	if participantRoleToString(participant.RoleGM) != "GM" {
 		t.Fatal("expected GM role")
 	}
-	if stringToParticipantRole("PLAYER") != participant.ParticipantRolePlayer {
+	if stringToParticipantRole("PLAYER") != participant.RolePlayer {
 		t.Fatal("expected player role")
 	}
-	if stringToParticipantRole("bogus") != participant.ParticipantRoleUnspecified {
+	if stringToParticipantRole("bogus") != participant.RoleUnspecified {
 		t.Fatal("expected unspecified role")
 	}
 
@@ -130,23 +130,23 @@ func TestConversionHelpers(t *testing.T) {
 		t.Fatal("expected unspecified access")
 	}
 
-	if characterKindToString(character.CharacterKindNPC) != "NPC" {
+	if characterKindToString(character.KindNPC) != "NPC" {
 		t.Fatal("expected NPC kind")
 	}
-	if stringToCharacterKind("PC") != character.CharacterKindPC {
+	if stringToCharacterKind("PC") != character.KindPC {
 		t.Fatal("expected PC kind")
 	}
-	if stringToCharacterKind("bogus") != character.CharacterKindUnspecified {
+	if stringToCharacterKind("bogus") != character.KindUnspecified {
 		t.Fatal("expected unspecified kind")
 	}
 
-	if sessionStatusToString(session.SessionStatusEnded) != "ENDED" {
+	if sessionStatusToString(session.StatusEnded) != "ENDED" {
 		t.Fatal("expected ended session status")
 	}
-	if stringToSessionStatus("ACTIVE") != session.SessionStatusActive {
+	if stringToSessionStatus("ACTIVE") != session.StatusActive {
 		t.Fatal("expected active session status")
 	}
-	if stringToSessionStatus("bogus") != session.SessionStatusUnspecified {
+	if stringToSessionStatus("bogus") != session.StatusUnspecified {
 		t.Fatal("expected unspecified session status")
 	}
 }

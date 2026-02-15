@@ -9,8 +9,8 @@ import (
 )
 
 // createSessions creates the specified number of sessions for a campaign.
-// All but the last session are ended. Events are added to each session.
-func (g *Generator) createSessions(ctx context.Context, campaignID string, count int, cfg PresetConfig, characters []*statev1.Character) error {
+// All but the last session are ended.
+func (g *Generator) createSessions(ctx context.Context, campaignID string, count int, cfg PresetConfig) error {
 	if count < 1 {
 		return nil
 	}
@@ -28,12 +28,6 @@ func (g *Generator) createSessions(ctx context.Context, campaignID string, count
 		}
 
 		session := resp.Session
-
-		// Add events to the session
-		numEvents := g.randomRange(cfg.EventsMin, cfg.EventsMax)
-		if err := g.addSessionEvents(ctx, campaignID, session.Id, numEvents, characters); err != nil {
-			return fmt.Errorf("add events to session %d: %w", seq, err)
-		}
 
 		// End all sessions except the last one (unless we want ended sessions)
 		isLastSession := i == count-1

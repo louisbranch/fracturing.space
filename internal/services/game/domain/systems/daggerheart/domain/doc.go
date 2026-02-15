@@ -8,5 +8,5 @@
 //   - Probability calculations
 //   - Rules explanation for deterministic replay
 //
-// The mechanics are built on top of the generic primitives in internal/services/game/domain/core/dice.
+// The mechanics are built on top of the generic primitives in internal/services/game/core/dice.
 package domain

@@ -9,6 +9,9 @@ nav_order: 4
 This guide explains how the event journal, projections, and snapshots work
 together, and how to replay events to rebuild derived state.
 
+For command/event registration, envelope fields, and write-path routing, read
+[Event-driven system](event-driven-system.md) first.
+
 ## Concepts
 
 - **Event journal**: the append-only source of truth for a campaign.
@@ -22,6 +25,41 @@ together, and how to replay events to rebuild derived state.
 - **Emitter/applier split**: emitters append to `game-events`; appliers/adapters are the only writers to `game-projections`.
 
 Snapshots never replace the event journal; they only accelerate rebuilds.
+
+## Domain replay runner
+
+The domain replay runner is a deterministic, checkpointed apply loop used by the
+event-sourced core. It enforces ordered sequences, applies events in order, and
+persists a per-campaign checkpoint after each successful apply.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant R as Replay Runner
+    participant C as Checkpoint Store
+    participant E as Event Store
+    participant A as Applier
+
+    R->>C: Get(campaign checkpoint)
+    C-->>R: last_seq (or not found)
+    loop pages of events after last_seq
+        R->>E: ListEvents(campaign, after_seq, limit)
+        E-->>R: ordered events
+        loop each event
+            R->>A: Apply(state, event)
+            A-->>R: updated state
+            R->>C: Save(last_seq = event.seq)
+        end
+    end
+```
+
+Behavior:
+
+- Replay starts from the max of the stored checkpoint and `after_seq`.
+- Each applied event advances the checkpoint (`last_seq`) to guarantee idempotence
+  if replay is restarted.
+- Sequence gaps (non-contiguous `seq`) are treated as replay errors.
+- Appliers must be deterministic and side-effect free beyond projection updates.
 
 ## Event integrity and tamper resistance
 
@@ -124,6 +162,7 @@ disable the cap.
 - Validation can fail if payloads are malformed or out of bounds.
 - Integrity checks compare stored projections against a clean replay and exit
   non-zero on mismatches.
+- Domain replay checkpoints advance after every applied event to avoid duplicates.
 
 ## Best practices
 

@@ -9,10 +9,15 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	"github.com/louisbranch/fracturing.space/internal/services/game/core/dice"
+	"github.com/louisbranch/fracturing.space/internal/services/game/core/random"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/character"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/session"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -22,22 +27,22 @@ import (
 // --- Fake stores for daggerheart action tests ---
 
 type fakeCampaignStore struct {
-	campaigns map[string]campaign.Campaign
+	campaigns map[string]storage.CampaignRecord
 }
 
 func newFakeCampaignStore() *fakeCampaignStore {
-	return &fakeCampaignStore{campaigns: make(map[string]campaign.Campaign)}
+	return &fakeCampaignStore{campaigns: make(map[string]storage.CampaignRecord)}
 }
 
-func (s *fakeCampaignStore) Put(_ context.Context, c campaign.Campaign) error {
+func (s *fakeCampaignStore) Put(_ context.Context, c storage.CampaignRecord) error {
 	s.campaigns[c.ID] = c
 	return nil
 }
 
-func (s *fakeCampaignStore) Get(_ context.Context, id string) (campaign.Campaign, error) {
+func (s *fakeCampaignStore) Get(_ context.Context, id string) (storage.CampaignRecord, error) {
 	c, ok := s.campaigns[id]
 	if !ok {
-		return campaign.Campaign{}, storage.ErrNotFound
+		return storage.CampaignRecord{}, storage.ErrNotFound
 	}
 	return c, nil
 }
@@ -227,23 +232,61 @@ func (s *fakeEventStore) ListEventsPage(_ context.Context, _ storage.ListEventsP
 	return storage.ListEventsPageResult{}, nil
 }
 
+type fakeDomainEngine struct {
+	store         storage.EventStore
+	result        engine.Result
+	resultsByType map[command.Type]engine.Result
+	calls         int
+	lastCommand   command.Command
+	commands      []command.Command
+}
+
+func (f *fakeDomainEngine) Execute(ctx context.Context, cmd command.Command) (engine.Result, error) {
+	f.calls++
+	f.lastCommand = cmd
+	f.commands = append(f.commands, cmd)
+
+	result := f.result
+	if len(f.resultsByType) > 0 {
+		if selected, ok := f.resultsByType[cmd.Type]; ok {
+			result = selected
+		}
+	}
+	if f.store == nil {
+		return result, nil
+	}
+	if len(result.Decision.Events) == 0 {
+		return result, nil
+	}
+	stored := make([]event.Event, 0, len(result.Decision.Events))
+	for _, evt := range result.Decision.Events {
+		storedEvent, err := f.store.AppendEvent(ctx, evt)
+		if err != nil {
+			return engine.Result{}, err
+		}
+		stored = append(stored, storedEvent)
+	}
+	result.Decision.Events = stored
+	return result, nil
+}
+
 type fakeCharacterStore struct {
-	characters map[string]character.Character
+	characters map[string]storage.CharacterRecord
 }
 
 func newFakeCharacterStore() *fakeCharacterStore {
-	return &fakeCharacterStore{characters: make(map[string]character.Character)}
+	return &fakeCharacterStore{characters: make(map[string]storage.CharacterRecord)}
 }
 
-func (s *fakeCharacterStore) PutCharacter(_ context.Context, c character.Character) error {
+func (s *fakeCharacterStore) PutCharacter(_ context.Context, c storage.CharacterRecord) error {
 	s.characters[c.CampaignID+":"+c.ID] = c
 	return nil
 }
 
-func (s *fakeCharacterStore) GetCharacter(_ context.Context, campaignID, characterID string) (character.Character, error) {
+func (s *fakeCharacterStore) GetCharacter(_ context.Context, campaignID, characterID string) (storage.CharacterRecord, error) {
 	c, ok := s.characters[campaignID+":"+characterID]
 	if !ok {
-		return character.Character{}, storage.ErrNotFound
+		return storage.CharacterRecord{}, storage.ErrNotFound
 	}
 	return c, nil
 }
@@ -285,32 +328,32 @@ func (s *fakeSessionSpotlightStore) ClearSessionSpotlight(_ context.Context, _, 
 }
 
 type fakeSessionStore struct {
-	sessions map[string]session.Session // campaignID:sessionID -> session
+	sessions map[string]storage.SessionRecord // campaignID:sessionID -> session
 }
 
 func newFakeSessionStore() *fakeSessionStore {
-	return &fakeSessionStore{sessions: make(map[string]session.Session)}
+	return &fakeSessionStore{sessions: make(map[string]storage.SessionRecord)}
 }
 
-func (s *fakeSessionStore) PutSession(_ context.Context, sess session.Session) error {
+func (s *fakeSessionStore) PutSession(_ context.Context, sess storage.SessionRecord) error {
 	s.sessions[sess.CampaignID+":"+sess.ID] = sess
 	return nil
 }
 
-func (s *fakeSessionStore) EndSession(_ context.Context, _, _ string, _ time.Time) (session.Session, bool, error) {
-	return session.Session{}, false, nil
+func (s *fakeSessionStore) EndSession(_ context.Context, _, _ string, _ time.Time) (storage.SessionRecord, bool, error) {
+	return storage.SessionRecord{}, false, nil
 }
 
-func (s *fakeSessionStore) GetSession(_ context.Context, campaignID, sessionID string) (session.Session, error) {
+func (s *fakeSessionStore) GetSession(_ context.Context, campaignID, sessionID string) (storage.SessionRecord, error) {
 	sess, ok := s.sessions[campaignID+":"+sessionID]
 	if !ok {
-		return session.Session{}, storage.ErrNotFound
+		return storage.SessionRecord{}, storage.ErrNotFound
 	}
 	return sess, nil
 }
 
-func (s *fakeSessionStore) GetActiveSession(_ context.Context, _ string) (session.Session, error) {
-	return session.Session{}, storage.ErrNotFound
+func (s *fakeSessionStore) GetActiveSession(_ context.Context, _ string) (storage.SessionRecord, error) {
+	return storage.SessionRecord{}, storage.ErrNotFound
 }
 
 func (s *fakeSessionStore) ListSessions(_ context.Context, _ string, _ int, _ string) (storage.SessionPage, error) {
@@ -322,11 +365,43 @@ func contextWithSessionID(sessionID string) context.Context {
 	return metadata.NewIncomingContext(context.Background(), md)
 }
 
+func optionalInt(value int) *int {
+	return &value
+}
+
+func configureNoopDomain(svc *DaggerheartService) {
+	svc.stores.Domain = &fakeDomainEngine{}
+}
+
+func configureActionRollDomain(t *testing.T, svc *DaggerheartService, requestID string) {
+	t.Helper()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	payloadJSON, err := json.Marshal(map[string]string{"request_id": requestID})
+	if err != nil {
+		t.Fatalf("encode roll payload: %v", err)
+	}
+	svc.stores.Domain = &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.roll.resolve"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "camp-1",
+				Type:        event.Type("action.roll_resolved"),
+				Timestamp:   time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:   event.ActorTypeSystem,
+				SessionID:   "sess-1",
+				RequestID:   requestID,
+				EntityType:  "roll",
+				EntityID:    requestID,
+				PayloadJSON: payloadJSON,
+			}),
+		},
+	}}
+}
+
 func newActionTestService() *DaggerheartService {
 	campaignStore := newFakeCampaignStore()
-	campaignStore.campaigns["camp-1"] = campaign.Campaign{
+	campaignStore.campaigns["camp-1"] = storage.CampaignRecord{
 		ID:     "camp-1",
-		Status: campaign.CampaignStatusActive,
+		Status: campaign.StatusActive,
 		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 	}
 
@@ -367,20 +442,21 @@ func newActionTestService() *DaggerheartService {
 	}
 
 	sessStore := newFakeSessionStore()
-	sessStore.sessions["camp-1:sess-1"] = session.Session{
+	sessStore.sessions["camp-1:sess-1"] = storage.SessionRecord{
 		ID:         "sess-1",
 		CampaignID: "camp-1",
-		Status:     session.SessionStatusActive,
+		Status:     session.StatusActive,
 	}
 
 	return &DaggerheartService{
 		stores: Stores{
 			Campaign:         campaignStore,
 			Daggerheart:      dhStore,
+			Character:        newFakeCharacterStore(),
 			Event:            newFakeActionEventStore(),
 			SessionGate:      &fakeSessionGateStore{},
 			SessionSpotlight: &fakeSessionSpotlightStore{},
-			Character:        newFakeCharacterStore(),
+			Domain:           &fakeDomainEngine{},
 			Session:          sessStore,
 		},
 		seedFunc: func() (int64, error) { return 42, nil },
@@ -454,9 +530,81 @@ func TestApplyDowntimeMove_UnspecifiedMove(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
-func TestApplyDowntimeMove_Success(t *testing.T) {
+func TestApplyDowntimeMove_RequiresDomainEngine(t *testing.T) {
 	svc := newActionTestService()
 	ctx := contextWithSessionID("sess-1")
+	_, err := svc.ApplyDowntimeMove(ctx, &pb.DaggerheartApplyDowntimeMoveRequest{
+		CampaignId:  "camp-1",
+		CharacterId: "char-1",
+		Move: &pb.DaggerheartDowntimeRequest{
+			Move: pb.DaggerheartDowntimeMove_DAGGERHEART_DOWNTIME_MOVE_CLEAR_ALL_STRESS,
+		},
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestApplyDowntimeMove_Success(t *testing.T) {
+	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+
+	current := dhStore.states["camp-1:char-1"]
+	profile := dhStore.profiles["camp-1:char-1"]
+	state := daggerheart.NewCharacterState(daggerheart.CharacterStateConfig{
+		CampaignID:  "camp-1",
+		CharacterID: "char-1",
+		HP:          current.Hp,
+		HPMax:       profile.HpMax,
+		Hope:        current.Hope,
+		HopeMax:     current.HopeMax,
+		Stress:      current.Stress,
+		StressMax:   profile.StressMax,
+		Armor:       current.Armor,
+		ArmorMax:    profile.ArmorMax,
+		LifeState:   current.LifeState,
+	})
+	move, err := daggerheartDowntimeMoveFromProto(pb.DaggerheartDowntimeMove_DAGGERHEART_DOWNTIME_MOVE_CLEAR_ALL_STRESS)
+	if err != nil {
+		t.Fatalf("map downtime move: %v", err)
+	}
+	result := daggerheart.ApplyDowntimeMove(state, move, daggerheart.DowntimeOptions{})
+	moveName := daggerheartDowntimeMoveToString(move)
+	payload := daggerheart.DowntimeMoveAppliedPayload{
+		CharacterID:  "char-1",
+		Move:         moveName,
+		HopeBefore:   &result.HopeBefore,
+		HopeAfter:    &result.HopeAfter,
+		StressBefore: &result.StressBefore,
+		StressAfter:  &result.StressAfter,
+		ArmorBefore:  &result.ArmorBefore,
+		ArmorAfter:   &result.ArmorAfter,
+	}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("encode downtime move payload: %v", err)
+	}
+
+	serviceDomain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.downtime_move.apply"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.downtime_move_applied"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-downtime-success",
+				EntityType:    "character",
+				EntityID:      "char-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   payloadJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = serviceDomain
+
+	ctx := grpcmeta.WithRequestID(contextWithSessionID("sess-1"), "req-downtime-success")
 	resp, err := svc.ApplyDowntimeMove(ctx, &pb.DaggerheartApplyDowntimeMoveRequest{
 		CampaignId:  "camp-1",
 		CharacterId: "char-1",
@@ -475,6 +623,116 @@ func TestApplyDowntimeMove_Success(t *testing.T) {
 	}
 	if resp.State.Stress != 0 {
 		t.Fatalf("stress = %d, want 0", resp.State.Stress)
+	}
+}
+
+func TestApplyDowntimeMove_UsesDomainEngine(t *testing.T) {
+	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+
+	current := dhStore.states["camp-1:char-1"]
+	profile := dhStore.profiles["camp-1:char-1"]
+	state := daggerheart.NewCharacterState(daggerheart.CharacterStateConfig{
+		CampaignID:  "camp-1",
+		CharacterID: "char-1",
+		HP:          current.Hp,
+		HPMax:       profile.HpMax,
+		Hope:        current.Hope,
+		HopeMax:     current.HopeMax,
+		Stress:      current.Stress,
+		StressMax:   profile.StressMax,
+		Armor:       current.Armor,
+		ArmorMax:    profile.ArmorMax,
+		LifeState:   current.LifeState,
+	})
+	move, err := daggerheartDowntimeMoveFromProto(pb.DaggerheartDowntimeMove_DAGGERHEART_DOWNTIME_MOVE_CLEAR_ALL_STRESS)
+	if err != nil {
+		t.Fatalf("map downtime move: %v", err)
+	}
+	result := daggerheart.ApplyDowntimeMove(state, move, daggerheart.DowntimeOptions{})
+	moveName := daggerheartDowntimeMoveToString(move)
+	payload := daggerheart.DowntimeMoveAppliedPayload{
+		CharacterID:  "char-1",
+		Move:         moveName,
+		HopeBefore:   &result.HopeBefore,
+		HopeAfter:    &result.HopeAfter,
+		StressBefore: &result.StressBefore,
+		StressAfter:  &result.StressAfter,
+		ArmorBefore:  &result.ArmorBefore,
+		ArmorAfter:   &result.ArmorAfter,
+	}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("encode downtime move payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.downtime_move.apply"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.downtime_move_applied"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-downtime-move",
+				EntityType:    "character",
+				EntityID:      "char-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   payloadJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = domain
+
+	ctx := grpcmeta.WithRequestID(contextWithSessionID("sess-1"), "req-downtime-move")
+	_, err = svc.ApplyDowntimeMove(ctx, &pb.DaggerheartApplyDowntimeMoveRequest{
+		CampaignId:  "camp-1",
+		CharacterId: "char-1",
+		Move: &pb.DaggerheartDowntimeRequest{
+			Move: pb.DaggerheartDowntimeMove_DAGGERHEART_DOWNTIME_MOVE_CLEAR_ALL_STRESS,
+		},
+	})
+	if err != nil {
+		t.Fatalf("ApplyDowntimeMove returned error: %v", err)
+	}
+	if domain.calls != 1 {
+		t.Fatalf("expected domain to be called once, got %d", domain.calls)
+	}
+	if len(domain.commands) != 1 {
+		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
+	}
+	if domain.commands[0].Type != command.Type("action.downtime_move.apply") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "action.downtime_move.apply")
+	}
+	if domain.commands[0].SystemID != daggerheart.SystemID {
+		t.Fatalf("command system id = %s, want %s", domain.commands[0].SystemID, daggerheart.SystemID)
+	}
+	if domain.commands[0].SystemVersion != daggerheart.SystemVersion {
+		t.Fatalf("command system version = %s, want %s", domain.commands[0].SystemVersion, daggerheart.SystemVersion)
+	}
+	var got struct {
+		CharacterID  string `json:"character_id"`
+		Move         string `json:"move"`
+		StressBefore *int   `json:"stress_before"`
+		StressAfter  *int   `json:"stress_after"`
+	}
+	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &got); err != nil {
+		t.Fatalf("decode downtime move command payload: %v", err)
+	}
+	if got.CharacterID != "char-1" {
+		t.Fatalf("command character id = %s, want %s", got.CharacterID, "char-1")
+	}
+	if got.Move != moveName {
+		t.Fatalf("command move = %s, want %s", got.Move, moveName)
+	}
+	if got.StressBefore == nil || *got.StressBefore != result.StressBefore {
+		t.Fatalf("command stress before = %v, want %d", got.StressBefore, result.StressBefore)
+	}
+	if got.StressAfter == nil || *got.StressAfter != result.StressAfter {
+		t.Fatalf("command stress after = %v, want %d", got.StressAfter, result.StressAfter)
 	}
 }
 
@@ -548,9 +806,64 @@ func TestSwapLoadout_NegativeRecallCost(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
-func TestSwapLoadout_Success(t *testing.T) {
+func TestSwapLoadout_RequiresDomainEngine(t *testing.T) {
 	svc := newActionTestService()
 	ctx := contextWithSessionID("sess-1")
+	_, err := svc.SwapLoadout(ctx, &pb.DaggerheartSwapLoadoutRequest{
+		CampaignId:  "camp-1",
+		CharacterId: "char-1",
+		Swap: &pb.DaggerheartLoadoutSwapRequest{
+			CardId:     "card-1",
+			RecallCost: 0,
+		},
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestSwapLoadout_Success(t *testing.T) {
+	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	loadoutPayload := struct {
+		CharacterID  string `json:"character_id"`
+		CardID       string `json:"card_id"`
+		From         string `json:"from"`
+		To           string `json:"to"`
+		RecallCost   int    `json:"recall_cost"`
+		StressBefore *int   `json:"stress_before,omitempty"`
+		StressAfter  *int   `json:"stress_after,omitempty"`
+	}{
+		CharacterID:  "char-1",
+		CardID:       "card-1",
+		From:         "vault",
+		To:           "active",
+		RecallCost:   0,
+		StressBefore: optionalInt(3),
+		StressAfter:  optionalInt(3),
+	}
+	loadoutJSON, err := json.Marshal(loadoutPayload)
+	if err != nil {
+		t.Fatalf("encode loadout payload: %v", err)
+	}
+	serviceDomain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.loadout.swap"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.loadout_swapped"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-swap-success",
+				EntityType:    "character",
+				EntityID:      "char-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   loadoutJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = serviceDomain
+	ctx := grpcmeta.WithRequestID(contextWithSessionID("sess-1"), "req-swap-success")
 	resp, err := svc.SwapLoadout(ctx, &pb.DaggerheartSwapLoadoutRequest{
 		CampaignId:  "camp-1",
 		CharacterId: "char-1",
@@ -572,7 +885,82 @@ func TestSwapLoadout_Success(t *testing.T) {
 
 func TestSwapLoadout_WithRecallCost(t *testing.T) {
 	svc := newActionTestService()
-	ctx := contextWithSessionID("sess-1")
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	stressBefore := 3
+	stressAfter := 2
+	loadoutPayload := struct {
+		CharacterID  string `json:"character_id"`
+		CardID       string `json:"card_id"`
+		From         string `json:"from"`
+		To           string `json:"to"`
+		RecallCost   int    `json:"recall_cost"`
+		StressBefore *int   `json:"stress_before,omitempty"`
+		StressAfter  *int   `json:"stress_after,omitempty"`
+	}{
+		CharacterID:  "char-1",
+		CardID:       "card-1",
+		From:         "vault",
+		To:           "active",
+		RecallCost:   1,
+		StressBefore: &stressBefore,
+		StressAfter:  &stressAfter,
+	}
+	loadoutJSON, err := json.Marshal(loadoutPayload)
+	if err != nil {
+		t.Fatalf("encode loadout payload: %v", err)
+	}
+	spendPayload := struct {
+		CharacterID string `json:"character_id"`
+		Amount      int    `json:"amount"`
+		Before      int    `json:"before"`
+		After       int    `json:"after"`
+		Source      string `json:"source,omitempty"`
+	}{
+		CharacterID: "char-1",
+		Amount:      1,
+		Before:      stressBefore,
+		After:       stressAfter,
+		Source:      "loadout_swap",
+	}
+	spendJSON, err := json.Marshal(spendPayload)
+	if err != nil {
+		t.Fatalf("encode stress spend payload: %v", err)
+	}
+	serviceDomain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.loadout.swap"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.loadout_swapped"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-swap-with-cost",
+				EntityType:    "character",
+				EntityID:      "char-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   loadoutJSON,
+			}),
+		},
+		command.Type("action.stress.spend"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.stress_spent"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-swap-with-cost",
+				EntityType:    "character",
+				EntityID:      "char-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   spendJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = serviceDomain
+	ctx := grpcmeta.WithRequestID(contextWithSessionID("sess-1"), "req-swap-with-cost")
 	resp, err := svc.SwapLoadout(ctx, &pb.DaggerheartSwapLoadoutRequest{
 		CampaignId:  "camp-1",
 		CharacterId: "char-1",
@@ -589,9 +977,298 @@ func TestSwapLoadout_WithRecallCost(t *testing.T) {
 	}
 }
 
+func TestSwapLoadout_UsesDomainEngineForLoadoutSwap(t *testing.T) {
+	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+
+	stressBefore := 3
+	stressAfter := 3
+	loadoutPayload := struct {
+		CharacterID  string `json:"character_id"`
+		CardID       string `json:"card_id"`
+		From         string `json:"from"`
+		To           string `json:"to"`
+		RecallCost   int    `json:"recall_cost"`
+		StressBefore *int   `json:"stress_before,omitempty"`
+		StressAfter  *int   `json:"stress_after,omitempty"`
+	}{
+		CharacterID:  "char-1",
+		CardID:       "card-1",
+		From:         "vault",
+		To:           "active",
+		RecallCost:   0,
+		StressBefore: &stressBefore,
+		StressAfter:  &stressAfter,
+	}
+	loadoutJSON, err := json.Marshal(loadoutPayload)
+	if err != nil {
+		t.Fatalf("encode loadout payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.loadout.swap"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.loadout_swapped"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-swap-1",
+				EntityType:    "character",
+				EntityID:      "char-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   loadoutJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = domain
+
+	ctx := grpcmeta.WithRequestID(contextWithSessionID("sess-1"), "req-swap-1")
+	_, err = svc.SwapLoadout(ctx, &pb.DaggerheartSwapLoadoutRequest{
+		CampaignId:  "camp-1",
+		CharacterId: "char-1",
+		Swap: &pb.DaggerheartLoadoutSwapRequest{
+			CardId:     "card-1",
+			RecallCost: 0,
+		},
+	})
+	if err != nil {
+		t.Fatalf("SwapLoadout returned error: %v", err)
+	}
+	if domain.calls != 1 {
+		t.Fatalf("expected domain to be called once, got %d", domain.calls)
+	}
+	if len(domain.commands) != 1 {
+		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
+	}
+	if domain.commands[0].Type != command.Type("action.loadout.swap") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "action.loadout.swap")
+	}
+	if domain.commands[0].SystemID != daggerheart.SystemID {
+		t.Fatalf("command system id = %s, want %s", domain.commands[0].SystemID, daggerheart.SystemID)
+	}
+	if domain.commands[0].SystemVersion != daggerheart.SystemVersion {
+		t.Fatalf("command system version = %s, want %s", domain.commands[0].SystemVersion, daggerheart.SystemVersion)
+	}
+	var got struct {
+		CharacterID  string `json:"character_id"`
+		CardID       string `json:"card_id"`
+		From         string `json:"from"`
+		To           string `json:"to"`
+		RecallCost   int    `json:"recall_cost"`
+		StressBefore *int   `json:"stress_before,omitempty"`
+		StressAfter  *int   `json:"stress_after,omitempty"`
+	}
+	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &got); err != nil {
+		t.Fatalf("decode loadout swap command payload: %v", err)
+	}
+	if got.CharacterID != "char-1" {
+		t.Fatalf("command character id = %s, want %s", got.CharacterID, "char-1")
+	}
+	if got.CardID != "card-1" {
+		t.Fatalf("command card id = %s, want %s", got.CardID, "card-1")
+	}
+	if got.From != "vault" {
+		t.Fatalf("command from = %s, want %s", got.From, "vault")
+	}
+	if got.To != "active" {
+		t.Fatalf("command to = %s, want %s", got.To, "active")
+	}
+	if got.RecallCost != 0 {
+		t.Fatalf("command recall cost = %d, want %d", got.RecallCost, 0)
+	}
+	if got.StressBefore == nil || *got.StressBefore != stressBefore {
+		t.Fatalf("command stress before = %v, want %d", got.StressBefore, stressBefore)
+	}
+	if got.StressAfter == nil || *got.StressAfter != stressAfter {
+		t.Fatalf("command stress after = %v, want %d", got.StressAfter, stressAfter)
+	}
+}
+
+func TestSwapLoadout_UsesDomainEngineForStressSpend(t *testing.T) {
+	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+
+	stressBefore := 3
+	stressAfter := 2
+	loadoutPayload := struct {
+		CharacterID  string `json:"character_id"`
+		CardID       string `json:"card_id"`
+		From         string `json:"from"`
+		To           string `json:"to"`
+		RecallCost   int    `json:"recall_cost"`
+		StressBefore *int   `json:"stress_before,omitempty"`
+		StressAfter  *int   `json:"stress_after,omitempty"`
+	}{
+		CharacterID:  "char-1",
+		CardID:       "card-1",
+		From:         "vault",
+		To:           "active",
+		RecallCost:   1,
+		StressBefore: &stressBefore,
+		StressAfter:  &stressAfter,
+	}
+	loadoutJSON, err := json.Marshal(loadoutPayload)
+	if err != nil {
+		t.Fatalf("encode loadout payload: %v", err)
+	}
+
+	spendPayload := struct {
+		CharacterID string `json:"character_id"`
+		Amount      int    `json:"amount"`
+		Before      int    `json:"before"`
+		After       int    `json:"after"`
+		Source      string `json:"source,omitempty"`
+	}{
+		CharacterID: "char-1",
+		Amount:      1,
+		Before:      stressBefore,
+		After:       stressAfter,
+		Source:      "loadout_swap",
+	}
+	spendJSON, err := json.Marshal(spendPayload)
+	if err != nil {
+		t.Fatalf("encode stress spend payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.loadout.swap"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.loadout_swapped"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-swap-1",
+				EntityType:    "character",
+				EntityID:      "char-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   loadoutJSON,
+			}),
+		},
+		command.Type("action.stress.spend"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.stress_spent"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-swap-1",
+				EntityType:    "character",
+				EntityID:      "char-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   spendJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = domain
+
+	ctx := grpcmeta.WithRequestID(contextWithSessionID("sess-1"), "req-swap-1")
+	_, err = svc.SwapLoadout(ctx, &pb.DaggerheartSwapLoadoutRequest{
+		CampaignId:  "camp-1",
+		CharacterId: "char-1",
+		Swap: &pb.DaggerheartLoadoutSwapRequest{
+			CardId:     "card-1",
+			RecallCost: 1,
+		},
+	})
+	if err != nil {
+		t.Fatalf("SwapLoadout returned error: %v", err)
+	}
+	if domain.calls != 2 {
+		t.Fatalf("expected domain to be called twice, got %d", domain.calls)
+	}
+	if len(domain.commands) != 2 {
+		t.Fatalf("expected 2 domain commands, got %d", len(domain.commands))
+	}
+	if domain.commands[0].Type != command.Type("action.loadout.swap") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "action.loadout.swap")
+	}
+	if domain.commands[1].Type != command.Type("action.stress.spend") {
+		t.Fatalf("command type = %s, want %s", domain.commands[1].Type, "action.stress.spend")
+	}
+	if domain.commands[1].SystemID != daggerheart.SystemID {
+		t.Fatalf("command system id = %s, want %s", domain.commands[1].SystemID, daggerheart.SystemID)
+	}
+	if domain.commands[1].SystemVersion != daggerheart.SystemVersion {
+		t.Fatalf("command system version = %s, want %s", domain.commands[1].SystemVersion, daggerheart.SystemVersion)
+	}
+	var got struct {
+		CharacterID string `json:"character_id"`
+		Amount      int    `json:"amount"`
+		Before      int    `json:"before"`
+		After       int    `json:"after"`
+		Source      string `json:"source"`
+	}
+	if err := json.Unmarshal(domain.commands[1].PayloadJSON, &got); err != nil {
+		t.Fatalf("decode stress spend command payload: %v", err)
+	}
+	if got.CharacterID != "char-1" {
+		t.Fatalf("command character id = %s, want %s", got.CharacterID, "char-1")
+	}
+	if got.Amount != 1 {
+		t.Fatalf("command amount = %d, want %d", got.Amount, 1)
+	}
+	if got.Before != stressBefore {
+		t.Fatalf("command before = %d, want %d", got.Before, stressBefore)
+	}
+	if got.After != stressAfter {
+		t.Fatalf("command after = %d, want %d", got.After, stressAfter)
+	}
+	if got.Source != "loadout_swap" {
+		t.Fatalf("command source = %s, want %s", got.Source, "loadout_swap")
+	}
+}
+
 func TestSwapLoadout_InRestSkipsRecallCost(t *testing.T) {
 	svc := newActionTestService()
-	ctx := contextWithSessionID("sess-1")
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	loadoutPayload := struct {
+		CharacterID  string `json:"character_id"`
+		CardID       string `json:"card_id"`
+		From         string `json:"from"`
+		To           string `json:"to"`
+		RecallCost   int    `json:"recall_cost"`
+		StressBefore *int   `json:"stress_before,omitempty"`
+		StressAfter  *int   `json:"stress_after,omitempty"`
+	}{
+		CharacterID:  "char-1",
+		CardID:       "card-1",
+		From:         "vault",
+		To:           "active",
+		RecallCost:   2,
+		StressBefore: optionalInt(3),
+		StressAfter:  optionalInt(3),
+	}
+	loadoutJSON, err := json.Marshal(loadoutPayload)
+	if err != nil {
+		t.Fatalf("encode loadout payload: %v", err)
+	}
+	serviceDomain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.loadout.swap"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.loadout_swapped"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-swap-rest",
+				EntityType:    "character",
+				EntityID:      "char-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   loadoutJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = serviceDomain
+	ctx := grpcmeta.WithRequestID(contextWithSessionID("sess-1"), "req-swap-rest")
 	resp, err := svc.SwapLoadout(ctx, &pb.DaggerheartSwapLoadoutRequest{
 		CampaignId:  "camp-1",
 		CharacterId: "char-1",
@@ -635,6 +1312,7 @@ func TestApplyDeathMove_MissingSeedFunc(t *testing.T) {
 
 func TestApplyDeathMove_MissingCampaignId(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	ctx := contextWithSessionID("sess-1")
 	_, err := svc.ApplyDeathMove(ctx, &pb.DaggerheartApplyDeathMoveRequest{
 		CharacterId: "ch1",
@@ -644,6 +1322,7 @@ func TestApplyDeathMove_MissingCampaignId(t *testing.T) {
 
 func TestApplyDeathMove_MissingSessionId(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	_, err := svc.ApplyDeathMove(context.Background(), &pb.DaggerheartApplyDeathMoveRequest{
 		CampaignId: "camp-1", CharacterId: "char-1",
 	})
@@ -652,6 +1331,7 @@ func TestApplyDeathMove_MissingSessionId(t *testing.T) {
 
 func TestApplyDeathMove_UnspecifiedMove(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	ctx := contextWithSessionID("sess-1")
 	_, err := svc.ApplyDeathMove(ctx, &pb.DaggerheartApplyDeathMoveRequest{
 		CampaignId:  "camp-1",
@@ -661,8 +1341,30 @@ func TestApplyDeathMove_UnspecifiedMove(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
+func TestApplyDeathMove_RequiresDomainEngine(t *testing.T) {
+	svc := newActionTestService()
+	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
+	dhStore.states["camp-1:char-1"] = storage.DaggerheartCharacterState{
+		CampaignID:  "camp-1",
+		CharacterID: "char-1",
+		Hp:          0,
+		Hope:        2,
+		HopeMax:     daggerheart.HopeMax,
+		Stress:      1,
+		LifeState:   daggerheart.LifeStateAlive,
+	}
+	ctx := contextWithSessionID("sess-1")
+	_, err := svc.ApplyDeathMove(ctx, &pb.DaggerheartApplyDeathMoveRequest{
+		CampaignId:  "camp-1",
+		CharacterId: "char-1",
+		Move:        pb.DaggerheartDeathMove_DAGGERHEART_DEATH_MOVE_AVOID_DEATH,
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
 func TestApplyDeathMove_HpClearOnNonRiskItAll(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	ctx := contextWithSessionID("sess-1")
 	hpClear := int32(1)
 	_, err := svc.ApplyDeathMove(ctx, &pb.DaggerheartApplyDeathMoveRequest{
@@ -676,6 +1378,7 @@ func TestApplyDeathMove_HpClearOnNonRiskItAll(t *testing.T) {
 
 func TestApplyDeathMove_HpNotZero(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	ctx := contextWithSessionID("sess-1")
 	_, err := svc.ApplyDeathMove(ctx, &pb.DaggerheartApplyDeathMoveRequest{
 		CampaignId:  "camp-1",
@@ -687,6 +1390,7 @@ func TestApplyDeathMove_HpNotZero(t *testing.T) {
 
 func TestApplyDeathMove_AlreadyDead(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	// Set up state with hp=0 and life_state=dead
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
 	dhStore.states["camp-1:char-1"] = storage.DaggerheartCharacterState{
@@ -716,7 +1420,81 @@ func TestApplyDeathMove_AvoidDeath_Success(t *testing.T) {
 		Stress:      1,
 		LifeState:   daggerheart.LifeStateAlive,
 	}
-	ctx := contextWithSessionID("sess-1")
+	profile := dhStore.profiles["camp-1:char-1"]
+	move, err := daggerheartDeathMoveFromProto(pb.DaggerheartDeathMove_DAGGERHEART_DEATH_MOVE_AVOID_DEATH)
+	if err != nil {
+		t.Fatalf("map death move: %v", err)
+	}
+	hpMax := profile.HpMax
+	if hpMax == 0 {
+		hpMax = daggerheart.PCHpMax
+	}
+	stressMax := profile.StressMax
+	if stressMax < 0 {
+		stressMax = 0
+	}
+	hopeMax := daggerheart.HopeMax
+	level := profile.Level
+	if level == 0 {
+		level = daggerheart.PCLevelDefault
+	}
+	result, err := daggerheart.ResolveDeathMove(daggerheart.DeathMoveInput{
+		Move:      move,
+		Level:     level,
+		HP:        0,
+		HPMax:     hpMax,
+		Hope:      2,
+		HopeMax:   hopeMax,
+		Stress:    1,
+		StressMax: stressMax,
+		Seed:      42,
+	})
+	if err != nil {
+		t.Fatalf("resolve death move: %v", err)
+	}
+	lifeStateBefore := daggerheart.LifeStateAlive
+	payload := daggerheart.DeathMoveResolvedPayload{
+		CharacterID:     "char-1",
+		Move:            move,
+		LifeStateBefore: &lifeStateBefore,
+		LifeStateAfter:  result.LifeState,
+		HpBefore:        &result.HPBefore,
+		HpAfter:         &result.HPAfter,
+		HopeBefore:      &result.HopeBefore,
+		HopeAfter:       &result.HopeAfter,
+		HopeMaxBefore:   &result.HopeMaxBefore,
+		HopeMaxAfter:    &result.HopeMaxAfter,
+		StressBefore:    &result.StressBefore,
+		StressAfter:     &result.StressAfter,
+		HopeDie:         result.HopeDie,
+		FearDie:         result.FearDie,
+		ScarGained:      result.ScarGained,
+		HPCleared:       result.HPCleared,
+		StressCleared:   result.StressCleared,
+	}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("encode death move payload: %v", err)
+	}
+	serviceDomain := &fakeDomainEngine{store: svc.stores.Event, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.death_move.resolve"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.death_move_resolved"),
+				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-death-success",
+				EntityType:    "character",
+				EntityID:      "char-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   payloadJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = serviceDomain
+	ctx := grpcmeta.WithRequestID(contextWithSessionID("sess-1"), "req-death-success")
 	resp, err := svc.ApplyDeathMove(ctx, &pb.DaggerheartApplyDeathMoveRequest{
 		CampaignId:  "camp-1",
 		CharacterId: "char-1",
@@ -730,6 +1508,150 @@ func TestApplyDeathMove_AvoidDeath_Success(t *testing.T) {
 	}
 	if resp.Result == nil {
 		t.Fatal("expected result in response")
+	}
+}
+
+func TestApplyDeathMove_UsesDomainEngine(t *testing.T) {
+	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+
+	state := storage.DaggerheartCharacterState{
+		CampaignID:  "camp-1",
+		CharacterID: "char-1",
+		Hp:          0,
+		Hope:        2,
+		HopeMax:     daggerheart.HopeMax,
+		Stress:      1,
+		LifeState:   daggerheart.LifeStateAlive,
+	}
+	dhStore.states["camp-1:char-1"] = state
+	profile := dhStore.profiles["camp-1:char-1"]
+	move, err := daggerheartDeathMoveFromProto(pb.DaggerheartDeathMove_DAGGERHEART_DEATH_MOVE_AVOID_DEATH)
+	if err != nil {
+		t.Fatalf("map death move: %v", err)
+	}
+
+	hpMax := profile.HpMax
+	if hpMax == 0 {
+		hpMax = daggerheart.PCHpMax
+	}
+	stressMax := profile.StressMax
+	if stressMax < 0 {
+		stressMax = 0
+	}
+	hopeMax := state.HopeMax
+	if hopeMax == 0 {
+		hopeMax = daggerheart.HopeMax
+	}
+	level := profile.Level
+	if level == 0 {
+		level = daggerheart.PCLevelDefault
+	}
+
+	result, err := daggerheart.ResolveDeathMove(daggerheart.DeathMoveInput{
+		Move:      move,
+		Level:     level,
+		HP:        state.Hp,
+		HPMax:     hpMax,
+		Hope:      state.Hope,
+		HopeMax:   hopeMax,
+		Stress:    state.Stress,
+		StressMax: stressMax,
+		Seed:      42,
+	})
+	if err != nil {
+		t.Fatalf("resolve death move: %v", err)
+	}
+
+	lifeStateBefore := state.LifeState
+	if lifeStateBefore == "" {
+		lifeStateBefore = daggerheart.LifeStateAlive
+	}
+	payload := daggerheart.DeathMoveResolvedPayload{
+		CharacterID:     "char-1",
+		Move:            move,
+		LifeStateBefore: &lifeStateBefore,
+		LifeStateAfter:  result.LifeState,
+		HpBefore:        &result.HPBefore,
+		HpAfter:         &result.HPAfter,
+		HopeBefore:      &result.HopeBefore,
+		HopeAfter:       &result.HopeAfter,
+		HopeMaxBefore:   &result.HopeMaxBefore,
+		HopeMaxAfter:    &result.HopeMaxAfter,
+		StressBefore:    &result.StressBefore,
+		StressAfter:     &result.StressAfter,
+		HopeDie:         result.HopeDie,
+		FearDie:         result.FearDie,
+		ScarGained:      result.ScarGained,
+		HPCleared:       result.HPCleared,
+		StressCleared:   result.StressCleared,
+	}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("encode death move payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.death_move.resolve"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.death_move_resolved"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-death-move",
+				EntityType:    "character",
+				EntityID:      "char-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   payloadJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = domain
+
+	ctx := grpcmeta.WithRequestID(contextWithSessionID("sess-1"), "req-death-move")
+	_, err = svc.ApplyDeathMove(ctx, &pb.DaggerheartApplyDeathMoveRequest{
+		CampaignId:  "camp-1",
+		CharacterId: "char-1",
+		Move:        pb.DaggerheartDeathMove_DAGGERHEART_DEATH_MOVE_AVOID_DEATH,
+	})
+	if err != nil {
+		t.Fatalf("ApplyDeathMove returned error: %v", err)
+	}
+	if domain.calls != 1 {
+		t.Fatalf("expected domain to be called once, got %d", domain.calls)
+	}
+	if len(domain.commands) != 1 {
+		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
+	}
+	if domain.commands[0].Type != command.Type("action.death_move.resolve") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "action.death_move.resolve")
+	}
+	if domain.commands[0].SystemID != daggerheart.SystemID {
+		t.Fatalf("command system id = %s, want %s", domain.commands[0].SystemID, daggerheart.SystemID)
+	}
+	if domain.commands[0].SystemVersion != daggerheart.SystemVersion {
+		t.Fatalf("command system version = %s, want %s", domain.commands[0].SystemVersion, daggerheart.SystemVersion)
+	}
+	var got struct {
+		CharacterID    string `json:"character_id"`
+		Move           string `json:"move"`
+		LifeStateAfter string `json:"life_state_after"`
+	}
+	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &got); err != nil {
+		t.Fatalf("decode death move command payload: %v", err)
+	}
+	if got.CharacterID != "char-1" {
+		t.Fatalf("command character id = %s, want %s", got.CharacterID, "char-1")
+	}
+	if got.Move != move {
+		t.Fatalf("command move = %s, want %s", got.Move, move)
+	}
+	if got.LifeStateAfter == "" {
+		t.Fatal("expected life_state_after in command payload")
 	}
 }
 
@@ -758,6 +1680,30 @@ func TestResolveBlazeOfGlory_MissingSessionId(t *testing.T) {
 		CampaignId: "camp-1", CharacterId: "char-1",
 	})
 	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestResolveBlazeOfGlory_RequiresDomainEngine(t *testing.T) {
+	svc := newActionTestService()
+	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
+	dhStore.states["camp-1:char-1"] = storage.DaggerheartCharacterState{
+		CampaignID:  "camp-1",
+		CharacterID: "char-1",
+		Hp:          0,
+		LifeState:   daggerheart.LifeStateBlazeOfGlory,
+	}
+	charStore := svc.stores.Character.(*fakeCharacterStore)
+	charStore.characters["camp-1:char-1"] = storage.CharacterRecord{
+		ID:         "char-1",
+		CampaignID: "camp-1",
+		Name:       "Hero",
+		Kind:       character.KindPC,
+	}
+	ctx := contextWithSessionID("sess-1")
+	_, err := svc.ResolveBlazeOfGlory(ctx, &pb.DaggerheartResolveBlazeOfGloryRequest{
+		CampaignId:  "camp-1",
+		CharacterId: "char-1",
+	})
+	assertStatusCode(t, err, codes.Internal)
 }
 
 func TestResolveBlazeOfGlory_CharacterAlreadyDead(t *testing.T) {
@@ -794,14 +1740,40 @@ func TestResolveBlazeOfGlory_Success(t *testing.T) {
 		LifeState:   daggerheart.LifeStateBlazeOfGlory,
 	}
 	charStore := svc.stores.Character.(*fakeCharacterStore)
-	charStore.characters["camp-1:char-1"] = character.Character{
+	charStore.characters["camp-1:char-1"] = storage.CharacterRecord{
 		ID:         "char-1",
 		CampaignID: "camp-1",
 		Name:       "Hero",
-		Kind:       character.CharacterKindPC,
+		Kind:       character.KindPC,
 	}
-
-	ctx := contextWithSessionID("sess-1")
+	payload := daggerheart.BlazeOfGloryResolvedPayload{
+		CharacterID:    "char-1",
+		LifeStateAfter: daggerheart.LifeStateDead,
+	}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("encode blaze of glory payload: %v", err)
+	}
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	serviceDomain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.blaze_of_glory.resolve"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.blaze_of_glory_resolved"),
+				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-blaze-success",
+				EntityType:    "character",
+				EntityID:      "char-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   payloadJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = serviceDomain
+	ctx := grpcmeta.WithRequestID(contextWithSessionID("sess-1"), "req-blaze-success")
 	resp, err := svc.ResolveBlazeOfGlory(ctx, &pb.DaggerheartResolveBlazeOfGloryRequest{
 		CampaignId: "camp-1", CharacterId: "char-1",
 	})
@@ -819,6 +1791,77 @@ func TestResolveBlazeOfGlory_Success(t *testing.T) {
 	}
 }
 
+func TestResolveBlazeOfGlory_UsesDomainEngine(t *testing.T) {
+	svc := newActionTestService()
+	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
+	dhStore.states["camp-1:char-1"] = storage.DaggerheartCharacterState{
+		CampaignID:  "camp-1",
+		CharacterID: "char-1",
+		Hp:          0,
+		LifeState:   daggerheart.LifeStateBlazeOfGlory,
+	}
+	charStore := svc.stores.Character.(*fakeCharacterStore)
+	charStore.characters["camp-1:char-1"] = storage.CharacterRecord{
+		ID:         "char-1",
+		CampaignID: "camp-1",
+		Name:       "Hero",
+		Kind:       character.KindPC,
+	}
+
+	payload := daggerheart.BlazeOfGloryResolvedPayload{
+		CharacterID:    "char-1",
+		LifeStateAfter: daggerheart.LifeStateDead,
+	}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("encode blaze of glory payload: %v", err)
+	}
+
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.blaze_of_glory.resolve"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.blaze_of_glory_resolved"),
+				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-blaze",
+				EntityType:    "character",
+				EntityID:      "char-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   payloadJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = domain
+
+	ctx := grpcmeta.WithRequestID(contextWithSessionID("sess-1"), "req-blaze")
+	_, err = svc.ResolveBlazeOfGlory(ctx, &pb.DaggerheartResolveBlazeOfGloryRequest{
+		CampaignId:  "camp-1",
+		CharacterId: "char-1",
+	})
+	if err != nil {
+		t.Fatalf("ResolveBlazeOfGlory returned error: %v", err)
+	}
+	if domain.calls != 1 {
+		t.Fatalf("expected domain to be called once, got %d", domain.calls)
+	}
+	if domain.lastCommand.Type != command.Type("action.blaze_of_glory.resolve") {
+		t.Fatalf("command type = %s, want %s", domain.lastCommand.Type, "action.blaze_of_glory.resolve")
+	}
+	if got := len(eventStore.events["camp-1"]); got != 2 {
+		t.Fatalf("expected 2 events, got %d", got)
+	}
+	if eventStore.events["camp-1"][0].Type != event.Type("action.blaze_of_glory_resolved") {
+		t.Fatalf("event[0] type = %s, want %s", eventStore.events["camp-1"][0].Type, event.Type("action.blaze_of_glory_resolved"))
+	}
+	if eventStore.events["camp-1"][1].Type != event.Type("character.deleted") {
+		t.Fatalf("event[1] type = %s, want %s", eventStore.events["camp-1"][1].Type, event.Type("character.deleted"))
+	}
+}
+
 // --- ApplyDamage tests ---
 
 func TestApplyDamage_MissingStores(t *testing.T) {
@@ -829,8 +1872,23 @@ func TestApplyDamage_MissingStores(t *testing.T) {
 	assertStatusCode(t, err, codes.Internal)
 }
 
+func TestApplyDamage_RequiresDomainEngine(t *testing.T) {
+	svc := newActionTestService()
+	ctx := contextWithSessionID("sess-1")
+	_, err := svc.ApplyDamage(ctx, &pb.DaggerheartApplyDamageRequest{
+		CampaignId:  "camp-1",
+		CharacterId: "char-1",
+		Damage: &pb.DaggerheartDamageRequest{
+			Amount:     3,
+			DamageType: pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_PHYSICAL,
+		},
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
 func TestApplyDamage_MissingCampaignId(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	ctx := contextWithSessionID("sess-1")
 	_, err := svc.ApplyDamage(ctx, &pb.DaggerheartApplyDamageRequest{CharacterId: "ch1"})
 	assertStatusCode(t, err, codes.InvalidArgument)
@@ -838,6 +1896,7 @@ func TestApplyDamage_MissingCampaignId(t *testing.T) {
 
 func TestApplyDamage_MissingCharacterId(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	ctx := contextWithSessionID("sess-1")
 	_, err := svc.ApplyDamage(ctx, &pb.DaggerheartApplyDamageRequest{CampaignId: "camp-1"})
 	assertStatusCode(t, err, codes.InvalidArgument)
@@ -845,6 +1904,7 @@ func TestApplyDamage_MissingCharacterId(t *testing.T) {
 
 func TestApplyDamage_MissingSessionId(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	_, err := svc.ApplyDamage(context.Background(), &pb.DaggerheartApplyDamageRequest{
 		CampaignId: "camp-1", CharacterId: "char-1",
 	})
@@ -853,6 +1913,7 @@ func TestApplyDamage_MissingSessionId(t *testing.T) {
 
 func TestApplyDamage_MissingDamage(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	ctx := contextWithSessionID("sess-1")
 	_, err := svc.ApplyDamage(ctx, &pb.DaggerheartApplyDamageRequest{
 		CampaignId: "camp-1", CharacterId: "char-1",
@@ -862,6 +1923,7 @@ func TestApplyDamage_MissingDamage(t *testing.T) {
 
 func TestApplyDamage_NegativeAmount(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	ctx := contextWithSessionID("sess-1")
 	_, err := svc.ApplyDamage(ctx, &pb.DaggerheartApplyDamageRequest{
 		CampaignId:  "camp-1",
@@ -876,6 +1938,7 @@ func TestApplyDamage_NegativeAmount(t *testing.T) {
 
 func TestApplyDamage_UnspecifiedType(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	ctx := contextWithSessionID("sess-1")
 	_, err := svc.ApplyDamage(ctx, &pb.DaggerheartApplyDamageRequest{
 		CampaignId:  "camp-1",
@@ -890,14 +1953,74 @@ func TestApplyDamage_UnspecifiedType(t *testing.T) {
 
 func TestApplyDamage_Success(t *testing.T) {
 	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+
+	profile := dhStore.profiles["camp-1:char-1"]
+	state := dhStore.states["camp-1:char-1"]
+	damage := &pb.DaggerheartDamageRequest{
+		Amount:     3,
+		DamageType: pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_PHYSICAL,
+	}
+	result, mitigated, err := applyDaggerheartDamage(damage, profile, state)
+	if err != nil {
+		t.Fatalf("apply daggerheart damage: %v", err)
+	}
+
+	hpBefore := result.HPBefore
+	hpAfter := result.HPAfter
+	armorBefore := result.ArmorBefore
+	armorAfter := result.ArmorAfter
+	sourceCharacterIDs := normalizeTargets(damage.GetSourceCharacterIds())
+	payload := daggerheart.DamageAppliedPayload{
+		CharacterID:        "char-1",
+		HpBefore:           &hpBefore,
+		HpAfter:            &hpAfter,
+		ArmorBefore:        &armorBefore,
+		ArmorAfter:         &armorAfter,
+		ArmorSpent:         result.ArmorSpent,
+		Severity:           daggerheartSeverityToString(result.Result.Severity),
+		Marks:              result.Result.Marks,
+		DamageType:         daggerheartDamageTypeToString(damage.DamageType),
+		RollSeq:            nil,
+		ResistPhysical:     damage.ResistPhysical,
+		ResistMagic:        damage.ResistMagic,
+		ImmunePhysical:     damage.ImmunePhysical,
+		ImmuneMagic:        damage.ImmuneMagic,
+		Direct:             damage.Direct,
+		MassiveDamage:      damage.MassiveDamage,
+		Mitigated:          mitigated,
+		Source:             damage.Source,
+		SourceCharacterIDs: sourceCharacterIDs,
+	}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("encode damage payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.damage.apply"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.damage_applied"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				EntityType:    "character",
+				EntityID:      "char-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   payloadJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = domain
 	ctx := contextWithSessionID("sess-1")
 	resp, err := svc.ApplyDamage(ctx, &pb.DaggerheartApplyDamageRequest{
 		CampaignId:  "camp-1",
 		CharacterId: "char-1",
-		Damage: &pb.DaggerheartDamageRequest{
-			Amount:     3,
-			DamageType: pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_PHYSICAL,
-		},
+		Damage:      damage,
 	})
 	if err != nil {
 		t.Fatalf("ApplyDamage returned error: %v", err)
@@ -913,9 +2036,121 @@ func TestApplyDamage_Success(t *testing.T) {
 	}
 }
 
+func TestApplyDamage_UsesDomainEngine(t *testing.T) {
+	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+
+	profile := dhStore.profiles["camp-1:char-1"]
+	state := dhStore.states["camp-1:char-1"]
+	damage := &pb.DaggerheartDamageRequest{
+		Amount:     3,
+		DamageType: pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_PHYSICAL,
+	}
+	result, mitigated, err := applyDaggerheartDamage(damage, profile, state)
+	if err != nil {
+		t.Fatalf("apply daggerheart damage: %v", err)
+	}
+
+	hpBefore := result.HPBefore
+	hpAfter := result.HPAfter
+	armorBefore := result.ArmorBefore
+	armorAfter := result.ArmorAfter
+	sourceCharacterIDs := normalizeTargets(damage.GetSourceCharacterIds())
+	payload := daggerheart.DamageAppliedPayload{
+		CharacterID:        "char-1",
+		HpBefore:           &hpBefore,
+		HpAfter:            &hpAfter,
+		ArmorBefore:        &armorBefore,
+		ArmorAfter:         &armorAfter,
+		ArmorSpent:         result.ArmorSpent,
+		Severity:           daggerheartSeverityToString(result.Result.Severity),
+		Marks:              result.Result.Marks,
+		DamageType:         daggerheartDamageTypeToString(damage.DamageType),
+		RollSeq:            nil,
+		ResistPhysical:     damage.ResistPhysical,
+		ResistMagic:        damage.ResistMagic,
+		ImmunePhysical:     damage.ImmunePhysical,
+		ImmuneMagic:        damage.ImmuneMagic,
+		Direct:             damage.Direct,
+		MassiveDamage:      damage.MassiveDamage,
+		Mitigated:          mitigated,
+		Source:             damage.Source,
+		SourceCharacterIDs: sourceCharacterIDs,
+	}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("encode damage payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.damage.apply"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.damage_applied"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-apply-damage",
+				EntityType:    "character",
+				EntityID:      "char-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   payloadJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = domain
+
+	ctx := grpcmeta.WithRequestID(contextWithSessionID("sess-1"), "req-apply-damage")
+	_, err = svc.ApplyDamage(ctx, &pb.DaggerheartApplyDamageRequest{
+		CampaignId:  "camp-1",
+		CharacterId: "char-1",
+		Damage:      damage,
+	})
+	if err != nil {
+		t.Fatalf("ApplyDamage returned error: %v", err)
+	}
+	if domain.calls != 1 {
+		t.Fatalf("expected domain to be called once, got %d", domain.calls)
+	}
+	if len(domain.commands) != 1 {
+		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
+	}
+	if domain.commands[0].Type != command.Type("action.damage.apply") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "action.damage.apply")
+	}
+	if domain.commands[0].SystemID != daggerheart.SystemID {
+		t.Fatalf("command system id = %s, want %s", domain.commands[0].SystemID, daggerheart.SystemID)
+	}
+	if domain.commands[0].SystemVersion != daggerheart.SystemVersion {
+		t.Fatalf("command system version = %s, want %s", domain.commands[0].SystemVersion, daggerheart.SystemVersion)
+	}
+	var got struct {
+		CharacterID string `json:"character_id"`
+		DamageType  string `json:"damage_type"`
+		HpAfter     *int   `json:"hp_after"`
+	}
+	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &got); err != nil {
+		t.Fatalf("decode damage command payload: %v", err)
+	}
+	if got.CharacterID != "char-1" {
+		t.Fatalf("command character id = %s, want %s", got.CharacterID, "char-1")
+	}
+	if got.DamageType != "physical" {
+		t.Fatalf("command damage type = %s, want %s", got.DamageType, "physical")
+	}
+	if got.HpAfter == nil || *got.HpAfter != hpAfter {
+		t.Fatalf("command hp after = %v, want %d", got.HpAfter, hpAfter)
+	}
+}
+
 func TestApplyDamage_WithArmorMitigation(t *testing.T) {
 	svc := newActionTestService()
 	ctx := contextWithSessionID("sess-1")
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
 	profile := dhStore.profiles["camp-1:char-1"]
@@ -929,44 +2164,99 @@ func TestApplyDamage_WithArmorMitigation(t *testing.T) {
 	state.Armor = 1
 	dhStore.states["camp-1:char-1"] = state
 
-	_, err := svc.ApplyDamage(ctx, &pb.DaggerheartApplyDamageRequest{
+	damage := &pb.DaggerheartDamageRequest{
+		Amount:     4,
+		DamageType: pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_PHYSICAL,
+	}
+	result, mitigated, err := applyDaggerheartDamage(damage, profile, state)
+	if err != nil {
+		t.Fatalf("apply daggerheart damage: %v", err)
+	}
+
+	hpBefore := result.HPBefore
+	hpAfter := result.HPAfter
+	armorBefore := result.ArmorBefore
+	armorAfter := result.ArmorAfter
+	sourceCharacterIDs := normalizeTargets(damage.GetSourceCharacterIds())
+	payload := daggerheart.DamageAppliedPayload{
+		CharacterID:        "char-1",
+		HpBefore:           &hpBefore,
+		HpAfter:            &hpAfter,
+		ArmorBefore:        &armorBefore,
+		ArmorAfter:         &armorAfter,
+		ArmorSpent:         result.ArmorSpent,
+		Severity:           daggerheartSeverityToString(result.Result.Severity),
+		Marks:              result.Result.Marks,
+		DamageType:         daggerheartDamageTypeToString(damage.DamageType),
+		RollSeq:            nil,
+		ResistPhysical:     damage.ResistPhysical,
+		ResistMagic:        damage.ResistMagic,
+		ImmunePhysical:     damage.ImmunePhysical,
+		ImmuneMagic:        damage.ImmuneMagic,
+		Direct:             damage.Direct,
+		MassiveDamage:      damage.MassiveDamage,
+		Mitigated:          mitigated,
+		Source:             damage.Source,
+		SourceCharacterIDs: sourceCharacterIDs,
+	}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("encode damage payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.damage.apply"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.damage_applied"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				EntityType:    "character",
+				EntityID:      "char-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   payloadJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = domain
+
+	_, err = svc.ApplyDamage(ctx, &pb.DaggerheartApplyDamageRequest{
 		CampaignId:  "camp-1",
 		CharacterId: "char-1",
-		Damage: &pb.DaggerheartDamageRequest{
-			Amount:     4,
-			DamageType: pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_PHYSICAL,
-		},
+		Damage:      damage,
 	})
 	if err != nil {
 		t.Fatalf("ApplyDamage returned error: %v", err)
 	}
 
-	eventStore := svc.stores.Event.(*fakeEventStore)
 	events := eventStore.events["camp-1"]
 	if len(events) == 0 {
 		t.Fatal("expected damage event")
 	}
 	last := events[len(events)-1]
-	if last.Type != daggerheart.EventTypeDamageApplied {
-		t.Fatalf("last event type = %s, want %s", last.Type, daggerheart.EventTypeDamageApplied)
+	if last.Type != event.Type("action.damage_applied") {
+		t.Fatalf("last event type = %s, want %s", last.Type, event.Type("action.damage_applied"))
 	}
-	var payload daggerheart.DamageAppliedPayload
-	if err := json.Unmarshal(last.PayloadJSON, &payload); err != nil {
+	var parsedPayload daggerheart.DamageAppliedPayload
+	if err := json.Unmarshal(last.PayloadJSON, &parsedPayload); err != nil {
 		t.Fatalf("decode damage payload: %v", err)
 	}
-	if payload.ArmorSpent != 1 {
-		t.Fatalf("armor_spent = %d, want 1", payload.ArmorSpent)
+	if parsedPayload.ArmorSpent != 1 {
+		t.Fatalf("armor_spent = %d, want 1", parsedPayload.ArmorSpent)
 	}
-	if payload.Marks != 1 {
-		t.Fatalf("marks = %d, want 1", payload.Marks)
+	if parsedPayload.Marks != 1 {
+		t.Fatalf("marks = %d, want 1", parsedPayload.Marks)
 	}
-	if payload.Severity != "minor" {
-		t.Fatalf("severity = %s, want minor", payload.Severity)
+	if parsedPayload.Severity != "minor" {
+		t.Fatalf("severity = %s, want minor", parsedPayload.Severity)
 	}
 }
 
 func TestApplyDamage_RequireDamageRollWithoutSeq(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	ctx := contextWithSessionID("sess-1")
 	_, err := svc.ApplyDamage(ctx, &pb.DaggerheartApplyDamageRequest{
 		CampaignId:  "camp-1",
@@ -982,7 +2272,37 @@ func TestApplyDamage_RequireDamageRollWithoutSeq(t *testing.T) {
 
 func TestApplyConditions_LifeStateOnly(t *testing.T) {
 	svc := newActionTestService()
-	ctx := contextWithSessionID("sess-1")
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	before := daggerheart.LifeStateAlive
+	after := daggerheart.LifeStateUnconscious
+	patchPayload := daggerheart.CharacterStatePatchedPayload{
+		CharacterID:     "char-1",
+		LifeStateBefore: &before,
+		LifeStateAfter:  &after,
+	}
+	patchJSON, err := json.Marshal(patchPayload)
+	if err != nil {
+		t.Fatalf("encode patch payload: %v", err)
+	}
+	serviceDomain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.character_state.patch"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.character_state_patched"),
+				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-conditions-life",
+				EntityType:    "character",
+				EntityID:      "char-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   patchJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = serviceDomain
+	ctx := grpcmeta.WithRequestID(contextWithSessionID("sess-1"), "req-conditions-life")
 	resp, err := svc.ApplyConditions(ctx, &pb.DaggerheartApplyConditionsRequest{
 		CampaignId:  "camp-1",
 		CharacterId: "char-1",
@@ -998,14 +2318,13 @@ func TestApplyConditions_LifeStateOnly(t *testing.T) {
 		t.Fatalf("life_state = %v, want UNCONSCIOUS", resp.State.LifeState)
 	}
 
-	eventStore := svc.stores.Event.(*fakeEventStore)
 	events := eventStore.events["camp-1"]
 	if len(events) == 0 {
 		t.Fatal("expected events")
 	}
 	last := events[len(events)-1]
-	if last.Type != daggerheart.EventTypeCharacterStatePatched {
-		t.Fatalf("last event type = %s, want %s", last.Type, daggerheart.EventTypeCharacterStatePatched)
+	if last.Type != event.Type("action.character_state_patched") {
+		t.Fatalf("last event type = %s, want %s", last.Type, event.Type("action.character_state_patched"))
 	}
 }
 
@@ -1052,6 +2371,183 @@ func TestApplyConditions_NoConditionChanges(t *testing.T) {
 	assertStatusCode(t, err, codes.FailedPrecondition)
 }
 
+func TestApplyConditions_RequiresDomainEngine(t *testing.T) {
+	svc := newActionTestService()
+	ctx := contextWithSessionID("sess-1")
+	_, err := svc.ApplyConditions(ctx, &pb.DaggerheartApplyConditionsRequest{
+		CampaignId:  "camp-1",
+		CharacterId: "char-1",
+		Add:         []pb.DaggerheartCondition{pb.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN},
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestApplyConditions_UsesDomainEngine(t *testing.T) {
+	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+
+	conditionPayload := daggerheart.ConditionChangedPayload{
+		CharacterID:      "char-1",
+		ConditionsBefore: []string{},
+		ConditionsAfter:  []string{daggerheart.ConditionHidden},
+		Added:            []string{daggerheart.ConditionHidden},
+	}
+	conditionJSON, err := json.Marshal(conditionPayload)
+	if err != nil {
+		t.Fatalf("encode condition payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.condition.change"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.condition_changed"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-apply-conditions",
+				EntityType:    "character",
+				EntityID:      "char-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   conditionJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = domain
+
+	ctx := grpcmeta.WithRequestID(contextWithSessionID("sess-1"), "req-apply-conditions")
+	_, err = svc.ApplyConditions(ctx, &pb.DaggerheartApplyConditionsRequest{
+		CampaignId:  "camp-1",
+		CharacterId: "char-1",
+		Add:         []pb.DaggerheartCondition{pb.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN},
+	})
+	if err != nil {
+		t.Fatalf("ApplyConditions returned error: %v", err)
+	}
+	if domain.calls != 1 {
+		t.Fatalf("expected domain to be called once, got %d", domain.calls)
+	}
+	if len(domain.commands) != 1 {
+		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
+	}
+	if domain.commands[0].Type != command.Type("action.condition.change") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "action.condition.change")
+	}
+	if domain.commands[0].SystemID != daggerheart.SystemID {
+		t.Fatalf("command system id = %s, want %s", domain.commands[0].SystemID, daggerheart.SystemID)
+	}
+	if domain.commands[0].SystemVersion != daggerheart.SystemVersion {
+		t.Fatalf("command system version = %s, want %s", domain.commands[0].SystemVersion, daggerheart.SystemVersion)
+	}
+	var got daggerheart.ConditionChangePayload
+	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &got); err != nil {
+		t.Fatalf("decode condition command payload: %v", err)
+	}
+	if got.CharacterID != "char-1" {
+		t.Fatalf("command character id = %s, want %s", got.CharacterID, "char-1")
+	}
+	if len(got.ConditionsAfter) != 1 || got.ConditionsAfter[0] != daggerheart.ConditionHidden {
+		t.Fatalf("command conditions_after = %v, want %s", got.ConditionsAfter, daggerheart.ConditionHidden)
+	}
+	var foundConditionEvent bool
+	for _, evt := range eventStore.events["camp-1"] {
+		if evt.Type == event.Type("action.condition_changed") {
+			foundConditionEvent = true
+			break
+		}
+	}
+	if !foundConditionEvent {
+		t.Fatal("expected condition changed event")
+	}
+}
+
+func TestApplyConditions_UsesDomainEngineForLifeState(t *testing.T) {
+	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+
+	before := daggerheart.LifeStateAlive
+	after := daggerheart.LifeStateUnconscious
+	patchPayload := daggerheart.CharacterStatePatchedPayload{
+		CharacterID:     "char-1",
+		LifeStateBefore: &before,
+		LifeStateAfter:  &after,
+	}
+	patchJSON, err := json.Marshal(patchPayload)
+	if err != nil {
+		t.Fatalf("encode patch payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.character_state.patch"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.character_state_patched"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-apply-conditions",
+				EntityType:    "character",
+				EntityID:      "char-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   patchJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = domain
+
+	ctx := grpcmeta.WithRequestID(contextWithSessionID("sess-1"), "req-apply-conditions")
+	_, err = svc.ApplyConditions(ctx, &pb.DaggerheartApplyConditionsRequest{
+		CampaignId:  "camp-1",
+		CharacterId: "char-1",
+		LifeState:   pb.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_UNCONSCIOUS,
+	})
+	if err != nil {
+		t.Fatalf("ApplyConditions returned error: %v", err)
+	}
+	if domain.calls != 1 {
+		t.Fatalf("expected domain to be called once, got %d", domain.calls)
+	}
+	if len(domain.commands) != 1 {
+		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
+	}
+	if domain.commands[0].Type != command.Type("action.character_state.patch") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "action.character_state.patch")
+	}
+	if domain.commands[0].SystemID != daggerheart.SystemID {
+		t.Fatalf("command system id = %s, want %s", domain.commands[0].SystemID, daggerheart.SystemID)
+	}
+	if domain.commands[0].SystemVersion != daggerheart.SystemVersion {
+		t.Fatalf("command system version = %s, want %s", domain.commands[0].SystemVersion, daggerheart.SystemVersion)
+	}
+	var got daggerheart.CharacterStatePatchPayload
+	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &got); err != nil {
+		t.Fatalf("decode patch command payload: %v", err)
+	}
+	if got.CharacterID != "char-1" {
+		t.Fatalf("command character id = %s, want %s", got.CharacterID, "char-1")
+	}
+	if got.LifeStateBefore == nil || *got.LifeStateBefore != before {
+		t.Fatalf("command life_state_before = %v, want %s", got.LifeStateBefore, before)
+	}
+	if got.LifeStateAfter == nil || *got.LifeStateAfter != after {
+		t.Fatalf("command life_state_after = %v, want %s", got.LifeStateAfter, after)
+	}
+	var foundStateEvent bool
+	for _, evt := range eventStore.events["camp-1"] {
+		if evt.Type == event.Type("action.character_state_patched") {
+			foundStateEvent = true
+			break
+		}
+	}
+	if !foundStateEvent {
+		t.Fatal("expected character state patched event")
+	}
+}
+
 // --- ApplyRest tests ---
 
 func TestApplyRest_MissingStores(t *testing.T) {
@@ -1062,8 +2558,23 @@ func TestApplyRest_MissingStores(t *testing.T) {
 	assertStatusCode(t, err, codes.Internal)
 }
 
+func TestApplyRest_RequiresDomainEngine(t *testing.T) {
+	svc := newActionTestService()
+	ctx := contextWithSessionID("sess-1")
+	_, err := svc.ApplyRest(ctx, &pb.DaggerheartApplyRestRequest{
+		CampaignId:   "camp-1",
+		CharacterIds: []string{"char-1"},
+		Rest: &pb.DaggerheartRestRequest{
+			RestType:  pb.DaggerheartRestType_DAGGERHEART_REST_TYPE_SHORT,
+			PartySize: 3,
+		},
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
 func TestApplyRest_MissingCampaignId(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	ctx := contextWithSessionID("sess-1")
 	_, err := svc.ApplyRest(ctx, &pb.DaggerheartApplyRestRequest{})
 	assertStatusCode(t, err, codes.InvalidArgument)
@@ -1071,6 +2582,7 @@ func TestApplyRest_MissingCampaignId(t *testing.T) {
 
 func TestApplyRest_MissingSessionId(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	_, err := svc.ApplyRest(context.Background(), &pb.DaggerheartApplyRestRequest{
 		CampaignId: "camp-1",
 	})
@@ -1079,6 +2591,7 @@ func TestApplyRest_MissingSessionId(t *testing.T) {
 
 func TestApplyRest_MissingRest(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	ctx := contextWithSessionID("sess-1")
 	_, err := svc.ApplyRest(ctx, &pb.DaggerheartApplyRestRequest{
 		CampaignId: "camp-1",
@@ -1088,6 +2601,7 @@ func TestApplyRest_MissingRest(t *testing.T) {
 
 func TestApplyRest_UnspecifiedRestType(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	ctx := contextWithSessionID("sess-1")
 	_, err := svc.ApplyRest(ctx, &pb.DaggerheartApplyRestRequest{
 		CampaignId: "camp-1",
@@ -1100,6 +2614,40 @@ func TestApplyRest_UnspecifiedRestType(t *testing.T) {
 
 func TestApplyRest_ShortRest_Success(t *testing.T) {
 	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+
+	payloadJSON, err := json.Marshal(daggerheart.RestTakenPayload{
+		RestType:         "short",
+		Interrupted:      false,
+		GMFearBefore:     0,
+		GMFearAfter:      0,
+		ShortRestsBefore: 0,
+		ShortRestsAfter:  1,
+		RefreshRest:      false,
+		RefreshLongRest:  false,
+	})
+	if err != nil {
+		t.Fatalf("encode rest payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.rest.take"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.rest_taken"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				EntityType:    "session",
+				EntityID:      "camp-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   payloadJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = domain
 	ctx := contextWithSessionID("sess-1")
 	resp, err := svc.ApplyRest(ctx, &pb.DaggerheartApplyRestRequest{
 		CampaignId:   "camp-1",
@@ -1117,8 +2665,114 @@ func TestApplyRest_ShortRest_Success(t *testing.T) {
 	}
 }
 
+func TestApplyRest_UsesDomainEngine(t *testing.T) {
+	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+
+	restPayload := struct {
+		RestType    string `json:"rest_type"`
+		Interrupted bool   `json:"interrupted"`
+	}{
+		RestType:    "short",
+		Interrupted: false,
+	}
+	payloadJSON, err := json.Marshal(restPayload)
+	if err != nil {
+		t.Fatalf("encode rest payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.rest.take"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.rest_taken"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-rest-1",
+				EntityType:    "session",
+				EntityID:      "camp-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   payloadJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = domain
+
+	ctx := grpcmeta.WithRequestID(contextWithSessionID("sess-1"), "req-rest-1")
+	_, err = svc.ApplyRest(ctx, &pb.DaggerheartApplyRestRequest{
+		CampaignId:   "camp-1",
+		CharacterIds: []string{"char-1"},
+		Rest: &pb.DaggerheartRestRequest{
+			RestType:  pb.DaggerheartRestType_DAGGERHEART_REST_TYPE_SHORT,
+			PartySize: 3,
+		},
+	})
+	if err != nil {
+		t.Fatalf("ApplyRest returned error: %v", err)
+	}
+	if domain.calls != 1 {
+		t.Fatalf("expected domain to be called once, got %d", domain.calls)
+	}
+	if len(domain.commands) != 1 {
+		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
+	}
+	if domain.commands[0].Type != command.Type("action.rest.take") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "action.rest.take")
+	}
+	if domain.commands[0].SystemID != daggerheart.SystemID {
+		t.Fatalf("command system id = %s, want %s", domain.commands[0].SystemID, daggerheart.SystemID)
+	}
+	if domain.commands[0].SystemVersion != daggerheart.SystemVersion {
+		t.Fatalf("command system version = %s, want %s", domain.commands[0].SystemVersion, daggerheart.SystemVersion)
+	}
+	var got map[string]any
+	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &got); err != nil {
+		t.Fatalf("decode rest command payload: %v", err)
+	}
+	if got["rest_type"] != "short" {
+		t.Fatalf("command rest_type = %v, want %s", got["rest_type"], "short")
+	}
+}
+
 func TestApplyRest_LongRest_Success(t *testing.T) {
 	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+
+	payloadJSON, err := json.Marshal(daggerheart.RestTakenPayload{
+		RestType:         "long",
+		Interrupted:      false,
+		GMFearBefore:     0,
+		GMFearAfter:      0,
+		ShortRestsBefore: 1,
+		ShortRestsAfter:  0,
+		RefreshRest:      false,
+		RefreshLongRest:  false,
+	})
+	if err != nil {
+		t.Fatalf("encode rest payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.rest.take"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.rest_taken"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				EntityType:    "session",
+				EntityID:      "camp-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   payloadJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = domain
 	ctx := contextWithSessionID("sess-1")
 	resp, err := svc.ApplyRest(ctx, &pb.DaggerheartApplyRestRequest{
 		CampaignId:   "camp-1",
@@ -1178,9 +2832,46 @@ func TestApplyGmMove_NegativeFearSpent(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
+func TestApplyGmMove_RequiresDomainEngine(t *testing.T) {
+	svc := newActionTestService()
+	ctx := context.Background()
+	_, err := svc.ApplyGmMove(ctx, &pb.DaggerheartApplyGmMoveRequest{
+		CampaignId: "camp-1", SessionId: "sess-1", Move: "test_move",
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
 func TestApplyGmMove_Success(t *testing.T) {
 	svc := newActionTestService()
-	resp, err := svc.ApplyGmMove(context.Background(), &pb.DaggerheartApplyGmMoveRequest{
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	movePayload := daggerheart.GMMoveAppliedPayload{
+		Move:     "change_environment",
+		Severity: "soft",
+	}
+	movePayloadJSON, err := json.Marshal(movePayload)
+	if err != nil {
+		t.Fatalf("encode gm move payload: %v", err)
+	}
+	serviceDomain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.gm_move.apply"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.gm_move_applied"),
+				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-gm-move-success",
+				EntityType:    "gm_move",
+				EntityID:      "camp-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   movePayloadJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = serviceDomain
+	ctx := context.Background()
+	resp, err := svc.ApplyGmMove(ctx, &pb.DaggerheartApplyGmMoveRequest{
 		CampaignId: "camp-1", SessionId: "sess-1", Move: "change_environment",
 	})
 	if err != nil {
@@ -1196,7 +2887,56 @@ func TestApplyGmMove_WithFearSpent(t *testing.T) {
 	// Pre-populate GM fear in snapshot
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
 	dhStore.snapshots["camp-1"] = storage.DaggerheartSnapshot{CampaignID: "camp-1", GMFear: 3}
-	resp, err := svc.ApplyGmMove(context.Background(), &pb.DaggerheartApplyGmMoveRequest{
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	gmPayload := daggerheart.GMFearSetPayload{After: optionalInt(2), Reason: "gm_move"}
+	gmPayloadJSON, err := json.Marshal(gmPayload)
+	if err != nil {
+		t.Fatalf("encode gm fear payload: %v", err)
+	}
+	movePayload := daggerheart.GMMoveAppliedPayload{
+		Move:      "change_environment",
+		FearSpent: 1,
+		Severity:  "soft",
+	}
+	movePayloadJSON, err := json.Marshal(movePayload)
+	if err != nil {
+		t.Fatalf("encode gm move payload: %v", err)
+	}
+	serviceDomain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.gm_fear.set"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.gm_fear_changed"),
+				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-gm-move-fear",
+				EntityType:    "campaign",
+				EntityID:      "camp-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   gmPayloadJSON,
+			}),
+		},
+		command.Type("action.gm_move.apply"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.gm_move_applied"),
+				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-gm-move-fear",
+				EntityType:    "gm_move",
+				EntityID:      "camp-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   movePayloadJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = serviceDomain
+	ctx := context.Background()
+	resp, err := svc.ApplyGmMove(ctx, &pb.DaggerheartApplyGmMoveRequest{
 		CampaignId: "camp-1", SessionId: "sess-1", Move: "change_environment", FearSpent: 1,
 	})
 	if err != nil {
@@ -1204,6 +2944,112 @@ func TestApplyGmMove_WithFearSpent(t *testing.T) {
 	}
 	if resp == nil {
 		t.Fatal("expected response")
+	}
+}
+
+func TestApplyGmMove_UsesDomainEngine(t *testing.T) {
+	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
+	dhStore.snapshots["camp-1"] = storage.DaggerheartSnapshot{CampaignID: "camp-1", GMFear: 2}
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+
+	movePayload := daggerheart.GMMoveAppliedPayload{
+		Move:      "change_environment",
+		FearSpent: 1,
+		Severity:  "soft",
+	}
+	movePayloadJSON, err := json.Marshal(movePayload)
+	if err != nil {
+		t.Fatalf("encode gm move payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.gm_fear.set"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.gm_fear_changed"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				EntityType:    "campaign",
+				EntityID:      "camp-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   []byte(`{"before":2,"after":1,"reason":"gm_move"}`),
+			}),
+		},
+		command.Type("action.gm_move.apply"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.gm_move_applied"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-gm-move",
+				EntityType:    "gm_move",
+				EntityID:      "camp-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   movePayloadJSON,
+			}),
+		},
+	}}
+
+	svc.stores.Domain = domain
+
+	_, err = svc.ApplyGmMove(context.Background(), &pb.DaggerheartApplyGmMoveRequest{
+		CampaignId: "camp-1",
+		SessionId:  "sess-1",
+		Move:       "change_environment",
+		FearSpent:  1,
+	})
+	if err != nil {
+		t.Fatalf("ApplyGmMove returned error: %v", err)
+	}
+	if domain.calls != 2 {
+		t.Fatalf("expected domain to be called twice, got %d", domain.calls)
+	}
+	if len(domain.commands) != 2 {
+		t.Fatalf("expected 2 domain commands, got %d", len(domain.commands))
+	}
+	if domain.commands[0].Type != command.Type("action.gm_fear.set") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "action.gm_fear.set")
+	}
+	if domain.commands[1].Type != command.Type("action.gm_move.apply") {
+		t.Fatalf("command type = %s, want %s", domain.commands[1].Type, "action.gm_move.apply")
+	}
+	if domain.commands[1].SystemID != daggerheart.SystemID {
+		t.Fatalf("command system id = %s, want %s", domain.commands[1].SystemID, daggerheart.SystemID)
+	}
+	if domain.commands[1].SystemVersion != daggerheart.SystemVersion {
+		t.Fatalf("command system version = %s, want %s", domain.commands[1].SystemVersion, daggerheart.SystemVersion)
+	}
+	var got struct {
+		Move      string `json:"move"`
+		FearSpent int    `json:"fear_spent"`
+		Severity  string `json:"severity"`
+	}
+	if err := json.Unmarshal(domain.commands[1].PayloadJSON, &got); err != nil {
+		t.Fatalf("decode gm move command payload: %v", err)
+	}
+	if got.Move != "change_environment" {
+		t.Fatalf("command move = %s, want %s", got.Move, "change_environment")
+	}
+	if got.FearSpent != 1 {
+		t.Fatalf("command fear_spent = %d, want %d", got.FearSpent, 1)
+	}
+	if got.Severity != "soft" {
+		t.Fatalf("command severity = %s, want %s", got.Severity, "soft")
+	}
+	if got := len(eventStore.events["camp-1"]); got != 2 {
+		t.Fatalf("expected 2 events, got %d", got)
+	}
+	if eventStore.events["camp-1"][0].Type != event.Type("action.gm_fear_changed") {
+		t.Fatalf("event type = %s, want %s", eventStore.events["camp-1"][0].Type, event.Type("action.gm_fear_changed"))
+	}
+	if eventStore.events["camp-1"][1].Type != event.Type("action.gm_move_applied") {
+		t.Fatalf("event type = %s, want %s", eventStore.events["camp-1"][1].Type, event.Type("action.gm_move_applied"))
 	}
 }
 
@@ -1268,9 +3114,9 @@ func TestCreateCountdown_CurrentOutOfRange(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
-func TestCreateCountdown_Success(t *testing.T) {
+func TestCreateCountdown_RequiresDomainEngine(t *testing.T) {
 	svc := newActionTestService()
-	resp, err := svc.CreateCountdown(context.Background(), &pb.DaggerheartCreateCountdownRequest{
+	_, err := svc.CreateCountdown(context.Background(), &pb.DaggerheartCreateCountdownRequest{
 		CampaignId: "camp-1",
 		SessionId:  "sess-1",
 		Name:       "Test Countdown",
@@ -1278,6 +3124,53 @@ func TestCreateCountdown_Success(t *testing.T) {
 		Direction:  pb.DaggerheartCountdownDirection_DAGGERHEART_COUNTDOWN_DIRECTION_INCREASE,
 		Max:        4,
 		Current:    0,
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestCreateCountdown_Success(t *testing.T) {
+	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	countdownPayload := daggerheart.CountdownCreatedPayload{
+		CountdownID: "cd-1",
+		Name:        "Test Countdown",
+		Kind:        daggerheart.CountdownKindProgress,
+		Current:     0,
+		Max:         4,
+		Direction:   daggerheart.CountdownDirectionIncrease,
+		Looping:     false,
+	}
+	countdownPayloadJSON, err := json.Marshal(countdownPayload)
+	if err != nil {
+		t.Fatalf("encode countdown payload: %v", err)
+	}
+	serviceDomain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.countdown.create"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.countdown_created"),
+				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-countdown-success",
+				EntityType:    "countdown",
+				EntityID:      "cd-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   countdownPayloadJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = serviceDomain
+	resp, err := svc.CreateCountdown(context.Background(), &pb.DaggerheartCreateCountdownRequest{
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		Name:        "Test Countdown",
+		Kind:        pb.DaggerheartCountdownKind_DAGGERHEART_COUNTDOWN_KIND_PROGRESS,
+		Direction:   pb.DaggerheartCountdownDirection_DAGGERHEART_COUNTDOWN_DIRECTION_INCREASE,
+		Max:         4,
+		Current:     0,
+		CountdownId: "cd-1",
 	})
 	if err != nil {
 		t.Fatalf("CreateCountdown returned error: %v", err)
@@ -1287,6 +3180,77 @@ func TestCreateCountdown_Success(t *testing.T) {
 	}
 	if resp.Countdown.Name != "Test Countdown" {
 		t.Fatalf("name = %q, want Test Countdown", resp.Countdown.Name)
+	}
+}
+
+func TestCreateCountdown_UsesDomainEngine(t *testing.T) {
+	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	countdownPayload := daggerheart.CountdownCreatedPayload{
+		CountdownID: "cd-1",
+		Name:        "Signal",
+		Kind:        daggerheart.CountdownKindProgress,
+		Current:     1,
+		Max:         4,
+		Direction:   daggerheart.CountdownDirectionIncrease,
+		Looping:     true,
+	}
+	countdownPayloadJSON, err := json.Marshal(countdownPayload)
+	if err != nil {
+		t.Fatalf("encode countdown payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.countdown.create"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.countdown_created"),
+				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-countdown-create",
+				EntityType:    "countdown",
+				EntityID:      "cd-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   countdownPayloadJSON,
+			}),
+		},
+	}}
+
+	svc.stores.Domain = domain
+
+	resp, err := svc.CreateCountdown(context.Background(), &pb.DaggerheartCreateCountdownRequest{
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		CountdownId: "cd-1",
+		Name:        "Signal",
+		Kind:        pb.DaggerheartCountdownKind_DAGGERHEART_COUNTDOWN_KIND_PROGRESS,
+		Direction:   pb.DaggerheartCountdownDirection_DAGGERHEART_COUNTDOWN_DIRECTION_INCREASE,
+		Max:         4,
+		Current:     1,
+		Looping:     true,
+	})
+	if err != nil {
+		t.Fatalf("CreateCountdown returned error: %v", err)
+	}
+	if resp.Countdown == nil {
+		t.Fatal("expected countdown in response")
+	}
+	if resp.Countdown.CountdownId != "cd-1" {
+		t.Fatalf("countdown_id = %q, want cd-1", resp.Countdown.CountdownId)
+	}
+	if domain.calls != 1 {
+		t.Fatalf("expected domain to be called once, got %d", domain.calls)
+	}
+	if domain.lastCommand.Type != command.Type("action.countdown.create") {
+		t.Fatalf("command type = %s, want %s", domain.lastCommand.Type, "action.countdown.create")
+	}
+	if got := len(eventStore.events["camp-1"]); got != 1 {
+		t.Fatalf("expected 1 event, got %d", got)
+	}
+	if eventStore.events["camp-1"][0].Type != event.Type("action.countdown_created") {
+		t.Fatalf("event type = %s, want %s", eventStore.events["camp-1"][0].Type, event.Type("action.countdown_created"))
 	}
 }
 
@@ -1332,10 +3296,98 @@ func TestUpdateCountdown_NoDeltaOrCurrent(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
+func TestDeleteCountdown_RequiresDomainEngine(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.DeleteCountdown(context.Background(), &pb.DaggerheartDeleteCountdownRequest{
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		CountdownId: "cd-1",
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestUpdateCountdown_RequiresDomainEngine(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.UpdateCountdown(context.Background(), &pb.DaggerheartUpdateCountdownRequest{
+		CampaignId: "camp-1", SessionId: "sess-1", CountdownId: "cd-1", Delta: 1,
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
 func TestUpdateCountdown_Success(t *testing.T) {
 	svc := newActionTestService()
-	// First create a countdown
-	createResp, err := svc.CreateCountdown(context.Background(), &pb.DaggerheartCreateCountdownRequest{
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	createPayload := daggerheart.CountdownCreatedPayload{
+		CountdownID: "cd-update",
+		Name:        "Update Test",
+		Kind:        daggerheart.CountdownKindProgress,
+		Current:     0,
+		Max:         4,
+		Direction:   daggerheart.CountdownDirectionIncrease,
+		Looping:     false,
+	}
+	createPayloadJSON, err := json.Marshal(createPayload)
+	if err != nil {
+		t.Fatalf("encode countdown create payload: %v", err)
+	}
+	update, err := daggerheart.ApplyCountdownUpdate(daggerheart.Countdown{
+		CampaignID: "camp-1",
+		ID:         "cd-update",
+		Name:       "Update Test",
+		Kind:       daggerheart.CountdownKindProgress,
+		Current:    0,
+		Max:        4,
+		Direction:  daggerheart.CountdownDirectionIncrease,
+		Looping:    false,
+	}, 1, nil)
+	if err != nil {
+		t.Fatalf("apply countdown update: %v", err)
+	}
+	updatePayload := daggerheart.CountdownUpdatedPayload{
+		CountdownID: "cd-update",
+		Before:      update.Before,
+		After:       update.After,
+		Delta:       update.Delta,
+		Looped:      update.Looped,
+	}
+	updatePayloadJSON, err := json.Marshal(updatePayload)
+	if err != nil {
+		t.Fatalf("encode countdown update payload: %v", err)
+	}
+	serviceDomain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.countdown.create"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.countdown_created"),
+				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-countdown-update-create",
+				EntityType:    "countdown",
+				EntityID:      "cd-update",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   createPayloadJSON,
+			}),
+		},
+		command.Type("action.countdown.update"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.countdown_updated"),
+				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-countdown-update",
+				EntityType:    "countdown",
+				EntityID:      "cd-update",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   updatePayloadJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = serviceDomain
+	_, err = svc.CreateCountdown(context.Background(), &pb.DaggerheartCreateCountdownRequest{
 		CampaignId:  "camp-1",
 		SessionId:   "sess-1",
 		Name:        "Update Test",
@@ -1348,10 +3400,9 @@ func TestUpdateCountdown_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateCountdown returned error: %v", err)
 	}
-	cdID := createResp.Countdown.CountdownId
 
 	resp, err := svc.UpdateCountdown(context.Background(), &pb.DaggerheartUpdateCountdownRequest{
-		CampaignId: "camp-1", SessionId: "sess-1", CountdownId: cdID, Delta: 1,
+		CampaignId: "camp-1", SessionId: "sess-1", CountdownId: "cd-update", Delta: 1,
 	})
 	if err != nil {
 		t.Fatalf("UpdateCountdown returned error: %v", err)
@@ -1361,6 +3412,93 @@ func TestUpdateCountdown_Success(t *testing.T) {
 	}
 	if resp.After != 1 {
 		t.Fatalf("after = %d, want 1", resp.After)
+	}
+}
+
+func TestUpdateCountdown_UsesDomainEngine(t *testing.T) {
+	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
+
+	dhStore.countdowns["camp-1:cd-1"] = storage.DaggerheartCountdown{
+		CampaignID:  "camp-1",
+		CountdownID: "cd-1",
+		Name:        "Update",
+		Kind:        daggerheart.CountdownKindProgress,
+		Current:     2,
+		Max:         4,
+		Direction:   daggerheart.CountdownDirectionIncrease,
+		Looping:     false,
+	}
+	update, err := daggerheart.ApplyCountdownUpdate(daggerheart.Countdown{
+		CampaignID: "camp-1",
+		ID:         "cd-1",
+		Name:       "Update",
+		Kind:       daggerheart.CountdownKindProgress,
+		Current:    2,
+		Max:        4,
+		Direction:  daggerheart.CountdownDirectionIncrease,
+		Looping:    false,
+	}, 1, nil)
+	if err != nil {
+		t.Fatalf("apply countdown update: %v", err)
+	}
+	updatePayload := daggerheart.CountdownUpdatedPayload{
+		CountdownID: "cd-1",
+		Before:      update.Before,
+		After:       update.After,
+		Delta:       update.Delta,
+		Looped:      update.Looped,
+		Reason:      "advance",
+	}
+	updatePayloadJSON, err := json.Marshal(updatePayload)
+	if err != nil {
+		t.Fatalf("encode countdown update payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.countdown.update"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.countdown_updated"),
+				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-countdown-update",
+				EntityType:    "countdown",
+				EntityID:      "cd-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   updatePayloadJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = domain
+
+	resp, err := svc.UpdateCountdown(context.Background(), &pb.DaggerheartUpdateCountdownRequest{
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		CountdownId: "cd-1",
+		Delta:       1,
+		Reason:      "advance",
+	})
+	if err != nil {
+		t.Fatalf("UpdateCountdown returned error: %v", err)
+	}
+	if domain.calls != 1 {
+		t.Fatalf("expected domain to be called once, got %d", domain.calls)
+	}
+	if domain.lastCommand.Type != command.Type("action.countdown.update") {
+		t.Fatalf("command type = %s, want %s", domain.lastCommand.Type, "action.countdown.update")
+	}
+	if resp.After != int32(update.After) {
+		t.Fatalf("after = %d, want %d", resp.After, update.After)
+	}
+	if resp.Countdown == nil {
+		t.Fatal("expected countdown in response")
+	}
+	if resp.Countdown.Current != int32(update.After) {
+		t.Fatalf("current = %d, want %d", resp.Countdown.Current, update.After)
 	}
 }
 
@@ -1400,30 +3538,113 @@ func TestDeleteCountdown_MissingCountdownId(t *testing.T) {
 
 func TestDeleteCountdown_Success(t *testing.T) {
 	svc := newActionTestService()
-	// First create a countdown
-	createResp, err := svc.CreateCountdown(context.Background(), &pb.DaggerheartCreateCountdownRequest{
-		CampaignId:  "camp-1",
-		SessionId:   "sess-1",
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
+	dhStore.countdowns["camp-1:cd-delete"] = storage.DaggerheartCountdown{
+		CampaignID:  "camp-1",
+		CountdownID: "cd-delete",
 		Name:        "Delete Test",
-		Kind:        pb.DaggerheartCountdownKind_DAGGERHEART_COUNTDOWN_KIND_CONSEQUENCE,
-		Direction:   pb.DaggerheartCountdownDirection_DAGGERHEART_COUNTDOWN_DIRECTION_INCREASE,
-		Max:         4,
+		Kind:        daggerheart.CountdownKindConsequence,
 		Current:     0,
-		CountdownId: "cd-delete",
-	})
-	if err != nil {
-		t.Fatalf("CreateCountdown returned error: %v", err)
+		Max:         4,
+		Direction:   daggerheart.CountdownDirectionIncrease,
+		Looping:     false,
 	}
-	cdID := createResp.Countdown.CountdownId
-
+	deletePayload := daggerheart.CountdownDeletedPayload{CountdownID: "cd-delete"}
+	deletePayloadJSON, err := json.Marshal(deletePayload)
+	if err != nil {
+		t.Fatalf("encode countdown delete payload: %v", err)
+	}
+	serviceDomain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.countdown.delete"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.countdown_deleted"),
+				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-countdown-delete-success",
+				EntityType:    "countdown",
+				EntityID:      "cd-delete",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   deletePayloadJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = serviceDomain
 	resp, err := svc.DeleteCountdown(context.Background(), &pb.DaggerheartDeleteCountdownRequest{
-		CampaignId: "camp-1", SessionId: "sess-1", CountdownId: cdID,
+		CampaignId: "camp-1", SessionId: "sess-1", CountdownId: "cd-delete",
 	})
 	if err != nil {
 		t.Fatalf("DeleteCountdown returned error: %v", err)
 	}
-	if resp.CountdownId != cdID {
-		t.Fatalf("countdown_id = %q, want %q", resp.CountdownId, cdID)
+	if resp.CountdownId != "cd-delete" {
+		t.Fatalf("countdown_id = %q, want %q", resp.CountdownId, "cd-delete")
+	}
+}
+
+func TestDeleteCountdown_UsesDomainEngine(t *testing.T) {
+	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
+
+	dhStore.countdowns["camp-1:cd-1"] = storage.DaggerheartCountdown{
+		CampaignID:  "camp-1",
+		CountdownID: "cd-1",
+		Name:        "Cleanup",
+		Kind:        daggerheart.CountdownKindConsequence,
+		Current:     0,
+		Max:         4,
+		Direction:   daggerheart.CountdownDirectionIncrease,
+		Looping:     false,
+	}
+	deletePayload := daggerheart.CountdownDeletedPayload{CountdownID: "cd-1", Reason: "cleanup"}
+	deletePayloadJSON, err := json.Marshal(deletePayload)
+	if err != nil {
+		t.Fatalf("encode countdown delete payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.countdown.delete"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.countdown_deleted"),
+				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-countdown-delete",
+				EntityType:    "countdown",
+				EntityID:      "cd-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   deletePayloadJSON,
+			}),
+		},
+	}}
+
+	svc.stores.Domain = domain
+
+	resp, err := svc.DeleteCountdown(context.Background(), &pb.DaggerheartDeleteCountdownRequest{
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		CountdownId: "cd-1",
+		Reason:      "cleanup",
+	})
+	if err != nil {
+		t.Fatalf("DeleteCountdown returned error: %v", err)
+	}
+	if domain.calls != 1 {
+		t.Fatalf("expected domain to be called once, got %d", domain.calls)
+	}
+	if domain.lastCommand.Type != command.Type("action.countdown.delete") {
+		t.Fatalf("command type = %s, want %s", domain.lastCommand.Type, "action.countdown.delete")
+	}
+	if resp.CountdownId != "cd-1" {
+		t.Fatalf("countdown_id = %q, want cd-1", resp.CountdownId)
+	}
+	if _, err := dhStore.GetDaggerheartCountdown(context.Background(), "camp-1", "cd-1"); err == nil {
+		t.Fatal("expected countdown to be deleted")
 	}
 }
 
@@ -1450,6 +3671,21 @@ func TestApplyAdversaryDamage_MissingStores(t *testing.T) {
 	svc := &DaggerheartService{}
 	_, err := svc.ApplyAdversaryDamage(context.Background(), &pb.DaggerheartApplyAdversaryDamageRequest{
 		CampaignId: "c1", AdversaryId: "a1",
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestApplyAdversaryDamage_RequiresDomainEngine(t *testing.T) {
+	svc := newAdversaryDamageTestService()
+	svc.stores.Domain = nil
+	ctx := contextWithSessionID("sess-1")
+	_, err := svc.ApplyAdversaryDamage(ctx, &pb.DaggerheartApplyAdversaryDamageRequest{
+		CampaignId:  "camp-1",
+		AdversaryId: "adv-1",
+		Damage: &pb.DaggerheartDamageRequest{
+			Amount:     5,
+			DamageType: pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_PHYSICAL,
+		},
 	})
 	assertStatusCode(t, err, codes.Internal)
 }
@@ -1519,6 +3755,67 @@ func TestApplyAdversaryDamage_UnspecifiedType(t *testing.T) {
 
 func TestApplyAdversaryDamage_Success(t *testing.T) {
 	svc := newAdversaryDamageTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartAdversaryStore)
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+
+	adversary := dhStore.adversaries["camp-1:adv-1"]
+	damage := &pb.DaggerheartDamageRequest{
+		Amount:     5,
+		DamageType: pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_PHYSICAL,
+	}
+	result, mitigated, err := applyDaggerheartAdversaryDamage(damage, adversary)
+	if err != nil {
+		t.Fatalf("apply adversary damage: %v", err)
+	}
+	hpBefore := result.HPBefore
+	hpAfter := result.HPAfter
+	armorBefore := result.ArmorBefore
+	armorAfter := result.ArmorAfter
+	sourceCharacterIDs := normalizeTargets(damage.GetSourceCharacterIds())
+	payload := daggerheart.AdversaryDamageAppliedPayload{
+		AdversaryID:        "adv-1",
+		HpBefore:           &hpBefore,
+		HpAfter:            &hpAfter,
+		ArmorBefore:        &armorBefore,
+		ArmorAfter:         &armorAfter,
+		ArmorSpent:         result.ArmorSpent,
+		Severity:           daggerheartSeverityToString(result.Result.Severity),
+		Marks:              result.Result.Marks,
+		DamageType:         daggerheartDamageTypeToString(damage.DamageType),
+		RollSeq:            nil,
+		ResistPhysical:     damage.ResistPhysical,
+		ResistMagic:        damage.ResistMagic,
+		ImmunePhysical:     damage.ImmunePhysical,
+		ImmuneMagic:        damage.ImmuneMagic,
+		Direct:             damage.Direct,
+		MassiveDamage:      damage.MassiveDamage,
+		Mitigated:          mitigated,
+		Source:             damage.Source,
+		SourceCharacterIDs: sourceCharacterIDs,
+	}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("encode adversary damage payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.adversary_damage.apply"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.adversary_damage_applied"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				EntityType:    "adversary",
+				EntityID:      "adv-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   payloadJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = domain
 	ctx := contextWithSessionID("sess-1")
 	resp, err := svc.ApplyAdversaryDamage(ctx, &pb.DaggerheartApplyAdversaryDamageRequest{
 		CampaignId:  "camp-1",
@@ -1539,8 +3836,178 @@ func TestApplyAdversaryDamage_Success(t *testing.T) {
 	}
 }
 
+func TestApplyAdversaryDamage_UsesDomainEngine(t *testing.T) {
+	svc := newAdversaryDamageTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartAdversaryStore)
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+
+	adversary := dhStore.adversaries["camp-1:adv-1"]
+	damage := &pb.DaggerheartDamageRequest{
+		Amount:     5,
+		DamageType: pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_PHYSICAL,
+	}
+	result, mitigated, err := applyDaggerheartAdversaryDamage(damage, adversary)
+	if err != nil {
+		t.Fatalf("apply adversary damage: %v", err)
+	}
+	hpBefore := result.HPBefore
+	hpAfter := result.HPAfter
+	armorBefore := result.ArmorBefore
+	armorAfter := result.ArmorAfter
+	sourceCharacterIDs := normalizeTargets(damage.GetSourceCharacterIds())
+	payload := daggerheart.AdversaryDamageAppliedPayload{
+		AdversaryID:        "adv-1",
+		HpBefore:           &hpBefore,
+		HpAfter:            &hpAfter,
+		ArmorBefore:        &armorBefore,
+		ArmorAfter:         &armorAfter,
+		ArmorSpent:         result.ArmorSpent,
+		Severity:           daggerheartSeverityToString(result.Result.Severity),
+		Marks:              result.Result.Marks,
+		DamageType:         daggerheartDamageTypeToString(damage.DamageType),
+		RollSeq:            nil,
+		ResistPhysical:     damage.ResistPhysical,
+		ResistMagic:        damage.ResistMagic,
+		ImmunePhysical:     damage.ImmunePhysical,
+		ImmuneMagic:        damage.ImmuneMagic,
+		Direct:             damage.Direct,
+		MassiveDamage:      damage.MassiveDamage,
+		Mitigated:          mitigated,
+		Source:             damage.Source,
+		SourceCharacterIDs: sourceCharacterIDs,
+	}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("encode adversary damage payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.adversary_damage.apply"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.adversary_damage_applied"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-adversary-damage",
+				EntityType:    "adversary",
+				EntityID:      "adv-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   payloadJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = domain
+
+	ctx := grpcmeta.WithRequestID(contextWithSessionID("sess-1"), "req-adversary-damage")
+	_, err = svc.ApplyAdversaryDamage(ctx, &pb.DaggerheartApplyAdversaryDamageRequest{
+		CampaignId:  "camp-1",
+		AdversaryId: "adv-1",
+		Damage:      damage,
+	})
+	if err != nil {
+		t.Fatalf("ApplyAdversaryDamage returned error: %v", err)
+	}
+	if domain.calls != 1 {
+		t.Fatalf("expected domain to be called once, got %d", domain.calls)
+	}
+	if len(domain.commands) != 1 {
+		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
+	}
+	if domain.commands[0].Type != command.Type("action.adversary_damage.apply") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "action.adversary_damage.apply")
+	}
+	if domain.commands[0].SystemID != daggerheart.SystemID {
+		t.Fatalf("command system id = %s, want %s", domain.commands[0].SystemID, daggerheart.SystemID)
+	}
+	if domain.commands[0].SystemVersion != daggerheart.SystemVersion {
+		t.Fatalf("command system version = %s, want %s", domain.commands[0].SystemVersion, daggerheart.SystemVersion)
+	}
+	var got struct {
+		AdversaryID string `json:"adversary_id"`
+		DamageType  string `json:"damage_type"`
+		HpAfter     *int   `json:"hp_after"`
+	}
+	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &got); err != nil {
+		t.Fatalf("decode adversary damage command payload: %v", err)
+	}
+	if got.AdversaryID != "adv-1" {
+		t.Fatalf("command adversary id = %s, want %s", got.AdversaryID, "adv-1")
+	}
+	if got.DamageType != "physical" {
+		t.Fatalf("command damage type = %s, want %s", got.DamageType, "physical")
+	}
+	if got.HpAfter == nil || *got.HpAfter != hpAfter {
+		t.Fatalf("command hp after = %v, want %d", got.HpAfter, hpAfter)
+	}
+}
+
 func TestApplyAdversaryDamage_DirectDamage(t *testing.T) {
 	svc := newAdversaryDamageTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartAdversaryStore)
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+
+	adversary := dhStore.adversaries["camp-1:adv-1"]
+	damage := &pb.DaggerheartDamageRequest{
+		Amount:     3,
+		DamageType: pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_PHYSICAL,
+		Direct:     true,
+	}
+	result, mitigated, err := applyDaggerheartAdversaryDamage(damage, adversary)
+	if err != nil {
+		t.Fatalf("apply adversary damage: %v", err)
+	}
+	hpBefore := result.HPBefore
+	hpAfter := result.HPAfter
+	armorBefore := result.ArmorBefore
+	armorAfter := result.ArmorAfter
+	sourceCharacterIDs := normalizeTargets(damage.GetSourceCharacterIds())
+	payload := daggerheart.AdversaryDamageAppliedPayload{
+		AdversaryID:        "adv-1",
+		HpBefore:           &hpBefore,
+		HpAfter:            &hpAfter,
+		ArmorBefore:        &armorBefore,
+		ArmorAfter:         &armorAfter,
+		ArmorSpent:         result.ArmorSpent,
+		Severity:           daggerheartSeverityToString(result.Result.Severity),
+		Marks:              result.Result.Marks,
+		DamageType:         daggerheartDamageTypeToString(damage.DamageType),
+		RollSeq:            nil,
+		ResistPhysical:     damage.ResistPhysical,
+		ResistMagic:        damage.ResistMagic,
+		ImmunePhysical:     damage.ImmunePhysical,
+		ImmuneMagic:        damage.ImmuneMagic,
+		Direct:             damage.Direct,
+		MassiveDamage:      damage.MassiveDamage,
+		Mitigated:          mitigated,
+		Source:             damage.Source,
+		SourceCharacterIDs: sourceCharacterIDs,
+	}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("encode adversary damage payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.adversary_damage.apply"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.adversary_damage_applied"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				EntityType:    "adversary",
+				EntityID:      "adv-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   payloadJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = domain
 	ctx := contextWithSessionID("sess-1")
 	resp, err := svc.ApplyAdversaryDamage(ctx, &pb.DaggerheartApplyAdversaryDamageRequest{
 		CampaignId:  "camp-1",
@@ -1599,6 +4066,18 @@ func TestApplyAdversaryConditions_MissingSessionId(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
+func TestApplyAdversaryConditions_RequiresDomainEngine(t *testing.T) {
+	svc := newAdversaryDamageTestService()
+	svc.stores.Domain = nil
+	ctx := contextWithSessionID("sess-1")
+	_, err := svc.ApplyAdversaryConditions(ctx, &pb.DaggerheartApplyAdversaryConditionsRequest{
+		CampaignId:  "camp-1",
+		AdversaryId: "adv-1",
+		Add:         []pb.DaggerheartCondition{pb.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE},
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
 func TestApplyAdversaryConditions_NoConditions(t *testing.T) {
 	svc := newAdversaryDamageTestService()
 	ctx := contextWithSessionID("sess-1")
@@ -1623,7 +4102,36 @@ func TestApplyAdversaryConditions_ConflictAddRemoveSame(t *testing.T) {
 
 func TestApplyAdversaryConditions_AddCondition_Success(t *testing.T) {
 	svc := newAdversaryDamageTestService()
-	ctx := contextWithSessionID("sess-1")
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	payload := daggerheart.AdversaryConditionChangedPayload{
+		AdversaryID:      "adv-1",
+		ConditionsBefore: []string{},
+		ConditionsAfter:  []string{daggerheart.ConditionVulnerable},
+		Added:            []string{daggerheart.ConditionVulnerable},
+	}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("encode adversary condition payload: %v", err)
+	}
+	serviceDomain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.adversary_condition.change"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.adversary_condition_changed"),
+				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-adv-conditions-add",
+				EntityType:    "adversary",
+				EntityID:      "adv-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   payloadJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = serviceDomain
+	ctx := grpcmeta.WithRequestID(contextWithSessionID("sess-1"), "req-adv-conditions-add")
 	resp, err := svc.ApplyAdversaryConditions(ctx, &pb.DaggerheartApplyAdversaryConditionsRequest{
 		CampaignId:  "camp-1",
 		AdversaryId: "adv-1",
@@ -1647,8 +4155,36 @@ func TestApplyAdversaryConditions_RemoveCondition_Success(t *testing.T) {
 	adv := dhStore.adversaries["camp-1:adv-1"]
 	adv.Conditions = []string{"vulnerable"}
 	dhStore.adversaries["camp-1:adv-1"] = adv
-
-	ctx := contextWithSessionID("sess-1")
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	payload := daggerheart.AdversaryConditionChangedPayload{
+		AdversaryID:      "adv-1",
+		ConditionsBefore: []string{daggerheart.ConditionVulnerable},
+		ConditionsAfter:  []string{},
+		Removed:          []string{daggerheart.ConditionVulnerable},
+	}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("encode adversary condition payload: %v", err)
+	}
+	serviceDomain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.adversary_condition.change"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.adversary_condition_changed"),
+				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-adv-conditions-remove",
+				EntityType:    "adversary",
+				EntityID:      "adv-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   payloadJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = serviceDomain
+	ctx := grpcmeta.WithRequestID(contextWithSessionID("sess-1"), "req-adv-conditions-remove")
 	resp, err := svc.ApplyAdversaryConditions(ctx, &pb.DaggerheartApplyAdversaryConditionsRequest{
 		CampaignId:  "camp-1",
 		AdversaryId: "adv-1",
@@ -1659,6 +4195,82 @@ func TestApplyAdversaryConditions_RemoveCondition_Success(t *testing.T) {
 	}
 	if len(resp.Removed) == 0 {
 		t.Fatal("expected removed conditions")
+	}
+}
+
+func TestApplyAdversaryConditions_UsesDomainEngine(t *testing.T) {
+	svc := newAdversaryDamageTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+
+	payload := daggerheart.AdversaryConditionChangedPayload{
+		AdversaryID:      "adv-1",
+		ConditionsBefore: []string{},
+		ConditionsAfter:  []string{daggerheart.ConditionVulnerable},
+		Added:            []string{daggerheart.ConditionVulnerable},
+		Source:           "test",
+	}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("encode adversary condition payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.adversary_condition.change"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.adversary_condition_changed"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-adversary-conditions",
+				EntityType:    "adversary",
+				EntityID:      "adv-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   payloadJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = domain
+
+	ctx := grpcmeta.WithRequestID(contextWithSessionID("sess-1"), "req-adversary-conditions")
+	_, err = svc.ApplyAdversaryConditions(ctx, &pb.DaggerheartApplyAdversaryConditionsRequest{
+		CampaignId:  "camp-1",
+		AdversaryId: "adv-1",
+		Add:         []pb.DaggerheartCondition{pb.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE},
+		Source:      "test",
+	})
+	if err != nil {
+		t.Fatalf("ApplyAdversaryConditions returned error: %v", err)
+	}
+	if domain.calls != 1 {
+		t.Fatalf("expected domain to be called once, got %d", domain.calls)
+	}
+	if len(domain.commands) != 1 {
+		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
+	}
+	if domain.commands[0].Type != command.Type("action.adversary_condition.change") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "action.adversary_condition.change")
+	}
+	if domain.commands[0].SystemID != daggerheart.SystemID {
+		t.Fatalf("command system id = %s, want %s", domain.commands[0].SystemID, daggerheart.SystemID)
+	}
+	if domain.commands[0].SystemVersion != daggerheart.SystemVersion {
+		t.Fatalf("command system version = %s, want %s", domain.commands[0].SystemVersion, daggerheart.SystemVersion)
+	}
+	var got struct {
+		AdversaryID     string   `json:"adversary_id"`
+		ConditionsAfter []string `json:"conditions_after"`
+	}
+	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &got); err != nil {
+		t.Fatalf("decode adversary condition command payload: %v", err)
+	}
+	if got.AdversaryID != "adv-1" {
+		t.Fatalf("command adversary id = %s, want %s", got.AdversaryID, "adv-1")
+	}
+	if len(got.ConditionsAfter) != 1 || got.ConditionsAfter[0] != daggerheart.ConditionVulnerable {
+		t.Fatalf("command conditions_after = %v, want [%s]", got.ConditionsAfter, daggerheart.ConditionVulnerable)
 	}
 }
 
@@ -1683,7 +4295,36 @@ func TestApplyAdversaryConditions_NoChanges(t *testing.T) {
 
 func TestApplyConditions_AddCondition_Success(t *testing.T) {
 	svc := newActionTestService()
-	ctx := contextWithSessionID("sess-1")
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	conditionPayload := daggerheart.ConditionChangedPayload{
+		CharacterID:      "char-1",
+		ConditionsBefore: []string{},
+		ConditionsAfter:  []string{daggerheart.ConditionHidden},
+		Added:            []string{daggerheart.ConditionHidden},
+	}
+	conditionJSON, err := json.Marshal(conditionPayload)
+	if err != nil {
+		t.Fatalf("encode condition payload: %v", err)
+	}
+	serviceDomain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.condition.change"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.condition_changed"),
+				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-conditions-add",
+				EntityType:    "character",
+				EntityID:      "char-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   conditionJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = serviceDomain
+	ctx := grpcmeta.WithRequestID(contextWithSessionID("sess-1"), "req-conditions-add")
 	resp, err := svc.ApplyConditions(ctx, &pb.DaggerheartApplyConditionsRequest{
 		CampaignId:  "camp-1",
 		CharacterId: "char-1",
@@ -1703,8 +4344,36 @@ func TestApplyConditions_RemoveCondition_Success(t *testing.T) {
 	state := dhStore.states["camp-1:char-1"]
 	state.Conditions = []string{"hidden", "vulnerable"}
 	dhStore.states["camp-1:char-1"] = state
-
-	ctx := contextWithSessionID("sess-1")
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	conditionPayload := daggerheart.ConditionChangedPayload{
+		CharacterID:      "char-1",
+		ConditionsBefore: []string{daggerheart.ConditionHidden, daggerheart.ConditionVulnerable},
+		ConditionsAfter:  []string{daggerheart.ConditionVulnerable},
+		Removed:          []string{daggerheart.ConditionHidden},
+	}
+	conditionJSON, err := json.Marshal(conditionPayload)
+	if err != nil {
+		t.Fatalf("encode condition payload: %v", err)
+	}
+	serviceDomain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.condition.change"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.condition_changed"),
+				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-conditions-remove",
+				EntityType:    "character",
+				EntityID:      "char-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   conditionJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = serviceDomain
+	ctx := grpcmeta.WithRequestID(contextWithSessionID("sess-1"), "req-conditions-remove")
 	resp, err := svc.ApplyConditions(ctx, &pb.DaggerheartApplyConditionsRequest{
 		CampaignId:  "camp-1",
 		CharacterId: "char-1",
@@ -1724,8 +4393,37 @@ func TestApplyConditions_AddAndRemove(t *testing.T) {
 	state := dhStore.states["camp-1:char-1"]
 	state.Conditions = []string{"hidden"}
 	dhStore.states["camp-1:char-1"] = state
-
-	ctx := contextWithSessionID("sess-1")
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	conditionPayload := daggerheart.ConditionChangedPayload{
+		CharacterID:      "char-1",
+		ConditionsBefore: []string{daggerheart.ConditionHidden},
+		ConditionsAfter:  []string{daggerheart.ConditionVulnerable},
+		Added:            []string{daggerheart.ConditionVulnerable},
+		Removed:          []string{daggerheart.ConditionHidden},
+	}
+	conditionJSON, err := json.Marshal(conditionPayload)
+	if err != nil {
+		t.Fatalf("encode condition payload: %v", err)
+	}
+	serviceDomain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.condition.change"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.condition_changed"),
+				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-conditions-both",
+				EntityType:    "character",
+				EntityID:      "char-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   conditionJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = serviceDomain
+	ctx := grpcmeta.WithRequestID(contextWithSessionID("sess-1"), "req-conditions-both")
 	resp, err := svc.ApplyConditions(ctx, &pb.DaggerheartApplyConditionsRequest{
 		CampaignId:  "camp-1",
 		CharacterId: "char-1",
@@ -1794,6 +4492,7 @@ func TestSessionActionRoll_MissingStores(t *testing.T) {
 
 func TestSessionActionRoll_MissingCampaignId(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	_, err := svc.SessionActionRoll(context.Background(), &pb.SessionActionRollRequest{
 		SessionId: "sess-1", CharacterId: "char-1", Trait: "agility",
 	})
@@ -1802,6 +4501,7 @@ func TestSessionActionRoll_MissingCampaignId(t *testing.T) {
 
 func TestSessionActionRoll_MissingSessionId(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	_, err := svc.SessionActionRoll(context.Background(), &pb.SessionActionRollRequest{
 		CampaignId: "camp-1", CharacterId: "char-1", Trait: "agility",
 	})
@@ -1810,6 +4510,7 @@ func TestSessionActionRoll_MissingSessionId(t *testing.T) {
 
 func TestSessionActionRoll_MissingCharacterId(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	_, err := svc.SessionActionRoll(context.Background(), &pb.SessionActionRollRequest{
 		CampaignId: "camp-1", SessionId: "sess-1", Trait: "agility",
 	})
@@ -1818,15 +4519,46 @@ func TestSessionActionRoll_MissingCharacterId(t *testing.T) {
 
 func TestSessionActionRoll_MissingTrait(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	_, err := svc.SessionActionRoll(context.Background(), &pb.SessionActionRollRequest{
 		CampaignId: "camp-1", SessionId: "sess-1", CharacterId: "char-1",
 	})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
+func TestSessionActionRoll_RequiresDomainEngine(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.SessionActionRoll(context.Background(), &pb.SessionActionRollRequest{
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		CharacterId: "char-1",
+		Trait:       "agility",
+		Difficulty:  10,
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
 func TestSessionActionRoll_Success(t *testing.T) {
 	svc := newActionTestService()
-	resp, err := svc.SessionActionRoll(context.Background(), &pb.SessionActionRollRequest{
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	serviceDomain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.roll.resolve"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "camp-1",
+				Type:        event.Type("action.roll_resolved"),
+				Timestamp:   time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:   event.ActorTypeSystem,
+				SessionID:   "sess-1",
+				RequestID:   "req-roll-success",
+				EntityType:  "roll",
+				EntityID:    "req-roll-success",
+				PayloadJSON: []byte(`{"request_id":"req-roll-success"}`),
+			}),
+		},
+	}}
+	svc.stores.Domain = serviceDomain
+	ctx := grpcmeta.WithRequestID(context.Background(), "req-roll-success")
+	resp, err := svc.SessionActionRoll(ctx, &pb.SessionActionRollRequest{
 		CampaignId:  "camp-1",
 		SessionId:   "sess-1",
 		CharacterId: "char-1",
@@ -1844,9 +4576,282 @@ func TestSessionActionRoll_Success(t *testing.T) {
 	}
 }
 
+func TestSessionActionRoll_UsesDomainEngine(t *testing.T) {
+	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.roll.resolve"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "camp-1",
+				Type:        event.Type("action.roll_resolved"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				SessionID:   "sess-1",
+				RequestID:   "req-roll-1",
+				EntityType:  "roll",
+				EntityID:    "req-roll-1",
+				PayloadJSON: []byte(`{"request_id":"req-roll-1"}`),
+			}),
+		},
+	}}
+	svc.stores.Domain = domain
+
+	ctx := grpcmeta.WithRequestID(context.Background(), "req-roll-1")
+	resp, err := svc.SessionActionRoll(ctx, &pb.SessionActionRollRequest{
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		CharacterId: "char-1",
+		Trait:       "agility",
+		Difficulty:  10,
+	})
+	if err != nil {
+		t.Fatalf("SessionActionRoll returned error: %v", err)
+	}
+	if resp.RollSeq == 0 {
+		t.Fatal("expected non-zero roll seq")
+	}
+	if domain.calls != 1 {
+		t.Fatalf("expected domain to be called once, got %d", domain.calls)
+	}
+	if len(domain.commands) != 1 {
+		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
+	}
+	if domain.commands[0].Type != command.Type("action.roll.resolve") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "action.roll.resolve")
+	}
+	if got := len(eventStore.events["camp-1"]); got != 1 {
+		t.Fatalf("expected 1 event, got %d", got)
+	}
+	if eventStore.events["camp-1"][0].Type != event.Type("action.roll_resolved") {
+		t.Fatalf("event type = %s, want %s", eventStore.events["camp-1"][0].Type, event.Type("action.roll_resolved"))
+	}
+}
+
+func TestSessionActionRoll_UsesDomainEngineForHopeSpend(t *testing.T) {
+	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+
+	hopeBefore := 2
+	hopeAfter := 1
+	patchPayload := daggerheart.CharacterStatePatchedPayload{
+		CharacterID: "char-1",
+		HopeBefore:  &hopeBefore,
+		HopeAfter:   &hopeAfter,
+	}
+	patchJSON, err := json.Marshal(patchPayload)
+	if err != nil {
+		t.Fatalf("encode patch payload: %v", err)
+	}
+
+	hopeSpendPayload := daggerheart.HopeSpentPayload{
+		CharacterID: "char-1",
+		Amount:      1,
+		Before:      hopeBefore,
+		After:       hopeAfter,
+		Source:      "experience",
+	}
+	hopeSpendJSON, err := json.Marshal(hopeSpendPayload)
+	if err != nil {
+		t.Fatalf("encode hope spend payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.hope.spend"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.hope_spent"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-roll-1",
+				EntityType:    "character",
+				EntityID:      "char-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   hopeSpendJSON,
+			}),
+		},
+		command.Type("action.character_state.patch"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.character_state_patched"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-roll-1",
+				EntityType:    "character",
+				EntityID:      "char-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   patchJSON,
+			}),
+		},
+		command.Type("action.roll.resolve"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "camp-1",
+				Type:        event.Type("action.roll_resolved"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				SessionID:   "sess-1",
+				RequestID:   "req-roll-1",
+				EntityType:  "roll",
+				EntityID:    "req-roll-1",
+				PayloadJSON: []byte(`{"request_id":"req-roll-1"}`),
+			}),
+		},
+	}}
+	svc.stores.Domain = domain
+
+	ctx := grpcmeta.WithRequestID(context.Background(), "req-roll-1")
+	_, err = svc.SessionActionRoll(ctx, &pb.SessionActionRollRequest{
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		CharacterId: "char-1",
+		Trait:       "agility",
+		Difficulty:  10,
+		Modifiers: []*pb.ActionRollModifier{
+			{Value: 1, Source: "experience"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("SessionActionRoll returned error: %v", err)
+	}
+	if domain.calls != 3 {
+		t.Fatalf("expected domain to be called three times, got %d", domain.calls)
+	}
+	if len(domain.commands) != 3 {
+		t.Fatalf("expected 3 domain commands, got %d", len(domain.commands))
+	}
+	if domain.commands[0].Type != command.Type("action.hope.spend") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "action.hope.spend")
+	}
+	if domain.commands[1].Type != command.Type("action.character_state.patch") {
+		t.Fatalf("command type = %s, want %s", domain.commands[1].Type, "action.character_state.patch")
+	}
+	if domain.commands[2].Type != command.Type("action.roll.resolve") {
+		t.Fatalf("command type = %s, want %s", domain.commands[2].Type, "action.roll.resolve")
+	}
+	if domain.commands[0].SystemID != daggerheart.SystemID {
+		t.Fatalf("command system id = %s, want %s", domain.commands[0].SystemID, daggerheart.SystemID)
+	}
+	if domain.commands[0].SystemVersion != daggerheart.SystemVersion {
+		t.Fatalf("command system version = %s, want %s", domain.commands[0].SystemVersion, daggerheart.SystemVersion)
+	}
+	var spend daggerheart.HopeSpendPayload
+	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &spend); err != nil {
+		t.Fatalf("decode hope spend command payload: %v", err)
+	}
+	if spend.CharacterID != "char-1" {
+		t.Fatalf("hope spend character id = %s, want %s", spend.CharacterID, "char-1")
+	}
+	if spend.Amount != 1 {
+		t.Fatalf("hope spend amount = %d, want %d", spend.Amount, 1)
+	}
+	if spend.Before != hopeBefore {
+		t.Fatalf("hope spend before = %d, want %d", spend.Before, hopeBefore)
+	}
+	if spend.After != hopeAfter {
+		t.Fatalf("hope spend after = %d, want %d", spend.After, hopeAfter)
+	}
+	if spend.Source != "experience" {
+		t.Fatalf("hope spend source = %s, want %s", spend.Source, "experience")
+	}
+	var got daggerheart.CharacterStatePatchPayload
+	if err := json.Unmarshal(domain.commands[1].PayloadJSON, &got); err != nil {
+		t.Fatalf("decode patch command payload: %v", err)
+	}
+	if got.CharacterID != "char-1" {
+		t.Fatalf("command character id = %s, want %s", got.CharacterID, "char-1")
+	}
+	if got.HopeBefore == nil || *got.HopeBefore != hopeBefore {
+		t.Fatalf("command hope_before = %v, want %d", got.HopeBefore, hopeBefore)
+	}
+	if got.HopeAfter == nil || *got.HopeAfter != hopeAfter {
+		t.Fatalf("command hope_after = %v, want %d", got.HopeAfter, hopeAfter)
+	}
+}
+
 func TestSessionActionRoll_WithModifiers(t *testing.T) {
 	svc := newActionTestService()
-	resp, err := svc.SessionActionRoll(context.Background(), &pb.SessionActionRollRequest{
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	hopeBefore := 2
+	hopeAfter := 1
+	patchPayload := daggerheart.CharacterStatePatchedPayload{
+		CharacterID: "char-1",
+		HopeBefore:  &hopeBefore,
+		HopeAfter:   &hopeAfter,
+	}
+	patchJSON, err := json.Marshal(patchPayload)
+	if err != nil {
+		t.Fatalf("encode patch payload: %v", err)
+	}
+	spendPayload := daggerheart.HopeSpentPayload{
+		CharacterID: "char-1",
+		Amount:      1,
+		Before:      hopeBefore,
+		After:       hopeAfter,
+		Source:      "experience",
+	}
+	spendJSON, err := json.Marshal(spendPayload)
+	if err != nil {
+		t.Fatalf("encode hope spend payload: %v", err)
+	}
+	rollPayloadJSON, err := json.Marshal(map[string]string{"request_id": "req-roll-modifiers"})
+	if err != nil {
+		t.Fatalf("encode roll payload: %v", err)
+	}
+	serviceDomain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.hope.spend"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.hope_spent"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-roll-modifiers",
+				EntityType:    "character",
+				EntityID:      "char-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   spendJSON,
+			}),
+		},
+		command.Type("action.character_state.patch"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.character_state_patched"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-roll-modifiers",
+				EntityType:    "character",
+				EntityID:      "char-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   patchJSON,
+			}),
+		},
+		command.Type("action.roll.resolve"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "camp-1",
+				Type:        event.Type("action.roll_resolved"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				SessionID:   "sess-1",
+				RequestID:   "req-roll-modifiers",
+				EntityType:  "roll",
+				EntityID:    "req-roll-modifiers",
+				PayloadJSON: rollPayloadJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = serviceDomain
+	ctx := grpcmeta.WithRequestID(context.Background(), "req-roll-modifiers")
+	resp, err := svc.SessionActionRoll(ctx, &pb.SessionActionRollRequest{
 		CampaignId:  "camp-1",
 		SessionId:   "sess-1",
 		CharacterId: "char-1",
@@ -1876,6 +4881,7 @@ func TestSessionDamageRoll_MissingStores(t *testing.T) {
 
 func TestSessionDamageRoll_MissingCampaignId(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	_, err := svc.SessionDamageRoll(context.Background(), &pb.SessionDamageRollRequest{
 		SessionId: "sess-1", CharacterId: "char-1",
 	})
@@ -1884,6 +4890,7 @@ func TestSessionDamageRoll_MissingCampaignId(t *testing.T) {
 
 func TestSessionDamageRoll_MissingSessionId(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	_, err := svc.SessionDamageRoll(context.Background(), &pb.SessionDamageRollRequest{
 		CampaignId: "camp-1", CharacterId: "char-1",
 	})
@@ -1892,6 +4899,7 @@ func TestSessionDamageRoll_MissingSessionId(t *testing.T) {
 
 func TestSessionDamageRoll_MissingCharacterId(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	_, err := svc.SessionDamageRoll(context.Background(), &pb.SessionDamageRollRequest{
 		CampaignId: "camp-1", SessionId: "sess-1",
 	})
@@ -1900,15 +4908,67 @@ func TestSessionDamageRoll_MissingCharacterId(t *testing.T) {
 
 func TestSessionDamageRoll_MissingDice(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	_, err := svc.SessionDamageRoll(context.Background(), &pb.SessionDamageRollRequest{
 		CampaignId: "camp-1", SessionId: "sess-1", CharacterId: "char-1",
 	})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
+func TestSessionDamageRoll_RequiresDomainEngine(t *testing.T) {
+	svc := newActionTestService()
+	_, err := svc.SessionDamageRoll(context.Background(), &pb.SessionDamageRollRequest{
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		CharacterId: "char-1",
+		Dice:        []*pb.DiceSpec{{Sides: 6, Count: 2}},
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
 func TestSessionDamageRoll_Success(t *testing.T) {
 	svc := newActionTestService()
-	resp, err := svc.SessionDamageRoll(context.Background(), &pb.SessionDamageRollRequest{
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	rollPayload := daggerheart.DamageRollResolvedPayload{
+		CharacterID:   "char-1",
+		RollSeq:       1,
+		Rolls:         []dice.Roll{{Results: []int{3, 4}}},
+		BaseTotal:     7,
+		Modifier:      0,
+		CriticalBonus: 0,
+		Total:         7,
+		Critical:      false,
+		Rng: daggerheart.RollRngInfo{
+			SeedUsed:   1,
+			RngAlgo:    random.RngAlgoMathRandV1,
+			SeedSource: "seed",
+			RollMode:   "roll",
+		},
+	}
+	rollPayloadJSON, err := json.Marshal(rollPayload)
+	if err != nil {
+		t.Fatalf("encode damage roll payload: %v", err)
+	}
+	serviceDomain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.damage_roll.resolve"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.damage_roll_resolved"),
+				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-damage-roll-success",
+				EntityType:    "roll",
+				EntityID:      "req-damage-roll-success",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   rollPayloadJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = serviceDomain
+	ctx := grpcmeta.WithRequestID(context.Background(), "req-damage-roll-success")
+	resp, err := svc.SessionDamageRoll(ctx, &pb.SessionDamageRollRequest{
 		CampaignId:  "camp-1",
 		SessionId:   "sess-1",
 		CharacterId: "char-1",
@@ -1925,6 +4985,90 @@ func TestSessionDamageRoll_Success(t *testing.T) {
 	}
 }
 
+func TestSessionDamageRoll_UsesDomainEngine(t *testing.T) {
+	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+
+	payload := daggerheart.DamageRollResolvedPayload{
+		CharacterID:   "char-1",
+		RollSeq:       1,
+		Rolls:         []dice.Roll{{Results: []int{3, 4}}},
+		BaseTotal:     7,
+		Modifier:      0,
+		CriticalBonus: 0,
+		Total:         7,
+		Critical:      false,
+		Rng: daggerheart.RollRngInfo{
+			SeedUsed:   1,
+			RngAlgo:    random.RngAlgoMathRandV1,
+			SeedSource: "seed",
+			RollMode:   "roll",
+		},
+	}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("encode damage roll payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.damage_roll.resolve"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.damage_roll_resolved"),
+				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-damage-roll-legacy",
+				EntityType:    "roll",
+				EntityID:      "req-damage-roll-legacy",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   payloadJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = domain
+
+	ctx := grpcmeta.WithRequestID(context.Background(), "req-damage-roll-legacy")
+	_, err = svc.SessionDamageRoll(ctx, &pb.SessionDamageRollRequest{
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		CharacterId: "char-1",
+		Dice:        []*pb.DiceSpec{{Sides: 6, Count: 2}},
+	})
+	if err != nil {
+		t.Fatalf("SessionDamageRoll returned error: %v", err)
+	}
+	if domain.calls != 1 {
+		t.Fatalf("expected domain to be called once, got %d", domain.calls)
+	}
+	if len(domain.commands) != 1 {
+		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
+	}
+	if domain.commands[0].Type != command.Type("action.damage_roll.resolve") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "action.damage_roll.resolve")
+	}
+	if domain.commands[0].SystemID != daggerheart.SystemID {
+		t.Fatalf("command system id = %s, want %s", domain.commands[0].SystemID, daggerheart.SystemID)
+	}
+	if domain.commands[0].SystemVersion != daggerheart.SystemVersion {
+		t.Fatalf("command system version = %s, want %s", domain.commands[0].SystemVersion, daggerheart.SystemVersion)
+	}
+	var got struct {
+		CharacterID string `json:"character_id"`
+		RollSeq     uint64 `json:"roll_seq"`
+	}
+	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &got); err != nil {
+		t.Fatalf("decode damage roll command payload: %v", err)
+	}
+	if got.CharacterID != "char-1" {
+		t.Fatalf("command character id = %s, want %s", got.CharacterID, "char-1")
+	}
+	if got.RollSeq == 0 {
+		t.Fatal("expected non-zero roll seq in command payload")
+	}
+}
+
 // --- SessionAttackFlow tests ---
 
 func TestSessionAttackFlow_MissingStores(t *testing.T) {
@@ -1937,6 +5081,7 @@ func TestSessionAttackFlow_MissingStores(t *testing.T) {
 
 func TestSessionAttackFlow_MissingCampaignId(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	_, err := svc.SessionAttackFlow(context.Background(), &pb.SessionAttackFlowRequest{
 		SessionId: "sess-1",
 	})
@@ -1945,6 +5090,7 @@ func TestSessionAttackFlow_MissingCampaignId(t *testing.T) {
 
 func TestSessionAttackFlow_MissingSessionId(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	_, err := svc.SessionAttackFlow(context.Background(), &pb.SessionAttackFlowRequest{
 		CampaignId: "camp-1",
 	})
@@ -1953,6 +5099,7 @@ func TestSessionAttackFlow_MissingSessionId(t *testing.T) {
 
 func TestSessionAttackFlow_MissingCharacterId(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	_, err := svc.SessionAttackFlow(context.Background(), &pb.SessionAttackFlowRequest{
 		CampaignId: "camp-1", SessionId: "sess-1",
 	})
@@ -1961,6 +5108,7 @@ func TestSessionAttackFlow_MissingCharacterId(t *testing.T) {
 
 func TestSessionAttackFlow_MissingTrait(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	_, err := svc.SessionAttackFlow(context.Background(), &pb.SessionAttackFlowRequest{
 		CampaignId: "camp-1", SessionId: "sess-1", CharacterId: "char-1",
 	})
@@ -1969,6 +5117,7 @@ func TestSessionAttackFlow_MissingTrait(t *testing.T) {
 
 func TestSessionAttackFlow_MissingTargetId(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	_, err := svc.SessionAttackFlow(context.Background(), &pb.SessionAttackFlowRequest{
 		CampaignId: "camp-1", SessionId: "sess-1", CharacterId: "char-1", Trait: "agility",
 	})
@@ -1977,6 +5126,7 @@ func TestSessionAttackFlow_MissingTargetId(t *testing.T) {
 
 func TestSessionAttackFlow_MissingDamage(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	_, err := svc.SessionAttackFlow(context.Background(), &pb.SessionAttackFlowRequest{
 		CampaignId: "camp-1", SessionId: "sess-1", CharacterId: "char-1", Trait: "agility", TargetId: "adv-1",
 	})
@@ -1985,6 +5135,7 @@ func TestSessionAttackFlow_MissingDamage(t *testing.T) {
 
 func TestSessionAttackFlow_MissingDamageType(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	_, err := svc.SessionAttackFlow(context.Background(), &pb.SessionAttackFlowRequest{
 		CampaignId: "camp-1", SessionId: "sess-1", CharacterId: "char-1", Trait: "agility", TargetId: "adv-1",
 		Damage: &pb.DaggerheartAttackDamageSpec{},
@@ -2004,6 +5155,7 @@ func TestSessionReactionFlow_MissingStores(t *testing.T) {
 
 func TestSessionReactionFlow_MissingCampaignId(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	_, err := svc.SessionReactionFlow(context.Background(), &pb.SessionReactionFlowRequest{
 		SessionId: "sess-1",
 	})
@@ -2012,6 +5164,7 @@ func TestSessionReactionFlow_MissingCampaignId(t *testing.T) {
 
 func TestSessionReactionFlow_MissingSessionId(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	_, err := svc.SessionReactionFlow(context.Background(), &pb.SessionReactionFlowRequest{
 		CampaignId: "camp-1",
 	})
@@ -2020,6 +5173,7 @@ func TestSessionReactionFlow_MissingSessionId(t *testing.T) {
 
 func TestSessionReactionFlow_MissingCharacterId(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	_, err := svc.SessionReactionFlow(context.Background(), &pb.SessionReactionFlowRequest{
 		CampaignId: "camp-1", SessionId: "sess-1",
 	})
@@ -2028,6 +5182,7 @@ func TestSessionReactionFlow_MissingCharacterId(t *testing.T) {
 
 func TestSessionReactionFlow_MissingTrait(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	_, err := svc.SessionReactionFlow(context.Background(), &pb.SessionReactionFlowRequest{
 		CampaignId: "camp-1", SessionId: "sess-1", CharacterId: "char-1",
 	})
@@ -2036,6 +5191,91 @@ func TestSessionReactionFlow_MissingTrait(t *testing.T) {
 
 func TestSessionReactionFlow_Success(t *testing.T) {
 	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+
+	rollPayload := action.RollResolvePayload{
+		RequestID: "req-reaction-1",
+		RollSeq:   1,
+		Results:   map[string]any{"d20": 12},
+		Outcome:   pb.Outcome_SUCCESS_WITH_HOPE.String(),
+		SystemData: map[string]any{
+			"character_id": "char-1",
+			"roll_kind":    pb.RollKind_ROLL_KIND_REACTION.String(),
+			"hope_fear":    false,
+		},
+	}
+	rollJSON, err := json.Marshal(rollPayload)
+	if err != nil {
+		t.Fatalf("encode roll payload: %v", err)
+	}
+
+	outcomeJSON, err := json.Marshal(action.OutcomeApplyPayload{
+		RequestID: "req-reaction-1",
+		RollSeq:   1,
+		Targets:   []string{"char-1"},
+	})
+	if err != nil {
+		t.Fatalf("encode outcome payload: %v", err)
+	}
+
+	reactionPayload := daggerheart.ReactionResolvedPayload{
+		CharacterID:        "char-1",
+		RollSeq:            1,
+		Outcome:            "success",
+		Success:            true,
+		Crit:               false,
+		CritNegatesEffects: false,
+		EffectsNegated:     false,
+	}
+	reactionJSON, err := json.Marshal(reactionPayload)
+	if err != nil {
+		t.Fatalf("encode reaction payload: %v", err)
+	}
+
+	svc.stores.Domain = &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.roll.resolve"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "camp-1",
+				Type:        event.Type("action.roll_resolved"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				SessionID:   "sess-1",
+				RequestID:   "req-reaction-1",
+				EntityType:  "roll",
+				EntityID:    "req-reaction-1",
+				PayloadJSON: rollJSON,
+			}),
+		},
+		command.Type("action.outcome.apply"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "camp-1",
+				Type:        event.Type("action.outcome_applied"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				SessionID:   "sess-1",
+				RequestID:   "req-reaction-1",
+				EntityType:  "outcome",
+				EntityID:    "req-reaction-1",
+				PayloadJSON: outcomeJSON,
+			}),
+		},
+		command.Type("action.reaction.resolve"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.reaction_resolved"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-reaction-1",
+				EntityType:    "reaction",
+				EntityID:      "req-reaction-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   reactionJSON,
+			}),
+		},
+	}}
 	ctx := grpcmeta.WithRequestID(context.Background(), "req-reaction-1")
 	resp, err := svc.SessionReactionFlow(ctx, &pb.SessionReactionFlowRequest{
 		CampaignId:  "camp-1",
@@ -2092,9 +5332,56 @@ func TestSessionAdversaryAttackRoll_MissingAdversaryId(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
+func TestSessionAdversaryAttackRoll_RequiresDomainEngine(t *testing.T) {
+	svc := newAdversaryDamageTestService()
+	svc.stores.Domain = nil
+	_, err := svc.SessionAdversaryAttackRoll(context.Background(), &pb.SessionAdversaryAttackRollRequest{
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		AdversaryId: "adv-1",
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
 func TestSessionAdversaryAttackRoll_Success(t *testing.T) {
 	svc := newAdversaryDamageTestService()
-	resp, err := svc.SessionAdversaryAttackRoll(context.Background(), &pb.SessionAdversaryAttackRollRequest{
+	eventStore := svc.stores.Event.(*fakeEventStore)
+
+	payload := daggerheart.AdversaryRollResolvedPayload{
+		AdversaryID:  "adv-1",
+		RollSeq:      1,
+		Rolls:        []int{7},
+		Roll:         7,
+		Modifier:     0,
+		Total:        7,
+		Advantage:    0,
+		Disadvantage: 0,
+	}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("encode adversary roll payload: %v", err)
+	}
+
+	svc.stores.Domain = &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.adversary_roll.resolve"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.adversary_roll_resolved"),
+				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-adv-roll-success",
+				EntityType:    "adversary",
+				EntityID:      "adv-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   payloadJSON,
+			}),
+		},
+	}}
+
+	ctx := grpcmeta.WithRequestID(context.Background(), "req-adv-roll-success")
+	resp, err := svc.SessionAdversaryAttackRoll(ctx, &pb.SessionAdversaryAttackRollRequest{
 		CampaignId:  "camp-1",
 		SessionId:   "sess-1",
 		AdversaryId: "adv-1",
@@ -2104,6 +5391,71 @@ func TestSessionAdversaryAttackRoll_Success(t *testing.T) {
 	}
 	if resp.RollSeq == 0 {
 		t.Fatal("expected non-zero roll seq")
+	}
+}
+
+func TestSessionAdversaryAttackRoll_UsesDomainEngine(t *testing.T) {
+	svc := newAdversaryDamageTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+
+	payload := daggerheart.AdversaryRollResolvedPayload{
+		AdversaryID:  "adv-1",
+		RollSeq:      1,
+		Rolls:        []int{12, 18},
+		Roll:         18,
+		Modifier:     2,
+		Total:        20,
+		Advantage:    1,
+		Disadvantage: 0,
+	}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("encode adversary roll payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.adversary_roll.resolve"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.adversary_roll_resolved"),
+				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-adv-roll",
+				EntityType:    "adversary",
+				EntityID:      "adv-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   payloadJSON,
+			}),
+		},
+	}}
+
+	svc.stores.Domain = domain
+
+	ctx := grpcmeta.WithRequestID(context.Background(), "req-adv-roll")
+	resp, err := svc.SessionAdversaryAttackRoll(ctx, &pb.SessionAdversaryAttackRollRequest{
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		AdversaryId: "adv-1",
+	})
+	if err != nil {
+		t.Fatalf("SessionAdversaryAttackRoll returned error: %v", err)
+	}
+	if resp.RollSeq == 0 {
+		t.Fatal("expected non-zero roll seq")
+	}
+	if domain.calls != 1 {
+		t.Fatalf("expected domain to be called once, got %d", domain.calls)
+	}
+	if domain.lastCommand.Type != command.Type("action.adversary_roll.resolve") {
+		t.Fatalf("command type = %s, want %s", domain.lastCommand.Type, "action.adversary_roll.resolve")
+	}
+	if got := len(eventStore.events["camp-1"]); got != 1 {
+		t.Fatalf("expected 1 event, got %d", got)
+	}
+	if eventStore.events["camp-1"][0].Type != event.Type("action.adversary_roll_resolved") {
+		t.Fatalf("event type = %s, want %s", eventStore.events["camp-1"][0].Type, event.Type("action.adversary_roll_resolved"))
 	}
 }
 
@@ -2141,8 +5493,111 @@ func TestSessionAdversaryActionCheck_MissingAdversaryId(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
+func TestSessionAdversaryActionCheck_RequiresDomainEngine(t *testing.T) {
+	svc := newAdversaryDamageTestService()
+	svc.stores.Domain = nil
+	_, err := svc.SessionAdversaryActionCheck(context.Background(), &pb.SessionAdversaryActionCheckRequest{
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		AdversaryId: "adv-1",
+		Difficulty:  10,
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
 func TestSessionAdversaryActionCheck_Success(t *testing.T) {
 	svc := newAdversaryDamageTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+
+	payload := daggerheart.AdversaryActionResolvedPayload{
+		AdversaryID: "adv-1",
+		RollSeq:     1,
+		Difficulty:  10,
+		Dramatic:    false,
+		AutoSuccess: true,
+		Roll:        0,
+		Modifier:    0,
+		Total:       0,
+		Success:     true,
+	}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("encode adversary action payload: %v", err)
+	}
+
+	svc.stores.Domain = &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.adversary_action.resolve"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.adversary_action_resolved"),
+				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-adv-action-success",
+				EntityType:    "adversary",
+				EntityID:      "adv-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   payloadJSON,
+			}),
+		},
+	}}
+
+	ctx := grpcmeta.WithRequestID(context.Background(), "req-adv-action-success")
+	resp, err := svc.SessionAdversaryActionCheck(ctx, &pb.SessionAdversaryActionCheckRequest{
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		AdversaryId: "adv-1",
+		Difficulty:  10,
+	})
+	if err != nil {
+		t.Fatalf("SessionAdversaryActionCheck returned error: %v", err)
+	}
+	if resp.RollSeq == 0 {
+		t.Fatal("expected non-zero roll seq")
+	}
+}
+
+func TestSessionAdversaryActionCheck_UsesDomainEngine(t *testing.T) {
+	svc := newAdversaryDamageTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+
+	payload := daggerheart.AdversaryActionResolvedPayload{
+		AdversaryID: "adv-1",
+		RollSeq:     1,
+		Difficulty:  10,
+		Dramatic:    false,
+		AutoSuccess: true,
+		Roll:        0,
+		Modifier:    0,
+		Total:       0,
+		Success:     true,
+	}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("encode adversary action payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.adversary_action.resolve"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.adversary_action_resolved"),
+				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-adv-action",
+				EntityType:    "adversary",
+				EntityID:      "adv-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   payloadJSON,
+			}),
+		},
+	}}
+
+	svc.stores.Domain = domain
+
 	resp, err := svc.SessionAdversaryActionCheck(context.Background(), &pb.SessionAdversaryActionCheckRequest{
 		CampaignId:  "camp-1",
 		SessionId:   "sess-1",
@@ -2154,6 +5609,18 @@ func TestSessionAdversaryActionCheck_Success(t *testing.T) {
 	}
 	if resp.RollSeq == 0 {
 		t.Fatal("expected non-zero roll seq")
+	}
+	if domain.calls != 1 {
+		t.Fatalf("expected domain to be called once, got %d", domain.calls)
+	}
+	if domain.lastCommand.Type != command.Type("action.adversary_action.resolve") {
+		t.Fatalf("command type = %s, want %s", domain.lastCommand.Type, "action.adversary_action.resolve")
+	}
+	if got := len(eventStore.events["camp-1"]); got != 1 {
+		t.Fatalf("expected 1 event, got %d", got)
+	}
+	if eventStore.events["camp-1"][0].Type != event.Type("action.adversary_action_resolved") {
+		t.Fatalf("event type = %s, want %s", eventStore.events["camp-1"][0].Type, event.Type("action.adversary_action_resolved"))
 	}
 }
 
@@ -2228,6 +5695,7 @@ func TestSessionGroupActionFlow_MissingStores(t *testing.T) {
 
 func TestSessionGroupActionFlow_MissingCampaignId(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	_, err := svc.SessionGroupActionFlow(context.Background(), &pb.SessionGroupActionFlowRequest{
 		SessionId: "sess-1",
 	})
@@ -2236,6 +5704,7 @@ func TestSessionGroupActionFlow_MissingCampaignId(t *testing.T) {
 
 func TestSessionGroupActionFlow_MissingSessionId(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	_, err := svc.SessionGroupActionFlow(context.Background(), &pb.SessionGroupActionFlowRequest{
 		CampaignId: "camp-1",
 	})
@@ -2244,6 +5713,7 @@ func TestSessionGroupActionFlow_MissingSessionId(t *testing.T) {
 
 func TestSessionGroupActionFlow_MissingLeader(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	_, err := svc.SessionGroupActionFlow(context.Background(), &pb.SessionGroupActionFlowRequest{
 		CampaignId: "camp-1", SessionId: "sess-1",
 	})
@@ -2252,6 +5722,7 @@ func TestSessionGroupActionFlow_MissingLeader(t *testing.T) {
 
 func TestSessionGroupActionFlow_MissingLeaderTrait(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	_, err := svc.SessionGroupActionFlow(context.Background(), &pb.SessionGroupActionFlowRequest{
 		CampaignId: "camp-1", SessionId: "sess-1", LeaderCharacterId: "char-1",
 	})
@@ -2260,6 +5731,7 @@ func TestSessionGroupActionFlow_MissingLeaderTrait(t *testing.T) {
 
 func TestSessionGroupActionFlow_MissingDifficulty(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	_, err := svc.SessionGroupActionFlow(context.Background(), &pb.SessionGroupActionFlowRequest{
 		CampaignId: "camp-1", SessionId: "sess-1", LeaderCharacterId: "char-1", LeaderTrait: "agility",
 	})
@@ -2268,6 +5740,7 @@ func TestSessionGroupActionFlow_MissingDifficulty(t *testing.T) {
 
 func TestSessionGroupActionFlow_MissingSupporters(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	_, err := svc.SessionGroupActionFlow(context.Background(), &pb.SessionGroupActionFlowRequest{
 		CampaignId: "camp-1", SessionId: "sess-1", LeaderCharacterId: "char-1", LeaderTrait: "agility", Difficulty: 10,
 	})
@@ -2286,6 +5759,7 @@ func TestSessionTagTeamFlow_MissingStores(t *testing.T) {
 
 func TestSessionTagTeamFlow_MissingCampaignId(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	_, err := svc.SessionTagTeamFlow(context.Background(), &pb.SessionTagTeamFlowRequest{
 		SessionId: "sess-1",
 	})
@@ -2294,6 +5768,7 @@ func TestSessionTagTeamFlow_MissingCampaignId(t *testing.T) {
 
 func TestSessionTagTeamFlow_MissingSessionId(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	_, err := svc.SessionTagTeamFlow(context.Background(), &pb.SessionTagTeamFlowRequest{
 		CampaignId: "camp-1",
 	})
@@ -2302,6 +5777,7 @@ func TestSessionTagTeamFlow_MissingSessionId(t *testing.T) {
 
 func TestSessionTagTeamFlow_MissingDifficulty(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	_, err := svc.SessionTagTeamFlow(context.Background(), &pb.SessionTagTeamFlowRequest{
 		CampaignId: "camp-1", SessionId: "sess-1",
 	})
@@ -2310,6 +5786,7 @@ func TestSessionTagTeamFlow_MissingDifficulty(t *testing.T) {
 
 func TestSessionTagTeamFlow_MissingFirst(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	_, err := svc.SessionTagTeamFlow(context.Background(), &pb.SessionTagTeamFlowRequest{
 		CampaignId: "camp-1", SessionId: "sess-1", Difficulty: 10,
 	})
@@ -2318,6 +5795,7 @@ func TestSessionTagTeamFlow_MissingFirst(t *testing.T) {
 
 func TestSessionTagTeamFlow_MissingSecond(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	_, err := svc.SessionTagTeamFlow(context.Background(), &pb.SessionTagTeamFlowRequest{
 		CampaignId: "camp-1", SessionId: "sess-1", Difficulty: 10,
 		First: &pb.TagTeamParticipant{CharacterId: "char-1", Trait: "agility"},
@@ -2327,6 +5805,7 @@ func TestSessionTagTeamFlow_MissingSecond(t *testing.T) {
 
 func TestSessionTagTeamFlow_SameParticipant(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	_, err := svc.SessionTagTeamFlow(context.Background(), &pb.SessionTagTeamFlowRequest{
 		CampaignId: "camp-1", SessionId: "sess-1", Difficulty: 10,
 		First:               &pb.TagTeamParticipant{CharacterId: "char-1", Trait: "agility"},
@@ -2348,6 +5827,7 @@ func TestApplyRollOutcome_MissingStores(t *testing.T) {
 
 func TestApplyRollOutcome_MissingCampaignId(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	_, err := svc.ApplyRollOutcome(context.Background(), &pb.ApplyRollOutcomeRequest{
 		SessionId: "sess-1", RollSeq: 1,
 	})
@@ -2356,6 +5836,7 @@ func TestApplyRollOutcome_MissingCampaignId(t *testing.T) {
 
 func TestApplyRollOutcome_MissingSessionId(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	ctx := withCampaignSessionMetadata(context.Background(), "camp-1", "")
 	_, err := svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
 		RollSeq: 1,
@@ -2365,6 +5846,7 @@ func TestApplyRollOutcome_MissingSessionId(t *testing.T) {
 
 func TestApplyRollOutcome_MissingRollSeq(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	ctx := withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1")
 	_, err := svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
 		SessionId: "sess-1",
@@ -2372,11 +5854,10 @@ func TestApplyRollOutcome_MissingRollSeq(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
-func TestApplyRollOutcome_Success(t *testing.T) {
+func TestApplyRollOutcome_RequiresDomainEngine(t *testing.T) {
 	svc := newActionTestService()
-	// First create a roll event via SessionActionRoll.
-	// Must include request ID as ApplyRollOutcome requires it.
-	rollCtx := grpcmeta.WithRequestID(context.Background(), "req-roll-1")
+	rollCtx := grpcmeta.WithRequestID(context.Background(), "req-roll-outcome-required")
+	configureActionRollDomain(t, svc, "req-roll-outcome-required")
 	rollResp, err := svc.SessionActionRoll(rollCtx, &pb.SessionActionRollRequest{
 		CampaignId:  "camp-1",
 		SessionId:   "sess-1",
@@ -2387,17 +5868,905 @@ func TestApplyRollOutcome_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SessionActionRoll returned error: %v", err)
 	}
+	noDomainSvc := &DaggerheartService{stores: svc.stores, seedFunc: svc.seedFunc}
+	noDomainSvc.stores.Domain = nil
+
+	ctx := grpcmeta.WithRequestID(withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1"), "req-roll-outcome-required")
+	_, err = noDomainSvc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
+		SessionId: "sess-1",
+		RollSeq:   rollResp.RollSeq,
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestApplyRollOutcome_Success(t *testing.T) {
+	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+
+	rollPayload := action.RollResolvePayload{
+		RequestID: "req-roll-1",
+		RollSeq:   1,
+		Results:   map[string]any{"d20": 20},
+		Outcome:   pb.Outcome_SUCCESS_WITH_HOPE.String(),
+		SystemData: map[string]any{
+			"character_id": "char-1",
+			"roll_kind":    pb.RollKind_ROLL_KIND_ACTION.String(),
+			"hope_fear":    true,
+		},
+	}
+	rollJSON, err := json.Marshal(rollPayload)
+	if err != nil {
+		t.Fatalf("encode roll payload: %v", err)
+	}
+	rollEvent, err := eventStore.AppendEvent(context.Background(), event.Event{
+		CampaignID:  "camp-1",
+		Timestamp:   now,
+		Type:        event.Type("action.roll_resolved"),
+		SessionID:   "sess-1",
+		RequestID:   "req-roll-1",
+		ActorType:   event.ActorTypeSystem,
+		EntityType:  "roll",
+		EntityID:    "req-roll-1",
+		PayloadJSON: rollJSON,
+	})
+	if err != nil {
+		t.Fatalf("append roll event: %v", err)
+	}
+
+	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
+	state := dhStore.states["camp-1:char-1"]
+	hopeBefore := state.Hope
+	hopeMax := state.HopeMax
+	if hopeMax == 0 {
+		hopeMax = daggerheart.HopeMax
+	}
+	hopeAfter := hopeBefore + 1
+	if hopeAfter > hopeMax {
+		hopeAfter = hopeMax
+	}
+	stressBefore := state.Stress
+	stressAfter := stressBefore
+	patchPayload := daggerheart.CharacterStatePatchedPayload{
+		CharacterID:  "char-1",
+		HopeBefore:   &hopeBefore,
+		HopeAfter:    &hopeAfter,
+		StressBefore: &stressBefore,
+		StressAfter:  &stressAfter,
+	}
+	patchJSON, err := json.Marshal(patchPayload)
+	if err != nil {
+		t.Fatalf("encode patch payload: %v", err)
+	}
+
+	svc.stores.Domain = &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.character_state.patch"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.character_state_patched"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-roll-1",
+				EntityType:    "character",
+				EntityID:      "char-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   patchJSON,
+			}),
+		},
+		command.Type("action.outcome.apply"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "camp-1",
+				Type:        event.Type("action.outcome_applied"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				SessionID:   "sess-1",
+				RequestID:   "req-roll-1",
+				EntityType:  "outcome",
+				EntityID:    "req-roll-1",
+				PayloadJSON: []byte(`{"request_id":"req-roll-1"}`),
+			}),
+		},
+	}}
 
 	ctx := grpcmeta.WithRequestID(withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1"), "req-roll-1")
 	resp, err := svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
 		SessionId: "sess-1",
-		RollSeq:   rollResp.RollSeq,
+		RollSeq:   rollEvent.Seq,
 	})
 	if err != nil {
 		t.Fatalf("ApplyRollOutcome returned error: %v", err)
 	}
 	if resp.RollSeq == 0 {
 		t.Fatal("expected roll seq in response")
+	}
+}
+
+func TestApplyRollOutcome_UsesDomainEngine(t *testing.T) {
+	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
+	state := dhStore.states["camp-1:char-1"]
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+
+	rollPayload := action.RollResolvePayload{
+		RequestID: "req-roll-1",
+		RollSeq:   1,
+		Results:   map[string]any{"d20": 20},
+		Outcome:   pb.Outcome_SUCCESS_WITH_HOPE.String(),
+		SystemData: map[string]any{
+			"character_id": "char-1",
+		},
+	}
+	rollJSON, err := json.Marshal(rollPayload)
+	if err != nil {
+		t.Fatalf("encode roll payload: %v", err)
+	}
+
+	hopeBefore := state.Hope
+	hopeMax := state.HopeMax
+	if hopeMax == 0 {
+		hopeMax = daggerheart.HopeMax
+	}
+	hopeAfter := hopeBefore + 1
+	if hopeAfter > hopeMax {
+		hopeAfter = hopeMax
+	}
+	stressBefore := state.Stress
+	stressAfter := stressBefore
+	patchPayload := daggerheart.CharacterStatePatchedPayload{
+		CharacterID:  "char-1",
+		HopeBefore:   &hopeBefore,
+		HopeAfter:    &hopeAfter,
+		StressBefore: &stressBefore,
+		StressAfter:  &stressAfter,
+	}
+	patchJSON, err := json.Marshal(patchPayload)
+	if err != nil {
+		t.Fatalf("encode patch payload: %v", err)
+	}
+	rollEvent, err := eventStore.AppendEvent(context.Background(), event.Event{
+		CampaignID:  "camp-1",
+		Timestamp:   now,
+		Type:        event.Type("action.roll_resolved"),
+		SessionID:   "sess-1",
+		RequestID:   "req-roll-1",
+		ActorType:   event.ActorTypeSystem,
+		EntityType:  "roll",
+		EntityID:    "req-roll-1",
+		PayloadJSON: rollJSON,
+	})
+	if err != nil {
+		t.Fatalf("append roll event: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.character_state.patch"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.character_state_patched"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-roll-1",
+				EntityType:    "character",
+				EntityID:      "char-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   patchJSON,
+			}),
+		},
+		command.Type("action.outcome.apply"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "camp-1",
+				Type:        event.Type("action.outcome_applied"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				SessionID:   "sess-1",
+				RequestID:   "req-roll-1",
+				EntityType:  "outcome",
+				EntityID:    "req-roll-1",
+				PayloadJSON: []byte(`{"request_id":"req-roll-1"}`),
+			}),
+		},
+	}}
+	svc.stores.Domain = domain
+
+	ctx := grpcmeta.WithRequestID(withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1"), "req-roll-1")
+	_, err = svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
+		SessionId: "sess-1",
+		RollSeq:   rollEvent.Seq,
+	})
+	if err != nil {
+		t.Fatalf("ApplyRollOutcome returned error: %v", err)
+	}
+	if domain.calls != 2 {
+		t.Fatalf("expected domain to be called twice, got %d", domain.calls)
+	}
+	if len(domain.commands) != 2 {
+		t.Fatalf("expected 2 domain commands, got %d", len(domain.commands))
+	}
+	var foundPatch bool
+	var foundOutcome bool
+	for _, cmd := range domain.commands {
+		switch cmd.Type {
+		case command.Type("action.character_state.patch"):
+			foundPatch = true
+		case command.Type("action.outcome.apply"):
+			foundOutcome = true
+		}
+	}
+	if !foundPatch {
+		t.Fatal("expected character state patch command")
+	}
+	if !foundOutcome {
+		t.Fatal("expected outcome apply command")
+	}
+	found := false
+	for _, evt := range eventStore.events["camp-1"] {
+		if evt.Type == event.Type("action.outcome_applied") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected outcome applied event")
+	}
+}
+
+func TestApplyRollOutcome_UsesDomainEngineForGmFear(t *testing.T) {
+	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
+	dhStore.snapshots["camp-1"] = storage.DaggerheartSnapshot{CampaignID: "camp-1", GMFear: 1}
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+
+	rollPayload := action.RollResolvePayload{
+		RequestID: "req-roll-1",
+		RollSeq:   1,
+		Results:   map[string]any{"d20": 1},
+		Outcome:   pb.Outcome_FAILURE_WITH_FEAR.String(),
+		SystemData: map[string]any{
+			"character_id": "char-1",
+		},
+	}
+	rollJSON, err := json.Marshal(rollPayload)
+	if err != nil {
+		t.Fatalf("encode roll payload: %v", err)
+	}
+	rollEvent, err := eventStore.AppendEvent(context.Background(), event.Event{
+		CampaignID:  "camp-1",
+		Timestamp:   now,
+		Type:        event.Type("action.roll_resolved"),
+		SessionID:   "sess-1",
+		RequestID:   "req-roll-1",
+		ActorType:   event.ActorTypeSystem,
+		EntityType:  "roll",
+		EntityID:    "req-roll-1",
+		PayloadJSON: rollJSON,
+	})
+	if err != nil {
+		t.Fatalf("append roll event: %v", err)
+	}
+
+	gatePayload := session.GateOpenedPayload{
+		GateID:   "gate-1",
+		GateType: "gm_consequence",
+		Reason:   "gm_consequence",
+		Metadata: map[string]any{"roll_seq": uint64(rollEvent.Seq), "request_id": "req-roll-1"},
+	}
+	gateJSON, err := json.Marshal(gatePayload)
+	if err != nil {
+		t.Fatalf("encode gate payload: %v", err)
+	}
+
+	spotlightPayload := session.SpotlightSetPayload{SpotlightType: string(session.SpotlightTypeGM)}
+	spotlightJSON, err := json.Marshal(spotlightPayload)
+	if err != nil {
+		t.Fatalf("encode spotlight payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.gm_fear.set"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.gm_fear_changed"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-roll-1",
+				EntityType:    "campaign",
+				EntityID:      "camp-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   []byte(`{"before":1,"after":2}`),
+			}),
+		},
+		command.Type("action.outcome.apply"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "camp-1",
+				Type:        event.Type("action.outcome_applied"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				SessionID:   "sess-1",
+				RequestID:   "req-roll-1",
+				EntityType:  "outcome",
+				EntityID:    "req-roll-1",
+				PayloadJSON: []byte(`{"request_id":"req-roll-1"}`),
+			}),
+		},
+		command.Type("session.gate_open"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "camp-1",
+				Type:        event.Type("session.gate_opened"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				SessionID:   "sess-1",
+				RequestID:   "req-roll-1",
+				EntityType:  "session_gate",
+				EntityID:    "gate-1",
+				PayloadJSON: gateJSON,
+			}),
+		},
+		command.Type("session.spotlight_set"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "camp-1",
+				Type:        event.Type("session.spotlight_set"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				SessionID:   "sess-1",
+				RequestID:   "req-roll-1",
+				EntityType:  "session_spotlight",
+				EntityID:    "sess-1",
+				PayloadJSON: spotlightJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = domain
+
+	ctx := grpcmeta.WithRequestID(withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1"), "req-roll-1")
+	_, err = svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
+		SessionId: "sess-1",
+		RollSeq:   rollEvent.Seq,
+	})
+	if err != nil {
+		t.Fatalf("ApplyRollOutcome returned error: %v", err)
+	}
+	if domain.calls != 4 {
+		t.Fatalf("expected domain to be called 4 times, got %d", domain.calls)
+	}
+	if len(domain.commands) != 4 {
+		t.Fatalf("expected 4 domain commands, got %d", len(domain.commands))
+	}
+	var foundFear bool
+	var foundOutcome bool
+	var foundGate bool
+	var foundSpotlight bool
+	for _, cmd := range domain.commands {
+		switch cmd.Type {
+		case command.Type("action.gm_fear.set"):
+			foundFear = true
+			if cmd.SystemID != daggerheart.SystemID {
+				t.Fatalf("gm fear command system id = %s, want %s", cmd.SystemID, daggerheart.SystemID)
+			}
+			if cmd.SystemVersion != daggerheart.SystemVersion {
+				t.Fatalf("gm fear command system version = %s, want %s", cmd.SystemVersion, daggerheart.SystemVersion)
+			}
+		case command.Type("action.outcome.apply"):
+			foundOutcome = true
+		case command.Type("session.gate_open"):
+			foundGate = true
+		case command.Type("session.spotlight_set"):
+			foundSpotlight = true
+		}
+	}
+	if !foundFear {
+		t.Fatal("expected gm fear command")
+	}
+	if !foundOutcome {
+		t.Fatal("expected outcome apply command")
+	}
+	if !foundGate {
+		t.Fatal("expected session gate command")
+	}
+	if !foundSpotlight {
+		t.Fatal("expected session spotlight command")
+	}
+	var foundFearEvent bool
+	var foundOutcomeEvent bool
+	for _, evt := range eventStore.events["camp-1"] {
+		switch evt.Type {
+		case event.Type("action.gm_fear_changed"):
+			foundFearEvent = true
+		case event.Type("action.outcome_applied"):
+			foundOutcomeEvent = true
+		}
+	}
+	if !foundFearEvent {
+		t.Fatal("expected gm fear event")
+	}
+	if !foundOutcomeEvent {
+		t.Fatal("expected outcome applied event")
+	}
+}
+
+func TestApplyRollOutcome_UsesDomainEngineForGmConsequenceGate(t *testing.T) {
+	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+
+	rollPayload := action.RollResolvePayload{
+		RequestID: "req-roll-1",
+		RollSeq:   1,
+		Results:   map[string]any{"d20": 1},
+		Outcome:   pb.Outcome_FAILURE_WITH_FEAR.String(),
+		SystemData: map[string]any{
+			"character_id": "char-1",
+		},
+	}
+	rollJSON, err := json.Marshal(rollPayload)
+	if err != nil {
+		t.Fatalf("encode roll payload: %v", err)
+	}
+	rollEvent, err := eventStore.AppendEvent(context.Background(), event.Event{
+		CampaignID:  "camp-1",
+		Timestamp:   now,
+		Type:        event.Type("action.roll_resolved"),
+		SessionID:   "sess-1",
+		RequestID:   "req-roll-1",
+		ActorType:   event.ActorTypeSystem,
+		EntityType:  "roll",
+		EntityID:    "req-roll-1",
+		PayloadJSON: rollJSON,
+	})
+	if err != nil {
+		t.Fatalf("append roll event: %v", err)
+	}
+
+	gatePayload := session.GateOpenedPayload{
+		GateID:   "gate-1",
+		GateType: "gm_consequence",
+		Reason:   "gm_consequence",
+		Metadata: map[string]any{"roll_seq": uint64(rollEvent.Seq), "request_id": "req-roll-1"},
+	}
+	gateJSON, err := json.Marshal(gatePayload)
+	if err != nil {
+		t.Fatalf("encode gate payload: %v", err)
+	}
+
+	spotlightPayload := session.SpotlightSetPayload{SpotlightType: string(session.SpotlightTypeGM)}
+	spotlightJSON, err := json.Marshal(spotlightPayload)
+	if err != nil {
+		t.Fatalf("encode spotlight payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.gm_fear.set"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.gm_fear_changed"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-roll-1",
+				EntityType:    "campaign",
+				EntityID:      "camp-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   []byte(`{"before":0,"after":1}`),
+			}),
+		},
+		command.Type("action.outcome.apply"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "camp-1",
+				Type:        event.Type("action.outcome_applied"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				SessionID:   "sess-1",
+				RequestID:   "req-roll-1",
+				EntityType:  "outcome",
+				EntityID:    "req-roll-1",
+				PayloadJSON: []byte(`{"request_id":"req-roll-1"}`),
+			}),
+		},
+		command.Type("session.gate_open"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "camp-1",
+				Type:        event.Type("session.gate_opened"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				SessionID:   "sess-1",
+				RequestID:   "req-roll-1",
+				EntityType:  "session_gate",
+				EntityID:    "gate-1",
+				PayloadJSON: gateJSON,
+			}),
+		},
+		command.Type("session.spotlight_set"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "camp-1",
+				Type:        event.Type("session.spotlight_set"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				SessionID:   "sess-1",
+				RequestID:   "req-roll-1",
+				EntityType:  "session_spotlight",
+				EntityID:    "sess-1",
+				PayloadJSON: spotlightJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = domain
+
+	ctx := grpcmeta.WithRequestID(withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1"), "req-roll-1")
+	resp, err := svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
+		SessionId: "sess-1",
+		RollSeq:   rollEvent.Seq,
+	})
+	if err != nil {
+		t.Fatalf("ApplyRollOutcome returned error: %v", err)
+	}
+	if !resp.RequiresComplication {
+		t.Fatal("expected requires complication to be true")
+	}
+	if domain.calls != 4 {
+		t.Fatalf("expected domain to be called 4 times, got %d", domain.calls)
+	}
+	var foundGate bool
+	var foundSpotlight bool
+	for _, cmd := range domain.commands {
+		switch cmd.Type {
+		case command.Type("session.gate_open"):
+			foundGate = true
+		case command.Type("session.spotlight_set"):
+			foundSpotlight = true
+		}
+	}
+	if !foundGate {
+		t.Fatal("expected session gate open command")
+	}
+	if !foundSpotlight {
+		t.Fatal("expected session spotlight set command")
+	}
+}
+
+func TestApplyRollOutcome_UsesDomainEngineForCharacterStatePatch(t *testing.T) {
+	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
+	state := dhStore.states["camp-1:char-1"]
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+
+	rollPayload := action.RollResolvePayload{
+		RequestID: "req-roll-1",
+		RollSeq:   1,
+		Results:   map[string]any{"d20": 20},
+		Outcome:   pb.Outcome_SUCCESS_WITH_HOPE.String(),
+		SystemData: map[string]any{
+			"character_id": "char-1",
+		},
+	}
+	rollJSON, err := json.Marshal(rollPayload)
+	if err != nil {
+		t.Fatalf("encode roll payload: %v", err)
+	}
+	rollEvent, err := eventStore.AppendEvent(context.Background(), event.Event{
+		CampaignID:  "camp-1",
+		Timestamp:   now,
+		Type:        event.Type("action.roll_resolved"),
+		SessionID:   "sess-1",
+		RequestID:   "req-roll-1",
+		ActorType:   event.ActorTypeSystem,
+		EntityType:  "roll",
+		EntityID:    "req-roll-1",
+		PayloadJSON: rollJSON,
+	})
+	if err != nil {
+		t.Fatalf("append roll event: %v", err)
+	}
+
+	hopeBefore := state.Hope
+	hopeMax := state.HopeMax
+	if hopeMax == 0 {
+		hopeMax = daggerheart.HopeMax
+	}
+	hopeAfter := hopeBefore + 1
+	if hopeAfter > hopeMax {
+		hopeAfter = hopeMax
+	}
+	stressBefore := state.Stress
+	stressAfter := stressBefore
+
+	patchPayload := daggerheart.CharacterStatePatchedPayload{
+		CharacterID:  "char-1",
+		HopeBefore:   &hopeBefore,
+		HopeAfter:    &hopeAfter,
+		StressBefore: &stressBefore,
+		StressAfter:  &stressAfter,
+	}
+	patchJSON, err := json.Marshal(patchPayload)
+	if err != nil {
+		t.Fatalf("encode patch payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.character_state.patch"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.character_state_patched"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-roll-1",
+				EntityType:    "character",
+				EntityID:      "char-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   patchJSON,
+			}),
+		},
+		command.Type("action.outcome.apply"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "camp-1",
+				Type:        event.Type("action.outcome_applied"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				SessionID:   "sess-1",
+				RequestID:   "req-roll-1",
+				EntityType:  "outcome",
+				EntityID:    "req-roll-1",
+				PayloadJSON: []byte(`{"request_id":"req-roll-1"}`),
+			}),
+		},
+	}}
+	svc.stores.Domain = domain
+
+	ctx := grpcmeta.WithRequestID(withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1"), "req-roll-1")
+	_, err = svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
+		SessionId: "sess-1",
+		RollSeq:   rollEvent.Seq,
+	})
+	if err != nil {
+		t.Fatalf("ApplyRollOutcome returned error: %v", err)
+	}
+	if domain.calls != 2 {
+		t.Fatalf("expected domain to be called twice, got %d", domain.calls)
+	}
+	if len(domain.commands) != 2 {
+		t.Fatalf("expected 2 domain commands, got %d", len(domain.commands))
+	}
+	var foundPatch bool
+	var foundOutcome bool
+	for _, cmd := range domain.commands {
+		switch cmd.Type {
+		case command.Type("action.character_state.patch"):
+			foundPatch = true
+			if cmd.SystemID != daggerheart.SystemID {
+				t.Fatalf("patch command system id = %s, want %s", cmd.SystemID, daggerheart.SystemID)
+			}
+			if cmd.SystemVersion != daggerheart.SystemVersion {
+				t.Fatalf("patch command system version = %s, want %s", cmd.SystemVersion, daggerheart.SystemVersion)
+			}
+			var got daggerheart.CharacterStatePatchPayload
+			if err := json.Unmarshal(cmd.PayloadJSON, &got); err != nil {
+				t.Fatalf("decode patch command payload: %v", err)
+			}
+			if got.CharacterID != "char-1" {
+				t.Fatalf("patch command character id = %s, want %s", got.CharacterID, "char-1")
+			}
+			if got.HopeBefore == nil || *got.HopeBefore != hopeBefore {
+				t.Fatalf("patch command hope_before = %v, want %d", got.HopeBefore, hopeBefore)
+			}
+			if got.HopeAfter == nil || *got.HopeAfter != hopeAfter {
+				t.Fatalf("patch command hope_after = %v, want %d", got.HopeAfter, hopeAfter)
+			}
+		case command.Type("action.outcome.apply"):
+			foundOutcome = true
+		}
+	}
+	if !foundPatch {
+		t.Fatal("expected character state patch command")
+	}
+	if !foundOutcome {
+		t.Fatal("expected outcome apply command")
+	}
+	var foundPatchEvent bool
+	var foundOutcomeEvent bool
+	for _, evt := range eventStore.events["camp-1"] {
+		switch evt.Type {
+		case event.Type("action.character_state_patched"):
+			foundPatchEvent = true
+		case event.Type("action.outcome_applied"):
+			foundOutcomeEvent = true
+		}
+	}
+	if !foundPatchEvent {
+		t.Fatal("expected character state patched event")
+	}
+	if !foundOutcomeEvent {
+		t.Fatal("expected outcome applied event")
+	}
+}
+
+func TestApplyRollOutcome_UsesDomainEngineForConditionChange(t *testing.T) {
+	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
+	profile := dhStore.profiles["camp-1:char-1"]
+	state := dhStore.states["camp-1:char-1"]
+	state.Stress = profile.StressMax
+	state.Conditions = []string{daggerheart.ConditionVulnerable}
+	dhStore.states["camp-1:char-1"] = state
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+
+	rollPayload := action.RollResolvePayload{
+		RequestID: "req-roll-1",
+		RollSeq:   1,
+		Results:   map[string]any{"d20": 20},
+		Outcome:   pb.Outcome_CRITICAL_SUCCESS.String(),
+		SystemData: map[string]any{
+			"character_id": "char-1",
+			"crit":         true,
+		},
+	}
+	rollJSON, err := json.Marshal(rollPayload)
+	if err != nil {
+		t.Fatalf("encode roll payload: %v", err)
+	}
+	rollEvent, err := eventStore.AppendEvent(context.Background(), event.Event{
+		CampaignID:  "camp-1",
+		Timestamp:   now,
+		Type:        event.Type("action.roll_resolved"),
+		SessionID:   "sess-1",
+		RequestID:   "req-roll-1",
+		ActorType:   event.ActorTypeSystem,
+		EntityType:  "roll",
+		EntityID:    "req-roll-1",
+		PayloadJSON: rollJSON,
+	})
+	if err != nil {
+		t.Fatalf("append roll event: %v", err)
+	}
+
+	hopeBefore := state.Hope
+	hopeMax := state.HopeMax
+	if hopeMax == 0 {
+		hopeMax = daggerheart.HopeMax
+	}
+	hopeAfter := hopeBefore + 1
+	if hopeAfter > hopeMax {
+		hopeAfter = hopeMax
+	}
+	stressBefore := profile.StressMax
+	stressAfter := stressBefore - 1
+	patchPayload := daggerheart.CharacterStatePatchedPayload{
+		CharacterID:  "char-1",
+		HopeBefore:   &hopeBefore,
+		HopeAfter:    &hopeAfter,
+		StressBefore: &stressBefore,
+		StressAfter:  &stressAfter,
+	}
+	patchJSON, err := json.Marshal(patchPayload)
+	if err != nil {
+		t.Fatalf("encode patch payload: %v", err)
+	}
+
+	rollSeq := rollEvent.Seq
+	conditionPayload := daggerheart.ConditionChangedPayload{
+		CharacterID:      "char-1",
+		ConditionsBefore: []string{daggerheart.ConditionVulnerable},
+		ConditionsAfter:  []string{},
+		Removed:          []string{daggerheart.ConditionVulnerable},
+		RollSeq:          &rollSeq,
+	}
+	conditionJSON, err := json.Marshal(conditionPayload)
+	if err != nil {
+		t.Fatalf("encode condition payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.character_state.patch"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.character_state_patched"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-roll-1",
+				EntityType:    "character",
+				EntityID:      "char-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   patchJSON,
+			}),
+		},
+		command.Type("action.condition.change"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.condition_changed"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-roll-1",
+				EntityType:    "character",
+				EntityID:      "char-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   conditionJSON,
+			}),
+		},
+		command.Type("action.outcome.apply"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "camp-1",
+				Type:        event.Type("action.outcome_applied"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				SessionID:   "sess-1",
+				RequestID:   "req-roll-1",
+				EntityType:  "outcome",
+				EntityID:    "req-roll-1",
+				PayloadJSON: []byte(`{"request_id":"req-roll-1"}`),
+			}),
+		},
+	}}
+	svc.stores.Domain = domain
+
+	ctx := grpcmeta.WithRequestID(withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1"), "req-roll-1")
+	_, err = svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
+		SessionId: "sess-1",
+		RollSeq:   rollEvent.Seq,
+	})
+	if err != nil {
+		t.Fatalf("ApplyRollOutcome returned error: %v", err)
+	}
+	if domain.calls != 3 {
+		t.Fatalf("expected domain to be called three times, got %d", domain.calls)
+	}
+	if len(domain.commands) != 3 {
+		t.Fatalf("expected 3 domain commands, got %d", len(domain.commands))
+	}
+	var foundCondition bool
+	for _, cmd := range domain.commands {
+		if cmd.Type != command.Type("action.condition.change") {
+			continue
+		}
+		foundCondition = true
+		if cmd.SystemID != daggerheart.SystemID {
+			t.Fatalf("condition command system id = %s, want %s", cmd.SystemID, daggerheart.SystemID)
+		}
+		if cmd.SystemVersion != daggerheart.SystemVersion {
+			t.Fatalf("condition command system version = %s, want %s", cmd.SystemVersion, daggerheart.SystemVersion)
+		}
+		var got daggerheart.ConditionChangePayload
+		if err := json.Unmarshal(cmd.PayloadJSON, &got); err != nil {
+			t.Fatalf("decode condition command payload: %v", err)
+		}
+		if got.CharacterID != "char-1" {
+			t.Fatalf("condition command character id = %s, want %s", got.CharacterID, "char-1")
+		}
+		if got.RollSeq == nil || *got.RollSeq != rollSeq {
+			t.Fatalf("condition command roll_seq = %v, want %d", got.RollSeq, rollSeq)
+		}
+		if len(got.Removed) != 1 || got.Removed[0] != daggerheart.ConditionVulnerable {
+			t.Fatalf("condition command removed = %v, want %s", got.Removed, daggerheart.ConditionVulnerable)
+		}
+		if len(got.ConditionsAfter) != 0 {
+			t.Fatalf("condition command conditions_after = %v, want empty", got.ConditionsAfter)
+		}
+	}
+	if !foundCondition {
+		t.Fatal("expected condition change command")
+	}
+	var foundConditionEvent bool
+	for _, evt := range eventStore.events["camp-1"] {
+		if evt.Type == event.Type("action.condition_changed") {
+			foundConditionEvent = true
+			break
+		}
+	}
+	if !foundConditionEvent {
+		t.Fatal("expected condition changed event")
 	}
 }
 
@@ -2413,6 +6782,7 @@ func TestApplyAttackOutcome_MissingStores(t *testing.T) {
 
 func TestApplyAttackOutcome_MissingCampaignId(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	_, err := svc.ApplyAttackOutcome(context.Background(), &pb.DaggerheartApplyAttackOutcomeRequest{
 		SessionId: "sess-1", RollSeq: 1, Targets: []string{"adv-1"},
 	})
@@ -2421,6 +6791,7 @@ func TestApplyAttackOutcome_MissingCampaignId(t *testing.T) {
 
 func TestApplyAttackOutcome_MissingSessionId(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	_, err := svc.ApplyAttackOutcome(context.Background(), &pb.DaggerheartApplyAttackOutcomeRequest{
 		RollSeq: 1, Targets: []string{"adv-1"},
 	})
@@ -2429,6 +6800,7 @@ func TestApplyAttackOutcome_MissingSessionId(t *testing.T) {
 
 func TestApplyAttackOutcome_MissingRollSeq(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	ctx := withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1")
 	_, err := svc.ApplyAttackOutcome(ctx, &pb.DaggerheartApplyAttackOutcomeRequest{
 		SessionId: "sess-1", Targets: []string{"adv-1"},
@@ -2438,11 +6810,154 @@ func TestApplyAttackOutcome_MissingRollSeq(t *testing.T) {
 
 func TestApplyAttackOutcome_MissingTargets(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	ctx := withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1")
 	_, err := svc.ApplyAttackOutcome(ctx, &pb.DaggerheartApplyAttackOutcomeRequest{
 		SessionId: "sess-1", RollSeq: 1,
 	})
 	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestApplyAttackOutcome_RequiresDomainEngine(t *testing.T) {
+	svc := newActionTestService()
+	rollCtx := grpcmeta.WithRequestID(context.Background(), "req-atk-outcome-required")
+	configureActionRollDomain(t, svc, "req-atk-outcome-required")
+	rollResp, err := svc.SessionActionRoll(rollCtx, &pb.SessionActionRollRequest{
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		CharacterId: "char-1",
+		Trait:       "agility",
+		Difficulty:  10,
+	})
+	if err != nil {
+		t.Fatalf("SessionActionRoll returned error: %v", err)
+	}
+	svc.stores.Domain = nil
+
+	ctx := grpcmeta.WithRequestID(
+		withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1"),
+		"req-atk-outcome-required",
+	)
+	_, err = svc.ApplyAttackOutcome(ctx, &pb.DaggerheartApplyAttackOutcomeRequest{
+		SessionId: "sess-1",
+		RollSeq:   rollResp.RollSeq,
+		Targets:   []string{"char-2"},
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestApplyAttackOutcome_UsesDomainEngine(t *testing.T) {
+	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+
+	rollPayload := action.RollResolvePayload{
+		RequestID: "req-atk-outcome-legacy",
+		RollSeq:   1,
+		Results:   map[string]any{"d20": 20},
+		Outcome:   pb.Outcome_SUCCESS_WITH_HOPE.String(),
+		SystemData: map[string]any{
+			"character_id": "char-1",
+			"roll_kind":    pb.RollKind_ROLL_KIND_ACTION.String(),
+			"hope_fear":    true,
+		},
+	}
+	rollJSON, err := json.Marshal(rollPayload)
+	if err != nil {
+		t.Fatalf("encode roll payload: %v", err)
+	}
+	rollEvent, err := eventStore.AppendEvent(context.Background(), event.Event{
+		CampaignID:  "camp-1",
+		Timestamp:   now,
+		Type:        event.Type("action.roll_resolved"),
+		SessionID:   "sess-1",
+		RequestID:   "req-atk-outcome-legacy",
+		ActorType:   event.ActorTypeSystem,
+		EntityType:  "roll",
+		EntityID:    "req-atk-outcome-legacy",
+		PayloadJSON: rollJSON,
+	})
+	if err != nil {
+		t.Fatalf("append roll event: %v", err)
+	}
+
+	payload := daggerheart.AttackResolvedPayload{
+		CharacterID: "char-1",
+		RollSeq:     rollEvent.Seq,
+		Targets:     []string{"char-2"},
+		Outcome:     "success",
+		Success:     true,
+		Crit:        false,
+		Flavor:      "",
+	}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("encode attack payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.attack.resolve"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.attack_resolved"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-atk-outcome-legacy",
+				EntityType:    "attack",
+				EntityID:      "req-atk-outcome-legacy",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   payloadJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = domain
+
+	ctx := grpcmeta.WithRequestID(
+		withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1"),
+		"req-atk-outcome-legacy",
+	)
+	_, err = svc.ApplyAttackOutcome(ctx, &pb.DaggerheartApplyAttackOutcomeRequest{
+		SessionId: "sess-1",
+		RollSeq:   rollEvent.Seq,
+		Targets:   []string{"char-2"},
+	})
+	if err != nil {
+		t.Fatalf("ApplyAttackOutcome returned error: %v", err)
+	}
+	if domain.calls != 1 {
+		t.Fatalf("expected domain to be called once, got %d", domain.calls)
+	}
+	if len(domain.commands) != 1 {
+		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
+	}
+	if domain.commands[0].Type != command.Type("action.attack.resolve") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "action.attack.resolve")
+	}
+	if domain.commands[0].SystemID != daggerheart.SystemID {
+		t.Fatalf("command system id = %s, want %s", domain.commands[0].SystemID, daggerheart.SystemID)
+	}
+	if domain.commands[0].SystemVersion != daggerheart.SystemVersion {
+		t.Fatalf("command system version = %s, want %s", domain.commands[0].SystemVersion, daggerheart.SystemVersion)
+	}
+	var got struct {
+		CharacterID string   `json:"character_id"`
+		RollSeq     uint64   `json:"roll_seq"`
+		Targets     []string `json:"targets"`
+	}
+	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &got); err != nil {
+		t.Fatalf("decode attack command payload: %v", err)
+	}
+	if got.CharacterID != "char-1" {
+		t.Fatalf("command character id = %s, want %s", got.CharacterID, "char-1")
+	}
+	if got.RollSeq != rollEvent.Seq {
+		t.Fatalf("command roll seq = %d, want %d", got.RollSeq, rollEvent.Seq)
+	}
+	if len(got.Targets) != 1 || got.Targets[0] != "char-2" {
+		t.Fatalf("command targets = %v, want %v", got.Targets, []string{"char-2"})
+	}
 }
 
 // --- ApplyAdversaryAttackOutcome tests ---
@@ -2457,6 +6972,7 @@ func TestApplyAdversaryAttackOutcome_MissingStores(t *testing.T) {
 
 func TestApplyAdversaryAttackOutcome_MissingCampaignId(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	_, err := svc.ApplyAdversaryAttackOutcome(context.Background(), &pb.DaggerheartApplyAdversaryAttackOutcomeRequest{
 		SessionId: "sess-1", RollSeq: 1, Targets: []string{"char-1"},
 	})
@@ -2465,6 +6981,7 @@ func TestApplyAdversaryAttackOutcome_MissingCampaignId(t *testing.T) {
 
 func TestApplyAdversaryAttackOutcome_MissingSessionId(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	_, err := svc.ApplyAdversaryAttackOutcome(context.Background(), &pb.DaggerheartApplyAdversaryAttackOutcomeRequest{
 		RollSeq: 1, Targets: []string{"char-1"},
 	})
@@ -2473,6 +6990,7 @@ func TestApplyAdversaryAttackOutcome_MissingSessionId(t *testing.T) {
 
 func TestApplyAdversaryAttackOutcome_MissingRollSeq(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	ctx := withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1")
 	_, err := svc.ApplyAdversaryAttackOutcome(ctx, &pb.DaggerheartApplyAdversaryAttackOutcomeRequest{
 		SessionId: "sess-1", Targets: []string{"char-1"},
@@ -2482,11 +7000,205 @@ func TestApplyAdversaryAttackOutcome_MissingRollSeq(t *testing.T) {
 
 func TestApplyAdversaryAttackOutcome_MissingTargets(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	ctx := withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1")
 	_, err := svc.ApplyAdversaryAttackOutcome(ctx, &pb.DaggerheartApplyAdversaryAttackOutcomeRequest{
 		SessionId: "sess-1", RollSeq: 1,
 	})
 	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestApplyAdversaryAttackOutcome_RequiresDomainEngine(t *testing.T) {
+	svc := newAdversaryDamageTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+
+	rollPayload := daggerheart.AdversaryRollResolvedPayload{
+		AdversaryID:  "adv-1",
+		RollSeq:      1,
+		Rolls:        []int{4},
+		Roll:         4,
+		Modifier:     0,
+		Total:        4,
+		Advantage:    0,
+		Disadvantage: 0,
+	}
+	rollPayloadJSON, err := json.Marshal(rollPayload)
+	if err != nil {
+		t.Fatalf("encode adversary roll payload: %v", err)
+	}
+
+	svc.stores.Domain = &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.adversary_roll.resolve"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.adversary_roll_resolved"),
+				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-adv-atk-outcome-required",
+				EntityType:    "adversary",
+				EntityID:      "adv-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   rollPayloadJSON,
+			}),
+		},
+	}}
+
+	rollCtx := grpcmeta.WithRequestID(context.Background(), "req-adv-atk-outcome-required")
+	rollResp, err := svc.SessionAdversaryAttackRoll(rollCtx, &pb.SessionAdversaryAttackRollRequest{
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		AdversaryId: "adv-1",
+	})
+	if err != nil {
+		t.Fatalf("SessionAdversaryAttackRoll returned error: %v", err)
+	}
+	noDomainSvc := &DaggerheartService{stores: svc.stores, seedFunc: svc.seedFunc}
+	noDomainSvc.stores.Domain = nil
+
+	ctx := grpcmeta.WithRequestID(
+		withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1"),
+		"req-adv-atk-outcome-required",
+	)
+	_, err = noDomainSvc.ApplyAdversaryAttackOutcome(ctx, &pb.DaggerheartApplyAdversaryAttackOutcomeRequest{
+		SessionId:  "sess-1",
+		RollSeq:    rollResp.RollSeq,
+		Targets:    []string{"char-1"},
+		Difficulty: 10,
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestApplyAdversaryAttackOutcome_UsesDomainEngine(t *testing.T) {
+	svc := newAdversaryDamageTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+
+	rollPayload := daggerheart.AdversaryRollResolvedPayload{
+		AdversaryID:  "adv-1",
+		RollSeq:      1,
+		Rolls:        []int{4},
+		Roll:         4,
+		Modifier:     0,
+		Total:        4,
+		Advantage:    0,
+		Disadvantage: 0,
+	}
+	rollPayloadJSON, err := json.Marshal(rollPayload)
+	if err != nil {
+		t.Fatalf("encode adversary roll payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.adversary_roll.resolve"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.adversary_roll_resolved"),
+				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-adv-atk-outcome-legacy",
+				EntityType:    "adversary",
+				EntityID:      "adv-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   rollPayloadJSON,
+			}),
+		},
+	}}
+
+	svc.stores.Domain = domain
+
+	rollCtx := grpcmeta.WithRequestID(context.Background(), "req-adv-atk-outcome-legacy")
+	rollResp, err := svc.SessionAdversaryAttackRoll(rollCtx, &pb.SessionAdversaryAttackRollRequest{
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		AdversaryId: "adv-1",
+	})
+	if err != nil {
+		t.Fatalf("SessionAdversaryAttackRoll returned error: %v", err)
+	}
+
+	difficulty := int32(10)
+	success := rollResp.Total >= difficulty
+	crit := rollResp.Roll == 20
+	payload := daggerheart.AdversaryAttackResolvedPayload{
+		AdversaryID: "adv-1",
+		RollSeq:     rollResp.RollSeq,
+		Targets:     []string{"char-1"},
+		Roll:        int(rollResp.Roll),
+		Modifier:    0,
+		Total:       int(rollResp.Total),
+		Difficulty:  int(difficulty),
+		Success:     success,
+		Crit:        crit,
+	}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("encode adversary attack payload: %v", err)
+	}
+
+	domain.resultsByType[command.Type("action.adversary_attack.resolve")] = engine.Result{
+		Decision: command.Accept(event.Event{
+			CampaignID:    "camp-1",
+			Type:          event.Type("action.adversary_attack_resolved"),
+			Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+			ActorType:     event.ActorTypeSystem,
+			SessionID:     "sess-1",
+			RequestID:     "req-adv-atk-outcome-legacy",
+			EntityType:    "attack",
+			EntityID:      "req-adv-atk-outcome-legacy",
+			SystemID:      daggerheart.SystemID,
+			SystemVersion: daggerheart.SystemVersion,
+			PayloadJSON:   payloadJSON,
+		}),
+	}
+
+	ctx := grpcmeta.WithRequestID(
+		withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1"),
+		"req-adv-atk-outcome-legacy",
+	)
+	_, err = svc.ApplyAdversaryAttackOutcome(ctx, &pb.DaggerheartApplyAdversaryAttackOutcomeRequest{
+		SessionId:  "sess-1",
+		RollSeq:    rollResp.RollSeq,
+		Targets:    []string{"char-1"},
+		Difficulty: difficulty,
+	})
+	if err != nil {
+		t.Fatalf("ApplyAdversaryAttackOutcome returned error: %v", err)
+	}
+	if domain.calls != 2 {
+		t.Fatalf("expected domain to be called twice, got %d", domain.calls)
+	}
+	if len(domain.commands) != 2 {
+		t.Fatalf("expected 2 domain commands, got %d", len(domain.commands))
+	}
+	if domain.commands[1].Type != command.Type("action.adversary_attack.resolve") {
+		t.Fatalf("command type = %s, want %s", domain.commands[1].Type, "action.adversary_attack.resolve")
+	}
+	if domain.commands[1].SystemID != daggerheart.SystemID {
+		t.Fatalf("command system id = %s, want %s", domain.commands[1].SystemID, daggerheart.SystemID)
+	}
+	if domain.commands[1].SystemVersion != daggerheart.SystemVersion {
+		t.Fatalf("command system version = %s, want %s", domain.commands[1].SystemVersion, daggerheart.SystemVersion)
+	}
+	var got struct {
+		AdversaryID string   `json:"adversary_id"`
+		RollSeq     uint64   `json:"roll_seq"`
+		Targets     []string `json:"targets"`
+	}
+	if err := json.Unmarshal(domain.commands[1].PayloadJSON, &got); err != nil {
+		t.Fatalf("decode adversary attack command payload: %v", err)
+	}
+	if got.AdversaryID != "adv-1" {
+		t.Fatalf("command adversary id = %s, want %s", got.AdversaryID, "adv-1")
+	}
+	if got.RollSeq != rollResp.RollSeq {
+		t.Fatalf("command roll seq = %d, want %d", got.RollSeq, rollResp.RollSeq)
+	}
+	if len(got.Targets) != 1 || got.Targets[0] != "char-1" {
+		t.Fatalf("command targets = %v, want %v", got.Targets, []string{"char-1"})
+	}
 }
 
 // --- ApplyReactionOutcome tests ---
@@ -2501,6 +7213,7 @@ func TestApplyReactionOutcome_MissingStores(t *testing.T) {
 
 func TestApplyReactionOutcome_MissingCampaignId(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	_, err := svc.ApplyReactionOutcome(context.Background(), &pb.DaggerheartApplyReactionOutcomeRequest{
 		SessionId: "sess-1", RollSeq: 1,
 	})
@@ -2509,6 +7222,7 @@ func TestApplyReactionOutcome_MissingCampaignId(t *testing.T) {
 
 func TestApplyReactionOutcome_MissingSessionId(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	_, err := svc.ApplyReactionOutcome(context.Background(), &pb.DaggerheartApplyReactionOutcomeRequest{
 		RollSeq: 1,
 	})
@@ -2517,6 +7231,7 @@ func TestApplyReactionOutcome_MissingSessionId(t *testing.T) {
 
 func TestApplyReactionOutcome_MissingRollSeq(t *testing.T) {
 	svc := newActionTestService()
+	configureNoopDomain(svc)
 	ctx := withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1")
 	_, err := svc.ApplyReactionOutcome(ctx, &pb.DaggerheartApplyReactionOutcomeRequest{
 		SessionId: "sess-1",
@@ -2524,10 +7239,233 @@ func TestApplyReactionOutcome_MissingRollSeq(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
+func TestApplyReactionOutcome_RequiresDomainEngine(t *testing.T) {
+	svc := newActionTestService()
+	rollCtx := grpcmeta.WithRequestID(context.Background(), "req-react-outcome-required")
+	configureActionRollDomain(t, svc, "req-react-outcome-required")
+	rollResp, err := svc.SessionActionRoll(rollCtx, &pb.SessionActionRollRequest{
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		CharacterId: "char-1",
+		Trait:       "agility",
+		RollKind:    pb.RollKind_ROLL_KIND_REACTION,
+		Difficulty:  10,
+	})
+	if err != nil {
+		t.Fatalf("SessionActionRoll returned error: %v", err)
+	}
+	svc.stores.Domain = nil
+
+	ctx := grpcmeta.WithRequestID(
+		withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1"),
+		"req-react-outcome-required",
+	)
+	_, err = svc.ApplyReactionOutcome(ctx, &pb.DaggerheartApplyReactionOutcomeRequest{
+		SessionId: "sess-1",
+		RollSeq:   rollResp.RollSeq,
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestApplyReactionOutcome_UsesDomainEngine(t *testing.T) {
+	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+
+	rollPayload := action.RollResolvePayload{
+		RequestID: "req-react-outcome-legacy",
+		RollSeq:   1,
+		Results:   map[string]any{"d20": 12},
+		Outcome:   pb.Outcome_SUCCESS_WITH_HOPE.String(),
+		SystemData: map[string]any{
+			"character_id": "char-1",
+			"roll_kind":    pb.RollKind_ROLL_KIND_REACTION.String(),
+			"hope_fear":    false,
+		},
+	}
+	rollJSON, err := json.Marshal(rollPayload)
+	if err != nil {
+		t.Fatalf("encode roll payload: %v", err)
+	}
+	rollEvent, err := eventStore.AppendEvent(context.Background(), event.Event{
+		CampaignID:  "camp-1",
+		Timestamp:   now,
+		Type:        event.Type("action.roll_resolved"),
+		SessionID:   "sess-1",
+		RequestID:   "req-react-outcome-legacy",
+		ActorType:   event.ActorTypeSystem,
+		EntityType:  "roll",
+		EntityID:    "req-react-outcome-legacy",
+		PayloadJSON: rollJSON,
+	})
+	if err != nil {
+		t.Fatalf("append roll event: %v", err)
+	}
+
+	payload := daggerheart.ReactionResolvedPayload{
+		CharacterID:        "char-1",
+		RollSeq:            rollEvent.Seq,
+		Outcome:            "success",
+		Success:            true,
+		Crit:               false,
+		CritNegatesEffects: false,
+		EffectsNegated:     false,
+	}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("encode reaction payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.reaction.resolve"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.reaction_resolved"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-react-outcome-legacy",
+				EntityType:    "reaction",
+				EntityID:      "req-react-outcome-legacy",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   payloadJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = domain
+
+	ctx := grpcmeta.WithRequestID(
+		withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1"),
+		"req-react-outcome-legacy",
+	)
+	_, err = svc.ApplyReactionOutcome(ctx, &pb.DaggerheartApplyReactionOutcomeRequest{
+		SessionId: "sess-1",
+		RollSeq:   rollEvent.Seq,
+	})
+	if err != nil {
+		t.Fatalf("ApplyReactionOutcome returned error: %v", err)
+	}
+	if domain.calls != 1 {
+		t.Fatalf("expected domain to be called once, got %d", domain.calls)
+	}
+	if len(domain.commands) != 1 {
+		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
+	}
+	if domain.commands[0].Type != command.Type("action.reaction.resolve") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "action.reaction.resolve")
+	}
+	if domain.commands[0].SystemID != daggerheart.SystemID {
+		t.Fatalf("command system id = %s, want %s", domain.commands[0].SystemID, daggerheart.SystemID)
+	}
+	if domain.commands[0].SystemVersion != daggerheart.SystemVersion {
+		t.Fatalf("command system version = %s, want %s", domain.commands[0].SystemVersion, daggerheart.SystemVersion)
+	}
+	var got struct {
+		CharacterID string `json:"character_id"`
+		RollSeq     uint64 `json:"roll_seq"`
+	}
+	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &got); err != nil {
+		t.Fatalf("decode reaction command payload: %v", err)
+	}
+	if got.CharacterID != "char-1" {
+		t.Fatalf("command character id = %s, want %s", got.CharacterID, "char-1")
+	}
+	if got.RollSeq != rollEvent.Seq {
+		t.Fatalf("command roll seq = %d, want %d", got.RollSeq, rollEvent.Seq)
+	}
+}
+
 // --- Success path tests for flow handlers ---
 
 func TestSessionAttackFlow_Success(t *testing.T) {
 	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+
+	rollPayload := action.RollResolvePayload{
+		RequestID: "req-attack-1",
+		RollSeq:   1,
+		Results:   map[string]any{"d20": 8},
+		Outcome:   pb.Outcome_FAILURE_WITH_FEAR.String(),
+		SystemData: map[string]any{
+			"character_id": "char-1",
+			"roll_kind":    pb.RollKind_ROLL_KIND_ACTION.String(),
+			"hope_fear":    false,
+			"gm_move":      false,
+		},
+	}
+	rollJSON, err := json.Marshal(rollPayload)
+	if err != nil {
+		t.Fatalf("encode roll payload: %v", err)
+	}
+
+	outcomeJSON, err := json.Marshal(action.OutcomeApplyPayload{
+		RequestID: "req-attack-1",
+		RollSeq:   1,
+		Targets:   []string{"char-1"},
+	})
+	if err != nil {
+		t.Fatalf("encode outcome payload: %v", err)
+	}
+
+	attackPayload := daggerheart.AttackResolvedPayload{
+		CharacterID: "char-1",
+		RollSeq:     1,
+		Targets:     []string{"char-2"},
+		Outcome:     "failure",
+		Success:     false,
+		Crit:        false,
+		Flavor:      "",
+	}
+	attackJSON, err := json.Marshal(attackPayload)
+	if err != nil {
+		t.Fatalf("encode attack payload: %v", err)
+	}
+
+	svc.stores.Domain = &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.roll.resolve"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "camp-1",
+				Type:        event.Type("action.roll_resolved"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				SessionID:   "sess-1",
+				RequestID:   "req-attack-1",
+				EntityType:  "roll",
+				EntityID:    "req-attack-1",
+				PayloadJSON: rollJSON,
+			}),
+		},
+		command.Type("action.outcome.apply"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "camp-1",
+				Type:        event.Type("action.outcome_applied"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				SessionID:   "sess-1",
+				RequestID:   "req-attack-1",
+				EntityType:  "outcome",
+				EntityID:    "req-attack-1",
+				PayloadJSON: outcomeJSON,
+			}),
+		},
+		command.Type("action.attack.resolve"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.attack_resolved"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-attack-1",
+				EntityType:    "attack",
+				EntityID:      "req-attack-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   attackJSON,
+			}),
+		},
+	}}
 	ctx := grpcmeta.WithRequestID(context.Background(), "req-attack-1")
 	resp, err := svc.SessionAttackFlow(ctx, &pb.SessionAttackFlowRequest{
 		CampaignId:  "camp-1",
@@ -2555,6 +7493,72 @@ func TestSessionAttackFlow_Success(t *testing.T) {
 
 func TestSessionAdversaryAttackFlow_Success(t *testing.T) {
 	svc := newAdversaryDamageTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+
+	rollPayload := daggerheart.AdversaryRollResolvedPayload{
+		AdversaryID:  "adv-1",
+		RollSeq:      1,
+		Rolls:        []int{1},
+		Roll:         1,
+		Modifier:     0,
+		Total:        1,
+		Advantage:    0,
+		Disadvantage: 0,
+	}
+	rollPayloadJSON, err := json.Marshal(rollPayload)
+	if err != nil {
+		t.Fatalf("encode adversary roll payload: %v", err)
+	}
+
+	attackPayload := daggerheart.AdversaryAttackResolvedPayload{
+		AdversaryID: "adv-1",
+		RollSeq:     1,
+		Targets:     []string{"char-1"},
+		Roll:        1,
+		Modifier:    0,
+		Total:       1,
+		Difficulty:  10,
+		Success:     false,
+		Crit:        false,
+	}
+	attackPayloadJSON, err := json.Marshal(attackPayload)
+	if err != nil {
+		t.Fatalf("encode adversary attack payload: %v", err)
+	}
+
+	svc.stores.Domain = &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.adversary_roll.resolve"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.adversary_roll_resolved"),
+				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-adv-attack-1",
+				EntityType:    "adversary",
+				EntityID:      "adv-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   rollPayloadJSON,
+			}),
+		},
+		command.Type("action.adversary_attack.resolve"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.adversary_attack_resolved"),
+				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-adv-attack-1",
+				EntityType:    "attack",
+				EntityID:      "req-adv-attack-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   attackPayloadJSON,
+			}),
+		},
+	}}
+
 	ctx := grpcmeta.WithRequestID(context.Background(), "req-adv-attack-1")
 	resp, err := svc.SessionAdversaryAttackFlow(ctx, &pb.SessionAdversaryAttackFlowRequest{
 		CampaignId:  "camp-1",
@@ -2580,6 +7584,91 @@ func TestSessionAdversaryAttackFlow_Success(t *testing.T) {
 
 func TestSessionGroupActionFlow_Success(t *testing.T) {
 	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+
+	rollPayload := action.RollResolvePayload{
+		RequestID: "req-group-1",
+		RollSeq:   1,
+		Results:   map[string]any{"d20": 20},
+		Outcome:   pb.Outcome_SUCCESS_WITH_HOPE.String(),
+		SystemData: map[string]any{
+			"character_id": "char-1",
+			"roll_kind":    pb.RollKind_ROLL_KIND_ACTION.String(),
+			"hope_fear":    false,
+		},
+	}
+	rollJSON, err := json.Marshal(rollPayload)
+	if err != nil {
+		t.Fatalf("encode roll payload: %v", err)
+	}
+
+	outcomeJSON, err := json.Marshal(action.OutcomeApplyPayload{
+		RequestID: "req-group-1",
+		RollSeq:   1,
+		Targets:   []string{"char-1"},
+	})
+	if err != nil {
+		t.Fatalf("encode outcome payload: %v", err)
+	}
+
+	groupPayloadJSON, err := json.Marshal(daggerheart.GroupActionResolvedPayload{
+		LeaderCharacterID: "char-1",
+		LeaderRollSeq:     1,
+		SupportSuccesses:  1,
+		SupportFailures:   0,
+		SupportModifier:   1,
+		Supporters: []daggerheart.GroupActionSupporterRoll{
+			{CharacterID: "char-2", RollSeq: 2, Success: true},
+		},
+	})
+	if err != nil {
+		t.Fatalf("encode group action payload: %v", err)
+	}
+
+	svc.stores.Domain = &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.roll.resolve"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "camp-1",
+				Type:        event.Type("action.roll_resolved"),
+				Timestamp:   time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:   event.ActorTypeSystem,
+				SessionID:   "sess-1",
+				RequestID:   "req-group-1",
+				EntityType:  "roll",
+				EntityID:    "req-group-1",
+				PayloadJSON: rollJSON,
+			}),
+		},
+		command.Type("action.outcome.apply"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "camp-1",
+				Type:        event.Type("action.outcome_applied"),
+				Timestamp:   time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:   event.ActorTypeSystem,
+				SessionID:   "sess-1",
+				RequestID:   "req-group-1",
+				EntityType:  "outcome",
+				EntityID:    "req-group-1",
+				PayloadJSON: outcomeJSON,
+			}),
+		},
+		command.Type("action.group_action.resolve"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.group_action_resolved"),
+				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-group-1",
+				EntityType:    "group_action",
+				EntityID:      "char-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   groupPayloadJSON,
+			}),
+		},
+	}}
+
 	ctx := grpcmeta.WithRequestID(context.Background(), "req-group-1")
 	resp, err := svc.SessionGroupActionFlow(ctx, &pb.SessionGroupActionFlowRequest{
 		CampaignId:        "camp-1",
@@ -2604,6 +7693,89 @@ func TestSessionGroupActionFlow_Success(t *testing.T) {
 
 func TestSessionTagTeamFlow_Success(t *testing.T) {
 	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+
+	rollPayload := action.RollResolvePayload{
+		RequestID: "req-tagteam-1",
+		RollSeq:   1,
+		Results:   map[string]any{"d20": 18},
+		Outcome:   pb.Outcome_SUCCESS_WITH_HOPE.String(),
+		SystemData: map[string]any{
+			"character_id": "char-1",
+			"roll_kind":    pb.RollKind_ROLL_KIND_ACTION.String(),
+			"hope_fear":    false,
+		},
+	}
+	rollJSON, err := json.Marshal(rollPayload)
+	if err != nil {
+		t.Fatalf("encode roll payload: %v", err)
+	}
+
+	outcomeJSON, err := json.Marshal(action.OutcomeApplyPayload{
+		RequestID: "req-tagteam-1",
+		RollSeq:   1,
+		Targets:   []string{"char-1", "char-2"},
+	})
+	if err != nil {
+		t.Fatalf("encode outcome payload: %v", err)
+	}
+
+	tagPayloadJSON, err := json.Marshal(daggerheart.TagTeamResolvedPayload{
+		FirstCharacterID:    "char-1",
+		FirstRollSeq:        1,
+		SecondCharacterID:   "char-2",
+		SecondRollSeq:       2,
+		SelectedCharacterID: "char-1",
+		SelectedRollSeq:     1,
+	})
+	if err != nil {
+		t.Fatalf("encode tag team payload: %v", err)
+	}
+
+	svc.stores.Domain = &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.roll.resolve"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "camp-1",
+				Type:        event.Type("action.roll_resolved"),
+				Timestamp:   time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:   event.ActorTypeSystem,
+				SessionID:   "sess-1",
+				RequestID:   "req-tagteam-1",
+				EntityType:  "roll",
+				EntityID:    "req-tagteam-1",
+				PayloadJSON: rollJSON,
+			}),
+		},
+		command.Type("action.outcome.apply"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "camp-1",
+				Type:        event.Type("action.outcome_applied"),
+				Timestamp:   time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:   event.ActorTypeSystem,
+				SessionID:   "sess-1",
+				RequestID:   "req-tagteam-1",
+				EntityType:  "outcome",
+				EntityID:    "req-tagteam-1",
+				PayloadJSON: outcomeJSON,
+			}),
+		},
+		command.Type("action.tag_team.resolve"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.tag_team_resolved"),
+				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-tagteam-1",
+				EntityType:    "tag_team",
+				EntityID:      "char-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   tagPayloadJSON,
+			}),
+		},
+	}}
+
 	ctx := grpcmeta.WithRequestID(context.Background(), "req-tagteam-1")
 	resp, err := svc.SessionTagTeamFlow(ctx, &pb.SessionTagTeamFlowRequest{
 		CampaignId:          "camp-1",
@@ -2624,20 +7796,295 @@ func TestSessionTagTeamFlow_Success(t *testing.T) {
 	}
 }
 
-func TestApplyAttackOutcome_Success(t *testing.T) {
+func TestSessionGroupActionFlow_UsesDomainEngine(t *testing.T) {
 	svc := newActionTestService()
-	// Create an action roll event first.
-	rollCtx := grpcmeta.WithRequestID(context.Background(), "req-atk-outcome-1")
-	rollResp, err := svc.SessionActionRoll(rollCtx, &pb.SessionActionRollRequest{
-		CampaignId:  "camp-1",
-		SessionId:   "sess-1",
-		CharacterId: "char-1",
-		Trait:       "agility",
-		Difficulty:  10,
+	eventStore := svc.stores.Event.(*fakeEventStore)
+
+	rollPayload := action.RollResolvePayload{
+		RequestID: "req-group-action",
+		RollSeq:   1,
+		Results:   map[string]any{"d20": 20},
+		Outcome:   pb.Outcome_SUCCESS_WITH_HOPE.String(),
+		SystemData: map[string]any{
+			"character_id": "char-1",
+			"roll_kind":    pb.RollKind_ROLL_KIND_ACTION.String(),
+			"hope_fear":    false,
+		},
+	}
+	rollJSON, err := json.Marshal(rollPayload)
+	if err != nil {
+		t.Fatalf("encode roll payload: %v", err)
+	}
+
+	outcomeJSON, err := json.Marshal(action.OutcomeApplyPayload{
+		RequestID: "req-group-action",
+		RollSeq:   1,
+		Targets:   []string{"char-1"},
 	})
 	if err != nil {
-		t.Fatalf("SessionActionRoll returned error: %v", err)
+		t.Fatalf("encode outcome payload: %v", err)
 	}
+
+	groupPayloadJSON, err := json.Marshal(daggerheart.GroupActionResolvedPayload{
+		LeaderCharacterID: "char-1",
+		LeaderRollSeq:     1,
+		SupportSuccesses:  1,
+		SupportFailures:   0,
+		SupportModifier:   1,
+		Supporters: []daggerheart.GroupActionSupporterRoll{
+			{CharacterID: "char-2", RollSeq: 2, Success: true},
+		},
+	})
+	if err != nil {
+		t.Fatalf("encode group action payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.roll.resolve"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "camp-1",
+				Type:        event.Type("action.roll_resolved"),
+				Timestamp:   time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:   event.ActorTypeSystem,
+				SessionID:   "sess-1",
+				RequestID:   "req-group-action",
+				EntityType:  "roll",
+				EntityID:    "req-group-action",
+				PayloadJSON: rollJSON,
+			}),
+		},
+		command.Type("action.outcome.apply"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "camp-1",
+				Type:        event.Type("action.outcome_applied"),
+				Timestamp:   time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:   event.ActorTypeSystem,
+				SessionID:   "sess-1",
+				RequestID:   "req-group-action",
+				EntityType:  "outcome",
+				EntityID:    "req-group-action",
+				PayloadJSON: outcomeJSON,
+			}),
+		},
+		command.Type("action.group_action.resolve"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.group_action_resolved"),
+				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-group-action",
+				EntityType:    "group_action",
+				EntityID:      "char-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   groupPayloadJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = domain
+
+	ctx := grpcmeta.WithRequestID(context.Background(), "req-group-action")
+	_, err = svc.SessionGroupActionFlow(ctx, &pb.SessionGroupActionFlowRequest{
+		CampaignId:        "camp-1",
+		SessionId:         "sess-1",
+		LeaderCharacterId: "char-1",
+		LeaderTrait:       "agility",
+		Difficulty:        10,
+		Supporters: []*pb.GroupActionSupporter{
+			{CharacterId: "char-2", Trait: "strength"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("SessionGroupActionFlow returned error: %v", err)
+	}
+	var found bool
+	for _, cmd := range domain.commands {
+		if cmd.Type == command.Type("action.group_action.resolve") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("expected domain group action command")
+	}
+}
+
+func TestSessionTagTeamFlow_UsesDomainEngine(t *testing.T) {
+	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+
+	rollPayload := action.RollResolvePayload{
+		RequestID: "req-tag-team",
+		RollSeq:   1,
+		Results:   map[string]any{"d20": 18},
+		Outcome:   pb.Outcome_SUCCESS_WITH_HOPE.String(),
+		SystemData: map[string]any{
+			"character_id": "char-1",
+			"roll_kind":    pb.RollKind_ROLL_KIND_ACTION.String(),
+			"hope_fear":    false,
+		},
+	}
+	rollJSON, err := json.Marshal(rollPayload)
+	if err != nil {
+		t.Fatalf("encode roll payload: %v", err)
+	}
+
+	outcomeJSON, err := json.Marshal(action.OutcomeApplyPayload{
+		RequestID: "req-tag-team",
+		RollSeq:   1,
+		Targets:   []string{"char-1", "char-2"},
+	})
+	if err != nil {
+		t.Fatalf("encode outcome payload: %v", err)
+	}
+
+	tagPayloadJSON, err := json.Marshal(daggerheart.TagTeamResolvedPayload{
+		FirstCharacterID:    "char-1",
+		FirstRollSeq:        1,
+		SecondCharacterID:   "char-2",
+		SecondRollSeq:       2,
+		SelectedCharacterID: "char-1",
+		SelectedRollSeq:     1,
+	})
+	if err != nil {
+		t.Fatalf("encode tag team payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.roll.resolve"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "camp-1",
+				Type:        event.Type("action.roll_resolved"),
+				Timestamp:   time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:   event.ActorTypeSystem,
+				SessionID:   "sess-1",
+				RequestID:   "req-tag-team",
+				EntityType:  "roll",
+				EntityID:    "req-tag-team",
+				PayloadJSON: rollJSON,
+			}),
+		},
+		command.Type("action.outcome.apply"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "camp-1",
+				Type:        event.Type("action.outcome_applied"),
+				Timestamp:   time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:   event.ActorTypeSystem,
+				SessionID:   "sess-1",
+				RequestID:   "req-tag-team",
+				EntityType:  "outcome",
+				EntityID:    "req-tag-team",
+				PayloadJSON: outcomeJSON,
+			}),
+		},
+		command.Type("action.tag_team.resolve"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.tag_team_resolved"),
+				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-tag-team",
+				EntityType:    "tag_team",
+				EntityID:      "char-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   tagPayloadJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = domain
+
+	ctx := grpcmeta.WithRequestID(context.Background(), "req-tag-team")
+	_, err = svc.SessionTagTeamFlow(ctx, &pb.SessionTagTeamFlowRequest{
+		CampaignId:          "camp-1",
+		SessionId:           "sess-1",
+		Difficulty:          10,
+		First:               &pb.TagTeamParticipant{CharacterId: "char-1", Trait: "agility"},
+		Second:              &pb.TagTeamParticipant{CharacterId: "char-2", Trait: "strength"},
+		SelectedCharacterId: "char-1",
+	})
+	if err != nil {
+		t.Fatalf("SessionTagTeamFlow returned error: %v", err)
+	}
+	var found bool
+	for _, cmd := range domain.commands {
+		if cmd.Type == command.Type("action.tag_team.resolve") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("expected domain tag team command")
+	}
+}
+
+func TestApplyAttackOutcome_Success(t *testing.T) {
+	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+
+	rollPayload := action.RollResolvePayload{
+		RequestID: "req-atk-outcome-1",
+		RollSeq:   1,
+		Results:   map[string]any{"d20": 18},
+		Outcome:   pb.Outcome_SUCCESS_WITH_HOPE.String(),
+		SystemData: map[string]any{
+			"character_id": "char-1",
+			"roll_kind":    pb.RollKind_ROLL_KIND_ACTION.String(),
+			"hope_fear":    true,
+		},
+	}
+	rollJSON, err := json.Marshal(rollPayload)
+	if err != nil {
+		t.Fatalf("encode roll payload: %v", err)
+	}
+	rollEvent, err := eventStore.AppendEvent(context.Background(), event.Event{
+		CampaignID:  "camp-1",
+		Timestamp:   now,
+		Type:        event.Type("action.roll_resolved"),
+		SessionID:   "sess-1",
+		RequestID:   "req-atk-outcome-1",
+		ActorType:   event.ActorTypeSystem,
+		EntityType:  "roll",
+		EntityID:    "req-atk-outcome-1",
+		PayloadJSON: rollJSON,
+	})
+	if err != nil {
+		t.Fatalf("append roll event: %v", err)
+	}
+
+	attackPayloadJSON, err := json.Marshal(daggerheart.AttackResolvedPayload{
+		CharacterID: "char-1",
+		RollSeq:     rollEvent.Seq,
+		Targets:     []string{"char-2"},
+		Outcome:     "success",
+		Success:     true,
+		Crit:        false,
+		Flavor:      "",
+	})
+	if err != nil {
+		t.Fatalf("encode attack payload: %v", err)
+	}
+
+	svc.stores.Domain = &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.attack.resolve"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.attack_resolved"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-atk-outcome-1",
+				EntityType:    "attack",
+				EntityID:      "req-atk-outcome-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   attackPayloadJSON,
+			}),
+		},
+	}}
 
 	ctx := grpcmeta.WithRequestID(
 		withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1"),
@@ -2645,7 +8092,7 @@ func TestApplyAttackOutcome_Success(t *testing.T) {
 	)
 	resp, err := svc.ApplyAttackOutcome(ctx, &pb.DaggerheartApplyAttackOutcomeRequest{
 		SessionId: "sess-1",
-		RollSeq:   rollResp.RollSeq,
+		RollSeq:   rollEvent.Seq,
 		Targets:   []string{"char-2"},
 	})
 	if err != nil {
@@ -2661,6 +8108,41 @@ func TestApplyAttackOutcome_Success(t *testing.T) {
 
 func TestApplyAdversaryAttackOutcome_Success(t *testing.T) {
 	svc := newAdversaryDamageTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+
+	rollPayload := daggerheart.AdversaryRollResolvedPayload{
+		AdversaryID:  "adv-1",
+		RollSeq:      1,
+		Rolls:        []int{3},
+		Roll:         3,
+		Modifier:     0,
+		Total:        3,
+		Advantage:    0,
+		Disadvantage: 0,
+	}
+	rollPayloadJSON, err := json.Marshal(rollPayload)
+	if err != nil {
+		t.Fatalf("encode adversary roll payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.adversary_roll.resolve"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("action.adversary_roll_resolved"),
+				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-adv-atk-outcome-1",
+				EntityType:    "adversary",
+				EntityID:      "adv-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   rollPayloadJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = domain
 	// Create an adversary attack roll event first.
 	rollCtx := grpcmeta.WithRequestID(context.Background(), "req-adv-atk-outcome-1")
 	rollResp, err := svc.SessionAdversaryAttackRoll(rollCtx, &pb.SessionAdversaryAttackRollRequest{
@@ -2670,6 +8152,35 @@ func TestApplyAdversaryAttackOutcome_Success(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("SessionAdversaryAttackRoll returned error: %v", err)
+	}
+	attackPayloadJSON, err := json.Marshal(daggerheart.AdversaryAttackResolvedPayload{
+		AdversaryID: "adv-1",
+		RollSeq:     rollResp.RollSeq,
+		Targets:     []string{"char-1"},
+		Roll:        int(rollResp.Roll),
+		Modifier:    0,
+		Total:       int(rollResp.Total),
+		Difficulty:  10,
+		Success:     rollResp.Total >= 10,
+		Crit:        rollResp.Roll == 20,
+	})
+	if err != nil {
+		t.Fatalf("encode adversary attack payload: %v", err)
+	}
+	domain.resultsByType[command.Type("action.adversary_attack.resolve")] = engine.Result{
+		Decision: command.Accept(event.Event{
+			CampaignID:    "camp-1",
+			Type:          event.Type("action.adversary_attack_resolved"),
+			Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+			ActorType:     event.ActorTypeSystem,
+			SessionID:     "sess-1",
+			RequestID:     "req-adv-atk-outcome-1",
+			EntityType:    "attack",
+			EntityID:      "req-adv-atk-outcome-1",
+			SystemID:      daggerheart.SystemID,
+			SystemVersion: daggerheart.SystemVersion,
+			PayloadJSON:   attackPayloadJSON,
+		}),
 	}
 
 	ctx := grpcmeta.WithRequestID(

@@ -5,12 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/character"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/invite"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/participant"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/session"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -78,8 +74,8 @@ func (f *fakeClosableEventStore) Close() error {
 // return "not implemented".
 type fakeProjectionStore struct {
 	// Injectable function fields for methods used in replay/integrity paths.
-	get                        func(ctx context.Context, id string) (campaign.Campaign, error)
-	put                        func(ctx context.Context, c campaign.Campaign) error
+	get                        func(ctx context.Context, id string) (storage.CampaignRecord, error)
+	put                        func(ctx context.Context, c storage.CampaignRecord) error
 	listCharacters             func(ctx context.Context, campaignID string, pageSize int, pageToken string) (storage.CharacterPage, error)
 	getDaggerheartSnapshot     func(ctx context.Context, campaignID string) (storage.DaggerheartSnapshot, error)
 	putDaggerheartSnapshot     func(ctx context.Context, snap storage.DaggerheartSnapshot) error
@@ -94,37 +90,37 @@ type fakeProjectionStore struct {
 	deleteDaggerheartAdversary func(ctx context.Context, campaignID, adversaryID string) error
 }
 
-func (f *fakeProjectionStore) Put(ctx context.Context, c campaign.Campaign) error {
+func (f *fakeProjectionStore) Put(ctx context.Context, c storage.CampaignRecord) error {
 	if f.put != nil {
 		return f.put(ctx, c)
 	}
 	return fmt.Errorf("not implemented")
 }
 
-func (f *fakeProjectionStore) Get(ctx context.Context, id string) (campaign.Campaign, error) {
+func (f *fakeProjectionStore) Get(ctx context.Context, id string) (storage.CampaignRecord, error) {
 	if f.get != nil {
 		return f.get(ctx, id)
 	}
-	return campaign.Campaign{}, fmt.Errorf("not implemented")
+	return storage.CampaignRecord{}, fmt.Errorf("not implemented")
 }
 
 func (f *fakeProjectionStore) List(context.Context, int, string) (storage.CampaignPage, error) {
 	return storage.CampaignPage{}, fmt.Errorf("not implemented")
 }
 
-func (f *fakeProjectionStore) PutParticipant(context.Context, participant.Participant) error {
+func (f *fakeProjectionStore) PutParticipant(context.Context, storage.ParticipantRecord) error {
 	return fmt.Errorf("not implemented")
 }
 
-func (f *fakeProjectionStore) GetParticipant(context.Context, string, string) (participant.Participant, error) {
-	return participant.Participant{}, fmt.Errorf("not implemented")
+func (f *fakeProjectionStore) GetParticipant(context.Context, string, string) (storage.ParticipantRecord, error) {
+	return storage.ParticipantRecord{}, fmt.Errorf("not implemented")
 }
 
 func (f *fakeProjectionStore) DeleteParticipant(context.Context, string, string) error {
 	return fmt.Errorf("not implemented")
 }
 
-func (f *fakeProjectionStore) ListParticipantsByCampaign(context.Context, string) ([]participant.Participant, error) {
+func (f *fakeProjectionStore) ListParticipantsByCampaign(context.Context, string) ([]storage.ParticipantRecord, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
@@ -144,12 +140,12 @@ func (f *fakeProjectionStore) DeleteParticipantClaim(context.Context, string, st
 	return fmt.Errorf("not implemented")
 }
 
-func (f *fakeProjectionStore) PutInvite(context.Context, invite.Invite) error {
+func (f *fakeProjectionStore) PutInvite(context.Context, storage.InviteRecord) error {
 	return fmt.Errorf("not implemented")
 }
 
-func (f *fakeProjectionStore) GetInvite(context.Context, string) (invite.Invite, error) {
-	return invite.Invite{}, fmt.Errorf("not implemented")
+func (f *fakeProjectionStore) GetInvite(context.Context, string) (storage.InviteRecord, error) {
+	return storage.InviteRecord{}, fmt.Errorf("not implemented")
 }
 
 func (f *fakeProjectionStore) ListInvites(context.Context, string, string, invite.Status, int, string) (storage.InvitePage, error) {
@@ -168,12 +164,12 @@ func (f *fakeProjectionStore) UpdateInviteStatus(context.Context, string, invite
 	return fmt.Errorf("not implemented")
 }
 
-func (f *fakeProjectionStore) PutCharacter(context.Context, character.Character) error {
+func (f *fakeProjectionStore) PutCharacter(context.Context, storage.CharacterRecord) error {
 	return fmt.Errorf("not implemented")
 }
 
-func (f *fakeProjectionStore) GetCharacter(context.Context, string, string) (character.Character, error) {
-	return character.Character{}, fmt.Errorf("not implemented")
+func (f *fakeProjectionStore) GetCharacter(context.Context, string, string) (storage.CharacterRecord, error) {
+	return storage.CharacterRecord{}, fmt.Errorf("not implemented")
 }
 
 func (f *fakeProjectionStore) DeleteCharacter(context.Context, string, string) error {
@@ -276,20 +272,20 @@ func (f *fakeProjectionStore) DeleteDaggerheartAdversary(ctx context.Context, ca
 	return fmt.Errorf("not implemented")
 }
 
-func (f *fakeProjectionStore) PutSession(context.Context, session.Session) error {
+func (f *fakeProjectionStore) PutSession(context.Context, storage.SessionRecord) error {
 	return fmt.Errorf("not implemented")
 }
 
-func (f *fakeProjectionStore) EndSession(context.Context, string, string, time.Time) (session.Session, bool, error) {
-	return session.Session{}, false, fmt.Errorf("not implemented")
+func (f *fakeProjectionStore) EndSession(context.Context, string, string, time.Time) (storage.SessionRecord, bool, error) {
+	return storage.SessionRecord{}, false, fmt.Errorf("not implemented")
 }
 
-func (f *fakeProjectionStore) GetSession(context.Context, string, string) (session.Session, error) {
-	return session.Session{}, fmt.Errorf("not implemented")
+func (f *fakeProjectionStore) GetSession(context.Context, string, string) (storage.SessionRecord, error) {
+	return storage.SessionRecord{}, fmt.Errorf("not implemented")
 }
 
-func (f *fakeProjectionStore) GetActiveSession(context.Context, string) (session.Session, error) {
-	return session.Session{}, fmt.Errorf("not implemented")
+func (f *fakeProjectionStore) GetActiveSession(context.Context, string) (storage.SessionRecord, error) {
+	return storage.SessionRecord{}, fmt.Errorf("not implemented")
 }
 
 func (f *fakeProjectionStore) ListSessions(context.Context, string, int, string) (storage.SessionPage, error) {

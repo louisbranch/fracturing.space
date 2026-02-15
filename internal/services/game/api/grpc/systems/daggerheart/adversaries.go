@@ -6,14 +6,13 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -34,6 +33,9 @@ func (s *DaggerheartService) CreateAdversary(ctx context.Context, in *pb.Daggerh
 	}
 	if s.stores.Event == nil {
 		return nil, status.Error(codes.Internal, "event store is not configured")
+	}
+	if s.stores.Domain == nil {
+		return nil, status.Error(codes.Internal, "domain engine is not configured")
 	}
 
 	campaignID := strings.TrimSpace(in.GetCampaignId())
@@ -94,7 +96,7 @@ func (s *DaggerheartService) CreateAdversary(ctx context.Context, in *pb.Daggerh
 		return nil, status.Errorf(codes.Internal, "generate adversary id: %v", err)
 	}
 
-	payload := daggerheart.AdversaryCreatedPayload{
+	payload := daggerheart.AdversaryCreatePayload{
 		AdversaryID: adversaryID,
 		Name:        name,
 		Kind:        kind,
@@ -114,27 +116,35 @@ func (s *DaggerheartService) CreateAdversary(ctx context.Context, in *pb.Daggerh
 		return nil, status.Errorf(codes.Internal, "encode adversary payload: %v", err)
 	}
 
-	stored, err := s.stores.Event.AppendEvent(ctx, event.Event{
+	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
+	requestID := grpcmeta.RequestIDFromContext(ctx)
+	invocationID := grpcmeta.InvocationIDFromContext(ctx)
+	result, err := s.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:    campaignID,
-		Timestamp:     time.Now().UTC(),
-		Type:          daggerheart.EventTypeAdversaryCreated,
+		Type:          command.Type("action.adversary.create"),
+		ActorType:     command.ActorTypeSystem,
 		SessionID:     sessionID,
-		RequestID:     grpcmeta.RequestIDFromContext(ctx),
-		InvocationID:  grpcmeta.InvocationIDFromContext(ctx),
-		ActorType:     event.ActorTypeSystem,
+		RequestID:     requestID,
+		InvocationID:  invocationID,
 		EntityType:    "adversary",
 		EntityID:      adversaryID,
-		SystemID:      c.System.String(),
+		SystemID:      daggerheart.SystemID,
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON:   payloadJSON,
 	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "append adversary created event: %v", err)
+		return nil, status.Errorf(codes.Internal, "execute domain command: %v", err)
 	}
-
-	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
-	if err := adapter.ApplyEvent(ctx, stored); err != nil {
-		return nil, status.Errorf(codes.Internal, "apply adversary created event: %v", err)
+	if len(result.Decision.Rejections) > 0 {
+		return nil, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
+	}
+	if len(result.Decision.Events) == 0 {
+		return nil, status.Error(codes.Internal, "adversary create did not emit an event")
+	}
+	for _, evt := range result.Decision.Events {
+		if err := adapter.Apply(ctx, evt); err != nil {
+			return nil, status.Errorf(codes.Internal, "apply adversary created event: %v", err)
+		}
 	}
 
 	created, err := s.stores.Daggerheart.GetDaggerheartAdversary(ctx, campaignID, adversaryID)
@@ -246,7 +256,7 @@ func (s *DaggerheartService) UpdateAdversary(ctx context.Context, in *pb.Daggerh
 		}
 	}
 
-	payload := daggerheart.AdversaryUpdatedPayload{
+	payload := daggerheart.AdversaryUpdatePayload{
 		AdversaryID: adversaryID,
 		Name:        name,
 		Kind:        kind,
@@ -266,27 +276,35 @@ func (s *DaggerheartService) UpdateAdversary(ctx context.Context, in *pb.Daggerh
 		return nil, status.Errorf(codes.Internal, "encode adversary payload: %v", err)
 	}
 
-	stored, err := s.stores.Event.AppendEvent(ctx, event.Event{
+	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
+	requestID := grpcmeta.RequestIDFromContext(ctx)
+	invocationID := grpcmeta.InvocationIDFromContext(ctx)
+	result, err := s.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:    campaignID,
-		Timestamp:     time.Now().UTC(),
-		Type:          daggerheart.EventTypeAdversaryUpdated,
+		Type:          command.Type("action.adversary.update"),
+		ActorType:     command.ActorTypeSystem,
 		SessionID:     sessionID,
-		RequestID:     grpcmeta.RequestIDFromContext(ctx),
-		InvocationID:  grpcmeta.InvocationIDFromContext(ctx),
-		ActorType:     event.ActorTypeSystem,
+		RequestID:     requestID,
+		InvocationID:  invocationID,
 		EntityType:    "adversary",
 		EntityID:      adversaryID,
-		SystemID:      c.System.String(),
+		SystemID:      daggerheart.SystemID,
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON:   payloadJSON,
 	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "append adversary updated event: %v", err)
+		return nil, status.Errorf(codes.Internal, "execute domain command: %v", err)
 	}
-
-	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
-	if err := adapter.ApplyEvent(ctx, stored); err != nil {
-		return nil, status.Errorf(codes.Internal, "apply adversary updated event: %v", err)
+	if len(result.Decision.Rejections) > 0 {
+		return nil, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
+	}
+	if len(result.Decision.Events) == 0 {
+		return nil, status.Error(codes.Internal, "adversary update did not emit an event")
+	}
+	for _, evt := range result.Decision.Events {
+		if err := adapter.Apply(ctx, evt); err != nil {
+			return nil, status.Errorf(codes.Internal, "apply adversary updated event: %v", err)
+		}
 	}
 
 	updated, err := s.stores.Daggerheart.GetDaggerheartAdversary(ctx, campaignID, adversaryID)
@@ -345,7 +363,7 @@ func (s *DaggerheartService) DeleteAdversary(ctx context.Context, in *pb.Daggerh
 		}
 	}
 
-	payload := daggerheart.AdversaryDeletedPayload{
+	payload := daggerheart.AdversaryDeletePayload{
 		AdversaryID: adversaryID,
 		Reason:      strings.TrimSpace(in.GetReason()),
 	}
@@ -354,27 +372,35 @@ func (s *DaggerheartService) DeleteAdversary(ctx context.Context, in *pb.Daggerh
 		return nil, status.Errorf(codes.Internal, "encode adversary payload: %v", err)
 	}
 
-	stored, err := s.stores.Event.AppendEvent(ctx, event.Event{
+	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
+	requestID := grpcmeta.RequestIDFromContext(ctx)
+	invocationID := grpcmeta.InvocationIDFromContext(ctx)
+	result, err := s.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:    campaignID,
-		Timestamp:     time.Now().UTC(),
-		Type:          daggerheart.EventTypeAdversaryDeleted,
+		Type:          command.Type("action.adversary.delete"),
+		ActorType:     command.ActorTypeSystem,
 		SessionID:     sessionID,
-		RequestID:     grpcmeta.RequestIDFromContext(ctx),
-		InvocationID:  grpcmeta.InvocationIDFromContext(ctx),
-		ActorType:     event.ActorTypeSystem,
+		RequestID:     requestID,
+		InvocationID:  invocationID,
 		EntityType:    "adversary",
 		EntityID:      adversaryID,
-		SystemID:      c.System.String(),
+		SystemID:      daggerheart.SystemID,
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON:   payloadJSON,
 	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "append adversary deleted event: %v", err)
+		return nil, status.Errorf(codes.Internal, "execute domain command: %v", err)
 	}
-
-	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
-	if err := adapter.ApplyEvent(ctx, stored); err != nil {
-		return nil, status.Errorf(codes.Internal, "apply adversary deleted event: %v", err)
+	if len(result.Decision.Rejections) > 0 {
+		return nil, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
+	}
+	if len(result.Decision.Events) == 0 {
+		return nil, status.Error(codes.Internal, "adversary delete did not emit an event")
+	}
+	for _, evt := range result.Decision.Events {
+		if err := adapter.Apply(ctx, evt); err != nil {
+			return nil, status.Errorf(codes.Internal, "apply adversary deleted event: %v", err)
+		}
 	}
 
 	return &pb.DaggerheartDeleteAdversaryResponse{

@@ -320,6 +320,8 @@ type Event struct {
 	ActorID        string `json:"actor_id"`
 	EntityType     string `json:"entity_type"`
 	EntityID       string `json:"entity_id"`
+	CorrelationID  string `json:"correlation_id"`
+	CausationID    string `json:"causation_id"`
 	PayloadJson    []byte `json:"payload_json"`
 }
 

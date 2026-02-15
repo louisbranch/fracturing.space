@@ -234,7 +234,7 @@ func (g *Generator) generateCampaign(ctx context.Context, index int, cfg PresetC
 	}
 
 	if numSessions > 0 {
-		if err := g.createSessions(ctx, campaign.Id, numSessions, cfg, characters); err != nil {
+		if err := g.createSessions(ctx, campaign.Id, numSessions, cfg); err != nil {
 			return fmt.Errorf("create sessions: %w", err)
 		}
 		if g.config.Verbose {

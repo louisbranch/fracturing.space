@@ -14,12 +14,9 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/character"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/invite"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/participant"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/session"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -29,7 +26,7 @@ import (
 
 // fakeCampaignStore is a test double for storage.CampaignStore.
 type fakeCampaignStore struct {
-	campaigns map[string]campaign.Campaign
+	campaigns map[string]storage.CampaignRecord
 	putErr    error
 	getErr    error
 	listErr   error
@@ -37,11 +34,11 @@ type fakeCampaignStore struct {
 
 func newFakeCampaignStore() *fakeCampaignStore {
 	return &fakeCampaignStore{
-		campaigns: make(map[string]campaign.Campaign),
+		campaigns: make(map[string]storage.CampaignRecord),
 	}
 }
 
-func (s *fakeCampaignStore) Put(_ context.Context, c campaign.Campaign) error {
+func (s *fakeCampaignStore) Put(_ context.Context, c storage.CampaignRecord) error {
 	if s.putErr != nil {
 		return s.putErr
 	}
@@ -49,13 +46,13 @@ func (s *fakeCampaignStore) Put(_ context.Context, c campaign.Campaign) error {
 	return nil
 }
 
-func (s *fakeCampaignStore) Get(_ context.Context, id string) (campaign.Campaign, error) {
+func (s *fakeCampaignStore) Get(_ context.Context, id string) (storage.CampaignRecord, error) {
 	if s.getErr != nil {
-		return campaign.Campaign{}, s.getErr
+		return storage.CampaignRecord{}, s.getErr
 	}
 	c, ok := s.campaigns[id]
 	if !ok {
-		return campaign.Campaign{}, storage.ErrNotFound
+		return storage.CampaignRecord{}, storage.ErrNotFound
 	}
 	return c, nil
 }
@@ -64,7 +61,7 @@ func (s *fakeCampaignStore) List(_ context.Context, pageSize int, pageToken stri
 	if s.listErr != nil {
 		return storage.CampaignPage{}, s.listErr
 	}
-	campaigns := make([]campaign.Campaign, 0, len(s.campaigns))
+	campaigns := make([]storage.CampaignRecord, 0, len(s.campaigns))
 	for _, c := range s.campaigns {
 		campaigns = append(campaigns, c)
 	}
@@ -76,7 +73,7 @@ func (s *fakeCampaignStore) List(_ context.Context, pageSize int, pageToken stri
 
 // fakeParticipantStore is a test double for storage.ParticipantStore.
 type fakeParticipantStore struct {
-	participants map[string]map[string]participant.Participant // campaignID -> participantID -> Participant
+	participants map[string]map[string]storage.ParticipantRecord // campaignID -> participantID -> Participant
 	putErr       error
 	getErr       error
 	deleteErr    error
@@ -85,7 +82,7 @@ type fakeParticipantStore struct {
 
 // fakeInviteStore is a test double for storage.InviteStore.
 type fakeInviteStore struct {
-	invites   map[string]invite.Invite
+	invites   map[string]storage.InviteRecord
 	putErr    error
 	getErr    error
 	listErr   error
@@ -93,10 +90,10 @@ type fakeInviteStore struct {
 }
 
 func newFakeInviteStore() *fakeInviteStore {
-	return &fakeInviteStore{invites: make(map[string]invite.Invite)}
+	return &fakeInviteStore{invites: make(map[string]storage.InviteRecord)}
 }
 
-func (s *fakeInviteStore) PutInvite(_ context.Context, inv invite.Invite) error {
+func (s *fakeInviteStore) PutInvite(_ context.Context, inv storage.InviteRecord) error {
 	if s.putErr != nil {
 		return s.putErr
 	}
@@ -104,13 +101,13 @@ func (s *fakeInviteStore) PutInvite(_ context.Context, inv invite.Invite) error 
 	return nil
 }
 
-func (s *fakeInviteStore) GetInvite(_ context.Context, inviteID string) (invite.Invite, error) {
+func (s *fakeInviteStore) GetInvite(_ context.Context, inviteID string) (storage.InviteRecord, error) {
 	if s.getErr != nil {
-		return invite.Invite{}, s.getErr
+		return storage.InviteRecord{}, s.getErr
 	}
 	inv, ok := s.invites[inviteID]
 	if !ok {
-		return invite.Invite{}, storage.ErrNotFound
+		return storage.InviteRecord{}, storage.ErrNotFound
 	}
 	return inv, nil
 }
@@ -119,7 +116,7 @@ func (s *fakeInviteStore) ListInvites(_ context.Context, campaignID string, reci
 	if s.listErr != nil {
 		return storage.InvitePage{}, s.listErr
 	}
-	result := make([]invite.Invite, 0)
+	result := make([]storage.InviteRecord, 0)
 	for _, inv := range s.invites {
 		if inv.CampaignID != campaignID {
 			continue
@@ -139,7 +136,7 @@ func (s *fakeInviteStore) ListPendingInvites(_ context.Context, campaignID strin
 	if s.listErr != nil {
 		return storage.InvitePage{}, s.listErr
 	}
-	result := make([]invite.Invite, 0)
+	result := make([]storage.InviteRecord, 0)
 	for _, inv := range s.invites {
 		if inv.CampaignID == campaignID && inv.Status == invite.StatusPending {
 			result = append(result, inv)
@@ -152,7 +149,7 @@ func (s *fakeInviteStore) ListPendingInvitesForRecipient(_ context.Context, user
 	if s.listErr != nil {
 		return storage.InvitePage{}, s.listErr
 	}
-	result := make([]invite.Invite, 0)
+	result := make([]storage.InviteRecord, 0)
 	for _, inv := range s.invites {
 		if inv.RecipientUserID == userID && inv.Status == invite.StatusPending {
 			result = append(result, inv)
@@ -177,16 +174,16 @@ func (s *fakeInviteStore) UpdateInviteStatus(_ context.Context, inviteID string,
 
 func newFakeParticipantStore() *fakeParticipantStore {
 	return &fakeParticipantStore{
-		participants: make(map[string]map[string]participant.Participant),
+		participants: make(map[string]map[string]storage.ParticipantRecord),
 	}
 }
 
-func (s *fakeParticipantStore) PutParticipant(_ context.Context, p participant.Participant) error {
+func (s *fakeParticipantStore) PutParticipant(_ context.Context, p storage.ParticipantRecord) error {
 	if s.putErr != nil {
 		return s.putErr
 	}
 	if s.participants[p.CampaignID] == nil {
-		s.participants[p.CampaignID] = make(map[string]participant.Participant)
+		s.participants[p.CampaignID] = make(map[string]storage.ParticipantRecord)
 	}
 	if strings.TrimSpace(p.UserID) != "" {
 		for id, existing := range s.participants[p.CampaignID] {
@@ -209,17 +206,17 @@ func (s *fakeParticipantStore) PutParticipant(_ context.Context, p participant.P
 	return nil
 }
 
-func (s *fakeParticipantStore) GetParticipant(_ context.Context, campaignID, participantID string) (participant.Participant, error) {
+func (s *fakeParticipantStore) GetParticipant(_ context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
 	if s.getErr != nil {
-		return participant.Participant{}, s.getErr
+		return storage.ParticipantRecord{}, s.getErr
 	}
 	byID, ok := s.participants[campaignID]
 	if !ok {
-		return participant.Participant{}, storage.ErrNotFound
+		return storage.ParticipantRecord{}, storage.ErrNotFound
 	}
 	p, ok := byID[participantID]
 	if !ok {
-		return participant.Participant{}, storage.ErrNotFound
+		return storage.ParticipantRecord{}, storage.ErrNotFound
 	}
 	return p, nil
 }
@@ -239,7 +236,7 @@ func (s *fakeParticipantStore) DeleteParticipant(_ context.Context, campaignID, 
 	return nil
 }
 
-func (s *fakeParticipantStore) ListParticipantsByCampaign(_ context.Context, campaignID string) ([]participant.Participant, error) {
+func (s *fakeParticipantStore) ListParticipantsByCampaign(_ context.Context, campaignID string) ([]storage.ParticipantRecord, error) {
 	if s.listErr != nil {
 		return nil, s.listErr
 	}
@@ -247,7 +244,7 @@ func (s *fakeParticipantStore) ListParticipantsByCampaign(_ context.Context, cam
 	if !ok {
 		return nil, nil
 	}
-	result := make([]participant.Participant, 0, len(byID))
+	result := make([]storage.ParticipantRecord, 0, len(byID))
 	for _, p := range byID {
 		result = append(result, p)
 	}
@@ -262,7 +259,7 @@ func (s *fakeParticipantStore) ListParticipants(_ context.Context, campaignID st
 	if !ok {
 		return storage.ParticipantPage{}, nil
 	}
-	result := make([]participant.Participant, 0, len(byID))
+	result := make([]storage.ParticipantRecord, 0, len(byID))
 	for _, p := range byID {
 		result = append(result, p)
 	}
@@ -274,7 +271,7 @@ func (s *fakeParticipantStore) ListParticipants(_ context.Context, campaignID st
 
 // fakeCharacterStore is a test double for storage.CharacterStore.
 type fakeCharacterStore struct {
-	characters map[string]map[string]character.Character // campaignID -> characterID -> Character
+	characters map[string]map[string]storage.CharacterRecord // campaignID -> characterID -> Character
 	putErr     error
 	getErr     error
 	deleteErr  error
@@ -283,32 +280,32 @@ type fakeCharacterStore struct {
 
 func newFakeCharacterStore() *fakeCharacterStore {
 	return &fakeCharacterStore{
-		characters: make(map[string]map[string]character.Character),
+		characters: make(map[string]map[string]storage.CharacterRecord),
 	}
 }
 
-func (s *fakeCharacterStore) PutCharacter(_ context.Context, c character.Character) error {
+func (s *fakeCharacterStore) PutCharacter(_ context.Context, c storage.CharacterRecord) error {
 	if s.putErr != nil {
 		return s.putErr
 	}
 	if s.characters[c.CampaignID] == nil {
-		s.characters[c.CampaignID] = make(map[string]character.Character)
+		s.characters[c.CampaignID] = make(map[string]storage.CharacterRecord)
 	}
 	s.characters[c.CampaignID][c.ID] = c
 	return nil
 }
 
-func (s *fakeCharacterStore) GetCharacter(_ context.Context, campaignID, characterID string) (character.Character, error) {
+func (s *fakeCharacterStore) GetCharacter(_ context.Context, campaignID, characterID string) (storage.CharacterRecord, error) {
 	if s.getErr != nil {
-		return character.Character{}, s.getErr
+		return storage.CharacterRecord{}, s.getErr
 	}
 	byID, ok := s.characters[campaignID]
 	if !ok {
-		return character.Character{}, storage.ErrNotFound
+		return storage.CharacterRecord{}, storage.ErrNotFound
 	}
 	c, ok := byID[characterID]
 	if !ok {
-		return character.Character{}, storage.ErrNotFound
+		return storage.CharacterRecord{}, storage.ErrNotFound
 	}
 	return c, nil
 }
@@ -336,7 +333,7 @@ func (s *fakeCharacterStore) ListCharacters(_ context.Context, campaignID string
 	if !ok {
 		return storage.CharacterPage{}, nil
 	}
-	result := make([]character.Character, 0, len(byID))
+	result := make([]storage.CharacterRecord, 0, len(byID))
 	for _, c := range byID {
 		result = append(result, c)
 	}
@@ -596,7 +593,7 @@ func (s *fakeSessionGateStore) GetOpenSessionGate(_ context.Context, campaignID,
 		return storage.SessionGate{}, s.getErr
 	}
 	for _, gate := range s.gates {
-		if gate.CampaignID == campaignID && gate.SessionID == sessionID && gate.Status == string(session.GateStatusOpen) {
+		if gate.CampaignID == campaignID && gate.SessionID == sessionID && gate.Status == session.GateStatusOpen {
 			return gate, nil
 		}
 	}
@@ -605,8 +602,8 @@ func (s *fakeSessionGateStore) GetOpenSessionGate(_ context.Context, campaignID,
 
 // fakeSessionStore is a test double for storage.SessionStore.
 type fakeSessionStore struct {
-	sessions      map[string]map[string]session.Session // campaignID -> sessionID -> Session
-	activeSession map[string]string                     // campaignID -> sessionID (active session ID)
+	sessions      map[string]map[string]storage.SessionRecord // campaignID -> sessionID -> Session
+	activeSession map[string]string                           // campaignID -> sessionID (active session ID)
 	putErr        error
 	getErr        error
 	endErr        error
@@ -671,12 +668,12 @@ func (s *fakeSessionSpotlightStore) ClearSessionSpotlight(_ context.Context, cam
 
 func newFakeSessionStore() *fakeSessionStore {
 	return &fakeSessionStore{
-		sessions:      make(map[string]map[string]session.Session),
+		sessions:      make(map[string]map[string]storage.SessionRecord),
 		activeSession: make(map[string]string),
 	}
 }
 
-func (s *fakeSessionStore) PutSession(_ context.Context, sess session.Session) error {
+func (s *fakeSessionStore) PutSession(_ context.Context, sess storage.SessionRecord) error {
 	if s.putErr != nil {
 		return s.putErr
 	}
@@ -685,31 +682,31 @@ func (s *fakeSessionStore) PutSession(_ context.Context, sess session.Session) e
 		return storage.ErrActiveSessionExists
 	}
 	if s.sessions[sess.CampaignID] == nil {
-		s.sessions[sess.CampaignID] = make(map[string]session.Session)
+		s.sessions[sess.CampaignID] = make(map[string]storage.SessionRecord)
 	}
 	s.sessions[sess.CampaignID][sess.ID] = sess
-	if sess.Status == session.SessionStatusActive {
+	if sess.Status == session.StatusActive {
 		s.activeSession[sess.CampaignID] = sess.ID
 	}
 	return nil
 }
 
-func (s *fakeSessionStore) EndSession(_ context.Context, campaignID, sessionID string, endedAt time.Time) (session.Session, bool, error) {
+func (s *fakeSessionStore) EndSession(_ context.Context, campaignID, sessionID string, endedAt time.Time) (storage.SessionRecord, bool, error) {
 	if s.endErr != nil {
-		return session.Session{}, false, s.endErr
+		return storage.SessionRecord{}, false, s.endErr
 	}
 	byID, ok := s.sessions[campaignID]
 	if !ok {
-		return session.Session{}, false, storage.ErrNotFound
+		return storage.SessionRecord{}, false, storage.ErrNotFound
 	}
 	sess, ok := byID[sessionID]
 	if !ok {
-		return session.Session{}, false, storage.ErrNotFound
+		return storage.SessionRecord{}, false, storage.ErrNotFound
 	}
-	if sess.Status == session.SessionStatusEnded {
+	if sess.Status == session.StatusEnded {
 		return sess, false, nil
 	}
-	sess.Status = session.SessionStatusEnded
+	sess.Status = session.StatusEnded
 	sess.EndedAt = &endedAt
 	sess.UpdatedAt = endedAt
 	s.sessions[campaignID][sessionID] = sess
@@ -719,33 +716,33 @@ func (s *fakeSessionStore) EndSession(_ context.Context, campaignID, sessionID s
 	return sess, true, nil
 }
 
-func (s *fakeSessionStore) GetSession(_ context.Context, campaignID, sessionID string) (session.Session, error) {
+func (s *fakeSessionStore) GetSession(_ context.Context, campaignID, sessionID string) (storage.SessionRecord, error) {
 	if s.getErr != nil {
-		return session.Session{}, s.getErr
+		return storage.SessionRecord{}, s.getErr
 	}
 	byID, ok := s.sessions[campaignID]
 	if !ok {
-		return session.Session{}, storage.ErrNotFound
+		return storage.SessionRecord{}, storage.ErrNotFound
 	}
 	sess, ok := byID[sessionID]
 	if !ok {
-		return session.Session{}, storage.ErrNotFound
+		return storage.SessionRecord{}, storage.ErrNotFound
 	}
 	return sess, nil
 }
 
-func (s *fakeSessionStore) GetActiveSession(_ context.Context, campaignID string) (session.Session, error) {
+func (s *fakeSessionStore) GetActiveSession(_ context.Context, campaignID string) (storage.SessionRecord, error) {
 	if s.activeErr != nil {
-		return session.Session{}, s.activeErr
+		return storage.SessionRecord{}, s.activeErr
 	}
 	activeID, ok := s.activeSession[campaignID]
 	if !ok || activeID == "" {
-		return session.Session{}, storage.ErrNotFound
+		return storage.SessionRecord{}, storage.ErrNotFound
 	}
 	byID := s.sessions[campaignID]
 	sess, ok := byID[activeID]
 	if !ok {
-		return session.Session{}, storage.ErrNotFound
+		return storage.SessionRecord{}, storage.ErrNotFound
 	}
 	return sess, nil
 }
@@ -758,7 +755,7 @@ func (s *fakeSessionStore) ListSessions(_ context.Context, campaignID string, pa
 	if !ok {
 		return storage.SessionPage{}, nil
 	}
-	result := make([]session.Session, 0, len(byID))
+	result := make([]storage.SessionRecord, 0, len(byID))
 	for _, sess := range byID {
 		result = append(result, sess)
 	}

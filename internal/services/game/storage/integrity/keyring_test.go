@@ -11,7 +11,7 @@ func TestNewKeyringValidation(t *testing.T) {
 		t.Fatal("expected error for missing active key id")
 	}
 
-	if _, err := NewKeyring(map[string][]byte{"v1": []byte("secret")}, "v2"); err == nil {
+	if _, err := NewKeyring(map[string][]byte{"v1": []byte("secret")}, "legacy"); err == nil {
 		t.Fatal("expected error for unknown active key id")
 	}
 }

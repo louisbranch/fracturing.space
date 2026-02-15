@@ -2,12 +2,13 @@ package game
 
 import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/invite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // Invite proto conversion helpers.
-func inviteToProto(inv invite.Invite) *campaignv1.Invite {
+func inviteToProto(inv storage.InviteRecord) *campaignv1.Invite {
 	return &campaignv1.Invite{
 		Id:                     inv.ID,
 		CampaignId:             inv.CampaignID,

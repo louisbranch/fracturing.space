@@ -7,7 +7,9 @@ import (
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"google.golang.org/grpc/codes"
 )
 
@@ -130,11 +132,11 @@ func TestListEvents_ASC_Pagination(t *testing.T) {
 
 	// Add 5 events
 	eventStore.events["c1"] = []event.Event{
-		{CampaignID: "c1", Seq: 1, Type: "e1", Timestamp: now},
-		{CampaignID: "c1", Seq: 2, Type: "e2", Timestamp: now},
-		{CampaignID: "c1", Seq: 3, Type: "e3", Timestamp: now},
-		{CampaignID: "c1", Seq: 4, Type: "e4", Timestamp: now},
-		{CampaignID: "c1", Seq: 5, Type: "e5", Timestamp: now},
+		{CampaignID: "c1", Seq: 1, Type: event.Type("e1"), Timestamp: now},
+		{CampaignID: "c1", Seq: 2, Type: event.Type("e2"), Timestamp: now},
+		{CampaignID: "c1", Seq: 3, Type: event.Type("e3"), Timestamp: now},
+		{CampaignID: "c1", Seq: 4, Type: event.Type("e4"), Timestamp: now},
+		{CampaignID: "c1", Seq: 5, Type: event.Type("e5"), Timestamp: now},
 	}
 
 	svc := NewEventService(Stores{Event: eventStore})
@@ -199,17 +201,112 @@ func TestListEvents_ASC_Pagination(t *testing.T) {
 	}
 }
 
+func TestAppendEvent_UsesDomainEngineForActionEvents(t *testing.T) {
+	eventStore := newFakeEventStore()
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+
+	cases := []struct {
+		name        string
+		eventType   string
+		commandType command.Type
+	}{
+		{
+			name:        "note added",
+			eventType:   "action.note_added",
+			commandType: command.Type("action.note.add"),
+		},
+		{
+			name:        "roll resolved",
+			eventType:   "action.roll_resolved",
+			commandType: command.Type("action.roll.resolve"),
+		},
+		{
+			name:        "outcome applied",
+			eventType:   "action.outcome_applied",
+			commandType: command.Type("action.outcome.apply"),
+		},
+		{
+			name:        "outcome rejected",
+			eventType:   "action.outcome_rejected",
+			commandType: command.Type("action.outcome.reject"),
+		},
+	}
+
+	results := make(map[command.Type]engine.Result, len(cases))
+	for _, tc := range cases {
+		results[tc.commandType] = engine.Result{
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type(tc.eventType),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				EntityType:  "campaign",
+				EntityID:    "c1",
+				PayloadJSON: []byte("{}"),
+			}),
+		}
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: results}
+	svc := NewEventService(Stores{Event: eventStore, Domain: domain})
+
+	for _, tc := range cases {
+		_, err := svc.AppendEvent(context.Background(), &campaignv1.AppendEventRequest{
+			CampaignId:  "c1",
+			Type:        tc.eventType,
+			ActorType:   "system",
+			EntityType:  "campaign",
+			EntityId:    "c1",
+			PayloadJson: []byte("{}"),
+		})
+		if err != nil {
+			t.Fatalf("AppendEvent %s returned error: %v", tc.name, err)
+		}
+	}
+
+	if domain.calls != len(cases) {
+		t.Fatalf("expected domain to be called %d times, got %d", len(cases), domain.calls)
+	}
+	if len(domain.commands) != len(cases) {
+		t.Fatalf("expected %d domain commands, got %d", len(cases), len(domain.commands))
+	}
+	for i, tc := range cases {
+		if domain.commands[i].Type != tc.commandType {
+			t.Fatalf("command type = %s, want %s", domain.commands[i].Type, tc.commandType)
+		}
+	}
+}
+
+func TestAppendEvent_RejectsUnmappedTypeWithDomain(t *testing.T) {
+	eventStore := newFakeEventStore()
+	domain := &fakeDomainEngine{store: eventStore}
+	svc := NewEventService(Stores{Event: eventStore, Domain: domain})
+
+	_, err := svc.AppendEvent(context.Background(), &campaignv1.AppendEventRequest{
+		CampaignId:  "c1",
+		Type:        "campaign.created",
+		ActorType:   "system",
+		EntityType:  "campaign",
+		EntityId:    "c1",
+		PayloadJson: []byte("{}"),
+	})
+	assertStatusCode(t, err, codes.FailedPrecondition)
+	if domain.calls != 0 {
+		t.Fatalf("expected domain not to be called, got %d", domain.calls)
+	}
+}
+
 func TestListEvents_DESC_Pagination(t *testing.T) {
 	eventStore := newFakeEventStore()
 	now := time.Now().UTC()
 
 	// Add 5 events
 	eventStore.events["c1"] = []event.Event{
-		{CampaignID: "c1", Seq: 1, Type: "e1", Timestamp: now},
-		{CampaignID: "c1", Seq: 2, Type: "e2", Timestamp: now},
-		{CampaignID: "c1", Seq: 3, Type: "e3", Timestamp: now},
-		{CampaignID: "c1", Seq: 4, Type: "e4", Timestamp: now},
-		{CampaignID: "c1", Seq: 5, Type: "e5", Timestamp: now},
+		{CampaignID: "c1", Seq: 1, Type: event.Type("e1"), Timestamp: now},
+		{CampaignID: "c1", Seq: 2, Type: event.Type("e2"), Timestamp: now},
+		{CampaignID: "c1", Seq: 3, Type: event.Type("e3"), Timestamp: now},
+		{CampaignID: "c1", Seq: 4, Type: event.Type("e4"), Timestamp: now},
+		{CampaignID: "c1", Seq: 5, Type: event.Type("e5"), Timestamp: now},
 	}
 
 	svc := NewEventService(Stores{Event: eventStore})

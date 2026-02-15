@@ -5,11 +5,12 @@ import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // Campaign proto conversion helpers.
-func campaignToProto(c campaign.Campaign) *campaignv1.Campaign {
+func campaignToProto(c storage.CampaignRecord) *campaignv1.Campaign {
 	return &campaignv1.Campaign{
 		Id:               c.ID,
 		Name:             c.Name,
@@ -29,15 +30,15 @@ func campaignToProto(c campaign.Campaign) *campaignv1.Campaign {
 	}
 }
 
-func campaignStatusToProto(status campaign.CampaignStatus) campaignv1.CampaignStatus {
+func campaignStatusToProto(status campaign.Status) campaignv1.CampaignStatus {
 	switch status {
-	case campaign.CampaignStatusDraft:
+	case campaign.StatusDraft:
 		return campaignv1.CampaignStatus_DRAFT
-	case campaign.CampaignStatusActive:
+	case campaign.StatusActive:
 		return campaignv1.CampaignStatus_ACTIVE
-	case campaign.CampaignStatusCompleted:
+	case campaign.StatusCompleted:
 		return campaignv1.CampaignStatus_COMPLETED
-	case campaign.CampaignStatusArchived:
+	case campaign.StatusArchived:
 		return campaignv1.CampaignStatus_ARCHIVED
 	default:
 		return campaignv1.CampaignStatus_CAMPAIGN_STATUS_UNSPECIFIED
@@ -70,52 +71,52 @@ func gmModeToProto(mode campaign.GmMode) campaignv1.GmMode {
 	}
 }
 
-func campaignIntentFromProto(intent campaignv1.CampaignIntent) campaign.CampaignIntent {
+func campaignIntentFromProto(intent campaignv1.CampaignIntent) campaign.Intent {
 	switch intent {
 	case campaignv1.CampaignIntent_STANDARD:
-		return campaign.CampaignIntentStandard
+		return campaign.IntentStandard
 	case campaignv1.CampaignIntent_STARTER:
-		return campaign.CampaignIntentStarter
+		return campaign.IntentStarter
 	case campaignv1.CampaignIntent_SANDBOX:
-		return campaign.CampaignIntentSandbox
+		return campaign.IntentSandbox
 	default:
-		return campaign.CampaignIntentUnspecified
+		return campaign.IntentUnspecified
 	}
 }
 
-func campaignIntentToProto(intent campaign.CampaignIntent) campaignv1.CampaignIntent {
+func campaignIntentToProto(intent campaign.Intent) campaignv1.CampaignIntent {
 	switch intent {
-	case campaign.CampaignIntentStandard:
+	case campaign.IntentStandard:
 		return campaignv1.CampaignIntent_STANDARD
-	case campaign.CampaignIntentStarter:
+	case campaign.IntentStarter:
 		return campaignv1.CampaignIntent_STARTER
-	case campaign.CampaignIntentSandbox:
+	case campaign.IntentSandbox:
 		return campaignv1.CampaignIntent_SANDBOX
 	default:
 		return campaignv1.CampaignIntent_CAMPAIGN_INTENT_UNSPECIFIED
 	}
 }
 
-func campaignAccessPolicyFromProto(policy campaignv1.CampaignAccessPolicy) campaign.CampaignAccessPolicy {
+func campaignAccessPolicyFromProto(policy campaignv1.CampaignAccessPolicy) campaign.AccessPolicy {
 	switch policy {
 	case campaignv1.CampaignAccessPolicy_PRIVATE:
-		return campaign.CampaignAccessPolicyPrivate
+		return campaign.AccessPolicyPrivate
 	case campaignv1.CampaignAccessPolicy_RESTRICTED:
-		return campaign.CampaignAccessPolicyRestricted
+		return campaign.AccessPolicyRestricted
 	case campaignv1.CampaignAccessPolicy_PUBLIC:
-		return campaign.CampaignAccessPolicyPublic
+		return campaign.AccessPolicyPublic
 	default:
-		return campaign.CampaignAccessPolicyUnspecified
+		return campaign.AccessPolicyUnspecified
 	}
 }
 
-func campaignAccessPolicyToProto(policy campaign.CampaignAccessPolicy) campaignv1.CampaignAccessPolicy {
+func campaignAccessPolicyToProto(policy campaign.AccessPolicy) campaignv1.CampaignAccessPolicy {
 	switch policy {
-	case campaign.CampaignAccessPolicyPrivate:
+	case campaign.AccessPolicyPrivate:
 		return campaignv1.CampaignAccessPolicy_PRIVATE
-	case campaign.CampaignAccessPolicyRestricted:
+	case campaign.AccessPolicyRestricted:
 		return campaignv1.CampaignAccessPolicy_RESTRICTED
-	case campaign.CampaignAccessPolicyPublic:
+	case campaign.AccessPolicyPublic:
 		return campaignv1.CampaignAccessPolicy_PUBLIC
 	default:
 		return campaignv1.CampaignAccessPolicy_CAMPAIGN_ACCESS_POLICY_UNSPECIFIED
