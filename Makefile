@@ -8,7 +8,7 @@ PROTO_FILES := \
 	$(wildcard $(PROTO_DIR)/game/v1/*.proto) \
 	$(wildcard $(PROTO_DIR)/systems/daggerheart/v1/*.proto)
 
-.PHONY: all proto clean run cover cover-treemap test integration scenario templ-generate event-catalog-check fmt fmt-check catalog-importer
+.PHONY: all proto clean run cover cover-treemap test integration scenario templ-generate event-catalog-check fmt fmt-check catalog-importer bootstrap bootstrap-prod
 
 all: proto
 
@@ -120,3 +120,9 @@ seed-generate-fresh: ## Reset DB and generate demo data
 
 catalog-importer: ## Import Daggerheart catalog content
 	go run ./cmd/catalog-importer -dir internal/tools/importer/content/daggerheart/v1
+
+bootstrap: ## Generate missing keys and start Compose
+	./scripts/bootstrap.sh
+
+bootstrap-prod: ## Bootstrap using .env.production.example
+	ENV_EXAMPLE=.env.production.example ./scripts/bootstrap.sh

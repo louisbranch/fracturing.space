@@ -161,6 +161,106 @@ services:
       - edge
     restart: unless-stopped
 
+  seed:
+    build:
+      context: .
+      target: base
+      args:
+        GO_VERSION: ${GO_VERSION:-1.25.6}
+    image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/seed:${FRACTURING_SPACE_IMAGE_TAG:-dev}"
+    profiles:
+      - tools
+    depends_on:
+      - game
+      - auth
+    environment:
+      FRACTURING_SPACE_AUTH_ADDR: auth:8083
+    entrypoint: ["go", "run", "./cmd/seed", "-grpc-addr", "game:8080"]
+    networks:
+      - internal
+
+  scenario:
+    build:
+      context: .
+      target: base
+      args:
+        GO_VERSION: ${GO_VERSION:-1.25.6}
+    image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/scenario:${FRACTURING_SPACE_IMAGE_TAG:-dev}"
+    profiles:
+      - tools
+    depends_on:
+      - game
+    environment:
+      FRACTURING_SPACE_GAME_ADDR: game:8080
+    entrypoint: ["go", "run", "./cmd/scenario"]
+    networks:
+      - internal
+
+  maintenance:
+    build:
+      context: .
+      target: base
+      args:
+        GO_VERSION: ${GO_VERSION:-1.25.6}
+    image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/maintenance:${FRACTURING_SPACE_IMAGE_TAG:-dev}"
+    profiles:
+      - tools
+    depends_on:
+      init-data:
+        condition: service_completed_successfully
+    environment:
+      FRACTURING_SPACE_GAME_EVENTS_DB_PATH: /data/game-events.db
+      FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH: /data/game-projections.db
+      FRACTURING_SPACE_GAME_EVENT_HMAC_KEY: ${FRACTURING_SPACE_GAME_EVENT_HMAC_KEY:-dev-secret}
+      FRACTURING_SPACE_GAME_EVENT_HMAC_KEYS: ${FRACTURING_SPACE_GAME_EVENT_HMAC_KEYS:-}
+      FRACTURING_SPACE_GAME_EVENT_HMAC_KEY_ID: ${FRACTURING_SPACE_GAME_EVENT_HMAC_KEY_ID:-v1}
+    entrypoint: ["go", "run", "./cmd/maintenance"]
+    volumes:
+      - fracturing-space-data:/data
+    network_mode: none
+
+  catalog-importer:
+    build:
+      context: .
+      target: base
+      args:
+        GO_VERSION: ${GO_VERSION:-1.25.6}
+    image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/catalog-importer:${FRACTURING_SPACE_IMAGE_TAG:-dev}"
+    profiles:
+      - tools
+    depends_on:
+      init-data:
+        condition: service_completed_successfully
+    entrypoint:
+      ["go", "run", "./cmd/catalog-importer", "-dir", "internal/tools/importer/content/daggerheart/v1", "-db-path", "/data/game-content.db"]
+    volumes:
+      - fracturing-space-data:/data
+    network_mode: none
+
+  join-grant-key:
+    build:
+      context: .
+      target: base
+      args:
+        GO_VERSION: ${GO_VERSION:-1.25.6}
+    image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/join-grant-key:${FRACTURING_SPACE_IMAGE_TAG:-dev}"
+    profiles:
+      - tools
+    entrypoint: ["go", "run", "./cmd/join-grant-key"]
+    network_mode: none
+
+  hmac-key:
+    build:
+      context: .
+      target: base
+      args:
+        GO_VERSION: ${GO_VERSION:-1.25.6}
+    image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/hmac-key:${FRACTURING_SPACE_IMAGE_TAG:-dev}"
+    profiles:
+      - tools
+    entrypoint: ["go", "run", "./cmd/hmac-key"]
+    network_mode: none
+
 volumes:
   fracturing-space-data:
   caddy-data:
