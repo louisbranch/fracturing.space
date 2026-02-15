@@ -20,6 +20,16 @@ go run ./cmd/game
 go run ./cmd/scenario -scenario internal/test/game/scenarios/basic_flow.lua
 ```
 
+Using Compose:
+
+```bash
+# Terminal 1: Start the game service
+docker compose up -d game
+
+# Terminal 2: Run a scenario
+docker compose --profile tools run --rm scenario -- -scenario internal/test/game/scenarios/basic_flow.lua
+```
+
 ## CLI Options
 
 | Flag | Description | Default |

@@ -12,6 +12,14 @@ Requires Docker + Docker Compose.
 docker compose up --build
 ```
 
+For a minimal-intervention bootstrap that creates `.env`, generates missing keys, and starts the stack:
+
+```sh
+make bootstrap
+# or
+./scripts/bootstrap.sh
+```
+
 Open `http://localhost:8080`.
 
 Service URLs and Docker Compose details: [docker-compose.md](docker-compose.md).

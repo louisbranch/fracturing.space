@@ -33,6 +33,20 @@ See [configuration](configuration.md) for the full list.
 
 For production, see [production](production.md).
 
+## Tools
+
+Compose exposes CLI tools under the `tools` profile:
+
+```sh
+docker compose --profile tools run --rm hmac-key
+docker compose --profile tools run --rm join-grant-key
+docker compose --profile tools run --rm seed
+docker compose --profile tools run --rm seed -- -generate -preset=variety -v
+docker compose --profile tools run --rm scenario -- -scenario internal/test/game/scenarios/basic_flow.lua
+docker compose --profile tools run --rm maintenance -- -campaign-id <id> -validate
+docker compose --profile tools run --rm catalog-importer
+```
+
 ## Volumes
 
 Compose uses named volumes for SQLite data stores. To remove them:

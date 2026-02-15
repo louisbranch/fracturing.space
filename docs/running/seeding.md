@@ -22,12 +22,28 @@ go run ./cmd/game
 make seed
 ```
 
+Using Compose:
+
+```bash
+# Terminal 1: Start the game + auth services
+docker compose up -d game auth
+
+# Terminal 2: Run seeding commands
+docker compose --profile tools run --rm seed
+```
+
 ## Catalog Content Import
 
 Use the catalog importer to load Daggerheart content into the SQLite catalog database.
 
 ```bash
 make catalog-importer
+```
+
+Compose:
+
+```bash
+docker compose --profile tools run --rm catalog-importer
 ```
 
 ### CLI Options
@@ -46,6 +62,13 @@ Run predefined scenarios from JSON fixture files:
 ```bash
 make seed        # Run all scenarios with verbose output
 make seed-fresh  # Reset DB and reseed
+```
+
+Compose:
+
+```bash
+docker compose --profile tools run --rm seed
+docker compose --profile tools run --rm seed -- -scenario example
 ```
 
 ### CLI Options
@@ -70,6 +93,13 @@ Generate diverse, randomized test data with reproducible seeds:
 make seed-generate         # Demo preset (rich single campaign)
 make seed-variety          # 8 campaigns with varied statuses/modes
 make seed-generate-fresh   # Reset DB and generate demo data
+```
+
+Compose:
+
+```bash
+docker compose --profile tools run --rm seed -- -generate -preset=demo -v
+docker compose --profile tools run --rm seed -- -generate -preset=variety -v
 ```
 
 ### CLI Options
