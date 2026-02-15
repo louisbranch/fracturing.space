@@ -1,0 +1,28 @@
+package templates
+
+import (
+	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	"github.com/louisbranch/fracturing.space/internal/platform/icons"
+)
+
+// LucideSprite injects the shared Lucide SVG sprite into the page.
+templ LucideSprite() {
+	@templ.Raw(icons.LucideSprite())
+}
+
+// LucideIcon renders a Lucide icon from the shared sprite by name.
+templ LucideIcon(name string, class string) {
+	<svg
+		class={ class }
+		viewBox="0 0 24 24"
+		aria-hidden="true"
+		focusable="false"
+	>
+		<use href={ "#" + icons.LucideSymbolID(name) }></use>
+	</svg>
+}
+
+// LucideIconID renders the Lucide icon for a core icon identifier.
+templ LucideIconID(iconID commonv1.IconId, class string) {
+	@LucideIcon(icons.LucideNameOrDefault(iconID), class)
+}

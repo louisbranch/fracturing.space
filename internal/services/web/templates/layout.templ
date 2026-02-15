@@ -1,5 +1,7 @@
 package templates
 
+import sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
+
 // Layout wraps public pages in the shared HTML shell.
 templ Layout(title string, lang string) {
 	<!DOCTYPE html>
@@ -14,6 +16,7 @@ templ Layout(title string, lang string) {
 			<link rel="stylesheet" href="/static/landing.css">
 		</head>
 		<body class="landing-body">
+			@sharedtemplates.LucideSprite()
 			{ children... }
 		</body>
 	</html>

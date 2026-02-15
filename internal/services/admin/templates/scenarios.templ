@@ -1,6 +1,9 @@
 package templates
 
-import commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+import (
+	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
+)
 
 // ScenariosFullPage renders the scenarios page in the base layout.
 templ ScenariosFullPage(view ScenarioPageView, page PageContext) {
@@ -46,19 +49,7 @@ templ ScenarioScriptPanel(view ScenarioPageView, loc Localizer) {
 				<div class="tabs tabs-lift">
 					<label class="tab">
 						<input type="radio" name="cheatsheet-tabs" checked />
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							class="size-4 me-2"
-						>
-						<path d="M12 7v14" />
-						<path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" />
-						</svg>
+					@sharedtemplates.LucideIcon("book-open", "size-4 me-2")
 						{T(loc, "scenarios.cheatsheet.basics")}
 					</label>
 					<div class="tab-content bg-base-200 border-base-300 p-4 text-sm overflow-y-auto max-h-100">
@@ -73,21 +64,7 @@ templ ScenarioScriptPanel(view ScenarioPageView, loc Localizer) {
 					</div>
 					<label class="tab">
 						<input type="radio" name="cheatsheet-tabs" />
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							class="size-4 me-2"
-						>
-						<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-						<circle cx="9" cy="7" r="4" />
-						<path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-						<path d="M16 3.13a4 4 0 0 1 0 7.75" />
-						</svg>
+					@sharedtemplates.LucideIcon("users", "size-4 me-2")
 						{T(loc, "scenarios.cheatsheet.characters")}
 					</label>
 					<div class="tab-content bg-base-200 border-base-300 p-4 text-sm overflow-y-auto max-h-100">
@@ -101,27 +78,7 @@ templ ScenarioScriptPanel(view ScenarioPageView, loc Localizer) {
 					</div>
 					<label class="tab">
 						<input type="radio" name="cheatsheet-tabs" />
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							class="size-4 me-2"
-						>
-						<path d="M8 2v4" />
-						<path d="M16 2v4" />
-						<rect width="18" height="18" x="3" y="4" rx="2" />
-						<path d="M3 10h18" />
-						<path d="M8 14h.01" />
-						<path d="M12 14h.01" />
-						<path d="M16 14h.01" />
-						<path d="M8 18h.01" />
-						<path d="M12 18h.01" />
-						<path d="M16 18h.01" />
-						</svg>
+					@sharedtemplates.LucideIcon("calendar-days", "size-4 me-2")
 						{T(loc, "scenarios.cheatsheet.sessions")}
 					</label>
 					<div class="tab-content bg-base-200 border-base-300 p-4 text-sm overflow-y-auto max-h-100">
@@ -133,22 +90,7 @@ templ ScenarioScriptPanel(view ScenarioPageView, loc Localizer) {
 					</div>
 					<label class="tab">
 						<input type="radio" name="cheatsheet-tabs" />
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							class="size-4 me-2"
-						>
-						<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
-						<path d="M20 3v4" />
-						<path d="M22 5h-4" />
-						<path d="M4 17v2" />
-						<path d="M5 18H3" />
-						</svg>
+					@sharedtemplates.LucideIcon("sparkles", "size-4 me-2")
 						{T(loc, "scenarios.cheatsheet.spotlight")}
 					</label>
 					<div class="tab-content bg-base-200 border-base-300 p-4 text-sm overflow-y-auto max-h-100">
@@ -160,23 +102,7 @@ templ ScenarioScriptPanel(view ScenarioPageView, loc Localizer) {
 					</div>
 					<label class="tab">
 						<input type="radio" name="cheatsheet-tabs" />
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							class="size-4 me-2"
-						>
-						<rect width="12" height="12" x="2" y="10" rx="2" ry="2" />
-						<path d="m17.92 14 3.5-3.5a2.24 2.24 0 0 0 0-3l-5-4.92a2.24 2.24 0 0 0-3 0L10 6" />
-						<path d="M6 18h.01" />
-						<path d="M10 14h.01" />
-						<path d="M15 6h.01" />
-						<path d="M18 9h.01" />
-						</svg>
+					@sharedtemplates.LucideIcon("dices", "size-4 me-2")
 						{T(loc, "scenarios.cheatsheet.actions")}
 					</label>
 					<div class="tab-content bg-base-200 border-base-300 p-4 text-sm overflow-y-auto max-h-100">
@@ -323,80 +249,7 @@ templ ScenarioTimelineEntryRow(entry ScenarioTimelineEntry, loc Localizer) {
 // ScenarioTimelineIcon renders the icon for a timeline entry.
 templ ScenarioTimelineIcon(iconID commonv1.IconId) {
 	<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-base-300 bg-base-200">
-		if iconID == commonv1.IconId_ICON_ID_CAMPAIGN {
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				viewBox="0 0 24 24"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="2"
-				stroke-linecap="round"
-				stroke-linejoin="round"
-				class="size-4"
-			>
-				<path d="M12 7v14" />
-				<path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" />
-			</svg>
-		} else if iconID == commonv1.IconId_ICON_ID_PARTICIPANT {
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				viewBox="0 0 24 24"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="2"
-				stroke-linecap="round"
-				stroke-linejoin="round"
-				class="size-4"
-			>
-				<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-				<circle cx="9" cy="7" r="4" />
-				<path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-				<path d="M16 3.13a4 4 0 0 1 0 7.75" />
-			</svg>
-		} else if iconID == commonv1.IconId_ICON_ID_CHARACTER {
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				viewBox="0 0 24 24"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="2"
-				stroke-linecap="round"
-				stroke-linejoin="round"
-				class="size-4"
-			>
-				<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-				<circle cx="12" cy="7" r="4" />
-			</svg>
-		} else if iconID == commonv1.IconId_ICON_ID_SESSION {
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				viewBox="0 0 24 24"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="2"
-				stroke-linecap="round"
-				stroke-linejoin="round"
-				class="size-4"
-			>
-				<path d="M8 2v4" />
-				<path d="M16 2v4" />
-				<rect width="18" height="18" x="3" y="4" rx="2" />
-				<path d="M3 10h18" />
-			</svg>
-		} else {
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				viewBox="0 0 24 24"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="2"
-				stroke-linecap="round"
-				stroke-linejoin="round"
-				class="size-4"
-			>
-				<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
-			</svg>
-		}
+		@sharedtemplates.LucideIconID(iconID, "size-4")
 	</div>
 }
 

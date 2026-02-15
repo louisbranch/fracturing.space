@@ -8,6 +8,8 @@ package templates
 import (
 	"github.com/a-h/templ"
 	templruntime "github.com/a-h/templ/runtime"
+
+	sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
 )
 
 // Layout wraps content in the base HTML shell with top navigation.
@@ -39,7 +41,7 @@ func Layout(title string, activePage string, page PageContext) templ.Component {
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(page.Lang)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/layout.templ`, Line: 6, Col: 23}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/layout.templ`, Line: 8, Col: 23}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -52,13 +54,17 @@ func Layout(title string, activePage string, page PageContext) templ.Component {
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/layout.templ`, Line: 10, Col: 16}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/layout.templ`, Line: 12, Col: 16}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</title><link rel=\"icon\" href=\"/static/favicon.svg\" type=\"image/svg+xml\"><link href=\"https://cdn.jsdelivr.net/npm/daisyui@5.5.18\" rel=\"stylesheet\" type=\"text/css\" integrity=\"sha384-ww1btmC3Ah3rEb6jt/coOxyQ9JYMoxQpFSB/bxdE20ZYMK4kWSb+TwcgbHR/GFCq\" crossorigin=\"anonymous\"><link href=\"https://cdn.jsdelivr.net/npm/daisyui@5.5.18/theme/dim.css\" rel=\"stylesheet\" type=\"text/css\" integrity=\"sha384-xpSgL8CP56CuCvJwgKtoJawFcAe9gqR7VZQ99ss8l/QMdVjBbIPvXnOZDOsJdTds\" crossorigin=\"anonymous\"><script src=\"https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.1.18\" integrity=\"sha384-WrpyCFNrMmN/IC7KmMNiXxIouXEFpoDIuJ2P+ys++uYEzegAW2MSl+X6Unsahaij\" crossorigin=\"anonymous\"></script><link rel=\"stylesheet\" href=\"/static/theme.css\"><script src=\"https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js\" integrity=\"sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2XoQrxeTUQyRjrOnlCoYta87iKBWq3EsdM2\" crossorigin=\"anonymous\"></script></head><body>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = sharedtemplates.LucideSprite().Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

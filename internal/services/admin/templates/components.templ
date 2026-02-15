@@ -1,5 +1,7 @@
 package templates
 
+import sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
+
 // TopNav renders the top navigation bar using DaisyUI navbar.
 templ TopNav(activePage string, page PageContext) {
 	<nav class="navbar bg-base-200 fixed top-0 w-full z-50">
@@ -95,10 +97,8 @@ templ TopNav(activePage string, page PageContext) {
 		<div class="navbar-end md:hidden">
 			<div class="dropdown dropdown-end">
 			<div tabindex="0" role="button" class="btn btn-soft btn-ghost">
-					<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-					</svg>
-				</div>
+				@sharedtemplates.LucideIcon("menu", "h-5 w-5")
+			</div>
 				<ul tabindex="0" class="menu menu-sm dropdown-content bg-base-200 rounded-box z-10 mt-3 w-52 p-2 shadow">
 					<li>
 						<a
