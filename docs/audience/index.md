@@ -8,7 +8,7 @@ has_children: true
 
 Pick the track that matches what you need.
 
-- Contributors: `contributors.md`
-- Operators: `operators.md`
-- Clients and tooling: `clients.md`
-- System designers: `system-designers.md`
+- [Contributors](contributors.md)
+- [Operators](operators.md)
+- [Clients and tooling](clients.md)
+- [System designers](system-designers.md)

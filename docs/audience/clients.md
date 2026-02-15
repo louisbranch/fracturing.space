@@ -10,10 +10,10 @@ For building clients, bots, or MCP integrations.
 
 Start here:
 
-- MCP tools and resources: `../reference/mcp.md`
-- Quickstart (Docker): `../running/quickstart.md`
-- Local development (Go): `../running/local-dev.md`
-- Configuration reference (MCP + OAuth): `../running/configuration.md`
+- [MCP tools and resources](../reference/mcp.md)
+- [Quickstart (Docker)](../running/quickstart.md)
+- [Local development (Go)](../running/local-dev.md)
+- [Configuration reference (MCP + OAuth)](../running/configuration.md)
 
 Also useful:
 

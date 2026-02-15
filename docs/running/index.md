@@ -6,4 +6,4 @@ has_children: true
 
 # Running
 
-Start with `quickstart.md` for Docker or `local-dev.md` for the Go workflow.
+Start with [quickstart](quickstart.md) for Docker or [local development](local-dev.md) for the Go workflow.

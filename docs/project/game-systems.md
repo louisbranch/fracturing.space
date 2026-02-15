@@ -8,7 +8,7 @@ nav_order: 5
 
 This document describes how Fracturing.Space supports multiple tabletop RPG systems through a pluggable architecture that separates system-agnostic core functionality from system-specific mechanics.
 
-For the high-level design checklist, see `systems.md`.
+For the high-level design checklist, see [systems checklist](systems.md).
 
 ## Design Rationale
 
