@@ -1,4 +1,4 @@
-package main
+package catalogimporter
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -23,43 +24,73 @@ const (
 	defaultSystemVer  = "v1"
 )
 
-func main() {
-	var (
-		dir        string
-		dbPath     string
-		baseLocale string
-		dryRun     bool
-	)
-	flag.StringVar(&dir, "dir", "", "directory containing locale subfolders")
-	flag.StringVar(&dbPath, "db-path", filepath.Join("data", "game-content.db"), "content database path")
-	flag.StringVar(&baseLocale, "base-locale", defaultBaseLocale, "base locale used for catalog data")
-	flag.BoolVar(&dryRun, "dry-run", false, "validate without writing to the database")
-	flag.Parse()
+// Config holds configuration for the catalog importer.
+type Config struct {
+	Dir        string
+	DBPath     string
+	BaseLocale string
+	DryRun     bool
+}
 
-	if strings.TrimSpace(dir) == "" {
-		fail("dir is required")
+// ParseConfig parses CLI flags into a Config.
+func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
+	cfg := Config{
+		DBPath:     filepath.Join("data", "game-content.db"),
+		BaseLocale: defaultBaseLocale,
 	}
-	if strings.TrimSpace(baseLocale) == "" {
-		fail("base-locale is required")
+
+	fs.StringVar(&cfg.Dir, "dir", "", "directory containing locale subfolders")
+	fs.StringVar(&cfg.DBPath, "db-path", cfg.DBPath, "content database path")
+	fs.StringVar(&cfg.BaseLocale, "base-locale", cfg.BaseLocale, "base locale used for catalog data")
+	fs.BoolVar(&cfg.DryRun, "dry-run", false, "validate without writing to the database")
+	if err := fs.Parse(args); err != nil {
+		return Config{}, err
+	}
+
+	if strings.TrimSpace(cfg.Dir) == "" {
+		return Config{}, errors.New("dir is required")
+	}
+	if strings.TrimSpace(cfg.BaseLocale) == "" {
+		return Config{}, errors.New("base-locale is required")
+	}
+
+	return cfg, nil
+}
+
+// Run executes the importer using the provided Config.
+func Run(ctx context.Context, cfg Config, out io.Writer) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if out == nil {
+		out = io.Discard
+	}
+
+	dir := strings.TrimSpace(cfg.Dir)
+	if dir == "" {
+		return errors.New("dir is required")
+	}
+	baseLocale := strings.TrimSpace(cfg.BaseLocale)
+	if baseLocale == "" {
+		return errors.New("base-locale is required")
 	}
 
 	locales, err := listLocaleDirs(dir)
 	if err != nil {
-		fail(err.Error())
+		return err
 	}
 	if len(locales) == 0 {
-		fail("no locale directories found")
+		return errors.New("no locale directories found")
 	}
 	if !contains(locales, baseLocale) {
-		fail(fmt.Sprintf("base-locale %s not found in %s", baseLocale, dir))
+		return fmt.Errorf("base-locale %s not found in %s", baseLocale, dir)
 	}
 
-	ctx := context.Background()
 	var store storage.DaggerheartContentStore
-	if !dryRun {
-		contentStore, err := storagesqlite.OpenContent(dbPath)
+	if !cfg.DryRun {
+		contentStore, err := storagesqlite.OpenContent(cfg.DBPath)
 		if err != nil {
-			fail(fmt.Sprintf("open content store: %v", err))
+			return fmt.Errorf("open content store: %w", err)
 		}
 		defer contentStore.Close()
 		store = contentStore
@@ -69,26 +100,27 @@ func main() {
 		localeDir := filepath.Join(dir, locale)
 		payloads, err := readLocalePayloads(localeDir)
 		if err != nil {
-			fail(fmt.Sprintf("read %s: %v", locale, err))
+			return fmt.Errorf("read %s: %w", locale, err)
 		}
 		if err := validateLocalePayloads(locale, payloads); err != nil {
-			fail(fmt.Sprintf("validate %s: %v", locale, err))
+			return fmt.Errorf("validate %s: %w", locale, err)
 		}
 
 		isBase := locale == baseLocale
-		if !dryRun {
+		if !cfg.DryRun {
 			now := time.Now().UTC()
 			if err := upsertLocale(ctx, store, locale, isBase, payloads, now); err != nil {
-				fail(fmt.Sprintf("import %s: %v", locale, err))
+				return fmt.Errorf("import %s: %w", locale, err)
 			}
 		}
 	}
 
-	if dryRun {
-		fmt.Printf("validated %d locale(s)\n", len(locales))
-		return
+	if cfg.DryRun {
+		_, err = fmt.Fprintf(out, "validated %d locale(s)\n", len(locales))
+		return err
 	}
-	fmt.Printf("imported %d locale(s) into %s\n", len(locales), dbPath)
+	_, err = fmt.Fprintf(out, "imported %d locale(s) into %s\n", len(locales), cfg.DBPath)
+	return err
 }
 
 func listLocaleDirs(root string) ([]string, error) {
@@ -395,9 +427,4 @@ func upsertLocale(ctx context.Context, store storage.DaggerheartContentStore, lo
 	}
 
 	return nil
-}
-
-func fail(message string) {
-	_, _ = fmt.Fprintln(os.Stderr, message)
-	os.Exit(1)
 }

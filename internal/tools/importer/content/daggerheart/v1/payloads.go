@@ -1,4 +1,4 @@
-package main
+package catalogimporter
 
 type classPayload struct {
 	SystemID      string        `json:"system_id"`

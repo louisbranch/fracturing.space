@@ -8,7 +8,7 @@ PROTO_FILES := \
 	$(wildcard $(PROTO_DIR)/game/v1/*.proto) \
 	$(wildcard $(PROTO_DIR)/systems/daggerheart/v1/*.proto)
 
-.PHONY: all proto clean run cover cover-treemap test integration scenario templ-generate event-catalog-check fmt fmt-check
+.PHONY: all proto clean run cover cover-treemap test integration scenario templ-generate event-catalog-check fmt fmt-check catalog-importer
 
 all: proto
 
@@ -117,3 +117,6 @@ seed-variety: ## Generate variety of campaigns across all statuses
 
 seed-generate-fresh: ## Reset DB and generate demo data
 	rm -f data/game-events.db data/game-projections.db && $(MAKE) seed-generate
+
+catalog-importer: ## Import Daggerheart catalog content
+	go run ./cmd/catalog-importer -dir internal/tools/importer/content/daggerheart/v1

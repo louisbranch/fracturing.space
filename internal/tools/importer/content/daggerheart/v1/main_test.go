@@ -1,4 +1,4 @@
-package main
+package catalogimporter
 
 import (
 	"os"
