@@ -179,4 +179,6 @@ The primary service boundaries are:
 Non-service utilities live in shared layers:
 
 - **RNG/seed generation**: `internal/services/game/core/random/` (shared domain utility, not a service).
+- **Request-scoped identity context helpers**: `internal/platform/requestctx/` (transport-agnostic context primitives reused across services).
+- **Cross-service auth introspection client**: `internal/services/shared/authctx/` (shared contract client for auth HTTP token introspection).
 - **Seeding CLI**: `cmd/seed` (dev tooling that calls the game service APIs).

@@ -53,11 +53,25 @@ type Server struct {
 }
 
 type handler struct {
-	config         Config
-	authClient     authv1.AuthServiceClient
-	sessions       *sessionStore
-	pendingFlows   *pendingFlowStore
-	campaignAccess campaignAccessChecker
+	config            Config
+	authClient        authv1.AuthServiceClient
+	sessions          *sessionStore
+	pendingFlows      *pendingFlowStore
+	campaignClient    statev1.CampaignServiceClient
+	sessionClient     statev1.SessionServiceClient
+	participantClient statev1.ParticipantServiceClient
+	characterClient   statev1.CharacterServiceClient
+	inviteClient      statev1.InviteServiceClient
+	campaignAccess    campaignAccessChecker
+}
+
+type handlerDependencies struct {
+	campaignAccess    campaignAccessChecker
+	campaignClient    statev1.CampaignServiceClient
+	sessionClient     statev1.SessionServiceClient
+	participantClient statev1.ParticipantServiceClient
+	characterClient   statev1.CharacterServiceClient
+	inviteClient      statev1.InviteServiceClient
 }
 
 // localizer resolves the request locale, optionally persists a cookie,
@@ -72,11 +86,11 @@ func localizer(w http.ResponseWriter, r *http.Request) (*message.Printer, string
 
 // NewHandler creates the HTTP handler for the login UX.
 func NewHandler(config Config, authClient authv1.AuthServiceClient) http.Handler {
-	return NewHandlerWithCampaignAccess(config, authClient, nil)
+	return NewHandlerWithCampaignAccess(config, authClient, handlerDependencies{})
 }
 
 // NewHandlerWithCampaignAccess creates the HTTP handler with campaign access checks.
-func NewHandlerWithCampaignAccess(config Config, authClient authv1.AuthServiceClient, campaignAccess campaignAccessChecker) http.Handler {
+func NewHandlerWithCampaignAccess(config Config, authClient authv1.AuthServiceClient, deps handlerDependencies) http.Handler {
 	mux := http.NewServeMux()
 	staticFS, err := fs.Sub(assetsFS, "static")
 	if err != nil {
@@ -89,14 +103,24 @@ func NewHandlerWithCampaignAccess(config Config, authClient authv1.AuthServiceCl
 		appName = branding.AppName
 	}
 	h := &handler{
-		config:         config,
-		authClient:     authClient,
-		sessions:       newSessionStore(),
-		pendingFlows:   newPendingFlowStore(),
-		campaignAccess: campaignAccess,
+		config:            config,
+		authClient:        authClient,
+		sessions:          newSessionStore(),
+		pendingFlows:      newPendingFlowStore(),
+		campaignClient:    deps.campaignClient,
+		sessionClient:     deps.sessionClient,
+		participantClient: deps.participantClient,
+		characterClient:   deps.characterClient,
+		inviteClient:      deps.inviteClient,
+		campaignAccess:    deps.campaignAccess,
 	}
 
-	mux.HandleFunc("/campaigns/", h.handleCampaignPage)
+	mux.HandleFunc("/app", h.handleAppHome)
+	mux.HandleFunc("/app/campaigns", h.handleAppCampaigns)
+	mux.HandleFunc("/app/campaigns/create", h.handleAppCampaignCreate)
+	mux.HandleFunc("/app/campaigns/", h.handleAppCampaignDetail)
+	mux.HandleFunc("/app/invites", h.handleAppInvites)
+	mux.HandleFunc("/app/invites/claim", h.handleAppInviteClaim)
 
 	// Register OAuth client routes when configured.
 	if strings.TrimSpace(config.OAuthClientID) != "" {
@@ -217,17 +241,32 @@ func NewServer(config Config) (*Server, error) {
 
 	var gameConn *grpc.ClientConn
 	var participantClient statev1.ParticipantServiceClient
+	var campaignClient statev1.CampaignServiceClient
+	var sessionClient statev1.SessionServiceClient
+	var characterClient statev1.CharacterServiceClient
+	var inviteClient statev1.InviteServiceClient
 	if strings.TrimSpace(config.GameAddr) != "" {
-		conn, client, err := dialGameGRPC(context.Background(), config)
+		conn, participantServiceClient, campaignServiceClient, sessionServiceClient, characterServiceClient, inviteServiceClient, err := dialGameGRPC(context.Background(), config)
 		if err != nil {
 			log.Printf("game gRPC dial failed, campaign access checks disabled: %v", err)
 		} else {
 			gameConn = conn
-			participantClient = client
+			participantClient = participantServiceClient
+			campaignClient = campaignServiceClient
+			sessionClient = sessionServiceClient
+			characterClient = characterServiceClient
+			inviteClient = inviteServiceClient
 		}
 	}
 	campaignAccess := newCampaignAccessChecker(config, participantClient)
-	handler := NewHandlerWithCampaignAccess(config, authClient, campaignAccess)
+	handler := NewHandlerWithCampaignAccess(config, authClient, handlerDependencies{
+		campaignAccess:    campaignAccess,
+		campaignClient:    campaignClient,
+		sessionClient:     sessionClient,
+		participantClient: participantClient,
+		characterClient:   characterClient,
+		inviteClient:      inviteClient,
+	})
 	httpServer := &http.Server{
 		Addr:              httpAddr,
 		Handler:           handler,
@@ -336,10 +375,10 @@ func dialAuthGRPC(ctx context.Context, config Config) (*grpc.ClientConn, authv1.
 	return conn, client, nil
 }
 
-func dialGameGRPC(ctx context.Context, config Config) (*grpc.ClientConn, statev1.ParticipantServiceClient, error) {
+func dialGameGRPC(ctx context.Context, config Config) (*grpc.ClientConn, statev1.ParticipantServiceClient, statev1.CampaignServiceClient, statev1.SessionServiceClient, statev1.CharacterServiceClient, statev1.InviteServiceClient, error) {
 	gameAddr := strings.TrimSpace(config.GameAddr)
 	if gameAddr == "" {
-		return nil, nil, nil
+		return nil, nil, nil, nil, nil, nil, nil
 	}
 	if ctx == nil {
 		ctx = context.Background()
@@ -362,14 +401,18 @@ func dialGameGRPC(ctx context.Context, config Config) (*grpc.ClientConn, statev1
 		var dialErr *platformgrpc.DialError
 		if errors.As(err, &dialErr) {
 			if dialErr.Stage == platformgrpc.DialStageHealth {
-				return nil, nil, fmt.Errorf("game gRPC health check failed for %s: %w", gameAddr, dialErr.Err)
+				return nil, nil, nil, nil, nil, nil, fmt.Errorf("game gRPC health check failed for %s: %w", gameAddr, dialErr.Err)
 			}
-			return nil, nil, fmt.Errorf("dial game gRPC %s: %w", gameAddr, dialErr.Err)
+			return nil, nil, nil, nil, nil, nil, fmt.Errorf("dial game gRPC %s: %w", gameAddr, dialErr.Err)
 		}
-		return nil, nil, fmt.Errorf("dial game gRPC %s: %w", gameAddr, err)
+		return nil, nil, nil, nil, nil, nil, fmt.Errorf("dial game gRPC %s: %w", gameAddr, err)
 	}
-	client := statev1.NewParticipantServiceClient(conn)
-	return conn, client, nil
+	participantClient := statev1.NewParticipantServiceClient(conn)
+	campaignClient := statev1.NewCampaignServiceClient(conn)
+	sessionClient := statev1.NewSessionServiceClient(conn)
+	characterClient := statev1.NewCharacterServiceClient(conn)
+	inviteClient := statev1.NewInviteServiceClient(conn)
+	return conn, participantClient, campaignClient, sessionClient, characterClient, inviteClient, nil
 }
 
 func (h *handler) handlePasskeyLoginStart(w http.ResponseWriter, r *http.Request) {

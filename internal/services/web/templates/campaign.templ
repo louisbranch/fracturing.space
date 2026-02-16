@@ -7,6 +7,17 @@ templ CampaignPage(page PageContext, campaignID string) {
 			<section class="landing-hero">
 				<h1>Campaign { campaignID }</h1>
 				<p class="hero-tagline">Phase 1.1 chat shell (participant mode only).</p>
+				<div class="card border border-base-300 bg-base-100 mb-4">
+					<div class="card-body gap-3">
+						<h2 class="card-title m-0">Workspace</h2>
+						<div class="flex flex-wrap gap-2">
+							<a class="btn btn-sm btn-outline" href={ "/app/campaigns/" + campaignID + "/sessions" }>Sessions</a>
+							<a class="btn btn-sm btn-outline" href={ "/app/campaigns/" + campaignID + "/participants" }>Participants</a>
+							<a class="btn btn-sm btn-outline" href={ "/app/campaigns/" + campaignID + "/characters" }>Characters</a>
+							<a class="btn btn-sm btn-outline" href={ "/app/campaigns/" + campaignID + "/invites" }>Invites</a>
+						</div>
+					</div>
+				</div>
 				<div class="card border border-base-300 bg-base-100">
 					<div class="card-body gap-4">
 						<div class="flex items-center justify-between gap-4">
