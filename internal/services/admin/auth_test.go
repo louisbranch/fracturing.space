@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/louisbranch/fracturing.space/internal/platform/requestctx"
 )
 
 func TestHTTPIntrospectorActiveToken(t *testing.T) {
@@ -164,7 +166,7 @@ func TestRequireAuthIntrospectError(t *testing.T) {
 func TestRequireAuthValidToken(t *testing.T) {
 	var calledWithUserID string
 	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		calledWithUserID = authUserFromContext(r.Context())
+		calledWithUserID = requestctx.UserIDFromContext(r.Context())
 		w.WriteHeader(http.StatusOK)
 	})
 	intr := &fakeIntrospector{result: introspectResponse{Active: true, UserID: "user-42"}}
