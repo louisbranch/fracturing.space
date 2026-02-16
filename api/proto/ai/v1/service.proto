@@ -1,0 +1,344 @@
+syntax = "proto3";
+
+package ai.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1;aiv1";
+
+enum Provider {
+  PROVIDER_UNSPECIFIED = 0;
+  PROVIDER_OPENAI = 1;
+}
+
+enum CredentialStatus {
+  CREDENTIAL_STATUS_UNSPECIFIED = 0;
+  CREDENTIAL_STATUS_ACTIVE = 1;
+  CREDENTIAL_STATUS_REVOKED = 2;
+}
+
+enum AgentStatus {
+  AGENT_STATUS_UNSPECIFIED = 0;
+  AGENT_STATUS_ACTIVE = 1;
+}
+
+enum ProviderGrantStatus {
+  PROVIDER_GRANT_STATUS_UNSPECIFIED = 0;
+  PROVIDER_GRANT_STATUS_ACTIVE = 1;
+  PROVIDER_GRANT_STATUS_REVOKED = 2;
+  PROVIDER_GRANT_STATUS_EXPIRED = 3;
+  PROVIDER_GRANT_STATUS_REFRESH_FAILED = 4;
+}
+
+enum AccessRequestStatus {
+  ACCESS_REQUEST_STATUS_UNSPECIFIED = 0;
+  ACCESS_REQUEST_STATUS_PENDING = 1;
+  ACCESS_REQUEST_STATUS_APPROVED = 2;
+  ACCESS_REQUEST_STATUS_DENIED = 3;
+  ACCESS_REQUEST_STATUS_REVOKED = 4;
+}
+
+enum AccessRequestRole {
+  ACCESS_REQUEST_ROLE_UNSPECIFIED = 0;
+  ACCESS_REQUEST_ROLE_REQUESTER = 1;
+  ACCESS_REQUEST_ROLE_OWNER = 2;
+}
+
+enum AccessRequestDecision {
+  ACCESS_REQUEST_DECISION_UNSPECIFIED = 0;
+  ACCESS_REQUEST_DECISION_APPROVE = 1;
+  ACCESS_REQUEST_DECISION_DENY = 2;
+}
+
+message Credential {
+  string id = 1;
+  string owner_user_id = 2;
+  Provider provider = 3;
+  string label = 4;
+  CredentialStatus status = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+  google.protobuf.Timestamp revoked_at = 8;
+}
+
+message Agent {
+  string id = 1;
+  string owner_user_id = 2;
+  string name = 3;
+  Provider provider = 4;
+  string model = 5;
+  string credential_id = 6;
+  AgentStatus status = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+  string provider_grant_id = 10;
+}
+
+message ProviderGrant {
+  string id = 1;
+  string owner_user_id = 2;
+  Provider provider = 3;
+  repeated string granted_scopes = 4;
+  bool refresh_supported = 5;
+  ProviderGrantStatus status = 6;
+  string last_refresh_error = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+  google.protobuf.Timestamp revoked_at = 10;
+  google.protobuf.Timestamp expires_at = 11;
+  google.protobuf.Timestamp last_refreshed_at = 12;
+}
+
+message AccessRequest {
+  string id = 1;
+  string requester_user_id = 2;
+  string owner_user_id = 3;
+  string agent_id = 4;
+  string scope = 5;
+  string request_note = 6;
+  AccessRequestStatus status = 7;
+  string reviewer_user_id = 8;
+  string review_note = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+  google.protobuf.Timestamp reviewed_at = 12;
+}
+
+message AuditEvent {
+  string id = 1;
+  string event_name = 2;
+  string actor_user_id = 3;
+  string owner_user_id = 4;
+  string requester_user_id = 5;
+  string agent_id = 6;
+  string access_request_id = 7;
+  string outcome = 8;
+  google.protobuf.Timestamp created_at = 9;
+}
+
+service CredentialService {
+  rpc CreateCredential(CreateCredentialRequest) returns (CreateCredentialResponse);
+  rpc ListCredentials(ListCredentialsRequest) returns (ListCredentialsResponse);
+  rpc RevokeCredential(RevokeCredentialRequest) returns (RevokeCredentialResponse);
+}
+
+message CreateCredentialRequest {
+  Provider provider = 1;
+  string label = 2;
+  string secret = 3;
+}
+
+message CreateCredentialResponse {
+  Credential credential = 1;
+}
+
+message ListCredentialsRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+}
+
+message ListCredentialsResponse {
+  repeated Credential credentials = 1;
+  string next_page_token = 2;
+}
+
+message RevokeCredentialRequest {
+  string credential_id = 1;
+}
+
+message RevokeCredentialResponse {
+  Credential credential = 1;
+}
+
+service AgentService {
+  rpc CreateAgent(CreateAgentRequest) returns (CreateAgentResponse);
+  rpc ListAgents(ListAgentsRequest) returns (ListAgentsResponse);
+  rpc ListAccessibleAgents(ListAccessibleAgentsRequest) returns (ListAccessibleAgentsResponse);
+  rpc GetAccessibleAgent(GetAccessibleAgentRequest) returns (GetAccessibleAgentResponse);
+  rpc UpdateAgent(UpdateAgentRequest) returns (UpdateAgentResponse);
+  rpc DeleteAgent(DeleteAgentRequest) returns (DeleteAgentResponse);
+}
+
+service InvocationService {
+  rpc InvokeAgent(InvokeAgentRequest) returns (InvokeAgentResponse);
+}
+
+service ProviderGrantService {
+  rpc StartProviderConnect(StartProviderConnectRequest) returns (StartProviderConnectResponse);
+  rpc FinishProviderConnect(FinishProviderConnectRequest) returns (FinishProviderConnectResponse);
+  rpc ListProviderGrants(ListProviderGrantsRequest) returns (ListProviderGrantsResponse);
+  rpc RevokeProviderGrant(RevokeProviderGrantRequest) returns (RevokeProviderGrantResponse);
+}
+
+service AccessRequestService {
+  rpc CreateAccessRequest(CreateAccessRequestRequest) returns (CreateAccessRequestResponse);
+  rpc ListAccessRequests(ListAccessRequestsRequest) returns (ListAccessRequestsResponse);
+  rpc ListAuditEvents(ListAuditEventsRequest) returns (ListAuditEventsResponse);
+  rpc ReviewAccessRequest(ReviewAccessRequestRequest) returns (ReviewAccessRequestResponse);
+  rpc RevokeAccessRequest(RevokeAccessRequestRequest) returns (RevokeAccessRequestResponse);
+}
+
+message CreateAgentRequest {
+  string name = 1;
+  Provider provider = 2;
+  string model = 3;
+  string credential_id = 4;
+  string provider_grant_id = 5;
+}
+
+message CreateAgentResponse {
+  Agent agent = 1;
+}
+
+message ListAgentsRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+}
+
+message ListAgentsResponse {
+  repeated Agent agents = 1;
+  string next_page_token = 2;
+}
+
+message ListAccessibleAgentsRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+}
+
+message ListAccessibleAgentsResponse {
+  repeated Agent agents = 1;
+  string next_page_token = 2;
+}
+
+message GetAccessibleAgentRequest {
+  string agent_id = 1;
+}
+
+message GetAccessibleAgentResponse {
+  Agent agent = 1;
+}
+
+message UpdateAgentRequest {
+  string agent_id = 1;
+  string name = 2;
+  string model = 3;
+  string credential_id = 4;
+  string provider_grant_id = 5;
+}
+
+message UpdateAgentResponse {
+  Agent agent = 1;
+}
+
+message DeleteAgentRequest {
+  string agent_id = 1;
+}
+
+message DeleteAgentResponse {}
+
+message InvokeAgentRequest {
+  string agent_id = 1;
+  string input = 2;
+}
+
+message InvokeAgentResponse {
+  string output_text = 1;
+  Provider provider = 2;
+  string model = 3;
+}
+
+message StartProviderConnectRequest {
+  Provider provider = 1;
+  repeated string requested_scopes = 2;
+}
+
+message StartProviderConnectResponse {
+  string connect_session_id = 1;
+  string state = 2;
+  string authorization_url = 3;
+  google.protobuf.Timestamp expires_at = 4;
+}
+
+message FinishProviderConnectRequest {
+  string connect_session_id = 1;
+  string state = 2;
+  string authorization_code = 3;
+}
+
+message FinishProviderConnectResponse {
+  ProviderGrant provider_grant = 1;
+}
+
+message ListProviderGrantsRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+  Provider provider = 3;
+  ProviderGrantStatus status = 4;
+}
+
+message ListProviderGrantsResponse {
+  repeated ProviderGrant provider_grants = 1;
+  string next_page_token = 2;
+}
+
+message RevokeProviderGrantRequest {
+  string provider_grant_id = 1;
+}
+
+message RevokeProviderGrantResponse {
+  ProviderGrant provider_grant = 1;
+}
+
+message CreateAccessRequestRequest {
+  string agent_id = 1;
+  string scope = 2;
+  string request_note = 3;
+}
+
+message CreateAccessRequestResponse {
+  AccessRequest access_request = 1;
+}
+
+message ListAccessRequestsRequest {
+  AccessRequestRole role = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+message ListAccessRequestsResponse {
+  repeated AccessRequest access_requests = 1;
+  string next_page_token = 2;
+}
+
+message ListAuditEventsRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+  string event_name = 3;
+  string agent_id = 4;
+  google.protobuf.Timestamp created_after = 5;
+  google.protobuf.Timestamp created_before = 6;
+}
+
+message ListAuditEventsResponse {
+  repeated AuditEvent audit_events = 1;
+  string next_page_token = 2;
+}
+
+message ReviewAccessRequestRequest {
+  string access_request_id = 1;
+  AccessRequestDecision decision = 2;
+  string review_note = 3;
+}
+
+message ReviewAccessRequestResponse {
+  AccessRequest access_request = 1;
+}
+
+message RevokeAccessRequestRequest {
+  string access_request_id = 1;
+  string revoke_note = 2;
+}
+
+message RevokeAccessRequestResponse {
+  AccessRequest access_request = 1;
+}
