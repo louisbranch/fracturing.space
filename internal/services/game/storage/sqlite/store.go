@@ -15,13 +15,13 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/character"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/invite"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/participant"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/session"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/snapshot"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/integrity"
@@ -56,9 +56,10 @@ func fromNullMillis(value sql.NullInt64) *time.Time {
 
 // Store provides a SQLite-backed store implementing all storage interfaces.
 type Store struct {
-	sqlDB   *sql.DB
-	q       *db.Queries
-	keyring *integrity.Keyring
+	sqlDB         *sql.DB
+	q             *db.Queries
+	keyring       *integrity.Keyring
+	eventRegistry *event.Registry
 }
 
 // Open opens a SQLite projections store at the provided path.
@@ -67,8 +68,13 @@ func Open(path string) (*Store, error) {
 }
 
 // OpenEvents opens a SQLite event journal store at the provided path.
-func OpenEvents(path string, keyring *integrity.Keyring) (*Store, error) {
-	return openStore(path, migrations.EventsFS, "events", keyring)
+func OpenEvents(path string, keyring *integrity.Keyring, registry *event.Registry) (*Store, error) {
+	store, err := openStore(path, migrations.EventsFS, "events", keyring)
+	if err != nil {
+		return nil, err
+	}
+	store.eventRegistry = registry
+	return store, nil
 }
 
 // OpenProjections opens a SQLite projections store at the provided path.
@@ -244,7 +250,7 @@ func isAlreadyExistsError(err error) bool {
 // Campaign methods
 
 // Put persists a campaign record.
-func (s *Store) Put(ctx context.Context, c campaign.Campaign) error {
+func (s *Store) Put(ctx context.Context, c storage.CampaignRecord) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -278,23 +284,23 @@ func (s *Store) Put(ctx context.Context, c campaign.Campaign) error {
 }
 
 // Get fetches a campaign record by ID.
-func (s *Store) Get(ctx context.Context, id string) (campaign.Campaign, error) {
+func (s *Store) Get(ctx context.Context, id string) (storage.CampaignRecord, error) {
 	if err := ctx.Err(); err != nil {
-		return campaign.Campaign{}, err
+		return storage.CampaignRecord{}, err
 	}
 	if s == nil || s.sqlDB == nil {
-		return campaign.Campaign{}, fmt.Errorf("storage is not configured")
+		return storage.CampaignRecord{}, fmt.Errorf("storage is not configured")
 	}
 	if strings.TrimSpace(id) == "" {
-		return campaign.Campaign{}, fmt.Errorf("campaign id is required")
+		return storage.CampaignRecord{}, fmt.Errorf("campaign id is required")
 	}
 
 	row, err := s.q.GetCampaign(ctx, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return campaign.Campaign{}, storage.ErrNotFound
+			return storage.CampaignRecord{}, storage.ErrNotFound
 		}
-		return campaign.Campaign{}, fmt.Errorf("get campaign: %w", err)
+		return storage.CampaignRecord{}, fmt.Errorf("get campaign: %w", err)
 	}
 
 	return dbGetCampaignRowToDomain(row)
@@ -313,7 +319,7 @@ func (s *Store) List(ctx context.Context, pageSize int, pageToken string) (stora
 	}
 
 	page := storage.CampaignPage{
-		Campaigns: make([]campaign.Campaign, 0, pageSize),
+		Campaigns: make([]storage.CampaignRecord, 0, pageSize),
 	}
 
 	if pageToken == "" {
@@ -359,7 +365,7 @@ func (s *Store) List(ctx context.Context, pageSize int, pageToken string) (stora
 // Participant methods
 
 // PutParticipant persists a participant record.
-func (s *Store) PutParticipant(ctx context.Context, p participant.Participant) error {
+func (s *Store) PutParticipant(ctx context.Context, p storage.ParticipantRecord) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -539,18 +545,18 @@ func (s *Store) DeleteParticipantClaim(ctx context.Context, campaignID, userID s
 }
 
 // GetParticipant fetches a participant record by IDs.
-func (s *Store) GetParticipant(ctx context.Context, campaignID, participantID string) (participant.Participant, error) {
+func (s *Store) GetParticipant(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
 	if err := ctx.Err(); err != nil {
-		return participant.Participant{}, err
+		return storage.ParticipantRecord{}, err
 	}
 	if s == nil || s.sqlDB == nil {
-		return participant.Participant{}, fmt.Errorf("storage is not configured")
+		return storage.ParticipantRecord{}, fmt.Errorf("storage is not configured")
 	}
 	if strings.TrimSpace(campaignID) == "" {
-		return participant.Participant{}, fmt.Errorf("campaign id is required")
+		return storage.ParticipantRecord{}, fmt.Errorf("campaign id is required")
 	}
 	if strings.TrimSpace(participantID) == "" {
-		return participant.Participant{}, fmt.Errorf("participant id is required")
+		return storage.ParticipantRecord{}, fmt.Errorf("participant id is required")
 	}
 
 	row, err := s.q.GetParticipant(ctx, db.GetParticipantParams{
@@ -559,16 +565,16 @@ func (s *Store) GetParticipant(ctx context.Context, campaignID, participantID st
 	})
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return participant.Participant{}, storage.ErrNotFound
+			return storage.ParticipantRecord{}, storage.ErrNotFound
 		}
-		return participant.Participant{}, fmt.Errorf("get participant: %w", err)
+		return storage.ParticipantRecord{}, fmt.Errorf("get participant: %w", err)
 	}
 
 	return dbParticipantToDomain(row)
 }
 
 // ListParticipantsByCampaign returns all participants for a campaign.
-func (s *Store) ListParticipantsByCampaign(ctx context.Context, campaignID string) ([]participant.Participant, error) {
+func (s *Store) ListParticipantsByCampaign(ctx context.Context, campaignID string) ([]storage.ParticipantRecord, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -584,7 +590,7 @@ func (s *Store) ListParticipantsByCampaign(ctx context.Context, campaignID strin
 		return nil, fmt.Errorf("list participants: %w", err)
 	}
 
-	participants := make([]participant.Participant, 0, len(rows))
+	participants := make([]storage.ParticipantRecord, 0, len(rows))
 	for _, row := range rows {
 		p, err := dbParticipantToDomain(row)
 		if err != nil {
@@ -631,7 +637,7 @@ func (s *Store) ListParticipants(ctx context.Context, campaignID string, pageSiz
 	}
 
 	page := storage.ParticipantPage{
-		Participants: make([]participant.Participant, 0, pageSize),
+		Participants: make([]storage.ParticipantRecord, 0, pageSize),
 	}
 
 	for i, row := range rows {
@@ -652,7 +658,7 @@ func (s *Store) ListParticipants(ctx context.Context, campaignID string, pageSiz
 // Invite methods
 
 // PutInvite persists an invite record.
-func (s *Store) PutInvite(ctx context.Context, inv invite.Invite) error {
+func (s *Store) PutInvite(ctx context.Context, inv storage.InviteRecord) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -674,7 +680,7 @@ func (s *Store) PutInvite(ctx context.Context, inv invite.Invite) error {
 		CampaignID:             inv.CampaignID,
 		ParticipantID:          inv.ParticipantID,
 		RecipientUserID:        strings.TrimSpace(inv.RecipientUserID),
-		Status:                 invite.StatusLabel(inv.Status),
+		Status:                 inviteStatusToString(inv.Status),
 		CreatedByParticipantID: inv.CreatedByParticipantID,
 		CreatedAt:              toMillis(inv.CreatedAt),
 		UpdatedAt:              toMillis(inv.UpdatedAt),
@@ -682,23 +688,23 @@ func (s *Store) PutInvite(ctx context.Context, inv invite.Invite) error {
 }
 
 // GetInvite fetches an invite record by ID.
-func (s *Store) GetInvite(ctx context.Context, inviteID string) (invite.Invite, error) {
+func (s *Store) GetInvite(ctx context.Context, inviteID string) (storage.InviteRecord, error) {
 	if err := ctx.Err(); err != nil {
-		return invite.Invite{}, err
+		return storage.InviteRecord{}, err
 	}
 	if s == nil || s.sqlDB == nil {
-		return invite.Invite{}, fmt.Errorf("storage is not configured")
+		return storage.InviteRecord{}, fmt.Errorf("storage is not configured")
 	}
 	if strings.TrimSpace(inviteID) == "" {
-		return invite.Invite{}, fmt.Errorf("invite id is required")
+		return storage.InviteRecord{}, fmt.Errorf("invite id is required")
 	}
 
 	row, err := s.q.GetInvite(ctx, inviteID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return invite.Invite{}, storage.ErrNotFound
+			return storage.InviteRecord{}, storage.ErrNotFound
 		}
-		return invite.Invite{}, fmt.Errorf("get invite: %w", err)
+		return storage.InviteRecord{}, fmt.Errorf("get invite: %w", err)
 	}
 
 	return dbInviteToDomain(row)
@@ -721,7 +727,7 @@ func (s *Store) ListInvites(ctx context.Context, campaignID string, recipientUse
 	recipientUserID = strings.TrimSpace(recipientUserID)
 	statusFilter := ""
 	if status != invite.StatusUnspecified {
-		statusFilter = invite.StatusLabel(status)
+		statusFilter = inviteStatusToString(status)
 	}
 
 	var rows []db.Invite
@@ -750,7 +756,7 @@ func (s *Store) ListInvites(ctx context.Context, campaignID string, recipientUse
 		return storage.InvitePage{}, fmt.Errorf("list invites: %w", err)
 	}
 
-	page := storage.InvitePage{Invites: make([]invite.Invite, 0, pageSize)}
+	page := storage.InvitePage{Invites: make([]storage.InviteRecord, 0, pageSize)}
 	for i, row := range rows {
 		if i >= pageSize {
 			page.NextPageToken = rows[pageSize-1].ID
@@ -781,7 +787,7 @@ func (s *Store) ListPendingInvites(ctx context.Context, campaignID string, pageS
 		return storage.InvitePage{}, fmt.Errorf("page size must be greater than zero")
 	}
 
-	status := invite.StatusLabel(invite.StatusPending)
+	status := inviteStatusToString(invite.StatusPending)
 	var rows []db.Invite
 	var err error
 	if pageToken == "" {
@@ -802,7 +808,7 @@ func (s *Store) ListPendingInvites(ctx context.Context, campaignID string, pageS
 		return storage.InvitePage{}, fmt.Errorf("list pending invites: %w", err)
 	}
 
-	page := storage.InvitePage{Invites: make([]invite.Invite, 0, pageSize)}
+	page := storage.InvitePage{Invites: make([]storage.InviteRecord, 0, pageSize)}
 	for i, row := range rows {
 		if i >= pageSize {
 			page.NextPageToken = rows[pageSize-1].ID
@@ -833,7 +839,7 @@ func (s *Store) ListPendingInvitesForRecipient(ctx context.Context, userID strin
 		return storage.InvitePage{}, fmt.Errorf("page size must be greater than zero")
 	}
 
-	status := invite.StatusLabel(invite.StatusPending)
+	status := inviteStatusToString(invite.StatusPending)
 	var rows []db.Invite
 	var err error
 	if pageToken == "" {
@@ -854,7 +860,7 @@ func (s *Store) ListPendingInvitesForRecipient(ctx context.Context, userID strin
 		return storage.InvitePage{}, fmt.Errorf("list pending invites for recipient: %w", err)
 	}
 
-	page := storage.InvitePage{Invites: make([]invite.Invite, 0, pageSize)}
+	page := storage.InvitePage{Invites: make([]storage.InviteRecord, 0, pageSize)}
 	for i, row := range rows {
 		if i >= pageSize {
 			page.NextPageToken = rows[pageSize-1].ID
@@ -886,7 +892,7 @@ func (s *Store) UpdateInviteStatus(ctx context.Context, inviteID string, status 
 	}
 
 	return s.q.UpdateInviteStatus(ctx, db.UpdateInviteStatusParams{
-		Status:    invite.StatusLabel(status),
+		Status:    inviteStatusToString(status),
 		UpdatedAt: toMillis(updatedAt),
 		ID:        inviteID,
 	})
@@ -895,7 +901,7 @@ func (s *Store) UpdateInviteStatus(ctx context.Context, inviteID string, status 
 // Character methods
 
 // PutCharacter persists a character record.
-func (s *Store) PutCharacter(ctx context.Context, c character.Character) error {
+func (s *Store) PutCharacter(ctx context.Context, c storage.CharacterRecord) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -943,18 +949,18 @@ func (s *Store) DeleteCharacter(ctx context.Context, campaignID, characterID str
 }
 
 // GetCharacter fetches a character record by IDs.
-func (s *Store) GetCharacter(ctx context.Context, campaignID, characterID string) (character.Character, error) {
+func (s *Store) GetCharacter(ctx context.Context, campaignID, characterID string) (storage.CharacterRecord, error) {
 	if err := ctx.Err(); err != nil {
-		return character.Character{}, err
+		return storage.CharacterRecord{}, err
 	}
 	if s == nil || s.sqlDB == nil {
-		return character.Character{}, fmt.Errorf("storage is not configured")
+		return storage.CharacterRecord{}, fmt.Errorf("storage is not configured")
 	}
 	if strings.TrimSpace(campaignID) == "" {
-		return character.Character{}, fmt.Errorf("campaign id is required")
+		return storage.CharacterRecord{}, fmt.Errorf("campaign id is required")
 	}
 	if strings.TrimSpace(characterID) == "" {
-		return character.Character{}, fmt.Errorf("character id is required")
+		return storage.CharacterRecord{}, fmt.Errorf("character id is required")
 	}
 
 	row, err := s.q.GetCharacter(ctx, db.GetCharacterParams{
@@ -963,9 +969,9 @@ func (s *Store) GetCharacter(ctx context.Context, campaignID, characterID string
 	})
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return character.Character{}, storage.ErrNotFound
+			return storage.CharacterRecord{}, storage.ErrNotFound
 		}
-		return character.Character{}, fmt.Errorf("get character: %w", err)
+		return storage.CharacterRecord{}, fmt.Errorf("get character: %w", err)
 	}
 
 	return dbCharacterToDomain(row)
@@ -1006,7 +1012,7 @@ func (s *Store) ListCharacters(ctx context.Context, campaignID string, pageSize 
 	}
 
 	page := storage.CharacterPage{
-		Characters: make([]character.Character, 0, pageSize),
+		Characters: make([]storage.CharacterRecord, 0, pageSize),
 	}
 
 	for i, row := range rows {
@@ -1027,7 +1033,7 @@ func (s *Store) ListCharacters(ctx context.Context, campaignID string, pageSize 
 // Session methods
 
 // PutSession atomically stores a session and sets it as the active session for the campaign.
-func (s *Store) PutSession(ctx context.Context, sess session.Session) error {
+func (s *Store) PutSession(ctx context.Context, sess storage.SessionRecord) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -1049,7 +1055,7 @@ func (s *Store) PutSession(ctx context.Context, sess session.Session) error {
 
 	qtx := s.q.WithTx(tx)
 
-	if sess.Status == session.SessionStatusActive {
+	if sess.Status == session.StatusActive {
 		hasActive, err := qtx.HasActiveSession(ctx, sess.CampaignID)
 		if err != nil {
 			return fmt.Errorf("check active session: %w", err)
@@ -1073,7 +1079,7 @@ func (s *Store) PutSession(ctx context.Context, sess session.Session) error {
 		return fmt.Errorf("put session: %w", err)
 	}
 
-	if sess.Status == session.SessionStatusActive {
+	if sess.Status == session.StatusActive {
 		if err := qtx.SetActiveSession(ctx, db.SetActiveSessionParams{
 			CampaignID: sess.CampaignID,
 			SessionID:  sess.ID,
@@ -1086,23 +1092,23 @@ func (s *Store) PutSession(ctx context.Context, sess session.Session) error {
 }
 
 // EndSession marks a session as ended and clears it as active for the campaign.
-func (s *Store) EndSession(ctx context.Context, campaignID, sessionID string, endedAt time.Time) (session.Session, bool, error) {
+func (s *Store) EndSession(ctx context.Context, campaignID, sessionID string, endedAt time.Time) (storage.SessionRecord, bool, error) {
 	if err := ctx.Err(); err != nil {
-		return session.Session{}, false, err
+		return storage.SessionRecord{}, false, err
 	}
 	if s == nil || s.sqlDB == nil {
-		return session.Session{}, false, fmt.Errorf("storage is not configured")
+		return storage.SessionRecord{}, false, fmt.Errorf("storage is not configured")
 	}
 	if strings.TrimSpace(campaignID) == "" {
-		return session.Session{}, false, fmt.Errorf("campaign id is required")
+		return storage.SessionRecord{}, false, fmt.Errorf("campaign id is required")
 	}
 	if strings.TrimSpace(sessionID) == "" {
-		return session.Session{}, false, fmt.Errorf("session id is required")
+		return storage.SessionRecord{}, false, fmt.Errorf("session id is required")
 	}
 
 	tx, err := s.sqlDB.BeginTx(ctx, nil)
 	if err != nil {
-		return session.Session{}, false, fmt.Errorf("begin tx: %w", err)
+		return storage.SessionRecord{}, false, fmt.Errorf("begin tx: %w", err)
 	}
 	defer tx.Rollback()
 
@@ -1114,20 +1120,20 @@ func (s *Store) EndSession(ctx context.Context, campaignID, sessionID string, en
 	})
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return session.Session{}, false, storage.ErrNotFound
+			return storage.SessionRecord{}, false, storage.ErrNotFound
 		}
-		return session.Session{}, false, fmt.Errorf("get session: %w", err)
+		return storage.SessionRecord{}, false, fmt.Errorf("get session: %w", err)
 	}
 
 	sess, err := dbSessionToDomain(row)
 	if err != nil {
-		return session.Session{}, false, err
+		return storage.SessionRecord{}, false, err
 	}
 
 	transitioned := false
-	if sess.Status == session.SessionStatusActive {
+	if sess.Status == session.StatusActive {
 		transitioned = true
-		sess.Status = session.SessionStatusEnded
+		sess.Status = session.StatusEnded
 		sess.UpdatedAt = endedAt.UTC()
 		sess.EndedAt = &sess.UpdatedAt
 
@@ -1138,34 +1144,34 @@ func (s *Store) EndSession(ctx context.Context, campaignID, sessionID string, en
 			CampaignID: campaignID,
 			ID:         sessionID,
 		}); err != nil {
-			return session.Session{}, false, fmt.Errorf("update session status: %w", err)
+			return storage.SessionRecord{}, false, fmt.Errorf("update session status: %w", err)
 		}
 	}
 
 	if err := qtx.ClearActiveSession(ctx, campaignID); err != nil {
-		return session.Session{}, false, fmt.Errorf("clear active session: %w", err)
+		return storage.SessionRecord{}, false, fmt.Errorf("clear active session: %w", err)
 	}
 
 	if err := tx.Commit(); err != nil {
-		return session.Session{}, false, fmt.Errorf("commit: %w", err)
+		return storage.SessionRecord{}, false, fmt.Errorf("commit: %w", err)
 	}
 
 	return sess, transitioned, nil
 }
 
 // GetSession retrieves a session by campaign ID and session ID.
-func (s *Store) GetSession(ctx context.Context, campaignID, sessionID string) (session.Session, error) {
+func (s *Store) GetSession(ctx context.Context, campaignID, sessionID string) (storage.SessionRecord, error) {
 	if err := ctx.Err(); err != nil {
-		return session.Session{}, err
+		return storage.SessionRecord{}, err
 	}
 	if s == nil || s.sqlDB == nil {
-		return session.Session{}, fmt.Errorf("storage is not configured")
+		return storage.SessionRecord{}, fmt.Errorf("storage is not configured")
 	}
 	if strings.TrimSpace(campaignID) == "" {
-		return session.Session{}, fmt.Errorf("campaign id is required")
+		return storage.SessionRecord{}, fmt.Errorf("campaign id is required")
 	}
 	if strings.TrimSpace(sessionID) == "" {
-		return session.Session{}, fmt.Errorf("session id is required")
+		return storage.SessionRecord{}, fmt.Errorf("session id is required")
 	}
 
 	row, err := s.q.GetSession(ctx, db.GetSessionParams{
@@ -1174,32 +1180,32 @@ func (s *Store) GetSession(ctx context.Context, campaignID, sessionID string) (s
 	})
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return session.Session{}, storage.ErrNotFound
+			return storage.SessionRecord{}, storage.ErrNotFound
 		}
-		return session.Session{}, fmt.Errorf("get session: %w", err)
+		return storage.SessionRecord{}, fmt.Errorf("get session: %w", err)
 	}
 
 	return dbSessionToDomain(row)
 }
 
 // GetActiveSession retrieves the active session for a campaign.
-func (s *Store) GetActiveSession(ctx context.Context, campaignID string) (session.Session, error) {
+func (s *Store) GetActiveSession(ctx context.Context, campaignID string) (storage.SessionRecord, error) {
 	if err := ctx.Err(); err != nil {
-		return session.Session{}, err
+		return storage.SessionRecord{}, err
 	}
 	if s == nil || s.sqlDB == nil {
-		return session.Session{}, fmt.Errorf("storage is not configured")
+		return storage.SessionRecord{}, fmt.Errorf("storage is not configured")
 	}
 	if strings.TrimSpace(campaignID) == "" {
-		return session.Session{}, fmt.Errorf("campaign id is required")
+		return storage.SessionRecord{}, fmt.Errorf("campaign id is required")
 	}
 
 	row, err := s.q.GetActiveSession(ctx, campaignID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return session.Session{}, storage.ErrNotFound
+			return storage.SessionRecord{}, storage.ErrNotFound
 		}
-		return session.Session{}, fmt.Errorf("get active session: %w", err)
+		return storage.SessionRecord{}, fmt.Errorf("get active session: %w", err)
 	}
 
 	return dbSessionToDomain(row)
@@ -1240,7 +1246,7 @@ func (s *Store) ListSessions(ctx context.Context, campaignID string, pageSize in
 	}
 
 	page := storage.SessionPage{
-		Sessions: make([]session.Session, 0, pageSize),
+		Sessions: make([]storage.SessionRecord, 0, pageSize),
 	}
 
 	for i, row := range rows {
@@ -1280,7 +1286,8 @@ func (s *Store) PutSessionGate(ctx context.Context, gate storage.SessionGate) er
 	if strings.TrimSpace(gate.GateType) == "" {
 		return fmt.Errorf("gate type is required")
 	}
-	if strings.TrimSpace(gate.Status) == "" {
+	status := strings.TrimSpace(string(gate.Status))
+	if status == "" {
 		return fmt.Errorf("gate status is required")
 	}
 
@@ -1289,7 +1296,7 @@ func (s *Store) PutSessionGate(ctx context.Context, gate storage.SessionGate) er
 		SessionID:           gate.SessionID,
 		GateID:              gate.GateID,
 		GateType:            gate.GateType,
-		Status:              gate.Status,
+		Status:              status,
 		Reason:              gate.Reason,
 		CreatedAt:           toMillis(gate.CreatedAt),
 		CreatedByActorType:  gate.CreatedByActorType,
@@ -1380,14 +1387,15 @@ func (s *Store) PutSessionSpotlight(ctx context.Context, spotlight storage.Sessi
 	if strings.TrimSpace(spotlight.SessionID) == "" {
 		return fmt.Errorf("session id is required")
 	}
-	if strings.TrimSpace(spotlight.SpotlightType) == "" {
+	spotlightType := strings.TrimSpace(string(spotlight.SpotlightType))
+	if spotlightType == "" {
 		return fmt.Errorf("spotlight type is required")
 	}
 
 	return s.q.PutSessionSpotlight(ctx, db.PutSessionSpotlightParams{
 		CampaignID:         spotlight.CampaignID,
 		SessionID:          spotlight.SessionID,
-		SpotlightType:      spotlight.SpotlightType,
+		SpotlightType:      spotlightType,
 		CharacterID:        spotlight.CharacterID,
 		UpdatedAt:          toMillis(spotlight.UpdatedAt),
 		UpdatedByActorType: spotlight.UpdatedByActorType,
@@ -1490,7 +1498,7 @@ func (s *Store) ApplyRollOutcome(ctx context.Context, input storage.RollOutcomeA
 
 	result := storage.RollOutcomeApplyResult{
 		UpdatedCharacterStates: make([]storage.DaggerheartCharacterState, 0, len(input.Targets)),
-		AppliedChanges:         make([]session.OutcomeAppliedChange, 0),
+		AppliedChanges:         make([]action.OutcomeAppliedChange, 0),
 	}
 
 	tx, err := s.sqlDB.BeginTx(ctx, nil)
@@ -1515,36 +1523,37 @@ func (s *Store) ApplyRollOutcome(ctx context.Context, input storage.RollOutcomeA
 		return storage.RollOutcomeApplyResult{}, fmt.Errorf("check outcome applied: %w", err)
 	}
 	if applied != 0 {
-		return storage.RollOutcomeApplyResult{}, session.ErrOutcomeAlreadyApplied
+		return storage.RollOutcomeApplyResult{}, action.ErrOutcomeAlreadyApplied
 	}
 
 	if input.GMFearDelta != 0 {
 		if input.GMFearDelta < 0 {
-			return storage.RollOutcomeApplyResult{}, session.ErrOutcomeGMFearInvalid
+			return storage.RollOutcomeApplyResult{}, action.ErrOutcomeGMFearInvalid
 		}
 
-		var fear snapshot.GmFear
+		var currentFear int
 		shortRests := 0
 		row, err := qtx.GetDaggerheartSnapshot(ctx, input.CampaignID)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				fear = snapshot.GmFear{CampaignID: input.CampaignID, Value: 0}
+				currentFear = 0
 			} else {
 				return storage.RollOutcomeApplyResult{}, fmt.Errorf("get daggerheart snapshot: %w", err)
 			}
 		} else {
-			fear = snapshot.GmFear{CampaignID: row.CampaignID, Value: int(row.GmFear)}
+			currentFear = int(row.GmFear)
 			shortRests = int(row.ConsecutiveShortRests)
 		}
 
-		updated, before, after, err := snapshot.ApplyGmFearGain(fear, input.GMFearDelta)
-		if err != nil {
-			return storage.RollOutcomeApplyResult{}, session.ErrOutcomeGMFearInvalid
+		before := currentFear
+		after := before + input.GMFearDelta
+		if after > daggerheart.GMFearMax {
+			return storage.RollOutcomeApplyResult{}, action.ErrOutcomeGMFearInvalid
 		}
 
 		if err := qtx.PutDaggerheartSnapshot(ctx, db.PutDaggerheartSnapshotParams{
-			CampaignID:            updated.CampaignID,
-			GmFear:                int64(updated.Value),
+			CampaignID:            input.CampaignID,
+			GmFear:                int64(after),
 			ConsecutiveShortRests: int64(shortRests),
 		}); err != nil {
 			return storage.RollOutcomeApplyResult{}, fmt.Errorf("put daggerheart snapshot: %w", err)
@@ -1553,8 +1562,8 @@ func (s *Store) ApplyRollOutcome(ctx context.Context, input storage.RollOutcomeA
 		result.GMFearChanged = true
 		result.GMFearBefore = before
 		result.GMFearAfter = after
-		result.AppliedChanges = append(result.AppliedChanges, session.OutcomeAppliedChange{
-			Field:  session.OutcomeFieldGMFear,
+		result.AppliedChanges = append(result.AppliedChanges, action.OutcomeAppliedChange{
+			Field:  action.OutcomeFieldGMFear,
 			Before: before,
 			After:  after,
 		})
@@ -1566,16 +1575,16 @@ func (s *Store) ApplyRollOutcome(ctx context.Context, input storage.RollOutcomeA
 		if err != nil {
 			return storage.RollOutcomeApplyResult{}, fmt.Errorf("marshal gm fear payload: %w", err)
 		}
-		if _, err := appendEventTx(ctx, qtx, s.keyring, event.Event{
+		if _, err := appendEventTx(ctx, qtx, s.keyring, s.eventRegistry, event.Event{
 			CampaignID:    input.CampaignID,
 			Timestamp:     evtTimestamp,
-			Type:          daggerheart.EventTypeGMFearChanged,
+			Type:          event.Type("action.gm_fear_changed"),
 			SessionID:     input.SessionID,
 			RequestID:     input.RequestID,
 			ActorType:     event.ActorTypeSystem,
 			EntityType:    "campaign",
 			EntityID:      input.CampaignID,
-			SystemID:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART.String(),
+			SystemID:      daggerheart.SystemID,
 			SystemVersion: daggerheart.SystemVersion,
 			PayloadJSON:   payloadJSON,
 		}); err != nil {
@@ -1591,7 +1600,7 @@ func (s *Store) ApplyRollOutcome(ctx context.Context, input storage.RollOutcomeA
 		})
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				return storage.RollOutcomeApplyResult{}, session.ErrOutcomeCharacterNotFound
+				return storage.RollOutcomeApplyResult{}, action.ErrOutcomeCharacterNotFound
 			}
 			return storage.RollOutcomeApplyResult{}, fmt.Errorf("get daggerheart character state: %w", err)
 		}
@@ -1602,7 +1611,7 @@ func (s *Store) ApplyRollOutcome(ctx context.Context, input storage.RollOutcomeA
 		})
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				return storage.RollOutcomeApplyResult{}, session.ErrOutcomeCharacterNotFound
+				return storage.RollOutcomeApplyResult{}, action.ErrOutcomeCharacterNotFound
 			}
 			return storage.RollOutcomeApplyResult{}, fmt.Errorf("get daggerheart character profile: %w", err)
 		}
@@ -1627,17 +1636,17 @@ func (s *Store) ApplyRollOutcome(ctx context.Context, input storage.RollOutcomeA
 		}
 
 		if afterHope != beforeHope {
-			result.AppliedChanges = append(result.AppliedChanges, session.OutcomeAppliedChange{
+			result.AppliedChanges = append(result.AppliedChanges, action.OutcomeAppliedChange{
 				CharacterID: target,
-				Field:       session.OutcomeFieldHope,
+				Field:       action.OutcomeFieldHope,
 				Before:      beforeHope,
 				After:       afterHope,
 			})
 		}
 		if afterStress != beforeStress {
-			result.AppliedChanges = append(result.AppliedChanges, session.OutcomeAppliedChange{
+			result.AppliedChanges = append(result.AppliedChanges, action.OutcomeAppliedChange{
 				CharacterID: target,
-				Field:       session.OutcomeFieldStress,
+				Field:       action.OutcomeFieldStress,
 				Before:      beforeStress,
 				After:       afterStress,
 			})
@@ -1664,16 +1673,16 @@ func (s *Store) ApplyRollOutcome(ctx context.Context, input storage.RollOutcomeA
 			if err != nil {
 				return storage.RollOutcomeApplyResult{}, fmt.Errorf("marshal character state payload: %w", err)
 			}
-			if _, err := appendEventTx(ctx, qtx, s.keyring, event.Event{
+			if _, err := appendEventTx(ctx, qtx, s.keyring, s.eventRegistry, event.Event{
 				CampaignID:    input.CampaignID,
 				Timestamp:     evtTimestamp,
-				Type:          daggerheart.EventTypeCharacterStatePatched,
+				Type:          event.Type("action.character_state_patched"),
 				SessionID:     input.SessionID,
 				RequestID:     input.RequestID,
 				ActorType:     event.ActorTypeSystem,
 				EntityType:    "character",
 				EntityID:      target,
-				SystemID:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART.String(),
+				SystemID:      daggerheart.SystemID,
 				SystemVersion: daggerheart.SystemVersion,
 				PayloadJSON:   payloadJSON,
 			}); err != nil {
@@ -1693,33 +1702,22 @@ func (s *Store) ApplyRollOutcome(ctx context.Context, input storage.RollOutcomeA
 		})
 	}
 
-	// Convert applied changes for event payload
-	payloadChanges := make([]event.OutcomeAppliedChange, len(result.AppliedChanges))
-	for i, ch := range result.AppliedChanges {
-		payloadChanges[i] = event.OutcomeAppliedChange{
-			CharacterID: ch.CharacterID,
-			Field:       string(ch.Field),
-			Before:      ch.Before,
-			After:       ch.After,
-		}
-	}
-
-	payload, err := json.Marshal(event.OutcomeAppliedPayload{
+	payload, err := json.Marshal(action.OutcomeApplyPayload{
 		RequestID:            input.RequestID,
 		RollSeq:              input.RollSeq,
 		Targets:              input.Targets,
 		RequiresComplication: input.RequiresComplication,
-		AppliedChanges:       payloadChanges,
+		AppliedChanges:       result.AppliedChanges,
 	})
 	if err != nil {
 		return storage.RollOutcomeApplyResult{}, fmt.Errorf("marshal outcome applied payload: %w", err)
 	}
 
 	// Use unified event table
-	if _, err := appendEventTx(ctx, qtx, s.keyring, event.Event{
+	if _, err := appendEventTx(ctx, qtx, s.keyring, s.eventRegistry, event.Event{
 		CampaignID:   input.CampaignID,
 		Timestamp:    evtTimestamp,
-		Type:         event.TypeOutcomeApplied,
+		Type:         event.Type("action.outcome_applied"),
 		SessionID:    input.SessionID,
 		RequestID:    input.RequestID,
 		InvocationID: input.InvocationID,
@@ -1746,12 +1744,15 @@ func (s *Store) ApplyRollOutcome(ctx context.Context, input storage.RollOutcomeA
 	return result, nil
 }
 
-func appendEventTx(ctx context.Context, qtx *db.Queries, keyring *integrity.Keyring, evt event.Event) (event.Event, error) {
+func appendEventTx(ctx context.Context, qtx *db.Queries, keyring *integrity.Keyring, registry *event.Registry, evt event.Event) (event.Event, error) {
 	if qtx == nil {
 		return event.Event{}, fmt.Errorf("event store is not configured")
 	}
+	if registry == nil {
+		return event.Event{}, fmt.Errorf("event registry is required")
+	}
 
-	normalized, err := event.NormalizeForAppend(evt)
+	normalized, err := registry.ValidateForAppend(evt)
 	if err != nil {
 		return event.Event{}, err
 	}
@@ -1837,6 +1838,8 @@ func appendEventTx(ctx context.Context, qtx *db.Queries, keyring *integrity.Keyr
 		EntityID:       evt.EntityID,
 		SystemID:       evt.SystemID,
 		SystemVersion:  evt.SystemVersion,
+		CorrelationID:  evt.CorrelationID,
+		CausationID:    evt.CausationID,
 		PayloadJson:    evt.PayloadJSON,
 	}); err != nil {
 		return event.Event{}, fmt.Errorf("append event: %w", err)
@@ -1865,43 +1868,43 @@ func stringToGameSystem(s string) commonv1.GameSystem {
 	}
 }
 
-func campaignStatusToString(cs campaign.CampaignStatus) string {
-	switch cs {
-	case campaign.CampaignStatusDraft:
+func campaignStatusToString(status campaign.Status) string {
+	switch strings.ToLower(strings.TrimSpace(string(status))) {
+	case "draft":
 		return "DRAFT"
-	case campaign.CampaignStatusActive:
+	case "active":
 		return "ACTIVE"
-	case campaign.CampaignStatusCompleted:
+	case "completed":
 		return "COMPLETED"
-	case campaign.CampaignStatusArchived:
+	case "archived":
 		return "ARCHIVED"
 	default:
 		return "UNSPECIFIED"
 	}
 }
 
-func stringToCampaignStatus(s string) campaign.CampaignStatus {
-	switch s {
+func stringToCampaignStatus(s string) campaign.Status {
+	switch strings.ToUpper(strings.TrimSpace(s)) {
 	case "DRAFT":
-		return campaign.CampaignStatusDraft
+		return campaign.StatusDraft
 	case "ACTIVE":
-		return campaign.CampaignStatusActive
+		return campaign.StatusActive
 	case "COMPLETED":
-		return campaign.CampaignStatusCompleted
+		return campaign.StatusCompleted
 	case "ARCHIVED":
-		return campaign.CampaignStatusArchived
+		return campaign.StatusArchived
 	default:
-		return campaign.CampaignStatusUnspecified
+		return campaign.StatusUnspecified
 	}
 }
 
 func gmModeToString(gm campaign.GmMode) string {
-	switch gm {
-	case campaign.GmModeHuman:
+	switch strings.ToLower(strings.TrimSpace(string(gm))) {
+	case "human":
 		return "HUMAN"
-	case campaign.GmModeAI:
+	case "ai":
 		return "AI"
-	case campaign.GmModeHybrid:
+	case "hybrid":
 		return "HYBRID"
 	default:
 		return "UNSPECIFIED"
@@ -1909,7 +1912,7 @@ func gmModeToString(gm campaign.GmMode) string {
 }
 
 func stringToGmMode(s string) campaign.GmMode {
-	switch s {
+	switch strings.ToUpper(strings.TrimSpace(s)) {
 	case "HUMAN":
 		return campaign.GmModeHuman
 	case "AI":
@@ -1921,85 +1924,111 @@ func stringToGmMode(s string) campaign.GmMode {
 	}
 }
 
-func campaignIntentToString(intent campaign.CampaignIntent) string {
-	switch intent {
-	case campaign.CampaignIntentStandard:
+func campaignIntentToString(intent campaign.Intent) string {
+	switch strings.ToLower(strings.TrimSpace(string(intent))) {
+	case "standard":
 		return "STANDARD"
-	case campaign.CampaignIntentStarter:
+	case "starter":
 		return "STARTER"
-	case campaign.CampaignIntentSandbox:
+	case "sandbox":
 		return "SANDBOX"
 	default:
 		return "UNSPECIFIED"
 	}
 }
 
-func stringToCampaignIntent(s string) campaign.CampaignIntent {
-	switch s {
+func stringToCampaignIntent(s string) campaign.Intent {
+	switch strings.ToUpper(strings.TrimSpace(s)) {
 	case "STANDARD":
-		return campaign.CampaignIntentStandard
+		return campaign.IntentStandard
 	case "STARTER":
-		return campaign.CampaignIntentStarter
+		return campaign.IntentStarter
 	case "SANDBOX":
-		return campaign.CampaignIntentSandbox
+		return campaign.IntentSandbox
 	default:
-		return campaign.CampaignIntentUnspecified
+		return campaign.IntentUnspecified
 	}
 }
 
-func campaignAccessPolicyToString(policy campaign.CampaignAccessPolicy) string {
-	switch policy {
-	case campaign.CampaignAccessPolicyPrivate:
+func campaignAccessPolicyToString(policy campaign.AccessPolicy) string {
+	switch strings.ToLower(strings.TrimSpace(string(policy))) {
+	case "private":
 		return "PRIVATE"
-	case campaign.CampaignAccessPolicyRestricted:
+	case "restricted":
 		return "RESTRICTED"
-	case campaign.CampaignAccessPolicyPublic:
+	case "public":
 		return "PUBLIC"
 	default:
 		return "UNSPECIFIED"
 	}
 }
 
-func stringToCampaignAccessPolicy(s string) campaign.CampaignAccessPolicy {
-	switch s {
+func stringToCampaignAccessPolicy(s string) campaign.AccessPolicy {
+	switch strings.ToUpper(strings.TrimSpace(s)) {
 	case "PRIVATE":
-		return campaign.CampaignAccessPolicyPrivate
+		return campaign.AccessPolicyPrivate
 	case "RESTRICTED":
-		return campaign.CampaignAccessPolicyRestricted
+		return campaign.AccessPolicyRestricted
 	case "PUBLIC":
-		return campaign.CampaignAccessPolicyPublic
+		return campaign.AccessPolicyPublic
 	default:
-		return campaign.CampaignAccessPolicyUnspecified
+		return campaign.AccessPolicyUnspecified
 	}
 }
 
-func participantRoleToString(pr participant.ParticipantRole) string {
-	switch pr {
-	case participant.ParticipantRoleGM:
+func inviteStatusToString(status invite.Status) string {
+	switch strings.ToLower(strings.TrimSpace(string(status))) {
+	case "pending":
+		return "PENDING"
+	case "claimed":
+		return "CLAIMED"
+	case "revoked":
+		return "REVOKED"
+	default:
+		return "UNSPECIFIED"
+	}
+}
+
+func stringToInviteStatus(s string) invite.Status {
+	switch strings.ToUpper(strings.TrimSpace(s)) {
+	case "PENDING":
+		return invite.StatusPending
+	case "CLAIMED":
+		return invite.StatusClaimed
+	case "REVOKED":
+		return invite.StatusRevoked
+	default:
+		return invite.StatusUnspecified
+	}
+}
+
+func participantRoleToString(role participant.Role) string {
+	switch strings.ToLower(strings.TrimSpace(string(role))) {
+	case "gm":
 		return "GM"
-	case participant.ParticipantRolePlayer:
+	case "player":
 		return "PLAYER"
 	default:
 		return "UNSPECIFIED"
 	}
 }
 
-func stringToParticipantRole(s string) participant.ParticipantRole {
-	switch s {
+func stringToParticipantRole(s string) participant.Role {
+	switch strings.ToUpper(strings.TrimSpace(s)) {
 	case "GM":
-		return participant.ParticipantRoleGM
+		return participant.RoleGM
 	case "PLAYER":
-		return participant.ParticipantRolePlayer
+		return participant.RolePlayer
 	default:
-		return participant.ParticipantRoleUnspecified
+		return participant.RoleUnspecified
 	}
 }
 
-func participantControllerToString(pc participant.Controller) string {
-	switch pc {
-	case participant.ControllerHuman:
+func participantControllerToString(controller participant.Controller) string {
+	switch strings.ToLower(strings.TrimSpace(string(controller))) {
+	case "human":
 		return "HUMAN"
-	case participant.ControllerAI:
+	case "ai":
 		return "AI"
 	default:
 		return "UNSPECIFIED"
@@ -2007,12 +2036,12 @@ func participantControllerToString(pc participant.Controller) string {
 }
 
 func participantAccessToString(access participant.CampaignAccess) string {
-	switch access {
-	case participant.CampaignAccessMember:
+	switch strings.ToLower(strings.TrimSpace(string(access))) {
+	case "member":
 		return "MEMBER"
-	case participant.CampaignAccessManager:
+	case "manager":
 		return "MANAGER"
-	case participant.CampaignAccessOwner:
+	case "owner":
 		return "OWNER"
 	default:
 		return "UNSPECIFIED"
@@ -2031,7 +2060,7 @@ func intToBool(value int64) bool {
 }
 
 func stringToParticipantController(s string) participant.Controller {
-	switch s {
+	switch strings.ToUpper(strings.TrimSpace(s)) {
 	case "HUMAN":
 		return participant.ControllerHuman
 	case "AI":
@@ -2042,7 +2071,7 @@ func stringToParticipantController(s string) participant.Controller {
 }
 
 func stringToParticipantAccess(s string) participant.CampaignAccess {
-	switch s {
+	switch strings.ToUpper(strings.TrimSpace(s)) {
 	case "MEMBER":
 		return participant.CampaignAccessMember
 	case "MANAGER":
@@ -2054,47 +2083,47 @@ func stringToParticipantAccess(s string) participant.CampaignAccess {
 	}
 }
 
-func characterKindToString(ck character.CharacterKind) string {
-	switch ck {
-	case character.CharacterKindPC:
+func characterKindToString(kind character.Kind) string {
+	switch strings.ToLower(strings.TrimSpace(string(kind))) {
+	case "pc":
 		return "PC"
-	case character.CharacterKindNPC:
+	case "npc":
 		return "NPC"
 	default:
 		return "UNSPECIFIED"
 	}
 }
 
-func stringToCharacterKind(s string) character.CharacterKind {
-	switch s {
+func stringToCharacterKind(s string) character.Kind {
+	switch strings.ToUpper(strings.TrimSpace(s)) {
 	case "PC":
-		return character.CharacterKindPC
+		return character.KindPC
 	case "NPC":
-		return character.CharacterKindNPC
+		return character.KindNPC
 	default:
-		return character.CharacterKindUnspecified
+		return character.KindUnspecified
 	}
 }
 
-func sessionStatusToString(ss session.SessionStatus) string {
-	switch ss {
-	case session.SessionStatusActive:
+func sessionStatusToString(status session.Status) string {
+	switch strings.ToLower(strings.TrimSpace(string(status))) {
+	case "active":
 		return "ACTIVE"
-	case session.SessionStatusEnded:
+	case "ended":
 		return "ENDED"
 	default:
 		return "UNSPECIFIED"
 	}
 }
 
-func stringToSessionStatus(s string) session.SessionStatus {
-	switch s {
+func stringToSessionStatus(s string) session.Status {
+	switch strings.ToUpper(strings.TrimSpace(s)) {
 	case "ACTIVE":
-		return session.SessionStatusActive
+		return session.StatusActive
 	case "ENDED":
-		return session.SessionStatusEnded
+		return session.StatusEnded
 	default:
-		return session.SessionStatusUnspecified
+		return session.StatusUnspecified
 	}
 }
 
@@ -2119,12 +2148,12 @@ type campaignRowData struct {
 	ArchivedAt       sql.NullInt64
 }
 
-func campaignRowDataToDomain(row campaignRowData) (campaign.Campaign, error) {
+func campaignRowDataToDomain(row campaignRowData) (storage.CampaignRecord, error) {
 	locale := platformi18n.DefaultLocale()
 	if parsed, ok := platformi18n.ParseLocale(row.Locale); ok {
 		locale = parsed
 	}
-	c := campaign.Campaign{
+	c := storage.CampaignRecord{
 		ID:               row.ID,
 		Name:             row.Name,
 		Locale:           locale,
@@ -2145,7 +2174,7 @@ func campaignRowDataToDomain(row campaignRowData) (campaign.Campaign, error) {
 	return c, nil
 }
 
-func dbGetCampaignRowToDomain(row db.GetCampaignRow) (campaign.Campaign, error) {
+func dbGetCampaignRowToDomain(row db.GetCampaignRow) (storage.CampaignRecord, error) {
 	return campaignRowDataToDomain(campaignRowData{
 		ID:               row.ID,
 		Name:             row.Name,
@@ -2165,7 +2194,7 @@ func dbGetCampaignRowToDomain(row db.GetCampaignRow) (campaign.Campaign, error) 
 	})
 }
 
-func dbListCampaignsRowToDomain(row db.ListCampaignsRow) (campaign.Campaign, error) {
+func dbListCampaignsRowToDomain(row db.ListCampaignsRow) (storage.CampaignRecord, error) {
 	return campaignRowDataToDomain(campaignRowData{
 		ID:               row.ID,
 		Name:             row.Name,
@@ -2185,7 +2214,7 @@ func dbListCampaignsRowToDomain(row db.ListCampaignsRow) (campaign.Campaign, err
 	})
 }
 
-func dbListAllCampaignsRowToDomain(row db.ListAllCampaignsRow) (campaign.Campaign, error) {
+func dbListAllCampaignsRowToDomain(row db.ListAllCampaignsRow) (storage.CampaignRecord, error) {
 	return campaignRowDataToDomain(campaignRowData{
 		ID:               row.ID,
 		Name:             row.Name,
@@ -2204,8 +2233,8 @@ func dbListAllCampaignsRowToDomain(row db.ListAllCampaignsRow) (campaign.Campaig
 	})
 }
 
-func dbParticipantToDomain(row db.Participant) (participant.Participant, error) {
-	return participant.Participant{
+func dbParticipantToDomain(row db.Participant) (storage.ParticipantRecord, error) {
+	return storage.ParticipantRecord{
 		ID:             row.ID,
 		CampaignID:     row.CampaignID,
 		UserID:         row.UserID,
@@ -2218,25 +2247,25 @@ func dbParticipantToDomain(row db.Participant) (participant.Participant, error) 
 	}, nil
 }
 
-func dbInviteToDomain(row db.Invite) (invite.Invite, error) {
-	return invite.Invite{
+func dbInviteToDomain(row db.Invite) (storage.InviteRecord, error) {
+	return storage.InviteRecord{
 		ID:                     row.ID,
 		CampaignID:             row.CampaignID,
 		ParticipantID:          row.ParticipantID,
 		RecipientUserID:        row.RecipientUserID,
-		Status:                 invite.StatusFromLabel(row.Status),
+		Status:                 stringToInviteStatus(row.Status),
 		CreatedByParticipantID: row.CreatedByParticipantID,
 		CreatedAt:              fromMillis(row.CreatedAt),
 		UpdatedAt:              fromMillis(row.UpdatedAt),
 	}, nil
 }
 
-func dbCharacterToDomain(row db.Character) (character.Character, error) {
+func dbCharacterToDomain(row db.Character) (storage.CharacterRecord, error) {
 	participantID := ""
 	if row.ControllerParticipantID.Valid {
 		participantID = row.ControllerParticipantID.String
 	}
-	return character.Character{
+	return storage.CharacterRecord{
 		ID:            row.ID,
 		CampaignID:    row.CampaignID,
 		ParticipantID: participantID,
@@ -2248,8 +2277,8 @@ func dbCharacterToDomain(row db.Character) (character.Character, error) {
 	}, nil
 }
 
-func dbSessionToDomain(row db.Session) (session.Session, error) {
-	sess := session.Session{
+func dbSessionToDomain(row db.Session) (storage.SessionRecord, error) {
+	sess := storage.SessionRecord{
 		ID:         row.ID,
 		CampaignID: row.CampaignID,
 		Name:       row.Name,
@@ -2268,7 +2297,7 @@ func dbSessionGateToStorage(row db.SessionGate) storage.SessionGate {
 		SessionID:          row.SessionID,
 		GateID:             row.GateID,
 		GateType:           row.GateType,
-		Status:             row.Status,
+		Status:             session.GateStatus(strings.ToLower(strings.TrimSpace(row.Status))),
 		Reason:             row.Reason,
 		CreatedAt:          fromMillis(row.CreatedAt),
 		CreatedByActorType: row.CreatedByActorType,
@@ -2290,7 +2319,7 @@ func dbSessionSpotlightToStorage(row db.SessionSpotlight) storage.SessionSpotlig
 	return storage.SessionSpotlight{
 		CampaignID:         row.CampaignID,
 		SessionID:          row.SessionID,
-		SpotlightType:      row.SpotlightType,
+		SpotlightType:      session.SpotlightType(strings.ToLower(strings.TrimSpace(row.SpotlightType))),
 		CharacterID:        row.CharacterID,
 		UpdatedAt:          fromMillis(row.UpdatedAt),
 		UpdatedByActorType: row.UpdatedByActorType,
@@ -2722,7 +2751,7 @@ func (s *Store) PutDaggerheartCharacterState(ctx context.Context, state storage.
 
 	hopeMax := state.HopeMax
 	if hopeMax == 0 {
-		hopeMax = daggerheart.HopeMax
+		hopeMax = daggerheart.HopeMaxDefault
 	}
 
 	lifeState := state.LifeState
@@ -4648,8 +4677,11 @@ func (s *Store) AppendEvent(ctx context.Context, evt event.Event) (event.Event, 
 	if s == nil || s.sqlDB == nil {
 		return event.Event{}, fmt.Errorf("storage is not configured")
 	}
+	if s.eventRegistry == nil {
+		return event.Event{}, fmt.Errorf("event registry is required")
+	}
 
-	validated, err := event.NormalizeForAppend(evt)
+	validated, err := s.eventRegistry.ValidateForAppend(evt)
 	if err != nil {
 		return event.Event{}, err
 	}
@@ -4743,6 +4775,8 @@ func (s *Store) AppendEvent(ctx context.Context, evt event.Event) (event.Event, 
 		EntityID:       evt.EntityID,
 		SystemID:       evt.SystemID,
 		SystemVersion:  evt.SystemVersion,
+		CorrelationID:  evt.CorrelationID,
+		CausationID:    evt.CausationID,
 		PayloadJson:    evt.PayloadJSON,
 	}); err != nil {
 		if isConstraintError(err) {
@@ -5145,7 +5179,7 @@ func (s *Store) ListEventsPage(ctx context.Context, req storage.ListEventsPageRe
 
 	// Build and execute the query
 	query := fmt.Sprintf(
-		"SELECT campaign_id, seq, event_hash, prev_event_hash, chain_hash, signature_key_id, event_signature, timestamp, event_type, session_id, request_id, invocation_id, actor_type, actor_id, entity_type, entity_id, payload_json FROM events WHERE %s %s %s",
+		"SELECT campaign_id, seq, event_hash, prev_event_hash, chain_hash, signature_key_id, event_signature, timestamp, event_type, session_id, request_id, invocation_id, actor_type, actor_id, entity_type, entity_id, system_id, system_version, correlation_id, causation_id, payload_json FROM events WHERE %s %s %s",
 		whereClause,
 		orderClause,
 		limitClause,
@@ -5177,6 +5211,10 @@ func (s *Store) ListEventsPage(ctx context.Context, req storage.ListEventsPageRe
 			&row.ActorID,
 			&row.EntityType,
 			&row.EntityID,
+			&row.SystemID,
+			&row.SystemVersion,
+			&row.CorrelationID,
+			&row.CausationID,
 			&row.PayloadJson,
 		); err != nil {
 			return storage.ListEventsPageResult{}, fmt.Errorf("scan event: %w", err)
@@ -5443,6 +5481,8 @@ type eventRowData struct {
 	EntityID       string
 	SystemID       string
 	SystemVersion  string
+	CorrelationID  string
+	CausationID    string
 	PayloadJSON    []byte
 }
 
@@ -5466,6 +5506,8 @@ func eventRowDataToDomain(row eventRowData) (event.Event, error) {
 		EntityID:       row.EntityID,
 		SystemID:       row.SystemID,
 		SystemVersion:  row.SystemVersion,
+		CorrelationID:  row.CorrelationID,
+		CausationID:    row.CausationID,
 		PayloadJSON:    row.PayloadJSON,
 	}, nil
 }
@@ -5490,6 +5532,8 @@ func eventRowDataFromEvent(row db.Event) eventRowData {
 		EntityID:       row.EntityID,
 		SystemID:       row.SystemID,
 		SystemVersion:  row.SystemVersion,
+		CorrelationID:  row.CorrelationID,
+		CausationID:    row.CausationID,
 		PayloadJSON:    row.PayloadJson,
 	}
 }
@@ -5514,6 +5558,8 @@ func eventRowDataFromGetEventByHashRow(row db.GetEventByHashRow) eventRowData {
 		EntityID:       row.EntityID,
 		SystemID:       row.SystemID,
 		SystemVersion:  row.SystemVersion,
+		CorrelationID:  row.CorrelationID,
+		CausationID:    row.CausationID,
 		PayloadJSON:    row.PayloadJson,
 	}
 }
@@ -5538,6 +5584,8 @@ func eventRowDataFromGetEventBySeqRow(row db.GetEventBySeqRow) eventRowData {
 		EntityID:       row.EntityID,
 		SystemID:       row.SystemID,
 		SystemVersion:  row.SystemVersion,
+		CorrelationID:  row.CorrelationID,
+		CausationID:    row.CausationID,
 		PayloadJSON:    row.PayloadJson,
 	}
 }
@@ -5562,6 +5610,8 @@ func eventRowDataFromListEventsRow(row db.ListEventsRow) eventRowData {
 		EntityID:       row.EntityID,
 		SystemID:       row.SystemID,
 		SystemVersion:  row.SystemVersion,
+		CorrelationID:  row.CorrelationID,
+		CausationID:    row.CausationID,
 		PayloadJSON:    row.PayloadJson,
 	}
 }
@@ -5586,6 +5636,8 @@ func eventRowDataFromListEventsBySessionRow(row db.ListEventsBySessionRow) event
 		EntityID:       row.EntityID,
 		SystemID:       row.SystemID,
 		SystemVersion:  row.SystemVersion,
+		CorrelationID:  row.CorrelationID,
+		CausationID:    row.CausationID,
 		PayloadJSON:    row.PayloadJson,
 	}
 }

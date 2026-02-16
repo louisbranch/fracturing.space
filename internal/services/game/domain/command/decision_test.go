@@ -1,0 +1,37 @@
+package command
+
+import (
+	"testing"
+
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+)
+
+func TestAcceptDecision_ReturnsEventsOnly(t *testing.T) {
+	evt := event.Event{CampaignID: "camp-1"}
+	decision := Accept(evt)
+
+	if len(decision.Events) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(decision.Events))
+	}
+	if decision.Events[0].CampaignID != "camp-1" {
+		t.Fatalf("event campaign id = %s, want %s", decision.Events[0].CampaignID, "camp-1")
+	}
+	if len(decision.Rejections) != 0 {
+		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
+	}
+}
+
+func TestRejectDecision_ReturnsRejectionsOnly(t *testing.T) {
+	rejection := Rejection{Code: "INVALID"}
+	decision := Reject(rejection)
+
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != "INVALID" {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, "INVALID")
+	}
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+}

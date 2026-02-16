@@ -6,8 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/character"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/session"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/integrity"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/migrations"
 )
@@ -27,7 +30,11 @@ func testKeyring(t *testing.T) *integrity.Keyring {
 func openTestEventsStore(t *testing.T) *Store {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "events.sqlite")
-	store, err := OpenEvents(path, testKeyring(t))
+	registries, err := engine.BuildRegistries(daggerheart.NewModule())
+	if err != nil {
+		t.Fatalf("build registries: %v", err)
+	}
+	store, err := OpenEvents(path, testKeyring(t), registries.Events)
 	if err != nil {
 		t.Fatalf("open events store: %v", err)
 	}
@@ -66,6 +73,12 @@ func openTestCombinedStore(t *testing.T) *Store {
 	}
 	// Attach the keyring so event appends within ApplyRollOutcome work.
 	store.keyring = testKeyring(t)
+	registries, err := engine.BuildRegistries(daggerheart.NewModule())
+	if err != nil {
+		_ = store.Close()
+		t.Fatalf("build registries: %v", err)
+	}
+	store.eventRegistry = registries.Events
 
 	// Run events migrations on the same database so the events tables exist.
 	if err := runMigrations(store.sqlDB, migrations.EventsFS, "events"); err != nil {
@@ -81,9 +94,9 @@ func openTestCombinedStore(t *testing.T) *Store {
 	return store
 }
 
-func seedCharacter(t *testing.T, store *Store, campaignID, charID, name string, kind character.CharacterKind, now time.Time) character.Character {
+func seedCharacter(t *testing.T, store *Store, campaignID, charID, name string, kind character.Kind, now time.Time) storage.CharacterRecord {
 	t.Helper()
-	c := character.Character{
+	c := storage.CharacterRecord{
 		ID:         charID,
 		CampaignID: campaignID,
 		Name:       name,
@@ -97,13 +110,13 @@ func seedCharacter(t *testing.T, store *Store, campaignID, charID, name string, 
 	return c
 }
 
-func seedSession(t *testing.T, store *Store, campaignID, sessID string, now time.Time) session.Session {
+func seedSession(t *testing.T, store *Store, campaignID, sessID string, now time.Time) storage.SessionRecord {
 	t.Helper()
-	s := session.Session{
+	s := storage.SessionRecord{
 		ID:         sessID,
 		CampaignID: campaignID,
 		Name:       "Session " + sessID,
-		Status:     session.SessionStatusActive,
+		Status:     session.StatusActive,
 		StartedAt:  now,
 		UpdatedAt:  now,
 	}

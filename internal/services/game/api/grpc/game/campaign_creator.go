@@ -3,6 +3,7 @@ package game
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"time"
 
@@ -13,8 +14,9 @@ import (
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/participant"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -34,8 +36,8 @@ func newCampaignApplication(service *CampaignService) campaignApplication {
 	return app
 }
 
-func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.CreateCampaignRequest) (campaign.Campaign, participant.Participant, error) {
-	input := campaign.CreateCampaignInput{
+func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.CreateCampaignRequest) (storage.CampaignRecord, storage.ParticipantRecord, error) {
+	input := campaign.CreateInput{
 		Name:         in.GetName(),
 		Locale:       in.GetLocale(),
 		System:       in.GetSystem(),
@@ -45,17 +47,17 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 		ThemePrompt:  in.GetThemePrompt(),
 	}
 	if input.System == commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED {
-		return campaign.Campaign{}, participant.Participant{}, status.Error(codes.InvalidArgument, "game system is required")
+		return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Error(codes.InvalidArgument, "game system is required")
 	}
 
-	normalized, err := campaign.NormalizeCreateCampaignInput(input)
+	normalized, err := campaign.NormalizeCreateInput(input)
 	if err != nil {
-		return campaign.Campaign{}, participant.Participant{}, err
+		return storage.CampaignRecord{}, storage.ParticipantRecord{}, err
 	}
 
 	userID := strings.TrimSpace(grpcmeta.UserIDFromContext(ctx))
 	if userID == "" {
-		return campaign.Campaign{}, participant.Participant{}, apperrors.New(
+		return storage.CampaignRecord{}, storage.ParticipantRecord{}, apperrors.New(
 			apperrors.CodeCampaignCreatorUserMissing,
 			"creator user id is required",
 		)
@@ -63,10 +65,15 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 
 	campaignID, err := c.idGenerator()
 	if err != nil {
-		return campaign.Campaign{}, participant.Participant{}, status.Errorf(codes.Internal, "generate campaign id: %v", err)
+		return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "generate campaign id: %v", err)
 	}
 
-	payload := event.CampaignCreatedPayload{
+	actorID := grpcmeta.ParticipantIDFromContext(ctx)
+	applier := c.stores.Applier()
+	if c.stores.Domain == nil {
+		return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Error(codes.Internal, "domain engine is not configured")
+	}
+	payload := campaign.CreatePayload{
 		Name:         normalized.Name,
 		Locale:       platformi18n.LocaleString(normalized.Locale),
 		GameSystem:   normalized.System.String(),
@@ -77,69 +84,69 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return campaign.Campaign{}, participant.Participant{}, status.Errorf(codes.Internal, "encode payload: %v", err)
+		return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
 
-	actorID := grpcmeta.ParticipantIDFromContext(ctx)
-	actorType := event.ActorTypeSystem
+	actorType := command.ActorTypeSystem
 	if actorID != "" {
-		actorType = event.ActorTypeParticipant
+		actorType = command.ActorTypeParticipant
 	}
-
-	stored, err := c.stores.Event.AppendEvent(ctx, event.Event{
+	participantResult, err := c.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:   campaignID,
-		Timestamp:    c.clock().UTC(),
-		Type:         event.TypeCampaignCreated,
-		RequestID:    grpcmeta.RequestIDFromContext(ctx),
-		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+		Type:         command.Type("campaign.create"),
 		ActorType:    actorType,
 		ActorID:      actorID,
+		RequestID:    grpcmeta.RequestIDFromContext(ctx),
+		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
 		EntityType:   "campaign",
 		EntityID:     campaignID,
 		PayloadJSON:  payloadJSON,
 	})
 	if err != nil {
-		return campaign.Campaign{}, participant.Participant{}, status.Errorf(codes.Internal, "append event: %v", err)
+		return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
 	}
-
-	applier := c.stores.Applier()
-	if err := applier.Apply(ctx, stored); err != nil {
-		return campaign.Campaign{}, participant.Participant{}, status.Errorf(codes.Internal, "apply event: %v", err)
+	if len(participantResult.Decision.Rejections) > 0 {
+		return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Error(codes.FailedPrecondition, participantResult.Decision.Rejections[0].Message)
+	}
+	for _, evt := range participantResult.Decision.Events {
+		if err := applier.Apply(ctx, evt); err != nil {
+			return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "apply event: %v", err)
+		}
 	}
 
 	creatorID, err := c.idGenerator()
 	if err != nil {
-		return campaign.Campaign{}, participant.Participant{}, status.Errorf(codes.Internal, "generate participant id: %v", err)
+		return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "generate participant id: %v", err)
 	}
 
 	creatorDisplayName := strings.TrimSpace(in.GetCreatorDisplayName())
 	if creatorDisplayName == "" {
 		if c.authClient == nil {
-			return campaign.Campaign{}, participant.Participant{}, status.Error(codes.Internal, "auth client is not configured")
+			return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Error(codes.Internal, "auth client is not configured")
 		}
 		userResponse, err := c.authClient.GetUser(ctx, &authv1.GetUserRequest{UserId: userID})
 		if err != nil {
 			if statusErr, ok := status.FromError(err); ok && statusErr.Code() == codes.NotFound {
-				return campaign.Campaign{}, participant.Participant{}, apperrors.New(
+				return storage.CampaignRecord{}, storage.ParticipantRecord{}, apperrors.New(
 					apperrors.CodeCampaignCreatorUserMissing,
 					"creator user not found",
 				)
 			}
-			return campaign.Campaign{}, participant.Participant{}, status.Errorf(codes.Internal, "get auth user: %v", err)
+			return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "get auth user: %v", err)
 		}
 		if userResponse == nil || userResponse.GetUser() == nil {
-			return campaign.Campaign{}, participant.Participant{}, status.Error(codes.Internal, "auth user response is missing")
+			return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Error(codes.Internal, "auth user response is missing")
 		}
 		creatorDisplayName = strings.TrimSpace(userResponse.GetUser().GetUsername())
 		if creatorDisplayName == "" {
-			return campaign.Campaign{}, participant.Participant{}, apperrors.New(
+			return storage.CampaignRecord{}, storage.ParticipantRecord{}, apperrors.New(
 				apperrors.CodeCampaignCreatorUserMissing,
 				"creator user display name is required",
 			)
 		}
 	}
 
-	participantPayload := event.ParticipantJoinedPayload{
+	participantPayload := participant.JoinPayload{
 		ParticipantID:  creatorID,
 		UserID:         userID,
 		DisplayName:    creatorDisplayName,
@@ -149,208 +156,223 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 	}
 	participantPayloadJSON, err := json.Marshal(participantPayload)
 	if err != nil {
-		return campaign.Campaign{}, participant.Participant{}, status.Errorf(codes.Internal, "encode participant payload: %v", err)
+		return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "encode participant payload: %v", err)
 	}
 
-	participantEvent, err := c.stores.Event.AppendEvent(ctx, event.Event{
+	result, err := c.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:   campaignID,
-		Timestamp:    c.clock().UTC(),
-		Type:         event.TypeParticipantJoined,
+		Type:         command.Type("participant.join"),
+		ActorType:    command.ActorTypeSystem,
+		ActorID:      "",
 		RequestID:    grpcmeta.RequestIDFromContext(ctx),
 		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-		ActorType:    event.ActorTypeSystem,
-		ActorID:      "",
 		EntityType:   "participant",
 		EntityID:     creatorID,
 		PayloadJSON:  participantPayloadJSON,
 	})
 	if err != nil {
-		return campaign.Campaign{}, participant.Participant{}, status.Errorf(codes.Internal, "append participant event: %v", err)
+		return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
 	}
-
-	if err := applier.Apply(ctx, participantEvent); err != nil {
-		return campaign.Campaign{}, participant.Participant{}, status.Errorf(codes.Internal, "apply participant event: %v", err)
+	if len(result.Decision.Rejections) > 0 {
+		return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
+	}
+	for _, evt := range result.Decision.Events {
+		if err := applier.Apply(ctx, evt); err != nil {
+			return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "apply participant event: %v", err)
+		}
 	}
 
 	ownerParticipant, err := c.stores.Participant.GetParticipant(ctx, campaignID, creatorID)
 	if err != nil {
-		return campaign.Campaign{}, participant.Participant{}, status.Errorf(codes.Internal, "load owner participant: %v", err)
+		return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "load owner participant: %v", err)
 	}
 
 	created, err := c.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return campaign.Campaign{}, participant.Participant{}, status.Errorf(codes.Internal, "load campaign: %v", err)
+		return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "load campaign: %v", err)
 	}
 
 	return created, ownerParticipant, nil
 }
 
-func (c campaignApplication) EndCampaign(ctx context.Context, campaignID string) (campaign.Campaign, error) {
+func (c campaignApplication) EndCampaign(ctx context.Context, campaignID string) (storage.CampaignRecord, error) {
 	campaignRecord, err := c.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return campaign.Campaign{}, err
+		return storage.CampaignRecord{}, err
 	}
 
 	if err := ensureNoActiveSession(ctx, c.stores.Session, campaignID); err != nil {
-		return campaign.Campaign{}, err
+		return storage.CampaignRecord{}, err
 	}
-	if _, err := campaign.TransitionCampaignStatus(campaignRecord, campaign.CampaignStatusCompleted, c.clock); err != nil {
-		return campaign.Campaign{}, err
+	if err := validateCampaignStatusTransition(campaignRecord, campaign.StatusCompleted); err != nil {
+		return storage.CampaignRecord{}, err
+	}
+	if c.stores.Domain != nil {
+		actorID := grpcmeta.ParticipantIDFromContext(ctx)
+		actorType := command.ActorTypeSystem
+		if actorID != "" {
+			actorType = command.ActorTypeParticipant
+		}
+
+		result, err := c.stores.Domain.Execute(ctx, command.Command{
+			CampaignID:   campaignID,
+			Type:         command.Type("campaign.end"),
+			ActorType:    actorType,
+			ActorID:      actorID,
+			RequestID:    grpcmeta.RequestIDFromContext(ctx),
+			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+			EntityType:   "campaign",
+			EntityID:     campaignID,
+		})
+		if err != nil {
+			return storage.CampaignRecord{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
+		}
+		if len(result.Decision.Rejections) > 0 {
+			return storage.CampaignRecord{}, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
+		}
+		applier := c.stores.Applier()
+		for _, evt := range result.Decision.Events {
+			if err := applier.Apply(ctx, evt); err != nil {
+				return storage.CampaignRecord{}, status.Errorf(codes.Internal, "apply event: %v", err)
+			}
+		}
+		updated, err := c.stores.Campaign.Get(ctx, campaignID)
+		if err != nil {
+			return storage.CampaignRecord{}, status.Errorf(codes.Internal, "load campaign: %v", err)
+		}
+
+		return updated, nil
 	}
 
-	payload := event.CampaignUpdatedPayload{
-		Fields: map[string]any{
-			"status": campaignStatusToProto(campaign.CampaignStatusCompleted).String(),
-		},
-	}
-	payloadJSON, err := json.Marshal(payload)
-	if err != nil {
-		return campaign.Campaign{}, status.Errorf(codes.Internal, "encode payload: %v", err)
-	}
-
-	actorID := grpcmeta.ParticipantIDFromContext(ctx)
-	actorType := event.ActorTypeSystem
-	if actorID != "" {
-		actorType = event.ActorTypeParticipant
-	}
-
-	stored, err := c.stores.Event.AppendEvent(ctx, event.Event{
-		CampaignID:   campaignID,
-		Timestamp:    c.clock().UTC(),
-		Type:         event.TypeCampaignUpdated,
-		RequestID:    grpcmeta.RequestIDFromContext(ctx),
-		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-		ActorType:    actorType,
-		ActorID:      actorID,
-		EntityType:   "campaign",
-		EntityID:     campaignID,
-		PayloadJSON:  payloadJSON,
-	})
-	if err != nil {
-		return campaign.Campaign{}, status.Errorf(codes.Internal, "append event: %v", err)
-	}
-
-	applier := c.stores.Applier()
-	if err := applier.Apply(ctx, stored); err != nil {
-		return campaign.Campaign{}, status.Errorf(codes.Internal, "apply event: %v", err)
-	}
-
-	updated, err := c.stores.Campaign.Get(ctx, campaignID)
-	if err != nil {
-		return campaign.Campaign{}, status.Errorf(codes.Internal, "load campaign: %v", err)
-	}
-
-	return updated, nil
+	return storage.CampaignRecord{}, status.Error(codes.Internal, "domain engine is not configured")
 }
 
-func (c campaignApplication) ArchiveCampaign(ctx context.Context, campaignID string) (campaign.Campaign, error) {
+func (c campaignApplication) ArchiveCampaign(ctx context.Context, campaignID string) (storage.CampaignRecord, error) {
 	campaignRecord, err := c.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return campaign.Campaign{}, err
+		return storage.CampaignRecord{}, err
 	}
 
 	if err := ensureNoActiveSession(ctx, c.stores.Session, campaignID); err != nil {
-		return campaign.Campaign{}, err
+		return storage.CampaignRecord{}, err
 	}
-	if _, err := campaign.TransitionCampaignStatus(campaignRecord, campaign.CampaignStatusArchived, c.clock); err != nil {
-		return campaign.Campaign{}, err
+	if err := validateCampaignStatusTransition(campaignRecord, campaign.StatusArchived); err != nil {
+		return storage.CampaignRecord{}, err
+	}
+	if c.stores.Domain != nil {
+		actorID := grpcmeta.ParticipantIDFromContext(ctx)
+		actorType := command.ActorTypeSystem
+		if actorID != "" {
+			actorType = command.ActorTypeParticipant
+		}
+
+		result, err := c.stores.Domain.Execute(ctx, command.Command{
+			CampaignID:   campaignID,
+			Type:         command.Type("campaign.archive"),
+			ActorType:    actorType,
+			ActorID:      actorID,
+			RequestID:    grpcmeta.RequestIDFromContext(ctx),
+			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+			EntityType:   "campaign",
+			EntityID:     campaignID,
+		})
+		if err != nil {
+			return storage.CampaignRecord{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
+		}
+		if len(result.Decision.Rejections) > 0 {
+			return storage.CampaignRecord{}, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
+		}
+		applier := c.stores.Applier()
+		for _, evt := range result.Decision.Events {
+			if err := applier.Apply(ctx, evt); err != nil {
+				return storage.CampaignRecord{}, status.Errorf(codes.Internal, "apply event: %v", err)
+			}
+		}
+		updated, err := c.stores.Campaign.Get(ctx, campaignID)
+		if err != nil {
+			return storage.CampaignRecord{}, status.Errorf(codes.Internal, "load campaign: %v", err)
+		}
+
+		return updated, nil
 	}
 
-	payload := event.CampaignUpdatedPayload{
-		Fields: map[string]any{
-			"status": campaignStatusToProto(campaign.CampaignStatusArchived).String(),
-		},
-	}
-	payloadJSON, err := json.Marshal(payload)
-	if err != nil {
-		return campaign.Campaign{}, status.Errorf(codes.Internal, "encode payload: %v", err)
-	}
-
-	actorID := grpcmeta.ParticipantIDFromContext(ctx)
-	actorType := event.ActorTypeSystem
-	if actorID != "" {
-		actorType = event.ActorTypeParticipant
-	}
-
-	stored, err := c.stores.Event.AppendEvent(ctx, event.Event{
-		CampaignID:   campaignID,
-		Timestamp:    c.clock().UTC(),
-		Type:         event.TypeCampaignUpdated,
-		RequestID:    grpcmeta.RequestIDFromContext(ctx),
-		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-		ActorType:    actorType,
-		ActorID:      actorID,
-		EntityType:   "campaign",
-		EntityID:     campaignID,
-		PayloadJSON:  payloadJSON,
-	})
-	if err != nil {
-		return campaign.Campaign{}, status.Errorf(codes.Internal, "append event: %v", err)
-	}
-
-	applier := c.stores.Applier()
-	if err := applier.Apply(ctx, stored); err != nil {
-		return campaign.Campaign{}, status.Errorf(codes.Internal, "apply event: %v", err)
-	}
-
-	updated, err := c.stores.Campaign.Get(ctx, campaignID)
-	if err != nil {
-		return campaign.Campaign{}, status.Errorf(codes.Internal, "load campaign: %v", err)
-	}
-
-	return updated, nil
+	return storage.CampaignRecord{}, status.Error(codes.Internal, "domain engine is not configured")
 }
 
-func (c campaignApplication) RestoreCampaign(ctx context.Context, campaignID string) (campaign.Campaign, error) {
+func (c campaignApplication) RestoreCampaign(ctx context.Context, campaignID string) (storage.CampaignRecord, error) {
 	campaignRecord, err := c.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return campaign.Campaign{}, err
+		return storage.CampaignRecord{}, err
 	}
-	if _, err := campaign.TransitionCampaignStatus(campaignRecord, campaign.CampaignStatusDraft, c.clock); err != nil {
-		return campaign.Campaign{}, err
+	if err := validateCampaignStatusTransition(campaignRecord, campaign.StatusDraft); err != nil {
+		return storage.CampaignRecord{}, err
+	}
+	if c.stores.Domain != nil {
+		actorID := grpcmeta.ParticipantIDFromContext(ctx)
+		actorType := command.ActorTypeSystem
+		if actorID != "" {
+			actorType = command.ActorTypeParticipant
+		}
+
+		result, err := c.stores.Domain.Execute(ctx, command.Command{
+			CampaignID:   campaignID,
+			Type:         command.Type("campaign.restore"),
+			ActorType:    actorType,
+			ActorID:      actorID,
+			RequestID:    grpcmeta.RequestIDFromContext(ctx),
+			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+			EntityType:   "campaign",
+			EntityID:     campaignID,
+		})
+		if err != nil {
+			return storage.CampaignRecord{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
+		}
+		if len(result.Decision.Rejections) > 0 {
+			return storage.CampaignRecord{}, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
+		}
+		applier := c.stores.Applier()
+		for _, evt := range result.Decision.Events {
+			if err := applier.Apply(ctx, evt); err != nil {
+				return storage.CampaignRecord{}, status.Errorf(codes.Internal, "apply event: %v", err)
+			}
+		}
+		updated, err := c.stores.Campaign.Get(ctx, campaignID)
+		if err != nil {
+			return storage.CampaignRecord{}, status.Errorf(codes.Internal, "load campaign: %v", err)
+		}
+
+		return updated, nil
 	}
 
-	payload := event.CampaignUpdatedPayload{
-		Fields: map[string]any{
-			"status": campaignStatusToProto(campaign.CampaignStatusDraft).String(),
-		},
-	}
-	payloadJSON, err := json.Marshal(payload)
-	if err != nil {
-		return campaign.Campaign{}, status.Errorf(codes.Internal, "encode payload: %v", err)
-	}
+	return storage.CampaignRecord{}, status.Error(codes.Internal, "domain engine is not configured")
+}
 
-	actorID := grpcmeta.ParticipantIDFromContext(ctx)
-	actorType := event.ActorTypeSystem
-	if actorID != "" {
-		actorType = event.ActorTypeParticipant
+// validateCampaignStatusTransition ensures the target status is allowed from the current state.
+func validateCampaignStatusTransition(record storage.CampaignRecord, target campaign.Status) error {
+	if campaign.IsStatusTransitionAllowed(record.Status, target) {
+		return nil
 	}
+	fromStatus := campaignStatusLabel(record.Status)
+	toStatus := campaignStatusLabel(target)
+	return apperrors.WithMetadata(
+		apperrors.CodeCampaignInvalidStatusTransition,
+		fmt.Sprintf("campaign status transition not allowed: %s -> %s", fromStatus, toStatus),
+		map[string]string{"FromStatus": fromStatus, "ToStatus": toStatus},
+	)
+}
 
-	stored, err := c.stores.Event.AppendEvent(ctx, event.Event{
-		CampaignID:   campaignID,
-		Timestamp:    c.clock().UTC(),
-		Type:         event.TypeCampaignUpdated,
-		RequestID:    grpcmeta.RequestIDFromContext(ctx),
-		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-		ActorType:    actorType,
-		ActorID:      actorID,
-		EntityType:   "campaign",
-		EntityID:     campaignID,
-		PayloadJSON:  payloadJSON,
-	})
-	if err != nil {
-		return campaign.Campaign{}, status.Errorf(codes.Internal, "append event: %v", err)
+// campaignStatusLabel returns a stable label for campaign status errors.
+func campaignStatusLabel(status campaign.Status) string {
+	switch status {
+	case campaign.StatusDraft:
+		return "DRAFT"
+	case campaign.StatusActive:
+		return "ACTIVE"
+	case campaign.StatusCompleted:
+		return "COMPLETED"
+	case campaign.StatusArchived:
+		return "ARCHIVED"
+	default:
+		return "UNSPECIFIED"
 	}
-
-	applier := c.stores.Applier()
-	if err := applier.Apply(ctx, stored); err != nil {
-		return campaign.Campaign{}, status.Errorf(codes.Internal, "apply event: %v", err)
-	}
-
-	updated, err := c.stores.Campaign.Get(ctx, campaignID)
-	if err != nil {
-		return campaign.Campaign{}, status.Errorf(codes.Internal, "load campaign: %v", err)
-	}
-
-	return updated, nil
 }

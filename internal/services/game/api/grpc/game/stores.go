@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/projection"
+	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -26,6 +26,7 @@ type Stores struct {
 	Snapshot           storage.SnapshotStore
 	CampaignFork       storage.CampaignForkStore
 	DaggerheartContent storage.DaggerheartContentStore
+	Domain             Domain
 }
 
 // Applier returns a projection Applier wired to the stores in this bundle.

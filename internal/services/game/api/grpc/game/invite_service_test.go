@@ -8,9 +8,12 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/invite"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/participant"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 )
 
@@ -20,14 +23,14 @@ func TestCreateInvite_NilRequest(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
-func TestCreateInvite_Success(t *testing.T) {
+func TestCreateInvite_RequiresDomainEngine(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
 	inviteStore := newFakeInviteStore()
 	eventStore := newFakeEventStore()
 
-	campaignStore.campaigns["campaign-1"] = campaign.Campaign{ID: "campaign-1", Status: campaign.CampaignStatusDraft}
-	participantStore.participants["campaign-1"] = map[string]participant.Participant{
+	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
+	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
 		"owner-1":       {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner},
 		"participant-1": {ID: "participant-1", CampaignID: "campaign-1"},
 	}
@@ -35,6 +38,52 @@ func TestCreateInvite_Success(t *testing.T) {
 	svc := &InviteService{
 		stores:      Stores{Campaign: campaignStore, Participant: participantStore, Invite: inviteStore, Event: eventStore},
 		clock:       fixedClock(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
+		idGenerator: fixedIDGenerator("invite-123"),
+	}
+
+	ctx := contextWithParticipantID("owner-1")
+	_, err := svc.CreateInvite(ctx, &statev1.CreateInviteRequest{
+		CampaignId:    "campaign-1",
+		ParticipantId: "participant-1",
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestCreateInvite_Success(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	inviteStore := newFakeInviteStore()
+	eventStore := newFakeEventStore()
+	now := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
+	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
+		"owner-1":       {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner},
+		"participant-1": {ID: "participant-1", CampaignID: "campaign-1"},
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, result: engine.Result{
+		Decision: command.Accept(event.Event{
+			CampaignID:  "campaign-1",
+			Type:        event.Type("invite.created"),
+			Timestamp:   now,
+			ActorType:   event.ActorTypeParticipant,
+			ActorID:     "owner-1",
+			EntityType:  "invite",
+			EntityID:    "invite-123",
+			PayloadJSON: []byte(`{"invite_id":"invite-123","participant_id":"participant-1","status":"pending","created_by_participant_id":"owner-1"}`),
+		}),
+	}}
+
+	svc := &InviteService{
+		stores: Stores{
+			Campaign:    campaignStore,
+			Participant: participantStore,
+			Invite:      inviteStore,
+			Event:       eventStore,
+			Domain:      domain,
+		},
+		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("invite-123"),
 	}
 
@@ -52,19 +101,88 @@ func TestCreateInvite_Success(t *testing.T) {
 	if resp.Invite.Id != "invite-123" {
 		t.Fatalf("invite id = %s, want invite-123", resp.Invite.Id)
 	}
-	if eventStore.events["campaign-1"][0].Type != event.TypeInviteCreated {
-		t.Fatalf("event type = %s, want %s", eventStore.events["campaign-1"][0].Type, event.TypeInviteCreated)
+	if eventStore.events["campaign-1"][0].Type != event.Type("invite.created") {
+		t.Fatalf("event type = %s, want %s", eventStore.events["campaign-1"][0].Type, event.Type("invite.created"))
+	}
+}
+
+func TestCreateInvite_UsesDomainEngine(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	inviteStore := newFakeInviteStore()
+	eventStore := newFakeEventStore()
+	now := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
+	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
+		"owner-1":       {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner},
+		"participant-1": {ID: "participant-1", CampaignID: "campaign-1"},
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, result: engine.Result{
+		Decision: command.Accept(event.Event{
+			CampaignID:  "campaign-1",
+			Type:        event.Type("invite.created"),
+			Timestamp:   now,
+			ActorType:   event.ActorTypeParticipant,
+			ActorID:     "owner-1",
+			EntityType:  "invite",
+			EntityID:    "invite-123",
+			PayloadJSON: []byte(`{"invite_id":"invite-123","participant_id":"participant-1","status":"pending","created_by_participant_id":"owner-1"}`),
+		}),
+	}}
+
+	svc := &InviteService{
+		stores: Stores{
+			Campaign:    campaignStore,
+			Participant: participantStore,
+			Invite:      inviteStore,
+			Event:       eventStore,
+			Domain:      domain,
+		},
+		clock:       fixedClock(now),
+		idGenerator: fixedIDGenerator("invite-123"),
+	}
+
+	ctx := contextWithParticipantID("owner-1")
+	resp, err := svc.CreateInvite(ctx, &statev1.CreateInviteRequest{
+		CampaignId:    "campaign-1",
+		ParticipantId: "participant-1",
+	})
+	if err != nil {
+		t.Fatalf("CreateInvite returned error: %v", err)
+	}
+	if resp.Invite == nil {
+		t.Fatal("CreateInvite response has nil invite")
+	}
+	if domain.calls != 1 {
+		t.Fatalf("expected domain to be called once, got %d", domain.calls)
+	}
+	if len(domain.commands) != 1 {
+		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
+	}
+	if domain.commands[0].Type != command.Type("invite.create") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "invite.create")
+	}
+	if domain.commands[0].EntityID != "invite-123" {
+		t.Fatalf("command entity id = %s, want %s", domain.commands[0].EntityID, "invite-123")
+	}
+	if len(eventStore.events["campaign-1"]) != 1 {
+		t.Fatalf("event count = %d, want 1", len(eventStore.events["campaign-1"]))
+	}
+	if eventStore.events["campaign-1"][0].Type != event.Type("invite.created") {
+		t.Fatalf("event type = %s, want %s", eventStore.events["campaign-1"][0].Type, event.Type("invite.created"))
 	}
 }
 
 func TestRevokeInvite_AlreadyClaimed(t *testing.T) {
 	inviteStore := newFakeInviteStore()
 	eventStore := newFakeEventStore()
-	inviteStore.invites["invite-1"] = invite.Invite{ID: "invite-1", CampaignID: "campaign-1", Status: invite.StatusClaimed}
+	inviteStore.invites["invite-1"] = storage.InviteRecord{ID: "invite-1", CampaignID: "campaign-1", Status: invite.StatusClaimed}
 	campaignStore := newFakeCampaignStore()
-	campaignStore.campaigns["campaign-1"] = campaign.Campaign{ID: "campaign-1", Status: campaign.CampaignStatusDraft}
+	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
 	participantStore := newFakeParticipantStore()
-	participantStore.participants["campaign-1"] = map[string]participant.Participant{
+	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
 		"owner-1": {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner},
 	}
 
@@ -85,8 +203,8 @@ func TestCreateInvite_MissingParticipantIdentity(t *testing.T) {
 	inviteStore := newFakeInviteStore()
 	eventStore := newFakeEventStore()
 
-	campaignStore.campaigns["campaign-1"] = campaign.Campaign{ID: "campaign-1", Status: campaign.CampaignStatusDraft}
-	participantStore.participants["campaign-1"] = map[string]participant.Participant{
+	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
+	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
 		"owner-1":       {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner},
 		"participant-1": {ID: "participant-1", CampaignID: "campaign-1"},
 	}
@@ -110,16 +228,42 @@ func TestClaimInvite_Success(t *testing.T) {
 	inviteStore := newFakeInviteStore()
 	eventStore := newFakeEventStore()
 
-	campaignStore.campaigns["campaign-1"] = campaign.Campaign{ID: "campaign-1", Status: campaign.CampaignStatusDraft}
-	participantStore.participants["campaign-1"] = map[string]participant.Participant{
+	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
+	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
 		"participant-1": {ID: "participant-1", CampaignID: "campaign-1"},
 	}
-	inviteStore.invites["invite-1"] = invite.Invite{
+	inviteStore.invites["invite-1"] = storage.InviteRecord{
 		ID:            "invite-1",
 		CampaignID:    "campaign-1",
 		ParticipantID: "participant-1",
 		Status:        invite.StatusPending,
 	}
+
+	now := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.bind"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "campaign-1",
+				Type:        event.Type("participant.bound"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				EntityType:  "participant",
+				EntityID:    "participant-1",
+				PayloadJSON: []byte(`{"participant_id":"participant-1","user_id":"user-1"}`),
+			}),
+		},
+		command.Type("invite.claim"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "campaign-1",
+				Type:        event.Type("invite.claimed"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				EntityType:  "invite",
+				EntityID:    "invite-1",
+				PayloadJSON: []byte(`{"invite_id":"invite-1","participant_id":"participant-1","user_id":"user-1","jti":"jwt-1"}`),
+			}),
+		},
+	}}
 
 	svc := &InviteService{
 		stores: Stores{
@@ -127,8 +271,9 @@ func TestClaimInvite_Success(t *testing.T) {
 			Participant: participantStore,
 			Invite:      inviteStore,
 			Event:       eventStore,
+			Domain:      domain,
 		},
-		clock: fixedClock(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
+		clock: fixedClock(now),
 	}
 
 	signer := newJoinGrantSigner(t)
@@ -158,11 +303,144 @@ func TestClaimInvite_Success(t *testing.T) {
 	if len(eventStore.events["campaign-1"]) != 2 {
 		t.Fatalf("event count = %d, want 2", len(eventStore.events["campaign-1"]))
 	}
-	if eventStore.events["campaign-1"][0].Type != event.TypeParticipantBound {
-		t.Fatalf("event type = %s, want %s", eventStore.events["campaign-1"][0].Type, event.TypeParticipantBound)
+	if eventStore.events["campaign-1"][0].Type != event.Type("participant.bound") {
+		t.Fatalf("event type = %s, want %s", eventStore.events["campaign-1"][0].Type, event.Type("participant.bound"))
 	}
-	if eventStore.events["campaign-1"][1].Type != event.TypeInviteClaimed {
-		t.Fatalf("event type = %s, want %s", eventStore.events["campaign-1"][1].Type, event.TypeInviteClaimed)
+	if eventStore.events["campaign-1"][1].Type != event.Type("invite.claimed") {
+		t.Fatalf("event type = %s, want %s", eventStore.events["campaign-1"][1].Type, event.Type("invite.claimed"))
+	}
+}
+
+func TestClaimInvite_RequiresDomainEngine(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	inviteStore := newFakeInviteStore()
+	eventStore := newFakeEventStore()
+
+	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
+	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
+		"participant-1": {ID: "participant-1", CampaignID: "campaign-1"},
+	}
+	inviteStore.invites["invite-1"] = storage.InviteRecord{
+		ID:            "invite-1",
+		CampaignID:    "campaign-1",
+		ParticipantID: "participant-1",
+		Status:        invite.StatusPending,
+	}
+	now := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	svc := &InviteService{
+		stores: Stores{
+			Campaign:    campaignStore,
+			Participant: participantStore,
+			Invite:      inviteStore,
+			Event:       eventStore,
+		},
+		clock: fixedClock(now),
+	}
+
+	signer := newJoinGrantSigner(t)
+	joinGrant := signer.Token(t, "campaign-1", "invite-1", "user-1", "", svc.clock())
+	ctx := contextWithUserID("user-1")
+	_, err := svc.ClaimInvite(ctx, &statev1.ClaimInviteRequest{
+		CampaignId: "campaign-1",
+		InviteId:   "invite-1",
+		JoinGrant:  joinGrant,
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestClaimInvite_UsesDomainEngine(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	inviteStore := newFakeInviteStore()
+	eventStore := newFakeEventStore()
+	now := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
+	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
+		"participant-1": {ID: "participant-1", CampaignID: "campaign-1"},
+	}
+	inviteStore.invites["invite-1"] = storage.InviteRecord{
+		ID:            "invite-1",
+		CampaignID:    "campaign-1",
+		ParticipantID: "participant-1",
+		Status:        invite.StatusPending,
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.bind"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "campaign-1",
+				Type:        event.Type("participant.bound"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				EntityType:  "participant",
+				EntityID:    "participant-1",
+				PayloadJSON: []byte(`{"participant_id":"participant-1","user_id":"user-1"}`),
+			}),
+		},
+		command.Type("invite.claim"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "campaign-1",
+				Type:        event.Type("invite.claimed"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				EntityType:  "invite",
+				EntityID:    "invite-1",
+				PayloadJSON: []byte(`{"invite_id":"invite-1","participant_id":"participant-1","user_id":"user-1","jti":"jwt-1"}`),
+			}),
+		},
+	}}
+
+	svc := &InviteService{
+		stores: Stores{
+			Campaign:    campaignStore,
+			Participant: participantStore,
+			Invite:      inviteStore,
+			Event:       eventStore,
+			Domain:      domain,
+		},
+		clock: fixedClock(now),
+	}
+
+	signer := newJoinGrantSigner(t)
+	joinGrant := signer.Token(t, "campaign-1", "invite-1", "user-1", "", svc.clock())
+	ctx := contextWithUserID("user-1")
+	resp, err := svc.ClaimInvite(ctx, &statev1.ClaimInviteRequest{
+		CampaignId: "campaign-1",
+		InviteId:   "invite-1",
+		JoinGrant:  joinGrant,
+	})
+	if err != nil {
+		t.Fatalf("ClaimInvite returned error: %v", err)
+	}
+	if resp.Invite == nil {
+		t.Fatal("ClaimInvite response has nil invite")
+	}
+	if resp.Participant == nil {
+		t.Fatal("ClaimInvite response has nil participant")
+	}
+	if domain.calls != 2 {
+		t.Fatalf("expected domain to be called twice, got %d", domain.calls)
+	}
+	if len(domain.commands) != 2 {
+		t.Fatalf("expected 2 domain commands, got %d", len(domain.commands))
+	}
+	if domain.commands[0].Type != command.Type("participant.bind") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "participant.bind")
+	}
+	if domain.commands[1].Type != command.Type("invite.claim") {
+		t.Fatalf("command type = %s, want %s", domain.commands[1].Type, "invite.claim")
+	}
+	if len(eventStore.events["campaign-1"]) != 2 {
+		t.Fatalf("event count = %d, want 2", len(eventStore.events["campaign-1"]))
+	}
+	if eventStore.events["campaign-1"][0].Type != event.Type("participant.bound") {
+		t.Fatalf("event type = %s, want %s", eventStore.events["campaign-1"][0].Type, event.Type("participant.bound"))
+	}
+	if eventStore.events["campaign-1"][1].Type != event.Type("invite.claimed") {
+		t.Fatalf("event type = %s, want %s", eventStore.events["campaign-1"][1].Type, event.Type("invite.claimed"))
 	}
 }
 
@@ -172,16 +450,30 @@ func TestClaimInvite_MissingUserID(t *testing.T) {
 	inviteStore := newFakeInviteStore()
 	eventStore := newFakeEventStore()
 
-	campaignStore.campaigns["campaign-1"] = campaign.Campaign{ID: "campaign-1", Status: campaign.CampaignStatusDraft}
-	participantStore.participants["campaign-1"] = map[string]participant.Participant{
+	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
+	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
 		"participant-1": {ID: "participant-1", CampaignID: "campaign-1"},
 	}
-	inviteStore.invites["invite-1"] = invite.Invite{
+	inviteStore.invites["invite-1"] = storage.InviteRecord{
 		ID:            "invite-1",
 		CampaignID:    "campaign-1",
 		ParticipantID: "participant-1",
 		Status:        invite.StatusPending,
 	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.bind"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "campaign-1",
+				Type:        event.Type("participant.bound"),
+				Timestamp:   time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+				ActorType:   event.ActorTypeSystem,
+				EntityType:  "participant",
+				EntityID:    "participant-1",
+				PayloadJSON: []byte(`{"participant_id":"participant-1","user_id":"user-1"}`),
+			}),
+		},
+	}}
 
 	svc := &InviteService{
 		stores: Stores{
@@ -189,6 +481,7 @@ func TestClaimInvite_MissingUserID(t *testing.T) {
 			Participant: participantStore,
 			Invite:      inviteStore,
 			Event:       eventStore,
+			Domain:      domain,
 		},
 		clock: fixedClock(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
 	}
@@ -207,16 +500,41 @@ func TestClaimInvite_IdempotentGrant(t *testing.T) {
 	inviteStore := newFakeInviteStore()
 	eventStore := newFakeEventStore()
 
-	campaignStore.campaigns["campaign-1"] = campaign.Campaign{ID: "campaign-1", Status: campaign.CampaignStatusDraft}
-	participantStore.participants["campaign-1"] = map[string]participant.Participant{
+	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
+	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
 		"participant-1": {ID: "participant-1", CampaignID: "campaign-1"},
 	}
-	inviteStore.invites["invite-1"] = invite.Invite{
+	inviteStore.invites["invite-1"] = storage.InviteRecord{
 		ID:            "invite-1",
 		CampaignID:    "campaign-1",
 		ParticipantID: "participant-1",
 		Status:        invite.StatusPending,
 	}
+	now := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.bind"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "campaign-1",
+				Type:        event.Type("participant.bound"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				EntityType:  "participant",
+				EntityID:    "participant-1",
+				PayloadJSON: []byte(`{"participant_id":"participant-1","user_id":"user-1"}`),
+			}),
+		},
+		command.Type("invite.claim"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "campaign-1",
+				Type:        event.Type("invite.claimed"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				EntityType:  "invite",
+				EntityID:    "invite-1",
+				PayloadJSON: []byte(`{"invite_id":"invite-1","participant_id":"participant-1","user_id":"user-1","jti":"jti-1"}`),
+			}),
+		},
+	}}
 
 	svc := &InviteService{
 		stores: Stores{
@@ -224,8 +542,9 @@ func TestClaimInvite_IdempotentGrant(t *testing.T) {
 			Participant: participantStore,
 			Invite:      inviteStore,
 			Event:       eventStore,
+			Domain:      domain,
 		},
-		clock: fixedClock(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
+		clock: fixedClock(now),
 	}
 
 	signer := newJoinGrantSigner(t)
@@ -260,17 +579,31 @@ func TestClaimInvite_UserAlreadyClaimed(t *testing.T) {
 	inviteStore := newFakeInviteStore()
 	eventStore := newFakeEventStore()
 
-	campaignStore.campaigns["campaign-1"] = campaign.Campaign{ID: "campaign-1", Status: campaign.CampaignStatusDraft}
-	participantStore.participants["campaign-1"] = map[string]participant.Participant{
+	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
+	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
 		"participant-1": {ID: "participant-1", CampaignID: "campaign-1"},
 		"participant-2": {ID: "participant-2", CampaignID: "campaign-1", UserID: "user-1"},
 	}
-	inviteStore.invites["invite-1"] = invite.Invite{
+	inviteStore.invites["invite-1"] = storage.InviteRecord{
 		ID:            "invite-1",
 		CampaignID:    "campaign-1",
 		ParticipantID: "participant-1",
 		Status:        invite.StatusPending,
 	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.bind"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "campaign-1",
+				Type:        event.Type("participant.bound"),
+				Timestamp:   time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+				ActorType:   event.ActorTypeSystem,
+				EntityType:  "participant",
+				EntityID:    "participant-1",
+				PayloadJSON: []byte(`{"participant_id":"participant-1","user_id":"user-1"}`),
+			}),
+		},
+	}}
 
 	svc := &InviteService{
 		stores: Stores{
@@ -278,6 +611,7 @@ func TestClaimInvite_UserAlreadyClaimed(t *testing.T) {
 			Participant: participantStore,
 			Invite:      inviteStore,
 			Event:       eventStore,
+			Domain:      domain,
 		},
 		clock: fixedClock(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
 	}
@@ -313,11 +647,11 @@ func TestRevokeInvite_InviteNotFound(t *testing.T) {
 
 func TestRevokeInvite_AlreadyRevoked(t *testing.T) {
 	inviteStore := newFakeInviteStore()
-	inviteStore.invites["invite-1"] = invite.Invite{ID: "invite-1", CampaignID: "campaign-1", Status: invite.StatusRevoked}
+	inviteStore.invites["invite-1"] = storage.InviteRecord{ID: "invite-1", CampaignID: "campaign-1", Status: invite.StatusRevoked}
 	campaignStore := newFakeCampaignStore()
-	campaignStore.campaigns["campaign-1"] = campaign.Campaign{ID: "campaign-1", Status: campaign.CampaignStatusDraft}
+	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
 	participantStore := newFakeParticipantStore()
-	participantStore.participants["campaign-1"] = map[string]participant.Participant{
+	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
 		"owner-1": {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner},
 	}
 
@@ -334,18 +668,32 @@ func TestRevokeInvite_AlreadyRevoked(t *testing.T) {
 
 func TestRevokeInvite_Success(t *testing.T) {
 	inviteStore := newFakeInviteStore()
-	inviteStore.invites["invite-1"] = invite.Invite{ID: "invite-1", CampaignID: "campaign-1", Status: invite.StatusPending}
+	inviteStore.invites["invite-1"] = storage.InviteRecord{ID: "invite-1", CampaignID: "campaign-1", Status: invite.StatusPending}
 	campaignStore := newFakeCampaignStore()
-	campaignStore.campaigns["campaign-1"] = campaign.Campaign{ID: "campaign-1", Status: campaign.CampaignStatusDraft}
+	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
 	participantStore := newFakeParticipantStore()
-	participantStore.participants["campaign-1"] = map[string]participant.Participant{
+	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
 		"owner-1": {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner},
 	}
 	eventStore := newFakeEventStore()
+	now := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	domain := &fakeDomainEngine{store: eventStore, result: engine.Result{
+		Decision: command.Accept(event.Event{
+			CampaignID:  "campaign-1",
+			Type:        event.Type("invite.revoked"),
+			Timestamp:   now,
+			ActorType:   event.ActorTypeParticipant,
+			ActorID:     "owner-1",
+			EntityType:  "invite",
+			EntityID:    "invite-1",
+			PayloadJSON: []byte(`{"invite_id":"invite-1"}`),
+		}),
+	}}
 
 	svc := &InviteService{
-		stores:      Stores{Invite: inviteStore, Participant: participantStore, Campaign: campaignStore, Event: eventStore},
-		clock:       fixedClock(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
+		stores:      Stores{Invite: inviteStore, Participant: participantStore, Campaign: campaignStore, Event: eventStore, Domain: domain},
+		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("x"),
 	}
 
@@ -363,8 +711,91 @@ func TestRevokeInvite_Success(t *testing.T) {
 	if len(eventStore.events["campaign-1"]) != 1 {
 		t.Fatalf("event count = %d, want 1", len(eventStore.events["campaign-1"]))
 	}
-	if eventStore.events["campaign-1"][0].Type != event.TypeInviteRevoked {
-		t.Fatalf("event type = %s, want %s", eventStore.events["campaign-1"][0].Type, event.TypeInviteRevoked)
+	if eventStore.events["campaign-1"][0].Type != event.Type("invite.revoked") {
+		t.Fatalf("event type = %s, want %s", eventStore.events["campaign-1"][0].Type, event.Type("invite.revoked"))
+	}
+}
+
+func TestRevokeInvite_RequiresDomainEngine(t *testing.T) {
+	inviteStore := newFakeInviteStore()
+	inviteStore.invites["invite-1"] = storage.InviteRecord{ID: "invite-1", CampaignID: "campaign-1", Status: invite.StatusPending}
+	campaignStore := newFakeCampaignStore()
+	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
+	participantStore := newFakeParticipantStore()
+	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
+		"owner-1": {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner},
+	}
+
+	svc := &InviteService{
+		stores:      Stores{Invite: inviteStore, Participant: participantStore, Campaign: campaignStore, Event: newFakeEventStore()},
+		clock:       fixedClock(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
+		idGenerator: fixedIDGenerator("x"),
+	}
+
+	ctx := contextWithParticipantID("owner-1")
+	_, err := svc.RevokeInvite(ctx, &statev1.RevokeInviteRequest{InviteId: "invite-1"})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestRevokeInvite_UsesDomainEngine(t *testing.T) {
+	inviteStore := newFakeInviteStore()
+	inviteStore.invites["invite-1"] = storage.InviteRecord{ID: "invite-1", CampaignID: "campaign-1", Status: invite.StatusPending}
+	campaignStore := newFakeCampaignStore()
+	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
+	participantStore := newFakeParticipantStore()
+	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
+		"owner-1": {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner},
+	}
+	eventStore := newFakeEventStore()
+	now := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	domain := &fakeDomainEngine{store: eventStore, result: engine.Result{
+		Decision: command.Accept(event.Event{
+			CampaignID:  "campaign-1",
+			Type:        event.Type("invite.revoked"),
+			Timestamp:   now,
+			ActorType:   event.ActorTypeParticipant,
+			ActorID:     "owner-1",
+			EntityType:  "invite",
+			EntityID:    "invite-1",
+			PayloadJSON: []byte(`{"invite_id":"invite-1"}`),
+		}),
+	}}
+
+	svc := &InviteService{
+		stores: Stores{
+			Invite:      inviteStore,
+			Participant: participantStore,
+			Campaign:    campaignStore,
+			Event:       eventStore,
+			Domain:      domain,
+		},
+		clock:       fixedClock(now),
+		idGenerator: fixedIDGenerator("x"),
+	}
+
+	ctx := contextWithParticipantID("owner-1")
+	resp, err := svc.RevokeInvite(ctx, &statev1.RevokeInviteRequest{InviteId: "invite-1"})
+	if err != nil {
+		t.Fatalf("RevokeInvite returned error: %v", err)
+	}
+	if resp.Invite == nil {
+		t.Fatal("RevokeInvite response has nil invite")
+	}
+	if domain.calls != 1 {
+		t.Fatalf("expected domain to be called once, got %d", domain.calls)
+	}
+	if len(domain.commands) != 1 {
+		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
+	}
+	if domain.commands[0].Type != command.Type("invite.revoke") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "invite.revoke")
+	}
+	if len(eventStore.events["campaign-1"]) != 1 {
+		t.Fatalf("event count = %d, want 1", len(eventStore.events["campaign-1"]))
+	}
+	if eventStore.events["campaign-1"][0].Type != event.Type("invite.revoked") {
+		t.Fatalf("event type = %s, want %s", eventStore.events["campaign-1"][0].Type, event.Type("invite.revoked"))
 	}
 }
 
@@ -437,19 +868,19 @@ func TestListPendingInvites_Success(t *testing.T) {
 	participantStore := newFakeParticipantStore()
 	inviteStore := newFakeInviteStore()
 
-	campaignStore.campaigns["campaign-1"] = campaign.Campaign{ID: "campaign-1", Status: campaign.CampaignStatusDraft}
-	participantStore.participants["campaign-1"] = map[string]participant.Participant{
+	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
+	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
 		"owner-1": {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner, UserID: "user-1"},
-		"seat-1":  {ID: "seat-1", CampaignID: "campaign-1", DisplayName: "Seat 1", Role: participant.ParticipantRolePlayer},
+		"seat-1":  {ID: "seat-1", CampaignID: "campaign-1", DisplayName: "Seat 1", Role: participant.RolePlayer},
 	}
-	inviteStore.invites["invite-1"] = invite.Invite{
+	inviteStore.invites["invite-1"] = storage.InviteRecord{
 		ID:                     "invite-1",
 		CampaignID:             "campaign-1",
 		ParticipantID:          "seat-1",
 		Status:                 invite.StatusPending,
 		CreatedByParticipantID: "owner-1",
 	}
-	inviteStore.invites["invite-2"] = invite.Invite{
+	inviteStore.invites["invite-2"] = storage.InviteRecord{
 		ID:            "invite-2",
 		CampaignID:    "campaign-1",
 		ParticipantID: "seat-1",
@@ -514,11 +945,11 @@ func TestGetInvite_Success(t *testing.T) {
 	participantStore := newFakeParticipantStore()
 	inviteStore := newFakeInviteStore()
 
-	campaignStore.campaigns["campaign-1"] = campaign.Campaign{ID: "campaign-1", Status: campaign.CampaignStatusDraft}
-	participantStore.participants["campaign-1"] = map[string]participant.Participant{
+	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
+	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
 		"owner-1": {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner},
 	}
-	inviteStore.invites["invite-1"] = invite.Invite{
+	inviteStore.invites["invite-1"] = storage.InviteRecord{
 		ID:         "invite-1",
 		CampaignID: "campaign-1",
 		Status:     invite.StatusPending,
@@ -550,8 +981,8 @@ func TestGetInvite_MissingParticipantIdentity(t *testing.T) {
 	inviteStore := newFakeInviteStore()
 	participantStore := newFakeParticipantStore()
 
-	campaignStore.campaigns["campaign-1"] = campaign.Campaign{ID: "campaign-1", Status: campaign.CampaignStatusDraft}
-	inviteStore.invites["invite-1"] = invite.Invite{
+	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
+	inviteStore.invites["invite-1"] = storage.InviteRecord{
 		ID:         "invite-1",
 		CampaignID: "campaign-1",
 		Status:     invite.StatusPending,
@@ -598,16 +1029,16 @@ func TestListInvites_Success(t *testing.T) {
 	participantStore := newFakeParticipantStore()
 	inviteStore := newFakeInviteStore()
 
-	campaignStore.campaigns["campaign-1"] = campaign.Campaign{ID: "campaign-1", Status: campaign.CampaignStatusDraft}
-	participantStore.participants["campaign-1"] = map[string]participant.Participant{
+	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
+	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
 		"owner-1": {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner},
 	}
-	inviteStore.invites["invite-1"] = invite.Invite{
+	inviteStore.invites["invite-1"] = storage.InviteRecord{
 		ID:         "invite-1",
 		CampaignID: "campaign-1",
 		Status:     invite.StatusPending,
 	}
-	inviteStore.invites["invite-2"] = invite.Invite{
+	inviteStore.invites["invite-2"] = storage.InviteRecord{
 		ID:         "invite-2",
 		CampaignID: "campaign-1",
 		Status:     invite.StatusClaimed,
@@ -636,16 +1067,16 @@ func TestListInvites_WithStatusFilter(t *testing.T) {
 	participantStore := newFakeParticipantStore()
 	inviteStore := newFakeInviteStore()
 
-	campaignStore.campaigns["campaign-1"] = campaign.Campaign{ID: "campaign-1", Status: campaign.CampaignStatusDraft}
-	participantStore.participants["campaign-1"] = map[string]participant.Participant{
+	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
+	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
 		"owner-1": {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner},
 	}
-	inviteStore.invites["invite-1"] = invite.Invite{
+	inviteStore.invites["invite-1"] = storage.InviteRecord{
 		ID:         "invite-1",
 		CampaignID: "campaign-1",
 		Status:     invite.StatusPending,
 	}
-	inviteStore.invites["invite-2"] = invite.Invite{
+	inviteStore.invites["invite-2"] = storage.InviteRecord{
 		ID:         "invite-2",
 		CampaignID: "campaign-1",
 		Status:     invite.StatusClaimed,
@@ -680,8 +1111,8 @@ func TestListInvites_EmptyResult(t *testing.T) {
 	participantStore := newFakeParticipantStore()
 	inviteStore := newFakeInviteStore()
 
-	campaignStore.campaigns["campaign-1"] = campaign.Campaign{ID: "campaign-1", Status: campaign.CampaignStatusDraft}
-	participantStore.participants["campaign-1"] = map[string]participant.Participant{
+	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
+	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
 		"owner-1": {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner},
 	}
 
@@ -708,11 +1139,11 @@ func TestListPendingInvitesForUser_Success(t *testing.T) {
 	participantStore := newFakeParticipantStore()
 	inviteStore := newFakeInviteStore()
 
-	campaignStore.campaigns["campaign-1"] = campaign.Campaign{ID: "campaign-1", Status: campaign.CampaignStatusDraft}
-	participantStore.participants["campaign-1"] = map[string]participant.Participant{
-		"seat-1": {ID: "seat-1", CampaignID: "campaign-1", DisplayName: "Seat 1", Role: participant.ParticipantRolePlayer},
+	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
+	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
+		"seat-1": {ID: "seat-1", CampaignID: "campaign-1", DisplayName: "Seat 1", Role: participant.RolePlayer},
 	}
-	inviteStore.invites["invite-1"] = invite.Invite{
+	inviteStore.invites["invite-1"] = storage.InviteRecord{
 		ID:              "invite-1",
 		CampaignID:      "campaign-1",
 		ParticipantID:   "seat-1",
@@ -721,7 +1152,7 @@ func TestListPendingInvitesForUser_Success(t *testing.T) {
 		CreatedAt:       time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
 		UpdatedAt:       time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
 	}
-	inviteStore.invites["invite-2"] = invite.Invite{
+	inviteStore.invites["invite-2"] = storage.InviteRecord{
 		ID:              "invite-2",
 		CampaignID:      "campaign-1",
 		ParticipantID:   "seat-1",

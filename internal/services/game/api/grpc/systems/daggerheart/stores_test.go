@@ -6,6 +6,7 @@ func TestStoresApplier(t *testing.T) {
 	s := Stores{
 		Campaign:         &fakeCampaignStore{},
 		Character:        &fakeCharacterStore{},
+		Domain:           &fakeDomainEngine{},
 		Session:          &fakeSessionStore{},
 		SessionGate:      &fakeSessionGateStore{},
 		SessionSpotlight: &fakeSessionSpotlightStore{},

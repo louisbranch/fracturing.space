@@ -28,9 +28,9 @@ type DowntimeResult struct {
 // ApplyDowntimeMove applies a downtime move to the character state.
 func ApplyDowntimeMove(state *CharacterState, move DowntimeMove, opts DowntimeOptions) DowntimeResult {
 	result := DowntimeResult{
-		HopeBefore:   state.Hope(),
-		StressBefore: state.Stress(),
-		ArmorBefore:  state.Armor(),
+		HopeBefore:   state.Hope,
+		StressBefore: state.Stress,
+		ArmorBefore:  state.Armor,
 	}
 
 	switch move {
@@ -48,8 +48,8 @@ func ApplyDowntimeMove(state *CharacterState, move DowntimeMove, opts DowntimeOp
 		// No state changes.
 	}
 
-	result.HopeAfter = state.Hope()
-	result.StressAfter = state.Stress()
-	result.ArmorAfter = state.Armor()
+	result.HopeAfter = state.Hope
+	result.StressAfter = state.Stress
+	result.ArmorAfter = state.Armor
 	return result
 }

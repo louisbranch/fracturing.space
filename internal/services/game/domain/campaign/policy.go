@@ -13,8 +13,6 @@ const (
 	// CampaignOpUnspecified represents an invalid operation.
 	CampaignOpUnspecified CampaignOperation = iota
 	// CampaignOpRead represents read-only operations.
-	// This is intentionally allowed for all statuses today, but will expand to enforce
-	// user-scoped read capabilities (e.g., restricting which character sheets a player can view).
 	CampaignOpRead
 	// CampaignOpSessionStart represents starting a session.
 	CampaignOpSessionStart
@@ -36,7 +34,7 @@ var (
 )
 
 // ValidateCampaignOperation ensures the campaign status allows the requested operation.
-func ValidateCampaignOperation(status CampaignStatus, op CampaignOperation) error {
+func ValidateCampaignOperation(status Status, op CampaignOperation) error {
 	if op == CampaignOpUnspecified {
 		return newStatusOpError(status, op)
 	}
@@ -45,7 +43,7 @@ func ValidateCampaignOperation(status CampaignStatus, op CampaignOperation) erro
 	}
 
 	switch status {
-	case CampaignStatusDraft:
+	case StatusDraft:
 		switch op {
 		case CampaignOpSessionStart, CampaignOpCampaignMutate:
 			return nil
@@ -56,7 +54,7 @@ func ValidateCampaignOperation(status CampaignStatus, op CampaignOperation) erro
 		default:
 			return newStatusOpError(status, op)
 		}
-	case CampaignStatusActive:
+	case StatusActive:
 		switch op {
 		case CampaignOpSessionStart, CampaignOpSessionAction, CampaignOpCampaignMutate, CampaignOpEnd, CampaignOpArchive:
 			return nil
@@ -65,7 +63,7 @@ func ValidateCampaignOperation(status CampaignStatus, op CampaignOperation) erro
 		default:
 			return newStatusOpError(status, op)
 		}
-	case CampaignStatusCompleted:
+	case StatusCompleted:
 		switch op {
 		case CampaignOpArchive:
 			return nil
@@ -74,7 +72,7 @@ func ValidateCampaignOperation(status CampaignStatus, op CampaignOperation) erro
 		default:
 			return newStatusOpError(status, op)
 		}
-	case CampaignStatusArchived:
+	case StatusArchived:
 		switch op {
 		case CampaignOpRestore:
 			return nil
@@ -88,8 +86,8 @@ func ValidateCampaignOperation(status CampaignStatus, op CampaignOperation) erro
 	}
 }
 
-// newStatusOpError creates a structured error for disallowed status/operation combinations.
-func newStatusOpError(status CampaignStatus, op CampaignOperation) *apperrors.Error {
+// newStatusOpError creates metadata for disallowed status/operation combinations.
+func newStatusOpError(status Status, op CampaignOperation) *apperrors.Error {
 	statusLabel := campaignStatusLabel(status)
 	opLabel := campaignOperationLabel(op)
 	return apperrors.WithMetadata(
@@ -99,6 +97,7 @@ func newStatusOpError(status CampaignStatus, op CampaignOperation) *apperrors.Er
 	)
 }
 
+// campaignOperationLabel returns a stable label for a campaign operation.
 func campaignOperationLabel(op CampaignOperation) string {
 	switch op {
 	case CampaignOpRead:
@@ -115,6 +114,22 @@ func campaignOperationLabel(op CampaignOperation) string {
 		return "ARCHIVE"
 	case CampaignOpRestore:
 		return "RESTORE"
+	default:
+		return "UNSPECIFIED"
+	}
+}
+
+// campaignStatusLabel returns a stable label for a campaign status.
+func campaignStatusLabel(status Status) string {
+	switch status {
+	case StatusDraft:
+		return "DRAFT"
+	case StatusActive:
+		return "ACTIVE"
+	case StatusCompleted:
+		return "COMPLETED"
+	case StatusArchived:
+		return "ARCHIVED"
 	default:
 		return "UNSPECIFIED"
 	}

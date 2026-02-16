@@ -1,0 +1,212 @@
+package event
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"strings"
+	"time"
+
+	coreencoding "github.com/louisbranch/fracturing.space/internal/services/game/core/encoding"
+)
+
+var (
+	// ErrCampaignIDRequired indicates a missing campaign id.
+	ErrCampaignIDRequired = errors.New("campaign id is required")
+	// ErrTypeRequired indicates a missing event type.
+	ErrTypeRequired = errors.New("event type is required")
+	// ErrTypeUnknown indicates an unregistered event type.
+	ErrTypeUnknown = errors.New("event type is not registered")
+	// ErrActorTypeInvalid indicates an unknown actor type.
+	ErrActorTypeInvalid = errors.New("actor type is invalid")
+	// ErrActorIDRequired indicates a missing actor id for participant/gm.
+	ErrActorIDRequired = errors.New("actor id is required for participant or gm")
+	// ErrSystemMetadataRequired indicates missing system metadata for system events.
+	ErrSystemMetadataRequired = errors.New("system metadata is required for system events")
+	// ErrSystemMetadataForbidden indicates system metadata on core events.
+	ErrSystemMetadataForbidden = errors.New("system metadata must be empty for core events")
+	// ErrPayloadInvalid indicates malformed payload JSON.
+	ErrPayloadInvalid = errors.New("payload json must be valid")
+	// ErrStorageFieldsSet indicates storage-assigned fields were pre-set.
+	ErrStorageFieldsSet = errors.New("storage-assigned fields must be empty")
+)
+
+// Type identifies the event type string.
+type Type string
+
+// Owner identifies whether an event type is core or system-owned.
+type Owner string
+
+const (
+	// OwnerCore indicates a core domain event.
+	OwnerCore Owner = "core"
+	// OwnerSystem indicates a system-owned event.
+	OwnerSystem Owner = "system"
+)
+
+// ActorType identifies the actor who initiated the event.
+type ActorType string
+
+const (
+	// ActorTypeSystem indicates a system-originated event.
+	ActorTypeSystem ActorType = "system"
+	// ActorTypeParticipant indicates a participant-originated event.
+	ActorTypeParticipant ActorType = "participant"
+	// ActorTypeGM indicates a GM-originated event.
+	ActorTypeGM ActorType = "gm"
+)
+
+// Event captures the canonical event envelope.
+type Event struct {
+	CampaignID     string
+	Seq            uint64
+	Hash           string
+	PrevHash       string
+	ChainHash      string
+	Signature      string
+	SignatureKeyID string
+	Type           Type
+	Timestamp      time.Time
+	ActorType      ActorType
+	ActorID        string
+	SessionID      string
+	RequestID      string
+	InvocationID   string
+	EntityType     string
+	EntityID       string
+	SystemID       string
+	SystemVersion  string
+	CorrelationID  string
+	CausationID    string
+	PayloadJSON    []byte
+}
+
+// PayloadValidator validates a payload JSON document.
+type PayloadValidator func(json.RawMessage) error
+
+// Definition registers metadata for an event type.
+type Definition struct {
+	Type            Type
+	Owner           Owner
+	ValidatePayload PayloadValidator
+}
+
+// Registry stores event definitions and validates events for append.
+type Registry struct {
+	definitions map[Type]Definition
+}
+
+// NewRegistry creates an empty registry.
+func NewRegistry() *Registry {
+	return &Registry{definitions: make(map[Type]Definition)}
+}
+
+// Register adds a new event type definition to the registry.
+func (r *Registry) Register(def Definition) error {
+	if r == nil {
+		return fmt.Errorf("registry is required")
+	}
+	def.Type = Type(strings.TrimSpace(string(def.Type)))
+	if def.Type == "" {
+		return ErrTypeRequired
+	}
+	switch def.Owner {
+	case OwnerCore, OwnerSystem:
+		// allowed
+	default:
+		return fmt.Errorf("owner must be core or system")
+	}
+	if r.definitions == nil {
+		r.definitions = make(map[Type]Definition)
+	}
+	if _, exists := r.definitions[def.Type]; exists {
+		return fmt.Errorf("event type already registered: %s", def.Type)
+	}
+	r.definitions[def.Type] = def
+	return nil
+}
+
+// ValidateForAppend validates and normalizes an event prior to storage append.
+func (r *Registry) ValidateForAppend(evt Event) (Event, error) {
+	if r == nil {
+		return Event{}, fmt.Errorf("registry is required")
+	}
+	if evt.Seq != 0 || strings.TrimSpace(evt.Hash) != "" || strings.TrimSpace(evt.PrevHash) != "" ||
+		strings.TrimSpace(evt.ChainHash) != "" || strings.TrimSpace(evt.Signature) != "" ||
+		strings.TrimSpace(evt.SignatureKeyID) != "" {
+		return Event{}, ErrStorageFieldsSet
+	}
+
+	evt.CampaignID = strings.TrimSpace(evt.CampaignID)
+	if evt.CampaignID == "" {
+		return Event{}, ErrCampaignIDRequired
+	}
+
+	evt.Type = Type(strings.TrimSpace(string(evt.Type)))
+	if evt.Type == "" {
+		return Event{}, ErrTypeRequired
+	}
+	def, ok := r.definitions[evt.Type]
+	if !ok {
+		return Event{}, ErrTypeUnknown
+	}
+
+	evt.ActorType = ActorType(strings.TrimSpace(string(evt.ActorType)))
+	if evt.ActorType == "" {
+		evt.ActorType = ActorTypeSystem
+	}
+	switch evt.ActorType {
+	case ActorTypeSystem, ActorTypeParticipant, ActorTypeGM:
+		// allowed
+	default:
+		return Event{}, ErrActorTypeInvalid
+	}
+	evt.ActorID = strings.TrimSpace(evt.ActorID)
+	if (evt.ActorType == ActorTypeParticipant || evt.ActorType == ActorTypeGM) && evt.ActorID == "" {
+		return Event{}, ErrActorIDRequired
+	}
+
+	evt.SessionID = strings.TrimSpace(evt.SessionID)
+	evt.RequestID = strings.TrimSpace(evt.RequestID)
+	evt.InvocationID = strings.TrimSpace(evt.InvocationID)
+	evt.EntityType = strings.TrimSpace(evt.EntityType)
+	evt.EntityID = strings.TrimSpace(evt.EntityID)
+	evt.SystemID = strings.TrimSpace(evt.SystemID)
+	evt.SystemVersion = strings.TrimSpace(evt.SystemVersion)
+	evt.CorrelationID = strings.TrimSpace(evt.CorrelationID)
+	evt.CausationID = strings.TrimSpace(evt.CausationID)
+
+	switch def.Owner {
+	case OwnerSystem:
+		if evt.SystemID == "" || evt.SystemVersion == "" {
+			return Event{}, ErrSystemMetadataRequired
+		}
+	case OwnerCore:
+		if evt.SystemID != "" || evt.SystemVersion != "" {
+			return Event{}, ErrSystemMetadataForbidden
+		}
+	default:
+		return Event{}, fmt.Errorf("event owner is invalid")
+	}
+
+	if len(evt.PayloadJSON) == 0 {
+		evt.PayloadJSON = []byte("{}")
+	}
+	if !json.Valid(evt.PayloadJSON) {
+		return Event{}, ErrPayloadInvalid
+	}
+
+	canonical, err := coreencoding.CanonicalJSON(json.RawMessage(evt.PayloadJSON))
+	if err != nil {
+		return Event{}, fmt.Errorf("canonical payload json: %w", err)
+	}
+	evt.PayloadJSON = canonical
+
+	if def.ValidatePayload != nil {
+		if err := def.ValidatePayload(json.RawMessage(evt.PayloadJSON)); err != nil {
+			return Event{}, fmt.Errorf("payload invalid: %w", err)
+		}
+	}
+
+	return evt, nil
+}

@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 

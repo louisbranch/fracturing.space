@@ -5,11 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/character"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/invite"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/participant"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/session"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -17,7 +13,7 @@ func TestNilStoreErrors(t *testing.T) {
 	ctx := context.Background()
 	var s *Store
 
-	if err := s.Put(ctx, campaign.Campaign{ID: "x"}); err == nil {
+	if err := s.Put(ctx, storage.CampaignRecord{ID: "x"}); err == nil {
 		t.Fatal("expected error from nil store Put")
 	}
 	if _, err := s.Get(ctx, "x"); err == nil {
@@ -26,7 +22,7 @@ func TestNilStoreErrors(t *testing.T) {
 	if _, err := s.List(ctx, 10, ""); err == nil {
 		t.Fatal("expected error from nil store List")
 	}
-	if err := s.PutParticipant(ctx, participant.Participant{CampaignID: "c", ID: "p"}); err == nil {
+	if err := s.PutParticipant(ctx, storage.ParticipantRecord{CampaignID: "c", ID: "p"}); err == nil {
 		t.Fatal("expected error from nil store PutParticipant")
 	}
 	if err := s.DeleteParticipant(ctx, "c", "p"); err == nil {
@@ -50,7 +46,7 @@ func TestNilStoreErrors(t *testing.T) {
 	if err := s.DeleteParticipantClaim(ctx, "c", "u"); err == nil {
 		t.Fatal("expected error from nil store DeleteParticipantClaim")
 	}
-	if err := s.PutInvite(ctx, invite.Invite{ID: "i", CampaignID: "c", ParticipantID: "p"}); err == nil {
+	if err := s.PutInvite(ctx, storage.InviteRecord{ID: "i", CampaignID: "c", ParticipantID: "p"}); err == nil {
 		t.Fatal("expected error from nil store PutInvite")
 	}
 	if _, err := s.GetInvite(ctx, "i"); err == nil {
@@ -68,7 +64,7 @@ func TestNilStoreErrors(t *testing.T) {
 	if err := s.UpdateInviteStatus(ctx, "i", invite.StatusClaimed, time.Now()); err == nil {
 		t.Fatal("expected error from nil store UpdateInviteStatus")
 	}
-	if err := s.PutCharacter(ctx, character.Character{CampaignID: "c", ID: "ch"}); err == nil {
+	if err := s.PutCharacter(ctx, storage.CharacterRecord{CampaignID: "c", ID: "ch"}); err == nil {
 		t.Fatal("expected error from nil store PutCharacter")
 	}
 	if _, err := s.GetCharacter(ctx, "c", "ch"); err == nil {
@@ -80,7 +76,7 @@ func TestNilStoreErrors(t *testing.T) {
 	if _, err := s.ListCharacters(ctx, "c", 10, ""); err == nil {
 		t.Fatal("expected error from nil store ListCharacters")
 	}
-	if err := s.PutSession(ctx, session.Session{CampaignID: "c", ID: "s"}); err == nil {
+	if err := s.PutSession(ctx, storage.SessionRecord{CampaignID: "c", ID: "s"}); err == nil {
 		t.Fatal("expected error from nil store PutSession")
 	}
 	if _, _, err := s.EndSession(ctx, "c", "s", time.Now()); err == nil {
@@ -144,7 +140,7 @@ func TestCancelledContextErrors(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	if err := store.Put(ctx, campaign.Campaign{ID: "x"}); err == nil {
+	if err := store.Put(ctx, storage.CampaignRecord{ID: "x"}); err == nil {
 		t.Fatal("expected context error from Put")
 	}
 	if _, err := store.Get(ctx, "x"); err == nil {
@@ -153,7 +149,7 @@ func TestCancelledContextErrors(t *testing.T) {
 	if _, err := store.List(ctx, 10, ""); err == nil {
 		t.Fatal("expected context error from List")
 	}
-	if err := store.PutParticipant(ctx, participant.Participant{CampaignID: "c", ID: "p"}); err == nil {
+	if err := store.PutParticipant(ctx, storage.ParticipantRecord{CampaignID: "c", ID: "p"}); err == nil {
 		t.Fatal("expected context error from PutParticipant")
 	}
 	if err := store.DeleteParticipant(ctx, "c", "p"); err == nil {
@@ -177,7 +173,7 @@ func TestCancelledContextErrors(t *testing.T) {
 	if err := store.DeleteParticipantClaim(ctx, "c", "u"); err == nil {
 		t.Fatal("expected context error from DeleteParticipantClaim")
 	}
-	if err := store.PutInvite(ctx, invite.Invite{ID: "i", CampaignID: "c", ParticipantID: "p"}); err == nil {
+	if err := store.PutInvite(ctx, storage.InviteRecord{ID: "i", CampaignID: "c", ParticipantID: "p"}); err == nil {
 		t.Fatal("expected context error from PutInvite")
 	}
 	if _, err := store.GetInvite(ctx, "i"); err == nil {
@@ -195,7 +191,7 @@ func TestCancelledContextErrors(t *testing.T) {
 	if err := store.UpdateInviteStatus(ctx, "i", invite.StatusClaimed, time.Now()); err == nil {
 		t.Fatal("expected context error from UpdateInviteStatus")
 	}
-	if err := store.PutCharacter(ctx, character.Character{CampaignID: "c", ID: "ch"}); err == nil {
+	if err := store.PutCharacter(ctx, storage.CharacterRecord{CampaignID: "c", ID: "ch"}); err == nil {
 		t.Fatal("expected context error from PutCharacter")
 	}
 	if _, err := store.GetCharacter(ctx, "c", "ch"); err == nil {
@@ -207,7 +203,7 @@ func TestCancelledContextErrors(t *testing.T) {
 	if _, err := store.ListCharacters(ctx, "c", 10, ""); err == nil {
 		t.Fatal("expected context error from ListCharacters")
 	}
-	if err := store.PutSession(ctx, session.Session{CampaignID: "c", ID: "s"}); err == nil {
+	if err := store.PutSession(ctx, storage.SessionRecord{CampaignID: "c", ID: "s"}); err == nil {
 		t.Fatal("expected context error from PutSession")
 	}
 	if _, _, err := store.EndSession(ctx, "c", "s", time.Now()); err == nil {
@@ -271,7 +267,7 @@ func TestEmptyIDValidation(t *testing.T) {
 	ctx := context.Background()
 
 	// Campaign
-	if err := store.Put(ctx, campaign.Campaign{}); err == nil {
+	if err := store.Put(ctx, storage.CampaignRecord{}); err == nil {
 		t.Fatal("expected error for empty campaign ID in Put")
 	}
 	if _, err := store.Get(ctx, ""); err == nil {
@@ -285,10 +281,10 @@ func TestEmptyIDValidation(t *testing.T) {
 	}
 
 	// Participant
-	if err := store.PutParticipant(ctx, participant.Participant{ID: "p"}); err == nil {
+	if err := store.PutParticipant(ctx, storage.ParticipantRecord{ID: "p"}); err == nil {
 		t.Fatal("expected error for empty campaign ID in PutParticipant")
 	}
-	if err := store.PutParticipant(ctx, participant.Participant{CampaignID: "c"}); err == nil {
+	if err := store.PutParticipant(ctx, storage.ParticipantRecord{CampaignID: "c"}); err == nil {
 		t.Fatal("expected error for empty participant ID in PutParticipant")
 	}
 	if err := store.DeleteParticipant(ctx, "", "p"); err == nil {
@@ -337,13 +333,13 @@ func TestEmptyIDValidation(t *testing.T) {
 	}
 
 	// Invite
-	if err := store.PutInvite(ctx, invite.Invite{CampaignID: "c", ParticipantID: "p"}); err == nil {
+	if err := store.PutInvite(ctx, storage.InviteRecord{CampaignID: "c", ParticipantID: "p"}); err == nil {
 		t.Fatal("expected error for empty invite ID in PutInvite")
 	}
-	if err := store.PutInvite(ctx, invite.Invite{ID: "i", ParticipantID: "p"}); err == nil {
+	if err := store.PutInvite(ctx, storage.InviteRecord{ID: "i", ParticipantID: "p"}); err == nil {
 		t.Fatal("expected error for empty campaign ID in PutInvite")
 	}
-	if err := store.PutInvite(ctx, invite.Invite{ID: "i", CampaignID: "c"}); err == nil {
+	if err := store.PutInvite(ctx, storage.InviteRecord{ID: "i", CampaignID: "c"}); err == nil {
 		t.Fatal("expected error for empty participant ID in PutInvite")
 	}
 	if _, err := store.GetInvite(ctx, ""); err == nil {
@@ -372,10 +368,10 @@ func TestEmptyIDValidation(t *testing.T) {
 	}
 
 	// Character
-	if err := store.PutCharacter(ctx, character.Character{ID: "ch"}); err == nil {
+	if err := store.PutCharacter(ctx, storage.CharacterRecord{ID: "ch"}); err == nil {
 		t.Fatal("expected error for empty campaign ID in PutCharacter")
 	}
-	if err := store.PutCharacter(ctx, character.Character{CampaignID: "c"}); err == nil {
+	if err := store.PutCharacter(ctx, storage.CharacterRecord{CampaignID: "c"}); err == nil {
 		t.Fatal("expected error for empty character ID in PutCharacter")
 	}
 	if _, err := store.GetCharacter(ctx, "", "ch"); err == nil {
@@ -398,10 +394,10 @@ func TestEmptyIDValidation(t *testing.T) {
 	}
 
 	// Session
-	if err := store.PutSession(ctx, session.Session{ID: "s"}); err == nil {
+	if err := store.PutSession(ctx, storage.SessionRecord{ID: "s"}); err == nil {
 		t.Fatal("expected error for empty campaign ID in PutSession")
 	}
-	if err := store.PutSession(ctx, session.Session{CampaignID: "c"}); err == nil {
+	if err := store.PutSession(ctx, storage.SessionRecord{CampaignID: "c"}); err == nil {
 		t.Fatal("expected error for empty session ID in PutSession")
 	}
 	if _, _, err := store.EndSession(ctx, "", "s", time.Now()); err == nil {

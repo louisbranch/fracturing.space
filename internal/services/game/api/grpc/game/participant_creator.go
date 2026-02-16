@@ -10,9 +10,9 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/participant"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/policy"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -31,136 +31,120 @@ func newParticipantApplication(service *ParticipantService) participantApplicati
 	return app
 }
 
-func (c participantApplication) CreateParticipant(ctx context.Context, campaignID string, in *campaignv1.CreateParticipantRequest) (participant.Participant, error) {
+func (c participantApplication) CreateParticipant(ctx context.Context, campaignID string, in *campaignv1.CreateParticipantRequest) (storage.ParticipantRecord, error) {
 	campaignRecord, err := c.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return participant.Participant{}, err
+		return storage.ParticipantRecord{}, err
 	}
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
-		return participant.Participant{}, err
+		return storage.ParticipantRecord{}, err
 	}
-	if err := requirePolicy(ctx, c.stores, policy.ActionManageParticipants, campaignRecord); err != nil {
-		return participant.Participant{}, err
+	if err := requirePolicy(ctx, c.stores, policyActionManageParticipants, campaignRecord); err != nil {
+		return storage.ParticipantRecord{}, err
 	}
 
-	input := participant.CreateParticipantInput{
-		CampaignID:     campaignID,
-		UserID:         in.GetUserId(),
-		DisplayName:    in.GetDisplayName(),
-		Role:           participantRoleFromProto(in.GetRole()),
-		Controller:     controllerFromProto(in.GetController()),
-		CampaignAccess: participant.CampaignAccessMember,
+	displayName := strings.TrimSpace(in.GetDisplayName())
+	if displayName == "" {
+		return storage.ParticipantRecord{}, apperrors.New(apperrors.CodeParticipantEmptyDisplayName, "display name is required")
 	}
-	normalized, err := participant.NormalizeCreateParticipantInput(input)
-	if err != nil {
-		return participant.Participant{}, err
+	role := participantRoleFromProto(in.GetRole())
+	if role == participant.RoleUnspecified {
+		return storage.ParticipantRecord{}, apperrors.New(apperrors.CodeParticipantInvalidRole, "participant role is required")
 	}
+	controller := controllerFromProto(in.GetController())
+	if controller == participant.ControllerUnspecified {
+		controller = participant.ControllerHuman
+	}
+	access := participant.CampaignAccessMember
 
 	participantID, err := c.idGenerator()
 	if err != nil {
-		return participant.Participant{}, status.Errorf(codes.Internal, "generate participant id: %v", err)
-	}
-
-	roleLabel := ""
-	switch normalized.Role {
-	case participant.ParticipantRoleGM:
-		roleLabel = "GM"
-	case participant.ParticipantRolePlayer:
-		roleLabel = "PLAYER"
-	}
-	controllerLabel := ""
-	switch normalized.Controller {
-	case participant.ControllerHuman:
-		controllerLabel = "HUMAN"
-	case participant.ControllerAI:
-		controllerLabel = "AI"
-	}
-	accessLabel := "MEMBER"
-	switch normalized.CampaignAccess {
-	case participant.CampaignAccessManager:
-		accessLabel = "MANAGER"
-	case participant.CampaignAccessOwner:
-		accessLabel = "OWNER"
-	}
-
-	payload := event.ParticipantJoinedPayload{
-		ParticipantID:  participantID,
-		UserID:         normalized.UserID,
-		DisplayName:    normalized.DisplayName,
-		Role:           roleLabel,
-		Controller:     controllerLabel,
-		CampaignAccess: accessLabel,
-	}
-	payloadJSON, err := json.Marshal(payload)
-	if err != nil {
-		return participant.Participant{}, status.Errorf(codes.Internal, "encode payload: %v", err)
+		return storage.ParticipantRecord{}, status.Errorf(codes.Internal, "generate participant id: %v", err)
 	}
 
 	actorID := grpcmeta.ParticipantIDFromContext(ctx)
-	actorType := event.ActorTypeSystem
-	if actorID != "" {
-		actorType = event.ActorTypeParticipant
+	applier := c.stores.Applier()
+	if c.stores.Domain == nil {
+		return storage.ParticipantRecord{}, status.Error(codes.Internal, "domain engine is not configured")
+	}
+	payload := participant.JoinPayload{
+		ParticipantID:  participantID,
+		UserID:         strings.TrimSpace(in.GetUserId()),
+		DisplayName:    displayName,
+		Role:           string(role),
+		Controller:     string(controller),
+		CampaignAccess: string(access),
+	}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		return storage.ParticipantRecord{}, status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
 
-	stored, err := c.stores.Event.AppendEvent(ctx, event.Event{
+	actorType := command.ActorTypeSystem
+	if actorID != "" {
+		actorType = command.ActorTypeParticipant
+	}
+	result, err := c.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:   campaignID,
-		Timestamp:    c.clock().UTC(),
-		Type:         event.TypeParticipantJoined,
-		RequestID:    grpcmeta.RequestIDFromContext(ctx),
-		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+		Type:         command.Type("participant.join"),
 		ActorType:    actorType,
 		ActorID:      actorID,
+		RequestID:    grpcmeta.RequestIDFromContext(ctx),
+		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
 		EntityType:   "participant",
 		EntityID:     participantID,
 		PayloadJSON:  payloadJSON,
 	})
 	if err != nil {
-		return participant.Participant{}, status.Errorf(codes.Internal, "append event: %v", err)
+		return storage.ParticipantRecord{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
 	}
-
-	applier := c.stores.Applier()
-	if err := applier.Apply(ctx, stored); err != nil {
-		if apperrors.GetCode(err) != apperrors.CodeUnknown {
-			return participant.Participant{}, err
+	if len(result.Decision.Rejections) > 0 {
+		return storage.ParticipantRecord{}, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
+	}
+	for _, evt := range result.Decision.Events {
+		if err := applier.Apply(ctx, evt); err != nil {
+			if apperrors.GetCode(err) != apperrors.CodeUnknown {
+				return storage.ParticipantRecord{}, err
+			}
+			return storage.ParticipantRecord{}, status.Errorf(codes.Internal, "apply event: %v", err)
 		}
-		return participant.Participant{}, status.Errorf(codes.Internal, "apply event: %v", err)
 	}
 
 	created, err := c.stores.Participant.GetParticipant(ctx, campaignID, participantID)
 	if err != nil {
-		return participant.Participant{}, status.Errorf(codes.Internal, "load participant: %v", err)
+		return storage.ParticipantRecord{}, status.Errorf(codes.Internal, "load participant: %v", err)
 	}
 
 	return created, nil
 }
 
-func (c participantApplication) UpdateParticipant(ctx context.Context, campaignID string, in *campaignv1.UpdateParticipantRequest) (participant.Participant, error) {
+func (c participantApplication) UpdateParticipant(ctx context.Context, campaignID string, in *campaignv1.UpdateParticipantRequest) (storage.ParticipantRecord, error) {
 	campaignRecord, err := c.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return participant.Participant{}, err
+		return storage.ParticipantRecord{}, err
 	}
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
-		return participant.Participant{}, err
+		return storage.ParticipantRecord{}, err
 	}
-	if err := requirePolicy(ctx, c.stores, policy.ActionManageParticipants, campaignRecord); err != nil {
-		return participant.Participant{}, err
+	if err := requirePolicy(ctx, c.stores, policyActionManageParticipants, campaignRecord); err != nil {
+		return storage.ParticipantRecord{}, err
 	}
 
 	participantID := strings.TrimSpace(in.GetParticipantId())
 	if participantID == "" {
-		return participant.Participant{}, status.Error(codes.InvalidArgument, "participant id is required")
+		return storage.ParticipantRecord{}, status.Error(codes.InvalidArgument, "participant id is required")
 	}
 
 	current, err := c.stores.Participant.GetParticipant(ctx, campaignID, participantID)
 	if err != nil {
-		return participant.Participant{}, err
+		return storage.ParticipantRecord{}, err
 	}
 
 	fields := make(map[string]any)
 	if displayName := in.GetDisplayName(); displayName != nil {
 		trimmed := strings.TrimSpace(displayName.GetValue())
 		if trimmed == "" {
-			return participant.Participant{}, status.Error(codes.InvalidArgument, "display_name must not be empty")
+			return storage.ParticipantRecord{}, status.Error(codes.InvalidArgument, "display_name must not be empty")
 		}
 		current.DisplayName = trimmed
 		fields["display_name"] = trimmed
@@ -172,8 +156,8 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 	}
 	if in.GetRole() != campaignv1.ParticipantRole_ROLE_UNSPECIFIED {
 		role := participantRoleFromProto(in.GetRole())
-		if role == participant.ParticipantRoleUnspecified {
-			return participant.Participant{}, status.Error(codes.InvalidArgument, "role is invalid")
+		if role == participant.RoleUnspecified {
+			return storage.ParticipantRecord{}, status.Error(codes.InvalidArgument, "role is invalid")
 		}
 		current.Role = role
 		fields["role"] = in.GetRole().String()
@@ -181,7 +165,7 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 	if in.GetController() != campaignv1.Controller_CONTROLLER_UNSPECIFIED {
 		controller := controllerFromProto(in.GetController())
 		if controller == participant.ControllerUnspecified {
-			return participant.Participant{}, status.Error(codes.InvalidArgument, "controller is invalid")
+			return storage.ParticipantRecord{}, status.Error(codes.InvalidArgument, "controller is invalid")
 		}
 		current.Controller = controller
 		fields["controller"] = in.GetController().String()
@@ -189,118 +173,137 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 	if in.GetCampaignAccess() != campaignv1.CampaignAccess_CAMPAIGN_ACCESS_UNSPECIFIED {
 		access := campaignAccessFromProto(in.GetCampaignAccess())
 		if access == participant.CampaignAccessUnspecified {
-			return participant.Participant{}, status.Error(codes.InvalidArgument, "campaign_access is invalid")
+			return storage.ParticipantRecord{}, status.Error(codes.InvalidArgument, "campaign_access is invalid")
 		}
 		current.CampaignAccess = access
 		fields["campaign_access"] = in.GetCampaignAccess().String()
 	}
 	if len(fields) == 0 {
-		return participant.Participant{}, status.Error(codes.InvalidArgument, "at least one field must be provided")
-	}
-
-	payload := event.ParticipantUpdatedPayload{
-		ParticipantID: participantID,
-		Fields:        fields,
-	}
-	payloadJSON, err := json.Marshal(payload)
-	if err != nil {
-		return participant.Participant{}, status.Errorf(codes.Internal, "encode payload: %v", err)
+		return storage.ParticipantRecord{}, status.Error(codes.InvalidArgument, "at least one field must be provided")
 	}
 
 	actorID := grpcmeta.ParticipantIDFromContext(ctx)
-	actorType := event.ActorTypeSystem
-	if actorID != "" {
-		actorType = event.ActorTypeParticipant
+	applier := c.stores.Applier()
+	if c.stores.Domain == nil {
+		return storage.ParticipantRecord{}, status.Error(codes.Internal, "domain engine is not configured")
+	}
+	payloadFields := make(map[string]string, len(fields))
+	for key, value := range fields {
+		stringValue, ok := value.(string)
+		if !ok {
+			return storage.ParticipantRecord{}, status.Errorf(codes.Internal, "participant update field %s must be string", key)
+		}
+		payloadFields[key] = stringValue
+	}
+	payload := participant.UpdatePayload{
+		ParticipantID: participantID,
+		Fields:        payloadFields,
+	}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		return storage.ParticipantRecord{}, status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
 
-	stored, err := c.stores.Event.AppendEvent(ctx, event.Event{
+	actorType := command.ActorTypeSystem
+	if actorID != "" {
+		actorType = command.ActorTypeParticipant
+	}
+	result, err := c.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:   campaignID,
-		Timestamp:    c.clock().UTC(),
-		Type:         event.TypeParticipantUpdated,
-		RequestID:    grpcmeta.RequestIDFromContext(ctx),
-		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+		Type:         command.Type("participant.update"),
 		ActorType:    actorType,
 		ActorID:      actorID,
+		RequestID:    grpcmeta.RequestIDFromContext(ctx),
+		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
 		EntityType:   "participant",
 		EntityID:     participantID,
 		PayloadJSON:  payloadJSON,
 	})
 	if err != nil {
-		return participant.Participant{}, status.Errorf(codes.Internal, "append event: %v", err)
+		return storage.ParticipantRecord{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
 	}
-
-	applier := c.stores.Applier()
-	if err := applier.Apply(ctx, stored); err != nil {
-		if apperrors.GetCode(err) != apperrors.CodeUnknown {
-			return participant.Participant{}, err
+	if len(result.Decision.Rejections) > 0 {
+		return storage.ParticipantRecord{}, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
+	}
+	for _, evt := range result.Decision.Events {
+		if err := applier.Apply(ctx, evt); err != nil {
+			if apperrors.GetCode(err) != apperrors.CodeUnknown {
+				return storage.ParticipantRecord{}, err
+			}
+			return storage.ParticipantRecord{}, status.Errorf(codes.Internal, "apply event: %v", err)
 		}
-		return participant.Participant{}, status.Errorf(codes.Internal, "apply event: %v", err)
 	}
 
 	updated, err := c.stores.Participant.GetParticipant(ctx, campaignID, participantID)
 	if err != nil {
-		return participant.Participant{}, status.Errorf(codes.Internal, "load participant: %v", err)
+		return storage.ParticipantRecord{}, status.Errorf(codes.Internal, "load participant: %v", err)
 	}
 
 	return updated, nil
 }
 
-func (c participantApplication) DeleteParticipant(ctx context.Context, campaignID string, in *campaignv1.DeleteParticipantRequest) (participant.Participant, error) {
+func (c participantApplication) DeleteParticipant(ctx context.Context, campaignID string, in *campaignv1.DeleteParticipantRequest) (storage.ParticipantRecord, error) {
 	campaignRecord, err := c.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return participant.Participant{}, err
+		return storage.ParticipantRecord{}, err
 	}
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
-		return participant.Participant{}, err
+		return storage.ParticipantRecord{}, err
 	}
 
 	participantID := strings.TrimSpace(in.GetParticipantId())
 	if participantID == "" {
-		return participant.Participant{}, status.Error(codes.InvalidArgument, "participant id is required")
+		return storage.ParticipantRecord{}, status.Error(codes.InvalidArgument, "participant id is required")
 	}
 
 	current, err := c.stores.Participant.GetParticipant(ctx, campaignID, participantID)
 	if err != nil {
-		return participant.Participant{}, err
-	}
-
-	payload := event.ParticipantLeftPayload{
-		ParticipantID: participantID,
-		Reason:        strings.TrimSpace(in.GetReason()),
-	}
-	payloadJSON, err := json.Marshal(payload)
-	if err != nil {
-		return participant.Participant{}, status.Errorf(codes.Internal, "encode payload: %v", err)
+		return storage.ParticipantRecord{}, err
 	}
 
 	actorID := grpcmeta.ParticipantIDFromContext(ctx)
-	actorType := event.ActorTypeSystem
-	if actorID != "" {
-		actorType = event.ActorTypeParticipant
+	reason := strings.TrimSpace(in.GetReason())
+	applier := c.stores.Applier()
+	if c.stores.Domain == nil {
+		return storage.ParticipantRecord{}, status.Error(codes.Internal, "domain engine is not configured")
+	}
+	payload := participant.LeavePayload{
+		ParticipantID: participantID,
+		Reason:        reason,
+	}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		return storage.ParticipantRecord{}, status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
 
-	stored, err := c.stores.Event.AppendEvent(ctx, event.Event{
+	actorType := command.ActorTypeSystem
+	if actorID != "" {
+		actorType = command.ActorTypeParticipant
+	}
+	result, err := c.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:   campaignID,
-		Timestamp:    c.clock().UTC(),
-		Type:         event.TypeParticipantLeft,
-		RequestID:    grpcmeta.RequestIDFromContext(ctx),
-		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+		Type:         command.Type("participant.leave"),
 		ActorType:    actorType,
 		ActorID:      actorID,
+		RequestID:    grpcmeta.RequestIDFromContext(ctx),
+		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
 		EntityType:   "participant",
 		EntityID:     participantID,
 		PayloadJSON:  payloadJSON,
 	})
 	if err != nil {
-		return participant.Participant{}, status.Errorf(codes.Internal, "append event: %v", err)
+		return storage.ParticipantRecord{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
 	}
-
-	applier := c.stores.Applier()
-	if err := applier.Apply(ctx, stored); err != nil {
-		if apperrors.GetCode(err) != apperrors.CodeUnknown {
-			return participant.Participant{}, err
+	if len(result.Decision.Rejections) > 0 {
+		return storage.ParticipantRecord{}, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
+	}
+	for _, evt := range result.Decision.Events {
+		if err := applier.Apply(ctx, evt); err != nil {
+			if apperrors.GetCode(err) != apperrors.CodeUnknown {
+				return storage.ParticipantRecord{}, err
+			}
+			return storage.ParticipantRecord{}, status.Errorf(codes.Internal, "apply event: %v", err)
 		}
-		return participant.Participant{}, status.Errorf(codes.Internal, "apply event: %v", err)
 	}
 
 	return current, nil

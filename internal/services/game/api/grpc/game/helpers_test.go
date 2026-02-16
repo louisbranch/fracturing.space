@@ -7,10 +7,10 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/character"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/invite"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/participant"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/session"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/protobuf/types/known/structpb"
 )
@@ -21,15 +21,15 @@ func TestCampaignToProto(t *testing.T) {
 	completed := created.Add(24 * time.Hour)
 	archived := created.Add(48 * time.Hour)
 
-	proto := campaignToProto(campaign.Campaign{
+	proto := campaignToProto(storage.CampaignRecord{
 		ID:               "camp-1",
 		Name:             "Campaign",
 		Locale:           commonv1.Locale_LOCALE_PT_BR,
 		System:           commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		Status:           campaign.CampaignStatusActive,
+		Status:           campaign.StatusActive,
 		GmMode:           campaign.GmModeHybrid,
-		Intent:           campaign.CampaignIntentStarter,
-		AccessPolicy:     campaign.CampaignAccessPolicyRestricted,
+		Intent:           campaign.IntentStarter,
+		AccessPolicy:     campaign.AccessPolicyRestricted,
 		ParticipantCount: 2,
 		CharacterCount:   3,
 		ThemePrompt:      "storm",
@@ -75,10 +75,10 @@ func TestCampaignToProto(t *testing.T) {
 }
 
 func TestEnumConversions(t *testing.T) {
-	if campaignStatusToProto(campaign.CampaignStatusArchived) != campaignv1.CampaignStatus_ARCHIVED {
+	if campaignStatusToProto(campaign.StatusArchived) != campaignv1.CampaignStatus_ARCHIVED {
 		t.Fatal("expected archived campaign status")
 	}
-	if campaignStatusToProto(campaign.CampaignStatusUnspecified) != campaignv1.CampaignStatus_CAMPAIGN_STATUS_UNSPECIFIED {
+	if campaignStatusToProto(campaign.StatusUnspecified) != campaignv1.CampaignStatus_CAMPAIGN_STATUS_UNSPECIFIED {
 		t.Fatal("expected unspecified campaign status")
 	}
 
@@ -89,24 +89,24 @@ func TestEnumConversions(t *testing.T) {
 		t.Fatal("expected gm mode unspecified")
 	}
 
-	if campaignIntentFromProto(campaignv1.CampaignIntent_STARTER) != campaign.CampaignIntentStarter {
+	if campaignIntentFromProto(campaignv1.CampaignIntent_STARTER) != campaign.IntentStarter {
 		t.Fatal("expected starter intent")
 	}
-	if campaignIntentFromProto(campaignv1.CampaignIntent_CAMPAIGN_INTENT_UNSPECIFIED) != campaign.CampaignIntentUnspecified {
+	if campaignIntentFromProto(campaignv1.CampaignIntent_CAMPAIGN_INTENT_UNSPECIFIED) != campaign.IntentUnspecified {
 		t.Fatal("expected unspecified intent")
 	}
 
-	if campaignAccessPolicyFromProto(campaignv1.CampaignAccessPolicy_PUBLIC) != campaign.CampaignAccessPolicyPublic {
+	if campaignAccessPolicyFromProto(campaignv1.CampaignAccessPolicy_PUBLIC) != campaign.AccessPolicyPublic {
 		t.Fatal("expected public access policy")
 	}
-	if campaignAccessPolicyFromProto(campaignv1.CampaignAccessPolicy_CAMPAIGN_ACCESS_POLICY_UNSPECIFIED) != campaign.CampaignAccessPolicyUnspecified {
+	if campaignAccessPolicyFromProto(campaignv1.CampaignAccessPolicy_CAMPAIGN_ACCESS_POLICY_UNSPECIFIED) != campaign.AccessPolicyUnspecified {
 		t.Fatal("expected unspecified access policy")
 	}
 
-	if participantRoleFromProto(campaignv1.ParticipantRole_GM) != participant.ParticipantRoleGM {
+	if participantRoleFromProto(campaignv1.ParticipantRole_GM) != participant.RoleGM {
 		t.Fatal("expected GM role")
 	}
-	if participantRoleFromProto(campaignv1.ParticipantRole_ROLE_UNSPECIFIED) != participant.ParticipantRoleUnspecified {
+	if participantRoleFromProto(campaignv1.ParticipantRole_ROLE_UNSPECIFIED) != participant.RoleUnspecified {
 		t.Fatal("expected unspecified role")
 	}
 
@@ -131,14 +131,14 @@ func TestEnumConversions(t *testing.T) {
 		t.Fatal("expected unspecified invite status")
 	}
 
-	if characterKindToProto(character.CharacterKindNPC) != campaignv1.CharacterKind_NPC {
+	if characterKindToProto(character.KindNPC) != campaignv1.CharacterKind_NPC {
 		t.Fatal("expected NPC character kind")
 	}
-	if characterKindFromProto(campaignv1.CharacterKind_CHARACTER_KIND_UNSPECIFIED) != character.CharacterKindUnspecified {
+	if characterKindFromProto(campaignv1.CharacterKind_CHARACTER_KIND_UNSPECIFIED) != character.KindUnspecified {
 		t.Fatal("expected unspecified character kind")
 	}
 
-	if sessionStatusToProto(session.SessionStatusEnded) != campaignv1.SessionStatus_SESSION_ENDED {
+	if sessionStatusToProto(session.StatusEnded) != campaignv1.SessionStatus_SESSION_ENDED {
 		t.Fatal("expected ended session status")
 	}
 }
@@ -147,11 +147,11 @@ func TestCharacterToProtoParticipantID(t *testing.T) {
 	created := time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC)
 	updated := created.Add(time.Hour)
 
-	withParticipant := characterToProto(character.Character{
+	withParticipant := characterToProto(storage.CharacterRecord{
 		ID:            "char-1",
 		CampaignID:    "camp-1",
 		Name:          "Hero",
-		Kind:          character.CharacterKindPC,
+		Kind:          character.KindPC,
 		ParticipantID: "part-1",
 		CreatedAt:     created,
 		UpdatedAt:     updated,
@@ -160,11 +160,11 @@ func TestCharacterToProtoParticipantID(t *testing.T) {
 		t.Fatal("expected participant id wrapper to be set")
 	}
 
-	noParticipant := characterToProto(character.Character{
+	noParticipant := characterToProto(storage.CharacterRecord{
 		ID:            "char-2",
 		CampaignID:    "camp-1",
 		Name:          "NPC",
-		Kind:          character.CharacterKindNPC,
+		Kind:          character.KindNPC,
 		ParticipantID: "  ",
 		CreatedAt:     created,
 		UpdatedAt:     updated,
@@ -179,11 +179,11 @@ func TestSessionToProtoEndedAt(t *testing.T) {
 	updated := started.Add(time.Hour)
 	ended := started.Add(2 * time.Hour)
 
-	withEnd := sessionToProto(session.Session{
+	withEnd := sessionToProto(storage.SessionRecord{
 		ID:         "sess-1",
 		CampaignID: "camp-1",
 		Name:       "Session",
-		Status:     session.SessionStatusEnded,
+		Status:     session.StatusEnded,
 		StartedAt:  started,
 		UpdatedAt:  updated,
 		EndedAt:    &ended,
@@ -192,11 +192,11 @@ func TestSessionToProtoEndedAt(t *testing.T) {
 		t.Fatal("expected ended_at to be set")
 	}
 
-	noEnd := sessionToProto(session.Session{
+	noEnd := sessionToProto(storage.SessionRecord{
 		ID:         "sess-2",
 		CampaignID: "camp-1",
 		Name:       "Active",
-		Status:     session.SessionStatusActive,
+		Status:     session.StatusActive,
 		StartedAt:  started,
 		UpdatedAt:  updated,
 	})
@@ -226,7 +226,7 @@ func TestInviteStatusToProto(t *testing.T) {
 		{"claimed", invite.StatusClaimed, campaignv1.InviteStatus_CLAIMED},
 		{"revoked", invite.StatusRevoked, campaignv1.InviteStatus_REVOKED},
 		{"unspecified", invite.StatusUnspecified, campaignv1.InviteStatus_INVITE_STATUS_UNSPECIFIED},
-		{"unknown", invite.Status(99), campaignv1.InviteStatus_INVITE_STATUS_UNSPECIFIED},
+		{"unknown", invite.Status("unknown"), campaignv1.InviteStatus_INVITE_STATUS_UNSPECIFIED},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -261,15 +261,15 @@ func TestInviteStatusFromProto(t *testing.T) {
 func TestSessionGateStatusToProto(t *testing.T) {
 	tests := []struct {
 		name   string
-		input  string
+		input  session.GateStatus
 		expect campaignv1.SessionGateStatus
 	}{
-		{"open", "open", campaignv1.SessionGateStatus_SESSION_GATE_OPEN},
-		{"resolved", "resolved", campaignv1.SessionGateStatus_SESSION_GATE_RESOLVED},
-		{"abandoned", "abandoned", campaignv1.SessionGateStatus_SESSION_GATE_ABANDONED},
-		{"open_uppercase", " OPEN ", campaignv1.SessionGateStatus_SESSION_GATE_OPEN},
-		{"empty", "", campaignv1.SessionGateStatus_SESSION_GATE_STATUS_UNSPECIFIED},
-		{"unknown", "invalid", campaignv1.SessionGateStatus_SESSION_GATE_STATUS_UNSPECIFIED},
+		{"open", session.GateStatusOpen, campaignv1.SessionGateStatus_SESSION_GATE_OPEN},
+		{"resolved", session.GateStatusResolved, campaignv1.SessionGateStatus_SESSION_GATE_RESOLVED},
+		{"abandoned", session.GateStatusAbandoned, campaignv1.SessionGateStatus_SESSION_GATE_ABANDONED},
+		{"open_uppercase", session.GateStatus(" OPEN "), campaignv1.SessionGateStatus_SESSION_GATE_OPEN},
+		{"empty", session.GateStatus(""), campaignv1.SessionGateStatus_SESSION_GATE_STATUS_UNSPECIFIED},
+		{"unknown", session.GateStatus("invalid"), campaignv1.SessionGateStatus_SESSION_GATE_STATUS_UNSPECIFIED},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -314,14 +314,14 @@ func TestSessionSpotlightTypeFromProto(t *testing.T) {
 func TestSessionSpotlightTypeToProto(t *testing.T) {
 	tests := []struct {
 		name   string
-		input  string
+		input  session.SpotlightType
 		expect campaignv1.SessionSpotlightType
 	}{
-		{"gm", "gm", campaignv1.SessionSpotlightType_SESSION_SPOTLIGHT_TYPE_GM},
-		{"character", "character", campaignv1.SessionSpotlightType_SESSION_SPOTLIGHT_TYPE_CHARACTER},
-		{"gm_uppercase", " GM ", campaignv1.SessionSpotlightType_SESSION_SPOTLIGHT_TYPE_GM},
-		{"empty", "", campaignv1.SessionSpotlightType_SESSION_SPOTLIGHT_TYPE_UNSPECIFIED},
-		{"unknown", "invalid", campaignv1.SessionSpotlightType_SESSION_SPOTLIGHT_TYPE_UNSPECIFIED},
+		{"gm", session.SpotlightTypeGM, campaignv1.SessionSpotlightType_SESSION_SPOTLIGHT_TYPE_GM},
+		{"character", session.SpotlightTypeCharacter, campaignv1.SessionSpotlightType_SESSION_SPOTLIGHT_TYPE_CHARACTER},
+		{"gm_uppercase", session.SpotlightType(" GM "), campaignv1.SessionSpotlightType_SESSION_SPOTLIGHT_TYPE_GM},
+		{"empty", session.SpotlightType(""), campaignv1.SessionSpotlightType_SESSION_SPOTLIGHT_TYPE_UNSPECIFIED},
+		{"unknown", session.SpotlightType("invalid"), campaignv1.SessionSpotlightType_SESSION_SPOTLIGHT_TYPE_UNSPECIFIED},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -490,7 +490,7 @@ func TestInviteToProto(t *testing.T) {
 	created := time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC)
 	updated := created.Add(time.Hour)
 
-	inv := inviteToProto(invite.Invite{
+	inv := inviteToProto(storage.InviteRecord{
 		ID:                     "inv-1",
 		CampaignID:             "camp-1",
 		ParticipantID:          "part-1",
@@ -515,12 +515,12 @@ func TestParticipantToProto(t *testing.T) {
 	created := time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC)
 	updated := created.Add(time.Hour)
 
-	p := participantToProto(participant.Participant{
+	p := participantToProto(storage.ParticipantRecord{
 		ID:             "part-1",
 		CampaignID:     "camp-1",
 		UserID:         "user-1",
 		DisplayName:    "Test Player",
-		Role:           participant.ParticipantRolePlayer,
+		Role:           participant.RolePlayer,
 		CampaignAccess: participant.CampaignAccessMember,
 		Controller:     participant.ControllerHuman,
 		CreatedAt:      created,
@@ -542,10 +542,10 @@ func TestParticipantToProto(t *testing.T) {
 
 func TestEnumConversionsExtended(t *testing.T) {
 	// campaignStatusToProto remaining branches
-	if campaignStatusToProto(campaign.CampaignStatusDraft) != campaignv1.CampaignStatus_DRAFT {
+	if campaignStatusToProto(campaign.StatusDraft) != campaignv1.CampaignStatus_DRAFT {
 		t.Fatal("expected draft")
 	}
-	if campaignStatusToProto(campaign.CampaignStatusCompleted) != campaignv1.CampaignStatus_COMPLETED {
+	if campaignStatusToProto(campaign.StatusCompleted) != campaignv1.CampaignStatus_COMPLETED {
 		t.Fatal("expected completed")
 	}
 
@@ -572,46 +572,46 @@ func TestEnumConversionsExtended(t *testing.T) {
 	}
 
 	// campaignIntentToProto all branches
-	if campaignIntentToProto(campaign.CampaignIntentStandard) != campaignv1.CampaignIntent_STANDARD {
+	if campaignIntentToProto(campaign.IntentStandard) != campaignv1.CampaignIntent_STANDARD {
 		t.Fatal("expected STANDARD")
 	}
-	if campaignIntentToProto(campaign.CampaignIntentStarter) != campaignv1.CampaignIntent_STARTER {
+	if campaignIntentToProto(campaign.IntentStarter) != campaignv1.CampaignIntent_STARTER {
 		t.Fatal("expected STARTER")
 	}
-	if campaignIntentToProto(campaign.CampaignIntentSandbox) != campaignv1.CampaignIntent_SANDBOX {
+	if campaignIntentToProto(campaign.IntentSandbox) != campaignv1.CampaignIntent_SANDBOX {
 		t.Fatal("expected SANDBOX")
 	}
-	if campaignIntentToProto(campaign.CampaignIntentUnspecified) != campaignv1.CampaignIntent_CAMPAIGN_INTENT_UNSPECIFIED {
+	if campaignIntentToProto(campaign.IntentUnspecified) != campaignv1.CampaignIntent_CAMPAIGN_INTENT_UNSPECIFIED {
 		t.Fatal("expected CAMPAIGN_INTENT_UNSPECIFIED")
 	}
 
 	// campaignAccessPolicyToProto all branches
-	if campaignAccessPolicyToProto(campaign.CampaignAccessPolicyPrivate) != campaignv1.CampaignAccessPolicy_PRIVATE {
+	if campaignAccessPolicyToProto(campaign.AccessPolicyPrivate) != campaignv1.CampaignAccessPolicy_PRIVATE {
 		t.Fatal("expected PRIVATE")
 	}
-	if campaignAccessPolicyToProto(campaign.CampaignAccessPolicyRestricted) != campaignv1.CampaignAccessPolicy_RESTRICTED {
+	if campaignAccessPolicyToProto(campaign.AccessPolicyRestricted) != campaignv1.CampaignAccessPolicy_RESTRICTED {
 		t.Fatal("expected RESTRICTED")
 	}
-	if campaignAccessPolicyToProto(campaign.CampaignAccessPolicyPublic) != campaignv1.CampaignAccessPolicy_PUBLIC {
+	if campaignAccessPolicyToProto(campaign.AccessPolicyPublic) != campaignv1.CampaignAccessPolicy_PUBLIC {
 		t.Fatal("expected PUBLIC")
 	}
-	if campaignAccessPolicyToProto(campaign.CampaignAccessPolicyUnspecified) != campaignv1.CampaignAccessPolicy_CAMPAIGN_ACCESS_POLICY_UNSPECIFIED {
+	if campaignAccessPolicyToProto(campaign.AccessPolicyUnspecified) != campaignv1.CampaignAccessPolicy_CAMPAIGN_ACCESS_POLICY_UNSPECIFIED {
 		t.Fatal("expected CAMPAIGN_ACCESS_POLICY_UNSPECIFIED")
 	}
 
 	// participantRoleFromProto player
-	if participantRoleFromProto(campaignv1.ParticipantRole_PLAYER) != participant.ParticipantRolePlayer {
+	if participantRoleFromProto(campaignv1.ParticipantRole_PLAYER) != participant.RolePlayer {
 		t.Fatal("expected player")
 	}
 
 	// participantRoleToProto all branches
-	if participantRoleToProto(participant.ParticipantRoleGM) != campaignv1.ParticipantRole_GM {
+	if participantRoleToProto(participant.RoleGM) != campaignv1.ParticipantRole_GM {
 		t.Fatal("expected GM")
 	}
-	if participantRoleToProto(participant.ParticipantRolePlayer) != campaignv1.ParticipantRole_PLAYER {
+	if participantRoleToProto(participant.RolePlayer) != campaignv1.ParticipantRole_PLAYER {
 		t.Fatal("expected PLAYER")
 	}
-	if participantRoleToProto(participant.ParticipantRoleUnspecified) != campaignv1.ParticipantRole_ROLE_UNSPECIFIED {
+	if participantRoleToProto(participant.RoleUnspecified) != campaignv1.ParticipantRole_ROLE_UNSPECIFIED {
 		t.Fatal("expected ROLE_UNSPECIFIED")
 	}
 
@@ -654,26 +654,26 @@ func TestEnumConversionsExtended(t *testing.T) {
 	}
 
 	// characterKindFromProto all branches
-	if characterKindFromProto(campaignv1.CharacterKind_PC) != character.CharacterKindPC {
+	if characterKindFromProto(campaignv1.CharacterKind_PC) != character.KindPC {
 		t.Fatal("expected PC")
 	}
-	if characterKindFromProto(campaignv1.CharacterKind_NPC) != character.CharacterKindNPC {
+	if characterKindFromProto(campaignv1.CharacterKind_NPC) != character.KindNPC {
 		t.Fatal("expected NPC")
 	}
 
 	// characterKindToProto all branches
-	if characterKindToProto(character.CharacterKindPC) != campaignv1.CharacterKind_PC {
+	if characterKindToProto(character.KindPC) != campaignv1.CharacterKind_PC {
 		t.Fatal("expected PC")
 	}
-	if characterKindToProto(character.CharacterKindUnspecified) != campaignv1.CharacterKind_CHARACTER_KIND_UNSPECIFIED {
+	if characterKindToProto(character.KindUnspecified) != campaignv1.CharacterKind_CHARACTER_KIND_UNSPECIFIED {
 		t.Fatal("expected UNSPECIFIED")
 	}
 
 	// sessionStatusToProto all branches
-	if sessionStatusToProto(session.SessionStatusActive) != campaignv1.SessionStatus_SESSION_ACTIVE {
+	if sessionStatusToProto(session.StatusActive) != campaignv1.SessionStatus_SESSION_ACTIVE {
 		t.Fatal("expected ACTIVE")
 	}
-	if sessionStatusToProto(session.SessionStatusUnspecified) != campaignv1.SessionStatus_SESSION_STATUS_UNSPECIFIED {
+	if sessionStatusToProto(session.StatusUnspecified) != campaignv1.SessionStatus_SESSION_STATUS_UNSPECIFIED {
 		t.Fatal("expected UNSPECIFIED")
 	}
 

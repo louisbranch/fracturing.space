@@ -12,9 +12,8 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/invite"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/participant"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/policy"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -115,7 +114,7 @@ func (s *InviteService) GetInvite(ctx context.Context, in *campaignv1.GetInviteR
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return nil, handleDomainError(err)
 	}
-	if err := requirePolicy(ctx, s.stores, policy.ActionManageInvites, campaignRecord); err != nil {
+	if err := requirePolicy(ctx, s.stores, policyActionManageInvites, campaignRecord); err != nil {
 		return nil, err
 	}
 
@@ -138,7 +137,7 @@ func (s *InviteService) ListInvites(ctx context.Context, in *campaignv1.ListInvi
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpRead); err != nil {
 		return nil, handleDomainError(err)
 	}
-	if err := requirePolicy(ctx, s.stores, policy.ActionManageInvites, campaignRecord); err != nil {
+	if err := requirePolicy(ctx, s.stores, policyActionManageInvites, campaignRecord); err != nil {
 		return nil, err
 	}
 
@@ -183,7 +182,7 @@ func (s *InviteService) ListPendingInvites(ctx context.Context, in *campaignv1.L
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
-	if err := requirePolicy(ctx, s.stores, policy.ActionManageInvites, campaignRecord); err != nil {
+	if err := requirePolicy(ctx, s.stores, policyActionManageInvites, campaignRecord); err != nil {
 		return nil, err
 	}
 
@@ -206,7 +205,7 @@ func (s *InviteService) ListPendingInvites(ctx context.Context, in *campaignv1.L
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "list participants: %v", err)
 	}
-	participantsByID := make(map[string]participant.Participant, len(participants))
+	participantsByID := make(map[string]storage.ParticipantRecord, len(participants))
 	for _, p := range participants {
 		participantsByID[p.ID] = p
 	}
@@ -281,8 +280,8 @@ func (s *InviteService) ListPendingInvitesForUser(ctx context.Context, in *campa
 		return response, nil
 	}
 
-	campaignsByID := make(map[string]campaign.Campaign)
-	participantsByID := make(map[string]participant.Participant)
+	campaignsByID := make(map[string]storage.CampaignRecord)
+	participantsByID := make(map[string]storage.ParticipantRecord)
 	response.Invites = make([]*campaignv1.PendingUserInvite, 0, len(page.Invites))
 	for _, inv := range page.Invites {
 		campaignRecord, ok := campaignsByID[inv.CampaignID]

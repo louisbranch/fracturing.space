@@ -7,7 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -27,7 +28,7 @@ func testEvent(campaignID string, typ event.Type, sessionID string) event.Event 
 func TestAppendAndGetBySeq(t *testing.T) {
 	store := openTestEventsStore(t)
 
-	evt := testEvent("camp-evt", event.TypeCampaignCreated, "")
+	evt := testEvent("camp-evt", event.Type("campaign.created"), "")
 	stored, err := store.AppendEvent(context.Background(), evt)
 	if err != nil {
 		t.Fatalf("append event: %v", err)
@@ -64,7 +65,7 @@ func TestAppendAndGetBySeq(t *testing.T) {
 func TestAppendAndGetByHash(t *testing.T) {
 	store := openTestEventsStore(t)
 
-	evt := testEvent("camp-hash", event.TypeCampaignCreated, "")
+	evt := testEvent("camp-hash", event.Type("campaign.created"), "")
 	stored, err := store.AppendEvent(context.Background(), evt)
 	if err != nil {
 		t.Fatalf("append event: %v", err)
@@ -85,7 +86,7 @@ func TestAppendChainIntegrity(t *testing.T) {
 
 	var events []event.Event
 	for i := 0; i < 3; i++ {
-		evt := testEvent(campaignID, event.TypeCampaignCreated, "")
+		evt := testEvent(campaignID, event.Type("campaign.created"), "")
 		evt.Timestamp = time.Date(2026, 2, 3, 12, i, 0, 0, time.UTC)
 		stored, err := store.AppendEvent(context.Background(), evt)
 		if err != nil {
@@ -115,7 +116,7 @@ func TestAppendChainIntegrity(t *testing.T) {
 func TestAppendIdempotent(t *testing.T) {
 	store := openTestEventsStore(t)
 
-	evt := testEvent("camp-idem", event.TypeCampaignCreated, "")
+	evt := testEvent("camp-idem", event.Type("campaign.created"), "")
 	first, err := store.AppendEvent(context.Background(), evt)
 	if err != nil {
 		t.Fatalf("first append: %v", err)
@@ -136,7 +137,7 @@ func TestListEvents(t *testing.T) {
 	campaignID := "camp-list-evt"
 
 	for i := 0; i < 5; i++ {
-		evt := testEvent(campaignID, event.TypeCampaignCreated, "")
+		evt := testEvent(campaignID, event.Type("campaign.created"), "")
 		evt.Timestamp = time.Date(2026, 2, 3, 12, i, 0, 0, time.UTC)
 		if _, err := store.AppendEvent(context.Background(), evt); err != nil {
 			t.Fatalf("append event %d: %v", i+1, err)
@@ -168,14 +169,14 @@ func TestListEventsBySession(t *testing.T) {
 
 	// 3 events in session A, 2 in session B
 	for i := 0; i < 3; i++ {
-		evt := testEvent(campaignID, event.TypeSessionStarted, "sess-a")
+		evt := testEvent(campaignID, event.Type("session.started"), "sess-a")
 		evt.Timestamp = time.Date(2026, 2, 3, 12, i, 0, 0, time.UTC)
 		if _, err := store.AppendEvent(context.Background(), evt); err != nil {
 			t.Fatalf("append event sess-a %d: %v", i+1, err)
 		}
 	}
 	for i := 0; i < 2; i++ {
-		evt := testEvent(campaignID, event.TypeSessionStarted, "sess-b")
+		evt := testEvent(campaignID, event.Type("session.started"), "sess-b")
 		evt.Timestamp = time.Date(2026, 2, 3, 13, i, 0, 0, time.UTC)
 		if _, err := store.AppendEvent(context.Background(), evt); err != nil {
 			t.Fatalf("append event sess-b %d: %v", i+1, err)
@@ -213,7 +214,7 @@ func TestGetLatestEventSeq(t *testing.T) {
 	}
 
 	for i := 0; i < 3; i++ {
-		evt := testEvent(campaignID, event.TypeCampaignCreated, "")
+		evt := testEvent(campaignID, event.Type("campaign.created"), "")
 		evt.Timestamp = time.Date(2026, 2, 3, 12, i, 0, 0, time.UTC)
 		if _, err := store.AppendEvent(context.Background(), evt); err != nil {
 			t.Fatalf("append event %d: %v", i+1, err)
@@ -234,7 +235,7 @@ func TestListEventsPage(t *testing.T) {
 	campaignID := "camp-page"
 
 	for i := 0; i < 10; i++ {
-		evt := testEvent(campaignID, event.TypeCampaignCreated, "")
+		evt := testEvent(campaignID, event.Type("campaign.created"), "")
 		evt.Timestamp = time.Date(2026, 2, 3, 12, i, 0, 0, time.UTC)
 		if _, err := store.AppendEvent(context.Background(), evt); err != nil {
 			t.Fatalf("append event %d: %v", i+1, err)
@@ -303,7 +304,7 @@ func TestListEventsPage(t *testing.T) {
 	}
 
 	// FilterClause: only session events
-	sessEvt := testEvent(campaignID, event.TypeSessionStarted, "sess-filter")
+	sessEvt := testEvent(campaignID, event.Type("session.started"), "sess-filter")
 	sessEvt.Timestamp = time.Date(2026, 2, 3, 13, 0, 0, 0, time.UTC)
 	if _, err := store.AppendEvent(context.Background(), sessEvt); err != nil {
 		t.Fatalf("append session event: %v", err)
@@ -347,7 +348,7 @@ func TestVerifyEventIntegrity(t *testing.T) {
 	campaignID := "camp-verify"
 
 	for i := 0; i < 5; i++ {
-		evt := testEvent(campaignID, event.TypeCampaignCreated, "")
+		evt := testEvent(campaignID, event.Type("campaign.created"), "")
 		evt.Timestamp = time.Date(2026, 2, 3, 12, i, 0, 0, time.UTC)
 		if _, err := store.AppendEvent(context.Background(), evt); err != nil {
 			t.Fatalf("append event %d: %v", i+1, err)
@@ -368,7 +369,7 @@ func TestGetEventNotFound(t *testing.T) {
 	}
 
 	// Append one event first to ensure the campaign has a seq tracker
-	evt := testEvent("camp-nf", event.TypeCampaignCreated, "")
+	evt := testEvent("camp-nf", event.Type("campaign.created"), "")
 	if _, err := store.AppendEvent(context.Background(), evt); err != nil {
 		t.Fatalf("append event: %v", err)
 	}
@@ -385,7 +386,7 @@ func TestAppendEventMultipleCampaigns(t *testing.T) {
 	// Each campaign gets independent sequence numbers
 	for _, campID := range []string{"camp-a", "camp-b"} {
 		for i := 0; i < 3; i++ {
-			evt := testEvent(campID, event.TypeCampaignCreated, "")
+			evt := testEvent(campID, event.Type("campaign.created"), "")
 			evt.Timestamp = time.Date(2026, 2, 3, 12, i, 0, 0, time.UTC)
 			stored, err := store.AppendEvent(context.Background(), evt)
 			if err != nil {
@@ -421,7 +422,7 @@ func TestAppendEventFieldRoundTrip(t *testing.T) {
 	evt := event.Event{
 		CampaignID:    "camp-fields",
 		Timestamp:     time.Date(2026, 2, 3, 12, 0, 0, 0, time.UTC),
-		Type:          event.TypeCharacterCreated,
+		Type:          event.Type("action.character_state_patched"),
 		SessionID:     "sess-1",
 		RequestID:     "req-1",
 		InvocationID:  "inv-1",
@@ -429,9 +430,11 @@ func TestAppendEventFieldRoundTrip(t *testing.T) {
 		ActorID:       "part-1",
 		EntityType:    "character",
 		EntityID:      "char-1",
-		SystemID:      "DAGGERHEART",
-		SystemVersion: "1.0",
-		PayloadJSON:   []byte(`{"name":"Aria"}`),
+		SystemID:      daggerheart.SystemID,
+		SystemVersion: daggerheart.SystemVersion,
+		CorrelationID: "corr-1",
+		CausationID:   "cause-1",
+		PayloadJSON:   []byte(`{"character_id":"char-1"}`),
 	}
 
 	stored, err := store.AppendEvent(context.Background(), evt)
@@ -456,13 +459,15 @@ func TestAppendEventFieldRoundTrip(t *testing.T) {
 		{"ActorID", stored.ActorID, got.ActorID},
 		{"EntityType", stored.EntityType, got.EntityType},
 		{"EntityID", stored.EntityID, got.EntityID},
+		{"CorrelationID", stored.CorrelationID, got.CorrelationID},
+		{"CausationID", stored.CausationID, got.CausationID},
 	}
 	for _, c := range checks {
 		if c.expected != c.actual {
 			t.Fatalf("%s: expected %q, got %q", c.name, c.expected, c.actual)
 		}
 	}
-	if string(got.PayloadJSON) != `{"name":"Aria"}` {
+	if string(got.PayloadJSON) != `{"character_id":"char-1"}` {
 		t.Fatalf("expected payload to round-trip, got %s", string(got.PayloadJSON))
 	}
 	if fmt.Sprintf("%d", got.Seq) != fmt.Sprintf("%d", stored.Seq) {

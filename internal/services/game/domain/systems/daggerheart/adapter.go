@@ -8,8 +8,7 @@ import (
 	"strings"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
+	event "github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -33,8 +32,8 @@ func (a *Adapter) Version() string {
 	return SystemVersion
 }
 
-// ApplyEvent applies a system-specific event to Daggerheart projections.
-func (a *Adapter) ApplyEvent(ctx context.Context, evt event.Event) error {
+// Apply applies a system-specific event to Daggerheart projections.
+func (a *Adapter) Apply(ctx context.Context, evt event.Event) error {
 	if a == nil || a.store == nil {
 		return fmt.Errorf("daggerheart store is not configured")
 	}
@@ -197,7 +196,7 @@ func (a *Adapter) applyCharacterStatePatched(ctx context.Context, evt event.Even
 	if strings.TrimSpace(payload.CharacterID) == "" {
 		return fmt.Errorf("character_id is required")
 	}
-	return a.applyStatePatch(ctx, evt.CampaignID, payload.CharacterID, payload.HpAfter, payload.HopeAfter, payload.HopeMaxAfter, payload.StressAfter, payload.ArmorAfter, payload.LifeStateAfter)
+	return a.applyStatePatch(ctx, evt.CampaignID, payload.CharacterID, payload.HPAfter, payload.HopeAfter, payload.HopeMaxAfter, payload.StressAfter, payload.ArmorAfter, payload.LifeStateAfter)
 }
 
 func (a *Adapter) applyConditionChanged(ctx context.Context, evt event.Event) error {
@@ -857,5 +856,3 @@ func (a *Adapter) applyAdversaryConditionPatch(ctx context.Context, campaignID, 
 	}
 	return nil
 }
-
-var _ systems.Adapter = (*Adapter)(nil)

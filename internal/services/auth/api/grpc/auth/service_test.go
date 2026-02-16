@@ -11,7 +11,7 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/user"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/invite"
+	invite "github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

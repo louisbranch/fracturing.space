@@ -7,8 +7,11 @@ import (
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/participant"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
@@ -47,9 +50,9 @@ func TestCreateParticipant_CampaignNotFound(t *testing.T) {
 func TestCreateParticipant_CampaignArchivedDisallowed(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
-	campaignStore.campaigns["c1"] = campaign.Campaign{
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
-		Status: campaign.CampaignStatusArchived,
+		Status: campaign.StatusArchived,
 	}
 
 	eventStore := newFakeEventStore()
@@ -65,12 +68,12 @@ func TestCreateParticipant_CampaignArchivedDisallowed(t *testing.T) {
 func TestCreateParticipant_EmptyDisplayName(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
-	participantStore.participants["c1"] = map[string]participant.Participant{
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
 		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
 	}
-	campaignStore.campaigns["c1"] = campaign.Campaign{
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
-		Status: campaign.CampaignStatusDraft,
+		Status: campaign.StatusDraft,
 	}
 
 	eventStore := newFakeEventStore()
@@ -86,12 +89,12 @@ func TestCreateParticipant_EmptyDisplayName(t *testing.T) {
 func TestCreateParticipant_InvalidRole(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
-	participantStore.participants["c1"] = map[string]participant.Participant{
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
 		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
 	}
-	campaignStore.campaigns["c1"] = campaign.Campaign{
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
-		Status: campaign.CampaignStatusDraft,
+		Status: campaign.StatusDraft,
 	}
 
 	eventStore := newFakeEventStore()
@@ -104,22 +107,55 @@ func TestCreateParticipant_InvalidRole(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
+func TestCreateParticipant_RequiresDomainEngine(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+	}
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusDraft}
+
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: newFakeEventStore()})
+	ctx := contextWithParticipantID("owner-1")
+	_, err := svc.CreateParticipant(ctx, &statev1.CreateParticipantRequest{
+		CampaignId:  "c1",
+		DisplayName: "Game Master",
+		Role:        statev1.ParticipantRole_GM,
+		Controller:  statev1.Controller_CONTROLLER_AI,
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
 func TestCreateParticipant_Success_GM(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
-	participantStore.participants["c1"] = map[string]participant.Participant{
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
 		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
 	}
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = campaign.Campaign{
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
-		Status: campaign.CampaignStatusDraft,
+		Status: campaign.StatusDraft,
 	}
 
 	eventStore := newFakeEventStore()
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.join"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("participant.joined"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeParticipant,
+				ActorID:     "owner-1",
+				EntityType:  "participant",
+				EntityID:    "participant-123",
+				PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"","display_name":"Game Master","role":"GM","controller":"AI","campaign_access":"MEMBER"}`),
+			}),
+		},
+	}}
 	svc := &ParticipantService{
-		stores:      Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore},
+		stores:      Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Domain: domain},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("participant-123"),
 	}
@@ -155,8 +191,8 @@ func TestCreateParticipant_Success_GM(t *testing.T) {
 	if got := len(eventStore.events["c1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)
 	}
-	if eventStore.events["c1"][0].Type != event.TypeParticipantJoined {
-		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.TypeParticipantJoined)
+	if eventStore.events["c1"][0].Type != event.Type("participant.joined") {
+		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.Type("participant.joined"))
 	}
 
 	// Verify persisted
@@ -172,19 +208,33 @@ func TestCreateParticipant_Success_GM(t *testing.T) {
 func TestCreateParticipant_Success_Player(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
-	participantStore.participants["c1"] = map[string]participant.Participant{
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
 		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
 	}
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = campaign.Campaign{
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
-		Status: campaign.CampaignStatusActive,
+		Status: campaign.StatusActive,
 	}
 
 	eventStore := newFakeEventStore()
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.join"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("participant.joined"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeParticipant,
+				ActorID:     "owner-1",
+				EntityType:  "participant",
+				EntityID:    "participant-456",
+				PayloadJSON: []byte(`{"participant_id":"participant-456","user_id":"","display_name":"Player One","role":"PLAYER","controller":"HUMAN","campaign_access":"MEMBER"}`),
+			}),
+		},
+	}}
 	svc := &ParticipantService{
-		stores:      Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore},
+		stores:      Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Domain: domain},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("participant-456"),
 	}
@@ -208,8 +258,75 @@ func TestCreateParticipant_Success_Player(t *testing.T) {
 	if got := len(eventStore.events["c1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)
 	}
-	if eventStore.events["c1"][0].Type != event.TypeParticipantJoined {
-		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.TypeParticipantJoined)
+	if eventStore.events["c1"][0].Type != event.Type("participant.joined") {
+		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.Type("participant.joined"))
+	}
+}
+
+func TestCreateParticipant_UsesDomainEngine(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+	}
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	eventStore := newFakeEventStore()
+	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.join"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("participant.joined"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeParticipant,
+				ActorID:     "owner-1",
+				EntityType:  "participant",
+				EntityID:    "participant-123",
+				PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"user-123","display_name":"Player One","role":"player","controller":"human","campaign_access":"member"}`),
+			}),
+		},
+	}}
+
+	svc := &ParticipantService{
+		stores: Stores{
+			Campaign:    campaignStore,
+			Participant: participantStore,
+			Event:       eventStore,
+			Domain:      domain,
+		},
+		clock:       fixedClock(now),
+		idGenerator: fixedIDGenerator("participant-123"),
+	}
+
+	ctx := contextWithParticipantID("owner-1")
+	resp, err := svc.CreateParticipant(ctx, &statev1.CreateParticipantRequest{
+		CampaignId:  "c1",
+		DisplayName: "Player One",
+		Role:        statev1.ParticipantRole_PLAYER,
+		Controller:  statev1.Controller_CONTROLLER_HUMAN,
+		UserId:      "user-123",
+	})
+	if err != nil {
+		t.Fatalf("CreateParticipant returned error: %v", err)
+	}
+	if resp.Participant == nil {
+		t.Fatal("CreateParticipant response has nil participant")
+	}
+	if domain.calls != 1 {
+		t.Fatalf("expected domain to be called once, got %d", domain.calls)
+	}
+	if len(domain.commands) != 1 {
+		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
+	}
+	if domain.commands[0].Type != command.Type("participant.join") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "participant.join")
+	}
+	if got := len(eventStore.events["c1"]); got != 1 {
+		t.Fatalf("expected 1 event, got %d", got)
+	}
+	if eventStore.events["c1"][0].Type != event.Type("participant.joined") {
+		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.Type("participant.joined"))
 	}
 }
 
@@ -218,13 +335,28 @@ func TestUpdateParticipant_NoFields(t *testing.T) {
 	participantStore := newFakeParticipantStore()
 	eventStore := newFakeEventStore()
 
-	campaignStore.campaigns["c1"] = campaign.Campaign{ID: "c1", Status: campaign.CampaignStatusActive}
-	participantStore.participants["c1"] = map[string]participant.Participant{
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
 		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
-		"p1":      {ID: "p1", CampaignID: "c1", DisplayName: "Player One", Role: participant.ParticipantRolePlayer, Controller: participant.ControllerHuman},
+		"p1":      {ID: "p1", CampaignID: "c1", DisplayName: "Player One", Role: participant.RolePlayer, Controller: participant.ControllerHuman},
 	}
+	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.update"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("participant.updated"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeParticipant,
+				ActorID:     "owner-1",
+				EntityType:  "participant",
+				EntityID:    "p1",
+				PayloadJSON: []byte(`{"participant_id":"p1","fields":{"display_name":"Player Uno","controller":"ai"}}`),
+			}),
+		},
+	}}
 
-	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore})
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Domain: domain})
 	ctx := contextWithParticipantID("owner-1")
 	_, err := svc.UpdateParticipant(ctx, &statev1.UpdateParticipantRequest{
 		CampaignId:    "c1",
@@ -233,18 +365,52 @@ func TestUpdateParticipant_NoFields(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
+func TestUpdateParticipant_RequiresDomainEngine(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+		"p1":      {ID: "p1", CampaignID: "c1", DisplayName: "Player One", Role: participant.RolePlayer, Controller: participant.ControllerHuman},
+	}
+
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: newFakeEventStore()})
+	ctx := contextWithParticipantID("owner-1")
+	_, err := svc.UpdateParticipant(ctx, &statev1.UpdateParticipantRequest{
+		CampaignId:    "c1",
+		ParticipantId: "p1",
+		DisplayName:   wrapperspb.String("Player Uno"),
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
 func TestUpdateParticipant_Success(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
 	eventStore := newFakeEventStore()
 
-	campaignStore.campaigns["c1"] = campaign.Campaign{ID: "c1", Status: campaign.CampaignStatusActive}
-	participantStore.participants["c1"] = map[string]participant.Participant{
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
 		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
-		"p1":      {ID: "p1", CampaignID: "c1", DisplayName: "Player One", Role: participant.ParticipantRolePlayer, Controller: participant.ControllerHuman},
+		"p1":      {ID: "p1", CampaignID: "c1", DisplayName: "Player One", Role: participant.RolePlayer, Controller: participant.ControllerHuman},
 	}
+	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.update"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("participant.updated"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeParticipant,
+				ActorID:     "owner-1",
+				EntityType:  "participant",
+				EntityID:    "p1",
+				PayloadJSON: []byte(`{"participant_id":"p1","fields":{"display_name":"Player Uno","controller":"ai"}}`),
+			}),
+		},
+	}}
 
-	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore})
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Domain: domain})
 	ctx := contextWithParticipantID("owner-1")
 	resp, err := svc.UpdateParticipant(ctx, &statev1.UpdateParticipantRequest{
 		CampaignId:    "c1",
@@ -272,8 +438,82 @@ func TestUpdateParticipant_Success(t *testing.T) {
 	if got := len(eventStore.events["c1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)
 	}
-	if eventStore.events["c1"][0].Type != event.TypeParticipantUpdated {
-		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.TypeParticipantUpdated)
+	if eventStore.events["c1"][0].Type != event.Type("participant.updated") {
+		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.Type("participant.updated"))
+	}
+}
+
+func TestUpdateParticipant_UsesDomainEngine(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	eventStore := newFakeEventStore()
+
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+		"p1":      {ID: "p1", CampaignID: "c1", DisplayName: "Player One", Role: participant.RolePlayer, Controller: participant.ControllerHuman},
+	}
+	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.update"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("participant.updated"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeParticipant,
+				ActorID:     "owner-1",
+				EntityType:  "participant",
+				EntityID:    "p1",
+				PayloadJSON: []byte(`{"participant_id":"p1","fields":{"display_name":"Player Uno","controller":"ai"}}`),
+			}),
+		},
+	}}
+
+	svc := &ParticipantService{
+		stores: Stores{
+			Campaign:    campaignStore,
+			Participant: participantStore,
+			Event:       eventStore,
+			Domain:      domain,
+		},
+		clock: fixedClock(now),
+	}
+
+	ctx := contextWithParticipantID("owner-1")
+	resp, err := svc.UpdateParticipant(ctx, &statev1.UpdateParticipantRequest{
+		CampaignId:    "c1",
+		ParticipantId: "p1",
+		DisplayName:   wrapperspb.String("Player Uno"),
+		Controller:    statev1.Controller_CONTROLLER_AI,
+	})
+	if err != nil {
+		t.Fatalf("UpdateParticipant returned error: %v", err)
+	}
+	if resp.Participant == nil {
+		t.Fatal("UpdateParticipant response has nil participant")
+	}
+	if domain.calls != 1 {
+		t.Fatalf("expected domain to be called once, got %d", domain.calls)
+	}
+	if len(domain.commands) != 1 {
+		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
+	}
+	if domain.commands[0].Type != command.Type("participant.update") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "participant.update")
+	}
+	if got := len(eventStore.events["c1"]); got != 1 {
+		t.Fatalf("expected 1 event, got %d", got)
+	}
+	if eventStore.events["c1"][0].Type != event.Type("participant.updated") {
+		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.Type("participant.updated"))
+	}
+	stored, err := participantStore.GetParticipant(context.Background(), "c1", "p1")
+	if err != nil {
+		t.Fatalf("Participant not persisted: %v", err)
+	}
+	if stored.DisplayName != "Player Uno" {
+		t.Fatalf("Stored participant DisplayName = %q, want %q", stored.DisplayName, "Player Uno")
 	}
 }
 
@@ -282,13 +522,28 @@ func TestUpdateParticipant_CampaignAccess(t *testing.T) {
 	participantStore := newFakeParticipantStore()
 	eventStore := newFakeEventStore()
 
-	campaignStore.campaigns["c1"] = campaign.Campaign{ID: "c1", Status: campaign.CampaignStatusActive}
-	participantStore.participants["c1"] = map[string]participant.Participant{
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
 		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
 		"p1":      {ID: "p1", CampaignID: "c1", DisplayName: "Player One", CampaignAccess: participant.CampaignAccessMember},
 	}
+	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.update"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("participant.updated"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeParticipant,
+				ActorID:     "owner-1",
+				EntityType:  "participant",
+				EntityID:    "p1",
+				PayloadJSON: []byte(`{"participant_id":"p1","fields":{"campaign_access":"manager"}}`),
+			}),
+		},
+	}}
 
-	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore})
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Domain: domain})
 	ctx := contextWithParticipantID("owner-1")
 	resp, err := svc.UpdateParticipant(ctx, &statev1.UpdateParticipantRequest{
 		CampaignId:     "c1",
@@ -316,13 +571,28 @@ func TestDeleteParticipant_Success(t *testing.T) {
 	participantStore := newFakeParticipantStore()
 	eventStore := newFakeEventStore()
 
-	campaignStore.campaigns["c1"] = campaign.Campaign{ID: "c1", Status: campaign.CampaignStatusActive, ParticipantCount: 1}
-	participantStore.participants["c1"] = map[string]participant.Participant{
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive, ParticipantCount: 1}
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
 		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
-		"p1":      {ID: "p1", CampaignID: "c1", DisplayName: "Player One", Role: participant.ParticipantRolePlayer},
+		"p1":      {ID: "p1", CampaignID: "c1", DisplayName: "Player One", Role: participant.RolePlayer},
 	}
+	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.leave"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("participant.left"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeParticipant,
+				ActorID:     "owner-1",
+				EntityType:  "participant",
+				EntityID:    "p1",
+				PayloadJSON: []byte(`{"participant_id":"p1","reason":"left"}`),
+			}),
+		},
+	}}
 
-	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore})
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Domain: domain})
 	ctx := contextWithParticipantID("owner-1")
 	resp, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
 		CampaignId:    "c1",
@@ -348,8 +618,102 @@ func TestDeleteParticipant_Success(t *testing.T) {
 	if got := len(eventStore.events["c1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)
 	}
-	if eventStore.events["c1"][0].Type != event.TypeParticipantLeft {
-		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.TypeParticipantLeft)
+	if eventStore.events["c1"][0].Type != event.Type("participant.left") {
+		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.Type("participant.left"))
+	}
+}
+
+func TestDeleteParticipant_RequiresDomainEngine(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive, ParticipantCount: 1}
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+		"p1":      {ID: "p1", CampaignID: "c1", DisplayName: "Player One", Role: participant.RolePlayer},
+	}
+
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: newFakeEventStore()})
+	ctx := contextWithParticipantID("owner-1")
+	_, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
+		CampaignId:    "c1",
+		ParticipantId: "p1",
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestDeleteParticipant_UsesDomainEngine(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	eventStore := newFakeEventStore()
+
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive, ParticipantCount: 1}
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+		"p1":      {ID: "p1", CampaignID: "c1", DisplayName: "Player One", Role: participant.RolePlayer},
+	}
+	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.leave"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("participant.left"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeParticipant,
+				ActorID:     "owner-1",
+				EntityType:  "participant",
+				EntityID:    "p1",
+				PayloadJSON: []byte(`{"participant_id":"p1","reason":"left"}`),
+			}),
+		},
+	}}
+
+	svc := &ParticipantService{
+		stores: Stores{
+			Campaign:    campaignStore,
+			Participant: participantStore,
+			Event:       eventStore,
+			Domain:      domain,
+		},
+		clock: fixedClock(now),
+	}
+
+	ctx := contextWithParticipantID("owner-1")
+	resp, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
+		CampaignId:    "c1",
+		ParticipantId: "p1",
+		Reason:        "left",
+	})
+	if err != nil {
+		t.Fatalf("DeleteParticipant returned error: %v", err)
+	}
+	if resp.Participant.Id != "p1" {
+		t.Fatalf("Participant ID = %q, want %q", resp.Participant.Id, "p1")
+	}
+	if domain.calls != 1 {
+		t.Fatalf("expected domain to be called once, got %d", domain.calls)
+	}
+	if len(domain.commands) != 1 {
+		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
+	}
+	if domain.commands[0].Type != command.Type("participant.leave") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "participant.leave")
+	}
+	if got := len(eventStore.events["c1"]); got != 1 {
+		t.Fatalf("expected 1 event, got %d", got)
+	}
+	if eventStore.events["c1"][0].Type != event.Type("participant.left") {
+		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.Type("participant.left"))
+	}
+	if _, err := participantStore.GetParticipant(context.Background(), "c1", "p1"); err == nil {
+		t.Fatal("expected participant to be deleted")
+	}
+	updatedCampaign, err := campaignStore.Get(context.Background(), "c1")
+	if err != nil {
+		t.Fatalf("campaign not found: %v", err)
+	}
+	if updatedCampaign.ParticipantCount != 0 {
+		t.Fatalf("ParticipantCount = %d, want 0", updatedCampaign.ParticipantCount)
 	}
 }
 
@@ -382,12 +746,12 @@ func TestListParticipants_CampaignArchivedAllowed(t *testing.T) {
 	participantStore := newFakeParticipantStore()
 	now := time.Now().UTC()
 
-	campaignStore.campaigns["c1"] = campaign.Campaign{
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
-		Status: campaign.CampaignStatusArchived,
+		Status: campaign.StatusArchived,
 	}
-	participantStore.participants["c1"] = map[string]participant.Participant{
-		"p1": {ID: "p1", CampaignID: "c1", DisplayName: "GM", Role: participant.ParticipantRoleGM, CreatedAt: now},
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+		"p1": {ID: "p1", CampaignID: "c1", DisplayName: "GM", Role: participant.RoleGM, CreatedAt: now},
 	}
 
 	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore})
@@ -403,9 +767,9 @@ func TestListParticipants_CampaignArchivedAllowed(t *testing.T) {
 func TestListParticipants_EmptyList(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
-	campaignStore.campaigns["c1"] = campaign.Campaign{
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
-		Status: campaign.CampaignStatusActive,
+		Status: campaign.StatusActive,
 	}
 
 	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore})
@@ -423,13 +787,13 @@ func TestListParticipants_WithParticipants(t *testing.T) {
 	participantStore := newFakeParticipantStore()
 	now := time.Now().UTC()
 
-	campaignStore.campaigns["c1"] = campaign.Campaign{
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
-		Status: campaign.CampaignStatusActive,
+		Status: campaign.StatusActive,
 	}
-	participantStore.participants["c1"] = map[string]participant.Participant{
-		"p1": {ID: "p1", CampaignID: "c1", DisplayName: "GM", Role: participant.ParticipantRoleGM, CreatedAt: now},
-		"p2": {ID: "p2", CampaignID: "c1", DisplayName: "Player 1", Role: participant.ParticipantRolePlayer, CreatedAt: now},
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+		"p1": {ID: "p1", CampaignID: "c1", DisplayName: "GM", Role: participant.RoleGM, CreatedAt: now},
+		"p2": {ID: "p2", CampaignID: "c1", DisplayName: "Player 1", Role: participant.RolePlayer, CreatedAt: now},
 	}
 
 	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore})
@@ -475,9 +839,9 @@ func TestGetParticipant_CampaignNotFound(t *testing.T) {
 func TestGetParticipant_ParticipantNotFound(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
-	campaignStore.campaigns["c1"] = campaign.Campaign{
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
-		Status: campaign.CampaignStatusActive,
+		Status: campaign.StatusActive,
 	}
 
 	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore})
@@ -490,16 +854,16 @@ func TestGetParticipant_Success(t *testing.T) {
 	participantStore := newFakeParticipantStore()
 	now := time.Now().UTC()
 
-	campaignStore.campaigns["c1"] = campaign.Campaign{
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
-		Status: campaign.CampaignStatusActive,
+		Status: campaign.StatusActive,
 	}
-	participantStore.participants["c1"] = map[string]participant.Participant{
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
 		"p1": {
 			ID:          "p1",
 			CampaignID:  "c1",
 			DisplayName: "Game Master",
-			Role:        participant.ParticipantRoleGM,
+			Role:        participant.RoleGM,
 			Controller:  participant.ControllerAI,
 			CreatedAt:   now,
 			UpdatedAt:   now,

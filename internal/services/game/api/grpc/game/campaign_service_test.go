@@ -10,8 +10,11 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/session"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -74,14 +77,61 @@ func TestCreateCampaign_MissingCreatorUserID(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
+func TestCreateCampaign_RequiresDomainEngine(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	eventStore := newFakeEventStore()
+	participantStore := newFakeParticipantStore()
+	svc := &CampaignService{
+		stores:      Stores{Campaign: campaignStore, Event: eventStore, Participant: participantStore},
+		clock:       fixedClock(time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)),
+		idGenerator: fixedSequenceIDGenerator("campaign-123", "participant-123"),
+	}
+
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-123"))
+	_, err := svc.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
+		Name:               "Test Campaign",
+		System:             commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		GmMode:             statev1.GmMode_HUMAN,
+		CreatorDisplayName: "Owner",
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
 func TestCreateCampaign_Success(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	eventStore := newFakeEventStore()
 	participantStore := newFakeParticipantStore()
 	fakeAuth := &fakeAuthClient{user: &authv1.User{Id: "user-123", Username: "creator"}}
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
+	domain := &fakeDomainEngine{
+		store: eventStore,
+		resultsByType: map[command.Type]engine.Result{
+			command.Type("campaign.create"): {
+				Decision: command.Accept(event.Event{
+					CampaignID:  "campaign-123",
+					Type:        event.Type("campaign.created"),
+					Timestamp:   now,
+					ActorType:   event.ActorTypeSystem,
+					EntityType:  "campaign",
+					EntityID:    "campaign-123",
+					PayloadJSON: []byte(`{"name":"Test Campaign","locale":"en-US","game_system":"GAME_SYSTEM_DAGGERHEART","gm_mode":"GM_MODE_HUMAN","intent":"STARTER","access_policy":"PUBLIC","theme_prompt":"A dark fantasy adventure"}`),
+				}),
+			},
+			command.Type("participant.join"): {
+				Decision: command.Accept(event.Event{
+					CampaignID:  "campaign-123",
+					Type:        event.Type("participant.joined"),
+					Timestamp:   now,
+					ActorType:   event.ActorTypeSystem,
+					EntityType:  "participant",
+					EntityID:    "participant-123",
+					PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"user-123","display_name":"creator","role":"GM","controller":"HUMAN","campaign_access":"OWNER"}`),
+				}),
+			},
+		},
+	}
 	svc := &CampaignService{
-		stores:      Stores{Campaign: campaignStore, Event: eventStore, Participant: participantStore},
+		stores:      Stores{Campaign: campaignStore, Event: eventStore, Participant: participantStore, Domain: domain},
 		clock:       fixedClock(now),
 		idGenerator: fixedSequenceIDGenerator("campaign-123", "participant-123"),
 		authClient:  fakeAuth,
@@ -128,11 +178,11 @@ func TestCreateCampaign_Success(t *testing.T) {
 	if got := len(eventStore.events["campaign-123"]); got != 2 {
 		t.Fatalf("expected 2 events, got %d", got)
 	}
-	if eventStore.events["campaign-123"][0].Type != event.TypeCampaignCreated {
-		t.Fatalf("event type = %s, want %s", eventStore.events["campaign-123"][0].Type, event.TypeCampaignCreated)
+	if eventStore.events["campaign-123"][0].Type != event.Type("campaign.created") {
+		t.Fatalf("event type = %s, want %s", eventStore.events["campaign-123"][0].Type, event.Type("campaign.created"))
 	}
-	if eventStore.events["campaign-123"][1].Type != event.TypeParticipantJoined {
-		t.Fatalf("event type = %s, want %s", eventStore.events["campaign-123"][1].Type, event.TypeParticipantJoined)
+	if eventStore.events["campaign-123"][1].Type != event.Type("participant.joined") {
+		t.Fatalf("event type = %s, want %s", eventStore.events["campaign-123"][1].Type, event.Type("participant.joined"))
 	}
 
 	// Verify persisted
@@ -142,6 +192,94 @@ func TestCreateCampaign_Success(t *testing.T) {
 	}
 	if stored.Name != "Test Campaign" {
 		t.Errorf("Stored campaign Name = %q, want %q", stored.Name, "Test Campaign")
+	}
+}
+
+func TestCreateCampaign_UsesDomainEngine(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	eventStore := newFakeEventStore()
+	participantStore := newFakeParticipantStore()
+	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
+
+	domain := &fakeDomainEngine{
+		store: eventStore,
+		resultsByType: map[command.Type]engine.Result{
+			command.Type("campaign.create"): {
+				Decision: command.Accept(event.Event{
+					CampaignID:  "campaign-123",
+					Type:        event.Type("campaign.created"),
+					Timestamp:   now,
+					ActorType:   event.ActorTypeSystem,
+					EntityType:  "campaign",
+					EntityID:    "campaign-123",
+					PayloadJSON: []byte(`{"name":"Test Campaign","locale":"en-US","game_system":"GAME_SYSTEM_DAGGERHEART","gm_mode":"GM_MODE_HUMAN","intent":"STARTER","access_policy":"PUBLIC","theme_prompt":"A dark fantasy adventure"}`),
+				}),
+			},
+			command.Type("participant.join"): {
+				Decision: command.Accept(event.Event{
+					CampaignID:  "campaign-123",
+					Type:        event.Type("participant.joined"),
+					Timestamp:   now,
+					ActorType:   event.ActorTypeSystem,
+					EntityType:  "participant",
+					EntityID:    "participant-123",
+					PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"user-123","display_name":"Owner","role":"GM","controller":"HUMAN","campaign_access":"OWNER"}`),
+				}),
+			},
+		},
+	}
+
+	svc := &CampaignService{
+		stores: Stores{
+			Campaign:    campaignStore,
+			Event:       eventStore,
+			Participant: participantStore,
+			Domain:      domain,
+		},
+		clock:       fixedClock(now),
+		idGenerator: fixedSequenceIDGenerator("campaign-123", "participant-123"),
+	}
+
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-123"))
+	resp, err := svc.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
+		Name:               "Test Campaign",
+		Locale:             commonv1.Locale_LOCALE_EN_US,
+		System:             commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		GmMode:             statev1.GmMode_HUMAN,
+		Intent:             statev1.CampaignIntent_STARTER,
+		AccessPolicy:       statev1.CampaignAccessPolicy_PUBLIC,
+		ThemePrompt:        "A dark fantasy adventure",
+		CreatorDisplayName: "Owner",
+	})
+	if err != nil {
+		t.Fatalf("CreateCampaign returned error: %v", err)
+	}
+	if resp.Campaign == nil {
+		t.Fatal("CreateCampaign response has nil campaign")
+	}
+	if resp.Campaign.ThemePrompt != "A dark fantasy adventure" {
+		t.Fatalf("Campaign ThemePrompt = %q, want %q", resp.Campaign.ThemePrompt, "A dark fantasy adventure")
+	}
+	if domain.calls != 2 {
+		t.Fatalf("expected domain to be called twice, got %d", domain.calls)
+	}
+	if len(domain.commands) != 2 {
+		t.Fatalf("expected 2 domain commands, got %d", len(domain.commands))
+	}
+	if domain.commands[0].Type != command.Type("campaign.create") {
+		t.Fatalf("first command type = %s, want %s", domain.commands[0].Type, "campaign.create")
+	}
+	if domain.commands[1].Type != command.Type("participant.join") {
+		t.Fatalf("second command type = %s, want %s", domain.commands[1].Type, "participant.join")
+	}
+	if got := len(eventStore.events["campaign-123"]); got != 2 {
+		t.Fatalf("expected 2 events, got %d", got)
+	}
+	if eventStore.events["campaign-123"][0].Type != event.Type("campaign.created") {
+		t.Fatalf("event type = %s, want %s", eventStore.events["campaign-123"][0].Type, event.Type("campaign.created"))
+	}
+	if eventStore.events["campaign-123"][1].Type != event.Type("participant.joined") {
+		t.Fatalf("event type = %s, want %s", eventStore.events["campaign-123"][1].Type, event.Type("participant.joined"))
 	}
 }
 
@@ -167,18 +305,18 @@ func TestListCampaigns_EmptyList(t *testing.T) {
 func TestListCampaigns_WithCampaigns(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	now := time.Now().UTC()
-	campaignStore.campaigns["c1"] = campaign.Campaign{
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
 		Name:   "Campaign One",
 		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		Status: campaign.CampaignStatusDraft,
+		Status: campaign.StatusDraft,
 		GmMode: campaign.GmModeHuman,
 	}
-	campaignStore.campaigns["c2"] = campaign.Campaign{
+	campaignStore.campaigns["c2"] = storage.CampaignRecord{
 		ID:        "c2",
 		Name:      "Campaign Two",
 		System:    commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		Status:    campaign.CampaignStatusActive,
+		Status:    campaign.StatusActive,
 		GmMode:    campaign.GmModeAI,
 		CreatedAt: now,
 	}
@@ -217,11 +355,11 @@ func TestGetCampaign_NotFound(t *testing.T) {
 func TestGetCampaign_Success(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	now := time.Now().UTC()
-	campaignStore.campaigns["c1"] = campaign.Campaign{
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{
 		ID:        "c1",
 		Name:      "Test Campaign",
 		System:    commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		Status:    campaign.CampaignStatusDraft,
+		Status:    campaign.StatusDraft,
 		GmMode:    campaign.GmModeHuman,
 		CreatedAt: now,
 	}
@@ -273,15 +411,15 @@ func TestEndCampaign_ActiveSessionBlocks(t *testing.T) {
 	eventStore := newFakeEventStore()
 	now := time.Now().UTC()
 
-	campaignStore.campaigns["c1"] = campaign.Campaign{
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
 		Name:   "Test Campaign",
-		Status: campaign.CampaignStatusActive,
+		Status: campaign.StatusActive,
 		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 		GmMode: campaign.GmModeHuman,
 	}
-	sessionStore.sessions["c1"] = map[string]session.Session{
-		"s1": {ID: "s1", CampaignID: "c1", Status: session.SessionStatusActive, StartedAt: now},
+	sessionStore.sessions["c1"] = map[string]storage.SessionRecord{
+		"s1": {ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now},
 	}
 	sessionStore.activeSession["c1"] = "s1"
 
@@ -295,10 +433,10 @@ func TestEndCampaign_DraftStatusDisallowed(t *testing.T) {
 	sessionStore := newFakeSessionStore()
 	eventStore := newFakeEventStore()
 
-	campaignStore.campaigns["c1"] = campaign.Campaign{
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
 		Name:   "Test Campaign",
-		Status: campaign.CampaignStatusDraft,
+		Status: campaign.StatusDraft,
 		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 		GmMode: campaign.GmModeHuman,
 	}
@@ -308,22 +446,44 @@ func TestEndCampaign_DraftStatusDisallowed(t *testing.T) {
 	assertStatusCode(t, err, codes.FailedPrecondition)
 }
 
+func TestEndCampaign_RequiresDomainEngine(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	eventStore := newFakeEventStore()
+	sessionStore := newFakeSessionStore()
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+
+	svc := NewCampaignService(Stores{Campaign: campaignStore, Event: eventStore, Session: sessionStore})
+	_, err := svc.EndCampaign(context.Background(), &statev1.EndCampaignRequest{CampaignId: "c1"})
+	assertStatusCode(t, err, codes.Internal)
+}
+
 func TestEndCampaign_Success(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = campaign.Campaign{
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
 		Name:   "Test Campaign",
-		Status: campaign.CampaignStatusActive,
+		Status: campaign.StatusActive,
 		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 		GmMode: campaign.GmModeHuman,
 	}
+	domain := &fakeDomainEngine{store: eventStore, result: engine.Result{
+		Decision: command.Accept(event.Event{
+			CampaignID:  "c1",
+			Type:        event.Type("campaign.updated"),
+			Timestamp:   now,
+			ActorType:   event.ActorTypeSystem,
+			EntityType:  "campaign",
+			EntityID:    "c1",
+			PayloadJSON: []byte(`{"fields":{"status":"completed"}}`),
+		}),
+	}}
 
 	svc := &CampaignService{
-		stores:      Stores{Campaign: campaignStore, Session: sessionStore, Event: eventStore},
+		stores:      Stores{Campaign: campaignStore, Session: sessionStore, Event: eventStore, Domain: domain},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("campaign-123"),
 	}
@@ -341,14 +501,57 @@ func TestEndCampaign_Success(t *testing.T) {
 
 	// Verify persisted
 	stored, _ := campaignStore.Get(context.Background(), "c1")
-	if stored.Status != campaign.CampaignStatusCompleted {
-		t.Errorf("Stored campaign Status = %v, want %v", stored.Status, campaign.CampaignStatusCompleted)
+	if stored.Status != campaign.StatusCompleted {
+		t.Errorf("Stored campaign Status = %v, want %v", stored.Status, campaign.StatusCompleted)
 	}
 	if got := len(eventStore.events["c1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)
 	}
-	if eventStore.events["c1"][0].Type != event.TypeCampaignUpdated {
-		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.TypeCampaignUpdated)
+	if eventStore.events["c1"][0].Type != event.Type("campaign.updated") {
+		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.Type("campaign.updated"))
+	}
+}
+
+func TestEndCampaign_UsesDomainEngine(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	sessionStore := newFakeSessionStore()
+	eventStore := newFakeEventStore()
+	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
+
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+		ID:     "c1",
+		Name:   "Test Campaign",
+		Status: campaign.StatusActive,
+		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		GmMode: campaign.GmModeHuman,
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, result: engine.Result{
+		Decision: command.Accept(event.Event{
+			CampaignID:  "c1",
+			Type:        event.Type("campaign.updated"),
+			Timestamp:   now,
+			ActorType:   event.ActorTypeSystem,
+			EntityType:  "campaign",
+			EntityID:    "c1",
+			PayloadJSON: []byte(`{"fields":{"status":"completed"}}`),
+		}),
+	}}
+
+	svc := &CampaignService{
+		stores: Stores{Campaign: campaignStore, Session: sessionStore, Event: eventStore, Domain: domain},
+		clock:  fixedClock(now),
+	}
+
+	_, err := svc.EndCampaign(context.Background(), &statev1.EndCampaignRequest{CampaignId: "c1"})
+	if err != nil {
+		t.Fatalf("EndCampaign returned error: %v", err)
+	}
+	if domain.calls != 1 {
+		t.Fatalf("expected domain to be called once, got %d", domain.calls)
+	}
+	if domain.lastCommand.Type != command.Type("campaign.end") {
+		t.Fatalf("command type = %s, want %s", domain.lastCommand.Type, "campaign.end")
 	}
 }
 
@@ -382,12 +585,12 @@ func TestArchiveCampaign_ActiveSessionBlocks(t *testing.T) {
 	eventStore := newFakeEventStore()
 	now := time.Now().UTC()
 
-	campaignStore.campaigns["c1"] = campaign.Campaign{
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
-		Status: campaign.CampaignStatusActive,
+		Status: campaign.StatusActive,
 	}
-	sessionStore.sessions["c1"] = map[string]session.Session{
-		"s1": {ID: "s1", CampaignID: "c1", Status: session.SessionStatusActive, StartedAt: now},
+	sessionStore.sessions["c1"] = map[string]storage.SessionRecord{
+		"s1": {ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now},
 	}
 	sessionStore.activeSession["c1"] = "s1"
 
@@ -396,22 +599,44 @@ func TestArchiveCampaign_ActiveSessionBlocks(t *testing.T) {
 	assertStatusCode(t, err, codes.FailedPrecondition)
 }
 
+func TestArchiveCampaign_RequiresDomainEngine(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	eventStore := newFakeEventStore()
+	sessionStore := newFakeSessionStore()
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+
+	svc := NewCampaignService(Stores{Campaign: campaignStore, Event: eventStore, Session: sessionStore})
+	_, err := svc.ArchiveCampaign(context.Background(), &statev1.ArchiveCampaignRequest{CampaignId: "c1"})
+	assertStatusCode(t, err, codes.Internal)
+}
+
 func TestArchiveCampaign_Success(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = campaign.Campaign{
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
 		Name:   "Test Campaign",
-		Status: campaign.CampaignStatusCompleted,
+		Status: campaign.StatusCompleted,
 		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 		GmMode: campaign.GmModeHuman,
 	}
+	domain := &fakeDomainEngine{store: eventStore, result: engine.Result{
+		Decision: command.Accept(event.Event{
+			CampaignID:  "c1",
+			Type:        event.Type("campaign.updated"),
+			Timestamp:   now,
+			ActorType:   event.ActorTypeSystem,
+			EntityType:  "campaign",
+			EntityID:    "c1",
+			PayloadJSON: []byte(`{"fields":{"status":"archived"}}`),
+		}),
+	}}
 
 	svc := &CampaignService{
-		stores:      Stores{Campaign: campaignStore, Session: sessionStore, Event: eventStore},
+		stores:      Stores{Campaign: campaignStore, Session: sessionStore, Event: eventStore, Domain: domain},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("campaign-123"),
 	}
@@ -429,8 +654,51 @@ func TestArchiveCampaign_Success(t *testing.T) {
 	if got := len(eventStore.events["c1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)
 	}
-	if eventStore.events["c1"][0].Type != event.TypeCampaignUpdated {
-		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.TypeCampaignUpdated)
+	if eventStore.events["c1"][0].Type != event.Type("campaign.updated") {
+		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.Type("campaign.updated"))
+	}
+}
+
+func TestArchiveCampaign_UsesDomainEngine(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	sessionStore := newFakeSessionStore()
+	eventStore := newFakeEventStore()
+	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
+
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+		ID:     "c1",
+		Name:   "Test Campaign",
+		Status: campaign.StatusCompleted,
+		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		GmMode: campaign.GmModeHuman,
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, result: engine.Result{
+		Decision: command.Accept(event.Event{
+			CampaignID:  "c1",
+			Type:        event.Type("campaign.updated"),
+			Timestamp:   now,
+			ActorType:   event.ActorTypeSystem,
+			EntityType:  "campaign",
+			EntityID:    "c1",
+			PayloadJSON: []byte(`{"fields":{"status":"archived"}}`),
+		}),
+	}}
+
+	svc := &CampaignService{
+		stores: Stores{Campaign: campaignStore, Session: sessionStore, Event: eventStore, Domain: domain},
+		clock:  fixedClock(now),
+	}
+
+	_, err := svc.ArchiveCampaign(context.Background(), &statev1.ArchiveCampaignRequest{CampaignId: "c1"})
+	if err != nil {
+		t.Fatalf("ArchiveCampaign returned error: %v", err)
+	}
+	if domain.calls != 1 {
+		t.Fatalf("expected domain to be called once, got %d", domain.calls)
+	}
+	if domain.lastCommand.Type != command.Type("campaign.archive") {
+		t.Fatalf("command type = %s, want %s", domain.lastCommand.Type, "campaign.archive")
 	}
 }
 
@@ -459,14 +727,24 @@ func TestRestoreCampaign_NotFound(t *testing.T) {
 func TestRestoreCampaign_NotArchivedDisallowed(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	eventStore := newFakeEventStore()
-	campaignStore.campaigns["c1"] = campaign.Campaign{
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
-		Status: campaign.CampaignStatusActive,
+		Status: campaign.StatusActive,
 	}
 
 	svc := NewCampaignService(Stores{Campaign: campaignStore, Event: eventStore})
 	_, err := svc.RestoreCampaign(context.Background(), &statev1.RestoreCampaignRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.FailedPrecondition)
+}
+
+func TestRestoreCampaign_RequiresDomainEngine(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	eventStore := newFakeEventStore()
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusArchived}
+
+	svc := NewCampaignService(Stores{Campaign: campaignStore, Event: eventStore})
+	_, err := svc.RestoreCampaign(context.Background(), &statev1.RestoreCampaignRequest{CampaignId: "c1"})
+	assertStatusCode(t, err, codes.Internal)
 }
 
 func TestRestoreCampaign_Success(t *testing.T) {
@@ -475,17 +753,28 @@ func TestRestoreCampaign_Success(t *testing.T) {
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 	archivedAt := now.Add(-24 * time.Hour)
 
-	campaignStore.campaigns["c1"] = campaign.Campaign{
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{
 		ID:         "c1",
 		Name:       "Test Campaign",
-		Status:     campaign.CampaignStatusArchived,
+		Status:     campaign.StatusArchived,
 		ArchivedAt: &archivedAt,
 		System:     commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 		GmMode:     campaign.GmModeHuman,
 	}
+	domain := &fakeDomainEngine{store: eventStore, result: engine.Result{
+		Decision: command.Accept(event.Event{
+			CampaignID:  "c1",
+			Type:        event.Type("campaign.updated"),
+			Timestamp:   now,
+			ActorType:   event.ActorTypeSystem,
+			EntityType:  "campaign",
+			EntityID:    "c1",
+			PayloadJSON: []byte(`{"fields":{"status":"draft"}}`),
+		}),
+	}}
 
 	svc := &CampaignService{
-		stores:      Stores{Campaign: campaignStore, Event: eventStore},
+		stores:      Stores{Campaign: campaignStore, Event: eventStore, Domain: domain},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("campaign-123"),
 	}
@@ -503,8 +792,52 @@ func TestRestoreCampaign_Success(t *testing.T) {
 	if got := len(eventStore.events["c1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)
 	}
-	if eventStore.events["c1"][0].Type != event.TypeCampaignUpdated {
-		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.TypeCampaignUpdated)
+	if eventStore.events["c1"][0].Type != event.Type("campaign.updated") {
+		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.Type("campaign.updated"))
+	}
+}
+
+func TestRestoreCampaign_UsesDomainEngine(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	eventStore := newFakeEventStore()
+	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
+	archivedAt := now.Add(-24 * time.Hour)
+
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+		ID:         "c1",
+		Name:       "Test Campaign",
+		Status:     campaign.StatusArchived,
+		ArchivedAt: &archivedAt,
+		System:     commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		GmMode:     campaign.GmModeHuman,
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, result: engine.Result{
+		Decision: command.Accept(event.Event{
+			CampaignID:  "c1",
+			Type:        event.Type("campaign.updated"),
+			Timestamp:   now,
+			ActorType:   event.ActorTypeSystem,
+			EntityType:  "campaign",
+			EntityID:    "c1",
+			PayloadJSON: []byte(`{"fields":{"status":"draft"}}`),
+		}),
+	}}
+
+	svc := &CampaignService{
+		stores: Stores{Campaign: campaignStore, Event: eventStore, Domain: domain},
+		clock:  fixedClock(now),
+	}
+
+	_, err := svc.RestoreCampaign(context.Background(), &statev1.RestoreCampaignRequest{CampaignId: "c1"})
+	if err != nil {
+		t.Fatalf("RestoreCampaign returned error: %v", err)
+	}
+	if domain.calls != 1 {
+		t.Fatalf("expected domain to be called once, got %d", domain.calls)
+	}
+	if domain.lastCommand.Type != command.Type("campaign.restore") {
+		t.Fatalf("command type = %s, want %s", domain.lastCommand.Type, "campaign.restore")
 	}
 }
 

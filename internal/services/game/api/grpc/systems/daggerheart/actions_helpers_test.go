@@ -6,7 +6,7 @@ import (
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/core/dice"
+	"github.com/louisbranch/fracturing.space/internal/services/game/core/dice"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	daggerheartdomain "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/domain"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"

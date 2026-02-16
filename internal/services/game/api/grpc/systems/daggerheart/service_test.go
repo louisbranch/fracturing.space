@@ -8,8 +8,8 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/core/dice"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/core/random"
+	"github.com/louisbranch/fracturing.space/internal/services/game/core/dice"
+	"github.com/louisbranch/fracturing.space/internal/services/game/core/random"
 	daggerheartdomain "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/domain"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

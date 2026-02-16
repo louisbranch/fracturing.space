@@ -12,7 +12,7 @@ import (
 func TestCreateSessions_CountLessThanOne(t *testing.T) {
 	g := newTestGen(1, testDeps(nil, nil, nil, nil, &fakeSessionManager{}, nil, nil))
 
-	err := g.createSessions(context.Background(), "camp-1", 0, PresetConfig{}, nil)
+	err := g.createSessions(context.Background(), "camp-1", 0, PresetConfig{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -43,7 +43,7 @@ func TestCreateSessions_EndsAllButLast(t *testing.T) {
 	cfg := PresetConfig{EventsMin: 0, EventsMax: 0}
 	g := newTestGen(1, testDeps(nil, nil, nil, nil, sess, evt, nil))
 
-	err := g.createSessions(context.Background(), "camp-1", 3, cfg, nil)
+	err := g.createSessions(context.Background(), "camp-1", 3, cfg)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -82,7 +82,7 @@ func TestCreateSessions_IncludeEndedSessions(t *testing.T) {
 	cfg := PresetConfig{EventsMin: 0, EventsMax: 0, IncludeEndedSessions: true}
 	g := newTestGen(1, testDeps(nil, nil, nil, nil, sess, evt, nil))
 
-	err := g.createSessions(context.Background(), "camp-1", 2, cfg, nil)
+	err := g.createSessions(context.Background(), "camp-1", 2, cfg)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -92,7 +92,7 @@ func TestCreateSessions_IncludeEndedSessions(t *testing.T) {
 	}
 }
 
-func TestCreateSessions_EventsAppended(t *testing.T) {
+func TestCreateSessions_DoesNotAppendEvents(t *testing.T) {
 	var eventCount int
 	sessSeq := 0
 	sess := &fakeSessionManager{
@@ -115,12 +115,12 @@ func TestCreateSessions_EventsAppended(t *testing.T) {
 	cfg := PresetConfig{EventsMin: 3, EventsMax: 3}
 	g := newTestGen(1, testDeps(nil, nil, nil, nil, sess, evt, nil))
 
-	err := g.createSessions(context.Background(), "camp-1", 1, cfg, nil)
+	err := g.createSessions(context.Background(), "camp-1", 1, cfg)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if eventCount != 3 {
-		t.Fatalf("expected 3 events, got %d", eventCount)
+	if eventCount != 0 {
+		t.Fatalf("expected no events appended, got %d", eventCount)
 	}
 }
 
@@ -132,7 +132,7 @@ func TestCreateSessions_StartError(t *testing.T) {
 	}
 	g := newTestGen(1, testDeps(nil, nil, nil, nil, sess, nil, nil))
 
-	err := g.createSessions(context.Background(), "camp-1", 1, PresetConfig{}, nil)
+	err := g.createSessions(context.Background(), "camp-1", 1, PresetConfig{})
 	if err == nil {
 		t.Fatal("expected error from StartSession failure")
 	}
@@ -158,7 +158,7 @@ func TestCreateSessions_EndError(t *testing.T) {
 	g := newTestGen(1, testDeps(nil, nil, nil, nil, sess, evt, nil))
 
 	// 2 sessions — first should be ended, which triggers the error
-	err := g.createSessions(context.Background(), "camp-1", 2, cfg, nil)
+	err := g.createSessions(context.Background(), "camp-1", 2, cfg)
 	if err == nil {
 		t.Fatal("expected error from EndSession failure")
 	}

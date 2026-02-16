@@ -11,9 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/character"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
@@ -380,10 +378,10 @@ func TestScanSnapshotEventsEmpty(t *testing.T) {
 func TestScanSnapshotEventsCountsSnapshotEvents(t *testing.T) {
 	store := &fakeEventStore{events: map[string][]event.Event{
 		"c1": {
-			{Seq: 1, Type: event.TypeCampaignCreated},
-			{Seq: 2, Type: daggerheart.EventTypeCharacterStatePatched, SystemID: "daggerheart"},
-			{Seq: 3, Type: event.TypeCharacterCreated},
-			{Seq: 4, Type: daggerheart.EventTypeGMFearChanged, SystemID: "daggerheart"},
+			{Seq: 1, Type: event.Type("campaign.created")},
+			{Seq: 2, Type: event.Type("action.character_state_patched"), CampaignID: "c1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion},
+			{Seq: 3, Type: event.Type("character.created")},
+			{Seq: 4, Type: event.Type("action.gm_fear_changed"), CampaignID: "c1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion},
 		},
 	}}
 	report, _, err := scanSnapshotEvents(t.Context(), store, "c1", 0, 0, false)
@@ -404,8 +402,8 @@ func TestScanSnapshotEventsCountsSnapshotEvents(t *testing.T) {
 func TestScanSnapshotEventsWithValidation(t *testing.T) {
 	store := &fakeEventStore{events: map[string][]event.Event{
 		"c1": {
-			{Seq: 1, Type: daggerheart.EventTypeCharacterStatePatched, SystemID: "dh", PayloadJSON: []byte(`{"character_id":"ch1"}`)},
-			{Seq: 2, Type: daggerheart.EventTypeCharacterStatePatched, SystemID: "dh", PayloadJSON: []byte(`{invalid`)},
+			{Seq: 1, Type: event.Type("action.character_state_patched"), CampaignID: "c1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion, PayloadJSON: []byte(`{"character_id":"ch1"}`)},
+			{Seq: 2, Type: event.Type("action.character_state_patched"), CampaignID: "c1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion, PayloadJSON: []byte(`{invalid`)},
 		},
 	}}
 	report, warnings, err := scanSnapshotEvents(t.Context(), store, "c1", 0, 0, true)
@@ -423,9 +421,9 @@ func TestScanSnapshotEventsWithValidation(t *testing.T) {
 func TestScanSnapshotEventsUntilSeq(t *testing.T) {
 	store := &fakeEventStore{events: map[string][]event.Event{
 		"c1": {
-			{Seq: 1, Type: event.TypeCampaignCreated},
-			{Seq: 2, Type: event.TypeCharacterCreated},
-			{Seq: 3, Type: event.TypeCharacterCreated},
+			{Seq: 1, Type: event.Type("campaign.created")},
+			{Seq: 2, Type: event.Type("character.created")},
+			{Seq: 3, Type: event.Type("character.created")},
 		},
 	}}
 	report, _, err := scanSnapshotEvents(t.Context(), store, "c1", 0, 2, false)
@@ -440,9 +438,9 @@ func TestScanSnapshotEventsUntilSeq(t *testing.T) {
 func TestScanSnapshotEventsAfterSeq(t *testing.T) {
 	store := &fakeEventStore{events: map[string][]event.Event{
 		"c1": {
-			{Seq: 1, Type: event.TypeCampaignCreated},
-			{Seq: 2, Type: event.TypeCharacterCreated},
-			{Seq: 3, Type: event.TypeCharacterCreated},
+			{Seq: 1, Type: event.Type("campaign.created")},
+			{Seq: 2, Type: event.Type("character.created")},
+			{Seq: 3, Type: event.Type("character.created")},
 		},
 	}}
 	report, _, err := scanSnapshotEvents(t.Context(), store, "c1", 2, 0, false)
@@ -477,318 +475,14 @@ func TestScanSnapshotEventsListError(t *testing.T) {
 	}
 }
 
-// --- validateSnapshotEvent tests ---
-
-func TestValidateSnapshotEventCharacterStatePatched(t *testing.T) {
-	tests := []struct {
-		name    string
-		payload string
-		wantErr bool
-	}{
-		{"valid", `{"character_id":"ch1"}`, false},
-		{"invalid json", `{bad`, true},
-		{"missing character_id", `{}`, true},
-		{"hp out of range", `{"character_id":"ch1","hp_after":9999}`, true},
-		{"hope_max out of range", `{"character_id":"ch1","hope_max_after":9999}`, true},
-		{"hope out of range", `{"character_id":"ch1","hope_after":9999}`, true},
-		{"stress out of range", `{"character_id":"ch1","stress_after":9999}`, true},
-		{"armor out of range", `{"character_id":"ch1","armor_after":9999}`, true},
-		{"invalid life_state", `{"character_id":"ch1","life_state_after":"bogus"}`, true},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			evt := event.Event{Type: daggerheart.EventTypeCharacterStatePatched, PayloadJSON: []byte(tt.payload)}
-			err := validateSnapshotEvent(evt)
-			if tt.wantErr && err == nil {
-				t.Fatal("expected error")
-			}
-			if !tt.wantErr && err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-		})
-	}
-}
-
-func TestValidateSnapshotEventDeathMoveResolved(t *testing.T) {
-	tests := []struct {
-		name    string
-		payload string
-		wantErr bool
-	}{
-		{"valid", `{"character_id":"ch1","move":"risk_it_all","life_state_after":"dead"}`, false},
-		{"invalid json", `{bad`, true},
-		{"missing character_id", `{"move":"risk_it_all","life_state_after":"dead"}`, true},
-		{"invalid move", `{"character_id":"ch1","move":"bogus","life_state_after":"dead"}`, true},
-		{"missing life_state_after", `{"character_id":"ch1","move":"risk_it_all"}`, true},
-		{"invalid life_state_after", `{"character_id":"ch1","move":"risk_it_all","life_state_after":"bogus"}`, true},
-		{"hope_die out of range", `{"character_id":"ch1","move":"risk_it_all","life_state_after":"dead","hope_die":99}`, true},
-		{"fear_die out of range", `{"character_id":"ch1","move":"risk_it_all","life_state_after":"dead","fear_die":99}`, true},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			evt := event.Event{Type: daggerheart.EventTypeDeathMoveResolved, PayloadJSON: []byte(tt.payload)}
-			err := validateSnapshotEvent(evt)
-			if tt.wantErr && err == nil {
-				t.Fatal("expected error")
-			}
-			if !tt.wantErr && err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-		})
-	}
-}
-
-func TestValidateSnapshotEventBlazeOfGlory(t *testing.T) {
-	tests := []struct {
-		name    string
-		payload string
-		wantErr bool
-	}{
-		{"valid", `{"character_id":"ch1","life_state_after":"dead"}`, false},
-		{"invalid json", `{bad`, true},
-		{"missing character_id", `{"life_state_after":"dead"}`, true},
-		{"missing life_state_after", `{"character_id":"ch1"}`, true},
-		{"invalid life_state_after", `{"character_id":"ch1","life_state_after":"bogus"}`, true},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			evt := event.Event{Type: daggerheart.EventTypeBlazeOfGloryResolved, PayloadJSON: []byte(tt.payload)}
-			err := validateSnapshotEvent(evt)
-			if tt.wantErr && err == nil {
-				t.Fatal("expected error")
-			}
-			if !tt.wantErr && err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-		})
-	}
-}
-
-func TestValidateSnapshotEventAttackResolved(t *testing.T) {
-	tests := []struct {
-		name    string
-		payload string
-		wantErr bool
-	}{
-		{"valid", `{"character_id":"ch1","roll_seq":1,"targets":["t1"],"outcome":"hit"}`, false},
-		{"invalid json", `{bad`, true},
-		{"missing character_id", `{"roll_seq":1,"targets":["t1"],"outcome":"hit"}`, true},
-		{"missing roll_seq", `{"character_id":"ch1","targets":["t1"],"outcome":"hit"}`, true},
-		{"missing targets", `{"character_id":"ch1","roll_seq":1,"outcome":"hit"}`, true},
-		{"empty target", `{"character_id":"ch1","roll_seq":1,"targets":[""],"outcome":"hit"}`, true},
-		{"missing outcome", `{"character_id":"ch1","roll_seq":1,"targets":["t1"]}`, true},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			evt := event.Event{Type: daggerheart.EventTypeAttackResolved, PayloadJSON: []byte(tt.payload)}
-			err := validateSnapshotEvent(evt)
-			if tt.wantErr && err == nil {
-				t.Fatal("expected error")
-			}
-			if !tt.wantErr && err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-		})
-	}
-}
-
-func TestValidateSnapshotEventReactionResolved(t *testing.T) {
-	tests := []struct {
-		name    string
-		payload string
-		wantErr bool
-	}{
-		{"valid", `{"character_id":"ch1","roll_seq":1,"outcome":"success"}`, false},
-		{"invalid json", `{bad`, true},
-		{"missing character_id", `{"roll_seq":1,"outcome":"success"}`, true},
-		{"missing roll_seq", `{"character_id":"ch1","outcome":"success"}`, true},
-		{"missing outcome", `{"character_id":"ch1","roll_seq":1}`, true},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			evt := event.Event{Type: daggerheart.EventTypeReactionResolved, PayloadJSON: []byte(tt.payload)}
-			err := validateSnapshotEvent(evt)
-			if tt.wantErr && err == nil {
-				t.Fatal("expected error")
-			}
-			if !tt.wantErr && err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-		})
-	}
-}
-
-func TestValidateSnapshotEventDamageRollResolved(t *testing.T) {
-	tests := []struct {
-		name    string
-		payload string
-		wantErr bool
-	}{
-		{"valid", `{"character_id":"ch1","roll_seq":1,"rolls":[{"value":3}]}`, false},
-		{"invalid json", `{bad`, true},
-		{"missing character_id", `{"roll_seq":1,"rolls":[{"value":3}]}`, true},
-		{"missing roll_seq", `{"character_id":"ch1","rolls":[{"value":3}]}`, true},
-		{"missing rolls", `{"character_id":"ch1","roll_seq":1}`, true},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			evt := event.Event{Type: daggerheart.EventTypeDamageRollResolved, PayloadJSON: []byte(tt.payload)}
-			err := validateSnapshotEvent(evt)
-			if tt.wantErr && err == nil {
-				t.Fatal("expected error")
-			}
-			if !tt.wantErr && err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-		})
-	}
-}
-
-func TestValidateSnapshotEventGMFearChanged(t *testing.T) {
-	tests := []struct {
-		name    string
-		payload string
-		wantErr bool
-	}{
-		{"valid", `{"after":3}`, false},
-		{"invalid json", `{bad`, true},
-		{"out of range", `{"after":9999}`, true},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			evt := event.Event{Type: daggerheart.EventTypeGMFearChanged, PayloadJSON: []byte(tt.payload)}
-			err := validateSnapshotEvent(evt)
-			if tt.wantErr && err == nil {
-				t.Fatal("expected error")
-			}
-			if !tt.wantErr && err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-		})
-	}
-}
-
-func TestValidateCharacterStatePatchedHopeConstrainedByHopeMax(t *testing.T) {
-	// When hope_max_after is set, hope_after must be <= hope_max_after.
-	hopeMax := 3
-	hopeOK := 3
-	hopeBad := 4
-	tests := []struct {
-		name    string
-		payload daggerheart.CharacterStatePatchedPayload
-		wantErr bool
-	}{
-		{
-			name:    "hope equals hope_max",
-			payload: daggerheart.CharacterStatePatchedPayload{CharacterID: "ch1", HopeMaxAfter: &hopeMax, HopeAfter: &hopeOK},
-			wantErr: false,
-		},
-		{
-			name:    "hope exceeds custom hope_max",
-			payload: daggerheart.CharacterStatePatchedPayload{CharacterID: "ch1", HopeMaxAfter: &hopeMax, HopeAfter: &hopeBad},
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			data, _ := json.Marshal(tt.payload)
-			evt := event.Event{Type: daggerheart.EventTypeCharacterStatePatched, PayloadJSON: data}
-			err := validateSnapshotEvent(evt)
-			if tt.wantErr && err == nil {
-				t.Fatal("expected error")
-			}
-			if !tt.wantErr && err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-		})
-	}
-}
-
-func TestValidateCharacterStatePatchedHpNegative(t *testing.T) {
-	hp := -1
-	payload := daggerheart.CharacterStatePatchedPayload{CharacterID: "ch1", HpAfter: &hp}
-	data, _ := json.Marshal(payload)
-	evt := event.Event{Type: daggerheart.EventTypeCharacterStatePatched, PayloadJSON: data}
-	if err := validateSnapshotEvent(evt); err == nil {
-		t.Fatal("expected error for negative hp_after")
-	}
-}
-
-func TestValidateDeathMoveResolvedDieBoundaries(t *testing.T) {
-	// Valid boundaries: 1 and 12; invalid: 0 and 13.
-	validLow := 1
-	validHigh := 12
-	invalidLow := 0
-	invalidHigh := 13
-
-	tests := []struct {
-		name    string
-		hopeDie *int
-		fearDie *int
-		wantErr bool
-	}{
-		{"hope_die=1 valid", &validLow, nil, false},
-		{"hope_die=12 valid", &validHigh, nil, false},
-		{"hope_die=0 invalid", &invalidLow, nil, true},
-		{"hope_die=13 invalid", &invalidHigh, nil, true},
-		{"fear_die=1 valid", nil, &validLow, false},
-		{"fear_die=12 valid", nil, &validHigh, false},
-		{"fear_die=0 invalid", nil, &invalidLow, true},
-		{"fear_die=13 invalid", nil, &invalidHigh, true},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			payload := daggerheart.DeathMoveResolvedPayload{
-				CharacterID:    "ch1",
-				Move:           "risk_it_all",
-				LifeStateAfter: "dead",
-				HopeDie:        tt.hopeDie,
-				FearDie:        tt.fearDie,
-			}
-			data, _ := json.Marshal(payload)
-			evt := event.Event{Type: daggerheart.EventTypeDeathMoveResolved, PayloadJSON: data}
-			err := validateSnapshotEvent(evt)
-			if tt.wantErr && err == nil {
-				t.Fatal("expected error")
-			}
-			if !tt.wantErr && err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-		})
-	}
-}
-
-func TestValidateGMFearChangedBoundaries(t *testing.T) {
-	tests := []struct {
-		name    string
-		after   int
-		wantErr bool
-	}{
-		{"min valid", daggerheart.GMFearMin, false},
-		{"max valid", daggerheart.GMFearMax, false},
-		{"below min", daggerheart.GMFearMin - 1, true},
-		{"above max", daggerheart.GMFearMax + 1, true},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			payload := daggerheart.GMFearChangedPayload{After: tt.after}
-			data, _ := json.Marshal(payload)
-			evt := event.Event{Type: daggerheart.EventTypeGMFearChanged, PayloadJSON: data}
-			err := validateSnapshotEvent(evt)
-			if tt.wantErr && err == nil {
-				t.Fatal("expected error")
-			}
-			if !tt.wantErr && err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-		})
-	}
-}
-
-func TestValidateSnapshotEventUnknownType(t *testing.T) {
-	evt := event.Event{Type: "unknown.type", PayloadJSON: []byte(`{}`)}
-	if err := validateSnapshotEvent(evt); err != nil {
-		t.Fatalf("unknown types should pass validation, got %v", err)
+// makeDaggerheartEvent builds v2 system events for snapshot validation tests.
+func makeDaggerheartEvent(campaignID string, eventType string, payload []byte) event.Event {
+	return event.Event{
+		CampaignID:    campaignID,
+		Type:          event.Type(eventType),
+		SystemID:      daggerheart.SystemID,
+		SystemVersion: daggerheart.SystemVersion,
+		PayloadJSON:   payload,
 	}
 }
 
@@ -797,8 +491,8 @@ func TestValidateSnapshotEventUnknownType(t *testing.T) {
 func TestRunCampaignDryRunScan(t *testing.T) {
 	store := &fakeEventStore{events: map[string][]event.Event{
 		"c1": {
-			{Seq: 1, Type: event.TypeCampaignCreated},
-			{Seq: 2, Type: daggerheart.EventTypeGMFearChanged, SystemID: "dh"},
+			{Seq: 1, Type: event.Type("campaign.created")},
+			{Seq: 2, Type: event.Type("action.gm_fear_changed"), CampaignID: "c1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion},
 		},
 	}}
 	result := runCampaign(t.Context(), store, nil, "c1", runOptions{DryRun: true, WarningsCap: 25}, io.Discard)
@@ -823,7 +517,7 @@ func TestRunCampaignDryRunScan(t *testing.T) {
 func TestRunCampaignValidateMode(t *testing.T) {
 	store := &fakeEventStore{events: map[string][]event.Event{
 		"c1": {
-			{Seq: 1, Type: daggerheart.EventTypeCharacterStatePatched, SystemID: "dh", PayloadJSON: []byte(`{invalid`)},
+			{Seq: 1, Type: event.Type("action.character_state_patched"), CampaignID: "c1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion, PayloadJSON: []byte(`{invalid`)},
 		},
 	}}
 	result := runCampaign(t.Context(), store, nil, "c1", runOptions{DryRun: true, Validate: true, WarningsCap: 25}, io.Discard)
@@ -886,12 +580,8 @@ func TestRunCampaignScanWarningsCapped(t *testing.T) {
 	// Build events that each produce a validation warning when validated.
 	var events []event.Event
 	for i := 1; i <= 5; i++ {
-		events = append(events, event.Event{
-			Seq:         uint64(i),
-			Type:        daggerheart.EventTypeCharacterStatePatched,
-			SystemID:    "dh",
-			PayloadJSON: []byte(`{invalid`),
-		})
+		events = append(events, makeDaggerheartEvent("c1", "action.character_state_patched", []byte(`{invalid`)))
+		events[len(events)-1].Seq = uint64(i)
 	}
 	store := &fakeEventStore{events: map[string][]event.Event{"c1": events}}
 	result := runCampaign(t.Context(), store, nil, "c1", runOptions{DryRun: true, Validate: true, WarningsCap: 3}, io.Discard)
@@ -906,7 +596,7 @@ func TestRunCampaignScanWarningsCapped(t *testing.T) {
 func TestRunCampaignValidateNoInvalid(t *testing.T) {
 	store := &fakeEventStore{events: map[string][]event.Event{
 		"c1": {
-			{Seq: 1, Type: daggerheart.EventTypeGMFearChanged, SystemID: "dh", PayloadJSON: []byte(`{"after":3}`)},
+			{Seq: 1, Type: event.Type("action.gm_fear_changed"), CampaignID: "c1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion, PayloadJSON: []byte(`{"after":3}`)},
 		},
 	}}
 	result := runCampaign(t.Context(), store, nil, "c1", runOptions{DryRun: true, Validate: true, WarningsCap: 25}, io.Discard)
@@ -917,7 +607,7 @@ func TestRunCampaignValidateNoInvalid(t *testing.T) {
 
 func TestRunCampaignDryRunWithJSONOutput(t *testing.T) {
 	store := &fakeEventStore{events: map[string][]event.Event{
-		"c1": {{Seq: 1, Type: event.TypeCampaignCreated}},
+		"c1": {{Seq: 1, Type: event.Type("campaign.created")}},
 	}}
 	result := runCampaign(t.Context(), store, nil, "c1", runOptions{DryRun: true, WarningsCap: 25, JSONOutput: true}, io.Discard)
 	if result.ExitCode != 0 {
@@ -936,8 +626,8 @@ func TestRunCampaignDryRunWithJSONOutput(t *testing.T) {
 func TestRunWithDeps_MultiCampaign(t *testing.T) {
 	evtStore := &fakeClosableEventStore{
 		fakeEventStore: fakeEventStore{events: map[string][]event.Event{
-			"c1": {{Seq: 1, Type: event.TypeCampaignCreated}},
-			"c2": {{Seq: 1, Type: event.TypeCampaignCreated}},
+			"c1": {{Seq: 1, Type: event.Type("campaign.created")}},
+			"c2": {{Seq: 1, Type: event.Type("campaign.created")}},
 		}},
 	}
 	projStore := &fakeClosableProjectionStore{}
@@ -964,8 +654,8 @@ func TestRunWithDeps_MultiCampaign(t *testing.T) {
 func TestRunWithDeps_OneCampaignFails(t *testing.T) {
 	evtStore := &fakeClosableEventStore{
 		fakeEventStore: fakeEventStore{events: map[string][]event.Event{
-			"c1": {{Seq: 1, Type: daggerheart.EventTypeCharacterStatePatched, SystemID: "dh", PayloadJSON: []byte(`{invalid`)}},
-			"c2": {{Seq: 1, Type: event.TypeCampaignCreated}},
+			"c1": {{Seq: 1, Type: event.Type("action.character_state_patched"), CampaignID: "c1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion, PayloadJSON: []byte(`{invalid`)}},
+			"c2": {{Seq: 1, Type: event.Type("campaign.created")}},
 		}},
 	}
 	projStore := &fakeClosableProjectionStore{}
@@ -991,7 +681,7 @@ func TestRunWithDeps_OneCampaignFails(t *testing.T) {
 func TestRunWithDeps_JSONOutputMode(t *testing.T) {
 	evtStore := &fakeClosableEventStore{
 		fakeEventStore: fakeEventStore{events: map[string][]event.Event{
-			"c1": {{Seq: 1, Type: event.TypeCampaignCreated}},
+			"c1": {{Seq: 1, Type: event.Type("campaign.created")}},
 		}},
 	}
 	projStore := &fakeClosableProjectionStore{}
@@ -1015,7 +705,7 @@ func TestRunWithDeps_JSONOutputMode(t *testing.T) {
 func TestRunWithDeps_StoreCloseError(t *testing.T) {
 	evtStore := &fakeClosableEventStore{
 		fakeEventStore: fakeEventStore{events: map[string][]event.Event{
-			"c1": {{Seq: 1, Type: event.TypeCampaignCreated}},
+			"c1": {{Seq: 1, Type: event.Type("campaign.created")}},
 		}},
 		closeErr: fmt.Errorf("event close failed"),
 	}
@@ -1102,8 +792,8 @@ func TestRunCampaignReplayAfterSeqEventStoreError(t *testing.T) {
 func TestCheckIntegrityWithStores_GMFearMismatch(t *testing.T) {
 	evtStore := &fakeEventStore{events: map[string][]event.Event{}}
 	source := &fakeProjectionStore{
-		get: func(_ context.Context, _ string) (campaign.Campaign, error) {
-			return campaign.Campaign{ID: "c1"}, nil
+		get: func(_ context.Context, _ string) (storage.CampaignRecord, error) {
+			return storage.CampaignRecord{ID: "c1"}, nil
 		},
 		getDaggerheartSnapshot: func(_ context.Context, _ string) (storage.DaggerheartSnapshot, error) {
 			return storage.DaggerheartSnapshot{GMFear: 5}, nil
@@ -1113,7 +803,7 @@ func TestCheckIntegrityWithStores_GMFearMismatch(t *testing.T) {
 		},
 	}
 	scratch := &fakeProjectionStore{
-		put: func(_ context.Context, _ campaign.Campaign) error { return nil },
+		put: func(_ context.Context, _ storage.CampaignRecord) error { return nil },
 		getDaggerheartSnapshot: func(_ context.Context, _ string) (storage.DaggerheartSnapshot, error) {
 			return storage.DaggerheartSnapshot{GMFear: 3}, nil
 		},
@@ -1133,8 +823,8 @@ func TestCheckIntegrityWithStores_GMFearMismatch(t *testing.T) {
 func TestCheckIntegrityWithStores_GMFearMatch(t *testing.T) {
 	evtStore := &fakeEventStore{events: map[string][]event.Event{}}
 	source := &fakeProjectionStore{
-		get: func(_ context.Context, _ string) (campaign.Campaign, error) {
-			return campaign.Campaign{ID: "c1"}, nil
+		get: func(_ context.Context, _ string) (storage.CampaignRecord, error) {
+			return storage.CampaignRecord{ID: "c1"}, nil
 		},
 		getDaggerheartSnapshot: func(_ context.Context, _ string) (storage.DaggerheartSnapshot, error) {
 			return storage.DaggerheartSnapshot{GMFear: 5}, nil
@@ -1144,7 +834,7 @@ func TestCheckIntegrityWithStores_GMFearMatch(t *testing.T) {
 		},
 	}
 	scratch := &fakeProjectionStore{
-		put: func(_ context.Context, _ campaign.Campaign) error { return nil },
+		put: func(_ context.Context, _ storage.CampaignRecord) error { return nil },
 		getDaggerheartSnapshot: func(_ context.Context, _ string) (storage.DaggerheartSnapshot, error) {
 			return storage.DaggerheartSnapshot{GMFear: 5}, nil
 		},
@@ -1161,15 +851,15 @@ func TestCheckIntegrityWithStores_GMFearMatch(t *testing.T) {
 func TestCheckIntegrityWithStores_CharacterMismatch(t *testing.T) {
 	evtStore := &fakeEventStore{events: map[string][]event.Event{}}
 	source := &fakeProjectionStore{
-		get: func(_ context.Context, _ string) (campaign.Campaign, error) {
-			return campaign.Campaign{ID: "c1"}, nil
+		get: func(_ context.Context, _ string) (storage.CampaignRecord, error) {
+			return storage.CampaignRecord{ID: "c1"}, nil
 		},
 		getDaggerheartSnapshot: func(_ context.Context, _ string) (storage.DaggerheartSnapshot, error) {
 			return storage.DaggerheartSnapshot{GMFear: 0}, nil
 		},
 		listCharacters: func(_ context.Context, _ string, _ int, _ string) (storage.CharacterPage, error) {
 			return storage.CharacterPage{
-				Characters: []character.Character{{ID: "ch1"}},
+				Characters: []storage.CharacterRecord{{ID: "ch1"}},
 			}, nil
 		},
 		getDaggerheartCharState: func(_ context.Context, _, charID string) (storage.DaggerheartCharacterState, error) {
@@ -1177,7 +867,7 @@ func TestCheckIntegrityWithStores_CharacterMismatch(t *testing.T) {
 		},
 	}
 	scratch := &fakeProjectionStore{
-		put: func(_ context.Context, _ campaign.Campaign) error { return nil },
+		put: func(_ context.Context, _ storage.CampaignRecord) error { return nil },
 		getDaggerheartSnapshot: func(_ context.Context, _ string) (storage.DaggerheartSnapshot, error) {
 			return storage.DaggerheartSnapshot{GMFear: 0}, nil
 		},
@@ -1200,15 +890,15 @@ func TestCheckIntegrityWithStores_CharacterMismatch(t *testing.T) {
 func TestCheckIntegrityWithStores_MissingSourceState(t *testing.T) {
 	evtStore := &fakeEventStore{events: map[string][]event.Event{}}
 	source := &fakeProjectionStore{
-		get: func(_ context.Context, _ string) (campaign.Campaign, error) {
-			return campaign.Campaign{ID: "c1"}, nil
+		get: func(_ context.Context, _ string) (storage.CampaignRecord, error) {
+			return storage.CampaignRecord{ID: "c1"}, nil
 		},
 		getDaggerheartSnapshot: func(_ context.Context, _ string) (storage.DaggerheartSnapshot, error) {
 			return storage.DaggerheartSnapshot{}, nil
 		},
 		listCharacters: func(_ context.Context, _ string, _ int, _ string) (storage.CharacterPage, error) {
 			return storage.CharacterPage{
-				Characters: []character.Character{{ID: "ch1"}},
+				Characters: []storage.CharacterRecord{{ID: "ch1"}},
 			}, nil
 		},
 		getDaggerheartCharState: func(_ context.Context, _, _ string) (storage.DaggerheartCharacterState, error) {
@@ -1216,7 +906,7 @@ func TestCheckIntegrityWithStores_MissingSourceState(t *testing.T) {
 		},
 	}
 	scratch := &fakeProjectionStore{
-		put: func(_ context.Context, _ campaign.Campaign) error { return nil },
+		put: func(_ context.Context, _ storage.CampaignRecord) error { return nil },
 		getDaggerheartSnapshot: func(_ context.Context, _ string) (storage.DaggerheartSnapshot, error) {
 			return storage.DaggerheartSnapshot{}, nil
 		},
@@ -1236,8 +926,8 @@ func TestCheckIntegrityWithStores_MissingSourceState(t *testing.T) {
 func TestCheckIntegrityWithStores_CampaignLoadError(t *testing.T) {
 	evtStore := &fakeEventStore{events: map[string][]event.Event{}}
 	source := &fakeProjectionStore{
-		get: func(_ context.Context, _ string) (campaign.Campaign, error) {
-			return campaign.Campaign{}, fmt.Errorf("load failed")
+		get: func(_ context.Context, _ string) (storage.CampaignRecord, error) {
+			return storage.CampaignRecord{}, fmt.Errorf("load failed")
 		},
 	}
 	scratch := &fakeProjectionStore{}

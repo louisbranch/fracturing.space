@@ -15,8 +15,8 @@ const appendEvent = `-- name: AppendEvent :exec
 INSERT INTO events (
     campaign_id, seq, event_hash, prev_event_hash, chain_hash, signature_key_id, event_signature, timestamp, event_type,
     session_id, request_id, invocation_id,
-    actor_type, actor_id, entity_type, entity_id, system_id, system_version, payload_json
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    actor_type, actor_id, entity_type, entity_id, system_id, system_version, correlation_id, causation_id, payload_json
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `
 
 type AppendEventParams struct {
@@ -38,6 +38,8 @@ type AppendEventParams struct {
 	EntityID       string `json:"entity_id"`
 	SystemID       string `json:"system_id"`
 	SystemVersion  string `json:"system_version"`
+	CorrelationID  string `json:"correlation_id"`
+	CausationID    string `json:"causation_id"`
 	PayloadJson    []byte `json:"payload_json"`
 }
 
@@ -62,6 +64,8 @@ func (q *Queries) AppendEvent(ctx context.Context, arg AppendEventParams) error 
 		arg.EntityID,
 		arg.SystemID,
 		arg.SystemVersion,
+		arg.CorrelationID,
+		arg.CausationID,
 		arg.PayloadJson,
 	)
 	return err
@@ -110,7 +114,7 @@ func (q *Queries) GetCampaignForkMetadata(ctx context.Context, id string) (GetCa
 const getEventByHash = `-- name: GetEventByHash :one
 SELECT campaign_id, seq, event_hash, prev_event_hash, chain_hash, signature_key_id, event_signature,
     timestamp, event_type, session_id, request_id, invocation_id, actor_type, actor_id,
-    entity_type, entity_id, system_id, system_version, payload_json
+    entity_type, entity_id, system_id, system_version, correlation_id, causation_id, payload_json
 FROM events WHERE event_hash = ?
 `
 
@@ -133,6 +137,8 @@ type GetEventByHashRow struct {
 	EntityID       string `json:"entity_id"`
 	SystemID       string `json:"system_id"`
 	SystemVersion  string `json:"system_version"`
+	CorrelationID  string `json:"correlation_id"`
+	CausationID    string `json:"causation_id"`
 	PayloadJson    []byte `json:"payload_json"`
 }
 
@@ -158,6 +164,8 @@ func (q *Queries) GetEventByHash(ctx context.Context, eventHash string) (GetEven
 		&i.EntityID,
 		&i.SystemID,
 		&i.SystemVersion,
+		&i.CorrelationID,
+		&i.CausationID,
 		&i.PayloadJson,
 	)
 	return i, err
@@ -166,7 +174,7 @@ func (q *Queries) GetEventByHash(ctx context.Context, eventHash string) (GetEven
 const getEventBySeq = `-- name: GetEventBySeq :one
 SELECT campaign_id, seq, event_hash, prev_event_hash, chain_hash, signature_key_id, event_signature,
     timestamp, event_type, session_id, request_id, invocation_id, actor_type, actor_id,
-    entity_type, entity_id, system_id, system_version, payload_json
+    entity_type, entity_id, system_id, system_version, correlation_id, causation_id, payload_json
 FROM events WHERE campaign_id = ? AND seq = ?
 `
 
@@ -194,6 +202,8 @@ type GetEventBySeqRow struct {
 	EntityID       string `json:"entity_id"`
 	SystemID       string `json:"system_id"`
 	SystemVersion  string `json:"system_version"`
+	CorrelationID  string `json:"correlation_id"`
+	CausationID    string `json:"causation_id"`
 	PayloadJson    []byte `json:"payload_json"`
 }
 
@@ -219,6 +229,8 @@ func (q *Queries) GetEventBySeq(ctx context.Context, arg GetEventBySeqParams) (G
 		&i.EntityID,
 		&i.SystemID,
 		&i.SystemVersion,
+		&i.CorrelationID,
+		&i.CausationID,
 		&i.PayloadJson,
 	)
 	return i, err
@@ -317,7 +329,7 @@ func (q *Queries) InitEventSeq(ctx context.Context, campaignID string) error {
 const listEvents = `-- name: ListEvents :many
 SELECT campaign_id, seq, event_hash, prev_event_hash, chain_hash, signature_key_id, event_signature,
     timestamp, event_type, session_id, request_id, invocation_id, actor_type, actor_id,
-    entity_type, entity_id, system_id, system_version, payload_json
+    entity_type, entity_id, system_id, system_version, correlation_id, causation_id, payload_json
 FROM events
 WHERE campaign_id = ? AND seq > ?
 ORDER BY seq
@@ -349,6 +361,8 @@ type ListEventsRow struct {
 	EntityID       string `json:"entity_id"`
 	SystemID       string `json:"system_id"`
 	SystemVersion  string `json:"system_version"`
+	CorrelationID  string `json:"correlation_id"`
+	CausationID    string `json:"causation_id"`
 	PayloadJson    []byte `json:"payload_json"`
 }
 
@@ -380,6 +394,8 @@ func (q *Queries) ListEvents(ctx context.Context, arg ListEventsParams) ([]ListE
 			&i.EntityID,
 			&i.SystemID,
 			&i.SystemVersion,
+			&i.CorrelationID,
+			&i.CausationID,
 			&i.PayloadJson,
 		); err != nil {
 			return nil, err
@@ -398,7 +414,7 @@ func (q *Queries) ListEvents(ctx context.Context, arg ListEventsParams) ([]ListE
 const listEventsBySession = `-- name: ListEventsBySession :many
 SELECT campaign_id, seq, event_hash, prev_event_hash, chain_hash, signature_key_id, event_signature,
     timestamp, event_type, session_id, request_id, invocation_id, actor_type, actor_id,
-    entity_type, entity_id, system_id, system_version, payload_json
+    entity_type, entity_id, system_id, system_version, correlation_id, causation_id, payload_json
 FROM events
 WHERE campaign_id = ? AND session_id = ? AND seq > ?
 ORDER BY seq
@@ -431,6 +447,8 @@ type ListEventsBySessionRow struct {
 	EntityID       string `json:"entity_id"`
 	SystemID       string `json:"system_id"`
 	SystemVersion  string `json:"system_version"`
+	CorrelationID  string `json:"correlation_id"`
+	CausationID    string `json:"causation_id"`
 	PayloadJson    []byte `json:"payload_json"`
 }
 
@@ -467,6 +485,8 @@ func (q *Queries) ListEventsBySession(ctx context.Context, arg ListEventsBySessi
 			&i.EntityID,
 			&i.SystemID,
 			&i.SystemVersion,
+			&i.CorrelationID,
+			&i.CausationID,
 			&i.PayloadJson,
 		); err != nil {
 			return nil, err

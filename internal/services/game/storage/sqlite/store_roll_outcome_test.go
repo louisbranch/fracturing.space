@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/character"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/session"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -15,7 +15,7 @@ import (
 // outcome tests.
 func seedRollOutcomeCharacter(t *testing.T, store *Store, campaignID, charID string, now time.Time, hope, hopeMax, stress, stressMax int) {
 	t.Helper()
-	seedCharacter(t, store, campaignID, charID, "Char-"+charID, character.CharacterKindPC, now)
+	seedCharacter(t, store, campaignID, charID, "Char-"+charID, character.KindPC, now)
 	if err := store.PutDaggerheartCharacterProfile(context.Background(), storage.DaggerheartCharacterProfile{
 		CampaignID:  campaignID,
 		CharacterID: charID,
@@ -76,13 +76,13 @@ func TestApplyRollOutcomeHopeAndStress(t *testing.T) {
 		t.Fatalf("expected at least 2 applied changes, got %d", len(result.AppliedChanges))
 	}
 
-	var hopeChange, stressChange *session.OutcomeAppliedChange
+	var hopeChange, stressChange *action.OutcomeAppliedChange
 	for i := range result.AppliedChanges {
 		ch := &result.AppliedChanges[i]
 		switch ch.Field {
-		case session.OutcomeFieldHope:
+		case action.OutcomeFieldHope:
 			hopeChange = ch
-		case session.OutcomeFieldStress:
+		case action.OutcomeFieldStress:
 			stressChange = ch
 		}
 	}
@@ -217,7 +217,7 @@ func TestApplyRollOutcomeIdempotent(t *testing.T) {
 	}
 
 	_, err := store.ApplyRollOutcome(context.Background(), input)
-	if err == nil || !errors.Is(err, session.ErrOutcomeAlreadyApplied) {
+	if err == nil || !errors.Is(err, action.ErrOutcomeAlreadyApplied) {
 		t.Fatalf("expected ErrOutcomeAlreadyApplied, got %v", err)
 	}
 }
@@ -235,7 +235,7 @@ func TestApplyRollOutcomeCharacterNotFound(t *testing.T) {
 		RequestID:      "req-cnf",
 		EventTimestamp: now,
 	})
-	if err == nil || !errors.Is(err, session.ErrOutcomeCharacterNotFound) {
+	if err == nil || !errors.Is(err, action.ErrOutcomeCharacterNotFound) {
 		t.Fatalf("expected ErrOutcomeCharacterNotFound, got %v", err)
 	}
 }
