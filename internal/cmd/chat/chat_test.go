@@ -1,0 +1,41 @@
+package chat
+
+import (
+	"flag"
+	"testing"
+)
+
+func TestParseConfigDefaults(t *testing.T) {
+	fs := flag.NewFlagSet("chat", flag.ContinueOnError)
+	cfg, err := ParseConfig(fs, nil)
+	if err != nil {
+		t.Fatalf("parse config: %v", err)
+	}
+	if cfg.HTTPAddr != ":8087" {
+		t.Fatalf("expected default http addr, got %q", cfg.HTTPAddr)
+	}
+	if cfg.GameAddr != "localhost:8080" {
+		t.Fatalf("expected default game addr, got %q", cfg.GameAddr)
+	}
+}
+
+func TestParseConfigOverrides(t *testing.T) {
+	t.Setenv("FRACTURING_SPACE_CHAT_HTTP_ADDR", "env-chat")
+	t.Setenv("FRACTURING_SPACE_GAME_ADDR", "env-game")
+
+	fs := flag.NewFlagSet("chat", flag.ContinueOnError)
+	args := []string{
+		"-http-addr", "flag-chat",
+		"-game-addr", "flag-game",
+	}
+	cfg, err := ParseConfig(fs, args)
+	if err != nil {
+		t.Fatalf("parse config: %v", err)
+	}
+	if cfg.HTTPAddr != "flag-chat" {
+		t.Fatalf("expected flag http addr, got %q", cfg.HTTPAddr)
+	}
+	if cfg.GameAddr != "flag-game" {
+		t.Fatalf("expected flag game addr, got %q", cfg.GameAddr)
+	}
+}

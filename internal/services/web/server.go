@@ -14,6 +14,7 @@ import (
 
 	"github.com/a-h/templ"
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
+	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/branding"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
@@ -28,6 +29,7 @@ type Config struct {
 	HTTPAddr        string
 	AuthBaseURL     string
 	AuthAddr        string
+	GameAddr        string
 	AppName         string
 	GRPCDialTimeout time.Duration
 	// OAuthClientID is the first-party OAuth client ID for web login.
@@ -38,6 +40,8 @@ type Config struct {
 	AuthTokenURL string
 	// Domain is the parent domain used for cross-subdomain cookie scoping.
 	Domain string
+	// OAuthResourceSecret is used by web service to introspect access tokens.
+	OAuthResourceSecret string
 }
 
 // Server hosts the web login HTTP server.
@@ -45,13 +49,15 @@ type Server struct {
 	httpAddr   string
 	httpServer *http.Server
 	authConn   *grpc.ClientConn
+	gameConn   *grpc.ClientConn
 }
 
 type handler struct {
-	config       Config
-	authClient   authv1.AuthServiceClient
-	sessions     *sessionStore
-	pendingFlows *pendingFlowStore
+	config         Config
+	authClient     authv1.AuthServiceClient
+	sessions       *sessionStore
+	pendingFlows   *pendingFlowStore
+	campaignAccess campaignAccessChecker
 }
 
 // localizer resolves the request locale, optionally persists a cookie,
@@ -66,6 +72,11 @@ func localizer(w http.ResponseWriter, r *http.Request) (*message.Printer, string
 
 // NewHandler creates the HTTP handler for the login UX.
 func NewHandler(config Config, authClient authv1.AuthServiceClient) http.Handler {
+	return NewHandlerWithCampaignAccess(config, authClient, nil)
+}
+
+// NewHandlerWithCampaignAccess creates the HTTP handler with campaign access checks.
+func NewHandlerWithCampaignAccess(config Config, authClient authv1.AuthServiceClient, campaignAccess campaignAccessChecker) http.Handler {
 	mux := http.NewServeMux()
 	staticFS, err := fs.Sub(assetsFS, "static")
 	if err != nil {
@@ -78,11 +89,14 @@ func NewHandler(config Config, authClient authv1.AuthServiceClient) http.Handler
 		appName = branding.AppName
 	}
 	h := &handler{
-		config:       config,
-		authClient:   authClient,
-		sessions:     newSessionStore(),
-		pendingFlows: newPendingFlowStore(),
+		config:         config,
+		authClient:     authClient,
+		sessions:       newSessionStore(),
+		pendingFlows:   newPendingFlowStore(),
+		campaignAccess: campaignAccess,
 	}
+
+	mux.HandleFunc("/campaigns/", h.handleCampaignPage)
 
 	// Register OAuth client routes when configured.
 	if strings.TrimSpace(config.OAuthClientID) != "" {
@@ -201,7 +215,19 @@ func NewServer(config Config) (*Server, error) {
 		authClient = client
 	}
 
-	handler := NewHandler(config, authClient)
+	var gameConn *grpc.ClientConn
+	var participantClient statev1.ParticipantServiceClient
+	if strings.TrimSpace(config.GameAddr) != "" {
+		conn, client, err := dialGameGRPC(context.Background(), config)
+		if err != nil {
+			log.Printf("game gRPC dial failed, campaign access checks disabled: %v", err)
+		} else {
+			gameConn = conn
+			participantClient = client
+		}
+	}
+	campaignAccess := newCampaignAccessChecker(config, participantClient)
+	handler := NewHandlerWithCampaignAccess(config, authClient, campaignAccess)
 	httpServer := &http.Server{
 		Addr:              httpAddr,
 		Handler:           handler,
@@ -212,6 +238,7 @@ func NewServer(config Config) (*Server, error) {
 		httpAddr:   httpAddr,
 		httpServer: httpServer,
 		authConn:   authConn,
+		gameConn:   gameConn,
 	}, nil
 }
 
@@ -249,11 +276,18 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 
 // Close releases any gRPC resources held by the server.
 func (s *Server) Close() {
-	if s == nil || s.authConn == nil {
+	if s == nil {
 		return
 	}
-	if err := s.authConn.Close(); err != nil {
-		log.Printf("close auth gRPC connection: %v", err)
+	if s.authConn != nil {
+		if err := s.authConn.Close(); err != nil {
+			log.Printf("close auth gRPC connection: %v", err)
+		}
+	}
+	if s.gameConn != nil {
+		if err := s.gameConn.Close(); err != nil {
+			log.Printf("close game gRPC connection: %v", err)
+		}
 	}
 }
 
@@ -299,6 +333,42 @@ func dialAuthGRPC(ctx context.Context, config Config) (*grpc.ClientConn, authv1.
 		return nil, nil, fmt.Errorf("dial auth gRPC %s: %w", authAddr, err)
 	}
 	client := authv1.NewAuthServiceClient(conn)
+	return conn, client, nil
+}
+
+func dialGameGRPC(ctx context.Context, config Config) (*grpc.ClientConn, statev1.ParticipantServiceClient, error) {
+	gameAddr := strings.TrimSpace(config.GameAddr)
+	if gameAddr == "" {
+		return nil, nil, nil
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if config.GRPCDialTimeout <= 0 {
+		config.GRPCDialTimeout = timeouts.GRPCDial
+	}
+	logf := func(format string, args ...any) {
+		log.Printf("game %s", fmt.Sprintf(format, args...))
+	}
+	conn, err := platformgrpc.DialWithHealth(
+		ctx,
+		nil,
+		gameAddr,
+		config.GRPCDialTimeout,
+		logf,
+		platformgrpc.DefaultClientDialOptions()...,
+	)
+	if err != nil {
+		var dialErr *platformgrpc.DialError
+		if errors.As(err, &dialErr) {
+			if dialErr.Stage == platformgrpc.DialStageHealth {
+				return nil, nil, fmt.Errorf("game gRPC health check failed for %s: %w", gameAddr, dialErr.Err)
+			}
+			return nil, nil, fmt.Errorf("dial game gRPC %s: %w", gameAddr, dialErr.Err)
+		}
+		return nil, nil, fmt.Errorf("dial game gRPC %s: %w", gameAddr, err)
+	}
+	client := statev1.NewParticipantServiceClient(conn)
 	return conn, client, nil
 }
 

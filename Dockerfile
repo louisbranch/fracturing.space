@@ -28,6 +28,10 @@ FROM base AS build-web
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/web ./cmd/web
 
+FROM base AS build-chat
+
+RUN CGO_ENABLED=0 GOOS=linux go build -o /out/chat ./cmd/chat
+
 FROM gcr.io/distroless/static-debian12:nonroot AS game
 
 WORKDIR /app
@@ -77,3 +81,13 @@ COPY --from=build-web /out/web /app/web
 EXPOSE 8086
 
 ENTRYPOINT ["/app/web"]
+
+FROM gcr.io/distroless/static-debian12:nonroot AS chat
+
+WORKDIR /app
+
+COPY --from=build-chat /out/chat /app/chat
+
+EXPOSE 8087
+
+ENTRYPOINT ["/app/chat"]
