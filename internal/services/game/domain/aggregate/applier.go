@@ -54,9 +54,6 @@ func (a Applier) Apply(state any, evt event.Event) (any, error) {
 		}
 		updated, err := system.RouteEvent(registry, systemState, evt)
 		if err != nil {
-			if errors.Is(err, system.ErrModuleNotFound) {
-				return current, nil
-			}
 			return current, err
 		}
 		current.Systems[key] = updated

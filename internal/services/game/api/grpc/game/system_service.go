@@ -20,9 +20,6 @@ type SystemService struct {
 
 // NewSystemService creates a SystemService backed by the registry.
 func NewSystemService(registry *systems.Registry) *SystemService {
-	if registry == nil {
-		registry = systems.DefaultRegistry
-	}
 	return &SystemService{registry: registry}
 }
 

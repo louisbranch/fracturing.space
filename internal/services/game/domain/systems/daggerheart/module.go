@@ -37,206 +37,77 @@ func (m *Module) Version() string {
 	return SystemVersion
 }
 
+var daggerheartCommandDefinitions = []command.Definition{
+	{Type: commandTypeGMFearSet, Owner: command.OwnerSystem, ValidatePayload: validateGMFearSetPayload},
+	{Type: commandTypeCharacterStatePatch, Owner: command.OwnerSystem, ValidatePayload: validateCharacterStatePatchPayload},
+	{Type: commandTypeConditionChange, Owner: command.OwnerSystem, ValidatePayload: validateConditionChangePayload},
+	{Type: commandTypeHopeSpend, Owner: command.OwnerSystem, ValidatePayload: validateHopeSpendPayload},
+	{Type: commandTypeStressSpend, Owner: command.OwnerSystem, ValidatePayload: validateStressSpendPayload},
+	{Type: commandTypeLoadoutSwap, Owner: command.OwnerSystem, ValidatePayload: validateLoadoutSwapPayload},
+	{Type: commandTypeRestTake, Owner: command.OwnerSystem, ValidatePayload: validateRestTakePayload},
+	{Type: commandTypeAttackResolve, Owner: command.OwnerSystem, ValidatePayload: validateAttackResolvePayload},
+	{Type: commandTypeReactionResolve, Owner: command.OwnerSystem, ValidatePayload: validateReactionResolvePayload},
+	{Type: commandTypeAdversaryRollResolve, Owner: command.OwnerSystem, ValidatePayload: validateAdversaryRollResolvePayload},
+	{Type: commandTypeAdversaryAttackResolve, Owner: command.OwnerSystem, ValidatePayload: validateAdversaryAttackResolvePayload},
+	{Type: commandTypeDamageRollResolve, Owner: command.OwnerSystem, ValidatePayload: validateDamageRollResolvePayload},
+	{Type: commandTypeGroupActionResolve, Owner: command.OwnerSystem, ValidatePayload: validateGroupActionResolvePayload},
+	{Type: commandTypeTagTeamResolve, Owner: command.OwnerSystem, ValidatePayload: validateTagTeamResolvePayload},
+	{Type: commandTypeCountdownCreate, Owner: command.OwnerSystem, ValidatePayload: validateCountdownCreatePayload},
+	{Type: commandTypeCountdownUpdate, Owner: command.OwnerSystem, ValidatePayload: validateCountdownUpdatePayload},
+	{Type: commandTypeCountdownDelete, Owner: command.OwnerSystem, ValidatePayload: validateCountdownDeletePayload},
+	{Type: commandTypeAdversaryActionResolve, Owner: command.OwnerSystem, ValidatePayload: validateAdversaryActionResolvePayload},
+	{Type: commandTypeDamageApply, Owner: command.OwnerSystem, ValidatePayload: validateDamageApplyPayload},
+	{Type: commandTypeAdversaryDamageApply, Owner: command.OwnerSystem, ValidatePayload: validateAdversaryDamageApplyPayload},
+	{Type: commandTypeDowntimeMoveApply, Owner: command.OwnerSystem, ValidatePayload: validateDowntimeMoveApplyPayload},
+	{Type: commandTypeDeathMoveResolve, Owner: command.OwnerSystem, ValidatePayload: validateDeathMoveResolvePayload},
+	{Type: commandTypeBlazeOfGloryResolve, Owner: command.OwnerSystem, ValidatePayload: validateBlazeOfGloryResolvePayload},
+	{Type: commandTypeGMMoveApply, Owner: command.OwnerSystem, ValidatePayload: validateGMMoveApplyPayload},
+	{Type: commandTypeAdversaryConditionChange, Owner: command.OwnerSystem, ValidatePayload: validateAdversaryConditionChangePayload},
+	{Type: commandTypeAdversaryCreate, Owner: command.OwnerSystem, ValidatePayload: validateAdversaryCreatePayload},
+	{Type: commandTypeAdversaryUpdate, Owner: command.OwnerSystem, ValidatePayload: validateAdversaryUpdatePayload},
+	{Type: commandTypeAdversaryDelete, Owner: command.OwnerSystem, ValidatePayload: validateAdversaryDeletePayload},
+}
+
+var daggerheartEventDefinitions = []event.Definition{
+	{Type: eventTypeGMFearChanged, Owner: event.OwnerSystem, ValidatePayload: validateGMFearChangedPayload},
+	{Type: eventTypeCharacterStatePatched, Owner: event.OwnerSystem, ValidatePayload: validateCharacterStatePatchedPayload},
+	{Type: eventTypeConditionChanged, Owner: event.OwnerSystem, ValidatePayload: validateConditionChangedPayload},
+	{Type: eventTypeHopeSpent, Owner: event.OwnerSystem, ValidatePayload: validateHopeSpentPayload},
+	{Type: eventTypeStressSpent, Owner: event.OwnerSystem, ValidatePayload: validateStressSpentPayload},
+	{Type: eventTypeLoadoutSwapped, Owner: event.OwnerSystem, ValidatePayload: validateLoadoutSwappedPayload},
+	{Type: eventTypeRestTaken, Owner: event.OwnerSystem, ValidatePayload: validateRestTakenPayload},
+	{Type: eventTypeAttackResolved, Owner: event.OwnerSystem, ValidatePayload: validateAttackResolvedPayload},
+	{Type: eventTypeReactionResolved, Owner: event.OwnerSystem, ValidatePayload: validateReactionResolvedPayload},
+	{Type: eventTypeAdversaryRollResolved, Owner: event.OwnerSystem, ValidatePayload: validateAdversaryRollResolvedPayload},
+	{Type: eventTypeAdversaryAttackResolved, Owner: event.OwnerSystem, ValidatePayload: validateAdversaryAttackResolvedPayload},
+	{Type: eventTypeDamageRollResolved, Owner: event.OwnerSystem, ValidatePayload: validateDamageRollResolvedPayload},
+	{Type: eventTypeGroupActionResolved, Owner: event.OwnerSystem, ValidatePayload: validateGroupActionResolvedPayload},
+	{Type: eventTypeTagTeamResolved, Owner: event.OwnerSystem, ValidatePayload: validateTagTeamResolvedPayload},
+	{Type: eventTypeCountdownCreated, Owner: event.OwnerSystem, ValidatePayload: validateCountdownCreatedPayload},
+	{Type: eventTypeCountdownUpdated, Owner: event.OwnerSystem, ValidatePayload: validateCountdownUpdatedPayload},
+	{Type: eventTypeCountdownDeleted, Owner: event.OwnerSystem, ValidatePayload: validateCountdownDeletedPayload},
+	{Type: eventTypeAdversaryActionResolved, Owner: event.OwnerSystem, ValidatePayload: validateAdversaryActionResolvedPayload},
+	{Type: eventTypeDamageApplied, Owner: event.OwnerSystem, ValidatePayload: validateDamageAppliedPayload},
+	{Type: eventTypeAdversaryDamageApplied, Owner: event.OwnerSystem, ValidatePayload: validateAdversaryDamageAppliedPayload},
+	{Type: eventTypeDowntimeMoveApplied, Owner: event.OwnerSystem, ValidatePayload: validateDowntimeMoveAppliedPayload},
+	{Type: eventTypeDeathMoveResolved, Owner: event.OwnerSystem, ValidatePayload: validateDeathMoveResolvedPayload},
+	{Type: eventTypeBlazeOfGloryResolved, Owner: event.OwnerSystem, ValidatePayload: validateBlazeOfGloryResolvedPayload},
+	{Type: eventTypeGMMoveApplied, Owner: event.OwnerSystem, ValidatePayload: validateGMMoveAppliedPayload},
+	{Type: eventTypeAdversaryConditionChanged, Owner: event.OwnerSystem, ValidatePayload: validateAdversaryConditionChangedPayload},
+	{Type: eventTypeAdversaryCreated, Owner: event.OwnerSystem, ValidatePayload: validateAdversaryCreatedPayload},
+	{Type: eventTypeAdversaryUpdated, Owner: event.OwnerSystem, ValidatePayload: validateAdversaryUpdatedPayload},
+	{Type: eventTypeAdversaryDeleted, Owner: event.OwnerSystem, ValidatePayload: validateAdversaryDeletedPayload},
+}
+
 // RegisterCommands registers Daggerheart system commands.
 func (m *Module) RegisterCommands(registry *command.Registry) error {
 	if registry == nil {
 		return errors.New("command registry is required")
 	}
-	if err := registry.Register(command.Definition{
-		Type:            commandTypeGMFearSet,
-		Owner:           command.OwnerSystem,
-		ValidatePayload: validateGMFearSetPayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(command.Definition{
-		Type:            commandTypeCharacterStatePatch,
-		Owner:           command.OwnerSystem,
-		ValidatePayload: validateCharacterStatePatchPayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(command.Definition{
-		Type:            commandTypeConditionChange,
-		Owner:           command.OwnerSystem,
-		ValidatePayload: validateConditionChangePayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(command.Definition{
-		Type:            commandTypeHopeSpend,
-		Owner:           command.OwnerSystem,
-		ValidatePayload: validateHopeSpendPayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(command.Definition{
-		Type:            commandTypeStressSpend,
-		Owner:           command.OwnerSystem,
-		ValidatePayload: validateStressSpendPayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(command.Definition{
-		Type:            commandTypeLoadoutSwap,
-		Owner:           command.OwnerSystem,
-		ValidatePayload: validateLoadoutSwapPayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(command.Definition{
-		Type:            commandTypeRestTake,
-		Owner:           command.OwnerSystem,
-		ValidatePayload: validateRestTakePayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(command.Definition{
-		Type:            commandTypeAttackResolve,
-		Owner:           command.OwnerSystem,
-		ValidatePayload: validateAttackResolvePayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(command.Definition{
-		Type:            commandTypeReactionResolve,
-		Owner:           command.OwnerSystem,
-		ValidatePayload: validateReactionResolvePayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(command.Definition{
-		Type:            commandTypeAdversaryRollResolve,
-		Owner:           command.OwnerSystem,
-		ValidatePayload: validateAdversaryRollResolvePayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(command.Definition{
-		Type:            commandTypeAdversaryAttackResolve,
-		Owner:           command.OwnerSystem,
-		ValidatePayload: validateAdversaryAttackResolvePayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(command.Definition{
-		Type:            commandTypeDamageRollResolve,
-		Owner:           command.OwnerSystem,
-		ValidatePayload: validateDamageRollResolvePayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(command.Definition{
-		Type:            commandTypeGroupActionResolve,
-		Owner:           command.OwnerSystem,
-		ValidatePayload: validateGroupActionResolvePayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(command.Definition{
-		Type:            commandTypeTagTeamResolve,
-		Owner:           command.OwnerSystem,
-		ValidatePayload: validateTagTeamResolvePayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(command.Definition{
-		Type:            commandTypeCountdownCreate,
-		Owner:           command.OwnerSystem,
-		ValidatePayload: validateCountdownCreatePayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(command.Definition{
-		Type:            commandTypeCountdownUpdate,
-		Owner:           command.OwnerSystem,
-		ValidatePayload: validateCountdownUpdatePayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(command.Definition{
-		Type:            commandTypeCountdownDelete,
-		Owner:           command.OwnerSystem,
-		ValidatePayload: validateCountdownDeletePayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(command.Definition{
-		Type:            commandTypeAdversaryActionResolve,
-		Owner:           command.OwnerSystem,
-		ValidatePayload: validateAdversaryActionResolvePayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(command.Definition{
-		Type:            commandTypeDamageApply,
-		Owner:           command.OwnerSystem,
-		ValidatePayload: validateDamageApplyPayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(command.Definition{
-		Type:            commandTypeAdversaryDamageApply,
-		Owner:           command.OwnerSystem,
-		ValidatePayload: validateAdversaryDamageApplyPayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(command.Definition{
-		Type:            commandTypeDowntimeMoveApply,
-		Owner:           command.OwnerSystem,
-		ValidatePayload: validateDowntimeMoveApplyPayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(command.Definition{
-		Type:            commandTypeDeathMoveResolve,
-		Owner:           command.OwnerSystem,
-		ValidatePayload: validateDeathMoveResolvePayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(command.Definition{
-		Type:            commandTypeBlazeOfGloryResolve,
-		Owner:           command.OwnerSystem,
-		ValidatePayload: validateBlazeOfGloryResolvePayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(command.Definition{
-		Type:            commandTypeGMMoveApply,
-		Owner:           command.OwnerSystem,
-		ValidatePayload: validateGMMoveApplyPayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(command.Definition{
-		Type:            commandTypeAdversaryConditionChange,
-		Owner:           command.OwnerSystem,
-		ValidatePayload: validateAdversaryConditionChangePayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(command.Definition{
-		Type:            commandTypeAdversaryCreate,
-		Owner:           command.OwnerSystem,
-		ValidatePayload: validateAdversaryCreatePayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(command.Definition{
-		Type:            commandTypeAdversaryUpdate,
-		Owner:           command.OwnerSystem,
-		ValidatePayload: validateAdversaryUpdatePayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(command.Definition{
-		Type:            commandTypeAdversaryDelete,
-		Owner:           command.OwnerSystem,
-		ValidatePayload: validateAdversaryDeletePayload,
-	}); err != nil {
-		return err
+	for _, definition := range daggerheartCommandDefinitions {
+		if err := registry.Register(definition); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -246,201 +117,10 @@ func (m *Module) RegisterEvents(registry *event.Registry) error {
 	if registry == nil {
 		return errors.New("event registry is required")
 	}
-	if err := registry.Register(event.Definition{
-		Type:            eventTypeGMFearChanged,
-		Owner:           event.OwnerSystem,
-		ValidatePayload: validateGMFearChangedPayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(event.Definition{
-		Type:            eventTypeCharacterStatePatched,
-		Owner:           event.OwnerSystem,
-		ValidatePayload: validateCharacterStatePatchedPayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(event.Definition{
-		Type:            eventTypeConditionChanged,
-		Owner:           event.OwnerSystem,
-		ValidatePayload: validateConditionChangedPayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(event.Definition{
-		Type:            eventTypeHopeSpent,
-		Owner:           event.OwnerSystem,
-		ValidatePayload: validateHopeSpentPayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(event.Definition{
-		Type:            eventTypeStressSpent,
-		Owner:           event.OwnerSystem,
-		ValidatePayload: validateStressSpentPayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(event.Definition{
-		Type:            eventTypeLoadoutSwapped,
-		Owner:           event.OwnerSystem,
-		ValidatePayload: validateLoadoutSwappedPayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(event.Definition{
-		Type:            eventTypeRestTaken,
-		Owner:           event.OwnerSystem,
-		ValidatePayload: validateRestTakenPayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(event.Definition{
-		Type:            eventTypeAttackResolved,
-		Owner:           event.OwnerSystem,
-		ValidatePayload: validateAttackResolvedPayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(event.Definition{
-		Type:            eventTypeReactionResolved,
-		Owner:           event.OwnerSystem,
-		ValidatePayload: validateReactionResolvedPayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(event.Definition{
-		Type:            eventTypeAdversaryRollResolved,
-		Owner:           event.OwnerSystem,
-		ValidatePayload: validateAdversaryRollResolvedPayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(event.Definition{
-		Type:            eventTypeAdversaryAttackResolved,
-		Owner:           event.OwnerSystem,
-		ValidatePayload: validateAdversaryAttackResolvedPayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(event.Definition{
-		Type:            eventTypeDamageRollResolved,
-		Owner:           event.OwnerSystem,
-		ValidatePayload: validateDamageRollResolvedPayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(event.Definition{
-		Type:            eventTypeGroupActionResolved,
-		Owner:           event.OwnerSystem,
-		ValidatePayload: validateGroupActionResolvedPayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(event.Definition{
-		Type:            eventTypeTagTeamResolved,
-		Owner:           event.OwnerSystem,
-		ValidatePayload: validateTagTeamResolvedPayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(event.Definition{
-		Type:            eventTypeCountdownCreated,
-		Owner:           event.OwnerSystem,
-		ValidatePayload: validateCountdownCreatedPayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(event.Definition{
-		Type:            eventTypeCountdownUpdated,
-		Owner:           event.OwnerSystem,
-		ValidatePayload: validateCountdownUpdatedPayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(event.Definition{
-		Type:            eventTypeCountdownDeleted,
-		Owner:           event.OwnerSystem,
-		ValidatePayload: validateCountdownDeletedPayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(event.Definition{
-		Type:            eventTypeAdversaryActionResolved,
-		Owner:           event.OwnerSystem,
-		ValidatePayload: validateAdversaryActionResolvedPayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(event.Definition{
-		Type:            eventTypeDamageApplied,
-		Owner:           event.OwnerSystem,
-		ValidatePayload: validateDamageAppliedPayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(event.Definition{
-		Type:            eventTypeAdversaryDamageApplied,
-		Owner:           event.OwnerSystem,
-		ValidatePayload: validateAdversaryDamageAppliedPayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(event.Definition{
-		Type:            eventTypeDowntimeMoveApplied,
-		Owner:           event.OwnerSystem,
-		ValidatePayload: validateDowntimeMoveAppliedPayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(event.Definition{
-		Type:            eventTypeDeathMoveResolved,
-		Owner:           event.OwnerSystem,
-		ValidatePayload: validateDeathMoveResolvedPayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(event.Definition{
-		Type:            eventTypeBlazeOfGloryResolved,
-		Owner:           event.OwnerSystem,
-		ValidatePayload: validateBlazeOfGloryResolvedPayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(event.Definition{
-		Type:            eventTypeGMMoveApplied,
-		Owner:           event.OwnerSystem,
-		ValidatePayload: validateGMMoveAppliedPayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(event.Definition{
-		Type:            eventTypeAdversaryConditionChanged,
-		Owner:           event.OwnerSystem,
-		ValidatePayload: validateAdversaryConditionChangedPayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(event.Definition{
-		Type:            eventTypeAdversaryCreated,
-		Owner:           event.OwnerSystem,
-		ValidatePayload: validateAdversaryCreatedPayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(event.Definition{
-		Type:            eventTypeAdversaryUpdated,
-		Owner:           event.OwnerSystem,
-		ValidatePayload: validateAdversaryUpdatedPayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(event.Definition{
-		Type:            eventTypeAdversaryDeleted,
-		Owner:           event.OwnerSystem,
-		ValidatePayload: validateAdversaryDeletedPayload,
-	}); err != nil {
-		return err
+	for _, definition := range daggerheartEventDefinitions {
+		if err := registry.Register(definition); err != nil {
+			return err
+		}
 	}
 	return nil
 }

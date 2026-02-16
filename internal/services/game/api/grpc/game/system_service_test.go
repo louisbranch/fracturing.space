@@ -43,7 +43,7 @@ func (t *testRegistrySystem) OutcomeApplier() systems.OutcomeApplier {
 
 func TestListGameSystems_Defaults(t *testing.T) {
 	registry := systems.NewRegistry()
-	registry.Register(&testRegistrySystem{
+	if err := registry.Register(&testRegistrySystem{
 		id:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 		version: "1.0.0",
 		name:    "Daggerheart",
@@ -53,8 +53,10 @@ func TestListGameSystems_Defaults(t *testing.T) {
 			AccessLevel:         commonv1.GameSystemAccessLevel_GAME_SYSTEM_ACCESS_LEVEL_BETA,
 			Notes:               "partial support",
 		},
-	})
-	registry.Register(&testRegistrySystem{
+	}); err != nil {
+		t.Fatalf("register 1.0.0: %v", err)
+	}
+	if err := registry.Register(&testRegistrySystem{
 		id:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 		version: "1.1.0",
 		name:    "Daggerheart",
@@ -64,7 +66,9 @@ func TestListGameSystems_Defaults(t *testing.T) {
 			AccessLevel:         commonv1.GameSystemAccessLevel_GAME_SYSTEM_ACCESS_LEVEL_BETA,
 			Notes:               "partial support",
 		},
-	})
+	}); err != nil {
+		t.Fatalf("register 1.1.0: %v", err)
+	}
 
 	svc := NewSystemService(registry)
 	resp, err := svc.ListGameSystems(context.Background(), &gamev1.ListGameSystemsRequest{})
@@ -90,7 +94,7 @@ func TestListGameSystems_Defaults(t *testing.T) {
 
 func TestGetGameSystem_DefaultVersion(t *testing.T) {
 	registry := systems.NewRegistry()
-	registry.Register(&testRegistrySystem{
+	if err := registry.Register(&testRegistrySystem{
 		id:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 		version: "1.0.0",
 		name:    "Daggerheart",
@@ -99,8 +103,10 @@ func TestGetGameSystem_DefaultVersion(t *testing.T) {
 			OperationalStatus:   commonv1.GameSystemOperationalStatus_GAME_SYSTEM_OPERATIONAL_STATUS_OPERATIONAL,
 			AccessLevel:         commonv1.GameSystemAccessLevel_GAME_SYSTEM_ACCESS_LEVEL_BETA,
 		},
-	})
-	registry.Register(&testRegistrySystem{
+	}); err != nil {
+		t.Fatalf("register 1.0.0: %v", err)
+	}
+	if err := registry.Register(&testRegistrySystem{
 		id:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 		version: "1.1.0",
 		name:    "Daggerheart",
@@ -109,7 +115,9 @@ func TestGetGameSystem_DefaultVersion(t *testing.T) {
 			OperationalStatus:   commonv1.GameSystemOperationalStatus_GAME_SYSTEM_OPERATIONAL_STATUS_OPERATIONAL,
 			AccessLevel:         commonv1.GameSystemAccessLevel_GAME_SYSTEM_ACCESS_LEVEL_BETA,
 		},
-	})
+	}); err != nil {
+		t.Fatalf("register 1.1.0: %v", err)
+	}
 
 	svc := NewSystemService(registry)
 	resp, err := svc.GetGameSystem(context.Background(), &gamev1.GetGameSystemRequest{Id: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART})
@@ -129,4 +137,10 @@ func TestGetGameSystem_NotFound(t *testing.T) {
 	svc := NewSystemService(registry)
 	_, err := svc.GetGameSystem(context.Background(), &gamev1.GetGameSystemRequest{Id: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART})
 	assertStatusCode(t, err, codes.NotFound)
+}
+
+func TestListGameSystems_RequiresRegistry(t *testing.T) {
+	svc := NewSystemService(nil)
+	_, err := svc.ListGameSystems(context.Background(), &gamev1.ListGameSystemsRequest{})
+	assertStatusCode(t, err, codes.Internal)
 }

@@ -2,6 +2,7 @@ package systems
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -157,6 +158,17 @@ type SystemKey struct {
 	Version string
 }
 
+var (
+	// ErrSystemRegistryNil indicates registration was attempted on a nil registry.
+	ErrSystemRegistryNil = errors.New("system registry is nil")
+	// ErrSystemRequired indicates a nil game system was provided for registration.
+	ErrSystemRequired = errors.New("game system is required")
+	// ErrSystemVersionRequired indicates system registration omitted a version.
+	ErrSystemVersionRequired = errors.New("game system version is required")
+	// ErrSystemAlreadyRegistered indicates registration duplicated ID+version.
+	ErrSystemAlreadyRegistered = errors.New("game system already registered")
+)
+
 // NewRegistry creates a new game system registry.
 func NewRegistry() *Registry {
 	return &Registry{
@@ -166,24 +178,30 @@ func NewRegistry() *Registry {
 }
 
 // Register adds a game system to the registry.
-// Panics if a system with the same ID is already registered.
-func (r *Registry) Register(system GameSystem) {
+func (r *Registry) Register(system GameSystem) error {
+	if r == nil {
+		return ErrSystemRegistryNil
+	}
+	if system == nil {
+		return ErrSystemRequired
+	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	id := system.ID()
 	version := strings.TrimSpace(system.Version())
 	if version == "" {
-		panic(fmt.Sprintf("game system %s must define a version", id))
+		return fmt.Errorf("%w: %s", ErrSystemVersionRequired, id)
 	}
 	key := SystemKey{ID: id, Version: version}
 	if _, exists := r.systems[key]; exists {
-		panic(fmt.Sprintf("game system %s version %s already registered", id, version))
+		return fmt.Errorf("%w: %s version %s", ErrSystemAlreadyRegistered, id, version)
 	}
 	if _, exists := r.defaults[id]; !exists {
 		r.defaults[id] = version
 	}
 	r.systems[key] = system
+	return nil
 }
 
 // Get returns the game system for the given ID, or nil if not found.

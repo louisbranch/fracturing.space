@@ -76,8 +76,8 @@ func TestConversionHelpers(t *testing.T) {
 	if gameSystemToString(commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED) != "UNSPECIFIED" {
 		t.Fatal("expected unspecified game system string")
 	}
-	if stringToGameSystem("unknown") != commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART {
-		t.Fatal("expected fallback game system daggerheart")
+	if stringToGameSystem("unknown") != commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED {
+		t.Fatal("expected fallback game system unspecified")
 	}
 
 	if campaignStatusToString(campaign.StatusArchived) != "ARCHIVED" {

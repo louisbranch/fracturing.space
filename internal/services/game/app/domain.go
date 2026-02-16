@@ -51,7 +51,8 @@ func buildDomainEngine(eventStore storage.EventStore) (gamegrpc.Domain, error) {
 	applier := aggregate.Applier{SystemRegistry: registries.Systems}
 	stateLoader := engine.ReplayStateLoader{
 		Events:       gamegrpc.NewEventStoreAdapter(eventStore),
-		Checkpoints:  checkpoint.NewNoop(),
+		Checkpoints:  checkpoints,
+		Snapshots:    checkpoints,
 		Applier:      applier,
 		StateFactory: func() any { return aggregate.State{} },
 	}
@@ -60,6 +61,7 @@ func buildDomainEngine(eventStore storage.EventStore) (gamegrpc.Domain, error) {
 		Events:          registries.Events,
 		Journal:         gamegrpc.NewJournalAdapter(eventStore),
 		Checkpoints:     checkpoints,
+		Snapshots:       checkpoints,
 		Gate:            engine.DecisionGate{Registry: registries.Commands},
 		GateStateLoader: engine.ReplayGateStateLoader{StateLoader: stateLoader},
 		StateLoader:     stateLoader,
@@ -98,7 +100,10 @@ func (d coreDecider) Decide(state any, cmd command.Command, now func() time.Time
 	case strings.HasPrefix(cmdType, "character."):
 		return character.Decide(characterStateFor(cmd, current), cmd, now)
 	default:
-		return command.Decision{}
+		return command.Reject(command.Rejection{
+			Code:    "COMMAND_TYPE_UNSUPPORTED",
+			Message: "command type is not supported by core decider",
+		})
 	}
 }
 

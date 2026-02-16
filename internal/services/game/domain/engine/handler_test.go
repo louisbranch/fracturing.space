@@ -68,6 +68,15 @@ func (f *fakeCheckpointStore) Save(_ context.Context, checkpoint replay.Checkpoi
 	return nil
 }
 
+type trackingStateLoader struct {
+	campaignIDs []string
+}
+
+func (t *trackingStateLoader) Load(_ context.Context, cmd command.Command) (any, error) {
+	t.campaignIDs = append(t.campaignIDs, cmd.CampaignID)
+	return aggregate.State{}, nil
+}
+
 func TestHandle_RejectsWhenGateOpen(t *testing.T) {
 	registry := command.NewRegistry()
 	if err := registry.Register(command.Definition{
@@ -279,5 +288,73 @@ func TestExecute_SavesCheckpointAfterAppend(t *testing.T) {
 	}
 	if checkpoints.last.LastSeq != 1 {
 		t.Fatalf("checkpoint seq = %d, want %d", checkpoints.last.LastSeq, 1)
+	}
+}
+
+func TestExecute_UsesValidatedCommandForAllStateLoads(t *testing.T) {
+	cmdRegistry := command.NewRegistry()
+	if err := cmdRegistry.Register(command.Definition{
+		Type:  command.Type("action.test"),
+		Owner: command.OwnerCore,
+	}); err != nil {
+		t.Fatalf("register command: %v", err)
+	}
+
+	loader := &trackingStateLoader{}
+	handler := Handler{
+		Commands:    cmdRegistry,
+		Decider:     fixedDecider{decision: command.Decision{}},
+		StateLoader: loader,
+	}
+
+	_, err := handler.Execute(context.Background(), command.Command{
+		CampaignID: "  camp-1  ",
+		Type:       command.Type("action.test"),
+		ActorType:  command.ActorTypeSystem,
+	})
+	if err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	if len(loader.campaignIDs) != 2 {
+		t.Fatalf("state loader calls = %d, want %d", len(loader.campaignIDs), 2)
+	}
+	for _, id := range loader.campaignIDs {
+		if id != "camp-1" {
+			t.Fatalf("state loader campaign id = %q, want %q", id, "camp-1")
+		}
+	}
+}
+
+func TestExecute_SavesCheckpointWithValidatedCampaignID(t *testing.T) {
+	cmdRegistry := command.NewRegistry()
+	if err := cmdRegistry.Register(command.Definition{
+		Type:  command.Type("action.test"),
+		Owner: command.OwnerCore,
+	}); err != nil {
+		t.Fatalf("register command: %v", err)
+	}
+
+	journal := &fakeJournal{}
+	checkpoints := &fakeCheckpointStore{}
+	handler := Handler{
+		Commands:    cmdRegistry,
+		Decider:     fixedDecider{decision: command.Accept(event.Event{CampaignID: "camp-1", Type: event.Type("action.tested"), Timestamp: time.Unix(0, 0).UTC(), ActorType: event.ActorTypeSystem, PayloadJSON: []byte(`{}`)})},
+		Journal:     journal,
+		Checkpoints: checkpoints,
+	}
+
+	_, err := handler.Execute(context.Background(), command.Command{
+		CampaignID: "  camp-1  ",
+		Type:       command.Type("action.test"),
+		ActorType:  command.ActorTypeSystem,
+	})
+	if err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	if checkpoints.calls != 1 {
+		t.Fatalf("checkpoint calls = %d, want %d", checkpoints.calls, 1)
+	}
+	if checkpoints.last.CampaignID != "camp-1" {
+		t.Fatalf("checkpoint campaign id = %q, want %q", checkpoints.last.CampaignID, "camp-1")
 	}
 }

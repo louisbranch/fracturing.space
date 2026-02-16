@@ -44,7 +44,10 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
 		return acceptActionEvent(cmd, now, eventTypeNoteAdded, "note", cmd.EntityID, payload)
 	default:
-		return command.Decision{}
+		return command.Reject(command.Rejection{
+			Code:    "COMMAND_TYPE_UNSUPPORTED",
+			Message: "command type is not supported by action decider",
+		})
 	}
 }
 

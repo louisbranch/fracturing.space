@@ -107,7 +107,7 @@ Flow:
 6. `event.Registry.ValidateForAppend` validates each emitted event.
 7. Event store appends each event and assigns `seq/hash/chain/signature`.
 8. Application layer applies emitted events to projection stores.
-9. Replay checkpoints are advanced as events are processed.
+9. Replay checkpoints and command-replay snapshots are advanced as events are processed.
 
 ### Write-path sequence diagram
 
@@ -230,11 +230,13 @@ Rules of thumb:
 - Commands do not mutate projections directly.
 - Rejections do not append events.
 - Side effects should happen from accepted events, not before append.
+- Mutating runtime handlers should write through `Domain.Execute`; direct
+  `AppendEvent` usage is reserved for maintenance/import workflows.
 
 There is a compatibility append path in `EventService.AppendEvent`
 (`internal/services/game/api/grpc/game/event_application.go`) that maps a small
 subset of event types to domain commands; the domain path remains the source of
-truth when enabled.
+truth when enabled and should remain the canonical write route.
 
 ## Projections and consistency
 
@@ -283,6 +285,7 @@ Checkpoint behavior:
 - Replay starts from the max of stored checkpoint and requested `after_seq`.
 - Each successful apply saves a new checkpoint.
 - Sequence gaps stop replay with an error.
+- Unregistered system-owned events stop replay with an error (no silent ignore).
 
 Operationally: if projection writes fail after events are appended, replay is
 the recovery mechanism.

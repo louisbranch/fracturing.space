@@ -235,6 +235,54 @@ func TestBuildDomainEngine_SystemCommand(t *testing.T) {
 	}
 }
 
+func TestBuildDomainEngine_ReusesCheckpointedStateForReplay(t *testing.T) {
+	store := newFakeDomainEventStore()
+	engine, err := buildDomainEngine(store)
+	if err != nil {
+		t.Fatalf("build domain engine: %v", err)
+	}
+
+	createCmd := command.Command{
+		CampaignID:  "c1",
+		Type:        command.Type("campaign.create"),
+		EntityType:  "campaign",
+		EntityID:    "c1",
+		PayloadJSON: []byte(`{"name":"Test Campaign","game_system":"daggerheart","gm_mode":"human"}`),
+	}
+	createResult, err := engine.Execute(context.Background(), createCmd)
+	if err != nil {
+		t.Fatalf("execute campaign.create: %v", err)
+	}
+	if len(createResult.Decision.Rejections) > 0 {
+		t.Fatalf("campaign.create rejected: %s", createResult.Decision.Rejections[0].Message)
+	}
+
+	updateCmd := command.Command{
+		CampaignID:  "c1",
+		Type:        command.Type("campaign.update"),
+		EntityType:  "campaign",
+		EntityID:    "c1",
+		PayloadJSON: []byte(`{"fields":{"status":"active"}}`),
+	}
+	updateResult, err := engine.Execute(context.Background(), updateCmd)
+	if err != nil {
+		t.Fatalf("execute campaign.update: %v", err)
+	}
+	if len(updateResult.Decision.Rejections) > 0 {
+		t.Fatalf("campaign.update rejected: %s", updateResult.Decision.Rejections[0].Message)
+	}
+
+	zeroSeqStarts := 0
+	for _, afterSeq := range store.listAfterSeq {
+		if afterSeq == 0 {
+			zeroSeqStarts++
+		}
+	}
+	if zeroSeqStarts != 2 {
+		t.Fatalf("expected 2 replay starts from seq 0, got %d (calls: %v)", zeroSeqStarts, store.listAfterSeq)
+	}
+}
+
 func TestConfigureDomainEnabled_SetsDomain(t *testing.T) {
 	store := newFakeDomainEventStore()
 	stores := gamegrpc.Stores{Event: store}
@@ -248,8 +296,9 @@ func TestConfigureDomainEnabled_SetsDomain(t *testing.T) {
 }
 
 type fakeDomainEventStore struct {
-	events  map[string][]event.Event
-	nextSeq map[string]uint64
+	events       map[string][]event.Event
+	nextSeq      map[string]uint64
+	listAfterSeq []uint64
 }
 
 func newFakeDomainEventStore() *fakeDomainEventStore {
@@ -285,6 +334,7 @@ func (s *fakeDomainEventStore) GetEventBySeq(_ context.Context, campaignID strin
 }
 
 func (s *fakeDomainEventStore) ListEvents(_ context.Context, campaignID string, afterSeq uint64, limit int) ([]event.Event, error) {
+	s.listAfterSeq = append(s.listAfterSeq, afterSeq)
 	entries := s.events[campaignID]
 	result := make([]event.Event, 0, len(entries))
 	for _, evt := range entries {

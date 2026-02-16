@@ -21,6 +21,7 @@ import (
 	daggerheartservice "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/random"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/integrity"
 	storagesqlite "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite"
@@ -136,6 +137,12 @@ func NewWithAddr(addr string) (*Server, error) {
 		bundle.Close()
 		return nil, fmt.Errorf("configure domain: %w", err)
 	}
+	systemRegistry, err := buildSystemRegistry()
+	if err != nil {
+		_ = listener.Close()
+		bundle.Close()
+		return nil, fmt.Errorf("build system registry: %w", err)
+	}
 
 	authConn, authClient, err := dialAuthGRPC(context.Background(), srvEnv.AuthAddr)
 	if err != nil {
@@ -174,7 +181,7 @@ func NewWithAddr(addr string) (*Server, error) {
 	forkService := gamegrpc.NewForkService(stores)
 	eventService := gamegrpc.NewEventService(stores)
 	statisticsService := gamegrpc.NewStatisticsService(stores)
-	systemService := gamegrpc.NewSystemService(nil)
+	systemService := gamegrpc.NewSystemService(systemRegistry)
 	healthServer := health.NewServer()
 	daggerheartv1.RegisterDaggerheartServiceServer(grpcServer, daggerheartService)
 	daggerheartv1.RegisterDaggerheartContentServiceServer(grpcServer, contentService)
@@ -210,6 +217,14 @@ func NewWithAddr(addr string) (*Server, error) {
 		stores:     bundle,
 		authConn:   authConn,
 	}, nil
+}
+
+func buildSystemRegistry() (*systems.Registry, error) {
+	registry := systems.NewRegistry()
+	if err := registry.Register(daggerheart.NewRegistrySystem()); err != nil {
+		return nil, fmt.Errorf("register daggerheart system: %w", err)
+	}
+	return registry, nil
 }
 
 // Addr returns the listener address for the game server.

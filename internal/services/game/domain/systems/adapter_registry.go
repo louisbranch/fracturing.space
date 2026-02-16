@@ -2,6 +2,7 @@ package systems
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -31,6 +32,17 @@ type systemKey struct {
 	Version string
 }
 
+var (
+	// ErrAdapterRegistryNil indicates registration was attempted on a nil registry.
+	ErrAdapterRegistryNil = errors.New("adapter registry is nil")
+	// ErrAdapterRequired indicates a nil adapter was provided for registration.
+	ErrAdapterRequired = errors.New("adapter is required")
+	// ErrAdapterVersionRequired indicates adapter registration omitted a version.
+	ErrAdapterVersionRequired = errors.New("adapter version is required")
+	// ErrAdapterAlreadyRegistered indicates adapter registration duplicated ID+version.
+	ErrAdapterAlreadyRegistered = errors.New("adapter already registered")
+)
+
 // NewAdapterRegistry creates a new system adapter registry.
 func NewAdapterRegistry() *AdapterRegistry {
 	return &AdapterRegistry{
@@ -40,24 +52,28 @@ func NewAdapterRegistry() *AdapterRegistry {
 }
 
 // Register registers an adapter for a system + version.
-func (r *AdapterRegistry) Register(adapter Adapter) {
+func (r *AdapterRegistry) Register(adapter Adapter) error {
 	if r == nil {
-		panic("adapter registry is nil")
+		return ErrAdapterRegistryNil
+	}
+	if adapter == nil {
+		return ErrAdapterRequired
 	}
 	version := strings.TrimSpace(adapter.Version())
 	if version == "" {
-		panic(fmt.Sprintf("system %s must define a version", adapter.ID()))
+		return fmt.Errorf("%w: system %s", ErrAdapterVersionRequired, adapter.ID())
 	}
 	key := systemKey{ID: adapter.ID(), Version: version}
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if _, exists := r.adapters[key]; exists {
-		panic(fmt.Sprintf("system %s version %s already registered", adapter.ID(), version))
+		return fmt.Errorf("%w: system %s version %s", ErrAdapterAlreadyRegistered, adapter.ID(), version)
 	}
 	if _, exists := r.defaults[adapter.ID()]; !exists {
 		r.defaults[adapter.ID()] = version
 	}
 	r.adapters[key] = adapter
+	return nil
 }
 
 // Get returns the adapter for the system + version.

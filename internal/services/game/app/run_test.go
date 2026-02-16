@@ -8,10 +8,13 @@ import (
 	"testing"
 	"time"
 
+	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	authserver "github.com/louisbranch/fracturing.space/internal/services/auth/app"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	grpc_health_v1 "google.golang.org/grpc/health/grpc_health_v1"
@@ -112,6 +115,64 @@ func TestHealthCheckReportsServing(t *testing.T) {
 
 	cancel()
 
+	select {
+	case err := <-serveErr:
+		if err != nil {
+			t.Fatalf("serve returned error: %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("server did not stop in time")
+	}
+}
+
+func TestSystemServiceListsDaggerheartFromLiveServer(t *testing.T) {
+	setTempDBPath(t)
+	stopAuth := startAuthServer(t)
+	defer stopAuth()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	grpcServer, err := New(0)
+	if err != nil {
+		t.Fatalf("new server: %v", err)
+	}
+
+	serveErr := make(chan error, 1)
+	go func() {
+		serveErr <- grpcServer.Serve(ctx)
+	}()
+
+	addr := normalizeAddress(t, grpcServer.listener.Addr().String())
+	conn, err := grpc.NewClient(
+		addr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDefaultCallOptions(grpc.WaitForReady(true)),
+	)
+	if err != nil {
+		t.Fatalf("dial server: %v", err)
+	}
+	defer conn.Close()
+
+	client := gamev1.NewSystemServiceClient(conn)
+	callCtx, callCancel := context.WithTimeout(context.Background(), time.Second)
+	resp, err := client.ListGameSystems(callCtx, &gamev1.ListGameSystemsRequest{})
+	callCancel()
+	if err != nil {
+		t.Fatalf("list systems: %v", err)
+	}
+
+	var found bool
+	for _, system := range resp.GetSystems() {
+		if system.GetId() == commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART && system.GetVersion() == daggerheart.SystemVersion {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected daggerheart system %q in response: %+v", daggerheart.SystemVersion, resp.GetSystems())
+	}
+
+	cancel()
 	select {
 	case err := <-serveErr:
 		if err != nil {

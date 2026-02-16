@@ -1864,7 +1864,7 @@ func stringToGameSystem(s string) commonv1.GameSystem {
 	case "DAGGERHEART":
 		return commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART
 	default:
-		return commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART
+		return commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED
 	}
 }
 

@@ -145,6 +145,19 @@ func TestCreateCharacter_Success_PC(t *testing.T) {
 				PayloadJSON: []byte(`{"character_id":"char-123","system_profile":{"daggerheart":{"hp_max":6}}}`),
 			}),
 		},
+		command.Type("action.character_state.patch"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "c1",
+				Type:          event.Type("action.character_state_patched"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				EntityType:    "character",
+				EntityID:      "char-123",
+				SystemID:      "GAME_SYSTEM_DAGGERHEART",
+				SystemVersion: "1.0.0",
+				PayloadJSON:   []byte(`{"character_id":"char-123","hp_after":6}`),
+			}),
+		},
 	}}
 
 	svc := &CharacterService{
@@ -247,6 +260,19 @@ func TestCreateCharacter_Success_NPC(t *testing.T) {
 				PayloadJSON: []byte(`{"character_id":"npc-456","system_profile":{"daggerheart":{"hp_max":6}}}`),
 			}),
 		},
+		command.Type("action.character_state.patch"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "c1",
+				Type:          event.Type("action.character_state_patched"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				EntityType:    "character",
+				EntityID:      "npc-456",
+				SystemID:      "GAME_SYSTEM_DAGGERHEART",
+				SystemVersion: "1.0.0",
+				PayloadJSON:   []byte(`{"character_id":"npc-456","hp_after":3}`),
+			}),
+		},
 	}}
 
 	svc := &CharacterService{
@@ -312,6 +338,19 @@ func TestCreateCharacter_UsesDomainEngine(t *testing.T) {
 				PayloadJSON: []byte(`{"character_id":"char-123","system_profile":{"daggerheart":{"hp_max":6}}}`),
 			}),
 		},
+		command.Type("action.character_state.patch"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "c1",
+				Type:          event.Type("action.character_state_patched"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				EntityType:    "character",
+				EntityID:      "char-123",
+				SystemID:      "GAME_SYSTEM_DAGGERHEART",
+				SystemVersion: "1.0.0",
+				PayloadJSON:   []byte(`{"character_id":"char-123","hp_after":6}`),
+			}),
+		},
 	}}
 
 	svc := &CharacterService{
@@ -338,17 +377,20 @@ func TestCreateCharacter_UsesDomainEngine(t *testing.T) {
 	if resp.Character == nil {
 		t.Fatal("CreateCharacter response has nil character")
 	}
-	if domain.calls != 2 {
-		t.Fatalf("expected domain to be called twice, got %d", domain.calls)
+	if domain.calls != 3 {
+		t.Fatalf("expected domain to be called three times, got %d", domain.calls)
 	}
-	if len(domain.commands) != 2 {
-		t.Fatalf("expected 2 domain commands, got %d", len(domain.commands))
+	if len(domain.commands) != 3 {
+		t.Fatalf("expected 3 domain commands, got %d", len(domain.commands))
 	}
 	if domain.commands[0].Type != command.Type("character.create") {
 		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "character.create")
 	}
 	if domain.commands[1].Type != command.Type("character.profile_update") {
 		t.Fatalf("command type = %s, want %s", domain.commands[1].Type, "character.profile_update")
+	}
+	if domain.commands[2].Type != command.Type("action.character_state.patch") {
+		t.Fatalf("command type = %s, want %s", domain.commands[2].Type, "action.character_state.patch")
 	}
 	if _, err := characterStore.GetCharacter(context.Background(), "c1", "char-123"); err != nil {
 		t.Fatalf("Character not persisted: %v", err)
