@@ -11,6 +11,7 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
+	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -83,6 +84,26 @@ func (s *CampaignService) ListCampaigns(ctx context.Context, in *campaignv1.List
 	page, err := s.stores.Campaign.List(ctx, pageSize, in.GetPageToken())
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "list campaigns: %v", err)
+	}
+	userID := strings.TrimSpace(grpcmeta.UserIDFromContext(ctx))
+	if userID != "" {
+		if s.stores.Participant == nil {
+			return nil, status.Error(codes.Internal, "participant store is not configured")
+		}
+		filtered := make([]storage.CampaignRecord, 0, len(page.Campaigns))
+		for _, campaignRecord := range page.Campaigns {
+			participants, listErr := s.stores.Participant.ListParticipantsByCampaign(ctx, campaignRecord.ID)
+			if listErr != nil {
+				return nil, status.Errorf(codes.Internal, "list participants by campaign: %v", listErr)
+			}
+			for _, participantRecord := range participants {
+				if strings.TrimSpace(participantRecord.UserID) == userID {
+					filtered = append(filtered, campaignRecord)
+					break
+				}
+			}
+		}
+		page.Campaigns = filtered
 	}
 
 	response := &campaignv1.ListCampaignsResponse{
