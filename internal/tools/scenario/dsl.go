@@ -73,8 +73,6 @@ func LoadScenarioFromFile(path string) (*Scenario, error) {
 
 // validateScenarioComments fails fast so scenarios always ship with block intent.
 func validateScenarioComments(path string) error {
-	return nil
-
 	contents, err := os.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("read scenario: %w", err)
