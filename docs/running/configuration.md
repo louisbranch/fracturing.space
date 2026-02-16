@@ -33,6 +33,12 @@ This is the full environment variable reference. For setup steps, see
 - `FRACTURING_SPACE_OAUTH_FIRST_PARTY_CLIENT_ID`: client ID for the first-party web login client. When set (along with redirect URI), registers a trusted OAuth client that skips the consent screen. Default: unset.
 - `FRACTURING_SPACE_OAUTH_FIRST_PARTY_REDIRECT_URI`: redirect URI for the first-party web login client. Required together with the client ID.
 
+### AI
+
+- `FRACTURING_SPACE_AI_PORT`: gRPC port for AI service. Default: `8088`.
+- `FRACTURING_SPACE_AI_DB_PATH`: AI SQLite path. Default: `data/ai.db`.
+- `FRACTURING_SPACE_AI_ENCRYPTION_KEY`: base64-encoded AES key used to encrypt provider secrets at rest (must decode to 16/24/32 bytes).
+
 ### WebAuthn / Passkeys
 
 - `FRACTURING_SPACE_WEBAUTHN_RP_ID`: WebAuthn relying party ID (the domain the user sees). Default: `localhost`.
@@ -147,3 +153,17 @@ The web login server accepts flags for HTTP address and auth endpoints. If
 `FRACTURING_SPACE_WEB_HTTP_ADDR`, `FRACTURING_SPACE_WEB_AUTH_BASE_URL`, or
 `FRACTURING_SPACE_WEB_AUTH_ADDR` are set, they provide defaults when the matching flag
 is omitted. Command-line flags take precedence over env values.
+
+## AI Service Configuration
+
+### Command-line Flags
+
+The AI service (`cmd/ai`) accepts the following flags:
+
+- `-port`: gRPC server port. Default: `8088`
+
+### Address Overrides
+
+The AI service accepts the `-port` flag. If `FRACTURING_SPACE_AI_PORT` is set,
+it provides the default when the flag is omitted. Command-line flags take
+precedence over env values.
