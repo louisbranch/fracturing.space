@@ -143,7 +143,7 @@ func findAdversaryAttackResolved(ctx context.Context, client gamev1.EventService
 		CampaignId: campaignID,
 		PageSize:   200,
 		OrderBy:    "seq desc",
-		Filter:     "session_id = \"" + sessionID + "\" AND type = \"action.adversary_attack_resolved\"",
+		Filter:     "session_id = \"" + sessionID + "\" AND type = \"sys.daggerheart.action.adversary_attack_resolved\"",
 	})
 	if err != nil {
 		return err

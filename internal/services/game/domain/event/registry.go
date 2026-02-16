@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -21,6 +22,10 @@ var (
 	ErrActorTypeInvalid = errors.New("actor type is invalid")
 	// ErrActorIDRequired indicates a missing actor id for participant/gm.
 	ErrActorIDRequired = errors.New("actor id is required for participant or gm")
+	// ErrEntityTypeRequired indicates a missing entity type for addressed events.
+	ErrEntityTypeRequired = errors.New("entity type is required")
+	// ErrEntityIDRequired indicates a missing entity id for addressed events.
+	ErrEntityIDRequired = errors.New("entity id is required")
 	// ErrSystemMetadataRequired indicates missing system metadata for system events.
 	ErrSystemMetadataRequired = errors.New("system metadata is required for system events")
 	// ErrSystemMetadataForbidden indicates system metadata on core events.
@@ -88,8 +93,21 @@ type PayloadValidator func(json.RawMessage) error
 type Definition struct {
 	Type            Type
 	Owner           Owner
+	Addressing      AddressingPolicy
 	ValidatePayload PayloadValidator
 }
+
+// AddressingPolicy declares required entity-addressing fields for an event type.
+type AddressingPolicy uint8
+
+const (
+	// AddressingPolicyNone does not require entity addressing fields.
+	AddressingPolicyNone AddressingPolicy = iota
+	// AddressingPolicyEntityType requires only entity_type.
+	AddressingPolicyEntityType
+	// AddressingPolicyEntityTarget requires both entity_type and entity_id.
+	AddressingPolicyEntityTarget
+)
 
 // Registry stores event definitions and validates events for append.
 type Registry struct {
@@ -115,6 +133,12 @@ func (r *Registry) Register(def Definition) error {
 		// allowed
 	default:
 		return fmt.Errorf("owner must be core or system")
+	}
+	switch def.Addressing {
+	case AddressingPolicyNone, AddressingPolicyEntityType, AddressingPolicyEntityTarget:
+		// allowed
+	default:
+		return fmt.Errorf("event addressing policy is invalid")
 	}
 	if r.definitions == nil {
 		r.definitions = make(map[Type]Definition)
@@ -176,17 +200,38 @@ func (r *Registry) ValidateForAppend(evt Event) (Event, error) {
 	evt.CorrelationID = strings.TrimSpace(evt.CorrelationID)
 	evt.CausationID = strings.TrimSpace(evt.CausationID)
 
+	requireEntityType := false
+	requireEntityID := false
+	switch def.Addressing {
+	case AddressingPolicyEntityType:
+		requireEntityType = true
+	case AddressingPolicyEntityTarget:
+		requireEntityType = true
+		requireEntityID = true
+	}
+
 	switch def.Owner {
 	case OwnerSystem:
 		if evt.SystemID == "" || evt.SystemVersion == "" {
 			return Event{}, ErrSystemMetadataRequired
 		}
+		requireEntityType = true
+		requireEntityID = true
 	case OwnerCore:
 		if evt.SystemID != "" || evt.SystemVersion != "" {
 			return Event{}, ErrSystemMetadataForbidden
 		}
 	default:
 		return Event{}, fmt.Errorf("event owner is invalid")
+	}
+	if requireEntityType && evt.EntityType == "" {
+		return Event{}, ErrEntityTypeRequired
+	}
+	if requireEntityID && evt.EntityID == "" {
+		return Event{}, ErrEntityIDRequired
+	}
+	if evt.EntityID != "" && evt.EntityType == "" {
+		return Event{}, ErrEntityTypeRequired
 	}
 
 	if len(evt.PayloadJSON) == 0 {
@@ -209,4 +254,19 @@ func (r *Registry) ValidateForAppend(evt Event) (Event, error) {
 	}
 
 	return evt, nil
+}
+
+// ListDefinitions returns a stable, sorted snapshot of registered definitions.
+func (r *Registry) ListDefinitions() []Definition {
+	if r == nil || len(r.definitions) == 0 {
+		return nil
+	}
+	definitions := make([]Definition, 0, len(r.definitions))
+	for _, definition := range r.definitions {
+		definitions = append(definitions, definition)
+	}
+	sort.Slice(definitions, func(i, j int) bool {
+		return string(definitions[i].Type) < string(definitions[j].Type)
+	})
+	return definitions
 }

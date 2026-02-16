@@ -215,10 +215,41 @@ Command and event registries enforce:
   - participant/GM actor types require `actor_id`.
 - Ownership constraints:
   - core-owned entries must not include `system_id/system_version`.
-  - system-owned entries must include both.
+  - system-owned entries must include both metadata fields and explicit
+    addressing (`entity_type` + `entity_id`).
 
 This makes payload hashing stable, routing deterministic, and replay behavior
 reproducible.
+
+## Event naming and addressing conventions
+
+Use these conventions when adding new command/event types so routing and replay
+remain predictable across systems.
+
+Naming:
+
+- Core command types: `<domain>.<entity>.<verb>` (for example `session.gate.open`).
+- Core event types: `<domain>.<entity>_<verb_past>` (for example `session.gate_opened`).
+- System-owned command/event types should be system-scoped for new work:
+  - command: `sys.<system_id>.<domain>.<verb>`
+  - event: `sys.<system_id>.<domain>.<verb_past>`
+- Keep versioning in `system_version`, not in the type string.
+
+Addressing:
+
+- Every mutating event should set `entity_type`.
+- Every mutating event with a concrete target should set `entity_id`.
+- Runtime validation currently enforces `entity_type` + `entity_id` for all
+  system-owned events.
+- `campaign_id + seq` is the authoritative identity for stored events.
+- `request_id`, `invocation_id`, `correlation_id`, and `causation_id` are for
+  traceability and causal linking, not identity.
+
+Why this matters:
+
+- Reduces naming collisions as more systems are added.
+- Makes filters (`type`, `entity_type`, `entity_id`, `system_id`) easier to use.
+- Avoids timeline/projection fallbacks that infer meaning from partial envelopes.
 
 ## Trigger semantics
 
@@ -381,11 +412,3 @@ These are current documentation or architecture pain points worth improving.
    - `domain/system.Registry` (module command/event routing) and
      `domain/systems.Registry` (API/system metadata bridge) can be confused.
    - Improvement: clarify names or collapse responsibilities.
-4. No generated command catalog:
-   - Events have `docs/events/event-catalog.md`, but command surfaces are only
-     discoverable by code search.
-   - Improvement: add command-catalog generation and CI drift checks.
-5. Prefix-based core command dispatch:
-   - `internal/services/game/app/domain.go` routes core commands by string
-     prefix (`campaign.`, `session.`, etc.).
-   - Improvement: move to explicit command-type routing metadata.

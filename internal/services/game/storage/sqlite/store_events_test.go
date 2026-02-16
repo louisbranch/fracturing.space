@@ -422,7 +422,7 @@ func TestAppendEventFieldRoundTrip(t *testing.T) {
 	evt := event.Event{
 		CampaignID:    "camp-fields",
 		Timestamp:     time.Date(2026, 2, 3, 12, 0, 0, 0, time.UTC),
-		Type:          event.Type("action.character_state_patched"),
+		Type:          event.Type("sys.daggerheart.action.character_state_patched"),
 		SessionID:     "sess-1",
 		RequestID:     "req-1",
 		InvocationID:  "inv-1",

@@ -349,7 +349,7 @@ func findGmMoveApplied(ctx context.Context, client gamev1.EventServiceClient, ca
 		CampaignId: campaignID,
 		PageSize:   200,
 		OrderBy:    "seq desc",
-		Filter:     "session_id = \"" + sessionID + "\" AND type = \"action.gm_move_applied\"",
+		Filter:     "session_id = \"" + sessionID + "\" AND type = \"sys.daggerheart.action.gm_move_applied\"",
 	})
 	if err != nil {
 		return err
@@ -371,7 +371,7 @@ func findGMFearChanged(ctx context.Context, client gamev1.EventServiceClient, ca
 		CampaignId: campaignID,
 		PageSize:   200,
 		OrderBy:    "seq desc",
-		Filter:     "session_id = \"" + sessionID + "\" AND type = \"action.gm_fear_changed\"",
+		Filter:     "session_id = \"" + sessionID + "\" AND type = \"sys.daggerheart.action.gm_fear_changed\"",
 	})
 	if err != nil {
 		return err
@@ -393,7 +393,7 @@ func findCountdownCreated(ctx context.Context, client gamev1.EventServiceClient,
 		CampaignId: campaignID,
 		PageSize:   200,
 		OrderBy:    "seq desc",
-		Filter:     "session_id = \"" + sessionID + "\" AND type = \"action.countdown_created\"",
+		Filter:     "session_id = \"" + sessionID + "\" AND type = \"sys.daggerheart.action.countdown_created\"",
 	})
 	if err != nil {
 		return err
@@ -415,7 +415,7 @@ func findCountdownUpdated(ctx context.Context, client gamev1.EventServiceClient,
 		CampaignId: campaignID,
 		PageSize:   200,
 		OrderBy:    "seq desc",
-		Filter:     "session_id = \"" + sessionID + "\" AND type = \"action.countdown_updated\"",
+		Filter:     "session_id = \"" + sessionID + "\" AND type = \"sys.daggerheart.action.countdown_updated\"",
 	})
 	if err != nil {
 		return err
@@ -437,7 +437,7 @@ func findCountdownDeleted(ctx context.Context, client gamev1.EventServiceClient,
 		CampaignId: campaignID,
 		PageSize:   200,
 		OrderBy:    "seq desc",
-		Filter:     "session_id = \"" + sessionID + "\" AND type = \"action.countdown_deleted\"",
+		Filter:     "session_id = \"" + sessionID + "\" AND type = \"sys.daggerheart.action.countdown_deleted\"",
 	})
 	if err != nil {
 		return err
@@ -459,7 +459,7 @@ func findAdversaryRollResolved(ctx context.Context, client gamev1.EventServiceCl
 		CampaignId: campaignID,
 		PageSize:   200,
 		OrderBy:    "seq desc",
-		Filter:     "session_id = \"" + sessionID + "\" AND type = \"action.adversary_roll_resolved\"",
+		Filter:     "session_id = \"" + sessionID + "\" AND type = \"sys.daggerheart.action.adversary_roll_resolved\"",
 	})
 	if err != nil {
 		return err

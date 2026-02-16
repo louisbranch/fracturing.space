@@ -245,7 +245,7 @@ func findConditionChange(ctx context.Context, client gamev1.EventServiceClient, 
 		CampaignId: campaignID,
 		PageSize:   200,
 		OrderBy:    "seq desc",
-		Filter:     "entity_id = \"" + characterID + "\" AND type = \"action.condition_changed\"",
+		Filter:     "entity_id = \"" + characterID + "\" AND type = \"sys.daggerheart.action.condition_changed\"",
 	})
 	if err != nil {
 		return err
@@ -267,7 +267,7 @@ func findAdversaryConditionChange(ctx context.Context, client gamev1.EventServic
 		CampaignId: campaignID,
 		PageSize:   200,
 		OrderBy:    "seq desc",
-		Filter:     "entity_id = \"" + adversaryID + "\" AND type = \"action.adversary_condition_changed\"",
+		Filter:     "entity_id = \"" + adversaryID + "\" AND type = \"sys.daggerheart.action.adversary_condition_changed\"",
 	})
 	if err != nil {
 		return err

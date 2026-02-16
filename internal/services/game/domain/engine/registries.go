@@ -1,6 +1,9 @@
 package engine
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
@@ -67,10 +70,15 @@ func BuildRegistries(modules ...system.Module) (Registries, error) {
 		if err := systemRegistry.Register(module); err != nil {
 			return Registries{}, err
 		}
+		beforeCommands := commandTypeSet(commandRegistry.ListDefinitions())
 		if err := module.RegisterCommands(commandRegistry); err != nil {
 			return Registries{}, err
 		}
+		beforeEvents := eventTypeSet(eventRegistry.ListDefinitions())
 		if err := module.RegisterEvents(eventRegistry); err != nil {
+			return Registries{}, err
+		}
+		if err := validateModuleSystemTypePrefixes(module, beforeCommands, beforeEvents, commandRegistry.ListDefinitions(), eventRegistry.ListDefinitions()); err != nil {
 			return Registries{}, err
 		}
 	}
@@ -80,4 +88,91 @@ func BuildRegistries(modules ...system.Module) (Registries, error) {
 		Events:   eventRegistry,
 		Systems:  systemRegistry,
 	}, nil
+}
+
+func validateModuleSystemTypePrefixes(
+	module system.Module,
+	knownCommands map[command.Type]struct{},
+	knownEvents map[event.Type]struct{},
+	commands []command.Definition,
+	events []event.Definition,
+) error {
+	moduleID := strings.TrimSpace(module.ID())
+	namespace := systemNamespace(moduleID)
+	if namespace == "" {
+		return fmt.Errorf("system module id is required for naming validation")
+	}
+	expectedPrefix := "sys." + namespace + "."
+
+	for _, definition := range commands {
+		if definition.Owner != command.OwnerSystem {
+			continue
+		}
+		if _, exists := knownCommands[definition.Type]; exists {
+			continue
+		}
+		name := string(definition.Type)
+		if strings.HasPrefix(name, expectedPrefix) {
+			continue
+		}
+		return fmt.Errorf("system module %s command %s must use %s prefix", moduleID, definition.Type, expectedPrefix)
+	}
+
+	for _, definition := range events {
+		if definition.Owner != event.OwnerSystem {
+			continue
+		}
+		if _, exists := knownEvents[definition.Type]; exists {
+			continue
+		}
+		name := string(definition.Type)
+		if strings.HasPrefix(name, expectedPrefix) {
+			continue
+		}
+		return fmt.Errorf("system module %s event %s must use %s prefix", moduleID, definition.Type, expectedPrefix)
+	}
+	return nil
+}
+
+func commandTypeSet(definitions []command.Definition) map[command.Type]struct{} {
+	result := make(map[command.Type]struct{}, len(definitions))
+	for _, definition := range definitions {
+		result[definition.Type] = struct{}{}
+	}
+	return result
+}
+
+func eventTypeSet(definitions []event.Definition) map[event.Type]struct{} {
+	result := make(map[event.Type]struct{}, len(definitions))
+	for _, definition := range definitions {
+		result[definition.Type] = struct{}{}
+	}
+	return result
+}
+
+func systemNamespace(moduleID string) string {
+	trimmed := strings.TrimSpace(moduleID)
+	if trimmed == "" {
+		return ""
+	}
+	const legacyPrefix = "GAME_SYSTEM_"
+	if len(trimmed) > len(legacyPrefix) && strings.EqualFold(trimmed[:len(legacyPrefix)], legacyPrefix) {
+		trimmed = trimmed[len(legacyPrefix):]
+	}
+	normalized := strings.ToLower(trimmed)
+	var b strings.Builder
+	b.Grow(len(normalized))
+	lastUnderscore := false
+	for _, r := range normalized {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+			b.WriteRune(r)
+			lastUnderscore = false
+			continue
+		}
+		if !lastUnderscore {
+			b.WriteByte('_')
+			lastUnderscore = true
+		}
+	}
+	return strings.Trim(b.String(), "_")
 }

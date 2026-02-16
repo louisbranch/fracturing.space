@@ -16,6 +16,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
+	daggerheartsys "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection/testevent"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
@@ -724,6 +725,50 @@ func TestApplySystemEvent_UsesAdapter(t *testing.T) {
 	}
 	if !adapter.called {
 		t.Fatal("expected adapter to be called")
+	}
+}
+
+func TestApplySystemEvent_UsesDaggerheartAdapterForSysPrefixedEventType(t *testing.T) {
+	ctx := context.Background()
+	daggerheartStore := newProjectionDaggerheartStore()
+	registry := systems.NewAdapterRegistry()
+	if err := registry.Register(daggerheartsys.NewAdapter(daggerheartStore)); err != nil {
+		t.Fatalf("register adapter: %v", err)
+	}
+	applier := Applier{
+		Daggerheart: daggerheartStore,
+		Adapters:    registry,
+	}
+
+	payload, err := json.Marshal(daggerheartsys.GMFearChangedPayload{
+		Before: 1,
+		After:  4,
+		Reason: "test",
+	})
+	if err != nil {
+		t.Fatalf("marshal payload: %v", err)
+	}
+
+	evt := event.Event{
+		CampaignID:    "camp-1",
+		Type:          event.Type("sys." + daggerheartsys.SystemID + ".action.gm_fear_changed"),
+		SystemID:      daggerheartsys.SystemID,
+		SystemVersion: daggerheartsys.SystemVersion,
+		EntityType:    "campaign",
+		EntityID:      "camp-1",
+		PayloadJSON:   payload,
+	}
+
+	if err := applier.Apply(ctx, evt); err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+
+	snapshot, err := daggerheartStore.GetDaggerheartSnapshot(ctx, "camp-1")
+	if err != nil {
+		t.Fatalf("load snapshot: %v", err)
+	}
+	if snapshot.GMFear != 4 {
+		t.Fatalf("snapshot gm fear = %d, want %d", snapshot.GMFear, 4)
 	}
 }
 

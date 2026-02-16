@@ -1,6 +1,6 @@
 PROTO_DIR := api/proto
 GEN_GO_DIR := api/gen/go
-COVER_EXCLUDE_REGEX := (api/gen/|_templ\.go|internal/services/admin/templates/|internal/services/game/storage/sqlite/db/|internal/services/auth/storage/sqlite/db/|internal/services/admin/storage/sqlite/db/|cmd/|internal/cmd/)
+COVER_EXCLUDE_REGEX := (api/gen/|_templ\.go|internal/services/admin/templates/|internal/services/game/storage/sqlite/db/|internal/services/auth/storage/sqlite/db/|internal/services/admin/storage/sqlite/db/|internal/tools/eventdocgen/|cmd/|internal/cmd/)
 
 PROTO_FILES := \
 	$(wildcard $(PROTO_DIR)/common/v1/*.proto) \
@@ -102,7 +102,7 @@ scenario:
 	go test -tags=scenario ./internal/test/game
 
 event-catalog-check:
-	@bash -euo pipefail -c 'go generate ./internal/services/game/domain/campaign/event >/dev/null 2>&1; git diff --exit-code -- docs/events/event-catalog.md'
+	@bash -euo pipefail -c 'go generate ./internal/services/game/domain/campaign/event >/dev/null 2>&1; git diff --exit-code -- docs/events/event-catalog.md docs/events/usage-map.md docs/events/command-catalog.md'
 
 seed: ## Seed the local database with demo data (static fixtures)
 	go run ./cmd/seed -v

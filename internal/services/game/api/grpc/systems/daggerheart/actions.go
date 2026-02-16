@@ -114,8 +114,8 @@ func (s *DaggerheartService) ApplyDamage(ctx context.Context, in *pb.Daggerheart
 		if err != nil {
 			return nil, handleDomainError(err)
 		}
-		if rollEvent.Type != event.Type("action.damage_roll_resolved") {
-			return nil, status.Error(codes.InvalidArgument, "roll_seq must reference action.damage_roll_resolved")
+		if rollEvent.Type != event.Type("sys.daggerheart.action.damage_roll_resolved") {
+			return nil, status.Error(codes.InvalidArgument, "roll_seq must reference sys.daggerheart.action.damage_roll_resolved")
 		}
 		var rollPayload daggerheart.DamageRollResolvedPayload
 		if err := json.Unmarshal(rollEvent.PayloadJSON, &rollPayload); err != nil {
@@ -158,7 +158,7 @@ func (s *DaggerheartService) ApplyDamage(ctx context.Context, in *pb.Daggerheart
 	}
 	domainResult, err := s.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:    campaignID,
-		Type:          command.Type("action.damage.apply"),
+		Type:          command.Type("sys.daggerheart.action.damage.apply"),
 		ActorType:     command.ActorTypeSystem,
 		SessionID:     sessionID,
 		RequestID:     requestID,
@@ -278,8 +278,8 @@ func (s *DaggerheartService) ApplyAdversaryDamage(ctx context.Context, in *pb.Da
 		if err != nil {
 			return nil, handleDomainError(err)
 		}
-		if rollEvent.Type != event.Type("action.damage_roll_resolved") {
-			return nil, status.Error(codes.InvalidArgument, "roll_seq must reference action.damage_roll_resolved")
+		if rollEvent.Type != event.Type("sys.daggerheart.action.damage_roll_resolved") {
+			return nil, status.Error(codes.InvalidArgument, "roll_seq must reference sys.daggerheart.action.damage_roll_resolved")
 		}
 		var rollPayload daggerheart.DamageRollResolvedPayload
 		if err := json.Unmarshal(rollEvent.PayloadJSON, &rollPayload); err != nil {
@@ -323,7 +323,7 @@ func (s *DaggerheartService) ApplyAdversaryDamage(ctx context.Context, in *pb.Da
 	}
 	domainResult, err := s.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:    campaignID,
-		Type:          command.Type("action.adversary_damage.apply"),
+		Type:          command.Type("sys.daggerheart.action.adversary_damage.apply"),
 		ActorType:     command.ActorTypeSystem,
 		SessionID:     sessionID,
 		RequestID:     requestID,
@@ -467,7 +467,7 @@ func (s *DaggerheartService) ApplyRest(ctx context.Context, in *pb.DaggerheartAp
 	}
 	domainResult, err := s.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:    campaignID,
-		Type:          command.Type("action.rest.take"),
+		Type:          command.Type("sys.daggerheart.action.rest.take"),
 		ActorType:     command.ActorTypeSystem,
 		SessionID:     sessionID,
 		RequestID:     requestID,
@@ -644,7 +644,7 @@ func (s *DaggerheartService) ApplyDowntimeMove(ctx context.Context, in *pb.Dagge
 	}
 	domainResult, err := s.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:    campaignID,
-		Type:          command.Type("action.downtime_move.apply"),
+		Type:          command.Type("sys.daggerheart.action.downtime_move.apply"),
 		ActorType:     command.ActorTypeSystem,
 		SessionID:     sessionID,
 		RequestID:     requestID,
@@ -788,7 +788,7 @@ func (s *DaggerheartService) SwapLoadout(ctx context.Context, in *pb.Daggerheart
 	}
 	result, err := s.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:    campaignID,
-		Type:          command.Type("action.loadout.swap"),
+		Type:          command.Type("sys.daggerheart.action.loadout.swap"),
 		ActorType:     command.ActorTypeSystem,
 		SessionID:     grpcmeta.SessionIDFromContext(ctx),
 		RequestID:     requestID,
@@ -832,7 +832,7 @@ func (s *DaggerheartService) SwapLoadout(ctx context.Context, in *pb.Daggerheart
 		invocationID := grpcmeta.InvocationIDFromContext(ctx)
 		result, err := s.stores.Domain.Execute(ctx, command.Command{
 			CampaignID:    campaignID,
-			Type:          command.Type("action.stress.spend"),
+			Type:          command.Type("sys.daggerheart.action.stress.spend"),
 			ActorType:     command.ActorTypeSystem,
 			SessionID:     grpcmeta.SessionIDFromContext(ctx),
 			RequestID:     requestID,
@@ -1040,7 +1040,7 @@ func (s *DaggerheartService) ApplyDeathMove(ctx context.Context, in *pb.Daggerhe
 	}
 	domainResult, err := s.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:    campaignID,
-		Type:          command.Type("action.death_move.resolve"),
+		Type:          command.Type("sys.daggerheart.action.death_move.resolve"),
 		ActorType:     command.ActorTypeSystem,
 		SessionID:     sessionID,
 		RequestID:     requestID,
@@ -1279,7 +1279,7 @@ func (s *DaggerheartService) ApplyConditions(ctx context.Context, in *pb.Daggerh
 		requestID := grpcmeta.RequestIDFromContext(ctx)
 		domainResult, err := s.stores.Domain.Execute(ctx, command.Command{
 			CampaignID:    campaignID,
-			Type:          command.Type("action.condition.change"),
+			Type:          command.Type("sys.daggerheart.action.condition.change"),
 			ActorType:     command.ActorTypeSystem,
 			SessionID:     sessionID,
 			RequestID:     requestID,
@@ -1320,7 +1320,7 @@ func (s *DaggerheartService) ApplyConditions(ctx context.Context, in *pb.Daggerh
 		requestID := grpcmeta.RequestIDFromContext(ctx)
 		domainResult, err := s.stores.Domain.Execute(ctx, command.Command{
 			CampaignID:    campaignID,
-			Type:          command.Type("action.character_state.patch"),
+			Type:          command.Type("sys.daggerheart.action.character_state.patch"),
 			ActorType:     command.ActorTypeSystem,
 			SessionID:     sessionID,
 			RequestID:     requestID,
@@ -1509,7 +1509,7 @@ func (s *DaggerheartService) ApplyAdversaryConditions(ctx context.Context, in *p
 	}
 	result, err := s.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:    campaignID,
-		Type:          command.Type("action.adversary_condition.change"),
+		Type:          command.Type("sys.daggerheart.action.adversary_condition.change"),
 		ActorType:     command.ActorTypeSystem,
 		SessionID:     sessionID,
 		RequestID:     requestID,
@@ -1632,7 +1632,7 @@ func (s *DaggerheartService) ApplyGmMove(ctx context.Context, in *pb.Daggerheart
 		}
 		result, err := s.stores.Domain.Execute(ctx, command.Command{
 			CampaignID:    campaignID,
-			Type:          command.Type("action.gm_fear.set"),
+			Type:          command.Type("sys.daggerheart.action.gm_fear.set"),
 			ActorType:     command.ActorTypeSystem,
 			SessionID:     sessionID,
 			RequestID:     requestID,
@@ -1683,7 +1683,7 @@ func (s *DaggerheartService) ApplyGmMove(ctx context.Context, in *pb.Daggerheart
 	}
 	result, err := s.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:    campaignID,
-		Type:          command.Type("action.gm_move.apply"),
+		Type:          command.Type("sys.daggerheart.action.gm_move.apply"),
 		ActorType:     command.ActorTypeSystem,
 		SessionID:     sessionID,
 		RequestID:     requestID,
@@ -1820,7 +1820,7 @@ func (s *DaggerheartService) CreateCountdown(ctx context.Context, in *pb.Daggerh
 	}
 	result, err := s.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:    campaignID,
-		Type:          command.Type("action.countdown.create"),
+		Type:          command.Type("sys.daggerheart.action.countdown.create"),
 		ActorType:     command.ActorTypeSystem,
 		SessionID:     sessionID,
 		RequestID:     requestID,
@@ -1958,7 +1958,7 @@ func (s *DaggerheartService) UpdateCountdown(ctx context.Context, in *pb.Daggerh
 	}
 	result, err := s.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:    campaignID,
-		Type:          command.Type("action.countdown.update"),
+		Type:          command.Type("sys.daggerheart.action.countdown.update"),
 		ActorType:     command.ActorTypeSystem,
 		SessionID:     sessionID,
 		RequestID:     requestID,
@@ -2070,7 +2070,7 @@ func (s *DaggerheartService) DeleteCountdown(ctx context.Context, in *pb.Daggerh
 	}
 	result, err := s.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:    campaignID,
-		Type:          command.Type("action.countdown.delete"),
+		Type:          command.Type("sys.daggerheart.action.countdown.delete"),
 		ActorType:     command.ActorTypeSystem,
 		SessionID:     sessionID,
 		RequestID:     requestID,
@@ -2178,7 +2178,7 @@ func (s *DaggerheartService) ResolveBlazeOfGlory(ctx context.Context, in *pb.Dag
 	}
 	result, err := s.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:    campaignID,
-		Type:          command.Type("action.blaze_of_glory.resolve"),
+		Type:          command.Type("sys.daggerheart.action.blaze_of_glory.resolve"),
 		ActorType:     command.ActorTypeSystem,
 		SessionID:     sessionID,
 		RequestID:     requestID,
@@ -2412,7 +2412,7 @@ func (s *DaggerheartService) SessionActionRoll(ctx context.Context, in *pb.Sessi
 			}
 			result, err := s.stores.Domain.Execute(ctx, command.Command{
 				CampaignID:    campaignID,
-				Type:          command.Type("action.hope.spend"),
+				Type:          command.Type("sys.daggerheart.action.hope.spend"),
 				ActorType:     command.ActorTypeSystem,
 				SessionID:     sessionID,
 				RequestID:     requestID,
@@ -2454,7 +2454,7 @@ func (s *DaggerheartService) SessionActionRoll(ctx context.Context, in *pb.Sessi
 			}
 			result, err := s.stores.Domain.Execute(ctx, command.Command{
 				CampaignID:    campaignID,
-				Type:          command.Type("action.character_state.patch"),
+				Type:          command.Type("sys.daggerheart.action.character_state.patch"),
 				ActorType:     command.ActorTypeSystem,
 				SessionID:     sessionID,
 				RequestID:     requestID,
@@ -2739,7 +2739,7 @@ func (s *DaggerheartService) SessionDamageRoll(ctx context.Context, in *pb.Sessi
 	var rollSeqValue uint64
 	domainResult, err := s.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:    campaignID,
-		Type:          command.Type("action.damage_roll.resolve"),
+		Type:          command.Type("sys.daggerheart.action.damage_roll.resolve"),
 		ActorType:     command.ActorTypeSystem,
 		SessionID:     sessionID,
 		RequestID:     requestID,
@@ -3134,7 +3134,7 @@ func (s *DaggerheartService) SessionAdversaryAttackRoll(ctx context.Context, in 
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
 	domainResult, err := s.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:    campaignID,
-		Type:          command.Type("action.adversary_roll.resolve"),
+		Type:          command.Type("sys.daggerheart.action.adversary_roll.resolve"),
 		ActorType:     command.ActorTypeSystem,
 		SessionID:     sessionID,
 		RequestID:     requestID,
@@ -3314,7 +3314,7 @@ func (s *DaggerheartService) SessionAdversaryActionCheck(ctx context.Context, in
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
 	domainResult, err := s.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:    campaignID,
-		Type:          command.Type("action.adversary_action.resolve"),
+		Type:          command.Type("sys.daggerheart.action.adversary_action.resolve"),
 		ActorType:     command.ActorTypeSystem,
 		SessionID:     sessionID,
 		RequestID:     requestID,
@@ -3621,7 +3621,7 @@ func (s *DaggerheartService) SessionGroupActionFlow(ctx context.Context, in *pb.
 
 	result, err := s.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:    campaignID,
-		Type:          command.Type("action.group_action.resolve"),
+		Type:          command.Type("sys.daggerheart.action.group_action.resolve"),
 		ActorType:     command.ActorTypeSystem,
 		SessionID:     sessionID,
 		RequestID:     grpcmeta.RequestIDFromContext(ctx),
@@ -3780,7 +3780,7 @@ func (s *DaggerheartService) SessionTagTeamFlow(ctx context.Context, in *pb.Sess
 
 	result, err := s.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:    campaignID,
-		Type:          command.Type("action.tag_team.resolve"),
+		Type:          command.Type("sys.daggerheart.action.tag_team.resolve"),
 		ActorType:     command.ActorTypeSystem,
 		SessionID:     sessionID,
 		RequestID:     grpcmeta.RequestIDFromContext(ctx),
@@ -3959,7 +3959,7 @@ func (s *DaggerheartService) ApplyRollOutcome(ctx context.Context, in *pb.ApplyR
 		}
 		result, err := s.stores.Domain.Execute(ctx, command.Command{
 			CampaignID:    campaignID,
-			Type:          command.Type("action.gm_fear.set"),
+			Type:          command.Type("sys.daggerheart.action.gm_fear.set"),
 			ActorType:     command.ActorTypeSystem,
 			SessionID:     sessionID,
 			RequestID:     rollRequestID,
@@ -4028,7 +4028,7 @@ func (s *DaggerheartService) ApplyRollOutcome(ctx context.Context, in *pb.ApplyR
 			invocationID := grpcmeta.InvocationIDFromContext(ctx)
 			result, err := s.stores.Domain.Execute(ctx, command.Command{
 				CampaignID:    campaignID,
-				Type:          command.Type("action.character_state.patch"),
+				Type:          command.Type("sys.daggerheart.action.character_state.patch"),
 				ActorType:     command.ActorTypeSystem,
 				SessionID:     sessionID,
 				RequestID:     rollRequestID,
@@ -4347,7 +4347,7 @@ func (s *DaggerheartService) ApplyAttackOutcome(ctx context.Context, in *pb.Dagg
 		PageSize:     1,
 		Descending:   true,
 		FilterClause: "session_id = ? AND request_id = ? AND event_type = ?",
-		FilterParams: []any{sessionID, rollRequestID, string(event.Type("action.attack_resolved"))},
+		FilterParams: []any{sessionID, rollRequestID, string(event.Type("sys.daggerheart.action.attack_resolved"))},
 	})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "check attack outcome applied: %v", err)
@@ -4372,7 +4372,7 @@ func (s *DaggerheartService) ApplyAttackOutcome(ctx context.Context, in *pb.Dagg
 
 	result, err := s.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:    campaignID,
-		Type:          command.Type("action.attack.resolve"),
+		Type:          command.Type("sys.daggerheart.action.attack.resolve"),
 		ActorType:     command.ActorTypeSystem,
 		SessionID:     sessionID,
 		RequestID:     rollRequestID,
@@ -4470,8 +4470,8 @@ func (s *DaggerheartService) ApplyAdversaryAttackOutcome(ctx context.Context, in
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
-	if rollEvent.Type != event.Type("action.adversary_roll_resolved") {
-		return nil, status.Error(codes.InvalidArgument, "roll seq does not reference action.adversary_roll_resolved")
+	if rollEvent.Type != event.Type("sys.daggerheart.action.adversary_roll_resolved") {
+		return nil, status.Error(codes.InvalidArgument, "roll seq does not reference sys.daggerheart.action.adversary_roll_resolved")
 	}
 	if rollEvent.SessionID != sessionID {
 		return nil, status.Error(codes.InvalidArgument, "roll seq does not match session")
@@ -4501,7 +4501,7 @@ func (s *DaggerheartService) ApplyAdversaryAttackOutcome(ctx context.Context, in
 		PageSize:     1,
 		Descending:   true,
 		FilterClause: "session_id = ? AND request_id = ? AND event_type = ?",
-		FilterParams: []any{sessionID, rollRequestID, string(event.Type("action.adversary_attack_resolved"))},
+		FilterParams: []any{sessionID, rollRequestID, string(event.Type("sys.daggerheart.action.adversary_attack_resolved"))},
 	})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "check adversary attack outcome applied: %v", err)
@@ -4535,7 +4535,7 @@ func (s *DaggerheartService) ApplyAdversaryAttackOutcome(ctx context.Context, in
 
 	result, err := s.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:    campaignID,
-		Type:          command.Type("action.adversary_attack.resolve"),
+		Type:          command.Type("sys.daggerheart.action.adversary_attack.resolve"),
 		ActorType:     command.ActorTypeSystem,
 		SessionID:     sessionID,
 		RequestID:     rollRequestID,
@@ -4673,7 +4673,7 @@ func (s *DaggerheartService) ApplyReactionOutcome(ctx context.Context, in *pb.Da
 		PageSize:     1,
 		Descending:   true,
 		FilterClause: "session_id = ? AND request_id = ? AND event_type = ?",
-		FilterParams: []any{sessionID, rollRequestID, string(event.Type("action.reaction_resolved"))},
+		FilterParams: []any{sessionID, rollRequestID, string(event.Type("sys.daggerheart.action.reaction_resolved"))},
 	})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "check reaction outcome applied: %v", err)
@@ -4698,7 +4698,7 @@ func (s *DaggerheartService) ApplyReactionOutcome(ctx context.Context, in *pb.Da
 
 	result, err := s.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:    campaignID,
-		Type:          command.Type("action.reaction.resolve"),
+		Type:          command.Type("sys.daggerheart.action.reaction.resolve"),
 		ActorType:     command.ActorTypeSystem,
 		SessionID:     sessionID,
 		RequestID:     rollRequestID,
@@ -4811,7 +4811,7 @@ func (s *DaggerheartService) applyStressVulnerableCondition(
 	}
 	result, err := s.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:    campaignID,
-		Type:          command.Type("action.condition.change"),
+		Type:          command.Type("sys.daggerheart.action.condition.change"),
 		ActorType:     command.ActorTypeSystem,
 		SessionID:     sessionID,
 		RequestID:     requestID,

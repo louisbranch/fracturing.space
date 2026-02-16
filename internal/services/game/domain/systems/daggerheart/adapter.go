@@ -107,7 +107,7 @@ func (a *Adapter) Snapshot(ctx context.Context, campaignID string) (any, error) 
 func (a *Adapter) applyDamageApplied(ctx context.Context, evt event.Event) error {
 	var payload DamageAppliedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode action.damage_applied payload: %w", err)
+		return fmt.Errorf("decode sys.daggerheart.action.damage_applied payload: %w", err)
 	}
 	if strings.TrimSpace(payload.CharacterID) == "" {
 		return fmt.Errorf("character_id is required")
@@ -140,7 +140,7 @@ func (a *Adapter) applyDamageApplied(ctx context.Context, evt event.Event) error
 func (a *Adapter) applyRestTaken(ctx context.Context, evt event.Event) error {
 	var payload RestTakenPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode action.rest_taken payload: %w", err)
+		return fmt.Errorf("decode sys.daggerheart.action.rest_taken payload: %w", err)
 	}
 	if payload.GMFearAfter < GMFearMin || payload.GMFearAfter > GMFearMax {
 		return fmt.Errorf("rest_taken gm_fear_after must be in range %d..%d", GMFearMin, GMFearMax)
@@ -169,7 +169,7 @@ func (a *Adapter) applyRestTaken(ctx context.Context, evt event.Event) error {
 func (a *Adapter) applyDowntimeMoveApplied(ctx context.Context, evt event.Event) error {
 	var payload DowntimeMoveAppliedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode action.downtime_move_applied payload: %w", err)
+		return fmt.Errorf("decode sys.daggerheart.action.downtime_move_applied payload: %w", err)
 	}
 	if strings.TrimSpace(payload.CharacterID) == "" {
 		return fmt.Errorf("character_id is required")
@@ -180,7 +180,7 @@ func (a *Adapter) applyDowntimeMoveApplied(ctx context.Context, evt event.Event)
 func (a *Adapter) applyLoadoutSwapped(ctx context.Context, evt event.Event) error {
 	var payload LoadoutSwappedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode action.loadout_swapped payload: %w", err)
+		return fmt.Errorf("decode sys.daggerheart.action.loadout_swapped payload: %w", err)
 	}
 	if strings.TrimSpace(payload.CharacterID) == "" {
 		return fmt.Errorf("character_id is required")
@@ -191,7 +191,7 @@ func (a *Adapter) applyLoadoutSwapped(ctx context.Context, evt event.Event) erro
 func (a *Adapter) applyCharacterStatePatched(ctx context.Context, evt event.Event) error {
 	var payload CharacterStatePatchedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode action.character_state_patched payload: %w", err)
+		return fmt.Errorf("decode sys.daggerheart.action.character_state_patched payload: %w", err)
 	}
 	if strings.TrimSpace(payload.CharacterID) == "" {
 		return fmt.Errorf("character_id is required")
@@ -202,7 +202,7 @@ func (a *Adapter) applyCharacterStatePatched(ctx context.Context, evt event.Even
 func (a *Adapter) applyConditionChanged(ctx context.Context, evt event.Event) error {
 	var payload ConditionChangedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode action.condition_changed payload: %w", err)
+		return fmt.Errorf("decode sys.daggerheart.action.condition_changed payload: %w", err)
 	}
 	if strings.TrimSpace(payload.CharacterID) == "" {
 		return fmt.Errorf("character_id is required")
@@ -233,7 +233,7 @@ func (a *Adapter) applyConditionChanged(ctx context.Context, evt event.Event) er
 func (a *Adapter) applyAdversaryConditionChanged(ctx context.Context, evt event.Event) error {
 	var payload AdversaryConditionChangedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode action.adversary_condition_changed payload: %w", err)
+		return fmt.Errorf("decode sys.daggerheart.action.adversary_condition_changed payload: %w", err)
 	}
 	if strings.TrimSpace(payload.AdversaryID) == "" {
 		return fmt.Errorf("adversary_id is required")
@@ -264,7 +264,7 @@ func (a *Adapter) applyAdversaryConditionChanged(ctx context.Context, evt event.
 func (a *Adapter) applyGMFearChanged(ctx context.Context, evt event.Event) error {
 	var payload GMFearChangedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode action.gm_fear_changed payload: %w", err)
+		return fmt.Errorf("decode sys.daggerheart.action.gm_fear_changed payload: %w", err)
 	}
 	if payload.After < GMFearMin || payload.After > GMFearMax {
 		return fmt.Errorf("gm_fear_changed after must be in range %d..%d", GMFearMin, GMFearMax)
@@ -284,7 +284,7 @@ func (a *Adapter) applyGMFearChanged(ctx context.Context, evt event.Event) error
 func (a *Adapter) applyGMMoveApplied(ctx context.Context, evt event.Event) error {
 	var payload GMMoveAppliedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode action.gm_move_applied payload: %w", err)
+		return fmt.Errorf("decode sys.daggerheart.action.gm_move_applied payload: %w", err)
 	}
 	if strings.TrimSpace(payload.Move) == "" {
 		return fmt.Errorf("gm move is required")
@@ -303,7 +303,7 @@ func (a *Adapter) applyGMMoveApplied(ctx context.Context, evt event.Event) error
 func (a *Adapter) applyDeathMoveResolved(ctx context.Context, evt event.Event) error {
 	var payload DeathMoveResolvedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode action.death_move_resolved payload: %w", err)
+		return fmt.Errorf("decode sys.daggerheart.action.death_move_resolved payload: %w", err)
 	}
 	if strings.TrimSpace(payload.CharacterID) == "" {
 		return fmt.Errorf("character_id is required")
@@ -343,7 +343,7 @@ func (a *Adapter) applyDeathMoveResolved(ctx context.Context, evt event.Event) e
 func (a *Adapter) applyBlazeOfGloryResolved(ctx context.Context, evt event.Event) error {
 	var payload BlazeOfGloryResolvedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode action.blaze_of_glory_resolved payload: %w", err)
+		return fmt.Errorf("decode sys.daggerheart.action.blaze_of_glory_resolved payload: %w", err)
 	}
 	if strings.TrimSpace(payload.CharacterID) == "" {
 		return fmt.Errorf("character_id is required")
@@ -371,7 +371,7 @@ func (a *Adapter) applyBlazeOfGloryResolved(ctx context.Context, evt event.Event
 func (a *Adapter) applyAttackResolved(ctx context.Context, evt event.Event) error {
 	var payload AttackResolvedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode action.attack_resolved payload: %w", err)
+		return fmt.Errorf("decode sys.daggerheart.action.attack_resolved payload: %w", err)
 	}
 	if strings.TrimSpace(payload.CharacterID) == "" {
 		return fmt.Errorf("character_id is required")
@@ -396,7 +396,7 @@ func (a *Adapter) applyAttackResolved(ctx context.Context, evt event.Event) erro
 func (a *Adapter) applyReactionResolved(ctx context.Context, evt event.Event) error {
 	var payload ReactionResolvedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode action.reaction_resolved payload: %w", err)
+		return fmt.Errorf("decode sys.daggerheart.action.reaction_resolved payload: %w", err)
 	}
 	if strings.TrimSpace(payload.CharacterID) == "" {
 		return fmt.Errorf("character_id is required")
@@ -413,7 +413,7 @@ func (a *Adapter) applyReactionResolved(ctx context.Context, evt event.Event) er
 func (a *Adapter) applyDamageRollResolved(ctx context.Context, evt event.Event) error {
 	var payload DamageRollResolvedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode action.damage_roll_resolved payload: %w", err)
+		return fmt.Errorf("decode sys.daggerheart.action.damage_roll_resolved payload: %w", err)
 	}
 	if strings.TrimSpace(payload.CharacterID) == "" {
 		return fmt.Errorf("character_id is required")
@@ -430,7 +430,7 @@ func (a *Adapter) applyDamageRollResolved(ctx context.Context, evt event.Event) 
 func (a *Adapter) applyGroupActionResolved(ctx context.Context, evt event.Event) error {
 	var payload GroupActionResolvedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode action.group_action_resolved payload: %w", err)
+		return fmt.Errorf("decode sys.daggerheart.action.group_action_resolved payload: %w", err)
 	}
 	if strings.TrimSpace(payload.LeaderCharacterID) == "" {
 		return fmt.Errorf("leader_character_id is required")
@@ -455,7 +455,7 @@ func (a *Adapter) applyGroupActionResolved(ctx context.Context, evt event.Event)
 func (a *Adapter) applyTagTeamResolved(ctx context.Context, evt event.Event) error {
 	var payload TagTeamResolvedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode action.tag_team_resolved payload: %w", err)
+		return fmt.Errorf("decode sys.daggerheart.action.tag_team_resolved payload: %w", err)
 	}
 	if strings.TrimSpace(payload.FirstCharacterID) == "" {
 		return fmt.Errorf("first_character_id is required")
@@ -487,7 +487,7 @@ func (a *Adapter) applyTagTeamResolved(ctx context.Context, evt event.Event) err
 func (a *Adapter) applyCountdownCreated(ctx context.Context, evt event.Event) error {
 	var payload CountdownCreatedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode action.countdown_created payload: %w", err)
+		return fmt.Errorf("decode sys.daggerheart.action.countdown_created payload: %w", err)
 	}
 	if strings.TrimSpace(payload.CountdownID) == "" {
 		return fmt.Errorf("countdown_id is required")
@@ -523,7 +523,7 @@ func (a *Adapter) applyCountdownCreated(ctx context.Context, evt event.Event) er
 func (a *Adapter) applyCountdownUpdated(ctx context.Context, evt event.Event) error {
 	var payload CountdownUpdatedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode action.countdown_updated payload: %w", err)
+		return fmt.Errorf("decode sys.daggerheart.action.countdown_updated payload: %w", err)
 	}
 	if strings.TrimSpace(payload.CountdownID) == "" {
 		return fmt.Errorf("countdown_id is required")
@@ -549,7 +549,7 @@ func (a *Adapter) applyCountdownUpdated(ctx context.Context, evt event.Event) er
 func (a *Adapter) applyCountdownDeleted(ctx context.Context, evt event.Event) error {
 	var payload CountdownDeletedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode action.countdown_deleted payload: %w", err)
+		return fmt.Errorf("decode sys.daggerheart.action.countdown_deleted payload: %w", err)
 	}
 	if strings.TrimSpace(payload.CountdownID) == "" {
 		return fmt.Errorf("countdown_id is required")
@@ -560,7 +560,7 @@ func (a *Adapter) applyCountdownDeleted(ctx context.Context, evt event.Event) er
 func (a *Adapter) applyAdversaryRollResolved(ctx context.Context, evt event.Event) error {
 	var payload AdversaryRollResolvedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode action.adversary_roll_resolved payload: %w", err)
+		return fmt.Errorf("decode sys.daggerheart.action.adversary_roll_resolved payload: %w", err)
 	}
 	if strings.TrimSpace(payload.AdversaryID) == "" {
 		return fmt.Errorf("adversary_id is required")
@@ -580,7 +580,7 @@ func (a *Adapter) applyAdversaryRollResolved(ctx context.Context, evt event.Even
 func (a *Adapter) applyAdversaryAttackResolved(ctx context.Context, evt event.Event) error {
 	var payload AdversaryAttackResolvedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode action.adversary_attack_resolved payload: %w", err)
+		return fmt.Errorf("decode sys.daggerheart.action.adversary_attack_resolved payload: %w", err)
 	}
 	if strings.TrimSpace(payload.AdversaryID) == "" {
 		return fmt.Errorf("adversary_id is required")
@@ -608,7 +608,7 @@ func (a *Adapter) applyAdversaryAttackResolved(ctx context.Context, evt event.Ev
 func (a *Adapter) applyAdversaryCreated(ctx context.Context, evt event.Event) error {
 	var payload AdversaryCreatedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode action.adversary_created payload: %w", err)
+		return fmt.Errorf("decode sys.daggerheart.action.adversary_created payload: %w", err)
 	}
 	adversaryID := strings.TrimSpace(payload.AdversaryID)
 	if adversaryID == "" {
@@ -645,7 +645,7 @@ func (a *Adapter) applyAdversaryCreated(ctx context.Context, evt event.Event) er
 func (a *Adapter) applyAdversaryUpdated(ctx context.Context, evt event.Event) error {
 	var payload AdversaryUpdatedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode action.adversary_updated payload: %w", err)
+		return fmt.Errorf("decode sys.daggerheart.action.adversary_updated payload: %w", err)
 	}
 	adversaryID := strings.TrimSpace(payload.AdversaryID)
 	if adversaryID == "" {
@@ -687,7 +687,7 @@ func (a *Adapter) applyAdversaryUpdated(ctx context.Context, evt event.Event) er
 func (a *Adapter) applyAdversaryDamageApplied(ctx context.Context, evt event.Event) error {
 	var payload AdversaryDamageAppliedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode action.adversary_damage_applied payload: %w", err)
+		return fmt.Errorf("decode sys.daggerheart.action.adversary_damage_applied payload: %w", err)
 	}
 	adversaryID := strings.TrimSpace(payload.AdversaryID)
 	if adversaryID == "" {
@@ -764,7 +764,7 @@ func validateAdversaryStats(hp, hpMax, stress, stressMax, evasion, major, severe
 func (a *Adapter) applyAdversaryDeleted(ctx context.Context, evt event.Event) error {
 	var payload AdversaryDeletedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode action.adversary_deleted payload: %w", err)
+		return fmt.Errorf("decode sys.daggerheart.action.adversary_deleted payload: %w", err)
 	}
 	adversaryID := strings.TrimSpace(payload.AdversaryID)
 	if adversaryID == "" {

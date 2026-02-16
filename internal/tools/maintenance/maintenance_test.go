@@ -3,18 +3,63 @@ package maintenance
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage/integrity"
+	storagesqlite "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite"
 )
+
+type fakeOutboxInspector struct {
+	summary storagesqlite.ProjectionApplyOutboxSummary
+	rows    []storagesqlite.ProjectionApplyOutboxEntry
+	err     error
+}
+
+func (f *fakeOutboxInspector) GetProjectionApplyOutboxSummary(context.Context) (storagesqlite.ProjectionApplyOutboxSummary, error) {
+	if f.err != nil {
+		return storagesqlite.ProjectionApplyOutboxSummary{}, f.err
+	}
+	return f.summary, nil
+}
+
+func (f *fakeOutboxInspector) ListProjectionApplyOutboxRows(context.Context, string, int) ([]storagesqlite.ProjectionApplyOutboxEntry, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return f.rows, nil
+}
+
+type fakeOutboxRequeuer struct {
+	requeued     bool
+	deadRequeued int
+	err          error
+}
+
+func (f *fakeOutboxRequeuer) RequeueProjectionApplyOutboxRow(context.Context, string, uint64, time.Time) (bool, error) {
+	if f.err != nil {
+		return false, f.err
+	}
+	return f.requeued, nil
+}
+
+func (f *fakeOutboxRequeuer) RequeueProjectionApplyOutboxDeadRows(context.Context, int, time.Time) (int, error) {
+	if f.err != nil {
+		return 0, f.err
+	}
+	return f.deadRequeued, nil
+}
 
 func TestResolveCampaignIDs(t *testing.T) {
 	tests := []struct {
@@ -116,6 +161,633 @@ func TestParseConfigOverrides(t *testing.T) {
 	if cfg.WarningsCap != 5 {
 		t.Fatalf("expected warnings cap 5, got %d", cfg.WarningsCap)
 	}
+}
+
+func TestParseConfigOutboxFlags(t *testing.T) {
+	fs := flag.NewFlagSet("maintenance", flag.ContinueOnError)
+	args := []string{
+		"-outbox-report",
+		"-outbox-status", "failed",
+		"-outbox-limit", "7",
+	}
+	cfg, err := ParseConfig(fs, args)
+	if err != nil {
+		t.Fatalf("parse config: %v", err)
+	}
+	if !cfg.OutboxReport {
+		t.Fatal("expected outbox report mode to be enabled")
+	}
+	if cfg.OutboxStatus != "failed" {
+		t.Fatalf("expected failed status filter, got %q", cfg.OutboxStatus)
+	}
+	if cfg.OutboxLimit != 7 {
+		t.Fatalf("expected outbox limit 7, got %d", cfg.OutboxLimit)
+	}
+}
+
+func TestParseConfigOutboxRequeueFlags(t *testing.T) {
+	fs := flag.NewFlagSet("maintenance", flag.ContinueOnError)
+	args := []string{
+		"-outbox-requeue",
+		"-outbox-requeue-campaign-id", "camp-1",
+		"-outbox-requeue-seq", "9",
+	}
+	cfg, err := ParseConfig(fs, args)
+	if err != nil {
+		t.Fatalf("parse config: %v", err)
+	}
+	if !cfg.OutboxRequeue {
+		t.Fatal("expected outbox requeue mode to be enabled")
+	}
+	if cfg.OutboxRequeueCampaignID != "camp-1" {
+		t.Fatalf("expected outbox requeue campaign id camp-1, got %q", cfg.OutboxRequeueCampaignID)
+	}
+	if cfg.OutboxRequeueSeq != 9 {
+		t.Fatalf("expected outbox requeue seq 9, got %d", cfg.OutboxRequeueSeq)
+	}
+}
+
+func TestParseConfigOutboxRequeueDeadFlags(t *testing.T) {
+	fs := flag.NewFlagSet("maintenance", flag.ContinueOnError)
+	args := []string{
+		"-outbox-requeue-dead",
+		"-outbox-requeue-dead-limit", "25",
+	}
+	cfg, err := ParseConfig(fs, args)
+	if err != nil {
+		t.Fatalf("parse config: %v", err)
+	}
+	if !cfg.OutboxRequeueDead {
+		t.Fatal("expected outbox requeue dead mode to be enabled")
+	}
+	if cfg.OutboxRequeueDeadLimit != 25 {
+		t.Fatalf("expected outbox requeue dead limit 25, got %d", cfg.OutboxRequeueDeadLimit)
+	}
+}
+
+func TestRunOutboxReportTextOutput(t *testing.T) {
+	inspector := &fakeOutboxInspector{
+		summary: storagesqlite.ProjectionApplyOutboxSummary{
+			PendingCount:            2,
+			ProcessingCount:         1,
+			FailedCount:             3,
+			DeadCount:               1,
+			OldestPendingCampaignID: "camp-oldest",
+			OldestPendingSeq:        42,
+			OldestPendingAt:         time.Date(2026, 2, 16, 10, 0, 0, 0, time.UTC),
+		},
+		rows: []storagesqlite.ProjectionApplyOutboxEntry{
+			{
+				CampaignID:    "camp-oldest",
+				Seq:           42,
+				EventType:     event.Type("campaign.created"),
+				Status:        "failed",
+				AttemptCount:  3,
+				NextAttemptAt: time.Date(2026, 2, 16, 10, 0, 0, 0, time.UTC),
+			},
+		},
+	}
+
+	var out, errOut bytes.Buffer
+	if err := runOutboxReport(t.Context(), inspector, "failed", 10, false, &out, &errOut); err != nil {
+		t.Fatalf("run outbox report: %v", err)
+	}
+	if errOut.Len() != 0 {
+		t.Fatalf("unexpected stderr output: %s", errOut.String())
+	}
+	text := out.String()
+	if !strings.Contains(text, "Outbox summary") {
+		t.Fatalf("expected summary header, got %q", text)
+	}
+	if !strings.Contains(text, "pending=2") || !strings.Contains(text, "failed=3") {
+		t.Fatalf("expected summary counts, got %q", text)
+	}
+	if !strings.Contains(text, "camp-oldest/42") {
+		t.Fatalf("expected listed row identity, got %q", text)
+	}
+}
+
+func TestRunOutboxReportJSONOutput(t *testing.T) {
+	inspector := &fakeOutboxInspector{
+		summary: storagesqlite.ProjectionApplyOutboxSummary{
+			PendingCount: 4,
+			DeadCount:    2,
+		},
+		rows: []storagesqlite.ProjectionApplyOutboxEntry{
+			{
+				CampaignID: "camp-json",
+				Seq:        9,
+				Status:     "dead",
+			},
+		},
+	}
+
+	var out, errOut bytes.Buffer
+	if err := runOutboxReport(t.Context(), inspector, "dead", 5, true, &out, &errOut); err != nil {
+		t.Fatalf("run outbox report: %v", err)
+	}
+	if errOut.Len() != 0 {
+		t.Fatalf("unexpected stderr output: %s", errOut.String())
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(out.Bytes(), &payload); err != nil {
+		t.Fatalf("decode JSON output: %v", err)
+	}
+	if payload["mode"] != "outbox" {
+		t.Fatalf("expected mode outbox, got %v", payload["mode"])
+	}
+}
+
+func TestRunOutboxReportModeNoCampaignIDs(t *testing.T) {
+	t.Setenv("FRACTURING_SPACE_GAME_EVENT_HMAC_KEY", "test-key")
+	eventsPath := filepath.Join(t.TempDir(), "events.db")
+
+	keyring, err := integrity.KeyringFromEnv()
+	if err != nil {
+		t.Fatalf("build keyring: %v", err)
+	}
+	eventStore, err := storagesqlite.OpenEvents(
+		eventsPath,
+		keyring,
+		testEventRegistry(t),
+		storagesqlite.WithProjectionApplyOutboxEnabled(true),
+	)
+	if err != nil {
+		t.Fatalf("open events store: %v", err)
+	}
+	if _, err := eventStore.AppendEvent(t.Context(), event.Event{
+		CampaignID:  "camp-run-outbox",
+		Timestamp:   time.Date(2026, 2, 16, 11, 0, 0, 0, time.UTC),
+		Type:        event.Type("campaign.created"),
+		ActorType:   event.ActorTypeSystem,
+		EntityType:  "campaign",
+		EntityID:    "camp-run-outbox",
+		PayloadJSON: []byte(`{}`),
+	}); err != nil {
+		_ = eventStore.Close()
+		t.Fatalf("append event: %v", err)
+	}
+	if err := eventStore.Close(); err != nil {
+		t.Fatalf("close events store: %v", err)
+	}
+
+	cfg := Config{
+		OutboxReport: true,
+		OutboxLimit:  10,
+		EventsDBPath: eventsPath,
+	}
+	var out, errOut bytes.Buffer
+	if err := Run(t.Context(), cfg, &out, &errOut); err != nil {
+		t.Fatalf("run maintenance outbox report: %v", err)
+	}
+	if errOut.Len() != 0 {
+		t.Fatalf("unexpected stderr output: %s", errOut.String())
+	}
+	text := out.String()
+	if !strings.Contains(text, "Outbox summary") {
+		t.Fatalf("expected outbox summary in output, got %q", text)
+	}
+	if !strings.Contains(text, "camp-run-outbox") {
+		t.Fatalf("expected outbox row in output, got %q", text)
+	}
+}
+
+func TestRunOutboxReportValidationErrors(t *testing.T) {
+	t.Run("campaign id conflict", func(t *testing.T) {
+		cfg := Config{
+			CampaignID:   "camp-1",
+			OutboxReport: true,
+			OutboxLimit:  10,
+		}
+		err := Run(t.Context(), cfg, nil, nil)
+		if err == nil || !strings.Contains(err.Error(), "-outbox-report cannot be combined with -campaign-id or -campaign-ids") {
+			t.Fatalf("expected campaign conflict error, got %v", err)
+		}
+	})
+
+	t.Run("invalid outbox limit", func(t *testing.T) {
+		cfg := Config{
+			OutboxReport: true,
+			OutboxLimit:  0,
+		}
+		err := Run(t.Context(), cfg, nil, nil)
+		if err == nil || !strings.Contains(err.Error(), "-outbox-limit must be > 0") {
+			t.Fatalf("expected outbox limit error, got %v", err)
+		}
+	})
+}
+
+func TestRunOutboxReportHelperErrors(t *testing.T) {
+	t.Run("nil inspector", func(t *testing.T) {
+		err := runOutboxReport(t.Context(), nil, "", 10, false, nil, nil)
+		if err == nil || !strings.Contains(err.Error(), "outbox inspector is not configured") {
+			t.Fatalf("expected nil inspector error, got %v", err)
+		}
+	})
+
+	t.Run("invalid limit", func(t *testing.T) {
+		err := runOutboxReport(t.Context(), &fakeOutboxInspector{}, "", 0, false, nil, nil)
+		if err == nil || !strings.Contains(err.Error(), "outbox limit must be > 0") {
+			t.Fatalf("expected outbox limit error, got %v", err)
+		}
+	})
+
+	t.Run("summary read error", func(t *testing.T) {
+		err := runOutboxReport(t.Context(), &fakeOutboxInspector{err: fmt.Errorf("boom")}, "", 10, false, nil, nil)
+		if err == nil || !strings.Contains(err.Error(), "read outbox summary") {
+			t.Fatalf("expected summary read error, got %v", err)
+		}
+	})
+}
+
+func TestRunOutboxReportValidationReplayFlagConflict(t *testing.T) {
+	cfg := Config{
+		OutboxReport: true,
+		OutboxLimit:  10,
+		DryRun:       true,
+	}
+	err := Run(t.Context(), cfg, nil, nil)
+	if err == nil || !strings.Contains(err.Error(), "-outbox-report cannot be combined with replay/scan flags") {
+		t.Fatalf("expected replay/scan conflict error, got %v", err)
+	}
+}
+
+func TestRunOutboxRequeueModeRequeuesDeadRow(t *testing.T) {
+	t.Setenv("FRACTURING_SPACE_GAME_EVENT_HMAC_KEY", "test-key")
+	eventsPath := filepath.Join(t.TempDir(), "events.db")
+
+	keyring, err := integrity.KeyringFromEnv()
+	if err != nil {
+		t.Fatalf("build keyring: %v", err)
+	}
+	eventStore, err := storagesqlite.OpenEvents(
+		eventsPath,
+		keyring,
+		testEventRegistry(t),
+		storagesqlite.WithProjectionApplyOutboxEnabled(true),
+	)
+	if err != nil {
+		t.Fatalf("open events store: %v", err)
+	}
+	stored, err := eventStore.AppendEvent(t.Context(), event.Event{
+		CampaignID:  "camp-run-requeue",
+		Timestamp:   time.Date(2026, 2, 16, 12, 0, 0, 0, time.UTC),
+		Type:        event.Type("campaign.created"),
+		ActorType:   event.ActorTypeSystem,
+		EntityType:  "campaign",
+		EntityID:    "camp-run-requeue",
+		PayloadJSON: []byte(`{}`),
+	})
+	if err != nil {
+		_ = eventStore.Close()
+		t.Fatalf("append event: %v", err)
+	}
+	if err := eventStore.Close(); err != nil {
+		t.Fatalf("close events store: %v", err)
+	}
+
+	dbConn, err := sql.Open("sqlite", eventsPath)
+	if err != nil {
+		t.Fatalf("open sqlite db: %v", err)
+	}
+	defer dbConn.Close()
+	if _, err := dbConn.ExecContext(
+		t.Context(),
+		`UPDATE projection_apply_outbox
+		 SET status = 'dead', attempt_count = 8, next_attempt_at = ?, last_error = 'failed permanently', updated_at = ?
+		 WHERE campaign_id = ? AND seq = ?`,
+		time.Date(2026, 2, 16, 12, 1, 0, 0, time.UTC).UnixMilli(),
+		time.Date(2026, 2, 16, 12, 1, 0, 0, time.UTC).UnixMilli(),
+		stored.CampaignID,
+		stored.Seq,
+	); err != nil {
+		t.Fatalf("prepare dead outbox row: %v", err)
+	}
+
+	cfg := Config{
+		OutboxRequeue:           true,
+		OutboxRequeueCampaignID: stored.CampaignID,
+		OutboxRequeueSeq:        stored.Seq,
+		EventsDBPath:            eventsPath,
+	}
+	var out, errOut bytes.Buffer
+	if err := Run(t.Context(), cfg, &out, &errOut); err != nil {
+		t.Fatalf("run maintenance outbox requeue: %v", err)
+	}
+	if errOut.Len() != 0 {
+		t.Fatalf("unexpected stderr output: %s", errOut.String())
+	}
+	if !strings.Contains(out.String(), "Requeued outbox row") {
+		t.Fatalf("expected requeue output, got %q", out.String())
+	}
+}
+
+func TestRunOutboxRequeueDeadModeRequeuesRows(t *testing.T) {
+	t.Setenv("FRACTURING_SPACE_GAME_EVENT_HMAC_KEY", "test-key")
+	eventsPath := filepath.Join(t.TempDir(), "events.db")
+
+	keyring, err := integrity.KeyringFromEnv()
+	if err != nil {
+		t.Fatalf("build keyring: %v", err)
+	}
+	eventStore, err := storagesqlite.OpenEvents(
+		eventsPath,
+		keyring,
+		testEventRegistry(t),
+		storagesqlite.WithProjectionApplyOutboxEnabled(true),
+	)
+	if err != nil {
+		t.Fatalf("open events store: %v", err)
+	}
+	storedA, err := eventStore.AppendEvent(t.Context(), event.Event{
+		CampaignID:  "camp-run-requeue-batch-a",
+		Timestamp:   time.Date(2026, 2, 16, 13, 0, 0, 0, time.UTC),
+		Type:        event.Type("campaign.created"),
+		ActorType:   event.ActorTypeSystem,
+		EntityType:  "campaign",
+		EntityID:    "camp-run-requeue-batch-a",
+		PayloadJSON: []byte(`{}`),
+	})
+	if err != nil {
+		_ = eventStore.Close()
+		t.Fatalf("append event A: %v", err)
+	}
+	storedB, err := eventStore.AppendEvent(t.Context(), event.Event{
+		CampaignID:  "camp-run-requeue-batch-b",
+		Timestamp:   time.Date(2026, 2, 16, 13, 0, 1, 0, time.UTC),
+		Type:        event.Type("campaign.created"),
+		ActorType:   event.ActorTypeSystem,
+		EntityType:  "campaign",
+		EntityID:    "camp-run-requeue-batch-b",
+		PayloadJSON: []byte(`{}`),
+	})
+	if err != nil {
+		_ = eventStore.Close()
+		t.Fatalf("append event B: %v", err)
+	}
+	storedC, err := eventStore.AppendEvent(t.Context(), event.Event{
+		CampaignID:  "camp-run-requeue-batch-c",
+		Timestamp:   time.Date(2026, 2, 16, 13, 0, 2, 0, time.UTC),
+		Type:        event.Type("campaign.created"),
+		ActorType:   event.ActorTypeSystem,
+		EntityType:  "campaign",
+		EntityID:    "camp-run-requeue-batch-c",
+		PayloadJSON: []byte(`{}`),
+	})
+	if err != nil {
+		_ = eventStore.Close()
+		t.Fatalf("append event C: %v", err)
+	}
+	if err := eventStore.Close(); err != nil {
+		t.Fatalf("close events store: %v", err)
+	}
+
+	dbConn, err := sql.Open("sqlite", eventsPath)
+	if err != nil {
+		t.Fatalf("open sqlite db: %v", err)
+	}
+	defer dbConn.Close()
+
+	markDead := func(campaignID string, seq uint64, nextAttempt time.Time) {
+		t.Helper()
+		if _, err := dbConn.ExecContext(
+			t.Context(),
+			`UPDATE projection_apply_outbox
+			 SET status = 'dead', attempt_count = 8, next_attempt_at = ?, last_error = 'failed permanently', updated_at = ?
+			 WHERE campaign_id = ? AND seq = ?`,
+			nextAttempt.UnixMilli(),
+			nextAttempt.UnixMilli(),
+			campaignID,
+			seq,
+		); err != nil {
+			t.Fatalf("prepare dead outbox row %s/%d: %v", campaignID, seq, err)
+		}
+	}
+	markDead(storedA.CampaignID, storedA.Seq, time.Date(2026, 2, 16, 13, 1, 0, 0, time.UTC))
+	markDead(storedB.CampaignID, storedB.Seq, time.Date(2026, 2, 16, 13, 2, 0, 0, time.UTC))
+	markDead(storedC.CampaignID, storedC.Seq, time.Date(2026, 2, 16, 13, 3, 0, 0, time.UTC))
+
+	cfg := Config{
+		OutboxRequeueDead:      true,
+		OutboxRequeueDeadLimit: 2,
+		EventsDBPath:           eventsPath,
+	}
+	var out, errOut bytes.Buffer
+	if err := Run(t.Context(), cfg, &out, &errOut); err != nil {
+		t.Fatalf("run maintenance outbox dead requeue: %v", err)
+	}
+	if errOut.Len() != 0 {
+		t.Fatalf("unexpected stderr output: %s", errOut.String())
+	}
+	if !strings.Contains(out.String(), "Requeued dead outbox rows: 2 (limit=2)") {
+		t.Fatalf("expected dead requeue output, got %q", out.String())
+	}
+
+	var pendingCount int
+	if err := dbConn.QueryRowContext(
+		t.Context(),
+		`SELECT COUNT(*) FROM projection_apply_outbox WHERE status = 'pending'`,
+	).Scan(&pendingCount); err != nil {
+		t.Fatalf("count pending rows: %v", err)
+	}
+	if pendingCount != 2 {
+		t.Fatalf("expected two rows pending after requeue, got %d", pendingCount)
+	}
+
+	var deadCount int
+	if err := dbConn.QueryRowContext(
+		t.Context(),
+		`SELECT COUNT(*) FROM projection_apply_outbox WHERE status = 'dead'`,
+	).Scan(&deadCount); err != nil {
+		t.Fatalf("count dead rows: %v", err)
+	}
+	if deadCount != 1 {
+		t.Fatalf("expected one row remaining dead after requeue, got %d", deadCount)
+	}
+}
+
+func TestRunOutboxRequeueValidationErrors(t *testing.T) {
+	t.Run("missing campaign id", func(t *testing.T) {
+		cfg := Config{
+			OutboxRequeue:    true,
+			OutboxRequeueSeq: 1,
+		}
+		err := Run(t.Context(), cfg, nil, nil)
+		if err == nil || !strings.Contains(err.Error(), "-outbox-requeue-campaign-id is required") {
+			t.Fatalf("expected missing campaign id error, got %v", err)
+		}
+	})
+
+	t.Run("missing seq", func(t *testing.T) {
+		cfg := Config{
+			OutboxRequeue:           true,
+			OutboxRequeueCampaignID: "camp-1",
+		}
+		err := Run(t.Context(), cfg, nil, nil)
+		if err == nil || !strings.Contains(err.Error(), "-outbox-requeue-seq must be > 0") {
+			t.Fatalf("expected missing seq error, got %v", err)
+		}
+	})
+
+	t.Run("conflict with outbox report", func(t *testing.T) {
+		cfg := Config{
+			OutboxRequeue:           true,
+			OutboxRequeueCampaignID: "camp-1",
+			OutboxRequeueSeq:        1,
+			OutboxReport:            true,
+		}
+		err := Run(t.Context(), cfg, nil, nil)
+		if err == nil || !strings.Contains(err.Error(), "-outbox-requeue cannot be combined with -outbox-report") {
+			t.Fatalf("expected outbox mode conflict error, got %v", err)
+		}
+	})
+
+	t.Run("conflict with replay flags", func(t *testing.T) {
+		cfg := Config{
+			OutboxRequeue:           true,
+			OutboxRequeueCampaignID: "camp-1",
+			OutboxRequeueSeq:        1,
+			DryRun:                  true,
+		}
+		err := Run(t.Context(), cfg, nil, nil)
+		if err == nil || !strings.Contains(err.Error(), "-outbox-requeue cannot be combined with replay/scan flags") {
+			t.Fatalf("expected replay conflict error, got %v", err)
+		}
+	})
+}
+
+func TestRunOutboxRequeueDeadValidationErrors(t *testing.T) {
+	t.Run("missing limit", func(t *testing.T) {
+		cfg := Config{
+			OutboxRequeueDead: true,
+		}
+		err := Run(t.Context(), cfg, nil, nil)
+		if err == nil || !strings.Contains(err.Error(), "-outbox-requeue-dead-limit must be > 0") {
+			t.Fatalf("expected missing limit error, got %v", err)
+		}
+	})
+
+	t.Run("conflict with outbox requeue", func(t *testing.T) {
+		cfg := Config{
+			OutboxRequeueDead:      true,
+			OutboxRequeueDeadLimit: 5,
+			OutboxRequeue:          true,
+		}
+		err := Run(t.Context(), cfg, nil, nil)
+		if err == nil || !strings.Contains(err.Error(), "-outbox-requeue-dead cannot be combined with -outbox-requeue") {
+			t.Fatalf("expected outbox requeue conflict error, got %v", err)
+		}
+	})
+
+	t.Run("conflict with replay flags", func(t *testing.T) {
+		cfg := Config{
+			OutboxRequeueDead:      true,
+			OutboxRequeueDeadLimit: 5,
+			DryRun:                 true,
+		}
+		err := Run(t.Context(), cfg, nil, nil)
+		if err == nil || !strings.Contains(err.Error(), "-outbox-requeue-dead cannot be combined with replay/scan flags") {
+			t.Fatalf("expected replay conflict error, got %v", err)
+		}
+	})
+}
+
+func TestRunOutboxRequeueHelper(t *testing.T) {
+	t.Run("nil requeuer", func(t *testing.T) {
+		err := runOutboxRequeue(t.Context(), nil, "camp-1", 1, time.Now().UTC(), false, nil, nil)
+		if err == nil || !strings.Contains(err.Error(), "outbox requeuer is not configured") {
+			t.Fatalf("expected nil requeuer error, got %v", err)
+		}
+	})
+
+	t.Run("not found", func(t *testing.T) {
+		err := runOutboxRequeue(
+			t.Context(),
+			&fakeOutboxRequeuer{requeued: false},
+			"camp-1",
+			1,
+			time.Now().UTC(),
+			false,
+			nil,
+			nil,
+		)
+		if err == nil || !strings.Contains(err.Error(), "dead outbox row not found") {
+			t.Fatalf("expected dead row not found error, got %v", err)
+		}
+	})
+
+	t.Run("json output", func(t *testing.T) {
+		var out, errOut bytes.Buffer
+		err := runOutboxRequeue(
+			t.Context(),
+			&fakeOutboxRequeuer{requeued: true},
+			"camp-1",
+			5,
+			time.Date(2026, 2, 16, 12, 30, 0, 0, time.UTC),
+			true,
+			&out,
+			&errOut,
+		)
+		if err != nil {
+			t.Fatalf("run outbox requeue helper: %v", err)
+		}
+		if errOut.Len() != 0 {
+			t.Fatalf("unexpected stderr output: %s", errOut.String())
+		}
+		var payload map[string]any
+		if err := json.Unmarshal(out.Bytes(), &payload); err != nil {
+			t.Fatalf("decode JSON output: %v", err)
+		}
+		if payload["mode"] != "outbox-requeue" {
+			t.Fatalf("expected outbox-requeue mode, got %v", payload["mode"])
+		}
+	})
+}
+
+func TestRunOutboxRequeueDeadHelper(t *testing.T) {
+	t.Run("nil requeuer", func(t *testing.T) {
+		err := runOutboxRequeueDeadRows(t.Context(), nil, 5, time.Now().UTC(), false, nil, nil)
+		if err == nil || !strings.Contains(err.Error(), "outbox requeuer is not configured") {
+			t.Fatalf("expected nil requeuer error, got %v", err)
+		}
+	})
+
+	t.Run("invalid limit", func(t *testing.T) {
+		err := runOutboxRequeueDeadRows(t.Context(), &fakeOutboxRequeuer{}, 0, time.Now().UTC(), false, nil, nil)
+		if err == nil || !strings.Contains(err.Error(), "outbox requeue limit must be > 0") {
+			t.Fatalf("expected limit error, got %v", err)
+		}
+	})
+
+	t.Run("json output", func(t *testing.T) {
+		var out, errOut bytes.Buffer
+		err := runOutboxRequeueDeadRows(
+			t.Context(),
+			&fakeOutboxRequeuer{deadRequeued: 4},
+			10,
+			time.Date(2026, 2, 16, 13, 30, 0, 0, time.UTC),
+			true,
+			&out,
+			&errOut,
+		)
+		if err != nil {
+			t.Fatalf("run outbox dead requeue helper: %v", err)
+		}
+		if errOut.Len() != 0 {
+			t.Fatalf("unexpected stderr output: %s", errOut.String())
+		}
+		var payload map[string]any
+		if err := json.Unmarshal(out.Bytes(), &payload); err != nil {
+			t.Fatalf("decode JSON output: %v", err)
+		}
+		if payload["mode"] != "outbox-requeue-dead" {
+			t.Fatalf("expected outbox-requeue-dead mode, got %v", payload["mode"])
+		}
+		if payload["requeued"] != float64(4) {
+			t.Fatalf("expected requeued=4, got %v", payload["requeued"])
+		}
+	})
 }
 
 func TestOutputJSON(t *testing.T) {
@@ -379,9 +1051,9 @@ func TestScanSnapshotEventsCountsSnapshotEvents(t *testing.T) {
 	store := &fakeEventStore{events: map[string][]event.Event{
 		"c1": {
 			{Seq: 1, Type: event.Type("campaign.created")},
-			{Seq: 2, Type: event.Type("action.character_state_patched"), CampaignID: "c1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion},
+			{Seq: 2, Type: event.Type("sys.daggerheart.action.character_state_patched"), CampaignID: "c1", EntityType: "action", EntityID: "entity-1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion},
 			{Seq: 3, Type: event.Type("character.created")},
-			{Seq: 4, Type: event.Type("action.gm_fear_changed"), CampaignID: "c1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion},
+			{Seq: 4, Type: event.Type("sys.daggerheart.action.gm_fear_changed"), CampaignID: "c1", EntityType: "action", EntityID: "entity-1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion},
 		},
 	}}
 	report, _, err := scanSnapshotEvents(t.Context(), store, "c1", 0, 0, false)
@@ -402,8 +1074,8 @@ func TestScanSnapshotEventsCountsSnapshotEvents(t *testing.T) {
 func TestScanSnapshotEventsWithValidation(t *testing.T) {
 	store := &fakeEventStore{events: map[string][]event.Event{
 		"c1": {
-			{Seq: 1, Type: event.Type("action.character_state_patched"), CampaignID: "c1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion, PayloadJSON: []byte(`{"character_id":"ch1"}`)},
-			{Seq: 2, Type: event.Type("action.character_state_patched"), CampaignID: "c1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion, PayloadJSON: []byte(`{invalid`)},
+			{Seq: 1, Type: event.Type("sys.daggerheart.action.character_state_patched"), CampaignID: "c1", EntityType: "action", EntityID: "entity-1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion, PayloadJSON: []byte(`{"character_id":"ch1"}`)},
+			{Seq: 2, Type: event.Type("sys.daggerheart.action.character_state_patched"), CampaignID: "c1", EntityType: "action", EntityID: "entity-1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion, PayloadJSON: []byte(`{invalid`)},
 		},
 	}}
 	report, warnings, err := scanSnapshotEvents(t.Context(), store, "c1", 0, 0, true)
@@ -480,6 +1152,8 @@ func makeDaggerheartEvent(campaignID string, eventType string, payload []byte) e
 	return event.Event{
 		CampaignID:    campaignID,
 		Type:          event.Type(eventType),
+		EntityType:    "action",
+		EntityID:      "entity-1",
 		SystemID:      daggerheart.SystemID,
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON:   payload,
@@ -492,7 +1166,7 @@ func TestRunCampaignDryRunScan(t *testing.T) {
 	store := &fakeEventStore{events: map[string][]event.Event{
 		"c1": {
 			{Seq: 1, Type: event.Type("campaign.created")},
-			{Seq: 2, Type: event.Type("action.gm_fear_changed"), CampaignID: "c1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion},
+			{Seq: 2, Type: event.Type("sys.daggerheart.action.gm_fear_changed"), CampaignID: "c1", EntityType: "action", EntityID: "entity-1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion},
 		},
 	}}
 	result := runCampaign(t.Context(), store, nil, "c1", runOptions{DryRun: true, WarningsCap: 25}, io.Discard)
@@ -517,7 +1191,7 @@ func TestRunCampaignDryRunScan(t *testing.T) {
 func TestRunCampaignValidateMode(t *testing.T) {
 	store := &fakeEventStore{events: map[string][]event.Event{
 		"c1": {
-			{Seq: 1, Type: event.Type("action.character_state_patched"), CampaignID: "c1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion, PayloadJSON: []byte(`{invalid`)},
+			{Seq: 1, Type: event.Type("sys.daggerheart.action.character_state_patched"), CampaignID: "c1", EntityType: "action", EntityID: "entity-1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion, PayloadJSON: []byte(`{invalid`)},
 		},
 	}}
 	result := runCampaign(t.Context(), store, nil, "c1", runOptions{DryRun: true, Validate: true, WarningsCap: 25}, io.Discard)
@@ -580,7 +1254,7 @@ func TestRunCampaignScanWarningsCapped(t *testing.T) {
 	// Build events that each produce a validation warning when validated.
 	var events []event.Event
 	for i := 1; i <= 5; i++ {
-		events = append(events, makeDaggerheartEvent("c1", "action.character_state_patched", []byte(`{invalid`)))
+		events = append(events, makeDaggerheartEvent("c1", "sys.daggerheart.action.character_state_patched", []byte(`{invalid`)))
 		events[len(events)-1].Seq = uint64(i)
 	}
 	store := &fakeEventStore{events: map[string][]event.Event{"c1": events}}
@@ -596,7 +1270,7 @@ func TestRunCampaignScanWarningsCapped(t *testing.T) {
 func TestRunCampaignValidateNoInvalid(t *testing.T) {
 	store := &fakeEventStore{events: map[string][]event.Event{
 		"c1": {
-			{Seq: 1, Type: event.Type("action.gm_fear_changed"), CampaignID: "c1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion, PayloadJSON: []byte(`{"after":3}`)},
+			{Seq: 1, Type: event.Type("sys.daggerheart.action.gm_fear_changed"), CampaignID: "c1", EntityType: "action", EntityID: "entity-1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion, PayloadJSON: []byte(`{"after":3}`)},
 		},
 	}}
 	result := runCampaign(t.Context(), store, nil, "c1", runOptions{DryRun: true, Validate: true, WarningsCap: 25}, io.Discard)
@@ -654,7 +1328,7 @@ func TestRunWithDeps_MultiCampaign(t *testing.T) {
 func TestRunWithDeps_OneCampaignFails(t *testing.T) {
 	evtStore := &fakeClosableEventStore{
 		fakeEventStore: fakeEventStore{events: map[string][]event.Event{
-			"c1": {{Seq: 1, Type: event.Type("action.character_state_patched"), CampaignID: "c1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion, PayloadJSON: []byte(`{invalid`)}},
+			"c1": {{Seq: 1, Type: event.Type("sys.daggerheart.action.character_state_patched"), CampaignID: "c1", EntityType: "action", EntityID: "entity-1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion, PayloadJSON: []byte(`{invalid`)}},
 			"c2": {{Seq: 1, Type: event.Type("campaign.created")}},
 		}},
 	}

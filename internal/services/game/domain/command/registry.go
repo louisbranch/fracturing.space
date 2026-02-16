@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	coreencoding "github.com/louisbranch/fracturing.space/internal/services/game/core/encoding"
@@ -208,4 +209,19 @@ func (r *Registry) Definition(cmdType Type) (Definition, bool) {
 	}
 	def, ok := r.definitions[cmdType]
 	return def, ok
+}
+
+// ListDefinitions returns a stable, sorted snapshot of registered definitions.
+func (r *Registry) ListDefinitions() []Definition {
+	if r == nil || len(r.definitions) == 0 {
+		return nil
+	}
+	definitions := make([]Definition, 0, len(r.definitions))
+	for _, definition := range r.definitions {
+		definitions = append(definitions, definition)
+	}
+	sort.Slice(definitions, func(i, j int) bool {
+		return string(definitions[i].Type) < string(definitions[j].Type)
+	})
+	return definitions
 }

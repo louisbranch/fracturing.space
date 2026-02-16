@@ -123,6 +123,92 @@ func TestModuleRegisterEvents_RequiresRegistry(t *testing.T) {
 	}
 }
 
+func TestModuleRegisterCommands_RegistersSysPrefixedOnly(t *testing.T) {
+	registry := command.NewRegistry()
+	module := NewModule()
+	if err := module.RegisterCommands(registry); err != nil {
+		t.Fatalf("register commands: %v", err)
+	}
+
+	definitions := registry.ListDefinitions()
+	if got, want := len(definitions), len(daggerheartCommandDefinitions); got != want {
+		t.Fatalf("registered command definitions = %d, want %d", got, want)
+	}
+
+	canonicalType := command.Type("sys." + SystemID + ".action.gm_fear.set")
+	_, err := registry.ValidateForDecision(command.Command{
+		CampaignID:    "camp-1",
+		Type:          canonicalType,
+		ActorType:     command.ActorTypeGM,
+		ActorID:       "gm-1",
+		SystemID:      SystemID,
+		SystemVersion: SystemVersion,
+		PayloadJSON:   []byte(`{"after":2}`),
+	})
+	if err != nil {
+		t.Fatalf("canonical sys-prefixed command rejected: %v", err)
+	}
+
+	_, err = registry.ValidateForDecision(command.Command{
+		CampaignID:    "camp-1",
+		Type:          command.Type("action.gm_fear.set"),
+		ActorType:     command.ActorTypeGM,
+		ActorID:       "gm-1",
+		SystemID:      SystemID,
+		SystemVersion: SystemVersion,
+		PayloadJSON:   []byte(`{"after":2}`),
+	})
+	if !errors.Is(err, command.ErrTypeUnknown) {
+		t.Fatalf("legacy action.* command should be unknown, got %v", err)
+	}
+}
+
+func TestModuleRegisterEvents_RegistersSysPrefixedOnly(t *testing.T) {
+	registry := event.NewRegistry()
+	module := NewModule()
+	if err := module.RegisterEvents(registry); err != nil {
+		t.Fatalf("register events: %v", err)
+	}
+
+	definitions := registry.ListDefinitions()
+	if got, want := len(definitions), len(daggerheartEventDefinitions); got != want {
+		t.Fatalf("registered event definitions = %d, want %d", got, want)
+	}
+
+	canonicalType := event.Type("sys." + SystemID + ".action.gm_fear_changed")
+	_, err := registry.ValidateForAppend(event.Event{
+		CampaignID:    "camp-1",
+		Type:          canonicalType,
+		Timestamp:     time.Unix(0, 0).UTC(),
+		ActorType:     event.ActorTypeGM,
+		ActorID:       "gm-1",
+		EntityType:    "campaign",
+		EntityID:      "camp-1",
+		SystemID:      SystemID,
+		SystemVersion: SystemVersion,
+		PayloadJSON:   []byte(`{"before":1,"after":2}`),
+	})
+	if err != nil {
+		t.Fatalf("canonical sys-prefixed event rejected: %v", err)
+	}
+
+	_, err = registry.ValidateForAppend(event.Event{
+		CampaignID:    "camp-1",
+		Type:          event.Type("action.gm_fear_changed"),
+		Timestamp:     time.Unix(0, 0).UTC(),
+		ActorType:     event.ActorTypeGM,
+		ActorID:       "gm-1",
+		EntityType:    "campaign",
+		EntityID:      "camp-1",
+		SystemID:      SystemID,
+		SystemVersion: SystemVersion,
+		PayloadJSON:   []byte(`{"before":1,"after":2}`),
+	})
+	if !errors.Is(err, event.ErrTypeUnknown) {
+		t.Fatalf("legacy action.* event should be unknown, got %v", err)
+	}
+}
+
 func TestModuleRegisterCommands_ValidatesAllRegisteredCommands(t *testing.T) {
 	registry := command.NewRegistry()
 	module := NewModule()
@@ -209,6 +295,8 @@ func TestModuleRegisterEvents_ValidatesAllRegisteredEvents(t *testing.T) {
 				Timestamp:     time.Unix(0, 0).UTC(),
 				ActorType:     actorType,
 				ActorID:       tc.actorID,
+				EntityType:    "action",
+				EntityID:      "entity-1",
 				SystemID:      SystemID,
 				SystemVersion: SystemVersion,
 				PayloadJSON:   []byte(tc.validPayload),

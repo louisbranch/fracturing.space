@@ -77,22 +77,22 @@ func (d *dynamicDomainEngine) Execute(ctx context.Context, cmd command.Command) 
 
 	var eventType event.Type
 	switch cmd.Type {
-	case command.Type("action.adversary.create"):
-		eventType = event.Type("action.adversary_created")
-	case command.Type("action.adversary.update"):
-		eventType = event.Type("action.adversary_updated")
-	case command.Type("action.adversary.delete"):
-		eventType = event.Type("action.adversary_deleted")
-	case command.Type("action.adversary_damage.apply"):
-		eventType = event.Type("action.adversary_damage_applied")
-	case command.Type("action.adversary_condition.change"):
-		eventType = event.Type("action.adversary_condition_changed")
-	case command.Type("action.adversary_attack.resolve"):
-		eventType = event.Type("action.adversary_attack_resolved")
-	case command.Type("action.adversary_action.resolve"):
-		eventType = event.Type("action.adversary_action_resolved")
-	case command.Type("action.adversary_roll.resolve"):
-		eventType = event.Type("action.adversary_roll_resolved")
+	case command.Type("sys.daggerheart.action.adversary.create"):
+		eventType = event.Type("sys.daggerheart.action.adversary_created")
+	case command.Type("sys.daggerheart.action.adversary.update"):
+		eventType = event.Type("sys.daggerheart.action.adversary_updated")
+	case command.Type("sys.daggerheart.action.adversary.delete"):
+		eventType = event.Type("sys.daggerheart.action.adversary_deleted")
+	case command.Type("sys.daggerheart.action.adversary_damage.apply"):
+		eventType = event.Type("sys.daggerheart.action.adversary_damage_applied")
+	case command.Type("sys.daggerheart.action.adversary_condition.change"):
+		eventType = event.Type("sys.daggerheart.action.adversary_condition_changed")
+	case command.Type("sys.daggerheart.action.adversary_attack.resolve"):
+		eventType = event.Type("sys.daggerheart.action.adversary_attack_resolved")
+	case command.Type("sys.daggerheart.action.adversary_action.resolve"):
+		eventType = event.Type("sys.daggerheart.action.adversary_action_resolved")
+	case command.Type("sys.daggerheart.action.adversary_roll.resolve"):
+		eventType = event.Type("sys.daggerheart.action.adversary_roll_resolved")
 	default:
 		return engine.Result{}, nil
 	}
@@ -281,8 +281,8 @@ func TestCreateAdversary_UsesDomainEngine(t *testing.T) {
 	if engine.calls != 1 {
 		t.Fatalf("expected domain to be called once, got %d", engine.calls)
 	}
-	if engine.lastCommand.Type != command.Type("action.adversary.create") {
-		t.Fatalf("command type = %s, want %s", engine.lastCommand.Type, "action.adversary.create")
+	if engine.lastCommand.Type != command.Type("sys.daggerheart.action.adversary.create") {
+		t.Fatalf("command type = %s, want %s", engine.lastCommand.Type, "sys.daggerheart.action.adversary.create")
 	}
 	if engine.lastCommand.SystemID != daggerheart.SystemID {
 		t.Fatalf("command system id = %s, want %s", engine.lastCommand.SystemID, daggerheart.SystemID)
@@ -558,8 +558,8 @@ func TestUpdateAdversary_UsesDomainEngine(t *testing.T) {
 	if engine.calls != 1 {
 		t.Fatalf("expected domain to be called once, got %d", engine.calls)
 	}
-	if engine.lastCommand.Type != command.Type("action.adversary.update") {
-		t.Fatalf("command type = %s, want %s", engine.lastCommand.Type, "action.adversary.update")
+	if engine.lastCommand.Type != command.Type("sys.daggerheart.action.adversary.update") {
+		t.Fatalf("command type = %s, want %s", engine.lastCommand.Type, "sys.daggerheart.action.adversary.update")
 	}
 
 	var payload struct {
@@ -672,8 +672,8 @@ func TestDeleteAdversary_UsesDomainEngine(t *testing.T) {
 	if engine.calls != 1 {
 		t.Fatalf("expected domain to be called once, got %d", engine.calls)
 	}
-	if engine.lastCommand.Type != command.Type("action.adversary.delete") {
-		t.Fatalf("command type = %s, want %s", engine.lastCommand.Type, "action.adversary.delete")
+	if engine.lastCommand.Type != command.Type("sys.daggerheart.action.adversary.delete") {
+		t.Fatalf("command type = %s, want %s", engine.lastCommand.Type, "sys.daggerheart.action.adversary.delete")
 	}
 
 	var payload struct {

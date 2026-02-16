@@ -28,10 +28,10 @@ func TestApplyStressVulnerableCondition_AddsCondition(t *testing.T) {
 		t.Fatalf("encode condition payload: %v", err)
 	}
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.condition.change"): {
+		command.Type("sys.daggerheart.action.condition.change"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "c1",
-				Type:          event.Type("action.condition_changed"),
+				Type:          event.Type("sys.daggerheart.action.condition_changed"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeGM,
 				SessionID:     "s1",
@@ -63,8 +63,8 @@ func TestApplyStressVulnerableCondition_AddsCondition(t *testing.T) {
 	if got := len(eventStore.events["c1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)
 	}
-	if eventStore.events["c1"][0].Type != event.Type("action.condition_changed") {
-		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, "action.condition_changed")
+	if eventStore.events["c1"][0].Type != event.Type("sys.daggerheart.action.condition_changed") {
+		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, "sys.daggerheart.action.condition_changed")
 	}
 	state, err := dhStore.GetDaggerheartCharacterState(ctx, "c1", "ch1")
 	if err != nil {
@@ -91,10 +91,10 @@ func TestApplyStressVulnerableCondition_RemovesCondition(t *testing.T) {
 		t.Fatalf("encode condition payload: %v", err)
 	}
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.condition.change"): {
+		command.Type("sys.daggerheart.action.condition.change"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "c1",
-				Type:          event.Type("action.condition_changed"),
+				Type:          event.Type("sys.daggerheart.action.condition_changed"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeGM,
 				SessionID:     "s1",

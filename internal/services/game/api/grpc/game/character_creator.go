@@ -200,7 +200,7 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 	}
 	stateResult, err := c.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:    campaignID,
-		Type:          command.Type("action.character_state.patch"),
+		Type:          command.Type("sys.daggerheart.action.character_state.patch"),
 		ActorType:     profileCommandActorType,
 		ActorID:       actorID,
 		SessionID:     grpcmeta.SessionIDFromContext(ctx),

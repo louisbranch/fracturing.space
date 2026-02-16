@@ -40,6 +40,110 @@ func TestListTimelineEntries_InvalidFilter(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
+func TestListTimelineEntries_MissingParticipantStoreFailsFast(t *testing.T) {
+	eventStore := newFakeEventStore()
+	eventStore.events["c1"] = []event.Event{
+		{
+			CampaignID: "c1",
+			Seq:        1,
+			Type:       event.Type("participant.joined"),
+			EntityType: "participant",
+			EntityID:   "p1",
+			Timestamp:  time.Now().UTC(),
+		},
+	}
+
+	service := NewEventService(Stores{
+		Event: eventStore,
+	})
+
+	_, err := service.ListTimelineEntries(context.Background(), &campaignv1.ListTimelineEntriesRequest{
+		CampaignId: "c1",
+	})
+	assertStatusCode(t, err, codes.Internal)
+	if err == nil || !strings.Contains(err.Error(), "participant store is not configured") {
+		t.Fatalf("expected participant store configuration error, got %v", err)
+	}
+}
+
+func TestListTimelineEntries_MissingCampaignStoreFailsFast(t *testing.T) {
+	eventStore := newFakeEventStore()
+	eventStore.events["c1"] = []event.Event{
+		{
+			CampaignID: "c1",
+			Seq:        1,
+			Type:       event.Type("campaign.created"),
+			EntityType: "campaign",
+			EntityID:   "c1",
+			Timestamp:  time.Now().UTC(),
+		},
+	}
+
+	service := NewEventService(Stores{
+		Event: eventStore,
+	})
+
+	_, err := service.ListTimelineEntries(context.Background(), &campaignv1.ListTimelineEntriesRequest{
+		CampaignId: "c1",
+	})
+	assertStatusCode(t, err, codes.Internal)
+	if err == nil || !strings.Contains(err.Error(), "campaign store is not configured") {
+		t.Fatalf("expected campaign store configuration error, got %v", err)
+	}
+}
+
+func TestListTimelineEntries_MissingCharacterStoreFailsFast(t *testing.T) {
+	eventStore := newFakeEventStore()
+	eventStore.events["c1"] = []event.Event{
+		{
+			CampaignID: "c1",
+			Seq:        1,
+			Type:       event.Type("character.created"),
+			EntityType: "character",
+			EntityID:   "ch1",
+			Timestamp:  time.Now().UTC(),
+		},
+	}
+
+	service := NewEventService(Stores{
+		Event: eventStore,
+	})
+
+	_, err := service.ListTimelineEntries(context.Background(), &campaignv1.ListTimelineEntriesRequest{
+		CampaignId: "c1",
+	})
+	assertStatusCode(t, err, codes.Internal)
+	if err == nil || !strings.Contains(err.Error(), "character store is not configured") {
+		t.Fatalf("expected character store configuration error, got %v", err)
+	}
+}
+
+func TestListTimelineEntries_MissingSessionStoreFailsFast(t *testing.T) {
+	eventStore := newFakeEventStore()
+	eventStore.events["c1"] = []event.Event{
+		{
+			CampaignID: "c1",
+			Seq:        1,
+			Type:       event.Type("session.started"),
+			EntityType: "session",
+			EntityID:   "s1",
+			Timestamp:  time.Now().UTC(),
+		},
+	}
+
+	service := NewEventService(Stores{
+		Event: eventStore,
+	})
+
+	_, err := service.ListTimelineEntries(context.Background(), &campaignv1.ListTimelineEntriesRequest{
+		CampaignId: "c1",
+	})
+	assertStatusCode(t, err, codes.Internal)
+	if err == nil || !strings.Contains(err.Error(), "session store is not configured") {
+		t.Fatalf("expected session store configuration error, got %v", err)
+	}
+}
+
 func TestListTimelineEntries_ProjectionDisplayByDomain(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
@@ -208,7 +312,7 @@ func TestListTimelineEntries_CharacterStateChanges(t *testing.T) {
 		{
 			CampaignID:  "c1",
 			Seq:         1,
-			Type:        event.Type("action.character_state_patched"),
+			Type:        event.Type("sys.daggerheart.action.character_state_patched"),
 			EntityType:  "character",
 			EntityID:    "ch1",
 			Timestamp:   now,
@@ -304,7 +408,7 @@ func TestListTimelineEntries_CharacterStateChanges_WithBefore(t *testing.T) {
 		{
 			CampaignID:  "c1",
 			Seq:         1,
-			Type:        event.Type("action.character_state_patched"),
+			Type:        event.Type("sys.daggerheart.action.character_state_patched"),
 			EntityType:  "character",
 			EntityID:    "ch1",
 			Timestamp:   now,

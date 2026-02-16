@@ -45,7 +45,9 @@ func TestValidateSnapshotEvent_CharacterStatePatched(t *testing.T) {
 		data, _ := json.Marshal(payload)
 		return event.Event{
 			CampaignID:    "camp-1",
-			Type:          event.Type("action.character_state_patched"),
+			Type:          event.Type("sys.daggerheart.action.character_state_patched"),
+			EntityType:    "action",
+			EntityID:      "entity-1",
 			SystemID:      daggerheart.SystemID,
 			SystemVersion: daggerheart.SystemVersion,
 			PayloadJSON:   data,
@@ -69,7 +71,9 @@ func TestValidateSnapshotEvent_CharacterStatePatched(t *testing.T) {
 	t.Run("invalid json", func(t *testing.T) {
 		evt := event.Event{
 			CampaignID:    "camp-1",
-			Type:          event.Type("action.character_state_patched"),
+			Type:          event.Type("sys.daggerheart.action.character_state_patched"),
+			EntityType:    "action",
+			EntityID:      "entity-1",
 			SystemID:      daggerheart.SystemID,
 			SystemVersion: daggerheart.SystemVersion,
 			PayloadJSON:   []byte(`{invalid`),
@@ -86,7 +90,9 @@ func TestValidateSnapshotEvent_GMFearChanged(t *testing.T) {
 		data, _ := json.Marshal(payload)
 		return event.Event{
 			CampaignID:    "camp-1",
-			Type:          event.Type("action.gm_fear_changed"),
+			Type:          event.Type("sys.daggerheart.action.gm_fear_changed"),
+			EntityType:    "action",
+			EntityID:      "entity-1",
 			SystemID:      daggerheart.SystemID,
 			SystemVersion: daggerheart.SystemVersion,
 			PayloadJSON:   data,

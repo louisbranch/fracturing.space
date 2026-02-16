@@ -124,7 +124,7 @@ func findReactionResolved(ctx context.Context, client gamev1.EventServiceClient,
 		CampaignId: campaignID,
 		PageSize:   200,
 		OrderBy:    "seq desc",
-		Filter:     "session_id = \"" + sessionID + "\" AND type = \"action.reaction_resolved\"",
+		Filter:     "session_id = \"" + sessionID + "\" AND type = \"sys.daggerheart.action.reaction_resolved\"",
 	})
 	if err != nil {
 		return reactionResolvedPayload{}, err
