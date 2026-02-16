@@ -13,6 +13,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
@@ -35,6 +36,9 @@ const (
 	maxRoomMessages      = 1000
 	maxIdempotencyRecord = 4000
 )
+
+var errCampaignSessionInactive = errors.New("campaign has no active session")
+var errCampaignParticipantRequired = errors.New("campaign participant access required")
 
 // Config defines the inputs for the chat server.
 type Config struct {
@@ -221,6 +225,23 @@ func (r *campaignRoom) join(peer *wsPeer) int64 {
 	return latest
 }
 
+func (r *campaignRoom) setSessionID(sessionID string) {
+	sessionID = strings.TrimSpace(sessionID)
+	if sessionID == "" {
+		return
+	}
+	r.mu.Lock()
+	r.sessionID = sessionID
+	r.mu.Unlock()
+}
+
+func (r *campaignRoom) currentSessionID() string {
+	r.mu.Lock()
+	id := r.sessionID
+	r.mu.Unlock()
+	return id
+}
+
 func (r *campaignRoom) leave(peer *wsPeer) {
 	r.mu.Lock()
 	delete(r.subscribers, peer)
@@ -296,11 +317,25 @@ type wsAuthorizer interface {
 	IsCampaignParticipant(ctx context.Context, campaignID string, userID string) (bool, error)
 }
 
+type wsJoinWelcomeProvider interface {
+	ResolveJoinWelcome(ctx context.Context, campaignID string, userID string) (joinWelcome, error)
+}
+
+type joinWelcome struct {
+	ParticipantName string
+	CampaignName    string
+	SessionID       string
+	SessionName     string
+	Locale          commonv1.Locale
+}
+
 type campaignAuthorizer struct {
 	authBaseURL         string
 	oauthResourceSecret string
 	httpClient          *http.Client
 	participantClient   statev1.ParticipantServiceClient
+	sessionClient       statev1.SessionServiceClient
+	campaignClient      statev1.CampaignServiceClient
 }
 
 type authIntrospectResponse struct {
@@ -308,7 +343,12 @@ type authIntrospectResponse struct {
 	UserID string `json:"user_id"`
 }
 
-func newCampaignAuthorizer(config Config, participantClient statev1.ParticipantServiceClient) wsAuthorizer {
+func newCampaignAuthorizer(
+	config Config,
+	participantClient statev1.ParticipantServiceClient,
+	sessionClient statev1.SessionServiceClient,
+	campaignClient statev1.CampaignServiceClient,
+) wsAuthorizer {
 	authBaseURL := strings.TrimSpace(config.AuthBaseURL)
 	resourceSecret := strings.TrimSpace(config.OAuthResourceSecret)
 	if authBaseURL == "" || resourceSecret == "" {
@@ -322,6 +362,8 @@ func newCampaignAuthorizer(config Config, participantClient statev1.ParticipantS
 			Timeout: 5 * time.Second,
 		},
 		participantClient: participantClient,
+		sessionClient:     sessionClient,
+		campaignClient:    campaignClient,
 	}
 }
 
@@ -381,6 +423,113 @@ func (a *campaignAuthorizer) IsCampaignParticipant(ctx context.Context, campaign
 		return false, nil
 	}
 
+	participant, err := a.findParticipantByUserID(ctx, campaignID, userID)
+	if err != nil {
+		return false, err
+	}
+	return participant != nil, nil
+}
+
+func (a *campaignAuthorizer) ResolveJoinWelcome(ctx context.Context, campaignID string, userID string) (joinWelcome, error) {
+	campaignID = strings.TrimSpace(campaignID)
+	userID = strings.TrimSpace(userID)
+	if campaignID == "" {
+		return joinWelcome{}, errors.New("campaign id is required")
+	}
+
+	var activeSession *statev1.Session
+	if a.sessionClient != nil {
+		var err error
+		activeSession, err = a.findActiveSession(ctx, campaignID)
+		if err != nil && !errors.Is(err, errCampaignSessionInactive) {
+			return joinWelcome{}, err
+		}
+	}
+
+	participant, err := a.findParticipantByUserID(ctx, campaignID, userID)
+	if err != nil {
+		return joinWelcome{}, err
+	}
+	if participant == nil {
+		return joinWelcome{}, errCampaignParticipantRequired
+	}
+
+	participantName := userID
+	if strings.TrimSpace(participant.GetDisplayName()) != "" {
+		participantName = strings.TrimSpace(participant.GetDisplayName())
+	}
+
+	campaignName := campaignID
+	locale := commonv1.Locale_LOCALE_EN_US
+	if a.campaignClient != nil {
+		callCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+		resp, err := a.campaignClient.GetCampaign(callCtx, &statev1.GetCampaignRequest{CampaignId: campaignID})
+		cancel()
+		if err != nil {
+			return joinWelcome{}, fmt.Errorf("get campaign: %w", err)
+		}
+		if campaign := resp.GetCampaign(); campaign != nil {
+			if name := strings.TrimSpace(campaign.GetName()); name != "" {
+				campaignName = name
+			}
+			if campaign.GetLocale() != commonv1.Locale_LOCALE_UNSPECIFIED {
+				locale = campaign.GetLocale()
+			}
+		}
+	}
+
+	sessionID := ""
+	sessionName := ""
+	if activeSession != nil {
+		sessionID = strings.TrimSpace(activeSession.GetId())
+		sessionName = strings.TrimSpace(activeSession.GetName())
+		if sessionName == "" {
+			sessionName = sessionID
+		}
+	}
+
+	return joinWelcome{
+		ParticipantName: strings.TrimSpace(participantName),
+		CampaignName:    campaignName,
+		SessionID:       sessionID,
+		SessionName:     sessionName,
+		Locale:          locale,
+	}, nil
+}
+
+func (a *campaignAuthorizer) findActiveSession(ctx context.Context, campaignID string) (*statev1.Session, error) {
+	if a == nil || a.sessionClient == nil {
+		return nil, errors.New("session client is not configured")
+	}
+	pageToken := ""
+	for {
+		callCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+		resp, err := a.sessionClient.ListSessions(callCtx, &statev1.ListSessionsRequest{
+			CampaignId: campaignID,
+			PageSize:   10,
+			PageToken:  pageToken,
+		})
+		cancel()
+		if err != nil {
+			return nil, fmt.Errorf("list campaign sessions: %w", err)
+		}
+		for _, session := range resp.GetSessions() {
+			if session.GetStatus() == statev1.SessionStatus_SESSION_ACTIVE {
+				return session, nil
+			}
+		}
+		pageToken = strings.TrimSpace(resp.GetNextPageToken())
+		if pageToken == "" {
+			break
+		}
+	}
+	return nil, errCampaignSessionInactive
+}
+
+func (a *campaignAuthorizer) findParticipantByUserID(ctx context.Context, campaignID string, userID string) (*statev1.Participant, error) {
+	if a == nil || a.participantClient == nil {
+		return nil, errors.New("participant client is not configured")
+	}
 	pageToken := ""
 	for {
 		callCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
@@ -391,11 +540,11 @@ func (a *campaignAuthorizer) IsCampaignParticipant(ctx context.Context, campaign
 		})
 		cancel()
 		if err != nil {
-			return false, fmt.Errorf("list campaign participants: %w", err)
+			return nil, fmt.Errorf("list campaign participants: %w", err)
 		}
-		for _, p := range resp.GetParticipants() {
-			if strings.TrimSpace(p.GetUserId()) == userID {
-				return true, nil
+		for _, participant := range resp.GetParticipants() {
+			if strings.TrimSpace(participant.GetUserId()) == userID {
+				return participant, nil
 			}
 		}
 		pageToken = strings.TrimSpace(resp.GetNextPageToken())
@@ -403,7 +552,7 @@ func (a *campaignAuthorizer) IsCampaignParticipant(ctx context.Context, campaign
 			break
 		}
 	}
-	return false, nil
+	return nil, nil
 }
 
 type wsUserIDContextKey struct{}
@@ -559,9 +708,35 @@ func handleJoinFrame(ctx context.Context, session *wsSession, hub *roomHub, auth
 		return
 	}
 
-	if authorizer != nil {
+	welcome := joinWelcome{
+		ParticipantName: session.userID,
+		CampaignName:    campaignID,
+		SessionID:       "",
+		SessionName:     "",
+		Locale:          commonv1.Locale_LOCALE_EN_US,
+	}
+	if provider, ok := authorizer.(wsJoinWelcomeProvider); ok {
+		resolved, err := provider.ResolveJoinWelcome(ctx, campaignID, session.userID)
+		if err != nil {
+			if errors.Is(err, errCampaignParticipantRequired) {
+				_ = writeWSError(session.peer, frame.RequestID, "FORBIDDEN", "participant access required for campaign")
+				return
+			}
+			if errors.Is(err, errCampaignSessionInactive) {
+				_ = writeWSError(session.peer, frame.RequestID, "FAILED_PRECONDITION", "campaign session is not active")
+				return
+			}
+			_ = writeWSError(session.peer, frame.RequestID, "UNAVAILABLE", "campaign context lookup unavailable")
+			return
+		}
+		welcome = resolved
+	} else if authorizer != nil {
 		allowed, err := authorizer.IsCampaignParticipant(ctx, campaignID, session.userID)
 		if err != nil {
+			if errors.Is(err, errCampaignSessionInactive) {
+				_ = writeWSError(session.peer, frame.RequestID, "FAILED_PRECONDITION", "campaign session is not active")
+				return
+			}
 			_ = writeWSError(session.peer, frame.RequestID, "UNAVAILABLE", "campaign membership verification unavailable")
 			return
 		}
@@ -572,6 +747,10 @@ func handleJoinFrame(ctx context.Context, session *wsSession, hub *roomHub, auth
 	}
 
 	room := hub.room(campaignID)
+	room.setSessionID(welcome.SessionID)
+	if strings.TrimSpace(welcome.SessionName) == "" {
+		welcome.SessionName = room.currentSessionID()
+	}
 	previous := session.setRoom(room)
 	if previous != nil && previous != room {
 		previous.leave(session.peer)
@@ -582,11 +761,66 @@ func handleJoinFrame(ctx context.Context, session *wsSession, hub *roomHub, auth
 		Type: "chat.joined",
 		Payload: mustJSON(joinedPayload{
 			CampaignID:       campaignID,
-			SessionID:        room.sessionID,
+			SessionID:        room.currentSessionID(),
 			LatestSequenceID: latest,
 			ServerTime:       time.Now().UTC().Format(time.RFC3339),
 		}),
 	})
+	_ = session.peer.writeFrame(wsFrame{
+		Type: "chat.message",
+		Payload: mustJSON(messageEnvelope{
+			Message: chatMessage{
+				MessageID:  fmt.Sprintf("sys_%d", time.Now().UnixNano()),
+				CampaignID: campaignID,
+				SessionID:  room.currentSessionID(),
+				SequenceID: latest,
+				SentAt:     time.Now().UTC().Format(time.RFC3339),
+				Kind:       "system",
+				Actor: messageActor{
+					ParticipantID: "system",
+					DisplayName:   localizedSystemLabel(welcome.Locale),
+				},
+				Body: localizedJoinWelcomeBody(welcome),
+			},
+		}),
+	})
+}
+
+func localizedSystemLabel(locale commonv1.Locale) string {
+	switch locale {
+	case commonv1.Locale_LOCALE_PT_BR:
+		return "sistema"
+	default:
+		return "system"
+	}
+}
+
+func localizedJoinWelcomeBody(welcome joinWelcome) string {
+	participantName := strings.TrimSpace(welcome.ParticipantName)
+	if participantName == "" {
+		participantName = "participant"
+	}
+	campaignName := strings.TrimSpace(welcome.CampaignName)
+	if campaignName == "" {
+		campaignName = "campaign"
+	}
+	sessionName := strings.TrimSpace(welcome.SessionName)
+	if sessionName == "" {
+		sessionName = strings.TrimSpace(welcome.SessionID)
+	}
+
+	switch welcome.Locale {
+	case commonv1.Locale_LOCALE_PT_BR:
+		if sessionName == "" {
+			return fmt.Sprintf("Bem-vindo %s. Você entrou na Campanha %s.", participantName, campaignName)
+		}
+		return fmt.Sprintf("Bem-vindo %s. Você entrou na Campanha %s, Sessão %s.", participantName, campaignName, sessionName)
+	default:
+		if sessionName == "" {
+			return fmt.Sprintf("Welcome %s. You've joined Campaign %s.", participantName, campaignName)
+		}
+		return fmt.Sprintf("Welcome %s. You've joined Campaign %s, Session %s.", participantName, campaignName, sessionName)
+	}
 }
 
 func handleSendFrame(session *wsSession, frame wsFrame) {
@@ -731,6 +965,8 @@ func NewServer(config Config) (*Server, error) {
 
 	var gameConn *gogrpc.ClientConn
 	var participantClient statev1.ParticipantServiceClient
+	var sessionClient statev1.SessionServiceClient
+	var campaignClient statev1.CampaignServiceClient
 	if strings.TrimSpace(config.GameAddr) != "" {
 		conn, client, err := dialGameGRPC(context.Background(), config)
 		if err != nil {
@@ -738,10 +974,12 @@ func NewServer(config Config) (*Server, error) {
 		} else {
 			gameConn = conn
 			participantClient = client
+			sessionClient = statev1.NewSessionServiceClient(conn)
+			campaignClient = statev1.NewCampaignServiceClient(conn)
 		}
 	}
 
-	authorizer := newCampaignAuthorizer(config, participantClient)
+	authorizer := newCampaignAuthorizer(config, participantClient, sessionClient, campaignClient)
 	httpServer := &http.Server{
 		Addr:              httpAddr,
 		Handler:           NewHandlerWithAuthorizer(authorizer),

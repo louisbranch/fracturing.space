@@ -106,6 +106,13 @@ func TestCampaignPageReturnsBadGatewayOnAccessCheckerError(t *testing.T) {
 	if w.Code != http.StatusBadGateway {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusBadGateway)
 	}
+	body := w.Body.String()
+	if !strings.Contains(body, `class="landing-body"`) {
+		t.Fatalf("expected shared error page layout")
+	}
+	if !strings.Contains(body, "failed to verify campaign access") {
+		t.Fatalf("expected campaign access error message")
+	}
 }
 
 func TestCampaignPageRejectsNonGET(t *testing.T) {

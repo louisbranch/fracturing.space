@@ -28,19 +28,22 @@ func (h *handler) handleCampaignPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if h.campaignAccess == nil {
-		http.Error(w, "campaign access checker is not configured", http.StatusServiceUnavailable)
+		h.renderErrorPage(w, r, http.StatusServiceUnavailable, "Campaign unavailable", "campaign access checker is not configured")
 		return
 	}
 	allowed, err := h.campaignAccess.IsCampaignParticipant(r.Context(), path, sess.accessToken)
 	if err != nil {
-		http.Error(w, "failed to verify campaign access", http.StatusBadGateway)
+		h.renderErrorPage(w, r, http.StatusBadGateway, "Campaign unavailable", "failed to verify campaign access")
 		return
 	}
 	if !allowed {
-		http.Error(w, "participant access required", http.StatusForbidden)
+		h.renderErrorPage(w, r, http.StatusForbidden, "Access denied", "participant access required")
 		return
 	}
+	h.renderCampaignPage(w, r, path)
+}
 
+func (h *handler) renderCampaignPage(w http.ResponseWriter, r *http.Request, campaignID string) {
 	printer, lang := localizer(w, r)
 	page := webtemplates.PageContext{
 		Lang:         lang,
@@ -48,6 +51,5 @@ func (h *handler) handleCampaignPage(w http.ResponseWriter, r *http.Request) {
 		CurrentPath:  r.URL.Path,
 		CurrentQuery: r.URL.RawQuery,
 	}
-
-	templ.Handler(webtemplates.CampaignPage(page, path)).ServeHTTP(w, r)
+	templ.Handler(webtemplates.CampaignPage(page, campaignID)).ServeHTTP(w, r)
 }

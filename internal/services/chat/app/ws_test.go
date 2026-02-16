@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	"golang.org/x/net/websocket"
 )
 
@@ -61,6 +62,47 @@ func (f fakeWSAuthorizer) IsCampaignParticipant(_ context.Context, campaignID st
 		return f.participantByCampaign[campaignID], nil
 	}
 	return f.participantAllowed, nil
+}
+
+type fakeWSWelcomeAuthorizer struct {
+	userID             string
+	authErr            error
+	participantAllowed bool
+	participantCalls   int
+	resolveWelcome     joinWelcome
+	resolveErr         error
+}
+
+func (f *fakeWSWelcomeAuthorizer) Authenticate(_ context.Context, _ string) (string, error) {
+	if f.authErr != nil {
+		return "", f.authErr
+	}
+	if strings.TrimSpace(f.userID) == "" {
+		return "", errors.New("missing user id")
+	}
+	return strings.TrimSpace(f.userID), nil
+}
+
+func (f *fakeWSWelcomeAuthorizer) IsCampaignParticipant(_ context.Context, _ string, _ string) (bool, error) {
+	f.participantCalls++
+	return f.participantAllowed, nil
+}
+
+func (f *fakeWSWelcomeAuthorizer) ResolveJoinWelcome(_ context.Context, campaignID string, userID string) (joinWelcome, error) {
+	if f.resolveErr != nil {
+		return joinWelcome{}, f.resolveErr
+	}
+	welcome := f.resolveWelcome
+	if strings.TrimSpace(welcome.ParticipantName) == "" {
+		welcome.ParticipantName = userID
+	}
+	if strings.TrimSpace(welcome.CampaignName) == "" {
+		welcome.CampaignName = campaignID
+	}
+	if welcome.Locale == commonv1.Locale_LOCALE_UNSPECIFIED {
+		welcome.Locale = commonv1.Locale_LOCALE_EN_US
+	}
+	return welcome, nil
 }
 
 func dialWS(t *testing.T, path string) *websocket.Conn {
@@ -171,6 +213,10 @@ func joinCampaign(t *testing.T, conn *websocket.Conn, campaignID string) {
 	got := readFrame(t, conn)
 	if got.Type != "chat.joined" {
 		t.Fatalf("frame type = %q, want %q", got.Type, "chat.joined")
+	}
+	welcome := readFrame(t, conn)
+	if welcome.Type != "chat.message" {
+		t.Fatalf("frame type = %q, want %q", welcome.Type, "chat.message")
 	}
 }
 
@@ -397,5 +443,118 @@ func TestWebSocketJoinRequiresParticipantMembership(t *testing.T) {
 	}
 	if !strings.Contains(string(got.Payload), "FORBIDDEN") {
 		t.Fatalf("error payload = %s, expected FORBIDDEN", string(got.Payload))
+	}
+}
+
+func TestWebSocketJoinActiveSessionFailureReturnsFailedPrecondition(t *testing.T) {
+	authorizer := fakeWSAuthorizer{
+		userID:         "user-1",
+		participantErr: errCampaignSessionInactive,
+	}
+	conn := dialWSWithHandler(t, NewHandlerWithAuthorizer(authorizer), "/ws", "fs_token=token-1")
+
+	writeFrame(t, conn, map[string]any{
+		"type":       "chat.join",
+		"request_id": "req-join-1",
+		"payload": map[string]any{
+			"campaign_id": "camp-1",
+		},
+	})
+
+	got := readFrame(t, conn)
+	if got.Type != "chat.error" {
+		t.Fatalf("frame type = %q, want %q", got.Type, "chat.error")
+	}
+	if !strings.Contains(string(got.Payload), "FAILED_PRECONDITION") {
+		t.Fatalf("error payload = %s, expected FAILED_PRECONDITION", string(got.Payload))
+	}
+}
+
+func TestWebSocketJoinSendsWelcomeSystemMessage(t *testing.T) {
+	authorizer := fakeWSAuthorizer{
+		userID:             "user-1",
+		participantAllowed: true,
+	}
+	conn := dialWSWithHandler(t, NewHandlerWithAuthorizer(authorizer), "/ws", "fs_token=token-1")
+
+	writeFrame(t, conn, map[string]any{
+		"type":       "chat.join",
+		"request_id": "req-join-1",
+		"payload": map[string]any{
+			"campaign_id": "camp-1",
+		},
+	})
+
+	joined := readFrame(t, conn)
+	if joined.Type != "chat.joined" {
+		t.Fatalf("frame type = %q, want %q", joined.Type, "chat.joined")
+	}
+
+	systemMessage := readFrame(t, conn)
+	if systemMessage.Type != "chat.message" {
+		t.Fatalf("frame type = %q, want %q", systemMessage.Type, "chat.message")
+	}
+	if !strings.Contains(string(systemMessage.Payload), "Welcome") {
+		t.Fatalf("message payload = %s, expected Welcome text", string(systemMessage.Payload))
+	}
+}
+
+func TestWebSocketJoinWithWelcomeProviderSkipsParticipantCheck(t *testing.T) {
+	authorizer := &fakeWSWelcomeAuthorizer{
+		userID:             "user-1",
+		participantAllowed: false,
+		resolveWelcome: joinWelcome{
+			ParticipantName: "Ari",
+			CampaignName:    "Camp One",
+			SessionName:     "Session One",
+			Locale:          commonv1.Locale_LOCALE_EN_US,
+		},
+	}
+	conn := dialWSWithHandler(t, NewHandlerWithAuthorizer(authorizer), "/ws", "fs_token=token-1")
+
+	writeFrame(t, conn, map[string]any{
+		"type":       "chat.join",
+		"request_id": "req-join-1",
+		"payload": map[string]any{
+			"campaign_id": "camp-1",
+		},
+	})
+
+	joined := readFrame(t, conn)
+	if joined.Type != "chat.joined" {
+		t.Fatalf("frame type = %q, want %q", joined.Type, "chat.joined")
+	}
+	welcome := readFrame(t, conn)
+	if welcome.Type != "chat.message" {
+		t.Fatalf("frame type = %q, want %q", welcome.Type, "chat.message")
+	}
+	if authorizer.participantCalls != 0 {
+		t.Fatalf("participant checks = %d, want 0", authorizer.participantCalls)
+	}
+}
+
+func TestLocalizedJoinWelcomeBodyUsesCampaignLocale(t *testing.T) {
+	body := localizedJoinWelcomeBody(joinWelcome{
+		ParticipantName: "Ari",
+		CampaignName:    "Campanha Um",
+		SessionName:     "Sessao Um",
+		Locale:          commonv1.Locale_LOCALE_PT_BR,
+	})
+	if !strings.Contains(body, "Bem-vindo") {
+		t.Fatalf("body = %q, expected Portuguese welcome", body)
+	}
+}
+
+func TestLocalizedJoinWelcomeBodyOmitsSessionWhenUnavailable(t *testing.T) {
+	body := localizedJoinWelcomeBody(joinWelcome{
+		ParticipantName: "Ari",
+		CampaignName:    "Campaign One",
+		Locale:          commonv1.Locale_LOCALE_EN_US,
+	})
+	if strings.Contains(body, "Session") {
+		t.Fatalf("body = %q, expected no session text", body)
+	}
+	if !strings.Contains(body, "Campaign Campaign One") {
+		t.Fatalf("body = %q, expected campaign text", body)
 	}
 }
