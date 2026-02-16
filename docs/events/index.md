@@ -12,5 +12,6 @@ For the end-to-end command/event/projection lifecycle, see
 [Event-driven system](../project/event-driven-system.md).
 
 - Event catalog: [event-catalog.md](event-catalog.md)
+- Command catalog: [command-catalog.md](command-catalog.md)
 - Event usage map: [usage-map.md](usage-map.md)
 - Event catalog generator: [README.md](README.md)

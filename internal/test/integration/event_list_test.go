@@ -66,7 +66,7 @@ func runEventListTests(t *testing.T, grpcAddr string, authAddr string) {
 			ActorType:   "system",
 			EntityType:  "campaign",
 			EntityId:    campaignID,
-			PayloadJson: []byte("{}"),
+			PayloadJson: []byte(`{"request_id":"req-1"}`),
 		}); err != nil {
 			t.Fatalf("append roll event %d: %v", i, err)
 		}

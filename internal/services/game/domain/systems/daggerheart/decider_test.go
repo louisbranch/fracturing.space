@@ -13,7 +13,7 @@ func TestDecideGMFearSet_EmitsGMFearChanged(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("action.gm_fear.set"),
+		Type:          command.Type("sys.daggerheart.action.gm_fear.set"),
 		ActorType:     command.ActorTypeGM,
 		ActorID:       "gm-1",
 		SystemID:      SystemID,
@@ -30,8 +30,8 @@ func TestDecideGMFearSet_EmitsGMFearChanged(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("action.gm_fear_changed") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "action.gm_fear_changed")
+	if evt.Type != event.Type("sys.daggerheart.action.gm_fear_changed") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.gm_fear_changed")
 	}
 	if evt.SystemID != SystemID {
 		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
@@ -70,10 +70,35 @@ func TestDecideGMFearSet_EmitsGMFearChanged(t *testing.T) {
 	}
 }
 
+func TestDecideGMFearSet_AcceptsSysPrefixedType(t *testing.T) {
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	cmd := command.Command{
+		CampaignID:    "camp-1",
+		Type:          command.Type("sys." + SystemID + ".action.gm_fear.set"),
+		ActorType:     command.ActorTypeGM,
+		ActorID:       "gm-1",
+		SystemID:      SystemID,
+		SystemVersion: SystemVersion,
+		PayloadJSON:   []byte(`{"after":4}`),
+	}
+
+	decision := Decider{}.Decide(SnapshotState{GMFear: 2}, cmd, func() time.Time { return now })
+	if len(decision.Rejections) != 0 {
+		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
+	}
+	if len(decision.Events) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(decision.Events))
+	}
+	wantType := event.Type("sys." + SystemID + ".action.gm_fear_changed")
+	if decision.Events[0].Type != wantType {
+		t.Fatalf("event type = %s, want %s", decision.Events[0].Type, wantType)
+	}
+}
+
 func TestDecideGMFearSet_MissingAfterRejected(t *testing.T) {
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("action.gm_fear.set"),
+		Type:          command.Type("sys.daggerheart.action.gm_fear.set"),
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
 		PayloadJSON:   []byte(`{"reason":""}`),
@@ -95,7 +120,7 @@ func TestDecideGMFearSet_AfterOutOfRangeRejected(t *testing.T) {
 	after := GMFearMax + 1
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("action.gm_fear.set"),
+		Type:          command.Type("sys.daggerheart.action.gm_fear.set"),
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
 		PayloadJSON:   []byte(`{"after":13}`),
@@ -120,7 +145,7 @@ func TestDecideCharacterStatePatch_EmitsCharacterStatePatched(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("action.character_state.patch"),
+		Type:          command.Type("sys.daggerheart.action.character_state.patch"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -138,8 +163,8 @@ func TestDecideCharacterStatePatch_EmitsCharacterStatePatched(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("action.character_state_patched") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "action.character_state_patched")
+	if evt.Type != event.Type("sys.daggerheart.action.character_state_patched") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.character_state_patched")
 	}
 	if evt.SystemID != SystemID {
 		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
@@ -180,7 +205,7 @@ func TestDecideConditionChange_EmitsConditionChanged(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("action.condition.change"),
+		Type:          command.Type("sys.daggerheart.action.condition.change"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -198,8 +223,8 @@ func TestDecideConditionChange_EmitsConditionChanged(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("action.condition_changed") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "action.condition_changed")
+	if evt.Type != event.Type("sys.daggerheart.action.condition_changed") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.condition_changed")
 	}
 	if evt.EntityType != "character" {
 		t.Fatalf("entity type = %s, want %s", evt.EntityType, "character")
@@ -238,7 +263,7 @@ func TestDecideHopeSpend_EmitsHopeSpent(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("action.hope.spend"),
+		Type:          command.Type("sys.daggerheart.action.hope.spend"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -256,8 +281,8 @@ func TestDecideHopeSpend_EmitsHopeSpent(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("action.hope_spent") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "action.hope_spent")
+	if evt.Type != event.Type("sys.daggerheart.action.hope_spent") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.hope_spent")
 	}
 	if evt.SystemID != SystemID {
 		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
@@ -306,7 +331,7 @@ func TestDecideStressSpend_EmitsStressSpent(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("action.stress.spend"),
+		Type:          command.Type("sys.daggerheart.action.stress.spend"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -324,8 +349,8 @@ func TestDecideStressSpend_EmitsStressSpent(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("action.stress_spent") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "action.stress_spent")
+	if evt.Type != event.Type("sys.daggerheart.action.stress_spent") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.stress_spent")
 	}
 	if evt.SystemID != SystemID {
 		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
@@ -374,7 +399,7 @@ func TestDecideLoadoutSwap_EmitsLoadoutSwapped(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("action.loadout.swap"),
+		Type:          command.Type("sys.daggerheart.action.loadout.swap"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -392,8 +417,8 @@ func TestDecideLoadoutSwap_EmitsLoadoutSwapped(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("action.loadout_swapped") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "action.loadout_swapped")
+	if evt.Type != event.Type("sys.daggerheart.action.loadout_swapped") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.loadout_swapped")
 	}
 	if evt.SystemID != SystemID {
 		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
@@ -450,7 +475,7 @@ func TestDecideRestTake_EmitsRestTaken(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("action.rest.take"),
+		Type:          command.Type("sys.daggerheart.action.rest.take"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -468,8 +493,8 @@ func TestDecideRestTake_EmitsRestTaken(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("action.rest_taken") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "action.rest_taken")
+	if evt.Type != event.Type("sys.daggerheart.action.rest_taken") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.rest_taken")
 	}
 	if evt.SystemID != SystemID {
 		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
@@ -530,7 +555,7 @@ func TestDecideDamageApply_EmitsDamageApplied(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("action.damage.apply"),
+		Type:          command.Type("sys.daggerheart.action.damage.apply"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -548,8 +573,8 @@ func TestDecideDamageApply_EmitsDamageApplied(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("action.damage_applied") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "action.damage_applied")
+	if evt.Type != event.Type("sys.daggerheart.action.damage_applied") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.damage_applied")
 	}
 	if evt.SystemID != SystemID {
 		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
@@ -590,7 +615,7 @@ func TestDecideAdversaryDamageApply_EmitsAdversaryDamageApplied(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("action.adversary_damage.apply"),
+		Type:          command.Type("sys.daggerheart.action.adversary_damage.apply"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -608,8 +633,8 @@ func TestDecideAdversaryDamageApply_EmitsAdversaryDamageApplied(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("action.adversary_damage_applied") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "action.adversary_damage_applied")
+	if evt.Type != event.Type("sys.daggerheart.action.adversary_damage_applied") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.adversary_damage_applied")
 	}
 	if evt.SystemID != SystemID {
 		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
@@ -650,7 +675,7 @@ func TestDecideAttackResolve_EmitsAttackResolved(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("action.attack.resolve"),
+		Type:          command.Type("sys.daggerheart.action.attack.resolve"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -668,8 +693,8 @@ func TestDecideAttackResolve_EmitsAttackResolved(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("action.attack_resolved") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "action.attack_resolved")
+	if evt.Type != event.Type("sys.daggerheart.action.attack_resolved") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.attack_resolved")
 	}
 	if evt.SystemID != SystemID {
 		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
@@ -706,7 +731,7 @@ func TestDecideReactionResolve_EmitsReactionResolved(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("action.reaction.resolve"),
+		Type:          command.Type("sys.daggerheart.action.reaction.resolve"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -724,8 +749,8 @@ func TestDecideReactionResolve_EmitsReactionResolved(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("action.reaction_resolved") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "action.reaction_resolved")
+	if evt.Type != event.Type("sys.daggerheart.action.reaction_resolved") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.reaction_resolved")
 	}
 	if evt.SystemID != SystemID {
 		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
@@ -766,7 +791,7 @@ func TestDecideAdversaryAttackResolve_EmitsAdversaryAttackResolved(t *testing.T)
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("action.adversary_attack.resolve"),
+		Type:          command.Type("sys.daggerheart.action.adversary_attack.resolve"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -784,8 +809,8 @@ func TestDecideAdversaryAttackResolve_EmitsAdversaryAttackResolved(t *testing.T)
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("action.adversary_attack_resolved") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "action.adversary_attack_resolved")
+	if evt.Type != event.Type("sys.daggerheart.action.adversary_attack_resolved") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.adversary_attack_resolved")
 	}
 	if evt.SystemID != SystemID {
 		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
@@ -826,7 +851,7 @@ func TestDecideDamageRollResolve_EmitsDamageRollResolved(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("action.damage_roll.resolve"),
+		Type:          command.Type("sys.daggerheart.action.damage_roll.resolve"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -844,8 +869,8 @@ func TestDecideDamageRollResolve_EmitsDamageRollResolved(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("action.damage_roll_resolved") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "action.damage_roll_resolved")
+	if evt.Type != event.Type("sys.daggerheart.action.damage_roll_resolved") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.damage_roll_resolved")
 	}
 	if evt.SystemID != SystemID {
 		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
@@ -882,7 +907,7 @@ func TestDecideGroupActionResolve_EmitsGroupActionResolved(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("action.group_action.resolve"),
+		Type:          command.Type("sys.daggerheart.action.group_action.resolve"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -900,8 +925,8 @@ func TestDecideGroupActionResolve_EmitsGroupActionResolved(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("action.group_action_resolved") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "action.group_action_resolved")
+	if evt.Type != event.Type("sys.daggerheart.action.group_action_resolved") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.group_action_resolved")
 	}
 	if evt.SystemID != SystemID {
 		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
@@ -924,7 +949,7 @@ func TestDecideTagTeamResolve_EmitsTagTeamResolved(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("action.tag_team.resolve"),
+		Type:          command.Type("sys.daggerheart.action.tag_team.resolve"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -942,8 +967,8 @@ func TestDecideTagTeamResolve_EmitsTagTeamResolved(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("action.tag_team_resolved") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "action.tag_team_resolved")
+	if evt.Type != event.Type("sys.daggerheart.action.tag_team_resolved") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.tag_team_resolved")
 	}
 	if evt.SystemID != SystemID {
 		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
@@ -966,7 +991,7 @@ func TestDecideCountdownCreate_EmitsCountdownCreated(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("action.countdown.create"),
+		Type:          command.Type("sys.daggerheart.action.countdown.create"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -984,8 +1009,8 @@ func TestDecideCountdownCreate_EmitsCountdownCreated(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("action.countdown_created") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "action.countdown_created")
+	if evt.Type != event.Type("sys.daggerheart.action.countdown_created") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.countdown_created")
 	}
 	if evt.SystemID != SystemID {
 		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
@@ -1008,7 +1033,7 @@ func TestDecideCountdownUpdate_EmitsCountdownUpdated(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("action.countdown.update"),
+		Type:          command.Type("sys.daggerheart.action.countdown.update"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -1026,8 +1051,8 @@ func TestDecideCountdownUpdate_EmitsCountdownUpdated(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("action.countdown_updated") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "action.countdown_updated")
+	if evt.Type != event.Type("sys.daggerheart.action.countdown_updated") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.countdown_updated")
 	}
 	if evt.SystemID != SystemID {
 		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
@@ -1050,7 +1075,7 @@ func TestDecideCountdownDelete_EmitsCountdownDeleted(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("action.countdown.delete"),
+		Type:          command.Type("sys.daggerheart.action.countdown.delete"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -1068,8 +1093,8 @@ func TestDecideCountdownDelete_EmitsCountdownDeleted(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("action.countdown_deleted") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "action.countdown_deleted")
+	if evt.Type != event.Type("sys.daggerheart.action.countdown_deleted") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.countdown_deleted")
 	}
 	if evt.SystemID != SystemID {
 		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
@@ -1092,7 +1117,7 @@ func TestDecideAdversaryActionResolve_EmitsAdversaryActionResolved(t *testing.T)
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("action.adversary_action.resolve"),
+		Type:          command.Type("sys.daggerheart.action.adversary_action.resolve"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -1110,8 +1135,8 @@ func TestDecideAdversaryActionResolve_EmitsAdversaryActionResolved(t *testing.T)
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("action.adversary_action_resolved") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "action.adversary_action_resolved")
+	if evt.Type != event.Type("sys.daggerheart.action.adversary_action_resolved") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.adversary_action_resolved")
 	}
 	if evt.SystemID != SystemID {
 		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
@@ -1134,7 +1159,7 @@ func TestDecideAdversaryRollResolve_EmitsAdversaryRollResolved(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("action.adversary_roll.resolve"),
+		Type:          command.Type("sys.daggerheart.action.adversary_roll.resolve"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -1152,8 +1177,8 @@ func TestDecideAdversaryRollResolve_EmitsAdversaryRollResolved(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("action.adversary_roll_resolved") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "action.adversary_roll_resolved")
+	if evt.Type != event.Type("sys.daggerheart.action.adversary_roll_resolved") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.adversary_roll_resolved")
 	}
 	if evt.SystemID != SystemID {
 		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
@@ -1176,7 +1201,7 @@ func TestDecideBlazeOfGloryResolve_EmitsBlazeOfGloryResolved(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("action.blaze_of_glory.resolve"),
+		Type:          command.Type("sys.daggerheart.action.blaze_of_glory.resolve"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -1194,8 +1219,8 @@ func TestDecideBlazeOfGloryResolve_EmitsBlazeOfGloryResolved(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("action.blaze_of_glory_resolved") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "action.blaze_of_glory_resolved")
+	if evt.Type != event.Type("sys.daggerheart.action.blaze_of_glory_resolved") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.blaze_of_glory_resolved")
 	}
 	if evt.SystemID != SystemID {
 		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
@@ -1218,7 +1243,7 @@ func TestDecideDowntimeMoveApply_EmitsDowntimeMoveApplied(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("action.downtime_move.apply"),
+		Type:          command.Type("sys.daggerheart.action.downtime_move.apply"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -1236,8 +1261,8 @@ func TestDecideDowntimeMoveApply_EmitsDowntimeMoveApplied(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("action.downtime_move_applied") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "action.downtime_move_applied")
+	if evt.Type != event.Type("sys.daggerheart.action.downtime_move_applied") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.downtime_move_applied")
 	}
 	if evt.SystemID != SystemID {
 		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
@@ -1282,7 +1307,7 @@ func TestDecideDeathMoveResolve_EmitsDeathMoveResolved(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("action.death_move.resolve"),
+		Type:          command.Type("sys.daggerheart.action.death_move.resolve"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -1300,8 +1325,8 @@ func TestDecideDeathMoveResolve_EmitsDeathMoveResolved(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("action.death_move_resolved") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "action.death_move_resolved")
+	if evt.Type != event.Type("sys.daggerheart.action.death_move_resolved") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.death_move_resolved")
 	}
 	if evt.SystemID != SystemID {
 		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
@@ -1342,7 +1367,7 @@ func TestDecideGMMoveApply_EmitsGMMoveApplied(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("action.gm_move.apply"),
+		Type:          command.Type("sys.daggerheart.action.gm_move.apply"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -1360,8 +1385,8 @@ func TestDecideGMMoveApply_EmitsGMMoveApplied(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("action.gm_move_applied") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "action.gm_move_applied")
+	if evt.Type != event.Type("sys.daggerheart.action.gm_move_applied") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.gm_move_applied")
 	}
 	if evt.SystemID != SystemID {
 		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
@@ -1402,7 +1427,7 @@ func TestDecideAdversaryConditionChange_EmitsAdversaryConditionChanged(t *testin
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("action.adversary_condition.change"),
+		Type:          command.Type("sys.daggerheart.action.adversary_condition.change"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -1420,8 +1445,8 @@ func TestDecideAdversaryConditionChange_EmitsAdversaryConditionChanged(t *testin
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("action.adversary_condition_changed") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "action.adversary_condition_changed")
+	if evt.Type != event.Type("sys.daggerheart.action.adversary_condition_changed") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.adversary_condition_changed")
 	}
 	if evt.SystemID != SystemID {
 		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
@@ -1458,7 +1483,7 @@ func TestDecideAdversaryCreate_EmitsAdversaryCreated(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("action.adversary.create"),
+		Type:          command.Type("sys.daggerheart.action.adversary.create"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -1475,8 +1500,8 @@ func TestDecideAdversaryCreate_EmitsAdversaryCreated(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("action.adversary_created") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "action.adversary_created")
+	if evt.Type != event.Type("sys.daggerheart.action.adversary_created") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.adversary_created")
 	}
 	if evt.SystemID != SystemID {
 		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
@@ -1517,7 +1542,7 @@ func TestDecideAdversaryUpdate_EmitsAdversaryUpdated(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("action.adversary.update"),
+		Type:          command.Type("sys.daggerheart.action.adversary.update"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -1534,8 +1559,8 @@ func TestDecideAdversaryUpdate_EmitsAdversaryUpdated(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("action.adversary_updated") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "action.adversary_updated")
+	if evt.Type != event.Type("sys.daggerheart.action.adversary_updated") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.adversary_updated")
 	}
 	if evt.EntityType != "adversary" {
 		t.Fatalf("entity type = %s, want %s", evt.EntityType, "adversary")
@@ -1570,7 +1595,7 @@ func TestDecideAdversaryDelete_EmitsAdversaryDeleted(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("action.adversary.delete"),
+		Type:          command.Type("sys.daggerheart.action.adversary.delete"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -1587,8 +1612,8 @@ func TestDecideAdversaryDelete_EmitsAdversaryDeleted(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("action.adversary_deleted") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "action.adversary_deleted")
+	if evt.Type != event.Type("sys.daggerheart.action.adversary_deleted") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.adversary_deleted")
 	}
 	if evt.EntityType != "adversary" {
 		t.Fatalf("entity type = %s, want %s", evt.EntityType, "adversary")

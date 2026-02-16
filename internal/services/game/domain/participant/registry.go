@@ -63,6 +63,7 @@ func RegisterEvents(registry *event.Registry) error {
 	if err := registry.Register(event.Definition{
 		Type:            eventTypeJoined,
 		Owner:           event.OwnerCore,
+		Addressing:      event.AddressingPolicyEntityTarget,
 		ValidatePayload: validateJoinPayload,
 	}); err != nil {
 		return err
@@ -70,6 +71,7 @@ func RegisterEvents(registry *event.Registry) error {
 	if err := registry.Register(event.Definition{
 		Type:            eventTypeUpdated,
 		Owner:           event.OwnerCore,
+		Addressing:      event.AddressingPolicyEntityTarget,
 		ValidatePayload: validateUpdatePayload,
 	}); err != nil {
 		return err
@@ -77,6 +79,7 @@ func RegisterEvents(registry *event.Registry) error {
 	if err := registry.Register(event.Definition{
 		Type:            eventTypeLeft,
 		Owner:           event.OwnerCore,
+		Addressing:      event.AddressingPolicyEntityTarget,
 		ValidatePayload: validateLeavePayload,
 	}); err != nil {
 		return err
@@ -84,6 +87,7 @@ func RegisterEvents(registry *event.Registry) error {
 	if err := registry.Register(event.Definition{
 		Type:            eventTypeBound,
 		Owner:           event.OwnerCore,
+		Addressing:      event.AddressingPolicyEntityTarget,
 		ValidatePayload: validateBindPayload,
 	}); err != nil {
 		return err
@@ -91,6 +95,7 @@ func RegisterEvents(registry *event.Registry) error {
 	if err := registry.Register(event.Definition{
 		Type:            eventTypeUnbound,
 		Owner:           event.OwnerCore,
+		Addressing:      event.AddressingPolicyEntityTarget,
 		ValidatePayload: validateUnbindPayload,
 	}); err != nil {
 		return err
@@ -98,6 +103,7 @@ func RegisterEvents(registry *event.Registry) error {
 	return registry.Register(event.Definition{
 		Type:            eventTypeSeatReassigned,
 		Owner:           event.OwnerCore,
+		Addressing:      event.AddressingPolicyEntityTarget,
 		ValidatePayload: validateSeatReassignPayload,
 	})
 }

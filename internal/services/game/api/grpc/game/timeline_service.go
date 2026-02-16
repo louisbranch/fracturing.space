@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -198,7 +199,7 @@ func timelineEntryFromEvent(ctx context.Context, resolver *timelineProjectionRes
 
 func timelineChangeFields(evt event.Event) []*campaignv1.ProjectionField {
 	switch evt.Type {
-	case event.Type("action.character_state_patched"):
+	case event.Type("sys.daggerheart.action.character_state_patched"):
 		return daggerheartStateChangeFields(evt.PayloadJSON)
 	default:
 		return nil
@@ -345,8 +346,11 @@ func (r *timelineProjectionResolver) resolve(ctx context.Context, evt event.Even
 // lookupCampaign fetches campaign projection data, using cache when available.
 func (r *timelineProjectionResolver) lookupCampaign(ctx context.Context, campaignID string) (storage.CampaignRecord, bool, error) {
 	campaignID = strings.TrimSpace(campaignID)
-	if campaignID == "" || r.campaignStore == nil {
+	if campaignID == "" {
 		return storage.CampaignRecord{}, false, nil
+	}
+	if r.campaignStore == nil {
+		return storage.CampaignRecord{}, false, fmt.Errorf("campaign store is not configured")
 	}
 	if cached, ok := r.campaignCache[campaignID]; ok {
 		return cached, true, nil
@@ -366,8 +370,11 @@ func (r *timelineProjectionResolver) lookupCampaign(ctx context.Context, campaig
 func (r *timelineProjectionResolver) lookupParticipant(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, bool, error) {
 	campaignID = strings.TrimSpace(campaignID)
 	participantID = strings.TrimSpace(participantID)
-	if campaignID == "" || participantID == "" || r.participantStore == nil {
+	if campaignID == "" || participantID == "" {
 		return storage.ParticipantRecord{}, false, nil
+	}
+	if r.participantStore == nil {
+		return storage.ParticipantRecord{}, false, fmt.Errorf("participant store is not configured")
 	}
 	key := campaignID + ":" + participantID
 	if cached, ok := r.participantCache[key]; ok {
@@ -388,8 +395,11 @@ func (r *timelineProjectionResolver) lookupParticipant(ctx context.Context, camp
 func (r *timelineProjectionResolver) lookupCharacter(ctx context.Context, campaignID, characterID string) (storage.CharacterRecord, bool, error) {
 	campaignID = strings.TrimSpace(campaignID)
 	characterID = strings.TrimSpace(characterID)
-	if campaignID == "" || characterID == "" || r.characterStore == nil {
+	if campaignID == "" || characterID == "" {
 		return storage.CharacterRecord{}, false, nil
+	}
+	if r.characterStore == nil {
+		return storage.CharacterRecord{}, false, fmt.Errorf("character store is not configured")
 	}
 	key := campaignID + ":" + characterID
 	if cached, ok := r.characterCache[key]; ok {
@@ -410,8 +420,11 @@ func (r *timelineProjectionResolver) lookupCharacter(ctx context.Context, campai
 func (r *timelineProjectionResolver) lookupSession(ctx context.Context, campaignID, sessionID string) (storage.SessionRecord, bool, error) {
 	campaignID = strings.TrimSpace(campaignID)
 	sessionID = strings.TrimSpace(sessionID)
-	if campaignID == "" || sessionID == "" || r.sessionStore == nil {
+	if campaignID == "" || sessionID == "" {
 		return storage.SessionRecord{}, false, nil
+	}
+	if r.sessionStore == nil {
+		return storage.SessionRecord{}, false, fmt.Errorf("session store is not configured")
 	}
 	key := campaignID + ":" + sessionID
 	if cached, ok := r.sessionCache[key]; ok {

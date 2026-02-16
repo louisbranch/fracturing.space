@@ -116,6 +116,8 @@ func TestRegisterEvents_ValidatesActionPayloads(t *testing.T) {
 				Type:        event.Type("action.roll_resolved"),
 				Timestamp:   time.Unix(0, 0).UTC(),
 				ActorType:   event.ActorTypeSystem,
+				EntityType:  "roll",
+				EntityID:    "req-1",
 				PayloadJSON: []byte(`{"request_id":"req-1"}`),
 			},
 			invalid: event.Event{
@@ -123,6 +125,8 @@ func TestRegisterEvents_ValidatesActionPayloads(t *testing.T) {
 				Type:        event.Type("action.roll_resolved"),
 				Timestamp:   time.Unix(0, 0).UTC(),
 				ActorType:   event.ActorTypeSystem,
+				EntityType:  "roll",
+				EntityID:    "req-1",
 				PayloadJSON: []byte(`{"request_id":1}`),
 			},
 		},
@@ -133,6 +137,8 @@ func TestRegisterEvents_ValidatesActionPayloads(t *testing.T) {
 				Type:        event.Type("action.outcome_applied"),
 				Timestamp:   time.Unix(0, 0).UTC(),
 				ActorType:   event.ActorTypeSystem,
+				EntityType:  "outcome",
+				EntityID:    "req-1",
 				PayloadJSON: []byte(`{"request_id":"req-1"}`),
 			},
 			invalid: event.Event{
@@ -140,6 +146,8 @@ func TestRegisterEvents_ValidatesActionPayloads(t *testing.T) {
 				Type:        event.Type("action.outcome_applied"),
 				Timestamp:   time.Unix(0, 0).UTC(),
 				ActorType:   event.ActorTypeSystem,
+				EntityType:  "outcome",
+				EntityID:    "req-1",
 				PayloadJSON: []byte(`{"request_id":1}`),
 			},
 		},
@@ -150,6 +158,8 @@ func TestRegisterEvents_ValidatesActionPayloads(t *testing.T) {
 				Type:        event.Type("action.outcome_rejected"),
 				Timestamp:   time.Unix(0, 0).UTC(),
 				ActorType:   event.ActorTypeSystem,
+				EntityType:  "outcome",
+				EntityID:    "req-1",
 				PayloadJSON: []byte(`{"request_id":"req-1"}`),
 			},
 			invalid: event.Event{
@@ -157,6 +167,8 @@ func TestRegisterEvents_ValidatesActionPayloads(t *testing.T) {
 				Type:        event.Type("action.outcome_rejected"),
 				Timestamp:   time.Unix(0, 0).UTC(),
 				ActorType:   event.ActorTypeSystem,
+				EntityType:  "outcome",
+				EntityID:    "req-1",
 				PayloadJSON: []byte(`{"request_id":1}`),
 			},
 		},
@@ -168,6 +180,8 @@ func TestRegisterEvents_ValidatesActionPayloads(t *testing.T) {
 				Timestamp:   time.Unix(0, 0).UTC(),
 				ActorType:   event.ActorTypeParticipant,
 				ActorID:     "actor-1",
+				EntityType:  "note",
+				EntityID:    "note-1",
 				PayloadJSON: []byte(`{"content":"note"}`),
 			},
 			invalid: event.Event{
@@ -176,6 +190,8 @@ func TestRegisterEvents_ValidatesActionPayloads(t *testing.T) {
 				Timestamp:   time.Unix(0, 0).UTC(),
 				ActorType:   event.ActorTypeParticipant,
 				ActorID:     "actor-1",
+				EntityType:  "note",
+				EntityID:    "note-1",
 				PayloadJSON: []byte(`{"content":1}`),
 			},
 		},
@@ -194,5 +210,44 @@ func TestRegisterEvents_ValidatesActionPayloads(t *testing.T) {
 				t.Fatalf("expected payload validation error, got %v", err)
 			}
 		})
+	}
+}
+
+func TestRegisterEvents_RollResolvedRequiresEntityTargetAddressing(t *testing.T) {
+	registry := event.NewRegistry()
+	if err := RegisterEvents(registry); err != nil {
+		t.Fatalf("register events: %v", err)
+	}
+
+	base := event.Event{
+		CampaignID:  "camp-1",
+		Type:        event.Type("action.roll_resolved"),
+		Timestamp:   time.Unix(0, 0).UTC(),
+		ActorType:   event.ActorTypeSystem,
+		PayloadJSON: []byte(`{"request_id":"req-1"}`),
+	}
+
+	_, err := registry.ValidateForAppend(base)
+	if err == nil {
+		t.Fatal("expected missing entity type error")
+	}
+	if !errors.Is(err, event.ErrEntityTypeRequired) {
+		t.Fatalf("expected ErrEntityTypeRequired, got %v", err)
+	}
+
+	withType := base
+	withType.EntityType = "action"
+	_, err = registry.ValidateForAppend(withType)
+	if err == nil {
+		t.Fatal("expected missing entity id error")
+	}
+	if !errors.Is(err, event.ErrEntityIDRequired) {
+		t.Fatalf("expected ErrEntityIDRequired, got %v", err)
+	}
+
+	withTypeAndID := withType
+	withTypeAndID.EntityID = "req-1"
+	if _, err := registry.ValidateForAppend(withTypeAndID); err != nil {
+		t.Fatalf("valid addressed event rejected: %v", err)
 	}
 }

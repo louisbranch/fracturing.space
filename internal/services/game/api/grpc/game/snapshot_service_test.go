@@ -382,10 +382,10 @@ func TestPatchCharacterState_Success(t *testing.T) {
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.character_state.patch"): {
+		command.Type("sys.daggerheart.action.character_state.patch"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "c1",
-				Type:          event.Type("action.character_state_patched"),
+				Type:          event.Type("sys.daggerheart.action.character_state_patched"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				EntityType:    "character",
@@ -437,8 +437,8 @@ func TestPatchCharacterState_Success(t *testing.T) {
 	if len(eventStore.events["c1"]) != 1 {
 		t.Fatalf("expected 1 event, got %d", len(eventStore.events["c1"]))
 	}
-	if eventStore.events["c1"][0].Type != event.Type("action.character_state_patched") {
-		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, "action.character_state_patched")
+	if eventStore.events["c1"][0].Type != event.Type("sys.daggerheart.action.character_state_patched") {
+		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, "sys.daggerheart.action.character_state_patched")
 	}
 }
 
@@ -477,10 +477,10 @@ func TestPatchCharacterState_SetToZero(t *testing.T) {
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.character_state.patch"): {
+		command.Type("sys.daggerheart.action.character_state.patch"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "c1",
-				Type:          event.Type("action.character_state_patched"),
+				Type:          event.Type("sys.daggerheart.action.character_state_patched"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				EntityType:    "character",
@@ -631,10 +631,10 @@ func TestUpdateSnapshotState_Success(t *testing.T) {
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.gm_fear.set"): {
+		command.Type("sys.daggerheart.action.gm_fear.set"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "c1",
-				Type:          event.Type("action.gm_fear_changed"),
+				Type:          event.Type("sys.daggerheart.action.gm_fear_changed"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				EntityType:    "campaign",
@@ -678,8 +678,8 @@ func TestUpdateSnapshotState_Success(t *testing.T) {
 	if len(eventStore.events["c1"]) != 1 {
 		t.Fatalf("expected 1 event, got %d", len(eventStore.events["c1"]))
 	}
-	if eventStore.events["c1"][0].Type != event.Type("action.gm_fear_changed") {
-		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, "action.gm_fear_changed")
+	if eventStore.events["c1"][0].Type != event.Type("sys.daggerheart.action.gm_fear_changed") {
+		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, "sys.daggerheart.action.gm_fear_changed")
 	}
 }
 
@@ -698,10 +698,10 @@ func TestUpdateSnapshotState_UpdateExisting(t *testing.T) {
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.gm_fear.set"): {
+		command.Type("sys.daggerheart.action.gm_fear.set"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "c1",
-				Type:          event.Type("action.gm_fear_changed"),
+				Type:          event.Type("sys.daggerheart.action.gm_fear_changed"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				EntityType:    "campaign",
@@ -755,10 +755,10 @@ func TestUpdateSnapshotState_SetToZero(t *testing.T) {
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.gm_fear.set"): {
+		command.Type("sys.daggerheart.action.gm_fear.set"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "c1",
-				Type:          event.Type("action.gm_fear_changed"),
+				Type:          event.Type("sys.daggerheart.action.gm_fear_changed"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				EntityType:    "campaign",
@@ -805,10 +805,10 @@ func TestUpdateSnapshotState_UsesDomainEngine(t *testing.T) {
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.gm_fear.set"): {
+		command.Type("sys.daggerheart.action.gm_fear.set"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "c1",
-				Type:          event.Type("action.gm_fear_changed"),
+				Type:          event.Type("sys.daggerheart.action.gm_fear_changed"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				EntityType:    "campaign",
@@ -842,8 +842,8 @@ func TestUpdateSnapshotState_UsesDomainEngine(t *testing.T) {
 	if len(domain.commands) != 1 {
 		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
 	}
-	if domain.commands[0].Type != command.Type("action.gm_fear.set") {
-		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "action.gm_fear.set")
+	if domain.commands[0].Type != command.Type("sys.daggerheart.action.gm_fear.set") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "sys.daggerheart.action.gm_fear.set")
 	}
 }
 
@@ -882,10 +882,10 @@ func TestPatchCharacterState_UsesDomainEngine(t *testing.T) {
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.character_state.patch"): {
+		command.Type("sys.daggerheart.action.character_state.patch"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "c1",
-				Type:          event.Type("action.character_state_patched"),
+				Type:          event.Type("sys.daggerheart.action.character_state_patched"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				EntityType:    "character",
@@ -920,7 +920,7 @@ func TestPatchCharacterState_UsesDomainEngine(t *testing.T) {
 	if len(domain.commands) != 1 {
 		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
 	}
-	if domain.commands[0].Type != command.Type("action.character_state.patch") {
-		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "action.character_state.patch")
+	if domain.commands[0].Type != command.Type("sys.daggerheart.action.character_state.patch") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "sys.daggerheart.action.character_state.patch")
 	}
 }

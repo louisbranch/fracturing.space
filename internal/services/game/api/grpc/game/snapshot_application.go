@@ -183,7 +183,7 @@ func (a snapshotApplication) PatchCharacterState(ctx context.Context, campaignID
 		}
 		result, err := a.stores.Domain.Execute(ctx, command.Command{
 			CampaignID:    campaignID,
-			Type:          command.Type("action.character_state.patch"),
+			Type:          command.Type("sys.daggerheart.action.character_state.patch"),
 			ActorType:     actorTypeForCommand,
 			ActorID:       actorID,
 			SessionID:     grpcmeta.SessionIDFromContext(ctx),
@@ -251,7 +251,7 @@ func (a snapshotApplication) PatchCharacterState(ctx context.Context, campaignID
 				}
 				result, err := a.stores.Domain.Execute(ctx, command.Command{
 					CampaignID:    campaignID,
-					Type:          command.Type("action.condition.change"),
+					Type:          command.Type("sys.daggerheart.action.condition.change"),
 					ActorType:     actorTypeForCommand,
 					ActorID:       actorID,
 					SessionID:     grpcmeta.SessionIDFromContext(ctx),
@@ -324,7 +324,7 @@ func (a snapshotApplication) UpdateSnapshotState(ctx context.Context, campaignID
 		}
 		result, err := a.stores.Domain.Execute(ctx, command.Command{
 			CampaignID:    campaignID,
-			Type:          command.Type("action.gm_fear.set"),
+			Type:          command.Type("sys.daggerheart.action.gm_fear.set"),
 			ActorType:     actorTypeForCommand,
 			ActorID:       actorID,
 			SessionID:     grpcmeta.SessionIDFromContext(ctx),
@@ -452,7 +452,7 @@ func applyStressVulnerableCondition(
 	}
 	result, err := stores.Domain.Execute(ctx, command.Command{
 		CampaignID:    campaignID,
-		Type:          command.Type("action.condition.change"),
+		Type:          command.Type("sys.daggerheart.action.condition.change"),
 		ActorType:     actorTypeForCommand,
 		ActorID:       actorID,
 		SessionID:     sessionID,

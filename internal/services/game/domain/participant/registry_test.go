@@ -51,6 +51,8 @@ func TestRegisterEvents_ValidatesJoinedPayload(t *testing.T) {
 		Type:        event.Type("participant.joined"),
 		Timestamp:   time.Unix(0, 0).UTC(),
 		ActorType:   event.ActorTypeSystem,
+		EntityType:  "participant",
+		EntityID:    "p-1",
 		PayloadJSON: []byte(`{"participant_id":"p-1","display_name":"Alice","role":"PLAYER"}`),
 	}
 	if _, err := registry.ValidateForAppend(validEvent); err != nil {
@@ -65,6 +67,45 @@ func TestRegisterEvents_ValidatesJoinedPayload(t *testing.T) {
 	}
 	if errors.Is(err, event.ErrTypeUnknown) {
 		t.Fatalf("expected payload validation error, got %v", err)
+	}
+}
+
+func TestRegisterEvents_JoinedRequiresEntityTargetAddressing(t *testing.T) {
+	registry := event.NewRegistry()
+	if err := RegisterEvents(registry); err != nil {
+		t.Fatalf("register events: %v", err)
+	}
+
+	base := event.Event{
+		CampaignID:  "camp-1",
+		Type:        event.Type("participant.joined"),
+		Timestamp:   time.Unix(0, 0).UTC(),
+		ActorType:   event.ActorTypeSystem,
+		PayloadJSON: []byte(`{"participant_id":"p-1","display_name":"Alice","role":"PLAYER"}`),
+	}
+
+	_, err := registry.ValidateForAppend(base)
+	if err == nil {
+		t.Fatal("expected missing entity type error")
+	}
+	if !errors.Is(err, event.ErrEntityTypeRequired) {
+		t.Fatalf("expected ErrEntityTypeRequired, got %v", err)
+	}
+
+	withType := base
+	withType.EntityType = "participant"
+	_, err = registry.ValidateForAppend(withType)
+	if err == nil {
+		t.Fatal("expected missing entity id error")
+	}
+	if !errors.Is(err, event.ErrEntityIDRequired) {
+		t.Fatalf("expected ErrEntityIDRequired, got %v", err)
+	}
+
+	withTypeAndID := withType
+	withTypeAndID.EntityID = "p-1"
+	if _, err := registry.ValidateForAppend(withTypeAndID); err != nil {
+		t.Fatalf("valid addressed event rejected: %v", err)
 	}
 }
 
@@ -110,6 +151,8 @@ func TestRegisterEvents_ValidatesUpdatedPayload(t *testing.T) {
 		Type:        event.Type("participant.updated"),
 		Timestamp:   time.Unix(0, 0).UTC(),
 		ActorType:   event.ActorTypeSystem,
+		EntityType:  "participant",
+		EntityID:    "p-1",
 		PayloadJSON: []byte(`{"participant_id":"p-1","fields":{"display_name":"Alice"}}`),
 	}
 	if _, err := registry.ValidateForAppend(validEvent); err != nil {
@@ -169,6 +212,8 @@ func TestRegisterEvents_ValidatesLeftPayload(t *testing.T) {
 		Type:        event.Type("participant.left"),
 		Timestamp:   time.Unix(0, 0).UTC(),
 		ActorType:   event.ActorTypeSystem,
+		EntityType:  "participant",
+		EntityID:    "p-1",
 		PayloadJSON: []byte(`{"participant_id":"p-1"}`),
 	}
 	if _, err := registry.ValidateForAppend(validEvent); err != nil {
@@ -228,6 +273,8 @@ func TestRegisterEvents_ValidatesBoundPayload(t *testing.T) {
 		Type:        event.Type("participant.bound"),
 		Timestamp:   time.Unix(0, 0).UTC(),
 		ActorType:   event.ActorTypeSystem,
+		EntityType:  "participant",
+		EntityID:    "p-1",
 		PayloadJSON: []byte(`{"participant_id":"p-1","user_id":"u-1"}`),
 	}
 	if _, err := registry.ValidateForAppend(validEvent); err != nil {
@@ -287,6 +334,8 @@ func TestRegisterEvents_ValidatesUnboundPayload(t *testing.T) {
 		Type:        event.Type("participant.unbound"),
 		Timestamp:   time.Unix(0, 0).UTC(),
 		ActorType:   event.ActorTypeSystem,
+		EntityType:  "participant",
+		EntityID:    "p-1",
 		PayloadJSON: []byte(`{"participant_id":"p-1"}`),
 	}
 	if _, err := registry.ValidateForAppend(validEvent); err != nil {
@@ -346,6 +395,8 @@ func TestRegisterEvents_ValidatesSeatReassignedPayload(t *testing.T) {
 		Type:        event.Type("seat.reassigned"),
 		Timestamp:   time.Unix(0, 0).UTC(),
 		ActorType:   event.ActorTypeSystem,
+		EntityType:  "participant",
+		EntityID:    "p-1",
 		PayloadJSON: []byte(`{"participant_id":"p-1","user_id":"u-2"}`),
 	}
 	if _, err := registry.ValidateForAppend(validEvent); err != nil {

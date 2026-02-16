@@ -33,10 +33,30 @@ func RegisterEvents(registry *event.Registry) error {
 		return errors.New("event registry is required")
 	}
 	definitions := []event.Definition{
-		{Type: eventTypeRollResolved, Owner: event.OwnerCore, ValidatePayload: validateRollResolvePayload},
-		{Type: eventTypeOutcomeApplied, Owner: event.OwnerCore, ValidatePayload: validateOutcomeApplyPayload},
-		{Type: eventTypeOutcomeRejected, Owner: event.OwnerCore, ValidatePayload: validateOutcomeRejectPayload},
-		{Type: eventTypeNoteAdded, Owner: event.OwnerCore, ValidatePayload: validateNoteAddPayload},
+		{
+			Type:            eventTypeRollResolved,
+			Owner:           event.OwnerCore,
+			Addressing:      event.AddressingPolicyEntityTarget,
+			ValidatePayload: validateRollResolvePayload,
+		},
+		{
+			Type:            eventTypeOutcomeApplied,
+			Owner:           event.OwnerCore,
+			Addressing:      event.AddressingPolicyEntityTarget,
+			ValidatePayload: validateOutcomeApplyPayload,
+		},
+		{
+			Type:            eventTypeOutcomeRejected,
+			Owner:           event.OwnerCore,
+			Addressing:      event.AddressingPolicyEntityTarget,
+			ValidatePayload: validateOutcomeRejectPayload,
+		},
+		{
+			Type:            eventTypeNoteAdded,
+			Owner:           event.OwnerCore,
+			Addressing:      event.AddressingPolicyEntityTarget,
+			ValidatePayload: validateNoteAddPayload,
+		},
 	}
 	for _, definition := range definitions {
 		if err := registry.Register(definition); err != nil {

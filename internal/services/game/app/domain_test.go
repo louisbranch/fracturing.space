@@ -1,6 +1,7 @@
 package server
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -76,5 +77,42 @@ func TestCoreDeciderRejectsUnsupportedCommandType(t *testing.T) {
 	}
 	if decision.Rejections[0].Code != "COMMAND_TYPE_UNSUPPORTED" {
 		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, "COMMAND_TYPE_UNSUPPORTED")
+	}
+}
+
+func TestBuildCoreRouteTable_RejectsMissingCoreRoute(t *testing.T) {
+	definitions := []command.Definition{
+		{Type: command.Type("campaign.create"), Owner: command.OwnerCore},
+		{Type: command.Type("story.note.add"), Owner: command.OwnerCore},
+	}
+
+	_, err := buildCoreRouteTable(definitions)
+	if err == nil {
+		t.Fatal("expected error for missing core route")
+	}
+	if !strings.Contains(err.Error(), "story.note.add") {
+		t.Fatalf("expected missing command type in error, got %v", err)
+	}
+}
+
+func TestBuildCoreRouteTable_IncludesRegisteredCoreRoutes(t *testing.T) {
+	definitions := []command.Definition{
+		{Type: command.Type("campaign.create"), Owner: command.OwnerCore},
+		{Type: command.Type("action.roll.resolve"), Owner: command.OwnerCore},
+		{Type: command.Type("sys.alpha.action.attack.resolve"), Owner: command.OwnerSystem},
+	}
+
+	routes, err := buildCoreRouteTable(definitions)
+	if err != nil {
+		t.Fatalf("build core route table: %v", err)
+	}
+	if _, ok := routes[command.Type("campaign.create")]; !ok {
+		t.Fatal("expected campaign.create route")
+	}
+	if _, ok := routes[command.Type("action.roll.resolve")]; !ok {
+		t.Fatal("expected action.roll.resolve route")
+	}
+	if _, ok := routes[command.Type("sys.alpha.action.attack.resolve")]; ok {
+		t.Fatal("did not expect system command route in core table")
 	}
 }

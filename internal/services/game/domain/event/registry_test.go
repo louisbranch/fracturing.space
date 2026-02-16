@@ -33,6 +33,93 @@ func TestRegistryValidateForAppend_SystemEventRequiresSystemMetadata(t *testing.
 	}
 }
 
+func TestRegistryValidateForAppend_SystemEventRequiresEntityAddressing(t *testing.T) {
+	registry := NewRegistry()
+	if err := registry.Register(Definition{
+		Type:  Type("action.system_test"),
+		Owner: OwnerSystem,
+	}); err != nil {
+		t.Fatalf("register type: %v", err)
+	}
+
+	base := Event{
+		CampaignID:    "camp-1",
+		Type:          Type("action.system_test"),
+		Timestamp:     time.Unix(0, 0).UTC(),
+		ActorType:     ActorTypeSystem,
+		SystemID:      "sys-1",
+		SystemVersion: "1.0.0",
+		PayloadJSON:   []byte("{}"),
+	}
+
+	_, err := registry.ValidateForAppend(base)
+	if err == nil {
+		t.Fatal("expected missing entity type error")
+	}
+	if !errors.Is(err, ErrEntityTypeRequired) {
+		t.Fatalf("expected ErrEntityTypeRequired, got %v", err)
+	}
+
+	withType := base
+	withType.EntityType = "action"
+	_, err = registry.ValidateForAppend(withType)
+	if err == nil {
+		t.Fatal("expected missing entity id error")
+	}
+	if !errors.Is(err, ErrEntityIDRequired) {
+		t.Fatalf("expected ErrEntityIDRequired, got %v", err)
+	}
+
+	withTypeAndID := withType
+	withTypeAndID.EntityID = "req-1"
+	if _, err := registry.ValidateForAppend(withTypeAndID); err != nil {
+		t.Fatalf("valid system event rejected: %v", err)
+	}
+}
+
+func TestRegistryValidateForAppend_DefinitionAddressingPolicy(t *testing.T) {
+	registry := NewRegistry()
+	if err := registry.Register(Definition{
+		Type:       Type("campaign.created"),
+		Owner:      OwnerCore,
+		Addressing: AddressingPolicyEntityTarget,
+	}); err != nil {
+		t.Fatalf("register type: %v", err)
+	}
+
+	base := Event{
+		CampaignID:  "camp-1",
+		Type:        Type("campaign.created"),
+		Timestamp:   time.Unix(0, 0).UTC(),
+		ActorType:   ActorTypeSystem,
+		PayloadJSON: []byte("{}"),
+	}
+
+	_, err := registry.ValidateForAppend(base)
+	if err == nil {
+		t.Fatal("expected missing entity type error")
+	}
+	if !errors.Is(err, ErrEntityTypeRequired) {
+		t.Fatalf("expected ErrEntityTypeRequired, got %v", err)
+	}
+
+	withType := base
+	withType.EntityType = "campaign"
+	_, err = registry.ValidateForAppend(withType)
+	if err == nil {
+		t.Fatal("expected missing entity id error")
+	}
+	if !errors.Is(err, ErrEntityIDRequired) {
+		t.Fatalf("expected ErrEntityIDRequired, got %v", err)
+	}
+
+	withTypeAndID := withType
+	withTypeAndID.EntityID = "camp-1"
+	if _, err := registry.ValidateForAppend(withTypeAndID); err != nil {
+		t.Fatalf("valid addressed event rejected: %v", err)
+	}
+}
+
 func TestRegistryValidateForAppend_CanonicalizesPayloadJSON(t *testing.T) {
 	registry := NewRegistry()
 	if err := registry.Register(Definition{

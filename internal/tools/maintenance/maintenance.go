@@ -26,18 +26,26 @@ const adminReplayPageSize = 200
 
 // Config holds maintenance command configuration.
 type Config struct {
-	CampaignID        string
-	CampaignIDs       string
-	EventsDBPath      string        `env:"FRACTURING_SPACE_GAME_EVENTS_DB_PATH"`
-	ProjectionsDBPath string        `env:"FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH"`
-	Timeout           time.Duration `env:"FRACTURING_SPACE_MAINTENANCE_TIMEOUT" envDefault:"10m"`
-	UntilSeq          uint64
-	AfterSeq          uint64
-	DryRun            bool
-	Validate          bool
-	Integrity         bool
-	WarningsCap       int
-	JSONOutput        bool
+	CampaignID              string
+	CampaignIDs             string
+	EventsDBPath            string        `env:"FRACTURING_SPACE_GAME_EVENTS_DB_PATH"`
+	ProjectionsDBPath       string        `env:"FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH"`
+	Timeout                 time.Duration `env:"FRACTURING_SPACE_MAINTENANCE_TIMEOUT" envDefault:"10m"`
+	UntilSeq                uint64
+	AfterSeq                uint64
+	DryRun                  bool
+	Validate                bool
+	Integrity               bool
+	WarningsCap             int
+	JSONOutput              bool
+	OutboxReport            bool
+	OutboxStatus            string
+	OutboxLimit             int
+	OutboxRequeue           bool
+	OutboxRequeueDead       bool
+	OutboxRequeueDeadLimit  int
+	OutboxRequeueCampaignID string
+	OutboxRequeueSeq        uint64
 }
 
 type envConfig struct {
@@ -58,6 +66,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 		ProjectionsDBPath: envCfg.ProjectionsDBPath,
 		Timeout:           envCfg.Timeout,
 		WarningsCap:       25,
+		OutboxLimit:       50,
 	}
 	if cfg.EventsDBPath == "" {
 		cfg.EventsDBPath = filepath.Join("data", "game-events.db")
@@ -77,6 +86,14 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	fs.BoolVar(&cfg.Integrity, "integrity", false, "replay snapshot-related events into a scratch store and compare against stored projections")
 	fs.IntVar(&cfg.WarningsCap, "warnings-cap", cfg.WarningsCap, "max warnings to print (0 = no limit)")
 	fs.BoolVar(&cfg.JSONOutput, "json", false, "output JSON reports")
+	fs.BoolVar(&cfg.OutboxReport, "outbox-report", false, "report projection apply outbox depth and rows")
+	fs.StringVar(&cfg.OutboxStatus, "outbox-status", "", "optional outbox status filter (pending|processing|failed|dead)")
+	fs.IntVar(&cfg.OutboxLimit, "outbox-limit", cfg.OutboxLimit, "max outbox rows to print/list")
+	fs.BoolVar(&cfg.OutboxRequeue, "outbox-requeue", false, "requeue one dead projection apply outbox row")
+	fs.BoolVar(&cfg.OutboxRequeueDead, "outbox-requeue-dead", false, "requeue a bounded batch of dead projection apply outbox rows")
+	fs.IntVar(&cfg.OutboxRequeueDeadLimit, "outbox-requeue-dead-limit", 0, "max dead outbox rows to requeue (required with -outbox-requeue-dead)")
+	fs.StringVar(&cfg.OutboxRequeueCampaignID, "outbox-requeue-campaign-id", "", "campaign id for outbox requeue")
+	fs.Uint64Var(&cfg.OutboxRequeueSeq, "outbox-requeue-seq", 0, "event sequence for outbox requeue")
 	fs.DurationVar(&cfg.Timeout, "timeout", cfg.Timeout, "overall timeout")
 	if err := fs.Parse(args); err != nil {
 		return Config{}, err
@@ -95,6 +112,104 @@ func Run(ctx context.Context, cfg Config, out io.Writer, errOut io.Writer) error
 
 	if cfg.Validate {
 		cfg.DryRun = true
+	}
+	if cfg.OutboxRequeueDead {
+		if cfg.OutboxRequeue {
+			return errors.New("-outbox-requeue-dead cannot be combined with -outbox-requeue")
+		}
+		if cfg.OutboxReport {
+			return errors.New("-outbox-requeue-dead cannot be combined with -outbox-report")
+		}
+		if cfg.CampaignID != "" || cfg.CampaignIDs != "" {
+			return errors.New("-outbox-requeue-dead cannot be combined with -campaign-id or -campaign-ids")
+		}
+		if cfg.DryRun || cfg.Validate || cfg.Integrity || cfg.AfterSeq > 0 || cfg.UntilSeq > 0 {
+			return errors.New("-outbox-requeue-dead cannot be combined with replay/scan flags")
+		}
+		if cfg.OutboxRequeueDeadLimit <= 0 {
+			return errors.New("-outbox-requeue-dead-limit must be > 0")
+		}
+		if strings.TrimSpace(cfg.OutboxRequeueCampaignID) != "" || cfg.OutboxRequeueSeq > 0 {
+			return errors.New("-outbox-requeue-dead cannot be combined with -outbox-requeue-campaign-id or -outbox-requeue-seq")
+		}
+
+		eventStore, err := openEventStore(ctx, cfg.EventsDBPath)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			if closeErr := eventStore.Close(); closeErr != nil {
+				fmt.Fprintf(errOut, "Error: close event store: %v\n", closeErr)
+			}
+		}()
+		return runOutboxRequeueDeadRows(
+			ctx,
+			eventStore,
+			cfg.OutboxRequeueDeadLimit,
+			time.Now().UTC(),
+			cfg.JSONOutput,
+			out,
+			errOut,
+		)
+	}
+	if cfg.OutboxRequeue {
+		if cfg.OutboxReport {
+			return errors.New("-outbox-requeue cannot be combined with -outbox-report")
+		}
+		if cfg.CampaignID != "" || cfg.CampaignIDs != "" {
+			return errors.New("-outbox-requeue cannot be combined with -campaign-id or -campaign-ids")
+		}
+		if cfg.DryRun || cfg.Validate || cfg.Integrity || cfg.AfterSeq > 0 || cfg.UntilSeq > 0 {
+			return errors.New("-outbox-requeue cannot be combined with replay/scan flags")
+		}
+		if strings.TrimSpace(cfg.OutboxRequeueCampaignID) == "" {
+			return errors.New("-outbox-requeue-campaign-id is required")
+		}
+		if cfg.OutboxRequeueSeq == 0 {
+			return errors.New("-outbox-requeue-seq must be > 0")
+		}
+
+		eventStore, err := openEventStore(ctx, cfg.EventsDBPath)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			if closeErr := eventStore.Close(); closeErr != nil {
+				fmt.Fprintf(errOut, "Error: close event store: %v\n", closeErr)
+			}
+		}()
+		return runOutboxRequeue(
+			ctx,
+			eventStore,
+			cfg.OutboxRequeueCampaignID,
+			cfg.OutboxRequeueSeq,
+			time.Now().UTC(),
+			cfg.JSONOutput,
+			out,
+			errOut,
+		)
+	}
+	if cfg.OutboxReport {
+		if cfg.CampaignID != "" || cfg.CampaignIDs != "" {
+			return errors.New("-outbox-report cannot be combined with -campaign-id or -campaign-ids")
+		}
+		if cfg.DryRun || cfg.Validate || cfg.Integrity || cfg.AfterSeq > 0 || cfg.UntilSeq > 0 {
+			return errors.New("-outbox-report cannot be combined with replay/scan flags")
+		}
+		if cfg.OutboxLimit <= 0 {
+			return errors.New("-outbox-limit must be > 0")
+		}
+
+		eventStore, err := openEventStore(ctx, cfg.EventsDBPath)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			if closeErr := eventStore.Close(); closeErr != nil {
+				fmt.Fprintf(errOut, "Error: close event store: %v\n", closeErr)
+			}
+		}()
+		return runOutboxReport(ctx, eventStore, cfg.OutboxStatus, cfg.OutboxLimit, cfg.JSONOutput, out, errOut)
 	}
 	if cfg.Integrity && (cfg.DryRun || cfg.Validate) {
 		return errors.New("-integrity cannot be combined with -dry-run or -validate")
@@ -402,6 +517,230 @@ func openStores(ctx context.Context, eventsPath, projectionsPath string) (*sqlit
 		return nil, nil, err
 	}
 	return eventStore, projStore, nil
+}
+
+type outboxInspector interface {
+	GetProjectionApplyOutboxSummary(context.Context) (sqlite.ProjectionApplyOutboxSummary, error)
+	ListProjectionApplyOutboxRows(context.Context, string, int) ([]sqlite.ProjectionApplyOutboxEntry, error)
+}
+
+type outboxRequeuer interface {
+	RequeueProjectionApplyOutboxRow(context.Context, string, uint64, time.Time) (bool, error)
+	RequeueProjectionApplyOutboxDeadRows(context.Context, int, time.Time) (int, error)
+}
+
+type outboxReport struct {
+	Mode    string                              `json:"mode"`
+	Status  string                              `json:"status,omitempty"`
+	Limit   int                                 `json:"limit"`
+	Summary sqlite.ProjectionApplyOutboxSummary `json:"summary"`
+	Rows    []sqlite.ProjectionApplyOutboxEntry `json:"rows"`
+}
+
+type outboxRequeueResult struct {
+	Mode       string `json:"mode"`
+	CampaignID string `json:"campaign_id"`
+	Seq        uint64 `json:"seq"`
+	Requeued   bool   `json:"requeued"`
+}
+
+type outboxRequeueDeadResult struct {
+	Mode     string `json:"mode"`
+	Limit    int    `json:"limit"`
+	Requeued int    `json:"requeued"`
+}
+
+func runOutboxReport(
+	ctx context.Context,
+	inspector outboxInspector,
+	status string,
+	limit int,
+	jsonOutput bool,
+	out io.Writer,
+	errOut io.Writer,
+) error {
+	if out == nil {
+		out = io.Discard
+	}
+	if errOut == nil {
+		errOut = io.Discard
+	}
+	if inspector == nil {
+		return fmt.Errorf("outbox inspector is not configured")
+	}
+	if limit <= 0 {
+		return fmt.Errorf("outbox limit must be > 0")
+	}
+
+	summary, err := inspector.GetProjectionApplyOutboxSummary(ctx)
+	if err != nil {
+		return fmt.Errorf("read outbox summary: %w", err)
+	}
+	rows, err := inspector.ListProjectionApplyOutboxRows(ctx, status, limit)
+	if err != nil {
+		return fmt.Errorf("list outbox rows: %w", err)
+	}
+
+	if jsonOutput {
+		report := outboxReport{
+			Mode:    "outbox",
+			Status:  strings.TrimSpace(status),
+			Limit:   limit,
+			Summary: summary,
+			Rows:    rows,
+		}
+		encoded, err := json.Marshal(report)
+		if err != nil {
+			return fmt.Errorf("encode outbox report: %w", err)
+		}
+		fmt.Fprintln(out, string(encoded))
+		return nil
+	}
+
+	fmt.Fprintf(
+		out,
+		"Outbox summary: pending=%d processing=%d failed=%d dead=%d\n",
+		summary.PendingCount,
+		summary.ProcessingCount,
+		summary.FailedCount,
+		summary.DeadCount,
+	)
+	if summary.OldestPendingCampaignID == "" || summary.OldestPendingSeq == 0 || summary.OldestPendingAt.IsZero() {
+		fmt.Fprintln(out, "Oldest pending/failed row: none")
+	} else {
+		fmt.Fprintf(
+			out,
+			"Oldest pending/failed row: %s/%d next_attempt_at=%s\n",
+			summary.OldestPendingCampaignID,
+			summary.OldestPendingSeq,
+			summary.OldestPendingAt.Format(time.RFC3339),
+		)
+	}
+	filter := strings.TrimSpace(status)
+	if filter == "" {
+		fmt.Fprintf(out, "Rows (all statuses, limit=%d):\n", limit)
+	} else {
+		fmt.Fprintf(out, "Rows (status=%s, limit=%d):\n", filter, limit)
+	}
+	for _, row := range rows {
+		fmt.Fprintf(
+			out,
+			"- %s/%d status=%s attempts=%d next_attempt_at=%s type=%s\n",
+			row.CampaignID,
+			row.Seq,
+			row.Status,
+			row.AttemptCount,
+			row.NextAttemptAt.Format(time.RFC3339),
+			row.EventType,
+		)
+		if strings.TrimSpace(row.LastError) != "" {
+			fmt.Fprintf(out, "  last_error=%s\n", row.LastError)
+		}
+	}
+	return nil
+}
+
+func runOutboxRequeue(
+	ctx context.Context,
+	requeuer outboxRequeuer,
+	campaignID string,
+	seq uint64,
+	now time.Time,
+	jsonOutput bool,
+	out io.Writer,
+	errOut io.Writer,
+) error {
+	if out == nil {
+		out = io.Discard
+	}
+	if errOut == nil {
+		errOut = io.Discard
+	}
+	if requeuer == nil {
+		return fmt.Errorf("outbox requeuer is not configured")
+	}
+	campaignID = strings.TrimSpace(campaignID)
+	if campaignID == "" {
+		return fmt.Errorf("campaign id is required")
+	}
+	if seq == 0 {
+		return fmt.Errorf("event sequence must be greater than zero")
+	}
+	if now.IsZero() {
+		now = time.Now().UTC()
+	}
+
+	requeued, err := requeuer.RequeueProjectionApplyOutboxRow(ctx, campaignID, seq, now)
+	if err != nil {
+		return fmt.Errorf("requeue outbox row: %w", err)
+	}
+	if !requeued {
+		return fmt.Errorf("dead outbox row not found for %s/%d", campaignID, seq)
+	}
+
+	if jsonOutput {
+		payload, err := json.Marshal(outboxRequeueResult{
+			Mode:       "outbox-requeue",
+			CampaignID: campaignID,
+			Seq:        seq,
+			Requeued:   true,
+		})
+		if err != nil {
+			return fmt.Errorf("encode outbox requeue report: %w", err)
+		}
+		fmt.Fprintln(out, string(payload))
+		return nil
+	}
+
+	fmt.Fprintf(out, "Requeued outbox row: %s/%d\n", campaignID, seq)
+	return nil
+}
+
+func runOutboxRequeueDeadRows(
+	ctx context.Context,
+	requeuer outboxRequeuer,
+	limit int,
+	now time.Time,
+	jsonOutput bool,
+	out io.Writer,
+	errOut io.Writer,
+) error {
+	if out == nil {
+		out = io.Discard
+	}
+	if errOut == nil {
+		errOut = io.Discard
+	}
+	if requeuer == nil {
+		return fmt.Errorf("outbox requeuer is not configured")
+	}
+	if limit <= 0 {
+		return fmt.Errorf("outbox requeue limit must be > 0")
+	}
+	if now.IsZero() {
+		now = time.Now().UTC()
+	}
+
+	requeued, err := requeuer.RequeueProjectionApplyOutboxDeadRows(ctx, limit, now)
+	if err != nil {
+		return fmt.Errorf("requeue dead outbox rows: %w", err)
+	}
+
+	if jsonOutput {
+		payload, err := json.Marshal(outboxRequeueDeadResult{
+			Mode:     "outbox-requeue-dead",
+			Limit:    limit,
+			Requeued: requeued,
+		})
+		if err != nil {
+			return fmt.Errorf("encode outbox dead requeue report: %w", err)
+		}
+		fmt.Fprintln(out, string(payload))
+		return nil
+	}
+
+	fmt.Fprintf(out, "Requeued dead outbox rows: %d (limit=%d)\n", requeued, limit)
+	return nil
 }
 
 // buildEventRegistry constructs the v2 event registry for validation.

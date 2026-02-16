@@ -19,7 +19,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/system"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -42,9 +41,13 @@ func buildDomainEngine(eventStore storage.EventStore) (gamegrpc.Domain, error) {
 	if eventStore == nil {
 		return nil, errors.New("event store is required")
 	}
-	registries, err := engine.BuildRegistries(daggerheart.NewModule())
+	registries, err := engine.BuildRegistries(registeredSystemModules()...)
 	if err != nil {
 		return nil, fmt.Errorf("build registries: %w", err)
+	}
+	routes, err := buildCoreRouteTable(registries.Commands.ListDefinitions())
+	if err != nil {
+		return nil, fmt.Errorf("build core command routes: %w", err)
 	}
 
 	checkpoints := checkpoint.NewMemory()
@@ -65,13 +68,92 @@ func buildDomainEngine(eventStore storage.EventStore) (gamegrpc.Domain, error) {
 		Gate:            engine.DecisionGate{Registry: registries.Commands},
 		GateStateLoader: engine.ReplayGateStateLoader{StateLoader: stateLoader},
 		StateLoader:     stateLoader,
-		Decider:         coreDecider{Systems: registries.Systems},
+		Decider:         coreDecider{Systems: registries.Systems, routes: routes},
 		Applier:         applier,
 	}, nil
 }
 
 type coreDecider struct {
 	Systems *system.Registry
+	routes  map[command.Type]coreCommandRoute
+}
+
+type coreCommandRoute func(d coreDecider, current aggregate.State, cmd command.Command, now func() time.Time) command.Decision
+
+func campaignRoute(_ coreDecider, current aggregate.State, cmd command.Command, now func() time.Time) command.Decision {
+	return campaign.Decide(current.Campaign, cmd, now)
+}
+
+func actionRoute(_ coreDecider, _ aggregate.State, cmd command.Command, now func() time.Time) command.Decision {
+	return action.Decide(action.State{}, cmd, now)
+}
+
+func sessionRoute(_ coreDecider, current aggregate.State, cmd command.Command, now func() time.Time) command.Decision {
+	return session.Decide(current.Session, cmd, now)
+}
+
+func participantRoute(_ coreDecider, current aggregate.State, cmd command.Command, now func() time.Time) command.Decision {
+	return participant.Decide(participantStateFor(cmd, current), cmd, now)
+}
+
+func inviteRoute(_ coreDecider, current aggregate.State, cmd command.Command, now func() time.Time) command.Decision {
+	return invite.Decide(inviteStateFor(cmd, current), cmd, now)
+}
+
+func characterRoute(_ coreDecider, current aggregate.State, cmd command.Command, now func() time.Time) command.Decision {
+	return character.Decide(characterStateFor(cmd, current), cmd, now)
+}
+
+func staticCoreCommandRoutes() map[command.Type]coreCommandRoute {
+	return map[command.Type]coreCommandRoute{
+		command.Type("campaign.create"):          campaignRoute,
+		command.Type("campaign.update"):          campaignRoute,
+		command.Type("campaign.fork"):            campaignRoute,
+		command.Type("campaign.end"):             campaignRoute,
+		command.Type("campaign.archive"):         campaignRoute,
+		command.Type("campaign.restore"):         campaignRoute,
+		command.Type("action.roll.resolve"):      actionRoute,
+		command.Type("action.outcome.apply"):     actionRoute,
+		command.Type("action.outcome.reject"):    actionRoute,
+		command.Type("action.note.add"):          actionRoute,
+		command.Type("session.start"):            sessionRoute,
+		command.Type("session.end"):              sessionRoute,
+		command.Type("session.gate_open"):        sessionRoute,
+		command.Type("session.gate_resolve"):     sessionRoute,
+		command.Type("session.gate_abandon"):     sessionRoute,
+		command.Type("session.spotlight_set"):    sessionRoute,
+		command.Type("session.spotlight_clear"):  sessionRoute,
+		command.Type("participant.join"):         participantRoute,
+		command.Type("participant.update"):       participantRoute,
+		command.Type("participant.leave"):        participantRoute,
+		command.Type("participant.bind"):         participantRoute,
+		command.Type("participant.unbind"):       participantRoute,
+		command.Type("seat.reassign"):            participantRoute,
+		command.Type("invite.create"):            inviteRoute,
+		command.Type("invite.claim"):             inviteRoute,
+		command.Type("invite.revoke"):            inviteRoute,
+		command.Type("invite.update"):            inviteRoute,
+		command.Type("character.create"):         characterRoute,
+		command.Type("character.update"):         characterRoute,
+		command.Type("character.delete"):         characterRoute,
+		command.Type("character.profile_update"): characterRoute,
+	}
+}
+
+func buildCoreRouteTable(definitions []command.Definition) (map[command.Type]coreCommandRoute, error) {
+	available := staticCoreCommandRoutes()
+	routes := make(map[command.Type]coreCommandRoute)
+	for _, definition := range definitions {
+		if definition.Owner != command.OwnerCore {
+			continue
+		}
+		route, ok := available[definition.Type]
+		if !ok {
+			return nil, fmt.Errorf("core command route missing for registered type %s", definition.Type)
+		}
+		routes[definition.Type] = route
+	}
+	return routes, nil
 }
 
 func (d coreDecider) Decide(state any, cmd command.Command, now func() time.Time) command.Decision {
@@ -85,26 +167,18 @@ func (d coreDecider) Decide(state any, cmd command.Command, now func() time.Time
 		}
 		return decision
 	}
-	cmdType := string(cmd.Type)
-	switch {
-	case strings.HasPrefix(cmdType, "campaign."):
-		return campaign.Decide(current.Campaign, cmd, now)
-	case strings.HasPrefix(cmdType, "action."):
-		return action.Decide(action.State{}, cmd, now)
-	case strings.HasPrefix(cmdType, "session."):
-		return session.Decide(current.Session, cmd, now)
-	case strings.HasPrefix(cmdType, "participant.") || strings.HasPrefix(cmdType, "seat."):
-		return participant.Decide(participantStateFor(cmd, current), cmd, now)
-	case strings.HasPrefix(cmdType, "invite."):
-		return invite.Decide(inviteStateFor(cmd, current), cmd, now)
-	case strings.HasPrefix(cmdType, "character."):
-		return character.Decide(characterStateFor(cmd, current), cmd, now)
-	default:
+	routes := d.routes
+	if routes == nil {
+		routes = staticCoreCommandRoutes()
+	}
+	route, ok := routes[cmd.Type]
+	if !ok {
 		return command.Reject(command.Rejection{
 			Code:    "COMMAND_TYPE_UNSUPPORTED",
 			Message: "command type is not supported by core decider",
 		})
 	}
+	return route(d, current, cmd, now)
 }
 
 func aggregateState(state any) aggregate.State {

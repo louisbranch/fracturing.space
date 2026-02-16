@@ -4,7 +4,9 @@
 package integration
 
 import (
+	"fmt"
 	"go/ast"
+	"go/token"
 	"go/types"
 	"os"
 	"path/filepath"
@@ -32,12 +34,12 @@ func TestProjectionStoreWritesAreEventDriven(t *testing.T) {
 	}
 	storagePkg := storagePkgs[0]
 
-	apiPkgs, err := packages.Load(config, "./internal/services/game/api/grpc/...")
+	targetPkgs, err := packages.Load(config, projectionWriteGuardrailPatterns()...)
 	if err != nil {
-		t.Fatalf("load api packages: %v", err)
+		t.Fatalf("load target packages: %v", err)
 	}
-	if packages.PrintErrors(apiPkgs) > 0 {
-		t.Fatalf("api package load errors")
+	if packages.PrintErrors(targetPkgs) > 0 {
+		t.Fatalf("target package load errors")
 	}
 
 	storeInterfaces := []*types.Interface{
@@ -76,7 +78,10 @@ func TestProjectionStoreWritesAreEventDriven(t *testing.T) {
 	}
 
 	var violations []string
-	for _, pkg := range apiPkgs {
+	for _, pkg := range targetPkgs {
+		if isProjectionWriteGuardrailIgnoredPackage(pkg.PkgPath) {
+			continue
+		}
 		for _, file := range pkg.Syntax {
 			ast.Inspect(file, func(node ast.Node) bool {
 				call, ok := node.(*ast.CallExpr)
@@ -98,7 +103,7 @@ func TestProjectionStoreWritesAreEventDriven(t *testing.T) {
 					return true
 				}
 				position := pkg.Fset.Position(sel.Pos())
-				violations = append(violations, position.String()+": direct projection store write")
+				violations = append(violations, formatProjectionWriteViolation(pkg.PkgPath, file, sel, position.String()))
 				return true
 			})
 		}
@@ -110,6 +115,69 @@ func TestProjectionStoreWritesAreEventDriven(t *testing.T) {
 			formatted = append(formatted, "- "+filepath.ToSlash(violation))
 		}
 		t.Fatalf("direct projection store writes must go through event appliers:\n%s", strings.Join(formatted, "\n"))
+	}
+}
+
+func formatProjectionWriteViolation(pkgPath string, file *ast.File, sel *ast.SelectorExpr, position string) string {
+	if sel == nil || sel.Sel == nil {
+		return fmt.Sprintf("%s: direct projection store write", position)
+	}
+	location := strings.TrimSpace(position)
+	if location == "" {
+		location = "<unknown>"
+	}
+	pkgPath = filepath.ToSlash(strings.TrimSpace(pkgPath))
+	if pkgPath == "" {
+		pkgPath = "<unknown-package>"
+	}
+	funcName := enclosingFunctionName(file, sel.Pos())
+	if strings.TrimSpace(funcName) == "" {
+		funcName = "<unknown-function>"
+	}
+	return fmt.Sprintf("%s: %s %s calls %s", location, pkgPath, funcName, sel.Sel.Name)
+}
+
+func enclosingFunctionName(file *ast.File, pos token.Pos) string {
+	if file == nil {
+		return ""
+	}
+	for _, decl := range file.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok || fn.Name == nil {
+			continue
+		}
+		if pos < fn.Pos() || pos > fn.End() {
+			continue
+		}
+		if fn.Recv == nil || len(fn.Recv.List) == 0 {
+			return fn.Name.Name
+		}
+		recvName := receiverTypeName(fn.Recv.List[0].Type)
+		if recvName == "" {
+			return fn.Name.Name
+		}
+		return recvName + "." + fn.Name.Name
+	}
+	return ""
+}
+
+func receiverTypeName(expr ast.Expr) string {
+	switch typed := expr.(type) {
+	case *ast.Ident:
+		return typed.Name
+	case *ast.StarExpr:
+		return receiverTypeName(typed.X)
+	case *ast.IndexExpr:
+		return receiverTypeName(typed.X)
+	case *ast.IndexListExpr:
+		return receiverTypeName(typed.X)
+	case *ast.SelectorExpr:
+		if typed.Sel != nil {
+			return typed.Sel.Name
+		}
+		return ""
+	default:
+		return ""
 	}
 }
 
@@ -155,4 +223,48 @@ func implementsAnyStore(typ types.Type, interfaces []*types.Interface) bool {
 		}
 	}
 	return false
+}
+
+func TestProjectionWriteGuardrailScopes(t *testing.T) {
+	patterns := projectionWriteGuardrailPatterns()
+	if len(patterns) == 0 {
+		t.Fatal("expected at least one package pattern")
+	}
+	found := false
+	for _, pattern := range patterns {
+		if pattern == "./internal/services/game/..." {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected scan scope to include ./internal/services/game/..., got %v", patterns)
+	}
+}
+
+func TestProjectionWriteGuardrailIgnoresAuthorizedPackages(t *testing.T) {
+	if !isProjectionWriteGuardrailIgnoredPackage("github.com/louisbranch/fracturing.space/internal/services/game/projection") {
+		t.Fatal("expected projection package to be ignored")
+	}
+	if !isProjectionWriteGuardrailIgnoredPackage("github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite") {
+		t.Fatal("expected storage package to be ignored")
+	}
+	if isProjectionWriteGuardrailIgnoredPackage("github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game") {
+		t.Fatal("expected API package to be scanned")
+	}
+}
+
+func projectionWriteGuardrailPatterns() []string {
+	return []string{
+		"./internal/services/game/...",
+	}
+}
+
+func isProjectionWriteGuardrailIgnoredPackage(pkgPath string) bool {
+	path := filepath.ToSlash(strings.TrimSpace(pkgPath))
+	if path == "" {
+		return false
+	}
+	return strings.Contains(path, "/internal/services/game/projection") ||
+		strings.Contains(path, "/internal/services/game/storage")
 }

@@ -49,6 +49,7 @@ func RegisterEvents(registry *event.Registry) error {
 	if err := registry.Register(event.Definition{
 		Type:            eventTypeCreated,
 		Owner:           event.OwnerCore,
+		Addressing:      event.AddressingPolicyEntityTarget,
 		ValidatePayload: validateCreatePayload,
 	}); err != nil {
 		return err
@@ -56,6 +57,7 @@ func RegisterEvents(registry *event.Registry) error {
 	if err := registry.Register(event.Definition{
 		Type:            eventTypeUpdated,
 		Owner:           event.OwnerCore,
+		Addressing:      event.AddressingPolicyEntityTarget,
 		ValidatePayload: validateUpdatePayload,
 	}); err != nil {
 		return err
@@ -63,6 +65,7 @@ func RegisterEvents(registry *event.Registry) error {
 	if err := registry.Register(event.Definition{
 		Type:            eventTypeDeleted,
 		Owner:           event.OwnerCore,
+		Addressing:      event.AddressingPolicyEntityTarget,
 		ValidatePayload: validateDeletePayload,
 	}); err != nil {
 		return err
@@ -70,6 +73,7 @@ func RegisterEvents(registry *event.Registry) error {
 	return registry.Register(event.Definition{
 		Type:            eventTypeProfileUpdated,
 		Owner:           event.OwnerCore,
+		Addressing:      event.AddressingPolicyEntityTarget,
 		ValidatePayload: validateProfileUpdatePayload,
 	})
 }

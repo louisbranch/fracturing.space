@@ -82,6 +82,8 @@ func TestRegisterEvents_ValidatesStartedPayload(t *testing.T) {
 		Type:        event.Type("session.started"),
 		Timestamp:   time.Unix(0, 0).UTC(),
 		ActorType:   event.ActorTypeSystem,
+		EntityType:  "session",
+		EntityID:    "sess-1",
 		PayloadJSON: []byte(`{"session_id":"sess-1"}`),
 	}
 	if _, err := registry.ValidateForAppend(validEvent); err != nil {
@@ -99,6 +101,45 @@ func TestRegisterEvents_ValidatesStartedPayload(t *testing.T) {
 	}
 }
 
+func TestRegisterEvents_StartedRequiresEntityTargetAddressing(t *testing.T) {
+	registry := event.NewRegistry()
+	if err := RegisterEvents(registry); err != nil {
+		t.Fatalf("register events: %v", err)
+	}
+
+	base := event.Event{
+		CampaignID:  "camp-1",
+		Type:        event.Type("session.started"),
+		Timestamp:   time.Unix(0, 0).UTC(),
+		ActorType:   event.ActorTypeSystem,
+		PayloadJSON: []byte(`{"session_id":"sess-1"}`),
+	}
+
+	_, err := registry.ValidateForAppend(base)
+	if err == nil {
+		t.Fatal("expected missing entity type error")
+	}
+	if !errors.Is(err, event.ErrEntityTypeRequired) {
+		t.Fatalf("expected ErrEntityTypeRequired, got %v", err)
+	}
+
+	withType := base
+	withType.EntityType = "session"
+	_, err = registry.ValidateForAppend(withType)
+	if err == nil {
+		t.Fatal("expected missing entity id error")
+	}
+	if !errors.Is(err, event.ErrEntityIDRequired) {
+		t.Fatalf("expected ErrEntityIDRequired, got %v", err)
+	}
+
+	withTypeAndID := withType
+	withTypeAndID.EntityID = "sess-1"
+	if _, err := registry.ValidateForAppend(withTypeAndID); err != nil {
+		t.Fatalf("valid addressed event rejected: %v", err)
+	}
+}
+
 func TestRegisterEvents_ValidatesEndedPayload(t *testing.T) {
 	registry := event.NewRegistry()
 	if err := RegisterEvents(registry); err != nil {
@@ -110,6 +151,8 @@ func TestRegisterEvents_ValidatesEndedPayload(t *testing.T) {
 		Type:        event.Type("session.ended"),
 		Timestamp:   time.Unix(0, 0).UTC(),
 		ActorType:   event.ActorTypeSystem,
+		EntityType:  "session",
+		EntityID:    "sess-1",
 		PayloadJSON: []byte(`{"session_id":"sess-1"}`),
 	}
 	if _, err := registry.ValidateForAppend(validEvent); err != nil {
@@ -171,6 +214,8 @@ func TestRegisterEvents_ValidatesGateOpenedPayload(t *testing.T) {
 		Type:        event.Type("session.gate_opened"),
 		Timestamp:   time.Unix(0, 0).UTC(),
 		ActorType:   event.ActorTypeSystem,
+		EntityType:  "session_gate",
+		EntityID:    "gate-1",
 		PayloadJSON: []byte(`{"gate_id":"gate-1","gate_type":"gm_consequence"}`),
 	}
 	if _, err := registry.ValidateForAppend(validEvent); err != nil {
@@ -265,6 +310,8 @@ func TestRegisterEvents_ValidatesGateResolvedPayload(t *testing.T) {
 		Type:        event.Type("session.gate_resolved"),
 		Timestamp:   time.Unix(0, 0).UTC(),
 		ActorType:   event.ActorTypeSystem,
+		EntityType:  "session_gate",
+		EntityID:    "gate-1",
 		PayloadJSON: []byte(`{"gate_id":"gate-1","decision":"approve"}`),
 	}
 	if _, err := registry.ValidateForAppend(validEvent); err != nil {
@@ -293,6 +340,8 @@ func TestRegisterEvents_ValidatesGateAbandonedPayload(t *testing.T) {
 		Type:        event.Type("session.gate_abandoned"),
 		Timestamp:   time.Unix(0, 0).UTC(),
 		ActorType:   event.ActorTypeSystem,
+		EntityType:  "session_gate",
+		EntityID:    "gate-1",
 		PayloadJSON: []byte(`{"gate_id":"gate-1","reason":"timeout"}`),
 	}
 	if _, err := registry.ValidateForAppend(validEvent); err != nil {
@@ -387,6 +436,8 @@ func TestRegisterEvents_ValidatesSpotlightSetPayload(t *testing.T) {
 		Type:        event.Type("session.spotlight_set"),
 		Timestamp:   time.Unix(0, 0).UTC(),
 		ActorType:   event.ActorTypeSystem,
+		EntityType:  "session",
+		EntityID:    "sess-1",
 		PayloadJSON: []byte(`{"spotlight_type":"character","character_id":"char-1"}`),
 	}
 	if _, err := registry.ValidateForAppend(validEvent); err != nil {
@@ -415,6 +466,8 @@ func TestRegisterEvents_ValidatesSpotlightClearedPayload(t *testing.T) {
 		Type:        event.Type("session.spotlight_cleared"),
 		Timestamp:   time.Unix(0, 0).UTC(),
 		ActorType:   event.ActorTypeSystem,
+		EntityType:  "session",
+		EntityID:    "sess-1",
 		PayloadJSON: []byte(`{"reason":"scene change"}`),
 	}
 	if _, err := registry.ValidateForAppend(validEvent); err != nil {

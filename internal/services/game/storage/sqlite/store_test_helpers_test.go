@@ -29,12 +29,17 @@ func testKeyring(t *testing.T) *integrity.Keyring {
 
 func openTestEventsStore(t *testing.T) *Store {
 	t.Helper()
+	return openTestEventsStoreWithOutbox(t, false)
+}
+
+func openTestEventsStoreWithOutbox(t *testing.T, outboxEnabled bool) *Store {
+	t.Helper()
 	path := filepath.Join(t.TempDir(), "events.sqlite")
 	registries, err := engine.BuildRegistries(daggerheart.NewModule())
 	if err != nil {
 		t.Fatalf("build registries: %v", err)
 	}
-	store, err := OpenEvents(path, testKeyring(t), registries.Events)
+	store, err := OpenEvents(path, testKeyring(t), registries.Events, WithProjectionApplyOutboxEnabled(outboxEnabled))
 	if err != nil {
 		t.Fatalf("open events store: %v", err)
 	}

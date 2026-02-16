@@ -586,10 +586,10 @@ func TestApplyDowntimeMove_Success(t *testing.T) {
 	}
 
 	serviceDomain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.downtime_move.apply"): {
+		command.Type("sys.daggerheart.action.downtime_move.apply"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.downtime_move_applied"),
+				Type:          event.Type("sys.daggerheart.action.downtime_move_applied"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -669,10 +669,10 @@ func TestApplyDowntimeMove_UsesDomainEngine(t *testing.T) {
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.downtime_move.apply"): {
+		command.Type("sys.daggerheart.action.downtime_move.apply"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.downtime_move_applied"),
+				Type:          event.Type("sys.daggerheart.action.downtime_move_applied"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -704,8 +704,8 @@ func TestApplyDowntimeMove_UsesDomainEngine(t *testing.T) {
 	if len(domain.commands) != 1 {
 		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
 	}
-	if domain.commands[0].Type != command.Type("action.downtime_move.apply") {
-		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "action.downtime_move.apply")
+	if domain.commands[0].Type != command.Type("sys.daggerheart.action.downtime_move.apply") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "sys.daggerheart.action.downtime_move.apply")
 	}
 	if domain.commands[0].SystemID != daggerheart.SystemID {
 		t.Fatalf("command system id = %s, want %s", domain.commands[0].SystemID, daggerheart.SystemID)
@@ -846,10 +846,10 @@ func TestSwapLoadout_Success(t *testing.T) {
 		t.Fatalf("encode loadout payload: %v", err)
 	}
 	serviceDomain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.loadout.swap"): {
+		command.Type("sys.daggerheart.action.loadout.swap"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.loadout_swapped"),
+				Type:          event.Type("sys.daggerheart.action.loadout_swapped"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -928,10 +928,10 @@ func TestSwapLoadout_WithRecallCost(t *testing.T) {
 		t.Fatalf("encode stress spend payload: %v", err)
 	}
 	serviceDomain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.loadout.swap"): {
+		command.Type("sys.daggerheart.action.loadout.swap"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.loadout_swapped"),
+				Type:          event.Type("sys.daggerheart.action.loadout_swapped"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -943,10 +943,10 @@ func TestSwapLoadout_WithRecallCost(t *testing.T) {
 				PayloadJSON:   loadoutJSON,
 			}),
 		},
-		command.Type("action.stress.spend"): {
+		command.Type("sys.daggerheart.action.stress.spend"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.stress_spent"),
+				Type:          event.Type("sys.daggerheart.action.stress_spent"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -1007,10 +1007,10 @@ func TestSwapLoadout_UsesDomainEngineForLoadoutSwap(t *testing.T) {
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.loadout.swap"): {
+		command.Type("sys.daggerheart.action.loadout.swap"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.loadout_swapped"),
+				Type:          event.Type("sys.daggerheart.action.loadout_swapped"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -1043,8 +1043,8 @@ func TestSwapLoadout_UsesDomainEngineForLoadoutSwap(t *testing.T) {
 	if len(domain.commands) != 1 {
 		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
 	}
-	if domain.commands[0].Type != command.Type("action.loadout.swap") {
-		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "action.loadout.swap")
+	if domain.commands[0].Type != command.Type("sys.daggerheart.action.loadout.swap") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "sys.daggerheart.action.loadout.swap")
 	}
 	if domain.commands[0].SystemID != daggerheart.SystemID {
 		t.Fatalf("command system id = %s, want %s", domain.commands[0].SystemID, daggerheart.SystemID)
@@ -1135,10 +1135,10 @@ func TestSwapLoadout_UsesDomainEngineForStressSpend(t *testing.T) {
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.loadout.swap"): {
+		command.Type("sys.daggerheart.action.loadout.swap"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.loadout_swapped"),
+				Type:          event.Type("sys.daggerheart.action.loadout_swapped"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -1150,10 +1150,10 @@ func TestSwapLoadout_UsesDomainEngineForStressSpend(t *testing.T) {
 				PayloadJSON:   loadoutJSON,
 			}),
 		},
-		command.Type("action.stress.spend"): {
+		command.Type("sys.daggerheart.action.stress.spend"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.stress_spent"),
+				Type:          event.Type("sys.daggerheart.action.stress_spent"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -1186,11 +1186,11 @@ func TestSwapLoadout_UsesDomainEngineForStressSpend(t *testing.T) {
 	if len(domain.commands) != 2 {
 		t.Fatalf("expected 2 domain commands, got %d", len(domain.commands))
 	}
-	if domain.commands[0].Type != command.Type("action.loadout.swap") {
-		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "action.loadout.swap")
+	if domain.commands[0].Type != command.Type("sys.daggerheart.action.loadout.swap") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "sys.daggerheart.action.loadout.swap")
 	}
-	if domain.commands[1].Type != command.Type("action.stress.spend") {
-		t.Fatalf("command type = %s, want %s", domain.commands[1].Type, "action.stress.spend")
+	if domain.commands[1].Type != command.Type("sys.daggerheart.action.stress.spend") {
+		t.Fatalf("command type = %s, want %s", domain.commands[1].Type, "sys.daggerheart.action.stress.spend")
 	}
 	if domain.commands[1].SystemID != daggerheart.SystemID {
 		t.Fatalf("command system id = %s, want %s", domain.commands[1].SystemID, daggerheart.SystemID)
@@ -1251,10 +1251,10 @@ func TestSwapLoadout_InRestSkipsRecallCost(t *testing.T) {
 		t.Fatalf("encode loadout payload: %v", err)
 	}
 	serviceDomain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.loadout.swap"): {
+		command.Type("sys.daggerheart.action.loadout.swap"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.loadout_swapped"),
+				Type:          event.Type("sys.daggerheart.action.loadout_swapped"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -1477,10 +1477,10 @@ func TestApplyDeathMove_AvoidDeath_Success(t *testing.T) {
 		t.Fatalf("encode death move payload: %v", err)
 	}
 	serviceDomain := &fakeDomainEngine{store: svc.stores.Event, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.death_move.resolve"): {
+		command.Type("sys.daggerheart.action.death_move.resolve"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.death_move_resolved"),
+				Type:          event.Type("sys.daggerheart.action.death_move_resolved"),
 				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -1594,10 +1594,10 @@ func TestApplyDeathMove_UsesDomainEngine(t *testing.T) {
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.death_move.resolve"): {
+		command.Type("sys.daggerheart.action.death_move.resolve"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.death_move_resolved"),
+				Type:          event.Type("sys.daggerheart.action.death_move_resolved"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -1627,8 +1627,8 @@ func TestApplyDeathMove_UsesDomainEngine(t *testing.T) {
 	if len(domain.commands) != 1 {
 		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
 	}
-	if domain.commands[0].Type != command.Type("action.death_move.resolve") {
-		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "action.death_move.resolve")
+	if domain.commands[0].Type != command.Type("sys.daggerheart.action.death_move.resolve") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "sys.daggerheart.action.death_move.resolve")
 	}
 	if domain.commands[0].SystemID != daggerheart.SystemID {
 		t.Fatalf("command system id = %s, want %s", domain.commands[0].SystemID, daggerheart.SystemID)
@@ -1756,10 +1756,10 @@ func TestResolveBlazeOfGlory_Success(t *testing.T) {
 	}
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	serviceDomain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.blaze_of_glory.resolve"): {
+		command.Type("sys.daggerheart.action.blaze_of_glory.resolve"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.blaze_of_glory_resolved"),
+				Type:          event.Type("sys.daggerheart.action.blaze_of_glory_resolved"),
 				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -1832,10 +1832,10 @@ func TestResolveBlazeOfGlory_UsesDomainEngine(t *testing.T) {
 
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.blaze_of_glory.resolve"): {
+		command.Type("sys.daggerheart.action.blaze_of_glory.resolve"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.blaze_of_glory_resolved"),
+				Type:          event.Type("sys.daggerheart.action.blaze_of_glory_resolved"),
 				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -1877,8 +1877,8 @@ func TestResolveBlazeOfGlory_UsesDomainEngine(t *testing.T) {
 	if len(domain.commands) != 2 {
 		t.Fatalf("expected 2 domain commands, got %d", len(domain.commands))
 	}
-	if domain.commands[0].Type != command.Type("action.blaze_of_glory.resolve") {
-		t.Fatalf("command[0] type = %s, want %s", domain.commands[0].Type, "action.blaze_of_glory.resolve")
+	if domain.commands[0].Type != command.Type("sys.daggerheart.action.blaze_of_glory.resolve") {
+		t.Fatalf("command[0] type = %s, want %s", domain.commands[0].Type, "sys.daggerheart.action.blaze_of_glory.resolve")
 	}
 	if domain.commands[1].Type != command.Type("character.delete") {
 		t.Fatalf("command[1] type = %s, want %s", domain.commands[1].Type, "character.delete")
@@ -1886,8 +1886,8 @@ func TestResolveBlazeOfGlory_UsesDomainEngine(t *testing.T) {
 	if got := len(eventStore.events["camp-1"]); got != 2 {
 		t.Fatalf("expected 2 events, got %d", got)
 	}
-	if eventStore.events["camp-1"][0].Type != event.Type("action.blaze_of_glory_resolved") {
-		t.Fatalf("event[0] type = %s, want %s", eventStore.events["camp-1"][0].Type, event.Type("action.blaze_of_glory_resolved"))
+	if eventStore.events["camp-1"][0].Type != event.Type("sys.daggerheart.action.blaze_of_glory_resolved") {
+		t.Fatalf("event[0] type = %s, want %s", eventStore.events["camp-1"][0].Type, event.Type("sys.daggerheart.action.blaze_of_glory_resolved"))
 	}
 	if eventStore.events["camp-1"][1].Type != event.Type("character.deleted") {
 		t.Fatalf("event[1] type = %s, want %s", eventStore.events["camp-1"][1].Type, event.Type("character.deleted"))
@@ -2032,10 +2032,10 @@ func TestApplyDamage_Success(t *testing.T) {
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.damage.apply"): {
+		command.Type("sys.daggerheart.action.damage.apply"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.damage_applied"),
+				Type:          event.Type("sys.daggerheart.action.damage_applied"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -2117,10 +2117,10 @@ func TestApplyDamage_UsesDomainEngine(t *testing.T) {
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.damage.apply"): {
+		command.Type("sys.daggerheart.action.damage.apply"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.damage_applied"),
+				Type:          event.Type("sys.daggerheart.action.damage_applied"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -2150,8 +2150,8 @@ func TestApplyDamage_UsesDomainEngine(t *testing.T) {
 	if len(domain.commands) != 1 {
 		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
 	}
-	if domain.commands[0].Type != command.Type("action.damage.apply") {
-		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "action.damage.apply")
+	if domain.commands[0].Type != command.Type("sys.daggerheart.action.damage.apply") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "sys.daggerheart.action.damage.apply")
 	}
 	if domain.commands[0].SystemID != daggerheart.SystemID {
 		t.Fatalf("command system id = %s, want %s", domain.commands[0].SystemID, daggerheart.SystemID)
@@ -2237,10 +2237,10 @@ func TestApplyDamage_WithArmorMitigation(t *testing.T) {
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.damage.apply"): {
+		command.Type("sys.daggerheart.action.damage.apply"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.damage_applied"),
+				Type:          event.Type("sys.daggerheart.action.damage_applied"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -2268,8 +2268,8 @@ func TestApplyDamage_WithArmorMitigation(t *testing.T) {
 		t.Fatal("expected damage event")
 	}
 	last := events[len(events)-1]
-	if last.Type != event.Type("action.damage_applied") {
-		t.Fatalf("last event type = %s, want %s", last.Type, event.Type("action.damage_applied"))
+	if last.Type != event.Type("sys.daggerheart.action.damage_applied") {
+		t.Fatalf("last event type = %s, want %s", last.Type, event.Type("sys.daggerheart.action.damage_applied"))
 	}
 	var parsedPayload daggerheart.DamageAppliedPayload
 	if err := json.Unmarshal(last.PayloadJSON, &parsedPayload); err != nil {
@@ -2317,10 +2317,10 @@ func TestApplyConditions_LifeStateOnly(t *testing.T) {
 		t.Fatalf("encode patch payload: %v", err)
 	}
 	serviceDomain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.character_state.patch"): {
+		command.Type("sys.daggerheart.action.character_state.patch"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.character_state_patched"),
+				Type:          event.Type("sys.daggerheart.action.character_state_patched"),
 				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -2355,8 +2355,8 @@ func TestApplyConditions_LifeStateOnly(t *testing.T) {
 		t.Fatal("expected events")
 	}
 	last := events[len(events)-1]
-	if last.Type != event.Type("action.character_state_patched") {
-		t.Fatalf("last event type = %s, want %s", last.Type, event.Type("action.character_state_patched"))
+	if last.Type != event.Type("sys.daggerheart.action.character_state_patched") {
+		t.Fatalf("last event type = %s, want %s", last.Type, event.Type("sys.daggerheart.action.character_state_patched"))
 	}
 }
 
@@ -2431,10 +2431,10 @@ func TestApplyConditions_UsesDomainEngine(t *testing.T) {
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.condition.change"): {
+		command.Type("sys.daggerheart.action.condition.change"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.condition_changed"),
+				Type:          event.Type("sys.daggerheart.action.condition_changed"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -2464,8 +2464,8 @@ func TestApplyConditions_UsesDomainEngine(t *testing.T) {
 	if len(domain.commands) != 1 {
 		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
 	}
-	if domain.commands[0].Type != command.Type("action.condition.change") {
-		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "action.condition.change")
+	if domain.commands[0].Type != command.Type("sys.daggerheart.action.condition.change") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "sys.daggerheart.action.condition.change")
 	}
 	if domain.commands[0].SystemID != daggerheart.SystemID {
 		t.Fatalf("command system id = %s, want %s", domain.commands[0].SystemID, daggerheart.SystemID)
@@ -2485,7 +2485,7 @@ func TestApplyConditions_UsesDomainEngine(t *testing.T) {
 	}
 	var foundConditionEvent bool
 	for _, evt := range eventStore.events["camp-1"] {
-		if evt.Type == event.Type("action.condition_changed") {
+		if evt.Type == event.Type("sys.daggerheart.action.condition_changed") {
 			foundConditionEvent = true
 			break
 		}
@@ -2513,10 +2513,10 @@ func TestApplyConditions_UsesDomainEngineForLifeState(t *testing.T) {
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.character_state.patch"): {
+		command.Type("sys.daggerheart.action.character_state.patch"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.character_state_patched"),
+				Type:          event.Type("sys.daggerheart.action.character_state_patched"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -2546,8 +2546,8 @@ func TestApplyConditions_UsesDomainEngineForLifeState(t *testing.T) {
 	if len(domain.commands) != 1 {
 		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
 	}
-	if domain.commands[0].Type != command.Type("action.character_state.patch") {
-		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "action.character_state.patch")
+	if domain.commands[0].Type != command.Type("sys.daggerheart.action.character_state.patch") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "sys.daggerheart.action.character_state.patch")
 	}
 	if domain.commands[0].SystemID != daggerheart.SystemID {
 		t.Fatalf("command system id = %s, want %s", domain.commands[0].SystemID, daggerheart.SystemID)
@@ -2570,7 +2570,7 @@ func TestApplyConditions_UsesDomainEngineForLifeState(t *testing.T) {
 	}
 	var foundStateEvent bool
 	for _, evt := range eventStore.events["camp-1"] {
-		if evt.Type == event.Type("action.character_state_patched") {
+		if evt.Type == event.Type("sys.daggerheart.action.character_state_patched") {
 			foundStateEvent = true
 			break
 		}
@@ -2664,10 +2664,10 @@ func TestApplyRest_ShortRest_Success(t *testing.T) {
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.rest.take"): {
+		command.Type("sys.daggerheart.action.rest.take"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.rest_taken"),
+				Type:          event.Type("sys.daggerheart.action.rest_taken"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -2715,10 +2715,10 @@ func TestApplyRest_UsesDomainEngine(t *testing.T) {
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.rest.take"): {
+		command.Type("sys.daggerheart.action.rest.take"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.rest_taken"),
+				Type:          event.Type("sys.daggerheart.action.rest_taken"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -2751,8 +2751,8 @@ func TestApplyRest_UsesDomainEngine(t *testing.T) {
 	if len(domain.commands) != 1 {
 		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
 	}
-	if domain.commands[0].Type != command.Type("action.rest.take") {
-		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "action.rest.take")
+	if domain.commands[0].Type != command.Type("sys.daggerheart.action.rest.take") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "sys.daggerheart.action.rest.take")
 	}
 	if domain.commands[0].SystemID != daggerheart.SystemID {
 		t.Fatalf("command system id = %s, want %s", domain.commands[0].SystemID, daggerheart.SystemID)
@@ -2789,10 +2789,10 @@ func TestApplyRest_LongRest_Success(t *testing.T) {
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.rest.take"): {
+		command.Type("sys.daggerheart.action.rest.take"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.rest_taken"),
+				Type:          event.Type("sys.daggerheart.action.rest_taken"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -2885,10 +2885,10 @@ func TestApplyGmMove_Success(t *testing.T) {
 		t.Fatalf("encode gm move payload: %v", err)
 	}
 	serviceDomain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.gm_move.apply"): {
+		command.Type("sys.daggerheart.action.gm_move.apply"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.gm_move_applied"),
+				Type:          event.Type("sys.daggerheart.action.gm_move_applied"),
 				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -2935,10 +2935,10 @@ func TestApplyGmMove_WithFearSpent(t *testing.T) {
 		t.Fatalf("encode gm move payload: %v", err)
 	}
 	serviceDomain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.gm_fear.set"): {
+		command.Type("sys.daggerheart.action.gm_fear.set"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.gm_fear_changed"),
+				Type:          event.Type("sys.daggerheart.action.gm_fear_changed"),
 				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -2950,10 +2950,10 @@ func TestApplyGmMove_WithFearSpent(t *testing.T) {
 				PayloadJSON:   gmPayloadJSON,
 			}),
 		},
-		command.Type("action.gm_move.apply"): {
+		command.Type("sys.daggerheart.action.gm_move.apply"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.gm_move_applied"),
+				Type:          event.Type("sys.daggerheart.action.gm_move_applied"),
 				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -2997,10 +2997,10 @@ func TestApplyGmMove_UsesDomainEngine(t *testing.T) {
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.gm_fear.set"): {
+		command.Type("sys.daggerheart.action.gm_fear.set"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.gm_fear_changed"),
+				Type:          event.Type("sys.daggerheart.action.gm_fear_changed"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -3011,10 +3011,10 @@ func TestApplyGmMove_UsesDomainEngine(t *testing.T) {
 				PayloadJSON:   []byte(`{"before":2,"after":1,"reason":"gm_move"}`),
 			}),
 		},
-		command.Type("action.gm_move.apply"): {
+		command.Type("sys.daggerheart.action.gm_move.apply"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.gm_move_applied"),
+				Type:          event.Type("sys.daggerheart.action.gm_move_applied"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -3045,11 +3045,11 @@ func TestApplyGmMove_UsesDomainEngine(t *testing.T) {
 	if len(domain.commands) != 2 {
 		t.Fatalf("expected 2 domain commands, got %d", len(domain.commands))
 	}
-	if domain.commands[0].Type != command.Type("action.gm_fear.set") {
-		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "action.gm_fear.set")
+	if domain.commands[0].Type != command.Type("sys.daggerheart.action.gm_fear.set") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "sys.daggerheart.action.gm_fear.set")
 	}
-	if domain.commands[1].Type != command.Type("action.gm_move.apply") {
-		t.Fatalf("command type = %s, want %s", domain.commands[1].Type, "action.gm_move.apply")
+	if domain.commands[1].Type != command.Type("sys.daggerheart.action.gm_move.apply") {
+		t.Fatalf("command type = %s, want %s", domain.commands[1].Type, "sys.daggerheart.action.gm_move.apply")
 	}
 	if domain.commands[1].SystemID != daggerheart.SystemID {
 		t.Fatalf("command system id = %s, want %s", domain.commands[1].SystemID, daggerheart.SystemID)
@@ -3077,11 +3077,11 @@ func TestApplyGmMove_UsesDomainEngine(t *testing.T) {
 	if got := len(eventStore.events["camp-1"]); got != 2 {
 		t.Fatalf("expected 2 events, got %d", got)
 	}
-	if eventStore.events["camp-1"][0].Type != event.Type("action.gm_fear_changed") {
-		t.Fatalf("event type = %s, want %s", eventStore.events["camp-1"][0].Type, event.Type("action.gm_fear_changed"))
+	if eventStore.events["camp-1"][0].Type != event.Type("sys.daggerheart.action.gm_fear_changed") {
+		t.Fatalf("event type = %s, want %s", eventStore.events["camp-1"][0].Type, event.Type("sys.daggerheart.action.gm_fear_changed"))
 	}
-	if eventStore.events["camp-1"][1].Type != event.Type("action.gm_move_applied") {
-		t.Fatalf("event type = %s, want %s", eventStore.events["camp-1"][1].Type, event.Type("action.gm_move_applied"))
+	if eventStore.events["camp-1"][1].Type != event.Type("sys.daggerheart.action.gm_move_applied") {
+		t.Fatalf("event type = %s, want %s", eventStore.events["camp-1"][1].Type, event.Type("sys.daggerheart.action.gm_move_applied"))
 	}
 }
 
@@ -3177,10 +3177,10 @@ func TestCreateCountdown_Success(t *testing.T) {
 		t.Fatalf("encode countdown payload: %v", err)
 	}
 	serviceDomain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.countdown.create"): {
+		command.Type("sys.daggerheart.action.countdown.create"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.countdown_created"),
+				Type:          event.Type("sys.daggerheart.action.countdown_created"),
 				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -3233,10 +3233,10 @@ func TestCreateCountdown_UsesDomainEngine(t *testing.T) {
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.countdown.create"): {
+		command.Type("sys.daggerheart.action.countdown.create"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.countdown_created"),
+				Type:          event.Type("sys.daggerheart.action.countdown_created"),
 				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -3275,14 +3275,14 @@ func TestCreateCountdown_UsesDomainEngine(t *testing.T) {
 	if domain.calls != 1 {
 		t.Fatalf("expected domain to be called once, got %d", domain.calls)
 	}
-	if domain.lastCommand.Type != command.Type("action.countdown.create") {
-		t.Fatalf("command type = %s, want %s", domain.lastCommand.Type, "action.countdown.create")
+	if domain.lastCommand.Type != command.Type("sys.daggerheart.action.countdown.create") {
+		t.Fatalf("command type = %s, want %s", domain.lastCommand.Type, "sys.daggerheart.action.countdown.create")
 	}
 	if got := len(eventStore.events["camp-1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)
 	}
-	if eventStore.events["camp-1"][0].Type != event.Type("action.countdown_created") {
-		t.Fatalf("event type = %s, want %s", eventStore.events["camp-1"][0].Type, event.Type("action.countdown_created"))
+	if eventStore.events["camp-1"][0].Type != event.Type("sys.daggerheart.action.countdown_created") {
+		t.Fatalf("event type = %s, want %s", eventStore.events["camp-1"][0].Type, event.Type("sys.daggerheart.action.countdown_created"))
 	}
 }
 
@@ -3387,10 +3387,10 @@ func TestUpdateCountdown_Success(t *testing.T) {
 		t.Fatalf("encode countdown update payload: %v", err)
 	}
 	serviceDomain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.countdown.create"): {
+		command.Type("sys.daggerheart.action.countdown.create"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.countdown_created"),
+				Type:          event.Type("sys.daggerheart.action.countdown_created"),
 				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -3402,10 +3402,10 @@ func TestUpdateCountdown_Success(t *testing.T) {
 				PayloadJSON:   createPayloadJSON,
 			}),
 		},
-		command.Type("action.countdown.update"): {
+		command.Type("sys.daggerheart.action.countdown.update"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.countdown_updated"),
+				Type:          event.Type("sys.daggerheart.action.countdown_updated"),
 				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -3489,10 +3489,10 @@ func TestUpdateCountdown_UsesDomainEngine(t *testing.T) {
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.countdown.update"): {
+		command.Type("sys.daggerheart.action.countdown.update"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.countdown_updated"),
+				Type:          event.Type("sys.daggerheart.action.countdown_updated"),
 				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -3520,8 +3520,8 @@ func TestUpdateCountdown_UsesDomainEngine(t *testing.T) {
 	if domain.calls != 1 {
 		t.Fatalf("expected domain to be called once, got %d", domain.calls)
 	}
-	if domain.lastCommand.Type != command.Type("action.countdown.update") {
-		t.Fatalf("command type = %s, want %s", domain.lastCommand.Type, "action.countdown.update")
+	if domain.lastCommand.Type != command.Type("sys.daggerheart.action.countdown.update") {
+		t.Fatalf("command type = %s, want %s", domain.lastCommand.Type, "sys.daggerheart.action.countdown.update")
 	}
 	if resp.After != int32(update.After) {
 		t.Fatalf("after = %d, want %d", resp.After, update.After)
@@ -3588,10 +3588,10 @@ func TestDeleteCountdown_Success(t *testing.T) {
 		t.Fatalf("encode countdown delete payload: %v", err)
 	}
 	serviceDomain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.countdown.delete"): {
+		command.Type("sys.daggerheart.action.countdown.delete"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.countdown_deleted"),
+				Type:          event.Type("sys.daggerheart.action.countdown_deleted"),
 				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -3638,10 +3638,10 @@ func TestDeleteCountdown_UsesDomainEngine(t *testing.T) {
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.countdown.delete"): {
+		command.Type("sys.daggerheart.action.countdown.delete"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.countdown_deleted"),
+				Type:          event.Type("sys.daggerheart.action.countdown_deleted"),
 				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -3669,8 +3669,8 @@ func TestDeleteCountdown_UsesDomainEngine(t *testing.T) {
 	if domain.calls != 1 {
 		t.Fatalf("expected domain to be called once, got %d", domain.calls)
 	}
-	if domain.lastCommand.Type != command.Type("action.countdown.delete") {
-		t.Fatalf("command type = %s, want %s", domain.lastCommand.Type, "action.countdown.delete")
+	if domain.lastCommand.Type != command.Type("sys.daggerheart.action.countdown.delete") {
+		t.Fatalf("command type = %s, want %s", domain.lastCommand.Type, "sys.daggerheart.action.countdown.delete")
 	}
 	if resp.CountdownId != "cd-1" {
 		t.Fatalf("countdown_id = %q, want cd-1", resp.CountdownId)
@@ -3832,10 +3832,10 @@ func TestApplyAdversaryDamage_Success(t *testing.T) {
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.adversary_damage.apply"): {
+		command.Type("sys.daggerheart.action.adversary_damage.apply"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.adversary_damage_applied"),
+				Type:          event.Type("sys.daggerheart.action.adversary_damage_applied"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -3915,10 +3915,10 @@ func TestApplyAdversaryDamage_UsesDomainEngine(t *testing.T) {
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.adversary_damage.apply"): {
+		command.Type("sys.daggerheart.action.adversary_damage.apply"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.adversary_damage_applied"),
+				Type:          event.Type("sys.daggerheart.action.adversary_damage_applied"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -3948,8 +3948,8 @@ func TestApplyAdversaryDamage_UsesDomainEngine(t *testing.T) {
 	if len(domain.commands) != 1 {
 		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
 	}
-	if domain.commands[0].Type != command.Type("action.adversary_damage.apply") {
-		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "action.adversary_damage.apply")
+	if domain.commands[0].Type != command.Type("sys.daggerheart.action.adversary_damage.apply") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "sys.daggerheart.action.adversary_damage.apply")
 	}
 	if domain.commands[0].SystemID != daggerheart.SystemID {
 		t.Fatalf("command system id = %s, want %s", domain.commands[0].SystemID, daggerheart.SystemID)
@@ -4024,10 +4024,10 @@ func TestApplyAdversaryDamage_DirectDamage(t *testing.T) {
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.adversary_damage.apply"): {
+		command.Type("sys.daggerheart.action.adversary_damage.apply"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.adversary_damage_applied"),
+				Type:          event.Type("sys.daggerheart.action.adversary_damage_applied"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -4146,10 +4146,10 @@ func TestApplyAdversaryConditions_AddCondition_Success(t *testing.T) {
 		t.Fatalf("encode adversary condition payload: %v", err)
 	}
 	serviceDomain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.adversary_condition.change"): {
+		command.Type("sys.daggerheart.action.adversary_condition.change"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.adversary_condition_changed"),
+				Type:          event.Type("sys.daggerheart.action.adversary_condition_changed"),
 				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -4199,10 +4199,10 @@ func TestApplyAdversaryConditions_RemoveCondition_Success(t *testing.T) {
 		t.Fatalf("encode adversary condition payload: %v", err)
 	}
 	serviceDomain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.adversary_condition.change"): {
+		command.Type("sys.daggerheart.action.adversary_condition.change"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.adversary_condition_changed"),
+				Type:          event.Type("sys.daggerheart.action.adversary_condition_changed"),
 				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -4248,10 +4248,10 @@ func TestApplyAdversaryConditions_UsesDomainEngine(t *testing.T) {
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.adversary_condition.change"): {
+		command.Type("sys.daggerheart.action.adversary_condition.change"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.adversary_condition_changed"),
+				Type:          event.Type("sys.daggerheart.action.adversary_condition_changed"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -4282,8 +4282,8 @@ func TestApplyAdversaryConditions_UsesDomainEngine(t *testing.T) {
 	if len(domain.commands) != 1 {
 		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
 	}
-	if domain.commands[0].Type != command.Type("action.adversary_condition.change") {
-		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "action.adversary_condition.change")
+	if domain.commands[0].Type != command.Type("sys.daggerheart.action.adversary_condition.change") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "sys.daggerheart.action.adversary_condition.change")
 	}
 	if domain.commands[0].SystemID != daggerheart.SystemID {
 		t.Fatalf("command system id = %s, want %s", domain.commands[0].SystemID, daggerheart.SystemID)
@@ -4339,10 +4339,10 @@ func TestApplyConditions_AddCondition_Success(t *testing.T) {
 		t.Fatalf("encode condition payload: %v", err)
 	}
 	serviceDomain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.condition.change"): {
+		command.Type("sys.daggerheart.action.condition.change"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.condition_changed"),
+				Type:          event.Type("sys.daggerheart.action.condition_changed"),
 				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -4388,10 +4388,10 @@ func TestApplyConditions_RemoveCondition_Success(t *testing.T) {
 		t.Fatalf("encode condition payload: %v", err)
 	}
 	serviceDomain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.condition.change"): {
+		command.Type("sys.daggerheart.action.condition.change"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.condition_changed"),
+				Type:          event.Type("sys.daggerheart.action.condition_changed"),
 				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -4438,10 +4438,10 @@ func TestApplyConditions_AddAndRemove(t *testing.T) {
 		t.Fatalf("encode condition payload: %v", err)
 	}
 	serviceDomain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.condition.change"): {
+		command.Type("sys.daggerheart.action.condition.change"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.condition_changed"),
+				Type:          event.Type("sys.daggerheart.action.condition_changed"),
 				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -4691,10 +4691,10 @@ func TestSessionActionRoll_UsesDomainEngineForHopeSpend(t *testing.T) {
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.hope.spend"): {
+		command.Type("sys.daggerheart.action.hope.spend"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.hope_spent"),
+				Type:          event.Type("sys.daggerheart.action.hope_spent"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -4706,10 +4706,10 @@ func TestSessionActionRoll_UsesDomainEngineForHopeSpend(t *testing.T) {
 				PayloadJSON:   hopeSpendJSON,
 			}),
 		},
-		command.Type("action.character_state.patch"): {
+		command.Type("sys.daggerheart.action.character_state.patch"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.character_state_patched"),
+				Type:          event.Type("sys.daggerheart.action.character_state_patched"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -4757,11 +4757,11 @@ func TestSessionActionRoll_UsesDomainEngineForHopeSpend(t *testing.T) {
 	if len(domain.commands) != 3 {
 		t.Fatalf("expected 3 domain commands, got %d", len(domain.commands))
 	}
-	if domain.commands[0].Type != command.Type("action.hope.spend") {
-		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "action.hope.spend")
+	if domain.commands[0].Type != command.Type("sys.daggerheart.action.hope.spend") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "sys.daggerheart.action.hope.spend")
 	}
-	if domain.commands[1].Type != command.Type("action.character_state.patch") {
-		t.Fatalf("command type = %s, want %s", domain.commands[1].Type, "action.character_state.patch")
+	if domain.commands[1].Type != command.Type("sys.daggerheart.action.character_state.patch") {
+		t.Fatalf("command type = %s, want %s", domain.commands[1].Type, "sys.daggerheart.action.character_state.patch")
 	}
 	if domain.commands[2].Type != command.Type("action.roll.resolve") {
 		t.Fatalf("command type = %s, want %s", domain.commands[2].Type, "action.roll.resolve")
@@ -4837,10 +4837,10 @@ func TestSessionActionRoll_WithModifiers(t *testing.T) {
 		t.Fatalf("encode roll payload: %v", err)
 	}
 	serviceDomain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.hope.spend"): {
+		command.Type("sys.daggerheart.action.hope.spend"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.hope_spent"),
+				Type:          event.Type("sys.daggerheart.action.hope_spent"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -4852,10 +4852,10 @@ func TestSessionActionRoll_WithModifiers(t *testing.T) {
 				PayloadJSON:   spendJSON,
 			}),
 		},
-		command.Type("action.character_state.patch"): {
+		command.Type("sys.daggerheart.action.character_state.patch"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.character_state_patched"),
+				Type:          event.Type("sys.daggerheart.action.character_state_patched"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -4982,10 +4982,10 @@ func TestSessionDamageRoll_Success(t *testing.T) {
 		t.Fatalf("encode damage roll payload: %v", err)
 	}
 	serviceDomain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.damage_roll.resolve"): {
+		command.Type("sys.daggerheart.action.damage_roll.resolve"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.damage_roll_resolved"),
+				Type:          event.Type("sys.daggerheart.action.damage_roll_resolved"),
 				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -5043,10 +5043,10 @@ func TestSessionDamageRoll_UsesDomainEngine(t *testing.T) {
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.damage_roll.resolve"): {
+		command.Type("sys.daggerheart.action.damage_roll.resolve"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.damage_roll_resolved"),
+				Type:          event.Type("sys.daggerheart.action.damage_roll_resolved"),
 				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -5077,8 +5077,8 @@ func TestSessionDamageRoll_UsesDomainEngine(t *testing.T) {
 	if len(domain.commands) != 1 {
 		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
 	}
-	if domain.commands[0].Type != command.Type("action.damage_roll.resolve") {
-		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "action.damage_roll.resolve")
+	if domain.commands[0].Type != command.Type("sys.daggerheart.action.damage_roll.resolve") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "sys.daggerheart.action.damage_roll.resolve")
 	}
 	if domain.commands[0].SystemID != daggerheart.SystemID {
 		t.Fatalf("command system id = %s, want %s", domain.commands[0].SystemID, daggerheart.SystemID)
@@ -5292,10 +5292,10 @@ func TestSessionReactionFlow_Success(t *testing.T) {
 				PayloadJSON: outcomeJSON,
 			}),
 		},
-		command.Type("action.reaction.resolve"): {
+		command.Type("sys.daggerheart.action.reaction.resolve"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.reaction_resolved"),
+				Type:          event.Type("sys.daggerheart.action.reaction_resolved"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -5395,10 +5395,10 @@ func TestSessionAdversaryAttackRoll_Success(t *testing.T) {
 	}
 
 	svc.stores.Domain = &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.adversary_roll.resolve"): {
+		command.Type("sys.daggerheart.action.adversary_roll.resolve"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.adversary_roll_resolved"),
+				Type:          event.Type("sys.daggerheart.action.adversary_roll_resolved"),
 				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -5446,10 +5446,10 @@ func TestSessionAdversaryAttackRoll_UsesDomainEngine(t *testing.T) {
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.adversary_roll.resolve"): {
+		command.Type("sys.daggerheart.action.adversary_roll.resolve"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.adversary_roll_resolved"),
+				Type:          event.Type("sys.daggerheart.action.adversary_roll_resolved"),
 				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -5480,14 +5480,14 @@ func TestSessionAdversaryAttackRoll_UsesDomainEngine(t *testing.T) {
 	if domain.calls != 1 {
 		t.Fatalf("expected domain to be called once, got %d", domain.calls)
 	}
-	if domain.lastCommand.Type != command.Type("action.adversary_roll.resolve") {
-		t.Fatalf("command type = %s, want %s", domain.lastCommand.Type, "action.adversary_roll.resolve")
+	if domain.lastCommand.Type != command.Type("sys.daggerheart.action.adversary_roll.resolve") {
+		t.Fatalf("command type = %s, want %s", domain.lastCommand.Type, "sys.daggerheart.action.adversary_roll.resolve")
 	}
 	if got := len(eventStore.events["camp-1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)
 	}
-	if eventStore.events["camp-1"][0].Type != event.Type("action.adversary_roll_resolved") {
-		t.Fatalf("event type = %s, want %s", eventStore.events["camp-1"][0].Type, event.Type("action.adversary_roll_resolved"))
+	if eventStore.events["camp-1"][0].Type != event.Type("sys.daggerheart.action.adversary_roll_resolved") {
+		t.Fatalf("event type = %s, want %s", eventStore.events["camp-1"][0].Type, event.Type("sys.daggerheart.action.adversary_roll_resolved"))
 	}
 }
 
@@ -5558,10 +5558,10 @@ func TestSessionAdversaryActionCheck_Success(t *testing.T) {
 	}
 
 	svc.stores.Domain = &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.adversary_action.resolve"): {
+		command.Type("sys.daggerheart.action.adversary_action.resolve"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.adversary_action_resolved"),
+				Type:          event.Type("sys.daggerheart.action.adversary_action_resolved"),
 				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -5611,10 +5611,10 @@ func TestSessionAdversaryActionCheck_UsesDomainEngine(t *testing.T) {
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.adversary_action.resolve"): {
+		command.Type("sys.daggerheart.action.adversary_action.resolve"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.adversary_action_resolved"),
+				Type:          event.Type("sys.daggerheart.action.adversary_action_resolved"),
 				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -5645,14 +5645,14 @@ func TestSessionAdversaryActionCheck_UsesDomainEngine(t *testing.T) {
 	if domain.calls != 1 {
 		t.Fatalf("expected domain to be called once, got %d", domain.calls)
 	}
-	if domain.lastCommand.Type != command.Type("action.adversary_action.resolve") {
-		t.Fatalf("command type = %s, want %s", domain.lastCommand.Type, "action.adversary_action.resolve")
+	if domain.lastCommand.Type != command.Type("sys.daggerheart.action.adversary_action.resolve") {
+		t.Fatalf("command type = %s, want %s", domain.lastCommand.Type, "sys.daggerheart.action.adversary_action.resolve")
 	}
 	if got := len(eventStore.events["camp-1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)
 	}
-	if eventStore.events["camp-1"][0].Type != event.Type("action.adversary_action_resolved") {
-		t.Fatalf("event type = %s, want %s", eventStore.events["camp-1"][0].Type, event.Type("action.adversary_action_resolved"))
+	if eventStore.events["camp-1"][0].Type != event.Type("sys.daggerheart.action.adversary_action_resolved") {
+		t.Fatalf("event type = %s, want %s", eventStore.events["camp-1"][0].Type, event.Type("sys.daggerheart.action.adversary_action_resolved"))
 	}
 }
 
@@ -5972,10 +5972,10 @@ func TestApplyRollOutcome_Success(t *testing.T) {
 	}
 
 	svc.stores.Domain = &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.character_state.patch"): {
+		command.Type("sys.daggerheart.action.character_state.patch"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.character_state_patched"),
+				Type:          event.Type("sys.daggerheart.action.character_state_patched"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -6074,10 +6074,10 @@ func TestApplyRollOutcome_UsesDomainEngine(t *testing.T) {
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.character_state.patch"): {
+		command.Type("sys.daggerheart.action.character_state.patch"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.character_state_patched"),
+				Type:          event.Type("sys.daggerheart.action.character_state_patched"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -6123,7 +6123,7 @@ func TestApplyRollOutcome_UsesDomainEngine(t *testing.T) {
 	var foundOutcome bool
 	for _, cmd := range domain.commands {
 		switch cmd.Type {
-		case command.Type("action.character_state.patch"):
+		case command.Type("sys.daggerheart.action.character_state.patch"):
 			foundPatch = true
 		case command.Type("action.outcome.apply"):
 			foundOutcome = true
@@ -6200,10 +6200,10 @@ func TestApplyRollOutcome_UsesDomainEngineForGmFear(t *testing.T) {
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.gm_fear.set"): {
+		command.Type("sys.daggerheart.action.gm_fear.set"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.gm_fear_changed"),
+				Type:          event.Type("sys.daggerheart.action.gm_fear_changed"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -6277,7 +6277,7 @@ func TestApplyRollOutcome_UsesDomainEngineForGmFear(t *testing.T) {
 	var foundSpotlight bool
 	for _, cmd := range domain.commands {
 		switch cmd.Type {
-		case command.Type("action.gm_fear.set"):
+		case command.Type("sys.daggerheart.action.gm_fear.set"):
 			foundFear = true
 			if cmd.SystemID != daggerheart.SystemID {
 				t.Fatalf("gm fear command system id = %s, want %s", cmd.SystemID, daggerheart.SystemID)
@@ -6309,7 +6309,7 @@ func TestApplyRollOutcome_UsesDomainEngineForGmFear(t *testing.T) {
 	var foundOutcomeEvent bool
 	for _, evt := range eventStore.events["camp-1"] {
 		switch evt.Type {
-		case event.Type("action.gm_fear_changed"):
+		case event.Type("sys.daggerheart.action.gm_fear_changed"):
 			foundFearEvent = true
 		case event.Type("action.outcome_applied"):
 			foundOutcomeEvent = true
@@ -6374,10 +6374,10 @@ func TestApplyRollOutcome_UsesDomainEngineForGmConsequenceGate(t *testing.T) {
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.gm_fear.set"): {
+		command.Type("sys.daggerheart.action.gm_fear.set"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.gm_fear_changed"),
+				Type:          event.Type("sys.daggerheart.action.gm_fear_changed"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -6523,10 +6523,10 @@ func TestApplyRollOutcome_UsesDomainEngineForCharacterStatePatch(t *testing.T) {
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.character_state.patch"): {
+		command.Type("sys.daggerheart.action.character_state.patch"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.character_state_patched"),
+				Type:          event.Type("sys.daggerheart.action.character_state_patched"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -6572,7 +6572,7 @@ func TestApplyRollOutcome_UsesDomainEngineForCharacterStatePatch(t *testing.T) {
 	var foundOutcome bool
 	for _, cmd := range domain.commands {
 		switch cmd.Type {
-		case command.Type("action.character_state.patch"):
+		case command.Type("sys.daggerheart.action.character_state.patch"):
 			foundPatch = true
 			if cmd.SystemID != daggerheart.SystemID {
 				t.Fatalf("patch command system id = %s, want %s", cmd.SystemID, daggerheart.SystemID)
@@ -6607,7 +6607,7 @@ func TestApplyRollOutcome_UsesDomainEngineForCharacterStatePatch(t *testing.T) {
 	var foundOutcomeEvent bool
 	for _, evt := range eventStore.events["camp-1"] {
 		switch evt.Type {
-		case event.Type("action.character_state_patched"):
+		case event.Type("sys.daggerheart.action.character_state_patched"):
 			foundPatchEvent = true
 		case event.Type("action.outcome_applied"):
 			foundOutcomeEvent = true
@@ -6698,10 +6698,10 @@ func TestApplyRollOutcome_UsesDomainEngineForConditionChange(t *testing.T) {
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.character_state.patch"): {
+		command.Type("sys.daggerheart.action.character_state.patch"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.character_state_patched"),
+				Type:          event.Type("sys.daggerheart.action.character_state_patched"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -6713,10 +6713,10 @@ func TestApplyRollOutcome_UsesDomainEngineForConditionChange(t *testing.T) {
 				PayloadJSON:   patchJSON,
 			}),
 		},
-		command.Type("action.condition.change"): {
+		command.Type("sys.daggerheart.action.condition.change"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.condition_changed"),
+				Type:          event.Type("sys.daggerheart.action.condition_changed"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -6760,7 +6760,7 @@ func TestApplyRollOutcome_UsesDomainEngineForConditionChange(t *testing.T) {
 	}
 	var foundCondition bool
 	for _, cmd := range domain.commands {
-		if cmd.Type != command.Type("action.condition.change") {
+		if cmd.Type != command.Type("sys.daggerheart.action.condition.change") {
 			continue
 		}
 		foundCondition = true
@@ -6792,7 +6792,7 @@ func TestApplyRollOutcome_UsesDomainEngineForConditionChange(t *testing.T) {
 	}
 	var foundConditionEvent bool
 	for _, evt := range eventStore.events["camp-1"] {
-		if evt.Type == event.Type("action.condition_changed") {
+		if evt.Type == event.Type("sys.daggerheart.action.condition_changed") {
 			foundConditionEvent = true
 			break
 		}
@@ -6928,10 +6928,10 @@ func TestApplyAttackOutcome_UsesDomainEngine(t *testing.T) {
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.attack.resolve"): {
+		command.Type("sys.daggerheart.action.attack.resolve"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.attack_resolved"),
+				Type:          event.Type("sys.daggerheart.action.attack_resolved"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -6964,8 +6964,8 @@ func TestApplyAttackOutcome_UsesDomainEngine(t *testing.T) {
 	if len(domain.commands) != 1 {
 		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
 	}
-	if domain.commands[0].Type != command.Type("action.attack.resolve") {
-		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "action.attack.resolve")
+	if domain.commands[0].Type != command.Type("sys.daggerheart.action.attack.resolve") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "sys.daggerheart.action.attack.resolve")
 	}
 	if domain.commands[0].SystemID != daggerheart.SystemID {
 		t.Fatalf("command system id = %s, want %s", domain.commands[0].SystemID, daggerheart.SystemID)
@@ -7060,10 +7060,10 @@ func TestApplyAdversaryAttackOutcome_RequiresDomainEngine(t *testing.T) {
 	}
 
 	svc.stores.Domain = &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.adversary_roll.resolve"): {
+		command.Type("sys.daggerheart.action.adversary_roll.resolve"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.adversary_roll_resolved"),
+				Type:          event.Type("sys.daggerheart.action.adversary_roll_resolved"),
 				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -7122,10 +7122,10 @@ func TestApplyAdversaryAttackOutcome_UsesDomainEngine(t *testing.T) {
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.adversary_roll.resolve"): {
+		command.Type("sys.daggerheart.action.adversary_roll.resolve"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.adversary_roll_resolved"),
+				Type:          event.Type("sys.daggerheart.action.adversary_roll_resolved"),
 				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -7170,10 +7170,10 @@ func TestApplyAdversaryAttackOutcome_UsesDomainEngine(t *testing.T) {
 		t.Fatalf("encode adversary attack payload: %v", err)
 	}
 
-	domain.resultsByType[command.Type("action.adversary_attack.resolve")] = engine.Result{
+	domain.resultsByType[command.Type("sys.daggerheart.action.adversary_attack.resolve")] = engine.Result{
 		Decision: command.Accept(event.Event{
 			CampaignID:    "camp-1",
-			Type:          event.Type("action.adversary_attack_resolved"),
+			Type:          event.Type("sys.daggerheart.action.adversary_attack_resolved"),
 			Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
 			ActorType:     event.ActorTypeSystem,
 			SessionID:     "sess-1",
@@ -7205,8 +7205,8 @@ func TestApplyAdversaryAttackOutcome_UsesDomainEngine(t *testing.T) {
 	if len(domain.commands) != 2 {
 		t.Fatalf("expected 2 domain commands, got %d", len(domain.commands))
 	}
-	if domain.commands[1].Type != command.Type("action.adversary_attack.resolve") {
-		t.Fatalf("command type = %s, want %s", domain.commands[1].Type, "action.adversary_attack.resolve")
+	if domain.commands[1].Type != command.Type("sys.daggerheart.action.adversary_attack.resolve") {
+		t.Fatalf("command type = %s, want %s", domain.commands[1].Type, "sys.daggerheart.action.adversary_attack.resolve")
 	}
 	if domain.commands[1].SystemID != daggerheart.SystemID {
 		t.Fatalf("command system id = %s, want %s", domain.commands[1].SystemID, daggerheart.SystemID)
@@ -7349,10 +7349,10 @@ func TestApplyReactionOutcome_UsesDomainEngine(t *testing.T) {
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.reaction.resolve"): {
+		command.Type("sys.daggerheart.action.reaction.resolve"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.reaction_resolved"),
+				Type:          event.Type("sys.daggerheart.action.reaction_resolved"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -7384,8 +7384,8 @@ func TestApplyReactionOutcome_UsesDomainEngine(t *testing.T) {
 	if len(domain.commands) != 1 {
 		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
 	}
-	if domain.commands[0].Type != command.Type("action.reaction.resolve") {
-		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "action.reaction.resolve")
+	if domain.commands[0].Type != command.Type("sys.daggerheart.action.reaction.resolve") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "sys.daggerheart.action.reaction.resolve")
 	}
 	if domain.commands[0].SystemID != daggerheart.SystemID {
 		t.Fatalf("command system id = %s, want %s", domain.commands[0].SystemID, daggerheart.SystemID)
@@ -7482,10 +7482,10 @@ func TestSessionAttackFlow_Success(t *testing.T) {
 				PayloadJSON: outcomeJSON,
 			}),
 		},
-		command.Type("action.attack.resolve"): {
+		command.Type("sys.daggerheart.action.attack.resolve"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.attack_resolved"),
+				Type:          event.Type("sys.daggerheart.action.attack_resolved"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -7559,10 +7559,10 @@ func TestSessionAdversaryAttackFlow_Success(t *testing.T) {
 	}
 
 	svc.stores.Domain = &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.adversary_roll.resolve"): {
+		command.Type("sys.daggerheart.action.adversary_roll.resolve"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.adversary_roll_resolved"),
+				Type:          event.Type("sys.daggerheart.action.adversary_roll_resolved"),
 				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -7574,10 +7574,10 @@ func TestSessionAdversaryAttackFlow_Success(t *testing.T) {
 				PayloadJSON:   rollPayloadJSON,
 			}),
 		},
-		command.Type("action.adversary_attack.resolve"): {
+		command.Type("sys.daggerheart.action.adversary_attack.resolve"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.adversary_attack_resolved"),
+				Type:          event.Type("sys.daggerheart.action.adversary_attack_resolved"),
 				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -7684,10 +7684,10 @@ func TestSessionGroupActionFlow_Success(t *testing.T) {
 				PayloadJSON: outcomeJSON,
 			}),
 		},
-		command.Type("action.group_action.resolve"): {
+		command.Type("sys.daggerheart.action.group_action.resolve"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.group_action_resolved"),
+				Type:          event.Type("sys.daggerheart.action.group_action_resolved"),
 				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -7791,10 +7791,10 @@ func TestSessionTagTeamFlow_Success(t *testing.T) {
 				PayloadJSON: outcomeJSON,
 			}),
 		},
-		command.Type("action.tag_team.resolve"): {
+		command.Type("sys.daggerheart.action.tag_team.resolve"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.tag_team_resolved"),
+				Type:          event.Type("sys.daggerheart.action.tag_team_resolved"),
 				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -7898,10 +7898,10 @@ func TestSessionGroupActionFlow_UsesDomainEngine(t *testing.T) {
 				PayloadJSON: outcomeJSON,
 			}),
 		},
-		command.Type("action.group_action.resolve"): {
+		command.Type("sys.daggerheart.action.group_action.resolve"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.group_action_resolved"),
+				Type:          event.Type("sys.daggerheart.action.group_action_resolved"),
 				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -7932,7 +7932,7 @@ func TestSessionGroupActionFlow_UsesDomainEngine(t *testing.T) {
 	}
 	var found bool
 	for _, cmd := range domain.commands {
-		if cmd.Type == command.Type("action.group_action.resolve") {
+		if cmd.Type == command.Type("sys.daggerheart.action.group_action.resolve") {
 			found = true
 			break
 		}
@@ -8010,10 +8010,10 @@ func TestSessionTagTeamFlow_UsesDomainEngine(t *testing.T) {
 				PayloadJSON: outcomeJSON,
 			}),
 		},
-		command.Type("action.tag_team.resolve"): {
+		command.Type("sys.daggerheart.action.tag_team.resolve"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.tag_team_resolved"),
+				Type:          event.Type("sys.daggerheart.action.tag_team_resolved"),
 				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -8042,7 +8042,7 @@ func TestSessionTagTeamFlow_UsesDomainEngine(t *testing.T) {
 	}
 	var found bool
 	for _, cmd := range domain.commands {
-		if cmd.Type == command.Type("action.tag_team.resolve") {
+		if cmd.Type == command.Type("sys.daggerheart.action.tag_team.resolve") {
 			found = true
 			break
 		}
@@ -8101,10 +8101,10 @@ func TestApplyAttackOutcome_Success(t *testing.T) {
 	}
 
 	svc.stores.Domain = &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.attack.resolve"): {
+		command.Type("sys.daggerheart.action.attack.resolve"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.attack_resolved"),
+				Type:          event.Type("sys.daggerheart.action.attack_resolved"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -8158,10 +8158,10 @@ func TestApplyAdversaryAttackOutcome_Success(t *testing.T) {
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("action.adversary_roll.resolve"): {
+		command.Type("sys.daggerheart.action.adversary_roll.resolve"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
-				Type:          event.Type("action.adversary_roll_resolved"),
+				Type:          event.Type("sys.daggerheart.action.adversary_roll_resolved"),
 				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
@@ -8199,10 +8199,10 @@ func TestApplyAdversaryAttackOutcome_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("encode adversary attack payload: %v", err)
 	}
-	domain.resultsByType[command.Type("action.adversary_attack.resolve")] = engine.Result{
+	domain.resultsByType[command.Type("sys.daggerheart.action.adversary_attack.resolve")] = engine.Result{
 		Decision: command.Accept(event.Event{
 			CampaignID:    "camp-1",
-			Type:          event.Type("action.adversary_attack_resolved"),
+			Type:          event.Type("sys.daggerheart.action.adversary_attack_resolved"),
 			Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
 			ActorType:     event.ActorTypeSystem,
 			SessionID:     "sess-1",

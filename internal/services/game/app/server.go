@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"time"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
@@ -21,8 +22,8 @@ import (
 	daggerheartservice "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/random"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/integrity"
 	storagesqlite "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite"
 	"google.golang.org/grpc"
@@ -32,11 +33,14 @@ import (
 
 // serverEnv holds env-parsed configuration for the game server.
 type serverEnv struct {
-	AuthAddr          string `env:"FRACTURING_SPACE_AUTH_ADDR"                 envDefault:"localhost:8083"`
-	EventsDBPath      string `env:"FRACTURING_SPACE_GAME_EVENTS_DB_PATH"`
-	ProjectionsDBPath string `env:"FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH"`
-	ContentDBPath     string `env:"FRACTURING_SPACE_GAME_CONTENT_DB_PATH"`
-	DomainEnabled     bool   `env:"FRACTURING_SPACE_GAME_DOMAIN_ENABLED"       envDefault:"true"`
+	AuthAddr                                 string `env:"FRACTURING_SPACE_AUTH_ADDR"                                 envDefault:"localhost:8083"`
+	EventsDBPath                             string `env:"FRACTURING_SPACE_GAME_EVENTS_DB_PATH"`
+	ProjectionsDBPath                        string `env:"FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH"`
+	ContentDBPath                            string `env:"FRACTURING_SPACE_GAME_CONTENT_DB_PATH"`
+	DomainEnabled                            bool   `env:"FRACTURING_SPACE_GAME_DOMAIN_ENABLED"                       envDefault:"true"`
+	ProjectionApplyOutboxEnabled             bool   `env:"FRACTURING_SPACE_GAME_PROJECTION_APPLY_OUTBOX_ENABLED"     envDefault:"false"`
+	ProjectionApplyOutboxShadowWorkerEnabled bool   `env:"FRACTURING_SPACE_GAME_PROJECTION_APPLY_OUTBOX_SHADOW_WORKER_ENABLED" envDefault:"false"`
+	ProjectionApplyOutboxWorkerEnabled       bool   `env:"FRACTURING_SPACE_GAME_PROJECTION_APPLY_OUTBOX_WORKER_ENABLED" envDefault:"false"`
 }
 
 func loadServerEnv() serverEnv {
@@ -56,12 +60,30 @@ func loadServerEnv() serverEnv {
 
 // Server hosts the game service.
 type Server struct {
-	listener   net.Listener
-	grpcServer *grpc.Server
-	health     *health.Server
-	stores     *storageBundle
-	authConn   *grpc.ClientConn
+	listener                                 net.Listener
+	grpcServer                               *grpc.Server
+	health                                   *health.Server
+	stores                                   *storageBundle
+	authConn                                 *grpc.ClientConn
+	projectionApplyOutboxWorkerEnabled       bool
+	projectionApplyOutboxApply               func(context.Context, event.Event) error
+	projectionApplyOutboxShadowWorkerEnabled bool
 }
+
+type projectionApplyOutboxShadowProcessor interface {
+	ProcessProjectionApplyOutboxShadow(context.Context, time.Time, int) (int, error)
+}
+
+type projectionApplyOutboxProcessor interface {
+	ProcessProjectionApplyOutbox(context.Context, time.Time, int, func(context.Context, event.Event) error) (int, error)
+}
+
+const (
+	projectionApplyOutboxWorkerInterval       = 2 * time.Second
+	projectionApplyOutboxWorkerBatch          = 64
+	projectionApplyOutboxShadowWorkerInterval = 2 * time.Second
+	projectionApplyOutboxShadowWorkerBatch    = 64
+)
 
 // storageBundle groups the three SQLite stores and manages their lifecycle.
 type storageBundle struct {
@@ -143,6 +165,12 @@ func NewWithAddr(addr string) (*Server, error) {
 		bundle.Close()
 		return nil, fmt.Errorf("build system registry: %w", err)
 	}
+	applier := stores.Applier()
+	if err := validateSystemRegistrationParity(registeredSystemModules(), systemRegistry, applier.Adapters); err != nil {
+		_ = listener.Close()
+		bundle.Close()
+		return nil, fmt.Errorf("validate system parity: %w", err)
+	}
 
 	authConn, authClient, err := dialAuthGRPC(context.Background(), srvEnv.AuthAddr)
 	if err != nil {
@@ -210,19 +238,37 @@ func NewWithAddr(addr string) (*Server, error) {
 	healthServer.SetServingStatus("game.v1.StatisticsService", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("game.v1.SystemService", grpc_health_v1.HealthCheckResponse_SERVING)
 
+	enableApplyWorker := srvEnv.ProjectionApplyOutboxEnabled && srvEnv.ProjectionApplyOutboxWorkerEnabled
+	enableShadowWorker := srvEnv.ProjectionApplyOutboxEnabled && srvEnv.ProjectionApplyOutboxShadowWorkerEnabled
+	if enableApplyWorker && enableShadowWorker {
+		enableShadowWorker = false
+		log.Printf("projection apply outbox shadow worker disabled because apply worker is enabled")
+	}
+	if srvEnv.ProjectionApplyOutboxWorkerEnabled && !srvEnv.ProjectionApplyOutboxEnabled {
+		log.Printf("projection apply outbox worker disabled because enqueue flag is off")
+	}
+	if srvEnv.ProjectionApplyOutboxShadowWorkerEnabled && !srvEnv.ProjectionApplyOutboxEnabled {
+		log.Printf("projection apply outbox shadow worker disabled because enqueue flag is off")
+	}
+
 	return &Server{
-		listener:   listener,
-		grpcServer: grpcServer,
-		health:     healthServer,
-		stores:     bundle,
-		authConn:   authConn,
+		listener:                                 listener,
+		grpcServer:                               grpcServer,
+		health:                                   healthServer,
+		stores:                                   bundle,
+		authConn:                                 authConn,
+		projectionApplyOutboxWorkerEnabled:       enableApplyWorker,
+		projectionApplyOutboxApply:               applier.Apply,
+		projectionApplyOutboxShadowWorkerEnabled: enableShadowWorker,
 	}, nil
 }
 
 func buildSystemRegistry() (*systems.Registry, error) {
 	registry := systems.NewRegistry()
-	if err := registry.Register(daggerheart.NewRegistrySystem()); err != nil {
-		return nil, fmt.Errorf("register daggerheart system: %w", err)
+	for _, gameSystem := range registeredMetadataSystems() {
+		if err := registry.Register(gameSystem); err != nil {
+			return nil, fmt.Errorf("register system %s@%s: %w", gameSystem.ID(), gameSystem.Version(), err)
+		}
 	}
 	return registry, nil
 }
@@ -259,6 +305,10 @@ func (s *Server) Serve(ctx context.Context) error {
 		ctx = context.Background()
 	}
 	defer s.closeResources()
+	stopOutboxWorker := s.startProjectionApplyOutboxWorker(ctx)
+	defer stopOutboxWorker()
+	stopOutboxShadowWorker := s.startProjectionApplyOutboxShadowWorker(ctx)
+	defer stopOutboxShadowWorker()
 
 	log.Printf("game server listening at %v", s.listener.Addr())
 	serveErr := make(chan error, 1)
@@ -286,9 +336,167 @@ func (s *Server) Serve(ctx context.Context) error {
 	}
 }
 
+func (s *Server) startProjectionApplyOutboxShadowWorker(ctx context.Context) func() {
+	if s == nil || !s.projectionApplyOutboxShadowWorkerEnabled || s.stores == nil || s.stores.events == nil {
+		return func() {}
+	}
+
+	workerCtx, cancel := context.WithCancel(ctx)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		runProjectionApplyOutboxShadowWorker(
+			workerCtx,
+			s.stores.events,
+			projectionApplyOutboxShadowWorkerInterval,
+			projectionApplyOutboxShadowWorkerBatch,
+			time.Now,
+			log.Printf,
+		)
+	}()
+
+	return func() {
+		cancel()
+		<-done
+	}
+}
+
+func (s *Server) startProjectionApplyOutboxWorker(ctx context.Context) func() {
+	if s == nil || !s.projectionApplyOutboxWorkerEnabled || s.stores == nil || s.stores.events == nil || s.projectionApplyOutboxApply == nil {
+		return func() {}
+	}
+
+	workerCtx, cancel := context.WithCancel(ctx)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		runProjectionApplyOutboxWorker(
+			workerCtx,
+			s.stores.events,
+			s.projectionApplyOutboxApply,
+			projectionApplyOutboxWorkerInterval,
+			projectionApplyOutboxWorkerBatch,
+			time.Now,
+			log.Printf,
+		)
+	}()
+
+	return func() {
+		cancel()
+		<-done
+	}
+}
+
+func runProjectionApplyOutboxShadowWorker(
+	ctx context.Context,
+	processor projectionApplyOutboxShadowProcessor,
+	interval time.Duration,
+	limit int,
+	now func() time.Time,
+	logf func(string, ...any),
+) {
+	if processor == nil || interval <= 0 || limit <= 0 {
+		return
+	}
+	if now == nil {
+		now = time.Now
+	}
+	if logf == nil {
+		logf = func(string, ...any) {}
+	}
+
+	runPass := func() int {
+		processed, err := processor.ProcessProjectionApplyOutboxShadow(ctx, now().UTC(), limit)
+		if err != nil {
+			logf("projection apply outbox shadow worker pass failed: %v", err)
+			return 0
+		}
+		if processed > 0 {
+			logf("projection apply outbox shadow worker observed %d rows", processed)
+		}
+		return processed
+	}
+
+	for {
+		if runPass() < limit {
+			break
+		}
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+	}
+
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			runPass()
+		}
+	}
+}
+
+func runProjectionApplyOutboxWorker(
+	ctx context.Context,
+	processor projectionApplyOutboxProcessor,
+	apply func(context.Context, event.Event) error,
+	interval time.Duration,
+	limit int,
+	now func() time.Time,
+	logf func(string, ...any),
+) {
+	if processor == nil || apply == nil || interval <= 0 || limit <= 0 {
+		return
+	}
+	if now == nil {
+		now = time.Now
+	}
+	if logf == nil {
+		logf = func(string, ...any) {}
+	}
+
+	runPass := func() int {
+		processed, err := processor.ProcessProjectionApplyOutbox(ctx, now().UTC(), limit, apply)
+		if err != nil {
+			logf("projection apply outbox worker pass failed: %v", err)
+			return 0
+		}
+		if processed > 0 {
+			logf("projection apply outbox worker applied %d rows", processed)
+		}
+		return processed
+	}
+
+	for {
+		if runPass() < limit {
+			break
+		}
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+	}
+
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			runPass()
+		}
+	}
+}
+
 // openStorageBundle opens the events, projections, and content stores as a unit.
 func openStorageBundle(srvEnv serverEnv) (*storageBundle, error) {
-	eventStore, err := openEventStore(srvEnv.EventsDBPath)
+	eventStore, err := openEventStore(srvEnv.EventsDBPath, srvEnv.ProjectionApplyOutboxEnabled)
 	if err != nil {
 		return nil, err
 	}
@@ -338,7 +546,7 @@ func dialAuthGRPC(ctx context.Context, authAddr string) (*grpc.ClientConn, authv
 	return conn, authv1.NewAuthServiceClient(conn), nil
 }
 
-func openEventStore(path string) (*storagesqlite.Store, error) {
+func openEventStore(path string, projectionApplyOutboxEnabled bool) (*storagesqlite.Store, error) {
 	if err := ensureDir(path); err != nil {
 		return nil, err
 	}
@@ -346,11 +554,16 @@ func openEventStore(path string) (*storagesqlite.Store, error) {
 	if err != nil {
 		return nil, err
 	}
-	registries, err := engine.BuildRegistries(daggerheart.NewModule())
+	registries, err := engine.BuildRegistries(registeredSystemModules()...)
 	if err != nil {
 		return nil, fmt.Errorf("build registries: %w", err)
 	}
-	store, err := storagesqlite.OpenEvents(path, keyring, registries.Events)
+	store, err := storagesqlite.OpenEvents(
+		path,
+		keyring,
+		registries.Events,
+		storagesqlite.WithProjectionApplyOutboxEnabled(projectionApplyOutboxEnabled),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("open events store: %w", err)
 	}

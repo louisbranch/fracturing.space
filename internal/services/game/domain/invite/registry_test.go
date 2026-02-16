@@ -144,6 +144,8 @@ func TestRegisterEvents_ValidatesCreatedPayload(t *testing.T) {
 		Type:        event.Type("invite.created"),
 		Timestamp:   time.Unix(0, 0).UTC(),
 		ActorType:   event.ActorTypeSystem,
+		EntityType:  "invite",
+		EntityID:    "inv-1",
 		PayloadJSON: []byte(`{"invite_id":"inv-1","participant_id":"p-1","status":"pending"}`),
 	}
 	if _, err := registry.ValidateForAppend(validEvent); err != nil {
@@ -161,6 +163,45 @@ func TestRegisterEvents_ValidatesCreatedPayload(t *testing.T) {
 	}
 }
 
+func TestRegisterEvents_CreatedRequiresEntityTargetAddressing(t *testing.T) {
+	registry := event.NewRegistry()
+	if err := RegisterEvents(registry); err != nil {
+		t.Fatalf("register events: %v", err)
+	}
+
+	base := event.Event{
+		CampaignID:  "camp-1",
+		Type:        event.Type("invite.created"),
+		Timestamp:   time.Unix(0, 0).UTC(),
+		ActorType:   event.ActorTypeSystem,
+		PayloadJSON: []byte(`{"invite_id":"inv-1","participant_id":"p-1","status":"pending"}`),
+	}
+
+	_, err := registry.ValidateForAppend(base)
+	if err == nil {
+		t.Fatal("expected missing entity type error")
+	}
+	if !errors.Is(err, event.ErrEntityTypeRequired) {
+		t.Fatalf("expected ErrEntityTypeRequired, got %v", err)
+	}
+
+	withType := base
+	withType.EntityType = "invite"
+	_, err = registry.ValidateForAppend(withType)
+	if err == nil {
+		t.Fatal("expected missing entity id error")
+	}
+	if !errors.Is(err, event.ErrEntityIDRequired) {
+		t.Fatalf("expected ErrEntityIDRequired, got %v", err)
+	}
+
+	withTypeAndID := withType
+	withTypeAndID.EntityID = "inv-1"
+	if _, err := registry.ValidateForAppend(withTypeAndID); err != nil {
+		t.Fatalf("valid addressed event rejected: %v", err)
+	}
+}
+
 func TestRegisterEvents_ValidatesClaimedPayload(t *testing.T) {
 	registry := event.NewRegistry()
 	if err := RegisterEvents(registry); err != nil {
@@ -172,6 +213,8 @@ func TestRegisterEvents_ValidatesClaimedPayload(t *testing.T) {
 		Type:        event.Type("invite.claimed"),
 		Timestamp:   time.Unix(0, 0).UTC(),
 		ActorType:   event.ActorTypeSystem,
+		EntityType:  "invite",
+		EntityID:    "inv-1",
 		PayloadJSON: []byte(`{"invite_id":"inv-1","participant_id":"p-1","user_id":"user-1","jti":"jwt-1"}`),
 	}
 	if _, err := registry.ValidateForAppend(validEvent); err != nil {
@@ -200,6 +243,8 @@ func TestRegisterEvents_ValidatesRevokedPayload(t *testing.T) {
 		Type:        event.Type("invite.revoked"),
 		Timestamp:   time.Unix(0, 0).UTC(),
 		ActorType:   event.ActorTypeSystem,
+		EntityType:  "invite",
+		EntityID:    "inv-1",
 		PayloadJSON: []byte(`{"invite_id":"inv-1"}`),
 	}
 	if _, err := registry.ValidateForAppend(validEvent); err != nil {
@@ -228,6 +273,8 @@ func TestRegisterEvents_ValidatesUpdatedPayload(t *testing.T) {
 		Type:        event.Type("invite.updated"),
 		Timestamp:   time.Unix(0, 0).UTC(),
 		ActorType:   event.ActorTypeSystem,
+		EntityType:  "invite",
+		EntityID:    "inv-1",
 		PayloadJSON: []byte(`{"invite_id":"inv-1","status":"pending"}`),
 	}
 	if _, err := registry.ValidateForAppend(validEvent); err != nil {

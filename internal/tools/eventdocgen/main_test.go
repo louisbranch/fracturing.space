@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"flag"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -105,22 +107,42 @@ func TestPayloadNameForEvent(t *testing.T) {
 
 func TestRenderCatalog(t *testing.T) {
 	defs := packageDefs{
-		Events: []eventDef{{
-			Owner:     "Core",
-			Name:      "TypeFoo",
-			Value:     "foo",
-			DefinedAt: "internal/foo.go:10",
-		}},
+		Events: []eventDef{
+			{
+				Owner:     "Core",
+				Name:      "TypeFoo",
+				Value:     "action.foo",
+				DefinedAt: "internal/foo.go:10",
+			},
+			{
+				Owner:     "Core",
+				Name:      "TypeBar",
+				Value:     "session.bar",
+				DefinedAt: "internal/bar.go:11",
+			},
+		},
 		Payloads: map[string]payloadDef{
 			"FooPayload": {
 				Owner:     "Core",
 				Name:      "FooPayload",
 				DefinedAt: "internal/foo.go:20",
-				Fields: []payloadField{{
-					Name:    "ID",
-					Type:    "string",
-					JSONTag: "json:\"id\"",
-				}},
+				Fields: []payloadField{
+					{
+						Name:    "ID",
+						Type:    "string",
+						JSONTag: "json:\"id\"",
+					},
+					{
+						Name:    "Note",
+						Type:    "string",
+						JSONTag: "json:\"note,omitempty\"",
+					},
+				},
+			},
+			"BarPayload": {
+				Owner:     "Core",
+				Name:      "BarPayload",
+				DefinedAt: "internal/bar.go:21",
 			},
 			"UnusedPayload": {
 				Owner:     "Core",
@@ -138,9 +160,17 @@ func TestRenderCatalog(t *testing.T) {
 	}
 	checks := []string{
 		"## Core Events",
-		"### `foo` (`TypeFoo`)",
-		"Payload: `FooPayload`",
-		"`ID (json:\"id\")`: `string`",
+		"### Summary",
+		"| Event | Namespace | Name | Constant | Payload | Emitters |",
+		"| `action.foo` | `action` | `foo` | `TypeFoo` | `FooPayload` | 1 |",
+		"| `session.bar` | `session` | `bar` | `TypeBar` | `BarPayload` | 0 |",
+		"### Namespace `action`",
+		"#### `action.foo`",
+		"- Constant: `TypeFoo`",
+		"- Payload: `FooPayload` (`internal/foo.go:20`)",
+		"| `ID` | `id` | `string` | yes |",
+		"| `Note` | `note` | `string` | no |",
+		"### Namespace `session`",
 		"### Unmapped Payloads",
 		"`UnusedPayload`",
 		"Emitters:",
@@ -388,5 +418,843 @@ func TestRenderCatalog_NoPayload(t *testing.T) {
 	}
 	if !strings.Contains(output, "Payload: not found") {
 		t.Error("expected 'Payload: not found' for event without matching payload")
+	}
+}
+
+func TestSplitEventValue(t *testing.T) {
+	t.Run("with namespace", func(t *testing.T) {
+		namespace, name := splitEventValue("session.started")
+		if namespace != "session" {
+			t.Fatalf("namespace = %q, want session", namespace)
+		}
+		if name != "started" {
+			t.Fatalf("name = %q, want started", name)
+		}
+	})
+
+	t.Run("without namespace", func(t *testing.T) {
+		namespace, name := splitEventValue("orphan")
+		if namespace != "(none)" {
+			t.Fatalf("namespace = %q, want (none)", namespace)
+		}
+		if name != "orphan" {
+			t.Fatalf("name = %q, want orphan", name)
+		}
+	})
+
+	t.Run("empty", func(t *testing.T) {
+		namespace, name := splitEventValue("")
+		if namespace != "(none)" {
+			t.Fatalf("namespace = %q, want (none)", namespace)
+		}
+		if name != "(none)" {
+			t.Fatalf("name = %q, want (none)", name)
+		}
+	})
+}
+
+func TestParseJSONTag(t *testing.T) {
+	t.Run("required tagged field", func(t *testing.T) {
+		name, required := parseJSONTag(`json:"id"`, "ID")
+		if name != "id" {
+			t.Fatalf("name = %q, want id", name)
+		}
+		if !required {
+			t.Fatal("expected required field")
+		}
+	})
+
+	t.Run("omitempty tagged field", func(t *testing.T) {
+		name, required := parseJSONTag(`json:"note,omitempty"`, "Note")
+		if name != "note" {
+			t.Fatalf("name = %q, want note", name)
+		}
+		if required {
+			t.Fatal("expected optional field")
+		}
+	})
+
+	t.Run("missing tag", func(t *testing.T) {
+		name, required := parseJSONTag("", "DisplayName")
+		if name != "DisplayName" {
+			t.Fatalf("name = %q, want DisplayName", name)
+		}
+		if !required {
+			t.Fatal("expected required field for untagged field")
+		}
+	})
+
+	t.Run("unexpected tag format", func(t *testing.T) {
+		name, required := parseJSONTag("bad", "DisplayName")
+		if name != "bad" {
+			t.Fatalf("name = %q, want bad", name)
+		}
+		if !required {
+			t.Fatal("expected required field for unknown tag format")
+		}
+	})
+}
+
+func TestWriteOutput(t *testing.T) {
+	root := t.TempDir()
+	out := filepath.Join(root, "docs", "events", "out.md")
+	if err := writeOutput(out, "content", "catalog"); err != nil {
+		t.Fatalf("writeOutput returned error: %v", err)
+	}
+	data, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatalf("read output: %v", err)
+	}
+	if string(data) != "content" {
+		t.Fatalf("unexpected output content: %q", string(data))
+	}
+}
+
+func TestMainGeneratesCatalogAndUsageMap(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "go.mod"), []byte("module github.com/louisbranch/fracturing.space\n"), 0o644); err != nil {
+		t.Fatalf("write go.mod: %v", err)
+	}
+
+	coreDir := filepath.Join(root, "internal", "services", "game", "domain", "campaign", "event")
+	if err := os.MkdirAll(coreDir, 0o755); err != nil {
+		t.Fatalf("mkdir core dir: %v", err)
+	}
+	coreEvent := strings.Join([]string{
+		"package event",
+		"",
+		"type Type string",
+		"",
+		"const (",
+		"\tTypeCampaignCreated Type = \"campaign.created\"",
+		")",
+	}, "\n")
+	if err := os.WriteFile(filepath.Join(coreDir, "event.go"), []byte(coreEvent), 0o644); err != nil {
+		t.Fatalf("write core event file: %v", err)
+	}
+	corePayload := strings.Join([]string{
+		"package event",
+		"",
+		"type CampaignCreatedPayload struct {",
+		"\tName string `json:\"name\"`",
+		"}",
+	}, "\n")
+	if err := os.WriteFile(filepath.Join(coreDir, "payload.go"), []byte(corePayload), 0o644); err != nil {
+		t.Fatalf("write core payload file: %v", err)
+	}
+
+	daggerheartDir := filepath.Join(root, "internal", "services", "game", "domain", "systems", "daggerheart")
+	if err := os.MkdirAll(daggerheartDir, 0o755); err != nil {
+		t.Fatalf("mkdir daggerheart dir: %v", err)
+	}
+	daggerheartEvents := strings.Join([]string{
+		"package daggerheart",
+		"",
+		"import event \"github.com/louisbranch/fracturing.space/internal/services/game/domain/event\"",
+		"",
+		"const (",
+		"\tEventTypeAlphaDone event.Type = \"action.alpha_done\"",
+		")",
+	}, "\n")
+	if err := os.WriteFile(filepath.Join(daggerheartDir, "event_types.go"), []byte(daggerheartEvents), 0o644); err != nil {
+		t.Fatalf("write daggerheart event file: %v", err)
+	}
+	daggerheartPayload := strings.Join([]string{
+		"package daggerheart",
+		"",
+		"type AlphaDonePayload struct {",
+		"\tID string `json:\"id\"`",
+		"}",
+	}, "\n")
+	if err := os.WriteFile(filepath.Join(daggerheartDir, "payload.go"), []byte(daggerheartPayload), 0o644); err != nil {
+		t.Fatalf("write daggerheart payload file: %v", err)
+	}
+
+	eventDir := filepath.Join(root, "internal", "services", "game", "domain", "event")
+	if err := os.MkdirAll(eventDir, 0o755); err != nil {
+		t.Fatalf("mkdir event dir: %v", err)
+	}
+	eventPkg := strings.Join([]string{
+		"package event",
+		"",
+		"type Type string",
+		"",
+		"type Event struct {",
+		"\tType Type",
+		"}",
+	}, "\n")
+	if err := os.WriteFile(filepath.Join(eventDir, "event.go"), []byte(eventPkg), 0o644); err != nil {
+		t.Fatalf("write event package file: %v", err)
+	}
+
+	emitterDir := filepath.Join(root, "internal", "services", "game", "domain", "sample")
+	if err := os.MkdirAll(emitterDir, 0o755); err != nil {
+		t.Fatalf("mkdir emitter dir: %v", err)
+	}
+	emitterSrc := strings.Join([]string{
+		"package sample",
+		"",
+		"import event \"github.com/louisbranch/fracturing.space/internal/services/game/domain/event\"",
+		"",
+		"func emit() {",
+		"\t_ = event.Event{Type: TypeCampaignCreated}",
+		"}",
+	}, "\n")
+	if err := os.WriteFile(filepath.Join(emitterDir, "emit.go"), []byte(emitterSrc), 0o644); err != nil {
+		t.Fatalf("write emitter file: %v", err)
+	}
+
+	catalogOut := "docs/events/generated-catalog.md"
+	usageOut := "docs/events/generated-usage.md"
+
+	oldArgs := os.Args
+	oldFlagSet := flag.CommandLine
+	defer func() {
+		os.Args = oldArgs
+		flag.CommandLine = oldFlagSet
+	}()
+
+	flag.CommandLine = flag.NewFlagSet("eventdocgen-test", flag.ContinueOnError)
+	os.Args = []string{
+		"eventdocgen-test",
+		"-root", root,
+		"-out", catalogOut,
+		"-usage-out", usageOut,
+		"-commands-out", "",
+	}
+
+	main()
+
+	catalogData, err := os.ReadFile(filepath.Join(root, catalogOut))
+	if err != nil {
+		t.Fatalf("read generated catalog: %v", err)
+	}
+	if !strings.Contains(string(catalogData), "## Core Events") {
+		t.Fatalf("catalog missing Core Events section:\n%s", string(catalogData))
+	}
+	if !strings.Contains(string(catalogData), "## Daggerheart Events") {
+		t.Fatalf("catalog missing Daggerheart Events section:\n%s", string(catalogData))
+	}
+
+	usageData, err := os.ReadFile(filepath.Join(root, usageOut))
+	if err != nil {
+		t.Fatalf("read generated usage map: %v", err)
+	}
+	if !strings.Contains(string(usageData), "# Event Usage Map") {
+		t.Fatalf("usage map missing title:\n%s", string(usageData))
+	}
+	if !strings.Contains(string(usageData), "### `campaign.created`") {
+		t.Fatalf("usage map missing campaign.created event:\n%s", string(usageData))
+	}
+}
+
+func TestBuildEventValueLookup(t *testing.T) {
+	packages := []packageDefs{
+		{
+			Events: []eventDef{
+				{Name: "TypeOne", Value: "one.created"},
+				{Name: "TypeTwo", Value: "two.updated"},
+				{Name: "", Value: "invalid"},
+				{Name: "TypeThree", Value: ""},
+			},
+		},
+	}
+
+	lookup := buildEventValueLookup(packages)
+	if lookup["TypeOne"] != "one.created" {
+		t.Fatalf("TypeOne lookup mismatch: %q", lookup["TypeOne"])
+	}
+	if lookup["TypeTwo"] != "two.updated" {
+		t.Fatalf("TypeTwo lookup mismatch: %q", lookup["TypeTwo"])
+	}
+	if _, ok := lookup[""]; ok {
+		t.Fatal("expected empty-name event to be ignored")
+	}
+	if _, ok := lookup["TypeThree"]; ok {
+		t.Fatal("expected empty-value event to be ignored")
+	}
+}
+
+func TestBuildLocalConstLookup(t *testing.T) {
+	src := strings.Join([]string{
+		"package sample",
+		"",
+		"import \"example.com/event\"",
+		"",
+		"const (",
+		"\tBaseType = event.Type(\"campaign.created\")",
+		"\tAliasType = BaseType",
+		"\tRawType = \"session.started\"",
+		")",
+	}, "\n")
+
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, "sample.go", src, parser.AllErrors)
+	if err != nil {
+		t.Fatalf("parse file: %v", err)
+	}
+
+	lookup := buildLocalConstLookup(file, map[string]string{"SeedType": "seed.type"})
+	if lookup["SeedType"] != "seed.type" {
+		t.Fatalf("seed lookup mismatch: %q", lookup["SeedType"])
+	}
+	if lookup["BaseType"] != "campaign.created" {
+		t.Fatalf("BaseType lookup mismatch: %q", lookup["BaseType"])
+	}
+	if lookup["AliasType"] != "campaign.created" {
+		t.Fatalf("AliasType lookup mismatch: %q", lookup["AliasType"])
+	}
+	if lookup["RawType"] != "session.started" {
+		t.Fatalf("RawType lookup mismatch: %q", lookup["RawType"])
+	}
+}
+
+func TestEventValueFromExpr(t *testing.T) {
+	lookup := map[string]string{
+		"TypeFoo": "campaign.created",
+	}
+
+	t.Run("string literal", func(t *testing.T) {
+		expr := &ast.BasicLit{Kind: token.STRING, Value: `"session.started"`}
+		if got := eventValueFromExpr(expr, lookup); got != "session.started" {
+			t.Fatalf("got %q, want session.started", got)
+		}
+	})
+
+	t.Run("call wrapper", func(t *testing.T) {
+		expr := &ast.CallExpr{
+			Fun:  &ast.Ident{Name: "Type"},
+			Args: []ast.Expr{&ast.BasicLit{Kind: token.STRING, Value: `"invite.created"`}},
+		}
+		if got := eventValueFromExpr(expr, lookup); got != "invite.created" {
+			t.Fatalf("got %q, want invite.created", got)
+		}
+	})
+
+	t.Run("ident lookup", func(t *testing.T) {
+		expr := &ast.Ident{Name: "TypeFoo"}
+		if got := eventValueFromExpr(expr, lookup); got != "campaign.created" {
+			t.Fatalf("got %q, want campaign.created", got)
+		}
+	})
+
+	t.Run("selector lookup", func(t *testing.T) {
+		expr := &ast.SelectorExpr{X: &ast.Ident{Name: "pkg"}, Sel: &ast.Ident{Name: "TypeFoo"}}
+		if got := eventValueFromExpr(expr, lookup); got != "campaign.created" {
+			t.Fatalf("got %q, want campaign.created", got)
+		}
+	})
+
+	t.Run("unsupported", func(t *testing.T) {
+		expr := &ast.ArrayType{Elt: &ast.Ident{Name: "string"}}
+		if got := eventValueFromExpr(expr, lookup); got != "" {
+			t.Fatalf("got %q, want empty", got)
+		}
+	})
+}
+
+func TestSwitchesOnEventType(t *testing.T) {
+	if switchesOnEventType(&ast.SelectorExpr{X: &ast.Ident{Name: "evt"}, Sel: &ast.Ident{Name: "Type"}}) != true {
+		t.Fatal("expected selector evt.Type to match")
+	}
+	if switchesOnEventType(&ast.SelectorExpr{X: &ast.Ident{Name: "evt"}, Sel: &ast.Ident{Name: "ID"}}) != false {
+		t.Fatal("expected selector evt.ID to not match")
+	}
+	if switchesOnEventType(&ast.Ident{Name: "evt"}) != false {
+		t.Fatal("expected non-selector to not match")
+	}
+}
+
+func TestSortedUnique(t *testing.T) {
+	var nilSlice []string
+	if got := sortedUnique(nilSlice); got != nil {
+		t.Fatalf("expected nil for nil input, got %#v", got)
+	}
+	values := []string{"b", "a", "b", "c", "a"}
+	got := sortedUnique(values)
+	want := []string{"a", "b", "c"}
+	if !bytes.Equal([]byte(strings.Join(got, ",")), []byte(strings.Join(want, ","))) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+}
+
+func TestImportedResolutionHelpers(t *testing.T) {
+	root := t.TempDir()
+	importDir := filepath.Join(root, "internal", "example")
+	if err := os.MkdirAll(importDir, 0o755); err != nil {
+		t.Fatalf("mkdir import dir: %v", err)
+	}
+
+	src := strings.Join([]string{
+		"package example",
+		"",
+		"const ExternalType = \"external.created\"",
+		"",
+		"type ExternalPayload struct {",
+		"\tID string `json:\"id\"`",
+		"}",
+	}, "\n")
+	if err := os.WriteFile(filepath.Join(importDir, "sample.go"), []byte(src), 0o644); err != nil {
+		t.Fatalf("write sample.go: %v", err)
+	}
+
+	importAliases := map[string]string{
+		"ext": "github.com/louisbranch/fracturing.space/internal/example",
+	}
+
+	if got := resolveImportDir("github.com/louisbranch/fracturing.space/internal/example", root); got == "" {
+		t.Fatal("expected resolveImportDir to resolve project import path")
+	}
+	if got := resolveImportDir("example.com/not-project", root); got != "" {
+		t.Fatalf("expected empty dir for non-project import, got %q", got)
+	}
+
+	payloadSelector := &ast.SelectorExpr{X: &ast.Ident{Name: "ext"}, Sel: &ast.Ident{Name: "ExternalPayload"}}
+	fields, definedAt, ok := parseImportedPayload(payloadSelector, importAliases, root)
+	if !ok {
+		t.Fatal("expected parseImportedPayload to resolve payload")
+	}
+	if len(fields) != 1 || fields[0].Name != "ID" || fields[0].JSONTag != `json:"id"` {
+		t.Fatalf("unexpected payload fields: %#v", fields)
+	}
+	if !strings.Contains(definedAt, "internal/example/sample.go:5") {
+		t.Fatalf("unexpected definedAt: %s", definedAt)
+	}
+
+	constSelector := &ast.SelectorExpr{X: &ast.Ident{Name: "ext"}, Sel: &ast.Ident{Name: "ExternalType"}}
+	value, ok := constFromSelector(constSelector, importAliases, root)
+	if !ok {
+		t.Fatal("expected constFromSelector to resolve external constant")
+	}
+	if value != "external.created" {
+		t.Fatalf("unexpected constant value: %s", value)
+	}
+}
+
+func TestParsePayloadFromTypeExpr_IdentAlias(t *testing.T) {
+	src := strings.Join([]string{
+		"package sample",
+		"",
+		"type BasePayload struct {",
+		"\tID string `json:\"id\"`",
+		"}",
+		"",
+		"type AliasPayload BasePayload",
+	}, "\n")
+
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, "sample.go", src, parser.AllErrors)
+	if err != nil {
+		t.Fatalf("parse file: %v", err)
+	}
+
+	typeSpecs := make(map[string]ast.Expr)
+	ast.Inspect(file, func(node ast.Node) bool {
+		typeSpec, ok := node.(*ast.TypeSpec)
+		if !ok {
+			return true
+		}
+		typeSpecs[typeSpec.Name.Name] = typeSpec.Type
+		return true
+	})
+
+	fields, _, ok := parsePayloadFromTypeExpr(
+		&ast.Ident{Name: "AliasPayload"},
+		fset,
+		nil,
+		"",
+		typeSpecs,
+		map[string]struct{}{"AliasPayload": {}},
+	)
+	if ok {
+		t.Fatal("expected cycle guard to prevent resolving seen type")
+	}
+
+	fields, _, ok = parsePayloadFromTypeExpr(
+		&ast.Ident{Name: "AliasPayload"},
+		fset,
+		nil,
+		"",
+		typeSpecs,
+		map[string]struct{}{},
+	)
+	if !ok {
+		t.Fatal("expected alias payload to resolve")
+	}
+	if len(fields) != 1 || fields[0].Name != "ID" {
+		t.Fatalf("unexpected resolved fields: %#v", fields)
+	}
+}
+
+func TestRenderUsageMap(t *testing.T) {
+	defs := packageDefs{
+		Events: []eventDef{
+			{
+				Owner:     "Core",
+				Name:      "TypeCampaignCreated",
+				Value:     "campaign.created",
+				DefinedAt: "internal/foo.go:10",
+			},
+			{
+				Owner:     "Core",
+				Name:      "TypeSessionStarted",
+				Value:     "session.started",
+				DefinedAt: "internal/bar.go:11",
+			},
+		},
+		Payloads: map[string]payloadDef{},
+	}
+
+	emitters := map[string][]string{
+		"campaign.created": {"internal/emit.go:12"},
+	}
+	appliers := map[string][]string{
+		"campaign.created": {"internal/projection/applier.go:22"},
+		"session.started":  {"internal/projection/applier.go:24"},
+	}
+
+	output, err := renderUsageMap([]packageDefs{defs}, emitters, appliers)
+	if err != nil {
+		t.Fatalf("renderUsageMap returned error: %v", err)
+	}
+
+	checks := []string{
+		"# Event Usage Map",
+		"## Core Events",
+		"### `campaign.created`",
+		"`internal/emit.go:12`",
+		"`internal/projection/applier.go:22`",
+		"### `session.started`",
+		"- Emitters: none found",
+		"`internal/projection/applier.go:24`",
+	}
+	for _, check := range checks {
+		if !strings.Contains(output, check) {
+			t.Fatalf("expected output to contain %q", check)
+		}
+	}
+}
+
+func TestRenderCommandCatalog(t *testing.T) {
+	definitions := []commandDef{
+		{
+			Owner:         "Core",
+			Value:         "action.roll.resolve",
+			GateScope:     "session",
+			AllowWhenOpen: false,
+		},
+		{
+			Owner: "Core",
+			Value: "campaign.create",
+		},
+		{
+			Owner: "System",
+			Value: "sys.alpha.action.attack.resolve",
+		},
+	}
+
+	output, err := renderCommandCatalog(definitions)
+	if err != nil {
+		t.Fatalf("renderCommandCatalog returned error: %v", err)
+	}
+
+	checks := []string{
+		"# Command Catalog",
+		"## Core Commands",
+		"| `campaign.create` | `campaign` | `none` | n/a |",
+		"| `action.roll.resolve` | `action` | `session` | no |",
+		"## System Commands",
+		"| `sys.alpha.action.attack.resolve` | `sys` | `none` | n/a |",
+	}
+	for _, check := range checks {
+		if !strings.Contains(output, check) {
+			t.Fatalf("expected output to contain %q", check)
+		}
+	}
+}
+
+func TestParseCommandPackage(t *testing.T) {
+	root := t.TempDir()
+	pkgDir := filepath.Join(root, "internal", "services", "game", "domain", "sample")
+	if err := os.MkdirAll(pkgDir, 0o755); err != nil {
+		t.Fatalf("mkdir sample package: %v", err)
+	}
+
+	deciderSrc := strings.Join([]string{
+		"package sample",
+		"",
+		"import \"github.com/louisbranch/fracturing.space/internal/services/game/domain/command\"",
+		"",
+		"const (",
+		"\tcommandTypeFoo command.Type = \"sample.foo\"",
+		"\tcommandTypeBar command.Type = \"sample.bar\"",
+		")",
+	}, "\n")
+	if err := os.WriteFile(filepath.Join(pkgDir, "decider.go"), []byte(deciderSrc), 0o644); err != nil {
+		t.Fatalf("write decider.go: %v", err)
+	}
+
+	registrySrc := strings.Join([]string{
+		"package sample",
+		"",
+		"import \"github.com/louisbranch/fracturing.space/internal/services/game/domain/command\"",
+		"",
+		"func RegisterCommands(registry *command.Registry) error {",
+		"\tif err := registry.Register(command.Definition{",
+		"\t\tType:  commandTypeFoo,",
+		"\t\tOwner: command.OwnerCore,",
+		"\t\tGate: command.GatePolicy{",
+		"\t\t\tScope:         command.GateScopeSession,",
+		"\t\t\tAllowWhenOpen: true,",
+		"\t\t},",
+		"\t}); err != nil {",
+		"\t\treturn err",
+		"\t}",
+		"\treturn registry.Register(command.Definition{Type: commandTypeBar, Owner: command.OwnerCore})",
+		"}",
+	}, "\n")
+	if err := os.WriteFile(filepath.Join(pkgDir, "registry.go"), []byte(registrySrc), 0o644); err != nil {
+		t.Fatalf("write registry.go: %v", err)
+	}
+
+	definitions, err := parseCommandPackage(pkgDir, root, "Core")
+	if err != nil {
+		t.Fatalf("parseCommandPackage returned error: %v", err)
+	}
+	if len(definitions) != 2 {
+		t.Fatalf("expected 2 command definitions, got %d", len(definitions))
+	}
+
+	byValue := make(map[string]commandDef, len(definitions))
+	for _, definition := range definitions {
+		byValue[definition.Value] = definition
+	}
+
+	foo, ok := byValue["sample.foo"]
+	if !ok {
+		t.Fatal("expected sample.foo command definition")
+	}
+	if foo.Owner != "Core" {
+		t.Fatalf("sample.foo owner = %q, want Core", foo.Owner)
+	}
+	if foo.GateScope != "session" {
+		t.Fatalf("sample.foo gate scope = %q, want session", foo.GateScope)
+	}
+	if !foo.AllowWhenOpen {
+		t.Fatal("sample.foo expected allow_when_open=true")
+	}
+
+	bar, ok := byValue["sample.bar"]
+	if !ok {
+		t.Fatal("expected sample.bar command definition")
+	}
+	if bar.GateScope != "" {
+		t.Fatalf("sample.bar gate scope = %q, want empty", bar.GateScope)
+	}
+}
+
+func TestMergeCommandDefinitions(t *testing.T) {
+	target := map[string]commandDef{
+		"sample.foo": {
+			Owner:     "Core",
+			Value:     "sample.foo",
+			GateScope: "none",
+		},
+	}
+
+	mergeCommandDefinitions(target, []commandDef{
+		{
+			Owner:         "Core",
+			Name:          "commandTypeFoo",
+			Value:         "sample.foo",
+			GateScope:     "session",
+			AllowWhenOpen: true,
+			DefinedAt:     "sample/registry.go:10",
+		},
+	})
+
+	merged := target["sample.foo"]
+	if merged.GateScope != "session" {
+		t.Fatalf("merged gate scope = %q, want session", merged.GateScope)
+	}
+	if !merged.AllowWhenOpen {
+		t.Fatal("expected merged allow_when_open=true")
+	}
+	if merged.Name != "commandTypeFoo" {
+		t.Fatalf("merged name = %q, want commandTypeFoo", merged.Name)
+	}
+}
+
+func TestCommandDefinitionsFromMap(t *testing.T) {
+	defs := commandDefinitionsFromMap(map[string]commandDef{
+		"zeta":  {Value: "zeta"},
+		"alpha": {Value: "alpha"},
+	})
+	if len(defs) != 2 {
+		t.Fatalf("expected 2 definitions, got %d", len(defs))
+	}
+	if defs[0].Value != "alpha" || defs[1].Value != "zeta" {
+		t.Fatalf("unexpected sorted order: %#v", defs)
+	}
+}
+
+func TestIsDefinitionComposite(t *testing.T) {
+	if !isDefinitionComposite(&ast.SelectorExpr{X: &ast.Ident{Name: "command"}, Sel: &ast.Ident{Name: "Definition"}}) {
+		t.Fatal("expected selector command.Definition to match")
+	}
+	if !isDefinitionComposite(&ast.Ident{Name: "Definition"}) {
+		t.Fatal("expected Definition ident to match")
+	}
+	if isDefinitionComposite(&ast.Ident{Name: "Other"}) {
+		t.Fatal("did not expect Other ident to match")
+	}
+}
+
+func TestCommandOwnerFromExpr(t *testing.T) {
+	if owner, ok := commandOwnerFromExpr(&ast.SelectorExpr{X: &ast.Ident{Name: "command"}, Sel: &ast.Ident{Name: "OwnerCore"}}); !ok || owner != "Core" {
+		t.Fatalf("owner = %q ok=%v, want Core/true", owner, ok)
+	}
+	if owner, ok := commandOwnerFromExpr(&ast.SelectorExpr{X: &ast.Ident{Name: "command"}, Sel: &ast.Ident{Name: "OwnerSystem"}}); !ok || owner != "System" {
+		t.Fatalf("owner = %q ok=%v, want System/true", owner, ok)
+	}
+	if _, ok := commandOwnerFromExpr(&ast.Ident{Name: "OwnerCore"}); ok {
+		t.Fatal("did not expect non-selector owner expression to resolve")
+	}
+}
+
+func TestParseGateScope(t *testing.T) {
+	if got := parseGateScope(&ast.SelectorExpr{X: &ast.Ident{Name: "command"}, Sel: &ast.Ident{Name: "GateScopeSession"}}); got != "session" {
+		t.Fatalf("got %q, want session", got)
+	}
+	if got := parseGateScope(&ast.SelectorExpr{X: &ast.Ident{Name: "command"}, Sel: &ast.Ident{Name: "GateScopeNone"}}); got != "none" {
+		t.Fatalf("got %q, want none", got)
+	}
+	if got := parseGateScope(&ast.BasicLit{Kind: token.STRING, Value: `"custom"`}); got != "custom" {
+		t.Fatalf("got %q, want custom", got)
+	}
+	if got := parseGateScope(&ast.Ident{Name: "other"}); got != "" {
+		t.Fatalf("got %q, want empty", got)
+	}
+}
+
+func TestMainGeneratesCommandCatalogFromRepo(t *testing.T) {
+	root, err := resolveRoot("")
+	if err != nil {
+		t.Fatalf("resolve root: %v", err)
+	}
+
+	tempDir := t.TempDir()
+	catalogOut := filepath.Join(tempDir, "catalog.md")
+	usageOut := filepath.Join(tempDir, "usage.md")
+	commandOut := filepath.Join(tempDir, "commands.md")
+
+	oldArgs := os.Args
+	oldFlagSet := flag.CommandLine
+	defer func() {
+		os.Args = oldArgs
+		flag.CommandLine = oldFlagSet
+	}()
+
+	flag.CommandLine = flag.NewFlagSet("eventdocgen-test-repo", flag.ContinueOnError)
+	os.Args = []string{
+		"eventdocgen-test-repo",
+		"-root", root,
+		"-out", catalogOut,
+		"-usage-out", usageOut,
+		"-commands-out", commandOut,
+	}
+
+	main()
+
+	commandData, err := os.ReadFile(commandOut)
+	if err != nil {
+		t.Fatalf("read generated command catalog: %v", err)
+	}
+	if !strings.Contains(string(commandData), "# Command Catalog") {
+		t.Fatalf("command catalog missing title:\n%s", string(commandData))
+	}
+}
+
+func TestScanEmitterValues(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, "emitters")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatalf("mkdir emitters: %v", err)
+	}
+
+	src := strings.Join([]string{
+		"package sample",
+		"",
+		"import \"example.com/event\"",
+		"",
+		"func emit() {",
+		"\t_ = event.Event{Type: TypeFoo}",
+		"\t_ = event.Event{Type: event.Type(\"session.started\")}",
+		"}",
+	}, "\n")
+
+	path := filepath.Join(dir, "emit.go")
+	if err := os.WriteFile(path, []byte(src), 0o644); err != nil {
+		t.Fatalf("write emit.go: %v", err)
+	}
+
+	lookup := map[string]string{
+		"TypeFoo": "campaign.created",
+	}
+	emitters, err := scanEmitterValues(root, root, lookup)
+	if err != nil {
+		t.Fatalf("scanEmitterValues returned error: %v", err)
+	}
+
+	if len(emitters["campaign.created"]) != 1 {
+		t.Fatalf("expected one emitter for campaign.created, got %d", len(emitters["campaign.created"]))
+	}
+	if len(emitters["session.started"]) != 1 {
+		t.Fatalf("expected one emitter for session.started, got %d", len(emitters["session.started"]))
+	}
+}
+
+func TestScanAppliers(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, "applier")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatalf("mkdir applier: %v", err)
+	}
+
+	src := strings.Join([]string{
+		"package sample",
+		"",
+		"import \"example.com/event\"",
+		"",
+		"func Apply(evt event.Event) error {",
+		"\tswitch evt.Type {",
+		"\tcase event.Type(\"campaign.created\"):",
+		"\t\treturn nil",
+		"\tcase EventTypeSessionStarted:",
+		"\t\treturn nil",
+		"\tdefault:",
+		"\t\treturn nil",
+		"\t}",
+		"}",
+	}, "\n")
+
+	path := filepath.Join(dir, "apply.go")
+	if err := os.WriteFile(path, []byte(src), 0o644); err != nil {
+		t.Fatalf("write apply.go: %v", err)
+	}
+
+	lookup := map[string]string{
+		"EventTypeSessionStarted": "session.started",
+	}
+	appliers, err := scanAppliers(root, root, lookup)
+	if err != nil {
+		t.Fatalf("scanAppliers returned error: %v", err)
+	}
+
+	if len(appliers["campaign.created"]) != 1 {
+		t.Fatalf("expected one applier for campaign.created, got %d", len(appliers["campaign.created"]))
+	}
+	if len(appliers["session.started"]) != 1 {
+		t.Fatalf("expected one applier for session.started, got %d", len(appliers["session.started"]))
 	}
 }

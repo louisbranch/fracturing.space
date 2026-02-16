@@ -270,7 +270,7 @@ func findGroupActionResolved(ctx context.Context, client gamev1.EventServiceClie
 		CampaignId: campaignID,
 		PageSize:   200,
 		OrderBy:    "seq desc",
-		Filter:     "session_id = \"" + sessionID + "\" AND type = \"action.group_action_resolved\"",
+		Filter:     "session_id = \"" + sessionID + "\" AND type = \"sys.daggerheart.action.group_action_resolved\"",
 	})
 	if err != nil {
 		return groupActionResolvedPayload{}, err
@@ -292,7 +292,7 @@ func findTagTeamResolved(ctx context.Context, client gamev1.EventServiceClient, 
 		CampaignId: campaignID,
 		PageSize:   200,
 		OrderBy:    "seq desc",
-		Filter:     "session_id = \"" + sessionID + "\" AND type = \"action.tag_team_resolved\"",
+		Filter:     "session_id = \"" + sessionID + "\" AND type = \"sys.daggerheart.action.tag_team_resolved\"",
 	})
 	if err != nil {
 		return tagTeamResolvedPayload{}, err

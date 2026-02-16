@@ -2,11 +2,17 @@ package game
 
 import (
 	"context"
+	"errors"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/replay"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+)
+
+var (
+	errReplayEventStoreRequired  = errors.New("replay event store is not configured")
+	errJournalEventStoreRequired = errors.New("journal event store is not configured")
 )
 
 type EventStoreAdapter struct {
@@ -20,7 +26,7 @@ func NewEventStoreAdapter(store storage.EventStore) replay.EventStore {
 
 func (a EventStoreAdapter) ListEvents(ctx context.Context, campaignID string, afterSeq uint64, limit int) ([]event.Event, error) {
 	if a.store == nil {
-		return nil, nil
+		return nil, errReplayEventStoreRequired
 	}
 	entries, err := a.store.ListEvents(ctx, campaignID, afterSeq, limit)
 	if err != nil {
@@ -40,7 +46,7 @@ func NewJournalAdapter(store storage.EventStore) engine.EventJournal {
 
 func (a JournalAdapter) Append(ctx context.Context, evt event.Event) (event.Event, error) {
 	if a.store == nil {
-		return event.Event{}, nil
+		return event.Event{}, errJournalEventStoreRequired
 	}
 	stored, err := a.store.AppendEvent(ctx, evt)
 	if err != nil {

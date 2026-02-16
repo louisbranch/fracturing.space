@@ -24,6 +24,15 @@ type eventDef struct {
 	DefinedAt string
 }
 
+type commandDef struct {
+	Owner         string
+	Name          string
+	Value         string
+	GateScope     string
+	AllowWhenOpen bool
+	DefinedAt     string
+}
+
 type payloadField struct {
 	Name    string
 	Type    string
@@ -44,8 +53,12 @@ type packageDefs struct {
 
 func main() {
 	var outPath string
+	var usageOutPath string
+	var commandsOutPath string
 	var rootFlag string
 	flag.StringVar(&outPath, "out", "docs/events/event-catalog.md", "output path for the catalog")
+	flag.StringVar(&usageOutPath, "usage-out", "docs/events/usage-map.md", "output path for the usage map")
+	flag.StringVar(&commandsOutPath, "commands-out", "docs/events/command-catalog.md", "output path for the command catalog")
 	flag.StringVar(&rootFlag, "root", "", "repo root (defaults to locating go.mod)")
 	flag.Parse()
 
@@ -53,9 +66,17 @@ func main() {
 	if err != nil {
 		fatal(err)
 	}
-	output := outPath
-	if !filepath.IsAbs(output) {
-		output = filepath.Join(root, outPath)
+	catalogOutput := outPath
+	if !filepath.IsAbs(catalogOutput) {
+		catalogOutput = filepath.Join(root, outPath)
+	}
+	usageOutput := usageOutPath
+	if !filepath.IsAbs(usageOutput) {
+		usageOutput = filepath.Join(root, usageOutPath)
+	}
+	commandsOutput := strings.TrimSpace(commandsOutPath)
+	if commandsOutput != "" && !filepath.IsAbs(commandsOutput) {
+		commandsOutput = filepath.Join(root, commandsOutput)
 	}
 
 	coreDir := filepath.Join(root, "internal/services/game/domain/campaign/event")
@@ -69,23 +90,78 @@ func main() {
 	if err != nil {
 		fatal(err)
 	}
+	definitions := []packageDefs{coreDefs, daggerheartDefs}
 
 	emitters, err := scanEmitters(filepath.Join(root, "internal/services/game"), root)
 	if err != nil {
 		fatal(err)
 	}
 
-	content, err := renderCatalog([]packageDefs{coreDefs, daggerheartDefs}, emitters)
+	content, err := renderCatalog(definitions, emitters)
 	if err != nil {
 		fatal(err)
 	}
+	if err := writeOutput(catalogOutput, content, "catalog"); err != nil {
+		fatal(err)
+	}
 
-	if err := os.MkdirAll(filepath.Dir(output), 0o755); err != nil {
-		fatal(fmt.Errorf("create output dir: %w", err))
+	valueByConstant := buildEventValueLookup(definitions)
+	emitterValues, err := scanEmitterValues(filepath.Join(root, "internal/services/game"), root, valueByConstant)
+	if err != nil {
+		fatal(err)
 	}
-	if err := os.WriteFile(output, []byte(content), 0o644); err != nil {
-		fatal(fmt.Errorf("write catalog: %w", err))
+	appliers, err := scanAppliers(filepath.Join(root, "internal/services/game"), root, valueByConstant)
+	if err != nil {
+		fatal(err)
 	}
+	usageContent, err := renderUsageMap(definitions, emitterValues, appliers)
+	if err != nil {
+		fatal(err)
+	}
+	if err := writeOutput(usageOutput, usageContent, "usage map"); err != nil {
+		fatal(err)
+	}
+
+	if commandsOutput != "" {
+		commandPackages := []struct {
+			dir   string
+			owner string
+		}{
+			{dir: filepath.Join(root, "internal/services/game/domain/campaign"), owner: "Core"},
+			{dir: filepath.Join(root, "internal/services/game/domain/action"), owner: "Core"},
+			{dir: filepath.Join(root, "internal/services/game/domain/session"), owner: "Core"},
+			{dir: filepath.Join(root, "internal/services/game/domain/participant"), owner: "Core"},
+			{dir: filepath.Join(root, "internal/services/game/domain/invite"), owner: "Core"},
+			{dir: filepath.Join(root, "internal/services/game/domain/character"), owner: "Core"},
+			{dir: filepath.Join(root, "internal/services/game/domain/systems/daggerheart"), owner: "System"},
+		}
+		commandMap := make(map[string]commandDef)
+		for _, pkg := range commandPackages {
+			definitions, err := parseCommandPackage(pkg.dir, root, pkg.owner)
+			if err != nil {
+				fatal(err)
+			}
+			mergeCommandDefinitions(commandMap, definitions)
+		}
+		commandDefinitions := commandDefinitionsFromMap(commandMap)
+		commandContent, err := renderCommandCatalog(commandDefinitions)
+		if err != nil {
+			fatal(err)
+		}
+		if err := writeOutput(commandsOutput, commandContent, "command catalog"); err != nil {
+			fatal(err)
+		}
+	}
+}
+
+func writeOutput(path, content, label string) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return fmt.Errorf("create %s output dir: %w", label, err)
+	}
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		return fmt.Errorf("write %s: %w", label, err)
+	}
+	return nil
 }
 
 func resolveRoot(flagRoot string) (string, error) {
@@ -182,6 +258,267 @@ func parsePackage(dir, root, owner string) (packageDefs, error) {
 		defs.Events[i].Owner = owner
 	}
 	return defs, nil
+}
+
+func parseCommandPackage(dir, root, owner string) ([]commandDef, error) {
+	fset := token.NewFileSet()
+	pkgs, err := parser.ParseDir(fset, dir, func(info os.FileInfo) bool {
+		return !strings.HasSuffix(info.Name(), "_test.go")
+	}, parser.AllErrors)
+	if err != nil {
+		return nil, fmt.Errorf("parse %s: %w", dir, err)
+	}
+
+	commandValues := make(map[string]string)
+	byValue := make(map[string]commandDef)
+
+	for _, pkg := range pkgs {
+		for _, file := range pkg.Files {
+			importAliases := parseImportAliases(file)
+			for _, decl := range file.Decls {
+				gen, ok := decl.(*ast.GenDecl)
+				if !ok || gen.Tok != token.CONST {
+					continue
+				}
+				for _, spec := range gen.Specs {
+					valueSpec, ok := spec.(*ast.ValueSpec)
+					if !ok {
+						continue
+					}
+					for idx, name := range valueSpec.Names {
+						if !strings.HasPrefix(name.Name, "commandType") && !strings.HasPrefix(name.Name, "CommandType") {
+							continue
+						}
+						valueExpr := selectValueExpr(valueSpec.Values, idx)
+						if valueExpr == nil {
+							continue
+						}
+						value, ok := constantValue(valueExpr, importAliases, root)
+						if !ok || strings.TrimSpace(value) == "" {
+							continue
+						}
+						commandValues[name.Name] = value
+						byValue[value] = commandDef{
+							Owner:     owner,
+							Name:      name.Name,
+							Value:     value,
+							DefinedAt: formatPosition(fset.Position(name.Pos()), root),
+						}
+					}
+				}
+			}
+		}
+
+		for _, file := range pkg.Files {
+			ast.Inspect(file, func(node ast.Node) bool {
+				call, ok := node.(*ast.CallExpr)
+				if !ok {
+					return true
+				}
+				selector, ok := call.Fun.(*ast.SelectorExpr)
+				if !ok || selector.Sel == nil || selector.Sel.Name != "Register" || len(call.Args) != 1 {
+					return true
+				}
+				definitionLit, ok := call.Args[0].(*ast.CompositeLit)
+				if !ok || !isDefinitionComposite(definitionLit.Type) {
+					return true
+				}
+				definition, ok := parseCommandDefinitionLiteral(definitionLit, fset, root, owner, commandValues)
+				if !ok {
+					return true
+				}
+				current, exists := byValue[definition.Value]
+				if !exists {
+					byValue[definition.Value] = definition
+					return true
+				}
+				if current.Owner == "" {
+					current.Owner = definition.Owner
+				}
+				if current.Name == "" {
+					current.Name = definition.Name
+				}
+				if current.DefinedAt == "" {
+					current.DefinedAt = definition.DefinedAt
+				}
+				if current.GateScope == "" || current.GateScope == "none" {
+					if definition.GateScope != "" {
+						current.GateScope = definition.GateScope
+						current.AllowWhenOpen = definition.AllowWhenOpen
+					}
+				}
+				byValue[definition.Value] = current
+				return true
+			})
+		}
+	}
+
+	result := make([]commandDef, 0, len(byValue))
+	for _, definition := range byValue {
+		result = append(result, definition)
+	}
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Value < result[j].Value
+	})
+	return result, nil
+}
+
+func isDefinitionComposite(expr ast.Expr) bool {
+	switch typed := expr.(type) {
+	case *ast.SelectorExpr:
+		return typed.Sel != nil && typed.Sel.Name == "Definition"
+	case *ast.Ident:
+		return typed.Name == "Definition"
+	default:
+		return false
+	}
+}
+
+func parseCommandDefinitionLiteral(lit *ast.CompositeLit, fset *token.FileSet, root, owner string, commandValues map[string]string) (commandDef, bool) {
+	definition := commandDef{
+		Owner: owner,
+	}
+	for _, elt := range lit.Elts {
+		kv, ok := elt.(*ast.KeyValueExpr)
+		if !ok {
+			continue
+		}
+		key, ok := kv.Key.(*ast.Ident)
+		if !ok {
+			continue
+		}
+		switch key.Name {
+		case "Type":
+			value := eventValueFromExpr(kv.Value, commandValues)
+			if strings.TrimSpace(value) == "" {
+				continue
+			}
+			definition.Value = value
+		case "Owner":
+			if parsedOwner, ok := commandOwnerFromExpr(kv.Value); ok {
+				definition.Owner = parsedOwner
+			}
+		case "Gate":
+			scope, allowWhenOpen := parseGatePolicyFromExpr(kv.Value)
+			if strings.TrimSpace(scope) != "" {
+				definition.GateScope = scope
+				definition.AllowWhenOpen = allowWhenOpen
+			}
+		}
+	}
+	if strings.TrimSpace(definition.Value) == "" {
+		return commandDef{}, false
+	}
+	definition.DefinedAt = formatPosition(fset.Position(lit.Pos()), root)
+	return definition, true
+}
+
+func commandOwnerFromExpr(expr ast.Expr) (string, bool) {
+	selector, ok := expr.(*ast.SelectorExpr)
+	if !ok || selector.Sel == nil {
+		return "", false
+	}
+	switch selector.Sel.Name {
+	case "OwnerCore":
+		return "Core", true
+	case "OwnerSystem":
+		return "System", true
+	default:
+		return "", false
+	}
+}
+
+func parseGatePolicyFromExpr(expr ast.Expr) (string, bool) {
+	lit, ok := expr.(*ast.CompositeLit)
+	if !ok {
+		return "", false
+	}
+	scope := ""
+	allowWhenOpen := false
+	for _, elt := range lit.Elts {
+		kv, ok := elt.(*ast.KeyValueExpr)
+		if !ok {
+			continue
+		}
+		key, ok := kv.Key.(*ast.Ident)
+		if !ok {
+			continue
+		}
+		switch key.Name {
+		case "Scope":
+			scope = parseGateScope(kv.Value)
+		case "AllowWhenOpen":
+			if ident, ok := kv.Value.(*ast.Ident); ok {
+				allowWhenOpen = ident.Name == "true"
+			}
+		}
+	}
+	return scope, allowWhenOpen
+}
+
+func parseGateScope(expr ast.Expr) string {
+	switch typed := expr.(type) {
+	case *ast.SelectorExpr:
+		if typed.Sel == nil {
+			return ""
+		}
+		switch typed.Sel.Name {
+		case "GateScopeSession":
+			return "session"
+		case "GateScopeNone":
+			return "none"
+		}
+	case *ast.BasicLit:
+		if typed.Kind != token.STRING {
+			return ""
+		}
+		value, err := strconv.Unquote(typed.Value)
+		if err != nil {
+			return ""
+		}
+		return strings.TrimSpace(value)
+	}
+	return ""
+}
+
+func mergeCommandDefinitions(target map[string]commandDef, definitions []commandDef) {
+	for _, definition := range definitions {
+		current, exists := target[definition.Value]
+		if !exists {
+			target[definition.Value] = definition
+			continue
+		}
+		if current.Owner == "" {
+			current.Owner = definition.Owner
+		}
+		if current.Name == "" {
+			current.Name = definition.Name
+		}
+		if current.DefinedAt == "" {
+			current.DefinedAt = definition.DefinedAt
+		}
+		if current.GateScope == "" || current.GateScope == "none" {
+			if definition.GateScope != "" {
+				current.GateScope = definition.GateScope
+				current.AllowWhenOpen = definition.AllowWhenOpen
+			}
+		}
+		target[definition.Value] = current
+	}
+}
+
+func commandDefinitionsFromMap(definitions map[string]commandDef) []commandDef {
+	if len(definitions) == 0 {
+		return nil
+	}
+	result := make([]commandDef, 0, len(definitions))
+	for _, definition := range definitions {
+		result = append(result, definition)
+	}
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Value < result[j].Value
+	})
+	return result
 }
 
 func parseConstDecl(decl *ast.GenDecl, fset *token.FileSet, root, owner string, importAliases map[string]string) []eventDef {
@@ -528,6 +865,278 @@ func eventNameFromExpr(expr ast.Expr) string {
 	}
 }
 
+func buildEventValueLookup(packages []packageDefs) map[string]string {
+	lookup := make(map[string]string)
+	for _, pkg := range packages {
+		for _, evt := range pkg.Events {
+			if strings.TrimSpace(evt.Name) == "" || strings.TrimSpace(evt.Value) == "" {
+				continue
+			}
+			lookup[evt.Name] = evt.Value
+		}
+	}
+	return lookup
+}
+
+func buildLocalConstLookup(file *ast.File, seed map[string]string) map[string]string {
+	lookup := make(map[string]string, len(seed))
+	for key, value := range seed {
+		lookup[key] = value
+	}
+
+	type pendingConst struct {
+		name string
+		expr ast.Expr
+	}
+	pending := make([]pendingConst, 0)
+
+	for _, decl := range file.Decls {
+		gen, ok := decl.(*ast.GenDecl)
+		if !ok || gen.Tok != token.CONST {
+			continue
+		}
+		for _, spec := range gen.Specs {
+			valueSpec, ok := spec.(*ast.ValueSpec)
+			if !ok {
+				continue
+			}
+			for i, name := range valueSpec.Names {
+				expr := selectValueExpr(valueSpec.Values, i)
+				if expr == nil {
+					continue
+				}
+				value := eventValueFromExpr(expr, lookup)
+				if value != "" {
+					lookup[name.Name] = value
+					continue
+				}
+				pending = append(pending, pendingConst{name: name.Name, expr: expr})
+			}
+		}
+	}
+
+	changed := true
+	for changed {
+		changed = false
+		remaining := make([]pendingConst, 0, len(pending))
+		for _, item := range pending {
+			value := eventValueFromExpr(item.expr, lookup)
+			if value == "" {
+				remaining = append(remaining, item)
+				continue
+			}
+			lookup[item.name] = value
+			changed = true
+		}
+		pending = remaining
+	}
+
+	return lookup
+}
+
+func scanEmitterValues(dir, root string, valueByConstant map[string]string) (map[string][]string, error) {
+	emitters := make(map[string][]string)
+	if err := filepath.WalkDir(dir, func(path string, entry os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.IsDir() {
+			return nil
+		}
+		if !strings.HasSuffix(entry.Name(), ".go") || strings.HasSuffix(entry.Name(), "_test.go") {
+			return nil
+		}
+		fset := token.NewFileSet()
+		file, err := parser.ParseFile(fset, path, nil, parser.AllErrors)
+		if err != nil {
+			return fmt.Errorf("parse %s: %w", path, err)
+		}
+		fileLookup := buildLocalConstLookup(file, valueByConstant)
+		relPath, _ := filepath.Rel(root, path)
+		relPath = filepath.ToSlash(relPath)
+		ast.Inspect(file, func(node ast.Node) bool {
+			lit, ok := node.(*ast.CompositeLit)
+			if !ok {
+				return true
+			}
+			selector, ok := lit.Type.(*ast.SelectorExpr)
+			if !ok {
+				return true
+			}
+			ident, ok := selector.X.(*ast.Ident)
+			if !ok || ident.Name != "event" || selector.Sel.Name != "Event" {
+				return true
+			}
+			for _, elt := range lit.Elts {
+				kv, ok := elt.(*ast.KeyValueExpr)
+				if !ok {
+					continue
+				}
+				key, ok := kv.Key.(*ast.Ident)
+				if !ok || key.Name != "Type" {
+					continue
+				}
+				value := eventValueFromExpr(kv.Value, fileLookup)
+				if value == "" {
+					continue
+				}
+				pos := fset.Position(kv.Value.Pos())
+				location := fmt.Sprintf("%s:%d", relPath, pos.Line)
+				emitters[value] = append(emitters[value], location)
+			}
+			return true
+		})
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	for key := range emitters {
+		emitters[key] = sortedUnique(emitters[key])
+	}
+	return emitters, nil
+}
+
+func scanAppliers(dir, root string, valueByConstant map[string]string) (map[string][]string, error) {
+	appliers := make(map[string][]string)
+	if err := filepath.WalkDir(dir, func(path string, entry os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.IsDir() {
+			return nil
+		}
+		if !strings.HasSuffix(entry.Name(), ".go") || strings.HasSuffix(entry.Name(), "_test.go") {
+			return nil
+		}
+		fset := token.NewFileSet()
+		file, err := parser.ParseFile(fset, path, nil, parser.AllErrors)
+		if err != nil {
+			return fmt.Errorf("parse %s: %w", path, err)
+		}
+		fileLookup := buildLocalConstLookup(file, valueByConstant)
+		relPath, _ := filepath.Rel(root, path)
+		relPath = filepath.ToSlash(relPath)
+		ast.Inspect(file, func(node ast.Node) bool {
+			fn, ok := node.(*ast.FuncDecl)
+			if !ok || fn.Body == nil || fn.Name == nil || fn.Name.Name != "Apply" {
+				return true
+			}
+			ast.Inspect(fn.Body, func(inner ast.Node) bool {
+				switchStmt, ok := inner.(*ast.SwitchStmt)
+				if !ok || !switchesOnEventType(switchStmt.Tag) {
+					return true
+				}
+				for _, stmt := range switchStmt.Body.List {
+					caseClause, ok := stmt.(*ast.CaseClause)
+					if !ok {
+						continue
+					}
+					for _, expr := range caseClause.List {
+						value := eventValueFromExpr(expr, fileLookup)
+						if value == "" {
+							continue
+						}
+						pos := fset.Position(expr.Pos())
+						location := fmt.Sprintf("%s:%d", relPath, pos.Line)
+						appliers[value] = append(appliers[value], location)
+					}
+				}
+				return true
+			})
+			return false
+		})
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	for key := range appliers {
+		appliers[key] = sortedUnique(appliers[key])
+	}
+	return appliers, nil
+}
+
+func switchesOnEventType(tag ast.Expr) bool {
+	selector, ok := tag.(*ast.SelectorExpr)
+	if !ok {
+		return false
+	}
+	return selector.Sel != nil && selector.Sel.Name == "Type"
+}
+
+func eventValueFromExpr(expr ast.Expr, valueByConstant map[string]string) string {
+	switch typed := expr.(type) {
+	case *ast.BasicLit:
+		if typed.Kind != token.STRING {
+			return ""
+		}
+		value, err := strconv.Unquote(typed.Value)
+		if err != nil {
+			return ""
+		}
+		return strings.TrimSpace(value)
+	case *ast.CallExpr:
+		if len(typed.Args) != 1 {
+			return ""
+		}
+		return eventValueFromExpr(typed.Args[0], valueByConstant)
+	case *ast.Ident:
+		return strings.TrimSpace(valueByConstant[typed.Name])
+	case *ast.SelectorExpr:
+		return strings.TrimSpace(valueByConstant[typed.Sel.Name])
+	default:
+		return ""
+	}
+}
+
+func sortedUnique(values []string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	sort.Strings(values)
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		if len(result) > 0 && result[len(result)-1] == value {
+			continue
+		}
+		result = append(result, value)
+	}
+	return result
+}
+
+func splitEventValue(value string) (string, string) {
+	parts := strings.SplitN(value, ".", 2)
+	if len(parts) == 2 {
+		return parts[0], parts[1]
+	}
+	if value == "" {
+		return "(none)", "(none)"
+	}
+	return "(none)", value
+}
+
+func parseJSONTag(jsonTag, fieldName string) (string, bool) {
+	if jsonTag == "" {
+		return fieldName, true
+	}
+	const prefix = `json:"`
+	if !strings.HasPrefix(jsonTag, prefix) || !strings.HasSuffix(jsonTag, `"`) {
+		return jsonTag, true
+	}
+	tag := strings.TrimSuffix(strings.TrimPrefix(jsonTag, prefix), `"`)
+	parts := strings.Split(tag, ",")
+	name := parts[0]
+	if name == "" {
+		name = fieldName
+	}
+	required := true
+	for _, option := range parts[1:] {
+		if option == "omitempty" {
+			required = false
+		}
+	}
+	return name, required
+}
+
 func renderCatalog(packages []packageDefs, emitters map[string][]string) (string, error) {
 	var buf bytes.Buffer
 	buf.WriteString("---\n")
@@ -549,8 +1158,30 @@ func renderCatalog(packages []packageDefs, emitters map[string][]string) (string
 			return pkg.Events[i].Value < pkg.Events[j].Value
 		})
 		buf.WriteString(fmt.Sprintf("## %s Events\n\n", pkg.Events[0].Owner))
+		buf.WriteString("### Summary\n\n")
+		buf.WriteString("| Event | Namespace | Name | Constant | Payload | Emitters |\n")
+		buf.WriteString("| --- | --- | --- | --- | --- | --- |\n")
+		for _, evt := range pkg.Events {
+			namespace, eventName := splitEventValue(evt.Value)
+			payloadName := payloadNameForEvent(evt.Name, evt.Owner)
+			payloadLabel := "not found"
+			if _, ok := pkg.Payloads[payloadName]; ok {
+				payloadLabel = fmt.Sprintf("`%s`", payloadName)
+			}
+			buf.WriteString(fmt.Sprintf(
+				"| `%s` | `%s` | `%s` | `%s` | %s | %d |\n",
+				evt.Value,
+				namespace,
+				eventName,
+				evt.Name,
+				payloadLabel,
+				len(emitters[evt.Name]),
+			))
+		}
+		buf.WriteString("\n")
 
 		usedPayloads := make(map[string]struct{})
+		currentNamespace := ""
 		for _, evt := range pkg.Events {
 			payloadName := payloadNameForEvent(evt.Name, evt.Owner)
 			payload, hasPayload := pkg.Payloads[payloadName]
@@ -558,19 +1189,35 @@ func renderCatalog(packages []packageDefs, emitters map[string][]string) (string
 				usedPayloads[payloadName] = struct{}{}
 			}
 
-			buf.WriteString(fmt.Sprintf("### `%s` (`%s`)\n", evt.Value, evt.Name))
+			namespace, _ := splitEventValue(evt.Value)
+			if namespace != currentNamespace {
+				buf.WriteString(fmt.Sprintf("### Namespace `%s`\n\n", namespace))
+				currentNamespace = namespace
+			}
+			buf.WriteString(fmt.Sprintf("#### `%s`\n", evt.Value))
+			buf.WriteString(fmt.Sprintf("- Constant: `%s`\n", evt.Name))
 			buf.WriteString(fmt.Sprintf("- Defined at: `%s`\n", evt.DefinedAt))
 			if hasPayload {
 				buf.WriteString(fmt.Sprintf("- Payload: `%s` (`%s`)\n", payload.Name, payload.DefinedAt))
 				if len(payload.Fields) > 0 {
-					buf.WriteString("- Fields:\n")
+					buf.WriteString("- Fields:\n\n")
+					buf.WriteString("| Field | JSON | Type | Required |\n")
+					buf.WriteString("| --- | --- | --- | --- |\n")
 					for _, field := range payload.Fields {
-						label := field.Name
-						if field.JSONTag != "" {
-							label = fmt.Sprintf("%s (%s)", label, field.JSONTag)
+						jsonName, required := parseJSONTag(field.JSONTag, field.Name)
+						requiredLabel := "yes"
+						if !required {
+							requiredLabel = "no"
 						}
-						buf.WriteString(fmt.Sprintf("  - `%s`: `%s`\n", label, field.Type))
+						buf.WriteString(fmt.Sprintf(
+							"| `%s` | `%s` | `%s` | %s |\n",
+							field.Name,
+							jsonName,
+							field.Type,
+							requiredLabel,
+						))
 					}
+					buf.WriteString("\n")
 				}
 			} else {
 				buf.WriteString("- Payload: not found\n")
@@ -595,6 +1242,120 @@ func renderCatalog(packages []packageDefs, emitters map[string][]string) (string
 	}
 
 	return buf.String(), nil
+}
+
+func renderUsageMap(packages []packageDefs, emitters map[string][]string, appliers map[string][]string) (string, error) {
+	var buf bytes.Buffer
+	buf.WriteString("---\n")
+	buf.WriteString("title: \"Event Usage Map\"\n")
+	buf.WriteString("parent: \"Events\"\n")
+	buf.WriteString("nav_order: 3\n")
+	buf.WriteString("---\n\n")
+	buf.WriteString("# Event Usage Map\n\n")
+	buf.WriteString("Generated by `go generate ./internal/services/game/domain/campaign/event`.\n\n")
+
+	for _, pkg := range packages {
+		if len(pkg.Events) == 0 {
+			continue
+		}
+		sort.Slice(pkg.Events, func(i, j int) bool {
+			if pkg.Events[i].Value == pkg.Events[j].Value {
+				return pkg.Events[i].Name < pkg.Events[j].Name
+			}
+			return pkg.Events[i].Value < pkg.Events[j].Value
+		})
+		buf.WriteString(fmt.Sprintf("## %s Events\n\n", pkg.Events[0].Owner))
+		for _, evt := range pkg.Events {
+			buf.WriteString(fmt.Sprintf("### `%s`\n", evt.Value))
+			emitterLocations := sortedUnique(emitters[evt.Value])
+			if len(emitterLocations) == 0 {
+				buf.WriteString("- Emitters: none found\n")
+			} else {
+				buf.WriteString("- Emitters:\n")
+				for _, location := range emitterLocations {
+					buf.WriteString(fmt.Sprintf("  - `%s`\n", location))
+				}
+			}
+			applierLocations := sortedUnique(appliers[evt.Value])
+			if len(applierLocations) == 0 {
+				buf.WriteString("- Appliers: none found\n")
+			} else {
+				buf.WriteString("- Appliers:\n")
+				for _, location := range applierLocations {
+					buf.WriteString(fmt.Sprintf("  - `%s`\n", location))
+				}
+			}
+			buf.WriteString("\n")
+		}
+	}
+
+	return buf.String(), nil
+}
+
+func renderCommandCatalog(definitions []commandDef) (string, error) {
+	var buf bytes.Buffer
+	buf.WriteString("---\n")
+	buf.WriteString("title: \"Command Catalog\"\n")
+	buf.WriteString("parent: \"Events\"\n")
+	buf.WriteString("nav_order: 2\n")
+	buf.WriteString("---\n\n")
+	buf.WriteString("# Command Catalog\n\n")
+	buf.WriteString("Generated by `go generate ./internal/services/game/domain/campaign/event`.\n\n")
+
+	if len(definitions) == 0 {
+		return buf.String(), nil
+	}
+	sort.Slice(definitions, func(i, j int) bool {
+		return strings.TrimSpace(definitions[i].Value) < strings.TrimSpace(definitions[j].Value)
+	})
+
+	core := make([]commandDef, 0, len(definitions))
+	system := make([]commandDef, 0, len(definitions))
+	for _, definition := range definitions {
+		switch strings.TrimSpace(strings.ToLower(definition.Owner)) {
+		case "core":
+			core = append(core, definition)
+		case "system":
+			system = append(system, definition)
+		}
+	}
+
+	writeCommandSection(&buf, "Core Commands", core)
+	writeCommandSection(&buf, "System Commands", system)
+	return buf.String(), nil
+}
+
+func writeCommandSection(buf *bytes.Buffer, title string, definitions []commandDef) {
+	if len(definitions) == 0 {
+		return
+	}
+	buf.WriteString(fmt.Sprintf("## %s\n\n", title))
+	buf.WriteString("| Command | Namespace | Gate Scope | Allowed When Open |\n")
+	buf.WriteString("| --- | --- | --- | --- |\n")
+	for _, definition := range definitions {
+		commandType := strings.TrimSpace(definition.Value)
+		namespace, _ := splitEventValue(commandType)
+		gateScope := "none"
+		allowWhenOpen := "n/a"
+		if strings.TrimSpace(definition.GateScope) != "" {
+			gateScope = strings.TrimSpace(definition.GateScope)
+		}
+		if gateScope != "none" {
+			if definition.AllowWhenOpen {
+				allowWhenOpen = "yes"
+			} else {
+				allowWhenOpen = "no"
+			}
+		}
+		buf.WriteString(fmt.Sprintf(
+			"| `%s` | `%s` | `%s` | %s |\n",
+			commandType,
+			namespace,
+			gateScope,
+			allowWhenOpen,
+		))
+	}
+	buf.WriteString("\n")
 }
 
 func payloadNameForEvent(eventName, owner string) string {

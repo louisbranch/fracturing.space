@@ -89,6 +89,7 @@ func RegisterEvents(registry *event.Registry) error {
 	if err := registry.Register(event.Definition{
 		Type:            eventTypeStarted,
 		Owner:           event.OwnerCore,
+		Addressing:      event.AddressingPolicyEntityTarget,
 		ValidatePayload: validateStartPayload,
 	}); err != nil {
 		return err
@@ -96,6 +97,7 @@ func RegisterEvents(registry *event.Registry) error {
 	if err := registry.Register(event.Definition{
 		Type:            eventTypeEnded,
 		Owner:           event.OwnerCore,
+		Addressing:      event.AddressingPolicyEntityTarget,
 		ValidatePayload: validateEndPayload,
 	}); err != nil {
 		return err
@@ -103,6 +105,7 @@ func RegisterEvents(registry *event.Registry) error {
 	if err := registry.Register(event.Definition{
 		Type:            eventTypeGateOpened,
 		Owner:           event.OwnerCore,
+		Addressing:      event.AddressingPolicyEntityTarget,
 		ValidatePayload: validateGateOpenedPayload,
 	}); err != nil {
 		return err
@@ -110,6 +113,7 @@ func RegisterEvents(registry *event.Registry) error {
 	if err := registry.Register(event.Definition{
 		Type:            eventTypeGateResolved,
 		Owner:           event.OwnerCore,
+		Addressing:      event.AddressingPolicyEntityTarget,
 		ValidatePayload: validateGateResolvedPayload,
 	}); err != nil {
 		return err
@@ -117,6 +121,7 @@ func RegisterEvents(registry *event.Registry) error {
 	if err := registry.Register(event.Definition{
 		Type:            eventTypeGateAbandoned,
 		Owner:           event.OwnerCore,
+		Addressing:      event.AddressingPolicyEntityTarget,
 		ValidatePayload: validateGateAbandonedPayload,
 	}); err != nil {
 		return err
@@ -124,6 +129,7 @@ func RegisterEvents(registry *event.Registry) error {
 	if err := registry.Register(event.Definition{
 		Type:            eventTypeSpotlightSet,
 		Owner:           event.OwnerCore,
+		Addressing:      event.AddressingPolicyEntityTarget,
 		ValidatePayload: validateSpotlightSetPayload,
 	}); err != nil {
 		return err
@@ -131,6 +137,7 @@ func RegisterEvents(registry *event.Registry) error {
 	return registry.Register(event.Definition{
 		Type:            eventTypeSpotlightCleared,
 		Owner:           event.OwnerCore,
+		Addressing:      event.AddressingPolicyEntityTarget,
 		ValidatePayload: validateSpotlightClearedPayload,
 	})
 }
