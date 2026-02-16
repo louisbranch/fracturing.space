@@ -29,5 +29,7 @@ Not sure where to start? Use the [audience guides](audience/index.md).
 - [Project overview](project/overview.md)
 - [Architecture](project/architecture.md)
 - [Domain language](project/domain-language.md)
+- [AI provider access](project/ai-provider-access.md)
+- [AI campaign assignment (phase 4)](project/ai-campaign-assignment-phase4.md)
 - [Event replay and snapshots](project/event-replay.md)
 - [Testing policy](project/testing-coverage.md)
