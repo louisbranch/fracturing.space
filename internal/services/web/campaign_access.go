@@ -2,13 +2,13 @@ package web
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/authctx"
 )
 
 type campaignAccessChecker interface {
@@ -22,10 +22,7 @@ type campaignAccessService struct {
 	participantClient   statev1.ParticipantServiceClient
 }
 
-type introspectResponse struct {
-	Active bool   `json:"active"`
-	UserID string `json:"user_id"`
-}
+type introspectResponse = authctx.IntrospectionResult
 
 func newCampaignAccessChecker(config Config, participantClient statev1.ParticipantServiceClient) campaignAccessChecker {
 	if participantClient == nil {
@@ -90,29 +87,12 @@ func (s *campaignAccessService) introspectUserID(ctx context.Context, accessToke
 	introspectCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(introspectCtx, http.MethodPost, endpoint, nil)
-	if err != nil {
-		return "", fmt.Errorf("build introspection request: %w", err)
-	}
-	req.Header.Set("Authorization", "Bearer "+accessToken)
-	req.Header.Set("X-Resource-Secret", s.oauthResourceSecret)
-
-	resp, err := s.httpClient.Do(req)
+	resp, err := authctx.NewHTTPIntrospector(endpoint, s.oauthResourceSecret, s.httpClient).Introspect(introspectCtx, accessToken)
 	if err != nil {
 		return "", fmt.Errorf("call auth introspection: %w", err)
 	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("auth introspection status %d", resp.StatusCode)
-	}
-
-	var payload introspectResponse
-	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
-		return "", fmt.Errorf("decode introspection response: %w", err)
-	}
-	if !payload.Active {
+	if !resp.Active {
 		return "", nil
 	}
-	return strings.TrimSpace(payload.UserID), nil
+	return strings.TrimSpace(resp.UserID), nil
 }
