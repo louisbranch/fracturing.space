@@ -14,6 +14,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"unicode"
 )
 
 type eventDef struct {
@@ -123,12 +124,31 @@ func parsePackage(dir, root, owner string) (packageDefs, error) {
 	}
 	defs := packageDefs{Payloads: make(map[string]payloadDef)}
 	for _, pkg := range pkgs {
+		files := make([]*ast.File, 0, len(pkg.Files))
+		typeSpecs := make(map[string]ast.Expr)
 		for _, file := range pkg.Files {
+			files = append(files, file)
+			for _, decl := range file.Decls {
+				gen, ok := decl.(*ast.GenDecl)
+				if !ok || gen.Tok != token.TYPE {
+					continue
+				}
+				for _, spec := range gen.Specs {
+					typeSpec, ok := spec.(*ast.TypeSpec)
+					if !ok {
+						continue
+					}
+					typeSpecs[typeSpec.Name.Name] = typeSpec.Type
+				}
+			}
+		}
+		for _, file := range pkg.Files {
+			importAliases := parseImportAliases(file)
 			ast.Inspect(file, func(node ast.Node) bool {
 				switch typed := node.(type) {
 				case *ast.GenDecl:
 					if typed.Tok == token.CONST {
-						defs.Events = append(defs.Events, parseConstDecl(typed, fset, root, owner)...)
+						defs.Events = append(defs.Events, parseConstDecl(typed, fset, root, owner, importAliases)...)
 					}
 					if typed.Tok == token.TYPE {
 						for _, spec := range typed.Specs {
@@ -136,19 +156,19 @@ func parsePackage(dir, root, owner string) (packageDefs, error) {
 							if !ok {
 								continue
 							}
-							structType, ok := typeSpec.Type.(*ast.StructType)
-							if !ok {
-								continue
-							}
 							name := typeSpec.Name.Name
 							if !strings.HasSuffix(name, "Payload") {
+								continue
+							}
+							payloadFields, definedAt, ok := parsePayloadFromTypeExpr(typeSpec.Type, fset, importAliases, root, typeSpecs, map[string]struct{}{name: {}})
+							if !ok {
 								continue
 							}
 							payload := payloadDef{
 								Owner:     owner,
 								Name:      name,
-								DefinedAt: formatPosition(fset.Position(typeSpec.Pos()), root),
-								Fields:    parsePayloadFields(structType.Fields, fset),
+								DefinedAt: definedAt,
+								Fields:    payloadFields,
 							}
 							defs.Payloads[name] = payload
 						}
@@ -164,31 +184,38 @@ func parsePackage(dir, root, owner string) (packageDefs, error) {
 	return defs, nil
 }
 
-func parseConstDecl(decl *ast.GenDecl, fset *token.FileSet, root, owner string) []eventDef {
+func parseConstDecl(decl *ast.GenDecl, fset *token.FileSet, root, owner string, importAliases map[string]string) []eventDef {
 	var events []eventDef
 	for _, spec := range decl.Specs {
 		valueSpec, ok := spec.(*ast.ValueSpec)
 		if !ok {
 			continue
 		}
-		if valueSpec.Type == nil {
-			continue
-		}
-		typeString := exprString(fset, valueSpec.Type)
-		if typeString != "Type" && typeString != "event.Type" {
-			continue
+		typeString := ""
+		if valueSpec.Type != nil {
+			typeString = exprString(fset, valueSpec.Type)
+			if typeString != "Type" && typeString != "event.Type" {
+				continue
+			}
 		}
 		for idx, name := range valueSpec.Names {
+			if !strings.HasPrefix(name.Name, "Type") && !strings.HasPrefix(name.Name, "EventType") {
+				continue
+			}
+			if !isExported(name.Name) {
+				continue
+			}
 			valueExpr := selectValueExpr(valueSpec.Values, idx)
 			if valueExpr == nil {
 				continue
 			}
-			lit, ok := valueExpr.(*ast.BasicLit)
-			if !ok || lit.Kind != token.STRING {
-				continue
+			if valueSpec.Type == nil {
+				if _, ok := valueExpr.(*ast.SelectorExpr); !ok {
+					continue
+				}
 			}
-			value, err := strconv.Unquote(lit.Value)
-			if err != nil {
+			value, ok := constantValue(valueExpr, importAliases, root)
+			if !ok {
 				continue
 			}
 			events = append(events, eventDef{
@@ -231,6 +258,190 @@ func parsePayloadFields(fields *ast.FieldList, fset *token.FileSet) []payloadFie
 		}
 	}
 	return results
+}
+
+func parsePayloadFromTypeExpr(expr ast.Expr, fset *token.FileSet, importAliases map[string]string, root string, typeSpecs map[string]ast.Expr, seen map[string]struct{}) ([]payloadField, string, bool) {
+	switch typed := expr.(type) {
+	case *ast.StructType:
+		return parsePayloadFields(typed.Fields, fset), formatPosition(fset.Position(typed.Pos()), root), true
+	case *ast.SelectorExpr:
+		return parseImportedPayload(typed, importAliases, root)
+	case *ast.Ident:
+		name := typed.Name
+		if _, ok := seen[name]; ok {
+			return nil, "", false
+		}
+		target, ok := typeSpecs[name]
+		if !ok {
+			return nil, "", false
+		}
+		next := make(map[string]struct{}, len(seen)+1)
+		for k := range seen {
+			next[k] = struct{}{}
+		}
+		next[name] = struct{}{}
+		return parsePayloadFromTypeExpr(target, fset, importAliases, root, typeSpecs, next)
+	default:
+		return nil, "", false
+	}
+}
+
+func parseImportedPayload(sel *ast.SelectorExpr, importAliases map[string]string, root string) ([]payloadField, string, bool) {
+	alias := sel.X
+	ident, ok := alias.(*ast.Ident)
+	if !ok {
+		return nil, "", false
+	}
+	importPath, ok := importAliases[ident.Name]
+	if !ok {
+		return nil, "", false
+	}
+	importDir := resolveImportDir(importPath, root)
+	if importDir == "" {
+		return nil, "", false
+	}
+	return parsePayloadFromPackage(importDir, sel.Sel.Name, root)
+}
+
+func parsePayloadFromPackage(dir, typeName, root string) ([]payloadField, string, bool) {
+	fset := token.NewFileSet()
+	pkgs, err := parser.ParseDir(fset, dir, func(info os.FileInfo) bool {
+		return !strings.HasSuffix(info.Name(), "_test.go")
+	}, parser.AllErrors)
+	if err != nil {
+		return nil, "", false
+	}
+	for _, pkg := range pkgs {
+		for _, file := range pkg.Files {
+			for _, decl := range file.Decls {
+				gen, ok := decl.(*ast.GenDecl)
+				if !ok || gen.Tok != token.TYPE {
+					continue
+				}
+				for _, spec := range gen.Specs {
+					typeSpec, ok := spec.(*ast.TypeSpec)
+					if !ok || typeSpec.Name.Name != typeName {
+						continue
+					}
+					structType, ok := typeSpec.Type.(*ast.StructType)
+					if !ok {
+						continue
+					}
+					return parsePayloadFields(structType.Fields, fset), formatPosition(fset.Position(typeSpec.Pos()), root), true
+				}
+			}
+		}
+	}
+	return nil, "", false
+}
+
+func parseImportAliases(file *ast.File) map[string]string {
+	aliases := make(map[string]string)
+	for _, imp := range file.Imports {
+		pathValue, err := strconv.Unquote(imp.Path.Value)
+		if err != nil {
+			continue
+		}
+		name := filepath.Base(pathValue)
+		if imp.Name != nil && imp.Name.Name != "" && imp.Name.Name != "." && imp.Name.Name != "_" {
+			name = imp.Name.Name
+		}
+		aliases[name] = pathValue
+	}
+	// Default import name is package identifier.
+	return aliases
+}
+
+func resolveImportDir(importPath, root string) string {
+	const modulePath = "github.com/louisbranch/fracturing.space/"
+	if !strings.HasPrefix(importPath, modulePath) {
+		return ""
+	}
+	relPath := strings.TrimPrefix(importPath, modulePath)
+	candidate := filepath.Join(root, filepath.FromSlash(relPath))
+	if _, err := os.Stat(candidate); err != nil {
+		return ""
+	}
+	return candidate
+}
+
+func constantValue(expr ast.Expr, importAliases map[string]string, root string) (string, bool) {
+	lit, ok := expr.(*ast.BasicLit)
+	if !ok || lit.Kind != token.STRING {
+		if sel, ok := expr.(*ast.SelectorExpr); ok {
+			return constFromSelector(sel, importAliases, root)
+		}
+		return "", false
+	}
+	value, err := strconv.Unquote(lit.Value)
+	if err != nil {
+		return "", false
+	}
+	return value, true
+}
+
+func constFromSelector(expr *ast.SelectorExpr, importAliases map[string]string, root string) (string, bool) {
+	alias := expr.X
+	ident, ok := alias.(*ast.Ident)
+	if !ok {
+		return "", false
+	}
+	importPath, ok := importAliases[ident.Name]
+	if !ok {
+		return "", false
+	}
+	importDir := resolveImportDir(importPath, root)
+	if importDir == "" {
+		return "", false
+	}
+	return constFromPackage(importDir, expr.Sel.Name)
+}
+
+func constFromPackage(dir, constantName string) (string, bool) {
+	fset := token.NewFileSet()
+	pkgs, err := parser.ParseDir(fset, dir, func(info os.FileInfo) bool {
+		return !strings.HasSuffix(info.Name(), "_test.go")
+	}, parser.AllErrors)
+	if err != nil {
+		return "", false
+	}
+	for _, pkg := range pkgs {
+		for _, file := range pkg.Files {
+			for _, decl := range file.Decls {
+				gen, ok := decl.(*ast.GenDecl)
+				if !ok || gen.Tok != token.CONST {
+					continue
+				}
+				for _, spec := range gen.Specs {
+					valueSpec, ok := spec.(*ast.ValueSpec)
+					if !ok {
+						continue
+					}
+					for i, name := range valueSpec.Names {
+						if name.Name != constantName {
+							continue
+						}
+						valueExpr := selectValueExpr(valueSpec.Values, i)
+						if valueExpr == nil {
+							continue
+						}
+						value, ok := constantValue(valueExpr, nil, dir)
+						if ok {
+							return value, true
+						}
+					}
+				}
+			}
+		}
+	}
+	return "", false
+}
+
+func isExported(name string) bool {
+	if name == "" {
+		return false
+	}
+	return unicode.IsUpper(rune(name[0]))
 }
 
 func selectValueExpr(values []ast.Expr, index int) ast.Expr {

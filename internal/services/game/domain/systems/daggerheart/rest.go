@@ -2,7 +2,7 @@ package daggerheart
 
 import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/core/dice"
+	"github.com/louisbranch/fracturing.space/internal/services/game/core/dice"
 )
 
 // RestType represents the type of rest taken.

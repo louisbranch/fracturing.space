@@ -12,7 +12,7 @@ Fracturing.Space is split into four layers:
 
 - **Transport layer**: Game server (`cmd/game`) + Auth server (`cmd/auth`) + MCP bridge (`cmd/mcp`) + Admin dashboard (`cmd/admin`)
 - **Platform layer**: Shared infrastructure (`internal/platform/`)
-- **Domain layer**: Game systems (`internal/services/game/domain/systems/`) + Campaign model (`internal/services/game/domain/campaign/`)
+- **Domain layer**: Core domain packages (`internal/services/game/domain/{campaign,participant,character,invite,session,action,...}`) + game systems (`internal/services/game/domain/systems/`)
 - **Storage layer**: SQLite persistence (`data/game-events.db`, `data/game-projections.db`, `data/game-content.db`, `data/auth.db`, `data/admin.db`)
 
 The MCP server is a thin adapter that forwards requests to the game services.
@@ -26,6 +26,8 @@ generation) live in the domain or platform layers instead of being separate
 services.
 
 For domain terminology, see [domain-language.md](domain-language.md).
+For the canonical event-driven write model, see
+[Event-driven system](event-driven-system.md).
 
 ## Game System Architecture
 
@@ -33,16 +35,22 @@ Fracturing.Space supports multiple tabletop RPG systems through a pluggable arch
 
 ```
 internal/services/game/domain/systems/
-├── registry.go          # GameSystem interface + registration
+├── adapter_registry.go  # Projection adapter routing by system + version
+├── registry_bridge.go   # API-facing game-system metadata registry
 └── daggerheart/         # Daggerheart implementation
-    ├── domain/          # Duality dice, outcomes, probability
-    ├── state.go         # System-specific state handlers
-    └── content/         # Compendium and starter kit data (stub)
+    ├── module.go        # domain/system.Module implementation
+    ├── decider.go       # system-owned command decisions
+    ├── projector.go     # system-owned replay/projector logic
+    ├── adapter.go       # projection adapter for system tables
+    └── domain/          # pure mechanics (outcomes/probability/etc.)
 ```
 
-Game system gRPC services live in `internal/services/game/api/grpc/systems/{name}/`.
-
-Systems are registered at startup and campaigns are bound to one system at creation.
+Domain command/event module routing is defined in
+`internal/services/game/domain/system/registry.go`.
+Game-system gRPC surfaces live in
+`internal/services/game/api/grpc/systems/{name}/`.
+Systems are registered at startup, and campaigns are bound to one system at
+creation.
 
 For detailed information on the game system architecture, including how to add new systems, see [game-systems.md](game-systems.md).
 
@@ -50,16 +58,18 @@ For detailed information on the game system architecture, including how to add n
 
 Campaign data is organized into three tiers by change frequency:
 
-| Layer | Subpackages | Changes | Contents |
+| Layer | Packages | Changes | Contents |
 |-------|-------------|---------|----------|
-| **Campaign** (Config) | `campaign/`, `campaign/participant/`, `campaign/character/` | Setup time | Name, system, GM mode, participants, character profiles |
-| **Snapshot** | `campaign/snapshot/` | At any event sequence | Materialized projection cache for replay/performance |
-| **Session** (Gameplay) | `campaign/session/` | Every action | Active session, events, rolls, outcomes |
+| **Core campaign state** | `campaign/`, `participant/`, `character/`, `invite/` | Setup + lifecycle | Name, status, seats, characters, invites |
+| **Session gameplay** | `session/`, `action/` | During play | Active session, spotlight/gates, action resolution |
+| **Derived projections** | `projection/`, `domain/systems/*/adapter.go` | Rebuilt/apply-time | Query models and system extension state |
 
 This model uses an event-sourced architecture where the event journal is the
 source of truth and projections/snapshots are derived views.
 
 ## Event-Sourced Model
+
+Reference guide: [Event-driven system](event-driven-system.md)
 
 - All game changes are events in the campaign journal.
 - Projections are derived through an explicit apply pipeline.
@@ -114,9 +124,15 @@ Entry point: `cmd/mcp`
 ### Domain packages
 
 Game system mechanics live in `internal/services/game/domain/systems/` (e.g., `internal/services/game/domain/systems/daggerheart/`).
-The campaign model lives in `internal/services/game/domain/campaign/` with subpackages for participant,
-character, snapshot, and session. Core primitives (dice, checks, RNG) live in
-`internal/services/game/domain/core/`. These packages are transport agnostic and used by the game services.
+Core domain behavior lives in top-level domain packages such as
+`internal/services/game/domain/campaign/`,
+`internal/services/game/domain/participant/`,
+`internal/services/game/domain/character/`,
+`internal/services/game/domain/invite/`,
+`internal/services/game/domain/session/`, and
+`internal/services/game/domain/action/`.
+Core primitives (dice, checks, RNG) live in `internal/services/game/core/`.
+These packages are transport agnostic and used by the game services.
 
 ### Storage
 
@@ -153,5 +169,5 @@ The primary service boundaries are:
 
 Non-service utilities live in shared layers:
 
-- **RNG/seed generation**: `internal/services/game/domain/core/random/` (shared domain utility, not a service).
+- **RNG/seed generation**: `internal/services/game/core/random/` (shared domain utility, not a service).
 - **Seeding CLI**: `cmd/seed` (dev tooling that calls the game service APIs).

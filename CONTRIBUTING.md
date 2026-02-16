@@ -53,7 +53,7 @@ use the Make targets documented in [integration tests](docs/running/integration-
 | Persistent gameplay state | `internal/services/game/domain/campaign/snapshot/` |
 | Session mechanics | `internal/services/game/domain/campaign/session/` |
 | Game-system-specific rules | `internal/services/game/domain/systems/{system}/` |
-| Generic dice mechanics | `internal/services/game/domain/core/dice/` |
+| Generic dice mechanics | `internal/services/game/core/dice/` |
 | gRPC API endpoints | `internal/services/game/api/grpc/` |
 | MCP tools | `internal/services/mcp/tool/` |
 

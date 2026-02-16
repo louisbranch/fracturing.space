@@ -4,15 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/core/dice"
-)
-
-// Life state identifiers for Daggerheart characters.
-const (
-	LifeStateAlive        = "alive"
-	LifeStateUnconscious  = "unconscious"
-	LifeStateBlazeOfGlory = "blaze_of_glory"
-	LifeStateDead         = "dead"
+	"github.com/louisbranch/fracturing.space/internal/services/game/core/dice"
 )
 
 // Death move identifiers for Daggerheart.
@@ -79,7 +71,6 @@ type DeathMoveInput struct {
 // DeathMoveOutcome captures the resolved effects of a death move.
 type DeathMoveOutcome struct {
 	Move          string
-	LifeState     string
 	HPBefore      int
 	HPAfter       int
 	HopeBefore    int
@@ -88,6 +79,7 @@ type DeathMoveOutcome struct {
 	HopeMaxAfter  int
 	StressBefore  int
 	StressAfter   int
+	LifeState     string
 	HopeDie       *int
 	FearDie       *int
 	ScarGained    bool
@@ -95,7 +87,7 @@ type DeathMoveOutcome struct {
 	StressCleared int
 }
 
-// ResolveDeathMove applies the SRD death move rules.
+// ResolveDeathMove applies the Daggerheart death move rules.
 func ResolveDeathMove(input DeathMoveInput) (DeathMoveOutcome, error) {
 	move, err := NormalizeDeathMove(input.Move)
 	if err != nil {

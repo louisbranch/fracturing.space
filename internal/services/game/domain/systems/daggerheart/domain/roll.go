@@ -1,7 +1,7 @@
 package domain
 
 import (
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/core/dice"
+	"github.com/louisbranch/fracturing.space/internal/services/game/core/dice"
 )
 
 // RollAction performs an action roll from the provided request.

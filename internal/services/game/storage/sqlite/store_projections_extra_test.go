@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/character"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/session"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -102,7 +102,7 @@ func TestSessionGetAndListSessions(t *testing.T) {
 	if got.ID != s.ID || got.CampaignID != s.CampaignID {
 		t.Fatalf("expected identity to match")
 	}
-	if got.Name != s.Name || got.Status != session.SessionStatusActive {
+	if got.Name != s.Name || got.Status != session.StatusActive {
 		t.Fatalf("expected name/status to match")
 	}
 	if !got.StartedAt.Equal(s.StartedAt) {
@@ -115,9 +115,9 @@ func TestSessionGetAndListSessions(t *testing.T) {
 	}
 
 	// Create two more sessions (ending each before the next)
-	sess2 := session.Session{
+	sess2 := storage.SessionRecord{
 		ID: "sess-2", CampaignID: "camp-sess", Name: "Session 2",
-		Status: session.SessionStatusActive, StartedAt: now.Add(2 * time.Hour), UpdatedAt: now.Add(2 * time.Hour),
+		Status: session.StatusActive, StartedAt: now.Add(2 * time.Hour), UpdatedAt: now.Add(2 * time.Hour),
 	}
 	if err := store.PutSession(context.Background(), sess2); err != nil {
 		t.Fatalf("put session 2: %v", err)
@@ -126,9 +126,9 @@ func TestSessionGetAndListSessions(t *testing.T) {
 		t.Fatalf("end session 2: %v", err)
 	}
 
-	sess3 := session.Session{
+	sess3 := storage.SessionRecord{
 		ID: "sess-3", CampaignID: "camp-sess", Name: "Session 3",
-		Status: session.SessionStatusActive, StartedAt: now.Add(4 * time.Hour), UpdatedAt: now.Add(4 * time.Hour),
+		Status: session.StatusActive, StartedAt: now.Add(4 * time.Hour), UpdatedAt: now.Add(4 * time.Hour),
 	}
 	if err := store.PutSession(context.Background(), sess3); err != nil {
 		t.Fatalf("put session 3: %v", err)
@@ -223,7 +223,7 @@ func TestGetGameStatistics(t *testing.T) {
 	seedCampaign(t, store, "camp-stats-2", now)
 	seedParticipant(t, store, "camp-stats-1", "part-1", "user-1", now)
 	seedParticipant(t, store, "camp-stats-1", "part-2", "user-2", now)
-	seedCharacter(t, store, "camp-stats-1", "char-1", "Aria", character.CharacterKindPC, now)
+	seedCharacter(t, store, "camp-stats-1", "char-1", "Aria", character.KindPC, now)
 	seedSession(t, store, "camp-stats-1", "sess-1", now)
 
 	stats, err := store.GetGameStatistics(context.Background(), nil)

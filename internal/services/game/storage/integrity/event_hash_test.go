@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 )
 
 func TestEventHashDeterministic(t *testing.T) {
@@ -12,7 +12,7 @@ func TestEventHashDeterministic(t *testing.T) {
 	evt := event.Event{
 		CampaignID:  "c1",
 		Timestamp:   ts,
-		Type:        event.TypeCampaignCreated,
+		Type:        event.Type("campaign.created"),
 		ActorType:   event.ActorTypeSystem,
 		PayloadJSON: []byte(`{"name":"demo"}`),
 	}
@@ -37,7 +37,7 @@ func TestEventHashChangesWithOptionalFields(t *testing.T) {
 	base := event.Event{
 		CampaignID:  "c1",
 		Timestamp:   ts,
-		Type:        event.TypeCampaignCreated,
+		Type:        event.Type("campaign.created"),
 		ActorType:   event.ActorTypeSystem,
 		PayloadJSON: []byte(`{"name":"demo"}`),
 	}
@@ -64,7 +64,7 @@ func TestChainHashRequiresEventHash(t *testing.T) {
 		CampaignID:  "c1",
 		Seq:         10,
 		Timestamp:   time.Date(2024, 2, 1, 10, 30, 0, 0, time.UTC),
-		Type:        event.TypeCampaignCreated,
+		Type:        event.Type("campaign.created"),
 		ActorType:   event.ActorTypeSystem,
 		PayloadJSON: []byte(`{"name":"demo"}`),
 	}
@@ -81,7 +81,7 @@ func TestChainHashDeterministic(t *testing.T) {
 		Seq:         10,
 		Hash:        "eventhash",
 		Timestamp:   time.Date(2024, 2, 1, 10, 30, 0, 0, time.UTC),
-		Type:        event.TypeCampaignCreated,
+		Type:        event.Type("campaign.created"),
 		ActorType:   event.ActorTypeSystem,
 		PayloadJSON: []byte(`{"name":"demo"}`),
 	}

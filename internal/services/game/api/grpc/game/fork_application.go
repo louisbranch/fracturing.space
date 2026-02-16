@@ -8,12 +8,14 @@ import (
 	"time"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/fork"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/projection"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/session"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/fork"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
+	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -32,31 +34,31 @@ func newForkApplication(service *ForkService) forkApplication {
 	return app
 }
 
-func (a forkApplication) ForkCampaign(ctx context.Context, sourceCampaignID string, in *campaignv1.ForkCampaignRequest) (campaign.Campaign, *campaignv1.Lineage, uint64, error) {
+func (a forkApplication) ForkCampaign(ctx context.Context, sourceCampaignID string, in *campaignv1.ForkCampaignRequest) (storage.CampaignRecord, *campaignv1.Lineage, uint64, error) {
 	if in.GetCopyParticipants() && a.stores.Participant == nil {
-		return campaign.Campaign{}, nil, 0, status.Error(codes.Internal, "participant store is not configured")
+		return storage.CampaignRecord{}, nil, 0, status.Error(codes.Internal, "participant store is not configured")
 	}
 
 	// Get source campaign
 	sourceCampaign, err := a.stores.Campaign.Get(ctx, sourceCampaignID)
 	if err != nil {
 		if isNotFound(err) {
-			return campaign.Campaign{}, nil, 0, status.Error(codes.NotFound, "source campaign not found")
+			return storage.CampaignRecord{}, nil, 0, status.Error(codes.NotFound, "source campaign not found")
 		}
-		return campaign.Campaign{}, nil, 0, status.Errorf(codes.Internal, "get source campaign: %v", err)
+		return storage.CampaignRecord{}, nil, 0, status.Errorf(codes.Internal, "get source campaign: %v", err)
 	}
 
 	// Determine fork point
 	forkPoint := forkPointFromProto(in.GetForkPoint())
 	forkEventSeq, err := a.resolveForkPoint(ctx, sourceCampaignID, forkPoint)
 	if err != nil {
-		return campaign.Campaign{}, nil, 0, err
+		return storage.CampaignRecord{}, nil, 0, err
 	}
 
 	// Get source campaign's fork metadata to determine origin
 	sourceMetadata, err := a.stores.CampaignFork.GetCampaignForkMetadata(ctx, sourceCampaignID)
 	if err != nil && !isNotFound(err) {
-		return campaign.Campaign{}, nil, 0, status.Errorf(codes.Internal, "get source fork metadata: %v", err)
+		return storage.CampaignRecord{}, nil, 0, status.Errorf(codes.Internal, "get source fork metadata: %v", err)
 	}
 
 	originCampaignID := sourceMetadata.OriginCampaignID
@@ -72,52 +74,62 @@ func (a forkApplication) ForkCampaign(ctx context.Context, sourceCampaignID stri
 		CopyParticipants: in.GetCopyParticipants(),
 	}, originCampaignID, forkEventSeq, a.clock, a.idGenerator)
 	if err != nil {
-		return campaign.Campaign{}, nil, 0, err
+		return storage.CampaignRecord{}, nil, 0, err
 	}
 
 	actorID := grpcmeta.ParticipantIDFromContext(ctx)
-	actorType := event.ActorTypeSystem
-	if actorID != "" {
-		actorType = event.ActorTypeParticipant
-	}
+	requestID := grpcmeta.RequestIDFromContext(ctx)
+	invocationID := grpcmeta.InvocationIDFromContext(ctx)
 
 	newCampaignName := in.GetNewCampaignName()
 	if newCampaignName == "" {
 		newCampaignName = fmt.Sprintf("%s (Fork)", sourceCampaign.Name)
 	}
-	campaignPayload := event.CampaignCreatedPayload{
-		Name:        newCampaignName,
-		GameSystem:  sourceCampaign.System.String(),
-		GmMode:      gmModeToProto(sourceCampaign.GmMode).String(),
-		ThemePrompt: sourceCampaign.ThemePrompt,
+	campaignPayload := campaign.CreatePayload{
+		Name:         newCampaignName,
+		Locale:       platformi18n.LocaleString(sourceCampaign.Locale),
+		GameSystem:   sourceCampaign.System.String(),
+		GmMode:       gmModeToProto(sourceCampaign.GmMode).String(),
+		Intent:       campaignIntentToProto(sourceCampaign.Intent).String(),
+		AccessPolicy: campaignAccessPolicyToProto(sourceCampaign.AccessPolicy).String(),
+		ThemePrompt:  sourceCampaign.ThemePrompt,
 	}
 	campaignJSON, err := json.Marshal(campaignPayload)
 	if err != nil {
-		return campaign.Campaign{}, nil, 0, status.Errorf(codes.Internal, "encode payload: %v", err)
+		return storage.CampaignRecord{}, nil, 0, status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
-
-	createdEvent, err := a.stores.Event.AppendEvent(ctx, event.Event{
+	applier := a.stores.Applier()
+	if a.stores.Domain == nil {
+		return storage.CampaignRecord{}, nil, 0, status.Error(codes.Internal, "domain engine is not configured")
+	}
+	actorType := command.ActorTypeSystem
+	if actorID != "" {
+		actorType = command.ActorTypeParticipant
+	}
+	result, err := a.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:   f.NewCampaignID,
-		Timestamp:    a.clock().UTC(),
-		Type:         event.TypeCampaignCreated,
-		RequestID:    grpcmeta.RequestIDFromContext(ctx),
-		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+		Type:         command.Type("campaign.create"),
 		ActorType:    actorType,
 		ActorID:      actorID,
+		RequestID:    requestID,
+		InvocationID: invocationID,
 		EntityType:   "campaign",
 		EntityID:     f.NewCampaignID,
 		PayloadJSON:  campaignJSON,
 	})
 	if err != nil {
-		return campaign.Campaign{}, nil, 0, status.Errorf(codes.Internal, "append campaign.created: %v", err)
+		return storage.CampaignRecord{}, nil, 0, status.Errorf(codes.Internal, "execute domain command: %v", err)
+	}
+	if len(result.Decision.Rejections) > 0 {
+		return storage.CampaignRecord{}, nil, 0, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
+	}
+	for _, evt := range result.Decision.Events {
+		if err := applier.Apply(ctx, evt); err != nil {
+			return storage.CampaignRecord{}, nil, 0, status.Errorf(codes.Internal, "apply campaign.created: %v", err)
+		}
 	}
 
-	applier := a.stores.Applier()
-	if err := applier.Apply(ctx, createdEvent); err != nil {
-		return campaign.Campaign{}, nil, 0, status.Errorf(codes.Internal, "apply campaign.created: %v", err)
-	}
-
-	forkPayload := event.CampaignForkedPayload{
+	forkPayload := campaign.ForkPayload{
 		ParentCampaignID: sourceCampaignID,
 		ForkEventSeq:     forkEventSeq,
 		OriginCampaignID: originCampaignID,
@@ -125,29 +137,37 @@ func (a forkApplication) ForkCampaign(ctx context.Context, sourceCampaignID stri
 	}
 	forkJSON, err := json.Marshal(forkPayload)
 	if err != nil {
-		return campaign.Campaign{}, nil, 0, status.Errorf(codes.Internal, "encode payload: %v", err)
+		return storage.CampaignRecord{}, nil, 0, status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
-	storedFork, err := a.stores.Event.AppendEvent(ctx, event.Event{
+	actorType = command.ActorTypeSystem
+	if actorID != "" {
+		actorType = command.ActorTypeParticipant
+	}
+	result, err = a.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:   f.NewCampaignID,
-		Timestamp:    a.clock().UTC(),
-		Type:         event.TypeCampaignForked,
-		RequestID:    grpcmeta.RequestIDFromContext(ctx),
-		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+		Type:         command.Type("campaign.fork"),
 		ActorType:    actorType,
 		ActorID:      actorID,
+		RequestID:    requestID,
+		InvocationID: invocationID,
 		EntityType:   "campaign",
 		EntityID:     f.NewCampaignID,
 		PayloadJSON:  forkJSON,
 	})
 	if err != nil {
-		return campaign.Campaign{}, nil, 0, status.Errorf(codes.Internal, "append campaign.forked: %v", err)
+		return storage.CampaignRecord{}, nil, 0, status.Errorf(codes.Internal, "execute domain command: %v", err)
 	}
-	if err := applier.Apply(ctx, storedFork); err != nil {
-		return campaign.Campaign{}, nil, 0, status.Errorf(codes.Internal, "apply campaign.forked: %v", err)
+	if len(result.Decision.Rejections) > 0 {
+		return storage.CampaignRecord{}, nil, 0, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
+	}
+	for _, evt := range result.Decision.Events {
+		if err := applier.Apply(ctx, evt); err != nil {
+			return storage.CampaignRecord{}, nil, 0, status.Errorf(codes.Internal, "apply campaign.forked: %v", err)
+		}
 	}
 
 	if _, err := a.copyForkEvents(ctx, sourceCampaignID, f.NewCampaignID, forkEventSeq, in.GetCopyParticipants(), applier); err != nil {
-		return campaign.Campaign{}, nil, 0, status.Errorf(codes.Internal, "copy events: %v", err)
+		return storage.CampaignRecord{}, nil, 0, status.Errorf(codes.Internal, "copy events: %v", err)
 	}
 
 	// Calculate depth by walking the parent chain
@@ -155,7 +175,7 @@ func (a forkApplication) ForkCampaign(ctx context.Context, sourceCampaignID stri
 
 	newCampaign, err := a.stores.Campaign.Get(ctx, f.NewCampaignID)
 	if err != nil {
-		return campaign.Campaign{}, nil, 0, status.Errorf(codes.Internal, "load forked campaign: %v", err)
+		return storage.CampaignRecord{}, nil, 0, status.Errorf(codes.Internal, "load forked campaign: %v", err)
 	}
 
 	lineage := &campaignv1.Lineage{
@@ -232,7 +252,7 @@ func (a forkApplication) resolveForkPoint(ctx context.Context, campaignID string
 			}
 			return 0, status.Errorf(codes.Internal, "get session: %v", err)
 		}
-		if sess.Status != session.SessionStatusEnded {
+		if sess.Status != session.StatusEnded {
 			return 0, status.Error(codes.FailedPrecondition, "session has not ended")
 		}
 
