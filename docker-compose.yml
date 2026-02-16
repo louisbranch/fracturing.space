@@ -128,11 +128,32 @@ services:
       FRACTURING_SPACE_WEB_HTTP_ADDR: 0.0.0.0:8086
       FRACTURING_SPACE_WEB_AUTH_BASE_URL: ${FRACTURING_SPACE_PUBLIC_SCHEME:-http}://auth.${FRACTURING_SPACE_DOMAIN:-localhost}${FRACTURING_SPACE_PUBLIC_PORT-:8080}
       FRACTURING_SPACE_WEB_AUTH_ADDR: auth:8083
+      FRACTURING_SPACE_GAME_ADDR: game:8080
       FRACTURING_SPACE_WEB_DIAL_TIMEOUT: ${FRACTURING_SPACE_WEB_DIAL_TIMEOUT:-2s}
       FRACTURING_SPACE_WEB_OAUTH_CLIENT_ID: fracturing-space-web
+      FRACTURING_SPACE_WEB_OAUTH_RESOURCE_SECRET: ${FRACTURING_SPACE_WEB_OAUTH_RESOURCE_SECRET:-dev-admin-secret}
       FRACTURING_SPACE_WEB_CALLBACK_URL: ${FRACTURING_SPACE_PUBLIC_SCHEME:-http}://${FRACTURING_SPACE_DOMAIN:-localhost}${FRACTURING_SPACE_PUBLIC_PORT-:8080}/auth/callback
       FRACTURING_SPACE_WEB_AUTH_TOKEN_URL: http://auth:8084/token
       FRACTURING_SPACE_DOMAIN: ${FRACTURING_SPACE_DOMAIN:-localhost}
+    networks:
+      - internal
+    restart: unless-stopped
+
+  chat:
+    build:
+      context: .
+      target: chat
+      args:
+        GO_VERSION: ${GO_VERSION:-1.25.6}
+    image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/chat:${FRACTURING_SPACE_IMAGE_TAG:-dev}"
+    depends_on:
+      init-data:
+        condition: service_completed_successfully
+      game:
+        condition: service_started
+    environment:
+      FRACTURING_SPACE_CHAT_HTTP_ADDR: ${FRACTURING_SPACE_CHAT_HTTP_ADDR:-0.0.0.0:8087}
+      FRACTURING_SPACE_GAME_ADDR: game:8080
     networks:
       - internal
     restart: unless-stopped
@@ -141,6 +162,7 @@ services:
     image: caddy:2.8.4
     depends_on:
       - web
+      - chat
       - auth
       - admin
       - mcp

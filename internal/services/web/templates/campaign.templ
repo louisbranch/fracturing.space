@@ -1,0 +1,28 @@
+package templates
+
+// CampaignPage renders the campaign chat shell for Phase 1.1.
+templ CampaignPage(page PageContext, campaignID string) {
+	@Layout("Campaign "+campaignID+" | Fracturing.Space", page.Lang) {
+		<main class="landing-shell" data-campaign-id={ campaignID }>
+			<section class="landing-hero">
+				<h1>Campaign { campaignID }</h1>
+				<p class="hero-tagline">Phase 1.1 chat shell (participant mode only).</p>
+				<div class="card border border-base-300 bg-base-100">
+					<div class="card-body gap-4">
+						<div class="flex items-center justify-between gap-4">
+							<h2 class="card-title m-0">Chat</h2>
+							<span id="chat-status" class="text-sm opacity-70">connecting...</span>
+						</div>
+						<div id="chat-messages" class="h-80 overflow-y-auto rounded border border-base-300 p-3 text-sm"></div>
+						<form id="chat-form" class="flex gap-2">
+							<input id="chat-input" class="input input-bordered w-full" type="text" maxlength="2000" placeholder="Type a message" autocomplete="off"/>
+							<button id="chat-send" class="btn btn-primary" type="submit">Send</button>
+						</form>
+					</div>
+				</div>
+			</section>
+		</main>
+		<script>window.__FRACTURING_CHAT_JOIN_TYPE = "chat.join";</script>
+		<script defer src="/static/campaign-chat.js"></script>
+	}
+}
