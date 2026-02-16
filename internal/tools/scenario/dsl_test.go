@@ -193,6 +193,39 @@ return scene
 	}
 }
 
+func TestValidateScenarioCommentsRequiresCommentForSceneBlock(t *testing.T) {
+	path := writeScenarioFixture(t, `local scene = Scenario.new("no-comment")
+scene:campaign({name = "Test", system = "DAGGERHEART"})
+
+return scene
+`)
+
+	_, err := LoadScenarioFromFile(path)
+	if err == nil {
+		t.Fatal("expected validation error for missing block comment")
+	}
+	if !strings.Contains(err.Error(), "scenario block missing comment") {
+		t.Fatalf("error = %q, want contains %q", err.Error(), "scenario block missing comment")
+	}
+}
+
+func TestValidateScenarioCommentsAllowsCommentedSceneBlock(t *testing.T) {
+	path := writeScenarioFixture(t, `-- Setup
+local scene = Scenario.new("commented")
+scene:campaign({name = "Test", system = "DAGGERHEART"})
+
+return scene
+`)
+
+	scenario, err := LoadScenarioFromFile(path)
+	if err != nil {
+		t.Fatalf("load scenario: %v", err)
+	}
+	if scenario.Name != "commented" {
+		t.Fatalf("scenario name = %q, want %q", scenario.Name, "commented")
+	}
+}
+
 func writeScenarioFixture(t *testing.T, content string) string {
 	t.Helper()
 
