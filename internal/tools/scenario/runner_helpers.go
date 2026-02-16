@@ -412,32 +412,62 @@ func (r *Runner) getAdversary(ctx context.Context, state *scenarioState, adversa
 
 func chooseActionSeed(args map[string]any, difficulty int) (uint64, error) {
 	hint := strings.ToLower(optionalString(args, "outcome", ""))
-	if hint == "" {
+	total, hasTotal := readInt(args, "total")
+	modifier := optionalInt(args, "modifier", 0)
+	modifier += actionRollModifierTotal(args, "modifiers")
+	advantage := optionalInt(args, "advantage", 0)
+	disadvantage := optionalInt(args, "disadvantage", 0)
+	key := actionSeedKey{
+		difficulty:   difficulty,
+		hint:         hint,
+		total:        total,
+		exactTotal:   hasTotal,
+		modifier:     modifier,
+		advantage:    advantage,
+		disadvantage: disadvantage,
+	}
+	if hint == "" && !hasTotal {
 		return 42, nil
 	}
-	if seed, ok := cachedActionSeed(difficulty, hint); ok {
+	if seed, ok := cachedActionSeed(key); ok {
 		return seed, nil
 	}
 	for seed := uint64(1); seed < 50000; seed++ {
 		result, err := daggerheartdomain.RollAction(daggerheartdomain.ActionRequest{
-			Modifier:   0,
-			Difficulty: &difficulty,
-			Seed:       int64(seed),
+			Modifier:     modifier,
+			Difficulty:   &difficulty,
+			Advantage:    advantage,
+			Disadvantage: disadvantage,
+			Seed:         int64(seed),
 		})
 		if err != nil {
 			continue
 		}
-		if matchesOutcomeHint(result, hint) {
-			cacheActionSeed(difficulty, hint, seed)
+		if hasTotal && result.Total != total {
+			continue
+		}
+		if hint == "" || matchesOutcomeHint(result, hint) {
+			cacheActionSeed(key, seed)
 			return seed, nil
 		}
+	}
+	if hasTotal {
+		if hint == "" {
+			return 0, fmt.Errorf("no seed found for total %d", total)
+		}
+		return 0, fmt.Errorf("no seed found for outcome %q and total %d", hint, total)
 	}
 	return 0, fmt.Errorf("no seed found for outcome %q", hint)
 }
 
 type actionSeedKey struct {
-	difficulty int
-	hint       string
+	difficulty   int
+	hint         string
+	total        int
+	exactTotal   bool
+	modifier     int
+	advantage    int
+	disadvantage int
 }
 
 var (
@@ -445,17 +475,46 @@ var (
 	actionSeedCache = map[actionSeedKey]uint64{}
 )
 
-func cachedActionSeed(difficulty int, hint string) (uint64, bool) {
+func cachedActionSeed(key actionSeedKey) (uint64, bool) {
 	actionSeedMu.Lock()
 	defer actionSeedMu.Unlock()
-	seed, ok := actionSeedCache[actionSeedKey{difficulty: difficulty, hint: hint}]
+	seed, ok := actionSeedCache[key]
 	return seed, ok
 }
 
-func cacheActionSeed(difficulty int, hint string, seed uint64) {
+func cacheActionSeed(key actionSeedKey, seed uint64) {
 	actionSeedMu.Lock()
 	defer actionSeedMu.Unlock()
-	actionSeedCache[actionSeedKey{difficulty: difficulty, hint: hint}] = seed
+	actionSeedCache[key] = seed
+}
+
+func actionRollModifierTotal(args map[string]any, key string) int {
+	value, ok := args[key]
+	if !ok {
+		return 0
+	}
+	list, ok := value.([]any)
+	if !ok || len(list) == 0 {
+		return 0
+	}
+	total := 0
+	for index, entry := range list {
+		item, ok := entry.(map[string]any)
+		if !ok {
+			continue
+		}
+		source := optionalString(item, "source", fmt.Sprintf("modifier_%d", index))
+		value, ok := readInt(item, "value")
+		if !ok {
+			if isHopeSpendSource(source) {
+				value = 0
+			} else {
+				continue
+			}
+		}
+		total += value
+	}
+	return total
 }
 
 func matchesOutcomeHint(result daggerheartdomain.ActionResult, hint string) bool {
@@ -470,8 +529,16 @@ func matchesOutcomeHint(result daggerheartdomain.ActionResult, hint string) bool
 			result.Outcome == daggerheartdomain.OutcomeFailureWithHope
 	case "critical":
 		return result.IsCrit
+	case "on_crit":
+		return result.IsCrit
 	case "failure_hope":
 		return result.Outcome == daggerheartdomain.OutcomeFailureWithHope
+	case "failure_fear":
+		return result.Outcome == daggerheartdomain.OutcomeFailureWithFear
+	case "success_hope":
+		return result.Outcome == daggerheartdomain.OutcomeSuccessWithHope
+	case "success_fear":
+		return result.Outcome == daggerheartdomain.OutcomeSuccessWithFear
 	default:
 		return false
 	}
@@ -483,6 +550,158 @@ func resolveOutcomeSeed(args map[string]any, key string, difficulty int, fallbac
 		return fallback, nil
 	}
 	return chooseActionSeed(map[string]any{"outcome": hint}, difficulty)
+}
+
+func actionRollResultFromResponse(response *daggerheartv1.SessionActionRollResponse) actionRollResult {
+	if response == nil {
+		return actionRollResult{}
+	}
+	return actionRollResult{
+		rollSeq:    response.GetRollSeq(),
+		hopeDie:    int(response.GetHopeDie()),
+		fearDie:    int(response.GetFearDie()),
+		total:      int(response.GetTotal()),
+		difficulty: int(response.GetDifficulty()),
+		success:    response.GetSuccess(),
+		crit:       response.GetCrit(),
+	}
+}
+
+func parseOutcomeBranchSteps(value any) ([]Step, error) {
+	if value == nil {
+		return nil, nil
+	}
+
+	raw, ok := value.([]any)
+	if !ok {
+		entry, ok := value.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("outcome branch expects a list of step objects")
+		}
+		raw = []any{entry}
+	}
+	steps := make([]Step, 0, len(raw))
+	for _, entry := range raw {
+		item, ok := entry.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("outcome branch step must be an object")
+		}
+		kind := optionalString(item, "kind", "")
+		if kind == "" {
+			return nil, fmt.Errorf("outcome branch step requires kind")
+		}
+		args := map[string]any{}
+		for key, value := range item {
+			if key == "kind" {
+				continue
+			}
+			args[key] = value
+		}
+		steps = append(steps, Step{Kind: kind, Args: args})
+	}
+	return steps, nil
+}
+
+func resolveOutcomeBranches(args map[string]any, allowed map[string]struct{}) (map[string][]Step, error) {
+	branches := make(map[string][]Step)
+	for key, value := range args {
+		if !strings.HasPrefix(key, "on_") {
+			continue
+		}
+		if _, ok := allowed[key]; !ok {
+			return nil, fmt.Errorf("unknown outcome branch %q", key)
+		}
+		if value == nil {
+			continue
+		}
+		steps, err := parseOutcomeBranchSteps(value)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", key, err)
+		}
+		branches[key] = steps
+	}
+	return branches, nil
+}
+
+func evaluateActionOutcomeBranch(result actionRollResult, branch string) bool {
+	switch branch {
+	case "on_success":
+		return result.success
+	case "on_failure":
+		return !result.success
+	case "on_hope":
+		return result.hopeDie > result.fearDie
+	case "on_fear":
+		return result.fearDie > result.hopeDie
+	case "on_success_hope":
+		return result.success && result.hopeDie > result.fearDie
+	case "on_failure_hope":
+		return !result.success && result.hopeDie > result.fearDie
+	case "on_success_fear":
+		return result.success && result.fearDie > result.hopeDie
+	case "on_failure_fear":
+		return !result.success && result.fearDie > result.hopeDie
+	case "on_critical", "on_crit":
+		return result.crit
+	default:
+		return false
+	}
+}
+
+func evaluateReactionOutcomeBranch(result *daggerheartv1.DaggerheartReactionOutcomeResult, branch string) bool {
+	if result == nil {
+		return false
+	}
+	switch branch {
+	case "on_success":
+		return result.GetSuccess()
+	case "on_failure":
+		return !result.GetSuccess()
+	case "on_hope":
+		switch result.GetOutcome() {
+		case daggerheartv1.Outcome_SUCCESS_WITH_HOPE, daggerheartv1.Outcome_FAILURE_WITH_HOPE, daggerheartv1.Outcome_ROLL_WITH_HOPE:
+			return true
+		default:
+			return false
+		}
+	case "on_fear":
+		switch result.GetOutcome() {
+		case daggerheartv1.Outcome_SUCCESS_WITH_FEAR, daggerheartv1.Outcome_FAILURE_WITH_FEAR, daggerheartv1.Outcome_ROLL_WITH_FEAR:
+			return true
+		default:
+			return false
+		}
+	case "on_success_hope":
+		return result.GetSuccess() && result.GetOutcome() == daggerheartv1.Outcome_SUCCESS_WITH_HOPE
+	case "on_failure_hope":
+		return !result.GetSuccess() && result.GetOutcome() == daggerheartv1.Outcome_FAILURE_WITH_HOPE
+	case "on_success_fear":
+		return result.GetSuccess() && result.GetOutcome() == daggerheartv1.Outcome_SUCCESS_WITH_FEAR
+	case "on_failure_fear":
+		return !result.GetSuccess() && result.GetOutcome() == daggerheartv1.Outcome_FAILURE_WITH_FEAR
+	case "on_critical", "on_crit":
+		return result.GetCrit()
+	default:
+		return false
+	}
+}
+
+func runOutcomeBranchSteps(ctx context.Context, state *scenarioState, r *Runner, branches map[string][]Step, orderedKeys []string, evaluator func(string) bool) error {
+	for _, key := range orderedKeys {
+		if !evaluator(key) {
+			continue
+		}
+		steps, ok := branches[key]
+		if !ok || len(steps) == 0 {
+			continue
+		}
+		for index, step := range steps {
+			if err := r.runStep(ctx, state, step); err != nil {
+				return fmt.Errorf("%s step %d (%s): %w", key, index+1, step.Kind, err)
+			}
+		}
+	}
+	return nil
 }
 
 func buildActionRollModifiers(args map[string]any, key string) []*daggerheartv1.ActionRollModifier {
@@ -1033,6 +1252,12 @@ func optionalBool(args map[string]any, key string, fallback bool) bool {
 		}
 	}
 	return fallback
+}
+
+func ensureRollOutcomeState(state *scenarioState) {
+	if state.rollOutcomes == nil {
+		state.rollOutcomes = map[uint64]actionRollResult{}
+	}
 }
 
 func readBool(args map[string]any, key string) (bool, bool) {

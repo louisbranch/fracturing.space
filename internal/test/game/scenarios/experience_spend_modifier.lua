@@ -13,8 +13,16 @@ scene:pc("Frodo")
 -- Frodo uses a relevant Experience by spending Hope for a modifier.
 scene:start_session("Experience Modifier")
 
--- Missing DSL: spend Hope and apply an Experience bonus to the roll.
-scene:action_roll{ actor = "Frodo", trait = "presence", difficulty = 12, outcome = "hope" }
+scene:action_roll{
+  actor = "Frodo",
+  trait = "presence",
+  difficulty = 12,
+  outcome = "hope",
+  modifiers = {
+    Modifiers.hope("experience"),
+    Modifiers.mod("training", 3),
+  }
+}
 
 scene:end_session()
 

@@ -2962,14 +2962,16 @@ func (s *DaggerheartService) SessionReactionFlow(ctx context.Context, in *pb.Ses
 	}
 
 	rollResp, err := s.SessionActionRoll(ctx, &pb.SessionActionRollRequest{
-		CampaignId:  campaignID,
-		SessionId:   sessionID,
-		CharacterId: actorID,
-		Trait:       trait,
-		RollKind:    pb.RollKind_ROLL_KIND_REACTION,
-		Difficulty:  in.GetDifficulty(),
-		Modifiers:   in.GetModifiers(),
-		Rng:         in.GetReactionRng(),
+		CampaignId:   campaignID,
+		SessionId:    sessionID,
+		CharacterId:  actorID,
+		Trait:        trait,
+		RollKind:     pb.RollKind_ROLL_KIND_REACTION,
+		Difficulty:   in.GetDifficulty(),
+		Modifiers:    in.GetModifiers(),
+		Advantage:    in.GetAdvantage(),
+		Disadvantage: in.GetDisadvantage(),
+		Rng:          in.GetReactionRng(),
 	})
 	if err != nil {
 		return nil, err

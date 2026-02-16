@@ -364,6 +364,148 @@ func TestMatchesOutcomeHint_Pure(t *testing.T) {
 	}
 }
 
+func TestParseOutcomeBranchSteps(t *testing.T) {
+	t.Run("single_map", func(t *testing.T) {
+		steps, err := parseOutcomeBranchSteps(map[string]any{"kind": "clear_spotlight"})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(steps) != 1 || steps[0].Kind != "clear_spotlight" {
+			t.Fatalf("steps = %v", steps)
+		}
+	})
+	t.Run("list_of_maps", func(t *testing.T) {
+		steps, err := parseOutcomeBranchSteps([]any{
+			map[string]any{"kind": "clear_spotlight"},
+			map[string]any{"kind": "clear_spotlight", "foo": "bar"},
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(steps) != 2 || steps[0].Kind != "clear_spotlight" || steps[1].Kind != "clear_spotlight" {
+			t.Fatalf("steps = %v", steps)
+		}
+		if _, ok := steps[1].Args["foo"]; !ok {
+			t.Fatalf("expected args to carry non-kind fields: %#v", steps[1].Args)
+		}
+	})
+	t.Run("invalid_step", func(t *testing.T) {
+		_, err := parseOutcomeBranchSteps([]any{"bad"})
+		if err == nil {
+			t.Fatal("expected error")
+		}
+	})
+}
+
+func TestResolveOutcomeBranches(t *testing.T) {
+	t.Run("extract_known", func(t *testing.T) {
+		branches, err := resolveOutcomeBranches(map[string]any{
+			"on_success": []any{map[string]any{"kind": "clear_spotlight"}},
+			"on_failure": []any{map[string]any{"kind": "clear_spotlight"}},
+		}, map[string]struct{}{
+			"on_success": {},
+			"on_failure": {},
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(branches) != 2 {
+			t.Fatalf("want 2 branches, got %d", len(branches))
+		}
+	})
+	t.Run("unknown_branch", func(t *testing.T) {
+		_, err := resolveOutcomeBranches(map[string]any{
+			"on_magic": []any{map[string]any{"kind": "clear_spotlight"}},
+		}, map[string]struct{}{
+			"on_success": {},
+		})
+		if err == nil {
+			t.Fatal("expected unknown branch error")
+		}
+	})
+}
+
+func TestEvaluateActionOutcomeBranch(t *testing.T) {
+	tests := []struct {
+		name   string
+		result actionRollResult
+		want   map[string]bool
+	}{
+		{
+			name:   "success_with_hope",
+			result: actionRollResult{success: true, hopeDie: 6, fearDie: 2, crit: true},
+			want: map[string]bool{
+				"on_success":      true,
+				"on_failure":      false,
+				"on_hope":         true,
+				"on_fear":         false,
+				"on_success_hope": true,
+				"on_failure_hope": false,
+				"on_success_fear": false,
+				"on_failure_fear": false,
+				"on_critical":     true,
+				"on_crit":         true,
+			},
+		},
+		{
+			name:   "failure_with_fear",
+			result: actionRollResult{success: false, hopeDie: 2, fearDie: 6, crit: false},
+			want: map[string]bool{
+				"on_success":      false,
+				"on_failure":      true,
+				"on_hope":         false,
+				"on_fear":         true,
+				"on_success_hope": false,
+				"on_failure_hope": false,
+				"on_success_fear": false,
+				"on_failure_fear": true,
+				"on_critical":     false,
+				"on_crit":         false,
+			},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			for branch, want := range tc.want {
+				if got := evaluateActionOutcomeBranch(tc.result, branch); got != want {
+					t.Fatalf("branch %s got %v want %v", branch, got, want)
+				}
+			}
+		})
+	}
+}
+
+func TestEvaluateReactionOutcomeBranch(t *testing.T) {
+	successWithHope := &daggerheartv1.DaggerheartReactionOutcomeResult{
+		Success: true,
+		Outcome: daggerheartv1.Outcome_SUCCESS_WITH_HOPE,
+		Crit:    true,
+	}
+	failureWithFear := &daggerheartv1.DaggerheartReactionOutcomeResult{
+		Success: false,
+		Outcome: daggerheartv1.Outcome_FAILURE_WITH_FEAR,
+		Crit:    false,
+	}
+	if !evaluateReactionOutcomeBranch(successWithHope, "on_success") ||
+		!evaluateReactionOutcomeBranch(successWithHope, "on_hope") ||
+		!evaluateReactionOutcomeBranch(successWithHope, "on_success_hope") ||
+		!evaluateReactionOutcomeBranch(successWithHope, "on_critical") ||
+		evaluateReactionOutcomeBranch(successWithHope, "on_failure_fear") ||
+		evaluateReactionOutcomeBranch(successWithHope, "on_success_fear") {
+		t.Fatal("expected success+hope+critical to match")
+	}
+	if !evaluateReactionOutcomeBranch(failureWithFear, "on_failure") ||
+		!evaluateReactionOutcomeBranch(failureWithFear, "on_fear") ||
+		!evaluateReactionOutcomeBranch(failureWithFear, "on_failure_fear") ||
+		evaluateReactionOutcomeBranch(failureWithFear, "on_success") ||
+		evaluateReactionOutcomeBranch(failureWithFear, "on_success_fear") {
+		t.Fatal("expected failure+fear to match")
+	}
+	if evaluateReactionOutcomeBranch(nil, "on_success") {
+		t.Fatal("nil reaction result should not match")
+	}
+}
+
 func TestActorID(t *testing.T) {
 	state := &scenarioState{actors: map[string]string{"Alice": "a-1", "Bob": "b-1"}}
 
@@ -1540,5 +1682,103 @@ func TestChooseActionSeed_FearHint(t *testing.T) {
 	}
 	if !matchesOutcomeHint(result, "fear") {
 		t.Fatalf("seed %d produced %v, not fear", seed, result.Outcome)
+	}
+}
+
+func TestChooseActionSeed_TotalHint(t *testing.T) {
+	difficulty := 12
+	seed, err := chooseActionSeed(map[string]any{"total": 10}, difficulty)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	result, err := daggerheartdomain.RollAction(daggerheartdomain.ActionRequest{
+		Difficulty: func() *int { d := difficulty; return &d }(),
+		Seed:       int64(seed),
+	})
+	if err != nil {
+		t.Fatalf("roll error: %v", err)
+	}
+	if result.Total != 10 {
+		t.Fatalf("seed %d produced total %d, want 10", seed, result.Total)
+	}
+}
+
+func TestChooseActionSeed_TotalAndOutcomeHint(t *testing.T) {
+	difficulty := 12
+	seed, err := chooseActionSeed(map[string]any{"total": 12, "outcome": "hope"}, difficulty)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	result, err := daggerheartdomain.RollAction(daggerheartdomain.ActionRequest{
+		Difficulty: func() *int { d := difficulty; return &d }(),
+		Seed:       int64(seed),
+	})
+	if err != nil {
+		t.Fatalf("roll error: %v", err)
+	}
+	if result.Total != 12 {
+		t.Fatalf("seed %d produced total %d, want 12", seed, result.Total)
+	}
+	if !matchesOutcomeHint(result, "hope") {
+		t.Fatalf("seed %d produced %v, not hope", seed, result.Outcome)
+	}
+}
+
+func TestChooseActionSeed_TotalAndAdvantage(t *testing.T) {
+	seed, err := chooseActionSeed(map[string]any{"total": 30, "advantage": 1}, 12)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	result, err := daggerheartdomain.RollAction(daggerheartdomain.ActionRequest{
+		Difficulty: func() *int { d := 12; return &d }(),
+		Advantage:  1,
+		Seed:       int64(seed),
+	})
+	if err != nil {
+		t.Fatalf("roll error: %v", err)
+	}
+	if result.Total != 30 {
+		t.Fatalf("seed %d produced total %d, want 30", seed, result.Total)
+	}
+}
+
+func TestChooseActionSeed_TotalAndDisadvantage(t *testing.T) {
+	seed, err := chooseActionSeed(map[string]any{"total": -4, "disadvantage": 1}, 12)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	result, err := daggerheartdomain.RollAction(daggerheartdomain.ActionRequest{
+		Difficulty:   func() *int { d := 12; return &d }(),
+		Disadvantage: 1,
+		Seed:         int64(seed),
+	})
+	if err != nil {
+		t.Fatalf("roll error: %v", err)
+	}
+	if result.Total != -4 {
+		t.Fatalf("seed %d produced total %d, want -4", seed, result.Total)
+	}
+}
+
+func TestChooseActionSeed_TotalAndModifiers(t *testing.T) {
+	seed, err := chooseActionSeed(map[string]any{
+		"total": 30,
+		"modifiers": []any{
+			map[string]any{"source": "experience", "value": 10},
+		},
+	}, 12)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	result, err := daggerheartdomain.RollAction(daggerheartdomain.ActionRequest{
+		Difficulty: func() *int { d := 12; return &d }(),
+		Modifier:   10,
+		Seed:       int64(seed),
+	})
+	if err != nil {
+		t.Fatalf("roll error: %v", err)
+	}
+	if result.Total != 30 {
+		t.Fatalf("seed %d produced total %d, want 30", seed, result.Total)
 	}
 }

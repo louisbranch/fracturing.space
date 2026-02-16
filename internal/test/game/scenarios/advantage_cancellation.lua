@@ -13,8 +13,14 @@ scene:pc("Frodo")
 -- Two sources of advantage and one of disadvantage resolve to advantage.
 scene:start_session("Advantage Cancellation")
 
--- Missing DSL: apply multiple advantage/disadvantage sources to a single roll.
-scene:action_roll{ actor = "Frodo", trait = "presence", difficulty = 12, outcome = "hope" }
+scene:action_roll{
+  actor = "Frodo",
+  trait = "presence",
+  difficulty = 12,
+  advantage = 2,
+  disadvantage = 1,
+  outcome = "hope"
+}
 
 scene:end_session()
 

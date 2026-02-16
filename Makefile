@@ -9,7 +9,7 @@ PROTO_FILES := \
 	$(wildcard $(PROTO_DIR)/game/v1/*.proto) \
 	$(wildcard $(PROTO_DIR)/systems/daggerheart/v1/*.proto)
 
-.PHONY: all proto clean run cover cover-treemap test integration scenario templ-generate event-catalog-check fmt fmt-check catalog-importer bootstrap bootstrap-prod
+.PHONY: all proto clean run cover cover-treemap test integration scenario scenario-missing-doc-check templ-generate event-catalog-check fmt fmt-check catalog-importer bootstrap bootstrap-prod
 
 all: proto
 
@@ -100,6 +100,9 @@ integration:
 
 scenario:
 	go test -tags=scenario ./internal/test/game
+
+scenario-missing-doc-check:
+	@bash ./scripts/check-scenario-missing-mechanics.sh
 
 event-catalog-check:
 	@bash -euo pipefail -c 'go generate ./internal/services/game/domain/campaign/event >/dev/null 2>&1; git diff --exit-code -- docs/events/event-catalog.md docs/events/usage-map.md docs/events/command-catalog.md'

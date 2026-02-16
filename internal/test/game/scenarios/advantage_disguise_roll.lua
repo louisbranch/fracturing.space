@@ -14,8 +14,13 @@ scene:pc("Aragorn")
 scene:start_session("Sneak Past Guard")
 
 -- Example: Difficulty 15 Presence roll with advantage from the disguise.
--- Missing DSL: apply the d6 advantage die to the action roll.
-scene:action_roll{ actor = "Aragorn", trait = "presence", difficulty = 15, outcome = "hope" }
+scene:action_roll{
+  actor = "Aragorn",
+  trait = "presence",
+  difficulty = 15,
+  advantage = 1,
+  outcome = "hope"
+}
 
 -- Close the session after the stealth attempt.
 scene:end_session()

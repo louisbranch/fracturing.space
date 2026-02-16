@@ -16,6 +16,16 @@ type scenarioEnv struct {
 	userID            string
 }
 
+type actionRollResult struct {
+	rollSeq    uint64
+	hopeDie    int
+	fearDie    int
+	total      int
+	difficulty int
+	success    bool
+	crit       bool
+}
+
 type scenarioState struct {
 	campaignID           string
 	ownerParticipantID   string
@@ -29,4 +39,5 @@ type scenarioState struct {
 	lastRollSeq          uint64
 	lastDamageRollSeq    uint64
 	lastAdversaryRollSeq uint64
+	rollOutcomes         map[uint64]actionRollResult
 }

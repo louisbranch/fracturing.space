@@ -13,8 +13,12 @@ scene:pc("Sam")
 -- Failure still grants Hope but introduces a complication.
 scene:start_session("Failure with Hope")
 
--- Missing DSL: apply Hope gain and record a narrative complication.
 scene:action_roll{ actor = "Sam", trait = "agility", difficulty = 14, outcome = "failure_hope" }
+scene:apply_roll_outcome{
+  on_failure_hope = {
+    {kind = "set_spotlight", type = "gm"},
+  },
+}
 
 scene:end_session()
 

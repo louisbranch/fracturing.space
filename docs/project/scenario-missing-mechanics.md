@@ -12,6 +12,8 @@ This document tracks mechanics gaps discovered while running the scenario suite.
 
 Mechanics inventory reflects the first full scenario run after disabling comment validation.
 
+Last reconciled against current `-- Missing DSL` markers on 2026-02-16.
+
 ## Glossary of Common Mechanics
 
 Use these definitions to interpret repeated terms in the gaps list without re-reading the SRD.
@@ -65,16 +67,18 @@ This ordering shows which system primitives should be implemented before scenari
 
 ## Daggerheart-Specific Mechanics Gaps
 
+### Scenario fixture placeholders requiring clarification
+
+- `internal/test/game/scenarios/combat_objectives_ritual_rescue_capture.lua` — Placeholder for parallel combat objectives (ritual completion, rescue progress, capture progress) with missing rules for updating multiple objective countdowns from action outcomes.
+- `internal/test/game/scenarios/companion_experience_stress_clear.lua` — Placeholder for companion return cadence where an experience completion triggers stress clear; exact invocation and timing semantics are not specified.
+- `internal/test/game/scenarios/death_reaction_dig_two_graves.lua` — Placeholder for a death-triggered adversary reaction (damage + Hope loss) with missing deterministic sequencing and scope rules.
+- `internal/test/game/scenarios/encounter_battle_points_example.lua` — Placeholder for encounter battle-point budgeting and encounter composition, requiring clear conversion from points to adversary mix and scaling rules.
+- `internal/test/game/scenarios/environment_helms_deep_siege_collateral_damage.lua` — Placeholder for environment collateral-damage fallout after an adversary falls; requires explicit reaction-roll, damage, and stress-outcome mechanics.
+
 Scenario annotations still call out missing DSL/mechanics. Items are grouped by theme and ordered by priority within each bucket (highest impact first):
 
 ### Core roll and damage resolution
 Requires: Core rolls and outcomes; Dice modifiers; Resources; Damage pipeline.
-- Apply Hope gain, Stress clear, and choose a bonus effect — `internal/test/game/scenarios/action_roll_critical_success.lua`. Trigger: action roll where Hope and Fear dice match. Effects: automatic success, gain 1 Hope, clear 1 Stress, apply critical damage if this is an attack roll, and grant a bonus effect consistent with the fiction. Requires: See section Requires. Notes: modifiers and extra dice must be declared before rolling; a critical counts as a roll with Hope.
-- Apply Hope gain and record a narrative complication — `internal/test/game/scenarios/action_roll_failure_with_hope.lua`. Trigger: total below Difficulty with Hope die higher than Fear die. Effects: failure with a minor consequence, gain 1 Hope, spotlight swings to GM for a move. Requires: See section Requires. Notes: GM sets Difficulty and states stakes before the roll.
-- Apply multiple advantage/disadvantage sources to a single roll — `internal/test/game/scenarios/advantage_cancellation.lua`. Trigger: roll gains advantage and disadvantage from multiple sources. Effects: advantage and disadvantage dice cancel one-for-one in the same pool; you never roll both; remaining advantage adds a d6, remaining disadvantage subtracts a d6. Requires: See section Requires. Notes: Help an Ally advantage dice are separate and stack by adding the highest helper die to the total.
-- Apply the d6 advantage die to the action roll — `internal/test/game/scenarios/advantage_disguise_roll.lua`. Trigger: roll with advantage. Effects: add a d6 to the roll total. Requires: See section Requires. Notes: advantage is granted by a feature, effect, or GM ruling; it cancels with disadvantage in the same pool.
-- Spend Hope on help and apply the advantage die — `internal/test/game/scenarios/help_advantage_roll.lua`. Trigger: a PC uses Help an Ally on another PC's action roll. Effects: helper spends 1 Hope, rolls a d6 advantage die, and the acting PC adds the highest helper die if multiple helpers contribute. Requires: See section Requires. Notes: Help is only for action rolls (not reaction rolls).
-- Spend Hope and apply an Experience bonus to the roll — `internal/test/game/scenarios/experience_spend_modifier.lua`. Trigger: a PC Utilizes an Experience relevant to the roll. Effects: spend 1 Hope to add that Experience's modifier to the roll total; multiple Experiences can be used by spending multiple Hope. Requires: See section Requires. Notes: must be declared before the roll unless a feature allows after-the-fact modification.
 - Force the adversary attack roll to equal Evasion — `internal/test/game/scenarios/evasion_tie_hit.lua`. Trigger: adversary attack roll total equals the target's Evasion. Effects: attack succeeds on a tie. Requires: See section Requires. Notes: adversary attack roll uses d20 + attack modifier vs Evasion.
 - Apply max-dice bonus before rolling damage — `internal/test/game/scenarios/critical_damage_maximum.lua`. Trigger: critical success on an attack roll (matching Duality Dice). Effects: roll damage normally, then add the maximum possible result of the damage dice to the total. Requires: See section Requires. Notes: flat modifiers are not doubled; apply resistance/armor after total damage is known.
 - Assert tier mapping and HP marked for each tier — `internal/test/game/scenarios/damage_thresholds_example.lua`. Trigger: damage is applied after a successful attack. Effects: compare final damage to Major/Severe thresholds to mark 1, 2, or 3 HP; if damage is reduced to 0 or less, mark no HP. Requires: See section Requires. Notes: tiers map to levels (Tier 1: level 1; Tier 2: levels 2-4; Tier 3: levels 5-7; Tier 4: levels 8-10); apply resistance and other reductions before thresholds.

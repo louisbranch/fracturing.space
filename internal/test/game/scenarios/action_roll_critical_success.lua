@@ -14,8 +14,12 @@ scene:adversary("Nazgul")
 -- A critical success grants Hope, clears Stress, and offers an extra benefit.
 scene:start_session("Critical Success")
 
--- Missing DSL: apply Hope gain, Stress clear, and choose a bonus effect.
 scene:action_roll{ actor = "Sam", trait = "agility", difficulty = 14, outcome = "critical" }
+scene:apply_roll_outcome{
+  on_critical = {
+    {kind = "apply_condition", target = "Nazgul", add = { "vulnerable" }},
+  },
+}
 
 scene:end_session()
 

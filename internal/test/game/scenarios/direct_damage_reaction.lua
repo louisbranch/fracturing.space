@@ -13,9 +13,8 @@ scene:pc("Aragorn")
 -- An explosive spell threatens Aragorn, calling for a reaction roll.
 scene:start_session("Direct Damage")
 
--- Example: Agility reaction roll vs Difficulty 16, total 19, avoiding the blast.
--- Missing DSL: force the reaction roll result to 19.
-scene:reaction_roll{ actor = "Aragorn", trait = "agility", difficulty = 16, outcome = "hope" }
+-- Example: Agility reaction roll vs Difficulty 16 with a forced total to ensure the fixture is deterministic.
+scene:reaction_roll{ actor = "Aragorn", trait = "agility", difficulty = 16, total = 19, outcome = "hope" }
 scene:apply_reaction_outcome{}
 
 -- Close the session after the reaction.

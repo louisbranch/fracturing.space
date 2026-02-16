@@ -8,7 +8,14 @@ scene:pc("Sam")
 scene:start_session("Reaction")
 
 -- Sam makes a reaction roll under pressure.
-scene:reaction{ actor = "Sam", trait = "agility", difficulty = 8, outcome = "hope" }
+scene:reaction{
+  actor = "Sam",
+  trait = "agility",
+  difficulty = 8,
+  outcome = "hope",
+  advantage = 1,
+  disadvantage = 1,
+}
 
 -- Close the session after the reaction.
 scene:end_session()

@@ -703,6 +703,8 @@ message SessionReactionFlowRequest {
   int32 difficulty = 5;
   repeated ActionRollModifier modifiers = 6;
   common.v1.RngRequest reaction_rng = 7;
+  int32 advantage = 8;
+  int32 disadvantage = 9;
 }
 
 message SessionReactionFlowResponse {
