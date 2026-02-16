@@ -12,13 +12,18 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
 type fakeWebParticipantClient struct {
-	pages map[string]*statev1.ListParticipantsResponse
-	err   error
-	calls []*statev1.ListParticipantsRequest
+	pages      map[string]*statev1.ListParticipantsResponse
+	err        error
+	calls      []*statev1.ListParticipantsRequest
+	updateReq  *statev1.UpdateParticipantRequest
+	updateMD   metadata.MD
+	updateResp *statev1.UpdateParticipantResponse
+	updateErr  error
 }
 
 func (f *fakeWebParticipantClient) ListParticipants(_ context.Context, req *statev1.ListParticipantsRequest, _ ...grpc.CallOption) (*statev1.ListParticipantsResponse, error) {
@@ -37,7 +42,16 @@ func (*fakeWebParticipantClient) CreateParticipant(context.Context, *statev1.Cre
 	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
-func (*fakeWebParticipantClient) UpdateParticipant(context.Context, *statev1.UpdateParticipantRequest, ...grpc.CallOption) (*statev1.UpdateParticipantResponse, error) {
+func (f *fakeWebParticipantClient) UpdateParticipant(ctx context.Context, req *statev1.UpdateParticipantRequest, _ ...grpc.CallOption) (*statev1.UpdateParticipantResponse, error) {
+	md, _ := metadata.FromOutgoingContext(ctx)
+	f.updateMD = md
+	f.updateReq = req
+	if f.updateErr != nil {
+		return nil, f.updateErr
+	}
+	if f.updateResp != nil {
+		return f.updateResp, nil
+	}
 	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 

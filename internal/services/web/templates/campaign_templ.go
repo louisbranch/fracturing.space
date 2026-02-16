@@ -70,7 +70,59 @@ func CampaignPage(page PageContext, campaignID string) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</h1><p class=\"hero-tagline\">Phase 1.1 chat shell (participant mode only).</p><div class=\"card border border-base-300 bg-base-100\"><div class=\"card-body gap-4\"><div class=\"flex items-center justify-between gap-4\"><h2 class=\"card-title m-0\">Chat</h2><span id=\"chat-status\" class=\"text-sm opacity-70\">connecting...</span></div><div id=\"chat-messages\" class=\"h-80 overflow-y-auto rounded border border-base-300 p-3 text-sm\"></div><form id=\"chat-form\" class=\"flex gap-2\"><input id=\"chat-input\" class=\"input input-bordered w-full\" type=\"text\" maxlength=\"2000\" placeholder=\"Type a message\" autocomplete=\"off\"> <button id=\"chat-send\" class=\"btn btn-primary\" type=\"submit\">Send</button></form></div></div></section></main><script>window.__FRACTURING_CHAT_JOIN_TYPE = \"chat.join\";</script> <script defer src=\"/static/campaign-chat.js\"></script>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</h1><p class=\"hero-tagline\">Phase 1.1 chat shell (participant mode only).</p><div class=\"card border border-base-300 bg-base-100 mb-4\"><div class=\"card-body gap-3\"><h2 class=\"card-title m-0\">Workspace</h2><div class=\"flex flex-wrap gap-2\"><a class=\"btn btn-sm btn-outline\" href=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var5 templ.SafeURL
+			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinURLErrs("/app/campaigns/" + campaignID + "/sessions")
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/campaign.templ`, Line: 14, Col: 92}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\">Sessions</a> <a class=\"btn btn-sm btn-outline\" href=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var6 templ.SafeURL
+			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinURLErrs("/app/campaigns/" + campaignID + "/participants")
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/campaign.templ`, Line: 15, Col: 96}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "\">Participants</a> <a class=\"btn btn-sm btn-outline\" href=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var7 templ.SafeURL
+			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinURLErrs("/app/campaigns/" + campaignID + "/characters")
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/campaign.templ`, Line: 16, Col: 94}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "\">Characters</a> <a class=\"btn btn-sm btn-outline\" href=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var8 templ.SafeURL
+			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinURLErrs("/app/campaigns/" + campaignID + "/invites")
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/campaign.templ`, Line: 17, Col: 91}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "\">Invites</a></div></div></div><div class=\"card border border-base-300 bg-base-100\"><div class=\"card-body gap-4\"><div class=\"flex items-center justify-between gap-4\"><h2 class=\"card-title m-0\">Chat</h2><span id=\"chat-status\" class=\"text-sm opacity-70\">connecting...</span></div><div id=\"chat-messages\" class=\"h-80 overflow-y-auto rounded border border-base-300 p-3 text-sm\"></div><form id=\"chat-form\" class=\"flex gap-2\"><input id=\"chat-input\" class=\"input input-bordered w-full\" type=\"text\" maxlength=\"2000\" placeholder=\"Type a message\" autocomplete=\"off\"> <button id=\"chat-send\" class=\"btn btn-primary\" type=\"submit\">Send</button></form></div></div></section></main><script>window.__FRACTURING_CHAT_JOIN_TYPE = \"chat.join\";</script> <script defer src=\"/static/campaign-chat.js\"></script>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

@@ -332,6 +332,48 @@ func TestListCampaigns_WithCampaigns(t *testing.T) {
 	}
 }
 
+func TestListCampaigns_UserScopedByMetadata(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	now := time.Now().UTC()
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+		ID:        "c1",
+		Name:      "Campaign One",
+		System:    commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		Status:    campaign.StatusDraft,
+		GmMode:    campaign.GmModeHuman,
+		CreatedAt: now,
+	}
+	campaignStore.campaigns["c2"] = storage.CampaignRecord{
+		ID:        "c2",
+		Name:      "Campaign Two",
+		System:    commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		Status:    campaign.StatusActive,
+		GmMode:    campaign.GmModeAI,
+		CreatedAt: now,
+	}
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+		"p1": {ID: "p1", CampaignID: "c1", UserID: "user-123", DisplayName: "Alice"},
+	}
+	participantStore.participants["c2"] = map[string]storage.ParticipantRecord{
+		"p2": {ID: "p2", CampaignID: "c2", UserID: "user-999", DisplayName: "Bob"},
+	}
+
+	svc := NewCampaignService(Stores{Campaign: campaignStore, Participant: participantStore})
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-123"))
+
+	resp, err := svc.ListCampaigns(ctx, &statev1.ListCampaignsRequest{})
+	if err != nil {
+		t.Fatalf("ListCampaigns returned error: %v", err)
+	}
+	if len(resp.Campaigns) != 1 {
+		t.Fatalf("ListCampaigns returned %d campaigns, want 1", len(resp.Campaigns))
+	}
+	if resp.Campaigns[0].GetId() != "c1" {
+		t.Fatalf("ListCampaigns campaign id = %q, want %q", resp.Campaigns[0].GetId(), "c1")
+	}
+}
+
 func TestGetCampaign_NilRequest(t *testing.T) {
 	svc := NewCampaignService(Stores{})
 	_, err := svc.GetCampaign(context.Background(), nil)
