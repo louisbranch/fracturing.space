@@ -16,8 +16,10 @@ For command/event registration, envelope fields, and write-path routing, read
 
 - **Event journal**: the append-only source of truth for a campaign.
 - **Projection**: a derived view built by applying events in order.
-- **Snapshot**: a materialized projection derived from the event journal at a
-  specific sequence to speed up replay. Snapshots are not authoritative.
+- **Checkpoint**: a replay cursor (`last_seq`) that records how far replay has
+  successfully applied events for a campaign.
+- **Snapshot**: materialized derived state captured at a specific sequence to
+  reduce replay cost. Snapshots are not authoritative.
 
 ## Invariant
 
@@ -59,7 +61,25 @@ Behavior:
 - Each applied event advances the checkpoint (`last_seq`) to guarantee idempotence
   if replay is restarted.
 - Sequence gaps (non-contiguous `seq`) are treated as replay errors.
+- System-owned events that cannot be routed to a registered module/projector are
+  replay errors (fail-fast).
 - Appliers must be deterministic and side-effect free beyond projection updates.
+
+## Command replay state loading
+
+The game domain engine uses checkpoint + snapshot seeding for command-time state
+loading:
+
+- `engine.ReplayStateLoader` first attempts to load snapshot state + sequence for
+  the campaign.
+- Replay then starts at the max of snapshot sequence, checkpoint sequence, and
+  requested `after_seq`.
+- `engine.Handler.Execute` persists checkpoint progress and snapshot state from
+  the same write path so load/save sources stay aligned.
+
+Current default wiring in the game server uses `checkpoint.NewMemory()` as a
+process-local store for both checkpoints and command replay snapshots. After a
+process restart, replay falls back to rebuilding from the event journal.
 
 ## Event integrity and tamper resistance
 
@@ -127,10 +147,14 @@ targeted checks or backfills without reprocessing the full history.
 
 ## What snapshots contain
 
-Snapshots capture projection state needed for fast rebuilds without replaying
-the full event journal.
-Today this includes Daggerheart character state and GM fear. Snapshots do not
-contain story content, telemetry, or other non-canonical data.
+Two snapshot classes are used:
+
+- Projection snapshots: system projection state for faster rebuild/recovery.
+- Command replay snapshots: aggregate command state used to avoid replaying from
+  sequence zero on every command execution.
+
+Snapshots do not replace the event journal and should not be treated as
+authoritative business history.
 
 ## Admin CLI workflows
 

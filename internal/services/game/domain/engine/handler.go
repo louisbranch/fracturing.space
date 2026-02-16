@@ -51,6 +51,7 @@ type Handler struct {
 	Events          *event.Registry
 	Journal         EventJournal
 	Checkpoints     replay.CheckpointStore
+	Snapshots       StateSnapshotStore
 	Gate            DecisionGate
 	GateStateLoader GateStateLoader
 	StateLoader     StateLoader
@@ -132,17 +133,27 @@ func (h Handler) Handle(ctx context.Context, cmd command.Command) (command.Decis
 
 // Execute handles a command and applies emitted events to state.
 func (h Handler) Execute(ctx context.Context, cmd command.Command) (Result, error) {
-	decision, err := h.Handle(ctx, cmd)
+	normalized := cmd
+	if h.Commands != nil {
+		validated, err := h.Commands.ValidateForDecision(cmd)
+		if err != nil {
+			return Result{}, err
+		}
+		normalized = validated
+	}
+
+	decision, err := h.Handle(ctx, normalized)
 	if err != nil {
 		return Result{}, err
 	}
 	var state any
 	if h.StateLoader != nil {
-		state, err = h.StateLoader.Load(ctx, cmd)
+		state, err = h.StateLoader.Load(ctx, normalized)
 		if err != nil {
 			return Result{}, err
 		}
 	}
+	loadedState := state
 	if h.Applier != nil && len(decision.Events) > 0 {
 		for _, evt := range decision.Events {
 			state, err = h.Applier.Apply(state, evt)
@@ -155,10 +166,24 @@ func (h Handler) Execute(ctx context.Context, cmd command.Command) (Result, erro
 		last := decision.Events[len(decision.Events)-1]
 		if last.Seq > 0 {
 			if err := h.Checkpoints.Save(ctx, replay.Checkpoint{
-				CampaignID: cmd.CampaignID,
+				CampaignID: normalized.CampaignID,
 				LastSeq:    last.Seq,
 				UpdatedAt:  time.Now().UTC(),
 			}); err != nil {
+				return Result{}, err
+			}
+		}
+	}
+	if h.Snapshots != nil && len(decision.Events) > 0 {
+		last := decision.Events[len(decision.Events)-1]
+		if last.Seq > 0 {
+			snapshotState := state
+			if h.Journal != nil && h.StateLoader != nil {
+				// When events were appended before state load, loadedState already
+				// includes those events exactly once.
+				snapshotState = loadedState
+			}
+			if err := h.Snapshots.SaveState(ctx, normalized.CampaignID, last.Seq, snapshotState); err != nil {
 				return Result{}, err
 			}
 		}

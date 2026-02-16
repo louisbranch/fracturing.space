@@ -14,9 +14,16 @@ import (
 type ReplayStateLoader struct {
 	Events       replay.EventStore
 	Checkpoints  replay.CheckpointStore
+	Snapshots    StateSnapshotStore
 	Applier      replay.Applier
 	StateFactory func() any
 	Options      replay.Options
+}
+
+// StateSnapshotStore loads and saves replay state snapshots keyed by campaign.
+type StateSnapshotStore interface {
+	GetState(ctx context.Context, campaignID string) (state any, lastSeq uint64, err error)
+	SaveState(ctx context.Context, campaignID string, lastSeq uint64, state any) error
 }
 
 // ReplayGateStateLoader loads session state via replay.
@@ -36,10 +43,26 @@ func (l ReplayStateLoader) Load(ctx context.Context, cmd command.Command) (any, 
 		return nil, replay.ErrApplierRequired
 	}
 	var state any
-	if l.StateFactory != nil {
-		state = l.StateFactory()
+	options := l.Options
+	if l.Snapshots != nil {
+		snapshotState, snapshotSeq, err := l.Snapshots.GetState(ctx, cmd.CampaignID)
+		if err != nil {
+			if !errors.Is(err, replay.ErrCheckpointNotFound) {
+				return nil, err
+			}
+		} else {
+			state = snapshotState
+			if snapshotSeq > options.AfterSeq {
+				options.AfterSeq = snapshotSeq
+			}
+		}
 	}
-	result, err := replay.Replay(ctx, l.Events, l.Checkpoints, l.Applier, cmd.CampaignID, state, l.Options)
+	if l.StateFactory != nil {
+		if state == nil {
+			state = l.StateFactory()
+		}
+	}
+	result, err := replay.Replay(ctx, l.Events, l.Checkpoints, l.Applier, cmd.CampaignID, state, options)
 	if err != nil {
 		return nil, err
 	}

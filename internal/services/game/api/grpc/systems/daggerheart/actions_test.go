@@ -1771,6 +1771,19 @@ func TestResolveBlazeOfGlory_Success(t *testing.T) {
 				PayloadJSON:   payloadJSON,
 			}),
 		},
+		command.Type("character.delete"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "camp-1",
+				Type:        event.Type("character.deleted"),
+				Timestamp:   time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:   event.ActorTypeSystem,
+				SessionID:   "sess-1",
+				RequestID:   "req-blaze-success",
+				EntityType:  "character",
+				EntityID:    "char-1",
+				PayloadJSON: []byte(`{"character_id":"char-1","reason":"blaze_of_glory"}`),
+			}),
+		},
 	}}
 	svc.stores.Domain = serviceDomain
 	ctx := grpcmeta.WithRequestID(contextWithSessionID("sess-1"), "req-blaze-success")
@@ -1834,6 +1847,19 @@ func TestResolveBlazeOfGlory_UsesDomainEngine(t *testing.T) {
 				PayloadJSON:   payloadJSON,
 			}),
 		},
+		command.Type("character.delete"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "camp-1",
+				Type:        event.Type("character.deleted"),
+				Timestamp:   time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				ActorType:   event.ActorTypeSystem,
+				SessionID:   "sess-1",
+				RequestID:   "req-blaze",
+				EntityType:  "character",
+				EntityID:    "char-1",
+				PayloadJSON: []byte(`{"character_id":"char-1","reason":"blaze_of_glory"}`),
+			}),
+		},
 	}}
 	svc.stores.Domain = domain
 
@@ -1845,11 +1871,17 @@ func TestResolveBlazeOfGlory_UsesDomainEngine(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ResolveBlazeOfGlory returned error: %v", err)
 	}
-	if domain.calls != 1 {
-		t.Fatalf("expected domain to be called once, got %d", domain.calls)
+	if domain.calls != 2 {
+		t.Fatalf("expected domain to be called twice, got %d", domain.calls)
 	}
-	if domain.lastCommand.Type != command.Type("action.blaze_of_glory.resolve") {
-		t.Fatalf("command type = %s, want %s", domain.lastCommand.Type, "action.blaze_of_glory.resolve")
+	if len(domain.commands) != 2 {
+		t.Fatalf("expected 2 domain commands, got %d", len(domain.commands))
+	}
+	if domain.commands[0].Type != command.Type("action.blaze_of_glory.resolve") {
+		t.Fatalf("command[0] type = %s, want %s", domain.commands[0].Type, "action.blaze_of_glory.resolve")
+	}
+	if domain.commands[1].Type != command.Type("character.delete") {
+		t.Fatalf("command[1] type = %s, want %s", domain.commands[1].Type, "character.delete")
 	}
 	if got := len(eventStore.events["camp-1"]); got != 2 {
 		t.Fatalf("expected 2 events, got %d", got)

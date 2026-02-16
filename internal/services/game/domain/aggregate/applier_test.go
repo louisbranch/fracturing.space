@@ -97,24 +97,17 @@ func TestApplierApply_RoutesSystemEvents(t *testing.T) {
 	}
 }
 
-func TestApplierApply_IgnoresUnregisteredSystemEvents(t *testing.T) {
+func TestApplierApply_ReturnsErrorForUnregisteredSystemEvents(t *testing.T) {
 	applier := Applier{SystemRegistry: system.NewRegistry()}
 	state := State{}
 
-	updated, err := applier.Apply(state, event.Event{
+	_, err := applier.Apply(state, event.Event{
 		Type:          event.Type("action.unregistered_system"),
 		SystemID:      "unregistered-system",
 		SystemVersion: "v1",
 	})
-	if err != nil {
-		t.Fatalf("apply system event: %v", err)
-	}
-	result, ok := updated.(State)
-	if !ok {
-		t.Fatal("expected State result")
-	}
-	if len(result.Systems) != 0 {
-		t.Fatalf("expected no system state entries, got %d", len(result.Systems))
+	if err == nil {
+		t.Fatal("expected error for unregistered system event")
 	}
 }
 

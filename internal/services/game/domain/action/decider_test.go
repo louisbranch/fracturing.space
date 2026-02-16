@@ -115,3 +115,21 @@ func TestDecideActionCommands_PreservesSystemMetadata(t *testing.T) {
 		t.Fatalf("event system version = %s, want %s", evt.SystemVersion, "v1")
 	}
 }
+
+func TestDecideActionCommands_RejectsUnsupportedType(t *testing.T) {
+	decision := Decide(State{}, command.Command{
+		CampaignID: "camp-1",
+		Type:       command.Type("action.not_registered"),
+		ActorType:  command.ActorTypeSystem,
+	}, time.Now)
+
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != "COMMAND_TYPE_UNSUPPORTED" {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, "COMMAND_TYPE_UNSUPPORTED")
+	}
+}

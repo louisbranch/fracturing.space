@@ -12,7 +12,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -114,10 +113,6 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 
 	reqID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
-	profileActorType := event.ActorTypeSystem
-	if actorID != "" {
-		profileActorType = event.ActorTypeGM
-	}
 
 	experiencesPayload := make([]map[string]any, 0, len(dhDefaults.Experiences))
 	for _, experience := range dhDefaults.Experiences {
@@ -203,15 +198,14 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 	if err != nil {
 		return storage.CharacterRecord{}, status.Errorf(codes.Internal, "encode state payload: %v", err)
 	}
-	stateEvent, err := c.stores.Event.AppendEvent(ctx, event.Event{
+	stateResult, err := c.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:    campaignID,
-		Timestamp:     c.clock().UTC(),
-		Type:          event.Type("action.character_state_patched"),
+		Type:          command.Type("action.character_state.patch"),
+		ActorType:     profileCommandActorType,
+		ActorID:       actorID,
 		SessionID:     grpcmeta.SessionIDFromContext(ctx),
 		RequestID:     reqID,
 		InvocationID:  invocationID,
-		ActorType:     profileActorType,
-		ActorID:       actorID,
 		EntityType:    "character",
 		EntityID:      created.ID,
 		SystemID:      daggerheart.SystemID,
@@ -219,10 +213,18 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 		PayloadJSON:   stateJSON,
 	})
 	if err != nil {
-		return storage.CharacterRecord{}, status.Errorf(codes.Internal, "append state event: %v", err)
+		return storage.CharacterRecord{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
 	}
-	if err := c.stores.Applier().Apply(ctx, stateEvent); err != nil {
-		return storage.CharacterRecord{}, status.Errorf(codes.Internal, "apply state event: %v", err)
+	if len(stateResult.Decision.Rejections) > 0 {
+		return storage.CharacterRecord{}, status.Error(codes.FailedPrecondition, stateResult.Decision.Rejections[0].Message)
+	}
+	if len(stateResult.Decision.Events) == 0 {
+		return storage.CharacterRecord{}, status.Error(codes.Internal, "character state patch did not emit an event")
+	}
+	for _, evt := range stateResult.Decision.Events {
+		if err := c.stores.Applier().Apply(ctx, evt); err != nil {
+			return storage.CharacterRecord{}, status.Errorf(codes.Internal, "apply state event: %v", err)
+		}
 	}
 
 	return created, nil

@@ -59,3 +59,22 @@ func TestCoreDeciderRoutesActionCommands(t *testing.T) {
 		t.Fatalf("event type = %s, want %s", decision.Events[0].Type, "action.roll_resolved")
 	}
 }
+
+func TestCoreDeciderRejectsUnsupportedCommandType(t *testing.T) {
+	decider := coreDecider{}
+	decision := decider.Decide(aggregate.State{}, command.Command{
+		CampaignID: "camp-1",
+		Type:       command.Type("story.note.add"),
+		ActorType:  command.ActorTypeSystem,
+	}, time.Now)
+
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != "COMMAND_TYPE_UNSUPPORTED" {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, "COMMAND_TYPE_UNSUPPORTED")
+	}
+}

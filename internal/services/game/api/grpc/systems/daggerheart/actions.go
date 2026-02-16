@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"strings"
-	"time"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
@@ -39,12 +38,6 @@ func (s *DaggerheartService) ApplyDamage(ctx context.Context, in *pb.Daggerheart
 	}
 	if s.stores.Event == nil {
 		return nil, status.Error(codes.Internal, "event store is not configured")
-	}
-	if s.stores.Domain == nil {
-		return nil, status.Error(codes.Internal, "domain engine is not configured")
-	}
-	if s.stores.Domain == nil {
-		return nil, status.Error(codes.Internal, "domain engine is not configured")
 	}
 	if s.stores.Domain == nil {
 		return nil, status.Error(codes.Internal, "domain engine is not configured")
@@ -676,7 +669,7 @@ func (s *DaggerheartService) ApplyDowntimeMove(ctx context.Context, in *pb.Dagge
 			return nil, status.Errorf(codes.Internal, "apply downtime move event: %v", err)
 		}
 	}
-	if err := s.applyStressVulnerableCondition(ctx, campaignID, grpcmeta.SessionIDFromContext(ctx), characterID, current.Conditions, stressBefore, stressAfter, profile.StressMax, nil, grpcmeta.RequestIDFromContext(ctx), daggerheart.SystemID); err != nil {
+	if err := s.applyStressVulnerableCondition(ctx, campaignID, grpcmeta.SessionIDFromContext(ctx), characterID, current.Conditions, stressBefore, stressAfter, profile.StressMax, nil, grpcmeta.RequestIDFromContext(ctx)); err != nil {
 		return nil, err
 	}
 
@@ -820,7 +813,7 @@ func (s *DaggerheartService) SwapLoadout(ctx context.Context, in *pb.Daggerheart
 			return nil, status.Errorf(codes.Internal, "apply loadout swap event: %v", err)
 		}
 	}
-	if err := s.applyStressVulnerableCondition(ctx, campaignID, grpcmeta.SessionIDFromContext(ctx), characterID, current.Conditions, stressBefore, stressAfter, profile.StressMax, nil, grpcmeta.RequestIDFromContext(ctx), daggerheart.SystemID); err != nil {
+	if err := s.applyStressVulnerableCondition(ctx, campaignID, grpcmeta.SessionIDFromContext(ctx), characterID, current.Conditions, stressBefore, stressAfter, profile.StressMax, nil, grpcmeta.RequestIDFromContext(ctx)); err != nil {
 		return nil, err
 	}
 	if !in.Swap.InRest && in.Swap.RecallCost > 0 {
@@ -1077,7 +1070,7 @@ func (s *DaggerheartService) ApplyDeathMove(ctx context.Context, in *pb.Daggerhe
 			return nil, err
 		}
 	}
-	if err := s.applyStressVulnerableCondition(ctx, campaignID, grpcmeta.SessionIDFromContext(ctx), characterID, state.Conditions, stressBefore, stressAfter, stressMax, nil, grpcmeta.RequestIDFromContext(ctx), daggerheart.SystemID); err != nil {
+	if err := s.applyStressVulnerableCondition(ctx, campaignID, grpcmeta.SessionIDFromContext(ctx), characterID, state.Conditions, stressBefore, stressAfter, stressMax, nil, grpcmeta.RequestIDFromContext(ctx)); err != nil {
 		return nil, err
 	}
 
@@ -2232,10 +2225,7 @@ func (s *DaggerheartService) appendCharacterDeletedEvent(ctx context.Context, ca
 		return status.Error(codes.Internal, "campaign store is not configured")
 	}
 	if s.stores.Domain == nil {
-		return status.Error(codes.Internal, "character store is not configured")
-	}
-	if s.stores.Event == nil {
-		return status.Error(codes.Internal, "event store is not configured")
+		return status.Error(codes.Internal, "domain engine is not configured")
 	}
 	payload := character.DeletePayload{
 		CharacterID: characterID,
@@ -2245,24 +2235,31 @@ func (s *DaggerheartService) appendCharacterDeletedEvent(ctx context.Context, ca
 	if err != nil {
 		return status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
-	stored, err := s.stores.Event.AppendEvent(ctx, event.Event{
+	result, err := s.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:   campaignID,
-		Timestamp:    time.Now().UTC(),
-		Type:         event.Type("character.deleted"),
+		Type:         command.Type("character.delete"),
+		ActorType:    command.ActorTypeSystem,
 		SessionID:    grpcmeta.SessionIDFromContext(ctx),
 		RequestID:    grpcmeta.RequestIDFromContext(ctx),
 		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-		ActorType:    event.ActorTypeSystem,
 		EntityType:   "character",
 		EntityID:     characterID,
 		PayloadJSON:  payloadJSON,
 	})
 	if err != nil {
-		return status.Errorf(codes.Internal, "append event: %v", err)
+		return status.Errorf(codes.Internal, "execute domain command: %v", err)
+	}
+	if len(result.Decision.Rejections) > 0 {
+		return status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
+	}
+	if len(result.Decision.Events) == 0 {
+		return status.Error(codes.Internal, "character delete did not emit an event")
 	}
 	applier := s.stores.Applier()
-	if err := applier.Apply(ctx, stored); err != nil {
-		return status.Errorf(codes.Internal, "apply event: %v", err)
+	for _, evt := range result.Decision.Events {
+		if err := applier.Apply(ctx, evt); err != nil {
+			return status.Errorf(codes.Internal, "apply event: %v", err)
+		}
 	}
 	return nil
 }
@@ -4057,7 +4054,7 @@ func (s *DaggerheartService) ApplyRollOutcome(ctx context.Context, in *pb.ApplyR
 				}
 			}
 			rollSeq := in.GetRollSeq()
-			if err := s.applyStressVulnerableCondition(ctx, campaignID, sessionID, target, state.Conditions, stressBefore, stressAfter, profile.StressMax, &rollSeq, rollRequestID, daggerheart.SystemID); err != nil {
+			if err := s.applyStressVulnerableCondition(ctx, campaignID, sessionID, target, state.Conditions, stressBefore, stressAfter, profile.StressMax, &rollSeq, rollRequestID); err != nil {
 				return nil, err
 			}
 		}
@@ -4142,8 +4139,8 @@ func (s *DaggerheartService) openGMConsequenceGate(ctx context.Context, campaign
 	if s.stores.SessionSpotlight == nil {
 		return status.Error(codes.Internal, "session spotlight store is not configured")
 	}
-	if s.stores.Event == nil {
-		return status.Error(codes.Internal, "event store is not configured")
+	if s.stores.Domain == nil {
+		return status.Error(codes.Internal, "domain engine is not configured")
 	}
 
 	if _, err := s.stores.SessionGate.GetOpenSessionGate(ctx, campaignID, sessionID); err == nil {
@@ -4174,122 +4171,63 @@ func (s *DaggerheartService) openGMConsequenceGate(ctx context.Context, campaign
 	if err != nil {
 		return status.Errorf(codes.Internal, "encode session gate payload: %v", err)
 	}
-	if s.stores.Domain != nil {
-		gatePayload := session.GateOpenedPayload{
-			GateID:   gateID,
-			GateType: gateType,
-			Reason:   "gm_consequence",
-			Metadata: metadata,
-		}
-		gatePayloadJSON, err := json.Marshal(gatePayload)
-		if err != nil {
-			return status.Errorf(codes.Internal, "encode session gate payload: %v", err)
-		}
-		result, err := s.stores.Domain.Execute(ctx, command.Command{
-			CampaignID:   campaignID,
-			Type:         command.Type("session.gate_open"),
-			ActorType:    command.ActorTypeSystem,
-			SessionID:    sessionID,
-			RequestID:    rollRequestID,
-			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-			EntityType:   "session_gate",
-			EntityID:     gateID,
-			PayloadJSON:  gatePayloadJSON,
-		})
-		if err != nil {
-			return status.Errorf(codes.Internal, "execute domain command: %v", err)
-		}
-		if len(result.Decision.Rejections) > 0 {
-			return status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-		}
-		if len(result.Decision.Events) == 0 {
-			return status.Error(codes.Internal, "session gate open did not emit an event")
-		}
-		gateApplier := s.stores.Applier()
-		for _, evt := range result.Decision.Events {
-			if err := gateApplier.Apply(ctx, evt); err != nil {
-				return status.Errorf(codes.Internal, "apply session gate event: %v", err)
-			}
-		}
-
-		spotlightPayload := session.SpotlightSetPayload{
-			SpotlightType: string(session.SpotlightTypeGM),
-		}
-		spotlightPayloadJSON, err := json.Marshal(spotlightPayload)
-		if err != nil {
-			return status.Errorf(codes.Internal, "encode spotlight payload: %v", err)
-		}
-		spotlightResult, err := s.stores.Domain.Execute(ctx, command.Command{
-			CampaignID:   campaignID,
-			Type:         command.Type("session.spotlight_set"),
-			ActorType:    command.ActorTypeSystem,
-			SessionID:    sessionID,
-			RequestID:    rollRequestID,
-			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-			EntityType:   "session_spotlight",
-			EntityID:     sessionID,
-			PayloadJSON:  spotlightPayloadJSON,
-		})
-		if err != nil {
-			return status.Errorf(codes.Internal, "execute domain command: %v", err)
-		}
-		if len(spotlightResult.Decision.Rejections) > 0 {
-			return status.Error(codes.FailedPrecondition, spotlightResult.Decision.Rejections[0].Message)
-		}
-		if len(spotlightResult.Decision.Events) == 0 {
-			return status.Error(codes.Internal, "session spotlight set did not emit an event")
-		}
-		spotlightApplier := s.stores.Applier()
-		for _, evt := range spotlightResult.Decision.Events {
-			if err := spotlightApplier.Apply(ctx, evt); err != nil {
-				return status.Errorf(codes.Internal, "apply spotlight event: %v", err)
-			}
-		}
-	} else {
-		storedGate, err := s.stores.Event.AppendEvent(ctx, event.Event{
-			CampaignID:   campaignID,
-			Timestamp:    time.Now().UTC(),
-			Type:         event.Type("session.gate_opened"),
-			SessionID:    sessionID,
-			RequestID:    rollRequestID,
-			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-			ActorType:    event.ActorTypeSystem,
-			EntityType:   "session_gate",
-			EntityID:     gateID,
-			PayloadJSON:  payloadJSON,
-		})
-		if err != nil {
-			return status.Errorf(codes.Internal, "append session gate event: %v", err)
-		}
-		gateApplier := s.stores.Applier()
-		if err := gateApplier.Apply(ctx, storedGate); err != nil {
+	result, err := s.stores.Domain.Execute(ctx, command.Command{
+		CampaignID:   campaignID,
+		Type:         command.Type("session.gate_open"),
+		ActorType:    command.ActorTypeSystem,
+		SessionID:    sessionID,
+		RequestID:    rollRequestID,
+		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+		EntityType:   "session_gate",
+		EntityID:     gateID,
+		PayloadJSON:  payloadJSON,
+	})
+	if err != nil {
+		return status.Errorf(codes.Internal, "execute domain command: %v", err)
+	}
+	if len(result.Decision.Rejections) > 0 {
+		return status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
+	}
+	if len(result.Decision.Events) == 0 {
+		return status.Error(codes.Internal, "session gate open did not emit an event")
+	}
+	gateApplier := s.stores.Applier()
+	for _, evt := range result.Decision.Events {
+		if err := gateApplier.Apply(ctx, evt); err != nil {
 			return status.Errorf(codes.Internal, "apply session gate event: %v", err)
 		}
+	}
 
-		spotlightPayload := session.SpotlightSetPayload{
-			SpotlightType: string(session.SpotlightTypeGM),
-		}
-		spotlightJSON, err := json.Marshal(spotlightPayload)
-		if err != nil {
-			return status.Errorf(codes.Internal, "encode spotlight payload: %v", err)
-		}
-		storedSpotlight, err := s.stores.Event.AppendEvent(ctx, event.Event{
-			CampaignID:   campaignID,
-			Timestamp:    time.Now().UTC(),
-			Type:         event.Type("session.spotlight_set"),
-			SessionID:    sessionID,
-			RequestID:    rollRequestID,
-			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-			ActorType:    event.ActorTypeSystem,
-			EntityType:   "session_spotlight",
-			EntityID:     sessionID,
-			PayloadJSON:  spotlightJSON,
-		})
-		if err != nil {
-			return status.Errorf(codes.Internal, "append spotlight event: %v", err)
-		}
-		spotlightApplier := s.stores.Applier()
-		if err := spotlightApplier.Apply(ctx, storedSpotlight); err != nil {
+	spotlightPayload := session.SpotlightSetPayload{
+		SpotlightType: string(session.SpotlightTypeGM),
+	}
+	spotlightPayloadJSON, err := json.Marshal(spotlightPayload)
+	if err != nil {
+		return status.Errorf(codes.Internal, "encode spotlight payload: %v", err)
+	}
+	spotlightResult, err := s.stores.Domain.Execute(ctx, command.Command{
+		CampaignID:   campaignID,
+		Type:         command.Type("session.spotlight_set"),
+		ActorType:    command.ActorTypeSystem,
+		SessionID:    sessionID,
+		RequestID:    rollRequestID,
+		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+		EntityType:   "session_spotlight",
+		EntityID:     sessionID,
+		PayloadJSON:  spotlightPayloadJSON,
+	})
+	if err != nil {
+		return status.Errorf(codes.Internal, "execute domain command: %v", err)
+	}
+	if len(spotlightResult.Decision.Rejections) > 0 {
+		return status.Error(codes.FailedPrecondition, spotlightResult.Decision.Rejections[0].Message)
+	}
+	if len(spotlightResult.Decision.Events) == 0 {
+		return status.Error(codes.Internal, "session spotlight set did not emit an event")
+	}
+	spotlightApplier := s.stores.Applier()
+	for _, evt := range spotlightResult.Decision.Events {
+		if err := spotlightApplier.Apply(ctx, evt); err != nil {
 			return status.Errorf(codes.Internal, "apply spotlight event: %v", err)
 		}
 	}
@@ -4309,12 +4247,6 @@ func (s *DaggerheartService) ApplyAttackOutcome(ctx context.Context, in *pb.Dagg
 	}
 	if s.stores.Event == nil {
 		return nil, status.Error(codes.Internal, "event store is not configured")
-	}
-	if s.stores.Domain == nil {
-		return nil, status.Error(codes.Internal, "domain engine is not configured")
-	}
-	if s.stores.Domain == nil {
-		return nil, status.Error(codes.Internal, "domain engine is not configured")
 	}
 	if s.stores.Domain == nil {
 		return nil, status.Error(codes.Internal, "domain engine is not configured")
@@ -4811,7 +4743,6 @@ func (s *DaggerheartService) applyStressVulnerableCondition(
 	stressMax int,
 	rollSeq *uint64,
 	requestID string,
-	systemID string,
 ) error {
 	if stressMax <= 0 {
 		return nil
@@ -4875,53 +4806,33 @@ func (s *DaggerheartService) applyStressVulnerableCondition(
 
 	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
-	if s.stores.Domain != nil {
-		result, err := s.stores.Domain.Execute(ctx, command.Command{
-			CampaignID:    campaignID,
-			Type:          command.Type("action.condition.change"),
-			ActorType:     command.ActorTypeSystem,
-			SessionID:     sessionID,
-			RequestID:     requestID,
-			InvocationID:  invocationID,
-			EntityType:    "character",
-			EntityID:      characterID,
-			SystemID:      daggerheart.SystemID,
-			SystemVersion: daggerheart.SystemVersion,
-			PayloadJSON:   payloadJSON,
-		})
-		if err != nil {
-			return status.Errorf(codes.Internal, "execute domain command: %v", err)
-		}
-		if len(result.Decision.Rejections) > 0 {
-			return status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-		}
-		if len(result.Decision.Events) == 0 {
-			return status.Error(codes.Internal, "condition change did not emit an event")
-		}
-		for _, evt := range result.Decision.Events {
-			if err := adapter.Apply(ctx, evt); err != nil {
-				return status.Errorf(codes.Internal, "apply condition event: %v", err)
-			}
-		}
-	} else {
-		stored, err := s.stores.Event.AppendEvent(ctx, event.Event{
-			CampaignID:    campaignID,
-			Timestamp:     time.Now().UTC(),
-			Type:          event.Type("action.condition_changed"),
-			SessionID:     sessionID,
-			RequestID:     requestID,
-			InvocationID:  invocationID,
-			ActorType:     event.ActorTypeSystem,
-			EntityType:    "character",
-			EntityID:      characterID,
-			SystemID:      systemID,
-			SystemVersion: daggerheart.SystemVersion,
-			PayloadJSON:   payloadJSON,
-		})
-		if err != nil {
-			return status.Errorf(codes.Internal, "append condition event: %v", err)
-		}
-		if err := adapter.Apply(ctx, stored); err != nil {
+	if s.stores.Domain == nil {
+		return status.Error(codes.Internal, "domain engine is not configured")
+	}
+	result, err := s.stores.Domain.Execute(ctx, command.Command{
+		CampaignID:    campaignID,
+		Type:          command.Type("action.condition.change"),
+		ActorType:     command.ActorTypeSystem,
+		SessionID:     sessionID,
+		RequestID:     requestID,
+		InvocationID:  invocationID,
+		EntityType:    "character",
+		EntityID:      characterID,
+		SystemID:      daggerheart.SystemID,
+		SystemVersion: daggerheart.SystemVersion,
+		PayloadJSON:   payloadJSON,
+	})
+	if err != nil {
+		return status.Errorf(codes.Internal, "execute domain command: %v", err)
+	}
+	if len(result.Decision.Rejections) > 0 {
+		return status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
+	}
+	if len(result.Decision.Events) == 0 {
+		return status.Error(codes.Internal, "condition change did not emit an event")
+	}
+	for _, evt := range result.Decision.Events {
+		if err := adapter.Apply(ctx, evt); err != nil {
 			return status.Errorf(codes.Internal, "apply condition event: %v", err)
 		}
 	}

@@ -392,7 +392,9 @@ func newProjectionDaggerheartStore() *projectionDaggerheartStore {
 
 func newProjectionApplier(campaignStore *projectionCampaignStore, daggerheartStore *projectionDaggerheartStore) Applier {
 	registry := systems.NewAdapterRegistry()
-	registry.Register(daggerheart.NewAdapter(daggerheartStore))
+	if err := registry.Register(daggerheart.NewAdapter(daggerheartStore)); err != nil {
+		panic(err)
+	}
 	return Applier{Campaign: campaignStore, Daggerheart: daggerheartStore, Adapters: registry}
 }
 

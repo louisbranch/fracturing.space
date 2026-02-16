@@ -707,7 +707,9 @@ func TestApplySystemEvent_UsesAdapter(t *testing.T) {
 	ctx := context.Background()
 	adapter := &fakeAdapter{}
 	registry := systems.NewAdapterRegistry()
-	registry.Register(adapter)
+	if err := registry.Register(adapter); err != nil {
+		t.Fatalf("register adapter: %v", err)
+	}
 	applier := Applier{Adapters: registry}
 
 	evt := testevent.Event{
@@ -2663,7 +2665,9 @@ func TestApplySessionSpotlightSet_InvalidTarget(t *testing.T) {
 
 func TestApplySystemEvent_MissingSystemID(t *testing.T) {
 	registry := systems.NewAdapterRegistry()
-	registry.Register(&fakeAdapter{})
+	if err := registry.Register(&fakeAdapter{}); err != nil {
+		t.Fatalf("register adapter: %v", err)
+	}
 	applier := Applier{Adapters: registry}
 	// Call applySystemEvent directly to hit the empty SystemID guard
 	evt := event.Event{CampaignID: "camp-1", Type: "system.custom", SystemID: "  ", PayloadJSON: []byte("{}")}
@@ -2674,7 +2678,9 @@ func TestApplySystemEvent_MissingSystemID(t *testing.T) {
 
 func TestApplySystemEvent_InvalidGameSystem(t *testing.T) {
 	registry := systems.NewAdapterRegistry()
-	registry.Register(&fakeAdapter{})
+	if err := registry.Register(&fakeAdapter{}); err != nil {
+		t.Fatalf("register adapter: %v", err)
+	}
 	applier := Applier{Adapters: registry}
 	evt := testevent.Event{CampaignID: "camp-1", Type: testevent.Type("system.custom"), SystemID: "INVALID_SYSTEM", PayloadJSON: []byte("{}")}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
