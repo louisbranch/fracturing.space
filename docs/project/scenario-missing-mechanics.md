@@ -72,8 +72,6 @@ This ordering shows which system primitives should be implemented before scenari
 - `internal/test/game/scenarios/combat_objectives_ritual_rescue_capture.lua` — Placeholder for parallel combat objectives (ritual completion, rescue progress, capture progress) with missing rules for updating multiple objective countdowns from action outcomes.
 - `internal/test/game/scenarios/companion_experience_stress_clear.lua` — Placeholder for companion return cadence where an experience completion triggers stress clear; exact invocation and timing semantics are not specified.
 - `internal/test/game/scenarios/death_reaction_dig_two_graves.lua` — Placeholder for a death-triggered adversary reaction (damage + Hope loss) with missing deterministic sequencing and scope rules.
-- `internal/test/game/scenarios/chase_countdown_ring.lua` — Placeholder for a chase flow with a progressing countdown and consequence countdown; required behavior to tie action-roll outcomes to countdown tick advancement is not explicitly implemented.
-- `internal/test/game/scenarios/direct_damage_reaction.lua` — Placeholder that names a reaction roll result expectation but does not yet define deterministic fixture controls for forcing direct-damage reaction outcomes.
 - `internal/test/game/scenarios/encounter_battle_points_example.lua` — Placeholder for encounter battle-point budgeting and encounter composition, requiring clear conversion from points to adversary mix and scaling rules.
 - `internal/test/game/scenarios/environment_helms_deep_siege_collateral_damage.lua` — Placeholder for environment collateral-damage fallout after an adversary falls; requires explicit reaction-roll, damage, and stress-outcome mechanics.
 
