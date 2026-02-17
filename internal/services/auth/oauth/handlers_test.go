@@ -3,6 +3,8 @@ package oauth
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"io/fs"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -780,13 +782,17 @@ func TestHelperFunctions(t *testing.T) {
 func TestRegisterRoutes(t *testing.T) {
 	t.Run("nil mux is safe", func(t *testing.T) {
 		server, _ := testServer(t)
-		server.RegisterRoutes(nil)
+		if err := server.RegisterRoutes(nil); err != nil {
+			t.Fatalf("RegisterRoutes(nil) returned error: %v", err)
+		}
 	})
 
 	t.Run("registers routes", func(t *testing.T) {
 		server, _ := testServer(t)
 		mux := http.NewServeMux()
-		server.RegisterRoutes(mux)
+		if err := server.RegisterRoutes(mux); err != nil {
+			t.Fatalf("RegisterRoutes() returned error: %v", err)
+		}
 
 		// Test the health endpoint
 		req := httptest.NewRequest(http.MethodGet, "/up", nil)
@@ -794,6 +800,23 @@ func TestRegisterRoutes(t *testing.T) {
 		mux.ServeHTTP(w, req)
 		if w.Code != http.StatusOK {
 			t.Errorf("expected 200, got %d", w.Code)
+		}
+	})
+
+	t.Run("static assets unavailable", func(t *testing.T) {
+		server, _ := testServer(t)
+		originalResolveStaticFS := resolveStaticFS
+		resolveStaticFS = func() (fs.FS, error) {
+			return nil, errors.New("forced")
+		}
+		t.Cleanup(func() {
+			resolveStaticFS = originalResolveStaticFS
+		})
+
+		mux := http.NewServeMux()
+		err := server.RegisterRoutes(mux)
+		if err == nil {
+			t.Fatal("expected error when static assets are unavailable")
 		}
 	})
 }

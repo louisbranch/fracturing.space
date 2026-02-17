@@ -25,6 +25,40 @@ func response(status int, body string) *http.Response {
 	}
 }
 
+type failingReadCloser struct{}
+
+func (f failingReadCloser) Read(_ []byte) (int, error) {
+	return 0, io.ErrUnexpectedEOF
+}
+
+func (f failingReadCloser) Close() error {
+	return nil
+}
+
+func TestOpenAIInvokeAdapterInvokeNon2xxReadError(t *testing.T) {
+	adapter := &openAIInvokeAdapter{cfg: OpenAIInvokeConfig{
+		ResponsesURL: "https://provider.example.com/v1/responses",
+		HTTPClient: &http.Client{
+			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				return &http.Response{
+					StatusCode: http.StatusUnauthorized,
+					Header:     make(http.Header),
+					Body:       failingReadCloser{},
+				}, nil
+			}),
+		},
+	}}
+
+	_, err := adapter.Invoke(context.Background(), ProviderInvokeInput{
+		Model:            "gpt-4o-mini",
+		Input:            "Say hello",
+		CredentialSecret: "sk-1",
+	})
+	if err == nil || !strings.Contains(err.Error(), "read") {
+		t.Fatalf("error = %v, want read error", err)
+	}
+}
+
 func TestNewOpenAIInvokeAdapterDefaults(t *testing.T) {
 	adapter := NewOpenAIInvokeAdapter(OpenAIInvokeConfig{})
 	typed, ok := adapter.(*openAIInvokeAdapter)

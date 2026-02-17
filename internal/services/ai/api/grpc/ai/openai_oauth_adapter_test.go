@@ -162,6 +162,32 @@ func TestOpenAIOAuthAdapterRefreshToken(t *testing.T) {
 	}
 }
 
+func TestOpenAIOAuthAdapterExchangeAuthorizationCodeNon2xxReadError(t *testing.T) {
+	adapter := &openAIOAuthAdapter{cfg: OpenAIOAuthConfig{
+		TokenURL:     "https://provider.example.com/token",
+		ClientID:     "client-1",
+		ClientSecret: "secret-1",
+		RedirectURI:  "https://app.example.com/oauth/callback",
+		HTTPClient: &http.Client{
+			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				return &http.Response{
+					StatusCode: http.StatusUnauthorized,
+					Header:     make(http.Header),
+					Body:       failingReadCloser{},
+				}, nil
+			}),
+		},
+	}}
+
+	_, err := adapter.ExchangeAuthorizationCode(context.Background(), ProviderAuthorizationCodeInput{
+		AuthorizationCode: "code-1",
+		CodeVerifier:      "verifier-1",
+	})
+	if err == nil || !strings.Contains(err.Error(), "read") {
+		t.Fatalf("error = %v, want read error", err)
+	}
+}
+
 func TestOpenAIInvokeAdapterInvoke(t *testing.T) {
 	responsesServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {

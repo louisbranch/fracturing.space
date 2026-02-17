@@ -148,3 +148,40 @@ func TestRegistryRegister_NilSystem(t *testing.T) {
 		t.Fatalf("expected ErrSystemRequired, got %v", err)
 	}
 }
+
+func TestRegistryMustGetPanicsWhenMissing(t *testing.T) {
+	registry := NewRegistry()
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Fatal("MustGet() did not panic")
+		}
+		if err, ok := r.(error); !ok || !errors.Is(err, ErrSystemNotRegistered) {
+			t.Fatalf("MustGet() panic = %v, want ErrSystemNotRegistered", r)
+		}
+	}()
+	registry.MustGet(commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART)
+}
+
+func TestRegistryGetOrError(t *testing.T) {
+	registry := NewRegistry()
+	_, err := registry.GetOrError(commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART)
+	if !errors.Is(err, ErrSystemNotRegistered) {
+		t.Fatalf("expected ErrSystemNotRegistered, got %v", err)
+	}
+
+	system := &testGameSystem{
+		id:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		version: "1.0",
+	}
+	if err := registry.Register(system); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+	got, err := registry.GetOrError(commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART)
+	if err != nil {
+		t.Fatalf("GetOrError() unexpected error: %v", err)
+	}
+	if got != system {
+		t.Fatalf("GetOrError() = %v, want %v", got, system)
+	}
+}

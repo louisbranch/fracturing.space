@@ -1,8 +1,12 @@
 package domain
 
 import (
+	"fmt"
+
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/dice"
 )
+
+var rollDice = dice.RollDice
 
 // RollAction performs an action roll from the provided request.
 // It uses the core dice package for deterministic rolling.
@@ -21,13 +25,12 @@ func RollAction(request ActionRequest) (ActionResult, error) {
 		rollSpecs = append(rollSpecs, dice.Spec{Sides: 6, Count: 1})
 	}
 
-	rollResult, err := dice.RollDice(dice.Request{
+	rollResult, err := rollDice(dice.Request{
 		Dice: rollSpecs,
 		Seed: request.Seed,
 	})
 	if err != nil {
-		// This should be unreachable: the DiceSpec is hardcoded and always valid.
-		panic(err)
+		return ActionResult{}, fmt.Errorf("roll dice: %w", err)
 	}
 
 	hope := rollResult.Rolls[0].Results[0]

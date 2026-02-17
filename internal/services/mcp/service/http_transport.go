@@ -53,6 +53,10 @@ const (
 
 	// sseHeartbeatInterval is how often to update lastUsed for active SSE connections.
 	sseHeartbeatInterval = 30 * time.Second
+
+	// defaultSessionReadyTimeout bounds how long we wait for a session connection
+	// to become ready before request handling continues.
+	defaultSessionReadyTimeout = 100 * time.Millisecond
 )
 
 // HTTPTransport implements mcp.Transport for HTTP-based MCP communication.
@@ -73,6 +77,10 @@ type HTTPTransport struct {
 	serverOnceMu sync.Mutex
 	serverOnce   map[string]*sync.Once
 	oauth        *oauthAuth
+
+	serverReadyTimeout time.Duration
+	randomReader       func([]byte) (int, error)
+	readyAfter         func(time.Duration) <-chan time.Time
 }
 
 // httpSession maintains state for an HTTP client connection.
@@ -108,13 +116,16 @@ func NewHTTPTransport(addr string) *HTTPTransport {
 	_ = config.ParseEnv(&raw)
 	ctx, cancel := context.WithCancel(context.Background())
 	return &HTTPTransport{
-		addr:         addr,
-		allowedHosts: parseAllowedHosts(raw.AllowedHosts),
-		sessions:     make(map[string]*httpSession),
-		serverCtx:    ctx,
-		serverCancel: cancel,
-		serverOnce:   make(map[string]*sync.Once),
-		oauth:        loadOAuthAuthFromEnv(raw),
+		addr:               addr,
+		allowedHosts:       parseAllowedHosts(raw.AllowedHosts),
+		sessions:           make(map[string]*httpSession),
+		serverCtx:          ctx,
+		serverCancel:       cancel,
+		serverOnce:         make(map[string]*sync.Once),
+		serverReadyTimeout: defaultSessionReadyTimeout,
+		randomReader:       rand.Read,
+		readyAfter:         time.After,
+		oauth:              loadOAuthAuthFromEnv(raw),
 	}
 }
 
@@ -129,7 +140,7 @@ func NewHTTPTransportWithServer(addr string, server *mcp.Server) *HTTPTransport 
 // For HTTP transport, this creates a new session and connection that will
 // be used by the MCP server's Run method. The connection waits for HTTP requests.
 func (t *HTTPTransport) Connect(ctx context.Context) (mcp.Connection, error) {
-	sessionID := generateSessionID()
+	sessionID := t.generateSessionID()
 
 	conn := &httpConnection{
 		sessionID:   sessionID,
@@ -153,6 +164,14 @@ func (t *HTTPTransport) Connect(ctx context.Context) (mcp.Connection, error) {
 	t.sessionsMu.Unlock()
 
 	return conn, nil
+}
+
+func (t *HTTPTransport) generateSessionID() string {
+	randomReader := rand.Read
+	if t != nil && t.randomReader != nil {
+		randomReader = t.randomReader
+	}
+	return generateSessionIDWithRandomRead(randomReader)
 }
 
 // Start starts the HTTP server and begins handling requests.
@@ -1033,7 +1052,7 @@ func (t *HTTPTransport) ensureServerRunning(session *httpSession) {
 	select {
 	case <-session.conn.ready:
 		// Connection is ready to process messages
-	case <-time.After(100 * time.Millisecond):
+	case <-t.readyAfterOrDefault()(t.serverReadyTimeoutOrDefault()):
 		// Short timeout - if readiness hasn't happened yet, it will happen when
 		// the first message is sent and Read() is called. This avoids blocking
 		// tests that call ensureServerRunning() without sending messages.
@@ -1041,6 +1060,20 @@ func (t *HTTPTransport) ensureServerRunning(session *httpSession) {
 		// Server is shutting down
 		return
 	}
+}
+
+func (t *HTTPTransport) readyAfterOrDefault() func(time.Duration) <-chan time.Time {
+	if t == nil || t.readyAfter == nil {
+		return time.After
+	}
+	return t.readyAfter
+}
+
+func (t *HTTPTransport) serverReadyTimeoutOrDefault() time.Duration {
+	if t == nil || t.serverReadyTimeout <= 0 {
+		return defaultSessionReadyTimeout
+	}
+	return t.serverReadyTimeout
 }
 
 // sessionTransport is a transport that returns a specific connection.
@@ -1060,9 +1093,16 @@ var sessionCounter atomic.Uint64
 // generateSessionID generates a unique session ID using crypto/rand
 // combined with a counter to prevent collisions.
 func generateSessionID() string {
+	return generateSessionIDWithRandomRead(rand.Read)
+}
+
+func generateSessionIDWithRandomRead(randomRead func([]byte) (int, error)) string {
 	// Generate 8 random bytes
 	b := make([]byte, 8)
-	if _, err := rand.Read(b); err != nil {
+	if randomRead == nil {
+		randomRead = rand.Read
+	}
+	if _, err := randomRead(b); err != nil {
 		// Fallback to timestamp + counter if crypto/rand fails
 		counter := sessionCounter.Add(1)
 		return fmt.Sprintf("session_%d_%d", time.Now().UnixNano(), counter)

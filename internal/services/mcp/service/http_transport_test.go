@@ -3,8 +3,10 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -572,6 +574,32 @@ func TestGenerateSessionID(t *testing.T) {
 	}
 }
 
+func TestGenerateSessionIDWithRandomReadErrorFallsBack(t *testing.T) {
+	id := generateSessionIDWithRandomRead(func(_ []byte) (int, error) {
+		return 0, errors.New("forced random read error")
+	})
+	matched := regexp.MustCompile(`^session_\d+_\d+$`).MatchString(id)
+	if !matched {
+		t.Fatalf("generateSessionIDWithRandomRead() = %q, want fallback session id", id)
+	}
+}
+
+func TestHTTPTransport_Connect_UsesInjectedRandomReader(t *testing.T) {
+	transport := NewHTTPTransport("localhost:8081")
+	transport.randomReader = func(_ []byte) (int, error) {
+		return 0, errors.New("forced random read error")
+	}
+	conn, err := transport.Connect(context.Background())
+	if err != nil {
+		t.Fatalf("Connect() error = %v", err)
+	}
+	sessionID := conn.SessionID()
+	matched := regexp.MustCompile(`^session_\d+_\d+$`).MatchString(sessionID)
+	if !matched {
+		t.Fatalf("session ID = %q, want fallback format", sessionID)
+	}
+}
+
 func TestHTTPTransport_cleanupSessions(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
@@ -680,6 +708,42 @@ func TestHTTPTransport_ensureServerRunning(t *testing.T) {
 	}
 	if once == nil {
 		t.Error("serverOnce should not be nil")
+	}
+}
+
+func TestHTTPTransport_ensureServerRunning_UsesConfigurableReadyTimeout(t *testing.T) {
+	transport := NewHTTPTransport("localhost:8081")
+	transport.server = mcp.NewServer(&mcp.Implementation{Name: "test", Version: "1.0"}, nil)
+	transport.serverReadyTimeout = 17 * time.Millisecond
+
+	readyTimeouts := make([]time.Duration, 0, 1)
+	transport.readyAfter = func(d time.Duration) <-chan time.Time {
+		readyTimeouts = append(readyTimeouts, d)
+		ch := make(chan time.Time, 1)
+		ch <- time.Time{}
+		return ch
+	}
+
+	ctx := context.Background()
+	conn, err := transport.Connect(ctx)
+	if err != nil {
+		t.Fatalf("Connect() error = %v", err)
+	}
+	sessionID := conn.SessionID()
+	transport.sessionsMu.RLock()
+	session := transport.sessions[sessionID]
+	transport.sessionsMu.RUnlock()
+	if session == nil {
+		t.Fatal("session not found")
+	}
+
+	transport.ensureServerRunning(session)
+
+	if len(readyTimeouts) != 1 {
+		t.Fatalf("readyAfter() called = %d, want 1", len(readyTimeouts))
+	}
+	if readyTimeouts[0] != 17*time.Millisecond {
+		t.Fatalf("ready timeout = %v, want %v", readyTimeouts[0], 17*time.Millisecond)
 	}
 }
 

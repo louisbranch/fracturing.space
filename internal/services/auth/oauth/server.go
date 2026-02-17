@@ -2,6 +2,7 @@ package oauth
 
 import (
 	"context"
+	"fmt"
 	"io/fs"
 	"net/http"
 	"time"
@@ -13,6 +14,10 @@ import (
 type UserStore interface {
 	PutUser(ctx context.Context, u user.User) error
 	GetUser(ctx context.Context, userID string) (user.User, error)
+}
+
+var resolveStaticFS = func() (fs.FS, error) {
+	return fs.Sub(assetsFS, "static")
 }
 
 // Server hosts OAuth endpoints and external provider flows.
@@ -36,14 +41,14 @@ func NewServer(config Config, store *Store, userStore UserStore) *Server {
 }
 
 // RegisterRoutes registers OAuth HTTP endpoints on the provided mux.
-func (s *Server) RegisterRoutes(mux *http.ServeMux) {
+func (s *Server) RegisterRoutes(mux *http.ServeMux) error {
 	if mux == nil {
-		return
+		return nil
 	}
 
-	staticFS, err := fs.Sub(assetsFS, "static")
+	staticFS, err := resolveStaticFS()
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("register static routes: %w", err)
 	}
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
 
@@ -57,6 +62,7 @@ func (s *Server) RegisterRoutes(mux *http.ServeMux) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("OK"))
 	})
+	return nil
 }
 
 // StartCleanup runs periodic cleanup for expired OAuth entries.

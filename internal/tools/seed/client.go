@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -89,8 +90,11 @@ func (c *StdioClient) WriteMessage(message any) error {
 }
 
 // ReadResponseForID waits for a response matching the request ID.
-func (c *StdioClient) ReadResponseForID(requestID any, timeout time.Duration) (any, []byte, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+func (c *StdioClient) ReadResponseForID(ctx context.Context, requestID any, timeout time.Duration) (any, []byte, error) {
+	if ctx == nil {
+		return nil, nil, errors.New("context is nil")
+	}
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
 	requestIDString := fmt.Sprint(requestID)

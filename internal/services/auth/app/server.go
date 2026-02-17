@@ -78,7 +78,12 @@ func New(port int, httpAddr string) (*Server, error) {
 		}
 		mux := http.NewServeMux()
 		oauthServer = oauth.NewServer(oauthConfig, oauthStore, store)
-		oauthServer.RegisterRoutes(mux)
+		if err := oauthServer.RegisterRoutes(mux); err != nil {
+			_ = httpListener.Close()
+			_ = listener.Close()
+			_ = store.Close()
+			return nil, fmt.Errorf("register oauth routes: %w", err)
+		}
 		httpServer = &http.Server{Handler: mux}
 	}
 
