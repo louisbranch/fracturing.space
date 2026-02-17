@@ -30,12 +30,12 @@ func TestMCPStdioBlackbox(t *testing.T) {
 	for _, fixture := range fixtures {
 		captures := make(map[string]string)
 		for _, step := range fixture.Steps {
-			executeStdioBlackboxStep(t, client, step, captures, userID)
+			executeStdioBlackboxStep(t, ctx, client, step, captures, userID)
 		}
 	}
 }
 
-func executeStdioBlackboxStep(t *testing.T, client *seed.StdioClient, step seed.BlackboxStep, captures map[string]string, userID string) {
+func executeStdioBlackboxStep(t *testing.T, ctx context.Context, client *seed.StdioClient, step seed.BlackboxStep, captures map[string]string, userID string) {
 	t.Helper()
 
 	request, err := seed.RenderPlaceholders(step.Request, captures)
@@ -58,7 +58,7 @@ func executeStdioBlackboxStep(t *testing.T, client *seed.StdioClient, step seed.
 		return
 	}
 
-	responseAny, responseBytes, err := client.ReadResponseForID(requestID, 5*time.Second)
+	responseAny, responseBytes, err := client.ReadResponseForID(ctx, requestID, 5*time.Second)
 	if err != nil {
 		t.Fatalf("read response %s: %v", step.Name, err)
 	}

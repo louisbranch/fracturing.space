@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -48,7 +50,7 @@ func TestExecuteStep_WriteError(t *testing.T) {
 
 func TestExecuteStep_ReadError(t *testing.T) {
 	client := &fakeMCPClient{
-		readResponseForID: func(_ any, _ time.Duration) (any, []byte, error) {
+		readResponseForID: func(_ context.Context, _ any, _ time.Duration) (any, []byte, error) {
 			return nil, nil, fmt.Errorf("read failed")
 		},
 	}
@@ -72,7 +74,7 @@ func TestExecuteStep_NoRequestID(t *testing.T) {
 			writeCalled = true
 			return nil
 		},
-		readResponseForID: func(_ any, _ time.Duration) (any, []byte, error) {
+		readResponseForID: func(_ context.Context, _ any, _ time.Duration) (any, []byte, error) {
 			t.Fatal("ReadResponseForID should not be called for fire-and-forget steps")
 			return nil, nil, nil
 		},
@@ -93,7 +95,7 @@ func TestExecuteStep_NoRequestID(t *testing.T) {
 
 func TestExecuteStep_JSONRPCError(t *testing.T) {
 	client := &fakeMCPClient{
-		readResponseForID: func(_ any, _ time.Duration) (any, []byte, error) {
+		readResponseForID: func(_ context.Context, _ any, _ time.Duration) (any, []byte, error) {
 			resp := map[string]any{
 				"id":    1,
 				"error": map[string]any{"code": -32600, "message": "Invalid Request"},
@@ -117,7 +119,7 @@ func TestExecuteStep_JSONRPCError(t *testing.T) {
 
 func TestExecuteStep_CaptureSuccess(t *testing.T) {
 	client := &fakeMCPClient{
-		readResponseForID: func(_ any, _ time.Duration) (any, []byte, error) {
+		readResponseForID: func(_ context.Context, _ any, _ time.Duration) (any, []byte, error) {
 			resp := map[string]any{
 				"id":     1,
 				"result": map[string]any{"structuredContent": map[string]any{"id": "captured-id"}},
@@ -253,7 +255,7 @@ func TestInjectCampaignCreatorUserID(t *testing.T) {
 
 func TestRunFixtures_ReadError(t *testing.T) {
 	client := &fakeMCPClient{
-		readResponseForID: func(_ any, _ time.Duration) (any, []byte, error) {
+		readResponseForID: func(_ context.Context, _ any, _ time.Duration) (any, []byte, error) {
 			return nil, nil, fmt.Errorf("read failed")
 		},
 	}
@@ -268,5 +270,148 @@ func TestRunFixtures_ReadError(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "read failed") {
 		t.Fatalf("expected read error, got: %v", err)
+	}
+}
+
+func TestRun_UsesInjectedMCPClientLauncherAndSeedUserCreator(t *testing.T) {
+	repoRoot := t.TempDir()
+	fixtureDir := filepath.Join(repoRoot, "fixtures")
+	if err := os.MkdirAll(fixtureDir, 0o755); err != nil {
+		t.Fatalf("mk fixtures dir: %v", err)
+	}
+	fixturePath := filepath.Join(fixtureDir, "seed.json")
+	fixtureBytes := `{"name":"seed","steps":[{"name":"init","action":"initialized"}]}` + "\n"
+	if err := os.WriteFile(fixturePath, []byte(fixtureBytes), 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+
+	originalLauncher := startMCPClient
+	originalUserCreator := createSeedUserFn
+	t.Cleanup(func() {
+		startMCPClient = originalLauncher
+		createSeedUserFn = originalUserCreator
+	})
+
+	client := &fakeMCPClient{
+		writeMessage: func(_ any) error { return nil },
+		readResponseForID: func(_ context.Context, requestID any, _ time.Duration) (any, []byte, error) {
+			t.Fatalf("unexpected response read for notification step: id=%v", requestID)
+			return nil, nil, nil
+		},
+	}
+	var receivedRepoRoot string
+	var receivedGRPCAddr string
+	startMCPClient = func(_ context.Context, repoRoot string, grpcAddr string) (mcpClient, error) {
+		receivedRepoRoot = repoRoot
+		receivedGRPCAddr = grpcAddr
+		return client, nil
+	}
+	createSeedUserFn = func(context.Context, string) (string, error) {
+		return "seed-user", nil
+	}
+
+	cfg := Config{
+		RepoRoot:    repoRoot,
+		GRPCAddr:    "127.0.0.1:0",
+		AuthAddr:    "auth.example:0",
+		FixturesDir: "fixtures",
+	}
+	if err := Run(t.Context(), cfg); err != nil {
+		t.Fatalf("Run returned error: %v", err)
+	}
+
+	if !client.closed {
+		t.Fatal("expected MCP client to be closed after Run completes")
+	}
+	if receivedRepoRoot != cfg.RepoRoot {
+		t.Fatalf("startMCPClient got repoRoot %q; want %q", receivedRepoRoot, cfg.RepoRoot)
+	}
+	if receivedGRPCAddr != cfg.GRPCAddr {
+		t.Fatalf("startMCPClient got grpcAddr %q; want %q", receivedGRPCAddr, cfg.GRPCAddr)
+	}
+}
+
+func TestRun_ReturnsLauncherError(t *testing.T) {
+	repoRoot := t.TempDir()
+	fixtureDir := filepath.Join(repoRoot, "fixtures")
+	if err := os.MkdirAll(fixtureDir, 0o755); err != nil {
+		t.Fatalf("mk fixtures dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(fixtureDir, "seed.json"), []byte(`{"name":"seed","steps":[{"action":"initialized"}]}`), 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+
+	originalLauncher := startMCPClient
+	originalUserCreator := createSeedUserFn
+	t.Cleanup(func() {
+		startMCPClient = originalLauncher
+		createSeedUserFn = originalUserCreator
+	})
+
+	startMCPClient = func(context.Context, string, string) (mcpClient, error) {
+		return nil, fmt.Errorf("spawn blocked")
+	}
+	createSeedUserCalled := false
+	createSeedUserFn = func(context.Context, string) (string, error) {
+		createSeedUserCalled = true
+		return "seed-user", nil
+	}
+
+	cfg := Config{
+		RepoRoot:    repoRoot,
+		GRPCAddr:    "127.0.0.1:0",
+		AuthAddr:    "auth.example:0",
+		FixturesDir: "fixtures",
+	}
+	err := Run(t.Context(), cfg)
+	if err == nil {
+		t.Fatal("expected start error")
+	}
+	if !strings.Contains(err.Error(), "start MCP client") {
+		t.Fatalf("expected start MCP client error, got: %v", err)
+	}
+	if createSeedUserCalled {
+		t.Fatal("createSeedUser should not run when startMCPClient fails")
+	}
+}
+
+func TestRun_ClosesClientWhenCreateSeedUserFails(t *testing.T) {
+	repoRoot := t.TempDir()
+	fixtureDir := filepath.Join(repoRoot, "fixtures")
+	if err := os.MkdirAll(fixtureDir, 0o755); err != nil {
+		t.Fatalf("mk fixtures dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(fixtureDir, "seed.json"), []byte(`{"name":"seed","steps":[{"action":"initialized"}]}`), 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+
+	originalLauncher := startMCPClient
+	originalUserCreator := createSeedUserFn
+	t.Cleanup(func() {
+		startMCPClient = originalLauncher
+		createSeedUserFn = originalUserCreator
+	})
+
+	client := &fakeMCPClient{}
+	startMCPClient = func(context.Context, string, string) (mcpClient, error) { return client, nil }
+	createSeedUserFn = func(context.Context, string) (string, error) {
+		return "", fmt.Errorf("auth dial failed")
+	}
+
+	cfg := Config{
+		RepoRoot:    repoRoot,
+		GRPCAddr:    "127.0.0.1:0",
+		AuthAddr:    "auth.example:0",
+		FixturesDir: "fixtures",
+	}
+	err := Run(t.Context(), cfg)
+	if err == nil {
+		t.Fatal("expected create user error")
+	}
+	if !strings.Contains(err.Error(), "auth dial failed") {
+		t.Fatalf("expected create user error, got: %v", err)
+	}
+	if !client.closed {
+		t.Fatal("expected MCP client to be closed on create user failure")
 	}
 }

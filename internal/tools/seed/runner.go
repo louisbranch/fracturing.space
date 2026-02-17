@@ -2,6 +2,7 @@ package seed
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,6 +12,13 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+)
+
+var (
+	createSeedUserFn = createSeedUser
+	startMCPClient   = func(ctx context.Context, repoRoot, grpcAddr string) (mcpClient, error) {
+		return StartMCPClient(ctx, repoRoot, grpcAddr)
+	}
 )
 
 // Config holds seed runner configuration.
@@ -48,7 +56,7 @@ func Run(ctx context.Context, cfg Config) error {
 		fmt.Fprintf(os.Stderr, "Loaded %d fixture(s)\n", len(fixtures))
 	}
 
-	client, err := StartMCPClient(ctx, cfg.RepoRoot, cfg.GRPCAddr)
+	client, err := startMCPClient(ctx, cfg.RepoRoot, cfg.GRPCAddr)
 	if err != nil {
 		return fmt.Errorf("start MCP client: %w", err)
 	}
@@ -58,7 +66,7 @@ func Run(ctx context.Context, cfg Config) error {
 	if authAddr == "" {
 		return fmt.Errorf("auth server address is required")
 	}
-	userID, err := createSeedUser(ctx, authAddr)
+	userID, err := createSeedUserFn(ctx, authAddr)
 	if err != nil {
 		return err
 	}
@@ -136,7 +144,7 @@ func executeStep(ctx context.Context, client mcpClient, step BlackboxStep, captu
 		return nil
 	}
 
-	responseAny, responseBytes, err := client.ReadResponseForID(requestID, 30*time.Second)
+	responseAny, responseBytes, err := client.ReadResponseForID(ctx, requestID, 30*time.Second)
 	if err != nil {
 		return fmt.Errorf("read response: %w", err)
 	}
@@ -203,7 +211,7 @@ func executeStep(ctx context.Context, client mcpClient, step BlackboxStep, captu
 
 func createSeedUser(ctx context.Context, authAddr string) (string, error) {
 	if ctx == nil {
-		ctx = context.Background()
+		return "", errors.New("context is nil")
 	}
 	conn, err := grpc.NewClient(
 		authAddr,

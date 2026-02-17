@@ -23,7 +23,9 @@ func TestOAuthStaticAssets(t *testing.T) {
 	server := oauth.NewServer(oauth.Config{}, oauthStore, nil)
 
 	mux := http.NewServeMux()
-	server.RegisterRoutes(mux)
+	if err := server.RegisterRoutes(mux); err != nil {
+		t.Fatalf("register routes: %v", err)
+	}
 
 	httpServer := httptest.NewServer(mux)
 	defer httpServer.Close()

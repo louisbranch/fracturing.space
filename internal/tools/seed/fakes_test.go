@@ -1,11 +1,14 @@
 package seed
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 // fakeMCPClient satisfies mcpClient with injectable function fields.
 type fakeMCPClient struct {
 	writeMessage      func(message any) error
-	readResponseForID func(requestID any, timeout time.Duration) (any, []byte, error)
+	readResponseForID func(ctx context.Context, requestID any, timeout time.Duration) (any, []byte, error)
 	closed            bool
 }
 
@@ -16,9 +19,9 @@ func (f *fakeMCPClient) WriteMessage(message any) error {
 	return nil
 }
 
-func (f *fakeMCPClient) ReadResponseForID(requestID any, timeout time.Duration) (any, []byte, error) {
+func (f *fakeMCPClient) ReadResponseForID(ctx context.Context, requestID any, timeout time.Duration) (any, []byte, error) {
 	if f.readResponseForID != nil {
-		return f.readResponseForID(requestID, timeout)
+		return f.readResponseForID(ctx, requestID, timeout)
 	}
 	return map[string]any{"id": requestID}, nil, nil
 }

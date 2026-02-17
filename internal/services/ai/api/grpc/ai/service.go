@@ -388,7 +388,10 @@ func (a *openAIInvokeAdapter) Invoke(ctx context.Context, input ProviderInvokeIn
 	}
 	defer res.Body.Close()
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
-		body, _ := io.ReadAll(io.LimitReader(res.Body, 4096))
+		body, err := io.ReadAll(io.LimitReader(res.Body, 4096))
+		if err != nil {
+			return ProviderInvokeResult{}, fmt.Errorf("read invoke error body: %w", err)
+		}
 		return ProviderInvokeResult{}, fmt.Errorf("invoke request status %d: %s", res.StatusCode, strings.TrimSpace(string(body)))
 	}
 
@@ -441,7 +444,10 @@ func (a *openAIOAuthAdapter) tokenRequest(ctx context.Context, form url.Values) 
 	}
 	defer res.Body.Close()
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
-		body, _ := io.ReadAll(io.LimitReader(res.Body, 4096))
+		body, err := io.ReadAll(io.LimitReader(res.Body, 4096))
+		if err != nil {
+			return ProviderTokenExchangeResult{}, fmt.Errorf("read token error body: %w", err)
+		}
 		return ProviderTokenExchangeResult{}, fmt.Errorf("token request status %d: %s", res.StatusCode, strings.TrimSpace(string(body)))
 	}
 

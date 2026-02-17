@@ -33,7 +33,9 @@ func TestOAuthAuthorizationCodeFlow(t *testing.T) {
 	}
 	server := NewServer(config, oauthStore, store)
 	mux := http.NewServeMux()
-	server.RegisterRoutes(mux)
+	if err := server.RegisterRoutes(mux); err != nil {
+		t.Fatalf("register routes: %v", err)
+	}
 	httpServer := httptest.NewServer(mux)
 	t.Cleanup(httpServer.Close)
 

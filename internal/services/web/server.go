@@ -24,6 +24,10 @@ import (
 	"google.golang.org/grpc"
 )
 
+var subStaticFS = func() (fs.FS, error) {
+	return fs.Sub(assetsFS, "static")
+}
+
 // Config defines the inputs for the web login server.
 type Config struct {
 	HTTPAddr        string
@@ -86,15 +90,21 @@ func localizer(w http.ResponseWriter, r *http.Request) (*message.Printer, string
 
 // NewHandler creates the HTTP handler for the login UX.
 func NewHandler(config Config, authClient authv1.AuthServiceClient) http.Handler {
-	return NewHandlerWithCampaignAccess(config, authClient, handlerDependencies{})
+	handler, err := NewHandlerWithCampaignAccess(config, authClient, handlerDependencies{})
+	if err != nil {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.Error(w, "web handler unavailable", http.StatusInternalServerError)
+		})
+	}
+	return handler
 }
 
 // NewHandlerWithCampaignAccess creates the HTTP handler with campaign access checks.
-func NewHandlerWithCampaignAccess(config Config, authClient authv1.AuthServiceClient, deps handlerDependencies) http.Handler {
+func NewHandlerWithCampaignAccess(config Config, authClient authv1.AuthServiceClient, deps handlerDependencies) (http.Handler, error) {
 	mux := http.NewServeMux()
-	staticFS, err := fs.Sub(assetsFS, "static")
+	staticFS, err := subStaticFS()
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("resolve static assets: %w", err)
 	}
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
 
@@ -212,11 +222,19 @@ func NewHandlerWithCampaignAccess(config Config, authClient authv1.AuthServiceCl
 		_, _ = w.Write([]byte("OK"))
 	})
 
-	return mux
+	return mux, nil
 }
 
 // NewServer builds a configured web server.
 func NewServer(config Config) (*Server, error) {
+	return NewServerWithContext(context.Background(), config)
+}
+
+// NewServerWithContext builds a configured web server.
+func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
+	if ctx == nil {
+		return nil, errors.New("context is required")
+	}
 	httpAddr := strings.TrimSpace(config.HTTPAddr)
 	if httpAddr == "" {
 		return nil, errors.New("http address is required")
@@ -231,7 +249,7 @@ func NewServer(config Config) (*Server, error) {
 	var authConn *grpc.ClientConn
 	var authClient authv1.AuthServiceClient
 	if strings.TrimSpace(config.AuthAddr) != "" {
-		conn, client, err := dialAuthGRPC(context.Background(), config)
+		conn, client, err := dialAuthGRPC(ctx, config)
 		if err != nil {
 			return nil, fmt.Errorf("dial auth grpc: %w", err)
 		}
@@ -246,7 +264,7 @@ func NewServer(config Config) (*Server, error) {
 	var characterClient statev1.CharacterServiceClient
 	var inviteClient statev1.InviteServiceClient
 	if strings.TrimSpace(config.GameAddr) != "" {
-		conn, participantServiceClient, campaignServiceClient, sessionServiceClient, characterServiceClient, inviteServiceClient, err := dialGameGRPC(context.Background(), config)
+		conn, participantServiceClient, campaignServiceClient, sessionServiceClient, characterServiceClient, inviteServiceClient, err := dialGameGRPC(ctx, config)
 		if err != nil {
 			log.Printf("game gRPC dial failed, campaign access checks disabled: %v", err)
 		} else {
@@ -259,7 +277,7 @@ func NewServer(config Config) (*Server, error) {
 		}
 	}
 	campaignAccess := newCampaignAccessChecker(config, participantClient)
-	handler := NewHandlerWithCampaignAccess(config, authClient, handlerDependencies{
+	handler, err := NewHandlerWithCampaignAccess(config, authClient, handlerDependencies{
 		campaignAccess:    campaignAccess,
 		campaignClient:    campaignClient,
 		sessionClient:     sessionClient,
@@ -267,6 +285,9 @@ func NewServer(config Config) (*Server, error) {
 		characterClient:   characterClient,
 		inviteClient:      inviteClient,
 	})
+	if err != nil {
+		return nil, fmt.Errorf("build handler: %w", err)
+	}
 	httpServer := &http.Server{
 		Addr:              httpAddr,
 		Handler:           handler,
@@ -287,7 +308,7 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 		return errors.New("web server is nil")
 	}
 	if ctx == nil {
-		ctx = context.Background()
+		return errors.New("context is required")
 	}
 
 	serveErr := make(chan error, 1)
@@ -345,7 +366,7 @@ func dialAuthGRPC(ctx context.Context, config Config) (*grpc.ClientConn, authv1.
 		return nil, nil, nil
 	}
 	if ctx == nil {
-		ctx = context.Background()
+		return nil, nil, errors.New("context is required")
 	}
 	if config.GRPCDialTimeout <= 0 {
 		config.GRPCDialTimeout = timeouts.GRPCDial
@@ -381,7 +402,7 @@ func dialGameGRPC(ctx context.Context, config Config) (*grpc.ClientConn, statev1
 		return nil, nil, nil, nil, nil, nil, nil
 	}
 	if ctx == nil {
-		ctx = context.Background()
+		return nil, nil, nil, nil, nil, nil, errors.New("context is required")
 	}
 	if config.GRPCDialTimeout <= 0 {
 		config.GRPCDialTimeout = timeouts.GRPCDial

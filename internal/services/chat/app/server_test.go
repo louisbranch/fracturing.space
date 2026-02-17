@@ -22,6 +22,24 @@ func TestListenAndServeNilServer(t *testing.T) {
 	}
 }
 
+func TestNewServerWithContextRequiresContext(t *testing.T) {
+	if _, err := NewServerWithContext(nil, Config{HTTPAddr: "127.0.0.1:0"}); err == nil {
+		t.Fatal("expected error for nil context")
+	}
+}
+
+func TestDialGameGRPCNilContextReturnsError(t *testing.T) {
+	_, _, err := dialGameGRPC(nil, Config{
+		GameAddr: "127.0.0.1:1",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "context is required") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestNewHandlerUpEndpoint(t *testing.T) {
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/up", nil)
@@ -33,6 +51,16 @@ func TestNewHandlerUpEndpoint(t *testing.T) {
 	}
 	if strings.TrimSpace(rr.Body.String()) != "OK" {
 		t.Fatalf("body = %q, want OK", rr.Body.String())
+	}
+}
+
+func TestListenAndServeRequiresContext(t *testing.T) {
+	server, err := NewServer(Config{HTTPAddr: "127.0.0.1:0"})
+	if err != nil {
+		t.Fatalf("new server: %v", err)
+	}
+	if err := server.ListenAndServe(nil); err == nil {
+		t.Fatal("expected error")
 	}
 }
 
@@ -72,5 +100,17 @@ func TestListenAndServeStopsOnCancel(t *testing.T) {
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatal("server did not stop on cancel")
+	}
+}
+
+func TestMustJSONReturnsNilWithoutPanic(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("mustJSON panicked: %v", r)
+		}
+	}()
+
+	if got := mustJSON(make(chan int)); got != nil {
+		t.Fatalf("mustJSON = %v, want nil", got)
 	}
 }

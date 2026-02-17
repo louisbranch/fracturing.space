@@ -942,13 +942,22 @@ func writeWSError(peer *wsPeer, requestID string, code string, message string) e
 func mustJSON(v any) json.RawMessage {
 	b, err := json.Marshal(v)
 	if err != nil {
-		panic(err)
+		log.Printf("failed to marshal websocket frame payload: %v", err)
+		return nil
 	}
 	return b
 }
 
 // NewServer builds a configured chat server.
 func NewServer(config Config) (*Server, error) {
+	return NewServerWithContext(context.Background(), config)
+}
+
+// NewServerWithContext builds a configured chat server with an explicit context.
+func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
+	if ctx == nil {
+		return nil, errors.New("context is required")
+	}
 	httpAddr := strings.TrimSpace(config.HTTPAddr)
 	if httpAddr == "" {
 		return nil, errors.New("http address is required")
@@ -968,7 +977,7 @@ func NewServer(config Config) (*Server, error) {
 	var sessionClient statev1.SessionServiceClient
 	var campaignClient statev1.CampaignServiceClient
 	if strings.TrimSpace(config.GameAddr) != "" {
-		conn, client, err := dialGameGRPC(context.Background(), config)
+		conn, client, err := dialGameGRPC(ctx, config)
 		if err != nil {
 			log.Printf("game gRPC dial failed, campaign membership checks unavailable: %v", err)
 		} else {
@@ -1014,7 +1023,7 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 		return errors.New("chat server is nil")
 	}
 	if ctx == nil {
-		ctx = context.Background()
+		return errors.New("context is required")
 	}
 
 	serveErr := make(chan error, 1)
@@ -1058,7 +1067,7 @@ func dialGameGRPC(ctx context.Context, config Config) (*gogrpc.ClientConn, state
 		return nil, nil, nil
 	}
 	if ctx == nil {
-		ctx = context.Background()
+		return nil, nil, errors.New("context is required")
 	}
 	if config.GRPCDialTimeout <= 0 {
 		config.GRPCDialTimeout = timeouts.GRPCDial

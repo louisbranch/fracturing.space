@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
+	"io/fs"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -654,6 +656,53 @@ func TestNewServerRequiresAuthBaseURL(t *testing.T) {
 	}
 }
 
+func TestNewHandlerWithCampaignAccessStaticAssetsFailure(t *testing.T) {
+	origSubStaticFS := subStaticFS
+	subStaticFS = func() (fs.FS, error) {
+		return nil, fmt.Errorf("injected static assets failure")
+	}
+	defer func() {
+		subStaticFS = origSubStaticFS
+	}()
+
+	_, err := NewHandlerWithCampaignAccess(Config{AuthBaseURL: "http://auth.local"}, nil, handlerDependencies{})
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	if !strings.Contains(err.Error(), "resolve static assets") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestNewHandlerFallsBackToInternalServerError(t *testing.T) {
+	origSubStaticFS := subStaticFS
+	subStaticFS = func() (fs.FS, error) {
+		return nil, fmt.Errorf("injected static assets failure")
+	}
+	defer func() {
+		subStaticFS = origSubStaticFS
+	}()
+
+	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusInternalServerError)
+	}
+}
+
+func TestNewServerWithContextRequiresContext(t *testing.T) {
+	_, err := NewServerWithContext(nil, Config{
+		HTTPAddr:    "127.0.0.1:0",
+		AuthBaseURL: "http://auth.local",
+	})
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+}
+
 func TestDialAuthGRPCNilAddr(t *testing.T) {
 	conn, client, err := dialAuthGRPC(context.Background(), Config{})
 	if err != nil {
@@ -664,20 +713,16 @@ func TestDialAuthGRPCNilAddr(t *testing.T) {
 	}
 }
 
-func TestDialAuthGRPCNilContextUsesDefaultTimeout(t *testing.T) {
-	listener, server := startGRPCServer(t)
-	defer server.Stop()
-
-	conn, client, err := dialAuthGRPC(nil, Config{
-		AuthAddr: listener.Addr().String(),
+func TestDialAuthGRPCNilContextReturnsError(t *testing.T) {
+	_, _, err := dialAuthGRPC(nil, Config{
+		AuthAddr: "127.0.0.1:1",
 	})
-	if err != nil {
-		t.Fatalf("dial: %v", err)
+	if err == nil {
+		t.Fatalf("expected error")
 	}
-	if conn == nil || client == nil {
-		t.Fatalf("expected conn and client")
+	if !strings.Contains(err.Error(), "context is required") {
+		t.Fatalf("unexpected error: %v", err)
 	}
-	_ = conn.Close()
 }
 
 func TestDialAuthGRPCSuccess(t *testing.T) {
@@ -839,6 +884,17 @@ func TestListenAndServeReturnsServeError(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "serve http") {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestListenAndServeRequiresContext(t *testing.T) {
+	server := &Server{
+		httpAddr:   "127.0.0.1:0",
+		httpServer: &http.Server{Addr: "127.0.0.1:0"},
+	}
+	err := server.ListenAndServe(nil)
+	if err == nil {
+		t.Fatal("expected error")
 	}
 }
 

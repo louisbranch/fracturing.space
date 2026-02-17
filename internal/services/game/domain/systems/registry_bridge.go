@@ -167,6 +167,7 @@ var (
 	ErrSystemVersionRequired = errors.New("game system version is required")
 	// ErrSystemAlreadyRegistered indicates registration duplicated ID+version.
 	ErrSystemAlreadyRegistered = errors.New("game system already registered")
+	ErrSystemNotRegistered     = errors.New("game system not registered")
 )
 
 // NewRegistry creates a new game system registry.
@@ -233,13 +234,22 @@ func (r *Registry) DefaultVersion(id commonv1.GameSystem) string {
 	return r.defaults[id]
 }
 
-// MustGet returns the game system for the given ID, or panics if not found.
+// MustGet returns the game system for the given ID, or panics if not registered.
 func (r *Registry) MustGet(id commonv1.GameSystem) GameSystem {
-	system := r.Get(id)
-	if system == nil {
-		panic(fmt.Sprintf("game system %s not registered", id))
+	system, err := r.GetOrError(id)
+	if err != nil {
+		panic(err)
 	}
 	return system
+}
+
+// GetOrError returns the game system for the given ID or an error if not found.
+func (r *Registry) GetOrError(id commonv1.GameSystem) (GameSystem, error) {
+	system := r.Get(id)
+	if system == nil {
+		return nil, fmt.Errorf("%w: %s", ErrSystemNotRegistered, id)
+	}
+	return system, nil
 }
 
 // List returns all registered game systems.
