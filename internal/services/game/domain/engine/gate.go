@@ -16,6 +16,9 @@ type DecisionGate struct {
 }
 
 // Check returns a rejection when a session gate blocks the command.
+//
+// Gate evaluation is intentionally centralized so each domain package can expose a
+// simple session command shape while policy enforcement remains consistent.
 func (g DecisionGate) Check(state session.State, cmd command.Command) command.Decision {
 	if g.Registry == nil {
 		return command.Decision{}

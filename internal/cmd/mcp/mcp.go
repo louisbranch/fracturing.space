@@ -1,3 +1,4 @@
+// Package mcp parses MCP command flags and selects stdio or HTTP transport.
 package mcp
 
 import (
@@ -15,7 +16,7 @@ type Config struct {
 	Transport string `env:"FRACTURING_SPACE_MCP_TRANSPORT" envDefault:"stdio"`
 }
 
-// ParseConfig parses flags into a Config.
+// ParseConfig parses environment and flags into a Config.
 func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	var cfg Config
 	if err := config.ParseEnv(&cfg); err != nil {
@@ -31,7 +32,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	return cfg, nil
 }
 
-// Run starts the MCP server.
+// Run starts the MCP protocol adapter.
 func Run(ctx context.Context, cfg Config) error {
 	return mcpapp.Run(ctx, cfg.Addr, cfg.HTTPAddr, cfg.Transport)
 }

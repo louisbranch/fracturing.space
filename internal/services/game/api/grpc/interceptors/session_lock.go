@@ -21,19 +21,22 @@ const (
 	snapshotServicePrefix    = "/game.v1.SnapshotService/"
 )
 
-// blockedParticipantMethods lists ParticipantService mutators blocked during an active session.
+// blockedParticipantMethods lists ParticipantService mutators blocked during an active
+// campaign session so roster mutation cannot drift during active play.
 var blockedParticipantMethods = map[string]struct{}{
 	campaignv1.ParticipantService_CreateParticipant_FullMethodName: {},
 }
 
-// blockedCharacterMethods lists CharacterService mutators blocked during an active session.
+// blockedCharacterMethods lists CharacterService mutators blocked during an active
+// session to protect turn-based state snapshots from mid-session mutation.
 var blockedCharacterMethods = map[string]struct{}{
 	campaignv1.CharacterService_CreateCharacter_FullMethodName:       {},
 	campaignv1.CharacterService_SetDefaultControl_FullMethodName:     {},
 	campaignv1.CharacterService_PatchCharacterProfile_FullMethodName: {},
 }
 
-// blockedSnapshotMethods lists SnapshotService mutators blocked during an active session.
+// blockedSnapshotMethods lists SnapshotService mutators blocked during an active
+// session because snapshots are a derived state layer that must track session progress.
 var blockedSnapshotMethods = map[string]struct{}{
 	campaignv1.SnapshotService_PatchCharacterState_FullMethodName: {},
 }
@@ -43,7 +46,9 @@ type campaignIDGetter interface {
 	GetCampaignId() string
 }
 
-// SessionLockInterceptor blocks campaign service mutators when a campaign has an active session.
+// SessionLockInterceptor blocks campaign service mutators when a campaign has
+// an active session. This enforces turn/state coherence across direct gRPC
+// writes that might otherwise bypass session-aware tooling.
 func SessionLockInterceptor(sessionStore storage.SessionStore) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		if !isBlockedMethod(info.FullMethod) {

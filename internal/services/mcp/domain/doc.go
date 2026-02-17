@@ -1,6 +1,10 @@
-// Package domain defines MCP tool/resource schemas and handlers.
+// Package domain translates MCP UX operations into game domain commands.
 //
-// It maps MCP calls to game gRPC services, manages MCP context, and shapes
-// request/response payloads for campaign, session, participant, character,
-// and event workflows.
+// The package is intentionally explicit about that mapping:
+// - parse MCP request context into game-scoped context,
+// - route calls to the correct gRPC domain service,
+// - and surface structured outputs that MCP clients can render.
+//
+// This keeps MCP behavior auditable from protocol message -> domain command ->
+// projection/read model update.
 package domain

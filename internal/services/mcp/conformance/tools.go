@@ -1,5 +1,11 @@
 //go:build conformance
 
+// Package conformance defines MCP protocol fixtures that let CI validate transport
+// behavior independently from product toolsets.
+//
+// These fixtures intentionally remain generic: they stabilize protocol expectations
+// while real product tool contracts evolve in normal feature work.
+
 package conformance
 
 import (
@@ -40,6 +46,11 @@ func simpleTextTool() *mcp.Tool {
 
 // simpleTextHandler returns a fixed text payload for conformance validation.
 // TODO: Provide project-aware completion/tool examples once conformance fixtures map to Duality features.
+// Conformance currently verifies protocol transport behavior; these fixtures are
+// intentionally generic so they stay stable while product surfaces evolve.
+//
+// This keeps protocol checks decoupled from product semantics until the MCP
+// command set is locked for production.
 func simpleTextHandler() mcp.ToolHandlerFor[struct{}, any] {
 	return func(_ context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, any, error) {
 		return &mcp.CallToolResult{

@@ -13,6 +13,8 @@ import (
 )
 
 func (h *handler) handleAppCampaignInvites(w http.ResponseWriter, r *http.Request, campaignID string) {
+	// handleAppCampaignInvites lists invites for a campaign after an actor-level
+	// membership lookup, ensuring only authorized members view sensitive flows.
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -56,6 +58,8 @@ func (h *handler) handleAppCampaignInvites(w http.ResponseWriter, r *http.Reques
 }
 
 func (h *handler) handleAppCampaignInviteCreate(w http.ResponseWriter, r *http.Request, campaignID string) {
+	// handleAppCampaignInviteCreate creates a player invitation and binds it to
+	// the selected target participant.
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -109,6 +113,8 @@ func (h *handler) handleAppCampaignInviteCreate(w http.ResponseWriter, r *http.R
 }
 
 func (h *handler) handleAppCampaignInviteRevoke(w http.ResponseWriter, r *http.Request, campaignID string) {
+	// handleAppCampaignInviteRevoke removes an invite resource to terminate a
+	// pending membership path for the campaign.
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -164,6 +170,7 @@ type campaignInviteActor struct {
 }
 
 func (h *handler) campaignInviteActor(ctx context.Context, campaignID string, accessToken string) (*campaignInviteActor, error) {
+	// campaignInviteActor resolves both identity and permission for invite flows.
 	participant, err := h.campaignParticipant(ctx, campaignID, accessToken)
 	if err != nil {
 		return nil, err
@@ -182,6 +189,8 @@ func (h *handler) campaignInviteActor(ctx context.Context, campaignID string, ac
 }
 
 func (h *handler) campaignParticipant(ctx context.Context, campaignID string, accessToken string) (*statev1.Participant, error) {
+	// campaignParticipant maps an access token to the participant record in the
+	// campaign, with pagination across participant pages if needed.
 	if h == nil || h.participantClient == nil {
 		return nil, errors.New("participant client is not configured")
 	}
@@ -225,6 +234,7 @@ func canManageCampaignInvites(access statev1.CampaignAccess) bool {
 }
 
 func renderAppCampaignInvitesPage(w http.ResponseWriter, campaignID string, invites []*statev1.Invite, canManageInvites bool) {
+	// renderAppCampaignInvitesPage exposes write controls only to managed roles.
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	escapedCampaignID := html.EscapeString(campaignID)
 	_, _ = io.WriteString(w, "<!doctype html><html><head><title>Campaign Invites</title></head><body><h1>Campaign Invites</h1>")

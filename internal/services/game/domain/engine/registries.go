@@ -23,6 +23,9 @@ type Registries struct {
 }
 
 // BuildRegistries registers core and system modules.
+//
+// This is the shared bootstrap point where all command/event contracts become a
+// single validated registry consumed by the write handler and projections.
 func BuildRegistries(modules ...system.Module) (Registries, error) {
 	commandRegistry := command.NewRegistry()
 	eventRegistry := event.NewRegistry()
@@ -90,6 +93,8 @@ func BuildRegistries(modules ...system.Module) (Registries, error) {
 	}, nil
 }
 
+// validateModuleSystemTypePrefixes enforces system namespace naming for system-owned
+// command/event types.
 func validateModuleSystemTypePrefixes(
 	module system.Module,
 	knownCommands map[command.Type]struct{},
@@ -134,6 +139,7 @@ func validateModuleSystemTypePrefixes(
 	return nil
 }
 
+// commandTypeSet creates a set view for prefix validation comparisons.
 func commandTypeSet(definitions []command.Definition) map[command.Type]struct{} {
 	result := make(map[command.Type]struct{}, len(definitions))
 	for _, definition := range definitions {
@@ -142,6 +148,7 @@ func commandTypeSet(definitions []command.Definition) map[command.Type]struct{} 
 	return result
 }
 
+// eventTypeSet creates a set view for prefix validation comparisons.
 func eventTypeSet(definitions []event.Definition) map[event.Type]struct{} {
 	result := make(map[event.Type]struct{}, len(definitions))
 	for _, definition := range definitions {

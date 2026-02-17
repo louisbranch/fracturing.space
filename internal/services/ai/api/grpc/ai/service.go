@@ -104,6 +104,9 @@ type ProviderInvokeResult struct {
 }
 
 // Service implements ai.v1 credential and agent services.
+//
+// It is the orchestration root where credential/grant/agent state is validated,
+// authorized, and projected into protocol responses for callers.
 type Service struct {
 	aiv1.UnimplementedCredentialServiceServer
 	aiv1.UnimplementedAgentServiceServer
@@ -129,6 +132,9 @@ type Service struct {
 }
 
 // NewService builds a new ai.v1 service implementation.
+//
+// Passing the service and credential stores separately allows one persisted
+// snapshot to satisfy multiple interfaces while preserving explicit dependency intent.
 func NewService(credentialStore storage.CredentialStore, agentStore storage.AgentStore, sealer SecretSealer) *Service {
 	var providerGrantStore storage.ProviderGrantStore
 	if store, ok := credentialStore.(storage.ProviderGrantStore); ok {

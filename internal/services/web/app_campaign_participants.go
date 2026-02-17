@@ -11,6 +11,8 @@ import (
 )
 
 func (h *handler) handleAppCampaignParticipants(w http.ResponseWriter, r *http.Request, campaignID string) {
+	// handleAppCampaignParticipants renders participant read models only after
+	// explicit campaign membership is verified.
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -46,6 +48,8 @@ func (h *handler) handleAppCampaignParticipants(w http.ResponseWriter, r *http.R
 }
 
 func (h *handler) handleAppCampaignParticipantUpdate(w http.ResponseWriter, r *http.Request, campaignID string) {
+	// handleAppCampaignParticipantUpdate applies participant role/access/controller changes
+	// for managers and owners only, preserving campaign governance semantics.
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -202,6 +206,8 @@ func participantControllerFormValue(controller statev1.Controller) string {
 }
 
 func renderAppCampaignParticipantsPage(w http.ResponseWriter, campaignID string, participants []*statev1.Participant, canManageParticipants bool) {
+	// renderAppCampaignParticipantsPage translates participant domain objects into the
+	// management controls available at this campaign membership level.
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	escapedCampaignID := html.EscapeString(campaignID)
 	_, _ = io.WriteString(w, "<!doctype html><html><head><title>Participants</title></head><body><h1>Participants</h1><ul>")

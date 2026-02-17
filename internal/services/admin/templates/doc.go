@@ -1,4 +1,5 @@
 // Package templates contains templ components for the admin dashboard UI.
 //
-// It includes layout, page, and shared component views plus localized strings.
+// It is the presentation layer for admin operators, translating campaign and
+// auth state into routable pages while avoiding business logic in templates.
 package templates

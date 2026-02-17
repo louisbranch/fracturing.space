@@ -11,19 +11,23 @@ import (
 
 const replayPageSize = 200
 
-// ReplayOptions configures event replay behavior.
+// ReplayOptions configures the projection rebuild cursor and payload scope.
 type ReplayOptions struct {
+	// AfterSeq starts replay after this campaign sequence.
 	AfterSeq uint64
+	// UntilSeq stops replay when events exceed this sequence.
 	UntilSeq uint64
-	Filter   func(event.Event) bool
+	// Filter returns true for events that should be projected.
+	Filter func(event.Event) bool
 }
 
-// ReplayCampaign replays events for a campaign and applies projections in order.
+// ReplayCampaign rebuilds campaign-level projections from event 0 onward.
 func ReplayCampaign(ctx context.Context, eventStore storage.EventStore, applier Applier, campaignID string) (uint64, error) {
 	return ReplayCampaignWith(ctx, eventStore, applier, campaignID, ReplayOptions{})
 }
 
-// ReplaySnapshot replays snapshot-related events for a campaign and applies projections.
+// ReplaySnapshot replays snapshot-bearing events only, useful for state reconstruction
+// paths that depend on system snapshots.
 func ReplaySnapshot(ctx context.Context, eventStore storage.EventStore, applier Applier, campaignID string, untilSeq uint64) (uint64, error) {
 	return ReplayCampaignWith(ctx, eventStore, applier, campaignID, ReplayOptions{
 		UntilSeq: untilSeq,
@@ -33,7 +37,10 @@ func ReplaySnapshot(ctx context.Context, eventStore storage.EventStore, applier 
 	})
 }
 
-// ReplayCampaignWith replays events with additional filtering and bounds.
+// ReplayCampaignWith applies a bounded replay stream into the projection applier.
+//
+// It exists for operational recovery: one code path for full rebuild and one for
+// bounded/specialized replay flows.
 func ReplayCampaignWith(ctx context.Context, eventStore storage.EventStore, applier Applier, campaignID string, options ReplayOptions) (uint64, error) {
 	if eventStore == nil {
 		return 0, fmt.Errorf("event store is not configured")

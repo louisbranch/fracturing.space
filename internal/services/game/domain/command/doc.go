@@ -1,7 +1,11 @@
-// Package command defines the canonical command envelope, registration, and
-// decision types used by the game domain write path.
+// Package command defines the canonical command envelope and contract used across
+// the write path.
 //
-// Commands represent intent. They are validated and normalized before deciders
-// run. Deciders return Decisions containing either accepted events or
-// rejections.
+// Commands express business intent from API callers and tooling. They are the
+// stable boundary before domain deciders so that business rules are evaluated only
+// against normalized, ownership-aware inputs.
+//
+// The package-level registry and definitions exist to keep command behavior
+// consistent for: authorization ownership (core vs system), payload compatibility,
+// gate policy, and actor identity defaults.
 package command

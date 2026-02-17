@@ -1,3 +1,7 @@
+// Package agent models user-owned AI runtime personalities.
+//
+// Agent definitions are intentionally metadata-first: handlers consume these records
+// and decide credentials/grants at call time through dedicated resolution paths.
 package agent
 
 import (

@@ -1,3 +1,4 @@
+// Package game parses game command flags and starts the domain runtime.
 package game
 
 import (
@@ -14,7 +15,7 @@ type Config struct {
 	Addr string `env:"FRACTURING_SPACE_GAME_ADDR"`
 }
 
-// ParseConfig parses flags into a Config.
+// ParseConfig parses environment and flags into a Config.
 func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	var cfg Config
 	if err := config.ParseEnv(&cfg); err != nil {
@@ -29,7 +30,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	return cfg, nil
 }
 
-// Run starts the game server.
+// Run starts the game domain API service.
 func Run(ctx context.Context, cfg Config) error {
 	if cfg.Addr != "" {
 		return server.RunWithAddr(ctx, cfg.Addr)

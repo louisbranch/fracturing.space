@@ -1,3 +1,7 @@
+// Package accessrequest models owner-gated approval of AI agent invocations.
+//
+// It provides a narrow approval workflow so runtime invocation can stay logged and
+// controlled rather than automatically inheriting user ownership.
 package accessrequest
 
 import (

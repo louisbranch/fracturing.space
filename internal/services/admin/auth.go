@@ -13,7 +13,7 @@ import (
 // tokenCookieName is the domain-scoped cookie set by the web login service.
 const tokenCookieName = "fs_token"
 
-// AuthConfig holds the settings for admin authentication middleware.
+// AuthConfig holds auth middleware configuration for the admin operator plane.
 type AuthConfig struct {
 	IntrospectURL  string
 	ResourceSecret string
@@ -21,7 +21,9 @@ type AuthConfig struct {
 }
 
 // requireAuth wraps next with token-introspection-based authentication.
-// Requests to auth-exempt paths (e.g. /static/) pass through unchecked.
+//
+// This keeps admin routes protected by the shared auth service while leaving only
+// static assets and login handoff paths unauthenticated.
 func requireAuth(next http.Handler, introspector TokenIntrospector, loginURL string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if isAuthExempt(r.URL.Path) {

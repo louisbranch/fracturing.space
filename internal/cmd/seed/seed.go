@@ -1,3 +1,4 @@
+// Package seed parses seed command flags and executes fixture / generation workflows.
 package seed
 
 import (
@@ -33,7 +34,7 @@ type seedEnv struct {
 	Timeout  time.Duration `env:"FRACTURING_SPACE_SEED_TIMEOUT" envDefault:"10m"`
 }
 
-// ParseConfig parses flags into a Config.
+// ParseConfig parses environment and flags into a Config.
 func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	var se seedEnv
 	if err := config.ParseEnv(&se); err != nil {
@@ -80,7 +81,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	}, nil
 }
 
-// Run executes the seed command.
+// Run executes the seed command across dynamic generation or fixture replay.
 func Run(ctx context.Context, cfg Config, out io.Writer, errOut io.Writer) error {
 	if out == nil {
 		out = io.Discard

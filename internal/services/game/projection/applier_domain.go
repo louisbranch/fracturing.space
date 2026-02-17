@@ -17,7 +17,11 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
-// Apply applies domain events to projection stores.
+// Apply routes domain events into denormalized read-model stores.
+//
+// The projection layer is the reason projections remain current for APIs and
+// query use-cases: every event that changes campaign/world state in the domain
+// gets mirrored here according to projection semantics.
 func (a Applier) Apply(ctx context.Context, evt event.Event) error {
 	switch evt.Type {
 	case event.Type("campaign.created"):
@@ -1164,6 +1168,9 @@ func (a Applier) applySessionSpotlightCleared(ctx context.Context, evt event.Eve
 	return a.SessionSpotlight.ClearSessionSpotlight(ctx, evt.CampaignID, evt.SessionID)
 }
 
+// decodePayload is a guarded bridge between event envelopes and in-memory domain
+// payload types, preserving a clear failure message when replay/apply input is
+// malformed.
 func decodePayload(payload []byte, target any, name string) error {
 	if err := json.Unmarshal(payload, target); err != nil {
 		return fmt.Errorf("decode %s payload: %w", name, err)

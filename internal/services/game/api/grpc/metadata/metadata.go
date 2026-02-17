@@ -1,5 +1,11 @@
 package metadata
 
+// Package metadata defines the cross-service headers that keep request context
+// stable across gRPC boundaries.
+//
+// IDs are intentionally cheap, stable identifiers used by transport, logs, and
+// telemetry stores so behavior remains observable without leaking domain payloads.
+
 import (
 	"context"
 	"strings"
@@ -18,15 +24,19 @@ const RequestIDHeader = "x-fracturing-space-request-id"
 const InvocationIDHeader = "x-fracturing-space-invocation-id"
 
 // ParticipantIDHeader is the gRPC metadata key for caller identity hints.
+// It allows downstream authz checks and audit logs to attach context to actions.
 const ParticipantIDHeader = "x-fracturing-space-participant-id"
 
 // UserIDHeader is the gRPC metadata key for user impersonation hints.
+// In web flows this may represent end-user identity for campaign filtering.
 const UserIDHeader = "x-fracturing-space-user-id"
 
 // CampaignIDHeader is the gRPC metadata key for campaign routing hints.
+// MCP and UI flows can pass this through for consistency and observability.
 const CampaignIDHeader = "x-fracturing-space-campaign-id"
 
 // SessionIDHeader is the gRPC metadata key for session routing hints.
+// Useful for scoped event and telemetry reads under an active session.
 const SessionIDHeader = "x-fracturing-space-session-id"
 
 // contextKey stores metadata values in context.
@@ -107,6 +117,8 @@ func IsPrintableASCII(value string) bool {
 }
 
 // FirstMetadataValue returns the first printable ASCII metadata value for a key.
+// Printable filtering drops control characters to keep downstream logs and
+// downstream request propagation robust.
 func FirstMetadataValue(md metadata.MD, key string) string {
 	if len(md) == 0 {
 		return ""
@@ -125,6 +137,8 @@ func FirstMetadataValue(md metadata.MD, key string) string {
 }
 
 // UnaryServerInterceptor enforces project request metadata on unary calls.
+// The interceptor guarantees every inbound call gets correlation identifiers, so
+// downstream logs and storage can correlate activity even when clients omit headers.
 func UnaryServerInterceptor(idGenerator func() (string, error)) grpc.UnaryServerInterceptor {
 	if idGenerator == nil {
 		idGenerator = id.NewID
@@ -139,13 +153,21 @@ func UnaryServerInterceptor(idGenerator func() (string, error)) grpc.UnaryServer
 			return nil, status.Errorf(codes.Internal, "set response metadata: %v", headerErr)
 		}
 
-		// TODO: Add request_id and invocation_id to OpenTelemetry span attributes once tracing is added.
+		// TODO: Add request_id and invocation_id to OpenTelemetry span attributes for unary calls once tracing is added.
+		// Metadata headers are propagated today as the transport-agnostic audit rail.
+		// This keeps correlation consistent across CLI, MCP, and web callers even before
+		// tracing is introduced. Spans can be added behind the same metadata keys later
+		// without changing this contract.
+		// Metadata headers are propagated today for auditability; tracing is intentionally
+		// deferred to avoid blocking this layer on observability plumbing choices.
 
 		return handler(updatedCtx, req)
 	}
 }
 
 // StreamServerInterceptor enforces project request metadata on streaming calls.
+// Streaming calls also receive stable request/invocation IDs so cross-stream
+// diagnostics can continue to stitch events together.
 func StreamServerInterceptor(idGenerator func() (string, error)) grpc.StreamServerInterceptor {
 	if idGenerator == nil {
 		idGenerator = id.NewID
@@ -160,7 +182,13 @@ func StreamServerInterceptor(idGenerator func() (string, error)) grpc.StreamServ
 			return status.Errorf(codes.Internal, "set response metadata: %v", headerErr)
 		}
 
-		// TODO: Add request_id and invocation_id to OpenTelemetry span attributes once tracing is added.
+		// TODO: Add request_id and invocation_id to OpenTelemetry span attributes for stream calls once tracing is added.
+		// Metadata headers are propagated today as the transport-agnostic audit rail.
+		// This keeps correlation consistent across CLI, MCP, and web callers even before
+		// tracing is introduced. Spans can be added behind the same metadata keys later
+		// without changing this contract.
+		// Metadata headers are propagated today for auditability; tracing is intentionally
+		// deferred to avoid blocking this layer on observability plumbing choices.
 
 		return handler(srv, &wrappedServerStream{ServerStream: stream, ctx: updatedCtx})
 	}
@@ -178,6 +206,8 @@ func (w *wrappedServerStream) Context() context.Context {
 }
 
 // ensureRequestMetadata ensures the request ID exists and returns updated context.
+// This guarantees correlation identifiers are always attached to downstream handlers,
+// even when callers are not yet emitting them.
 func ensureRequestMetadata(ctx context.Context, idGenerator func() (string, error)) (context.Context, string, string, error) {
 	requestID := requestIDFromIncomingContext(ctx)
 	invocationID := invocationIDFromIncomingContext(ctx)

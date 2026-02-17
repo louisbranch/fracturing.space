@@ -21,6 +21,10 @@ const (
 )
 
 // Decide returns the decision for an action command against current state.
+//
+// The action aggregate is intentionally lightweight: each supported action command
+// becomes a typed domain event, keeping roll outcome logic and note-taking in one
+// replayable stream.
 func Decide(state State, cmd command.Command, now func() time.Time) command.Decision {
 	if now == nil {
 		now = time.Now
@@ -51,6 +55,10 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 	}
 }
 
+// acceptActionEvent creates the standard action event envelope for accepted commands.
+//
+// Centralizing this constructor keeps action event metadata consistent even when
+// specific systems add new action shapes.
 func acceptActionEvent(cmd command.Command, now func() time.Time, eventType event.Type, entityType, entityID string, payload any) command.Decision {
 	payloadJSON, _ := json.Marshal(payload)
 	evt := event.Event{

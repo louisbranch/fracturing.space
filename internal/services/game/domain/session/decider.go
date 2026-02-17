@@ -34,6 +34,10 @@ const (
 )
 
 // Decide returns the decision for a session command against current state.
+//
+// It maps every supported session lifecycle and gate command to deterministic
+// events, and leaves status checks to replayable state transitions rather than
+// imperative side effects.
 func Decide(state State, cmd command.Command, now func() time.Time) command.Decision {
 	if cmd.Type == commandTypeStart {
 		if state.Started {

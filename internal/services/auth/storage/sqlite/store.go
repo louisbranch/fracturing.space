@@ -25,21 +25,26 @@ FROM users
 WHERE (?1 IS NULL OR created_at >= ?1);
 `
 
+// toMillis normalizes timestamps into millisecond precision for storage.
 func toMillis(value time.Time) int64 {
 	return value.UTC().UnixMilli()
 }
 
+// fromMillis restores millisecond precision and keeps UTC normalization.
 func fromMillis(value int64) time.Time {
 	return time.UnixMilli(value).UTC()
 }
 
-// Store provides a SQLite-backed store implementing auth storage interfaces.
+// Store implements auth persistence over SQLite.
+//
+// A single SQLite file backs identity state so every auth subflow can share the
+// same transaction and visibility boundaries.
 type Store struct {
 	sqlDB *sql.DB
 	q     *db.Queries
 }
 
-// DB returns the underlying sql.DB instance.
+// DB returns the raw database handle for OAuth and legacy callers.
 func (s *Store) DB() *sql.DB {
 	if s == nil {
 		return nil
@@ -47,7 +52,10 @@ func (s *Store) DB() *sql.DB {
 	return s.sqlDB
 }
 
-// Open opens a SQLite store at the provided path.
+// Open opens an auth SQLite store and applies bundled migrations.
+//
+// This keeps startup and schema evolution in one place, instead of requiring
+// callers to coordinate migrations independently.
 func Open(path string) (*Store, error) {
 	if strings.TrimSpace(path) == "" {
 		return nil, fmt.Errorf("storage path is required")
@@ -78,7 +86,7 @@ func Open(path string) (*Store, error) {
 	return store, nil
 }
 
-// Close closes the underlying SQLite database.
+// Close releases the underlying SQLite database.
 func (s *Store) Close() error {
 	if s == nil || s.sqlDB == nil {
 		return nil
@@ -86,7 +94,7 @@ func (s *Store) Close() error {
 	return s.sqlDB.Close()
 }
 
-// runMigrations runs embedded SQL migrations.
+// runMigrations applies embedded DDL snapshots for known schema versions.
 func (s *Store) runMigrations() error {
 	entries, err := fs.ReadDir(migrations.FS, ".")
 	if err != nil {
@@ -122,7 +130,7 @@ func (s *Store) runMigrations() error {
 	return nil
 }
 
-// extractUpMigration extracts the Up migration portion from a migration file.
+// extractUpMigration extracts only the upgrade section from a migration file.
 func extractUpMigration(content string) string {
 	upIdx := strings.Index(content, "-- +migrate Up")
 	if upIdx == -1 {
@@ -135,7 +143,7 @@ func extractUpMigration(content string) string {
 	return content[upIdx+len("-- +migrate Up") : downIdx]
 }
 
-// isAlreadyExistsError checks if the error is a table/index already exists error.
+// isAlreadyExistsError detects SQLite "already exists" conditions during idempotent runs.
 func isAlreadyExistsError(err error) bool {
 	return strings.Contains(err.Error(), "already exists")
 }

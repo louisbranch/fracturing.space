@@ -12,6 +12,9 @@ const (
 )
 
 // NormalizeKind parses a kind label into a canonical value.
+//
+// Character kinds drive downstream projection and UI behavior, so a stable value
+// avoids schema branching and replay mismatch.
 func NormalizeKind(value string) (Kind, bool) {
 	trimmed := strings.TrimSpace(value)
 	if trimmed == "" {

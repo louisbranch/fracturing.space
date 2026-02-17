@@ -5,7 +5,12 @@ import (
 	"strings"
 )
 
+// handleAppCampaignDetail parses campaign workspace routes and dispatches each
+// subpath to the ownership/authorization-aware leaf handler.
 func (h *handler) handleAppCampaignDetail(w http.ResponseWriter, r *http.Request) {
+	// Route parser for nested campaign routes.
+	// This keeps sub-resources (sessions/participants/characters/invites) in one
+	// place while maintaining explicit authorization checks per branch.
 	path := strings.TrimPrefix(r.URL.Path, "/app/campaigns/")
 	rawParts := strings.Split(path, "/")
 	parts := make([]string, 0, len(rawParts))

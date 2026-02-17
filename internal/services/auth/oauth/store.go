@@ -10,12 +10,15 @@ import (
 
 const oauthTimeFormat = time.RFC3339Nano
 
-// Store provides SQLite-backed storage for OAuth data.
+// Store persists short-lived OAuth material in the same auth database.
+//
+// Keeping authorization codes, access tokens, and provider identities here keeps
+// all OAuth lifecycle state near the identity service that owns it.
 type Store struct {
 	db *sql.DB
 }
 
-// NewStore creates a new OAuth store using the provided database.
+// NewStore creates a new OAuth store using a shared auth DB connection.
 func NewStore(db *sql.DB) *Store {
 	return &Store{db: db}
 }

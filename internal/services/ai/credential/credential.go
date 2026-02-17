@@ -1,3 +1,8 @@
+// Package credential models BYO LLM provider credentials for AI operations.
+//
+// Credentials are validated here as domain objects and encrypted by higher
+// layers before persistence, so callers can reason in plain terms without
+// leaking plaintext secrets.
 package credential
 
 import (

@@ -22,6 +22,10 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
+// configureDomain wires the write-path domain engine into gRPC stores when enabled.
+//
+// This is intentionally guarded by config so deployments can run without domain
+// execution in specific environments (for example, projection-only workflows).
 func configureDomain(srvEnv serverEnv, stores *gamegrpc.Stores) error {
 	if !srvEnv.DomainEnabled {
 		return nil
@@ -37,6 +41,10 @@ func configureDomain(srvEnv serverEnv, stores *gamegrpc.Stores) error {
 	return nil
 }
 
+// buildDomainEngine builds the replay-capable domain handler used by write paths.
+//
+// It composes registries, replay-based state loading, gate evaluation, and
+// decider routing once, so command execution stays consistent for every request.
 func buildDomainEngine(eventStore storage.EventStore) (gamegrpc.Domain, error) {
 	if eventStore == nil {
 		return nil, errors.New("event store is required")
@@ -73,37 +81,51 @@ func buildDomainEngine(eventStore storage.EventStore) (gamegrpc.Domain, error) {
 	}, nil
 }
 
+// coreDecider is the top-level decider for core (non-system) commands.
+//
+// It keeps command routing explicit: each command type maps to exactly one
+// aggregate route, while system commands are dispatched by system id/version.
 type coreDecider struct {
 	Systems *system.Registry
 	routes  map[command.Type]coreCommandRoute
 }
 
+// coreCommandRoute maps a normalized aggregate state + command into one decision path.
 type coreCommandRoute func(d coreDecider, current aggregate.State, cmd command.Command, now func() time.Time) command.Decision
 
+// campaignRoute routes campaign-level commands to campaign deciders.
 func campaignRoute(_ coreDecider, current aggregate.State, cmd command.Command, now func() time.Time) command.Decision {
 	return campaign.Decide(current.Campaign, cmd, now)
 }
 
+// actionRoute routes gameplay action commands to the action decider.
 func actionRoute(_ coreDecider, _ aggregate.State, cmd command.Command, now func() time.Time) command.Decision {
 	return action.Decide(action.State{}, cmd, now)
 }
 
+// sessionRoute routes session commands to the session decider.
 func sessionRoute(_ coreDecider, current aggregate.State, cmd command.Command, now func() time.Time) command.Decision {
 	return session.Decide(current.Session, cmd, now)
 }
 
+// participantRoute resolves the target participant snapshot and routes accordingly.
 func participantRoute(_ coreDecider, current aggregate.State, cmd command.Command, now func() time.Time) command.Decision {
 	return participant.Decide(participantStateFor(cmd, current), cmd, now)
 }
 
+// inviteRoute resolves the target invite snapshot and routes accordingly.
 func inviteRoute(_ coreDecider, current aggregate.State, cmd command.Command, now func() time.Time) command.Decision {
 	return invite.Decide(inviteStateFor(cmd, current), cmd, now)
 }
 
+// characterRoute resolves the target character snapshot and routes accordingly.
 func characterRoute(_ coreDecider, current aggregate.State, cmd command.Command, now func() time.Time) command.Decision {
 	return character.Decide(characterStateFor(cmd, current), cmd, now)
 }
 
+// staticCoreCommandRoutes enumerates domain routing for all known core command types.
+//
+// This table is the onboarding-friendly contract for what the core decider owns.
 func staticCoreCommandRoutes() map[command.Type]coreCommandRoute {
 	return map[command.Type]coreCommandRoute{
 		command.Type("campaign.create"):          campaignRoute,
@@ -140,6 +162,9 @@ func staticCoreCommandRoutes() map[command.Type]coreCommandRoute {
 	}
 }
 
+// buildCoreRouteTable makes sure every registered core command type has a routing target.
+//
+// The resulting map is the source-of-truth permission model for non-system commands.
 func buildCoreRouteTable(definitions []command.Definition) (map[command.Type]coreCommandRoute, error) {
 	available := staticCoreCommandRoutes()
 	routes := make(map[command.Type]coreCommandRoute)
@@ -181,6 +206,10 @@ func (d coreDecider) Decide(state any, cmd command.Command, now func() time.Time
 	return route(d, current, cmd, now)
 }
 
+// aggregateState converts whatever aggregate representation reached this decider into a concrete value.
+//
+// It supports both typed values and pointers for convenience in tests and caller
+// boundaries while keeping downstream code safe and side-effect free.
 func aggregateState(state any) aggregate.State {
 	switch typed := state.(type) {
 	case aggregate.State:
@@ -217,6 +246,11 @@ type characterIDPayload struct {
 	CharacterID string `json:"character_id"`
 }
 
+// characterStateFor loads the target character from command metadata.
+//
+// Commands can carry the character reference in either EntityID or payload body;
+// this lets callers keep transport-level shape flexible while preserving deterministic
+// routing.
 func characterStateFor(cmd command.Command, current aggregate.State) character.State {
 	if current.Characters == nil {
 		return character.State{}

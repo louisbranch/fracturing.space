@@ -1,3 +1,4 @@
+// Package ai parses AI command flags and launches the AI control-plane service.
 package ai
 
 import (
@@ -13,7 +14,7 @@ type Config struct {
 	Port int `env:"FRACTURING_SPACE_AI_PORT" envDefault:"8088"`
 }
 
-// ParseConfig parses flags into a Config.
+// ParseConfig parses environment and flags into a Config.
 func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	var cfg Config
 	if err := config.ParseEnv(&cfg); err != nil {
@@ -26,7 +27,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	return cfg, nil
 }
 
-// Run starts the AI server.
+// Run starts the AI orchestration service.
 func Run(ctx context.Context, cfg Config) error {
 	return server.Run(ctx, cfg.Port)
 }

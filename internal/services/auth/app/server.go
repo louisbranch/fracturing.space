@@ -22,7 +22,7 @@ import (
 	grpc_health_v1 "google.golang.org/grpc/health/grpc_health_v1"
 )
 
-// authServerEnv holds env-parsed configuration for the auth server.
+// authServerEnv captures env-driven auth startup settings.
 type authServerEnv struct {
 	DBPath string `env:"FRACTURING_SPACE_AUTH_DB_PATH"`
 }
@@ -36,7 +36,8 @@ func loadAuthServerEnv() authServerEnv {
 	return cfg
 }
 
-// Server hosts the auth service.
+// Server hosts the auth process and keeps gRPC plus OAuth HTTP flows aligned
+// around one identity store.
 type Server struct {
 	listener     net.Listener
 	grpcServer   *grpc.Server
@@ -48,7 +49,10 @@ type Server struct {
 	oauthServer  *oauth.Server
 }
 
-// New creates a configured auth server listening on the provided port.
+// New creates a configured auth server and binds identity transport boundaries.
+//
+// It initializes one SQLite store first so both gRPC handlers and OAuth routes
+// read and write from the same identity ledger.
 func New(port int, httpAddr string) (*Server, error) {
 	srvEnv := loadAuthServerEnv()
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
@@ -110,7 +114,7 @@ func New(port int, httpAddr string) (*Server, error) {
 	}, nil
 }
 
-// Addr returns the listener address for the auth server.
+// Addr returns the gRPC listener address for the auth server.
 func (s *Server) Addr() string {
 	if s == nil || s.listener == nil {
 		return ""
@@ -127,7 +131,10 @@ func Run(ctx context.Context, port int, httpAddr string) error {
 	return grpcServer.Serve(ctx)
 }
 
-// Serve starts the auth server and blocks until it stops or the context ends.
+// Serve starts both transport surfaces and blocks until shutdown.
+//
+// This is the lifecycle boundary where authentication state, token cleanup, and
+// transport shutdown are coordinated together.
 func (s *Server) Serve(ctx context.Context) error {
 	if ctx == nil {
 		ctx = context.Background()
@@ -197,6 +204,7 @@ func (s *Server) Serve(ctx context.Context) error {
 	}
 }
 
+// openAuthStore opens the auth SQLite database and prepares any missing path.
 func openAuthStore(path string) (*authsqlite.Store, error) {
 	if dir := filepath.Dir(path); dir != "." {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -211,6 +219,7 @@ func openAuthStore(path string) (*authsqlite.Store, error) {
 	return store, nil
 }
 
+// closeStore releases the auth SQLite handle at process shutdown.
 func (s *Server) closeStore() {
 	if s == nil {
 		return
@@ -222,6 +231,7 @@ func (s *Server) closeStore() {
 	}
 }
 
+// defaultOAuthIssuer infers the OAuth issuer URL for metadata when none is set.
 func defaultOAuthIssuer(httpAddr string) string {
 	addr := strings.TrimSpace(httpAddr)
 	if addr == "" {

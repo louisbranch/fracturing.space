@@ -1,3 +1,4 @@
+// Package admin parses admin command flags and boots the operator service.
 package admin
 
 import (
@@ -23,7 +24,7 @@ type Config struct {
 	LoginURL            string        `env:"FRACTURING_SPACE_ADMIN_LOGIN_URL"`
 }
 
-// ParseConfig parses flags into a Config.
+// ParseConfig parses environment and flags into a Config.
 func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	var cfg Config
 	if err := config.ParseEnv(&cfg); err != nil {
@@ -43,7 +44,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	return cfg, nil
 }
 
-// Run starts the admin server.
+// Run creates the admin control-plane and starts it for the current process.
 func Run(ctx context.Context, cfg Config) error {
 	var authCfg *admin.AuthConfig
 	if strings.TrimSpace(cfg.AuthIntrospectURL) != "" && strings.TrimSpace(cfg.LoginURL) != "" {

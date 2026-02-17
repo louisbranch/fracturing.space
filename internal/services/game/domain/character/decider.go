@@ -29,6 +29,9 @@ const (
 )
 
 // Decide returns the decision for a character command against current state.
+//
+// Character changes are intentionally event-driven so ownership and profile edits
+// can be replayed and projected consistently across tools and clients.
 func Decide(state State, cmd command.Command, now func() time.Time) command.Decision {
 	if cmd.Type == commandTypeCreate {
 		if state.Created {
@@ -260,6 +263,9 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 }
 
 // normalizeCharacterKindLabel returns a canonical character kind label.
+//
+// Character kinds flow into character-sheet and system-specific behavior, so this
+// normalization prevents mismatched kind values from bifurcating state.
 func normalizeCharacterKindLabel(value string) (string, bool) {
 	trimmed := strings.TrimSpace(value)
 	if trimmed == "" {

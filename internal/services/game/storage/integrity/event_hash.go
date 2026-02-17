@@ -11,7 +11,10 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 )
 
-// EventHash computes the content hash for an event.
+// EventHash computes the content hash for a single event payload.
+//
+// The envelope is canonicalized so identical semantic event content always
+// produces the same hash regardless of transport ordering noise.
 func EventHash(evt event.Event) (string, error) {
 	envelope := map[string]any{
 		"campaign_id": evt.CampaignID,
@@ -53,7 +56,10 @@ func EventHash(evt event.Event) (string, error) {
 	return encoding.ContentHash(envelope)
 }
 
-// ChainHash computes the SHA-256 hash that links an event to the previous hash.
+// ChainHash computes the SHA-256 hash that links an event to its predecessor.
+//
+// It encodes replay-critical fields so tamper/ordering changes become detectable
+// before projection replay proceeds.
 func ChainHash(evt event.Event, prevHash string) (string, error) {
 	if evt.Hash == "" {
 		return "", fmt.Errorf("event hash is required")

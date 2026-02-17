@@ -11,6 +11,8 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 )
 
+// parseGameSystem maps external and enum-style system names into canonical
+// GameSystem values that projection state persists for reads and filtering.
 func parseGameSystem(value string) (commonv1.GameSystem, error) {
 	trimmed := strings.TrimSpace(value)
 	if trimmed == "" {
@@ -26,6 +28,8 @@ func parseGameSystem(value string) (commonv1.GameSystem, error) {
 	return commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED, fmt.Errorf("unknown game system: %s", trimmed)
 }
 
+// parseCampaignStatus enforces campaign status vocabulary before applying
+// projected state changes that power campaign listing and filtering surfaces.
 func parseCampaignStatus(value string) (campaign.Status, error) {
 	trimmed := strings.TrimSpace(value)
 	if trimmed == "" {
@@ -37,6 +41,8 @@ func parseCampaignStatus(value string) (campaign.Status, error) {
 	return campaign.StatusUnspecified, fmt.Errorf("unknown campaign status: %s", trimmed)
 }
 
+// parseGmMode normalizes GM mode inputs so session/replay paths can remain
+// deterministic even when payloads come in with casing or spacing variation.
 func parseGmMode(value string) (campaign.GmMode, error) {
 	trimmed := strings.TrimSpace(value)
 	if trimmed == "" {
@@ -48,14 +54,20 @@ func parseGmMode(value string) (campaign.GmMode, error) {
 	return campaign.GmModeUnspecified, fmt.Errorf("unknown gm mode: %s", trimmed)
 }
 
+// parseCampaignIntent maps legacy/free-form user intent text into the domain
+// intent enum used by read models.
 func parseCampaignIntent(value string) campaign.Intent {
 	return campaign.NormalizeIntent(value)
 }
 
+// parseCampaignAccessPolicy maps legacy/free-form access text into the domain
+// access policy enum used by campaign reads and access checks.
 func parseCampaignAccessPolicy(value string) campaign.AccessPolicy {
 	return campaign.NormalizeAccessPolicy(value)
 }
 
+// parseParticipantRole validates and normalizes role strings before persisting
+// participant boundaries that API filtering and command validation depend on.
 func parseParticipantRole(value string) (participant.Role, error) {
 	trimmed := strings.TrimSpace(value)
 	if trimmed == "" {
@@ -67,6 +79,8 @@ func parseParticipantRole(value string) (participant.Role, error) {
 	return participant.RoleUnspecified, fmt.Errorf("unknown participant role: %s", trimmed)
 }
 
+// parseParticipantController normalizes participant control mode for the domain
+// model where human and AI ownership diverge in command permission rules.
 func parseParticipantController(value string) (participant.Controller, error) {
 	trimmed := strings.TrimSpace(value)
 	if trimmed == "" {
@@ -78,6 +92,8 @@ func parseParticipantController(value string) (participant.Controller, error) {
 	return participant.ControllerUnspecified, fmt.Errorf("unknown participant controller: %s", trimmed)
 }
 
+// parseCampaignAccess translates campaign access text into canonical domain values
+// for projection fields that drive invitation and visibility UX.
 func parseCampaignAccess(value string) (participant.CampaignAccess, error) {
 	trimmed := strings.TrimSpace(value)
 	if trimmed == "" {
@@ -89,6 +105,7 @@ func parseCampaignAccess(value string) (participant.CampaignAccess, error) {
 	return participant.CampaignAccessUnspecified, fmt.Errorf("unknown campaign access: %s", trimmed)
 }
 
+// parseInviteStatus normalizes invite status transitions represented in event payloads.
 func parseInviteStatus(value string) (invite.Status, error) {
 	trimmed := strings.TrimSpace(value)
 	if trimmed == "" {
@@ -100,6 +117,8 @@ func parseInviteStatus(value string) (invite.Status, error) {
 	return invite.StatusUnspecified, fmt.Errorf("unknown invite status: %s", trimmed)
 }
 
+// parseCharacterKind validates character kind strings before updating
+// projection records that are filtered by kind and mechanics.
 func parseCharacterKind(value string) (character.Kind, error) {
 	trimmed := strings.TrimSpace(value)
 	if trimmed == "" {

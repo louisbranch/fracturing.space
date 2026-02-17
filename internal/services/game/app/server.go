@@ -70,14 +70,21 @@ type Server struct {
 	projectionApplyOutboxShadowWorkerEnabled bool
 }
 
+// projectionApplyOutboxShadowProcessor drains queue rows for environments where the
+// main apply worker is intentionally delayed or disabled.
 type projectionApplyOutboxShadowProcessor interface {
 	ProcessProjectionApplyOutboxShadow(context.Context, time.Time, int) (int, error)
 }
 
+// projectionApplyOutboxProcessor is responsible for applying queued events to projections.
+//
+// It keeps event ingestion and projection side effects separated from request path
+// responsiveness while still converging read models in the background.
 type projectionApplyOutboxProcessor interface {
 	ProcessProjectionApplyOutbox(context.Context, time.Time, int, func(context.Context, event.Event) error) (int, error)
 }
 
+// Projection worker defaults balance recovery speed versus DB churn.
 const (
 	projectionApplyOutboxWorkerInterval       = 2 * time.Second
 	projectionApplyOutboxWorkerBatch          = 64
@@ -86,6 +93,9 @@ const (
 )
 
 // storageBundle groups the three SQLite stores and manages their lifecycle.
+//
+// Events are the source of truth, projections feed APIs, and content stores
+// enrich projection reads for system-specific metadata.
 type storageBundle struct {
 	events      *storagesqlite.Store
 	projections *storagesqlite.Store
@@ -273,6 +283,7 @@ func buildSystemRegistry() (*systems.Registry, error) {
 	return registry, nil
 }
 
+// closeResources releases every handle created at server startup.
 // Addr returns the listener address for the game server.
 func (s *Server) Addr() string {
 	if s == nil || s.listener == nil {
@@ -336,6 +347,10 @@ func (s *Server) Serve(ctx context.Context) error {
 	}
 }
 
+// startProjectionApplyOutboxShadowWorker launches an optional background shadow worker.
+//
+// This keeps pending queue items progressing when projection updates are not
+// processed inline.
 func (s *Server) startProjectionApplyOutboxShadowWorker(ctx context.Context) func() {
 	if s == nil || !s.projectionApplyOutboxShadowWorkerEnabled || s.stores == nil || s.stores.events == nil {
 		return func() {}
@@ -361,6 +376,9 @@ func (s *Server) startProjectionApplyOutboxShadowWorker(ctx context.Context) fun
 	}
 }
 
+// startProjectionApplyOutboxWorker launches an optional background projection worker.
+//
+// The worker applies queued projection rows independently from request handling.
 func (s *Server) startProjectionApplyOutboxWorker(ctx context.Context) func() {
 	if s == nil || !s.projectionApplyOutboxWorkerEnabled || s.stores == nil || s.stores.events == nil || s.projectionApplyOutboxApply == nil {
 		return func() {}
@@ -387,6 +405,10 @@ func (s *Server) startProjectionApplyOutboxWorker(ctx context.Context) func() {
 	}
 }
 
+// runProjectionApplyOutboxShadowWorker drains projection outbox shadow entries.
+//
+// It is intentionally lightweight: the purpose is progress cleanup, not full
+// projection mutation.
 func runProjectionApplyOutboxShadowWorker(
 	ctx context.Context,
 	processor projectionApplyOutboxShadowProcessor,
@@ -440,6 +462,9 @@ func runProjectionApplyOutboxShadowWorker(
 	}
 }
 
+// runProjectionApplyOutboxWorker drains projection outbox entries into projections.
+//
+// It loops in bounded batches until no rows remain, then waits for timer ticks.
 func runProjectionApplyOutboxWorker(
 	ctx context.Context,
 	processor projectionApplyOutboxProcessor,
@@ -494,7 +519,9 @@ func runProjectionApplyOutboxWorker(
 	}
 }
 
-// openStorageBundle opens the events, projections, and content stores as a unit.
+// openStorageBundle opens events, projections, and content stores as a unit.
+//
+// Startup is all-or-nothing so no request path sees a partial storage graph.
 func openStorageBundle(srvEnv serverEnv) (*storageBundle, error) {
 	eventStore, err := openEventStore(srvEnv.EventsDBPath, srvEnv.ProjectionApplyOutboxEnabled)
 	if err != nil {
@@ -518,6 +545,7 @@ func openStorageBundle(srvEnv serverEnv) (*storageBundle, error) {
 	}, nil
 }
 
+// dialAuthGRPC opens an authenticated gRPC client to auth service.
 func dialAuthGRPC(ctx context.Context, authAddr string) (*grpc.ClientConn, authv1.AuthServiceClient, error) {
 	if ctx == nil {
 		ctx = context.Background()
@@ -546,6 +574,7 @@ func dialAuthGRPC(ctx context.Context, authAddr string) (*grpc.ClientConn, authv
 	return conn, authv1.NewAuthServiceClient(conn), nil
 }
 
+// openEventStore opens the immutable event store and verifies chain integrity on boot.
 func openEventStore(path string, projectionApplyOutboxEnabled bool) (*storagesqlite.Store, error) {
 	if err := ensureDir(path); err != nil {
 		return nil, err
@@ -574,6 +603,7 @@ func openEventStore(path string, projectionApplyOutboxEnabled bool) (*storagesql
 	return store, nil
 }
 
+// openProjectionStore opens the materialized views database.
 func openProjectionStore(path string) (*storagesqlite.Store, error) {
 	if err := ensureDir(path); err != nil {
 		return nil, err
@@ -585,6 +615,7 @@ func openProjectionStore(path string) (*storagesqlite.Store, error) {
 	return store, nil
 }
 
+// openContentStore opens the content reference database.
 func openContentStore(path string) (*storagesqlite.Store, error) {
 	if err := ensureDir(path); err != nil {
 		return nil, err
@@ -596,6 +627,7 @@ func openContentStore(path string) (*storagesqlite.Store, error) {
 	return store, nil
 }
 
+// ensureDir creates parent paths for sqlite files so startup can create DB files.
 func ensureDir(path string) error {
 	if dir := filepath.Dir(path); dir != "." {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -605,7 +637,7 @@ func ensureDir(path string) error {
 	return nil
 }
 
-// closeResources releases all server resources.
+// closeResources releases all server resources in shutdown order.
 func (s *Server) closeResources() {
 	if s == nil {
 		return

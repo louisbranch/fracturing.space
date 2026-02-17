@@ -1,3 +1,4 @@
+// Package chat parses chat command flags and composes transport entrypoints.
 package chat
 
 import (
@@ -17,7 +18,7 @@ type Config struct {
 	OAuthResourceSecret string `env:"FRACTURING_SPACE_WEB_OAUTH_RESOURCE_SECRET"`
 }
 
-// ParseConfig parses flags into a Config.
+// ParseConfig parses environment and flags into a Config.
 func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	var cfg Config
 	if err := config.ParseEnv(&cfg); err != nil {
@@ -34,7 +35,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	return cfg, nil
 }
 
-// Run starts the chat server.
+// Run builds the chat app and starts realtime transport behavior.
 func Run(ctx context.Context, cfg Config) error {
 	if err := server.Run(ctx, server.Config{
 		HTTPAddr:            cfg.HTTPAddr,

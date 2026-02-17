@@ -15,6 +15,9 @@ import (
 )
 
 // TelemetryInterceptor emits telemetry for read-only gRPC methods.
+//
+// It is intentionally limited to read paths so write call telemetry can remain
+// in command/application layers where business errors are richer.
 func TelemetryInterceptor(store storage.TelemetryStore) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		resp, err := handler(ctx, req)

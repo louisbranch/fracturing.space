@@ -77,6 +77,9 @@ func NewRegistry() *Registry {
 }
 
 // RouteCommand routes a system command to the registered module decider.
+//
+// This boundary allows custom game systems to participate in command handling
+// without leaking system-specific behavior into core aggregates.
 func RouteCommand(registry *Registry, state any, cmd command.Command, now func() time.Time) (command.Decision, error) {
 	if registry == nil {
 		return command.Decision{}, ErrRegistryRequired
@@ -101,6 +104,9 @@ func RouteCommand(registry *Registry, state any, cmd command.Command, now func()
 }
 
 // RouteEvent routes a system event to the registered module projector.
+//
+// Projectors keep system-owned read models or aggregate state slices aligned with
+// event semantics defined by the same module that emitted them.
 func RouteEvent(registry *Registry, state any, evt event.Event) (any, error) {
 	if registry == nil {
 		return nil, ErrRegistryRequired

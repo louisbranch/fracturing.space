@@ -13,6 +13,8 @@ import (
 )
 
 func (h *handler) handleAppInvites(w http.ResponseWriter, r *http.Request) {
+	// handleAppInvites lists pending invites for the authenticated user and
+	// keeps user identity as the primary partition for this page.
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -52,6 +54,8 @@ func (h *handler) handleAppInvites(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) handleAppInviteClaim(w http.ResponseWriter, r *http.Request) {
+	// handleAppInviteClaim exchanges a join grant and claim request to materialize
+	// campaign membership for the authenticated user.
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -120,6 +124,8 @@ func (h *handler) handleAppInviteClaim(w http.ResponseWriter, r *http.Request) {
 }
 
 func renderAppInvitesPage(w http.ResponseWriter, invites []*statev1.PendingUserInvite) {
+	// renderAppInvitesPage maps pending user invites into the minimal claimable
+	// list the web surface exposes.
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_, _ = io.WriteString(w, "<!doctype html><html><head><title>My Invites</title></head><body><h1>My Invites</h1><ul>")
 	for _, pending := range invites {

@@ -12,6 +12,8 @@ import (
 )
 
 func (h *handler) handleAppCampaignCharacters(w http.ResponseWriter, r *http.Request, campaignID string) {
+	// handleAppCampaignCharacters renders all characters for a campaign once
+	// membership and capability checks pass.
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -59,6 +61,8 @@ func (h *handler) handleAppCampaignCharacters(w http.ResponseWriter, r *http.Req
 }
 
 func (h *handler) handleAppCampaignCharacterDetail(w http.ResponseWriter, r *http.Request, campaignID string, characterID string) {
+	// handleAppCampaignCharacterDetail loads a single character sheet to support
+	// detailed editing from the campaign context.
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -95,6 +99,8 @@ func (h *handler) handleAppCampaignCharacterDetail(w http.ResponseWriter, r *htt
 }
 
 func (h *handler) handleAppCampaignCharacterCreate(w http.ResponseWriter, r *http.Request, campaignID string) {
+	// handleAppCampaignCharacterCreate validates owner/manager intent from the
+	// caller before creating a new character aggregate.
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -160,6 +166,8 @@ func (h *handler) handleAppCampaignCharacterCreate(w http.ResponseWriter, r *htt
 }
 
 func (h *handler) handleAppCampaignCharacterUpdate(w http.ResponseWriter, r *http.Request, campaignID string) {
+	// handleAppCampaignCharacterUpdate applies partial character updates while
+	// preserving idempotent form-to-domain conversions for name and kind.
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -238,6 +246,8 @@ func (h *handler) handleAppCampaignCharacterUpdate(w http.ResponseWriter, r *htt
 }
 
 func (h *handler) handleAppCampaignCharacterControl(w http.ResponseWriter, r *http.Request, campaignID string) {
+	// handleAppCampaignCharacterControl assigns character control ownership so game
+	// actions can be routed to the correct participant at the session layer.
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -335,6 +345,8 @@ func participantControlFormLabel(participant *statev1.Participant) string {
 }
 
 func renderAppCampaignCharactersPage(w http.ResponseWriter, campaignID string, characters []*statev1.Character, canManageCharacters bool, controlParticipants []*statev1.Participant) {
+	// renderAppCampaignCharactersPage keeps the write controls tied to current
+	// campaign access level so members cannot reach management operations.
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	escapedCampaignID := html.EscapeString(campaignID)
 	_, _ = io.WriteString(w, "<!doctype html><html><head><title>Characters</title></head><body><h1>Characters</h1>")
@@ -406,6 +418,8 @@ func renderAppCampaignCharactersPage(w http.ResponseWriter, campaignID string, c
 }
 
 func renderAppCampaignCharacterDetailPage(w http.ResponseWriter, campaignID string, character *statev1.Character) {
+	// renderAppCampaignCharacterDetailPage provides the stable read surface for a
+	// single character without mutating state.
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	escapedCampaignID := html.EscapeString(campaignID)
 	characterID := strings.TrimSpace(character.GetId())

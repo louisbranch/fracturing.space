@@ -35,6 +35,8 @@ type actionRollResolvedPayload struct {
 
 // TODO: These types were removed from domain during statev1 migration.
 // They should be re-implemented as part of Daggerheart-specific MCP tools.
+// Keeping the shapes here preserves expected MCP payload structure for future
+// migration back into the new game-system implementation.
 type sessionActionRollResultRng struct {
 	SeedUsed uint64 `json:"seed_used,omitempty"`
 	RollMode string `json:"roll_mode,omitempty"`
@@ -62,6 +64,8 @@ type sessionRollOutcomeApplyResult struct {
 // TODO: Re-enable when Daggerheart-specific MCP tools are implemented.
 // The session_action_roll and session_roll_outcome_apply MCP tools were
 // game-system specific and removed during the statev1 migration.
+// The skip is intentional to avoid false confidence: this test currently locks
+// behavior to old MCP contracts that no longer exist in active transport paths.
 func runSessionOutcomeTests(t *testing.T, suite *integrationSuite, grpcAddr string) {
 	t.Helper()
 	t.Skip("session_action_roll and session_roll_outcome_apply MCP tools need Daggerheart-specific implementation")

@@ -30,10 +30,12 @@ var (
 	ErrPayloadInvalid = errors.New("payload json must be valid")
 )
 
-// Type identifies the command type string.
+// Type identifies a stable command semantic used by both API transport and
+// domain deciders. A change in this value is a behavior contract.
 type Type string
 
-// Owner identifies whether a command type is core or system-owned.
+// Owner identifies whether a command type is handled by core game rules or a
+// pluggable game-system module.
 type Owner string
 
 const (
@@ -71,7 +73,10 @@ const (
 	ActorTypeGM ActorType = "gm"
 )
 
-// Command captures the canonical command envelope.
+// Command captures the canonical envelope used by the domain engine.
+//
+// Commands are normalized and validated before reaching deciders so business
+// rules are applied to stable inputs instead of transport-shaped payloads.
 type Command struct {
 	CampaignID    string
 	Type          Type
@@ -90,6 +95,11 @@ type Command struct {
 }
 
 // Definition registers metadata for a command type.
+//
+// The definition is the single place that declares:
+//   - who owns the command (core/system),
+//   - which payload validator runs,
+//   - and whether session gates apply.
 type Definition struct {
 	Type            Type
 	Owner           Owner
@@ -101,6 +111,9 @@ type Definition struct {
 type PayloadValidator func(json.RawMessage) error
 
 // Registry stores command definitions and validates commands.
+//
+// Validation here is intentionally strict: malformed commands are rejected once,
+// before policy deciders run, to keep behavior deterministic.
 type Registry struct {
 	definitions map[Type]Definition
 }
@@ -136,6 +149,10 @@ func (r *Registry) Register(def Definition) error {
 }
 
 // ValidateForDecision validates and normalizes a command before decision handling.
+//
+// It is the boundary that protects deciders from transport noise:
+// canonical JSON, ownership checks, actor identity defaults, and payload
+// validation all happen before domain logic sees the command.
 func (r *Registry) ValidateForDecision(cmd Command) (Command, error) {
 	cmd.CampaignID = strings.TrimSpace(cmd.CampaignID)
 	if cmd.CampaignID == "" {

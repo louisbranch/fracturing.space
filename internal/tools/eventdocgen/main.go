@@ -1,5 +1,10 @@
 package main
 
+// Package main generates documentation catalogs for domain events and commands.
+//
+// This utility is intentionally read-only and lives near the API boundary so
+// onboarding can regenerate docs after domain/event language changes.
+
 import (
 	"bytes"
 	"flag"

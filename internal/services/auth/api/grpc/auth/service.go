@@ -26,6 +26,9 @@ const (
 )
 
 // AuthService implements the auth.v1.AuthService gRPC API.
+//
+// It is the stable surface game, admin, and tooling call to perform identity
+// actions without directly touching storage details.
 type AuthService struct {
 	authv1.UnimplementedAuthServiceServer
 	store              storage.UserStore
@@ -43,7 +46,10 @@ type AuthService struct {
 	passkeyIDGenerator func() (string, error)
 }
 
-// NewAuthService creates an AuthService with default dependencies.
+// NewAuthService builds a service with defaults for the auth package.
+//
+// Defaults are intentionally assembled here so transport handlers can treat this
+// as the canonical auth domain entrypoint.
 func NewAuthService(store storage.UserStore, passkeyStore storage.PasskeyStore, oauthStore *oauth.Store) *AuthService {
 	config := passkey.LoadConfigFromEnv()
 	magicConfig := magiclink.LoadConfigFromEnv()
@@ -79,7 +85,7 @@ func NewAuthService(store storage.UserStore, passkeyStore storage.PasskeyStore, 
 	}
 }
 
-// CreateUser creates a new user record.
+// CreateUser creates a user and returns the canonical identity for campaign actions.
 func (s *AuthService) CreateUser(ctx context.Context, in *authv1.CreateUserRequest) (*authv1.CreateUserResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "create user request is required")
@@ -96,7 +102,7 @@ func (s *AuthService) CreateUser(ctx context.Context, in *authv1.CreateUserReque
 	return &authv1.CreateUserResponse{User: userToProto(created)}, nil
 }
 
-// IssueJoinGrant issues a join grant for a campaign invite.
+// IssueJoinGrant issues a one-time join grant for campaign invites.
 func (s *AuthService) IssueJoinGrant(ctx context.Context, in *authv1.IssueJoinGrantRequest) (*authv1.IssueJoinGrantResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "issue join grant request is required")
@@ -117,7 +123,7 @@ func (s *AuthService) IssueJoinGrant(ctx context.Context, in *authv1.IssueJoinGr
 	}, nil
 }
 
-// GetUser returns a user record by ID.
+// GetUser resolves a user ID to an identity record for cross-service lookups.
 func (s *AuthService) GetUser(ctx context.Context, in *authv1.GetUserRequest) (*authv1.GetUserResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "get user request is required")
@@ -139,7 +145,7 @@ func (s *AuthService) GetUser(ctx context.Context, in *authv1.GetUserRequest) (*
 	return &authv1.GetUserResponse{User: userToProto(found)}, nil
 }
 
-// ListUsers returns a page of user records.
+// ListUsers returns a page of users for operator-facing views and audits.
 func (s *AuthService) ListUsers(ctx context.Context, in *authv1.ListUsersRequest) (*authv1.ListUsersResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "list users request is required")

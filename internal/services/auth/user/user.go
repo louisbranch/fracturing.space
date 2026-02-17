@@ -37,7 +37,8 @@ type CreateUserInput struct {
 	Locale   commonv1.Locale
 }
 
-// ValidateUsername checks that a username matches ^[a-z0-9_.-]{3,32}$.
+// ValidateUsername enforces canonical username constraints used by joins, invites,
+// and chat display across services.
 func ValidateUsername(s string) error {
 	if !usernamePattern.MatchString(s) {
 		return ErrInvalidUsername
@@ -45,7 +46,10 @@ func ValidateUsername(s string) error {
 	return nil
 }
 
-// CreateUser creates a new user with a generated ID and timestamps.
+// CreateUser creates a durable user identity from validated input.
+//
+// The service layer treats this as the canonical point where untrusted username
+// data becomes a stable identity used by auth, admin, and game paths.
 func CreateUser(input CreateUserInput, now func() time.Time, idGenerator func() (string, error)) (User, error) {
 	if now == nil {
 		now = time.Now
@@ -74,7 +78,7 @@ func CreateUser(input CreateUserInput, now func() time.Time, idGenerator func() 
 	}, nil
 }
 
-// NormalizeCreateUserInput trims, lowercases, and validates user input metadata.
+// NormalizeCreateUserInput trims and normalizes input before validation.
 func NormalizeCreateUserInput(input CreateUserInput) (CreateUserInput, error) {
 	input.Username = strings.ToLower(strings.TrimSpace(input.Username))
 	if input.Username == "" {

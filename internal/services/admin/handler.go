@@ -238,6 +238,8 @@ func (h *Handler) withImpersonation(next http.Handler) http.Handler {
 	if h == nil || next == nil {
 		return next
 	}
+	// withImpersonation injects the selected impersonation user ID so downstream
+	// handlers inherit authorization checks in the same shape as direct users.
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		impersonation := h.currentImpersonation(r)
 		if impersonation != nil && impersonation.userID != "" {

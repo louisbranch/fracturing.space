@@ -14,25 +14,30 @@ const sessionCookieName = "fs_session"
 // readable by sibling subdomains (e.g. admin.{DOMAIN}).
 const tokenCookieName = "fs_token"
 
-// session holds data for an authenticated web session.
+// session holds one in-process authenticated session mapping token identity to UI
+// display context for subsequent web requests.
 type session struct {
 	accessToken string
 	displayName string
 	expiresAt   time.Time
 }
 
-// sessionStore is a thread-safe in-memory session store.
+// sessionStore stores ephemeral web sessions for this process.
+//
+// The map is intentionally local to the web process because the session token is
+// already authoritative and persisted in the signed access token cookie.
 type sessionStore struct {
 	mu       sync.RWMutex
 	sessions map[string]*session
 }
 
-// newSessionStore creates an empty session store.
+// newSessionStore creates the in-memory cache for authenticated sessions.
 func newSessionStore() *sessionStore {
 	return &sessionStore{sessions: make(map[string]*session)}
 }
 
-// create stores a new session and returns its ID.
+// create stores a new web session and returns an opaque session identifier.
+// IDs are random and intentionally not reused so replaying old cookie values stays safe.
 func (s *sessionStore) create(accessToken, displayName string, expiresAt time.Time) string {
 	id := randomHex(16)
 	s.mu.Lock()
@@ -45,7 +50,8 @@ func (s *sessionStore) create(accessToken, displayName string, expiresAt time.Ti
 	return id
 }
 
-// get returns a session by ID, or nil if missing or expired.
+// get resolves a session by ID and prunes expired entries eagerly.
+// Expired sessions reduce auth confusion when users leave long-running tabs open.
 func (s *sessionStore) get(id string) *session {
 	s.mu.RLock()
 	sess, ok := s.sessions[id]
@@ -60,27 +66,31 @@ func (s *sessionStore) get(id string) *session {
 	return sess
 }
 
-// delete removes a session by ID.
+// delete removes session state when sign-out or rotation occurs.
 func (s *sessionStore) delete(id string) {
 	s.mu.Lock()
 	delete(s.sessions, id)
 	s.mu.Unlock()
 }
 
-// pendingFlow holds PKCE state for an in-flight OAuth login.
+// pendingFlow tracks OAuth PKCE state for one in-flight login/registration flow.
 type pendingFlow struct {
 	codeVerifier string
 	createdAt    time.Time
 }
 
-// pendingFlowStore is a thread-safe store for in-flight PKCE flows.
+// pendingFlowStore is a thread-safe cache of temporary OAuth PKCE state.
+//
+// Entries are short-lived by design because they only need to bridge browser auth
+// redirects to token exchange and should not become a replay surface.
 type pendingFlowStore struct {
 	mu    sync.Mutex
 	flows map[string]*pendingFlow
 	ttl   time.Duration
 }
 
-// newPendingFlowStore creates an empty pending flow store with a 10-minute TTL.
+// newPendingFlowStore creates a PKCE flow store with a short-lived default TTL.
+// A small TTL keeps open OAuth handshakes from staying valid after user abandonment.
 func newPendingFlowStore() *pendingFlowStore {
 	return &pendingFlowStore{
 		flows: make(map[string]*pendingFlow),
@@ -88,7 +98,7 @@ func newPendingFlowStore() *pendingFlowStore {
 	}
 }
 
-// create stores a new pending flow and returns the state parameter.
+// create stores a new pending flow and returns the state token.
 func (s *pendingFlowStore) create(codeVerifier string) string {
 	state := randomHex(16)
 	s.mu.Lock()
@@ -101,7 +111,7 @@ func (s *pendingFlowStore) create(codeVerifier string) string {
 }
 
 // consume retrieves and removes a pending flow by state.
-// Returns nil if missing or expired.
+// Returns nil if missing, already consumed, or expired.
 func (s *pendingFlowStore) consume(state string) *pendingFlow {
 	s.mu.Lock()
 	flow, ok := s.flows[state]
@@ -118,7 +128,8 @@ func (s *pendingFlowStore) consume(state string) *pendingFlow {
 	return flow
 }
 
-// setSessionCookie writes the session cookie to the response.
+// setSessionCookie writes the session cookie that maps browser requests to this
+// process-specific session map.
 func setSessionCookie(w http.ResponseWriter, sessionID string) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     sessionCookieName,
@@ -129,7 +140,7 @@ func setSessionCookie(w http.ResponseWriter, sessionID string) {
 	})
 }
 
-// clearSessionCookie expires the session cookie.
+// clearSessionCookie expires the session cookie, forcing re-auth on subsequent requests.
 func clearSessionCookie(w http.ResponseWriter) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     sessionCookieName,
@@ -141,7 +152,8 @@ func clearSessionCookie(w http.ResponseWriter) {
 	})
 }
 
-// sessionFromRequest reads the session cookie and looks up the session.
+// sessionFromRequest resolves request-local session state from the session cookie.
+// This is the first auth gate used by almost all app routes.
 func sessionFromRequest(r *http.Request, store *sessionStore) *session {
 	cookie, err := r.Cookie(sessionCookieName)
 	if err != nil {
@@ -150,8 +162,8 @@ func sessionFromRequest(r *http.Request, store *sessionStore) *session {
 	return store.get(cookie.Value)
 }
 
-// setTokenCookie writes a domain-scoped access token cookie to the response.
-// The Domain attribute allows subdomains (e.g. admin.{DOMAIN}) to read it.
+// setTokenCookie writes an access-token cookie for sibling web surfaces.
+// The domain scope is intentional so admin and game web pages can share one session.
 func setTokenCookie(w http.ResponseWriter, token, domain string, maxAge int) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     tokenCookieName,
@@ -164,7 +176,7 @@ func setTokenCookie(w http.ResponseWriter, token, domain string, maxAge int) {
 	})
 }
 
-// clearTokenCookie expires the domain-scoped token cookie.
+// clearTokenCookie expires token-bearing cookie material across related hosts.
 func clearTokenCookie(w http.ResponseWriter, domain string) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     tokenCookieName,
@@ -177,7 +189,7 @@ func clearTokenCookie(w http.ResponseWriter, domain string) {
 	})
 }
 
-// randomHex generates a cryptographically random hex string of n bytes.
+// randomHex generates a cryptographically random hex string used as session state.
 func randomHex(n int) string {
 	b := make([]byte, n)
 	_, _ = rand.Read(b)

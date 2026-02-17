@@ -8,7 +8,10 @@ import (
 	"github.com/caarlos0/env/v11"
 )
 
-// Config describes the OAuth server configuration.
+// Config describes external OAuth server behavior and identity provider wiring.
+//
+// The loaded values determine which OAuth providers the auth process trusts and
+// how much of the browser/login flow is enabled at runtime.
 type Config struct {
 	Issuer                  string
 	ResourceSecret          string
@@ -66,7 +69,10 @@ type oauthEnv struct {
 	GitHubScopes            []string      `env:"FRACTURING_SPACE_OAUTH_GITHUB_SCOPES"       envSeparator:","`
 }
 
-// LoadConfigFromEnv loads OAuth server configuration from environment variables.
+// LoadConfigFromEnv loads OAuth server configuration and applies safe defaults.
+//
+// Defaulting happens here to keep provider behavior deterministic for operators
+// while still allowing feature-level overrides through env vars.
 func LoadConfigFromEnv() Config {
 	var raw oauthEnv
 	_ = env.Parse(&raw)

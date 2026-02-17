@@ -1,3 +1,4 @@
+// Package auth parses auth service startup flags and hands off to the app server.
 package auth
 
 import (
@@ -14,7 +15,7 @@ type Config struct {
 	HTTPAddr string `env:"FRACTURING_SPACE_AUTH_HTTP_ADDR" envDefault:"localhost:8084"`
 }
 
-// ParseConfig parses flags into a Config.
+// ParseConfig parses environment and flags into a Config.
 func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	var cfg Config
 	if err := config.ParseEnv(&cfg); err != nil {
@@ -29,7 +30,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	return cfg, nil
 }
 
-// Run starts the auth server.
+// Run starts the auth process by delegating to the auth app server.
 func Run(ctx context.Context, cfg Config) error {
 	return server.Run(ctx, cfg.Port, cfg.HTTPAddr)
 }

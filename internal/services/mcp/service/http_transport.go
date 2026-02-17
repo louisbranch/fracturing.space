@@ -62,9 +62,21 @@ const (
 // HTTPTransport implements mcp.Transport for HTTP-based MCP communication.
 // It provides an HTTP server that handles JSON-RPC messages over POST requests
 // and supports Server-Sent Events (SSE) for streaming responses.
+// The implementation is intentionally explicit about session lifecycle and cleanup so
+// long-lived local MCP clients cannot leak resources even when upstream services
+// stop responding.
+//
+// Security and scale-related features are intentionally deferred:
+// - authentication/authorization for production exposure
+// - per-connection rate limiting
+// and are therefore documented as TODO near the relevant hot paths.
 //
 // TODO: Add authentication/authorization for production use
+// Without this, any network-reachable caller can open MCP sessions and invoke
+// tools. Keep this transport limited to trusted local usage until auth is added.
 // TODO: Add rate limiting per connection
+// Multiple chatty clients over long-lived SSE can otherwise monopolize worker
+// capacity; rate limiting belongs here to preserve fair scheduling and backpressure.
 type HTTPTransport struct {
 	addr         string
 	allowedHosts map[string]struct{}
@@ -83,7 +95,9 @@ type HTTPTransport struct {
 	readyAfter         func(time.Duration) <-chan time.Time
 }
 
-// httpSession maintains state for an HTTP client connection.
+// httpSession maintains state for a single MCP session in memory.
+// It tracks liveness and the active connection so cleanup and SSE delivery can
+// be scoped to one browser/process session.
 type httpSession struct {
 	id        string
 	conn      *httpConnection
@@ -92,6 +106,8 @@ type httpSession struct {
 }
 
 // httpConnection implements mcp.Connection for HTTP-based communication.
+// The MCP SDK expects a bidirectional connection model, so this adapter maps
+// request/response flow and notification delivery onto separate buffered channels.
 type httpConnection struct {
 	sessionID   string
 	reqChan     chan jsonrpc.Message
@@ -107,6 +123,8 @@ type httpConnection struct {
 }
 
 // NewHTTPTransport creates a new HTTP transport that will serve MCP over HTTP.
+// It defaults to localhost-only binding to keep the default footprint constrained
+// to local development unless explicit host configuration broadens access.
 func NewHTTPTransport(addr string) *HTTPTransport {
 	// Default to localhost-only binding for security
 	if addr == "" {
@@ -130,6 +148,9 @@ func NewHTTPTransport(addr string) *HTTPTransport {
 }
 
 // NewHTTPTransportWithServer creates a new HTTP transport with a reference to the MCP server.
+//
+// Callers use this when they need to inject a preconfigured MCP runtime without
+// re-dialing transport setup, which keeps tests and process lifecycle simpler.
 func NewHTTPTransportWithServer(addr string, server *mcp.Server) *HTTPTransport {
 	transport := NewHTTPTransport(addr)
 	transport.server = server
@@ -139,6 +160,8 @@ func NewHTTPTransportWithServer(addr string, server *mcp.Server) *HTTPTransport 
 // Connect implements mcp.Transport.Connect.
 // For HTTP transport, this creates a new session and connection that will
 // be used by the MCP server's Run method. The connection waits for HTTP requests.
+// Each call creates a fresh session so one client identity can be tracked across
+// multiple request/notification streams without cross-session contamination.
 func (t *HTTPTransport) Connect(ctx context.Context) (mcp.Connection, error) {
 	sessionID := t.generateSessionID()
 
@@ -176,6 +199,8 @@ func (t *HTTPTransport) generateSessionID() string {
 
 // Start starts the HTTP server and begins handling requests.
 // This should be called in a separate goroutine while the MCP server runs.
+// The same server instance multiplexes POST requests and SSE streams while sharing
+// host validation, auth, and session lifecycle enforcement.
 func (t *HTTPTransport) Start(ctx context.Context) error {
 	// Update server context to use the provided context
 	t.serverCtx, t.serverCancel = context.WithCancel(ctx)
@@ -240,6 +265,8 @@ func (t *HTTPTransport) Start(ctx context.Context) error {
 
 // cleanupSessions periodically removes expired sessions from the sessions map.
 // Sessions expire after sessionExpirationTime of inactivity.
+// This prevents stale sessions from accumulating when callers disconnect without a
+// clean logout path.
 func (t *HTTPTransport) cleanupSessions(ctx context.Context) {
 	ticker := time.NewTicker(sessionCleanupInterval)
 	defer ticker.Stop()
@@ -269,6 +296,11 @@ func (t *HTTPTransport) cleanupSessions(ctx context.Context) {
 }
 
 // handleMessages handles POST /mcp/messages for JSON-RPC requests.
+// It maps transport-agnostic JSON-RPC payloads onto session-local MCP
+// connection state so one campaign/auth participant can stay contiguous across
+// multiple HTTP round-trips.
+// It is the write path for all request/notification traffic and performs
+// per-session validation before routing into the MCP runtime.
 func (t *HTTPTransport) handleMessages(w http.ResponseWriter, r *http.Request) {
 	if err := t.validateLocalRequest(r); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -503,6 +535,9 @@ func (t *HTTPTransport) handleMessages(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleSSE handles GET /mcp/sse for Server-Sent Events streaming.
+// SSE is intentionally kept as a notification-only path so request/reply
+// operations can be decoupled from streaming delivery and shared connection
+// state can be updated in-place without response blocking.
 func (t *HTTPTransport) handleSSE(w http.ResponseWriter, r *http.Request) {
 	if err := t.validateLocalRequest(r); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -629,6 +664,7 @@ func writeSessionError(w http.ResponseWriter, message string) {
 // validateLocalRequest enforces host access to mitigate DNS rebinding.
 // It checks Host and Origin headers against allowed hosts per MCP guidance so
 // remote web pages cannot reach local MCP servers via rebinding.
+// This is the transport-side "network guardrail" before we have richer auth.
 func (t *HTTPTransport) validateLocalRequest(r *http.Request) error {
 	if r == nil {
 		return fmt.Errorf("invalid request")
@@ -661,6 +697,7 @@ func (t *HTTPTransport) validateLocalRequest(r *http.Request) error {
 }
 
 // isAllowedHostHeader reports whether a Host/Origin header resolves to an allowed host.
+// The default posture is local-only unless explicit hosts are configured.
 func (t *HTTPTransport) isAllowedHostHeader(host string) bool {
 	resolvedHost, ok := normalizeHost(host)
 	if !ok {
@@ -681,6 +718,7 @@ func (t *HTTPTransport) isAllowedHostHeader(host string) bool {
 }
 
 // isLoopbackHost reports whether a host resolves to loopback.
+// It is intentionally strict: only explicit local loopback hosts pass by default.
 func isLoopbackHost(host string) bool {
 	host = strings.ToLower(strings.TrimSpace(host))
 	switch host {
@@ -771,6 +809,9 @@ type introspectionPayload struct {
 	Active bool `json:"active"`
 }
 
+// loadOAuthAuthFromEnv builds optional transport-level auth from environment.
+// OAuth is optional so MCP can run in trusted local mode without extra
+// operational prerequisites.
 func loadOAuthAuthFromEnv(raw mcpHTTPEnv) *oauthAuth {
 	issuer := strings.TrimSpace(raw.OAuthIssuer)
 	if issuer == "" {
@@ -783,6 +824,9 @@ func loadOAuthAuthFromEnv(raw mcpHTTPEnv) *oauthAuth {
 	}
 }
 
+// authorizeRequest runs bearer-token checks only when OAuth config is present.
+// This keeps transport behavior explicit at the boundary while allowing local
+// deployments to skip token validation without changing handler wiring.
 func (t *HTTPTransport) authorizeRequest(w http.ResponseWriter, r *http.Request) bool {
 	if t.oauth == nil {
 		return true
@@ -814,6 +858,8 @@ func (t *HTTPTransport) authorizeRequest(w http.ResponseWriter, r *http.Request)
 	return true
 }
 
+// handleProtectedResourceMetadata publishes oauth protected-resource metadata for
+// MCP clients that can introspect bearer-token expectations.
 func (t *HTTPTransport) handleProtectedResourceMetadata(w http.ResponseWriter, r *http.Request) {
 	if t.oauth == nil {
 		http.NotFound(w, r)
@@ -844,6 +890,8 @@ func (t *HTTPTransport) writeUnauthorized(w http.ResponseWriter, r *http.Request
 	http.Error(w, message, http.StatusUnauthorized)
 }
 
+// validateToken asks the OAuth resource server whether a token is currently
+// active; transport admission is all-or-nothing at MCP call time.
 func (a *oauthAuth) validateToken(ctx context.Context, token string) (bool, error) {
 	if a == nil || a.issuer == "" {
 		return false, errors.New("oauth issuer is not configured")
@@ -887,6 +935,9 @@ func baseURLFromRequest(r *http.Request) string {
 // Read implements mcp.Connection.Read.
 // For HTTP transport, this reads messages from HTTP requests that have been
 // sent to the connection's request channel.
+// This adapter waits for incoming JSON-RPC traffic from handleMessages and allows
+// MCP request handlers to run in their own goroutine without blocking the HTTP
+// handler indefinitely.
 func (c *httpConnection) Read(ctx context.Context) (jsonrpc.Message, error) {
 	// Signal readiness on first read (when Server.Connect() starts reading)
 	// Use sync.Once to ensure we only signal once
@@ -920,6 +971,8 @@ func (c *httpConnection) Read(ctx context.Context) (jsonrpc.Message, error) {
 // Write implements mcp.Connection.Write.
 // For HTTP transport, this writes responses to the connection's response channel,
 // routing them to the correct pending request or to the notification channel.
+// The split channel model avoids delivering unrelated notifications to callers that
+// are awaiting a specific request/response exchange.
 func (c *httpConnection) Write(ctx context.Context, msg jsonrpc.Message) error {
 	// Check closed flag and hold lock throughout to prevent race with Close()
 	c.mu.Lock()
@@ -978,6 +1031,8 @@ func (c *httpConnection) Write(ctx context.Context, msg jsonrpc.Message) error {
 }
 
 // Close implements mcp.Connection.Close.
+// Close is explicit about draining all waiters and channels so a dropped session
+// cannot leave goroutines blocked on per-session reads/writes.
 func (c *httpConnection) Close() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -1011,8 +1066,9 @@ func (c *httpConnection) SessionID() string {
 }
 
 // ensureServerRunning ensures the MCP server is processing messages for this session.
-// It starts a goroutine that calls Server.Connect with a transport that returns this session's connection.
-// Uses sync.Once per session to prevent goroutine leaks from multiple calls.
+// It starts a goroutine that calls Server.Connect with a transport that returns
+// this session's connection.
+// sync.Once is used so each session has at most one MCP runtime reader pipeline.
 func (t *HTTPTransport) ensureServerRunning(session *httpSession) {
 	if t.server == nil {
 		return

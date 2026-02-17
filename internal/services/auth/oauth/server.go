@@ -29,7 +29,7 @@ type Server struct {
 	httpClient *http.Client
 }
 
-// NewServer creates a new OAuth server.
+// NewServer builds an OAuth server bound to auth config and backing stores.
 func NewServer(config Config, store *Store, userStore UserStore) *Server {
 	return &Server{
 		config:     config,
@@ -65,7 +65,10 @@ func (s *Server) RegisterRoutes(mux *http.ServeMux) error {
 	return nil
 }
 
-// StartCleanup runs periodic cleanup for expired OAuth entries.
+// StartCleanup starts periodic expiry cleanup for transient OAuth artifacts.
+//
+// This keeps short-lived authorization and pending login records from
+// accumulating without requiring a separate maintenance process.
 func (s *Server) StartCleanup(ctx context.Context, interval time.Duration) {
 	if s == nil || s.store == nil || interval <= 0 {
 		return
