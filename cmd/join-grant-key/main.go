@@ -1,3 +1,6 @@
+// Package main provides a one-shot utility for join-grant key generation.
+//
+// It emits the asymmetric keypair used by auth invitation flow checks.
 package main
 
 import (

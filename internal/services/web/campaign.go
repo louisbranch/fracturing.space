@@ -7,6 +7,8 @@ import (
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
+// renderCampaignPage renders the shared campaign shell once access has been
+// verified by route-level auth and campaign membership checks.
 func (h *handler) renderCampaignPage(w http.ResponseWriter, r *http.Request, campaignID string) {
 	printer, lang := localizer(w, r)
 	page := webtemplates.PageContext{

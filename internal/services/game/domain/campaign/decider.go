@@ -33,6 +33,10 @@ const (
 )
 
 // Decide returns the decision for a campaign command against current state.
+//
+// This function is the campaign policy hub: it normalizes command payloads,
+// enforces legal transitions, and emits immutable events that can be replayed
+// to reproduce the same campaign state.
 func Decide(state State, cmd command.Command, now func() time.Time) command.Decision {
 	if cmd.Type == commandTypeCreate {
 		if state.Created {
@@ -258,7 +262,10 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 	return command.Decision{}
 }
 
-// statusCommandTarget maps lifecycle commands to their target status.
+// statusCommandTarget maps lifecycle command names to their destination status.
+//
+// Centralizing lifecycle transition targets prevents duplicate status-mapping logic
+// in every handler and keeps command intent readable.
 func statusCommandTarget(cmdType command.Type) (Status, bool) {
 	switch cmdType {
 	case commandTypeEnd:
@@ -273,6 +280,9 @@ func statusCommandTarget(cmdType command.Type) (Status, bool) {
 }
 
 // normalizeGameSystemLabel returns a canonical label for stable payload hashes.
+//
+// Campaign behavior depends on a stable system identity, not caller-specific casing
+// or enum prefix variants.
 func normalizeGameSystemLabel(value string) (string, bool) {
 	trimmed := strings.TrimSpace(value)
 	if trimmed == "" {
@@ -285,7 +295,10 @@ func normalizeGameSystemLabel(value string) (string, bool) {
 	return canonicalGameSystemLabel(system), true
 }
 
-// gameSystemFromLabel accepts enum labels with or without the prefix.
+// gameSystemFromLabel accepts enum labels with or without the GAME_SYSTEM_ prefix.
+//
+// This keeps campaign creation tolerant of payload shape differences while keeping
+// canonical values internally.
 func gameSystemFromLabel(value string) (commonv1.GameSystem, bool) {
 	if system, ok := commonv1.GameSystem_value[value]; ok {
 		return commonv1.GameSystem(system), true
@@ -297,7 +310,7 @@ func gameSystemFromLabel(value string) (commonv1.GameSystem, bool) {
 	return commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED, false
 }
 
-// canonicalGameSystemLabel prefers lowercase short labels.
+// canonicalGameSystemLabel strips transport enum prefixes for stable, compact state.
 func canonicalGameSystemLabel(system commonv1.GameSystem) string {
 	label := system.String()
 	label = strings.TrimPrefix(label, "GAME_SYSTEM_")
@@ -305,6 +318,9 @@ func canonicalGameSystemLabel(system commonv1.GameSystem) string {
 }
 
 // normalizeGmModeLabel returns a canonical label for stable payload hashes.
+//
+// The canonical GM mode value is the shared contract used later by permission and
+// command-policy checks.
 func normalizeGmModeLabel(value string) (string, bool) {
 	trimmed := strings.TrimSpace(value)
 	if trimmed == "" {

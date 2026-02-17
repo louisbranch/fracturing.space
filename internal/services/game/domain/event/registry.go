@@ -36,10 +36,16 @@ var (
 	ErrStorageFieldsSet = errors.New("storage-assigned fields must be empty")
 )
 
-// Type identifies the event type string.
+// Type identifies a stable event semantic used by API transport and projections.
+//
+// Event names are part of the write-path contract; changing one affects
+// replay, projections, and downstream integrations.
 type Type string
 
 // Owner identifies whether an event type is core or system-owned.
+//
+// Core events are always managed by the common campaign/session/participant
+// aggregate logic; system events are owned by pluggable modules.
 type Owner string
 
 const (
@@ -62,6 +68,9 @@ const (
 )
 
 // Event captures the canonical event envelope.
+//
+// The envelope is immutable metadata + business payload: storage appends
+// integrity hashes and chain fields after validation, preserving replay order.
 type Event struct {
 	CampaignID     string
 	Seq            uint64
@@ -90,6 +99,10 @@ type Event struct {
 type PayloadValidator func(json.RawMessage) error
 
 // Definition registers metadata for an event type.
+//
+// Metadata declares how strict the registry should be around entity addressing and
+// validation. This keeps projections honest about which aggregate subtree each event
+// affects.
 type Definition struct {
 	Type            Type
 	Owner           Owner
@@ -110,6 +123,9 @@ const (
 )
 
 // Registry stores event definitions and validates events for append.
+//
+// Validation happens at the edge of storage. The goal is to reject malformed
+// events before persistence and before they can contaminate replay.
 type Registry struct {
 	definitions map[Type]Definition
 }
@@ -151,6 +167,10 @@ func (r *Registry) Register(def Definition) error {
 }
 
 // ValidateForAppend validates and normalizes an event prior to storage append.
+//
+// It enforces ownership boundaries (core/system), canonical payload shape, and
+// pre-append invariants (for example, hash/sequence fields are initially empty).
+// This protects event history integrity from the first write.
 func (r *Registry) ValidateForAppend(evt Event) (Event, error) {
 	if r == nil {
 		return Event{}, fmt.Errorf("registry is required")

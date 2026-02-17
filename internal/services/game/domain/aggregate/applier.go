@@ -13,11 +13,20 @@ import (
 )
 
 // Applier folds events into aggregate state.
+//
+// The applier is where the domain boundary stays deterministic:
+// each event type updates exactly one aggregate slice and is replayed
+// identically whether during request execution or historical reconstruction.
 type Applier struct {
+	// SystemRegistry routes system events to their module-specific projector.
 	SystemRegistry *system.Registry
 }
 
 // Apply applies a single event to aggregate state.
+//
+// The function only mutates aggregate state through fold functions so state
+// transitions remain visible in one place per subdomain and replay behavior matches
+// request-time behavior.
 func (a Applier) Apply(state any, evt event.Event) (any, error) {
 	current := State{}
 	if existing, ok := state.(State); ok {

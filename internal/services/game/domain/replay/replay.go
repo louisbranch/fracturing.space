@@ -1,3 +1,7 @@
+// Package replay defines deterministic reconstruction boundaries for event-sourced flows.
+//
+// Replay is how write-path state is rebuilt from immutable history and how
+// projection rebuilds are repaired consistently after partial failures.
 package replay
 
 import (
@@ -25,18 +29,18 @@ var (
 	ErrCheckpointNotFound = errors.New("checkpoint not found")
 )
 
-// EventStore lists events for replay.
+// EventStore exposes read access to campaign event history for deterministic rebuild.
 type EventStore interface {
 	ListEvents(ctx context.Context, campaignID string, afterSeq uint64, limit int) ([]event.Event, error)
 }
 
-// CheckpointStore manages replay checkpoints.
+// CheckpointStore stores replay progress so reconstruction can resume from a cursor.
 type CheckpointStore interface {
 	Get(ctx context.Context, campaignID string) (Checkpoint, error)
 	Save(ctx context.Context, checkpoint Checkpoint) error
 }
 
-// Applier applies a domain event to projection state.
+// Applier applies a domain event into the in-memory replay target.
 type Applier interface {
 	Apply(state any, evt event.Event) (any, error)
 }
@@ -48,21 +52,24 @@ type Checkpoint struct {
 	UpdatedAt  time.Time
 }
 
-// Options configures replay behavior.
+// Options constrains replay work for maintenance windows or partial repair.
 type Options struct {
 	AfterSeq uint64
 	UntilSeq uint64
 	PageSize int
 }
 
-// Result captures replay outcomes.
+// Result captures replay outcomes and the new cursor for checkpoint updates.
 type Result struct {
 	State   any
 	LastSeq uint64
 	Applied int
 }
 
-// Replay replays events in order and updates checkpoints after each apply.
+// Replay rebuilds aggregate state from ordered events and persists checkpoints as it goes.
+//
+// It is the shared safety net used by both startup recovery and projection rebuilds:
+// sequence gaps fail fast, and each checkpoint represents the last known-correct seq.
 func Replay(ctx context.Context, store EventStore, checkpoints CheckpointStore, applier Applier, campaignID string, state any, options Options) (Result, error) {
 	if store == nil {
 		return Result{}, ErrEventStoreRequired

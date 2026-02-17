@@ -1,5 +1,6 @@
-// Package admin implements the HTTP admin dashboard server.
+// Package admin implements the operator control surface for the platform.
 //
-// It wires templ-based views, connects to game/auth gRPC services, and uses a
-// local SQLite store for admin-specific data.
+// It translates browser actions into domain-aware read/write operations so
+// operators can inspect, bootstrap, and repair game/domain state without binding
+// directly to storage internals.
 package admin

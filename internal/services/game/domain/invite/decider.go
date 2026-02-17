@@ -33,6 +33,10 @@ const (
 )
 
 // Decide returns the decision for an invite command against current state.
+//
+// Invite flow is intentionally strict because it gates who can participate in a
+// campaign. Each transition emits an immutable state event that can be audited
+// and replayed for investigation or migration.
 func Decide(state State, cmd command.Command, now func() time.Time) command.Decision {
 	if cmd.Type == commandTypeCreate {
 		if state.Created {

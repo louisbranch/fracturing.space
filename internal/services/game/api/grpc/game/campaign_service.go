@@ -69,6 +69,11 @@ func (s *CampaignService) CreateCampaign(ctx context.Context, in *campaignv1.Cre
 }
 
 // ListCampaigns returns a page of campaign metadata records.
+// The web path needs a user-scoped view quickly, so we filter by caller membership
+// before sending a response and keep policy/intent checks explicit in later security
+// work that is shared with MCP and future clients.
+// The current behavior scopes results by caller user_id when present, which is a
+// partial authorization step; full access-policy and intent checks are still TODO.
 func (s *CampaignService) ListCampaigns(ctx context.Context, in *campaignv1.ListCampaignsRequest) (*campaignv1.ListCampaignsResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "list campaigns request is required")
@@ -80,6 +85,10 @@ func (s *CampaignService) ListCampaigns(ctx context.Context, in *campaignv1.List
 	})
 
 	// TODO: Apply access policy/intent gates for campaign listing.
+	// Without this, user-scoped filtering should not be interpreted as a full
+	// authorization decision for all clients and request contexts.
+	// This is intentionally a membership-first filter until role/intent policy
+	// evaluation is completed at a common boundary.
 
 	page, err := s.stores.Campaign.List(ctx, pageSize, in.GetPageToken())
 	if err != nil {
@@ -122,6 +131,11 @@ func (s *CampaignService) ListCampaigns(ctx context.Context, in *campaignv1.List
 }
 
 // GetCampaign returns a campaign metadata record by ID.
+// The domain layer enforces lifecycle validity, while broader policy/intent checks
+// are deferred to dedicated access gates so one read model can serve all transport
+// surfaces (gRPC, MCP, and web).
+// Lifecycle validation is enforced at domain level now; broader access-policy checks
+// (gating by intent/role) are intentionally still pending.
 func (s *CampaignService) GetCampaign(ctx context.Context, in *campaignv1.GetCampaignRequest) (*campaignv1.GetCampaignResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "get campaign request is required")
@@ -137,6 +151,10 @@ func (s *CampaignService) GetCampaign(ctx context.Context, in *campaignv1.GetCam
 		return nil, handleDomainError(err)
 	}
 	// TODO: Apply access policy/intent gates for campaign read.
+	// Until policy checks are wired in, clients can retrieve campaign metadata
+	// after record fetch and domain-state validation only.
+	// Treat this endpoint as a domain-integrity boundary, not a full authorization
+	// boundary, until policy checks are centralized.
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpRead); err != nil {
 		return nil, handleDomainError(err)
 	}
@@ -233,6 +251,12 @@ func ensureNoActiveSession(ctx context.Context, store storage.SessionStore, camp
 //
 // TODO: Extract locale from gRPC metadata (e.g., "accept-language" header) to enable
 // proper i18n support. Currently hardcoded to DefaultLocale.
+//
+// This keeps API responses deterministic today while leaving room for locale-aware
+// user experience in follow-up work.
+//
+// The default locale is intentional so behavior is stable while auth/web and
+// gRPC metadata propagation is still being aligned for user-facing localization.
 func handleDomainError(err error) error {
 	return apperrors.HandleError(err, apperrors.DefaultLocale)
 }

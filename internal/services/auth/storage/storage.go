@@ -11,20 +11,20 @@ import (
 // ErrNotFound indicates a requested record is missing.
 var ErrNotFound = errors.New(errors.CodeNotFound, "record not found")
 
-// UserStore persists auth user records.
+// UserStore owns durable user identity, the core join point used by game and admin.
 type UserStore interface {
 	PutUser(ctx context.Context, u user.User) error
 	GetUser(ctx context.Context, userID string) (user.User, error)
 	ListUsers(ctx context.Context, pageSize int, pageToken string) (UserPage, error)
 }
 
-// UserPage describes a page of user records.
+// UserPage is a cursor page of users for admin-facing browsing and audits.
 type UserPage struct {
 	Users         []user.User
 	NextPageToken string
 }
 
-// PasskeyCredential stores a WebAuthn credential for a user.
+// PasskeyCredential stores a WebAuthn credential record linked to a user identity.
 type PasskeyCredential struct {
 	CredentialID   string
 	UserID         string
@@ -34,7 +34,7 @@ type PasskeyCredential struct {
 	LastUsedAt     *time.Time
 }
 
-// PasskeySession stores a WebAuthn registration or login session.
+// PasskeySession stores pending WebAuthn challenge state for registration or login.
 type PasskeySession struct {
 	ID          string
 	Kind        string
@@ -43,7 +43,7 @@ type PasskeySession struct {
 	ExpiresAt   time.Time
 }
 
-// UserEmail stores an email address tied to a user.
+// UserEmail stores a verified contact address and verification lifecycle metadata.
 type UserEmail struct {
 	ID         string
 	UserID     string
@@ -53,7 +53,7 @@ type UserEmail struct {
 	UpdatedAt  time.Time
 }
 
-// MagicLink represents a single-use magic link token.
+// MagicLink represents a single-use bootstrap token for one-time authentication.
 type MagicLink struct {
 	Token     string
 	UserID    string
@@ -64,7 +64,7 @@ type MagicLink struct {
 	UsedAt    *time.Time
 }
 
-// PasskeyStore persists WebAuthn credential and session data.
+// PasskeyStore persists WebAuthn credential and challenge state.
 type PasskeyStore interface {
 	PutPasskeyCredential(ctx context.Context, credential PasskeyCredential) error
 	GetPasskeyCredential(ctx context.Context, credentialID string) (PasskeyCredential, error)
@@ -76,7 +76,7 @@ type PasskeyStore interface {
 	DeleteExpiredPasskeySessions(ctx context.Context, now time.Time) error
 }
 
-// EmailStore persists user email data.
+// EmailStore persists user contacts used for identity recovery and validation.
 type EmailStore interface {
 	PutUserEmail(ctx context.Context, email UserEmail) error
 	GetUserEmailByEmail(ctx context.Context, email string) (UserEmail, error)
@@ -84,7 +84,7 @@ type EmailStore interface {
 	VerifyUserEmail(ctx context.Context, userID string, email string, verifiedAt time.Time) error
 }
 
-// MagicLinkStore persists magic link tokens.
+// MagicLinkStore persists one-time magic-link token state.
 type MagicLinkStore interface {
 	PutMagicLink(ctx context.Context, link MagicLink) error
 	GetMagicLink(ctx context.Context, token string) (MagicLink, error)

@@ -22,7 +22,7 @@ import (
 	grpc_health_v1 "google.golang.org/grpc/health/grpc_health_v1"
 )
 
-// serverEnv holds env-parsed configuration for the AI server.
+// serverEnv captures startup configuration and optional provider integration.
 type serverEnv struct {
 	DBPath        string `env:"FRACTURING_SPACE_AI_DB_PATH"`
 	EncryptionKey string `env:"FRACTURING_SPACE_AI_ENCRYPTION_KEY"`
@@ -44,6 +44,10 @@ func loadServerEnv() serverEnv {
 	return cfg
 }
 
+// openAIOAuthConfigFromEnv loads optional OpenAI OAuth config.
+//
+// If all OpenAI OAuth variables are present they are wired in together; partial
+// configuration is rejected to avoid accidental half-configured runtime.
 func openAIOAuthConfigFromEnv() (*aiservice.OpenAIOAuthConfig, error) {
 	env := loadServerEnv()
 	authURL := strings.TrimSpace(env.OpenAIOAuthAuthURL)
@@ -86,7 +90,10 @@ func openAIOAuthConfigFromEnv() (*aiservice.OpenAIOAuthConfig, error) {
 	}, nil
 }
 
-// Server hosts the AI service.
+// Server hosts the AI service and coordinates gRPC + health serving.
+//
+// It treats AI credential material as externalized secrets and never exposes
+// decrypted values from the API layer.
 type Server struct {
 	listener   net.Listener
 	grpcServer *grpc.Server
@@ -101,6 +108,8 @@ func New(port int) (*Server, error) {
 }
 
 // NewWithAddr creates a configured AI server listening on the provided address.
+//
+// This is the constructor used by tests and runnables that want explicit binding.
 func NewWithAddr(addr string) (*Server, error) {
 	srvEnv := loadServerEnv()
 

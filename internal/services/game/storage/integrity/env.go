@@ -14,7 +14,10 @@ type keyringEnv struct {
 	KeyID string `env:"FRACTURING_SPACE_GAME_EVENT_HMAC_KEY_ID" envDefault:"v1"`
 }
 
-// KeyringFromEnv loads the HMAC keyring configuration from environment variables.
+// KeyringFromEnv loads campaign event integrity keys from environment variables.
+//
+// It supports both a single legacy key and rotating multi-key maps so operators
+// can roll keys with minimal deployment churn.
 func KeyringFromEnv() (*Keyring, error) {
 	var raw keyringEnv
 	if err := env.Parse(&raw); err != nil {

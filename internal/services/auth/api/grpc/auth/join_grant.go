@@ -20,6 +20,10 @@ type joinGrantEnv struct {
 	TTL        time.Duration `env:"FRACTURING_SPACE_JOIN_GRANT_TTL"         envDefault:"5m"`
 }
 
+// joinGrantConfig contains the validated signing context for invitation join grants.
+//
+// Join grants are short-lived, signed capabilities that authorize a participant
+// invitation path without relying on an interactive auth exchange.
 type joinGrantConfig struct {
 	issuer   string
 	audience string
@@ -27,6 +31,9 @@ type joinGrantConfig struct {
 	ttl      time.Duration
 }
 
+// loadJoinGrantConfigFromEnv converts raw environment values into a validated
+// signing configuration so startup can fail fast when required join-grant metadata
+// is missing or malformed.
 func loadJoinGrantConfigFromEnv() (joinGrantConfig, error) {
 	var raw joinGrantEnv
 	if err := env.Parse(&raw); err != nil {
@@ -63,6 +70,9 @@ func loadJoinGrantConfigFromEnv() (joinGrantConfig, error) {
 	}, nil
 }
 
+// encodeJoinGrant creates a compact EdDSA-signed token encoding the provided join
+// grant payload. Tokens can then be verified by downstream invite endpoints without
+// maintaining token state in storage.
 func encodeJoinGrant(cfg joinGrantConfig, payload map[string]any) (string, error) {
 	if cfg.issuer == "" || cfg.audience == "" || len(cfg.key) != ed25519.PrivateKeySize {
 		return "", errors.New("join grant signer is not configured")
@@ -88,6 +98,8 @@ func encodeJoinGrant(cfg joinGrantConfig, payload map[string]any) (string, error
 	return signingInput + "." + encodedSig, nil
 }
 
+// decodeBase64 decodes URL-safe or standard base64 keys so tooling and secret
+// providers can be flexible without blocking bootstrapping.
 func decodeBase64(value string) ([]byte, error) {
 	if value == "" {
 		return nil, errors.New("empty base64 value")

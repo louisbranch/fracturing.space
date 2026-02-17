@@ -1,3 +1,7 @@
+// Package campaign provides policy checks for campaign operations and lifecycle.
+//
+// It exists so command handlers can stay focused on intent translation while
+// status-level rules stay centralized and explicit.
 package campaign
 
 import (
@@ -33,7 +37,11 @@ var (
 	ErrCampaignStatusDisallowsOperation = apperrors.New(apperrors.CodeCampaignStatusDisallowsOp, "campaign status does not allow operation")
 )
 
-// ValidateCampaignOperation ensures the campaign status allows the requested operation.
+// ValidateCampaignOperation checks the campaign status/operation pair and returns
+// a stable error when a transition is not allowed.
+//
+// This gives API callers and telemetry a consistent reason when legal-state rules
+// reject a request.
 func ValidateCampaignOperation(status Status, op CampaignOperation) error {
 	if op == CampaignOpUnspecified {
 		return newStatusOpError(status, op)
@@ -86,7 +94,7 @@ func ValidateCampaignOperation(status Status, op CampaignOperation) error {
 	}
 }
 
-// newStatusOpError creates metadata for disallowed status/operation combinations.
+// newStatusOpError creates typed metadata for disallowed status/operation pairs.
 func newStatusOpError(status Status, op CampaignOperation) *apperrors.Error {
 	statusLabel := campaignStatusLabel(status)
 	opLabel := campaignOperationLabel(op)

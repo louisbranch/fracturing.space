@@ -1,3 +1,7 @@
+// Package main starts the MCP server in stdio or HTTP transport mode.
+//
+// This keeps protocol transport selection in one place and shields tool behavior
+// from deployment startup concerns.
 package main
 
 import (

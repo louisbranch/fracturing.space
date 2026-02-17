@@ -1,5 +1,10 @@
 package main
 
+// Package main generates the icon catalog from the shared icon registry.
+//
+// It is a docs-oriented tooling boundary: source metadata drives generated UX
+// documentation, and no runtime behavior depends on this tool.
+
 import (
 	"flag"
 	"fmt"

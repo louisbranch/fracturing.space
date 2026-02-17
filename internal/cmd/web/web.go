@@ -1,3 +1,4 @@
+// Package web parses web command flags and boots the browser UI service.
 package web
 
 import (
@@ -25,7 +26,7 @@ type Config struct {
 	OAuthResourceSecret string        `env:"FRACTURING_SPACE_WEB_OAUTH_RESOURCE_SECRET"`
 }
 
-// ParseConfig parses flags into a Config.
+// ParseConfig parses environment and flags into a Config.
 func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	var cfg Config
 	if err := config.ParseEnv(&cfg); err != nil {
@@ -46,7 +47,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	return cfg, nil
 }
 
-// Run starts the web login server.
+// Run builds and starts the web login surface.
 func Run(ctx context.Context, cfg Config) error {
 	server, err := web.NewServer(web.Config{
 		HTTPAddr:            cfg.HTTPAddr,

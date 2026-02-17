@@ -11,20 +11,32 @@ import (
 
 // Applier applies event journal entries to projection stores.
 type Applier struct {
-	Campaign         storage.CampaignStore
-	Character        storage.CharacterStore
-	CampaignFork     storage.CampaignForkStore
-	Daggerheart      storage.DaggerheartStore
-	ClaimIndex       storage.ClaimIndexStore
-	Invite           storage.InviteStore
-	Participant      storage.ParticipantStore
-	Session          storage.SessionStore
-	SessionGate      storage.SessionGateStore
+	// Campaign writes campaign metadata read models.
+	Campaign storage.CampaignStore
+	// Character writes character read models.
+	Character storage.CharacterStore
+	// CampaignFork stores campaign fork metadata.
+	CampaignFork storage.CampaignForkStore
+	// Daggerheart writes system-specific projection data.
+	Daggerheart storage.DaggerheartStore
+	// ClaimIndex writes/reads participant-user claim mappings.
+	ClaimIndex storage.ClaimIndexStore
+	// Invite writes invite read models.
+	Invite storage.InviteStore
+	// Participant writes participant read models.
+	Participant storage.ParticipantStore
+	// Session writes session metadata read models.
+	Session storage.SessionStore
+	// SessionGate writes open/resolved gate state.
+	SessionGate storage.SessionGateStore
+	// SessionSpotlight writes session spotlight state.
 	SessionSpotlight storage.SessionSpotlightStore
-	Adapters         *systems.AdapterRegistry
+	// Adapters holds extension-specific projection hooks.
+	Adapters *systems.AdapterRegistry
 }
 
-// ensureTimestamp returns the given timestamp in UTC, or the current time if zero.
+// ensureTimestamp normalizes timestamps so projections always persist UTC, defaulting
+// to now for defensive event payloads that do not set time.
 func ensureTimestamp(ts time.Time) time.Time {
 	if ts.IsZero() {
 		return time.Now().UTC()
@@ -32,8 +44,10 @@ func ensureTimestamp(ts time.Time) time.Time {
 	return ts.UTC()
 }
 
-// marshalResolutionPayload encodes a gate resolution decision and resolution map
-// into a single JSON blob. Returns nil when both inputs are empty.
+// marshalResolutionPayload returns a compact JSON payload for gate resolution.
+//
+// This payload is read by API/UI layers so they can show both explicit decisions
+// and resolved map values without requiring schema-specific types.
 func marshalResolutionPayload(decision string, resolution map[string]any) ([]byte, error) {
 	if strings.TrimSpace(decision) == "" && len(resolution) == 0 {
 		return nil, nil
@@ -48,7 +62,7 @@ func marshalResolutionPayload(decision string, resolution map[string]any) ([]byt
 	return json.Marshal(combined)
 }
 
-// marshalOptionalMap encodes a map to JSON, returning nil when the map is empty.
+// marshalOptionalMap encodes an optional map and returns nil for empty payloads.
 func marshalOptionalMap(values map[string]any) ([]byte, error) {
 	if len(values) == 0 {
 		return nil, nil

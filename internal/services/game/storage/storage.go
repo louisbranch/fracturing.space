@@ -15,13 +15,16 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 )
 
-// ErrNotFound indicates a requested record is missing.
+// ErrNotFound indicates a requested persistence record is missing.
+// Callers use this to differentiate between legitimate "no such entity" states
+// and transport or data corruption failures.
 var ErrNotFound = apperrors.New(apperrors.CodeNotFound, "record not found")
 
-// ErrActiveSessionExists indicates an active session already exists for a campaign.
+// ErrActiveSessionExists indicates a command tried to start a second active session
+// for the same campaign, which would violate the single-active-session domain rule.
 var ErrActiveSessionExists = apperrors.New(apperrors.CodeActiveSessionExists, "active session already exists for campaign")
 
-// CampaignRecord captures persisted campaign metadata.
+// CampaignRecord captures the projection-oriented campaign metadata that APIs read.
 type CampaignRecord struct {
 	ID               string
 	Name             string
@@ -40,7 +43,7 @@ type CampaignRecord struct {
 	ArchivedAt       *time.Time
 }
 
-// ParticipantRecord captures persisted participant metadata.
+// ParticipantRecord captures participation state used by campaign membership queries.
 type ParticipantRecord struct {
 	ID             string
 	CampaignID     string
@@ -53,7 +56,7 @@ type ParticipantRecord struct {
 	UpdatedAt      time.Time
 }
 
-// InviteRecord captures persisted invite metadata.
+// InviteRecord captures invite state used for invitation lifecycle and UX decisions.
 type InviteRecord struct {
 	ID                     string
 	CampaignID             string
@@ -65,7 +68,7 @@ type InviteRecord struct {
 	UpdatedAt              time.Time
 }
 
-// CharacterRecord captures persisted character metadata.
+// CharacterRecord captures character identity/state metadata for campaign read views.
 type CharacterRecord struct {
 	ID            string
 	CampaignID    string
@@ -77,7 +80,7 @@ type CharacterRecord struct {
 	UpdatedAt     time.Time
 }
 
-// SessionRecord captures persisted session metadata.
+// SessionRecord captures session lifecycle metadata that defines active session boundaries.
 type SessionRecord struct {
 	ID         string
 	CampaignID string
@@ -88,7 +91,8 @@ type SessionRecord struct {
 	EndedAt    *time.Time
 }
 
-// CampaignStore persists campaign metadata records.
+// CampaignStore owns the campaign-level projection used by list/detail screens and
+// status transitions.
 type CampaignStore interface {
 	Put(ctx context.Context, c CampaignRecord) error
 	Get(ctx context.Context, id string) (CampaignRecord, error)
@@ -102,7 +106,7 @@ type CampaignPage struct {
 	NextPageToken string
 }
 
-// ParticipantStore persists participant records.
+// ParticipantStore owns membership read state, including seat ownership and ordering.
 type ParticipantStore interface {
 	PutParticipant(ctx context.Context, p ParticipantRecord) error
 	GetParticipant(ctx context.Context, campaignID, participantID string) (ParticipantRecord, error)
@@ -119,7 +123,7 @@ type ParticipantPage struct {
 	NextPageToken string
 }
 
-// InviteStore persists campaign invite records.
+// InviteStore owns invite lifecycle read data (created/claimed/revoked flows).
 type InviteStore interface {
 	PutInvite(ctx context.Context, inv InviteRecord) error
 	GetInvite(ctx context.Context, inviteID string) (InviteRecord, error)
@@ -135,7 +139,7 @@ type InvitePage struct {
 	NextPageToken string
 }
 
-// CharacterStore persists character records.
+// CharacterStore owns character listing and identity metadata for campaign views.
 type CharacterStore interface {
 	PutCharacter(ctx context.Context, c CharacterRecord) error
 	GetCharacter(ctx context.Context, campaignID, characterID string) (CharacterRecord, error)
@@ -150,7 +154,7 @@ type CharacterPage struct {
 	NextPageToken string
 }
 
-// SessionStore persists session records.
+// SessionStore owns active/completed session state used by replay, API, and CLI flows.
 type SessionStore interface {
 	// PutSession atomically stores a session and sets it as the active session for the campaign.
 	// Returns ErrActiveSessionExists if an active session already exists for the campaign.
@@ -167,7 +171,8 @@ type SessionStore interface {
 	ListSessions(ctx context.Context, campaignID string, pageSize int, pageToken string) (SessionPage, error)
 }
 
-// EventStore persists events to the unified event journal.
+// EventStore owns the event stream boundary that drives replay and command
+// rehydration; this is the source of truth for state reconstruction.
 type EventStore interface {
 	// AppendEvent atomically appends an event and returns it with sequence and hash set.
 	AppendEvent(ctx context.Context, evt event.Event) (event.Event, error)
@@ -186,7 +191,7 @@ type EventStore interface {
 	ListEventsPage(ctx context.Context, req ListEventsPageRequest) (ListEventsPageResult, error)
 }
 
-// TelemetryEvent describes an operational telemetry record.
+// TelemetryEvent captures operational observations emitted during command execution.
 type TelemetryEvent struct {
 	Timestamp      time.Time
 	EventName      string
@@ -203,12 +208,12 @@ type TelemetryEvent struct {
 	AttributesJSON []byte
 }
 
-// TelemetryStore persists operational telemetry events.
+// TelemetryStore persists operational telemetry records for audits and incident analysis.
 type TelemetryStore interface {
 	AppendTelemetryEvent(ctx context.Context, evt TelemetryEvent) error
 }
 
-// GameStatistics contains aggregate counts across the game data set.
+// GameStatistics contains aggregate counters used by dashboards and housekeeping.
 type GameStatistics struct {
 	CampaignCount    int64
 	SessionCount     int64
@@ -216,14 +221,14 @@ type GameStatistics struct {
 	ParticipantCount int64
 }
 
-// StatisticsStore provides aggregate statistics.
+// StatisticsStore centralizes aggregate count queries for operational observability.
 type StatisticsStore interface {
 	// GetGameStatistics returns aggregate counts.
 	// When since is nil, counts are for all time.
 	GetGameStatistics(ctx context.Context, since *time.Time) (GameStatistics, error)
 }
 
-// ListEventsPageRequest describes the parameters for paginated event listing.
+// ListEventsPageRequest describes request filters for operator and UI event history views.
 type ListEventsPageRequest struct {
 	// CampaignID scopes the query to a specific campaign (required).
 	CampaignID string
@@ -244,7 +249,7 @@ type ListEventsPageRequest struct {
 	FilterParams []any
 }
 
-// ListEventsPageResult contains the paginated event results.
+// ListEventsPageResult contains paginated event history for introspection tooling.
 type ListEventsPageResult struct {
 	// Events are the events matching the request.
 	Events []event.Event
@@ -256,14 +261,15 @@ type ListEventsPageResult struct {
 	TotalCount int
 }
 
-// RollOutcomeDelta describes a per-character state change.
+// RollOutcomeDelta describes a per-character projection delta from a roll action.
 type RollOutcomeDelta struct {
 	CharacterID string
 	HopeDelta   int
 	StressDelta int
 }
 
-// RollOutcomeApplyInput describes the outcome application request for storage.
+// RollOutcomeApplyInput carries the minimum authoritative inputs needed to apply
+// a roll outcome atomically and avoid partial state divergence.
 type RollOutcomeApplyInput struct {
 	CampaignID           string
 	SessionID            string
@@ -279,7 +285,7 @@ type RollOutcomeApplyInput struct {
 	GMFearDelta          int
 }
 
-// RollOutcomeApplyResult describes the outcome application result from storage.
+// RollOutcomeApplyResult reports exactly what changed after an atomic outcome update.
 type RollOutcomeApplyResult struct {
 	UpdatedCharacterStates []DaggerheartCharacterState
 	AppliedChanges         []action.OutcomeAppliedChange
@@ -288,7 +294,7 @@ type RollOutcomeApplyResult struct {
 	GMFearAfter            int
 }
 
-// RollOutcomeStore applies roll outcomes atomically.
+// RollOutcomeStore applies roll outcomes atomically so projection and stats stay coherent.
 type RollOutcomeStore interface {
 	ApplyRollOutcome(ctx context.Context, input RollOutcomeApplyInput) (RollOutcomeApplyResult, error)
 }
@@ -299,7 +305,7 @@ type SessionPage struct {
 	NextPageToken string
 }
 
-// SessionGate describes an open or resolved session gate.
+// SessionGate describes one gate and its resolution lifecycle within a session.
 type SessionGate struct {
 	CampaignID          string
 	SessionID           string
@@ -317,7 +323,7 @@ type SessionGate struct {
 	ResolutionJSON      []byte
 }
 
-// SessionGateStore persists session gate projections.
+// SessionGateStore persists gate state for the same lifecycle rules the game engine enforces.
 type SessionGateStore interface {
 	// PutSessionGate stores a gate record.
 	PutSessionGate(ctx context.Context, gate SessionGate) error
@@ -327,7 +333,7 @@ type SessionGateStore interface {
 	GetOpenSessionGate(ctx context.Context, campaignID, sessionID string) (SessionGate, error)
 }
 
-// SessionSpotlight describes the current session spotlight.
+// SessionSpotlight captures spotlight turn ownership so clients can read turn-order intent.
 type SessionSpotlight struct {
 	CampaignID         string
 	SessionID          string
@@ -338,7 +344,7 @@ type SessionSpotlight struct {
 	UpdatedByActorID   string
 }
 
-// SessionSpotlightStore persists session spotlight projections.
+// SessionSpotlightStore persists current spotlight state for session-facing APIs.
 type SessionSpotlightStore interface {
 	// PutSessionSpotlight stores the current spotlight for a session.
 	PutSessionSpotlight(ctx context.Context, spotlight SessionSpotlight) error
@@ -348,8 +354,8 @@ type SessionSpotlightStore interface {
 	ClearSessionSpotlight(ctx context.Context, campaignID, sessionID string) error
 }
 
-// Snapshot represents a materialized projection for a campaign as of an event sequence.
-// Snapshots are derived from the event journal and are not authoritative.
+// Snapshot is a materialized campaign/session state checkpoint derived from the event journal.
+// Snapshots are accelerators for replay, not the source of authority.
 type Snapshot struct {
 	CampaignID          string
 	SessionID           string
@@ -360,7 +366,7 @@ type Snapshot struct {
 	CreatedAt           time.Time
 }
 
-// SnapshotStore persists session snapshots captured at event sequences.
+// SnapshotStore persists replay checkpoints used to jump event replay work.
 type SnapshotStore interface {
 	// PutSnapshot stores a snapshot.
 	PutSnapshot(ctx context.Context, snap Snapshot) error
@@ -372,7 +378,7 @@ type SnapshotStore interface {
 	ListSnapshots(ctx context.Context, campaignID string, limit int) ([]Snapshot, error)
 }
 
-// ParticipantClaim describes a user-to-participant binding in a campaign.
+// ParticipantClaim describes enforced uniqueness of user-to-seat binding.
 type ParticipantClaim struct {
 	CampaignID    string
 	UserID        string
@@ -380,7 +386,7 @@ type ParticipantClaim struct {
 	ClaimedAt     time.Time
 }
 
-// ClaimIndexStore enforces uniqueness on claimed participants.
+// ClaimIndexStore keeps seat claim uniqueness from drifting during concurrent joins.
 type ClaimIndexStore interface {
 	// PutParticipantClaim stores a user claim for a participant seat.
 	PutParticipantClaim(ctx context.Context, campaignID, userID, participantID string, claimedAt time.Time) error
@@ -390,14 +396,14 @@ type ClaimIndexStore interface {
 	DeleteParticipantClaim(ctx context.Context, campaignID, userID string) error
 }
 
-// ForkMetadata contains fork-related campaign information.
+// ForkMetadata tracks campaign lineage needed for fork navigation and support tooling.
 type ForkMetadata struct {
 	ParentCampaignID string
 	ForkEventSeq     uint64
 	OriginCampaignID string
 }
 
-// CampaignForkStore provides fork-related campaign operations.
+// CampaignForkStore persists fork lineage metadata for derived-campaign workflows.
 type CampaignForkStore interface {
 	// GetCampaignForkMetadata retrieves fork metadata for a campaign.
 	GetCampaignForkMetadata(ctx context.Context, campaignID string) (ForkMetadata, error)
@@ -405,7 +411,7 @@ type CampaignForkStore interface {
 	SetCampaignForkMetadata(ctx context.Context, campaignID string, metadata ForkMetadata) error
 }
 
-// ProjectionStore groups projection-related storage interfaces.
+// ProjectionStore groups read-model-oriented stores consumed by APIs and queries.
 type ProjectionStore interface {
 	CampaignStore
 	ParticipantStore
@@ -419,8 +425,8 @@ type ProjectionStore interface {
 	StatisticsStore
 }
 
-// Store is a composite interface for all storage concerns.
-// Storage backends (BoltDB, SQLite) implement this interface.
+// Store is a composite interface for all persistence concerns used across event
+// sourcing, projection application, and queries.
 type Store interface {
 	CampaignStore
 	ParticipantStore
@@ -438,7 +444,8 @@ type Store interface {
 	Close() error
 }
 
-// DaggerheartCharacterProfile contains Daggerheart-specific character profile data.
+// DaggerheartCharacterProfile is the stored projection of Daggerheart
+// character progression and stats for read-heavy operations.
 type DaggerheartCharacterProfile struct {
 	CampaignID      string
 	CharacterID     string
@@ -461,13 +468,13 @@ type DaggerheartCharacterProfile struct {
 	Knowledge int
 }
 
-// DaggerheartExperience captures experience modifiers.
+// DaggerheartExperience captures character experience modifiers in read form.
 type DaggerheartExperience struct {
 	Name     string
 	Modifier int
 }
 
-// DaggerheartCharacterState contains Daggerheart-specific character state data.
+// DaggerheartCharacterState stores Daggerheart combat state needed by outcome workflows.
 type DaggerheartCharacterState struct {
 	CampaignID  string
 	CharacterID string
@@ -480,14 +487,14 @@ type DaggerheartCharacterState struct {
 	LifeState   string
 }
 
-// DaggerheartSnapshot contains Daggerheart-specific campaign-level state.
+// DaggerheartSnapshot stores campaign-level Daggerheart state used during replay.
 type DaggerheartSnapshot struct {
 	CampaignID            string
 	GMFear                int
 	ConsecutiveShortRests int
 }
 
-// DaggerheartCountdown contains countdown state for a campaign.
+// DaggerheartCountdown stores timed countdown state in session read models.
 type DaggerheartCountdown struct {
 	CampaignID  string
 	CountdownID string
@@ -499,7 +506,7 @@ type DaggerheartCountdown struct {
 	Looping     bool
 }
 
-// DaggerheartAdversary contains adversary metadata for a campaign.
+// DaggerheartAdversary stores adversary read data used by session renderers.
 type DaggerheartAdversary struct {
 	CampaignID  string
 	AdversaryID string
@@ -520,7 +527,7 @@ type DaggerheartAdversary struct {
 	UpdatedAt   time.Time
 }
 
-// DaggerheartFeature captures a class, subclass, heritage, or environment feature.
+// DaggerheartFeature captures reusable feature metadata from campaign content.
 type DaggerheartFeature struct {
 	ID          string
 	Name        string
@@ -528,14 +535,14 @@ type DaggerheartFeature struct {
 	Level       int
 }
 
-// DaggerheartHopeFeature captures a class hope feature.
+// DaggerheartHopeFeature captures one class hope feature row for reuse.
 type DaggerheartHopeFeature struct {
 	Name        string
 	Description string
 	HopeCost    int
 }
 
-// DaggerheartClass represents a content catalog class.
+// DaggerheartClass represents a catalog class content row.
 type DaggerheartClass struct {
 	ID              string
 	Name            string
@@ -549,7 +556,7 @@ type DaggerheartClass struct {
 	UpdatedAt       time.Time
 }
 
-// DaggerheartSubclass represents a content catalog subclass.
+// DaggerheartSubclass represents a catalog subclass content row.
 type DaggerheartSubclass struct {
 	ID                     string
 	Name                   string
@@ -561,7 +568,7 @@ type DaggerheartSubclass struct {
 	UpdatedAt              time.Time
 }
 
-// DaggerheartHeritage represents ancestry or community content.
+// DaggerheartHeritage stores reusable ancestry/community catalog rows.
 type DaggerheartHeritage struct {
 	ID        string
 	Name      string
@@ -571,7 +578,7 @@ type DaggerheartHeritage struct {
 	UpdatedAt time.Time
 }
 
-// DaggerheartExperienceEntry represents an experience catalog entry.
+// DaggerheartExperienceEntry stores reusable experience catalog rows.
 type DaggerheartExperienceEntry struct {
 	ID          string
 	Name        string
@@ -580,7 +587,7 @@ type DaggerheartExperienceEntry struct {
 	UpdatedAt   time.Time
 }
 
-// DaggerheartAdversaryAttack represents a standard adversary attack.
+// DaggerheartAdversaryAttack stores base attack schema for adversary projection.
 type DaggerheartAdversaryAttack struct {
 	Name        string
 	Range       string
@@ -589,13 +596,13 @@ type DaggerheartAdversaryAttack struct {
 	DamageType  string
 }
 
-// DaggerheartAdversaryExperience represents an adversary experience bonus.
+// DaggerheartAdversaryExperience stores adversary experience modifiers.
 type DaggerheartAdversaryExperience struct {
 	Name     string
 	Modifier int
 }
 
-// DaggerheartAdversaryFeature represents an adversary feature.
+// DaggerheartAdversaryFeature stores adversary feature details.
 type DaggerheartAdversaryFeature struct {
 	ID          string
 	Name        string
@@ -605,7 +612,7 @@ type DaggerheartAdversaryFeature struct {
 	Cost        int
 }
 
-// DaggerheartAdversaryEntry represents an adversary catalog entry.
+// DaggerheartAdversaryEntry stores catalog-grade adversary definitions.
 type DaggerheartAdversaryEntry struct {
 	ID              string
 	Name            string
@@ -627,7 +634,7 @@ type DaggerheartAdversaryEntry struct {
 	UpdatedAt       time.Time
 }
 
-// DaggerheartBeastformAttack represents a beastform attack profile.
+// DaggerheartBeastformAttack stores beastform attack schema for rendering.
 type DaggerheartBeastformAttack struct {
 	Range       string
 	Trait       string
@@ -636,14 +643,14 @@ type DaggerheartBeastformAttack struct {
 	DamageType  string
 }
 
-// DaggerheartBeastformFeature represents a beastform feature.
+// DaggerheartBeastformFeature stores reusable beastform feature rows.
 type DaggerheartBeastformFeature struct {
 	ID          string
 	Name        string
 	Description string
 }
 
-// DaggerheartBeastformEntry represents a beastform catalog entry.
+// DaggerheartBeastformEntry stores beastform catalog rows.
 type DaggerheartBeastformEntry struct {
 	ID           string
 	Name         string
@@ -659,7 +666,7 @@ type DaggerheartBeastformEntry struct {
 	UpdatedAt    time.Time
 }
 
-// DaggerheartCompanionExperienceEntry represents a companion experience catalog entry.
+// DaggerheartCompanionExperienceEntry stores reusable companion experience entries.
 type DaggerheartCompanionExperienceEntry struct {
 	ID          string
 	Name        string
@@ -668,7 +675,7 @@ type DaggerheartCompanionExperienceEntry struct {
 	UpdatedAt   time.Time
 }
 
-// DaggerheartLootEntry represents a loot catalog entry.
+// DaggerheartLootEntry stores loot catalog entries.
 type DaggerheartLootEntry struct {
 	ID          string
 	Name        string
@@ -678,7 +685,7 @@ type DaggerheartLootEntry struct {
 	UpdatedAt   time.Time
 }
 
-// DaggerheartDamageTypeEntry represents a damage type catalog entry.
+// DaggerheartDamageTypeEntry stores reusable damage-type catalog entries.
 type DaggerheartDamageTypeEntry struct {
 	ID          string
 	Name        string
@@ -687,7 +694,7 @@ type DaggerheartDamageTypeEntry struct {
 	UpdatedAt   time.Time
 }
 
-// DaggerheartDomain represents a domain catalog entry.
+// DaggerheartDomain stores reusable domain catalog entries.
 type DaggerheartDomain struct {
 	ID          string
 	Name        string
@@ -696,7 +703,7 @@ type DaggerheartDomain struct {
 	UpdatedAt   time.Time
 }
 
-// DaggerheartDomainCard represents a domain card catalog entry.
+// DaggerheartDomainCard stores reusable domain card rows.
 type DaggerheartDomainCard struct {
 	ID          string
 	Name        string
@@ -710,13 +717,13 @@ type DaggerheartDomainCard struct {
 	UpdatedAt   time.Time
 }
 
-// DaggerheartDamageDie represents a damage dice spec for content weapons.
+// DaggerheartDamageDie stores a normalized die specification.
 type DaggerheartDamageDie struct {
 	Sides int
 	Count int
 }
 
-// DaggerheartWeapon represents a weapon catalog entry.
+// DaggerheartWeapon stores reusable weapon catalog rows.
 type DaggerheartWeapon struct {
 	ID         string
 	Name       string
@@ -732,7 +739,7 @@ type DaggerheartWeapon struct {
 	UpdatedAt  time.Time
 }
 
-// DaggerheartArmor represents an armor catalog entry.
+// DaggerheartArmor stores reusable armor catalog rows.
 type DaggerheartArmor struct {
 	ID                  string
 	Name                string
@@ -745,7 +752,7 @@ type DaggerheartArmor struct {
 	UpdatedAt           time.Time
 }
 
-// DaggerheartItem represents an item catalog entry.
+// DaggerheartItem stores reusable item catalog rows.
 type DaggerheartItem struct {
 	ID          string
 	Name        string
@@ -758,7 +765,7 @@ type DaggerheartItem struct {
 	UpdatedAt   time.Time
 }
 
-// DaggerheartEnvironment represents an environment catalog entry.
+// DaggerheartEnvironment stores reusable environment catalog rows.
 type DaggerheartEnvironment struct {
 	ID                    string
 	Name                  string
@@ -773,7 +780,7 @@ type DaggerheartEnvironment struct {
 	UpdatedAt             time.Time
 }
 
-// DaggerheartContentString stores localized content strings.
+// DaggerheartContentString stores localized content text for the catalog.
 type DaggerheartContentString struct {
 	ContentID   string
 	ContentType string
@@ -784,8 +791,8 @@ type DaggerheartContentString struct {
 	UpdatedAt   time.Time
 }
 
-// DaggerheartStore provides Daggerheart-specific storage operations.
-// This interface is used for the Daggerheart game system extension tables.
+// DaggerheartStore provides campaign-scoped Daggerheart extension operations,
+// so system-specific projection logic stays isolated from generic projections.
 type DaggerheartStore interface {
 	// Character Profile Extensions
 	PutDaggerheartCharacterProfile(ctx context.Context, profile DaggerheartCharacterProfile) error
@@ -812,7 +819,8 @@ type DaggerheartStore interface {
 	DeleteDaggerheartAdversary(ctx context.Context, campaignID, adversaryID string) error
 }
 
-// DaggerheartContentStore provides access to the Daggerheart content catalog.
+// DaggerheartContentStore provides read/write access to Daggerheart campaign
+// content catalog rows used by bootstrap and content import tooling.
 type DaggerheartContentStore interface {
 	PutDaggerheartClass(ctx context.Context, class DaggerheartClass) error
 	GetDaggerheartClass(ctx context.Context, id string) (DaggerheartClass, error)

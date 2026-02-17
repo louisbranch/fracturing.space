@@ -9,13 +9,16 @@ import (
 	"strings"
 )
 
-// Keyring stores root HMAC keys and the active key id.
+// Keyring stores root HMAC keys and tracks the currently active signing key id.
+//
+// It intentionally isolates key selection and campaign-specific derivation so
+// callers can rotate keys without touching hash verification logic.
 type Keyring struct {
 	keys        map[string][]byte
 	activeKeyID string
 }
 
-// NewKeyring constructs a keyring for HMAC signing and verification.
+// NewKeyring validates and constructs the campaign keyring used for chain signatures.
 func NewKeyring(keys map[string][]byte, activeKeyID string) (*Keyring, error) {
 	if len(keys) == 0 {
 		return nil, fmt.Errorf("hmac keys are required")
@@ -30,7 +33,7 @@ func NewKeyring(keys map[string][]byte, activeKeyID string) (*Keyring, error) {
 	return &Keyring{keys: keys, activeKeyID: activeKeyID}, nil
 }
 
-// ActiveKeyID returns the configured signing key id.
+// ActiveKeyID returns the currently configured signing key id.
 func (k *Keyring) ActiveKeyID() string {
 	if k == nil {
 		return ""
@@ -52,7 +55,8 @@ func (k *Keyring) SignChainHash(campaignID, chainHash string) (string, string, e
 	return sig, keyID, nil
 }
 
-// VerifyChainHash validates a chain hash signature.
+// VerifyChainHash validates a chain hash signature for the campaign using the
+// supplied key id. This is the integrity checkpoint for replay acceptance.
 func (k *Keyring) VerifyChainHash(campaignID, chainHash, signature, keyID string) error {
 	if k == nil {
 		return fmt.Errorf("hmac keyring is not configured")

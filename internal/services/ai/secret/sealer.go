@@ -1,3 +1,7 @@
+// Package secret handles cryptographic sealing and opening of sensitive values.
+//
+// Sealing is isolated so core domain models stay transport-agnostic while storage
+// boundaries own the concrete crypto and key lifecycle.
 package secret
 
 import (

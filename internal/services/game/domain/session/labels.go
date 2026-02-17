@@ -32,6 +32,9 @@ const (
 )
 
 // NormalizeStatus parses a session status label into a canonical value.
+//
+// Normalization keeps API and test payloads aligned so status comparisons stay
+// stable across replay and branching flows.
 func NormalizeStatus(value string) (Status, bool) {
 	trimmed := strings.TrimSpace(value)
 	if trimmed == "" {
@@ -49,6 +52,9 @@ func NormalizeStatus(value string) (Status, bool) {
 }
 
 // NormalizeGateType validates and normalizes a gate type value.
+//
+// Gate types are intentionally free-form at storage level, but validated here so
+// invalid commands cannot open a gate with malformed metadata.
 func NormalizeGateType(value string) (string, error) {
 	trimmed := strings.TrimSpace(value)
 	if trimmed == "" {
@@ -58,11 +64,15 @@ func NormalizeGateType(value string) (string, error) {
 }
 
 // NormalizeGateReason trims a gate reason string.
+//
+// Even optional strings are normalized to reduce irrelevant replay diffs.
 func NormalizeGateReason(value string) string {
 	return strings.TrimSpace(value)
 }
 
 // NormalizeSpotlightType validates and normalizes a spotlight type value.
+//
+// The spotlight type controls who can consume command outcomes at a given moment.
 func NormalizeSpotlightType(value string) (SpotlightType, error) {
 	trimmed := strings.ToLower(strings.TrimSpace(value))
 	if trimmed == "" {
@@ -77,6 +87,8 @@ func NormalizeSpotlightType(value string) (SpotlightType, error) {
 }
 
 // ValidateSpotlightTarget enforces target requirements based on spotlight type.
+//
+// This guard protects command handlers from routing spotlight to an invalid target.
 func ValidateSpotlightTarget(spotlightType SpotlightType, characterID string) error {
 	characterID = strings.TrimSpace(characterID)
 	if spotlightType == SpotlightTypeCharacter && characterID == "" {

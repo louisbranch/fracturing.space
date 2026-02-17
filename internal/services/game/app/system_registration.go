@@ -17,14 +17,28 @@ var (
 	errSystemModuleRegistryMismatch   = errors.New("system module registry mismatch")
 )
 
+// registeredSystemModules returns the concrete system implementations wired into runtime.
+//
+// These modules provide command/event registration plus adapters used by domain and
+// projection code paths; keeping this in one place ensures startup can validate
+// consistency before accepting traffic.
 func registeredSystemModules() []domainsystem.Module {
 	return systemmanifest.Modules()
 }
 
+// registeredMetadataSystems returns system metadata surfaced in API contracts and registry.
+//
+// The metadata side is the contract-level source of truth for system names and
+// versions before runtime adapters are loaded.
 func registeredMetadataSystems() []domainsystems.GameSystem {
 	return systemmanifest.MetadataSystems()
 }
 
+// validateSystemRegistrationParity ensures module, metadata, and adapter registries match.
+//
+// If a module is missing from either metadata or adapters (or vice versa), the
+// server refuses startup because command execution and read-model projection would
+// diverge by system.
 func validateSystemRegistrationParity(modules []domainsystem.Module, metadata *domainsystems.Registry, adapters *domainsystems.AdapterRegistry) error {
 	if metadata == nil {
 		return errSystemMetadataRegistryRequired
@@ -72,6 +86,7 @@ func validateSystemRegistrationParity(modules []domainsystem.Module, metadata *d
 	return nil
 }
 
+// parseGameSystemID turns environment-facing system names into the API enum domain type.
 func parseGameSystemID(raw string) (commonv1.GameSystem, error) {
 	trimmed := strings.TrimSpace(raw)
 	if trimmed == "" {
@@ -87,6 +102,7 @@ func parseGameSystemID(raw string) (commonv1.GameSystem, error) {
 	return commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED, fmt.Errorf("unknown system id: %s", trimmed)
 }
 
+// systemParityKey normalizes system+version into a single key for cross-registry comparison.
 func systemParityKey(id commonv1.GameSystem, version string) string {
 	return fmt.Sprintf("%d@%s", id, strings.TrimSpace(version))
 }

@@ -40,7 +40,10 @@ const (
 var errCampaignSessionInactive = errors.New("campaign has no active session")
 var errCampaignParticipantRequired = errors.New("campaign participant access required")
 
-// Config defines the inputs for the chat server.
+// Config defines the inputs for the chat transport boundary.
+//
+// The settings intentionally couple the chat WebSocket layer to game membership and
+// auth token introspection without owning gameplay state.
 type Config struct {
 	HTTPAddr            string
 	GameAddr            string
@@ -51,7 +54,10 @@ type Config struct {
 	ShutdownTimeout     time.Duration
 }
 
-// Server hosts the chat HTTP server.
+// Server hosts the chat HTTP/WebSocket process.
+//
+// It delegates campaign membership and identity resolution to external service
+// clients so chat remains transport-only.
 type Server struct {
 	httpAddr        string
 	shutdownTimeout time.Duration
@@ -557,14 +563,13 @@ func (a *campaignAuthorizer) findParticipantByUserID(ctx context.Context, campai
 
 type wsUserIDContextKey struct{}
 
-// NewHandler creates the HTTP routes for chat service health and websocket entry.
-// This constructor keeps websocket auth disabled and exists for local tests.
+// NewHandler creates chat routes for tests and offline paths.
+// WebSocket auth is intentionally disabled in this constructor.
 func NewHandler() http.Handler {
 	return newHandler(nil, false)
 }
 
-// NewHandlerWithAuthorizer creates the chat HTTP routes with mandatory websocket
-// authentication and campaign membership checks.
+// NewHandlerWithAuthorizer creates chat routes with enforced websocket identity checks.
 func NewHandlerWithAuthorizer(authorizer wsAuthorizer) http.Handler {
 	return newHandler(authorizer, true)
 }
@@ -948,7 +953,7 @@ func mustJSON(v any) json.RawMessage {
 	return b
 }
 
-// NewServer builds a configured chat server.
+// NewServer builds a configured chat server and wires membership checks if game is reachable.
 func NewServer(config Config) (*Server, error) {
 	return NewServerWithContext(context.Background(), config)
 }
@@ -1004,6 +1009,8 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 }
 
 // Run creates and serves a chat server until the context ends.
+//
+// Operators can treat this as the lifecycle boundary for the real-time surface.
 func Run(ctx context.Context, config Config) error {
 	server, err := NewServer(config)
 	if err != nil {

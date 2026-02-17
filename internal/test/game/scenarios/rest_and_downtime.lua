@@ -15,6 +15,8 @@ scene:start_session("Rest")
 
 -- A short rest to regain footing, followed by a Prepare downtime move.
 -- TODO: Update rest deltas if rest recovery rules change.
+-- This keeps scenario expectations aligned with the current recovery model in use by
+-- the Daggerheart domain snapshot and session progression flow.
 scene:rest{
   type = "short",
   seed = 42,

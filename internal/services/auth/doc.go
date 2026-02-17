@@ -1,7 +1,8 @@
-// Package auth defines the authentication boundary for the project.
+// Package auth defines the identity boundary used across the platform.
 //
-// It is an umbrella package for the auth server, OAuth flows, user model,
-// and storage implementations used by the gRPC auth service.
+// It is the single place that owns user lifecycle, authentication factors,
+// and grant issuance so other services can depend on stable user IDs and
+// authorization checks instead of re-implementing identity rules.
 //
 // Subpackages:
 //   - app: auth server wiring and lifecycle

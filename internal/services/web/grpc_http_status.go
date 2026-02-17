@@ -7,8 +7,9 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// grpcErrorHTTPStatus maps common gRPC status codes to HTTP status codes.
-// It returns fallback when err is not a gRPC status or is unmapped.
+// grpcErrorHTTPStatus converts transport errors into web-facing status codes.
+// This keeps web routing logic simple: handlers can stay HTTP-first while still
+// preserving typed failures from gRPC for dashboards and templates.
 func grpcErrorHTTPStatus(err error, fallback int) int {
 	st, ok := status.FromError(err)
 	if !ok {

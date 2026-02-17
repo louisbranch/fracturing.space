@@ -37,7 +37,7 @@ type TransportKind string
 const (
 	// TransportStdio uses standard input/output for MCP.
 	TransportStdio TransportKind = "stdio"
-	// TransportHTTP is reserved for future HTTP transport support.
+	// TransportHTTP runs MCP over HTTP/SSE for browser or remote clients.
 	TransportHTTP TransportKind = "http"
 )
 
@@ -47,7 +47,13 @@ type Config struct {
 	Transport TransportKind
 	HTTPAddr  string // HTTP server address (e.g., "localhost:8081"). Defaults to localhost:8081 for HTTP transport.
 	// TODO: Add TLSConfig field for future TLS/HTTPS support
+	// Current deployments are expected to run MCP over trusted local transport only.
+	// This means HTTPS and transport-level trust are intentionally out-of-scope for now,
+	// and must be added before any non-local production exposure.
 	// TODO: Add AuthToken field for future API key authentication
+	// Authentication is intentionally deferred in this config because MCP transport
+	// defaults to local development trust assumptions; API tokens should be required
+	// before opening this server beyond that boundary.
 }
 
 // Server hosts the MCP server.
@@ -58,7 +64,8 @@ type Server struct {
 	ctxMu     sync.RWMutex
 }
 
-// New creates a configured MCP server that connects to state and game system gRPC services.
+// New creates a configured MCP server that connects to state and game system
+// gRPC services and hydrates tool/resource handlers from those APIs.
 func New(grpcAddr string) (*Server, error) {
 	addr := grpcAddress(grpcAddr)
 	conn, err := newGRPCConn(addr)
@@ -68,6 +75,8 @@ func New(grpcAddr string) (*Server, error) {
 	return newServer(conn), nil
 }
 
+// newServer creates MCP tool/resource handler bindings once and keeps shared
+// context for protocol state updates.
 func newServer(conn *grpc.ClientConn) *Server {
 	mcpServer := mcp.NewServer(&mcp.Implementation{Name: serverName, Version: serverVersion}, &mcp.ServerOptions{
 		CompletionHandler:  completionHandler,
@@ -113,7 +122,12 @@ func newServer(conn *grpc.ClientConn) *Server {
 }
 
 // completionHandler handles completion/complete requests with empty results.
+// Returning empty completions is intentional today because MCP prompt/resource
+// completion is still experimental in this codebase and would be unreliable
+// without full context wiring.
 // TODO: Return context-aware completions for prompt arguments and resource templates.
+// That capability is intentionally deferred so early MCP clients stay predictable
+// while protocol-level correctness is stabilized.
 func completionHandler(ctx context.Context, req *mcp.CompleteRequest) (*mcp.CompleteResult, error) {
 	return &mcp.CompleteResult{
 		Completion: mcp.CompletionResultDetails{
@@ -123,6 +137,8 @@ func completionHandler(ctx context.Context, req *mcp.CompleteRequest) (*mcp.Comp
 }
 
 // resourceSubscribeHandler accepts resource subscriptions with a valid URI.
+// The handler currently validates only addressing because MCP subscription
+// semantics are delegated to the resource model once URI mapping is stable.
 func resourceSubscribeHandler(_ context.Context, req *mcp.SubscribeRequest) error {
 	if req == nil || req.Params == nil || strings.TrimSpace(req.Params.URI) == "" {
 		return fmt.Errorf("resource uri is required")
@@ -131,6 +147,8 @@ func resourceSubscribeHandler(_ context.Context, req *mcp.SubscribeRequest) erro
 }
 
 // resourceUnsubscribeHandler accepts resource unsubscriptions with a valid URI.
+// URI-level validation is still the boundary because MCP unsubscription is a
+// resource routing signal, not yet a domain mutation path.
 func resourceUnsubscribeHandler(_ context.Context, req *mcp.UnsubscribeRequest) error {
 	if req == nil || req.Params == nil || strings.TrimSpace(req.Params.URI) == "" {
 		return fmt.Errorf("resource uri is required")
@@ -138,7 +156,9 @@ func resourceUnsubscribeHandler(_ context.Context, req *mcp.UnsubscribeRequest) 
 	return nil
 }
 
-// Run creates and serves the MCP server until the context ends.
+// Run is the service entrypoint for MCP and blocks until context cancellation.
+// It is intentionally transport-agnostic so startup can choose stdio for local
+// tools and HTTP for browser/remote integrations.
 func Run(ctx context.Context, cfg Config) error {
 	if cfg.Transport == "" {
 		cfg.Transport = TransportStdio
@@ -155,6 +175,8 @@ func Run(ctx context.Context, cfg Config) error {
 }
 
 // runWithHTTPTransport creates a server and serves it over HTTP transport.
+// runWithHTTPTransport keeps HTTP session/stateful transport concerns isolated from
+// the same MCP domain handlers used by stdio.
 func runWithHTTPTransport(ctx context.Context, cfg Config) error {
 	// Default to localhost-only binding for security
 	httpAddr := cfg.HTTPAddr
@@ -185,7 +207,8 @@ func runWithHTTPTransport(ctx context.Context, cfg Config) error {
 
 // monitorHealth periodically checks gRPC connection health.
 // If the connection becomes unhealthy, it logs errors but doesn't terminate
-// the HTTP server, allowing for graceful degradation.
+// the HTTP server, allowing for graceful degradation while still surfacing
+// connector issues quickly.
 func (s *Server) monitorHealth(ctx context.Context) {
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
@@ -254,6 +277,8 @@ func (s *Server) getContext() domain.Context {
 }
 
 // serveWithTransport starts the MCP server using the provided transport.
+// The server and its gRPC connection share a single exit path so cleanup behavior
+// is consistent for both stdio and HTTP runs.
 func (s *Server) serveWithTransport(ctx context.Context, transport mcp.Transport) error {
 	if s == nil || s.mcpServer == nil {
 		return fmt.Errorf("MCP server is not configured")

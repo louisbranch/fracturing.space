@@ -37,6 +37,10 @@ const (
 )
 
 // Decide returns the decision for a participant command against current state.
+//
+// Participant commands define membership and authorization context. This decider keeps
+// that context explicit by emitting identity/role/capability changes as immutable
+// events rather than mutating shared storage directly.
 func Decide(state State, cmd command.Command, now func() time.Time) command.Decision {
 	if cmd.Type == commandTypeJoin {
 		if state.Joined {

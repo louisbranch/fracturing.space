@@ -1,3 +1,7 @@
+// Package main starts the browser-facing web service.
+//
+// This process owns route wiring and static template serving so campaign/auth
+// context is translated consistently for browsers and web users.
 package main
 
 import (

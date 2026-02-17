@@ -1,13 +1,24 @@
 package participant
 
-// State captures participant facts derived from domain events.
+// State captures replayed campaign membership and control intent.
+//
+// Permission checks in multiple services derive from this snapshot to avoid
+// scattering identity and role logic across handlers.
 type State struct {
-	Joined         bool
-	Left           bool
-	ParticipantID  string
-	UserID         string
-	DisplayName    string
-	Role           string
-	Controller     string
+	// Joined indicates the participant currently exists in this campaign roster.
+	Joined bool
+	// Left indicates a completed leave command has been processed.
+	Left bool
+	// ParticipantID is the campaign-scoped identity used by domain commands.
+	ParticipantID string
+	// UserID links participant records to external authentication identities.
+	UserID string
+	// DisplayName is shown across campaign/session UI and projection outputs.
+	DisplayName string
+	// Role is the campaign role used for authorization decisions.
+	Role string
+	// Controller indicates who can command actions for this participant.
+	Controller string
+	// CampaignAccess controls visibility and permission scope at campaign level.
 	CampaignAccess string
 }

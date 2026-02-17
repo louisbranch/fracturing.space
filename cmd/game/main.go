@@ -1,3 +1,6 @@
+// Package main starts the game gRPC service and owns its process lifecycle.
+//
+// This command wires stores and handlers into a single durable process boundary.
 package main
 
 import (

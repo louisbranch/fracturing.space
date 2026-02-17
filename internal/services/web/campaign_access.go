@@ -11,10 +11,16 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/shared/authctx"
 )
 
+// campaignAccessChecker answers "can this access token claim campaign access?"
+//
+// It forms the boundary between authenticated identity and campaign membership.
 type campaignAccessChecker interface {
 	IsCampaignParticipant(ctx context.Context, campaignID string, accessToken string) (bool, error)
 }
 
+// campaignAccessService adapts auth introspection + participant reads into a
+// campaign membership decision that web routes can enforce before invoking domain
+// services.
 type campaignAccessService struct {
 	authBaseURL         string
 	oauthResourceSecret string
@@ -24,7 +30,15 @@ type campaignAccessService struct {
 
 type introspectResponse = authctx.IntrospectionResult
 
+// newCampaignAccessChecker wires the identity-based membership gate when both auth
+// base URL and resource secret are configured.
+//
+// If either input is missing, membership checks are intentionally disabled to
+// allow partial deployments to continue with auth/session gating only.
 func newCampaignAccessChecker(config Config, participantClient statev1.ParticipantServiceClient) campaignAccessChecker {
+	// If either identity base URL or resource secret is missing, we intentionally
+	// disable extra server-side access checks and let upstream auth/session gating
+	// control overall trust decisions.
 	if participantClient == nil {
 		return nil
 	}
@@ -41,6 +55,9 @@ func newCampaignAccessChecker(config Config, participantClient statev1.Participa
 	}
 }
 
+// IsCampaignParticipant resolves token identity and confirms campaign membership
+// by walking current participants, which protects campaign routes from being read by
+// non-members before state mutation operations.
 func (s *campaignAccessService) IsCampaignParticipant(ctx context.Context, campaignID string, accessToken string) (bool, error) {
 	campaignID = strings.TrimSpace(campaignID)
 	accessToken = strings.TrimSpace(accessToken)
@@ -80,6 +97,8 @@ func (s *campaignAccessService) IsCampaignParticipant(ctx context.Context, campa
 }
 
 func (s *campaignAccessService) introspectUserID(ctx context.Context, accessToken string) (string, error) {
+	// introspectUserID is the auth boundary for web-gate decisions, so
+	// authorization here is always rooted in active user identity.
 	if s == nil || s.httpClient == nil {
 		return "", fmt.Errorf("campaign access checker is not configured")
 	}

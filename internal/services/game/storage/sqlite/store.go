@@ -35,10 +35,12 @@ func toMillis(value time.Time) int64 {
 	return value.UTC().UnixMilli()
 }
 
+// fromMillis reverses toMillis for persisted millisecond timestamps.
 func fromMillis(value int64) time.Time {
 	return time.UnixMilli(value).UTC()
 }
 
+// toNullMillis maps optional domain times to sql.NullInt64 for nullable DB columns.
 func toNullMillis(value *time.Time) sql.NullInt64 {
 	if value == nil {
 		return sql.NullInt64{}
@@ -46,6 +48,7 @@ func toNullMillis(value *time.Time) sql.NullInt64 {
 	return sql.NullInt64{Int64: toMillis(*value), Valid: true}
 }
 
+// fromNullMillis maps nullable SQL timestamps back into optional domain time values.
 func fromNullMillis(value sql.NullInt64) *time.Time {
 	if !value.Valid {
 		return nil
@@ -74,11 +77,17 @@ func WithProjectionApplyOutboxEnabled(enabled bool) OpenEventsOption {
 }
 
 // Open opens a SQLite projections store at the provided path.
+//
+// This is the historic convenience constructor used by some startup codepaths that
+// only need projection storage.
 func Open(path string) (*Store, error) {
 	return OpenProjections(path)
 }
 
 // OpenEvents opens a SQLite event journal store at the provided path.
+//
+// This path wires integrity key material and the event registry so every appended
+// event can be consistently hashed and validated in one place.
 func OpenEvents(path string, keyring *integrity.Keyring, registry *event.Registry, opts ...OpenEventsOption) (*Store, error) {
 	store, err := openStore(path, migrations.EventsFS, "events", keyring)
 	if err != nil {
@@ -104,6 +113,8 @@ func OpenContent(path string) (*Store, error) {
 }
 
 // Close closes the underlying SQLite database.
+//
+// Close is intentionally nil-safe so callers can defer it in all startup paths.
 func (s *Store) Close() error {
 	if s == nil || s.sqlDB == nil {
 		return nil
@@ -111,6 +122,8 @@ func (s *Store) Close() error {
 	return s.sqlDB.Close()
 }
 
+// openStore boots a SQLite bundle for a domain purpose (events/projections/content)
+// and applies embedded migrations before the store is handed to higher layers.
 func openStore(path string, migrationFS fs.FS, migrationRoot string, keyring *integrity.Keyring) (*Store, error) {
 	if strings.TrimSpace(path) == "" {
 		return nil, fmt.Errorf("storage path is required")
@@ -148,6 +161,7 @@ func openStore(path string, migrationFS fs.FS, migrationRoot string, keyring *in
 	return store, nil
 }
 
+// ensureInviteRecipientColumn backfills invite schema when older databases omit recipient_user_id.
 func ensureInviteRecipientColumn(sqlDB *sql.DB) error {
 	rows, err := sqlDB.Query("PRAGMA table_info(invites)")
 	if err != nil {
@@ -209,7 +223,8 @@ CREATE INDEX idx_invites_recipient_status ON invites(recipient_user_id, status);
 	return nil
 }
 
-// runMigrations runs embedded SQL migrations.
+// runMigrations executes embedded SQL migrations from the provided migration set.
+// Files are sorted lexicographically to make startup behavior deterministic.
 func runMigrations(sqlDB *sql.DB, migrationFS fs.FS, migrationRoot string) error {
 	entries, err := fs.ReadDir(migrationFS, migrationRoot)
 	if err != nil {
@@ -246,6 +261,7 @@ func runMigrations(sqlDB *sql.DB, migrationFS fs.FS, migrationRoot string) error
 }
 
 // extractUpMigration extracts the Up migration portion from a migration file.
+// Down sections are intentionally ignored during startup execution.
 func extractUpMigration(content string) string {
 	upIdx := strings.Index(content, "-- +migrate Up")
 	if upIdx == -1 {

@@ -22,7 +22,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-// adminServerEnv holds env-parsed configuration for the admin server.
+// adminServerEnv captures startup defaults for the admin process.
 type adminServerEnv struct {
 	DBPath string `env:"FRACTURING_SPACE_ADMIN_DB_PATH"`
 }
@@ -42,7 +42,10 @@ const defaultGRPCRetryDelay = 500 * time.Millisecond
 // maxGRPCRetryDelay caps the backoff between gRPC dial attempts.
 const maxGRPCRetryDelay = 10 * time.Second
 
-// Config defines the inputs for the admin server.
+// Config defines the inputs for the admin operator process.
+//
+// The admin service is a control plane that consumes game/auth APIs; these
+// values select those API surfaces and optional authentication enforcement.
 type Config struct {
 	HTTPAddr        string
 	GRPCAddr        string
@@ -52,7 +55,10 @@ type Config struct {
 	AuthConfig *AuthConfig
 }
 
-// Server hosts the admin dashboard HTTP server and optional gRPC connection.
+// Server hosts the admin dashboard and manages authenticated gRPC clients.
+//
+// It keeps a thin orchestration layer between operator HTTP handlers and domain
+// services that hold campaign/user/session/project state.
 type Server struct {
 	httpAddr    string
 	grpcAddr    string
@@ -211,7 +217,7 @@ func (g *grpcClients) HasAuthConnection() bool {
 	return g.authConn != nil
 }
 
-// SetGameConn stores the game gRPC connection and clients.
+// SetGameConn stores the game gRPC connection and clients after first successful dial.
 func (g *grpcClients) SetGameConn(conn *grpc.ClientConn, daggerheartClient daggerheartv1.DaggerheartServiceClient, contentClient daggerheartv1.DaggerheartContentServiceClient, campaignClient statev1.CampaignServiceClient, sessionClient statev1.SessionServiceClient, characterClient statev1.CharacterServiceClient, participantClient statev1.ParticipantServiceClient, inviteClient statev1.InviteServiceClient, snapshotClient statev1.SnapshotServiceClient, eventClient statev1.EventServiceClient, statisticsClient statev1.StatisticsServiceClient, systemClient statev1.SystemServiceClient) {
 	if g == nil {
 		return

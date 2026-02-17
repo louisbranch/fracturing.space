@@ -1,3 +1,4 @@
+// Package scenario parses scenario command flags and executes scripted runs.
 package scenario
 
 import (
@@ -21,7 +22,7 @@ type Config struct {
 	Timeout    time.Duration `env:"FRACTURING_SPACE_SCENARIO_TIMEOUT"  envDefault:"10s"`
 }
 
-// ParseConfig parses flags into a Config.
+// ParseConfig parses environment and flags into a Config.
 func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	var cfg Config
 	if err := config.ParseEnv(&cfg); err != nil {
@@ -39,7 +40,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	return cfg, nil
 }
 
-// Run executes the scenario command.
+// Run executes a scenario Lua file through game gRPC contracts.
 func Run(ctx context.Context, cfg Config, out io.Writer, errOut io.Writer) error {
 	if out == nil {
 		out = io.Discard

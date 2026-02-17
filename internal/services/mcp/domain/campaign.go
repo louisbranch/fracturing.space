@@ -737,6 +737,8 @@ func CampaignRestoreHandler(client statev1.CampaignServiceClient, getContext fun
 }
 
 // CampaignListResourceHandler returns a readable campaign listing resource.
+// The resource intentionally returns one consolidated page while we migrate MCP clients
+// to explicit paging controls; callers should not assume cursor-based pagination exists yet.
 func CampaignListResourceHandler(client statev1.CampaignServiceClient) mcp.ResourceHandler {
 	return func(ctx context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
 		if client == nil {
@@ -756,8 +758,17 @@ func CampaignListResourceHandler(client statev1.CampaignServiceClient) mcp.Resou
 			return nil, fmt.Errorf("create request metadata: %w", err)
 		}
 
-		payload := CampaignListPayload{}
+		// Campaign listings currently return a single snapshot page so MCP callers can
+		// inspect canonical campaign metadata quickly during onboarding and local scripting.
 		// TODO: Support page_size/page_token inputs and return next_page_token.
+		// Without this, clients cannot resume listing after this first page and may
+		// over-fetch when campaign catalogs grow.
+		//
+		// This is a temporary compromise to keep catalog responses stable while
+		// richer UX pagination support is implemented in a later revision.
+		// Pagination is intentionally deferred to keep MCP responses deterministic while
+		// first-party surfaces agree on cursor semantics.
+		payload := CampaignListPayload{}
 		response, err := client.ListCampaigns(callCtx, &statev1.ListCampaignsRequest{
 			PageSize: 10,
 		})
@@ -805,6 +816,7 @@ func CampaignListResourceHandler(client statev1.CampaignServiceClient) mcp.Resou
 }
 
 // formatTimestamp returns an RFC3339 timestamp or empty string.
+// Empty values are treated as missing fields for compact API responses.
 func formatTimestamp(ts *timestamppb.Timestamp) string {
 	if ts == nil {
 		return ""
@@ -812,6 +824,9 @@ func formatTimestamp(ts *timestamppb.Timestamp) string {
 	return ts.AsTime().Format(time.RFC3339)
 }
 
+// gameSystemFromString normalizes MCP input into a canonical game-system enum.
+// Unknown values degrade to UNSPECIFIED so input validation can reject unsupported
+// systems in a controlled and observable way.
 func gameSystemFromString(value string) commonv1.GameSystem {
 	switch strings.ToUpper(strings.TrimSpace(value)) {
 	case "DAGGERHEART", "GAME_SYSTEM_DAGGERHEART":
@@ -821,6 +836,8 @@ func gameSystemFromString(value string) commonv1.GameSystem {
 	}
 }
 
+// gmModeFromString parses MCP input into gm mode, accepting loose variants and
+// normalizing case/spacing so user-facing callers stay ergonomic.
 func gmModeFromString(value string) statev1.GmMode {
 	switch strings.ToUpper(strings.TrimSpace(value)) {
 	case "HUMAN":
@@ -834,6 +851,7 @@ func gmModeFromString(value string) statev1.GmMode {
 	}
 }
 
+// gmModeToString converts internal gm-mode enums into deterministic MCP output values.
 func gmModeToString(mode statev1.GmMode) string {
 	switch mode {
 	case statev1.GmMode_HUMAN:
@@ -847,6 +865,7 @@ func gmModeToString(mode statev1.GmMode) string {
 	}
 }
 
+// campaignIntentFromString parses MCP campaign intent values while accepting common aliases.
 func campaignIntentFromString(value string) statev1.CampaignIntent {
 	switch strings.ToUpper(strings.TrimSpace(value)) {
 	case "STANDARD", "CAMPAIGN_INTENT_STANDARD":
@@ -860,6 +879,7 @@ func campaignIntentFromString(value string) statev1.CampaignIntent {
 	}
 }
 
+// campaignIntentToString converts internal campaign intent enums into MCP wire format.
 func campaignIntentToString(intent statev1.CampaignIntent) string {
 	switch intent {
 	case statev1.CampaignIntent_STANDARD:
@@ -873,6 +893,7 @@ func campaignIntentToString(intent statev1.CampaignIntent) string {
 	}
 }
 
+// campaignAccessPolicyFromString maps MCP text to the campaign access policy enum.
 func campaignAccessPolicyFromString(value string) statev1.CampaignAccessPolicy {
 	switch strings.ToUpper(strings.TrimSpace(value)) {
 	case "PRIVATE", "CAMPAIGN_ACCESS_POLICY_PRIVATE":
@@ -886,6 +907,7 @@ func campaignAccessPolicyFromString(value string) statev1.CampaignAccessPolicy {
 	}
 }
 
+// campaignAccessPolicyToString converts internal campaign access policy enums for output.
 func campaignAccessPolicyToString(policy statev1.CampaignAccessPolicy) string {
 	switch policy {
 	case statev1.CampaignAccessPolicy_PRIVATE:
@@ -899,6 +921,7 @@ func campaignAccessPolicyToString(policy statev1.CampaignAccessPolicy) string {
 	}
 }
 
+// campaignStatusToString converts internal campaign status enums for MCP consumers.
 func campaignStatusToString(status statev1.CampaignStatus) string {
 	switch status {
 	case statev1.CampaignStatus_DRAFT:
@@ -1123,6 +1146,7 @@ func ParticipantDeleteHandler(client statev1.ParticipantServiceClient, getContex
 	}
 }
 
+// participantRoleFromString maps MCP role names to domain enums while tolerating common casing.
 func participantRoleFromString(value string) statev1.ParticipantRole {
 	switch strings.ToUpper(strings.TrimSpace(value)) {
 	case "GM":
@@ -1134,6 +1158,7 @@ func participantRoleFromString(value string) statev1.ParticipantRole {
 	}
 }
 
+// participantRoleToString converts participant roles back to stable MCP-visible values.
 func participantRoleToString(role statev1.ParticipantRole) string {
 	switch role {
 	case statev1.ParticipantRole_GM:
@@ -1145,6 +1170,7 @@ func participantRoleToString(role statev1.ParticipantRole) string {
 	}
 }
 
+// controllerFromString parses controller kinds from MCP payload strings.
 func controllerFromString(value string) statev1.Controller {
 	switch strings.ToUpper(strings.TrimSpace(value)) {
 	case "HUMAN":
@@ -1156,6 +1182,7 @@ func controllerFromString(value string) statev1.Controller {
 	}
 }
 
+// controllerToString converts internal controller enums into MCP output form.
 func controllerToString(controller statev1.Controller) string {
 	switch controller {
 	case statev1.Controller_CONTROLLER_HUMAN:
@@ -1349,6 +1376,7 @@ func CharacterDeleteHandler(client statev1.CharacterServiceClient, notify Resour
 	}
 }
 
+// characterKindFromString parses MCP character kinds and maps unknown kinds to UNSPECIFIED.
 func characterKindFromString(value string) statev1.CharacterKind {
 	switch strings.ToUpper(strings.TrimSpace(value)) {
 	case "PC":
@@ -1360,6 +1388,7 @@ func characterKindFromString(value string) statev1.CharacterKind {
 	}
 }
 
+// characterKindToString converts internal character kinds into MCP output values.
 func characterKindToString(kind statev1.CharacterKind) string {
 	switch kind {
 	case statev1.CharacterKind_PC:

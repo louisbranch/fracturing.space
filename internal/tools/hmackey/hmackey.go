@@ -1,5 +1,10 @@
 package hmackey
 
+// Package hmackey generates random secret material used to sign game event HMACs.
+//
+// The output is deterministic in structure for consumers but unpredictable by
+// design, so it can be used safely in deployment bootstrap scripts.
+
 import (
 	"crypto/rand"
 	"encoding/hex"

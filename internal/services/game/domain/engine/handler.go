@@ -21,31 +21,50 @@ var (
 )
 
 // GateStateLoader loads session state for gate checks.
+//
+// It lets the command flow remain read-light by loading only session context when
+// gate policy evaluation is required.
 type GateStateLoader interface {
 	LoadSession(ctx context.Context, campaignID, sessionID string) (session.State, error)
 }
 
 // StateLoader loads domain state for deciders.
+//
+// This keeps deciders pure: they never fetch data themselves and always operate
+// on fully reconstructed state from the replay pipeline.
 type StateLoader interface {
 	Load(ctx context.Context, cmd command.Command) (any, error)
 }
 
 // EventJournal appends events to the journal.
+//
+// Appending here is the persistence boundary for the write model.
 type EventJournal interface {
 	Append(ctx context.Context, evt event.Event) (event.Event, error)
 }
 
 // Applier folds events into state.
+//
+// The applier is intentionally shared between request-time execution and replay
+// so behavior is identical when handling new commands and reconstructing history.
 type Applier interface {
 	Apply(state any, evt event.Event) (any, error)
 }
 
 // Decider returns a decision for a command.
+//
+// Implementations are where business invariants live; handlers just orchestrate
+// transport-safe execution.
 type Decider interface {
 	Decide(state any, cmd command.Command, now func() time.Time) command.Decision
 }
 
-// Handler validates, gates, and decides commands.
+// Handler is the domain write orchestrator:
+// 1) validate intent against command registry,
+// 2) enforce optional session gate policy,
+// 3) execute deciders over replay-derived state,
+// 4) validate and append domain events,
+// 5) checkpoint and snapshot state for fast future replays.
 type Handler struct {
 	Commands        *command.Registry
 	Events          *event.Registry
@@ -61,12 +80,18 @@ type Handler struct {
 }
 
 // Result captures execution outcomes.
+//
+// Result captures both the command decision and any newly folded in-memory state so
+// transport layers can support read-after-write flows without a second load.
 type Result struct {
 	Decision command.Decision
 	State    any
 }
 
 // Handle validates a command, checks gate policy, and returns a decision.
+//
+// Use Handle when you need validation plus event emission decisions without
+// requiring caller to materialize post-apply state.
 func (h Handler) Handle(ctx context.Context, cmd command.Command) (command.Decision, error) {
 	if h.Commands == nil {
 		return command.Decision{}, ErrCommandRegistryRequired
@@ -132,6 +157,9 @@ func (h Handler) Handle(ctx context.Context, cmd command.Command) (command.Decis
 }
 
 // Execute handles a command and applies emitted events to state.
+//
+// Execute is the full write-side path: same validation and decider inputs as
+// Handle, plus deterministic event application and persistence side-effect hooks.
 func (h Handler) Execute(ctx context.Context, cmd command.Command) (Result, error) {
 	normalized := cmd
 	if h.Commands != nil {

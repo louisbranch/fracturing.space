@@ -1,3 +1,6 @@
+// Package main wires the AI gRPC service process lifecycle.
+//
+// It reads config from flags/env and runs the AI server until shutdown.
 package main
 
 import (

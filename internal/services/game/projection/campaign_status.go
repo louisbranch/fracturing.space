@@ -9,6 +9,8 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
+// applyCampaignStatusTransition enforces campaign lifecycle rules while
+// preserving timestamps for history-sensitive read models (completed/archived at).
 func applyCampaignStatusTransition(record storage.CampaignRecord, target campaign.Status, now time.Time) (storage.CampaignRecord, error) {
 	if !campaign.IsStatusTransitionAllowed(record.Status, target) {
 		fromStatus := campaignStatusLabel(record.Status)
@@ -37,6 +39,7 @@ func applyCampaignStatusTransition(record storage.CampaignRecord, target campaig
 	return updated, nil
 }
 
+// campaignStatusLabel centralizes stable status labels for error/reporting context.
 func campaignStatusLabel(status campaign.Status) string {
 	switch status {
 	case campaign.StatusDraft:

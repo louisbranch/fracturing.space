@@ -1,3 +1,7 @@
+// Package providergrant models OAuth-connected provider access for AI runtime calls.
+//
+// Grants represent delegated authorization from an owner that can be refreshed and
+// revoked without changing local credential ownership models.
 package providergrant
 
 import (

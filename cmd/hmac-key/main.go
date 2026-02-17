@@ -1,3 +1,7 @@
+// Package main provides a one-off utility to generate HMAC secrets.
+//
+// The command emits generated keys to stdout so operational bootstrap tooling can
+// pipe them directly into environment or secret stores.
 package main
 
 import (

@@ -11,6 +11,8 @@ import (
 )
 
 func (h *handler) handleAppCampaignSessions(w http.ResponseWriter, r *http.Request, campaignID string) {
+	// handleAppCampaignSessions renders active/archived campaign sessions so
+	// participants can reason about current play context.
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -46,6 +48,8 @@ func (h *handler) handleAppCampaignSessions(w http.ResponseWriter, r *http.Reque
 }
 
 func (h *handler) handleAppCampaignSessionDetail(w http.ResponseWriter, r *http.Request, campaignID string, sessionID string) {
+	// handleAppCampaignSessionDetail returns one session record from the session
+	// read model for the campaign workspace.
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -82,6 +86,8 @@ func (h *handler) handleAppCampaignSessionDetail(w http.ResponseWriter, r *http.
 }
 
 func (h *handler) handleAppCampaignSessionStart(w http.ResponseWriter, r *http.Request, campaignID string) {
+	// handleAppCampaignSessionStart creates a new live session for campaign play
+	// and requires manager/owner permission.
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -137,6 +143,8 @@ func (h *handler) handleAppCampaignSessionStart(w http.ResponseWriter, r *http.R
 }
 
 func (h *handler) handleAppCampaignSessionEnd(w http.ResponseWriter, r *http.Request, campaignID string) {
+	// handleAppCampaignSessionEnd transitions a session to ended state once
+	// authorization checks are satisfied.
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -196,6 +204,8 @@ func canManageCampaignSessions(access statev1.CampaignAccess) bool {
 }
 
 func renderAppCampaignSessionsPage(w http.ResponseWriter, campaignID string, sessions []*statev1.Session, canManageSessions bool) {
+	// renderAppCampaignSessionsPage maps session models to a navigable list and
+	// conditionally exposes end actions only for managers/owners.
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	escapedCampaignID := html.EscapeString(campaignID)
 	_, _ = io.WriteString(w, "<!doctype html><html><head><title>Sessions</title></head><body><h1>Sessions</h1>")
@@ -229,6 +239,8 @@ func renderAppCampaignSessionsPage(w http.ResponseWriter, campaignID string, ses
 }
 
 func renderAppCampaignSessionDetailPage(w http.ResponseWriter, campaignID string, session *statev1.Session) {
+	// renderAppCampaignSessionDetailPage renders the canonical read surface for one
+	// game session and links back into the session list.
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	escapedCampaignID := html.EscapeString(campaignID)
 	sessionID := strings.TrimSpace(session.GetId())

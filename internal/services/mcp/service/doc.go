@@ -1,5 +1,5 @@
-// Package service provides MCP server wiring.
+// Package service wires protocol transport to domain services.
 //
-// It connects to game gRPC services, registers MCP tools/resources, and hosts
-// the MCP server over stdio or HTTP transports.
+// It is the transport adapter layer: the package knows how to run MCP over stdio
+// or HTTP and delegates business meaning to domain handlers in the MCP package.
 package service

@@ -1,3 +1,7 @@
+// Package main imports catalog content via catalog-specific CLI arguments.
+//
+// This command remains a focused operational path for initial content bootstrap
+// and does not participate in gameplay request handling.
 package main
 
 import (

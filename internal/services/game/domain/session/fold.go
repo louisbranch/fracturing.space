@@ -7,6 +7,9 @@ import (
 )
 
 // Fold applies an event to session state.
+//
+// The fold is intentionally declarative: every session transition is represented as
+// an event so tests and replay both observe the same gate and spotlight behavior.
 func Fold(state State, evt event.Event) State {
 	if evt.Type == eventTypeStarted {
 		state.Started = true

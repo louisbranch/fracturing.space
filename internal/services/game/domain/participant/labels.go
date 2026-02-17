@@ -29,6 +29,9 @@ const (
 )
 
 // NormalizeRole parses a role label into a canonical value.
+//
+// Normalizing role labels keeps permission checks stable despite caller input
+// differences (for example, GM vs gm).
 func NormalizeRole(value string) (Role, bool) {
 	if normalized, ok := normalizeRoleLabel(value); ok {
 		return Role(normalized), true
@@ -37,6 +40,8 @@ func NormalizeRole(value string) (Role, bool) {
 }
 
 // NormalizeController parses a controller label into a canonical value.
+//
+// Controllers are used to resolve whether a participant is player-driven or AI-driven.
 func NormalizeController(value string) (Controller, bool) {
 	if normalized, ok := normalizeControllerLabel(value); ok {
 		return Controller(normalized), true
@@ -45,6 +50,9 @@ func NormalizeController(value string) (Controller, bool) {
 }
 
 // NormalizeCampaignAccess parses an access label into a canonical value.
+//
+// Access is enforced by read/write boundaries, so canonical labels prevent
+// accidental policy drift across callers.
 func NormalizeCampaignAccess(value string) (CampaignAccess, bool) {
 	if normalized, ok := normalizeCampaignAccessLabel(value); ok {
 		return CampaignAccess(normalized), true

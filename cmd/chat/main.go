@@ -1,3 +1,7 @@
+// Package main starts the chat real-time service and handles termination.
+//
+// The process is a transport adapter around chat room lifecycle and message
+// streaming so campaign state remains owned by the game domain.
 package main
 
 import (

@@ -1,5 +1,11 @@
 package maintenance
 
+// Package maintenance contains event/replay tooling entrypoints for projection and
+// outbox recovery operations.
+//
+// These commands are intentionally operational (not business-critical runtime)
+// and are invoked when read model state must be reconstructed or validated.
+
 import (
 	"context"
 	"encoding/json"

@@ -10,13 +10,13 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// StatisticsService implements the auth.v1.StatisticsService gRPC API.
+// StatisticsService exposes auth-level aggregates for operator and health-oriented views.
 type StatisticsService struct {
 	authv1.UnimplementedStatisticsServiceServer
 	store storage.StatisticsStore
 }
 
-// NewStatisticsService creates a StatisticsService with default dependencies.
+// NewStatisticsService builds the statistics facade from a statistics store.
 func NewStatisticsService(store storage.StatisticsStore) *StatisticsService {
 	return &StatisticsService{store: store}
 }

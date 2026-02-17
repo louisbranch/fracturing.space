@@ -1,5 +1,10 @@
 package joingrant
 
+// Package joingrant generates ephemeral join-grant keypairs for invitation flows.
+//
+// The generated private/public keypair is intended for quick secret bootstrap and
+// is scoped to local/onboarding environments until rotated in production.
+
 import (
 	"crypto/ed25519"
 	"crypto/rand"

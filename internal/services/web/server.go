@@ -89,6 +89,9 @@ func localizer(w http.ResponseWriter, r *http.Request) (*message.Printer, string
 }
 
 // NewHandler creates the HTTP handler for the login UX.
+//
+// This function is the test-oriented entrypoint that assembles route handlers
+// while keeping gRPC dependencies injectable via NewHandlerWithCampaignAccess.
 func NewHandler(config Config, authClient authv1.AuthServiceClient) http.Handler {
 	handler, err := NewHandlerWithCampaignAccess(config, authClient, handlerDependencies{})
 	if err != nil {
@@ -226,6 +229,11 @@ func NewHandlerWithCampaignAccess(config Config, authClient authv1.AuthServiceCl
 }
 
 // NewServer builds a configured web server.
+//
+// NewServer is the process entrypoint adapter:
+// - wires auth/game gRPC dependencies for handlers
+// - falls back to degraded UX mode when services are temporarily unavailable
+// - returns a ready-to-run HTTP server wrapper.
 func NewServer(config Config) (*Server, error) {
 	return NewServerWithContext(context.Background(), config)
 }
@@ -303,6 +311,9 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 }
 
 // ListenAndServe runs the HTTP server until the context ends.
+//
+// On cancellation, it performs a bounded shutdown so in-flight requests
+// are drained before hard close.
 func (s *Server) ListenAndServe(ctx context.Context) error {
 	if s == nil {
 		return errors.New("web server is nil")
@@ -351,6 +362,8 @@ func (s *Server) Close() {
 	}
 }
 
+// buildAuthConsentURL resolves the post-magic-link consent callback.
+// It keeps OAuth return handling deterministic regardless of deployment prefixing.
 func buildAuthConsentURL(base string, pendingID string) string {
 	base = strings.TrimSpace(base)
 	encoded := url.QueryEscape(pendingID)
@@ -360,6 +373,9 @@ func buildAuthConsentURL(base string, pendingID string) string {
 	return strings.TrimRight(base, "/") + "/authorize/consent?pending_id=" + encoded
 }
 
+// dialAuthGRPC returns a client for auth-backed login/registration operations.
+// Auth transport is optional in degraded startup modes so the web package can
+// still stand up with limited capability.
 func dialAuthGRPC(ctx context.Context, config Config) (*grpc.ClientConn, authv1.AuthServiceClient, error) {
 	authAddr := strings.TrimSpace(config.AuthAddr)
 	if authAddr == "" {
@@ -396,6 +412,9 @@ func dialAuthGRPC(ctx context.Context, config Config) (*grpc.ClientConn, authv1.
 	return conn, client, nil
 }
 
+// dialGameGRPC returns clients for campaign/character/session/invite operations.
+// This dependency is optional by design so campaign routes can degrade gracefully
+// during partial service outages.
 func dialGameGRPC(ctx context.Context, config Config) (*grpc.ClientConn, statev1.ParticipantServiceClient, statev1.CampaignServiceClient, statev1.SessionServiceClient, statev1.CharacterServiceClient, statev1.InviteServiceClient, error) {
 	gameAddr := strings.TrimSpace(config.GameAddr)
 	if gameAddr == "" {
@@ -436,6 +455,8 @@ func dialGameGRPC(ctx context.Context, config Config) (*grpc.ClientConn, statev1
 	return conn, participantClient, campaignClient, sessionClient, characterClient, inviteClient, nil
 }
 
+// handlePasskeyLoginStart begins a passkey authentication round trip and returns
+// the credential challenge expected by browser/WebAuth clients.
 func (h *handler) handlePasskeyLoginStart(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -470,6 +491,8 @@ func (h *handler) handlePasskeyLoginStart(w http.ResponseWriter, r *http.Request
 	})
 }
 
+// handlePasskeyLoginFinish finalizes passkey authentication and hands control back
+// to the consent flow via the shared pending transaction state.
 func (h *handler) handlePasskeyLoginFinish(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -516,6 +539,8 @@ func (h *handler) handlePasskeyLoginFinish(w http.ResponseWriter, r *http.Reques
 	writeJSON(w, http.StatusOK, map[string]any{"redirect_url": redirectURL})
 }
 
+// handlePasskeyRegisterStart creates a new passkey credential request so users can
+// onboard a new WebAuth identity without leaving the current auth flow.
 func (h *handler) handlePasskeyRegisterStart(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -559,6 +584,8 @@ func (h *handler) handlePasskeyRegisterStart(w http.ResponseWriter, r *http.Requ
 	})
 }
 
+// handlePasskeyRegisterFinish completes the registration ceremony and returns the
+// newly created participant binding identifiers for client continuation.
 func (h *handler) handlePasskeyRegisterFinish(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -607,6 +634,8 @@ func (h *handler) handlePasskeyRegisterFinish(w http.ResponseWriter, r *http.Req
 	})
 }
 
+// handleMagicLink validates one-time login tokens and moves valid sessions into the
+// normal consent redirect path.
 func (h *handler) handleMagicLink(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -674,7 +703,8 @@ func renderMagicPage(w http.ResponseWriter, r *http.Request, status int, params 
 	templ.Handler(webtemplates.MagicPage(params)).ServeHTTP(w, r)
 }
 
-// handleAuthLogin initiates the OAuth PKCE flow by redirecting to the auth server.
+// handleAuthLogin initiates the OAuth PKCE flow by redirecting to the auth server
+// with state and challenge that ties browser and token exchange together.
 func (h *handler) handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -707,7 +737,8 @@ func (h *handler) handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, redirectURL.String(), http.StatusFound)
 }
 
-// handleAuthCallback exchanges the authorization code for a token and creates a session.
+// handleAuthCallback exchanges the authorization code for a token and creates a
+// web session that subsequent web handlers can reuse for campaign membership checks.
 func (h *handler) handleAuthCallback(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -774,7 +805,8 @@ func (h *handler) handleAuthCallback(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusFound)
 }
 
-// handleAuthLogout clears the session and redirects to the landing page.
+// handleAuthLogout clears both local and cross-subdomain session/token artifacts to
+// avoid mixed-session conditions across web and auth-aware siblings.
 func (h *handler) handleAuthLogout(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -789,6 +821,7 @@ func (h *handler) handleAuthLogout(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusFound)
 }
 
+// writeJSON writes JSON responses with a consistent content type for auth flows.
 func writeJSON(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)

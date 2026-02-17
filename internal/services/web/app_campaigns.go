@@ -15,6 +15,8 @@ import (
 )
 
 func (h *handler) handleAppCampaigns(w http.ResponseWriter, r *http.Request) {
+	// Campaign list is the web entrypoint into the campaign read model and is
+	// intentionally user-scoped before rendering.
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -52,6 +54,8 @@ func (h *handler) handleAppCampaigns(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) handleAppCampaignCreate(w http.ResponseWriter, r *http.Request) {
+	// Campaign create is the onboarding bridge from HTML form into typed
+	// campaign service behavior.
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -120,6 +124,8 @@ func (h *handler) sessionUserID(ctx context.Context, accessToken string) (string
 }
 
 func renderAppCampaignsPage(w http.ResponseWriter, campaigns []*statev1.Campaign) {
+	// renderAppCampaignsPage maps the list of campaign read models into links that
+	// become the canonical campaign navigation point for this boundary.
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_, _ = io.WriteString(w, "<!doctype html><html><head><title>Campaigns</title></head><body><h1>Campaigns</h1><form method=\"post\" action=\"/app/campaigns/create\"><input type=\"text\" name=\"name\" placeholder=\"campaign name\" required><button type=\"submit\">Create Campaign</button></form><ul>")
 	for _, campaign := range campaigns {

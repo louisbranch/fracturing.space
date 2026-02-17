@@ -1,3 +1,7 @@
+// Package main starts the auth gRPC boundary and exits cleanly on signal.
+//
+// The bootstrap path intentionally stays thin so auth configuration is isolated to
+// flag/env parsing and server lifecycle management.
 package main
 
 import (
