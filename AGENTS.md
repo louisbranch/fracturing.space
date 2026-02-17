@@ -58,9 +58,9 @@ Example response for a behavior change:
 
 ## Planning sessions
 
-- Create `.ai/plans/<topic>.md` before modifying any other files.
+- Create `.agents/plans/<topic>.md` before modifying any other files.
 - Plans are session-only and should include a description, task list that is updated as work progresses, plus next steps and out of scope if applicable.
-- Before any PR, move lingering knowledge or tasks from `.ai/plans` into `docs/` so it survives the worktree lifecycle.
+- Before any PR, move lingering knowledge or tasks from `.agents/plans` into `docs/` so it survives the worktree lifecycle.
 
 ## Verification
 
@@ -90,7 +90,7 @@ Example: `feat: add duality outcome tool`
 
 Load the relevant skill when working in these areas:
 
-Skills live in `.ai/skills/`.
+Skills live in `.agents/skills/`.
 
 | skill | what | when to use |
 | --- | --- | --- |
