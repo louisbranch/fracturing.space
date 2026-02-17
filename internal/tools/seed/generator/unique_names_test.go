@@ -40,7 +40,7 @@ func TestGenerator_UniqueUserDisplayNames(t *testing.T) {
 	var emails []string
 	auth := &fakeAuthProvider{
 		createUser: func(_ context.Context, in *authv1.CreateUserRequest, _ ...grpc.CallOption) (*authv1.CreateUserResponse, error) {
-			emails = append(emails, in.GetPrimaryEmail())
+			emails = append(emails, in.GetEmail())
 			return &authv1.CreateUserResponse{User: &authv1.User{Id: fmt.Sprintf("user-%d", len(emails))}}, nil
 		},
 		issueJoinGrant: func(context.Context, *authv1.IssueJoinGrantRequest, ...grpc.CallOption) (*authv1.IssueJoinGrantResponse, error) {

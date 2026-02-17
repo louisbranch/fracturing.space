@@ -28,8 +28,8 @@ func (g *Generator) pickGmMode(vary bool, index int) statev1.GmMode {
 // createCampaign creates a new campaign with the given GM mode.
 func (g *Generator) createCampaign(ctx context.Context, gmMode statev1.GmMode) (*statev1.Campaign, string, error) {
 	creatorName := g.uniqueDisplayName(g.wb.ParticipantName())
-	creatorEmail := g.seedPrimaryEmail(creatorName)
-	userResp, err := g.authClient.CreateUser(ctx, &authv1.CreateUserRequest{PrimaryEmail: creatorEmail})
+	creatorEmail := g.seedEmail(creatorName)
+	userResp, err := g.authClient.CreateUser(ctx, &authv1.CreateUserRequest{Email: creatorEmail})
 	if err != nil {
 		return nil, "", fmt.Errorf("CreateUser: %w", err)
 	}

@@ -271,11 +271,11 @@ func TestHandleConsent(t *testing.T) {
 	t.Run("get renders consent view", func(t *testing.T) {
 		server, oauthStore := testServer(t)
 		if err := server.userStore.PutUser(context.Background(), user.User{
-			ID:           "user-1",
-			PrimaryEmail: "alice",
-			Locale:       platformi18n.DefaultLocale(),
-			CreatedAt:    time.Now(),
-			UpdatedAt:    time.Now(),
+			ID:        "user-1",
+			Email:     "alice",
+			Locale:    platformi18n.DefaultLocale(),
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
 		}); err != nil {
 			t.Fatalf("put user: %v", err)
 		}
@@ -360,11 +360,11 @@ func TestHandleConsent_NonTrustedClientRendersConsentView(t *testing.T) {
 	server, oauthStore := testServer(t)
 	// Ensure client is NOT trusted (default).
 	if err := server.userStore.PutUser(context.Background(), user.User{
-		ID:           "user-1",
-		PrimaryEmail: "alice",
-		Locale:       platformi18n.DefaultLocale(),
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
+		ID:        "user-1",
+		Email:     "alice",
+		Locale:    platformi18n.DefaultLocale(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
 	}); err != nil {
 		t.Fatalf("put user: %v", err)
 	}

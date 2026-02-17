@@ -50,8 +50,8 @@ func (g *Generator) createParticipants(ctx context.Context, campaignID, ownerPar
 		participants = append(participants, created)
 
 		if controller == statev1.Controller_CONTROLLER_HUMAN {
-			primaryEmail := g.seedPrimaryEmail(name)
-			userResp, err := g.authClient.CreateUser(ctx, &authv1.CreateUserRequest{PrimaryEmail: primaryEmail})
+			email := g.seedEmail(name)
+			userResp, err := g.authClient.CreateUser(ctx, &authv1.CreateUserRequest{Email: email})
 			if err != nil {
 				return nil, fmt.Errorf("CreateUser for participant %d: %w", i+1, err)
 			}

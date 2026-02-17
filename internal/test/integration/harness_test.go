@@ -191,7 +191,7 @@ func createAuthUser(t *testing.T, authAddr, username string) string {
 	if !strings.Contains(email, "@") {
 		email = email + "@example.com"
 	}
-	resp, err := client.CreateUser(ctx, &authv1.CreateUserRequest{PrimaryEmail: email})
+	resp, err := client.CreateUser(ctx, &authv1.CreateUserRequest{Email: email})
 	if err != nil {
 		t.Fatalf("create user: %v", err)
 	}

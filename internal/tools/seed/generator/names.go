@@ -40,7 +40,7 @@ func (g *Generator) uniqueDisplayName(base string) string {
 	return g.nameRegistry.uniqueDisplayName(base)
 }
 
-func (g *Generator) seedPrimaryEmail(displayName string) string {
+func (g *Generator) seedEmail(displayName string) string {
 	base := strings.TrimSpace(strings.ToLower(displayName))
 	if base == "" {
 		base = "seed-user"

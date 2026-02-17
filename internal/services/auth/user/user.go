@@ -14,33 +14,33 @@ import (
 )
 
 var (
-	// ErrEmptyPrimaryEmail indicates a missing primary email.
-	ErrEmptyPrimaryEmail = apperrors.New(apperrors.CodeUserEmptyPrimaryEmail, "primary email is required")
-	// ErrInvalidPrimaryEmail indicates a primary email that does not match the required format.
-	ErrInvalidPrimaryEmail = apperrors.New(apperrors.CodeUserInvalidPrimaryEmail, "primary email must be a valid email address")
+	// ErrEmptyEmail indicates a missing primary email.
+	ErrEmptyEmail = apperrors.New(apperrors.CodeUserEmptyEmail, "primary email is required")
+	// ErrInvalidEmail indicates a primary email that does not match the required format.
+	ErrInvalidEmail = apperrors.New(apperrors.CodeUserInvalidEmail, "primary email must be a valid email address")
 )
 
 // User represents an authenticated identity record.
 type User struct {
-	ID           string
-	PrimaryEmail string
-	Locale       commonv1.Locale
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID        string
+	Email     string
+	Locale    commonv1.Locale
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 // CreateUserInput describes the metadata needed to create a user.
 type CreateUserInput struct {
-	PrimaryEmail string
-	Locale       commonv1.Locale
+	Email  string
+	Locale commonv1.Locale
 }
 
-// ValidatePrimaryEmail enforces canonical primary-email constraints used by joins, invites,
+// ValidateEmail enforces canonical primary-email constraints used by joins, invites,
 // and chat display across services.
-func ValidatePrimaryEmail(s string) error {
+func ValidateEmail(s string) error {
 	parsed, err := mail.ParseAddress(s)
 	if err != nil || parsed.Name != "" || !strings.EqualFold(strings.TrimSpace(parsed.Address), strings.TrimSpace(s)) {
-		return ErrInvalidPrimaryEmail
+		return ErrInvalidEmail
 	}
 	return nil
 }
@@ -69,21 +69,21 @@ func CreateUser(input CreateUserInput, now func() time.Time, idGenerator func() 
 
 	createdAt := now().UTC()
 	return User{
-		ID:           userID,
-		PrimaryEmail: normalized.PrimaryEmail,
-		Locale:       normalized.Locale,
-		CreatedAt:    createdAt,
-		UpdatedAt:    createdAt,
+		ID:        userID,
+		Email:     normalized.Email,
+		Locale:    normalized.Locale,
+		CreatedAt: createdAt,
+		UpdatedAt: createdAt,
 	}, nil
 }
 
 // NormalizeCreateUserInput trims and normalizes input before validation.
 func NormalizeCreateUserInput(input CreateUserInput) (CreateUserInput, error) {
-	input.PrimaryEmail = strings.ToLower(strings.TrimSpace(input.PrimaryEmail))
-	if input.PrimaryEmail == "" {
-		return CreateUserInput{}, ErrEmptyPrimaryEmail
+	input.Email = strings.ToLower(strings.TrimSpace(input.Email))
+	if input.Email == "" {
+		return CreateUserInput{}, ErrEmptyEmail
 	}
-	if err := ValidatePrimaryEmail(input.PrimaryEmail); err != nil {
+	if err := ValidateEmail(input.Email); err != nil {
 		return CreateUserInput{}, err
 	}
 	input.Locale = platformi18n.NormalizeLocale(input.Locale)

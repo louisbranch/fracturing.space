@@ -32,16 +32,16 @@ type UserDetailPageView struct {
 
 // UserRow represents a row in the users table.
 type UserRow struct {
-	ID           string
-	PrimaryEmail string
-	CreatedAt    string
-	UpdatedAt    string
+	ID        string
+	Email     string
+	CreatedAt string
+	UpdatedAt string
 }
 
 // UserDetail represents a single user detail view.
 type UserDetail struct {
 	ID                    string
-	PrimaryEmail          string
+	Email                 string
 	CreatedAt             string
 	UpdatedAt             string
 	Emails                []UserEmailRow

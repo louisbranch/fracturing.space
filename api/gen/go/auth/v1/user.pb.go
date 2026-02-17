@@ -28,7 +28,7 @@ const (
 type User struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	PrimaryEmail  string                 `protobuf:"bytes,2,opt,name=primary_email,json=primaryEmail,proto3" json:"primary_email,omitempty"`
+	Email         string                 `protobuf:"bytes,2,opt,name=email,proto3" json:"email,omitempty"`
 	Locale        v1.Locale              `protobuf:"varint,3,opt,name=locale,proto3,enum=common.v1.Locale" json:"locale,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
@@ -73,9 +73,9 @@ func (x *User) GetId() string {
 	return ""
 }
 
-func (x *User) GetPrimaryEmail() string {
+func (x *User) GetEmail() string {
 	if x != nil {
-		return x.PrimaryEmail
+		return x.Email
 	}
 	return ""
 }
@@ -103,7 +103,7 @@ func (x *User) GetUpdatedAt() *timestamppb.Timestamp {
 
 type CreateUserRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	PrimaryEmail  string                 `protobuf:"bytes,1,opt,name=primary_email,json=primaryEmail,proto3" json:"primary_email,omitempty"`
+	Email         string                 `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
 	Locale        v1.Locale              `protobuf:"varint,2,opt,name=locale,proto3,enum=common.v1.Locale" json:"locale,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -139,9 +139,9 @@ func (*CreateUserRequest) Descriptor() ([]byte, []int) {
 	return file_auth_v1_user_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *CreateUserRequest) GetPrimaryEmail() string {
+func (x *CreateUserRequest) GetEmail() string {
 	if x != nil {
-		return x.PrimaryEmail
+		return x.Email
 	}
 	return ""
 }
@@ -1296,17 +1296,17 @@ var File_auth_v1_user_proto protoreflect.FileDescriptor
 
 const file_auth_v1_user_proto_rawDesc = "" +
 	"\n" +
-	"\x12auth/v1/user.proto\x12\aauth.v1\x1a\x16common/v1/locale.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xdc\x01\n" +
+	"\x12auth/v1/user.proto\x12\aauth.v1\x1a\x16common/v1/locale.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xcd\x01\n" +
 	"\x04User\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12#\n" +
-	"\rprimary_email\x18\x02 \x01(\tR\fprimaryEmail\x12)\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
+	"\x05email\x18\x02 \x01(\tR\x05email\x12)\n" +
 	"\x06locale\x18\x03 \x01(\x0e2\x11.common.v1.LocaleR\x06locale\x129\n" +
 	"\n" +
 	"created_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"c\n" +
-	"\x11CreateUserRequest\x12#\n" +
-	"\rprimary_email\x18\x01 \x01(\tR\fprimaryEmail\x12)\n" +
+	"updated_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"T\n" +
+	"\x11CreateUserRequest\x12\x14\n" +
+	"\x05email\x18\x01 \x01(\tR\x05email\x12)\n" +
 	"\x06locale\x18\x02 \x01(\x0e2\x11.common.v1.LocaleR\x06locale\"7\n" +
 	"\x12CreateUserResponse\x12!\n" +
 	"\x04user\x18\x01 \x01(\v2\r.auth.v1.UserR\x04user\":\n" +
