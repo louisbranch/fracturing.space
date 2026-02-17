@@ -11,15 +11,15 @@ tmp_missing="$(mktemp)"
 tmp_stale="$(mktemp)"
 trap 'rm -f "$tmp_markers" "$tmp_doc" "$tmp_missing" "$tmp_stale"' EXIT
 
-while IFS= read -r -d '' file; do
-  if rg --fixed-strings --quiet -- "$MARKER" "$file"; then
+while IFS= read -r file; do
+  if grep -q --fixed-strings -- "$MARKER" "$file"; then
     echo "${file##*/}" | sed 's/\.lua$//' >> "$tmp_markers"
   fi
-done < <(find "$SCENARIO_DIR" -name '*.lua' -print0 | sort -zV)
+done < <(find "$SCENARIO_DIR" -name '*.lua' | sort)
 
 sort -u "$tmp_markers" -o "$tmp_markers"
 
-  rg -o 'internal/test/game/scenarios/[A-Za-z0-9_-]+\.lua' "$DOC" \
+  grep -Eo 'internal/test/game/scenarios/[A-Za-z0-9_-]+\.lua' "$DOC" \
   | sed -e 's#internal/test/game/scenarios/##' -e 's/\.lua$//' \
   | sort -u > "$tmp_doc"
 
@@ -41,7 +41,7 @@ fi
 
 if [ "$issues" -eq 1 ]; then
   echo "Mismatch detected between scenario markers and docs."
-  echo "Run: rg -l --fixed-strings -- \"$MARKER\" internal/test/game/scenarios/*.lua"
+  echo "Run: grep -l --fixed-strings -- \"$MARKER\" internal/test/game/scenarios/*.lua"
   exit 1
 fi
 

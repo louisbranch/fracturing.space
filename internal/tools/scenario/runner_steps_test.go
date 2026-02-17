@@ -858,6 +858,41 @@ func TestRunActionRollStep(t *testing.T) {
 	}
 }
 
+func TestRunActionRollStepForwardsFlatModifier(t *testing.T) {
+	env, _, _, dhClient := testEnv()
+	var request *daggerheartv1.SessionActionRollRequest
+	dhClient.sessionActionRoll = func(_ context.Context, req *daggerheartv1.SessionActionRollRequest, _ ...grpc.CallOption) (*daggerheartv1.SessionActionRollResponse, error) {
+		request = req
+		return &daggerheartv1.SessionActionRollResponse{RollSeq: 42}, nil
+	}
+	runner := quietRunner(env)
+	state := testState()
+	state.actors["Frodo"] = "char-frodo"
+	err := runner.runActionRollStep(context.Background(), state, Step{
+		Kind: "action_roll",
+		Args: map[string]any{
+			"actor":      "Frodo",
+			"trait":      "agility",
+			"seed":       1,
+			"modifier":   3,
+			"difficulty": 12,
+		},
+	})
+	if err != nil {
+		t.Fatalf("runActionRollStep: %v", err)
+	}
+	if request == nil {
+		t.Fatal("expected request")
+	}
+	mods := request.GetModifiers()
+	if len(mods) != 1 {
+		t.Fatalf("len(modifiers) = %d, want 1", len(mods))
+	}
+	if mods[0].GetSource() != "modifier" || mods[0].GetValue() != 3 {
+		t.Fatalf("unexpected modifier: source=%s value=%d", mods[0].GetSource(), mods[0].GetValue())
+	}
+}
+
 func TestRunActionRollStepMissingActor(t *testing.T) {
 	env, _, _, _ := testEnv()
 	runner := quietRunner(env)
@@ -906,6 +941,39 @@ func TestRunReactionRollStep(t *testing.T) {
 	}
 	if state.lastRollSeq != 55 {
 		t.Fatalf("lastRollSeq = %d, want 55", state.lastRollSeq)
+	}
+}
+
+func TestRunReactionRollStepForwardsFlatModifier(t *testing.T) {
+	env, _, _, dhClient := testEnv()
+	var request *daggerheartv1.SessionActionRollRequest
+	dhClient.sessionActionRoll = func(_ context.Context, req *daggerheartv1.SessionActionRollRequest, _ ...grpc.CallOption) (*daggerheartv1.SessionActionRollResponse, error) {
+		request = req
+		return &daggerheartv1.SessionActionRollResponse{RollSeq: 55}, nil
+	}
+	runner := quietRunner(env)
+	state := testState()
+	state.actors["Frodo"] = "char-frodo"
+	err := runner.runReactionRollStep(context.Background(), state, Step{
+		Kind: "reaction_roll",
+		Args: map[string]any{
+			"actor":    "Frodo",
+			"seed":     1,
+			"modifier": 4,
+		},
+	})
+	if err != nil {
+		t.Fatalf("runReactionRollStep: %v", err)
+	}
+	if request == nil {
+		t.Fatal("expected request")
+	}
+	mods := request.GetModifiers()
+	if len(mods) != 1 {
+		t.Fatalf("len(modifiers) = %d, want 1", len(mods))
+	}
+	if mods[0].GetSource() != "modifier" || mods[0].GetValue() != 4 {
+		t.Fatalf("unexpected modifier: source=%s value=%d", mods[0].GetSource(), mods[0].GetValue())
 	}
 }
 
@@ -1089,6 +1157,36 @@ func TestRunApplyRollOutcomeStepRunsFailureBranchForFailureResult(t *testing.T) 
 	}
 	if !cleared {
 		t.Fatal("expected failure branch step to run")
+	}
+}
+
+func TestRunApplyRollOutcomeStepInvalidBranchSkipsApply(t *testing.T) {
+	env, _, _, dhClient := testEnv()
+	called := false
+	dhClient.applyRollOutcome = func(_ context.Context, req *daggerheartv1.ApplyRollOutcomeRequest, _ ...grpc.CallOption) (*daggerheartv1.ApplyRollOutcomeResponse, error) {
+		called = true
+		return &daggerheartv1.ApplyRollOutcomeResponse{}, nil
+	}
+	runner := quietRunner(env)
+	state := testState()
+	state.lastRollSeq = 42
+	state.rollOutcomes[42] = actionRollResult{
+		rollSeq: 42,
+		success: true,
+	}
+	err := runner.runApplyRollOutcomeStep(context.Background(), state, Step{
+		Kind: "apply_roll_outcome",
+		Args: map[string]any{
+			"on_magic": []any{
+				map[string]any{"kind": "clear_spotlight"},
+			},
+		},
+	})
+	if err == nil || !strings.Contains(err.Error(), "unknown outcome branch") {
+		t.Fatalf("expected unknown outcome branch error, got %v", err)
+	}
+	if called {
+		t.Fatal("expected apply roll outcome to be skipped")
 	}
 }
 
@@ -1296,6 +1394,34 @@ func TestRunApplyReactionOutcomeStepRunsFearSubbranchForFailureFearResult(t *tes
 	}
 	if !cleared {
 		t.Fatal("expected failure_fear branch step to run")
+	}
+}
+
+func TestRunApplyReactionOutcomeStepInvalidBranchSkipsApply(t *testing.T) {
+	env, _, _, dhClient := testEnv()
+	called := false
+	dhClient.applyReactionOutcome = func(_ context.Context, req *daggerheartv1.DaggerheartApplyReactionOutcomeRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyReactionOutcomeResponse, error) {
+		called = true
+		return &daggerheartv1.DaggerheartApplyReactionOutcomeResponse{
+			Result: &daggerheartv1.DaggerheartReactionOutcomeResult{Success: true},
+		}, nil
+	}
+	runner := quietRunner(env)
+	state := testState()
+	state.lastRollSeq = 42
+	err := runner.runApplyReactionOutcomeStep(context.Background(), state, Step{
+		Kind: "apply_reaction_outcome",
+		Args: map[string]any{
+			"on_magic": []any{
+				map[string]any{"kind": "clear_spotlight"},
+			},
+		},
+	})
+	if err == nil || !strings.Contains(err.Error(), "unknown outcome branch") {
+		t.Fatalf("expected unknown outcome branch error, got %v", err)
+	}
+	if called {
+		t.Fatal("expected apply reaction outcome to be skipped")
 	}
 }
 

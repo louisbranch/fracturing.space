@@ -1939,18 +1939,6 @@ func (r *Runner) runApplyRollOutcomeStep(ctx context.Context, state *scenarioSta
 	if err != nil {
 		return err
 	}
-	if len(targets) > 0 {
-		request.Targets = targets
-	}
-
-	before, err := r.latestSeq(ctx, state)
-	if err != nil {
-		return err
-	}
-	_, err = r.env.daggerheartClient.ApplyRollOutcome(withCampaignID(withSessionID(ctx, state.sessionID), state.campaignID), request)
-	if err != nil {
-		return fmt.Errorf("apply_roll_outcome: %w", err)
-	}
 	branches, err := resolveOutcomeBranches(step.Args, map[string]struct{}{
 		"on_success":      {},
 		"on_failure":      {},
@@ -1965,6 +1953,18 @@ func (r *Runner) runApplyRollOutcomeStep(ctx context.Context, state *scenarioSta
 	})
 	if err != nil {
 		return err
+	}
+	if len(targets) > 0 {
+		request.Targets = targets
+	}
+
+	before, err := r.latestSeq(ctx, state)
+	if err != nil {
+		return err
+	}
+	_, err = r.env.daggerheartClient.ApplyRollOutcome(withCampaignID(withSessionID(ctx, state.sessionID), state.campaignID), request)
+	if err != nil {
+		return fmt.Errorf("apply_roll_outcome: %w", err)
 	}
 	if len(branches) > 0 {
 		ensureRollOutcomeState(state)
@@ -2062,21 +2062,6 @@ func (r *Runner) runApplyReactionOutcomeStep(ctx context.Context, state *scenari
 	if rollSeq == 0 {
 		return r.failf("apply_reaction_outcome requires roll_seq")
 	}
-
-	before, err := r.latestSeq(ctx, state)
-	if err != nil {
-		return err
-	}
-	response, err := r.env.daggerheartClient.ApplyReactionOutcome(withCampaignID(withSessionID(ctx, state.sessionID), state.campaignID), &daggerheartv1.DaggerheartApplyReactionOutcomeRequest{
-		SessionId: state.sessionID,
-		RollSeq:   rollSeq,
-	})
-	if err != nil {
-		return fmt.Errorf("apply_reaction_outcome: %w", err)
-	}
-	if response == nil {
-		return r.failf("apply_reaction_outcome: expected response")
-	}
 	branches, err := resolveOutcomeBranches(step.Args, map[string]struct{}{
 		"on_success":      {},
 		"on_failure":      {},
@@ -2091,6 +2076,21 @@ func (r *Runner) runApplyReactionOutcomeStep(ctx context.Context, state *scenari
 	})
 	if err != nil {
 		return err
+	}
+
+	before, err := r.latestSeq(ctx, state)
+	if err != nil {
+		return err
+	}
+	response, err := r.env.daggerheartClient.ApplyReactionOutcome(withCampaignID(withSessionID(ctx, state.sessionID), state.campaignID), &daggerheartv1.DaggerheartApplyReactionOutcomeRequest{
+		SessionId: state.sessionID,
+		RollSeq:   rollSeq,
+	})
+	if err != nil {
+		return fmt.Errorf("apply_reaction_outcome: %w", err)
+	}
+	if response == nil {
+		return r.failf("apply_reaction_outcome: expected response")
 	}
 	if len(branches) > 0 {
 		if err := runOutcomeBranchSteps(ctx, state, r, branches, []string{"on_success", "on_failure", "on_success_hope", "on_failure_hope", "on_success_fear", "on_failure_fear", "on_hope", "on_fear", "on_critical", "on_crit"}, func(branch string) bool {
