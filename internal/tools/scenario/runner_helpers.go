@@ -603,6 +603,11 @@ func parseOutcomeBranchSteps(value any) ([]Step, error) {
 }
 
 func resolveOutcomeBranches(args map[string]any, allowed map[string]struct{}) (map[string][]Step, error) {
+	if _, hasCritical := args["on_critical"]; hasCritical {
+		if _, hasCrit := args["on_crit"]; hasCrit {
+			return nil, fmt.Errorf("on_critical and on_crit are aliases")
+		}
+	}
 	branches := make(map[string][]Step)
 	for key, value := range args {
 		if !strings.HasPrefix(key, "on_") {
@@ -706,32 +711,42 @@ func runOutcomeBranchSteps(ctx context.Context, state *scenarioState, r *Runner,
 
 func buildActionRollModifiers(args map[string]any, key string) []*daggerheartv1.ActionRollModifier {
 	value, ok := args[key]
-	if !ok {
-		return nil
-	}
-	list, ok := value.([]any)
-	if !ok || len(list) == 0 {
-		return nil
-	}
-	modifiers := make([]*daggerheartv1.ActionRollModifier, 0, len(list))
-	for index, entry := range list {
-		item, ok := entry.(map[string]any)
-		if !ok {
-			continue
-		}
-		source := optionalString(item, "source", fmt.Sprintf("modifier_%d", index))
-		value, ok := readInt(item, "value")
-		if !ok {
-			if isHopeSpendSource(source) {
-				value = 0
-			} else {
+	list, hasList := value.([]any)
+	modifiers := make([]*daggerheartv1.ActionRollModifier, 0, 1)
+	if ok && hasList && len(list) > 0 {
+		modifiers = make([]*daggerheartv1.ActionRollModifier, 0, len(list)+1)
+		for index, entry := range list {
+			item, ok := entry.(map[string]any)
+			if !ok {
 				continue
 			}
+			source := optionalString(item, "source", fmt.Sprintf("modifier_%d", index))
+			value, ok := readInt(item, "value")
+			if !ok {
+				if isHopeSpendSource(source) {
+					value = 0
+				} else {
+					continue
+				}
+			}
+			modifiers = append(modifiers, &daggerheartv1.ActionRollModifier{
+				Source: source,
+				Value:  int32(value),
+			})
+		}
+	}
+	if _, hasModifier := args["modifier"]; hasModifier {
+		modifier, ok := readInt(args, "modifier")
+		if !ok {
+			modifier = 0
 		}
 		modifiers = append(modifiers, &daggerheartv1.ActionRollModifier{
-			Source: source,
-			Value:  int32(value),
+			Source: "modifier",
+			Value:  int32(modifier),
 		})
+	}
+	if len(modifiers) == 0 {
+		return nil
 	}
 	return modifiers
 }

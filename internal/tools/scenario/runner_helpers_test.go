@@ -423,6 +423,18 @@ func TestResolveOutcomeBranches(t *testing.T) {
 			t.Fatal("expected unknown branch error")
 		}
 	})
+	t.Run("critical_alias_conflict", func(t *testing.T) {
+		_, err := resolveOutcomeBranches(map[string]any{
+			"on_critical": []any{map[string]any{"kind": "clear_spotlight"}},
+			"on_crit":     []any{map[string]any{"kind": "clear_spotlight"}},
+		}, map[string]struct{}{
+			"on_critical": {},
+			"on_crit":     {},
+		})
+		if err == nil {
+			t.Fatal("expected critical alias conflict error")
+		}
+	})
 }
 
 func TestEvaluateActionOutcomeBranch(t *testing.T) {
@@ -1016,6 +1028,18 @@ func TestBuildActionRollModifiers(t *testing.T) {
 		// experience is a hope spend source, so value=0 is ok
 		if mods[1].Source != "experience" || mods[1].Value != 0 {
 			t.Fatalf("mod 1: %+v", mods[1])
+		}
+	})
+	t.Run("with_flat_modifier", func(t *testing.T) {
+		mods := buildActionRollModifiers(map[string]any{
+			"mods":     []any{map[string]any{"source": "buff", "value": 2}},
+			"modifier": 3,
+		}, "mods")
+		if len(mods) != 2 {
+			t.Fatalf("expected 2 modifiers, got %d", len(mods))
+		}
+		if mods[1].Source != "modifier" || mods[1].Value != 3 {
+			t.Fatalf("flat modifier not forwarded: %+v", mods[1])
 		}
 	})
 }
@@ -1767,6 +1791,24 @@ func TestChooseActionSeed_TotalAndModifiers(t *testing.T) {
 			map[string]any{"source": "experience", "value": 10},
 		},
 	}, 12)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	result, err := daggerheartdomain.RollAction(daggerheartdomain.ActionRequest{
+		Difficulty: func() *int { d := 12; return &d }(),
+		Modifier:   10,
+		Seed:       int64(seed),
+	})
+	if err != nil {
+		t.Fatalf("roll error: %v", err)
+	}
+	if result.Total != 30 {
+		t.Fatalf("seed %d produced total %d, want 30", seed, result.Total)
+	}
+}
+
+func TestChooseActionSeed_TotalAndFlatModifier(t *testing.T) {
+	seed, err := chooseActionSeed(map[string]any{"total": 30, "modifier": 10}, 12)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
