@@ -180,7 +180,7 @@ type Participant struct {
 	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	CampaignId     string                 `protobuf:"bytes,2,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"`
 	UserId         string                 `protobuf:"bytes,3,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	DisplayName    string                 `protobuf:"bytes,4,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	Name           string                 `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
 	Role           ParticipantRole        `protobuf:"varint,5,opt,name=role,proto3,enum=game.v1.ParticipantRole" json:"role,omitempty"`
 	CampaignAccess CampaignAccess         `protobuf:"varint,6,opt,name=campaign_access,json=campaignAccess,proto3,enum=game.v1.CampaignAccess" json:"campaign_access,omitempty"`
 	Controller     Controller             `protobuf:"varint,7,opt,name=controller,proto3,enum=game.v1.Controller" json:"controller,omitempty"`
@@ -241,9 +241,9 @@ func (x *Participant) GetUserId() string {
 	return ""
 }
 
-func (x *Participant) GetDisplayName() string {
+func (x *Participant) GetName() string {
 	if x != nil {
-		return x.DisplayName
+		return x.Name
 	}
 	return ""
 }
@@ -290,7 +290,7 @@ type CreateParticipantRequest struct {
 	// Optional user ID tied to the participant seat.
 	UserId string `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	// Display name for the participant.
-	DisplayName string `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	Name string `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
 	// The role of the participant.
 	Role ParticipantRole `protobuf:"varint,4,opt,name=role,proto3,enum=game.v1.ParticipantRole" json:"role,omitempty"`
 	// The controller type (defaults to HUMAN if unspecified).
@@ -343,9 +343,9 @@ func (x *CreateParticipantRequest) GetUserId() string {
 	return ""
 }
 
-func (x *CreateParticipantRequest) GetDisplayName() string {
+func (x *CreateParticipantRequest) GetName() string {
 	if x != nil {
-		return x.DisplayName
+		return x.Name
 	}
 	return ""
 }
@@ -417,7 +417,7 @@ type UpdateParticipantRequest struct {
 	// Optional updated user ID.
 	UserId *wrapperspb.StringValue `protobuf:"bytes,3,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	// Optional updated display name.
-	DisplayName *wrapperspb.StringValue `protobuf:"bytes,4,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	Name *wrapperspb.StringValue `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
 	// Optional updated role.
 	Role ParticipantRole `protobuf:"varint,5,opt,name=role,proto3,enum=game.v1.ParticipantRole" json:"role,omitempty"`
 	// Optional updated campaign access.
@@ -479,9 +479,9 @@ func (x *UpdateParticipantRequest) GetUserId() *wrapperspb.StringValue {
 	return nil
 }
 
-func (x *UpdateParticipantRequest) GetDisplayName() *wrapperspb.StringValue {
+func (x *UpdateParticipantRequest) GetName() *wrapperspb.StringValue {
 	if x != nil {
-		return x.DisplayName
+		return x.Name
 	}
 	return nil
 }
@@ -876,13 +876,13 @@ var File_game_v1_participant_proto protoreflect.FileDescriptor
 
 const file_game_v1_participant_proto_rawDesc = "" +
 	"\n" +
-	"\x19game/v1/participant.proto\x12\agame.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1egoogle/protobuf/wrappers.proto\"\x95\x03\n" +
+	"\x19game/v1/participant.proto\x12\agame.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1egoogle/protobuf/wrappers.proto\"\x86\x03\n" +
 	"\vParticipant\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vcampaign_id\x18\x02 \x01(\tR\n" +
 	"campaignId\x12\x17\n" +
-	"\auser_id\x18\x03 \x01(\tR\x06userId\x12!\n" +
-	"\fdisplay_name\x18\x04 \x01(\tR\vdisplayName\x12,\n" +
+	"\auser_id\x18\x03 \x01(\tR\x06userId\x12\x12\n" +
+	"\x04name\x18\x04 \x01(\tR\x04name\x12,\n" +
 	"\x04role\x18\x05 \x01(\x0e2\x18.game.v1.ParticipantRoleR\x04role\x12@\n" +
 	"\x0fcampaign_access\x18\x06 \x01(\x0e2\x17.game.v1.CampaignAccessR\x0ecampaignAccess\x123\n" +
 	"\n" +
@@ -891,24 +891,24 @@ const file_game_v1_participant_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xda\x01\n" +
+	"updated_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xcb\x01\n" +
 	"\x18CreateParticipantRequest\x12\x1f\n" +
 	"\vcampaign_id\x18\x01 \x01(\tR\n" +
 	"campaignId\x12\x17\n" +
-	"\auser_id\x18\x02 \x01(\tR\x06userId\x12!\n" +
-	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName\x12,\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\x12,\n" +
 	"\x04role\x18\x04 \x01(\x0e2\x18.game.v1.ParticipantRoleR\x04role\x123\n" +
 	"\n" +
 	"controller\x18\x05 \x01(\x0e2\x13.game.v1.ControllerR\n" +
 	"controller\"S\n" +
 	"\x19CreateParticipantResponse\x126\n" +
-	"\vparticipant\x18\x01 \x01(\v2\x14.game.v1.ParticipantR\vparticipant\"\xff\x02\n" +
+	"\vparticipant\x18\x01 \x01(\v2\x14.game.v1.ParticipantR\vparticipant\"\xf0\x02\n" +
 	"\x18UpdateParticipantRequest\x12\x1f\n" +
 	"\vcampaign_id\x18\x01 \x01(\tR\n" +
 	"campaignId\x12%\n" +
 	"\x0eparticipant_id\x18\x02 \x01(\tR\rparticipantId\x125\n" +
-	"\auser_id\x18\x03 \x01(\v2\x1c.google.protobuf.StringValueR\x06userId\x12?\n" +
-	"\fdisplay_name\x18\x04 \x01(\v2\x1c.google.protobuf.StringValueR\vdisplayName\x12,\n" +
+	"\auser_id\x18\x03 \x01(\v2\x1c.google.protobuf.StringValueR\x06userId\x120\n" +
+	"\x04name\x18\x04 \x01(\v2\x1c.google.protobuf.StringValueR\x04name\x12,\n" +
 	"\x04role\x18\x05 \x01(\x0e2\x18.game.v1.ParticipantRoleR\x04role\x12@\n" +
 	"\x0fcampaign_access\x18\x06 \x01(\x0e2\x17.game.v1.CampaignAccessR\x0ecampaignAccess\x123\n" +
 	"\n" +
@@ -1002,7 +1002,7 @@ var file_game_v1_participant_proto_depIdxs = []int32{
 	2,  // 6: game.v1.CreateParticipantRequest.controller:type_name -> game.v1.Controller
 	3,  // 7: game.v1.CreateParticipantResponse.participant:type_name -> game.v1.Participant
 	15, // 8: game.v1.UpdateParticipantRequest.user_id:type_name -> google.protobuf.StringValue
-	15, // 9: game.v1.UpdateParticipantRequest.display_name:type_name -> google.protobuf.StringValue
+	15, // 9: game.v1.UpdateParticipantRequest.name:type_name -> google.protobuf.StringValue
 	0,  // 10: game.v1.UpdateParticipantRequest.role:type_name -> game.v1.ParticipantRole
 	1,  // 11: game.v1.UpdateParticipantRequest.campaign_access:type_name -> game.v1.CampaignAccess
 	2,  // 12: game.v1.UpdateParticipantRequest.controller:type_name -> game.v1.Controller

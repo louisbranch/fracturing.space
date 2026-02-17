@@ -54,7 +54,7 @@
       "tool": "participant_create",
       "args": {
         "campaign_id": {"ref": "campaign_id"},
-        "display_name": "Sarah",
+        "name": "Sarah",
         "role": "GM",
         "controller": "HUMAN"
       },
@@ -68,7 +68,7 @@
       "tool": "participant_create",
       "args": {
         "campaign_id": {"ref": "campaign_id"},
-        "display_name": "Alex",
+        "name": "Alex",
         "role": "PLAYER",
         "controller": "HUMAN"
       },
@@ -82,7 +82,7 @@
       "tool": "participant_create",
       "args": {
         "campaign_id": {"ref": "campaign_id"},
-        "display_name": "Jordan",
+        "name": "Jordan",
         "role": "PLAYER",
         "controller": "HUMAN"
       },

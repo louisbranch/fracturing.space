@@ -11,8 +11,8 @@ type PageContext struct {
 
 // ImpersonationView holds the active impersonation context for the UI.
 type ImpersonationView struct {
-	UserID      string
-	DisplayName string
+	UserID string
+	Name   string
 }
 
 // ImpersonationLabel returns the display label for an impersonation session.
@@ -20,8 +20,8 @@ func ImpersonationLabel(view *ImpersonationView) string {
 	if view == nil {
 		return ""
 	}
-	if view.DisplayName != "" {
-		return view.DisplayName
+	if view.Name != "" {
+		return view.Name
 	}
 	return view.UserID
 }

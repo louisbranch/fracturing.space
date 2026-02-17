@@ -871,7 +871,7 @@ func TestListPendingInvites_Success(t *testing.T) {
 	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
 	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
 		"owner-1": {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner, UserID: "user-1"},
-		"seat-1":  {ID: "seat-1", CampaignID: "campaign-1", DisplayName: "Seat 1", Role: participant.RolePlayer},
+		"seat-1":  {ID: "seat-1", CampaignID: "campaign-1", Name: "Seat 1", Role: participant.RolePlayer},
 	}
 	inviteStore.invites["invite-1"] = storage.InviteRecord{
 		ID:                     "invite-1",
@@ -1141,7 +1141,7 @@ func TestListPendingInvitesForUser_Success(t *testing.T) {
 
 	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
 	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
-		"seat-1": {ID: "seat-1", CampaignID: "campaign-1", DisplayName: "Seat 1", Role: participant.RolePlayer},
+		"seat-1": {ID: "seat-1", CampaignID: "campaign-1", Name: "Seat 1", Role: participant.RolePlayer},
 	}
 	inviteStore.invites["invite-1"] = storage.InviteRecord{
 		ID:              "invite-1",

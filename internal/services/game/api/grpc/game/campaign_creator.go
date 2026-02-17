@@ -149,7 +149,7 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 	participantPayload := participant.JoinPayload{
 		ParticipantID:  creatorID,
 		UserID:         userID,
-		DisplayName:    creatorDisplayName,
+		Name:           creatorDisplayName,
 		Role:           "GM",
 		Controller:     "HUMAN",
 		CampaignAccess: "OWNER",

@@ -238,9 +238,9 @@ func (a Applier) applyParticipantJoined(ctx context.Context, evt event.Event) er
 	if err != nil {
 		return err
 	}
-	displayName := strings.TrimSpace(payload.DisplayName)
-	if displayName == "" {
-		return fmt.Errorf("display name is required")
+	name := strings.TrimSpace(payload.Name)
+	if name == "" {
+		return fmt.Errorf("name is required")
 	}
 	userID := strings.TrimSpace(payload.UserID)
 
@@ -249,7 +249,7 @@ func (a Applier) applyParticipantJoined(ctx context.Context, evt event.Event) er
 		ID:             participantID,
 		CampaignID:     strings.TrimSpace(evt.CampaignID),
 		UserID:         userID,
-		DisplayName:    displayName,
+		Name:           name,
 		Role:           role,
 		Controller:     controller,
 		CampaignAccess: access,
@@ -302,12 +302,12 @@ func (a Applier) applyParticipantUpdated(ctx context.Context, evt event.Event) e
 		switch key {
 		case "user_id":
 			updated.UserID = strings.TrimSpace(value)
-		case "display_name":
+		case "name":
 			name := strings.TrimSpace(value)
 			if name == "" {
-				return fmt.Errorf("display name is required")
+				return fmt.Errorf("name is required")
 			}
-			updated.DisplayName = name
+			updated.Name = name
 		case "role":
 			role, err := parseParticipantRole(value)
 			if err != nil {

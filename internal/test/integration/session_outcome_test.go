@@ -117,10 +117,10 @@ func runSessionOutcomeTests(t *testing.T, suite *integrationSuite, grpcAddr stri
 		participantResult, err := suite.client.CallTool(ctx, &mcp.CallToolParams{
 			Name: "participant_create",
 			Arguments: map[string]any{
-				"campaign_id":  campaignOutput.ID,
-				"display_name": "Outcome GM",
-				"role":         "GM",
-				"controller":   "HUMAN",
+				"campaign_id": campaignOutput.ID,
+				"name":        "Outcome GM",
+				"role":        "GM",
+				"controller":  "HUMAN",
 			},
 		})
 		if err != nil {
@@ -274,9 +274,9 @@ func runSessionOutcomeTests(t *testing.T, suite *integrationSuite, grpcAddr stri
 		participantResult, err := suite.client.CallTool(ctx, &mcp.CallToolParams{
 			Name: "participant_create",
 			Arguments: map[string]any{
-				"campaign_id":  campaignOutput.ID,
-				"display_name": "Outcome GM",
-				"role":         "GM",
+				"campaign_id": campaignOutput.ID,
+				"name":        "Outcome GM",
+				"role":        "GM",
 			},
 		})
 		if err != nil {

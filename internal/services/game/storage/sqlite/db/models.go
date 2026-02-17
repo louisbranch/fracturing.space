@@ -351,7 +351,7 @@ type Participant struct {
 	CampaignID     string `json:"campaign_id"`
 	ID             string `json:"id"`
 	UserID         string `json:"user_id"`
-	DisplayName    string `json:"display_name"`
+	Name           string `json:"name"`
 	Role           string `json:"role"`
 	Controller     string `json:"controller"`
 	CampaignAccess string `json:"campaign_access"`

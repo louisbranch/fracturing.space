@@ -110,10 +110,10 @@ func (r *Runner) runParticipantStep(ctx context.Context, state *scenarioState, s
 	}
 
 	request := &gamev1.CreateParticipantRequest{
-		CampaignId:  state.campaignID,
-		DisplayName: name,
-		Role:        roleValue,
-		Controller:  controllerValue,
+		CampaignId: state.campaignID,
+		Name:       name,
+		Role:       roleValue,
+		Controller: controllerValue,
 	}
 	if userID := optionalString(step.Args, "user_id", ""); userID != "" {
 		request.UserId = userID

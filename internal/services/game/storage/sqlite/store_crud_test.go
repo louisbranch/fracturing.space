@@ -364,7 +364,7 @@ func seedParticipant(t *testing.T, store *Store, campaignID, participantID, user
 		CampaignID:     campaignID,
 		ID:             participantID,
 		UserID:         userID,
-		DisplayName:    participantID,
+		Name:           participantID,
 		Role:           participant.RolePlayer,
 		Controller:     participant.ControllerHuman,
 		CampaignAccess: participant.CampaignAccessMember,

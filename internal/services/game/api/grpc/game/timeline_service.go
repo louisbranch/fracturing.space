@@ -466,7 +466,7 @@ func campaignProjectionDisplay(entry storage.CampaignRecord) *campaignv1.Project
 // participantProjectionDisplay builds a display summary for participant projections.
 func participantProjectionDisplay(entry storage.ParticipantRecord) *campaignv1.ProjectionDisplay {
 	display := &campaignv1.ProjectionDisplay{
-		Title: entry.DisplayName,
+		Title: entry.Name,
 	}
 	switch entry.Role {
 	case participant.RoleGM:

@@ -270,11 +270,11 @@ func testCampaign(id, name string, status statev1.CampaignStatus) *statev1.Campa
 // testParticipant returns a proto participant for test fixtures.
 func testParticipant(id, campaignID, displayName string, role statev1.ParticipantRole) *statev1.Participant {
 	return &statev1.Participant{
-		Id:          id,
-		CampaignId:  campaignID,
-		DisplayName: displayName,
-		Role:        role,
-		Controller:  statev1.Controller_CONTROLLER_HUMAN,
+		Id:         id,
+		CampaignId: campaignID,
+		Name:       displayName,
+		Role:       role,
+		Controller: statev1.Controller_CONTROLLER_HUMAN,
 	}
 }
 

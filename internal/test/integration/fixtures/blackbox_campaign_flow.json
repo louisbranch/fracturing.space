@@ -86,7 +86,7 @@
       "tool": "participant_create",
       "args": {
         "campaign_id": {"ref": "campaign_id"},
-        "display_name": "Blackbox Player",
+        "name": "Blackbox Player",
         "role": "PLAYER",
         "controller": "HUMAN"
       },

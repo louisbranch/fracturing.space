@@ -53,7 +53,7 @@ func TestStoresApplier_ApplyCampaignAndParticipant(t *testing.T) {
 	joinPayload := participant.JoinPayload{
 		ParticipantID:  "part-1",
 		UserID:         "user-1",
-		DisplayName:    "GM",
+		Name:           "GM",
 		Role:           "GM",
 		Controller:     "HUMAN",
 		CampaignAccess: "OWNER",
@@ -92,8 +92,8 @@ func TestStoresApplier_ApplyCampaignAndParticipant(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get participant: %v", err)
 	}
-	if participant.DisplayName != "GM" {
-		t.Fatalf("participant display name = %q, want %q", participant.DisplayName, "GM")
+	if participant.Name != "GM" {
+		t.Fatalf("participant display name = %q, want %q", participant.Name, "GM")
 	}
 }
 
@@ -133,7 +133,7 @@ func TestStoresApplier_ApplyParticipantUpdated(t *testing.T) {
 	joinPayload := participant.JoinPayload{
 		ParticipantID:  "part-1",
 		UserID:         "user-1",
-		DisplayName:    "GM",
+		Name:           "GM",
 		Role:           "GM",
 		Controller:     "HUMAN",
 		CampaignAccess: "OWNER",
@@ -157,7 +157,7 @@ func TestStoresApplier_ApplyParticipantUpdated(t *testing.T) {
 	updatePayload := participant.UpdatePayload{
 		ParticipantID: "part-1",
 		Fields: map[string]string{
-			"display_name": "Guide",
+			"name": "Guide",
 		},
 	}
 	updateJSON, err := json.Marshal(updatePayload)
@@ -180,8 +180,8 @@ func TestStoresApplier_ApplyParticipantUpdated(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get participant: %v", err)
 	}
-	if updated.DisplayName != "Guide" {
-		t.Fatalf("display name = %q, want %q", updated.DisplayName, "Guide")
+	if updated.Name != "Guide" {
+		t.Fatalf("display name = %q, want %q", updated.Name, "Guide")
 	}
 }
 
@@ -221,7 +221,7 @@ func TestStoresApplier_ApplyParticipantLeft(t *testing.T) {
 	joinPayload := participant.JoinPayload{
 		ParticipantID:  "part-1",
 		UserID:         "user-1",
-		DisplayName:    "GM",
+		Name:           "GM",
 		Role:           "GM",
 		Controller:     "HUMAN",
 		CampaignAccess: "OWNER",
@@ -311,7 +311,7 @@ func TestStoresApplier_ApplyParticipantBindUnbindAndSeatReassign(t *testing.T) {
 	joinPayload := participant.JoinPayload{
 		ParticipantID:  "part-1",
 		UserID:         "",
-		DisplayName:    "GM",
+		Name:           "GM",
 		Role:           "GM",
 		Controller:     "HUMAN",
 		CampaignAccess: "OWNER",

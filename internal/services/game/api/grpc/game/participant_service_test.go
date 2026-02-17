@@ -28,8 +28,8 @@ func TestCreateParticipant_MissingCampaignId(t *testing.T) {
 	eventStore := newFakeEventStore()
 	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore})
 	_, err := svc.CreateParticipant(context.Background(), &statev1.CreateParticipantRequest{
-		DisplayName: "Player 1",
-		Role:        statev1.ParticipantRole_PLAYER,
+		Name: "Player 1",
+		Role: statev1.ParticipantRole_PLAYER,
 	})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
@@ -40,9 +40,9 @@ func TestCreateParticipant_CampaignNotFound(t *testing.T) {
 	eventStore := newFakeEventStore()
 	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore})
 	_, err := svc.CreateParticipant(context.Background(), &statev1.CreateParticipantRequest{
-		CampaignId:  "nonexistent",
-		DisplayName: "Player 1",
-		Role:        statev1.ParticipantRole_PLAYER,
+		CampaignId: "nonexistent",
+		Name:       "Player 1",
+		Role:       statev1.ParticipantRole_PLAYER,
 	})
 	assertStatusCode(t, err, codes.NotFound)
 }
@@ -58,14 +58,14 @@ func TestCreateParticipant_CampaignArchivedDisallowed(t *testing.T) {
 	eventStore := newFakeEventStore()
 	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore})
 	_, err := svc.CreateParticipant(context.Background(), &statev1.CreateParticipantRequest{
-		CampaignId:  "c1",
-		DisplayName: "Player 1",
-		Role:        statev1.ParticipantRole_PLAYER,
+		CampaignId: "c1",
+		Name:       "Player 1",
+		Role:       statev1.ParticipantRole_PLAYER,
 	})
 	assertStatusCode(t, err, codes.FailedPrecondition)
 }
 
-func TestCreateParticipant_EmptyDisplayName(t *testing.T) {
+func TestCreateParticipant_EmptyName(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
@@ -101,8 +101,8 @@ func TestCreateParticipant_InvalidRole(t *testing.T) {
 	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore})
 	ctx := contextWithParticipantID("owner-1")
 	_, err := svc.CreateParticipant(ctx, &statev1.CreateParticipantRequest{
-		CampaignId:  "c1",
-		DisplayName: "Player 1",
+		CampaignId: "c1",
+		Name:       "Player 1",
 	})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
@@ -118,10 +118,10 @@ func TestCreateParticipant_RequiresDomainEngine(t *testing.T) {
 	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: newFakeEventStore()})
 	ctx := contextWithParticipantID("owner-1")
 	_, err := svc.CreateParticipant(ctx, &statev1.CreateParticipantRequest{
-		CampaignId:  "c1",
-		DisplayName: "Game Master",
-		Role:        statev1.ParticipantRole_GM,
-		Controller:  statev1.Controller_CONTROLLER_AI,
+		CampaignId: "c1",
+		Name:       "Game Master",
+		Role:       statev1.ParticipantRole_GM,
+		Controller: statev1.Controller_CONTROLLER_AI,
 	})
 	assertStatusCode(t, err, codes.Internal)
 }
@@ -150,7 +150,7 @@ func TestCreateParticipant_Success_GM(t *testing.T) {
 				ActorID:     "owner-1",
 				EntityType:  "participant",
 				EntityID:    "participant-123",
-				PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"","display_name":"Game Master","role":"GM","controller":"AI","campaign_access":"MEMBER"}`),
+				PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"","name":"Game Master","role":"GM","controller":"AI","campaign_access":"MEMBER"}`),
 			}),
 		},
 	}}
@@ -162,10 +162,10 @@ func TestCreateParticipant_Success_GM(t *testing.T) {
 
 	ctx := contextWithParticipantID("owner-1")
 	resp, err := svc.CreateParticipant(ctx, &statev1.CreateParticipantRequest{
-		CampaignId:  "c1",
-		DisplayName: "Game Master",
-		Role:        statev1.ParticipantRole_GM,
-		Controller:  statev1.Controller_CONTROLLER_AI,
+		CampaignId: "c1",
+		Name:       "Game Master",
+		Role:       statev1.ParticipantRole_GM,
+		Controller: statev1.Controller_CONTROLLER_AI,
 	})
 	if err != nil {
 		t.Fatalf("CreateParticipant returned error: %v", err)
@@ -176,8 +176,8 @@ func TestCreateParticipant_Success_GM(t *testing.T) {
 	if resp.Participant.Id != "participant-123" {
 		t.Errorf("Participant ID = %q, want %q", resp.Participant.Id, "participant-123")
 	}
-	if resp.Participant.DisplayName != "Game Master" {
-		t.Errorf("Participant DisplayName = %q, want %q", resp.Participant.DisplayName, "Game Master")
+	if resp.Participant.Name != "Game Master" {
+		t.Errorf("Participant Name = %q, want %q", resp.Participant.Name, "Game Master")
 	}
 	if resp.Participant.Role != statev1.ParticipantRole_GM {
 		t.Errorf("Participant Role = %v, want %v", resp.Participant.Role, statev1.ParticipantRole_GM)
@@ -200,8 +200,8 @@ func TestCreateParticipant_Success_GM(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Participant not persisted: %v", err)
 	}
-	if stored.DisplayName != "Game Master" {
-		t.Errorf("Stored participant DisplayName = %q, want %q", stored.DisplayName, "Game Master")
+	if stored.Name != "Game Master" {
+		t.Errorf("Stored participant Name = %q, want %q", stored.Name, "Game Master")
 	}
 }
 
@@ -229,7 +229,7 @@ func TestCreateParticipant_Success_Player(t *testing.T) {
 				ActorID:     "owner-1",
 				EntityType:  "participant",
 				EntityID:    "participant-456",
-				PayloadJSON: []byte(`{"participant_id":"participant-456","user_id":"","display_name":"Player One","role":"PLAYER","controller":"HUMAN","campaign_access":"MEMBER"}`),
+				PayloadJSON: []byte(`{"participant_id":"participant-456","user_id":"","name":"Player One","role":"PLAYER","controller":"HUMAN","campaign_access":"MEMBER"}`),
 			}),
 		},
 	}}
@@ -241,10 +241,10 @@ func TestCreateParticipant_Success_Player(t *testing.T) {
 
 	ctx := contextWithParticipantID("owner-1")
 	resp, err := svc.CreateParticipant(ctx, &statev1.CreateParticipantRequest{
-		CampaignId:  "c1",
-		DisplayName: "Player One",
-		Role:        statev1.ParticipantRole_PLAYER,
-		Controller:  statev1.Controller_CONTROLLER_HUMAN,
+		CampaignId: "c1",
+		Name:       "Player One",
+		Role:       statev1.ParticipantRole_PLAYER,
+		Controller: statev1.Controller_CONTROLLER_HUMAN,
 	})
 	if err != nil {
 		t.Fatalf("CreateParticipant returned error: %v", err)
@@ -283,7 +283,7 @@ func TestCreateParticipant_UsesDomainEngine(t *testing.T) {
 				ActorID:     "owner-1",
 				EntityType:  "participant",
 				EntityID:    "participant-123",
-				PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"user-123","display_name":"Player One","role":"player","controller":"human","campaign_access":"member"}`),
+				PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"user-123","name":"Player One","role":"player","controller":"human","campaign_access":"member"}`),
 			}),
 		},
 	}}
@@ -301,11 +301,11 @@ func TestCreateParticipant_UsesDomainEngine(t *testing.T) {
 
 	ctx := contextWithParticipantID("owner-1")
 	resp, err := svc.CreateParticipant(ctx, &statev1.CreateParticipantRequest{
-		CampaignId:  "c1",
-		DisplayName: "Player One",
-		Role:        statev1.ParticipantRole_PLAYER,
-		Controller:  statev1.Controller_CONTROLLER_HUMAN,
-		UserId:      "user-123",
+		CampaignId: "c1",
+		Name:       "Player One",
+		Role:       statev1.ParticipantRole_PLAYER,
+		Controller: statev1.Controller_CONTROLLER_HUMAN,
+		UserId:     "user-123",
 	})
 	if err != nil {
 		t.Fatalf("CreateParticipant returned error: %v", err)
@@ -338,7 +338,7 @@ func TestUpdateParticipant_NoFields(t *testing.T) {
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
 		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
-		"p1":      {ID: "p1", CampaignID: "c1", DisplayName: "Player One", Role: participant.RolePlayer, Controller: participant.ControllerHuman},
+		"p1":      {ID: "p1", CampaignID: "c1", Name: "Player One", Role: participant.RolePlayer, Controller: participant.ControllerHuman},
 	}
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
@@ -351,7 +351,7 @@ func TestUpdateParticipant_NoFields(t *testing.T) {
 				ActorID:     "owner-1",
 				EntityType:  "participant",
 				EntityID:    "p1",
-				PayloadJSON: []byte(`{"participant_id":"p1","fields":{"display_name":"Player Uno","controller":"ai"}}`),
+				PayloadJSON: []byte(`{"participant_id":"p1","fields":{"name":"Player Uno","controller":"ai"}}`),
 			}),
 		},
 	}}
@@ -371,7 +371,7 @@ func TestUpdateParticipant_RequiresDomainEngine(t *testing.T) {
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
 		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
-		"p1":      {ID: "p1", CampaignID: "c1", DisplayName: "Player One", Role: participant.RolePlayer, Controller: participant.ControllerHuman},
+		"p1":      {ID: "p1", CampaignID: "c1", Name: "Player One", Role: participant.RolePlayer, Controller: participant.ControllerHuman},
 	}
 
 	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: newFakeEventStore()})
@@ -379,7 +379,7 @@ func TestUpdateParticipant_RequiresDomainEngine(t *testing.T) {
 	_, err := svc.UpdateParticipant(ctx, &statev1.UpdateParticipantRequest{
 		CampaignId:    "c1",
 		ParticipantId: "p1",
-		DisplayName:   wrapperspb.String("Player Uno"),
+		Name:          wrapperspb.String("Player Uno"),
 	})
 	assertStatusCode(t, err, codes.Internal)
 }
@@ -392,7 +392,7 @@ func TestUpdateParticipant_Success(t *testing.T) {
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
 		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
-		"p1":      {ID: "p1", CampaignID: "c1", DisplayName: "Player One", Role: participant.RolePlayer, Controller: participant.ControllerHuman},
+		"p1":      {ID: "p1", CampaignID: "c1", Name: "Player One", Role: participant.RolePlayer, Controller: participant.ControllerHuman},
 	}
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
@@ -405,7 +405,7 @@ func TestUpdateParticipant_Success(t *testing.T) {
 				ActorID:     "owner-1",
 				EntityType:  "participant",
 				EntityID:    "p1",
-				PayloadJSON: []byte(`{"participant_id":"p1","fields":{"display_name":"Player Uno","controller":"ai"}}`),
+				PayloadJSON: []byte(`{"participant_id":"p1","fields":{"name":"Player Uno","controller":"ai"}}`),
 			}),
 		},
 	}}
@@ -415,14 +415,14 @@ func TestUpdateParticipant_Success(t *testing.T) {
 	resp, err := svc.UpdateParticipant(ctx, &statev1.UpdateParticipantRequest{
 		CampaignId:    "c1",
 		ParticipantId: "p1",
-		DisplayName:   wrapperspb.String("Player Uno"),
+		Name:          wrapperspb.String("Player Uno"),
 		Controller:    statev1.Controller_CONTROLLER_AI,
 	})
 	if err != nil {
 		t.Fatalf("UpdateParticipant returned error: %v", err)
 	}
-	if resp.Participant.DisplayName != "Player Uno" {
-		t.Errorf("Participant DisplayName = %q, want %q", resp.Participant.DisplayName, "Player Uno")
+	if resp.Participant.Name != "Player Uno" {
+		t.Errorf("Participant Name = %q, want %q", resp.Participant.Name, "Player Uno")
 	}
 	if resp.Participant.Controller != statev1.Controller_CONTROLLER_AI {
 		t.Errorf("Participant Controller = %v, want %v", resp.Participant.Controller, statev1.Controller_CONTROLLER_AI)
@@ -432,8 +432,8 @@ func TestUpdateParticipant_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Participant not persisted: %v", err)
 	}
-	if stored.DisplayName != "Player Uno" {
-		t.Errorf("Stored participant DisplayName = %q, want %q", stored.DisplayName, "Player Uno")
+	if stored.Name != "Player Uno" {
+		t.Errorf("Stored participant Name = %q, want %q", stored.Name, "Player Uno")
 	}
 	if got := len(eventStore.events["c1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)
@@ -451,7 +451,7 @@ func TestUpdateParticipant_UsesDomainEngine(t *testing.T) {
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
 		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
-		"p1":      {ID: "p1", CampaignID: "c1", DisplayName: "Player One", Role: participant.RolePlayer, Controller: participant.ControllerHuman},
+		"p1":      {ID: "p1", CampaignID: "c1", Name: "Player One", Role: participant.RolePlayer, Controller: participant.ControllerHuman},
 	}
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
@@ -465,7 +465,7 @@ func TestUpdateParticipant_UsesDomainEngine(t *testing.T) {
 				ActorID:     "owner-1",
 				EntityType:  "participant",
 				EntityID:    "p1",
-				PayloadJSON: []byte(`{"participant_id":"p1","fields":{"display_name":"Player Uno","controller":"ai"}}`),
+				PayloadJSON: []byte(`{"participant_id":"p1","fields":{"name":"Player Uno","controller":"ai"}}`),
 			}),
 		},
 	}}
@@ -484,7 +484,7 @@ func TestUpdateParticipant_UsesDomainEngine(t *testing.T) {
 	resp, err := svc.UpdateParticipant(ctx, &statev1.UpdateParticipantRequest{
 		CampaignId:    "c1",
 		ParticipantId: "p1",
-		DisplayName:   wrapperspb.String("Player Uno"),
+		Name:          wrapperspb.String("Player Uno"),
 		Controller:    statev1.Controller_CONTROLLER_AI,
 	})
 	if err != nil {
@@ -512,8 +512,8 @@ func TestUpdateParticipant_UsesDomainEngine(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Participant not persisted: %v", err)
 	}
-	if stored.DisplayName != "Player Uno" {
-		t.Fatalf("Stored participant DisplayName = %q, want %q", stored.DisplayName, "Player Uno")
+	if stored.Name != "Player Uno" {
+		t.Fatalf("Stored participant Name = %q, want %q", stored.Name, "Player Uno")
 	}
 }
 
@@ -525,7 +525,7 @@ func TestUpdateParticipant_CampaignAccess(t *testing.T) {
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
 		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
-		"p1":      {ID: "p1", CampaignID: "c1", DisplayName: "Player One", CampaignAccess: participant.CampaignAccessMember},
+		"p1":      {ID: "p1", CampaignID: "c1", Name: "Player One", CampaignAccess: participant.CampaignAccessMember},
 	}
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
@@ -574,7 +574,7 @@ func TestDeleteParticipant_Success(t *testing.T) {
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive, ParticipantCount: 1}
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
 		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
-		"p1":      {ID: "p1", CampaignID: "c1", DisplayName: "Player One", Role: participant.RolePlayer},
+		"p1":      {ID: "p1", CampaignID: "c1", Name: "Player One", Role: participant.RolePlayer},
 	}
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
@@ -629,7 +629,7 @@ func TestDeleteParticipant_RequiresDomainEngine(t *testing.T) {
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive, ParticipantCount: 1}
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
 		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
-		"p1":      {ID: "p1", CampaignID: "c1", DisplayName: "Player One", Role: participant.RolePlayer},
+		"p1":      {ID: "p1", CampaignID: "c1", Name: "Player One", Role: participant.RolePlayer},
 	}
 
 	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: newFakeEventStore()})
@@ -649,7 +649,7 @@ func TestDeleteParticipant_UsesDomainEngine(t *testing.T) {
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive, ParticipantCount: 1}
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
 		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
-		"p1":      {ID: "p1", CampaignID: "c1", DisplayName: "Player One", Role: participant.RolePlayer},
+		"p1":      {ID: "p1", CampaignID: "c1", Name: "Player One", Role: participant.RolePlayer},
 	}
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
@@ -751,7 +751,7 @@ func TestListParticipants_CampaignArchivedAllowed(t *testing.T) {
 		Status: campaign.StatusArchived,
 	}
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
-		"p1": {ID: "p1", CampaignID: "c1", DisplayName: "GM", Role: participant.RoleGM, CreatedAt: now},
+		"p1": {ID: "p1", CampaignID: "c1", Name: "GM", Role: participant.RoleGM, CreatedAt: now},
 	}
 
 	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore})
@@ -792,8 +792,8 @@ func TestListParticipants_WithParticipants(t *testing.T) {
 		Status: campaign.StatusActive,
 	}
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
-		"p1": {ID: "p1", CampaignID: "c1", DisplayName: "GM", Role: participant.RoleGM, CreatedAt: now},
-		"p2": {ID: "p2", CampaignID: "c1", DisplayName: "Player 1", Role: participant.RolePlayer, CreatedAt: now},
+		"p1": {ID: "p1", CampaignID: "c1", Name: "GM", Role: participant.RoleGM, CreatedAt: now},
+		"p2": {ID: "p2", CampaignID: "c1", Name: "Player 1", Role: participant.RolePlayer, CreatedAt: now},
 	}
 
 	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore})
@@ -860,13 +860,13 @@ func TestGetParticipant_Success(t *testing.T) {
 	}
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
 		"p1": {
-			ID:          "p1",
-			CampaignID:  "c1",
-			DisplayName: "Game Master",
-			Role:        participant.RoleGM,
-			Controller:  participant.ControllerAI,
-			CreatedAt:   now,
-			UpdatedAt:   now,
+			ID:         "p1",
+			CampaignID: "c1",
+			Name:       "Game Master",
+			Role:       participant.RoleGM,
+			Controller: participant.ControllerAI,
+			CreatedAt:  now,
+			UpdatedAt:  now,
 		},
 	}
 
@@ -881,8 +881,8 @@ func TestGetParticipant_Success(t *testing.T) {
 	if resp.Participant.Id != "p1" {
 		t.Errorf("Participant ID = %q, want %q", resp.Participant.Id, "p1")
 	}
-	if resp.Participant.DisplayName != "Game Master" {
-		t.Errorf("Participant DisplayName = %q, want %q", resp.Participant.DisplayName, "Game Master")
+	if resp.Participant.Name != "Game Master" {
+		t.Errorf("Participant Name = %q, want %q", resp.Participant.Name, "Game Master")
 	}
 	if resp.Participant.Role != statev1.ParticipantRole_GM {
 		t.Errorf("Participant Role = %v, want %v", resp.Participant.Role, statev1.ParticipantRole_GM)

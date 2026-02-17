@@ -519,7 +519,7 @@ func TestParticipantToProto(t *testing.T) {
 		ID:             "part-1",
 		CampaignID:     "camp-1",
 		UserID:         "user-1",
-		DisplayName:    "Test Player",
+		Name:           "Test Player",
 		Role:           participant.RolePlayer,
 		CampaignAccess: participant.CampaignAccessMember,
 		Controller:     participant.ControllerHuman,

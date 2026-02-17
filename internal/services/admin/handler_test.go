@@ -1332,7 +1332,7 @@ func TestCampaignCreateImpersonationOverridesUserID(t *testing.T) {
 	handler := webHandler.routes()
 
 	sessionID := "session-impersonate"
-	webHandler.impersonation.Set(sessionID, impersonationSession{userID: "user-imp", displayName: "Impersonated"})
+	webHandler.impersonation.Set(sessionID, impersonationSession{userID: "user-imp", name: "Impersonated"})
 
 	form := url.Values{}
 	form.Set("user_id", "user-other")
@@ -3297,7 +3297,7 @@ func TestInvitesTable(t *testing.T) {
 		}
 		participantClient := &testParticipantClient{
 			participants: []*statev1.Participant{
-				{Id: "p-1", CampaignId: "camp-1", DisplayName: "Alice"},
+				{Id: "p-1", CampaignId: "camp-1", Name: "Alice"},
 			},
 		}
 		authClient := &testAuthClient{
@@ -3400,7 +3400,7 @@ func TestListPendingInvitesForUser(t *testing.T) {
 							CreatedAt:  timestamppb.Now(),
 						},
 						Campaign:    &statev1.Campaign{Id: "camp-1", Name: "My Campaign"},
-						Participant: &statev1.Participant{Id: "p-1", DisplayName: "Alice"},
+						Participant: &statev1.Participant{Id: "p-1", Name: "Alice"},
 					},
 				},
 			},
@@ -3443,7 +3443,7 @@ func TestListPendingInvitesForUser(t *testing.T) {
 				Invites: []*statev1.PendingUserInvite{
 					{
 						Campaign:    &statev1.Campaign{Id: "camp-1", Name: "Campaign"},
-						Participant: &statev1.Participant{Id: "p-1", DisplayName: "Alice"},
+						Participant: &statev1.Participant{Id: "p-1", Name: "Alice"},
 					},
 				},
 			},
@@ -3470,7 +3470,7 @@ func TestListPendingInvitesForUser(t *testing.T) {
 					{
 						Invite:      &statev1.Invite{Id: "inv-1", CampaignId: "camp-x"},
 						Campaign:    &statev1.Campaign{Id: "camp-x"},
-						Participant: &statev1.Participant{DisplayName: "Bob"},
+						Participant: &statev1.Participant{Name: "Bob"},
 					},
 				},
 			},
@@ -3537,7 +3537,7 @@ func TestRenderCharacterSheet(t *testing.T) {
 		}
 		participantClient := &testParticipantClient{
 			participants: []*statev1.Participant{
-				{Id: "p-1", DisplayName: "Alice"},
+				{Id: "p-1", Name: "Alice"},
 			},
 		}
 		campaignClient := &testCampaignClient{
@@ -3640,8 +3640,8 @@ func TestResolveParticipantIDForUser(t *testing.T) {
 	t.Run("found participant", func(t *testing.T) {
 		participantClient := &testParticipantClient{
 			participants: []*statev1.Participant{
-				{Id: "p-1", UserId: "u-1", DisplayName: "Alice"},
-				{Id: "p-2", UserId: "u-2", DisplayName: "Bob"},
+				{Id: "p-1", UserId: "u-1", Name: "Alice"},
+				{Id: "p-2", UserId: "u-2", Name: "Bob"},
 			},
 		}
 		provider := testClientProvider{participant: participantClient}
@@ -3658,7 +3658,7 @@ func TestResolveParticipantIDForUser(t *testing.T) {
 	t.Run("not found", func(t *testing.T) {
 		participantClient := &testParticipantClient{
 			participants: []*statev1.Participant{
-				{Id: "p-1", UserId: "u-2", DisplayName: "Bob"},
+				{Id: "p-1", UserId: "u-2", Name: "Bob"},
 			},
 		}
 		provider := testClientProvider{participant: participantClient}
@@ -4323,7 +4323,7 @@ func TestBuildParticipantRows(t *testing.T) {
 			{
 				Id:             "p-1",
 				CampaignId:     "camp-1",
-				DisplayName:    "Alice",
+				Name:           "Alice",
 				Role:           statev1.ParticipantRole_GM,
 				CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER,
 				Controller:     statev1.Controller_CONTROLLER_HUMAN,
@@ -4335,8 +4335,8 @@ func TestBuildParticipantRows(t *testing.T) {
 		if len(rows) != 1 {
 			t.Fatalf("expected 1 row, got %d", len(rows))
 		}
-		if rows[0].DisplayName != "Alice" {
-			t.Errorf("DisplayName = %q, want Alice", rows[0].DisplayName)
+		if rows[0].Name != "Alice" {
+			t.Errorf("Name = %q, want Alice", rows[0].Name)
 		}
 		if rows[0].ID != "p-1" {
 			t.Errorf("ID = %q, want p-1", rows[0].ID)
@@ -4629,7 +4629,7 @@ func TestCharactersTableErrorPaths(t *testing.T) {
 		}
 		partClient := &testParticipantClient{
 			participants: []*statev1.Participant{
-				{Id: "part-1", DisplayName: "Player1"},
+				{Id: "part-1", Name: "Player1"},
 			},
 		}
 		provider := testFullClientProvider{character: charClient, participant: partClient}
@@ -4702,7 +4702,7 @@ func TestInvitesTableErrorPaths(t *testing.T) {
 		authClient := &testAuthClient{user: &authv1.User{Id: "user-1", Username: "Alice"}}
 		partClient := &testParticipantClient{
 			participants: []*statev1.Participant{
-				{Id: "part-1", DisplayName: "GM"},
+				{Id: "part-1", Name: "GM"},
 			},
 		}
 		provider := testFullClientProvider{invite: inviteClient, auth: authClient, participant: partClient}
@@ -5049,7 +5049,7 @@ func TestParticipantsTableErrorPaths(t *testing.T) {
 	t.Run("with data", func(t *testing.T) {
 		partClient := &testParticipantClient{
 			participants: []*statev1.Participant{
-				{Id: "part-1", DisplayName: "Player 1"},
+				{Id: "part-1", Name: "Player 1"},
 			},
 		}
 		provider := testFullClientProvider{participant: partClient}

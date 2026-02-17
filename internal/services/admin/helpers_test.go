@@ -399,7 +399,7 @@ func TestParticipantsTableRoute(t *testing.T) {
 	t.Run("with client", func(t *testing.T) {
 		participantClient := &testParticipantClient{
 			participants: []*statev1.Participant{
-				{Id: "p1", CampaignId: "camp-123", DisplayName: "Alice", Role: statev1.ParticipantRole_GM},
+				{Id: "p1", CampaignId: "camp-123", Name: "Alice", Role: statev1.ParticipantRole_GM},
 			},
 		}
 		handler := NewHandler(testClientProvider{participant: participantClient})

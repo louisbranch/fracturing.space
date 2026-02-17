@@ -61,7 +61,7 @@ func TestForkCampaign_ReplaysEvents_CopyParticipantsFalse(t *testing.T) {
 		EntityID:   "part-1",
 		PayloadJSON: mustJSON(t, participant.JoinPayload{
 			ParticipantID:  "part-1",
-			DisplayName:    "Alice",
+			Name:           "Alice",
 			Role:           "PLAYER",
 			Controller:     "CONTROLLER_HUMAN",
 			CampaignAccess: "MEMBER",
@@ -382,7 +382,7 @@ func TestForkCampaign_SeedsSnapshotStateAtHead(t *testing.T) {
 		EntityID:   "part-1",
 		PayloadJSON: mustJSON(t, participant.JoinPayload{
 			ParticipantID:  "part-1",
-			DisplayName:    "Alice",
+			Name:           "Alice",
 			Role:           "PLAYER",
 			Controller:     "CONTROLLER_HUMAN",
 			CampaignAccess: "MEMBER",

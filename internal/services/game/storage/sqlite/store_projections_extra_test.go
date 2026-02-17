@@ -33,7 +33,7 @@ func TestParticipantGetAndDelete(t *testing.T) {
 	if got.ID != p.ID || got.CampaignID != p.CampaignID {
 		t.Fatalf("expected identity to match")
 	}
-	if got.UserID != p.UserID || got.DisplayName != p.DisplayName {
+	if got.UserID != p.UserID || got.Name != p.Name {
 		t.Fatalf("expected user id/display name to match")
 	}
 	if got.Role != p.Role || got.Controller != p.Controller || got.CampaignAccess != p.CampaignAccess {

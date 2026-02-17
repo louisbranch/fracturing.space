@@ -773,10 +773,10 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		participantCtx := metadata.NewOutgoingContext(ctx, metadata.Pairs(grpcmeta.ParticipantIDHeader, ownerID))
 
 		_, err = participantClient.CreateParticipant(participantCtx, &statev1.CreateParticipantRequest{
-			CampaignId:  campaignID,
-			DisplayName: "Test Player One",
-			Role:        statev1.ParticipantRole_PLAYER,
-			Controller:  statev1.Controller_CONTROLLER_HUMAN,
+			CampaignId: campaignID,
+			Name:       "Test Player One",
+			Role:       statev1.ParticipantRole_PLAYER,
+			Controller: statev1.Controller_CONTROLLER_HUMAN,
 		})
 		if err != nil {
 			t.Fatalf("create participant: %v", err)

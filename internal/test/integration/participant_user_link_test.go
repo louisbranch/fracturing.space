@@ -63,11 +63,11 @@ func runParticipantUserLinkTests(t *testing.T, grpcAddr string, authAddr string)
 	participantCtx := metadata.NewOutgoingContext(ctx, metadata.Pairs(grpcmeta.ParticipantIDHeader, ownerID))
 
 	firstResp, err := participantClient.CreateParticipant(participantCtx, &statev1.CreateParticipantRequest{
-		CampaignId:  createResp.Campaign.Id,
-		UserId:      "user-1",
-		DisplayName: "Player One",
-		Role:        statev1.ParticipantRole_PLAYER,
-		Controller:  statev1.Controller_CONTROLLER_HUMAN,
+		CampaignId: createResp.Campaign.Id,
+		UserId:     "user-1",
+		Name:       "Player One",
+		Role:       statev1.ParticipantRole_PLAYER,
+		Controller: statev1.Controller_CONTROLLER_HUMAN,
 	})
 	if err != nil {
 		t.Fatalf("create participant: %v", err)
@@ -77,11 +77,11 @@ func runParticipantUserLinkTests(t *testing.T, grpcAddr string, authAddr string)
 	}
 
 	secondResp, err := participantClient.CreateParticipant(participantCtx, &statev1.CreateParticipantRequest{
-		CampaignId:  createResp.Campaign.Id,
-		UserId:      "user-2",
-		DisplayName: "Player Two",
-		Role:        statev1.ParticipantRole_PLAYER,
-		Controller:  statev1.Controller_CONTROLLER_HUMAN,
+		CampaignId: createResp.Campaign.Id,
+		UserId:     "user-2",
+		Name:       "Player Two",
+		Role:       statev1.ParticipantRole_PLAYER,
+		Controller: statev1.Controller_CONTROLLER_HUMAN,
 	})
 	if err != nil {
 		t.Fatalf("create second participant: %v", err)

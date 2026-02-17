@@ -88,9 +88,9 @@ type Handler struct {
 }
 
 type impersonationSession struct {
-	userID      string
-	displayName string
-	expiresAt   time.Time
+	userID    string
+	name      string
+	expiresAt time.Time
 }
 
 type impersonationStore struct {
@@ -600,8 +600,8 @@ func (h *Handler) impersonationView(r *http.Request) *templates.ImpersonationVie
 		return nil
 	}
 	return &templates.ImpersonationView{
-		UserID:      impersonation.userID,
-		DisplayName: impersonation.displayName,
+		UserID: impersonation.userID,
+		Name:   impersonation.name,
 	}
 }
 
@@ -798,8 +798,8 @@ func (h *Handler) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	displayName := strings.TrimSpace(r.FormValue("username"))
-	if displayName == "" {
+	name := strings.TrimSpace(r.FormValue("username"))
+	if name == "" {
 		view.Message = loc.Sprintf("error.user_username_required")
 		templ.Handler(templates.UsersFullPage(view, pageCtx)).ServeHTTP(w, r)
 		return
@@ -817,7 +817,7 @@ func (h *Handler) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 
 	locale := localeFromTag(lang)
 	response, err := client.CreateUser(ctx, &authv1.CreateUserRequest{
-		Username: displayName,
+		Username: name,
 		Locale:   locale,
 	})
 	if err != nil || response.GetUser() == nil {
@@ -967,8 +967,8 @@ func (h *Handler) handleImpersonateUser(w http.ResponseWriter, r *http.Request) 
 
 	if h.impersonation != nil {
 		h.impersonation.Set(sessionID, impersonationSession{
-			userID:      user.GetId(),
-			displayName: user.GetUsername(),
+			userID: user.GetId(),
+			name:   user.GetUsername(),
 		})
 	}
 
@@ -983,8 +983,8 @@ func (h *Handler) handleImpersonateUser(w http.ResponseWriter, r *http.Request) 
 
 	view.Detail = buildUserDetail(user)
 	view.Impersonation = &templates.ImpersonationView{
-		UserID:      user.GetId(),
-		DisplayName: user.GetUsername(),
+		UserID: user.GetId(),
+		Name:   user.GetUsername(),
 	}
 	invitesCtx, invitesCancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
 	defer invitesCancel()
@@ -1635,7 +1635,7 @@ func (h *Handler) handleCampaignCreate(w http.ResponseWriter, r *http.Request) {
 	}
 	if pageCtx.Impersonation != nil {
 		view.UserID = pageCtx.Impersonation.UserID
-		view.CreatorDisplayName = pageCtx.Impersonation.DisplayName
+		view.CreatorDisplayName = pageCtx.Impersonation.Name
 	}
 	renderCreate := func() {
 		renderPage(w, r, templates.CampaignCreatePage(view, loc), templates.CampaignCreateFullPage(view, pageCtx))
@@ -1669,7 +1669,7 @@ func (h *Handler) handleCampaignCreate(w http.ResponseWriter, r *http.Request) {
 		view.CreatorDisplayName = strings.TrimSpace(r.FormValue("creator_display_name"))
 	} else {
 		view.UserID = pageCtx.Impersonation.UserID
-		view.CreatorDisplayName = pageCtx.Impersonation.DisplayName
+		view.CreatorDisplayName = pageCtx.Impersonation.Name
 	}
 	view.Name = strings.TrimSpace(r.FormValue("name"))
 	view.System = strings.TrimSpace(r.FormValue("system"))
@@ -2974,7 +2974,7 @@ func (h *Handler) listPendingInvitesForUser(ctx context.Context, userID string, 
 				}
 			}
 
-			participantLabel := strings.TrimSpace(participant.GetDisplayName())
+			participantLabel := strings.TrimSpace(participant.GetName())
 			if participantLabel == "" {
 				participantLabel = loc.Sprintf("label.unknown")
 			}
@@ -3467,7 +3467,7 @@ func (h *Handler) handleCharactersTable(w http.ResponseWriter, r *http.Request, 
 		} else {
 			for _, participant := range participantsResp.GetParticipants() {
 				if participant != nil {
-					participantNames[participant.GetId()] = participant.GetDisplayName()
+					participantNames[participant.GetId()] = participant.GetName()
 				}
 			}
 		}
@@ -3554,7 +3554,7 @@ func (h *Handler) renderCharacterSheet(w http.ResponseWriter, r *http.Request, c
 				log.Printf("get participant for character sheet: %v", err)
 				controller = loc.Sprintf("label.unknown")
 			} else if participant := participantResp.GetParticipant(); participant != nil {
-				controller = participant.GetDisplayName()
+				controller = participant.GetName()
 			} else {
 				controller = loc.Sprintf("label.unknown")
 			}
@@ -3752,7 +3752,7 @@ func (h *Handler) handleInvitesTable(w http.ResponseWriter, r *http.Request, cam
 		} else {
 			for _, participant := range participantsResp.GetParticipants() {
 				if participant != nil {
-					participantNames[participant.GetId()] = participant.GetDisplayName()
+					participantNames[participant.GetId()] = participant.GetName()
 				}
 			}
 		}
@@ -3884,7 +3884,7 @@ func buildParticipantRows(participants []*statev1.Participant, loc *message.Prin
 
 		rows = append(rows, templates.ParticipantRow{
 			ID:                participant.GetId(),
-			DisplayName:       participant.GetDisplayName(),
+			Name:              participant.GetName(),
 			Role:              role,
 			RoleVariant:       roleVariant,
 			Access:            access,

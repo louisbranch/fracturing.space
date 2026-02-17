@@ -48,7 +48,7 @@ type ParticipantRecord struct {
 	ID             string
 	CampaignID     string
 	UserID         string
-	DisplayName    string
+	Name           string
 	Role           participant.Role
 	Controller     participant.Controller
 	CampaignAccess participant.CampaignAccess

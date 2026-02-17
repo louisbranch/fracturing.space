@@ -13,7 +13,7 @@ func participantToProto(p storage.ParticipantRecord) *campaignv1.Participant {
 		Id:             p.ID,
 		CampaignId:     p.CampaignID,
 		UserId:         p.UserID,
-		DisplayName:    p.DisplayName,
+		Name:           p.Name,
 		Role:           participantRoleToProto(p.Role),
 		CampaignAccess: campaignAccessToProto(p.CampaignAccess),
 		Controller:     controllerToProto(p.Controller),

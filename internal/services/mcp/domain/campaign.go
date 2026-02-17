@@ -103,17 +103,17 @@ type CampaignPayload struct {
 
 // ParticipantCreateInput represents the MCP tool input for participant creation.
 type ParticipantCreateInput struct {
-	CampaignID  string `json:"campaign_id" jsonschema:"campaign identifier"`
-	DisplayName string `json:"display_name" jsonschema:"display name for the participant"`
-	Role        string `json:"role" jsonschema:"participant role (GM, PLAYER)"`
-	Controller  string `json:"controller,omitempty" jsonschema:"controller type (HUMAN, AI); optional, defaults to HUMAN if unspecified"`
+	CampaignID string `json:"campaign_id" jsonschema:"campaign identifier"`
+	Name       string `json:"name" jsonschema:"display name for the participant"`
+	Role       string `json:"role" jsonschema:"participant role (GM, PLAYER)"`
+	Controller string `json:"controller,omitempty" jsonschema:"controller type (HUMAN, AI); optional, defaults to HUMAN if unspecified"`
 }
 
 // ParticipantUpdateInput represents the MCP tool input for participant updates.
 type ParticipantUpdateInput struct {
 	CampaignID    string  `json:"campaign_id" jsonschema:"campaign identifier"`
 	ParticipantID string  `json:"participant_id" jsonschema:"participant identifier"`
-	DisplayName   *string `json:"display_name,omitempty" jsonschema:"optional display name"`
+	Name          *string `json:"name,omitempty" jsonschema:"optional display name"`
 	Role          *string `json:"role,omitempty" jsonschema:"optional participant role (GM, PLAYER)"`
 	Controller    *string `json:"controller,omitempty" jsonschema:"optional controller (HUMAN, AI)"`
 }
@@ -127,46 +127,46 @@ type ParticipantDeleteInput struct {
 
 // ParticipantCreateResult represents the MCP tool output for participant creation.
 type ParticipantCreateResult struct {
-	ID          string `json:"id" jsonschema:"participant identifier"`
-	CampaignID  string `json:"campaign_id" jsonschema:"campaign identifier"`
-	DisplayName string `json:"display_name" jsonschema:"display name for the participant"`
-	Role        string `json:"role" jsonschema:"participant role"`
-	Controller  string `json:"controller" jsonschema:"controller type"`
-	CreatedAt   string `json:"created_at" jsonschema:"RFC3339 timestamp when participant was created"`
-	UpdatedAt   string `json:"updated_at" jsonschema:"RFC3339 timestamp when participant was last updated"`
+	ID         string `json:"id" jsonschema:"participant identifier"`
+	CampaignID string `json:"campaign_id" jsonschema:"campaign identifier"`
+	Name       string `json:"name" jsonschema:"display name for the participant"`
+	Role       string `json:"role" jsonschema:"participant role"`
+	Controller string `json:"controller" jsonschema:"controller type"`
+	CreatedAt  string `json:"created_at" jsonschema:"RFC3339 timestamp when participant was created"`
+	UpdatedAt  string `json:"updated_at" jsonschema:"RFC3339 timestamp when participant was last updated"`
 }
 
 // ParticipantUpdateResult represents the MCP tool output for participant updates.
 type ParticipantUpdateResult struct {
-	ID          string `json:"id" jsonschema:"participant identifier"`
-	CampaignID  string `json:"campaign_id" jsonschema:"campaign identifier"`
-	DisplayName string `json:"display_name" jsonschema:"display name for the participant"`
-	Role        string `json:"role" jsonschema:"participant role"`
-	Controller  string `json:"controller" jsonschema:"controller type"`
-	CreatedAt   string `json:"created_at" jsonschema:"RFC3339 timestamp when participant was created"`
-	UpdatedAt   string `json:"updated_at" jsonschema:"RFC3339 timestamp when participant was last updated"`
+	ID         string `json:"id" jsonschema:"participant identifier"`
+	CampaignID string `json:"campaign_id" jsonschema:"campaign identifier"`
+	Name       string `json:"name" jsonschema:"display name for the participant"`
+	Role       string `json:"role" jsonschema:"participant role"`
+	Controller string `json:"controller" jsonschema:"controller type"`
+	CreatedAt  string `json:"created_at" jsonschema:"RFC3339 timestamp when participant was created"`
+	UpdatedAt  string `json:"updated_at" jsonschema:"RFC3339 timestamp when participant was last updated"`
 }
 
 // ParticipantDeleteResult represents the MCP tool output for participant deletion.
 type ParticipantDeleteResult struct {
-	ID          string `json:"id" jsonschema:"participant identifier"`
-	CampaignID  string `json:"campaign_id" jsonschema:"campaign identifier"`
-	DisplayName string `json:"display_name" jsonschema:"display name for the participant"`
-	Role        string `json:"role" jsonschema:"participant role"`
-	Controller  string `json:"controller" jsonschema:"controller type"`
-	CreatedAt   string `json:"created_at" jsonschema:"RFC3339 timestamp when participant was created"`
-	UpdatedAt   string `json:"updated_at" jsonschema:"RFC3339 timestamp when participant was last updated"`
+	ID         string `json:"id" jsonschema:"participant identifier"`
+	CampaignID string `json:"campaign_id" jsonschema:"campaign identifier"`
+	Name       string `json:"name" jsonschema:"display name for the participant"`
+	Role       string `json:"role" jsonschema:"participant role"`
+	Controller string `json:"controller" jsonschema:"controller type"`
+	CreatedAt  string `json:"created_at" jsonschema:"RFC3339 timestamp when participant was created"`
+	UpdatedAt  string `json:"updated_at" jsonschema:"RFC3339 timestamp when participant was last updated"`
 }
 
 // ParticipantListEntry represents a readable participant entry.
 type ParticipantListEntry struct {
-	ID          string `json:"id"`
-	CampaignID  string `json:"campaign_id"`
-	DisplayName string `json:"display_name"`
-	Role        string `json:"role"`
-	Controller  string `json:"controller"`
-	CreatedAt   string `json:"created_at"`
-	UpdatedAt   string `json:"updated_at"`
+	ID         string `json:"id"`
+	CampaignID string `json:"campaign_id"`
+	Name       string `json:"name"`
+	Role       string `json:"role"`
+	Controller string `json:"controller"`
+	CreatedAt  string `json:"created_at"`
+	UpdatedAt  string `json:"updated_at"`
 }
 
 // ParticipantListPayload represents the MCP resource payload for participant listings.
@@ -973,9 +973,9 @@ func ParticipantCreateHandler(client statev1.ParticipantServiceClient, getContex
 		var header metadata.MD
 
 		req := &statev1.CreateParticipantRequest{
-			CampaignId:  input.CampaignID,
-			DisplayName: input.DisplayName,
-			Role:        participantRoleFromString(input.Role),
+			CampaignId: input.CampaignID,
+			Name:       input.Name,
+			Role:       participantRoleFromString(input.Role),
 		}
 
 		// Controller is optional; only set if provided
@@ -992,13 +992,13 @@ func ParticipantCreateHandler(client statev1.ParticipantServiceClient, getContex
 		}
 
 		result := ParticipantCreateResult{
-			ID:          response.Participant.GetId(),
-			CampaignID:  response.Participant.GetCampaignId(),
-			DisplayName: response.Participant.GetDisplayName(),
-			Role:        participantRoleToString(response.Participant.GetRole()),
-			Controller:  controllerToString(response.Participant.GetController()),
-			CreatedAt:   formatTimestamp(response.Participant.GetCreatedAt()),
-			UpdatedAt:   formatTimestamp(response.Participant.GetUpdatedAt()),
+			ID:         response.Participant.GetId(),
+			CampaignID: response.Participant.GetCampaignId(),
+			Name:       response.Participant.GetName(),
+			Role:       participantRoleToString(response.Participant.GetRole()),
+			Controller: controllerToString(response.Participant.GetController()),
+			CreatedAt:  formatTimestamp(response.Participant.GetCreatedAt()),
+			UpdatedAt:  formatTimestamp(response.Participant.GetUpdatedAt()),
 		}
 
 		responseMeta := MergeResponseMetadata(callMeta, header)
@@ -1038,8 +1038,8 @@ func ParticipantUpdateHandler(client statev1.ParticipantServiceClient, getContex
 			CampaignId:    input.CampaignID,
 			ParticipantId: input.ParticipantID,
 		}
-		if input.DisplayName != nil {
-			req.DisplayName = wrapperspb.String(*input.DisplayName)
+		if input.Name != nil {
+			req.Name = wrapperspb.String(*input.Name)
 		}
 		if input.Role != nil {
 			role := participantRoleFromString(*input.Role)
@@ -1055,7 +1055,7 @@ func ParticipantUpdateHandler(client statev1.ParticipantServiceClient, getContex
 			}
 			req.Controller = controller
 		}
-		if req.DisplayName == nil && req.Role == statev1.ParticipantRole_ROLE_UNSPECIFIED && req.Controller == statev1.Controller_CONTROLLER_UNSPECIFIED {
+		if req.Name == nil && req.Role == statev1.ParticipantRole_ROLE_UNSPECIFIED && req.Controller == statev1.Controller_CONTROLLER_UNSPECIFIED {
 			return nil, ParticipantUpdateResult{}, fmt.Errorf("at least one field must be provided")
 		}
 
@@ -1069,13 +1069,13 @@ func ParticipantUpdateHandler(client statev1.ParticipantServiceClient, getContex
 		}
 
 		result := ParticipantUpdateResult{
-			ID:          response.Participant.GetId(),
-			CampaignID:  response.Participant.GetCampaignId(),
-			DisplayName: response.Participant.GetDisplayName(),
-			Role:        participantRoleToString(response.Participant.GetRole()),
-			Controller:  controllerToString(response.Participant.GetController()),
-			CreatedAt:   formatTimestamp(response.Participant.GetCreatedAt()),
-			UpdatedAt:   formatTimestamp(response.Participant.GetUpdatedAt()),
+			ID:         response.Participant.GetId(),
+			CampaignID: response.Participant.GetCampaignId(),
+			Name:       response.Participant.GetName(),
+			Role:       participantRoleToString(response.Participant.GetRole()),
+			Controller: controllerToString(response.Participant.GetController()),
+			CreatedAt:  formatTimestamp(response.Participant.GetCreatedAt()),
+			UpdatedAt:  formatTimestamp(response.Participant.GetUpdatedAt()),
 		}
 
 		responseMeta := MergeResponseMetadata(callMeta, header)
@@ -1125,13 +1125,13 @@ func ParticipantDeleteHandler(client statev1.ParticipantServiceClient, getContex
 		}
 
 		result := ParticipantDeleteResult{
-			ID:          response.Participant.GetId(),
-			CampaignID:  response.Participant.GetCampaignId(),
-			DisplayName: response.Participant.GetDisplayName(),
-			Role:        participantRoleToString(response.Participant.GetRole()),
-			Controller:  controllerToString(response.Participant.GetController()),
-			CreatedAt:   formatTimestamp(response.Participant.GetCreatedAt()),
-			UpdatedAt:   formatTimestamp(response.Participant.GetUpdatedAt()),
+			ID:         response.Participant.GetId(),
+			CampaignID: response.Participant.GetCampaignId(),
+			Name:       response.Participant.GetName(),
+			Role:       participantRoleToString(response.Participant.GetRole()),
+			Controller: controllerToString(response.Participant.GetController()),
+			CreatedAt:  formatTimestamp(response.Participant.GetCreatedAt()),
+			UpdatedAt:  formatTimestamp(response.Participant.GetUpdatedAt()),
 		}
 
 		responseMeta := MergeResponseMetadata(callMeta, header)
@@ -1699,13 +1699,13 @@ func ParticipantListResourceHandler(client statev1.ParticipantServiceClient) mcp
 
 		for _, participant := range response.GetParticipants() {
 			payload.Participants = append(payload.Participants, ParticipantListEntry{
-				ID:          participant.GetId(),
-				CampaignID:  participant.GetCampaignId(),
-				DisplayName: participant.GetDisplayName(),
-				Role:        participantRoleToString(participant.GetRole()),
-				Controller:  controllerToString(participant.GetController()),
-				CreatedAt:   formatTimestamp(participant.GetCreatedAt()),
-				UpdatedAt:   formatTimestamp(participant.GetUpdatedAt()),
+				ID:         participant.GetId(),
+				CampaignID: participant.GetCampaignId(),
+				Name:       participant.GetName(),
+				Role:       participantRoleToString(participant.GetRole()),
+				Controller: controllerToString(participant.GetController()),
+				CreatedAt:  formatTimestamp(participant.GetCreatedAt()),
+				UpdatedAt:  formatTimestamp(participant.GetUpdatedAt()),
 			})
 		}
 

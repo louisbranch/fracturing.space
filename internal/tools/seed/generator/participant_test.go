@@ -19,10 +19,10 @@ func TestCreateParticipants_CountLessThanOne(t *testing.T) {
 			partSeq++
 			return &statev1.CreateParticipantResponse{
 				Participant: &statev1.Participant{
-					Id:          fmt.Sprintf("p-%d", partSeq),
-					DisplayName: in.DisplayName,
-					Role:        in.Role,
-					Controller:  in.Controller,
+					Id:         fmt.Sprintf("p-%d", partSeq),
+					Name:       in.Name,
+					Role:       in.Role,
+					Controller: in.Controller,
 				},
 			}, nil
 		},

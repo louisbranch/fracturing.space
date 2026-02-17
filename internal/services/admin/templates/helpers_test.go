@@ -21,7 +21,7 @@ func TestImpersonationLabel(t *testing.T) {
 	if ImpersonationLabel(&ImpersonationView{UserID: "user"}) != "user" {
 		t.Fatal("expected user id fallback label")
 	}
-	if ImpersonationLabel(&ImpersonationView{UserID: "user", DisplayName: "User"}) != "User" {
+	if ImpersonationLabel(&ImpersonationView{UserID: "user", Name: "User"}) != "User" {
 		t.Fatal("expected display name label")
 	}
 }

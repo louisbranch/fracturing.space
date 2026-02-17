@@ -72,10 +72,10 @@ func runSessionLockTests(t *testing.T, grpcAddr string, authAddr string) {
 		t.Fatal("expected session response")
 	}
 	_, err = participantClient.CreateParticipant(participantCtx, &statev1.CreateParticipantRequest{
-		CampaignId:  createResp.Campaign.Id,
-		DisplayName: "Player One",
-		Role:        statev1.ParticipantRole_PLAYER,
-		Controller:  statev1.Controller_CONTROLLER_HUMAN,
+		CampaignId: createResp.Campaign.Id,
+		Name:       "Player One",
+		Role:       statev1.ParticipantRole_PLAYER,
+		Controller: statev1.Controller_CONTROLLER_HUMAN,
 	})
 	if err == nil {
 		t.Fatal("expected error")
@@ -112,10 +112,10 @@ func runSessionLockTests(t *testing.T, grpcAddr string, authAddr string) {
 		t.Fatal("expected ended_at to be set")
 	}
 	createParticipantResp, err := participantClient.CreateParticipant(participantCtx, &statev1.CreateParticipantRequest{
-		CampaignId:  createResp.Campaign.Id,
-		DisplayName: "Player One",
-		Role:        statev1.ParticipantRole_PLAYER,
-		Controller:  statev1.Controller_CONTROLLER_HUMAN,
+		CampaignId: createResp.Campaign.Id,
+		Name:       "Player One",
+		Role:       statev1.ParticipantRole_PLAYER,
+		Controller: statev1.Controller_CONTROLLER_HUMAN,
 	})
 	if err != nil {
 		t.Fatalf("create participant after end session: %v", err)

@@ -35,7 +35,7 @@ func (s *sequenceSource) Seed(seed int64) {
 	s.index = 0
 }
 
-func TestGenerator_UniqueUserDisplayNames(t *testing.T) {
+func TestGenerator_UniqueUserNames(t *testing.T) {
 	var usernames []string
 	auth := &fakeAuthProvider{
 		createUser: func(_ context.Context, in *authv1.CreateUserRequest, _ ...grpc.CallOption) (*authv1.CreateUserResponse, error) {
@@ -60,9 +60,9 @@ func TestGenerator_UniqueUserDisplayNames(t *testing.T) {
 			partSeq++
 			return &statev1.CreateParticipantResponse{
 				Participant: &statev1.Participant{
-					Id:          fmt.Sprintf("p-%d", partSeq),
-					DisplayName: in.DisplayName,
-					Controller:  in.Controller,
+					Id:         fmt.Sprintf("p-%d", partSeq),
+					Name:       in.Name,
+					Controller: in.Controller,
 				},
 			}, nil
 		},

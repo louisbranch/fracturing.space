@@ -75,7 +75,7 @@ func TestParticipantPaging(t *testing.T) {
 			CampaignID:     "camp-1",
 			ID:             id,
 			UserID:         "user-" + id,
-			DisplayName:    "Player " + id,
+			Name:           "Player " + id,
 			Role:           participant.RolePlayer,
 			Controller:     participant.ControllerHuman,
 			CampaignAccess: participant.CampaignAccessMember,
