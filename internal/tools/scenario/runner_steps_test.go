@@ -97,6 +97,7 @@ func testState() *scenarioState {
 		adversaries:        map[string]string{},
 		countdowns:         map[string]string{},
 		participants:       map[string]string{},
+		rollOutcomes:       map[uint64]actionRollResult{},
 	}
 }
 
@@ -824,7 +825,9 @@ func TestRunMitigateDamageStepZeroArmor(t *testing.T) {
 
 func TestRunActionRollStep(t *testing.T) {
 	env, _, _, dhClient := testEnv()
+	var request *daggerheartv1.SessionActionRollRequest
 	dhClient.sessionActionRoll = func(_ context.Context, req *daggerheartv1.SessionActionRollRequest, _ ...grpc.CallOption) (*daggerheartv1.SessionActionRollResponse, error) {
+		request = req
 		return &daggerheartv1.SessionActionRollResponse{RollSeq: 42}, nil
 	}
 	runner := quietRunner(env)
@@ -832,10 +835,23 @@ func TestRunActionRollStep(t *testing.T) {
 	state.actors["Frodo"] = "char-frodo"
 	err := runner.runActionRollStep(context.Background(), state, Step{
 		Kind: "action_roll",
-		Args: map[string]any{"actor": "Frodo", "trait": "agility", "difficulty": 12, "seed": 1},
+		Args: map[string]any{
+			"actor":        "Frodo",
+			"trait":        "agility",
+			"difficulty":   12,
+			"seed":         1,
+			"advantage":    2,
+			"disadvantage": 1,
+		},
 	})
 	if err != nil {
 		t.Fatalf("runActionRollStep: %v", err)
+	}
+	if request == nil {
+		t.Fatal("expected request")
+	}
+	if request.GetAdvantage() != 2 || request.GetDisadvantage() != 1 {
+		t.Fatalf("advantage/disadvantage mismatch: %d/%d", request.GetAdvantage(), request.GetDisadvantage())
 	}
 	if state.lastRollSeq != 42 {
 		t.Fatalf("lastRollSeq = %d, want 42", state.lastRollSeq)
@@ -859,10 +875,12 @@ func TestRunActionRollStepMissingActor(t *testing.T) {
 
 func TestRunReactionRollStep(t *testing.T) {
 	env, _, _, dhClient := testEnv()
+	var request *daggerheartv1.SessionActionRollRequest
 	dhClient.sessionActionRoll = func(_ context.Context, req *daggerheartv1.SessionActionRollRequest, _ ...grpc.CallOption) (*daggerheartv1.SessionActionRollResponse, error) {
 		if req.GetRollKind() != daggerheartv1.RollKind_ROLL_KIND_REACTION {
 			return nil, fmt.Errorf("expected REACTION roll kind, got %v", req.GetRollKind())
 		}
+		request = req
 		return &daggerheartv1.SessionActionRollResponse{RollSeq: 55}, nil
 	}
 	runner := quietRunner(env)
@@ -870,13 +888,64 @@ func TestRunReactionRollStep(t *testing.T) {
 	state.actors["Frodo"] = "char-frodo"
 	err := runner.runReactionRollStep(context.Background(), state, Step{
 		Kind: "reaction_roll",
-		Args: map[string]any{"actor": "Frodo", "seed": 1},
+		Args: map[string]any{
+			"actor":        "Frodo",
+			"seed":         1,
+			"advantage":    1,
+			"disadvantage": 2,
+		},
 	})
 	if err != nil {
 		t.Fatalf("runReactionRollStep: %v", err)
 	}
+	if request == nil {
+		t.Fatal("expected request")
+	}
+	if request.GetAdvantage() != 1 || request.GetDisadvantage() != 2 {
+		t.Fatalf("advantage/disadvantage mismatch: %d/%d", request.GetAdvantage(), request.GetDisadvantage())
+	}
 	if state.lastRollSeq != 55 {
 		t.Fatalf("lastRollSeq = %d, want 55", state.lastRollSeq)
+	}
+}
+
+func TestRunReactionStep(t *testing.T) {
+	env, _, _, dhClient := testEnv()
+	var request *daggerheartv1.SessionReactionFlowRequest
+	dhClient.sessionReactionFlow = func(_ context.Context, req *daggerheartv1.SessionReactionFlowRequest, _ ...grpc.CallOption) (*daggerheartv1.SessionReactionFlowResponse, error) {
+		request = req
+		return &daggerheartv1.SessionReactionFlowResponse{
+			ActionRoll: &daggerheartv1.SessionActionRollResponse{RollSeq: 99},
+		}, nil
+	}
+	runner := quietRunner(env)
+	state := testState()
+	state.actors["Frodo"] = "char-frodo"
+	err := runner.runReactionStep(context.Background(), state, Step{
+		Kind: "reaction",
+		Args: map[string]any{
+			"actor":        "Frodo",
+			"trait":        "agility",
+			"difficulty":   9,
+			"seed":         4,
+			"advantage":    1,
+			"disadvantage": 2,
+		},
+	})
+	if err != nil {
+		t.Fatalf("runReactionStep: %v", err)
+	}
+	if request == nil {
+		t.Fatal("expected request")
+	}
+	if request.GetAdvantage() != 1 || request.GetDisadvantage() != 2 {
+		t.Fatalf("advantage/disadvantage mismatch: %d/%d", request.GetAdvantage(), request.GetDisadvantage())
+	}
+	if request.GetReactionRng() == nil {
+		t.Fatal("expected replay rng")
+	}
+	if state.lastRollSeq != 99 {
+		t.Fatalf("lastRollSeq = %d, want 99", state.lastRollSeq)
 	}
 }
 
@@ -954,6 +1023,128 @@ func TestRunApplyRollOutcomeStepMissingRollSeq(t *testing.T) {
 	})
 	if err == nil || !strings.Contains(err.Error(), "requires roll_seq") {
 		t.Fatalf("expected requires roll_seq error, got %v", err)
+	}
+}
+
+func TestRunApplyRollOutcomeStepRunsSuccessBranch(t *testing.T) {
+	env, _, sessionClient, dhClient := testEnv()
+	var cleared bool
+	sessionClient.clearSpotlight = func(_ context.Context, _ *gamev1.ClearSessionSpotlightRequest, _ ...grpc.CallOption) (*gamev1.ClearSessionSpotlightResponse, error) {
+		cleared = true
+		return &gamev1.ClearSessionSpotlightResponse{}, nil
+	}
+	dhClient.applyRollOutcome = func(_ context.Context, req *daggerheartv1.ApplyRollOutcomeRequest, _ ...grpc.CallOption) (*daggerheartv1.ApplyRollOutcomeResponse, error) {
+		return &daggerheartv1.ApplyRollOutcomeResponse{}, nil
+	}
+	runner := quietRunner(env)
+	state := testState()
+	state.lastRollSeq = 42
+	state.rollOutcomes[42] = actionRollResult{
+		rollSeq: 42,
+		success: true,
+	}
+	err := runner.runApplyRollOutcomeStep(context.Background(), state, Step{
+		Kind: "apply_roll_outcome",
+		Args: map[string]any{
+			"on_success": []any{
+				map[string]any{"kind": "clear_spotlight"},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("runApplyRollOutcomeStep: %v", err)
+	}
+	if !cleared {
+		t.Fatal("expected success branch step to run")
+	}
+}
+
+func TestRunApplyRollOutcomeStepRunsFailureBranchForFailureResult(t *testing.T) {
+	env, _, sessionClient, dhClient := testEnv()
+	var cleared bool
+	sessionClient.clearSpotlight = func(_ context.Context, _ *gamev1.ClearSessionSpotlightRequest, _ ...grpc.CallOption) (*gamev1.ClearSessionSpotlightResponse, error) {
+		cleared = true
+		return &gamev1.ClearSessionSpotlightResponse{}, nil
+	}
+	dhClient.applyRollOutcome = func(_ context.Context, req *daggerheartv1.ApplyRollOutcomeRequest, _ ...grpc.CallOption) (*daggerheartv1.ApplyRollOutcomeResponse, error) {
+		return &daggerheartv1.ApplyRollOutcomeResponse{}, nil
+	}
+	runner := quietRunner(env)
+	state := testState()
+	state.lastRollSeq = 42
+	state.rollOutcomes[42] = actionRollResult{
+		rollSeq: 42,
+		success: false,
+	}
+	err := runner.runApplyRollOutcomeStep(context.Background(), state, Step{
+		Kind: "apply_roll_outcome",
+		Args: map[string]any{
+			"on_failure": []any{
+				map[string]any{"kind": "clear_spotlight"},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("runApplyRollOutcomeStep: %v", err)
+	}
+	if !cleared {
+		t.Fatal("expected failure branch step to run")
+	}
+}
+
+func TestRunApplyRollOutcomeStepRunsFailureHopeBranchForFailureHopeResult(t *testing.T) {
+	env, _, sessionClient, dhClient := testEnv()
+	var cleared bool
+	sessionClient.clearSpotlight = func(_ context.Context, _ *gamev1.ClearSessionSpotlightRequest, _ ...grpc.CallOption) (*gamev1.ClearSessionSpotlightResponse, error) {
+		cleared = true
+		return &gamev1.ClearSessionSpotlightResponse{}, nil
+	}
+	dhClient.applyRollOutcome = func(_ context.Context, req *daggerheartv1.ApplyRollOutcomeRequest, _ ...grpc.CallOption) (*daggerheartv1.ApplyRollOutcomeResponse, error) {
+		return &daggerheartv1.ApplyRollOutcomeResponse{}, nil
+	}
+	runner := quietRunner(env)
+	state := testState()
+	state.lastRollSeq = 42
+	state.rollOutcomes[42] = actionRollResult{
+		rollSeq: 42,
+		success: false,
+		hopeDie: 6,
+		fearDie: 1,
+	}
+	err := runner.runApplyRollOutcomeStep(context.Background(), state, Step{
+		Kind: "apply_roll_outcome",
+		Args: map[string]any{
+			"on_failure_hope": []any{
+				map[string]any{"kind": "clear_spotlight"},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("runApplyRollOutcomeStep: %v", err)
+	}
+	if !cleared {
+		t.Fatal("expected failure_hope branch step to run")
+	}
+}
+
+func TestRunApplyRollOutcomeStepMissingOutcomeMetadata(t *testing.T) {
+	env, _, _, dhClient := testEnv()
+	dhClient.applyRollOutcome = func(_ context.Context, req *daggerheartv1.ApplyRollOutcomeRequest, _ ...grpc.CallOption) (*daggerheartv1.ApplyRollOutcomeResponse, error) {
+		return &daggerheartv1.ApplyRollOutcomeResponse{}, nil
+	}
+	runner := quietRunner(env)
+	state := testState()
+	state.lastRollSeq = 42
+	err := runner.runApplyRollOutcomeStep(context.Background(), state, Step{
+		Kind: "apply_roll_outcome",
+		Args: map[string]any{
+			"on_success": []any{
+				map[string]any{"kind": "clear_spotlight"},
+			},
+		},
+	})
+	if err == nil || !strings.Contains(err.Error(), "missing action roll outcome") {
+		t.Fatalf("expected missing action roll outcome error, got %v", err)
 	}
 }
 
@@ -1040,6 +1231,71 @@ func TestRunApplyReactionOutcomeStep(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("runApplyReactionOutcomeStep: %v", err)
+	}
+}
+
+func TestRunApplyReactionOutcomeStepRunsOutcomeBranch(t *testing.T) {
+	env, _, sessionClient, dhClient := testEnv()
+	var spotlightCleared bool
+	sessionClient.clearSpotlight = func(_ context.Context, _ *gamev1.ClearSessionSpotlightRequest, _ ...grpc.CallOption) (*gamev1.ClearSessionSpotlightResponse, error) {
+		spotlightCleared = true
+		return &gamev1.ClearSessionSpotlightResponse{}, nil
+	}
+	dhClient.applyReactionOutcome = func(_ context.Context, _ *daggerheartv1.DaggerheartApplyReactionOutcomeRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyReactionOutcomeResponse, error) {
+		return &daggerheartv1.DaggerheartApplyReactionOutcomeResponse{
+			Result: &daggerheartv1.DaggerheartReactionOutcomeResult{Success: true},
+		}, nil
+	}
+	runner := quietRunner(env)
+	state := testState()
+	state.lastRollSeq = 42
+	err := runner.runApplyReactionOutcomeStep(context.Background(), state, Step{
+		Kind: "apply_reaction_outcome",
+		Args: map[string]any{
+			"on_success": []any{
+				map[string]any{"kind": "clear_spotlight"},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("runApplyReactionOutcomeStep: %v", err)
+	}
+	if !spotlightCleared {
+		t.Fatal("expected success branch step to run")
+	}
+}
+
+func TestRunApplyReactionOutcomeStepRunsFearSubbranchForFailureFearResult(t *testing.T) {
+	env, _, sessionClient, dhClient := testEnv()
+	var cleared bool
+	sessionClient.clearSpotlight = func(_ context.Context, _ *gamev1.ClearSessionSpotlightRequest, _ ...grpc.CallOption) (*gamev1.ClearSessionSpotlightResponse, error) {
+		cleared = true
+		return &gamev1.ClearSessionSpotlightResponse{}, nil
+	}
+	dhClient.applyReactionOutcome = func(_ context.Context, _ *daggerheartv1.DaggerheartApplyReactionOutcomeRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyReactionOutcomeResponse, error) {
+		return &daggerheartv1.DaggerheartApplyReactionOutcomeResponse{
+			Result: &daggerheartv1.DaggerheartReactionOutcomeResult{
+				Success: false,
+				Outcome: daggerheartv1.Outcome_FAILURE_WITH_FEAR,
+			},
+		}, nil
+	}
+	runner := quietRunner(env)
+	state := testState()
+	state.lastRollSeq = 42
+	err := runner.runApplyReactionOutcomeStep(context.Background(), state, Step{
+		Kind: "apply_reaction_outcome",
+		Args: map[string]any{
+			"on_failure_fear": []any{
+				map[string]any{"kind": "clear_spotlight"},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("runApplyReactionOutcomeStep: %v", err)
+	}
+	if !cleared {
+		t.Fatal("expected failure_fear branch step to run")
 	}
 }
 

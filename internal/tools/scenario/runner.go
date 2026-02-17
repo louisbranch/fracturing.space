@@ -146,6 +146,7 @@ func (r *Runner) RunScenario(ctx context.Context, scenario *Scenario) error {
 		adversaries:  map[string]string{},
 		countdowns:   map[string]string{},
 		participants: map[string]string{},
+		rollOutcomes: map[uint64]actionRollResult{},
 		userID:       r.userID,
 	}
 

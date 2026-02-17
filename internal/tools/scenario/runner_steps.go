@@ -441,12 +441,14 @@ func (r *Runner) runReactionStep(ctx context.Context, state *scenarioState, step
 		return err
 	}
 	response, err := r.env.daggerheartClient.SessionReactionFlow(ctx, &daggerheartv1.SessionReactionFlowRequest{
-		CampaignId:  state.campaignID,
-		SessionId:   state.sessionID,
-		CharacterId: actorIDValue,
-		Trait:       trait,
-		Difficulty:  int32(difficulty),
-		Modifiers:   buildActionRollModifiers(step.Args, "modifiers"),
+		CampaignId:   state.campaignID,
+		SessionId:    state.sessionID,
+		CharacterId:  actorIDValue,
+		Trait:        trait,
+		Difficulty:   int32(difficulty),
+		Advantage:    int32(optionalInt(step.Args, "advantage", 0)),
+		Disadvantage: int32(optionalInt(step.Args, "disadvantage", 0)),
+		Modifiers:    buildActionRollModifiers(step.Args, "modifiers"),
 		ReactionRng: &commonv1.RngRequest{
 			Seed:     &seed,
 			RollMode: commonv1.RollMode_REPLAY,
@@ -1755,13 +1757,15 @@ func (r *Runner) runActionRollStep(ctx context.Context, state *scenarioState, st
 		return err
 	}
 	response, err := r.env.daggerheartClient.SessionActionRoll(ctx, &daggerheartv1.SessionActionRollRequest{
-		CampaignId:  state.campaignID,
-		SessionId:   state.sessionID,
-		CharacterId: actorIDValue,
-		Trait:       trait,
-		RollKind:    daggerheartv1.RollKind_ROLL_KIND_ACTION,
-		Difficulty:  int32(difficulty),
-		Modifiers:   buildActionRollModifiers(step.Args, "modifiers"),
+		CampaignId:   state.campaignID,
+		SessionId:    state.sessionID,
+		CharacterId:  actorIDValue,
+		Trait:        trait,
+		RollKind:     daggerheartv1.RollKind_ROLL_KIND_ACTION,
+		Difficulty:   int32(difficulty),
+		Advantage:    int32(optionalInt(step.Args, "advantage", 0)),
+		Disadvantage: int32(optionalInt(step.Args, "disadvantage", 0)),
+		Modifiers:    buildActionRollModifiers(step.Args, "modifiers"),
 		Rng: &commonv1.RngRequest{
 			Seed:     &seed,
 			RollMode: commonv1.RollMode_REPLAY,
@@ -1770,6 +1774,8 @@ func (r *Runner) runActionRollStep(ctx context.Context, state *scenarioState, st
 	if err != nil {
 		return fmt.Errorf("action_roll: %w", err)
 	}
+	ensureRollOutcomeState(state)
+	state.rollOutcomes[response.GetRollSeq()] = actionRollResultFromResponse(response)
 	state.lastRollSeq = response.GetRollSeq()
 	r.logf("action roll: actor=%s roll_seq=%d", actorName, state.lastRollSeq)
 	return r.requireEventTypesAfterSeq(ctx, state, before, event.TypeRollResolved)
@@ -1803,13 +1809,15 @@ func (r *Runner) runReactionRollStep(ctx context.Context, state *scenarioState, 
 		return err
 	}
 	response, err := r.env.daggerheartClient.SessionActionRoll(ctx, &daggerheartv1.SessionActionRollRequest{
-		CampaignId:  state.campaignID,
-		SessionId:   state.sessionID,
-		CharacterId: actorIDValue,
-		Trait:       trait,
-		RollKind:    daggerheartv1.RollKind_ROLL_KIND_REACTION,
-		Difficulty:  int32(difficulty),
-		Modifiers:   buildActionRollModifiers(step.Args, "modifiers"),
+		CampaignId:   state.campaignID,
+		SessionId:    state.sessionID,
+		CharacterId:  actorIDValue,
+		Trait:        trait,
+		RollKind:     daggerheartv1.RollKind_ROLL_KIND_REACTION,
+		Difficulty:   int32(difficulty),
+		Advantage:    int32(optionalInt(step.Args, "advantage", 0)),
+		Disadvantage: int32(optionalInt(step.Args, "disadvantage", 0)),
+		Modifiers:    buildActionRollModifiers(step.Args, "modifiers"),
 		Rng: &commonv1.RngRequest{
 			Seed:     &seed,
 			RollMode: commonv1.RollMode_REPLAY,
@@ -1818,6 +1826,8 @@ func (r *Runner) runReactionRollStep(ctx context.Context, state *scenarioState, 
 	if err != nil {
 		return fmt.Errorf("reaction_roll: %w", err)
 	}
+	ensureRollOutcomeState(state)
+	state.rollOutcomes[response.GetRollSeq()] = actionRollResultFromResponse(response)
 	state.lastRollSeq = response.GetRollSeq()
 	r.logf("reaction roll: actor=%s roll_seq=%d", actorName, state.lastRollSeq)
 	return r.requireEventTypesAfterSeq(ctx, state, before, event.TypeRollResolved)
@@ -1941,6 +1951,33 @@ func (r *Runner) runApplyRollOutcomeStep(ctx context.Context, state *scenarioSta
 	if err != nil {
 		return fmt.Errorf("apply_roll_outcome: %w", err)
 	}
+	branches, err := resolveOutcomeBranches(step.Args, map[string]struct{}{
+		"on_success":      {},
+		"on_failure":      {},
+		"on_hope":         {},
+		"on_fear":         {},
+		"on_success_hope": {},
+		"on_failure_hope": {},
+		"on_success_fear": {},
+		"on_failure_fear": {},
+		"on_critical":     {},
+		"on_crit":         {},
+	})
+	if err != nil {
+		return err
+	}
+	if len(branches) > 0 {
+		ensureRollOutcomeState(state)
+		result, ok := state.rollOutcomes[rollSeq]
+		if !ok {
+			return r.failf("missing action roll outcome for roll_seq %d", rollSeq)
+		}
+		if err := runOutcomeBranchSteps(ctx, state, r, branches, []string{"on_success", "on_failure", "on_success_hope", "on_failure_hope", "on_success_fear", "on_failure_fear", "on_hope", "on_fear", "on_critical", "on_crit"}, func(branch string) bool {
+			return evaluateActionOutcomeBranch(result, branch)
+		}); err != nil {
+			return err
+		}
+	}
 	return r.requireAnyEventTypesAfterSeq(ctx, state, before, event.TypeOutcomeApplied, event.TypeOutcomeRejected)
 }
 
@@ -2030,12 +2067,37 @@ func (r *Runner) runApplyReactionOutcomeStep(ctx context.Context, state *scenari
 	if err != nil {
 		return err
 	}
-	_, err = r.env.daggerheartClient.ApplyReactionOutcome(withCampaignID(withSessionID(ctx, state.sessionID), state.campaignID), &daggerheartv1.DaggerheartApplyReactionOutcomeRequest{
+	response, err := r.env.daggerheartClient.ApplyReactionOutcome(withCampaignID(withSessionID(ctx, state.sessionID), state.campaignID), &daggerheartv1.DaggerheartApplyReactionOutcomeRequest{
 		SessionId: state.sessionID,
 		RollSeq:   rollSeq,
 	})
 	if err != nil {
 		return fmt.Errorf("apply_reaction_outcome: %w", err)
+	}
+	if response == nil {
+		return r.failf("apply_reaction_outcome: expected response")
+	}
+	branches, err := resolveOutcomeBranches(step.Args, map[string]struct{}{
+		"on_success":      {},
+		"on_failure":      {},
+		"on_hope":         {},
+		"on_fear":         {},
+		"on_success_hope": {},
+		"on_failure_hope": {},
+		"on_success_fear": {},
+		"on_failure_fear": {},
+		"on_critical":     {},
+		"on_crit":         {},
+	})
+	if err != nil {
+		return err
+	}
+	if len(branches) > 0 {
+		if err := runOutcomeBranchSteps(ctx, state, r, branches, []string{"on_success", "on_failure", "on_success_hope", "on_failure_hope", "on_success_fear", "on_failure_fear", "on_hope", "on_fear", "on_critical", "on_crit"}, func(branch string) bool {
+			return evaluateReactionOutcomeBranch(response.GetResult(), branch)
+		}); err != nil {
+			return err
+		}
 	}
 	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeReactionResolved)
 }

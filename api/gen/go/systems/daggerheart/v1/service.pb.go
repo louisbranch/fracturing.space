@@ -4791,6 +4791,8 @@ type SessionReactionFlowRequest struct {
 	Difficulty    int32                  `protobuf:"varint,5,opt,name=difficulty,proto3" json:"difficulty,omitempty"`
 	Modifiers     []*ActionRollModifier  `protobuf:"bytes,6,rep,name=modifiers,proto3" json:"modifiers,omitempty"`
 	ReactionRng   *v1.RngRequest         `protobuf:"bytes,7,opt,name=reaction_rng,json=reactionRng,proto3" json:"reaction_rng,omitempty"`
+	Advantage     int32                  `protobuf:"varint,8,opt,name=advantage,proto3" json:"advantage,omitempty"`
+	Disadvantage  int32                  `protobuf:"varint,9,opt,name=disadvantage,proto3" json:"disadvantage,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -4872,6 +4874,20 @@ func (x *SessionReactionFlowRequest) GetReactionRng() *v1.RngRequest {
 		return x.ReactionRng
 	}
 	return nil
+}
+
+func (x *SessionReactionFlowRequest) GetAdvantage() int32 {
+	if x != nil {
+		return x.Advantage
+	}
+	return 0
+}
+
+func (x *SessionReactionFlowRequest) GetDisadvantage() int32 {
+	if x != nil {
+		return x.Disadvantage
+	}
+	return 0
 }
 
 type SessionReactionFlowResponse struct {
@@ -7240,7 +7256,7 @@ const file_systems_daggerheart_v1_service_proto_rawDesc = "" +
 	"\x0eattack_outcome\x18\x03 \x01(\v2=.systems.daggerheart.v1.DaggerheartApplyAttackOutcomeResponseR\rattackOutcome\x12R\n" +
 	"\vdamage_roll\x18\x04 \x01(\v21.systems.daggerheart.v1.SessionDamageRollResponseR\n" +
 	"damageRoll\x12]\n" +
-	"\x0edamage_applied\x18\x05 \x01(\v26.systems.daggerheart.v1.DaggerheartApplyDamageResponseR\rdamageApplied\"\xb9\x02\n" +
+	"\x0edamage_applied\x18\x05 \x01(\v26.systems.daggerheart.v1.DaggerheartApplyDamageResponseR\rdamageApplied\"\xfb\x02\n" +
 	"\x1aSessionReactionFlowRequest\x12\x1f\n" +
 	"\vcampaign_id\x18\x01 \x01(\tR\n" +
 	"campaignId\x12\x1d\n" +
@@ -7252,7 +7268,9 @@ const file_systems_daggerheart_v1_service_proto_rawDesc = "" +
 	"difficulty\x18\x05 \x01(\x05R\n" +
 	"difficulty\x12H\n" +
 	"\tmodifiers\x18\x06 \x03(\v2*.systems.daggerheart.v1.ActionRollModifierR\tmodifiers\x128\n" +
-	"\freaction_rng\x18\a \x01(\v2\x15.common.v1.RngRequestR\vreactionRng\"\xb2\x02\n" +
+	"\freaction_rng\x18\a \x01(\v2\x15.common.v1.RngRequestR\vreactionRng\x12\x1c\n" +
+	"\tadvantage\x18\b \x01(\x05R\tadvantage\x12\"\n" +
+	"\fdisadvantage\x18\t \x01(\x05R\fdisadvantage\"\xb2\x02\n" +
 	"\x1bSessionReactionFlowResponse\x12R\n" +
 	"\vaction_roll\x18\x01 \x01(\v21.systems.daggerheart.v1.SessionActionRollResponseR\n" +
 	"actionRoll\x12S\n" +
