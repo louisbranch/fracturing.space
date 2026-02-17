@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -224,7 +225,11 @@ func createAuthUser(t *testing.T, authAddr, displayName string) string {
 	defer conn.Close()
 
 	client := authv1.NewAuthServiceClient(conn)
-	resp, err := client.CreateUser(ctx, &authv1.CreateUserRequest{Username: displayName})
+	email := displayName
+	if !strings.Contains(email, "@") {
+		email = email + "@example.com"
+	}
+	resp, err := client.CreateUser(ctx, &authv1.CreateUserRequest{PrimaryEmail: email})
 	if err != nil {
 		t.Fatalf("create user: %v", err)
 	}

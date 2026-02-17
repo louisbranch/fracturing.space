@@ -552,19 +552,19 @@ func (h *handler) handlePasskeyRegisterStart(w http.ResponseWriter, r *http.Requ
 	}
 
 	var payload struct {
-		Username  string `json:"username"`
+		Email     string `json:"email"`
 		PendingID string `json:"pending_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		http.Error(w, "invalid json body", http.StatusBadRequest)
 		return
 	}
-	if strings.TrimSpace(payload.Username) == "" {
-		http.Error(w, "username is required", http.StatusBadRequest)
+	if strings.TrimSpace(payload.Email) == "" {
+		http.Error(w, "email is required", http.StatusBadRequest)
 		return
 	}
 
-	createResp, err := h.authClient.CreateUser(r.Context(), &authv1.CreateUserRequest{Username: payload.Username})
+	createResp, err := h.authClient.CreateUser(r.Context(), &authv1.CreateUserRequest{PrimaryEmail: payload.Email})
 	if err != nil || createResp.GetUser() == nil {
 		http.Error(w, "failed to create user", http.StatusBadRequest)
 		return

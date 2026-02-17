@@ -49,7 +49,7 @@ async page => {
 
   await page.getByRole("heading", { name: "Sign in to continue" }).waitFor();
   await page.getByText("Account Access").waitFor();
-  await page.getByLabel("Username").waitFor();
+  await page.getByLabel("Email").waitFor();
   await page.getByRole("button", { name: "Create Account With Passkey" }).waitFor();
   await page.getByRole("button", { name: "Sign In With Passkey" }).waitFor();
 

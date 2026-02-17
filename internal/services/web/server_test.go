@@ -278,7 +278,7 @@ func TestPasskeyRegisterStartRequiresFields(t *testing.T) {
 func TestPasskeyRegisterStartSuccess(t *testing.T) {
 	fake := &fakeAuthClient{
 		createUserResp: &authv1.CreateUserResponse{
-			User: &authv1.User{Id: "user-1", Username: "alpha"},
+			User: &authv1.User{Id: "user-1", PrimaryEmail: "alpha@example.com"},
 		},
 		beginRegResp: &authv1.BeginPasskeyRegistrationResponse{
 			SessionId:                     "session-1",
@@ -286,7 +286,7 @@ func TestPasskeyRegisterStartSuccess(t *testing.T) {
 		},
 	}
 	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, fake)
-	req := httptest.NewRequest(http.MethodPost, "/passkeys/register/start", bytes.NewBufferString(`{"username":"alpha"}`))
+	req := httptest.NewRequest(http.MethodPost, "/passkeys/register/start", bytes.NewBufferString(`{"email":"alpha@example.com"}`))
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
 	if w.Code != http.StatusOK {

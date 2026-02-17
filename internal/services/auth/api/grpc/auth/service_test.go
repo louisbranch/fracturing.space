@@ -65,13 +65,13 @@ func TestCreateUser_NilRequest(t *testing.T) {
 
 func TestCreateUser_MissingStore(t *testing.T) {
 	svc := NewAuthService(nil, nil, nil)
-	_, err := svc.CreateUser(context.Background(), &authv1.CreateUserRequest{Username: "alice"})
+	_, err := svc.CreateUser(context.Background(), &authv1.CreateUserRequest{PrimaryEmail: "alice@example.com"})
 	assertStatusCode(t, err, codes.Internal)
 }
 
 func TestCreateUser_EmptyUsername(t *testing.T) {
 	svc := NewAuthService(newFakeUserStore(), nil, nil)
-	_, err := svc.CreateUser(context.Background(), &authv1.CreateUserRequest{Username: "  "})
+	_, err := svc.CreateUser(context.Background(), &authv1.CreateUserRequest{PrimaryEmail: "  "})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
@@ -82,15 +82,15 @@ func TestCreateUser_Success(t *testing.T) {
 	svc.clock = func() time.Time { return fixedTime }
 	svc.idGenerator = func() (string, error) { return "user-123", nil }
 
-	resp, err := svc.CreateUser(context.Background(), &authv1.CreateUserRequest{Username: "  Alice  "})
+	resp, err := svc.CreateUser(context.Background(), &authv1.CreateUserRequest{PrimaryEmail: "  Alice@example.COM  "})
 	if err != nil {
 		t.Fatalf("create user: %v", err)
 	}
 	if resp.GetUser().GetId() != "user-123" {
 		t.Fatalf("expected id user-123, got %q", resp.GetUser().GetId())
 	}
-	if resp.GetUser().GetUsername() != "alice" {
-		t.Fatalf("expected lowercased username, got %q", resp.GetUser().GetUsername())
+	if resp.GetUser().GetPrimaryEmail() != "alice@example.com" {
+		t.Fatalf("expected normalized primary email, got %q", resp.GetUser().GetPrimaryEmail())
 	}
 }
 
@@ -120,7 +120,7 @@ func TestGetUser_NotFound(t *testing.T) {
 
 func TestGetUser_Success(t *testing.T) {
 	store := newFakeUserStore()
-	store.users["user-123"] = user.User{ID: "user-123", Username: "alice", CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	store.users["user-123"] = user.User{ID: "user-123", PrimaryEmail: "alice", CreatedAt: time.Now(), UpdatedAt: time.Now()}
 	svc := NewAuthService(store, nil, nil)
 
 	resp, err := svc.GetUser(context.Background(), &authv1.GetUserRequest{UserId: "user-123"})
@@ -146,8 +146,8 @@ func TestListUsers_MissingStore(t *testing.T) {
 
 func TestListUsers_Success(t *testing.T) {
 	store := newFakeUserStore()
-	store.users["user-1"] = user.User{ID: "user-1", Username: "alpha", CreatedAt: time.Now(), UpdatedAt: time.Now()}
-	store.users["user-2"] = user.User{ID: "user-2", Username: "beta", CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	store.users["user-1"] = user.User{ID: "user-1", PrimaryEmail: "alpha", CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	store.users["user-2"] = user.User{ID: "user-2", PrimaryEmail: "beta", CreatedAt: time.Now(), UpdatedAt: time.Now()}
 
 	svc := NewAuthService(store, nil, nil)
 	resp, err := svc.ListUsers(context.Background(), &authv1.ListUsersRequest{PageSize: 10})
@@ -161,7 +161,7 @@ func TestListUsers_Success(t *testing.T) {
 
 func TestIssueJoinGrant_Success(t *testing.T) {
 	store := newFakeUserStore()
-	store.users["user-1"] = user.User{ID: "user-1", Username: "alpha", CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	store.users["user-1"] = user.User{ID: "user-1", PrimaryEmail: "alpha", CreatedAt: time.Now(), UpdatedAt: time.Now()}
 
 	publicKey, privateKey, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {

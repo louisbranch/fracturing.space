@@ -75,7 +75,7 @@ type OauthProviderState struct {
 
 type OauthUserCredential struct {
 	UserID       string `json:"user_id"`
-	Username     string `json:"username"`
+	PrimaryEmail string `json:"primary_email"`
 	PasswordHash string `json:"password_hash"`
 	CreatedAt    string `json:"created_at"`
 	UpdatedAt    string `json:"updated_at"`
@@ -99,11 +99,11 @@ type PasskeySession struct {
 }
 
 type User struct {
-	ID        string `json:"id"`
-	Username  string `json:"username"`
-	Locale    string `json:"locale"`
-	CreatedAt int64  `json:"created_at"`
-	UpdatedAt int64  `json:"updated_at"`
+	ID           string `json:"id"`
+	PrimaryEmail string `json:"primary_email"`
+	Locale       string `json:"locale"`
+	CreatedAt    int64  `json:"created_at"`
+	UpdatedAt    int64  `json:"updated_at"`
 }
 
 type UserEmail struct {

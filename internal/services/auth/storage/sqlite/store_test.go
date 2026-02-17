@@ -34,11 +34,11 @@ func TestPutGetUserRoundTrip(t *testing.T) {
 	created := time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC)
 	updated := created.Add(time.Hour)
 	input := user.User{
-		ID:        "user-1",
-		Username:  "testuser",
-		Locale:    commonv1.Locale_LOCALE_PT_BR,
-		CreatedAt: created,
-		UpdatedAt: updated,
+		ID:           "user-1",
+		PrimaryEmail: "testuser",
+		Locale:       commonv1.Locale_LOCALE_PT_BR,
+		CreatedAt:    created,
+		UpdatedAt:    updated,
 	}
 
 	if err := store.PutUser(context.Background(), input); err != nil {
@@ -49,7 +49,7 @@ func TestPutGetUserRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get user: %v", err)
 	}
-	if got.ID != input.ID || got.Username != input.Username || got.Locale != input.Locale {
+	if got.ID != input.ID || got.PrimaryEmail != input.PrimaryEmail || got.Locale != input.Locale {
 		t.Fatalf("unexpected user: %+v", got)
 	}
 }
@@ -89,11 +89,11 @@ func TestListUsersPagination(t *testing.T) {
 
 	for i, id := range []string{"user-1", "user-2", "user-3"} {
 		if err := store.PutUser(context.Background(), user.User{
-			ID:        id,
-			Username:  fmt.Sprintf("user%d", i+1),
-			Locale:    platformi18n.DefaultLocale(),
-			CreatedAt: time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC),
-			UpdatedAt: time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC),
+			ID:           id,
+			PrimaryEmail: fmt.Sprintf("user%d", i+1),
+			Locale:       platformi18n.DefaultLocale(),
+			CreatedAt:    time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC),
+			UpdatedAt:    time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC),
 		}); err != nil {
 			t.Fatalf("put user: %v", err)
 		}
@@ -146,11 +146,11 @@ func TestGetAuthStatisticsSince(t *testing.T) {
 
 	created := time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC)
 	if err := store.PutUser(context.Background(), user.User{
-		ID:        "user-1",
-		Username:  "testuser",
-		Locale:    platformi18n.DefaultLocale(),
-		CreatedAt: created,
-		UpdatedAt: created,
+		ID:           "user-1",
+		PrimaryEmail: "testuser",
+		Locale:       platformi18n.DefaultLocale(),
+		CreatedAt:    created,
+		UpdatedAt:    created,
 	}); err != nil {
 		t.Fatalf("put user: %v", err)
 	}
@@ -170,11 +170,11 @@ func TestGetAuthStatisticsAllTime(t *testing.T) {
 
 	created := time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC)
 	if err := store.PutUser(context.Background(), user.User{
-		ID:        "user-1",
-		Username:  "testuser",
-		Locale:    platformi18n.DefaultLocale(),
-		CreatedAt: created,
-		UpdatedAt: created,
+		ID:           "user-1",
+		PrimaryEmail: "testuser",
+		Locale:       platformi18n.DefaultLocale(),
+		CreatedAt:    created,
+		UpdatedAt:    created,
 	}); err != nil {
 		t.Fatalf("put user: %v", err)
 	}
@@ -193,11 +193,11 @@ func TestPasskeyCredentialRoundTrip(t *testing.T) {
 	now := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)
 
 	if err := store.PutUser(context.Background(), user.User{
-		ID:        "user-1",
-		Username:  "testuser",
-		Locale:    platformi18n.DefaultLocale(),
-		CreatedAt: now,
-		UpdatedAt: now,
+		ID:           "user-1",
+		PrimaryEmail: "testuser",
+		Locale:       platformi18n.DefaultLocale(),
+		CreatedAt:    now,
+		UpdatedAt:    now,
 	}); err != nil {
 		t.Fatalf("put user: %v", err)
 	}
@@ -318,11 +318,11 @@ func TestUserEmailRoundTrip(t *testing.T) {
 	now := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)
 
 	if err := store.PutUser(context.Background(), user.User{
-		ID:        "user-1",
-		Username:  "testuser",
-		Locale:    platformi18n.DefaultLocale(),
-		CreatedAt: now,
-		UpdatedAt: now,
+		ID:           "user-1",
+		PrimaryEmail: "testuser",
+		Locale:       platformi18n.DefaultLocale(),
+		CreatedAt:    now,
+		UpdatedAt:    now,
 	}); err != nil {
 		t.Fatalf("put user: %v", err)
 	}

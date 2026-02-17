@@ -101,7 +101,7 @@ func TestCreateCampaign_Success(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	eventStore := newFakeEventStore()
 	participantStore := newFakeParticipantStore()
-	fakeAuth := &fakeAuthClient{user: &authv1.User{Id: "user-123", Username: "creator"}}
+	fakeAuth := &fakeAuthClient{user: &authv1.User{Id: "user-123", PrimaryEmail: "creator"}}
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 	domain := &fakeDomainEngine{
 		store: eventStore,

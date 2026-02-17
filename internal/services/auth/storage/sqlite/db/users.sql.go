@@ -10,7 +10,7 @@ import (
 )
 
 const getUser = `-- name: GetUser :one
-SELECT id, username, locale, created_at, updated_at FROM users WHERE id = ?
+SELECT id, primary_email, locale, created_at, updated_at FROM users WHERE id = ?
 `
 
 func (q *Queries) GetUser(ctx context.Context, id string) (User, error) {
@@ -18,7 +18,7 @@ func (q *Queries) GetUser(ctx context.Context, id string) (User, error) {
 	var i User
 	err := row.Scan(
 		&i.ID,
-		&i.Username,
+		&i.PrimaryEmail,
 		&i.Locale,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -27,7 +27,7 @@ func (q *Queries) GetUser(ctx context.Context, id string) (User, error) {
 }
 
 const listUsersPaged = `-- name: ListUsersPaged :many
-SELECT id, username, locale, created_at, updated_at FROM users
+SELECT id, primary_email, locale, created_at, updated_at FROM users
 WHERE id > ?
 ORDER BY id
 LIMIT ?
@@ -49,7 +49,7 @@ func (q *Queries) ListUsersPaged(ctx context.Context, arg ListUsersPagedParams) 
 		var i User
 		if err := rows.Scan(
 			&i.ID,
-			&i.Username,
+			&i.PrimaryEmail,
 			&i.Locale,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -68,7 +68,7 @@ func (q *Queries) ListUsersPaged(ctx context.Context, arg ListUsersPagedParams) 
 }
 
 const listUsersPagedFirst = `-- name: ListUsersPagedFirst :many
-SELECT id, username, locale, created_at, updated_at FROM users
+SELECT id, primary_email, locale, created_at, updated_at FROM users
 ORDER BY id
 LIMIT ?
 `
@@ -84,7 +84,7 @@ func (q *Queries) ListUsersPagedFirst(ctx context.Context, limit int64) ([]User,
 		var i User
 		if err := rows.Scan(
 			&i.ID,
-			&i.Username,
+			&i.PrimaryEmail,
 			&i.Locale,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -104,26 +104,26 @@ func (q *Queries) ListUsersPagedFirst(ctx context.Context, limit int64) ([]User,
 
 const putUser = `-- name: PutUser :exec
 INSERT INTO users (
-    id, username, locale, created_at, updated_at
+    id, primary_email, locale, created_at, updated_at
 ) VALUES (?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
-    username = excluded.username,
+    primary_email = excluded.primary_email,
     locale = excluded.locale,
     updated_at = excluded.updated_at
 `
 
 type PutUserParams struct {
-	ID        string `json:"id"`
-	Username  string `json:"username"`
-	Locale    string `json:"locale"`
-	CreatedAt int64  `json:"created_at"`
-	UpdatedAt int64  `json:"updated_at"`
+	ID           string `json:"id"`
+	PrimaryEmail string `json:"primary_email"`
+	Locale       string `json:"locale"`
+	CreatedAt    int64  `json:"created_at"`
+	UpdatedAt    int64  `json:"updated_at"`
 }
 
 func (q *Queries) PutUser(ctx context.Context, arg PutUserParams) error {
 	_, err := q.db.ExecContext(ctx, putUser,
 		arg.ID,
-		arg.Username,
+		arg.PrimaryEmail,
 		arg.Locale,
 		arg.CreatedAt,
 		arg.UpdatedAt,
