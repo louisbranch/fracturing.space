@@ -8,7 +8,7 @@ Use an ExecPlan for complex features or significant refactors. The plan is the s
 
 When the work changes behavior, follow TDD explicitly: state the Red/Green/Refactor intent, write the failing test first, run it, then implement.
 
-ExecPlans live in the `.ai/plans/` directory and must remain in sync with this guidance.
+ExecPlans live in the `.agents/plans/` directory and must remain in sync with this guidance.
 
 ## Non-negotiable requirements
 

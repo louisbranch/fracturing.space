@@ -72,7 +72,7 @@ See [Playwright CLI QA workflows](../specs/playwright-cli-qa-workflows.md) for t
 
 Use `.playwright/cli.config.json` to set defaults (browser, viewport, etc.).
 This repo checks in a baseline config for Chromium. The skill at
-`.ai/skills/playwright-cli/SKILL.md` has the full command reference.
+`.agents/skills/playwright-cli/SKILL.md` has the full command reference.
 
 ### .gitignore
 
