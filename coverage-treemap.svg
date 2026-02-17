@@ -485,7 +485,7 @@
 	text-anchor="start"
 	transform="translate(281.706628,351.187361) scale(1.000000)"
 	style="font-family: Open Sans, verdana, arial, sans-serif !important; font-size: 12px; fill: rgb(0, 0, 0); fill-opacity: 1.00; white-space: pre;" 
-	data-math="N">storage 86.7%</text>
+	data-math="N">storage 86.8%</text>
 		
 </g>
 
@@ -1123,14 +1123,14 @@
 
 
 <g>
-	<rect x="281.706628" y="357.187361" width="204.642785" height="139.303799" style="fill: rgb(60, 166, 87);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
+	<rect x="281.706628" y="357.187361" width="204.642785" height="139.303799" style="fill: rgb(59, 166, 87);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
 	
 <text 
 	data-notex="1" 
 	text-anchor="start"
 	transform="translate(289.706628,372.787361) scale(0.935728)"
 	style="font-family: Open Sans, verdana, arial, sans-serif !important; font-size: 12px; fill: rgb(0, 0, 0); fill-opacity: 1.00; white-space: pre;" 
-	data-math="N">sqlite/store.go 86.3%</text>
+	data-math="N">sqlite/store.go 86.4%</text>
 		
 </g>
 
