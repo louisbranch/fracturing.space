@@ -278,7 +278,7 @@ func TestPasskeyRegisterStartRequiresFields(t *testing.T) {
 func TestPasskeyRegisterStartSuccess(t *testing.T) {
 	fake := &fakeAuthClient{
 		createUserResp: &authv1.CreateUserResponse{
-			User: &authv1.User{Id: "user-1", PrimaryEmail: "alpha@example.com"},
+			User: &authv1.User{Id: "user-1", Email: "alpha@example.com"},
 		},
 		beginRegResp: &authv1.BeginPasskeyRegistrationResponse{
 			SessionId:                     "session-1",

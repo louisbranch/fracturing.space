@@ -11,12 +11,12 @@ import (
 )
 
 type consentView struct {
-	AppName      string
-	PendingID    string
-	ClientID     string
-	ClientName   string
-	PrimaryEmail string
-	Scopes       []string
+	AppName    string
+	PendingID  string
+	ClientID   string
+	ClientName string
+	Email      string
+	Scopes     []string
 }
 
 type errorView struct {
@@ -345,21 +345,21 @@ func (s *Server) renderError(w http.ResponseWriter, code, description string, st
 
 func (s *Server) renderConsentView(w http.ResponseWriter, r *http.Request, pending *PendingAuthorization) {
 	client := s.clientForID(pending.Request.ClientID)
-	primaryEmail := pending.UserID
+	email := pending.UserID
 	if s.userStore != nil {
 		if user, err := s.userStore.GetUser(r.Context(), pending.UserID); err == nil {
-			if strings.TrimSpace(user.PrimaryEmail) != "" {
-				primaryEmail = user.PrimaryEmail
+			if strings.TrimSpace(user.Email) != "" {
+				email = user.Email
 			}
 		}
 	}
 	view := consentView{
-		AppName:      branding.AppName,
-		PendingID:    pending.ID,
-		ClientID:     pending.Request.ClientID,
-		ClientName:   clientDisplayName(client),
-		PrimaryEmail: primaryEmail,
-		Scopes:       formatScopes(pending.Request.Scope),
+		AppName:    branding.AppName,
+		PendingID:  pending.ID,
+		ClientID:   pending.Request.ClientID,
+		ClientName: clientDisplayName(client),
+		Email:      email,
+		Scopes:     formatScopes(pending.Request.Scope),
 	}
 	_ = templates.ExecuteTemplate(w, "consent.html", view)
 }

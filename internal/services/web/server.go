@@ -564,7 +564,7 @@ func (h *handler) handlePasskeyRegisterStart(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	createResp, err := h.authClient.CreateUser(r.Context(), &authv1.CreateUserRequest{PrimaryEmail: payload.Email})
+	createResp, err := h.authClient.CreateUser(r.Context(), &authv1.CreateUserRequest{Email: payload.Email})
 	if err != nil || createResp.GetUser() == nil {
 		http.Error(w, "failed to create user", http.StatusBadRequest)
 		return

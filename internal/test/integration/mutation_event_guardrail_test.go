@@ -266,7 +266,7 @@ func runMutationEventGuardrailTests(t *testing.T, suite *integrationSuite, grpcA
 		}
 		lastSeq = requireEventTypesAfterSeq(t, ctx, eventClient, campaignOutput.ID, lastSeq, "invite.created")
 
-		userResp, err := authClient.CreateUser(ctx, &authv1.CreateUserRequest{PrimaryEmail: "invite.claimer@example.com"})
+		userResp, err := authClient.CreateUser(ctx, &authv1.CreateUserRequest{Email: "invite.claimer@example.com"})
 		if err != nil {
 			t.Fatalf("create invite claimer: %v", err)
 		}

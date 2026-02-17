@@ -223,7 +223,7 @@ func createSeedUser(ctx context.Context, authAddr string) (string, error) {
 	}
 	defer conn.Close()
 	client := authv1.NewAuthServiceClient(conn)
-	resp, err := client.CreateUser(ctx, &authv1.CreateUserRequest{PrimaryEmail: "seed.creator@example.com"})
+	resp, err := client.CreateUser(ctx, &authv1.CreateUserRequest{Email: "seed.creator@example.com"})
 	if err != nil {
 		return "", fmt.Errorf("create seed user: %w", err)
 	}

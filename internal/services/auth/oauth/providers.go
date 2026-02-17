@@ -312,7 +312,7 @@ func (s *Server) ensureUserForProfile(ctx context.Context, providerID string, pr
 	if s.userStore == nil {
 		return "", errors.New("user store not configured")
 	}
-	created, err := user.CreateUser(user.CreateUserInput{PrimaryEmail: derivePrimaryEmail(profile)}, s.clock, id.NewID)
+	created, err := user.CreateUser(user.CreateUserInput{Email: deriveEmail(profile)}, s.clock, id.NewID)
 	if err != nil {
 		return "", err
 	}
@@ -376,7 +376,7 @@ func sanitizeUsername(name string) string {
 	return result
 }
 
-func derivePrimaryEmail(profile providerProfile) string {
+func deriveEmail(profile providerProfile) string {
 	email := strings.TrimSpace(strings.ToLower(profile.Email))
 	if email != "" {
 		return email

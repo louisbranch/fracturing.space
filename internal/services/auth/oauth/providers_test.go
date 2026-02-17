@@ -55,16 +55,16 @@ func TestFirstNonEmpty(t *testing.T) {
 	}
 }
 
-func TestDerivePrimaryEmail(t *testing.T) {
+func TestDeriveEmail(t *testing.T) {
 	t.Run("uses provided email", func(t *testing.T) {
 		profile := providerProfile{
 			Email:          "Alice@Example.Com ",
 			DisplayName:    "Test User",
 			ProviderUserID: "provider-1",
 		}
-		got := derivePrimaryEmail(profile)
+		got := deriveEmail(profile)
 		if got != "alice@example.com" {
-			t.Fatalf("derivePrimaryEmail = %q, want alice@example.com", got)
+			t.Fatalf("deriveEmail = %q, want alice@example.com", got)
 		}
 	})
 
@@ -73,9 +73,9 @@ func TestDerivePrimaryEmail(t *testing.T) {
 			DisplayName:    "Ada Lovelace",
 			ProviderUserID: "provider-123",
 		}
-		got := derivePrimaryEmail(profile)
+		got := deriveEmail(profile)
 		if got != "ada-lovelace-provider-123@oauth.local" {
-			t.Fatalf("derivePrimaryEmail = %q, want %q", got, "ada-lovelace-provider-123@oauth.local")
+			t.Fatalf("deriveEmail = %q, want %q", got, "ada-lovelace-provider-123@oauth.local")
 		}
 	})
 
@@ -83,18 +83,18 @@ func TestDerivePrimaryEmail(t *testing.T) {
 		profile := providerProfile{
 			ProviderUserID: "provider-123",
 		}
-		got := derivePrimaryEmail(profile)
+		got := deriveEmail(profile)
 		if got != "provider-123@oauth.local" {
-			t.Fatalf("derivePrimaryEmail = %q, want %q", got, "provider-123@oauth.local")
+			t.Fatalf("deriveEmail = %q, want %q", got, "provider-123@oauth.local")
 		}
 	})
 
 	t.Run("adds stable uniqueness for provider users with shared display names", func(t *testing.T) {
-		first := derivePrimaryEmail(providerProfile{
+		first := deriveEmail(providerProfile{
 			DisplayName:    "Tester",
 			ProviderUserID: "provider-11",
 		})
-		second := derivePrimaryEmail(providerProfile{
+		second := deriveEmail(providerProfile{
 			DisplayName:    "Tester",
 			ProviderUserID: "provider-22",
 		})

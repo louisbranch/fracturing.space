@@ -20,11 +20,11 @@ func TestGenerateMagicLinkAndConsume(t *testing.T) {
 	oauthStore := oauth.NewStore(store.DB())
 
 	userRecord := user.User{
-		ID:           "user-1",
-		PrimaryEmail: "alpha",
-		Locale:       platformi18n.DefaultLocale(),
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
+		ID:        "user-1",
+		Email:     "alpha",
+		Locale:    platformi18n.DefaultLocale(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
 	}
 	if err := store.PutUser(context.Background(), userRecord); err != nil {
 		t.Fatalf("put user: %v", err)
@@ -99,11 +99,11 @@ func TestConsumeMagicLinkExpired(t *testing.T) {
 func TestListUserEmails(t *testing.T) {
 	store := openTempAuthStore(t)
 	userRecord := user.User{
-		ID:           "user-1",
-		PrimaryEmail: "alpha",
-		Locale:       platformi18n.DefaultLocale(),
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
+		ID:        "user-1",
+		Email:     "alpha",
+		Locale:    platformi18n.DefaultLocale(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
 	}
 	if err := store.PutUser(context.Background(), userRecord); err != nil {
 		t.Fatalf("put user: %v", err)

@@ -10,7 +10,7 @@ DROP TABLE IF EXISTS users;
 
 CREATE TABLE users (
     id TEXT PRIMARY KEY,
-    primary_email TEXT NOT NULL UNIQUE,
+    email TEXT NOT NULL UNIQUE,
     locale TEXT NOT NULL DEFAULT 'en-US',
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
@@ -18,7 +18,7 @@ CREATE TABLE users (
 
 CREATE TABLE oauth_user_credentials (
     user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-    primary_email TEXT NOT NULL UNIQUE,
+    email TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
