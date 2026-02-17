@@ -215,7 +215,7 @@ func renderAppCampaignParticipantsPage(w http.ResponseWriter, campaignID string,
 		if participant == nil {
 			continue
 		}
-		name := strings.TrimSpace(participant.GetDisplayName())
+		name := strings.TrimSpace(participant.GetName())
 		if name == "" {
 			name = strings.TrimSpace(participant.GetUserId())
 		}

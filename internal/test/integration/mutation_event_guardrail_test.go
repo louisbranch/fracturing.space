@@ -80,10 +80,10 @@ func runMutationEventGuardrailTests(t *testing.T, suite *integrationSuite, grpcA
 		participantResult, err := suite.client.CallTool(ctx, &mcp.CallToolParams{
 			Name: "participant_create",
 			Arguments: map[string]any{
-				"campaign_id":  campaignOutput.ID,
-				"display_name": "Guardrail Player",
-				"role":         "PLAYER",
-				"controller":   "HUMAN",
+				"campaign_id": campaignOutput.ID,
+				"name":        "Guardrail Player",
+				"role":        "PLAYER",
+				"controller":  "HUMAN",
 			},
 		})
 		if err != nil {
@@ -238,10 +238,10 @@ func runMutationEventGuardrailTests(t *testing.T, suite *integrationSuite, grpcA
 		participantResult, err := suite.client.CallTool(ctx, &mcp.CallToolParams{
 			Name: "participant_create",
 			Arguments: map[string]any{
-				"campaign_id":  campaignOutput.ID,
-				"display_name": "Invite Guardrail Player",
-				"role":         "PLAYER",
-				"controller":   "HUMAN",
+				"campaign_id": campaignOutput.ID,
+				"name":        "Invite Guardrail Player",
+				"role":        "PLAYER",
+				"controller":  "HUMAN",
 			},
 		})
 		if err != nil {

@@ -127,7 +127,7 @@
         if (sequence > lastSequenceID) {
           lastSequenceID = sequence;
         }
-        var author = (((message || {}).actor || {}).display_name) || "participant";
+        var author = (((message || {}).actor || {}).name) || "participant";
         appendLine(author, String(message.body || ""), false);
         return;
       }

@@ -15,7 +15,7 @@ func Fold(state State, evt event.Event) State {
 		_ = json.Unmarshal(evt.PayloadJSON, &payload)
 		state.ParticipantID = payload.ParticipantID
 		state.UserID = payload.UserID
-		state.DisplayName = payload.DisplayName
+		state.Name = payload.Name
 		state.Role = payload.Role
 		state.Controller = payload.Controller
 		state.CampaignAccess = payload.CampaignAccess
@@ -30,8 +30,8 @@ func Fold(state State, evt event.Event) State {
 			switch key {
 			case "user_id":
 				state.UserID = value
-			case "display_name":
-				state.DisplayName = value
+			case "name":
+				state.Name = value
 			case "role":
 				state.Role = value
 			case "controller":

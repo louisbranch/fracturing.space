@@ -149,7 +149,7 @@ func TestAppInvitesPageRendersPendingInvitesForUser(t *testing.T) {
 				{
 					Invite:      &statev1.Invite{Id: "inv-1", CampaignId: "camp-1"},
 					Campaign:    &statev1.Campaign{Id: "camp-1", Name: "Winds of Iron"},
-					Participant: &statev1.Participant{Id: "part-1", DisplayName: "Mira"},
+					Participant: &statev1.Participant{Id: "part-1", Name: "Mira"},
 				},
 			},
 		},

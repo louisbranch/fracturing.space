@@ -1071,7 +1071,7 @@ func TestApplyParticipantUpdated(t *testing.T) {
 	pStore := newProjectionParticipantStore()
 	pStore.participants["camp-1:part-1"] = storage.ParticipantRecord{
 		ID: "part-1", CampaignID: "camp-1", UserID: "user-1",
-		DisplayName: "Old Name", Role: participant.RolePlayer,
+		Name: "Old Name", Role: participant.RolePlayer,
 		Controller: participant.ControllerHuman, CampaignAccess: participant.CampaignAccessMember,
 	}
 	cStore := newProjectionCampaignStore()
@@ -1079,7 +1079,7 @@ func TestApplyParticipantUpdated(t *testing.T) {
 	applier := Applier{Participant: pStore, Campaign: cStore}
 
 	payload := testevent.ParticipantUpdatedPayload{Fields: map[string]any{
-		"display_name":    "New Name",
+		"name":            "New Name",
 		"role":            "GM",
 		"controller":      "AI",
 		"campaign_access": "OWNER",
@@ -1096,8 +1096,8 @@ func TestApplyParticipantUpdated(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get participant: %v", err)
 	}
-	if updated.DisplayName != "New Name" {
-		t.Fatalf("DisplayName = %q, want %q", updated.DisplayName, "New Name")
+	if updated.Name != "New Name" {
+		t.Fatalf("Name = %q, want %q", updated.Name, "New Name")
 	}
 	if updated.Role != participant.RoleGM {
 		t.Fatalf("Role = %v, want GM", updated.Role)
@@ -1130,7 +1130,7 @@ func TestApplyParticipantUpdated_EmptyFields(t *testing.T) {
 
 func TestApplyParticipantUpdated_MissingStore(t *testing.T) {
 	ctx := context.Background()
-	data, _ := json.Marshal(testevent.ParticipantUpdatedPayload{Fields: map[string]any{"display_name": "x"}})
+	data, _ := json.Marshal(testevent.ParticipantUpdatedPayload{Fields: map[string]any{"name": "x"}})
 	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantUpdated, PayloadJSON: data}
 	if err := (Applier{}).Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing participant store")
@@ -1964,7 +1964,7 @@ func TestApplyParticipantJoined(t *testing.T) {
 
 	payload := testevent.ParticipantJoinedPayload{
 		UserID:         "user-1",
-		DisplayName:    "Alice",
+		Name:           "Alice",
 		Role:           "player",
 		Controller:     "human",
 		CampaignAccess: "member",
@@ -1980,8 +1980,8 @@ func TestApplyParticipantJoined(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get participant: %v", err)
 	}
-	if p.DisplayName != "Alice" {
-		t.Fatalf("DisplayName = %q, want Alice", p.DisplayName)
+	if p.Name != "Alice" {
+		t.Fatalf("Name = %q, want Alice", p.Name)
 	}
 	c, _ := campaignStore.Get(ctx, "camp-1")
 	if c.ParticipantCount != 1 {
@@ -1991,7 +1991,7 @@ func TestApplyParticipantJoined(t *testing.T) {
 
 func TestApplyParticipantJoined_MissingStores(t *testing.T) {
 	ctx := context.Background()
-	data, _ := json.Marshal(testevent.ParticipantJoinedPayload{UserID: "u", DisplayName: "A", Role: "player", Controller: "human", CampaignAccess: "member"})
+	data, _ := json.Marshal(testevent.ParticipantJoinedPayload{UserID: "u", Name: "A", Role: "player", Controller: "human", CampaignAccess: "member"})
 	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantJoined, PayloadJSON: data}
 
 	if err := (Applier{Campaign: newProjectionCampaignStore()}).Apply(ctx, eventToEvent(evt)); err == nil {
@@ -2004,7 +2004,7 @@ func TestApplyParticipantJoined_MissingStores(t *testing.T) {
 
 func TestApplyParticipantJoined_MissingEntityID(t *testing.T) {
 	ctx := context.Background()
-	data, _ := json.Marshal(testevent.ParticipantJoinedPayload{UserID: "u", DisplayName: "A", Role: "player", Controller: "human", CampaignAccess: "member"})
+	data, _ := json.Marshal(testevent.ParticipantJoinedPayload{UserID: "u", Name: "A", Role: "player", Controller: "human", CampaignAccess: "member"})
 	evt := testevent.Event{CampaignID: "camp-1", EntityID: "", Type: testevent.TypeParticipantJoined, PayloadJSON: data}
 	applier := Applier{Participant: newProjectionParticipantStore(), Campaign: newProjectionCampaignStore()}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
@@ -2014,7 +2014,7 @@ func TestApplyParticipantJoined_MissingEntityID(t *testing.T) {
 
 func TestApplyParticipantJoined_MissingCampaignID(t *testing.T) {
 	ctx := context.Background()
-	data, _ := json.Marshal(testevent.ParticipantJoinedPayload{UserID: "u", DisplayName: "A", Role: "player", Controller: "human", CampaignAccess: "member"})
+	data, _ := json.Marshal(testevent.ParticipantJoinedPayload{UserID: "u", Name: "A", Role: "player", Controller: "human", CampaignAccess: "member"})
 	evt := testevent.Event{CampaignID: "", EntityID: "part-1", Type: testevent.TypeParticipantJoined, PayloadJSON: data}
 	applier := Applier{Participant: newProjectionParticipantStore(), Campaign: newProjectionCampaignStore()}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
@@ -2285,7 +2285,7 @@ func TestApplyParticipantUpdated_InvalidUserIDType(t *testing.T) {
 	}
 }
 
-func TestApplyParticipantUpdated_InvalidDisplayNameType(t *testing.T) {
+func TestApplyParticipantUpdated_InvalidNameType(t *testing.T) {
 	ctx := context.Background()
 	participantStore := newProjectionParticipantStore()
 	participantStore.participants["camp-1:part-1"] = storage.ParticipantRecord{ID: "part-1", CampaignID: "camp-1"}
@@ -2293,14 +2293,14 @@ func TestApplyParticipantUpdated_InvalidDisplayNameType(t *testing.T) {
 	campaignStore.campaigns["camp-1"] = storage.CampaignRecord{ID: "camp-1"}
 	applier := Applier{Participant: participantStore, Campaign: campaignStore}
 
-	data, _ := json.Marshal(testevent.ParticipantUpdatedPayload{Fields: map[string]any{"display_name": 42}})
+	data, _ := json.Marshal(testevent.ParticipantUpdatedPayload{Fields: map[string]any{"name": 42}})
 	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantUpdated, PayloadJSON: data}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid display_name type")
 	}
 }
 
-func TestApplyParticipantUpdated_EmptyDisplayName(t *testing.T) {
+func TestApplyParticipantUpdated_EmptyName(t *testing.T) {
 	ctx := context.Background()
 	participantStore := newProjectionParticipantStore()
 	participantStore.participants["camp-1:part-1"] = storage.ParticipantRecord{ID: "part-1", CampaignID: "camp-1"}
@@ -2308,7 +2308,7 @@ func TestApplyParticipantUpdated_EmptyDisplayName(t *testing.T) {
 	campaignStore.campaigns["camp-1"] = storage.CampaignRecord{ID: "camp-1"}
 	applier := Applier{Participant: participantStore, Campaign: campaignStore}
 
-	data, _ := json.Marshal(testevent.ParticipantUpdatedPayload{Fields: map[string]any{"display_name": "  "}})
+	data, _ := json.Marshal(testevent.ParticipantUpdatedPayload{Fields: map[string]any{"name": "  "}})
 	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantUpdated, PayloadJSON: data}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for empty display name")
@@ -2970,7 +2970,7 @@ func TestApplyCharacterUpdated_InvalidKind(t *testing.T) {
 
 func TestApplyParticipantUpdated_MissingCampaignID(t *testing.T) {
 	applier := Applier{Participant: newProjectionParticipantStore(), Campaign: newProjectionCampaignStore()}
-	evt := testevent.Event{CampaignID: "  ", EntityID: "part-1", Type: testevent.TypeParticipantUpdated, PayloadJSON: []byte(`{"fields":{"display_name":"X"}}`)}
+	evt := testevent.Event{CampaignID: "  ", EntityID: "part-1", Type: testevent.TypeParticipantUpdated, PayloadJSON: []byte(`{"fields":{"name":"X"}}`)}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing campaign id")
 	}
@@ -2978,7 +2978,7 @@ func TestApplyParticipantUpdated_MissingCampaignID(t *testing.T) {
 
 func TestApplyParticipantUpdated_MissingEntityID(t *testing.T) {
 	applier := Applier{Participant: newProjectionParticipantStore(), Campaign: newProjectionCampaignStore()}
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "  ", Type: testevent.TypeParticipantUpdated, PayloadJSON: []byte(`{"fields":{"display_name":"X"}}`)}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "  ", Type: testevent.TypeParticipantUpdated, PayloadJSON: []byte(`{"fields":{"name":"X"}}`)}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing entity id")
 	}
@@ -3041,7 +3041,7 @@ func TestApplyParticipantUpdated_InvalidAccess(t *testing.T) {
 
 func TestApplyParticipantJoined_InvalidRole(t *testing.T) {
 	applier := Applier{Participant: newProjectionParticipantStore(), Campaign: newProjectionCampaignStore()}
-	payload := testevent.ParticipantJoinedPayload{DisplayName: "A", Role: "ALIEN", Controller: "HUMAN", CampaignAccess: "READ_ONLY"}
+	payload := testevent.ParticipantJoinedPayload{Name: "A", Role: "ALIEN", Controller: "HUMAN", CampaignAccess: "READ_ONLY"}
 	data, _ := json.Marshal(payload)
 	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantJoined, PayloadJSON: data}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
@@ -3051,7 +3051,7 @@ func TestApplyParticipantJoined_InvalidRole(t *testing.T) {
 
 func TestApplyParticipantJoined_InvalidController(t *testing.T) {
 	applier := Applier{Participant: newProjectionParticipantStore(), Campaign: newProjectionCampaignStore()}
-	payload := testevent.ParticipantJoinedPayload{DisplayName: "A", Role: "PLAYER", Controller: "ALIEN", CampaignAccess: "READ_ONLY"}
+	payload := testevent.ParticipantJoinedPayload{Name: "A", Role: "PLAYER", Controller: "ALIEN", CampaignAccess: "READ_ONLY"}
 	data, _ := json.Marshal(payload)
 	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantJoined, PayloadJSON: data}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
@@ -3061,7 +3061,7 @@ func TestApplyParticipantJoined_InvalidController(t *testing.T) {
 
 func TestApplyParticipantJoined_InvalidAccess(t *testing.T) {
 	applier := Applier{Participant: newProjectionParticipantStore(), Campaign: newProjectionCampaignStore()}
-	payload := testevent.ParticipantJoinedPayload{DisplayName: "A", Role: "PLAYER", Controller: "HUMAN", CampaignAccess: "ALIEN"}
+	payload := testevent.ParticipantJoinedPayload{Name: "A", Role: "PLAYER", Controller: "HUMAN", CampaignAccess: "ALIEN"}
 	data, _ := json.Marshal(payload)
 	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantJoined, PayloadJSON: data}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {

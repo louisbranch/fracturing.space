@@ -265,7 +265,7 @@ func TestCampaignAuthorizerResolveJoinWelcomeWithoutActiveSession(t *testing.T) 
 	a := &campaignAuthorizer{
 		participantClient: &fakeParticipantClient{
 			pages: map[string]*statev1.ListParticipantsResponse{
-				"": {Participants: []*statev1.Participant{{Id: "p-1", UserId: "user-a", DisplayName: "Ari"}}},
+				"": {Participants: []*statev1.Participant{{Id: "p-1", UserId: "user-a", Name: "Ari"}}},
 			},
 		},
 		sessionClient: &fakeSessionClient{
@@ -322,7 +322,7 @@ func TestCampaignAuthorizerResolveJoinWelcomeUsesCampaignLocale(t *testing.T) {
 	a := &campaignAuthorizer{
 		participantClient: &fakeParticipantClient{
 			pages: map[string]*statev1.ListParticipantsResponse{
-				"": {Participants: []*statev1.Participant{{Id: "p-1", UserId: "user-a", DisplayName: "Ari"}}},
+				"": {Participants: []*statev1.Participant{{Id: "p-1", UserId: "user-a", Name: "Ari"}}},
 			},
 		},
 		sessionClient: &fakeSessionClient{

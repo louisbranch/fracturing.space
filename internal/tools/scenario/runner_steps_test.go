@@ -49,7 +49,7 @@ func testEnv() (scenarioEnv, *fakeEventClient, *fakeSessionClient, *fakeDaggerhe
 		participantClient: &fakeParticipantClient{
 			create: func(_ context.Context, req *gamev1.CreateParticipantRequest, _ ...grpc.CallOption) (*gamev1.CreateParticipantResponse, error) {
 				return &gamev1.CreateParticipantResponse{
-					Participant: &gamev1.Participant{Id: "participant-" + req.GetDisplayName()},
+					Participant: &gamev1.Participant{Id: "participant-" + req.GetName()},
 				}, nil
 			},
 		},

@@ -144,7 +144,7 @@ func TestEmitter_EmitParticipantJoined(t *testing.T) {
 	evt, err := emitter.EmitParticipantJoined(context.Background(), "camp-1", ParticipantJoinedPayload{
 		ParticipantID: "part-1",
 		UserID:        "user-1",
-		DisplayName:   "Player",
+		Name:          "Player",
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

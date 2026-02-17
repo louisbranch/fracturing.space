@@ -71,7 +71,7 @@ func TestExportHumanReadable_MultipleEvents(t *testing.T) {
 			ActorID:     "part_xyz",
 			EntityType:  "participant",
 			EntityID:    "part_xyz",
-			PayloadJSON: []byte(`{"display_name":"Alice","role":"player"}`),
+			PayloadJSON: []byte(`{"name":"Alice","role":"player"}`),
 		},
 	}
 

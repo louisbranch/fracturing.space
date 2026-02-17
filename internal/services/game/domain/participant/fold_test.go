@@ -10,7 +10,7 @@ func TestFoldParticipantJoinedSetsFields(t *testing.T) {
 	state := State{}
 	updated := Fold(state, event.Event{
 		Type:        event.Type("participant.joined"),
-		PayloadJSON: []byte(`{"participant_id":"p-1","user_id":"u-1","display_name":"Alice","role":"player","controller":"human","campaign_access":"member"}`),
+		PayloadJSON: []byte(`{"participant_id":"p-1","user_id":"u-1","name":"Alice","role":"player","controller":"human","campaign_access":"member"}`),
 	})
 	if !updated.Joined {
 		t.Fatal("expected participant to be joined")
@@ -21,8 +21,8 @@ func TestFoldParticipantJoinedSetsFields(t *testing.T) {
 	if updated.UserID != "u-1" {
 		t.Fatalf("user id = %s, want %s", updated.UserID, "u-1")
 	}
-	if updated.DisplayName != "Alice" {
-		t.Fatalf("display name = %s, want %s", updated.DisplayName, "Alice")
+	if updated.Name != "Alice" {
+		t.Fatalf("display name = %s, want %s", updated.Name, "Alice")
 	}
 	if updated.Role != "player" {
 		t.Fatalf("role = %s, want %s", updated.Role, "player")
@@ -36,13 +36,13 @@ func TestFoldParticipantJoinedSetsFields(t *testing.T) {
 }
 
 func TestFoldParticipantUpdatedSetsFields(t *testing.T) {
-	state := State{Joined: true, ParticipantID: "p-1", DisplayName: "Old", Role: "gm"}
+	state := State{Joined: true, ParticipantID: "p-1", Name: "Old", Role: "gm"}
 	updated := Fold(state, event.Event{
 		Type:        event.Type("participant.updated"),
-		PayloadJSON: []byte(`{"participant_id":"p-1","fields":{"display_name":"Alice","role":"player","controller":"human","campaign_access":"member"}}`),
+		PayloadJSON: []byte(`{"participant_id":"p-1","fields":{"name":"Alice","role":"player","controller":"human","campaign_access":"member"}}`),
 	})
-	if updated.DisplayName != "Alice" {
-		t.Fatalf("display name = %s, want %s", updated.DisplayName, "Alice")
+	if updated.Name != "Alice" {
+		t.Fatalf("display name = %s, want %s", updated.Name, "Alice")
 	}
 	if updated.Role != "player" {
 		t.Fatalf("role = %s, want %s", updated.Role, "player")

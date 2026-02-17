@@ -26,7 +26,7 @@ const (
 	rejectionCodeParticipantAlreadyJoined      = "PARTICIPANT_ALREADY_JOINED"
 	rejectionCodeParticipantNotJoined          = "PARTICIPANT_NOT_JOINED"
 	rejectionCodeParticipantIDRequired         = "PARTICIPANT_ID_REQUIRED"
-	rejectionCodeParticipantDisplayNameEmpty   = "PARTICIPANT_DISPLAY_NAME_EMPTY"
+	rejectionCodeParticipantNameEmpty          = "PARTICIPANT_NAME_EMPTY"
 	rejectionCodeParticipantRoleInvalid        = "PARTICIPANT_INVALID_ROLE"
 	rejectionCodeParticipantControllerInvalid  = "PARTICIPANT_INVALID_CONTROLLER"
 	rejectionCodeParticipantAccessInvalid      = "PARTICIPANT_INVALID_CAMPAIGN_ACCESS"
@@ -60,11 +60,11 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			})
 		}
 		userID := strings.TrimSpace(payload.UserID)
-		displayName := strings.TrimSpace(payload.DisplayName)
-		if displayName == "" {
+		name := strings.TrimSpace(payload.Name)
+		if name == "" {
 			return command.Reject(command.Rejection{
-				Code:    rejectionCodeParticipantDisplayNameEmpty,
-				Message: "display name is required",
+				Code:    rejectionCodeParticipantNameEmpty,
+				Message: "name is required",
 			})
 		}
 		role, ok := normalizeRoleLabel(payload.Role)
@@ -101,7 +101,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		normalizedPayload := JoinPayload{
 			ParticipantID:  participantID,
 			UserID:         userID,
-			DisplayName:    displayName,
+			Name:           name,
 			Role:           role,
 			Controller:     controller,
 			CampaignAccess: access,
@@ -154,12 +154,12 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			switch key {
 			case "user_id":
 				normalizedFields[key] = strings.TrimSpace(value)
-			case "display_name":
+			case "name":
 				trimmed := strings.TrimSpace(value)
 				if trimmed == "" {
 					return command.Reject(command.Rejection{
-						Code:    rejectionCodeParticipantDisplayNameEmpty,
-						Message: "display name is required",
+						Code:    rejectionCodeParticipantNameEmpty,
+						Message: "name is required",
 					})
 				}
 				normalizedFields[key] = trimmed

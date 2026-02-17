@@ -334,7 +334,7 @@ func participantControlFormLabel(participant *statev1.Participant) string {
 	if participant == nil {
 		return ""
 	}
-	label := strings.TrimSpace(participant.GetDisplayName())
+	label := strings.TrimSpace(participant.GetName())
 	if label == "" {
 		label = strings.TrimSpace(participant.GetUserId())
 	}

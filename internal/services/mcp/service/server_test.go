@@ -2159,10 +2159,10 @@ func TestParticipantCreateHandlerReturnsClientError(t *testing.T) {
 	handler := domain.ParticipantCreateHandler(client, nil, nil)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.ParticipantCreateInput{
-		CampaignID:  "camp-123",
-		DisplayName: "Test Player",
-		Role:        "PLAYER",
-		Controller:  "HUMAN",
+		CampaignID: "camp-123",
+		Name:       "Test Player",
+		Role:       "PLAYER",
+		Controller: "HUMAN",
 	})
 	if err == nil {
 		t.Fatal("expected error")
@@ -2177,23 +2177,23 @@ func TestParticipantCreateHandlerMapsRequestAndResponse(t *testing.T) {
 	now := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
 	client := &fakeParticipantClient{createParticipantResponse: &statev1.CreateParticipantResponse{
 		Participant: &statev1.Participant{
-			Id:          "part-456",
-			CampaignId:  "camp-123",
-			DisplayName: "Test Player",
-			Role:        statev1.ParticipantRole_PLAYER,
-			Controller:  statev1.Controller_CONTROLLER_HUMAN,
-			CreatedAt:   timestamppb.New(now),
-			UpdatedAt:   timestamppb.New(now.Add(time.Hour)),
+			Id:         "part-456",
+			CampaignId: "camp-123",
+			Name:       "Test Player",
+			Role:       statev1.ParticipantRole_PLAYER,
+			Controller: statev1.Controller_CONTROLLER_HUMAN,
+			CreatedAt:  timestamppb.New(now),
+			UpdatedAt:  timestamppb.New(now.Add(time.Hour)),
 		},
 	}}
 	result, output, err := domain.ParticipantCreateHandler(client, nil, nil)(
 		context.Background(),
 		&mcp.CallToolRequest{},
 		domain.ParticipantCreateInput{
-			CampaignID:  "camp-123",
-			DisplayName: "Test Player",
-			Role:        "PLAYER",
-			Controller:  "HUMAN",
+			CampaignID: "camp-123",
+			Name:       "Test Player",
+			Role:       "PLAYER",
+			Controller: "HUMAN",
 		},
 	)
 	if err != nil {
@@ -2206,8 +2206,8 @@ func TestParticipantCreateHandlerMapsRequestAndResponse(t *testing.T) {
 	if client.lastCreateParticipantRequest.GetCampaignId() != "camp-123" {
 		t.Fatalf("expected campaign id camp-123, got %q", client.lastCreateParticipantRequest.GetCampaignId())
 	}
-	if client.lastCreateParticipantRequest.GetDisplayName() != "Test Player" {
-		t.Fatalf("expected display name Test Player, got %q", client.lastCreateParticipantRequest.GetDisplayName())
+	if client.lastCreateParticipantRequest.GetName() != "Test Player" {
+		t.Fatalf("expected display name Test Player, got %q", client.lastCreateParticipantRequest.GetName())
 	}
 	if client.lastCreateParticipantRequest.GetRole() != statev1.ParticipantRole_PLAYER {
 		t.Fatalf("expected role PLAYER, got %v", client.lastCreateParticipantRequest.GetRole())
@@ -2221,8 +2221,8 @@ func TestParticipantCreateHandlerMapsRequestAndResponse(t *testing.T) {
 	if output.CampaignID != "camp-123" {
 		t.Fatalf("expected campaign id camp-123, got %q", output.CampaignID)
 	}
-	if output.DisplayName != "Test Player" {
-		t.Fatalf("expected display name Test Player, got %q", output.DisplayName)
+	if output.Name != "Test Player" {
+		t.Fatalf("expected display name Test Player, got %q", output.Name)
 	}
 	if output.Role != "PLAYER" {
 		t.Fatalf("expected role PLAYER, got %q", output.Role)
@@ -2243,22 +2243,22 @@ func TestParticipantCreateHandlerOptionalController(t *testing.T) {
 	now := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
 	client := &fakeParticipantClient{createParticipantResponse: &statev1.CreateParticipantResponse{
 		Participant: &statev1.Participant{
-			Id:          "part-789",
-			CampaignId:  "camp-123",
-			DisplayName: "Test GM",
-			Role:        statev1.ParticipantRole_GM,
-			Controller:  statev1.Controller_CONTROLLER_HUMAN,
-			CreatedAt:   timestamppb.New(now),
-			UpdatedAt:   timestamppb.New(now),
+			Id:         "part-789",
+			CampaignId: "camp-123",
+			Name:       "Test GM",
+			Role:       statev1.ParticipantRole_GM,
+			Controller: statev1.Controller_CONTROLLER_HUMAN,
+			CreatedAt:  timestamppb.New(now),
+			UpdatedAt:  timestamppb.New(now),
 		},
 	}}
 	result, output, err := domain.ParticipantCreateHandler(client, nil, nil)(
 		context.Background(),
 		&mcp.CallToolRequest{},
 		domain.ParticipantCreateInput{
-			CampaignID:  "camp-123",
-			DisplayName: "Test GM",
-			Role:        "GM",
+			CampaignID: "camp-123",
+			Name:       "Test GM",
+			Role:       "GM",
 			// Controller omitted
 		},
 	)
@@ -2284,9 +2284,9 @@ func TestParticipantCreateHandlerRejectsEmptyResponse(t *testing.T) {
 	handler := domain.ParticipantCreateHandler(client, nil, nil)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.ParticipantCreateInput{
-		CampaignID:  "camp-123",
-		DisplayName: "Test Player",
-		Role:        "PLAYER",
+		CampaignID: "camp-123",
+		Name:       "Test Player",
+		Role:       "PLAYER",
 	})
 	if err == nil {
 		t.Fatal("expected error")
@@ -2874,21 +2874,21 @@ func TestParticipantListResourceHandlerMapsResponse(t *testing.T) {
 	campaignID := "camp-456"
 	client := &fakeParticipantClient{listParticipantsResponse: &statev1.ListParticipantsResponse{
 		Participants: []*statev1.Participant{{
-			Id:          "part-1",
-			CampaignId:  campaignID,
-			DisplayName: "Test Player",
-			Role:        statev1.ParticipantRole_PLAYER,
-			Controller:  statev1.Controller_CONTROLLER_HUMAN,
-			CreatedAt:   timestamppb.New(now),
-			UpdatedAt:   timestamppb.New(now.Add(time.Hour)),
+			Id:         "part-1",
+			CampaignId: campaignID,
+			Name:       "Test Player",
+			Role:       statev1.ParticipantRole_PLAYER,
+			Controller: statev1.Controller_CONTROLLER_HUMAN,
+			CreatedAt:  timestamppb.New(now),
+			UpdatedAt:  timestamppb.New(now.Add(time.Hour)),
 		}, {
-			Id:          "part-2",
-			CampaignId:  campaignID,
-			DisplayName: "Test GM",
-			Role:        statev1.ParticipantRole_GM,
-			Controller:  statev1.Controller_CONTROLLER_AI,
-			CreatedAt:   timestamppb.New(now),
-			UpdatedAt:   timestamppb.New(now),
+			Id:         "part-2",
+			CampaignId: campaignID,
+			Name:       "Test GM",
+			Role:       statev1.ParticipantRole_GM,
+			Controller: statev1.Controller_CONTROLLER_AI,
+			CreatedAt:  timestamppb.New(now),
+			UpdatedAt:  timestamppb.New(now),
 		}},
 	}}
 
@@ -2915,13 +2915,13 @@ func TestParticipantListResourceHandlerMapsResponse(t *testing.T) {
 
 	var payload struct {
 		Participants []struct {
-			ID          string `json:"id"`
-			CampaignID  string `json:"campaign_id"`
-			DisplayName string `json:"display_name"`
-			Role        string `json:"role"`
-			Controller  string `json:"controller"`
-			CreatedAt   string `json:"created_at"`
-			UpdatedAt   string `json:"updated_at"`
+			ID         string `json:"id"`
+			CampaignID string `json:"campaign_id"`
+			Name       string `json:"name"`
+			Role       string `json:"role"`
+			Controller string `json:"controller"`
+			CreatedAt  string `json:"created_at"`
+			UpdatedAt  string `json:"updated_at"`
 		} `json:"participants"`
 	}
 	if err := json.Unmarshal([]byte(result.Contents[0].Text), &payload); err != nil {

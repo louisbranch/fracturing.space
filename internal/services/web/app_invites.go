@@ -143,7 +143,7 @@ func renderAppInvitesPage(w http.ResponseWriter, invites []*statev1.PendingUserI
 		if campaignName == "" {
 			campaignName = "Unknown campaign"
 		}
-		participantName := strings.TrimSpace(pending.GetParticipant().GetDisplayName())
+		participantName := strings.TrimSpace(pending.GetParticipant().GetName())
 		participantID := strings.TrimSpace(pending.GetParticipant().GetId())
 		inviteID := strings.TrimSpace(pending.GetInvite().GetId())
 		if participantName == "" {

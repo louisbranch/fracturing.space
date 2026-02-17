@@ -162,7 +162,7 @@ func TestListTimelineEntries_ProjectionDisplayByDomain(t *testing.T) {
 		"p1": {
 			ID:             "p1",
 			CampaignID:     "c1",
-			DisplayName:    "Ada",
+			Name:           "Ada",
 			Role:           participant.RoleGM,
 			Controller:     participant.ControllerAI,
 			CampaignAccess: participant.CampaignAccessOwner,

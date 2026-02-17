@@ -190,7 +190,7 @@ func ParticipantsTable(rows []ParticipantRow, message string, loc Localizer) tem
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var8 string
-			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "participants.table.display_name"))
+			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "participants.table.name"))
 			if templ_7745c5c3_Err != nil {
 				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/participants.templ`, Line: 32, Col: 51}
 			}
@@ -260,7 +260,7 @@ func ParticipantsTable(rows []ParticipantRow, message string, loc Localizer) tem
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var13 string
-				templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(row.DisplayName)
+				templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(row.Name)
 				if templ_7745c5c3_Err != nil {
 					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/participants.templ`, Line: 42, Col: 26}
 				}

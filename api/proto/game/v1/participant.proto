@@ -12,7 +12,7 @@ message Participant {
   string id = 1;
   string campaign_id = 2;
   string user_id = 3;
-  string display_name = 4;
+  string name = 4;
   ParticipantRole role = 5;
   CampaignAccess campaign_access = 6;
   Controller controller = 7;
@@ -65,7 +65,7 @@ message CreateParticipantRequest {
   string user_id = 2;
 
   // Display name for the participant.
-  string display_name = 3;
+  string name = 3;
 
   // The role of the participant.
   ParticipantRole role = 4;
@@ -89,7 +89,7 @@ message UpdateParticipantRequest {
   google.protobuf.StringValue user_id = 3;
 
   // Optional updated display name.
-  google.protobuf.StringValue display_name = 4;
+  google.protobuf.StringValue name = 4;
 
   // Optional updated role.
   ParticipantRole role = 5;

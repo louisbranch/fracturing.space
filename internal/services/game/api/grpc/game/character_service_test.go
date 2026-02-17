@@ -996,7 +996,7 @@ func TestSetDefaultControl_Success_Participant(t *testing.T) {
 		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", CreatedAt: now},
 	}
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
-		"p1": {ID: "p1", CampaignID: "c1", DisplayName: "Player 1", CreatedAt: now},
+		"p1": {ID: "p1", CampaignID: "c1", Name: "Player 1", CreatedAt: now},
 	}
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
 		command.Type("character.update"): {
@@ -1058,7 +1058,7 @@ func TestSetDefaultControl_UsesDomainEngine(t *testing.T) {
 		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", CreatedAt: now},
 	}
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
-		"p1": {ID: "p1", CampaignID: "c1", DisplayName: "Player 1", CreatedAt: now},
+		"p1": {ID: "p1", CampaignID: "c1", Name: "Player 1", CreatedAt: now},
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{

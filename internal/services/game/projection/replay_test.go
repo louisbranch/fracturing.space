@@ -52,8 +52,8 @@ func TestReplayCampaign_AppliesEvents(t *testing.T) {
 	if err != nil {
 		t.Fatalf("participant not stored: %v", err)
 	}
-	if storedParticipant.DisplayName != "Player One" {
-		t.Fatalf("participant display name = %q, want %q", storedParticipant.DisplayName, "Player One")
+	if storedParticipant.Name != "Player One" {
+		t.Fatalf("participant display name = %q, want %q", storedParticipant.Name, "Player One")
 	}
 }
 
@@ -534,7 +534,7 @@ func newCampaignCreatedEvent(campaignID string, seq uint64) event.Event {
 func newParticipantJoinedEvent(campaignID, participantID string, seq uint64) event.Event {
 	payload := participant.JoinPayload{
 		ParticipantID:  participantID,
-		DisplayName:    "Player One",
+		Name:           "Player One",
 		Role:           "PLAYER",
 		Controller:     "CONTROLLER_HUMAN",
 		CampaignAccess: "MEMBER",

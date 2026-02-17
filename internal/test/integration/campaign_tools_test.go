@@ -47,10 +47,10 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 		participantParams := &mcp.CallToolParams{
 			Name: "participant_create",
 			Arguments: map[string]any{
-				"campaign_id":  campaignOutput.ID,
-				"display_name": "Test Player",
-				"role":         "PLAYER",
-				"controller":   "HUMAN",
+				"campaign_id": campaignOutput.ID,
+				"name":        "Test Player",
+				"role":        "PLAYER",
+				"controller":  "HUMAN",
 			},
 		}
 		participantResult, err := suite.client.CallTool(ctx, participantParams)
@@ -244,9 +244,9 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 		participantParams := &mcp.CallToolParams{
 			Name: "participant_create",
 			Arguments: map[string]any{
-				"campaign_id":  campaignOutput.ID,
-				"display_name": "Test Player",
-				"role":         "PLAYER",
+				"campaign_id": campaignOutput.ID,
+				"name":        "Test Player",
+				"role":        "PLAYER",
 			},
 		}
 		participantResult, err := suite.client.CallTool(ctx, participantParams)

@@ -29,7 +29,7 @@ templ ParticipantsTable(rows []ParticipantRow, message string, loc Localizer) {
 		<table class="table table-zebra">
 			<thead>
 				<tr>
-					<th>{T(loc, "participants.table.display_name")}</th>
+					<th>{T(loc, "participants.table.name")}</th>
 					<th>{T(loc, "participants.table.role")}</th>
 					<th>{T(loc, "participants.table.access")}</th>
 					<th>{T(loc, "participants.table.controller")}</th>
@@ -39,7 +39,7 @@ templ ParticipantsTable(rows []ParticipantRow, message string, loc Localizer) {
 			<tbody>
 				for _, row := range rows {
 					<tr>
-						<td>{row.DisplayName}</td>
+						<td>{row.Name}</td>
 						<td>@StatusBadge(row.Role, row.RoleVariant)</td>
 						<td>@StatusBadge(row.Access, row.AccessVariant)</td>
 						<td>@StatusBadge(row.Controller, row.ControllerVariant)</td>

@@ -86,7 +86,7 @@ func TestSessionLockInterceptor_BlockedMethod_NoActiveSession_PassesThrough(t *t
 
 	// CreateParticipant is blocked, but no active session exists
 	info := serverInfo(statev1.ParticipantService_CreateParticipant_FullMethodName)
-	req := &statev1.CreateParticipantRequest{CampaignId: "c1", DisplayName: "Test"}
+	req := &statev1.CreateParticipantRequest{CampaignId: "c1", Name: "Test"}
 
 	resp, err := interceptor(context.Background(), req, info, fakeHandler)
 	if err != nil {
@@ -104,7 +104,7 @@ func TestSessionLockInterceptor_CreateParticipant_WithActiveSession_Blocks(t *te
 
 	interceptor := SessionLockInterceptor(sessionStore)
 	info := serverInfo(statev1.ParticipantService_CreateParticipant_FullMethodName)
-	req := &statev1.CreateParticipantRequest{CampaignId: "c1", DisplayName: "Test"}
+	req := &statev1.CreateParticipantRequest{CampaignId: "c1", Name: "Test"}
 
 	_, err := interceptor(context.Background(), req, info, fakeHandler)
 	assertStatusCode(t, err, codes.FailedPrecondition)
@@ -167,7 +167,7 @@ func TestSessionLockInterceptor_BlockedMethod_MissingCampaignId_ReturnsInvalidAr
 	interceptor := SessionLockInterceptor(sessionStore)
 
 	info := serverInfo(statev1.ParticipantService_CreateParticipant_FullMethodName)
-	req := &statev1.CreateParticipantRequest{DisplayName: "Test"} // No CampaignId
+	req := &statev1.CreateParticipantRequest{Name: "Test"} // No CampaignId
 
 	_, err := interceptor(context.Background(), req, info, fakeHandler)
 	assertStatusCode(t, err, codes.InvalidArgument)
@@ -177,7 +177,7 @@ func TestSessionLockInterceptor_BlockedMethod_NilSessionStore_ReturnsInternal(t 
 	interceptor := SessionLockInterceptor(nil)
 
 	info := serverInfo(statev1.ParticipantService_CreateParticipant_FullMethodName)
-	req := &statev1.CreateParticipantRequest{CampaignId: "c1", DisplayName: "Test"}
+	req := &statev1.CreateParticipantRequest{CampaignId: "c1", Name: "Test"}
 
 	_, err := interceptor(context.Background(), req, info, fakeHandler)
 	assertStatusCode(t, err, codes.Internal)
@@ -189,7 +189,7 @@ func TestSessionLockInterceptor_BlockedMethod_SessionStoreError_ReturnsInternal(
 
 	interceptor := SessionLockInterceptor(sessionStore)
 	info := serverInfo(statev1.ParticipantService_CreateParticipant_FullMethodName)
-	req := &statev1.CreateParticipantRequest{CampaignId: "c1", DisplayName: "Test"}
+	req := &statev1.CreateParticipantRequest{CampaignId: "c1", Name: "Test"}
 
 	_, err := interceptor(context.Background(), req, info, fakeHandler)
 	assertStatusCode(t, err, codes.Internal)
@@ -204,7 +204,7 @@ func TestSessionLockInterceptor_DifferentCampaigns_NotBlocked(t *testing.T) {
 	interceptor := SessionLockInterceptor(sessionStore)
 	info := serverInfo(statev1.ParticipantService_CreateParticipant_FullMethodName)
 	// Request for campaign c2 (no active session)
-	req := &statev1.CreateParticipantRequest{CampaignId: "c2", DisplayName: "Test"}
+	req := &statev1.CreateParticipantRequest{CampaignId: "c2", Name: "Test"}
 
 	resp, err := interceptor(context.Background(), req, info, fakeHandler)
 	if err != nil {

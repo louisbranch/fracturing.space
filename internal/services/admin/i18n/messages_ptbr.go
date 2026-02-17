@@ -206,7 +206,7 @@ func init() {
 		"tab.timeline":                              "Linha do tempo",
 		"participants.heading":                      "Participantes",
 		"participants.loading":                      "Carregando participantes...",
-		"participants.table.display_name":           "Nome exibido",
+		"participants.table.name":                   "Nome",
 		"participants.table.role":                   "Função",
 		"participants.table.access":                 "Acesso",
 		"participants.table.controller":             "Controlador",

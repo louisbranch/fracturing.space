@@ -40,7 +40,7 @@ func (q *Queries) GetParticipant(ctx context.Context, arg GetParticipantParams) 
 		&i.CampaignID,
 		&i.ID,
 		&i.UserID,
-		&i.DisplayName,
+		&i.Name,
 		&i.Role,
 		&i.Controller,
 		&i.CampaignAccess,
@@ -69,7 +69,7 @@ func (q *Queries) ListParticipantsByCampaign(ctx context.Context, campaignID str
 			&i.CampaignID,
 			&i.ID,
 			&i.UserID,
-			&i.DisplayName,
+			&i.Name,
 			&i.Role,
 			&i.Controller,
 			&i.CampaignAccess,
@@ -115,7 +115,7 @@ func (q *Queries) ListParticipantsByCampaignPaged(ctx context.Context, arg ListP
 			&i.CampaignID,
 			&i.ID,
 			&i.UserID,
-			&i.DisplayName,
+			&i.Name,
 			&i.Role,
 			&i.Controller,
 			&i.CampaignAccess,
@@ -160,7 +160,7 @@ func (q *Queries) ListParticipantsByCampaignPagedFirst(ctx context.Context, arg 
 			&i.CampaignID,
 			&i.ID,
 			&i.UserID,
-			&i.DisplayName,
+			&i.Name,
 			&i.Role,
 			&i.Controller,
 			&i.CampaignAccess,
@@ -197,7 +197,7 @@ type PutParticipantParams struct {
 	CampaignID     string `json:"campaign_id"`
 	ID             string `json:"id"`
 	UserID         string `json:"user_id"`
-	DisplayName    string `json:"display_name"`
+	Name           string `json:"name"`
 	Role           string `json:"role"`
 	Controller     string `json:"controller"`
 	CampaignAccess string `json:"campaign_access"`
@@ -210,7 +210,7 @@ func (q *Queries) PutParticipant(ctx context.Context, arg PutParticipantParams) 
 		arg.CampaignID,
 		arg.ID,
 		arg.UserID,
-		arg.DisplayName,
+		arg.Name,
 		arg.Role,
 		arg.Controller,
 		arg.CampaignAccess,

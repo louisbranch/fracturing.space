@@ -323,15 +323,15 @@ func TestParticipantCreateHandler(t *testing.T) {
 		}
 		handler := ParticipantCreateHandler(client, nil, nil)
 		_, result, err := handler(context.Background(), nil, ParticipantCreateInput{
-			CampaignID:  "c1",
-			DisplayName: "Alice",
-			Role:        "PLAYER",
+			CampaignID: "c1",
+			Name:       "Alice",
+			Role:       "PLAYER",
 		})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if result.DisplayName != "Alice" {
-			t.Errorf("expected display name %q, got %q", "Alice", result.DisplayName)
+		if result.Name != "Alice" {
+			t.Errorf("expected display name %q, got %q", "Alice", result.Name)
 		}
 	})
 
@@ -340,7 +340,7 @@ func TestParticipantCreateHandler(t *testing.T) {
 			createErr: fmt.Errorf("connection refused"),
 		}
 		handler := ParticipantCreateHandler(client, nil, nil)
-		_, _, err := handler(context.Background(), nil, ParticipantCreateInput{CampaignID: "c1", DisplayName: "X", Role: "GM"})
+		_, _, err := handler(context.Background(), nil, ParticipantCreateInput{CampaignID: "c1", Name: "X", Role: "GM"})
 		if err == nil {
 			t.Fatal("expected error")
 		}
@@ -351,7 +351,7 @@ func TestParticipantCreateHandler(t *testing.T) {
 			createResp: &statev1.CreateParticipantResponse{},
 		}
 		handler := ParticipantCreateHandler(client, nil, nil)
-		_, _, err := handler(context.Background(), nil, ParticipantCreateInput{CampaignID: "c1", DisplayName: "X", Role: "GM"})
+		_, _, err := handler(context.Background(), nil, ParticipantCreateInput{CampaignID: "c1", Name: "X", Role: "GM"})
 		if err == nil {
 			t.Fatal("expected error for nil participant in response")
 		}
@@ -365,7 +365,7 @@ func TestParticipantCreateHandler(t *testing.T) {
 		}
 		handler := ParticipantCreateHandler(client, nil, nil)
 		_, _, err := handler(context.Background(), nil, ParticipantCreateInput{
-			CampaignID: "c1", DisplayName: "Bot", Role: "PLAYER", Controller: "AI",
+			CampaignID: "c1", Name: "Bot", Role: "PLAYER", Controller: "AI",
 		})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -385,20 +385,20 @@ func TestParticipantUpdateHandler(t *testing.T) {
 		_, result, err := handler(context.Background(), nil, ParticipantUpdateInput{
 			CampaignID:    "c1",
 			ParticipantID: "p1",
-			DisplayName:   &name,
+			Name:          &name,
 		})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if result.DisplayName != "Bob" {
-			t.Errorf("expected %q, got %q", "Bob", result.DisplayName)
+		if result.Name != "Bob" {
+			t.Errorf("expected %q, got %q", "Bob", result.Name)
 		}
 	})
 
 	t.Run("missing campaign_id", func(t *testing.T) {
 		name := "X"
 		handler := ParticipantUpdateHandler(&fakeParticipantClient{}, nil, nil)
-		_, _, err := handler(context.Background(), nil, ParticipantUpdateInput{ParticipantID: "p1", DisplayName: &name})
+		_, _, err := handler(context.Background(), nil, ParticipantUpdateInput{ParticipantID: "p1", Name: &name})
 		if err == nil {
 			t.Fatal("expected error")
 		}
@@ -407,7 +407,7 @@ func TestParticipantUpdateHandler(t *testing.T) {
 	t.Run("missing participant_id", func(t *testing.T) {
 		name := "X"
 		handler := ParticipantUpdateHandler(&fakeParticipantClient{}, nil, nil)
-		_, _, err := handler(context.Background(), nil, ParticipantUpdateInput{CampaignID: "c1", DisplayName: &name})
+		_, _, err := handler(context.Background(), nil, ParticipantUpdateInput{CampaignID: "c1", Name: &name})
 		if err == nil {
 			t.Fatal("expected error")
 		}
@@ -1115,7 +1115,7 @@ func TestParticipantUpdateHandler_EdgeCases(t *testing.T) {
 		name := "X"
 		client := &fakeParticipantClient{updateErr: fmt.Errorf("error")}
 		handler := ParticipantUpdateHandler(client, nil, nil)
-		_, _, err := handler(context.Background(), nil, ParticipantUpdateInput{CampaignID: "c1", ParticipantID: "p1", DisplayName: &name})
+		_, _, err := handler(context.Background(), nil, ParticipantUpdateInput{CampaignID: "c1", ParticipantID: "p1", Name: &name})
 		if err == nil {
 			t.Fatal("expected error")
 		}
@@ -1125,7 +1125,7 @@ func TestParticipantUpdateHandler_EdgeCases(t *testing.T) {
 		name := "X"
 		client := &fakeParticipantClient{updateResp: &statev1.UpdateParticipantResponse{}}
 		handler := ParticipantUpdateHandler(client, nil, nil)
-		_, _, err := handler(context.Background(), nil, ParticipantUpdateInput{CampaignID: "c1", ParticipantID: "p1", DisplayName: &name})
+		_, _, err := handler(context.Background(), nil, ParticipantUpdateInput{CampaignID: "c1", ParticipantID: "p1", Name: &name})
 		if err == nil {
 			t.Fatal("expected error for nil participant in response")
 		}

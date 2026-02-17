@@ -43,9 +43,9 @@ func (c participantApplication) CreateParticipant(ctx context.Context, campaignI
 		return storage.ParticipantRecord{}, err
 	}
 
-	displayName := strings.TrimSpace(in.GetDisplayName())
-	if displayName == "" {
-		return storage.ParticipantRecord{}, apperrors.New(apperrors.CodeParticipantEmptyDisplayName, "display name is required")
+	name := strings.TrimSpace(in.GetName())
+	if name == "" {
+		return storage.ParticipantRecord{}, apperrors.New(apperrors.CodeParticipantEmptyDisplayName, "name is required")
 	}
 	role := participantRoleFromProto(in.GetRole())
 	if role == participant.RoleUnspecified {
@@ -70,7 +70,7 @@ func (c participantApplication) CreateParticipant(ctx context.Context, campaignI
 	payload := participant.JoinPayload{
 		ParticipantID:  participantID,
 		UserID:         strings.TrimSpace(in.GetUserId()),
-		DisplayName:    displayName,
+		Name:           name,
 		Role:           string(role),
 		Controller:     string(controller),
 		CampaignAccess: string(access),
@@ -141,13 +141,13 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 	}
 
 	fields := make(map[string]any)
-	if displayName := in.GetDisplayName(); displayName != nil {
-		trimmed := strings.TrimSpace(displayName.GetValue())
+	if name := in.GetName(); name != nil {
+		trimmed := strings.TrimSpace(name.GetValue())
 		if trimmed == "" {
-			return storage.ParticipantRecord{}, status.Error(codes.InvalidArgument, "display_name must not be empty")
+			return storage.ParticipantRecord{}, status.Error(codes.InvalidArgument, "name must not be empty")
 		}
-		current.DisplayName = trimmed
-		fields["display_name"] = trimmed
+		current.Name = trimmed
+		fields["name"] = trimmed
 	}
 	if userID := in.GetUserId(); userID != nil {
 		trimmed := strings.TrimSpace(userID.GetValue())

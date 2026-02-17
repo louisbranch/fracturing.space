@@ -3,7 +3,7 @@ package templates
 // ParticipantRow represents a single row in the participants table.
 type ParticipantRow struct {
 	ID                string
-	DisplayName       string
+	Name              string
 	Role              string
 	RoleVariant       string
 	Access            string

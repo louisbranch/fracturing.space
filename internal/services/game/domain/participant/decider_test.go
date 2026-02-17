@@ -15,7 +15,7 @@ func TestDecideParticipantJoin_EmitsParticipantJoinedEvent(t *testing.T) {
 		CampaignID:  "camp-1",
 		Type:        command.Type("participant.join"),
 		ActorType:   command.ActorTypeSystem,
-		PayloadJSON: []byte(`{"participant_id":"p-1","user_id":" user-1 ","display_name":"  Alice  ","role":"PLAYER","controller":"CONTROLLER_HUMAN","campaign_access":"CAMPAIGN_ACCESS_MEMBER"}`),
+		PayloadJSON: []byte(`{"participant_id":"p-1","user_id":" user-1 ","name":"  Alice  ","role":"PLAYER","controller":"CONTROLLER_HUMAN","campaign_access":"CAMPAIGN_ACCESS_MEMBER"}`),
 	}
 
 	decision := Decide(State{}, cmd, func() time.Time { return now })
@@ -56,8 +56,8 @@ func TestDecideParticipantJoin_EmitsParticipantJoinedEvent(t *testing.T) {
 	if payload.UserID != "user-1" {
 		t.Fatalf("payload user id = %s, want %s", payload.UserID, "user-1")
 	}
-	if payload.DisplayName != "Alice" {
-		t.Fatalf("payload display name = %s, want %s", payload.DisplayName, "Alice")
+	if payload.Name != "Alice" {
+		t.Fatalf("payload display name = %s, want %s", payload.Name, "Alice")
 	}
 	if payload.Role != "player" {
 		t.Fatalf("payload role = %s, want %s", payload.Role, "player")
@@ -75,7 +75,7 @@ func TestDecideParticipantJoin_DefaultsControllerAndAccess(t *testing.T) {
 		CampaignID:  "camp-1",
 		Type:        command.Type("participant.join"),
 		ActorType:   command.ActorTypeSystem,
-		PayloadJSON: []byte(`{"participant_id":"p-1","display_name":"Alice","role":"GM"}`),
+		PayloadJSON: []byte(`{"participant_id":"p-1","name":"Alice","role":"GM"}`),
 	}
 
 	decision := Decide(State{}, cmd, nil)
@@ -103,7 +103,7 @@ func TestDecideParticipantJoin_WhenAlreadyJoined_ReturnsRejection(t *testing.T) 
 		CampaignID:  "camp-1",
 		Type:        command.Type("participant.join"),
 		ActorType:   command.ActorTypeSystem,
-		PayloadJSON: []byte(`{"participant_id":"p-1","display_name":"Alice","role":"PLAYER"}`),
+		PayloadJSON: []byte(`{"participant_id":"p-1","name":"Alice","role":"PLAYER"}`),
 	}
 
 	decision := Decide(State{Joined: true}, cmd, nil)
@@ -123,7 +123,7 @@ func TestDecideParticipantJoin_MissingParticipantID_ReturnsRejection(t *testing.
 		CampaignID:  "camp-1",
 		Type:        command.Type("participant.join"),
 		ActorType:   command.ActorTypeSystem,
-		PayloadJSON: []byte(`{"participant_id":"  ","display_name":"Alice","role":"PLAYER"}`),
+		PayloadJSON: []byte(`{"participant_id":"  ","name":"Alice","role":"PLAYER"}`),
 	}
 
 	decision := Decide(State{}, cmd, nil)
@@ -138,12 +138,12 @@ func TestDecideParticipantJoin_MissingParticipantID_ReturnsRejection(t *testing.
 	}
 }
 
-func TestDecideParticipantJoin_MissingDisplayName_ReturnsRejection(t *testing.T) {
+func TestDecideParticipantJoin_MissingName_ReturnsRejection(t *testing.T) {
 	cmd := command.Command{
 		CampaignID:  "camp-1",
 		Type:        command.Type("participant.join"),
 		ActorType:   command.ActorTypeSystem,
-		PayloadJSON: []byte(`{"participant_id":"p-1","display_name":"  ","role":"PLAYER"}`),
+		PayloadJSON: []byte(`{"participant_id":"p-1","name":"  ","role":"PLAYER"}`),
 	}
 
 	decision := Decide(State{}, cmd, nil)
@@ -153,8 +153,8 @@ func TestDecideParticipantJoin_MissingDisplayName_ReturnsRejection(t *testing.T)
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
-	if decision.Rejections[0].Code != rejectionCodeParticipantDisplayNameEmpty {
-		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeParticipantDisplayNameEmpty)
+	if decision.Rejections[0].Code != rejectionCodeParticipantNameEmpty {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeParticipantNameEmpty)
 	}
 }
 
@@ -163,7 +163,7 @@ func TestDecideParticipantJoin_InvalidRole_ReturnsRejection(t *testing.T) {
 		CampaignID:  "camp-1",
 		Type:        command.Type("participant.join"),
 		ActorType:   command.ActorTypeSystem,
-		PayloadJSON: []byte(`{"participant_id":"p-1","display_name":"Alice","role":"ALIEN"}`),
+		PayloadJSON: []byte(`{"participant_id":"p-1","name":"Alice","role":"ALIEN"}`),
 	}
 
 	decision := Decide(State{}, cmd, nil)
@@ -183,7 +183,7 @@ func TestDecideParticipantJoin_InvalidController_ReturnsRejection(t *testing.T) 
 		CampaignID:  "camp-1",
 		Type:        command.Type("participant.join"),
 		ActorType:   command.ActorTypeSystem,
-		PayloadJSON: []byte(`{"participant_id":"p-1","display_name":"Alice","role":"PLAYER","controller":"ALIEN"}`),
+		PayloadJSON: []byte(`{"participant_id":"p-1","name":"Alice","role":"PLAYER","controller":"ALIEN"}`),
 	}
 
 	decision := Decide(State{}, cmd, nil)
@@ -203,7 +203,7 @@ func TestDecideParticipantJoin_InvalidAccess_ReturnsRejection(t *testing.T) {
 		CampaignID:  "camp-1",
 		Type:        command.Type("participant.join"),
 		ActorType:   command.ActorTypeSystem,
-		PayloadJSON: []byte(`{"participant_id":"p-1","display_name":"Alice","role":"PLAYER","campaign_access":"ALIEN"}`),
+		PayloadJSON: []byte(`{"participant_id":"p-1","name":"Alice","role":"PLAYER","campaign_access":"ALIEN"}`),
 	}
 
 	decision := Decide(State{}, cmd, nil)
@@ -224,7 +224,7 @@ func TestDecideParticipantUpdate_EmitsParticipantUpdatedEvent(t *testing.T) {
 		CampaignID:  "camp-1",
 		Type:        command.Type("participant.update"),
 		ActorType:   command.ActorTypeSystem,
-		PayloadJSON: []byte(`{"participant_id":"p-1","fields":{"user_id":" user-1 ","display_name":"  Alice  ","role":"ROLE_PLAYER","controller":"CONTROLLER_HUMAN","campaign_access":"CAMPAIGN_ACCESS_MEMBER"}}`),
+		PayloadJSON: []byte(`{"participant_id":"p-1","fields":{"user_id":" user-1 ","name":"  Alice  ","role":"ROLE_PLAYER","controller":"CONTROLLER_HUMAN","campaign_access":"CAMPAIGN_ACCESS_MEMBER"}}`),
 	}
 
 	decision := Decide(State{Joined: true}, cmd, func() time.Time { return now })
@@ -256,8 +256,8 @@ func TestDecideParticipantUpdate_EmitsParticipantUpdatedEvent(t *testing.T) {
 	if payload.Fields["user_id"] != "user-1" {
 		t.Fatalf("payload user id = %s, want %s", payload.Fields["user_id"], "user-1")
 	}
-	if payload.Fields["display_name"] != "Alice" {
-		t.Fatalf("payload display name = %s, want %s", payload.Fields["display_name"], "Alice")
+	if payload.Fields["name"] != "Alice" {
+		t.Fatalf("payload display name = %s, want %s", payload.Fields["name"], "Alice")
 	}
 	if payload.Fields["role"] != "player" {
 		t.Fatalf("payload role = %s, want %s", payload.Fields["role"], "player")
@@ -315,7 +315,7 @@ func TestDecideParticipantUpdate_WhenNotJoinedRejected(t *testing.T) {
 		CampaignID:  "camp-1",
 		Type:        command.Type("participant.update"),
 		ActorType:   command.ActorTypeSystem,
-		PayloadJSON: []byte(`{"participant_id":"p-1","fields":{"display_name":"Alice"}}`),
+		PayloadJSON: []byte(`{"participant_id":"p-1","fields":{"name":"Alice"}}`),
 	}
 
 	decision := Decide(State{}, cmd, nil)

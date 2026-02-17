@@ -19,7 +19,7 @@ func TestRegisterCommands_ValidatesJoinPayload(t *testing.T) {
 		CampaignID:  "camp-1",
 		Type:        command.Type("participant.join"),
 		ActorType:   command.ActorTypeSystem,
-		PayloadJSON: []byte(`{"participant_id":"p-1","display_name":"Alice","role":"PLAYER"}`),
+		PayloadJSON: []byte(`{"participant_id":"p-1","name":"Alice","role":"PLAYER"}`),
 	}
 	if _, err := registry.ValidateForDecision(validCommand); err != nil {
 		t.Fatalf("valid command rejected: %v", err)
@@ -29,7 +29,7 @@ func TestRegisterCommands_ValidatesJoinPayload(t *testing.T) {
 		CampaignID:  "camp-1",
 		Type:        command.Type("participant.join"),
 		ActorType:   command.ActorTypeSystem,
-		PayloadJSON: []byte(`{"participant_id":1,"display_name":"Alice","role":"PLAYER"}`),
+		PayloadJSON: []byte(`{"participant_id":1,"name":"Alice","role":"PLAYER"}`),
 	}
 	_, err := registry.ValidateForDecision(invalidCommand)
 	if err == nil {
@@ -53,14 +53,14 @@ func TestRegisterEvents_ValidatesJoinedPayload(t *testing.T) {
 		ActorType:   event.ActorTypeSystem,
 		EntityType:  "participant",
 		EntityID:    "p-1",
-		PayloadJSON: []byte(`{"participant_id":"p-1","display_name":"Alice","role":"PLAYER"}`),
+		PayloadJSON: []byte(`{"participant_id":"p-1","name":"Alice","role":"PLAYER"}`),
 	}
 	if _, err := registry.ValidateForAppend(validEvent); err != nil {
 		t.Fatalf("valid event rejected: %v", err)
 	}
 
 	invalidEvent := validEvent
-	invalidEvent.PayloadJSON = []byte(`{"participant_id":1,"display_name":"Alice","role":"PLAYER"}`)
+	invalidEvent.PayloadJSON = []byte(`{"participant_id":1,"name":"Alice","role":"PLAYER"}`)
 	_, err := registry.ValidateForAppend(invalidEvent)
 	if err == nil {
 		t.Fatal("expected error")
@@ -81,7 +81,7 @@ func TestRegisterEvents_JoinedRequiresEntityTargetAddressing(t *testing.T) {
 		Type:        event.Type("participant.joined"),
 		Timestamp:   time.Unix(0, 0).UTC(),
 		ActorType:   event.ActorTypeSystem,
-		PayloadJSON: []byte(`{"participant_id":"p-1","display_name":"Alice","role":"PLAYER"}`),
+		PayloadJSON: []byte(`{"participant_id":"p-1","name":"Alice","role":"PLAYER"}`),
 	}
 
 	_, err := registry.ValidateForAppend(base)
@@ -119,7 +119,7 @@ func TestRegisterCommands_ValidatesUpdatePayload(t *testing.T) {
 		CampaignID:  "camp-1",
 		Type:        command.Type("participant.update"),
 		ActorType:   command.ActorTypeSystem,
-		PayloadJSON: []byte(`{"participant_id":"p-1","fields":{"display_name":"Alice"}}`),
+		PayloadJSON: []byte(`{"participant_id":"p-1","fields":{"name":"Alice"}}`),
 	}
 	if _, err := registry.ValidateForDecision(validCommand); err != nil {
 		t.Fatalf("valid command rejected: %v", err)
@@ -129,7 +129,7 @@ func TestRegisterCommands_ValidatesUpdatePayload(t *testing.T) {
 		CampaignID:  "camp-1",
 		Type:        command.Type("participant.update"),
 		ActorType:   command.ActorTypeSystem,
-		PayloadJSON: []byte(`{"participant_id":"p-1","fields":{"display_name":1}}`),
+		PayloadJSON: []byte(`{"participant_id":"p-1","fields":{"name":1}}`),
 	}
 	_, err := registry.ValidateForDecision(invalidCommand)
 	if err == nil {
@@ -153,14 +153,14 @@ func TestRegisterEvents_ValidatesUpdatedPayload(t *testing.T) {
 		ActorType:   event.ActorTypeSystem,
 		EntityType:  "participant",
 		EntityID:    "p-1",
-		PayloadJSON: []byte(`{"participant_id":"p-1","fields":{"display_name":"Alice"}}`),
+		PayloadJSON: []byte(`{"participant_id":"p-1","fields":{"name":"Alice"}}`),
 	}
 	if _, err := registry.ValidateForAppend(validEvent); err != nil {
 		t.Fatalf("valid event rejected: %v", err)
 	}
 
 	invalidEvent := validEvent
-	invalidEvent.PayloadJSON = []byte(`{"participant_id":"p-1","fields":{"display_name":1}}`)
+	invalidEvent.PayloadJSON = []byte(`{"participant_id":"p-1","fields":{"name":1}}`)
 	_, err := registry.ValidateForAppend(invalidEvent)
 	if err == nil {
 		t.Fatal("expected error")

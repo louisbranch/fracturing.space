@@ -125,7 +125,7 @@ func TestCreateCampaign_Success(t *testing.T) {
 					ActorType:   event.ActorTypeSystem,
 					EntityType:  "participant",
 					EntityID:    "participant-123",
-					PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"user-123","display_name":"creator","role":"GM","controller":"HUMAN","campaign_access":"OWNER"}`),
+					PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"user-123","name":"creator","role":"GM","controller":"HUMAN","campaign_access":"OWNER"}`),
 				}),
 			},
 		},
@@ -223,7 +223,7 @@ func TestCreateCampaign_UsesDomainEngine(t *testing.T) {
 					ActorType:   event.ActorTypeSystem,
 					EntityType:  "participant",
 					EntityID:    "participant-123",
-					PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"user-123","display_name":"Owner","role":"GM","controller":"HUMAN","campaign_access":"OWNER"}`),
+					PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"user-123","name":"Owner","role":"GM","controller":"HUMAN","campaign_access":"OWNER"}`),
 				}),
 			},
 		},
@@ -353,10 +353,10 @@ func TestListCampaigns_UserScopedByMetadata(t *testing.T) {
 		CreatedAt: now,
 	}
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
-		"p1": {ID: "p1", CampaignID: "c1", UserID: "user-123", DisplayName: "Alice"},
+		"p1": {ID: "p1", CampaignID: "c1", UserID: "user-123", Name: "Alice"},
 	}
 	participantStore.participants["c2"] = map[string]storage.ParticipantRecord{
-		"p2": {ID: "p2", CampaignID: "c2", UserID: "user-999", DisplayName: "Bob"},
+		"p2": {ID: "p2", CampaignID: "c2", UserID: "user-999", Name: "Bob"},
 	}
 
 	svc := NewCampaignService(Stores{Campaign: campaignStore, Participant: participantStore})

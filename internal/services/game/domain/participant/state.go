@@ -13,8 +13,8 @@ type State struct {
 	ParticipantID string
 	// UserID links participant records to external authentication identities.
 	UserID string
-	// DisplayName is shown across campaign/session UI and projection outputs.
-	DisplayName string
+	// Name is shown across campaign/session UI and projection outputs.
+	Name string
 	// Role is the campaign role used for authorization decisions.
 	Role string
 	// Controller indicates who can command actions for this participant.

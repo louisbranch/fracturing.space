@@ -122,7 +122,7 @@ type chatMessage struct {
 
 type messageActor struct {
 	ParticipantID string `json:"participant_id"`
-	DisplayName   string `json:"display_name"`
+	Name          string `json:"name"`
 }
 
 type ackEnvelope struct {
@@ -276,7 +276,7 @@ func (r *campaignRoom) appendMessage(actorID string, body string, clientMessageI
 		Kind:       "text",
 		Actor: messageActor{
 			ParticipantID: actorID,
-			DisplayName:   actorID,
+			Name:          actorID,
 		},
 		Body:            body,
 		ClientMessageID: clientMessageID,
@@ -461,8 +461,8 @@ func (a *campaignAuthorizer) ResolveJoinWelcome(ctx context.Context, campaignID 
 	}
 
 	participantName := userID
-	if strings.TrimSpace(participant.GetDisplayName()) != "" {
-		participantName = strings.TrimSpace(participant.GetDisplayName())
+	if strings.TrimSpace(participant.GetName()) != "" {
+		participantName = strings.TrimSpace(participant.GetName())
 	}
 
 	campaignName := campaignID
@@ -783,7 +783,7 @@ func handleJoinFrame(ctx context.Context, session *wsSession, hub *roomHub, auth
 				Kind:       "system",
 				Actor: messageActor{
 					ParticipantID: "system",
-					DisplayName:   localizedSystemLabel(welcome.Locale),
+					Name:          localizedSystemLabel(welcome.Locale),
 				},
 				Body: localizedJoinWelcomeBody(welcome),
 			},
