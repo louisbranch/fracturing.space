@@ -798,9 +798,9 @@ func (h *Handler) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	name := strings.TrimSpace(r.FormValue("username"))
-	if name == "" {
-		view.Message = loc.Sprintf("error.user_username_required")
+	primaryEmail := strings.TrimSpace(r.FormValue("email"))
+	if primaryEmail == "" {
+		view.Message = loc.Sprintf("error.user_primary_email_required")
 		templ.Handler(templates.UsersFullPage(view, pageCtx)).ServeHTTP(w, r)
 		return
 	}
@@ -817,8 +817,8 @@ func (h *Handler) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 
 	locale := localeFromTag(lang)
 	response, err := client.CreateUser(ctx, &authv1.CreateUserRequest{
-		Username: name,
-		Locale:   locale,
+		PrimaryEmail: primaryEmail,
+		Locale:       locale,
 	})
 	if err != nil || response.GetUser() == nil {
 		log.Printf("create user: %v", err)
@@ -968,7 +968,7 @@ func (h *Handler) handleImpersonateUser(w http.ResponseWriter, r *http.Request) 
 	if h.impersonation != nil {
 		h.impersonation.Set(sessionID, impersonationSession{
 			userID: user.GetId(),
-			name:   user.GetUsername(),
+			name:   user.GetPrimaryEmail(),
 		})
 	}
 
@@ -984,13 +984,13 @@ func (h *Handler) handleImpersonateUser(w http.ResponseWriter, r *http.Request) 
 	view.Detail = buildUserDetail(user)
 	view.Impersonation = &templates.ImpersonationView{
 		UserID: user.GetId(),
-		Name:   user.GetUsername(),
+		Name:   user.GetPrimaryEmail(),
 	}
 	invitesCtx, invitesCancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
 	defer invitesCancel()
 	h.populateUserInvitesIfImpersonating(invitesCtx, view.Detail, view.Impersonation, loc)
 	pageCtx.Impersonation = view.Impersonation
-	label := strings.TrimSpace(user.GetUsername())
+	label := strings.TrimSpace(user.GetPrimaryEmail())
 	if label == "" {
 		label = user.GetId()
 	}
@@ -2255,10 +2255,10 @@ func buildUserRows(users []*authv1.User) []templates.UserRow {
 			continue
 		}
 		rows = append(rows, templates.UserRow{
-			ID:        u.GetId(),
-			Username:  u.GetUsername(),
-			CreatedAt: formatTimestamp(u.GetCreatedAt()),
-			UpdatedAt: formatTimestamp(u.GetUpdatedAt()),
+			ID:           u.GetId(),
+			PrimaryEmail: u.GetPrimaryEmail(),
+			CreatedAt:    formatTimestamp(u.GetCreatedAt()),
+			UpdatedAt:    formatTimestamp(u.GetUpdatedAt()),
 		})
 	}
 	return rows
@@ -2877,10 +2877,10 @@ func buildUserDetail(u *authv1.User) *templates.UserDetail {
 		return nil
 	}
 	return &templates.UserDetail{
-		ID:        u.GetId(),
-		Username:  u.GetUsername(),
-		CreatedAt: formatTimestamp(u.GetCreatedAt()),
-		UpdatedAt: formatTimestamp(u.GetUpdatedAt()),
+		ID:           u.GetId(),
+		PrimaryEmail: u.GetPrimaryEmail(),
+		CreatedAt:    formatTimestamp(u.GetCreatedAt()),
+		UpdatedAt:    formatTimestamp(u.GetUpdatedAt()),
 	}
 }
 
@@ -3778,7 +3778,7 @@ func (h *Handler) handleInvitesTable(w http.ResponseWriter, r *http.Request, cam
 				continue
 			}
 			if user := userResp.GetUser(); user != nil {
-				recipientNames[recipientID] = user.GetUsername()
+				recipientNames[recipientID] = user.GetPrimaryEmail()
 			}
 		}
 	}

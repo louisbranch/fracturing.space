@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"net/mail"
 	"testing"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
@@ -35,12 +36,12 @@ func (s *sequenceSource) Seed(seed int64) {
 	s.index = 0
 }
 
-func TestGenerator_UniqueUserNames(t *testing.T) {
-	var usernames []string
+func TestGenerator_UniqueUserDisplayNames(t *testing.T) {
+	var emails []string
 	auth := &fakeAuthProvider{
 		createUser: func(_ context.Context, in *authv1.CreateUserRequest, _ ...grpc.CallOption) (*authv1.CreateUserResponse, error) {
-			usernames = append(usernames, in.GetUsername())
-			return &authv1.CreateUserResponse{User: &authv1.User{Id: fmt.Sprintf("user-%d", len(usernames))}}, nil
+			emails = append(emails, in.GetPrimaryEmail())
+			return &authv1.CreateUserResponse{User: &authv1.User{Id: fmt.Sprintf("user-%d", len(emails))}}, nil
 		},
 		issueJoinGrant: func(context.Context, *authv1.IssueJoinGrantRequest, ...grpc.CallOption) (*authv1.IssueJoinGrantResponse, error) {
 			return &authv1.IssueJoinGrantResponse{JoinGrant: "grant"}, nil
@@ -87,14 +88,17 @@ func TestGenerator_UniqueUserNames(t *testing.T) {
 		t.Fatalf("unexpected participant error: %v", err)
 	}
 
-	if len(usernames) < 3 {
-		t.Fatalf("expected at least 3 users created, got %d", len(usernames))
+	if len(emails) < 3 {
+		t.Fatalf("expected at least 3 users created, got %d", len(emails))
 	}
 	seen := make(map[string]struct{})
-	for _, name := range usernames {
-		if _, ok := seen[name]; ok {
-			t.Fatalf("expected unique CreateUser usernames, got duplicate %q", name)
+	for _, email := range emails {
+		if _, ok := seen[email]; ok {
+			t.Fatalf("expected unique CreateUser emails, got duplicate %q", email)
 		}
-		seen[name] = struct{}{}
+		if _, err := mail.ParseAddress(email); err != nil {
+			t.Fatalf("expected %q to be a valid email, got parse error: %v", email, err)
+		}
+		seen[email] = struct{}{}
 	}
 }

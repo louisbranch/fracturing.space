@@ -13,8 +13,8 @@ const (
 	CodeParticipantInvalidRole          = "PARTICIPANT_INVALID_ROLE"
 	CodeParticipantEmptyCampaignID      = "PARTICIPANT_EMPTY_CAMPAIGN_ID"
 	CodeParticipantUserAlreadyClaimed   = "PARTICIPANT_USER_ALREADY_CLAIMED"
-	CodeUserEmptyUsername               = "USER_EMPTY_USERNAME"
-	CodeUserInvalidUsername             = "USER_INVALID_USERNAME"
+	CodeUserEmptyPrimaryEmail           = "USER_EMPTY_PRIMARY_EMAIL"
+	CodeUserInvalidPrimaryEmail         = "USER_INVALID_PRIMARY_EMAIL"
 	CodeInviteEmptyCampaignID           = "INVITE_EMPTY_CAMPAIGN_ID"
 	CodeInviteEmptyParticipantID        = "INVITE_EMPTY_PARTICIPANT_ID"
 	CodeInviteRecipientUserMissing      = "INVITE_RECIPIENT_USER_MISSING"
@@ -79,8 +79,8 @@ var enUSCatalog = &Catalog{
 		CodeParticipantUserAlreadyClaimed: "User is already assigned to a participant in this campaign",
 
 		// User errors
-		CodeUserEmptyUsername:   "Username cannot be empty",
-		CodeUserInvalidUsername: "Username must be 3-32 lowercase alphanumeric, dot, dash, or underscore characters",
+		CodeUserEmptyPrimaryEmail:   "Primary email cannot be empty",
+		CodeUserInvalidPrimaryEmail: "Primary email must be a valid email address",
 
 		// Invite errors
 		CodeInviteEmptyCampaignID:      "Campaign ID is required for invite",

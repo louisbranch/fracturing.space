@@ -32,8 +32,8 @@ templ LoginPage(params LoginParams) {
 						<div id="register-success" class="alert alert-success mt-4" hidden></div>
 						<form class="grid gap-4 mt-4" id="register-form">
 							<label class="form-control w-full">
-								<div class="label"><span class="label-text">{ T(params.Loc, "login.username") }</span></div>
-								<input type="text" id="username" name="username" autocomplete="username" required class="input input-bordered w-full"/>
+								<div class="label"><span class="label-text">{ T(params.Loc, "login.email") }</span></div>
+								<input type="email" id="email" name="email" autocomplete="email" required class="input input-bordered w-full"/>
 							</label>
 							<button type="button" class="btn btn-primary" id="passkey-register" data-pending-id={ params.PendingID }>{ T(params.Loc, "login.create_passkey") }</button>
 						</form>
@@ -48,7 +48,7 @@ templ LoginPage(params LoginParams) {
 			hidden
 			data-missing-session={ T(params.Loc, "login.js.missing_session") }
 			data-passkey-failed={ T(params.Loc, "login.js.passkey_failed") }
-			data-username-required={ T(params.Loc, "login.js.username_required") }
+			data-email-required={ T(params.Loc, "login.js.email_required") }
 			data-passkey-created={ T(params.Loc, "login.js.passkey_created") }
 			data-register-failed={ T(params.Loc, "login.js.register_failed") }
 			data-login-start-error={ T(params.Loc, "login.js.login_start_error") }
@@ -69,7 +69,7 @@ templ loginScript() {
 		const passkeyButton = document.getElementById("passkey-login");
 		const passkeyError = document.getElementById("passkey-error");
 		const registerButton = document.getElementById("passkey-register");
-		const registerName = document.getElementById("username");
+		const registerEmail = document.getElementById("email");
 		const registerError = document.getElementById("register-error");
 		const registerSuccess = document.getElementById("register-success");
 
@@ -184,12 +184,12 @@ templ loginScript() {
 			return response.json();
 		}
 
-		async function startPasskeyRegister(displayName, pendingId) {
+		async function startPasskeyRegister(email, pendingId) {
 			const response = await fetch("/passkeys/register/start", {
 				method: "POST",
 				headers: {"Content-Type": "application/json"},
 				body: JSON.stringify({
-					username: displayName,
+					email,
 					pending_id: pendingId,
 				}),
 			});
@@ -244,17 +244,17 @@ templ loginScript() {
 		}
 
 		if (registerButton && window.PublicKeyCredential) {
-			registerButton.addEventListener("click", async () => {
+				registerButton.addEventListener("click", async () => {
 				registerError.hidden = true;
 				registerSuccess.hidden = true;
 				const pendingId = registerButton.dataset.pendingId || "";
-				const displayName = registerName ? registerName.value.trim() : "";
-				if (!displayName) {
-					showRegisterError(i18n.usernameRequired || "Username is required.");
+				const email = registerEmail ? registerEmail.value.trim() : "";
+				if (!email) {
+					showRegisterError(i18n.emailRequired || "Email is required.");
 					return;
 				}
 				try {
-					const start = await startPasskeyRegister(displayName, pendingId);
+					const start = await startPasskeyRegister(email, pendingId);
 					const publicKey = normalizeCreationOptions(start.public_key.publicKey);
 					const credential = await navigator.credentials.create({publicKey});
 					const credentialJSON = credentialToJSON(credential);

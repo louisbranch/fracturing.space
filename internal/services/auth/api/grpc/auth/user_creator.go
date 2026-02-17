@@ -36,8 +36,8 @@ func (c userCreator) create(ctx context.Context, in *authv1.CreateUserRequest) (
 	}
 
 	created, err := user.CreateUser(user.CreateUserInput{
-		Username: in.GetUsername(),
-		Locale:   in.GetLocale(),
+		PrimaryEmail: in.GetPrimaryEmail(),
+		Locale:       in.GetLocale(),
 	}, c.clock, c.idGenerator)
 	if err != nil {
 		return user.User{}, err

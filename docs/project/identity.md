@@ -10,8 +10,9 @@ This document captures the identity model and recovery flows for authentication.
 
 ## Identity Model
 
-- **User**: Core identity record. A user is not defined by an email address.
-- **Email**: Optional contact record linked to a user. Users can have zero or more emails.
+- **User**: Core identity record. A user is defined by a primary email.
+- **Primary email**: Canonical identity value used across auth, admin, and game surfaces.
+- **Additional emails**: Planned as a future extension, but out of scope for this change.
 - **Passkey**: Primary authentication credential. Users can register multiple passkeys.
 
 ## Recovery Model
@@ -35,5 +36,5 @@ This document captures the identity model and recovery flows for authentication.
 
 ## Notes
 
-- Emails are decoupled from user identity to support multiple emails or email-less accounts.
-- Magic links are a recovery mechanism, not the primary authentication method.
+- Primary email is the canonical identity during this release.
+- Additional email support is planned but out of scope.

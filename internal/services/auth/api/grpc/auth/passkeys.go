@@ -300,7 +300,7 @@ func (u *passkeyUser) WebAuthnName() string {
 }
 
 func (u *passkeyUser) WebAuthnDisplayName() string {
-	return u.user.Username
+	return u.user.PrimaryEmail
 }
 
 func (u *passkeyUser) WebAuthnIcon() string {

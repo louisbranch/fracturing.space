@@ -1358,7 +1358,7 @@ func TestCampaignCreateImpersonationOverridesUserID(t *testing.T) {
 }
 
 func TestImpersonationFlow(t *testing.T) {
-	user := &authv1.User{Id: "user-1", Username: "Test User"}
+	user := &authv1.User{Id: "user-1", PrimaryEmail: "Test User"}
 	authClient := &testAuthClient{user: user}
 	provider := testClientProvider{auth: authClient}
 	webHandler := &Handler{clientProvider: provider, impersonation: newImpersonationStore()}
@@ -1448,7 +1448,7 @@ func TestImpersonationFlow(t *testing.T) {
 }
 
 func TestImpersonationMetadataInjection(t *testing.T) {
-	user := &authv1.User{Id: "user-lookup", Username: "Lookup"}
+	user := &authv1.User{Id: "user-lookup", PrimaryEmail: "Lookup"}
 	authClient := &testAuthClient{user: user}
 	provider := testClientProvider{auth: authClient}
 	webHandler := &Handler{clientProvider: provider, impersonation: newImpersonationStore()}
@@ -1469,7 +1469,7 @@ func TestImpersonationMetadataInjection(t *testing.T) {
 }
 
 func TestUserDetailPendingInvitesUsesImpersonationMetadata(t *testing.T) {
-	user := &authv1.User{Id: "user-lookup", Username: "Lookup"}
+	user := &authv1.User{Id: "user-lookup", PrimaryEmail: "Lookup"}
 	authClient := &testAuthClient{user: user}
 	inviteClient := &testInviteClient{}
 	provider := testClientProvider{auth: authClient, invite: inviteClient}
@@ -1783,13 +1783,13 @@ func TestUserLookup(t *testing.T) {
 }
 
 func TestCreateUser(t *testing.T) {
-	authClient := &testAuthClient{user: &authv1.User{Id: "new-user", Username: "Test"}}
+	authClient := &testAuthClient{user: &authv1.User{Id: "new-user", PrimaryEmail: "test@example.com"}}
 	provider := testClientProvider{auth: authClient}
 	webHandler := &Handler{clientProvider: provider, impersonation: newImpersonationStore()}
 	handler := webHandler.routes()
 
 	t.Run("success", func(t *testing.T) {
-		form := url.Values{"username": {"test.user"}}
+		form := url.Values{"email": {"test.user@example.com"}}
 		req := httptest.NewRequest(http.MethodPost, "http://example.com/users/create", strings.NewReader(form.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		req.Header.Set("Origin", "http://example.com")
@@ -1805,8 +1805,8 @@ func TestCreateUser(t *testing.T) {
 		}
 	})
 
-	t.Run("empty display name", func(t *testing.T) {
-		form := url.Values{"username": {""}}
+	t.Run("empty primary email", func(t *testing.T) {
+		form := url.Values{"email": {""}}
 		req := httptest.NewRequest(http.MethodPost, "http://example.com/users/create", strings.NewReader(form.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		req.Header.Set("Origin", "http://example.com")
@@ -1831,7 +1831,7 @@ func TestCreateUser(t *testing.T) {
 	t.Run("nil auth client", func(t *testing.T) {
 		noAuthHandler := &Handler{clientProvider: testClientProvider{}, impersonation: newImpersonationStore()}
 		h := noAuthHandler.routes()
-		form := url.Values{"username": {"test"}}
+		form := url.Values{"email": {"test"}}
 		req := httptest.NewRequest(http.MethodPost, "http://example.com/users/create", strings.NewReader(form.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		req.Header.Set("Origin", "http://example.com")
@@ -1845,7 +1845,7 @@ func TestCreateUser(t *testing.T) {
 }
 
 func TestGenerateMagicLink(t *testing.T) {
-	user := &authv1.User{Id: "user-1", Username: "Test User"}
+	user := &authv1.User{Id: "user-1", PrimaryEmail: "Test User"}
 	authClient := &testAuthClient{
 		user: user,
 		magicLinkResp: &authv1.GenerateMagicLinkResponse{
@@ -1876,7 +1876,7 @@ func TestGenerateMagicLink(t *testing.T) {
 }
 
 func TestUserDetailShowsEmails(t *testing.T) {
-	user := &authv1.User{Id: "user-1", Username: "Test User"}
+	user := &authv1.User{Id: "user-1", PrimaryEmail: "Test User"}
 	authClient := &testAuthClient{
 		user: user,
 		listUserEmailsResp: &authv1.ListUserEmailsResponse{
@@ -2615,15 +2615,15 @@ func TestBuildUserRows(t *testing.T) {
 	})
 
 	t.Run("skips nil", func(t *testing.T) {
-		rows := buildUserRows([]*authv1.User{nil, {Id: "u1", Username: "bob"}})
+		rows := buildUserRows([]*authv1.User{nil, {Id: "u1", PrimaryEmail: "bob"}})
 		if len(rows) != 1 {
 			t.Fatalf("expected 1 row, got %d", len(rows))
 		}
 		if rows[0].ID != "u1" {
 			t.Errorf("ID = %q, want u1", rows[0].ID)
 		}
-		if rows[0].Username != "bob" {
-			t.Errorf("Username = %q, want bob", rows[0].Username)
+		if rows[0].PrimaryEmail != "bob" {
+			t.Errorf("PrimaryEmail = %q, want bob", rows[0].PrimaryEmail)
 		}
 	})
 }
@@ -3127,7 +3127,7 @@ func TestHandleLogout(t *testing.T) {
 
 	t.Run("with user_id loads detail", func(t *testing.T) {
 		authClient := &testAuthClient{
-			user: &authv1.User{Id: "u-1", Username: "Alice"},
+			user: &authv1.User{Id: "u-1", PrimaryEmail: "Alice"},
 		}
 		provider := testFullClientProvider{auth: authClient}
 		webHandler := &Handler{clientProvider: provider, impersonation: newImpersonationStore()}
@@ -3301,7 +3301,7 @@ func TestInvitesTable(t *testing.T) {
 			},
 		}
 		authClient := &testAuthClient{
-			user: &authv1.User{Id: "u-1", Username: "Bob"},
+			user: &authv1.User{Id: "u-1", PrimaryEmail: "Bob"},
 		}
 		provider := testFullClientProvider{
 			invite:      inviteClient,
@@ -3778,7 +3778,7 @@ func TestLoadUserDetail(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		authClient := &testAuthClient{
-			user: &authv1.User{Id: "u-1", Username: "Alice"},
+			user: &authv1.User{Id: "u-1", PrimaryEmail: "Alice"},
 		}
 		provider := testClientProvider{auth: authClient}
 		h := &Handler{clientProvider: provider}
@@ -3884,10 +3884,10 @@ func TestBuildUserDetail(t *testing.T) {
 
 	t.Run("populated", func(t *testing.T) {
 		u := &authv1.User{
-			Id:        "u-1",
-			Username:  "alice",
-			CreatedAt: timestamppb.Now(),
-			UpdatedAt: timestamppb.Now(),
+			Id:           "u-1",
+			PrimaryEmail: "alice",
+			CreatedAt:    timestamppb.Now(),
+			UpdatedAt:    timestamppb.Now(),
 		}
 		detail := buildUserDetail(u)
 		if detail == nil {
@@ -3896,8 +3896,8 @@ func TestBuildUserDetail(t *testing.T) {
 		if detail.ID != "u-1" {
 			t.Errorf("ID = %q, want u-1", detail.ID)
 		}
-		if detail.Username != "alice" {
-			t.Errorf("Username = %q, want alice", detail.Username)
+		if detail.PrimaryEmail != "alice" {
+			t.Errorf("PrimaryEmail = %q, want alice", detail.PrimaryEmail)
 		}
 	})
 }
@@ -4408,8 +4408,8 @@ func TestUsersTableListError(t *testing.T) {
 func TestUsersTableWithUsers(t *testing.T) {
 	authClient := &testAuthClient{
 		users: []*authv1.User{
-			{Id: "user-1", Username: "alice"},
-			{Id: "user-2", Username: "bob"},
+			{Id: "user-1", PrimaryEmail: "alice"},
+			{Id: "user-2", PrimaryEmail: "bob"},
 		},
 	}
 	handler := NewHandler(testClientProvider{auth: authClient})
@@ -4699,7 +4699,7 @@ func TestInvitesTableErrorPaths(t *testing.T) {
 				},
 			},
 		}
-		authClient := &testAuthClient{user: &authv1.User{Id: "user-1", Username: "Alice"}}
+		authClient := &testAuthClient{user: &authv1.User{Id: "user-1", PrimaryEmail: "Alice"}}
 		partClient := &testParticipantClient{
 			participants: []*statev1.Participant{
 				{Id: "part-1", Name: "GM"},
@@ -4798,7 +4798,7 @@ func TestImpersonateUserGetUserError(t *testing.T) {
 
 // TestImpersonateUserSuccessDeletesOldSession verifies old session cleanup.
 func TestImpersonateUserSuccessDeletesOldSession(t *testing.T) {
-	authClient := &testAuthClient{user: &authv1.User{Id: "user-1", Username: "Alice"}}
+	authClient := &testAuthClient{user: &authv1.User{Id: "user-1", PrimaryEmail: "Alice"}}
 	webHandler := &Handler{clientProvider: testClientProvider{auth: authClient}, impersonation: newImpersonationStore()}
 	handler := webHandler.routes()
 
@@ -4892,7 +4892,7 @@ func TestParticipantsTableNilClient(t *testing.T) {
 func TestCreateUserErrorPaths(t *testing.T) {
 	t.Run("nil auth client", func(t *testing.T) {
 		handler := NewHandler(testClientProvider{})
-		form := url.Values{"username": {"alice"}}
+		form := url.Values{"email": {"alice@example.com"}}
 		req := httptest.NewRequest(http.MethodPost, "http://example.com/users/create", strings.NewReader(form.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		req.Header.Set("Origin", "http://example.com")
@@ -4902,9 +4902,9 @@ func TestCreateUserErrorPaths(t *testing.T) {
 		assertContains(t, rec.Body.String(), "User service unavailable")
 	})
 
-	t.Run("empty display name", func(t *testing.T) {
+	t.Run("empty primary email", func(t *testing.T) {
 		handler := NewHandler(testClientProvider{auth: &testAuthClient{}})
-		form := url.Values{"username": {""}}
+		form := url.Values{"email": {""}}
 		req := httptest.NewRequest(http.MethodPost, "http://example.com/users/create", strings.NewReader(form.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		req.Header.Set("Origin", "http://example.com")
@@ -4919,7 +4919,7 @@ func TestCreateUserErrorPaths(t *testing.T) {
 	t.Run("create user RPC error", func(t *testing.T) {
 		authClient := &testAuthClient{createUserErr: fmt.Errorf("deadline exceeded")}
 		handler := NewHandler(testClientProvider{auth: authClient})
-		form := url.Values{"username": {"alice"}}
+		form := url.Values{"email": {"alice@example.com"}}
 		req := httptest.NewRequest(http.MethodPost, "http://example.com/users/create", strings.NewReader(form.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		req.Header.Set("Origin", "http://example.com")
@@ -4930,9 +4930,9 @@ func TestCreateUserErrorPaths(t *testing.T) {
 	})
 
 	t.Run("success htmx redirect", func(t *testing.T) {
-		authClient := &testAuthClient{user: &authv1.User{Id: "new-user", Username: "Alice"}}
+		authClient := &testAuthClient{user: &authv1.User{Id: "new-user", PrimaryEmail: "alice@example.com"}}
 		handler := NewHandler(testClientProvider{auth: authClient})
-		form := url.Values{"username": {"alice"}}
+		form := url.Values{"email": {"alice@example.com"}}
 		req := httptest.NewRequest(http.MethodPost, "http://example.com/users/create", strings.NewReader(form.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		req.Header.Set("Origin", "http://example.com")
@@ -5132,7 +5132,7 @@ func TestScenarioEventsTablePushURL(t *testing.T) {
 
 // TestUserDetailWithMessage verifies the message query parameter in user detail.
 func TestUserDetailWithMessage(t *testing.T) {
-	authClient := &testAuthClient{user: &authv1.User{Id: "user-1", Username: "Alice"}}
+	authClient := &testAuthClient{user: &authv1.User{Id: "user-1", PrimaryEmail: "Alice"}}
 	webHandler := &Handler{clientProvider: testClientProvider{auth: authClient}, impersonation: newImpersonationStore()}
 	handler := webHandler.routes()
 
@@ -5211,7 +5211,7 @@ func TestGenerateMagicLinkNilAuthClient(t *testing.T) {
 
 func TestGenerateMagicLinkGRPCError(t *testing.T) {
 	authClient := &testAuthClient{
-		user:         &authv1.User{Id: "user-1", Username: "Test User"},
+		user:         &authv1.User{Id: "user-1", PrimaryEmail: "Test User"},
 		magicLinkErr: status.Error(codes.Internal, "boom"),
 	}
 	provider := testClientProvider{auth: authClient}

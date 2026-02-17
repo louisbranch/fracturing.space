@@ -245,6 +245,7 @@ func (s *Server) exchangeProviderToken(ctx context.Context, provider ProviderCon
 
 type providerProfile struct {
 	ProviderUserID string
+	Email          string
 	DisplayName    string
 }
 
@@ -274,7 +275,11 @@ func (s *Server) fetchProviderProfile(ctx context.Context, provider ProviderConf
 		if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
 			return providerProfile{}, err
 		}
-		return providerProfile{ProviderUserID: payload.Sub, DisplayName: firstNonEmpty(payload.Name, payload.Email, payload.Sub)}, nil
+		return providerProfile{
+			ProviderUserID: payload.Sub,
+			Email:          payload.Email,
+			DisplayName:    firstNonEmpty(payload.Name, payload.Email, payload.Sub),
+		}, nil
 	}
 
 	var payload struct {
@@ -286,7 +291,11 @@ func (s *Server) fetchProviderProfile(ctx context.Context, provider ProviderConf
 	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
 		return providerProfile{}, err
 	}
-	return providerProfile{ProviderUserID: formatGitHubID(payload.ID), DisplayName: firstNonEmpty(payload.Name, payload.Login, payload.Email)}, nil
+	return providerProfile{
+		ProviderUserID: formatGitHubID(payload.ID),
+		Email:          payload.Email,
+		DisplayName:    firstNonEmpty(payload.Name, payload.Login, payload.Email),
+	}, nil
 }
 
 func (s *Server) ensureUserForProfile(ctx context.Context, providerID string, profile providerProfile) (string, error) {
@@ -303,7 +312,7 @@ func (s *Server) ensureUserForProfile(ctx context.Context, providerID string, pr
 	if s.userStore == nil {
 		return "", errors.New("user store not configured")
 	}
-	created, err := user.CreateUser(user.CreateUserInput{Username: sanitizeUsername(profile.DisplayName)}, s.clock, id.NewID)
+	created, err := user.CreateUser(user.CreateUserInput{PrimaryEmail: derivePrimaryEmail(profile)}, s.clock, id.NewID)
 	if err != nil {
 		return "", err
 	}
@@ -333,7 +342,7 @@ func isAllowedRedirect(uri string, allowlist []string) bool {
 	return false
 }
 
-// sanitizeUsername converts a provider display name into a valid username
+// sanitizeUsername converts a provider display name into a valid local-part seed.
 // by lowercasing, replacing spaces/special characters with dashes, and
 // truncating to the max length. If the result is too short, it appends
 // random hex to reach the minimum length.
@@ -365,6 +374,34 @@ func sanitizeUsername(name string) string {
 		}
 	}
 	return result
+}
+
+func derivePrimaryEmail(profile providerProfile) string {
+	email := strings.TrimSpace(strings.ToLower(profile.Email))
+	if email != "" {
+		return email
+	}
+	displayName := strings.TrimSpace(profile.DisplayName)
+	providerUserID := strings.TrimSpace(profile.ProviderUserID)
+	local := sanitizeUsername(displayName)
+	if local == "" || displayName == "" {
+		local = sanitizeUsername(providerUserID)
+	}
+	providerPart := ""
+	if providerUserID != "" {
+		providerPart = sanitizeUsername(providerUserID)
+	}
+	if providerPart != "" && !strings.Contains(local, providerPart) {
+		suffix := "-" + providerPart
+		if len(suffix) > 0 && len(local) > (64-len(suffix)) {
+			local = strings.Trim(local[:64-len(suffix)], "-")
+			if local == "" {
+				local = "user"
+			}
+		}
+		local = local + suffix
+	}
+	return local + "@oauth.local"
 }
 
 func firstNonEmpty(values ...string) string {

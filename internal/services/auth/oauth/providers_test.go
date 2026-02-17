@@ -55,6 +55,61 @@ func TestFirstNonEmpty(t *testing.T) {
 	}
 }
 
+func TestDerivePrimaryEmail(t *testing.T) {
+	t.Run("uses provided email", func(t *testing.T) {
+		profile := providerProfile{
+			Email:          "Alice@Example.Com ",
+			DisplayName:    "Test User",
+			ProviderUserID: "provider-1",
+		}
+		got := derivePrimaryEmail(profile)
+		if got != "alice@example.com" {
+			t.Fatalf("derivePrimaryEmail = %q, want alice@example.com", got)
+		}
+	})
+
+	t.Run("falls back to display name and appends provider id", func(t *testing.T) {
+		profile := providerProfile{
+			DisplayName:    "Ada Lovelace",
+			ProviderUserID: "provider-123",
+		}
+		got := derivePrimaryEmail(profile)
+		if got != "ada-lovelace-provider-123@oauth.local" {
+			t.Fatalf("derivePrimaryEmail = %q, want %q", got, "ada-lovelace-provider-123@oauth.local")
+		}
+	})
+
+	t.Run("uses provider id when display name empty", func(t *testing.T) {
+		profile := providerProfile{
+			ProviderUserID: "provider-123",
+		}
+		got := derivePrimaryEmail(profile)
+		if got != "provider-123@oauth.local" {
+			t.Fatalf("derivePrimaryEmail = %q, want %q", got, "provider-123@oauth.local")
+		}
+	})
+
+	t.Run("adds stable uniqueness for provider users with shared display names", func(t *testing.T) {
+		first := derivePrimaryEmail(providerProfile{
+			DisplayName:    "Tester",
+			ProviderUserID: "provider-11",
+		})
+		second := derivePrimaryEmail(providerProfile{
+			DisplayName:    "Tester",
+			ProviderUserID: "provider-22",
+		})
+		if strings.TrimSpace(first) == "" || strings.TrimSpace(second) == "" {
+			t.Fatal("expected non-empty email values")
+		}
+		if first == second {
+			t.Fatalf("expected unique fallback emails, got equal %q", first)
+		}
+		if first == "tester@oauth.local" || second == "tester@oauth.local" {
+			t.Fatal("expected uniqueness suffix when provider id is available")
+		}
+	})
+}
+
 func TestFormatGitHubID(t *testing.T) {
 	tests := []struct {
 		name  string

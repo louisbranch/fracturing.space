@@ -137,7 +137,7 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 		if userResponse == nil || userResponse.GetUser() == nil {
 			return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Error(codes.Internal, "auth user response is missing")
 		}
-		creatorDisplayName = strings.TrimSpace(userResponse.GetUser().GetUsername())
+		creatorDisplayName = strings.TrimSpace(userResponse.GetUser().GetPrimaryEmail())
 		if creatorDisplayName == "" {
 			return storage.CampaignRecord{}, storage.ParticipantRecord{}, apperrors.New(
 				apperrors.CodeCampaignCreatorUserMissing,

@@ -3,7 +3,7 @@ package user
 
 import (
 	"fmt"
-	"regexp"
+	"net/mail"
 	"strings"
 	"time"
 
@@ -14,42 +14,41 @@ import (
 )
 
 var (
-	// ErrEmptyUsername indicates a missing username.
-	ErrEmptyUsername = apperrors.New(apperrors.CodeUserEmptyUsername, "username is required")
-	// ErrInvalidUsername indicates a username that does not match the required format.
-	ErrInvalidUsername = apperrors.New(apperrors.CodeUserInvalidUsername, "username must be 3-32 lowercase alphanumeric, dot, dash, or underscore characters")
-
-	usernamePattern = regexp.MustCompile(`^[a-z0-9_.\-]{3,32}$`)
+	// ErrEmptyPrimaryEmail indicates a missing primary email.
+	ErrEmptyPrimaryEmail = apperrors.New(apperrors.CodeUserEmptyPrimaryEmail, "primary email is required")
+	// ErrInvalidPrimaryEmail indicates a primary email that does not match the required format.
+	ErrInvalidPrimaryEmail = apperrors.New(apperrors.CodeUserInvalidPrimaryEmail, "primary email must be a valid email address")
 )
 
 // User represents an authenticated identity record.
 type User struct {
-	ID        string
-	Username  string
-	Locale    commonv1.Locale
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID           string
+	PrimaryEmail string
+	Locale       commonv1.Locale
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 // CreateUserInput describes the metadata needed to create a user.
 type CreateUserInput struct {
-	Username string
-	Locale   commonv1.Locale
+	PrimaryEmail string
+	Locale       commonv1.Locale
 }
 
-// ValidateUsername enforces canonical username constraints used by joins, invites,
+// ValidatePrimaryEmail enforces canonical primary-email constraints used by joins, invites,
 // and chat display across services.
-func ValidateUsername(s string) error {
-	if !usernamePattern.MatchString(s) {
-		return ErrInvalidUsername
+func ValidatePrimaryEmail(s string) error {
+	parsed, err := mail.ParseAddress(s)
+	if err != nil || parsed.Name != "" || !strings.EqualFold(strings.TrimSpace(parsed.Address), strings.TrimSpace(s)) {
+		return ErrInvalidPrimaryEmail
 	}
 	return nil
 }
 
 // CreateUser creates a durable user identity from validated input.
 //
-// The service layer treats this as the canonical point where untrusted username
-// data becomes a stable identity used by auth, admin, and game paths.
+// The service layer treats this as the canonical point where untrusted primary
+// email becomes a stable identity used by auth, admin, and game paths.
 func CreateUser(input CreateUserInput, now func() time.Time, idGenerator func() (string, error)) (User, error) {
 	if now == nil {
 		now = time.Now
@@ -70,21 +69,21 @@ func CreateUser(input CreateUserInput, now func() time.Time, idGenerator func() 
 
 	createdAt := now().UTC()
 	return User{
-		ID:        userID,
-		Username:  normalized.Username,
-		Locale:    normalized.Locale,
-		CreatedAt: createdAt,
-		UpdatedAt: createdAt,
+		ID:           userID,
+		PrimaryEmail: normalized.PrimaryEmail,
+		Locale:       normalized.Locale,
+		CreatedAt:    createdAt,
+		UpdatedAt:    createdAt,
 	}, nil
 }
 
 // NormalizeCreateUserInput trims and normalizes input before validation.
 func NormalizeCreateUserInput(input CreateUserInput) (CreateUserInput, error) {
-	input.Username = strings.ToLower(strings.TrimSpace(input.Username))
-	if input.Username == "" {
-		return CreateUserInput{}, ErrEmptyUsername
+	input.PrimaryEmail = strings.ToLower(strings.TrimSpace(input.PrimaryEmail))
+	if input.PrimaryEmail == "" {
+		return CreateUserInput{}, ErrEmptyPrimaryEmail
 	}
-	if err := ValidateUsername(input.Username); err != nil {
+	if err := ValidatePrimaryEmail(input.PrimaryEmail); err != nil {
 		return CreateUserInput{}, err
 	}
 	input.Locale = platformi18n.NormalizeLocale(input.Locale)
