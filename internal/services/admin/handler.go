@@ -553,11 +553,12 @@ func (h *Handler) runScenarioScript(ctx context.Context, script string) (string,
 	var output bytes.Buffer
 	logger := log.New(&output, "", 0)
 	config := scenario.Config{
-		GRPCAddr:   h.scenarioGRPCAddr(),
-		Timeout:    10 * time.Second,
-		Assertions: scenario.AssertionStrict,
-		Verbose:    true,
-		Logger:     logger,
+		GRPCAddr:         h.scenarioGRPCAddr(),
+		Timeout:          10 * time.Second,
+		Assertions:       scenario.AssertionStrict,
+		ValidateComments: false,
+		Verbose:          true,
+		Logger:           logger,
 	}
 	if err := scenario.RunFile(ctx, config, path); err != nil {
 		return strings.TrimSpace(output.String()), parseScenarioCampaignID(output.String()), err
