@@ -88,6 +88,20 @@ func localizer(w http.ResponseWriter, r *http.Request) (*message.Printer, string
 	return webi18n.Printer(tag), tag.String()
 }
 
+func withStaticMime(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch path := strings.ToLower(r.URL.Path); {
+		case strings.HasSuffix(path, ".css"):
+			w.Header().Set("Content-Type", "text/css")
+		case strings.HasSuffix(path, ".js"):
+			w.Header().Set("Content-Type", "application/javascript")
+		case strings.HasSuffix(path, ".svg"):
+			w.Header().Set("Content-Type", "image/svg+xml")
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 // NewHandler creates the HTTP handler for the login UX.
 //
 // This function is the test-oriented entrypoint that assembles route handlers
@@ -109,7 +123,12 @@ func NewHandlerWithCampaignAccess(config Config, authClient authv1.AuthServiceCl
 	if err != nil {
 		return nil, fmt.Errorf("resolve static assets: %w", err)
 	}
-	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
+	mux.Handle(
+		"/static/",
+		withStaticMime(
+			http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))),
+		),
+	)
 
 	appName := strings.TrimSpace(config.AppName)
 	if appName == "" {

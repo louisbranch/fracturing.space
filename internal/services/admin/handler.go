@@ -3,8 +3,10 @@ package admin
 import (
 	"bytes"
 	"context"
+	"embed"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"net/http"
 	"net/url"
@@ -62,6 +64,13 @@ const (
 	// scenarioTempDirEnv configures the temp directory for scenario scripts.
 	scenarioTempDirEnv = "FRACTURING_SPACE_SCENARIO_TMPDIR"
 )
+
+//go:embed static/*
+var staticAssets embed.FS
+
+var resolveStaticFS = func() (fs.FS, error) {
+	return fs.Sub(staticAssets, "static")
+}
 
 // GRPCClientProvider supplies gRPC clients for request handling.
 type GRPCClientProvider interface {
@@ -204,10 +213,34 @@ func (h *Handler) pageContext(lang string, loc *message.Printer, r *http.Request
 	}
 }
 
+func withStaticMime(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch path := strings.ToLower(r.URL.Path); {
+		case strings.HasSuffix(path, ".css"):
+			w.Header().Set("Content-Type", "text/css")
+		case strings.HasSuffix(path, ".js"):
+			w.Header().Set("Content-Type", "application/javascript")
+		case strings.HasSuffix(path, ".svg"):
+			w.Header().Set("Content-Type", "image/svg+xml")
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 // routes wires the HTTP routes for the admin handler.
 func (h *Handler) routes() http.Handler {
 	mux := http.NewServeMux()
-	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("internal/services/admin/static"))))
+	staticFS, err := resolveStaticFS()
+	if err == nil {
+		mux.Handle(
+			"/static/",
+			withStaticMime(
+				http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))),
+			),
+		)
+	} else {
+		log.Printf("admin: failed to initialize static assets: %v", err)
+	}
 	mux.Handle("/", http.HandlerFunc(h.handleDashboard))
 	mux.Handle("/dashboard/content", http.HandlerFunc(h.handleDashboardContent))
 	mux.Handle("/campaigns", http.HandlerFunc(h.handleCampaignsPage))
