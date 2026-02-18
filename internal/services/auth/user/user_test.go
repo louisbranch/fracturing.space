@@ -48,7 +48,7 @@ func TestCreateUserNormalizesInput(t *testing.T) {
 		t.Fatalf("expected id user-123, got %q", created.ID)
 	}
 	if created.Email != "alice@example.com" {
-		t.Fatalf("expected lowercased trimmed primary email, got %q", created.Email)
+		t.Fatalf("expected lowercased trimmed email, got %q", created.Email)
 	}
 	if created.Locale != commonv1.Locale_LOCALE_PT_BR {
 		t.Fatalf("expected locale %v, got %v", commonv1.Locale_LOCALE_PT_BR, created.Locale)
@@ -102,7 +102,7 @@ func TestNormalizeCreateUserInputLowercases(t *testing.T) {
 		t.Fatalf("normalize: %v", err)
 	}
 	if normalized.Email != "alice@example.com" {
-		t.Fatalf("expected lowercased primary email, got %q", normalized.Email)
+		t.Fatalf("expected lowercased email, got %q", normalized.Email)
 	}
 }
 

@@ -14,10 +14,10 @@ import (
 )
 
 var (
-	// ErrEmptyEmail indicates a missing primary email.
-	ErrEmptyEmail = apperrors.New(apperrors.CodeUserEmptyEmail, "primary email is required")
-	// ErrInvalidEmail indicates a primary email that does not match the required format.
-	ErrInvalidEmail = apperrors.New(apperrors.CodeUserInvalidEmail, "primary email must be a valid email address")
+	// ErrEmptyEmail indicates a missing email.
+	ErrEmptyEmail = apperrors.New(apperrors.CodeUserEmptyEmail, "email is required")
+	// ErrInvalidEmail indicates an email that does not match the required format.
+	ErrInvalidEmail = apperrors.New(apperrors.CodeUserInvalidEmail, "email must be a valid email address")
 )
 
 // User represents an authenticated identity record.
@@ -35,7 +35,7 @@ type CreateUserInput struct {
 	Locale commonv1.Locale
 }
 
-// ValidateEmail enforces canonical primary-email constraints used by joins, invites,
+// ValidateEmail enforces canonical email constraints used by joins, invites,
 // and chat display across services.
 func ValidateEmail(s string) error {
 	parsed, err := mail.ParseAddress(s)

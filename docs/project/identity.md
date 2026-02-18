@@ -10,8 +10,8 @@ This document captures the identity model and recovery flows for authentication.
 
 ## Identity Model
 
-- **User**: Core identity record. A user is defined by a primary email.
-- **Primary email**: Canonical identity value used across auth, admin, and game surfaces.
+- **User**: Core identity record. A user is defined by an email.
+- **Email**: Canonical identity value used across auth, admin, and game surfaces.
 - **Additional emails**: Planned as a future extension, but out of scope for this change.
 - **Passkey**: Primary authentication credential. Users can register multiple passkeys.
 
@@ -36,5 +36,5 @@ This document captures the identity model and recovery flows for authentication.
 
 ## Notes
 
-- Primary email is the canonical identity during this release.
+- Email is the canonical identity during this release.
 - Additional email support is planned but out of scope.

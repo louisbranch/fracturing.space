@@ -1805,7 +1805,7 @@ func TestCreateUser(t *testing.T) {
 		}
 	})
 
-	t.Run("empty primary email", func(t *testing.T) {
+	t.Run("empty email", func(t *testing.T) {
 		form := url.Values{"email": {""}}
 		req := httptest.NewRequest(http.MethodPost, "http://example.com/users/create", strings.NewReader(form.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -4902,7 +4902,7 @@ func TestCreateUserErrorPaths(t *testing.T) {
 		assertContains(t, rec.Body.String(), "User service unavailable")
 	})
 
-	t.Run("empty primary email", func(t *testing.T) {
+	t.Run("empty email", func(t *testing.T) {
 		handler := NewHandler(testClientProvider{auth: &testAuthClient{}})
 		form := url.Values{"email": {""}}
 		req := httptest.NewRequest(http.MethodPost, "http://example.com/users/create", strings.NewReader(form.Encode()))

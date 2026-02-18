@@ -144,7 +144,7 @@ The generator uses a seeded random number generator. Running with the same `-see
 Using seed: 1707234567890123456
 ```
 
-Primary emails are uniquified within a run to satisfy auth primary-email uniqueness constraints. When duplicates occur, the generator appends a numeric suffix (for example, `alex@example.com` -> `alex-2@example.com`).
+Emails are uniquified within a run to satisfy auth email uniqueness constraints. When duplicates occur, the generator appends a numeric suffix (for example, `alex@example.com` -> `alex-2@example.com`).
 
 ### Entity Variations
 
