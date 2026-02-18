@@ -90,7 +90,7 @@ func TestCreateUser_Success(t *testing.T) {
 		t.Fatalf("expected id user-123, got %q", resp.GetUser().GetId())
 	}
 	if resp.GetUser().GetEmail() != "alice@example.com" {
-		t.Fatalf("expected normalized primary email, got %q", resp.GetUser().GetEmail())
+		t.Fatalf("expected normalized email, got %q", resp.GetUser().GetEmail())
 	}
 }
 

@@ -79,8 +79,8 @@ var enUSCatalog = &Catalog{
 		CodeParticipantUserAlreadyClaimed: "User is already assigned to a participant in this campaign",
 
 		// User errors
-		CodeUserEmptyEmail:   "Primary email cannot be empty",
-		CodeUserInvalidEmail: "Primary email must be a valid email address",
+		CodeUserEmptyEmail:   "Email cannot be empty",
+		CodeUserInvalidEmail: "Email must be a valid email address",
 
 		// Invite errors
 		CodeInviteEmptyCampaignID:      "Campaign ID is required for invite",
