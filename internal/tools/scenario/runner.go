@@ -16,20 +16,22 @@ import (
 
 // Config controls scenario execution.
 type Config struct {
-	GRPCAddr   string
-	Timeout    time.Duration
-	Assertions AssertionMode
-	Verbose    bool
-	Logger     *log.Logger
+	GRPCAddr         string
+	Timeout          time.Duration
+	Assertions       AssertionMode
+	Verbose          bool
+	Logger           *log.Logger
+	ValidateComments bool
 }
 
 // DefaultConfig returns default runner configuration.
 func DefaultConfig() Config {
 	return Config{
-		GRPCAddr:   "localhost:8080",
-		Timeout:    10 * time.Second,
-		Assertions: AssertionStrict,
-		Verbose:    false,
+		GRPCAddr:         "localhost:8080",
+		Timeout:          10 * time.Second,
+		Assertions:       AssertionStrict,
+		Verbose:          false,
+		ValidateComments: true,
 	}
 }
 
@@ -128,7 +130,7 @@ func RunFile(ctx context.Context, cfg Config, path string) error {
 	}
 	defer runner.Close()
 
-	scenario, err := LoadScenarioFromFile(path)
+	scenario, err := LoadScenarioFromFileWithOptions(path, cfg.ValidateComments)
 	if err != nil {
 		return err
 	}

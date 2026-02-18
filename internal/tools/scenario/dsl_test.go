@@ -226,6 +226,19 @@ return scene
 	}
 }
 
+func TestLoadScenarioFromFileWithoutCommentValidationAllowsMissingComment(t *testing.T) {
+	path := writeScenarioFixture(t, `local scene = Scenario.new("no-comment")
+scene:campaign({name = "Test", system = "DAGGERHEART"})
+
+return scene
+`)
+
+	_, err := LoadScenarioFromFileWithOptions(path, false)
+	if err != nil {
+		t.Fatalf("load scenario: %v", err)
+	}
+}
+
 func writeScenarioFixture(t *testing.T, content string) string {
 	t.Helper()
 
