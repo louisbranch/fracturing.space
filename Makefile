@@ -105,7 +105,7 @@ scenario-missing-doc-check:
 	@bash ./scripts/check-scenario-missing-mechanics.sh
 
 event-catalog-check:
-	@bash -euo pipefail -c 'go generate ./internal/services/game/domain/campaign/event >/dev/null 2>&1; git diff --exit-code -- docs/events/event-catalog.md docs/events/usage-map.md docs/events/command-catalog.md'
+	@bash -euo pipefail -c 'go run ./internal/tools/eventdocgen >/dev/null 2>&1; git diff --exit-code -- docs/events/event-catalog.md docs/events/usage-map.md docs/events/command-catalog.md'
 
 seed: ## Seed the local database with demo data (static fixtures)
 	go run ./cmd/seed -v

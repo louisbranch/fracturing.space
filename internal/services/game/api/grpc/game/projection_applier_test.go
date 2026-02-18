@@ -387,16 +387,24 @@ func TestStoresApplier_ApplyParticipantBindUnbindAndSeatReassign(t *testing.T) {
 	if err != nil {
 		t.Fatalf("encode reassign payload: %v", err)
 	}
-	if err := applier.Apply(ctx, event.Event{
-		CampaignID:  "camp-1",
-		Type:        event.Type("seat.reassigned"),
-		Timestamp:   now,
-		ActorType:   event.ActorTypeSystem,
-		EntityType:  "participant",
-		EntityID:    "part-1",
-		PayloadJSON: reassignJSON,
-	}); err != nil {
-		t.Fatalf("apply seat.reassigned: %v", err)
+	seatEvents := []event.Type{
+		event.Type("seat.reassigned"),
+		event.Type("participant.seat_reassigned"),
+	}
+	for _, eventType := range seatEvents {
+		t.Run(string(eventType), func(t *testing.T) {
+			if err := applier.Apply(ctx, event.Event{
+				CampaignID:  "camp-1",
+				Type:        eventType,
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				EntityType:  "participant",
+				EntityID:    "part-1",
+				PayloadJSON: reassignJSON,
+			}); err != nil {
+				t.Fatalf("apply %s: %v", eventType, err)
+			}
+		})
 	}
 
 	reassigned, err := stores.Participant.GetParticipant(ctx, "camp-1", "part-1")

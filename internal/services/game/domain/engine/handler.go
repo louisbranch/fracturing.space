@@ -93,95 +93,18 @@ type Result struct {
 // Use Handle when you need validation plus event emission decisions without
 // requiring caller to materialize post-apply state.
 func (h Handler) Handle(ctx context.Context, cmd command.Command) (command.Decision, error) {
-	if h.Commands == nil {
-		return command.Decision{}, ErrCommandRegistryRequired
-	}
-	validated, err := h.Commands.ValidateForDecision(cmd)
+	_, _, decision, err := h.prepareExecution(ctx, cmd)
 	if err != nil {
 		return command.Decision{}, err
-	}
-	cmd = validated
-
-	if def, ok := h.Commands.Definition(cmd.Type); ok && def.Gate.Scope == command.GateScopeSession {
-		if h.GateStateLoader == nil {
-			return command.Decision{}, ErrGateStateLoaderRequired
-		}
-		state, err := h.GateStateLoader.LoadSession(ctx, cmd.CampaignID, cmd.SessionID)
-		if err != nil {
-			return command.Decision{}, err
-		}
-		decision := h.Gate.Check(state, cmd)
-		if len(decision.Rejections) > 0 {
-			return decision, nil
-		}
-	}
-
-	if h.Decider == nil {
-		return command.Decision{}, ErrDeciderRequired
-	}
-	var state any
-	if h.StateLoader != nil {
-		state, err = h.StateLoader.Load(ctx, cmd)
-		if err != nil {
-			return command.Decision{}, err
-		}
-	}
-	now := h.Now
-	if now == nil {
-		now = time.Now
-	}
-	decision := h.Decider.Decide(state, cmd, now)
-	if h.Events != nil && len(decision.Events) > 0 {
-		validated := make([]event.Event, 0, len(decision.Events))
-		for _, evt := range decision.Events {
-			vetted, err := h.Events.ValidateForAppend(evt)
-			if err != nil {
-				return command.Decision{}, err
-			}
-			validated = append(validated, vetted)
-		}
-		decision.Events = validated
-	}
-	if h.Journal != nil && len(decision.Events) > 0 {
-		stored := make([]event.Event, 0, len(decision.Events))
-		for _, evt := range decision.Events {
-			appended, err := h.Journal.Append(ctx, evt)
-			if err != nil {
-				return command.Decision{}, err
-			}
-			stored = append(stored, appended)
-		}
-		decision.Events = stored
 	}
 	return decision, nil
 }
 
-// Execute handles a command and applies emitted events to state.
-//
-// Execute is the full write-side path: same validation and decider inputs as
-// Handle, plus deterministic event application and persistence side-effect hooks.
 func (h Handler) Execute(ctx context.Context, cmd command.Command) (Result, error) {
-	normalized := cmd
-	if h.Commands != nil {
-		validated, err := h.Commands.ValidateForDecision(cmd)
-		if err != nil {
-			return Result{}, err
-		}
-		normalized = validated
-	}
-
-	decision, err := h.Handle(ctx, normalized)
+	validated, state, decision, err := h.prepareExecution(ctx, cmd)
 	if err != nil {
 		return Result{}, err
 	}
-	var state any
-	if h.StateLoader != nil {
-		state, err = h.StateLoader.Load(ctx, normalized)
-		if err != nil {
-			return Result{}, err
-		}
-	}
-	loadedState := state
 	if h.Applier != nil && len(decision.Events) > 0 {
 		for _, evt := range decision.Events {
 			state, err = h.Applier.Apply(state, evt)
@@ -194,7 +117,7 @@ func (h Handler) Execute(ctx context.Context, cmd command.Command) (Result, erro
 		last := decision.Events[len(decision.Events)-1]
 		if last.Seq > 0 {
 			if err := h.Checkpoints.Save(ctx, replay.Checkpoint{
-				CampaignID: normalized.CampaignID,
+				CampaignID: validated.CampaignID,
 				LastSeq:    last.Seq,
 				UpdatedAt:  time.Now().UTC(),
 			}); err != nil {
@@ -205,16 +128,74 @@ func (h Handler) Execute(ctx context.Context, cmd command.Command) (Result, erro
 	if h.Snapshots != nil && len(decision.Events) > 0 {
 		last := decision.Events[len(decision.Events)-1]
 		if last.Seq > 0 {
-			snapshotState := state
-			if h.Journal != nil && h.StateLoader != nil {
-				// When events were appended before state load, loadedState already
-				// includes those events exactly once.
-				snapshotState = loadedState
-			}
-			if err := h.Snapshots.SaveState(ctx, normalized.CampaignID, last.Seq, snapshotState); err != nil {
+			if err := h.Snapshots.SaveState(ctx, validated.CampaignID, last.Seq, state); err != nil {
 				return Result{}, err
 			}
 		}
 	}
 	return Result{Decision: decision, State: state}, nil
+}
+
+func (h Handler) prepareExecution(ctx context.Context, cmd command.Command) (command.Command, any, command.Decision, error) {
+	if h.Commands == nil {
+		return command.Command{}, nil, command.Decision{}, ErrCommandRegistryRequired
+	}
+	validated, err := h.Commands.ValidateForDecision(cmd)
+	if err != nil {
+		return command.Command{}, nil, command.Decision{}, err
+	}
+	cmd = validated
+
+	if def, ok := h.Commands.Definition(cmd.Type); ok && def.Gate.Scope == command.GateScopeSession {
+		if h.GateStateLoader == nil {
+			return command.Command{}, nil, command.Decision{}, ErrGateStateLoaderRequired
+		}
+		state, err := h.GateStateLoader.LoadSession(ctx, cmd.CampaignID, cmd.SessionID)
+		if err != nil {
+			return command.Command{}, nil, command.Decision{}, err
+		}
+		decision := h.Gate.Check(state, cmd)
+		if len(decision.Rejections) > 0 {
+			return cmd, nil, decision, nil
+		}
+	}
+
+	if h.Decider == nil {
+		return command.Command{}, nil, command.Decision{}, ErrDeciderRequired
+	}
+	var state any
+	if h.StateLoader != nil {
+		state, err = h.StateLoader.Load(ctx, cmd)
+		if err != nil {
+			return command.Command{}, nil, command.Decision{}, err
+		}
+	}
+	now := h.Now
+	if now == nil {
+		now = time.Now
+	}
+	decision := h.Decider.Decide(state, cmd, now)
+	if h.Events != nil && len(decision.Events) > 0 {
+		validated := make([]event.Event, 0, len(decision.Events))
+		for _, evt := range decision.Events {
+			vetted, err := h.Events.ValidateForAppend(evt)
+			if err != nil {
+				return command.Command{}, nil, command.Decision{}, err
+			}
+			validated = append(validated, vetted)
+		}
+		decision.Events = validated
+	}
+	if h.Journal != nil && len(decision.Events) > 0 {
+		stored := make([]event.Event, 0, len(decision.Events))
+		for _, evt := range decision.Events {
+			appended, err := h.Journal.Append(ctx, evt)
+			if err != nil {
+				return command.Command{}, nil, command.Decision{}, err
+			}
+			stored = append(stored, appended)
+		}
+		decision.Events = stored
+	}
+	return cmd, state, decision, nil
 }

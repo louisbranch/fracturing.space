@@ -549,83 +549,107 @@ func TestDecideParticipantUnbind_UserIDMismatchRejected(t *testing.T) {
 
 func TestDecideSeatReassign_EmitsSeatReassignedEvent(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
-	cmd := command.Command{
-		CampaignID:  "camp-1",
-		Type:        command.Type("seat.reassign"),
-		ActorType:   command.ActorTypeSystem,
-		PayloadJSON: []byte(`{"participant_id":"p-1","prior_user_id":"user-1","user_id":"user-2","reason":"  moved  "}`),
+	commandTypes := []command.Type{
+		command.Type("seat.reassign"),
+		command.Type("participant.seat.reassign"),
 	}
+	for _, cmdType := range commandTypes {
+		t.Run(string(cmdType), func(t *testing.T) {
+			cmd := command.Command{
+				CampaignID:  "camp-1",
+				Type:        cmdType,
+				ActorType:   command.ActorTypeSystem,
+				PayloadJSON: []byte(`{"participant_id":"p-1","prior_user_id":"user-1","user_id":"user-2","reason":"  moved  "}`),
+			}
 
-	decision := Decide(State{Joined: true, UserID: "user-1"}, cmd, func() time.Time { return now })
-	if len(decision.Rejections) != 0 {
-		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
-	}
-	if len(decision.Events) != 1 {
-		t.Fatalf("expected 1 event, got %d", len(decision.Events))
-	}
+			decision := Decide(State{Joined: true, UserID: "user-1"}, cmd, func() time.Time { return now })
+			if len(decision.Rejections) != 0 {
+				t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
+			}
+			if len(decision.Events) != 1 {
+				t.Fatalf("expected 1 event, got %d", len(decision.Events))
+			}
 
-	evt := decision.Events[0]
-	if evt.Type != event.Type("seat.reassigned") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "seat.reassigned")
-	}
-	if !evt.Timestamp.Equal(now) {
-		t.Fatalf("event timestamp = %s, want %s", evt.Timestamp, now)
-	}
+			evt := decision.Events[0]
+			if evt.Type != event.Type("participant.seat_reassigned") {
+				t.Fatalf("event type = %s, want %s", evt.Type, "participant.seat_reassigned")
+			}
+			if !evt.Timestamp.Equal(now) {
+				t.Fatalf("event timestamp = %s, want %s", evt.Timestamp, now)
+			}
 
-	var payload SeatReassignPayload
-	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		t.Fatalf("unmarshal payload: %v", err)
-	}
-	if payload.ParticipantID != "p-1" {
-		t.Fatalf("payload participant id = %s, want %s", payload.ParticipantID, "p-1")
-	}
-	if payload.PriorUserID != "user-1" {
-		t.Fatalf("payload prior user id = %s, want %s", payload.PriorUserID, "user-1")
-	}
-	if payload.UserID != "user-2" {
-		t.Fatalf("payload user id = %s, want %s", payload.UserID, "user-2")
-	}
-	if payload.Reason != "moved" {
-		t.Fatalf("payload reason = %s, want %s", payload.Reason, "moved")
+			var payload SeatReassignPayload
+			if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+				t.Fatalf("unmarshal payload: %v", err)
+			}
+			if payload.ParticipantID != "p-1" {
+				t.Fatalf("payload participant id = %s, want %s", payload.ParticipantID, "p-1")
+			}
+			if payload.PriorUserID != "user-1" {
+				t.Fatalf("payload prior user id = %s, want %s", payload.PriorUserID, "user-1")
+			}
+			if payload.UserID != "user-2" {
+				t.Fatalf("payload user id = %s, want %s", payload.UserID, "user-2")
+			}
+			if payload.Reason != "moved" {
+				t.Fatalf("payload reason = %s, want %s", payload.Reason, "moved")
+			}
+		})
 	}
 }
 
 func TestDecideSeatReassign_PriorUserMismatchRejected(t *testing.T) {
-	cmd := command.Command{
-		CampaignID:  "camp-1",
-		Type:        command.Type("seat.reassign"),
-		ActorType:   command.ActorTypeSystem,
-		PayloadJSON: []byte(`{"participant_id":"p-1","prior_user_id":"user-2","user_id":"user-3"}`),
+	commandTypes := []command.Type{
+		command.Type("seat.reassign"),
+		command.Type("participant.seat.reassign"),
 	}
+	for _, cmdType := range commandTypes {
+		t.Run(string(cmdType), func(t *testing.T) {
+			cmd := command.Command{
+				CampaignID:  "camp-1",
+				Type:        cmdType,
+				ActorType:   command.ActorTypeSystem,
+				PayloadJSON: []byte(`{"participant_id":"p-1","prior_user_id":"user-2","user_id":"user-3"}`),
+			}
 
-	decision := Decide(State{Joined: true, UserID: "user-1"}, cmd, nil)
-	if len(decision.Events) != 0 {
-		t.Fatalf("expected no events, got %d", len(decision.Events))
-	}
-	if len(decision.Rejections) != 1 {
-		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
-	}
-	if decision.Rejections[0].Code != rejectionCodeParticipantUserIDMismatch {
-		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeParticipantUserIDMismatch)
+			decision := Decide(State{Joined: true, UserID: "user-1"}, cmd, nil)
+			if len(decision.Events) != 0 {
+				t.Fatalf("expected no events, got %d", len(decision.Events))
+			}
+			if len(decision.Rejections) != 1 {
+				t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+			}
+			if decision.Rejections[0].Code != rejectionCodeParticipantUserIDMismatch {
+				t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeParticipantUserIDMismatch)
+			}
+		})
 	}
 }
 
 func TestDecideSeatReassign_MissingUserIDRejected(t *testing.T) {
-	cmd := command.Command{
-		CampaignID:  "camp-1",
-		Type:        command.Type("seat.reassign"),
-		ActorType:   command.ActorTypeSystem,
-		PayloadJSON: []byte(`{"participant_id":"p-1","user_id":" "}`),
+	commandTypes := []command.Type{
+		command.Type("seat.reassign"),
+		command.Type("participant.seat.reassign"),
 	}
+	for _, cmdType := range commandTypes {
+		t.Run(string(cmdType), func(t *testing.T) {
+			cmd := command.Command{
+				CampaignID:  "camp-1",
+				Type:        cmdType,
+				ActorType:   command.ActorTypeSystem,
+				PayloadJSON: []byte(`{"participant_id":"p-1","user_id":" "}`),
+			}
 
-	decision := Decide(State{Joined: true}, cmd, nil)
-	if len(decision.Events) != 0 {
-		t.Fatalf("expected no events, got %d", len(decision.Events))
-	}
-	if len(decision.Rejections) != 1 {
-		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
-	}
-	if decision.Rejections[0].Code != rejectionCodeParticipantUserIDRequired {
-		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeParticipantUserIDRequired)
+			decision := Decide(State{Joined: true}, cmd, nil)
+			if len(decision.Events) != 0 {
+				t.Fatalf("expected no events, got %d", len(decision.Events))
+			}
+			if len(decision.Rejections) != 1 {
+				t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+			}
+			if decision.Rejections[0].Code != rejectionCodeParticipantUserIDRequired {
+				t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeParticipantUserIDRequired)
+			}
+		})
 	}
 }

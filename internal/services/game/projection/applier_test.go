@@ -2706,6 +2706,18 @@ func TestApplySessionSpotlightSet_InvalidTarget(t *testing.T) {
 	}
 }
 
+func TestApply_UnhandledCoreEventReturnsError(t *testing.T) {
+	applier := Applier{}
+	evt := event.Event{
+		CampaignID:  "camp-1",
+		Type:        event.Type("campaign.made_up"),
+		PayloadJSON: []byte("{}"),
+	}
+	if err := applier.Apply(context.Background(), evt); err == nil {
+		t.Fatal("expected error for unhandled core event")
+	}
+}
+
 // --- applySystemEvent missing branches ---
 
 func TestApplySystemEvent_MissingSystemID(t *testing.T) {
@@ -2730,6 +2742,26 @@ func TestApplySystemEvent_InvalidGameSystem(t *testing.T) {
 	evt := testevent.Event{CampaignID: "camp-1", Type: testevent.Type("system.custom"), SystemID: "INVALID_SYSTEM", PayloadJSON: []byte("{}")}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid game system")
+	}
+}
+
+func TestApplySystemEvent_UnhandledSystemEventReturnsError(t *testing.T) {
+	registry := systems.NewAdapterRegistry()
+	if err := registry.Register(daggerheartsys.NewAdapter(newProjectionDaggerheartStore())); err != nil {
+		t.Fatalf("register adapter: %v", err)
+	}
+	applier := Applier{Adapters: registry}
+	evt := event.Event{
+		CampaignID:    "camp-1",
+		Type:          event.Type("sys.daggerheart.action.unhandled_system_event"),
+		SystemID:      daggerheartsys.SystemID,
+		SystemVersion: daggerheartsys.SystemVersion,
+		EntityType:    "campaign",
+		EntityID:      "camp-1",
+		PayloadJSON:   []byte("{}"),
+	}
+	if err := applier.applySystemEvent(context.Background(), evt); err == nil {
+		t.Fatal("expected error for unhandled system event")
 	}
 }
 

@@ -10,18 +10,20 @@ import (
 )
 
 const (
-	commandTypeJoin         command.Type = "participant.join"
-	commandTypeUpdate       command.Type = "participant.update"
-	commandTypeLeave        command.Type = "participant.leave"
-	commandTypeBind         command.Type = "participant.bind"
-	commandTypeUnbind       command.Type = "participant.unbind"
-	commandTypeSeatReassign command.Type = "seat.reassign"
-	eventTypeJoined         event.Type   = "participant.joined"
-	eventTypeUpdated        event.Type   = "participant.updated"
-	eventTypeLeft           event.Type   = "participant.left"
-	eventTypeBound          event.Type   = "participant.bound"
-	eventTypeUnbound        event.Type   = "participant.unbound"
-	eventTypeSeatReassigned event.Type   = "seat.reassigned"
+	commandTypeJoin               command.Type = "participant.join"
+	commandTypeUpdate             command.Type = "participant.update"
+	commandTypeLeave              command.Type = "participant.leave"
+	commandTypeBind               command.Type = "participant.bind"
+	commandTypeUnbind             command.Type = "participant.unbind"
+	commandTypeSeatReassign       command.Type = "participant.seat.reassign"
+	commandTypeSeatReassignLegacy command.Type = "seat.reassign"
+	eventTypeJoined               event.Type   = "participant.joined"
+	eventTypeUpdated              event.Type   = "participant.updated"
+	eventTypeLeft                 event.Type   = "participant.left"
+	eventTypeBound                event.Type   = "participant.bound"
+	eventTypeUnbound              event.Type   = "participant.unbound"
+	eventTypeSeatReassigned       event.Type   = "participant.seat_reassigned"
+	eventTypeSeatReassignedLegacy event.Type   = "seat.reassigned"
 
 	rejectionCodeParticipantAlreadyJoined      = "PARTICIPANT_ALREADY_JOINED"
 	rejectionCodeParticipantNotJoined          = "PARTICIPANT_NOT_JOINED"
@@ -126,7 +128,6 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 
 		return command.Accept(evt)
 	}
-
 	if cmd.Type == commandTypeUpdate {
 		if !state.Joined || state.Left {
 			return command.Reject(command.Rejection{
@@ -361,7 +362,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		return command.Accept(evt)
 	}
 
-	if cmd.Type == commandTypeSeatReassign {
+	if cmd.Type == commandTypeSeatReassign || cmd.Type == commandTypeSeatReassignLegacy {
 		if !state.Joined || state.Left {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeParticipantNotJoined,

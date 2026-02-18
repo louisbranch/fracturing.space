@@ -63,3 +63,47 @@ func TestProjectorApplyGMFearChanged_UpdatesStateForSysPrefixedType(t *testing.T
 		t.Fatalf("gm fear = %d, want %d", snapshot.GMFear, 4)
 	}
 }
+
+func TestProjectorApplyHandlesAllRegisteredEvents(t *testing.T) {
+	projector := Projector{}
+	for _, def := range daggerheartEventDefinitions {
+		t.Run(string(def.Type), func(t *testing.T) {
+			payloadJSON := []byte(`{}`)
+			if def.Type == eventTypeGMFearChanged {
+				payload, err := json.Marshal(GMFearChangedPayload{Before: 1, After: 2})
+				if err != nil {
+					t.Fatalf("marshal payload: %v", err)
+				}
+				payloadJSON = payload
+			}
+
+			updated, err := projector.Apply(SnapshotState{CampaignID: "camp-1", GMFear: 1}, event.Event{
+				CampaignID:    "camp-1",
+				Type:          def.Type,
+				SystemID:      SystemID,
+				SystemVersion: SystemVersion,
+				PayloadJSON:   payloadJSON,
+			})
+			if err != nil {
+				t.Fatalf("projector apply %s: %v", def.Type, err)
+			}
+			if _, ok := updated.(SnapshotState); !ok {
+				t.Fatalf("expected SnapshotState, got %T", updated)
+			}
+		})
+	}
+}
+
+func TestProjectorApplyUnknownEventReturnsError(t *testing.T) {
+	projector := Projector{}
+	_, err := projector.Apply(SnapshotState{CampaignID: "camp-1"}, event.Event{
+		CampaignID:    "camp-1",
+		Type:          event.Type("sys.daggerheart.action.unknown"),
+		SystemID:      SystemID,
+		SystemVersion: SystemVersion,
+		PayloadJSON:   []byte(`{}`),
+	})
+	if err == nil {
+		t.Fatal("expected error for unknown event type")
+	}
+}

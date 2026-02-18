@@ -43,6 +43,12 @@ type serverEnv struct {
 	ProjectionApplyOutboxWorkerEnabled       bool   `env:"FRACTURING_SPACE_GAME_PROJECTION_APPLY_OUTBOX_WORKER_ENABLED" envDefault:"false"`
 }
 
+const (
+	projectionApplyModeInlineApplyOnly = "inline_apply_only"
+	projectionApplyModeOutboxApplyOnly = "outbox_apply_only"
+	projectionApplyModeShadowOnly      = "shadow_only"
+)
+
 func loadServerEnv() serverEnv {
 	var cfg serverEnv
 	_ = config.ParseEnv(&cfg)
@@ -56,6 +62,29 @@ func loadServerEnv() serverEnv {
 		cfg.ContentDBPath = filepath.Join("data", "game-content.db")
 	}
 	return cfg
+}
+
+func resolveProjectionApplyOutboxModes(srvEnv serverEnv) (bool, bool, string, error) {
+	if !srvEnv.ProjectionApplyOutboxEnabled {
+		if srvEnv.ProjectionApplyOutboxWorkerEnabled {
+			return false, false, "", errors.New("projection apply outbox worker requested without outbox enabled")
+		}
+		if srvEnv.ProjectionApplyOutboxShadowWorkerEnabled {
+			return false, false, "", errors.New("projection apply outbox shadow worker requested without outbox enabled")
+		}
+		return false, false, projectionApplyModeInlineApplyOnly, nil
+	}
+
+	if srvEnv.ProjectionApplyOutboxWorkerEnabled && srvEnv.ProjectionApplyOutboxShadowWorkerEnabled {
+		return false, false, "", errors.New("projection apply outbox cannot enable both apply and shadow workers")
+	}
+	if srvEnv.ProjectionApplyOutboxWorkerEnabled {
+		return true, false, projectionApplyModeOutboxApplyOnly, nil
+	}
+	if srvEnv.ProjectionApplyOutboxShadowWorkerEnabled {
+		return false, true, projectionApplyModeShadowOnly, nil
+	}
+	return false, false, projectionApplyModeInlineApplyOnly, nil
 }
 
 // Server hosts the game service.
@@ -248,18 +277,13 @@ func NewWithAddr(addr string) (*Server, error) {
 	healthServer.SetServingStatus("game.v1.StatisticsService", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("game.v1.SystemService", grpc_health_v1.HealthCheckResponse_SERVING)
 
-	enableApplyWorker := srvEnv.ProjectionApplyOutboxEnabled && srvEnv.ProjectionApplyOutboxWorkerEnabled
-	enableShadowWorker := srvEnv.ProjectionApplyOutboxEnabled && srvEnv.ProjectionApplyOutboxShadowWorkerEnabled
-	if enableApplyWorker && enableShadowWorker {
-		enableShadowWorker = false
-		log.Printf("projection apply outbox shadow worker disabled because apply worker is enabled")
+	enableApplyWorker, enableShadowWorker, projectionApplyOutboxMode, err := resolveProjectionApplyOutboxModes(srvEnv)
+	if err != nil {
+		_ = listener.Close()
+		bundle.Close()
+		return nil, fmt.Errorf("resolve projection apply outbox modes: %w", err)
 	}
-	if srvEnv.ProjectionApplyOutboxWorkerEnabled && !srvEnv.ProjectionApplyOutboxEnabled {
-		log.Printf("projection apply outbox worker disabled because enqueue flag is off")
-	}
-	if srvEnv.ProjectionApplyOutboxShadowWorkerEnabled && !srvEnv.ProjectionApplyOutboxEnabled {
-		log.Printf("projection apply outbox shadow worker disabled because enqueue flag is off")
-	}
+	log.Printf("projection apply mode = %s", projectionApplyOutboxMode)
 
 	return &Server{
 		listener:                                 listener,

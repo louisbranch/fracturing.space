@@ -38,24 +38,28 @@ func RegisterEvents(registry *event.Registry) error {
 			Owner:           event.OwnerCore,
 			Addressing:      event.AddressingPolicyEntityTarget,
 			ValidatePayload: validateRollResolvePayload,
+			Intent:          event.IntentAuditOnly,
 		},
 		{
 			Type:            eventTypeOutcomeApplied,
 			Owner:           event.OwnerCore,
 			Addressing:      event.AddressingPolicyEntityTarget,
 			ValidatePayload: validateOutcomeApplyPayload,
+			Intent:          event.IntentAuditOnly,
 		},
 		{
 			Type:            eventTypeOutcomeRejected,
 			Owner:           event.OwnerCore,
 			Addressing:      event.AddressingPolicyEntityTarget,
 			ValidatePayload: validateOutcomeRejectPayload,
+			Intent:          event.IntentAuditOnly,
 		},
 		{
 			Type:            eventTypeNoteAdded,
 			Owner:           event.OwnerCore,
 			Addressing:      event.AddressingPolicyEntityTarget,
 			ValidatePayload: validateNoteAddPayload,
+			Intent:          event.IntentAuditOnly,
 		},
 	}
 	for _, definition := range definitions {

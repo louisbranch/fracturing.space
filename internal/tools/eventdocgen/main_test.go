@@ -100,8 +100,8 @@ func TestPayloadNameForEvent(t *testing.T) {
 	if got := payloadNameForEvent("EventTypeSessionStarted", "Daggerheart"); got != "SessionStartedPayload" {
 		t.Fatalf("unexpected payload name: %s", got)
 	}
-	if got := payloadNameForEvent("EventTypeSessionStarted", "Unknown"); got != "" {
-		t.Fatalf("expected empty payload name, got %s", got)
+	if got := payloadNameForEvent("EventTypeSessionStarted", "Unknown"); got != "SessionStartedPayload" {
+		t.Fatalf("unexpected payload name for unknown owner: %s", got)
 	}
 }
 
@@ -516,24 +516,24 @@ func TestMainGeneratesCatalogAndUsageMap(t *testing.T) {
 		t.Fatalf("write go.mod: %v", err)
 	}
 
-	coreDir := filepath.Join(root, "internal", "services", "game", "domain", "campaign", "event")
+	coreDir := filepath.Join(root, "internal", "services", "game", "domain", "campaign")
 	if err := os.MkdirAll(coreDir, 0o755); err != nil {
 		t.Fatalf("mkdir core dir: %v", err)
 	}
 	coreEvent := strings.Join([]string{
-		"package event",
+		"package campaign",
 		"",
-		"type Type string",
+		`import event "github.com/louisbranch/fracturing.space/internal/services/game/domain/event"`,
 		"",
 		"const (",
-		"\tTypeCampaignCreated Type = \"campaign.created\"",
+		"\tTypeCampaignCreated event.Type = \"campaign.created\"",
 		")",
 	}, "\n")
 	if err := os.WriteFile(filepath.Join(coreDir, "event.go"), []byte(coreEvent), 0o644); err != nil {
 		t.Fatalf("write core event file: %v", err)
 	}
 	corePayload := strings.Join([]string{
-		"package event",
+		"package campaign",
 		"",
 		"type CampaignCreatedPayload struct {",
 		"\tName string `json:\"name\"`",
@@ -541,6 +541,18 @@ func TestMainGeneratesCatalogAndUsageMap(t *testing.T) {
 	}, "\n")
 	if err := os.WriteFile(filepath.Join(coreDir, "payload.go"), []byte(corePayload), 0o644); err != nil {
 		t.Fatalf("write core payload file: %v", err)
+	}
+
+	for _, dir := range []string{
+		filepath.Join(root, "internal", "services", "game", "domain", "character"),
+		filepath.Join(root, "internal", "services", "game", "domain", "invite"),
+		filepath.Join(root, "internal", "services", "game", "domain", "participant"),
+		filepath.Join(root, "internal", "services", "game", "domain", "session"),
+		filepath.Join(root, "internal", "services", "game", "domain", "action"),
+	} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatalf("mkdir package dir %s: %v", dir, err)
+		}
 	}
 
 	daggerheartDir := filepath.Join(root, "internal", "services", "game", "domain", "systems", "daggerheart")
@@ -595,9 +607,10 @@ func TestMainGeneratesCatalogAndUsageMap(t *testing.T) {
 		"package sample",
 		"",
 		"import event \"github.com/louisbranch/fracturing.space/internal/services/game/domain/event\"",
+		`import camp "github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"`,
 		"",
 		"func emit() {",
-		"\t_ = event.Event{Type: TypeCampaignCreated}",
+		"\t_ = event.Event{Type: camp.TypeCampaignCreated}",
 		"}",
 	}, "\n")
 	if err := os.WriteFile(filepath.Join(emitterDir, "emit.go"), []byte(emitterSrc), 0o644); err != nil {

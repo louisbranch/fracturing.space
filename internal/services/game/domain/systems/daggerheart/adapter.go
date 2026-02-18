@@ -89,7 +89,7 @@ func (a *Adapter) Apply(ctx context.Context, evt event.Event) error {
 	case EventTypeAdversaryDeleted:
 		return a.applyAdversaryDeleted(ctx, evt)
 	default:
-		return nil
+		return fmt.Errorf("unhandled daggerheart event type %s for campaign %s", evt.Type, evt.CampaignID)
 	}
 }
 

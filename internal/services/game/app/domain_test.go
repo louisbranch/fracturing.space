@@ -99,6 +99,8 @@ func TestBuildCoreRouteTable_IncludesRegisteredCoreRoutes(t *testing.T) {
 	definitions := []command.Definition{
 		{Type: command.Type("campaign.create"), Owner: command.OwnerCore},
 		{Type: command.Type("action.roll.resolve"), Owner: command.OwnerCore},
+		{Type: command.Type("participant.seat.reassign"), Owner: command.OwnerCore},
+		{Type: command.Type("seat.reassign"), Owner: command.OwnerCore},
 		{Type: command.Type("sys.alpha.action.attack.resolve"), Owner: command.OwnerSystem},
 	}
 
@@ -111,6 +113,12 @@ func TestBuildCoreRouteTable_IncludesRegisteredCoreRoutes(t *testing.T) {
 	}
 	if _, ok := routes[command.Type("action.roll.resolve")]; !ok {
 		t.Fatal("expected action.roll.resolve route")
+	}
+	if _, ok := routes[command.Type("participant.seat.reassign")]; !ok {
+		t.Fatal("expected participant.seat.reassign route")
+	}
+	if _, ok := routes[command.Type("seat.reassign")]; !ok {
+		t.Fatal("expected seat.reassign route")
 	}
 	if _, ok := routes[command.Type("sys.alpha.action.attack.resolve")]; ok {
 		t.Fatal("did not expect system command route in core table")

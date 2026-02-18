@@ -91,27 +91,25 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 	if actorID != "" {
 		actorType = command.ActorTypeParticipant
 	}
-	participantResult, err := c.stores.Domain.Execute(ctx, command.Command{
-		CampaignID:   campaignID,
-		Type:         command.Type("campaign.create"),
-		ActorType:    actorType,
-		ActorID:      actorID,
-		RequestID:    grpcmeta.RequestIDFromContext(ctx),
-		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-		EntityType:   "campaign",
-		EntityID:     campaignID,
-		PayloadJSON:  payloadJSON,
-	})
+	_, err = executeAndApplyDomainCommand(
+		ctx,
+		c.stores.Domain,
+		applier,
+		command.Command{
+			CampaignID:   campaignID,
+			Type:         command.Type("campaign.create"),
+			ActorType:    actorType,
+			ActorID:      actorID,
+			RequestID:    grpcmeta.RequestIDFromContext(ctx),
+			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+			EntityType:   "campaign",
+			EntityID:     campaignID,
+			PayloadJSON:  payloadJSON,
+		},
+		domainCommandApplyOptions{},
+	)
 	if err != nil {
-		return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
-	}
-	if len(participantResult.Decision.Rejections) > 0 {
-		return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Error(codes.FailedPrecondition, participantResult.Decision.Rejections[0].Message)
-	}
-	for _, evt := range participantResult.Decision.Events {
-		if err := applier.Apply(ctx, evt); err != nil {
-			return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "apply event: %v", err)
-		}
+		return storage.CampaignRecord{}, storage.ParticipantRecord{}, err
 	}
 
 	creatorID, err := c.idGenerator()
@@ -159,27 +157,27 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 		return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "encode participant payload: %v", err)
 	}
 
-	result, err := c.stores.Domain.Execute(ctx, command.Command{
-		CampaignID:   campaignID,
-		Type:         command.Type("participant.join"),
-		ActorType:    command.ActorTypeSystem,
-		ActorID:      "",
-		RequestID:    grpcmeta.RequestIDFromContext(ctx),
-		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-		EntityType:   "participant",
-		EntityID:     creatorID,
-		PayloadJSON:  participantPayloadJSON,
-	})
+	_, err = executeAndApplyDomainCommand(
+		ctx,
+		c.stores.Domain,
+		applier,
+		command.Command{
+			CampaignID:   campaignID,
+			Type:         command.Type("participant.join"),
+			ActorType:    command.ActorTypeSystem,
+			ActorID:      "",
+			RequestID:    grpcmeta.RequestIDFromContext(ctx),
+			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+			EntityType:   "participant",
+			EntityID:     creatorID,
+			PayloadJSON:  participantPayloadJSON,
+		},
+		domainCommandApplyOptions{
+			applyErrMessage: "apply participant event",
+		},
+	)
 	if err != nil {
-		return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
-	}
-	if len(result.Decision.Rejections) > 0 {
-		return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-	}
-	for _, evt := range result.Decision.Events {
-		if err := applier.Apply(ctx, evt); err != nil {
-			return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "apply participant event: %v", err)
-		}
+		return storage.CampaignRecord{}, storage.ParticipantRecord{}, err
 	}
 
 	ownerParticipant, err := c.stores.Participant.GetParticipant(ctx, campaignID, creatorID)
@@ -213,28 +211,24 @@ func (c campaignApplication) EndCampaign(ctx context.Context, campaignID string)
 		if actorID != "" {
 			actorType = command.ActorTypeParticipant
 		}
-
-		result, err := c.stores.Domain.Execute(ctx, command.Command{
-			CampaignID:   campaignID,
-			Type:         command.Type("campaign.end"),
-			ActorType:    actorType,
-			ActorID:      actorID,
-			RequestID:    grpcmeta.RequestIDFromContext(ctx),
-			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-			EntityType:   "campaign",
-			EntityID:     campaignID,
-		})
+		_, err = executeAndApplyDomainCommand(
+			ctx,
+			c.stores.Domain,
+			c.stores.Applier(),
+			command.Command{
+				CampaignID:   campaignID,
+				Type:         command.Type("campaign.end"),
+				ActorType:    actorType,
+				ActorID:      actorID,
+				RequestID:    grpcmeta.RequestIDFromContext(ctx),
+				InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+				EntityType:   "campaign",
+				EntityID:     campaignID,
+			},
+			domainCommandApplyOptions{},
+		)
 		if err != nil {
-			return storage.CampaignRecord{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
-		}
-		if len(result.Decision.Rejections) > 0 {
-			return storage.CampaignRecord{}, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-		}
-		applier := c.stores.Applier()
-		for _, evt := range result.Decision.Events {
-			if err := applier.Apply(ctx, evt); err != nil {
-				return storage.CampaignRecord{}, status.Errorf(codes.Internal, "apply event: %v", err)
-			}
+			return storage.CampaignRecord{}, err
 		}
 		updated, err := c.stores.Campaign.Get(ctx, campaignID)
 		if err != nil {
@@ -265,28 +259,24 @@ func (c campaignApplication) ArchiveCampaign(ctx context.Context, campaignID str
 		if actorID != "" {
 			actorType = command.ActorTypeParticipant
 		}
-
-		result, err := c.stores.Domain.Execute(ctx, command.Command{
-			CampaignID:   campaignID,
-			Type:         command.Type("campaign.archive"),
-			ActorType:    actorType,
-			ActorID:      actorID,
-			RequestID:    grpcmeta.RequestIDFromContext(ctx),
-			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-			EntityType:   "campaign",
-			EntityID:     campaignID,
-		})
+		_, err = executeAndApplyDomainCommand(
+			ctx,
+			c.stores.Domain,
+			c.stores.Applier(),
+			command.Command{
+				CampaignID:   campaignID,
+				Type:         command.Type("campaign.archive"),
+				ActorType:    actorType,
+				ActorID:      actorID,
+				RequestID:    grpcmeta.RequestIDFromContext(ctx),
+				InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+				EntityType:   "campaign",
+				EntityID:     campaignID,
+			},
+			domainCommandApplyOptions{},
+		)
 		if err != nil {
-			return storage.CampaignRecord{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
-		}
-		if len(result.Decision.Rejections) > 0 {
-			return storage.CampaignRecord{}, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-		}
-		applier := c.stores.Applier()
-		for _, evt := range result.Decision.Events {
-			if err := applier.Apply(ctx, evt); err != nil {
-				return storage.CampaignRecord{}, status.Errorf(codes.Internal, "apply event: %v", err)
-			}
+			return storage.CampaignRecord{}, err
 		}
 		updated, err := c.stores.Campaign.Get(ctx, campaignID)
 		if err != nil {
@@ -313,28 +303,24 @@ func (c campaignApplication) RestoreCampaign(ctx context.Context, campaignID str
 		if actorID != "" {
 			actorType = command.ActorTypeParticipant
 		}
-
-		result, err := c.stores.Domain.Execute(ctx, command.Command{
-			CampaignID:   campaignID,
-			Type:         command.Type("campaign.restore"),
-			ActorType:    actorType,
-			ActorID:      actorID,
-			RequestID:    grpcmeta.RequestIDFromContext(ctx),
-			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-			EntityType:   "campaign",
-			EntityID:     campaignID,
-		})
+		_, err = executeAndApplyDomainCommand(
+			ctx,
+			c.stores.Domain,
+			c.stores.Applier(),
+			command.Command{
+				CampaignID:   campaignID,
+				Type:         command.Type("campaign.restore"),
+				ActorType:    actorType,
+				ActorID:      actorID,
+				RequestID:    grpcmeta.RequestIDFromContext(ctx),
+				InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+				EntityType:   "campaign",
+				EntityID:     campaignID,
+			},
+			domainCommandApplyOptions{},
+		)
 		if err != nil {
-			return storage.CampaignRecord{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
-		}
-		if len(result.Decision.Rejections) > 0 {
-			return storage.CampaignRecord{}, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-		}
-		applier := c.stores.Applier()
-		for _, evt := range result.Decision.Events {
-			if err := applier.Apply(ctx, evt); err != nil {
-				return storage.CampaignRecord{}, status.Errorf(codes.Internal, "apply event: %v", err)
-			}
+			return storage.CampaignRecord{}, err
 		}
 		updated, err := c.stores.Campaign.Get(ctx, campaignID)
 		if err != nil {

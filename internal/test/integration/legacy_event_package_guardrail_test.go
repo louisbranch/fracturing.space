@@ -7,17 +7,24 @@ import (
 	"go/parser"
 	"go/token"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
 )
 
-func TestLegacyCampaignEventPackageImportsAreAllowlisted(t *testing.T) {
+func TestLegacyCampaignEventPackageIsNotUsed(t *testing.T) {
 	const legacyImportPath = "github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign/event"
 
 	root := integrationRepoRoot(t)
-	allowlist := legacyCampaignEventImportAllowlist()
+	legacyDir := filepath.Join(root, "internal/services/game/domain/campaign/event")
+	if _, err := os.Stat(legacyDir); err == nil {
+		t.Fatalf("legacy campaign event package must be removed: %s", legacyDir)
+	} else if !os.IsNotExist(err) {
+		t.Fatalf("stat legacy campaign event package: %v", err)
+	}
+
 	var violations []string
 
 	err := filepath.WalkDir(filepath.Join(root, "internal"), func(path string, d fs.DirEntry, walkErr error) error {
@@ -49,9 +56,6 @@ func TestLegacyCampaignEventPackageImportsAreAllowlisted(t *testing.T) {
 				return err
 			}
 			rel = filepath.ToSlash(rel)
-			if _, ok := allowlist[rel]; ok {
-				continue
-			}
 			violations = append(violations, rel)
 		}
 		return nil
@@ -61,10 +65,6 @@ func TestLegacyCampaignEventPackageImportsAreAllowlisted(t *testing.T) {
 	}
 
 	if len(violations) > 0 {
-		t.Fatalf("legacy campaign event package imports must be allowlisted:\n- %s", strings.Join(violations, "\n- "))
+		t.Fatalf("legacy campaign event package imports must not exist:\n- %s", strings.Join(violations, "\n- "))
 	}
-}
-
-func legacyCampaignEventImportAllowlist() map[string]struct{} {
-	return map[string]struct{}{}
 }

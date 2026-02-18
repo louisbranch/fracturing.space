@@ -10,7 +10,7 @@ nav_order: 4
 Run the generator from the repo root:
 
 ```bash
-go generate ./internal/services/game/domain/campaign/event
+go run ./internal/tools/eventdocgen
 ```
 
 This writes:
@@ -45,9 +45,8 @@ This writes:
   `internal/services/game/domain/event` registries.
 - Generated files in this folder are artifacts of the generator and should
   not be edited manually.
-- The generator currently sources core event type declarations from
-  `internal/services/game/domain/campaign/event` plus system event-type
-  declarations.
+- The generator sources runtime command and event type declarations from
+  core domain and system runtime registries.
 
 ## CI check
 The Go tests workflow regenerates docs and fails if either generated file is out of date:

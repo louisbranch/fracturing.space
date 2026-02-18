@@ -66,7 +66,7 @@ func Fold(state State, evt event.Event) State {
 		}
 		state.UserID = ""
 	}
-	if evt.Type == eventTypeSeatReassigned {
+	if evt.Type == eventTypeSeatReassigned || evt.Type == eventTypeSeatReassignedLegacy {
 		var payload SeatReassignPayload
 		_ = json.Unmarshal(evt.PayloadJSON, &payload)
 		if payload.ParticipantID != "" {

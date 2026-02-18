@@ -106,27 +106,27 @@ func (a forkApplication) ForkCampaign(ctx context.Context, sourceCampaignID stri
 	if actorID != "" {
 		actorType = command.ActorTypeParticipant
 	}
-	result, err := a.stores.Domain.Execute(ctx, command.Command{
-		CampaignID:   f.NewCampaignID,
-		Type:         command.Type("campaign.create"),
-		ActorType:    actorType,
-		ActorID:      actorID,
-		RequestID:    requestID,
-		InvocationID: invocationID,
-		EntityType:   "campaign",
-		EntityID:     f.NewCampaignID,
-		PayloadJSON:  campaignJSON,
-	})
+	_, err = executeAndApplyDomainCommand(
+		ctx,
+		a.stores.Domain,
+		applier,
+		command.Command{
+			CampaignID:   f.NewCampaignID,
+			Type:         command.Type("campaign.create"),
+			ActorType:    actorType,
+			ActorID:      actorID,
+			RequestID:    requestID,
+			InvocationID: invocationID,
+			EntityType:   "campaign",
+			EntityID:     f.NewCampaignID,
+			PayloadJSON:  campaignJSON,
+		},
+		domainCommandApplyOptions{
+			applyErrMessage: "apply campaign.created",
+		},
+	)
 	if err != nil {
-		return storage.CampaignRecord{}, nil, 0, status.Errorf(codes.Internal, "execute domain command: %v", err)
-	}
-	if len(result.Decision.Rejections) > 0 {
-		return storage.CampaignRecord{}, nil, 0, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-	}
-	for _, evt := range result.Decision.Events {
-		if err := applier.Apply(ctx, evt); err != nil {
-			return storage.CampaignRecord{}, nil, 0, status.Errorf(codes.Internal, "apply campaign.created: %v", err)
-		}
+		return storage.CampaignRecord{}, nil, 0, err
 	}
 
 	forkPayload := campaign.ForkPayload{
@@ -143,27 +143,27 @@ func (a forkApplication) ForkCampaign(ctx context.Context, sourceCampaignID stri
 	if actorID != "" {
 		actorType = command.ActorTypeParticipant
 	}
-	result, err = a.stores.Domain.Execute(ctx, command.Command{
-		CampaignID:   f.NewCampaignID,
-		Type:         command.Type("campaign.fork"),
-		ActorType:    actorType,
-		ActorID:      actorID,
-		RequestID:    requestID,
-		InvocationID: invocationID,
-		EntityType:   "campaign",
-		EntityID:     f.NewCampaignID,
-		PayloadJSON:  forkJSON,
-	})
+	_, err = executeAndApplyDomainCommand(
+		ctx,
+		a.stores.Domain,
+		applier,
+		command.Command{
+			CampaignID:   f.NewCampaignID,
+			Type:         command.Type("campaign.fork"),
+			ActorType:    actorType,
+			ActorID:      actorID,
+			RequestID:    requestID,
+			InvocationID: invocationID,
+			EntityType:   "campaign",
+			EntityID:     f.NewCampaignID,
+			PayloadJSON:  forkJSON,
+		},
+		domainCommandApplyOptions{
+			applyErrMessage: "apply campaign.forked",
+		},
+	)
 	if err != nil {
-		return storage.CampaignRecord{}, nil, 0, status.Errorf(codes.Internal, "execute domain command: %v", err)
-	}
-	if len(result.Decision.Rejections) > 0 {
-		return storage.CampaignRecord{}, nil, 0, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-	}
-	for _, evt := range result.Decision.Events {
-		if err := applier.Apply(ctx, evt); err != nil {
-			return storage.CampaignRecord{}, nil, 0, status.Errorf(codes.Internal, "apply campaign.forked: %v", err)
-		}
+		return storage.CampaignRecord{}, nil, 0, err
 	}
 
 	if _, err := a.copyForkEvents(ctx, sourceCampaignID, f.NewCampaignID, forkEventSeq, in.GetCopyParticipants(), applier); err != nil {
