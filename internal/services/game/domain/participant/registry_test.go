@@ -359,28 +359,30 @@ func TestRegisterCommands_ValidatesSeatReassignPayload(t *testing.T) {
 		t.Fatalf("register commands: %v", err)
 	}
 
-	validCommand := command.Command{
-		CampaignID:  "camp-1",
-		Type:        command.Type("seat.reassign"),
-		ActorType:   command.ActorTypeSystem,
-		PayloadJSON: []byte(`{"participant_id":"p-1","user_id":"u-2"}`),
-	}
-	if _, err := registry.ValidateForDecision(validCommand); err != nil {
-		t.Fatalf("valid command rejected: %v", err)
-	}
+	for _, commandType := range []command.Type{command.Type("seat.reassign"), command.Type("participant.seat.reassign")} {
+		validCommand := command.Command{
+			CampaignID:  "camp-1",
+			Type:        commandType,
+			ActorType:   command.ActorTypeSystem,
+			PayloadJSON: []byte(`{"participant_id":"p-1","user_id":"u-2"}`),
+		}
+		if _, err := registry.ValidateForDecision(validCommand); err != nil {
+			t.Fatalf("valid command (%s) rejected: %v", commandType, err)
+		}
 
-	invalidCommand := command.Command{
-		CampaignID:  "camp-1",
-		Type:        command.Type("seat.reassign"),
-		ActorType:   command.ActorTypeSystem,
-		PayloadJSON: []byte(`{"participant_id":1,"user_id":"u-2"}`),
-	}
-	_, err := registry.ValidateForDecision(invalidCommand)
-	if err == nil {
-		t.Fatal("expected error")
-	}
-	if errors.Is(err, command.ErrTypeUnknown) {
-		t.Fatalf("expected payload validation error, got %v", err)
+		invalidCommand := command.Command{
+			CampaignID:  "camp-1",
+			Type:        commandType,
+			ActorType:   command.ActorTypeSystem,
+			PayloadJSON: []byte(`{"participant_id":1,"user_id":"u-2"}`),
+		}
+		_, err := registry.ValidateForDecision(invalidCommand)
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		if errors.Is(err, command.ErrTypeUnknown) {
+			t.Fatalf("expected payload validation error, got %v", err)
+		}
 	}
 }
 
@@ -390,26 +392,28 @@ func TestRegisterEvents_ValidatesSeatReassignedPayload(t *testing.T) {
 		t.Fatalf("register events: %v", err)
 	}
 
-	validEvent := event.Event{
-		CampaignID:  "camp-1",
-		Type:        event.Type("seat.reassigned"),
-		Timestamp:   time.Unix(0, 0).UTC(),
-		ActorType:   event.ActorTypeSystem,
-		EntityType:  "participant",
-		EntityID:    "p-1",
-		PayloadJSON: []byte(`{"participant_id":"p-1","user_id":"u-2"}`),
-	}
-	if _, err := registry.ValidateForAppend(validEvent); err != nil {
-		t.Fatalf("valid event rejected: %v", err)
-	}
+	for _, eventType := range []event.Type{event.Type("seat.reassigned"), event.Type("participant.seat_reassigned")} {
+		validEvent := event.Event{
+			CampaignID:  "camp-1",
+			Type:        eventType,
+			Timestamp:   time.Unix(0, 0).UTC(),
+			ActorType:   event.ActorTypeSystem,
+			EntityType:  "participant",
+			EntityID:    "p-1",
+			PayloadJSON: []byte(`{"participant_id":"p-1","user_id":"u-2"}`),
+		}
+		if _, err := registry.ValidateForAppend(validEvent); err != nil {
+			t.Fatalf("valid event (%s) rejected: %v", eventType, err)
+		}
 
-	invalidEvent := validEvent
-	invalidEvent.PayloadJSON = []byte(`{"participant_id":1,"user_id":"u-2"}`)
-	_, err := registry.ValidateForAppend(invalidEvent)
-	if err == nil {
-		t.Fatal("expected error")
-	}
-	if errors.Is(err, event.ErrTypeUnknown) {
-		t.Fatalf("expected payload validation error, got %v", err)
+		invalidEvent := validEvent
+		invalidEvent.PayloadJSON = []byte(`{"participant_id":1,"user_id":"u-2"}`)
+		_, err := registry.ValidateForAppend(invalidEvent)
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		if errors.Is(err, event.ErrTypeUnknown) {
+			t.Fatalf("expected payload validation error, got %v", err)
+		}
 	}
 }

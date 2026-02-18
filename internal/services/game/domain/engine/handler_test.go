@@ -315,8 +315,8 @@ func TestExecute_UsesValidatedCommandForAllStateLoads(t *testing.T) {
 	if err != nil {
 		t.Fatalf("execute: %v", err)
 	}
-	if len(loader.campaignIDs) != 2 {
-		t.Fatalf("state loader calls = %d, want %d", len(loader.campaignIDs), 2)
+	if len(loader.campaignIDs) != 1 {
+		t.Fatalf("state loader calls = %d, want %d", len(loader.campaignIDs), 1)
 	}
 	for _, id := range loader.campaignIDs {
 		if id != "camp-1" {

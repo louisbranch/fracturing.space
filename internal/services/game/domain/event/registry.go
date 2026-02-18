@@ -108,7 +108,21 @@ type Definition struct {
 	Owner           Owner
 	Addressing      AddressingPolicy
 	ValidatePayload PayloadValidator
+	Intent          Intent
 }
+
+// Intent declares what the runtime should do when the event is replayed.
+//
+// - ProjectionAndReplay means the event must be folded into state and projected.
+// - AuditOnly means handlers may ignore the event at projection/runtime edges.
+type Intent string
+
+const (
+	// IntentProjectionAndReplay indicates the event should be applied during replay and projection.
+	IntentProjectionAndReplay Intent = "projection_and_replay"
+	// IntentAuditOnly indicates the event is observability-only.
+	IntentAuditOnly Intent = "audit_only"
+)
 
 // AddressingPolicy declares required entity-addressing fields for an event type.
 type AddressingPolicy uint8
@@ -149,6 +163,15 @@ func (r *Registry) Register(def Definition) error {
 		// allowed
 	default:
 		return fmt.Errorf("owner must be core or system")
+	}
+	if def.Intent == "" {
+		def.Intent = IntentProjectionAndReplay
+	}
+	switch def.Intent {
+	case IntentProjectionAndReplay, IntentAuditOnly:
+		// allowed
+	default:
+		return fmt.Errorf("event intent is invalid")
 	}
 	switch def.Addressing {
 	case AddressingPolicyNone, AddressingPolicyEntityType, AddressingPolicyEntityTarget:

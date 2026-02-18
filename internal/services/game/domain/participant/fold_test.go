@@ -93,11 +93,19 @@ func TestFoldParticipantUnboundClearsUserID(t *testing.T) {
 
 func TestFoldSeatReassignedUpdatesUserID(t *testing.T) {
 	state := State{Joined: true, ParticipantID: "p-1", UserID: "u-1"}
-	updated := Fold(state, event.Event{
-		Type:        event.Type("seat.reassigned"),
-		PayloadJSON: []byte(`{"participant_id":"p-1","prior_user_id":"u-1","user_id":"u-2"}`),
-	})
-	if updated.UserID != "u-2" {
-		t.Fatalf("user id = %s, want %s", updated.UserID, "u-2")
+	eventTypes := []event.Type{
+		event.Type("seat.reassigned"),
+		event.Type("participant.seat_reassigned"),
+	}
+	for _, eventType := range eventTypes {
+		t.Run(string(eventType), func(t *testing.T) {
+			updated := Fold(state, event.Event{
+				Type:        eventType,
+				PayloadJSON: []byte(`{"participant_id":"p-1","prior_user_id":"u-1","user_id":"u-2"}`),
+			})
+			if updated.UserID != "u-2" {
+				t.Fatalf("user id = %s, want %s", updated.UserID, "u-2")
+			}
+		})
 	}
 }

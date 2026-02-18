@@ -48,11 +48,21 @@ func RegisterCommands(registry *command.Registry) error {
 	}); err != nil {
 		return err
 	}
-	return registry.Register(command.Definition{
+	if err := registry.Register(command.Definition{
+		Type:            commandTypeSeatReassignLegacy,
+		Owner:           command.OwnerCore,
+		ValidatePayload: validateSeatReassignPayload,
+	}); err != nil {
+		return err
+	}
+	if err := registry.Register(command.Definition{
 		Type:            commandTypeSeatReassign,
 		Owner:           command.OwnerCore,
 		ValidatePayload: validateSeatReassignPayload,
-	})
+	}); err != nil {
+		return err
+	}
+	return nil
 }
 
 // RegisterEvents registers participant events with the shared registry.
@@ -100,12 +110,23 @@ func RegisterEvents(registry *event.Registry) error {
 	}); err != nil {
 		return err
 	}
-	return registry.Register(event.Definition{
+	if err := registry.Register(event.Definition{
+		Type:            eventTypeSeatReassignedLegacy,
+		Owner:           event.OwnerCore,
+		Addressing:      event.AddressingPolicyEntityTarget,
+		ValidatePayload: validateSeatReassignPayload,
+	}); err != nil {
+		return err
+	}
+	if err := registry.Register(event.Definition{
 		Type:            eventTypeSeatReassigned,
 		Owner:           event.OwnerCore,
 		Addressing:      event.AddressingPolicyEntityTarget,
 		ValidatePayload: validateSeatReassignPayload,
-	})
+	}); err != nil {
+		return err
+	}
+	return nil
 }
 
 // validateJoinPayload ensures join payloads match the participant join shape.

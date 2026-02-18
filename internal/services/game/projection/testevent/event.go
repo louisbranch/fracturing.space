@@ -14,12 +14,13 @@ const (
 
 // Participant events.
 const (
-	TypeParticipantJoined  Type = "participant.joined"
-	TypeParticipantLeft    Type = "participant.left"
-	TypeParticipantUpdated Type = "participant.updated"
-	TypeParticipantBound   Type = "participant.bound"
-	TypeParticipantUnbound Type = "participant.unbound"
-	TypeSeatReassigned     Type = "seat.reassigned"
+	TypeParticipantJoined         Type = "participant.joined"
+	TypeParticipantLeft           Type = "participant.left"
+	TypeParticipantUpdated        Type = "participant.updated"
+	TypeParticipantBound          Type = "participant.bound"
+	TypeParticipantUnbound        Type = "participant.unbound"
+	TypeSeatReassigned            Type = "seat.reassigned"
+	TypeParticipantSeatReassigned Type = "participant.seat_reassigned"
 )
 
 // Invite events.

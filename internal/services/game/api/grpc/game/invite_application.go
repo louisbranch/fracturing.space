@@ -103,30 +103,27 @@ func (a inviteApplication) CreateInvite(ctx context.Context, campaignID string, 
 	if actorID != "" {
 		actorType = command.ActorTypeParticipant
 	}
-	result, err := a.stores.Domain.Execute(ctx, command.Command{
-		CampaignID:   campaignID,
-		Type:         command.Type("invite.create"),
-		ActorType:    actorType,
-		ActorID:      actorID,
-		RequestID:    requestID,
-		InvocationID: invocationID,
-		EntityType:   "invite",
-		EntityID:     inviteID,
-		PayloadJSON:  payloadJSON,
-	})
+	_, err = executeAndApplyDomainCommand(
+		ctx,
+		a.stores.Domain,
+		applier,
+		command.Command{
+			CampaignID:   campaignID,
+			Type:         command.Type("invite.create"),
+			ActorType:    actorType,
+			ActorID:      actorID,
+			RequestID:    requestID,
+			InvocationID: invocationID,
+			EntityType:   "invite",
+			EntityID:     inviteID,
+			PayloadJSON:  payloadJSON,
+		},
+		domainCommandApplyOptions{
+			applyErr: domainApplyErrorWithCodePreserve("apply invite event"),
+		},
+	)
 	if err != nil {
-		return storage.InviteRecord{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
-	}
-	if len(result.Decision.Rejections) > 0 {
-		return storage.InviteRecord{}, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-	}
-	for _, evt := range result.Decision.Events {
-		if err := applier.Apply(ctx, evt); err != nil {
-			if apperrors.GetCode(err) != apperrors.CodeUnknown {
-				return storage.InviteRecord{}, err
-			}
-			return storage.InviteRecord{}, status.Errorf(codes.Internal, "apply invite event: %v", err)
-		}
+		return storage.InviteRecord{}, err
 	}
 
 	inv, err := a.stores.Invite.GetInvite(ctx, inviteID)
@@ -257,30 +254,27 @@ func (a inviteApplication) ClaimInvite(ctx context.Context, campaignID string, i
 	if actorID != "" {
 		actorType = command.ActorTypeParticipant
 	}
-	result, err := a.stores.Domain.Execute(ctx, command.Command{
-		CampaignID:   campaignID,
-		Type:         command.Type("participant.bind"),
-		ActorType:    actorType,
-		ActorID:      actorID,
-		RequestID:    requestID,
-		InvocationID: invocationID,
-		EntityType:   "participant",
-		EntityID:     seat.ID,
-		PayloadJSON:  payloadJSON,
-	})
+	_, err = executeAndApplyDomainCommand(
+		ctx,
+		a.stores.Domain,
+		applier,
+		command.Command{
+			CampaignID:   campaignID,
+			Type:         command.Type("participant.bind"),
+			ActorType:    actorType,
+			ActorID:      actorID,
+			RequestID:    requestID,
+			InvocationID: invocationID,
+			EntityType:   "participant",
+			EntityID:     seat.ID,
+			PayloadJSON:  payloadJSON,
+		},
+		domainCommandApplyOptions{
+			applyErr: domainApplyErrorWithCodePreserve("apply participant event"),
+		},
+	)
 	if err != nil {
-		return storage.InviteRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
-	}
-	if len(result.Decision.Rejections) > 0 {
-		return storage.InviteRecord{}, storage.ParticipantRecord{}, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-	}
-	for _, evt := range result.Decision.Events {
-		if err := applier.Apply(ctx, evt); err != nil {
-			if apperrors.GetCode(err) != apperrors.CodeUnknown {
-				return storage.InviteRecord{}, storage.ParticipantRecord{}, err
-			}
-			return storage.InviteRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "apply participant event: %v", err)
-		}
+		return storage.InviteRecord{}, storage.ParticipantRecord{}, err
 	}
 
 	claimPayload := invite.ClaimPayload{
@@ -297,30 +291,27 @@ func (a inviteApplication) ClaimInvite(ctx context.Context, campaignID string, i
 	if actorID != "" {
 		actorType = command.ActorTypeParticipant
 	}
-	result, err = a.stores.Domain.Execute(ctx, command.Command{
-		CampaignID:   campaignID,
-		Type:         command.Type("invite.claim"),
-		ActorType:    actorType,
-		ActorID:      actorID,
-		RequestID:    requestID,
-		InvocationID: invocationID,
-		EntityType:   "invite",
-		EntityID:     inv.ID,
-		PayloadJSON:  claimJSON,
-	})
+	_, err = executeAndApplyDomainCommand(
+		ctx,
+		a.stores.Domain,
+		applier,
+		command.Command{
+			CampaignID:   campaignID,
+			Type:         command.Type("invite.claim"),
+			ActorType:    actorType,
+			ActorID:      actorID,
+			RequestID:    requestID,
+			InvocationID: invocationID,
+			EntityType:   "invite",
+			EntityID:     inv.ID,
+			PayloadJSON:  claimJSON,
+		},
+		domainCommandApplyOptions{
+			applyErr: domainApplyErrorWithCodePreserve("apply invite event"),
+		},
+	)
 	if err != nil {
-		return storage.InviteRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
-	}
-	if len(result.Decision.Rejections) > 0 {
-		return storage.InviteRecord{}, storage.ParticipantRecord{}, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-	}
-	for _, evt := range result.Decision.Events {
-		if err := applier.Apply(ctx, evt); err != nil {
-			if apperrors.GetCode(err) != apperrors.CodeUnknown {
-				return storage.InviteRecord{}, storage.ParticipantRecord{}, err
-			}
-			return storage.InviteRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "apply invite event: %v", err)
-		}
+		return storage.InviteRecord{}, storage.ParticipantRecord{}, err
 	}
 
 	updatedInvite, err := a.stores.Invite.GetInvite(ctx, inv.ID)
@@ -376,30 +367,27 @@ func (a inviteApplication) RevokeInvite(ctx context.Context, in *campaignv1.Revo
 	if actorID != "" {
 		actorType = command.ActorTypeParticipant
 	}
-	result, err := a.stores.Domain.Execute(ctx, command.Command{
-		CampaignID:   inv.CampaignID,
-		Type:         command.Type("invite.revoke"),
-		ActorType:    actorType,
-		ActorID:      actorID,
-		RequestID:    requestID,
-		InvocationID: invocationID,
-		EntityType:   "invite",
-		EntityID:     inv.ID,
-		PayloadJSON:  payloadJSON,
-	})
+	_, err = executeAndApplyDomainCommand(
+		ctx,
+		a.stores.Domain,
+		applier,
+		command.Command{
+			CampaignID:   inv.CampaignID,
+			Type:         command.Type("invite.revoke"),
+			ActorType:    actorType,
+			ActorID:      actorID,
+			RequestID:    requestID,
+			InvocationID: invocationID,
+			EntityType:   "invite",
+			EntityID:     inv.ID,
+			PayloadJSON:  payloadJSON,
+		},
+		domainCommandApplyOptions{
+			applyErr: domainApplyErrorWithCodePreserve("apply invite event"),
+		},
+	)
 	if err != nil {
-		return storage.InviteRecord{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
-	}
-	if len(result.Decision.Rejections) > 0 {
-		return storage.InviteRecord{}, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-	}
-	for _, evt := range result.Decision.Events {
-		if err := applier.Apply(ctx, evt); err != nil {
-			if apperrors.GetCode(err) != apperrors.CodeUnknown {
-				return storage.InviteRecord{}, err
-			}
-			return storage.InviteRecord{}, status.Errorf(codes.Internal, "apply invite event: %v", err)
-		}
+		return storage.InviteRecord{}, err
 	}
 
 	updated, err := a.stores.Invite.GetInvite(ctx, inv.ID)

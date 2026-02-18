@@ -76,27 +76,25 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 	if actorID != "" {
 		actorType = command.ActorTypeParticipant
 	}
-	result, err := c.stores.Domain.Execute(ctx, command.Command{
-		CampaignID:   campaignID,
-		Type:         command.Type("character.create"),
-		ActorType:    actorType,
-		ActorID:      actorID,
-		RequestID:    grpcmeta.RequestIDFromContext(ctx),
-		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-		EntityType:   "character",
-		EntityID:     characterID,
-		PayloadJSON:  payloadJSON,
-	})
+	_, err = executeAndApplyDomainCommand(
+		ctx,
+		c.stores.Domain,
+		applier,
+		command.Command{
+			CampaignID:   campaignID,
+			Type:         command.Type("character.create"),
+			ActorType:    actorType,
+			ActorID:      actorID,
+			RequestID:    grpcmeta.RequestIDFromContext(ctx),
+			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+			EntityType:   "character",
+			EntityID:     characterID,
+			PayloadJSON:  payloadJSON,
+		},
+		domainCommandApplyOptions{},
+	)
 	if err != nil {
-		return storage.CharacterRecord{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
-	}
-	if len(result.Decision.Rejections) > 0 {
-		return storage.CharacterRecord{}, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-	}
-	for _, evt := range result.Decision.Events {
-		if err := applier.Apply(ctx, evt); err != nil {
-			return storage.CharacterRecord{}, status.Errorf(codes.Internal, "apply event: %v", err)
-		}
+		return storage.CharacterRecord{}, err
 	}
 
 	created, err := c.stores.Character.GetCharacter(ctx, campaignID, characterID)
@@ -156,27 +154,27 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 	if actorID != "" {
 		profileCommandActorType = command.ActorTypeGM
 	}
-	profileResult, err := c.stores.Domain.Execute(ctx, command.Command{
-		CampaignID:   campaignID,
-		Type:         command.Type("character.profile_update"),
-		ActorType:    profileCommandActorType,
-		ActorID:      actorID,
-		RequestID:    reqID,
-		InvocationID: invocationID,
-		EntityType:   "character",
-		EntityID:     created.ID,
-		PayloadJSON:  commandPayloadJSON,
-	})
+	_, err = executeAndApplyDomainCommand(
+		ctx,
+		c.stores.Domain,
+		projectionApplier,
+		command.Command{
+			CampaignID:   campaignID,
+			Type:         command.Type("character.profile_update"),
+			ActorType:    profileCommandActorType,
+			ActorID:      actorID,
+			RequestID:    reqID,
+			InvocationID: invocationID,
+			EntityType:   "character",
+			EntityID:     created.ID,
+			PayloadJSON:  commandPayloadJSON,
+		},
+		domainCommandApplyOptions{
+			applyErrMessage: "apply profile event",
+		},
+	)
 	if err != nil {
-		return storage.CharacterRecord{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
-	}
-	if len(profileResult.Decision.Rejections) > 0 {
-		return storage.CharacterRecord{}, status.Error(codes.FailedPrecondition, profileResult.Decision.Rejections[0].Message)
-	}
-	for _, evt := range profileResult.Decision.Events {
-		if err := projectionApplier.Apply(ctx, evt); err != nil {
-			return storage.CharacterRecord{}, status.Errorf(codes.Internal, "apply profile event: %v", err)
-		}
+		return storage.CharacterRecord{}, err
 	}
 
 	hpAfter := dhDefaults.HpMax
@@ -198,33 +196,32 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 	if err != nil {
 		return storage.CharacterRecord{}, status.Errorf(codes.Internal, "encode state payload: %v", err)
 	}
-	stateResult, err := c.stores.Domain.Execute(ctx, command.Command{
-		CampaignID:    campaignID,
-		Type:          command.Type("sys.daggerheart.action.character_state.patch"),
-		ActorType:     profileCommandActorType,
-		ActorID:       actorID,
-		SessionID:     grpcmeta.SessionIDFromContext(ctx),
-		RequestID:     reqID,
-		InvocationID:  invocationID,
-		EntityType:    "character",
-		EntityID:      created.ID,
-		SystemID:      daggerheart.SystemID,
-		SystemVersion: daggerheart.SystemVersion,
-		PayloadJSON:   stateJSON,
-	})
+	_, err = executeAndApplyDomainCommand(
+		ctx,
+		c.stores.Domain,
+		c.stores.Applier(),
+		command.Command{
+			CampaignID:    campaignID,
+			Type:          command.Type("sys.daggerheart.action.character_state.patch"),
+			ActorType:     profileCommandActorType,
+			ActorID:       actorID,
+			SessionID:     grpcmeta.SessionIDFromContext(ctx),
+			RequestID:     reqID,
+			InvocationID:  invocationID,
+			EntityType:    "character",
+			EntityID:      created.ID,
+			SystemID:      daggerheart.SystemID,
+			SystemVersion: daggerheart.SystemVersion,
+			PayloadJSON:   stateJSON,
+		},
+		domainCommandApplyOptions{
+			requireEvents:   true,
+			missingEventMsg: "character state patch did not emit an event",
+			applyErrMessage: "apply state event",
+		},
+	)
 	if err != nil {
-		return storage.CharacterRecord{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
-	}
-	if len(stateResult.Decision.Rejections) > 0 {
-		return storage.CharacterRecord{}, status.Error(codes.FailedPrecondition, stateResult.Decision.Rejections[0].Message)
-	}
-	if len(stateResult.Decision.Events) == 0 {
-		return storage.CharacterRecord{}, status.Error(codes.Internal, "character state patch did not emit an event")
-	}
-	for _, evt := range stateResult.Decision.Events {
-		if err := c.stores.Applier().Apply(ctx, evt); err != nil {
-			return storage.CharacterRecord{}, status.Errorf(codes.Internal, "apply state event: %v", err)
-		}
+		return storage.CharacterRecord{}, err
 	}
 
 	return created, nil
@@ -300,27 +297,25 @@ func (c characterApplication) UpdateCharacter(ctx context.Context, campaignID st
 	if actorID != "" {
 		actorType = command.ActorTypeParticipant
 	}
-	result, err := c.stores.Domain.Execute(ctx, command.Command{
-		CampaignID:   campaignID,
-		Type:         command.Type("character.update"),
-		ActorType:    actorType,
-		ActorID:      actorID,
-		RequestID:    grpcmeta.RequestIDFromContext(ctx),
-		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-		EntityType:   "character",
-		EntityID:     characterID,
-		PayloadJSON:  payloadJSON,
-	})
+	_, err = executeAndApplyDomainCommand(
+		ctx,
+		c.stores.Domain,
+		applier,
+		command.Command{
+			CampaignID:   campaignID,
+			Type:         command.Type("character.update"),
+			ActorType:    actorType,
+			ActorID:      actorID,
+			RequestID:    grpcmeta.RequestIDFromContext(ctx),
+			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+			EntityType:   "character",
+			EntityID:     characterID,
+			PayloadJSON:  payloadJSON,
+		},
+		domainCommandApplyOptions{},
+	)
 	if err != nil {
-		return storage.CharacterRecord{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
-	}
-	if len(result.Decision.Rejections) > 0 {
-		return storage.CharacterRecord{}, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-	}
-	for _, evt := range result.Decision.Events {
-		if err := applier.Apply(ctx, evt); err != nil {
-			return storage.CharacterRecord{}, status.Errorf(codes.Internal, "apply event: %v", err)
-		}
+		return storage.CharacterRecord{}, err
 	}
 
 	updated, err := c.stores.Character.GetCharacter(ctx, campaignID, characterID)
@@ -369,27 +364,27 @@ func (c characterApplication) DeleteCharacter(ctx context.Context, campaignID st
 	if actorID != "" {
 		actorType = command.ActorTypeParticipant
 	}
-	result, err := c.stores.Domain.Execute(ctx, command.Command{
-		CampaignID:   campaignID,
-		Type:         command.Type("character.delete"),
-		ActorType:    actorType,
-		ActorID:      actorID,
-		RequestID:    grpcmeta.RequestIDFromContext(ctx),
-		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-		EntityType:   "character",
-		EntityID:     characterID,
-		PayloadJSON:  payloadJSON,
-	})
+	_, err = executeAndApplyDomainCommand(
+		ctx,
+		c.stores.Domain,
+		applier,
+		command.Command{
+			CampaignID:   campaignID,
+			Type:         command.Type("character.delete"),
+			ActorType:    actorType,
+			ActorID:      actorID,
+			RequestID:    grpcmeta.RequestIDFromContext(ctx),
+			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+			EntityType:   "character",
+			EntityID:     characterID,
+			PayloadJSON:  payloadJSON,
+		},
+		domainCommandApplyOptions{
+			applyErrMessage: "apply event",
+		},
+	)
 	if err != nil {
-		return storage.CharacterRecord{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
-	}
-	if len(result.Decision.Rejections) > 0 {
-		return storage.CharacterRecord{}, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-	}
-	for _, evt := range result.Decision.Events {
-		if err := applier.Apply(ctx, evt); err != nil {
-			return storage.CharacterRecord{}, status.Errorf(codes.Internal, "apply event: %v", err)
-		}
+		return storage.CharacterRecord{}, err
 	}
 
 	return ch, nil
@@ -441,27 +436,27 @@ func (c characterApplication) SetDefaultControl(ctx context.Context, campaignID 
 	if actorID != "" {
 		actorType = command.ActorTypeParticipant
 	}
-	result, err := c.stores.Domain.Execute(ctx, command.Command{
-		CampaignID:   campaignID,
-		Type:         command.Type("character.update"),
-		ActorType:    actorType,
-		ActorID:      actorID,
-		RequestID:    grpcmeta.RequestIDFromContext(ctx),
-		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-		EntityType:   "character",
-		EntityID:     characterID,
-		PayloadJSON:  payloadJSON,
-	})
+	_, err = executeAndApplyDomainCommand(
+		ctx,
+		c.stores.Domain,
+		applier,
+		command.Command{
+			CampaignID:   campaignID,
+			Type:         command.Type("character.update"),
+			ActorType:    actorType,
+			ActorID:      actorID,
+			RequestID:    grpcmeta.RequestIDFromContext(ctx),
+			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+			EntityType:   "character",
+			EntityID:     characterID,
+			PayloadJSON:  payloadJSON,
+		},
+		domainCommandApplyOptions{
+			applyErrMessage: "apply event",
+		},
+	)
 	if err != nil {
-		return "", "", status.Errorf(codes.Internal, "execute domain command: %v", err)
-	}
-	if len(result.Decision.Rejections) > 0 {
-		return "", "", status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-	}
-	for _, evt := range result.Decision.Events {
-		if err := applier.Apply(ctx, evt); err != nil {
-			return "", "", status.Errorf(codes.Internal, "apply event: %v", err)
-		}
+		return "", "", err
 	}
 
 	return characterID, participantID, nil
@@ -706,27 +701,25 @@ func (c characterApplication) PatchCharacterProfile(ctx context.Context, campaig
 	if actorID != "" {
 		actorType = command.ActorTypeParticipant
 	}
-	result, err := c.stores.Domain.Execute(ctx, command.Command{
-		CampaignID:   campaignID,
-		Type:         command.Type("character.profile_update"),
-		ActorType:    actorType,
-		ActorID:      actorID,
-		RequestID:    grpcmeta.RequestIDFromContext(ctx),
-		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-		EntityType:   "character",
-		EntityID:     characterID,
-		PayloadJSON:  commandPayloadJSON,
-	})
+	_, err = executeAndApplyDomainCommand(
+		ctx,
+		c.stores.Domain,
+		applier,
+		command.Command{
+			CampaignID:   campaignID,
+			Type:         command.Type("character.profile_update"),
+			ActorType:    actorType,
+			ActorID:      actorID,
+			RequestID:    grpcmeta.RequestIDFromContext(ctx),
+			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+			EntityType:   "character",
+			EntityID:     characterID,
+			PayloadJSON:  commandPayloadJSON,
+		},
+		domainCommandApplyOptions{},
+	)
 	if err != nil {
-		return "", storage.DaggerheartCharacterProfile{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
-	}
-	if len(result.Decision.Rejections) > 0 {
-		return "", storage.DaggerheartCharacterProfile{}, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-	}
-	for _, evt := range result.Decision.Events {
-		if err := applier.Apply(ctx, evt); err != nil {
-			return "", storage.DaggerheartCharacterProfile{}, status.Errorf(codes.Internal, "apply event: %v", err)
-		}
+		return "", storage.DaggerheartCharacterProfile{}, err
 	}
 
 	return characterID, dhProfile, nil

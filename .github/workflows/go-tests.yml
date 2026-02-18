@@ -23,10 +23,8 @@ jobs:
         run: go install golang.org/x/tools/cmd/goimports@latest
       - name: Check Go formatting
         run: make fmt-check
-      - name: Generate event catalog
-        run: go generate ./internal/services/game/domain/campaign/event
-      - name: Verify event catalog is up to date
-        run: git diff --exit-code docs/events/event-catalog.md
+      - name: Verify event catalogs are up to date
+        run: make event-catalog-check
       - name: Run tests and generate coverage report
         run: make cover
       - name: Check coverage regression against baseline

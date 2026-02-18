@@ -77,27 +77,28 @@ func (a sessionApplication) StartSession(ctx context.Context, campaignID string,
 		if err != nil {
 			return storage.SessionRecord{}, status.Errorf(codes.Internal, "encode payload: %v", err)
 		}
-		result, err := a.stores.Domain.Execute(ctx, command.Command{
-			CampaignID:   campaignID,
-			Type:         command.Type("campaign.update"),
-			ActorType:    actorType,
-			ActorID:      actorID,
-			RequestID:    grpcmeta.RequestIDFromContext(ctx),
-			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-			EntityType:   "campaign",
-			EntityID:     campaignID,
-			PayloadJSON:  payloadJSON,
-		})
+		_, err = executeAndApplyDomainCommand(
+			ctx,
+			a.stores.Domain,
+			applier,
+			command.Command{
+				CampaignID:   campaignID,
+				Type:         command.Type("campaign.update"),
+				ActorType:    actorType,
+				ActorID:      actorID,
+				RequestID:    grpcmeta.RequestIDFromContext(ctx),
+				InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+				EntityType:   "campaign",
+				EntityID:     campaignID,
+				PayloadJSON:  payloadJSON,
+			},
+			domainCommandApplyOptions{
+				requireEvents:   true,
+				missingEventMsg: "campaign.update did not emit an event",
+			},
+		)
 		if err != nil {
-			return storage.SessionRecord{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
-		}
-		if len(result.Decision.Rejections) > 0 {
-			return storage.SessionRecord{}, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-		}
-		for _, evt := range result.Decision.Events {
-			if err := applier.Apply(ctx, evt); err != nil {
-				return storage.SessionRecord{}, status.Errorf(codes.Internal, "apply event: %v", err)
-			}
+			return storage.SessionRecord{}, err
 		}
 	}
 
@@ -109,28 +110,29 @@ func (a sessionApplication) StartSession(ctx context.Context, campaignID string,
 	if err != nil {
 		return storage.SessionRecord{}, status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
-	result, err := a.stores.Domain.Execute(ctx, command.Command{
-		CampaignID:   campaignID,
-		Type:         command.Type("session.start"),
-		ActorType:    actorType,
-		ActorID:      actorID,
-		SessionID:    sessionID,
-		RequestID:    grpcmeta.RequestIDFromContext(ctx),
-		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-		EntityType:   "session",
-		EntityID:     sessionID,
-		PayloadJSON:  payloadJSON,
-	})
+	_, err = executeAndApplyDomainCommand(
+		ctx,
+		a.stores.Domain,
+		applier,
+		command.Command{
+			CampaignID:   campaignID,
+			Type:         command.Type("session.start"),
+			ActorType:    actorType,
+			ActorID:      actorID,
+			SessionID:    sessionID,
+			RequestID:    grpcmeta.RequestIDFromContext(ctx),
+			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+			EntityType:   "session",
+			EntityID:     sessionID,
+			PayloadJSON:  payloadJSON,
+		},
+		domainCommandApplyOptions{
+			requireEvents:   true,
+			missingEventMsg: "session.start did not emit an event",
+		},
+	)
 	if err != nil {
-		return storage.SessionRecord{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
-	}
-	if len(result.Decision.Rejections) > 0 {
-		return storage.SessionRecord{}, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-	}
-	for _, evt := range result.Decision.Events {
-		if err := applier.Apply(ctx, evt); err != nil {
-			return storage.SessionRecord{}, status.Errorf(codes.Internal, "apply event: %v", err)
-		}
+		return storage.SessionRecord{}, err
 	}
 
 	sess, err := a.stores.Session.GetSession(ctx, campaignID, sessionID)
@@ -172,29 +174,29 @@ func (a sessionApplication) EndSession(ctx context.Context, campaignID string, i
 		actorType = command.ActorTypeParticipant
 	}
 
-	result, err := a.stores.Domain.Execute(ctx, command.Command{
-		CampaignID:   campaignID,
-		Type:         command.Type("session.end"),
-		ActorType:    actorType,
-		ActorID:      actorID,
-		SessionID:    sessionID,
-		RequestID:    grpcmeta.RequestIDFromContext(ctx),
-		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-		EntityType:   "session",
-		EntityID:     sessionID,
-		PayloadJSON:  payloadJSON,
-	})
+	_, err = executeAndApplyDomainCommand(
+		ctx,
+		a.stores.Domain,
+		a.stores.Applier(),
+		command.Command{
+			CampaignID:   campaignID,
+			Type:         command.Type("session.end"),
+			ActorType:    actorType,
+			ActorID:      actorID,
+			SessionID:    sessionID,
+			RequestID:    grpcmeta.RequestIDFromContext(ctx),
+			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+			EntityType:   "session",
+			EntityID:     sessionID,
+			PayloadJSON:  payloadJSON,
+		},
+		domainCommandApplyOptions{
+			requireEvents:   true,
+			missingEventMsg: "session.end did not emit an event",
+		},
+	)
 	if err != nil {
-		return storage.SessionRecord{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
-	}
-	if len(result.Decision.Rejections) > 0 {
-		return storage.SessionRecord{}, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-	}
-	applier := a.stores.Applier()
-	for _, evt := range result.Decision.Events {
-		if err := applier.Apply(ctx, evt); err != nil {
-			return storage.SessionRecord{}, status.Errorf(codes.Internal, "apply event: %v", err)
-		}
+		return storage.SessionRecord{}, err
 	}
 
 	updated, err := a.stores.Session.GetSession(ctx, campaignID, sessionID)
@@ -268,29 +270,29 @@ func (a sessionApplication) OpenSessionGate(ctx context.Context, campaignID stri
 		actorType = command.ActorTypeParticipant
 	}
 
-	result, err := a.stores.Domain.Execute(ctx, command.Command{
-		CampaignID:   campaignID,
-		Type:         command.Type("session.gate_open"),
-		ActorType:    actorType,
-		ActorID:      actorID,
-		SessionID:    sessionID,
-		RequestID:    grpcmeta.RequestIDFromContext(ctx),
-		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-		EntityType:   "session_gate",
-		EntityID:     gateID,
-		PayloadJSON:  payloadJSON,
-	})
+	_, err = executeAndApplyDomainCommand(
+		ctx,
+		a.stores.Domain,
+		a.stores.Applier(),
+		command.Command{
+			CampaignID:   campaignID,
+			Type:         command.Type("session.gate_open"),
+			ActorType:    actorType,
+			ActorID:      actorID,
+			SessionID:    sessionID,
+			RequestID:    grpcmeta.RequestIDFromContext(ctx),
+			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+			EntityType:   "session_gate",
+			EntityID:     gateID,
+			PayloadJSON:  payloadJSON,
+		},
+		domainCommandApplyOptions{
+			requireEvents:   true,
+			missingEventMsg: "session.gate_open did not emit an event",
+		},
+	)
 	if err != nil {
-		return storage.SessionGate{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
-	}
-	if len(result.Decision.Rejections) > 0 {
-		return storage.SessionGate{}, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-	}
-	applier := a.stores.Applier()
-	for _, evt := range result.Decision.Events {
-		if err := applier.Apply(ctx, evt); err != nil {
-			return storage.SessionGate{}, status.Errorf(codes.Internal, "apply event: %v", err)
-		}
+		return storage.SessionGate{}, err
 	}
 	gate, err := a.stores.SessionGate.GetSessionGate(ctx, campaignID, sessionID, gateID)
 	if err != nil {
@@ -348,29 +350,29 @@ func (a sessionApplication) ResolveSessionGate(ctx context.Context, campaignID s
 		actorType = command.ActorTypeParticipant
 	}
 
-	result, err := a.stores.Domain.Execute(ctx, command.Command{
-		CampaignID:   campaignID,
-		Type:         command.Type("session.gate_resolve"),
-		ActorType:    actorType,
-		ActorID:      actorID,
-		SessionID:    sessionID,
-		RequestID:    grpcmeta.RequestIDFromContext(ctx),
-		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-		EntityType:   "session_gate",
-		EntityID:     gateID,
-		PayloadJSON:  payloadJSON,
-	})
+	_, err = executeAndApplyDomainCommand(
+		ctx,
+		a.stores.Domain,
+		a.stores.Applier(),
+		command.Command{
+			CampaignID:   campaignID,
+			Type:         command.Type("session.gate_resolve"),
+			ActorType:    actorType,
+			ActorID:      actorID,
+			SessionID:    sessionID,
+			RequestID:    grpcmeta.RequestIDFromContext(ctx),
+			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+			EntityType:   "session_gate",
+			EntityID:     gateID,
+			PayloadJSON:  payloadJSON,
+		},
+		domainCommandApplyOptions{
+			requireEvents:   true,
+			missingEventMsg: "session.gate_resolve did not emit an event",
+		},
+	)
 	if err != nil {
-		return storage.SessionGate{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
-	}
-	if len(result.Decision.Rejections) > 0 {
-		return storage.SessionGate{}, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-	}
-	applier := a.stores.Applier()
-	for _, evt := range result.Decision.Events {
-		if err := applier.Apply(ctx, evt); err != nil {
-			return storage.SessionGate{}, status.Errorf(codes.Internal, "apply event: %v", err)
-		}
+		return storage.SessionGate{}, err
 	}
 	updated, err := a.stores.SessionGate.GetSessionGate(ctx, campaignID, sessionID, gateID)
 	if err != nil {
@@ -422,29 +424,29 @@ func (a sessionApplication) AbandonSessionGate(ctx context.Context, campaignID s
 		actorType = command.ActorTypeParticipant
 	}
 
-	result, err := a.stores.Domain.Execute(ctx, command.Command{
-		CampaignID:   campaignID,
-		Type:         command.Type("session.gate_abandon"),
-		ActorType:    actorType,
-		ActorID:      actorID,
-		SessionID:    sessionID,
-		RequestID:    grpcmeta.RequestIDFromContext(ctx),
-		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-		EntityType:   "session_gate",
-		EntityID:     gateID,
-		PayloadJSON:  payloadJSON,
-	})
+	_, err = executeAndApplyDomainCommand(
+		ctx,
+		a.stores.Domain,
+		a.stores.Applier(),
+		command.Command{
+			CampaignID:   campaignID,
+			Type:         command.Type("session.gate_abandon"),
+			ActorType:    actorType,
+			ActorID:      actorID,
+			SessionID:    sessionID,
+			RequestID:    grpcmeta.RequestIDFromContext(ctx),
+			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+			EntityType:   "session_gate",
+			EntityID:     gateID,
+			PayloadJSON:  payloadJSON,
+		},
+		domainCommandApplyOptions{
+			requireEvents:   true,
+			missingEventMsg: "session.gate_abandon did not emit an event",
+		},
+	)
 	if err != nil {
-		return storage.SessionGate{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
-	}
-	if len(result.Decision.Rejections) > 0 {
-		return storage.SessionGate{}, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-	}
-	applier := a.stores.Applier()
-	for _, evt := range result.Decision.Events {
-		if err := applier.Apply(ctx, evt); err != nil {
-			return storage.SessionGate{}, status.Errorf(codes.Internal, "apply event: %v", err)
-		}
+		return storage.SessionGate{}, err
 	}
 	updated, err := a.stores.SessionGate.GetSessionGate(ctx, campaignID, sessionID, gateID)
 	if err != nil {
@@ -500,29 +502,30 @@ func (a sessionApplication) SetSessionSpotlight(ctx context.Context, campaignID 
 		actorType = command.ActorTypeParticipant
 	}
 
-	result, err := a.stores.Domain.Execute(ctx, command.Command{
-		CampaignID:   campaignID,
-		Type:         command.Type("session.spotlight_set"),
-		ActorType:    actorType,
-		ActorID:      actorID,
-		SessionID:    sessionID,
-		RequestID:    grpcmeta.RequestIDFromContext(ctx),
-		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-		EntityType:   "session",
-		EntityID:     sessionID,
-		PayloadJSON:  payloadJSON,
-	})
+	_, err = executeAndApplyDomainCommand(
+		ctx,
+		a.stores.Domain,
+		a.stores.Applier(),
+		command.Command{
+			CampaignID:   campaignID,
+			Type:         command.Type("session.spotlight_set"),
+			ActorType:    actorType,
+			ActorID:      actorID,
+			SessionID:    sessionID,
+			RequestID:    grpcmeta.RequestIDFromContext(ctx),
+			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+			EntityType:   "session",
+			EntityID:     sessionID,
+			PayloadJSON:  payloadJSON,
+		},
+		domainCommandApplyOptions{
+			applyErr:        domainApplyErrorWithCodePreserve("apply event"),
+			requireEvents:   true,
+			missingEventMsg: "session.spotlight_set did not emit an event",
+		},
+	)
 	if err != nil {
-		return storage.SessionSpotlight{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
-	}
-	if len(result.Decision.Rejections) > 0 {
-		return storage.SessionSpotlight{}, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-	}
-	applier := a.stores.Applier()
-	for _, evt := range result.Decision.Events {
-		if err := applier.Apply(ctx, evt); err != nil {
-			return storage.SessionSpotlight{}, status.Errorf(codes.Internal, "apply event: %v", err)
-		}
+		return storage.SessionSpotlight{}, err
 	}
 	spotlight, err := a.stores.SessionSpotlight.GetSessionSpotlight(ctx, campaignID, sessionID)
 	if err != nil {
@@ -565,29 +568,30 @@ func (a sessionApplication) ClearSessionSpotlight(ctx context.Context, campaignI
 		actorType = command.ActorTypeParticipant
 	}
 
-	result, err := a.stores.Domain.Execute(ctx, command.Command{
-		CampaignID:   campaignID,
-		Type:         command.Type("session.spotlight_clear"),
-		ActorType:    actorType,
-		ActorID:      actorID,
-		SessionID:    sessionID,
-		RequestID:    grpcmeta.RequestIDFromContext(ctx),
-		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-		EntityType:   "session",
-		EntityID:     sessionID,
-		PayloadJSON:  payloadJSON,
-	})
+	_, err = executeAndApplyDomainCommand(
+		ctx,
+		a.stores.Domain,
+		a.stores.Applier(),
+		command.Command{
+			CampaignID:   campaignID,
+			Type:         command.Type("session.spotlight_clear"),
+			ActorType:    actorType,
+			ActorID:      actorID,
+			SessionID:    sessionID,
+			RequestID:    grpcmeta.RequestIDFromContext(ctx),
+			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+			EntityType:   "session",
+			EntityID:     sessionID,
+			PayloadJSON:  payloadJSON,
+		},
+		domainCommandApplyOptions{
+			applyErr:        domainApplyErrorWithCodePreserve("apply event"),
+			requireEvents:   true,
+			missingEventMsg: "session.spotlight_clear did not emit an event",
+		},
+	)
 	if err != nil {
-		return storage.SessionSpotlight{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
-	}
-	if len(result.Decision.Rejections) > 0 {
-		return storage.SessionSpotlight{}, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-	}
-	applier := a.stores.Applier()
-	for _, evt := range result.Decision.Events {
-		if err := applier.Apply(ctx, evt); err != nil {
-			return storage.SessionSpotlight{}, status.Errorf(codes.Internal, "apply event: %v", err)
-		}
+		return storage.SessionSpotlight{}, err
 	}
 
 	return spotlight, nil

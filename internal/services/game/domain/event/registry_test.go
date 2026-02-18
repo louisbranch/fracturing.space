@@ -194,6 +194,35 @@ func TestRegistryValidateForAppend_UnknownType(t *testing.T) {
 	}
 }
 
+func TestRegistryRegister_DefaultsIntentToProjectionAndReplay(t *testing.T) {
+	registry := NewRegistry()
+	if err := registry.Register(Definition{
+		Type:       Type("action.test"),
+		Owner:      OwnerCore,
+		Addressing: AddressingPolicyNone,
+	}); err != nil {
+		t.Fatalf("register type: %v", err)
+	}
+	definitions := registry.ListDefinitions()
+	if len(definitions) != 1 {
+		t.Fatalf("definitions length = %d, want 1", len(definitions))
+	}
+	if definitions[0].Intent != IntentProjectionAndReplay {
+		t.Fatalf("intent = %s, want %s", definitions[0].Intent, IntentProjectionAndReplay)
+	}
+}
+
+func TestRegistryRegister_InvalidIntent(t *testing.T) {
+	registry := NewRegistry()
+	if err := registry.Register(Definition{
+		Type:   Type("action.test"),
+		Owner:  OwnerCore,
+		Intent: Intent("invalid-intent"),
+	}); err == nil {
+		t.Fatal("expected error")
+	}
+}
+
 func TestRegistryValidateForAppend_InvalidActorType(t *testing.T) {
 	registry := NewRegistry()
 	if err := registry.Register(Definition{

@@ -40,7 +40,7 @@ func (a Applier) Apply(ctx context.Context, evt event.Event) error {
 		return a.applyParticipantBound(ctx, evt)
 	case event.Type("participant.unbound"):
 		return a.applyParticipantUnbound(ctx, evt)
-	case event.Type("seat.reassigned"):
+	case event.Type("seat.reassigned"), event.Type("participant.seat_reassigned"):
 		return a.applySeatReassigned(ctx, evt)
 	case event.Type("character.created"):
 		return a.applyCharacterCreated(ctx, evt)
@@ -76,7 +76,7 @@ func (a Applier) Apply(ctx context.Context, evt event.Event) error {
 		if strings.TrimSpace(evt.SystemID) != "" {
 			return a.applySystemEvent(ctx, evt)
 		}
-		return nil
+		return fmt.Errorf("unhandled projection event type: %s", evt.Type)
 	}
 }
 
@@ -500,7 +500,11 @@ func (a Applier) applySeatReassigned(ctx context.Context, evt event.Event) error
 	}
 
 	var payload participant.SeatReassignPayload
-	if err := decodePayload(evt.PayloadJSON, &payload, "seat.reassigned"); err != nil {
+	payloadType := "seat.reassigned"
+	if strings.TrimSpace(string(evt.Type)) == "participant.seat_reassigned" {
+		payloadType = "participant.seat_reassigned"
+	}
+	if err := decodePayload(evt.PayloadJSON, &payload, payloadType); err != nil {
 		return err
 	}
 	newUserID := strings.TrimSpace(payload.UserID)

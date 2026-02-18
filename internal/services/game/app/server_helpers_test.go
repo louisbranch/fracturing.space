@@ -469,6 +469,99 @@ func TestLoadServerEnvProjectionApplyOutboxWorkerEnabled(t *testing.T) {
 	}
 }
 
+func TestResolveProjectionApplyOutboxModes_DefaultInlineMode(t *testing.T) {
+	applyWorker, shadowWorker, mode, err := resolveProjectionApplyOutboxModes(serverEnv{
+		ProjectionApplyOutboxEnabled:             false,
+		ProjectionApplyOutboxWorkerEnabled:       false,
+		ProjectionApplyOutboxShadowWorkerEnabled: false,
+	})
+	if err != nil {
+		t.Fatalf("resolve projection outbox modes: %v", err)
+	}
+	if applyWorker {
+		t.Fatal("expected apply worker to be disabled")
+	}
+	if shadowWorker {
+		t.Fatal("expected shadow worker to be disabled")
+	}
+	if mode != projectionApplyModeInlineApplyOnly {
+		t.Fatalf("mode = %q, want %q", mode, projectionApplyModeInlineApplyOnly)
+	}
+}
+
+func TestResolveProjectionApplyOutboxModes_OutboxApplyOnly(t *testing.T) {
+	applyWorker, shadowWorker, mode, err := resolveProjectionApplyOutboxModes(serverEnv{
+		ProjectionApplyOutboxEnabled:             true,
+		ProjectionApplyOutboxWorkerEnabled:       true,
+		ProjectionApplyOutboxShadowWorkerEnabled: false,
+	})
+	if err != nil {
+		t.Fatalf("resolve projection outbox modes: %v", err)
+	}
+	if !applyWorker {
+		t.Fatal("expected apply worker to be enabled")
+	}
+	if shadowWorker {
+		t.Fatal("expected shadow worker to be disabled")
+	}
+	if mode != projectionApplyModeOutboxApplyOnly {
+		t.Fatalf("mode = %q, want %q", mode, projectionApplyModeOutboxApplyOnly)
+	}
+}
+
+func TestResolveProjectionApplyOutboxModes_ShadowOnly(t *testing.T) {
+	applyWorker, shadowWorker, mode, err := resolveProjectionApplyOutboxModes(serverEnv{
+		ProjectionApplyOutboxEnabled:             true,
+		ProjectionApplyOutboxWorkerEnabled:       false,
+		ProjectionApplyOutboxShadowWorkerEnabled: true,
+	})
+	if err != nil {
+		t.Fatalf("resolve projection outbox modes: %v", err)
+	}
+	if applyWorker {
+		t.Fatal("expected apply worker to be disabled")
+	}
+	if !shadowWorker {
+		t.Fatal("expected shadow worker to be enabled")
+	}
+	if mode != projectionApplyModeShadowOnly {
+		t.Fatalf("mode = %q, want %q", mode, projectionApplyModeShadowOnly)
+	}
+}
+
+func TestResolveProjectionApplyOutboxModes_InvalidWhenOutboxDisabledWithWorker(t *testing.T) {
+	_, _, _, err := resolveProjectionApplyOutboxModes(serverEnv{
+		ProjectionApplyOutboxEnabled:             false,
+		ProjectionApplyOutboxWorkerEnabled:       true,
+		ProjectionApplyOutboxShadowWorkerEnabled: false,
+	})
+	if err == nil {
+		t.Fatal("expected worker without outbox to fail")
+	}
+}
+
+func TestResolveProjectionApplyOutboxModes_InvalidWhenOutboxDisabledWithShadowWorker(t *testing.T) {
+	_, _, _, err := resolveProjectionApplyOutboxModes(serverEnv{
+		ProjectionApplyOutboxEnabled:             false,
+		ProjectionApplyOutboxWorkerEnabled:       false,
+		ProjectionApplyOutboxShadowWorkerEnabled: true,
+	})
+	if err == nil {
+		t.Fatal("expected shadow worker without outbox to fail")
+	}
+}
+
+func TestResolveProjectionApplyOutboxModes_InvalidWhenBothWorkersEnabled(t *testing.T) {
+	_, _, _, err := resolveProjectionApplyOutboxModes(serverEnv{
+		ProjectionApplyOutboxEnabled:             true,
+		ProjectionApplyOutboxWorkerEnabled:       true,
+		ProjectionApplyOutboxShadowWorkerEnabled: true,
+	})
+	if err == nil {
+		t.Fatal("expected both workers to fail")
+	}
+}
+
 func TestRunProjectionApplyOutboxWorkerRunsImmediateAndPeriodic(t *testing.T) {
 	processor := &fakeProjectionOutboxProcessor{processed: 1}
 	var applyCalls atomic.Int32
@@ -1050,8 +1143,8 @@ func TestBuildDomainEngine_ReusesCheckpointedStateForReplay(t *testing.T) {
 			zeroSeqStarts++
 		}
 	}
-	if zeroSeqStarts != 2 {
-		t.Fatalf("expected 2 replay starts from seq 0, got %d (calls: %v)", zeroSeqStarts, store.listAfterSeq)
+	if zeroSeqStarts != 1 {
+		t.Fatalf("expected 1 replay start from seq 0, got %d (calls: %v)", zeroSeqStarts, store.listAfterSeq)
 	}
 }
 

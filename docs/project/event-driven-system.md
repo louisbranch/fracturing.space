@@ -50,6 +50,15 @@ Event envelope type: `internal/services/game/domain/event/registry.go`.
 An event is an immutable fact that was accepted by the domain. Event storage
 assigns sequencing and integrity fields.
 
+Event definitions now include intent to make projection behavior explicit:
+
+- `IntentProjectionAndReplay`: event must be handled in replay/projection paths.
+- `IntentAuditOnly`: event is not projected and is treated as audit/observability
+  only.
+
+The intent is configured on `event.Definition` as `Intent`, defaults to
+`IntentProjectionAndReplay` when omitted.
+
 Important event fields:
 
 - `campaign_id`: required scope.
@@ -203,6 +212,15 @@ Each definition includes:
 
 System modules register via `BuildRegistries(modules...)` and are expected to
 register their own system-owned command/event types.
+
+Recommended module registration contract:
+
+- Register all emitted command types with payload validation.
+- Register all emitted system event types with the same intent you want downstream
+  consumers to enforce.
+- Use `IntentProjectionAndReplay` for events that must impact projection state.
+- Use `IntentAuditOnly` only when intentional by design (for example, internal
+  counters or outbox/telemetry-only events).
 
 ## Validation rules and why they matter
 
@@ -399,10 +417,8 @@ sequenceDiagram
 These are current documentation or architecture pain points worth improving.
 
 1. Duplicate event-model surface:
-   - `internal/services/game/domain/event` is runtime canonical, while
-     `internal/services/game/domain/campaign/event` still exists for catalog and
-     legacy helper surfaces.
-   - Improvement: converge on one canonical event model package.
+   - `internal/services/game/domain/event` is runtime canonical.
+   - Improvement: keep catalogs generated from runtime registries only.
 2. Event append and projection apply are not one DB transaction:
    - Event append is authoritative; projection apply happens after emit in
      application handlers.

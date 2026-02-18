@@ -155,6 +155,24 @@ Create `internal/services/game/domain/systems/{system}/adapter.go` implementing
 - Projection tests for adapter/store behavior.
 - Integration tests across gRPC/MCP + storage.
 
+### 9. Confirm system extension contract (required in reviews)
+
+- All emitted system events are registered with explicit intent (`projection_and_replay`
+  vs `audit_only`) so projection obligations are discoverable from registries.
+- Core decider outputs have a test that new events can be round-tripped through
+  `BuildRegistries` and replayed once in projector tests.
+- Core applier and adapter coverage tests prove every `projection_and_replay` event
+  is handled (or intentionally ignored by intent).
+- Command builders and payload validators reject malformed envelopes with clear
+  errors.
+- New system event types are documented in both:
+  - command/event runtime registrations
+  - generated event catalogs generated from runtime registries.
+- New code path is exercised with at least one happy-path and one rejection/edge-case
+  test for each new command and event pairing.
+
+This checklist should be part of review for each new game-system module.
+
 ### Runtime execution diagram
 
 ```mermaid

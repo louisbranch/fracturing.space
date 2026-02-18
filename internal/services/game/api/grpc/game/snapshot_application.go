@@ -181,33 +181,32 @@ func (a snapshotApplication) PatchCharacterState(ctx context.Context, campaignID
 		case event.ActorTypeGM:
 			actorTypeForCommand = command.ActorTypeGM
 		}
-		result, err := a.stores.Domain.Execute(ctx, command.Command{
-			CampaignID:    campaignID,
-			Type:          command.Type("sys.daggerheart.action.character_state.patch"),
-			ActorType:     actorTypeForCommand,
-			ActorID:       actorID,
-			SessionID:     grpcmeta.SessionIDFromContext(ctx),
-			RequestID:     requestID,
-			InvocationID:  invocationID,
-			EntityType:    "character",
-			EntityID:      characterID,
-			SystemID:      daggerheart.SystemID,
-			SystemVersion: daggerheart.SystemVersion,
-			PayloadJSON:   payloadJSON,
-		})
+		_, err = executeAndApplyDomainCommand(
+			ctx,
+			a.stores.Domain,
+			applier,
+			command.Command{
+				CampaignID:    campaignID,
+				Type:          command.Type("sys.daggerheart.action.character_state.patch"),
+				ActorType:     actorTypeForCommand,
+				ActorID:       actorID,
+				SessionID:     grpcmeta.SessionIDFromContext(ctx),
+				RequestID:     requestID,
+				InvocationID:  invocationID,
+				EntityType:    "character",
+				EntityID:      characterID,
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   payloadJSON,
+			},
+			domainCommandApplyOptions{
+				requireEvents:   true,
+				missingEventMsg: "character state patch did not emit an event",
+				applyErr:        domainApplyErrorWithCodePreserve("apply event"),
+			},
+		)
 		if err != nil {
-			return "", storage.DaggerheartCharacterState{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
-		}
-		if len(result.Decision.Rejections) > 0 {
-			return "", storage.DaggerheartCharacterState{}, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-		}
-		if len(result.Decision.Events) == 0 {
-			return "", storage.DaggerheartCharacterState{}, status.Error(codes.Internal, "character state patch did not emit an event")
-		}
-		for _, evt := range result.Decision.Events {
-			if err := applier.Apply(ctx, evt); err != nil {
-				return "", storage.DaggerheartCharacterState{}, status.Errorf(codes.Internal, "apply event: %v", err)
-			}
+			return "", storage.DaggerheartCharacterState{}, err
 		}
 		if !conditionPatch {
 			if err := applyStressVulnerableCondition(ctx, a.stores, campaignID, grpcmeta.SessionIDFromContext(ctx), characterID, dhState.Conditions, stressBefore, stressAfter, stressMax, actorType, actorID); err != nil {
@@ -249,33 +248,32 @@ func (a snapshotApplication) PatchCharacterState(ctx context.Context, campaignID
 				case event.ActorTypeGM:
 					actorTypeForCommand = command.ActorTypeGM
 				}
-				result, err := a.stores.Domain.Execute(ctx, command.Command{
-					CampaignID:    campaignID,
-					Type:          command.Type("sys.daggerheart.action.condition.change"),
-					ActorType:     actorTypeForCommand,
-					ActorID:       actorID,
-					SessionID:     grpcmeta.SessionIDFromContext(ctx),
-					RequestID:     grpcmeta.RequestIDFromContext(ctx),
-					InvocationID:  grpcmeta.InvocationIDFromContext(ctx),
-					EntityType:    "character",
-					EntityID:      characterID,
-					SystemID:      daggerheart.SystemID,
-					SystemVersion: daggerheart.SystemVersion,
-					PayloadJSON:   conditionJSON,
-				})
+				_, err = executeAndApplyDomainCommand(
+					ctx,
+					a.stores.Domain,
+					applier,
+					command.Command{
+						CampaignID:    campaignID,
+						Type:          command.Type("sys.daggerheart.action.condition.change"),
+						ActorType:     actorTypeForCommand,
+						ActorID:       actorID,
+						SessionID:     grpcmeta.SessionIDFromContext(ctx),
+						RequestID:     grpcmeta.RequestIDFromContext(ctx),
+						InvocationID:  grpcmeta.InvocationIDFromContext(ctx),
+						EntityType:    "character",
+						EntityID:      characterID,
+						SystemID:      daggerheart.SystemID,
+						SystemVersion: daggerheart.SystemVersion,
+						PayloadJSON:   conditionJSON,
+					},
+					domainCommandApplyOptions{
+						requireEvents:   true,
+						missingEventMsg: "condition change did not emit an event",
+						applyErr:        domainApplyErrorWithCodePreserve("apply event"),
+					},
+				)
 				if err != nil {
-					return "", storage.DaggerheartCharacterState{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
-				}
-				if len(result.Decision.Rejections) > 0 {
-					return "", storage.DaggerheartCharacterState{}, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-				}
-				if len(result.Decision.Events) == 0 {
-					return "", storage.DaggerheartCharacterState{}, status.Error(codes.Internal, "condition change did not emit an event")
-				}
-				for _, evt := range result.Decision.Events {
-					if err := applier.Apply(ctx, evt); err != nil {
-						return "", storage.DaggerheartCharacterState{}, status.Errorf(codes.Internal, "apply event: %v", err)
-					}
+					return "", storage.DaggerheartCharacterState{}, err
 				}
 
 				dhState, err = a.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
@@ -322,33 +320,32 @@ func (a snapshotApplication) UpdateSnapshotState(ctx context.Context, campaignID
 		if actorID != "" {
 			actorTypeForCommand = command.ActorTypeGM
 		}
-		result, err := a.stores.Domain.Execute(ctx, command.Command{
-			CampaignID:    campaignID,
-			Type:          command.Type("sys.daggerheart.action.gm_fear.set"),
-			ActorType:     actorTypeForCommand,
-			ActorID:       actorID,
-			SessionID:     grpcmeta.SessionIDFromContext(ctx),
-			RequestID:     requestID,
-			InvocationID:  invocationID,
-			EntityType:    "campaign",
-			EntityID:      campaignID,
-			SystemID:      daggerheart.SystemID,
-			SystemVersion: daggerheart.SystemVersion,
-			PayloadJSON:   payloadJSON,
-		})
+		_, err = executeAndApplyDomainCommand(
+			ctx,
+			a.stores.Domain,
+			applier,
+			command.Command{
+				CampaignID:    campaignID,
+				Type:          command.Type("sys.daggerheart.action.gm_fear.set"),
+				ActorType:     actorTypeForCommand,
+				ActorID:       actorID,
+				SessionID:     grpcmeta.SessionIDFromContext(ctx),
+				RequestID:     requestID,
+				InvocationID:  invocationID,
+				EntityType:    "campaign",
+				EntityID:      campaignID,
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   payloadJSON,
+			},
+			domainCommandApplyOptions{
+				requireEvents:   true,
+				missingEventMsg: "gm fear update did not emit an event",
+				applyErr:        domainApplyErrorWithCodePreserve("apply event"),
+			},
+		)
 		if err != nil {
-			return storage.DaggerheartSnapshot{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
-		}
-		if len(result.Decision.Rejections) > 0 {
-			return storage.DaggerheartSnapshot{}, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-		}
-		if len(result.Decision.Events) == 0 {
-			return storage.DaggerheartSnapshot{}, status.Error(codes.Internal, "gm fear update did not emit an event")
-		}
-		for _, evt := range result.Decision.Events {
-			if err := applier.Apply(ctx, evt); err != nil {
-				return storage.DaggerheartSnapshot{}, status.Errorf(codes.Internal, "apply event: %v", err)
-			}
+			return storage.DaggerheartSnapshot{}, err
 		}
 
 		dhSnapshot, err := a.stores.Daggerheart.GetDaggerheartSnapshot(ctx, campaignID)
@@ -450,34 +447,32 @@ func applyStressVulnerableCondition(
 	case event.ActorTypeGM:
 		actorTypeForCommand = command.ActorTypeGM
 	}
-	result, err := stores.Domain.Execute(ctx, command.Command{
-		CampaignID:    campaignID,
-		Type:          command.Type("sys.daggerheart.action.condition.change"),
-		ActorType:     actorTypeForCommand,
-		ActorID:       actorID,
-		SessionID:     sessionID,
-		RequestID:     grpcmeta.RequestIDFromContext(ctx),
-		InvocationID:  grpcmeta.InvocationIDFromContext(ctx),
-		EntityType:    "character",
-		EntityID:      characterID,
-		SystemID:      daggerheart.SystemID,
-		SystemVersion: daggerheart.SystemVersion,
-		PayloadJSON:   payloadJSON,
-	})
+	_, err = executeAndApplyDomainCommand(
+		ctx,
+		stores.Domain,
+		stores.Applier(),
+		command.Command{
+			CampaignID:    campaignID,
+			Type:          command.Type("sys.daggerheart.action.condition.change"),
+			ActorType:     actorTypeForCommand,
+			ActorID:       actorID,
+			SessionID:     sessionID,
+			RequestID:     grpcmeta.RequestIDFromContext(ctx),
+			InvocationID:  grpcmeta.InvocationIDFromContext(ctx),
+			EntityType:    "character",
+			EntityID:      characterID,
+			SystemID:      daggerheart.SystemID,
+			SystemVersion: daggerheart.SystemVersion,
+			PayloadJSON:   payloadJSON,
+		},
+		domainCommandApplyOptions{
+			requireEvents:   true,
+			missingEventMsg: "condition change did not emit an event",
+			applyErr:        domainApplyErrorWithCodePreserve("apply condition event"),
+		},
+	)
 	if err != nil {
-		return status.Errorf(codes.Internal, "execute domain command: %v", err)
-	}
-	if len(result.Decision.Rejections) > 0 {
-		return status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-	}
-	if len(result.Decision.Events) == 0 {
-		return status.Error(codes.Internal, "condition change did not emit an event")
-	}
-	applier := stores.Applier()
-	for _, evt := range result.Decision.Events {
-		if err := applier.Apply(ctx, evt); err != nil {
-			return status.Errorf(codes.Internal, "apply condition event: %v", err)
-		}
+		return err
 	}
 
 	return nil
