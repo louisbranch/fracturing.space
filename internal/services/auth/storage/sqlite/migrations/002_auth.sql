@@ -12,8 +12,6 @@ DROP TABLE IF EXISTS users;
 
 CREATE TABLE users (
     id TEXT PRIMARY KEY,
-    email TEXT NOT NULL UNIQUE,
-    locale TEXT NOT NULL DEFAULT 'en-US',
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
 );

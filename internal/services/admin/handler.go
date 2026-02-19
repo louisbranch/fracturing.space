@@ -75,6 +75,7 @@ var resolveStaticFS = func() (fs.FS, error) {
 // GRPCClientProvider supplies gRPC clients for request handling.
 type GRPCClientProvider interface {
 	AuthClient() authv1.AuthServiceClient
+	AccountClient() authv1.AccountServiceClient
 	CampaignClient() statev1.CampaignServiceClient
 	SessionClient() statev1.SessionServiceClient
 	CharacterClient() statev1.CharacterServiceClient
@@ -851,14 +852,23 @@ func (h *Handler) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 
 	locale := localeFromTag(lang)
 	response, err := client.CreateUser(ctx, &authv1.CreateUserRequest{
-		Email:  email,
-		Locale: locale,
+		Email: email,
 	})
 	if err != nil || response.GetUser() == nil {
 		log.Printf("create user: %v", err)
 		view.Message = loc.Sprintf("error.user_create_failed")
 		templ.Handler(templates.UsersFullPage(view, pageCtx)).ServeHTTP(w, r)
 		return
+	}
+	if accountClient := h.accountClient(); accountClient != nil {
+		if _, err := accountClient.UpdateProfile(ctx, &authv1.UpdateProfileRequest{
+			UserId: response.GetUser().GetId(),
+			Locale: locale,
+		}); err != nil {
+			log.Printf("create user profile: %v", err)
+		}
+	} else {
+		log.Printf("create user profile: account client unavailable")
 	}
 
 	created := response.GetUser()
@@ -2031,6 +2041,14 @@ func (h *Handler) authClient() authv1.AuthServiceClient {
 		return nil
 	}
 	return h.clientProvider.AuthClient()
+}
+
+// accountClient returns the currently configured account client.
+func (h *Handler) accountClient() authv1.AccountServiceClient {
+	if h == nil || h.clientProvider == nil {
+		return nil
+	}
+	return h.clientProvider.AccountClient()
 }
 
 // daggerheartContentClient returns the Daggerheart content client.

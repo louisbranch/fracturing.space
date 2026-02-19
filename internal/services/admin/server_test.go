@@ -49,7 +49,7 @@ func TestGrpcClientsNilSafe(t *testing.T) {
 
 	// nil-safe set and close
 	g.SetGameConn(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
-	g.SetAuthConn(nil, nil)
+	g.SetAuthConn(nil, nil, nil)
 	g.Close()
 }
 
@@ -92,7 +92,7 @@ func TestGrpcClientsSetAndRead(t *testing.T) {
 	}
 
 	// SetAuthConn with nil conn.
-	g.SetAuthConn(nil, nil)
+	g.SetAuthConn(nil, nil, nil)
 	if g.AuthClient() != nil {
 		t.Error("expected nil AuthClient with nil conn")
 	}
@@ -142,7 +142,7 @@ func TestGrpcClientsSetAuthConnIdempotent(t *testing.T) {
 	// Simulate a set connection by directly setting authConn.
 	g.authConn = &grpc.ClientConn{}
 	// Second call should be a no-op (returns early).
-	g.SetAuthConn(nil, nil)
+	g.SetAuthConn(nil, nil, nil)
 	if !g.HasAuthConnection() {
 		t.Error("expected auth connection to remain after idempotent set")
 	}
