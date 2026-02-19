@@ -19,7 +19,7 @@ go test -race ./...                 # Run with race detector
 go test -cover ./...                # Run with coverage
 go test ./path/to/pkg -run '^TestName$' # Run single test
 go vet ./...                        # Vet all packages
-goimports -w .                      # Format with import sorting
+make setup-hooks                    # Install committed git hooks if not configured
 goimports -l .                      # List unformatted files
 make fmt-check                      # CI formatting check
 go mod tidy                         # Clean up dependencies
@@ -31,7 +31,7 @@ Group imports: standard library, third-party, local. Use `goimports` to manage o
 
 ## Formatting
 
-- Run `goimports` on edited files
+- If `git config --local --get core.hooksPath` is not `.githooks`, run `make setup-hooks`
 - Use `make fmt-check` before pushing or rely on CI
 - Prefer early returns to reduce nesting
 - Keep line length reasonable; break long expressions

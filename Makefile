@@ -9,7 +9,7 @@ PROTO_FILES := \
 	$(wildcard $(PROTO_DIR)/game/v1/*.proto) \
 	$(wildcard $(PROTO_DIR)/systems/daggerheart/v1/*.proto)
 
-.PHONY: all proto clean run cover cover-treemap test integration scenario scenario-missing-doc-check templ-generate event-catalog-check fmt fmt-check catalog-importer bootstrap bootstrap-prod
+.PHONY: all proto clean run cover cover-treemap test integration scenario scenario-missing-doc-check templ-generate event-catalog-check fmt fmt-check catalog-importer bootstrap bootstrap-prod setup-hooks
 
 all: proto
 
@@ -22,14 +22,20 @@ proto:
 		--go-grpc_out=$(GEN_GO_DIR) \
 		--go-grpc_opt=paths=source_relative \
 		$(PROTO_FILES)
-	goimports -w $(GEN_GO_DIR)
 
 templ-generate:
 	go run github.com/a-h/templ/cmd/templ@v0.3.977 generate ./...
-	goimports -w .
 
 fmt:
-	goimports -w .
+	@bash -euo pipefail -c '\
+	  if [ -n "$${FILE:-}" ]; then \
+	    goimports -w "$$FILE"; \
+	  elif [ -n "$${FILES:-}" ]; then \
+	    goimports -w $$FILES; \
+	  else \
+	    goimports -w .; \
+	  fi \
+	'
 
 fmt-check:
 	@bash -euo pipefail -c '\
@@ -130,3 +136,19 @@ bootstrap: ## Generate missing keys and start Compose
 
 bootstrap-prod: ## Bootstrap using .env.production.example
 	ENV_EXAMPLE=.env.production.example ./scripts/bootstrap.sh
+
+setup-hooks: ## Configure repository-managed git hooks path
+	@bash -euo pipefail -c '\
+	  if [ ! -f .githooks/pre-commit ]; then \
+	    echo ".githooks/pre-commit not found"; \
+	    exit 1; \
+	  fi; \
+	  chmod +x .githooks/pre-commit; \
+	  current="$$(git config --local --get core.hooksPath || true)"; \
+	  if [ "$$current" = ".githooks" ]; then \
+	    echo "core.hooksPath already configured as .githooks"; \
+	    exit 0; \
+	  fi; \
+	  git config --local core.hooksPath .githooks; \
+	  echo "Configured core.hooksPath=.githooks" \
+	'
