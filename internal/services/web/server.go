@@ -102,6 +102,50 @@ func withStaticMime(next http.Handler) http.Handler {
 	})
 }
 
+func (h *handler) handleAppRoot(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
+	if r.Method != http.MethodGet {
+		w.Header().Set("Allow", http.MethodGet)
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	printer, lang := localizer(w, r)
+
+	appName := strings.TrimSpace(h.config.AppName)
+	if appName == "" {
+		appName = branding.AppName
+	}
+
+	if sess := sessionFromRequest(r, h.sessions); sess != nil {
+		userLabel := strings.TrimSpace(sess.displayName)
+		if userLabel == "" {
+			userLabel = "User"
+		}
+		templ.Handler(webtemplates.DashboardPage(webtemplates.DashboardPageParams{
+			AppName:  appName,
+			Lang:     lang,
+			UserName: userLabel,
+		})).ServeHTTP(w, r)
+		return
+	}
+
+	page := webtemplates.PageContext{
+		Lang:         lang,
+		Loc:          printer,
+		CurrentPath:  r.URL.Path,
+		CurrentQuery: r.URL.RawQuery,
+	}
+	params := webtemplates.LandingParams{}
+	if strings.TrimSpace(h.config.OAuthClientID) != "" {
+		params.SignInURL = "/auth/login"
+	}
+	templ.Handler(webtemplates.LandingPage(page, appName, params)).ServeHTTP(w, r)
+}
+
 // NewHandler creates the HTTP handler for the login UX.
 //
 // This function is the test-oriented entrypoint that assembles route handlers
@@ -148,6 +192,7 @@ func NewHandlerWithCampaignAccess(config Config, authClient authv1.AuthServiceCl
 	}
 
 	mux.HandleFunc("/app", h.handleAppHome)
+	mux.HandleFunc("/app/dashboard", h.handleAppDashboard)
 	mux.HandleFunc("/app/campaigns", h.handleAppCampaigns)
 	mux.HandleFunc("/app/campaigns/create", h.handleAppCampaignCreate)
 	mux.HandleFunc("/app/campaigns/", h.handleAppCampaignDetail)
@@ -161,36 +206,7 @@ func NewHandlerWithCampaignAccess(config Config, authClient authv1.AuthServiceCl
 		mux.HandleFunc("/auth/logout", h.handleAuthLogout)
 	}
 
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/" {
-			http.NotFound(w, r)
-			return
-		}
-		if r.Method != http.MethodGet {
-			w.Header().Set("Allow", http.MethodGet)
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		printer, lang := localizer(w, r)
-		page := webtemplates.PageContext{
-			Lang:         lang,
-			Loc:          printer,
-			CurrentPath:  r.URL.Path,
-			CurrentQuery: r.URL.RawQuery,
-		}
-		params := webtemplates.LandingParams{}
-		if strings.TrimSpace(config.OAuthClientID) != "" {
-			params.SignInURL = "/auth/login"
-		}
-		if sess := sessionFromRequest(r, h.sessions); sess != nil {
-			name := sess.displayName
-			if name == "" {
-				name = "User"
-			}
-			params.UserName = name
-		}
-		templ.Handler(webtemplates.LandingPage(page, appName, params)).ServeHTTP(w, r)
-	})
+	mux.HandleFunc("/", h.handleAppRoot)
 
 	mux.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
@@ -222,7 +238,6 @@ func NewHandlerWithCampaignAccess(config Config, authClient authv1.AuthServiceCl
 		params := webtemplates.LoginParams{
 			AppName:    appName,
 			PendingID:  pendingID,
-			ClientID:   clientID,
 			ClientName: clientName,
 			Error:      errorMessage,
 			Lang:       lang,

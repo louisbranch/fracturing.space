@@ -102,8 +102,8 @@ func TestAppSignedInWorkspaceJourneySmoke(t *testing.T) {
 	if appResp.Code != http.StatusFound {
 		t.Fatalf("/app status = %d, want %d", appResp.Code, http.StatusFound)
 	}
-	if location := appResp.Header().Get("Location"); location != "/app/campaigns" {
-		t.Fatalf("/app location = %q, want %q", location, "/app/campaigns")
+	if location := appResp.Header().Get("Location"); location != "/" {
+		t.Fatalf("/app location = %q, want %q", location, "/")
 	}
 
 	campaignsReq := httptest.NewRequest(http.MethodGet, "/app/campaigns", nil)
