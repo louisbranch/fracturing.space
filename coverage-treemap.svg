@@ -14,13 +14,13 @@
 	text-anchor="start"
 	transform="translate(28.000000,35.600000) scale(1.000000)"
 	style="font-family: Open Sans, verdana, arial, sans-serif !important; font-size: 12px; fill: rgb(0, 0, 0); fill-opacity: 1.00; white-space: pre;" 
-	data-math="N">github.com/louisbranch/fracturing.space/internal 78.3%</text>
+	data-math="N">github.com/louisbranch/fracturing.space/internal 78.4%</text>
 		
 </g>
 
 
 <g>
-	<rect x="853.939149" y="587.283411" width="146.060851" height="24.716589" style="fill: rgb(5, 116, 61);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
+	<rect x="853.939149" y="587.283411" width="146.060851" height="24.716589" style="fill: rgb(4, 114, 60);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
 	
 </g>
 
@@ -58,7 +58,7 @@
 
 
 <g>
-	<rect x="861.939149" y="599.283411" width="55.363749" height="4.716589" style="fill: rgb(6, 119, 63);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
+	<rect x="861.939149" y="599.283411" width="55.363749" height="4.716589" style="fill: rgb(4, 115, 61);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
 	
 </g>
 
@@ -230,14 +230,14 @@
 
 
 <g>
-	<rect x="861.939149" y="345.371780" width="130.060851" height="96.371231" style="fill: rgb(92, 183, 96);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
+	<rect x="861.939149" y="345.371780" width="130.060851" height="96.371231" style="fill: rgb(91, 183, 95);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
 	
 <text 
 	data-notex="1" 
 	text-anchor="start"
 	transform="translate(869.939149,360.971780) scale(1.000000)"
 	style="font-family: Open Sans, verdana, arial, sans-serif !important; font-size: 12px; fill: rgb(0, 0, 0); fill-opacity: 1.00; white-space: pre;" 
-	data-math="N">seed 81.6%</text>
+	data-math="N">seed 81.7%</text>
 		
 </g>
 
@@ -717,14 +717,14 @@
 
 
 <g>
-	<rect x="869.939149" y="366.971780" width="43.983880" height="66.771231" style="fill: rgb(22, 146, 77);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
+	<rect x="869.939149" y="366.971780" width="43.983880" height="66.771231" style="fill: rgb(22, 145, 76);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
 	
 <text 
 	data-notex="1" 
 	text-anchor="start"
 	transform="translate(877.939149,382.571780) scale(0.194333)"
 	style="font-family: Open Sans, verdana, arial, sans-serif !important; font-size: 12px; fill: rgb(0, 0, 0); fill-opacity: 1.00; white-space: pre;" 
-	data-math="N">expand.go 91.2%</text>
+	data-math="N">expand.go 91.4%</text>
 		
 </g>
 
