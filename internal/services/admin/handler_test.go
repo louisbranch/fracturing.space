@@ -616,6 +616,7 @@ func TestCampaignSessionsRoute(t *testing.T) {
 
 type testClientProvider struct {
 	auth        authv1.AuthServiceClient
+	account     authv1.AccountServiceClient
 	campaign    statev1.CampaignServiceClient
 	invite      statev1.InviteServiceClient
 	participant statev1.ParticipantServiceClient
@@ -661,6 +662,10 @@ func (p testClientProvider) SystemClient() statev1.SystemServiceClient {
 
 func (p testClientProvider) AuthClient() authv1.AuthServiceClient {
 	return p.auth
+}
+
+func (p testClientProvider) AccountClient() authv1.AccountServiceClient {
+	return p.account
 }
 
 func (p testClientProvider) DaggerheartContentClient() daggerheartv1.DaggerheartContentServiceClient {
@@ -981,6 +986,23 @@ func (c *testAuthClient) CreateUser(ctx context.Context, in *authv1.CreateUserRe
 		return nil, c.createUserErr
 	}
 	return &authv1.CreateUserResponse{User: c.user}, nil
+}
+
+type testAccountClient struct {
+	updateProfileReq *authv1.UpdateProfileRequest
+	updateProfileErr error
+}
+
+func (c *testAccountClient) GetProfile(ctx context.Context, in *authv1.GetProfileRequest, opts ...grpc.CallOption) (*authv1.GetProfileResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented in test account client")
+}
+
+func (c *testAccountClient) UpdateProfile(ctx context.Context, in *authv1.UpdateProfileRequest, opts ...grpc.CallOption) (*authv1.UpdateProfileResponse, error) {
+	if c.updateProfileErr != nil {
+		return nil, c.updateProfileErr
+	}
+	c.updateProfileReq = in
+	return &authv1.UpdateProfileResponse{}, nil
 }
 
 func (c *testAuthClient) IssueJoinGrant(ctx context.Context, in *authv1.IssueJoinGrantRequest, opts ...grpc.CallOption) (*authv1.IssueJoinGrantResponse, error) {
@@ -1666,6 +1688,7 @@ func (c *testStatisticsClient) GetGameStatistics(ctx context.Context, in *statev
 // testFullClientProvider extends testClientProvider with all client types.
 type testFullClientProvider struct {
 	auth        authv1.AuthServiceClient
+	account     authv1.AccountServiceClient
 	campaign    statev1.CampaignServiceClient
 	invite      statev1.InviteServiceClient
 	participant statev1.ParticipantServiceClient
@@ -1690,8 +1713,9 @@ func (p testFullClientProvider) SnapshotClient() statev1.SnapshotServiceClient {
 func (p testFullClientProvider) StatisticsClient() statev1.StatisticsServiceClient {
 	return p.statistics
 }
-func (p testFullClientProvider) SystemClient() statev1.SystemServiceClient { return p.system }
-func (p testFullClientProvider) AuthClient() authv1.AuthServiceClient      { return p.auth }
+func (p testFullClientProvider) SystemClient() statev1.SystemServiceClient  { return p.system }
+func (p testFullClientProvider) AuthClient() authv1.AuthServiceClient       { return p.auth }
+func (p testFullClientProvider) AccountClient() authv1.AccountServiceClient { return p.account }
 func (p testFullClientProvider) DaggerheartContentClient() daggerheartv1.DaggerheartContentServiceClient {
 	return p.content
 }
@@ -1784,7 +1808,8 @@ func TestUserLookup(t *testing.T) {
 
 func TestCreateUser(t *testing.T) {
 	authClient := &testAuthClient{user: &authv1.User{Id: "new-user", Email: "test@example.com"}}
-	provider := testClientProvider{auth: authClient}
+	accountClient := &testAccountClient{}
+	provider := testClientProvider{auth: authClient, account: accountClient}
 	webHandler := &Handler{clientProvider: provider, impersonation: newImpersonationStore()}
 	handler := webHandler.routes()
 
@@ -1802,6 +1827,12 @@ func TestCreateUser(t *testing.T) {
 		location := rec.Header().Get("Location")
 		if !strings.HasPrefix(location, "/users/new-user") {
 			t.Errorf("expected redirect to /users/new-user, got %q", location)
+		}
+		if accountClient.updateProfileReq == nil {
+			t.Fatalf("expected update profile request")
+		}
+		if got, want := accountClient.updateProfileReq.GetUserId(), "new-user"; got != want {
+			t.Fatalf("expected user ID %q, got %q", want, got)
 		}
 	})
 
@@ -4929,9 +4960,29 @@ func TestCreateUserErrorPaths(t *testing.T) {
 		assertContains(t, rec.Body.String(), "Unable to create user")
 	})
 
+	t.Run("account profile update error", func(t *testing.T) {
+		authClient := &testAuthClient{user: &authv1.User{Id: "new-user", Email: "alice@example.com"}}
+		accountClient := &testAccountClient{updateProfileErr: fmt.Errorf("account update failed")}
+		handler := NewHandler(testClientProvider{auth: authClient, account: accountClient})
+		form := url.Values{"email": {"alice@example.com"}}
+		req := httptest.NewRequest(http.MethodPost, "http://example.com/users/create", strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Set("Origin", "http://example.com")
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusSeeOther {
+			t.Fatalf("expected 303, got %d", rec.Code)
+		}
+		if !strings.Contains(rec.Header().Get("Location"), "/users/new-user") {
+			t.Fatalf("expected redirect to /users/new-user, got %q", rec.Header().Get("Location"))
+		}
+	})
+
 	t.Run("success htmx redirect", func(t *testing.T) {
 		authClient := &testAuthClient{user: &authv1.User{Id: "new-user", Email: "alice@example.com"}}
-		handler := NewHandler(testClientProvider{auth: authClient})
+		accountClient := &testAccountClient{}
+		handler := NewHandler(testClientProvider{auth: authClient, account: accountClient})
 		form := url.Values{"email": {"alice@example.com"}}
 		req := httptest.NewRequest(http.MethodPost, "http://example.com/users/create", strings.NewReader(form.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
