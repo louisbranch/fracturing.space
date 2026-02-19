@@ -3,6 +3,7 @@ package web
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
@@ -37,7 +38,7 @@ func TestAppHomeRouteRejectsNonGET(t *testing.T) {
 	}
 }
 
-func TestAppHomeHandlerRedirectsAuthenticatedToCampaigns(t *testing.T) {
+func TestAppHomeHandlerRedirectsAuthenticatedToHomeShell(t *testing.T) {
 	h := &handler{
 		config:       Config{AuthBaseURL: "http://auth.local"},
 		sessions:     newSessionStore(),
@@ -53,7 +54,55 @@ func TestAppHomeHandlerRedirectsAuthenticatedToCampaigns(t *testing.T) {
 	if w.Code != http.StatusFound {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusFound)
 	}
-	if location := w.Header().Get("Location"); location != "/app/campaigns" {
-		t.Fatalf("location = %q, want %q", location, "/app/campaigns")
+	if location := w.Header().Get("Location"); location != "/" {
+		t.Fatalf("location = %q, want %q", location, "/")
+	}
+}
+
+func TestAppDashboardRouteRedirectsToHome(t *testing.T) {
+	h := &handler{
+		config:       Config{AuthBaseURL: "http://auth.local"},
+		sessions:     newSessionStore(),
+		pendingFlows: newPendingFlowStore(),
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+
+	req := httptest.NewRequest(http.MethodGet, "/app/dashboard", nil)
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+
+	h.handleAppDashboard(w, req)
+
+	if w.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusFound)
+	}
+	if location := w.Header().Get("Location"); location != "/" {
+		t.Fatalf("location = %q, want %q", location, "/")
+	}
+}
+
+func TestAppRootRendersAuthenticatedDashboard(t *testing.T) {
+	h := &handler{
+		config:       Config{AuthBaseURL: "http://auth.local", AppName: "Test App"},
+		sessions:     newSessionStore(),
+		pendingFlows: newPendingFlowStore(),
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+
+	h.handleAppRoot(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "Test App") {
+		t.Fatalf("body should include app name for dashboard branding")
+	}
+	if !strings.Contains(body, "Welcome, Alice") {
+		t.Fatalf("body should include user greeting")
 	}
 }
