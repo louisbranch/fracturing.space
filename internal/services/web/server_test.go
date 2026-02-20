@@ -25,7 +25,7 @@ import (
 func TestLoginWithoutPendingIDRedirectsToAuthLogin(t *testing.T) {
 	handler := NewHandler(Config{
 		AuthBaseURL:   "http://auth.local",
-		OAuthClientID: "fracturing-space-web",
+		OAuthClientID: "fracturing-space",
 		CallbackURL:   "http://localhost:8080/auth/callback",
 	}, nil)
 	req := httptest.NewRequest(http.MethodGet, "/login", nil)
@@ -86,7 +86,7 @@ func TestLandingPageRenders(t *testing.T) {
 func TestLandingPageShowsSignIn(t *testing.T) {
 	handler := NewHandler(Config{
 		AuthBaseURL:   "http://auth.local",
-		OAuthClientID: "fracturing-space-web",
+		OAuthClientID: "fracturing-space",
 		CallbackURL:   "http://localhost:8080/auth/callback",
 	}, nil)
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -108,7 +108,7 @@ func TestLandingPageShowsSignedInUser(t *testing.T) {
 	h := &handler{
 		config: Config{
 			AuthBaseURL:   "http://auth.local",
-			OAuthClientID: "fracturing-space-web",
+			OAuthClientID: "fracturing-space",
 			CallbackURL:   "http://localhost:8080/auth/callback",
 		},
 		sessions:     newSessionStore(),
@@ -331,7 +331,7 @@ func TestPasskeyRegisterFinishSuccess(t *testing.T) {
 func TestAuthLoginRedirect(t *testing.T) {
 	handler := NewHandler(Config{
 		AuthBaseURL:   "http://auth.local",
-		OAuthClientID: "fracturing-space-web",
+		OAuthClientID: "fracturing-space",
 		CallbackURL:   "http://localhost:8080/auth/callback",
 	}, nil)
 	req := httptest.NewRequest(http.MethodGet, "/auth/login", nil)
@@ -359,7 +359,7 @@ func TestAuthLoginRedirect(t *testing.T) {
 	if q.Get("response_type") != "code" {
 		t.Fatalf("response_type = %q", q.Get("response_type"))
 	}
-	if q.Get("client_id") != "fracturing-space-web" {
+	if q.Get("client_id") != "fracturing-space" {
 		t.Fatalf("client_id = %q", q.Get("client_id"))
 	}
 	if q.Get("redirect_uri") != "http://localhost:8080/auth/callback" {
@@ -392,7 +392,7 @@ func TestAuthCallbackExchangesCodeAndSetsCookie(t *testing.T) {
 			http.Error(w, "wrong grant_type", http.StatusBadRequest)
 			return
 		}
-		if r.FormValue("client_id") != "fracturing-space-web" {
+		if r.FormValue("client_id") != "fracturing-space" {
 			http.Error(w, "wrong client_id", http.StatusBadRequest)
 			return
 		}
@@ -404,7 +404,7 @@ func TestAuthCallbackExchangesCodeAndSetsCookie(t *testing.T) {
 	h := &handler{
 		config: Config{
 			AuthBaseURL:   "http://auth.local",
-			OAuthClientID: "fracturing-space-web",
+			OAuthClientID: "fracturing-space",
 			CallbackURL:   "http://localhost:8080/auth/callback",
 			AuthTokenURL:  tokenServer.URL,
 		},
@@ -459,7 +459,7 @@ func TestAuthCallbackSetsTokenCookie(t *testing.T) {
 	h := &handler{
 		config: Config{
 			AuthBaseURL:   "http://auth.local",
-			OAuthClientID: "fracturing-space-web",
+			OAuthClientID: "fracturing-space",
 			CallbackURL:   "http://localhost:8080/auth/callback",
 			AuthTokenURL:  tokenServer.URL,
 			Domain:        "example.com",
@@ -502,7 +502,7 @@ func TestAuthLogoutClearsTokenCookie(t *testing.T) {
 	h := &handler{
 		config: Config{
 			AuthBaseURL:   "http://auth.local",
-			OAuthClientID: "fracturing-space-web",
+			OAuthClientID: "fracturing-space",
 			Domain:        "example.com",
 		},
 		sessions:     newSessionStore(),
@@ -534,7 +534,7 @@ func TestAuthCallbackMissingCodeOrState(t *testing.T) {
 	h := &handler{
 		config: Config{
 			AuthBaseURL:   "http://auth.local",
-			OAuthClientID: "fracturing-space-web",
+			OAuthClientID: "fracturing-space",
 			CallbackURL:   "http://localhost:8080/auth/callback",
 		},
 		sessions:     newSessionStore(),
@@ -553,7 +553,7 @@ func TestAuthCallbackInvalidState(t *testing.T) {
 	h := &handler{
 		config: Config{
 			AuthBaseURL:   "http://auth.local",
-			OAuthClientID: "fracturing-space-web",
+			OAuthClientID: "fracturing-space",
 			CallbackURL:   "http://localhost:8080/auth/callback",
 		},
 		sessions:     newSessionStore(),
@@ -572,7 +572,7 @@ func TestAuthLogoutClearsSessionAndRedirects(t *testing.T) {
 	h := &handler{
 		config: Config{
 			AuthBaseURL:   "http://auth.local",
-			OAuthClientID: "fracturing-space-web",
+			OAuthClientID: "fracturing-space",
 		},
 		sessions:     newSessionStore(),
 		pendingFlows: newPendingFlowStore(),
@@ -614,7 +614,7 @@ func TestAuthLogoutMethodNotAllowed(t *testing.T) {
 	h := &handler{
 		config: Config{
 			AuthBaseURL:   "http://auth.local",
-			OAuthClientID: "fracturing-space-web",
+			OAuthClientID: "fracturing-space",
 		},
 		sessions:     newSessionStore(),
 		pendingFlows: newPendingFlowStore(),
