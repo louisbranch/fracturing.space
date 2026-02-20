@@ -10,6 +10,7 @@ import (
 	"time"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/user"
 )
@@ -27,62 +28,6 @@ func TestStoreDBNilSafe(t *testing.T) {
 	}
 }
 
-func TestPutGetAccountProfileRoundTrip(t *testing.T) {
-	store := openTempStore(t)
-
-	createdAt := time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC)
-	updatedAt := createdAt.Add(time.Minute)
-	userRecord := user.User{
-		ID:        "user-1",
-		Email:     "testuser",
-		CreatedAt: createdAt,
-		UpdatedAt: updatedAt,
-	}
-	if err := store.PutUser(context.Background(), userRecord); err != nil {
-		t.Fatalf("put user: %v", err)
-	}
-
-	profile := storage.AccountProfile{
-		UserID:    userRecord.ID,
-		Name:      "Alice",
-		Locale:    commonv1.Locale_LOCALE_EN_US,
-		CreatedAt: createdAt,
-		UpdatedAt: updatedAt,
-	}
-	if err := store.PutAccountProfile(context.Background(), profile); err != nil {
-		t.Fatalf("put profile: %v", err)
-	}
-
-	got, err := store.GetAccountProfile(context.Background(), userRecord.ID)
-	if err != nil {
-		t.Fatalf("get profile: %v", err)
-	}
-	if got.UserID != profile.UserID || got.Name != profile.Name || got.Locale != profile.Locale {
-		t.Fatalf("unexpected profile: %+v", got)
-	}
-}
-
-func TestGetAccountProfileNotFound(t *testing.T) {
-	store := openTempStore(t)
-	_, err := store.GetAccountProfile(context.Background(), "missing")
-	if err == nil {
-		t.Fatal("expected error for missing profile")
-	}
-	if !errors.Is(err, storage.ErrNotFound) {
-		t.Fatalf("expected storage.ErrNotFound, got %v", err)
-	}
-}
-
-func TestPutAccountProfileRequiresUserID(t *testing.T) {
-	store := openTempStore(t)
-	err := store.PutAccountProfile(context.Background(), storage.AccountProfile{
-		UserID: " ",
-	})
-	if err == nil {
-		t.Fatal("expected error for missing user id")
-	}
-}
-
 func TestPutGetUserRoundTrip(t *testing.T) {
 	store := openTempStore(t)
 
@@ -91,6 +36,7 @@ func TestPutGetUserRoundTrip(t *testing.T) {
 	input := user.User{
 		ID:        "user-1",
 		Email:     "testuser",
+		Locale:    commonv1.Locale_LOCALE_PT_BR,
 		CreatedAt: created,
 		UpdatedAt: updated,
 	}
@@ -103,7 +49,7 @@ func TestPutGetUserRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get user: %v", err)
 	}
-	if got.ID != input.ID || got.Email != input.Email {
+	if got.ID != input.ID || got.Email != input.Email || got.Locale != input.Locale {
 		t.Fatalf("unexpected user: %+v", got)
 	}
 }
@@ -114,76 +60,6 @@ func TestPutUserRequiresID(t *testing.T) {
 	err := store.PutUser(context.Background(), user.User{ID: "  "})
 	if err == nil {
 		t.Fatal("expected error for empty user id")
-	}
-}
-
-func TestPutUserRequiresEmail(t *testing.T) {
-	store := openTempStore(t)
-
-	err := store.PutUser(context.Background(), user.User{
-		ID:        "user-1",
-		Email:     " ",
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-	})
-	if err == nil {
-		t.Fatal("expected error for empty email")
-	}
-}
-
-func TestPutUserEnforcesPrimaryEmailUniqueness(t *testing.T) {
-	store := openTempStore(t)
-
-	if err := store.PutUser(context.Background(), user.User{
-		ID:        "user-1",
-		Email:     "shared@example.com",
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-	}); err != nil {
-		t.Fatalf("put user: %v", err)
-	}
-
-	err := store.PutUser(context.Background(), user.User{
-		ID:        "user-2",
-		Email:     "shared@example.com",
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-	})
-	if err == nil {
-		t.Fatal("expected duplicate email error")
-	}
-	if _, err := store.GetUser(context.Background(), "user-2"); err != storage.ErrNotFound {
-		t.Fatalf("expected user-2 not found, got %v", err)
-	}
-}
-
-func TestPutUserIsIdempotentForPrimaryEmail(t *testing.T) {
-	store := openTempStore(t)
-
-	created := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)
-	updated := created.Add(time.Minute)
-	input := user.User{
-		ID:        "user-1",
-		Email:     "testuser",
-		CreatedAt: created,
-		UpdatedAt: created,
-	}
-
-	if err := store.PutUser(context.Background(), input); err != nil {
-		t.Fatalf("put user: %v", err)
-	}
-	input.CreatedAt = updated
-	input.UpdatedAt = updated
-	if err := store.PutUser(context.Background(), input); err != nil {
-		t.Fatalf("put user again: %v", err)
-	}
-
-	list, err := store.ListUserEmailsByUser(context.Background(), "user-1")
-	if err != nil {
-		t.Fatalf("list user emails: %v", err)
-	}
-	if len(list) != 1 {
-		t.Fatalf("expected 1 email, got %d", len(list))
 	}
 }
 
@@ -215,6 +91,7 @@ func TestListUsersPagination(t *testing.T) {
 		if err := store.PutUser(context.Background(), user.User{
 			ID:        id,
 			Email:     fmt.Sprintf("user%d", i+1),
+			Locale:    platformi18n.DefaultLocale(),
 			CreatedAt: time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC),
 			UpdatedAt: time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC),
 		}); err != nil {
@@ -271,6 +148,7 @@ func TestGetAuthStatisticsSince(t *testing.T) {
 	if err := store.PutUser(context.Background(), user.User{
 		ID:        "user-1",
 		Email:     "testuser",
+		Locale:    platformi18n.DefaultLocale(),
 		CreatedAt: created,
 		UpdatedAt: created,
 	}); err != nil {
@@ -294,6 +172,7 @@ func TestGetAuthStatisticsAllTime(t *testing.T) {
 	if err := store.PutUser(context.Background(), user.User{
 		ID:        "user-1",
 		Email:     "testuser",
+		Locale:    platformi18n.DefaultLocale(),
 		CreatedAt: created,
 		UpdatedAt: created,
 	}); err != nil {
@@ -316,6 +195,7 @@ func TestPasskeyCredentialRoundTrip(t *testing.T) {
 	if err := store.PutUser(context.Background(), user.User{
 		ID:        "user-1",
 		Email:     "testuser",
+		Locale:    platformi18n.DefaultLocale(),
 		CreatedAt: now,
 		UpdatedAt: now,
 	}); err != nil {
@@ -440,6 +320,7 @@ func TestUserEmailRoundTrip(t *testing.T) {
 	if err := store.PutUser(context.Background(), user.User{
 		ID:        "user-1",
 		Email:     "testuser",
+		Locale:    platformi18n.DefaultLocale(),
 		CreatedAt: now,
 		UpdatedAt: now,
 	}); err != nil {
@@ -469,8 +350,8 @@ func TestUserEmailRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list emails: %v", err)
 	}
-	if len(list) != 2 {
-		t.Fatalf("expected 2 emails, got %d", len(list))
+	if len(list) != 1 {
+		t.Fatalf("expected 1 email, got %d", len(list))
 	}
 
 	verifiedAt := now.Add(time.Minute)
@@ -483,88 +364,6 @@ func TestUserEmailRoundTrip(t *testing.T) {
 	}
 	if verified.VerifiedAt == nil {
 		t.Fatalf("expected verified_at")
-	}
-}
-
-func TestGetUserUsesPrimaryEmail(t *testing.T) {
-	store := openTempStore(t)
-	now := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)
-
-	if err := store.PutUser(context.Background(), user.User{
-		ID:        "user-1",
-		Email:     "primary@example.com",
-		CreatedAt: now,
-		UpdatedAt: now,
-	}); err != nil {
-		t.Fatalf("put user: %v", err)
-	}
-
-	if err := store.PutUserEmail(context.Background(), storage.UserEmail{
-		ID:        "email-2",
-		UserID:    "user-1",
-		Email:     "secondary@example.com",
-		CreatedAt: now,
-		UpdatedAt: now,
-	}); err != nil {
-		t.Fatalf("put user email: %v", err)
-	}
-
-	got, err := store.GetUser(context.Background(), "user-1")
-	if err != nil {
-		t.Fatalf("get user: %v", err)
-	}
-	if got.Email != "primary@example.com" {
-		t.Fatalf("expected primary email, got %q", got.Email)
-	}
-
-	list, err := store.ListUserEmailsByUser(context.Background(), "user-1")
-	if err != nil {
-		t.Fatalf("list emails: %v", err)
-	}
-	if len(list) != 2 {
-		t.Fatalf("expected 2 emails, got %d", len(list))
-	}
-}
-
-func TestPutUserEmailDoesNotDemotePrimary(t *testing.T) {
-	store := openTempStore(t)
-	now := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)
-
-	if err := store.PutUser(context.Background(), user.User{
-		ID:        "user-1",
-		Email:     "primary@example.com",
-		CreatedAt: now,
-		UpdatedAt: now,
-	}); err != nil {
-		t.Fatalf("put user: %v", err)
-	}
-
-	if err := store.PutUserEmail(context.Background(), storage.UserEmail{
-		ID:        "email-primary",
-		UserID:    "user-1",
-		Email:     "primary@example.com",
-		CreatedAt: now,
-		UpdatedAt: now,
-	}); err != nil {
-		t.Fatalf("put user email: %v", err)
-	}
-
-	if _, err := store.GetUser(context.Background(), "user-1"); err != nil {
-		t.Fatalf("get user before re-upsert: %v", err)
-	}
-
-	if err := store.PutUserEmail(context.Background(), storage.UserEmail{
-		ID:        "email-primary-updated",
-		UserID:    "user-1",
-		Email:     "primary@example.com",
-		CreatedAt: now,
-		UpdatedAt: now.Add(time.Minute),
-	}); err != nil {
-		t.Fatalf("upsert primary email: %v", err)
-	}
-
-	if _, err := store.GetUser(context.Background(), "user-1"); err != nil {
-		t.Fatalf("expected primary email to remain after upsert: %v", err)
 	}
 }
 

@@ -1,90 +1,99 @@
 .oauth-shell {
-    width: 100%;
-    max-width: 560px;
+  padding: 2.5rem 0 3rem;
 }
 
 .oauth-header {
-    text-align: center;
-    margin-bottom: 1.5rem;
+  text-align: center;
+  margin-bottom: 1.5rem;
 }
 
 .oauth-card {
-    width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
 }
 
 .oauth-subtitle {
-    margin-top: 0.25rem;
+  margin-top: 0.25rem;
 }
 
 .oauth-client {
-    background: color-mix(in srgb, var(--color-base-200) 70%, transparent);
-    border: 1px solid var(--color-base-300);
-    border-radius: var(--radius-box);
-    padding: 0.75rem 1rem;
-    margin-bottom: 1rem;
-    font-size: 0.95rem;
+  background: #ffffff;
+  border: 1px solid #dbe3ec;
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
 }
 
 .oauth-alert {
-    border-radius: var(--radius-box);
-    padding: 0.75rem 1rem;
-    margin-bottom: 1rem;
-    font-size: 0.95rem;
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
 }
 
 .oauth-alert-error {
-    background: color-mix(in srgb, var(--color-error) 14%, transparent);
-    border: 1px solid color-mix(in srgb, var(--color-error) 35%, transparent);
-    color: var(--color-error-content);
+  background: #ffe8e6;
+  border: 1px solid #f1b8b2;
+  color: #7a1b15;
 }
 
 .oauth-field {
-    margin-bottom: 1rem;
+  margin-bottom: 1rem;
 }
 
 .oauth-field label {
-    display: block;
-    font-weight: 600;
-    margin-bottom: 0.35rem;
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.35rem;
 }
 
 .oauth-field input[type="text"],
 .oauth-field input[type="password"] {
-    width: 100%;
+  width: 100%;
 }
 
 .oauth-button {
-    width: 100%;
+  width: 100%;
 }
 
 .oauth-actions {
-    display: flex;
-    gap: 0.75rem;
-    margin-top: 1.25rem;
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
 }
 
-.oauth-actions .btn {
-    flex: 1;
-    text-align: center;
+.oauth-actions .paper-btn {
+  flex: 1;
+  text-align: center;
+}
+
+.oauth-actions .paper-btn.secondary {
+  background: #e5e9ef;
+}
+
+.oauth-actions .paper-btn.primary {
+  background: #1b263b;
+  color: #ffffff;
 }
 
 .oauth-permissions {
-    margin-top: 0.5rem;
-    margin-bottom: 0;
-    padding-left: 1.1rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0;
+  padding-left: 1.1rem;
 }
 
 .oauth-permissions li {
-    margin-bottom: 0.35rem;
+  margin-bottom: 0.35rem;
 }
 
 .oauth-error-code {
-    display: inline-block;
-    font-family: "Courier New", monospace;
-    font-size: 0.9rem;
-    padding: 0.25rem 0.5rem;
-    background: color-mix(in srgb, var(--color-error) 12%, transparent);
-    border-radius: 4px;
-    color: var(--color-error-content);
-    margin-bottom: 0.75rem;
+  display: inline-block;
+  font-family: monospace;
+  font-size: 0.9rem;
+  padding: 0.25rem 0.5rem;
+  background: #ffe8e6;
+  border-radius: 4px;
+  color: #7a1b15;
+  margin-bottom: 0.75rem;
 }

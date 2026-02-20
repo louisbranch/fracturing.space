@@ -51,7 +51,7 @@ func TestDialAuthGRPCHealthError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
 
-	_, _, _, err := dialAuthGRPC(ctx, Config{
+	_, _, err := dialAuthGRPC(ctx, Config{
 		AuthAddr:        addr,
 		GRPCDialTimeout: 100 * time.Millisecond,
 	})
@@ -95,7 +95,7 @@ func TestDialAuthGRPCSuccess(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	conn, client, _, err := dialAuthGRPC(ctx, Config{
+	conn, client, err := dialAuthGRPC(ctx, Config{
 		AuthAddr:        addr,
 		GRPCDialTimeout: 100 * time.Millisecond,
 	})

@@ -751,7 +751,7 @@ func TestApplySystemEvent_UsesDaggerheartAdapterForSysPrefixedEventType(t *testi
 
 	evt := event.Event{
 		CampaignID:    "camp-1",
-		Type:          event.Type("sys." + daggerheartsys.SystemID + ".action.gm_fear_changed"),
+		Type:          event.Type("sys." + daggerheartsys.SystemID + ".gm_fear_changed"),
 		SystemID:      daggerheartsys.SystemID,
 		SystemVersion: daggerheartsys.SystemVersion,
 		EntityType:    "campaign",
@@ -2753,7 +2753,7 @@ func TestApplySystemEvent_UnhandledSystemEventReturnsError(t *testing.T) {
 	applier := Applier{Adapters: registry}
 	evt := event.Event{
 		CampaignID:    "camp-1",
-		Type:          event.Type("sys.daggerheart.action.unhandled_system_event"),
+		Type:          event.Type("sys.daggerheart.unhandled_system_event"),
 		SystemID:      daggerheartsys.SystemID,
 		SystemVersion: daggerheartsys.SystemVersion,
 		EntityType:    "campaign",

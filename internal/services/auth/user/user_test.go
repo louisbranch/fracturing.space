@@ -4,6 +4,9 @@ import (
 	"errors"
 	"testing"
 	"time"
+
+	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 )
 
 func TestCreateUserDefaults(t *testing.T) {
@@ -17,8 +20,8 @@ func TestCreateUserDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create user: %v", err)
 	}
-	if created.ID != "user-1" {
-		t.Fatalf("expected id user-1, got %q", created.ID)
+	if created.Locale != platformi18n.DefaultLocale() {
+		t.Fatalf("expected default locale %v, got %v", platformi18n.DefaultLocale(), created.Locale)
 	}
 
 	_, err = CreateUser(input, nil, func() (string, error) { return "", errors.New("id generator error") })
@@ -30,7 +33,8 @@ func TestCreateUserDefaults(t *testing.T) {
 func TestCreateUserNormalizesInput(t *testing.T) {
 	fixedTime := time.Date(2026, 1, 23, 10, 0, 0, 0, time.UTC)
 	input := CreateUserInput{
-		Email: "  ALICE@example.com  ",
+		Email:  "  ALICE@example.com  ",
+		Locale: commonv1.Locale_LOCALE_PT_BR,
 	}
 
 	created, err := CreateUser(input, func() time.Time { return fixedTime }, func() (string, error) {
@@ -45,6 +49,9 @@ func TestCreateUserNormalizesInput(t *testing.T) {
 	}
 	if created.Email != "alice@example.com" {
 		t.Fatalf("expected lowercased trimmed email, got %q", created.Email)
+	}
+	if created.Locale != commonv1.Locale_LOCALE_PT_BR {
+		t.Fatalf("expected locale %v, got %v", commonv1.Locale_LOCALE_PT_BR, created.Locale)
 	}
 	if !created.CreatedAt.Equal(fixedTime) || !created.UpdatedAt.Equal(fixedTime) {
 		t.Fatalf("expected timestamps to match fixed time")

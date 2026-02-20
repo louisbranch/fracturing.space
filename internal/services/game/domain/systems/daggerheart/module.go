@@ -45,23 +45,12 @@ var daggerheartCommandDefinitions = []command.Definition{
 	{Type: commandTypeStressSpend, Owner: command.OwnerSystem, ValidatePayload: validateStressSpendPayload},
 	{Type: commandTypeLoadoutSwap, Owner: command.OwnerSystem, ValidatePayload: validateLoadoutSwapPayload},
 	{Type: commandTypeRestTake, Owner: command.OwnerSystem, ValidatePayload: validateRestTakePayload},
-	{Type: commandTypeAttackResolve, Owner: command.OwnerSystem, ValidatePayload: validateAttackResolvePayload},
-	{Type: commandTypeReactionResolve, Owner: command.OwnerSystem, ValidatePayload: validateReactionResolvePayload},
-	{Type: commandTypeAdversaryRollResolve, Owner: command.OwnerSystem, ValidatePayload: validateAdversaryRollResolvePayload},
-	{Type: commandTypeAdversaryAttackResolve, Owner: command.OwnerSystem, ValidatePayload: validateAdversaryAttackResolvePayload},
-	{Type: commandTypeDamageRollResolve, Owner: command.OwnerSystem, ValidatePayload: validateDamageRollResolvePayload},
-	{Type: commandTypeGroupActionResolve, Owner: command.OwnerSystem, ValidatePayload: validateGroupActionResolvePayload},
-	{Type: commandTypeTagTeamResolve, Owner: command.OwnerSystem, ValidatePayload: validateTagTeamResolvePayload},
 	{Type: commandTypeCountdownCreate, Owner: command.OwnerSystem, ValidatePayload: validateCountdownCreatePayload},
 	{Type: commandTypeCountdownUpdate, Owner: command.OwnerSystem, ValidatePayload: validateCountdownUpdatePayload},
 	{Type: commandTypeCountdownDelete, Owner: command.OwnerSystem, ValidatePayload: validateCountdownDeletePayload},
-	{Type: commandTypeAdversaryActionResolve, Owner: command.OwnerSystem, ValidatePayload: validateAdversaryActionResolvePayload},
 	{Type: commandTypeDamageApply, Owner: command.OwnerSystem, ValidatePayload: validateDamageApplyPayload},
 	{Type: commandTypeAdversaryDamageApply, Owner: command.OwnerSystem, ValidatePayload: validateAdversaryDamageApplyPayload},
 	{Type: commandTypeDowntimeMoveApply, Owner: command.OwnerSystem, ValidatePayload: validateDowntimeMoveApplyPayload},
-	{Type: commandTypeDeathMoveResolve, Owner: command.OwnerSystem, ValidatePayload: validateDeathMoveResolvePayload},
-	{Type: commandTypeBlazeOfGloryResolve, Owner: command.OwnerSystem, ValidatePayload: validateBlazeOfGloryResolvePayload},
-	{Type: commandTypeGMMoveApply, Owner: command.OwnerSystem, ValidatePayload: validateGMMoveApplyPayload},
 	{Type: commandTypeAdversaryConditionChange, Owner: command.OwnerSystem, ValidatePayload: validateAdversaryConditionChangePayload},
 	{Type: commandTypeAdversaryCreate, Owner: command.OwnerSystem, ValidatePayload: validateAdversaryCreatePayload},
 	{Type: commandTypeAdversaryUpdate, Owner: command.OwnerSystem, ValidatePayload: validateAdversaryUpdatePayload},
@@ -72,27 +61,14 @@ var daggerheartEventDefinitions = []event.Definition{
 	{Type: eventTypeGMFearChanged, Owner: event.OwnerSystem, ValidatePayload: validateGMFearChangedPayload},
 	{Type: eventTypeCharacterStatePatched, Owner: event.OwnerSystem, ValidatePayload: validateCharacterStatePatchedPayload},
 	{Type: eventTypeConditionChanged, Owner: event.OwnerSystem, ValidatePayload: validateConditionChangedPayload},
-	{Type: eventTypeHopeSpent, Owner: event.OwnerSystem, ValidatePayload: validateHopeSpentPayload, Intent: event.IntentAuditOnly},
-	{Type: eventTypeStressSpent, Owner: event.OwnerSystem, ValidatePayload: validateStressSpentPayload, Intent: event.IntentAuditOnly},
 	{Type: eventTypeLoadoutSwapped, Owner: event.OwnerSystem, ValidatePayload: validateLoadoutSwappedPayload},
 	{Type: eventTypeRestTaken, Owner: event.OwnerSystem, ValidatePayload: validateRestTakenPayload},
-	{Type: eventTypeAttackResolved, Owner: event.OwnerSystem, ValidatePayload: validateAttackResolvedPayload},
-	{Type: eventTypeReactionResolved, Owner: event.OwnerSystem, ValidatePayload: validateReactionResolvedPayload},
-	{Type: eventTypeAdversaryRollResolved, Owner: event.OwnerSystem, ValidatePayload: validateAdversaryRollResolvedPayload},
-	{Type: eventTypeAdversaryAttackResolved, Owner: event.OwnerSystem, ValidatePayload: validateAdversaryAttackResolvedPayload},
-	{Type: eventTypeDamageRollResolved, Owner: event.OwnerSystem, ValidatePayload: validateDamageRollResolvedPayload},
-	{Type: eventTypeGroupActionResolved, Owner: event.OwnerSystem, ValidatePayload: validateGroupActionResolvedPayload},
-	{Type: eventTypeTagTeamResolved, Owner: event.OwnerSystem, ValidatePayload: validateTagTeamResolvedPayload},
 	{Type: eventTypeCountdownCreated, Owner: event.OwnerSystem, ValidatePayload: validateCountdownCreatedPayload},
 	{Type: eventTypeCountdownUpdated, Owner: event.OwnerSystem, ValidatePayload: validateCountdownUpdatedPayload},
 	{Type: eventTypeCountdownDeleted, Owner: event.OwnerSystem, ValidatePayload: validateCountdownDeletedPayload},
-	{Type: eventTypeAdversaryActionResolved, Owner: event.OwnerSystem, ValidatePayload: validateAdversaryActionResolvedPayload, Intent: event.IntentAuditOnly},
 	{Type: eventTypeDamageApplied, Owner: event.OwnerSystem, ValidatePayload: validateDamageAppliedPayload},
 	{Type: eventTypeAdversaryDamageApplied, Owner: event.OwnerSystem, ValidatePayload: validateAdversaryDamageAppliedPayload},
 	{Type: eventTypeDowntimeMoveApplied, Owner: event.OwnerSystem, ValidatePayload: validateDowntimeMoveAppliedPayload},
-	{Type: eventTypeDeathMoveResolved, Owner: event.OwnerSystem, ValidatePayload: validateDeathMoveResolvedPayload},
-	{Type: eventTypeBlazeOfGloryResolved, Owner: event.OwnerSystem, ValidatePayload: validateBlazeOfGloryResolvedPayload},
-	{Type: eventTypeGMMoveApplied, Owner: event.OwnerSystem, ValidatePayload: validateGMMoveAppliedPayload},
 	{Type: eventTypeAdversaryConditionChanged, Owner: event.OwnerSystem, ValidatePayload: validateAdversaryConditionChangedPayload},
 	{Type: eventTypeAdversaryCreated, Owner: event.OwnerSystem, ValidatePayload: validateAdversaryCreatedPayload},
 	{Type: eventTypeAdversaryUpdated, Owner: event.OwnerSystem, ValidatePayload: validateAdversaryUpdatedPayload},
@@ -162,6 +138,9 @@ func validateGMFearChangedPayload(raw json.RawMessage) error {
 	if payload.After < GMFearMin || payload.After > GMFearMax {
 		return fmt.Errorf("after must be in range %d..%d", GMFearMin, GMFearMax)
 	}
+	if payload.Before == payload.After {
+		return errors.New("before and after must differ")
+	}
 	return nil
 }
 
@@ -173,26 +152,14 @@ func validateCharacterStatePatchPayload(raw json.RawMessage) error {
 	if strings.TrimSpace(payload.CharacterID) == "" {
 		return errors.New("character_id is required")
 	}
+	if !hasCharacterStateChange(payload) {
+		return errors.New("character_state patch must change at least one field")
+	}
 	return nil
 }
 
 func validateCharacterStatePatchedPayload(raw json.RawMessage) error {
 	return validateCharacterStatePatchPayload(raw)
-}
-
-func validateConditionChangePayload(raw json.RawMessage) error {
-	var payload ConditionChangePayload
-	if err := json.Unmarshal(raw, &payload); err != nil {
-		return err
-	}
-	if strings.TrimSpace(payload.CharacterID) == "" {
-		return errors.New("character_id is required")
-	}
-	return nil
-}
-
-func validateConditionChangedPayload(raw json.RawMessage) error {
-	return validateConditionChangePayload(raw)
 }
 
 func validateHopeSpendPayload(raw json.RawMessage) error {
@@ -203,11 +170,16 @@ func validateHopeSpendPayload(raw json.RawMessage) error {
 	if strings.TrimSpace(payload.CharacterID) == "" {
 		return errors.New("character_id is required")
 	}
+	if payload.Amount <= 0 {
+		return errors.New("amount must be greater than zero")
+	}
+	if payload.Before == payload.After {
+		return errors.New("before and after must differ")
+	}
+	if abs(payload.Before-payload.After) != payload.Amount {
+		return errors.New("amount must match before and after delta")
+	}
 	return nil
-}
-
-func validateHopeSpentPayload(raw json.RawMessage) error {
-	return validateHopeSpendPayload(raw)
 }
 
 func validateStressSpendPayload(raw json.RawMessage) error {
@@ -218,11 +190,38 @@ func validateStressSpendPayload(raw json.RawMessage) error {
 	if strings.TrimSpace(payload.CharacterID) == "" {
 		return errors.New("character_id is required")
 	}
+	if payload.Amount <= 0 {
+		return errors.New("amount must be greater than zero")
+	}
+	if payload.Before == payload.After {
+		return errors.New("before and after must differ")
+	}
+	if abs(payload.Before-payload.After) != payload.Amount {
+		return errors.New("amount must match before and after delta")
+	}
 	return nil
 }
 
-func validateStressSpentPayload(raw json.RawMessage) error {
-	return validateStressSpendPayload(raw)
+func validateConditionChangePayload(raw json.RawMessage) error {
+	var payload ConditionChangePayload
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return err
+	}
+	if strings.TrimSpace(payload.CharacterID) == "" {
+		return errors.New("character_id is required")
+	}
+	if !hasConditionListMutation(payload.ConditionsBefore, payload.ConditionsAfter) &&
+		len(payload.Added) == 0 && len(payload.Removed) == 0 {
+		return errors.New("conditions must change")
+	}
+	if _, err := NormalizeConditions(payload.ConditionsAfter); err != nil {
+		return err
+	}
+	return nil
+}
+
+func validateConditionChangedPayload(raw json.RawMessage) error {
+	return validateConditionChangePayload(raw)
 }
 
 func validateLoadoutSwapPayload(raw json.RawMessage) error {
@@ -251,158 +250,14 @@ func validateRestTakePayload(raw json.RawMessage) error {
 	if strings.TrimSpace(payload.RestType) == "" {
 		return errors.New("rest_type is required")
 	}
+	if !hasRestTakeMutation(payload) {
+		return errors.New("rest.take must change at least one field")
+	}
 	return nil
 }
 
 func validateRestTakenPayload(raw json.RawMessage) error {
 	return validateRestTakePayload(raw)
-}
-
-func validateAttackResolvePayload(raw json.RawMessage) error {
-	var payload AttackResolvePayload
-	if err := json.Unmarshal(raw, &payload); err != nil {
-		return err
-	}
-	if strings.TrimSpace(payload.CharacterID) == "" {
-		return errors.New("character_id is required")
-	}
-	if payload.RollSeq == 0 {
-		return errors.New("roll_seq is required")
-	}
-	if len(payload.Targets) == 0 {
-		return errors.New("targets are required")
-	}
-	return nil
-}
-
-func validateAttackResolvedPayload(raw json.RawMessage) error {
-	return validateAttackResolvePayload(raw)
-}
-
-func validateReactionResolvePayload(raw json.RawMessage) error {
-	var payload ReactionResolvePayload
-	if err := json.Unmarshal(raw, &payload); err != nil {
-		return err
-	}
-	if strings.TrimSpace(payload.CharacterID) == "" {
-		return errors.New("character_id is required")
-	}
-	if payload.RollSeq == 0 {
-		return errors.New("roll_seq is required")
-	}
-	if strings.TrimSpace(payload.Outcome) == "" {
-		return errors.New("outcome is required")
-	}
-	return nil
-}
-
-func validateReactionResolvedPayload(raw json.RawMessage) error {
-	return validateReactionResolvePayload(raw)
-}
-
-func validateAdversaryRollResolvePayload(raw json.RawMessage) error {
-	var payload AdversaryRollResolvePayload
-	if err := json.Unmarshal(raw, &payload); err != nil {
-		return err
-	}
-	if strings.TrimSpace(payload.AdversaryID) == "" {
-		return errors.New("adversary_id is required")
-	}
-	if payload.RollSeq == 0 {
-		return errors.New("roll_seq is required")
-	}
-	return nil
-}
-
-func validateAdversaryRollResolvedPayload(raw json.RawMessage) error {
-	return validateAdversaryRollResolvePayload(raw)
-}
-
-func validateAdversaryAttackResolvePayload(raw json.RawMessage) error {
-	var payload AdversaryAttackResolvePayload
-	if err := json.Unmarshal(raw, &payload); err != nil {
-		return err
-	}
-	if strings.TrimSpace(payload.AdversaryID) == "" {
-		return errors.New("adversary_id is required")
-	}
-	if payload.RollSeq == 0 {
-		return errors.New("roll_seq is required")
-	}
-	if len(payload.Targets) == 0 {
-		return errors.New("targets are required")
-	}
-	return nil
-}
-
-func validateAdversaryAttackResolvedPayload(raw json.RawMessage) error {
-	return validateAdversaryAttackResolvePayload(raw)
-}
-
-func validateDamageRollResolvePayload(raw json.RawMessage) error {
-	var payload DamageRollResolvePayload
-	if err := json.Unmarshal(raw, &payload); err != nil {
-		return err
-	}
-	if strings.TrimSpace(payload.CharacterID) == "" {
-		return errors.New("character_id is required")
-	}
-	if payload.RollSeq == 0 {
-		return errors.New("roll_seq is required")
-	}
-	return nil
-}
-
-func validateDamageRollResolvedPayload(raw json.RawMessage) error {
-	return validateDamageRollResolvePayload(raw)
-}
-
-func validateGroupActionResolvePayload(raw json.RawMessage) error {
-	var payload GroupActionResolvePayload
-	if err := json.Unmarshal(raw, &payload); err != nil {
-		return err
-	}
-	if strings.TrimSpace(payload.LeaderCharacterID) == "" {
-		return errors.New("leader_character_id is required")
-	}
-	if payload.LeaderRollSeq == 0 {
-		return errors.New("leader_roll_seq is required")
-	}
-	return nil
-}
-
-func validateGroupActionResolvedPayload(raw json.RawMessage) error {
-	return validateGroupActionResolvePayload(raw)
-}
-
-func validateTagTeamResolvePayload(raw json.RawMessage) error {
-	var payload TagTeamResolvePayload
-	if err := json.Unmarshal(raw, &payload); err != nil {
-		return err
-	}
-	if strings.TrimSpace(payload.FirstCharacterID) == "" {
-		return errors.New("first_character_id is required")
-	}
-	if strings.TrimSpace(payload.SecondCharacterID) == "" {
-		return errors.New("second_character_id is required")
-	}
-	if strings.TrimSpace(payload.SelectedCharacterID) == "" {
-		return errors.New("selected_character_id is required")
-	}
-	if payload.FirstRollSeq == 0 {
-		return errors.New("first_roll_seq is required")
-	}
-	if payload.SecondRollSeq == 0 {
-		return errors.New("second_roll_seq is required")
-	}
-	if payload.SelectedRollSeq == 0 {
-		return errors.New("selected_roll_seq is required")
-	}
-	return nil
-}
-
-func validateTagTeamResolvedPayload(raw json.RawMessage) error {
-	return validateTagTeamResolvePayload(raw)
 }
 
 func validateCountdownCreatePayload(raw json.RawMessage) error {
@@ -443,6 +298,9 @@ func validateCountdownUpdatePayload(raw json.RawMessage) error {
 	if strings.TrimSpace(payload.CountdownID) == "" {
 		return errors.New("countdown_id is required")
 	}
+	if payload.Before == payload.After && payload.Delta == 0 {
+		return errors.New("countdown update must change value")
+	}
 	return nil
 }
 
@@ -465,24 +323,6 @@ func validateCountdownDeletedPayload(raw json.RawMessage) error {
 	return validateCountdownDeletePayload(raw)
 }
 
-func validateAdversaryActionResolvePayload(raw json.RawMessage) error {
-	var payload AdversaryActionResolvePayload
-	if err := json.Unmarshal(raw, &payload); err != nil {
-		return err
-	}
-	if strings.TrimSpace(payload.AdversaryID) == "" {
-		return errors.New("adversary_id is required")
-	}
-	if payload.RollSeq == 0 {
-		return errors.New("roll_seq is required")
-	}
-	return nil
-}
-
-func validateAdversaryActionResolvedPayload(raw json.RawMessage) error {
-	return validateAdversaryActionResolvePayload(raw)
-}
-
 func validateDamageApplyPayload(raw json.RawMessage) error {
 	var payload DamageApplyPayload
 	if err := json.Unmarshal(raw, &payload); err != nil {
@@ -490,6 +330,9 @@ func validateDamageApplyPayload(raw json.RawMessage) error {
 	}
 	if strings.TrimSpace(payload.CharacterID) == "" {
 		return errors.New("character_id is required")
+	}
+	if !hasDamagePatchMutation(payload.HpBefore, payload.HpAfter, payload.ArmorBefore, payload.ArmorAfter) {
+		return errors.New("damage apply must change hp or armor")
 	}
 	return nil
 }
@@ -505,6 +348,9 @@ func validateAdversaryDamageApplyPayload(raw json.RawMessage) error {
 	}
 	if strings.TrimSpace(payload.AdversaryID) == "" {
 		return errors.New("adversary_id is required")
+	}
+	if !hasDamagePatchMutation(payload.HpBefore, payload.HpAfter, payload.ArmorBefore, payload.ArmorAfter) {
+		return errors.New("damage apply must change hp or armor")
 	}
 	return nil
 }
@@ -524,65 +370,16 @@ func validateDowntimeMoveApplyPayload(raw json.RawMessage) error {
 	if strings.TrimSpace(payload.Move) == "" {
 		return errors.New("move is required")
 	}
+	if !hasIntFieldChange(payload.HopeBefore, payload.HopeAfter) &&
+		!hasIntFieldChange(payload.StressBefore, payload.StressAfter) &&
+		!hasIntFieldChange(payload.ArmorBefore, payload.ArmorAfter) {
+		return errors.New("downtime_move must change at least one state field")
+	}
 	return nil
 }
 
 func validateDowntimeMoveAppliedPayload(raw json.RawMessage) error {
 	return validateDowntimeMoveApplyPayload(raw)
-}
-
-func validateDeathMoveResolvePayload(raw json.RawMessage) error {
-	var payload DeathMoveResolvePayload
-	if err := json.Unmarshal(raw, &payload); err != nil {
-		return err
-	}
-	if strings.TrimSpace(payload.CharacterID) == "" {
-		return errors.New("character_id is required")
-	}
-	if strings.TrimSpace(payload.Move) == "" {
-		return errors.New("move is required")
-	}
-	if strings.TrimSpace(payload.LifeStateAfter) == "" {
-		return errors.New("life_state_after is required")
-	}
-	return nil
-}
-
-func validateDeathMoveResolvedPayload(raw json.RawMessage) error {
-	return validateDeathMoveResolvePayload(raw)
-}
-
-func validateBlazeOfGloryResolvePayload(raw json.RawMessage) error {
-	var payload BlazeOfGloryResolvePayload
-	if err := json.Unmarshal(raw, &payload); err != nil {
-		return err
-	}
-	if strings.TrimSpace(payload.CharacterID) == "" {
-		return errors.New("character_id is required")
-	}
-	if strings.TrimSpace(payload.LifeStateAfter) == "" {
-		return errors.New("life_state_after is required")
-	}
-	return nil
-}
-
-func validateBlazeOfGloryResolvedPayload(raw json.RawMessage) error {
-	return validateBlazeOfGloryResolvePayload(raw)
-}
-
-func validateGMMoveApplyPayload(raw json.RawMessage) error {
-	var payload GMMoveApplyPayload
-	if err := json.Unmarshal(raw, &payload); err != nil {
-		return err
-	}
-	if strings.TrimSpace(payload.Move) == "" {
-		return errors.New("move is required")
-	}
-	return nil
-}
-
-func validateGMMoveAppliedPayload(raw json.RawMessage) error {
-	return validateGMMoveApplyPayload(raw)
 }
 
 func validateAdversaryConditionChangePayload(raw json.RawMessage) error {
@@ -592,6 +389,13 @@ func validateAdversaryConditionChangePayload(raw json.RawMessage) error {
 	}
 	if strings.TrimSpace(payload.AdversaryID) == "" {
 		return errors.New("adversary_id is required")
+	}
+	if !hasConditionListMutation(payload.ConditionsBefore, payload.ConditionsAfter) &&
+		len(payload.Added) == 0 && len(payload.Removed) == 0 {
+		return errors.New("conditions must change")
+	}
+	if _, err := NormalizeConditions(payload.ConditionsAfter); err != nil {
+		return err
 	}
 	return nil
 }
@@ -649,6 +453,79 @@ func validateAdversaryDeletePayload(raw json.RawMessage) error {
 
 func validateAdversaryDeletedPayload(raw json.RawMessage) error {
 	return validateAdversaryDeletePayload(raw)
+}
+
+func hasCharacterStateChange(payload CharacterStatePatchPayload) bool {
+	return hasIntFieldChange(payload.HPBefore, payload.HPAfter) ||
+		hasIntFieldChange(payload.HopeBefore, payload.HopeAfter) ||
+		hasIntFieldChange(payload.HopeMaxBefore, payload.HopeMaxAfter) ||
+		hasIntFieldChange(payload.StressBefore, payload.StressAfter) ||
+		hasIntFieldChange(payload.ArmorBefore, payload.ArmorAfter) ||
+		hasStringFieldChange(payload.LifeStateBefore, payload.LifeStateAfter)
+}
+
+func hasConditionListMutation(before, after []string) bool {
+	beforeNormalized, err := NormalizeConditions(before)
+	if err != nil {
+		return true
+	}
+	afterNormalized, err := NormalizeConditions(after)
+	if err != nil {
+		return true
+	}
+	return !ConditionsEqual(beforeNormalized, afterNormalized)
+}
+
+func hasRestCharacterStateMutation(payload RestCharacterStatePatch) bool {
+	return hasIntFieldChange(payload.HopeBefore, payload.HopeAfter) ||
+		hasIntFieldChange(payload.StressBefore, payload.StressAfter) ||
+		hasIntFieldChange(payload.ArmorBefore, payload.ArmorAfter)
+}
+
+func hasRestTakeMutation(payload RestTakePayload) bool {
+	if payload.GMFearBefore != payload.GMFearAfter ||
+		payload.ShortRestsBefore != payload.ShortRestsAfter ||
+		payload.RefreshRest ||
+		payload.RefreshLongRest {
+		return true
+	}
+	for _, patch := range payload.CharacterStates {
+		if hasRestCharacterStateMutation(patch) {
+			return true
+		}
+	}
+	return false
+}
+
+func hasDamagePatchMutation(hpBefore, hpAfter, armorBefore, armorAfter *int) bool {
+	return hasIntFieldChange(hpBefore, hpAfter) || hasIntFieldChange(armorBefore, armorAfter)
+}
+
+func hasIntFieldChange(before, after *int) bool {
+	if after == nil {
+		return false
+	}
+	if before == nil {
+		return true
+	}
+	return *before != *after
+}
+
+func hasStringFieldChange(before, after *string) bool {
+	if after == nil {
+		return false
+	}
+	if before == nil {
+		return true
+	}
+	return *before != *after
+}
+
+func abs(value int) int {
+	if value < 0 {
+		return -value
+	}
+	return value
 }
 
 var _ system.Module = (*Module)(nil)

@@ -10,8 +10,6 @@ import (
 
 	"github.com/a-h/templ"
 	templruntime "github.com/a-h/templ/runtime"
-
-	sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
 )
 
 // CatalogFullPage renders the catalog content in the base layout.
@@ -256,10 +254,6 @@ func CatalogSidebar(activeSection string, loc Localizer) templ.Component {
 			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(section.Label)
 			if templ_7745c5c3_Err != nil {
 				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/catalog.templ`, Line: 52, Col: 21}
-			}
-			templ_7745c5c3_Err = sharedtemplates.LucideIconID(section.IconID, "size-4 me-2").Render(ctx, templ_7745c5c3_Buffer)
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 			if templ_7745c5c3_Err != nil {

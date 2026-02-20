@@ -461,7 +461,7 @@ func (r *Runner) runReactionStep(ctx context.Context, state *scenarioState, step
 		return r.failf("expected reaction action roll")
 	}
 	state.lastRollSeq = response.GetActionRoll().GetRollSeq()
-	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeReactionResolved); err != nil {
+	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, event.TypeOutcomeApplied); err != nil {
 		return err
 	}
 	return r.assertExpectedDeltas(ctx, state, expectedSpec, expectedBefore)
@@ -501,11 +501,7 @@ func (r *Runner) runGMSpendFearStep(ctx context.Context, state *scenarioState, s
 		return fmt.Errorf("apply gm move: %w", err)
 	}
 	if amount > 0 {
-		if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeGMFearChanged, daggerheart.EventTypeGMMoveApplied); err != nil {
-			return err
-		}
-	} else {
-		if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeGMMoveApplied); err != nil {
+		if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeGMFearChanged); err != nil {
 			return err
 		}
 	}
@@ -738,7 +734,7 @@ func (r *Runner) runGroupActionStep(ctx context.Context, state *scenarioState, s
 	if err != nil {
 		return fmt.Errorf("group_action: %w", err)
 	}
-	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeGroupActionResolved); err != nil {
+	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, event.TypeOutcomeApplied); err != nil {
 		return err
 	}
 	return r.assertExpectedDeltas(ctx, state, expectedSpec, expectedBefore)
@@ -831,7 +827,7 @@ func (r *Runner) runTagTeamStep(ctx context.Context, state *scenarioState, step 
 	if err != nil {
 		return fmt.Errorf("tag_team: %w", err)
 	}
-	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeTagTeamResolved); err != nil {
+	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, event.TypeOutcomeApplied); err != nil {
 		return err
 	}
 	return r.assertExpectedDeltas(ctx, state, expectedSpec, expectedBefore)
@@ -1018,7 +1014,7 @@ func (r *Runner) runDeathMoveStep(ctx context.Context, state *scenarioState, ste
 	if err != nil {
 		return fmt.Errorf("death_move: %w", err)
 	}
-	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeDeathMoveResolved); err != nil {
+	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeCharacterStatePatched); err != nil {
 		return err
 	}
 	return r.assertExpectedDeltas(ctx, state, expectedSpec, expectedBefore)
@@ -1049,11 +1045,10 @@ func (r *Runner) runBlazeOfGloryStep(ctx context.Context, state *scenarioState, 
 	if err != nil {
 		return fmt.Errorf("blaze_of_glory: %w", err)
 	}
-	converted, err := convertDaggerheartEventTypes(daggerheart.EventTypeBlazeOfGloryResolved)
-	if err != nil {
+	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeCharacterStatePatched); err != nil {
 		return err
 	}
-	return r.requireEventTypesAfterSeq(ctx, state, before, append(converted, event.TypeCharacterDeleted)...)
+	return r.requireAnyEventTypesAfterSeq(ctx, state, before, event.TypeCharacterDeleted)
 }
 
 func (r *Runner) runAttackStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -1119,7 +1114,7 @@ func (r *Runner) runAttackStep(ctx context.Context, state *scenarioState, step S
 		if err != nil {
 			return fmt.Errorf("attack flow: %w", err)
 		}
-		if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeAttackResolved); err != nil {
+		if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, event.TypeOutcomeApplied); err != nil {
 			return err
 		}
 		if response.GetDamageApplied() != nil {
@@ -1183,7 +1178,7 @@ func (r *Runner) runAttackStep(ctx context.Context, state *scenarioState, step S
 	if err != nil {
 		return fmt.Errorf("attack outcome: %w", err)
 	}
-	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeAttackResolved); err != nil {
+	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, event.TypeOutcomeApplied); err != nil {
 		return err
 	}
 
@@ -1307,7 +1302,7 @@ func (r *Runner) runMultiAttackStep(ctx context.Context, state *scenarioState, s
 	if err != nil {
 		return fmt.Errorf("multi_attack outcome: %w", err)
 	}
-	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeAttackResolved); err != nil {
+	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, event.TypeOutcomeApplied); err != nil {
 		return err
 	}
 
@@ -1535,7 +1530,7 @@ func (r *Runner) runAdversaryAttackStep(ctx context.Context, state *scenarioStat
 	if err != nil {
 		return fmt.Errorf("adversary attack flow: %w", err)
 	}
-	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeAdversaryAttackResolved); err != nil {
+	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, event.TypeOutcomeApplied); err != nil {
 		return err
 	}
 	if response.GetDamageApplied() != nil {
@@ -1875,7 +1870,7 @@ func (r *Runner) runDamageRollStep(ctx context.Context, state *scenarioState, st
 	}
 	state.lastDamageRollSeq = response.GetRollSeq()
 	r.logf("damage roll: actor=%s roll_seq=%d", actorName, state.lastDamageRollSeq)
-	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeDamageRollResolved)
+	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, event.TypeRollResolved)
 }
 
 func (r *Runner) runAdversaryAttackRollStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -1917,7 +1912,7 @@ func (r *Runner) runAdversaryAttackRollStep(ctx context.Context, state *scenario
 	}
 	state.lastAdversaryRollSeq = response.GetRollSeq()
 	r.logf("adversary attack roll: actor=%s roll_seq=%d", actorName, state.lastAdversaryRollSeq)
-	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeAdversaryRollResolved)
+	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, event.TypeRollResolved)
 }
 
 func (r *Runner) runApplyRollOutcomeStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -2012,7 +2007,7 @@ func (r *Runner) runApplyAttackOutcomeStep(ctx context.Context, state *scenarioS
 	if err != nil {
 		return fmt.Errorf("apply_attack_outcome: %w", err)
 	}
-	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeAttackResolved)
+	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, event.TypeOutcomeApplied)
 }
 
 func (r *Runner) runApplyAdversaryAttackOutcomeStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -2048,7 +2043,7 @@ func (r *Runner) runApplyAdversaryAttackOutcomeStep(ctx context.Context, state *
 	if err != nil {
 		return fmt.Errorf("apply_adversary_attack_outcome: %w", err)
 	}
-	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeAdversaryAttackResolved)
+	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, event.TypeOutcomeApplied)
 }
 
 func (r *Runner) runApplyReactionOutcomeStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -2099,7 +2094,7 @@ func (r *Runner) runApplyReactionOutcomeStep(ctx context.Context, state *scenari
 			return err
 		}
 	}
-	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeReactionResolved)
+	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, event.TypeOutcomeApplied)
 }
 
 func (r *Runner) runMitigateDamageStep(ctx context.Context, state *scenarioState, step Step) error {

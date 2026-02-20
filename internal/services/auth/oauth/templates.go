@@ -1,6 +1,11 @@
 package oauth
 
-import "embed"
+import (
+	"embed"
+	"html/template"
+)
 
-//go:embed static/*.css
+//go:embed templates/*.html static/*.css
 var assetsFS embed.FS
+
+var templates = template.Must(template.ParseFS(assetsFS, "templates/*.html"))

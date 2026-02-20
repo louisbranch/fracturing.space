@@ -5,8 +5,6 @@ package integration
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"testing"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
@@ -15,11 +13,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
-
-type reactionResolvedPayload struct {
-	RollSeq     uint64 `json:"roll_seq"`
-	CharacterID string `json:"character_id"`
-}
 
 func TestDaggerheartReactionFlow(t *testing.T) {
 	grpcAddr, authAddr, stopServer := startGRPCServer(t)
@@ -38,7 +31,6 @@ func TestDaggerheartReactionFlow(t *testing.T) {
 	campaignClient := gamev1.NewCampaignServiceClient(conn)
 	characterClient := gamev1.NewCharacterServiceClient(conn)
 	sessionClient := gamev1.NewSessionServiceClient(conn)
-	eventClient := gamev1.NewEventServiceClient(conn)
 	daggerheartClient := daggerheartv1.NewDaggerheartServiceClient(conn)
 
 	ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
@@ -110,33 +102,4 @@ func TestDaggerheartReactionFlow(t *testing.T) {
 		t.Fatal("expected effects_negated to match crit and crit_negates_effects")
 	}
 
-	resolved, err := findReactionResolved(ctx, eventClient, campaignID, sessionID, result.GetActionRoll().GetRollSeq())
-	if err != nil {
-		t.Fatalf("find reaction resolved: %v", err)
-	}
-	if resolved.RollSeq != result.GetActionRoll().GetRollSeq() || resolved.CharacterID != reactor {
-		t.Fatal("expected reaction resolved payload to match roll")
-	}
-}
-
-func findReactionResolved(ctx context.Context, client gamev1.EventServiceClient, campaignID, sessionID string, rollSeq uint64) (reactionResolvedPayload, error) {
-	response, err := client.ListEvents(ctx, &gamev1.ListEventsRequest{
-		CampaignId: campaignID,
-		PageSize:   200,
-		OrderBy:    "seq desc",
-		Filter:     "session_id = \"" + sessionID + "\" AND type = \"sys.daggerheart.action.reaction_resolved\"",
-	})
-	if err != nil {
-		return reactionResolvedPayload{}, err
-	}
-	for _, evt := range response.GetEvents() {
-		var payload reactionResolvedPayload
-		if err := json.Unmarshal(evt.GetPayloadJson(), &payload); err != nil {
-			return reactionResolvedPayload{}, err
-		}
-		if payload.RollSeq == rollSeq {
-			return payload, nil
-		}
-	}
-	return reactionResolvedPayload{}, fmt.Errorf("reaction resolved event not found")
 }

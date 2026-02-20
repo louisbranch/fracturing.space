@@ -13,7 +13,7 @@ func TestDecideGMFearSet_EmitsGMFearChanged(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("sys.daggerheart.action.gm_fear.set"),
+		Type:          command.Type("sys.daggerheart.gm_fear.set"),
 		ActorType:     command.ActorTypeGM,
 		ActorID:       "gm-1",
 		SystemID:      SystemID,
@@ -30,8 +30,8 @@ func TestDecideGMFearSet_EmitsGMFearChanged(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("sys.daggerheart.action.gm_fear_changed") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.gm_fear_changed")
+	if evt.Type != event.Type("sys.daggerheart.gm_fear_changed") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.gm_fear_changed")
 	}
 	if evt.SystemID != SystemID {
 		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
@@ -70,7 +70,7 @@ func TestDecideGMFearSet_EmitsGMFearChanged(t *testing.T) {
 	}
 }
 
-func TestDecideGMFearSet_AcceptsSysPrefixedType(t *testing.T) {
+func TestDecideGMFearSet_IgnoresLegacyActionType(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
@@ -86,19 +86,15 @@ func TestDecideGMFearSet_AcceptsSysPrefixedType(t *testing.T) {
 	if len(decision.Rejections) != 0 {
 		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
 	}
-	if len(decision.Events) != 1 {
-		t.Fatalf("expected 1 event, got %d", len(decision.Events))
-	}
-	wantType := event.Type("sys." + SystemID + ".action.gm_fear_changed")
-	if decision.Events[0].Type != wantType {
-		t.Fatalf("event type = %s, want %s", decision.Events[0].Type, wantType)
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
 }
 
 func TestDecideGMFearSet_MissingAfterRejected(t *testing.T) {
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("sys.daggerheart.action.gm_fear.set"),
+		Type:          command.Type("sys.daggerheart.gm_fear.set"),
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
 		PayloadJSON:   []byte(`{"reason":""}`),
@@ -120,7 +116,7 @@ func TestDecideGMFearSet_AfterOutOfRangeRejected(t *testing.T) {
 	after := GMFearMax + 1
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("sys.daggerheart.action.gm_fear.set"),
+		Type:          command.Type("sys.daggerheart.gm_fear.set"),
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
 		PayloadJSON:   []byte(`{"after":13}`),
@@ -145,7 +141,7 @@ func TestDecideCharacterStatePatch_EmitsCharacterStatePatched(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("sys.daggerheart.action.character_state.patch"),
+		Type:          command.Type("sys.daggerheart.character_state.patch"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -163,8 +159,8 @@ func TestDecideCharacterStatePatch_EmitsCharacterStatePatched(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("sys.daggerheart.action.character_state_patched") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.character_state_patched")
+	if evt.Type != event.Type("sys.daggerheart.character_state_patched") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.character_state_patched")
 	}
 	if evt.SystemID != SystemID {
 		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
@@ -205,7 +201,7 @@ func TestDecideConditionChange_EmitsConditionChanged(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("sys.daggerheart.action.condition.change"),
+		Type:          command.Type("sys.daggerheart.condition.change"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -223,8 +219,8 @@ func TestDecideConditionChange_EmitsConditionChanged(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("sys.daggerheart.action.condition_changed") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.condition_changed")
+	if evt.Type != event.Type("sys.daggerheart.condition_changed") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.condition_changed")
 	}
 	if evt.EntityType != "character" {
 		t.Fatalf("entity type = %s, want %s", evt.EntityType, "character")
@@ -259,11 +255,11 @@ func TestDecideConditionChange_EmitsConditionChanged(t *testing.T) {
 	}
 }
 
-func TestDecideHopeSpend_EmitsHopeSpent(t *testing.T) {
+func TestDecideHopeSpend_EmitsCharacterStatePatched(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("sys.daggerheart.action.hope.spend"),
+		Type:          command.Type("sys.daggerheart.hope.spend"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -281,8 +277,8 @@ func TestDecideHopeSpend_EmitsHopeSpent(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("sys.daggerheart.action.hope_spent") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.hope_spent")
+	if evt.Type != event.Type("sys.daggerheart.character_state_patched") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.character_state_patched")
 	}
 	if evt.SystemID != SystemID {
 		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
@@ -302,10 +298,8 @@ func TestDecideHopeSpend_EmitsHopeSpent(t *testing.T) {
 
 	var payload struct {
 		CharacterID string `json:"character_id"`
-		Amount      int    `json:"amount"`
-		Before      int    `json:"before"`
-		After       int    `json:"after"`
-		Source      string `json:"source"`
+		HopeBefore  *int   `json:"hope_before"`
+		HopeAfter   *int   `json:"hope_after"`
 	}
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 		t.Fatalf("unmarshal payload: %v", err)
@@ -313,25 +307,19 @@ func TestDecideHopeSpend_EmitsHopeSpent(t *testing.T) {
 	if payload.CharacterID != "char-1" {
 		t.Fatalf("character id = %s, want %s", payload.CharacterID, "char-1")
 	}
-	if payload.Amount != 1 {
-		t.Fatalf("amount = %d, want %d", payload.Amount, 1)
+	if payload.HopeBefore == nil || *payload.HopeBefore != 2 {
+		t.Fatalf("hope_before = %v, want %d", payload.HopeBefore, 2)
 	}
-	if payload.Before != 2 {
-		t.Fatalf("before = %d, want %d", payload.Before, 2)
-	}
-	if payload.After != 1 {
-		t.Fatalf("after = %d, want %d", payload.After, 1)
-	}
-	if payload.Source != "experience" {
-		t.Fatalf("source = %s, want %s", payload.Source, "experience")
+	if payload.HopeAfter == nil || *payload.HopeAfter != 1 {
+		t.Fatalf("hope_after = %v, want %d", payload.HopeAfter, 1)
 	}
 }
 
-func TestDecideStressSpend_EmitsStressSpent(t *testing.T) {
+func TestDecideStressSpend_EmitsCharacterStatePatched(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("sys.daggerheart.action.stress.spend"),
+		Type:          command.Type("sys.daggerheart.stress.spend"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -349,8 +337,8 @@ func TestDecideStressSpend_EmitsStressSpent(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("sys.daggerheart.action.stress_spent") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.stress_spent")
+	if evt.Type != event.Type("sys.daggerheart.character_state_patched") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.character_state_patched")
 	}
 	if evt.SystemID != SystemID {
 		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
@@ -369,11 +357,9 @@ func TestDecideStressSpend_EmitsStressSpent(t *testing.T) {
 	}
 
 	var payload struct {
-		CharacterID string `json:"character_id"`
-		Amount      int    `json:"amount"`
-		Before      int    `json:"before"`
-		After       int    `json:"after"`
-		Source      string `json:"source"`
+		CharacterID  string `json:"character_id"`
+		StressBefore *int   `json:"stress_before"`
+		StressAfter  *int   `json:"stress_after"`
 	}
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 		t.Fatalf("unmarshal payload: %v", err)
@@ -381,17 +367,11 @@ func TestDecideStressSpend_EmitsStressSpent(t *testing.T) {
 	if payload.CharacterID != "char-1" {
 		t.Fatalf("character id = %s, want %s", payload.CharacterID, "char-1")
 	}
-	if payload.Amount != 1 {
-		t.Fatalf("amount = %d, want %d", payload.Amount, 1)
+	if payload.StressBefore == nil || *payload.StressBefore != 3 {
+		t.Fatalf("stress_before = %v, want %d", payload.StressBefore, 3)
 	}
-	if payload.Before != 3 {
-		t.Fatalf("before = %d, want %d", payload.Before, 3)
-	}
-	if payload.After != 2 {
-		t.Fatalf("after = %d, want %d", payload.After, 2)
-	}
-	if payload.Source != "loadout_swap" {
-		t.Fatalf("source = %s, want %s", payload.Source, "loadout_swap")
+	if payload.StressAfter == nil || *payload.StressAfter != 2 {
+		t.Fatalf("stress_after = %v, want %d", payload.StressAfter, 2)
 	}
 }
 
@@ -399,7 +379,7 @@ func TestDecideLoadoutSwap_EmitsLoadoutSwapped(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("sys.daggerheart.action.loadout.swap"),
+		Type:          command.Type("sys.daggerheart.loadout.swap"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -417,8 +397,8 @@ func TestDecideLoadoutSwap_EmitsLoadoutSwapped(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("sys.daggerheart.action.loadout_swapped") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.loadout_swapped")
+	if evt.Type != event.Type("sys.daggerheart.loadout_swapped") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.loadout_swapped")
 	}
 	if evt.SystemID != SystemID {
 		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
@@ -475,7 +455,7 @@ func TestDecideRestTake_EmitsRestTaken(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("sys.daggerheart.action.rest.take"),
+		Type:          command.Type("sys.daggerheart.rest.take"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -493,8 +473,8 @@ func TestDecideRestTake_EmitsRestTaken(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("sys.daggerheart.action.rest_taken") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.rest_taken")
+	if evt.Type != event.Type("sys.daggerheart.rest_taken") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.rest_taken")
 	}
 	if evt.SystemID != SystemID {
 		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
@@ -555,7 +535,7 @@ func TestDecideDamageApply_EmitsDamageApplied(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("sys.daggerheart.action.damage.apply"),
+		Type:          command.Type("sys.daggerheart.damage.apply"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -573,8 +553,8 @@ func TestDecideDamageApply_EmitsDamageApplied(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("sys.daggerheart.action.damage_applied") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.damage_applied")
+	if evt.Type != event.Type("sys.daggerheart.damage_applied") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.damage_applied")
 	}
 	if evt.SystemID != SystemID {
 		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
@@ -615,7 +595,7 @@ func TestDecideAdversaryDamageApply_EmitsAdversaryDamageApplied(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("sys.daggerheart.action.adversary_damage.apply"),
+		Type:          command.Type("sys.daggerheart.adversary_damage.apply"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -633,8 +613,8 @@ func TestDecideAdversaryDamageApply_EmitsAdversaryDamageApplied(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("sys.daggerheart.action.adversary_damage_applied") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.adversary_damage_applied")
+	if evt.Type != event.Type("sys.daggerheart.adversary_damage_applied") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.adversary_damage_applied")
 	}
 	if evt.SystemID != SystemID {
 		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
@@ -671,327 +651,11 @@ func TestDecideAdversaryDamageApply_EmitsAdversaryDamageApplied(t *testing.T) {
 	}
 }
 
-func TestDecideAttackResolve_EmitsAttackResolved(t *testing.T) {
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
-	cmd := command.Command{
-		CampaignID:    "camp-1",
-		Type:          command.Type("sys.daggerheart.action.attack.resolve"),
-		ActorType:     command.ActorTypeSystem,
-		SystemID:      SystemID,
-		SystemVersion: SystemVersion,
-		EntityType:    "attack",
-		EntityID:      "req-attack-1",
-		PayloadJSON:   []byte(`{"character_id":"char-1","roll_seq":4,"targets":["char-2"],"outcome":"success","success":true,"crit":false}`),
-	}
-
-	decision := Decider{}.Decide(nil, cmd, func() time.Time { return now })
-	if len(decision.Rejections) != 0 {
-		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
-	}
-	if len(decision.Events) != 1 {
-		t.Fatalf("expected 1 event, got %d", len(decision.Events))
-	}
-
-	evt := decision.Events[0]
-	if evt.Type != event.Type("sys.daggerheart.action.attack_resolved") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.attack_resolved")
-	}
-	if evt.SystemID != SystemID {
-		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
-	}
-	if evt.SystemVersion != SystemVersion {
-		t.Fatalf("system version = %s, want %s", evt.SystemVersion, SystemVersion)
-	}
-	if evt.EntityType != "attack" {
-		t.Fatalf("entity type = %s, want %s", evt.EntityType, "attack")
-	}
-	if evt.EntityID != "req-attack-1" {
-		t.Fatalf("entity id = %s, want %s", evt.EntityID, "req-attack-1")
-	}
-	if !evt.Timestamp.Equal(now) {
-		t.Fatalf("timestamp = %s, want %s", evt.Timestamp, now)
-	}
-
-	var payload struct {
-		CharacterID string `json:"character_id"`
-		RollSeq     uint64 `json:"roll_seq"`
-	}
-	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		t.Fatalf("unmarshal payload: %v", err)
-	}
-	if payload.CharacterID != "char-1" {
-		t.Fatalf("character id = %s, want %s", payload.CharacterID, "char-1")
-	}
-	if payload.RollSeq != 4 {
-		t.Fatalf("roll seq = %d, want %d", payload.RollSeq, 4)
-	}
-}
-
-func TestDecideReactionResolve_EmitsReactionResolved(t *testing.T) {
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
-	cmd := command.Command{
-		CampaignID:    "camp-1",
-		Type:          command.Type("sys.daggerheart.action.reaction.resolve"),
-		ActorType:     command.ActorTypeSystem,
-		SystemID:      SystemID,
-		SystemVersion: SystemVersion,
-		EntityType:    "reaction",
-		EntityID:      "req-reaction-1",
-		PayloadJSON:   []byte(`{"character_id":"char-1","roll_seq":5,"outcome":"success","success":true,"crit":false,"crit_negates_effects":false,"effects_negated":false}`),
-	}
-
-	decision := Decider{}.Decide(nil, cmd, func() time.Time { return now })
-	if len(decision.Rejections) != 0 {
-		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
-	}
-	if len(decision.Events) != 1 {
-		t.Fatalf("expected 1 event, got %d", len(decision.Events))
-	}
-
-	evt := decision.Events[0]
-	if evt.Type != event.Type("sys.daggerheart.action.reaction_resolved") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.reaction_resolved")
-	}
-	if evt.SystemID != SystemID {
-		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
-	}
-	if evt.SystemVersion != SystemVersion {
-		t.Fatalf("system version = %s, want %s", evt.SystemVersion, SystemVersion)
-	}
-	if evt.EntityType != "reaction" {
-		t.Fatalf("entity type = %s, want %s", evt.EntityType, "reaction")
-	}
-	if evt.EntityID != "req-reaction-1" {
-		t.Fatalf("entity id = %s, want %s", evt.EntityID, "req-reaction-1")
-	}
-	if !evt.Timestamp.Equal(now) {
-		t.Fatalf("timestamp = %s, want %s", evt.Timestamp, now)
-	}
-
-	var payload struct {
-		CharacterID string `json:"character_id"`
-		RollSeq     uint64 `json:"roll_seq"`
-		Outcome     string `json:"outcome"`
-	}
-	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		t.Fatalf("unmarshal payload: %v", err)
-	}
-	if payload.CharacterID != "char-1" {
-		t.Fatalf("character id = %s, want %s", payload.CharacterID, "char-1")
-	}
-	if payload.RollSeq != 5 {
-		t.Fatalf("roll seq = %d, want %d", payload.RollSeq, 5)
-	}
-	if payload.Outcome != "success" {
-		t.Fatalf("outcome = %s, want %s", payload.Outcome, "success")
-	}
-}
-
-func TestDecideAdversaryAttackResolve_EmitsAdversaryAttackResolved(t *testing.T) {
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
-	cmd := command.Command{
-		CampaignID:    "camp-1",
-		Type:          command.Type("sys.daggerheart.action.adversary_attack.resolve"),
-		ActorType:     command.ActorTypeSystem,
-		SystemID:      SystemID,
-		SystemVersion: SystemVersion,
-		EntityType:    "attack",
-		EntityID:      "req-adv-attack-1",
-		PayloadJSON:   []byte(`{"adversary_id":"adv-1","roll_seq":6,"targets":["char-1"],"roll":14,"modifier":2,"total":16,"difficulty":10,"success":true,"crit":false}`),
-	}
-
-	decision := Decider{}.Decide(nil, cmd, func() time.Time { return now })
-	if len(decision.Rejections) != 0 {
-		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
-	}
-	if len(decision.Events) != 1 {
-		t.Fatalf("expected 1 event, got %d", len(decision.Events))
-	}
-
-	evt := decision.Events[0]
-	if evt.Type != event.Type("sys.daggerheart.action.adversary_attack_resolved") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.adversary_attack_resolved")
-	}
-	if evt.SystemID != SystemID {
-		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
-	}
-	if evt.SystemVersion != SystemVersion {
-		t.Fatalf("system version = %s, want %s", evt.SystemVersion, SystemVersion)
-	}
-	if evt.EntityType != "attack" {
-		t.Fatalf("entity type = %s, want %s", evt.EntityType, "attack")
-	}
-	if evt.EntityID != "req-adv-attack-1" {
-		t.Fatalf("entity id = %s, want %s", evt.EntityID, "req-adv-attack-1")
-	}
-	if !evt.Timestamp.Equal(now) {
-		t.Fatalf("timestamp = %s, want %s", evt.Timestamp, now)
-	}
-
-	var payload struct {
-		AdversaryID string   `json:"adversary_id"`
-		RollSeq     uint64   `json:"roll_seq"`
-		Targets     []string `json:"targets"`
-	}
-	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		t.Fatalf("unmarshal payload: %v", err)
-	}
-	if payload.AdversaryID != "adv-1" {
-		t.Fatalf("adversary id = %s, want %s", payload.AdversaryID, "adv-1")
-	}
-	if payload.RollSeq != 6 {
-		t.Fatalf("roll seq = %d, want %d", payload.RollSeq, 6)
-	}
-	if len(payload.Targets) != 1 || payload.Targets[0] != "char-1" {
-		t.Fatalf("targets = %v, want %v", payload.Targets, []string{"char-1"})
-	}
-}
-
-func TestDecideDamageRollResolve_EmitsDamageRollResolved(t *testing.T) {
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
-	cmd := command.Command{
-		CampaignID:    "camp-1",
-		Type:          command.Type("sys.daggerheart.action.damage_roll.resolve"),
-		ActorType:     command.ActorTypeSystem,
-		SystemID:      SystemID,
-		SystemVersion: SystemVersion,
-		EntityType:    "roll",
-		EntityID:      "req-damage-roll-1",
-		PayloadJSON:   []byte(`{"character_id":"char-1","roll_seq":7}`),
-	}
-
-	decision := Decider{}.Decide(nil, cmd, func() time.Time { return now })
-	if len(decision.Rejections) != 0 {
-		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
-	}
-	if len(decision.Events) != 1 {
-		t.Fatalf("expected 1 event, got %d", len(decision.Events))
-	}
-
-	evt := decision.Events[0]
-	if evt.Type != event.Type("sys.daggerheart.action.damage_roll_resolved") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.damage_roll_resolved")
-	}
-	if evt.SystemID != SystemID {
-		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
-	}
-	if evt.SystemVersion != SystemVersion {
-		t.Fatalf("system version = %s, want %s", evt.SystemVersion, SystemVersion)
-	}
-	if evt.EntityType != "roll" {
-		t.Fatalf("entity type = %s, want %s", evt.EntityType, "roll")
-	}
-	if evt.EntityID != "req-damage-roll-1" {
-		t.Fatalf("entity id = %s, want %s", evt.EntityID, "req-damage-roll-1")
-	}
-	if !evt.Timestamp.Equal(now) {
-		t.Fatalf("timestamp = %s, want %s", evt.Timestamp, now)
-	}
-
-	var payload struct {
-		CharacterID string `json:"character_id"`
-		RollSeq     uint64 `json:"roll_seq"`
-	}
-	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		t.Fatalf("unmarshal payload: %v", err)
-	}
-	if payload.CharacterID != "char-1" {
-		t.Fatalf("character id = %s, want %s", payload.CharacterID, "char-1")
-	}
-	if payload.RollSeq != 7 {
-		t.Fatalf("roll seq = %d, want %d", payload.RollSeq, 7)
-	}
-}
-
-func TestDecideGroupActionResolve_EmitsGroupActionResolved(t *testing.T) {
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
-	cmd := command.Command{
-		CampaignID:    "camp-1",
-		Type:          command.Type("sys.daggerheart.action.group_action.resolve"),
-		ActorType:     command.ActorTypeSystem,
-		SystemID:      SystemID,
-		SystemVersion: SystemVersion,
-		EntityType:    "group_action",
-		EntityID:      "char-1",
-		PayloadJSON:   []byte(`{"leader_character_id":"char-1","leader_roll_seq":1,"support_successes":1,"support_failures":0,"support_modifier":1}`),
-	}
-
-	decision := Decider{}.Decide(nil, cmd, func() time.Time { return now })
-	if len(decision.Rejections) != 0 {
-		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
-	}
-	if len(decision.Events) != 1 {
-		t.Fatalf("expected 1 event, got %d", len(decision.Events))
-	}
-
-	evt := decision.Events[0]
-	if evt.Type != event.Type("sys.daggerheart.action.group_action_resolved") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.group_action_resolved")
-	}
-	if evt.SystemID != SystemID {
-		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
-	}
-	if evt.SystemVersion != SystemVersion {
-		t.Fatalf("system version = %s, want %s", evt.SystemVersion, SystemVersion)
-	}
-	if evt.EntityType != "group_action" {
-		t.Fatalf("entity type = %s, want %s", evt.EntityType, "group_action")
-	}
-	if evt.EntityID != "char-1" {
-		t.Fatalf("entity id = %s, want %s", evt.EntityID, "char-1")
-	}
-	if !evt.Timestamp.Equal(now) {
-		t.Fatalf("timestamp = %s, want %s", evt.Timestamp, now)
-	}
-}
-
-func TestDecideTagTeamResolve_EmitsTagTeamResolved(t *testing.T) {
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
-	cmd := command.Command{
-		CampaignID:    "camp-1",
-		Type:          command.Type("sys.daggerheart.action.tag_team.resolve"),
-		ActorType:     command.ActorTypeSystem,
-		SystemID:      SystemID,
-		SystemVersion: SystemVersion,
-		EntityType:    "tag_team",
-		EntityID:      "char-1",
-		PayloadJSON:   []byte(`{"first_character_id":"char-1","first_roll_seq":1,"second_character_id":"char-2","second_roll_seq":2,"selected_character_id":"char-1","selected_roll_seq":1}`),
-	}
-
-	decision := Decider{}.Decide(nil, cmd, func() time.Time { return now })
-	if len(decision.Rejections) != 0 {
-		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
-	}
-	if len(decision.Events) != 1 {
-		t.Fatalf("expected 1 event, got %d", len(decision.Events))
-	}
-
-	evt := decision.Events[0]
-	if evt.Type != event.Type("sys.daggerheart.action.tag_team_resolved") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.tag_team_resolved")
-	}
-	if evt.SystemID != SystemID {
-		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
-	}
-	if evt.SystemVersion != SystemVersion {
-		t.Fatalf("system version = %s, want %s", evt.SystemVersion, SystemVersion)
-	}
-	if evt.EntityType != "tag_team" {
-		t.Fatalf("entity type = %s, want %s", evt.EntityType, "tag_team")
-	}
-	if evt.EntityID != "char-1" {
-		t.Fatalf("entity id = %s, want %s", evt.EntityID, "char-1")
-	}
-	if !evt.Timestamp.Equal(now) {
-		t.Fatalf("timestamp = %s, want %s", evt.Timestamp, now)
-	}
-}
-
 func TestDecideCountdownCreate_EmitsCountdownCreated(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("sys.daggerheart.action.countdown.create"),
+		Type:          command.Type("sys.daggerheart.countdown.create"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -1009,8 +673,8 @@ func TestDecideCountdownCreate_EmitsCountdownCreated(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("sys.daggerheart.action.countdown_created") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.countdown_created")
+	if evt.Type != event.Type("sys.daggerheart.countdown_created") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.countdown_created")
 	}
 	if evt.SystemID != SystemID {
 		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
@@ -1033,7 +697,7 @@ func TestDecideCountdownUpdate_EmitsCountdownUpdated(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("sys.daggerheart.action.countdown.update"),
+		Type:          command.Type("sys.daggerheart.countdown.update"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -1051,8 +715,8 @@ func TestDecideCountdownUpdate_EmitsCountdownUpdated(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("sys.daggerheart.action.countdown_updated") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.countdown_updated")
+	if evt.Type != event.Type("sys.daggerheart.countdown_updated") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.countdown_updated")
 	}
 	if evt.SystemID != SystemID {
 		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
@@ -1075,7 +739,7 @@ func TestDecideCountdownDelete_EmitsCountdownDeleted(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("sys.daggerheart.action.countdown.delete"),
+		Type:          command.Type("sys.daggerheart.countdown.delete"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -1093,8 +757,8 @@ func TestDecideCountdownDelete_EmitsCountdownDeleted(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("sys.daggerheart.action.countdown_deleted") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.countdown_deleted")
+	if evt.Type != event.Type("sys.daggerheart.countdown_deleted") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.countdown_deleted")
 	}
 	if evt.SystemID != SystemID {
 		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
@@ -1113,137 +777,11 @@ func TestDecideCountdownDelete_EmitsCountdownDeleted(t *testing.T) {
 	}
 }
 
-func TestDecideAdversaryActionResolve_EmitsAdversaryActionResolved(t *testing.T) {
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
-	cmd := command.Command{
-		CampaignID:    "camp-1",
-		Type:          command.Type("sys.daggerheart.action.adversary_action.resolve"),
-		ActorType:     command.ActorTypeSystem,
-		SystemID:      SystemID,
-		SystemVersion: SystemVersion,
-		EntityType:    "adversary",
-		EntityID:      "adv-1",
-		PayloadJSON:   []byte(`{"adversary_id":"adv-1","roll_seq":1,"difficulty":10,"dramatic":false,"auto_success":true,"success":true}`),
-	}
-
-	decision := Decider{}.Decide(nil, cmd, func() time.Time { return now })
-	if len(decision.Rejections) != 0 {
-		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
-	}
-	if len(decision.Events) != 1 {
-		t.Fatalf("expected 1 event, got %d", len(decision.Events))
-	}
-
-	evt := decision.Events[0]
-	if evt.Type != event.Type("sys.daggerheart.action.adversary_action_resolved") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.adversary_action_resolved")
-	}
-	if evt.SystemID != SystemID {
-		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
-	}
-	if evt.SystemVersion != SystemVersion {
-		t.Fatalf("system version = %s, want %s", evt.SystemVersion, SystemVersion)
-	}
-	if evt.EntityType != "adversary" {
-		t.Fatalf("entity type = %s, want %s", evt.EntityType, "adversary")
-	}
-	if evt.EntityID != "adv-1" {
-		t.Fatalf("entity id = %s, want %s", evt.EntityID, "adv-1")
-	}
-	if !evt.Timestamp.Equal(now) {
-		t.Fatalf("timestamp = %s, want %s", evt.Timestamp, now)
-	}
-}
-
-func TestDecideAdversaryRollResolve_EmitsAdversaryRollResolved(t *testing.T) {
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
-	cmd := command.Command{
-		CampaignID:    "camp-1",
-		Type:          command.Type("sys.daggerheart.action.adversary_roll.resolve"),
-		ActorType:     command.ActorTypeSystem,
-		SystemID:      SystemID,
-		SystemVersion: SystemVersion,
-		EntityType:    "adversary",
-		EntityID:      "adv-1",
-		PayloadJSON:   []byte(`{"adversary_id":"adv-1","roll_seq":1,"rolls":[12,18],"roll":18,"modifier":2,"total":20,"advantage":1,"disadvantage":0}`),
-	}
-
-	decision := Decider{}.Decide(nil, cmd, func() time.Time { return now })
-	if len(decision.Rejections) != 0 {
-		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
-	}
-	if len(decision.Events) != 1 {
-		t.Fatalf("expected 1 event, got %d", len(decision.Events))
-	}
-
-	evt := decision.Events[0]
-	if evt.Type != event.Type("sys.daggerheart.action.adversary_roll_resolved") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.adversary_roll_resolved")
-	}
-	if evt.SystemID != SystemID {
-		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
-	}
-	if evt.SystemVersion != SystemVersion {
-		t.Fatalf("system version = %s, want %s", evt.SystemVersion, SystemVersion)
-	}
-	if evt.EntityType != "adversary" {
-		t.Fatalf("entity type = %s, want %s", evt.EntityType, "adversary")
-	}
-	if evt.EntityID != "adv-1" {
-		t.Fatalf("entity id = %s, want %s", evt.EntityID, "adv-1")
-	}
-	if !evt.Timestamp.Equal(now) {
-		t.Fatalf("timestamp = %s, want %s", evt.Timestamp, now)
-	}
-}
-
-func TestDecideBlazeOfGloryResolve_EmitsBlazeOfGloryResolved(t *testing.T) {
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
-	cmd := command.Command{
-		CampaignID:    "camp-1",
-		Type:          command.Type("sys.daggerheart.action.blaze_of_glory.resolve"),
-		ActorType:     command.ActorTypeSystem,
-		SystemID:      SystemID,
-		SystemVersion: SystemVersion,
-		EntityType:    "character",
-		EntityID:      "char-1",
-		PayloadJSON:   []byte(`{"character_id":"char-1","life_state_before":"blaze_of_glory","life_state_after":"dead"}`),
-	}
-
-	decision := Decider{}.Decide(nil, cmd, func() time.Time { return now })
-	if len(decision.Rejections) != 0 {
-		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
-	}
-	if len(decision.Events) != 1 {
-		t.Fatalf("expected 1 event, got %d", len(decision.Events))
-	}
-
-	evt := decision.Events[0]
-	if evt.Type != event.Type("sys.daggerheart.action.blaze_of_glory_resolved") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.blaze_of_glory_resolved")
-	}
-	if evt.SystemID != SystemID {
-		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
-	}
-	if evt.SystemVersion != SystemVersion {
-		t.Fatalf("system version = %s, want %s", evt.SystemVersion, SystemVersion)
-	}
-	if evt.EntityType != "character" {
-		t.Fatalf("entity type = %s, want %s", evt.EntityType, "character")
-	}
-	if evt.EntityID != "char-1" {
-		t.Fatalf("entity id = %s, want %s", evt.EntityID, "char-1")
-	}
-	if !evt.Timestamp.Equal(now) {
-		t.Fatalf("timestamp = %s, want %s", evt.Timestamp, now)
-	}
-}
-
 func TestDecideDowntimeMoveApply_EmitsDowntimeMoveApplied(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("sys.daggerheart.action.downtime_move.apply"),
+		Type:          command.Type("sys.daggerheart.downtime_move.apply"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -1261,8 +799,8 @@ func TestDecideDowntimeMoveApply_EmitsDowntimeMoveApplied(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("sys.daggerheart.action.downtime_move_applied") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.downtime_move_applied")
+	if evt.Type != event.Type("sys.daggerheart.downtime_move_applied") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.downtime_move_applied")
 	}
 	if evt.SystemID != SystemID {
 		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
@@ -1303,131 +841,11 @@ func TestDecideDowntimeMoveApply_EmitsDowntimeMoveApplied(t *testing.T) {
 	}
 }
 
-func TestDecideDeathMoveResolve_EmitsDeathMoveResolved(t *testing.T) {
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
-	cmd := command.Command{
-		CampaignID:    "camp-1",
-		Type:          command.Type("sys.daggerheart.action.death_move.resolve"),
-		ActorType:     command.ActorTypeSystem,
-		SystemID:      SystemID,
-		SystemVersion: SystemVersion,
-		EntityType:    "character",
-		EntityID:      "char-1",
-		PayloadJSON:   []byte(`{"character_id":"char-1","move":"avoid_death","life_state_after":"alive","hope_die":2,"fear_die":1}`),
-	}
-
-	decision := Decider{}.Decide(nil, cmd, func() time.Time { return now })
-	if len(decision.Rejections) != 0 {
-		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
-	}
-	if len(decision.Events) != 1 {
-		t.Fatalf("expected 1 event, got %d", len(decision.Events))
-	}
-
-	evt := decision.Events[0]
-	if evt.Type != event.Type("sys.daggerheart.action.death_move_resolved") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.death_move_resolved")
-	}
-	if evt.SystemID != SystemID {
-		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
-	}
-	if evt.SystemVersion != SystemVersion {
-		t.Fatalf("system version = %s, want %s", evt.SystemVersion, SystemVersion)
-	}
-	if evt.EntityType != "character" {
-		t.Fatalf("entity type = %s, want %s", evt.EntityType, "character")
-	}
-	if evt.EntityID != "char-1" {
-		t.Fatalf("entity id = %s, want %s", evt.EntityID, "char-1")
-	}
-	if !evt.Timestamp.Equal(now) {
-		t.Fatalf("timestamp = %s, want %s", evt.Timestamp, now)
-	}
-
-	var payload struct {
-		CharacterID    string `json:"character_id"`
-		Move           string `json:"move"`
-		LifeStateAfter string `json:"life_state_after"`
-	}
-	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		t.Fatalf("unmarshal payload: %v", err)
-	}
-	if payload.CharacterID != "char-1" {
-		t.Fatalf("character id = %s, want %s", payload.CharacterID, "char-1")
-	}
-	if payload.Move != "avoid_death" {
-		t.Fatalf("move = %s, want %s", payload.Move, "avoid_death")
-	}
-	if payload.LifeStateAfter != "alive" {
-		t.Fatalf("life_state_after = %s, want %s", payload.LifeStateAfter, "alive")
-	}
-}
-
-func TestDecideGMMoveApply_EmitsGMMoveApplied(t *testing.T) {
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
-	cmd := command.Command{
-		CampaignID:    "camp-1",
-		Type:          command.Type("sys.daggerheart.action.gm_move.apply"),
-		ActorType:     command.ActorTypeSystem,
-		SystemID:      SystemID,
-		SystemVersion: SystemVersion,
-		EntityType:    "gm_move",
-		EntityID:      "camp-1",
-		PayloadJSON:   []byte(`{"move":"change_environment","fear_spent":1,"severity":"soft","source":"manual"}`),
-	}
-
-	decision := Decider{}.Decide(nil, cmd, func() time.Time { return now })
-	if len(decision.Rejections) != 0 {
-		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
-	}
-	if len(decision.Events) != 1 {
-		t.Fatalf("expected 1 event, got %d", len(decision.Events))
-	}
-
-	evt := decision.Events[0]
-	if evt.Type != event.Type("sys.daggerheart.action.gm_move_applied") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.gm_move_applied")
-	}
-	if evt.SystemID != SystemID {
-		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
-	}
-	if evt.SystemVersion != SystemVersion {
-		t.Fatalf("system version = %s, want %s", evt.SystemVersion, SystemVersion)
-	}
-	if evt.EntityType != "gm_move" {
-		t.Fatalf("entity type = %s, want %s", evt.EntityType, "gm_move")
-	}
-	if evt.EntityID != "camp-1" {
-		t.Fatalf("entity id = %s, want %s", evt.EntityID, "camp-1")
-	}
-	if !evt.Timestamp.Equal(now) {
-		t.Fatalf("timestamp = %s, want %s", evt.Timestamp, now)
-	}
-
-	var payload struct {
-		Move      string `json:"move"`
-		FearSpent int    `json:"fear_spent"`
-		Severity  string `json:"severity"`
-	}
-	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		t.Fatalf("unmarshal payload: %v", err)
-	}
-	if payload.Move != "change_environment" {
-		t.Fatalf("move = %s, want %s", payload.Move, "change_environment")
-	}
-	if payload.FearSpent != 1 {
-		t.Fatalf("fear_spent = %d, want %d", payload.FearSpent, 1)
-	}
-	if payload.Severity != "soft" {
-		t.Fatalf("severity = %s, want %s", payload.Severity, "soft")
-	}
-}
-
 func TestDecideAdversaryConditionChange_EmitsAdversaryConditionChanged(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("sys.daggerheart.action.adversary_condition.change"),
+		Type:          command.Type("sys.daggerheart.adversary_condition.change"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -1445,8 +863,8 @@ func TestDecideAdversaryConditionChange_EmitsAdversaryConditionChanged(t *testin
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("sys.daggerheart.action.adversary_condition_changed") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.adversary_condition_changed")
+	if evt.Type != event.Type("sys.daggerheart.adversary_condition_changed") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.adversary_condition_changed")
 	}
 	if evt.SystemID != SystemID {
 		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
@@ -1483,7 +901,7 @@ func TestDecideAdversaryCreate_EmitsAdversaryCreated(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("sys.daggerheart.action.adversary.create"),
+		Type:          command.Type("sys.daggerheart.adversary.create"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -1500,8 +918,8 @@ func TestDecideAdversaryCreate_EmitsAdversaryCreated(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("sys.daggerheart.action.adversary_created") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.adversary_created")
+	if evt.Type != event.Type("sys.daggerheart.adversary_created") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.adversary_created")
 	}
 	if evt.SystemID != SystemID {
 		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
@@ -1542,7 +960,7 @@ func TestDecideAdversaryUpdate_EmitsAdversaryUpdated(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("sys.daggerheart.action.adversary.update"),
+		Type:          command.Type("sys.daggerheart.adversary.update"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -1559,8 +977,8 @@ func TestDecideAdversaryUpdate_EmitsAdversaryUpdated(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("sys.daggerheart.action.adversary_updated") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.adversary_updated")
+	if evt.Type != event.Type("sys.daggerheart.adversary_updated") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.adversary_updated")
 	}
 	if evt.EntityType != "adversary" {
 		t.Fatalf("entity type = %s, want %s", evt.EntityType, "adversary")
@@ -1595,7 +1013,7 @@ func TestDecideAdversaryDelete_EmitsAdversaryDeleted(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("sys.daggerheart.action.adversary.delete"),
+		Type:          command.Type("sys.daggerheart.adversary.delete"),
 		ActorType:     command.ActorTypeSystem,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
@@ -1612,8 +1030,8 @@ func TestDecideAdversaryDelete_EmitsAdversaryDeleted(t *testing.T) {
 	}
 
 	evt := decision.Events[0]
-	if evt.Type != event.Type("sys.daggerheart.action.adversary_deleted") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.action.adversary_deleted")
+	if evt.Type != event.Type("sys.daggerheart.adversary_deleted") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.adversary_deleted")
 	}
 	if evt.EntityType != "adversary" {
 		t.Fatalf("entity type = %s, want %s", evt.EntityType, "adversary")

@@ -4,6 +4,7 @@ package templates
 type LoginParams struct {
 	AppName    string
 	PendingID  string
+	ClientID   string
 	ClientName string
 	Error      string
 	Lang       string
@@ -12,12 +13,12 @@ type LoginParams struct {
 
 // LoginPage renders the passkey sign-in / registration page.
 templ LoginPage(params LoginParams) {
-	@AuthLayout(T(params.Loc, "title.login", params.AppName), params.Lang) {
+	@Layout(T(params.Loc, "title.login", params.AppName), params.Lang) {
 		<main class="flex justify-center px-5 py-12">
 			<div class="w-full max-w-xl grid gap-8">
 				<header class="grid gap-3">
 					<h1 class="text-3xl font-bold">{ T(params.Loc, "login.heading") }</h1>
-					<p class="opacity-70">{ T(params.Loc, "login.requesting_access", params.ClientName) }</p>
+					<p class="opacity-70">{ T(params.Loc, "login.requesting_access", params.ClientName, params.ClientID) }</p>
 				</header>
 				<div class="card bg-base-200 border border-base-300 shadow-xl">
 					<div class="card-body">

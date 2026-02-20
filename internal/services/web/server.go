@@ -104,50 +104,6 @@ func withStaticMime(next http.Handler) http.Handler {
 	})
 }
 
-func (h *handler) handleAppRoot(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-		http.NotFound(w, r)
-		return
-	}
-	if r.Method != http.MethodGet {
-		w.Header().Set("Allow", http.MethodGet)
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	printer, lang := localizer(w, r)
-
-	appName := strings.TrimSpace(h.config.AppName)
-	if appName == "" {
-		appName = branding.AppName
-	}
-
-	if sess := sessionFromRequest(r, h.sessions); sess != nil {
-		userLabel := strings.TrimSpace(sess.displayName)
-		if userLabel == "" {
-			userLabel = "User"
-		}
-		templ.Handler(webtemplates.DashboardPage(webtemplates.DashboardPageParams{
-			AppName:  appName,
-			Lang:     lang,
-			UserName: userLabel,
-		})).ServeHTTP(w, r)
-		return
-	}
-
-	page := webtemplates.PageContext{
-		Lang:         lang,
-		Loc:          printer,
-		CurrentPath:  r.URL.Path,
-		CurrentQuery: r.URL.RawQuery,
-	}
-	params := webtemplates.LandingParams{}
-	if strings.TrimSpace(h.config.OAuthClientID) != "" {
-		params.SignInURL = "/auth/login"
-	}
-	templ.Handler(webtemplates.LandingPage(page, appName, params)).ServeHTTP(w, r)
-}
-
 // NewHandler creates the HTTP handler for the login UX.
 //
 // This function is the test-oriented entrypoint that assembles route handlers
@@ -164,12 +120,12 @@ func NewHandler(config Config, authClient authv1.AuthServiceClient) http.Handler
 
 // NewHandlerWithCampaignAccess creates the HTTP handler with campaign access checks.
 func NewHandlerWithCampaignAccess(config Config, authClient authv1.AuthServiceClient, deps handlerDependencies) (http.Handler, error) {
-	rootMux := http.NewServeMux()
+	mux := http.NewServeMux()
 	staticFS, err := subStaticFS()
 	if err != nil {
 		return nil, fmt.Errorf("resolve static assets: %w", err)
 	}
-	rootMux.Handle(
+	mux.Handle(
 		"/static/",
 		withStaticMime(
 			http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))),
@@ -193,40 +149,50 @@ func NewHandlerWithCampaignAccess(config Config, authClient authv1.AuthServiceCl
 		campaignAccess:    deps.campaignAccess,
 	}
 
-	gameMux := http.NewServeMux()
-	h.registerGameRoutes(gameMux)
-
-	publicMux := http.NewServeMux()
-	h.registerPublicRoutes(publicMux, appName)
-
-	rootMux.Handle("/dashboard", gameMux)
-	rootMux.Handle("/campaigns", gameMux)
-	rootMux.Handle("/campaigns/", gameMux)
-	rootMux.Handle("/invites", gameMux)
-	rootMux.Handle("/invites/", gameMux)
-	rootMux.Handle("/", publicMux)
-
-	return rootMux, nil
-}
-
-func (h *handler) registerGameRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("/dashboard", h.handleAppHome)
-	mux.HandleFunc("/campaigns", h.handleAppCampaigns)
-	mux.HandleFunc("/campaigns/create", h.handleAppCampaignCreate)
-	mux.HandleFunc("/campaigns/", h.handleAppCampaignDetail)
-	mux.HandleFunc("/invites", h.handleAppInvites)
-	mux.HandleFunc("/invites/claim", h.handleAppInviteClaim)
-}
-
-func (h *handler) registerPublicRoutes(mux *http.ServeMux, appName string) {
-	mux.HandleFunc("/", h.handleAppRoot)
+	mux.HandleFunc("/app", h.handleAppHome)
+	mux.HandleFunc("/app/campaigns", h.handleAppCampaigns)
+	mux.HandleFunc("/app/campaigns/create", h.handleAppCampaignCreate)
+	mux.HandleFunc("/app/campaigns/", h.handleAppCampaignDetail)
+	mux.HandleFunc("/app/invites", h.handleAppInvites)
+	mux.HandleFunc("/app/invites/claim", h.handleAppInviteClaim)
 
 	// Register OAuth client routes when configured.
-	if strings.TrimSpace(h.config.OAuthClientID) != "" {
+	if strings.TrimSpace(config.OAuthClientID) != "" {
 		mux.HandleFunc("/auth/login", h.handleAuthLogin)
 		mux.HandleFunc("/auth/callback", h.handleAuthCallback)
 		mux.HandleFunc("/auth/logout", h.handleAuthLogout)
 	}
+
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" {
+			http.NotFound(w, r)
+			return
+		}
+		if r.Method != http.MethodGet {
+			w.Header().Set("Allow", http.MethodGet)
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		printer, lang := localizer(w, r)
+		page := webtemplates.PageContext{
+			Lang:         lang,
+			Loc:          printer,
+			CurrentPath:  r.URL.Path,
+			CurrentQuery: r.URL.RawQuery,
+		}
+		params := webtemplates.LandingParams{}
+		if strings.TrimSpace(config.OAuthClientID) != "" {
+			params.SignInURL = "/auth/login"
+		}
+		if sess := sessionFromRequest(r, h.sessions); sess != nil {
+			name := sess.displayName
+			if name == "" {
+				name = "User"
+			}
+			params.UserName = name
+		}
+		templ.Handler(webtemplates.LandingPage(page, appName, params)).ServeHTTP(w, r)
+	})
 
 	mux.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
@@ -236,7 +202,7 @@ func (h *handler) registerPublicRoutes(mux *http.ServeMux, appName string) {
 
 		pendingID := strings.TrimSpace(r.URL.Query().Get("pending_id"))
 		if pendingID == "" {
-			if strings.TrimSpace(h.config.OAuthClientID) != "" {
+			if strings.TrimSpace(config.OAuthClientID) != "" {
 				http.Redirect(w, r, "/auth/login", http.StatusFound)
 				return
 			}
@@ -258,6 +224,7 @@ func (h *handler) registerPublicRoutes(mux *http.ServeMux, appName string) {
 		params := webtemplates.LoginParams{
 			AppName:    appName,
 			PendingID:  pendingID,
+			ClientID:   clientID,
 			ClientName: clientName,
 			Error:      errorMessage,
 			Lang:       lang,
@@ -267,14 +234,19 @@ func (h *handler) registerPublicRoutes(mux *http.ServeMux, appName string) {
 	})
 
 	mux.HandleFunc("/magic", h.handleMagicLink)
+
 	mux.HandleFunc("/passkeys/register/start", h.handlePasskeyRegisterStart)
 	mux.HandleFunc("/passkeys/register/finish", h.handlePasskeyRegisterFinish)
+
 	mux.HandleFunc("/passkeys/login/start", h.handlePasskeyLoginStart)
 	mux.HandleFunc("/passkeys/login/finish", h.handlePasskeyLoginFinish)
+
 	mux.HandleFunc("/up", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("OK"))
 	})
+
+	return mux, nil
 }
 
 // NewServer builds a configured web server.

@@ -1005,7 +1005,7 @@ func TestBuildDomainEngine_SystemCommand(t *testing.T) {
 
 	cmd := command.Command{
 		CampaignID:    "c1",
-		Type:          command.Type("sys.daggerheart.action.gm_fear.set"),
+		Type:          command.Type("sys.daggerheart.gm_fear.set"),
 		SystemID:      daggerheart.SystemID,
 		SystemVersion: daggerheart.SystemVersion,
 		EntityType:    "campaign",
@@ -1023,8 +1023,8 @@ func TestBuildDomainEngine_SystemCommand(t *testing.T) {
 	if got := len(store.events["c1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)
 	}
-	if store.events["c1"][0].Type != event.Type("sys.daggerheart.action.gm_fear_changed") {
-		t.Fatalf("event type = %s, want %s", store.events["c1"][0].Type, event.Type("sys.daggerheart.action.gm_fear_changed"))
+	if store.events["c1"][0].Type != event.Type("sys.daggerheart.gm_fear_changed") {
+		t.Fatalf("event type = %s, want %s", store.events["c1"][0].Type, event.Type("sys.daggerheart.gm_fear_changed"))
 	}
 }
 

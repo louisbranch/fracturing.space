@@ -190,7 +190,7 @@ func findDamageApplied(ctx context.Context, client gamev1.EventServiceClient, ca
 		CampaignId: campaignID,
 		PageSize:   200,
 		OrderBy:    "seq desc",
-		Filter:     "session_id = \"" + sessionID + "\" AND type = \"sys.daggerheart.action.damage_applied\"",
+		Filter:     "session_id = \"" + sessionID + "\" AND type = \"sys.daggerheart.damage_applied\"",
 	})
 	if err != nil {
 		return damageAppliedPayload{}, err

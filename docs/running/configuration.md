@@ -75,7 +75,7 @@ This is the full environment variable reference. For setup steps, see
 - `FRACTURING_SPACE_WEB_AUTH_BASE_URL`: external auth base URL for login redirects.
 - `FRACTURING_SPACE_WEB_AUTH_ADDR`: auth gRPC address used by the web login server.
 - `FRACTURING_SPACE_WEB_DIAL_TIMEOUT`: gRPC dial timeout for the web login server. Default: `2s`.
-- `FRACTURING_SPACE_WEB_OAUTH_CLIENT_ID`: first-party OAuth client ID used by the web server. Default: `fracturing-space`.
+- `FRACTURING_SPACE_WEB_OAUTH_CLIENT_ID`: first-party OAuth client ID used by the web server. Default: `fracturing-space-web`.
 - `FRACTURING_SPACE_WEB_CALLBACK_URL`: public OAuth callback URL (e.g., `http://localhost:8080/auth/callback`).
 - `FRACTURING_SPACE_WEB_AUTH_TOKEN_URL`: internal auth token endpoint for server-to-server code exchange. Defaults to `{AuthBaseURL}/token`.
 

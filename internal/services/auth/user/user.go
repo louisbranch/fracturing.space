@@ -7,7 +7,9 @@ import (
 	"strings"
 	"time"
 
+	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
+	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
 )
 
@@ -22,13 +24,15 @@ var (
 type User struct {
 	ID        string
 	Email     string
+	Locale    commonv1.Locale
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
 
 // CreateUserInput describes the metadata needed to create a user.
 type CreateUserInput struct {
-	Email string
+	Email  string
+	Locale commonv1.Locale
 }
 
 // ValidateEmail enforces canonical email constraints used by joins, invites,
@@ -67,6 +71,7 @@ func CreateUser(input CreateUserInput, now func() time.Time, idGenerator func() 
 	return User{
 		ID:        userID,
 		Email:     normalized.Email,
+		Locale:    normalized.Locale,
 		CreatedAt: createdAt,
 		UpdatedAt: createdAt,
 	}, nil
@@ -81,5 +86,6 @@ func NormalizeCreateUserInput(input CreateUserInput) (CreateUserInput, error) {
 	if err := ValidateEmail(input.Email); err != nil {
 		return CreateUserInput{}, err
 	}
+	input.Locale = platformi18n.NormalizeLocale(input.Locale)
 	return input, nil
 }

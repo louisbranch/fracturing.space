@@ -117,6 +117,12 @@ func isUnhandledSystemEventError(err error, eventType event.Type) bool {
 
 func parseSystemIDFromEventType(eventType event.Type) (string, error) {
 	parts := strings.Split(string(eventType), ".")
+	if len(parts) == 3 {
+		if parts[0] != "sys" {
+			return "", fmt.Errorf("event type %s is not a system namespace", eventType)
+		}
+		return parts[1], nil
+	}
 	if len(parts) < 4 {
 		return "", fmt.Errorf("event type %s missing system segment", eventType)
 	}

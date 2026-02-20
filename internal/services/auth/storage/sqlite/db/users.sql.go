@@ -10,27 +10,16 @@ import (
 )
 
 const getUser = `-- name: GetUser :one
-SELECT users.id, user_emails.email, users.created_at, users.updated_at
-FROM users
-JOIN user_emails
-    ON users.id = user_emails.user_id
-    AND user_emails.is_primary = 1
-WHERE users.id = ?
+SELECT id, email, locale, created_at, updated_at FROM users WHERE id = ?
 `
 
-type GetUserRow struct {
-	ID        string `json:"id"`
-	Email     string `json:"email"`
-	CreatedAt int64  `json:"created_at"`
-	UpdatedAt int64  `json:"updated_at"`
-}
-
-func (q *Queries) GetUser(ctx context.Context, id string) (GetUserRow, error) {
+func (q *Queries) GetUser(ctx context.Context, id string) (User, error) {
 	row := q.db.QueryRowContext(ctx, getUser, id)
-	var i GetUserRow
+	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
+		&i.Locale,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -38,13 +27,9 @@ func (q *Queries) GetUser(ctx context.Context, id string) (GetUserRow, error) {
 }
 
 const listUsersPaged = `-- name: ListUsersPaged :many
-SELECT users.id, user_emails.email, users.created_at, users.updated_at
-FROM users
-JOIN user_emails
-    ON users.id = user_emails.user_id
-    AND user_emails.is_primary = 1
-WHERE users.id > ?
-ORDER BY users.id
+SELECT id, email, locale, created_at, updated_at FROM users
+WHERE id > ?
+ORDER BY id
 LIMIT ?
 `
 
@@ -53,25 +38,19 @@ type ListUsersPagedParams struct {
 	Limit int64  `json:"limit"`
 }
 
-type ListUsersPagedRow struct {
-	ID        string `json:"id"`
-	Email     string `json:"email"`
-	CreatedAt int64  `json:"created_at"`
-	UpdatedAt int64  `json:"updated_at"`
-}
-
-func (q *Queries) ListUsersPaged(ctx context.Context, arg ListUsersPagedParams) ([]ListUsersPagedRow, error) {
+func (q *Queries) ListUsersPaged(ctx context.Context, arg ListUsersPagedParams) ([]User, error) {
 	rows, err := q.db.QueryContext(ctx, listUsersPaged, arg.ID, arg.Limit)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []ListUsersPagedRow{}
+	items := []User{}
 	for rows.Next() {
-		var i ListUsersPagedRow
+		var i User
 		if err := rows.Scan(
 			&i.ID,
 			&i.Email,
+			&i.Locale,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -89,34 +68,24 @@ func (q *Queries) ListUsersPaged(ctx context.Context, arg ListUsersPagedParams) 
 }
 
 const listUsersPagedFirst = `-- name: ListUsersPagedFirst :many
-SELECT users.id, user_emails.email, users.created_at, users.updated_at
-FROM users
-JOIN user_emails
-    ON users.id = user_emails.user_id
-    AND user_emails.is_primary = 1
-ORDER BY users.id
+SELECT id, email, locale, created_at, updated_at FROM users
+ORDER BY id
 LIMIT ?
 `
 
-type ListUsersPagedFirstRow struct {
-	ID        string `json:"id"`
-	Email     string `json:"email"`
-	CreatedAt int64  `json:"created_at"`
-	UpdatedAt int64  `json:"updated_at"`
-}
-
-func (q *Queries) ListUsersPagedFirst(ctx context.Context, limit int64) ([]ListUsersPagedFirstRow, error) {
+func (q *Queries) ListUsersPagedFirst(ctx context.Context, limit int64) ([]User, error) {
 	rows, err := q.db.QueryContext(ctx, listUsersPagedFirst, limit)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []ListUsersPagedFirstRow{}
+	items := []User{}
 	for rows.Next() {
-		var i ListUsersPagedFirstRow
+		var i User
 		if err := rows.Scan(
 			&i.ID,
 			&i.Email,
+			&i.Locale,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -135,19 +104,29 @@ func (q *Queries) ListUsersPagedFirst(ctx context.Context, limit int64) ([]ListU
 
 const putUser = `-- name: PutUser :exec
 INSERT INTO users (
-    id, created_at, updated_at
-) VALUES (?, ?, ?)
+    id, email, locale, created_at, updated_at
+) VALUES (?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
+    email = excluded.email,
+    locale = excluded.locale,
     updated_at = excluded.updated_at
 `
 
 type PutUserParams struct {
 	ID        string `json:"id"`
+	Email     string `json:"email"`
+	Locale    string `json:"locale"`
 	CreatedAt int64  `json:"created_at"`
 	UpdatedAt int64  `json:"updated_at"`
 }
 
 func (q *Queries) PutUser(ctx context.Context, arg PutUserParams) error {
-	_, err := q.db.ExecContext(ctx, putUser, arg.ID, arg.CreatedAt, arg.UpdatedAt)
+	_, err := q.db.ExecContext(ctx, putUser,
+		arg.ID,
+		arg.Email,
+		arg.Locale,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+	)
 	return err
 }

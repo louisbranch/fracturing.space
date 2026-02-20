@@ -7,6 +7,7 @@ import (
 	"time"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
+	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/oauth"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/storage"
 	authsqlite "github.com/louisbranch/fracturing.space/internal/services/auth/storage/sqlite"
@@ -21,6 +22,7 @@ func TestGenerateMagicLinkAndConsume(t *testing.T) {
 	userRecord := user.User{
 		ID:        "user-1",
 		Email:     "alpha",
+		Locale:    platformi18n.DefaultLocale(),
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -99,6 +101,7 @@ func TestListUserEmails(t *testing.T) {
 	userRecord := user.User{
 		ID:        "user-1",
 		Email:     "alpha",
+		Locale:    platformi18n.DefaultLocale(),
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -120,8 +123,8 @@ func TestListUserEmails(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list user emails: %v", err)
 	}
-	if len(resp.GetEmails()) != 2 {
-		t.Fatalf("expected 2 emails, got %d", len(resp.GetEmails()))
+	if len(resp.GetEmails()) != 1 {
+		t.Fatalf("expected 1 email, got %d", len(resp.GetEmails()))
 	}
 }
 

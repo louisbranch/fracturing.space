@@ -2,6 +2,32 @@
 
 PRAGMA foreign_keys = OFF;
 
+DROP INDEX IF EXISTS idx_session_spotlight_session;
+DROP TABLE IF EXISTS session_spotlight;
+DROP INDEX IF EXISTS idx_session_gates_open;
+DROP TABLE IF EXISTS session_gates;
+DROP TABLE IF EXISTS daggerheart_adversaries;
+DROP TABLE IF EXISTS daggerheart_countdowns;
+DROP TABLE IF EXISTS daggerheart_snapshots;
+DROP TABLE IF EXISTS daggerheart_character_states;
+DROP TABLE IF EXISTS daggerheart_character_profiles;
+DROP INDEX IF EXISTS idx_snapshots_seq;
+DROP TABLE IF EXISTS snapshots;
+DROP INDEX IF EXISTS idx_invites_campaign_recipient;
+DROP INDEX IF EXISTS idx_invites_recipient_user;
+DROP INDEX IF EXISTS idx_invites_participant;
+DROP INDEX IF EXISTS idx_invites_campaign;
+DROP TABLE IF EXISTS invites;
+DROP TABLE IF EXISTS campaign_active_session;
+DROP INDEX IF EXISTS idx_sessions_active;
+DROP TABLE IF EXISTS sessions;
+DROP TABLE IF EXISTS characters;
+DROP INDEX IF EXISTS idx_participant_claims_participant;
+DROP TABLE IF EXISTS participant_claims;
+DROP INDEX IF EXISTS idx_participants_campaign_user;
+DROP INDEX IF EXISTS idx_participants_user_id;
+DROP TABLE IF EXISTS participants;
+DROP TABLE IF EXISTS campaigns;
 
 -- Campaign layer
 CREATE TABLE campaigns (
@@ -190,7 +216,6 @@ CREATE TABLE daggerheart_adversaries (
     name TEXT NOT NULL,
     kind TEXT NOT NULL DEFAULT '',
     session_id TEXT,
-    conditions_json TEXT NOT NULL DEFAULT '[]',
     notes TEXT NOT NULL DEFAULT '',
     hp INTEGER NOT NULL DEFAULT 6,
     hp_max INTEGER NOT NULL DEFAULT 6,
@@ -262,10 +287,10 @@ DROP TABLE IF EXISTS invites;
 DROP TABLE IF EXISTS campaign_active_session;
 DROP INDEX IF EXISTS idx_sessions_active;
 DROP TABLE IF EXISTS sessions;
+DROP TABLE IF EXISTS characters;
 DROP INDEX IF EXISTS idx_participant_claims_participant;
 DROP TABLE IF EXISTS participant_claims;
 DROP INDEX IF EXISTS idx_participants_campaign_user;
 DROP INDEX IF EXISTS idx_participants_user_id;
 DROP TABLE IF EXISTS participants;
-DROP TABLE IF EXISTS characters;
 DROP TABLE IF EXISTS campaigns;

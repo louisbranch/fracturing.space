@@ -414,7 +414,7 @@ func runReactionStep(t *testing.T, ctx context.Context, env scenarioEnv, state *
 		t.Fatal("expected reaction action roll")
 	}
 	state.lastRollSeq = response.GetActionRoll().GetRollSeq()
-	requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeReactionResolved)
+	requireEventTypesAfterSeq(t, ctx, env, state, before, event.TypeOutcomeApplied)
 	assertExpectedDeltas(t, ctx, env, state, expectedSpec, expectedBefore)
 }
 
@@ -449,12 +449,9 @@ func runGMSpendFearStep(t *testing.T, ctx context.Context, env scenarioEnv, stat
 		t.Fatalf("apply gm move: %v", err)
 	}
 	if amount > 0 {
-		requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeGMFearChanged, daggerheart.EventTypeGMMoveApplied)
-	} else {
-		requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeGMMoveApplied)
+		requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeGMFearChanged)
 	}
 	state.gmFear = int(response.GetGmFearAfter())
-	assertExpectedGMMove(t, ctx, env, state, before, step.Args)
 	assertExpectedDeltas(t, ctx, env, state, expectedSpec, expectedBefore)
 }
 
@@ -632,7 +629,7 @@ func runGroupActionStep(t *testing.T, ctx context.Context, env scenarioEnv, stat
 	if err != nil {
 		t.Fatalf("group_action: %v", err)
 	}
-	requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeGroupActionResolved)
+	requireEventTypesAfterSeq(t, ctx, env, state, before, event.TypeOutcomeApplied)
 	assertExpectedDeltas(t, ctx, env, state, expectedSpec, expectedBefore)
 }
 
@@ -694,7 +691,7 @@ func runTagTeamStep(t *testing.T, ctx context.Context, env scenarioEnv, state *s
 	if err != nil {
 		t.Fatalf("tag_team: %v", err)
 	}
-	requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeTagTeamResolved)
+	requireEventTypesAfterSeq(t, ctx, env, state, before, event.TypeOutcomeApplied)
 	if response != nil {
 		assertExpectedOutcome(t, ctx, env, state, before, response.GetSelectedRollSeq(), step.Args)
 		assertExpectedComplication(t, response.GetSelectedOutcome(), step.Args)
@@ -902,7 +899,7 @@ func runAttackStep(t *testing.T, ctx context.Context, env scenarioEnv, state *sc
 		if err != nil {
 			t.Fatalf("attack flow: %v", err)
 		}
-		requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeAttackResolved)
+		requireEventTypesAfterSeq(t, ctx, env, state, before, event.TypeOutcomeApplied)
 		assertExpectedSpotlight(t, ctx, env, state, step.Args)
 		assertExpectedComplication(t, response.GetRollOutcome(), step.Args)
 		if response.GetDamageApplied() != nil {
@@ -961,7 +958,7 @@ func runAttackStep(t *testing.T, ctx context.Context, env scenarioEnv, state *sc
 	if err != nil {
 		t.Fatalf("attack outcome: %v", err)
 	}
-	requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeAttackResolved)
+	requireEventTypesAfterSeq(t, ctx, env, state, before, event.TypeOutcomeApplied)
 
 	if attackOutcome.GetResult() != nil && attackOutcome.GetResult().GetSuccess() {
 		dice := buildDamageDice(step.Args)
@@ -1067,7 +1064,7 @@ func runMultiAttackStep(t *testing.T, ctx context.Context, env scenarioEnv, stat
 	if err != nil {
 		t.Fatalf("multi_attack outcome: %v", err)
 	}
-	requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeAttackResolved)
+	requireEventTypesAfterSeq(t, ctx, env, state, before, event.TypeOutcomeApplied)
 
 	if attackOutcome.GetResult() != nil && attackOutcome.GetResult().GetSuccess() {
 		dice := buildDamageDice(step.Args)
@@ -1290,7 +1287,7 @@ func runAdversaryAttackStep(t *testing.T, ctx context.Context, env scenarioEnv, 
 	if err != nil {
 		t.Fatalf("adversary attack flow: %v", err)
 	}
-	requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeAdversaryAttackResolved)
+	requireEventTypesAfterSeq(t, ctx, env, state, before, event.TypeOutcomeApplied)
 	if response.GetDamageApplied() != nil {
 		requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeDamageApplied)
 		assertDamageFlags(t, ctx, env, state, before, targetCharacterID, step.Args)
@@ -1535,7 +1532,7 @@ func runDamageRollStep(t *testing.T, ctx context.Context, env scenarioEnv, state
 		t.Fatalf("damage_roll: %v", err)
 	}
 	state.lastDamageRollSeq = response.GetRollSeq()
-	requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeDamageRollResolved)
+	requireEventTypesAfterSeq(t, ctx, env, state, before, event.TypeRollResolved)
 	assertExpectedDamageRoll(t, ctx, env, state, response.GetRollSeq(), step.Args)
 }
 
@@ -1568,7 +1565,7 @@ func runAdversaryAttackRollStep(t *testing.T, ctx context.Context, env scenarioE
 		t.Fatalf("adversary_attack_roll: %v", err)
 	}
 	state.lastAdversaryRollSeq = response.GetRollSeq()
-	requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeAdversaryRollResolved)
+	requireEventTypesAfterSeq(t, ctx, env, state, before, event.TypeRollResolved)
 }
 
 func runApplyRollOutcomeStep(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, step Step) {
@@ -1621,7 +1618,7 @@ func runApplyAttackOutcomeStep(t *testing.T, ctx context.Context, env scenarioEn
 	if err != nil {
 		t.Fatalf("apply_attack_outcome: %v", err)
 	}
-	requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeAttackResolved)
+	requireNoSessionEventsAfterSeq(t, ctx, env, state, before)
 }
 
 func runApplyAdversaryAttackOutcomeStep(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, step Step) {
@@ -1649,7 +1646,7 @@ func runApplyAdversaryAttackOutcomeStep(t *testing.T, ctx context.Context, env s
 	if err != nil {
 		t.Fatalf("apply_adversary_attack_outcome: %v", err)
 	}
-	requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeAdversaryAttackResolved)
+	requireNoSessionEventsAfterSeq(t, ctx, env, state, before)
 }
 
 func runApplyReactionOutcomeStep(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, step Step) {
@@ -1670,7 +1667,7 @@ func runApplyReactionOutcomeStep(t *testing.T, ctx context.Context, env scenario
 	if err != nil {
 		t.Fatalf("apply_reaction_outcome: %v", err)
 	}
-	requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeReactionResolved)
+	requireNoSessionEventsAfterSeq(t, ctx, env, state, before)
 }
 
 func runMitigateDamageStep(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, step Step) {
@@ -1742,6 +1739,29 @@ func latestSeq(t *testing.T, ctx context.Context, env scenarioEnv, state *scenar
 		return 0
 	}
 	return response.GetEvents()[0].GetSeq()
+}
+
+func requireNoSessionEventsAfterSeq(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, before uint64) {
+	t.Helper()
+	if state.sessionID == "" {
+		t.Fatal("session is required")
+	}
+
+	response, err := env.eventClient.ListEvents(ctx, &gamev1.ListEventsRequest{
+		CampaignId: state.campaignID,
+		PageSize:   20,
+		OrderBy:    "seq desc",
+		Filter:     fmt.Sprintf("session_id = \"%s\"", state.sessionID),
+	})
+	if err != nil {
+		t.Fatalf("list session events: %v", err)
+	}
+	for _, evt := range response.GetEvents() {
+		if evt.GetSeq() <= before {
+			break
+		}
+		t.Fatalf("expected no session events after seq %d, got %s@%d", before, evt.GetType(), evt.GetSeq())
+	}
 }
 
 func requireEventTypesAfterSeq(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, before uint64, types ...event.Type) {
@@ -2202,14 +2222,6 @@ func assertExpectedComplication(t *testing.T, response *daggerheartv1.ApplyRollO
 	}
 }
 
-type gmMoveExpect struct {
-	move        string
-	fearSpent   *int
-	source      string
-	description string
-	severity    string
-}
-
 type restExpect struct {
 	restType        string
 	interrupted     *bool
@@ -2221,29 +2233,6 @@ type restExpect struct {
 
 type downtimeExpect struct {
 	move string
-}
-
-func readGMMoveExpect(args map[string]any) (gmMoveExpect, bool) {
-	expect := gmMoveExpect{}
-	if value := strings.TrimSpace(optionalString(args, "expect_gm_move", "")); value != "" {
-		expect.move = strings.ToLower(value)
-	}
-	if value, ok := readInt(args, "expect_gm_fear_spent"); ok {
-		expect.fearSpent = &value
-	}
-	if value := strings.TrimSpace(optionalString(args, "expect_gm_move_source", "")); value != "" {
-		expect.source = value
-	}
-	if value := strings.TrimSpace(optionalString(args, "expect_gm_move_description", "")); value != "" {
-		expect.description = value
-	}
-	if value := strings.TrimSpace(optionalString(args, "expect_gm_move_severity", "")); value != "" {
-		expect.severity = strings.ToLower(value)
-	}
-	if expect.move == "" && expect.fearSpent == nil && expect.source == "" && expect.description == "" && expect.severity == "" {
-		return gmMoveExpect{}, false
-	}
-	return expect, true
 }
 
 func readRestExpect(args map[string]any) (restExpect, bool) {
@@ -2281,36 +2270,6 @@ func readDowntimeExpect(args map[string]any) (downtimeExpect, bool) {
 		return downtimeExpect{}, false
 	}
 	return expect, true
-}
-
-func assertExpectedGMMove(
-	t *testing.T,
-	ctx context.Context,
-	env scenarioEnv,
-	state *scenarioState,
-	before uint64,
-	args map[string]any,
-) {
-	expect, ok := readGMMoveExpect(args)
-	if !ok {
-		return
-	}
-	payload := findGMMoveAppliedPayload(t, ctx, env, state, before)
-	if expect.move != "" && strings.ToLower(payload.Move) != expect.move {
-		t.Fatalf("gm move = %s, want %s", payload.Move, expect.move)
-	}
-	if expect.fearSpent != nil && payload.FearSpent != *expect.fearSpent {
-		t.Fatalf("gm fear_spent = %d, want %d", payload.FearSpent, *expect.fearSpent)
-	}
-	if expect.source != "" && payload.Source != expect.source {
-		t.Fatalf("gm move source = %s, want %s", payload.Source, expect.source)
-	}
-	if expect.description != "" && payload.Description != expect.description {
-		t.Fatalf("gm move description = %s, want %s", payload.Description, expect.description)
-	}
-	if expect.severity != "" && strings.ToLower(payload.Severity) != expect.severity {
-		t.Fatalf("gm move severity = %s, want %s", payload.Severity, expect.severity)
-	}
 }
 
 func assertExpectedRestTaken(
@@ -2433,40 +2392,6 @@ func findDowntimeMovePayload(
 	}
 	t.Fatalf("expected downtime_move_applied after seq %d", before)
 	return daggerheart.DowntimeMoveAppliedPayload{}
-}
-
-func findGMMoveAppliedPayload(
-	t *testing.T,
-	ctx context.Context,
-	env scenarioEnv,
-	state *scenarioState,
-	before uint64,
-) daggerheart.GMMoveAppliedPayload {
-	filter := fmt.Sprintf("type = \"%s\"", daggerheart.EventTypeGMMoveApplied)
-	if state.sessionID != "" {
-		filter = filter + fmt.Sprintf(" AND session_id = \"%s\"", state.sessionID)
-	}
-	response, err := env.eventClient.ListEvents(ctx, &gamev1.ListEventsRequest{
-		CampaignId: state.campaignID,
-		PageSize:   20,
-		OrderBy:    "seq desc",
-		Filter:     filter,
-	})
-	if err != nil {
-		t.Fatalf("list gm move events: %v", err)
-	}
-	for _, evt := range response.GetEvents() {
-		if evt.GetSeq() <= before {
-			continue
-		}
-		var payload daggerheart.GMMoveAppliedPayload
-		if err := json.Unmarshal(evt.GetPayloadJson(), &payload); err != nil {
-			t.Fatalf("decode gm move payload: %v", err)
-		}
-		return payload
-	}
-	t.Fatalf("expected gm_move_applied after seq %d", before)
-	return daggerheart.GMMoveAppliedPayload{}
 }
 
 func resolveOutcomeSeed(t *testing.T, args map[string]any, key string, difficulty int, fallback uint64) uint64 {
@@ -3527,20 +3452,50 @@ func assertExpectedDamageRoll(
 		t.Fatal("damage roll expectations require a roll sequence")
 	}
 	payload := findDamageRollResolvedPayload(t, ctx, env, state, rollSeq)
-	if expect.baseTotal != nil && payload.BaseTotal != *expect.baseTotal {
-		t.Fatalf("damage base_total = %d, want %d", payload.BaseTotal, *expect.baseTotal)
+	baseTotal, ok := readRollResolvedInt(payload, "base_total")
+	if expect.baseTotal != nil {
+		if !ok {
+			t.Fatalf("damage base_total missing from roll resolved payload")
+		}
+		if baseTotal != *expect.baseTotal {
+			t.Fatalf("damage base_total = %d, want %d", baseTotal, *expect.baseTotal)
+		}
 	}
-	if expect.modifier != nil && payload.Modifier != *expect.modifier {
-		t.Fatalf("damage modifier = %d, want %d", payload.Modifier, *expect.modifier)
+	modifier, ok := readRollResolvedInt(payload, "modifier")
+	if expect.modifier != nil {
+		if !ok {
+			t.Fatalf("damage modifier missing from roll resolved payload")
+		}
+		if modifier != *expect.modifier {
+			t.Fatalf("damage modifier = %d, want %d", modifier, *expect.modifier)
+		}
 	}
-	if expect.criticalBonus != nil && payload.CriticalBonus != *expect.criticalBonus {
-		t.Fatalf("damage critical_bonus = %d, want %d", payload.CriticalBonus, *expect.criticalBonus)
+	criticalBonus, ok := readRollResolvedInt(payload, "critical_bonus")
+	if expect.criticalBonus != nil {
+		if !ok {
+			t.Fatalf("damage critical_bonus missing from roll resolved payload")
+		}
+		if criticalBonus != *expect.criticalBonus {
+			t.Fatalf("damage critical_bonus = %d, want %d", criticalBonus, *expect.criticalBonus)
+		}
 	}
-	if expect.total != nil && payload.Total != *expect.total {
-		t.Fatalf("damage total = %d, want %d", payload.Total, *expect.total)
+	total, ok := readRollResolvedInt(payload, "total")
+	if expect.total != nil {
+		if !ok {
+			t.Fatalf("damage total missing from roll resolved payload")
+		}
+		if total != *expect.total {
+			t.Fatalf("damage total = %d, want %d", total, *expect.total)
+		}
 	}
-	if expect.critical != nil && payload.Critical != *expect.critical {
-		t.Fatalf("damage critical = %v, want %v", payload.Critical, *expect.critical)
+	critical, ok := readRollResolvedBool(payload, "critical")
+	if expect.critical != nil {
+		if !ok {
+			t.Fatalf("damage critical missing from roll resolved payload")
+		}
+		if critical != *expect.critical {
+			t.Fatalf("damage critical = %v, want %v", critical, *expect.critical)
+		}
 	}
 }
 
@@ -3618,7 +3573,11 @@ func formatDamageRollSummary(
 		return "roll_seq=nil"
 	}
 	roll := findDamageRollResolvedPayload(t, ctx, env, state, *rollSeq)
-	return fmt.Sprintf("roll_total=%d roll_base=%d roll_modifier=%d roll_critical=%v", roll.Total, roll.BaseTotal, roll.Modifier, roll.Critical)
+	critical, _ := readRollResolvedBool(roll, "critical")
+	baseTotal, _ := readRollResolvedInt(roll, "base_total")
+	modifier, _ := readRollResolvedInt(roll, "modifier")
+	total, _ := readRollResolvedInt(roll, "total")
+	return fmt.Sprintf("roll_total=%d roll_base=%d roll_modifier=%d roll_critical=%v", total, baseTotal, modifier, critical)
 }
 
 func formatCharacterThresholds(
@@ -3763,8 +3722,8 @@ func findDamageRollResolvedPayload(
 	env scenarioEnv,
 	state *scenarioState,
 	rollSeq uint64,
-) daggerheart.DamageRollResolvedPayload {
-	filter := fmt.Sprintf("type = \"%s\"", daggerheart.EventTypeDamageRollResolved)
+) event.RollResolvedPayload {
+	filter := fmt.Sprintf("type = \"%s\"", event.TypeRollResolved)
 	if state.sessionID != "" {
 		filter = filter + fmt.Sprintf(" AND session_id = \"%s\"", state.sessionID)
 	}
@@ -3778,7 +3737,7 @@ func findDamageRollResolvedPayload(
 		t.Fatalf("list damage roll events: %v", err)
 	}
 	for _, evt := range response.GetEvents() {
-		var payload daggerheart.DamageRollResolvedPayload
+		var payload event.RollResolvedPayload
 		if err := json.Unmarshal(evt.GetPayloadJson(), &payload); err != nil {
 			t.Fatalf("decode damage roll payload: %v", err)
 		}
@@ -3787,7 +3746,89 @@ func findDamageRollResolvedPayload(
 		}
 	}
 	t.Fatalf("damage roll payload not found for roll seq %d", rollSeq)
-	return daggerheart.DamageRollResolvedPayload{}
+	return event.RollResolvedPayload{}
+}
+
+func readRollResolvedInt(payload event.RollResolvedPayload, key string) (int, bool) {
+	if payload.SystemData != nil {
+		if value, ok := payload.SystemData[key]; ok {
+			parsed, ok := valueToInt(value)
+			if ok {
+				return parsed, true
+			}
+		}
+	}
+	if payload.Results != nil {
+		if value, ok := payload.Results[key]; ok {
+			parsed, ok := valueToInt(value)
+			if ok {
+				return parsed, true
+			}
+		}
+	}
+	return 0, false
+}
+
+func readRollResolvedBool(payload event.RollResolvedPayload, key string) (bool, bool) {
+	if payload.SystemData != nil {
+		if value, ok := payload.SystemData[key]; ok {
+			parsed, ok := valueToBool(value)
+			if ok {
+				return parsed, true
+			}
+		}
+	}
+	if payload.Results != nil {
+		if value, ok := payload.Results[key]; ok {
+			parsed, ok := valueToBool(value)
+			if ok {
+				return parsed, true
+			}
+		}
+	}
+	return false, false
+}
+
+func valueToInt(value any) (int, bool) {
+	switch v := value.(type) {
+	case float64:
+		return int(v), true
+	case float32:
+		return int(v), true
+	case int:
+		return v, true
+	case int32:
+		return int(v), true
+	case int64:
+		return int(v), true
+	case uint64:
+		return int(v), true
+	case uint32:
+		return int(v), true
+	default:
+		return 0, false
+	}
+}
+
+func valueToBool(value any) (bool, bool) {
+	switch v := value.(type) {
+	case bool:
+		return v, true
+	case float64:
+		return v != 0, true
+	case int:
+		return v != 0, true
+	case int32:
+		return v != 0, true
+	case int64:
+		return v != 0, true
+	case uint64:
+		return v != 0, true
+	case uint32:
+		return v != 0, true
+	default:
+		return false, false
+	}
 }
 
 func isHopeSpendSource(source string) bool {
