@@ -69,11 +69,11 @@ func (s *CampaignService) CreateCampaign(ctx context.Context, in *campaignv1.Cre
 }
 
 // ListCampaigns returns a page of campaign metadata records.
-// The web path needs a user-scoped view quickly, so we filter by caller membership
-// before sending a response and keep policy/intent checks explicit in later security
-// work that is shared with MCP and future clients.
-// The current behavior scopes results by caller user_id when present, which is a
-// partial authorization step; full access-policy and intent checks are still TODO.
+// The web path needs a participant-scoped view quickly, so we filter by caller
+// membership before sending a response and keep policy/intent checks explicit in
+// later security work that is shared with MCP and future clients.
+// The current behavior prefers caller participant_id when present and falls back to
+// user_id for backward compatibility.
 func (s *CampaignService) ListCampaigns(ctx context.Context, in *campaignv1.ListCampaignsRequest) (*campaignv1.ListCampaignsResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "list campaigns request is required")
@@ -89,45 +89,152 @@ func (s *CampaignService) ListCampaigns(ctx context.Context, in *campaignv1.List
 	// authorization decision for all clients and request contexts.
 	// This is intentionally a membership-first filter until role/intent policy
 	// evaluation is completed at a common boundary.
-
-	page, err := s.stores.Campaign.List(ctx, pageSize, in.GetPageToken())
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list campaigns: %v", err)
-	}
+	participantID := strings.TrimSpace(grpcmeta.ParticipantIDFromContext(ctx))
 	userID := strings.TrimSpace(grpcmeta.UserIDFromContext(ctx))
-	if userID != "" {
-		if s.stores.Participant == nil {
-			return nil, status.Error(codes.Internal, "participant store is not configured")
+
+	campaignRecords := make([]storage.CampaignRecord, 0, pageSize)
+	nextPageToken := ""
+	var err error
+	if participantID != "" && s.stores.Participant == nil {
+		return nil, status.Error(codes.Internal, "participant store is not configured")
+	}
+	if participantID == "" && userID != "" && s.stores.Participant == nil {
+		return nil, status.Error(codes.Internal, "participant store is not configured")
+	}
+
+	if participantID == "" && userID == "" {
+		page, err := s.stores.Campaign.List(ctx, pageSize, in.GetPageToken())
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "list campaigns: %v", err)
 		}
-		filtered := make([]storage.CampaignRecord, 0, len(page.Campaigns))
-		for _, campaignRecord := range page.Campaigns {
-			participants, listErr := s.stores.Participant.ListParticipantsByCampaign(ctx, campaignRecord.ID)
-			if listErr != nil {
-				return nil, status.Errorf(codes.Internal, "list participants by campaign: %v", listErr)
-			}
-			for _, participantRecord := range participants {
-				if strings.TrimSpace(participantRecord.UserID) == userID {
-					filtered = append(filtered, campaignRecord)
-					break
-				}
-			}
-		}
-		page.Campaigns = filtered
+		campaignRecords = page.Campaigns
+		nextPageToken = page.NextPageToken
+	} else if participantID != "" {
+		campaignRecords, nextPageToken, err = s.listCampaignsForParticipant(ctx, participantID, pageSize, in.GetPageToken())
+	} else {
+		campaignRecords, nextPageToken, err = s.listCampaignsForUser(ctx, userID, pageSize, in.GetPageToken())
+	}
+	if err != nil {
+		return nil, err
 	}
 
 	response := &campaignv1.ListCampaignsResponse{
-		NextPageToken: page.NextPageToken,
+		NextPageToken: nextPageToken,
 	}
-	if len(page.Campaigns) == 0 {
+	if len(campaignRecords) == 0 {
 		return response, nil
 	}
 
-	response.Campaigns = make([]*campaignv1.Campaign, 0, len(page.Campaigns))
-	for _, c := range page.Campaigns {
+	response.Campaigns = make([]*campaignv1.Campaign, 0, len(campaignRecords))
+	for _, c := range campaignRecords {
 		response.Campaigns = append(response.Campaigns, campaignToProto(c))
 	}
 
 	return response, nil
+}
+
+func (s *CampaignService) listCampaignsForUser(ctx context.Context, userID string, pageSize int, pageToken string) ([]storage.CampaignRecord, string, error) {
+	userID = strings.TrimSpace(userID)
+	campaignIDs, err := s.stores.Participant.ListCampaignIDsByUser(ctx, userID)
+	if err != nil {
+		return nil, "", status.Errorf(codes.Internal, "list campaign IDs by user: %v", err)
+	}
+	if len(campaignIDs) == 0 {
+		return nil, "", nil
+	}
+
+	start := 0
+	if pageToken != "" {
+		for idx, campaignID := range campaignIDs {
+			if strings.TrimSpace(campaignID) == pageToken {
+				start = idx + 1
+				break
+			}
+		}
+	}
+	if start < 0 || start >= len(campaignIDs) {
+		start = 0
+	}
+
+	end := start + pageSize
+	if end > len(campaignIDs) {
+		end = len(campaignIDs)
+	}
+
+	campaignRecords := make([]storage.CampaignRecord, 0, end-start)
+	for _, campaignID := range campaignIDs[start:end] {
+		campaignID = strings.TrimSpace(campaignID)
+		if campaignID == "" {
+			continue
+		}
+		record, err := s.stores.Campaign.Get(ctx, campaignID)
+		if err != nil {
+			if errors.Is(err, storage.ErrNotFound) {
+				continue
+			}
+			return nil, "", status.Errorf(codes.Internal, "get campaign: %v", err)
+		}
+		campaignRecords = append(campaignRecords, record)
+	}
+
+	nextPageToken := ""
+	if end < len(campaignIDs) && end > 0 {
+		nextPageToken = campaignIDs[end-1]
+	}
+
+	return campaignRecords, nextPageToken, nil
+}
+
+func (s *CampaignService) listCampaignsForParticipant(ctx context.Context, participantID string, pageSize int, pageToken string) ([]storage.CampaignRecord, string, error) {
+	participantID = strings.TrimSpace(participantID)
+	campaignIDs, err := s.stores.Participant.ListCampaignIDsByParticipant(ctx, participantID)
+	if err != nil {
+		return nil, "", status.Errorf(codes.Internal, "list campaign IDs by participant: %v", err)
+	}
+	if len(campaignIDs) == 0 {
+		return nil, "", nil
+	}
+
+	start := 0
+	if pageToken != "" {
+		for idx, campaignID := range campaignIDs {
+			if strings.TrimSpace(campaignID) == pageToken {
+				start = idx + 1
+				break
+			}
+		}
+	}
+	if start < 0 || start >= len(campaignIDs) {
+		start = 0
+	}
+
+	end := start + pageSize
+	if end > len(campaignIDs) {
+		end = len(campaignIDs)
+	}
+
+	campaignRecords := make([]storage.CampaignRecord, 0, end-start)
+	for _, campaignID := range campaignIDs[start:end] {
+		campaignID = strings.TrimSpace(campaignID)
+		if campaignID == "" {
+			continue
+		}
+		record, err := s.stores.Campaign.Get(ctx, campaignID)
+		if err != nil {
+			if errors.Is(err, storage.ErrNotFound) {
+				continue
+			}
+			return nil, "", status.Errorf(codes.Internal, "get campaign: %v", err)
+		}
+		campaignRecords = append(campaignRecords, record)
+	}
+
+	nextPageToken := ""
+	if end < len(campaignIDs) && end > 0 {
+		nextPageToken = campaignIDs[end-1]
+	}
+
+	return campaignRecords, nextPageToken, nil
 }
 
 // GetCampaign returns a campaign metadata record by ID.

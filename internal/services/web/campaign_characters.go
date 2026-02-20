@@ -19,22 +19,15 @@ func (h *handler) handleAppCampaignCharacters(w http.ResponseWriter, r *http.Req
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	if !h.requireCampaignParticipant(w, r, campaignID) {
+	actingParticipant, ok := h.requireCampaignActor(w, r, campaignID)
+	if !ok {
 		return
 	}
 	if h.characterClient == nil {
 		h.renderErrorPage(w, r, http.StatusServiceUnavailable, "Characters unavailable", "character service client is not configured")
 		return
 	}
-	sess := sessionFromRequest(r, h.sessions)
-	if sess == nil {
-		http.Redirect(w, r, "/auth/login", http.StatusFound)
-		return
-	}
-	canManageCharacters := false
-	if participant, err := h.campaignParticipant(r.Context(), campaignID, sess.accessToken); err == nil && participant != nil && strings.TrimSpace(participant.GetId()) != "" {
-		canManageCharacters = canManageCampaignCharacters(participant.GetCampaignAccess())
-	}
+	canManageCharacters := canManageCampaignCharacters(actingParticipant.GetCampaignAccess())
 	controlParticipants := []*statev1.Participant(nil)
 	if canManageCharacters {
 		resp, err := h.participantClient.ListParticipants(r.Context(), &statev1.ListParticipantsRequest{
@@ -68,7 +61,7 @@ func (h *handler) handleAppCampaignCharacterDetail(w http.ResponseWriter, r *htt
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	if !h.requireCampaignParticipant(w, r, campaignID) {
+	if _, ok := h.requireCampaignActor(w, r, campaignID); !ok {
 		return
 	}
 	if h.characterClient == nil {
@@ -106,16 +99,12 @@ func (h *handler) handleAppCampaignCharacterCreate(w http.ResponseWriter, r *htt
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	if !h.requireCampaignParticipant(w, r, campaignID) {
+	actingParticipant, ok := h.requireCampaignActor(w, r, campaignID)
+	if !ok {
 		return
 	}
 	if h.characterClient == nil {
 		h.renderErrorPage(w, r, http.StatusServiceUnavailable, "Character action unavailable", "character service client is not configured")
-		return
-	}
-	sess := sessionFromRequest(r, h.sessions)
-	if sess == nil {
-		http.Redirect(w, r, "/auth/login", http.StatusFound)
 		return
 	}
 	if err := r.ParseForm(); err != nil {
@@ -133,26 +122,13 @@ func (h *handler) handleAppCampaignCharacterCreate(w http.ResponseWriter, r *htt
 		return
 	}
 
-	actingParticipant, err := h.campaignParticipant(r.Context(), campaignID, sess.accessToken)
-	if err != nil {
-		h.renderErrorPage(w, r, http.StatusBadGateway, "Character action unavailable", "failed to resolve campaign participant")
-		return
-	}
-	actingParticipantID := ""
-	if actingParticipant != nil {
-		actingParticipantID = strings.TrimSpace(actingParticipant.GetId())
-	}
-	if actingParticipantID == "" {
-		h.renderErrorPage(w, r, http.StatusForbidden, "Access denied", "participant identity required for character action")
-		return
-	}
 	if !canManageCampaignCharacters(actingParticipant.GetCampaignAccess()) {
 		h.renderErrorPage(w, r, http.StatusForbidden, "Access denied", "manager or owner access required for character action")
 		return
 	}
 
-	ctx := grpcauthctx.WithParticipantID(r.Context(), actingParticipantID)
-	_, err = h.characterClient.CreateCharacter(ctx, &statev1.CreateCharacterRequest{
+	ctx := grpcauthctx.WithParticipantID(r.Context(), strings.TrimSpace(actingParticipant.GetId()))
+	_, err := h.characterClient.CreateCharacter(ctx, &statev1.CreateCharacterRequest{
 		CampaignId: campaignID,
 		Name:       name,
 		Kind:       kind,
@@ -173,16 +149,12 @@ func (h *handler) handleAppCampaignCharacterUpdate(w http.ResponseWriter, r *htt
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	if !h.requireCampaignParticipant(w, r, campaignID) {
+	actingParticipant, ok := h.requireCampaignActor(w, r, campaignID)
+	if !ok {
 		return
 	}
 	if h.characterClient == nil {
 		h.renderErrorPage(w, r, http.StatusServiceUnavailable, "Character action unavailable", "character service client is not configured")
-		return
-	}
-	sess := sessionFromRequest(r, h.sessions)
-	if sess == nil {
-		http.Redirect(w, r, "/auth/login", http.StatusFound)
 		return
 	}
 	if err := r.ParseForm(); err != nil {
@@ -217,26 +189,13 @@ func (h *handler) handleAppCampaignCharacterUpdate(w http.ResponseWriter, r *htt
 		return
 	}
 
-	actingParticipant, err := h.campaignParticipant(r.Context(), campaignID, sess.accessToken)
-	if err != nil {
-		h.renderErrorPage(w, r, http.StatusBadGateway, "Character action unavailable", "failed to resolve campaign participant")
-		return
-	}
-	actingParticipantID := ""
-	if actingParticipant != nil {
-		actingParticipantID = strings.TrimSpace(actingParticipant.GetId())
-	}
-	if actingParticipantID == "" {
-		h.renderErrorPage(w, r, http.StatusForbidden, "Access denied", "participant identity required for character action")
-		return
-	}
 	if !canManageCampaignCharacters(actingParticipant.GetCampaignAccess()) {
 		h.renderErrorPage(w, r, http.StatusForbidden, "Access denied", "manager or owner access required for character action")
 		return
 	}
 
-	ctx := grpcauthctx.WithParticipantID(r.Context(), actingParticipantID)
-	_, err = h.characterClient.UpdateCharacter(ctx, req)
+	ctx := grpcauthctx.WithParticipantID(r.Context(), strings.TrimSpace(actingParticipant.GetId()))
+	_, err := h.characterClient.UpdateCharacter(ctx, req)
 	if err != nil {
 		h.renderErrorPage(w, r, http.StatusBadGateway, "Character action unavailable", "failed to update character")
 		return
@@ -253,16 +212,12 @@ func (h *handler) handleAppCampaignCharacterControl(w http.ResponseWriter, r *ht
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	if !h.requireCampaignParticipant(w, r, campaignID) {
+	actingParticipant, ok := h.requireCampaignActor(w, r, campaignID)
+	if !ok {
 		return
 	}
 	if h.characterClient == nil {
 		h.renderErrorPage(w, r, http.StatusServiceUnavailable, "Character action unavailable", "character service client is not configured")
-		return
-	}
-	sess := sessionFromRequest(r, h.sessions)
-	if sess == nil {
-		http.Redirect(w, r, "/auth/login", http.StatusFound)
 		return
 	}
 	if err := r.ParseForm(); err != nil {
@@ -276,26 +231,13 @@ func (h *handler) handleAppCampaignCharacterControl(w http.ResponseWriter, r *ht
 	}
 	targetParticipantID := strings.TrimSpace(r.FormValue("participant_id"))
 
-	actingParticipant, err := h.campaignParticipant(r.Context(), campaignID, sess.accessToken)
-	if err != nil {
-		h.renderErrorPage(w, r, http.StatusBadGateway, "Character action unavailable", "failed to resolve campaign participant")
-		return
-	}
-	actingParticipantID := ""
-	if actingParticipant != nil {
-		actingParticipantID = strings.TrimSpace(actingParticipant.GetId())
-	}
-	if actingParticipantID == "" {
-		h.renderErrorPage(w, r, http.StatusForbidden, "Access denied", "participant identity required for character action")
-		return
-	}
 	if !canManageCampaignCharacters(actingParticipant.GetCampaignAccess()) {
 		h.renderErrorPage(w, r, http.StatusForbidden, "Access denied", "manager or owner access required for character action")
 		return
 	}
 
-	ctx := grpcauthctx.WithParticipantID(r.Context(), actingParticipantID)
-	_, err = h.characterClient.SetDefaultControl(ctx, &statev1.SetDefaultControlRequest{
+	ctx := grpcauthctx.WithParticipantID(r.Context(), strings.TrimSpace(actingParticipant.GetId()))
+	_, err := h.characterClient.SetDefaultControl(ctx, &statev1.SetDefaultControlRequest{
 		CampaignId:    campaignID,
 		CharacterId:   characterID,
 		ParticipantId: wrapperspb.String(targetParticipantID),

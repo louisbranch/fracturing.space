@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/a-h/templ"
@@ -61,6 +62,7 @@ type handler struct {
 	authClient        authv1.AuthServiceClient
 	sessions          *sessionStore
 	pendingFlows      *pendingFlowStore
+	clientInitMu      sync.Mutex
 	campaignClient    statev1.CampaignServiceClient
 	sessionClient     statev1.SessionServiceClient
 	participantClient statev1.ParticipantServiceClient

@@ -73,11 +73,16 @@ func (s *fakeCampaignStore) List(_ context.Context, pageSize int, pageToken stri
 
 // fakeParticipantStore is a test double for storage.ParticipantStore.
 type fakeParticipantStore struct {
-	participants map[string]map[string]storage.ParticipantRecord // campaignID -> participantID -> Participant
-	putErr       error
-	getErr       error
-	deleteErr    error
-	listErr      error
+	participants                      map[string]map[string]storage.ParticipantRecord // campaignID -> participantID -> Participant
+	putErr                            error
+	getErr                            error
+	deleteErr                         error
+	listErr                           error
+	listByCampaignCalls               int
+	listCampaignIDsByUserErr          error
+	listCampaignIDsByUserCalls        int
+	listCampaignIDsByParticipantErr   error
+	listCampaignIDsByParticipantCalls int
 }
 
 // fakeInviteStore is a test double for storage.InviteStore.
@@ -237,6 +242,7 @@ func (s *fakeParticipantStore) DeleteParticipant(_ context.Context, campaignID, 
 }
 
 func (s *fakeParticipantStore) ListParticipantsByCampaign(_ context.Context, campaignID string) ([]storage.ParticipantRecord, error) {
+	s.listByCampaignCalls++
 	if s.listErr != nil {
 		return nil, s.listErr
 	}
@@ -249,6 +255,66 @@ func (s *fakeParticipantStore) ListParticipantsByCampaign(_ context.Context, cam
 		result = append(result, p)
 	}
 	return result, nil
+}
+
+func (s *fakeParticipantStore) ListCampaignIDsByUser(_ context.Context, userID string) ([]string, error) {
+	s.listCampaignIDsByUserCalls++
+	if s.listCampaignIDsByUserErr != nil {
+		return nil, s.listCampaignIDsByUserErr
+	}
+	userID = strings.TrimSpace(userID)
+	ids := make([]string, 0)
+	seen := make(map[string]struct{})
+	if userID == "" {
+		return ids, nil
+	}
+	for _, byID := range s.participants {
+		for _, participant := range byID {
+			if strings.TrimSpace(participant.UserID) != userID {
+				continue
+			}
+			campaignID := strings.TrimSpace(participant.CampaignID)
+			if campaignID == "" {
+				continue
+			}
+			if _, ok := seen[campaignID]; ok {
+				continue
+			}
+			seen[campaignID] = struct{}{}
+			ids = append(ids, campaignID)
+		}
+	}
+	return ids, nil
+}
+
+func (s *fakeParticipantStore) ListCampaignIDsByParticipant(_ context.Context, participantID string) ([]string, error) {
+	s.listCampaignIDsByParticipantCalls++
+	if s.listCampaignIDsByParticipantErr != nil {
+		return nil, s.listCampaignIDsByParticipantErr
+	}
+	participantID = strings.TrimSpace(participantID)
+	ids := make([]string, 0)
+	seen := make(map[string]struct{})
+	if participantID == "" {
+		return ids, nil
+	}
+	for _, byID := range s.participants {
+		for _, participant := range byID {
+			if strings.TrimSpace(participant.ID) != participantID {
+				continue
+			}
+			campaignID := strings.TrimSpace(participant.CampaignID)
+			if campaignID == "" {
+				continue
+			}
+			if _, ok := seen[campaignID]; ok {
+				continue
+			}
+			seen[campaignID] = struct{}{}
+			ids = append(ids, campaignID)
+		}
+	}
+	return ids, nil
 }
 
 func (s *fakeParticipantStore) ListParticipants(_ context.Context, campaignID string, pageSize int, pageToken string) (storage.ParticipantPage, error) {

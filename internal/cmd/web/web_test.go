@@ -23,8 +23,8 @@ func TestParseConfigDefaults(t *testing.T) {
 	if cfg.OAuthClientID != "fracturing-space" {
 		t.Fatalf("expected default oauth client id, got %q", cfg.OAuthClientID)
 	}
-	if cfg.GameAddr != "" {
-		t.Fatalf("expected empty default game addr, got %q", cfg.GameAddr)
+	if cfg.GameAddr != "localhost:8080" {
+		t.Fatalf("expected default game addr, got %q", cfg.GameAddr)
 	}
 }
 

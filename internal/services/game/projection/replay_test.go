@@ -368,6 +368,14 @@ func (s *projectionParticipantStore) ListParticipantsByCampaign(context.Context,
 	return nil, nil
 }
 
+func (s *projectionParticipantStore) ListCampaignIDsByUser(context.Context, string) ([]string, error) {
+	return nil, nil
+}
+
+func (s *projectionParticipantStore) ListCampaignIDsByParticipant(context.Context, string) ([]string, error) {
+	return nil, nil
+}
+
 func (s *projectionParticipantStore) ListParticipants(context.Context, string, int, string) (storage.ParticipantPage, error) {
 	return storage.ParticipantPage{}, nil
 }

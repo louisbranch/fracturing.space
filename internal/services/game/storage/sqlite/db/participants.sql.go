@@ -89,6 +89,62 @@ func (q *Queries) ListParticipantsByCampaign(ctx context.Context, campaignID str
 	return items, nil
 }
 
+const listCampaignIDsByUser = `-- name: ListCampaignIDsByUser :many
+SELECT DISTINCT campaign_id FROM participants WHERE user_id = ? ORDER BY campaign_id
+`
+
+func (q *Queries) ListCampaignIDsByUser(ctx context.Context, userID string) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, listCampaignIDsByUser, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	items := make([]string, 0)
+	for rows.Next() {
+		var campaignID string
+		if err := rows.Scan(&campaignID); err != nil {
+			return nil, err
+		}
+		items = append(items, campaignID)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listCampaignIDsByParticipant = `-- name: ListCampaignIDsByParticipant :many
+SELECT DISTINCT campaign_id FROM participants WHERE id = ? ORDER BY campaign_id
+`
+
+func (q *Queries) ListCampaignIDsByParticipant(ctx context.Context, participantID string) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, listCampaignIDsByParticipant, participantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	items := make([]string, 0)
+	for rows.Next() {
+		var campaignID string
+		if err := rows.Scan(&campaignID); err != nil {
+			return nil, err
+		}
+		items = append(items, campaignID)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listParticipantsByCampaignPaged = `-- name: ListParticipantsByCampaignPaged :many
 SELECT campaign_id, id, user_id, display_name, role, controller, campaign_access, created_at, updated_at FROM participants
 WHERE campaign_id = ? AND id > ?

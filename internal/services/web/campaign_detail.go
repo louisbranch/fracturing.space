@@ -3,11 +3,17 @@ package web
 import (
 	"net/http"
 	"strings"
+
+	sharedroute "github.com/louisbranch/fracturing.space/internal/services/shared/route"
 )
 
 // handleAppCampaignDetail parses campaign workspace routes and dispatches each
 // subpath to the ownership/authorization-aware leaf handler.
 func (h *handler) handleAppCampaignDetail(w http.ResponseWriter, r *http.Request) {
+	if sharedroute.RedirectTrailingSlash(w, r) {
+		return
+	}
+
 	// Route parser for nested campaign routes.
 	// This keeps sub-resources (sessions/participants/characters/invites) in one
 	// place while maintaining explicit authorization checks per branch.
@@ -88,7 +94,7 @@ func (h *handler) handleAppCampaignDetail(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if !h.requireCampaignParticipant(w, r, campaignID) {
+	if _, ok := h.requireCampaignActor(w, r, campaignID); !ok {
 		return
 	}
 

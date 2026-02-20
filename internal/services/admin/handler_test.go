@@ -16,6 +16,7 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/branding"
+	"github.com/louisbranch/fracturing.space/internal/platform/requestctx"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/templates"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
@@ -1095,6 +1096,8 @@ func (c *testCampaignClient) CreateCampaign(ctx context.Context, in *statev1.Cre
 }
 
 func (c *testCampaignClient) ListCampaigns(ctx context.Context, in *statev1.ListCampaignsRequest, opts ...grpc.CallOption) (*statev1.ListCampaignsResponse, error) {
+	md, _ := metadata.FromOutgoingContext(ctx)
+	c.lastMetadata = md
 	if c.listErr != nil {
 		return nil, c.listErr
 	}
@@ -1364,6 +1367,46 @@ func TestImpersonationMetadataInjection(t *testing.T) {
 	handler.ServeHTTP(recorder, req)
 
 	values := authClient.lastMetadata.Get(grpcmeta.UserIDHeader)
+	if len(values) != 1 || values[0] != "user-impersonated" {
+		t.Fatalf("expected metadata %s to be set, got %v", grpcmeta.UserIDHeader, values)
+	}
+}
+
+func TestContextUserMetadataInjectionWithoutImpersonation(t *testing.T) {
+	campaignClient := &testCampaignClient{}
+	provider := testClientProvider{campaign: campaignClient}
+	webHandler := &Handler{clientProvider: provider, impersonation: newImpersonationStore()}
+	handler := webHandler.routes()
+
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/table", nil)
+	req.Header.Set("HX-Request", "true")
+	req = req.WithContext(requestctx.WithUserID(req.Context(), "user-context"))
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, req)
+
+	values := campaignClient.lastMetadata.Get(grpcmeta.UserIDHeader)
+	if len(values) != 1 || values[0] != "user-context" {
+		t.Fatalf("expected metadata %s to be set, got %v", grpcmeta.UserIDHeader, values)
+	}
+}
+
+func TestCampaignsTableUsesImpersonationMetadata(t *testing.T) {
+	campaignClient := &testCampaignClient{}
+	provider := testClientProvider{campaign: campaignClient}
+	webHandler := &Handler{clientProvider: provider, impersonation: newImpersonationStore()}
+	handler := webHandler.routes()
+
+	sessionID := "session-meta"
+	webHandler.impersonation.Set(sessionID, impersonationSession{userID: "user-impersonated"})
+
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/table", nil)
+	req.Header.Set("HX-Request", "true")
+	req = req.WithContext(requestctx.WithUserID(req.Context(), "user-admin"))
+	req.AddCookie(&http.Cookie{Name: impersonationCookieName, Value: sessionID})
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, req)
+
+	values := campaignClient.lastMetadata.Get(grpcmeta.UserIDHeader)
 	if len(values) != 1 || values[0] != "user-impersonated" {
 		t.Fatalf("expected metadata %s to be set, got %v", grpcmeta.UserIDHeader, values)
 	}
@@ -1820,6 +1863,21 @@ func TestUsersTable(t *testing.T) {
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+}
+
+func TestCampaignsTrailingSlashRedirect(t *testing.T) {
+	handler := NewHandler(nil)
+
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusMovedPermanently {
+		t.Fatalf("expected 301, got %d", rec.Code)
+	}
+	if location := rec.Header().Get("Location"); location != "/campaigns" {
+		t.Fatalf("expected Location /campaigns, got %q", location)
 	}
 }
 

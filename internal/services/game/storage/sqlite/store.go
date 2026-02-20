@@ -566,6 +566,62 @@ func (s *Store) ListParticipantsByCampaign(ctx context.Context, campaignID strin
 	return participants, nil
 }
 
+// ListCampaignIDsByUser returns campaigns where the given user participates.
+func (s *Store) ListCampaignIDsByUser(ctx context.Context, userID string) ([]string, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return nil, fmt.Errorf("storage is not configured")
+	}
+	userID = strings.TrimSpace(userID)
+	if userID == "" {
+		return nil, fmt.Errorf("user id is required")
+	}
+
+	rows, err := s.q.ListCampaignIDsByUser(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("list campaign IDs by user: %w", err)
+	}
+
+	campaignIDs := make([]string, 0, len(rows))
+	for _, campaignID := range rows {
+		campaignID = strings.TrimSpace(campaignID)
+		if campaignID != "" {
+			campaignIDs = append(campaignIDs, campaignID)
+		}
+	}
+	return campaignIDs, nil
+}
+
+// ListCampaignIDsByParticipant returns campaign IDs where the given participant id exists.
+func (s *Store) ListCampaignIDsByParticipant(ctx context.Context, participantID string) ([]string, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return nil, fmt.Errorf("storage is not configured")
+	}
+	participantID = strings.TrimSpace(participantID)
+	if participantID == "" {
+		return nil, fmt.Errorf("participant id is required")
+	}
+
+	rows, err := s.q.ListCampaignIDsByParticipant(ctx, participantID)
+	if err != nil {
+		return nil, fmt.Errorf("list campaign IDs by participant: %w", err)
+	}
+
+	campaignIDs := make([]string, 0, len(rows))
+	for _, campaignID := range rows {
+		campaignID = strings.TrimSpace(campaignID)
+		if campaignID != "" {
+			campaignIDs = append(campaignIDs, campaignID)
+		}
+	}
+	return campaignIDs, nil
+}
+
 // ListParticipants returns a page of participant records.
 func (s *Store) ListParticipants(ctx context.Context, campaignID string, pageSize int, pageToken string) (storage.ParticipantPage, error) {
 	if err := ctx.Err(); err != nil {

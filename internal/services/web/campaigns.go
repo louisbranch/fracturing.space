@@ -16,7 +16,8 @@ import (
 
 func (h *handler) handleAppCampaigns(w http.ResponseWriter, r *http.Request) {
 	// Campaign list is the web entrypoint into the campaign read model and is
-	// intentionally user-scoped before rendering.
+	// intentionally participant-only to keep campaign listing scoped by active
+	// participant identity.
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -28,29 +29,38 @@ func (h *handler) handleAppCampaigns(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/auth/login", http.StatusFound)
 		return
 	}
-	if h.campaignClient == nil {
-		h.renderErrorPage(w, r, http.StatusServiceUnavailable, "Campaigns unavailable", "campaign service client is not configured")
+
+	if err := h.ensureCampaignClients(r.Context()); err != nil {
+		renderAppCampaignsListPageWithAppName(w, h.resolvedAppName(), []*statev1.Campaign{})
+		return
+	}
+	if h.campaignClient == nil || h.campaignAccess == nil {
+		renderAppCampaignsListPageWithAppName(w, h.resolvedAppName(), []*statev1.Campaign{})
 		return
 	}
 
-	userID, err := h.sessionUserID(r.Context(), sess.accessToken)
-	if err != nil {
-		h.renderErrorPage(w, r, http.StatusBadGateway, "Campaigns unavailable", "failed to resolve current user")
-		return
+	requestCtx := r.Context()
+	participantID, err := h.sessionParticipantID(requestCtx, sess.accessToken)
+	listCampaigns := func(ctx context.Context) ([]*statev1.Campaign, error) {
+		resp, err := h.campaignClient.ListCampaigns(ctx, &statev1.ListCampaignsRequest{})
+		if err != nil {
+			return nil, err
+		}
+		return resp.GetCampaigns(), nil
 	}
-	if userID == "" {
-		h.renderErrorPage(w, r, http.StatusUnauthorized, "Authentication required", "no user identity was resolved for this session")
+
+	if err != nil || strings.TrimSpace(participantID) == "" {
+		renderAppCampaignsListPageWithAppName(w, h.resolvedAppName(), []*statev1.Campaign{})
 		return
 	}
 
-	ctx := grpcauthctx.WithUserID(r.Context(), userID)
-	resp, err := h.campaignClient.ListCampaigns(ctx, &statev1.ListCampaignsRequest{})
+	requestCtx = grpcauthctx.WithParticipantID(requestCtx, participantID)
+	campaigns, err := listCampaigns(requestCtx)
 	if err != nil {
 		h.renderErrorPage(w, r, http.StatusBadGateway, "Campaigns unavailable", "failed to list campaigns")
 		return
 	}
-
-	renderAppCampaignsPageWithAppName(w, h.resolvedAppName(), resp.GetCampaigns())
+	renderAppCampaignsListPageWithAppName(w, h.resolvedAppName(), campaigns)
 }
 
 func (h *handler) handleAppCampaignCreate(w http.ResponseWriter, r *http.Request) {
@@ -62,7 +72,7 @@ func (h *handler) handleAppCampaignCreate(w http.ResponseWriter, r *http.Request
 			http.Redirect(w, r, "/auth/login", http.StatusFound)
 			return
 		}
-		renderAppCampaignsPageWithAppName(w, h.resolvedAppName(), nil)
+		renderAppCampaignCreatePageWithAppName(w, h.resolvedAppName())
 		return
 	}
 	if r.Method != http.MethodPost {
@@ -74,6 +84,10 @@ func (h *handler) handleAppCampaignCreate(w http.ResponseWriter, r *http.Request
 	sess := sessionFromRequest(r, h.sessions)
 	if sess == nil {
 		http.Redirect(w, r, "/auth/login", http.StatusFound)
+		return
+	}
+	if err := h.ensureCampaignClients(r.Context()); err != nil {
+		h.renderErrorPage(w, r, http.StatusServiceUnavailable, "Campaign create unavailable", "campaign service client is not configured")
 		return
 	}
 	if h.campaignClient == nil {
@@ -156,22 +170,59 @@ func (h *handler) sessionUserID(ctx context.Context, accessToken string) (string
 	return svc.introspectUserID(ctx, accessToken)
 }
 
-func renderAppCampaignsPage(w http.ResponseWriter, campaigns []*statev1.Campaign) {
-	renderAppCampaignsPageWithAppName(w, "", campaigns)
+func (h *handler) sessionParticipantID(ctx context.Context, accessToken string) (string, error) {
+	if h == nil || h.campaignAccess == nil {
+		return "", errors.New("campaign access checker is not configured")
+	}
+	svc, ok := h.campaignAccess.(*campaignAccessService)
+	if !ok {
+		return "", errors.New("campaign access checker does not support participant introspection")
+	}
+	return svc.introspectParticipantID(ctx, accessToken)
 }
 
-func renderAppCampaignsPageWithAppName(w http.ResponseWriter, appName string, campaigns []*statev1.Campaign) {
-	// renderAppCampaignsPage maps the list of campaign read models into links that
-	// become the canonical campaign navigation point for this boundary.
+func (h *handler) ensureCampaignClients(ctx context.Context) error {
+	if h == nil {
+		return errors.New("web handler is not configured")
+	}
+	if h.campaignClient != nil {
+		return nil
+	}
+
+	h.clientInitMu.Lock()
+	defer h.clientInitMu.Unlock()
+
+	if h.campaignClient != nil {
+		return nil
+	}
+
+	_, participantClient, campaignClient, sessionClient, characterClient, inviteClient, err := dialGameGRPC(ctx, h.config)
+	if err != nil {
+		return err
+	}
+	if campaignClient == nil || sessionClient == nil || participantClient == nil || characterClient == nil || inviteClient == nil {
+		return errors.New("campaign service client is not configured")
+	}
+
+	h.participantClient = participantClient
+	h.campaignClient = campaignClient
+	h.sessionClient = sessionClient
+	h.characterClient = characterClient
+	h.inviteClient = inviteClient
+	h.campaignAccess = newCampaignAccessChecker(h.config, participantClient)
+	return nil
+}
+
+func renderAppCampaignsPage(w http.ResponseWriter, campaigns []*statev1.Campaign) {
+	renderAppCampaignsListPageWithAppName(w, "", campaigns)
+}
+
+func renderAppCampaignsListPageWithAppName(w http.ResponseWriter, appName string, campaigns []*statev1.Campaign) {
+	// renderAppCampaignsListPageWithAppName maps the list of campaign read models into
+	// links that become the canonical campaign navigation point for this boundary.
 	writeGamePageStart(w, "Campaigns", appName)
 	_, _ = io.WriteString(w, "<h1>Campaigns</h1>")
-	_, _ = io.WriteString(w, "<form method=\"post\" action=\"/campaigns/create\">")
-	_, _ = io.WriteString(w, "<label>Campaign Name <input type=\"text\" name=\"name\" placeholder=\"campaign name\" required></label>")
-	_, _ = io.WriteString(w, "<label>Game System <select name=\"system\"><option value=\"daggerheart\" selected>Daggerheart</option></select></label>")
-	_, _ = io.WriteString(w, "<label>GM Mode <select name=\"gm_mode\"><option value=\"human\" selected>Human</option><option value=\"ai\">AI</option><option value=\"hybrid\">Hybrid</option></select></label>")
-	_, _ = io.WriteString(w, "<label>Creator Display Name <input type=\"text\" name=\"creator_display_name\" placeholder=\"display name\"></label>")
-	_, _ = io.WriteString(w, "<label>Theme Prompt <textarea name=\"theme_prompt\" rows=\"4\" placeholder=\"theme prompt\"></textarea></label>")
-	_, _ = io.WriteString(w, "<button type=\"submit\">Create Campaign</button></form><ul>")
+	_, _ = io.WriteString(w, "<p><a href=\"/campaigns/create\"><button type=\"button\">Start a new Campaign</button></a></p><ul>")
 	for _, campaign := range campaigns {
 		if campaign == nil {
 			continue
@@ -188,6 +239,21 @@ func renderAppCampaignsPageWithAppName(w http.ResponseWriter, appName string, ca
 		_, _ = io.WriteString(w, "<li>"+html.EscapeString(name)+"</li>")
 	}
 	_, _ = io.WriteString(w, "</ul>")
+	writeGamePageEnd(w)
+}
+
+func renderAppCampaignCreatePageWithAppName(w http.ResponseWriter, appName string) {
+	// renderAppCampaignCreatePageWithAppName renders the campaign creation form used by
+	// the create flow.
+	writeGamePageStart(w, "Campaigns", appName)
+	_, _ = io.WriteString(w, "<h1>Campaigns</h1>")
+	_, _ = io.WriteString(w, "<form method=\"post\" action=\"/campaigns/create\">")
+	_, _ = io.WriteString(w, "<label>Campaign Name <input type=\"text\" name=\"name\" placeholder=\"campaign name\" required></label>")
+	_, _ = io.WriteString(w, "<label>Game System <select name=\"system\"><option value=\"daggerheart\" selected>Daggerheart</option></select></label>")
+	_, _ = io.WriteString(w, "<label>GM Mode <select name=\"gm_mode\"><option value=\"human\" selected>Human</option><option value=\"ai\">AI</option><option value=\"hybrid\">Hybrid</option></select></label>")
+	_, _ = io.WriteString(w, "<label>Creator Display Name <input type=\"text\" name=\"creator_display_name\" placeholder=\"display name\"></label>")
+	_, _ = io.WriteString(w, "<label>Theme Prompt <textarea name=\"theme_prompt\" rows=\"4\" placeholder=\"theme prompt\"></textarea></label>")
+	_, _ = io.WriteString(w, "<button type=\"submit\">Create Campaign</button></form>")
 	writeGamePageEnd(w)
 }
 

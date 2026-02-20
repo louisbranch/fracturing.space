@@ -2,6 +2,7 @@ package game
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -19,6 +20,67 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
+
+type orderedCampaignStore struct {
+	campaigns []storage.CampaignRecord
+}
+
+func (s *orderedCampaignStore) Put(_ context.Context, c storage.CampaignRecord) error {
+	if s == nil {
+		return fmt.Errorf("storage is not configured")
+	}
+	s.campaigns = append(s.campaigns, c)
+	return nil
+}
+
+func (s *orderedCampaignStore) Get(_ context.Context, id string) (storage.CampaignRecord, error) {
+	if s == nil {
+		return storage.CampaignRecord{}, fmt.Errorf("storage is not configured")
+	}
+	for _, c := range s.campaigns {
+		if c.ID == id {
+			return c, nil
+		}
+	}
+	return storage.CampaignRecord{}, storage.ErrNotFound
+}
+
+func (s *orderedCampaignStore) List(_ context.Context, pageSize int, pageToken string) (storage.CampaignPage, error) {
+	if s == nil {
+		return storage.CampaignPage{}, fmt.Errorf("storage is not configured")
+	}
+	if pageSize <= 0 {
+		return storage.CampaignPage{}, fmt.Errorf("page size must be greater than zero")
+	}
+
+	page := storage.CampaignPage{
+		Campaigns: make([]storage.CampaignRecord, 0, pageSize),
+	}
+
+	start := 0
+	if pageToken != "" {
+		for idx, c := range s.campaigns {
+			if c.ID == pageToken {
+				start = idx + 1
+				break
+			}
+		}
+	}
+	if start < 0 || start > len(s.campaigns) {
+		start = 0
+	}
+
+	end := start + pageSize
+	if end > len(s.campaigns) {
+		end = len(s.campaigns)
+	}
+
+	page.Campaigns = append(page.Campaigns, s.campaigns[start:end]...)
+	if end < len(s.campaigns) {
+		page.NextPageToken = s.campaigns[end-1].ID
+	}
+	return page, nil
+}
 
 func TestCreateCampaign_NilRequest(t *testing.T) {
 	svc := NewCampaignService(Stores{})
@@ -369,9 +431,71 @@ func TestListCampaigns_UserScopedByMetadata(t *testing.T) {
 	if len(resp.Campaigns) != 1 {
 		t.Fatalf("ListCampaigns returned %d campaigns, want 1", len(resp.Campaigns))
 	}
+	if participantStore.listCampaignIDsByUserCalls != 1 {
+		t.Fatalf("ListCampaignIDsByUser calls = %d, want 1", participantStore.listCampaignIDsByUserCalls)
+	}
+	if participantStore.listByCampaignCalls != 0 {
+		t.Fatalf("ListParticipantsByCampaign calls = %d, want 0", participantStore.listByCampaignCalls)
+	}
 	if resp.Campaigns[0].GetId() != "c1" {
 		t.Fatalf("ListCampaigns campaign id = %q, want %q", resp.Campaigns[0].GetId(), "c1")
 	}
+}
+
+func TestListCampaigns_UserScopedByMetadataAfterPageBoundary(t *testing.T) {
+	campaignStore := &orderedCampaignStore{
+		campaigns: make([]storage.CampaignRecord, 12),
+	}
+	for i := 1; i <= 12; i++ {
+		campaignStore.campaigns[i-1] = storage.CampaignRecord{
+			ID:        fmt.Sprintf("campaign-%03d", i),
+			Name:      fmt.Sprintf("Campaign %d", i),
+			System:    commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+			Status:    campaign.StatusDraft,
+			GmMode:    campaign.GmModeHuman,
+			CreatedAt: time.Now().UTC(),
+		}
+	}
+	participantStore := newFakeParticipantStore()
+	participantStore.participants["campaign-012"] = map[string]storage.ParticipantRecord{
+		"p1": {ID: "p1", CampaignID: "campaign-012", UserID: "user-123", Name: "Alice"},
+	}
+
+	svc := NewCampaignService(Stores{Campaign: campaignStore, Participant: participantStore})
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-123"))
+
+	resp, err := svc.ListCampaigns(ctx, &statev1.ListCampaignsRequest{})
+	if err != nil {
+		t.Fatalf("ListCampaigns returned error: %v", err)
+	}
+	if len(resp.Campaigns) != 1 {
+		t.Fatalf("ListCampaigns returned %d campaigns, want 1", len(resp.Campaigns))
+	}
+	if resp.Campaigns[0].GetId() != "campaign-012" {
+		t.Fatalf("ListCampaigns campaign id = %q, want %q", resp.Campaigns[0].GetId(), "campaign-012")
+	}
+	if participantStore.listCampaignIDsByUserCalls != 1 {
+		t.Fatalf("ListCampaignIDsByUser calls = %d, want 1", participantStore.listCampaignIDsByUserCalls)
+	}
+}
+
+func TestListCampaigns_UserScopedByMetadataQueryFailure(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+		ID:        "c1",
+		Name:      "Campaign One",
+		System:    commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		Status:    campaign.StatusDraft,
+		GmMode:    campaign.GmModeHuman,
+		CreatedAt: time.Now().UTC(),
+	}
+	participantStore.listCampaignIDsByUserErr = fmt.Errorf("campaign index unavailable")
+	svc := NewCampaignService(Stores{Campaign: campaignStore, Participant: participantStore})
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-123"))
+
+	_, err := svc.ListCampaigns(ctx, &statev1.ListCampaignsRequest{})
+	assertStatusCode(t, err, codes.Internal)
 }
 
 func TestGetCampaign_NilRequest(t *testing.T) {
