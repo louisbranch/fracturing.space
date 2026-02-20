@@ -1,13 +1,5 @@
 -- +migrate Up
 
-DROP TABLE IF EXISTS oauth_external_identities;
-DROP TABLE IF EXISTS oauth_provider_states;
-DROP TABLE IF EXISTS oauth_pending_authorizations;
-DROP TABLE IF EXISTS oauth_access_tokens;
-DROP TABLE IF EXISTS oauth_authorization_codes;
-DROP TABLE IF EXISTS oauth_user_credentials;
-DROP TABLE IF EXISTS users;
-
 CREATE TABLE users (
     id TEXT PRIMARY KEY,
     created_at INTEGER NOT NULL,
@@ -78,7 +70,61 @@ CREATE TABLE oauth_external_identities (
     UNIQUE(provider, provider_user_id)
 );
 
+CREATE TABLE passkeys (
+    credential_id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    credential_json TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    last_used_at INTEGER
+);
+
+CREATE TABLE passkey_sessions (
+    id TEXT PRIMARY KEY,
+    kind TEXT NOT NULL,
+    user_id TEXT,
+    session_json TEXT NOT NULL,
+    expires_at INTEGER NOT NULL
+);
+
+CREATE TABLE account_profiles (
+    user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    locale TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+
+CREATE TABLE user_emails (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    email TEXT NOT NULL UNIQUE,
+    is_primary INTEGER NOT NULL DEFAULT 0,
+    verified_at INTEGER,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS user_emails_primary_idx
+ON user_emails(user_id)
+WHERE is_primary = 1;
+
+CREATE TABLE magic_links (
+    token TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    email TEXT NOT NULL,
+    pending_id TEXT,
+    created_at INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL,
+    used_at INTEGER
+);
+
 -- +migrate Down
+DROP TABLE IF EXISTS magic_links;
+DROP TABLE IF EXISTS user_emails;
+DROP INDEX IF EXISTS user_emails_primary_idx;
+DROP TABLE IF EXISTS passkey_sessions;
+DROP TABLE IF EXISTS passkeys;
 DROP TABLE IF EXISTS oauth_external_identities;
 DROP TABLE IF EXISTS oauth_provider_states;
 DROP TABLE IF EXISTS oauth_pending_authorizations;

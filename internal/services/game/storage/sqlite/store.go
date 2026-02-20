@@ -151,76 +151,8 @@ func openStore(path string, migrationFS fs.FS, migrationRoot string, keyring *in
 		_ = sqlDB.Close()
 		return nil, fmt.Errorf("run migrations: %w", err)
 	}
-	if migrationRoot == "projections" {
-		if err := ensureInviteRecipientColumn(sqlDB); err != nil {
-			_ = sqlDB.Close()
-			return nil, fmt.Errorf("ensure invite schema: %w", err)
-		}
-	}
 
 	return store, nil
-}
-
-// ensureInviteRecipientColumn backfills invite schema when older databases omit recipient_user_id.
-func ensureInviteRecipientColumn(sqlDB *sql.DB) error {
-	rows, err := sqlDB.Query("PRAGMA table_info(invites)")
-	if err != nil {
-		return fmt.Errorf("inspect invites table: %w", err)
-	}
-	defer rows.Close()
-
-	var hasRecipient bool
-	for rows.Next() {
-		var cid int
-		var name string
-		var colType string
-		var notNull int
-		var defaultValue sql.NullString
-		var pk int
-		if err := rows.Scan(&cid, &name, &colType, &notNull, &defaultValue, &pk); err != nil {
-			return fmt.Errorf("scan invites table info: %w", err)
-		}
-		if name == "recipient_user_id" {
-			hasRecipient = true
-			break
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return fmt.Errorf("read invites table info: %w", err)
-	}
-	if hasRecipient {
-		return nil
-	}
-
-	const inviteRebuildSQL = `
-DROP INDEX IF EXISTS idx_invites_recipient_status;
-DROP INDEX IF EXISTS idx_invites_participant;
-DROP INDEX IF EXISTS idx_invites_campaign;
-DROP TABLE IF EXISTS invites;
-
-CREATE TABLE invites (
-    id TEXT PRIMARY KEY,
-    campaign_id TEXT NOT NULL,
-    participant_id TEXT NOT NULL,
-    recipient_user_id TEXT NOT NULL DEFAULT '',
-    status TEXT NOT NULL,
-    created_by_participant_id TEXT NOT NULL DEFAULT '',
-    created_at INTEGER NOT NULL,
-    updated_at INTEGER NOT NULL,
-    FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
-    FOREIGN KEY (campaign_id, participant_id) REFERENCES participants(campaign_id, id) ON DELETE CASCADE
-);
-
-CREATE INDEX idx_invites_campaign ON invites(campaign_id);
-CREATE INDEX idx_invites_participant ON invites(participant_id);
-CREATE INDEX idx_invites_recipient_status ON invites(recipient_user_id, status);
-`
-
-	if _, err := sqlDB.Exec(inviteRebuildSQL); err != nil {
-		return fmt.Errorf("rebuild invites table: %w", err)
-	}
-
-	return nil
 }
 
 // runMigrations executes embedded SQL migrations from the provided migration set.

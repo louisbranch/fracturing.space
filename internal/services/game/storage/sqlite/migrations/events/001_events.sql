@@ -1,18 +1,5 @@
 -- +migrate Up
 
-DROP TRIGGER IF EXISTS events_no_delete;
-DROP TRIGGER IF EXISTS events_no_update;
-DROP INDEX IF EXISTS idx_telemetry_events_timestamp;
-DROP INDEX IF EXISTS idx_telemetry_events_campaign_id;
-DROP TABLE IF EXISTS telemetry_events;
-DROP TABLE IF EXISTS outcome_applied;
-DROP TABLE IF EXISTS event_seq;
-DROP INDEX IF EXISTS idx_events_system;
-DROP INDEX IF EXISTS idx_events_type;
-DROP INDEX IF EXISTS idx_events_session;
-DROP INDEX IF EXISTS idx_events_hash;
-DROP TABLE IF EXISTS events;
-
 CREATE TABLE events (
     campaign_id TEXT NOT NULL,
     seq INTEGER NOT NULL,
@@ -32,6 +19,8 @@ CREATE TABLE events (
     actor_id TEXT NOT NULL DEFAULT '',
     entity_type TEXT NOT NULL DEFAULT '',
     entity_id TEXT NOT NULL DEFAULT '',
+    correlation_id TEXT NOT NULL DEFAULT '',
+    causation_id TEXT NOT NULL DEFAULT '',
     payload_json BLOB NOT NULL,
     PRIMARY KEY (campaign_id, seq)
 );
@@ -86,9 +75,31 @@ BEGIN
     SELECT RAISE(FAIL, 'events are append-only');
 END;
 
+CREATE TABLE projection_apply_outbox (
+    campaign_id TEXT NOT NULL,
+    seq INTEGER NOT NULL,
+    event_type TEXT NOT NULL,
+    status TEXT NOT NULL,
+    attempt_count INTEGER NOT NULL DEFAULT 0,
+    next_attempt_at INTEGER NOT NULL,
+    last_error TEXT NOT NULL DEFAULT '',
+    updated_at INTEGER NOT NULL,
+    PRIMARY KEY (campaign_id, seq),
+    FOREIGN KEY (campaign_id, seq) REFERENCES events(campaign_id, seq) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_projection_apply_outbox_status_next_attempt
+    ON projection_apply_outbox (status, next_attempt_at, seq);
+
+CREATE INDEX idx_projection_apply_outbox_campaign
+    ON projection_apply_outbox (campaign_id, seq);
+
 -- +migrate Down
 DROP TRIGGER IF EXISTS events_no_delete;
 DROP TRIGGER IF EXISTS events_no_update;
+DROP INDEX IF EXISTS idx_projection_apply_outbox_campaign;
+DROP INDEX IF EXISTS idx_projection_apply_outbox_status_next_attempt;
+DROP TABLE IF EXISTS projection_apply_outbox;
 DROP INDEX IF EXISTS idx_telemetry_events_timestamp;
 DROP INDEX IF EXISTS idx_telemetry_events_campaign_id;
 DROP TABLE IF EXISTS telemetry_events;

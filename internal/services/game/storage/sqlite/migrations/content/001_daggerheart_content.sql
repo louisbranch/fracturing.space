@@ -1,21 +1,5 @@
 -- +migrate Up
 
-DROP TABLE IF EXISTS daggerheart_damage_types;
-DROP TABLE IF EXISTS daggerheart_loot_entries;
-DROP TABLE IF EXISTS daggerheart_companion_experiences;
-DROP TABLE IF EXISTS daggerheart_beastforms;
-DROP TABLE IF EXISTS daggerheart_adversary_entries;
-DROP TABLE IF EXISTS daggerheart_experiences;
-DROP TABLE IF EXISTS daggerheart_content_strings;
-DROP TABLE IF EXISTS daggerheart_environments;
-DROP TABLE IF EXISTS daggerheart_items;
-DROP TABLE IF EXISTS daggerheart_armor;
-DROP TABLE IF EXISTS daggerheart_weapons;
-DROP TABLE IF EXISTS daggerheart_domain_cards;
-DROP TABLE IF EXISTS daggerheart_domains;
-DROP TABLE IF EXISTS daggerheart_heritages;
-DROP TABLE IF EXISTS daggerheart_subclasses;
-DROP TABLE IF EXISTS daggerheart_classes;
 
 CREATE TABLE daggerheart_classes (
     id TEXT PRIMARY KEY,
