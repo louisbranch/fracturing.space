@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/branding"
+	oauthtemplates "github.com/louisbranch/fracturing.space/internal/services/auth/oauth/templates"
 )
 
 type consentView struct {
@@ -63,22 +64,22 @@ func (s *Server) handleAuthorize(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if request.ResponseType != "code" {
-		s.renderError(w, "unsupported_response_type", "Only 'code' response type is supported", http.StatusBadRequest)
+		s.renderError(w, r, "unsupported_response_type", "Only 'code' response type is supported", http.StatusBadRequest)
 		return
 	}
 
 	client := s.clientForID(request.ClientID)
 	if client == nil {
-		s.renderError(w, "invalid_request", "Unknown client_id", http.StatusBadRequest)
+		s.renderError(w, r, "invalid_request", "Unknown client_id", http.StatusBadRequest)
 		return
 	}
 
 	if request.RedirectURI == "" {
-		s.renderError(w, "invalid_request", "redirect_uri is required", http.StatusBadRequest)
+		s.renderError(w, r, "invalid_request", "redirect_uri is required", http.StatusBadRequest)
 		return
 	}
 	if !redirectURIAllowed(request.RedirectURI, client.RedirectURIs) {
-		s.renderError(w, "invalid_request", "redirect_uri is not registered", http.StatusBadRequest)
+		s.renderError(w, r, "invalid_request", "redirect_uri is not registered", http.StatusBadRequest)
 		return
 	}
 
@@ -103,13 +104,13 @@ func (s *Server) handleAuthorize(w http.ResponseWriter, r *http.Request) {
 
 	loginUIURL := strings.TrimSpace(s.config.LoginUIURL)
 	if loginUIURL == "" {
-		s.renderError(w, "server_error", "login UI URL not configured", http.StatusInternalServerError)
+		s.renderError(w, r, "server_error", "login UI URL not configured", http.StatusInternalServerError)
 		return
 	}
 
 	redirectURL, err := url.Parse(loginUIURL)
 	if err != nil {
-		s.renderError(w, "server_error", "invalid login ui url", http.StatusInternalServerError)
+		s.renderError(w, r, "server_error", "invalid login ui url", http.StatusInternalServerError)
 		return
 	}
 	query := redirectURL.Query()
@@ -125,16 +126,16 @@ func (s *Server) handleConsent(w http.ResponseWriter, r *http.Request) {
 		pendingID := strings.TrimSpace(r.URL.Query().Get("pending_id"))
 		pending, err := s.store.GetPendingAuthorization(pendingID)
 		if err != nil || pending == nil {
-			s.renderError(w, "invalid_request", "authorization session expired", http.StatusBadRequest)
+			s.renderError(w, r, "invalid_request", "authorization session expired", http.StatusBadRequest)
 			return
 		}
 		if pending.ExpiresAt.Before(s.clock().UTC()) {
 			s.store.DeletePendingAuthorization(pendingID)
-			s.renderError(w, "invalid_request", "authorization session expired", http.StatusBadRequest)
+			s.renderError(w, r, "invalid_request", "authorization session expired", http.StatusBadRequest)
 			return
 		}
 		if pending.UserID == "" {
-			s.renderError(w, "invalid_request", "user not authenticated", http.StatusBadRequest)
+			s.renderError(w, r, "invalid_request", "user not authenticated", http.StatusBadRequest)
 			return
 		}
 
@@ -162,16 +163,16 @@ func (s *Server) handleConsent(w http.ResponseWriter, r *http.Request) {
 
 	pending, err := s.store.GetPendingAuthorization(pendingID)
 	if err != nil || pending == nil {
-		s.renderError(w, "invalid_request", "authorization session expired", http.StatusBadRequest)
+		s.renderError(w, r, "invalid_request", "authorization session expired", http.StatusBadRequest)
 		return
 	}
 	if pending.ExpiresAt.Before(s.clock().UTC()) {
 		s.store.DeletePendingAuthorization(pendingID)
-		s.renderError(w, "invalid_request", "authorization session expired", http.StatusBadRequest)
+		s.renderError(w, r, "invalid_request", "authorization session expired", http.StatusBadRequest)
 		return
 	}
 	if pending.UserID == "" {
-		s.renderError(w, "invalid_request", "user not authenticated", http.StatusBadRequest)
+		s.renderError(w, r, "invalid_request", "user not authenticated", http.StatusBadRequest)
 		return
 	}
 
@@ -198,7 +199,7 @@ func (s *Server) approveAndRedirect(w http.ResponseWriter, r *http.Request, pend
 
 	redirectURL, err := url.Parse(pending.Request.RedirectURI)
 	if err != nil {
-		s.renderError(w, "server_error", "invalid redirect uri", http.StatusInternalServerError)
+		s.renderError(w, r, "server_error", "invalid redirect uri", http.StatusInternalServerError)
 		return
 	}
 	query := redirectURL.Query()
@@ -338,9 +339,13 @@ func (s *Server) handleIntrospect(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (s *Server) renderError(w http.ResponseWriter, code, description string, status int) {
+func (s *Server) renderError(w http.ResponseWriter, r *http.Request, code, description string, status int) {
 	w.WriteHeader(status)
-	_ = templates.ExecuteTemplate(w, "error.html", errorView{AppName: branding.AppName, Error: code, ErrorDescription: description})
+	_ = oauthtemplates.ErrorPage(oauthtemplates.ErrorPageParams{
+		AppName:          branding.AppName,
+		Error:            code,
+		ErrorDescription: description,
+	}).Render(r.Context(), w)
 }
 
 func (s *Server) renderConsentView(w http.ResponseWriter, r *http.Request, pending *PendingAuthorization) {
@@ -361,13 +366,19 @@ func (s *Server) renderConsentView(w http.ResponseWriter, r *http.Request, pendi
 		Email:      email,
 		Scopes:     formatScopes(pending.Request.Scope),
 	}
-	_ = templates.ExecuteTemplate(w, "consent.html", view)
+	_ = oauthtemplates.ConsentPage(oauthtemplates.ConsentPageParams{
+		AppName:    view.AppName,
+		PendingID:  view.PendingID,
+		ClientName: view.ClientName,
+		Email:      view.Email,
+		Scopes:     view.Scopes,
+	}).Render(r.Context(), w)
 }
 
 func (s *Server) redirectError(w http.ResponseWriter, r *http.Request, request AuthorizationRequest, code, description string) {
 	redirectURL, err := url.Parse(request.RedirectURI)
 	if err != nil {
-		s.renderError(w, "server_error", "invalid redirect uri", http.StatusInternalServerError)
+		s.renderError(w, r, "server_error", "invalid redirect uri", http.StatusInternalServerError)
 		return
 	}
 	query := redirectURL.Query()
