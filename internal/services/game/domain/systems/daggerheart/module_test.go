@@ -20,29 +20,18 @@ type commandValidationCase struct {
 func commandValidationCases() []commandValidationCase {
 	return []commandValidationCase{
 		{typ: commandTypeGMFearSet, validPayload: `{"after":2}`, invalidPayload: `{"after":"nope"}`, actorType: command.ActorTypeGM, actorID: "gm-1"},
-		{typ: commandTypeCharacterStatePatch, validPayload: `{"character_id":"char-1","hp_after":5}`, invalidPayload: `{"character_id":1}`},
-		{typ: commandTypeConditionChange, validPayload: `{"character_id":"char-1","conditions_after":["shaken"]}`, invalidPayload: `{"character_id":1}`},
 		{typ: commandTypeHopeSpend, validPayload: `{"character_id":"char-1","amount":1,"before":2,"after":1}`, invalidPayload: `{"character_id":1}`},
 		{typ: commandTypeStressSpend, validPayload: `{"character_id":"char-1","amount":1,"before":3,"after":2}`, invalidPayload: `{"character_id":1}`},
+		{typ: commandTypeCharacterStatePatch, validPayload: `{"character_id":"char-1","hp_after":5}`, invalidPayload: `{"character_id":1}`},
+		{typ: commandTypeConditionChange, validPayload: `{"character_id":"char-1","conditions_after":["vulnerable"]}`, invalidPayload: `{"character_id":1}`},
 		{typ: commandTypeLoadoutSwap, validPayload: `{"character_id":"char-1","card_id":"card-1","from":"vault","to":"active"}`, invalidPayload: `{"character_id":1}`},
-		{typ: commandTypeRestTake, validPayload: `{"rest_type":"short"}`, invalidPayload: `{"rest_type":1}`},
-		{typ: commandTypeAttackResolve, validPayload: `{"character_id":"char-1","roll_seq":4,"targets":["char-2"]}`, invalidPayload: `{"character_id":1}`},
-		{typ: commandTypeReactionResolve, validPayload: `{"character_id":"char-1","roll_seq":5,"outcome":"success"}`, invalidPayload: `{"character_id":1}`},
-		{typ: commandTypeAdversaryRollResolve, validPayload: `{"adversary_id":"adv-1","roll_seq":1,"rolls":[12],"roll":12,"modifier":2,"total":14}`, invalidPayload: `{"adversary_id":1}`},
-		{typ: commandTypeAdversaryAttackResolve, validPayload: `{"adversary_id":"adv-1","roll_seq":6,"targets":["char-1"]}`, invalidPayload: `{"adversary_id":1}`},
-		{typ: commandTypeDamageRollResolve, validPayload: `{"character_id":"char-1","roll_seq":7}`, invalidPayload: `{"character_id":1}`},
-		{typ: commandTypeGroupActionResolve, validPayload: `{"leader_character_id":"char-1","leader_roll_seq":1,"support_successes":1,"support_failures":0,"support_modifier":1}`, invalidPayload: `{"leader_character_id":1}`},
-		{typ: commandTypeTagTeamResolve, validPayload: `{"first_character_id":"char-1","first_roll_seq":1,"second_character_id":"char-2","second_roll_seq":2,"selected_character_id":"char-1","selected_roll_seq":1}`, invalidPayload: `{"first_character_id":1}`},
+		{typ: commandTypeRestTake, validPayload: `{"rest_type":"short","gm_fear_before":1,"gm_fear_after":2,"short_rests_before":0,"short_rests_after":1,"refresh_rest":true}`, invalidPayload: `{"rest_type":1}`},
 		{typ: commandTypeCountdownCreate, validPayload: `{"countdown_id":"cd-1","name":"Doom","kind":"progress","current":0,"max":4,"direction":"increase","looping":true}`, invalidPayload: `{"countdown_id":1}`},
 		{typ: commandTypeCountdownUpdate, validPayload: `{"countdown_id":"cd-1","before":2,"after":3,"delta":1,"looped":false}`, invalidPayload: `{"countdown_id":1}`},
 		{typ: commandTypeCountdownDelete, validPayload: `{"countdown_id":"cd-1"}`, invalidPayload: `{"countdown_id":1}`},
-		{typ: commandTypeAdversaryActionResolve, validPayload: `{"adversary_id":"adv-1","roll_seq":1,"difficulty":10,"dramatic":false,"auto_success":true,"success":true}`, invalidPayload: `{"adversary_id":1}`},
-		{typ: commandTypeDamageApply, validPayload: `{"character_id":"char-1"}`, invalidPayload: `{"character_id":1}`},
-		{typ: commandTypeAdversaryDamageApply, validPayload: `{"adversary_id":"adv-1"}`, invalidPayload: `{"adversary_id":1}`},
-		{typ: commandTypeDowntimeMoveApply, validPayload: `{"character_id":"char-1","move":"clear_all_stress"}`, invalidPayload: `{"character_id":"char-1","move":""}`},
-		{typ: commandTypeDeathMoveResolve, validPayload: `{"character_id":"char-1","move":"avoid_death","life_state_after":"alive"}`, invalidPayload: `{"character_id":"char-1","move":"avoid_death"}`},
-		{typ: commandTypeBlazeOfGloryResolve, validPayload: `{"character_id":"char-1","life_state_after":"dead"}`, invalidPayload: `{"character_id":1}`},
-		{typ: commandTypeGMMoveApply, validPayload: `{"move":"change_environment","fear_spent":1,"severity":"soft"}`, invalidPayload: `{"move":""}`},
+		{typ: commandTypeDamageApply, validPayload: `{"character_id":"char-1","hp_before":6,"hp_after":3}`, invalidPayload: `{"character_id":1}`},
+		{typ: commandTypeAdversaryDamageApply, validPayload: `{"adversary_id":"adv-1","hp_before":8,"hp_after":3}`, invalidPayload: `{"adversary_id":1}`},
+		{typ: commandTypeDowntimeMoveApply, validPayload: `{"character_id":"char-1","move":"clear_all_stress","stress_before":3,"stress_after":2}`, invalidPayload: `{"character_id":"char-1","move":""}`},
 		{typ: commandTypeAdversaryConditionChange, validPayload: `{"adversary_id":"adv-1","conditions_after":["hidden"]}`, invalidPayload: `{"adversary_id":1}`},
 		{typ: commandTypeAdversaryCreate, validPayload: `{"adversary_id":"adv-1","name":"Goblin"}`, invalidPayload: `{"adversary_id":1}`},
 		{typ: commandTypeAdversaryUpdate, validPayload: `{"adversary_id":"adv-1","name":"Goblin"}`, invalidPayload: `{"adversary_id":1}`},
@@ -62,28 +51,15 @@ func eventValidationCases() []eventValidationCase {
 	return []eventValidationCase{
 		{typ: eventTypeGMFearChanged, validPayload: `{"before":1,"after":2}`, invalidPayload: `{"before":1,"after":"nope"}`, actorType: event.ActorTypeGM, actorID: "gm-1"},
 		{typ: eventTypeCharacterStatePatched, validPayload: `{"character_id":"char-1","hp_after":5}`, invalidPayload: `{"character_id":1}`},
-		{typ: eventTypeConditionChanged, validPayload: `{"character_id":"char-1","conditions_after":["shaken"]}`, invalidPayload: `{"character_id":1}`},
-		{typ: eventTypeHopeSpent, validPayload: `{"character_id":"char-1","amount":1,"before":2,"after":1}`, invalidPayload: `{"character_id":1}`},
-		{typ: eventTypeStressSpent, validPayload: `{"character_id":"char-1","amount":1,"before":3,"after":2}`, invalidPayload: `{"character_id":1}`},
+		{typ: eventTypeConditionChanged, validPayload: `{"character_id":"char-1","conditions_after":["vulnerable"]}`, invalidPayload: `{"character_id":1}`},
 		{typ: eventTypeLoadoutSwapped, validPayload: `{"character_id":"char-1","card_id":"card-1","from":"vault","to":"active"}`, invalidPayload: `{"character_id":1}`},
-		{typ: eventTypeRestTaken, validPayload: `{"rest_type":"short"}`, invalidPayload: `{"rest_type":1}`},
-		{typ: eventTypeAttackResolved, validPayload: `{"character_id":"char-1","roll_seq":4,"targets":["char-2"]}`, invalidPayload: `{"character_id":1}`},
-		{typ: eventTypeReactionResolved, validPayload: `{"character_id":"char-1","roll_seq":5,"outcome":"success"}`, invalidPayload: `{"character_id":1}`},
-		{typ: eventTypeAdversaryRollResolved, validPayload: `{"adversary_id":"adv-1","roll_seq":1,"rolls":[12],"roll":12,"modifier":2,"total":14}`, invalidPayload: `{"adversary_id":1}`},
-		{typ: eventTypeAdversaryAttackResolved, validPayload: `{"adversary_id":"adv-1","roll_seq":6,"targets":["char-1"]}`, invalidPayload: `{"adversary_id":1}`},
-		{typ: eventTypeDamageRollResolved, validPayload: `{"character_id":"char-1","roll_seq":7}`, invalidPayload: `{"character_id":1}`},
-		{typ: eventTypeGroupActionResolved, validPayload: `{"leader_character_id":"char-1","leader_roll_seq":1,"support_successes":1,"support_failures":0,"support_modifier":1}`, invalidPayload: `{"leader_character_id":1}`},
-		{typ: eventTypeTagTeamResolved, validPayload: `{"first_character_id":"char-1","first_roll_seq":1,"second_character_id":"char-2","second_roll_seq":2,"selected_character_id":"char-1","selected_roll_seq":1}`, invalidPayload: `{"first_character_id":1}`},
+		{typ: eventTypeRestTaken, validPayload: `{"rest_type":"short","gm_fear_before":1,"gm_fear_after":2,"short_rests_before":0,"short_rests_after":1,"refresh_rest":true}`, invalidPayload: `{"rest_type":1}`},
 		{typ: eventTypeCountdownCreated, validPayload: `{"countdown_id":"cd-1","name":"Doom","kind":"progress","current":0,"max":4,"direction":"increase","looping":true}`, invalidPayload: `{"countdown_id":1}`},
 		{typ: eventTypeCountdownUpdated, validPayload: `{"countdown_id":"cd-1","before":2,"after":3,"delta":1,"looped":false}`, invalidPayload: `{"countdown_id":1}`},
 		{typ: eventTypeCountdownDeleted, validPayload: `{"countdown_id":"cd-1"}`, invalidPayload: `{"countdown_id":1}`},
-		{typ: eventTypeAdversaryActionResolved, validPayload: `{"adversary_id":"adv-1","roll_seq":1,"difficulty":10,"dramatic":false,"auto_success":true,"success":true}`, invalidPayload: `{"adversary_id":1}`},
-		{typ: eventTypeDamageApplied, validPayload: `{"character_id":"char-1"}`, invalidPayload: `{"character_id":1}`},
-		{typ: eventTypeAdversaryDamageApplied, validPayload: `{"adversary_id":"adv-1"}`, invalidPayload: `{"adversary_id":1}`},
-		{typ: eventTypeDowntimeMoveApplied, validPayload: `{"character_id":"char-1","move":"clear_all_stress"}`, invalidPayload: `{"character_id":"char-1","move":1}`},
-		{typ: eventTypeDeathMoveResolved, validPayload: `{"character_id":"char-1","move":"avoid_death","life_state_after":"alive"}`, invalidPayload: `{"character_id":"char-1","move":""}`},
-		{typ: eventTypeBlazeOfGloryResolved, validPayload: `{"character_id":"char-1","life_state_after":"dead"}`, invalidPayload: `{"character_id":1}`},
-		{typ: eventTypeGMMoveApplied, validPayload: `{"move":"change_environment","fear_spent":1,"severity":"soft"}`, invalidPayload: `{"move":1}`},
+		{typ: eventTypeDamageApplied, validPayload: `{"character_id":"char-1","hp_before":6,"hp_after":3}`, invalidPayload: `{"character_id":1}`},
+		{typ: eventTypeAdversaryDamageApplied, validPayload: `{"adversary_id":"adv-1","hp_before":8,"hp_after":3}`, invalidPayload: `{"adversary_id":1}`},
+		{typ: eventTypeDowntimeMoveApplied, validPayload: `{"character_id":"char-1","move":"clear_all_stress","stress_before":3,"stress_after":2}`, invalidPayload: `{"character_id":"char-1","move":1}`},
 		{typ: eventTypeAdversaryConditionChanged, validPayload: `{"adversary_id":"adv-1","conditions_after":["hidden"]}`, invalidPayload: `{"adversary_id":1}`},
 		{typ: eventTypeAdversaryCreated, validPayload: `{"adversary_id":"adv-1","name":"Goblin"}`, invalidPayload: `{"adversary_id":1}`},
 		{typ: eventTypeAdversaryUpdated, validPayload: `{"adversary_id":"adv-1","name":"Goblin"}`, invalidPayload: `{"adversary_id":1}`},
@@ -135,7 +111,7 @@ func TestModuleRegisterCommands_RegistersSysPrefixedOnly(t *testing.T) {
 		t.Fatalf("registered command definitions = %d, want %d", got, want)
 	}
 
-	canonicalType := command.Type("sys." + SystemID + ".action.gm_fear.set")
+	canonicalType := command.Type("sys." + SystemID + ".gm_fear.set")
 	_, err := registry.ValidateForDecision(command.Command{
 		CampaignID:    "camp-1",
 		Type:          canonicalType,
@@ -146,12 +122,12 @@ func TestModuleRegisterCommands_RegistersSysPrefixedOnly(t *testing.T) {
 		PayloadJSON:   []byte(`{"after":2}`),
 	})
 	if err != nil {
-		t.Fatalf("canonical sys-prefixed command rejected: %v", err)
+		t.Fatalf("canonical command rejected: %v", err)
 	}
 
 	_, err = registry.ValidateForDecision(command.Command{
 		CampaignID:    "camp-1",
-		Type:          command.Type("action.gm_fear.set"),
+		Type:          command.Type("sys.daggerheart.action.gm_fear.set"),
 		ActorType:     command.ActorTypeGM,
 		ActorID:       "gm-1",
 		SystemID:      SystemID,
@@ -159,7 +135,7 @@ func TestModuleRegisterCommands_RegistersSysPrefixedOnly(t *testing.T) {
 		PayloadJSON:   []byte(`{"after":2}`),
 	})
 	if !errors.Is(err, command.ErrTypeUnknown) {
-		t.Fatalf("legacy action.* command should be unknown, got %v", err)
+		t.Fatalf("legacy action command should be unknown, got %v", err)
 	}
 }
 
@@ -175,7 +151,7 @@ func TestModuleRegisterEvents_RegistersSysPrefixedOnly(t *testing.T) {
 		t.Fatalf("registered event definitions = %d, want %d", got, want)
 	}
 
-	canonicalType := event.Type("sys." + SystemID + ".action.gm_fear_changed")
+	canonicalType := event.Type("sys." + SystemID + ".gm_fear_changed")
 	_, err := registry.ValidateForAppend(event.Event{
 		CampaignID:    "camp-1",
 		Type:          canonicalType,
@@ -189,12 +165,12 @@ func TestModuleRegisterEvents_RegistersSysPrefixedOnly(t *testing.T) {
 		PayloadJSON:   []byte(`{"before":1,"after":2}`),
 	})
 	if err != nil {
-		t.Fatalf("canonical sys-prefixed event rejected: %v", err)
+		t.Fatalf("canonical event rejected: %v", err)
 	}
 
 	_, err = registry.ValidateForAppend(event.Event{
 		CampaignID:    "camp-1",
-		Type:          event.Type("action.gm_fear_changed"),
+		Type:          event.Type("sys.daggerheart.action.gm_fear_changed"),
 		Timestamp:     time.Unix(0, 0).UTC(),
 		ActorType:     event.ActorTypeGM,
 		ActorID:       "gm-1",
@@ -205,7 +181,44 @@ func TestModuleRegisterEvents_RegistersSysPrefixedOnly(t *testing.T) {
 		PayloadJSON:   []byte(`{"before":1,"after":2}`),
 	})
 	if !errors.Is(err, event.ErrTypeUnknown) {
-		t.Fatalf("legacy action.* event should be unknown, got %v", err)
+		t.Fatalf("legacy action event should be unknown, got %v", err)
+	}
+}
+
+func TestModuleRegisterEvents_ResolvedNotificationEventsRemoved(t *testing.T) {
+	registry := event.NewRegistry()
+	module := NewModule()
+	if err := module.RegisterEvents(registry); err != nil {
+		t.Fatalf("register events: %v", err)
+	}
+
+	removed := []event.Type{
+		event.Type("sys.daggerheart.attack_resolved"),
+		event.Type("sys.daggerheart.reaction_resolved"),
+		event.Type("sys.daggerheart.adversary_roll_resolved"),
+		event.Type("sys.daggerheart.adversary_attack_resolved"),
+		event.Type("sys.daggerheart.damage_roll_resolved"),
+		event.Type("sys.daggerheart.group_action_resolved"),
+		event.Type("sys.daggerheart.tag_team_resolved"),
+		event.Type("sys.daggerheart.gm_move_applied"),
+	}
+
+	definitions := make(map[event.Type]event.Definition, len(removed))
+	for _, def := range registry.ListDefinitions() {
+		definitions[def.Type] = def
+	}
+
+	for _, target := range removed {
+		_, ok := definitions[target]
+		if ok {
+			t.Fatalf("resolved/notification event should not be registered: %s", target)
+		}
+	}
+
+	for _, def := range registry.ListDefinitions() {
+		if def.Intent != event.IntentProjectionAndReplay {
+			t.Fatalf("event %s intent = %s, want %s", def.Type, def.Intent, event.IntentProjectionAndReplay)
+		}
 	}
 }
 
@@ -310,6 +323,194 @@ func TestModuleRegisterEvents_ValidatesAllRegisteredEvents(t *testing.T) {
 			_, err := registry.ValidateForAppend(invalid)
 			if err == nil {
 				t.Fatal("expected error")
+			}
+			if errors.Is(err, event.ErrTypeUnknown) {
+				t.Fatalf("expected payload validation error, got %v", err)
+			}
+		})
+	}
+}
+
+func TestModuleRegisterCommands_RejectsNoOpMutatingPayloads(t *testing.T) {
+	registry := command.NewRegistry()
+	module := NewModule()
+	if err := module.RegisterCommands(registry); err != nil {
+		t.Fatalf("register commands: %v", err)
+	}
+
+	tests := []struct {
+		name    string
+		typ     command.Type
+		payload string
+	}{
+		{
+			name:    "character_state.patch requires changes",
+			typ:     commandTypeCharacterStatePatch,
+			payload: `{"character_id":"char-1","hp_before":2,"hp_after":2}`,
+		},
+		{
+			name:    "hope.spend requires non-zero amount",
+			typ:     commandTypeHopeSpend,
+			payload: `{"character_id":"char-1","amount":0,"before":2,"after":2}`,
+		},
+		{
+			name:    "hope.spend requires before and after to differ",
+			typ:     commandTypeHopeSpend,
+			payload: `{"character_id":"char-1","amount":1,"before":2,"after":2}`,
+		},
+		{
+			name:    "hope.spend requires before-after delta to match amount",
+			typ:     commandTypeHopeSpend,
+			payload: `{"character_id":"char-1","amount":2,"before":2,"after":1}`,
+		},
+		{
+			name:    "stress.spend requires non-zero amount",
+			typ:     commandTypeStressSpend,
+			payload: `{"character_id":"char-1","amount":0,"before":3,"after":3}`,
+		},
+		{
+			name:    "stress.spend requires before and after to differ",
+			typ:     commandTypeStressSpend,
+			payload: `{"character_id":"char-1","amount":1,"before":3,"after":3}`,
+		},
+		{
+			name:    "stress.spend requires before-after delta to match amount",
+			typ:     commandTypeStressSpend,
+			payload: `{"character_id":"char-1","amount":2,"before":3,"after":2}`,
+		},
+		{
+			name:    "condition.change requires a change",
+			typ:     commandTypeConditionChange,
+			payload: `{"character_id":"char-1","conditions_before":["hidden"],"conditions_after":["hidden"]}`,
+		},
+		{
+			name:    "countdown.update with no value change is rejected",
+			typ:     commandTypeCountdownUpdate,
+			payload: `{"countdown_id":"cd-1","before":3,"after":3,"delta":0,"looped":false}`,
+		},
+		{
+			name:    "damage.apply requires hp or armor change",
+			typ:     commandTypeDamageApply,
+			payload: `{"character_id":"char-1","hp_before":6,"hp_after":6}`,
+		},
+		{
+			name:    "adversary_damage.apply requires hp or armor change",
+			typ:     commandTypeAdversaryDamageApply,
+			payload: `{"adversary_id":"adv-1","hp_before":8,"hp_after":8}`,
+		},
+		{
+			name:    "downtime_move.apply requires state change",
+			typ:     commandTypeDowntimeMoveApply,
+			payload: `{"character_id":"char-1","move":"clear_all_stress","stress_before":2,"stress_after":2}`,
+		},
+		{
+			name:    "rest.take requires rest change or character patches",
+			typ:     commandTypeRestTake,
+			payload: `{"rest_type":"short","gm_fear_before":1,"gm_fear_after":1,"short_rests_before":0,"short_rests_after":0,"refresh_rest":false,"refresh_long_rest":false}`,
+		},
+		{
+			name:    "adversary_condition.change requires a change",
+			typ:     commandTypeAdversaryConditionChange,
+			payload: `{"adversary_id":"adv-1","conditions_before":["hidden"],"conditions_after":["hidden"]}`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := registry.ValidateForDecision(command.Command{
+				CampaignID:    "camp-1",
+				Type:          tc.typ,
+				ActorType:     command.ActorTypeSystem,
+				ActorID:       "system-1",
+				SystemID:      SystemID,
+				SystemVersion: SystemVersion,
+				PayloadJSON:   []byte(tc.payload),
+			})
+			if err == nil {
+				t.Fatalf("expected validation failure")
+			}
+			if errors.Is(err, command.ErrTypeUnknown) {
+				t.Fatalf("expected payload validation error, got %v", err)
+			}
+		})
+	}
+}
+
+func TestModuleRegisterEvents_RejectsNoOpMutatingPayloads(t *testing.T) {
+	registry := event.NewRegistry()
+	module := NewModule()
+	if err := module.RegisterEvents(registry); err != nil {
+		t.Fatalf("register events: %v", err)
+	}
+
+	tests := []struct {
+		name    string
+		typ     event.Type
+		payload string
+	}{
+		{
+			name:    "character_state_patched requires a change",
+			typ:     eventTypeCharacterStatePatched,
+			payload: `{"character_id":"char-1","hp_before":2,"hp_after":2}`,
+		},
+		{
+			name:    "gm_fear_changed requires a change",
+			typ:     eventTypeGMFearChanged,
+			payload: `{"before":2,"after":2}`,
+		},
+		{
+			name:    "condition_changed requires a change",
+			typ:     eventTypeConditionChanged,
+			payload: `{"character_id":"char-1","conditions_before":["hidden"],"conditions_after":["hidden"]}`,
+		},
+		{
+			name:    "countdown_updated requires a change",
+			typ:     eventTypeCountdownUpdated,
+			payload: `{"countdown_id":"cd-1","before":3,"after":3,"delta":0,"looped":false}`,
+		},
+		{
+			name:    "damage_applied requires hp or armor change",
+			typ:     eventTypeDamageApplied,
+			payload: `{"character_id":"char-1","hp_before":6,"hp_after":6}`,
+		},
+		{
+			name:    "adversary_damage_applied requires hp or armor change",
+			typ:     eventTypeAdversaryDamageApplied,
+			payload: `{"adversary_id":"adv-1","hp_before":8,"hp_after":8}`,
+		},
+		{
+			name:    "downtime_move_applied requires state change",
+			typ:     eventTypeDowntimeMoveApplied,
+			payload: `{"character_id":"char-1","move":"clear_all_stress","stress_before":2,"stress_after":2}`,
+		},
+		{
+			name:    "rest_taken requires rest change or character patches",
+			typ:     eventTypeRestTaken,
+			payload: `{"rest_type":"short","gm_fear_before":1,"gm_fear_after":1,"short_rests_before":0,"short_rests_after":0,"refresh_rest":false,"refresh_long_rest":false}`,
+		},
+		{
+			name:    "adversary_condition_changed requires a change",
+			typ:     eventTypeAdversaryConditionChanged,
+			payload: `{"adversary_id":"adv-1","conditions_before":["hidden"],"conditions_after":["hidden"]}`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := registry.ValidateForAppend(event.Event{
+				CampaignID:    "camp-1",
+				Type:          tc.typ,
+				Timestamp:     time.Unix(0, 0).UTC(),
+				ActorType:     event.ActorTypeSystem,
+				ActorID:       "system-1",
+				EntityType:    "character",
+				EntityID:      "entity-1",
+				SystemID:      SystemID,
+				SystemVersion: SystemVersion,
+				PayloadJSON:   []byte(tc.payload),
+			})
+			if err == nil {
+				t.Fatalf("expected validation failure")
 			}
 			if errors.Is(err, event.ErrTypeUnknown) {
 				t.Fatalf("expected payload validation error, got %v", err)

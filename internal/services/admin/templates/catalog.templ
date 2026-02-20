@@ -1,10 +1,6 @@
 package templates
 
-import (
-	"strconv"
-
-	sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
-)
+import "strconv"
 
 // CatalogFullPage renders the catalog content in the base layout.
 templ CatalogFullPage(activeSection string, page PageContext) {
@@ -43,23 +39,20 @@ templ CatalogSidebar(activeSection string, loc Localizer) {
 			<a>{T(loc, "label.daggerheart")}</a>
 			<ul>
 				for _, section := range DaggerheartCatalogSections(loc) {
-			<li>
-				<a
-					href={ templ.SafeURL(section.URL) }
-					hx-get={ section.URL }
-					hx-target="#catalog-content"
-					hx-swap="innerHTML"
-					hx-push-url="true"
-					if section.ID == activeSection {
-						class="active"
-					}
-				>
-					@sharedtemplates.LucideIconID(section.IconID, "size-4 me-2")
-					{section.Label}
-				</a>
-			</li>
-		}
-	</ul>
+					<li>
+						<a
+							href={ templ.SafeURL(section.URL) }
+							hx-get={ section.URL }
+							hx-target="#catalog-content"
+							hx-swap="innerHTML"
+							hx-push-url="true"
+							if section.ID == activeSection {
+								class="active"
+							}
+						>{section.Label}</a>
+					</li>
+				}
+			</ul>
 		</li>
 	</ul>
 }

@@ -45,7 +45,7 @@ func TestValidateSnapshotEvent_CharacterStatePatched(t *testing.T) {
 		data, _ := json.Marshal(payload)
 		return event.Event{
 			CampaignID:    "camp-1",
-			Type:          event.Type("sys.daggerheart.action.character_state_patched"),
+			Type:          event.Type("sys.daggerheart.character_state_patched"),
 			EntityType:    "action",
 			EntityID:      "entity-1",
 			SystemID:      daggerheart.SystemID,
@@ -55,7 +55,13 @@ func TestValidateSnapshotEvent_CharacterStatePatched(t *testing.T) {
 	}
 
 	t.Run("valid", func(t *testing.T) {
-		evt := makeEvent(daggerheart.CharacterStatePatchedPayload{CharacterID: "char-1"})
+		hpBefore := 5
+		hpAfter := 4
+		evt := makeEvent(daggerheart.CharacterStatePatchedPayload{
+			CharacterID: "char-1",
+			HPBefore:    &hpBefore,
+			HPAfter:     &hpAfter,
+		})
 		if err := validateSnapshotEvent(registry, evt); err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
@@ -71,7 +77,7 @@ func TestValidateSnapshotEvent_CharacterStatePatched(t *testing.T) {
 	t.Run("invalid json", func(t *testing.T) {
 		evt := event.Event{
 			CampaignID:    "camp-1",
-			Type:          event.Type("sys.daggerheart.action.character_state_patched"),
+			Type:          event.Type("sys.daggerheart.character_state_patched"),
 			EntityType:    "action",
 			EntityID:      "entity-1",
 			SystemID:      daggerheart.SystemID,
@@ -90,7 +96,7 @@ func TestValidateSnapshotEvent_GMFearChanged(t *testing.T) {
 		data, _ := json.Marshal(payload)
 		return event.Event{
 			CampaignID:    "camp-1",
-			Type:          event.Type("sys.daggerheart.action.gm_fear_changed"),
+			Type:          event.Type("sys.daggerheart.gm_fear_changed"),
 			EntityType:    "action",
 			EntityID:      "entity-1",
 			SystemID:      daggerheart.SystemID,

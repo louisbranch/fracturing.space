@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OAuth Error - {{.AppName}}</title>
+    <link rel="stylesheet" href="https://unpkg.com/papercss@1.9.2/dist/paper.min.css" integrity="sha384-wMyZfjGAQ1ZgZgPm5qchzSB5HnjMhkNztmQTcnqZSdk5nrTqgiitoN+nL0XgczcG" crossorigin="anonymous">
+    <link rel="stylesheet" href="/static/theme.css">
+    <link rel="stylesheet" href="/static/auth.css">
+</head>
+<body>
+    <div class="paper container margin-top oauth-shell">
+        <div class="oauth-header">
+            <h3>{{.AppName}}</h3>
+            <p class="text-center muted oauth-subtitle">OAuth Error</p>
+        </div>
+
+        <div class="card oauth-card">
+            <div class="card-body text-center">
+                <h4 class="card-title">Authorization Error</h4>
+                <div class="oauth-error-code">{{.Error}}</div>
+                <p>{{.ErrorDescription}}</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

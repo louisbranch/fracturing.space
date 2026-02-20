@@ -4,8 +4,6 @@ package integration
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"testing"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
@@ -15,28 +13,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
-
-type groupActionResolvedPayload struct {
-	LeaderCharacterID string `json:"leader_character_id"`
-	LeaderRollSeq     uint64 `json:"leader_roll_seq"`
-	SupportSuccesses  int    `json:"support_successes"`
-	SupportFailures   int    `json:"support_failures"`
-	SupportModifier   int    `json:"support_modifier"`
-	Supporters        []struct {
-		CharacterID string `json:"character_id"`
-		RollSeq     uint64 `json:"roll_seq"`
-		Success     bool   `json:"success"`
-	} `json:"supporters"`
-}
-
-type tagTeamResolvedPayload struct {
-	FirstCharacterID    string `json:"first_character_id"`
-	FirstRollSeq        uint64 `json:"first_roll_seq"`
-	SecondCharacterID   string `json:"second_character_id"`
-	SecondRollSeq       uint64 `json:"second_roll_seq"`
-	SelectedCharacterID string `json:"selected_character_id"`
-	SelectedRollSeq     uint64 `json:"selected_roll_seq"`
-}
 
 func TestDaggerheartGroupActionFlow(t *testing.T) {
 	grpcAddr, authAddr, stopServer := startGRPCServer(t)
@@ -55,7 +31,6 @@ func TestDaggerheartGroupActionFlow(t *testing.T) {
 	campaignClient := gamev1.NewCampaignServiceClient(conn)
 	characterClient := gamev1.NewCharacterServiceClient(conn)
 	sessionClient := gamev1.NewSessionServiceClient(conn)
-	eventClient := gamev1.NewEventServiceClient(conn)
 	daggerheartClient := daggerheartv1.NewDaggerheartServiceClient(conn)
 
 	ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
@@ -132,14 +107,6 @@ func TestDaggerheartGroupActionFlow(t *testing.T) {
 	if result.GetSupportModifier() != 2 || result.GetSupportSuccesses() != 2 || result.GetSupportFailures() != 0 {
 		t.Fatal("expected support modifier to reflect two successes")
 	}
-
-	resolved, err := findGroupActionResolved(ctx, eventClient, campaignID, sessionID, result.GetLeaderRoll().GetRollSeq())
-	if err != nil {
-		t.Fatalf("find group action resolved: %v", err)
-	}
-	if resolved.LeaderCharacterID != leader || resolved.LeaderRollSeq != result.GetLeaderRoll().GetRollSeq() {
-		t.Fatal("expected group action payload to match leader roll")
-	}
 }
 
 func TestDaggerheartTagTeamFlow(t *testing.T) {
@@ -159,7 +126,6 @@ func TestDaggerheartTagTeamFlow(t *testing.T) {
 	campaignClient := gamev1.NewCampaignServiceClient(conn)
 	characterClient := gamev1.NewCharacterServiceClient(conn)
 	sessionClient := gamev1.NewSessionServiceClient(conn)
-	eventClient := gamev1.NewEventServiceClient(conn)
 	daggerheartClient := daggerheartv1.NewDaggerheartServiceClient(conn)
 
 	ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
@@ -232,14 +198,6 @@ func TestDaggerheartTagTeamFlow(t *testing.T) {
 	if result.GetSelectedRollSeq() != result.GetFirstRoll().GetRollSeq() {
 		t.Fatal("expected selected roll seq to match first roll")
 	}
-
-	resolved, err := findTagTeamResolved(ctx, eventClient, campaignID, sessionID, result.GetSelectedRollSeq())
-	if err != nil {
-		t.Fatalf("find tag team resolved: %v", err)
-	}
-	if resolved.SelectedCharacterID != first || resolved.SelectedRollSeq != result.GetSelectedRollSeq() {
-		t.Fatal("expected tag team payload to match selected roll")
-	}
 }
 
 func findReplaySeedForReaction(t *testing.T, difficulty int, success bool) uint64 {
@@ -263,48 +221,4 @@ func findReplaySeedForReaction(t *testing.T, difficulty int, success bool) uint6
 	}
 	t.Fatal("no replay seed found for failed reaction roll")
 	return 0
-}
-
-func findGroupActionResolved(ctx context.Context, client gamev1.EventServiceClient, campaignID, sessionID string, leaderRollSeq uint64) (groupActionResolvedPayload, error) {
-	response, err := client.ListEvents(ctx, &gamev1.ListEventsRequest{
-		CampaignId: campaignID,
-		PageSize:   200,
-		OrderBy:    "seq desc",
-		Filter:     "session_id = \"" + sessionID + "\" AND type = \"sys.daggerheart.action.group_action_resolved\"",
-	})
-	if err != nil {
-		return groupActionResolvedPayload{}, err
-	}
-	for _, evt := range response.GetEvents() {
-		var payload groupActionResolvedPayload
-		if err := json.Unmarshal(evt.GetPayloadJson(), &payload); err != nil {
-			return groupActionResolvedPayload{}, err
-		}
-		if payload.LeaderRollSeq == leaderRollSeq {
-			return payload, nil
-		}
-	}
-	return groupActionResolvedPayload{}, fmt.Errorf("group action resolved event not found")
-}
-
-func findTagTeamResolved(ctx context.Context, client gamev1.EventServiceClient, campaignID, sessionID string, selectedRollSeq uint64) (tagTeamResolvedPayload, error) {
-	response, err := client.ListEvents(ctx, &gamev1.ListEventsRequest{
-		CampaignId: campaignID,
-		PageSize:   200,
-		OrderBy:    "seq desc",
-		Filter:     "session_id = \"" + sessionID + "\" AND type = \"sys.daggerheart.action.tag_team_resolved\"",
-	})
-	if err != nil {
-		return tagTeamResolvedPayload{}, err
-	}
-	for _, evt := range response.GetEvents() {
-		var payload tagTeamResolvedPayload
-		if err := json.Unmarshal(evt.GetPayloadJson(), &payload); err != nil {
-			return tagTeamResolvedPayload{}, err
-		}
-		if payload.SelectedRollSeq == selectedRollSeq {
-			return payload, nil
-		}
-	}
-	return tagTeamResolvedPayload{}, fmt.Errorf("tag team resolved event not found")
 }

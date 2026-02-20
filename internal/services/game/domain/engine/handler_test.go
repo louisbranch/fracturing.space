@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -75,6 +76,17 @@ type trackingStateLoader struct {
 func (t *trackingStateLoader) Load(_ context.Context, cmd command.Command) (any, error) {
 	t.campaignIDs = append(t.campaignIDs, cmd.CampaignID)
 	return aggregate.State{}, nil
+}
+
+type systemMutationApplier struct {
+	Mutate bool
+}
+
+func (a *systemMutationApplier) Apply(_ any, _ event.Event) (any, error) {
+	if a.Mutate {
+		return map[string]int{"mutated": 1}, nil
+	}
+	return nil, nil
 }
 
 func TestHandle_RejectsWhenGateOpen(t *testing.T) {
@@ -303,7 +315,7 @@ func TestExecute_UsesValidatedCommandForAllStateLoads(t *testing.T) {
 	loader := &trackingStateLoader{}
 	handler := Handler{
 		Commands:    cmdRegistry,
-		Decider:     fixedDecider{decision: command.Decision{}},
+		Decider:     fixedDecider{decision: command.Accept(event.Event{CampaignID: "camp-1", Type: event.Type("action.tested"), Timestamp: time.Unix(0, 0).UTC(), ActorType: event.ActorTypeSystem, PayloadJSON: []byte(`{}`)})},
 		StateLoader: loader,
 	}
 
@@ -322,6 +334,135 @@ func TestExecute_UsesValidatedCommandForAllStateLoads(t *testing.T) {
 		if id != "camp-1" {
 			t.Fatalf("state loader campaign id = %q, want %q", id, "camp-1")
 		}
+	}
+}
+
+func TestExecute_FailsWhenDeciderReturnsNoEventsWithoutRejections(t *testing.T) {
+	cmdRegistry := command.NewRegistry()
+	if err := cmdRegistry.Register(command.Definition{
+		Type:  command.Type("action.test"),
+		Owner: command.OwnerCore,
+	}); err != nil {
+		t.Fatalf("register command: %v", err)
+	}
+
+	handler := Handler{
+		Commands: cmdRegistry,
+		Decider: fixedDecider{
+			decision: command.Decision{},
+		},
+	}
+
+	_, err := handler.Execute(context.Background(), command.Command{
+		CampaignID: "camp-1",
+		Type:       command.Type("action.test"),
+		ActorType:  command.ActorTypeSystem,
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !errors.Is(err, ErrCommandMustMutate) {
+		t.Fatalf("expected ErrCommandMustMutate, got %v", err)
+	}
+}
+
+func TestExecute_FailsWhenSystemEventDoesNotMutateState(t *testing.T) {
+	cmdRegistry := command.NewRegistry()
+	if err := cmdRegistry.Register(command.Definition{
+		Type:  command.Type("sys.test.noop"),
+		Owner: command.OwnerSystem,
+	}); err != nil {
+		t.Fatalf("register command: %v", err)
+	}
+	eventRegistry := event.NewRegistry()
+	if err := eventRegistry.Register(event.Definition{
+		Type:  event.Type("sys.test.noop"),
+		Owner: event.OwnerSystem,
+	}); err != nil {
+		t.Fatalf("register event: %v", err)
+	}
+
+	handler := Handler{
+		Commands: cmdRegistry,
+		Events:   eventRegistry,
+		Decider: fixedDecider{decision: command.Accept(event.Event{
+			CampaignID:    "camp-1",
+			Type:          event.Type("sys.test.noop"),
+			EntityType:    "character",
+			EntityID:      "char-1",
+			SystemID:      "system.test",
+			SystemVersion: "1.0.0",
+			Timestamp:     time.Unix(0, 0).UTC(),
+			ActorType:     event.ActorTypeSystem,
+			PayloadJSON:   []byte(`{}`),
+		})},
+		Applier: &systemMutationApplier{},
+	}
+
+	_, err := handler.Execute(context.Background(), command.Command{
+		CampaignID:    "camp-1",
+		Type:          command.Type("sys.test.noop"),
+		ActorType:     command.ActorTypeSystem,
+		SystemID:      "system.test",
+		SystemVersion: "1.0.0",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !errors.Is(err, ErrSystemEventNoMutation) {
+		t.Fatalf("expected ErrSystemEventNoMutation, got %v", err)
+	}
+}
+
+func TestExecute_AllowsMutatingSystemEvent(t *testing.T) {
+	cmdRegistry := command.NewRegistry()
+	if err := cmdRegistry.Register(command.Definition{
+		Type:  command.Type("sys.test.mutates"),
+		Owner: command.OwnerSystem,
+	}); err != nil {
+		t.Fatalf("register command: %v", err)
+	}
+	eventRegistry := event.NewRegistry()
+	if err := eventRegistry.Register(event.Definition{
+		Type:  event.Type("sys.test.mutates"),
+		Owner: event.OwnerSystem,
+	}); err != nil {
+		t.Fatalf("register event: %v", err)
+	}
+
+	handler := Handler{
+		Commands: cmdRegistry,
+		Events:   eventRegistry,
+		Decider: fixedDecider{decision: command.Accept(event.Event{
+			CampaignID:    "camp-1",
+			Type:          event.Type("sys.test.mutates"),
+			EntityType:    "character",
+			EntityID:      "char-1",
+			SystemID:      "system.test",
+			SystemVersion: "1.0.0",
+			Timestamp:     time.Unix(0, 0).UTC(),
+			ActorType:     event.ActorTypeSystem,
+			PayloadJSON:   []byte(`{}`),
+		})},
+		Applier: &systemMutationApplier{Mutate: true},
+	}
+
+	result, err := handler.Execute(context.Background(), command.Command{
+		CampaignID:    "camp-1",
+		Type:          command.Type("sys.test.mutates"),
+		ActorType:     command.ActorTypeSystem,
+		SystemID:      "system.test",
+		SystemVersion: "1.0.0",
+	})
+	if err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	mutated, ok := result.State.(map[string]int)
+	if !ok {
+		t.Fatalf("expected map state, got %T", result.State)
+	}
+	if mutated["mutated"] != 1 {
+		t.Fatalf("expected mutated state marker, got %v", mutated["mutated"])
 	}
 }
 

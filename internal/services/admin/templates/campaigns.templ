@@ -9,7 +9,7 @@ templ CampaignsFullPage(page PageContext) {
 
 // CampaignsPage renders the campaigns page content.
 templ CampaignsPage(loc Localizer) {
-	@PageHeader(PageHeading{Title: T(loc, "campaigns.heading")})
+	@PageHeader(PageHeading{Title: T(loc, "campaigns.heading"), ActionURL: "/campaigns/create", ActionLabel: T(loc, "campaigns.create.action")})
 	@CampaignsLoading(loc)
 }
 

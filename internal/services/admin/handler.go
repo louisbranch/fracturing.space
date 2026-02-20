@@ -77,7 +77,6 @@ var resolveStaticFS = func() (fs.FS, error) {
 // GRPCClientProvider supplies gRPC clients for request handling.
 type GRPCClientProvider interface {
 	AuthClient() authv1.AuthServiceClient
-	AccountClient() authv1.AccountServiceClient
 	CampaignClient() statev1.CampaignServiceClient
 	SessionClient() statev1.SessionServiceClient
 	CharacterClient() statev1.CharacterServiceClient
@@ -253,6 +252,7 @@ func (h *Handler) routes() http.Handler {
 	mux.Handle("/dashboard/content", http.HandlerFunc(h.handleDashboardContent))
 	mux.Handle("/campaigns", http.HandlerFunc(h.handleCampaignsPage))
 	mux.Handle("/campaigns/table", http.HandlerFunc(h.handleCampaignsTable))
+	mux.Handle("/campaigns/create", http.HandlerFunc(h.handleCampaignCreate))
 	mux.Handle("/campaigns/", http.HandlerFunc(h.handleCampaignRoutes))
 	mux.Handle("/systems", http.HandlerFunc(h.handleSystemsPage))
 	mux.Handle("/systems/table", http.HandlerFunc(h.handleSystemsTable))
@@ -908,23 +908,14 @@ func (h *Handler) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 
 	locale := localeFromTag(lang)
 	response, err := client.CreateUser(ctx, &authv1.CreateUserRequest{
-		Email: email,
+		Email:  email,
+		Locale: locale,
 	})
 	if err != nil || response.GetUser() == nil {
 		log.Printf("create user: %v", err)
 		view.Message = loc.Sprintf("error.user_create_failed")
 		templ.Handler(templates.UsersFullPage(view, pageCtx)).ServeHTTP(w, r)
 		return
-	}
-	if accountClient := h.accountClient(); accountClient != nil {
-		if _, err := accountClient.UpdateProfile(ctx, &authv1.UpdateProfileRequest{
-			UserId: response.GetUser().GetId(),
-			Locale: locale,
-		}); err != nil {
-			log.Printf("create user profile: %v", err)
-		}
-	} else {
-		log.Printf("create user profile: account client unavailable")
 	}
 
 	created := response.GetUser()
@@ -1738,6 +1729,134 @@ func (h *Handler) handleSystemDetail(w http.ResponseWriter, r *http.Request, sys
 	h.renderSystemDetail(w, r, detail, "", lang, loc)
 }
 
+func (h *Handler) handleCampaignCreate(w http.ResponseWriter, r *http.Request) {
+	loc, lang := h.localizer(w, r)
+	pageCtx := h.pageContext(lang, loc, r)
+	view := templates.CampaignCreatePageView{
+		Impersonation: pageCtx.Impersonation,
+		System:        "daggerheart",
+		GmMode:        "human",
+	}
+	if pageCtx.Impersonation != nil {
+		view.UserID = pageCtx.Impersonation.UserID
+		view.CreatorDisplayName = pageCtx.Impersonation.Name
+	}
+	renderCreate := func() {
+		renderPage(w, r, templates.CampaignCreatePage(view, loc), templates.CampaignCreateFullPage(view, pageCtx))
+	}
+
+	switch r.Method {
+	case http.MethodGet:
+		if message := strings.TrimSpace(r.URL.Query().Get("message")); message != "" {
+			view.Message = message
+		}
+		renderCreate()
+		return
+	case http.MethodPost:
+		if !requireSameOrigin(w, r, loc) {
+			return
+		}
+	default:
+		w.Header().Set("Allow", strings.Join([]string{http.MethodGet, http.MethodPost}, ", "))
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		view.Message = loc.Sprintf("error.campaign_create_invalid")
+		renderCreate()
+		return
+	}
+
+	if pageCtx.Impersonation == nil {
+		view.UserID = strings.TrimSpace(r.FormValue("user_id"))
+		view.CreatorDisplayName = strings.TrimSpace(r.FormValue("creator_display_name"))
+	} else {
+		view.UserID = pageCtx.Impersonation.UserID
+		view.CreatorDisplayName = pageCtx.Impersonation.Name
+	}
+	view.Name = strings.TrimSpace(r.FormValue("name"))
+	view.System = strings.TrimSpace(r.FormValue("system"))
+	view.GmMode = strings.TrimSpace(r.FormValue("gm_mode"))
+	view.ThemePrompt = strings.TrimSpace(r.FormValue("theme_prompt"))
+
+	if view.UserID == "" {
+		view.Message = loc.Sprintf("error.campaign_user_id_required")
+		renderCreate()
+		return
+	}
+
+	if view.Name == "" {
+		view.Message = loc.Sprintf("error.campaign_name_required")
+		renderCreate()
+		return
+	}
+
+	system, ok := parseGameSystem(view.System)
+	if !ok {
+		if view.System == "" {
+			view.Message = loc.Sprintf("error.campaign_system_required")
+		} else {
+			view.Message = loc.Sprintf("error.campaign_system_invalid")
+		}
+		renderCreate()
+		return
+	}
+
+	gmMode, ok := parseGmMode(view.GmMode)
+	if !ok {
+		if view.GmMode == "" {
+			view.Message = loc.Sprintf("error.campaign_gm_mode_required")
+		} else {
+			view.Message = loc.Sprintf("error.campaign_gm_mode_invalid")
+		}
+		renderCreate()
+		return
+	}
+
+	client := h.campaignClient()
+	if client == nil {
+		view.Message = loc.Sprintf("error.campaign_service_unavailable")
+		renderCreate()
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
+	defer cancel()
+	if view.UserID != "" {
+		md, _ := metadata.FromOutgoingContext(ctx)
+		md = md.Copy()
+		md.Set(grpcmeta.UserIDHeader, view.UserID)
+		ctx = metadata.NewOutgoingContext(ctx, md)
+	}
+
+	locale := localeFromTag(lang)
+	response, err := client.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
+		Name:               view.Name,
+		Locale:             locale,
+		System:             system,
+		GmMode:             gmMode,
+		ThemePrompt:        view.ThemePrompt,
+		CreatorDisplayName: view.CreatorDisplayName,
+	})
+	if err != nil || response.GetCampaign() == nil {
+		log.Printf("create campaign: %v", err)
+		view.Message = loc.Sprintf("error.campaign_create_failed")
+		renderCreate()
+		return
+	}
+
+	campaignID := response.GetCampaign().GetId()
+	redirectURL := "/campaigns/" + campaignID
+	if isHTMXRequest(r) {
+		w.Header().Set("Location", redirectURL)
+		w.Header().Set("HX-Redirect", redirectURL)
+		w.WriteHeader(http.StatusSeeOther)
+		return
+	}
+	http.Redirect(w, r, redirectURL, http.StatusSeeOther)
+}
+
 // handleCampaignRoutes dispatches detail and session subroutes.
 func (h *Handler) handleCampaignRoutes(w http.ResponseWriter, r *http.Request) {
 	if sharedroute.RedirectTrailingSlash(w, r) {
@@ -1745,10 +1864,6 @@ func (h *Handler) handleCampaignRoutes(w http.ResponseWriter, r *http.Request) {
 	}
 	campaignPath := strings.TrimPrefix(r.URL.Path, "/campaigns/")
 	parts := splitPathParts(campaignPath)
-	if len(parts) == 1 && strings.EqualFold(parts[0], "create") {
-		http.NotFound(w, r)
-		return
-	}
 
 	// /campaigns/{id}/characters
 	if len(parts) == 2 && parts[1] == "characters" {
@@ -1986,14 +2101,6 @@ func (h *Handler) authClient() authv1.AuthServiceClient {
 		return nil
 	}
 	return h.clientProvider.AuthClient()
-}
-
-// accountClient returns the currently configured account client.
-func (h *Handler) accountClient() authv1.AccountServiceClient {
-	if h == nil || h.clientProvider == nil {
-		return nil
-	}
-	return h.clientProvider.AccountClient()
 }
 
 // daggerheartContentClient returns the Daggerheart content client.

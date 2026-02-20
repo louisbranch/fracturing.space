@@ -202,7 +202,7 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 		c.stores.Applier(),
 		command.Command{
 			CampaignID:    campaignID,
-			Type:          command.Type("sys.daggerheart.action.character_state.patch"),
+			Type:          command.Type("sys.daggerheart.character_state.patch"),
 			ActorType:     profileCommandActorType,
 			ActorID:       actorID,
 			SessionID:     grpcmeta.SessionIDFromContext(ctx),

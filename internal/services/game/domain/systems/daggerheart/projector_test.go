@@ -17,7 +17,7 @@ func TestProjectorApplyGMFearChanged_UpdatesState(t *testing.T) {
 	}
 	updated, err := projector.Apply(state, event.Event{
 		CampaignID:    "camp-1",
-		Type:          event.Type("sys.daggerheart.action.gm_fear_changed"),
+		Type:          event.Type("sys.daggerheart.gm_fear_changed"),
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
 		PayloadJSON:   payload,
@@ -37,17 +37,26 @@ func TestProjectorApplyGMFearChanged_UpdatesState(t *testing.T) {
 	}
 }
 
-func TestProjectorApplyGMFearChanged_UpdatesStateForSysPrefixedType(t *testing.T) {
+func TestProjectorApplyCharacterStatePatched_StoresCharacterState(t *testing.T) {
 	projector := Projector{}
-	state := SnapshotState{CampaignID: "camp-1", GMFear: 1}
-
-	payload, err := json.Marshal(GMFearChangedPayload{Before: 1, After: 4, Reason: "shift"})
+	hpAfter := 6
+	hopeAfter := 2
+	payload, err := json.Marshal(CharacterStatePatchedPayload{
+		CharacterID:    "char-1",
+		HPAfter:        &hpAfter,
+		HopeAfter:      &hopeAfter,
+		HopeMaxAfter:   nil,
+		StressAfter:    nil,
+		ArmorAfter:     nil,
+		LifeStateAfter: nil,
+	})
 	if err != nil {
 		t.Fatalf("marshal payload: %v", err)
 	}
-	updated, err := projector.Apply(state, event.Event{
+
+	updated, err := projector.Apply(SnapshotState{CampaignID: "camp-1"}, event.Event{
 		CampaignID:    "camp-1",
-		Type:          event.Type("sys." + SystemID + ".action.gm_fear_changed"),
+		Type:          eventTypeCharacterStatePatched,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
 		PayloadJSON:   payload,
@@ -59,8 +68,21 @@ func TestProjectorApplyGMFearChanged_UpdatesStateForSysPrefixedType(t *testing.T
 	if !ok {
 		t.Fatalf("expected SnapshotState, got %T", updated)
 	}
-	if snapshot.GMFear != 4 {
-		t.Fatalf("gm fear = %d, want %d", snapshot.GMFear, 4)
+	character, ok := snapshot.CharacterStates["char-1"]
+	if !ok {
+		t.Fatal("expected character state")
+	}
+	if character.CampaignID != "camp-1" {
+		t.Fatalf("character campaign id = %s, want %s", character.CampaignID, "camp-1")
+	}
+	if character.CharacterID != "char-1" {
+		t.Fatalf("character id = %s, want %s", character.CharacterID, "char-1")
+	}
+	if character.HP != hpAfter {
+		t.Fatalf("hp = %d, want %d", character.HP, hpAfter)
+	}
+	if character.Hope != hopeAfter {
+		t.Fatalf("hope = %d, want %d", character.Hope, hopeAfter)
 	}
 }
 
@@ -98,7 +120,7 @@ func TestProjectorApplyUnknownEventReturnsError(t *testing.T) {
 	projector := Projector{}
 	_, err := projector.Apply(SnapshotState{CampaignID: "camp-1"}, event.Event{
 		CampaignID:    "camp-1",
-		Type:          event.Type("sys.daggerheart.action.unknown"),
+		Type:          event.Type("sys.daggerheart.unknown"),
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
 		PayloadJSON:   []byte(`{}`),

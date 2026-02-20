@@ -145,10 +145,10 @@ func TestCreateCharacter_Success_PC(t *testing.T) {
 				PayloadJSON: []byte(`{"character_id":"char-123","system_profile":{"daggerheart":{"hp_max":6}}}`),
 			}),
 		},
-		command.Type("sys.daggerheart.action.character_state.patch"): {
+		command.Type("sys.daggerheart.character_state.patch"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "c1",
-				Type:          event.Type("sys.daggerheart.action.character_state_patched"),
+				Type:          event.Type("sys.daggerheart.character_state_patched"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				EntityType:    "character",
@@ -221,8 +221,8 @@ func TestCreateCharacter_Success_PC(t *testing.T) {
 	if eventStore.events["c1"][1].Type != event.Type("character.profile_updated") {
 		t.Fatalf("event[1] type = %s, want %s", eventStore.events["c1"][1].Type, event.Type("character.profile_updated"))
 	}
-	if eventStore.events["c1"][2].Type != event.Type("sys.daggerheart.action.character_state_patched") {
-		t.Fatalf("event[2] type = %s, want %s", eventStore.events["c1"][2].Type, event.Type("sys.daggerheart.action.character_state_patched"))
+	if eventStore.events["c1"][2].Type != event.Type("sys.daggerheart.character_state_patched") {
+		t.Fatalf("event[2] type = %s, want %s", eventStore.events["c1"][2].Type, event.Type("sys.daggerheart.character_state_patched"))
 	}
 }
 
@@ -260,10 +260,10 @@ func TestCreateCharacter_Success_NPC(t *testing.T) {
 				PayloadJSON: []byte(`{"character_id":"npc-456","system_profile":{"daggerheart":{"hp_max":6}}}`),
 			}),
 		},
-		command.Type("sys.daggerheart.action.character_state.patch"): {
+		command.Type("sys.daggerheart.character_state.patch"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "c1",
-				Type:          event.Type("sys.daggerheart.action.character_state_patched"),
+				Type:          event.Type("sys.daggerheart.character_state_patched"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				EntityType:    "character",
@@ -338,10 +338,10 @@ func TestCreateCharacter_UsesDomainEngine(t *testing.T) {
 				PayloadJSON: []byte(`{"character_id":"char-123","system_profile":{"daggerheart":{"hp_max":6}}}`),
 			}),
 		},
-		command.Type("sys.daggerheart.action.character_state.patch"): {
+		command.Type("sys.daggerheart.character_state.patch"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "c1",
-				Type:          event.Type("sys.daggerheart.action.character_state_patched"),
+				Type:          event.Type("sys.daggerheart.character_state_patched"),
 				Timestamp:     now,
 				ActorType:     event.ActorTypeSystem,
 				EntityType:    "character",
@@ -389,8 +389,8 @@ func TestCreateCharacter_UsesDomainEngine(t *testing.T) {
 	if domain.commands[1].Type != command.Type("character.profile_update") {
 		t.Fatalf("command type = %s, want %s", domain.commands[1].Type, "character.profile_update")
 	}
-	if domain.commands[2].Type != command.Type("sys.daggerheart.action.character_state.patch") {
-		t.Fatalf("command type = %s, want %s", domain.commands[2].Type, "sys.daggerheart.action.character_state.patch")
+	if domain.commands[2].Type != command.Type("sys.daggerheart.character_state.patch") {
+		t.Fatalf("command type = %s, want %s", domain.commands[2].Type, "sys.daggerheart.character_state.patch")
 	}
 	if _, err := characterStore.GetCharacter(context.Background(), "c1", "char-123"); err != nil {
 		t.Fatalf("Character not persisted: %v", err)
@@ -410,8 +410,8 @@ func TestCreateCharacter_UsesDomainEngine(t *testing.T) {
 	if eventStore.events["c1"][1].Type != event.Type("character.profile_updated") {
 		t.Fatalf("event[1] type = %s, want %s", eventStore.events["c1"][1].Type, event.Type("character.profile_updated"))
 	}
-	if eventStore.events["c1"][2].Type != event.Type("sys.daggerheart.action.character_state_patched") {
-		t.Fatalf("event[2] type = %s, want %s", eventStore.events["c1"][2].Type, event.Type("sys.daggerheart.action.character_state_patched"))
+	if eventStore.events["c1"][2].Type != event.Type("sys.daggerheart.character_state_patched") {
+		t.Fatalf("event[2] type = %s, want %s", eventStore.events["c1"][2].Type, event.Type("sys.daggerheart.character_state_patched"))
 	}
 }
 

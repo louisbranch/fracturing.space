@@ -227,8 +227,8 @@ func TestBuildRegistries_SyntheticModuleRejectsLegacyActionPrefix(t *testing.T) 
 	legacy := syntheticModule{
 		id:          "GAME_SYSTEM_ALPHA",
 		version:     "v1",
-		commandType: command.Type("sys.daggerheart.action.attack.resolve"),
-		eventType:   event.Type("sys.daggerheart.action.attack_resolved"),
+		commandType: command.Type("sys.daggerheart.attack.resolve"),
+		eventType:   event.Type("sys.daggerheart.attack_resolved"),
 	}
 
 	_, err := BuildRegistries(legacy)

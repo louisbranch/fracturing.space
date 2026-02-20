@@ -120,7 +120,7 @@ func TestForkCampaign_ReplaysEvents_CopyParticipantsFalse(t *testing.T) {
 	appendEvent(t, eventStore, event.Event{
 		CampaignID:    "source",
 		Timestamp:     now.Add(-5 * time.Hour),
-		Type:          event.Type("sys.daggerheart.action.character_state_patched"),
+		Type:          event.Type("sys.daggerheart.character_state_patched"),
 		EntityType:    "character",
 		EntityID:      "char-1",
 		SystemID:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART.String(),
@@ -247,8 +247,8 @@ func TestForkCampaign_ReplaysEvents_CopyParticipantsFalse(t *testing.T) {
 	if forkedEvents[3].Type != event.Type("character.profile_updated") {
 		t.Fatalf("event[3] type = %s, want %s", forkedEvents[3].Type, event.Type("character.profile_updated"))
 	}
-	if forkedEvents[4].Type != event.Type("sys.daggerheart.action.character_state_patched") {
-		t.Fatalf("event[4] type = %s, want %s", forkedEvents[4].Type, event.Type("sys.daggerheart.action.character_state_patched"))
+	if forkedEvents[4].Type != event.Type("sys.daggerheart.character_state_patched") {
+		t.Fatalf("event[4] type = %s, want %s", forkedEvents[4].Type, event.Type("sys.daggerheart.character_state_patched"))
 	}
 
 	metadata, err := forkStore.GetCampaignForkMetadata(ctx, "fork-1")
@@ -441,7 +441,7 @@ func TestForkCampaign_SeedsSnapshotStateAtHead(t *testing.T) {
 	appendEvent(t, eventStore, event.Event{
 		CampaignID:    "source",
 		Timestamp:     now.Add(-5 * time.Hour),
-		Type:          event.Type("sys.daggerheart.action.character_state_patched"),
+		Type:          event.Type("sys.daggerheart.character_state_patched"),
 		EntityType:    "character",
 		EntityID:      "char-1",
 		SystemID:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART.String(),
@@ -456,7 +456,7 @@ func TestForkCampaign_SeedsSnapshotStateAtHead(t *testing.T) {
 	appendEvent(t, eventStore, event.Event{
 		CampaignID:    "source",
 		Timestamp:     now.Add(-4 * time.Hour),
-		Type:          event.Type("sys.daggerheart.action.gm_fear_changed"),
+		Type:          event.Type("sys.daggerheart.gm_fear_changed"),
 		EntityType:    "campaign",
 		EntityID:      "source",
 		SystemID:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART.String(),
@@ -733,7 +733,7 @@ func TestForkCampaign_SessionBoundaryForkPoint(t *testing.T) {
 	appendEvent(t, eventStore, event.Event{
 		CampaignID:    "source",
 		Timestamp:     now.Add(-90 * time.Minute),
-		Type:          event.Type("sys.daggerheart.action.gm_fear_changed"),
+		Type:          event.Type("sys.daggerheart.gm_fear_changed"),
 		EntityType:    "campaign",
 		EntityID:      "source",
 		SessionID:     "sess-1",

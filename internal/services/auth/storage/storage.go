@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/user"
 )
@@ -17,21 +16,6 @@ type UserStore interface {
 	PutUser(ctx context.Context, u user.User) error
 	GetUser(ctx context.Context, userID string) (user.User, error)
 	ListUsers(ctx context.Context, pageSize int, pageToken string) (UserPage, error)
-}
-
-// AccountProfile represents one row of user profile metadata.
-type AccountProfile struct {
-	UserID    string
-	Name      string
-	Locale    commonv1.Locale
-	CreatedAt time.Time
-	UpdatedAt time.Time
-}
-
-// AccountProfileStore persists per-user profile metadata.
-type AccountProfileStore interface {
-	PutAccountProfile(ctx context.Context, profile AccountProfile) error
-	GetAccountProfile(ctx context.Context, userID string) (AccountProfile, error)
 }
 
 // UserPage is a cursor page of users for admin-facing browsing and audits.

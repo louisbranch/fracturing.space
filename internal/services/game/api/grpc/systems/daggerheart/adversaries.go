@@ -121,7 +121,7 @@ func (s *DaggerheartService) CreateAdversary(ctx context.Context, in *pb.Daggerh
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
 	result, err := s.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:    campaignID,
-		Type:          command.Type("sys.daggerheart.action.adversary.create"),
+		Type:          command.Type("sys.daggerheart.adversary.create"),
 		ActorType:     command.ActorTypeSystem,
 		SessionID:     sessionID,
 		RequestID:     requestID,
@@ -281,7 +281,7 @@ func (s *DaggerheartService) UpdateAdversary(ctx context.Context, in *pb.Daggerh
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
 	result, err := s.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:    campaignID,
-		Type:          command.Type("sys.daggerheart.action.adversary.update"),
+		Type:          command.Type("sys.daggerheart.adversary.update"),
 		ActorType:     command.ActorTypeSystem,
 		SessionID:     sessionID,
 		RequestID:     requestID,
@@ -377,7 +377,7 @@ func (s *DaggerheartService) DeleteAdversary(ctx context.Context, in *pb.Daggerh
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
 	result, err := s.stores.Domain.Execute(ctx, command.Command{
 		CampaignID:    campaignID,
-		Type:          command.Type("sys.daggerheart.action.adversary.delete"),
+		Type:          command.Type("sys.daggerheart.adversary.delete"),
 		ActorType:     command.ActorTypeSystem,
 		SessionID:     sessionID,
 		RequestID:     requestID,

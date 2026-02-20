@@ -422,7 +422,7 @@ func TestAppendEventFieldRoundTrip(t *testing.T) {
 	evt := event.Event{
 		CampaignID:    "camp-fields",
 		Timestamp:     time.Date(2026, 2, 3, 12, 0, 0, 0, time.UTC),
-		Type:          event.Type("sys.daggerheart.action.character_state_patched"),
+		Type:          event.Type("sys.daggerheart.character_state_patched"),
 		SessionID:     "sess-1",
 		RequestID:     "req-1",
 		InvocationID:  "inv-1",
@@ -434,7 +434,7 @@ func TestAppendEventFieldRoundTrip(t *testing.T) {
 		SystemVersion: daggerheart.SystemVersion,
 		CorrelationID: "corr-1",
 		CausationID:   "cause-1",
-		PayloadJSON:   []byte(`{"character_id":"char-1"}`),
+		PayloadJSON:   []byte(`{"character_id":"char-1","hp_after":5}`),
 	}
 
 	stored, err := store.AppendEvent(context.Background(), evt)
@@ -467,7 +467,7 @@ func TestAppendEventFieldRoundTrip(t *testing.T) {
 			t.Fatalf("%s: expected %q, got %q", c.name, c.expected, c.actual)
 		}
 	}
-	if string(got.PayloadJSON) != `{"character_id":"char-1"}` {
+	if string(got.PayloadJSON) != `{"character_id":"char-1","hp_after":5}` {
 		t.Fatalf("expected payload to round-trip, got %s", string(got.PayloadJSON))
 	}
 	if fmt.Sprintf("%d", got.Seq) != fmt.Sprintf("%d", stored.Seq) {

@@ -312,7 +312,7 @@ func TestListTimelineEntries_CharacterStateChanges(t *testing.T) {
 		{
 			CampaignID:  "c1",
 			Seq:         1,
-			Type:        event.Type("sys.daggerheart.action.character_state_patched"),
+			Type:        event.Type("sys.daggerheart.character_state_patched"),
 			EntityType:  "character",
 			EntityID:    "ch1",
 			Timestamp:   now,
@@ -408,7 +408,7 @@ func TestListTimelineEntries_CharacterStateChanges_WithBefore(t *testing.T) {
 		{
 			CampaignID:  "c1",
 			Seq:         1,
-			Type:        event.Type("sys.daggerheart.action.character_state_patched"),
+			Type:        event.Type("sys.daggerheart.character_state_patched"),
 			EntityType:  "character",
 			EntityID:    "ch1",
 			Timestamp:   now,

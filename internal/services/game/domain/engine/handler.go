@@ -3,6 +3,8 @@ package engine
 import (
 	"context"
 	"errors"
+	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -14,6 +16,10 @@ import (
 var (
 	// ErrCommandRegistryRequired indicates a missing command registry.
 	ErrCommandRegistryRequired = errors.New("command registry is required")
+	// ErrCommandMustMutate indicates a command returned no mutations.
+	ErrCommandMustMutate = errors.New("command must emit at least one event")
+	// ErrSystemEventNoMutation indicates a system event did not mutate state.
+	ErrSystemEventNoMutation = errors.New("system event must mutate state")
 	// ErrDeciderRequired indicates a missing decider.
 	ErrDeciderRequired = errors.New("decider is required")
 	// ErrGateStateLoaderRequired indicates a missing gate state loader.
@@ -105,14 +111,6 @@ func (h Handler) Execute(ctx context.Context, cmd command.Command) (Result, erro
 	if err != nil {
 		return Result{}, err
 	}
-	if h.Applier != nil && len(decision.Events) > 0 {
-		for _, evt := range decision.Events {
-			state, err = h.Applier.Apply(state, evt)
-			if err != nil {
-				return Result{}, err
-			}
-		}
-	}
 	if h.Checkpoints != nil && len(decision.Events) > 0 {
 		last := decision.Events[len(decision.Events)-1]
 		if last.Seq > 0 {
@@ -175,6 +173,27 @@ func (h Handler) prepareExecution(ctx context.Context, cmd command.Command) (com
 		now = time.Now
 	}
 	decision := h.Decider.Decide(state, cmd, now)
+	if len(decision.Rejections) == 0 && len(decision.Events) == 0 {
+		return command.Command{}, nil, command.Decision{}, ErrCommandMustMutate
+	}
+	if h.Applier != nil && len(decision.Events) > 0 {
+		for _, evt := range decision.Events {
+			stateAfter, err := h.Applier.Apply(state, evt)
+			if err != nil {
+				return command.Command{}, nil, command.Decision{}, err
+			}
+			if evt.SystemID != "" {
+				before, err := cloneState(state)
+				if err != nil {
+					return command.Command{}, nil, command.Decision{}, err
+				}
+				if reflect.DeepEqual(before, stateAfter) {
+					return command.Command{}, nil, command.Decision{}, fmt.Errorf("%w: %s", ErrSystemEventNoMutation, evt.Type)
+				}
+			}
+			state = stateAfter
+		}
+	}
 	if h.Events != nil && len(decision.Events) > 0 {
 		validated := make([]event.Event, 0, len(decision.Events))
 		for _, evt := range decision.Events {
@@ -198,4 +217,120 @@ func (h Handler) prepareExecution(ctx context.Context, cmd command.Command) (com
 		decision.Events = stored
 	}
 	return cmd, state, decision, nil
+}
+
+func cloneState(state any) (any, error) {
+	if state == nil {
+		return nil, nil
+	}
+	cloned, err := cloneValue(reflect.ValueOf(state))
+	if err != nil {
+		return nil, err
+	}
+	return cloned.Interface(), nil
+}
+
+func cloneValue(value reflect.Value) (reflect.Value, error) {
+	if !value.IsValid() {
+		return reflect.New(reflect.TypeOf((*interface{})(nil)).Elem()).Elem(), nil
+	}
+
+	switch value.Kind() {
+	case reflect.Interface:
+		if value.IsNil() {
+			return reflect.Zero(value.Type()), nil
+		}
+		cloned, err := cloneValue(value.Elem())
+		if err != nil {
+			return reflect.Value{}, err
+		}
+		out := reflect.New(value.Type()).Elem()
+		if cloned.IsValid() {
+			out.Set(cloned)
+		}
+		return out, nil
+
+	case reflect.Ptr:
+		if value.IsNil() {
+			return reflect.Zero(value.Type()), nil
+		}
+		cloned, err := cloneValue(value.Elem())
+		if err != nil {
+			return reflect.Value{}, err
+		}
+		out := reflect.New(value.Elem().Type())
+		out.Elem().Set(cloned)
+		return out, nil
+
+	case reflect.Map:
+		if value.IsNil() {
+			return reflect.Zero(value.Type()), nil
+		}
+		out := reflect.MakeMapWithSize(value.Type(), value.Len())
+		for _, key := range value.MapKeys() {
+			clonedKey, err := cloneValue(key)
+			if err != nil {
+				return reflect.Value{}, err
+			}
+			clonedValue, err := cloneValue(value.MapIndex(key))
+			if err != nil {
+				return reflect.Value{}, err
+			}
+			out.SetMapIndex(clonedKey, clonedValue)
+		}
+		return out, nil
+
+	case reflect.Slice:
+		if value.IsNil() {
+			return reflect.Zero(value.Type()), nil
+		}
+		out := reflect.MakeSlice(value.Type(), value.Len(), value.Len())
+		for i := 0; i < value.Len(); i++ {
+			clonedItem, err := cloneValue(value.Index(i))
+			if err != nil {
+				return reflect.Value{}, err
+			}
+			out.Index(i).Set(clonedItem)
+		}
+		return out, nil
+
+	case reflect.Array:
+		out := reflect.New(value.Type()).Elem()
+		for i := 0; i < value.Len(); i++ {
+			clonedItem, err := cloneValue(value.Index(i))
+			if err != nil {
+				return reflect.Value{}, err
+			}
+			out.Index(i).Set(clonedItem)
+		}
+		return out, nil
+
+	case reflect.Struct:
+		out := reflect.New(value.Type()).Elem()
+		for i := 0; i < value.NumField(); i++ {
+			clonedField, err := cloneValue(value.Field(i))
+			if err != nil {
+				return reflect.Value{}, err
+			}
+			field := out.Field(i)
+			if !field.CanSet() {
+				continue
+			}
+			if !clonedField.IsValid() {
+				field.Set(reflect.Zero(field.Type()))
+				continue
+			}
+			if clonedField.Type().AssignableTo(field.Type()) {
+				field.Set(clonedField)
+				continue
+			}
+			if clonedField.Type().ConvertibleTo(field.Type()) {
+				field.Set(clonedField.Convert(field.Type()))
+			}
+		}
+		return out, nil
+
+	default:
+		return value, nil
+	}
 }

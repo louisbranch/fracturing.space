@@ -148,7 +148,7 @@ func isAlreadyExistsError(err error) bool {
 	return strings.Contains(err.Error(), "already exists")
 }
 
-// PutUser persists a user record and its primary email atomically.
+// PutUser persists a user record.
 func (s *Store) PutUser(ctx context.Context, u user.User) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -159,91 +159,14 @@ func (s *Store) PutUser(ctx context.Context, u user.User) error {
 	if strings.TrimSpace(u.ID) == "" {
 		return fmt.Errorf("user id is required")
 	}
-	if strings.TrimSpace(u.Email) == "" {
-		return fmt.Errorf("email is required")
-	}
 
-	tx, err := s.sqlDB.BeginTx(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("start transaction: %w", err)
-	}
-	defer func() {
-		_ = tx.Rollback()
-	}()
-
-	qtx := s.q.WithTx(tx)
-
-	if err := qtx.PutUser(ctx, db.PutUserParams{
+	return s.q.PutUser(ctx, db.PutUserParams{
 		ID:        u.ID,
-		CreatedAt: toMillis(u.CreatedAt),
-		UpdatedAt: toMillis(u.UpdatedAt),
-	}); err != nil {
-		return fmt.Errorf("put user: %w", err)
-	}
-
-	if err := qtx.PutUserPrimaryEmail(ctx, db.PutUserPrimaryEmailParams{
-		ID:        u.ID,
-		UserID:    u.ID,
 		Email:     u.Email,
+		Locale:    platformi18n.LocaleString(u.Locale),
 		CreatedAt: toMillis(u.CreatedAt),
 		UpdatedAt: toMillis(u.UpdatedAt),
-	}); err != nil {
-		return fmt.Errorf("put user primary email: %w", err)
-	}
-
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("commit user: %w", err)
-	}
-	return nil
-}
-
-// PutAccountProfile stores account profile metadata for a user.
-func (s *Store) PutAccountProfile(ctx context.Context, profile storage.AccountProfile) error {
-	if err := ctx.Err(); err != nil {
-		return err
-	}
-	if s == nil || s.sqlDB == nil {
-		return fmt.Errorf("storage is not configured")
-	}
-	if strings.TrimSpace(profile.UserID) == "" {
-		return fmt.Errorf("user id is required")
-	}
-
-	return s.q.PutAccountProfile(ctx, db.PutAccountProfileParams{
-		UserID:    profile.UserID,
-		Name:      profile.Name,
-		Locale:    platformi18n.LocaleString(profile.Locale),
-		CreatedAt: toMillis(profile.CreatedAt),
-		UpdatedAt: toMillis(profile.UpdatedAt),
 	})
-}
-
-// GetAccountProfile fetches profile metadata for a user.
-func (s *Store) GetAccountProfile(ctx context.Context, userID string) (storage.AccountProfile, error) {
-	if err := ctx.Err(); err != nil {
-		return storage.AccountProfile{}, err
-	}
-	if s == nil || s.sqlDB == nil {
-		return storage.AccountProfile{}, fmt.Errorf("storage is not configured")
-	}
-	if strings.TrimSpace(userID) == "" {
-		return storage.AccountProfile{}, fmt.Errorf("user id is required")
-	}
-
-	row, err := s.q.GetAccountProfile(ctx, userID)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return storage.AccountProfile{}, storage.ErrNotFound
-		}
-		return storage.AccountProfile{}, fmt.Errorf("get account profile: %w", err)
-	}
-
-	profile, err := dbAccountProfileToDomain(row)
-	if err != nil {
-		return storage.AccountProfile{}, fmt.Errorf("parse account profile: %w", err)
-	}
-
-	return profile, nil
 }
 
 // GetUser fetches a user record by ID.
@@ -266,7 +189,7 @@ func (s *Store) GetUser(ctx context.Context, userID string) (user.User, error) {
 		return user.User{}, fmt.Errorf("get user: %w", err)
 	}
 
-	return dbUserToDomain(row.ID, row.Email, row.CreatedAt, row.UpdatedAt), nil
+	return dbUserToDomain(row)
 }
 
 // ListUsers returns a page of user records.
@@ -281,36 +204,33 @@ func (s *Store) ListUsers(ctx context.Context, pageSize int, pageToken string) (
 		return storage.UserPage{}, fmt.Errorf("page size must be greater than zero")
 	}
 
-	page := storage.UserPage{Users: make([]user.User, 0, pageSize)}
+	var rows []db.User
+	var err error
 
-	switch {
-	case pageToken == "":
-		rows, err := s.q.ListUsersPagedFirst(ctx, int64(pageSize+1))
-		if err != nil {
-			return storage.UserPage{}, fmt.Errorf("list users: %w", err)
-		}
-		for i, row := range rows {
-			if i >= pageSize {
-				page.NextPageToken = rows[pageSize-1].ID
-				break
-			}
-			page.Users = append(page.Users, dbUserToDomain(row.ID, row.Email, row.CreatedAt, row.UpdatedAt))
-		}
-	default:
-		rows, err := s.q.ListUsersPaged(ctx, db.ListUsersPagedParams{
+	if pageToken == "" {
+		rows, err = s.q.ListUsersPagedFirst(ctx, int64(pageSize+1))
+	} else {
+		rows, err = s.q.ListUsersPaged(ctx, db.ListUsersPagedParams{
 			ID:    pageToken,
 			Limit: int64(pageSize + 1),
 		})
+	}
+	if err != nil {
+		return storage.UserPage{}, fmt.Errorf("list users: %w", err)
+	}
+
+	page := storage.UserPage{Users: make([]user.User, 0, pageSize)}
+
+	for i, row := range rows {
+		if i >= pageSize {
+			page.NextPageToken = rows[pageSize-1].ID
+			break
+		}
+		u, err := dbUserToDomain(row)
 		if err != nil {
-			return storage.UserPage{}, fmt.Errorf("list users: %w", err)
+			return storage.UserPage{}, err
 		}
-		for i, row := range rows {
-			if i >= pageSize {
-				page.NextPageToken = rows[pageSize-1].ID
-				break
-			}
-			page.Users = append(page.Users, dbUserToDomain(row.ID, row.Email, row.CreatedAt, row.UpdatedAt))
-		}
+		page.Users = append(page.Users, u)
 	}
 
 	return page, nil
@@ -339,25 +259,15 @@ func (s *Store) GetAuthStatistics(ctx context.Context, since *time.Time) (storag
 	return storage.AuthStatistics{UserCount: count}, nil
 }
 
-func dbUserToDomain(id string, email string, createdAt int64, updatedAt int64) user.User {
+func dbUserToDomain(row db.User) (user.User, error) {
+	locale := platformi18n.DefaultLocale()
+	if parsed, ok := platformi18n.ParseLocale(row.Locale); ok {
+		locale = parsed
+	}
 	return user.User{
-		ID:        id,
-		Email:     email,
-		CreatedAt: fromMillis(createdAt),
-		UpdatedAt: fromMillis(updatedAt),
-	}
-}
-
-func dbAccountProfileToDomain(row db.AccountProfile) (storage.AccountProfile, error) {
-	parsedLocale := platformi18n.DefaultLocale()
-	if locale, ok := platformi18n.ParseLocale(row.Locale); ok {
-		parsedLocale = locale
-	}
-
-	return storage.AccountProfile{
-		UserID:    row.UserID,
-		Name:      row.Name,
-		Locale:    parsedLocale,
+		ID:        row.ID,
+		Email:     row.Email,
+		Locale:    locale,
 		CreatedAt: fromMillis(row.CreatedAt),
 		UpdatedAt: fromMillis(row.UpdatedAt),
 	}, nil
@@ -594,7 +504,6 @@ func (s *Store) PutUserEmail(ctx context.Context, email storage.UserEmail) error
 		ID:         email.ID,
 		UserID:     email.UserID,
 		Email:      email.Email,
-		IsPrimary:  0,
 		VerifiedAt: verified,
 		CreatedAt:  toMillis(email.CreatedAt),
 		UpdatedAt:  toMillis(email.UpdatedAt),
@@ -783,7 +692,6 @@ func dbMagicLinkToDomain(row db.MagicLink) storage.MagicLink {
 }
 
 var _ storage.UserStore = (*Store)(nil)
-var _ storage.AccountProfileStore = (*Store)(nil)
 var _ storage.StatisticsStore = (*Store)(nil)
 var _ storage.PasskeyStore = (*Store)(nil)
 var _ storage.EmailStore = (*Store)(nil)

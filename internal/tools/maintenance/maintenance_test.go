@@ -1051,9 +1051,9 @@ func TestScanSnapshotEventsCountsSnapshotEvents(t *testing.T) {
 	store := &fakeEventStore{events: map[string][]event.Event{
 		"c1": {
 			{Seq: 1, Type: event.Type("campaign.created")},
-			{Seq: 2, Type: event.Type("sys.daggerheart.action.character_state_patched"), CampaignID: "c1", EntityType: "action", EntityID: "entity-1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion},
+			{Seq: 2, Type: event.Type("sys.daggerheart.character_state_patched"), CampaignID: "c1", EntityType: "action", EntityID: "entity-1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion},
 			{Seq: 3, Type: event.Type("character.created")},
-			{Seq: 4, Type: event.Type("sys.daggerheart.action.gm_fear_changed"), CampaignID: "c1", EntityType: "action", EntityID: "entity-1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion},
+			{Seq: 4, Type: event.Type("sys.daggerheart.gm_fear_changed"), CampaignID: "c1", EntityType: "action", EntityID: "entity-1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion},
 		},
 	}}
 	report, _, err := scanSnapshotEvents(t.Context(), store, "c1", 0, 0, false)
@@ -1074,8 +1074,8 @@ func TestScanSnapshotEventsCountsSnapshotEvents(t *testing.T) {
 func TestScanSnapshotEventsWithValidation(t *testing.T) {
 	store := &fakeEventStore{events: map[string][]event.Event{
 		"c1": {
-			{Seq: 1, Type: event.Type("sys.daggerheart.action.character_state_patched"), CampaignID: "c1", EntityType: "action", EntityID: "entity-1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion, PayloadJSON: []byte(`{"character_id":"ch1"}`)},
-			{Seq: 2, Type: event.Type("sys.daggerheart.action.character_state_patched"), CampaignID: "c1", EntityType: "action", EntityID: "entity-1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion, PayloadJSON: []byte(`{invalid`)},
+			{Seq: 1, Type: event.Type("sys.daggerheart.character_state_patched"), CampaignID: "c1", EntityType: "action", EntityID: "entity-1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion, PayloadJSON: []byte(`{"character_id":"ch1","hp_before":3,"hp_after":2}`)},
+			{Seq: 2, Type: event.Type("sys.daggerheart.character_state_patched"), CampaignID: "c1", EntityType: "action", EntityID: "entity-1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion, PayloadJSON: []byte(`{invalid`)},
 		},
 	}}
 	report, warnings, err := scanSnapshotEvents(t.Context(), store, "c1", 0, 0, true)
@@ -1166,7 +1166,7 @@ func TestRunCampaignDryRunScan(t *testing.T) {
 	store := &fakeEventStore{events: map[string][]event.Event{
 		"c1": {
 			{Seq: 1, Type: event.Type("campaign.created")},
-			{Seq: 2, Type: event.Type("sys.daggerheart.action.gm_fear_changed"), CampaignID: "c1", EntityType: "action", EntityID: "entity-1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion},
+			{Seq: 2, Type: event.Type("sys.daggerheart.gm_fear_changed"), CampaignID: "c1", EntityType: "action", EntityID: "entity-1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion},
 		},
 	}}
 	result := runCampaign(t.Context(), store, nil, "c1", runOptions{DryRun: true, WarningsCap: 25}, io.Discard)
@@ -1191,7 +1191,7 @@ func TestRunCampaignDryRunScan(t *testing.T) {
 func TestRunCampaignValidateMode(t *testing.T) {
 	store := &fakeEventStore{events: map[string][]event.Event{
 		"c1": {
-			{Seq: 1, Type: event.Type("sys.daggerheart.action.character_state_patched"), CampaignID: "c1", EntityType: "action", EntityID: "entity-1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion, PayloadJSON: []byte(`{invalid`)},
+			{Seq: 1, Type: event.Type("sys.daggerheart.character_state_patched"), CampaignID: "c1", EntityType: "action", EntityID: "entity-1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion, PayloadJSON: []byte(`{invalid`)},
 		},
 	}}
 	result := runCampaign(t.Context(), store, nil, "c1", runOptions{DryRun: true, Validate: true, WarningsCap: 25}, io.Discard)
@@ -1254,7 +1254,7 @@ func TestRunCampaignScanWarningsCapped(t *testing.T) {
 	// Build events that each produce a validation warning when validated.
 	var events []event.Event
 	for i := 1; i <= 5; i++ {
-		events = append(events, makeDaggerheartEvent("c1", "sys.daggerheart.action.character_state_patched", []byte(`{invalid`)))
+		events = append(events, makeDaggerheartEvent("c1", "sys.daggerheart.character_state_patched", []byte(`{invalid`)))
 		events[len(events)-1].Seq = uint64(i)
 	}
 	store := &fakeEventStore{events: map[string][]event.Event{"c1": events}}
@@ -1270,7 +1270,7 @@ func TestRunCampaignScanWarningsCapped(t *testing.T) {
 func TestRunCampaignValidateNoInvalid(t *testing.T) {
 	store := &fakeEventStore{events: map[string][]event.Event{
 		"c1": {
-			{Seq: 1, Type: event.Type("sys.daggerheart.action.gm_fear_changed"), CampaignID: "c1", EntityType: "action", EntityID: "entity-1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion, PayloadJSON: []byte(`{"after":3}`)},
+			{Seq: 1, Type: event.Type("sys.daggerheart.gm_fear_changed"), CampaignID: "c1", EntityType: "action", EntityID: "entity-1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion, PayloadJSON: []byte(`{"after":3}`)},
 		},
 	}}
 	result := runCampaign(t.Context(), store, nil, "c1", runOptions{DryRun: true, Validate: true, WarningsCap: 25}, io.Discard)
@@ -1328,7 +1328,7 @@ func TestRunWithDeps_MultiCampaign(t *testing.T) {
 func TestRunWithDeps_OneCampaignFails(t *testing.T) {
 	evtStore := &fakeClosableEventStore{
 		fakeEventStore: fakeEventStore{events: map[string][]event.Event{
-			"c1": {{Seq: 1, Type: event.Type("sys.daggerheart.action.character_state_patched"), CampaignID: "c1", EntityType: "action", EntityID: "entity-1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion, PayloadJSON: []byte(`{invalid`)}},
+			"c1": {{Seq: 1, Type: event.Type("sys.daggerheart.character_state_patched"), CampaignID: "c1", EntityType: "action", EntityID: "entity-1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion, PayloadJSON: []byte(`{invalid`)}},
 			"c2": {{Seq: 1, Type: event.Type("campaign.created")}},
 		}},
 	}

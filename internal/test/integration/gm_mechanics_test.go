@@ -11,15 +11,11 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
-
-type gmMoveAppliedPayload struct {
-	Move      string `json:"move"`
-	FearSpent int    `json:"fear_spent"`
-}
 
 type gmFearChangedPayload struct {
 	Before int    `json:"before"`
@@ -40,11 +36,6 @@ type countdownUpdatedPayload struct {
 
 type countdownDeletedPayload struct {
 	CountdownID string `json:"countdown_id"`
-}
-
-type adversaryRollPayload struct {
-	AdversaryID string `json:"adversary_id"`
-	RollSeq     uint64 `json:"roll_seq"`
 }
 
 func TestDaggerheartGmMoveSpendFear(t *testing.T) {
@@ -138,9 +129,6 @@ func TestDaggerheartGmMoveSpendFear(t *testing.T) {
 		t.Fatalf("gm fear = %d -> %d, want 3 -> 1", moveResp.GetGmFearBefore(), moveResp.GetGmFearAfter())
 	}
 
-	if err := findGmMoveApplied(ctx, eventClient, campaignID, sessionID, "hard_move"); err != nil {
-		t.Fatalf("find gm move applied: %v", err)
-	}
 	if err := findGMFearChanged(ctx, eventClient, campaignID, sessionID, 3, 1); err != nil {
 		t.Fatalf("find gm fear changed: %v", err)
 	}
@@ -344,34 +332,12 @@ func TestDaggerheartAdversaryAttackRoll(t *testing.T) {
 	}
 }
 
-func findGmMoveApplied(ctx context.Context, client gamev1.EventServiceClient, campaignID, sessionID, move string) error {
-	response, err := client.ListEvents(ctx, &gamev1.ListEventsRequest{
-		CampaignId: campaignID,
-		PageSize:   200,
-		OrderBy:    "seq desc",
-		Filter:     "session_id = \"" + sessionID + "\" AND type = \"sys.daggerheart.action.gm_move_applied\"",
-	})
-	if err != nil {
-		return err
-	}
-	for _, evt := range response.GetEvents() {
-		var payload gmMoveAppliedPayload
-		if err := json.Unmarshal(evt.GetPayloadJson(), &payload); err != nil {
-			return err
-		}
-		if payload.Move == move {
-			return nil
-		}
-	}
-	return fmt.Errorf("gm move applied event not found")
-}
-
 func findGMFearChanged(ctx context.Context, client gamev1.EventServiceClient, campaignID, sessionID string, before, after int) error {
 	response, err := client.ListEvents(ctx, &gamev1.ListEventsRequest{
 		CampaignId: campaignID,
 		PageSize:   200,
 		OrderBy:    "seq desc",
-		Filter:     "session_id = \"" + sessionID + "\" AND type = \"sys.daggerheart.action.gm_fear_changed\"",
+		Filter:     "session_id = \"" + sessionID + "\" AND type = \"sys.daggerheart.gm_fear_changed\"",
 	})
 	if err != nil {
 		return err
@@ -393,7 +359,7 @@ func findCountdownCreated(ctx context.Context, client gamev1.EventServiceClient,
 		CampaignId: campaignID,
 		PageSize:   200,
 		OrderBy:    "seq desc",
-		Filter:     "session_id = \"" + sessionID + "\" AND type = \"sys.daggerheart.action.countdown_created\"",
+		Filter:     "session_id = \"" + sessionID + "\" AND type = \"sys.daggerheart.countdown_created\"",
 	})
 	if err != nil {
 		return err
@@ -415,7 +381,7 @@ func findCountdownUpdated(ctx context.Context, client gamev1.EventServiceClient,
 		CampaignId: campaignID,
 		PageSize:   200,
 		OrderBy:    "seq desc",
-		Filter:     "session_id = \"" + sessionID + "\" AND type = \"sys.daggerheart.action.countdown_updated\"",
+		Filter:     "session_id = \"" + sessionID + "\" AND type = \"sys.daggerheart.countdown_updated\"",
 	})
 	if err != nil {
 		return err
@@ -437,7 +403,7 @@ func findCountdownDeleted(ctx context.Context, client gamev1.EventServiceClient,
 		CampaignId: campaignID,
 		PageSize:   200,
 		OrderBy:    "seq desc",
-		Filter:     "session_id = \"" + sessionID + "\" AND type = \"sys.daggerheart.action.countdown_deleted\"",
+		Filter:     "session_id = \"" + sessionID + "\" AND type = \"sys.daggerheart.countdown_deleted\"",
 	})
 	if err != nil {
 		return err
@@ -459,13 +425,13 @@ func findAdversaryRollResolved(ctx context.Context, client gamev1.EventServiceCl
 		CampaignId: campaignID,
 		PageSize:   200,
 		OrderBy:    "seq desc",
-		Filter:     "session_id = \"" + sessionID + "\" AND type = \"sys.daggerheart.action.adversary_roll_resolved\"",
+		Filter:     "session_id = \"" + sessionID + "\" AND type = \"action.roll_resolved\"",
 	})
 	if err != nil {
 		return err
 	}
 	for _, evt := range response.GetEvents() {
-		var payload adversaryRollPayload
+		var payload action.RollResolvePayload
 		if err := json.Unmarshal(evt.GetPayloadJson(), &payload); err != nil {
 			return err
 		}

@@ -4,8 +4,6 @@ package integration
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"testing"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
@@ -15,12 +13,6 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
-
-type adversaryAttackResolvedPayload struct {
-	AdversaryID string `json:"adversary_id"`
-	RollSeq     uint64 `json:"roll_seq"`
-	Success     bool   `json:"success"`
-}
 
 func TestDaggerheartAdversaryAttackFlow(t *testing.T) {
 	grpcAddr, authAddr, stopServer := startGRPCServer(t)
@@ -130,32 +122,7 @@ func TestDaggerheartAdversaryAttackFlow(t *testing.T) {
 		t.Fatal("expected damage roll seq")
 	}
 
-	if err := findAdversaryAttackResolved(ctx, eventClient, campaignID, sessionID, result.GetAttackRoll().GetRollSeq()); err != nil {
-		t.Fatalf("find adversary attack resolved: %v", err)
-	}
 	if _, err := findDamageApplied(ctx, eventClient, campaignID, sessionID, result.GetDamageRoll().GetRollSeq()); err != nil {
 		t.Fatalf("find damage applied: %v", err)
 	}
-}
-
-func findAdversaryAttackResolved(ctx context.Context, client gamev1.EventServiceClient, campaignID, sessionID string, rollSeq uint64) error {
-	response, err := client.ListEvents(ctx, &gamev1.ListEventsRequest{
-		CampaignId: campaignID,
-		PageSize:   200,
-		OrderBy:    "seq desc",
-		Filter:     "session_id = \"" + sessionID + "\" AND type = \"sys.daggerheart.action.adversary_attack_resolved\"",
-	})
-	if err != nil {
-		return err
-	}
-	for _, evt := range response.GetEvents() {
-		var payload adversaryAttackResolvedPayload
-		if err := json.Unmarshal(evt.GetPayloadJson(), &payload); err != nil {
-			return err
-		}
-		if payload.RollSeq == rollSeq {
-			return nil
-		}
-	}
-	return fmt.Errorf("adversary attack resolved event not found")
 }

@@ -199,7 +199,7 @@ func timelineEntryFromEvent(ctx context.Context, resolver *timelineProjectionRes
 
 func timelineChangeFields(evt event.Event) []*campaignv1.ProjectionField {
 	switch evt.Type {
-	case event.Type("sys.daggerheart.action.character_state_patched"):
+	case event.Type("sys.daggerheart.character_state_patched"):
 		return daggerheartStateChangeFields(evt.PayloadJSON)
 	default:
 		return nil

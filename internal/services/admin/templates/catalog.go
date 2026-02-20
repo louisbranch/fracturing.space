@@ -1,14 +1,11 @@
 // File catalog.go defines view data for catalog templates.
 package templates
 
-import commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
-
 // CatalogSection represents a catalog section entry.
 type CatalogSection struct {
-	ID     string
-	Label  string
-	URL    string
-	IconID commonv1.IconId
+	ID    string
+	Label string
+	URL   string
 }
 
 // CatalogTableRow represents a single row in a catalog table.
@@ -101,21 +98,21 @@ func IsDaggerheartCatalogSection(sectionID string) bool {
 // DaggerheartCatalogSections returns the catalog navigation entries.
 func DaggerheartCatalogSections(loc Localizer) []CatalogSection {
 	return []CatalogSection{
-		{ID: CatalogSectionClasses, Label: T(loc, "catalog.daggerheart.classes"), URL: "/catalog/daggerheart/classes", IconID: commonv1.IconId_ICON_ID_CLASS},
-		{ID: CatalogSectionSubclasses, Label: T(loc, "catalog.daggerheart.subclasses"), URL: "/catalog/daggerheart/subclasses", IconID: commonv1.IconId_ICON_ID_SUBCLASS},
-		{ID: CatalogSectionHeritages, Label: T(loc, "catalog.daggerheart.heritages"), URL: "/catalog/daggerheart/heritages", IconID: commonv1.IconId_ICON_ID_HERITAGE},
-		{ID: CatalogSectionExperiences, Label: T(loc, "catalog.daggerheart.experiences"), URL: "/catalog/daggerheart/experiences", IconID: commonv1.IconId_ICON_ID_EXPERIENCE},
-		{ID: CatalogSectionDomains, Label: T(loc, "catalog.daggerheart.domains"), URL: "/catalog/daggerheart/domains", IconID: commonv1.IconId_ICON_ID_DOMAIN},
-		{ID: CatalogSectionDomainCards, Label: T(loc, "catalog.daggerheart.domain_cards"), URL: "/catalog/daggerheart/domain-cards", IconID: commonv1.IconId_ICON_ID_DOMAIN_CARD},
-		{ID: CatalogSectionItems, Label: T(loc, "catalog.daggerheart.items"), URL: "/catalog/daggerheart/items", IconID: commonv1.IconId_ICON_ID_ITEM},
-		{ID: CatalogSectionWeapons, Label: T(loc, "catalog.daggerheart.weapons"), URL: "/catalog/daggerheart/weapons", IconID: commonv1.IconId_ICON_ID_WEAPON},
-		{ID: CatalogSectionArmor, Label: T(loc, "catalog.daggerheart.armor"), URL: "/catalog/daggerheart/armor", IconID: commonv1.IconId_ICON_ID_ARMOR},
-		{ID: CatalogSectionLoot, Label: T(loc, "catalog.daggerheart.loot"), URL: "/catalog/daggerheart/loot", IconID: commonv1.IconId_ICON_ID_LOOT},
-		{ID: CatalogSectionDamageTypes, Label: T(loc, "catalog.daggerheart.damage_types"), URL: "/catalog/daggerheart/damage-types", IconID: commonv1.IconId_ICON_ID_DAMAGE},
-		{ID: CatalogSectionAdversaries, Label: T(loc, "catalog.daggerheart.adversaries"), URL: "/catalog/daggerheart/adversaries", IconID: commonv1.IconId_ICON_ID_ADVERSARY},
-		{ID: CatalogSectionBeastforms, Label: T(loc, "catalog.daggerheart.beastforms"), URL: "/catalog/daggerheart/beastforms", IconID: commonv1.IconId_ICON_ID_ADVERSARY},
-		{ID: CatalogSectionCompanionExperiences, Label: T(loc, "catalog.daggerheart.companion_experiences"), URL: "/catalog/daggerheart/companion-experiences", IconID: commonv1.IconId_ICON_ID_EXPERIENCE},
-		{ID: CatalogSectionEnvironments, Label: T(loc, "catalog.daggerheart.environments"), URL: "/catalog/daggerheart/environments", IconID: commonv1.IconId_ICON_ID_ENVIRONMENT},
+		{ID: CatalogSectionClasses, Label: T(loc, "catalog.daggerheart.classes"), URL: "/catalog/daggerheart/classes"},
+		{ID: CatalogSectionSubclasses, Label: T(loc, "catalog.daggerheart.subclasses"), URL: "/catalog/daggerheart/subclasses"},
+		{ID: CatalogSectionHeritages, Label: T(loc, "catalog.daggerheart.heritages"), URL: "/catalog/daggerheart/heritages"},
+		{ID: CatalogSectionExperiences, Label: T(loc, "catalog.daggerheart.experiences"), URL: "/catalog/daggerheart/experiences"},
+		{ID: CatalogSectionDomains, Label: T(loc, "catalog.daggerheart.domains"), URL: "/catalog/daggerheart/domains"},
+		{ID: CatalogSectionDomainCards, Label: T(loc, "catalog.daggerheart.domain_cards"), URL: "/catalog/daggerheart/domain-cards"},
+		{ID: CatalogSectionItems, Label: T(loc, "catalog.daggerheart.items"), URL: "/catalog/daggerheart/items"},
+		{ID: CatalogSectionWeapons, Label: T(loc, "catalog.daggerheart.weapons"), URL: "/catalog/daggerheart/weapons"},
+		{ID: CatalogSectionArmor, Label: T(loc, "catalog.daggerheart.armor"), URL: "/catalog/daggerheart/armor"},
+		{ID: CatalogSectionLoot, Label: T(loc, "catalog.daggerheart.loot"), URL: "/catalog/daggerheart/loot"},
+		{ID: CatalogSectionDamageTypes, Label: T(loc, "catalog.daggerheart.damage_types"), URL: "/catalog/daggerheart/damage-types"},
+		{ID: CatalogSectionAdversaries, Label: T(loc, "catalog.daggerheart.adversaries"), URL: "/catalog/daggerheart/adversaries"},
+		{ID: CatalogSectionBeastforms, Label: T(loc, "catalog.daggerheart.beastforms"), URL: "/catalog/daggerheart/beastforms"},
+		{ID: CatalogSectionCompanionExperiences, Label: T(loc, "catalog.daggerheart.companion_experiences"), URL: "/catalog/daggerheart/companion-experiences"},
+		{ID: CatalogSectionEnvironments, Label: T(loc, "catalog.daggerheart.environments"), URL: "/catalog/daggerheart/environments"},
 	}
 }
 

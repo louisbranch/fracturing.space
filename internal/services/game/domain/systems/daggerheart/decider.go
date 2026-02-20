@@ -10,62 +10,38 @@ import (
 )
 
 const (
-	commandTypeGMFearSet                command.Type = "sys.daggerheart.action.gm_fear.set"
-	commandTypeCharacterStatePatch      command.Type = "sys.daggerheart.action.character_state.patch"
-	commandTypeConditionChange          command.Type = "sys.daggerheart.action.condition.change"
-	commandTypeHopeSpend                command.Type = "sys.daggerheart.action.hope.spend"
-	commandTypeStressSpend              command.Type = "sys.daggerheart.action.stress.spend"
-	commandTypeLoadoutSwap              command.Type = "sys.daggerheart.action.loadout.swap"
-	commandTypeRestTake                 command.Type = "sys.daggerheart.action.rest.take"
-	commandTypeAttackResolve            command.Type = "sys.daggerheart.action.attack.resolve"
-	commandTypeReactionResolve          command.Type = "sys.daggerheart.action.reaction.resolve"
-	commandTypeAdversaryRollResolve     command.Type = "sys.daggerheart.action.adversary_roll.resolve"
-	commandTypeAdversaryAttackResolve   command.Type = "sys.daggerheart.action.adversary_attack.resolve"
-	commandTypeDamageRollResolve        command.Type = "sys.daggerheart.action.damage_roll.resolve"
-	commandTypeGroupActionResolve       command.Type = "sys.daggerheart.action.group_action.resolve"
-	commandTypeTagTeamResolve           command.Type = "sys.daggerheart.action.tag_team.resolve"
-	commandTypeCountdownCreate          command.Type = "sys.daggerheart.action.countdown.create"
-	commandTypeCountdownUpdate          command.Type = "sys.daggerheart.action.countdown.update"
-	commandTypeCountdownDelete          command.Type = "sys.daggerheart.action.countdown.delete"
-	commandTypeAdversaryActionResolve   command.Type = "sys.daggerheart.action.adversary_action.resolve"
-	commandTypeDamageApply              command.Type = "sys.daggerheart.action.damage.apply"
-	commandTypeAdversaryDamageApply     command.Type = "sys.daggerheart.action.adversary_damage.apply"
-	commandTypeDowntimeMoveApply        command.Type = "sys.daggerheart.action.downtime_move.apply"
-	commandTypeDeathMoveResolve         command.Type = "sys.daggerheart.action.death_move.resolve"
-	commandTypeBlazeOfGloryResolve      command.Type = "sys.daggerheart.action.blaze_of_glory.resolve"
-	commandTypeGMMoveApply              command.Type = "sys.daggerheart.action.gm_move.apply"
-	commandTypeAdversaryConditionChange command.Type = "sys.daggerheart.action.adversary_condition.change"
-	commandTypeAdversaryCreate          command.Type = "sys.daggerheart.action.adversary.create"
-	commandTypeAdversaryUpdate          command.Type = "sys.daggerheart.action.adversary.update"
-	commandTypeAdversaryDelete          command.Type = "sys.daggerheart.action.adversary.delete"
-	eventTypeGMFearChanged              event.Type   = "sys.daggerheart.action.gm_fear_changed"
-	eventTypeCharacterStatePatched      event.Type   = "sys.daggerheart.action.character_state_patched"
-	eventTypeConditionChanged           event.Type   = "sys.daggerheart.action.condition_changed"
-	eventTypeHopeSpent                  event.Type   = "sys.daggerheart.action.hope_spent"
-	eventTypeStressSpent                event.Type   = "sys.daggerheart.action.stress_spent"
-	eventTypeLoadoutSwapped             event.Type   = "sys.daggerheart.action.loadout_swapped"
-	eventTypeRestTaken                  event.Type   = "sys.daggerheart.action.rest_taken"
-	eventTypeAttackResolved             event.Type   = "sys.daggerheart.action.attack_resolved"
-	eventTypeReactionResolved           event.Type   = "sys.daggerheart.action.reaction_resolved"
-	eventTypeAdversaryRollResolved      event.Type   = "sys.daggerheart.action.adversary_roll_resolved"
-	eventTypeAdversaryAttackResolved    event.Type   = "sys.daggerheart.action.adversary_attack_resolved"
-	eventTypeDamageRollResolved         event.Type   = "sys.daggerheart.action.damage_roll_resolved"
-	eventTypeGroupActionResolved        event.Type   = "sys.daggerheart.action.group_action_resolved"
-	eventTypeTagTeamResolved            event.Type   = "sys.daggerheart.action.tag_team_resolved"
-	eventTypeCountdownCreated           event.Type   = "sys.daggerheart.action.countdown_created"
-	eventTypeCountdownUpdated           event.Type   = "sys.daggerheart.action.countdown_updated"
-	eventTypeCountdownDeleted           event.Type   = "sys.daggerheart.action.countdown_deleted"
-	eventTypeAdversaryActionResolved    event.Type   = "sys.daggerheart.action.adversary_action_resolved"
-	eventTypeDamageApplied              event.Type   = "sys.daggerheart.action.damage_applied"
-	eventTypeAdversaryDamageApplied     event.Type   = "sys.daggerheart.action.adversary_damage_applied"
-	eventTypeDowntimeMoveApplied        event.Type   = "sys.daggerheart.action.downtime_move_applied"
-	eventTypeDeathMoveResolved          event.Type   = "sys.daggerheart.action.death_move_resolved"
-	eventTypeBlazeOfGloryResolved       event.Type   = "sys.daggerheart.action.blaze_of_glory_resolved"
-	eventTypeGMMoveApplied              event.Type   = "sys.daggerheart.action.gm_move_applied"
-	eventTypeAdversaryConditionChanged  event.Type   = "sys.daggerheart.action.adversary_condition_changed"
-	eventTypeAdversaryCreated           event.Type   = "sys.daggerheart.action.adversary_created"
-	eventTypeAdversaryUpdated           event.Type   = "sys.daggerheart.action.adversary_updated"
-	eventTypeAdversaryDeleted           event.Type   = "sys.daggerheart.action.adversary_deleted"
+	commandTypeGMFearSet                command.Type = "sys.daggerheart.gm_fear.set"
+	commandTypeCharacterStatePatch      command.Type = "sys.daggerheart.character_state.patch"
+	commandTypeConditionChange          command.Type = "sys.daggerheart.condition.change"
+	commandTypeHopeSpend                command.Type = "sys.daggerheart.hope.spend"
+	commandTypeStressSpend              command.Type = "sys.daggerheart.stress.spend"
+	commandTypeLoadoutSwap              command.Type = "sys.daggerheart.loadout.swap"
+	commandTypeRestTake                 command.Type = "sys.daggerheart.rest.take"
+	commandTypeCountdownCreate          command.Type = "sys.daggerheart.countdown.create"
+	commandTypeCountdownUpdate          command.Type = "sys.daggerheart.countdown.update"
+	commandTypeCountdownDelete          command.Type = "sys.daggerheart.countdown.delete"
+	commandTypeDamageApply              command.Type = "sys.daggerheart.damage.apply"
+	commandTypeAdversaryDamageApply     command.Type = "sys.daggerheart.adversary_damage.apply"
+	commandTypeDowntimeMoveApply        command.Type = "sys.daggerheart.downtime_move.apply"
+	commandTypeAdversaryConditionChange command.Type = "sys.daggerheart.adversary_condition.change"
+	commandTypeAdversaryCreate          command.Type = "sys.daggerheart.adversary.create"
+	commandTypeAdversaryUpdate          command.Type = "sys.daggerheart.adversary.update"
+	commandTypeAdversaryDelete          command.Type = "sys.daggerheart.adversary.delete"
+	eventTypeGMFearChanged              event.Type   = "sys.daggerheart.gm_fear_changed"
+	eventTypeCharacterStatePatched      event.Type   = "sys.daggerheart.character_state_patched"
+	eventTypeConditionChanged           event.Type   = "sys.daggerheart.condition_changed"
+	eventTypeLoadoutSwapped             event.Type   = "sys.daggerheart.loadout_swapped"
+	eventTypeRestTaken                  event.Type   = "sys.daggerheart.rest_taken"
+	eventTypeCountdownCreated           event.Type   = "sys.daggerheart.countdown_created"
+	eventTypeCountdownUpdated           event.Type   = "sys.daggerheart.countdown_updated"
+	eventTypeCountdownDeleted           event.Type   = "sys.daggerheart.countdown_deleted"
+	eventTypeDamageApplied              event.Type   = "sys.daggerheart.damage_applied"
+	eventTypeAdversaryDamageApplied     event.Type   = "sys.daggerheart.adversary_damage_applied"
+	eventTypeDowntimeMoveApplied        event.Type   = "sys.daggerheart.downtime_move_applied"
+	eventTypeAdversaryConditionChanged  event.Type   = "sys.daggerheart.adversary_condition_changed"
+	eventTypeAdversaryCreated           event.Type   = "sys.daggerheart.adversary_created"
+	eventTypeAdversaryUpdated           event.Type   = "sys.daggerheart.adversary_updated"
+	eventTypeAdversaryDeleted           event.Type   = "sys.daggerheart.adversary_deleted"
 
 	rejectionCodeGMFearAfterRequired = "GM_FEAR_AFTER_REQUIRED"
 	rejectionCodeGMFearOutOfRange    = "GM_FEAR_AFTER_OUT_OF_RANGE"
@@ -201,15 +177,18 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 			now = time.Now
 		}
 		payload.CharacterID = strings.TrimSpace(payload.CharacterID)
-		payload.Source = strings.TrimSpace(payload.Source)
-		payloadJSON, _ := json.Marshal(payload)
+		payloadJSON, _ := json.Marshal(CharacterStatePatchedPayload{
+			CharacterID: payload.CharacterID,
+			HopeBefore:  &payload.Before,
+			HopeAfter:   &payload.After,
+		})
 		entityID := strings.TrimSpace(cmd.EntityID)
 		if entityID == "" {
 			entityID = payload.CharacterID
 		}
 		evt := event.Event{
 			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeHopeSpent,
+			Type:          eventTypeCharacterStatePatched,
 			Timestamp:     now().UTC(),
 			ActorType:     event.ActorType(cmd.ActorType),
 			ActorID:       cmd.ActorID,
@@ -233,15 +212,18 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 			now = time.Now
 		}
 		payload.CharacterID = strings.TrimSpace(payload.CharacterID)
-		payload.Source = strings.TrimSpace(payload.Source)
-		payloadJSON, _ := json.Marshal(payload)
+		payloadJSON, _ := json.Marshal(CharacterStatePatchedPayload{
+			CharacterID:  payload.CharacterID,
+			StressBefore: &payload.Before,
+			StressAfter:  &payload.After,
+		})
 		entityID := strings.TrimSpace(cmd.EntityID)
 		if entityID == "" {
 			entityID = payload.CharacterID
 		}
 		evt := event.Event{
 			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeStressSpent,
+			Type:          eventTypeCharacterStatePatched,
 			Timestamp:     now().UTC(),
 			ActorType:     event.ActorType(cmd.ActorType),
 			ActorID:       cmd.ActorID,
@@ -314,265 +296,6 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 			RequestID:     cmd.RequestID,
 			InvocationID:  cmd.InvocationID,
 			EntityType:    "session",
-			EntityID:      entityID,
-			SystemID:      SystemID,
-			SystemVersion: SystemVersion,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
-
-		return command.Accept(evt)
-	case commandTypeAttackResolve:
-		var payload AttackResolvePayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
-		if now == nil {
-			now = time.Now
-		}
-		payload.CharacterID = strings.TrimSpace(payload.CharacterID)
-		payload.Outcome = strings.TrimSpace(payload.Outcome)
-		payload.Flavor = strings.TrimSpace(payload.Flavor)
-		for i, target := range payload.Targets {
-			payload.Targets[i] = strings.TrimSpace(target)
-		}
-		payloadJSON, _ := json.Marshal(payload)
-		entityType := strings.TrimSpace(cmd.EntityType)
-		if entityType == "" {
-			entityType = "attack"
-		}
-		entityID := strings.TrimSpace(cmd.EntityID)
-		if entityID == "" {
-			entityID = cmd.RequestID
-		}
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeAttackResolved,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    entityType,
-			EntityID:      entityID,
-			SystemID:      SystemID,
-			SystemVersion: SystemVersion,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
-
-		return command.Accept(evt)
-	case commandTypeReactionResolve:
-		var payload ReactionResolvePayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
-		if now == nil {
-			now = time.Now
-		}
-		payload.CharacterID = strings.TrimSpace(payload.CharacterID)
-		payload.Outcome = strings.TrimSpace(payload.Outcome)
-		payloadJSON, _ := json.Marshal(payload)
-		entityType := strings.TrimSpace(cmd.EntityType)
-		if entityType == "" {
-			entityType = "reaction"
-		}
-		entityID := strings.TrimSpace(cmd.EntityID)
-		if entityID == "" {
-			entityID = cmd.RequestID
-		}
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeReactionResolved,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    entityType,
-			EntityID:      entityID,
-			SystemID:      SystemID,
-			SystemVersion: SystemVersion,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
-
-		return command.Accept(evt)
-	case commandTypeAdversaryRollResolve:
-		var payload AdversaryRollResolvePayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
-		if now == nil {
-			now = time.Now
-		}
-		payload.AdversaryID = strings.TrimSpace(payload.AdversaryID)
-		payloadJSON, _ := json.Marshal(payload)
-		entityType := strings.TrimSpace(cmd.EntityType)
-		if entityType == "" {
-			entityType = "adversary"
-		}
-		entityID := strings.TrimSpace(cmd.EntityID)
-		if entityID == "" {
-			entityID = payload.AdversaryID
-		}
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeAdversaryRollResolved,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    entityType,
-			EntityID:      entityID,
-			SystemID:      SystemID,
-			SystemVersion: SystemVersion,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
-
-		return command.Accept(evt)
-	case commandTypeAdversaryAttackResolve:
-		var payload AdversaryAttackResolvePayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
-		if now == nil {
-			now = time.Now
-		}
-		payload.AdversaryID = strings.TrimSpace(payload.AdversaryID)
-		for i, target := range payload.Targets {
-			payload.Targets[i] = strings.TrimSpace(target)
-		}
-		payloadJSON, _ := json.Marshal(payload)
-		entityType := strings.TrimSpace(cmd.EntityType)
-		if entityType == "" {
-			entityType = "attack"
-		}
-		entityID := strings.TrimSpace(cmd.EntityID)
-		if entityID == "" {
-			entityID = cmd.RequestID
-		}
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeAdversaryAttackResolved,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    entityType,
-			EntityID:      entityID,
-			SystemID:      SystemID,
-			SystemVersion: SystemVersion,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
-
-		return command.Accept(evt)
-	case commandTypeDamageRollResolve:
-		var payload DamageRollResolvePayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
-		if now == nil {
-			now = time.Now
-		}
-		payload.CharacterID = strings.TrimSpace(payload.CharacterID)
-		payloadJSON, _ := json.Marshal(payload)
-		entityType := strings.TrimSpace(cmd.EntityType)
-		if entityType == "" {
-			entityType = "roll"
-		}
-		entityID := strings.TrimSpace(cmd.EntityID)
-		if entityID == "" {
-			entityID = cmd.RequestID
-		}
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeDamageRollResolved,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    entityType,
-			EntityID:      entityID,
-			SystemID:      SystemID,
-			SystemVersion: SystemVersion,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
-
-		return command.Accept(evt)
-	case commandTypeGroupActionResolve:
-		var payload GroupActionResolvePayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
-		if now == nil {
-			now = time.Now
-		}
-		payload.LeaderCharacterID = strings.TrimSpace(payload.LeaderCharacterID)
-		for i, supporter := range payload.Supporters {
-			payload.Supporters[i].CharacterID = strings.TrimSpace(supporter.CharacterID)
-		}
-		payloadJSON, _ := json.Marshal(payload)
-		entityType := strings.TrimSpace(cmd.EntityType)
-		if entityType == "" {
-			entityType = "group_action"
-		}
-		entityID := strings.TrimSpace(cmd.EntityID)
-		if entityID == "" {
-			entityID = payload.LeaderCharacterID
-		}
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeGroupActionResolved,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    entityType,
-			EntityID:      entityID,
-			SystemID:      SystemID,
-			SystemVersion: SystemVersion,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
-
-		return command.Accept(evt)
-	case commandTypeTagTeamResolve:
-		var payload TagTeamResolvePayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
-		if now == nil {
-			now = time.Now
-		}
-		payload.FirstCharacterID = strings.TrimSpace(payload.FirstCharacterID)
-		payload.SecondCharacterID = strings.TrimSpace(payload.SecondCharacterID)
-		payload.SelectedCharacterID = strings.TrimSpace(payload.SelectedCharacterID)
-		payloadJSON, _ := json.Marshal(payload)
-		entityType := strings.TrimSpace(cmd.EntityType)
-		if entityType == "" {
-			entityType = "tag_team"
-		}
-		entityID := strings.TrimSpace(cmd.EntityID)
-		if entityID == "" {
-			entityID = payload.SelectedCharacterID
-		}
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeTagTeamResolved,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    entityType,
 			EntityID:      entityID,
 			SystemID:      SystemID,
 			SystemVersion: SystemVersion,
@@ -692,41 +415,6 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 		}
 
 		return command.Accept(evt)
-	case commandTypeAdversaryActionResolve:
-		var payload AdversaryActionResolvePayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
-		if now == nil {
-			now = time.Now
-		}
-		payload.AdversaryID = strings.TrimSpace(payload.AdversaryID)
-		payloadJSON, _ := json.Marshal(payload)
-		entityType := strings.TrimSpace(cmd.EntityType)
-		if entityType == "" {
-			entityType = "adversary"
-		}
-		entityID := strings.TrimSpace(cmd.EntityID)
-		if entityID == "" {
-			entityID = payload.AdversaryID
-		}
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeAdversaryActionResolved,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    entityType,
-			EntityID:      entityID,
-			SystemID:      SystemID,
-			SystemVersion: SystemVersion,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
-
-		return command.Accept(evt)
 	case commandTypeDamageApply:
 		var payload DamageApplyPayload
 		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
@@ -816,105 +504,6 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 			RequestID:     cmd.RequestID,
 			InvocationID:  cmd.InvocationID,
 			EntityType:    "character",
-			EntityID:      entityID,
-			SystemID:      SystemID,
-			SystemVersion: SystemVersion,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
-
-		return command.Accept(evt)
-	case commandTypeDeathMoveResolve:
-		var payload DeathMoveResolvePayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
-		if now == nil {
-			now = time.Now
-		}
-		payload.CharacterID = strings.TrimSpace(payload.CharacterID)
-		payload.Move = strings.TrimSpace(payload.Move)
-		payload.LifeStateAfter = strings.TrimSpace(payload.LifeStateAfter)
-		payloadJSON, _ := json.Marshal(payload)
-		entityID := strings.TrimSpace(cmd.EntityID)
-		if entityID == "" {
-			entityID = payload.CharacterID
-		}
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeDeathMoveResolved,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "character",
-			EntityID:      entityID,
-			SystemID:      SystemID,
-			SystemVersion: SystemVersion,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
-
-		return command.Accept(evt)
-	case commandTypeBlazeOfGloryResolve:
-		var payload BlazeOfGloryResolvePayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
-		if now == nil {
-			now = time.Now
-		}
-		payload.CharacterID = strings.TrimSpace(payload.CharacterID)
-		payload.LifeStateAfter = strings.TrimSpace(payload.LifeStateAfter)
-		payloadJSON, _ := json.Marshal(payload)
-		entityID := strings.TrimSpace(cmd.EntityID)
-		if entityID == "" {
-			entityID = payload.CharacterID
-		}
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeBlazeOfGloryResolved,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "character",
-			EntityID:      entityID,
-			SystemID:      SystemID,
-			SystemVersion: SystemVersion,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
-
-		return command.Accept(evt)
-	case commandTypeGMMoveApply:
-		var payload GMMoveApplyPayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
-		if now == nil {
-			now = time.Now
-		}
-		payload.Move = strings.TrimSpace(payload.Move)
-		payload.Description = strings.TrimSpace(payload.Description)
-		payload.Severity = strings.TrimSpace(payload.Severity)
-		payload.Source = strings.TrimSpace(payload.Source)
-		payloadJSON, _ := json.Marshal(payload)
-		entityID := strings.TrimSpace(cmd.EntityID)
-		if entityID == "" {
-			entityID = cmd.CampaignID
-		}
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeGMMoveApplied,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "gm_move",
 			EntityID:      entityID,
 			SystemID:      SystemID,
 			SystemVersion: SystemVersion,

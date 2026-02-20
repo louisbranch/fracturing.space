@@ -4,7 +4,7 @@
 
 Quick regression coverage for the web UI: landing page renders with branding
 and sign-in link, login page renders with passkey form elements, and route
-cutover behavior keeps `/campaigns/{id}` canonical.
+cutover behavior keeps `/app/campaigns/{id}` canonical.
 
 ## Preconditions
 
@@ -65,18 +65,18 @@ async page => {
 
   const origin = page.url().replace(/\/[^/]*$/, "");
 
-  const canonicalResponse = await page.request.get(origin + "/campaigns/camp-123", { maxRedirects: 0 });
-  if (canonicalResponse.status() !== 302) {
-    throw new Error("Expected /campaigns/camp-123 status 302, got: " + canonicalResponse.status());
-  }
-  const location = canonicalResponse.headers()["location"] || "";
-  if (!location.startsWith("/auth/login")) {
-    throw new Error("Expected /campaigns/camp-123 Location starting with /auth/login, got: " + location);
+  const legacyResponse = await page.request.get(origin + "/campaigns/camp-123", { maxRedirects: 0 });
+  if (legacyResponse.status() !== 404) {
+    throw new Error("Expected /campaigns/camp-123 status 404, got: " + legacyResponse.status());
   }
 
-  const legacyResponse = await page.request.get(origin + "/app/campaigns/camp-123", { maxRedirects: 0 });
-  if (legacyResponse.status() !== 404) {
-    throw new Error("Expected /app/campaigns/camp-123 status 404, got: " + legacyResponse.status());
+  const canonicalResponse = await page.request.get(origin + "/app/campaigns/camp-123", { maxRedirects: 0 });
+  if (canonicalResponse.status() !== 302) {
+    throw new Error("Expected /app/campaigns/camp-123 status 302, got: " + canonicalResponse.status());
+  }
+  const location = canonicalResponse.headers()["location"] || "";
+  if (location !== "/auth/login") {
+    throw new Error("Expected /app/campaigns/camp-123 Location /auth/login, got: " + location);
   }
 
   console.log("Campaign route cutover OK");

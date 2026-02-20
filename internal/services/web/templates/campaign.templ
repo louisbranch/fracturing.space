@@ -2,7 +2,7 @@ package templates
 
 // CampaignPage renders the campaign chat shell for Phase 1.1.
 templ CampaignPage(page PageContext, campaignID string) {
-	@GameLayout("Campaign "+campaignID+" | Fracturing.Space", page.Lang) {
+	@Layout("Campaign "+campaignID+" | Fracturing.Space", page.Lang) {
 		<main class="landing-shell" data-campaign-id={ campaignID }>
 			<section class="landing-hero">
 				<h1>Campaign { campaignID }</h1>
@@ -11,10 +11,10 @@ templ CampaignPage(page PageContext, campaignID string) {
 					<div class="card-body gap-3">
 						<h2 class="card-title m-0">Workspace</h2>
 						<div class="flex flex-wrap gap-2">
-							<a class="btn btn-sm btn-outline" href={ "/campaigns/" + campaignID + "/sessions" }>Sessions</a>
-							<a class="btn btn-sm btn-outline" href={ "/campaigns/" + campaignID + "/participants" }>Participants</a>
-							<a class="btn btn-sm btn-outline" href={ "/campaigns/" + campaignID + "/characters" }>Characters</a>
-							<a class="btn btn-sm btn-outline" href={ "/campaigns/" + campaignID + "/invites" }>Invites</a>
+							<a class="btn btn-sm btn-outline" href={ "/app/campaigns/" + campaignID + "/sessions" }>Sessions</a>
+							<a class="btn btn-sm btn-outline" href={ "/app/campaigns/" + campaignID + "/participants" }>Participants</a>
+							<a class="btn btn-sm btn-outline" href={ "/app/campaigns/" + campaignID + "/characters" }>Characters</a>
+							<a class="btn btn-sm btn-outline" href={ "/app/campaigns/" + campaignID + "/invites" }>Invites</a>
 						</div>
 					</div>
 				</div>

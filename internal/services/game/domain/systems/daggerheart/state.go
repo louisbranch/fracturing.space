@@ -23,8 +23,11 @@ const (
 
 // SnapshotState captures campaign-level Daggerheart state.
 type SnapshotState struct {
-	CampaignID string
-	GMFear     int
+	CampaignID      string
+	GMFear          int
+	CharacterStates map[string]CharacterState
+	AdversaryStates map[string]AdversaryState
+	CountdownStates map[string]CountdownState
 }
 
 // CharacterState captures Daggerheart character state.
@@ -41,4 +44,36 @@ type CharacterState struct {
 	Armor       int
 	ArmorMax    int
 	LifeState   string
+	Conditions  []string
+}
+
+// AdversaryState captures Daggerheart adversary state for aggregate projections.
+type AdversaryState struct {
+	CampaignID  string
+	AdversaryID string
+	Name        string
+	Kind        string
+	SessionID   string
+	Notes       string
+	HP          int
+	HPMax       int
+	Stress      int
+	StressMax   int
+	Evasion     int
+	Major       int
+	Severe      int
+	Armor       int
+	Conditions  []string
+}
+
+// CountdownState captures Daggerheart countdown state for aggregate projections.
+type CountdownState struct {
+	CampaignID  string
+	CountdownID string
+	Name        string
+	Kind        string
+	Current     int
+	Max         int
+	Direction   string
+	Looping     bool
 }
