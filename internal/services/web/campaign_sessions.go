@@ -18,22 +18,15 @@ func (h *handler) handleAppCampaignSessions(w http.ResponseWriter, r *http.Reque
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	if !h.requireCampaignParticipant(w, r, campaignID) {
+	participant, ok := h.requireCampaignActor(w, r, campaignID)
+	if !ok {
 		return
 	}
 	if h.sessionClient == nil {
 		h.renderErrorPage(w, r, http.StatusServiceUnavailable, "Sessions unavailable", "session service client is not configured")
 		return
 	}
-	sess := sessionFromRequest(r, h.sessions)
-	if sess == nil {
-		http.Redirect(w, r, "/auth/login", http.StatusFound)
-		return
-	}
-	canManageSessions := false
-	if participant, err := h.campaignParticipant(r.Context(), campaignID, sess.accessToken); err == nil && participant != nil && strings.TrimSpace(participant.GetId()) != "" {
-		canManageSessions = canManageCampaignSessions(participant.GetCampaignAccess())
-	}
+	canManageSessions := canManageCampaignSessions(participant.GetCampaignAccess())
 
 	resp, err := h.sessionClient.ListSessions(r.Context(), &statev1.ListSessionsRequest{
 		CampaignId: campaignID,
@@ -55,7 +48,7 @@ func (h *handler) handleAppCampaignSessionDetail(w http.ResponseWriter, r *http.
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	if !h.requireCampaignParticipant(w, r, campaignID) {
+	if _, ok := h.requireCampaignActor(w, r, campaignID); !ok {
 		return
 	}
 	if h.sessionClient == nil {
@@ -93,16 +86,12 @@ func (h *handler) handleAppCampaignSessionStart(w http.ResponseWriter, r *http.R
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	if !h.requireCampaignParticipant(w, r, campaignID) {
+	actor, ok := h.requireCampaignActor(w, r, campaignID)
+	if !ok {
 		return
 	}
 	if h.sessionClient == nil {
 		h.renderErrorPage(w, r, http.StatusServiceUnavailable, "Session action unavailable", "session service client is not configured")
-		return
-	}
-	sess := sessionFromRequest(r, h.sessions)
-	if sess == nil {
-		http.Redirect(w, r, "/auth/login", http.StatusFound)
 		return
 	}
 	if err := r.ParseForm(); err != nil {
@@ -115,22 +104,13 @@ func (h *handler) handleAppCampaignSessionStart(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	participant, err := h.campaignParticipant(r.Context(), campaignID, sess.accessToken)
-	if err != nil {
-		h.renderErrorPage(w, r, http.StatusBadGateway, "Session action unavailable", "failed to resolve campaign participant")
-		return
-	}
-	if participant == nil || strings.TrimSpace(participant.GetId()) == "" {
-		h.renderErrorPage(w, r, http.StatusForbidden, "Access denied", "participant identity required for session action")
-		return
-	}
-	if !canManageCampaignSessions(participant.GetCampaignAccess()) {
+	if !canManageCampaignSessions(actor.GetCampaignAccess()) {
 		h.renderErrorPage(w, r, http.StatusForbidden, "Access denied", "manager or owner access required for session action")
 		return
 	}
 
-	ctx := grpcauthctx.WithParticipantID(r.Context(), strings.TrimSpace(participant.GetId()))
-	_, err = h.sessionClient.StartSession(ctx, &statev1.StartSessionRequest{
+	ctx := grpcauthctx.WithParticipantID(r.Context(), strings.TrimSpace(actor.GetId()))
+	_, err := h.sessionClient.StartSession(ctx, &statev1.StartSessionRequest{
 		CampaignId: campaignID,
 		Name:       sessionName,
 	})
@@ -150,16 +130,12 @@ func (h *handler) handleAppCampaignSessionEnd(w http.ResponseWriter, r *http.Req
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	if !h.requireCampaignParticipant(w, r, campaignID) {
+	actor, ok := h.requireCampaignActor(w, r, campaignID)
+	if !ok {
 		return
 	}
 	if h.sessionClient == nil {
 		h.renderErrorPage(w, r, http.StatusServiceUnavailable, "Session action unavailable", "session service client is not configured")
-		return
-	}
-	sess := sessionFromRequest(r, h.sessions)
-	if sess == nil {
-		http.Redirect(w, r, "/auth/login", http.StatusFound)
 		return
 	}
 	if err := r.ParseForm(); err != nil {
@@ -172,22 +148,13 @@ func (h *handler) handleAppCampaignSessionEnd(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	participant, err := h.campaignParticipant(r.Context(), campaignID, sess.accessToken)
-	if err != nil {
-		h.renderErrorPage(w, r, http.StatusBadGateway, "Session action unavailable", "failed to resolve campaign participant")
-		return
-	}
-	if participant == nil || strings.TrimSpace(participant.GetId()) == "" {
-		h.renderErrorPage(w, r, http.StatusForbidden, "Access denied", "participant identity required for session action")
-		return
-	}
-	if !canManageCampaignSessions(participant.GetCampaignAccess()) {
+	if !canManageCampaignSessions(actor.GetCampaignAccess()) {
 		h.renderErrorPage(w, r, http.StatusForbidden, "Access denied", "manager or owner access required for session action")
 		return
 	}
 
-	ctx := grpcauthctx.WithParticipantID(r.Context(), strings.TrimSpace(participant.GetId()))
-	_, err = h.sessionClient.EndSession(ctx, &statev1.EndSessionRequest{
+	ctx := grpcauthctx.WithParticipantID(r.Context(), strings.TrimSpace(actor.GetId()))
+	_, err := h.sessionClient.EndSession(ctx, &statev1.EndSessionRequest{
 		CampaignId: campaignID,
 		SessionId:  sessionID,
 	})

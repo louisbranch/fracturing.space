@@ -17,7 +17,7 @@ type Config struct {
 	HTTPAddr            string        `env:"FRACTURING_SPACE_WEB_HTTP_ADDR"           envDefault:"localhost:8086"`
 	AuthBaseURL         string        `env:"FRACTURING_SPACE_WEB_AUTH_BASE_URL"       envDefault:"http://localhost:8084"`
 	AuthAddr            string        `env:"FRACTURING_SPACE_WEB_AUTH_ADDR"           envDefault:"localhost:8083"`
-	GameAddr            string        `env:"FRACTURING_SPACE_GAME_ADDR"`
+	GameAddr            string        `env:"FRACTURING_SPACE_GAME_ADDR"              envDefault:"localhost:8080"`
 	GRPCDialTimeout     time.Duration `env:"FRACTURING_SPACE_WEB_DIAL_TIMEOUT"        envDefault:"2s"`
 	OAuthClientID       string        `env:"FRACTURING_SPACE_WEB_OAUTH_CLIENT_ID"     envDefault:"fracturing-space"`
 	CallbackURL         string        `env:"FRACTURING_SPACE_WEB_CALLBACK_URL"`

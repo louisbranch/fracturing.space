@@ -20,22 +20,12 @@ func (h *handler) handleAppCampaignInvites(w http.ResponseWriter, r *http.Reques
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	sess := sessionFromRequest(r, h.sessions)
-	if sess == nil {
-		http.Redirect(w, r, "/auth/login", http.StatusFound)
+	actor, ok := h.requireCampaignActor(w, r, campaignID)
+	if !ok {
 		return
 	}
-
-	actor, err := h.campaignInviteActor(r.Context(), campaignID, sess.accessToken)
-	if err != nil {
-		h.renderErrorPage(w, r, http.StatusBadGateway, "Invites unavailable", "failed to resolve campaign participant")
-		return
-	}
-	if actor == nil {
-		h.renderErrorPage(w, r, http.StatusForbidden, "Access denied", "participant access required")
-		return
-	}
-	if !actor.canManageInvites {
+	inviteActor := h.campaignInviteActorFromParticipant(actor)
+	if inviteActor == nil || !inviteActor.canManageInvites {
 		h.renderErrorPage(w, r, http.StatusForbidden, "Access denied", "manager or owner access required for invite access")
 		return
 	}
@@ -44,7 +34,7 @@ func (h *handler) handleAppCampaignInvites(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	ctx := grpcauthctx.WithParticipantID(r.Context(), actor.participantID)
+	ctx := grpcauthctx.WithParticipantID(r.Context(), inviteActor.participantID)
 	resp, err := h.inviteClient.ListInvites(ctx, &statev1.ListInvitesRequest{
 		CampaignId: campaignID,
 		PageSize:   10,
@@ -54,7 +44,7 @@ func (h *handler) handleAppCampaignInvites(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	renderAppCampaignInvitesPageWithAppName(w, h.resolvedAppName(), campaignID, resp.GetInvites(), actor.canManageInvites)
+	renderAppCampaignInvitesPageWithAppName(w, h.resolvedAppName(), campaignID, resp.GetInvites(), inviteActor.canManageInvites)
 }
 
 func (h *handler) handleAppCampaignInviteCreate(w http.ResponseWriter, r *http.Request, campaignID string) {
@@ -65,21 +55,12 @@ func (h *handler) handleAppCampaignInviteCreate(w http.ResponseWriter, r *http.R
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	sess := sessionFromRequest(r, h.sessions)
-	if sess == nil {
-		http.Redirect(w, r, "/auth/login", http.StatusFound)
+	actor, ok := h.requireCampaignActor(w, r, campaignID)
+	if !ok {
 		return
 	}
-	actor, err := h.campaignInviteActor(r.Context(), campaignID, sess.accessToken)
-	if err != nil {
-		h.renderErrorPage(w, r, http.StatusBadGateway, "Invite action unavailable", "failed to resolve campaign participant")
-		return
-	}
-	if actor == nil {
-		h.renderErrorPage(w, r, http.StatusForbidden, "Access denied", "participant access required")
-		return
-	}
-	if !actor.canManageInvites {
+	inviteActor := h.campaignInviteActorFromParticipant(actor)
+	if inviteActor == nil || !inviteActor.canManageInvites {
 		h.renderErrorPage(w, r, http.StatusForbidden, "Access denied", "manager or owner access required for invite action")
 		return
 	}
@@ -98,8 +79,8 @@ func (h *handler) handleAppCampaignInviteCreate(w http.ResponseWriter, r *http.R
 	}
 	recipientUserID := strings.TrimSpace(r.FormValue("recipient_user_id"))
 
-	ctx := grpcauthctx.WithParticipantID(r.Context(), actor.participantID)
-	_, err = h.inviteClient.CreateInvite(ctx, &statev1.CreateInviteRequest{
+	ctx := grpcauthctx.WithParticipantID(r.Context(), inviteActor.participantID)
+	_, err := h.inviteClient.CreateInvite(ctx, &statev1.CreateInviteRequest{
 		CampaignId:      campaignID,
 		ParticipantId:   targetParticipantID,
 		RecipientUserId: recipientUserID,
@@ -120,21 +101,12 @@ func (h *handler) handleAppCampaignInviteRevoke(w http.ResponseWriter, r *http.R
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	sess := sessionFromRequest(r, h.sessions)
-	if sess == nil {
-		http.Redirect(w, r, "/auth/login", http.StatusFound)
+	actor, ok := h.requireCampaignActor(w, r, campaignID)
+	if !ok {
 		return
 	}
-	actor, err := h.campaignInviteActor(r.Context(), campaignID, sess.accessToken)
-	if err != nil {
-		h.renderErrorPage(w, r, http.StatusBadGateway, "Invite action unavailable", "failed to resolve campaign participant")
-		return
-	}
-	if actor == nil {
-		h.renderErrorPage(w, r, http.StatusForbidden, "Access denied", "participant access required")
-		return
-	}
-	if !actor.canManageInvites {
+	inviteActor := h.campaignInviteActorFromParticipant(actor)
+	if inviteActor == nil || !inviteActor.canManageInvites {
 		h.renderErrorPage(w, r, http.StatusForbidden, "Access denied", "manager or owner access required for invite action")
 		return
 	}
@@ -152,8 +124,8 @@ func (h *handler) handleAppCampaignInviteRevoke(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	ctx := grpcauthctx.WithParticipantID(r.Context(), actor.participantID)
-	_, err = h.inviteClient.RevokeInvite(ctx, &statev1.RevokeInviteRequest{
+	ctx := grpcauthctx.WithParticipantID(r.Context(), inviteActor.participantID)
+	_, err := h.inviteClient.RevokeInvite(ctx, &statev1.RevokeInviteRequest{
 		InviteId: inviteID,
 	})
 	if err != nil {
@@ -169,23 +141,18 @@ type campaignInviteActor struct {
 	canManageInvites bool
 }
 
-func (h *handler) campaignInviteActor(ctx context.Context, campaignID string, accessToken string) (*campaignInviteActor, error) {
-	// campaignInviteActor resolves both identity and permission for invite flows.
-	participant, err := h.campaignParticipant(ctx, campaignID, accessToken)
-	if err != nil {
-		return nil, err
-	}
+func (h *handler) campaignInviteActorFromParticipant(participant *statev1.Participant) *campaignInviteActor {
 	if participant == nil {
-		return nil, nil
+		return nil
 	}
 	participantID := strings.TrimSpace(participant.GetId())
 	if participantID == "" {
-		return nil, nil
+		return nil
 	}
 	return &campaignInviteActor{
 		participantID:    participantID,
 		canManageInvites: canManageCampaignInvites(participant.GetCampaignAccess()),
-	}, nil
+	}
 }
 
 func (h *handler) campaignParticipant(ctx context.Context, campaignID string, accessToken string) (*statev1.Participant, error) {

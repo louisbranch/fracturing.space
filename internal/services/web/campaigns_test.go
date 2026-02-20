@@ -20,18 +20,28 @@ import (
 )
 
 type fakeWebCampaignClient struct {
-	response       *statev1.ListCampaignsResponse
-	listCalls      int
-	listMetadata   metadata.MD
-	createReq      *statev1.CreateCampaignRequest
-	createMetadata metadata.MD
-	createResp     *statev1.CreateCampaignResponse
+	response            *statev1.ListCampaignsResponse
+	listCalls           int
+	listMetadata        metadata.MD
+	listMetadataByCall  []metadata.MD
+	listResponsesByCall []*statev1.ListCampaignsResponse
+	createReq           *statev1.CreateCampaignRequest
+	createMetadata      metadata.MD
+	createResp          *statev1.CreateCampaignResponse
 }
 
 func (f *fakeWebCampaignClient) ListCampaigns(ctx context.Context, _ *statev1.ListCampaignsRequest, _ ...grpc.CallOption) (*statev1.ListCampaignsResponse, error) {
 	f.listCalls++
 	md, _ := metadata.FromOutgoingContext(ctx)
 	f.listMetadata = md
+	if len(f.listMetadataByCall) < f.listCalls {
+		f.listMetadataByCall = append(f.listMetadataByCall, md)
+	} else {
+		f.listMetadataByCall[f.listCalls-1] = md
+	}
+	if index := f.listCalls - 1; index < len(f.listResponsesByCall) && f.listResponsesByCall[index] != nil {
+		return f.listResponsesByCall[index], nil
+	}
 	if f.response != nil {
 		return f.response, nil
 	}
@@ -249,8 +259,9 @@ func TestAppCampaignsPageRendersUserScopedCampaigns(t *testing.T) {
 		}
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(introspectResponse{
-			Active: true,
-			UserID: "user-123",
+			Active:        true,
+			UserID:        "user-123",
+			ParticipantID: "part-123",
 		})
 	}))
 	t.Cleanup(authServer.Close)
@@ -288,21 +299,172 @@ func TestAppCampaignsPageRendersUserScopedCampaigns(t *testing.T) {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
 	}
 	body := w.Body.String()
+	campaignActionIdx := strings.Index(body, "Start a new Campaign")
+	if campaignActionIdx == -1 {
+		t.Fatalf("expected create campaign action in response")
+	}
 	if !strings.Contains(body, "Campaign One") {
 		t.Fatalf("expected campaign one in response")
 	}
 	if !strings.Contains(body, "Campaign Two") {
 		t.Fatalf("expected campaign two in response")
 	}
-	if !strings.Contains(body, "Create Campaign") {
-		t.Fatalf("expected create campaign control in response")
-	}
-	if !strings.Contains(body, "/campaigns/camp-1") {
+	campOneIdx := strings.Index(body, "/campaigns/camp-1")
+	if campOneIdx == -1 {
 		t.Fatalf("expected campaign detail link for camp-1 in response")
 	}
-	userIDs := campaignClient.listMetadata.Get(grpcmeta.UserIDHeader)
-	if len(userIDs) != 1 || userIDs[0] != "user-123" {
-		t.Fatalf("metadata %s = %v, want [user-123]", grpcmeta.UserIDHeader, userIDs)
+	if campaignActionIdx > campOneIdx {
+		t.Fatalf("expected campaign action to render before campaign list items")
+	}
+	if !strings.Contains(body, "/campaigns/create") {
+		t.Fatalf("expected campaign create route in response")
+	}
+	if strings.Contains(body, "Campaign Name") {
+		t.Fatalf("expected list view to not render the create form")
+	}
+	participantIDs := campaignClient.listMetadata.Get(grpcmeta.ParticipantIDHeader)
+	if len(participantIDs) != 1 || participantIDs[0] != "part-123" {
+		t.Fatalf("metadata %s = %v, want [part-123]", grpcmeta.ParticipantIDHeader, participantIDs)
+	}
+}
+
+func TestAppCampaignsPageReturnsEmptyListWhenParticipantScopeHasNoCampaigns(t *testing.T) {
+	introspectCalls := 0
+	authServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		introspectCalls++
+		if r.URL.Path != "/introspect" {
+			t.Fatalf("path = %q, want %q", r.URL.Path, "/introspect")
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(introspectResponse{
+			Active:        true,
+			UserID:        "user-123",
+			ParticipantID: "part-stale",
+		})
+	}))
+	t.Cleanup(authServer.Close)
+
+	campaignClient := &fakeWebCampaignClient{
+		listResponsesByCall: []*statev1.ListCampaignsResponse{
+			{Campaigns: nil},
+		},
+	}
+	h := &handler{
+		config: Config{
+			AuthBaseURL:         authServer.URL,
+			OAuthResourceSecret: "secret-1",
+		},
+		sessions:       newSessionStore(),
+		pendingFlows:   newPendingFlowStore(),
+		campaignClient: campaignClient,
+		campaignAccess: &campaignAccessService{
+			authBaseURL:         authServer.URL,
+			oauthResourceSecret: "secret-1",
+			httpClient:          authServer.Client(),
+		},
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	req := httptest.NewRequest(http.MethodGet, "/campaigns", nil)
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+
+	h.handleAppCampaigns(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	body := w.Body.String()
+	if strings.Contains(body, "Campaign One") {
+		t.Fatalf("expected no campaign items when participant scope is empty")
+	}
+	if strings.Contains(body, "Campaign Two") {
+		t.Fatalf("expected no campaign items when participant scope is empty")
+	}
+	if campaignClient.listCalls != 1 {
+		t.Fatalf("list calls = %d, want %d", campaignClient.listCalls, 1)
+	}
+	participantIDs := campaignClient.listMetadataByCall[0].Get(grpcmeta.ParticipantIDHeader)
+	if len(participantIDs) != 1 || participantIDs[0] != "part-stale" {
+		t.Fatalf("metadata %s = %v, want [part-stale]", grpcmeta.ParticipantIDHeader, participantIDs)
+	}
+	if introspectCalls != 1 {
+		t.Fatalf("introspect calls = %d, want %d", introspectCalls, 1)
+	}
+}
+
+func TestAppCampaignsPageRendersEmptyListWhenParticipantIdentityUnavailable(t *testing.T) {
+	h := &handler{
+		config:         Config{AuthBaseURL: "http://auth.local"},
+		sessions:       newSessionStore(),
+		pendingFlows:   newPendingFlowStore(),
+		campaignClient: &fakeWebCampaignClient{},
+		campaignAccess: nil,
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	req := httptest.NewRequest(http.MethodGet, "/campaigns", nil)
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+
+	h.handleAppCampaigns(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "Start a new Campaign") {
+		t.Fatalf("expected empty list action in response")
+	}
+	if strings.Contains(body, "Campaigns unavailable") {
+		t.Fatalf("expected campaign list route to avoid service-unavailable when participant identity is missing")
+	}
+	if strings.Contains(body, "Campaign One") || strings.Contains(body, "Campaign Two") {
+		t.Fatalf("expected list to be empty when participant identity is missing")
+	}
+}
+
+func TestAppCampaignsPageRendersEmptyListWhenCampaignServiceUnavailable(t *testing.T) {
+	authServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/introspect" {
+			t.Fatalf("path = %q, want %q", r.URL.Path, "/introspect")
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(introspectResponse{
+			Active:        true,
+			ParticipantID: "part-123",
+		})
+	}))
+	t.Cleanup(authServer.Close)
+
+	h := &handler{
+		config: Config{
+			AuthBaseURL:         authServer.URL,
+			OAuthResourceSecret: "secret-1",
+			GameAddr:            "127.0.0.1:1",
+		},
+		sessions:     newSessionStore(),
+		pendingFlows: newPendingFlowStore(),
+		campaignAccess: &campaignAccessService{
+			authBaseURL:         authServer.URL,
+			oauthResourceSecret: "secret-1",
+			httpClient:          authServer.Client(),
+		},
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	req := httptest.NewRequest(http.MethodGet, "/campaigns", nil)
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+
+	h.handleAppCampaigns(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "Start a new Campaign") {
+		t.Fatalf("expected empty list action in response")
+	}
+	if strings.Contains(body, "Campaigns unavailable") {
+		t.Fatalf("expected campaign list route to avoid service-unavailable when game is unreachable")
 	}
 }
 

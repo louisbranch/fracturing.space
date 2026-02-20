@@ -24,10 +24,12 @@ import (
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	platformicons "github.com/louisbranch/fracturing.space/internal/platform/icons"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
+	"github.com/louisbranch/fracturing.space/internal/platform/requestctx"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/templates"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	sharedroute "github.com/louisbranch/fracturing.space/internal/services/shared/route"
 	"github.com/louisbranch/fracturing.space/internal/tools/scenario"
 	"golang.org/x/text/message"
 	"google.golang.org/grpc/codes"
@@ -92,9 +94,13 @@ type GRPCClientProvider interface {
 type Handler struct {
 	clientProvider GRPCClientProvider
 	impersonation  *impersonationStore
-	grpcAddr       string
-	authConfig     *AuthConfig
-	introspector   TokenIntrospector
+	// gameClientInitMu serializes on-demand game client bootstrap attempts.
+	gameClientInitMu sync.Mutex
+	// gameClientEnsureInProgress tracks whether a background game bootstrap is running.
+	gameClientInitInProgress bool
+	grpcAddr                 string
+	authConfig               *AuthConfig
+	introspector             TokenIntrospector
 }
 
 type impersonationSession struct {
@@ -184,10 +190,11 @@ func NewHandlerWithConfig(clientProvider GRPCClientProvider, grpcAddr string, au
 		handler.introspector = newHTTPIntrospector(authCfg.IntrospectURL, authCfg.ResourceSecret)
 	}
 	mux := handler.routes()
-	if handler.introspector != nil {
-		return requireAuth(mux, handler.introspector, authCfg.LoginURL)
+	mux = handler.withGameClientBootstrap(mux)
+	if handler.introspector == nil {
+		return mux
 	}
-	return mux
+	return requireAuth(mux, handler.introspector, authCfg.LoginURL)
 }
 
 func (h *Handler) localizer(w http.ResponseWriter, r *http.Request) (*message.Printer, string) {
@@ -274,13 +281,63 @@ func (h *Handler) withImpersonation(next http.Handler) http.Handler {
 	// withImpersonation injects the selected impersonation user ID so downstream
 	// handlers inherit authorization checks in the same shape as direct users.
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		userID := strings.TrimSpace(requestctx.UserIDFromContext(r.Context()))
 		impersonation := h.currentImpersonation(r)
 		if impersonation != nil && impersonation.userID != "" {
-			ctx := metadata.AppendToOutgoingContext(r.Context(), grpcmeta.UserIDHeader, impersonation.userID)
+			userID = strings.TrimSpace(impersonation.userID)
+		}
+		if userID != "" {
+			ctx := metadata.AppendToOutgoingContext(r.Context(), grpcmeta.UserIDHeader, userID)
 			r = r.WithContext(ctx)
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+// withGameClientBootstrap ensures game clients are initialized lazily from the admin handler context.
+func (h *Handler) withGameClientBootstrap(next http.Handler) http.Handler {
+	if h == nil || next == nil {
+		return next
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		h.ensureGameClients(r.Context())
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (h *Handler) ensureGameClients(ctx context.Context) {
+	if h == nil || h.clientProvider == nil {
+		return
+	}
+	clients, ok := h.clientProvider.(*grpcClients)
+	if !ok || clients == nil {
+		return
+	}
+	if clients.HasGameConnection() {
+		return
+	}
+
+	grpcAddr := strings.TrimSpace(h.grpcAddr)
+	if grpcAddr == "" {
+		return
+	}
+
+	h.gameClientInitMu.Lock()
+	if clients.HasGameConnection() || h.gameClientInitInProgress {
+		h.gameClientInitMu.Unlock()
+		return
+	}
+	h.gameClientInitInProgress = true
+	h.gameClientInitMu.Unlock()
+
+	go func() {
+		connectGameGRPCWithRetry(context.Background(), Config{
+			GRPCAddr: grpcAddr,
+		}, clients)
+		h.gameClientInitMu.Lock()
+		h.gameClientInitInProgress = false
+		h.gameClientInitMu.Unlock()
+	}()
 }
 
 // handleScenarios renders the scenarios page or runs a scenario script.
@@ -323,7 +380,7 @@ func shouldPrefillScenarioScript(r *http.Request) bool {
 
 // handleScenarioRoutes dispatches scenario subroutes.
 func (h *Handler) handleScenarioRoutes(w http.ResponseWriter, r *http.Request) {
-	if redirectTrailingSlash(w, r) {
+	if sharedroute.RedirectTrailingSlash(w, r) {
 		return
 	}
 	scenarioPath := strings.TrimPrefix(r.URL.Path, "/scenarios/")
@@ -765,7 +822,7 @@ func (h *Handler) handleUserLookup(w http.ResponseWriter, r *http.Request) {
 
 // handleUserRoutes dispatches the user detail route.
 func (h *Handler) handleUserRoutes(w http.ResponseWriter, r *http.Request) {
-	if redirectTrailingSlash(w, r) {
+	if sharedroute.RedirectTrailingSlash(w, r) {
 		return
 	}
 	userPath := strings.TrimPrefix(r.URL.Path, "/users/")
@@ -1135,6 +1192,19 @@ func (h *Handler) handleCampaignsTable(w http.ResponseWriter, r *http.Request) {
 
 	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
 	defer cancel()
+	userID := ""
+	if impersonation := h.currentImpersonation(r); impersonation != nil {
+		userID = strings.TrimSpace(impersonation.userID)
+	}
+	if userID == "" {
+		userID = strings.TrimSpace(requestctx.UserIDFromContext(r.Context()))
+	}
+	if userID != "" {
+		md, _ := metadata.FromOutgoingContext(ctx)
+		md = md.Copy()
+		md.Set(grpcmeta.UserIDHeader, userID)
+		ctx = metadata.NewOutgoingContext(ctx, md)
+	}
 
 	response, err := campaignClient.ListCampaigns(ctx, &statev1.ListCampaignsRequest{})
 	if err != nil {
@@ -1189,7 +1259,7 @@ func (h *Handler) handleCatalogPage(w http.ResponseWriter, r *http.Request) {
 
 // handleCatalogRoutes dispatches catalog section routes.
 func (h *Handler) handleCatalogRoutes(w http.ResponseWriter, r *http.Request) {
-	if redirectTrailingSlash(w, r) {
+	if sharedroute.RedirectTrailingSlash(w, r) {
 		return
 	}
 	path := strings.TrimPrefix(r.URL.Path, "/catalog/")
@@ -1616,7 +1686,7 @@ func (h *Handler) handleIconsTable(w http.ResponseWriter, r *http.Request) {
 
 // handleSystemRoutes dispatches the system detail route.
 func (h *Handler) handleSystemRoutes(w http.ResponseWriter, r *http.Request) {
-	if redirectTrailingSlash(w, r) {
+	if sharedroute.RedirectTrailingSlash(w, r) {
 		return
 	}
 	systemPath := strings.TrimPrefix(r.URL.Path, "/systems/")
@@ -1670,7 +1740,7 @@ func (h *Handler) handleSystemDetail(w http.ResponseWriter, r *http.Request, sys
 
 // handleCampaignRoutes dispatches detail and session subroutes.
 func (h *Handler) handleCampaignRoutes(w http.ResponseWriter, r *http.Request) {
-	if redirectTrailingSlash(w, r) {
+	if sharedroute.RedirectTrailingSlash(w, r) {
 		return
 	}
 	campaignPath := strings.TrimPrefix(r.URL.Path, "/campaigns/")
@@ -2026,22 +2096,6 @@ func splitPathParts(path string) []string {
 		parts = append(parts, trimmed)
 	}
 	return parts
-}
-
-// redirectTrailingSlash keeps admin subroutes on canonical paths for consistent matching.
-func redirectTrailingSlash(w http.ResponseWriter, r *http.Request) bool {
-	if r == nil || r.URL == nil {
-		return false
-	}
-	if !strings.HasSuffix(r.URL.Path, "/") {
-		return false
-	}
-	canonical := strings.TrimRight(r.URL.Path, "/")
-	if canonical == "" {
-		canonical = "/"
-	}
-	http.Redirect(w, r, canonical, http.StatusMovedPermanently)
-	return true
 }
 
 // renderPage picks the HTMX fragment or full layout without duplicating handler flow.

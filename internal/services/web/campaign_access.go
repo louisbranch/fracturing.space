@@ -115,3 +115,23 @@ func (s *campaignAccessService) introspectUserID(ctx context.Context, accessToke
 	}
 	return strings.TrimSpace(resp.UserID), nil
 }
+
+func (s *campaignAccessService) introspectParticipantID(ctx context.Context, accessToken string) (string, error) {
+	// introspectParticipantID is the auth boundary for web-gate decisions that are
+	// participant-specific and should avoid user-level indirection.
+	if s == nil || s.httpClient == nil {
+		return "", fmt.Errorf("campaign access checker is not configured")
+	}
+	endpoint := strings.TrimRight(s.authBaseURL, "/") + "/introspect"
+	introspectCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+
+	resp, err := authctx.NewHTTPIntrospector(endpoint, s.oauthResourceSecret, s.httpClient).Introspect(introspectCtx, accessToken)
+	if err != nil {
+		return "", fmt.Errorf("call auth introspection: %w", err)
+	}
+	if !resp.Active {
+		return "", nil
+	}
+	return strings.TrimSpace(resp.ParticipantID), nil
+}

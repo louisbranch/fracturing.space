@@ -1,12 +1,15 @@
 package web
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
+
+	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 )
 
 func TestAppCampaignDetailPageRedirectsUnauthenticatedToLogin(t *testing.T) {
@@ -28,12 +31,53 @@ func TestAppCampaignDetailPageRedirectsUnauthenticatedToLogin(t *testing.T) {
 	}
 }
 
-func TestAppCampaignDetailPageForbiddenForNonParticipant(t *testing.T) {
+func TestAppCampaignDetailCanonicalizesTrailingSlash(t *testing.T) {
 	h := &handler{
-		config:         Config{AuthBaseURL: "http://auth.local"},
-		sessions:       newSessionStore(),
-		pendingFlows:   newPendingFlowStore(),
-		campaignAccess: fakeCampaignAccessChecker{allowed: false},
+		config:       Config{AuthBaseURL: "http://auth.local"},
+		sessions:     newSessionStore(),
+		pendingFlows: newPendingFlowStore(),
+	}
+	req := httptest.NewRequest(http.MethodGet, "/campaigns/", nil)
+	w := httptest.NewRecorder()
+
+	h.handleAppCampaignDetail(w, req)
+
+	if w.Code != http.StatusMovedPermanently {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusMovedPermanently)
+	}
+	if location := w.Header().Get("Location"); location != "/campaigns" {
+		t.Fatalf("location = %q, want %q", location, "/campaigns")
+	}
+}
+
+func TestAppCampaignDetailPageForbiddenForNonParticipant(t *testing.T) {
+	authServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/introspect" {
+			t.Fatalf("path = %q, want %q", r.URL.Path, "/introspect")
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(introspectResponse{Active: true, UserID: "Alice"})
+	}))
+	t.Cleanup(authServer.Close)
+	participantClient := &fakeWebParticipantClient{
+		pages: map[string]*statev1.ListParticipantsResponse{
+			"": {},
+		},
+	}
+	h := &handler{
+		config: Config{
+			AuthBaseURL:         authServer.URL,
+			OAuthResourceSecret: "secret-1",
+		},
+		sessions:          newSessionStore(),
+		pendingFlows:      newPendingFlowStore(),
+		participantClient: participantClient,
+		campaignAccess: &campaignAccessService{
+			authBaseURL:         authServer.URL,
+			oauthResourceSecret: "secret-1",
+			httpClient:          authServer.Client(),
+			participantClient:   participantClient,
+		},
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
 	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123", nil)
@@ -48,11 +92,42 @@ func TestAppCampaignDetailPageForbiddenForNonParticipant(t *testing.T) {
 }
 
 func TestAppCampaignDetailPageParticipantRendersCampaign(t *testing.T) {
+	authServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/introspect" {
+			t.Fatalf("path = %q, want %q", r.URL.Path, "/introspect")
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(introspectResponse{Active: true, UserID: "Alice"})
+	}))
+	t.Cleanup(authServer.Close)
+	participantClient := &fakeWebParticipantClient{
+		pages: map[string]*statev1.ListParticipantsResponse{
+			"": {
+				Participants: []*statev1.Participant{
+					{
+						Id:             "participant-1",
+						CampaignId:     "camp-123",
+						UserId:         "Alice",
+						CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER,
+					},
+				},
+			},
+		},
+	}
 	h := &handler{
-		config:         Config{AuthBaseURL: "http://auth.local"},
-		sessions:       newSessionStore(),
-		pendingFlows:   newPendingFlowStore(),
-		campaignAccess: fakeCampaignAccessChecker{allowed: true},
+		config: Config{
+			AuthBaseURL:         authServer.URL,
+			OAuthResourceSecret: "secret-1",
+		},
+		sessions:          newSessionStore(),
+		pendingFlows:      newPendingFlowStore(),
+		participantClient: participantClient,
+		campaignAccess: &campaignAccessService{
+			authBaseURL:         authServer.URL,
+			oauthResourceSecret: "secret-1",
+			httpClient:          authServer.Client(),
+			participantClient:   participantClient,
+		},
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
 	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123", nil)
@@ -83,11 +158,31 @@ func TestAppCampaignDetailPageParticipantRendersCampaign(t *testing.T) {
 }
 
 func TestAppCampaignDetailPageReturnsBadGatewayOnAccessCheckerError(t *testing.T) {
+	authServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/introspect" {
+			t.Fatalf("path = %q, want %q", r.URL.Path, "/introspect")
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(introspectResponse{Active: true, UserID: "Alice"})
+	}))
+	t.Cleanup(authServer.Close)
+	participantClient := &fakeWebParticipantClient{
+		err: errors.New("upstream failure"),
+	}
 	h := &handler{
-		config:         Config{AuthBaseURL: "http://auth.local"},
-		sessions:       newSessionStore(),
-		pendingFlows:   newPendingFlowStore(),
-		campaignAccess: fakeCampaignAccessChecker{err: errors.New("upstream failure")},
+		config: Config{
+			AuthBaseURL:         authServer.URL,
+			OAuthResourceSecret: "secret-1",
+		},
+		sessions:          newSessionStore(),
+		pendingFlows:      newPendingFlowStore(),
+		participantClient: participantClient,
+		campaignAccess: &campaignAccessService{
+			authBaseURL:         authServer.URL,
+			oauthResourceSecret: "secret-1",
+			httpClient:          authServer.Client(),
+			participantClient:   participantClient,
+		},
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
 	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123", nil)

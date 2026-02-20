@@ -33,3 +33,9 @@ SELECT campaign_id, id, user_id, display_name, role, controller, campaign_access
 WHERE campaign_id = ?
 ORDER BY id
 LIMIT ?;
+
+-- name: ListCampaignIDsByUser :many
+SELECT DISTINCT campaign_id FROM participants WHERE user_id = ? ORDER BY campaign_id;
+
+-- name: ListCampaignIDsByParticipant :many
+SELECT DISTINCT campaign_id FROM participants WHERE id = ? ORDER BY campaign_id;

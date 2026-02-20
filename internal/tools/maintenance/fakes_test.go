@@ -124,6 +124,14 @@ func (f *fakeProjectionStore) ListParticipantsByCampaign(context.Context, string
 	return nil, fmt.Errorf("not implemented")
 }
 
+func (f *fakeProjectionStore) ListCampaignIDsByUser(context.Context, string) ([]string, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+func (f *fakeProjectionStore) ListCampaignIDsByParticipant(context.Context, string) ([]string, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
 func (f *fakeProjectionStore) ListParticipants(context.Context, string, int, string) (storage.ParticipantPage, error) {
 	return storage.ParticipantPage{}, fmt.Errorf("not implemented")
 }

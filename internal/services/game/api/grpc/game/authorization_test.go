@@ -36,6 +36,14 @@ func (f authzParticipantStore) ListParticipantsByCampaign(ctx context.Context, c
 	return nil, nil
 }
 
+func (f authzParticipantStore) ListCampaignIDsByUser(ctx context.Context, userID string) ([]string, error) {
+	return nil, nil
+}
+
+func (f authzParticipantStore) ListCampaignIDsByParticipant(ctx context.Context, participantID string) ([]string, error) {
+	return nil, nil
+}
+
 func (f authzParticipantStore) ListParticipants(ctx context.Context, campaignID string, pageSize int, pageToken string) (storage.ParticipantPage, error) {
 	return storage.ParticipantPage{}, nil
 }

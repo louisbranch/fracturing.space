@@ -113,6 +113,10 @@ type ParticipantStore interface {
 	DeleteParticipant(ctx context.Context, campaignID, participantID string) error
 	// ListParticipantsByCampaign returns all participants for a campaign.
 	ListParticipantsByCampaign(ctx context.Context, campaignID string) ([]ParticipantRecord, error)
+	// ListCampaignIDsByUser returns campaign IDs for a participant user.
+	ListCampaignIDsByUser(ctx context.Context, userID string) ([]string, error)
+	// ListCampaignIDsByParticipant returns campaign IDs for a participant id.
+	ListCampaignIDsByParticipant(ctx context.Context, participantID string) ([]string, error)
 	// ListParticipants returns a page of participant records for a campaign starting after the page token.
 	ListParticipants(ctx context.Context, campaignID string, pageSize int, pageToken string) (ParticipantPage, error)
 }

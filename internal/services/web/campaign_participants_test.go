@@ -45,21 +45,37 @@ func TestAppCampaignParticipantUpdateRedirectsUnauthenticatedToLogin(t *testing.
 }
 
 func TestAppCampaignParticipantsPageParticipantRendersParticipants(t *testing.T) {
+	authServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/introspect" {
+			t.Fatalf("path = %q, want %q", r.URL.Path, "/introspect")
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(introspectResponse{Active: true, UserID: "Alice"})
+	}))
+	t.Cleanup(authServer.Close)
 	participantClient := &fakeWebParticipantClient{
 		pages: map[string]*statev1.ListParticipantsResponse{
 			"": {
 				Participants: []*statev1.Participant{
-					{Id: "part-1", CampaignId: "camp-123", Name: "Alice"},
-					{Id: "part-2", CampaignId: "camp-123", Name: "Bob"},
+					{Id: "part-1", CampaignId: "camp-123", UserId: "Alice", Name: "Alice"},
+					{Id: "part-2", CampaignId: "camp-123", UserId: "Bob", Name: "Bob"},
 				},
 			},
 		},
 	}
 	h := &handler{
-		config:            Config{AuthBaseURL: "http://auth.local"},
-		sessions:          newSessionStore(),
-		pendingFlows:      newPendingFlowStore(),
-		campaignAccess:    fakeCampaignAccessChecker{allowed: true},
+		config: Config{
+			AuthBaseURL:         authServer.URL,
+			OAuthResourceSecret: "secret-1",
+		},
+		sessions:     newSessionStore(),
+		pendingFlows: newPendingFlowStore(),
+		campaignAccess: &campaignAccessService{
+			authBaseURL:         authServer.URL,
+			oauthResourceSecret: "secret-1",
+			httpClient:          authServer.Client(),
+			participantClient:   participantClient,
+		},
 		participantClient: participantClient,
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
@@ -72,8 +88,8 @@ func TestAppCampaignParticipantsPageParticipantRendersParticipants(t *testing.T)
 	if w.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
 	}
-	if len(participantClient.calls) != 1 {
-		t.Fatalf("ListParticipants calls = %d, want 1", len(participantClient.calls))
+	if len(participantClient.calls) != 2 {
+		t.Fatalf("ListParticipants calls = %d, want 2", len(participantClient.calls))
 	}
 	if participantClient.calls[0].GetCampaignId() != "camp-123" {
 		t.Fatalf("campaign_id = %q, want %q", participantClient.calls[0].GetCampaignId(), "camp-123")

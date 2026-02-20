@@ -56,7 +56,7 @@ This is the full environment variable reference. For setup steps, see
 
 ### MCP
 
-- `FRACTURING_SPACE_GAME_ADDR`: game gRPC address used by MCP and admin. Default: `localhost:8080`.
+- `FRACTURING_SPACE_GAME_ADDR`: game gRPC address used by MCP, admin, and web. Default: `localhost:8080`.
 - `FRACTURING_SPACE_MCP_HTTP_ADDR`: HTTP bind address for MCP when using HTTP transport. Default: `localhost:8081`.
 - `FRACTURING_SPACE_MCP_TRANSPORT`: transport type (`stdio` or `http`). Default: `stdio`.
 - `FRACTURING_SPACE_MCP_ALLOWED_HOSTS`: comma-separated allowed Host/Origin values for MCP HTTP. Defaults to loopback-only when unset.

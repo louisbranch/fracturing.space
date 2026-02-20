@@ -9,8 +9,9 @@ import (
 
 // IntrospectionResult mirrors the auth service introspection JSON response.
 type IntrospectionResult struct {
-	Active bool   `json:"active"`
-	UserID string `json:"user_id"`
+	Active        bool   `json:"active"`
+	UserID        string `json:"user_id"`
+	ParticipantID string `json:"participant_id"`
 }
 
 // Introspector validates an OAuth access token via introspection.

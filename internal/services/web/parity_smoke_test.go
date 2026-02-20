@@ -18,8 +18,9 @@ func TestAppSignedInWorkspaceJourneySmoke(t *testing.T) {
 		}
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(introspectResponse{
-			Active: true,
-			UserID: "user-123",
+			Active:        true,
+			UserID:        "user-123",
+			ParticipantID: "part-manager",
 		})
 	}))
 	t.Cleanup(authServer.Close)

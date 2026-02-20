@@ -18,22 +18,15 @@ func (h *handler) handleAppCampaignParticipants(w http.ResponseWriter, r *http.R
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	if !h.requireCampaignParticipant(w, r, campaignID) {
+	participant, ok := h.requireCampaignActor(w, r, campaignID)
+	if !ok {
 		return
 	}
 	if h.participantClient == nil {
 		h.renderErrorPage(w, r, http.StatusServiceUnavailable, "Participants unavailable", "participant service client is not configured")
 		return
 	}
-	sess := sessionFromRequest(r, h.sessions)
-	if sess == nil {
-		http.Redirect(w, r, "/auth/login", http.StatusFound)
-		return
-	}
-	canManageParticipants := false
-	if participant, err := h.campaignParticipant(r.Context(), campaignID, sess.accessToken); err == nil && participant != nil && strings.TrimSpace(participant.GetId()) != "" {
-		canManageParticipants = canManageCampaignParticipants(participant.GetCampaignAccess())
-	}
+	canManageParticipants := canManageCampaignParticipants(participant.GetCampaignAccess())
 
 	resp, err := h.participantClient.ListParticipants(r.Context(), &statev1.ListParticipantsRequest{
 		CampaignId: campaignID,
@@ -55,16 +48,12 @@ func (h *handler) handleAppCampaignParticipantUpdate(w http.ResponseWriter, r *h
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	if !h.requireCampaignParticipant(w, r, campaignID) {
+	actingParticipant, ok := h.requireCampaignActor(w, r, campaignID)
+	if !ok {
 		return
 	}
 	if h.participantClient == nil {
 		h.renderErrorPage(w, r, http.StatusServiceUnavailable, "Participant action unavailable", "participant service client is not configured")
-		return
-	}
-	sess := sessionFromRequest(r, h.sessions)
-	if sess == nil {
-		http.Redirect(w, r, "/auth/login", http.StatusFound)
 		return
 	}
 	if err := r.ParseForm(); err != nil {
@@ -113,26 +102,13 @@ func (h *handler) handleAppCampaignParticipantUpdate(w http.ResponseWriter, r *h
 		return
 	}
 
-	actingParticipant, err := h.campaignParticipant(r.Context(), campaignID, sess.accessToken)
-	if err != nil {
-		h.renderErrorPage(w, r, http.StatusBadGateway, "Participant action unavailable", "failed to resolve campaign participant")
-		return
-	}
-	actingParticipantID := ""
-	if actingParticipant != nil {
-		actingParticipantID = strings.TrimSpace(actingParticipant.GetId())
-	}
-	if actingParticipantID == "" {
-		h.renderErrorPage(w, r, http.StatusForbidden, "Access denied", "participant identity required for participant action")
-		return
-	}
 	if !canManageCampaignParticipants(actingParticipant.GetCampaignAccess()) {
 		h.renderErrorPage(w, r, http.StatusForbidden, "Access denied", "manager or owner access required for participant action")
 		return
 	}
 
-	ctx := grpcauthctx.WithParticipantID(r.Context(), actingParticipantID)
-	_, err = h.participantClient.UpdateParticipant(ctx, updateReq)
+	ctx := grpcauthctx.WithParticipantID(r.Context(), strings.TrimSpace(actingParticipant.GetId()))
+	_, err := h.participantClient.UpdateParticipant(ctx, updateReq)
 	if err != nil {
 		h.renderErrorPage(w, r, http.StatusBadGateway, "Participant action unavailable", "failed to update participant")
 		return

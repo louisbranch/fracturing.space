@@ -160,6 +160,28 @@ func (f *fakeWebSessionClient) ClearSessionSpotlight(context.Context, *statev1.C
 }
 
 func TestAppCampaignSessionsPageParticipantRendersSessions(t *testing.T) {
+	authServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/introspect" {
+			t.Fatalf("path = %q, want %q", r.URL.Path, "/introspect")
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(introspectResponse{Active: true, UserID: "Alice"})
+	}))
+	t.Cleanup(authServer.Close)
+	participantClient := &fakeWebParticipantClient{
+		pages: map[string]*statev1.ListParticipantsResponse{
+			"": {
+				Participants: []*statev1.Participant{
+					{
+						Id:             "part-gm",
+						CampaignId:     "camp-123",
+						UserId:         "Alice",
+						CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER,
+					},
+				},
+			},
+		},
+	}
 	sessionClient := &fakeWebSessionClient{
 		response: &statev1.ListSessionsResponse{
 			Sessions: []*statev1.Session{
@@ -169,11 +191,20 @@ func TestAppCampaignSessionsPageParticipantRendersSessions(t *testing.T) {
 		},
 	}
 	h := &handler{
-		config:         Config{AuthBaseURL: "http://auth.local"},
-		sessions:       newSessionStore(),
-		pendingFlows:   newPendingFlowStore(),
-		campaignAccess: fakeCampaignAccessChecker{allowed: true},
-		sessionClient:  sessionClient,
+		config: Config{
+			AuthBaseURL:         authServer.URL,
+			OAuthResourceSecret: "secret-1",
+		},
+		sessions:          newSessionStore(),
+		pendingFlows:      newPendingFlowStore(),
+		participantClient: participantClient,
+		campaignAccess: &campaignAccessService{
+			authBaseURL:         authServer.URL,
+			oauthResourceSecret: "secret-1",
+			httpClient:          authServer.Client(),
+			participantClient:   participantClient,
+		},
+		sessionClient: sessionClient,
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
 	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/sessions", nil)
@@ -204,6 +235,28 @@ func TestAppCampaignSessionsPageParticipantRendersSessions(t *testing.T) {
 }
 
 func TestAppCampaignSessionDetailParticipantRendersSession(t *testing.T) {
+	authServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/introspect" {
+			t.Fatalf("path = %q, want %q", r.URL.Path, "/introspect")
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(introspectResponse{Active: true, UserID: "Alice"})
+	}))
+	t.Cleanup(authServer.Close)
+	participantClient := &fakeWebParticipantClient{
+		pages: map[string]*statev1.ListParticipantsResponse{
+			"": {
+				Participants: []*statev1.Participant{
+					{
+						Id:             "part-gm",
+						CampaignId:     "camp-123",
+						UserId:         "Alice",
+						CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER,
+					},
+				},
+			},
+		},
+	}
 	sessionClient := &fakeWebSessionClient{
 		getRes: &statev1.GetSessionResponse{
 			Session: &statev1.Session{
@@ -215,11 +268,20 @@ func TestAppCampaignSessionDetailParticipantRendersSession(t *testing.T) {
 		},
 	}
 	h := &handler{
-		config:         Config{AuthBaseURL: "http://auth.local"},
-		sessions:       newSessionStore(),
-		pendingFlows:   newPendingFlowStore(),
-		campaignAccess: fakeCampaignAccessChecker{allowed: true},
-		sessionClient:  sessionClient,
+		config: Config{
+			AuthBaseURL:         authServer.URL,
+			OAuthResourceSecret: "secret-1",
+		},
+		sessions:          newSessionStore(),
+		pendingFlows:      newPendingFlowStore(),
+		participantClient: participantClient,
+		campaignAccess: &campaignAccessService{
+			authBaseURL:         authServer.URL,
+			oauthResourceSecret: "secret-1",
+			httpClient:          authServer.Client(),
+			participantClient:   participantClient,
+		},
+		sessionClient: sessionClient,
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
 	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/sessions/sess-1", nil)
