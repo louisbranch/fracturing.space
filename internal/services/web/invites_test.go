@@ -21,7 +21,7 @@ import (
 
 func TestAppInvitesPageRedirectsUnauthenticatedToLogin(t *testing.T) {
 	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodGet, "/app/invites", nil)
+	req := httptest.NewRequest(http.MethodGet, "/invites", nil)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
@@ -169,7 +169,7 @@ func TestAppInvitesPageRendersPendingInvitesForUser(t *testing.T) {
 		},
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-	req := httptest.NewRequest(http.MethodGet, "/app/invites", nil)
+	req := httptest.NewRequest(http.MethodGet, "/invites", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -199,7 +199,7 @@ func TestAppInvitesPageRendersPendingInvitesForUser(t *testing.T) {
 
 func TestAppInviteClaimRedirectsUnauthenticatedToLogin(t *testing.T) {
 	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodPost, "/app/invites/claim", strings.NewReader("campaign_id=camp-1"))
+	req := httptest.NewRequest(http.MethodPost, "/invites/claim", strings.NewReader("campaign_id=camp-1"))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	w := httptest.NewRecorder()
 
@@ -272,7 +272,7 @@ func TestAppInviteClaimRedirectsToCampaignAfterClaim(t *testing.T) {
 		"invite_id":      {"inv-1"},
 		"participant_id": {"part-1"},
 	}
-	req := httptest.NewRequest(http.MethodPost, "/app/invites/claim", strings.NewReader(form.Encode()))
+	req := httptest.NewRequest(http.MethodPost, "/invites/claim", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
@@ -282,8 +282,8 @@ func TestAppInviteClaimRedirectsToCampaignAfterClaim(t *testing.T) {
 	if w.Code != http.StatusFound {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusFound)
 	}
-	if location := w.Header().Get("Location"); location != "/app/campaigns/camp-1" {
-		t.Fatalf("location = %q, want %q", location, "/app/campaigns/camp-1")
+	if location := w.Header().Get("Location"); location != "/campaigns/camp-1" {
+		t.Fatalf("location = %q, want %q", location, "/campaigns/camp-1")
 	}
 	if authClient.issueJoinGrantReq == nil {
 		t.Fatalf("expected IssueJoinGrant request to be captured")

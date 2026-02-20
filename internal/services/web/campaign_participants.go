@@ -44,7 +44,7 @@ func (h *handler) handleAppCampaignParticipants(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	renderAppCampaignParticipantsPage(w, campaignID, resp.GetParticipants(), canManageParticipants)
+	renderAppCampaignParticipantsPageWithAppName(w, h.resolvedAppName(), campaignID, resp.GetParticipants(), canManageParticipants)
 }
 
 func (h *handler) handleAppCampaignParticipantUpdate(w http.ResponseWriter, r *http.Request, campaignID string) {
@@ -138,7 +138,7 @@ func (h *handler) handleAppCampaignParticipantUpdate(w http.ResponseWriter, r *h
 		return
 	}
 
-	http.Redirect(w, r, "/app/campaigns/"+campaignID+"/participants", http.StatusFound)
+	http.Redirect(w, r, "/campaigns/"+campaignID+"/participants", http.StatusFound)
 }
 
 func canManageCampaignParticipants(access statev1.CampaignAccess) bool {
@@ -206,11 +206,15 @@ func participantControllerFormValue(controller statev1.Controller) string {
 }
 
 func renderAppCampaignParticipantsPage(w http.ResponseWriter, campaignID string, participants []*statev1.Participant, canManageParticipants bool) {
+	renderAppCampaignParticipantsPageWithAppName(w, "", campaignID, participants, canManageParticipants)
+}
+
+func renderAppCampaignParticipantsPageWithAppName(w http.ResponseWriter, appName string, campaignID string, participants []*statev1.Participant, canManageParticipants bool) {
 	// renderAppCampaignParticipantsPage translates participant domain objects into the
 	// management controls available at this campaign membership level.
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	writeGamePageStart(w, "Participants", appName)
 	escapedCampaignID := html.EscapeString(campaignID)
-	_, _ = io.WriteString(w, "<!doctype html><html><head><title>Participants</title></head><body><h1>Participants</h1><ul>")
+	_, _ = io.WriteString(w, "<h1>Participants</h1><ul>")
 	for _, participant := range participants {
 		if participant == nil {
 			continue
@@ -254,10 +258,11 @@ func renderAppCampaignParticipantsPage(w http.ResponseWriter, campaignID string,
 				} else {
 					humanSelected = " selected"
 				}
-				_, _ = io.WriteString(w, "<form method=\"post\" action=\"/app/campaigns/"+escapedCampaignID+"/participants/update\"><input type=\"hidden\" name=\"participant_id\" value=\""+html.EscapeString(participantID)+"\"><select name=\"campaign_access\"><option value=\"member\""+memberSelected+">member</option><option value=\"manager\""+managerSelected+">manager</option><option value=\"owner\""+ownerSelected+">owner</option></select><select name=\"role\"><option value=\"gm\""+gmSelected+">gm</option><option value=\"player\""+playerSelected+">player</option></select><select name=\"controller\"><option value=\"human\""+humanSelected+">human</option><option value=\"ai\""+aiSelected+">ai</option></select><button type=\"submit\">Update Access</button></form>")
+				_, _ = io.WriteString(w, "<form method=\"post\" action=\"/campaigns/"+escapedCampaignID+"/participants/update\"><input type=\"hidden\" name=\"participant_id\" value=\""+html.EscapeString(participantID)+"\"><select name=\"campaign_access\"><option value=\"member\""+memberSelected+">member</option><option value=\"manager\""+managerSelected+">manager</option><option value=\"owner\""+ownerSelected+">owner</option></select><select name=\"role\"><option value=\"gm\""+gmSelected+">gm</option><option value=\"player\""+playerSelected+">player</option></select><select name=\"controller\"><option value=\"human\""+humanSelected+">human</option><option value=\"ai\""+aiSelected+">ai</option></select><button type=\"submit\">Update Access</button></form>")
 			}
 		}
 		_, _ = io.WriteString(w, "</li>")
 	}
-	_, _ = io.WriteString(w, "</ul></body></html>")
+	_, _ = io.WriteString(w, "</ul>")
+	writeGamePageEnd(w)
 }

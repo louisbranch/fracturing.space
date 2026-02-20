@@ -15,7 +15,7 @@ import (
 
 func TestAppCampaignParticipantsPageRedirectsUnauthenticatedToLogin(t *testing.T) {
 	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123/participants", nil)
+	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/participants", nil)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
@@ -30,7 +30,7 @@ func TestAppCampaignParticipantsPageRedirectsUnauthenticatedToLogin(t *testing.T
 
 func TestAppCampaignParticipantUpdateRedirectsUnauthenticatedToLogin(t *testing.T) {
 	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/camp-123/participants/update", strings.NewReader("participant_id=part-1"))
+	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/participants/update", strings.NewReader("participant_id=part-1"))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	w := httptest.NewRecorder()
 
@@ -63,7 +63,7 @@ func TestAppCampaignParticipantsPageParticipantRendersParticipants(t *testing.T)
 		participantClient: participantClient,
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123/participants", nil)
+	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/participants", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -147,7 +147,7 @@ func TestAppCampaignParticipantUpdateManagerCallsUpdateParticipant(t *testing.T)
 		"role":            {"player"},
 		"controller":      {"ai"},
 	}
-	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/camp-123/participants/update", strings.NewReader(form.Encode()))
+	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/participants/update", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
@@ -157,8 +157,8 @@ func TestAppCampaignParticipantUpdateManagerCallsUpdateParticipant(t *testing.T)
 	if w.Code != http.StatusFound {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusFound)
 	}
-	if location := w.Header().Get("Location"); location != "/app/campaigns/camp-123/participants" {
-		t.Fatalf("location = %q, want %q", location, "/app/campaigns/camp-123/participants")
+	if location := w.Header().Get("Location"); location != "/campaigns/camp-123/participants" {
+		t.Fatalf("location = %q, want %q", location, "/campaigns/camp-123/participants")
 	}
 	if participantClient.updateReq == nil {
 		t.Fatalf("expected UpdateParticipant request to be captured")
@@ -235,7 +235,7 @@ func TestAppCampaignParticipantUpdateMemberForbidden(t *testing.T) {
 		"role":            {"player"},
 		"controller":      {"ai"},
 	}
-	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/camp-123/participants/update", strings.NewReader(form.Encode()))
+	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/participants/update", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
@@ -295,7 +295,7 @@ func TestAppCampaignParticipantsPageManagerShowsUpdateControls(t *testing.T) {
 		},
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123/participants", nil)
+	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/participants", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -361,7 +361,7 @@ func TestAppCampaignParticipantsPageMemberHidesUpdateControls(t *testing.T) {
 		},
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123/participants", nil)
+	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/participants", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 

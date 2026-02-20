@@ -9,7 +9,7 @@ type DashboardPageParams struct {
 
 // DashboardPage renders the logged-in shell with shared web layout and an empty main area.
 templ DashboardPage(params DashboardPageParams) {
-	@Layout("Dashboard - "+params.AppName, params.Lang) {
+	@GameLayout("Dashboard - "+params.AppName, params.Lang) {
 		<nav class="navbar bg-base-200 fixed top-0 w-full z-50">
 			<div class="navbar-start w-auto">
 				<h3 class="text-lg font-bold">

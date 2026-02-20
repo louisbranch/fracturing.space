@@ -50,7 +50,7 @@ func (h *handler) handleAppInvites(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	renderAppInvitesPage(w, resp.GetInvites())
+	renderAppInvitesPageWithAppName(w, h.resolvedAppName(), resp.GetInvites())
 }
 
 func (h *handler) handleAppInviteClaim(w http.ResponseWriter, r *http.Request) {
@@ -120,14 +120,18 @@ func (h *handler) handleAppInviteClaim(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/app/campaigns/"+url.PathEscape(campaignID), http.StatusFound)
+	http.Redirect(w, r, "/campaigns/"+url.PathEscape(campaignID), http.StatusFound)
 }
 
 func renderAppInvitesPage(w http.ResponseWriter, invites []*statev1.PendingUserInvite) {
+	renderAppInvitesPageWithAppName(w, "", invites)
+}
+
+func renderAppInvitesPageWithAppName(w http.ResponseWriter, appName string, invites []*statev1.PendingUserInvite) {
 	// renderAppInvitesPage maps pending user invites into the minimal claimable
 	// list the web surface exposes.
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_, _ = io.WriteString(w, "<!doctype html><html><head><title>My Invites</title></head><body><h1>My Invites</h1><ul>")
+	writeGamePageStart(w, "My Invites", appName)
+	_, _ = io.WriteString(w, "<h1>My Invites</h1><ul>")
 	for _, pending := range invites {
 		if pending == nil {
 			continue
@@ -152,9 +156,10 @@ func renderAppInvitesPage(w http.ResponseWriter, invites []*statev1.PendingUserI
 		label := campaignName + " - " + participantName
 		_, _ = io.WriteString(w, "<li>"+html.EscapeString(label))
 		if campaignID != "" && inviteID != "" && participantID != "" {
-			_, _ = io.WriteString(w, "<form method=\"post\" action=\"/app/invites/claim\"><input type=\"hidden\" name=\"campaign_id\" value=\""+html.EscapeString(campaignID)+"\"><input type=\"hidden\" name=\"invite_id\" value=\""+html.EscapeString(inviteID)+"\"><input type=\"hidden\" name=\"participant_id\" value=\""+html.EscapeString(participantID)+"\"><button type=\"submit\">Claim</button></form>")
+			_, _ = io.WriteString(w, "<form method=\"post\" action=\"/invites/claim\"><input type=\"hidden\" name=\"campaign_id\" value=\""+html.EscapeString(campaignID)+"\"><input type=\"hidden\" name=\"invite_id\" value=\""+html.EscapeString(inviteID)+"\"><input type=\"hidden\" name=\"participant_id\" value=\""+html.EscapeString(participantID)+"\"><button type=\"submit\">Claim</button></form>")
 		}
 		_, _ = io.WriteString(w, "</li>")
 	}
-	_, _ = io.WriteString(w, "</ul></body></html>")
+	_, _ = io.WriteString(w, "</ul>")
+	writeGamePageEnd(w)
 }

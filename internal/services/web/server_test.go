@@ -64,6 +64,9 @@ func TestLoginHandlerRendersForm(t *testing.T) {
 	if !strings.Contains(body, "Test Client") {
 		t.Fatalf("expected client name in body")
 	}
+	if !strings.Contains(body, `data-layout="auth"`) {
+		t.Fatalf("expected auth layout marker in login page")
+	}
 }
 
 func TestLandingPageRenders(t *testing.T) {
@@ -80,6 +83,9 @@ func TestLandingPageRenders(t *testing.T) {
 	}
 	if !strings.Contains(body, "Open-source, server-authoritative engine") {
 		t.Fatalf("expected hero tagline in body")
+	}
+	if !strings.Contains(body, `data-layout="auth"`) {
+		t.Fatalf("expected auth layout marker in landing page")
 	}
 }
 
@@ -229,6 +235,9 @@ func TestMagicLinkRequiresToken(t *testing.T) {
 	}
 	if !strings.Contains(w.Body.String(), "Magic link missing") {
 		t.Fatalf("expected error page")
+	}
+	if !strings.Contains(w.Body.String(), `data-layout="auth"`) {
+		t.Fatalf("expected auth layout marker in magic page")
 	}
 }
 
