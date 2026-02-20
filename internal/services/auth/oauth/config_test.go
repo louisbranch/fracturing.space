@@ -138,7 +138,7 @@ func TestLoadConfigFromEnvInvalidTokenTTLKeepsIssuer(t *testing.T) {
 func TestFirstPartyClientRegistration(t *testing.T) {
 	t.Run("prepends trusted first-party client when env vars set", func(t *testing.T) {
 		clearOAuthEnv(t)
-		t.Setenv("FRACTURING_SPACE_OAUTH_FIRST_PARTY_CLIENT_ID", "fracturing-space-web")
+		t.Setenv("FRACTURING_SPACE_OAUTH_FIRST_PARTY_CLIENT_ID", "fracturing-space")
 		t.Setenv("FRACTURING_SPACE_OAUTH_FIRST_PARTY_REDIRECT_URI", "http://localhost:8080/auth/callback")
 
 		config := LoadConfigFromEnv()
@@ -146,8 +146,8 @@ func TestFirstPartyClientRegistration(t *testing.T) {
 			t.Fatalf("Clients len = %d, want 1", len(config.Clients))
 		}
 		client := config.Clients[0]
-		if client.ID != "fracturing-space-web" {
-			t.Fatalf("Client ID = %q, want %q", client.ID, "fracturing-space-web")
+		if client.ID != "fracturing-space" {
+			t.Fatalf("Client ID = %q, want %q", client.ID, "fracturing-space")
 		}
 		if !client.Trusted {
 			t.Fatal("expected first-party client to be Trusted")
@@ -162,7 +162,7 @@ func TestFirstPartyClientRegistration(t *testing.T) {
 
 	t.Run("first-party client prepended before JSON clients", func(t *testing.T) {
 		clearOAuthEnv(t)
-		t.Setenv("FRACTURING_SPACE_OAUTH_FIRST_PARTY_CLIENT_ID", "fracturing-space-web")
+		t.Setenv("FRACTURING_SPACE_OAUTH_FIRST_PARTY_CLIENT_ID", "fracturing-space")
 		t.Setenv("FRACTURING_SPACE_OAUTH_FIRST_PARTY_REDIRECT_URI", "http://localhost:8080/auth/callback")
 		t.Setenv("FRACTURING_SPACE_OAUTH_CLIENTS", `[{"client_id":"third-party","redirect_uris":["http://example.com/cb"]}]`)
 
@@ -170,8 +170,8 @@ func TestFirstPartyClientRegistration(t *testing.T) {
 		if len(config.Clients) != 2 {
 			t.Fatalf("Clients len = %d, want 2", len(config.Clients))
 		}
-		if config.Clients[0].ID != "fracturing-space-web" {
-			t.Fatalf("first client ID = %q, want %q", config.Clients[0].ID, "fracturing-space-web")
+		if config.Clients[0].ID != "fracturing-space" {
+			t.Fatalf("first client ID = %q, want %q", config.Clients[0].ID, "fracturing-space")
 		}
 		if config.Clients[0].Trusted != true {
 			t.Fatal("first-party client should be trusted")
@@ -197,7 +197,7 @@ func TestFirstPartyClientRegistration(t *testing.T) {
 
 	t.Run("skipped when redirect URI is empty", func(t *testing.T) {
 		clearOAuthEnv(t)
-		t.Setenv("FRACTURING_SPACE_OAUTH_FIRST_PARTY_CLIENT_ID", "fracturing-space-web")
+		t.Setenv("FRACTURING_SPACE_OAUTH_FIRST_PARTY_CLIENT_ID", "fracturing-space")
 		t.Setenv("FRACTURING_SPACE_OAUTH_FIRST_PARTY_REDIRECT_URI", "")
 
 		config := LoadConfigFromEnv()
