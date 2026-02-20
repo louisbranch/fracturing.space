@@ -20,7 +20,7 @@ import (
 
 func TestAppCampaignSessionsPageRedirectsUnauthenticatedToLogin(t *testing.T) {
 	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123/sessions", nil)
+	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/sessions", nil)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
@@ -35,7 +35,7 @@ func TestAppCampaignSessionsPageRedirectsUnauthenticatedToLogin(t *testing.T) {
 
 func TestAppCampaignSessionDetailRedirectsUnauthenticatedToLogin(t *testing.T) {
 	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123/sessions/sess-1", nil)
+	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/sessions/sess-1", nil)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
@@ -50,7 +50,7 @@ func TestAppCampaignSessionDetailRedirectsUnauthenticatedToLogin(t *testing.T) {
 
 func TestAppCampaignSessionStartRedirectsUnauthenticatedToLogin(t *testing.T) {
 	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/camp-123/sessions/start", nil)
+	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/sessions/start", nil)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
@@ -65,7 +65,7 @@ func TestAppCampaignSessionStartRedirectsUnauthenticatedToLogin(t *testing.T) {
 
 func TestAppCampaignSessionEndRedirectsUnauthenticatedToLogin(t *testing.T) {
 	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/camp-123/sessions/end", nil)
+	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/sessions/end", nil)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
@@ -176,7 +176,7 @@ func TestAppCampaignSessionsPageParticipantRendersSessions(t *testing.T) {
 		sessionClient:  sessionClient,
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123/sessions", nil)
+	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/sessions", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -198,7 +198,7 @@ func TestAppCampaignSessionsPageParticipantRendersSessions(t *testing.T) {
 	if !strings.Contains(body, "Session Two") {
 		t.Fatalf("expected Session Two in response body")
 	}
-	if !strings.Contains(body, "/app/campaigns/camp-123/sessions/sess-1") {
+	if !strings.Contains(body, "/campaigns/camp-123/sessions/sess-1") {
 		t.Fatalf("expected session detail link for sess-1")
 	}
 }
@@ -222,7 +222,7 @@ func TestAppCampaignSessionDetailParticipantRendersSession(t *testing.T) {
 		sessionClient:  sessionClient,
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123/sessions/sess-1", nil)
+	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/sessions/sess-1", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -297,7 +297,7 @@ func TestAppCampaignSessionStartManagerCallsStartSession(t *testing.T) {
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
 	form := url.Values{"name": {"Session Three"}}
-	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/camp-123/sessions/start", strings.NewReader(form.Encode()))
+	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/sessions/start", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
@@ -307,8 +307,8 @@ func TestAppCampaignSessionStartManagerCallsStartSession(t *testing.T) {
 	if w.Code != http.StatusFound {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusFound)
 	}
-	if location := w.Header().Get("Location"); location != "/app/campaigns/camp-123/sessions" {
-		t.Fatalf("location = %q, want %q", location, "/app/campaigns/camp-123/sessions")
+	if location := w.Header().Get("Location"); location != "/campaigns/camp-123/sessions" {
+		t.Fatalf("location = %q, want %q", location, "/campaigns/camp-123/sessions")
 	}
 	if sessionClient.startReq == nil {
 		t.Fatalf("expected StartSession request to be captured")
@@ -376,7 +376,7 @@ func TestAppCampaignSessionEndManagerCallsEndSession(t *testing.T) {
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
 	form := url.Values{"session_id": {"sess-1"}}
-	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/camp-123/sessions/end", strings.NewReader(form.Encode()))
+	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/sessions/end", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
@@ -386,8 +386,8 @@ func TestAppCampaignSessionEndManagerCallsEndSession(t *testing.T) {
 	if w.Code != http.StatusFound {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusFound)
 	}
-	if location := w.Header().Get("Location"); location != "/app/campaigns/camp-123/sessions" {
-		t.Fatalf("location = %q, want %q", location, "/app/campaigns/camp-123/sessions")
+	if location := w.Header().Get("Location"); location != "/campaigns/camp-123/sessions" {
+		t.Fatalf("location = %q, want %q", location, "/campaigns/camp-123/sessions")
 	}
 	if sessionClient.endReq == nil {
 		t.Fatalf("expected EndSession request to be captured")
@@ -451,7 +451,7 @@ func TestAppCampaignSessionStartMemberForbidden(t *testing.T) {
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
 	form := url.Values{"name": {"Session Three"}}
-	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/camp-123/sessions/start", strings.NewReader(form.Encode()))
+	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/sessions/start", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
@@ -513,7 +513,7 @@ func TestAppCampaignSessionStartRequiresName(t *testing.T) {
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
 	form := url.Values{"name": {"   "}}
-	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/camp-123/sessions/start", strings.NewReader(form.Encode()))
+	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/sessions/start", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
@@ -577,7 +577,7 @@ func TestAppCampaignSessionStartMapsInvalidArgumentToBadRequest(t *testing.T) {
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
 	form := url.Values{"name": {"Session Three"}}
-	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/camp-123/sessions/start", strings.NewReader(form.Encode()))
+	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/sessions/start", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
@@ -646,7 +646,7 @@ func TestAppCampaignSessionsPageManagerShowsWriteControls(t *testing.T) {
 		},
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123/sessions", nil)
+	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/sessions", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -721,7 +721,7 @@ func TestAppCampaignSessionsPageMemberHidesWriteControls(t *testing.T) {
 		},
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123/sessions", nil)
+	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/sessions", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 

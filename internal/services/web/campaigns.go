@@ -50,14 +50,23 @@ func (h *handler) handleAppCampaigns(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	renderAppCampaignsPage(w, resp.GetCampaigns())
+	renderAppCampaignsPageWithAppName(w, h.resolvedAppName(), resp.GetCampaigns())
 }
 
 func (h *handler) handleAppCampaignCreate(w http.ResponseWriter, r *http.Request) {
 	// Campaign create is the onboarding bridge from HTML form into typed
 	// campaign service behavior.
+	if r.Method == http.MethodGet {
+		sess := sessionFromRequest(r, h.sessions)
+		if sess == nil {
+			http.Redirect(w, r, "/auth/login", http.StatusFound)
+			return
+		}
+		renderAppCampaignsPageWithAppName(w, h.resolvedAppName(), nil)
+		return
+	}
 	if r.Method != http.MethodPost {
-		w.Header().Set("Allow", http.MethodPost)
+		w.Header().Set("Allow", "GET, POST")
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
@@ -80,6 +89,29 @@ func (h *handler) handleAppCampaignCreate(w http.ResponseWriter, r *http.Request
 		h.renderErrorPage(w, r, http.StatusBadRequest, "Campaign create unavailable", "campaign name is required")
 		return
 	}
+	systemValue := strings.TrimSpace(r.FormValue("system"))
+	if systemValue == "" {
+		systemValue = "daggerheart"
+	}
+	system, ok := parseAppGameSystem(systemValue)
+	if !ok {
+		h.renderErrorPage(w, r, http.StatusBadRequest, "Campaign create unavailable", "campaign system is invalid")
+		return
+	}
+	gmModeValue := strings.TrimSpace(r.FormValue("gm_mode"))
+	if gmModeValue == "" {
+		gmModeValue = "human"
+	}
+	gmMode, ok := parseAppGmMode(gmModeValue)
+	if !ok {
+		h.renderErrorPage(w, r, http.StatusBadRequest, "Campaign create unavailable", "campaign gm mode is invalid")
+		return
+	}
+	themePrompt := strings.TrimSpace(r.FormValue("theme_prompt"))
+	creatorDisplayName := strings.TrimSpace(r.FormValue("creator_display_name"))
+	if creatorDisplayName == "" {
+		creatorDisplayName = strings.TrimSpace(sess.displayName)
+	}
 
 	userID, err := h.sessionUserID(r.Context(), sess.accessToken)
 	if err != nil {
@@ -95,9 +127,10 @@ func (h *handler) handleAppCampaignCreate(w http.ResponseWriter, r *http.Request
 	resp, err := h.campaignClient.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
 		Name:               campaignName,
 		Locale:             commonv1.Locale_LOCALE_EN_US,
-		System:             commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		GmMode:             statev1.GmMode_HUMAN,
-		CreatorDisplayName: strings.TrimSpace(sess.displayName),
+		System:             system,
+		GmMode:             gmMode,
+		ThemePrompt:        themePrompt,
+		CreatorDisplayName: creatorDisplayName,
 	})
 	if err != nil {
 		h.renderErrorPage(w, r, http.StatusBadGateway, "Campaign create unavailable", "failed to create campaign")
@@ -109,7 +142,7 @@ func (h *handler) handleAppCampaignCreate(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	http.Redirect(w, r, "/app/campaigns/"+url.PathEscape(campaignID), http.StatusFound)
+	http.Redirect(w, r, "/campaigns/"+url.PathEscape(campaignID), http.StatusFound)
 }
 
 func (h *handler) sessionUserID(ctx context.Context, accessToken string) (string, error) {
@@ -124,10 +157,21 @@ func (h *handler) sessionUserID(ctx context.Context, accessToken string) (string
 }
 
 func renderAppCampaignsPage(w http.ResponseWriter, campaigns []*statev1.Campaign) {
+	renderAppCampaignsPageWithAppName(w, "", campaigns)
+}
+
+func renderAppCampaignsPageWithAppName(w http.ResponseWriter, appName string, campaigns []*statev1.Campaign) {
 	// renderAppCampaignsPage maps the list of campaign read models into links that
 	// become the canonical campaign navigation point for this boundary.
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_, _ = io.WriteString(w, "<!doctype html><html><head><title>Campaigns</title></head><body><h1>Campaigns</h1><form method=\"post\" action=\"/app/campaigns/create\"><input type=\"text\" name=\"name\" placeholder=\"campaign name\" required><button type=\"submit\">Create Campaign</button></form><ul>")
+	writeGamePageStart(w, "Campaigns", appName)
+	_, _ = io.WriteString(w, "<h1>Campaigns</h1>")
+	_, _ = io.WriteString(w, "<form method=\"post\" action=\"/campaigns/create\">")
+	_, _ = io.WriteString(w, "<label>Campaign Name <input type=\"text\" name=\"name\" placeholder=\"campaign name\" required></label>")
+	_, _ = io.WriteString(w, "<label>Game System <select name=\"system\"><option value=\"daggerheart\" selected>Daggerheart</option></select></label>")
+	_, _ = io.WriteString(w, "<label>GM Mode <select name=\"gm_mode\"><option value=\"human\" selected>Human</option><option value=\"ai\">AI</option><option value=\"hybrid\">Hybrid</option></select></label>")
+	_, _ = io.WriteString(w, "<label>Creator Display Name <input type=\"text\" name=\"creator_display_name\" placeholder=\"display name\"></label>")
+	_, _ = io.WriteString(w, "<label>Theme Prompt <textarea name=\"theme_prompt\" rows=\"4\" placeholder=\"theme prompt\"></textarea></label>")
+	_, _ = io.WriteString(w, "<button type=\"submit\">Create Campaign</button></form><ul>")
 	for _, campaign := range campaigns {
 		if campaign == nil {
 			continue
@@ -138,10 +182,33 @@ func renderAppCampaignsPage(w http.ResponseWriter, campaigns []*statev1.Campaign
 			name = campaignID
 		}
 		if campaignID != "" {
-			_, _ = io.WriteString(w, "<li><a href=\"/app/campaigns/"+html.EscapeString(campaignID)+"\">"+html.EscapeString(name)+"</a></li>")
+			_, _ = io.WriteString(w, "<li><a href=\"/campaigns/"+html.EscapeString(campaignID)+"\">"+html.EscapeString(name)+"</a></li>")
 			continue
 		}
 		_, _ = io.WriteString(w, "<li>"+html.EscapeString(name)+"</li>")
 	}
-	_, _ = io.WriteString(w, "</ul></body></html>")
+	_, _ = io.WriteString(w, "</ul>")
+	writeGamePageEnd(w)
+}
+
+func parseAppGameSystem(value string) (commonv1.GameSystem, bool) {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "daggerheart", "game_system_daggerheart":
+		return commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART, true
+	default:
+		return commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED, false
+	}
+}
+
+func parseAppGmMode(value string) (statev1.GmMode, bool) {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "human":
+		return statev1.GmMode_HUMAN, true
+	case "ai":
+		return statev1.GmMode_AI, true
+	case "hybrid":
+		return statev1.GmMode_HYBRID, true
+	default:
+		return statev1.GmMode_GM_MODE_UNSPECIFIED, false
+	}
 }

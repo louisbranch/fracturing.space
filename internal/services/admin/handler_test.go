@@ -59,6 +59,9 @@ func TestWebPageRendering(t *testing.T) {
 				branding.AppName,
 				"<h2>Campaigns</h2>",
 			},
+			notContains: []string{
+				"/campaigns/create",
+			},
 		},
 		{
 			name: "campaigns htmx",
@@ -71,6 +74,7 @@ func TestWebPageRendering(t *testing.T) {
 				"<!doctype html>",
 				branding.AppName,
 				"<html",
+				"/campaigns/create",
 			},
 		},
 		{
@@ -1201,181 +1205,56 @@ func (c *testInviteClient) RevokeInvite(ctx context.Context, in *statev1.RevokeI
 	return &statev1.RevokeInviteResponse{}, nil
 }
 
-func TestCampaignCreateFlow(t *testing.T) {
+func TestCampaignCreateRouteIsUnavailableInAdmin(t *testing.T) {
 	campaignClient := &testCampaignClient{}
-	provider := testClientProvider{campaign: campaignClient}
-	webHandler := &Handler{clientProvider: provider, impersonation: newImpersonationStore()}
-	handler := webHandler.routes()
-
-	form := url.Values{}
-	form.Set("user_id", "user-123")
-	form.Set("name", "New Campaign")
-	form.Set("system", "daggerheart")
-	form.Set("gm_mode", "human")
-	form.Set("theme_prompt", "Misty marshes")
-	form.Set("creator_display_name", "Owner")
-
-	req := httptest.NewRequest(http.MethodPost, "http://example.com/campaigns/create", strings.NewReader(form.Encode()))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Origin", "http://example.com")
-	recorder := httptest.NewRecorder()
-	handler.ServeHTTP(recorder, req)
-
-	if recorder.Code != http.StatusSeeOther {
-		t.Fatalf("expected status %d, got %d", http.StatusSeeOther, recorder.Code)
-	}
-	location := recorder.Header().Get("Location")
-	if location != "/campaigns/camp-123" {
-		t.Fatalf("expected redirect to /campaigns/camp-123, got %q", location)
-	}
-	values := campaignClient.lastMetadata.Get(grpcmeta.UserIDHeader)
-	if len(values) != 1 || values[0] != "user-123" {
-		t.Fatalf("expected metadata %s to be set, got %v", grpcmeta.UserIDHeader, values)
-	}
-	if campaignClient.lastRequest == nil {
-		t.Fatalf("expected CreateCampaign request to be captured")
-	}
-	if campaignClient.lastRequest.GetName() != "New Campaign" {
-		t.Fatalf("expected campaign name to be set")
-	}
-	if campaignClient.lastRequest.GetSystem() != commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART {
-		t.Fatalf("expected system to be daggerheart")
-	}
-	if campaignClient.lastRequest.GetGmMode() != statev1.GmMode_HUMAN {
-		t.Fatalf("expected gm mode to be human")
-	}
-}
-
-func TestCampaignCreateHTMXRedirect(t *testing.T) {
-	campaignClient := &testCampaignClient{}
-	provider := testClientProvider{campaign: campaignClient}
-	webHandler := &Handler{clientProvider: provider, impersonation: newImpersonationStore()}
-	handler := webHandler.routes()
-
-	form := url.Values{}
-	form.Set("user_id", "user-htmx")
-	form.Set("name", "HTMX Campaign")
-	form.Set("system", "daggerheart")
-	form.Set("gm_mode", "human")
-
-	req := httptest.NewRequest(http.MethodPost, "http://example.com/campaigns/create", strings.NewReader(form.Encode()))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Origin", "http://example.com")
-	req.Header.Set("HX-Request", "true")
-	recorder := httptest.NewRecorder()
-	handler.ServeHTTP(recorder, req)
-
-	if recorder.Code != http.StatusSeeOther {
-		t.Fatalf("expected status %d, got %d", http.StatusSeeOther, recorder.Code)
-	}
-	location := recorder.Header().Get("Location")
-	if location != "/campaigns/camp-123" {
-		t.Fatalf("expected Location to /campaigns/camp-123, got %q", location)
-	}
-	redirect := recorder.Header().Get("HX-Redirect")
-	if redirect != "/campaigns/camp-123" {
-		t.Fatalf("expected HX-Redirect to /campaigns/camp-123, got %q", redirect)
-	}
-}
-
-func TestCampaignCreateValidationErrors(t *testing.T) {
-	campaignClient := &testCampaignClient{}
-	provider := testClientProvider{campaign: campaignClient}
-	webHandler := &Handler{clientProvider: provider, impersonation: newImpersonationStore()}
-	handler := webHandler.routes()
-
-	loc := i18n.Printer(i18n.Default())
+	handler := NewHandler(testClientProvider{campaign: campaignClient})
 
 	tests := []struct {
-		name     string
-		form     url.Values
-		expected string
+		name       string
+		method     string
+		isHTMX     bool
+		body       string
+		contentTyp string
 	}{
+		{name: "post", method: http.MethodPost, body: "name=New+Campaign", contentTyp: "application/x-www-form-urlencoded"},
+		{name: "post htmx", method: http.MethodPost, isHTMX: true, body: "name=New+Campaign", contentTyp: "application/x-www-form-urlencoded"},
 		{
-			name: "empty system",
-			form: url.Values{
-				"user_id": []string{"user-123"},
-				"name":    []string{"New Campaign"},
-				"gm_mode": []string{"human"},
-			},
-			expected: loc.Sprintf("error.campaign_system_required"),
+			name:   "get",
+			method: http.MethodGet,
 		},
 		{
-			name: "invalid system",
-			form: url.Values{
-				"user_id": []string{"user-123"},
-				"name":    []string{"New Campaign"},
-				"system":  []string{"bad"},
-				"gm_mode": []string{"human"},
-			},
-			expected: loc.Sprintf("error.campaign_system_invalid"),
-		},
-		{
-			name: "empty gm mode",
-			form: url.Values{
-				"user_id": []string{"user-123"},
-				"name":    []string{"New Campaign"},
-				"system":  []string{"daggerheart"},
-			},
-			expected: loc.Sprintf("error.campaign_gm_mode_required"),
-		},
-		{
-			name: "invalid gm mode",
-			form: url.Values{
-				"user_id": []string{"user-123"},
-				"name":    []string{"New Campaign"},
-				"system":  []string{"daggerheart"},
-				"gm_mode": []string{"robot"},
-			},
-			expected: loc.Sprintf("error.campaign_gm_mode_invalid"),
+			name:   "delete",
+			method: http.MethodDelete,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodPost, "http://example.com/campaigns/create", strings.NewReader(tc.form.Encode()))
-			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-			req.Header.Set("Origin", "http://example.com")
+			req := httptest.NewRequest(tc.method, "http://example.com/campaigns/create", strings.NewReader(tc.body))
+			if tc.contentTyp != "" {
+				req.Header.Set("Content-Type", tc.contentTyp)
+			}
+			if tc.isHTMX {
+				req.Header.Set("HX-Request", "true")
+			}
 			recorder := httptest.NewRecorder()
+
 			handler.ServeHTTP(recorder, req)
 
-			if recorder.Code != http.StatusOK {
-				t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
+			if recorder.Code != http.StatusNotFound {
+				t.Fatalf("expected status %d, got %d", http.StatusNotFound, recorder.Code)
 			}
-			assertContains(t, recorder.Body.String(), tc.expected)
+			if location := recorder.Header().Get("Location"); location != "" {
+				t.Fatalf("expected no redirect location, got %q", location)
+			}
+			if hxRedirect := recorder.Header().Get("HX-Redirect"); hxRedirect != "" {
+				t.Fatalf("expected no HX-Redirect header, got %q", hxRedirect)
+			}
 		})
 	}
-}
 
-func TestCampaignCreateImpersonationOverridesUserID(t *testing.T) {
-	campaignClient := &testCampaignClient{}
-	provider := testClientProvider{campaign: campaignClient}
-	webHandler := &Handler{clientProvider: provider, impersonation: newImpersonationStore()}
-	handler := webHandler.routes()
-
-	sessionID := "session-impersonate"
-	webHandler.impersonation.Set(sessionID, impersonationSession{userID: "user-imp", name: "Impersonated"})
-
-	form := url.Values{}
-	form.Set("user_id", "user-other")
-	form.Set("name", "Impersonated Campaign")
-	form.Set("system", "daggerheart")
-	form.Set("gm_mode", "human")
-	form.Set("creator_display_name", "Other")
-
-	req := httptest.NewRequest(http.MethodPost, "http://example.com/campaigns/create", strings.NewReader(form.Encode()))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Origin", "http://example.com")
-	req.AddCookie(&http.Cookie{Name: impersonationCookieName, Value: sessionID})
-	recorder := httptest.NewRecorder()
-	handler.ServeHTTP(recorder, req)
-
-	values := campaignClient.lastMetadata.Get(grpcmeta.UserIDHeader)
-	if len(values) != 1 || values[0] != "user-imp" {
-		t.Fatalf("expected metadata %s to be impersonation user, got %v", grpcmeta.UserIDHeader, values)
-	}
-	if campaignClient.lastRequest == nil || campaignClient.lastRequest.GetCreatorDisplayName() != "Impersonated" {
-		t.Fatalf("expected creator display name to be impersonation display name")
+	if campaignClient.lastRequest != nil {
+		t.Fatalf("expected CreateCampaign not to be called")
 	}
 }
 
@@ -4527,90 +4406,6 @@ func TestSystemDetailGetError(t *testing.T) {
 	handler.ServeHTTP(rec, req)
 
 	assertContains(t, rec.Body.String(), "unavailable")
-}
-
-// TestCampaignCreateNilClient verifies the handler shows an error when campaignClient is nil.
-func TestCampaignCreateNilClient(t *testing.T) {
-	handler := NewHandler(testClientProvider{}) // no campaign client
-	form := url.Values{
-		"user_id": {"user-1"},
-		"name":    {"Test Campaign"},
-		"system":  {"daggerheart"},
-		"gm_mode": {"human"},
-	}
-	req := httptest.NewRequest(http.MethodPost, "http://example.com/campaigns/create", strings.NewReader(form.Encode()))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Origin", "http://example.com")
-	req.Header.Set("HX-Request", "true")
-	rec := httptest.NewRecorder()
-	handler.ServeHTTP(rec, req)
-
-	assertContains(t, rec.Body.String(), "Campaign service unavailable")
-}
-
-// TestCampaignCreateRPCError verifies the handler renders an error when CreateCampaign fails.
-func TestCampaignCreateRPCError(t *testing.T) {
-	campaignClient := &testCampaignClient{createErr: fmt.Errorf("deadline exceeded")}
-	handler := NewHandler(testClientProvider{campaign: campaignClient})
-	form := url.Values{
-		"user_id": {"user-1"},
-		"name":    {"Test Campaign"},
-		"system":  {"daggerheart"},
-		"gm_mode": {"human"},
-	}
-	req := httptest.NewRequest(http.MethodPost, "http://example.com/campaigns/create", strings.NewReader(form.Encode()))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Origin", "http://example.com")
-	req.Header.Set("HX-Request", "true")
-	rec := httptest.NewRecorder()
-	handler.ServeHTTP(rec, req)
-
-	assertContains(t, rec.Body.String(), "Unable to create campaign")
-}
-
-// TestCampaignCreateGetRendersPage verifies the GET path of campaign create.
-func TestCampaignCreateGetRendersPage(t *testing.T) {
-	handler := NewHandler(nil)
-
-	t.Run("htmx", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/create", nil)
-		req.Header.Set("HX-Request", "true")
-		rec := httptest.NewRecorder()
-		handler.ServeHTTP(rec, req)
-
-		if rec.Code != http.StatusOK {
-			t.Fatalf("expected 200, got %d", rec.Code)
-		}
-	})
-
-	t.Run("full page", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/create", nil)
-		rec := httptest.NewRecorder()
-		handler.ServeHTTP(rec, req)
-
-		if rec.Code != http.StatusOK {
-			t.Fatalf("expected 200, got %d", rec.Code)
-		}
-		assertContains(t, rec.Body.String(), "<!doctype html>")
-	})
-
-	t.Run("with message", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/create?message=test+msg", nil)
-		rec := httptest.NewRecorder()
-		handler.ServeHTTP(rec, req)
-
-		assertContains(t, rec.Body.String(), "test msg")
-	})
-
-	t.Run("method not allowed", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodDelete, "http://example.com/campaigns/create", nil)
-		rec := httptest.NewRecorder()
-		handler.ServeHTTP(rec, req)
-
-		if rec.Code != http.StatusMethodNotAllowed {
-			t.Fatalf("expected 405, got %d", rec.Code)
-		}
-	})
 }
 
 // TestSessionsTableListError verifies the handler renders an error when ListSessions fails.

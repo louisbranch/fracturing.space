@@ -54,7 +54,7 @@ func (h *handler) handleAppCampaignInvites(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	renderAppCampaignInvitesPage(w, campaignID, resp.GetInvites(), actor.canManageInvites)
+	renderAppCampaignInvitesPageWithAppName(w, h.resolvedAppName(), campaignID, resp.GetInvites(), actor.canManageInvites)
 }
 
 func (h *handler) handleAppCampaignInviteCreate(w http.ResponseWriter, r *http.Request, campaignID string) {
@@ -109,7 +109,7 @@ func (h *handler) handleAppCampaignInviteCreate(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	http.Redirect(w, r, "/app/campaigns/"+campaignID+"/invites", http.StatusFound)
+	http.Redirect(w, r, "/campaigns/"+campaignID+"/invites", http.StatusFound)
 }
 
 func (h *handler) handleAppCampaignInviteRevoke(w http.ResponseWriter, r *http.Request, campaignID string) {
@@ -161,7 +161,7 @@ func (h *handler) handleAppCampaignInviteRevoke(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	http.Redirect(w, r, "/app/campaigns/"+campaignID+"/invites", http.StatusFound)
+	http.Redirect(w, r, "/campaigns/"+campaignID+"/invites", http.StatusFound)
 }
 
 type campaignInviteActor struct {
@@ -234,12 +234,16 @@ func canManageCampaignInvites(access statev1.CampaignAccess) bool {
 }
 
 func renderAppCampaignInvitesPage(w http.ResponseWriter, campaignID string, invites []*statev1.Invite, canManageInvites bool) {
+	renderAppCampaignInvitesPageWithAppName(w, "", campaignID, invites, canManageInvites)
+}
+
+func renderAppCampaignInvitesPageWithAppName(w http.ResponseWriter, appName string, campaignID string, invites []*statev1.Invite, canManageInvites bool) {
 	// renderAppCampaignInvitesPage exposes write controls only to managed roles.
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	writeGamePageStart(w, "Campaign Invites", appName)
 	escapedCampaignID := html.EscapeString(campaignID)
-	_, _ = io.WriteString(w, "<!doctype html><html><head><title>Campaign Invites</title></head><body><h1>Campaign Invites</h1>")
+	_, _ = io.WriteString(w, "<h1>Campaign Invites</h1>")
 	if canManageInvites {
-		_, _ = io.WriteString(w, "<form method=\"post\" action=\"/app/campaigns/"+escapedCampaignID+"/invites/create\"><input type=\"text\" name=\"participant_id\" placeholder=\"participant id\" required><input type=\"text\" name=\"recipient_user_id\" placeholder=\"recipient user id\"><button type=\"submit\">Create Invite</button></form>")
+		_, _ = io.WriteString(w, "<form method=\"post\" action=\"/campaigns/"+escapedCampaignID+"/invites/create\"><input type=\"text\" name=\"participant_id\" placeholder=\"participant id\" required><input type=\"text\" name=\"recipient_user_id\" placeholder=\"recipient user id\"><button type=\"submit\">Create Invite</button></form>")
 	}
 	_, _ = io.WriteString(w, "<ul>")
 	for _, invite := range invites {
@@ -257,9 +261,10 @@ func renderAppCampaignInvitesPage(w http.ResponseWriter, campaignID string, invi
 		}
 		_, _ = io.WriteString(w, "<li>"+html.EscapeString(displayInviteID+" - "+recipient))
 		if canManageInvites && inviteID != "" {
-			_, _ = io.WriteString(w, "<form method=\"post\" action=\"/app/campaigns/"+escapedCampaignID+"/invites/revoke\"><input type=\"hidden\" name=\"invite_id\" value=\""+html.EscapeString(inviteID)+"\"><button type=\"submit\">Revoke</button></form>")
+			_, _ = io.WriteString(w, "<form method=\"post\" action=\"/campaigns/"+escapedCampaignID+"/invites/revoke\"><input type=\"hidden\" name=\"invite_id\" value=\""+html.EscapeString(inviteID)+"\"><button type=\"submit\">Revoke</button></form>")
 		}
 		_, _ = io.WriteString(w, "</li>")
 	}
-	_, _ = io.WriteString(w, "</ul></body></html>")
+	_, _ = io.WriteString(w, "</ul>")
+	writeGamePageEnd(w)
 }

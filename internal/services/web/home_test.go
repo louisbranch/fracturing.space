@@ -10,7 +10,7 @@ import (
 
 func TestAppHomeRouteRedirectsUnauthenticatedToLogin(t *testing.T) {
 	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodGet, "/app", nil)
+	req := httptest.NewRequest(http.MethodGet, "/dashboard", nil)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
@@ -25,7 +25,7 @@ func TestAppHomeRouteRedirectsUnauthenticatedToLogin(t *testing.T) {
 
 func TestAppHomeRouteRejectsNonGET(t *testing.T) {
 	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodPost, "/app", nil)
+	req := httptest.NewRequest(http.MethodPost, "/dashboard", nil)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
@@ -45,7 +45,7 @@ func TestAppHomeHandlerRedirectsAuthenticatedToHomeShell(t *testing.T) {
 		pendingFlows: newPendingFlowStore(),
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-	req := httptest.NewRequest(http.MethodGet, "/app", nil)
+	req := httptest.NewRequest(http.MethodGet, "/dashboard", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -67,7 +67,7 @@ func TestAppDashboardRouteRedirectsToHome(t *testing.T) {
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
 
-	req := httptest.NewRequest(http.MethodGet, "/app/dashboard", nil)
+	req := httptest.NewRequest(http.MethodGet, "/dashboard", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 

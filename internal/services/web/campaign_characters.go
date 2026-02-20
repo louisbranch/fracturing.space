@@ -57,7 +57,7 @@ func (h *handler) handleAppCampaignCharacters(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	renderAppCampaignCharactersPage(w, campaignID, resp.GetCharacters(), canManageCharacters, controlParticipants)
+	renderAppCampaignCharactersPageWithAppName(w, h.resolvedAppName(), campaignID, resp.GetCharacters(), canManageCharacters, controlParticipants)
 }
 
 func (h *handler) handleAppCampaignCharacterDetail(w http.ResponseWriter, r *http.Request, campaignID string, characterID string) {
@@ -95,7 +95,7 @@ func (h *handler) handleAppCampaignCharacterDetail(w http.ResponseWriter, r *htt
 		return
 	}
 
-	renderAppCampaignCharacterDetailPage(w, campaignID, resp.GetCharacter())
+	renderAppCampaignCharacterDetailPageWithAppName(w, h.resolvedAppName(), campaignID, resp.GetCharacter())
 }
 
 func (h *handler) handleAppCampaignCharacterCreate(w http.ResponseWriter, r *http.Request, campaignID string) {
@@ -162,7 +162,7 @@ func (h *handler) handleAppCampaignCharacterCreate(w http.ResponseWriter, r *htt
 		return
 	}
 
-	http.Redirect(w, r, "/app/campaigns/"+campaignID+"/characters", http.StatusFound)
+	http.Redirect(w, r, "/campaigns/"+campaignID+"/characters", http.StatusFound)
 }
 
 func (h *handler) handleAppCampaignCharacterUpdate(w http.ResponseWriter, r *http.Request, campaignID string) {
@@ -242,7 +242,7 @@ func (h *handler) handleAppCampaignCharacterUpdate(w http.ResponseWriter, r *htt
 		return
 	}
 
-	http.Redirect(w, r, "/app/campaigns/"+campaignID+"/characters", http.StatusFound)
+	http.Redirect(w, r, "/campaigns/"+campaignID+"/characters", http.StatusFound)
 }
 
 func (h *handler) handleAppCampaignCharacterControl(w http.ResponseWriter, r *http.Request, campaignID string) {
@@ -305,7 +305,7 @@ func (h *handler) handleAppCampaignCharacterControl(w http.ResponseWriter, r *ht
 		return
 	}
 
-	http.Redirect(w, r, "/app/campaigns/"+campaignID+"/characters", http.StatusFound)
+	http.Redirect(w, r, "/campaigns/"+campaignID+"/characters", http.StatusFound)
 }
 
 func canManageCampaignCharacters(access statev1.CampaignAccess) bool {
@@ -345,13 +345,17 @@ func participantControlFormLabel(participant *statev1.Participant) string {
 }
 
 func renderAppCampaignCharactersPage(w http.ResponseWriter, campaignID string, characters []*statev1.Character, canManageCharacters bool, controlParticipants []*statev1.Participant) {
+	renderAppCampaignCharactersPageWithAppName(w, "", campaignID, characters, canManageCharacters, controlParticipants)
+}
+
+func renderAppCampaignCharactersPageWithAppName(w http.ResponseWriter, appName string, campaignID string, characters []*statev1.Character, canManageCharacters bool, controlParticipants []*statev1.Participant) {
 	// renderAppCampaignCharactersPage keeps the write controls tied to current
 	// campaign access level so members cannot reach management operations.
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	writeGamePageStart(w, "Characters", appName)
 	escapedCampaignID := html.EscapeString(campaignID)
-	_, _ = io.WriteString(w, "<!doctype html><html><head><title>Characters</title></head><body><h1>Characters</h1>")
+	_, _ = io.WriteString(w, "<h1>Characters</h1>")
 	if canManageCharacters {
-		_, _ = io.WriteString(w, "<form method=\"post\" action=\"/app/campaigns/"+escapedCampaignID+"/characters/create\"><input type=\"text\" name=\"name\" placeholder=\"character name\" required><select name=\"kind\"><option value=\"pc\">pc</option><option value=\"npc\">npc</option></select><button type=\"submit\">Create Character</button></form>")
+		_, _ = io.WriteString(w, "<form method=\"post\" action=\"/campaigns/"+escapedCampaignID+"/characters/create\"><input type=\"text\" name=\"name\" placeholder=\"character name\" required><select name=\"kind\"><option value=\"pc\">pc</option><option value=\"npc\">npc</option></select><button type=\"submit\">Create Character</button></form>")
 	}
 	_, _ = io.WriteString(w, "<ul>")
 	for _, character := range characters {
@@ -365,7 +369,7 @@ func renderAppCampaignCharactersPage(w http.ResponseWriter, campaignID string, c
 		}
 		_, _ = io.WriteString(w, "<li>")
 		if characterID != "" {
-			_, _ = io.WriteString(w, "<a href=\"/app/campaigns/"+escapedCampaignID+"/characters/"+html.EscapeString(characterID)+"\">"+html.EscapeString(name)+"</a>")
+			_, _ = io.WriteString(w, "<a href=\"/campaigns/"+escapedCampaignID+"/characters/"+html.EscapeString(characterID)+"\">"+html.EscapeString(name)+"</a>")
 		} else {
 			_, _ = io.WriteString(w, html.EscapeString(name))
 		}
@@ -379,13 +383,13 @@ func renderAppCampaignCharactersPage(w http.ResponseWriter, campaignID string, c
 				} else {
 					pcSelected = " selected"
 				}
-				_, _ = io.WriteString(w, "<form method=\"post\" action=\"/app/campaigns/"+escapedCampaignID+"/characters/update\"><input type=\"hidden\" name=\"character_id\" value=\""+html.EscapeString(characterID)+"\"><input type=\"text\" name=\"name\" value=\""+html.EscapeString(strings.TrimSpace(character.GetName()))+"\"><select name=\"kind\"><option value=\"pc\""+pcSelected+">pc</option><option value=\"npc\""+npcSelected+">npc</option></select><button type=\"submit\">Update Character</button></form>")
+				_, _ = io.WriteString(w, "<form method=\"post\" action=\"/campaigns/"+escapedCampaignID+"/characters/update\"><input type=\"hidden\" name=\"character_id\" value=\""+html.EscapeString(characterID)+"\"><input type=\"text\" name=\"name\" value=\""+html.EscapeString(strings.TrimSpace(character.GetName()))+"\"><select name=\"kind\"><option value=\"pc\""+pcSelected+">pc</option><option value=\"npc\""+npcSelected+">npc</option></select><button type=\"submit\">Update Character</button></form>")
 
 				currentParticipantID := ""
 				if character.GetParticipantId() != nil {
 					currentParticipantID = strings.TrimSpace(character.GetParticipantId().GetValue())
 				}
-				_, _ = io.WriteString(w, "<form method=\"post\" action=\"/app/campaigns/"+escapedCampaignID+"/characters/control\"><input type=\"hidden\" name=\"character_id\" value=\""+html.EscapeString(characterID)+"\"><select name=\"participant_id\">")
+				_, _ = io.WriteString(w, "<form method=\"post\" action=\"/campaigns/"+escapedCampaignID+"/characters/control\"><input type=\"hidden\" name=\"character_id\" value=\""+html.EscapeString(characterID)+"\"><select name=\"participant_id\">")
 				unassignedSelected := ""
 				if currentParticipantID == "" {
 					unassignedSelected = " selected"
@@ -414,13 +418,18 @@ func renderAppCampaignCharactersPage(w http.ResponseWriter, campaignID string, c
 		}
 		_, _ = io.WriteString(w, "</li>")
 	}
-	_, _ = io.WriteString(w, "</ul></body></html>")
+	_, _ = io.WriteString(w, "</ul>")
+	writeGamePageEnd(w)
 }
 
 func renderAppCampaignCharacterDetailPage(w http.ResponseWriter, campaignID string, character *statev1.Character) {
+	renderAppCampaignCharacterDetailPageWithAppName(w, "", campaignID, character)
+}
+
+func renderAppCampaignCharacterDetailPageWithAppName(w http.ResponseWriter, appName string, campaignID string, character *statev1.Character) {
 	// renderAppCampaignCharacterDetailPage provides the stable read surface for a
 	// single character without mutating state.
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	writeGamePageStart(w, "Character", appName)
 	escapedCampaignID := html.EscapeString(campaignID)
 	characterID := strings.TrimSpace(character.GetId())
 	characterName := strings.TrimSpace(character.GetName())
@@ -428,13 +437,13 @@ func renderAppCampaignCharacterDetailPage(w http.ResponseWriter, campaignID stri
 		characterName = characterID
 	}
 
-	_, _ = io.WriteString(w, "<!doctype html><html><head><title>Character</title></head><body><h1>"+html.EscapeString(characterName)+"</h1>")
+	_, _ = io.WriteString(w, "<h1>"+html.EscapeString(characterName)+"</h1>")
 	if characterID != "" {
 		_, _ = io.WriteString(w, "<p>Character ID: "+html.EscapeString(characterID)+"</p>")
 	}
 	_, _ = io.WriteString(w, "<p>Kind: "+html.EscapeString(characterKindLabel(character.GetKind()))+"</p>")
-	_, _ = io.WriteString(w, "<p><a href=\"/app/campaigns/"+escapedCampaignID+"/characters\">Back to Characters</a></p>")
-	_, _ = io.WriteString(w, "</body></html>")
+	_, _ = io.WriteString(w, "<p><a href=\"/campaigns/"+escapedCampaignID+"/characters\">Back to Characters</a></p>")
+	writeGamePageEnd(w)
 }
 
 func characterKindLabel(kind statev1.CharacterKind) string {
