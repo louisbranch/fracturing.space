@@ -28,6 +28,7 @@ services:
       FRACTURING_SPACE_JOIN_GRANT_AUDIENCE: ${FRACTURING_SPACE_JOIN_GRANT_AUDIENCE:-fracturing.space/game}
       # Dev-only join-grant key for local quickstart. Override for real deployments.
       FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY: ${FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY:-DMPt2bezEVpUVJOabrX7YIaRLOITnATcwKUY6ofEhlQ}
+      FRACTURING_SPACE_OTEL_ENDPOINT: ${FRACTURING_SPACE_OTEL_ENDPOINT:-http://jaeger:4318}
     volumes:
       - fracturing-space-data:/data
     networks:
@@ -62,6 +63,7 @@ services:
       FRACTURING_SPACE_WEBAUTHN_RP_ORIGINS: ${FRACTURING_SPACE_PUBLIC_SCHEME:-http}://${FRACTURING_SPACE_DOMAIN:-localhost}${FRACTURING_SPACE_PUBLIC_PORT-:8080}
       FRACTURING_SPACE_OAUTH_FIRST_PARTY_CLIENT_ID: fracturing-space-web
       FRACTURING_SPACE_OAUTH_FIRST_PARTY_REDIRECT_URI: ${FRACTURING_SPACE_PUBLIC_SCHEME:-http}://${FRACTURING_SPACE_DOMAIN:-localhost}${FRACTURING_SPACE_PUBLIC_PORT-:8080}/auth/callback
+      FRACTURING_SPACE_OTEL_ENDPOINT: ${FRACTURING_SPACE_OTEL_ENDPOINT:-http://jaeger:4318}
     volumes:
       - fracturing-space-data:/data
     networks:
@@ -84,6 +86,7 @@ services:
       FRACTURING_SPACE_MCP_ALLOWED_HOSTS: ${FRACTURING_SPACE_MCP_ALLOWED_HOSTS:-mcp.${FRACTURING_SPACE_DOMAIN:-localhost}}
       FRACTURING_SPACE_MCP_OAUTH_ISSUER: ${FRACTURING_SPACE_MCP_OAUTH_ISSUER:-}
       FRACTURING_SPACE_MCP_OAUTH_RESOURCE_SECRET: ${FRACTURING_SPACE_MCP_OAUTH_RESOURCE_SECRET:-}
+      FRACTURING_SPACE_OTEL_ENDPOINT: ${FRACTURING_SPACE_OTEL_ENDPOINT:-http://jaeger:4318}
     networks:
       - internal
     restart: unless-stopped
@@ -109,6 +112,7 @@ services:
       FRACTURING_SPACE_ADMIN_AUTH_INTROSPECT_URL: ${FRACTURING_SPACE_ADMIN_AUTH_INTROSPECT_URL:-}
       FRACTURING_SPACE_ADMIN_OAUTH_RESOURCE_SECRET: ${FRACTURING_SPACE_ADMIN_OAUTH_RESOURCE_SECRET:-}
       FRACTURING_SPACE_ADMIN_LOGIN_URL: ${FRACTURING_SPACE_ADMIN_LOGIN_URL:-}
+      FRACTURING_SPACE_OTEL_ENDPOINT: ${FRACTURING_SPACE_OTEL_ENDPOINT:-http://jaeger:4318}
     volumes:
       - fracturing-space-data:/data
     networks:
@@ -135,6 +139,7 @@ services:
       FRACTURING_SPACE_WEB_CALLBACK_URL: ${FRACTURING_SPACE_PUBLIC_SCHEME:-http}://${FRACTURING_SPACE_DOMAIN:-localhost}${FRACTURING_SPACE_PUBLIC_PORT-:8080}/auth/callback
       FRACTURING_SPACE_WEB_AUTH_TOKEN_URL: http://auth:8084/token
       FRACTURING_SPACE_DOMAIN: ${FRACTURING_SPACE_DOMAIN:-localhost}
+      FRACTURING_SPACE_OTEL_ENDPOINT: ${FRACTURING_SPACE_OTEL_ENDPOINT:-http://jaeger:4318}
     networks:
       - internal
     restart: unless-stopped
@@ -154,6 +159,7 @@ services:
     environment:
       FRACTURING_SPACE_CHAT_HTTP_ADDR: ${FRACTURING_SPACE_CHAT_HTTP_ADDR:-0.0.0.0:8087}
       FRACTURING_SPACE_GAME_ADDR: game:8080
+      FRACTURING_SPACE_OTEL_ENDPOINT: ${FRACTURING_SPACE_OTEL_ENDPOINT:-http://jaeger:4318}
     networks:
       - internal
     restart: unless-stopped
@@ -166,11 +172,13 @@ services:
       - auth
       - admin
       - mcp
+      - jaeger
     environment:
       FRACTURING_SPACE_DOMAIN: ${FRACTURING_SPACE_DOMAIN:-localhost}
       FRACTURING_SPACE_CADDY_AUTO_HTTPS: ${FRACTURING_SPACE_CADDY_AUTO_HTTPS:-off}
       FRACTURING_SPACE_CADDY_EMAIL: ${FRACTURING_SPACE_CADDY_EMAIL:-}
       FRACTURING_SPACE_CADDY_SITE_PREFIX: ${FRACTURING_SPACE_CADDY_SITE_PREFIX-http://}
+      FRACTURING_SPACE_JAEGER_BASIC_AUTH: ${FRACTURING_SPACE_JAEGER_BASIC_AUTH:-}
     ports:
       - "${FRACTURING_SPACE_BIND_ADDR:-127.0.0.1}:${FRACTURING_SPACE_HTTP_PORT:-8080}:80"
       - "${FRACTURING_SPACE_BIND_ADDR:-127.0.0.1}:${FRACTURING_SPACE_HTTPS_PORT:-8443}:443"
@@ -181,6 +189,14 @@ services:
     networks:
       - internal
       - edge
+    restart: unless-stopped
+
+  jaeger:
+    image: jaegertracing/jaeger:2.15.0
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    networks:
+      - internal
     restart: unless-stopped
 
   seed:

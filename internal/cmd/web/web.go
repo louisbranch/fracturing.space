@@ -5,9 +5,11 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/config"
+	"github.com/louisbranch/fracturing.space/internal/platform/otel"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	"github.com/louisbranch/fracturing.space/internal/services/web"
 )
@@ -49,6 +51,18 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 
 // Run builds and starts the web login surface.
 func Run(ctx context.Context, cfg Config) error {
+	shutdown, err := otel.Setup(ctx, "web")
+	if err != nil {
+		return err
+	}
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := shutdown(shutdownCtx); err != nil {
+			log.Printf("otel shutdown: %v", err)
+		}
+	}()
+
 	server, err := web.NewServer(web.Config{
 		HTTPAddr:            cfg.HTTPAddr,
 		AuthBaseURL:         cfg.AuthBaseURL,

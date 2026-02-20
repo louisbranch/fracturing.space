@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	gogrpc "google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -55,10 +56,13 @@ func (e *DialError) Unwrap() error {
 }
 
 // DefaultClientDialOptions returns standard dial options for in-process clients.
+// Includes OTel gRPC interceptors so that every outbound call propagates trace
+// context automatically when a TracerProvider is registered.
 func DefaultClientDialOptions() []gogrpc.DialOption {
 	return []gogrpc.DialOption{
 		gogrpc.WithTransportCredentials(insecure.NewCredentials()),
 		gogrpc.WithBlock(),
+		gogrpc.WithStatsHandler(otelgrpc.NewClientHandler()),
 	}
 }
 

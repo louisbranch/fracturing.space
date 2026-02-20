@@ -9,6 +9,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/platform/telemetry"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -41,6 +42,12 @@ func TelemetryInterceptor(store storage.TelemetryStore) grpc.UnaryServerIntercep
 			actorType = "participant"
 		}
 
+		var traceID, spanID string
+		if sc := trace.SpanFromContext(ctx).SpanContext(); sc.IsValid() {
+			traceID = sc.TraceID().String()
+			spanID = sc.SpanID().String()
+		}
+
 		emitter := telemetry.NewEmitter(store)
 		emitErr := emitter.Emit(ctx, storage.TelemetryEvent{
 			EventName:    "telemetry.grpc.read",
@@ -51,6 +58,8 @@ func TelemetryInterceptor(store storage.TelemetryStore) grpc.UnaryServerIntercep
 			ActorID:      actorID,
 			RequestID:    grpcmeta.RequestIDFromContext(ctx),
 			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+			TraceID:      traceID,
+			SpanID:       spanID,
 			Attributes: map[string]any{
 				"method": info.FullMethod,
 				"code":   code.String(),

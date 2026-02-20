@@ -7,6 +7,9 @@ import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -182,6 +185,57 @@ func TestTelemetryInterceptorSystemActor(t *testing.T) {
 	}
 	if store.last.ActorType != "system" || store.last.ActorID != "" {
 		t.Fatalf("expected system actor, got %s/%s", store.last.ActorType, store.last.ActorID)
+	}
+}
+
+func TestTelemetryInterceptorOTelTraceContext(t *testing.T) {
+	store := &fakeTelemetryStore{}
+	interceptor := TelemetryInterceptor(store)
+	info := &grpc.UnaryServerInfo{FullMethod: campaignv1.CampaignService_GetCampaign_FullMethodName}
+
+	// Create an OTel span so the context carries a valid trace/span ID.
+	exporter := tracetest.NewInMemoryExporter()
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
+	defer func() { _ = tp.Shutdown(context.Background()) }()
+
+	ctx, span := tp.Tracer("test").Start(context.Background(), "test-span")
+	defer span.End()
+
+	sc := trace.SpanFromContext(ctx).SpanContext()
+	wantTraceID := sc.TraceID().String()
+	wantSpanID := sc.SpanID().String()
+
+	_, err := interceptor(ctx, &campaignRequest{campaignID: "camp-1"}, info, func(ctx context.Context, req any) (any, error) {
+		return "ok", nil
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if store.last.TraceID != wantTraceID {
+		t.Fatalf("expected trace_id %s, got %s", wantTraceID, store.last.TraceID)
+	}
+	if store.last.SpanID != wantSpanID {
+		t.Fatalf("expected span_id %s, got %s", wantSpanID, store.last.SpanID)
+	}
+}
+
+func TestTelemetryInterceptorNoSpanEmptyIDs(t *testing.T) {
+	store := &fakeTelemetryStore{}
+	interceptor := TelemetryInterceptor(store)
+	info := &grpc.UnaryServerInfo{FullMethod: campaignv1.CampaignService_GetCampaign_FullMethodName}
+
+	// No OTel span in context — trace/span IDs should remain empty.
+	_, err := interceptor(context.Background(), &campaignRequest{campaignID: "camp-1"}, info, func(ctx context.Context, req any) (any, error) {
+		return "ok", nil
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if store.last.TraceID != "" {
+		t.Fatalf("expected empty trace_id, got %s", store.last.TraceID)
+	}
+	if store.last.SpanID != "" {
+		t.Fatalf("expected empty span_id, got %s", store.last.SpanID)
 	}
 }
 

@@ -26,6 +26,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/integrity"
 	storagesqlite "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	grpc_health_v1 "google.golang.org/grpc/health/grpc_health_v1"
@@ -219,12 +220,15 @@ func NewWithAddr(addr string) (*Server, error) {
 	}
 
 	grpcServer := grpc.NewServer(
+		grpc.StatsHandler(otelgrpc.NewServerHandler()),
 		grpc.ChainUnaryInterceptor(
 			grpcmeta.UnaryServerInterceptor(nil),
 			interceptors.TelemetryInterceptor(bundle.events),
 			interceptors.SessionLockInterceptor(bundle.projections),
 		),
-		grpc.StreamInterceptor(grpcmeta.StreamServerInterceptor(nil)),
+		grpc.ChainStreamInterceptor(
+			grpcmeta.StreamServerInterceptor(nil),
+		),
 	)
 	daggerheartStores := daggerheartservice.Stores{
 		Campaign:           bundle.projections,
