@@ -64,6 +64,13 @@ run:
 	    done; \
 	    wait || true; \
 	  }; \
+	  env_file=".env"; \
+	  if [ ! -f "$$env_file" ]; then \
+	    cp "$${ENV_EXAMPLE:-.env.local.example}" "$$env_file"; \
+	  fi; \
+	  set -a; \
+	  . "$$env_file"; \
+	  set +a; \
 	  if [ -z "$${FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY:-}" ] || [ -z "$${FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY:-}" ]; then \
 	    eval "$$(go run ./cmd/join-grant-key)"; \
 	    export FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY; \
