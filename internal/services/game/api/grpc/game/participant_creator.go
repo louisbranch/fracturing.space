@@ -74,6 +74,8 @@ func (c participantApplication) CreateParticipant(ctx context.Context, campaignI
 		Role:           string(role),
 		Controller:     string(controller),
 		CampaignAccess: string(access),
+		AvatarSetID:    strings.TrimSpace(in.GetAvatarSetId()),
+		AvatarAssetID:  strings.TrimSpace(in.GetAvatarAssetId()),
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -174,6 +176,16 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 		}
 		current.CampaignAccess = access
 		fields["campaign_access"] = in.GetCampaignAccess().String()
+	}
+	if avatarSetID := in.GetAvatarSetId(); avatarSetID != nil {
+		trimmed := strings.TrimSpace(avatarSetID.GetValue())
+		current.AvatarSetID = trimmed
+		fields["avatar_set_id"] = trimmed
+	}
+	if avatarAssetID := in.GetAvatarAssetId(); avatarAssetID != nil {
+		trimmed := strings.TrimSpace(avatarAssetID.GetValue())
+		current.AvatarAssetID = trimmed
+		fields["avatar_asset_id"] = trimmed
 	}
 	if len(fields) == 0 {
 		return storage.ParticipantRecord{}, status.Error(codes.InvalidArgument, "at least one field must be provided")

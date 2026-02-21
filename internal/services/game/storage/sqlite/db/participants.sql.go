@@ -25,7 +25,7 @@ func (q *Queries) DeleteParticipant(ctx context.Context, arg DeleteParticipantPa
 }
 
 const getParticipant = `-- name: GetParticipant :one
-SELECT campaign_id, id, user_id, display_name, role, controller, campaign_access, created_at, updated_at FROM participants WHERE campaign_id = ? AND id = ?
+SELECT campaign_id, id, user_id, display_name, role, controller, campaign_access, avatar_set_id, avatar_asset_id, created_at, updated_at FROM participants WHERE campaign_id = ? AND id = ?
 `
 
 type GetParticipantParams struct {
@@ -33,52 +33,56 @@ type GetParticipantParams struct {
 	ID         string `json:"id"`
 }
 
-func (q *Queries) GetParticipant(ctx context.Context, arg GetParticipantParams) (Participant, error) {
+type GetParticipantRow struct {
+	CampaignID     string `json:"campaign_id"`
+	ID             string `json:"id"`
+	UserID         string `json:"user_id"`
+	DisplayName    string `json:"display_name"`
+	Role           string `json:"role"`
+	Controller     string `json:"controller"`
+	CampaignAccess string `json:"campaign_access"`
+	AvatarSetID    string `json:"avatar_set_id"`
+	AvatarAssetID  string `json:"avatar_asset_id"`
+	CreatedAt      int64  `json:"created_at"`
+	UpdatedAt      int64  `json:"updated_at"`
+}
+
+func (q *Queries) GetParticipant(ctx context.Context, arg GetParticipantParams) (GetParticipantRow, error) {
 	row := q.db.QueryRowContext(ctx, getParticipant, arg.CampaignID, arg.ID)
-	var i Participant
+	var i GetParticipantRow
 	err := row.Scan(
 		&i.CampaignID,
 		&i.ID,
 		&i.UserID,
-		&i.Name,
+		&i.DisplayName,
 		&i.Role,
 		&i.Controller,
 		&i.CampaignAccess,
+		&i.AvatarSetID,
+		&i.AvatarAssetID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
 }
 
-const listParticipantsByCampaign = `-- name: ListParticipantsByCampaign :many
-SELECT campaign_id, id, user_id, display_name, role, controller, campaign_access, created_at, updated_at FROM participants
-WHERE campaign_id = ?
-ORDER BY id
+const listCampaignIDsByParticipant = `-- name: ListCampaignIDsByParticipant :many
+SELECT DISTINCT campaign_id FROM participants WHERE id = ? ORDER BY campaign_id
 `
 
-func (q *Queries) ListParticipantsByCampaign(ctx context.Context, campaignID string) ([]Participant, error) {
-	rows, err := q.db.QueryContext(ctx, listParticipantsByCampaign, campaignID)
+func (q *Queries) ListCampaignIDsByParticipant(ctx context.Context, id string) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, listCampaignIDsByParticipant, id)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Participant{}
+	items := []string{}
 	for rows.Next() {
-		var i Participant
-		if err := rows.Scan(
-			&i.CampaignID,
-			&i.ID,
-			&i.UserID,
-			&i.Name,
-			&i.Role,
-			&i.Controller,
-			&i.CampaignAccess,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
+		var campaign_id string
+		if err := rows.Scan(&campaign_id); err != nil {
 			return nil, err
 		}
-		items = append(items, i)
+		items = append(items, campaign_id)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err
@@ -99,14 +103,13 @@ func (q *Queries) ListCampaignIDsByUser(ctx context.Context, userID string) ([]s
 		return nil, err
 	}
 	defer rows.Close()
-
-	items := make([]string, 0)
+	items := []string{}
 	for rows.Next() {
-		var campaignID string
-		if err := rows.Scan(&campaignID); err != nil {
+		var campaign_id string
+		if err := rows.Scan(&campaign_id); err != nil {
 			return nil, err
 		}
-		items = append(items, campaignID)
+		items = append(items, campaign_id)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err
@@ -117,24 +120,51 @@ func (q *Queries) ListCampaignIDsByUser(ctx context.Context, userID string) ([]s
 	return items, nil
 }
 
-const listCampaignIDsByParticipant = `-- name: ListCampaignIDsByParticipant :many
-SELECT DISTINCT campaign_id FROM participants WHERE id = ? ORDER BY campaign_id
+const listParticipantsByCampaign = `-- name: ListParticipantsByCampaign :many
+SELECT campaign_id, id, user_id, display_name, role, controller, campaign_access, avatar_set_id, avatar_asset_id, created_at, updated_at FROM participants
+WHERE campaign_id = ?
+ORDER BY id
 `
 
-func (q *Queries) ListCampaignIDsByParticipant(ctx context.Context, participantID string) ([]string, error) {
-	rows, err := q.db.QueryContext(ctx, listCampaignIDsByParticipant, participantID)
+type ListParticipantsByCampaignRow struct {
+	CampaignID     string `json:"campaign_id"`
+	ID             string `json:"id"`
+	UserID         string `json:"user_id"`
+	DisplayName    string `json:"display_name"`
+	Role           string `json:"role"`
+	Controller     string `json:"controller"`
+	CampaignAccess string `json:"campaign_access"`
+	AvatarSetID    string `json:"avatar_set_id"`
+	AvatarAssetID  string `json:"avatar_asset_id"`
+	CreatedAt      int64  `json:"created_at"`
+	UpdatedAt      int64  `json:"updated_at"`
+}
+
+func (q *Queries) ListParticipantsByCampaign(ctx context.Context, campaignID string) ([]ListParticipantsByCampaignRow, error) {
+	rows, err := q.db.QueryContext(ctx, listParticipantsByCampaign, campaignID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-
-	items := make([]string, 0)
+	items := []ListParticipantsByCampaignRow{}
 	for rows.Next() {
-		var campaignID string
-		if err := rows.Scan(&campaignID); err != nil {
+		var i ListParticipantsByCampaignRow
+		if err := rows.Scan(
+			&i.CampaignID,
+			&i.ID,
+			&i.UserID,
+			&i.DisplayName,
+			&i.Role,
+			&i.Controller,
+			&i.CampaignAccess,
+			&i.AvatarSetID,
+			&i.AvatarAssetID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
 			return nil, err
 		}
-		items = append(items, campaignID)
+		items = append(items, i)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err
@@ -146,7 +176,7 @@ func (q *Queries) ListCampaignIDsByParticipant(ctx context.Context, participantI
 }
 
 const listParticipantsByCampaignPaged = `-- name: ListParticipantsByCampaignPaged :many
-SELECT campaign_id, id, user_id, display_name, role, controller, campaign_access, created_at, updated_at FROM participants
+SELECT campaign_id, id, user_id, display_name, role, controller, campaign_access, avatar_set_id, avatar_asset_id, created_at, updated_at FROM participants
 WHERE campaign_id = ? AND id > ?
 ORDER BY id
 LIMIT ?
@@ -158,23 +188,39 @@ type ListParticipantsByCampaignPagedParams struct {
 	Limit      int64  `json:"limit"`
 }
 
-func (q *Queries) ListParticipantsByCampaignPaged(ctx context.Context, arg ListParticipantsByCampaignPagedParams) ([]Participant, error) {
+type ListParticipantsByCampaignPagedRow struct {
+	CampaignID     string `json:"campaign_id"`
+	ID             string `json:"id"`
+	UserID         string `json:"user_id"`
+	DisplayName    string `json:"display_name"`
+	Role           string `json:"role"`
+	Controller     string `json:"controller"`
+	CampaignAccess string `json:"campaign_access"`
+	AvatarSetID    string `json:"avatar_set_id"`
+	AvatarAssetID  string `json:"avatar_asset_id"`
+	CreatedAt      int64  `json:"created_at"`
+	UpdatedAt      int64  `json:"updated_at"`
+}
+
+func (q *Queries) ListParticipantsByCampaignPaged(ctx context.Context, arg ListParticipantsByCampaignPagedParams) ([]ListParticipantsByCampaignPagedRow, error) {
 	rows, err := q.db.QueryContext(ctx, listParticipantsByCampaignPaged, arg.CampaignID, arg.ID, arg.Limit)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Participant{}
+	items := []ListParticipantsByCampaignPagedRow{}
 	for rows.Next() {
-		var i Participant
+		var i ListParticipantsByCampaignPagedRow
 		if err := rows.Scan(
 			&i.CampaignID,
 			&i.ID,
 			&i.UserID,
-			&i.Name,
+			&i.DisplayName,
 			&i.Role,
 			&i.Controller,
 			&i.CampaignAccess,
+			&i.AvatarSetID,
+			&i.AvatarAssetID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -192,7 +238,7 @@ func (q *Queries) ListParticipantsByCampaignPaged(ctx context.Context, arg ListP
 }
 
 const listParticipantsByCampaignPagedFirst = `-- name: ListParticipantsByCampaignPagedFirst :many
-SELECT campaign_id, id, user_id, display_name, role, controller, campaign_access, created_at, updated_at FROM participants
+SELECT campaign_id, id, user_id, display_name, role, controller, campaign_access, avatar_set_id, avatar_asset_id, created_at, updated_at FROM participants
 WHERE campaign_id = ?
 ORDER BY id
 LIMIT ?
@@ -203,23 +249,39 @@ type ListParticipantsByCampaignPagedFirstParams struct {
 	Limit      int64  `json:"limit"`
 }
 
-func (q *Queries) ListParticipantsByCampaignPagedFirst(ctx context.Context, arg ListParticipantsByCampaignPagedFirstParams) ([]Participant, error) {
+type ListParticipantsByCampaignPagedFirstRow struct {
+	CampaignID     string `json:"campaign_id"`
+	ID             string `json:"id"`
+	UserID         string `json:"user_id"`
+	DisplayName    string `json:"display_name"`
+	Role           string `json:"role"`
+	Controller     string `json:"controller"`
+	CampaignAccess string `json:"campaign_access"`
+	AvatarSetID    string `json:"avatar_set_id"`
+	AvatarAssetID  string `json:"avatar_asset_id"`
+	CreatedAt      int64  `json:"created_at"`
+	UpdatedAt      int64  `json:"updated_at"`
+}
+
+func (q *Queries) ListParticipantsByCampaignPagedFirst(ctx context.Context, arg ListParticipantsByCampaignPagedFirstParams) ([]ListParticipantsByCampaignPagedFirstRow, error) {
 	rows, err := q.db.QueryContext(ctx, listParticipantsByCampaignPagedFirst, arg.CampaignID, arg.Limit)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Participant{}
+	items := []ListParticipantsByCampaignPagedFirstRow{}
 	for rows.Next() {
-		var i Participant
+		var i ListParticipantsByCampaignPagedFirstRow
 		if err := rows.Scan(
 			&i.CampaignID,
 			&i.ID,
 			&i.UserID,
-			&i.Name,
+			&i.DisplayName,
 			&i.Role,
 			&i.Controller,
 			&i.CampaignAccess,
+			&i.AvatarSetID,
+			&i.AvatarAssetID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -238,14 +300,16 @@ func (q *Queries) ListParticipantsByCampaignPagedFirst(ctx context.Context, arg 
 
 const putParticipant = `-- name: PutParticipant :exec
 INSERT INTO participants (
-	campaign_id, id, user_id, display_name, role, controller, campaign_access, created_at, updated_at
- ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+	campaign_id, id, user_id, display_name, role, controller, campaign_access, avatar_set_id, avatar_asset_id, created_at, updated_at
+ ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(campaign_id, id) DO UPDATE SET
 	user_id = excluded.user_id,
 	display_name = excluded.display_name,
 	role = excluded.role,
 	controller = excluded.controller,
 	campaign_access = excluded.campaign_access,
+	avatar_set_id = excluded.avatar_set_id,
+	avatar_asset_id = excluded.avatar_asset_id,
 	updated_at = excluded.updated_at
 `
 
@@ -253,10 +317,12 @@ type PutParticipantParams struct {
 	CampaignID     string `json:"campaign_id"`
 	ID             string `json:"id"`
 	UserID         string `json:"user_id"`
-	Name           string `json:"name"`
+	DisplayName    string `json:"display_name"`
 	Role           string `json:"role"`
 	Controller     string `json:"controller"`
 	CampaignAccess string `json:"campaign_access"`
+	AvatarSetID    string `json:"avatar_set_id"`
+	AvatarAssetID  string `json:"avatar_asset_id"`
 	CreatedAt      int64  `json:"created_at"`
 	UpdatedAt      int64  `json:"updated_at"`
 }
@@ -266,10 +332,12 @@ func (q *Queries) PutParticipant(ctx context.Context, arg PutParticipantParams) 
 		arg.CampaignID,
 		arg.ID,
 		arg.UserID,
-		arg.Name,
+		arg.DisplayName,
 		arg.Role,
 		arg.Controller,
 		arg.CampaignAccess,
+		arg.AvatarSetID,
+		arg.AvatarAssetID,
 		arg.CreatedAt,
 		arg.UpdatedAt,
 	)

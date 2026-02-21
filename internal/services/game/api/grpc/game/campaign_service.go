@@ -351,8 +351,9 @@ func (s *CampaignService) SetCampaignCover(ctx context.Context, in *campaignv1.S
 	if coverAssetID == "" {
 		return nil, status.Error(codes.InvalidArgument, "cover asset id is required")
 	}
+	coverSetID := strings.TrimSpace(in.GetCoverSetId())
 
-	updated, err := newCampaignApplication(s).SetCampaignCover(ctx, campaignID, coverAssetID)
+	updated, err := newCampaignApplication(s).SetCampaignCover(ctx, campaignID, coverAssetID, coverSetID)
 	if err != nil {
 		if apperrors.GetCode(err) != apperrors.CodeUnknown {
 			return nil, handleDomainError(err)

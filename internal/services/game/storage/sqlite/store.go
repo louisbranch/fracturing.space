@@ -278,6 +278,7 @@ func (s *Store) Put(ctx context.Context, c storage.CampaignRecord) error {
 		CharacterCount:   int64(c.CharacterCount),
 		ThemePrompt:      c.ThemePrompt,
 		CoverAssetID:     c.CoverAssetID,
+		CoverSetID:       c.CoverSetID,
 		CreatedAt:        toMillis(c.CreatedAt),
 		UpdatedAt:        toMillis(c.UpdatedAt),
 		CompletedAt:      completedAt,
@@ -385,10 +386,12 @@ func (s *Store) PutParticipant(ctx context.Context, p storage.ParticipantRecord)
 		CampaignID:     p.CampaignID,
 		ID:             p.ID,
 		UserID:         p.UserID,
-		Name:           p.Name,
+		DisplayName:    p.Name,
 		Role:           participantRoleToString(p.Role),
 		Controller:     participantControllerToString(p.Controller),
 		CampaignAccess: participantAccessToString(p.CampaignAccess),
+		AvatarSetID:    p.AvatarSetID,
+		AvatarAssetID:  p.AvatarAssetID,
 		CreatedAt:      toMillis(p.CreatedAt),
 		UpdatedAt:      toMillis(p.UpdatedAt),
 	}); err != nil {
@@ -572,7 +575,7 @@ func (s *Store) GetParticipant(ctx context.Context, campaignID, participantID st
 		return storage.ParticipantRecord{}, fmt.Errorf("get participant: %w", err)
 	}
 
-	return dbParticipantToDomain(row)
+	return dbGetParticipantRowToDomain(row)
 }
 
 // ListParticipantsByCampaign returns all participants for a campaign.
@@ -594,7 +597,7 @@ func (s *Store) ListParticipantsByCampaign(ctx context.Context, campaignID strin
 
 	participants := make([]storage.ParticipantRecord, 0, len(rows))
 	for _, row := range rows {
-		p, err := dbParticipantToDomain(row)
+		p, err := dbListParticipantsByCampaignRowToDomain(row)
 		if err != nil {
 			return nil, err
 		}
@@ -675,35 +678,46 @@ func (s *Store) ListParticipants(ctx context.Context, campaignID string, pageSiz
 		return storage.ParticipantPage{}, fmt.Errorf("page size must be greater than zero")
 	}
 
-	var rows []db.Participant
-	var err error
-
-	if pageToken == "" {
-		rows, err = s.q.ListParticipantsByCampaignPagedFirst(ctx, db.ListParticipantsByCampaignPagedFirstParams{
-			CampaignID: campaignID,
-			Limit:      int64(pageSize + 1),
-		})
-	} else {
-		rows, err = s.q.ListParticipantsByCampaignPaged(ctx, db.ListParticipantsByCampaignPagedParams{
-			CampaignID: campaignID,
-			ID:         pageToken,
-			Limit:      int64(pageSize + 1),
-		})
-	}
-	if err != nil {
-		return storage.ParticipantPage{}, fmt.Errorf("list participants: %w", err)
-	}
-
 	page := storage.ParticipantPage{
 		Participants: make([]storage.ParticipantRecord, 0, pageSize),
 	}
 
+	if pageToken == "" {
+		rows, err := s.q.ListParticipantsByCampaignPagedFirst(ctx, db.ListParticipantsByCampaignPagedFirstParams{
+			CampaignID: campaignID,
+			Limit:      int64(pageSize + 1),
+		})
+		if err != nil {
+			return storage.ParticipantPage{}, fmt.Errorf("list participants: %w", err)
+		}
+		for i, row := range rows {
+			if i >= pageSize {
+				page.NextPageToken = rows[pageSize-1].ID
+				break
+			}
+			p, err := dbListParticipantsByCampaignPagedFirstRowToDomain(row)
+			if err != nil {
+				return storage.ParticipantPage{}, err
+			}
+			page.Participants = append(page.Participants, p)
+		}
+		return page, nil
+	}
+
+	rows, err := s.q.ListParticipantsByCampaignPaged(ctx, db.ListParticipantsByCampaignPagedParams{
+		CampaignID: campaignID,
+		ID:         pageToken,
+		Limit:      int64(pageSize + 1),
+	})
+	if err != nil {
+		return storage.ParticipantPage{}, fmt.Errorf("list participants: %w", err)
+	}
 	for i, row := range rows {
 		if i >= pageSize {
 			page.NextPageToken = rows[pageSize-1].ID
 			break
 		}
-		p, err := dbParticipantToDomain(row)
+		p, err := dbListParticipantsByCampaignPagedRowToDomain(row)
 		if err != nil {
 			return storage.ParticipantPage{}, err
 		}
@@ -980,6 +994,8 @@ func (s *Store) PutCharacter(ctx context.Context, c storage.CharacterRecord) err
 		Name:                    c.Name,
 		Kind:                    characterKindToString(c.Kind),
 		Notes:                   c.Notes,
+		AvatarSetID:             c.AvatarSetID,
+		AvatarAssetID:           c.AvatarAssetID,
 		CreatedAt:               toMillis(c.CreatedAt),
 		UpdatedAt:               toMillis(c.UpdatedAt),
 	})
@@ -1911,6 +1927,7 @@ type campaignRowData struct {
 	CharacterCount   int64
 	ThemePrompt      string
 	CoverAssetID     string
+	CoverSetID       string
 	CreatedAt        int64
 	UpdatedAt        int64
 	CompletedAt      sql.NullInt64
@@ -1935,6 +1952,7 @@ func campaignRowDataToDomain(row campaignRowData) (storage.CampaignRecord, error
 		CharacterCount:   int(row.CharacterCount),
 		ThemePrompt:      row.ThemePrompt,
 		CoverAssetID:     row.CoverAssetID,
+		CoverSetID:       row.CoverSetID,
 		CreatedAt:        fromMillis(row.CreatedAt),
 		UpdatedAt:        fromMillis(row.UpdatedAt),
 	}
@@ -1958,6 +1976,7 @@ func dbGetCampaignRowToDomain(row db.GetCampaignRow) (storage.CampaignRecord, er
 		CharacterCount:   row.CharacterCount,
 		ThemePrompt:      row.ThemePrompt,
 		CoverAssetID:     row.CoverAssetID,
+		CoverSetID:       row.CoverSetID,
 		CreatedAt:        row.CreatedAt,
 		UpdatedAt:        row.UpdatedAt,
 		CompletedAt:      row.CompletedAt,
@@ -1979,6 +1998,7 @@ func dbListCampaignsRowToDomain(row db.ListCampaignsRow) (storage.CampaignRecord
 		CharacterCount:   row.CharacterCount,
 		ThemePrompt:      row.ThemePrompt,
 		CoverAssetID:     row.CoverAssetID,
+		CoverSetID:       row.CoverSetID,
 		CreatedAt:        row.CreatedAt,
 		UpdatedAt:        row.UpdatedAt,
 		CompletedAt:      row.CompletedAt,
@@ -1999,6 +2019,7 @@ func dbListAllCampaignsRowToDomain(row db.ListAllCampaignsRow) (storage.Campaign
 		CharacterCount:   row.CharacterCount,
 		ThemePrompt:      row.ThemePrompt,
 		CoverAssetID:     row.CoverAssetID,
+		CoverSetID:       row.CoverSetID,
 		CreatedAt:        row.CreatedAt,
 		UpdatedAt:        row.UpdatedAt,
 		CompletedAt:      row.CompletedAt,
@@ -2006,18 +2027,114 @@ func dbListAllCampaignsRowToDomain(row db.ListAllCampaignsRow) (storage.Campaign
 	})
 }
 
-func dbParticipantToDomain(row db.Participant) (storage.ParticipantRecord, error) {
+type participantRowData struct {
+	CampaignID     string
+	ID             string
+	UserID         string
+	DisplayName    string
+	Role           string
+	Controller     string
+	CampaignAccess string
+	AvatarSetID    string
+	AvatarAssetID  string
+	CreatedAt      int64
+	UpdatedAt      int64
+}
+
+func participantRowDataToDomain(row participantRowData) (storage.ParticipantRecord, error) {
 	return storage.ParticipantRecord{
 		ID:             row.ID,
 		CampaignID:     row.CampaignID,
 		UserID:         row.UserID,
-		Name:           row.Name,
+		Name:           row.DisplayName,
 		Role:           stringToParticipantRole(row.Role),
 		Controller:     stringToParticipantController(row.Controller),
 		CampaignAccess: stringToParticipantAccess(row.CampaignAccess),
+		AvatarSetID:    row.AvatarSetID,
+		AvatarAssetID:  row.AvatarAssetID,
 		CreatedAt:      fromMillis(row.CreatedAt),
 		UpdatedAt:      fromMillis(row.UpdatedAt),
 	}, nil
+}
+
+func dbParticipantToDomain(row db.Participant) (storage.ParticipantRecord, error) {
+	return participantRowDataToDomain(participantRowData{
+		CampaignID:     row.CampaignID,
+		ID:             row.ID,
+		UserID:         row.UserID,
+		DisplayName:    row.DisplayName,
+		Role:           row.Role,
+		Controller:     row.Controller,
+		CampaignAccess: row.CampaignAccess,
+		AvatarSetID:    row.AvatarSetID,
+		AvatarAssetID:  row.AvatarAssetID,
+		CreatedAt:      row.CreatedAt,
+		UpdatedAt:      row.UpdatedAt,
+	})
+}
+
+func dbGetParticipantRowToDomain(row db.GetParticipantRow) (storage.ParticipantRecord, error) {
+	return participantRowDataToDomain(participantRowData{
+		CampaignID:     row.CampaignID,
+		ID:             row.ID,
+		UserID:         row.UserID,
+		DisplayName:    row.DisplayName,
+		Role:           row.Role,
+		Controller:     row.Controller,
+		CampaignAccess: row.CampaignAccess,
+		AvatarSetID:    row.AvatarSetID,
+		AvatarAssetID:  row.AvatarAssetID,
+		CreatedAt:      row.CreatedAt,
+		UpdatedAt:      row.UpdatedAt,
+	})
+}
+
+func dbListParticipantsByCampaignRowToDomain(row db.ListParticipantsByCampaignRow) (storage.ParticipantRecord, error) {
+	return participantRowDataToDomain(participantRowData{
+		CampaignID:     row.CampaignID,
+		ID:             row.ID,
+		UserID:         row.UserID,
+		DisplayName:    row.DisplayName,
+		Role:           row.Role,
+		Controller:     row.Controller,
+		CampaignAccess: row.CampaignAccess,
+		AvatarSetID:    row.AvatarSetID,
+		AvatarAssetID:  row.AvatarAssetID,
+		CreatedAt:      row.CreatedAt,
+		UpdatedAt:      row.UpdatedAt,
+	})
+}
+
+func dbListParticipantsByCampaignPagedFirstRowToDomain(row db.ListParticipantsByCampaignPagedFirstRow) (storage.ParticipantRecord, error) {
+	return participantRowDataToDomain(participantRowData{
+		CampaignID:     row.CampaignID,
+		ID:             row.ID,
+		UserID:         row.UserID,
+		DisplayName:    row.DisplayName,
+		Role:           row.Role,
+		Controller:     row.Controller,
+		CampaignAccess: row.CampaignAccess,
+		AvatarSetID:    row.AvatarSetID,
+		AvatarAssetID:  row.AvatarAssetID,
+		CreatedAt:      row.CreatedAt,
+		UpdatedAt:      row.UpdatedAt,
+	})
+}
+
+func dbListParticipantsByCampaignPagedRowToDomain(row db.ListParticipantsByCampaignPagedRow) (storage.ParticipantRecord, error) {
+	return participantRowDataToDomain(participantRowData{
+		CampaignID:     row.CampaignID,
+		ID:             row.ID,
+		UserID:         row.UserID,
+		DisplayName:    row.DisplayName,
+		Role:           row.Role,
+		Controller:     row.Controller,
+		CampaignAccess: row.CampaignAccess,
+		AvatarSetID:    row.AvatarSetID,
+		AvatarAssetID:  row.AvatarAssetID,
+		CreatedAt:      row.CreatedAt,
+		UpdatedAt:      row.UpdatedAt,
+	})
 }
 
 func dbInviteToDomain(row db.Invite) (storage.InviteRecord, error) {
@@ -2045,6 +2162,8 @@ func dbCharacterToDomain(row db.Character) (storage.CharacterRecord, error) {
 		Name:          row.Name,
 		Kind:          stringToCharacterKind(row.Kind),
 		Notes:         row.Notes,
+		AvatarSetID:   row.AvatarSetID,
+		AvatarAssetID: row.AvatarAssetID,
 		CreatedAt:     fromMillis(row.CreatedAt),
 		UpdatedAt:     fromMillis(row.UpdatedAt),
 	}, nil

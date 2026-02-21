@@ -23,6 +23,8 @@ const (
 	rejectionCodeCharacterIDRequired         = "CHARACTER_ID_REQUIRED"
 	rejectionCodeCharacterNameEmpty          = "CHARACTER_NAME_EMPTY"
 	rejectionCodeCharacterKindInvalid        = "CHARACTER_KIND_INVALID"
+	rejectionCodeCharacterAvatarSetInvalid   = "CHARACTER_INVALID_AVATAR_SET"
+	rejectionCodeCharacterAvatarAssetInvalid = "CHARACTER_INVALID_AVATAR_ASSET"
 	rejectionCodeCharacterNotCreated         = "CHARACTER_NOT_CREATED"
 	rejectionCodeCharacterUpdateEmpty        = "CHARACTER_UPDATE_EMPTY"
 	rejectionCodeCharacterUpdateFieldInvalid = "CHARACTER_UPDATE_FIELD_INVALID"
@@ -64,15 +66,25 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			})
 		}
 		notes := strings.TrimSpace(payload.Notes)
+		avatarSetID, avatarAssetID, err := resolveCharacterAvatarSelection(
+			characterID,
+			payload.AvatarSetID,
+			payload.AvatarAssetID,
+		)
+		if err != nil {
+			return command.Reject(characterAvatarRejection(err))
+		}
 		if now == nil {
 			now = time.Now
 		}
 
 		normalizedPayload := CreatePayload{
-			CharacterID: characterID,
-			Name:        name,
-			Kind:        kind,
-			Notes:       notes,
+			CharacterID:   characterID,
+			Name:          name,
+			Kind:          kind,
+			Notes:         notes,
+			AvatarSetID:   avatarSetID,
+			AvatarAssetID: avatarAssetID,
 		}
 		payloadJSON, _ := json.Marshal(normalizedPayload)
 		evt := event.Event{
@@ -116,6 +128,8 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 				Message: "character update requires fields",
 			})
 		}
+		rawAvatarSetID, avatarSetProvided := payload.Fields["avatar_set_id"]
+		rawAvatarAssetID, avatarAssetProvided := payload.Fields["avatar_asset_id"]
 		normalizedFields := make(map[string]string, len(payload.Fields))
 		for key, value := range payload.Fields {
 			switch key {
@@ -141,11 +155,41 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 				normalizedFields[key] = strings.TrimSpace(value)
 			case "participant_id":
 				normalizedFields[key] = strings.TrimSpace(value)
+			case "avatar_set_id":
+			case "avatar_asset_id":
 			default:
 				return command.Reject(command.Rejection{
 					Code:    rejectionCodeCharacterUpdateFieldInvalid,
 					Message: "character update field is invalid",
 				})
+			}
+		}
+		if avatarSetProvided || avatarAssetProvided {
+			avatarSetInput := strings.TrimSpace(state.AvatarSetID)
+			if avatarSetProvided {
+				avatarSetInput = rawAvatarSetID
+			}
+
+			avatarAssetInput := strings.TrimSpace(state.AvatarAssetID)
+			if avatarAssetProvided {
+				avatarAssetInput = rawAvatarAssetID
+			} else if avatarSetProvided {
+				avatarAssetInput = ""
+			}
+
+			resolvedSetID, resolvedAssetID, err := resolveCharacterAvatarSelection(
+				characterID,
+				avatarSetInput,
+				avatarAssetInput,
+			)
+			if err != nil {
+				return command.Reject(characterAvatarRejection(err))
+			}
+			if avatarSetProvided {
+				normalizedFields["avatar_set_id"] = resolvedSetID
+			}
+			if avatarAssetProvided || avatarSetProvided {
+				normalizedFields["avatar_asset_id"] = resolvedAssetID
 			}
 		}
 		if now == nil {

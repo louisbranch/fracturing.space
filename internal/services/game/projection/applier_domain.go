@@ -151,6 +151,7 @@ func (a Applier) applyCampaignCreated(ctx context.Context, evt event.Event) erro
 		CharacterCount:   0,
 		ThemePrompt:      normalized.ThemePrompt,
 		CoverAssetID:     strings.TrimSpace(payload.CoverAssetID),
+		CoverSetID:       strings.TrimSpace(payload.CoverSetID),
 		CreatedAt:        createdAt,
 		UpdatedAt:        createdAt,
 	})
@@ -198,6 +199,8 @@ func (a Applier) applyCampaignUpdated(ctx context.Context, evt event.Event) erro
 			updated.ThemePrompt = strings.TrimSpace(value)
 		case "cover_asset_id":
 			updated.CoverAssetID = strings.TrimSpace(value)
+		case "cover_set_id":
+			updated.CoverSetID = strings.TrimSpace(value)
 		}
 	}
 
@@ -272,6 +275,8 @@ func (a Applier) applyParticipantJoined(ctx context.Context, evt event.Event) er
 		Role:           role,
 		Controller:     controller,
 		CampaignAccess: access,
+		AvatarSetID:    strings.TrimSpace(payload.AvatarSetID),
+		AvatarAssetID:  strings.TrimSpace(payload.AvatarAssetID),
 		CreatedAt:      createdAt,
 		UpdatedAt:      createdAt,
 	}); err != nil {
@@ -345,6 +350,10 @@ func (a Applier) applyParticipantUpdated(ctx context.Context, evt event.Event) e
 				return err
 			}
 			updated.CampaignAccess = access
+		case "avatar_set_id":
+			updated.AvatarSetID = strings.TrimSpace(value)
+		case "avatar_asset_id":
+			updated.AvatarAssetID = strings.TrimSpace(value)
 		}
 	}
 
@@ -605,13 +614,15 @@ func (a Applier) applyCharacterCreated(ctx context.Context, evt event.Event) err
 
 	createdAt := ensureTimestamp(evt.Timestamp)
 	ch := storage.CharacterRecord{
-		ID:         characterID,
-		CampaignID: strings.TrimSpace(evt.CampaignID),
-		Name:       name,
-		Kind:       kind,
-		Notes:      strings.TrimSpace(payload.Notes),
-		CreatedAt:  createdAt,
-		UpdatedAt:  createdAt,
+		ID:            characterID,
+		CampaignID:    strings.TrimSpace(evt.CampaignID),
+		Name:          name,
+		Kind:          kind,
+		Notes:         strings.TrimSpace(payload.Notes),
+		AvatarSetID:   strings.TrimSpace(payload.AvatarSetID),
+		AvatarAssetID: strings.TrimSpace(payload.AvatarAssetID),
+		CreatedAt:     createdAt,
+		UpdatedAt:     createdAt,
 	}
 	if err := a.Character.PutCharacter(ctx, ch); err != nil {
 		return err
@@ -677,6 +688,10 @@ func (a Applier) applyCharacterUpdated(ctx context.Context, evt event.Event) err
 			updated.Notes = strings.TrimSpace(value)
 		case "participant_id":
 			updated.ParticipantID = strings.TrimSpace(value)
+		case "avatar_set_id":
+			updated.AvatarSetID = strings.TrimSpace(value)
+		case "avatar_asset_id":
+			updated.AvatarAssetID = strings.TrimSpace(value)
 		}
 	}
 

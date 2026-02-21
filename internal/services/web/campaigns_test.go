@@ -13,6 +13,7 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
 	"github.com/louisbranch/fracturing.space/internal/platform/branding"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	webstorage "github.com/louisbranch/fracturing.space/internal/services/web/storage"
@@ -491,44 +492,41 @@ func TestTruncateCampaignTheme(t *testing.T) {
 }
 
 func TestCampaignCoverImageURL_DefaultsToFirstPNGAsset(t *testing.T) {
-	got := campaignCoverImageURL("")
+	got := campaignCoverImageURL(Config{}, "", "", "")
 	want := "/static/campaign-covers/abandoned_castle_courtyard.png"
 	if got != want {
 		t.Fatalf("campaignCoverImageURL(\"\") = %q, want %q", got, want)
 	}
 }
 
-func TestCampaignCoverAssetsEmbeddedIncludesConfiguredPNGs(t *testing.T) {
-	coverAssetIDs := []string{
+func TestCampaignCoverImageURL_UsesExternalAssetBaseURLWhenConfigured(t *testing.T) {
+	got := campaignCoverImageURL(
+		Config{
+			AssetBaseURL:         "https://cdn.example.com/assets",
+			AssetManifestVersion: "v9",
+		},
+		"camp-1",
+		catalog.CampaignCoverSetV1,
 		"abandoned_castle_courtyard",
-		"ancient_forest_shrine",
-		"arcane_observatory",
-		"arcane_ruins",
-		"broken_tower",
-		"cliffside_monastery",
-		"coastal_cliffs",
-		"crystal_cavern",
-		"cursed_farmlands",
-		"deserted_harbour",
-		"dwarven_gate",
-		"enchanted_meadow",
-		"forgotten_battlefield",
-		"frozen_keep",
-		"hidden_waterfall_sanctuary",
-		"moutain_pass",
-		"roadside_tavern",
-		"royal_capital_skyline",
-		"sunken_temple",
-		"unholy_swamp",
+	)
+	want := "https://cdn.example.com/assets/abandoned_castle_courtyard.png"
+	if got != want {
+		t.Fatalf("campaignCoverImageURL(...) = %q, want %q", got, want)
 	}
+}
 
-	for _, coverAssetID := range coverAssetIDs {
-		path := "static/campaign-covers/" + coverAssetID + ".png"
-		file, err := assetsFS.Open(path)
-		if err != nil {
-			t.Fatalf("open embedded cover %q: %v", path, err)
-		}
-		_ = file.Close()
+func TestCampaignCoverImageURL_UsesCloudinaryTransformForCardSize(t *testing.T) {
+	got := campaignCoverImageURL(
+		Config{
+			AssetBaseURL: "https://res.cloudinary.com/fracturing-space/image/upload",
+		},
+		"camp-1",
+		catalog.CampaignCoverSetV1,
+		"abandoned_castle_courtyard",
+	)
+	want := "https://res.cloudinary.com/fracturing-space/image/upload/f_auto,q_auto,dpr_auto,c_limit,w_768/abandoned_castle_courtyard.png"
+	if got != want {
+		t.Fatalf("campaignCoverImageURL(...) = %q, want %q", got, want)
 	}
 }
 

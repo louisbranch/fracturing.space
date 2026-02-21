@@ -17,6 +17,10 @@ type State struct {
 	Kind string
 	// Notes stores campaign-local free-form character metadata.
 	Notes string
+	// AvatarSetID identifies the avatar set bound to this character.
+	AvatarSetID string
+	// AvatarAssetID identifies the avatar image within AvatarSetID.
+	AvatarAssetID string
 	// ParticipantID links ownership/ownership intent.
 	ParticipantID string
 	// SystemProfile carries system-specific structured data for mechanics systems.

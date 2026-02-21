@@ -10,6 +10,8 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
+	"github.com/louisbranch/fracturing.space/internal/platform/assets/imagecdn"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
@@ -31,11 +33,11 @@ func (h *handler) handleAppCampaigns(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.ensureCampaignClients(r.Context()); err != nil {
-		renderAppCampaignsListPage(w, r, h.pageContext(w, r), []*statev1.Campaign{})
+		renderAppCampaignsListPageWithConfig(w, r, h.pageContext(w, r), h.config, []*statev1.Campaign{})
 		return
 	}
 	if h.campaignClient == nil || h.campaignAccess == nil {
-		renderAppCampaignsListPage(w, r, h.pageContext(w, r), []*statev1.Campaign{})
+		renderAppCampaignsListPageWithConfig(w, r, h.pageContext(w, r), h.config, []*statev1.Campaign{})
 		return
 	}
 
@@ -50,13 +52,13 @@ func (h *handler) handleAppCampaigns(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil || strings.TrimSpace(userID) == "" {
-		renderAppCampaignsListPage(w, r, h.pageContext(w, r), []*statev1.Campaign{})
+		renderAppCampaignsListPageWithConfig(w, r, h.pageContext(w, r), h.config, []*statev1.Campaign{})
 		return
 	}
 
 	requestCtx = grpcauthctx.WithUserID(requestCtx, userID)
 	if campaigns, ok := h.cachedUserCampaigns(requestCtx, userID); ok {
-		renderAppCampaignsListPage(w, r, h.pageContext(w, r), campaigns)
+		renderAppCampaignsListPageWithConfig(w, r, h.pageContext(w, r), h.config, campaigns)
 		return
 	}
 
@@ -66,7 +68,7 @@ func (h *handler) handleAppCampaigns(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.setUserCampaignsCache(requestCtx, userID, campaigns)
-	renderAppCampaignsListPage(w, r, h.pageContext(w, r), campaigns)
+	renderAppCampaignsListPageWithConfig(w, r, h.pageContext(w, r), h.config, campaigns)
 }
 
 func (h *handler) handleAppCampaignCreate(w http.ResponseWriter, r *http.Request) {
@@ -210,10 +212,14 @@ func (h *handler) ensureCampaignClients(ctx context.Context) error {
 }
 
 func renderAppCampaignsPage(w http.ResponseWriter, r *http.Request, campaigns []*statev1.Campaign) {
-	renderAppCampaignsListPage(w, r, webtemplates.PageContext{}, campaigns)
+	renderAppCampaignsListPageWithConfig(w, r, webtemplates.PageContext{}, Config{}, campaigns)
 }
 
 func renderAppCampaignsListPage(w http.ResponseWriter, r *http.Request, page webtemplates.PageContext, campaigns []*statev1.Campaign) {
+	renderAppCampaignsListPageWithConfig(w, r, page, Config{}, campaigns)
+}
+
+func renderAppCampaignsListPageWithConfig(w http.ResponseWriter, r *http.Request, page webtemplates.PageContext, config Config, campaigns []*statev1.Campaign) {
 	// renderAppCampaignsListPageWithAppName maps the list of campaign read models into
 	// links that become the canonical campaign navigation point for this boundary.
 	normalized := make([]webtemplates.CampaignListItem, 0, len(campaigns))
@@ -230,7 +236,7 @@ func renderAppCampaignsListPage(w http.ResponseWriter, r *http.Request, page web
 			ID:               campaignID,
 			Name:             name,
 			Theme:            truncateCampaignTheme(campaign.GetThemePrompt()),
-			CoverImageURL:    campaignCoverImageURL(campaign.GetCoverAssetId()),
+			CoverImageURL:    campaignCoverImageURL(config, campaignID, campaign.GetCoverSetId(), campaign.GetCoverAssetId()),
 			ParticipantCount: strconv.FormatInt(int64(campaign.GetParticipantCount()), 10),
 			CharacterCount:   strconv.FormatInt(int64(campaign.GetCharacterCount()), 10),
 		})
@@ -240,8 +246,12 @@ func renderAppCampaignsListPage(w http.ResponseWriter, r *http.Request, page web
 	}
 }
 
-const defaultCampaignCoverAssetID = "abandoned_castle_courtyard"
-const campaignThemePromptLimit = 80
+const (
+	campaignThemePromptLimit = 80
+	campaignCoverCardWidthPX = 768
+)
+
+var webCampaignCoverManifest = catalog.CampaignCoverManifest()
 
 func truncateCampaignTheme(themePrompt string) string {
 	runes := []rune(strings.TrimSpace(themePrompt))
@@ -254,12 +264,61 @@ func truncateCampaignTheme(themePrompt string) string {
 	return string(runes[:campaignThemePromptLimit]) + "..."
 }
 
-func campaignCoverImageURL(coverAssetID string) string {
-	resolvedCoverAssetID := strings.TrimSpace(coverAssetID)
-	if resolvedCoverAssetID == "" {
-		resolvedCoverAssetID = defaultCampaignCoverAssetID
+func campaignCoverImageURL(config Config, campaignID, coverSetID, coverAssetID string) string {
+	_, resolvedCoverAssetID := resolveWebCampaignCoverSelection(campaignID, coverSetID, coverAssetID)
+	resolvedAssetURL, err := imagecdn.New(config.AssetBaseURL).URL(imagecdn.Request{
+		AssetID:   resolvedCoverAssetID,
+		Extension: ".png",
+		Delivery: &imagecdn.Delivery{
+			WidthPX: campaignCoverCardWidthPX,
+		},
+	})
+	if err == nil {
+		return resolvedAssetURL
 	}
 	return "/static/campaign-covers/" + url.PathEscape(resolvedCoverAssetID) + ".png"
+}
+
+func normalizeWebCampaignCoverAssetID(raw string) (string, bool) {
+	normalizedCoverAssetID := webCampaignCoverManifest.NormalizeAssetID(raw)
+	if normalizedCoverAssetID == "" {
+		return "", false
+	}
+	if !webCampaignCoverManifest.ValidateAssetInSet(catalog.CampaignCoverSetV1, normalizedCoverAssetID) {
+		return "", false
+	}
+	return normalizedCoverAssetID, true
+}
+
+func defaultWebCampaignCoverAssetID() string {
+	coverSet, ok := webCampaignCoverManifest.Sets[catalog.CampaignCoverSetV1]
+	if !ok || len(coverSet.AssetIDs) == 0 {
+		return ""
+	}
+	return coverSet.AssetIDs[0]
+}
+
+func resolveWebCampaignCoverSelection(campaignID, coverSetID, coverAssetID string) (string, string) {
+	resolvedCoverSetID, resolvedCoverAssetID, err := webCampaignCoverManifest.ResolveSelection(catalog.SelectionInput{
+		EntityType: "campaign",
+		EntityID:   strings.TrimSpace(campaignID),
+		SetID:      coverSetID,
+		AssetID:    coverAssetID,
+	})
+	if err == nil {
+		return resolvedCoverSetID, resolvedCoverAssetID
+	}
+
+	fallbackCoverSetID, fallbackCoverAssetID, fallbackErr := webCampaignCoverManifest.ResolveSelection(catalog.SelectionInput{
+		EntityType: "campaign",
+		EntityID:   strings.TrimSpace(campaignID),
+		SetID:      catalog.CampaignCoverSetV1,
+		AssetID:    "",
+	})
+	if fallbackErr == nil {
+		return fallbackCoverSetID, fallbackCoverAssetID
+	}
+	return catalog.CampaignCoverSetV1, defaultWebCampaignCoverAssetID()
 }
 
 func renderAppCampaignCreatePage(w http.ResponseWriter, r *http.Request, page webtemplates.PageContext) {

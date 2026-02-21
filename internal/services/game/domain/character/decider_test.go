@@ -512,3 +512,111 @@ func TestDecideCharacterProfileUpdate_MissingCharacterIDRejected(t *testing.T) {
 		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeCharacterIDRequired)
 	}
 }
+
+func TestDecideCharacterCreate_DefaultsAvatarSelection(t *testing.T) {
+	cmd := command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("character.create"),
+		ActorType:   command.ActorTypeSystem,
+		PayloadJSON: []byte(`{"character_id":"char-1","name":"Aria","kind":"PC"}`),
+	}
+
+	decision := Decide(State{}, cmd, nil)
+	if len(decision.Rejections) != 0 {
+		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
+	}
+	if len(decision.Events) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(decision.Events))
+	}
+
+	var payload CreatePayload
+	if err := json.Unmarshal(decision.Events[0].PayloadJSON, &payload); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+	if payload.AvatarSetID == "" {
+		t.Fatal("expected avatar set to be defaulted")
+	}
+	if payload.AvatarAssetID == "" {
+		t.Fatal("expected avatar asset to be defaulted")
+	}
+}
+
+func TestDecideCharacterCreate_InvalidAvatarSetRejected(t *testing.T) {
+	cmd := command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("character.create"),
+		ActorType:   command.ActorTypeSystem,
+		PayloadJSON: []byte(`{"character_id":"char-1","name":"Aria","kind":"PC","avatar_set_id":"missing"}`),
+	}
+
+	decision := Decide(State{}, cmd, nil)
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != rejectionCodeCharacterAvatarSetInvalid {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeCharacterAvatarSetInvalid)
+	}
+}
+
+func TestDecideCharacterUpdate_AvatarSetAlsoNormalizesAvatarAsset(t *testing.T) {
+	cmd := command.Command{
+		CampaignID: "camp-1",
+		Type:       command.Type("character.update"),
+		ActorType:  command.ActorTypeSystem,
+		PayloadJSON: []byte(
+			`{"character_id":"char-1","fields":{"avatar_set_id":"avatar_set_v1"}}`,
+		),
+	}
+
+	decision := Decide(State{
+		Created:       true,
+		AvatarSetID:   "avatar_set_v1",
+		AvatarAssetID: "missing",
+	}, cmd, nil)
+	if len(decision.Rejections) != 0 {
+		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
+	}
+	if len(decision.Events) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(decision.Events))
+	}
+
+	var payload UpdatePayload
+	if err := json.Unmarshal(decision.Events[0].PayloadJSON, &payload); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+	if payload.Fields["avatar_set_id"] == "" {
+		t.Fatal("expected avatar_set_id to be normalized")
+	}
+	if payload.Fields["avatar_asset_id"] == "" {
+		t.Fatal("expected avatar_asset_id to be normalized alongside avatar_set_id")
+	}
+}
+
+func TestDecideCharacterUpdate_InvalidAvatarAssetRejected(t *testing.T) {
+	cmd := command.Command{
+		CampaignID: "camp-1",
+		Type:       command.Type("character.update"),
+		ActorType:  command.ActorTypeSystem,
+		PayloadJSON: []byte(
+			`{"character_id":"char-1","fields":{"avatar_asset_id":"missing"}}`,
+		),
+	}
+
+	decision := Decide(State{
+		Created:       true,
+		AvatarSetID:   "avatar_set_v1",
+		AvatarAssetID: "001",
+	}, cmd, nil)
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != rejectionCodeCharacterAvatarAssetInvalid {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeCharacterAvatarAssetInvalid)
+	}
+}

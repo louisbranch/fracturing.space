@@ -57,15 +57,27 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 	}
 
 	actorID := grpcmeta.ParticipantIDFromContext(ctx)
+	avatarSetID := strings.TrimSpace(in.GetAvatarSetId())
+	avatarAssetID := strings.TrimSpace(in.GetAvatarAssetId())
+	if actorID != "" && avatarSetID == "" && avatarAssetID == "" && c.stores.Participant != nil {
+		participantRecord, err := c.stores.Participant.GetParticipant(ctx, campaignID, actorID)
+		if err == nil {
+			avatarSetID = strings.TrimSpace(participantRecord.AvatarSetID)
+			avatarAssetID = strings.TrimSpace(participantRecord.AvatarAssetID)
+		}
+	}
+
 	applier := c.stores.Applier()
 	if c.stores.Domain == nil {
 		return storage.CharacterRecord{}, status.Error(codes.Internal, "domain engine is not configured")
 	}
 	payload := character.CreatePayload{
-		CharacterID: characterID,
-		Name:        name,
-		Kind:        in.GetKind().String(),
-		Notes:       notes,
+		CharacterID:   characterID,
+		Name:          name,
+		Kind:          in.GetKind().String(),
+		Notes:         notes,
+		AvatarSetID:   avatarSetID,
+		AvatarAssetID: avatarAssetID,
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -266,6 +278,16 @@ func (c characterApplication) UpdateCharacter(ctx context.Context, campaignID st
 	if notes := in.GetNotes(); notes != nil {
 		ch.Notes = strings.TrimSpace(notes.GetValue())
 		fields["notes"] = ch.Notes
+	}
+	if avatarSetID := in.GetAvatarSetId(); avatarSetID != nil {
+		trimmed := strings.TrimSpace(avatarSetID.GetValue())
+		ch.AvatarSetID = trimmed
+		fields["avatar_set_id"] = trimmed
+	}
+	if avatarAssetID := in.GetAvatarAssetId(); avatarAssetID != nil {
+		trimmed := strings.TrimSpace(avatarAssetID.GetValue())
+		ch.AvatarAssetID = trimmed
+		fields["avatar_asset_id"] = trimmed
 	}
 	if len(fields) == 0 {
 		return storage.CharacterRecord{}, status.Error(codes.InvalidArgument, "at least one field must be provided")

@@ -32,6 +32,8 @@ const (
 	rejectionCodeParticipantRoleInvalid        = "PARTICIPANT_INVALID_ROLE"
 	rejectionCodeParticipantControllerInvalid  = "PARTICIPANT_INVALID_CONTROLLER"
 	rejectionCodeParticipantAccessInvalid      = "PARTICIPANT_INVALID_CAMPAIGN_ACCESS"
+	rejectionCodeParticipantAvatarSetInvalid   = "PARTICIPANT_INVALID_AVATAR_SET"
+	rejectionCodeParticipantAvatarAssetInvalid = "PARTICIPANT_INVALID_AVATAR_ASSET"
 	rejectionCodeParticipantUpdateEmpty        = "PARTICIPANT_UPDATE_EMPTY"
 	rejectionCodeParticipantUpdateFieldInvalid = "PARTICIPANT_UPDATE_FIELD_INVALID"
 	rejectionCodeParticipantUserIDRequired     = "PARTICIPANT_USER_ID_REQUIRED"
@@ -96,6 +98,15 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			}
 			access = "member"
 		}
+		avatarSetID, avatarAssetID, err := resolveParticipantAvatarSelection(
+			participantID,
+			userID,
+			payload.AvatarSetID,
+			payload.AvatarAssetID,
+		)
+		if err != nil {
+			return command.Reject(participantAvatarRejection(err))
+		}
 		if now == nil {
 			now = time.Now
 		}
@@ -107,6 +118,8 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			Role:           role,
 			Controller:     controller,
 			CampaignAccess: access,
+			AvatarSetID:    avatarSetID,
+			AvatarAssetID:  avatarAssetID,
 		}
 		payloadJSON, _ := json.Marshal(normalizedPayload)
 
@@ -150,6 +163,9 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 				Message: "participant update requires fields",
 			})
 		}
+
+		rawAvatarSetID, avatarSetProvided := payload.Fields["avatar_set_id"]
+		rawAvatarAssetID, avatarAssetProvided := payload.Fields["avatar_asset_id"]
 		normalizedFields := make(map[string]string, len(payload.Fields))
 		for key, value := range payload.Fields {
 			switch key {
@@ -191,11 +207,47 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 					})
 				}
 				normalizedFields[key] = normalizedAccess
+			case "avatar_set_id":
+			case "avatar_asset_id":
 			default:
 				return command.Reject(command.Rejection{
 					Code:    rejectionCodeParticipantUpdateFieldInvalid,
 					Message: "participant update field is invalid",
 				})
+			}
+		}
+		if avatarSetProvided || avatarAssetProvided {
+			avatarUserID := strings.TrimSpace(state.UserID)
+			if rawUserID, ok := normalizedFields["user_id"]; ok {
+				avatarUserID = strings.TrimSpace(rawUserID)
+			}
+
+			avatarSetInput := strings.TrimSpace(state.AvatarSetID)
+			if avatarSetProvided {
+				avatarSetInput = rawAvatarSetID
+			}
+
+			avatarAssetInput := strings.TrimSpace(state.AvatarAssetID)
+			if avatarAssetProvided {
+				avatarAssetInput = rawAvatarAssetID
+			} else if avatarSetProvided {
+				avatarAssetInput = ""
+			}
+
+			resolvedSetID, resolvedAssetID, err := resolveParticipantAvatarSelection(
+				participantID,
+				avatarUserID,
+				avatarSetInput,
+				avatarAssetInput,
+			)
+			if err != nil {
+				return command.Reject(participantAvatarRejection(err))
+			}
+			if avatarSetProvided {
+				normalizedFields["avatar_set_id"] = resolvedSetID
+			}
+			if avatarAssetProvided || avatarSetProvided {
+				normalizedFields["avatar_asset_id"] = resolvedAssetID
 			}
 		}
 		if now == nil {

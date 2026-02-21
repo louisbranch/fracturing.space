@@ -21,6 +21,8 @@ type Config struct {
 	AuthAddr            string        `env:"FRACTURING_SPACE_WEB_AUTH_ADDR"           envDefault:"localhost:8083"`
 	GameAddr            string        `env:"FRACTURING_SPACE_GAME_ADDR"              envDefault:"localhost:8080"`
 	CacheDBPath         string        `env:"FRACTURING_SPACE_WEB_CACHE_DB_PATH"      envDefault:"data/web-cache.db"`
+	AssetBaseURL        string        `env:"FRACTURING_SPACE_ASSET_BASE_URL"`
+	AssetVersion        string        `env:"FRACTURING_SPACE_ASSET_VERSION"           envDefault:"v1"`
 	GRPCDialTimeout     time.Duration `env:"FRACTURING_SPACE_WEB_DIAL_TIMEOUT"        envDefault:"2s"`
 	OAuthClientID       string        `env:"FRACTURING_SPACE_WEB_OAUTH_CLIENT_ID"     envDefault:"fracturing-space"`
 	CallbackURL         string        `env:"FRACTURING_SPACE_WEB_CALLBACK_URL"`
@@ -44,6 +46,8 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	fs.StringVar(&cfg.AuthAddr, "auth-addr", cfg.AuthAddr, "Auth service gRPC address")
 	fs.StringVar(&cfg.GameAddr, "game-addr", cfg.GameAddr, "Game service gRPC address")
 	fs.StringVar(&cfg.CacheDBPath, "cache-db-path", cfg.CacheDBPath, "Web cache SQLite path")
+	fs.StringVar(&cfg.AssetBaseURL, "asset-base-url", cfg.AssetBaseURL, "Asset base URL for image delivery")
+	fs.StringVar(&cfg.AssetVersion, "asset-version", cfg.AssetVersion, "Version prefix for external asset keys")
 	if err := fs.Parse(args); err != nil {
 		return Config{}, err
 	}
@@ -66,17 +70,19 @@ func Run(ctx context.Context, cfg Config) error {
 	}()
 
 	server, err := web.NewServer(web.Config{
-		HTTPAddr:            cfg.HTTPAddr,
-		AuthBaseURL:         cfg.AuthBaseURL,
-		AuthAddr:            cfg.AuthAddr,
-		GameAddr:            cfg.GameAddr,
-		CacheDBPath:         cfg.CacheDBPath,
-		GRPCDialTimeout:     cfg.GRPCDialTimeout,
-		OAuthClientID:       cfg.OAuthClientID,
-		CallbackURL:         cfg.CallbackURL,
-		AuthTokenURL:        cfg.AuthTokenURL,
-		Domain:              cfg.Domain,
-		OAuthResourceSecret: cfg.OAuthResourceSecret,
+		HTTPAddr:             cfg.HTTPAddr,
+		AuthBaseURL:          cfg.AuthBaseURL,
+		AuthAddr:             cfg.AuthAddr,
+		GameAddr:             cfg.GameAddr,
+		CacheDBPath:          cfg.CacheDBPath,
+		AssetBaseURL:         cfg.AssetBaseURL,
+		AssetManifestVersion: cfg.AssetVersion,
+		GRPCDialTimeout:      cfg.GRPCDialTimeout,
+		OAuthClientID:        cfg.OAuthClientID,
+		CallbackURL:          cfg.CallbackURL,
+		AuthTokenURL:         cfg.AuthTokenURL,
+		Domain:               cfg.Domain,
+		OAuthResourceSecret:  cfg.OAuthResourceSecret,
 	})
 	if err != nil {
 		return fmt.Errorf("init web server: %w", err)

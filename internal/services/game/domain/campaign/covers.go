@@ -1,48 +1,31 @@
 package campaign
 
 import (
-	"hash/fnv"
 	"strings"
+
+	"github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
 )
 
-var campaignCoverAssetCatalog = []string{
-	"abandoned_castle_courtyard",
-	"ancient_forest_shrine",
-	"arcane_observatory",
-	"arcane_ruins",
-	"broken_tower",
-	"cliffside_monastery",
-	"coastal_cliffs",
-	"crystal_cavern",
-	"cursed_farmlands",
-	"deserted_harbour",
-	"dwarven_gate",
-	"enchanted_meadow",
-	"forgotten_battlefield",
-	"frozen_keep",
-	"hidden_waterfall_sanctuary",
-	"moutain_pass",
-	"roadside_tavern",
-	"royal_capital_skyline",
-	"sunken_temple",
-	"unholy_swamp",
-}
+const defaultCampaignCoverSetID = catalog.CampaignCoverSetV1
 
-var campaignCoverAssetSet = func() map[string]struct{} {
-	set := make(map[string]struct{}, len(campaignCoverAssetCatalog))
-	for _, id := range campaignCoverAssetCatalog {
-		set[id] = struct{}{}
-	}
-	return set
-}()
+var campaignCoverManifest = catalog.CampaignCoverManifest()
+
+var campaignCoverAssetCatalog = campaignCoverManifest.Sets[defaultCampaignCoverSetID].AssetIDs
 
 func isCampaignCoverAssetID(raw string) bool {
-	coverAssetID := strings.TrimSpace(raw)
-	if coverAssetID == "" {
-		return false
-	}
-	_, ok := campaignCoverAssetSet[coverAssetID]
+	_, ok := normalizeCampaignCoverAssetID(raw)
 	return ok
+}
+
+func normalizeCampaignCoverAssetID(raw string) (string, bool) {
+	coverAssetID := campaignCoverManifest.NormalizeAssetID(raw)
+	if coverAssetID == "" {
+		return "", false
+	}
+	if !campaignCoverManifest.ValidateAssetInSet(defaultCampaignCoverSetID, coverAssetID) {
+		return "", false
+	}
+	return coverAssetID, true
 }
 
 func defaultCampaignCoverAssetID(campaignID string) string {
@@ -55,8 +38,17 @@ func defaultCampaignCoverAssetID(campaignID string) string {
 		return campaignCoverAssetCatalog[0]
 	}
 
-	hasher := fnv.New32a()
-	_, _ = hasher.Write([]byte(trimmedCampaignID))
-	index := hasher.Sum32() % uint32(len(campaignCoverAssetCatalog))
-	return campaignCoverAssetCatalog[index]
+	coverAssetID, err := campaignCoverManifest.DeterministicAsset(catalog.PickerInput{
+		EntityType: "campaign",
+		EntityID:   trimmedCampaignID,
+		SetID:      defaultCampaignCoverSetID,
+	})
+	if err != nil || strings.TrimSpace(coverAssetID) == "" {
+		return campaignCoverAssetCatalog[0]
+	}
+	return coverAssetID
+}
+
+func normalizeCampaignCoverSetID(raw string) (string, bool) {
+	return campaignCoverManifest.NormalizeSetID(raw)
 }

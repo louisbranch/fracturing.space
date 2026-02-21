@@ -1,0 +1,62 @@
+{
+  "manifest": {
+    "id": "avatars-v1",
+    "default_set": "avatar_set_v1",
+    "sets": [
+      {
+        "id": "avatar_set_v1",
+        "asset_ids": [
+          "001",
+          "002",
+          "003",
+          "004",
+          "005",
+          "006",
+          "007",
+          "008",
+          "009",
+          "010"
+        ]
+      }
+    ],
+    "set_aliases": {},
+    "asset_aliases": {}
+  },
+  "sheets": [
+    {
+      "set_id": "avatar_set_v1",
+      "width_px": 1024,
+      "height_px": 1536,
+      "portraits": [
+        {
+          "slot": 1,
+          "x": 0,
+          "y": 0,
+          "width_px": 512,
+          "height_px": 768
+        },
+        {
+          "slot": 2,
+          "x": 512,
+          "y": 0,
+          "width_px": 512,
+          "height_px": 768
+        },
+        {
+          "slot": 3,
+          "x": 0,
+          "y": 768,
+          "width_px": 512,
+          "height_px": 768
+        },
+        {
+          "slot": 4,
+          "x": 512,
+          "y": 768,
+          "width_px": 512,
+          "height_px": 768
+        }
+      ]
+    }
+  ]
+}

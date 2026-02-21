@@ -22,6 +22,16 @@ func TestIsCampaignCoverAssetID_RejectsBlankValues(t *testing.T) {
 	}
 }
 
+func TestNormalizeCampaignCoverAssetID_AcceptsCanonicalValues(t *testing.T) {
+	got, ok := normalizeCampaignCoverAssetID("mountain_pass")
+	if !ok {
+		t.Fatal("expected mountain_pass to normalize successfully")
+	}
+	if got != "mountain_pass" {
+		t.Fatalf("normalizeCampaignCoverAssetID(mountain_pass) = %q, want %q", got, "mountain_pass")
+	}
+}
+
 func TestDefaultCampaignCoverAssetID_EmptyCampaignIDReturnsFirstConfiguredAsset(t *testing.T) {
 	got := defaultCampaignCoverAssetID("   ")
 	if got != campaignCoverAssetCatalog[0] {

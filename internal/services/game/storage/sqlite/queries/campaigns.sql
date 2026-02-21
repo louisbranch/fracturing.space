@@ -3,16 +3,16 @@ SELECT
 	c.id, c.name, c.locale, c.game_system, c.status, c.gm_mode, c.intent, c.access_policy,
 	(SELECT COUNT(*) FROM participants p WHERE p.campaign_id = c.id) AS participant_count,
 	(SELECT COUNT(*) FROM characters ch WHERE ch.campaign_id = c.id) AS character_count,
-	c.theme_prompt, c.cover_asset_id, c.parent_campaign_id, c.fork_event_seq, c.origin_campaign_id,
+	c.theme_prompt, c.cover_asset_id, c.cover_set_id, c.parent_campaign_id, c.fork_event_seq, c.origin_campaign_id,
 	c.created_at, c.updated_at, c.completed_at, c.archived_at
 FROM campaigns c WHERE c.id = ?;
 
 -- name: PutCampaign :exec
 INSERT INTO campaigns (
 	id, name, locale, game_system, status, gm_mode, intent, access_policy,
-	participant_count, character_count, theme_prompt, cover_asset_id,
+	participant_count, character_count, theme_prompt, cover_asset_id, cover_set_id,
 	created_at, updated_at, completed_at, archived_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
 	name = excluded.name,
 	locale = excluded.locale,
@@ -25,6 +25,7 @@ ON CONFLICT(id) DO UPDATE SET
     character_count = excluded.character_count,
     theme_prompt = excluded.theme_prompt,
     cover_asset_id = excluded.cover_asset_id,
+    cover_set_id = excluded.cover_set_id,
     updated_at = excluded.updated_at,
     completed_at = excluded.completed_at,
     archived_at = excluded.archived_at;
@@ -34,7 +35,7 @@ SELECT
 	c.id, c.name, c.locale, c.game_system, c.status, c.gm_mode, c.intent, c.access_policy,
 	(SELECT COUNT(*) FROM participants p WHERE p.campaign_id = c.id) AS participant_count,
 	(SELECT COUNT(*) FROM characters ch WHERE ch.campaign_id = c.id) AS character_count,
-	c.theme_prompt, c.cover_asset_id, c.parent_campaign_id, c.fork_event_seq, c.origin_campaign_id,
+	c.theme_prompt, c.cover_asset_id, c.cover_set_id, c.parent_campaign_id, c.fork_event_seq, c.origin_campaign_id,
 	c.created_at, c.updated_at, c.completed_at, c.archived_at
 FROM campaigns c
 WHERE c.id > ?
@@ -46,7 +47,7 @@ SELECT
 	c.id, c.name, c.locale, c.game_system, c.status, c.gm_mode, c.intent, c.access_policy,
 	(SELECT COUNT(*) FROM participants p WHERE p.campaign_id = c.id) AS participant_count,
 	(SELECT COUNT(*) FROM characters ch WHERE ch.campaign_id = c.id) AS character_count,
-	c.theme_prompt, c.cover_asset_id, c.parent_campaign_id, c.fork_event_seq, c.origin_campaign_id,
+	c.theme_prompt, c.cover_asset_id, c.cover_set_id, c.parent_campaign_id, c.fork_event_seq, c.origin_campaign_id,
 	c.created_at, c.updated_at, c.completed_at, c.archived_at
 FROM campaigns c
 ORDER BY c.id

@@ -18,6 +18,8 @@ message Character {
   string notes = 6;
   google.protobuf.Timestamp created_at = 7;
   google.protobuf.Timestamp updated_at = 8;
+  string avatar_set_id = 9;
+  string avatar_asset_id = 10;
 }
 
 enum CharacterKind {
@@ -76,6 +78,12 @@ message CreateCharacterRequest {
 
   // Optional free-form notes about the character.
   string notes = 4;
+
+  // Optional avatar set identifier.
+  string avatar_set_id = 5;
+
+  // Optional avatar asset identifier.
+  string avatar_asset_id = 6;
 }
 
 message CreateCharacterResponse {
@@ -97,6 +105,12 @@ message UpdateCharacterRequest {
 
   // Optional updated notes.
   google.protobuf.StringValue notes = 5;
+
+  // Optional updated avatar set identifier.
+  google.protobuf.StringValue avatar_set_id = 6;
+
+  // Optional updated avatar asset identifier.
+  google.protobuf.StringValue avatar_asset_id = 7;
 }
 
 message UpdateCharacterResponse {

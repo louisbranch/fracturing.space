@@ -21,4 +21,8 @@ type State struct {
 	Controller string
 	// CampaignAccess controls visibility and permission scope at campaign level.
 	CampaignAccess string
+	// AvatarSetID identifies the avatar set bound to this participant.
+	AvatarSetID string
+	// AvatarAssetID identifies the avatar image within AvatarSetID.
+	AvatarAssetID string
 }

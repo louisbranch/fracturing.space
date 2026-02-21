@@ -84,21 +84,42 @@ func (s *AccountService) UpdateProfile(ctx context.Context, in *authv1.UpdatePro
 	if err != nil && !errors.Is(err, storage.ErrNotFound) {
 		return nil, handleDomainError(err)
 	}
+	existingProfileFound := err == nil
+
+	avatarSetID := in.GetAvatarSetId()
+	avatarAssetID := in.GetAvatarAssetId()
+	if existingProfileFound {
+		if strings.TrimSpace(avatarSetID) == "" {
+			avatarSetID = existingProfile.AvatarSetID
+		}
+		if strings.TrimSpace(avatarAssetID) == "" {
+			avatarAssetID = existingProfile.AvatarAssetID
+		}
+	}
 
 	profile, err := account.NewProfile(account.ProfileInput{
-		UserID: userID,
-		Name:   in.GetName(),
-		Locale: in.GetLocale(),
+		UserID:        userID,
+		Name:          in.GetName(),
+		Locale:        in.GetLocale(),
+		AvatarSetID:   avatarSetID,
+		AvatarAssetID: avatarAssetID,
 	}, now)
 	if err != nil {
+		if errors.Is(err, account.ErrEmptyUserID) ||
+			errors.Is(err, account.ErrAvatarSetInvalid) ||
+			errors.Is(err, account.ErrAvatarAssetInvalid) {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
 		return nil, apperrors.HandleError(err, apperrors.DefaultLocale)
 	}
 	storageProfile := storage.AccountProfile{
-		UserID:    profile.UserID,
-		Name:      profile.Name,
-		Locale:    profile.Locale,
-		CreatedAt: profile.CreatedAt,
-		UpdatedAt: profile.UpdatedAt,
+		UserID:        profile.UserID,
+		Name:          profile.Name,
+		Locale:        profile.Locale,
+		AvatarSetID:   profile.AvatarSetID,
+		AvatarAssetID: profile.AvatarAssetID,
+		CreatedAt:     profile.CreatedAt,
+		UpdatedAt:     profile.UpdatedAt,
 	}
 	storageProfile.CreatedAt = existingProfile.CreatedAt
 	if existingProfile.CreatedAt.IsZero() {
@@ -120,10 +141,12 @@ func (s *AccountService) UpdateProfile(ctx context.Context, in *authv1.UpdatePro
 
 func accountProfileToProto(profile storage.AccountProfile) *authv1.AccountProfile {
 	return &authv1.AccountProfile{
-		UserId:    profile.UserID,
-		Name:      profile.Name,
-		Locale:    profile.Locale,
-		CreatedAt: timestamppb.New(profile.CreatedAt),
-		UpdatedAt: timestamppb.New(profile.UpdatedAt),
+		UserId:        profile.UserID,
+		Name:          profile.Name,
+		Locale:        profile.Locale,
+		AvatarSetId:   profile.AvatarSetID,
+		AvatarAssetId: profile.AvatarAssetID,
+		CreatedAt:     timestamppb.New(profile.CreatedAt),
+		UpdatedAt:     timestamppb.New(profile.UpdatedAt),
 	}
 }

@@ -19,4 +19,6 @@ type State struct {
 	ThemePrompt string
 	// CoverAssetID stores the selected built-in campaign cover identifier.
 	CoverAssetID string
+	// CoverSetID stores the selected built-in campaign cover set identifier.
+	CoverSetID string
 }

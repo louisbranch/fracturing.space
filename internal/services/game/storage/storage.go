@@ -37,6 +37,7 @@ type CampaignRecord struct {
 	CharacterCount   int
 	ThemePrompt      string
 	CoverAssetID     string
+	CoverSetID       string
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
 	CompletedAt      *time.Time
@@ -52,6 +53,8 @@ type ParticipantRecord struct {
 	Role           participant.Role
 	Controller     participant.Controller
 	CampaignAccess participant.CampaignAccess
+	AvatarSetID    string
+	AvatarAssetID  string
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 }
@@ -76,6 +79,8 @@ type CharacterRecord struct {
 	Name          string
 	Kind          character.Kind
 	Notes         string
+	AvatarSetID   string
+	AvatarAssetID string
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 }

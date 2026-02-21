@@ -18,6 +18,8 @@ message Participant {
   Controller controller = 7;
   google.protobuf.Timestamp created_at = 8;
   google.protobuf.Timestamp updated_at = 9;
+  string avatar_set_id = 10;
+  string avatar_asset_id = 11;
 }
 
 enum ParticipantRole {
@@ -72,6 +74,12 @@ message CreateParticipantRequest {
 
   // The controller type (defaults to HUMAN if unspecified).
   Controller controller = 5;
+
+  // Optional avatar set identifier.
+  string avatar_set_id = 6;
+
+  // Optional avatar asset identifier.
+  string avatar_asset_id = 7;
 }
 
 message CreateParticipantResponse {
@@ -99,6 +107,12 @@ message UpdateParticipantRequest {
 
   // Optional updated controller.
   Controller controller = 7;
+
+  // Optional updated avatar set identifier.
+  google.protobuf.StringValue avatar_set_id = 8;
+
+  // Optional updated avatar asset identifier.
+  google.protobuf.StringValue avatar_asset_id = 9;
 }
 
 message UpdateParticipantResponse {

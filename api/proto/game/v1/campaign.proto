@@ -34,6 +34,8 @@ message Campaign {
   google.protobuf.Timestamp archived_at = 15;
   // Selected built-in cover asset identifier.
   string cover_asset_id = 16;
+  // Selected built-in cover set identifier.
+  string cover_set_id = 17;
 }
 
 enum CampaignStatus {
@@ -177,6 +179,9 @@ message SetCampaignCoverRequest {
 
   // Built-in campaign cover asset identifier.
   string cover_asset_id = 2;
+
+  // Optional built-in campaign cover set identifier.
+  string cover_set_id = 3;
 }
 
 message SetCampaignCoverResponse {
