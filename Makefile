@@ -1,9 +1,6 @@
 PROTO_DIR := api/proto
 GEN_GO_DIR := api/gen/go
 COVER_EXCLUDE_REGEX := (api/gen/|_templ\.go|internal/services/admin/templates/|internal/services/game/storage/sqlite/db/|internal/services/auth/storage/sqlite/db/|internal/services/admin/storage/sqlite/db/|internal/tools/eventdocgen/|cmd/|internal/cmd/)
-export GOTMPDIR := $(abspath .tmp/go-build)
-export GOCACHE := $(abspath .tmp/go-cache)
-export GOMODCACHE := $(abspath .tmp/go-modcache)
 
 PROTO_FILES := \
 	$(wildcard $(PROTO_DIR)/common/v1/*.proto) \

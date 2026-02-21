@@ -22,10 +22,7 @@
     8087
   ],
   "remoteEnv": {
-    "TMPDIR": "/workspace/.tmp/go-build",
-    "GOTMPDIR": "/workspace/.tmp/go-build",
-    "GOCACHE": "/workspace/.tmp/go-cache",
-    "GOMODCACHE": "/workspace/.tmp/go-modcache"
+    "TMPDIR": "/workspace/.tmp/go-build"
   },
   "customizations": {
     "vscode": {
