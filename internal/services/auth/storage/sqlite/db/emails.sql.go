@@ -11,7 +11,7 @@ import (
 )
 
 const getUserEmailByEmail = `-- name: GetUserEmailByEmail :one
-SELECT id, user_id, email, verified_at, created_at, updated_at FROM user_emails WHERE email = ?
+SELECT id, user_id, email, is_primary, verified_at, created_at, updated_at FROM user_emails WHERE email = ?
 `
 
 func (q *Queries) GetUserEmailByEmail(ctx context.Context, email string) (UserEmail, error) {
@@ -21,6 +21,7 @@ func (q *Queries) GetUserEmailByEmail(ctx context.Context, email string) (UserEm
 		&i.ID,
 		&i.UserID,
 		&i.Email,
+		&i.IsPrimary,
 		&i.VerifiedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -29,7 +30,7 @@ func (q *Queries) GetUserEmailByEmail(ctx context.Context, email string) (UserEm
 }
 
 const listUserEmailsByUser = `-- name: ListUserEmailsByUser :many
-SELECT id, user_id, email, verified_at, created_at, updated_at FROM user_emails WHERE user_id = ? ORDER BY email
+SELECT id, user_id, email, is_primary, verified_at, created_at, updated_at FROM user_emails WHERE user_id = ? ORDER BY email
 `
 
 func (q *Queries) ListUserEmailsByUser(ctx context.Context, userID string) ([]UserEmail, error) {
@@ -45,6 +46,7 @@ func (q *Queries) ListUserEmailsByUser(ctx context.Context, userID string) ([]Us
 			&i.ID,
 			&i.UserID,
 			&i.Email,
+			&i.IsPrimary,
 			&i.VerifiedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -64,10 +66,11 @@ func (q *Queries) ListUserEmailsByUser(ctx context.Context, userID string) ([]Us
 
 const putUserEmail = `-- name: PutUserEmail :exec
 INSERT INTO user_emails (
-    id, user_id, email, verified_at, created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?)
+    id, user_id, email, is_primary, verified_at, created_at, updated_at
+) VALUES (?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(email) DO UPDATE SET
     user_id = excluded.user_id,
+    is_primary = user_emails.is_primary,
     verified_at = excluded.verified_at,
     updated_at = excluded.updated_at
 `
@@ -76,6 +79,7 @@ type PutUserEmailParams struct {
 	ID         string        `json:"id"`
 	UserID     string        `json:"user_id"`
 	Email      string        `json:"email"`
+	IsPrimary  int64         `json:"is_primary"`
 	VerifiedAt sql.NullInt64 `json:"verified_at"`
 	CreatedAt  int64         `json:"created_at"`
 	UpdatedAt  int64         `json:"updated_at"`
@@ -83,6 +87,39 @@ type PutUserEmailParams struct {
 
 func (q *Queries) PutUserEmail(ctx context.Context, arg PutUserEmailParams) error {
 	_, err := q.db.ExecContext(ctx, putUserEmail,
+		arg.ID,
+		arg.UserID,
+		arg.Email,
+		arg.IsPrimary,
+		arg.VerifiedAt,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+	)
+	return err
+}
+
+const putUserPrimaryEmail = `-- name: PutUserPrimaryEmail :exec
+INSERT INTO user_emails (
+    id, user_id, email, is_primary, verified_at, created_at, updated_at
+) VALUES (?, ?, ?, 1, ?, ?, ?)
+ON CONFLICT(id) DO UPDATE SET
+    user_id = excluded.user_id,
+    is_primary = excluded.is_primary,
+    verified_at = excluded.verified_at,
+    updated_at = excluded.updated_at
+`
+
+type PutUserPrimaryEmailParams struct {
+	ID         string        `json:"id"`
+	UserID     string        `json:"user_id"`
+	Email      string        `json:"email"`
+	VerifiedAt sql.NullInt64 `json:"verified_at"`
+	CreatedAt  int64         `json:"created_at"`
+	UpdatedAt  int64         `json:"updated_at"`
+}
+
+func (q *Queries) PutUserPrimaryEmail(ctx context.Context, arg PutUserPrimaryEmailParams) error {
+	_, err := q.db.ExecContext(ctx, putUserPrimaryEmail,
 		arg.ID,
 		arg.UserID,
 		arg.Email,

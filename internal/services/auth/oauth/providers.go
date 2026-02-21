@@ -93,7 +93,7 @@ func (s *Server) handleProviderCallback(w http.ResponseWriter, r *http.Request, 
 	}
 
 	if errParam := r.URL.Query().Get("error"); errParam != "" {
-		s.renderError(w, errParam, r.URL.Query().Get("error_description"), http.StatusBadRequest)
+		s.renderError(w, r, errParam, r.URL.Query().Get("error_description"), http.StatusBadRequest)
 		return
 	}
 

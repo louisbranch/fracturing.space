@@ -11,7 +11,6 @@ import (
 	sync "sync"
 	unsafe "unsafe"
 
-	v1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
@@ -29,9 +28,8 @@ type User struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Email         string                 `protobuf:"bytes,2,opt,name=email,proto3" json:"email,omitempty"`
-	Locale        v1.Locale              `protobuf:"varint,3,opt,name=locale,proto3,enum=common.v1.Locale" json:"locale,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -80,13 +78,6 @@ func (x *User) GetEmail() string {
 	return ""
 }
 
-func (x *User) GetLocale() v1.Locale {
-	if x != nil {
-		return x.Locale
-	}
-	return v1.Locale(0)
-}
-
 func (x *User) GetCreatedAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.CreatedAt
@@ -104,7 +95,6 @@ func (x *User) GetUpdatedAt() *timestamppb.Timestamp {
 type CreateUserRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Email         string                 `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
-	Locale        v1.Locale              `protobuf:"varint,2,opt,name=locale,proto3,enum=common.v1.Locale" json:"locale,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -144,13 +134,6 @@ func (x *CreateUserRequest) GetEmail() string {
 		return x.Email
 	}
 	return ""
-}
-
-func (x *CreateUserRequest) GetLocale() v1.Locale {
-	if x != nil {
-		return x.Locale
-	}
-	return v1.Locale(0)
 }
 
 type CreateUserResponse struct {
@@ -1296,18 +1279,16 @@ var File_auth_v1_user_proto protoreflect.FileDescriptor
 
 const file_auth_v1_user_proto_rawDesc = "" +
 	"\n" +
-	"\x12auth/v1/user.proto\x12\aauth.v1\x1a\x16common/v1/locale.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xcd\x01\n" +
+	"\x12auth/v1/user.proto\x12\aauth.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xa2\x01\n" +
 	"\x04User\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
-	"\x05email\x18\x02 \x01(\tR\x05email\x12)\n" +
-	"\x06locale\x18\x03 \x01(\x0e2\x11.common.v1.LocaleR\x06locale\x129\n" +
+	"\x05email\x18\x02 \x01(\tR\x05email\x129\n" +
 	"\n" +
-	"created_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"created_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"T\n" +
+	"updated_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\")\n" +
 	"\x11CreateUserRequest\x12\x14\n" +
-	"\x05email\x18\x01 \x01(\tR\x05email\x12)\n" +
-	"\x06locale\x18\x02 \x01(\x0e2\x11.common.v1.LocaleR\x06locale\"7\n" +
+	"\x05email\x18\x01 \x01(\tR\x05email\"7\n" +
 	"\x12CreateUserResponse\x12!\n" +
 	"\x04user\x18\x01 \x01(\v2\r.auth.v1.UserR\x04user\":\n" +
 	"\x1fBeginPasskeyRegistrationRequest\x12\x17\n" +
@@ -1440,53 +1421,50 @@ var file_auth_v1_user_proto_goTypes = []any{
 	(*GetUserResponse)(nil),                   // 21: auth.v1.GetUserResponse
 	(*ListUsersRequest)(nil),                  // 22: auth.v1.ListUsersRequest
 	(*ListUsersResponse)(nil),                 // 23: auth.v1.ListUsersResponse
-	(v1.Locale)(0),                            // 24: common.v1.Locale
-	(*timestamppb.Timestamp)(nil),             // 25: google.protobuf.Timestamp
+	(*timestamppb.Timestamp)(nil),             // 24: google.protobuf.Timestamp
 }
 var file_auth_v1_user_proto_depIdxs = []int32{
-	24, // 0: auth.v1.User.locale:type_name -> common.v1.Locale
-	25, // 1: auth.v1.User.created_at:type_name -> google.protobuf.Timestamp
-	25, // 2: auth.v1.User.updated_at:type_name -> google.protobuf.Timestamp
-	24, // 3: auth.v1.CreateUserRequest.locale:type_name -> common.v1.Locale
-	0,  // 4: auth.v1.CreateUserResponse.user:type_name -> auth.v1.User
-	0,  // 5: auth.v1.FinishPasskeyRegistrationResponse.user:type_name -> auth.v1.User
-	0,  // 6: auth.v1.FinishPasskeyLoginResponse.user:type_name -> auth.v1.User
-	25, // 7: auth.v1.GenerateMagicLinkResponse.expires_at:type_name -> google.protobuf.Timestamp
-	0,  // 8: auth.v1.ConsumeMagicLinkResponse.user:type_name -> auth.v1.User
-	17, // 9: auth.v1.ListUserEmailsResponse.emails:type_name -> auth.v1.UserEmail
-	25, // 10: auth.v1.UserEmail.verified_at:type_name -> google.protobuf.Timestamp
-	25, // 11: auth.v1.UserEmail.created_at:type_name -> google.protobuf.Timestamp
-	25, // 12: auth.v1.UserEmail.updated_at:type_name -> google.protobuf.Timestamp
-	25, // 13: auth.v1.IssueJoinGrantResponse.expires_at:type_name -> google.protobuf.Timestamp
-	0,  // 14: auth.v1.GetUserResponse.user:type_name -> auth.v1.User
-	0,  // 15: auth.v1.ListUsersResponse.users:type_name -> auth.v1.User
-	1,  // 16: auth.v1.AuthService.CreateUser:input_type -> auth.v1.CreateUserRequest
-	3,  // 17: auth.v1.AuthService.BeginPasskeyRegistration:input_type -> auth.v1.BeginPasskeyRegistrationRequest
-	5,  // 18: auth.v1.AuthService.FinishPasskeyRegistration:input_type -> auth.v1.FinishPasskeyRegistrationRequest
-	7,  // 19: auth.v1.AuthService.BeginPasskeyLogin:input_type -> auth.v1.BeginPasskeyLoginRequest
-	9,  // 20: auth.v1.AuthService.FinishPasskeyLogin:input_type -> auth.v1.FinishPasskeyLoginRequest
-	11, // 21: auth.v1.AuthService.GenerateMagicLink:input_type -> auth.v1.GenerateMagicLinkRequest
-	13, // 22: auth.v1.AuthService.ConsumeMagicLink:input_type -> auth.v1.ConsumeMagicLinkRequest
-	15, // 23: auth.v1.AuthService.ListUserEmails:input_type -> auth.v1.ListUserEmailsRequest
-	18, // 24: auth.v1.AuthService.IssueJoinGrant:input_type -> auth.v1.IssueJoinGrantRequest
-	20, // 25: auth.v1.AuthService.GetUser:input_type -> auth.v1.GetUserRequest
-	22, // 26: auth.v1.AuthService.ListUsers:input_type -> auth.v1.ListUsersRequest
-	2,  // 27: auth.v1.AuthService.CreateUser:output_type -> auth.v1.CreateUserResponse
-	4,  // 28: auth.v1.AuthService.BeginPasskeyRegistration:output_type -> auth.v1.BeginPasskeyRegistrationResponse
-	6,  // 29: auth.v1.AuthService.FinishPasskeyRegistration:output_type -> auth.v1.FinishPasskeyRegistrationResponse
-	8,  // 30: auth.v1.AuthService.BeginPasskeyLogin:output_type -> auth.v1.BeginPasskeyLoginResponse
-	10, // 31: auth.v1.AuthService.FinishPasskeyLogin:output_type -> auth.v1.FinishPasskeyLoginResponse
-	12, // 32: auth.v1.AuthService.GenerateMagicLink:output_type -> auth.v1.GenerateMagicLinkResponse
-	14, // 33: auth.v1.AuthService.ConsumeMagicLink:output_type -> auth.v1.ConsumeMagicLinkResponse
-	16, // 34: auth.v1.AuthService.ListUserEmails:output_type -> auth.v1.ListUserEmailsResponse
-	19, // 35: auth.v1.AuthService.IssueJoinGrant:output_type -> auth.v1.IssueJoinGrantResponse
-	21, // 36: auth.v1.AuthService.GetUser:output_type -> auth.v1.GetUserResponse
-	23, // 37: auth.v1.AuthService.ListUsers:output_type -> auth.v1.ListUsersResponse
-	27, // [27:38] is the sub-list for method output_type
-	16, // [16:27] is the sub-list for method input_type
-	16, // [16:16] is the sub-list for extension type_name
-	16, // [16:16] is the sub-list for extension extendee
-	0,  // [0:16] is the sub-list for field type_name
+	24, // 0: auth.v1.User.created_at:type_name -> google.protobuf.Timestamp
+	24, // 1: auth.v1.User.updated_at:type_name -> google.protobuf.Timestamp
+	0,  // 2: auth.v1.CreateUserResponse.user:type_name -> auth.v1.User
+	0,  // 3: auth.v1.FinishPasskeyRegistrationResponse.user:type_name -> auth.v1.User
+	0,  // 4: auth.v1.FinishPasskeyLoginResponse.user:type_name -> auth.v1.User
+	24, // 5: auth.v1.GenerateMagicLinkResponse.expires_at:type_name -> google.protobuf.Timestamp
+	0,  // 6: auth.v1.ConsumeMagicLinkResponse.user:type_name -> auth.v1.User
+	17, // 7: auth.v1.ListUserEmailsResponse.emails:type_name -> auth.v1.UserEmail
+	24, // 8: auth.v1.UserEmail.verified_at:type_name -> google.protobuf.Timestamp
+	24, // 9: auth.v1.UserEmail.created_at:type_name -> google.protobuf.Timestamp
+	24, // 10: auth.v1.UserEmail.updated_at:type_name -> google.protobuf.Timestamp
+	24, // 11: auth.v1.IssueJoinGrantResponse.expires_at:type_name -> google.protobuf.Timestamp
+	0,  // 12: auth.v1.GetUserResponse.user:type_name -> auth.v1.User
+	0,  // 13: auth.v1.ListUsersResponse.users:type_name -> auth.v1.User
+	1,  // 14: auth.v1.AuthService.CreateUser:input_type -> auth.v1.CreateUserRequest
+	3,  // 15: auth.v1.AuthService.BeginPasskeyRegistration:input_type -> auth.v1.BeginPasskeyRegistrationRequest
+	5,  // 16: auth.v1.AuthService.FinishPasskeyRegistration:input_type -> auth.v1.FinishPasskeyRegistrationRequest
+	7,  // 17: auth.v1.AuthService.BeginPasskeyLogin:input_type -> auth.v1.BeginPasskeyLoginRequest
+	9,  // 18: auth.v1.AuthService.FinishPasskeyLogin:input_type -> auth.v1.FinishPasskeyLoginRequest
+	11, // 19: auth.v1.AuthService.GenerateMagicLink:input_type -> auth.v1.GenerateMagicLinkRequest
+	13, // 20: auth.v1.AuthService.ConsumeMagicLink:input_type -> auth.v1.ConsumeMagicLinkRequest
+	15, // 21: auth.v1.AuthService.ListUserEmails:input_type -> auth.v1.ListUserEmailsRequest
+	18, // 22: auth.v1.AuthService.IssueJoinGrant:input_type -> auth.v1.IssueJoinGrantRequest
+	20, // 23: auth.v1.AuthService.GetUser:input_type -> auth.v1.GetUserRequest
+	22, // 24: auth.v1.AuthService.ListUsers:input_type -> auth.v1.ListUsersRequest
+	2,  // 25: auth.v1.AuthService.CreateUser:output_type -> auth.v1.CreateUserResponse
+	4,  // 26: auth.v1.AuthService.BeginPasskeyRegistration:output_type -> auth.v1.BeginPasskeyRegistrationResponse
+	6,  // 27: auth.v1.AuthService.FinishPasskeyRegistration:output_type -> auth.v1.FinishPasskeyRegistrationResponse
+	8,  // 28: auth.v1.AuthService.BeginPasskeyLogin:output_type -> auth.v1.BeginPasskeyLoginResponse
+	10, // 29: auth.v1.AuthService.FinishPasskeyLogin:output_type -> auth.v1.FinishPasskeyLoginResponse
+	12, // 30: auth.v1.AuthService.GenerateMagicLink:output_type -> auth.v1.GenerateMagicLinkResponse
+	14, // 31: auth.v1.AuthService.ConsumeMagicLink:output_type -> auth.v1.ConsumeMagicLinkResponse
+	16, // 32: auth.v1.AuthService.ListUserEmails:output_type -> auth.v1.ListUserEmailsResponse
+	19, // 33: auth.v1.AuthService.IssueJoinGrant:output_type -> auth.v1.IssueJoinGrantResponse
+	21, // 34: auth.v1.AuthService.GetUser:output_type -> auth.v1.GetUserResponse
+	23, // 35: auth.v1.AuthService.ListUsers:output_type -> auth.v1.ListUsersResponse
+	25, // [25:36] is the sub-list for method output_type
+	14, // [14:25] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_auth_v1_user_proto_init() }

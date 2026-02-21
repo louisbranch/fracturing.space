@@ -94,6 +94,32 @@ func TestCreateUser_Success(t *testing.T) {
 	}
 }
 
+func TestCreateUser_PersistsPrimaryEmail(t *testing.T) {
+	store := openTempAuthStore(t)
+	svc := NewAuthService(store, store, nil)
+	svc.clock = func() time.Time { return time.Date(2026, 1, 23, 10, 0, 0, 0, time.UTC) }
+	svc.idGenerator = func() (string, error) { return "user-123", nil }
+
+	resp, err := svc.CreateUser(context.Background(), &authv1.CreateUserRequest{Email: "  Alice@example.COM  "})
+	if err != nil {
+		t.Fatalf("create user: %v", err)
+	}
+	if resp.GetUser().GetId() != "user-123" {
+		t.Fatalf("expected id user-123, got %q", resp.GetUser().GetId())
+	}
+
+	emails, err := store.ListUserEmailsByUser(context.Background(), "user-123")
+	if err != nil {
+		t.Fatalf("list user emails: %v", err)
+	}
+	if len(emails) != 1 {
+		t.Fatalf("expected 1 email, got %d", len(emails))
+	}
+	if emails[0].Email != "alice@example.com" {
+		t.Fatalf("expected normalized primary email, got %q", emails[0].Email)
+	}
+}
+
 func TestGetUser_NilRequest(t *testing.T) {
 	svc := NewAuthService(newFakeUserStore(), nil, nil)
 	_, err := svc.GetUser(context.Background(), nil)

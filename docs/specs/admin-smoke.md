@@ -8,7 +8,7 @@ nav_order: 1
 
 ## Purpose
 Quick regression coverage for the admin UI: navigation, user creation, impersonation,
-and campaign creation.
+and campaigns read-only visibility.
 
 ## Preconditions
 - Services running (`make run`). This will automatically generate and export dev join-grant keys when missing.
@@ -29,7 +29,6 @@ cli run-code "$(cat <<'EOF'
 async page => {
   const ts = Date.now();
   const email = "playwright-smoke-" + ts + "@example.com";
-  const campaignName = "Playwright Campaign " + ts;
 
   await page.setViewportSize({ width: 1280, height: 720 });
   page.setDefaultTimeout(20000);
@@ -65,18 +64,20 @@ async page => {
 
   await page.getByRole("link", { name: "Campaigns" }).click();
   await page.getByRole("heading", { name: "Campaigns", level: 2 }).waitFor();
-  await page.getByRole("link", { name: "Create Campaign" }).click();
-  await page.getByRole("heading", { name: "Create Campaign", level: 2 }).waitFor();
+  await page.waitForFunction(() => {
+    const table = document.querySelector("table");
+    const text = document.body.innerText || "";
+    return table || text.includes("No campaigns yet.") || text.includes("Campaigns unavailable.") || text.includes("Campaign service unavailable.");
+  });
 
-  const campaignInput = page.locator("form[action=\"/campaigns/create\"] input[name=\"name\"]");
-  await campaignInput.waitFor();
-  await campaignInput.fill(campaignName);
-  await page.getByRole("button", { name: "Create Campaign" }).click();
-  await page.waitForURL(/\/campaigns\/[a-z0-9]+$/);
-  await page.getByRole("heading", { name: campaignName, level: 2 }).waitFor();
+  if (await page.getByRole("link", { name: "Create Campaign" }).count() !== 0) {
+    throw new Error("Admin unexpectedly shows Create Campaign link.");
+  }
+  if (await page.locator("form[action=\"/campaigns/create\"]").count() !== 0) {
+    throw new Error("Admin unexpectedly renders campaign create form.");
+  }
 
   console.log("Created user: " + email);
-  console.log("Created campaign: " + campaignName);
 }
 EOF
 )"

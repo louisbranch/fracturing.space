@@ -8,6 +8,14 @@ import (
 	"database/sql"
 )
 
+type AccountProfile struct {
+	UserID    string `json:"user_id"`
+	Name      string `json:"name"`
+	Locale    string `json:"locale"`
+	CreatedAt int64  `json:"created_at"`
+	UpdatedAt int64  `json:"updated_at"`
+}
+
 type MagicLink struct {
 	Token     string         `json:"token"`
 	UserID    string         `json:"user_id"`
@@ -100,8 +108,6 @@ type PasskeySession struct {
 
 type User struct {
 	ID        string `json:"id"`
-	Email     string `json:"email"`
-	Locale    string `json:"locale"`
 	CreatedAt int64  `json:"created_at"`
 	UpdatedAt int64  `json:"updated_at"`
 }
@@ -110,6 +116,7 @@ type UserEmail struct {
 	ID         string        `json:"id"`
 	UserID     string        `json:"user_id"`
 	Email      string        `json:"email"`
+	IsPrimary  int64         `json:"is_primary"`
 	VerifiedAt sql.NullInt64 `json:"verified_at"`
 	CreatedAt  int64         `json:"created_at"`
 	UpdatedAt  int64         `json:"updated_at"`

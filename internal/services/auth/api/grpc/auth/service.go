@@ -181,7 +181,6 @@ func userToProto(u user.User) *authv1.User {
 	return &authv1.User{
 		Id:        u.ID,
 		Email:     u.Email,
-		Locale:    u.Locale,
 		CreatedAt: timestamppb.New(u.CreatedAt),
 		UpdatedAt: timestamppb.New(u.UpdatedAt),
 	}
