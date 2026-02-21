@@ -9,7 +9,7 @@ PROTO_FILES := \
 	$(wildcard $(PROTO_DIR)/game/v1/*.proto) \
 	$(wildcard $(PROTO_DIR)/systems/daggerheart/v1/*.proto)
 
-.PHONY: all proto clean run up down cover cover-treemap test integration scenario scenario-missing-doc-check templ-generate event-catalog-check fmt fmt-check catalog-importer bootstrap bootstrap-prod setup-hooks
+.PHONY: all proto clean up down cover cover-treemap test integration scenario scenario-missing-doc-check templ-generate event-catalog-check fmt fmt-check catalog-importer bootstrap bootstrap-prod setup-hooks
 
 all: proto
 
@@ -52,55 +52,11 @@ fmt-check:
 clean:
 	rm -rf $(GEN_GO_DIR)
 
-up: ## Start watcher-based local services (devcontainer-friendly)
-	@bash .devcontainer/scripts/post-start.sh
+up: ## Start devcontainer and watcher-based local services
+	@bash .devcontainer/scripts/start-devcontainer.sh
 
-down: ## Stop watcher-based local services
-	@bash .devcontainer/scripts/stop-watch-services.sh
-
-run:
-	@bash -euo pipefail -c '\
-	  interrupted=0; \
-	  pids=(); \
-	  cleanup() { \
-	    trap - EXIT INT TERM; \
-	    for pid in "$$@"; do \
-	      if kill -0 "$$pid" 2>/dev/null; then \
-	        kill "$$pid" 2>/dev/null || true; \
-	      fi; \
-	    done; \
-	    wait || true; \
-	  }; \
-	  env_file=".env"; \
-	  if [ ! -f "$$env_file" ]; then \
-	    cp "$${ENV_EXAMPLE:-.env.local.example}" "$$env_file"; \
-	  fi; \
-	  mkdir -p .tmp/go-build .tmp/go-cache; \
-	  set -a; \
-	  . "$$env_file"; \
-	    set +a; \
-	    if [ -z "$${FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY:-}" ] || [ -z "$${FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY:-}" ]; then \
-	    eval "$$(go run ./cmd/join-grant-key)"; \
-	    export FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY; \
-	    export FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY; \
-	  fi; \
-	  export FRACTURING_SPACE_JOIN_GRANT_ISSUER="$${FRACTURING_SPACE_JOIN_GRANT_ISSUER:-fracturing.space/auth}"; \
-	  export FRACTURING_SPACE_JOIN_GRANT_AUDIENCE="$${FRACTURING_SPACE_JOIN_GRANT_AUDIENCE:-fracturing.space/game}"; \
-	  export FRACTURING_SPACE_JOIN_GRANT_TTL="$${FRACTURING_SPACE_JOIN_GRANT_TTL:-5m}"; \
-	  FRACTURING_SPACE_GAME_EVENT_HMAC_KEY=dev-secret go run ./cmd/game 2>&1 & pids+=($$!); \
-	  go run ./cmd/auth 2>&1 & pids+=($$!); \
-	  go run ./cmd/mcp 2>&1 & pids+=($$!); \
-	  go run ./cmd/admin 2>&1 & pids+=($$!); \
-	  go run ./cmd/web 2>&1 & pids+=($$!); \
-	  trap "cleanup $${pids[*]}" EXIT; \
-	  trap "interrupted=1; cleanup $${pids[*]}" INT TERM; \
-	  status=0; \
-	  wait || status=$$?; \
-	  if [ "$$interrupted" -eq 1 ]; then \
-	    exit 0; \
-	  fi; \
-	  exit $$status \
-	'
+down: ## Stop watcher-based local services and devcontainer
+	@bash .devcontainer/scripts/stop-devcontainer.sh
 
 cover:
 	rm -f coverage.raw coverage.out coverage.html coverage-treemap.svg

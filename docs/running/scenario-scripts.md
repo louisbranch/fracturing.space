@@ -13,7 +13,7 @@ Lua scenarios can be executed against the game gRPC API for testing, seeding, or
 The game server must be running before running scenarios:
 
 ```bash
-# Terminal 1: Start watcher-managed local services
+# Terminal 1: Start devcontainer + watcher-managed local services
 make up
 
 # Terminal 2: Run a scenario

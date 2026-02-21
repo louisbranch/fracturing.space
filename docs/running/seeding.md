@@ -15,7 +15,7 @@ Seeding is a developer tool that calls the game service APIs; it is not a standa
 The game server must be running before seeding:
 
 ```bash
-# Terminal 1: Start watcher-managed local services
+# Terminal 1: Start devcontainer + watcher-managed local services
 make up
 
 # Terminal 2: Run seeding commands

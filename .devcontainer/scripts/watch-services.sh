@@ -6,10 +6,12 @@ cd "$root_dir"
 
 mkdir -p .tmp/go-build .tmp/go-cache .tmp/go-modcache .tmp/dev .tmp/dev/bin .tmp/dev/air
 export TMPDIR="$root_dir/.tmp/go-build"
+export PATH="/usr/local/go/bin:$PATH"
 export PATH="$(go env GOPATH)/bin:$PATH"
 
 if ! command -v air >/dev/null 2>&1; then
-  CGO_ENABLED=0 go install github.com/air-verse/air@v1.62.0
+  echo "air is not installed in the devcontainer image; rebuild with make up" >&2
+  exit 1
 fi
 
 env_file=".env"
