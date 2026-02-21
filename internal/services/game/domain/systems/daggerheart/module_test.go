@@ -386,6 +386,16 @@ func TestModuleRegisterCommands_RejectsNoOpMutatingPayloads(t *testing.T) {
 			payload: `{"character_id":"char-1","conditions_before":["hidden"],"conditions_after":["hidden"]}`,
 		},
 		{
+			name:    "condition.change requires conditions_after",
+			typ:     commandTypeConditionChange,
+			payload: `{"character_id":"char-1","conditions_before":["hidden"]}`,
+		},
+		{
+			name:    "condition.change rejects added removed diff mismatch",
+			typ:     commandTypeConditionChange,
+			payload: `{"character_id":"char-1","conditions_before":["hidden"],"conditions_after":["vulnerable"],"added":["restrained"],"removed":["hidden"]}`,
+		},
+		{
 			name:    "countdown.update with no value change is rejected",
 			typ:     commandTypeCountdownUpdate,
 			payload: `{"countdown_id":"cd-1","before":3,"after":3,"delta":0,"looped":false}`,
@@ -414,6 +424,11 @@ func TestModuleRegisterCommands_RejectsNoOpMutatingPayloads(t *testing.T) {
 			name:    "adversary_condition.change requires a change",
 			typ:     commandTypeAdversaryConditionChange,
 			payload: `{"adversary_id":"adv-1","conditions_before":["hidden"],"conditions_after":["hidden"]}`,
+		},
+		{
+			name:    "adversary_condition.change rejects added removed diff mismatch",
+			typ:     commandTypeAdversaryConditionChange,
+			payload: `{"adversary_id":"adv-1","conditions_before":["hidden"],"conditions_after":["vulnerable"],"added":["vulnerable"],"removed":["restrained"]}`,
 		},
 	}
 
@@ -466,6 +481,16 @@ func TestModuleRegisterEvents_RejectsNoOpMutatingPayloads(t *testing.T) {
 			payload: `{"character_id":"char-1","conditions_before":["hidden"],"conditions_after":["hidden"]}`,
 		},
 		{
+			name:    "condition_changed requires conditions_after",
+			typ:     eventTypeConditionChanged,
+			payload: `{"character_id":"char-1","conditions_before":["hidden"]}`,
+		},
+		{
+			name:    "condition_changed rejects added removed diff mismatch",
+			typ:     eventTypeConditionChanged,
+			payload: `{"character_id":"char-1","conditions_before":["hidden"],"conditions_after":["vulnerable"],"added":["restrained"],"removed":["hidden"]}`,
+		},
+		{
 			name:    "countdown_updated requires a change",
 			typ:     eventTypeCountdownUpdated,
 			payload: `{"countdown_id":"cd-1","before":3,"after":3,"delta":0,"looped":false}`,
@@ -495,6 +520,11 @@ func TestModuleRegisterEvents_RejectsNoOpMutatingPayloads(t *testing.T) {
 			typ:     eventTypeAdversaryConditionChanged,
 			payload: `{"adversary_id":"adv-1","conditions_before":["hidden"],"conditions_after":["hidden"]}`,
 		},
+		{
+			name:    "adversary_condition_changed rejects added removed diff mismatch",
+			typ:     eventTypeAdversaryConditionChanged,
+			payload: `{"adversary_id":"adv-1","conditions_before":["hidden"],"conditions_after":["vulnerable"],"added":["vulnerable"],"removed":["restrained"]}`,
+		},
 	}
 
 	for _, tc := range tests {
@@ -516,6 +546,93 @@ func TestModuleRegisterEvents_RejectsNoOpMutatingPayloads(t *testing.T) {
 			}
 			if errors.Is(err, event.ErrTypeUnknown) {
 				t.Fatalf("expected payload validation error, got %v", err)
+			}
+		})
+	}
+}
+
+func TestModuleRegisterCommands_AllowsConditionAddedWithoutBefore(t *testing.T) {
+	registry := command.NewRegistry()
+	module := NewModule()
+	if err := module.RegisterCommands(registry); err != nil {
+		t.Fatalf("register commands: %v", err)
+	}
+
+	tests := []struct {
+		name    string
+		typ     command.Type
+		payload string
+	}{
+		{
+			name:    "character condition change add from empty",
+			typ:     commandTypeConditionChange,
+			payload: `{"character_id":"char-1","conditions_after":["hidden"],"added":["hidden"]}`,
+		},
+		{
+			name:    "adversary condition change add from empty",
+			typ:     commandTypeAdversaryConditionChange,
+			payload: `{"adversary_id":"adv-1","conditions_after":["hidden"],"added":["hidden"]}`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := registry.ValidateForDecision(command.Command{
+				CampaignID:    "camp-1",
+				Type:          tc.typ,
+				ActorType:     command.ActorTypeSystem,
+				ActorID:       "system-1",
+				SystemID:      SystemID,
+				SystemVersion: SystemVersion,
+				PayloadJSON:   []byte(tc.payload),
+			})
+			if err != nil {
+				t.Fatalf("expected payload to be valid, got %v", err)
+			}
+		})
+	}
+}
+
+func TestModuleRegisterEvents_AllowsConditionAddedWithoutBefore(t *testing.T) {
+	registry := event.NewRegistry()
+	module := NewModule()
+	if err := module.RegisterEvents(registry); err != nil {
+		t.Fatalf("register events: %v", err)
+	}
+
+	tests := []struct {
+		name    string
+		typ     event.Type
+		payload string
+	}{
+		{
+			name:    "condition changed add from empty",
+			typ:     eventTypeConditionChanged,
+			payload: `{"character_id":"char-1","conditions_after":["hidden"],"added":["hidden"]}`,
+		},
+		{
+			name:    "adversary condition changed add from empty",
+			typ:     eventTypeAdversaryConditionChanged,
+			payload: `{"adversary_id":"adv-1","conditions_after":["hidden"],"added":["hidden"]}`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := registry.ValidateForAppend(event.Event{
+				CampaignID:    "camp-1",
+				Type:          tc.typ,
+				Timestamp:     time.Unix(0, 0).UTC(),
+				ActorType:     event.ActorTypeSystem,
+				ActorID:       "system-1",
+				EntityType:    "character",
+				EntityID:      "entity-1",
+				SystemID:      SystemID,
+				SystemVersion: SystemVersion,
+				PayloadJSON:   []byte(tc.payload),
+			})
+			if err != nil {
+				t.Fatalf("expected payload to be valid, got %v", err)
 			}
 		})
 	}

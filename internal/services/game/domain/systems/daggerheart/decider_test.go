@@ -350,6 +350,37 @@ func TestDecideConditionChange_UnchangedStateRejected(t *testing.T) {
 	}
 }
 
+func TestDecideConditionChange_RemoveMissingConditionRejected(t *testing.T) {
+	cmd := command.Command{
+		CampaignID:    "camp-1",
+		Type:          command.Type("sys.daggerheart.condition.change"),
+		ActorType:     command.ActorTypeSystem,
+		SystemID:      SystemID,
+		SystemVersion: SystemVersion,
+		EntityType:    "character",
+		EntityID:      "char-1",
+		PayloadJSON:   []byte(`{"character_id":"char-1","conditions_before":["hidden"],"conditions_after":["hidden","vulnerable"],"added":["vulnerable"],"removed":["restrained"]}`),
+	}
+
+	state := SnapshotState{
+		CampaignID: "camp-1",
+		CharacterStates: map[string]CharacterState{
+			"char-1": {CampaignID: "camp-1", CharacterID: "char-1", Conditions: []string{"hidden"}},
+		},
+	}
+
+	decision := Decider{}.Decide(state, cmd, nil)
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != rejectionCodeConditionChangeRemoveMissing {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeConditionChangeRemoveMissing)
+	}
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+}
+
 func TestDecideHopeSpend_EmitsCharacterStatePatched(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
@@ -839,7 +870,7 @@ func TestDecideCountdownUpdate_UnchangedStateRejected(t *testing.T) {
 		SystemVersion: SystemVersion,
 		EntityType:    "countdown",
 		EntityID:      "cd-1",
-		PayloadJSON:   []byte(`{"countdown_id":"cd-1","before":2,"after":3,"delta":1,"looped":false}`),
+		PayloadJSON:   []byte(`{"countdown_id":"cd-1","before":3,"after":3,"delta":1,"looped":false}`),
 	}
 
 	state := SnapshotState{
@@ -855,6 +886,37 @@ func TestDecideCountdownUpdate_UnchangedStateRejected(t *testing.T) {
 	}
 	if decision.Rejections[0].Code != rejectionCodeCountdownUpdateNoMutation {
 		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeCountdownUpdateNoMutation)
+	}
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+}
+
+func TestDecideCountdownUpdate_BeforeMismatchRejected(t *testing.T) {
+	cmd := command.Command{
+		CampaignID:    "camp-1",
+		Type:          command.Type("sys.daggerheart.countdown.update"),
+		ActorType:     command.ActorTypeSystem,
+		SystemID:      SystemID,
+		SystemVersion: SystemVersion,
+		EntityType:    "countdown",
+		EntityID:      "cd-1",
+		PayloadJSON:   []byte(`{"countdown_id":"cd-1","before":2,"after":3,"delta":1,"looped":false}`),
+	}
+
+	state := SnapshotState{
+		CampaignID: "camp-1",
+		CountdownStates: map[string]CountdownState{
+			"cd-1": {CountdownID: "cd-1", Current: 1, Max: 4, Direction: "increase", Looping: false},
+		},
+	}
+
+	decision := Decider{}.Decide(state, cmd, nil)
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != rejectionCodeCountdownBeforeMismatch {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeCountdownBeforeMismatch)
 	}
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
@@ -1048,6 +1110,37 @@ func TestDecideAdversaryConditionChange_UnchangedStateRejected(t *testing.T) {
 	}
 	if decision.Rejections[0].Code != rejectionCodeAdversaryConditionNoMutation {
 		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeAdversaryConditionNoMutation)
+	}
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+}
+
+func TestDecideAdversaryConditionChange_RemoveMissingConditionRejected(t *testing.T) {
+	cmd := command.Command{
+		CampaignID:    "camp-1",
+		Type:          command.Type("sys.daggerheart.adversary_condition.change"),
+		ActorType:     command.ActorTypeSystem,
+		SystemID:      SystemID,
+		SystemVersion: SystemVersion,
+		EntityType:    "adversary",
+		EntityID:      "adv-1",
+		PayloadJSON:   []byte(`{"adversary_id":"adv-1","conditions_before":["hidden"],"conditions_after":["hidden","vulnerable"],"added":["vulnerable"],"removed":["restrained"]}`),
+	}
+
+	state := SnapshotState{
+		CampaignID: "camp-1",
+		AdversaryStates: map[string]AdversaryState{
+			"adv-1": {AdversaryID: "adv-1", Conditions: []string{"hidden"}},
+		},
+	}
+
+	decision := Decider{}.Decide(state, cmd, nil)
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != rejectionCodeAdversaryConditionRemoveMissing {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeAdversaryConditionRemoveMissing)
 	}
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))

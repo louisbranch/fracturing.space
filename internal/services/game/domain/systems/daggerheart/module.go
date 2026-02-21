@@ -212,14 +212,12 @@ func validateConditionChangePayload(raw json.RawMessage) error {
 	if strings.TrimSpace(payload.CharacterID) == "" {
 		return errors.New("character_id is required")
 	}
-	if !hasConditionListMutation(payload.ConditionsBefore, payload.ConditionsAfter) &&
-		len(payload.Added) == 0 && len(payload.Removed) == 0 {
-		return errors.New("conditions must change")
-	}
-	if _, err := NormalizeConditions(payload.ConditionsAfter); err != nil {
-		return err
-	}
-	return nil
+	return validateConditionSetPayload(
+		payload.ConditionsBefore,
+		payload.ConditionsAfter,
+		payload.Added,
+		payload.Removed,
+	)
 }
 
 func validateConditionChangedPayload(raw json.RawMessage) error {
@@ -416,20 +414,89 @@ func validateAdversaryConditionChangePayload(raw json.RawMessage) error {
 	if strings.TrimSpace(payload.AdversaryID) == "" {
 		return errors.New("adversary_id is required")
 	}
-	if !hasConditionListMutation(payload.ConditionsBefore, payload.ConditionsAfter) &&
-		len(payload.Added) == 0 && len(payload.Removed) == 0 {
-		return errors.New("conditions must change")
-	}
-	if _, err := NormalizeConditions(payload.ConditionsAfter); err != nil {
-		return err
-	}
-	return nil
+	return validateConditionSetPayload(
+		payload.ConditionsBefore,
+		payload.ConditionsAfter,
+		payload.Added,
+		payload.Removed,
+	)
 }
 
 func validateAdversaryConditionChangedPayload(raw json.RawMessage) error {
 	return validateAdversaryConditionChangePayload(raw)
 }
 
+func validateConditionSetPayload(before, after, added, removed []string) error {
+	normalizedAfter, _, err := normalizeConditionListField(after, "conditions_after", true)
+	if err != nil {
+		return err
+	}
+
+	normalizedBefore, hasBefore, err := normalizeConditionListField(before, "conditions_before", false)
+	if err != nil {
+		return err
+	}
+	normalizedAdded, hasAdded, err := normalizeConditionListField(added, "added", false)
+	if err != nil {
+		return err
+	}
+	normalizedRemoved, hasRemoved, err := normalizeConditionListField(removed, "removed", false)
+	if err != nil {
+		return err
+	}
+
+	expectedAdded := normalizedAfter
+	expectedRemoved := []string{}
+	if hasBefore {
+		expectedAdded, expectedRemoved = DiffConditions(normalizedBefore, normalizedAfter)
+	}
+
+	if !hasBefore && hasRemoved && len(normalizedRemoved) > 0 {
+		return errors.New("conditions_before is required when removed are provided")
+	}
+
+	if hasAdded {
+		if !ConditionsEqual(normalizedAdded, expectedAdded) {
+			if hasBefore {
+				return errors.New("added must match conditions_before and conditions_after diff")
+			}
+			return errors.New("added must match conditions_after when conditions_before is omitted")
+		}
+	}
+
+	if hasRemoved && !ConditionsEqual(normalizedRemoved, expectedRemoved) {
+		if hasBefore {
+			return errors.New("removed must match conditions_before and conditions_after diff")
+		}
+		return errors.New("removed must be empty when conditions_before is omitted")
+	}
+
+	if hasBefore {
+		if ConditionsEqual(normalizedBefore, normalizedAfter) &&
+			len(normalizedAdded) == 0 && len(normalizedRemoved) == 0 {
+			return errors.New("conditions must change")
+		}
+	} else if len(normalizedAfter) == 0 && len(normalizedAdded) == 0 && len(normalizedRemoved) == 0 {
+		return errors.New("conditions must change")
+	}
+
+	return nil
+}
+
+func normalizeConditionListField(values []string, field string, required bool) ([]string, bool, error) {
+	if values == nil {
+		if required {
+			return nil, false, fmt.Errorf("%s is required", field)
+		}
+		return nil, false, nil
+	}
+
+	normalized, err := NormalizeConditions(values)
+	if err != nil {
+		return nil, true, fmt.Errorf("%s: %w", field, err)
+	}
+	return normalized, true, nil
+}
 func validateAdversaryCreatePayload(raw json.RawMessage) error {
 	var payload AdversaryCreatePayload
 	if err := json.Unmarshal(raw, &payload); err != nil {
