@@ -24,6 +24,8 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
+	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/manifest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/integrity"
 	storagesqlite "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
@@ -306,9 +308,38 @@ func NewWithAddr(addr string) (*Server, error) {
 		stores:                                   bundle,
 		authConn:                                 authConn,
 		projectionApplyOutboxWorkerEnabled:       enableApplyWorker,
-		projectionApplyOutboxApply:               applier.Apply,
+		projectionApplyOutboxApply:               buildProjectionApplyOutboxApply(bundle.projections),
 		projectionApplyOutboxShadowWorkerEnabled: enableShadowWorker,
 	}, nil
+}
+
+func buildProjectionApplyOutboxApply(projectionStore *storagesqlite.Store) func(context.Context, event.Event) error {
+	if projectionStore == nil {
+		return nil
+	}
+	return func(ctx context.Context, evt event.Event) error {
+		_, err := projectionStore.ApplyProjectionEventExactlyOnce(
+			ctx,
+			evt,
+			func(applyCtx context.Context, applyEvt event.Event, txStore *storagesqlite.Store) error {
+				txApplier := projection.Applier{
+					Campaign:         txStore,
+					Character:        txStore,
+					CampaignFork:     txStore,
+					Daggerheart:      txStore,
+					ClaimIndex:       txStore,
+					Invite:           txStore,
+					Participant:      txStore,
+					Session:          txStore,
+					SessionGate:      txStore,
+					SessionSpotlight: txStore,
+					Adapters:         systemmanifest.AdapterRegistry(systemmanifest.ProjectionStores{Daggerheart: txStore}),
+				}
+				return txApplier.Apply(applyCtx, applyEvt)
+			},
+		)
+		return err
+	}
 }
 
 func buildSystemRegistry() (*systems.Registry, error) {

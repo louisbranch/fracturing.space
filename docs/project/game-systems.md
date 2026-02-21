@@ -38,6 +38,8 @@ Invariants:
 - Core must not emit system-owned events.
 - Systems must not emit core-owned events.
 - System-owned envelopes must include both `system_id` and `system_version`.
+- System-owned type names must match the system namespace:
+  `sys.<system_id>.*`.
 - Core treats system payloads as opaque and routes them to system handlers.
 
 ## Runtime extension surfaces
@@ -226,7 +228,9 @@ Required process:
 
 1. Add or update a timeline row in the system contract doc before code changes.
 2. Ensure handler code uses shared execute-and-apply orchestration.
-3. Add/update guard tests that prevent bypass patterns.
+3. Ensure system-owned side effects are emitted via explicit `sys.*` commands,
+   not embedded as system-owned effects in core command payloads.
+4. Add/update guard tests that prevent bypass patterns.
 
 For Daggerheart, use:
 [Daggerheart Event Timeline Contract](daggerheart-event-timeline-contract.md).

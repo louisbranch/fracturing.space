@@ -3,6 +3,7 @@ package daggerheart
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
@@ -226,8 +227,86 @@ func (s *fakeEventStore) GetLatestEventSeq(_ context.Context, campaignID string)
 	return seq - 1, nil
 }
 
-func (s *fakeEventStore) ListEventsPage(_ context.Context, _ storage.ListEventsPageRequest) (storage.ListEventsPageResult, error) {
-	return storage.ListEventsPageResult{}, nil
+func (s *fakeEventStore) ListEventsPage(_ context.Context, req storage.ListEventsPageRequest) (storage.ListEventsPageResult, error) {
+	pageSize := req.PageSize
+	if pageSize <= 0 {
+		pageSize = 50
+	}
+
+	filtered := make([]event.Event, 0)
+	for _, evt := range s.events[req.CampaignID] {
+		if evt.Seq <= req.AfterSeq {
+			continue
+		}
+		if !fakeEventMatchesPageFilter(evt, req.FilterClause, req.FilterParams) {
+			continue
+		}
+		filtered = append(filtered, evt)
+	}
+
+	if req.Descending {
+		for i, j := 0, len(filtered)-1; i < j; i, j = i+1, j-1 {
+			filtered[i], filtered[j] = filtered[j], filtered[i]
+		}
+	}
+
+	totalCount := len(filtered)
+	hasNextPage := len(filtered) > pageSize
+	if hasNextPage {
+		filtered = filtered[:pageSize]
+	}
+
+	return storage.ListEventsPageResult{
+		Events:      filtered,
+		HasNextPage: hasNextPage,
+		TotalCount:  totalCount,
+	}, nil
+}
+
+func fakeEventMatchesPageFilter(evt event.Event, clause string, params []any) bool {
+	if strings.TrimSpace(clause) == "" {
+		return true
+	}
+
+	paramIndex := 0
+	nextString := func() (string, bool) {
+		if paramIndex >= len(params) {
+			return "", false
+		}
+		value, ok := params[paramIndex].(string)
+		if !ok {
+			return "", false
+		}
+		paramIndex++
+		return value, true
+	}
+
+	if strings.Contains(clause, "session_id = ?") {
+		value, ok := nextString()
+		if !ok || evt.SessionID != value {
+			return false
+		}
+	}
+	if strings.Contains(clause, "request_id = ?") {
+		value, ok := nextString()
+		if !ok || evt.RequestID != value {
+			return false
+		}
+	}
+	if strings.Contains(clause, "event_type = ?") {
+		value, ok := nextString()
+		if !ok || string(evt.Type) != value {
+			return false
+		}
+	}
+	if strings.Contains(clause, "entity_id = ?") {
+		value, ok := nextString()
+		if !ok || evt.EntityID != value {
+			return false
+		}
+	}
+
+	return true
 }
 
 type fakeDomainEngine struct {
@@ -311,6 +390,22 @@ func (s *fakeSessionGateStore) GetOpenSessionGate(_ context.Context, _, _ string
 	return storage.SessionGate{}, storage.ErrNotFound
 }
 
+type fakeOpenSessionGateStore struct {
+	gate storage.SessionGate
+}
+
+func (s *fakeOpenSessionGateStore) PutSessionGate(_ context.Context, _ storage.SessionGate) error {
+	return nil
+}
+
+func (s *fakeOpenSessionGateStore) GetSessionGate(_ context.Context, _, _, _ string) (storage.SessionGate, error) {
+	return s.gate, nil
+}
+
+func (s *fakeOpenSessionGateStore) GetOpenSessionGate(_ context.Context, _, _ string) (storage.SessionGate, error) {
+	return s.gate, nil
+}
+
 type fakeSessionSpotlightStore struct{}
 
 func (s *fakeSessionSpotlightStore) PutSessionSpotlight(_ context.Context, _ storage.SessionSpotlight) error {
@@ -322,6 +417,30 @@ func (s *fakeSessionSpotlightStore) GetSessionSpotlight(_ context.Context, _, _ 
 }
 
 func (s *fakeSessionSpotlightStore) ClearSessionSpotlight(_ context.Context, _, _ string) error {
+	return nil
+}
+
+type fakeSessionSpotlightStateStore struct {
+	spotlight storage.SessionSpotlight
+	exists    bool
+}
+
+func (s *fakeSessionSpotlightStateStore) PutSessionSpotlight(_ context.Context, spotlight storage.SessionSpotlight) error {
+	s.spotlight = spotlight
+	s.exists = true
+	return nil
+}
+
+func (s *fakeSessionSpotlightStateStore) GetSessionSpotlight(_ context.Context, _, _ string) (storage.SessionSpotlight, error) {
+	if !s.exists {
+		return storage.SessionSpotlight{}, storage.ErrNotFound
+	}
+	return s.spotlight, nil
+}
+
+func (s *fakeSessionSpotlightStateStore) ClearSessionSpotlight(_ context.Context, _, _ string) error {
+	s.exists = false
+	s.spotlight = storage.SessionSpotlight{}
 	return nil
 }
 
@@ -5984,6 +6103,586 @@ func TestApplyRollOutcome_RequiresDomainEngine(t *testing.T) {
 	assertStatusCode(t, err, codes.Internal)
 }
 
+func TestApplyRollOutcome_IdempotentWhenAlreadyAppliedEvenWithOpenGate(t *testing.T) {
+	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+
+	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
+	dhStore.snapshots["camp-1"] = storage.DaggerheartSnapshot{
+		CampaignID: "camp-1",
+		GMFear:     3,
+	}
+
+	svc.stores.SessionGate = &fakeOpenSessionGateStore{
+		gate: storage.SessionGate{
+			CampaignID: "camp-1",
+			SessionID:  "sess-1",
+			GateID:     "gate-open",
+			GateType:   "gm_consequence",
+			Reason:     "gm_consequence",
+			Status:     session.GateStatusOpen,
+			CreatedAt:  now,
+		},
+	}
+	svc.stores.SessionSpotlight = &fakeSessionSpotlightStateStore{
+		exists: true,
+		spotlight: storage.SessionSpotlight{
+			CampaignID:    "camp-1",
+			SessionID:     "sess-1",
+			SpotlightType: session.SpotlightTypeGM,
+		},
+	}
+
+	rollPayload := action.RollResolvePayload{
+		RequestID: "req-roll-duplicate",
+		RollSeq:   1,
+		Results:   map[string]any{"d20": 1},
+		Outcome:   pb.Outcome_FAILURE_WITH_FEAR.String(),
+		SystemData: map[string]any{
+			"character_id": "char-1",
+			"roll_kind":    pb.RollKind_ROLL_KIND_ACTION.String(),
+			"hope_fear":    true,
+			"gm_move":      true,
+		},
+	}
+	rollJSON, err := json.Marshal(rollPayload)
+	if err != nil {
+		t.Fatalf("encode roll payload: %v", err)
+	}
+	rollEvent, err := eventStore.AppendEvent(context.Background(), event.Event{
+		CampaignID:  "camp-1",
+		Timestamp:   now,
+		Type:        event.Type("action.roll_resolved"),
+		SessionID:   "sess-1",
+		RequestID:   "req-roll-duplicate",
+		ActorType:   event.ActorTypeSystem,
+		EntityType:  "roll",
+		EntityID:    "req-roll-duplicate",
+		PayloadJSON: rollJSON,
+	})
+	if err != nil {
+		t.Fatalf("append roll event: %v", err)
+	}
+
+	_, err = eventStore.AppendEvent(context.Background(), event.Event{
+		CampaignID:  "camp-1",
+		Timestamp:   now.Add(time.Second),
+		Type:        event.Type("action.outcome_applied"),
+		SessionID:   "sess-1",
+		RequestID:   "req-roll-duplicate",
+		ActorType:   event.ActorTypeSystem,
+		EntityType:  "outcome",
+		EntityID:    "req-roll-duplicate",
+		PayloadJSON: []byte(`{"request_id":"req-roll-duplicate","roll_seq":1}`),
+	})
+	if err != nil {
+		t.Fatalf("append outcome event: %v", err)
+	}
+
+	domain := svc.stores.Domain.(*fakeDomainEngine)
+	ctx := grpcmeta.WithRequestID(withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1"), "req-roll-duplicate")
+	resp, err := svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
+		SessionId: "sess-1",
+		RollSeq:   rollEvent.Seq,
+	})
+	if err != nil {
+		t.Fatalf("ApplyRollOutcome returned error: %v", err)
+	}
+	if !resp.RequiresComplication {
+		t.Fatal("expected requires complication to be true")
+	}
+	if resp.Updated == nil || resp.Updated.GmFear == nil {
+		t.Fatal("expected gm fear in idempotent response")
+	}
+	if got, want := int(resp.Updated.GetGmFear()), 3; got != want {
+		t.Fatalf("gm fear = %d, want %d", got, want)
+	}
+	if domain.calls != 0 {
+		t.Fatalf("expected no new domain commands for duplicate outcome, got %d", domain.calls)
+	}
+}
+
+func TestApplyRollOutcome_AlreadyAppliedStillEnsuresComplicationGate(t *testing.T) {
+	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+
+	dhStore.snapshots["camp-1"] = storage.DaggerheartSnapshot{
+		CampaignID: "camp-1",
+		GMFear:     2,
+	}
+
+	rollPayload := action.RollResolvePayload{
+		RequestID: "req-roll-gate-retry",
+		RollSeq:   1,
+		Results:   map[string]any{"d20": 1},
+		Outcome:   pb.Outcome_FAILURE_WITH_FEAR.String(),
+		SystemData: map[string]any{
+			"character_id": "char-1",
+			"roll_kind":    pb.RollKind_ROLL_KIND_ACTION.String(),
+			"hope_fear":    true,
+			"gm_move":      true,
+		},
+	}
+	rollJSON, err := json.Marshal(rollPayload)
+	if err != nil {
+		t.Fatalf("encode roll payload: %v", err)
+	}
+	rollEvent, err := eventStore.AppendEvent(context.Background(), event.Event{
+		CampaignID:  "camp-1",
+		Timestamp:   now,
+		Type:        event.Type("action.roll_resolved"),
+		SessionID:   "sess-1",
+		RequestID:   "req-roll-gate-retry",
+		ActorType:   event.ActorTypeSystem,
+		EntityType:  "roll",
+		EntityID:    "req-roll-gate-retry",
+		PayloadJSON: rollJSON,
+	})
+	if err != nil {
+		t.Fatalf("append roll event: %v", err)
+	}
+
+	_, err = eventStore.AppendEvent(context.Background(), event.Event{
+		CampaignID:  "camp-1",
+		Timestamp:   now.Add(time.Second),
+		Type:        event.Type("action.outcome_applied"),
+		SessionID:   "sess-1",
+		RequestID:   "req-roll-gate-retry",
+		ActorType:   event.ActorTypeSystem,
+		EntityType:  "outcome",
+		EntityID:    "req-roll-gate-retry",
+		PayloadJSON: []byte(`{"request_id":"req-roll-gate-retry","roll_seq":1}`),
+	})
+	if err != nil {
+		t.Fatalf("append outcome event: %v", err)
+	}
+
+	gatePayload := session.GateOpenedPayload{
+		GateID:   "gate-1",
+		GateType: "gm_consequence",
+		Reason:   "gm_consequence",
+		Metadata: map[string]any{"roll_seq": uint64(rollEvent.Seq), "request_id": "req-roll-gate-retry"},
+	}
+	gateJSON, err := json.Marshal(gatePayload)
+	if err != nil {
+		t.Fatalf("encode gate payload: %v", err)
+	}
+
+	spotlightPayload := session.SpotlightSetPayload{SpotlightType: string(session.SpotlightTypeGM)}
+	spotlightJSON, err := json.Marshal(spotlightPayload)
+	if err != nil {
+		t.Fatalf("encode spotlight payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("session.gate_open"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "camp-1",
+				Type:        event.Type("session.gate_opened"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				SessionID:   "sess-1",
+				RequestID:   "req-roll-gate-retry",
+				EntityType:  "session_gate",
+				EntityID:    "gate-1",
+				PayloadJSON: gateJSON,
+			}),
+		},
+		command.Type("session.spotlight_set"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "camp-1",
+				Type:        event.Type("session.spotlight_set"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				SessionID:   "sess-1",
+				RequestID:   "req-roll-gate-retry",
+				EntityType:  "session_spotlight",
+				EntityID:    "sess-1",
+				PayloadJSON: spotlightJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = domain
+
+	ctx := grpcmeta.WithRequestID(withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1"), "req-roll-gate-retry")
+	resp, err := svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
+		SessionId: "sess-1",
+		RollSeq:   rollEvent.Seq,
+	})
+	if err != nil {
+		t.Fatalf("ApplyRollOutcome returned error: %v", err)
+	}
+	if !resp.RequiresComplication {
+		t.Fatal("expected requires complication to be true")
+	}
+	if domain.calls != 2 {
+		t.Fatalf("expected domain to be called twice for gate recovery, got %d", domain.calls)
+	}
+	var foundGate bool
+	var foundSpotlight bool
+	for _, cmd := range domain.commands {
+		switch cmd.Type {
+		case command.Type("session.gate_open"):
+			foundGate = true
+		case command.Type("session.spotlight_set"):
+			foundSpotlight = true
+		}
+	}
+	if !foundGate {
+		t.Fatal("expected session gate open command")
+	}
+	if !foundSpotlight {
+		t.Fatal("expected session spotlight set command")
+	}
+}
+
+func TestApplyRollOutcome_PartialRetrySkipsRepeatedGMFearSet(t *testing.T) {
+	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+
+	dhStore.snapshots["camp-1"] = storage.DaggerheartSnapshot{
+		CampaignID: "camp-1",
+		GMFear:     1,
+	}
+
+	rollPayload := action.RollResolvePayload{
+		RequestID: "req-roll-partial-retry",
+		RollSeq:   1,
+		Results:   map[string]any{"d20": 1},
+		Outcome:   pb.Outcome_FAILURE_WITH_FEAR.String(),
+		SystemData: map[string]any{
+			"character_id": "char-1",
+			"roll_kind":    pb.RollKind_ROLL_KIND_ACTION.String(),
+			"hope_fear":    true,
+			"gm_move":      true,
+		},
+	}
+	rollJSON, err := json.Marshal(rollPayload)
+	if err != nil {
+		t.Fatalf("encode roll payload: %v", err)
+	}
+	rollEvent, err := eventStore.AppendEvent(context.Background(), event.Event{
+		CampaignID:  "camp-1",
+		Timestamp:   now,
+		Type:        event.Type("action.roll_resolved"),
+		SessionID:   "sess-1",
+		RequestID:   "req-roll-partial-retry",
+		ActorType:   event.ActorTypeSystem,
+		EntityType:  "roll",
+		EntityID:    "req-roll-partial-retry",
+		PayloadJSON: rollJSON,
+	})
+	if err != nil {
+		t.Fatalf("append roll event: %v", err)
+	}
+
+	_, err = eventStore.AppendEvent(context.Background(), event.Event{
+		CampaignID:    "camp-1",
+		Timestamp:     now.Add(time.Second),
+		Type:          event.Type("sys.daggerheart.gm_fear_changed"),
+		SessionID:     "sess-1",
+		RequestID:     "req-roll-partial-retry",
+		ActorType:     event.ActorTypeSystem,
+		EntityType:    "campaign",
+		EntityID:      "camp-1",
+		SystemID:      daggerheart.SystemID,
+		SystemVersion: daggerheart.SystemVersion,
+		PayloadJSON:   []byte(`{"before":0,"after":1}`),
+	})
+	if err != nil {
+		t.Fatalf("append gm fear event: %v", err)
+	}
+
+	gatePayload := session.GateOpenedPayload{
+		GateID:   "gate-1",
+		GateType: "gm_consequence",
+		Reason:   "gm_consequence",
+		Metadata: map[string]any{"roll_seq": uint64(rollEvent.Seq), "request_id": "req-roll-partial-retry"},
+	}
+	gateJSON, err := json.Marshal(gatePayload)
+	if err != nil {
+		t.Fatalf("encode gate payload: %v", err)
+	}
+
+	spotlightPayload := session.SpotlightSetPayload{SpotlightType: string(session.SpotlightTypeGM)}
+	spotlightJSON, err := json.Marshal(spotlightPayload)
+	if err != nil {
+		t.Fatalf("encode spotlight payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.outcome.apply"): {
+			Decision: command.Accept(
+				event.Event{
+					CampaignID:  "camp-1",
+					Type:        event.Type("action.outcome_applied"),
+					Timestamp:   now,
+					ActorType:   event.ActorTypeSystem,
+					SessionID:   "sess-1",
+					RequestID:   "req-roll-partial-retry",
+					EntityType:  "outcome",
+					EntityID:    "req-roll-partial-retry",
+					PayloadJSON: []byte(`{"request_id":"req-roll-partial-retry","roll_seq":1}`),
+				},
+				event.Event{
+					CampaignID:  "camp-1",
+					Type:        event.Type("session.gate_opened"),
+					Timestamp:   now,
+					ActorType:   event.ActorTypeSystem,
+					SessionID:   "sess-1",
+					RequestID:   "req-roll-partial-retry",
+					EntityType:  "session_gate",
+					EntityID:    "gate-1",
+					PayloadJSON: gateJSON,
+				},
+				event.Event{
+					CampaignID:  "camp-1",
+					Type:        event.Type("session.spotlight_set"),
+					Timestamp:   now,
+					ActorType:   event.ActorTypeSystem,
+					SessionID:   "sess-1",
+					RequestID:   "req-roll-partial-retry",
+					EntityType:  "session_spotlight",
+					EntityID:    "sess-1",
+					PayloadJSON: spotlightJSON,
+				},
+			),
+		},
+	}}
+	svc.stores.Domain = domain
+
+	ctx := grpcmeta.WithRequestID(withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1"), "req-roll-partial-retry")
+	resp, err := svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
+		SessionId: "sess-1",
+		RollSeq:   rollEvent.Seq,
+	})
+	if err != nil {
+		t.Fatalf("ApplyRollOutcome returned error: %v", err)
+	}
+	if !resp.RequiresComplication {
+		t.Fatal("expected requires complication to be true")
+	}
+	if domain.calls != 1 {
+		t.Fatalf("expected domain to be called once, got %d", domain.calls)
+	}
+	var payload action.OutcomeApplyPayload
+	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &payload); err != nil {
+		t.Fatalf("decode outcome command payload: %v", err)
+	}
+	for _, effect := range payload.PreEffects {
+		if effect.Type == "sys.daggerheart.gm_fear_changed" {
+			t.Fatal("did not expect gm fear pre_effect on partial retry")
+		}
+	}
+	if snap := dhStore.snapshots["camp-1"]; snap.GMFear != 1 {
+		t.Fatalf("gm fear = %d, want %d", snap.GMFear, 1)
+	}
+}
+
+func TestApplyRollOutcome_PartialRetrySkipsRepeatedCharacterPatch(t *testing.T) {
+	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+
+	rollPayload := action.RollResolvePayload{
+		RequestID: "req-roll-patch-retry",
+		RollSeq:   1,
+		Results:   map[string]any{"d20": 20},
+		Outcome:   pb.Outcome_SUCCESS_WITH_HOPE.String(),
+		SystemData: map[string]any{
+			"character_id": "char-1",
+			"roll_kind":    pb.RollKind_ROLL_KIND_ACTION.String(),
+			"hope_fear":    true,
+		},
+	}
+	rollJSON, err := json.Marshal(rollPayload)
+	if err != nil {
+		t.Fatalf("encode roll payload: %v", err)
+	}
+	rollEvent, err := eventStore.AppendEvent(context.Background(), event.Event{
+		CampaignID:  "camp-1",
+		Timestamp:   now,
+		Type:        event.Type("action.roll_resolved"),
+		SessionID:   "sess-1",
+		RequestID:   "req-roll-patch-retry",
+		ActorType:   event.ActorTypeSystem,
+		EntityType:  "roll",
+		EntityID:    "req-roll-patch-retry",
+		PayloadJSON: rollJSON,
+	})
+	if err != nil {
+		t.Fatalf("append roll event: %v", err)
+	}
+
+	_, err = eventStore.AppendEvent(context.Background(), event.Event{
+		CampaignID:    "camp-1",
+		Timestamp:     now.Add(time.Second),
+		Type:          event.Type("sys.daggerheart.character_state_patched"),
+		SessionID:     "sess-1",
+		RequestID:     "req-roll-patch-retry",
+		ActorType:     event.ActorTypeSystem,
+		EntityType:    "character",
+		EntityID:      "char-1",
+		SystemID:      daggerheart.SystemID,
+		SystemVersion: daggerheart.SystemVersion,
+		PayloadJSON:   []byte(`{"character_id":"char-1","hope_before":2,"hope_after":3,"stress_before":3,"stress_after":3}`),
+	})
+	if err != nil {
+		t.Fatalf("append patch event: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.outcome.apply"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "camp-1",
+				Type:        event.Type("action.outcome_applied"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				SessionID:   "sess-1",
+				RequestID:   "req-roll-patch-retry",
+				EntityType:  "outcome",
+				EntityID:    "req-roll-patch-retry",
+				PayloadJSON: []byte(`{"request_id":"req-roll-patch-retry"}`),
+			}),
+		},
+	}}
+	svc.stores.Domain = domain
+
+	ctx := grpcmeta.WithRequestID(withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1"), "req-roll-patch-retry")
+	resp, err := svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
+		SessionId: "sess-1",
+		RollSeq:   rollEvent.Seq,
+	})
+	if err != nil {
+		t.Fatalf("ApplyRollOutcome returned error: %v", err)
+	}
+	if resp.RollSeq != rollEvent.Seq {
+		t.Fatalf("roll seq = %d, want %d", resp.RollSeq, rollEvent.Seq)
+	}
+	if domain.calls != 1 {
+		t.Fatalf("expected domain to be called once, got %d", domain.calls)
+	}
+	if len(domain.commands) != 1 || domain.commands[0].Type != command.Type("action.outcome.apply") {
+		t.Fatalf("expected only outcome apply command, got %+v", domain.commands)
+	}
+}
+
+func TestApplyRollOutcome_AlreadyAppliedWithOpenGateRepairsSpotlight(t *testing.T) {
+	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+
+	dhStore.snapshots["camp-1"] = storage.DaggerheartSnapshot{
+		CampaignID: "camp-1",
+		GMFear:     2,
+	}
+
+	svc.stores.SessionGate = &fakeOpenSessionGateStore{
+		gate: storage.SessionGate{
+			CampaignID: "camp-1",
+			SessionID:  "sess-1",
+			GateID:     "gate-open",
+			GateType:   "gm_consequence",
+			Reason:     "gm_consequence",
+			Status:     session.GateStatusOpen,
+			CreatedAt:  now,
+		},
+	}
+
+	rollPayload := action.RollResolvePayload{
+		RequestID: "req-roll-open-gate",
+		RollSeq:   1,
+		Results:   map[string]any{"d20": 1},
+		Outcome:   pb.Outcome_FAILURE_WITH_FEAR.String(),
+		SystemData: map[string]any{
+			"character_id": "char-1",
+			"roll_kind":    pb.RollKind_ROLL_KIND_ACTION.String(),
+			"hope_fear":    true,
+			"gm_move":      true,
+		},
+	}
+	rollJSON, err := json.Marshal(rollPayload)
+	if err != nil {
+		t.Fatalf("encode roll payload: %v", err)
+	}
+	rollEvent, err := eventStore.AppendEvent(context.Background(), event.Event{
+		CampaignID:  "camp-1",
+		Timestamp:   now,
+		Type:        event.Type("action.roll_resolved"),
+		SessionID:   "sess-1",
+		RequestID:   "req-roll-open-gate",
+		ActorType:   event.ActorTypeSystem,
+		EntityType:  "roll",
+		EntityID:    "req-roll-open-gate",
+		PayloadJSON: rollJSON,
+	})
+	if err != nil {
+		t.Fatalf("append roll event: %v", err)
+	}
+
+	_, err = eventStore.AppendEvent(context.Background(), event.Event{
+		CampaignID:  "camp-1",
+		Timestamp:   now.Add(time.Second),
+		Type:        event.Type("action.outcome_applied"),
+		SessionID:   "sess-1",
+		RequestID:   "req-roll-open-gate",
+		ActorType:   event.ActorTypeSystem,
+		EntityType:  "outcome",
+		EntityID:    "req-roll-open-gate",
+		PayloadJSON: []byte(`{"request_id":"req-roll-open-gate","roll_seq":1}`),
+	})
+	if err != nil {
+		t.Fatalf("append outcome event: %v", err)
+	}
+
+	spotlightPayload := session.SpotlightSetPayload{SpotlightType: string(session.SpotlightTypeGM)}
+	spotlightJSON, err := json.Marshal(spotlightPayload)
+	if err != nil {
+		t.Fatalf("encode spotlight payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("session.spotlight_set"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "camp-1",
+				Type:        event.Type("session.spotlight_set"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				SessionID:   "sess-1",
+				RequestID:   "req-roll-open-gate",
+				EntityType:  "session_spotlight",
+				EntityID:    "sess-1",
+				PayloadJSON: spotlightJSON,
+			}),
+		},
+	}}
+	svc.stores.Domain = domain
+
+	ctx := grpcmeta.WithRequestID(withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1"), "req-roll-open-gate")
+	resp, err := svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
+		SessionId: "sess-1",
+		RollSeq:   rollEvent.Seq,
+	})
+	if err != nil {
+		t.Fatalf("ApplyRollOutcome returned error: %v", err)
+	}
+	if !resp.RequiresComplication {
+		t.Fatal("expected requires complication to be true")
+	}
+	if domain.calls != 1 {
+		t.Fatalf("expected domain to be called once for spotlight repair, got %d", domain.calls)
+	}
+	if len(domain.commands) != 1 || domain.commands[0].Type != command.Type("session.spotlight_set") {
+		t.Fatalf("expected spotlight set command, got %+v", domain.commands)
+	}
+}
+
 func TestApplyRollOutcome_Success(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
@@ -6172,7 +6871,7 @@ func TestApplyRollOutcome_UsesDomainEngine(t *testing.T) {
 				RequestID:   "req-roll-1",
 				EntityType:  "outcome",
 				EntityID:    "req-roll-1",
-				PayloadJSON: []byte(`{"request_id":"req-roll-1"}`),
+				PayloadJSON: []byte(`{"request_id":"req-roll-1","roll_seq":1}`),
 			}),
 		},
 	}}
@@ -6192,21 +6891,18 @@ func TestApplyRollOutcome_UsesDomainEngine(t *testing.T) {
 	if len(domain.commands) != 2 {
 		t.Fatalf("expected 2 domain commands, got %d", len(domain.commands))
 	}
-	var foundPatch bool
-	var foundOutcome bool
-	for _, cmd := range domain.commands {
-		switch cmd.Type {
-		case command.Type("sys.daggerheart.character_state.patch"):
-			foundPatch = true
-		case command.Type("action.outcome.apply"):
-			foundOutcome = true
-		}
+	if domain.commands[0].Type != command.Type("sys.daggerheart.character_state.patch") {
+		t.Fatalf("first command type = %s, want %s", domain.commands[0].Type, "sys.daggerheart.character_state.patch")
 	}
-	if !foundPatch {
-		t.Fatal("expected character state patch command")
+	if domain.commands[1].Type != command.Type("action.outcome.apply") {
+		t.Fatalf("second command type = %s, want %s", domain.commands[1].Type, "action.outcome.apply")
 	}
-	if !foundOutcome {
-		t.Fatal("expected outcome apply command")
+	var outcomePayload action.OutcomeApplyPayload
+	if err := json.Unmarshal(domain.commands[1].PayloadJSON, &outcomePayload); err != nil {
+		t.Fatalf("decode outcome command payload: %v", err)
+	}
+	if len(outcomePayload.PreEffects) != 0 {
+		t.Fatalf("pre_effects length = %d, want 0", len(outcomePayload.PreEffects))
 	}
 	found := false
 	for _, evt := range eventStore.events["camp-1"] {
@@ -6217,6 +6913,110 @@ func TestApplyRollOutcome_UsesDomainEngine(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("expected outcome applied event")
+	}
+}
+
+func TestApplyRollOutcome_UsesSystemAndCoreCommandBoundary(t *testing.T) {
+	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
+	state := dhStore.states["camp-1:char-1"]
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+
+	rollPayload := action.RollResolvePayload{
+		RequestID: "req-roll-single-boundary",
+		RollSeq:   1,
+		Results:   map[string]any{"d20": 20},
+		Outcome:   pb.Outcome_SUCCESS_WITH_HOPE.String(),
+		SystemData: map[string]any{
+			"character_id": "char-1",
+		},
+	}
+	rollJSON, err := json.Marshal(rollPayload)
+	if err != nil {
+		t.Fatalf("encode roll payload: %v", err)
+	}
+	rollEvent, err := eventStore.AppendEvent(context.Background(), event.Event{
+		CampaignID:  "camp-1",
+		Timestamp:   now,
+		Type:        event.Type("action.roll_resolved"),
+		SessionID:   "sess-1",
+		RequestID:   "req-roll-single-boundary",
+		ActorType:   event.ActorTypeSystem,
+		EntityType:  "roll",
+		EntityID:    "req-roll-single-boundary",
+		PayloadJSON: rollJSON,
+	})
+	if err != nil {
+		t.Fatalf("append roll event: %v", err)
+	}
+
+	hopeBefore := state.Hope
+	hopeAfter := hopeBefore + 1
+	patchPayload := daggerheart.CharacterStatePatchedPayload{
+		CharacterID: "char-1",
+		HopeBefore:  &hopeBefore,
+		HopeAfter:   &hopeAfter,
+	}
+	patchJSON, err := json.Marshal(patchPayload)
+	if err != nil {
+		t.Fatalf("encode patch payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("sys.daggerheart.character_state.patch"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("sys.daggerheart.character_state_patched"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-roll-single-boundary",
+				EntityType:    "character",
+				EntityID:      "char-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   patchJSON,
+			}),
+		},
+		command.Type("action.outcome.apply"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "camp-1",
+				Type:        event.Type("action.outcome_applied"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				SessionID:   "sess-1",
+				RequestID:   "req-roll-single-boundary",
+				EntityType:  "outcome",
+				EntityID:    "req-roll-single-boundary",
+				PayloadJSON: []byte(`{"request_id":"req-roll-single-boundary","roll_seq":1}`),
+			}),
+		},
+	}}
+	svc.stores.Domain = domain
+
+	ctx := grpcmeta.WithRequestID(
+		withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1"),
+		"req-roll-single-boundary",
+	)
+	_, err = svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
+		SessionId: "sess-1",
+		RollSeq:   rollEvent.Seq,
+	})
+	if err != nil {
+		t.Fatalf("ApplyRollOutcome returned error: %v", err)
+	}
+	if domain.calls != 2 {
+		t.Fatalf("expected domain to be called twice, got %d", domain.calls)
+	}
+	if len(domain.commands) != 2 {
+		t.Fatalf("expected 2 domain commands, got %d", len(domain.commands))
+	}
+	if domain.commands[0].Type != command.Type("sys.daggerheart.character_state.patch") {
+		t.Fatalf("first command type = %s, want %s", domain.commands[0].Type, "sys.daggerheart.character_state.patch")
+	}
+	if domain.commands[1].Type != command.Type("action.outcome.apply") {
+		t.Fatalf("second command type = %s, want %s", domain.commands[1].Type, "action.outcome.apply")
 	}
 }
 
@@ -6289,43 +7089,41 @@ func TestApplyRollOutcome_UsesDomainEngineForGmFear(t *testing.T) {
 			}),
 		},
 		command.Type("action.outcome.apply"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:  "camp-1",
-				Type:        event.Type("action.outcome_applied"),
-				Timestamp:   now,
-				ActorType:   event.ActorTypeSystem,
-				SessionID:   "sess-1",
-				RequestID:   "req-roll-1",
-				EntityType:  "outcome",
-				EntityID:    "req-roll-1",
-				PayloadJSON: []byte(`{"request_id":"req-roll-1"}`),
-			}),
-		},
-		command.Type("session.gate_open"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:  "camp-1",
-				Type:        event.Type("session.gate_opened"),
-				Timestamp:   now,
-				ActorType:   event.ActorTypeSystem,
-				SessionID:   "sess-1",
-				RequestID:   "req-roll-1",
-				EntityType:  "session_gate",
-				EntityID:    "gate-1",
-				PayloadJSON: gateJSON,
-			}),
-		},
-		command.Type("session.spotlight_set"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:  "camp-1",
-				Type:        event.Type("session.spotlight_set"),
-				Timestamp:   now,
-				ActorType:   event.ActorTypeSystem,
-				SessionID:   "sess-1",
-				RequestID:   "req-roll-1",
-				EntityType:  "session_spotlight",
-				EntityID:    "sess-1",
-				PayloadJSON: spotlightJSON,
-			}),
+			Decision: command.Accept(
+				event.Event{
+					CampaignID:  "camp-1",
+					Type:        event.Type("action.outcome_applied"),
+					Timestamp:   now,
+					ActorType:   event.ActorTypeSystem,
+					SessionID:   "sess-1",
+					RequestID:   "req-roll-1",
+					EntityType:  "outcome",
+					EntityID:    "req-roll-1",
+					PayloadJSON: []byte(`{"request_id":"req-roll-1","roll_seq":1}`),
+				},
+				event.Event{
+					CampaignID:  "camp-1",
+					Type:        event.Type("session.gate_opened"),
+					Timestamp:   now,
+					ActorType:   event.ActorTypeSystem,
+					SessionID:   "sess-1",
+					RequestID:   "req-roll-1",
+					EntityType:  "session_gate",
+					EntityID:    "gate-1",
+					PayloadJSON: gateJSON,
+				},
+				event.Event{
+					CampaignID:  "camp-1",
+					Type:        event.Type("session.spotlight_set"),
+					Timestamp:   now,
+					ActorType:   event.ActorTypeSystem,
+					SessionID:   "sess-1",
+					RequestID:   "req-roll-1",
+					EntityType:  "session_spotlight",
+					EntityID:    "sess-1",
+					PayloadJSON: spotlightJSON,
+				},
+			),
 		},
 	}}
 	svc.stores.Domain = domain
@@ -6338,54 +7136,48 @@ func TestApplyRollOutcome_UsesDomainEngineForGmFear(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ApplyRollOutcome returned error: %v", err)
 	}
-	if domain.calls != 4 {
-		t.Fatalf("expected domain to be called 4 times, got %d", domain.calls)
+	if domain.calls != 2 {
+		t.Fatalf("expected domain to be called twice, got %d", domain.calls)
 	}
-	if len(domain.commands) != 4 {
-		t.Fatalf("expected 4 domain commands, got %d", len(domain.commands))
+	if len(domain.commands) != 2 {
+		t.Fatalf("expected 2 domain commands, got %d", len(domain.commands))
 	}
-	var foundFear bool
-	var foundOutcome bool
-	var foundGate bool
-	var foundSpotlight bool
-	for _, cmd := range domain.commands {
-		switch cmd.Type {
-		case command.Type("sys.daggerheart.gm_fear.set"):
-			foundFear = true
-			if cmd.SystemID != daggerheart.SystemID {
-				t.Fatalf("gm fear command system id = %s, want %s", cmd.SystemID, daggerheart.SystemID)
-			}
-			if cmd.SystemVersion != daggerheart.SystemVersion {
-				t.Fatalf("gm fear command system version = %s, want %s", cmd.SystemVersion, daggerheart.SystemVersion)
-			}
-		case command.Type("action.outcome.apply"):
-			foundOutcome = true
-		case command.Type("session.gate_open"):
-			foundGate = true
-		case command.Type("session.spotlight_set"):
-			foundSpotlight = true
-		}
+	if domain.commands[0].Type != command.Type("sys.daggerheart.gm_fear.set") {
+		t.Fatalf("first command type = %s, want %s", domain.commands[0].Type, "sys.daggerheart.gm_fear.set")
 	}
-	if !foundFear {
-		t.Fatal("expected gm fear command")
+	if domain.commands[1].Type != command.Type("action.outcome.apply") {
+		t.Fatalf("second command type = %s, want %s", domain.commands[1].Type, "action.outcome.apply")
 	}
-	if !foundOutcome {
-		t.Fatal("expected outcome apply command")
+	var payload action.OutcomeApplyPayload
+	if err := json.Unmarshal(domain.commands[1].PayloadJSON, &payload); err != nil {
+		t.Fatalf("decode outcome command payload: %v", err)
 	}
-	if !foundGate {
-		t.Fatal("expected session gate command")
+	if len(payload.PreEffects) != 0 {
+		t.Fatalf("pre_effects length = %d, want 0", len(payload.PreEffects))
 	}
-	if !foundSpotlight {
-		t.Fatal("expected session spotlight command")
+	if len(payload.PostEffects) != 2 {
+		t.Fatalf("post_effects length = %d, want 2", len(payload.PostEffects))
+	}
+	if got, want := payload.PostEffects[0].Type, "session.gate_opened"; got != want {
+		t.Fatalf("post_effects[0].type = %s, want %s", got, want)
+	}
+	if got, want := payload.PostEffects[1].Type, "session.spotlight_set"; got != want {
+		t.Fatalf("post_effects[1].type = %s, want %s", got, want)
 	}
 	var foundFearEvent bool
 	var foundOutcomeEvent bool
+	var foundGateEvent bool
+	var foundSpotlightEvent bool
 	for _, evt := range eventStore.events["camp-1"] {
 		switch evt.Type {
 		case event.Type("sys.daggerheart.gm_fear_changed"):
 			foundFearEvent = true
 		case event.Type("action.outcome_applied"):
 			foundOutcomeEvent = true
+		case event.Type("session.gate_opened"):
+			foundGateEvent = true
+		case event.Type("session.spotlight_set"):
+			foundSpotlightEvent = true
 		}
 	}
 	if !foundFearEvent {
@@ -6393,6 +7185,12 @@ func TestApplyRollOutcome_UsesDomainEngineForGmFear(t *testing.T) {
 	}
 	if !foundOutcomeEvent {
 		t.Fatal("expected outcome applied event")
+	}
+	if !foundGateEvent {
+		t.Fatal("expected session gate opened event")
+	}
+	if !foundSpotlightEvent {
+		t.Fatal("expected session spotlight set event")
 	}
 }
 
@@ -6463,43 +7261,41 @@ func TestApplyRollOutcome_UsesDomainEngineForGmConsequenceGate(t *testing.T) {
 			}),
 		},
 		command.Type("action.outcome.apply"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:  "camp-1",
-				Type:        event.Type("action.outcome_applied"),
-				Timestamp:   now,
-				ActorType:   event.ActorTypeSystem,
-				SessionID:   "sess-1",
-				RequestID:   "req-roll-1",
-				EntityType:  "outcome",
-				EntityID:    "req-roll-1",
-				PayloadJSON: []byte(`{"request_id":"req-roll-1"}`),
-			}),
-		},
-		command.Type("session.gate_open"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:  "camp-1",
-				Type:        event.Type("session.gate_opened"),
-				Timestamp:   now,
-				ActorType:   event.ActorTypeSystem,
-				SessionID:   "sess-1",
-				RequestID:   "req-roll-1",
-				EntityType:  "session_gate",
-				EntityID:    "gate-1",
-				PayloadJSON: gateJSON,
-			}),
-		},
-		command.Type("session.spotlight_set"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:  "camp-1",
-				Type:        event.Type("session.spotlight_set"),
-				Timestamp:   now,
-				ActorType:   event.ActorTypeSystem,
-				SessionID:   "sess-1",
-				RequestID:   "req-roll-1",
-				EntityType:  "session_spotlight",
-				EntityID:    "sess-1",
-				PayloadJSON: spotlightJSON,
-			}),
+			Decision: command.Accept(
+				event.Event{
+					CampaignID:  "camp-1",
+					Type:        event.Type("action.outcome_applied"),
+					Timestamp:   now,
+					ActorType:   event.ActorTypeSystem,
+					SessionID:   "sess-1",
+					RequestID:   "req-roll-1",
+					EntityType:  "outcome",
+					EntityID:    "req-roll-1",
+					PayloadJSON: []byte(`{"request_id":"req-roll-1","roll_seq":1}`),
+				},
+				event.Event{
+					CampaignID:  "camp-1",
+					Type:        event.Type("session.gate_opened"),
+					Timestamp:   now,
+					ActorType:   event.ActorTypeSystem,
+					SessionID:   "sess-1",
+					RequestID:   "req-roll-1",
+					EntityType:  "session_gate",
+					EntityID:    "gate-1",
+					PayloadJSON: gateJSON,
+				},
+				event.Event{
+					CampaignID:  "camp-1",
+					Type:        event.Type("session.spotlight_set"),
+					Timestamp:   now,
+					ActorType:   event.ActorTypeSystem,
+					SessionID:   "sess-1",
+					RequestID:   "req-roll-1",
+					EntityType:  "session_spotlight",
+					EntityID:    "sess-1",
+					PayloadJSON: spotlightJSON,
+				},
+			),
 		},
 	}}
 	svc.stores.Domain = domain
@@ -6515,24 +7311,33 @@ func TestApplyRollOutcome_UsesDomainEngineForGmConsequenceGate(t *testing.T) {
 	if !resp.RequiresComplication {
 		t.Fatal("expected requires complication to be true")
 	}
-	if domain.calls != 4 {
-		t.Fatalf("expected domain to be called 4 times, got %d", domain.calls)
+	if domain.calls != 2 {
+		t.Fatalf("expected domain to be called twice, got %d", domain.calls)
 	}
-	var foundGate bool
-	var foundSpotlight bool
-	for _, cmd := range domain.commands {
-		switch cmd.Type {
-		case command.Type("session.gate_open"):
-			foundGate = true
-		case command.Type("session.spotlight_set"):
-			foundSpotlight = true
-		}
+	if len(domain.commands) != 2 {
+		t.Fatalf("expected 2 domain commands, got %d", len(domain.commands))
 	}
-	if !foundGate {
-		t.Fatal("expected session gate open command")
+	if domain.commands[0].Type != command.Type("sys.daggerheart.gm_fear.set") {
+		t.Fatalf("first command type = %s, want %s", domain.commands[0].Type, "sys.daggerheart.gm_fear.set")
 	}
-	if !foundSpotlight {
-		t.Fatal("expected session spotlight set command")
+	if domain.commands[1].Type != command.Type("action.outcome.apply") {
+		t.Fatalf("second command type = %s, want %s", domain.commands[1].Type, "action.outcome.apply")
+	}
+	var payload action.OutcomeApplyPayload
+	if err := json.Unmarshal(domain.commands[1].PayloadJSON, &payload); err != nil {
+		t.Fatalf("decode outcome command payload: %v", err)
+	}
+	if len(payload.PreEffects) != 0 {
+		t.Fatalf("pre_effects length = %d, want 0", len(payload.PreEffects))
+	}
+	if len(payload.PostEffects) != 2 {
+		t.Fatalf("post_effects length = %d, want 2", len(payload.PostEffects))
+	}
+	if payload.PostEffects[0].Type != "session.gate_opened" {
+		t.Fatalf("post_effects[0].type = %s, want %s", payload.PostEffects[0].Type, "session.gate_opened")
+	}
+	if payload.PostEffects[1].Type != "session.spotlight_set" {
+		t.Fatalf("post_effects[1].type = %s, want %s", payload.PostEffects[1].Type, "session.spotlight_set")
 	}
 }
 
@@ -6621,7 +7426,7 @@ func TestApplyRollOutcome_UsesDomainEngineForCharacterStatePatch(t *testing.T) {
 				RequestID:   "req-roll-1",
 				EntityType:  "outcome",
 				EntityID:    "req-roll-1",
-				PayloadJSON: []byte(`{"request_id":"req-roll-1"}`),
+				PayloadJSON: []byte(`{"request_id":"req-roll-1","roll_seq":1}`),
 			}),
 		},
 	}}
@@ -6641,40 +7446,18 @@ func TestApplyRollOutcome_UsesDomainEngineForCharacterStatePatch(t *testing.T) {
 	if len(domain.commands) != 2 {
 		t.Fatalf("expected 2 domain commands, got %d", len(domain.commands))
 	}
-	var foundPatch bool
-	var foundOutcome bool
-	for _, cmd := range domain.commands {
-		switch cmd.Type {
-		case command.Type("sys.daggerheart.character_state.patch"):
-			foundPatch = true
-			if cmd.SystemID != daggerheart.SystemID {
-				t.Fatalf("patch command system id = %s, want %s", cmd.SystemID, daggerheart.SystemID)
-			}
-			if cmd.SystemVersion != daggerheart.SystemVersion {
-				t.Fatalf("patch command system version = %s, want %s", cmd.SystemVersion, daggerheart.SystemVersion)
-			}
-			var got daggerheart.CharacterStatePatchPayload
-			if err := json.Unmarshal(cmd.PayloadJSON, &got); err != nil {
-				t.Fatalf("decode patch command payload: %v", err)
-			}
-			if got.CharacterID != "char-1" {
-				t.Fatalf("patch command character id = %s, want %s", got.CharacterID, "char-1")
-			}
-			if got.HopeBefore == nil || *got.HopeBefore != hopeBefore {
-				t.Fatalf("patch command hope_before = %v, want %d", got.HopeBefore, hopeBefore)
-			}
-			if got.HopeAfter == nil || *got.HopeAfter != hopeAfter {
-				t.Fatalf("patch command hope_after = %v, want %d", got.HopeAfter, hopeAfter)
-			}
-		case command.Type("action.outcome.apply"):
-			foundOutcome = true
-		}
+	if domain.commands[0].Type != command.Type("sys.daggerheart.character_state.patch") {
+		t.Fatalf("first command type = %s, want %s", domain.commands[0].Type, "sys.daggerheart.character_state.patch")
 	}
-	if !foundPatch {
-		t.Fatal("expected character state patch command")
+	if domain.commands[1].Type != command.Type("action.outcome.apply") {
+		t.Fatalf("second command type = %s, want %s", domain.commands[1].Type, "action.outcome.apply")
 	}
-	if !foundOutcome {
-		t.Fatal("expected outcome apply command")
+	var got action.OutcomeApplyPayload
+	if err := json.Unmarshal(domain.commands[1].PayloadJSON, &got); err != nil {
+		t.Fatalf("decode outcome command payload: %v", err)
+	}
+	if len(got.PreEffects) != 0 {
+		t.Fatalf("pre_effects length = %d, want 0", len(got.PreEffects))
 	}
 	var foundPatchEvent bool
 	var foundOutcomeEvent bool
@@ -6811,7 +7594,7 @@ func TestApplyRollOutcome_UsesDomainEngineForConditionChange(t *testing.T) {
 				RequestID:   "req-roll-1",
 				EntityType:  "outcome",
 				EntityID:    "req-roll-1",
-				PayloadJSON: []byte(`{"request_id":"req-roll-1"}`),
+				PayloadJSON: []byte(`{"request_id":"req-roll-1","roll_seq":1}`),
 			}),
 		},
 	}}
@@ -6831,47 +7614,37 @@ func TestApplyRollOutcome_UsesDomainEngineForConditionChange(t *testing.T) {
 	if len(domain.commands) != 3 {
 		t.Fatalf("expected 3 domain commands, got %d", len(domain.commands))
 	}
-	var foundCondition bool
-	for _, cmd := range domain.commands {
-		if cmd.Type != command.Type("sys.daggerheart.condition.change") {
-			continue
-		}
-		foundCondition = true
-		if cmd.SystemID != daggerheart.SystemID {
-			t.Fatalf("condition command system id = %s, want %s", cmd.SystemID, daggerheart.SystemID)
-		}
-		if cmd.SystemVersion != daggerheart.SystemVersion {
-			t.Fatalf("condition command system version = %s, want %s", cmd.SystemVersion, daggerheart.SystemVersion)
-		}
-		var got daggerheart.ConditionChangePayload
-		if err := json.Unmarshal(cmd.PayloadJSON, &got); err != nil {
-			t.Fatalf("decode condition command payload: %v", err)
-		}
-		if got.CharacterID != "char-1" {
-			t.Fatalf("condition command character id = %s, want %s", got.CharacterID, "char-1")
-		}
-		if got.RollSeq == nil || *got.RollSeq != rollSeq {
-			t.Fatalf("condition command roll_seq = %v, want %d", got.RollSeq, rollSeq)
-		}
-		if len(got.Removed) != 1 || got.Removed[0] != daggerheart.ConditionVulnerable {
-			t.Fatalf("condition command removed = %v, want %s", got.Removed, daggerheart.ConditionVulnerable)
-		}
-		if len(got.ConditionsAfter) != 0 {
-			t.Fatalf("condition command conditions_after = %v, want empty", got.ConditionsAfter)
-		}
+	if domain.commands[0].Type != command.Type("sys.daggerheart.character_state.patch") {
+		t.Fatalf("first command type = %s, want %s", domain.commands[0].Type, "sys.daggerheart.character_state.patch")
 	}
-	if !foundCondition {
-		t.Fatal("expected condition change command")
+	if domain.commands[1].Type != command.Type("sys.daggerheart.condition.change") {
+		t.Fatalf("second command type = %s, want %s", domain.commands[1].Type, "sys.daggerheart.condition.change")
+	}
+	if domain.commands[2].Type != command.Type("action.outcome.apply") {
+		t.Fatalf("third command type = %s, want %s", domain.commands[2].Type, "action.outcome.apply")
+	}
+	var payload action.OutcomeApplyPayload
+	if err := json.Unmarshal(domain.commands[2].PayloadJSON, &payload); err != nil {
+		t.Fatalf("decode outcome command payload: %v", err)
+	}
+	if len(payload.PreEffects) != 0 {
+		t.Fatalf("pre_effects length = %d, want 0", len(payload.PreEffects))
 	}
 	var foundConditionEvent bool
+	var foundPatchEvent bool
 	for _, evt := range eventStore.events["camp-1"] {
-		if evt.Type == event.Type("sys.daggerheart.condition_changed") {
+		switch evt.Type {
+		case event.Type("sys.daggerheart.condition_changed"):
 			foundConditionEvent = true
-			break
+		case event.Type("sys.daggerheart.character_state_patched"):
+			foundPatchEvent = true
 		}
 	}
 	if !foundConditionEvent {
 		t.Fatal("expected condition changed event")
+	}
+	if !foundPatchEvent {
+		t.Fatal("expected character state patched event")
 	}
 }
 

@@ -425,6 +425,56 @@ func TestAppendEvent_DirectAppendAllowedWhenCompatibilityModeEnabled(t *testing.
 	}
 }
 
+func TestAppendEvent_ReturnsRequestedMappedEventWhenDomainEmitsMultipleEvents(t *testing.T) {
+	eventStore := newFakeEventStore()
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	domain := &fakeDomainEngine{
+		store: eventStore,
+		resultsByType: map[command.Type]engine.Result{
+			command.Type("action.outcome.apply"): {
+				Decision: command.Accept(
+					event.Event{
+						CampaignID:    "c1",
+						Type:          event.Type("sys.daggerheart.gm_fear_changed"),
+						Timestamp:     now,
+						ActorType:     event.ActorTypeSystem,
+						EntityType:    "campaign",
+						EntityID:      "c1",
+						SystemID:      "daggerheart",
+						SystemVersion: "1.0.0",
+						PayloadJSON:   []byte(`{"before":0,"after":1}`),
+					},
+					event.Event{
+						CampaignID:  "c1",
+						Type:        event.Type("action.outcome_applied"),
+						Timestamp:   now,
+						ActorType:   event.ActorTypeSystem,
+						EntityType:  "outcome",
+						EntityID:    "req-1",
+						PayloadJSON: []byte(`{"request_id":"req-1","roll_seq":1}`),
+					},
+				),
+			},
+		},
+	}
+	svc := NewEventService(Stores{Event: eventStore, Domain: domain})
+
+	resp, err := svc.AppendEvent(context.Background(), &campaignv1.AppendEventRequest{
+		CampaignId:  "c1",
+		Type:        "action.outcome_applied",
+		ActorType:   "system",
+		EntityType:  "outcome",
+		EntityId:    "req-1",
+		PayloadJson: []byte(`{"request_id":"req-1","roll_seq":1}`),
+	})
+	if err != nil {
+		t.Fatalf("AppendEvent returned error: %v", err)
+	}
+	if got, want := resp.GetEvent().GetType(), "action.outcome_applied"; got != want {
+		t.Fatalf("event type = %s, want %s", got, want)
+	}
+}
+
 func TestListEvents_DESC_Pagination(t *testing.T) {
 	eventStore := newFakeEventStore()
 	now := time.Now().UTC()

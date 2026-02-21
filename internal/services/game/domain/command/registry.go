@@ -22,6 +22,8 @@ var (
 	ErrSystemMetadataRequired = errors.New("system metadata is required for system commands")
 	// ErrSystemMetadataForbidden indicates system metadata on core commands.
 	ErrSystemMetadataForbidden = errors.New("system metadata must be empty for core commands")
+	// ErrSystemTypeNamespaceMismatch indicates system metadata does not match type namespace.
+	ErrSystemTypeNamespaceMismatch = errors.New("system id must match command type namespace")
 	// ErrActorTypeInvalid indicates an unknown actor type.
 	ErrActorTypeInvalid = errors.New("actor type is invalid")
 	// ErrActorIDRequired indicates a missing actor id for participant/gm.
@@ -174,6 +176,17 @@ func (r *Registry) ValidateForDecision(cmd Command) (Command, error) {
 		if cmd.SystemID == "" || cmd.SystemVersion == "" {
 			return Command{}, ErrSystemMetadataRequired
 		}
+		if expectedSystemNamespace, ok := systemNamespaceFromType(string(cmd.Type)); ok {
+			if normalizeSystemNamespace(cmd.SystemID) != expectedSystemNamespace {
+				return Command{}, fmt.Errorf(
+					"%w: type %s expects %s, got %s",
+					ErrSystemTypeNamespaceMismatch,
+					cmd.Type,
+					expectedSystemNamespace,
+					cmd.SystemID,
+				)
+			}
+		}
 	case OwnerCore:
 		if cmd.SystemID != "" || cmd.SystemVersion != "" {
 			return Command{}, ErrSystemMetadataForbidden
@@ -241,4 +254,39 @@ func (r *Registry) ListDefinitions() []Definition {
 		return string(definitions[i].Type) < string(definitions[j].Type)
 	})
 	return definitions
+}
+
+func systemNamespaceFromType(typeName string) (string, bool) {
+	parts := strings.Split(strings.TrimSpace(typeName), ".")
+	if len(parts) < 3 || parts[0] != "sys" {
+		return "", false
+	}
+	return strings.TrimSpace(parts[1]), true
+}
+
+func normalizeSystemNamespace(systemID string) string {
+	trimmed := strings.TrimSpace(systemID)
+	if trimmed == "" {
+		return ""
+	}
+	const legacyPrefix = "GAME_SYSTEM_"
+	if len(trimmed) > len(legacyPrefix) && strings.EqualFold(trimmed[:len(legacyPrefix)], legacyPrefix) {
+		trimmed = trimmed[len(legacyPrefix):]
+	}
+	normalized := strings.ToLower(trimmed)
+	var b strings.Builder
+	b.Grow(len(normalized))
+	lastUnderscore := false
+	for _, r := range normalized {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+			b.WriteRune(r)
+			lastUnderscore = false
+			continue
+		}
+		if !lastUnderscore {
+			b.WriteByte('_')
+			lastUnderscore = true
+		}
+	}
+	return strings.Trim(b.String(), "_")
 }

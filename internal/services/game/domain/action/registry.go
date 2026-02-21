@@ -89,7 +89,16 @@ func validateOutcomeApplyPayload(raw json.RawMessage) error {
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return err
 	}
-	return validateActionRequestAndRoll(payload.RequestID, payload.RollSeq)
+	if err := validateActionRequestAndRoll(payload.RequestID, payload.RollSeq); err != nil {
+		return err
+	}
+	if err := validateOutcomeApplyEffects(payload.PreEffects); err != nil {
+		return err
+	}
+	if err := validateOutcomeApplyEffects(payload.PostEffects); err != nil {
+		return err
+	}
+	return nil
 }
 
 func validateOutcomeRejectPayload(raw json.RawMessage) error {
@@ -111,6 +120,24 @@ func validateActionRequestAndRoll(requestID string, rollSeq uint64) error {
 	}
 	if rollSeq == 0 {
 		return errActionRollSeqRequired
+	}
+	return nil
+}
+
+func validateOutcomeApplyEffects(effects []OutcomeAppliedEffect) error {
+	for _, effect := range effects {
+		if strings.TrimSpace(effect.Type) == "" {
+			return errors.New("effect type is required")
+		}
+		if strings.TrimSpace(effect.EntityType) == "" {
+			return errors.New("effect entity_type is required")
+		}
+		if strings.TrimSpace(effect.EntityID) == "" {
+			return errors.New("effect entity_id is required")
+		}
+		if len(effect.PayloadJSON) > 0 && !json.Valid(effect.PayloadJSON) {
+			return errors.New("effect payload_json must be valid")
+		}
 	}
 	return nil
 }

@@ -214,6 +214,56 @@ func TestProcessProjectionApplyOutboxAppliesAndDeletesOnSuccess(t *testing.T) {
 	}
 }
 
+func TestProcessProjectionApplyOutboxSkipsAuditOnlyEvents(t *testing.T) {
+	store := openTestEventsStoreWithOutbox(t, true)
+
+	stored, err := store.AppendEvent(context.Background(), event.Event{
+		CampaignID:  "camp-outbox-audit-skip",
+		Timestamp:   time.Date(2026, 2, 16, 6, 1, 0, 0, time.UTC),
+		Type:        event.Type("story.note_added"),
+		ActorType:   event.ActorTypeSystem,
+		EntityType:  "note",
+		EntityID:    "note-1",
+		PayloadJSON: []byte(`{"content":"audit note"}`),
+	})
+	if err != nil {
+		t.Fatalf("append event: %v", err)
+	}
+
+	calls := 0
+	processed, err := store.ProcessProjectionApplyOutbox(
+		context.Background(),
+		time.Now().UTC().Add(time.Minute),
+		10,
+		func(_ context.Context, _ event.Event) error {
+			calls++
+			return nil
+		},
+	)
+	if err != nil {
+		t.Fatalf("process projection apply outbox: %v", err)
+	}
+	if processed != 1 {
+		t.Fatalf("expected one processed row, got %d", processed)
+	}
+	if calls != 0 {
+		t.Fatalf("expected zero apply callback invocations for audit-only event, got %d", calls)
+	}
+
+	var count int
+	if err := store.sqlDB.QueryRowContext(
+		context.Background(),
+		`SELECT COUNT(*) FROM projection_apply_outbox WHERE campaign_id = ? AND seq = ?`,
+		stored.CampaignID,
+		stored.Seq,
+	).Scan(&count); err != nil {
+		t.Fatalf("query outbox row count: %v", err)
+	}
+	if count != 0 {
+		t.Fatalf("expected outbox row to be deleted after audit-only skip, got %d", count)
+	}
+}
+
 func TestProcessProjectionApplyOutboxReclaimsStaleProcessingRows(t *testing.T) {
 	store := openTestEventsStoreWithOutbox(t, true)
 

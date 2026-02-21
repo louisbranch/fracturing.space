@@ -156,3 +156,35 @@ func TestDecideActionCommands_RejectsDuplicateOutcomeApply(t *testing.T) {
 		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, "OUTCOME_ALREADY_APPLIED")
 	}
 }
+
+func TestDecideActionCommands_RejectsSystemOwnedOutcomeEffects(t *testing.T) {
+	decision := Decide(State{}, command.Command{
+		CampaignID: "camp-1",
+		Type:       command.Type("action.outcome.apply"),
+		ActorType:  command.ActorTypeSystem,
+		PayloadJSON: []byte(`{
+			"request_id":"req-4",
+			"roll_seq":4,
+			"pre_effects":[
+				{
+					"type":"sys.daggerheart.gm_fear_changed",
+					"entity_type":"campaign",
+					"entity_id":"camp-1",
+					"system_id":"daggerheart",
+					"system_version":"v1",
+					"payload_json":{"before":0,"after":1}
+				}
+			]
+		}`),
+	}, time.Now)
+
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != "OUTCOME_EFFECT_SYSTEM_OWNED_FORBIDDEN" {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, "OUTCOME_EFFECT_SYSTEM_OWNED_FORBIDDEN")
+	}
+}

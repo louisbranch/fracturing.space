@@ -3636,9 +3636,6 @@ func (s *DaggerheartService) ApplyRollOutcome(ctx context.Context, in *pb.ApplyR
 	if sess.Status != session.StatusActive {
 		return nil, status.Error(codes.FailedPrecondition, "session is not active")
 	}
-	if err := s.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
-		return nil, err
-	}
 
 	rollEvent, err := s.stores.Event.GetEventBySeq(ctx, campaignID, in.GetRollSeq())
 	if err != nil {
@@ -3663,20 +3660,7 @@ func (s *DaggerheartService) ApplyRollOutcome(ctx context.Context, in *pb.ApplyR
 	if rollRequestID == "" {
 		return nil, status.Error(codes.InvalidArgument, "roll request id is required")
 	}
-
-	existing, err := s.stores.Event.ListEventsPage(ctx, storage.ListEventsPageRequest{
-		CampaignID:   campaignID,
-		PageSize:     1,
-		Descending:   true,
-		FilterClause: "session_id = ? AND request_id = ? AND entity_id = ? AND event_type = ?",
-		FilterParams: []any{sessionID, rollRequestID, rollRequestID, string(event.Type("action.outcome_applied"))},
-	})
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "check outcome applied: %v", err)
-	}
-	if len(existing.Events) > 0 {
-		return nil, status.Error(codes.FailedPrecondition, "outcome already applied")
-	}
+	invocationID := grpcmeta.InvocationIDFromContext(ctx)
 
 	rollSystemData := rollPayload.SystemData
 	rollKind := rollKindFromSystemData(rollSystemData)
@@ -3708,15 +3692,45 @@ func (s *DaggerheartService) ApplyRollOutcome(ctx context.Context, in *pb.ApplyR
 	if triggerGMMove && flavor == "FEAR" && !crit {
 		gmFearDelta = len(targets)
 	}
+	requiresComplication := flavor == "FEAR" && !crit && triggerGMMove
 
-	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
+	alreadyApplied, err := s.outcomeAlreadyAppliedForSessionRequest(ctx, campaignID, sessionID, in.GetRollSeq(), rollRequestID)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "check outcome applied: %v", err)
+	}
+	if alreadyApplied {
+		if requiresComplication {
+			if err := s.openGMConsequenceGate(ctx, campaignID, sessionID, in.GetRollSeq(), rollRequestID); err != nil {
+				return nil, err
+			}
+		}
+		return s.buildApplyRollOutcomeIdempotentResponse(ctx, campaignID, in.GetRollSeq(), targets, requiresComplication, gmFearDelta > 0)
+	}
+	if err := s.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
+		return nil, err
+	}
+
 	changes := make([]action.OutcomeAppliedChange, 0)
+	postEffects := make([]action.OutcomeAppliedEffect, 0)
 	updatedStates := make([]*pb.OutcomeCharacterState, 0, len(targets))
 
+	gmFearAlreadyApplied := false
 	if gmFearDelta > 0 {
-		if s.stores.Domain == nil {
-			return nil, status.Error(codes.Internal, "domain engine is not configured")
+		gmFearAlreadyApplied, err = s.sessionRequestEventExists(
+			ctx,
+			campaignID,
+			sessionID,
+			in.GetRollSeq(),
+			rollRequestID,
+			event.Type("sys.daggerheart.gm_fear_changed"),
+			campaignID,
+		)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "check gm fear applied: %v", err)
 		}
+	}
+
+	if gmFearDelta > 0 && !gmFearAlreadyApplied {
 		currentSnap, err := s.stores.Daggerheart.GetDaggerheartSnapshot(ctx, campaignID)
 		if err != nil && !errors.Is(err, storage.ErrNotFound) {
 			return nil, status.Errorf(codes.Internal, "load gm fear: %v", err)
@@ -3727,31 +3741,24 @@ func (s *DaggerheartService) ApplyRollOutcome(ctx context.Context, in *pb.ApplyR
 			return nil, status.Errorf(codes.InvalidArgument, "gm fear update invalid: %v", err)
 		}
 
-		invocationID := grpcmeta.InvocationIDFromContext(ctx)
 		payload := daggerheart.GMFearSetPayload{After: &after}
 		payloadJSON, err := json.Marshal(payload)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "encode gm fear payload: %v", err)
 		}
-		_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
-			CampaignID:    campaignID,
-			Type:          command.Type("sys.daggerheart.gm_fear.set"),
-			ActorType:     command.ActorTypeSystem,
-			SessionID:     sessionID,
-			RequestID:     rollRequestID,
-			InvocationID:  invocationID,
-			EntityType:    "campaign",
-			EntityID:      campaignID,
-			SystemID:      daggerheart.SystemID,
-			SystemVersion: daggerheart.SystemVersion,
-			PayloadJSON:   payloadJSON,
-		}, adapter, domainCommandApplyOptions{
-			requireEvents:   true,
+
+		if err := s.executeAndApplyDaggerheartSystemCommand(ctx, daggerheartSystemCommandInput{
+			campaignID:      campaignID,
+			commandType:     command.Type("sys.daggerheart.gm_fear.set"),
+			sessionID:       sessionID,
+			requestID:       rollRequestID,
+			invocationID:    invocationID,
+			entityType:      "campaign",
+			entityID:        campaignID,
+			payloadJSON:     payloadJSON,
 			missingEventMsg: "gm fear update did not emit an event",
 			applyErrMessage: "apply gm fear event",
-			executeErrMsg:   "execute domain command",
-		})
-		if err != nil {
+		}); err != nil {
 			return nil, err
 		}
 
@@ -3784,44 +3791,59 @@ func (s *DaggerheartService) ApplyRollOutcome(ctx context.Context, in *pb.ApplyR
 		}
 
 		if hopeAfter != hopeBefore || stressAfter != stressBefore {
-			if s.stores.Domain == nil {
-				return nil, status.Error(codes.Internal, "domain engine is not configured")
-			}
-			payload := daggerheart.CharacterStatePatchedPayload{
-				CharacterID:  target,
-				HopeBefore:   &hopeBefore,
-				HopeAfter:    &hopeAfter,
-				StressBefore: &stressBefore,
-				StressAfter:  &stressAfter,
-			}
-			payloadJSON, err := json.Marshal(payload)
+			characterPatchAlreadyApplied, err := s.sessionRequestEventExists(
+				ctx,
+				campaignID,
+				sessionID,
+				in.GetRollSeq(),
+				rollRequestID,
+				event.Type("sys.daggerheart.character_state_patched"),
+				target,
+			)
 			if err != nil {
-				return nil, status.Errorf(codes.Internal, "encode character state payload: %v", err)
+				return nil, status.Errorf(codes.Internal, "check character state patch applied: %v", err)
 			}
-			invocationID := grpcmeta.InvocationIDFromContext(ctx)
-			_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
-				CampaignID:    campaignID,
-				Type:          command.Type("sys.daggerheart.character_state.patch"),
-				ActorType:     command.ActorTypeSystem,
-				SessionID:     sessionID,
-				RequestID:     rollRequestID,
-				InvocationID:  invocationID,
-				EntityType:    "character",
-				EntityID:      target,
-				SystemID:      daggerheart.SystemID,
-				SystemVersion: daggerheart.SystemVersion,
-				PayloadJSON:   payloadJSON,
-			}, adapter, domainCommandApplyOptions{
-				requireEvents:   true,
-				missingEventMsg: "character state patch did not emit an event",
-				applyErrMessage: "apply character state event",
-				executeErrMsg:   "execute domain command",
-			})
-			if err != nil {
-				return nil, err
+			if !characterPatchAlreadyApplied {
+				payload := daggerheart.CharacterStatePatchedPayload{
+					CharacterID:  target,
+					HopeBefore:   &hopeBefore,
+					HopeAfter:    &hopeAfter,
+					StressBefore: &stressBefore,
+					StressAfter:  &stressAfter,
+				}
+				payloadJSON, err := json.Marshal(payload)
+				if err != nil {
+					return nil, status.Errorf(codes.Internal, "encode character state payload: %v", err)
+				}
+				if err := s.executeAndApplyDaggerheartSystemCommand(ctx, daggerheartSystemCommandInput{
+					campaignID:      campaignID,
+					commandType:     command.Type("sys.daggerheart.character_state.patch"),
+					sessionID:       sessionID,
+					requestID:       rollRequestID,
+					invocationID:    invocationID,
+					entityType:      "character",
+					entityID:        target,
+					payloadJSON:     payloadJSON,
+					missingEventMsg: "character state update did not emit an event",
+					applyErrMessage: "apply character state event",
+				}); err != nil {
+					return nil, err
+				}
 			}
 			rollSeq := in.GetRollSeq()
-			if err := s.applyStressVulnerableCondition(ctx, campaignID, sessionID, target, state.Conditions, stressBefore, stressAfter, profile.StressMax, &rollSeq, rollRequestID); err != nil {
+			err = s.applyStressVulnerableCondition(
+				ctx,
+				campaignID,
+				sessionID,
+				target,
+				state.Conditions,
+				stressBefore,
+				stressAfter,
+				profile.StressMax,
+				&rollSeq,
+				rollRequestID,
+			)
+			if err != nil {
 				return nil, err
 			}
 		}
@@ -3840,13 +3862,20 @@ func (s *DaggerheartService) ApplyRollOutcome(ctx context.Context, in *pb.ApplyR
 		})
 	}
 
-	requiresComplication := flavor == "FEAR" && !crit && triggerGMMove
+	if requiresComplication {
+		postEffects, err = s.buildGMConsequenceOutcomeEffects(ctx, campaignID, sessionID, in.GetRollSeq(), rollRequestID)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	payload := action.OutcomeApplyPayload{
 		RequestID:            rollRequestID,
 		RollSeq:              in.GetRollSeq(),
 		Targets:              targets,
 		RequiresComplication: requiresComplication,
 		AppliedChanges:       changes,
+		PostEffects:          postEffects,
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -3862,7 +3891,7 @@ func (s *DaggerheartService) ApplyRollOutcome(ctx context.Context, in *pb.ApplyR
 		ActorType:    command.ActorTypeSystem,
 		SessionID:    sessionID,
 		RequestID:    rollRequestID,
-		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+		InvocationID: invocationID,
 		EntityType:   "outcome",
 		EntityID:     rollRequestID,
 		PayloadJSON:  payloadJSON,
@@ -3873,12 +3902,6 @@ func (s *DaggerheartService) ApplyRollOutcome(ctx context.Context, in *pb.ApplyR
 	})
 	if err != nil {
 		return nil, err
-	}
-
-	if requiresComplication {
-		if err := s.openGMConsequenceGate(ctx, campaignID, sessionID, in.GetRollSeq(), rollRequestID); err != nil {
-			return nil, err
-		}
 	}
 
 	response := &pb.ApplyRollOutcomeResponse{
@@ -3900,6 +3923,213 @@ func (s *DaggerheartService) ApplyRollOutcome(ctx context.Context, in *pb.ApplyR
 	return response, nil
 }
 
+func (s *DaggerheartService) outcomeAlreadyAppliedForSessionRequest(ctx context.Context, campaignID, sessionID string, rollSeq uint64, requestID string) (bool, error) {
+	return s.sessionRequestEventExists(
+		ctx,
+		campaignID,
+		sessionID,
+		rollSeq,
+		requestID,
+		event.Type("action.outcome_applied"),
+		requestID,
+	)
+}
+
+func (s *DaggerheartService) sessionRequestEventExists(
+	ctx context.Context,
+	campaignID string,
+	sessionID string,
+	rollSeq uint64,
+	requestID string,
+	eventType event.Type,
+	entityID string,
+) (bool, error) {
+	requestID = strings.TrimSpace(requestID)
+	entityID = strings.TrimSpace(entityID)
+	if rollSeq == 0 || requestID == "" {
+		return false, nil
+	}
+
+	filterClause := "session_id = ? AND request_id = ? AND event_type = ?"
+	filterParams := []any{sessionID, requestID, string(eventType)}
+	if entityID != "" {
+		filterClause += " AND entity_id = ?"
+		filterParams = append(filterParams, entityID)
+	}
+
+	result, err := s.stores.Event.ListEventsPage(ctx, storage.ListEventsPageRequest{
+		CampaignID:   campaignID,
+		AfterSeq:     rollSeq - 1,
+		PageSize:     1,
+		FilterClause: filterClause,
+		FilterParams: filterParams,
+	})
+	if err != nil {
+		return false, err
+	}
+
+	return len(result.Events) > 0, nil
+}
+
+type daggerheartSystemCommandInput struct {
+	campaignID      string
+	commandType     command.Type
+	sessionID       string
+	requestID       string
+	invocationID    string
+	entityType      string
+	entityID        string
+	payloadJSON     []byte
+	missingEventMsg string
+	applyErrMessage string
+}
+
+func (s *DaggerheartService) executeAndApplyDaggerheartSystemCommand(ctx context.Context, in daggerheartSystemCommandInput) error {
+	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
+	_, err := s.executeAndApplyDomainCommand(ctx, command.Command{
+		CampaignID:    in.campaignID,
+		Type:          in.commandType,
+		ActorType:     command.ActorTypeSystem,
+		SessionID:     in.sessionID,
+		RequestID:     in.requestID,
+		InvocationID:  in.invocationID,
+		EntityType:    in.entityType,
+		EntityID:      in.entityID,
+		SystemID:      daggerheart.SystemID,
+		SystemVersion: daggerheart.SystemVersion,
+		PayloadJSON:   in.payloadJSON,
+	}, adapter, domainCommandApplyOptions{
+		requireEvents:   true,
+		missingEventMsg: in.missingEventMsg,
+		applyErrMessage: in.applyErrMessage,
+		executeErrMsg:   "execute domain command",
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *DaggerheartService) buildApplyRollOutcomeIdempotentResponse(
+	ctx context.Context,
+	campaignID string,
+	rollSeq uint64,
+	targets []string,
+	requiresComplication bool,
+	includeGMFear bool,
+) (*pb.ApplyRollOutcomeResponse, error) {
+	updatedStates := make([]*pb.OutcomeCharacterState, 0, len(targets))
+	for _, target := range targets {
+		state, err := s.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, target)
+		if err != nil {
+			return nil, handleDomainError(err)
+		}
+		updatedStates = append(updatedStates, &pb.OutcomeCharacterState{
+			CharacterId: target,
+			Hope:        int32(state.Hope),
+			Stress:      int32(state.Stress),
+			Hp:          int32(state.Hp),
+		})
+	}
+
+	response := &pb.ApplyRollOutcomeResponse{
+		RollSeq:              rollSeq,
+		RequiresComplication: requiresComplication,
+		Updated: &pb.OutcomeUpdated{
+			CharacterStates: updatedStates,
+		},
+	}
+	if !includeGMFear {
+		return response, nil
+	}
+
+	currentSnap, err := s.stores.Daggerheart.GetDaggerheartSnapshot(ctx, campaignID)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "load gm fear snapshot: %v", err)
+	}
+	value := int32(currentSnap.GMFear)
+	response.Updated.GmFear = &value
+	return response, nil
+}
+
+func (s *DaggerheartService) buildGMConsequenceOutcomeEffects(
+	ctx context.Context,
+	campaignID string,
+	sessionID string,
+	rollSeq uint64,
+	rollRequestID string,
+) ([]action.OutcomeAppliedEffect, error) {
+	if s.stores.SessionGate == nil {
+		return nil, status.Error(codes.Internal, "session gate store is not configured")
+	}
+	if s.stores.SessionSpotlight == nil {
+		return nil, status.Error(codes.Internal, "session spotlight store is not configured")
+	}
+
+	effects := make([]action.OutcomeAppliedEffect, 0, 2)
+
+	gateOpen := false
+	if _, err := s.stores.SessionGate.GetOpenSessionGate(ctx, campaignID, sessionID); err == nil {
+		gateOpen = true
+	} else if !errors.Is(err, storage.ErrNotFound) {
+		return nil, status.Errorf(codes.Internal, "check session gate: %v", err)
+	}
+	if !gateOpen {
+		gateID, err := id.NewID()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "generate gate id: %v", err)
+		}
+		gateType, err := session.NormalizeGateType("gm_consequence")
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "normalize gate type: %v", err)
+		}
+		gatePayload := session.GateOpenedPayload{
+			GateID:   gateID,
+			GateType: gateType,
+			Reason:   "gm_consequence",
+			Metadata: map[string]any{
+				"roll_seq":   rollSeq,
+				"request_id": rollRequestID,
+			},
+		}
+		payloadJSON, err := json.Marshal(gatePayload)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "encode session gate payload: %v", err)
+		}
+		effects = append(effects, action.OutcomeAppliedEffect{
+			Type:        "session.gate_opened",
+			EntityType:  "session_gate",
+			EntityID:    gateID,
+			PayloadJSON: payloadJSON,
+		})
+	}
+
+	spotlight, err := s.stores.SessionSpotlight.GetSessionSpotlight(ctx, campaignID, sessionID)
+	if err == nil {
+		if spotlight.SpotlightType == session.SpotlightTypeGM && strings.TrimSpace(spotlight.CharacterID) == "" {
+			return effects, nil
+		}
+	} else if !errors.Is(err, storage.ErrNotFound) {
+		return nil, status.Errorf(codes.Internal, "check session spotlight: %v", err)
+	}
+
+	spotlightPayload := session.SpotlightSetPayload{
+		SpotlightType: string(session.SpotlightTypeGM),
+	}
+	payloadJSON, err := json.Marshal(spotlightPayload)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "encode spotlight payload: %v", err)
+	}
+	effects = append(effects, action.OutcomeAppliedEffect{
+		Type:        "session.spotlight_set",
+		EntityType:  "session_spotlight",
+		EntityID:    sessionID,
+		PayloadJSON: payloadJSON,
+	})
+
+	return effects, nil
+}
+
 func (s *DaggerheartService) openGMConsequenceGate(ctx context.Context, campaignID, sessionID string, rollSeq uint64, rollRequestID string) error {
 	if s.stores.SessionGate == nil {
 		return status.Error(codes.Internal, "session gate store is not configured")
@@ -3911,53 +4141,65 @@ func (s *DaggerheartService) openGMConsequenceGate(ctx context.Context, campaign
 		return status.Error(codes.Internal, "domain engine is not configured")
 	}
 
+	gateOpen := false
 	if _, err := s.stores.SessionGate.GetOpenSessionGate(ctx, campaignID, sessionID); err == nil {
-		return nil
+		gateOpen = true
 	} else if !errors.Is(err, storage.ErrNotFound) {
 		return status.Errorf(codes.Internal, "check session gate: %v", err)
 	}
 
-	gateID, err := id.NewID()
-	if err != nil {
-		return status.Errorf(codes.Internal, "generate gate id: %v", err)
+	if !gateOpen {
+		gateID, err := id.NewID()
+		if err != nil {
+			return status.Errorf(codes.Internal, "generate gate id: %v", err)
+		}
+		gateType, err := session.NormalizeGateType("gm_consequence")
+		if err != nil {
+			return status.Errorf(codes.Internal, "normalize gate type: %v", err)
+		}
+		metadata := map[string]any{
+			"roll_seq":   rollSeq,
+			"request_id": rollRequestID,
+		}
+		payload := session.GateOpenedPayload{
+			GateID:   gateID,
+			GateType: gateType,
+			Reason:   "gm_consequence",
+			Metadata: metadata,
+		}
+		payloadJSON, err := json.Marshal(payload)
+		if err != nil {
+			return status.Errorf(codes.Internal, "encode session gate payload: %v", err)
+		}
+		gateApplier := s.stores.Applier()
+		_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
+			CampaignID:   campaignID,
+			Type:         command.Type("session.gate_open"),
+			ActorType:    command.ActorTypeSystem,
+			SessionID:    sessionID,
+			RequestID:    rollRequestID,
+			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+			EntityType:   "session_gate",
+			EntityID:     gateID,
+			PayloadJSON:  payloadJSON,
+		}, gateApplier, domainCommandApplyOptions{
+			requireEvents:   true,
+			missingEventMsg: "session gate open did not emit an event",
+			applyErrMessage: "apply session gate event",
+			executeErrMsg:   "execute domain command",
+		})
+		if err != nil {
+			return err
+		}
 	}
-	gateType, err := session.NormalizeGateType("gm_consequence")
-	if err != nil {
-		return status.Errorf(codes.Internal, "normalize gate type: %v", err)
-	}
-	metadata := map[string]any{
-		"roll_seq":   rollSeq,
-		"request_id": rollRequestID,
-	}
-	payload := session.GateOpenedPayload{
-		GateID:   gateID,
-		GateType: gateType,
-		Reason:   "gm_consequence",
-		Metadata: metadata,
-	}
-	payloadJSON, err := json.Marshal(payload)
-	if err != nil {
-		return status.Errorf(codes.Internal, "encode session gate payload: %v", err)
-	}
-	gateApplier := s.stores.Applier()
-	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
-		CampaignID:   campaignID,
-		Type:         command.Type("session.gate_open"),
-		ActorType:    command.ActorTypeSystem,
-		SessionID:    sessionID,
-		RequestID:    rollRequestID,
-		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-		EntityType:   "session_gate",
-		EntityID:     gateID,
-		PayloadJSON:  payloadJSON,
-	}, gateApplier, domainCommandApplyOptions{
-		requireEvents:   true,
-		missingEventMsg: "session gate open did not emit an event",
-		applyErrMessage: "apply session gate event",
-		executeErrMsg:   "execute domain command",
-	})
-	if err != nil {
-		return err
+
+	spotlight, err := s.stores.SessionSpotlight.GetSessionSpotlight(ctx, campaignID, sessionID)
+	if err == nil {
+		if spotlight.SpotlightType == session.SpotlightTypeGM && strings.TrimSpace(spotlight.CharacterID) == "" {
+			return nil
+		}
+	} else if !errors.Is(err, storage.ErrNotFound) {
+		return status.Errorf(codes.Internal, "check session spotlight: %v", err)
 	}
 
 	spotlightPayload := session.SpotlightSetPayload{
@@ -4355,28 +4597,78 @@ func (s *DaggerheartService) applyStressVulnerableCondition(
 	rollSeq *uint64,
 	requestID string,
 ) error {
-	if stressMax <= 0 {
+	effect, err := s.buildStressVulnerableConditionEffect(
+		ctx,
+		campaignID,
+		sessionID,
+		characterID,
+		conditions,
+		stressBefore,
+		stressAfter,
+		stressMax,
+		rollSeq,
+		requestID,
+	)
+	if err != nil {
+		return err
+	}
+	if effect == nil {
 		return nil
 	}
+
+	invocationID := grpcmeta.InvocationIDFromContext(ctx)
+	if err := s.executeAndApplyDaggerheartSystemCommand(ctx, daggerheartSystemCommandInput{
+		campaignID:      campaignID,
+		commandType:     command.Type("sys.daggerheart.condition.change"),
+		sessionID:       sessionID,
+		requestID:       requestID,
+		invocationID:    invocationID,
+		entityType:      "character",
+		entityID:        characterID,
+		payloadJSON:     effect.PayloadJSON,
+		missingEventMsg: "condition change did not emit an event",
+		applyErrMessage: "apply condition event",
+	}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *DaggerheartService) buildStressVulnerableConditionEffect(
+	ctx context.Context,
+	campaignID string,
+	sessionID string,
+	characterID string,
+	conditions []string,
+	stressBefore int,
+	stressAfter int,
+	stressMax int,
+	rollSeq *uint64,
+	requestID string,
+) (*action.OutcomeAppliedEffect, error) {
+	if stressMax <= 0 {
+		return nil, nil
+	}
 	if stressBefore == stressAfter {
-		return nil
+		return nil, nil
 	}
 	shouldAdd := stressBefore < stressMax && stressAfter == stressMax
 	shouldRemove := stressBefore == stressMax && stressAfter < stressMax
 	if !shouldAdd && !shouldRemove {
-		return nil
+		return nil, nil
 	}
 
 	normalized, err := daggerheart.NormalizeConditions(conditions)
 	if err != nil {
-		return status.Errorf(codes.Internal, "invalid stored conditions: %v", err)
+		return nil, status.Errorf(codes.Internal, "invalid stored conditions: %v", err)
 	}
 	hasVulnerable := containsString(normalized, daggerheart.ConditionVulnerable)
 	if shouldAdd && hasVulnerable {
-		return nil
+		return nil, nil
 	}
 	if shouldRemove && !hasVulnerable {
-		return nil
+		return nil, nil
 	}
 
 	afterSet := make(map[string]struct{}, len(normalized)+1)
@@ -4395,11 +4687,28 @@ func (s *DaggerheartService) applyStressVulnerableCondition(
 	}
 	after, err := daggerheart.NormalizeConditions(afterList)
 	if err != nil {
-		return status.Errorf(codes.Internal, "invalid condition set: %v", err)
+		return nil, status.Errorf(codes.Internal, "invalid condition set: %v", err)
 	}
 	added, removed := daggerheart.DiffConditions(normalized, after)
 	if len(added) == 0 && len(removed) == 0 {
-		return nil
+		return nil, nil
+	}
+	if rollSeq != nil && *rollSeq > 0 {
+		exists, err := s.sessionRequestEventExists(
+			ctx,
+			campaignID,
+			sessionID,
+			*rollSeq,
+			requestID,
+			event.Type("sys.daggerheart.condition_changed"),
+			characterID,
+		)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "check condition change applied: %v", err)
+		}
+		if exists {
+			return nil, nil
+		}
 	}
 
 	payload := daggerheart.ConditionChangePayload{
@@ -4412,37 +4721,16 @@ func (s *DaggerheartService) applyStressVulnerableCondition(
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return status.Errorf(codes.Internal, "encode condition payload: %v", err)
+		return nil, status.Errorf(codes.Internal, "encode condition payload: %v", err)
 	}
-
-	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
-	invocationID := grpcmeta.InvocationIDFromContext(ctx)
-	if s.stores.Domain == nil {
-		return status.Error(codes.Internal, "domain engine is not configured")
-	}
-	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
-		CampaignID:    campaignID,
-		Type:          command.Type("sys.daggerheart.condition.change"),
-		ActorType:     command.ActorTypeSystem,
-		SessionID:     sessionID,
-		RequestID:     requestID,
-		InvocationID:  invocationID,
+	return &action.OutcomeAppliedEffect{
+		Type:          "sys.daggerheart.condition_changed",
 		EntityType:    "character",
 		EntityID:      characterID,
 		SystemID:      daggerheart.SystemID,
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON:   payloadJSON,
-	}, adapter, domainCommandApplyOptions{
-		requireEvents:   true,
-		missingEventMsg: "condition change did not emit an event",
-		applyErrMessage: "apply condition event",
-		executeErrMsg:   "execute domain command",
-	})
-	if err != nil {
-		return err
-	}
-
-	return nil
+	}, nil
 }
 
 func (s *DaggerheartService) advanceBreathCountdown(

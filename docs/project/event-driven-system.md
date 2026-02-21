@@ -235,6 +235,8 @@ Command and event registries enforce:
   - core-owned entries must not include `system_id/system_version`.
   - system-owned entries must include both metadata fields and explicit
     addressing (`entity_type` + `entity_id`).
+  - system-owned type namespace must match `system_id`:
+    `sys.<system_id>.*` for both commands and events.
 
 This makes payload hashing stable, routing deterministic, and replay behavior
 reproducible.
@@ -281,6 +283,8 @@ Rules of thumb:
 - Side effects should happen from accepted events, not before append.
 - Mutating runtime handlers should write through `Domain.Execute`; direct
   `AppendEvent` usage is reserved for maintenance/import workflows.
+- Core commands must not carry system-owned effect envelopes; emit system-owned
+  side effects through explicit `sys.*` commands.
 
 There is a compatibility append path in `EventService.AppendEvent`
 (`internal/services/game/api/grpc/game/event_application.go`) that maps a small
@@ -288,6 +292,10 @@ subset of event types to domain commands. Direct compatibility append fallback
 is disabled by default and must be explicitly enabled with
 `FRACTURING_SPACE_GAME_COMPATIBILITY_APPEND_ENABLED=true`; the domain path
 remains the canonical write route.
+
+Compatibility mapping returns the emitted event matching the requested semantic
+type (not simply the first emitted event), which avoids side-effect event
+misreporting when one command emits multiple events.
 
 ## Projections and consistency
 
@@ -308,6 +316,8 @@ Consistency model:
 - Projection writes are derived from emitted events.
 - Replay can rebuild projections when needed (`projection/replay.go` and
   `domain/replay/replay.go`).
+- Projection outbox workers skip `IntentAuditOnly` events instead of invoking
+  projection apply callbacks for those envelopes.
 
 ## Integrity and tamper resistance
 

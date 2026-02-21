@@ -33,6 +33,24 @@ Use this as the onboarding contract for new mechanics and for review of existing
 | Countdown create/update/delete | `sys.daggerheart.countdown.create`, `sys.daggerheart.countdown.update`, `sys.daggerheart.countdown.delete` | `sys.daggerheart.countdown_created`, `sys.daggerheart.countdown_updated`, `sys.daggerheart.countdown_deleted` | Daggerheart countdown projections | Inline apply mode-controlled | Countdown bounds/rules validated before command |
 | Adversary create/update/delete | `sys.daggerheart.adversary.create`, `sys.daggerheart.adversary.update`, `sys.daggerheart.adversary.delete` | `sys.daggerheart.adversary_created`, `sys.daggerheart.adversary_updated`, `sys.daggerheart.adversary_deleted` | Daggerheart adversary projections | Inline apply mode-controlled | Session-scoped adversary integrity and payload validation |
 
+## ApplyRollOutcome sequencing contract
+
+`ApplyRollOutcome` must preserve this command order for replay-safe ownership:
+
+1. optional `sys.daggerheart.gm_fear.set`
+2. per-target optional `sys.daggerheart.character_state.patch`
+3. per-target optional `sys.daggerheart.condition.change`
+4. final `action.outcome.apply`
+
+Invariants:
+
+- `action.outcome.apply` is journal-facing and must not include system-owned
+  effects in `pre_effects`/`post_effects`.
+- Daggerheart state mutation is expressed only through explicit `sys.daggerheart.*`
+  commands/events.
+- Session-side follow-up effects (for example gate open + spotlight set) remain
+  core-owned post-effects on `action.outcome.apply`.
+
 ## Priority Missing-Mechanic Timeline Mappings
 
 Use these row IDs in `scenario-missing-mechanics.md` while backfilling the full
