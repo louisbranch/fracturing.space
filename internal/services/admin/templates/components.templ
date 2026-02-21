@@ -431,7 +431,7 @@ templ PageHeader(h PageHeading) {
 // LazyLoad renders an HTMX placeholder that loads content on page render.
 templ LazyLoad(url string, message string) {
 	<div hx-get={ url } hx-trigger="load" hx-swap="outerHTML">
-		<p>{message}</p>
+		@sharedtemplates.Loading()
 	</div>
 }
 
@@ -469,9 +469,9 @@ templ EmptyState(message string) {
 	<p class="text-center opacity-60">{message}</p>
 }
 
-// LoadingSpinner renders a loading message.
+// LoadingSpinner renders a loading ring.
 templ LoadingSpinner(loc Localizer) {
-	<p>{T(loc, "common.loading")}</p>
+	@sharedtemplates.Loading()
 }
 
 // Pagination renders prev/next navigation controls using DaisyUI buttons.
