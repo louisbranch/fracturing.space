@@ -637,3 +637,114 @@ func TestModuleRegisterEvents_AllowsConditionAddedWithoutBefore(t *testing.T) {
 		})
 	}
 }
+
+func TestModuleRegisterCommands_DamageApplyRejectsAdapterInvalidPayloads(t *testing.T) {
+	registry := command.NewRegistry()
+	module := NewModule()
+	if err := module.RegisterCommands(registry); err != nil {
+		t.Fatalf("register commands: %v", err)
+	}
+
+	tests := []struct {
+		name    string
+		payload string
+	}{
+		{
+			name:    "marks above cap",
+			payload: `{"character_id":"char-1","hp_before":6,"hp_after":5,"marks":5}`,
+		},
+		{
+			name:    "armor spent negative",
+			payload: `{"character_id":"char-1","hp_before":6,"hp_after":5,"armor_spent":-1}`,
+		},
+		{
+			name:    "roll seq must be positive",
+			payload: `{"character_id":"char-1","hp_before":6,"hp_after":5,"roll_seq":0}`,
+		},
+		{
+			name:    "severity must be known value",
+			payload: `{"character_id":"char-1","hp_before":6,"hp_after":5,"severity":"extreme"}`,
+		},
+		{
+			name:    "source ids must not contain empty values",
+			payload: `{"character_id":"char-1","hp_before":6,"hp_after":5,"source_character_ids":["char-2",""]}`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := registry.ValidateForDecision(command.Command{
+				CampaignID:    "camp-1",
+				Type:          commandTypeDamageApply,
+				ActorType:     command.ActorTypeSystem,
+				ActorID:       "system-1",
+				SystemID:      SystemID,
+				SystemVersion: SystemVersion,
+				PayloadJSON:   []byte(tc.payload),
+			})
+			if err == nil {
+				t.Fatalf("expected validation failure")
+			}
+			if errors.Is(err, command.ErrTypeUnknown) {
+				t.Fatalf("expected payload validation error, got %v", err)
+			}
+		})
+	}
+}
+
+func TestModuleRegisterEvents_DamageAppliedRejectsAdapterInvalidPayloads(t *testing.T) {
+	registry := event.NewRegistry()
+	module := NewModule()
+	if err := module.RegisterEvents(registry); err != nil {
+		t.Fatalf("register events: %v", err)
+	}
+
+	tests := []struct {
+		name    string
+		payload string
+	}{
+		{
+			name:    "marks above cap",
+			payload: `{"character_id":"char-1","hp_before":6,"hp_after":5,"marks":5}`,
+		},
+		{
+			name:    "armor spent negative",
+			payload: `{"character_id":"char-1","hp_before":6,"hp_after":5,"armor_spent":-1}`,
+		},
+		{
+			name:    "roll seq must be positive",
+			payload: `{"character_id":"char-1","hp_before":6,"hp_after":5,"roll_seq":0}`,
+		},
+		{
+			name:    "severity must be known value",
+			payload: `{"character_id":"char-1","hp_before":6,"hp_after":5,"severity":"extreme"}`,
+		},
+		{
+			name:    "source ids must not contain empty values",
+			payload: `{"character_id":"char-1","hp_before":6,"hp_after":5,"source_character_ids":["char-2",""]}`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := registry.ValidateForAppend(event.Event{
+				CampaignID:    "camp-1",
+				Type:          eventTypeDamageApplied,
+				Timestamp:     time.Unix(0, 0).UTC(),
+				ActorType:     event.ActorTypeSystem,
+				ActorID:       "system-1",
+				EntityType:    "character",
+				EntityID:      "char-1",
+				SystemID:      SystemID,
+				SystemVersion: SystemVersion,
+				PayloadJSON:   []byte(tc.payload),
+			})
+			if err == nil {
+				t.Fatalf("expected validation failure")
+			}
+			if errors.Is(err, event.ErrTypeUnknown) {
+				t.Fatalf("expected payload validation error, got %v", err)
+			}
+		})
+	}
+}

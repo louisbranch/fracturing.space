@@ -717,6 +717,41 @@ func TestDecideDamageApply_EmitsDamageApplied(t *testing.T) {
 	}
 }
 
+func TestDecideDamageApply_BeforeMismatchRejected(t *testing.T) {
+	cmd := command.Command{
+		CampaignID:    "camp-1",
+		Type:          command.Type("sys.daggerheart.damage.apply"),
+		ActorType:     command.ActorTypeSystem,
+		SystemID:      SystemID,
+		SystemVersion: SystemVersion,
+		EntityType:    "character",
+		EntityID:      "char-1",
+		PayloadJSON:   []byte(`{"character_id":"char-1","hp_before":6,"hp_after":3,"armor_before":2,"armor_after":1,"damage_type":"physical","marks":1}`),
+	}
+
+	state := SnapshotState{
+		CampaignID: "camp-1",
+		CharacterStates: map[string]CharacterState{
+			"char-1": {
+				CharacterID: "char-1",
+				HP:          5,
+				Armor:       2,
+			},
+		},
+	}
+
+	decision := Decider{}.Decide(state, cmd, nil)
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != "DAMAGE_BEFORE_MISMATCH" {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, "DAMAGE_BEFORE_MISMATCH")
+	}
+}
+
 func TestDecideAdversaryDamageApply_EmitsAdversaryDamageApplied(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
@@ -774,6 +809,41 @@ func TestDecideAdversaryDamageApply_EmitsAdversaryDamageApplied(t *testing.T) {
 	}
 	if payload.HPAfter == nil || *payload.HPAfter != 3 {
 		t.Fatalf("hp after = %v, want %d", payload.HPAfter, 3)
+	}
+}
+
+func TestDecideAdversaryDamageApply_BeforeMismatchRejected(t *testing.T) {
+	cmd := command.Command{
+		CampaignID:    "camp-1",
+		Type:          command.Type("sys.daggerheart.adversary_damage.apply"),
+		ActorType:     command.ActorTypeSystem,
+		SystemID:      SystemID,
+		SystemVersion: SystemVersion,
+		EntityType:    "adversary",
+		EntityID:      "adv-1",
+		PayloadJSON:   []byte(`{"adversary_id":"adv-1","hp_before":8,"hp_after":3,"armor_before":1,"armor_after":0,"damage_type":"physical"}`),
+	}
+
+	state := SnapshotState{
+		CampaignID: "camp-1",
+		AdversaryStates: map[string]AdversaryState{
+			"adv-1": {
+				AdversaryID: "adv-1",
+				HP:          7,
+				Armor:       1,
+			},
+		},
+	}
+
+	decision := Decider{}.Decide(state, cmd, nil)
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != "ADVERSARY_DAMAGE_BEFORE_MISMATCH" {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, "ADVERSARY_DAMAGE_BEFORE_MISMATCH")
 	}
 }
 

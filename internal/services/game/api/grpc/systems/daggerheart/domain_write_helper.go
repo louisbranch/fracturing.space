@@ -36,35 +36,6 @@ func SetInlineProjectionApplyEnabled(enabled bool) {
 	inlineProjectionApplyEnabled.Store(enabled)
 }
 
-func (s *DaggerheartService) executeDomainCommand(ctx context.Context, cmd command.Command) (engine.Result, error) {
-	if s.stores.Domain == nil {
-		return engine.Result{}, status.Error(codes.Internal, "domain engine is not configured")
-	}
-	return s.stores.Domain.Execute(ctx, cmd)
-}
-
-func (s *DaggerheartService) applyEmittedEvents(ctx context.Context, applier eventApplier, events []event.Event, applyErrMessage string) error {
-	if !inlineProjectionApplyEnabled.Load() {
-		return nil
-	}
-	for _, evt := range events {
-		if err := s.applyEmittedEvent(ctx, applier, evt, applyErrMessage); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (s *DaggerheartService) applyEmittedEvent(ctx context.Context, applier eventApplier, evt event.Event, applyErrMessage string) error {
-	if !inlineProjectionApplyEnabled.Load() {
-		return nil
-	}
-	if err := applier.Apply(ctx, evt); err != nil {
-		return status.Errorf(codes.Internal, "%s: %v", applyErrMessage, err)
-	}
-	return nil
-}
-
 func (s *DaggerheartService) executeAndApplyDomainCommand(
 	ctx context.Context,
 	cmd command.Command,
