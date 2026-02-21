@@ -12,12 +12,12 @@ const (
 	commandTypeRollResolve   command.Type = "action.roll.resolve"
 	commandTypeOutcomeApply  command.Type = "action.outcome.apply"
 	commandTypeOutcomeReject command.Type = "action.outcome.reject"
-	commandTypeNoteAdd       command.Type = "action.note.add"
+	commandTypeNoteAdd       command.Type = "story.note.add"
 
 	eventTypeRollResolved    event.Type = "action.roll_resolved"
 	eventTypeOutcomeApplied  event.Type = "action.outcome_applied"
 	eventTypeOutcomeRejected event.Type = "action.outcome_rejected"
-	eventTypeNoteAdded       event.Type = "action.note_added"
+	eventTypeNoteAdded       event.Type = "story.note_added"
 )
 
 // Decide returns the decision for an action command against current state.

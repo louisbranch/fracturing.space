@@ -3,6 +3,7 @@ package aggregate
 import (
 	"errors"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -37,6 +38,7 @@ func (a Applier) Apply(state any, evt event.Event) (any, error) {
 
 	current.Campaign = campaign.Fold(current.Campaign, evt)
 	current.Session = session.Fold(current.Session, evt)
+	current.Action = action.Fold(current.Action, evt)
 
 	if evt.SystemID != "" || evt.SystemVersion != "" {
 		if current.Systems == nil {

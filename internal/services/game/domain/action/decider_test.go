@@ -44,9 +44,9 @@ func TestDecideActionCommands_EmitsEvents(t *testing.T) {
 		},
 		{
 			name:           "note added",
-			commandType:    "action.note.add",
+			commandType:    "story.note.add",
 			payloadJSON:    `{"content":"note","character_id":"char-1"}`,
-			wantType:       "action.note_added",
+			wantType:       "story.note_added",
 			wantEntityType: "note",
 			wantEntityID:   "",
 		},

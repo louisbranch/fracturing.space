@@ -59,22 +59,22 @@ var daggerheartCommandDefinitions = []command.Definition{
 }
 
 var daggerheartEventDefinitions = []event.Definition{
-	{Type: eventTypeGMFearChanged, Owner: event.OwnerSystem, ValidatePayload: validateGMFearChangedPayload},
-	{Type: eventTypeCharacterStatePatched, Owner: event.OwnerSystem, ValidatePayload: validateCharacterStatePatchedPayload},
-	{Type: eventTypeConditionChanged, Owner: event.OwnerSystem, ValidatePayload: validateConditionChangedPayload},
-	{Type: eventTypeLoadoutSwapped, Owner: event.OwnerSystem, ValidatePayload: validateLoadoutSwappedPayload},
-	{Type: eventTypeRestTaken, Owner: event.OwnerSystem, ValidatePayload: validateRestTakenPayload},
-	{Type: eventTypeCountdownCreated, Owner: event.OwnerSystem, ValidatePayload: validateCountdownCreatedPayload},
-	{Type: eventTypeCountdownUpdated, Owner: event.OwnerSystem, ValidatePayload: validateCountdownUpdatedPayload},
-	{Type: eventTypeCountdownDeleted, Owner: event.OwnerSystem, ValidatePayload: validateCountdownDeletedPayload},
-	{Type: eventTypeDamageApplied, Owner: event.OwnerSystem, ValidatePayload: validateDamageAppliedPayload},
-	{Type: eventTypeAdversaryDamageApplied, Owner: event.OwnerSystem, ValidatePayload: validateAdversaryDamageAppliedPayload},
-	{Type: eventTypeDowntimeMoveApplied, Owner: event.OwnerSystem, ValidatePayload: validateDowntimeMoveAppliedPayload},
-	{Type: eventTypeCharacterTemporaryArmorApplied, Owner: event.OwnerSystem, ValidatePayload: validateCharacterTemporaryArmorAppliedPayload},
-	{Type: eventTypeAdversaryConditionChanged, Owner: event.OwnerSystem, ValidatePayload: validateAdversaryConditionChangedPayload},
-	{Type: eventTypeAdversaryCreated, Owner: event.OwnerSystem, ValidatePayload: validateAdversaryCreatedPayload},
-	{Type: eventTypeAdversaryUpdated, Owner: event.OwnerSystem, ValidatePayload: validateAdversaryUpdatedPayload},
-	{Type: eventTypeAdversaryDeleted, Owner: event.OwnerSystem, ValidatePayload: validateAdversaryDeletedPayload},
+	{Type: eventTypeGMFearChanged, Owner: event.OwnerSystem, ValidatePayload: validateGMFearChangedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: eventTypeCharacterStatePatched, Owner: event.OwnerSystem, ValidatePayload: validateCharacterStatePatchedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: eventTypeConditionChanged, Owner: event.OwnerSystem, ValidatePayload: validateConditionChangedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: eventTypeLoadoutSwapped, Owner: event.OwnerSystem, ValidatePayload: validateLoadoutSwappedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: eventTypeRestTaken, Owner: event.OwnerSystem, ValidatePayload: validateRestTakenPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: eventTypeCountdownCreated, Owner: event.OwnerSystem, ValidatePayload: validateCountdownCreatedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: eventTypeCountdownUpdated, Owner: event.OwnerSystem, ValidatePayload: validateCountdownUpdatedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: eventTypeCountdownDeleted, Owner: event.OwnerSystem, ValidatePayload: validateCountdownDeletedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: eventTypeDamageApplied, Owner: event.OwnerSystem, ValidatePayload: validateDamageAppliedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: eventTypeAdversaryDamageApplied, Owner: event.OwnerSystem, ValidatePayload: validateAdversaryDamageAppliedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: eventTypeDowntimeMoveApplied, Owner: event.OwnerSystem, ValidatePayload: validateDowntimeMoveAppliedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: eventTypeCharacterTemporaryArmorApplied, Owner: event.OwnerSystem, ValidatePayload: validateCharacterTemporaryArmorAppliedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: eventTypeAdversaryConditionChanged, Owner: event.OwnerSystem, ValidatePayload: validateAdversaryConditionChangedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: eventTypeAdversaryCreated, Owner: event.OwnerSystem, ValidatePayload: validateAdversaryCreatedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: eventTypeAdversaryUpdated, Owner: event.OwnerSystem, ValidatePayload: validateAdversaryUpdatedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: eventTypeAdversaryDeleted, Owner: event.OwnerSystem, ValidatePayload: validateAdversaryDeletedPayload, Intent: event.IntentProjectionAndReplay},
 }
 
 // RegisterCommands registers Daggerheart system commands.

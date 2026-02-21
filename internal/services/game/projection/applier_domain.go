@@ -72,12 +72,28 @@ func (a Applier) Apply(ctx context.Context, evt event.Event) error {
 		return a.applySessionSpotlightSet(ctx, evt)
 	case event.Type("session.spotlight_cleared"):
 		return a.applySessionSpotlightCleared(ctx, evt)
+	case event.Type("action.roll_resolved"):
+		return a.applyActionRollResolved(ctx, evt)
+	case event.Type("action.outcome_applied"):
+		return a.applyActionOutcomeApplied(ctx, evt)
 	default:
 		if strings.TrimSpace(evt.SystemID) != "" {
 			return a.applySystemEvent(ctx, evt)
 		}
 		return fmt.Errorf("unhandled projection event type: %s", evt.Type)
 	}
+}
+
+func (a Applier) applyActionRollResolved(_ context.Context, _ event.Event) error {
+	// Action roll envelopes are replay-authoritative for command invariants but
+	// do not currently materialize a dedicated read-model projection.
+	return nil
+}
+
+func (a Applier) applyActionOutcomeApplied(_ context.Context, _ event.Event) error {
+	// Outcome envelopes are replay-authoritative and may fan out to system events,
+	// but the core projection store has no direct read-model mutation for them.
+	return nil
 }
 
 func (a Applier) applyCampaignCreated(ctx context.Context, evt event.Event) error {

@@ -5,9 +5,9 @@ import (
 	"sync/atomic"
 
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -43,37 +43,15 @@ func executeAndApplyDomainCommand(
 	options domainCommandApplyOptions,
 ) (engine.Result, error) {
 	options = normalizeDomainCommandOptions(options)
-
-	if domain == nil {
-		return engine.Result{}, status.Error(codes.Internal, "domain engine is not configured")
-	}
-
-	result, err := domain.Execute(ctx, cmd)
-	if err != nil {
-		return engine.Result{}, options.executeErr(err)
-	}
-	if len(result.Decision.Rejections) > 0 {
-		return engine.Result{}, options.rejectErr(result.Decision.Rejections[0].Message)
-	}
-	if options.requireEvents && len(result.Decision.Events) == 0 {
-		return engine.Result{}, status.Error(codes.Internal, options.missingEventMsg)
-	}
-	if inlineProjectionApplyEnabled.Load() {
-		if err := applyDomainDecisionEvents(ctx, applier, result.Decision.Events, options.applyErr); err != nil {
-			return engine.Result{}, err
-		}
-	}
-
-	return result, nil
-}
-
-func applyDomainDecisionEvents(ctx context.Context, applier projection.Applier, events []event.Event, mapErr func(error) error) error {
-	for _, evt := range events {
-		if err := applier.Apply(ctx, evt); err != nil {
-			return mapErr(err)
-		}
-	}
-	return nil
+	return domainwrite.ExecuteAndApply(ctx, domain, applier, cmd, domainwrite.Options{
+		RequireEvents:      options.requireEvents,
+		MissingEventMsg:    options.missingEventMsg,
+		InlineApplyEnabled: inlineProjectionApplyEnabled.Load(),
+		ShouldApply:        domainwrite.ShouldApplyProjectionInline,
+		ExecuteErr:         options.executeErr,
+		ApplyErr:           options.applyErr,
+		RejectErr:          options.rejectErr,
+	})
 }
 
 func normalizeDomainCommandOptions(options domainCommandApplyOptions) domainCommandApplyOptions {

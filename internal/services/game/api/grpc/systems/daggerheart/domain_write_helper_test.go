@@ -128,3 +128,40 @@ func TestExecuteAndApplyDomainCommandSkipsApplyWhenInlineDisabled(t *testing.T) 
 		t.Fatalf("apply calls = %d, want 0", applier.calls)
 	}
 }
+
+func TestExecuteAndApplyDomainCommandSkipsJournalOnlyInlineApply(t *testing.T) {
+	SetInlineProjectionApplyEnabled(true)
+	applier := &fakeEventApplier{err: errors.New("should not apply")}
+	svc := &DaggerheartService{
+		stores: Stores{
+			Domain: fakeDomainExecutor{
+				result: engine.Result{
+					Decision: command.Decision{Events: []event.Event{
+						{
+							CampaignID:  "camp-1",
+							Type:        event.Type("story.note_added"),
+							Timestamp:   time.Now().UTC(),
+							ActorType:   event.ActorTypeSystem,
+							EntityType:  "note",
+							EntityID:    "note-1",
+							PayloadJSON: []byte(`{"content":"note"}`),
+						},
+					}},
+				},
+			},
+		},
+	}
+
+	_, err := svc.executeAndApplyDomainCommand(
+		context.Background(),
+		command.Command{CampaignID: "camp-1", Type: command.Type("story.note.add")},
+		applier,
+		domainCommandApplyOptions{requireEvents: true, missingEventMsg: "missing events"},
+	)
+	if err != nil {
+		t.Fatalf("execute and apply with journal-only event: %v", err)
+	}
+	if applier.calls != 0 {
+		t.Fatalf("apply calls = %d, want 0", applier.calls)
+	}
+}

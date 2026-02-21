@@ -69,13 +69,13 @@ func TestRegisterCommands_ValidatesActionPayloads(t *testing.T) {
 			name: "note add",
 			valid: command.Command{
 				CampaignID:  "camp-1",
-				Type:        command.Type("action.note.add"),
+				Type:        command.Type("story.note.add"),
 				ActorType:   command.ActorTypeSystem,
 				PayloadJSON: []byte(`{"content":"note"}`),
 			},
 			invalid: command.Command{
 				CampaignID:  "camp-1",
-				Type:        command.Type("action.note.add"),
+				Type:        command.Type("story.note.add"),
 				ActorType:   command.ActorTypeSystem,
 				PayloadJSON: []byte(`{"content":1}`),
 			},
@@ -176,7 +176,7 @@ func TestRegisterEvents_ValidatesActionPayloads(t *testing.T) {
 			name: "note added",
 			valid: event.Event{
 				CampaignID:  "camp-1",
-				Type:        event.Type("action.note_added"),
+				Type:        event.Type("story.note_added"),
 				Timestamp:   time.Unix(0, 0).UTC(),
 				ActorType:   event.ActorTypeParticipant,
 				ActorID:     "actor-1",
@@ -186,7 +186,7 @@ func TestRegisterEvents_ValidatesActionPayloads(t *testing.T) {
 			},
 			invalid: event.Event{
 				CampaignID:  "camp-1",
-				Type:        event.Type("action.note_added"),
+				Type:        event.Type("story.note_added"),
 				Timestamp:   time.Unix(0, 0).UTC(),
 				ActorType:   event.ActorTypeParticipant,
 				ActorID:     "actor-1",
@@ -249,5 +249,30 @@ func TestRegisterEvents_RollResolvedRequiresEntityTargetAddressing(t *testing.T)
 	withTypeAndID.EntityID = "req-1"
 	if _, err := registry.ValidateForAppend(withTypeAndID); err != nil {
 		t.Fatalf("valid addressed event rejected: %v", err)
+	}
+}
+
+func TestRegisterEvents_IntentContracts(t *testing.T) {
+	registry := event.NewRegistry()
+	if err := RegisterEvents(registry); err != nil {
+		t.Fatalf("register events: %v", err)
+	}
+	definitions := registry.ListDefinitions()
+	intents := map[event.Type]event.Intent{}
+	for _, definition := range definitions {
+		intents[definition.Type] = definition.Intent
+	}
+
+	if intents[event.Type("action.roll_resolved")] != event.IntentProjectionAndReplay {
+		t.Fatalf("action.roll_resolved intent = %s, want %s", intents[event.Type("action.roll_resolved")], event.IntentProjectionAndReplay)
+	}
+	if intents[event.Type("action.outcome_applied")] != event.IntentProjectionAndReplay {
+		t.Fatalf("action.outcome_applied intent = %s, want %s", intents[event.Type("action.outcome_applied")], event.IntentProjectionAndReplay)
+	}
+	if intents[event.Type("action.outcome_rejected")] != event.IntentAuditOnly {
+		t.Fatalf("action.outcome_rejected intent = %s, want %s", intents[event.Type("action.outcome_rejected")], event.IntentAuditOnly)
+	}
+	if intents[event.Type("story.note_added")] != event.IntentAuditOnly {
+		t.Fatalf("story.note_added intent = %s, want %s", intents[event.Type("story.note_added")], event.IntentAuditOnly)
 	}
 }
