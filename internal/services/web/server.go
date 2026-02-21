@@ -15,7 +15,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/a-h/templ"
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
@@ -154,13 +153,17 @@ func (h *handler) handleAppRoot(w http.ResponseWriter, r *http.Request) {
 		if userLabel == "" {
 			userLabel = webtemplates.T(page.Loc, "web.dashboard.user_name_fallback")
 		}
-		templ.Handler(webtemplates.DashboardPage(webtemplates.DashboardPageParams{
+		if err := h.writePage(w, r, webtemplates.DashboardPage(webtemplates.DashboardPageParams{
 			AppName:     appName,
 			Lang:        page.Lang,
 			UserName:    userLabel,
 			CurrentPath: page.CurrentPath,
 			Loc:         page.Loc,
-		})).ServeHTTP(w, r)
+		}), composeHTMXTitle(page.Loc, "dashboard.title")); err != nil {
+			log.Printf("web: failed to render dashboard page: %v", err)
+			localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.web_handler_unavailable")
+			return
+		}
 		return
 	}
 
@@ -168,7 +171,10 @@ func (h *handler) handleAppRoot(w http.ResponseWriter, r *http.Request) {
 	if strings.TrimSpace(h.config.OAuthClientID) != "" {
 		params.SignInURL = "/auth/login"
 	}
-	templ.Handler(webtemplates.LandingPage(page, appName, params)).ServeHTTP(w, r)
+	if err := h.writePage(w, r, webtemplates.LandingPage(page, appName, params), composeHTMXTitle(page.Loc, "title.landing")); err != nil {
+		log.Printf("web: failed to render landing page: %v", err)
+		localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.web_handler_unavailable")
+	}
 }
 
 // NewHandler creates the HTTP handler for the login UX.
@@ -286,7 +292,11 @@ func (h *handler) registerPublicRoutes(mux *http.ServeMux, appName string) {
 			Lang:       lang,
 			Loc:        printer,
 		}
-		templ.Handler(webtemplates.LoginPage(params)).ServeHTTP(w, r)
+		if err := h.writePage(w, r, webtemplates.LoginPage(params), composeHTMXTitle(printer, "title.login")); err != nil {
+			log.Printf("web: failed to render login page: %v", err)
+			localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.web_handler_unavailable")
+			return
+		}
 	})
 
 	mux.HandleFunc("/magic", h.handleMagicLink)
@@ -768,7 +778,7 @@ func (h *handler) handleMagicLink(w http.ResponseWriter, r *http.Request) {
 	}
 	printer, lang := localizer(w, r)
 	if h == nil || h.authClient == nil {
-		renderMagicPage(w, r, http.StatusInternalServerError, webtemplates.MagicParams{
+		h.renderMagicPage(w, r, http.StatusInternalServerError, webtemplates.MagicParams{
 			AppName: h.resolvedAppName(),
 			Title:   printer.Sprintf("magic.unavailable.title"),
 			Message: printer.Sprintf("magic.unavailable.message"),
@@ -782,7 +792,7 @@ func (h *handler) handleMagicLink(w http.ResponseWriter, r *http.Request) {
 
 	token := strings.TrimSpace(r.URL.Query().Get("token"))
 	if token == "" {
-		renderMagicPage(w, r, http.StatusBadRequest, webtemplates.MagicParams{
+		h.renderMagicPage(w, r, http.StatusBadRequest, webtemplates.MagicParams{
 			AppName: h.resolvedAppName(),
 			Title:   printer.Sprintf("magic.missing.title"),
 			Message: printer.Sprintf("magic.missing.message"),
@@ -796,7 +806,7 @@ func (h *handler) handleMagicLink(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.authClient.ConsumeMagicLink(r.Context(), &authv1.ConsumeMagicLinkRequest{Token: token})
 	if err != nil {
-		renderMagicPage(w, r, http.StatusBadRequest, webtemplates.MagicParams{
+		h.renderMagicPage(w, r, http.StatusBadRequest, webtemplates.MagicParams{
 			AppName: h.resolvedAppName(),
 			Title:   printer.Sprintf("magic.invalid.title"),
 			Message: printer.Sprintf("magic.invalid.message"),
@@ -813,7 +823,7 @@ func (h *handler) handleMagicLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	renderMagicPage(w, r, http.StatusOK, webtemplates.MagicParams{
+	h.renderMagicPage(w, r, http.StatusOK, webtemplates.MagicParams{
 		AppName:   h.resolvedAppName(),
 		Title:     printer.Sprintf("magic.verified.title"),
 		Message:   printer.Sprintf("magic.verified.message"),
@@ -827,9 +837,13 @@ func (h *handler) handleMagicLink(w http.ResponseWriter, r *http.Request) {
 }
 
 // renderMagicPage writes the status code and renders the magic-link templ page.
-func renderMagicPage(w http.ResponseWriter, r *http.Request, status int, params webtemplates.MagicParams) {
+func (h *handler) renderMagicPage(w http.ResponseWriter, r *http.Request, status int, params webtemplates.MagicParams) {
+	writeGameContentType(w)
 	w.WriteHeader(status)
-	templ.Handler(webtemplates.MagicPage(params)).ServeHTTP(w, r)
+	if err := h.writePage(w, r, webtemplates.MagicPage(params), composeHTMXTitle(nil, params.Title)); err != nil {
+		log.Printf("web: failed to render magic page: %v", err)
+		localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.web_handler_unavailable")
+	}
 }
 
 // handleAuthLogin initiates the OAuth PKCE flow by redirecting to the auth server

@@ -5,7 +5,6 @@ import (
 	"context"
 	"embed"
 	"fmt"
-	"html"
 	"io"
 	"io/fs"
 	"log"
@@ -30,6 +29,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/admin/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/templates"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	sharedhtmx "github.com/louisbranch/fracturing.space/internal/services/shared/htmx"
 	sharedroute "github.com/louisbranch/fracturing.space/internal/services/shared/route"
 	"github.com/louisbranch/fracturing.space/internal/tools/scenario"
 	"golang.org/x/text/message"
@@ -2175,10 +2175,7 @@ func (h *Handler) systemClient() statev1.SystemServiceClient {
 
 // isHTMXRequest reports whether the request originated from HTMX.
 func isHTMXRequest(r *http.Request) bool {
-	if r == nil {
-		return false
-	}
-	return strings.EqualFold(r.Header.Get("HX-Request"), "true")
+	return sharedhtmx.IsHTMXRequest(r)
 }
 
 // splitPathParts returns non-empty path segments.
@@ -2195,86 +2192,20 @@ func splitPathParts(path string) []string {
 	return parts
 }
 
-type htmxResponseBuffer struct {
-	header      http.Header
-	statusCode  int
-	body        bytes.Buffer
-	headerWrote bool
-}
-
-func newHTMXResponseBuffer() *htmxResponseBuffer {
-	return &htmxResponseBuffer{
-		header:     make(http.Header),
-		statusCode: http.StatusOK,
-	}
-}
-
-func (w *htmxResponseBuffer) Header() http.Header {
-	return w.header
-}
-
-func (w *htmxResponseBuffer) WriteHeader(status int) {
-	if w.headerWrote {
-		return
-	}
-	w.headerWrote = true
-	w.statusCode = status
-}
-
-func (w *htmxResponseBuffer) Write(body []byte) (int, error) {
-	return w.body.Write(body)
-}
-
 func htmxDefaultPageTitle() string {
-	return "<title>Admin | " + templates.AppName() + "</title>"
+	return sharedhtmx.TitleTag("Admin | " + templates.AppName())
 }
 
 func htmxLocalizedPageTitle(loc *message.Printer, title string, args ...any) string {
 	if loc == nil {
 		return htmxDefaultPageTitle()
 	}
-	return "<title>" + html.EscapeString(templates.ComposeAdminPageTitle(templates.T(loc, title, args...))) + "</title>"
-}
-
-func addHTMXTitleIfMissing(responseBody []byte, title string) []byte {
-	bodyLower := strings.ToLower(string(responseBody))
-	if strings.Contains(bodyLower, "<title") {
-		return responseBody
-	}
-	if strings.TrimSpace(title) == "" {
-		title = htmxDefaultPageTitle()
-	}
-	return append([]byte(title), responseBody...)
-}
-
-func copyHeaders(dst, src http.Header) {
-	for key, values := range src {
-		for _, value := range values {
-			dst.Add(key, value)
-		}
-	}
+	return sharedhtmx.TitleTag(templates.ComposeAdminPageTitle(templates.T(loc, title, args...)))
 }
 
 // renderPage picks the HTMX fragment or full layout without duplicating handler flow.
 func renderPage(w http.ResponseWriter, r *http.Request, fragment templ.Component, full templ.Component, htmxTitle string) {
-	if isHTMXRequest(r) {
-		capture := newHTMXResponseBuffer()
-		templ.Handler(fragment).ServeHTTP(capture, r)
-
-		body := addHTMXTitleIfMissing(capture.body.Bytes(), htmxTitle)
-		copyHeaders(w.Header(), capture.Header())
-		if !capture.headerWrote {
-			capture.statusCode = http.StatusOK
-		}
-		if capture.statusCode != http.StatusOK {
-			w.WriteHeader(capture.statusCode)
-		}
-		if _, err := w.Write(body); err != nil {
-			log.Printf("admin: failed to write HTMX response: %v", err)
-		}
-		return
-	}
-	templ.Handler(full).ServeHTTP(w, r)
+	sharedhtmx.RenderPage(w, r, fragment, full, htmxTitle)
 }
 
 // buildCampaignRows formats campaign rows for the table.

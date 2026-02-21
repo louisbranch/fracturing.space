@@ -199,8 +199,7 @@ func renderAppCampaignSessionsPageWithContext(w http.ResponseWriter, r *http.Req
 			IsActive: session.GetStatus() == statev1.SessionStatus_SESSION_ACTIVE,
 		})
 	}
-	writeGameContentType(w)
-	if err := webtemplates.SessionsListPage(page, campaignID, canManageSessions, sessionItems).Render(r.Context(), w); err != nil {
+	if err := writePage(w, r, webtemplates.SessionsListPage(page, campaignID, canManageSessions, sessionItems), composeHTMXTitle(page.Loc, "game.sessions.title")); err != nil {
 		localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.failed_to_render_sessions_page")
 	}
 }
@@ -227,8 +226,7 @@ func renderAppCampaignSessionDetailPageWithContext(w http.ResponseWriter, r *htt
 		Name:       sessionName,
 		Status:     sessionStatusLabel(page.Loc, session.GetStatus()),
 	}
-	writeGameContentType(w)
-	if err := webtemplates.SessionDetailPage(page, detail).Render(r.Context(), w); err != nil {
+	if err := writePage(w, r, webtemplates.SessionDetailPage(page, detail), composeHTMXTitle(page.Loc, "game.session_detail.title")); err != nil {
 		localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.failed_to_render_session_detail_page")
 	}
 }

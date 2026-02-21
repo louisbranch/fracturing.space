@@ -181,8 +181,7 @@ func renderAppInvitesPageWithContext(w http.ResponseWriter, r *http.Request, pag
 			ParticipantID: participantID,
 		})
 	}
-	writeGameContentType(w)
-	if err := webtemplates.UserInvitesPage(page, mapped).Render(r.Context(), w); err != nil {
+	if err := writePage(w, r, webtemplates.UserInvitesPage(page, mapped), composeHTMXTitle(page.Loc, "game.my_invites.title")); err != nil {
 		localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.failed_to_render_invites_page")
 	}
 }
