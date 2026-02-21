@@ -258,7 +258,7 @@ func CampaignCreatePage(view CampaignCreatePageView, loc Localizer) templ.Compon
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<div class=\"grid grid-cols-1 md:grid-cols-2 gap-4\"><div class=\"form-control\"><label class=\"label\"><span class=\"label-text\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<div class=\"grid grid-cols-1 md:grid-cols-3 gap-4\"><div class=\"form-control\"><label class=\"label\"><span class=\"label-text\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

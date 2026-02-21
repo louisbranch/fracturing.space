@@ -4,12 +4,10 @@ package templates
 type CampaignListItem struct {
 	ID               string
 	Name             string
+	Theme            string
 	CoverImageURL    string
-	System           string
-	GMMode           string
 	ParticipantCount string
 	CharacterCount   string
-	CreatedDate      string
 }
 
 // SessionListItem models one session row in the sessions list.
@@ -93,57 +91,50 @@ templ GamePageShell(page PageContext, title string) {
 templ CampaignsListPage(page PageContext, campaigns []CampaignListItem) {
 	@GamePageShell(page, T(page.Loc, "game.campaigns.title")) {
 		<h1>{ T(page.Loc, "game.campaigns.heading") }</h1>
-		<div class="card bg-base-200">
-			<div class="card-body">
-				<div class="flex flex-wrap items-center justify-between gap-3">
-					<h2 class="card-title">{ T(page.Loc, "game.campaigns.title") }</h2>
-					<a class="btn btn-primary btn-sm" href="/campaigns/create">{ T(page.Loc, "game.campaigns.start_new") }</a>
-				</div>
-				<div class="overflow-x-auto">
-					<table class="table table-zebra">
-						<thead>
-							<tr>
-								<th>{ T(page.Loc, "game.campaigns.table.campaign") }</th>
-								<th>{ T(page.Loc, "game.campaigns.table.system") }</th>
-								<th>{ T(page.Loc, "game.campaigns.table.gm_mode") }</th>
-								<th>{ T(page.Loc, "game.campaigns.table.participants") }</th>
-								<th>{ T(page.Loc, "game.campaigns.table.characters") }</th>
-								<th>{ T(page.Loc, "game.campaigns.table.created") }</th>
-							</tr>
-						</thead>
-						<tbody>
-							if len(campaigns) == 0 {
-								<tr>
-									<td colspan="6">{ T(page.Loc, "game.campaigns.empty") }</td>
-								</tr>
+		<div class="flex flex-wrap items-center justify-end gap-3">
+			<a class="btn btn-primary btn-sm" href="/campaigns/create">{ T(page.Loc, "game.campaigns.start_new") }</a>
+		</div>
+		<div class="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+			if len(campaigns) == 0 {
+				<p>{ T(page.Loc, "game.campaigns.empty") }</p>
+			}
+			for _, campaign := range campaigns {
+				<div class="card bg-base-100 border border-base-300">
+					<figure>
+						if campaign.ID != "" {
+							<a href={ "/campaigns/" + campaign.ID } class="group block">
+								<img
+									src={ campaign.CoverImageURL }
+									alt={ campaign.Name + " cover" }
+									class="w-full object-cover"
+								/>
+							</a>
+						} else {
+							<img
+								src={ campaign.CoverImageURL }
+								alt={ campaign.Name + " cover" }
+								class="w-full object-cover"
+							/>
+						}
+					</figure>
+					<div class="card-body">
+						<h2 class="card-title">
+							if campaign.ID != "" {
+								<a href={ "/campaigns/" + campaign.ID }>{ campaign.Name }</a>
+							} else {
+								{ campaign.Name }
 							}
-							for _, campaign := range campaigns {
-								<tr>
-									<td>
-										<div class="flex items-center gap-3">
-											if campaign.CoverImageURL != "" {
-												<img src={ campaign.CoverImageURL } alt={ campaign.Name + " cover" } class="w-10 h-10 rounded object-cover border border-base-300"/>
-											}
-											<div>
-												if campaign.ID != "" {
-													<a href={ "/campaigns/" + campaign.ID }>{ campaign.Name }</a>
-												} else {
-													{ campaign.Name }
-												}
-											</div>
-										</div>
-									</td>
-									<td>{ campaign.System }</td>
-									<td>{ campaign.GMMode }</td>
-									<td>{ campaign.ParticipantCount }</td>
-									<td>{ campaign.CharacterCount }</td>
-									<td>{ campaign.CreatedDate }</td>
-								</tr>
-							}
-						</tbody>
-					</table>
+						</h2>
+						if campaign.Theme != "" {
+							<p class="text-sm opacity-70">{ campaign.Theme }</p>
+						}
+						<div class="card-actions justify-start">
+							<div class="badge badge-outline">{ T(page.Loc, "game.campaigns.table.participants") }: { campaign.ParticipantCount }</div>
+							<div class="badge badge-outline">{ T(page.Loc, "game.campaigns.table.characters") }: { campaign.CharacterCount }</div>
+						</div>
+					</div>
 				</div>
-			</div>
+			}
 		</div>
 	}
 }

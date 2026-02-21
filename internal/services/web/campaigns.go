@@ -12,7 +12,6 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func (h *handler) handleAppCampaigns(w http.ResponseWriter, r *http.Request) {
@@ -230,12 +229,10 @@ func renderAppCampaignsListPage(w http.ResponseWriter, r *http.Request, page web
 		normalized = append(normalized, webtemplates.CampaignListItem{
 			ID:               campaignID,
 			Name:             name,
+			Theme:            truncateCampaignTheme(campaign.GetThemePrompt()),
 			CoverImageURL:    campaignCoverImageURL(campaign.GetCoverAssetId()),
-			System:           formatWebCampaignSystem(page.Loc, campaign.GetSystem()),
-			GMMode:           formatWebCampaignGmMode(page.Loc, campaign.GetGmMode()),
 			ParticipantCount: strconv.FormatInt(int64(campaign.GetParticipantCount()), 10),
 			CharacterCount:   strconv.FormatInt(int64(campaign.GetCharacterCount()), 10),
-			CreatedDate:      formatCampaignCreatedDate(campaign.GetCreatedAt()),
 		})
 	}
 	if err := writePage(w, r, webtemplates.CampaignsListPage(page, normalized), composeHTMXTitle(page.Loc, "game.campaigns.title")); err != nil {
@@ -244,6 +241,18 @@ func renderAppCampaignsListPage(w http.ResponseWriter, r *http.Request, page web
 }
 
 const defaultCampaignCoverAssetID = "abandoned_castle_courtyard"
+const campaignThemePromptLimit = 80
+
+func truncateCampaignTheme(themePrompt string) string {
+	runes := []rune(strings.TrimSpace(themePrompt))
+	if campaignThemePromptLimit <= 0 || len(runes) == 0 {
+		return ""
+	}
+	if len(runes) <= campaignThemePromptLimit {
+		return string(runes)
+	}
+	return string(runes[:campaignThemePromptLimit]) + "..."
+}
 
 func campaignCoverImageURL(coverAssetID string) string {
 	resolvedCoverAssetID := strings.TrimSpace(coverAssetID)
@@ -251,35 +260,6 @@ func campaignCoverImageURL(coverAssetID string) string {
 		resolvedCoverAssetID = defaultCampaignCoverAssetID
 	}
 	return "/static/campaign-covers/" + url.PathEscape(resolvedCoverAssetID) + ".png"
-}
-
-func formatWebCampaignSystem(loc webtemplates.Localizer, system commonv1.GameSystem) string {
-	switch system {
-	case commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART:
-		return webtemplates.T(loc, "game.create.field_system_value_daggerheart")
-	default:
-		return webtemplates.T(loc, "game.campaign.system_unspecified")
-	}
-}
-
-func formatWebCampaignGmMode(loc webtemplates.Localizer, mode statev1.GmMode) string {
-	switch mode {
-	case statev1.GmMode_HUMAN:
-		return webtemplates.T(loc, "game.create.field_gm_mode_human")
-	case statev1.GmMode_AI:
-		return webtemplates.T(loc, "game.create.field_gm_mode_ai")
-	case statev1.GmMode_HYBRID:
-		return webtemplates.T(loc, "game.create.field_gm_mode_hybrid")
-	default:
-		return webtemplates.T(loc, "game.campaign.gm_mode_unspecified")
-	}
-}
-
-func formatCampaignCreatedDate(createdAt *timestamppb.Timestamp) string {
-	if createdAt == nil {
-		return ""
-	}
-	return createdAt.AsTime().Format("2006-01-02")
 }
 
 func renderAppCampaignCreatePage(w http.ResponseWriter, r *http.Request, page webtemplates.PageContext) {

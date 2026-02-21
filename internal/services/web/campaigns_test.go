@@ -385,7 +385,14 @@ func TestAppCampaignsPageRendersUserScopedCampaigns(t *testing.T) {
 	campaignClient := &fakeWebCampaignClient{
 		response: &statev1.ListCampaignsResponse{
 			Campaigns: []*statev1.Campaign{
-				{Id: "camp-1", Name: "Campaign One", CoverAssetId: "abandoned_castle_courtyard"},
+				{
+					Id:               "camp-1",
+					Name:             "Campaign One",
+					CoverAssetId:     "abandoned_castle_courtyard",
+					ThemePrompt:      strings.Repeat("x", campaignThemePromptLimit+10),
+					ParticipantCount: 12,
+					CharacterCount:   7,
+				},
 				{Id: "camp-2", Name: "Campaign Two"},
 			},
 		},
@@ -415,6 +422,9 @@ func TestAppCampaignsPageRendersUserScopedCampaigns(t *testing.T) {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
 	}
 	body := w.Body.String()
+	if !strings.Contains(body, `class="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4"`) {
+		t.Fatalf("expected campaigns to render as card grid")
+	}
 	campaignActionIdx := strings.Index(body, "Start a new Campaign")
 	if campaignActionIdx == -1 {
 		t.Fatalf("expected create campaign action in response")
@@ -432,6 +442,22 @@ func TestAppCampaignsPageRendersUserScopedCampaigns(t *testing.T) {
 	if campOneIdx == -1 {
 		t.Fatalf("expected campaign detail link for camp-1 in response")
 	}
+	if !strings.Contains(body, `<a href="/campaigns/camp-1" class="group block"><img`) {
+		t.Fatalf("expected campaign cover image link for camp-1")
+	}
+	if !strings.Contains(body, `<a href="/campaigns/camp-1">Campaign One</a>`) {
+		t.Fatalf("expected campaign name link for camp-1")
+	}
+	expectedTheme := strings.Repeat("x", campaignThemePromptLimit) + "..."
+	if !strings.Contains(body, `<p class="text-sm opacity-70">`+expectedTheme+`</p>`) {
+		t.Fatalf("expected truncated campaign theme in response")
+	}
+	if !strings.Contains(body, `badge badge-outline">Participants: 12`) {
+		t.Fatalf("expected participants badge in response")
+	}
+	if !strings.Contains(body, `badge badge-outline">Characters: 7`) {
+		t.Fatalf("expected characters badge in response")
+	}
 	if campaignActionIdx > campOneIdx {
 		t.Fatalf("expected campaign action to render before campaign list items")
 	}
@@ -448,6 +474,19 @@ func TestAppCampaignsPageRendersUserScopedCampaigns(t *testing.T) {
 	userIDs := campaignClient.listMetadata.Get(grpcmeta.UserIDHeader)
 	if len(userIDs) != 1 || userIDs[0] != "user-123" {
 		t.Fatalf("metadata %s = %v, want [user-123]", grpcmeta.UserIDHeader, userIDs)
+	}
+}
+
+func TestTruncateCampaignTheme(t *testing.T) {
+	longTheme := strings.Repeat("x", campaignThemePromptLimit+1)
+	if got := truncateCampaignTheme(longTheme); got != strings.Repeat("x", campaignThemePromptLimit)+"..." {
+		t.Fatalf("truncateCampaignTheme(%q) = %q, want %q", longTheme, got, strings.Repeat("x", campaignThemePromptLimit)+"...")
+	}
+	if got := truncateCampaignTheme("Quiet dawn"); got != "Quiet dawn" {
+		t.Fatalf("truncateCampaignTheme(%q) = %q, want %q", "Quiet dawn", got, "Quiet dawn")
+	}
+	if got := truncateCampaignTheme("  trimmed  "); got != "trimmed" {
+		t.Fatalf("truncateCampaignTheme(%q) = %q, want %q", "  trimmed  ", got, "trimmed")
 	}
 }
 
