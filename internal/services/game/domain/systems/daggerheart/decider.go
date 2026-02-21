@@ -43,8 +43,14 @@ const (
 	eventTypeAdversaryUpdated           event.Type   = "sys.daggerheart.adversary_updated"
 	eventTypeAdversaryDeleted           event.Type   = "sys.daggerheart.adversary_deleted"
 
-	rejectionCodeGMFearAfterRequired = "GM_FEAR_AFTER_REQUIRED"
-	rejectionCodeGMFearOutOfRange    = "GM_FEAR_AFTER_OUT_OF_RANGE"
+	rejectionCodeGMFearAfterRequired           = "GM_FEAR_AFTER_REQUIRED"
+	rejectionCodeGMFearOutOfRange              = "GM_FEAR_AFTER_OUT_OF_RANGE"
+	rejectionCodeGMFearUnchanged               = "GM_FEAR_UNCHANGED"
+	rejectionCodeCharacterStatePatchNoMutation = "CHARACTER_STATE_PATCH_NO_MUTATION"
+	rejectionCodeConditionChangeNoMutation     = "CONDITION_CHANGE_NO_MUTATION"
+	rejectionCodeCountdownUpdateNoMutation     = "COUNTDOWN_UPDATE_NO_MUTATION"
+	rejectionCodeAdversaryConditionNoMutation  = "ADVERSARY_CONDITION_NO_MUTATION"
+	rejectionCodeAdversaryCreateNoMutation     = "ADVERSARY_CREATE_NO_MUTATION"
 )
 
 // Decider handles Daggerheart system commands.
@@ -52,6 +58,7 @@ type Decider struct{}
 
 // Decide returns the decision for a system command against current state.
 func (Decider) Decide(state any, cmd command.Command, now func() time.Time) command.Decision {
+	snapshotState, hasSnapshot := snapshotFromState(state)
 	switch cmd.Type {
 	case commandTypeGMFearSet:
 		var payload GMFearSetPayload
@@ -70,13 +77,15 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 			})
 		}
 		before := GMFearDefault
-		switch current := state.(type) {
-		case SnapshotState:
-			before = current.GMFear
-		case *SnapshotState:
-			if current != nil {
-				before = current.GMFear
-			}
+		if hasSnapshot {
+			before = snapshotState.GMFear
+		}
+		if after == before {
+			// FIXME(telemetry): metric for idempotent gm fear set commands (no-op reject).
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodeGMFearUnchanged,
+				Message: "gm fear after is unchanged",
+			})
 		}
 		if now == nil {
 			now = time.Now
@@ -110,6 +119,13 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 	case commandTypeCharacterStatePatch:
 		var payload CharacterStatePatchPayload
 		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if isCharacterStatePatchNoMutation(snapshotState, payload) {
+			// FIXME(telemetry): metric for idempotent character state patch commands.
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodeCharacterStatePatchNoMutation,
+				Message: "character state patch is unchanged",
+			})
+		}
 		if now == nil {
 			now = time.Now
 		}
@@ -141,6 +157,13 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 	case commandTypeConditionChange:
 		var payload ConditionChangePayload
 		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if isConditionChangeNoMutation(snapshotState, payload) {
+			// FIXME(telemetry): metric for idempotent character condition changes.
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodeConditionChangeNoMutation,
+				Message: "condition change is unchanged",
+			})
+		}
 		if now == nil {
 			now = time.Now
 		}
@@ -346,6 +369,13 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 	case commandTypeCountdownUpdate:
 		var payload CountdownUpdatePayload
 		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if isCountdownUpdateNoMutation(snapshotState, payload) {
+			// FIXME(telemetry): metric for idempotent countdown updates.
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodeCountdownUpdateNoMutation,
+				Message: "countdown update is unchanged",
+			})
+		}
 		if now == nil {
 			now = time.Now
 		}
@@ -516,6 +546,13 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 	case commandTypeAdversaryConditionChange:
 		var payload AdversaryConditionChangePayload
 		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if isAdversaryConditionChangeNoMutation(snapshotState, payload) {
+			// FIXME(telemetry): metric for idempotent adversary condition changes.
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodeAdversaryConditionNoMutation,
+				Message: "adversary condition change is unchanged",
+			})
+		}
 		if now == nil {
 			now = time.Now
 		}
@@ -548,6 +585,13 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 	case commandTypeAdversaryCreate:
 		var payload AdversaryCreatePayload
 		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if isAdversaryCreateNoMutation(snapshotState, payload) {
+			// FIXME(telemetry): metric for idempotent adversary creation commands.
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodeAdversaryCreateNoMutation,
+				Message: "adversary create is unchanged",
+			})
+		}
 		if now == nil {
 			now = time.Now
 		}
@@ -650,4 +694,148 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 	default:
 		return command.Decision{}
 	}
+}
+
+func isCharacterStatePatchNoMutation(snapshot SnapshotState, payload CharacterStatePatchPayload) bool {
+	character, hasCharacter := snapshotCharacterState(snapshot, payload.CharacterID)
+	if !hasCharacter {
+		return false
+	}
+
+	if payload.HPAfter != nil {
+		if character.HP != *payload.HPAfter {
+			return false
+		}
+	} else if payload.HPBefore != nil && character.HP == 0 && character.HP != *payload.HPBefore {
+		return false
+	}
+	if payload.HopeAfter != nil && character.Hope != *payload.HopeAfter {
+		return false
+	}
+	if payload.HopeMaxAfter != nil && character.HopeMax != *payload.HopeMaxAfter {
+		return false
+	}
+	if payload.StressAfter != nil && character.Stress != *payload.StressAfter {
+		return false
+	}
+	if payload.ArmorAfter != nil && character.Armor != *payload.ArmorAfter {
+		return false
+	}
+	if payload.LifeStateAfter != nil && character.LifeState != *payload.LifeStateAfter {
+		return false
+	}
+
+	return true
+}
+
+func isConditionChangeNoMutation(snapshot SnapshotState, payload ConditionChangePayload) bool {
+	character, hasCharacter := snapshotCharacterState(snapshot, payload.CharacterID)
+	if !hasCharacter {
+		return false
+	}
+
+	current, err := NormalizeConditions(character.Conditions)
+	if err != nil {
+		return false
+	}
+	after, err := NormalizeConditions(payload.ConditionsAfter)
+	if err != nil {
+		return false
+	}
+	return ConditionsEqual(current, after)
+}
+
+func isCountdownUpdateNoMutation(snapshot SnapshotState, payload CountdownUpdatePayload) bool {
+	countdown, hasCountdown := snapshotCountdownState(snapshot, payload.CountdownID)
+	if !hasCountdown {
+		return false
+	}
+	if countdown.Current != payload.After {
+		return false
+	}
+	if payload.Looped && !countdown.Looping {
+		return false
+	}
+	return true
+}
+
+func isAdversaryConditionChangeNoMutation(snapshot SnapshotState, payload AdversaryConditionChangePayload) bool {
+	adversary, hasAdversary := snapshotAdversaryState(snapshot, payload.AdversaryID)
+	if !hasAdversary {
+		return false
+	}
+
+	current, err := NormalizeConditions(adversary.Conditions)
+	if err != nil {
+		return false
+	}
+	after, err := NormalizeConditions(payload.ConditionsAfter)
+	if err != nil {
+		return false
+	}
+	return ConditionsEqual(current, after)
+}
+
+func isAdversaryCreateNoMutation(snapshot SnapshotState, payload AdversaryCreatePayload) bool {
+	adversary, hasAdversary := snapshotAdversaryState(snapshot, payload.AdversaryID)
+	if !hasAdversary {
+		return false
+	}
+	return adversary.Name == strings.TrimSpace(payload.Name) &&
+		adversary.Kind == strings.TrimSpace(payload.Kind) &&
+		adversary.SessionID == strings.TrimSpace(payload.SessionID) &&
+		adversary.Notes == strings.TrimSpace(payload.Notes) &&
+		adversary.HP == payload.HP &&
+		adversary.HPMax == payload.HPMax &&
+		adversary.Stress == payload.Stress &&
+		adversary.StressMax == payload.StressMax &&
+		adversary.Evasion == payload.Evasion &&
+		adversary.Major == payload.Major &&
+		adversary.Severe == payload.Severe &&
+		adversary.Armor == payload.Armor
+}
+
+func snapshotCharacterState(snapshot SnapshotState, characterID string) (CharacterState, bool) {
+	characterID = strings.TrimSpace(characterID)
+	if characterID == "" {
+		return CharacterState{}, false
+	}
+	character, ok := snapshot.CharacterStates[characterID]
+	if !ok {
+		return CharacterState{}, false
+	}
+	character.CharacterID = characterID
+	character.CampaignID = snapshot.CampaignID
+	if character.LifeState == "" {
+		character.LifeState = LifeStateAlive
+	}
+	return character, true
+}
+
+func snapshotAdversaryState(snapshot SnapshotState, adversaryID string) (AdversaryState, bool) {
+	adversaryID = strings.TrimSpace(adversaryID)
+	if adversaryID == "" {
+		return AdversaryState{}, false
+	}
+	adversary, ok := snapshot.AdversaryStates[adversaryID]
+	if !ok {
+		return AdversaryState{}, false
+	}
+	adversary.AdversaryID = adversaryID
+	adversary.CampaignID = snapshot.CampaignID
+	return adversary, true
+}
+
+func snapshotCountdownState(snapshot SnapshotState, countdownID string) (CountdownState, bool) {
+	countdownID = strings.TrimSpace(countdownID)
+	if countdownID == "" {
+		return CountdownState{}, false
+	}
+	countdown, ok := snapshot.CountdownStates[countdownID]
+	if !ok {
+		return CountdownState{}, false
+	}
+	countdown.CountdownID = countdownID
+	countdown.CampaignID = snapshot.CampaignID
+	return countdown, true
 }

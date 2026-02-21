@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/system"
 )
 
 // Projector applies Daggerheart system events to state.
@@ -409,6 +411,39 @@ func applyAdversaryConditionsChanged(state *SnapshotState, adversaryID string, a
 
 func snapshotFromState(state any) (SnapshotState, bool) {
 	switch typed := state.(type) {
+	case SnapshotState:
+		return typed, true
+	case *SnapshotState:
+		if typed != nil {
+			return *typed, true
+		}
+	case aggregate.State:
+		snapshot, ok := typed.Systems[system.Key{
+			ID:      SystemID,
+			Version: SystemVersion,
+		}]
+		if !ok {
+			return SnapshotState{GMFear: GMFearDefault}, false
+		}
+		return snapshotFromAny(snapshot)
+	case *aggregate.State:
+		if typed == nil {
+			return SnapshotState{GMFear: GMFearDefault}, false
+		}
+		snapshot, ok := typed.Systems[system.Key{
+			ID:      SystemID,
+			Version: SystemVersion,
+		}]
+		if !ok {
+			return SnapshotState{GMFear: GMFearDefault}, false
+		}
+		return snapshotFromAny(snapshot)
+	}
+	return SnapshotState{GMFear: GMFearDefault}, false
+}
+
+func snapshotFromAny(snapshot any) (SnapshotState, bool) {
+	switch typed := snapshot.(type) {
 	case SnapshotState:
 		return typed, true
 	case *SnapshotState:
