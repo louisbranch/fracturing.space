@@ -192,21 +192,21 @@ func (h *handler) ensureCampaignClients(ctx context.Context) error {
 		return nil
 	}
 
-	_, participantClient, campaignClient, eventClient, sessionClient, characterClient, inviteClient, err := dialGameGRPC(ctx, h.config)
+	clients, err := dialGameGRPC(ctx, h.config)
 	if err != nil {
 		return err
 	}
-	if campaignClient == nil || sessionClient == nil || participantClient == nil || characterClient == nil || inviteClient == nil {
+	if clients.campaignClient == nil || clients.sessionClient == nil || clients.participantClient == nil || clients.characterClient == nil || clients.inviteClient == nil {
 		return errors.New("campaign service client is not configured")
 	}
 
-	h.participantClient = participantClient
-	h.campaignClient = campaignClient
-	h.eventClient = eventClient
-	h.sessionClient = sessionClient
-	h.characterClient = characterClient
-	h.inviteClient = inviteClient
-	h.campaignAccess = newCampaignAccessChecker(h.config, participantClient)
+	h.participantClient = clients.participantClient
+	h.campaignClient = clients.campaignClient
+	h.eventClient = clients.eventClient
+	h.sessionClient = clients.sessionClient
+	h.characterClient = clients.characterClient
+	h.inviteClient = clients.inviteClient
+	h.campaignAccess = newCampaignAccessChecker(h.config, clients.participantClient)
 	return nil
 }
 

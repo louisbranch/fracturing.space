@@ -29,7 +29,7 @@ func TestNewServerWithContextRequiresContext(t *testing.T) {
 }
 
 func TestDialGameGRPCNilContextReturnsError(t *testing.T) {
-	_, _, err := dialGameGRPC(nil, Config{
+	_, err := dialGameGRPC(nil, Config{
 		GameAddr: "127.0.0.1:1",
 	})
 	if err == nil {

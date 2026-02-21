@@ -100,6 +100,11 @@ type Server struct {
 	projectionApplyOutboxShadowWorkerEnabled bool
 }
 
+type authGRPCClients struct {
+	conn       *grpc.ClientConn
+	authClient authv1.AuthServiceClient
+}
+
 // projectionApplyOutboxShadowProcessor drains queue rows for environments where the
 // main apply worker is intentionally delayed or disabled.
 type projectionApplyOutboxShadowProcessor interface {
@@ -211,12 +216,14 @@ func NewWithAddr(addr string) (*Server, error) {
 		return nil, fmt.Errorf("validate system parity: %w", err)
 	}
 
-	authConn, authClient, err := dialAuthGRPC(context.Background(), srvEnv.AuthAddr)
+	authClients, err := dialAuthGRPC(context.Background(), srvEnv.AuthAddr)
 	if err != nil {
 		_ = listener.Close()
 		bundle.Close()
 		return nil, err
 	}
+	authConn := authClients.conn
+	authClient := authClients.authClient
 
 	grpcServer := grpc.NewServer(
 		grpc.StatsHandler(otelgrpc.NewServerHandler()),
@@ -575,7 +582,7 @@ func openStorageBundle(srvEnv serverEnv) (*storageBundle, error) {
 }
 
 // dialAuthGRPC opens an authenticated gRPC client to auth service.
-func dialAuthGRPC(ctx context.Context, authAddr string) (*grpc.ClientConn, authv1.AuthServiceClient, error) {
+func dialAuthGRPC(ctx context.Context, authAddr string) (authGRPCClients, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -594,13 +601,16 @@ func dialAuthGRPC(ctx context.Context, authAddr string) (*grpc.ClientConn, authv
 		var dialErr *platformgrpc.DialError
 		if errors.As(err, &dialErr) {
 			if dialErr.Stage == platformgrpc.DialStageHealth {
-				return nil, nil, fmt.Errorf("auth gRPC health check failed for %s: %w", authAddr, dialErr.Err)
+				return authGRPCClients{}, fmt.Errorf("auth gRPC health check failed for %s: %w", authAddr, dialErr.Err)
 			}
-			return nil, nil, fmt.Errorf("dial auth gRPC %s: %w", authAddr, dialErr.Err)
+			return authGRPCClients{}, fmt.Errorf("dial auth gRPC %s: %w", authAddr, dialErr.Err)
 		}
-		return nil, nil, fmt.Errorf("dial auth gRPC %s: %w", authAddr, err)
+		return authGRPCClients{}, fmt.Errorf("dial auth gRPC %s: %w", authAddr, err)
 	}
-	return conn, authv1.NewAuthServiceClient(conn), nil
+	return authGRPCClients{
+		conn:       conn,
+		authClient: authv1.NewAuthServiceClient(conn),
+	}, nil
 }
 
 // openEventStore opens the immutable event store and verifies chain integrity on boot.

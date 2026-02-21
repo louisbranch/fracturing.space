@@ -16,7 +16,7 @@ func TestDialAuthGRPCDialError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
-	_, _, err := dialAuthGRPC(ctx, "127.0.0.1:1")
+	_, err := dialAuthGRPC(ctx, "127.0.0.1:1")
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -32,7 +32,7 @@ func TestDialAuthGRPCHealthError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
 
-	_, _, err := dialAuthGRPC(ctx, addr)
+	_, err := dialAuthGRPC(ctx, addr)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -48,17 +48,17 @@ func TestDialAuthGRPCSuccess(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	conn, client, err := dialAuthGRPC(ctx, addr)
+	clients, err := dialAuthGRPC(ctx, addr)
 	if err != nil {
 		t.Fatalf("dial auth gRPC: %v", err)
 	}
-	if conn == nil {
+	if clients.conn == nil {
 		t.Fatal("expected connection")
 	}
-	if client == nil {
+	if clients.authClient == nil {
 		t.Fatal("expected auth client")
 	}
-	if err := conn.Close(); err != nil {
+	if err := clients.conn.Close(); err != nil {
 		t.Fatalf("close conn: %v", err)
 	}
 }

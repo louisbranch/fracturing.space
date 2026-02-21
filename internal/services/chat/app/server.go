@@ -82,6 +82,11 @@ type wsError struct {
 	Details   map[string]any `json:"details,omitempty"`
 }
 
+type gameGRPCClients struct {
+	conn              *gogrpc.ClientConn
+	participantClient statev1.ParticipantServiceClient
+}
+
 type joinPayload struct {
 	CampaignID     string `json:"campaign_id"`
 	LastSequenceID int64  `json:"last_sequence_id,omitempty"`
@@ -982,14 +987,14 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 	var sessionClient statev1.SessionServiceClient
 	var campaignClient statev1.CampaignServiceClient
 	if strings.TrimSpace(config.GameAddr) != "" {
-		conn, client, err := dialGameGRPC(ctx, config)
+		clients, err := dialGameGRPC(ctx, config)
 		if err != nil {
 			log.Printf("game gRPC dial failed, campaign membership checks unavailable: %v", err)
 		} else {
-			gameConn = conn
-			participantClient = client
-			sessionClient = statev1.NewSessionServiceClient(conn)
-			campaignClient = statev1.NewCampaignServiceClient(conn)
+			gameConn = clients.conn
+			participantClient = clients.participantClient
+			sessionClient = statev1.NewSessionServiceClient(clients.conn)
+			campaignClient = statev1.NewCampaignServiceClient(clients.conn)
 		}
 	}
 
@@ -1068,13 +1073,13 @@ func (s *Server) Close() {
 	}
 }
 
-func dialGameGRPC(ctx context.Context, config Config) (*gogrpc.ClientConn, statev1.ParticipantServiceClient, error) {
+func dialGameGRPC(ctx context.Context, config Config) (gameGRPCClients, error) {
 	gameAddr := strings.TrimSpace(config.GameAddr)
 	if gameAddr == "" {
-		return nil, nil, nil
+		return gameGRPCClients{}, nil
 	}
 	if ctx == nil {
-		return nil, nil, errors.New("context is required")
+		return gameGRPCClients{}, errors.New("context is required")
 	}
 	if config.GRPCDialTimeout <= 0 {
 		config.GRPCDialTimeout = timeouts.GRPCDial
@@ -1093,7 +1098,10 @@ func dialGameGRPC(ctx context.Context, config Config) (*gogrpc.ClientConn, state
 		platformgrpc.DefaultClientDialOptions()...,
 	)
 	if err != nil {
-		return nil, nil, fmt.Errorf("dial game gRPC %s: %w", gameAddr, err)
+		return gameGRPCClients{}, fmt.Errorf("dial game gRPC %s: %w", gameAddr, err)
 	}
-	return conn, statev1.NewParticipantServiceClient(conn), nil
+	return gameGRPCClients{
+		conn:              conn,
+		participantClient: statev1.NewParticipantServiceClient(conn),
+	}, nil
 }

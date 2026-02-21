@@ -48,8 +48,8 @@ func TestGrpcClientsNilSafe(t *testing.T) {
 	}
 
 	// nil-safe set and close
-	g.SetGameConn(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
-	g.SetAuthConn(nil, nil, nil)
+	g.SetGameClients(gameGRPCClients{})
+	g.SetAuthClients(authGRPCClients{})
 	g.Close()
 }
 
@@ -62,7 +62,7 @@ func TestGrpcClientsClose(t *testing.T) {
 	}
 }
 
-// TestGrpcClientsSetAndRead verifies SetGameConn/SetAuthConn store values.
+// TestGrpcClientsSetAndRead verifies SetGameClients/SetAuthClients store values.
 func TestGrpcClientsSetAndRead(t *testing.T) {
 	g := &grpcClients{}
 
@@ -80,9 +80,9 @@ func TestGrpcClientsSetAndRead(t *testing.T) {
 		t.Error("expected no auth connection before set")
 	}
 
-	// SetGameConn with nil conn still marks it as set (conn field is assigned).
+	// SetGameClients with nil conn still marks it as set (conn field is assigned).
 	// Use nil clients to test accessor coverage without a real gRPC connection.
-	g.SetGameConn(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	g.SetGameClients(gameGRPCClients{})
 
 	// After first set, HasGameConnection is false since conn is nil.
 	// But the guard (g.gameConn != nil) won't trigger since we passed nil.
@@ -91,8 +91,8 @@ func TestGrpcClientsSetAndRead(t *testing.T) {
 		t.Error("expected nil CampaignClient with nil conn")
 	}
 
-	// SetAuthConn with nil conn.
-	g.SetAuthConn(nil, nil, nil)
+	// SetAuthClients with nil conn.
+	g.SetAuthClients(authGRPCClients{})
 	if g.AuthClient() != nil {
 		t.Error("expected nil AuthClient with nil conn")
 	}
@@ -124,25 +124,25 @@ func TestGrpcClientsSetAndRead(t *testing.T) {
 	}
 }
 
-// TestGrpcClientsSetGameConnIdempotent verifies duplicate SetGameConn is no-op.
+// TestGrpcClientsSetGameConnIdempotent verifies duplicate SetGameClients is no-op.
 func TestGrpcClientsSetGameConnIdempotent(t *testing.T) {
 	g := &grpcClients{}
 	// Simulate a set connection by directly setting gameConn.
 	g.gameConn = &grpc.ClientConn{}
 	// Second call should be a no-op (returns early).
-	g.SetGameConn(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	g.SetGameClients(gameGRPCClients{})
 	if !g.HasGameConnection() {
 		t.Error("expected game connection to remain after idempotent set")
 	}
 }
 
-// TestGrpcClientsSetAuthConnIdempotent verifies duplicate SetAuthConn is no-op.
+// TestGrpcClientsSetAuthConnIdempotent verifies duplicate SetAuthClients is no-op.
 func TestGrpcClientsSetAuthConnIdempotent(t *testing.T) {
 	g := &grpcClients{}
 	// Simulate a set connection by directly setting authConn.
 	g.authConn = &grpc.ClientConn{}
 	// Second call should be a no-op (returns early).
-	g.SetAuthConn(nil, nil, nil)
+	g.SetAuthClients(authGRPCClients{})
 	if !g.HasAuthConnection() {
 		t.Error("expected auth connection to remain after idempotent set")
 	}
