@@ -111,6 +111,19 @@ func TestApplierApply_ReturnsErrorForUnregisteredSystemEvents(t *testing.T) {
 	}
 }
 
+func TestApplierApply_PropagatesFoldError(t *testing.T) {
+	applier := Applier{}
+	state := State{}
+
+	_, err := applier.Apply(state, event.Event{
+		Type:        event.Type("campaign.created"),
+		PayloadJSON: []byte(`{corrupt`),
+	})
+	if err == nil {
+		t.Fatal("expected error for corrupt payload")
+	}
+}
+
 func TestApplierApply_UpdatesInviteState(t *testing.T) {
 	applier := Applier{}
 	state := State{}

@@ -17,13 +17,13 @@ const (
 	commandTypeUnbind             command.Type = "participant.unbind"
 	commandTypeSeatReassign       command.Type = "participant.seat.reassign"
 	commandTypeSeatReassignLegacy command.Type = "seat.reassign"
-	eventTypeJoined               event.Type   = "participant.joined"
-	eventTypeUpdated              event.Type   = "participant.updated"
-	eventTypeLeft                 event.Type   = "participant.left"
-	eventTypeBound                event.Type   = "participant.bound"
-	eventTypeUnbound              event.Type   = "participant.unbound"
-	eventTypeSeatReassigned       event.Type   = "participant.seat_reassigned"
-	eventTypeSeatReassignedLegacy event.Type   = "seat.reassigned"
+	EventTypeJoined               event.Type   = "participant.joined"
+	EventTypeUpdated              event.Type   = "participant.updated"
+	EventTypeLeft                 event.Type   = "participant.left"
+	EventTypeBound                event.Type   = "participant.bound"
+	EventTypeUnbound              event.Type   = "participant.unbound"
+	EventTypeSeatReassigned       event.Type   = "participant.seat_reassigned"
+	EventTypeSeatReassignedLegacy event.Type   = "seat.reassigned"
 
 	rejectionCodeParticipantAlreadyJoined      = "PARTICIPANT_ALREADY_JOINED"
 	rejectionCodeParticipantNotJoined          = "PARTICIPANT_NOT_JOINED"
@@ -123,21 +123,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		}
 		payloadJSON, _ := json.Marshal(normalizedPayload)
 
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeJoined,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "participant",
-			EntityID:      participantID,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
+		evt := command.NewEvent(cmd, EventTypeJoined, "participant", participantID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
 	}
@@ -256,21 +242,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 
 		normalizedPayload := UpdatePayload{ParticipantID: participantID, Fields: normalizedFields}
 		payloadJSON, _ := json.Marshal(normalizedPayload)
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeUpdated,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "participant",
-			EntityID:      participantID,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
+		evt := command.NewEvent(cmd, EventTypeUpdated, "participant", participantID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
 	}
@@ -298,21 +270,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 
 		normalizedPayload := LeavePayload{ParticipantID: participantID, Reason: reason}
 		payloadJSON, _ := json.Marshal(normalizedPayload)
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeLeft,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "participant",
-			EntityID:      participantID,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
+		evt := command.NewEvent(cmd, EventTypeLeft, "participant", participantID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
 	}
@@ -346,21 +304,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 
 		normalizedPayload := BindPayload{ParticipantID: participantID, UserID: userID}
 		payloadJSON, _ := json.Marshal(normalizedPayload)
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeBound,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "participant",
-			EntityID:      participantID,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
+		evt := command.NewEvent(cmd, EventTypeBound, "participant", participantID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
 	}
@@ -395,21 +339,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 
 		normalizedPayload := UnbindPayload{ParticipantID: participantID, UserID: userID, Reason: reason}
 		payloadJSON, _ := json.Marshal(normalizedPayload)
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeUnbound,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "participant",
-			EntityID:      participantID,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
+		evt := command.NewEvent(cmd, EventTypeUnbound, "participant", participantID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
 	}
@@ -456,21 +386,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			Reason:        reason,
 		}
 		payloadJSON, _ := json.Marshal(normalizedPayload)
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeSeatReassigned,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "participant",
-			EntityID:      participantID,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
+		evt := command.NewEvent(cmd, EventTypeSeatReassigned, "participant", participantID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
 	}

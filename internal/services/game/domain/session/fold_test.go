@@ -8,10 +8,13 @@ import (
 
 func TestFoldSessionStartedSetsFields(t *testing.T) {
 	state := State{Ended: true}
-	updated := Fold(state, event.Event{
+	updated, err := Fold(state, event.Event{
 		Type:        event.Type("session.started"),
 		PayloadJSON: []byte(`{"session_id":"sess-1","session_name":"Chapter One"}`),
 	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if !updated.Started {
 		t.Fatal("expected session to be started")
 	}
@@ -28,10 +31,13 @@ func TestFoldSessionStartedSetsFields(t *testing.T) {
 
 func TestFoldSessionEndedMarksEnded(t *testing.T) {
 	state := State{Started: true, SessionID: "sess-1"}
-	updated := Fold(state, event.Event{
+	updated, err := Fold(state, event.Event{
 		Type:        event.Type("session.ended"),
 		PayloadJSON: []byte(`{"session_id":"sess-1"}`),
 	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if updated.Started {
 		t.Fatal("expected session to be marked not started")
 	}
@@ -42,10 +48,13 @@ func TestFoldSessionEndedMarksEnded(t *testing.T) {
 
 func TestFoldSessionGateOpenedSetsGateState(t *testing.T) {
 	state := State{}
-	updated := Fold(state, event.Event{
+	updated, err := Fold(state, event.Event{
 		Type:        event.Type("session.gate_opened"),
 		PayloadJSON: []byte(`{"gate_id":"gate-1","gate_type":"gm_consequence"}`),
 	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if !updated.GateOpen {
 		t.Fatal("expected gate to be open")
 	}
@@ -56,10 +65,13 @@ func TestFoldSessionGateOpenedSetsGateState(t *testing.T) {
 
 func TestFoldSessionGateResolvedClearsGateState(t *testing.T) {
 	state := State{GateOpen: true, GateID: "gate-1"}
-	updated := Fold(state, event.Event{
+	updated, err := Fold(state, event.Event{
 		Type:        event.Type("session.gate_resolved"),
 		PayloadJSON: []byte(`{"gate_id":"gate-1","decision":"approve"}`),
 	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if updated.GateOpen {
 		t.Fatal("expected gate to be closed")
 	}
@@ -70,10 +82,13 @@ func TestFoldSessionGateResolvedClearsGateState(t *testing.T) {
 
 func TestFoldSessionGateAbandonedClearsGateState(t *testing.T) {
 	state := State{GateOpen: true, GateID: "gate-1"}
-	updated := Fold(state, event.Event{
+	updated, err := Fold(state, event.Event{
 		Type:        event.Type("session.gate_abandoned"),
 		PayloadJSON: []byte(`{"gate_id":"gate-1","reason":"timeout"}`),
 	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if updated.GateOpen {
 		t.Fatal("expected gate to be closed")
 	}
@@ -84,10 +99,13 @@ func TestFoldSessionGateAbandonedClearsGateState(t *testing.T) {
 
 func TestFoldSessionSpotlightSetUpdatesState(t *testing.T) {
 	state := State{}
-	updated := Fold(state, event.Event{
+	updated, err := Fold(state, event.Event{
 		Type:        event.Type("session.spotlight_set"),
 		PayloadJSON: []byte(`{"spotlight_type":"character","character_id":"char-1"}`),
 	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if updated.SpotlightType != "character" {
 		t.Fatalf("spotlight type = %s, want %s", updated.SpotlightType, "character")
 	}
@@ -98,10 +116,13 @@ func TestFoldSessionSpotlightSetUpdatesState(t *testing.T) {
 
 func TestFoldSessionSpotlightClearedResetsState(t *testing.T) {
 	state := State{SpotlightType: "gm", SpotlightCharacterID: "char-1"}
-	updated := Fold(state, event.Event{
+	updated, err := Fold(state, event.Event{
 		Type:        event.Type("session.spotlight_cleared"),
 		PayloadJSON: []byte(`{"reason":"scene change"}`),
 	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if updated.SpotlightType != "" {
 		t.Fatalf("spotlight type = %s, want empty", updated.SpotlightType)
 	}

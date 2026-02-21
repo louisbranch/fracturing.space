@@ -9,6 +9,7 @@ import (
 	"time"
 
 	coreencoding "github.com/louisbranch/fracturing.space/internal/services/game/core/encoding"
+	"github.com/louisbranch/fracturing.space/internal/services/game/core/naming"
 )
 
 var (
@@ -144,6 +145,7 @@ const (
 // events before persistence and before they can contaminate replay.
 type Registry struct {
 	definitions map[Type]Definition
+	aliases     map[Type]Type
 }
 
 // NewRegistry creates an empty registry.
@@ -260,8 +262,8 @@ func (r *Registry) ValidateForAppend(evt Event) (Event, error) {
 		if evt.SystemID == "" || evt.SystemVersion == "" {
 			return Event{}, ErrSystemMetadataRequired
 		}
-		if expectedSystemNamespace, ok := systemNamespaceFromType(string(evt.Type)); ok {
-			if normalizeSystemNamespace(evt.SystemID) != expectedSystemNamespace {
+		if expectedSystemNamespace, ok := naming.NamespaceFromType(string(evt.Type)); ok {
+			if naming.NormalizeSystemNamespace(evt.SystemID) != expectedSystemNamespace {
 				return Event{}, fmt.Errorf(
 					"%w: type %s expects %s, got %s",
 					ErrSystemTypeNamespaceMismatch,
@@ -325,6 +327,44 @@ func (r *Registry) Definition(eventType Type) (Definition, bool) {
 	return def, ok
 }
 
+// RegisterAlias maps a deprecated event type to its canonical replacement.
+//
+// Legacy journal entries may contain the deprecated type; Resolve translates
+// them so projection and replay code only needs to handle the canonical type.
+func (r *Registry) RegisterAlias(deprecated, canonical Type) error {
+	if r == nil {
+		return fmt.Errorf("registry is required")
+	}
+	deprecated = Type(strings.TrimSpace(string(deprecated)))
+	canonical = Type(strings.TrimSpace(string(canonical)))
+	if deprecated == "" || canonical == "" {
+		return fmt.Errorf("deprecated and canonical types are required")
+	}
+	if _, ok := r.definitions[canonical]; !ok {
+		return fmt.Errorf("canonical type %s is not registered", canonical)
+	}
+	if r.aliases == nil {
+		r.aliases = make(map[Type]Type)
+	}
+	if _, exists := r.aliases[deprecated]; exists {
+		return fmt.Errorf("alias already registered for %s", deprecated)
+	}
+	r.aliases[deprecated] = canonical
+	return nil
+}
+
+// Resolve returns the canonical type for an alias, or the input type itself
+// when no alias is registered.
+func (r *Registry) Resolve(t Type) Type {
+	if r == nil || r.aliases == nil {
+		return t
+	}
+	if canonical, ok := r.aliases[t]; ok {
+		return canonical
+	}
+	return t
+}
+
 // ListDefinitions returns a stable, sorted snapshot of registered definitions.
 func (r *Registry) ListDefinitions() []Definition {
 	if r == nil || len(r.definitions) == 0 {
@@ -338,39 +378,4 @@ func (r *Registry) ListDefinitions() []Definition {
 		return string(definitions[i].Type) < string(definitions[j].Type)
 	})
 	return definitions
-}
-
-func systemNamespaceFromType(typeName string) (string, bool) {
-	parts := strings.Split(strings.TrimSpace(typeName), ".")
-	if len(parts) < 3 || parts[0] != "sys" {
-		return "", false
-	}
-	return strings.TrimSpace(parts[1]), true
-}
-
-func normalizeSystemNamespace(systemID string) string {
-	trimmed := strings.TrimSpace(systemID)
-	if trimmed == "" {
-		return ""
-	}
-	const legacyPrefix = "GAME_SYSTEM_"
-	if len(trimmed) > len(legacyPrefix) && strings.EqualFold(trimmed[:len(legacyPrefix)], legacyPrefix) {
-		trimmed = trimmed[len(legacyPrefix):]
-	}
-	normalized := strings.ToLower(trimmed)
-	var b strings.Builder
-	b.Grow(len(normalized))
-	lastUnderscore := false
-	for _, r := range normalized {
-		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
-			b.WriteRune(r)
-			lastUnderscore = false
-			continue
-		}
-		if !lastUnderscore {
-			b.WriteByte('_')
-			lastUnderscore = true
-		}
-	}
-	return strings.Trim(b.String(), "_")
 }

@@ -5,20 +5,21 @@ import (
 	"strings"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
 // Applier applies event journal entries to projection stores.
 type Applier struct {
+	// Events resolves type aliases before routing.
+	Events *event.Registry
 	// Campaign writes campaign metadata read models.
 	Campaign storage.CampaignStore
 	// Character writes character read models.
 	Character storage.CharacterStore
 	// CampaignFork stores campaign fork metadata.
 	CampaignFork storage.CampaignForkStore
-	// Daggerheart writes system-specific projection data.
-	Daggerheart storage.DaggerheartStore
 	// ClaimIndex writes/reads participant-user claim mappings.
 	ClaimIndex storage.ClaimIndexStore
 	// Invite writes invite read models.
@@ -31,7 +32,8 @@ type Applier struct {
 	SessionGate storage.SessionGateStore
 	// SessionSpotlight writes session spotlight state.
 	SessionSpotlight storage.SessionSpotlightStore
-	// Adapters holds extension-specific projection hooks.
+	// Adapters holds extension-specific projection hooks including
+	// system event application and character profile updates.
 	Adapters *systems.AdapterRegistry
 }
 

@@ -33,21 +33,18 @@ type Stores struct {
 // Only the stores available in the Daggerheart service are mapped; fields not
 // present (e.g., Invite, CampaignFork) remain nil and are unused by dispatch.
 func (s Stores) Applier() projection.Applier {
-	applier := projection.Applier{
+	adapters := systems.NewAdapterRegistry()
+	if s.Daggerheart != nil {
+		if err := adapters.Register(daggerheartsystem.NewAdapter(s.Daggerheart)); err != nil {
+			panic("register daggerheart adapter: " + err.Error())
+		}
+	}
+	return projection.Applier{
 		Campaign:         s.Campaign,
 		Character:        s.Character,
 		Session:          s.Session,
 		SessionGate:      s.SessionGate,
 		SessionSpotlight: s.SessionSpotlight,
-		Daggerheart:      s.Daggerheart,
+		Adapters:         adapters,
 	}
-	if s.Daggerheart == nil {
-		return applier
-	}
-
-	adapters := systems.NewAdapterRegistry()
-	if err := adapters.Register(daggerheartsystem.NewAdapter(s.Daggerheart)); err == nil {
-		applier.Adapters = adapters
-	}
-	return applier
 }

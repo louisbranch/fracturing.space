@@ -65,8 +65,10 @@ type Decider interface {
 // 1) validate intent against command registry,
 // 2) enforce optional session gate policy,
 // 3) execute deciders over replay-derived state,
-// 4) validate and append domain events,
-// 5) checkpoint and snapshot state for fast future replays.
+// 4) validate events against event registry,
+// 5) append events to the journal,
+// 6) apply events to in-memory state,
+// 7) checkpoint and snapshot state for fast future replays.
 type Handler struct {
 	Commands        *command.Registry
 	Events          *event.Registry
@@ -174,15 +176,6 @@ func (h Handler) prepareExecution(ctx context.Context, cmd command.Command) (com
 		// once domain/write model counters are wired.
 		return command.Command{}, nil, command.Decision{}, ErrCommandMustMutate
 	}
-	if h.Applier != nil && len(decision.Events) > 0 {
-		for _, evt := range decision.Events {
-			stateAfter, err := h.Applier.Apply(state, evt)
-			if err != nil {
-				return command.Command{}, nil, command.Decision{}, err
-			}
-			state = stateAfter
-		}
-	}
 	if h.Events != nil && len(decision.Events) > 0 {
 		validated := make([]event.Event, 0, len(decision.Events))
 		for _, evt := range decision.Events {
@@ -204,6 +197,15 @@ func (h Handler) prepareExecution(ctx context.Context, cmd command.Command) (com
 			stored = append(stored, appended)
 		}
 		decision.Events = stored
+	}
+	if h.Applier != nil && len(decision.Events) > 0 {
+		for _, evt := range decision.Events {
+			stateAfter, err := h.Applier.Apply(state, evt)
+			if err != nil {
+				return command.Command{}, nil, command.Decision{}, err
+			}
+			state = stateAfter
+		}
 	}
 	return cmd, state, decision, nil
 }

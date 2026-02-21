@@ -2,17 +2,21 @@ package campaign
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 )
 
-// Fold applies an event to campaign state.
-func Fold(state State, evt event.Event) State {
-	if evt.Type == eventTypeCreated {
+// Fold applies an event to campaign state. It returns an error if a recognized
+// event carries a payload that cannot be unmarshalled.
+func Fold(state State, evt event.Event) (State, error) {
+	if evt.Type == EventTypeCreated {
 		state.Created = true
 		var payload CreatePayload
-		_ = json.Unmarshal(evt.PayloadJSON, &payload)
+		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+			return state, fmt.Errorf("campaign fold %s: %w", evt.Type, err)
+		}
 		state.Name = payload.Name
 		state.GameSystem = payload.GameSystem
 		state.GmMode = payload.GmMode
@@ -20,9 +24,11 @@ func Fold(state State, evt event.Event) State {
 		state.CoverAssetID = strings.TrimSpace(payload.CoverAssetID)
 		state.CoverSetID = strings.TrimSpace(payload.CoverSetID)
 	}
-	if evt.Type == eventTypeUpdated {
+	if evt.Type == EventTypeUpdated {
 		var payload UpdatePayload
-		_ = json.Unmarshal(evt.PayloadJSON, &payload)
+		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+			return state, fmt.Errorf("campaign fold %s: %w", evt.Type, err)
+		}
 		for key, value := range payload.Fields {
 			switch key {
 			case "name":
@@ -38,5 +44,5 @@ func Fold(state State, evt event.Event) State {
 			}
 		}
 	}
-	return state
+	return state, nil
 }

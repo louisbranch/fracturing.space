@@ -2,6 +2,7 @@ package systems
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -17,6 +18,14 @@ type Adapter interface {
 	Version() string
 	Apply(context.Context, event.Event) error
 	Snapshot(context.Context, string) (any, error)
+}
+
+// ProfileAdapter is an optional interface for adapters that handle
+// character profile updates. When a character.profile_updated event arrives,
+// the projection applier iterates the system_profile map and delegates each
+// key's data to the corresponding adapter if it implements ProfileAdapter.
+type ProfileAdapter interface {
+	ApplyProfile(ctx context.Context, campaignID, characterID string, profileData json.RawMessage) error
 }
 
 // AdapterRegistry routes system adapters by system ID + version.

@@ -2,16 +2,20 @@ package invite
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 )
 
-// Fold applies an event to invite state.
-func Fold(state State, evt event.Event) State {
-	if evt.Type == eventTypeCreated {
+// Fold applies an event to invite state. It returns an error if a recognized
+// event carries a payload that cannot be unmarshalled.
+func Fold(state State, evt event.Event) (State, error) {
+	if evt.Type == EventTypeCreated {
 		state.Created = true
 		var payload CreatePayload
-		_ = json.Unmarshal(evt.PayloadJSON, &payload)
+		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+			return state, fmt.Errorf("invite fold %s: %w", evt.Type, err)
+		}
 		state.InviteID = payload.InviteID
 		state.ParticipantID = payload.ParticipantID
 		state.RecipientUserID = payload.RecipientUserID
@@ -22,9 +26,11 @@ func Fold(state State, evt event.Event) State {
 		}
 		state.Status = status
 	}
-	if evt.Type == eventTypeClaimed {
+	if evt.Type == EventTypeClaimed {
 		var payload ClaimPayload
-		_ = json.Unmarshal(evt.PayloadJSON, &payload)
+		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+			return state, fmt.Errorf("invite fold %s: %w", evt.Type, err)
+		}
 		if payload.InviteID != "" {
 			state.InviteID = payload.InviteID
 		}
@@ -33,17 +39,21 @@ func Fold(state State, evt event.Event) State {
 		}
 		state.Status = statusClaimed
 	}
-	if evt.Type == eventTypeRevoked {
+	if evt.Type == EventTypeRevoked {
 		var payload RevokePayload
-		_ = json.Unmarshal(evt.PayloadJSON, &payload)
+		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+			return state, fmt.Errorf("invite fold %s: %w", evt.Type, err)
+		}
 		if payload.InviteID != "" {
 			state.InviteID = payload.InviteID
 		}
 		state.Status = statusRevoked
 	}
-	if evt.Type == eventTypeUpdated {
+	if evt.Type == EventTypeUpdated {
 		var payload UpdatePayload
-		_ = json.Unmarshal(evt.PayloadJSON, &payload)
+		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+			return state, fmt.Errorf("invite fold %s: %w", evt.Type, err)
+		}
 		if payload.InviteID != "" {
 			state.InviteID = payload.InviteID
 		}
@@ -55,5 +65,5 @@ func Fold(state State, evt event.Event) State {
 			state.Status = status
 		}
 	}
-	return state
+	return state, nil
 }

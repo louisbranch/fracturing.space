@@ -17,9 +17,9 @@ const (
 	commandTypeEnd     command.Type = "campaign.end"
 	commandTypeArchive command.Type = "campaign.archive"
 	commandTypeRestore command.Type = "campaign.restore"
-	eventTypeCreated   event.Type   = "campaign.created"
-	eventTypeUpdated   event.Type   = "campaign.updated"
-	eventTypeForked    event.Type   = "campaign.forked"
+	EventTypeCreated   event.Type   = "campaign.created"
+	EventTypeUpdated   event.Type   = "campaign.updated"
+	EventTypeForked    event.Type   = "campaign.forked"
 
 	rejectionCodeCampaignAlreadyExists      = "CAMPAIGN_ALREADY_EXISTS"
 	rejectionCodeCampaignNotCreated         = "CAMPAIGN_NOT_CREATED"
@@ -109,21 +109,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		}
 		payloadJSON, _ := json.Marshal(normalizedPayload)
 
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeCreated,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "campaign",
-			EntityID:      cmd.CampaignID,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
+		evt := command.NewEvent(cmd, EventTypeCreated, "campaign", cmd.CampaignID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
 	}
@@ -208,21 +194,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 
 		normalizedPayload := UpdatePayload{Fields: normalizedFields}
 		payloadJSON, _ := json.Marshal(normalizedPayload)
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeUpdated,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "campaign",
-			EntityID:      cmd.CampaignID,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
+		evt := command.NewEvent(cmd, EventTypeUpdated, "campaign", cmd.CampaignID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
 	}
@@ -242,21 +214,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			now = time.Now
 		}
 		payloadJSON, _ := json.Marshal(payload)
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeForked,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "campaign",
-			EntityID:      cmd.CampaignID,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
+		evt := command.NewEvent(cmd, EventTypeForked, "campaign", cmd.CampaignID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
 	}
@@ -284,21 +242,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 
 		normalizedPayload := UpdatePayload{Fields: map[string]string{"status": string(targetStatus)}}
 		payloadJSON, _ := json.Marshal(normalizedPayload)
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeUpdated,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "campaign",
-			EntityID:      cmd.CampaignID,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
+		evt := command.NewEvent(cmd, EventTypeUpdated, "campaign", cmd.CampaignID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
 	}

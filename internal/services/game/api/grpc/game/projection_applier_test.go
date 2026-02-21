@@ -9,6 +9,7 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
@@ -285,7 +286,12 @@ func TestStoresApplier_ApplyParticipantBindUnbindAndSeatReassign(t *testing.T) {
 		Participant: newFakeParticipantStore(),
 		ClaimIndex:  newFakeClaimIndexStore(),
 	}
+	registries, err := engine.BuildRegistries()
+	if err != nil {
+		t.Fatalf("build registries: %v", err)
+	}
 	applier := stores.Applier()
+	applier.Events = registries.Events
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 
 	createPayload := campaign.CreatePayload{

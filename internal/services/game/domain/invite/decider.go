@@ -14,10 +14,10 @@ const (
 	commandTypeClaim  command.Type = "invite.claim"
 	commandTypeRevoke command.Type = "invite.revoke"
 	commandTypeUpdate command.Type = "invite.update"
-	eventTypeCreated  event.Type   = "invite.created"
-	eventTypeClaimed  event.Type   = "invite.claimed"
-	eventTypeRevoked  event.Type   = "invite.revoked"
-	eventTypeUpdated  event.Type   = "invite.updated"
+	EventTypeCreated  event.Type   = "invite.created"
+	EventTypeClaimed  event.Type   = "invite.claimed"
+	EventTypeRevoked  event.Type   = "invite.revoked"
+	EventTypeUpdated  event.Type   = "invite.updated"
 
 	statusPending = "pending"
 	statusClaimed = "claimed"
@@ -64,21 +64,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			Status:                 statusPending,
 		}
 		payloadJSON, _ := json.Marshal(normalizedPayload)
-		return command.Accept(event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeCreated,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "invite",
-			EntityID:      inviteID,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		})
+		return command.Accept(command.NewEvent(cmd, EventTypeCreated, "invite", inviteID, payloadJSON, now().UTC()))
 	}
 
 	if cmd.Type == commandTypeClaim {
@@ -117,21 +103,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			JWTID:         jwtID,
 		}
 		payloadJSON, _ := json.Marshal(normalizedPayload)
-		return command.Accept(event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeClaimed,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "invite",
-			EntityID:      inviteID,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		})
+		return command.Accept(command.NewEvent(cmd, EventTypeClaimed, "invite", inviteID, payloadJSON, now().UTC()))
 	}
 
 	if cmd.Type == commandTypeRevoke {
@@ -151,21 +123,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			now = time.Now
 		}
 		payloadJSON, _ := json.Marshal(RevokePayload{InviteID: inviteID})
-		return command.Accept(event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeRevoked,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "invite",
-			EntityID:      inviteID,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		})
+		return command.Accept(command.NewEvent(cmd, EventTypeRevoked, "invite", inviteID, payloadJSON, now().UTC()))
 	}
 
 	if cmd.Type == commandTypeUpdate {
@@ -186,21 +144,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			now = time.Now
 		}
 		payloadJSON, _ := json.Marshal(UpdatePayload{InviteID: inviteID, Status: status})
-		return command.Accept(event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeUpdated,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "invite",
-			EntityID:      inviteID,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		})
+		return command.Accept(command.NewEvent(cmd, EventTypeUpdated, "invite", inviteID, payloadJSON, now().UTC()))
 	}
 
 	return command.Decision{}

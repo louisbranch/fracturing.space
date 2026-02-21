@@ -14,10 +14,10 @@ const (
 	commandTypeUpdate        command.Type = "character.update"
 	commandTypeDelete        command.Type = "character.delete"
 	commandTypeProfileUpdate command.Type = "character.profile_update"
-	eventTypeCreated         event.Type   = "character.created"
-	eventTypeUpdated         event.Type   = "character.updated"
-	eventTypeDeleted         event.Type   = "character.deleted"
-	eventTypeProfileUpdated  event.Type   = "character.profile_updated"
+	EventTypeCreated         event.Type   = "character.created"
+	EventTypeUpdated         event.Type   = "character.updated"
+	EventTypeDeleted         event.Type   = "character.deleted"
+	EventTypeProfileUpdated  event.Type   = "character.profile_updated"
 
 	rejectionCodeCharacterAlreadyExists      = "CHARACTER_ALREADY_EXISTS"
 	rejectionCodeCharacterIDRequired         = "CHARACTER_ID_REQUIRED"
@@ -87,21 +87,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			AvatarAssetID: avatarAssetID,
 		}
 		payloadJSON, _ := json.Marshal(normalizedPayload)
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeCreated,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "character",
-			EntityID:      characterID,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
+		evt := command.NewEvent(cmd, EventTypeCreated, "character", characterID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
 	}
@@ -198,21 +184,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 
 		normalizedPayload := UpdatePayload{CharacterID: characterID, Fields: normalizedFields}
 		payloadJSON, _ := json.Marshal(normalizedPayload)
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeUpdated,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "character",
-			EntityID:      characterID,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
+		evt := command.NewEvent(cmd, EventTypeUpdated, "character", characterID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
 	}
@@ -240,21 +212,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 
 		normalizedPayload := DeletePayload{CharacterID: characterID, Reason: reason}
 		payloadJSON, _ := json.Marshal(normalizedPayload)
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeDeleted,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "character",
-			EntityID:      characterID,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
+		evt := command.NewEvent(cmd, EventTypeDeleted, "character", characterID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
 	}
@@ -284,21 +242,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			SystemProfile: payload.SystemProfile,
 		}
 		payloadJSON, _ := json.Marshal(normalizedPayload)
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeProfileUpdated,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "character",
-			EntityID:      characterID,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
+		evt := command.NewEvent(cmd, EventTypeProfileUpdated, "character", characterID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
 	}

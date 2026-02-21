@@ -71,7 +71,7 @@ func RegisterEvents(registry *event.Registry) error {
 		return errors.New("event registry is required")
 	}
 	if err := registry.Register(event.Definition{
-		Type:            eventTypeJoined,
+		Type:            EventTypeJoined,
 		Owner:           event.OwnerCore,
 		Addressing:      event.AddressingPolicyEntityTarget,
 		ValidatePayload: validateJoinPayload,
@@ -79,7 +79,7 @@ func RegisterEvents(registry *event.Registry) error {
 		return err
 	}
 	if err := registry.Register(event.Definition{
-		Type:            eventTypeUpdated,
+		Type:            EventTypeUpdated,
 		Owner:           event.OwnerCore,
 		Addressing:      event.AddressingPolicyEntityTarget,
 		ValidatePayload: validateUpdatePayload,
@@ -87,7 +87,7 @@ func RegisterEvents(registry *event.Registry) error {
 		return err
 	}
 	if err := registry.Register(event.Definition{
-		Type:            eventTypeLeft,
+		Type:            EventTypeLeft,
 		Owner:           event.OwnerCore,
 		Addressing:      event.AddressingPolicyEntityTarget,
 		ValidatePayload: validateLeavePayload,
@@ -95,7 +95,7 @@ func RegisterEvents(registry *event.Registry) error {
 		return err
 	}
 	if err := registry.Register(event.Definition{
-		Type:            eventTypeBound,
+		Type:            EventTypeBound,
 		Owner:           event.OwnerCore,
 		Addressing:      event.AddressingPolicyEntityTarget,
 		ValidatePayload: validateBindPayload,
@@ -103,7 +103,7 @@ func RegisterEvents(registry *event.Registry) error {
 		return err
 	}
 	if err := registry.Register(event.Definition{
-		Type:            eventTypeUnbound,
+		Type:            EventTypeUnbound,
 		Owner:           event.OwnerCore,
 		Addressing:      event.AddressingPolicyEntityTarget,
 		ValidatePayload: validateUnbindPayload,
@@ -111,7 +111,7 @@ func RegisterEvents(registry *event.Registry) error {
 		return err
 	}
 	if err := registry.Register(event.Definition{
-		Type:            eventTypeSeatReassignedLegacy,
+		Type:            EventTypeSeatReassignedLegacy,
 		Owner:           event.OwnerCore,
 		Addressing:      event.AddressingPolicyEntityTarget,
 		ValidatePayload: validateSeatReassignPayload,
@@ -119,7 +119,7 @@ func RegisterEvents(registry *event.Registry) error {
 		return err
 	}
 	if err := registry.Register(event.Definition{
-		Type:            eventTypeSeatReassigned,
+		Type:            EventTypeSeatReassigned,
 		Owner:           event.OwnerCore,
 		Addressing:      event.AddressingPolicyEntityTarget,
 		ValidatePayload: validateSeatReassignPayload,

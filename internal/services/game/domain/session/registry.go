@@ -87,7 +87,7 @@ func RegisterEvents(registry *event.Registry) error {
 		return errors.New("event registry is required")
 	}
 	if err := registry.Register(event.Definition{
-		Type:            eventTypeStarted,
+		Type:            EventTypeStarted,
 		Owner:           event.OwnerCore,
 		Addressing:      event.AddressingPolicyEntityTarget,
 		ValidatePayload: validateStartPayload,
@@ -96,7 +96,7 @@ func RegisterEvents(registry *event.Registry) error {
 		return err
 	}
 	if err := registry.Register(event.Definition{
-		Type:            eventTypeEnded,
+		Type:            EventTypeEnded,
 		Owner:           event.OwnerCore,
 		Addressing:      event.AddressingPolicyEntityTarget,
 		ValidatePayload: validateEndPayload,
@@ -105,7 +105,7 @@ func RegisterEvents(registry *event.Registry) error {
 		return err
 	}
 	if err := registry.Register(event.Definition{
-		Type:            eventTypeGateOpened,
+		Type:            EventTypeGateOpened,
 		Owner:           event.OwnerCore,
 		Addressing:      event.AddressingPolicyEntityTarget,
 		ValidatePayload: validateGateOpenedPayload,
@@ -114,7 +114,7 @@ func RegisterEvents(registry *event.Registry) error {
 		return err
 	}
 	if err := registry.Register(event.Definition{
-		Type:            eventTypeGateResolved,
+		Type:            EventTypeGateResolved,
 		Owner:           event.OwnerCore,
 		Addressing:      event.AddressingPolicyEntityTarget,
 		ValidatePayload: validateGateResolvedPayload,
@@ -123,7 +123,7 @@ func RegisterEvents(registry *event.Registry) error {
 		return err
 	}
 	if err := registry.Register(event.Definition{
-		Type:            eventTypeGateAbandoned,
+		Type:            EventTypeGateAbandoned,
 		Owner:           event.OwnerCore,
 		Addressing:      event.AddressingPolicyEntityTarget,
 		ValidatePayload: validateGateAbandonedPayload,
@@ -132,7 +132,7 @@ func RegisterEvents(registry *event.Registry) error {
 		return err
 	}
 	if err := registry.Register(event.Definition{
-		Type:            eventTypeSpotlightSet,
+		Type:            EventTypeSpotlightSet,
 		Owner:           event.OwnerCore,
 		Addressing:      event.AddressingPolicyEntityTarget,
 		ValidatePayload: validateSpotlightSetPayload,
@@ -141,7 +141,7 @@ func RegisterEvents(registry *event.Registry) error {
 		return err
 	}
 	return registry.Register(event.Definition{
-		Type:            eventTypeSpotlightCleared,
+		Type:            EventTypeSpotlightCleared,
 		Owner:           event.OwnerCore,
 		Addressing:      event.AddressingPolicyEntityTarget,
 		ValidatePayload: validateSpotlightClearedPayload,

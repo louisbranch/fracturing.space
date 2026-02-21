@@ -22,6 +22,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/integrity"
@@ -391,7 +392,10 @@ func runCampaign(ctx context.Context, eventStore storage.EventStore, projStore s
 		result.ExitCode = 1
 		return result
 	}
-	applier := projection.Applier{Campaign: projStore, Daggerheart: projStore}
+	applier := projection.Applier{
+		Campaign: projStore,
+		Adapters: systemmanifest.AdapterRegistry(systemmanifest.ProjectionStores{Daggerheart: projStore}),
+	}
 
 	var lastSeq uint64
 	var err error
@@ -937,7 +941,10 @@ func checkIntegrityWithStores(ctx context.Context, eventStore storage.EventStore
 		return report, warnings, fmt.Errorf("seed campaign: %w", err)
 	}
 
-	applier := projection.Applier{Campaign: scratch, Daggerheart: scratch}
+	applier := projection.Applier{
+		Campaign: scratch,
+		Adapters: systemmanifest.AdapterRegistry(systemmanifest.ProjectionStores{Daggerheart: scratch}),
+	}
 	lastSeq, err := projection.ReplaySnapshot(ctx, eventStore, applier, campaignID, untilSeq)
 	if err != nil {
 		return report, warnings, fmt.Errorf("replay snapshot: %w", err)

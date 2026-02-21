@@ -463,6 +463,65 @@ func TestExecute_AllowsMutatingSystemEvent(t *testing.T) {
 	}
 }
 
+type failingJournal struct{}
+
+func (failingJournal) Append(_ context.Context, _ event.Event) (event.Event, error) {
+	return event.Event{}, errors.New("journal unavailable")
+}
+
+type spyApplier struct {
+	called bool
+}
+
+func (s *spyApplier) Apply(state any, _ event.Event) (any, error) {
+	s.called = true
+	return state, nil
+}
+
+func TestExecute_DoesNotApplyWhenJournalFails(t *testing.T) {
+	cmdRegistry := command.NewRegistry()
+	if err := cmdRegistry.Register(command.Definition{
+		Type:  command.Type("action.test"),
+		Owner: command.OwnerCore,
+	}); err != nil {
+		t.Fatalf("register command: %v", err)
+	}
+	eventRegistry := event.NewRegistry()
+	if err := eventRegistry.Register(event.Definition{
+		Type:  event.Type("action.tested"),
+		Owner: event.OwnerCore,
+	}); err != nil {
+		t.Fatalf("register event: %v", err)
+	}
+
+	applier := &spyApplier{}
+	handler := Handler{
+		Commands: cmdRegistry,
+		Events:   eventRegistry,
+		Decider: fixedDecider{decision: command.Accept(event.Event{
+			CampaignID:  "camp-1",
+			Type:        event.Type("action.tested"),
+			Timestamp:   time.Unix(0, 0).UTC(),
+			ActorType:   event.ActorTypeSystem,
+			PayloadJSON: []byte(`{"ok":true}`),
+		})},
+		Journal: failingJournal{},
+		Applier: applier,
+	}
+
+	_, err := handler.Execute(context.Background(), command.Command{
+		CampaignID: "camp-1",
+		Type:       command.Type("action.test"),
+		ActorType:  command.ActorTypeSystem,
+	})
+	if err == nil {
+		t.Fatal("expected error from failing journal")
+	}
+	if applier.called {
+		t.Fatal("expected applier not to be called when journal fails")
+	}
+}
+
 func TestExecute_SavesCheckpointWithValidatedCampaignID(t *testing.T) {
 	cmdRegistry := command.NewRegistry()
 	if err := cmdRegistry.Register(command.Definition{

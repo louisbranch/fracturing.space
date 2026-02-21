@@ -24,7 +24,7 @@ func (Projector) Apply(state any, evt event.Event) (any, error) {
 		current.CampaignID = evt.CampaignID
 	}
 	switch evt.Type {
-	case eventTypeGMFearChanged:
+	case EventTypeGMFearChanged:
 		if err := json.Unmarshal(evt.PayloadJSON, &fearPayload); err != nil {
 			return state, fmt.Errorf("decode gm_fear_changed payload: %w", err)
 		}
@@ -32,31 +32,31 @@ func (Projector) Apply(state any, evt event.Event) (any, error) {
 			return state, fmt.Errorf("gm fear after must be in range %d..%d", GMFearMin, GMFearMax)
 		}
 		current.GMFear = fearPayload.After
-	case eventTypeCharacterStatePatched:
+	case EventTypeCharacterStatePatched:
 		var payload CharacterStatePatchedPayload
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 			return state, fmt.Errorf("decode character_state_patched payload: %w", err)
 		}
 		applyCharacterStatePatched(&current, payload)
-	case eventTypeConditionChanged:
+	case EventTypeConditionChanged:
 		var payload ConditionChangedPayload
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 			return state, fmt.Errorf("decode condition_changed payload: %w", err)
 		}
 		applyCharacterConditionsChanged(&current, payload)
-	case eventTypeLoadoutSwapped:
+	case EventTypeLoadoutSwapped:
 		var payload LoadoutSwappedPayload
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 			return state, fmt.Errorf("decode loadout_swapped payload: %w", err)
 		}
 		applyCharacterLoadoutSwapped(&current, payload)
-	case eventTypeCharacterTemporaryArmorApplied:
+	case EventTypeCharacterTemporaryArmorApplied:
 		var payload CharacterTemporaryArmorAppliedPayload
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 			return state, fmt.Errorf("decode character_temporary_armor_applied payload: %w", err)
 		}
 		applyCharacterTemporaryArmorApplied(&current, payload)
-	case eventTypeRestTaken:
+	case EventTypeRestTaken:
 		var payload RestTakenPayload
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 			return state, fmt.Errorf("decode rest_taken payload: %w", err)
@@ -71,7 +71,7 @@ func (Projector) Apply(state any, evt event.Event) (any, error) {
 				clearRestTemporaryArmor(&current, patch.CharacterID, payload.RefreshRest, payload.RefreshLongRest)
 			}
 		}
-	case eventTypeCountdownCreated:
+	case EventTypeCountdownCreated:
 		var payload CountdownCreatedPayload
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 			return state, fmt.Errorf("decode countdown_created payload: %w", err)
@@ -84,7 +84,7 @@ func (Projector) Apply(state any, evt event.Event) (any, error) {
 			state.Direction = payload.Direction
 			state.Looping = payload.Looping
 		})
-	case eventTypeCountdownUpdated:
+	case EventTypeCountdownUpdated:
 		var payload CountdownUpdatedPayload
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 			return state, fmt.Errorf("decode countdown_updated payload: %w", err)
@@ -95,49 +95,49 @@ func (Projector) Apply(state any, evt event.Event) (any, error) {
 				state.Looping = true
 			}
 		})
-	case eventTypeCountdownDeleted:
+	case EventTypeCountdownDeleted:
 		var payload CountdownDeletedPayload
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 			return state, fmt.Errorf("decode countdown_deleted payload: %w", err)
 		}
 		deleteCountdownState(&current, payload.CountdownID)
-	case eventTypeDamageApplied:
+	case EventTypeDamageApplied:
 		var payload DamageAppliedPayload
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 			return state, fmt.Errorf("decode damage_applied payload: %w", err)
 		}
 		applyDamageApplied(&current, payload.CharacterID, payload.HpAfter, payload.ArmorAfter)
-	case eventTypeAdversaryDamageApplied:
+	case EventTypeAdversaryDamageApplied:
 		var payload AdversaryDamageAppliedPayload
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 			return state, fmt.Errorf("decode adversary_damage_applied payload: %w", err)
 		}
 		applyAdversaryDamage(&current, payload.AdversaryID, payload.HpAfter, payload.ArmorAfter)
-	case eventTypeDowntimeMoveApplied:
+	case EventTypeDowntimeMoveApplied:
 		var payload DowntimeMoveAppliedPayload
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 			return state, fmt.Errorf("decode downtime_move_applied payload: %w", err)
 		}
 		applyDowntimeMove(&current, payload.CharacterID, payload.Move, payload.HopeAfter, payload.StressAfter, payload.ArmorAfter)
-	case eventTypeAdversaryConditionChanged:
+	case EventTypeAdversaryConditionChanged:
 		var payload AdversaryConditionChangedPayload
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 			return state, fmt.Errorf("decode adversary_condition_changed payload: %w", err)
 		}
 		applyAdversaryConditionsChanged(&current, payload.AdversaryID, payload.ConditionsAfter)
-	case eventTypeAdversaryCreated:
+	case EventTypeAdversaryCreated:
 		var payload AdversaryCreatedPayload
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 			return state, fmt.Errorf("decode adversary_created payload: %w", err)
 		}
 		applyAdversaryCreated(&current, payload)
-	case eventTypeAdversaryUpdated:
+	case EventTypeAdversaryUpdated:
 		var payload AdversaryUpdatedPayload
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 			return state, fmt.Errorf("decode adversary_updated payload: %w", err)
 		}
 		applyAdversaryUpdated(&current, payload)
-	case eventTypeAdversaryDeleted:
+	case EventTypeAdversaryDeleted:
 		var payload AdversaryDeletedPayload
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 			return state, fmt.Errorf("decode adversary_deleted payload: %w", err)

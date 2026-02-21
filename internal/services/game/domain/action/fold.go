@@ -2,18 +2,22 @@ package action
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 )
 
-// Fold applies an event to action state.
-func Fold(state State, evt event.Event) State {
+// Fold applies an event to action state. It returns an error if a recognized
+// event carries a payload that cannot be unmarshalled.
+func Fold(state State, evt event.Event) (State, error) {
 	switch evt.Type {
-	case eventTypeRollResolved:
+	case EventTypeRollResolved:
 		var payload RollResolvePayload
-		_ = json.Unmarshal(evt.PayloadJSON, &payload)
+		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+			return state, fmt.Errorf("action fold %s: %w", evt.Type, err)
+		}
 		if payload.RollSeq == 0 {
-			return state
+			return state, nil
 		}
 		if state.Rolls == nil {
 			state.Rolls = make(map[uint64]RollState)
@@ -23,16 +27,18 @@ func Fold(state State, evt event.Event) State {
 			SessionID: evt.SessionID,
 			Outcome:   payload.Outcome,
 		}
-	case eventTypeOutcomeApplied:
+	case EventTypeOutcomeApplied:
 		var payload OutcomeApplyPayload
-		_ = json.Unmarshal(evt.PayloadJSON, &payload)
+		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+			return state, fmt.Errorf("action fold %s: %w", evt.Type, err)
+		}
 		if payload.RollSeq == 0 {
-			return state
+			return state, nil
 		}
 		if state.AppliedOutcomes == nil {
 			state.AppliedOutcomes = make(map[uint64]struct{})
 		}
 		state.AppliedOutcomes[payload.RollSeq] = struct{}{}
 	}
-	return state
+	return state, nil
 }
