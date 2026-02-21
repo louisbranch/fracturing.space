@@ -8,11 +8,53 @@ nav_order: 2
 
 ## Prerequisites
 
-- Go 1.26.0
-- protoc (until binaries are published)
-- Make
+- Option A (devcontainer):
+- Docker Engine/Desktop with Compose v2.
+- Devcontainer-capable editor integration (for example, VS Code Dev Containers extension).
+- First-run network access in devcontainer to download Go modules and install `air`.
+- Option B (host-only): Go 1.26.0, protoc (until binaries are published), and Make
 
-## Run the core services
+## Option A: Devcontainer (recommended)
+
+```sh
+# in VS Code
+Reopen in Container
+```
+
+The devcontainer setup is defined in `.devcontainer/devcontainer.json` and starts a
+watch-based runtime automatically after attach.
+
+- `postCreateCommand` installs `air` (live-reload watcher for Go).
+- `postStartCommand` launches `.devcontainer/scripts/watch-services.sh`.
+- The watcher script initializes `.env` from `.env.local.example` when missing.
+- The watcher script also generates join-grant keys when they are missing.
+
+No manual `make run` or repeated `docker compose up` is needed for day-to-day edits.
+Each restart still compiles, but only through Go build cache and only when files change.
+
+Watcher controls:
+
+```sh
+make up    # start watchers (or re-start if needed)
+make down  # stop watchers
+```
+
+Watcher logs:
+
+- `.tmp/dev/game.log`
+- `.tmp/dev/auth.log`
+- `.tmp/dev/mcp.log`
+- `.tmp/dev/admin.log`
+- `.tmp/dev/web.log`
+- `.tmp/dev/watch-services.log`
+
+Stop watchers:
+
+```sh
+make down
+```
+
+## Option B: Host machine (existing flow)
 
 ```sh
 make run
@@ -23,17 +65,6 @@ initialized from the file specified by `$ENV_EXAMPLE` (defaulting to `.env.local
 
 `make run` starts the game server, auth service, MCP bridge, and admin dashboard.
 It also generates dev join-grant keys if they are missing.
-
-## Optional web login server
-
-If you want the login UI without Docker:
-
-```sh
-go run ./cmd/web
-```
-
-If you run the web server in its own shell, set `FRACTURING_SPACE_WEB_OAUTH_CLIENT_ID`
-and `FRACTURING_SPACE_WEB_CALLBACK_URL` consistently with your auth client settings.
 
 ## Default endpoints
 

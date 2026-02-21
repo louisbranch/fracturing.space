@@ -12,7 +12,7 @@ PROTO_FILES := \
 	$(wildcard $(PROTO_DIR)/game/v1/*.proto) \
 	$(wildcard $(PROTO_DIR)/systems/daggerheart/v1/*.proto)
 
-.PHONY: all proto clean run cover cover-treemap test integration scenario scenario-missing-doc-check templ-generate event-catalog-check fmt fmt-check catalog-importer bootstrap bootstrap-prod setup-hooks
+.PHONY: all proto clean run up down cover cover-treemap test integration scenario scenario-missing-doc-check templ-generate event-catalog-check fmt fmt-check catalog-importer bootstrap bootstrap-prod setup-hooks
 
 all: proto
 
@@ -54,6 +54,12 @@ fmt-check:
 
 clean:
 	rm -rf $(GEN_GO_DIR)
+
+up: ## Start watcher-based local services (devcontainer-friendly)
+	@bash .devcontainer/scripts/post-start.sh
+
+down: ## Stop watcher-based local services
+	@bash .devcontainer/scripts/stop-watch-services.sh
 
 run:
 	@bash -euo pipefail -c '\
