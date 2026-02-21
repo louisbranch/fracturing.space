@@ -72,5 +72,4 @@ type CampaignCreatePageView struct {
 	GmMode             string
 	ThemePrompt        string
 	CreatorDisplayName string
-	Impersonation      *ImpersonationView
 }

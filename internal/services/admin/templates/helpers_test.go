@@ -14,18 +14,6 @@ func (f fakeLocalizer) Sprintf(key message.Reference, args ...any) string {
 	return f.value
 }
 
-func TestImpersonationLabel(t *testing.T) {
-	if ImpersonationLabel(nil) != "" {
-		t.Fatal("expected empty label for nil view")
-	}
-	if ImpersonationLabel(&ImpersonationView{UserID: "user"}) != "user" {
-		t.Fatal("expected user id fallback label")
-	}
-	if ImpersonationLabel(&ImpersonationView{UserID: "user", Name: "User"}) != "User" {
-		t.Fatal("expected display name label")
-	}
-}
-
 func TestTranslateFallback(t *testing.T) {
 	if T(nil, "hello") != "hello" {
 		t.Fatal("expected key fallback")

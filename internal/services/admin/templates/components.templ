@@ -81,10 +81,6 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 					>{T(loc, "nav.campaigns")}</a>
 				</li>
 			</ul>
-			if page.Impersonation != nil {
-				<span class="badge badge-secondary ml-2">{T(loc, "impersonation.badge")}</span>
-				<span class="ml-1">{ImpersonationLabel(page.Impersonation)}</span>
-			}
 			<div class="dropdown dropdown-hover dropdown-end">
 				<div tabindex="0" role="button" class="btn btn-ghost btn-sm hover:bg-neutral">
 					{ActiveLanguageLabel(page, loc)}
@@ -181,12 +177,6 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 
 						>{T(loc, "nav.campaigns")}</a>
 					</li>
-					if page.Impersonation != nil {
-						<li class="menu-title">
-							<span class="badge badge-secondary">{T(loc, "impersonation.badge")}</span>
-							<span>{ImpersonationLabel(page.Impersonation)}</span>
-						</li>
-					}
 					<li>
 						<span>
 							for _, option := range LanguageOptions(page, loc) {
