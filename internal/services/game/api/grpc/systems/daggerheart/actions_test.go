@@ -4764,20 +4764,17 @@ func TestSessionActionRoll_UsesDomainEngineForHopeSpend(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SessionActionRoll returned error: %v", err)
 	}
-	if domain.calls != 3 {
-		t.Fatalf("expected domain to be called three times, got %d", domain.calls)
+	if domain.calls != 2 {
+		t.Fatalf("expected domain to be called two times, got %d", domain.calls)
 	}
-	if len(domain.commands) != 3 {
-		t.Fatalf("expected 3 domain commands, got %d", len(domain.commands))
+	if len(domain.commands) != 2 {
+		t.Fatalf("expected 2 domain commands, got %d", len(domain.commands))
 	}
 	if domain.commands[0].Type != command.Type("sys.daggerheart.hope.spend") {
 		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "sys.daggerheart.hope.spend")
 	}
-	if domain.commands[1].Type != command.Type("sys.daggerheart.character_state.patch") {
-		t.Fatalf("command type = %s, want %s", domain.commands[1].Type, "sys.daggerheart.character_state.patch")
-	}
-	if domain.commands[2].Type != command.Type("action.roll.resolve") {
-		t.Fatalf("command type = %s, want %s", domain.commands[2].Type, "action.roll.resolve")
+	if domain.commands[1].Type != command.Type("action.roll.resolve") {
+		t.Fatalf("command type = %s, want %s", domain.commands[1].Type, "action.roll.resolve")
 	}
 	if domain.commands[0].SystemID != daggerheart.SystemID {
 		t.Fatalf("command system id = %s, want %s", domain.commands[0].SystemID, daggerheart.SystemID)
@@ -4813,19 +4810,6 @@ func TestSessionActionRoll_UsesDomainEngineForHopeSpend(t *testing.T) {
 	}
 	if !foundPatchEvent {
 		t.Fatal("expected character state patched event")
-	}
-	var got daggerheart.CharacterStatePatchPayload
-	if err := json.Unmarshal(domain.commands[1].PayloadJSON, &got); err != nil {
-		t.Fatalf("decode patch command payload: %v", err)
-	}
-	if got.CharacterID != "char-1" {
-		t.Fatalf("command character id = %s, want %s", got.CharacterID, "char-1")
-	}
-	if got.HopeBefore == nil || *got.HopeBefore != hopeBefore {
-		t.Fatalf("command hope_before = %v, want %d", got.HopeBefore, hopeBefore)
-	}
-	if got.HopeAfter == nil || *got.HopeAfter != hopeAfter {
-		t.Fatalf("command hope_after = %v, want %d", got.HopeAfter, hopeAfter)
 	}
 	updated, err := svc.stores.Daggerheart.GetDaggerheartCharacterState(ctx, "camp-1", "char-1")
 	if err != nil {

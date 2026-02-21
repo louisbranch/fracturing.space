@@ -86,6 +86,49 @@ func TestProjectorApplyCharacterStatePatched_StoresCharacterState(t *testing.T) 
 	}
 }
 
+func TestProjectorApplyCharacterStatePatched_DoesNotMutateFromBeforeOnly(t *testing.T) {
+	projector := Projector{}
+	hpBefore := 7
+	payload, err := json.Marshal(CharacterStatePatchedPayload{
+		CharacterID: "char-1",
+		HPBefore:    &hpBefore,
+	})
+	if err != nil {
+		t.Fatalf("marshal payload: %v", err)
+	}
+
+	updated, err := projector.Apply(SnapshotState{
+		CampaignID: "camp-1",
+		CharacterStates: map[string]CharacterState{
+			"char-1": {
+				CampaignID:  "camp-1",
+				CharacterID: "char-1",
+				HP:          0,
+			},
+		},
+	}, event.Event{
+		CampaignID:    "camp-1",
+		Type:          eventTypeCharacterStatePatched,
+		SystemID:      SystemID,
+		SystemVersion: SystemVersion,
+		PayloadJSON:   payload,
+	})
+	if err != nil {
+		t.Fatalf("apply event: %v", err)
+	}
+	snapshot, ok := updated.(SnapshotState)
+	if !ok {
+		t.Fatalf("expected SnapshotState, got %T", updated)
+	}
+	character, ok := snapshot.CharacterStates["char-1"]
+	if !ok {
+		t.Fatal("expected character state")
+	}
+	if character.HP != 0 {
+		t.Fatalf("hp = %d, want %d", character.HP, 0)
+	}
+}
+
 func TestProjectorApplyAdversaryUpdated_AppliesZeroAndEmptyValues(t *testing.T) {
 	projector := Projector{}
 	state := SnapshotState{
