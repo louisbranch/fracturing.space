@@ -19,14 +19,14 @@ func TestLazyLoadUsesSharedLoadingTemplate(t *testing.T) {
 	if !strings.Contains(got, `class="loading loading-ring loading-md"`) {
 		t.Fatalf("LazyLoad output missing loading ring: %q", got)
 	}
-	if strings.Contains(got, "<p>Loading dashboard...</p>") {
-		t.Fatalf("LazyLoad output should not include translated message: %q", got)
+	if !strings.Contains(got, `<span class="sr-only">Loading dashboard...</span>`) {
+		t.Fatalf("LazyLoad output should include sr-only message: %q", got)
 	}
 }
 
 func TestLoadingSpinnerUsesSharedLoadingTemplate(t *testing.T) {
 	var buf bytes.Buffer
-	if err := LoadingSpinner(fakeLocalizer{value: "Loading..."}).Render(context.Background(), &buf); err != nil {
+	if err := LoadingSpinner().Render(context.Background(), &buf); err != nil {
 		t.Fatalf("render LoadingSpinner: %v", err)
 	}
 	got := buf.String()
