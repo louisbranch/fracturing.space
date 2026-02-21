@@ -5,6 +5,7 @@ type DashboardPageParams struct {
 	AppName      string
 	Lang         string
 	UserName     string
+	UserAvatarURL string
 	CurrentPath string
 	CampaignName string
 	Loc          Localizer
@@ -12,7 +13,17 @@ type DashboardPageParams struct {
 
 // DashboardPage renders the logged-in shell with shared web layout and an empty main area.
 templ DashboardPage(params DashboardPageParams) {
-	@Layout(T(params.Loc, "dashboard.title"), params.Lang, params.AppName, params.Loc, params.CurrentPath, params.CampaignName) {
+	@Layout(LayoutOptions{
+		Title:            T(params.Loc, "dashboard.title"),
+		Lang:             params.Lang,
+		AppName:          params.AppName,
+		Loc:              params.Loc,
+		CurrentPath:      params.CurrentPath,
+		CampaignName:     params.CampaignName,
+		UserName:         params.UserName,
+		UserAvatarURL:    params.UserAvatarURL,
+		UseCustomBreadcrumbs: false,
+	}) {
 		<div class="max-w-screen-xl mx-auto px-4 pt-20" id="main">
 			<main aria-label={ T(params.Loc, "dashboard.title") } class="p-4"></main>
 		</div>

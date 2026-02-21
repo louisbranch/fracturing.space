@@ -2,7 +2,17 @@ package templates
 
 // CampaignPage renders the campaign chat shell for Phase 1.1.
 templ CampaignPage(page PageContext, campaignID string, campaignName string) {
-	@Layout(campaignName, page.Lang, page.AppName, page.Loc, page.CurrentPath, page.CampaignName) {
+	@Layout(LayoutOptions{
+		Title:            campaignName,
+		Lang:             page.Lang,
+		AppName:          page.AppName,
+		Loc:              page.Loc,
+		CurrentPath:      page.CurrentPath,
+		CampaignName:     page.CampaignName,
+		UserName:         page.UserName,
+		UserAvatarURL:    page.UserAvatarURL,
+		UseCustomBreadcrumbs: false,
+	}) {
 		<div
 			data-campaign-id={ campaignID }
 			data-chat-invalid-id={ T(page.Loc, "campaign.chat.invalid_id") }

@@ -3,7 +3,17 @@ package templates
 // ErrorPage renders a standard web error page using the shared layout shell.
 templ ErrorPage(page PageContext, title string, message string) {
 	if isGamePagePath(page.CurrentPath) {
-		@Layout(title, page.Lang, page.AppName, page.Loc, page.CurrentPath, page.CampaignName) {
+		@Layout(LayoutOptions{
+			Title:            title,
+			Lang:             page.Lang,
+			AppName:          page.AppName,
+			Loc:              page.Loc,
+			CurrentPath:      page.CurrentPath,
+			CampaignName:     page.CampaignName,
+			UserName:         page.UserName,
+			UserAvatarURL:    page.UserAvatarURL,
+			UseCustomBreadcrumbs: false,
+		}) {
 			@errorPageContent(page, title, message)
 		}
 	} else {

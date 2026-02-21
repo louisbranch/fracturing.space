@@ -81,12 +81,19 @@ func Layout(title string, activePage string, loc Localizer, page PageContext, br
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = sharedtemplates.AppChromeLayout(ComposeAdminPageTitle(title), page.Lang, AppName(), loc, breadcrumbs, sharedtemplates.ChromeLayoutOptions{
-			Theme:      "dim",
-			DataLayout: "admin",
-			Nav:        TopNav(activePage, page, loc),
-			HeadExtras: AdminChromeHeadExtras(),
-			MainAria:   "main",
+		templ_7745c5c3_Err = sharedtemplates.AppChromeLayout(sharedtemplates.AppChromeLayoutOptions{
+			Title:       ComposeAdminPageTitle(title),
+			Lang:        page.Lang,
+			AppName:     AppName(),
+			Loc:         loc,
+			Breadcrumbs: breadcrumbs,
+			ChromeOptions: sharedtemplates.ChromeLayoutOptions{
+				Theme:      "dim",
+				DataLayout: "admin",
+				Nav:        TopNav(activePage, page, loc),
+				HeadExtras: AdminChromeHeadExtras(),
+				MainAria:   "main",
+			},
 		}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var3), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err

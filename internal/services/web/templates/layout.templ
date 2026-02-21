@@ -2,6 +2,19 @@ package templates
 
 import sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
 
+type LayoutOptions struct {
+	Title           string
+	Lang            string
+	AppName         string
+	Loc             Localizer
+	CurrentPath     string
+	CampaignName    string
+	UserName        string
+	UserAvatarURL   string
+	CustomBreadcrumbs []sharedtemplates.BreadcrumbItem
+	UseCustomBreadcrumbs bool
+}
+
 // ShellLayout wraps auth/public pages in the shared HTML shell.
 templ ShellLayout(title string, lang string, loc Localizer) {
 	@sharedtemplates.ShellLayout(title, lang, loc) {
@@ -10,16 +23,34 @@ templ ShellLayout(title string, lang string, loc Localizer) {
 }
 
 // Layout wraps game pages in the shared HTML chrome.
-templ Layout(title string, lang string, appName string, loc Localizer, currentPath string, campaignName string, customBreadcrumbs ...sharedtemplates.BreadcrumbItem) {
-	if customBreadcrumbs != nil {
-		@sharedtemplates.AppChromeLayout(title, lang, appName, loc, customBreadcrumbs, sharedtemplates.ChromeLayoutOptions{
-			MainAria: sharedtemplates.T(loc, "game.aria_label"),
+templ Layout(options LayoutOptions) {
+	if options.UseCustomBreadcrumbs {
+		@sharedtemplates.AppChromeLayout(sharedtemplates.AppChromeLayoutOptions{
+			Title:      options.Title,
+			Lang:       options.Lang,
+			AppName:    options.AppName,
+			Loc:        options.Loc,
+			Breadcrumbs: options.CustomBreadcrumbs,
+			ChromeOptions: sharedtemplates.ChromeLayoutOptions{
+				MainAria:      sharedtemplates.T(options.Loc, "game.aria_label"),
+				UserName:      options.UserName,
+				UserAvatarURL: options.UserAvatarURL,
+			},
 		}) {
 			{ children... }
 		}
 	} else {
-		@sharedtemplates.AppChromeLayout(title, lang, appName, loc, sharedtemplates.BuildPathBreadcrumbsForWeb(currentPath, loc, campaignNamesForPath(currentPath, campaignName)), sharedtemplates.ChromeLayoutOptions{
-			MainAria: sharedtemplates.T(loc, "game.aria_label"),
+		@sharedtemplates.AppChromeLayout(sharedtemplates.AppChromeLayoutOptions{
+			Title:      options.Title,
+			Lang:       options.Lang,
+			AppName:    options.AppName,
+			Loc:        options.Loc,
+			Breadcrumbs: sharedtemplates.BuildPathBreadcrumbsForWeb(options.CurrentPath, options.Loc, campaignNamesForPath(options.CurrentPath, options.CampaignName)),
+			ChromeOptions: sharedtemplates.ChromeLayoutOptions{
+				MainAria:      sharedtemplates.T(options.Loc, "game.aria_label"),
+				UserName:      options.UserName,
+				UserAvatarURL: options.UserAvatarURL,
+			},
 		}) {
 			{ children... }
 		}

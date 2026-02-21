@@ -19,6 +19,17 @@ type ChromeLayoutOptions struct {
 	Nav         templ.Component
 	HeadExtras  templ.Component
 	BodyScripts templ.Component
+	UserName    string
+	UserAvatarURL string
+}
+
+type AppChromeLayoutOptions struct {
+	Title      string
+	Lang       string
+	AppName    string
+	Loc        Localizer
+	Breadcrumbs []BreadcrumbItem
+	ChromeOptions ChromeLayoutOptions
 }
 
 // T returns a translated string or the key when no localizer is available.
@@ -83,28 +94,28 @@ templ ShellLayout(title string, lang string, loc Localizer) {
 }
 
 
-templ AppChromeLayout(title string, lang string, appName string, loc Localizer, breadcrumbs []BreadcrumbItem, options ChromeLayoutOptions) {
+templ AppChromeLayout(options AppChromeLayoutOptions) {
 	<!DOCTYPE html>
-	<html lang={ lang } data-theme={ chromeTheme(options) }>
+	<html lang={ options.Lang } data-theme={ chromeTheme(options.ChromeOptions) }>
 		<head>
-			@pageHead(title, loc)
+			@pageHead(options.Title, options.Loc)
 			<link rel="stylesheet" href="/static/theme.css">
-			if options.HeadExtras == nil {
+			if options.ChromeOptions.HeadExtras == nil {
 				<script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js" integrity="sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2XoQrxeTUQyRjrOnlCoYta87iKBWq3EsdM2" crossorigin="anonymous"></script>
 			}
-			if options.HeadExtras != nil {
-				@options.HeadExtras
+			if options.ChromeOptions.HeadExtras != nil {
+				@options.ChromeOptions.HeadExtras
 			}
 		</head>
-		<body data-layout={ chromeDataLayout(options) }>
+		<body data-layout={ chromeDataLayout(options.ChromeOptions) }>
 				@LucideSprite()
-			if options.Nav != nil {
-				@options.Nav
+			if options.ChromeOptions.Nav != nil {
+				@options.ChromeOptions.Nav
 			} else {
 				<nav class="navbar bg-base-200 fixed top-0 w-full z-50">
 					<div class="navbar-start w-auto">
 						<a href="/" id="nav-logo" class="text-lg font-bold">
-							{ appName }
+							{ options.AppName }
 						</a>
 					</div>
 				<div class="navbar-end w-full justify-end gap-3">
@@ -116,27 +127,46 @@ templ AppChromeLayout(title string, lang string, appName string, loc Localizer, 
 							hx-push-url="true"
 							data-nav-item="true"
 							class="btn btn-ghost btn-sm"
-						>{ T(loc, "dashboard.title") }</a>
-						<a
-							href="/campaigns"
-							hx-get="/campaigns"
-							hx-target="#main"
-							hx-swap="innerHTML"
-							hx-push-url="true"
-							data-nav-item="true"
-							class="btn btn-ghost btn-sm"
-						>{ T(loc, "game.campaigns.title") }</a>
-					<form method="POST" action="/auth/logout">
-						<button type="submit" class="btn btn-ghost btn-sm">{ T(loc, "layout.sign_out") }</button>
-					</form>
+						>{ T(options.Loc, "dashboard.title") }</a>
+					<a
+						href="/campaigns"
+						hx-get="/campaigns"
+						hx-target="#main"
+						hx-swap="innerHTML"
+						hx-push-url="true"
+						data-nav-item="true"
+						class="btn btn-ghost btn-sm"
+					>{ T(options.Loc, "game.campaigns.title") }</a>
+					if strings.TrimSpace(options.ChromeOptions.UserAvatarURL) != "" {
+						<div class="dropdown dropdown-end">
+							<button type="button" class="btn btn-ghost btn-circle avatar">
+								<div class="w-10 rounded-full">
+									<img
+										src={ options.ChromeOptions.UserAvatarURL }
+										alt={ options.ChromeOptions.UserName }
+										class="rounded-full"
+									/>
+								</div>
+							</button>
+							<form method="POST" action="/auth/logout" class="dropdown-content bg-base-100 rounded-box z-[1] mt-3 w-40 p-2 shadow">
+								<button type="submit" class="btn btn-ghost btn-sm w-full justify-start">
+									{ T(options.Loc, "layout.sign_out") }
+								</button>
+							</form>
+						</div>
+					} else {
+						<form method="POST" action="/auth/logout">
+							<button type="submit" class="btn btn-ghost btn-sm">{ T(options.Loc, "layout.sign_out") }</button>
+						</form>
+					}
 				</div>
 				</nav>
 			}
-			<main class="max-w-screen-xl mx-auto px-4 pt-20" id="main" aria-label={ chromeMainAria(loc, options) }>
-				if len(breadcrumbs) > 0 {
-					@Breadcrumbs(breadcrumbs, false)
+			<main class="max-w-screen-xl mx-auto px-4 pt-20" id="main" aria-label={ chromeMainAria(options.Loc, options.ChromeOptions) }>
+				if len(options.Breadcrumbs) > 0 {
+					@Breadcrumbs(options.Breadcrumbs, false)
 				}
-				<h1 class="mb-5">{ pageHeadingFromTitle(title, appName) }</h1>
+				<h1 class="mb-5">{ pageHeadingFromTitle(options.Title, options.AppName) }</h1>
 				{ children... }
 			</main>
 			<script>
@@ -178,8 +208,8 @@ templ AppChromeLayout(title string, lang string, appName string, loc Localizer, 
 				document.addEventListener("htmx:afterSwap", syncChromeNavActiveLinks);
 				document.addEventListener("htmx:afterSettle", syncChromeNavActiveLinks);
 			</script>
-			if options.BodyScripts != nil {
-				@options.BodyScripts
+			if options.ChromeOptions.BodyScripts != nil {
+				@options.ChromeOptions.BodyScripts
 			}
 		</body>
 	</html>

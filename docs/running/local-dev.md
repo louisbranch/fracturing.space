@@ -94,6 +94,18 @@ For external image hosting (recommended for campaign covers and avatars), set:
 - `FRACTURING_SPACE_ASSET_BASE_URL` (for example `https://cdn.example.com/assets`)
 - `FRACTURING_SPACE_ASSET_VERSION` (for example `v1`)
 
+If you already have a `.env` file, update those values there and restart watchers:
+
+```sh
+make down && make up
+```
+
+If you don't have a `.env` file yet:
+
+```sh
+cp .env.local.example .env
+```
+
 Upload helper:
 
 ```sh

@@ -81,13 +81,34 @@ type UserInviteItem struct {
 }
 
 templ GamePageShell(page PageContext, title string) {
-	@Layout(title, page.Lang, page.AppName, page.Loc, page.CurrentPath, page.CampaignName) {
+	@Layout(LayoutOptions{
+		Title:            title,
+		Lang:             page.Lang,
+		AppName:          page.AppName,
+		Loc:              page.Loc,
+		CurrentPath:      page.CurrentPath,
+		CampaignName:     page.CampaignName,
+		UserName:         page.UserName,
+		UserAvatarURL:    page.UserAvatarURL,
+		UseCustomBreadcrumbs: false,
+	}) {
       { children... }
 	}
 }
 
 templ CampaignsListPage(page PageContext, campaigns []CampaignListItem) {
-	@Layout(T(page.Loc, "game.campaigns.title"), page.Lang, page.AppName, page.Loc, page.CurrentPath, page.CampaignName, []sharedtemplates.BreadcrumbItem{}...) {
+	@Layout(LayoutOptions{
+		Title:               T(page.Loc, "game.campaigns.title"),
+		Lang:                page.Lang,
+		AppName:             page.AppName,
+		Loc:                 page.Loc,
+		CurrentPath:         page.CurrentPath,
+		CampaignName:        page.CampaignName,
+		UserName:            page.UserName,
+		UserAvatarURL:       page.UserAvatarURL,
+		CustomBreadcrumbs:    []sharedtemplates.BreadcrumbItem{},
+		UseCustomBreadcrumbs: true,
+	}) {
 		<div class="flex flex-wrap items-center justify-end gap-3">
 			<a class="btn btn-primary btn-sm" href="/campaigns/create">{ T(page.Loc, "game.campaigns.start_new") }</a>
 		</div>

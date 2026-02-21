@@ -47,12 +47,19 @@ templ AdminChromeHeadExtras() {
 
 // Layout wraps content in the base HTML shell with top navigation.
 templ Layout(title string, activePage string, loc Localizer, page PageContext, breadcrumbs ...Breadcrumb) {
-	@sharedtemplates.AppChromeLayout(ComposeAdminPageTitle(title), page.Lang, AppName(), loc, breadcrumbs, sharedtemplates.ChromeLayoutOptions{
-		Theme:      "dim",
-		DataLayout: "admin",
-		Nav:        TopNav(activePage, page, loc),
-		HeadExtras: AdminChromeHeadExtras(),
-		MainAria:  "main",
+	@sharedtemplates.AppChromeLayout(sharedtemplates.AppChromeLayoutOptions{
+		Title:    ComposeAdminPageTitle(title),
+		Lang:     page.Lang,
+		AppName:  AppName(),
+		Loc:      loc,
+		Breadcrumbs: breadcrumbs,
+		ChromeOptions: sharedtemplates.ChromeLayoutOptions{
+			Theme:      "dim",
+			DataLayout: "admin",
+			Nav:        TopNav(activePage, page, loc),
+			HeadExtras: AdminChromeHeadExtras(),
+			MainAria:   "main",
+		},
 	}) {
 		{ children... }
 	}

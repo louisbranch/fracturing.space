@@ -20,7 +20,7 @@ func (h *handler) requireCampaignActor(w http.ResponseWriter, r *http.Request, c
 		return nil, false
 	}
 
-	participant, err := h.campaignParticipant(r.Context(), campaignID, sess.accessToken)
+	participant, err := h.campaignParticipant(r.Context(), campaignID, sess)
 	if err != nil {
 		h.renderErrorPage(w, r, http.StatusBadGateway, "Campaign unavailable", "failed to verify campaign access")
 		return nil, false

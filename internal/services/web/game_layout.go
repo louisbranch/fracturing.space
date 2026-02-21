@@ -1,11 +1,13 @@
 package web
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strings"
 
 	"github.com/a-h/templ"
+	"github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
 	"github.com/louisbranch/fracturing.space/internal/platform/branding"
 	sharedhtmx "github.com/louisbranch/fracturing.space/internal/services/shared/htmx"
 	sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
@@ -29,13 +31,52 @@ func (h *handler) resolvedAppName() string {
 
 func (h *handler) pageContext(w http.ResponseWriter, r *http.Request) webtemplates.PageContext {
 	printer, lang := localizer(w, r)
-	return webtemplates.PageContext{
-		Lang:         lang,
-		Loc:          printer,
-		CurrentPath:  r.URL.Path,
-		CurrentQuery: r.URL.RawQuery,
-		AppName:      h.resolvedAppName(),
+	page := webtemplates.PageContext{
+		Lang:          lang,
+		Loc:           printer,
+		CurrentPath:   r.URL.Path,
+		CurrentQuery:  r.URL.RawQuery,
+		UserName:      "",
+		UserAvatarURL: "",
+		AppName:       h.resolvedAppName(),
 	}
+
+	sess := sessionFromRequest(r, h.sessions)
+	if sess != nil {
+		page.UserName = strings.TrimSpace(sess.displayName)
+		if page.UserName == "" {
+			page.UserName = webtemplates.T(page.Loc, "web.dashboard.user_name_fallback")
+		}
+		page.UserAvatarURL = h.pageContextUserAvatar(r.Context(), sess)
+	}
+
+	return page
+}
+
+func (h *handler) pageContextUserAvatar(ctx context.Context, sess *session) string {
+	if h == nil {
+		return ""
+	}
+	if sess == nil || h.campaignAccess == nil {
+		return ""
+	}
+
+	if avatar, ok := sess.cachedUserAvatar(); ok {
+		return avatar
+	}
+
+	userID, err := h.sessionUserIDForSession(ctx, sess)
+	if err != nil {
+		return ""
+	}
+	if strings.TrimSpace(userID) == "" {
+		sess.setCachedUserAvatar("")
+		return ""
+	}
+
+	avatarURL := avatarImageURL(h.config, catalog.AvatarRoleUser, userID, "", "")
+	sess.setCachedUserAvatar(avatarURL)
+	return avatarURL
 }
 
 func (h *handler) pageContextForCampaign(w http.ResponseWriter, r *http.Request, campaignID string) webtemplates.PageContext {
