@@ -432,6 +432,9 @@ templ PageHeader(h PageHeading) {
 templ LazyLoad(url string, message string) {
 	<div hx-get={ url } hx-trigger="load" hx-swap="outerHTML">
 		@sharedtemplates.Loading()
+		if message != "" {
+			<span class="sr-only">{message}</span>
+		}
 	</div>
 }
 
@@ -470,7 +473,7 @@ templ EmptyState(message string) {
 }
 
 // LoadingSpinner renders a loading ring.
-templ LoadingSpinner(loc Localizer) {
+templ LoadingSpinner() {
 	@sharedtemplates.Loading()
 }
 
