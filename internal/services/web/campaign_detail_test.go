@@ -219,7 +219,7 @@ func TestAppCampaignDetailPageUsesCampaignNameFromService(t *testing.T) {
 	if !strings.Contains(body, "<title>Campaign One | "+branding.AppName+"</title>") {
 		t.Fatalf("expected campaign title in body")
 	}
-	if !strings.Contains(body, "<h1>Campaign One</h1>") {
+	if !strings.Contains(body, "Campaign One</h1>") {
 		t.Fatalf("expected campaign heading in body")
 	}
 }

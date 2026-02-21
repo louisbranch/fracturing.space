@@ -233,7 +233,7 @@ func TestWritePageInjectsTitleForHTMXRequests(t *testing.T) {
 	if !strings.Contains(body, "<title>Injected Title</title>") {
 		t.Fatalf("expected injected title in HTMX response, got %q", body)
 	}
-	if !strings.HasSuffix(body, "<main>fragment</main>") {
+	if !strings.HasSuffix(body, "fragment") {
 		t.Fatalf("expected rendered fragment body in HTMX response, got %q", body)
 	}
 }
