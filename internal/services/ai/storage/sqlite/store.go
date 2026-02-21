@@ -6,13 +6,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/fs"
 	"path/filepath"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	sqlitemigrate "github.com/louisbranch/fracturing.space/internal/platform/storage/sqlitemigrate"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage/sqlite/migrations"
 	_ "modernc.org/sqlite"
@@ -97,54 +96,15 @@ func (s *Store) Close() error {
 }
 
 func (s *Store) runMigrations() error {
-	entries, err := fs.ReadDir(migrations.FS, ".")
-	if err != nil {
-		return fmt.Errorf("read migrations dir: %w", err)
-	}
-
-	sqlFiles := make([]string, 0, len(entries))
-	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".sql") {
-			continue
-		}
-		sqlFiles = append(sqlFiles, entry.Name())
-	}
-	sort.Strings(sqlFiles)
-
-	for _, file := range sqlFiles {
-		content, err := fs.ReadFile(migrations.FS, file)
-		if err != nil {
-			return fmt.Errorf("read migration %s: %w", file, err)
-		}
-		upSQL := extractUpMigration(string(content))
-		if strings.TrimSpace(upSQL) == "" {
-			continue
-		}
-		if _, err := s.sqlDB.Exec(upSQL); err != nil {
-			if !isAlreadyExistsError(err) {
-				return fmt.Errorf("exec migration %s: %w", file, err)
-			}
-		}
-	}
-
-	return nil
+	return sqlitemigrate.ApplyMigrations(s.sqlDB, migrations.FS, "")
 }
 
 func extractUpMigration(content string) string {
-	upIdx := strings.Index(content, "-- +migrate Up")
-	if upIdx == -1 {
-		return content
-	}
-	downIdx := strings.Index(content, "-- +migrate Down")
-	if downIdx == -1 {
-		return content[upIdx+len("-- +migrate Up"):]
-	}
-	return content[upIdx+len("-- +migrate Up") : downIdx]
+	return sqlitemigrate.ExtractUpMigration(content)
 }
 
 func isAlreadyExistsError(err error) bool {
-	value := strings.ToLower(err.Error())
-	return strings.Contains(value, "already exists") || strings.Contains(value, "duplicate column name")
+	return sqlitemigrate.IsAlreadyExistsError(err)
 }
 
 // PutCredential persists a credential record.

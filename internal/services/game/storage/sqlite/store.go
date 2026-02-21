@@ -8,13 +8,13 @@ import (
 	"fmt"
 	"io/fs"
 	"path/filepath"
-	"sort"
 	"strings"
 	"time"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
+	sqlitemigrate "github.com/louisbranch/fracturing.space/internal/platform/storage/sqlitemigrate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
@@ -226,57 +226,18 @@ CREATE INDEX idx_invites_recipient_status ON invites(recipient_user_id, status);
 // runMigrations executes embedded SQL migrations from the provided migration set.
 // Files are sorted lexicographically to make startup behavior deterministic.
 func runMigrations(sqlDB *sql.DB, migrationFS fs.FS, migrationRoot string) error {
-	entries, err := fs.ReadDir(migrationFS, migrationRoot)
-	if err != nil {
-		return fmt.Errorf("read migrations dir: %w", err)
-	}
-
-	var sqlFiles []string
-	for _, entry := range entries {
-		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".sql") {
-			sqlFiles = append(sqlFiles, entry.Name())
-		}
-	}
-	sort.Strings(sqlFiles)
-
-	for _, file := range sqlFiles {
-		content, err := fs.ReadFile(migrationFS, filepath.Join(migrationRoot, file))
-		if err != nil {
-			return fmt.Errorf("read migration %s: %w", file, err)
-		}
-
-		upSQL := extractUpMigration(string(content))
-		if upSQL == "" {
-			continue
-		}
-
-		if _, err := sqlDB.Exec(upSQL); err != nil {
-			if !isAlreadyExistsError(err) {
-				return fmt.Errorf("exec migration %s: %w", file, err)
-			}
-		}
-	}
-
-	return nil
+	return sqlitemigrate.ApplyMigrations(sqlDB, migrationFS, migrationRoot)
 }
 
 // extractUpMigration extracts the Up migration portion from a migration file.
 // Down sections are intentionally ignored during startup execution.
 func extractUpMigration(content string) string {
-	upIdx := strings.Index(content, "-- +migrate Up")
-	if upIdx == -1 {
-		return content
-	}
-	downIdx := strings.Index(content, "-- +migrate Down")
-	if downIdx == -1 {
-		return content[upIdx+len("-- +migrate Up"):]
-	}
-	return content[upIdx+len("-- +migrate Up") : downIdx]
+	return sqlitemigrate.ExtractUpMigration(content)
 }
 
 // isAlreadyExistsError checks if the error is a table/index already exists error.
 func isAlreadyExistsError(err error) bool {
-	return strings.Contains(err.Error(), "already exists")
+	return sqlitemigrate.IsAlreadyExistsError(err)
 }
 
 // Campaign methods

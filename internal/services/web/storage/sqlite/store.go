@@ -4,12 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"io/fs"
 	"path/filepath"
-	"sort"
 	"strings"
 	"time"
 
+	sqlitemigrate "github.com/louisbranch/fracturing.space/internal/platform/storage/sqlitemigrate"
 	webstorage "github.com/louisbranch/fracturing.space/internal/services/web/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/web/storage/sqlite/migrations"
 	_ "modernc.org/sqlite"
@@ -323,52 +322,17 @@ func (s *Store) MarkCampaignScopeStale(ctx context.Context, campaignID, scope st
 
 // runMigrations applies embedded SQL migrations in filename order.
 func (s *Store) runMigrations() error {
-	entries, err := fs.ReadDir(migrations.FS, ".")
-	if err != nil {
-		return fmt.Errorf("read migrations dir: %w", err)
-	}
-
-	sqlFiles := make([]string, 0, len(entries))
-	for _, entry := range entries {
-		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".sql") {
-			sqlFiles = append(sqlFiles, entry.Name())
-		}
-	}
-	sort.Strings(sqlFiles)
-
-	for _, file := range sqlFiles {
-		content, err := fs.ReadFile(migrations.FS, file)
-		if err != nil {
-			return fmt.Errorf("read migration %s: %w", file, err)
-		}
-		upSQL := extractUpMigration(string(content))
-		if upSQL == "" {
-			continue
-		}
-		if _, err := s.sqlDB.Exec(upSQL); err != nil && !isAlreadyExistsError(err) {
-			return fmt.Errorf("exec migration %s: %w", file, err)
-		}
-	}
-
-	return nil
+	return sqlitemigrate.ApplyMigrations(s.sqlDB, migrations.FS, "")
 }
 
 // extractUpMigration isolates the `-- +migrate Up` segment for execution.
 func extractUpMigration(content string) string {
-	upIdx := strings.Index(content, "-- +migrate Up")
-	if upIdx == -1 {
-		return content
-	}
-	downIdx := strings.Index(content, "-- +migrate Down")
-	if downIdx == -1 {
-		return content[upIdx+len("-- +migrate Up"):]
-	}
-	return content[upIdx+len("-- +migrate Up") : downIdx]
+	return sqlitemigrate.ExtractUpMigration(content)
 }
 
 // isAlreadyExistsError treats idempotent re-creation attempts as no-ops.
 func isAlreadyExistsError(err error) bool {
-	return strings.Contains(err.Error(), "already exists")
+	return sqlitemigrate.IsAlreadyExistsError(err)
 }
 
 func boolToInt(value bool) int64 {
