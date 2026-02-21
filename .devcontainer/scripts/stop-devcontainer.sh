@@ -4,6 +4,8 @@ set -euo pipefail
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$root_dir"
 repo_name="$(basename "$root_dir")"
+export DEVCONTAINER_UID="${DEVCONTAINER_UID:-$(id -u)}"
+export DEVCONTAINER_GID="${DEVCONTAINER_GID:-$(id -g)}"
 
 if [[ -f "/.dockerenv" ]]; then
   bash .devcontainer/scripts/stop-watch-services.sh

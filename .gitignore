@@ -7,6 +7,7 @@ data/
 .env
 .env.local
 .tmp/
+.config/
 
 .agents/plans/*.md
 .playwright-cli/
