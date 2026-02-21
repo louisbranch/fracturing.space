@@ -455,12 +455,101 @@ func TestAuthCallbackExchangesCodeAndSetsCookie(t *testing.T) {
 	}
 
 	// Verify session exists in the store.
-	sess := h.sessions.get(sessionCookie.Value)
+	sess := h.sessions.get(sessionCookie.Value, "test-access-token")
 	if sess == nil {
 		t.Fatal("expected session in store")
 	}
 	if sess.accessToken != "test-access-token" {
 		t.Fatalf("accessToken = %q, want %q", sess.accessToken, "test-access-token")
+	}
+}
+
+func TestAuthCallbackPersistsSessionForRestart(t *testing.T) {
+	tokenServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"access_token":"test-access-token","token_type":"Bearer","expires_in":3600}`))
+	}))
+	defer tokenServer.Close()
+
+	cachePath := filepath.Join(t.TempDir(), "web-cache.db")
+	cacheStore, err := openWebCacheStore(cachePath)
+	if err != nil {
+		t.Fatalf("open cache store: %v", err)
+	}
+	h1 := &handler{
+		config: Config{
+			AuthBaseURL:   "http://auth.local",
+			OAuthClientID: "fracturing-space",
+			CallbackURL:   "http://localhost:8080/auth/callback",
+			AuthTokenURL:  tokenServer.URL,
+		},
+		sessions:     newSessionStore(cacheStore),
+		pendingFlows: newPendingFlowStore(),
+	}
+
+	state := h1.pendingFlows.create("test-verifier")
+	req := httptest.NewRequest(http.MethodGet, "/auth/callback?code=test-code&state="+state, nil)
+	w := httptest.NewRecorder()
+	h1.handleAuthCallback(w, req)
+
+	if w.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d: %s", w.Code, http.StatusFound, w.Body.String())
+	}
+	var sessionCookie *http.Cookie
+	for _, c := range w.Result().Cookies() {
+		if c.Name == sessionCookieName {
+			sessionCookie = c
+			break
+		}
+	}
+	if sessionCookie == nil {
+		t.Fatal("expected session cookie")
+	}
+
+	accessToken, _, _, found, err := cacheStore.LoadSession(context.Background(), sessionCookie.Value)
+	if err != nil {
+		t.Fatalf("load session from cache store: %v", err)
+	}
+	if !found {
+		t.Fatal("expected session persisted to cache store")
+	}
+	expectedAccessTokenHash := sessionAccessTokenFingerprint("test-access-token")
+	if accessToken != expectedAccessTokenHash {
+		t.Fatalf("persisted access token = %q, want %q", accessToken, expectedAccessTokenHash)
+	}
+	if err := cacheStore.Close(); err != nil {
+		t.Fatalf("close cache store: %v", err)
+	}
+
+	reopenedStore, err := openWebCacheStore(cachePath)
+	if err != nil {
+		t.Fatalf("reopen cache store: %v", err)
+	}
+	h2 := &handler{
+		config: Config{
+			AuthBaseURL:   "http://auth.local",
+			OAuthClientID: "fracturing-space",
+			CallbackURL:   "http://localhost:8080/auth/callback",
+			AuthTokenURL:  tokenServer.URL,
+		},
+		sessions:     newSessionStore(reopenedStore),
+		pendingFlows: newPendingFlowStore(),
+	}
+	t.Cleanup(func() {
+		if err := reopenedStore.Close(); err != nil {
+			t.Fatalf("close reopened cache store: %v", err)
+		}
+	})
+
+	replayReq := httptest.NewRequest(http.MethodGet, "/", nil)
+	replayReq.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionCookie.Value})
+	replayReq.AddCookie(&http.Cookie{Name: tokenCookieName, Value: "test-access-token"})
+	sess := sessionFromRequest(replayReq, h2.sessions)
+	if sess == nil {
+		t.Fatal("expected session restored from persistent cache")
+	}
+	if sess.accessToken != "test-access-token" {
+		t.Fatalf("restored access token = %q, want %q", sess.accessToken, "test-access-token")
 	}
 }
 
@@ -608,7 +697,7 @@ func TestAuthLogoutClearsSessionAndRedirects(t *testing.T) {
 	}
 
 	// Session should be deleted.
-	if sess := h.sessions.get(sessionID); sess != nil {
+	if sess := h.sessions.get(sessionID, "token-1"); sess != nil {
 		t.Fatal("expected session to be deleted")
 	}
 

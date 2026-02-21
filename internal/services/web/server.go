@@ -202,6 +202,10 @@ func NewHandlerWithCampaignAccess(config Config, authClient authv1.AuthServiceCl
 	if err != nil {
 		return nil, fmt.Errorf("resolve static assets: %w", err)
 	}
+	var sessionPersistence sessionPersistence
+	if webSessionStore, ok := deps.cacheStore.(*websqlite.Store); ok && webSessionStore != nil {
+		sessionPersistence = webSessionStore
+	}
 	rootMux.Handle(
 		"/static/",
 		withStaticMime(
@@ -213,7 +217,7 @@ func NewHandlerWithCampaignAccess(config Config, authClient authv1.AuthServiceCl
 		config:            config,
 		authClient:        authClient,
 		accountClient:     deps.accountClient,
-		sessions:          newSessionStore(),
+		sessions:          newSessionStore(sessionPersistence),
 		pendingFlows:      newPendingFlowStore(),
 		cacheStore:        deps.cacheStore,
 		campaignNameCache: make(map[string]campaignNameCache),
