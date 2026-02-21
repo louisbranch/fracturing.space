@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	authsqlite "github.com/louisbranch/fracturing.space/internal/services/auth/storage/sqlite"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/user"
 )
@@ -273,7 +272,6 @@ func TestHandleConsent(t *testing.T) {
 		if err := server.userStore.PutUser(context.Background(), user.User{
 			ID:        "user-1",
 			Email:     "alice",
-			Locale:    platformi18n.DefaultLocale(),
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
 		}); err != nil {
@@ -362,7 +360,6 @@ func TestHandleConsent_NonTrustedClientRendersConsentView(t *testing.T) {
 	if err := server.userStore.PutUser(context.Background(), user.User{
 		ID:        "user-1",
 		Email:     "alice",
-		Locale:    platformi18n.DefaultLocale(),
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}); err != nil {

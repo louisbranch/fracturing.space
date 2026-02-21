@@ -5,7 +5,8 @@ coverage.log
 coverage-treemap.svg
 data/
 .env
+.env.local
 
-.agents/plans/
+.agents/plans/*.md
 .playwright-cli/
 artifacts/

@@ -14,7 +14,7 @@ type MagicParams struct {
 
 // MagicPage renders the magic-link verification result page.
 templ MagicPage(params MagicParams) {
-	@Layout(params.Title + " - " + params.AppName, params.Lang) {
+	@AuthLayout(params.Title + " - " + params.AppName, params.Lang) {
 		<main class="flex justify-center px-5 py-12">
 			<div class="w-full max-w-xl grid gap-8">
 				<header class="grid gap-3">

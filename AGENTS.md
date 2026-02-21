@@ -76,7 +76,7 @@ make proto       # Regenerate proto code
 
 Commit in small, task-sized increments as you work; do not batch everything into a single final commit.
 
-Before committing, run `make fmt` to ensure consistent formatting.
+If `git config --local --get core.hooksPath` is not `.githooks`, run `make setup-hooks`; pre-commit then formats staged Go files automatically.
 
 Use matching prefixes with a short, why-focused subject:
 - `feat:` - New features

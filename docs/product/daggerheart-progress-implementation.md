@@ -25,17 +25,18 @@ Describe implemented mechanics, current PRD coverage, and remaining Phase 2 work
 ## Implemented Outcomes (Event-Driven Wiring)
 - System-owned Daggerheart action events emitted from system RPCs.
 - Session action rolls emit `action.roll_resolved` with roll kind metadata.
+- Mandatory roll outcome effects emit `action.outcome_applied` with roll linkage.
 - Damage applied events include HP/armor deltas, mitigation, resistance/immunity, roll linkage, and source actor IDs.
 - Rest, downtime, and loadout actions emit system events with GM Fear tracking and downtime deltas.
 - Hope and stress spend events emit with before/after values and roll linkage where applicable.
-- Death move resolution emits `action.outcome_rejected` or outcome-based state patches as appropriate.
-- Blaze of Glory completion updates durable character state and clears spotlight/session availability state.
-- Attack and reaction outcome application now emit durable system mutations (`sys.daggerheart.damage_applied`, `sys.daggerheart.character_state_patched`) and condition/movement updates.
-- Session damage rolls now project durable outcomes through `sys.daggerheart.damage_applied` and linked patch updates.
-- Session attack flow helper chains roll, outcome, damage roll, and direct damage application with linkage validation.
-- Session reaction flow helper chains reaction rolls with outcome and subsequent state mutation.
+- Death move resolution emits `action.death_move_resolved` with life state, scars, and recovery deltas.
+- Blaze of Glory completion emits `action.blaze_of_glory_resolved` and removes the character from campaign availability.
+- Attack and reaction outcome application emit `action.attack_resolved` and `action.reaction_resolved` for roll follow-up.
+- Session damage rolls emit `action.damage_roll_resolved` with dice results and RNG metadata.
+- Session attack flow helper chains roll, outcome, damage roll, and apply damage with linkage validation.
+- Session reaction flow helper chains reaction rolls with outcome and reaction outcome application.
 - Adversary CRUD emits create/update/delete events and projects adversaries into storage.
-- Adversary attack flow chains adversary roll, outcome handling, and direct state mutation without intermediate notification-only events.
+- Adversary attack flow chains adversary roll, outcome application, damage roll, and apply damage.
 
 ## Mechanics Delta Checklist (From SRD Review)
 - [x] Critical success: Hope gain and Stress clear on action roll crits; critical damage on attacks.

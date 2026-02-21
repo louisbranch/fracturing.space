@@ -1,0 +1,28 @@
+package templates
+
+import sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
+
+type ErrorPageParams struct {
+	AppName          string
+	Error            string
+	ErrorDescription string
+}
+
+templ ErrorPage(params ErrorPageParams) {
+	@sharedtemplates.AuthLayout("OAuth Error - "+params.AppName, "en", "landing-body", "") {
+		<main class="oauth-shell">
+			<div class="oauth-header">
+				<h1>{ params.AppName }</h1>
+				<p class="text-center opacity-70 oauth-subtitle">OAuth Error</p>
+			</div>
+
+			<div class="card oauth-card bg-base-200 border border-base-300 shadow-xl">
+				<div class="card-body text-center">
+					<h2 class="card-title justify-center text-xl">Authorization Error</h2>
+					<div class="oauth-error-code">{ params.Error }</div>
+					<p>{ params.ErrorDescription }</p>
+				</div>
+			</div>
+		</main>
+	}
+}

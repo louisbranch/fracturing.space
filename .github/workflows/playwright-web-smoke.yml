@@ -37,7 +37,7 @@ jobs:
         env:
           FRACTURING_SPACE_WEB_HTTP_ADDR: "127.0.0.1:8086"
           FRACTURING_SPACE_WEB_AUTH_BASE_URL: "http://localhost:8084"
-          FRACTURING_SPACE_WEB_OAUTH_CLIENT_ID: "fracturing-space-web"
+          FRACTURING_SPACE_WEB_OAUTH_CLIENT_ID: "fracturing-space"
         run: |
           set -euo pipefail
           ./bin/web -auth-addr="" 2>&1 &

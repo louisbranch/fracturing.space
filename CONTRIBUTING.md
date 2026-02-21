@@ -20,7 +20,8 @@ workflow, standards, and expectations used in this repo.
 - Build all packages: `go build ./...`
 - Run all tests: `go test ./...`
 - Run integration tests: `go test -tags=integration ./...`
-- Format code: `goimports -w .`
+- If `git config --local --get core.hooksPath` is not `.githooks`, run `make setup-hooks` (pre-commit formats staged Go files)
+- Verify formatting: `make fmt-check`
 - Keep `go.mod` tidy: `go mod tidy`
 
 Integration tests exercise the full gRPC + MCP + storage path. You can also

@@ -2,7 +2,6 @@ syntax = "proto3";
 
 package auth.v1;
 
-import "common/v1/locale.proto";
 import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1;authv1";
@@ -11,9 +10,8 @@ option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1;
 message User {
   string id = 1;
   string email = 2;
-  common.v1.Locale locale = 3;
-  google.protobuf.Timestamp created_at = 4;
-  google.protobuf.Timestamp updated_at = 5;
+  google.protobuf.Timestamp created_at = 3;
+  google.protobuf.Timestamp updated_at = 4;
 }
 
 // AuthService provides minimal auth user operations.
@@ -54,7 +52,6 @@ service AuthService {
 
 message CreateUserRequest {
   string email = 1;
-  common.v1.Locale locale = 2;
 }
 
 message CreateUserResponse {

@@ -74,6 +74,7 @@ type grpcClients struct {
 	gameConn          *grpc.ClientConn
 	authConn          *grpc.ClientConn
 	authClient        authv1.AuthServiceClient
+	accountClient     authv1.AccountServiceClient
 	daggerheartClient daggerheartv1.DaggerheartServiceClient
 	contentClient     daggerheartv1.DaggerheartContentServiceClient
 	campaignClient    statev1.CampaignServiceClient
@@ -105,6 +106,16 @@ func (g *grpcClients) AuthClient() authv1.AuthServiceClient {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 	return g.authClient
+}
+
+// AccountClient returns the current account client.
+func (g *grpcClients) AccountClient() authv1.AccountServiceClient {
+	if g == nil {
+		return nil
+	}
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	return g.accountClient
 }
 
 // SessionClient returns the current session client.
@@ -242,7 +253,7 @@ func (g *grpcClients) SetGameConn(conn *grpc.ClientConn, daggerheartClient dagge
 }
 
 // SetAuthConn stores the auth gRPC connection and client.
-func (g *grpcClients) SetAuthConn(conn *grpc.ClientConn, authClient authv1.AuthServiceClient) {
+func (g *grpcClients) SetAuthConn(conn *grpc.ClientConn, authClient authv1.AuthServiceClient, accountClient authv1.AccountServiceClient) {
 	if g == nil {
 		return
 	}
@@ -253,6 +264,7 @@ func (g *grpcClients) SetAuthConn(conn *grpc.ClientConn, authClient authv1.AuthS
 	}
 	g.authConn = conn
 	g.authClient = authClient
+	g.accountClient = accountClient
 }
 
 // Close releases any gRPC resources held by the clients.
@@ -303,12 +315,12 @@ func NewServer(ctx context.Context, config Config) (*Server, error) {
 		}
 	}
 	if strings.TrimSpace(config.AuthAddr) != "" {
-		conn, authClient, err := dialAuthGRPC(ctx, config)
+		conn, authClient, accountClient, err := dialAuthGRPC(ctx, config)
 		if err != nil {
 			log.Printf("admin auth gRPC dial failed: %v", err)
 			go connectAuthGRPCWithRetry(ctx, config, clients)
 		} else {
-			clients.SetAuthConn(conn, authClient)
+			clients.SetAuthConn(conn, authClient, accountClient)
 		}
 	}
 
@@ -437,10 +449,10 @@ func dialGameGRPC(ctx context.Context, config Config) (*grpc.ClientConn, daggerh
 }
 
 // dialAuthGRPC connects to the auth server and returns a client.
-func dialAuthGRPC(ctx context.Context, config Config) (*grpc.ClientConn, authv1.AuthServiceClient, error) {
+func dialAuthGRPC(ctx context.Context, config Config) (*grpc.ClientConn, authv1.AuthServiceClient, authv1.AccountServiceClient, error) {
 	authAddr := strings.TrimSpace(config.AuthAddr)
 	if authAddr == "" {
-		return nil, nil, nil
+		return nil, nil, nil, nil
 	}
 	if ctx == nil {
 		ctx = context.Background()
@@ -461,15 +473,16 @@ func dialAuthGRPC(ctx context.Context, config Config) (*grpc.ClientConn, authv1.
 		var dialErr *platformgrpc.DialError
 		if errors.As(err, &dialErr) {
 			if dialErr.Stage == platformgrpc.DialStageHealth {
-				return nil, nil, fmt.Errorf("admin auth gRPC health check failed for %s: %w", authAddr, dialErr.Err)
+				return nil, nil, nil, fmt.Errorf("admin auth gRPC health check failed for %s: %w", authAddr, dialErr.Err)
 			}
-			return nil, nil, dialErr.Err
+			return nil, nil, nil, dialErr.Err
 		}
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	authClient := authv1.NewAuthServiceClient(conn)
-	return conn, authClient, nil
+	accountClient := authv1.NewAccountServiceClient(conn)
+	return conn, authClient, accountClient, nil
 }
 
 // connectGameGRPCWithRetry keeps dialing until a connection is established or context ends.
@@ -533,9 +546,9 @@ func connectAuthGRPCWithRetry(ctx context.Context, config Config, clients *grpcC
 		if clients.HasAuthConnection() {
 			return
 		}
-		conn, authClient, err := dialAuthGRPC(ctx, config)
+		conn, authClient, accountClient, err := dialAuthGRPC(ctx, config)
 		if err == nil {
-			clients.SetAuthConn(conn, authClient)
+			clients.SetAuthConn(conn, authClient, accountClient)
 			log.Printf("admin auth gRPC connected to %s", config.AuthAddr)
 			return
 		}
