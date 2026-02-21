@@ -2320,16 +2320,12 @@ func (s *DaggerheartService) SessionActionRoll(ctx context.Context, in *pb.Sessi
 	if rollKind == pb.RollKind_ROLL_KIND_REACTION && spendEventCount > 0 {
 		return nil, status.Error(codes.InvalidArgument, "reaction rolls cannot spend hope")
 	}
-	statePatchNeeded := totalSpend > 0
 
 	latestSeq, err := s.stores.Event.GetLatestEventSeq(ctx, campaignID)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "load latest event seq: %v", err)
 	}
 	preEvents := spendEventCount
-	if statePatchNeeded {
-		preEvents++
-	}
 	rollSeq := latestSeq + uint64(preEvents) + 1
 
 	seed, seedSource, rollMode, err := random.ResolveSeed(
@@ -2374,6 +2370,7 @@ func (s *DaggerheartService) SessionActionRoll(ctx context.Context, in *pb.Sessi
 			if s.stores.Domain == nil {
 				return nil, status.Error(codes.Internal, "domain engine is not configured")
 			}
+			adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
 			_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 				CampaignID:    campaignID,
 				Type:          command.Type("sys.daggerheart.hope.spend"),
@@ -2386,56 +2383,15 @@ func (s *DaggerheartService) SessionActionRoll(ctx context.Context, in *pb.Sessi
 				SystemID:      daggerheart.SystemID,
 				SystemVersion: daggerheart.SystemVersion,
 				PayloadJSON:   payloadJSON,
-			}, s.stores.Applier(), domainCommandApplyOptions{
+			}, adapter, domainCommandApplyOptions{
 				requireEvents:   true,
 				missingEventMsg: "hope spend did not emit an event",
 				executeErrMsg:   "execute domain command",
-				skipApply:       true,
 			})
 			if err != nil {
 				return nil, err
 			}
 			hopeAfter = after
-		}
-
-		if hopeAfter != hopeBefore {
-			statePatchNeeded = true
-			payload := daggerheart.CharacterStatePatchedPayload{
-				CharacterID: characterID,
-				HopeBefore:  &hopeBefore,
-				HopeAfter:   &hopeAfter,
-			}
-			payloadJSON, err := json.Marshal(payload)
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "encode character state payload: %v", err)
-			}
-			adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
-			invocationID := grpcmeta.InvocationIDFromContext(ctx)
-			requestID := grpcmeta.RequestIDFromContext(ctx)
-			if s.stores.Domain == nil {
-				return nil, status.Error(codes.Internal, "domain engine is not configured")
-			}
-			_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
-				CampaignID:    campaignID,
-				Type:          command.Type("sys.daggerheart.character_state.patch"),
-				ActorType:     command.ActorTypeSystem,
-				SessionID:     sessionID,
-				RequestID:     requestID,
-				InvocationID:  invocationID,
-				EntityType:    "character",
-				EntityID:      characterID,
-				SystemID:      daggerheart.SystemID,
-				SystemVersion: daggerheart.SystemVersion,
-				PayloadJSON:   payloadJSON,
-			}, adapter, domainCommandApplyOptions{
-				requireEvents:   true,
-				missingEventMsg: "character state patch did not emit an event",
-				applyErrMessage: "apply character state event",
-				executeErrMsg:   "execute domain command",
-			})
-			if err != nil {
-				return nil, err
-			}
 		}
 	}
 

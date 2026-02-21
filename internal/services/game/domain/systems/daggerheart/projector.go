@@ -160,9 +160,6 @@ func applyCharacterStatePatched(state *SnapshotState, payload CharacterStatePatc
 	if payload.HPAfter != nil {
 		characterState.HP = *payload.HPAfter
 	}
-	if payload.HPBefore != nil && characterState.HP == 0 {
-		characterState.HP = *payload.HPBefore
-	}
 	if payload.HopeAfter != nil {
 		characterState.Hope = *payload.HopeAfter
 	}

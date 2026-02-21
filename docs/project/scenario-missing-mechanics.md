@@ -29,11 +29,154 @@ Required mapping:
 
 For Daggerheart mechanics, use:
 [Daggerheart Event Timeline Contract](daggerheart-event-timeline-contract.md).
+Priority backlog mappings live under
+[Priority Missing-Mechanic Timeline Mappings](daggerheart-event-timeline-contract.md#priority-missing-mechanic-timeline-mappings)
+with row IDs (`P1`, `P2`, ...).
 
 Review gate:
 
 1. No implementation PR should close a mechanic gap without a corresponding timeline entry/update.
 2. If command/event mapping is unclear, resolve that ambiguity in docs before code.
+
+## Priority Timeline Mapping Index
+
+Use this index to connect scenario gaps to timeline-contract row IDs before
+writing implementation code.
+
+| Scenario | Timeline Row ID |
+| --- | --- |
+| `internal/test/game/scenarios/evasion_tie_hit.lua` | `P1` |
+| `internal/test/game/scenarios/critical_damage_maximum.lua` | `P2` |
+| `internal/test/game/scenarios/damage_thresholds_example.lua` | `P3` |
+| `internal/test/game/scenarios/damage_roll_modifier.lua` | `P3` |
+| `internal/test/game/scenarios/damage_roll_proficiency.lua` | `P3` |
+| `internal/test/game/scenarios/fear_spotlight_armor_mitigation.lua` | `P4` |
+| `internal/test/game/scenarios/sweeping_attack_all_targets.lua` | `P5` |
+| `internal/test/game/scenarios/fireball_orc_pack_multi.lua` | `P5` |
+| `internal/test/game/scenarios/orc_dredge_group_attack.lua` | `P6` |
+| `internal/test/game/scenarios/minion_group_attack_rats.lua` | `P6` |
+| `internal/test/game/scenarios/minion_overflow_damage.lua` | `P7` |
+| `internal/test/game/scenarios/wild_flame_minion_blast.lua` | `P7` |
+| `internal/test/game/scenarios/minion_high_threshold_imps.lua` | `P7` |
+| `internal/test/game/scenarios/fireball_golum_reaction.lua` | `P8` |
+| `internal/test/game/scenarios/ranged_warding_sphere.lua` | `P9` |
+| `internal/test/game/scenarios/ranged_snowblind_trap.lua` | `P10` |
+| `internal/test/game/scenarios/ranged_take_cover.lua` | `P11` |
+| `internal/test/game/scenarios/ranged_steady_aim.lua` | `P12` |
+| `internal/test/game/scenarios/ranged_battle_teleport.lua` | `P13` |
+| `internal/test/game/scenarios/ranged_arcane_artillery.lua` | `P14` |
+| `internal/test/game/scenarios/ranged_eruption_hazard.lua` | `P15` |
+| `internal/test/game/scenarios/sam_critical_broadsword.lua` | `P16` |
+| `internal/test/game/scenarios/skulk_swift_claws.lua` | `P17` |
+| `internal/test/game/scenarios/skulk_cloaked_backstab.lua` | `P18` |
+| `internal/test/game/scenarios/skulk_reflective_scales.lua` | `P19` |
+| `internal/test/game/scenarios/skulk_icicle_barb.lua` | `P20` |
+| `internal/test/game/scenarios/improvised_fear_move_bandit_chain.lua` | `P21` |
+| `internal/test/game/scenarios/leader_into_bramble.lua` | `P22` |
+| `internal/test/game/scenarios/leader_ferocious_defense.lua` | `P23` |
+| `internal/test/game/scenarios/leader_brace_reaction.lua` | `P24` |
+| `internal/test/game/scenarios/head_guard_on_my_signal.lua` | `P25` |
+| `internal/test/game/scenarios/head_guard_rally_guards.lua` | `P26` |
+| `internal/test/game/scenarios/airship_group_roll.lua` | `P27` |
+| `internal/test/game/scenarios/group_finesse_sneak.lua` | `P27` |
+| `internal/test/game/scenarios/group_action_escape.lua` | `P27` |
+| `internal/test/game/scenarios/terrifying_hope_loss.lua` | `P28` |
+| `internal/test/game/scenarios/temporary_armor_bonus.lua` | `P29` |
+| `internal/test/game/scenarios/spellcast_scope_limit.lua` | `P30` |
+| `internal/test/game/scenarios/spellcast_hope_cost.lua` | `P30` |
+| `internal/test/game/scenarios/combat_objectives_ritual_rescue_capture.lua` | `P31` |
+| `internal/test/game/scenarios/companion_experience_stress_clear.lua` | `P31` |
+| `internal/test/game/scenarios/death_reaction_dig_two_graves.lua` | `P31` |
+| `internal/test/game/scenarios/encounter_battle_points_example.lua` | `P31` |
+| `internal/test/game/scenarios/environment_caradhras_pass_avalanche.lua` | `P32` |
+| `internal/test/game/scenarios/environment_caradhras_pass_icy_winds.lua` | `P32` |
+| `internal/test/game/scenarios/environment_helms_deep_siege_collateral_damage.lua` | `P32` |
+| `internal/test/game/scenarios/environment_helms_deep_siege_siege_weapons.lua` | `P32` |
+| `internal/test/game/scenarios/environment_mirkwood_blight_choking_ash.lua` | `P32` |
+| `internal/test/game/scenarios/environment_mirkwood_blight_grasping_vines.lua` | `P32` |
+| `internal/test/game/scenarios/environment_mirkwood_blight_indigo_flame.lua` | `P32` |
+| `internal/test/game/scenarios/environment_moria_ossuary_skeletal_burst.lua` | `P32` |
+| `internal/test/game/scenarios/environment_old_forest_grove_barbed_vines.lua` | `P32` |
+| `internal/test/game/scenarios/environment_old_forest_grove_overgrown.lua` | `P32` |
+| `internal/test/game/scenarios/environment_pelennor_battle_raze.lua` | `P32` |
+| `internal/test/game/scenarios/environment_prancing_pony_bar_fight.lua` | `P32` |
+| `internal/test/game/scenarios/environment_dark_tower_usurpation_beginning_of_end.lua` | `P33` |
+| `internal/test/game/scenarios/environment_dark_tower_usurpation_final_preparations.lua` | `P33` |
+| `internal/test/game/scenarios/environment_dark_tower_usurpation_ritual_nexus.lua` | `P33` |
+| `internal/test/game/scenarios/environment_isengard_ritual_blasphemous_might.lua` | `P33` |
+| `internal/test/game/scenarios/environment_isengard_ritual_complete.lua` | `P33` |
+| `internal/test/game/scenarios/environment_isengard_ritual_summoning.lua` | `P33` |
+| `internal/test/game/scenarios/environment_bree_market_tip_the_scales.lua` | `P34` |
+| `internal/test/game/scenarios/environment_bree_market_unexpected_find.lua` | `P34` |
+| `internal/test/game/scenarios/environment_bree_outpost_broken_compass.lua` | `P34` |
+| `internal/test/game/scenarios/environment_bree_outpost_rumors.lua` | `P34` |
+| `internal/test/game/scenarios/environment_caradhras_pass_engraved_sigils.lua` | `P34` |
+| `internal/test/game/scenarios/environment_gondor_court_all_roads.lua` | `P34` |
+| `internal/test/game/scenarios/environment_gondor_court_eyes_everywhere.lua` | `P34` |
+| `internal/test/game/scenarios/environment_moria_ossuary_centuries_of_knowledge.lua` | `P34` |
+| `internal/test/game/scenarios/environment_osgiliath_ruins_buried_knowledge.lua` | `P34` |
+| `internal/test/game/scenarios/environment_prancing_pony_mysterious_stranger.lua` | `P34` |
+| `internal/test/game/scenarios/environment_prancing_pony_sing.lua` | `P34` |
+| `internal/test/game/scenarios/environment_prancing_pony_talk.lua` | `P34` |
+| `internal/test/game/scenarios/environment_bree_outpost_rival_party.lua` | `P35` |
+| `internal/test/game/scenarios/environment_caradhras_pass_raptor_nest.lua` | `P35` |
+| `internal/test/game/scenarios/environment_dark_tower_usurpation_defilers_abound.lua` | `P35` |
+| `internal/test/game/scenarios/environment_helms_deep_siege_reinforcements.lua` | `P35` |
+| `internal/test/game/scenarios/environment_mirkwood_blight_charcoal_constructs.lua` | `P35` |
+| `internal/test/game/scenarios/environment_moria_ossuary_they_keep_coming.lua` | `P35` |
+| `internal/test/game/scenarios/environment_old_forest_grove_defiler.lua` | `P35` |
+| `internal/test/game/scenarios/environment_pelennor_battle_reinforcements.lua` | `P35` |
+| `internal/test/game/scenarios/environment_prancing_pony_someone_comes_to_town.lua` | `P35` |
+| `internal/test/game/scenarios/environment_shadow_realm_predators.lua` | `P35` |
+| `internal/test/game/scenarios/environment_bree_market_crowd_closes_in.lua` | `P36` |
+| `internal/test/game/scenarios/environment_bruinen_ford_dangerous_crossing.lua` | `P36` |
+| `internal/test/game/scenarios/environment_bruinen_ford_undertow.lua` | `P36` |
+| `internal/test/game/scenarios/environment_helms_deep_siege_secret_entrance.lua` | `P36` |
+| `internal/test/game/scenarios/environment_misty_ascent_fall.lua` | `P36` |
+| `internal/test/game/scenarios/environment_osgiliath_ruins_dead_ends.lua` | `P36` |
+| `internal/test/game/scenarios/environment_pelennor_battle_adrift.lua` | `P36` |
+| `internal/test/game/scenarios/environment_shadow_realm_disorienting_reality.lua` | `P36` |
+| `internal/test/game/scenarios/environment_shadow_realm_impossible_architecture.lua` | `P36` |
+| `internal/test/game/scenarios/environment_dark_tower_usurpation_divine_blessing.lua` | `P37` |
+| `internal/test/game/scenarios/environment_dark_tower_usurpation_godslayer.lua` | `P37` |
+| `internal/test/game/scenarios/environment_isengard_ritual_desecrated_ground.lua` | `P37` |
+| `internal/test/game/scenarios/environment_mirkwood_blight_chaos_magic.lua` | `P37` |
+| `internal/test/game/scenarios/environment_moria_ossuary_aura_of_death.lua` | `P37` |
+| `internal/test/game/scenarios/environment_moria_ossuary_no_place_living.lua` | `P37` |
+| `internal/test/game/scenarios/environment_osgiliath_ruins_apocalypse_then.lua` | `P37` |
+| `internal/test/game/scenarios/environment_osgiliath_ruins_ghostly_form.lua` | `P37` |
+| `internal/test/game/scenarios/environment_pelennor_battle_war_magic.lua` | `P37` |
+| `internal/test/game/scenarios/environment_rivendell_sanctuary_divine_censure.lua` | `P37` |
+| `internal/test/game/scenarios/environment_rivendell_sanctuary_guidance.lua` | `P37` |
+| `internal/test/game/scenarios/environment_rivendell_sanctuary_healing.lua` | `P37` |
+| `internal/test/game/scenarios/environment_rivendell_sanctuary_relentless_hope.lua` | `P37` |
+| `internal/test/game/scenarios/environment_shadow_realm_everything_you_are.lua` | `P37` |
+| `internal/test/game/scenarios/environment_shadow_realm_unmaking.lua` | `P37` |
+| `internal/test/game/scenarios/environment_bree_outpost_wrong_place.lua` | `P38` |
+| `internal/test/game/scenarios/environment_bruinen_ford_patient_hunter.lua` | `P38` |
+| `internal/test/game/scenarios/environment_old_forest_grove_not_welcome.lua` | `P38` |
+| `internal/test/game/scenarios/environment_waylaid_relative_strength.lua` | `P38` |
+| `internal/test/game/scenarios/environment_waylaid_surprise.lua` | `P38` |
+| `internal/test/game/scenarios/environment_waylayers_relative_strength.lua` | `P38` |
+| `internal/test/game/scenarios/environment_waylayers_surprise.lua` | `P38` |
+| `internal/test/game/scenarios/environment_waylayers_where_did_they_come_from.lua` | `P38` |
+| `internal/test/game/scenarios/environment_bree_market_sticky_fingers.lua` | `P39` |
+| `internal/test/game/scenarios/gm_move_artifact_chase.lua` | `P39` |
+| `internal/test/game/scenarios/gm_move_examples.lua` | `P39` |
+| `internal/test/game/scenarios/improvised_fear_move_noble_escape.lua` | `P40` |
+| `internal/test/game/scenarios/improvised_fear_move_rage_boost.lua` | `P40` |
+| `internal/test/game/scenarios/improvised_fear_move_shadow.lua` | `P40` |
+| `internal/test/game/scenarios/orc_archer_opportunist.lua` | `P41` |
+| `internal/test/game/scenarios/environment_misty_ascent_pitons.lua` | `P42` |
+| `internal/test/game/scenarios/environment_misty_ascent_progress.lua` | `P42` |
+| `internal/test/game/scenarios/progress_countdown_climb.lua` | `P42` |
+| `internal/test/game/scenarios/environment_bree_outpost_shakedown.lua` | `P43` |
+| `internal/test/game/scenarios/environment_gondor_court_gravity_of_empire.lua` | `P43` |
+| `internal/test/game/scenarios/environment_gondor_court_imperial_decree.lua` | `P43` |
+| `internal/test/game/scenarios/environment_gondor_court_rival_vassals.lua` | `P43` |
+| `internal/test/game/scenarios/social_merchant_haggling.lua` | `P43` |
+| `internal/test/game/scenarios/social_village_elder_peace.lua` | `P43` |
+| `internal/test/game/scenarios/spellcast_flavor_limits.lua` | `P44` |
 
 ## Glossary of Common Mechanics
 
@@ -116,36 +259,36 @@ Scenario annotations still call out missing DSL/mechanics. Items are grouped by 
 
 ### Core roll and damage resolution
 Requires: Core rolls and outcomes; Dice modifiers; Resources; Damage pipeline.
-- Force the adversary attack roll to equal Evasion — `internal/test/game/scenarios/evasion_tie_hit.lua`. Trigger: adversary attack roll total equals the target's Evasion. Effects: attack succeeds on a tie. Requires: See section Requires. Notes: adversary attack roll uses d20 + attack modifier vs Evasion.
+- Force the adversary attack roll to equal Evasion — `internal/test/game/scenarios/evasion_tie_hit.lua`. Trigger: adversary attack roll total equals the target's Evasion. Effects: attack succeeds on a tie. Requires: See section Requires. Timeline: `P1`. Notes: adversary attack roll uses d20 + attack modifier vs Evasion.
   > **CRB (p.160):** "Roll the d20 and add the adversary's attack bonus. If the roll result meets or beats the target PC's Evasion, the attack succeeds and hits." Ties go to the attacker. GM critical (natural 20) auto-succeeds and deals extra damage (max dice value + normal roll).
 
-- Apply max-dice bonus before rolling damage — `internal/test/game/scenarios/critical_damage_maximum.lua`. Trigger: critical success on an attack roll (matching Duality Dice). Effects: roll damage normally, then add the maximum possible result of the damage dice to the total. Requires: See section Requires. Notes: flat modifiers are not doubled; apply resistance/armor after total damage is known.
+- Apply max-dice bonus before rolling damage — `internal/test/game/scenarios/critical_damage_maximum.lua`. Trigger: critical success on an attack roll (matching Duality Dice). Effects: roll damage normally, then add the maximum possible result of the damage dice to the total. Requires: See section Requires. Timeline: `P2`. Notes: flat modifiers are not doubled; apply resistance/armor after total damage is known.
   > **CRB (p.98):** "If your attack roll critically succeeds, your attack deals extra damage! Start with the highest possible value the damage dice can roll, and then make a damage roll as usual, adding it to that value." The flat modifier is added once; only the dice maximum is added as a bonus.
 
-- Assert tier mapping and HP marked for each tier — `internal/test/game/scenarios/damage_thresholds_example.lua`. Trigger: damage is applied after a successful attack. Effects: compare final damage to Major/Severe thresholds to mark 1, 2, or 3 HP; if damage is reduced to 0 or less, mark no HP. Requires: See section Requires. Notes: tiers map to levels (Tier 1: level 1; Tier 2: levels 2-4; Tier 3: levels 5-7; Tier 4: levels 8-10); apply resistance and other reductions before thresholds.
+- Assert tier mapping and HP marked for each tier — `internal/test/game/scenarios/damage_thresholds_example.lua`. Trigger: damage is applied after a successful attack. Effects: compare final damage to Major/Severe thresholds to mark 1, 2, or 3 HP; if damage is reduced to 0 or less, mark no HP. Requires: See section Requires. Timeline: `P3`. Notes: tiers map to levels (Tier 1: level 1; Tier 2: levels 2-4; Tier 3: levels 5-7; Tier 4: levels 8-10); apply resistance and other reductions before thresholds.
   > **CRB (p.91):** "Severe damage is equal to or above your Severe threshold; you mark 3 HP. Major damage is equal to or above your Major threshold but below Severe; you mark 2 HP. Minor damage is anything below your Major threshold; you mark 1 HP. If you ever reduce incoming damage to 0 or less, you don't mark any HP." A character's level is added to their armor's base damage thresholds. Optional Massive Damage rule (p.91): damage equal to double your Severe threshold marks 4 HP.
 
-- Force the damage dice to 3, 5, and 6 — `internal/test/game/scenarios/damage_roll_modifier.lua`. Trigger: a damage roll is resolved with fixed or modified die results. Effects: sum the damage dice results and add flat modifiers once. Requires: See section Requires. Notes: damage dice count equals Proficiency (weapons) or Spellcast trait (spell damage); rerolls or die-setting effects replace the rolled value and the new result must be used.
+- Force the damage dice to 3, 5, and 6 — `internal/test/game/scenarios/damage_roll_modifier.lua`. Trigger: a damage roll is resolved with fixed or modified die results. Effects: sum the damage dice results and add flat modifiers once. Requires: See section Requires. Timeline: `P3`. Notes: damage dice count equals Proficiency (weapons) or Spellcast trait (spell damage); rerolls or die-setting effects replace the rolled value and the new result must be used.
   > **CRB (p.98):** "Your Proficiency determines how many damage dice you roll on a successful attack with a weapon." Damage roll = sum of [Proficiency] dice + flat modifier. Proficiency does not affect flat modifiers. Rerolls: "When a feature allows you to reroll a die, you always take the new result" (p.107).
 
-- Force the damage dice to 3 and 7 — `internal/test/game/scenarios/damage_roll_proficiency.lua`. Trigger: a weapon damage roll uses Proficiency to determine dice count. Effects: roll a number of dice equal to Proficiency, sum results, then add the flat modifier once. Requires: See section Requires. Notes: Proficiency increases dice count only; it does not multiply flat modifiers.
+- Force the damage dice to 3 and 7 — `internal/test/game/scenarios/damage_roll_proficiency.lua`. Trigger: a weapon damage roll uses Proficiency to determine dice count. Effects: roll a number of dice equal to Proficiency, sum results, then add the flat modifier once. Requires: See section Requires. Timeline: `P3`. Notes: Proficiency increases dice count only; it does not multiply flat modifiers.
   > **CRB (p.98):** "You start at 1 Proficiency and can increase this value to a maximum of 6. Your Proficiency determines how many damage dice you roll on a successful attack with a weapon. This value is not weapon-specific, and does not change or reset when you equip a new weapon." Damage dice are determined by the weapon; flat modifiers are added once regardless of Proficiency.
 
 ### Combat and adversary actions
 Requires: Adversary actions; Spotlight and GM moves; Damage pipeline; Conditions; Resources; Dice modifiers.
-- Set the adversary hit, damage total, and armor slot spend — `internal/test/game/scenarios/fear_spotlight_armor_mitigation.lua`. Trigger: GM spends Fear to seize spotlight and make a GM move or spotlight an adversary. Effects: adversary attack uses d20 + attack modifier vs Evasion; on success roll listed damage; target may mark 1 Armor Slot to reduce severity by one threshold. Requires: See section Requires. Notes: Armor Slots available only if Armor Score > 0; marking Armor Slots happens after total damage is known.
+- Set the adversary hit, damage total, and armor slot spend — `internal/test/game/scenarios/fear_spotlight_armor_mitigation.lua`. Trigger: GM spends Fear to seize spotlight and make a GM move or spotlight an adversary. Effects: adversary attack uses d20 + attack modifier vs Evasion; on success roll listed damage; target may mark 1 Armor Slot to reduce severity by one threshold. Requires: See section Requires. Timeline: `P4`. Notes: Armor Slots available only if Armor Score > 0; marking Armor Slots happens after total damage is known.
   > **CRB (p.114):** "When your character takes damage, you can negate some (or all) of it by marking an available Armor Slot, then reducing the severity of the damage by one threshold. Each time your character takes damage, you can only mark 1 Armor Slot." **CRB (p.154):** GM can spend Fear to interrupt PCs and spotlight an adversary. **CRB (p.160):** Adversary attacks: d20 + Attack Modifier vs Evasion; on success deal the listed damage.
 
-- Spend adversary stress and resolve a multi-target adversary attack — `internal/test/game/scenarios/sweeping_attack_all_targets.lua`. Trigger: adversary action that costs Stress and targets multiple creatures. Effects: mark the adversary's Stress cost, make one attack roll, compare to each target's Evasion, and apply damage to each target independently. Requires: See section Requires. Notes: multi-target adversary actions use one attack roll; damage resolution is per target.
+- Spend adversary stress and resolve a multi-target adversary attack — `internal/test/game/scenarios/sweeping_attack_all_targets.lua`. Trigger: adversary action that costs Stress and targets multiple creatures. Effects: mark the adversary's Stress cost, make one attack roll, compare to each target's Evasion, and apply damage to each target independently. Requires: See section Requires. Timeline: `P5`. Notes: multi-target adversary actions use one attack roll; damage resolution is per target.
   > **CRB (p.160):** "When an adversary's action lets you make an attack against multiple targets, you make one attack roll and ask if it hits any of the targets." **CRB (p.196):** Feature stress costs come from the adversary whose feature is being activated.
 
-- Represent group attack roll and shared damage — `internal/test/game/scenarios/orc_dredge_group_attack.lua`. Trigger: Minion group attack action. Effects: spend Fear, spotlight the Minion group (all Minions within Close range as a single spotlighted entity), make one shared attack roll, and on success each Minion contributes their listed damage; combine damage into a single total. Requires: See section Requires. Notes: combined damage is treated as a single source before thresholds.
+- Represent group attack roll and shared damage — `internal/test/game/scenarios/orc_dredge_group_attack.lua`. Trigger: Minion group attack action. Effects: spend Fear, spotlight the Minion group (all Minions within Close range as a single spotlighted entity), make one shared attack roll, and on success each Minion contributes their listed damage; combine damage into a single total. Requires: See section Requires. Timeline: `P6`. Notes: combined damage is treated as a single source before thresholds.
   > **CRB (p.196):** Minion Group Attack pattern (e.g., Skeleton Dredge, p.217): "Spend a Fear to choose a target and spotlight all [Minions] within Close range of them. Those Minions move into Melee range of the target and make one shared attack roll. On a success, they deal [X] physical damage each. Combine this damage."
 
-- Resolve group attack damage aggregation — `internal/test/game/scenarios/minion_group_attack_rats.lua`. Trigger: group attack succeeds. Effects: add each Minion's damage together, then apply resistance/armor/thresholds once to determine HP marked. Requires: See section Requires. Notes: combined damage is one source for threshold comparison.
+- Resolve group attack damage aggregation — `internal/test/game/scenarios/minion_group_attack_rats.lua`. Trigger: group attack succeeds. Effects: add each Minion's damage together, then apply resistance/armor/thresholds once to determine HP marked. Requires: See section Requires. Timeline: `P6`. Notes: combined damage is one source for threshold comparison.
   > **CRB (p.211, Giant Rat):** "Group Attack: Spend a Fear to choose a target and spotlight all Giant Rats within Close range of them. Those Minions move into Melee range of the target and make one shared attack roll. On a success, they deal 1 physical damage each. Combine this damage."
 
-- Apply Minion (3) overflow and select extra targets — `internal/test/game/scenarios/minion_overflow_damage.lua`. Trigger: a Minion takes any damage. Effects: Minion is defeated; for every 3 damage dealt, defeat an additional Minion within range the attack would succeed against. Requires: See section Requires. Notes: overflow targets must be within the original attack's valid range/line of sight.
+- Apply Minion (3) overflow and select extra targets — `internal/test/game/scenarios/minion_overflow_damage.lua`. Trigger: a Minion takes any damage. Effects: Minion is defeated; for every 3 damage dealt, defeat an additional Minion within range the attack would succeed against. Requires: See section Requires. Timeline: `P7`. Notes: overflow targets must be within the original attack's valid range/line of sight.
   > **CRB (p.196):** "Minion (X) - Passive: This adversary is defeated when they take any damage. For every X damage a PC deals to this adversary, defeat an additional Minion within range the attack would succeed against." For Minion (3), see e.g. Jagged Knife Lackey (p.213), Giant Rat (p.211).
 
 - Apply Minion (4) overflow and stress marking — `internal/test/game/scenarios/wild_flame_minion_blast.lua`. Trigger: Minion (4) passive on damage; and any linked effect that marks Stress. Effects: defeat additional Minions for every 4 damage; apply any feature-specified Stress marking to affected targets. Requires: See section Requires. Notes: overflow still respects attack range and targeting rules.
@@ -160,7 +303,7 @@ Requires: Adversary actions; Spotlight and GM moves; Damage pipeline; Conditions
 - Assert per-target outcomes and damage tiers — `internal/test/game/scenarios/fireball_orc_pack_multi.lua`. Trigger: multi-target attack roll. Effects: one attack roll and one damage roll, then apply damage and thresholds for each target individually; each target may use armor/resistance separately. Requires: See section Requires. Notes: attack roll is compared to each target's Difficulty/Evasion.
   > **CRB (p.160):** "When an adversary's action lets you make an attack against multiple targets, you make one attack roll and ask if it hits any of the targets." For PC multi-target attacks (p.96): "roll once and apply that result to all of the adversaries the attack can hit. The attack is successful against all targets for which the attack roll result meets or exceeds their Difficulty."
 
-- Adversary reaction roll with an experience bonus — `internal/test/game/scenarios/fireball_golum_reaction.lua`. Trigger: adversary makes a reaction roll to avoid an effect. Effects: roll d20; if GM spends Fear, add a relevant Experience; compare to the effect's Difficulty. Requires: See section Requires. Notes: a natural 20 reaction roll automatically succeeds but grants no extra benefit.
+- Adversary reaction roll with an experience bonus — `internal/test/game/scenarios/fireball_golum_reaction.lua`. Trigger: adversary makes a reaction roll to avoid an effect. Effects: roll d20; if GM spends Fear, add a relevant Experience; compare to the effect's Difficulty. Requires: See section Requires. Timeline: `P8`. Notes: a natural 20 reaction roll automatically succeeds but grants no extra benefit.
   > **CRB (p.161):** "When PC moves force an adversary to make a reaction roll, roll a d20. If it meets or exceeds the Difficulty, the NPC succeeds." **CRB (p.154):** "The GM can spend a Fear to add an adversary's relevant Experience to raise their attack roll or increase the Difficulty of a roll made against them." A natural 20 on an adversary reaction roll has no added benefit.
 
 - Apply reactive damage and cooldown on the reaction — `internal/test/game/scenarios/ranged_warding_sphere.lua`. Trigger: reaction such as Warding Sphere when the adversary takes damage within Close range. Effects: deal listed reactive damage to the attacker; reaction is unavailable until refreshed by the specified action. Requires: See section Requires. Notes: reaction triggers regardless of spotlight but obeys its own cooldown rule.
