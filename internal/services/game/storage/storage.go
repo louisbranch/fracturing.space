@@ -6,7 +6,6 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -268,44 +267,6 @@ type ListEventsPageResult struct {
 	TotalCount int
 }
 
-// RollOutcomeDelta describes a per-character projection delta from a roll action.
-type RollOutcomeDelta struct {
-	CharacterID string
-	HopeDelta   int
-	StressDelta int
-}
-
-// RollOutcomeApplyInput carries the minimum authoritative inputs needed to apply
-// a roll outcome atomically and avoid partial state divergence.
-type RollOutcomeApplyInput struct {
-	CampaignID           string
-	SessionID            string
-	RollSeq              uint64
-	Targets              []string
-	RequiresComplication bool
-	RequestID            string
-	InvocationID         string
-	ParticipantID        string
-	CharacterID          string
-	EventTimestamp       time.Time
-	CharacterDeltas      []RollOutcomeDelta
-	GMFearDelta          int
-}
-
-// RollOutcomeApplyResult reports exactly what changed after an atomic outcome update.
-type RollOutcomeApplyResult struct {
-	UpdatedCharacterStates []DaggerheartCharacterState
-	AppliedChanges         []action.OutcomeAppliedChange
-	GMFearChanged          bool
-	GMFearBefore           int
-	GMFearAfter            int
-}
-
-// RollOutcomeStore applies roll outcomes atomically so projection and stats stay coherent.
-type RollOutcomeStore interface {
-	ApplyRollOutcome(ctx context.Context, input RollOutcomeApplyInput) (RollOutcomeApplyResult, error)
-}
-
 // SessionPage describes a page of session records.
 type SessionPage struct {
 	Sessions      []SessionRecord
@@ -445,7 +406,6 @@ type Store interface {
 	EventStore
 	TelemetryStore
 	StatisticsStore
-	RollOutcomeStore
 	SnapshotStore
 	CampaignForkStore
 	Close() error

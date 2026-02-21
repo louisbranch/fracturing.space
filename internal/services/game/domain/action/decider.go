@@ -20,9 +20,10 @@ const (
 	eventTypeOutcomeRejected event.Type = "action.outcome_rejected"
 	eventTypeNoteAdded       event.Type = "story.note_added"
 
-	rejectionCodeRequestIDRequired     = "REQUEST_ID_REQUIRED"
-	rejectionCodeRollSeqRequired       = "ROLL_SEQ_REQUIRED"
-	rejectionCodeOutcomeAlreadyApplied = "OUTCOME_ALREADY_APPLIED"
+	rejectionCodeRequestIDRequired                 = "REQUEST_ID_REQUIRED"
+	rejectionCodeRollSeqRequired                   = "ROLL_SEQ_REQUIRED"
+	rejectionCodeOutcomeAlreadyApplied             = "OUTCOME_ALREADY_APPLIED"
+	rejectionCodeOutcomeEffectSystemOwnedForbidden = "OUTCOME_EFFECT_SYSTEM_OWNED_FORBIDDEN"
 )
 
 // Decide returns the decision for an action command against current state.
@@ -69,13 +70,33 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 				Message: "roll_seq must be greater than zero",
 			})
 		}
+		if hasSystemOwnedOutcomeEffect(payload.PreEffects) || hasSystemOwnedOutcomeEffect(payload.PostEffects) {
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodeOutcomeEffectSystemOwnedForbidden,
+				Message: "core action.outcome.apply cannot emit system-owned effects",
+			})
+		}
 		if _, alreadyApplied := state.AppliedOutcomes[payload.RollSeq]; alreadyApplied {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeOutcomeAlreadyApplied,
 				Message: ErrOutcomeAlreadyApplied.Error(),
 			})
 		}
-		return acceptActionEvent(cmd, now, eventTypeOutcomeApplied, "outcome", requestID, payload)
+		events := make([]event.Event, 0, len(payload.PreEffects)+len(payload.PostEffects)+1)
+		for _, effect := range payload.PreEffects {
+			events = append(events, buildOutcomeEffectEvent(cmd, now, effect))
+		}
+
+		postEffects := payload.PostEffects
+		payload.PreEffects = nil
+		payload.PostEffects = nil
+		outcomeEvent := acceptActionEvent(cmd, now, eventTypeOutcomeApplied, "outcome", requestID, payload).Events
+		events = append(events, outcomeEvent...)
+
+		for _, effect := range postEffects {
+			events = append(events, buildOutcomeEffectEvent(cmd, now, effect))
+		}
+		return command.Accept(events...)
 	case commandTypeOutcomeReject:
 		var payload OutcomeRejectPayload
 		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
@@ -130,4 +151,40 @@ func acceptActionEvent(cmd command.Command, now func() time.Time, eventType even
 	}
 
 	return command.Accept(evt)
+}
+
+func buildOutcomeEffectEvent(cmd command.Command, now func() time.Time, effect OutcomeAppliedEffect) event.Event {
+	payloadJSON := effect.PayloadJSON
+	if len(payloadJSON) == 0 {
+		payloadJSON = []byte("{}")
+	}
+	return event.Event{
+		CampaignID:    cmd.CampaignID,
+		Type:          event.Type(strings.TrimSpace(effect.Type)),
+		Timestamp:     now().UTC(),
+		ActorType:     event.ActorType(cmd.ActorType),
+		ActorID:       cmd.ActorID,
+		SessionID:     cmd.SessionID,
+		RequestID:     cmd.RequestID,
+		InvocationID:  cmd.InvocationID,
+		EntityType:    strings.TrimSpace(effect.EntityType),
+		EntityID:      strings.TrimSpace(effect.EntityID),
+		SystemID:      strings.TrimSpace(effect.SystemID),
+		SystemVersion: strings.TrimSpace(effect.SystemVersion),
+		CorrelationID: cmd.CorrelationID,
+		CausationID:   cmd.CausationID,
+		PayloadJSON:   payloadJSON,
+	}
+}
+
+func hasSystemOwnedOutcomeEffect(effects []OutcomeAppliedEffect) bool {
+	for _, effect := range effects {
+		if strings.HasPrefix(strings.TrimSpace(effect.Type), "sys.") {
+			return true
+		}
+		if strings.TrimSpace(effect.SystemID) != "" || strings.TrimSpace(effect.SystemVersion) != "" {
+			return true
+		}
+	}
+	return false
 }

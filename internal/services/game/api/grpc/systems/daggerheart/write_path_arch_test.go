@@ -69,7 +69,6 @@ func TestDaggerheartHandlersNoDirectStorageMutationBypass(t *testing.T) {
 			filename: "actions.go",
 			disallowedCalls: []string{
 				"s.stores.Event.AppendEvent",
-				"s.stores.Outcome.ApplyRollOutcome",
 			},
 			disallowedLiterals: []string{
 				"action.outcome_rejected",

@@ -68,7 +68,16 @@ func (a eventApplication) AppendEvent(ctx context.Context, in *campaignv1.Append
 			if len(result.Decision.Events) == 0 {
 				return event.Event{}, status.Error(codes.Internal, "append event did not emit an event")
 			}
-			return result.Decision.Events[0], nil
+			for _, emitted := range result.Decision.Events {
+				if emitted.Type == input.Type {
+					return emitted, nil
+				}
+			}
+			return event.Event{}, status.Errorf(
+				codes.FailedPrecondition,
+				"append event did not emit requested event type %s",
+				input.Type,
+			)
 		}
 		return event.Event{}, status.Error(codes.FailedPrecondition, "event type is not supported for append")
 	}

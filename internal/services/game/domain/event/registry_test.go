@@ -3,6 +3,7 @@ package event
 import (
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 )
@@ -30,6 +31,36 @@ func TestRegistryValidateForAppend_SystemEventRequiresSystemMetadata(t *testing.
 	}
 	if !errors.Is(err, ErrSystemMetadataRequired) {
 		t.Fatalf("expected ErrSystemMetadataRequired, got %v", err)
+	}
+}
+
+func TestRegistryValidateForAppend_SystemEventTypeMustMatchSystemID(t *testing.T) {
+	registry := NewRegistry()
+	if err := registry.Register(Definition{
+		Type:  Type("sys.alpha.action.tested"),
+		Owner: OwnerSystem,
+	}); err != nil {
+		t.Fatalf("register type: %v", err)
+	}
+
+	evt := Event{
+		CampaignID:    "camp-1",
+		Type:          Type("sys.alpha.action.tested"),
+		Timestamp:     time.Unix(0, 0).UTC(),
+		ActorType:     ActorTypeSystem,
+		SystemID:      "beta",
+		SystemVersion: "v1",
+		EntityType:    "action",
+		EntityID:      "req-1",
+		PayloadJSON:   []byte("{}"),
+	}
+
+	_, err := registry.ValidateForAppend(evt)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "system id must match event type namespace") {
+		t.Fatalf("expected system-id namespace mismatch error, got %v", err)
 	}
 }
 

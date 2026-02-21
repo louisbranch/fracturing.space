@@ -93,6 +93,33 @@ func TestRegistryValidateForDecision_SystemCommandRequiresSystemMetadata(t *test
 	}
 }
 
+func TestRegistryValidateForDecision_SystemCommandTypeMustMatchSystemID(t *testing.T) {
+	registry := NewRegistry()
+	if err := registry.Register(Definition{
+		Type:  Type("sys.alpha.action.test"),
+		Owner: OwnerSystem,
+	}); err != nil {
+		t.Fatalf("register type: %v", err)
+	}
+
+	cmd := Command{
+		CampaignID:    "camp-1",
+		Type:          Type("sys.alpha.action.test"),
+		ActorType:     ActorTypeSystem,
+		SystemID:      "beta",
+		SystemVersion: "v1",
+		PayloadJSON:   []byte("{}"),
+	}
+
+	_, err := registry.ValidateForDecision(cmd)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "system id must match command type namespace") {
+		t.Fatalf("expected system-id namespace mismatch error, got %v", err)
+	}
+}
+
 func TestRegistryValidateForDecision_CoreCommandRejectsSystemMetadata(t *testing.T) {
 	registry := NewRegistry()
 	if err := registry.Register(Definition{

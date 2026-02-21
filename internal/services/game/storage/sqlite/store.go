@@ -14,8 +14,6 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
-	sqlitemigrate "github.com/louisbranch/fracturing.space/internal/platform/storage/sqlitemigrate"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -64,6 +62,15 @@ type Store struct {
 	keyring                      *integrity.Keyring
 	eventRegistry                *event.Registry
 	projectionApplyOutboxEnabled bool
+}
+
+func (s *Store) withTx(tx *sql.Tx) *Store {
+	if s == nil || tx == nil {
+		return s
+	}
+	cloned := *s
+	cloned.q = s.q.WithTx(tx)
+	return &cloned
 }
 
 // OpenEventsOption configures event-store behavior.
@@ -1501,297 +1508,6 @@ func (s *Store) ClearSessionSpotlight(ctx context.Context, campaignID, sessionID
 		CampaignID: campaignID,
 		SessionID:  sessionID,
 	})
-}
-
-// Roll Outcome methods
-
-// ApplyRollOutcome atomically applies a roll outcome and appends the applied event.
-func (s *Store) ApplyRollOutcome(ctx context.Context, input storage.RollOutcomeApplyInput) (storage.RollOutcomeApplyResult, error) {
-	if err := ctx.Err(); err != nil {
-		return storage.RollOutcomeApplyResult{}, err
-	}
-	if s == nil || s.sqlDB == nil {
-		return storage.RollOutcomeApplyResult{}, fmt.Errorf("storage is not configured")
-	}
-	if strings.TrimSpace(input.CampaignID) == "" {
-		return storage.RollOutcomeApplyResult{}, fmt.Errorf("campaign id is required")
-	}
-	if strings.TrimSpace(input.SessionID) == "" {
-		return storage.RollOutcomeApplyResult{}, fmt.Errorf("session id is required")
-	}
-	if input.RollSeq == 0 {
-		return storage.RollOutcomeApplyResult{}, fmt.Errorf("roll seq is required")
-	}
-	if len(input.Targets) == 0 {
-		return storage.RollOutcomeApplyResult{}, fmt.Errorf("targets are required")
-	}
-
-	targetSet := make(map[string]struct{}, len(input.Targets))
-	for _, target := range input.Targets {
-		if strings.TrimSpace(target) == "" {
-			return storage.RollOutcomeApplyResult{}, fmt.Errorf("target id is required")
-		}
-		targetSet[target] = struct{}{}
-	}
-
-	perTargetDelta := make(map[string]storage.RollOutcomeDelta, len(input.CharacterDeltas))
-	for _, delta := range input.CharacterDeltas {
-		if _, ok := targetSet[delta.CharacterID]; !ok {
-			return storage.RollOutcomeApplyResult{}, fmt.Errorf("character delta target mismatch")
-		}
-		current := perTargetDelta[delta.CharacterID]
-		current.CharacterID = delta.CharacterID
-		current.HopeDelta += delta.HopeDelta
-		current.StressDelta += delta.StressDelta
-		perTargetDelta[delta.CharacterID] = current
-	}
-
-	result := storage.RollOutcomeApplyResult{
-		UpdatedCharacterStates: make([]storage.DaggerheartCharacterState, 0, len(input.Targets)),
-		AppliedChanges:         make([]action.OutcomeAppliedChange, 0),
-	}
-
-	tx, err := s.sqlDB.BeginTx(ctx, nil)
-	if err != nil {
-		return storage.RollOutcomeApplyResult{}, fmt.Errorf("begin tx: %w", err)
-	}
-	defer tx.Rollback()
-
-	qtx := s.q.WithTx(tx)
-
-	evtTimestamp := input.EventTimestamp
-	if evtTimestamp.IsZero() {
-		evtTimestamp = time.Now().UTC()
-	}
-
-	applied, err := qtx.CheckOutcomeApplied(ctx, db.CheckOutcomeAppliedParams{
-		CampaignID: input.CampaignID,
-		SessionID:  input.SessionID,
-		RequestID:  input.RequestID,
-	})
-	if err != nil {
-		return storage.RollOutcomeApplyResult{}, fmt.Errorf("check outcome applied: %w", err)
-	}
-	if applied != 0 {
-		return storage.RollOutcomeApplyResult{}, action.ErrOutcomeAlreadyApplied
-	}
-
-	if input.GMFearDelta != 0 {
-		if input.GMFearDelta < 0 {
-			return storage.RollOutcomeApplyResult{}, action.ErrOutcomeGMFearInvalid
-		}
-
-		var currentFear int
-		shortRests := 0
-		row, err := qtx.GetDaggerheartSnapshot(ctx, input.CampaignID)
-		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				currentFear = 0
-			} else {
-				return storage.RollOutcomeApplyResult{}, fmt.Errorf("get daggerheart snapshot: %w", err)
-			}
-		} else {
-			currentFear = int(row.GmFear)
-			shortRests = int(row.ConsecutiveShortRests)
-		}
-
-		before := currentFear
-		after := before + input.GMFearDelta
-		if after > daggerheart.GMFearMax {
-			return storage.RollOutcomeApplyResult{}, action.ErrOutcomeGMFearInvalid
-		}
-
-		if err := qtx.PutDaggerheartSnapshot(ctx, db.PutDaggerheartSnapshotParams{
-			CampaignID:            input.CampaignID,
-			GmFear:                int64(after),
-			ConsecutiveShortRests: int64(shortRests),
-		}); err != nil {
-			return storage.RollOutcomeApplyResult{}, fmt.Errorf("put daggerheart snapshot: %w", err)
-		}
-
-		result.GMFearChanged = true
-		result.GMFearBefore = before
-		result.GMFearAfter = after
-		result.AppliedChanges = append(result.AppliedChanges, action.OutcomeAppliedChange{
-			Field:  action.OutcomeFieldGMFear,
-			Before: before,
-			After:  after,
-		})
-
-		payloadJSON, err := json.Marshal(daggerheart.GMFearChangedPayload{
-			Before: before,
-			After:  after,
-		})
-		if err != nil {
-			return storage.RollOutcomeApplyResult{}, fmt.Errorf("marshal gm fear payload: %w", err)
-		}
-		if _, err := appendEventTx(ctx, qtx, s.keyring, s.eventRegistry, event.Event{
-			CampaignID:    input.CampaignID,
-			Timestamp:     evtTimestamp,
-			Type:          event.Type("sys.daggerheart.gm_fear_changed"),
-			SessionID:     input.SessionID,
-			RequestID:     input.RequestID,
-			ActorType:     event.ActorTypeSystem,
-			EntityType:    "campaign",
-			EntityID:      input.CampaignID,
-			SystemID:      daggerheart.SystemID,
-			SystemVersion: daggerheart.SystemVersion,
-			PayloadJSON:   payloadJSON,
-		}); err != nil {
-			return storage.RollOutcomeApplyResult{}, fmt.Errorf("append gm fear event: %w", err)
-		}
-	}
-
-	for _, target := range input.Targets {
-		// Get Daggerheart-specific state (HP, Hope, Stress)
-		dhStateRow, err := qtx.GetDaggerheartCharacterState(ctx, db.GetDaggerheartCharacterStateParams{
-			CampaignID:  input.CampaignID,
-			CharacterID: target,
-		})
-		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				return storage.RollOutcomeApplyResult{}, action.ErrOutcomeCharacterNotFound
-			}
-			return storage.RollOutcomeApplyResult{}, fmt.Errorf("get daggerheart character state: %w", err)
-		}
-
-		dhProfileRow, err := qtx.GetDaggerheartCharacterProfile(ctx, db.GetDaggerheartCharacterProfileParams{
-			CampaignID:  input.CampaignID,
-			CharacterID: target,
-		})
-		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				return storage.RollOutcomeApplyResult{}, action.ErrOutcomeCharacterNotFound
-			}
-			return storage.RollOutcomeApplyResult{}, fmt.Errorf("get daggerheart character profile: %w", err)
-		}
-
-		delta := perTargetDelta[target]
-		beforeHope := int(dhStateRow.Hope)
-		hopeMax := int(dhStateRow.HopeMax)
-		beforeStress := int(dhStateRow.Stress)
-		afterHope := beforeHope + delta.HopeDelta
-		if afterHope > hopeMax {
-			afterHope = hopeMax
-		}
-		if afterHope < 0 {
-			afterHope = 0
-		}
-		afterStress := beforeStress + delta.StressDelta
-		if afterStress < 0 {
-			afterStress = 0
-		}
-		if afterStress > int(dhProfileRow.StressMax) {
-			afterStress = int(dhProfileRow.StressMax)
-		}
-
-		if afterHope != beforeHope {
-			result.AppliedChanges = append(result.AppliedChanges, action.OutcomeAppliedChange{
-				CharacterID: target,
-				Field:       action.OutcomeFieldHope,
-				Before:      beforeHope,
-				After:       afterHope,
-			})
-		}
-		if afterStress != beforeStress {
-			result.AppliedChanges = append(result.AppliedChanges, action.OutcomeAppliedChange{
-				CharacterID: target,
-				Field:       action.OutcomeFieldStress,
-				Before:      beforeStress,
-				After:       afterStress,
-			})
-		}
-
-		if afterHope != beforeHope || afterStress != beforeStress {
-			if err := qtx.UpdateDaggerheartCharacterStateHopeStress(ctx, db.UpdateDaggerheartCharacterStateHopeStressParams{
-				Hope:        int64(afterHope),
-				Stress:      int64(afterStress),
-				CampaignID:  input.CampaignID,
-				CharacterID: target,
-			}); err != nil {
-				return storage.RollOutcomeApplyResult{}, fmt.Errorf("update daggerheart character state: %w", err)
-			}
-
-			payload := daggerheart.CharacterStatePatchedPayload{
-				CharacterID:  target,
-				HopeBefore:   &beforeHope,
-				HopeAfter:    &afterHope,
-				StressBefore: &beforeStress,
-				StressAfter:  &afterStress,
-			}
-			payloadJSON, err := json.Marshal(payload)
-			if err != nil {
-				return storage.RollOutcomeApplyResult{}, fmt.Errorf("marshal character state payload: %w", err)
-			}
-			if _, err := appendEventTx(ctx, qtx, s.keyring, s.eventRegistry, event.Event{
-				CampaignID:    input.CampaignID,
-				Timestamp:     evtTimestamp,
-				Type:          event.Type("sys.daggerheart.character_state_patched"),
-				SessionID:     input.SessionID,
-				RequestID:     input.RequestID,
-				ActorType:     event.ActorTypeSystem,
-				EntityType:    "character",
-				EntityID:      target,
-				SystemID:      daggerheart.SystemID,
-				SystemVersion: daggerheart.SystemVersion,
-				PayloadJSON:   payloadJSON,
-			}); err != nil {
-				return storage.RollOutcomeApplyResult{}, fmt.Errorf("append character state event: %w", err)
-			}
-		}
-
-		// Build result state with updated values
-		result.UpdatedCharacterStates = append(result.UpdatedCharacterStates, storage.DaggerheartCharacterState{
-			CampaignID:  input.CampaignID,
-			CharacterID: target,
-			Hp:          int(dhStateRow.Hp),
-			Hope:        afterHope,
-			HopeMax:     hopeMax,
-			Stress:      afterStress,
-			LifeState:   dhStateRow.LifeState,
-		})
-	}
-
-	payload, err := json.Marshal(action.OutcomeApplyPayload{
-		RequestID:            input.RequestID,
-		RollSeq:              input.RollSeq,
-		Targets:              input.Targets,
-		RequiresComplication: input.RequiresComplication,
-		AppliedChanges:       result.AppliedChanges,
-	})
-	if err != nil {
-		return storage.RollOutcomeApplyResult{}, fmt.Errorf("marshal outcome applied payload: %w", err)
-	}
-
-	// Use unified event table
-	if _, err := appendEventTx(ctx, qtx, s.keyring, s.eventRegistry, event.Event{
-		CampaignID:   input.CampaignID,
-		Timestamp:    evtTimestamp,
-		Type:         event.Type("action.outcome_applied"),
-		SessionID:    input.SessionID,
-		RequestID:    input.RequestID,
-		InvocationID: input.InvocationID,
-		ActorType:    event.ActorTypeSystem,
-		EntityType:   "outcome",
-		EntityID:     input.RequestID,
-		PayloadJSON:  payload,
-	}); err != nil {
-		return storage.RollOutcomeApplyResult{}, fmt.Errorf("append outcome applied event: %w", err)
-	}
-
-	if err := qtx.MarkOutcomeApplied(ctx, db.MarkOutcomeAppliedParams{
-		CampaignID: input.CampaignID,
-		SessionID:  input.SessionID,
-		RequestID:  input.RequestID,
-	}); err != nil {
-		return storage.RollOutcomeApplyResult{}, fmt.Errorf("mark outcome applied: %w", err)
-	}
-
-	if err := tx.Commit(); err != nil {
-		return storage.RollOutcomeApplyResult{}, fmt.Errorf("commit: %w", err)
-	}
-
-	return result, nil
 }
 
 func appendEventTx(ctx context.Context, qtx *db.Queries, keyring *integrity.Keyring, registry *event.Registry, evt event.Event) (event.Event, error) {
@@ -5087,6 +4803,118 @@ func normalizeProjectionApplyOutboxStatus(status string) (string, error) {
 	}
 }
 
+// ApplyProjectionEventExactlyOnce applies one projection event inside a projection-db
+// transaction and records a per-(campaign, seq) checkpoint to dedupe retries.
+func (s *Store) ApplyProjectionEventExactlyOnce(
+	ctx context.Context,
+	evt event.Event,
+	apply func(context.Context, event.Event, *Store) error,
+) (bool, error) {
+	if err := ctx.Err(); err != nil {
+		return false, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return false, fmt.Errorf("storage is not configured")
+	}
+	if apply == nil {
+		return false, fmt.Errorf("projection apply callback is required")
+	}
+	if strings.TrimSpace(evt.CampaignID) == "" {
+		return false, fmt.Errorf("campaign id is required")
+	}
+	if evt.Seq == 0 {
+		return false, fmt.Errorf("event sequence must be greater than zero")
+	}
+
+	const (
+		maxBusyRetries = 8
+		retryBaseDelay = 10 * time.Millisecond
+	)
+
+	waitForRetry := func(attempt int) error {
+		delay := time.Duration(attempt+1) * retryBaseDelay
+		timer := time.NewTimer(delay)
+		defer timer.Stop()
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-timer.C:
+			return nil
+		}
+	}
+
+	var lastBusyErr error
+	for attempt := 0; ; attempt++ {
+		tx, err := s.sqlDB.BeginTx(ctx, nil)
+		if err != nil {
+			if isSQLiteBusyError(err) && attempt < maxBusyRetries {
+				lastBusyErr = err
+				if waitErr := waitForRetry(attempt); waitErr != nil {
+					return false, waitErr
+				}
+				continue
+			}
+			return false, fmt.Errorf("begin projection apply tx: %w", err)
+		}
+
+		applied, retry, err := func() (bool, bool, error) {
+			defer tx.Rollback()
+
+			checkpointResult, err := tx.ExecContext(
+				ctx,
+				`INSERT OR IGNORE INTO projection_apply_checkpoints (campaign_id, seq, event_type, applied_at)
+				 VALUES (?, ?, ?, ?)`,
+				evt.CampaignID,
+				int64(evt.Seq),
+				string(evt.Type),
+				toMillis(time.Now().UTC()),
+			)
+			if err != nil {
+				if isSQLiteBusyError(err) {
+					lastBusyErr = err
+					return false, true, nil
+				}
+				return false, false, fmt.Errorf("reserve projection apply checkpoint %s/%d: %w", evt.CampaignID, evt.Seq, err)
+			}
+
+			rowsAffected, err := checkpointResult.RowsAffected()
+			if err != nil {
+				return false, false, fmt.Errorf("inspect projection apply checkpoint reservation %s/%d: %w", evt.CampaignID, evt.Seq, err)
+			}
+			if rowsAffected == 0 {
+				return false, false, nil
+			}
+
+			if err := apply(ctx, evt, s.withTx(tx)); err != nil {
+				return false, false, err
+			}
+
+			if err := tx.Commit(); err != nil {
+				if isSQLiteBusyError(err) {
+					lastBusyErr = err
+					return false, true, nil
+				}
+				return false, false, fmt.Errorf("commit projection apply tx: %w", err)
+			}
+
+			return true, false, nil
+		}()
+		if retry {
+			if attempt < maxBusyRetries {
+				if waitErr := waitForRetry(attempt); waitErr != nil {
+					return false, waitErr
+				}
+				continue
+			}
+			if lastBusyErr != nil {
+				return false, fmt.Errorf("projection apply checkpoint %s/%d remained busy: %w", evt.CampaignID, evt.Seq, lastBusyErr)
+			}
+			return false, fmt.Errorf("projection apply checkpoint %s/%d remained busy", evt.CampaignID, evt.Seq)
+		}
+		return applied, err
+	}
+}
+
 // ProcessProjectionApplyOutbox claims due outbox rows and applies projections
 // through the provided callback. Successful rows are removed from the outbox.
 func (s *Store) ProcessProjectionApplyOutbox(
@@ -5129,6 +4957,14 @@ func (s *Store) ProcessProjectionApplyOutbox(
 			continue
 		}
 
+		if !s.shouldApplyProjectionOutboxEvent(storedEvent) {
+			if err := s.completeProjectionApplyOutboxRow(ctx, row); err != nil {
+				return processed, err
+			}
+			processed++
+			continue
+		}
+
 		if applyErr := apply(ctx, storedEvent); applyErr != nil {
 			attempt := row.AttemptCount + 1
 			nextAttempt := now.Add(outboxRetryBackoff(attempt))
@@ -5146,6 +4982,17 @@ func (s *Store) ProcessProjectionApplyOutbox(
 	}
 
 	return processed, nil
+}
+
+func (s *Store) shouldApplyProjectionOutboxEvent(evt event.Event) bool {
+	if s == nil || s.eventRegistry == nil {
+		return true
+	}
+	definition, ok := s.eventRegistry.Definition(evt.Type)
+	if !ok {
+		return true
+	}
+	return definition.Intent != event.IntentAuditOnly
 }
 
 // ProcessProjectionApplyOutboxShadow claims due outbox rows and requeues them
@@ -5538,6 +5385,15 @@ func isConstraintError(err error) bool {
 	}
 	code := sqliteErr.Code()
 	return code == sqlite3.SQLITE_CONSTRAINT || code == sqlite3.SQLITE_CONSTRAINT_UNIQUE || code == sqlite3.SQLITE_CONSTRAINT_PRIMARYKEY
+}
+
+func isSQLiteBusyError(err error) bool {
+	var sqliteErr *sqlite.Error
+	if !errors.As(err, &sqliteErr) {
+		return false
+	}
+	code := sqliteErr.Code()
+	return code == sqlite3.SQLITE_BUSY || code == sqlite3.SQLITE_LOCKED
 }
 
 func isParticipantUserConflict(err error) bool {

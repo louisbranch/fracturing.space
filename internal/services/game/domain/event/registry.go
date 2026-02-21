@@ -30,6 +30,8 @@ var (
 	ErrSystemMetadataRequired = errors.New("system metadata is required for system events")
 	// ErrSystemMetadataForbidden indicates system metadata on core events.
 	ErrSystemMetadataForbidden = errors.New("system metadata must be empty for core events")
+	// ErrSystemTypeNamespaceMismatch indicates system metadata does not match type namespace.
+	ErrSystemTypeNamespaceMismatch = errors.New("system id must match event type namespace")
 	// ErrPayloadInvalid indicates malformed payload JSON.
 	ErrPayloadInvalid = errors.New("payload json must be valid")
 	// ErrStorageFieldsSet indicates storage-assigned fields were pre-set.
@@ -258,6 +260,17 @@ func (r *Registry) ValidateForAppend(evt Event) (Event, error) {
 		if evt.SystemID == "" || evt.SystemVersion == "" {
 			return Event{}, ErrSystemMetadataRequired
 		}
+		if expectedSystemNamespace, ok := systemNamespaceFromType(string(evt.Type)); ok {
+			if normalizeSystemNamespace(evt.SystemID) != expectedSystemNamespace {
+				return Event{}, fmt.Errorf(
+					"%w: type %s expects %s, got %s",
+					ErrSystemTypeNamespaceMismatch,
+					evt.Type,
+					expectedSystemNamespace,
+					evt.SystemID,
+				)
+			}
+		}
 		requireEntityType = true
 		requireEntityID = true
 	case OwnerCore:
@@ -299,6 +312,19 @@ func (r *Registry) ValidateForAppend(evt Event) (Event, error) {
 	return evt, nil
 }
 
+// Definition returns the event definition for a given type.
+func (r *Registry) Definition(eventType Type) (Definition, bool) {
+	if r == nil {
+		return Definition{}, false
+	}
+	eventType = Type(strings.TrimSpace(string(eventType)))
+	if eventType == "" {
+		return Definition{}, false
+	}
+	def, ok := r.definitions[eventType]
+	return def, ok
+}
+
 // ListDefinitions returns a stable, sorted snapshot of registered definitions.
 func (r *Registry) ListDefinitions() []Definition {
 	if r == nil || len(r.definitions) == 0 {
@@ -312,4 +338,39 @@ func (r *Registry) ListDefinitions() []Definition {
 		return string(definitions[i].Type) < string(definitions[j].Type)
 	})
 	return definitions
+}
+
+func systemNamespaceFromType(typeName string) (string, bool) {
+	parts := strings.Split(strings.TrimSpace(typeName), ".")
+	if len(parts) < 3 || parts[0] != "sys" {
+		return "", false
+	}
+	return strings.TrimSpace(parts[1]), true
+}
+
+func normalizeSystemNamespace(systemID string) string {
+	trimmed := strings.TrimSpace(systemID)
+	if trimmed == "" {
+		return ""
+	}
+	const legacyPrefix = "GAME_SYSTEM_"
+	if len(trimmed) > len(legacyPrefix) && strings.EqualFold(trimmed[:len(legacyPrefix)], legacyPrefix) {
+		trimmed = trimmed[len(legacyPrefix):]
+	}
+	normalized := strings.ToLower(trimmed)
+	var b strings.Builder
+	b.Grow(len(normalized))
+	lastUnderscore := false
+	for _, r := range normalized {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+			b.WriteRune(r)
+			lastUnderscore = false
+			continue
+		}
+		if !lastUnderscore {
+			b.WriteByte('_')
+			lastUnderscore = true
+		}
+	}
+	return strings.Trim(b.String(), "_")
 }

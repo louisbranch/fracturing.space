@@ -390,7 +390,7 @@ func TestExecute_AllowsSystemEventWithNoMutation(t *testing.T) {
 			Type:          event.Type("sys.test.noop"),
 			EntityType:    "character",
 			EntityID:      "char-1",
-			SystemID:      "system.test",
+			SystemID:      "test",
 			SystemVersion: "1.0.0",
 			Timestamp:     time.Unix(0, 0).UTC(),
 			ActorType:     event.ActorTypeSystem,
@@ -403,7 +403,7 @@ func TestExecute_AllowsSystemEventWithNoMutation(t *testing.T) {
 		CampaignID:    "camp-1",
 		Type:          command.Type("sys.test.noop"),
 		ActorType:     command.ActorTypeSystem,
-		SystemID:      "system.test",
+		SystemID:      "test",
 		SystemVersion: "1.0.0",
 	})
 	if err != nil {
@@ -435,7 +435,7 @@ func TestExecute_AllowsMutatingSystemEvent(t *testing.T) {
 			Type:          event.Type("sys.test.mutates"),
 			EntityType:    "character",
 			EntityID:      "char-1",
-			SystemID:      "system.test",
+			SystemID:      "test",
 			SystemVersion: "1.0.0",
 			Timestamp:     time.Unix(0, 0).UTC(),
 			ActorType:     event.ActorTypeSystem,
@@ -448,7 +448,7 @@ func TestExecute_AllowsMutatingSystemEvent(t *testing.T) {
 		CampaignID:    "camp-1",
 		Type:          command.Type("sys.test.mutates"),
 		ActorType:     command.ActorTypeSystem,
-		SystemID:      "system.test",
+		SystemID:      "test",
 		SystemVersion: "1.0.0",
 	})
 	if err != nil {

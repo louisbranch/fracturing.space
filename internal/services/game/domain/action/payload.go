@@ -1,5 +1,7 @@
 package action
 
+import "encoding/json"
+
 // RollResolvePayload captures the payload for action.roll.resolve commands and action.roll_resolved events.
 type RollResolvePayload struct {
 	RequestID  string         `json:"request_id"`
@@ -17,6 +19,16 @@ type OutcomeAppliedChange struct {
 	After       int    `json:"after"`
 }
 
+// OutcomeAppliedEffect captures a side-effect event emitted around action.outcome_applied.
+type OutcomeAppliedEffect struct {
+	Type          string          `json:"type"`
+	EntityType    string          `json:"entity_type"`
+	EntityID      string          `json:"entity_id"`
+	SystemID      string          `json:"system_id,omitempty"`
+	SystemVersion string          `json:"system_version,omitempty"`
+	PayloadJSON   json.RawMessage `json:"payload_json,omitempty"`
+}
+
 // OutcomeApplyPayload captures the payload for action.outcome.apply commands and action.outcome_applied events.
 type OutcomeApplyPayload struct {
 	RequestID            string                 `json:"request_id"`
@@ -24,6 +36,8 @@ type OutcomeApplyPayload struct {
 	Targets              []string               `json:"targets"`
 	RequiresComplication bool                   `json:"requires_complication"`
 	AppliedChanges       []OutcomeAppliedChange `json:"applied_changes,omitempty"`
+	PreEffects           []OutcomeAppliedEffect `json:"pre_effects,omitempty"`
+	PostEffects          []OutcomeAppliedEffect `json:"post_effects,omitempty"`
 }
 
 // OutcomeRejectPayload captures the payload for action.outcome.reject commands and action.outcome_rejected events.

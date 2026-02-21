@@ -5,6 +5,8 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
+	daggerheartsystem "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
@@ -31,7 +33,7 @@ type Stores struct {
 // Only the stores available in the Daggerheart service are mapped; fields not
 // present (e.g., Invite, CampaignFork) remain nil and are unused by dispatch.
 func (s Stores) Applier() projection.Applier {
-	return projection.Applier{
+	applier := projection.Applier{
 		Campaign:         s.Campaign,
 		Character:        s.Character,
 		Session:          s.Session,
@@ -39,4 +41,13 @@ func (s Stores) Applier() projection.Applier {
 		SessionSpotlight: s.SessionSpotlight,
 		Daggerheart:      s.Daggerheart,
 	}
+	if s.Daggerheart == nil {
+		return applier
+	}
+
+	adapters := systems.NewAdapterRegistry()
+	if err := adapters.Register(daggerheartsystem.NewAdapter(s.Daggerheart)); err == nil {
+		applier.Adapters = adapters
+	}
+	return applier
 }
