@@ -40,7 +40,7 @@ func TestAppProfileRouteRejectsUnsupportedMethod(t *testing.T) {
 		accountClient: &fakeAccountClient{},
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-	sess := h.sessions.get(sessionID)
+	sess := h.sessions.get(sessionID, "token-1")
 	sess.cachedUserID = "user-1"
 	sess.cachedUserIDResolved = true
 
@@ -74,7 +74,7 @@ func TestAppProfileRouteRendersFormForAuthenticatedUser(t *testing.T) {
 		},
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-	sess := h.sessions.get(sessionID)
+	sess := h.sessions.get(sessionID, "token-1")
 	sess.cachedUserID = "user-1"
 	sess.cachedUserIDResolved = true
 	req := httptest.NewRequest(http.MethodGet, "/profile", nil)
@@ -111,7 +111,7 @@ func TestAppProfileRouteRendersFormWhenProfileDoesNotExist(t *testing.T) {
 		},
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-	sess := h.sessions.get(sessionID)
+	sess := h.sessions.get(sessionID, "token-1")
 	sess.cachedUserID = "user-1"
 	sess.cachedUserIDResolved = true
 	req := httptest.NewRequest(http.MethodGet, "/profile", nil)
@@ -138,7 +138,7 @@ func TestAppProfileRouteUpdatesProfileOnPost(t *testing.T) {
 		accountClient: fakeAccount,
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-	sess := h.sessions.get(sessionID)
+	sess := h.sessions.get(sessionID, "token-1")
 	sess.cachedUserID = "user-1"
 	sess.cachedUserIDResolved = true
 

@@ -2,7 +2,9 @@ package sqlite
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -173,6 +175,97 @@ func (s *Store) DeleteCacheEntry(ctx context.Context, cacheKey string) error {
 	}
 	if _, err := s.sqlDB.ExecContext(ctx, `DELETE FROM cache_entries WHERE cache_key = ?`, cacheKey); err != nil {
 		return fmt.Errorf("delete cache entry: %w", err)
+	}
+	return nil
+}
+
+// LoadSession returns a persisted web session by session identifier.
+func (s *Store) LoadSession(ctx context.Context, sessionID string) (accessToken string, displayName string, expiresAt time.Time, found bool, err error) {
+	if s == nil || s.sqlDB == nil {
+		return "", "", time.Time{}, false, fmt.Errorf("storage is not configured")
+	}
+	sessionID = strings.TrimSpace(sessionID)
+	if sessionID == "" {
+		return "", "", time.Time{}, false, fmt.Errorf("session id is required")
+	}
+
+	row := s.sqlDB.QueryRowContext(ctx, `
+		SELECT access_token_hash, display_name, expires_at
+		FROM web_sessions
+		WHERE session_id = ?`,
+		sessionID,
+	)
+
+	var expiresAtMillis int64
+	if err := row.Scan(&accessToken, &displayName, &expiresAtMillis); err != nil {
+		if err == sql.ErrNoRows {
+			return "", "", time.Time{}, false, nil
+		}
+		return "", "", time.Time{}, false, fmt.Errorf("load web session: %w", err)
+	}
+
+	return accessToken, displayName, unixMillisToTime(expiresAtMillis), true, nil
+}
+
+// SaveSession persists a web session mapping for process restart recovery.
+func (s *Store) SaveSession(ctx context.Context, sessionID, accessToken, displayName string, expiresAt time.Time) error {
+	if s == nil || s.sqlDB == nil {
+		return fmt.Errorf("storage is not configured")
+	}
+	sessionID = strings.TrimSpace(sessionID)
+	accessToken = strings.TrimSpace(accessToken)
+	displayName = strings.TrimSpace(displayName)
+	if sessionID == "" {
+		return fmt.Errorf("session id is required")
+	}
+	if accessToken == "" {
+		return fmt.Errorf("access token is required")
+	}
+
+	now := time.Now().UTC()
+	if _, err := s.sqlDB.ExecContext(ctx, `DELETE FROM web_sessions WHERE expires_at < ?`, timeToUnixMillis(now)); err != nil {
+		return fmt.Errorf("prune web sessions: %w", err)
+	}
+	accessTokenHash := sqliteSessionAccessTokenFingerprint(accessToken)
+	_, err := s.sqlDB.ExecContext(
+		ctx,
+		`INSERT INTO web_sessions (
+		    session_id, access_token_hash, display_name, expires_at, created_at
+		) VALUES (?, ?, ?, ?, ?)
+		 ON CONFLICT(session_id) DO UPDATE SET
+		   access_token_hash = excluded.access_token_hash,
+		   display_name = excluded.display_name,
+		   expires_at = excluded.expires_at`,
+		sessionID,
+		accessTokenHash,
+		displayName,
+		timeToUnixMillis(expiresAt),
+		timeToUnixMillis(now),
+	)
+	if err != nil {
+		return fmt.Errorf("save web session: %w", err)
+	}
+	return nil
+}
+
+func sqliteSessionAccessTokenFingerprint(accessToken string) string {
+	accessToken = strings.TrimSpace(accessToken)
+	sum := sha256.Sum256([]byte(accessToken))
+	return hex.EncodeToString(sum[:])
+}
+
+// DeleteSession removes a persisted web session.
+func (s *Store) DeleteSession(ctx context.Context, sessionID string) error {
+	if s == nil || s.sqlDB == nil {
+		return fmt.Errorf("storage is not configured")
+	}
+	sessionID = strings.TrimSpace(sessionID)
+	if sessionID == "" {
+		return fmt.Errorf("session id is required")
+	}
+
+	if _, err := s.sqlDB.ExecContext(ctx, `DELETE FROM web_sessions WHERE session_id = ?`, sessionID); err != nil {
+		return fmt.Errorf("delete web session: %w", err)
 	}
 	return nil
 }

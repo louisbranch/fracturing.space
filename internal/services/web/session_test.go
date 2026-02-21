@@ -1,11 +1,48 @@
 package web
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
+
+type countingPersistenceStore struct {
+	inner          sessionPersistence
+	totalLoadCount int32
+	mu             sync.Mutex
+}
+
+func (c *countingPersistenceStore) LoadSession(ctx context.Context, sessionID string) (string, string, time.Time, bool, error) {
+	c.mu.Lock()
+	c.totalLoadCount++
+	c.mu.Unlock()
+	return c.inner.LoadSession(ctx, sessionID)
+}
+
+func (c *countingPersistenceStore) SaveSession(ctx context.Context, sessionID, accessToken, displayName string, expiresAt time.Time) error {
+	if c == nil {
+		return nil
+	}
+	return c.inner.SaveSession(ctx, sessionID, accessToken, displayName, expiresAt)
+}
+
+func (c *countingPersistenceStore) DeleteSession(ctx context.Context, sessionID string) error {
+	if c == nil {
+		return nil
+	}
+	return c.inner.DeleteSession(ctx, sessionID)
+}
+
+func (c *countingPersistenceStore) loadCount() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return int(c.totalLoadCount)
+}
 
 func TestSessionStoreCreateAndGet(t *testing.T) {
 	store := newSessionStore()
@@ -14,7 +51,7 @@ func TestSessionStoreCreateAndGet(t *testing.T) {
 		t.Fatal("expected non-empty session ID")
 	}
 
-	sess := store.get(id)
+	sess := store.get(id, "")
 	if sess == nil {
 		t.Fatal("expected session")
 	}
@@ -29,14 +66,14 @@ func TestSessionStoreCreateAndGet(t *testing.T) {
 func TestSessionStoreGetExpired(t *testing.T) {
 	store := newSessionStore()
 	id := store.create("token-1", "Alice", time.Now().Add(-time.Second))
-	if got := store.get(id); got != nil {
+	if got := store.get(id, ""); got != nil {
 		t.Fatal("expected nil for expired session")
 	}
 }
 
 func TestSessionStoreGetMissing(t *testing.T) {
 	store := newSessionStore()
-	if got := store.get("nonexistent"); got != nil {
+	if got := store.get("nonexistent", ""); got != nil {
 		t.Fatal("expected nil for missing session")
 	}
 }
@@ -45,8 +82,185 @@ func TestSessionStoreDelete(t *testing.T) {
 	store := newSessionStore()
 	id := store.create("token-1", "Alice", time.Now().Add(time.Hour))
 	store.delete(id)
-	if got := store.get(id); got != nil {
+	if got := store.get(id, ""); got != nil {
 		t.Fatal("expected nil after delete")
+	}
+}
+
+func TestSessionStoreRestoreFromPersistentStore(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "web-cache.db")
+	persistentStore, err := openWebCacheStore(path)
+	if err != nil {
+		t.Fatalf("open web cache store: %v", err)
+	}
+	if err := persistentStore.SaveSession(context.Background(), "persistent-session", "token-1", "Alice", time.Now().Add(time.Hour)); err != nil {
+		t.Fatalf("save session: %v", err)
+	}
+	if err := persistentStore.Close(); err != nil {
+		t.Fatalf("close web cache store: %v", err)
+	}
+
+	reopenedStore, err := openWebCacheStore(path)
+	if err != nil {
+		t.Fatalf("reopen web cache store: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := reopenedStore.Close(); err != nil {
+			t.Fatalf("close reopened web cache store: %v", err)
+		}
+	})
+	sessionStore := newSessionStore(reopenedStore)
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: "persistent-session"})
+	req.AddCookie(&http.Cookie{Name: tokenCookieName, Value: "token-1"})
+
+	sess := sessionFromRequest(req, sessionStore)
+	if sess == nil {
+		t.Fatal("expected session from persistent store")
+	}
+	if sess.accessToken != "token-1" {
+		t.Fatalf("accessToken = %q, want %q", sess.accessToken, "token-1")
+	}
+	if sess.displayName != "Alice" {
+		t.Fatalf("displayName = %q, want %q", sess.displayName, "Alice")
+	}
+}
+
+func TestSessionStoreRestoreFromPersistentStoreRejectsMismatchedToken(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "web-cache.db")
+	persistentStore, err := openWebCacheStore(path)
+	if err != nil {
+		t.Fatalf("open web cache store: %v", err)
+	}
+	if err := persistentStore.SaveSession(context.Background(), "persistent-session", "token-1", "Alice", time.Now().Add(time.Hour)); err != nil {
+		t.Fatalf("save session: %v", err)
+	}
+	if err := persistentStore.Close(); err != nil {
+		t.Fatalf("close web cache store: %v", err)
+	}
+
+	reopenedStore, err := openWebCacheStore(path)
+	if err != nil {
+		t.Fatalf("reopen web cache store: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := reopenedStore.Close(); err != nil {
+			t.Fatalf("close reopened web cache store: %v", err)
+		}
+	})
+	sessionStore := newSessionStore(reopenedStore)
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: "persistent-session"})
+	req.AddCookie(&http.Cookie{Name: tokenCookieName, Value: "wrong-token"})
+
+	sess := sessionFromRequest(req, sessionStore)
+	if sess != nil {
+		t.Fatal("expected nil for mismatched persisted session token")
+	}
+
+	_, _, _, found, err := reopenedStore.LoadSession(context.Background(), "persistent-session")
+	if err != nil {
+		t.Fatalf("load persisted session: %v", err)
+	}
+	if found {
+		t.Fatal("expected mismatched session to be deleted")
+	}
+}
+
+func TestSessionStoreExpiredFromPersistentStore(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "web-cache.db")
+	persistentStore, err := openWebCacheStore(path)
+	if err != nil {
+		t.Fatalf("open web cache store: %v", err)
+	}
+	if err := persistentStore.SaveSession(context.Background(), "expired-session", "token-1", "Alice", time.Now().Add(-time.Minute)); err != nil {
+		t.Fatalf("save session: %v", err)
+	}
+	if err := persistentStore.Close(); err != nil {
+		t.Fatalf("close web cache store: %v", err)
+	}
+
+	reopenedStore, err := openWebCacheStore(path)
+	if err != nil {
+		t.Fatalf("reopen web cache store: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := reopenedStore.Close(); err != nil {
+			t.Fatalf("close reopened web cache store: %v", err)
+		}
+	})
+	sessionStore := newSessionStore(reopenedStore)
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: "expired-session"})
+	req.AddCookie(&http.Cookie{Name: tokenCookieName, Value: "token-1"})
+
+	sess := sessionFromRequest(req, sessionStore)
+	if sess != nil {
+		t.Fatal("expected nil session for expired persistent entry")
+	}
+}
+
+func TestSessionStoreDeleteRemovesPersistentSession(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "web-cache.db")
+	persistentStore, err := openWebCacheStore(path)
+	if err != nil {
+		t.Fatalf("open web cache store: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := persistentStore.Close(); err != nil {
+			t.Fatalf("close web cache store: %v", err)
+		}
+	})
+	sessionStore := newSessionStore(persistentStore)
+	sessionID := sessionStore.create("token-1", "Alice", time.Now().Add(time.Hour))
+
+	sessionStore.delete(sessionID)
+	_, _, _, found, err := persistentStore.LoadSession(context.Background(), sessionID)
+	if err != nil {
+		t.Fatalf("load deleted session: %v", err)
+	}
+	if found {
+		t.Fatal("expected session to be deleted from persistent store")
+	}
+}
+
+func TestSessionStoreConcurrentRestoreLoadsOnlyOnce(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "web-cache.db")
+	persistentStore, err := openWebCacheStore(path)
+	if err != nil {
+		t.Fatalf("open web cache store: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := persistentStore.Close(); err != nil {
+			t.Fatalf("close web cache store: %v", err)
+		}
+	})
+	if err := persistentStore.SaveSession(context.Background(), "persistent-session", "token-1", "Alice", time.Now().Add(time.Hour)); err != nil {
+		t.Fatalf("save session: %v", err)
+	}
+
+	wrapped := &countingPersistenceStore{inner: persistentStore}
+	sessionStore := newSessionStore(wrapped)
+
+	const concurrentReaders = 24
+	var missing int32
+	var done sync.WaitGroup
+	done.Add(concurrentReaders)
+	for i := 0; i < concurrentReaders; i++ {
+		go func() {
+			defer done.Done()
+			sess := sessionStore.get("persistent-session", "token-1")
+			if sess == nil {
+				atomic.StoreInt32(&missing, 1)
+			}
+		}()
+	}
+	done.Wait()
+	if atomic.LoadInt32(&missing) != 0 {
+		t.Fatal("expected persisted session to restore under concurrent reads")
+	}
+	if got := wrapped.loadCount(); got != 1 {
+		t.Fatalf("LoadSession calls = %d, want 1", got)
 	}
 }
 

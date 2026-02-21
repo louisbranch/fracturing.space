@@ -2,7 +2,9 @@ package sqlite
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"path/filepath"
 	"testing"
 	"time"
@@ -40,6 +42,137 @@ func TestOpenRunsMigrations(t *testing.T) {
 
 	assertTableExists(t, sqlDB, "cache_entries")
 	assertTableExists(t, sqlDB, "campaign_event_cursors")
+	assertTableExists(t, sqlDB, "web_sessions")
+}
+
+func TestSessionPersistenceRoundTrip(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "web-cache.db")
+	store, err := Open(path)
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := store.Close(); err != nil {
+			t.Fatalf("close: %v", err)
+		}
+	})
+
+	ctx := context.Background()
+	expiresAt := time.Now().UTC().Add(time.Hour)
+	if err := store.SaveSession(ctx, "sess-1", "token-1", "Alice", expiresAt); err != nil {
+		t.Fatalf("save session: %v", err)
+	}
+
+	accessToken, displayName, persistedExpiresAt, found, err := store.LoadSession(ctx, "sess-1")
+	if err != nil {
+		t.Fatalf("load session: %v", err)
+	}
+	if !found {
+		t.Fatal("expected session row")
+	}
+	accessTokenHash := hashedAccessToken("token-1")
+	if accessToken != accessTokenHash {
+		t.Fatalf("access token = %q, want %q", accessToken, accessTokenHash)
+	}
+	if displayName != "Alice" {
+		t.Fatalf("display name = %q, want %q", displayName, "Alice")
+	}
+	expiresAt = expiresAt.UTC().Truncate(time.Millisecond)
+	if !persistedExpiresAt.Equal(expiresAt) {
+		t.Fatalf("expiresAt = %s, want %s", persistedExpiresAt, expiresAt)
+	}
+
+	if err := store.DeleteSession(ctx, "sess-1"); err != nil {
+		t.Fatalf("delete session: %v", err)
+	}
+	_, _, _, found, err = store.LoadSession(ctx, "sess-1")
+	if err != nil {
+		t.Fatalf("load session after delete: %v", err)
+	}
+	if found {
+		t.Fatal("expected missing session after delete")
+	}
+}
+
+func TestSessionPersistencePrunesExpiredSessionsOnSave(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "web-cache.db")
+	store, err := Open(path)
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := store.Close(); err != nil {
+			t.Fatalf("close: %v", err)
+		}
+	})
+
+	ctx := context.Background()
+	if err := store.SaveSession(ctx, "expired-session", "token-1", "Alice", time.Now().Add(-time.Hour)); err != nil {
+		t.Fatalf("save expired session: %v", err)
+	}
+	if err := store.SaveSession(ctx, "fresh-session", "token-2", "Bob", time.Now().Add(time.Hour)); err != nil {
+		t.Fatalf("save fresh session: %v", err)
+	}
+
+	_, _, _, found, err := store.LoadSession(ctx, "expired-session")
+	if err != nil {
+		t.Fatalf("load expired session: %v", err)
+	}
+	if found {
+		t.Fatal("expected expired session to be pruned")
+	}
+}
+
+func TestSessionPersistenceKeepsCreatedAtOnUpdate(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "web-cache.db")
+	store, err := Open(path)
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := store.Close(); err != nil {
+			t.Fatalf("close: %v", err)
+		}
+	})
+
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatalf("open sqlite: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := db.Close(); err != nil {
+			t.Fatalf("close sqlite: %v", err)
+		}
+	})
+
+	ctx := context.Background()
+	expiresAt := time.Now().UTC().Add(time.Hour)
+	if err := store.SaveSession(ctx, "sess-1", "token-1", "Alice", expiresAt); err != nil {
+		t.Fatalf("save session: %v", err)
+	}
+
+	var createdAt int64
+	row := db.QueryRowContext(ctx, `SELECT created_at FROM web_sessions WHERE session_id = ?`, "sess-1")
+	if err := row.Scan(&createdAt); err != nil {
+		t.Fatalf("read created_at: %v", err)
+	}
+	createdAtFirst := createdAt
+
+	time.Sleep(2 * time.Millisecond)
+	if err := store.SaveSession(ctx, "sess-1", "token-2", "Alice", expiresAt.Add(time.Hour)); err != nil {
+		t.Fatalf("update session: %v", err)
+	}
+	row = db.QueryRowContext(ctx, `SELECT created_at FROM web_sessions WHERE session_id = ?`, "sess-1")
+	if err := row.Scan(&createdAt); err != nil {
+		t.Fatalf("read created_at after update: %v", err)
+	}
+	createdAtSecond := createdAt
+
+	// Re-reading through the same query confirms created_at was not updated when
+	// upserting an existing session.
+	if createdAtFirst != createdAtSecond {
+		t.Fatalf("created_at changed on update: %d -> %d", createdAtFirst, createdAtSecond)
+	}
 }
 
 func TestStoreCampaignCursorAndStaleMarking(t *testing.T) {
@@ -160,4 +293,9 @@ WHERE type = 'table' AND name = ?;
 	if count != 1 {
 		t.Fatalf("table %q count = %d, want 1", tableName, count)
 	}
+}
+
+func hashedAccessToken(token string) string {
+	sum := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(sum[:])
 }
