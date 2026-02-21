@@ -148,6 +148,10 @@ func (f *fakeEventClient) ListTimelineEntries(context.Context, *gamev1.ListTimel
 	return nil, unimplemented("ListTimelineEntries")
 }
 
+func (f *fakeEventClient) SubscribeCampaignUpdates(context.Context, *gamev1.SubscribeCampaignUpdatesRequest, ...grpc.CallOption) (grpc.ServerStreamingClient[gamev1.CampaignUpdate], error) {
+	return nil, unimplemented("SubscribeCampaignUpdates")
+}
+
 type fakeSnapshotClient struct {
 	patchState     func(context.Context, *gamev1.PatchCharacterStateRequest, ...grpc.CallOption) (*gamev1.PatchCharacterStateResponse, error)
 	getSnapshot    func(context.Context, *gamev1.GetSnapshotRequest, ...grpc.CallOption) (*gamev1.GetSnapshotResponse, error)
