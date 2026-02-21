@@ -59,10 +59,12 @@ type Config struct {
 // It delegates campaign membership and identity resolution to external service
 // clients so chat remains transport-only.
 type Server struct {
-	httpAddr        string
-	shutdownTimeout time.Duration
-	httpServer      *http.Server
-	gameConn        *gogrpc.ClientConn
+	httpAddr                       string
+	shutdownTimeout                time.Duration
+	httpServer                     *http.Server
+	gameConn                       *gogrpc.ClientConn
+	campaignUpdateSubscriptionDone chan struct{}
+	campaignUpdateSubscriptionStop context.CancelFunc
 }
 
 type wsFrame struct {
@@ -85,6 +87,7 @@ type wsError struct {
 type gameGRPCClients struct {
 	conn              *gogrpc.ClientConn
 	participantClient statev1.ParticipantServiceClient
+	eventClient       statev1.EventServiceClient
 }
 
 type joinPayload struct {
@@ -253,10 +256,12 @@ func (r *campaignRoom) currentSessionID() string {
 	return id
 }
 
-func (r *campaignRoom) leave(peer *wsPeer) {
+func (r *campaignRoom) leave(peer *wsPeer) bool {
 	r.mu.Lock()
 	delete(r.subscribers, peer)
+	empty := len(r.subscribers) == 0
 	r.mu.Unlock()
+	return empty
 }
 
 func (r *campaignRoom) appendMessage(actorID string, body string, clientMessageID string) (chatMessage, bool, []*wsPeer) {
@@ -571,15 +576,15 @@ type wsUserIDContextKey struct{}
 // NewHandler creates chat routes for tests and offline paths.
 // WebSocket auth is intentionally disabled in this constructor.
 func NewHandler() http.Handler {
-	return newHandler(nil, false)
+	return newHandler(nil, false, nil, nil)
 }
 
 // NewHandlerWithAuthorizer creates chat routes with enforced websocket identity checks.
 func NewHandlerWithAuthorizer(authorizer wsAuthorizer) http.Handler {
-	return newHandler(authorizer, true)
+	return newHandler(authorizer, true, nil, nil)
 }
 
-func newHandler(authorizer wsAuthorizer, requireAuth bool) http.Handler {
+func newHandler(authorizer wsAuthorizer, requireAuth bool, ensureCampaignUpdateSubscription func(string), releaseCampaignUpdateSubscription func(string)) http.Handler {
 	hub := newRoomHub()
 	mux := http.NewServeMux()
 	mux.HandleFunc("/up", func(w http.ResponseWriter, r *http.Request) {
@@ -588,7 +593,7 @@ func newHandler(authorizer wsAuthorizer, requireAuth bool) http.Handler {
 	})
 
 	wsHandler := websocket.Handler(func(conn *websocket.Conn) {
-		handleWSConn(conn, hub, authorizer)
+		handleWSConn(conn, hub, authorizer, ensureCampaignUpdateSubscription, releaseCampaignUpdateSubscription)
 	})
 
 	mux.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
@@ -637,7 +642,7 @@ func accessTokenFromRequest(r *http.Request) string {
 	return strings.TrimSpace(cookie.Value)
 }
 
-func handleWSConn(conn *websocket.Conn, hub *roomHub, authorizer wsAuthorizer) {
+func handleWSConn(conn *websocket.Conn, hub *roomHub, authorizer wsAuthorizer, ensureCampaignUpdateSubscription func(string), releaseCampaignUpdateSubscription func(string)) {
 	defer func() {
 		_ = conn.Close()
 	}()
@@ -653,7 +658,7 @@ func handleWSConn(conn *websocket.Conn, hub *roomHub, authorizer wsAuthorizer) {
 	session := newWSSession(userID, peer)
 	defer func() {
 		if room := session.currentRoom(); room != nil {
-			room.leave(session.peer)
+			leaveCampaignRoom(room, session.peer, releaseCampaignUpdateSubscription)
 		}
 	}()
 
@@ -694,7 +699,7 @@ func handleWSConn(conn *websocket.Conn, hub *roomHub, authorizer wsAuthorizer) {
 
 		switch frame.Type {
 		case "chat.join":
-			handleJoinFrame(conn.Request().Context(), session, hub, authorizer, frame)
+			handleJoinFrame(conn.Request().Context(), session, hub, authorizer, frame, ensureCampaignUpdateSubscription, releaseCampaignUpdateSubscription)
 		case "chat.send":
 			handleSendFrame(session, frame)
 		case "chat.history.before":
@@ -705,7 +710,16 @@ func handleWSConn(conn *websocket.Conn, hub *roomHub, authorizer wsAuthorizer) {
 	}
 }
 
-func handleJoinFrame(ctx context.Context, session *wsSession, hub *roomHub, authorizer wsAuthorizer, frame wsFrame) {
+func leaveCampaignRoom(room *campaignRoom, peer *wsPeer, releaseCampaignUpdateSubscription func(string)) {
+	if room == nil || peer == nil {
+		return
+	}
+	if room.leave(peer) && releaseCampaignUpdateSubscription != nil {
+		releaseCampaignUpdateSubscription(room.campaignID)
+	}
+}
+
+func handleJoinFrame(ctx context.Context, session *wsSession, hub *roomHub, authorizer wsAuthorizer, frame wsFrame, ensureCampaignUpdateSubscription func(string), releaseCampaignUpdateSubscription func(string)) {
 	var payload joinPayload
 	if err := json.Unmarshal(frame.Payload, &payload); err != nil {
 		_ = writeWSError(session.peer, frame.RequestID, "INVALID_ARGUMENT", "invalid join payload")
@@ -755,6 +769,9 @@ func handleJoinFrame(ctx context.Context, session *wsSession, hub *roomHub, auth
 			return
 		}
 	}
+	if ensureCampaignUpdateSubscription != nil {
+		ensureCampaignUpdateSubscription(campaignID)
+	}
 
 	room := hub.room(campaignID)
 	room.setSessionID(welcome.SessionID)
@@ -763,7 +780,7 @@ func handleJoinFrame(ctx context.Context, session *wsSession, hub *roomHub, auth
 	}
 	previous := session.setRoom(room)
 	if previous != nil && previous != room {
-		previous.leave(session.peer)
+		leaveCampaignRoom(previous, session.peer, releaseCampaignUpdateSubscription)
 	}
 	latest := room.join(session.peer)
 
@@ -986,6 +1003,7 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 	var participantClient statev1.ParticipantServiceClient
 	var sessionClient statev1.SessionServiceClient
 	var campaignClient statev1.CampaignServiceClient
+	var eventClient statev1.EventServiceClient
 	if strings.TrimSpace(config.GameAddr) != "" {
 		clients, err := dialGameGRPC(ctx, config)
 		if err != nil {
@@ -995,21 +1013,25 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 			participantClient = clients.participantClient
 			sessionClient = statev1.NewSessionServiceClient(clients.conn)
 			campaignClient = statev1.NewCampaignServiceClient(clients.conn)
+			eventClient = clients.eventClient
 		}
 	}
 
 	authorizer := newCampaignAuthorizer(config, participantClient, sessionClient, campaignClient)
+	ensureCampaignUpdateSubscription, releaseCampaignUpdateSubscription, campaignUpdateStop, campaignUpdateDone := startCampaignEventCommittedSubscriptionWorker(eventClient)
 	httpServer := &http.Server{
 		Addr:              httpAddr,
-		Handler:           NewHandlerWithAuthorizer(authorizer),
+		Handler:           newHandler(authorizer, true, ensureCampaignUpdateSubscription, releaseCampaignUpdateSubscription),
 		ReadHeaderTimeout: config.ReadHeaderTimeout,
 	}
 
 	return &Server{
-		httpAddr:        httpAddr,
-		shutdownTimeout: config.ShutdownTimeout,
-		httpServer:      httpServer,
-		gameConn:        gameConn,
+		httpAddr:                       httpAddr,
+		shutdownTimeout:                config.ShutdownTimeout,
+		httpServer:                     httpServer,
+		gameConn:                       gameConn,
+		campaignUpdateSubscriptionDone: campaignUpdateDone,
+		campaignUpdateSubscriptionStop: campaignUpdateStop,
 	}, nil
 }
 
@@ -1066,6 +1088,12 @@ func (s *Server) Close() {
 	if s == nil {
 		return
 	}
+	if s.campaignUpdateSubscriptionStop != nil {
+		s.campaignUpdateSubscriptionStop()
+	}
+	if s.campaignUpdateSubscriptionDone != nil {
+		<-s.campaignUpdateSubscriptionDone
+	}
 	if s.gameConn != nil {
 		if err := s.gameConn.Close(); err != nil {
 			log.Printf("close game gRPC connection: %v", err)
@@ -1103,5 +1131,6 @@ func dialGameGRPC(ctx context.Context, config Config) (gameGRPCClients, error) {
 	return gameGRPCClients{
 		conn:              conn,
 		participantClient: statev1.NewParticipantServiceClient(conn),
+		eventClient:       statev1.NewEventServiceClient(conn),
 	}, nil
 }

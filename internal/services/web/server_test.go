@@ -940,6 +940,47 @@ func TestServerCloseStopsCacheInvalidationWorker(t *testing.T) {
 	}
 }
 
+func TestServerCloseStopsCampaignUpdateSubscriptionWorker(t *testing.T) {
+	done := make(chan struct{})
+	stopped := false
+	server := &Server{
+		campaignUpdateSubscriptionDone: done,
+		campaignUpdateSubscriptionStop: func() {
+			stopped = true
+			close(done)
+		},
+	}
+
+	server.Close()
+
+	if !stopped {
+		t.Fatalf("expected campaign update subscription stop to be called")
+	}
+}
+
+func TestServerCloseStopsWorkersBeforeWaiting(t *testing.T) {
+	cacheDone := make(chan struct{})
+	campaignDone := make(chan struct{})
+	server := &Server{
+		cacheInvalidationDone:          cacheDone,
+		campaignUpdateSubscriptionDone: campaignDone,
+		cacheInvalidationStop:          func() { close(campaignDone) },
+		campaignUpdateSubscriptionStop: func() { close(cacheDone) },
+	}
+
+	done := make(chan struct{})
+	go func() {
+		server.Close()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(500 * time.Millisecond):
+		t.Fatal("expected close to stop both workers before waiting")
+	}
+}
+
 func TestListenAndServeShutsDown(t *testing.T) {
 	webServer, err := NewServer(Config{
 		HTTPAddr:        "127.0.0.1:0",

@@ -24,6 +24,56 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// CampaignUpdateKind identifies which update types a subscription should receive.
+type CampaignUpdateKind int32
+
+const (
+	CampaignUpdateKind_CAMPAIGN_UPDATE_KIND_UNSPECIFIED        CampaignUpdateKind = 0
+	CampaignUpdateKind_CAMPAIGN_UPDATE_KIND_EVENT_COMMITTED    CampaignUpdateKind = 1
+	CampaignUpdateKind_CAMPAIGN_UPDATE_KIND_PROJECTION_APPLIED CampaignUpdateKind = 2
+)
+
+// Enum value maps for CampaignUpdateKind.
+var (
+	CampaignUpdateKind_name = map[int32]string{
+		0: "CAMPAIGN_UPDATE_KIND_UNSPECIFIED",
+		1: "CAMPAIGN_UPDATE_KIND_EVENT_COMMITTED",
+		2: "CAMPAIGN_UPDATE_KIND_PROJECTION_APPLIED",
+	}
+	CampaignUpdateKind_value = map[string]int32{
+		"CAMPAIGN_UPDATE_KIND_UNSPECIFIED":        0,
+		"CAMPAIGN_UPDATE_KIND_EVENT_COMMITTED":    1,
+		"CAMPAIGN_UPDATE_KIND_PROJECTION_APPLIED": 2,
+	}
+)
+
+func (x CampaignUpdateKind) Enum() *CampaignUpdateKind {
+	p := new(CampaignUpdateKind)
+	*p = x
+	return p
+}
+
+func (x CampaignUpdateKind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (CampaignUpdateKind) Descriptor() protoreflect.EnumDescriptor {
+	return file_game_v1_event_proto_enumTypes[0].Descriptor()
+}
+
+func (CampaignUpdateKind) Type() protoreflect.EnumType {
+	return &file_game_v1_event_proto_enumTypes[0]
+}
+
+func (x CampaignUpdateKind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use CampaignUpdateKind.Descriptor instead.
+func (CampaignUpdateKind) EnumDescriptor() ([]byte, []int) {
+	return file_game_v1_event_proto_rawDescGZIP(), []int{0}
+}
+
 // ListEventsRequest describes the parameters for listing events.
 type ListEventsRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -351,6 +401,320 @@ func (x *ListTimelineEntriesResponse) GetTotalSize() int32 {
 	return 0
 }
 
+// SubscribeCampaignUpdatesRequest configures campaign update streaming.
+type SubscribeCampaignUpdatesRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Required campaign identifier.
+	CampaignId string `protobuf:"bytes,1,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"`
+	// Resume cursor: only updates with seq greater than this value are streamed.
+	AfterSeq uint64 `protobuf:"varint,2,opt,name=after_seq,json=afterSeq,proto3" json:"after_seq,omitempty"`
+	// Optional update-kind filter. When omitted, all update kinds are streamed.
+	Kinds []CampaignUpdateKind `protobuf:"varint,3,rep,packed,name=kinds,proto3,enum=game.v1.CampaignUpdateKind" json:"kinds,omitempty"`
+	// Optional projection scope filter (for projection_applied updates only).
+	// Typical values include: campaign_summary, campaign_participants,
+	// campaign_sessions, campaign_characters, campaign_invites.
+	ProjectionScopes []string `protobuf:"bytes,4,rep,name=projection_scopes,json=projectionScopes,proto3" json:"projection_scopes,omitempty"`
+	// Optional stream polling interval in milliseconds.
+	// Defaults to server value when omitted or non-positive.
+	PollIntervalMs int32 `protobuf:"varint,5,opt,name=poll_interval_ms,json=pollIntervalMs,proto3" json:"poll_interval_ms,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *SubscribeCampaignUpdatesRequest) Reset() {
+	*x = SubscribeCampaignUpdatesRequest{}
+	mi := &file_game_v1_event_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SubscribeCampaignUpdatesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SubscribeCampaignUpdatesRequest) ProtoMessage() {}
+
+func (x *SubscribeCampaignUpdatesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_game_v1_event_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SubscribeCampaignUpdatesRequest.ProtoReflect.Descriptor instead.
+func (*SubscribeCampaignUpdatesRequest) Descriptor() ([]byte, []int) {
+	return file_game_v1_event_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *SubscribeCampaignUpdatesRequest) GetCampaignId() string {
+	if x != nil {
+		return x.CampaignId
+	}
+	return ""
+}
+
+func (x *SubscribeCampaignUpdatesRequest) GetAfterSeq() uint64 {
+	if x != nil {
+		return x.AfterSeq
+	}
+	return 0
+}
+
+func (x *SubscribeCampaignUpdatesRequest) GetKinds() []CampaignUpdateKind {
+	if x != nil {
+		return x.Kinds
+	}
+	return nil
+}
+
+func (x *SubscribeCampaignUpdatesRequest) GetProjectionScopes() []string {
+	if x != nil {
+		return x.ProjectionScopes
+	}
+	return nil
+}
+
+func (x *SubscribeCampaignUpdatesRequest) GetPollIntervalMs() int32 {
+	if x != nil {
+		return x.PollIntervalMs
+	}
+	return 0
+}
+
+// CampaignUpdate carries one campaign update envelope.
+type CampaignUpdate struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Campaign identifier.
+	CampaignId string `protobuf:"bytes,1,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"`
+	// Campaign event sequence associated with this update.
+	Seq uint64 `protobuf:"varint,2,opt,name=seq,proto3" json:"seq,omitempty"`
+	// Event type associated with this update.
+	EventType string `protobuf:"bytes,3,opt,name=event_type,json=eventType,proto3" json:"event_type,omitempty"`
+	// Event timestamp.
+	EventTime *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=event_time,json=eventTime,proto3" json:"event_time,omitempty"`
+	// Affected entity type (if provided by event envelope).
+	EntityType string `protobuf:"bytes,5,opt,name=entity_type,json=entityType,proto3" json:"entity_type,omitempty"`
+	// Affected entity ID (if provided by event envelope).
+	EntityId string `protobuf:"bytes,6,opt,name=entity_id,json=entityId,proto3" json:"entity_id,omitempty"`
+	// Types that are valid to be assigned to Update:
+	//
+	//	*CampaignUpdate_EventCommitted
+	//	*CampaignUpdate_ProjectionApplied
+	Update        isCampaignUpdate_Update `protobuf_oneof:"update"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CampaignUpdate) Reset() {
+	*x = CampaignUpdate{}
+	mi := &file_game_v1_event_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CampaignUpdate) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CampaignUpdate) ProtoMessage() {}
+
+func (x *CampaignUpdate) ProtoReflect() protoreflect.Message {
+	mi := &file_game_v1_event_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CampaignUpdate.ProtoReflect.Descriptor instead.
+func (*CampaignUpdate) Descriptor() ([]byte, []int) {
+	return file_game_v1_event_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *CampaignUpdate) GetCampaignId() string {
+	if x != nil {
+		return x.CampaignId
+	}
+	return ""
+}
+
+func (x *CampaignUpdate) GetSeq() uint64 {
+	if x != nil {
+		return x.Seq
+	}
+	return 0
+}
+
+func (x *CampaignUpdate) GetEventType() string {
+	if x != nil {
+		return x.EventType
+	}
+	return ""
+}
+
+func (x *CampaignUpdate) GetEventTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.EventTime
+	}
+	return nil
+}
+
+func (x *CampaignUpdate) GetEntityType() string {
+	if x != nil {
+		return x.EntityType
+	}
+	return ""
+}
+
+func (x *CampaignUpdate) GetEntityId() string {
+	if x != nil {
+		return x.EntityId
+	}
+	return ""
+}
+
+func (x *CampaignUpdate) GetUpdate() isCampaignUpdate_Update {
+	if x != nil {
+		return x.Update
+	}
+	return nil
+}
+
+func (x *CampaignUpdate) GetEventCommitted() *EventCommitted {
+	if x != nil {
+		if x, ok := x.Update.(*CampaignUpdate_EventCommitted); ok {
+			return x.EventCommitted
+		}
+	}
+	return nil
+}
+
+func (x *CampaignUpdate) GetProjectionApplied() *ProjectionApplied {
+	if x != nil {
+		if x, ok := x.Update.(*CampaignUpdate_ProjectionApplied); ok {
+			return x.ProjectionApplied
+		}
+	}
+	return nil
+}
+
+type isCampaignUpdate_Update interface {
+	isCampaignUpdate_Update()
+}
+
+type CampaignUpdate_EventCommitted struct {
+	EventCommitted *EventCommitted `protobuf:"bytes,20,opt,name=event_committed,json=eventCommitted,proto3,oneof"`
+}
+
+type CampaignUpdate_ProjectionApplied struct {
+	ProjectionApplied *ProjectionApplied `protobuf:"bytes,21,opt,name=projection_applied,json=projectionApplied,proto3,oneof"`
+}
+
+func (*CampaignUpdate_EventCommitted) isCampaignUpdate_Update() {}
+
+func (*CampaignUpdate_ProjectionApplied) isCampaignUpdate_Update() {}
+
+// EventCommitted marks that an event was durably appended.
+type EventCommitted struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EventCommitted) Reset() {
+	*x = EventCommitted{}
+	mi := &file_game_v1_event_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EventCommitted) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EventCommitted) ProtoMessage() {}
+
+func (x *EventCommitted) ProtoReflect() protoreflect.Message {
+	mi := &file_game_v1_event_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EventCommitted.ProtoReflect.Descriptor instead.
+func (*EventCommitted) Descriptor() ([]byte, []int) {
+	return file_game_v1_event_proto_rawDescGZIP(), []int{6}
+}
+
+// ProjectionApplied marks that derived projection state is available for the source seq.
+type ProjectionApplied struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Source event sequence that produced projection changes.
+	SourceSeq uint64 `protobuf:"varint,1,opt,name=source_seq,json=sourceSeq,proto3" json:"source_seq,omitempty"`
+	// Projection scopes affected by this update.
+	Scopes        []string `protobuf:"bytes,2,rep,name=scopes,proto3" json:"scopes,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ProjectionApplied) Reset() {
+	*x = ProjectionApplied{}
+	mi := &file_game_v1_event_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProjectionApplied) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProjectionApplied) ProtoMessage() {}
+
+func (x *ProjectionApplied) ProtoReflect() protoreflect.Message {
+	mi := &file_game_v1_event_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProjectionApplied.ProtoReflect.Descriptor instead.
+func (*ProjectionApplied) Descriptor() ([]byte, []int) {
+	return file_game_v1_event_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *ProjectionApplied) GetSourceSeq() uint64 {
+	if x != nil {
+		return x.SourceSeq
+	}
+	return 0
+}
+
+func (x *ProjectionApplied) GetScopes() []string {
+	if x != nil {
+		return x.Scopes
+	}
+	return nil
+}
+
 // TimelineEntry represents a timeline row with projection context.
 type TimelineEntry struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -372,7 +736,7 @@ type TimelineEntry struct {
 
 func (x *TimelineEntry) Reset() {
 	*x = TimelineEntry{}
-	mi := &file_game_v1_event_proto_msgTypes[4]
+	mi := &file_game_v1_event_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -384,7 +748,7 @@ func (x *TimelineEntry) String() string {
 func (*TimelineEntry) ProtoMessage() {}
 
 func (x *TimelineEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_game_v1_event_proto_msgTypes[4]
+	mi := &file_game_v1_event_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -397,7 +761,7 @@ func (x *TimelineEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TimelineEntry.ProtoReflect.Descriptor instead.
 func (*TimelineEntry) Descriptor() ([]byte, []int) {
-	return file_game_v1_event_proto_rawDescGZIP(), []int{4}
+	return file_game_v1_event_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *TimelineEntry) GetSeq() uint64 {
@@ -459,7 +823,7 @@ type ProjectionDisplay struct {
 
 func (x *ProjectionDisplay) Reset() {
 	*x = ProjectionDisplay{}
-	mi := &file_game_v1_event_proto_msgTypes[5]
+	mi := &file_game_v1_event_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -471,7 +835,7 @@ func (x *ProjectionDisplay) String() string {
 func (*ProjectionDisplay) ProtoMessage() {}
 
 func (x *ProjectionDisplay) ProtoReflect() protoreflect.Message {
-	mi := &file_game_v1_event_proto_msgTypes[5]
+	mi := &file_game_v1_event_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -484,7 +848,7 @@ func (x *ProjectionDisplay) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProjectionDisplay.ProtoReflect.Descriptor instead.
 func (*ProjectionDisplay) Descriptor() ([]byte, []int) {
-	return file_game_v1_event_proto_rawDescGZIP(), []int{5}
+	return file_game_v1_event_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ProjectionDisplay) GetTitle() string {
@@ -526,7 +890,7 @@ type ProjectionField struct {
 
 func (x *ProjectionField) Reset() {
 	*x = ProjectionField{}
-	mi := &file_game_v1_event_proto_msgTypes[6]
+	mi := &file_game_v1_event_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -538,7 +902,7 @@ func (x *ProjectionField) String() string {
 func (*ProjectionField) ProtoMessage() {}
 
 func (x *ProjectionField) ProtoReflect() protoreflect.Message {
-	mi := &file_game_v1_event_proto_msgTypes[6]
+	mi := &file_game_v1_event_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -551,7 +915,7 @@ func (x *ProjectionField) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProjectionField.ProtoReflect.Descriptor instead.
 func (*ProjectionField) Descriptor() ([]byte, []int) {
-	return file_game_v1_event_proto_rawDescGZIP(), []int{6}
+	return file_game_v1_event_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ProjectionField) GetLabel() string {
@@ -593,7 +957,7 @@ type AppendEventRequest struct {
 
 func (x *AppendEventRequest) Reset() {
 	*x = AppendEventRequest{}
-	mi := &file_game_v1_event_proto_msgTypes[7]
+	mi := &file_game_v1_event_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -605,7 +969,7 @@ func (x *AppendEventRequest) String() string {
 func (*AppendEventRequest) ProtoMessage() {}
 
 func (x *AppendEventRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_game_v1_event_proto_msgTypes[7]
+	mi := &file_game_v1_event_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -618,7 +982,7 @@ func (x *AppendEventRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AppendEventRequest.ProtoReflect.Descriptor instead.
 func (*AppendEventRequest) Descriptor() ([]byte, []int) {
-	return file_game_v1_event_proto_rawDescGZIP(), []int{7}
+	return file_game_v1_event_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *AppendEventRequest) GetCampaignId() string {
@@ -687,7 +1051,7 @@ type AppendEventResponse struct {
 
 func (x *AppendEventResponse) Reset() {
 	*x = AppendEventResponse{}
-	mi := &file_game_v1_event_proto_msgTypes[8]
+	mi := &file_game_v1_event_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -699,7 +1063,7 @@ func (x *AppendEventResponse) String() string {
 func (*AppendEventResponse) ProtoMessage() {}
 
 func (x *AppendEventResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_game_v1_event_proto_msgTypes[8]
+	mi := &file_game_v1_event_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -712,7 +1076,7 @@ func (x *AppendEventResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AppendEventResponse.ProtoReflect.Descriptor instead.
 func (*AppendEventResponse) Descriptor() ([]byte, []int) {
-	return file_game_v1_event_proto_rawDescGZIP(), []int{8}
+	return file_game_v1_event_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *AppendEventResponse) GetEvent() *Event {
@@ -761,7 +1125,7 @@ type Event struct {
 
 func (x *Event) Reset() {
 	*x = Event{}
-	mi := &file_game_v1_event_proto_msgTypes[9]
+	mi := &file_game_v1_event_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -773,7 +1137,7 @@ func (x *Event) String() string {
 func (*Event) ProtoMessage() {}
 
 func (x *Event) ProtoReflect() protoreflect.Message {
-	mi := &file_game_v1_event_proto_msgTypes[9]
+	mi := &file_game_v1_event_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -786,7 +1150,7 @@ func (x *Event) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Event.ProtoReflect.Descriptor instead.
 func (*Event) Descriptor() ([]byte, []int) {
-	return file_game_v1_event_proto_rawDescGZIP(), []int{9}
+	return file_game_v1_event_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *Event) GetCampaignId() string {
@@ -927,7 +1291,33 @@ const file_game_v1_event_proto_rawDesc = "" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12.\n" +
 	"\x13previous_page_token\x18\x03 \x01(\tR\x11previousPageToken\x12\x1d\n" +
 	"\n" +
-	"total_size\x18\x04 \x01(\x05R\ttotalSize\"\x91\x02\n" +
+	"total_size\x18\x04 \x01(\x05R\ttotalSize\"\xe9\x01\n" +
+	"\x1fSubscribeCampaignUpdatesRequest\x12\x1f\n" +
+	"\vcampaign_id\x18\x01 \x01(\tR\n" +
+	"campaignId\x12\x1b\n" +
+	"\tafter_seq\x18\x02 \x01(\x04R\bafterSeq\x121\n" +
+	"\x05kinds\x18\x03 \x03(\x0e2\x1b.game.v1.CampaignUpdateKindR\x05kinds\x12+\n" +
+	"\x11projection_scopes\x18\x04 \x03(\tR\x10projectionScopes\x12(\n" +
+	"\x10poll_interval_ms\x18\x05 \x01(\x05R\x0epollIntervalMs\"\xf6\x02\n" +
+	"\x0eCampaignUpdate\x12\x1f\n" +
+	"\vcampaign_id\x18\x01 \x01(\tR\n" +
+	"campaignId\x12\x10\n" +
+	"\x03seq\x18\x02 \x01(\x04R\x03seq\x12\x1d\n" +
+	"\n" +
+	"event_type\x18\x03 \x01(\tR\teventType\x129\n" +
+	"\n" +
+	"event_time\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\teventTime\x12\x1f\n" +
+	"\ventity_type\x18\x05 \x01(\tR\n" +
+	"entityType\x12\x1b\n" +
+	"\tentity_id\x18\x06 \x01(\tR\bentityId\x12B\n" +
+	"\x0fevent_committed\x18\x14 \x01(\v2\x17.game.v1.EventCommittedH\x00R\x0eeventCommitted\x12K\n" +
+	"\x12projection_applied\x18\x15 \x01(\v2\x1a.game.v1.ProjectionAppliedH\x00R\x11projectionAppliedB\b\n" +
+	"\x06update\"\x10\n" +
+	"\x0eEventCommitted\"J\n" +
+	"\x11ProjectionApplied\x12\x1d\n" +
+	"\n" +
+	"source_seq\x18\x01 \x01(\x04R\tsourceSeq\x12\x16\n" +
+	"\x06scopes\x18\x02 \x03(\tR\x06scopes\"\x91\x02\n" +
 	"\rTimelineEntry\x12\x10\n" +
 	"\x03seq\x18\x01 \x01(\x04R\x03seq\x12\x1d\n" +
 	"\n" +
@@ -983,12 +1373,17 @@ const file_game_v1_event_proto_rawDesc = "" +
 	"\ventity_type\x18\r \x01(\tR\n" +
 	"entityType\x12\x1b\n" +
 	"\tentity_id\x18\x0e \x01(\tR\bentityId\x12!\n" +
-	"\fpayload_json\x18\x0f \x01(\fR\vpayloadJson2\x81\x02\n" +
+	"\fpayload_json\x18\x0f \x01(\fR\vpayloadJson*\x91\x01\n" +
+	"\x12CampaignUpdateKind\x12$\n" +
+	" CAMPAIGN_UPDATE_KIND_UNSPECIFIED\x10\x00\x12(\n" +
+	"$CAMPAIGN_UPDATE_KIND_EVENT_COMMITTED\x10\x01\x12+\n" +
+	"'CAMPAIGN_UPDATE_KIND_PROJECTION_APPLIED\x10\x022\xe2\x02\n" +
 	"\fEventService\x12H\n" +
 	"\vAppendEvent\x12\x1b.game.v1.AppendEventRequest\x1a\x1c.game.v1.AppendEventResponse\x12E\n" +
 	"\n" +
 	"ListEvents\x12\x1a.game.v1.ListEventsRequest\x1a\x1b.game.v1.ListEventsResponse\x12`\n" +
-	"\x13ListTimelineEntries\x12#.game.v1.ListTimelineEntriesRequest\x1a$.game.v1.ListTimelineEntriesResponseBCZAgithub.com/louisbranch/fracturing.space/api/gen/go/game/v1;gamev1b\x06proto3"
+	"\x13ListTimelineEntries\x12#.game.v1.ListTimelineEntriesRequest\x1a$.game.v1.ListTimelineEntriesResponse\x12_\n" +
+	"\x18SubscribeCampaignUpdates\x12(.game.v1.SubscribeCampaignUpdatesRequest\x1a\x17.game.v1.CampaignUpdate0\x01BCZAgithub.com/louisbranch/fracturing.space/api/gen/go/game/v1;gamev1b\x06proto3"
 
 var (
 	file_game_v1_event_proto_rawDescOnce sync.Once
@@ -1002,41 +1397,53 @@ func file_game_v1_event_proto_rawDescGZIP() []byte {
 	return file_game_v1_event_proto_rawDescData
 }
 
-var file_game_v1_event_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_game_v1_event_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_game_v1_event_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_game_v1_event_proto_goTypes = []any{
-	(*ListEventsRequest)(nil),           // 0: game.v1.ListEventsRequest
-	(*ListEventsResponse)(nil),          // 1: game.v1.ListEventsResponse
-	(*ListTimelineEntriesRequest)(nil),  // 2: game.v1.ListTimelineEntriesRequest
-	(*ListTimelineEntriesResponse)(nil), // 3: game.v1.ListTimelineEntriesResponse
-	(*TimelineEntry)(nil),               // 4: game.v1.TimelineEntry
-	(*ProjectionDisplay)(nil),           // 5: game.v1.ProjectionDisplay
-	(*ProjectionField)(nil),             // 6: game.v1.ProjectionField
-	(*AppendEventRequest)(nil),          // 7: game.v1.AppendEventRequest
-	(*AppendEventResponse)(nil),         // 8: game.v1.AppendEventResponse
-	(*Event)(nil),                       // 9: game.v1.Event
-	(*timestamppb.Timestamp)(nil),       // 10: google.protobuf.Timestamp
-	(v1.IconId)(0),                      // 11: common.v1.IconId
+	(CampaignUpdateKind)(0),                 // 0: game.v1.CampaignUpdateKind
+	(*ListEventsRequest)(nil),               // 1: game.v1.ListEventsRequest
+	(*ListEventsResponse)(nil),              // 2: game.v1.ListEventsResponse
+	(*ListTimelineEntriesRequest)(nil),      // 3: game.v1.ListTimelineEntriesRequest
+	(*ListTimelineEntriesResponse)(nil),     // 4: game.v1.ListTimelineEntriesResponse
+	(*SubscribeCampaignUpdatesRequest)(nil), // 5: game.v1.SubscribeCampaignUpdatesRequest
+	(*CampaignUpdate)(nil),                  // 6: game.v1.CampaignUpdate
+	(*EventCommitted)(nil),                  // 7: game.v1.EventCommitted
+	(*ProjectionApplied)(nil),               // 8: game.v1.ProjectionApplied
+	(*TimelineEntry)(nil),                   // 9: game.v1.TimelineEntry
+	(*ProjectionDisplay)(nil),               // 10: game.v1.ProjectionDisplay
+	(*ProjectionField)(nil),                 // 11: game.v1.ProjectionField
+	(*AppendEventRequest)(nil),              // 12: game.v1.AppendEventRequest
+	(*AppendEventResponse)(nil),             // 13: game.v1.AppendEventResponse
+	(*Event)(nil),                           // 14: game.v1.Event
+	(*timestamppb.Timestamp)(nil),           // 15: google.protobuf.Timestamp
+	(v1.IconId)(0),                          // 16: common.v1.IconId
 }
 var file_game_v1_event_proto_depIdxs = []int32{
-	9,  // 0: game.v1.ListEventsResponse.events:type_name -> game.v1.Event
-	4,  // 1: game.v1.ListTimelineEntriesResponse.entries:type_name -> game.v1.TimelineEntry
-	10, // 2: game.v1.TimelineEntry.event_time:type_name -> google.protobuf.Timestamp
-	11, // 3: game.v1.TimelineEntry.icon_id:type_name -> common.v1.IconId
-	5,  // 4: game.v1.TimelineEntry.projection:type_name -> game.v1.ProjectionDisplay
-	6,  // 5: game.v1.ProjectionDisplay.fields:type_name -> game.v1.ProjectionField
-	9,  // 6: game.v1.AppendEventResponse.event:type_name -> game.v1.Event
-	10, // 7: game.v1.Event.ts:type_name -> google.protobuf.Timestamp
-	7,  // 8: game.v1.EventService.AppendEvent:input_type -> game.v1.AppendEventRequest
-	0,  // 9: game.v1.EventService.ListEvents:input_type -> game.v1.ListEventsRequest
-	2,  // 10: game.v1.EventService.ListTimelineEntries:input_type -> game.v1.ListTimelineEntriesRequest
-	8,  // 11: game.v1.EventService.AppendEvent:output_type -> game.v1.AppendEventResponse
-	1,  // 12: game.v1.EventService.ListEvents:output_type -> game.v1.ListEventsResponse
-	3,  // 13: game.v1.EventService.ListTimelineEntries:output_type -> game.v1.ListTimelineEntriesResponse
-	11, // [11:14] is the sub-list for method output_type
-	8,  // [8:11] is the sub-list for method input_type
-	8,  // [8:8] is the sub-list for extension type_name
-	8,  // [8:8] is the sub-list for extension extendee
-	0,  // [0:8] is the sub-list for field type_name
+	14, // 0: game.v1.ListEventsResponse.events:type_name -> game.v1.Event
+	9,  // 1: game.v1.ListTimelineEntriesResponse.entries:type_name -> game.v1.TimelineEntry
+	0,  // 2: game.v1.SubscribeCampaignUpdatesRequest.kinds:type_name -> game.v1.CampaignUpdateKind
+	15, // 3: game.v1.CampaignUpdate.event_time:type_name -> google.protobuf.Timestamp
+	7,  // 4: game.v1.CampaignUpdate.event_committed:type_name -> game.v1.EventCommitted
+	8,  // 5: game.v1.CampaignUpdate.projection_applied:type_name -> game.v1.ProjectionApplied
+	15, // 6: game.v1.TimelineEntry.event_time:type_name -> google.protobuf.Timestamp
+	16, // 7: game.v1.TimelineEntry.icon_id:type_name -> common.v1.IconId
+	10, // 8: game.v1.TimelineEntry.projection:type_name -> game.v1.ProjectionDisplay
+	11, // 9: game.v1.ProjectionDisplay.fields:type_name -> game.v1.ProjectionField
+	14, // 10: game.v1.AppendEventResponse.event:type_name -> game.v1.Event
+	15, // 11: game.v1.Event.ts:type_name -> google.protobuf.Timestamp
+	12, // 12: game.v1.EventService.AppendEvent:input_type -> game.v1.AppendEventRequest
+	1,  // 13: game.v1.EventService.ListEvents:input_type -> game.v1.ListEventsRequest
+	3,  // 14: game.v1.EventService.ListTimelineEntries:input_type -> game.v1.ListTimelineEntriesRequest
+	5,  // 15: game.v1.EventService.SubscribeCampaignUpdates:input_type -> game.v1.SubscribeCampaignUpdatesRequest
+	13, // 16: game.v1.EventService.AppendEvent:output_type -> game.v1.AppendEventResponse
+	2,  // 17: game.v1.EventService.ListEvents:output_type -> game.v1.ListEventsResponse
+	4,  // 18: game.v1.EventService.ListTimelineEntries:output_type -> game.v1.ListTimelineEntriesResponse
+	6,  // 19: game.v1.EventService.SubscribeCampaignUpdates:output_type -> game.v1.CampaignUpdate
+	16, // [16:20] is the sub-list for method output_type
+	12, // [12:16] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_game_v1_event_proto_init() }
@@ -1044,18 +1451,23 @@ func file_game_v1_event_proto_init() {
 	if File_game_v1_event_proto != nil {
 		return
 	}
+	file_game_v1_event_proto_msgTypes[5].OneofWrappers = []any{
+		(*CampaignUpdate_EventCommitted)(nil),
+		(*CampaignUpdate_ProjectionApplied)(nil),
+	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_game_v1_event_proto_rawDesc), len(file_game_v1_event_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   10,
+			NumEnums:      1,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_game_v1_event_proto_goTypes,
 		DependencyIndexes: file_game_v1_event_proto_depIdxs,
+		EnumInfos:         file_game_v1_event_proto_enumTypes,
 		MessageInfos:      file_game_v1_event_proto_msgTypes,
 	}.Build()
 	File_game_v1_event_proto = out.File

@@ -54,13 +54,15 @@ type Config struct {
 
 // Server hosts the web login HTTP server.
 type Server struct {
-	httpAddr              string
-	httpServer            *http.Server
-	authConn              *grpc.ClientConn
-	gameConn              *grpc.ClientConn
-	cacheStore            *websqlite.Store
-	cacheInvalidationDone chan struct{}
-	cacheInvalidationStop context.CancelFunc
+	httpAddr                       string
+	httpServer                     *http.Server
+	authConn                       *grpc.ClientConn
+	gameConn                       *grpc.ClientConn
+	cacheStore                     *websqlite.Store
+	cacheInvalidationDone          chan struct{}
+	cacheInvalidationStop          context.CancelFunc
+	campaignUpdateSubscriptionDone chan struct{}
+	campaignUpdateSubscriptionStop context.CancelFunc
 }
 
 type handler struct {
@@ -400,15 +402,18 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 	}
 
 	invalidationStop, invalidationDone := startCacheInvalidationWorker(cacheStore, eventClient)
+	campaignUpdateStop, campaignUpdateDone := startCampaignProjectionSubscriptionWorker(cacheStore, eventClient)
 
 	return &Server{
-		httpAddr:              httpAddr,
-		httpServer:            httpServer,
-		authConn:              authConn,
-		gameConn:              gameConn,
-		cacheStore:            cacheStore,
-		cacheInvalidationDone: invalidationDone,
-		cacheInvalidationStop: invalidationStop,
+		httpAddr:                       httpAddr,
+		httpServer:                     httpServer,
+		authConn:                       authConn,
+		gameConn:                       gameConn,
+		cacheStore:                     cacheStore,
+		cacheInvalidationDone:          invalidationDone,
+		cacheInvalidationStop:          invalidationStop,
+		campaignUpdateSubscriptionDone: campaignUpdateDone,
+		campaignUpdateSubscriptionStop: campaignUpdateStop,
 	}, nil
 }
 
@@ -455,8 +460,14 @@ func (s *Server) Close() {
 	if s.cacheInvalidationStop != nil {
 		s.cacheInvalidationStop()
 	}
+	if s.campaignUpdateSubscriptionStop != nil {
+		s.campaignUpdateSubscriptionStop()
+	}
 	if s.cacheInvalidationDone != nil {
 		<-s.cacheInvalidationDone
+	}
+	if s.campaignUpdateSubscriptionDone != nil {
+		<-s.campaignUpdateSubscriptionDone
 	}
 	if s.authConn != nil {
 		if err := s.authConn.Close(); err != nil {

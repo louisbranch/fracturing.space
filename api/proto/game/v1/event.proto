@@ -15,6 +15,8 @@ service EventService {
   rpc ListEvents(ListEventsRequest) returns (ListEventsResponse);
   // ListTimelineEntries returns a paginated timeline view for a campaign.
   rpc ListTimelineEntries(ListTimelineEntriesRequest) returns (ListTimelineEntriesResponse);
+  // SubscribeCampaignUpdates streams campaign updates for realtime consumers.
+  rpc SubscribeCampaignUpdates(SubscribeCampaignUpdatesRequest) returns (stream CampaignUpdate);
 }
 
 // ListEventsRequest describes the parameters for listing events.
@@ -91,6 +93,72 @@ message ListTimelineEntriesResponse {
 
   // Total number of events matching the filter (across all pages).
   int32 total_size = 4;
+}
+
+// CampaignUpdateKind identifies which update types a subscription should receive.
+enum CampaignUpdateKind {
+  CAMPAIGN_UPDATE_KIND_UNSPECIFIED = 0;
+  CAMPAIGN_UPDATE_KIND_EVENT_COMMITTED = 1;
+  CAMPAIGN_UPDATE_KIND_PROJECTION_APPLIED = 2;
+}
+
+// SubscribeCampaignUpdatesRequest configures campaign update streaming.
+message SubscribeCampaignUpdatesRequest {
+  // Required campaign identifier.
+  string campaign_id = 1;
+
+  // Resume cursor: only updates with seq greater than this value are streamed.
+  uint64 after_seq = 2;
+
+  // Optional update-kind filter. When omitted, all update kinds are streamed.
+  repeated CampaignUpdateKind kinds = 3;
+
+  // Optional projection scope filter (for projection_applied updates only).
+  // Typical values include: campaign_summary, campaign_participants,
+  // campaign_sessions, campaign_characters, campaign_invites.
+  repeated string projection_scopes = 4;
+
+  // Optional stream polling interval in milliseconds.
+  // Defaults to server value when omitted or non-positive.
+  int32 poll_interval_ms = 5;
+}
+
+// CampaignUpdate carries one campaign update envelope.
+message CampaignUpdate {
+  // Campaign identifier.
+  string campaign_id = 1;
+
+  // Campaign event sequence associated with this update.
+  uint64 seq = 2;
+
+  // Event type associated with this update.
+  string event_type = 3;
+
+  // Event timestamp.
+  google.protobuf.Timestamp event_time = 4;
+
+  // Affected entity type (if provided by event envelope).
+  string entity_type = 5;
+
+  // Affected entity ID (if provided by event envelope).
+  string entity_id = 6;
+
+  oneof update {
+    EventCommitted event_committed = 20;
+    ProjectionApplied projection_applied = 21;
+  }
+}
+
+// EventCommitted marks that an event was durably appended.
+message EventCommitted {}
+
+// ProjectionApplied marks that derived projection state is available for the source seq.
+message ProjectionApplied {
+  // Source event sequence that produced projection changes.
+  uint64 source_seq = 1;
+
+  // Projection scopes affected by this update.
+  repeated string scopes = 2;
 }
 
 // TimelineEntry represents a timeline row with projection context.

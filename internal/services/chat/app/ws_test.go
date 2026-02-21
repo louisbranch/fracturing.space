@@ -558,3 +558,54 @@ func TestLocalizedJoinWelcomeBodyOmitsSessionWhenUnavailable(t *testing.T) {
 		t.Fatalf("body = %q, expected campaign text", body)
 	}
 }
+
+func TestWebSocketDisconnectReleasesCampaignUpdateSubscriptionWhenRoomEmpty(t *testing.T) {
+	released := make(chan string, 1)
+	handler := newHandler(nil, false, nil, func(campaignID string) {
+		released <- campaignID
+	})
+
+	conn := dialWSWithHandler(t, handler, "/ws", "")
+	joinCampaign(t, conn, "camp-1")
+	_ = conn.Close()
+
+	select {
+	case campaignID := <-released:
+		if campaignID != "camp-1" {
+			t.Fatalf("released campaign id = %q, want %q", campaignID, "camp-1")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("expected campaign update subscription release")
+	}
+}
+
+func TestWebSocketDisconnectDoesNotReleaseUntilLastSubscriberLeaves(t *testing.T) {
+	released := make(chan string, 2)
+	handler := newHandler(nil, false, nil, func(campaignID string) {
+		released <- campaignID
+	})
+	srv := httptest.NewServer(handler)
+	t.Cleanup(srv.Close)
+
+	connA := dialWSWithExistingServer(t, srv, "/ws", "")
+	connB := dialWSWithExistingServer(t, srv, "/ws", "")
+	joinCampaign(t, connA, "camp-1")
+	joinCampaign(t, connB, "camp-1")
+
+	_ = connA.Close()
+	select {
+	case campaignID := <-released:
+		t.Fatalf("unexpected release while room still active: %q", campaignID)
+	case <-time.After(200 * time.Millisecond):
+	}
+
+	_ = connB.Close()
+	select {
+	case campaignID := <-released:
+		if campaignID != "camp-1" {
+			t.Fatalf("released campaign id = %q, want %q", campaignID, "camp-1")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("expected release after last subscriber leaves")
+	}
+}

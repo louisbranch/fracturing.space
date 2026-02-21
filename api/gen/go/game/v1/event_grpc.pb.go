@@ -20,9 +20,10 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	EventService_AppendEvent_FullMethodName         = "/game.v1.EventService/AppendEvent"
-	EventService_ListEvents_FullMethodName          = "/game.v1.EventService/ListEvents"
-	EventService_ListTimelineEntries_FullMethodName = "/game.v1.EventService/ListTimelineEntries"
+	EventService_AppendEvent_FullMethodName              = "/game.v1.EventService/AppendEvent"
+	EventService_ListEvents_FullMethodName               = "/game.v1.EventService/ListEvents"
+	EventService_ListTimelineEntries_FullMethodName      = "/game.v1.EventService/ListTimelineEntries"
+	EventService_SubscribeCampaignUpdates_FullMethodName = "/game.v1.EventService/SubscribeCampaignUpdates"
 )
 
 // EventServiceClient is the client API for EventService service.
@@ -37,6 +38,8 @@ type EventServiceClient interface {
 	ListEvents(ctx context.Context, in *ListEventsRequest, opts ...grpc.CallOption) (*ListEventsResponse, error)
 	// ListTimelineEntries returns a paginated timeline view for a campaign.
 	ListTimelineEntries(ctx context.Context, in *ListTimelineEntriesRequest, opts ...grpc.CallOption) (*ListTimelineEntriesResponse, error)
+	// SubscribeCampaignUpdates streams campaign updates for realtime consumers.
+	SubscribeCampaignUpdates(ctx context.Context, in *SubscribeCampaignUpdatesRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[CampaignUpdate], error)
 }
 
 type eventServiceClient struct {
@@ -77,6 +80,25 @@ func (c *eventServiceClient) ListTimelineEntries(ctx context.Context, in *ListTi
 	return out, nil
 }
 
+func (c *eventServiceClient) SubscribeCampaignUpdates(ctx context.Context, in *SubscribeCampaignUpdatesRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[CampaignUpdate], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &EventService_ServiceDesc.Streams[0], EventService_SubscribeCampaignUpdates_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[SubscribeCampaignUpdatesRequest, CampaignUpdate]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type EventService_SubscribeCampaignUpdatesClient = grpc.ServerStreamingClient[CampaignUpdate]
+
 // EventServiceServer is the server API for EventService service.
 // All implementations must embed UnimplementedEventServiceServer
 // for forward compatibility.
@@ -89,6 +111,8 @@ type EventServiceServer interface {
 	ListEvents(context.Context, *ListEventsRequest) (*ListEventsResponse, error)
 	// ListTimelineEntries returns a paginated timeline view for a campaign.
 	ListTimelineEntries(context.Context, *ListTimelineEntriesRequest) (*ListTimelineEntriesResponse, error)
+	// SubscribeCampaignUpdates streams campaign updates for realtime consumers.
+	SubscribeCampaignUpdates(*SubscribeCampaignUpdatesRequest, grpc.ServerStreamingServer[CampaignUpdate]) error
 	mustEmbedUnimplementedEventServiceServer()
 }
 
@@ -107,6 +131,9 @@ func (UnimplementedEventServiceServer) ListEvents(context.Context, *ListEventsRe
 }
 func (UnimplementedEventServiceServer) ListTimelineEntries(context.Context, *ListTimelineEntriesRequest) (*ListTimelineEntriesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListTimelineEntries not implemented")
+}
+func (UnimplementedEventServiceServer) SubscribeCampaignUpdates(*SubscribeCampaignUpdatesRequest, grpc.ServerStreamingServer[CampaignUpdate]) error {
+	return status.Error(codes.Unimplemented, "method SubscribeCampaignUpdates not implemented")
 }
 func (UnimplementedEventServiceServer) mustEmbedUnimplementedEventServiceServer() {}
 func (UnimplementedEventServiceServer) testEmbeddedByValue()                      {}
@@ -183,6 +210,17 @@ func _EventService_ListTimelineEntries_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _EventService_SubscribeCampaignUpdates_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(SubscribeCampaignUpdatesRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(EventServiceServer).SubscribeCampaignUpdates(m, &grpc.GenericServerStream[SubscribeCampaignUpdatesRequest, CampaignUpdate]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type EventService_SubscribeCampaignUpdatesServer = grpc.ServerStreamingServer[CampaignUpdate]
+
 // EventService_ServiceDesc is the grpc.ServiceDesc for EventService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -203,6 +241,12 @@ var EventService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _EventService_ListTimelineEntries_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "SubscribeCampaignUpdates",
+			Handler:       _EventService_SubscribeCampaignUpdates_Handler,
+			ServerStreams: true,
+		},
+	},
 	Metadata: "game/v1/event.proto",
 }

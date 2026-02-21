@@ -4,8 +4,11 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"sort"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
@@ -13,6 +16,11 @@ import (
 )
 
 const cacheInvalidationInterval = 30 * time.Second
+
+const (
+	cacheInvalidationIntervalEnv            = "FRACTURING_SPACE_WEB_CACHE_INVALIDATION_INTERVAL"
+	cacheInvalidationMaxCampaignsPerSyncEnv = "FRACTURING_SPACE_WEB_CACHE_INVALIDATION_MAX_CAMPAIGNS_PER_SYNC"
+)
 
 var campaignInvalidationScopes = []string{
 	cacheScopeCampaignSummary,
@@ -29,6 +37,11 @@ var campaignScopeRules = []campaignScopeRule{
 	{prefix: "session.", scopes: []string{cacheScopeCampaignSessions}},
 	{prefix: "character.", scopes: []string{cacheScopeCampaignCharacters, cacheScopeCampaignSummary}},
 	{prefix: "invite.", scopes: []string{cacheScopeCampaignInvites}},
+}
+
+var campaignSyncRoundRobinState struct {
+	mu        sync.Mutex
+	nextIndex int
 }
 
 type campaignScopeRule struct {
@@ -64,6 +77,8 @@ func startCacheInvalidationWorker(store webstorage.Store, eventClient statev1.Ev
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
+	interval := cacheInvalidationIntervalFromEnv(cacheInvalidationInterval)
+	maxCampaigns := cacheInvalidationMaxCampaignsPerSyncFromEnv()
 
 	h := &handler{
 		cacheStore:  store,
@@ -71,19 +86,19 @@ func startCacheInvalidationWorker(store webstorage.Store, eventClient statev1.Ev
 	}
 	go func() {
 		defer close(done)
-		h.runCacheInvalidationLoop(ctx, cacheInvalidationInterval)
+		h.runCacheInvalidationLoop(ctx, interval, maxCampaigns)
 	}()
 
 	return cancel, done
 }
 
-func (h *handler) runCacheInvalidationLoop(ctx context.Context, interval time.Duration) {
+func (h *handler) runCacheInvalidationLoop(ctx context.Context, interval time.Duration, maxCampaigns int) {
 	normalized, ok := normalizeInvalidationLoopInput(h, ctx, interval)
 	if !ok {
 		return
 	}
 
-	if err := h.syncCampaignEventHeads(normalized.ctx); err != nil {
+	if err := h.syncCampaignEventHeadsWithLimit(normalized.ctx, maxCampaigns); err != nil {
 		log.Printf("cache invalidation sync failed: %v", err)
 	}
 
@@ -95,7 +110,7 @@ func (h *handler) runCacheInvalidationLoop(ctx context.Context, interval time.Du
 		case <-normalized.ctx.Done():
 			return
 		case <-ticker.C:
-			if err := h.syncCampaignEventHeads(normalized.ctx); err != nil {
+			if err := h.syncCampaignEventHeadsWithLimit(normalized.ctx, maxCampaigns); err != nil {
 				log.Printf("cache invalidation sync failed: %v", err)
 			}
 		}
@@ -103,6 +118,10 @@ func (h *handler) runCacheInvalidationLoop(ctx context.Context, interval time.Du
 }
 
 func (h *handler) syncCampaignEventHeads(ctx context.Context) error {
+	return h.syncCampaignEventHeadsWithLimit(ctx, 0)
+}
+
+func (h *handler) syncCampaignEventHeadsWithLimit(ctx context.Context, maxCampaigns int) error {
 	if h == nil || h.cacheStore == nil || h.eventClient == nil {
 		return nil
 	}
@@ -114,6 +133,7 @@ func (h *handler) syncCampaignEventHeads(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("list tracked campaigns: %w", err)
 	}
+	campaignIDs = limitCampaignIDsForSync(campaignIDs, maxCampaigns)
 	for _, campaignID := range campaignIDs {
 		campaignID = strings.TrimSpace(campaignID)
 		if campaignID == "" {
@@ -151,6 +171,59 @@ func (h *handler) syncCampaignEventHeads(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+func limitCampaignIDsForSync(campaignIDs []string, maxCampaigns int) []string {
+	if maxCampaigns <= 0 || len(campaignIDs) <= maxCampaigns {
+		return append([]string(nil), campaignIDs...)
+	}
+
+	campaignSyncRoundRobinState.mu.Lock()
+	defer campaignSyncRoundRobinState.mu.Unlock()
+
+	start := campaignSyncRoundRobinState.nextIndex
+	if start < 0 {
+		start = 0
+	}
+	start = start % len(campaignIDs)
+
+	limited := make([]string, 0, maxCampaigns)
+	for i := 0; i < maxCampaigns; i++ {
+		index := (start + i) % len(campaignIDs)
+		limited = append(limited, campaignIDs[index])
+	}
+	campaignSyncRoundRobinState.nextIndex = (start + maxCampaigns) % len(campaignIDs)
+	return limited
+}
+
+func resetCampaignSyncRoundRobinState() {
+	campaignSyncRoundRobinState.mu.Lock()
+	campaignSyncRoundRobinState.nextIndex = 0
+	campaignSyncRoundRobinState.mu.Unlock()
+}
+
+func cacheInvalidationIntervalFromEnv(defaultInterval time.Duration) time.Duration {
+	value := strings.TrimSpace(os.Getenv(cacheInvalidationIntervalEnv))
+	if value == "" {
+		return defaultInterval
+	}
+	parsed, err := time.ParseDuration(value)
+	if err != nil || parsed <= 0 {
+		return defaultInterval
+	}
+	return parsed
+}
+
+func cacheInvalidationMaxCampaignsPerSyncFromEnv() int {
+	value := strings.TrimSpace(os.Getenv(cacheInvalidationMaxCampaignsPerSyncEnv))
+	if value == "" {
+		return 0
+	}
+	parsed, err := strconv.Atoi(value)
+	if err != nil || parsed <= 0 {
+		return 0
+	}
+	return parsed
 }
 
 func campaignEventHeadSeq(ctx context.Context, eventClient statev1.EventServiceClient, campaignID string) (uint64, error) {

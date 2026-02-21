@@ -92,6 +92,10 @@ func (f *fakeEventHeadClient) ListTimelineEntries(context.Context, *statev1.List
 	return nil, nil
 }
 
+func (f *fakeEventHeadClient) SubscribeCampaignUpdates(context.Context, *statev1.SubscribeCampaignUpdatesRequest, ...grpc.CallOption) (grpc.ServerStreamingClient[statev1.CampaignUpdate], error) {
+	return nil, errors.New("not implemented")
+}
+
 type fakeCampaignScopeStaleMark struct {
 	campaignID string
 	scope      string
@@ -902,5 +906,27 @@ func TestResolveCampaignStaleScopes(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestLimitCampaignIDsForSync_RotatesAcrossPasses(t *testing.T) {
+	resetCampaignSyncRoundRobinState()
+	t.Cleanup(resetCampaignSyncRoundRobinState)
+
+	campaignIDs := []string{"camp-1", "camp-2", "camp-3", "camp-4"}
+
+	first := limitCampaignIDsForSync(campaignIDs, 2)
+	if len(first) != 2 || first[0] != "camp-1" || first[1] != "camp-2" {
+		t.Fatalf("first batch = %v, want [camp-1 camp-2]", first)
+	}
+
+	second := limitCampaignIDsForSync(campaignIDs, 2)
+	if len(second) != 2 || second[0] != "camp-3" || second[1] != "camp-4" {
+		t.Fatalf("second batch = %v, want [camp-3 camp-4]", second)
+	}
+
+	third := limitCampaignIDsForSync(campaignIDs, 2)
+	if len(third) != 2 || third[0] != "camp-1" || third[1] != "camp-2" {
+		t.Fatalf("third batch = %v, want [camp-1 camp-2]", third)
 	}
 }

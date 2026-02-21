@@ -1631,6 +1631,10 @@ func (c *testEventClient) ListTimelineEntries(ctx context.Context, in *statev1.L
 	return &statev1.ListTimelineEntriesResponse{}, nil
 }
 
+func (c *testEventClient) SubscribeCampaignUpdates(ctx context.Context, in *statev1.SubscribeCampaignUpdatesRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[statev1.CampaignUpdate], error) {
+	return nil, status.Error(codes.Unimplemented, "SubscribeCampaignUpdates not implemented")
+}
+
 type testStatisticsClient struct {
 	response *statev1.GetGameStatisticsResponse
 }

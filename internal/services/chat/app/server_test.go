@@ -114,3 +114,21 @@ func TestMustJSONReturnsNilWithoutPanic(t *testing.T) {
 		t.Fatalf("mustJSON = %v, want nil", got)
 	}
 }
+
+func TestServerCloseStopsCampaignUpdateSubscriptionWorker(t *testing.T) {
+	done := make(chan struct{})
+	stopped := false
+	server := &Server{
+		campaignUpdateSubscriptionDone: done,
+		campaignUpdateSubscriptionStop: func() {
+			stopped = true
+			close(done)
+		},
+	}
+
+	server.Close()
+
+	if !stopped {
+		t.Fatalf("expected campaign update subscription stop to be called")
+	}
+}
