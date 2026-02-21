@@ -61,3 +61,19 @@ func TestEventFilterBaseURL(t *testing.T) {
 		t.Fatalf("expected base url, got %q", got)
 	}
 }
+
+func TestComposeAdminPageTitleStripsBrandSuffix(t *testing.T) {
+	got := ComposeAdminPageTitle("Campaigns - " + AppName())
+	want := "Campaigns - Admin | " + AppName()
+	if got != want {
+		t.Fatalf("composeAdminPageTitle = %q, want %q", got, want)
+	}
+}
+
+func TestComposeAdminPageTitleAppendsAdminSuffix(t *testing.T) {
+	got := ComposeAdminPageTitle("Campaigns")
+	want := "Campaigns - Admin | " + AppName()
+	if got != want {
+		t.Fatalf("composeAdminPageTitle = %q, want %q", got, want)
+	}
+}

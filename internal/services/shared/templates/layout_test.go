@@ -29,3 +29,11 @@ func TestComposePageTitleNormalizesHyphenBrandSuffix(t *testing.T) {
 		t.Fatalf("composePageTitle = %q, want %q", got, want)
 	}
 }
+
+func TestComposePageTitleSupportsAdminSuffix(t *testing.T) {
+	got := ComposePageTitle("Campaigns - Admin")
+	want := "Campaigns - Admin | " + branding.AppName
+	if got != want {
+		t.Fatalf("composePageTitle = %q, want %q", got, want)
+	}
+}
