@@ -14,8 +14,9 @@ scene:pc("Frodo")
 scene:start_session("Old Forest Grove")
 
 -- Example: success with Hope learns all details; failure can mark Stress for one.
--- Missing DSL: apply graded information gain and stress option.
+-- Graded information fanout and stress option remain unresolved.
 scene:action_roll{ actor = "Frodo", trait = "instinct", difficulty = 11, outcome = "hope" }
+scene:apply_roll_outcome{}
 
 scene:end_session()
 

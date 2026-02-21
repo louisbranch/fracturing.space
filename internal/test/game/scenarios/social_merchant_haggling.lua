@@ -15,8 +15,20 @@ scene:adversary("Bree Merchant")
 scene:start_session("Haggling")
 
 -- Example: success grants discounts, failure adds stress and disadvantage.
--- Missing DSL: apply Preferential Treatment and The Runaround effects.
-scene:action_roll{ actor = "Frodo", trait = "presence", difficulty = 12, outcome = "fear" }
+-- Partial mapping: discount pressure and runaround consequences are explicit by branch.
+-- Missing DSL: first-class pricing modifiers and direct stress mark operations.
+scene:action_roll{ actor = "Frodo", trait = "presence", difficulty = 12, outcome = "success_fear" }
+scene:apply_roll_outcome{
+  on_success = {
+    {kind = "adversary_update", target = "Bree Merchant", notes = "preferential_treatment_discount"},
+  },
+  on_failure = {
+    {kind = "apply_condition", target = "Frodo", add = {"VULNERABLE"}, source = "merchant_price_penalty"},
+  },
+  on_fear = {
+    {kind = "apply_condition", target = "Frodo", add = {"VULNERABLE"}, source = "merchant_runaround"},
+  },
+}
 
 scene:end_session()
 

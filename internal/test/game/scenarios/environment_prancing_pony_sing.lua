@@ -14,8 +14,9 @@ scene:pc("Frodo")
 scene:start_session("Sing for Supper")
 
 -- Example: Presence roll yields gold on success, Stress on failure.
--- Missing DSL: roll and apply gold payout vs stress.
+-- Gold payout and stress branch effects remain unresolved.
 scene:action_roll{ actor = "Frodo", trait = "presence", difficulty = 10, outcome = "fear" }
+scene:apply_roll_outcome{}
 
 scene:end_session()
 

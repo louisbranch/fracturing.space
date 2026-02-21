@@ -54,6 +54,7 @@ const (
 	rejectionCodeCountdownUpdateNoMutation       = "COUNTDOWN_UPDATE_NO_MUTATION"
 	rejectionCodeCountdownBeforeMismatch         = "COUNTDOWN_BEFORE_MISMATCH"
 	rejectionCodeDamageBeforeMismatch            = "DAMAGE_BEFORE_MISMATCH"
+	rejectionCodeDamageArmorSpendLimit           = "DAMAGE_ARMOR_SPEND_LIMIT"
 	rejectionCodeAdversaryDamageBeforeMismatch   = "ADVERSARY_DAMAGE_BEFORE_MISMATCH"
 	rejectionCodeAdversaryConditionNoMutation    = "ADVERSARY_CONDITION_NO_MUTATION"
 	rejectionCodeAdversaryConditionRemoveMissing = "ADVERSARY_CONDITION_REMOVE_MISSING"
@@ -467,6 +468,12 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 	case commandTypeDamageApply:
 		var payload DamageApplyPayload
 		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if payload.ArmorSpent > 1 {
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodeDamageArmorSpendLimit,
+				Message: "damage apply can spend at most one armor slot",
+			})
+		}
 		if hasSnapshot {
 			if character, ok := snapshotCharacterState(snapshotState, payload.CharacterID); ok {
 				if payload.HpBefore != nil && character.HP != *payload.HpBefore {

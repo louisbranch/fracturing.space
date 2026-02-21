@@ -15,6 +15,7 @@ scene:start_session("Divine Guidance")
 
 -- Missing DSL: apply outcome-based clarity and Hope gain.
 scene:action_roll{ actor = "Frodo", trait = "instinct", difficulty = 13, outcome = "hope" }
+scene:apply_roll_outcome{}
 
 scene:end_session()
 

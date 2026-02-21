@@ -12,9 +12,10 @@ scene:pc("Frodo")
 
 -- The crowd shifts when a PC splits off.
 scene:start_session("Crowd Closes In")
+scene:gm_fear(1)
 
--- Missing DSL: separate the PC from the group and apply positioning.
-scene:gm_spend_fear(0):spotlight("Crowd")
+-- Split-position tracking remains unresolved in this fixture.
+scene:gm_spend_fear(1):spotlight("Crowd")
 
 scene:end_session()
 

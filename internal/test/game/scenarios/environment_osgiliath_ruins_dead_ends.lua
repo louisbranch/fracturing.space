@@ -12,9 +12,10 @@ scene:pc("Frodo")
 
 -- Ghostly scenes block paths or present challenges.
 scene:start_session("Dead Ends")
+scene:gm_fear(1)
 
--- Missing DSL: model detours, blocked routes, and challenge prompts.
-scene:gm_spend_fear(0):spotlight("Osgiliath Ruins")
+-- Detour/blocked-route state modeling remains unresolved.
+scene:gm_spend_fear(1):spotlight("Osgiliath Ruins")
 
 scene:end_session()
 

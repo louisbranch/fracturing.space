@@ -26,7 +26,7 @@ func TestRegisterCommands_ValidatesActionPayloads(t *testing.T) {
 				CampaignID:  "camp-1",
 				Type:        command.Type("action.roll.resolve"),
 				ActorType:   command.ActorTypeSystem,
-				PayloadJSON: []byte(`{"request_id":"req-1"}`),
+				PayloadJSON: []byte(`{"request_id":"req-1","roll_seq":1}`),
 			},
 			invalid: command.Command{
 				CampaignID:  "camp-1",
@@ -41,7 +41,7 @@ func TestRegisterCommands_ValidatesActionPayloads(t *testing.T) {
 				CampaignID:  "camp-1",
 				Type:        command.Type("action.outcome.apply"),
 				ActorType:   command.ActorTypeSystem,
-				PayloadJSON: []byte(`{"request_id":"req-1"}`),
+				PayloadJSON: []byte(`{"request_id":"req-1","roll_seq":1}`),
 			},
 			invalid: command.Command{
 				CampaignID:  "camp-1",
@@ -56,7 +56,7 @@ func TestRegisterCommands_ValidatesActionPayloads(t *testing.T) {
 				CampaignID:  "camp-1",
 				Type:        command.Type("action.outcome.reject"),
 				ActorType:   command.ActorTypeSystem,
-				PayloadJSON: []byte(`{"request_id":"req-1"}`),
+				PayloadJSON: []byte(`{"request_id":"req-1","roll_seq":1}`),
 			},
 			invalid: command.Command{
 				CampaignID:  "camp-1",
@@ -98,6 +98,23 @@ func TestRegisterCommands_ValidatesActionPayloads(t *testing.T) {
 	}
 }
 
+func TestRegisterCommands_OutcomePayloadRequiresRequestIDAndRollSeq(t *testing.T) {
+	registry := command.NewRegistry()
+	if err := RegisterCommands(registry); err != nil {
+		t.Fatalf("register commands: %v", err)
+	}
+
+	_, err := registry.ValidateForDecision(command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("action.outcome.apply"),
+		ActorType:   command.ActorTypeSystem,
+		PayloadJSON: []byte(`{"request_id":"","roll_seq":0}`),
+	})
+	if err == nil {
+		t.Fatal("expected payload validation error for missing request_id and roll_seq")
+	}
+}
+
 func TestRegisterEvents_ValidatesActionPayloads(t *testing.T) {
 	registry := event.NewRegistry()
 	if err := RegisterEvents(registry); err != nil {
@@ -118,7 +135,7 @@ func TestRegisterEvents_ValidatesActionPayloads(t *testing.T) {
 				ActorType:   event.ActorTypeSystem,
 				EntityType:  "roll",
 				EntityID:    "req-1",
-				PayloadJSON: []byte(`{"request_id":"req-1"}`),
+				PayloadJSON: []byte(`{"request_id":"req-1","roll_seq":1}`),
 			},
 			invalid: event.Event{
 				CampaignID:  "camp-1",
@@ -139,7 +156,7 @@ func TestRegisterEvents_ValidatesActionPayloads(t *testing.T) {
 				ActorType:   event.ActorTypeSystem,
 				EntityType:  "outcome",
 				EntityID:    "req-1",
-				PayloadJSON: []byte(`{"request_id":"req-1"}`),
+				PayloadJSON: []byte(`{"request_id":"req-1","roll_seq":1}`),
 			},
 			invalid: event.Event{
 				CampaignID:  "camp-1",
@@ -160,7 +177,7 @@ func TestRegisterEvents_ValidatesActionPayloads(t *testing.T) {
 				ActorType:   event.ActorTypeSystem,
 				EntityType:  "outcome",
 				EntityID:    "req-1",
-				PayloadJSON: []byte(`{"request_id":"req-1"}`),
+				PayloadJSON: []byte(`{"request_id":"req-1","roll_seq":1}`),
 			},
 			invalid: event.Event{
 				CampaignID:  "camp-1",
@@ -213,6 +230,26 @@ func TestRegisterEvents_ValidatesActionPayloads(t *testing.T) {
 	}
 }
 
+func TestRegisterEvents_OutcomePayloadRequiresRequestIDAndRollSeq(t *testing.T) {
+	registry := event.NewRegistry()
+	if err := RegisterEvents(registry); err != nil {
+		t.Fatalf("register events: %v", err)
+	}
+
+	_, err := registry.ValidateForAppend(event.Event{
+		CampaignID:  "camp-1",
+		Type:        event.Type("action.outcome_applied"),
+		Timestamp:   time.Unix(0, 0).UTC(),
+		ActorType:   event.ActorTypeSystem,
+		EntityType:  "outcome",
+		EntityID:    "req-1",
+		PayloadJSON: []byte(`{"request_id":"","roll_seq":0}`),
+	})
+	if err == nil {
+		t.Fatal("expected payload validation error for missing request_id and roll_seq")
+	}
+}
+
 func TestRegisterEvents_RollResolvedRequiresEntityTargetAddressing(t *testing.T) {
 	registry := event.NewRegistry()
 	if err := RegisterEvents(registry); err != nil {
@@ -224,7 +261,7 @@ func TestRegisterEvents_RollResolvedRequiresEntityTargetAddressing(t *testing.T)
 		Type:        event.Type("action.roll_resolved"),
 		Timestamp:   time.Unix(0, 0).UTC(),
 		ActorType:   event.ActorTypeSystem,
-		PayloadJSON: []byte(`{"request_id":"req-1"}`),
+		PayloadJSON: []byte(`{"request_id":"req-1","roll_seq":1}`),
 	}
 
 	_, err := registry.ValidateForAppend(base)

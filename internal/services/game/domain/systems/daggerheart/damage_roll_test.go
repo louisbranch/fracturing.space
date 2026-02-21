@@ -49,6 +49,46 @@ func TestRollDamageAppliesModifierAndCritical(t *testing.T) {
 	}
 }
 
+func TestRollDamageCriticalBonusAcrossDiceSpecs(t *testing.T) {
+	request := DamageRollRequest{
+		Dice: []DamageDieSpec{
+			{Sides: 6, Count: 2},
+			{Sides: 8, Count: 1},
+		},
+		Modifier: 2,
+		Seed:     515151,
+		Critical: true,
+	}
+
+	rollResult, err := RollDamage(request)
+	if err != nil {
+		t.Fatalf("RollDamage failed: %v", err)
+	}
+
+	expectedRoll, err := dice.RollDice(dice.Request{
+		Dice: []dice.Spec{
+			{Sides: 6, Count: 2},
+			{Sides: 8, Count: 1},
+		},
+		Seed: request.Seed,
+	})
+	if err != nil {
+		t.Fatalf("expected dice roll: %v", err)
+	}
+
+	expectedBase := expectedRoll.Total + request.Modifier
+	expectedCritical := (6 * 2) + (8 * 1)
+	if rollResult.BaseTotal != expectedBase {
+		t.Fatalf("base total = %d, want %d", rollResult.BaseTotal, expectedBase)
+	}
+	if rollResult.CriticalBonus != expectedCritical {
+		t.Fatalf("critical bonus = %d, want %d", rollResult.CriticalBonus, expectedCritical)
+	}
+	if rollResult.Total != expectedBase+expectedCritical {
+		t.Fatalf("total = %d, want %d", rollResult.Total, expectedBase+expectedCritical)
+	}
+}
+
 func TestRollDamageInvalidDice(t *testing.T) {
 	_, err := RollDamage(DamageRollRequest{
 		Dice: []DamageDieSpec{{Sides: 6, Count: 0}},

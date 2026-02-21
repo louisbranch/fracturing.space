@@ -284,8 +284,10 @@ Rules of thumb:
 
 There is a compatibility append path in `EventService.AppendEvent`
 (`internal/services/game/api/grpc/game/event_application.go`) that maps a small
-subset of event types to domain commands; the domain path remains the source of
-truth when enabled and should remain the canonical write route.
+subset of event types to domain commands. Direct compatibility append fallback
+is disabled by default and must be explicitly enabled with
+`FRACTURING_SPACE_GAME_COMPATIBILITY_APPEND_ENABLED=true`; the domain path
+remains the canonical write route.
 
 ## Projections and consistency
 

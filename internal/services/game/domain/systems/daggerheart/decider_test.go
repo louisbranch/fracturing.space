@@ -752,6 +752,30 @@ func TestDecideDamageApply_BeforeMismatchRejected(t *testing.T) {
 	}
 }
 
+func TestDecideDamageApply_RejectsMultipleArmorSlotsSpent(t *testing.T) {
+	cmd := command.Command{
+		CampaignID:    "camp-1",
+		Type:          command.Type("sys.daggerheart.damage.apply"),
+		ActorType:     command.ActorTypeSystem,
+		SystemID:      SystemID,
+		SystemVersion: SystemVersion,
+		EntityType:    "character",
+		EntityID:      "char-1",
+		PayloadJSON:   []byte(`{"character_id":"char-1","hp_before":10,"hp_after":8,"armor_before":2,"armor_after":0,"damage_type":"physical","armor_spent":2,"marks":2}`),
+	}
+
+	decision := Decider{}.Decide(nil, cmd, nil)
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != "DAMAGE_ARMOR_SPEND_LIMIT" {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, "DAMAGE_ARMOR_SPEND_LIMIT")
+	}
+}
+
 func TestDecideAdversaryDamageApply_EmitsAdversaryDamageApplied(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{

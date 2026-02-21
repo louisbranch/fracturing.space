@@ -42,14 +42,18 @@ return scene
 - `adversary(name, opts)`
 - `gm_fear(value)`
 - `reaction{ actor, trait, difficulty, modifiers, outcome, seed, expect_hope_delta, expect_stress_delta, expect_target }`
+- `group_reaction{ targets, trait, difficulty, modifiers, outcome, seed, advantage, disadvantage, failure_conditions, source, damage, damage_type, half_damage_on_success, damage_source }`
 - `gm_spend_fear(amount):spotlight(target)`
 - `attack{ actor, target, trait, difficulty, damage_type, outcome, damage_dice, modifiers, resist_physical, resist_magic, immune_physical, immune_magic, direct, massive_damage, expect_hope_delta, expect_stress_delta, expect_target }`
 - `multi_attack{ actor, targets, trait, difficulty, outcome, damage_type, damage_dice, modifiers, resist_physical, resist_magic, immune_physical, immune_magic, direct, massive_damage, expect_hope_delta, expect_stress_delta, expect_target }`
 - `combined_damage{ target, damage_type, sources, source, resist_physical, resist_magic, immune_physical, immune_magic, direct, massive_damage }`
-- `adversary_attack{ actor, target, difficulty, attack_modifier, advantage, disadvantage, damage_type, damage_dice, resist_physical, resist_magic, immune_physical, immune_magic, direct, massive_damage, expect_hope_delta, expect_stress_delta, expect_target }`
-- `apply_condition{ target, add, remove, source }`
+- `adversary_attack{ actor, target, difficulty, attack_modifier, advantage, disadvantage, stress_for_advantage, teleport_range, teleport_stress_cost, damage_type, damage_dice, resist_physical, resist_magic, immune_physical, immune_magic, direct, massive_damage, expect_hope_delta, expect_stress_delta, expect_target }`
+- `adversary_reaction{ actor, target, damage, damage_type, source, available, cooldown_note, refresh, ready_note, resist_physical, resist_magic, immune_physical, immune_magic, direct, massive_damage }`
+- `adversary_update{ target, evasion, evasion_delta, stress, stress_delta, notes }`
+- `apply_condition{ target, add, remove, source, life_state }` (supports character and adversary targets; `life_state` is character-only)
 - `group_action{ leader, leader_trait, difficulty, supporters, leader_modifiers, outcome, expect_hope_delta, expect_stress_delta, expect_target }`
 - `tag_team{ first, first_trait, second, second_trait, selected, difficulty, outcome, expect_hope_delta, expect_stress_delta, expect_target }`
+- `temporary_armor{ target, source, duration, amount, source_id, expect_hope_delta, expect_stress_delta, expect_armor_delta, expect_target }`
 - `rest{ type, party_size, interrupted, characters, expect_hope_delta, expect_stress_delta, expect_target }`
 - `downtime_move{ target, move, prepare_with_group, expect_hope_delta, expect_stress_delta, expect_target }`
 - `death_move{ target, move, hp_clear, stress_clear, expect_hope_delta, expect_stress_delta, expect_target }`

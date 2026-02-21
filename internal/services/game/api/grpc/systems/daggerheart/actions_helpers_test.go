@@ -606,6 +606,37 @@ func TestNormalizeTargets(t *testing.T) {
 
 // --- applyDaggerheartAdversaryDamage tests ---
 
+func TestApplyDaggerheartDamage_NoHPMarksWhenMitigatedToZero(t *testing.T) {
+	profile := storage.DaggerheartCharacterProfile{
+		MajorThreshold:  5,
+		SevereThreshold: 10,
+	}
+	state := storage.DaggerheartCharacterState{
+		Hp:    10,
+		Armor: 1,
+	}
+
+	result, mitigated, err := applyDaggerheartDamage(&pb.DaggerheartDamageRequest{
+		Amount:     1,
+		DamageType: pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_PHYSICAL,
+	}, profile, state)
+	if err != nil {
+		t.Fatalf("applyDaggerheartDamage returned error: %v", err)
+	}
+	if !mitigated {
+		t.Fatal("expected damage to be marked mitigated when armor is spent")
+	}
+	if result.HPAfter != state.Hp {
+		t.Fatalf("hp_after = %d, want %d when final marks are zero", result.HPAfter, state.Hp)
+	}
+	if result.ArmorSpent != 1 {
+		t.Fatalf("armor_spent = %d, want 1", result.ArmorSpent)
+	}
+	if result.Result.Marks != 0 {
+		t.Fatalf("marks = %d, want 0 after armor mitigation", result.Result.Marks)
+	}
+}
+
 func TestApplyDaggerheartAdversaryDamage_PhysicalWithArmor(t *testing.T) {
 	adversary := storage.DaggerheartAdversary{
 		HP: 10, HPMax: 10, Armor: 2, Major: 5, Severe: 8,

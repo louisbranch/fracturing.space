@@ -17,6 +17,7 @@ scene:gm_fear(1)
 -- Missing DSL: spend Fear to trigger witness and Instinct reaction to notice.
 scene:gm_spend_fear(1):spotlight("Gondor Court")
 scene:reaction_roll{ actor = "Frodo", trait = "instinct", difficulty = 20, outcome = "fear" }
+scene:apply_reaction_outcome{}
 
 scene:end_session()
 

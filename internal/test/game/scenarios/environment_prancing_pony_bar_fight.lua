@@ -15,9 +15,17 @@ scene:start_session("Bar Fight")
 scene:gm_fear(1)
 
 -- Example: spend Fear; moving requires Agility/Presence or take 1d6+2 damage.
--- Missing DSL: apply movement check and hazard damage.
+-- Trait choice (Agility vs Presence) remains unresolved; this fixture uses Agility.
 scene:gm_spend_fear(1):spotlight("Prancing Pony")
-scene:action_roll{ actor = "Frodo", trait = "agility", difficulty = 10, outcome = "fear" }
+scene:group_reaction{
+  targets = {"Frodo"},
+  trait = "agility",
+  difficulty = 10,
+  outcome = "fear",
+  damage = 5,
+  damage_type = "physical",
+  source = "bar_fight_hazard"
+}
 
 scene:end_session()
 

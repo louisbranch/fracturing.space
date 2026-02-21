@@ -25,13 +25,6 @@ scene:rest{
   type = "short",
   party_size = 1,
   expect_target = "Gandalf",
-  expect_armor_delta = 0,
-}
-
-scene:downtime_move{
-  target = "Gandalf",
-  move = "repair_all_armor",
-  expect_target = "Gandalf",
   expect_armor_delta = -2,
 }
 

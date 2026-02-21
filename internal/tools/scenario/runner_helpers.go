@@ -857,6 +857,7 @@ func (r *Runner) applyAdversaryDamage(
 	if err != nil {
 		return false, fmt.Errorf("adversary damage: %w", err)
 	}
+	result = downgradeDamageResult(result, optionalInt(args, "severity_downgrade", 0))
 
 	var app daggerheart.DamageApplication
 	if optionalBool(args, "direct", false) {
@@ -864,6 +865,8 @@ func (r *Runner) applyAdversaryDamage(
 		if err != nil {
 			return false, fmt.Errorf("adversary damage: %w", err)
 		}
+		app.Result = result
+		_, app.HPAfter = daggerheart.ApplyDamageMarks(hpBefore, app.Result.Marks)
 	} else {
 		app = daggerheart.ApplyDamageWithArmor(hpBefore, armorBefore, result)
 	}
@@ -905,6 +908,20 @@ func (r *Runner) applyAdversaryDamage(
 		}
 	}
 	return true, nil
+}
+
+func downgradeDamageResult(result daggerheart.DamageResult, steps int) daggerheart.DamageResult {
+	if steps <= 0 || result.Marks <= 0 {
+		return result
+	}
+	downgraded := result
+	for i := 0; i < steps && downgraded.Marks > 0; i++ {
+		if downgraded.Severity > daggerheart.DamageNone {
+			downgraded.Severity--
+		}
+		downgraded.Marks--
+	}
+	return downgraded
 }
 
 func parseDamageType(value string) daggerheartv1.DaggerheartDamageType {
@@ -1635,6 +1652,15 @@ func parseDowntimeMove(value string) (daggerheartv1.DaggerheartDowntimeMove, err
 		return daggerheartv1.DaggerheartDowntimeMove_DAGGERHEART_DOWNTIME_MOVE_WORK_ON_PROJECT, nil
 	default:
 		return daggerheartv1.DaggerheartDowntimeMove_DAGGERHEART_DOWNTIME_MOVE_UNSPECIFIED, fmt.Errorf("unsupported downtime move %q", value)
+	}
+}
+
+func parseTemporaryArmorDuration(value string) (string, error) {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "short_rest", "long_rest", "session", "scene":
+		return strings.ToLower(strings.TrimSpace(value)), nil
+	default:
+		return "", fmt.Errorf("unsupported temporary_armor duration %q", value)
 	}
 }
 

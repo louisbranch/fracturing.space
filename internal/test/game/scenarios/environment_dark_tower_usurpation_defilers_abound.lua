@@ -15,8 +15,10 @@ scene:adversary("Orc Shock Troops")
 scene:start_session("Defilers Abound")
 scene:gm_fear(2)
 
--- Missing DSL: summon 1d4+2 troops and trigger their group attack.
-scene:gm_spend_fear(2):spotlight("Orc Shock Troops")
+scene:adversary("Orc Shock Troops Reinforcement 1")
+scene:adversary("Orc Shock Troops Reinforcement 2")
+-- Variable summon count and immediate group-attack execution remain unresolved.
+scene:gm_spend_fear(2):spotlight("Orc Shock Troops Reinforcement 1")
 
 scene:end_session()
 

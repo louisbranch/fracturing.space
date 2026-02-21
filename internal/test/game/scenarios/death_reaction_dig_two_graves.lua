@@ -1,6 +1,7 @@
 local scene = Scenario.new("death_reaction_dig_two_graves")
 
 -- Recreate the on-death reaction that lashes out and steals Hope.
+-- Clarification-gated fixture (P31): no generic on-death reaction pipeline exists yet.
 scene:campaign{
   name = "Death Reaction Dig Two Graves",
   system = "DAGGERHEART",

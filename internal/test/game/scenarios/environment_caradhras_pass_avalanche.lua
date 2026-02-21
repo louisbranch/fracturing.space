@@ -15,9 +15,17 @@ scene:start_session("Avalanche")
 scene:gm_fear(1)
 
 -- Example: reaction roll or take 2d20 damage, knocked to Far, mark Stress.
--- Missing DSL: apply movement and damage severity on failure.
+-- Movement + stress consequences remain unresolved in the fixture DSL.
 scene:gm_spend_fear(1):spotlight("Caradhras Pass")
-scene:reaction_roll{ actor = "Frodo", trait = "agility", difficulty = 15, outcome = "fear" }
+scene:group_reaction{
+  targets = {"Frodo"},
+  trait = "agility",
+  difficulty = 15,
+  outcome = "fear",
+  damage = 20,
+  damage_type = "physical",
+  source = "caradhras_avalanche"
+}
 
 scene:end_session()
 

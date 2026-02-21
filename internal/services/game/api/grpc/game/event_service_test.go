@@ -382,6 +382,49 @@ func TestAppendEvent_RejectsUnmappedTypeWithDomain(t *testing.T) {
 	}
 }
 
+func TestAppendEvent_DirectAppendRequiresCompatibilityMode(t *testing.T) {
+	SetCompatibilityAppendEnabled(false)
+
+	eventStore := newFakeEventStore()
+	svc := NewEventService(Stores{Event: eventStore})
+
+	_, err := svc.AppendEvent(context.Background(), &campaignv1.AppendEventRequest{
+		CampaignId:  "c1",
+		Type:        "story.note_added",
+		ActorType:   "system",
+		EntityType:  "note",
+		EntityId:    "note-1",
+		PayloadJson: []byte(`{"content":"note"}`),
+	})
+	assertStatusCode(t, err, codes.FailedPrecondition)
+	if len(eventStore.events["c1"]) != 0 {
+		t.Fatalf("expected no events appended while compatibility mode is disabled, got %d", len(eventStore.events["c1"]))
+	}
+}
+
+func TestAppendEvent_DirectAppendAllowedWhenCompatibilityModeEnabled(t *testing.T) {
+	SetCompatibilityAppendEnabled(true)
+	t.Cleanup(func() { SetCompatibilityAppendEnabled(false) })
+
+	eventStore := newFakeEventStore()
+	svc := NewEventService(Stores{Event: eventStore})
+
+	resp, err := svc.AppendEvent(context.Background(), &campaignv1.AppendEventRequest{
+		CampaignId:  "c1",
+		Type:        "story.note_added",
+		ActorType:   "system",
+		EntityType:  "note",
+		EntityId:    "note-1",
+		PayloadJson: []byte(`{"content":"note"}`),
+	})
+	if err != nil {
+		t.Fatalf("AppendEvent returned error: %v", err)
+	}
+	if resp.GetEvent().GetSeq() != 1 {
+		t.Fatalf("seq = %d, want 1", resp.GetEvent().GetSeq())
+	}
+}
+
 func TestListEvents_DESC_Pagination(t *testing.T) {
 	eventStore := newFakeEventStore()
 	now := time.Now().UTC()

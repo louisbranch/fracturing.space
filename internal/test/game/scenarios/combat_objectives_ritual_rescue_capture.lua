@@ -1,6 +1,7 @@
 local scene = Scenario.new("combat_objectives_ritual_rescue_capture")
 
 -- Track multiple combat objectives during a ritual confrontation.
+-- Clarification-gated fixture (P31): do not infer implicit multi-objective fanout.
 scene:campaign{
   name = "Combat Objectives Ritual Rescue Capture",
   system = "DAGGERHEART",

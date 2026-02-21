@@ -214,6 +214,73 @@ func TestProcessProjectionApplyOutboxAppliesAndDeletesOnSuccess(t *testing.T) {
 	}
 }
 
+func TestProcessProjectionApplyOutboxReclaimsStaleProcessingRows(t *testing.T) {
+	store := openTestEventsStoreWithOutbox(t, true)
+
+	stored, err := store.AppendEvent(context.Background(), event.Event{
+		CampaignID:  "camp-outbox-apply-stale-processing",
+		Timestamp:   time.Date(2026, 2, 16, 6, 5, 0, 0, time.UTC),
+		Type:        event.Type("campaign.created"),
+		ActorType:   event.ActorTypeSystem,
+		EntityType:  "campaign",
+		EntityID:    "camp-outbox-apply-stale-processing",
+		PayloadJSON: []byte(`{}`),
+	})
+	if err != nil {
+		t.Fatalf("append event: %v", err)
+	}
+
+	now := time.Date(2026, 2, 16, 7, 0, 0, 0, time.UTC)
+	if _, err := store.sqlDB.ExecContext(
+		context.Background(),
+		`UPDATE projection_apply_outbox
+		 SET status = 'processing', attempt_count = 1, next_attempt_at = ?, updated_at = ?
+		 WHERE campaign_id = ? AND seq = ?`,
+		now.Add(-10*time.Minute).UnixMilli(),
+		now.Add(-10*time.Minute).UnixMilli(),
+		stored.CampaignID,
+		stored.Seq,
+	); err != nil {
+		t.Fatalf("prepare stale processing row: %v", err)
+	}
+
+	calls := 0
+	processed, err := store.ProcessProjectionApplyOutbox(
+		context.Background(),
+		now,
+		10,
+		func(_ context.Context, evt event.Event) error {
+			calls++
+			if evt.CampaignID != stored.CampaignID || evt.Seq != stored.Seq {
+				t.Fatalf("unexpected event in apply callback: %+v", evt)
+			}
+			return nil
+		},
+	)
+	if err != nil {
+		t.Fatalf("process projection apply outbox: %v", err)
+	}
+	if processed != 1 {
+		t.Fatalf("expected one processed stale processing row, got %d", processed)
+	}
+	if calls != 1 {
+		t.Fatalf("expected one apply callback invocation, got %d", calls)
+	}
+
+	var count int
+	if err := store.sqlDB.QueryRowContext(
+		context.Background(),
+		`SELECT COUNT(*) FROM projection_apply_outbox WHERE campaign_id = ? AND seq = ?`,
+		stored.CampaignID,
+		stored.Seq,
+	).Scan(&count); err != nil {
+		t.Fatalf("query outbox row count: %v", err)
+	}
+	if count != 0 {
+		t.Fatalf("expected stale processing outbox row to be deleted after success, got %d", count)
+	}
+}
+
 func TestProcessProjectionApplyOutboxApplyFailureMarksRetry(t *testing.T) {
 	store := openTestEventsStoreWithOutbox(t, true)
 

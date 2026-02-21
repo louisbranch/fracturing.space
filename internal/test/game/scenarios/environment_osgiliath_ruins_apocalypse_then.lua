@@ -15,9 +15,14 @@ scene:start_session("Apocalypse Then")
 scene:gm_fear(1)
 
 -- Example: spend Fear to activate a progress countdown (5).
--- Missing DSL: tie action rolls to the escape countdown while hazards unfold.
 scene:gm_spend_fear(1):spotlight("Osgiliath Ruins")
 scene:countdown_create{ name = "Escape the Apocalypse", kind = "progress", current = 0, max = 5, direction = "increase" }
+scene:action_roll{ actor = "Frodo", trait = "agility", difficulty = 14, outcome = "success_fear" }
+scene:apply_roll_outcome{
+  on_success = {
+    {kind = "countdown_update", name = "Escape the Apocalypse", delta = 1, reason = "escape_progress"},
+  },
+}
 
 scene:end_session()
 

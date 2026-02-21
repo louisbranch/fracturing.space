@@ -15,7 +15,8 @@ scene:adversary("Mirkwood Warden")
 scene:start_session("Brace")
 
 -- Example: when the Mirkwood Warden marks HP, they can mark Stress to mark 1 fewer.
--- Missing DSL: reduce HP loss and spend Stress on reaction.
+-- Partial mapping: explicit stress spend and reaction update are represented.
+-- Missing DSL: automatic "mark 1 fewer HP" mitigation tied to qualifying HP-loss windows.
 scene:attack{
   actor = "Frodo",
   target = "Mirkwood Warden",
@@ -23,6 +24,11 @@ scene:attack{
   difficulty = 0,
   outcome = "hope",
   damage_type = "physical"
+}
+scene:adversary_update{
+  target = "Mirkwood Warden",
+  stress_delta = 1,
+  notes = "brace_reaction"
 }
 
 scene:end_session()

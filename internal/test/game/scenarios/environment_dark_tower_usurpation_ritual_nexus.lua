@@ -14,8 +14,9 @@ scene:adversary("Saruman")
 -- A Fear failure triggers magical backlash.
 scene:start_session("Ritual Nexus")
 
--- Missing DSL: roll 1d4 stress on failure with Fear.
+-- Stress roll (1d4) on failure with Fear remains unresolved.
 scene:action_roll{ actor = "Frodo", trait = "presence", difficulty = 20, outcome = "fear" }
+scene:apply_roll_outcome{}
 
 scene:end_session()
 

@@ -4953,7 +4953,10 @@ type ProjectionApplyOutboxEntry struct {
 	UpdatedAt     time.Time
 }
 
-const outboxDeadLetterThreshold = 8
+const (
+	outboxDeadLetterThreshold = 8
+	outboxProcessingLease     = 2 * time.Minute
+)
 
 // GetProjectionApplyOutboxSummary returns queue depth by status and the oldest
 // pending/failed row metadata.
@@ -5217,14 +5220,20 @@ func (s *Store) claimProjectionApplyOutboxDue(ctx context.Context, now time.Time
 	}
 	defer tx.Rollback()
 
+	staleBefore := now.Add(-outboxProcessingLease)
 	rows, err := tx.QueryContext(
 		ctx,
 		`SELECT campaign_id, seq, event_type, attempt_count
 		 FROM projection_apply_outbox
-		 WHERE status IN ('pending', 'failed') AND next_attempt_at <= ?
+		 WHERE (
+			 status IN ('pending', 'failed') AND next_attempt_at <= ?
+		 ) OR (
+			 status = 'processing' AND updated_at <= ?
+		 )
 		 ORDER BY next_attempt_at, seq
 		 LIMIT ?`,
 		toMillis(now),
+		toMillis(staleBefore),
 		limit,
 	)
 	if err != nil {
@@ -5253,12 +5262,15 @@ func (s *Store) claimProjectionApplyOutboxDue(ctx context.Context, now time.Time
 			`UPDATE projection_apply_outbox
 			 SET status = 'processing', updated_at = ?
 			 WHERE campaign_id = ? AND seq = ?
-			   AND status IN ('pending', 'failed')
-			   AND next_attempt_at <= ?`,
+			   AND (
+			   	(status IN ('pending', 'failed') AND next_attempt_at <= ?)
+			   	OR (status = 'processing' AND updated_at <= ?)
+			   )`,
 			toMillis(now),
 			candidate.CampaignID,
 			int64(candidate.Seq),
 			toMillis(now),
+			toMillis(staleBefore),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("claim outbox row %s/%d: %w", candidate.CampaignID, candidate.Seq, err)
@@ -5308,12 +5320,8 @@ func (s *Store) markProjectionApplyOutboxRetry(ctx context.Context, row projecti
 	if err != nil {
 		return fmt.Errorf("mark outbox retry for row %s/%d: %w", row.CampaignID, row.Seq, err)
 	}
-	affected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("mark outbox retry rows affected %s/%d: %w", row.CampaignID, row.Seq, err)
-	}
-	if affected != 1 {
-		return fmt.Errorf("mark outbox retry for row %s/%d: expected 1 row updated, got %d", row.CampaignID, row.Seq, affected)
+	if err := ensureProjectionApplyOutboxSingleRow(result, row, "mark outbox retry for row", "updated"); err != nil {
+		return err
 	}
 	return nil
 }
@@ -5329,12 +5337,19 @@ func (s *Store) completeProjectionApplyOutboxRow(ctx context.Context, row projec
 	if err != nil {
 		return fmt.Errorf("complete outbox row %s/%d: %w", row.CampaignID, row.Seq, err)
 	}
+	if err := ensureProjectionApplyOutboxSingleRow(result, row, "complete outbox row", "deleted"); err != nil {
+		return err
+	}
+	return nil
+}
+
+func ensureProjectionApplyOutboxSingleRow(result sql.Result, row projectionApplyOutboxRow, operation, verb string) error {
 	affected, err := result.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("complete outbox row rows affected %s/%d: %w", row.CampaignID, row.Seq, err)
+		return fmt.Errorf("%s rows affected %s/%d: %w", operation, row.CampaignID, row.Seq, err)
 	}
 	if affected != 1 {
-		return fmt.Errorf("complete outbox row %s/%d: expected 1 row deleted, got %d", row.CampaignID, row.Seq, affected)
+		return fmt.Errorf("%s %s/%d: expected 1 row %s, got %d", operation, row.CampaignID, row.Seq, verb, affected)
 	}
 	return nil
 }

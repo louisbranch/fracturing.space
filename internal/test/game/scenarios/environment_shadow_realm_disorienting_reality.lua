@@ -14,7 +14,8 @@ scene:pc("Frodo")
 scene:start_session("Disorienting Reality")
 
 -- Missing DSL: deduct Hope on Fear outcome and grant GM Fear if it was last Hope.
-scene:action_roll{ actor = "Frodo", trait = "instinct", difficulty = 20, outcome = "fear" }
+scene:action_roll{ actor = "Frodo", trait = "instinct", difficulty = 20, outcome = "failure_fear" }
+scene:apply_roll_outcome{}
 
 scene:end_session()
 

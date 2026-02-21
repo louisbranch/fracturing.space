@@ -3,9 +3,15 @@ package action
 import (
 	"encoding/json"
 	"errors"
+	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+)
+
+var (
+	errActionRequestIDRequired = errors.New("request_id is required")
+	errActionRollSeqRequired   = errors.New("roll_seq must be greater than zero")
 )
 
 // RegisterCommands registers action commands with the shared registry.
@@ -72,20 +78,39 @@ func RegisterEvents(registry *event.Registry) error {
 
 func validateRollResolvePayload(raw json.RawMessage) error {
 	var payload RollResolvePayload
-	return json.Unmarshal(raw, &payload)
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return err
+	}
+	return validateActionRequestAndRoll(payload.RequestID, payload.RollSeq)
 }
 
 func validateOutcomeApplyPayload(raw json.RawMessage) error {
 	var payload OutcomeApplyPayload
-	return json.Unmarshal(raw, &payload)
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return err
+	}
+	return validateActionRequestAndRoll(payload.RequestID, payload.RollSeq)
 }
 
 func validateOutcomeRejectPayload(raw json.RawMessage) error {
 	var payload OutcomeRejectPayload
-	return json.Unmarshal(raw, &payload)
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return err
+	}
+	return validateActionRequestAndRoll(payload.RequestID, payload.RollSeq)
 }
 
 func validateNoteAddPayload(raw json.RawMessage) error {
 	var payload NoteAddPayload
 	return json.Unmarshal(raw, &payload)
+}
+
+func validateActionRequestAndRoll(requestID string, rollSeq uint64) error {
+	if strings.TrimSpace(requestID) == "" {
+		return errActionRequestIDRequired
+	}
+	if rollSeq == 0 {
+		return errActionRollSeqRequired
+	}
+	return nil
 }

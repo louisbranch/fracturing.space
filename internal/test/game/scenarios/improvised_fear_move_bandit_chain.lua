@@ -9,6 +9,7 @@ scene:campaign{
 }
 
 scene:pc("Sam", { armor = 0 })
+scene:pc("Frodo", { armor = 0 })
 scene:adversary("Orc Captain")
 scene:adversary("Orc Raider")
 scene:adversary("Orc Minions")
@@ -21,14 +22,18 @@ scene:gm_fear(5)
 scene:gm_spend_fear(1):spotlight("Orc Captain")
 
 -- Example: spotlight Orc Raider and swing with a multi-target action.
--- Missing DSL: use Better Surrounded to hit all targets in range.
+-- Partial mapping: fear-spend spotlight with deterministic per-target attacks.
+-- Missing DSL: one shared roll that fans out to all targets in range.
 scene:gm_spend_fear(1):spotlight("Orc Raider")
-scene:adversary_attack{ actor = "Orc Raider", target = "Sam", difficulty = 0, damage_type = "physical" }
+scene:adversary_attack{ actor = "Orc Raider", target = "Sam", difficulty = 0, seed = 51, damage_type = "physical" }
+scene:adversary_attack{ actor = "Orc Raider", target = "Frodo", difficulty = 0, seed = 51, damage_type = "physical" }
 
 -- Example: spotlight minions and spend Fear for a group attack.
--- Missing DSL: apply group attack damage to the target.
+-- Partial mapping: per-target minion attacks are explicit.
+-- Missing DSL: combined group-attack damage as a single shared source.
 scene:gm_spend_fear(1):spotlight("Orc Minions")
-scene:adversary_attack{ actor = "Orc Minions", target = "Sam", difficulty = 0, damage_type = "physical" }
+scene:adversary_attack{ actor = "Orc Minions", target = "Sam", difficulty = 0, seed = 52, damage_type = "physical" }
+scene:adversary_attack{ actor = "Orc Minions", target = "Frodo", difficulty = 0, seed = 52, damage_type = "physical" }
 
 -- Close the session after the bandit chain.
 scene:end_session()

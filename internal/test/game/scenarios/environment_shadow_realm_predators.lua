@@ -17,7 +17,9 @@ scene:adversary("Shadow Thralls")
 scene:start_session("Outer Realms Predators")
 scene:gm_fear(1)
 
--- Missing DSL: spawn 1 abomination, 1 corruptor, and 2d6 thralls.
+scene:adversary("Shadow Thrall Reinforcement 1")
+scene:adversary("Shadow Thrall Reinforcement 2")
+-- Variable thrall count and exact spawn placement remain unresolved.
 scene:gm_spend_fear(1):spotlight("Nameless Horror")
 
 scene:end_session()

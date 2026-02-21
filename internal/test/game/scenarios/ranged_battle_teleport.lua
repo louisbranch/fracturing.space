@@ -15,8 +15,14 @@ scene:adversary("Saruman")
 scene:start_session("Battle Teleport")
 
 -- Example: mark Stress to teleport within Far range.
--- Missing DSL: move the adversary and spend Stress.
-scene:adversary_attack{ actor = "Saruman", target = "Frodo", difficulty = 0, damage_type = "magic" }
+scene:adversary_attack{
+  actor = "Saruman",
+  target = "Frodo",
+  difficulty = 0,
+  teleport_range = "far",
+  teleport_stress_cost = 1,
+  damage_type = "magic"
+}
 
 scene:end_session()
 

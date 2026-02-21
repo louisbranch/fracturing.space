@@ -16,9 +16,16 @@ scene:start_session("Village Council")
 scene:gm_fear(2)
 
 -- Example: No Hospitality action and There Will Be Peace reaction.
--- Missing DSL: apply hospitality ban, Hope loss, Stress, and unconscious condition.
-scene:gm_spend_fear(2):spotlight("Shire Elder")
-scene:apply_condition{ target = "Frodo", life_state = "unconscious", source = "there_will_be_peace" }
+-- Partial mapping: trigger roll, fear spend, and incapacitating outcome are explicit.
+-- Missing DSL: direct Hope/Stress social penalties and hospitality access state.
+scene:action_roll{ actor = "Frodo", trait = "presence", difficulty = 15, outcome = "failure_fear" }
+scene:apply_roll_outcome{
+  on_failure_fear = {
+    {kind = "gm_spend_fear", amount = 2, target = "Shire Elder", description = "there_will_be_peace_rebuke"},
+    {kind = "apply_condition", target = "Frodo", add = {"VULNERABLE"}, source = "no_hospitality"},
+    {kind = "apply_condition", target = "Frodo", life_state = "unconscious", source = "there_will_be_peace"},
+  },
+}
 
 scene:end_session()
 

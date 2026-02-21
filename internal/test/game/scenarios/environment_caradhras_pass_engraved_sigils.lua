@@ -15,6 +15,7 @@ scene:start_session("Engraved Sigils")
 
 -- Missing DSL: apply advantage on dispel after critical knowledge success.
 scene:action_roll{ actor = "Frodo", trait = "knowledge", difficulty = 15, outcome = "hope" }
+scene:apply_roll_outcome{}
 
 scene:end_session()
 

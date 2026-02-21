@@ -8,12 +8,27 @@ scene:campaign{
   theme = "environment"
 }
 
-scene:pc("Frodo")
+scene:pc("Frodo", { hope = 2 })
 
 -- Healing actions cost extra Hope here.
 scene:start_session("No Place for the Living")
 
--- Missing DSL: apply extra Hope cost to healing or rest effects.
+-- Build enough Hope for the explicit spend step.
+scene:action_roll{ actor = "Frodo", trait = "instinct", difficulty = 10, outcome = "success_hope" }
+scene:apply_roll_outcome{}
+
+-- Partial mapping: represent the extra Hope spend explicitly before rest.
+-- Missing DSL: direct coupling of Hope cost to healing/rest command semantics.
+scene:action_roll{
+  actor = "Frodo",
+  trait = "instinct",
+  difficulty = 12,
+  outcome = "success_hope",
+  modifiers = {
+    Modifiers.hope("hope_feature")
+  }
+}
+scene:apply_roll_outcome{}
 scene:rest{ type = "short", party_size = 1 }
 
 scene:end_session()

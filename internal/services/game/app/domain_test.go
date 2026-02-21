@@ -48,7 +48,7 @@ func TestCoreDeciderRoutesActionCommands(t *testing.T) {
 		Type:        command.Type("action.roll.resolve"),
 		ActorType:   command.ActorTypeSystem,
 		SessionID:   "sess-1",
-		PayloadJSON: []byte(`{"request_id":"req-1"}`),
+		PayloadJSON: []byte(`{"request_id":"req-1","roll_seq":1}`),
 	}, func() time.Time { return now })
 	if len(decision.Rejections) != 0 {
 		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))

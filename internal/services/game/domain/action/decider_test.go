@@ -99,7 +99,7 @@ func TestDecideActionCommands_PreservesSystemMetadata(t *testing.T) {
 		SessionID:     "sess-1",
 		SystemID:      "daggerheart",
 		SystemVersion: "v1",
-		PayloadJSON:   []byte(`{"request_id":"req-1"}`),
+		PayloadJSON:   []byte(`{"request_id":"req-1","roll_seq":1}`),
 	}, func() time.Time { return now })
 	if len(decision.Rejections) != 0 {
 		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
@@ -131,5 +131,28 @@ func TestDecideActionCommands_RejectsUnsupportedType(t *testing.T) {
 	}
 	if decision.Rejections[0].Code != "COMMAND_TYPE_UNSUPPORTED" {
 		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, "COMMAND_TYPE_UNSUPPORTED")
+	}
+}
+
+func TestDecideActionCommands_RejectsDuplicateOutcomeApply(t *testing.T) {
+	decision := Decide(State{
+		AppliedOutcomes: map[uint64]struct{}{
+			2: {},
+		},
+	}, command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("action.outcome.apply"),
+		ActorType:   command.ActorTypeSystem,
+		PayloadJSON: []byte(`{"request_id":"req-2","roll_seq":2}`),
+	}, time.Now)
+
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != "OUTCOME_ALREADY_APPLIED" {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, "OUTCOME_ALREADY_APPLIED")
 	}
 }

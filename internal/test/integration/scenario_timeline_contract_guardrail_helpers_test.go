@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"testing"
 )
 
 var timelineTypePattern = regexp.MustCompile(`[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+`)
@@ -214,4 +215,33 @@ func isMarkdownSeparatorRow(cells []string) bool {
 		}
 	}
 	return true
+}
+
+func validateTimelineCoverageForMarkers(
+	markerScenarios map[string]struct{},
+	indexRows map[string]string,
+	timelineRowIDs map[string]struct{},
+) error {
+	for scenario := range markerScenarios {
+		rowID, ok := indexRows[scenario]
+		if !ok {
+			return fmt.Errorf("missing scenario timeline index row for %s", scenario)
+		}
+		if _, ok := timelineRowIDs[rowID]; !ok {
+			return fmt.Errorf("scenario %s maps to unknown timeline row id %s", scenario, rowID)
+		}
+	}
+	return nil
+}
+
+func TestValidateTimelineCoverageForMarkers_AllowsZeroMarkedScenarios(t *testing.T) {
+	indexRows := map[string]string{
+		"any-scenario": "P1",
+	}
+	timelineRowIDs := map[string]struct{}{
+		"P1": {},
+	}
+	if err := validateTimelineCoverageForMarkers(map[string]struct{}{}, indexRows, timelineRowIDs); err != nil {
+		t.Fatalf("validate timeline coverage for empty markers: %v", err)
+	}
 }

@@ -16,14 +16,16 @@ scene:pc("Gandalf")
 scene:start_session("Escape")
 
 -- Sam leads the group action to remember the way out.
--- Missing DSL: assert each participant outcome and any fear/hope changes.
+-- Partial mapping: explicit leader/supporter outcomes are represented.
+-- Missing DSL: direct assertions for supporter-only roll effects.
 scene:group_action{
   leader = "Sam",
   leader_trait = "instinct",
   difficulty = 12,
+  outcome = "fear",
   supporters = {
-    { name = "Frodo", trait = "presence" },
-    { name = "Gandalf", trait = "agility" }
+    { name = "Frodo", trait = "presence", outcome = "hope" },
+    { name = "Gandalf", trait = "agility", outcome = "fear" }
   }
 }
 

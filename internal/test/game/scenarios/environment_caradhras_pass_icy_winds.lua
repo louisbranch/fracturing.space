@@ -14,9 +14,10 @@ scene:pc("Frodo")
 scene:start_session("Icy Winds")
 
 -- Example: countdown loop 4 triggers Strength reaction or Stress.
--- Missing DSL: implement looping countdown and cold gear advantage.
+-- Stress consequence and loop-reset automation remain unresolved in the fixture DSL.
 scene:countdown_create{ name = "Icy Winds", kind = "loop", current = 0, max = 4, direction = "increase" }
-scene:reaction_roll{ actor = "Frodo", trait = "strength", difficulty = 15, outcome = "fear" }
+scene:countdown_update{ name = "Icy Winds", delta = 4, reason = "loop_trigger" }
+scene:reaction_roll{ actor = "Frodo", trait = "strength", difficulty = 15, outcome = "fear", advantage = 1 }
 
 scene:end_session()
 

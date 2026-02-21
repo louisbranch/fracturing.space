@@ -15,7 +15,12 @@ scene:start_session("Impossible Architecture")
 
 -- Missing DSL: apply progress countdown (8) and stress on failure.
 scene:countdown_create{ name = "Chaos Traverse", kind = "progress", current = 0, max = 8, direction = "increase" }
-scene:action_roll{ actor = "Frodo", trait = "agility", difficulty = 20, outcome = "fear" }
+scene:action_roll{ actor = "Frodo", trait = "agility", difficulty = 20, outcome = "success_fear" }
+scene:apply_roll_outcome{
+  on_success = {
+    {kind = "countdown_update", name = "Chaos Traverse", delta = 1, reason = "navigate_shift"},
+  },
+}
 
 scene:end_session()
 

@@ -13,8 +13,9 @@ scene:pc("Frodo")
 -- A PC investigates the city's lore.
 scene:start_session("Buried Knowledge")
 
--- Missing DSL: map outcomes to info/loot and stress on failure.
+-- Info/loot fanout and failure-stress branch remain unresolved.
 scene:action_roll{ actor = "Frodo", trait = "instinct", difficulty = 14, outcome = "hope" }
+scene:apply_roll_outcome{}
 
 scene:end_session()
 

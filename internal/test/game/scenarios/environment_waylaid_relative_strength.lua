@@ -15,8 +15,10 @@ scene:adversary("Orc Lackey")
 -- The ambushed difficulty matches the toughest adversary.
 scene:start_session("Relative Strength")
 
--- Missing DSL: derive environment Difficulty from highest adversary.
-scene:action_roll{ actor = "Frodo", trait = "instinct", difficulty = 0, outcome = "fear" }
+-- Explicit anchor: highest adversary difficulty is represented by Orc Sniper.
+scene:adversary_update{ target = "Orc Sniper", evasion = 15, notes = "relative_strength_anchor" }
+scene:action_roll{ actor = "Frodo", trait = "instinct", difficulty = 15, outcome = "fear" }
+scene:apply_roll_outcome{}
 
 scene:end_session()
 

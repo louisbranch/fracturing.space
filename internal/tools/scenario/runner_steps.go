@@ -33,6 +33,8 @@ func (r *Runner) runStep(ctx context.Context, state *scenarioState, step Step) e
 		return r.runGMFearStep(ctx, state, step)
 	case "reaction":
 		return r.runReactionStep(ctx, state, step)
+	case "group_reaction":
+		return r.runGroupReactionStep(ctx, state, step)
 	case "gm_spend_fear":
 		return r.runGMSpendFearStep(ctx, state, step)
 	case "set_spotlight":
@@ -45,6 +47,8 @@ func (r *Runner) runStep(ctx context.Context, state *scenarioState, step Step) e
 		return r.runGroupActionStep(ctx, state, step)
 	case "tag_team":
 		return r.runTagTeamStep(ctx, state, step)
+	case "temporary_armor":
+		return r.runTemporaryArmorStep(ctx, state, step)
 	case "rest":
 		return r.runRestStep(ctx, state, step)
 	case "downtime_move":
@@ -61,6 +65,10 @@ func (r *Runner) runStep(ctx context.Context, state *scenarioState, step Step) e
 		return r.runCombinedDamageStep(ctx, state, step)
 	case "adversary_attack":
 		return r.runAdversaryAttackStep(ctx, state, step)
+	case "adversary_reaction":
+		return r.runAdversaryReactionStep(ctx, state, step)
+	case "adversary_update":
+		return r.runAdversaryUpdateStep(ctx, state, step)
 	case "swap_loadout":
 		return r.runSwapLoadoutStep(ctx, state, step)
 	case "countdown_create":
@@ -467,6 +475,104 @@ func (r *Runner) runReactionStep(ctx context.Context, state *scenarioState, step
 	return r.assertExpectedDeltas(ctx, state, expectedSpec, expectedBefore)
 }
 
+func (r *Runner) runGroupReactionStep(ctx context.Context, state *scenarioState, step Step) error {
+	if err := r.ensureSession(ctx, state); err != nil {
+		return err
+	}
+	targetNames := uniqueNonEmptyStrings(readStringSlice(step.Args, "targets"))
+	if len(targetNames) == 0 {
+		return r.failf("group_reaction requires targets")
+	}
+	trait := optionalString(step.Args, "trait", "instinct")
+	difficulty := optionalInt(step.Args, "difficulty", 10)
+	baseSeed := optionalInt(step.Args, "seed", 0)
+	failureConditions := readStringSlice(step.Args, "failure_conditions")
+	failureSource := optionalString(step.Args, "source", "group_reaction")
+	damageAmount := optionalInt(step.Args, "damage", 0)
+	if damageAmount < 0 {
+		return r.failf("group_reaction damage must be non-negative")
+	}
+	halfDamageOnSuccess := optionalBool(step.Args, "half_damage_on_success", false)
+	damageSource := optionalString(step.Args, "damage_source", failureSource)
+
+	for index, targetName := range targetNames {
+		rollArgs := map[string]any{
+			"actor":        targetName,
+			"trait":        trait,
+			"difficulty":   difficulty,
+			"advantage":    optionalInt(step.Args, "advantage", 0),
+			"disadvantage": optionalInt(step.Args, "disadvantage", 0),
+		}
+		if modifiersRaw, ok := step.Args["modifiers"]; ok {
+			rollArgs["modifiers"] = modifiersRaw
+		}
+		if outcome := optionalString(step.Args, "outcome", ""); outcome != "" {
+			rollArgs["outcome"] = outcome
+		}
+		if baseSeed > 0 {
+			rollArgs["seed"] = baseSeed + index
+		}
+		if err := r.runReactionRollStep(ctx, state, Step{Kind: "reaction_roll", Args: rollArgs}); err != nil {
+			return err
+		}
+
+		rollSeq := state.lastRollSeq
+		if err := r.runApplyReactionOutcomeStep(ctx, state, Step{
+			Kind: "apply_reaction_outcome",
+			Args: map[string]any{"roll_seq": int(rollSeq)},
+		}); err != nil {
+			return err
+		}
+
+		ensureRollOutcomeState(state)
+		result, ok := state.rollOutcomes[rollSeq]
+		if !ok {
+			return r.failf("missing action roll outcome for roll_seq %d", rollSeq)
+		}
+		if !result.success && len(failureConditions) > 0 {
+			add := make([]any, 0, len(failureConditions))
+			for _, value := range failureConditions {
+				add = append(add, value)
+			}
+			conditionArgs := map[string]any{
+				"target": targetName,
+				"add":    add,
+				"source": failureSource,
+			}
+			if err := r.runApplyConditionStep(ctx, state, Step{Kind: "apply_condition", Args: conditionArgs}); err != nil {
+				return err
+			}
+		}
+		appliedDamage := damageAmount
+		if result.success && halfDamageOnSuccess {
+			appliedDamage = appliedDamage / 2
+		}
+		if appliedDamage > 0 {
+			targetID, err := actorID(state, targetName)
+			if err != nil {
+				return err
+			}
+			beforeDamage, err := r.latestSeq(ctx, state)
+			if err != nil {
+				return err
+			}
+			ctxWithMeta := withCampaignID(withSessionID(ctx, state.sessionID), state.campaignID)
+			_, err = r.env.daggerheartClient.ApplyDamage(ctxWithMeta, &daggerheartv1.DaggerheartApplyDamageRequest{
+				CampaignId:  state.campaignID,
+				CharacterId: targetID,
+				Damage:      buildDamageRequest(step.Args, "", damageSource, int32(appliedDamage)),
+			})
+			if err != nil {
+				return fmt.Errorf("group_reaction apply damage: %w", err)
+			}
+			if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, beforeDamage, daggerheart.EventTypeDamageApplied); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 func (r *Runner) runGMSpendFearStep(ctx context.Context, state *scenarioState, step Step) error {
 	if err := r.ensureSession(ctx, state); err != nil {
 		return err
@@ -584,10 +690,6 @@ func (r *Runner) runApplyConditionStep(ctx context.Context, state *scenarioState
 	if name == "" {
 		return r.failf("apply_condition target is required")
 	}
-	characterID, err := actorID(state, name)
-	if err != nil {
-		return err
-	}
 	add := readStringSlice(step.Args, "add")
 	remove := readStringSlice(step.Args, "remove")
 	lifeState := optionalString(step.Args, "life_state", "")
@@ -608,44 +710,71 @@ func (r *Runner) runApplyConditionStep(ctx context.Context, state *scenarioState
 		}
 	}
 
+	characterID, characterErr := actorID(state, name)
+	adversaryIDValue, adversaryErr := adversaryID(state, name)
+	if characterErr != nil && adversaryErr != nil {
+		return characterErr
+	}
+
 	before, err := r.latestSeq(ctx, state)
 	if err != nil {
 		return err
 	}
-	request := &daggerheartv1.DaggerheartApplyConditionsRequest{
+	source := optionalString(step.Args, "source", "")
+	if characterErr == nil {
+		request := &daggerheartv1.DaggerheartApplyConditionsRequest{
+			CampaignId:  state.campaignID,
+			CharacterId: characterID,
+			Add:         addValues,
+			Remove:      removeValues,
+			Source:      source,
+		}
+		if lifeState != "" {
+			value, err := parseLifeState(lifeState)
+			if err != nil {
+				return err
+			}
+			request.LifeState = value
+		}
+		_, err = r.env.daggerheartClient.ApplyConditions(withSessionID(ctx, state.sessionID), request)
+		if err != nil {
+			return fmt.Errorf("apply conditions: %w", err)
+		}
+		eventTypes := []event.Type{}
+		if len(add) > 0 || len(remove) > 0 {
+			converted, err := convertDaggerheartEventTypes(daggerheart.EventTypeConditionChanged)
+			if err != nil {
+				return err
+			}
+			eventTypes = append(eventTypes, converted...)
+		}
+		if lifeState != "" {
+			converted, err := convertDaggerheartEventTypes(daggerheart.EventTypeCharacterStatePatched)
+			if err != nil {
+				return err
+			}
+			eventTypes = append(eventTypes, converted...)
+		}
+		return r.requireEventTypesAfterSeq(ctx, state, before, eventTypes...)
+	}
+
+	if lifeState != "" {
+		return r.failf("apply_condition life_state is only supported for characters")
+	}
+	_, err = r.env.daggerheartClient.ApplyAdversaryConditions(withSessionID(ctx, state.sessionID), &daggerheartv1.DaggerheartApplyAdversaryConditionsRequest{
 		CampaignId:  state.campaignID,
-		CharacterId: characterID,
+		AdversaryId: adversaryIDValue,
 		Add:         addValues,
 		Remove:      removeValues,
-		Source:      optionalString(step.Args, "source", ""),
-	}
-	if lifeState != "" {
-		value, err := parseLifeState(lifeState)
-		if err != nil {
-			return err
-		}
-		request.LifeState = value
-	}
-	_, err = r.env.daggerheartClient.ApplyConditions(withSessionID(ctx, state.sessionID), request)
+		Source:      source,
+	})
 	if err != nil {
-		return fmt.Errorf("apply conditions: %w", err)
+		return fmt.Errorf("apply adversary conditions: %w", err)
 	}
-	eventTypes := []event.Type{}
-	if len(add) > 0 || len(remove) > 0 {
-		converted, err := convertDaggerheartEventTypes(daggerheart.EventTypeConditionChanged)
-		if err != nil {
-			return err
-		}
-		eventTypes = append(eventTypes, converted...)
+	if len(add) == 0 && len(remove) == 0 {
+		return nil
 	}
-	if lifeState != "" {
-		converted, err := convertDaggerheartEventTypes(daggerheart.EventTypeCharacterStatePatched)
-		if err != nil {
-			return err
-		}
-		eventTypes = append(eventTypes, converted...)
-	}
-	return r.requireEventTypesAfterSeq(ctx, state, before, eventTypes...)
+	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeAdversaryConditionChanged)
 }
 
 func (r *Runner) runGroupActionStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -828,6 +957,64 @@ func (r *Runner) runTagTeamStep(ctx context.Context, state *scenarioState, step 
 		return fmt.Errorf("tag_team: %w", err)
 	}
 	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, event.TypeOutcomeApplied); err != nil {
+		return err
+	}
+	return r.assertExpectedDeltas(ctx, state, expectedSpec, expectedBefore)
+}
+
+func (r *Runner) runTemporaryArmorStep(ctx context.Context, state *scenarioState, step Step) error {
+	if err := r.ensureSession(ctx, state); err != nil {
+		return err
+	}
+	name := requiredString(step.Args, "target")
+	if name == "" {
+		return r.failf("temporary_armor target is required")
+	}
+	source := requiredString(step.Args, "source")
+	if source == "" {
+		return r.failf("temporary_armor source is required")
+	}
+	durationValue := requiredString(step.Args, "duration")
+	if durationValue == "" {
+		return r.failf("temporary_armor duration is required")
+	}
+	duration, err := parseTemporaryArmorDuration(durationValue)
+	if err != nil {
+		return err
+	}
+	amount, ok := readInt(step.Args, "amount")
+	if !ok || amount <= 0 {
+		return r.failf("temporary_armor amount must be positive")
+	}
+	sourceID := optionalString(step.Args, "source_id", "")
+
+	expectedSpec, expectedBefore, err := r.captureExpectedDeltas(ctx, state, step.Args, name)
+	if err != nil {
+		return err
+	}
+	before, err := r.latestSeq(ctx, state)
+	if err != nil {
+		return err
+	}
+	characterID, err := actorID(state, name)
+	if err != nil {
+		return err
+	}
+	ctxWithSession := withSessionID(ctx, state.sessionID)
+	_, err = r.env.daggerheartClient.ApplyTemporaryArmor(ctxWithSession, &daggerheartv1.DaggerheartApplyTemporaryArmorRequest{
+		CampaignId:  state.campaignID,
+		CharacterId: characterID,
+		Armor: &daggerheartv1.DaggerheartTemporaryArmor{
+			Source:   source,
+			Duration: duration,
+			Amount:   int32(amount),
+			SourceId: sourceID,
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("temporary_armor: %w", err)
+	}
+	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeCharacterTemporaryArmorApplied); err != nil {
 		return err
 	}
 	return r.assertExpectedDeltas(ctx, state, expectedSpec, expectedBefore)
@@ -1141,13 +1328,15 @@ func (r *Runner) runAttackStep(ctx context.Context, state *scenarioState, step S
 
 	ctxWithMeta := withCampaignID(withSessionID(ctx, state.sessionID), state.campaignID)
 	rollResp, err := r.env.daggerheartClient.SessionActionRoll(ctx, &daggerheartv1.SessionActionRollRequest{
-		CampaignId:  state.campaignID,
-		SessionId:   state.sessionID,
-		CharacterId: attackerID,
-		Trait:       trait,
-		RollKind:    daggerheartv1.RollKind_ROLL_KIND_ACTION,
-		Difficulty:  int32(difficulty),
-		Modifiers:   buildActionRollModifiers(step.Args, "modifiers"),
+		CampaignId:   state.campaignID,
+		SessionId:    state.sessionID,
+		CharacterId:  attackerID,
+		Trait:        trait,
+		RollKind:     daggerheartv1.RollKind_ROLL_KIND_ACTION,
+		Difficulty:   int32(difficulty),
+		Advantage:    int32(optionalInt(step.Args, "advantage", 0)),
+		Disadvantage: int32(optionalInt(step.Args, "disadvantage", 0)),
+		Modifiers:    buildActionRollModifiers(step.Args, "modifiers"),
 		Rng: &commonv1.RngRequest{
 			Seed:     &actionSeed,
 			RollMode: commonv1.RollMode_REPLAY,
@@ -1228,7 +1417,7 @@ func (r *Runner) runMultiAttackStep(ctx context.Context, state *scenarioState, s
 		return err
 	}
 
-	targetNames := readStringSlice(step.Args, "targets")
+	targetNames := uniqueNonEmptyStrings(readStringSlice(step.Args, "targets"))
 	if len(targetNames) == 0 {
 		return r.failf("multi_attack requires targets")
 	}
@@ -1386,7 +1575,7 @@ func (r *Runner) runCombinedDamageStep(ctx context.Context, state *scenarioState
 	if name == "" {
 		return r.failf("combined_damage target is required")
 	}
-	targetID, err := actorID(state, name)
+	targetID, targetIsAdversary, err := resolveTargetID(state, name)
 	if err != nil {
 		return err
 	}
@@ -1402,6 +1591,7 @@ func (r *Runner) runCombinedDamageStep(ctx context.Context, state *scenarioState
 
 	amountTotal := 0
 	sourceIDs := make([]string, 0, len(sourceList))
+	seenSourceIDs := make(map[string]struct{}, len(sourceList))
 	for index, entry := range sourceList {
 		item, ok := entry.(map[string]any)
 		if !ok {
@@ -1420,6 +1610,10 @@ func (r *Runner) runCombinedDamageStep(ctx context.Context, state *scenarioState
 			if err != nil {
 				return err
 			}
+			if _, exists := seenSourceIDs[id]; exists {
+				return r.failf("combined_damage source %d has duplicate source character %q", index, sourceName)
+			}
+			seenSourceIDs[id] = struct{}{}
 			sourceIDs = append(sourceIDs, id)
 		}
 	}
@@ -1427,18 +1621,61 @@ func (r *Runner) runCombinedDamageStep(ctx context.Context, state *scenarioState
 		return r.failf("combined_damage requires positive total damage")
 	}
 
+	overflowThreshold := optionalInt(step.Args, "overflow_threshold", 0)
+	overflowTargets := readStringSlice(step.Args, "overflow_targets")
+	if (overflowThreshold > 0 || len(overflowTargets) > 0) && !targetIsAdversary {
+		return r.failf("combined_damage overflow requires adversary target")
+	}
+	if len(overflowTargets) > 0 && overflowThreshold <= 0 {
+		return r.failf("combined_damage overflow_threshold is required when overflow_targets are provided")
+	}
+
 	before, err := r.latestSeq(ctx, state)
 	if err != nil {
 		return err
 	}
-	stateBefore, err := r.getCharacterState(ctx, state, targetID)
-	if err != nil {
-		return err
-	}
 	ctxWithSession := withSessionID(ctx, state.sessionID)
-	_, err = r.env.daggerheartClient.ApplyDamage(ctxWithSession, &daggerheartv1.DaggerheartApplyDamageRequest{
+
+	if !targetIsAdversary {
+		stateBefore, err := r.getCharacterState(ctx, state, targetID)
+		if err != nil {
+			return err
+		}
+		_, err = r.env.daggerheartClient.ApplyDamage(ctxWithSession, &daggerheartv1.DaggerheartApplyDamageRequest{
+			CampaignId:  state.campaignID,
+			CharacterId: targetID,
+			Damage: buildDamageRequestWithSources(
+				step.Args,
+				optionalString(step.Args, "source", "combined"),
+				int32(amountTotal),
+				sourceIDs,
+			),
+			RequireDamageRoll: false,
+		})
+		if err != nil {
+			return fmt.Errorf("combined_damage apply damage: %w", err)
+		}
+		if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeDamageApplied); err != nil {
+			return err
+		}
+		if err := r.assertDamageFlags(ctx, state, before, targetID, step.Args); err != nil {
+			return err
+		}
+		if adjustedDamageAmount(step.Args, int32(amountTotal)) > 0 {
+			stateAfter, err := r.getCharacterState(ctx, state, targetID)
+			if err != nil {
+				return err
+			}
+			if stateAfter.GetHp() >= stateBefore.GetHp() && stateAfter.GetArmor() >= stateBefore.GetArmor() {
+				return r.assertf("expected damage to affect hp or armor for %s", name)
+			}
+		}
+		return nil
+	}
+
+	_, err = r.env.daggerheartClient.ApplyAdversaryDamage(ctxWithSession, &daggerheartv1.DaggerheartApplyAdversaryDamageRequest{
 		CampaignId:  state.campaignID,
-		CharacterId: targetID,
+		AdversaryId: targetID,
 		Damage: buildDamageRequestWithSources(
 			step.Args,
 			optionalString(step.Args, "source", "combined"),
@@ -1448,21 +1685,51 @@ func (r *Runner) runCombinedDamageStep(ctx context.Context, state *scenarioState
 		RequireDamageRoll: false,
 	})
 	if err != nil {
-		return fmt.Errorf("combined_damage apply damage: %w", err)
+		return fmt.Errorf("combined_damage apply adversary damage: %w", err)
 	}
-	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeDamageApplied); err != nil {
+	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeAdversaryDamageApplied); err != nil {
 		return err
 	}
-	if err := r.assertDamageFlags(ctx, state, before, targetID, step.Args); err != nil {
-		return err
+
+	if overflowThreshold <= 0 {
+		return nil
 	}
-	if adjustedDamageAmount(step.Args, int32(amountTotal)) > 0 {
-		stateAfter, err := r.getCharacterState(ctx, state, targetID)
+	overflowCount := adjustedDamageAmount(step.Args, int32(amountTotal)) / overflowThreshold
+	if overflowCount <= 0 {
+		return nil
+	}
+	if len(overflowTargets) < overflowCount {
+		return r.failf("combined_damage overflow requires %d targets, got %d", overflowCount, len(overflowTargets))
+	}
+	seenOverflowIDs := make(map[string]struct{}, len(overflowTargets))
+	for index := 0; index < overflowCount; index++ {
+		overflowName := overflowTargets[index]
+		overflowID, err := adversaryID(state, overflowName)
 		if err != nil {
 			return err
 		}
-		if stateAfter.GetHp() >= stateBefore.GetHp() && stateAfter.GetArmor() >= stateBefore.GetArmor() {
-			return r.assertf("expected damage to affect hp or armor for %s", name)
+		if overflowID == targetID {
+			return r.failf("combined_damage overflow target %q must differ from primary target", overflowName)
+		}
+		if _, exists := seenOverflowIDs[overflowID]; exists {
+			return r.failf("combined_damage overflow target %q is duplicated", overflowName)
+		}
+		seenOverflowIDs[overflowID] = struct{}{}
+		if _, err := r.env.daggerheartClient.DeleteAdversary(ctxWithSession, &daggerheartv1.DaggerheartDeleteAdversaryRequest{
+			CampaignId:  state.campaignID,
+			AdversaryId: overflowID,
+			Reason:      "minion_overflow",
+		}); err != nil {
+			return fmt.Errorf("combined_damage overflow delete: %w", err)
+		}
+		if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeAdversaryDeleted); err != nil {
+			return err
+		}
+		for existingName, existingID := range state.adversaries {
+			if existingID == overflowID {
+				delete(state.adversaries, existingName)
+				break
+			}
 		}
 	}
 	return nil
@@ -1478,6 +1745,31 @@ func (r *Runner) runAdversaryAttackStep(ctx context.Context, state *scenarioStat
 		return r.failf("adversary_attack requires actor and target")
 	}
 	difficulty := optionalInt(step.Args, "difficulty", 10)
+	stressForAdvantage := optionalInt(step.Args, "stress_for_advantage", 0)
+	if stressForAdvantage < 0 {
+		return r.failf("adversary_attack stress_for_advantage must be non-negative")
+	}
+	if stressForAdvantage > 1 {
+		return r.failf("adversary_attack stress_for_advantage must be 0 or 1")
+	}
+	teleportRange := strings.ToLower(strings.TrimSpace(optionalString(step.Args, "teleport_range", "")))
+	teleportStressCost := optionalInt(step.Args, "teleport_stress_cost", 0)
+	if teleportStressCost < 0 {
+		return r.failf("adversary_attack teleport_stress_cost must be non-negative")
+	}
+	if teleportRange != "" {
+		switch teleportRange {
+		case "very_close", "close", "far":
+		default:
+			return r.failf("adversary_attack teleport_range must be one of very_close, close, far")
+		}
+		if teleportStressCost <= 0 {
+			return r.failf("adversary_attack teleport_stress_cost must be positive when teleport_range is set")
+		}
+	}
+	if teleportRange == "" && teleportStressCost > 0 {
+		return r.failf("adversary_attack teleport_range is required when teleport_stress_cost is set")
+	}
 	adversaryIDValue, err := adversaryID(state, actorName)
 	if err != nil {
 		return err
@@ -1502,6 +1794,32 @@ func (r *Runner) runAdversaryAttackStep(ctx context.Context, state *scenarioStat
 	if err != nil {
 		return err
 	}
+	stressSpend := stressForAdvantage + teleportStressCost
+	if stressSpend > 0 || teleportRange != "" {
+		current, err := r.getAdversary(ctx, state, adversaryIDValue)
+		if err != nil {
+			return err
+		}
+		update := &daggerheartv1.DaggerheartUpdateAdversaryRequest{
+			CampaignId:  state.campaignID,
+			AdversaryId: adversaryIDValue,
+		}
+		if stressSpend > 0 {
+			update.Stress = wrapperspb.Int32(current.GetStress() + int32(stressSpend))
+		}
+		if teleportRange != "" {
+			update.Notes = wrapperspb.String("teleport:" + teleportRange)
+		}
+		if state.sessionID != "" {
+			update.SessionId = wrapperspb.String(state.sessionID)
+		}
+		if _, err := r.env.daggerheartClient.UpdateAdversary(withSessionID(ctx, state.sessionID), update); err != nil {
+			return fmt.Errorf("adversary_attack pre_roll_update: %w", err)
+		}
+		if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeAdversaryUpdated); err != nil {
+			return err
+		}
+	}
 	stateBefore, err := r.getCharacterState(ctx, state, targetCharacterID)
 	if err != nil {
 		return err
@@ -1513,7 +1831,7 @@ func (r *Runner) runAdversaryAttackStep(ctx context.Context, state *scenarioStat
 		TargetId:          targetCharacterID,
 		Difficulty:        int32(difficulty),
 		AttackModifier:    int32(optionalInt(step.Args, "attack_modifier", 0)),
-		Advantage:         int32(optionalInt(step.Args, "advantage", 0)),
+		Advantage:         int32(optionalInt(step.Args, "advantage", 0) + stressForAdvantage),
 		Disadvantage:      int32(optionalInt(step.Args, "disadvantage", 0)),
 		DamageDice:        buildDamageDice(step.Args),
 		Damage:            buildDamageSpec(step.Args, "", "adversary_attack"),
@@ -1553,6 +1871,169 @@ func (r *Runner) runAdversaryAttackStep(ctx context.Context, state *scenarioStat
 		}
 	}
 	return r.assertExpectedDeltas(ctx, state, expectedSpec, expectedBefore)
+}
+
+func (r *Runner) runAdversaryReactionStep(ctx context.Context, state *scenarioState, step Step) error {
+	if err := r.ensureSession(ctx, state); err != nil {
+		return err
+	}
+	actorName := requiredString(step.Args, "actor")
+	if actorName == "" {
+		return r.failf("adversary_reaction requires actor")
+	}
+	adversaryIDValue, err := adversaryID(state, actorName)
+	if err != nil {
+		return err
+	}
+
+	before, err := r.latestSeq(ctx, state)
+	if err != nil {
+		return err
+	}
+	ctxWithSession := withSessionID(ctx, state.sessionID)
+
+	if optionalBool(step.Args, "refresh", false) {
+		readyNote := optionalString(step.Args, "ready_note", "reaction_ready")
+		update := &daggerheartv1.DaggerheartUpdateAdversaryRequest{
+			CampaignId:  state.campaignID,
+			AdversaryId: adversaryIDValue,
+			Notes:       wrapperspb.String(readyNote),
+		}
+		if state.sessionID != "" {
+			update.SessionId = wrapperspb.String(state.sessionID)
+		}
+		if _, err := r.env.daggerheartClient.UpdateAdversary(ctxWithSession, update); err != nil {
+			return fmt.Errorf("adversary_reaction refresh: %w", err)
+		}
+		return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeAdversaryUpdated)
+	}
+
+	if !optionalBool(step.Args, "available", true) {
+		return nil
+	}
+	targetName := requiredString(step.Args, "target")
+	if targetName == "" {
+		return r.failf("adversary_reaction requires target")
+	}
+	targetID, err := actorID(state, targetName)
+	if err != nil {
+		return err
+	}
+	damageAmount := optionalInt(step.Args, "damage", 0)
+	if damageAmount <= 0 {
+		return r.failf("adversary_reaction requires positive damage")
+	}
+
+	_, err = r.env.daggerheartClient.ApplyDamage(ctxWithSession, &daggerheartv1.DaggerheartApplyDamageRequest{
+		CampaignId:  state.campaignID,
+		CharacterId: targetID,
+		Damage:      buildDamageRequest(step.Args, "", optionalString(step.Args, "source", "reaction"), int32(damageAmount)),
+	})
+	if err != nil {
+		return fmt.Errorf("adversary_reaction apply damage: %w", err)
+	}
+	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeDamageApplied); err != nil {
+		return err
+	}
+
+	cooldownNote := optionalString(step.Args, "cooldown_note", "reaction_cooldown")
+	update := &daggerheartv1.DaggerheartUpdateAdversaryRequest{
+		CampaignId:  state.campaignID,
+		AdversaryId: adversaryIDValue,
+		Notes:       wrapperspb.String(cooldownNote),
+	}
+	if state.sessionID != "" {
+		update.SessionId = wrapperspb.String(state.sessionID)
+	}
+	if _, err := r.env.daggerheartClient.UpdateAdversary(ctxWithSession, update); err != nil {
+		return fmt.Errorf("adversary_reaction cooldown: %w", err)
+	}
+	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeAdversaryUpdated); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *Runner) runAdversaryUpdateStep(ctx context.Context, state *scenarioState, step Step) error {
+	if err := r.ensureSession(ctx, state); err != nil {
+		return err
+	}
+	name := requiredString(step.Args, "target")
+	if name == "" {
+		return r.failf("adversary_update target is required")
+	}
+	adversaryIDValue, err := adversaryID(state, name)
+	if err != nil {
+		return err
+	}
+
+	evasionValue, hasEvasion := readInt(step.Args, "evasion")
+	evasionDeltaValue, hasEvasionDelta := readInt(step.Args, "evasion_delta")
+	stressValue, hasStress := readInt(step.Args, "stress")
+	stressDeltaValue, hasStressDelta := readInt(step.Args, "stress_delta")
+	_, hasNotes := step.Args["notes"]
+	notesValue := optionalString(step.Args, "notes", "")
+	if !hasEvasion && !hasEvasionDelta && !hasStress && !hasStressDelta && !hasNotes {
+		return r.failf("adversary_update requires evasion, evasion_delta, stress, stress_delta, or notes")
+	}
+	if hasEvasion && hasEvasionDelta {
+		return r.failf("adversary_update cannot set both evasion and evasion_delta")
+	}
+	if hasStress && hasStressDelta {
+		return r.failf("adversary_update cannot set both stress and stress_delta")
+	}
+
+	before, err := r.latestSeq(ctx, state)
+	if err != nil {
+		return err
+	}
+	update := &daggerheartv1.DaggerheartUpdateAdversaryRequest{
+		CampaignId:  state.campaignID,
+		AdversaryId: adversaryIDValue,
+	}
+	if hasEvasion {
+		update.Evasion = wrapperspb.Int32(int32(evasionValue))
+	}
+	if hasStress {
+		update.Stress = wrapperspb.Int32(int32(stressValue))
+	}
+	var current *daggerheartv1.DaggerheartAdversary
+	loadCurrent := func() (*daggerheartv1.DaggerheartAdversary, error) {
+		if current != nil {
+			return current, nil
+		}
+		fetched, err := r.getAdversary(ctx, state, adversaryIDValue)
+		if err != nil {
+			return nil, err
+		}
+		current = fetched
+		return current, nil
+	}
+	if hasEvasionDelta {
+		currentAdversary, err := loadCurrent()
+		if err != nil {
+			return err
+		}
+		update.Evasion = wrapperspb.Int32(currentAdversary.GetEvasion() + int32(evasionDeltaValue))
+	}
+	if hasStressDelta {
+		currentAdversary, err := loadCurrent()
+		if err != nil {
+			return err
+		}
+		update.Stress = wrapperspb.Int32(currentAdversary.GetStress() + int32(stressDeltaValue))
+	}
+	if hasNotes {
+		update.Notes = wrapperspb.String(notesValue)
+	}
+	if state.sessionID != "" {
+		update.SessionId = wrapperspb.String(state.sessionID)
+	}
+
+	if _, err := r.env.daggerheartClient.UpdateAdversary(withSessionID(ctx, state.sessionID), update); err != nil {
+		return fmt.Errorf("adversary_update: %w", err)
+	}
+	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeAdversaryUpdated)
 }
 
 func (r *Runner) runSwapLoadoutStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -1784,45 +2265,69 @@ func (r *Runner) runReactionRollStep(ctx context.Context, state *scenarioState, 
 	if actorName == "" {
 		return r.failf("reaction_roll requires actor")
 	}
-	trait := optionalString(step.Args, "trait", "instinct")
-	difficulty := optionalInt(step.Args, "difficulty", 10)
-	seed := uint64(optionalInt(step.Args, "seed", 0))
-	if seed == 0 {
-		seedValue, err := chooseActionSeed(step.Args, difficulty)
-		if err != nil {
-			return err
-		}
-		seed = seedValue
-	}
-
 	before, err := r.latestSeq(ctx, state)
 	if err != nil {
 		return err
 	}
-	actorIDValue, err := actorID(state, actorName)
+	difficulty := optionalInt(step.Args, "difficulty", 10)
+	seed := uint64(optionalInt(step.Args, "seed", 0))
+
+	if actorIDValue, err := actorID(state, actorName); err == nil {
+		if seed == 0 {
+			seedValue, err := chooseActionSeed(step.Args, difficulty)
+			if err != nil {
+				return err
+			}
+			seed = seedValue
+		}
+		response, err := r.env.daggerheartClient.SessionActionRoll(ctx, &daggerheartv1.SessionActionRollRequest{
+			CampaignId:   state.campaignID,
+			SessionId:    state.sessionID,
+			CharacterId:  actorIDValue,
+			Trait:        optionalString(step.Args, "trait", "instinct"),
+			RollKind:     daggerheartv1.RollKind_ROLL_KIND_REACTION,
+			Difficulty:   int32(difficulty),
+			Advantage:    int32(optionalInt(step.Args, "advantage", 0)),
+			Disadvantage: int32(optionalInt(step.Args, "disadvantage", 0)),
+			Modifiers:    buildActionRollModifiers(step.Args, "modifiers"),
+			Rng: &commonv1.RngRequest{
+				Seed:     &seed,
+				RollMode: commonv1.RollMode_REPLAY,
+			},
+		})
+		if err != nil {
+			return fmt.Errorf("reaction_roll: %w", err)
+		}
+		ensureRollOutcomeState(state)
+		state.rollOutcomes[response.GetRollSeq()] = actionRollResultFromResponse(response)
+		state.lastRollSeq = response.GetRollSeq()
+		r.logf("reaction roll: actor=%s roll_seq=%d", actorName, state.lastRollSeq)
+		return r.requireEventTypesAfterSeq(ctx, state, before, event.TypeRollResolved)
+	}
+
+	adversaryIDValue, err := adversaryID(state, actorName)
 	if err != nil {
 		return err
 	}
-	response, err := r.env.daggerheartClient.SessionActionRoll(ctx, &daggerheartv1.SessionActionRollRequest{
-		CampaignId:   state.campaignID,
-		SessionId:    state.sessionID,
-		CharacterId:  actorIDValue,
-		Trait:        trait,
-		RollKind:     daggerheartv1.RollKind_ROLL_KIND_REACTION,
-		Difficulty:   int32(difficulty),
-		Advantage:    int32(optionalInt(step.Args, "advantage", 0)),
-		Disadvantage: int32(optionalInt(step.Args, "disadvantage", 0)),
-		Modifiers:    buildActionRollModifiers(step.Args, "modifiers"),
+	if seed == 0 {
+		seed = 42
+	}
+	response, err := r.env.daggerheartClient.SessionAdversaryAttackRoll(ctx, &daggerheartv1.SessionAdversaryAttackRollRequest{
+		CampaignId:     state.campaignID,
+		SessionId:      state.sessionID,
+		AdversaryId:    adversaryIDValue,
+		AttackModifier: int32(optionalInt(step.Args, "attack_modifier", optionalInt(step.Args, "modifier", 0))),
+		Advantage:      int32(optionalInt(step.Args, "advantage", 0)),
+		Disadvantage:   int32(optionalInt(step.Args, "disadvantage", 0)),
 		Rng: &commonv1.RngRequest{
 			Seed:     &seed,
 			RollMode: commonv1.RollMode_REPLAY,
 		},
 	})
 	if err != nil {
-		return fmt.Errorf("reaction_roll: %w", err)
+		return fmt.Errorf("reaction_roll adversary: %w", err)
 	}
-	ensureRollOutcomeState(state)
-	state.rollOutcomes[response.GetRollSeq()] = actionRollResultFromResponse(response)
+	state.lastAdversaryRollSeq = response.GetRollSeq()
 	state.lastRollSeq = response.GetRollSeq()
 	r.logf("reaction roll: actor=%s roll_seq=%d", actorName, state.lastRollSeq)
 	return r.requireEventTypesAfterSeq(ctx, state, before, event.TypeRollResolved)

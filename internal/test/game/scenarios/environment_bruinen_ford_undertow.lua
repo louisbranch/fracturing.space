@@ -15,10 +15,14 @@ scene:start_session("Bruinen Ford")
 scene:gm_fear(1)
 
 -- Example: spend Fear, Agility reaction, damage + movement + Vulnerable on failure.
--- Missing DSL: apply river movement and conditional stress on success.
+-- River movement and conditional stress on success remain unresolved.
 scene:gm_spend_fear(1):spotlight("Bruinen Ford")
-scene:reaction_roll{ actor = "Frodo", trait = "agility", difficulty = 10, outcome = "fear" }
-scene:apply_condition{ target = "Frodo", add = { "VULNERABLE" }, source = "undertow" }
+scene:reaction_roll{ actor = "Frodo", trait = "agility", difficulty = 10, outcome = "failure_fear" }
+scene:apply_reaction_outcome{
+  on_failure = {
+    {kind = "apply_condition", target = "Frodo", add = {"VULNERABLE"}, source = "undertow"},
+  },
+}
 
 scene:end_session()
 

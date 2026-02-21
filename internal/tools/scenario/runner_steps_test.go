@@ -1019,6 +1019,48 @@ func TestRunReactionRollStepForwardsFlatModifier(t *testing.T) {
 	}
 }
 
+func TestRunReactionRollStepAdversaryActorUsesAdversaryRoll(t *testing.T) {
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
+	var request *daggerheartv1.SessionAdversaryAttackRollRequest
+	dhClient.sessionAdversaryAttackRoll = func(_ context.Context, req *daggerheartv1.SessionAdversaryAttackRollRequest, _ ...grpc.CallOption) (*daggerheartv1.SessionAdversaryAttackRollResponse, error) {
+		request = req
+		return &daggerheartv1.SessionAdversaryAttackRollResponse{RollSeq: 144}, nil
+	}
+
+	runner := quietRunner(env)
+	state := testState()
+	state.adversaries["Golum"] = "adv-golum"
+	err := runner.runReactionRollStep(context.Background(), state, Step{
+		Kind: "reaction_roll",
+		Args: map[string]any{
+			"actor":        "Golum",
+			"seed":         5,
+			"modifier":     3,
+			"advantage":    1,
+			"disadvantage": 0,
+		},
+	})
+	if err != nil {
+		t.Fatalf("runReactionRollStep: %v", err)
+	}
+	if request == nil {
+		t.Fatal("expected adversary roll request")
+	}
+	if request.GetAdversaryId() != "adv-golum" {
+		t.Fatalf("adversary_id = %q, want adv-golum", request.GetAdversaryId())
+	}
+	if request.GetAttackModifier() != 3 {
+		t.Fatalf("attack_modifier = %d, want 3", request.GetAttackModifier())
+	}
+	if request.GetRng() == nil || request.GetRng().GetSeed() != 5 {
+		t.Fatalf("expected replay seed 5, got %+v", request.GetRng())
+	}
+	if state.lastAdversaryRollSeq != 144 {
+		t.Fatalf("lastAdversaryRollSeq = %d, want 144", state.lastAdversaryRollSeq)
+	}
+}
+
 func TestRunReactionStep(t *testing.T) {
 	fixture := testEnv()
 	env, dhClient := fixture.env, fixture.daggerheartClient
@@ -1057,6 +1099,567 @@ func TestRunReactionStep(t *testing.T) {
 	}
 	if state.lastRollSeq != 99 {
 		t.Fatalf("lastRollSeq = %d, want 99", state.lastRollSeq)
+	}
+}
+
+// --- adversary_attack step ---
+
+func TestRunAdversaryAttackStepStressForAdvantageSpendsStressBeforeRoll(t *testing.T) {
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
+	callOrder := make([]string, 0, 3)
+
+	dhClient.getAdversary = func(_ context.Context, req *daggerheartv1.DaggerheartGetAdversaryRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartGetAdversaryResponse, error) {
+		callOrder = append(callOrder, "get")
+		return &daggerheartv1.DaggerheartGetAdversaryResponse{
+			Adversary: &daggerheartv1.DaggerheartAdversary{
+				Id:     req.GetAdversaryId(),
+				Stress: 2,
+			},
+		}, nil
+	}
+
+	var updateReq *daggerheartv1.DaggerheartUpdateAdversaryRequest
+	dhClient.updateAdversary = func(_ context.Context, req *daggerheartv1.DaggerheartUpdateAdversaryRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartUpdateAdversaryResponse, error) {
+		callOrder = append(callOrder, "update")
+		updateReq = req
+		return &daggerheartv1.DaggerheartUpdateAdversaryResponse{
+			Adversary: &daggerheartv1.DaggerheartAdversary{
+				Id:     req.GetAdversaryId(),
+				Stress: req.GetStress().GetValue(),
+			},
+		}, nil
+	}
+
+	var attackReq *daggerheartv1.SessionAdversaryAttackFlowRequest
+	dhClient.sessionAdversaryAttackFlow = func(_ context.Context, req *daggerheartv1.SessionAdversaryAttackFlowRequest, _ ...grpc.CallOption) (*daggerheartv1.SessionAdversaryAttackFlowResponse, error) {
+		callOrder = append(callOrder, "attack")
+		attackReq = req
+		return &daggerheartv1.SessionAdversaryAttackFlowResponse{}, nil
+	}
+
+	runner := quietRunner(env)
+	state := testState()
+	state.adversaries["Ranger"] = "adv-ranger"
+	state.actors["Frodo"] = "char-frodo"
+
+	err := runner.runAdversaryAttackStep(context.Background(), state, Step{
+		Kind: "adversary_attack",
+		Args: map[string]any{
+			"actor":                "Ranger",
+			"target":               "Frodo",
+			"difficulty":           10,
+			"damage_type":          "physical",
+			"stress_for_advantage": 1,
+		},
+	})
+	if err != nil {
+		t.Fatalf("runAdversaryAttackStep: %v", err)
+	}
+	if updateReq == nil || updateReq.GetStress() == nil {
+		t.Fatal("expected stress update request before attack roll")
+	}
+	if got := updateReq.GetStress().GetValue(); got != 3 {
+		t.Fatalf("stress after spend = %d, want 3", got)
+	}
+	if attackReq == nil {
+		t.Fatal("expected SessionAdversaryAttackFlow request")
+	}
+	if got := attackReq.GetAdvantage(); got != 1 {
+		t.Fatalf("advantage = %d, want 1", got)
+	}
+	if got := strings.Join(callOrder, ","); got != "get,update,attack" {
+		t.Fatalf("call order = %q, want get,update,attack", got)
+	}
+}
+
+func TestRunAdversaryAttackStepStressForAdvantageRejectsMultipleSpends(t *testing.T) {
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
+	attackFlowCalls := 0
+	dhClient.sessionAdversaryAttackFlow = func(_ context.Context, _ *daggerheartv1.SessionAdversaryAttackFlowRequest, _ ...grpc.CallOption) (*daggerheartv1.SessionAdversaryAttackFlowResponse, error) {
+		attackFlowCalls++
+		return &daggerheartv1.SessionAdversaryAttackFlowResponse{}, nil
+	}
+
+	runner := quietRunner(env)
+	state := testState()
+	state.adversaries["Ranger"] = "adv-ranger"
+	state.actors["Frodo"] = "char-frodo"
+
+	err := runner.runAdversaryAttackStep(context.Background(), state, Step{
+		Kind: "adversary_attack",
+		Args: map[string]any{
+			"actor":                "Ranger",
+			"target":               "Frodo",
+			"difficulty":           10,
+			"damage_type":          "physical",
+			"stress_for_advantage": 2,
+		},
+	})
+	if err == nil {
+		t.Fatal("expected error for stress_for_advantage > 1")
+	}
+	if attackFlowCalls != 0 {
+		t.Fatalf("attack flow calls = %d, want 0", attackFlowCalls)
+	}
+}
+
+func TestRunAdversaryAttackStepTeleportRepositionUpdatesAdversaryBeforeRoll(t *testing.T) {
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
+	callOrder := make([]string, 0, 3)
+
+	dhClient.getAdversary = func(_ context.Context, req *daggerheartv1.DaggerheartGetAdversaryRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartGetAdversaryResponse, error) {
+		callOrder = append(callOrder, "get")
+		return &daggerheartv1.DaggerheartGetAdversaryResponse{
+			Adversary: &daggerheartv1.DaggerheartAdversary{
+				Id:     req.GetAdversaryId(),
+				Stress: 2,
+			},
+		}, nil
+	}
+
+	var updateReq *daggerheartv1.DaggerheartUpdateAdversaryRequest
+	dhClient.updateAdversary = func(_ context.Context, req *daggerheartv1.DaggerheartUpdateAdversaryRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartUpdateAdversaryResponse, error) {
+		callOrder = append(callOrder, "update")
+		updateReq = req
+		return &daggerheartv1.DaggerheartUpdateAdversaryResponse{
+			Adversary: &daggerheartv1.DaggerheartAdversary{
+				Id:     req.GetAdversaryId(),
+				Stress: req.GetStress().GetValue(),
+				Notes:  req.GetNotes().GetValue(),
+			},
+		}, nil
+	}
+
+	var attackReq *daggerheartv1.SessionAdversaryAttackFlowRequest
+	dhClient.sessionAdversaryAttackFlow = func(_ context.Context, req *daggerheartv1.SessionAdversaryAttackFlowRequest, _ ...grpc.CallOption) (*daggerheartv1.SessionAdversaryAttackFlowResponse, error) {
+		callOrder = append(callOrder, "attack")
+		attackReq = req
+		return &daggerheartv1.SessionAdversaryAttackFlowResponse{}, nil
+	}
+
+	runner := quietRunner(env)
+	state := testState()
+	state.adversaries["Saruman"] = "adv-saruman"
+	state.actors["Frodo"] = "char-frodo"
+
+	err := runner.runAdversaryAttackStep(context.Background(), state, Step{
+		Kind: "adversary_attack",
+		Args: map[string]any{
+			"actor":                "Saruman",
+			"target":               "Frodo",
+			"difficulty":           10,
+			"damage_type":          "magic",
+			"teleport_range":       "far",
+			"teleport_stress_cost": 1,
+		},
+	})
+	if err != nil {
+		t.Fatalf("runAdversaryAttackStep: %v", err)
+	}
+	if updateReq == nil || updateReq.GetStress() == nil {
+		t.Fatal("expected adversary stress update before attack roll")
+	}
+	if got := updateReq.GetStress().GetValue(); got != 3 {
+		t.Fatalf("stress after teleport spend = %d, want 3", got)
+	}
+	if updateReq.GetNotes() == nil || updateReq.GetNotes().GetValue() != "teleport:far" {
+		t.Fatalf("teleport note = %v, want teleport:far", updateReq.GetNotes())
+	}
+	if attackReq == nil {
+		t.Fatal("expected SessionAdversaryAttackFlow request")
+	}
+	if got := strings.Join(callOrder, ","); got != "get,update,attack" {
+		t.Fatalf("call order = %q, want get,update,attack", got)
+	}
+}
+
+func TestRunAdversaryAttackStepRejectsOutOfBoundsTeleportRange(t *testing.T) {
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
+	attackFlowCalls := 0
+	dhClient.sessionAdversaryAttackFlow = func(_ context.Context, _ *daggerheartv1.SessionAdversaryAttackFlowRequest, _ ...grpc.CallOption) (*daggerheartv1.SessionAdversaryAttackFlowResponse, error) {
+		attackFlowCalls++
+		return &daggerheartv1.SessionAdversaryAttackFlowResponse{}, nil
+	}
+
+	runner := quietRunner(env)
+	state := testState()
+	state.adversaries["Saruman"] = "adv-saruman"
+	state.actors["Frodo"] = "char-frodo"
+
+	err := runner.runAdversaryAttackStep(context.Background(), state, Step{
+		Kind: "adversary_attack",
+		Args: map[string]any{
+			"actor":                "Saruman",
+			"target":               "Frodo",
+			"difficulty":           10,
+			"damage_type":          "magic",
+			"teleport_range":       "across-the-map",
+			"teleport_stress_cost": 1,
+		},
+	})
+	if err == nil {
+		t.Fatal("expected error for out-of-bounds teleport_range")
+	}
+	if attackFlowCalls != 0 {
+		t.Fatalf("attack flow calls = %d, want 0", attackFlowCalls)
+	}
+}
+
+func TestRunStepAdversaryReactionStepAppliesDamageAndCooldown(t *testing.T) {
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
+
+	var damageReq *daggerheartv1.DaggerheartApplyDamageRequest
+	var updateReq *daggerheartv1.DaggerheartUpdateAdversaryRequest
+	dhClient.applyDamage = func(_ context.Context, req *daggerheartv1.DaggerheartApplyDamageRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyDamageResponse, error) {
+		damageReq = req
+		return &daggerheartv1.DaggerheartApplyDamageResponse{}, nil
+	}
+	dhClient.updateAdversary = func(_ context.Context, req *daggerheartv1.DaggerheartUpdateAdversaryRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartUpdateAdversaryResponse, error) {
+		updateReq = req
+		return &daggerheartv1.DaggerheartUpdateAdversaryResponse{
+			Adversary: &daggerheartv1.DaggerheartAdversary{Id: req.GetAdversaryId()},
+		}, nil
+	}
+
+	runner := quietRunner(env)
+	state := testState()
+	state.actors["Frodo"] = "char-frodo"
+	state.adversaries["Saruman"] = "adv-saruman"
+	err := runner.runStep(context.Background(), state, Step{
+		Kind: "adversary_reaction",
+		Args: map[string]any{
+			"actor":         "Saruman",
+			"target":        "Frodo",
+			"damage":        7,
+			"damage_type":   "magic",
+			"cooldown_note": "warding_sphere:cooldown",
+		},
+	})
+	if err != nil {
+		t.Fatalf("runStep: %v", err)
+	}
+	if damageReq == nil {
+		t.Fatal("expected apply damage request")
+	}
+	if got := damageReq.GetCharacterId(); got != "char-frodo" {
+		t.Fatalf("damage character_id = %q, want char-frodo", got)
+	}
+	if got := damageReq.GetDamage().GetAmount(); got != 7 {
+		t.Fatalf("damage amount = %d, want 7", got)
+	}
+	if updateReq == nil {
+		t.Fatal("expected update adversary request")
+	}
+	if got := updateReq.GetAdversaryId(); got != "adv-saruman" {
+		t.Fatalf("update adversary_id = %q, want adv-saruman", got)
+	}
+	if got := updateReq.GetNotes().GetValue(); got != "warding_sphere:cooldown" {
+		t.Fatalf("update notes = %q, want warding_sphere:cooldown", got)
+	}
+}
+
+func TestRunStepAdversaryUpdateAppliesEvasionDelta(t *testing.T) {
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
+
+	dhClient.getAdversary = func(_ context.Context, req *daggerheartv1.DaggerheartGetAdversaryRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartGetAdversaryResponse, error) {
+		return &daggerheartv1.DaggerheartGetAdversaryResponse{
+			Adversary: &daggerheartv1.DaggerheartAdversary{
+				Id:      req.GetAdversaryId(),
+				Evasion: 11,
+			},
+		}, nil
+	}
+
+	var updateReq *daggerheartv1.DaggerheartUpdateAdversaryRequest
+	dhClient.updateAdversary = func(_ context.Context, req *daggerheartv1.DaggerheartUpdateAdversaryRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartUpdateAdversaryResponse, error) {
+		updateReq = req
+		return &daggerheartv1.DaggerheartUpdateAdversaryResponse{
+			Adversary: &daggerheartv1.DaggerheartAdversary{
+				Id:      req.GetAdversaryId(),
+				Evasion: req.GetEvasion().GetValue(),
+			},
+		}, nil
+	}
+
+	runner := quietRunner(env)
+	state := testState()
+	state.adversaries["Mirkwood Warden"] = "adv-warden"
+
+	err := runner.runStep(context.Background(), state, Step{
+		Kind: "adversary_update",
+		Args: map[string]any{
+			"target":        "Mirkwood Warden",
+			"evasion_delta": 1,
+			"notes":         "ferocious_defense",
+		},
+	})
+	if err != nil {
+		t.Fatalf("runStep: %v", err)
+	}
+	if updateReq == nil {
+		t.Fatal("expected update adversary request")
+	}
+	if got := updateReq.GetEvasion().GetValue(); got != 12 {
+		t.Fatalf("evasion = %d, want 12", got)
+	}
+	if got := updateReq.GetNotes().GetValue(); got != "ferocious_defense" {
+		t.Fatalf("notes = %q, want ferocious_defense", got)
+	}
+}
+
+func TestRunStepAdversaryUpdateAppliesStressDelta(t *testing.T) {
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
+
+	dhClient.getAdversary = func(_ context.Context, req *daggerheartv1.DaggerheartGetAdversaryRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartGetAdversaryResponse, error) {
+		return &daggerheartv1.DaggerheartGetAdversaryResponse{
+			Adversary: &daggerheartv1.DaggerheartAdversary{
+				Id:     req.GetAdversaryId(),
+				Stress: 2,
+			},
+		}, nil
+	}
+
+	var updateReq *daggerheartv1.DaggerheartUpdateAdversaryRequest
+	dhClient.updateAdversary = func(_ context.Context, req *daggerheartv1.DaggerheartUpdateAdversaryRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartUpdateAdversaryResponse, error) {
+		updateReq = req
+		stressValue := int32(0)
+		if req.GetStress() != nil {
+			stressValue = req.GetStress().GetValue()
+		}
+		return &daggerheartv1.DaggerheartUpdateAdversaryResponse{
+			Adversary: &daggerheartv1.DaggerheartAdversary{
+				Id:     req.GetAdversaryId(),
+				Stress: stressValue,
+			},
+		}, nil
+	}
+
+	runner := quietRunner(env)
+	state := testState()
+	state.adversaries["Mirkwood Warden"] = "adv-warden"
+
+	err := runner.runStep(context.Background(), state, Step{
+		Kind: "adversary_update",
+		Args: map[string]any{
+			"target":       "Mirkwood Warden",
+			"stress_delta": 1,
+		},
+	})
+	if err != nil {
+		t.Fatalf("runStep: %v", err)
+	}
+	if updateReq == nil {
+		t.Fatal("expected update adversary request")
+	}
+	if got := updateReq.GetStress().GetValue(); got != 3 {
+		t.Fatalf("stress = %d, want 3", got)
+	}
+}
+
+func TestRunStepGroupReactionAppliesFailureConditionsOnly(t *testing.T) {
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
+
+	reactionRollCalls := 0
+	applyReactionRollSeqs := make([]uint64, 0, 2)
+	conditionTargets := make([]string, 0, 2)
+
+	dhClient.sessionActionRoll = func(_ context.Context, req *daggerheartv1.SessionActionRollRequest, _ ...grpc.CallOption) (*daggerheartv1.SessionActionRollResponse, error) {
+		reactionRollCalls++
+		if req.GetRollKind() != daggerheartv1.RollKind_ROLL_KIND_REACTION {
+			t.Fatalf("roll kind = %v, want REACTION", req.GetRollKind())
+		}
+		if req.GetCharacterId() == "char-frodo" {
+			return &daggerheartv1.SessionActionRollResponse{
+				RollSeq:    201,
+				HopeDie:    1,
+				FearDie:    10,
+				Total:      8,
+				Difficulty: 15,
+				Success:    false,
+				Crit:       false,
+			}, nil
+		}
+		if req.GetCharacterId() == "char-sam" {
+			return &daggerheartv1.SessionActionRollResponse{
+				RollSeq:    202,
+				HopeDie:    9,
+				FearDie:    2,
+				Total:      16,
+				Difficulty: 15,
+				Success:    true,
+				Crit:       false,
+			}, nil
+		}
+		t.Fatalf("unexpected character_id %q", req.GetCharacterId())
+		return nil, nil
+	}
+	dhClient.applyReactionOutcome = func(_ context.Context, req *daggerheartv1.DaggerheartApplyReactionOutcomeRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyReactionOutcomeResponse, error) {
+		applyReactionRollSeqs = append(applyReactionRollSeqs, req.GetRollSeq())
+		success := req.GetRollSeq() == 202
+		outcome := daggerheartv1.Outcome_FAILURE_WITH_FEAR
+		if success {
+			outcome = daggerheartv1.Outcome_SUCCESS_WITH_HOPE
+		}
+		return &daggerheartv1.DaggerheartApplyReactionOutcomeResponse{
+			Result: &daggerheartv1.DaggerheartReactionOutcomeResult{
+				Success: success,
+				Outcome: outcome,
+			},
+		}, nil
+	}
+	dhClient.applyConditions = func(_ context.Context, req *daggerheartv1.DaggerheartApplyConditionsRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyConditionsResponse, error) {
+		conditionTargets = append(conditionTargets, req.GetCharacterId())
+		return &daggerheartv1.DaggerheartApplyConditionsResponse{}, nil
+	}
+
+	runner := quietRunner(env)
+	state := testState()
+	state.actors["Frodo"] = "char-frodo"
+	state.actors["Sam"] = "char-sam"
+
+	err := runner.runStep(context.Background(), state, Step{
+		Kind: "group_reaction",
+		Args: map[string]any{
+			"targets":    []any{"Frodo", "Sam"},
+			"trait":      "agility",
+			"difficulty": 15,
+			"failure_conditions": []any{
+				"VULNERABLE",
+			},
+			"source": "snowblind_trap",
+		},
+	})
+	if err != nil {
+		t.Fatalf("runStep: %v", err)
+	}
+	if reactionRollCalls != 2 {
+		t.Fatalf("reaction roll calls = %d, want 2", reactionRollCalls)
+	}
+	if len(applyReactionRollSeqs) != 2 || applyReactionRollSeqs[0] != 201 || applyReactionRollSeqs[1] != 202 {
+		t.Fatalf("apply reaction roll seqs = %v, want [201 202]", applyReactionRollSeqs)
+	}
+	if len(conditionTargets) != 1 || conditionTargets[0] != "char-frodo" {
+		t.Fatalf("condition targets = %v, want [char-frodo]", conditionTargets)
+	}
+}
+
+func TestRunStepGroupReactionAppliesHalfDamageOnSuccess(t *testing.T) {
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
+
+	dhClient.sessionActionRoll = func(_ context.Context, req *daggerheartv1.SessionActionRollRequest, _ ...grpc.CallOption) (*daggerheartv1.SessionActionRollResponse, error) {
+		if req.GetCharacterId() == "char-frodo" {
+			return &daggerheartv1.SessionActionRollResponse{
+				RollSeq:    301,
+				Total:      8,
+				Difficulty: 15,
+				Success:    false,
+			}, nil
+		}
+		if req.GetCharacterId() == "char-sam" {
+			return &daggerheartv1.SessionActionRollResponse{
+				RollSeq:    302,
+				Total:      16,
+				Difficulty: 15,
+				Success:    true,
+			}, nil
+		}
+		t.Fatalf("unexpected character_id %q", req.GetCharacterId())
+		return nil, nil
+	}
+	dhClient.applyReactionOutcome = func(_ context.Context, req *daggerheartv1.DaggerheartApplyReactionOutcomeRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyReactionOutcomeResponse, error) {
+		success := req.GetRollSeq() == 302
+		return &daggerheartv1.DaggerheartApplyReactionOutcomeResponse{
+			Result: &daggerheartv1.DaggerheartReactionOutcomeResult{
+				Success: success,
+			},
+		}, nil
+	}
+
+	applied := map[string]int32{}
+	dhClient.applyDamage = func(_ context.Context, req *daggerheartv1.DaggerheartApplyDamageRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyDamageResponse, error) {
+		applied[req.GetCharacterId()] = req.GetDamage().GetAmount()
+		return &daggerheartv1.DaggerheartApplyDamageResponse{}, nil
+	}
+
+	runner := quietRunner(env)
+	state := testState()
+	state.actors["Frodo"] = "char-frodo"
+	state.actors["Sam"] = "char-sam"
+
+	err := runner.runStep(context.Background(), state, Step{
+		Kind: "group_reaction",
+		Args: map[string]any{
+			"targets":                []any{"Frodo", "Sam"},
+			"trait":                  "agility",
+			"difficulty":             15,
+			"damage":                 9,
+			"damage_type":            "magic",
+			"half_damage_on_success": true,
+			"source":                 "arcane_artillery",
+		},
+	})
+	if err != nil {
+		t.Fatalf("runStep: %v", err)
+	}
+	if got := len(applied); got != 2 {
+		t.Fatalf("damage applications = %d, want 2", got)
+	}
+	if got := applied["char-frodo"]; got != 9 {
+		t.Fatalf("frodo damage = %d, want 9", got)
+	}
+	if got := applied["char-sam"]; got != 4 {
+		t.Fatalf("sam damage = %d, want 4", got)
+	}
+}
+
+func TestRunAttackStepAdversaryTargetForwardsDisadvantage(t *testing.T) {
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
+	var actionRollReq *daggerheartv1.SessionActionRollRequest
+	dhClient.sessionActionRoll = func(_ context.Context, req *daggerheartv1.SessionActionRollRequest, _ ...grpc.CallOption) (*daggerheartv1.SessionActionRollResponse, error) {
+		actionRollReq = req
+		return &daggerheartv1.SessionActionRollResponse{RollSeq: 601}, nil
+	}
+	dhClient.applyRollOutcome = func(_ context.Context, _ *daggerheartv1.ApplyRollOutcomeRequest, _ ...grpc.CallOption) (*daggerheartv1.ApplyRollOutcomeResponse, error) {
+		return &daggerheartv1.ApplyRollOutcomeResponse{}, nil
+	}
+	dhClient.applyAttackOutcome = func(_ context.Context, _ *daggerheartv1.DaggerheartApplyAttackOutcomeRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyAttackOutcomeResponse, error) {
+		return &daggerheartv1.DaggerheartApplyAttackOutcomeResponse{
+			Result: &daggerheartv1.DaggerheartAttackOutcomeResult{Success: false},
+		}, nil
+	}
+
+	runner := quietRunner(env)
+	state := testState()
+	state.actors["Frodo"] = "char-frodo"
+	state.adversaries["Ranger"] = "adv-ranger"
+	err := runner.runAttackStep(context.Background(), state, Step{
+		Kind: "attack",
+		Args: map[string]any{
+			"actor":        "Frodo",
+			"target":       "Ranger",
+			"trait":        "instinct",
+			"difficulty":   10,
+			"disadvantage": 1,
+		},
+	})
+	if err != nil {
+		t.Fatalf("runAttackStep: %v", err)
+	}
+	if actionRollReq == nil {
+		t.Fatal("expected SessionActionRoll request")
+	}
+	if actionRollReq.GetDisadvantage() != 1 {
+		t.Fatalf("disadvantage = %d, want 1", actionRollReq.GetDisadvantage())
 	}
 }
 
@@ -1369,6 +1972,147 @@ func TestRunApplyAdversaryAttackOutcomeStepMissingRollSeq(t *testing.T) {
 	}
 }
 
+func TestRunMultiAttackStep_DeduplicatesTargetsForDamageFanout(t *testing.T) {
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
+
+	var attackOutcomeTargets []string
+	applyDamageCalls := 0
+	dhClient.sessionActionRoll = func(_ context.Context, _ *daggerheartv1.SessionActionRollRequest, _ ...grpc.CallOption) (*daggerheartv1.SessionActionRollResponse, error) {
+		return &daggerheartv1.SessionActionRollResponse{RollSeq: 101}, nil
+	}
+	dhClient.applyRollOutcome = func(_ context.Context, _ *daggerheartv1.ApplyRollOutcomeRequest, _ ...grpc.CallOption) (*daggerheartv1.ApplyRollOutcomeResponse, error) {
+		return &daggerheartv1.ApplyRollOutcomeResponse{}, nil
+	}
+	dhClient.applyAttackOutcome = func(_ context.Context, req *daggerheartv1.DaggerheartApplyAttackOutcomeRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyAttackOutcomeResponse, error) {
+		attackOutcomeTargets = append(attackOutcomeTargets, req.GetTargets()...)
+		return &daggerheartv1.DaggerheartApplyAttackOutcomeResponse{
+			Result: &daggerheartv1.DaggerheartAttackOutcomeResult{Success: true},
+		}, nil
+	}
+	dhClient.sessionDamageRoll = func(_ context.Context, _ *daggerheartv1.SessionDamageRollRequest, _ ...grpc.CallOption) (*daggerheartv1.SessionDamageRollResponse, error) {
+		return &daggerheartv1.SessionDamageRollResponse{RollSeq: 202, Total: 0}, nil
+	}
+	dhClient.applyDamage = func(_ context.Context, _ *daggerheartv1.DaggerheartApplyDamageRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyDamageResponse, error) {
+		applyDamageCalls++
+		return &daggerheartv1.DaggerheartApplyDamageResponse{}, nil
+	}
+
+	runner := quietRunner(env)
+	state := testState()
+	state.actors["Sam"] = "char-sam"
+	state.actors["Frodo"] = "char-frodo"
+
+	err := runner.runMultiAttackStep(context.Background(), state, Step{
+		Kind: "multi_attack",
+		Args: map[string]any{
+			"actor":      "Sam",
+			"targets":    []any{"Frodo", "Frodo"},
+			"difficulty": 10,
+			"seed":       42,
+			"damage_dice": []any{
+				map[string]any{"sides": 6, "count": 1},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("runMultiAttackStep: %v", err)
+	}
+	if len(attackOutcomeTargets) != 1 {
+		t.Fatalf("apply_attack_outcome targets len = %d, want 1 unique target", len(attackOutcomeTargets))
+	}
+	if applyDamageCalls != 1 {
+		t.Fatalf("apply damage calls = %d, want 1 unique target application", applyDamageCalls)
+	}
+}
+
+func TestRunCombinedDamageStep_RejectsDuplicateContributors(t *testing.T) {
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
+
+	applyDamageCalled := false
+	dhClient.applyDamage = func(_ context.Context, _ *daggerheartv1.DaggerheartApplyDamageRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyDamageResponse, error) {
+		applyDamageCalled = true
+		return &daggerheartv1.DaggerheartApplyDamageResponse{}, nil
+	}
+
+	runner := quietRunner(env)
+	state := testState()
+	state.actors["Frodo"] = "char-frodo"
+	state.actors["Rat A"] = "char-rat-a"
+
+	err := runner.runCombinedDamageStep(context.Background(), state, Step{
+		Kind: "combined_damage",
+		Args: map[string]any{
+			"target":          "Frodo",
+			"immune_physical": true,
+			"sources": []any{
+				map[string]any{"character": "Rat A", "amount": 1},
+				map[string]any{"character": "Rat A", "amount": 1},
+			},
+		},
+	})
+	if err == nil || !strings.Contains(err.Error(), "duplicate source character") {
+		t.Fatalf("expected duplicate source character error, got %v", err)
+	}
+	if applyDamageCalled {
+		t.Fatal("expected combined_damage to fail before ApplyDamage call")
+	}
+}
+
+func TestRunCombinedDamageStep_AdversaryOverflowDeletesExtraTargets(t *testing.T) {
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
+
+	applyAdversaryDamageCalls := 0
+	deletedAdversaries := make([]string, 0, 2)
+	dhClient.applyAdversaryDamage = func(_ context.Context, _ *daggerheartv1.DaggerheartApplyAdversaryDamageRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyAdversaryDamageResponse, error) {
+		applyAdversaryDamageCalls++
+		return &daggerheartv1.DaggerheartApplyAdversaryDamageResponse{
+			AdversaryId: "adv-rat-a",
+			Adversary:   &daggerheartv1.DaggerheartAdversary{Id: "adv-rat-a"},
+		}, nil
+	}
+	dhClient.deleteAdversary = func(_ context.Context, req *daggerheartv1.DaggerheartDeleteAdversaryRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartDeleteAdversaryResponse, error) {
+		deletedAdversaries = append(deletedAdversaries, req.GetAdversaryId())
+		return &daggerheartv1.DaggerheartDeleteAdversaryResponse{
+			Adversary: &daggerheartv1.DaggerheartAdversary{Id: req.GetAdversaryId()},
+		}, nil
+	}
+
+	runner := quietRunner(env)
+	state := testState()
+	state.actors["Frodo"] = "char-frodo"
+	state.adversaries["Moria Rat A"] = "adv-rat-a"
+	state.adversaries["Moria Rat B"] = "adv-rat-b"
+	state.adversaries["Moria Rat C"] = "adv-rat-c"
+
+	err := runner.runCombinedDamageStep(context.Background(), state, Step{
+		Kind: "combined_damage",
+		Args: map[string]any{
+			"target":             "Moria Rat A",
+			"damage_type":        "physical",
+			"overflow_threshold": 3,
+			"overflow_targets":   []any{"Moria Rat B", "Moria Rat C"},
+			"sources": []any{
+				map[string]any{"character": "Frodo", "amount": 6},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("runCombinedDamageStep: %v", err)
+	}
+	if applyAdversaryDamageCalls != 1 {
+		t.Fatalf("apply adversary damage calls = %d, want 1", applyAdversaryDamageCalls)
+	}
+	if len(deletedAdversaries) != 2 {
+		t.Fatalf("deleted adversaries = %v, want 2 overflow deletions", deletedAdversaries)
+	}
+	if deletedAdversaries[0] != "adv-rat-b" || deletedAdversaries[1] != "adv-rat-c" {
+		t.Fatalf("deleted adversaries order = %v, want [adv-rat-b adv-rat-c]", deletedAdversaries)
+	}
+}
+
 // --- apply_reaction_outcome step ---
 
 func TestRunApplyReactionOutcomeStep(t *testing.T) {
@@ -1593,6 +2337,38 @@ func TestRunApplyConditionStep(t *testing.T) {
 	}
 }
 
+func TestRunApplyConditionStepAdversaryTarget(t *testing.T) {
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
+	var request *daggerheartv1.DaggerheartApplyAdversaryConditionsRequest
+	dhClient.applyAdversaryConditions = func(_ context.Context, req *daggerheartv1.DaggerheartApplyAdversaryConditionsRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyAdversaryConditionsResponse, error) {
+		request = req
+		return &daggerheartv1.DaggerheartApplyAdversaryConditionsResponse{}, nil
+	}
+	runner := quietRunner(env)
+	state := testState()
+	state.adversaries["Orc Stalker"] = "adv-stalker"
+	err := runner.runApplyConditionStep(context.Background(), state, Step{
+		Kind: "apply_condition",
+		Args: map[string]any{"target": "Orc Stalker", "add": []any{"HIDDEN"}, "source": "cloaked"},
+	})
+	if err != nil {
+		t.Fatalf("runApplyConditionStep: %v", err)
+	}
+	if request == nil {
+		t.Fatal("expected adversary conditions request")
+	}
+	if request.GetAdversaryId() != "adv-stalker" {
+		t.Fatalf("adversary_id = %q, want adv-stalker", request.GetAdversaryId())
+	}
+	if got := request.GetSource(); got != "cloaked" {
+		t.Fatalf("source = %q, want cloaked", got)
+	}
+	if len(request.GetAdd()) != 1 || request.GetAdd()[0] != daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN {
+		t.Fatalf("add conditions = %v, want [HIDDEN]", request.GetAdd())
+	}
+}
+
 func TestRunApplyConditionStepMissingTarget(t *testing.T) {
 	fixture := testEnv()
 	env := fixture.env
@@ -1623,6 +2399,53 @@ func TestRunApplyConditionStepMissingActions(t *testing.T) {
 }
 
 // --- rest step ---
+
+func TestRunStepTemporaryArmor(t *testing.T) {
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
+
+	var request *daggerheartv1.DaggerheartApplyTemporaryArmorRequest
+	dhClient.applyTemporaryArmor = func(_ context.Context, req *daggerheartv1.DaggerheartApplyTemporaryArmorRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyTemporaryArmorResponse, error) {
+		request = req
+		return &daggerheartv1.DaggerheartApplyTemporaryArmorResponse{}, nil
+	}
+
+	runner := quietRunner(env)
+	state := testState()
+	state.actors["Gandalf"] = "char-gandalf"
+
+	err := runner.runStep(context.Background(), state, Step{
+		Kind: "temporary_armor",
+		Args: map[string]any{
+			"target":    "Gandalf",
+			"source":    "ritual",
+			"duration":  "short_rest",
+			"amount":    2,
+			"source_id": "blessing:1",
+		},
+	})
+	if err != nil {
+		t.Fatalf("runStep: %v", err)
+	}
+	if request == nil {
+		t.Fatal("expected apply temporary armor request")
+	}
+	if got := request.GetCharacterId(); got != "char-gandalf" {
+		t.Fatalf("character_id = %q, want char-gandalf", got)
+	}
+	if got := request.GetArmor().GetSource(); got != "ritual" {
+		t.Fatalf("source = %q, want ritual", got)
+	}
+	if got := request.GetArmor().GetDuration(); got != "short_rest" {
+		t.Fatalf("duration = %q, want short_rest", got)
+	}
+	if got := request.GetArmor().GetAmount(); got != 2 {
+		t.Fatalf("amount = %d, want 2", got)
+	}
+	if got := request.GetArmor().GetSourceId(); got != "blessing:1" {
+		t.Fatalf("source_id = %q, want blessing:1", got)
+	}
+}
 
 func TestRunRestStep(t *testing.T) {
 	fixture := testEnv()

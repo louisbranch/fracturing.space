@@ -17,6 +17,7 @@ scene:gm_fear(1)
 -- Missing DSL: apply area reaction roll, damage, and stress on failure.
 scene:gm_spend_fear(1):spotlight("Battlefield Nazgul")
 scene:reaction_roll{ actor = "Frodo", trait = "agility", difficulty = 17, outcome = "fear" }
+scene:apply_reaction_outcome{}
 
 scene:end_session()
 

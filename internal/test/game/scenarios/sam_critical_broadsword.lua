@@ -15,12 +15,14 @@ scene:adversary("Nazgul")
 scene:start_session("Critical Strike")
 
 -- Example: critical success adds max damage dice before rolling 2d8 +2.
--- Missing DSL: apply advantage die, stress cost, and reroll a 1.
+-- Partial mapping: attack roll includes declared advantage.
+-- Missing DSL/API: evented stress spend and reroll-replacement mechanics.
 scene:attack{
   actor = "Sam",
   target = "Nazgul",
   trait = "agility",
   difficulty = 0,
+  advantage = 1,
   outcome = "critical",
   damage_type = "physical"
 }

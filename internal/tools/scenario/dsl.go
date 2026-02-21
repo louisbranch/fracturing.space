@@ -220,16 +220,20 @@ var scenarioMethods = []lua.RegistryFunction{
 	{Name: "adversary", Function: scenarioAdversary},
 	{Name: "gm_fear", Function: scenarioGMFear},
 	{Name: "reaction", Function: scenarioReaction},
+	{Name: "group_reaction", Function: scenarioGroupReaction},
 	{Name: "attack", Function: scenarioAttack},
 	{Name: "multi_attack", Function: scenarioMultiAttack},
 	{Name: "combined_damage", Function: scenarioCombinedDamage},
 	{Name: "adversary_attack", Function: scenarioAdversaryAttack},
+	{Name: "adversary_reaction", Function: scenarioAdversaryReaction},
+	{Name: "adversary_update", Function: scenarioAdversaryUpdate},
 	{Name: "apply_condition", Function: scenarioApplyCondition},
 	{Name: "gm_spend_fear", Function: scenarioGMSpendFear},
 	{Name: "set_spotlight", Function: scenarioSetSpotlight},
 	{Name: "clear_spotlight", Function: scenarioClearSpotlight},
 	{Name: "group_action", Function: scenarioGroupAction},
 	{Name: "tag_team", Function: scenarioTagTeam},
+	{Name: "temporary_armor", Function: scenarioTemporaryArmor},
 	{Name: "rest", Function: scenarioRest},
 	{Name: "downtime_move", Function: scenarioDowntimeMove},
 	{Name: "death_move", Function: scenarioDeathMove},
@@ -357,6 +361,14 @@ func scenarioReaction(state *lua.State) int {
 	return 0
 }
 
+func scenarioGroupReaction(state *lua.State) int {
+	scenario := checkScenario(state)
+	lua.CheckType(state, 2, lua.TypeTable)
+	data := tableToMap(state, 2)
+	appendStep(scenario, "group_reaction", data)
+	return 0
+}
+
 func scenarioAttack(state *lua.State) int {
 	scenario := checkScenario(state)
 	lua.CheckType(state, 2, lua.TypeTable)
@@ -389,6 +401,22 @@ func scenarioAdversaryAttack(state *lua.State) int {
 	return 0
 }
 
+func scenarioAdversaryReaction(state *lua.State) int {
+	scenario := checkScenario(state)
+	lua.CheckType(state, 2, lua.TypeTable)
+	data := tableToMap(state, 2)
+	appendStep(scenario, "adversary_reaction", data)
+	return 0
+}
+
+func scenarioAdversaryUpdate(state *lua.State) int {
+	scenario := checkScenario(state)
+	lua.CheckType(state, 2, lua.TypeTable)
+	data := tableToMap(state, 2)
+	appendStep(scenario, "adversary_update", data)
+	return 0
+}
+
 func scenarioApplyCondition(state *lua.State) int {
 	scenario := checkScenario(state)
 	lua.CheckType(state, 2, lua.TypeTable)
@@ -410,6 +438,14 @@ func scenarioTagTeam(state *lua.State) int {
 	lua.CheckType(state, 2, lua.TypeTable)
 	data := tableToMap(state, 2)
 	appendStep(scenario, "tag_team", data)
+	return 0
+}
+
+func scenarioTemporaryArmor(state *lua.State) int {
+	scenario := checkScenario(state)
+	lua.CheckType(state, 2, lua.TypeTable)
+	data := tableToMap(state, 2)
+	appendStep(scenario, "temporary_armor", data)
 	return 0
 }
 

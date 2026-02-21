@@ -15,6 +15,7 @@ scene:start_session("Adrift on a Sea of Steel")
 
 -- Missing DSL: restrict movement without a successful Agility roll.
 scene:action_roll{ actor = "Frodo", trait = "agility", difficulty = 17, outcome = "hope" }
+scene:apply_roll_outcome{}
 
 scene:end_session()
 

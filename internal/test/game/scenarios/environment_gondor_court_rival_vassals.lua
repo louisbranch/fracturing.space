@@ -13,9 +13,22 @@ scene:npc("Gondor Vassals")
 
 -- Courtiers compete for favor and feed intrigue.
 scene:start_session("Gondor Vassals")
+scene:gm_fear(1)
 
--- Missing DSL: model ongoing social pressure and favor exchanges.
-scene:gm_spend_fear(0):spotlight("Gondor Vassals")
+-- Partial mapping: rivalry pressure and social fallout are explicit by branch.
+-- Missing DSL: first-class favor/debt economy between court factions and PCs.
+scene:gm_spend_fear(1):spotlight("Gondor Vassals", { description = "court_favor_competition" })
+scene:action_roll{ actor = "Frodo", trait = "presence", difficulty = 14, disadvantage = 1, outcome = "failure_fear" }
+scene:apply_roll_outcome{
+  on_failure_fear = {
+    {kind = "apply_condition", target = "Frodo", add = {"VULNERABLE"}, source = "rival_vassal_pressure"},
+    {kind = "set_spotlight", type = "gm"},
+  },
+  on_success = {
+    {kind = "set_spotlight", target = "Frodo"},
+  },
+}
+scene:set_spotlight{ target = "Frodo" }
 
 scene:end_session()
 

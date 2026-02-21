@@ -13,10 +13,11 @@ scene:npc("Elrond")
 
 -- The society offers boasts, rumors, and rivalries.
 scene:start_session("Broken Compass")
+scene:gm_fear(1)
 
 -- Example: a passive feature that sets social tension and leads.
--- Missing DSL: represent the ongoing social pressure from the society.
-scene:gm_spend_fear(0):spotlight("Elrond")
+-- Ongoing social-pressure persistence remains unresolved.
+scene:gm_spend_fear(1):spotlight("Elrond")
 
 scene:end_session()
 

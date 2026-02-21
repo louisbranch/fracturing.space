@@ -14,7 +14,8 @@ scene:pc("Frodo")
 scene:start_session("Relentless Hope")
 
 -- Missing DSL: convert a Fear outcome to Hope and mark Stress.
-scene:action_roll{ actor = "Frodo", trait = "presence", difficulty = 13, outcome = "fear" }
+scene:action_roll{ actor = "Frodo", trait = "presence", difficulty = 13, outcome = "failure_fear" }
+scene:apply_roll_outcome{}
 
 scene:end_session()
 

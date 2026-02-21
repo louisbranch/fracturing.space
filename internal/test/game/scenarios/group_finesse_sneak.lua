@@ -17,15 +17,16 @@ scene:pc("Sam")
 scene:start_session("Courtyard Infiltration")
 
 -- Example: two allies succeed (+1 each), one fails (-1), net +1 for the leader.
--- Missing DSL: encode per-supporter outcomes and group bonuses.
+-- Partial mapping: supporter outcomes encode the +1/+1/-1 contribution pattern.
 scene:group_action{
   leader = "Aragorn",
   leader_trait = "finesse",
   difficulty = 12,
+  outcome = "hope",
   supporters = {
-    { name = "Frodo", trait = "finesse" },
-    { name = "Gandalf", trait = "finesse" },
-    { name = "Sam", trait = "finesse" }
+    { name = "Frodo", trait = "finesse", outcome = "hope" },
+    { name = "Gandalf", trait = "finesse", outcome = "hope" },
+    { name = "Sam", trait = "finesse", outcome = "fear" }
   }
 }
 

@@ -17,6 +17,7 @@ scene:gm_fear(3)
 
 -- Missing DSL: clear 2 HP and increase the usurper's stats after the action.
 scene:gm_spend_fear(3):spotlight("Saruman")
+scene:adversary_update{ target = "Saruman", evasion_delta = 1, notes = "godslayer_empowerment" }
 
 scene:end_session()
 

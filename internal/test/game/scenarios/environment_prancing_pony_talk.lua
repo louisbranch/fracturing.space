@@ -14,8 +14,9 @@ scene:pc("Frodo")
 scene:start_session("Talk of the Town")
 
 -- Example: success grants multiple details; failure grants one plus Stress.
--- Missing DSL: map outcome to number of details and stress choice.
+-- Detail fanout and stress-choice semantics remain unresolved.
 scene:action_roll{ actor = "Frodo", trait = "presence", difficulty = 10, outcome = "hope" }
+scene:apply_roll_outcome{}
 
 scene:end_session()
 

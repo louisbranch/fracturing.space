@@ -18,13 +18,15 @@ scene:adversary("Nazgul")
 scene:start_session("Terrifying Strike")
 
 -- Example: 10 damage is Major; Sam marks armor to reduce to Minor.
--- Missing DSL: apply group Hope loss and GM Fear gain.
+-- Partial mapping: explicit post-trigger GM Fear gain is represented.
+-- Missing DSL: grouped Hope-loss fanout with per-character lower-bound enforcement.
 scene:adversary_attack{
   actor = "Nazgul",
   target = "Sam",
   difficulty = 0,
   damage_type = "physical"
 }
+scene:gm_fear(1)
 
 -- Close the session after the terrifying strike.
 scene:end_session()

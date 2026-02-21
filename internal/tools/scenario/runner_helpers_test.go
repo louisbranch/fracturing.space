@@ -943,6 +943,20 @@ func TestParseDowntimeMove(t *testing.T) {
 	}
 }
 
+func TestParseTemporaryArmorDuration(t *testing.T) {
+	tests := []string{"short_rest", "long_rest", "session", "scene"}
+	for _, input := range tests {
+		got, err := parseTemporaryArmorDuration(input)
+		if err != nil || got != input {
+			t.Fatalf("parseTemporaryArmorDuration(%q) = %q, err=%v", input, got, err)
+		}
+	}
+	_, err := parseTemporaryArmorDuration("bad")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
 func TestParseDeathMove(t *testing.T) {
 	tests := []struct {
 		input string
@@ -1822,5 +1836,59 @@ func TestChooseActionSeed_TotalAndFlatModifier(t *testing.T) {
 	}
 	if result.Total != 30 {
 		t.Fatalf("seed %d produced total %d, want 30", seed, result.Total)
+	}
+}
+
+func TestApplyAdversaryDamageSeverityDowngradeBeforeThresholds(t *testing.T) {
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
+
+	current := &daggerheartv1.DaggerheartAdversary{
+		Id:              "adv-ranger",
+		Hp:              6,
+		Armor:           0,
+		MajorThreshold:  2,
+		SevereThreshold: 4,
+	}
+	var updateReq *daggerheartv1.DaggerheartUpdateAdversaryRequest
+	dhClient.getAdversary = func(_ context.Context, _ *daggerheartv1.DaggerheartGetAdversaryRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartGetAdversaryResponse, error) {
+		snapshot := *current
+		return &daggerheartv1.DaggerheartGetAdversaryResponse{Adversary: &snapshot}, nil
+	}
+	dhClient.updateAdversary = func(_ context.Context, req *daggerheartv1.DaggerheartUpdateAdversaryRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartUpdateAdversaryResponse, error) {
+		updateReq = req
+		if req.GetHp() != nil {
+			current.Hp = req.GetHp().GetValue()
+		}
+		if req.GetArmor() != nil {
+			current.Armor = req.GetArmor().GetValue()
+		}
+		return &daggerheartv1.DaggerheartUpdateAdversaryResponse{Adversary: current}, nil
+	}
+
+	runner := quietRunner(env)
+	state := testState()
+	applied, err := runner.applyAdversaryDamage(
+		context.Background(),
+		state,
+		"adv-ranger",
+		"Ranger",
+		&daggerheartv1.SessionDamageRollResponse{Total: 4},
+		map[string]any{
+			"damage_type":        "physical",
+			"severity_downgrade": 1,
+		},
+	)
+	if err != nil {
+		t.Fatalf("applyAdversaryDamage: %v", err)
+	}
+	if !applied {
+		t.Fatal("expected damage to be applied")
+	}
+	if updateReq == nil || updateReq.GetHp() == nil {
+		t.Fatal("expected hp update request")
+	}
+	if got := updateReq.GetHp().GetValue(); got != 4 {
+		t.Fatalf("hp after = %d, want 4 with one-step severity downgrade", got)
 	}
 }

@@ -17,7 +17,8 @@ scene:start_session("Divine Censure")
 scene:gm_fear(1)
 
 -- Example: spend Fear to summon a Elf Warden and 1d4 guards.
--- Missing DSL: spawn multiple adversaries near the priest.
+scene:adversary("Gondor Guard Reinforcement")
+-- Variable guard count and proximity-to-priest placement remain unresolved.
 scene:gm_spend_fear(1):spotlight("Elf Warden")
 
 scene:end_session()

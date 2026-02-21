@@ -14,8 +14,10 @@ scene:adversary("Saruman")
 -- The ritual escalates into a siege of the gods.
 scene:start_session("Beginning of the End")
 
--- Missing DSL: activate siege countdown (10) and tick based on fear/major damage.
+-- Major-damage tick branches remain unresolved in this fixture.
 scene:countdown_create{ name = "Divine Siege", kind = "consequence", current = 0, max = 10, direction = "increase" }
+scene:action_roll{ actor = "Frodo", trait = "instinct", difficulty = 14, outcome = "fear" }
+scene:countdown_update{ name = "Divine Siege", delta = 1, reason = "fear_outcome" }
 
 scene:end_session()
 
