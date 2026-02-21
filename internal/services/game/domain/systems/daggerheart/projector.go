@@ -50,6 +50,12 @@ func (Projector) Apply(state any, evt event.Event) (any, error) {
 			return state, fmt.Errorf("decode loadout_swapped payload: %w", err)
 		}
 		applyCharacterLoadoutSwapped(&current, payload)
+	case eventTypeCharacterTemporaryArmorApplied:
+		var payload CharacterTemporaryArmorAppliedPayload
+		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+			return state, fmt.Errorf("decode character_temporary_armor_applied payload: %w", err)
+		}
+		applyCharacterTemporaryArmorApplied(&current, payload)
 	case eventTypeRestTaken:
 		var payload RestTakenPayload
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
@@ -61,6 +67,9 @@ func (Projector) Apply(state any, evt event.Event) (any, error) {
 		}
 		for _, patch := range payload.CharacterStates {
 			applyRestCharacterPatch(&current, patch)
+			if payload.RefreshRest || payload.RefreshLongRest {
+				clearRestTemporaryArmor(&current, patch.CharacterID, payload.RefreshRest, payload.RefreshLongRest)
+			}
 		}
 	case eventTypeCountdownCreated:
 		var payload CountdownCreatedPayload
@@ -109,7 +118,7 @@ func (Projector) Apply(state any, evt event.Event) (any, error) {
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 			return state, fmt.Errorf("decode downtime_move_applied payload: %w", err)
 		}
-		applyDowntimeMove(&current, payload.CharacterID, payload.HopeAfter, payload.StressAfter, payload.ArmorAfter)
+		applyDowntimeMove(&current, payload.CharacterID, payload.Move, payload.HopeAfter, payload.StressAfter, payload.ArmorAfter)
 	case eventTypeAdversaryConditionChanged:
 		var payload AdversaryConditionChangedPayload
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
@@ -207,6 +216,26 @@ func applyCharacterLoadoutSwapped(state *SnapshotState, payload LoadoutSwappedPa
 	state.CharacterStates[characterID] = characterState
 }
 
+func applyCharacterTemporaryArmorApplied(state *SnapshotState, payload CharacterTemporaryArmorAppliedPayload) {
+	characterID := strings.TrimSpace(payload.CharacterID)
+	if characterID == "" {
+		return
+	}
+	characterState := state.CharacterStates[characterID]
+	characterState.CampaignID = state.CampaignID
+	characterState.CharacterID = characterID
+	characterState.ApplyTemporaryArmor(TemporaryArmorBucket{
+		Source:   strings.TrimSpace(payload.Source),
+		Duration: strings.TrimSpace(payload.Duration),
+		SourceID: strings.TrimSpace(payload.SourceID),
+		Amount:   payload.Amount,
+	})
+	if state.CharacterStates == nil {
+		state.CharacterStates = make(map[string]CharacterState)
+	}
+	state.CharacterStates[characterID] = characterState
+}
+
 func applyRestCharacterPatch(state *SnapshotState, payload RestCharacterStatePatch) {
 	characterID := strings.TrimSpace(payload.CharacterID)
 	if characterID == "" {
@@ -224,6 +253,27 @@ func applyRestCharacterPatch(state *SnapshotState, payload RestCharacterStatePat
 	if payload.ArmorAfter != nil {
 		characterState.Armor = *payload.ArmorAfter
 	}
+	if state.CharacterStates == nil {
+		state.CharacterStates = make(map[string]CharacterState)
+	}
+	state.CharacterStates[characterID] = characterState
+}
+
+func clearRestTemporaryArmor(state *SnapshotState, characterID string, clearShortRest bool, clearLongRest bool) {
+	characterID = strings.TrimSpace(characterID)
+	if characterID == "" {
+		return
+	}
+	characterState := state.CharacterStates[characterID]
+	characterState.CampaignID = state.CampaignID
+	characterState.CharacterID = characterID
+	if clearShortRest {
+		characterState.ClearTemporaryArmorByDuration("short_rest")
+	}
+	if clearLongRest {
+		characterState.ClearTemporaryArmorByDuration("long_rest")
+	}
+	characterState.SetArmor(characterState.ResourceCap(ResourceArmor))
 	if state.CharacterStates == nil {
 		state.CharacterStates = make(map[string]CharacterState)
 	}
@@ -275,7 +325,7 @@ func applyDamageApplied(state *SnapshotState, characterID string, hpAfter, armor
 	state.CharacterStates[characterID] = characterState
 }
 
-func applyDowntimeMove(state *SnapshotState, characterID string, hopeAfter, stressAfter, armorAfter *int) {
+func applyDowntimeMove(state *SnapshotState, characterID string, move string, hopeAfter, stressAfter, armorAfter *int) {
 	characterID = strings.TrimSpace(characterID)
 	if characterID == "" {
 		return
@@ -289,8 +339,15 @@ func applyDowntimeMove(state *SnapshotState, characterID string, hopeAfter, stre
 	if stressAfter != nil {
 		characterState.Stress = *stressAfter
 	}
+	if move == "repair_all_armor" {
+		characterState.ClearTemporaryArmorByDuration("short_rest")
+		characterState.SetArmor(characterState.Armor)
+	}
 	if armorAfter != nil {
 		characterState.Armor = *armorAfter
+		if move == "repair_all_armor" {
+			characterState.SetArmor(*armorAfter)
+		}
 	}
 	if state.CharacterStates == nil {
 		state.CharacterStates = make(map[string]CharacterState)

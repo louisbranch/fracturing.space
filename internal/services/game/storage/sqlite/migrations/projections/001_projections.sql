@@ -185,6 +185,7 @@ CREATE TABLE daggerheart_character_states (
     stress INTEGER NOT NULL DEFAULT 0,
     armor INTEGER NOT NULL DEFAULT 0,
     conditions_json TEXT NOT NULL DEFAULT '[]',
+    temporary_armor_json TEXT NOT NULL DEFAULT '[]',
     life_state TEXT NOT NULL DEFAULT 'alive',
     PRIMARY KEY (campaign_id, character_id),
     FOREIGN KEY (campaign_id, character_id)

@@ -37,6 +37,7 @@ func ApplyDowntimeMove(state *CharacterState, move DowntimeMove, opts DowntimeOp
 	case DowntimeClearAllStress:
 		state.SetStress(0)
 	case DowntimeRepairAllArmor:
+		state.ClearTemporaryArmorByDuration("short_rest")
 		state.SetArmor(state.ResourceCap(ResourceArmor))
 	case DowntimePrepare:
 		gain := 1

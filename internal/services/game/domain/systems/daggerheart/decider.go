@@ -10,38 +10,40 @@ import (
 )
 
 const (
-	commandTypeGMFearSet                command.Type = "sys.daggerheart.gm_fear.set"
-	commandTypeCharacterStatePatch      command.Type = "sys.daggerheart.character_state.patch"
-	commandTypeConditionChange          command.Type = "sys.daggerheart.condition.change"
-	commandTypeHopeSpend                command.Type = "sys.daggerheart.hope.spend"
-	commandTypeStressSpend              command.Type = "sys.daggerheart.stress.spend"
-	commandTypeLoadoutSwap              command.Type = "sys.daggerheart.loadout.swap"
-	commandTypeRestTake                 command.Type = "sys.daggerheart.rest.take"
-	commandTypeCountdownCreate          command.Type = "sys.daggerheart.countdown.create"
-	commandTypeCountdownUpdate          command.Type = "sys.daggerheart.countdown.update"
-	commandTypeCountdownDelete          command.Type = "sys.daggerheart.countdown.delete"
-	commandTypeDamageApply              command.Type = "sys.daggerheart.damage.apply"
-	commandTypeAdversaryDamageApply     command.Type = "sys.daggerheart.adversary_damage.apply"
-	commandTypeDowntimeMoveApply        command.Type = "sys.daggerheart.downtime_move.apply"
-	commandTypeAdversaryConditionChange command.Type = "sys.daggerheart.adversary_condition.change"
-	commandTypeAdversaryCreate          command.Type = "sys.daggerheart.adversary.create"
-	commandTypeAdversaryUpdate          command.Type = "sys.daggerheart.adversary.update"
-	commandTypeAdversaryDelete          command.Type = "sys.daggerheart.adversary.delete"
-	eventTypeGMFearChanged              event.Type   = "sys.daggerheart.gm_fear_changed"
-	eventTypeCharacterStatePatched      event.Type   = "sys.daggerheart.character_state_patched"
-	eventTypeConditionChanged           event.Type   = "sys.daggerheart.condition_changed"
-	eventTypeLoadoutSwapped             event.Type   = "sys.daggerheart.loadout_swapped"
-	eventTypeRestTaken                  event.Type   = "sys.daggerheart.rest_taken"
-	eventTypeCountdownCreated           event.Type   = "sys.daggerheart.countdown_created"
-	eventTypeCountdownUpdated           event.Type   = "sys.daggerheart.countdown_updated"
-	eventTypeCountdownDeleted           event.Type   = "sys.daggerheart.countdown_deleted"
-	eventTypeDamageApplied              event.Type   = "sys.daggerheart.damage_applied"
-	eventTypeAdversaryDamageApplied     event.Type   = "sys.daggerheart.adversary_damage_applied"
-	eventTypeDowntimeMoveApplied        event.Type   = "sys.daggerheart.downtime_move_applied"
-	eventTypeAdversaryConditionChanged  event.Type   = "sys.daggerheart.adversary_condition_changed"
-	eventTypeAdversaryCreated           event.Type   = "sys.daggerheart.adversary_created"
-	eventTypeAdversaryUpdated           event.Type   = "sys.daggerheart.adversary_updated"
-	eventTypeAdversaryDeleted           event.Type   = "sys.daggerheart.adversary_deleted"
+	commandTypeGMFearSet                    command.Type = "sys.daggerheart.gm_fear.set"
+	commandTypeCharacterStatePatch          command.Type = "sys.daggerheart.character_state.patch"
+	commandTypeConditionChange              command.Type = "sys.daggerheart.condition.change"
+	commandTypeHopeSpend                    command.Type = "sys.daggerheart.hope.spend"
+	commandTypeStressSpend                  command.Type = "sys.daggerheart.stress.spend"
+	commandTypeLoadoutSwap                  command.Type = "sys.daggerheart.loadout.swap"
+	commandTypeRestTake                     command.Type = "sys.daggerheart.rest.take"
+	commandTypeCountdownCreate              command.Type = "sys.daggerheart.countdown.create"
+	commandTypeCountdownUpdate              command.Type = "sys.daggerheart.countdown.update"
+	commandTypeCountdownDelete              command.Type = "sys.daggerheart.countdown.delete"
+	commandTypeDamageApply                  command.Type = "sys.daggerheart.damage.apply"
+	commandTypeAdversaryDamageApply         command.Type = "sys.daggerheart.adversary_damage.apply"
+	commandTypeDowntimeMoveApply            command.Type = "sys.daggerheart.downtime_move.apply"
+	commandTypeCharacterTemporaryArmorApply command.Type = "sys.daggerheart.character_temporary_armor.apply"
+	commandTypeAdversaryConditionChange     command.Type = "sys.daggerheart.adversary_condition.change"
+	commandTypeAdversaryCreate              command.Type = "sys.daggerheart.adversary.create"
+	commandTypeAdversaryUpdate              command.Type = "sys.daggerheart.adversary.update"
+	commandTypeAdversaryDelete              command.Type = "sys.daggerheart.adversary.delete"
+	eventTypeGMFearChanged                  event.Type   = "sys.daggerheart.gm_fear_changed"
+	eventTypeCharacterStatePatched          event.Type   = "sys.daggerheart.character_state_patched"
+	eventTypeConditionChanged               event.Type   = "sys.daggerheart.condition_changed"
+	eventTypeLoadoutSwapped                 event.Type   = "sys.daggerheart.loadout_swapped"
+	eventTypeRestTaken                      event.Type   = "sys.daggerheart.rest_taken"
+	eventTypeCountdownCreated               event.Type   = "sys.daggerheart.countdown_created"
+	eventTypeCountdownUpdated               event.Type   = "sys.daggerheart.countdown_updated"
+	eventTypeCountdownDeleted               event.Type   = "sys.daggerheart.countdown_deleted"
+	eventTypeDamageApplied                  event.Type   = "sys.daggerheart.damage_applied"
+	eventTypeAdversaryDamageApplied         event.Type   = "sys.daggerheart.adversary_damage_applied"
+	eventTypeDowntimeMoveApplied            event.Type   = "sys.daggerheart.downtime_move_applied"
+	eventTypeCharacterTemporaryArmorApplied event.Type   = "sys.daggerheart.character_temporary_armor_applied"
+	eventTypeAdversaryConditionChanged      event.Type   = "sys.daggerheart.adversary_condition_changed"
+	eventTypeAdversaryCreated               event.Type   = "sys.daggerheart.adversary_created"
+	eventTypeAdversaryUpdated               event.Type   = "sys.daggerheart.adversary_updated"
+	eventTypeAdversaryDeleted               event.Type   = "sys.daggerheart.adversary_deleted"
 
 	rejectionCodeGMFearAfterRequired           = "GM_FEAR_AFTER_REQUIRED"
 	rejectionCodeGMFearOutOfRange              = "GM_FEAR_AFTER_OUT_OF_RANGE"
@@ -527,6 +529,40 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 		evt := event.Event{
 			CampaignID:    cmd.CampaignID,
 			Type:          eventTypeDowntimeMoveApplied,
+			Timestamp:     now().UTC(),
+			ActorType:     event.ActorType(cmd.ActorType),
+			ActorID:       cmd.ActorID,
+			SessionID:     cmd.SessionID,
+			RequestID:     cmd.RequestID,
+			InvocationID:  cmd.InvocationID,
+			EntityType:    "character",
+			EntityID:      entityID,
+			SystemID:      SystemID,
+			SystemVersion: SystemVersion,
+			CorrelationID: cmd.CorrelationID,
+			CausationID:   cmd.CausationID,
+			PayloadJSON:   payloadJSON,
+		}
+
+		return command.Accept(evt)
+	case commandTypeCharacterTemporaryArmorApply:
+		var payload CharacterTemporaryArmorApplyPayload
+		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if now == nil {
+			now = time.Now
+		}
+		payload.CharacterID = strings.TrimSpace(payload.CharacterID)
+		payload.Source = strings.TrimSpace(payload.Source)
+		payload.Duration = strings.TrimSpace(payload.Duration)
+		payload.SourceID = strings.TrimSpace(payload.SourceID)
+		payloadJSON, _ := json.Marshal(payload)
+		entityID := strings.TrimSpace(cmd.EntityID)
+		if entityID == "" {
+			entityID = payload.CharacterID
+		}
+		evt := event.Event{
+			CampaignID:    cmd.CampaignID,
+			Type:          eventTypeCharacterTemporaryArmorApplied,
 			Timestamp:     now().UTC(),
 			ActorType:     event.ActorType(cmd.ActorType),
 			ActorID:       cmd.ActorID,

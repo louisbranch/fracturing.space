@@ -596,9 +596,11 @@ type DaggerheartCharacterState struct {
 	// Active conditions for the character.
 	Conditions []DaggerheartCondition `protobuf:"varint,6,rep,packed,name=conditions,proto3,enum=systems.daggerheart.v1.DaggerheartCondition" json:"conditions,omitempty"`
 	// Current life state.
-	LifeState     DaggerheartLifeState `protobuf:"varint,7,opt,name=life_state,json=lifeState,proto3,enum=systems.daggerheart.v1.DaggerheartLifeState" json:"life_state,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	LifeState DaggerheartLifeState `protobuf:"varint,7,opt,name=life_state,json=lifeState,proto3,enum=systems.daggerheart.v1.DaggerheartLifeState" json:"life_state,omitempty"`
+	// Active temporary armor buckets.
+	TemporaryArmorBuckets []*DaggerheartTemporaryArmorBucket `protobuf:"bytes,8,rep,name=temporary_armor_buckets,json=temporaryArmorBuckets,proto3" json:"temporary_armor_buckets,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *DaggerheartCharacterState) Reset() {
@@ -680,6 +682,86 @@ func (x *DaggerheartCharacterState) GetLifeState() DaggerheartLifeState {
 	return DaggerheartLifeState_DAGGERHEART_LIFE_STATE_UNSPECIFIED
 }
 
+func (x *DaggerheartCharacterState) GetTemporaryArmorBuckets() []*DaggerheartTemporaryArmorBucket {
+	if x != nil {
+		return x.TemporaryArmorBuckets
+	}
+	return nil
+}
+
+// DaggerheartTemporaryArmorBucket tracks a temporary armor source.
+type DaggerheartTemporaryArmorBucket struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Source identifier for the temporary armor.
+	Source string `protobuf:"bytes,1,opt,name=source,proto3" json:"source,omitempty"`
+	// Duration bucket key that controls clearing rules.
+	Duration string `protobuf:"bytes,2,opt,name=duration,proto3" json:"duration,omitempty"`
+	// Optional stable source id for merge/replace.
+	SourceId string `protobuf:"bytes,3,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
+	// Armor amount added by this bucket.
+	Amount        int32 `protobuf:"varint,4,opt,name=amount,proto3" json:"amount,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DaggerheartTemporaryArmorBucket) Reset() {
+	*x = DaggerheartTemporaryArmorBucket{}
+	mi := &file_systems_daggerheart_v1_state_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DaggerheartTemporaryArmorBucket) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DaggerheartTemporaryArmorBucket) ProtoMessage() {}
+
+func (x *DaggerheartTemporaryArmorBucket) ProtoReflect() protoreflect.Message {
+	mi := &file_systems_daggerheart_v1_state_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DaggerheartTemporaryArmorBucket.ProtoReflect.Descriptor instead.
+func (*DaggerheartTemporaryArmorBucket) Descriptor() ([]byte, []int) {
+	return file_systems_daggerheart_v1_state_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *DaggerheartTemporaryArmorBucket) GetSource() string {
+	if x != nil {
+		return x.Source
+	}
+	return ""
+}
+
+func (x *DaggerheartTemporaryArmorBucket) GetDuration() string {
+	if x != nil {
+		return x.Duration
+	}
+	return ""
+}
+
+func (x *DaggerheartTemporaryArmorBucket) GetSourceId() string {
+	if x != nil {
+		return x.SourceId
+	}
+	return ""
+}
+
+func (x *DaggerheartTemporaryArmorBucket) GetAmount() int32 {
+	if x != nil {
+		return x.Amount
+	}
+	return 0
+}
+
 // DaggerheartSnapshot contains Daggerheart-specific campaign-level state.
 // This is materialized as a projection derived from the event journal.
 type DaggerheartSnapshot struct {
@@ -694,7 +776,7 @@ type DaggerheartSnapshot struct {
 
 func (x *DaggerheartSnapshot) Reset() {
 	*x = DaggerheartSnapshot{}
-	mi := &file_systems_daggerheart_v1_state_proto_msgTypes[3]
+	mi := &file_systems_daggerheart_v1_state_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -706,7 +788,7 @@ func (x *DaggerheartSnapshot) String() string {
 func (*DaggerheartSnapshot) ProtoMessage() {}
 
 func (x *DaggerheartSnapshot) ProtoReflect() protoreflect.Message {
-	mi := &file_systems_daggerheart_v1_state_proto_msgTypes[3]
+	mi := &file_systems_daggerheart_v1_state_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -719,7 +801,7 @@ func (x *DaggerheartSnapshot) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DaggerheartSnapshot.ProtoReflect.Descriptor instead.
 func (*DaggerheartSnapshot) Descriptor() ([]byte, []int) {
-	return file_systems_daggerheart_v1_state_proto_rawDescGZIP(), []int{3}
+	return file_systems_daggerheart_v1_state_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *DaggerheartSnapshot) GetGmFear() int32 {
@@ -754,7 +836,7 @@ type DaggerheartDamageRequest struct {
 
 func (x *DaggerheartDamageRequest) Reset() {
 	*x = DaggerheartDamageRequest{}
-	mi := &file_systems_daggerheart_v1_state_proto_msgTypes[4]
+	mi := &file_systems_daggerheart_v1_state_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -766,7 +848,7 @@ func (x *DaggerheartDamageRequest) String() string {
 func (*DaggerheartDamageRequest) ProtoMessage() {}
 
 func (x *DaggerheartDamageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_systems_daggerheart_v1_state_proto_msgTypes[4]
+	mi := &file_systems_daggerheart_v1_state_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -779,7 +861,7 @@ func (x *DaggerheartDamageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DaggerheartDamageRequest.ProtoReflect.Descriptor instead.
 func (*DaggerheartDamageRequest) Descriptor() ([]byte, []int) {
-	return file_systems_daggerheart_v1_state_proto_rawDescGZIP(), []int{4}
+	return file_systems_daggerheart_v1_state_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *DaggerheartDamageRequest) GetAmount() int32 {
@@ -865,7 +947,7 @@ type DaggerheartRestRequest struct {
 
 func (x *DaggerheartRestRequest) Reset() {
 	*x = DaggerheartRestRequest{}
-	mi := &file_systems_daggerheart_v1_state_proto_msgTypes[5]
+	mi := &file_systems_daggerheart_v1_state_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -877,7 +959,7 @@ func (x *DaggerheartRestRequest) String() string {
 func (*DaggerheartRestRequest) ProtoMessage() {}
 
 func (x *DaggerheartRestRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_systems_daggerheart_v1_state_proto_msgTypes[5]
+	mi := &file_systems_daggerheart_v1_state_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -890,7 +972,7 @@ func (x *DaggerheartRestRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DaggerheartRestRequest.ProtoReflect.Descriptor instead.
 func (*DaggerheartRestRequest) Descriptor() ([]byte, []int) {
-	return file_systems_daggerheart_v1_state_proto_rawDescGZIP(), []int{5}
+	return file_systems_daggerheart_v1_state_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *DaggerheartRestRequest) GetRestType() DaggerheartRestType {
@@ -938,7 +1020,7 @@ type DaggerheartDowntimeRequest struct {
 
 func (x *DaggerheartDowntimeRequest) Reset() {
 	*x = DaggerheartDowntimeRequest{}
-	mi := &file_systems_daggerheart_v1_state_proto_msgTypes[6]
+	mi := &file_systems_daggerheart_v1_state_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -950,7 +1032,7 @@ func (x *DaggerheartDowntimeRequest) String() string {
 func (*DaggerheartDowntimeRequest) ProtoMessage() {}
 
 func (x *DaggerheartDowntimeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_systems_daggerheart_v1_state_proto_msgTypes[6]
+	mi := &file_systems_daggerheart_v1_state_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -963,7 +1045,7 @@ func (x *DaggerheartDowntimeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DaggerheartDowntimeRequest.ProtoReflect.Descriptor instead.
 func (*DaggerheartDowntimeRequest) Descriptor() ([]byte, []int) {
-	return file_systems_daggerheart_v1_state_proto_rawDescGZIP(), []int{6}
+	return file_systems_daggerheart_v1_state_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *DaggerheartDowntimeRequest) GetMove() DaggerheartDowntimeMove {
@@ -991,7 +1073,7 @@ type DaggerheartLoadoutSwapRequest struct {
 
 func (x *DaggerheartLoadoutSwapRequest) Reset() {
 	*x = DaggerheartLoadoutSwapRequest{}
-	mi := &file_systems_daggerheart_v1_state_proto_msgTypes[7]
+	mi := &file_systems_daggerheart_v1_state_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1003,7 +1085,7 @@ func (x *DaggerheartLoadoutSwapRequest) String() string {
 func (*DaggerheartLoadoutSwapRequest) ProtoMessage() {}
 
 func (x *DaggerheartLoadoutSwapRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_systems_daggerheart_v1_state_proto_msgTypes[7]
+	mi := &file_systems_daggerheart_v1_state_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1016,7 +1098,7 @@ func (x *DaggerheartLoadoutSwapRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DaggerheartLoadoutSwapRequest.ProtoReflect.Descriptor instead.
 func (*DaggerheartLoadoutSwapRequest) Descriptor() ([]byte, []int) {
-	return file_systems_daggerheart_v1_state_proto_rawDescGZIP(), []int{7}
+	return file_systems_daggerheart_v1_state_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *DaggerheartLoadoutSwapRequest) GetCardId() string {
@@ -1067,7 +1149,7 @@ const file_systems_daggerheart_v1_state_proto_rawDesc = "" +
 	"\binstinct\x18\r \x01(\v2\x1b.google.protobuf.Int32ValueR\binstinct\x127\n" +
 	"\bpresence\x18\x0e \x01(\v2\x1b.google.protobuf.Int32ValueR\bpresence\x129\n" +
 	"\tknowledge\x18\x0f \x01(\v2\x1b.google.protobuf.Int32ValueR\tknowledge\x12O\n" +
-	"\vexperiences\x18\x10 \x03(\v2-.systems.daggerheart.v1.DaggerheartExperienceR\vexperiences\"\xa3\x02\n" +
+	"\vexperiences\x18\x10 \x03(\v2-.systems.daggerheart.v1.DaggerheartExperienceR\vexperiences\"\x94\x03\n" +
 	"\x19DaggerheartCharacterState\x12\x0e\n" +
 	"\x02hp\x18\x01 \x01(\x05R\x02hp\x12\x12\n" +
 	"\x04hope\x18\x02 \x01(\x05R\x04hope\x12\x19\n" +
@@ -1078,7 +1160,13 @@ const file_systems_daggerheart_v1_state_proto_rawDesc = "" +
 	"conditions\x18\x06 \x03(\x0e2,.systems.daggerheart.v1.DaggerheartConditionR\n" +
 	"conditions\x12K\n" +
 	"\n" +
-	"life_state\x18\a \x01(\x0e2,.systems.daggerheart.v1.DaggerheartLifeStateR\tlifeState\"f\n" +
+	"life_state\x18\a \x01(\x0e2,.systems.daggerheart.v1.DaggerheartLifeStateR\tlifeState\x12o\n" +
+	"\x17temporary_armor_buckets\x18\b \x03(\v27.systems.daggerheart.v1.DaggerheartTemporaryArmorBucketR\x15temporaryArmorBuckets\"\x8a\x01\n" +
+	"\x1fDaggerheartTemporaryArmorBucket\x12\x16\n" +
+	"\x06source\x18\x01 \x01(\tR\x06source\x12\x1a\n" +
+	"\bduration\x18\x02 \x01(\tR\bduration\x12\x1b\n" +
+	"\tsource_id\x18\x03 \x01(\tR\bsourceId\x12\x16\n" +
+	"\x06amount\x18\x04 \x01(\x05R\x06amount\"f\n" +
 	"\x13DaggerheartSnapshot\x12\x17\n" +
 	"\agm_fear\x18\x01 \x01(\x05R\x06gmFear\x126\n" +
 	"\x17consecutive_short_rests\x18\x02 \x01(\x05R\x15consecutiveShortRests\"\xa3\x03\n" +
@@ -1155,51 +1243,53 @@ func file_systems_daggerheart_v1_state_proto_rawDescGZIP() []byte {
 }
 
 var file_systems_daggerheart_v1_state_proto_enumTypes = make([]protoimpl.EnumInfo, 6)
-var file_systems_daggerheart_v1_state_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_systems_daggerheart_v1_state_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_systems_daggerheart_v1_state_proto_goTypes = []any{
-	(DaggerheartCondition)(0),             // 0: systems.daggerheart.v1.DaggerheartCondition
-	(DaggerheartLifeState)(0),             // 1: systems.daggerheart.v1.DaggerheartLifeState
-	(DaggerheartDeathMove)(0),             // 2: systems.daggerheart.v1.DaggerheartDeathMove
-	(DaggerheartRestType)(0),              // 3: systems.daggerheart.v1.DaggerheartRestType
-	(DaggerheartDowntimeMove)(0),          // 4: systems.daggerheart.v1.DaggerheartDowntimeMove
-	(DaggerheartDamageType)(0),            // 5: systems.daggerheart.v1.DaggerheartDamageType
-	(*DaggerheartExperience)(nil),         // 6: systems.daggerheart.v1.DaggerheartExperience
-	(*DaggerheartProfile)(nil),            // 7: systems.daggerheart.v1.DaggerheartProfile
-	(*DaggerheartCharacterState)(nil),     // 8: systems.daggerheart.v1.DaggerheartCharacterState
-	(*DaggerheartSnapshot)(nil),           // 9: systems.daggerheart.v1.DaggerheartSnapshot
-	(*DaggerheartDamageRequest)(nil),      // 10: systems.daggerheart.v1.DaggerheartDamageRequest
-	(*DaggerheartRestRequest)(nil),        // 11: systems.daggerheart.v1.DaggerheartRestRequest
-	(*DaggerheartDowntimeRequest)(nil),    // 12: systems.daggerheart.v1.DaggerheartDowntimeRequest
-	(*DaggerheartLoadoutSwapRequest)(nil), // 13: systems.daggerheart.v1.DaggerheartLoadoutSwapRequest
-	(*wrapperspb.Int32Value)(nil),         // 14: google.protobuf.Int32Value
-	(*v1.RngRequest)(nil),                 // 15: common.v1.RngRequest
+	(DaggerheartCondition)(0),               // 0: systems.daggerheart.v1.DaggerheartCondition
+	(DaggerheartLifeState)(0),               // 1: systems.daggerheart.v1.DaggerheartLifeState
+	(DaggerheartDeathMove)(0),               // 2: systems.daggerheart.v1.DaggerheartDeathMove
+	(DaggerheartRestType)(0),                // 3: systems.daggerheart.v1.DaggerheartRestType
+	(DaggerheartDowntimeMove)(0),            // 4: systems.daggerheart.v1.DaggerheartDowntimeMove
+	(DaggerheartDamageType)(0),              // 5: systems.daggerheart.v1.DaggerheartDamageType
+	(*DaggerheartExperience)(nil),           // 6: systems.daggerheart.v1.DaggerheartExperience
+	(*DaggerheartProfile)(nil),              // 7: systems.daggerheart.v1.DaggerheartProfile
+	(*DaggerheartCharacterState)(nil),       // 8: systems.daggerheart.v1.DaggerheartCharacterState
+	(*DaggerheartTemporaryArmorBucket)(nil), // 9: systems.daggerheart.v1.DaggerheartTemporaryArmorBucket
+	(*DaggerheartSnapshot)(nil),             // 10: systems.daggerheart.v1.DaggerheartSnapshot
+	(*DaggerheartDamageRequest)(nil),        // 11: systems.daggerheart.v1.DaggerheartDamageRequest
+	(*DaggerheartRestRequest)(nil),          // 12: systems.daggerheart.v1.DaggerheartRestRequest
+	(*DaggerheartDowntimeRequest)(nil),      // 13: systems.daggerheart.v1.DaggerheartDowntimeRequest
+	(*DaggerheartLoadoutSwapRequest)(nil),   // 14: systems.daggerheart.v1.DaggerheartLoadoutSwapRequest
+	(*wrapperspb.Int32Value)(nil),           // 15: google.protobuf.Int32Value
+	(*v1.RngRequest)(nil),                   // 16: common.v1.RngRequest
 }
 var file_systems_daggerheart_v1_state_proto_depIdxs = []int32{
-	14, // 0: systems.daggerheart.v1.DaggerheartProfile.stress_max:type_name -> google.protobuf.Int32Value
-	14, // 1: systems.daggerheart.v1.DaggerheartProfile.evasion:type_name -> google.protobuf.Int32Value
-	14, // 2: systems.daggerheart.v1.DaggerheartProfile.major_threshold:type_name -> google.protobuf.Int32Value
-	14, // 3: systems.daggerheart.v1.DaggerheartProfile.severe_threshold:type_name -> google.protobuf.Int32Value
-	14, // 4: systems.daggerheart.v1.DaggerheartProfile.proficiency:type_name -> google.protobuf.Int32Value
-	14, // 5: systems.daggerheart.v1.DaggerheartProfile.armor_score:type_name -> google.protobuf.Int32Value
-	14, // 6: systems.daggerheart.v1.DaggerheartProfile.armor_max:type_name -> google.protobuf.Int32Value
-	14, // 7: systems.daggerheart.v1.DaggerheartProfile.agility:type_name -> google.protobuf.Int32Value
-	14, // 8: systems.daggerheart.v1.DaggerheartProfile.strength:type_name -> google.protobuf.Int32Value
-	14, // 9: systems.daggerheart.v1.DaggerheartProfile.finesse:type_name -> google.protobuf.Int32Value
-	14, // 10: systems.daggerheart.v1.DaggerheartProfile.instinct:type_name -> google.protobuf.Int32Value
-	14, // 11: systems.daggerheart.v1.DaggerheartProfile.presence:type_name -> google.protobuf.Int32Value
-	14, // 12: systems.daggerheart.v1.DaggerheartProfile.knowledge:type_name -> google.protobuf.Int32Value
+	15, // 0: systems.daggerheart.v1.DaggerheartProfile.stress_max:type_name -> google.protobuf.Int32Value
+	15, // 1: systems.daggerheart.v1.DaggerheartProfile.evasion:type_name -> google.protobuf.Int32Value
+	15, // 2: systems.daggerheart.v1.DaggerheartProfile.major_threshold:type_name -> google.protobuf.Int32Value
+	15, // 3: systems.daggerheart.v1.DaggerheartProfile.severe_threshold:type_name -> google.protobuf.Int32Value
+	15, // 4: systems.daggerheart.v1.DaggerheartProfile.proficiency:type_name -> google.protobuf.Int32Value
+	15, // 5: systems.daggerheart.v1.DaggerheartProfile.armor_score:type_name -> google.protobuf.Int32Value
+	15, // 6: systems.daggerheart.v1.DaggerheartProfile.armor_max:type_name -> google.protobuf.Int32Value
+	15, // 7: systems.daggerheart.v1.DaggerheartProfile.agility:type_name -> google.protobuf.Int32Value
+	15, // 8: systems.daggerheart.v1.DaggerheartProfile.strength:type_name -> google.protobuf.Int32Value
+	15, // 9: systems.daggerheart.v1.DaggerheartProfile.finesse:type_name -> google.protobuf.Int32Value
+	15, // 10: systems.daggerheart.v1.DaggerheartProfile.instinct:type_name -> google.protobuf.Int32Value
+	15, // 11: systems.daggerheart.v1.DaggerheartProfile.presence:type_name -> google.protobuf.Int32Value
+	15, // 12: systems.daggerheart.v1.DaggerheartProfile.knowledge:type_name -> google.protobuf.Int32Value
 	6,  // 13: systems.daggerheart.v1.DaggerheartProfile.experiences:type_name -> systems.daggerheart.v1.DaggerheartExperience
 	0,  // 14: systems.daggerheart.v1.DaggerheartCharacterState.conditions:type_name -> systems.daggerheart.v1.DaggerheartCondition
 	1,  // 15: systems.daggerheart.v1.DaggerheartCharacterState.life_state:type_name -> systems.daggerheart.v1.DaggerheartLifeState
-	5,  // 16: systems.daggerheart.v1.DaggerheartDamageRequest.damage_type:type_name -> systems.daggerheart.v1.DaggerheartDamageType
-	3,  // 17: systems.daggerheart.v1.DaggerheartRestRequest.rest_type:type_name -> systems.daggerheart.v1.DaggerheartRestType
-	15, // 18: systems.daggerheart.v1.DaggerheartRestRequest.rng:type_name -> common.v1.RngRequest
-	4,  // 19: systems.daggerheart.v1.DaggerheartDowntimeRequest.move:type_name -> systems.daggerheart.v1.DaggerheartDowntimeMove
-	20, // [20:20] is the sub-list for method output_type
-	20, // [20:20] is the sub-list for method input_type
-	20, // [20:20] is the sub-list for extension type_name
-	20, // [20:20] is the sub-list for extension extendee
-	0,  // [0:20] is the sub-list for field type_name
+	9,  // 16: systems.daggerheart.v1.DaggerheartCharacterState.temporary_armor_buckets:type_name -> systems.daggerheart.v1.DaggerheartTemporaryArmorBucket
+	5,  // 17: systems.daggerheart.v1.DaggerheartDamageRequest.damage_type:type_name -> systems.daggerheart.v1.DaggerheartDamageType
+	3,  // 18: systems.daggerheart.v1.DaggerheartRestRequest.rest_type:type_name -> systems.daggerheart.v1.DaggerheartRestType
+	16, // 19: systems.daggerheart.v1.DaggerheartRestRequest.rng:type_name -> common.v1.RngRequest
+	4,  // 20: systems.daggerheart.v1.DaggerheartDowntimeRequest.move:type_name -> systems.daggerheart.v1.DaggerheartDowntimeMove
+	21, // [21:21] is the sub-list for method output_type
+	21, // [21:21] is the sub-list for method input_type
+	21, // [21:21] is the sub-list for extension type_name
+	21, // [21:21] is the sub-list for extension extendee
+	0,  // [0:21] is the sub-list for field type_name
 }
 
 func init() { file_systems_daggerheart_v1_state_proto_init() }
@@ -1213,7 +1303,7 @@ func file_systems_daggerheart_v1_state_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_systems_daggerheart_v1_state_proto_rawDesc), len(file_systems_daggerheart_v1_state_proto_rawDesc)),
 			NumEnums:      6,
-			NumMessages:   8,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

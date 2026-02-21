@@ -416,7 +416,7 @@ func (s *projectionDaggerheartStore) GetDaggerheartCharacterProfile(_ context.Co
 	key := campaignID + ":" + characterID
 	profile, ok := s.profiles[key]
 	if !ok {
-		return storage.DaggerheartCharacterProfile{}, fmt.Errorf("not found")
+		return storage.DaggerheartCharacterProfile{}, storage.ErrNotFound
 	}
 	return profile, nil
 }

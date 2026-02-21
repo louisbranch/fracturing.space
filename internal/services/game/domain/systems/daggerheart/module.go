@@ -51,6 +51,7 @@ var daggerheartCommandDefinitions = []command.Definition{
 	{Type: commandTypeDamageApply, Owner: command.OwnerSystem, ValidatePayload: validateDamageApplyPayload},
 	{Type: commandTypeAdversaryDamageApply, Owner: command.OwnerSystem, ValidatePayload: validateAdversaryDamageApplyPayload},
 	{Type: commandTypeDowntimeMoveApply, Owner: command.OwnerSystem, ValidatePayload: validateDowntimeMoveApplyPayload},
+	{Type: commandTypeCharacterTemporaryArmorApply, Owner: command.OwnerSystem, ValidatePayload: validateCharacterTemporaryArmorApplyPayload},
 	{Type: commandTypeAdversaryConditionChange, Owner: command.OwnerSystem, ValidatePayload: validateAdversaryConditionChangePayload},
 	{Type: commandTypeAdversaryCreate, Owner: command.OwnerSystem, ValidatePayload: validateAdversaryCreatePayload},
 	{Type: commandTypeAdversaryUpdate, Owner: command.OwnerSystem, ValidatePayload: validateAdversaryUpdatePayload},
@@ -69,6 +70,7 @@ var daggerheartEventDefinitions = []event.Definition{
 	{Type: eventTypeDamageApplied, Owner: event.OwnerSystem, ValidatePayload: validateDamageAppliedPayload},
 	{Type: eventTypeAdversaryDamageApplied, Owner: event.OwnerSystem, ValidatePayload: validateAdversaryDamageAppliedPayload},
 	{Type: eventTypeDowntimeMoveApplied, Owner: event.OwnerSystem, ValidatePayload: validateDowntimeMoveAppliedPayload},
+	{Type: eventTypeCharacterTemporaryArmorApplied, Owner: event.OwnerSystem, ValidatePayload: validateCharacterTemporaryArmorAppliedPayload},
 	{Type: eventTypeAdversaryConditionChanged, Owner: event.OwnerSystem, ValidatePayload: validateAdversaryConditionChangedPayload},
 	{Type: eventTypeAdversaryCreated, Owner: event.OwnerSystem, ValidatePayload: validateAdversaryCreatedPayload},
 	{Type: eventTypeAdversaryUpdated, Owner: event.OwnerSystem, ValidatePayload: validateAdversaryUpdatedPayload},
@@ -382,6 +384,30 @@ func validateDowntimeMoveAppliedPayload(raw json.RawMessage) error {
 	return validateDowntimeMoveApplyPayload(raw)
 }
 
+func validateCharacterTemporaryArmorApplyPayload(raw json.RawMessage) error {
+	var payload CharacterTemporaryArmorApplyPayload
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return err
+	}
+	if strings.TrimSpace(payload.CharacterID) == "" {
+		return errors.New("character_id is required")
+	}
+	if strings.TrimSpace(payload.Source) == "" {
+		return errors.New("source is required")
+	}
+	if !isTemporaryArmorDuration(strings.TrimSpace(payload.Duration)) {
+		return errors.New("duration must be short_rest, long_rest, session, or scene")
+	}
+	if payload.Amount <= 0 {
+		return errors.New("amount must be greater than zero")
+	}
+	return nil
+}
+
+func validateCharacterTemporaryArmorAppliedPayload(raw json.RawMessage) error {
+	return validateCharacterTemporaryArmorApplyPayload(raw)
+}
+
 func validateAdversaryConditionChangePayload(raw json.RawMessage) error {
 	var payload AdversaryConditionChangePayload
 	if err := json.Unmarshal(raw, &payload); err != nil {
@@ -499,6 +525,15 @@ func hasRestTakeMutation(payload RestTakePayload) bool {
 
 func hasDamagePatchMutation(hpBefore, hpAfter, armorBefore, armorAfter *int) bool {
 	return hasIntFieldChange(hpBefore, hpAfter) || hasIntFieldChange(armorBefore, armorAfter)
+}
+
+func isTemporaryArmorDuration(duration string) bool {
+	switch duration {
+	case "short_rest", "long_rest", "session", "scene":
+		return true
+	default:
+		return false
+	}
 }
 
 func hasIntFieldChange(before, after *int) bool {

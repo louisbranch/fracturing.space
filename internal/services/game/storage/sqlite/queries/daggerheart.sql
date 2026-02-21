@@ -37,13 +37,14 @@ WHERE campaign_id = ? AND character_id = ?;
 -- Character State Extensions
 
 -- name: GetDaggerheartCharacterState :one
-SELECT * FROM daggerheart_character_states
+SELECT campaign_id, character_id, hp, hope, hope_max, stress, armor, conditions_json, temporary_armor_json, life_state
+FROM daggerheart_character_states
 WHERE campaign_id = ? AND character_id = ?;
 
 -- name: PutDaggerheartCharacterState :exec
 INSERT INTO daggerheart_character_states (
-    campaign_id, character_id, hp, hope, hope_max, stress, armor, conditions_json, life_state
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    campaign_id, character_id, hp, hope, hope_max, stress, armor, conditions_json, temporary_armor_json, life_state
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(campaign_id, character_id) DO UPDATE SET
     hp = excluded.hp,
     hope = excluded.hope,
@@ -51,11 +52,12 @@ ON CONFLICT(campaign_id, character_id) DO UPDATE SET
     stress = excluded.stress,
     armor = excluded.armor,
     conditions_json = excluded.conditions_json,
+    temporary_armor_json = excluded.temporary_armor_json,
     life_state = excluded.life_state;
 
 -- name: UpdateDaggerheartCharacterState :exec
 UPDATE daggerheart_character_states
-SET hp = ?, hope = ?, hope_max = ?, stress = ?, armor = ?, conditions_json = ?, life_state = ?
+SET hp = ?, hope = ?, hope_max = ?, stress = ?, armor = ?, conditions_json = ?, temporary_armor_json = ?, life_state = ?
 WHERE campaign_id = ? AND character_id = ?;
 
 -- name: UpdateDaggerheartCharacterStateHopeStress :exec

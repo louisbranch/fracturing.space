@@ -97,6 +97,20 @@ message DaggerheartCharacterState {
   repeated DaggerheartCondition conditions = 6;
   // Current life state.
   DaggerheartLifeState life_state = 7;
+  // Active temporary armor buckets.
+  repeated DaggerheartTemporaryArmorBucket temporary_armor_buckets = 8;
+}
+
+// DaggerheartTemporaryArmorBucket tracks a temporary armor source.
+message DaggerheartTemporaryArmorBucket {
+  // Source identifier for the temporary armor.
+  string source = 1;
+  // Duration bucket key that controls clearing rules.
+  string duration = 2;
+  // Optional stable source id for merge/replace.
+  string source_id = 3;
+  // Armor amount added by this bucket.
+  int32 amount = 4;
 }
 
 // DaggerheartSnapshot contains Daggerheart-specific campaign-level state.

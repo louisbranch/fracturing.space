@@ -30,6 +30,7 @@ const (
 	DaggerheartService_ApplyAdversaryDamage_FullMethodName        = "/systems.daggerheart.v1.DaggerheartService/ApplyAdversaryDamage"
 	DaggerheartService_ApplyRest_FullMethodName                   = "/systems.daggerheart.v1.DaggerheartService/ApplyRest"
 	DaggerheartService_ApplyDowntimeMove_FullMethodName           = "/systems.daggerheart.v1.DaggerheartService/ApplyDowntimeMove"
+	DaggerheartService_ApplyTemporaryArmor_FullMethodName         = "/systems.daggerheart.v1.DaggerheartService/ApplyTemporaryArmor"
 	DaggerheartService_SwapLoadout_FullMethodName                 = "/systems.daggerheart.v1.DaggerheartService/SwapLoadout"
 	DaggerheartService_ApplyDeathMove_FullMethodName              = "/systems.daggerheart.v1.DaggerheartService/ApplyDeathMove"
 	DaggerheartService_ApplyConditions_FullMethodName             = "/systems.daggerheart.v1.DaggerheartService/ApplyConditions"
@@ -87,6 +88,8 @@ type DaggerheartServiceClient interface {
 	ApplyRest(ctx context.Context, in *DaggerheartApplyRestRequest, opts ...grpc.CallOption) (*DaggerheartApplyRestResponse, error)
 	// Apply a downtime move (system-specific).
 	ApplyDowntimeMove(ctx context.Context, in *DaggerheartApplyDowntimeMoveRequest, opts ...grpc.CallOption) (*DaggerheartApplyDowntimeMoveResponse, error)
+	// Apply temporary armor to a character (system-specific).
+	ApplyTemporaryArmor(ctx context.Context, in *DaggerheartApplyTemporaryArmorRequest, opts ...grpc.CallOption) (*DaggerheartApplyTemporaryArmorResponse, error)
 	// Swap a loadout card (system-specific).
 	SwapLoadout(ctx context.Context, in *DaggerheartSwapLoadoutRequest, opts ...grpc.CallOption) (*DaggerheartSwapLoadoutResponse, error)
 	// Apply a death move (system-specific).
@@ -245,6 +248,16 @@ func (c *daggerheartServiceClient) ApplyDowntimeMove(ctx context.Context, in *Da
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(DaggerheartApplyDowntimeMoveResponse)
 	err := c.cc.Invoke(ctx, DaggerheartService_ApplyDowntimeMove_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) ApplyTemporaryArmor(ctx context.Context, in *DaggerheartApplyTemporaryArmorRequest, opts ...grpc.CallOption) (*DaggerheartApplyTemporaryArmorResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartApplyTemporaryArmorResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_ApplyTemporaryArmor_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -549,6 +562,8 @@ type DaggerheartServiceServer interface {
 	ApplyRest(context.Context, *DaggerheartApplyRestRequest) (*DaggerheartApplyRestResponse, error)
 	// Apply a downtime move (system-specific).
 	ApplyDowntimeMove(context.Context, *DaggerheartApplyDowntimeMoveRequest) (*DaggerheartApplyDowntimeMoveResponse, error)
+	// Apply temporary armor to a character (system-specific).
+	ApplyTemporaryArmor(context.Context, *DaggerheartApplyTemporaryArmorRequest) (*DaggerheartApplyTemporaryArmorResponse, error)
 	// Swap a loadout card (system-specific).
 	SwapLoadout(context.Context, *DaggerheartSwapLoadoutRequest) (*DaggerheartSwapLoadoutResponse, error)
 	// Apply a death move (system-specific).
@@ -642,6 +657,9 @@ func (UnimplementedDaggerheartServiceServer) ApplyRest(context.Context, *Daggerh
 }
 func (UnimplementedDaggerheartServiceServer) ApplyDowntimeMove(context.Context, *DaggerheartApplyDowntimeMoveRequest) (*DaggerheartApplyDowntimeMoveResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ApplyDowntimeMove not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) ApplyTemporaryArmor(context.Context, *DaggerheartApplyTemporaryArmorRequest) (*DaggerheartApplyTemporaryArmorResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ApplyTemporaryArmor not implemented")
 }
 func (UnimplementedDaggerheartServiceServer) SwapLoadout(context.Context, *DaggerheartSwapLoadoutRequest) (*DaggerheartSwapLoadoutResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SwapLoadout not implemented")
@@ -921,6 +939,24 @@ func _DaggerheartService_ApplyDowntimeMove_Handler(srv interface{}, ctx context.
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DaggerheartServiceServer).ApplyDowntimeMove(ctx, req.(*DaggerheartApplyDowntimeMoveRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_ApplyTemporaryArmor_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartApplyTemporaryArmorRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).ApplyTemporaryArmor(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_ApplyTemporaryArmor_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).ApplyTemporaryArmor(ctx, req.(*DaggerheartApplyTemporaryArmorRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1457,6 +1493,10 @@ var DaggerheartService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ApplyDowntimeMove",
 			Handler:    _DaggerheartService_ApplyDowntimeMove_Handler,
+		},
+		{
+			MethodName: "ApplyTemporaryArmor",
+			Handler:    _DaggerheartService_ApplyTemporaryArmor_Handler,
 		},
 		{
 			MethodName: "SwapLoadout",

@@ -164,6 +164,8 @@ func runStep(t *testing.T, env scenarioEnv, state *scenarioState, step Step) {
 		runRestStep(t, ctx, env, state, step)
 	case "downtime_move":
 		runDowntimeMoveStep(t, ctx, env, state, step)
+	case "temporary_armor":
+		runTemporaryArmorStep(t, ctx, env, state, step)
 	case "death_move":
 		runDeathMoveStep(t, ctx, env, state, step)
 	case "blaze_of_glory":
@@ -785,6 +787,50 @@ func runDowntimeMoveStep(t *testing.T, ctx context.Context, env scenarioEnv, sta
 	}
 	requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeDowntimeMoveApplied)
 	assertExpectedDowntimeMove(t, ctx, env, state, before, step.Args)
+	assertExpectedDeltas(t, ctx, env, state, expectedSpec, expectedBefore)
+}
+
+func runTemporaryArmorStep(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, step Step) {
+	ensureSession(t, ctx, env, state)
+	name := requiredString(step.Args, "target")
+	if name == "" {
+		t.Fatal("temporary_armor target is required")
+	}
+	source := requiredString(step.Args, "source")
+	if source == "" {
+		t.Fatal("temporary_armor source is required")
+	}
+	duration := requiredString(step.Args, "duration")
+	if duration == "" {
+		t.Fatal("temporary_armor duration is required")
+	}
+	amount, ok := readInt(step.Args, "amount")
+	if !ok {
+		t.Fatal("temporary_armor amount is required")
+	}
+
+	expectedSpec, expectedBefore := captureExpectedDeltas(t, ctx, env, state, step.Args, name)
+
+	request := &daggerheartv1.DaggerheartApplyTemporaryArmorRequest{
+		CampaignId:  state.campaignID,
+		CharacterId: actorID(t, state, name),
+		Armor: &daggerheartv1.DaggerheartTemporaryArmor{
+			Source:   source,
+			Duration: duration,
+			Amount:   int32(amount),
+		},
+	}
+	if sourceID := optionalString(step.Args, "source_id", ""); sourceID != "" {
+		request.Armor.SourceId = sourceID
+	}
+
+	before := latestSeq(t, ctx, env, state)
+	ctxWithSession := withSessionID(ctx, state.sessionID)
+	_, err := env.daggerheartClient.ApplyTemporaryArmor(ctxWithSession, request)
+	if err != nil {
+		t.Fatalf("temporary_armor: %v", err)
+	}
+	requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeCharacterTemporaryArmorApplied)
 	assertExpectedDeltas(t, ctx, env, state, expectedSpec, expectedBefore)
 }
 
