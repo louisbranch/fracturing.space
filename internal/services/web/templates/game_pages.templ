@@ -1,0 +1,360 @@
+package templates
+
+import (
+	"strings"
+
+	sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
+	"github.com/louisbranch/fracturing.space/internal/platform/branding"
+)
+
+// CampaignListItem models one campaign row in the campaigns list.
+type CampaignListItem struct {
+	ID   string
+	Name string
+}
+
+// SessionListItem models one session row in the sessions list.
+type SessionListItem struct {
+	ID       string
+	Name     string
+	IsActive bool
+}
+
+// SessionDetail models a session detail view.
+type SessionDetail struct {
+	CampaignID string
+	ID         string
+	Name       string
+	Status     string
+}
+
+// ParticipantListItem models one participant row.
+type ParticipantListItem struct {
+	ID             string
+	Name           string
+	MemberSelected bool
+	ManagerSelected bool
+	OwnerSelected  bool
+	GMSelected     bool
+	PlayerSelected bool
+	HumanSelected bool
+	AISelected    bool
+}
+
+// CharacterControlOption models one character controller dropdown option.
+type CharacterControlOption struct {
+	ID       string
+	Label    string
+	Selected bool
+}
+
+// CharacterListItem models one character row.
+type CharacterListItem struct {
+	ID           string
+	DisplayName  string
+	EditableName string
+	Kind         string
+	PCSelected   bool
+	NPCSelected  bool
+	ControlOptions []CharacterControlOption
+}
+
+// CharacterDetail models a character detail view.
+type CharacterDetail struct {
+	CampaignID string
+	ID         string
+	Name       string
+	Kind       string
+}
+
+// CampaignInviteItem models one campaign invite row.
+type CampaignInviteItem struct {
+	ID     string
+	Label  string
+}
+
+// UserInviteItem models one pending invite row for the current user.
+type UserInviteItem struct {
+	Label         string
+	CampaignID    string
+	InviteID      string
+	ParticipantID string
+}
+
+func normalizedGameAppName(appName string) string {
+	appName = strings.TrimSpace(appName)
+	if appName == "" {
+		return branding.AppName
+	}
+	return appName
+}
+
+templ GamePageShell(appName string, title string, lang string) {
+	@sharedtemplates.AuthLayout(title, lang, "landing-body game-body", "game") {
+		<nav class="navbar bg-base-200 fixed top-0 w-full z-50">
+			<div class="navbar-start w-auto">
+				<h3 class="text-lg font-bold"><a href="/">{ normalizedGameAppName(appName) }</a></h3>
+			</div>
+			<div class="navbar-end w-full justify-end gap-3">
+				<form method="POST" action="/auth/logout">
+					<button type="submit" class="btn btn-ghost btn-sm">Sign out</button>
+				</form>
+			</div>
+		</nav>
+		<div class="max-w-screen-xl mx-auto px-4 pt-24" id="main">
+			<main aria-label="Game" class="p-4">
+				{ children... }
+			</main>
+		</div>
+	}
+}
+
+templ CampaignsListPage(appName string, campaigns []CampaignListItem) {
+	@GamePageShell(appName, "Campaigns", "en") {
+		<h1>Campaigns</h1>
+		<p><a href="/campaigns/create"><button type="button">Start a new Campaign</button></a></p>
+		<ul>
+			for _, campaign := range campaigns {
+				<li>
+					if campaign.ID != "" {
+						<a href={ "/campaigns/" + campaign.ID }>{ campaign.Name }</a>
+					} else {
+						{ campaign.Name }
+					}
+				</li>
+			}
+		</ul>
+	}
+}
+
+templ CampaignCreatePage(appName string) {
+	@GamePageShell(appName, "Campaigns", "en") {
+		<h1>Campaigns</h1>
+		<form method="post" action="/campaigns/create">
+			<label>Campaign Name <input type="text" name="name" placeholder="campaign name" required></label>
+			<label>Game System <select name="system"><option value="daggerheart" selected>Daggerheart</option></select></label>
+			<label>GM Mode <select name="gm_mode"><option value="human" selected>Human</option><option value="ai">AI</option><option value="hybrid">Hybrid</option></select></label>
+			<label>Creator Display Name <input type="text" name="creator_display_name" placeholder="display name"></label>
+			<label>Theme Prompt <textarea name="theme_prompt" rows="4" placeholder="theme prompt"></textarea></label>
+			<button type="submit">Create Campaign</button>
+		</form>
+	}
+}
+
+templ SessionsListPage(appName string, campaignID string, canManage bool, sessions []SessionListItem) {
+	@GamePageShell(appName, "Sessions", "en") {
+		<h1>Sessions</h1>
+		if canManage {
+			<form method="post" action={ "/campaigns/" + campaignID + "/sessions/start" }>
+				<input type="text" name="name" placeholder="session name">
+				<button type="submit">Start Session</button>
+			</form>
+		}
+		<ul>
+			for _, session := range sessions {
+				<li>
+					if session.ID != "" {
+						<a href={ "/campaigns/" + campaignID + "/sessions/" + session.ID }>{ session.Name }</a>
+					} else {
+						{ session.Name }
+					}
+					if canManage && session.IsActive && session.ID != "" {
+						<form method="post" action={ "/campaigns/" + campaignID + "/sessions/end" }>
+							<input type="hidden" name="session_id" value={ session.ID }>
+							<button type="submit">End Session</button>
+						</form>
+					}
+				</li>
+			}
+		</ul>
+	}
+}
+
+templ SessionDetailPage(appName string, detail SessionDetail) {
+	@GamePageShell(appName, "Session", "en") {
+		<h1>{ detail.Name }</h1>
+		if detail.ID != "" {
+			<p>Session ID: { detail.ID }</p>
+		}
+		<p>Status: { detail.Status }</p>
+		<p><a href={ "/campaigns/" + detail.CampaignID + "/sessions" }>Back to Sessions</a></p>
+	}
+}
+
+templ CampaignParticipantsPage(appName string, campaignID string, canManage bool, participants []ParticipantListItem) {
+	@GamePageShell(appName, "Participants", "en") {
+		<h1>Participants</h1>
+		<ul>
+			for _, participant := range participants {
+				<li>{ participant.Name }
+					if canManage && participant.ID != "" {
+						<form method="post" action={ "/campaigns/" + campaignID + "/participants/update" }>
+							<input type="hidden" name="participant_id" value={ participant.ID }>
+							<select name="campaign_access">
+								if participant.MemberSelected {
+									<option value="member" selected>member</option>
+								} else {
+									<option value="member">member</option>
+								}
+								if participant.ManagerSelected {
+									<option value="manager" selected>manager</option>
+								} else {
+									<option value="manager">manager</option>
+								}
+								if participant.OwnerSelected {
+									<option value="owner" selected>owner</option>
+								} else {
+									<option value="owner">owner</option>
+								}
+							</select>
+							<select name="role">
+								if participant.GMSelected {
+									<option value="gm" selected>gm</option>
+								} else {
+									<option value="gm">gm</option>
+								}
+								if participant.PlayerSelected {
+									<option value="player" selected>player</option>
+								} else {
+									<option value="player">player</option>
+								}
+							</select>
+							<select name="controller">
+								if participant.HumanSelected {
+									<option value="human" selected>human</option>
+								} else {
+									<option value="human">human</option>
+								}
+								if participant.AISelected {
+									<option value="ai" selected>ai</option>
+								} else {
+									<option value="ai">ai</option>
+								}
+							</select>
+							<button type="submit">Update Access</button>
+						</form>
+					}
+				</li>
+			}
+		</ul>
+	}
+}
+
+templ CampaignCharactersPage(appName string, campaignID string, canManage bool, characters []CharacterListItem) {
+	@GamePageShell(appName, "Characters", "en") {
+		<h1>Characters</h1>
+		if canManage {
+			<form method="post" action={ "/campaigns/" + campaignID + "/characters/create" }>
+				<input type="text" name="name" placeholder="character name" required>
+				<select name="kind">
+					<option value="pc">pc</option>
+					<option value="npc">npc</option>
+				</select>
+				<button type="submit">Create Character</button>
+			</form>
+		}
+		<ul>
+			for _, character := range characters {
+				<li>
+					if character.ID != "" {
+						<a href={ "/campaigns/" + campaignID + "/characters/" + character.ID }>{ character.DisplayName }</a>
+					} else {
+						{ character.DisplayName }
+					}
+					if canManage && character.ID != "" {
+						<form method="post" action={ "/campaigns/" + campaignID + "/characters/update" }>
+							<input type="hidden" name="character_id" value={ character.ID }>
+							if character.EditableName != "" {
+								<input type="text" name="name" value={ character.EditableName }>
+							} else {
+								<input type="text" name="name" value="" placeholder={ character.DisplayName }>
+							}
+							<select name="kind">
+								if character.PCSelected {
+									<option value="pc" selected>pc</option>
+								} else {
+									<option value="pc">pc</option>
+								}
+								if character.NPCSelected {
+									<option value="npc" selected>npc</option>
+								} else {
+									<option value="npc">npc</option>
+								}
+							</select>
+							<button type="submit">Update Character</button>
+						</form>
+						<form method="post" action={ "/campaigns/" + campaignID + "/characters/control" }>
+							<input type="hidden" name="character_id" value={ character.ID }>
+							<select name="participant_id">
+								for _, participant := range character.ControlOptions {
+									if participant.Selected {
+										<option value={ participant.ID } selected>{ participant.Label }</option>
+									} else {
+										<option value={ participant.ID }>{ participant.Label }</option>
+									}
+								}
+							</select>
+							<button type="submit">Set Controller</button>
+						</form>
+					}
+				</li>
+			}
+		</ul>
+	}
+}
+
+templ CharacterDetailPage(appName string, character CharacterDetail) {
+	@GamePageShell(appName, "Character", "en") {
+		<h1>{ character.Name }</h1>
+		if character.ID != "" {
+			<p>Character ID: { character.ID }</p>
+		}
+		<p>Kind: { character.Kind }</p>
+		<p><a href={ "/campaigns/" + character.CampaignID + "/characters" }>Back to Characters</a></p>
+	}
+}
+
+templ CampaignInvitesPage(appName string, campaignID string, canManage bool, invites []CampaignInviteItem) {
+	@GamePageShell(appName, "Campaign Invites", "en") {
+		<h1>Campaign Invites</h1>
+		if canManage {
+			<form method="post" action={ "/campaigns/" + campaignID + "/invites/create" }>
+				<input type="text" name="participant_id" placeholder="participant id" required>
+				<input type="text" name="recipient_user_id" placeholder="recipient user id">
+				<button type="submit">Create Invite</button>
+			</form>
+		}
+		<ul>
+			for _, invite := range invites {
+				<li>{ invite.Label }
+					if canManage && invite.ID != "" {
+						<form method="post" action={ "/campaigns/" + campaignID + "/invites/revoke" }>
+							<input type="hidden" name="invite_id" value={ invite.ID }>
+							<button type="submit">Revoke</button>
+						</form>
+					}
+				</li>
+			}
+		</ul>
+	}
+}
+
+templ UserInvitesPage(appName string, invites []UserInviteItem) {
+	@GamePageShell(appName, "My Invites", "en") {
+		<h1>My Invites</h1>
+		<ul>
+			for _, invite := range invites {
+				<li>{ invite.Label }
+					if invite.CampaignID != "" && invite.InviteID != "" && invite.ParticipantID != "" {
+						<form method="post" action="/invites/claim">
+							<input type="hidden" name="campaign_id" value={ invite.CampaignID }>
+							<input type="hidden" name="invite_id" value={ invite.InviteID }>
+							<input type="hidden" name="participant_id" value={ invite.ParticipantID }>
+							<button type="submit">Claim</button>
+						</form>
+					}
+				</li>
+			}
+		</ul>
+	}
+}

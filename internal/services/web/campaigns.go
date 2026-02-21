@@ -3,8 +3,6 @@ package web
 import (
 	"context"
 	"errors"
-	"html"
-	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -12,6 +10,7 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
+	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
 func (h *handler) handleAppCampaigns(w http.ResponseWriter, r *http.Request) {
@@ -31,11 +30,11 @@ func (h *handler) handleAppCampaigns(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.ensureCampaignClients(r.Context()); err != nil {
-		renderAppCampaignsListPageWithAppName(w, h.resolvedAppName(), []*statev1.Campaign{})
+		renderAppCampaignsListPageWithAppName(w, r, h.resolvedAppName(), []*statev1.Campaign{})
 		return
 	}
 	if h.campaignClient == nil || h.campaignAccess == nil {
-		renderAppCampaignsListPageWithAppName(w, h.resolvedAppName(), []*statev1.Campaign{})
+		renderAppCampaignsListPageWithAppName(w, r, h.resolvedAppName(), []*statev1.Campaign{})
 		return
 	}
 
@@ -50,7 +49,7 @@ func (h *handler) handleAppCampaigns(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil || strings.TrimSpace(participantID) == "" {
-		renderAppCampaignsListPageWithAppName(w, h.resolvedAppName(), []*statev1.Campaign{})
+		renderAppCampaignsListPageWithAppName(w, r, h.resolvedAppName(), []*statev1.Campaign{})
 		return
 	}
 
@@ -60,7 +59,7 @@ func (h *handler) handleAppCampaigns(w http.ResponseWriter, r *http.Request) {
 		h.renderErrorPage(w, r, http.StatusBadGateway, "Campaigns unavailable", "failed to list campaigns")
 		return
 	}
-	renderAppCampaignsListPageWithAppName(w, h.resolvedAppName(), campaigns)
+	renderAppCampaignsListPageWithAppName(w, r, h.resolvedAppName(), campaigns)
 }
 
 func (h *handler) handleAppCampaignCreate(w http.ResponseWriter, r *http.Request) {
@@ -72,7 +71,7 @@ func (h *handler) handleAppCampaignCreate(w http.ResponseWriter, r *http.Request
 			http.Redirect(w, r, "/auth/login", http.StatusFound)
 			return
 		}
-		renderAppCampaignCreatePageWithAppName(w, h.resolvedAppName())
+		renderAppCampaignCreatePageWithAppName(w, r, h.resolvedAppName())
 		return
 	}
 	if r.Method != http.MethodPost {
@@ -213,16 +212,14 @@ func (h *handler) ensureCampaignClients(ctx context.Context) error {
 	return nil
 }
 
-func renderAppCampaignsPage(w http.ResponseWriter, campaigns []*statev1.Campaign) {
-	renderAppCampaignsListPageWithAppName(w, "", campaigns)
+func renderAppCampaignsPage(w http.ResponseWriter, r *http.Request, campaigns []*statev1.Campaign) {
+	renderAppCampaignsListPageWithAppName(w, r, "", campaigns)
 }
 
-func renderAppCampaignsListPageWithAppName(w http.ResponseWriter, appName string, campaigns []*statev1.Campaign) {
+func renderAppCampaignsListPageWithAppName(w http.ResponseWriter, r *http.Request, appName string, campaigns []*statev1.Campaign) {
 	// renderAppCampaignsListPageWithAppName maps the list of campaign read models into
 	// links that become the canonical campaign navigation point for this boundary.
-	writeGamePageStart(w, "Campaigns", appName)
-	_, _ = io.WriteString(w, "<h1>Campaigns</h1>")
-	_, _ = io.WriteString(w, "<p><a href=\"/campaigns/create\"><button type=\"button\">Start a new Campaign</button></a></p><ul>")
+	normalized := make([]webtemplates.CampaignListItem, 0, len(campaigns))
 	for _, campaign := range campaigns {
 		if campaign == nil {
 			continue
@@ -232,29 +229,28 @@ func renderAppCampaignsListPageWithAppName(w http.ResponseWriter, appName string
 		if name == "" {
 			name = campaignID
 		}
-		if campaignID != "" {
-			_, _ = io.WriteString(w, "<li><a href=\"/campaigns/"+html.EscapeString(campaignID)+"\">"+html.EscapeString(name)+"</a></li>")
-			continue
-		}
-		_, _ = io.WriteString(w, "<li>"+html.EscapeString(name)+"</li>")
+		normalized = append(normalized, webtemplates.CampaignListItem{
+			ID:   campaignID,
+			Name: name,
+		})
 	}
-	_, _ = io.WriteString(w, "</ul>")
-	writeGamePageEnd(w)
+	writeGameContentType(w)
+	if err := webtemplates.CampaignsListPage(appName, normalized).Render(r.Context(), w); err != nil {
+		http.Error(w, "failed to render campaigns list page", http.StatusInternalServerError)
+	}
 }
 
-func renderAppCampaignCreatePageWithAppName(w http.ResponseWriter, appName string) {
+func renderAppCampaignCreatePage(w http.ResponseWriter, r *http.Request) {
+	renderAppCampaignCreatePageWithAppName(w, r, "")
+}
+
+func renderAppCampaignCreatePageWithAppName(w http.ResponseWriter, r *http.Request, appName string) {
 	// renderAppCampaignCreatePageWithAppName renders the campaign creation form used by
 	// the create flow.
-	writeGamePageStart(w, "Campaigns", appName)
-	_, _ = io.WriteString(w, "<h1>Campaigns</h1>")
-	_, _ = io.WriteString(w, "<form method=\"post\" action=\"/campaigns/create\">")
-	_, _ = io.WriteString(w, "<label>Campaign Name <input type=\"text\" name=\"name\" placeholder=\"campaign name\" required></label>")
-	_, _ = io.WriteString(w, "<label>Game System <select name=\"system\"><option value=\"daggerheart\" selected>Daggerheart</option></select></label>")
-	_, _ = io.WriteString(w, "<label>GM Mode <select name=\"gm_mode\"><option value=\"human\" selected>Human</option><option value=\"ai\">AI</option><option value=\"hybrid\">Hybrid</option></select></label>")
-	_, _ = io.WriteString(w, "<label>Creator Display Name <input type=\"text\" name=\"creator_display_name\" placeholder=\"display name\"></label>")
-	_, _ = io.WriteString(w, "<label>Theme Prompt <textarea name=\"theme_prompt\" rows=\"4\" placeholder=\"theme prompt\"></textarea></label>")
-	_, _ = io.WriteString(w, "<button type=\"submit\">Create Campaign</button></form>")
-	writeGamePageEnd(w)
+	writeGameContentType(w)
+	if err := webtemplates.CampaignCreatePage(appName).Render(r.Context(), w); err != nil {
+		http.Error(w, "failed to render campaign create page", http.StatusInternalServerError)
+	}
 }
 
 func parseAppGameSystem(value string) (commonv1.GameSystem, bool) {

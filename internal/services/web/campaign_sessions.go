@@ -1,13 +1,12 @@
 package web
 
 import (
-	"html"
-	"io"
 	"net/http"
 	"strings"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
+	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
 func (h *handler) handleAppCampaignSessions(w http.ResponseWriter, r *http.Request, campaignID string) {
@@ -37,7 +36,7 @@ func (h *handler) handleAppCampaignSessions(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	renderAppCampaignSessionsPageWithAppName(w, h.resolvedAppName(), campaignID, resp.GetSessions(), canManageSessions)
+	renderAppCampaignSessionsPageWithAppName(w, r, h.resolvedAppName(), campaignID, resp.GetSessions(), canManageSessions)
 }
 
 func (h *handler) handleAppCampaignSessionDetail(w http.ResponseWriter, r *http.Request, campaignID string, sessionID string) {
@@ -75,7 +74,7 @@ func (h *handler) handleAppCampaignSessionDetail(w http.ResponseWriter, r *http.
 		return
 	}
 
-	renderAppCampaignSessionDetailPageWithAppName(w, h.resolvedAppName(), campaignID, resp.GetSession())
+	renderAppCampaignSessionDetailPageWithAppName(w, r, h.resolvedAppName(), campaignID, resp.GetSession())
 }
 
 func (h *handler) handleAppCampaignSessionStart(w http.ResponseWriter, r *http.Request, campaignID string) {
@@ -170,20 +169,15 @@ func canManageCampaignSessions(access statev1.CampaignAccess) bool {
 	return access == statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER || access == statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER
 }
 
-func renderAppCampaignSessionsPage(w http.ResponseWriter, campaignID string, sessions []*statev1.Session, canManageSessions bool) {
-	renderAppCampaignSessionsPageWithAppName(w, "", campaignID, sessions, canManageSessions)
+func renderAppCampaignSessionsPage(w http.ResponseWriter, r *http.Request, campaignID string, sessions []*statev1.Session, canManageSessions bool) {
+	renderAppCampaignSessionsPageWithAppName(w, r, "", campaignID, sessions, canManageSessions)
 }
 
-func renderAppCampaignSessionsPageWithAppName(w http.ResponseWriter, appName string, campaignID string, sessions []*statev1.Session, canManageSessions bool) {
+func renderAppCampaignSessionsPageWithAppName(w http.ResponseWriter, r *http.Request, appName string, campaignID string, sessions []*statev1.Session, canManageSessions bool) {
 	// renderAppCampaignSessionsPage maps session models to a navigable list and
 	// conditionally exposes end actions only for managers/owners.
-	writeGamePageStart(w, "Sessions", appName)
-	escapedCampaignID := html.EscapeString(campaignID)
-	_, _ = io.WriteString(w, "<h1>Sessions</h1>")
-	if canManageSessions {
-		_, _ = io.WriteString(w, "<form method=\"post\" action=\"/campaigns/"+escapedCampaignID+"/sessions/start\"><input type=\"text\" name=\"name\" placeholder=\"session name\"><button type=\"submit\">Start Session</button></form>")
-	}
-	_, _ = io.WriteString(w, "<ul>")
+	campaignID = strings.TrimSpace(campaignID)
+	sessionItems := make([]webtemplates.SessionListItem, 0, len(sessions))
 	for _, session := range sessions {
 		if session == nil {
 			continue
@@ -193,44 +187,44 @@ func renderAppCampaignSessionsPageWithAppName(w http.ResponseWriter, appName str
 		if name == "" {
 			name = sessionID
 		}
-		_, _ = io.WriteString(w, "<li>")
-		if sessionID != "" {
-			_, _ = io.WriteString(w, "<a href=\"/campaigns/"+escapedCampaignID+"/sessions/"+html.EscapeString(sessionID)+"\">"+html.EscapeString(name)+"</a>")
-		} else {
-			_, _ = io.WriteString(w, html.EscapeString(name))
-		}
-		if canManageSessions && session.GetStatus() == statev1.SessionStatus_SESSION_ACTIVE {
-			if sessionID != "" {
-				_, _ = io.WriteString(w, "<form method=\"post\" action=\"/campaigns/"+escapedCampaignID+"/sessions/end\"><input type=\"hidden\" name=\"session_id\" value=\""+html.EscapeString(sessionID)+"\"><button type=\"submit\">End Session</button></form>")
-			}
-		}
-		_, _ = io.WriteString(w, "</li>")
+		sessionItems = append(sessionItems, webtemplates.SessionListItem{
+			ID:       sessionID,
+			Name:     name,
+			IsActive: session.GetStatus() == statev1.SessionStatus_SESSION_ACTIVE,
+		})
 	}
-	_, _ = io.WriteString(w, "</ul>")
-	writeGamePageEnd(w)
+	writeGameContentType(w)
+	if err := webtemplates.SessionsListPage(appName, campaignID, canManageSessions, sessionItems).Render(r.Context(), w); err != nil {
+		http.Error(w, "failed to render sessions page", http.StatusInternalServerError)
+	}
 }
 
-func renderAppCampaignSessionDetailPage(w http.ResponseWriter, campaignID string, session *statev1.Session) {
-	renderAppCampaignSessionDetailPageWithAppName(w, "", campaignID, session)
+func renderAppCampaignSessionDetailPage(w http.ResponseWriter, r *http.Request, campaignID string, session *statev1.Session) {
+	renderAppCampaignSessionDetailPageWithAppName(w, r, "", campaignID, session)
 }
 
-func renderAppCampaignSessionDetailPageWithAppName(w http.ResponseWriter, appName string, campaignID string, session *statev1.Session) {
+func renderAppCampaignSessionDetailPageWithAppName(w http.ResponseWriter, r *http.Request, appName string, campaignID string, session *statev1.Session) {
 	// renderAppCampaignSessionDetailPage renders the canonical read surface for one
 	// game session and links back into the session list.
-	writeGamePageStart(w, "Session", appName)
-	escapedCampaignID := html.EscapeString(campaignID)
+	if session == nil {
+		session = &statev1.Session{}
+	}
+	campaignID = strings.TrimSpace(campaignID)
 	sessionID := strings.TrimSpace(session.GetId())
 	sessionName := strings.TrimSpace(session.GetName())
 	if sessionName == "" {
 		sessionName = sessionID
 	}
-	_, _ = io.WriteString(w, "<h1>"+html.EscapeString(sessionName)+"</h1>")
-	if sessionID != "" {
-		_, _ = io.WriteString(w, "<p>Session ID: "+html.EscapeString(sessionID)+"</p>")
+	detail := webtemplates.SessionDetail{
+		CampaignID: campaignID,
+		ID:         sessionID,
+		Name:       sessionName,
+		Status:     sessionStatusLabel(session.GetStatus()),
 	}
-	_, _ = io.WriteString(w, "<p>Status: "+html.EscapeString(sessionStatusLabel(session.GetStatus()))+"</p>")
-	_, _ = io.WriteString(w, "<p><a href=\"/campaigns/"+escapedCampaignID+"/sessions\">Back to Sessions</a></p>")
-	writeGamePageEnd(w)
+	writeGameContentType(w)
+	if err := webtemplates.SessionDetailPage(appName, detail).Render(r.Context(), w); err != nil {
+		http.Error(w, "failed to render session detail page", http.StatusInternalServerError)
+	}
 }
 
 func sessionStatusLabel(status statev1.SessionStatus) string {

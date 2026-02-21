@@ -1,8 +1,6 @@
 package web
 
 import (
-	"html"
-	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -10,6 +8,7 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
+	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
 func (h *handler) handleAppInvites(w http.ResponseWriter, r *http.Request) {
@@ -50,7 +49,7 @@ func (h *handler) handleAppInvites(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	renderAppInvitesPageWithAppName(w, h.resolvedAppName(), resp.GetInvites())
+	renderAppInvitesPageWithAppName(w, r, h.resolvedAppName(), resp.GetInvites())
 }
 
 func (h *handler) handleAppInviteClaim(w http.ResponseWriter, r *http.Request) {
@@ -123,43 +122,66 @@ func (h *handler) handleAppInviteClaim(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/campaigns/"+url.PathEscape(campaignID), http.StatusFound)
 }
 
-func renderAppInvitesPage(w http.ResponseWriter, invites []*statev1.PendingUserInvite) {
-	renderAppInvitesPageWithAppName(w, "", invites)
+func renderAppInvitesPage(w http.ResponseWriter, r *http.Request, invites []*statev1.PendingUserInvite) {
+	renderAppInvitesPageWithAppName(w, r, "", invites)
 }
 
-func renderAppInvitesPageWithAppName(w http.ResponseWriter, appName string, invites []*statev1.PendingUserInvite) {
+func renderAppInvitesPageWithAppName(w http.ResponseWriter, r *http.Request, appName string, invites []*statev1.PendingUserInvite) {
 	// renderAppInvitesPage maps pending user invites into the minimal claimable
 	// list the web surface exposes.
-	writeGamePageStart(w, "My Invites", appName)
-	_, _ = io.WriteString(w, "<h1>My Invites</h1><ul>")
+	mapped := make([]webtemplates.UserInviteItem, 0, len(invites))
 	for _, pending := range invites {
 		if pending == nil {
 			continue
 		}
-		campaignName := strings.TrimSpace(pending.GetCampaign().GetName())
-		campaignID := strings.TrimSpace(pending.GetCampaign().GetId())
-		if campaignName == "" {
-			campaignName = strings.TrimSpace(pending.GetInvite().GetCampaignId())
+		campaign := pending.GetCampaign()
+		invite := pending.GetInvite()
+		participant := pending.GetParticipant()
+
+		campaignName := ""
+		campaignID := ""
+		inviteCampaignID := ""
+		inviteID := ""
+		if campaign != nil {
+			campaignName = strings.TrimSpace(campaign.GetName())
+			campaignID = strings.TrimSpace(campaign.GetId())
 		}
-		if campaignID == "" {
-			campaignID = strings.TrimSpace(pending.GetInvite().GetCampaignId())
+		if invite != nil {
+			inviteCampaignID = strings.TrimSpace(invite.GetCampaignId())
+			inviteID = strings.TrimSpace(invite.GetId())
+		}
+
+		participantName := "Unknown participant"
+		participantID := ""
+		if participant != nil {
+			participantName = strings.TrimSpace(participant.GetName())
+			participantID = strings.TrimSpace(participant.GetId())
+		}
+		if campaignName == "" {
+			campaignName = campaignID
+		}
+		if campaignName == "" {
+			campaignName = inviteCampaignID
 		}
 		if campaignName == "" {
 			campaignName = "Unknown campaign"
 		}
-		participantName := strings.TrimSpace(pending.GetParticipant().GetName())
-		participantID := strings.TrimSpace(pending.GetParticipant().GetId())
-		inviteID := strings.TrimSpace(pending.GetInvite().GetId())
+		if campaignID == "" {
+			campaignID = inviteCampaignID
+		}
 		if participantName == "" {
 			participantName = "Unknown participant"
 		}
 		label := campaignName + " - " + participantName
-		_, _ = io.WriteString(w, "<li>"+html.EscapeString(label))
-		if campaignID != "" && inviteID != "" && participantID != "" {
-			_, _ = io.WriteString(w, "<form method=\"post\" action=\"/invites/claim\"><input type=\"hidden\" name=\"campaign_id\" value=\""+html.EscapeString(campaignID)+"\"><input type=\"hidden\" name=\"invite_id\" value=\""+html.EscapeString(inviteID)+"\"><input type=\"hidden\" name=\"participant_id\" value=\""+html.EscapeString(participantID)+"\"><button type=\"submit\">Claim</button></form>")
-		}
-		_, _ = io.WriteString(w, "</li>")
+		mapped = append(mapped, webtemplates.UserInviteItem{
+			Label:         label,
+			CampaignID:    campaignID,
+			InviteID:      inviteID,
+			ParticipantID: participantID,
+		})
 	}
-	_, _ = io.WriteString(w, "</ul>")
-	writeGamePageEnd(w)
+	writeGameContentType(w)
+	if err := webtemplates.UserInvitesPage(appName, mapped).Render(r.Context(), w); err != nil {
+		http.Error(w, "failed to render invites page", http.StatusInternalServerError)
+	}
 }

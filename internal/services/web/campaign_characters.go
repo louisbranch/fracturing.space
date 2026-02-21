@@ -1,13 +1,12 @@
 package web
 
 import (
-	"html"
-	"io"
 	"net/http"
 	"strings"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
+	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
@@ -50,7 +49,7 @@ func (h *handler) handleAppCampaignCharacters(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	renderAppCampaignCharactersPageWithAppName(w, h.resolvedAppName(), campaignID, resp.GetCharacters(), canManageCharacters, controlParticipants)
+	renderAppCampaignCharactersPageWithAppName(w, r, h.resolvedAppName(), campaignID, resp.GetCharacters(), canManageCharacters, controlParticipants)
 }
 
 func (h *handler) handleAppCampaignCharacterDetail(w http.ResponseWriter, r *http.Request, campaignID string, characterID string) {
@@ -88,7 +87,7 @@ func (h *handler) handleAppCampaignCharacterDetail(w http.ResponseWriter, r *htt
 		return
 	}
 
-	renderAppCampaignCharacterDetailPageWithAppName(w, h.resolvedAppName(), campaignID, resp.GetCharacter())
+	renderAppCampaignCharacterDetailPageWithAppName(w, r, h.resolvedAppName(), campaignID, resp.GetCharacter())
 }
 
 func (h *handler) handleAppCampaignCharacterCreate(w http.ResponseWriter, r *http.Request, campaignID string) {
@@ -286,106 +285,100 @@ func participantControlFormLabel(participant *statev1.Participant) string {
 	return label
 }
 
-func renderAppCampaignCharactersPage(w http.ResponseWriter, campaignID string, characters []*statev1.Character, canManageCharacters bool, controlParticipants []*statev1.Participant) {
-	renderAppCampaignCharactersPageWithAppName(w, "", campaignID, characters, canManageCharacters, controlParticipants)
+func renderAppCampaignCharactersPage(w http.ResponseWriter, r *http.Request, campaignID string, characters []*statev1.Character, canManageCharacters bool, controlParticipants []*statev1.Participant) {
+	renderAppCampaignCharactersPageWithAppName(w, r, "", campaignID, characters, canManageCharacters, controlParticipants)
 }
 
-func renderAppCampaignCharactersPageWithAppName(w http.ResponseWriter, appName string, campaignID string, characters []*statev1.Character, canManageCharacters bool, controlParticipants []*statev1.Participant) {
+func renderAppCampaignCharactersPageWithAppName(w http.ResponseWriter, r *http.Request, appName string, campaignID string, characters []*statev1.Character, canManageCharacters bool, controlParticipants []*statev1.Participant) {
 	// renderAppCampaignCharactersPage keeps the write controls tied to current
 	// campaign access level so members cannot reach management operations.
-	writeGamePageStart(w, "Characters", appName)
-	escapedCampaignID := html.EscapeString(campaignID)
-	_, _ = io.WriteString(w, "<h1>Characters</h1>")
-	if canManageCharacters {
-		_, _ = io.WriteString(w, "<form method=\"post\" action=\"/campaigns/"+escapedCampaignID+"/characters/create\"><input type=\"text\" name=\"name\" placeholder=\"character name\" required><select name=\"kind\"><option value=\"pc\">pc</option><option value=\"npc\">npc</option></select><button type=\"submit\">Create Character</button></form>")
-	}
-	_, _ = io.WriteString(w, "<ul>")
+	campaignID = strings.TrimSpace(campaignID)
+	characterItems := make([]webtemplates.CharacterListItem, 0, len(characters))
 	for _, character := range characters {
 		if character == nil {
 			continue
 		}
 		characterID := strings.TrimSpace(character.GetId())
-		name := strings.TrimSpace(character.GetName())
-		if name == "" {
-			name = characterID
+		editName := strings.TrimSpace(character.GetName())
+		displayName := editName
+		if displayName == "" {
+			displayName = characterID
 		}
-		_, _ = io.WriteString(w, "<li>")
-		if characterID != "" {
-			_, _ = io.WriteString(w, "<a href=\"/campaigns/"+escapedCampaignID+"/characters/"+html.EscapeString(characterID)+"\">"+html.EscapeString(name)+"</a>")
-		} else {
-			_, _ = io.WriteString(w, html.EscapeString(name))
+		selectedKind := characterKindFormValue(character.GetKind())
+		currentParticipantID := ""
+		if character.GetParticipantId() != nil {
+			currentParticipantID = strings.TrimSpace(character.GetParticipantId().GetValue())
 		}
-		if canManageCharacters {
-			if characterID != "" {
-				selectedKind := characterKindFormValue(character.GetKind())
-				pcSelected := ""
-				npcSelected := ""
-				if selectedKind == "npc" {
-					npcSelected = " selected"
-				} else {
-					pcSelected = " selected"
-				}
-				_, _ = io.WriteString(w, "<form method=\"post\" action=\"/campaigns/"+escapedCampaignID+"/characters/update\"><input type=\"hidden\" name=\"character_id\" value=\""+html.EscapeString(characterID)+"\"><input type=\"text\" name=\"name\" value=\""+html.EscapeString(strings.TrimSpace(character.GetName()))+"\"><select name=\"kind\"><option value=\"pc\""+pcSelected+">pc</option><option value=\"npc\""+npcSelected+">npc</option></select><button type=\"submit\">Update Character</button></form>")
 
-				currentParticipantID := ""
-				if character.GetParticipantId() != nil {
-					currentParticipantID = strings.TrimSpace(character.GetParticipantId().GetValue())
-				}
-				_, _ = io.WriteString(w, "<form method=\"post\" action=\"/campaigns/"+escapedCampaignID+"/characters/control\"><input type=\"hidden\" name=\"character_id\" value=\""+html.EscapeString(characterID)+"\"><select name=\"participant_id\">")
-				unassignedSelected := ""
-				if currentParticipantID == "" {
-					unassignedSelected = " selected"
-				}
-				_, _ = io.WriteString(w, "<option value=\"\""+unassignedSelected+">unassigned</option>")
-				for _, participant := range controlParticipants {
-					if participant == nil {
-						continue
-					}
-					participantID := strings.TrimSpace(participant.GetId())
-					if participantID == "" {
-						continue
-					}
-					label := participantControlFormLabel(participant)
-					if label == "" {
-						continue
-					}
-					selected := ""
-					if participantID == currentParticipantID {
-						selected = " selected"
-					}
-					_, _ = io.WriteString(w, "<option value=\""+html.EscapeString(participantID)+"\""+selected+">"+html.EscapeString(label)+"</option>")
-				}
-				_, _ = io.WriteString(w, "</select><button type=\"submit\">Set Controller</button></form>")
+		controlOptions := make([]webtemplates.CharacterControlOption, 0, len(controlParticipants)+1)
+		controlOptions = append(controlOptions, webtemplates.CharacterControlOption{
+			ID:       "",
+			Label:    "unassigned",
+			Selected: currentParticipantID == "",
+		})
+		for _, participant := range controlParticipants {
+			if participant == nil {
+				continue
 			}
+			participantID := strings.TrimSpace(participant.GetId())
+			if participantID == "" {
+				continue
+			}
+			label := participantControlFormLabel(participant)
+			if label == "" {
+				continue
+			}
+			controlOptions = append(controlOptions, webtemplates.CharacterControlOption{
+				ID:       participantID,
+				Label:    label,
+				Selected: participantID == currentParticipantID,
+			})
 		}
-		_, _ = io.WriteString(w, "</li>")
+
+		characterItems = append(characterItems, webtemplates.CharacterListItem{
+			ID:           characterID,
+			DisplayName:  displayName,
+			EditableName: editName,
+			Kind:         selectedKind,
+			PCSelected:   selectedKind == "pc",
+			NPCSelected:  selectedKind == "npc",
+			// canManageCharacters controls form visibility at the page level.
+			// This item intentionally does not include per-character permissions.
+			ControlOptions: controlOptions,
+		})
 	}
-	_, _ = io.WriteString(w, "</ul>")
-	writeGamePageEnd(w)
+	writeGameContentType(w)
+	if err := webtemplates.CampaignCharactersPage(appName, campaignID, canManageCharacters, characterItems).Render(r.Context(), w); err != nil {
+		http.Error(w, "failed to render characters page", http.StatusInternalServerError)
+	}
 }
 
-func renderAppCampaignCharacterDetailPage(w http.ResponseWriter, campaignID string, character *statev1.Character) {
-	renderAppCampaignCharacterDetailPageWithAppName(w, "", campaignID, character)
+func renderAppCampaignCharacterDetailPage(w http.ResponseWriter, r *http.Request, campaignID string, character *statev1.Character) {
+	renderAppCampaignCharacterDetailPageWithAppName(w, r, "", campaignID, character)
 }
 
-func renderAppCampaignCharacterDetailPageWithAppName(w http.ResponseWriter, appName string, campaignID string, character *statev1.Character) {
+func renderAppCampaignCharacterDetailPageWithAppName(w http.ResponseWriter, r *http.Request, appName string, campaignID string, character *statev1.Character) {
 	// renderAppCampaignCharacterDetailPage provides the stable read surface for a
 	// single character without mutating state.
-	writeGamePageStart(w, "Character", appName)
-	escapedCampaignID := html.EscapeString(campaignID)
+	if character == nil {
+		character = &statev1.Character{}
+	}
+	campaignID = strings.TrimSpace(campaignID)
 	characterID := strings.TrimSpace(character.GetId())
 	characterName := strings.TrimSpace(character.GetName())
 	if characterName == "" {
 		characterName = characterID
 	}
-
-	_, _ = io.WriteString(w, "<h1>"+html.EscapeString(characterName)+"</h1>")
-	if characterID != "" {
-		_, _ = io.WriteString(w, "<p>Character ID: "+html.EscapeString(characterID)+"</p>")
+	detail := webtemplates.CharacterDetail{
+		CampaignID: campaignID,
+		ID:         characterID,
+		Name:       characterName,
+		Kind:       characterKindLabel(character.GetKind()),
 	}
-	_, _ = io.WriteString(w, "<p>Kind: "+html.EscapeString(characterKindLabel(character.GetKind()))+"</p>")
-	_, _ = io.WriteString(w, "<p><a href=\"/campaigns/"+escapedCampaignID+"/characters\">Back to Characters</a></p>")
-	writeGamePageEnd(w)
+	writeGameContentType(w)
+	if err := webtemplates.CharacterDetailPage(appName, detail).Render(r.Context(), w); err != nil {
+		http.Error(w, "failed to render character detail page", http.StatusInternalServerError)
+	}
 }
 
 func characterKindLabel(kind statev1.CharacterKind) string {

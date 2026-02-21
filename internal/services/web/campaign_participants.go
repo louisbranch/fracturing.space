@@ -1,13 +1,12 @@
 package web
 
 import (
-	"html"
-	"io"
 	"net/http"
 	"strings"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
+	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
 func (h *handler) handleAppCampaignParticipants(w http.ResponseWriter, r *http.Request, campaignID string) {
@@ -37,7 +36,7 @@ func (h *handler) handleAppCampaignParticipants(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	renderAppCampaignParticipantsPageWithAppName(w, h.resolvedAppName(), campaignID, resp.GetParticipants(), canManageParticipants)
+	renderAppCampaignParticipantsPageWithAppName(w, r, h.resolvedAppName(), campaignID, resp.GetParticipants(), canManageParticipants)
 }
 
 func (h *handler) handleAppCampaignParticipantUpdate(w http.ResponseWriter, r *http.Request, campaignID string) {
@@ -181,16 +180,15 @@ func participantControllerFormValue(controller statev1.Controller) string {
 	return "human"
 }
 
-func renderAppCampaignParticipantsPage(w http.ResponseWriter, campaignID string, participants []*statev1.Participant, canManageParticipants bool) {
-	renderAppCampaignParticipantsPageWithAppName(w, "", campaignID, participants, canManageParticipants)
+func renderAppCampaignParticipantsPage(w http.ResponseWriter, r *http.Request, campaignID string, participants []*statev1.Participant, canManageParticipants bool) {
+	renderAppCampaignParticipantsPageWithAppName(w, r, "", campaignID, participants, canManageParticipants)
 }
 
-func renderAppCampaignParticipantsPageWithAppName(w http.ResponseWriter, appName string, campaignID string, participants []*statev1.Participant, canManageParticipants bool) {
+func renderAppCampaignParticipantsPageWithAppName(w http.ResponseWriter, r *http.Request, appName string, campaignID string, participants []*statev1.Participant, canManageParticipants bool) {
 	// renderAppCampaignParticipantsPage translates participant domain objects into the
 	// management controls available at this campaign membership level.
-	writeGamePageStart(w, "Participants", appName)
-	escapedCampaignID := html.EscapeString(campaignID)
-	_, _ = io.WriteString(w, "<h1>Participants</h1><ul>")
+	campaignID = strings.TrimSpace(campaignID)
+	participantItems := make([]webtemplates.ParticipantListItem, 0, len(participants))
 	for _, participant := range participants {
 		if participant == nil {
 			continue
@@ -202,43 +200,23 @@ func renderAppCampaignParticipantsPageWithAppName(w http.ResponseWriter, appName
 		if name == "" {
 			name = strings.TrimSpace(participant.GetId())
 		}
-		_, _ = io.WriteString(w, "<li>"+html.EscapeString(name))
-		if canManageParticipants {
-			participantID := strings.TrimSpace(participant.GetId())
-			if participantID != "" {
-				selectedAccess := campaignAccessFormValue(participant.GetCampaignAccess())
-				selectedRole := participantRoleFormValue(participant.GetRole())
-				selectedController := participantControllerFormValue(participant.GetController())
-				memberSelected := ""
-				managerSelected := ""
-				ownerSelected := ""
-				switch selectedAccess {
-				case "manager":
-					managerSelected = " selected"
-				case "owner":
-					ownerSelected = " selected"
-				default:
-					memberSelected = " selected"
-				}
-				gmSelected := ""
-				playerSelected := ""
-				if selectedRole == "gm" {
-					gmSelected = " selected"
-				} else {
-					playerSelected = " selected"
-				}
-				humanSelected := ""
-				aiSelected := ""
-				if selectedController == "ai" {
-					aiSelected = " selected"
-				} else {
-					humanSelected = " selected"
-				}
-				_, _ = io.WriteString(w, "<form method=\"post\" action=\"/campaigns/"+escapedCampaignID+"/participants/update\"><input type=\"hidden\" name=\"participant_id\" value=\""+html.EscapeString(participantID)+"\"><select name=\"campaign_access\"><option value=\"member\""+memberSelected+">member</option><option value=\"manager\""+managerSelected+">manager</option><option value=\"owner\""+ownerSelected+">owner</option></select><select name=\"role\"><option value=\"gm\""+gmSelected+">gm</option><option value=\"player\""+playerSelected+">player</option></select><select name=\"controller\"><option value=\"human\""+humanSelected+">human</option><option value=\"ai\""+aiSelected+">ai</option></select><button type=\"submit\">Update Access</button></form>")
-			}
-		}
-		_, _ = io.WriteString(w, "</li>")
+		accessValue := campaignAccessFormValue(participant.GetCampaignAccess())
+		roleValue := participantRoleFormValue(participant.GetRole())
+		controllerValue := participantControllerFormValue(participant.GetController())
+		participantItems = append(participantItems, webtemplates.ParticipantListItem{
+			ID:              strings.TrimSpace(participant.GetId()),
+			Name:            name,
+			MemberSelected:  accessValue == "member",
+			ManagerSelected: accessValue == "manager",
+			OwnerSelected:   accessValue == "owner",
+			GMSelected:      roleValue == "gm",
+			PlayerSelected:  roleValue == "player",
+			HumanSelected:   controllerValue == "human",
+			AISelected:      controllerValue == "ai",
+		})
 	}
-	_, _ = io.WriteString(w, "</ul>")
-	writeGamePageEnd(w)
+	writeGameContentType(w)
+	if err := webtemplates.CampaignParticipantsPage(appName, campaignID, canManageParticipants, participantItems).Render(r.Context(), w); err != nil {
+		http.Error(w, "failed to render participants page", http.StatusInternalServerError)
+	}
 }
