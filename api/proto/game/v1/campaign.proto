@@ -32,6 +32,8 @@ message Campaign {
   google.protobuf.Timestamp completed_at = 14;
   // Timestamp when the campaign was archived.
   google.protobuf.Timestamp archived_at = 15;
+  // Selected built-in cover asset identifier.
+  string cover_asset_id = 16;
 }
 
 enum CampaignStatus {
@@ -82,6 +84,9 @@ service CampaignService {
 
   // Restore a campaign.
   rpc RestoreCampaign(RestoreCampaignRequest) returns (RestoreCampaignResponse);
+
+  // Set the selected built-in cover asset for a campaign.
+  rpc SetCampaignCover(SetCampaignCoverRequest) returns (SetCampaignCoverResponse);
 }
 
 message CreateCampaignRequest {
@@ -163,5 +168,17 @@ message RestoreCampaignRequest {
 }
 
 message RestoreCampaignResponse {
+  Campaign campaign = 1;
+}
+
+message SetCampaignCoverRequest {
+  // The campaign ID to update.
+  string campaign_id = 1;
+
+  // Built-in campaign cover asset identifier.
+  string cover_asset_id = 2;
+}
+
+message SetCampaignCoverResponse {
   Campaign campaign = 1;
 }

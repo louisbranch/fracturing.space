@@ -337,6 +337,32 @@ func (s *CampaignService) RestoreCampaign(ctx context.Context, in *campaignv1.Re
 	return &campaignv1.RestoreCampaignResponse{Campaign: campaignToProto(updated)}, nil
 }
 
+// SetCampaignCover updates the selected built-in campaign cover.
+func (s *CampaignService) SetCampaignCover(ctx context.Context, in *campaignv1.SetCampaignCoverRequest) (*campaignv1.SetCampaignCoverResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "set campaign cover request is required")
+	}
+
+	campaignID := strings.TrimSpace(in.GetCampaignId())
+	if campaignID == "" {
+		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	}
+	coverAssetID := strings.TrimSpace(in.GetCoverAssetId())
+	if coverAssetID == "" {
+		return nil, status.Error(codes.InvalidArgument, "cover asset id is required")
+	}
+
+	updated, err := newCampaignApplication(s).SetCampaignCover(ctx, campaignID, coverAssetID)
+	if err != nil {
+		if apperrors.GetCode(err) != apperrors.CodeUnknown {
+			return nil, handleDomainError(err)
+		}
+		return nil, err
+	}
+
+	return &campaignv1.SetCampaignCoverResponse{Campaign: campaignToProto(updated)}, nil
+}
+
 func ensureNoActiveSession(ctx context.Context, store storage.SessionStore, campaignID string) error {
 	if store == nil {
 		return status.Error(codes.Internal, "session store is not configured")

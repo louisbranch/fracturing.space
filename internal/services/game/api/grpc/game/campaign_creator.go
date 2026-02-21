@@ -333,6 +333,63 @@ func (c campaignApplication) RestoreCampaign(ctx context.Context, campaignID str
 	return storage.CampaignRecord{}, status.Error(codes.Internal, "domain engine is not configured")
 }
 
+func (c campaignApplication) SetCampaignCover(ctx context.Context, campaignID, coverAssetID string) (storage.CampaignRecord, error) {
+	campaignRecord, err := c.stores.Campaign.Get(ctx, campaignID)
+	if err != nil {
+		return storage.CampaignRecord{}, err
+	}
+	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
+		return storage.CampaignRecord{}, err
+	}
+
+	if c.stores.Domain != nil {
+		actorID := grpcmeta.ParticipantIDFromContext(ctx)
+		actorType := command.ActorTypeSystem
+		if actorID != "" {
+			actorType = command.ActorTypeParticipant
+		}
+
+		payload := campaign.UpdatePayload{
+			Fields: map[string]string{
+				"cover_asset_id": coverAssetID,
+			},
+		}
+		payloadJSON, err := json.Marshal(payload)
+		if err != nil {
+			return storage.CampaignRecord{}, status.Errorf(codes.Internal, "encode payload: %v", err)
+		}
+
+		_, err = executeAndApplyDomainCommand(
+			ctx,
+			c.stores.Domain,
+			c.stores.Applier(),
+			command.Command{
+				CampaignID:   campaignID,
+				Type:         command.Type("campaign.update"),
+				ActorType:    actorType,
+				ActorID:      actorID,
+				RequestID:    grpcmeta.RequestIDFromContext(ctx),
+				InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+				EntityType:   "campaign",
+				EntityID:     campaignID,
+				PayloadJSON:  payloadJSON,
+			},
+			domainCommandApplyOptions{},
+		)
+		if err != nil {
+			return storage.CampaignRecord{}, err
+		}
+
+		updated, err := c.stores.Campaign.Get(ctx, campaignID)
+		if err != nil {
+			return storage.CampaignRecord{}, status.Errorf(codes.Internal, "load campaign: %v", err)
+		}
+		return updated, nil
+	}
+
+	return storage.CampaignRecord{}, status.Error(codes.Internal, "domain engine is not configured")
+}
+
 // validateCampaignStatusTransition ensures the target status is allowed from the current state.
 func validateCampaignStatusTransition(record storage.CampaignRecord, target campaign.Status) error {
 	if campaign.IsStatusTransitionAllowed(record.Status, target) {

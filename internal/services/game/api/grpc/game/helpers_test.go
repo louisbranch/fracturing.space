@@ -33,6 +33,7 @@ func TestCampaignToProto(t *testing.T) {
 		ParticipantCount: 2,
 		CharacterCount:   3,
 		ThemePrompt:      "storm",
+		CoverAssetID:     "camp-cover-03",
 		CreatedAt:        created,
 		UpdatedAt:        updated,
 		CompletedAt:      &completed,
@@ -59,6 +60,9 @@ func TestCampaignToProto(t *testing.T) {
 	}
 	if proto.GetParticipantCount() != 2 || proto.GetCharacterCount() != 3 {
 		t.Fatal("expected participant/character counts to map")
+	}
+	if proto.GetCoverAssetId() != "camp-cover-03" {
+		t.Fatalf("expected cover asset id %q, got %q", "camp-cover-03", proto.GetCoverAssetId())
 	}
 	if proto.GetCreatedAt().AsTime().UTC() != created {
 		t.Fatal("expected created timestamp to match")

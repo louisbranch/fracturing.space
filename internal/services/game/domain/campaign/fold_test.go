@@ -18,7 +18,7 @@ func TestFoldCampaignCreatedSetsFields(t *testing.T) {
 	state := State{}
 	updated := Fold(state, event.Event{
 		Type:        event.Type("campaign.created"),
-		PayloadJSON: []byte(`{"name":"Sunfall","game_system":"daggerheart","gm_mode":"human"}`),
+		PayloadJSON: []byte(`{"name":"Sunfall","game_system":"daggerheart","gm_mode":"human","cover_asset_id":"camp-cover-03"}`),
 	})
 	if updated.Name != "Sunfall" {
 		t.Fatalf("name = %s, want %s", updated.Name, "Sunfall")
@@ -29,13 +29,16 @@ func TestFoldCampaignCreatedSetsFields(t *testing.T) {
 	if updated.GmMode != "human" {
 		t.Fatalf("gm mode = %s, want %s", updated.GmMode, "human")
 	}
+	if updated.CoverAssetID != "camp-cover-03" {
+		t.Fatalf("cover asset id = %s, want %s", updated.CoverAssetID, "camp-cover-03")
+	}
 }
 
 func TestFoldCampaignUpdatedSetsFields(t *testing.T) {
-	state := State{Created: true, Status: StatusDraft, Name: "Old", ThemePrompt: "Old theme"}
+	state := State{Created: true, Status: StatusDraft, Name: "Old", ThemePrompt: "Old theme", CoverAssetID: "camp-cover-01"}
 	updated := Fold(state, event.Event{
 		Type:        event.Type("campaign.updated"),
-		PayloadJSON: []byte(`{"fields":{"name":"Sunfall","status":"active","theme_prompt":"New theme"}}`),
+		PayloadJSON: []byte(`{"fields":{"name":"Sunfall","status":"active","theme_prompt":"New theme","cover_asset_id":"camp-cover-04"}}`),
 	})
 	if updated.Name != "Sunfall" {
 		t.Fatalf("name = %s, want %s", updated.Name, "Sunfall")
@@ -45,5 +48,8 @@ func TestFoldCampaignUpdatedSetsFields(t *testing.T) {
 	}
 	if updated.ThemePrompt != "New theme" {
 		t.Fatalf("theme prompt = %s, want %s", updated.ThemePrompt, "New theme")
+	}
+	if updated.CoverAssetID != "camp-cover-04" {
+		t.Fatalf("cover asset id = %s, want %s", updated.CoverAssetID, "camp-cover-04")
 	}
 }

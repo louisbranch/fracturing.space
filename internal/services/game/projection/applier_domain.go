@@ -150,6 +150,7 @@ func (a Applier) applyCampaignCreated(ctx context.Context, evt event.Event) erro
 		ParticipantCount: 0,
 		CharacterCount:   0,
 		ThemePrompt:      normalized.ThemePrompt,
+		CoverAssetID:     strings.TrimSpace(payload.CoverAssetID),
 		CreatedAt:        createdAt,
 		UpdatedAt:        createdAt,
 	})
@@ -195,6 +196,8 @@ func (a Applier) applyCampaignUpdated(ctx context.Context, evt event.Event) erro
 			updated.Name = name
 		case "theme_prompt":
 			updated.ThemePrompt = strings.TrimSpace(value)
+		case "cover_asset_id":
+			updated.CoverAssetID = strings.TrimSpace(value)
 		}
 	}
 

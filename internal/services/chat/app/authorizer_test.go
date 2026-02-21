@@ -113,6 +113,10 @@ func (*fakeCampaignClient) RestoreCampaign(context.Context, *statev1.RestoreCamp
 	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
+func (*fakeCampaignClient) SetCampaignCover(context.Context, *statev1.SetCampaignCoverRequest, ...grpc.CallOption) (*statev1.SetCampaignCoverResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented")
+}
+
 func (f *fakeParticipantClient) ListParticipants(_ context.Context, req *statev1.ListParticipantsRequest, _ ...grpc.CallOption) (*statev1.ListParticipantsResponse, error) {
 	if f.err != nil {
 		return nil, f.err

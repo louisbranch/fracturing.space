@@ -17,4 +17,6 @@ type State struct {
 	Status Status
 	// ThemePrompt stores optional campaign setup context for narrative features.
 	ThemePrompt string
+	// CoverAssetID stores the selected built-in campaign cover identifier.
+	CoverAssetID string
 }

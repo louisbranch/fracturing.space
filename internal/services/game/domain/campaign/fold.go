@@ -17,6 +17,7 @@ func Fold(state State, evt event.Event) State {
 		state.GameSystem = payload.GameSystem
 		state.GmMode = payload.GmMode
 		state.Status = StatusDraft
+		state.CoverAssetID = strings.TrimSpace(payload.CoverAssetID)
 	}
 	if evt.Type == eventTypeUpdated {
 		var payload UpdatePayload
@@ -29,6 +30,8 @@ func Fold(state State, evt event.Event) State {
 				state.Status = Status(strings.TrimSpace(value))
 			case "theme_prompt":
 				state.ThemePrompt = strings.TrimSpace(value)
+			case "cover_asset_id":
+				state.CoverAssetID = strings.TrimSpace(value)
 			}
 		}
 	}

@@ -75,25 +75,28 @@ func requireToolMetadata(t *testing.T, result *mcp.CallToolResult) (string, stri
 
 // fakeCampaignClient implements statev1.CampaignServiceClient for tests.
 type fakeCampaignClient struct {
-	response                   *statev1.CreateCampaignResponse
-	listResponse               *statev1.ListCampaignsResponse
-	getCampaignResponse        *statev1.GetCampaignResponse
-	endCampaignResponse        *statev1.EndCampaignResponse
-	archiveCampaignResponse    *statev1.ArchiveCampaignResponse
-	restoreCampaignResponse    *statev1.RestoreCampaignResponse
-	err                        error
-	listErr                    error
-	getCampaignErr             error
-	endCampaignErr             error
-	archiveCampaignErr         error
-	restoreCampaignErr         error
-	lastRequest                *statev1.CreateCampaignRequest
-	lastListRequest            *statev1.ListCampaignsRequest
-	lastGetCampaignRequest     *statev1.GetCampaignRequest
-	lastEndCampaignRequest     *statev1.EndCampaignRequest
-	lastArchiveCampaignRequest *statev1.ArchiveCampaignRequest
-	lastRestoreCampaignRequest *statev1.RestoreCampaignRequest
-	listCalls                  int
+	response                    *statev1.CreateCampaignResponse
+	listResponse                *statev1.ListCampaignsResponse
+	getCampaignResponse         *statev1.GetCampaignResponse
+	endCampaignResponse         *statev1.EndCampaignResponse
+	archiveCampaignResponse     *statev1.ArchiveCampaignResponse
+	restoreCampaignResponse     *statev1.RestoreCampaignResponse
+	setCampaignCoverResponse    *statev1.SetCampaignCoverResponse
+	err                         error
+	listErr                     error
+	getCampaignErr              error
+	endCampaignErr              error
+	archiveCampaignErr          error
+	restoreCampaignErr          error
+	setCampaignCoverErr         error
+	lastRequest                 *statev1.CreateCampaignRequest
+	lastListRequest             *statev1.ListCampaignsRequest
+	lastGetCampaignRequest      *statev1.GetCampaignRequest
+	lastEndCampaignRequest      *statev1.EndCampaignRequest
+	lastArchiveCampaignRequest  *statev1.ArchiveCampaignRequest
+	lastRestoreCampaignRequest  *statev1.RestoreCampaignRequest
+	lastSetCampaignCoverRequest *statev1.SetCampaignCoverRequest
+	listCalls                   int
 }
 
 // fakeParticipantClient implements statev1.ParticipantServiceClient for tests.
@@ -242,6 +245,12 @@ func (f *fakeCampaignClient) ArchiveCampaign(ctx context.Context, req *statev1.A
 func (f *fakeCampaignClient) RestoreCampaign(ctx context.Context, req *statev1.RestoreCampaignRequest, opts ...grpc.CallOption) (*statev1.RestoreCampaignResponse, error) {
 	f.lastRestoreCampaignRequest = req
 	return f.restoreCampaignResponse, f.restoreCampaignErr
+}
+
+// SetCampaignCover records the request and returns the configured response.
+func (f *fakeCampaignClient) SetCampaignCover(ctx context.Context, req *statev1.SetCampaignCoverRequest, opts ...grpc.CallOption) (*statev1.SetCampaignCoverResponse, error) {
+	f.lastSetCampaignCoverRequest = req
+	return f.setCampaignCoverResponse, f.setCampaignCoverErr
 }
 
 // CreateParticipant records the request and returns the configured response.

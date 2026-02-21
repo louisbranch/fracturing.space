@@ -33,6 +33,7 @@ func TestStoresApplier_ApplyCampaignAndParticipant(t *testing.T) {
 		Intent:       "STARTER",
 		AccessPolicy: "PUBLIC",
 		ThemePrompt:  "A dark fantasy adventure",
+		CoverAssetID: "camp-cover-02",
 	}
 	createJSON, err := json.Marshal(createPayload)
 	if err != nil {
@@ -83,6 +84,9 @@ func TestStoresApplier_ApplyCampaignAndParticipant(t *testing.T) {
 	}
 	if campaign.System != commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART {
 		t.Fatalf("campaign system = %s, want %s", campaign.System, commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART)
+	}
+	if campaign.CoverAssetID != "camp-cover-02" {
+		t.Fatalf("campaign cover asset id = %q, want %q", campaign.CoverAssetID, "camp-cover-02")
 	}
 	if campaign.ParticipantCount != 1 {
 		t.Fatalf("campaign participant count = %d, want 1", campaign.ParticipantCount)
@@ -530,6 +534,65 @@ func TestStoresApplier_ApplyCampaignUpdatedAndSessionLifecycle(t *testing.T) {
 	}
 	if ended.EndedAt == nil {
 		t.Fatal("expected ended session to have EndedAt")
+	}
+}
+
+func TestStoresApplier_ApplyCampaignUpdated_CoverAssetID(t *testing.T) {
+	ctx := context.Background()
+	stores := Stores{
+		Campaign: newFakeCampaignStore(),
+	}
+	applier := stores.Applier()
+	now := time.Date(2026, 2, 14, 1, 0, 0, 0, time.UTC)
+
+	createPayload := campaign.CreatePayload{
+		Name:         "Test Campaign",
+		Locale:       "en-US",
+		GameSystem:   commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART.String(),
+		GmMode:       "GM_MODE_HUMAN",
+		Intent:       "STARTER",
+		AccessPolicy: "PUBLIC",
+		CoverAssetID: "camp-cover-01",
+	}
+	createJSON, err := json.Marshal(createPayload)
+	if err != nil {
+		t.Fatalf("encode create payload: %v", err)
+	}
+	if err := applier.Apply(ctx, event.Event{
+		CampaignID:  "camp-1",
+		Type:        event.Type("campaign.created"),
+		Timestamp:   now,
+		ActorType:   event.ActorTypeSystem,
+		EntityType:  "campaign",
+		EntityID:    "camp-1",
+		PayloadJSON: createJSON,
+	}); err != nil {
+		t.Fatalf("apply campaign.created: %v", err)
+	}
+
+	updatePayload := campaign.UpdatePayload{Fields: map[string]string{"cover_asset_id": "camp-cover-04"}}
+	updateJSON, err := json.Marshal(updatePayload)
+	if err != nil {
+		t.Fatalf("encode update payload: %v", err)
+	}
+	if err := applier.Apply(ctx, event.Event{
+		CampaignID:  "camp-1",
+		Type:        event.Type("campaign.updated"),
+		Timestamp:   now.Add(time.Minute),
+		ActorType:   event.ActorTypeSystem,
+		EntityType:  "campaign",
+		EntityID:    "camp-1",
+		PayloadJSON: updateJSON,
+	}); err != nil {
+		t.Fatalf("apply campaign.updated: %v", err)
+	}
+
+	campaignRecord, err := stores.Campaign.Get(ctx, "camp-1")
+	if err != nil {
+		t.Fatalf("get campaign: %v", err)
+	}
+	if campaignRecord.CoverAssetID != "camp-cover-04" {
+		t.Fatalf("campaign cover asset id = %q, want %q", campaignRecord.CoverAssetID, "camp-cover-04")
 	}
 }
 

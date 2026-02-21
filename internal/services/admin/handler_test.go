@@ -1133,6 +1133,10 @@ func (c *testCampaignClient) RestoreCampaign(ctx context.Context, in *statev1.Re
 	return &statev1.RestoreCampaignResponse{}, nil
 }
 
+func (c *testCampaignClient) SetCampaignCover(ctx context.Context, in *statev1.SetCampaignCoverRequest, opts ...grpc.CallOption) (*statev1.SetCampaignCoverResponse, error) {
+	return &statev1.SetCampaignCoverResponse{}, nil
+}
+
 type testParticipantClient struct {
 	participants []*statev1.Participant
 	listErr      error
