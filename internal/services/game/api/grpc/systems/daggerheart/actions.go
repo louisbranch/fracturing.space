@@ -154,10 +154,7 @@ func (s *DaggerheartService) ApplyDamage(ctx context.Context, in *pb.Daggerheart
 	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
-	if s.stores.Domain == nil {
-		return nil, status.Error(codes.Internal, "domain engine is not configured")
-	}
-	domainResult, err := s.stores.Domain.Execute(ctx, command.Command{
+	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 		CampaignID:    campaignID,
 		Type:          command.Type("sys.daggerheart.damage.apply"),
 		ActorType:     command.ActorTypeSystem,
@@ -169,20 +166,14 @@ func (s *DaggerheartService) ApplyDamage(ctx context.Context, in *pb.Daggerheart
 		SystemID:      daggerheart.SystemID,
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON:   payloadJSON,
+	}, adapter, domainCommandApplyOptions{
+		requireEvents:   true,
+		missingEventMsg: "damage did not emit an event",
+		applyErrMessage: "apply damage event",
+		executeErrMsg:   "execute domain command",
 	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "execute domain command: %v", err)
-	}
-	if len(domainResult.Decision.Rejections) > 0 {
-		return nil, status.Error(codes.FailedPrecondition, domainResult.Decision.Rejections[0].Message)
-	}
-	if len(domainResult.Decision.Events) == 0 {
-		return nil, status.Error(codes.Internal, "damage did not emit an event")
-	}
-	for _, evt := range domainResult.Decision.Events {
-		if err := adapter.Apply(ctx, evt); err != nil {
-			return nil, status.Errorf(codes.Internal, "apply damage event: %v", err)
-		}
+		return nil, err
 	}
 
 	updated, err := s.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
@@ -325,10 +316,7 @@ func (s *DaggerheartService) ApplyAdversaryDamage(ctx context.Context, in *pb.Da
 	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
-	if s.stores.Domain == nil {
-		return nil, status.Error(codes.Internal, "domain engine is not configured")
-	}
-	domainResult, err := s.stores.Domain.Execute(ctx, command.Command{
+	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 		CampaignID:    campaignID,
 		Type:          command.Type("sys.daggerheart.adversary_damage.apply"),
 		ActorType:     command.ActorTypeSystem,
@@ -340,20 +328,14 @@ func (s *DaggerheartService) ApplyAdversaryDamage(ctx context.Context, in *pb.Da
 		SystemID:      daggerheart.SystemID,
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON:   payloadJSON,
+	}, adapter, domainCommandApplyOptions{
+		requireEvents:   true,
+		missingEventMsg: "adversary damage did not emit an event",
+		applyErrMessage: "apply adversary damage event",
+		executeErrMsg:   "execute domain command",
 	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "execute domain command: %v", err)
-	}
-	if len(domainResult.Decision.Rejections) > 0 {
-		return nil, status.Error(codes.FailedPrecondition, domainResult.Decision.Rejections[0].Message)
-	}
-	if len(domainResult.Decision.Events) == 0 {
-		return nil, status.Error(codes.Internal, "adversary damage did not emit an event")
-	}
-	for _, evt := range domainResult.Decision.Events {
-		if err := adapter.Apply(ctx, evt); err != nil {
-			return nil, status.Errorf(codes.Internal, "apply adversary damage event: %v", err)
-		}
+		return nil, err
 	}
 
 	updated, err := s.stores.Daggerheart.GetDaggerheartAdversary(ctx, campaignID, adversaryID)
@@ -481,10 +463,7 @@ func (s *DaggerheartService) ApplyRest(ctx context.Context, in *pb.DaggerheartAp
 	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
-	if s.stores.Domain == nil {
-		return nil, status.Error(codes.Internal, "domain engine is not configured")
-	}
-	domainResult, err := s.stores.Domain.Execute(ctx, command.Command{
+	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 		CampaignID:    campaignID,
 		Type:          command.Type("sys.daggerheart.rest.take"),
 		ActorType:     command.ActorTypeSystem,
@@ -496,20 +475,14 @@ func (s *DaggerheartService) ApplyRest(ctx context.Context, in *pb.DaggerheartAp
 		SystemID:      daggerheart.SystemID,
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON:   payloadJSON,
+	}, adapter, domainCommandApplyOptions{
+		requireEvents:   true,
+		missingEventMsg: "rest did not emit an event",
+		applyErrMessage: "apply rest event",
+		executeErrMsg:   "execute domain command",
 	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "execute domain command: %v", err)
-	}
-	if len(domainResult.Decision.Rejections) > 0 {
-		return nil, status.Error(codes.FailedPrecondition, domainResult.Decision.Rejections[0].Message)
-	}
-	if len(domainResult.Decision.Events) == 0 {
-		return nil, status.Error(codes.Internal, "rest did not emit an event")
-	}
-	for _, evt := range domainResult.Decision.Events {
-		if err := adapter.Apply(ctx, evt); err != nil {
-			return nil, status.Errorf(codes.Internal, "apply rest event: %v", err)
-		}
+		return nil, err
 	}
 
 	if outcome.AdvanceCountdown && longTermCountdownID != "" {
@@ -658,10 +631,7 @@ func (s *DaggerheartService) ApplyDowntimeMove(ctx context.Context, in *pb.Dagge
 	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
-	if s.stores.Domain == nil {
-		return nil, status.Error(codes.Internal, "domain engine is not configured")
-	}
-	domainResult, err := s.stores.Domain.Execute(ctx, command.Command{
+	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 		CampaignID:    campaignID,
 		Type:          command.Type("sys.daggerheart.downtime_move.apply"),
 		ActorType:     command.ActorTypeSystem,
@@ -673,20 +643,14 @@ func (s *DaggerheartService) ApplyDowntimeMove(ctx context.Context, in *pb.Dagge
 		SystemID:      daggerheart.SystemID,
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON:   payloadJSON,
+	}, adapter, domainCommandApplyOptions{
+		requireEvents:   true,
+		missingEventMsg: "downtime move did not emit an event",
+		applyErrMessage: "apply downtime move event",
+		executeErrMsg:   "execute domain command",
 	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "execute domain command: %v", err)
-	}
-	if len(domainResult.Decision.Rejections) > 0 {
-		return nil, status.Error(codes.FailedPrecondition, domainResult.Decision.Rejections[0].Message)
-	}
-	if len(domainResult.Decision.Events) == 0 {
-		return nil, status.Error(codes.Internal, "downtime move did not emit an event")
-	}
-	for _, evt := range domainResult.Decision.Events {
-		if err := adapter.Apply(ctx, evt); err != nil {
-			return nil, status.Errorf(codes.Internal, "apply downtime move event: %v", err)
-		}
+		return nil, err
 	}
 	if err := s.applyStressVulnerableCondition(ctx, campaignID, grpcmeta.SessionIDFromContext(ctx), characterID, current.Conditions, stressBefore, stressAfter, profile.StressMax, nil, grpcmeta.RequestIDFromContext(ctx)); err != nil {
 		return nil, err
@@ -769,10 +733,7 @@ func (s *DaggerheartService) ApplyTemporaryArmor(ctx context.Context, in *pb.Dag
 	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
-	if s.stores.Domain == nil {
-		return nil, status.Error(codes.Internal, "domain engine is not configured")
-	}
-	domainResult, err := s.stores.Domain.Execute(ctx, command.Command{
+	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 		CampaignID:    campaignID,
 		Type:          command.Type("sys.daggerheart.character_temporary_armor.apply"),
 		ActorType:     command.ActorTypeSystem,
@@ -784,20 +745,14 @@ func (s *DaggerheartService) ApplyTemporaryArmor(ctx context.Context, in *pb.Dag
 		SystemID:      daggerheart.SystemID,
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON:   payloadJSON,
+	}, adapter, domainCommandApplyOptions{
+		requireEvents:   true,
+		missingEventMsg: "temporary armor apply did not emit an event",
+		applyErrMessage: "apply temporary armor event",
+		executeErrMsg:   "execute domain command",
 	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "execute domain command: %v", err)
-	}
-	if len(domainResult.Decision.Rejections) > 0 {
-		return nil, status.Error(codes.FailedPrecondition, domainResult.Decision.Rejections[0].Message)
-	}
-	if len(domainResult.Decision.Events) == 0 {
-		return nil, status.Error(codes.Internal, "temporary armor apply did not emit an event")
-	}
-	for _, evt := range domainResult.Decision.Events {
-		if err := adapter.Apply(ctx, evt); err != nil {
-			return nil, status.Errorf(codes.Internal, "apply temporary armor event: %v", err)
-		}
+		return nil, err
 	}
 
 	updated, err := s.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
@@ -910,14 +865,11 @@ func (s *DaggerheartService) SwapLoadout(ctx context.Context, in *pb.Daggerheart
 	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
-	if s.stores.Domain == nil {
-		return nil, status.Error(codes.Internal, "domain engine is not configured")
-	}
-	result, err := s.stores.Domain.Execute(ctx, command.Command{
+	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 		CampaignID:    campaignID,
 		Type:          command.Type("sys.daggerheart.loadout.swap"),
 		ActorType:     command.ActorTypeSystem,
-		SessionID:     grpcmeta.SessionIDFromContext(ctx),
+		SessionID:     sessionID,
 		RequestID:     requestID,
 		InvocationID:  invocationID,
 		EntityType:    "character",
@@ -925,20 +877,14 @@ func (s *DaggerheartService) SwapLoadout(ctx context.Context, in *pb.Daggerheart
 		SystemID:      daggerheart.SystemID,
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON:   payloadJSON,
+	}, adapter, domainCommandApplyOptions{
+		requireEvents:   true,
+		missingEventMsg: "loadout swap did not emit an event",
+		applyErrMessage: "apply loadout swap event",
+		executeErrMsg:   "execute domain command",
 	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "execute domain command: %v", err)
-	}
-	if len(result.Decision.Rejections) > 0 {
-		return nil, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-	}
-	if len(result.Decision.Events) == 0 {
-		return nil, status.Error(codes.Internal, "loadout swap did not emit an event")
-	}
-	for _, evt := range result.Decision.Events {
-		if err := adapter.Apply(ctx, evt); err != nil {
-			return nil, status.Errorf(codes.Internal, "apply loadout swap event: %v", err)
-		}
+		return nil, err
 	}
 	if err := s.applyStressVulnerableCondition(ctx, campaignID, grpcmeta.SessionIDFromContext(ctx), characterID, current.Conditions, stressBefore, stressAfter, profile.StressMax, nil, grpcmeta.RequestIDFromContext(ctx)); err != nil {
 		return nil, err
@@ -955,13 +901,11 @@ func (s *DaggerheartService) SwapLoadout(ctx context.Context, in *pb.Daggerheart
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "encode stress spend payload: %v", err)
 		}
-		requestID := grpcmeta.RequestIDFromContext(ctx)
-		invocationID := grpcmeta.InvocationIDFromContext(ctx)
-		result, err := s.stores.Domain.Execute(ctx, command.Command{
+		_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 			CampaignID:    campaignID,
 			Type:          command.Type("sys.daggerheart.stress.spend"),
 			ActorType:     command.ActorTypeSystem,
-			SessionID:     grpcmeta.SessionIDFromContext(ctx),
+			SessionID:     sessionID,
 			RequestID:     requestID,
 			InvocationID:  invocationID,
 			EntityType:    "character",
@@ -969,15 +913,14 @@ func (s *DaggerheartService) SwapLoadout(ctx context.Context, in *pb.Daggerheart
 			SystemID:      daggerheart.SystemID,
 			SystemVersion: daggerheart.SystemVersion,
 			PayloadJSON:   spendJSON,
+		}, adapter, domainCommandApplyOptions{
+			requireEvents:   true,
+			missingEventMsg: "stress spend did not emit an event",
+			applyErrMessage: "apply stress spend event",
+			executeErrMsg:   "execute domain command",
 		})
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "execute domain command: %v", err)
-		}
-		if len(result.Decision.Rejections) > 0 {
-			return nil, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-		}
-		if len(result.Decision.Events) == 0 {
-			return nil, status.Error(codes.Internal, "stress spend did not emit an event")
+			return nil, err
 		}
 	}
 
@@ -1174,10 +1117,7 @@ func (s *DaggerheartService) ApplyDeathMove(ctx context.Context, in *pb.Daggerhe
 	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
-	if s.stores.Domain == nil {
-		return nil, status.Error(codes.Internal, "domain engine is not configured")
-	}
-	domainResult, err := s.stores.Domain.Execute(ctx, command.Command{
+	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 		CampaignID:    campaignID,
 		Type:          command.Type("sys.daggerheart.character_state.patch"),
 		ActorType:     command.ActorTypeSystem,
@@ -1189,20 +1129,14 @@ func (s *DaggerheartService) ApplyDeathMove(ctx context.Context, in *pb.Daggerhe
 		SystemID:      daggerheart.SystemID,
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON:   payloadJSON,
+	}, adapter, domainCommandApplyOptions{
+		requireEvents:   true,
+		missingEventMsg: "death move did not emit an event",
+		applyErrMessage: "apply character state event",
+		executeErrMsg:   "execute domain command",
 	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "execute domain command: %v", err)
-	}
-	if len(domainResult.Decision.Rejections) > 0 {
-		return nil, status.Error(codes.FailedPrecondition, domainResult.Decision.Rejections[0].Message)
-	}
-	if len(domainResult.Decision.Events) == 0 {
-		return nil, status.Error(codes.Internal, "death move did not emit an event")
-	}
-	for _, evt := range domainResult.Decision.Events {
-		if err := adapter.Apply(ctx, evt); err != nil {
-			return nil, status.Errorf(codes.Internal, "apply character state event: %v", err)
-		}
+		return nil, err
 	}
 	if result.LifeState == daggerheart.LifeStateDead {
 		if err := s.appendCharacterDeletedEvent(ctx, campaignID, characterID, result.Move); err != nil {
@@ -1397,9 +1331,8 @@ func (s *DaggerheartService) ApplyConditions(ctx context.Context, in *pb.Daggerh
 	}
 
 	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
-	if s.stores.Domain == nil {
-		return nil, status.Error(codes.Internal, "domain engine is not configured")
-	}
+	requestID := grpcmeta.RequestIDFromContext(ctx)
+	invocationID := grpcmeta.InvocationIDFromContext(ctx)
 	if conditionChanged {
 		payload := daggerheart.ConditionChangePayload{
 			CharacterID:      characterID,
@@ -1414,9 +1347,7 @@ func (s *DaggerheartService) ApplyConditions(ctx context.Context, in *pb.Daggerh
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "encode condition payload: %v", err)
 		}
-		invocationID := grpcmeta.InvocationIDFromContext(ctx)
-		requestID := grpcmeta.RequestIDFromContext(ctx)
-		domainResult, err := s.stores.Domain.Execute(ctx, command.Command{
+		_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 			CampaignID:    campaignID,
 			Type:          command.Type("sys.daggerheart.condition.change"),
 			ActorType:     command.ActorTypeSystem,
@@ -1428,20 +1359,14 @@ func (s *DaggerheartService) ApplyConditions(ctx context.Context, in *pb.Daggerh
 			SystemID:      daggerheart.SystemID,
 			SystemVersion: daggerheart.SystemVersion,
 			PayloadJSON:   payloadJSON,
+		}, adapter, domainCommandApplyOptions{
+			requireEvents:   true,
+			missingEventMsg: "condition change did not emit an event",
+			applyErrMessage: "apply condition event",
+			executeErrMsg:   "execute domain command",
 		})
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "execute domain command: %v", err)
-		}
-		if len(domainResult.Decision.Rejections) > 0 {
-			return nil, status.Error(codes.FailedPrecondition, domainResult.Decision.Rejections[0].Message)
-		}
-		if len(domainResult.Decision.Events) == 0 {
-			return nil, status.Error(codes.Internal, "condition change did not emit an event")
-		}
-		for _, evt := range domainResult.Decision.Events {
-			if err := adapter.Apply(ctx, evt); err != nil {
-				return nil, status.Errorf(codes.Internal, "apply condition event: %v", err)
-			}
+			return nil, err
 		}
 	}
 
@@ -1455,9 +1380,7 @@ func (s *DaggerheartService) ApplyConditions(ctx context.Context, in *pb.Daggerh
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "encode character state payload: %v", err)
 		}
-		invocationID := grpcmeta.InvocationIDFromContext(ctx)
-		requestID := grpcmeta.RequestIDFromContext(ctx)
-		domainResult, err := s.stores.Domain.Execute(ctx, command.Command{
+		_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 			CampaignID:    campaignID,
 			Type:          command.Type("sys.daggerheart.character_state.patch"),
 			ActorType:     command.ActorTypeSystem,
@@ -1469,20 +1392,14 @@ func (s *DaggerheartService) ApplyConditions(ctx context.Context, in *pb.Daggerh
 			SystemID:      daggerheart.SystemID,
 			SystemVersion: daggerheart.SystemVersion,
 			PayloadJSON:   payloadJSON,
+		}, adapter, domainCommandApplyOptions{
+			requireEvents:   true,
+			missingEventMsg: "character state patch did not emit an event",
+			applyErrMessage: "apply character state event",
+			executeErrMsg:   "execute domain command",
 		})
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "execute domain command: %v", err)
-		}
-		if len(domainResult.Decision.Rejections) > 0 {
-			return nil, status.Error(codes.FailedPrecondition, domainResult.Decision.Rejections[0].Message)
-		}
-		if len(domainResult.Decision.Events) == 0 {
-			return nil, status.Error(codes.Internal, "character state patch did not emit an event")
-		}
-		for _, evt := range domainResult.Decision.Events {
-			if err := adapter.Apply(ctx, evt); err != nil {
-				return nil, status.Errorf(codes.Internal, "apply character state event: %v", err)
-			}
+			return nil, err
 		}
 	}
 
@@ -1646,7 +1563,7 @@ func (s *DaggerheartService) ApplyAdversaryConditions(ctx context.Context, in *p
 	if s.stores.Domain == nil {
 		return nil, status.Error(codes.Internal, "domain engine is not configured")
 	}
-	result, err := s.stores.Domain.Execute(ctx, command.Command{
+	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 		CampaignID:    campaignID,
 		Type:          command.Type("sys.daggerheart.adversary_condition.change"),
 		ActorType:     command.ActorTypeSystem,
@@ -1658,20 +1575,14 @@ func (s *DaggerheartService) ApplyAdversaryConditions(ctx context.Context, in *p
 		SystemID:      daggerheart.SystemID,
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON:   payloadJSON,
+	}, adapter, domainCommandApplyOptions{
+		requireEvents:   true,
+		missingEventMsg: "adversary condition change did not emit an event",
+		applyErrMessage: "apply adversary condition event",
+		executeErrMsg:   "execute domain command",
 	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "execute domain command: %v", err)
-	}
-	if len(result.Decision.Rejections) > 0 {
-		return nil, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-	}
-	if len(result.Decision.Events) == 0 {
-		return nil, status.Error(codes.Internal, "adversary condition change did not emit an event")
-	}
-	for _, evt := range result.Decision.Events {
-		if err := adapter.Apply(ctx, evt); err != nil {
-			return nil, status.Errorf(codes.Internal, "apply adversary condition event: %v", err)
-		}
+		return nil, err
 	}
 
 	updated, err := s.stores.Daggerheart.GetDaggerheartAdversary(ctx, campaignID, adversaryID)
@@ -1769,7 +1680,7 @@ func (s *DaggerheartService) ApplyGmMove(ctx context.Context, in *pb.Daggerheart
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "encode gm fear payload: %v", err)
 		}
-		result, err := s.stores.Domain.Execute(ctx, command.Command{
+		_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 			CampaignID:    campaignID,
 			Type:          command.Type("sys.daggerheart.gm_fear.set"),
 			ActorType:     command.ActorTypeSystem,
@@ -1781,20 +1692,14 @@ func (s *DaggerheartService) ApplyGmMove(ctx context.Context, in *pb.Daggerheart
 			SystemID:      daggerheart.SystemID,
 			SystemVersion: daggerheart.SystemVersion,
 			PayloadJSON:   payloadJSON,
+		}, adapter, domainCommandApplyOptions{
+			requireEvents:   true,
+			missingEventMsg: "gm fear update did not emit an event",
+			applyErrMessage: "apply gm fear event",
+			executeErrMsg:   "execute domain command",
 		})
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "execute domain command: %v", err)
-		}
-		if len(result.Decision.Rejections) > 0 {
-			return nil, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-		}
-		if len(result.Decision.Events) == 0 {
-			return nil, status.Error(codes.Internal, "gm fear update did not emit an event")
-		}
-		for _, evt := range result.Decision.Events {
-			if err := adapter.Apply(ctx, evt); err != nil {
-				return nil, status.Errorf(codes.Internal, "apply gm fear event: %v", err)
-			}
+			return nil, err
 		}
 	}
 
@@ -1907,7 +1812,7 @@ func (s *DaggerheartService) CreateCountdown(ctx context.Context, in *pb.Daggerh
 	if s.stores.Domain == nil {
 		return nil, status.Error(codes.Internal, "domain engine is not configured")
 	}
-	result, err := s.stores.Domain.Execute(ctx, command.Command{
+	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 		CampaignID:    campaignID,
 		Type:          command.Type("sys.daggerheart.countdown.create"),
 		ActorType:     command.ActorTypeSystem,
@@ -1919,20 +1824,14 @@ func (s *DaggerheartService) CreateCountdown(ctx context.Context, in *pb.Daggerh
 		SystemID:      daggerheart.SystemID,
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON:   payloadJSON,
+	}, adapter, domainCommandApplyOptions{
+		requireEvents:   true,
+		missingEventMsg: "countdown create did not emit an event",
+		applyErrMessage: "apply countdown created event",
+		executeErrMsg:   "execute domain command",
 	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "execute domain command: %v", err)
-	}
-	if len(result.Decision.Rejections) > 0 {
-		return nil, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-	}
-	if len(result.Decision.Events) == 0 {
-		return nil, status.Error(codes.Internal, "countdown create did not emit an event")
-	}
-	for _, evt := range result.Decision.Events {
-		if err := adapter.Apply(ctx, evt); err != nil {
-			return nil, status.Errorf(codes.Internal, "apply countdown created event: %v", err)
-		}
+		return nil, err
 	}
 
 	countdown, err := s.stores.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, countdownID)
@@ -2045,7 +1944,7 @@ func (s *DaggerheartService) UpdateCountdown(ctx context.Context, in *pb.Daggerh
 	if s.stores.Domain == nil {
 		return nil, status.Error(codes.Internal, "domain engine is not configured")
 	}
-	result, err := s.stores.Domain.Execute(ctx, command.Command{
+	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 		CampaignID:    campaignID,
 		Type:          command.Type("sys.daggerheart.countdown.update"),
 		ActorType:     command.ActorTypeSystem,
@@ -2057,20 +1956,14 @@ func (s *DaggerheartService) UpdateCountdown(ctx context.Context, in *pb.Daggerh
 		SystemID:      daggerheart.SystemID,
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON:   payloadJSON,
+	}, adapter, domainCommandApplyOptions{
+		requireEvents:   true,
+		missingEventMsg: "countdown update did not emit an event",
+		applyErrMessage: "apply countdown update event",
+		executeErrMsg:   "execute domain command",
 	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "execute domain command: %v", err)
-	}
-	if len(result.Decision.Rejections) > 0 {
-		return nil, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-	}
-	if len(result.Decision.Events) == 0 {
-		return nil, status.Error(codes.Internal, "countdown update did not emit an event")
-	}
-	for _, evt := range result.Decision.Events {
-		if err := adapter.Apply(ctx, evt); err != nil {
-			return nil, status.Errorf(codes.Internal, "apply countdown update event: %v", err)
-		}
+		return nil, err
 	}
 
 	updatedCountdown, err := s.stores.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, countdownID)
@@ -2157,7 +2050,7 @@ func (s *DaggerheartService) DeleteCountdown(ctx context.Context, in *pb.Daggerh
 	if s.stores.Domain == nil {
 		return nil, status.Error(codes.Internal, "domain engine is not configured")
 	}
-	result, err := s.stores.Domain.Execute(ctx, command.Command{
+	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 		CampaignID:    campaignID,
 		Type:          command.Type("sys.daggerheart.countdown.delete"),
 		ActorType:     command.ActorTypeSystem,
@@ -2169,20 +2062,14 @@ func (s *DaggerheartService) DeleteCountdown(ctx context.Context, in *pb.Daggerh
 		SystemID:      daggerheart.SystemID,
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON:   payloadJSON,
+	}, adapter, domainCommandApplyOptions{
+		requireEvents:   true,
+		missingEventMsg: "countdown delete did not emit an event",
+		applyErrMessage: "apply countdown delete event",
+		executeErrMsg:   "execute domain command",
 	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "execute domain command: %v", err)
-	}
-	if len(result.Decision.Rejections) > 0 {
-		return nil, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-	}
-	if len(result.Decision.Events) == 0 {
-		return nil, status.Error(codes.Internal, "countdown delete did not emit an event")
-	}
-	for _, evt := range result.Decision.Events {
-		if err := adapter.Apply(ctx, evt); err != nil {
-			return nil, status.Errorf(codes.Internal, "apply countdown delete event: %v", err)
-		}
+		return nil, err
 	}
 
 	return &pb.DaggerheartDeleteCountdownResponse{CountdownId: countdownID}, nil
@@ -2265,7 +2152,7 @@ func (s *DaggerheartService) ResolveBlazeOfGlory(ctx context.Context, in *pb.Dag
 	if s.stores.Domain == nil {
 		return nil, status.Error(codes.Internal, "domain engine is not configured")
 	}
-	result, err := s.stores.Domain.Execute(ctx, command.Command{
+	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 		CampaignID:    campaignID,
 		Type:          command.Type("sys.daggerheart.character_state.patch"),
 		ActorType:     command.ActorTypeSystem,
@@ -2277,20 +2164,14 @@ func (s *DaggerheartService) ResolveBlazeOfGlory(ctx context.Context, in *pb.Dag
 		SystemID:      daggerheart.SystemID,
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON:   payloadJSON,
+	}, adapter, domainCommandApplyOptions{
+		requireEvents:   true,
+		missingEventMsg: "blaze of glory did not emit an event",
+		applyErrMessage: "apply character state event",
+		executeErrMsg:   "execute domain command",
 	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "execute domain command: %v", err)
-	}
-	if len(result.Decision.Rejections) > 0 {
-		return nil, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-	}
-	if len(result.Decision.Events) == 0 {
-		return nil, status.Error(codes.Internal, "blaze of glory did not emit an event")
-	}
-	for _, evt := range result.Decision.Events {
-		if err := adapter.Apply(ctx, evt); err != nil {
-			return nil, status.Errorf(codes.Internal, "apply character state event: %v", err)
-		}
+		return nil, err
 	}
 	updated, err := s.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
@@ -2324,7 +2205,8 @@ func (s *DaggerheartService) appendCharacterDeletedEvent(ctx context.Context, ca
 	if err != nil {
 		return status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
-	result, err := s.stores.Domain.Execute(ctx, command.Command{
+	applier := s.stores.Applier()
+	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 		CampaignID:   campaignID,
 		Type:         command.Type("character.delete"),
 		ActorType:    command.ActorTypeSystem,
@@ -2334,21 +2216,14 @@ func (s *DaggerheartService) appendCharacterDeletedEvent(ctx context.Context, ca
 		EntityType:   "character",
 		EntityID:     characterID,
 		PayloadJSON:  payloadJSON,
+	}, applier, domainCommandApplyOptions{
+		requireEvents:   true,
+		missingEventMsg: "character delete did not emit an event",
+		applyErrMessage: "apply event",
+		executeErrMsg:   "execute domain command",
 	})
 	if err != nil {
-		return status.Errorf(codes.Internal, "execute domain command: %v", err)
-	}
-	if len(result.Decision.Rejections) > 0 {
-		return status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-	}
-	if len(result.Decision.Events) == 0 {
-		return status.Error(codes.Internal, "character delete did not emit an event")
-	}
-	applier := s.stores.Applier()
-	for _, evt := range result.Decision.Events {
-		if err := applier.Apply(ctx, evt); err != nil {
-			return status.Errorf(codes.Internal, "apply event: %v", err)
-		}
+		return err
 	}
 	return nil
 }
@@ -2499,7 +2374,7 @@ func (s *DaggerheartService) SessionActionRoll(ctx context.Context, in *pb.Sessi
 			if s.stores.Domain == nil {
 				return nil, status.Error(codes.Internal, "domain engine is not configured")
 			}
-			result, err := s.stores.Domain.Execute(ctx, command.Command{
+			_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 				CampaignID:    campaignID,
 				Type:          command.Type("sys.daggerheart.hope.spend"),
 				ActorType:     command.ActorTypeSystem,
@@ -2511,15 +2386,14 @@ func (s *DaggerheartService) SessionActionRoll(ctx context.Context, in *pb.Sessi
 				SystemID:      daggerheart.SystemID,
 				SystemVersion: daggerheart.SystemVersion,
 				PayloadJSON:   payloadJSON,
+			}, s.stores.Applier(), domainCommandApplyOptions{
+				requireEvents:   true,
+				missingEventMsg: "hope spend did not emit an event",
+				executeErrMsg:   "execute domain command",
+				skipApply:       true,
 			})
 			if err != nil {
-				return nil, status.Errorf(codes.Internal, "execute domain command: %v", err)
-			}
-			if len(result.Decision.Rejections) > 0 {
-				return nil, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-			}
-			if len(result.Decision.Events) == 0 {
-				return nil, status.Error(codes.Internal, "hope spend did not emit an event")
+				return nil, err
 			}
 			hopeAfter = after
 		}
@@ -2541,7 +2415,7 @@ func (s *DaggerheartService) SessionActionRoll(ctx context.Context, in *pb.Sessi
 			if s.stores.Domain == nil {
 				return nil, status.Error(codes.Internal, "domain engine is not configured")
 			}
-			result, err := s.stores.Domain.Execute(ctx, command.Command{
+			_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 				CampaignID:    campaignID,
 				Type:          command.Type("sys.daggerheart.character_state.patch"),
 				ActorType:     command.ActorTypeSystem,
@@ -2553,20 +2427,14 @@ func (s *DaggerheartService) SessionActionRoll(ctx context.Context, in *pb.Sessi
 				SystemID:      daggerheart.SystemID,
 				SystemVersion: daggerheart.SystemVersion,
 				PayloadJSON:   payloadJSON,
+			}, adapter, domainCommandApplyOptions{
+				requireEvents:   true,
+				missingEventMsg: "character state patch did not emit an event",
+				applyErrMessage: "apply character state event",
+				executeErrMsg:   "execute domain command",
 			})
 			if err != nil {
-				return nil, status.Errorf(codes.Internal, "execute domain command: %v", err)
-			}
-			if len(result.Decision.Rejections) > 0 {
-				return nil, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-			}
-			if len(result.Decision.Events) == 0 {
-				return nil, status.Error(codes.Internal, "character state patch did not emit an event")
-			}
-			for _, evt := range result.Decision.Events {
-				if err := adapter.Apply(ctx, evt); err != nil {
-					return nil, status.Errorf(codes.Internal, "apply character state event: %v", err)
-				}
+				return nil, err
 			}
 		}
 	}
@@ -2657,7 +2525,7 @@ func (s *DaggerheartService) SessionActionRoll(ctx context.Context, in *pb.Sessi
 		return nil, status.Error(codes.Internal, "domain engine is not configured")
 	}
 	var rollSeqValue uint64
-	domainResult, err := s.stores.Domain.Execute(ctx, command.Command{
+	domainResult, err := s.executeAndApplyDomainCommand(ctx, command.Command{
 		CampaignID:   campaignID,
 		Type:         command.Type("action.roll.resolve"),
 		ActorType:    command.ActorTypeSystem,
@@ -2667,15 +2535,14 @@ func (s *DaggerheartService) SessionActionRoll(ctx context.Context, in *pb.Sessi
 		EntityType:   "roll",
 		EntityID:     requestID,
 		PayloadJSON:  payloadJSON,
+	}, s.stores.Applier(), domainCommandApplyOptions{
+		requireEvents:   true,
+		missingEventMsg: "action roll did not emit an event",
+		executeErrMsg:   "execute domain command",
+		skipApply:       true,
 	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "execute domain command: %v", err)
-	}
-	if len(domainResult.Decision.Rejections) > 0 {
-		return nil, status.Error(codes.FailedPrecondition, domainResult.Decision.Rejections[0].Message)
-	}
-	if len(domainResult.Decision.Events) == 0 {
-		return nil, status.Error(codes.Internal, "action roll did not emit an event")
+		return nil, err
 	}
 	rollSeqValue = domainResult.Decision.Events[0].Seq
 
@@ -2828,7 +2695,7 @@ func (s *DaggerheartService) SessionDamageRoll(ctx context.Context, in *pb.Sessi
 		return nil, status.Error(codes.Internal, "domain engine is not configured")
 	}
 	var rollSeqValue uint64
-	domainResult, err := s.stores.Domain.Execute(ctx, command.Command{
+	domainResult, err := s.executeAndApplyDomainCommand(ctx, command.Command{
 		CampaignID:   campaignID,
 		Type:         command.Type("action.roll.resolve"),
 		ActorType:    command.ActorTypeSystem,
@@ -2838,15 +2705,14 @@ func (s *DaggerheartService) SessionDamageRoll(ctx context.Context, in *pb.Sessi
 		EntityType:   "roll",
 		EntityID:     requestID,
 		PayloadJSON:  payloadJSON,
+	}, s.stores.Applier(), domainCommandApplyOptions{
+		requireEvents:   true,
+		missingEventMsg: "damage roll did not emit an event",
+		executeErrMsg:   "execute domain command",
+		skipApply:       true,
 	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "execute domain command: %v", err)
-	}
-	if len(domainResult.Decision.Rejections) > 0 {
-		return nil, status.Error(codes.FailedPrecondition, domainResult.Decision.Rejections[0].Message)
-	}
-	if len(domainResult.Decision.Events) == 0 {
-		return nil, status.Error(codes.Internal, "damage roll did not emit an event")
+		return nil, err
 	}
 	rollSeqValue = domainResult.Decision.Events[0].Seq
 
@@ -3229,7 +3095,7 @@ func (s *DaggerheartService) SessionAdversaryAttackRoll(ctx context.Context, in 
 	}
 
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
-	domainResult, err := s.stores.Domain.Execute(ctx, command.Command{
+	domainResult, err := s.executeAndApplyDomainCommand(ctx, command.Command{
 		CampaignID:   campaignID,
 		Type:         command.Type("action.roll.resolve"),
 		ActorType:    command.ActorTypeSystem,
@@ -3239,15 +3105,14 @@ func (s *DaggerheartService) SessionAdversaryAttackRoll(ctx context.Context, in 
 		EntityType:   "adversary",
 		EntityID:     adversaryID,
 		PayloadJSON:  payloadJSON,
+	}, s.stores.Applier(), domainCommandApplyOptions{
+		requireEvents:   true,
+		missingEventMsg: "adversary roll did not emit an event",
+		executeErrMsg:   "execute domain command",
+		skipApply:       true,
 	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "execute domain command: %v", err)
-	}
-	if len(domainResult.Decision.Rejections) > 0 {
-		return nil, status.Error(codes.FailedPrecondition, domainResult.Decision.Rejections[0].Message)
-	}
-	if len(domainResult.Decision.Events) == 0 {
-		return nil, status.Error(codes.Internal, "adversary roll did not emit an event")
+		return nil, err
 	}
 	rollSeqValue := domainResult.Decision.Events[0].Seq
 
@@ -3915,7 +3780,7 @@ func (s *DaggerheartService) ApplyRollOutcome(ctx context.Context, in *pb.ApplyR
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "encode gm fear payload: %v", err)
 		}
-		result, err := s.stores.Domain.Execute(ctx, command.Command{
+		_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 			CampaignID:    campaignID,
 			Type:          command.Type("sys.daggerheart.gm_fear.set"),
 			ActorType:     command.ActorTypeSystem,
@@ -3927,20 +3792,14 @@ func (s *DaggerheartService) ApplyRollOutcome(ctx context.Context, in *pb.ApplyR
 			SystemID:      daggerheart.SystemID,
 			SystemVersion: daggerheart.SystemVersion,
 			PayloadJSON:   payloadJSON,
+		}, adapter, domainCommandApplyOptions{
+			requireEvents:   true,
+			missingEventMsg: "gm fear update did not emit an event",
+			applyErrMessage: "apply gm fear event",
+			executeErrMsg:   "execute domain command",
 		})
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "execute domain command: %v", err)
-		}
-		if len(result.Decision.Rejections) > 0 {
-			return nil, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-		}
-		if len(result.Decision.Events) == 0 {
-			return nil, status.Error(codes.Internal, "gm fear update did not emit an event")
-		}
-		for _, evt := range result.Decision.Events {
-			if err := adapter.Apply(ctx, evt); err != nil {
-				return nil, status.Errorf(codes.Internal, "apply gm fear event: %v", err)
-			}
+			return nil, err
 		}
 
 		changes = append(changes, action.OutcomeAppliedChange{Field: action.OutcomeFieldGMFear, Before: before, After: after})
@@ -3987,7 +3846,7 @@ func (s *DaggerheartService) ApplyRollOutcome(ctx context.Context, in *pb.ApplyR
 				return nil, status.Errorf(codes.Internal, "encode character state payload: %v", err)
 			}
 			invocationID := grpcmeta.InvocationIDFromContext(ctx)
-			result, err := s.stores.Domain.Execute(ctx, command.Command{
+			_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 				CampaignID:    campaignID,
 				Type:          command.Type("sys.daggerheart.character_state.patch"),
 				ActorType:     command.ActorTypeSystem,
@@ -3999,20 +3858,14 @@ func (s *DaggerheartService) ApplyRollOutcome(ctx context.Context, in *pb.ApplyR
 				SystemID:      daggerheart.SystemID,
 				SystemVersion: daggerheart.SystemVersion,
 				PayloadJSON:   payloadJSON,
+			}, adapter, domainCommandApplyOptions{
+				requireEvents:   true,
+				missingEventMsg: "character state patch did not emit an event",
+				applyErrMessage: "apply character state event",
+				executeErrMsg:   "execute domain command",
 			})
 			if err != nil {
-				return nil, status.Errorf(codes.Internal, "execute domain command: %v", err)
-			}
-			if len(result.Decision.Rejections) > 0 {
-				return nil, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-			}
-			if len(result.Decision.Events) == 0 {
-				return nil, status.Error(codes.Internal, "character state patch did not emit an event")
-			}
-			for _, evt := range result.Decision.Events {
-				if err := adapter.Apply(ctx, evt); err != nil {
-					return nil, status.Errorf(codes.Internal, "apply character state event: %v", err)
-				}
+				return nil, err
 			}
 			rollSeq := in.GetRollSeq()
 			if err := s.applyStressVulnerableCondition(ctx, campaignID, sessionID, target, state.Conditions, stressBefore, stressAfter, profile.StressMax, &rollSeq, rollRequestID); err != nil {
@@ -4050,7 +3903,7 @@ func (s *DaggerheartService) ApplyRollOutcome(ctx context.Context, in *pb.ApplyR
 	if s.stores.Domain == nil {
 		return nil, status.Error(codes.Internal, "domain engine is not configured")
 	}
-	result, err := s.stores.Domain.Execute(ctx, command.Command{
+	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 		CampaignID:   campaignID,
 		Type:         command.Type("action.outcome.apply"),
 		ActorType:    command.ActorTypeSystem,
@@ -4060,15 +3913,14 @@ func (s *DaggerheartService) ApplyRollOutcome(ctx context.Context, in *pb.ApplyR
 		EntityType:   "outcome",
 		EntityID:     rollRequestID,
 		PayloadJSON:  payloadJSON,
+	}, s.stores.Applier(), domainCommandApplyOptions{
+		requireEvents:   true,
+		missingEventMsg: "outcome did not emit an event",
+		executeErrMsg:   "execute domain command",
+		skipApply:       true,
 	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "execute domain command: %v", err)
-	}
-	if len(result.Decision.Rejections) > 0 {
-		return nil, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-	}
-	if len(result.Decision.Events) == 0 {
-		return nil, status.Error(codes.Internal, "outcome did not emit an event")
+		return nil, err
 	}
 
 	if requiresComplication {
@@ -4135,7 +3987,8 @@ func (s *DaggerheartService) openGMConsequenceGate(ctx context.Context, campaign
 	if err != nil {
 		return status.Errorf(codes.Internal, "encode session gate payload: %v", err)
 	}
-	result, err := s.stores.Domain.Execute(ctx, command.Command{
+	gateApplier := s.stores.Applier()
+	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 		CampaignID:   campaignID,
 		Type:         command.Type("session.gate_open"),
 		ActorType:    command.ActorTypeSystem,
@@ -4145,21 +3998,14 @@ func (s *DaggerheartService) openGMConsequenceGate(ctx context.Context, campaign
 		EntityType:   "session_gate",
 		EntityID:     gateID,
 		PayloadJSON:  payloadJSON,
+	}, gateApplier, domainCommandApplyOptions{
+		requireEvents:   true,
+		missingEventMsg: "session gate open did not emit an event",
+		applyErrMessage: "apply session gate event",
+		executeErrMsg:   "execute domain command",
 	})
 	if err != nil {
-		return status.Errorf(codes.Internal, "execute domain command: %v", err)
-	}
-	if len(result.Decision.Rejections) > 0 {
-		return status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-	}
-	if len(result.Decision.Events) == 0 {
-		return status.Error(codes.Internal, "session gate open did not emit an event")
-	}
-	gateApplier := s.stores.Applier()
-	for _, evt := range result.Decision.Events {
-		if err := gateApplier.Apply(ctx, evt); err != nil {
-			return status.Errorf(codes.Internal, "apply session gate event: %v", err)
-		}
+		return err
 	}
 
 	spotlightPayload := session.SpotlightSetPayload{
@@ -4169,7 +4015,8 @@ func (s *DaggerheartService) openGMConsequenceGate(ctx context.Context, campaign
 	if err != nil {
 		return status.Errorf(codes.Internal, "encode spotlight payload: %v", err)
 	}
-	spotlightResult, err := s.stores.Domain.Execute(ctx, command.Command{
+	spotlightApplier := s.stores.Applier()
+	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 		CampaignID:   campaignID,
 		Type:         command.Type("session.spotlight_set"),
 		ActorType:    command.ActorTypeSystem,
@@ -4179,21 +4026,14 @@ func (s *DaggerheartService) openGMConsequenceGate(ctx context.Context, campaign
 		EntityType:   "session_spotlight",
 		EntityID:     sessionID,
 		PayloadJSON:  spotlightPayloadJSON,
+	}, spotlightApplier, domainCommandApplyOptions{
+		requireEvents:   true,
+		missingEventMsg: "session spotlight set did not emit an event",
+		applyErrMessage: "apply spotlight event",
+		executeErrMsg:   "execute domain command",
 	})
 	if err != nil {
-		return status.Errorf(codes.Internal, "execute domain command: %v", err)
-	}
-	if len(spotlightResult.Decision.Rejections) > 0 {
-		return status.Error(codes.FailedPrecondition, spotlightResult.Decision.Rejections[0].Message)
-	}
-	if len(spotlightResult.Decision.Events) == 0 {
-		return status.Error(codes.Internal, "session spotlight set did not emit an event")
-	}
-	spotlightApplier := s.stores.Applier()
-	for _, evt := range spotlightResult.Decision.Events {
-		if err := spotlightApplier.Apply(ctx, evt); err != nil {
-			return status.Errorf(codes.Internal, "apply spotlight event: %v", err)
-		}
+		return err
 	}
 
 	return nil
@@ -4628,7 +4468,7 @@ func (s *DaggerheartService) applyStressVulnerableCondition(
 	if s.stores.Domain == nil {
 		return status.Error(codes.Internal, "domain engine is not configured")
 	}
-	result, err := s.stores.Domain.Execute(ctx, command.Command{
+	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 		CampaignID:    campaignID,
 		Type:          command.Type("sys.daggerheart.condition.change"),
 		ActorType:     command.ActorTypeSystem,
@@ -4640,20 +4480,14 @@ func (s *DaggerheartService) applyStressVulnerableCondition(
 		SystemID:      daggerheart.SystemID,
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON:   payloadJSON,
+	}, adapter, domainCommandApplyOptions{
+		requireEvents:   true,
+		missingEventMsg: "condition change did not emit an event",
+		applyErrMessage: "apply condition event",
+		executeErrMsg:   "execute domain command",
 	})
 	if err != nil {
-		return status.Errorf(codes.Internal, "execute domain command: %v", err)
-	}
-	if len(result.Decision.Rejections) > 0 {
-		return status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-	}
-	if len(result.Decision.Events) == 0 {
-		return status.Error(codes.Internal, "condition change did not emit an event")
-	}
-	for _, evt := range result.Decision.Events {
-		if err := adapter.Apply(ctx, evt); err != nil {
-			return status.Errorf(codes.Internal, "apply condition event: %v", err)
-		}
+		return err
 	}
 
 	return nil

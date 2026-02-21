@@ -26,7 +26,7 @@ func TestStoresValidate(t *testing.T) {
 			"Campaign", "Participant", "ClaimIndex", "Invite",
 			"Character", "Daggerheart", "Session", "SessionGate",
 			"SessionSpotlight", "Event", "Telemetry", "Statistics",
-			"Outcome", "Snapshot", "CampaignFork", "DaggerheartContent",
+			"Snapshot", "CampaignFork", "DaggerheartContent",
 		} {
 			if !strings.Contains(msg, name) {
 				t.Errorf("error should mention %q, got: %s", name, msg)
@@ -62,7 +62,6 @@ func validStores() Stores {
 		Event:              newFakeEventStore(),
 		Telemetry:          stubTelemetry{},
 		Statistics:         &fakeStatisticsStore{},
-		Outcome:            stubRollOutcome{},
 		Snapshot:           stubSnapshot{},
 		CampaignFork:       &fakeCampaignForkStore{},
 		DaggerheartContent: stubDaggerheartContent{},
@@ -113,7 +112,6 @@ func TestStoresApplier(t *testing.T) {
 
 type stubClaimIndex struct{ storage.ClaimIndexStore }
 type stubTelemetry struct{ storage.TelemetryStore }
-type stubRollOutcome struct{ storage.RollOutcomeStore }
 type stubSnapshot struct{ storage.SnapshotStore }
 type stubDaggerheartContent struct {
 	storage.DaggerheartContentStore

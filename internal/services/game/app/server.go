@@ -184,7 +184,6 @@ func NewWithAddr(addr string) (*Server, error) {
 		Event:              bundle.events,
 		Telemetry:          bundle.events,
 		Statistics:         bundle.projections,
-		Outcome:            bundle.events,
 		Snapshot:           bundle.projections,
 		CampaignFork:       bundle.projections,
 		DaggerheartContent: bundle.content,
@@ -287,6 +286,8 @@ func NewWithAddr(addr string) (*Server, error) {
 		bundle.Close()
 		return nil, fmt.Errorf("resolve projection apply outbox modes: %w", err)
 	}
+	gamegrpc.SetInlineProjectionApplyEnabled(projectionApplyOutboxMode != projectionApplyModeOutboxApplyOnly)
+	daggerheartservice.SetInlineProjectionApplyEnabled(projectionApplyOutboxMode != projectionApplyModeOutboxApplyOnly)
 	log.Printf("projection apply mode = %s", projectionApplyOutboxMode)
 
 	return &Server{

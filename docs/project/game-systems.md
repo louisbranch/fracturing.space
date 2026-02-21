@@ -216,6 +216,27 @@ Use Daggerheart as the baseline for structure and naming.
 3. Projection adapter behavior must be idempotent under replay.
 4. Domain writes must happen through commands/events only, never direct projection mutation.
 
+## Event timeline contract requirement (for every new mechanic)
+
+Before implementing a new mechanic, define its timeline contract:
+
+`request -> command -> emitted event(s) -> projection targets -> apply mode -> invariants`
+
+Required process:
+
+1. Add or update a timeline row in the system contract doc before code changes.
+2. Ensure handler code uses shared execute-and-apply orchestration.
+3. Add/update guard tests that prevent bypass patterns.
+
+For Daggerheart, use:
+[Daggerheart Event Timeline Contract](daggerheart-event-timeline-contract.md).
+
+Bypass patterns that are not allowed in request handlers:
+
+1. Direct event append APIs from handler code.
+2. Direct projection/store mutation for mutating domain outcomes.
+3. Local duplicated execute/reject/apply loops instead of shared orchestration helpers.
+
 ## Common failure modes
 
 1. Missing `system_id/system_version` on system-owned envelopes:
