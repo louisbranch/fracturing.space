@@ -1527,6 +1527,7 @@ func appendEventTx(ctx context.Context, qtx *db.Queries, keyring *integrity.Keyr
 	if evt.Timestamp.IsZero() {
 		evt.Timestamp = time.Now().UTC()
 	}
+	evt.Timestamp = evt.Timestamp.UTC().Truncate(time.Millisecond)
 
 	if err := qtx.InitEventSeq(ctx, evt.CampaignID); err != nil {
 		return event.Event{}, fmt.Errorf("init event seq: %w", err)
@@ -4482,6 +4483,7 @@ func (s *Store) AppendEvent(ctx context.Context, evt event.Event) (event.Event, 
 	if evt.Timestamp.IsZero() {
 		evt.Timestamp = time.Now().UTC()
 	}
+	evt.Timestamp = evt.Timestamp.UTC().Truncate(time.Millisecond)
 
 	if err := qtx.InitEventSeq(ctx, evt.CampaignID); err != nil {
 		return event.Event{}, fmt.Errorf("init event seq: %w", err)

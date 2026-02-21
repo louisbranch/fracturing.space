@@ -430,6 +430,21 @@ func TestVerifyEventIntegrity(t *testing.T) {
 	}
 }
 
+func TestVerifyEventIntegrityHandlesSubMillisecondTimestamps(t *testing.T) {
+	store := openTestEventsStore(t)
+	campaignID := "camp-verify-ms"
+
+	evt := testEvent(campaignID, event.Type("campaign.created"), "")
+	evt.Timestamp = time.Date(2026, 2, 3, 12, 0, 0, 123456789, time.UTC)
+	if _, err := store.AppendEvent(context.Background(), evt); err != nil {
+		t.Fatalf("append event: %v", err)
+	}
+
+	if err := store.VerifyEventIntegrity(context.Background()); err != nil {
+		t.Fatalf("verify event integrity: %v", err)
+	}
+}
+
 func TestGetEventNotFound(t *testing.T) {
 	store := openTestEventsStore(t)
 
