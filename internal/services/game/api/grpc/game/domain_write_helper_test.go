@@ -71,3 +71,32 @@ func TestExecuteAndApplyDomainCommand_SkipsInlineApplyWhenDisabled(t *testing.T)
 		t.Fatalf("expected inline apply skip with no error, got %v", err)
 	}
 }
+
+func TestExecuteAndApplyDomainCommand_SkipsJournalOnlyInlineApply(t *testing.T) {
+	SetInlineProjectionApplyEnabled(true)
+	domain := fakeDomainExecutor{
+		result: engine.Result{
+			Decision: command.Decision{Events: []event.Event{
+				{
+					CampaignID:  "camp-1",
+					Type:        event.Type("story.note_added"),
+					Timestamp:   time.Now().UTC(),
+					ActorType:   event.ActorTypeSystem,
+					EntityType:  "note",
+					EntityID:    "note-1",
+					PayloadJSON: []byte(`{"content":"note"}`),
+				},
+			}},
+		},
+	}
+	_, err := executeAndApplyDomainCommand(
+		context.Background(),
+		domain,
+		projection.Applier{},
+		command.Command{CampaignID: "camp-1", Type: command.Type("story.note.add")},
+		domainCommandApplyOptions{requireEvents: true, missingEventMsg: "missing events"},
+	)
+	if err != nil {
+		t.Fatalf("expected journal-only inline apply skip with no error, got %v", err)
+	}
+}

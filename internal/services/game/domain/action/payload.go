@@ -34,7 +34,7 @@ type OutcomeRejectPayload struct {
 	Message    string `json:"message,omitempty"`
 }
 
-// NoteAddPayload captures the payload for action.note.add commands and action.note_added events.
+// NoteAddPayload captures the payload for story.note.add commands and story.note_added events.
 type NoteAddPayload struct {
 	Content     string `json:"content"`
 	CharacterID string `json:"character_id,omitempty"`

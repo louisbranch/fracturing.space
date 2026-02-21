@@ -96,8 +96,8 @@ func isEventValidationError(err error) bool {
 
 func domainCommandTypeForEvent(eventType event.Type) (command.Type, bool) {
 	switch eventType {
-	case event.Type("action.note_added"):
-		return command.Type("action.note.add"), true
+	case event.Type("story.note_added"):
+		return command.Type("story.note.add"), true
 	case event.Type("action.roll_resolved"):
 		return command.Type("action.roll.resolve"), true
 	case event.Type("action.outcome_applied"):

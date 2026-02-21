@@ -298,8 +298,8 @@ func TestAppendEvent_UsesDomainEngineForActionEvents(t *testing.T) {
 	}{
 		{
 			name:        "note added",
-			eventType:   "action.note_added",
-			commandType: command.Type("action.note.add"),
+			eventType:   "story.note_added",
+			commandType: command.Type("story.note.add"),
 		},
 		{
 			name:        "roll resolved",

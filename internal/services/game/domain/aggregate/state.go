@@ -1,6 +1,7 @@
 package aggregate
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
@@ -27,6 +28,8 @@ type State struct {
 	Campaign campaign.State
 	// Session tracks current active session, gate, and spotlight context.
 	Session session.State
+	// Action tracks causal roll/outcome replay state used for invariant checks.
+	Action action.State
 	// Participants stores compact per-participant state keyed by participant ID.
 	Participants map[string]participant.State
 	// Characters stores compact per-character state keyed by character ID.

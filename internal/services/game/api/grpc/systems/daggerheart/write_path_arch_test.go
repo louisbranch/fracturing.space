@@ -74,6 +74,8 @@ func TestActionHandlersNoDirectStorageMutationBypass(t *testing.T) {
 	assertNoBypassPatterns(t, source, "actions.go", []string{
 		"s.stores.Event.AppendEvent(",
 		"s.stores.Outcome.ApplyRollOutcome(",
+		"action.outcome_rejected",
+		"story.note_added",
 		"PutDaggerheart",
 		"UpdateDaggerheart",
 		"DeleteDaggerheart",

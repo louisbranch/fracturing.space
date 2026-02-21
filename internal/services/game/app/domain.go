@@ -99,8 +99,8 @@ func campaignRoute(_ coreDecider, current aggregate.State, cmd command.Command, 
 }
 
 // actionRoute routes gameplay action commands to the action decider.
-func actionRoute(_ coreDecider, _ aggregate.State, cmd command.Command, now func() time.Time) command.Decision {
-	return action.Decide(action.State{}, cmd, now)
+func actionRoute(_ coreDecider, current aggregate.State, cmd command.Command, now func() time.Time) command.Decision {
+	return action.Decide(current.Action, cmd, now)
 }
 
 // sessionRoute routes session commands to the session decider.
@@ -137,7 +137,7 @@ func staticCoreCommandRoutes() map[command.Type]coreCommandRoute {
 		command.Type("action.roll.resolve"):       actionRoute,
 		command.Type("action.outcome.apply"):      actionRoute,
 		command.Type("action.outcome.reject"):     actionRoute,
-		command.Type("action.note.add"):           actionRoute,
+		command.Type("story.note.add"):            actionRoute,
 		command.Type("session.start"):             sessionRoute,
 		command.Type("session.end"):               sessionRoute,
 		command.Type("session.gate_open"):         sessionRoute,

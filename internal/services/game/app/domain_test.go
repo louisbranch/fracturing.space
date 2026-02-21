@@ -65,7 +65,7 @@ func TestCoreDeciderRejectsUnsupportedCommandType(t *testing.T) {
 	decider := coreDecider{}
 	decision := decider.Decide(aggregate.State{}, command.Command{
 		CampaignID: "camp-1",
-		Type:       command.Type("story.note.add"),
+		Type:       command.Type("story.scene.start"),
 		ActorType:  command.ActorTypeSystem,
 	}, time.Now)
 
@@ -83,14 +83,14 @@ func TestCoreDeciderRejectsUnsupportedCommandType(t *testing.T) {
 func TestBuildCoreRouteTable_RejectsMissingCoreRoute(t *testing.T) {
 	definitions := []command.Definition{
 		{Type: command.Type("campaign.create"), Owner: command.OwnerCore},
-		{Type: command.Type("story.note.add"), Owner: command.OwnerCore},
+		{Type: command.Type("story.scene.start"), Owner: command.OwnerCore},
 	}
 
 	_, err := buildCoreRouteTable(definitions)
 	if err == nil {
 		t.Fatal("expected error for missing core route")
 	}
-	if !strings.Contains(err.Error(), "story.note.add") {
+	if !strings.Contains(err.Error(), "story.scene.start") {
 		t.Fatalf("expected missing command type in error, got %v", err)
 	}
 }

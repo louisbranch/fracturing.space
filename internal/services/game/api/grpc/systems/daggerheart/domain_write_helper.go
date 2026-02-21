@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync/atomic"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -25,7 +26,6 @@ type domainCommandApplyOptions struct {
 	requireEvents   bool
 	missingEventMsg string
 	applyErrMessage string
-	skipApply       bool
 	executeErrMsg   string
 	rejectErr       func(string) error
 }
@@ -72,23 +72,19 @@ func (s *DaggerheartService) executeAndApplyDomainCommand(
 	options domainCommandApplyOptions,
 ) (engine.Result, error) {
 	options = normalizeDomainCommandOptions(options)
-
-	result, err := s.executeDomainCommand(ctx, cmd)
-	if err != nil {
-		return engine.Result{}, status.Errorf(codes.Internal, "%s: %v", options.executeErrMsg, err)
-	}
-	if len(result.Decision.Rejections) > 0 {
-		return engine.Result{}, options.rejectErr(result.Decision.Rejections[0].Message)
-	}
-	if options.requireEvents && len(result.Decision.Events) == 0 {
-		return engine.Result{}, status.Error(codes.Internal, options.missingEventMsg)
-	}
-	if !options.skipApply {
-		if err := s.applyEmittedEvents(ctx, applier, result.Decision.Events, options.applyErrMessage); err != nil {
-			return engine.Result{}, err
-		}
-	}
-	return result, nil
+	return domainwrite.ExecuteAndApply(ctx, s.stores.Domain, applier, cmd, domainwrite.Options{
+		RequireEvents:      options.requireEvents,
+		MissingEventMsg:    options.missingEventMsg,
+		InlineApplyEnabled: inlineProjectionApplyEnabled.Load(),
+		ShouldApply:        domainwrite.ShouldApplyProjectionInline,
+		ExecuteErr: func(err error) error {
+			return status.Errorf(codes.Internal, "%s: %v", options.executeErrMsg, err)
+		},
+		ApplyErr: func(err error) error {
+			return status.Errorf(codes.Internal, "%s: %v", options.applyErrMessage, err)
+		},
+		RejectErr: options.rejectErr,
+	})
 }
 
 func normalizeDomainCommandOptions(options domainCommandApplyOptions) domainCommandApplyOptions {

@@ -91,6 +91,7 @@ func RegisterEvents(registry *event.Registry) error {
 		Owner:           event.OwnerCore,
 		Addressing:      event.AddressingPolicyEntityTarget,
 		ValidatePayload: validateStartPayload,
+		Intent:          event.IntentProjectionAndReplay,
 	}); err != nil {
 		return err
 	}
@@ -99,6 +100,7 @@ func RegisterEvents(registry *event.Registry) error {
 		Owner:           event.OwnerCore,
 		Addressing:      event.AddressingPolicyEntityTarget,
 		ValidatePayload: validateEndPayload,
+		Intent:          event.IntentProjectionAndReplay,
 	}); err != nil {
 		return err
 	}
@@ -107,6 +109,7 @@ func RegisterEvents(registry *event.Registry) error {
 		Owner:           event.OwnerCore,
 		Addressing:      event.AddressingPolicyEntityTarget,
 		ValidatePayload: validateGateOpenedPayload,
+		Intent:          event.IntentProjectionAndReplay,
 	}); err != nil {
 		return err
 	}
@@ -115,6 +118,7 @@ func RegisterEvents(registry *event.Registry) error {
 		Owner:           event.OwnerCore,
 		Addressing:      event.AddressingPolicyEntityTarget,
 		ValidatePayload: validateGateResolvedPayload,
+		Intent:          event.IntentProjectionAndReplay,
 	}); err != nil {
 		return err
 	}
@@ -123,6 +127,7 @@ func RegisterEvents(registry *event.Registry) error {
 		Owner:           event.OwnerCore,
 		Addressing:      event.AddressingPolicyEntityTarget,
 		ValidatePayload: validateGateAbandonedPayload,
+		Intent:          event.IntentProjectionAndReplay,
 	}); err != nil {
 		return err
 	}
@@ -131,6 +136,7 @@ func RegisterEvents(registry *event.Registry) error {
 		Owner:           event.OwnerCore,
 		Addressing:      event.AddressingPolicyEntityTarget,
 		ValidatePayload: validateSpotlightSetPayload,
+		Intent:          event.IntentProjectionAndReplay,
 	}); err != nil {
 		return err
 	}
@@ -139,6 +145,7 @@ func RegisterEvents(registry *event.Registry) error {
 		Owner:           event.OwnerCore,
 		Addressing:      event.AddressingPolicyEntityTarget,
 		ValidatePayload: validateSpotlightClearedPayload,
+		Intent:          event.IntentProjectionAndReplay,
 	})
 }
 

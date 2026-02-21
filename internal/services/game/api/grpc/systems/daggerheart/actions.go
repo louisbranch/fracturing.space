@@ -2495,7 +2495,6 @@ func (s *DaggerheartService) SessionActionRoll(ctx context.Context, in *pb.Sessi
 		requireEvents:   true,
 		missingEventMsg: "action roll did not emit an event",
 		executeErrMsg:   "execute domain command",
-		skipApply:       true,
 	})
 	if err != nil {
 		return nil, err
@@ -2665,7 +2664,6 @@ func (s *DaggerheartService) SessionDamageRoll(ctx context.Context, in *pb.Sessi
 		requireEvents:   true,
 		missingEventMsg: "damage roll did not emit an event",
 		executeErrMsg:   "execute domain command",
-		skipApply:       true,
 	})
 	if err != nil {
 		return nil, err
@@ -3065,7 +3063,6 @@ func (s *DaggerheartService) SessionAdversaryAttackRoll(ctx context.Context, in 
 		requireEvents:   true,
 		missingEventMsg: "adversary roll did not emit an event",
 		executeErrMsg:   "execute domain command",
-		skipApply:       true,
 	})
 	if err != nil {
 		return nil, err
@@ -3873,7 +3870,6 @@ func (s *DaggerheartService) ApplyRollOutcome(ctx context.Context, in *pb.ApplyR
 		requireEvents:   true,
 		missingEventMsg: "outcome did not emit an event",
 		executeErrMsg:   "execute domain command",
-		skipApply:       true,
 	})
 	if err != nil {
 		return nil, err

@@ -38,14 +38,14 @@ func RegisterEvents(registry *event.Registry) error {
 			Owner:           event.OwnerCore,
 			Addressing:      event.AddressingPolicyEntityTarget,
 			ValidatePayload: validateRollResolvePayload,
-			Intent:          event.IntentAuditOnly,
+			Intent:          event.IntentProjectionAndReplay,
 		},
 		{
 			Type:            eventTypeOutcomeApplied,
 			Owner:           event.OwnerCore,
 			Addressing:      event.AddressingPolicyEntityTarget,
 			ValidatePayload: validateOutcomeApplyPayload,
-			Intent:          event.IntentAuditOnly,
+			Intent:          event.IntentProjectionAndReplay,
 		},
 		{
 			Type:            eventTypeOutcomeRejected,

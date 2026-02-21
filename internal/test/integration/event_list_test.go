@@ -51,7 +51,7 @@ func runEventListTests(t *testing.T, grpcAddr string, authAddr string) {
 	for i := 0; i < 3; i++ {
 		if _, err := eventClient.AppendEvent(ctx, &statev1.AppendEventRequest{
 			CampaignId:  campaignID,
-			Type:        "action.note_added",
+			Type:        "story.note_added",
 			ActorType:   "system",
 			EntityType:  "campaign",
 			EntityId:    campaignID,
@@ -59,7 +59,7 @@ func runEventListTests(t *testing.T, grpcAddr string, authAddr string) {
 		}); err != nil {
 			t.Fatalf("append note event %d: %v", i, err)
 		}
-		lastSeq = requireEventTypesAfterSeq(t, ctx, eventClient, campaignID, lastSeq, "action.note_added")
+		lastSeq = requireEventTypesAfterSeq(t, ctx, eventClient, campaignID, lastSeq, "story.note_added")
 		if _, err := eventClient.AppendEvent(ctx, &statev1.AppendEventRequest{
 			CampaignId:  campaignID,
 			Type:        "action.roll_resolved",
@@ -235,7 +235,7 @@ func runEventListTests(t *testing.T, grpcAddr string, authAddr string) {
 	t.Run("filter by event type", func(t *testing.T) {
 		resp, err := eventClient.ListEvents(ctx, &statev1.ListEventsRequest{
 			CampaignId: campaignID,
-			Filter:     `type = "action.note_added"`,
+			Filter:     `type = "story.note_added"`,
 		})
 		if err != nil {
 			t.Fatalf("list events with filter: %v", err)
@@ -244,8 +244,8 @@ func runEventListTests(t *testing.T, grpcAddr string, authAddr string) {
 			t.Errorf("expected 3 note events, got %d", len(resp.Events))
 		}
 		for _, evt := range resp.Events {
-			if evt.Type != "action.note_added" {
-				t.Errorf("expected type action.note_added, got %s", evt.Type)
+			if evt.Type != "story.note_added" {
+				t.Errorf("expected type story.note_added, got %s", evt.Type)
 			}
 		}
 	})
@@ -295,7 +295,7 @@ func runEventListTests(t *testing.T, grpcAddr string, authAddr string) {
 		resp, err := eventClient.ListEvents(ctx, &statev1.ListEventsRequest{
 			CampaignId: campaignID,
 			PageSize:   2,
-			Filter:     `type = "action.note_added"`,
+			Filter:     `type = "story.note_added"`,
 		})
 		if err != nil {
 			t.Fatalf("get token: %v", err)
