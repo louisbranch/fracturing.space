@@ -36,21 +36,6 @@ h1 {
   letter-spacing: 0.02em;
 }
 
-#main>h2 {
-  font-family: "Cinzel", "Iowan Old Style", "Palatino Linotype", serif;
-  font-size: 2rem;
-  margin-bottom: 1rem;
-  letter-spacing: 0.02em;
-}
-
-#main>h3 {
-  font-family: "Cinzel", "Iowan Old Style", "Palatino Linotype", serif;
-  font-size: 1.5rem;
-  margin-top: 1rem;
-  margin-bottom: 1.5rem;
-  letter-spacing: 0.02em;
-}
-
 .hero-tagline {
   margin: 0;
   font-size: 1.1rem;

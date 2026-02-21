@@ -12,8 +12,7 @@ import (
 	sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
 )
 
-// Layout wraps content in the base HTML shell with top navigation.
-func Layout(title string, activePage string, loc Localizer, page PageContext) templ.Component {
+func AdminChromeHeadExtras() templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -34,53 +33,61 @@ func Layout(title string, activePage string, loc Localizer, page PageContext) te
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<!doctype html><html lang=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<link rel=\"icon\" href=\"/static/favicon.svg\" type=\"image/svg+xml\"><link href=\"https://cdn.jsdelivr.net/npm/daisyui@5.5.18/theme/dim.css\" rel=\"stylesheet\" type=\"text/css\" integrity=\"sha384-xpSgL8CP56CuCvJwgKtoJawFcAe9gqR7VZQ99ss8l/QMdVjBbIPvXnOZDOsJdTds\" crossorigin=\"anonymous\"><link rel=\"stylesheet\" href=\"/static/theme.css\"><script src=\"https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js\" integrity=\"sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2XoQrxeTUQyRjrOnlCoYta87iKBWq3EsdM2\" crossorigin=\"anonymous\"></script><script>\n\t\t// Make table rows with links in first cell clickable\n\t\tfunction initClickableRows() {\n\t\t\t\tdocument.querySelectorAll('tbody tr').forEach(function(row) {\n\t\t\t\t\tvar link = row.querySelector('td:first-child a');\n\t\t\t\t\tif (link && !row.hasAttribute('data-href')) {\n\t\t\t\t\t\trow.setAttribute('data-href', link.getAttribute('href'));\n\t\t\t\t\t\trow.addEventListener('click', function(e) {\n\t\t\t\t\t\t\tif (e.target.tagName !== 'A') {\n\t\t\t\t\t\t\t\tlink.click();\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t});\n\t\t\t\t\t}\n\t\t\t\t});\n\t\t\t}\n\t\t\tfunction updateLanguageLinks() {\n\t\t\t\tvar links = document.querySelectorAll('[data-lang]');\n\t\t\t\tif (!links.length) {\n\t\t\t\t\treturn;\n\t\t\t\t}\n\t\t\t\tvar current = new URL(window.location.href);\n\t\t\t\tlinks.forEach(function(link) {\n\t\t\t\t\tvar lang = link.getAttribute('data-lang');\n\t\t\t\t\tif (!lang) {\n\t\t\t\t\t\treturn;\n\t\t\t\t\t}\n\t\t\t\t\tvar next = new URL(current);\n\t\t\t\t\tnext.searchParams.set('lang', lang);\n\t\t\t\t\tlink.setAttribute('href', next.pathname + next.search + next.hash);\n\t\t\t\t});\n\t\t\t}\n\t\t\tdocument.addEventListener('DOMContentLoaded', initClickableRows);\n\t\t\tdocument.addEventListener('DOMContentLoaded', updateLanguageLinks);\n\t\t\tdocument.addEventListener('htmx:afterSwap', initClickableRows);\n\t\t\tdocument.addEventListener('htmx:afterSwap', updateLanguageLinks);\n\t</script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var2 string
-		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(page.Lang)
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/layout.templ`, Line: 8, Col: 23}
+		return nil
+	})
+}
+
+// Layout wraps content in the base HTML shell with top navigation.
+func Layout(title string, activePage string, loc Localizer, page PageContext, breadcrumbs ...Breadcrumb) templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\" data-theme=\"dim\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var2 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var2 == nil {
+			templ_7745c5c3_Var2 = templ.NopComponent
 		}
-		var templ_7745c5c3_Var3 string
-		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(ComposeAdminPageTitle(title))
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/layout.templ`, Line: 12, Col: 40}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</title><link rel=\"icon\" href=\"/static/favicon.svg\" type=\"image/svg+xml\"><link href=\"https://cdn.jsdelivr.net/npm/daisyui@5.5.18\" rel=\"stylesheet\" type=\"text/css\" integrity=\"sha384-ww1btmC3Ah3rEb6jt/coOxyQ9JYMoxQpFSB/bxdE20ZYMK4kWSb+TwcgbHR/GFCq\" crossorigin=\"anonymous\"><link href=\"https://cdn.jsdelivr.net/npm/daisyui@5.5.18/theme/dim.css\" rel=\"stylesheet\" type=\"text/css\" integrity=\"sha384-xpSgL8CP56CuCvJwgKtoJawFcAe9gqR7VZQ99ss8l/QMdVjBbIPvXnOZDOsJdTds\" crossorigin=\"anonymous\"><script src=\"https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.1.18\" integrity=\"sha384-WrpyCFNrMmN/IC7KmMNiXxIouXEFpoDIuJ2P+ys++uYEzegAW2MSl+X6Unsahaij\" crossorigin=\"anonymous\"></script><link rel=\"stylesheet\" href=\"/static/theme.css\"><script src=\"https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js\" integrity=\"sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2XoQrxeTUQyRjrOnlCoYta87iKBWq3EsdM2\" crossorigin=\"anonymous\"></script></head><body>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = sharedtemplates.LucideSprite().Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = TopNav(activePage, page, loc).Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<div class=\"max-w-screen-xl mx-auto px-4 pt-24\" id=\"main\">")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templ_7745c5c3_Var1.Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</div><script>\n\t\t\t// Make table rows with links in first cell clickable\n\t\t\tfunction initClickableRows() {\n\t\t\t\t\tdocument.querySelectorAll('tbody tr').forEach(function(row) {\n\t\t\t\t\t\tvar link = row.querySelector('td:first-child a');\n\t\t\t\t\t\tif (link && !row.hasAttribute('data-href')) {\n\t\t\t\t\t\t\trow.setAttribute('data-href', link.getAttribute('href'));\n\t\t\t\t\t\t\trow.addEventListener('click', function(e) {\n\t\t\t\t\t\t\t\tif (e.target.tagName !== 'A') {\n\t\t\t\t\t\t\t\t\tlink.click();\n\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t});\n\t\t\t\t\t\t}\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t\tfunction updateLanguageLinks() {\n\t\t\t\t\tvar links = document.querySelectorAll('[data-lang]');\n\t\t\t\t\tif (!links.length) {\n\t\t\t\t\t\treturn;\n\t\t\t\t\t}\n\t\t\t\t\tvar current = new URL(window.location.href);\n\t\t\t\t\tlinks.forEach(function(link) {\n\t\t\t\t\t\tvar lang = link.getAttribute('data-lang');\n\t\t\t\t\t\tif (!lang) {\n\t\t\t\t\t\t\treturn;\n\t\t\t\t\t\t}\n\t\t\t\t\t\tvar next = new URL(current);\n\t\t\t\t\t\tnext.searchParams.set('lang', lang);\n\t\t\t\t\t\tlink.setAttribute('href', next.pathname + next.search + next.hash);\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t\tdocument.addEventListener('DOMContentLoaded', initClickableRows);\n\t\t\t\tdocument.addEventListener('DOMContentLoaded', updateLanguageLinks);\n\t\t\t\tdocument.addEventListener('htmx:afterSwap', initClickableRows);\n\t\t\t\tdocument.addEventListener('htmx:afterSwap', updateLanguageLinks);\n\t\t</script></body></html>")
+		ctx = templ.ClearChildren(ctx)
+		templ_7745c5c3_Var3 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+			templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+			templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+			if !templ_7745c5c3_IsBuffer {
+				defer func() {
+					templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+					if templ_7745c5c3_Err == nil {
+						templ_7745c5c3_Err = templ_7745c5c3_BufErr
+					}
+				}()
+			}
+			ctx = templ.InitializeContext(ctx)
+			templ_7745c5c3_Err = templ_7745c5c3_Var2.Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			return nil
+		})
+		templ_7745c5c3_Err = sharedtemplates.AppChromeLayout(ComposeAdminPageTitle(title), page.Lang, AppName(), loc, breadcrumbs, sharedtemplates.ChromeLayoutOptions{
+			Theme:      "dim",
+			DataLayout: "admin",
+			Nav:        TopNav(activePage, page, loc),
+			HeadExtras: AdminChromeHeadExtras(),
+			MainAria:   "main",
+		}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var3), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

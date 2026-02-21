@@ -4,16 +4,17 @@ import "strconv"
 
 // SessionsListFullPage renders the sessions list in the base layout.
 templ SessionsListFullPage(campaignID string, campaignName string, page PageContext) {
-	@Layout(T(page.Loc, "title.sessions", AppName()), "Campaigns", page.Loc, page) {
+	@Layout(T(page.Loc, "title.sessions", AppName()), "Campaigns", page.Loc, page, []Breadcrumb{
+		{Label: T(page.Loc, "nav.campaigns"), URL: "/campaigns"},
+		{Label: campaignName, URL: ""},
+	}...) {
 		@SessionsListPage(campaignID, campaignName, page.Loc)
 	}
 }
 
 // SessionsListPage renders the sessions list content.
 templ SessionsListPage(campaignID string, campaignName string, loc Localizer) {
-	@PageHeader(PageHeading{Breadcrumbs: []Breadcrumb{{T(loc, "nav.campaigns"), "/campaigns"}, {campaignName, ""}}, Title: campaignName})
 	@CampaignSubNav(campaignID, "sessions", loc) {
-		<h3>{T(loc, "sessions.heading")}</h3>
 		@SessionsLoading(campaignID, loc)
 	}
 }
@@ -25,17 +26,20 @@ templ SessionsLoading(campaignID string, loc Localizer) {
 
 // SessionDetailFullPage renders the session detail in the base layout.
 templ SessionDetailFullPage(session SessionDetail, page PageContext) {
-	@Layout(T(page.Loc, "title.session", session.Name, AppName()), "Campaigns", page.Loc, page) {
+	@Layout(T(page.Loc, "title.session", session.Name, AppName()), "Campaigns", page.Loc, page, []Breadcrumb{
+		{Label: T(page.Loc, "nav.campaigns"), URL: "/campaigns"},
+		{Label: session.CampaignName, URL: "/campaigns/" + session.CampaignID},
+		{Label: session.Name, URL: ""},
+	}...) {
 		@SessionDetailPage(session, page.Loc)
 	}
 }
 
 // SessionDetailPage renders the session detail content.
 templ SessionDetailPage(session SessionDetail, loc Localizer) {
-	@PageHeader(PageHeading{Breadcrumbs: []Breadcrumb{{T(loc, "nav.campaigns"), "/campaigns"}, {session.CampaignName, "/campaigns/" + session.CampaignID}, {session.Name, ""}}, Title: session.Name})
 	<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 		<div>
-			<h3>{T(loc, "sessions.detail.info")}</h3>
+			<h2>{T(loc, "sessions.detail.info")}</h2>
 			<table class="table table-zebra">
 				<tbody>
 					<tr><td><strong>{T(loc, "campaigns.detail.id")}</strong></td><td><code>{session.ID}</code></td></tr>
@@ -50,7 +54,7 @@ templ SessionDetailPage(session SessionDetail, loc Localizer) {
 			</table>
 		</div>
 		<div>
-			<h3>{T(loc, "sessions.detail.timeline")}</h3>
+			<h2>{T(loc, "sessions.detail.timeline")}</h2>
 			<div id="session-events">
 				@SessionEventsLoading(session.CampaignID, session.ID, loc)
 			</div>

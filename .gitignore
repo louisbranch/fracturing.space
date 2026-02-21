@@ -6,6 +6,7 @@ coverage-treemap.svg
 data/
 .env
 .env.local
+.tmp/
 
 .agents/plans/*.md
 .playwright-cli/

@@ -2,16 +2,17 @@ package templates
 
 // ParticipantsListFullPage renders the participants list in the base layout.
 templ ParticipantsListFullPage(campaignID string, campaignName string, page PageContext) {
-	@Layout(T(page.Loc, "title.participants", AppName()), "Campaigns", page.Loc, page) {
+	@Layout(T(page.Loc, "title.participants", AppName()), "Campaigns", page.Loc, page, []Breadcrumb{
+		{Label: T(page.Loc, "nav.campaigns"), URL: "/campaigns"},
+		{Label: campaignName, URL: ""},
+	}...) {
 		@ParticipantsListPage(campaignID, campaignName, page.Loc)
 	}
 }
 
 // ParticipantsListPage renders the participants list content.
 templ ParticipantsListPage(campaignID string, campaignName string, loc Localizer) {
-	@PageHeader(PageHeading{Breadcrumbs: []Breadcrumb{{T(loc, "nav.campaigns"), "/campaigns"}, {campaignName, ""}}, Title: campaignName})
 	@CampaignSubNav(campaignID, "participants", loc) {
-		<h3>{T(loc, "participants.heading")}</h3>
 		@ParticipantsLoading(campaignID, loc)
 	}
 }

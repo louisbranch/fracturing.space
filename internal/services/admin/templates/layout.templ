@@ -2,63 +2,58 @@ package templates
 
 import sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
 
-// Layout wraps content in the base HTML shell with top navigation.
-templ Layout(title string, activePage string, loc Localizer, page PageContext) {
-	<!DOCTYPE html>
-	<html lang={ page.Lang } data-theme="dim">
-		<head>
-			<meta charset="utf-8">
-			<meta name="viewport" content="width=device-width, initial-scale=1">
-			<title>{ ComposeAdminPageTitle(title) }</title>
-			<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-			<link href="https://cdn.jsdelivr.net/npm/daisyui@5.5.18" rel="stylesheet" type="text/css" integrity="sha384-ww1btmC3Ah3rEb6jt/coOxyQ9JYMoxQpFSB/bxdE20ZYMK4kWSb+TwcgbHR/GFCq" crossorigin="anonymous"/>
-			<link href="https://cdn.jsdelivr.net/npm/daisyui@5.5.18/theme/dim.css" rel="stylesheet" type="text/css" integrity="sha384-xpSgL8CP56CuCvJwgKtoJawFcAe9gqR7VZQ99ss8l/QMdVjBbIPvXnOZDOsJdTds" crossorigin="anonymous">
-			<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.1.18" integrity="sha384-WrpyCFNrMmN/IC7KmMNiXxIouXEFpoDIuJ2P+ys++uYEzegAW2MSl+X6Unsahaij" crossorigin="anonymous"></script>
-			<link rel="stylesheet" href="/static/theme.css">
-			<script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js" integrity="sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2XoQrxeTUQyRjrOnlCoYta87iKBWq3EsdM2" crossorigin="anonymous"></script>
-		</head>
-		<body>
-			@sharedtemplates.LucideSprite()
-			@TopNav(activePage, page, loc)
-			<div class="max-w-screen-xl mx-auto px-4 pt-24" id="main">
-				{ children... }
-			</div>
-		<script>
-			// Make table rows with links in first cell clickable
-			function initClickableRows() {
-					document.querySelectorAll('tbody tr').forEach(function(row) {
-						var link = row.querySelector('td:first-child a');
-						if (link && !row.hasAttribute('data-href')) {
-							row.setAttribute('data-href', link.getAttribute('href'));
-							row.addEventListener('click', function(e) {
-								if (e.target.tagName !== 'A') {
-									link.click();
-								}
-							});
-						}
-					});
+templ AdminChromeHeadExtras() {
+	<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+	<link href="https://cdn.jsdelivr.net/npm/daisyui@5.5.18/theme/dim.css" rel="stylesheet" type="text/css" integrity="sha384-xpSgL8CP56CuCvJwgKtoJawFcAe9gqR7VZQ99ss8l/QMdVjBbIPvXnOZDOsJdTds" crossorigin="anonymous">
+	<link rel="stylesheet" href="/static/theme.css">
+	<script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js" integrity="sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2XoQrxeTUQyRjrOnlCoYta87iKBWq3EsdM2" crossorigin="anonymous"></script>
+	<script>
+		// Make table rows with links in first cell clickable
+		function initClickableRows() {
+				document.querySelectorAll('tbody tr').forEach(function(row) {
+					var link = row.querySelector('td:first-child a');
+					if (link && !row.hasAttribute('data-href')) {
+						row.setAttribute('data-href', link.getAttribute('href'));
+						row.addEventListener('click', function(e) {
+							if (e.target.tagName !== 'A') {
+								link.click();
+							}
+						});
+					}
+				});
+			}
+			function updateLanguageLinks() {
+				var links = document.querySelectorAll('[data-lang]');
+				if (!links.length) {
+					return;
 				}
-				function updateLanguageLinks() {
-					var links = document.querySelectorAll('[data-lang]');
-					if (!links.length) {
+				var current = new URL(window.location.href);
+				links.forEach(function(link) {
+					var lang = link.getAttribute('data-lang');
+					if (!lang) {
 						return;
 					}
-					var current = new URL(window.location.href);
-					links.forEach(function(link) {
-						var lang = link.getAttribute('data-lang');
-						if (!lang) {
-							return;
-						}
-						var next = new URL(current);
-						next.searchParams.set('lang', lang);
-						link.setAttribute('href', next.pathname + next.search + next.hash);
-					});
-				}
-				document.addEventListener('DOMContentLoaded', initClickableRows);
-				document.addEventListener('DOMContentLoaded', updateLanguageLinks);
-				document.addEventListener('htmx:afterSwap', initClickableRows);
-				document.addEventListener('htmx:afterSwap', updateLanguageLinks);
-		</script>
-	</body>
-</html>
+					var next = new URL(current);
+					next.searchParams.set('lang', lang);
+					link.setAttribute('href', next.pathname + next.search + next.hash);
+				});
+			}
+			document.addEventListener('DOMContentLoaded', initClickableRows);
+			document.addEventListener('DOMContentLoaded', updateLanguageLinks);
+			document.addEventListener('htmx:afterSwap', initClickableRows);
+			document.addEventListener('htmx:afterSwap', updateLanguageLinks);
+	</script>
+}
+
+// Layout wraps content in the base HTML shell with top navigation.
+templ Layout(title string, activePage string, loc Localizer, page PageContext, breadcrumbs ...Breadcrumb) {
+	@sharedtemplates.AppChromeLayout(ComposeAdminPageTitle(title), page.Lang, AppName(), loc, breadcrumbs, sharedtemplates.ChromeLayoutOptions{
+		Theme:      "dim",
+		DataLayout: "admin",
+		Nav:        TopNav(activePage, page, loc),
+		HeadExtras: AdminChromeHeadExtras(),
+		MainAria:  "main",
+	}) {
+		{ children... }
+	}
 }

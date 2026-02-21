@@ -14,7 +14,6 @@ templ ScenariosFullPage(view ScenarioPageView, page PageContext) {
 
 // ScenariosPage renders the scenarios page content.
 templ ScenariosPage(view ScenarioPageView, loc Localizer) {
-	@PageHeader(PageHeading{Title: T(loc, "scenarios.heading")})
 	@ScenarioScriptPanel(view, loc)
 }
 
@@ -255,14 +254,16 @@ templ ScenarioTimelineIcon(iconID commonv1.IconId) {
 
 // ScenarioEventsFullPage renders scenario events in the base layout.
 templ ScenarioEventsFullPage(view ScenarioEventsView, page PageContext) {
-	@Layout(T(page.Loc, "title.scenarios", AppName()), "Scenarios", page.Loc, page) {
+	@Layout(T(page.Loc, "title.scenarios", AppName()), "Scenarios", page.Loc, page, []Breadcrumb{
+		{Label: T(page.Loc, "nav.scenarios"), URL: "/scenarios"},
+		{Label: view.CampaignName, URL: ""},
+	}...) {
 		@ScenarioEventsPage(view, page.Loc)
 	}
 }
 
 // ScenarioEventsPage renders the scenario events content.
 templ ScenarioEventsPage(view ScenarioEventsView, loc Localizer) {
-	@PageHeader(PageHeading{Breadcrumbs: []Breadcrumb{{T(loc, "nav.scenarios"), "/scenarios"}, {view.CampaignName, ""}}, Title: T(loc, "scenarios.heading")})
 	@ScenarioEventsPanel(view, loc)
 }
 

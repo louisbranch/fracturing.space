@@ -2,16 +2,17 @@ package templates
 
 // InvitesListFullPage renders the invites list in the base layout.
 templ InvitesListFullPage(campaignID string, campaignName string, page PageContext) {
-	@Layout(T(page.Loc, "title.invites", AppName()), "Campaigns", page.Loc, page) {
+	@Layout(T(page.Loc, "title.invites", AppName()), "Campaigns", page.Loc, page, []Breadcrumb{
+		{Label: T(page.Loc, "nav.campaigns"), URL: "/campaigns"},
+		{Label: campaignName, URL: ""},
+	}...) {
 		@InvitesListPage(campaignID, campaignName, page.Loc)
 	}
 }
 
 // InvitesListPage renders the invites list content.
 templ InvitesListPage(campaignID string, campaignName string, loc Localizer) {
-	@PageHeader(PageHeading{Breadcrumbs: []Breadcrumb{{T(loc, "nav.campaigns"), "/campaigns"}, {campaignName, ""}}, Title: campaignName})
 	@CampaignSubNav(campaignID, "invites", loc) {
-		<h3>{T(loc, "invites.heading")}</h3>
 		@InvitesLoading(campaignID, loc)
 	}
 }

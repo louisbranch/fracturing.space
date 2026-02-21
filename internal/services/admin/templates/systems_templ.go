@@ -80,10 +80,6 @@ func SystemsPage(loc Localizer) templ.Component {
 			templ_7745c5c3_Var3 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = PageHeader(PageHeading{Title: T(loc, "systems.heading")}).Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
 		templ_7745c5c3_Err = SystemsLoading(loc).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
@@ -151,7 +147,7 @@ func SystemsTable(rows []SystemRow, message string, loc Localizer) templ.Compone
 		var templ_7745c5c3_Var6 string
 		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "systems.table.system"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/systems.templ`, Line: 26, Col: 39}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/systems.templ`, Line: 25, Col: 39}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {
@@ -164,7 +160,7 @@ func SystemsTable(rows []SystemRow, message string, loc Localizer) templ.Compone
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "systems.table.version"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/systems.templ`, Line: 27, Col: 40}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/systems.templ`, Line: 26, Col: 40}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {
@@ -177,7 +173,7 @@ func SystemsTable(rows []SystemRow, message string, loc Localizer) templ.Compone
 		var templ_7745c5c3_Var8 string
 		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "systems.table.implementation"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/systems.templ`, Line: 28, Col: 47}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/systems.templ`, Line: 27, Col: 47}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 		if templ_7745c5c3_Err != nil {
@@ -190,7 +186,7 @@ func SystemsTable(rows []SystemRow, message string, loc Localizer) templ.Compone
 		var templ_7745c5c3_Var9 string
 		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "systems.table.status"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/systems.templ`, Line: 29, Col: 39}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/systems.templ`, Line: 28, Col: 39}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 		if templ_7745c5c3_Err != nil {
@@ -203,7 +199,7 @@ func SystemsTable(rows []SystemRow, message string, loc Localizer) templ.Compone
 		var templ_7745c5c3_Var10 string
 		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "systems.table.access"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/systems.templ`, Line: 30, Col: 39}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/systems.templ`, Line: 29, Col: 39}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 		if templ_7745c5c3_Err != nil {
@@ -221,7 +217,7 @@ func SystemsTable(rows []SystemRow, message string, loc Localizer) templ.Compone
 			var templ_7745c5c3_Var11 string
 			templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(message)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/systems.templ`, Line: 36, Col: 29}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/systems.templ`, Line: 35, Col: 29}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 			if templ_7745c5c3_Err != nil {
@@ -252,7 +248,7 @@ func SystemsTable(rows []SystemRow, message string, loc Localizer) templ.Compone
 				var templ_7745c5c3_Var13 string
 				templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(row.Name)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/systems.templ`, Line: 43, Col: 16}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/systems.templ`, Line: 42, Col: 16}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 				if templ_7745c5c3_Err != nil {
@@ -271,7 +267,7 @@ func SystemsTable(rows []SystemRow, message string, loc Localizer) templ.Compone
 			var templ_7745c5c3_Var14 string
 			templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(row.Version)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/systems.templ`, Line: 47, Col: 18}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/systems.templ`, Line: 46, Col: 18}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 			if templ_7745c5c3_Err != nil {
@@ -289,7 +285,7 @@ func SystemsTable(rows []SystemRow, message string, loc Localizer) templ.Compone
 				var templ_7745c5c3_Var15 string
 				templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "systems.default"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/systems.templ`, Line: 49, Col: 74}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/systems.templ`, Line: 48, Col: 74}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 				if templ_7745c5c3_Err != nil {
@@ -307,7 +303,7 @@ func SystemsTable(rows []SystemRow, message string, loc Localizer) templ.Compone
 			var templ_7745c5c3_Var16 string
 			templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(row.ImplementationStage)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/systems.templ`, Line: 52, Col: 33}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/systems.templ`, Line: 51, Col: 33}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 			if templ_7745c5c3_Err != nil {
@@ -320,7 +316,7 @@ func SystemsTable(rows []SystemRow, message string, loc Localizer) templ.Compone
 			var templ_7745c5c3_Var17 string
 			templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(row.OperationalStatus)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/systems.templ`, Line: 53, Col: 31}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/systems.templ`, Line: 52, Col: 31}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 			if templ_7745c5c3_Err != nil {
@@ -333,7 +329,7 @@ func SystemsTable(rows []SystemRow, message string, loc Localizer) templ.Compone
 			var templ_7745c5c3_Var18 string
 			templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(row.AccessLevel)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/systems.templ`, Line: 54, Col: 25}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/systems.templ`, Line: 53, Col: 25}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
 			if templ_7745c5c3_Err != nil {
@@ -392,7 +388,10 @@ func SystemDetailFullPage(detail SystemDetail, message string, page PageContext)
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = Layout(T(page.Loc, "title.system", AppName()), "Systems", page.Loc, page).Render(templ.WithChildren(ctx, templ_7745c5c3_Var20), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = Layout(T(page.Loc, "title.system", AppName()), "Systems", page.Loc, page, []Breadcrumb{
+			{Label: T(page.Loc, "nav.systems"), URL: "/systems"},
+			{Label: detail.Name, URL: ""},
+		}...).Render(templ.WithChildren(ctx, templ_7745c5c3_Var20), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -423,18 +422,14 @@ func SystemDetailPage(detail SystemDetail, message string, loc Localizer) templ.
 		}
 		ctx = templ.ClearChildren(ctx)
 		if message != "" {
-			templ_7745c5c3_Err = PageHeader(PageHeading{Breadcrumbs: []Breadcrumb{{T(loc, "nav.systems"), "/systems"}, {T(loc, "systems.detail.heading"), ""}}, Title: T(loc, "systems.detail.heading")}).Render(ctx, templ_7745c5c3_Buffer)
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, " <p>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "<p>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var22 string
 			templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(message)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/systems.templ`, Line: 72, Col: 13}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/systems.templ`, Line: 73, Col: 13}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
 			if templ_7745c5c3_Err != nil {
@@ -445,11 +440,7 @@ func SystemDetailPage(detail SystemDetail, message string, loc Localizer) templ.
 				return templ_7745c5c3_Err
 			}
 		} else {
-			templ_7745c5c3_Err = PageHeader(PageHeading{Breadcrumbs: []Breadcrumb{{T(loc, "nav.systems"), "/systems"}, {detail.Name, ""}}, Title: detail.Name}).Render(ctx, templ_7745c5c3_Buffer)
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, " <table class=\"table table-zebra\"><tbody><tr><td><strong>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "<table class=\"table table-zebra\"><tbody><tr><td><strong>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

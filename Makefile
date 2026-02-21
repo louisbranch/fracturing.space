@@ -1,6 +1,9 @@
 PROTO_DIR := api/proto
 GEN_GO_DIR := api/gen/go
 COVER_EXCLUDE_REGEX := (api/gen/|_templ\.go|internal/services/admin/templates/|internal/services/game/storage/sqlite/db/|internal/services/auth/storage/sqlite/db/|internal/services/admin/storage/sqlite/db/|internal/tools/eventdocgen/|cmd/|internal/cmd/)
+export GOTMPDIR := $(abspath .tmp/go-build)
+export GOCACHE := $(abspath .tmp/go-cache)
+export GOMODCACHE := $(abspath .tmp/go-modcache)
 
 PROTO_FILES := \
 	$(wildcard $(PROTO_DIR)/common/v1/*.proto) \
@@ -24,6 +27,7 @@ proto:
 		$(PROTO_FILES)
 
 templ-generate:
+	mkdir -p .tmp/go-build .tmp/go-cache
 	go run github.com/a-h/templ/cmd/templ@v0.3.977 generate ./...
 
 fmt:
@@ -68,10 +72,11 @@ run:
 	  if [ ! -f "$$env_file" ]; then \
 	    cp "$${ENV_EXAMPLE:-.env.local.example}" "$$env_file"; \
 	  fi; \
+	  mkdir -p .tmp/go-build .tmp/go-cache; \
 	  set -a; \
 	  . "$$env_file"; \
-	  set +a; \
-	  if [ -z "$${FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY:-}" ] || [ -z "$${FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY:-}" ]; then \
+	    set +a; \
+	    if [ -z "$${FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY:-}" ] || [ -z "$${FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY:-}" ]; then \
 	    eval "$$(go run ./cmd/join-grant-key)"; \
 	    export FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY; \
 	    export FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY; \

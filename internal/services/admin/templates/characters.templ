@@ -2,16 +2,17 @@ package templates
 
 // CharactersListFullPage renders the characters list in the base layout.
 templ CharactersListFullPage(campaignID string, campaignName string, page PageContext) {
-	@Layout(T(page.Loc, "title.characters", AppName()), "Campaigns", page.Loc, page) {
+	@Layout(T(page.Loc, "title.characters", AppName()), "Campaigns", page.Loc, page, []Breadcrumb{
+		{Label: T(page.Loc, "nav.campaigns"), URL: "/campaigns"},
+		{Label: campaignName, URL: ""},
+	}...) {
 		@CharactersListPage(campaignID, campaignName, page.Loc)
 	}
 }
 
 // CharactersListPage renders the characters list content.
 templ CharactersListPage(campaignID string, campaignName string, loc Localizer) {
-	@PageHeader(PageHeading{Breadcrumbs: []Breadcrumb{{T(loc, "nav.campaigns"), "/campaigns"}, {campaignName, ""}}, Title: campaignName})
 	@CampaignSubNav(campaignID, "characters", loc) {
-		<h3>{T(loc, "characters.heading")}</h3>
 		@CharactersLoading(campaignID, loc)
 	}
 }
@@ -53,14 +54,18 @@ templ CharactersTable(rows []CharacterRow, message string, loc Localizer) {
 
 // CharacterSheetFullPage renders the character sheet in the base layout.
 templ CharacterSheetFullPage(sheet CharacterSheetView, activePage string, page PageContext) {
-	@Layout(T(page.Loc, "title.character_sheet", sheet.Character.GetName(), AppName()), "Campaigns", page.Loc, page) {
+	@Layout(T(page.Loc, "title.character_sheet", sheet.Character.GetName(), AppName()), "Campaigns", page.Loc, page, []Breadcrumb{
+		{Label: T(page.Loc, "nav.campaigns"), URL: "/campaigns"},
+		{Label: sheet.CampaignName, URL: "/campaigns/" + sheet.CampaignID},
+		{Label: T(page.Loc, "characters.heading"), URL: "/campaigns/" + sheet.CampaignID + "/characters"},
+		{Label: sheet.Character.GetName(), URL: ""},
+	}...) {
 		@CharacterSheetPage(sheet, activePage, page.Loc)
 	}
 }
 
 // CharacterSheetPage renders the character sheet content.
 templ CharacterSheetPage(sheet CharacterSheetView, activePage string, loc Localizer) {
-	@PageHeader(PageHeading{Breadcrumbs: []Breadcrumb{{T(loc, "nav.campaigns"), "/campaigns"}, {sheet.CampaignName, "/campaigns/" + sheet.CampaignID}, {T(loc, "characters.heading"), "/campaigns/" + sheet.CampaignID + "/characters"}, {sheet.Character.GetName(), ""}}, Title: sheet.Character.GetName()})
 	if activePage == "activity" {
 		@CharacterSubNav(sheet.CampaignID, sheet.Character.GetId(), "activity", loc) {
 			@CharacterActivityTab(sheet, loc)
@@ -74,7 +79,7 @@ templ CharacterSheetPage(sheet CharacterSheetView, activePage string, loc Locali
 
 // CharacterInfoTab renders the character info tab content.
 templ CharacterInfoTab(sheet CharacterSheetView, loc Localizer) {
-	<h3>{T(loc, "characters.sheet.info")}</h3>
+	<h2>{T(loc, "characters.sheet.info")}</h2>
 	<table class="table table-zebra">
 		<tbody>
 			<tr><td><strong>{T(loc, "campaigns.detail.id")}</strong></td><td><code>{sheet.Character.GetId()}</code></td></tr>
@@ -93,7 +98,7 @@ templ CharacterInfoTab(sheet CharacterSheetView, loc Localizer) {
 // CharacterActivityTab renders the character activity tab content.
 templ CharacterActivityTab(sheet CharacterSheetView, loc Localizer) {
 	if len(sheet.RecentEvents) > 0 {
-		<h3>{T(loc, "characters.sheet.recent_activity")}</h3>
+		<h2>{T(loc, "characters.sheet.recent_activity")}</h2>
 		<table class="table table-zebra">
 			<thead>
 				<tr>

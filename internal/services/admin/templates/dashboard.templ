@@ -9,7 +9,6 @@ templ DashboardFullPage(page PageContext) {
 
 // DashboardPage renders the dashboard content.
 templ DashboardPage(loc Localizer) {
-	@PageHeader(PageHeading{Title: T(loc, "dashboard.heading")})
 	@DashboardLoading(loc)
 }
 
@@ -21,7 +20,7 @@ templ DashboardLoading(loc Localizer) {
 // DashboardContent renders the main dashboard content.
 templ DashboardContent(stats DashboardStats, activities []ActivityEvent, loc Localizer) {
   @DashboardStatsCards(stats, loc)
-  <h3>{T(loc, "dashboard.recent_activity")}</h3>
+  <h2>{T(loc, "dashboard.recent_activity")}</h2>
   @RecentActivityFeed(activities, loc)
 }
 

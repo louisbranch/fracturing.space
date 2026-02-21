@@ -18,6 +18,15 @@ type Localizer interface {
 	Sprintf(key message.Reference, args ...any) string
 }
 
+type ChromeLayoutOptions struct {
+	Theme       string
+	DataLayout  string
+	MainAria    string
+	Nav         templ.Component
+	HeadExtras  templ.Component
+	BodyScripts templ.Component
+}
+
 // T returns a translated string or the key when no localizer is available.
 func T(loc Localizer, key message.Reference, args ...any) string {
 	if loc == nil {
@@ -42,6 +51,17 @@ func ComposePageTitle(title string) string {
 	default:
 		return title + " | " + appName
 	}
+}
+
+func pageHeadingFromTitle(title string, appName string) string {
+	heading := strings.TrimSpace(title)
+	appName = strings.TrimSpace(appName)
+	if appName != "" {
+		heading = strings.TrimSpace(strings.TrimSuffix(heading, " | "+appName))
+		heading = strings.TrimSpace(strings.TrimSuffix(heading, " - "+appName))
+	}
+	heading = strings.TrimSpace(strings.TrimSuffix(heading, " - Admin"))
+	return heading
 }
 
 func pageHead(title string, loc Localizer) templ.Component {
@@ -72,7 +92,7 @@ func pageHead(title string, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(ComposePageTitle(title))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 44, Col: 33}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 64, Col: 33}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -85,13 +105,13 @@ func pageHead(title string, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "layout.meta_description"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 45, Col: 69}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 65, Col: 69}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "\"><link href=\"https://cdn.jsdelivr.net/npm/daisyui@5.5.18\" rel=\"stylesheet\" type=\"text/css\" integrity=\"sha384-ww1btmC3Ah3rEb6jt/coOxyQ9JYMoxQpFSB/bxdE20ZYMK4kWSb+TwcgbHR/GFCq\" crossorigin=\"anonymous\"><link href=\"https://cdn.jsdelivr.net/npm/daisyui@5.5.18/theme/retro.css\" rel=\"stylesheet\" type=\"text/css\" crossorigin=\"anonymous\"><script src=\"https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.1.18\" integrity=\"sha384-WrpyCFNrMmN/IC7KmMNiXxIouXEFpoDIuJ2P+ys++uYEzegAW2MSl+X6Unsahaij\" crossorigin=\"anonymous\"></script><link rel=\"stylesheet\" href=\"/static/landing.css\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "\"><link href=\"https://cdn.jsdelivr.net/npm/daisyui@5.5.18\" rel=\"stylesheet\" type=\"text/css\" integrity=\"sha384-ww1btmC3Ah3rEb6jt/coOxyQ9JYMoxQpFSB/bxdE20ZYMK4kWSb+TwcgbHR/GFCq\" crossorigin=\"anonymous\"><link href=\"https://cdn.jsdelivr.net/npm/daisyui@5.5.18/theme/retro.css\" rel=\"stylesheet\" type=\"text/css\" crossorigin=\"anonymous\"><script src=\"https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.1.18\" integrity=\"sha384-WrpyCFNrMmN/IC7KmMNiXxIouXEFpoDIuJ2P+ys++uYEzegAW2MSl+X6Unsahaij\" crossorigin=\"anonymous\"></script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -127,7 +147,7 @@ func ShellLayout(title string, lang string, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var5 string
 		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(lang)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 54, Col: 18}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 73, Col: 18}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 		if templ_7745c5c3_Err != nil {
@@ -141,7 +161,7 @@ func ShellLayout(title string, lang string, loc Localizer) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</head><body class=\"landing-body\" data-layout=\"auth\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<link rel=\"stylesheet\" href=\"/static/shell.css\"></head><body class=\"landing-body\" data-layout=\"auth\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -161,7 +181,7 @@ func ShellLayout(title string, lang string, loc Localizer) templ.Component {
 	})
 }
 
-func AppChromeLayout(title string, lang string, appName string, loc Localizer, breadcrumbs []BreadcrumbItem) templ.Component {
+func AppChromeLayout(title string, lang string, appName string, loc Localizer, breadcrumbs []BreadcrumbItem, options ChromeLayoutOptions) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -189,13 +209,26 @@ func AppChromeLayout(title string, lang string, appName string, loc Localizer, b
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(lang)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 67, Col: 18}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 88, Col: 18}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "\" data-theme=\"retro\"><head>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "\" data-theme=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var8 string
+		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(chromeTheme(options))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 88, Col: 54}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "\"><head>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -203,7 +236,36 @@ func AppChromeLayout(title string, lang string, appName string, loc Localizer, b
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</head><body data-layout=\"game\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<link rel=\"stylesheet\" href=\"/static/theme.css\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if options.HeadExtras == nil {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "<script src=\"https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js\" integrity=\"sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2XoQrxeTUQyRjrOnlCoYta87iKBWq3EsdM2\" crossorigin=\"anonymous\"></script>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		if options.HeadExtras != nil {
+			templ_7745c5c3_Err = options.HeadExtras.Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</head><body data-layout=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var9 string
+		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(chromeDataLayout(options))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 99, Col: 47}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -211,59 +273,83 @@ func AppChromeLayout(title string, lang string, appName string, loc Localizer, b
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<nav class=\"navbar bg-base-200 fixed top-0 w-full z-50\"><div class=\"navbar-start w-auto\"><h1 class=\"text-lg font-bold\"><a href=\"/\">")
+		if options.Nav != nil {
+			templ_7745c5c3_Err = options.Nav.Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		} else {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "<nav class=\"navbar bg-base-200 fixed top-0 w-full z-50\"><div class=\"navbar-start w-auto\"><a href=\"/\" id=\"nav-logo\" class=\"text-lg font-bold\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var10 string
+			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(appName)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 107, Col: 16}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "</a></div><div class=\"navbar-end w-full justify-end gap-3\"><a href=\"/\" hx-get=\"/\" hx-target=\"#main\" hx-swap=\"innerHTML\" hx-push-url=\"true\" data-nav-item=\"true\" class=\"btn btn-ghost btn-sm\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var11 string
+			templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "dashboard.title"))
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 119, Col: 34}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "</a> <a href=\"/campaigns\" hx-get=\"/campaigns\" hx-target=\"#main\" hx-swap=\"innerHTML\" hx-push-url=\"true\" data-nav-item=\"true\" class=\"btn btn-ghost btn-sm\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var12 string
+			templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "game.campaigns.title"))
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 128, Col: 39}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "</a><form method=\"POST\" action=\"/auth/logout\"><button type=\"submit\" class=\"btn btn-ghost btn-sm\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var13 string
+			templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "layout.sign_out"))
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 130, Col: 84}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "</button></form></div></nav>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "<main class=\"max-w-screen-xl mx-auto px-4 pt-20\" id=\"main\" aria-label=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var8 string
-		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(appName)
+		var templ_7745c5c3_Var14 string
+		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(chromeMainAria(loc, options))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 76, Col: 27}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 135, Col: 103}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</a></h1></div><div class=\"navbar-end w-full justify-end gap-3\"><a href=\"/campaigns\" class=\"btn btn-ghost btn-sm\">")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var9 string
-		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "game.campaigns.title"))
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 80, Col: 87}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</a><form method=\"POST\" action=\"/auth/logout\"><button type=\"submit\" class=\"btn btn-ghost btn-sm\">")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var10 string
-		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "layout.sign_out"))
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 82, Col: 83}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "</button></form></div></nav><main class=\"max-w-screen-xl mx-auto px-4 pt-24\" id=\"main\" aria-label=\"")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var11 string
-		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "game.aria_label"))
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 86, Col: 99}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -273,16 +359,67 @@ func AppChromeLayout(title string, lang string, appName string, loc Localizer, b
 				return templ_7745c5c3_Err
 			}
 		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "<h1 class=\"mb-5\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var15 string
+		templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(pageHeadingFromTitle(title, appName))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 139, Col: 46}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "</h1>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
 		templ_7745c5c3_Err = templ_7745c5c3_Var6.Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "</main></body></html>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "</main><script>\n\t\t\t\tfunction syncChromeNavActiveLinks() {\n\t\t\t\t\tvar currentPath = window.location.pathname;\n\t\t\t\t\tvar links = document.querySelectorAll(\"a[data-nav-item]\");\n\t\t\t\t\tif (!links.length) {\n\t\t\t\t\t\treturn;\n\t\t\t\t\t}\n\t\t\t\tlinks.forEach(function(link) {\n\t\t\t\t\tvar href = link.getAttribute(\"href\");\n\t\t\t\t\tlink.classList.remove(\"active\");\n\t\t\t\t\tlink.classList.remove(\"menu-active\");\n\t\t\t\t\tlink.classList.remove(\"btn-active\");\n\t\t\t\t\tif (!href) {\n\t\t\t\t\t\treturn;\n\t\t\t\t\t}\n\t\t\t\t\t\tvar target;\n\t\t\t\t\t\ttry {\n\t\t\t\t\t\t\ttarget = new URL(href, window.location.origin);\n\t\t\t\t\t\t} catch (err) {\n\t\t\t\t\t\t\treturn;\n\t\t\t\t\t\t}\n\t\t\t\t\tvar shouldBeActive = currentPath === target.pathname;\n\t\t\t\t\tif (!shouldBeActive && target.pathname !== \"/\") {\n\t\t\t\t\t\tshouldBeActive = currentPath.indexOf(target.pathname + \"/\") === 0;\n\t\t\t\t\t}\n\n\t\t\t\t\tif (link.classList.contains(\"btn\")) {\n\t\t\t\t\t\tlink.classList.toggle(\"btn-active\", shouldBeActive);\n\t\t\t\t\t} else {\n\t\t\t\t\t\tlink.classList.toggle(\"menu-active\", shouldBeActive);\n\t\t\t\t\t}\n\t\t\t\t});\n\t\t\t}\n\t\t\t\tsyncChromeNavActiveLinks();\n\t\t\t\tdocument.addEventListener(\"DOMContentLoaded\", syncChromeNavActiveLinks);\n\t\t\t\twindow.addEventListener(\"popstate\", syncChromeNavActiveLinks);\n\t\t\t\tdocument.addEventListener(\"htmx:afterSwap\", syncChromeNavActiveLinks);\n\t\t\t\tdocument.addEventListener(\"htmx:afterSettle\", syncChromeNavActiveLinks);\n\t\t\t</script>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if options.BodyScripts != nil {
+			templ_7745c5c3_Err = options.BodyScripts.Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "</body></html>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		return nil
 	})
+}
+
+func chromeTheme(options ChromeLayoutOptions) string {
+	theme := strings.TrimSpace(options.Theme)
+	if theme == "" {
+		return "retro"
+	}
+	return theme
+}
+
+func chromeDataLayout(options ChromeLayoutOptions) string {
+	dataLayout := strings.TrimSpace(options.DataLayout)
+	if dataLayout == "" {
+		return "game"
+	}
+	return dataLayout
+}
+
+func chromeMainAria(loc Localizer, options ChromeLayoutOptions) string {
+	mainAria := strings.TrimSpace(options.MainAria)
+	if mainAria == "" {
+		return T(loc, "game.aria_label")
+	}
+	return mainAria
 }
 
 var _ = templruntime.GeneratedTemplate

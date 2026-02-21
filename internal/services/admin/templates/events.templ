@@ -4,16 +4,19 @@ import "fmt"
 
 // EventLogFullPage renders the event log in the base layout.
 templ EventLogFullPage(view EventLogView, page PageContext) {
-	@Layout(T(page.Loc, "title.events", AppName()), "Campaigns", page.Loc, page) {
+	@Layout(T(page.Loc, "title.events", AppName()), "Campaigns", page.Loc, page, []Breadcrumb{
+		{Label: T(page.Loc, "nav.campaigns"), URL: "/campaigns"},
+		{Label: view.CampaignName, URL: "/campaigns/" + view.CampaignID},
+		{Label: T(page.Loc, "events.heading"), URL: ""},
+	}...) {
 		@EventLogPage(view, page.Loc)
 	}
 }
 
 // EventLogPage renders the event log content.
 templ EventLogPage(view EventLogView, loc Localizer) {
-	@PageHeader(PageHeading{Breadcrumbs: []Breadcrumb{{T(loc, "nav.campaigns"), "/campaigns"}, {view.CampaignName, ""}}, Title: view.CampaignName})
 	@CampaignSubNav(view.CampaignID, "events", loc) {
-		<h3>{T(loc, "events.heading")}</h3>
+		<h2>{T(loc, "events.heading")}</h2>
 		<p>{ T(loc, "events.count", view.TotalCount) }</p>
 		@EventFilterForm(view.CampaignID, view.SessionID, view.Filters, loc)
 		<div id="event-timeline-container">

@@ -30,3 +30,13 @@ func AppendQueryParam(baseURL string, key string, value string) string {
 	}
 	return baseURL + "?" + encodedKey + "=" + encodedValue
 }
+
+func userDetailBreadcrumbLabel(view UserDetailPageView, loc Localizer) string {
+	if view.Detail == nil {
+		return T(loc, "users.detail.heading")
+	}
+	if strings.TrimSpace(view.Detail.Email) != "" {
+		return view.Detail.Email
+	}
+	return strings.TrimSpace(view.Detail.ID)
+}

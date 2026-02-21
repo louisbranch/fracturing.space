@@ -6,7 +6,7 @@ import sharedtemplates "github.com/louisbranch/fracturing.space/internal/service
 templ TopNav(activePage string, page PageContext, loc Localizer) {
 	<nav class="navbar bg-base-200 fixed top-0 w-full z-50">
 		<div class="navbar-start w-auto">
-			<h3 class="text-lg font-bold"><a href="/">{AppName()}</a></h3>
+			<a href="/" id="nav-logo" class="text-lg font-bold">{AppName()}</a>
 		</div>
 		<div class="navbar-end w-full hidden md:flex">
 			<ul class="menu menu-horizontal">
@@ -17,9 +17,7 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 						hx-target="#main"
 						hx-swap="innerHTML"
 						hx-push-url="true"
-						if activePage == "Dashboard" {
-							class="active"
-						}
+						data-nav-item="true"
 					>{T(loc, "nav.dashboard")}</a>
 				</li>
 				<li>
@@ -29,9 +27,7 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 						hx-target="#main"
 						hx-swap="innerHTML"
 						hx-push-url="true"
-						if activePage == "Systems" {
-							class="active"
-						}
+						data-nav-item="true"
 					>{T(loc, "nav.systems")}</a>
 				</li>
 				<li>
@@ -41,9 +37,7 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 						hx-target="#main"
 						hx-swap="innerHTML"
 						hx-push-url="true"
-						if activePage == "Catalog" {
-							class="active"
-						}
+						data-nav-item="true"
 					>{T(loc, "nav.catalog")}</a>
 				</li>
 				<li>
@@ -53,9 +47,7 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 						hx-target="#main"
 						hx-swap="innerHTML"
 						hx-push-url="true"
-						if activePage == "Icons" {
-							class="active"
-						}
+						data-nav-item="true"
 					>{T(loc, "nav.icons")}</a>
 				</li>
 				<li>
@@ -65,9 +57,7 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 						hx-target="#main"
 						hx-swap="innerHTML"
 						hx-push-url="true"
-						if activePage == "Scenarios" {
-							class="active"
-						}
+						data-nav-item="true"
 					>{T(loc, "nav.scenarios")}</a>
 				</li>
 				<li>
@@ -77,9 +67,7 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 						hx-target="#main"
 						hx-swap="innerHTML"
 						hx-push-url="true"
-						if activePage == "Users" {
-							class="active"
-						}
+						data-nav-item="true"
 					>{T(loc, "nav.users")}</a>
 				</li>
 				<li>
@@ -89,9 +77,7 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 						hx-target="#main"
 						hx-swap="innerHTML"
 						hx-push-url="true"
-						if activePage == "Campaigns" {
-							class="active"
-						}
+						data-nav-item="true"
 					>{T(loc, "nav.campaigns")}</a>
 				</li>
 			</ul>
@@ -99,24 +85,24 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 				<span class="badge badge-secondary ml-2">{T(loc, "impersonation.badge")}</span>
 				<span class="ml-1">{ImpersonationLabel(page.Impersonation)}</span>
 			}
-		<div class="dropdown dropdown-hover dropdown-end">
-			<div tabindex="0" role="button" class="btn btn-ghost btn-sm hover:bg-neutral">
-				{ActiveLanguageLabel(page, loc)}
-			</div>
-			<ul tabindex="0" class="dropdown-content menu menu-sm rounded-box z-10 w-20 shadow">
+			<div class="dropdown dropdown-hover dropdown-end">
+				<div tabindex="0" role="button" class="btn btn-ghost btn-sm hover:bg-neutral">
+					{ActiveLanguageLabel(page, loc)}
+				</div>
+				<ul tabindex="0" class="dropdown-content menu menu-sm rounded-box z-10 w-20 shadow">
 					for _, option := range LanguageOptions(page, loc) {
-					<li>
+						<li>
 						<a
 							href={ templ.SafeURL(LanguageURL(page, option.Tag)) }
 							data-lang={ option.Tag }
 							if option.Active {
-								class="active"
+								class="font-bold"
 							}
 						>{option.Label}</a>
 					</li>
-				}
-			</ul>
-		</div>
+					}
+				</ul>
+			</div>
 		</div>
 		<div class="navbar-end w-full md:hidden">
 			<div class="dropdown dropdown-end">
@@ -125,88 +111,75 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 				</div>
 				<ul tabindex="0" class="menu menu-sm dropdown-content bg-base-200 rounded-box z-10 mt-3 w-52 p-2 shadow">
 					<li>
-						<a
-							href="/"
-							hx-get="/"
-							hx-target="#main"
-							hx-swap="innerHTML"
-							hx-push-url="true"
-							if activePage == "Dashboard" {
-								class="active"
-							}
+					<a
+						href="/"
+						hx-get="/"
+						hx-target="#main"
+						hx-swap="innerHTML"
+						hx-push-url="true"
+						data-nav-item="true"
 					>{T(loc, "nav.dashboard")}</a>
-					</li>
+				</li>
 					<li>
-						<a
-							href="/systems"
-							hx-get="/systems"
-							hx-target="#main"
-							hx-swap="innerHTML"
-							hx-push-url="true"
-							if activePage == "Systems" {
-								class="active"
-							}
+				<a
+						href="/systems"
+						hx-get="/systems"
+						hx-target="#main"
+						hx-swap="innerHTML"
+						hx-push-url="true"
+						data-nav-item="true"
 					>{T(loc, "nav.systems")}</a>
-					</li>
+				</li>
 					<li>
-						<a
-							href="/catalog"
-							hx-get="/catalog"
-							hx-target="#main"
-							hx-swap="innerHTML"
-							hx-push-url="true"
-							if activePage == "Catalog" {
-								class="active"
-							}
+				<a
+						href="/catalog"
+						hx-get="/catalog"
+						hx-target="#main"
+						hx-swap="innerHTML"
+						hx-push-url="true"
+						data-nav-item="true"
 					>{T(loc, "nav.catalog")}</a>
-					</li>
+				</li>
 					<li>
-						<a
-							href="/icons"
-							hx-get="/icons"
-							hx-target="#main"
-							hx-swap="innerHTML"
-							hx-push-url="true"
-							if activePage == "Icons" {
-								class="active"
-							}
+				<a
+						href="/icons"
+						hx-get="/icons"
+						hx-target="#main"
+						hx-swap="innerHTML"
+						hx-push-url="true"
+						data-nav-item="true"
 					>{T(loc, "nav.icons")}</a>
-					</li>
+				</li>
 					<li>
-						<a
-							href="/scenarios?prefill=1"
-							hx-get="/scenarios?prefill=1"
-							hx-target="#main"
-							hx-swap="innerHTML"
-							hx-push-url="true"
-							if activePage == "Scenarios" {
-								class="active"
-							}
+				<a
+						href="/scenarios?prefill=1"
+						hx-get="/scenarios?prefill=1"
+						hx-target="#main"
+						hx-swap="innerHTML"
+						hx-push-url="true"
+						data-nav-item="true"
 					>{T(loc, "nav.scenarios")}</a>
-					</li>
+				</li>
 					<li>
-						<a
-							href="/users"
-							hx-get="/users"
-							hx-target="#main"
-							hx-swap="innerHTML"
-							hx-push-url="true"
-							if activePage == "Users" {
-								class="active"
-							}
+				<a
+						href="/users"
+						hx-get="/users"
+						hx-target="#main"
+						hx-swap="innerHTML"
+						hx-push-url="true"
+						data-nav-item="true"
 					>{T(loc, "nav.users")}</a>
-					</li>
+				</li>
 					<li>
-						<a
-							href="/campaigns"
-							hx-get="/campaigns"
-							hx-target="#main"
-							hx-swap="innerHTML"
-							hx-push-url="true"
-							if activePage == "Campaigns" {
-								class="active"
-							}
-					>{T(loc, "nav.campaigns")}</a>
+				<a
+						href="/campaigns"
+						hx-get="/campaigns"
+						hx-target="#main"
+						hx-swap="innerHTML"
+						hx-push-url="true"
+						data-nav-item="true"
+
+						>{T(loc, "nav.campaigns")}</a>
 					</li>
 					if page.Impersonation != nil {
 						<li class="menu-title">
@@ -228,10 +201,10 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 						</span>
 					</li>
 				</ul>
+				</div>
 			</div>
-		</div>
-	</nav>
-}
+		</nav>
+	}
 
 // CampaignSubNav renders the sub-navigation for campaign detail pages using DaisyUI tabs.
 // The active tab's content is rendered inside a tab-content panel via children.
