@@ -5,6 +5,76 @@ root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$root_dir"
 repo_name="$(basename "$root_dir")"
 
+wait_for_services_ready() {
+  local max_attempts=90
+  local sleep_seconds=1
+
+  local services=(
+    "game"
+    "auth"
+    "mcp"
+    "admin"
+    "web"
+  )
+
+  local markers=(
+    "game server listening at"
+    "auth server listening at"
+    "Starting MCP HTTP server"
+    "admin listening on"
+    "web login listening on"
+  )
+
+  local -a ready
+  local -a remaining
+  local log_file
+  local i remaining_count ready_count
+  local attempt=1
+  local service_count="${#services[@]}"
+
+  for i in "${!services[@]}"; do
+    ready["$i"]=0
+  done
+
+  echo "Waiting for services to become ready..."
+
+  while (( attempt <= max_attempts )); do
+    ready_count=0
+    remaining=()
+    for i in "${!services[@]}"; do
+      if [[ "${ready[$i]}" == "1" ]]; then
+        ready_count=$((ready_count + 1))
+        continue
+      fi
+
+      log_file=".tmp/dev/${services[$i]}.log"
+      if [[ -f "$log_file" ]] && tail -n 200 "$log_file" | grep -Fq "${markers[$i]}"; then
+        ready["$i"]=1
+        ready_count=$((ready_count + 1))
+        printf '%s service is ready.\n' "${services[$i]}"
+      else
+        remaining+=("${services[$i]}")
+      fi
+    done
+
+    if (( ready_count == service_count )); then
+      echo "All dev services are ready."
+      return 0
+    fi
+
+    remaining_count="${#remaining[@]}"
+    printf '  attempt %d/%d: waiting for %d/%d services (%s)\n' \
+      "$attempt" "$max_attempts" "$remaining_count" "$service_count" \
+      "$(printf '%s, ' "${remaining[@]}" | sed 's/, $//')"
+
+    attempt=$((attempt + 1))
+    sleep "$sleep_seconds"
+  done
+
+  echo "Timed out waiting for services to be ready; check .tmp/dev/*.log for details." >&2
+  return 1
+}
+
 run_post_start_in_container() {
   docker compose -f .devcontainer/docker-compose.devcontainer.yml -f docker-compose.yml exec -T devcontainer bash -lc "set -euo pipefail; if [ -d /workspace/${repo_name} ]; then cd /workspace/${repo_name}; else cd /workspace; fi; if [ ! -f .devcontainer/scripts/post-start.sh ]; then echo '.devcontainer/scripts/post-start.sh not found in container workspace' >&2; exit 1; fi; bash .devcontainer/scripts/post-start.sh"
 }
@@ -47,3 +117,4 @@ docker compose -f .devcontainer/docker-compose.devcontainer.yml -f docker-compos
 wait_for_devcontainer_ready
 ensure_go_toolchain
 run_post_start_in_container
+wait_for_services_ready

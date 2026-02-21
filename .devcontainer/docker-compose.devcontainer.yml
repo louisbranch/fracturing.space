@@ -6,10 +6,19 @@ services:
       target: base
       args:
         GO_VERSION: ${GO_VERSION:-1.26.0}
+        DEVCONTAINER_UID: ${DEVCONTAINER_UID:-1000}
+        DEVCONTAINER_GID: ${DEVCONTAINER_GID:-1000}
     command: sleep infinity
     working_dir: /workspace
     volumes:
       - ..:/workspace
+    user: "${DEVCONTAINER_UID:-1000}:${DEVCONTAINER_GID:-1000}"
+    environment:
+      HOME: /workspace
+      TMPDIR: /workspace/.tmp/go-build
+      GOCACHE: /workspace/.tmp/go-cache
+      GOPATH: /workspace/.tmp/go
+      GOMODCACHE: /workspace/.tmp/go/pkg/mod
     ports:
       - "8080:8080"
       - "8081:8081"

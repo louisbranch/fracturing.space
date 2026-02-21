@@ -12,6 +12,7 @@
   "shutdownAction": "stopCompose",
   "postCreateCommand": "bash .devcontainer/scripts/post-create.sh",
   "postStartCommand": "bash .devcontainer/scripts/post-start.sh",
+  "remoteUser": "vscode",
   "forwardPorts": [
     8080,
     8081,
