@@ -50,7 +50,7 @@ func TestWebPageRendering(t *testing.T) {
 				branding.AppName,
 			},
 			notContains: []string{
-				"<h1>Campaigns</h1>",
+				"Campaigns</h1>",
 			},
 		},
 		{
@@ -59,7 +59,7 @@ func TestWebPageRendering(t *testing.T) {
 			contains: []string{
 				"<!doctype html>",
 				branding.AppName,
-				"<h1>Campaigns</h1>",
+				"Campaigns</h1>",
 			},
 			notContains: []string{
 				"/campaigns/create",
@@ -83,7 +83,7 @@ func TestWebPageRendering(t *testing.T) {
 			contains: []string{
 				"<!doctype html>",
 				branding.AppName,
-				"<h1>Systems</h1>",
+				"Systems</h1>",
 			},
 		},
 		{
@@ -103,7 +103,7 @@ func TestWebPageRendering(t *testing.T) {
 			contains: []string{
 				"<!doctype html>",
 				branding.AppName,
-				"<h1>Catalog</h1>",
+				"Catalog</h1>",
 			},
 		},
 		{
@@ -123,7 +123,7 @@ func TestWebPageRendering(t *testing.T) {
 			contains: []string{
 				"<!doctype html>",
 				branding.AppName,
-				"<h1>Icons</h1>",
+				"Icons</h1>",
 			},
 		},
 		{
@@ -143,7 +143,7 @@ func TestWebPageRendering(t *testing.T) {
 			contains: []string{
 				"<!doctype html>",
 				branding.AppName,
-				"<h1>Scenarios</h1>",
+				"Scenarios</h1>",
 				"Cheat Sheet",
 			},
 			notContains: []string{
@@ -168,7 +168,7 @@ func TestWebPageRendering(t *testing.T) {
 			contains: []string{
 				"<!doctype html>",
 				branding.AppName,
-				"<h1>Scenarios</h1>",
+				"Scenarios</h1>",
 			},
 			notContains: []string{
 				"<h3>Events</h3>",
@@ -193,7 +193,7 @@ func TestWebPageRendering(t *testing.T) {
 				"<!doctype html>",
 				branding.AppName,
 				"Campaign service unavailable.",
-				"<h1>Campaign</h1>",
+				"Campaign</h1>",
 			},
 		},
 		{
@@ -576,7 +576,7 @@ func TestCampaignSessionsRoute(t *testing.T) {
 		}
 
 		body := recorder.Body.String()
-		assertNotContains(t, body, "<h1>Sessions</h1>")
+		assertContains(t, body, "Sessions</h1>")
 		assertNotContains(t, body, "<!doctype html>")
 	})
 
@@ -591,7 +591,7 @@ func TestCampaignSessionsRoute(t *testing.T) {
 
 		body := recorder.Body.String()
 		assertContains(t, body, "<!doctype html>")
-		assertContains(t, body, "<h1>Sessions</h1>")
+		assertContains(t, body, "Sessions</h1>")
 	})
 
 	t.Run("sessions table htmx", func(t *testing.T) {
@@ -1685,7 +1685,7 @@ func TestUsersPage(t *testing.T) {
 			t.Fatalf("expected 200, got %d", rec.Code)
 		}
 		assertContains(t, rec.Body.String(), "<!doctype html>")
-		assertContains(t, rec.Body.String(), "<h1>Users</h1>")
+		assertContains(t, rec.Body.String(), "Users</h1>")
 	})
 
 	t.Run("htmx", func(t *testing.T) {
@@ -1697,7 +1697,7 @@ func TestUsersPage(t *testing.T) {
 		if rec.Code != http.StatusOK {
 			t.Fatalf("expected 200, got %d", rec.Code)
 		}
-		assertNotContains(t, rec.Body.String(), "<h1>Users</h1>")
+		assertContains(t, rec.Body.String(), "Users</h1>")
 		assertNotContains(t, rec.Body.String(), "<!doctype html>")
 	})
 

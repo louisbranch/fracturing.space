@@ -212,7 +212,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		assertHTMLContains(t, body,
 			"<!doctype html>",
 			branding.AppName,
-			"<h1>Dashboard</h1>",
+			"Dashboard</h1>",
 		)
 	})
 
@@ -296,7 +296,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		assertHTMLContains(t, body,
 			"<!doctype html>",
 			branding.AppName,
-			"<h1>Sessions</h1>",
+			"Sessions</h1>",
 		)
 	})
 
@@ -500,7 +500,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		assertHTMLContains(t, body,
 			"<!doctype html>",
 			branding.AppName,
-			"<h1>Characters</h1>",
+			"Characters</h1>",
 		)
 	})
 
@@ -699,7 +699,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		assertHTMLContains(t, body,
 			"<!doctype html>",
 			branding.AppName,
-			"<h1>Participants</h1>",
+			"Participants</h1>",
 		)
 	})
 

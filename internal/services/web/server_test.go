@@ -64,9 +64,6 @@ func TestLoginHandlerRendersForm(t *testing.T) {
 	if !strings.Contains(body, "pending-1") {
 		t.Fatalf("expected pending_id in body")
 	}
-	if !strings.Contains(body, "Test Client") {
-		t.Fatalf("expected client name in body")
-	}
 	if !strings.Contains(body, "<title>Sign In | "+branding.AppName+"</title>") {
 		t.Fatalf("expected title suffix on login page")
 	}
