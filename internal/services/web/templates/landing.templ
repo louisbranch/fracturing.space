@@ -8,7 +8,7 @@ type LandingParams struct {
 
 // LandingPage renders the public-facing landing page.
 templ LandingPage(page PageContext, appName string, params LandingParams) {
-	@AuthLayout(T(page.Loc, "title.landing", appName), page.Lang) {
+	@ShellLayout(T(page.Loc, "title.landing", appName), page.Lang) {
 		<main class="landing-shell">
 			@LandingHero(page, appName, params)
 		</main>
@@ -24,18 +24,18 @@ templ LandingHero(page PageContext, appName string, params LandingParams) {
 			<p class="hero-user">{ T(page.Loc, "landing.signed_in_as") } <strong>{ params.UserName }</strong></p>
 			<div class="hero-links">
 				<form method="POST" action="/auth/logout">
-					<button type="submit" class="btn btn-secondary btn-outline">{ T(page.Loc, "landing.sign_out") }</button>
+					<button type="submit" class="btn btn-outline">{ T(page.Loc, "landing.sign_out") }</button>
 				</form>
-				<a class="btn btn-primary" href="https://louisbranch.github.io/fracturing.space/">{ T(page.Loc, "landing.docs") }</a>
-				<a class="btn btn-secondary btn-outline" href="https://github.com/louisbranch/fracturing.space">{ T(page.Loc, "landing.github") }</a>
+				<a class="btn btn-primary" href={ templ.SafeURL(T(page.Loc, "landing.docs_url")) }>{ T(page.Loc, "landing.docs") }</a>
+				<a class="btn btn-outline" href={ templ.SafeURL(T(page.Loc, "landing.github_url")) }>{ T(page.Loc, "landing.github") }</a>
 			</div>
 		} else {
 			<div class="hero-links">
 				if params.SignInURL != "" {
 					<a class="btn btn-primary" href={ templ.SafeURL(params.SignInURL) }>{ T(page.Loc, "landing.sign_in") }</a>
 				}
-				<a class="btn btn-primary" href="https://louisbranch.github.io/fracturing.space/">{ T(page.Loc, "landing.docs") }</a>
-				<a class="btn btn-secondary btn-outline" href="https://github.com/louisbranch/fracturing.space">{ T(page.Loc, "landing.github") }</a>
+				<a class="btn btn-primary" href={ templ.SafeURL(T(page.Loc, "landing.docs_url")) }>{ T(page.Loc, "landing.docs") }</a>
+				<a class="btn btn-outline" href={ templ.SafeURL(T(page.Loc, "landing.github_url")) }>{ T(page.Loc, "landing.github") }</a>
 			</div>
 		}
 	</section>

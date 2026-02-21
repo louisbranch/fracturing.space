@@ -11,7 +11,7 @@ type ConsentPageParams struct {
 }
 
 templ ConsentPage(params ConsentPageParams) {
-	@sharedtemplates.AuthLayout("Authorize - "+params.AppName, "en", "landing-body", "") {
+	@sharedtemplates.ShellLayoutWithLocalizer("Authorize - "+params.AppName, "en", nil) {
 		<main class="oauth-shell">
 			<div class="oauth-header">
 				<h1>{ params.AppName }</h1>

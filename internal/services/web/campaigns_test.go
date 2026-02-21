@@ -22,9 +22,12 @@ import (
 type fakeWebCampaignClient struct {
 	response            *statev1.ListCampaignsResponse
 	listCalls           int
+	getCalls            int
 	listMetadata        metadata.MD
 	listMetadataByCall  []metadata.MD
 	listResponsesByCall []*statev1.ListCampaignsResponse
+	getResponse         *statev1.GetCampaignResponse
+	getError            error
 	createReq           *statev1.CreateCampaignRequest
 	createMetadata      metadata.MD
 	createResp          *statev1.CreateCampaignResponse
@@ -58,7 +61,17 @@ func (f *fakeWebCampaignClient) CreateCampaign(ctx context.Context, req *statev1
 	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
-func (*fakeWebCampaignClient) GetCampaign(context.Context, *statev1.GetCampaignRequest, ...grpc.CallOption) (*statev1.GetCampaignResponse, error) {
+func (f *fakeWebCampaignClient) GetCampaign(_ context.Context, _ *statev1.GetCampaignRequest, _ ...grpc.CallOption) (*statev1.GetCampaignResponse, error) {
+	f.getCalls++
+	if f == nil {
+		return nil, status.Error(codes.Unimplemented, "not implemented")
+	}
+	if f.getResponse != nil {
+		return f.getResponse, nil
+	}
+	if f.getError != nil {
+		return nil, f.getError
+	}
 	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
@@ -628,5 +641,37 @@ func TestAppCampaignCreateErrorPageUsesGameLayout(t *testing.T) {
 	}
 	if !strings.Contains(w.Body.String(), `data-layout="game"`) {
 		t.Fatalf("expected game layout marker in campaign create error page")
+	}
+}
+
+func TestCampaignDisplayNameCachesValues(t *testing.T) {
+	campaignClient := &fakeWebCampaignClient{
+		getResponse: &statev1.GetCampaignResponse{
+			Campaign: &statev1.Campaign{
+				Id:   "camp-123",
+				Name: "Campaign One",
+			},
+		},
+	}
+
+	h := &handler{
+		campaignNameCache: make(map[string]campaignNameCache),
+		campaignClient:    campaignClient,
+	}
+
+	name := h.campaignDisplayName(context.Background(), "camp-123")
+	if name != "Campaign One" {
+		t.Fatalf("name = %q, want %q", name, "Campaign One")
+	}
+	if campaignClient.getCalls != 1 {
+		t.Fatalf("get calls = %d, want %d", campaignClient.getCalls, 1)
+	}
+
+	name = h.campaignDisplayName(context.Background(), "camp-123")
+	if name != "Campaign One" {
+		t.Fatalf("name = %q, want %q", name, "Campaign One")
+	}
+	if campaignClient.getCalls != 1 {
+		t.Fatalf("get calls = %d, want %d", campaignClient.getCalls, 1)
 	}
 }

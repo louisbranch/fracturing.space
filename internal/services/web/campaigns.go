@@ -21,7 +21,7 @@ func (h *handler) handleAppCampaigns(w http.ResponseWriter, r *http.Request) {
 	// entries regardless of active participant context.
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		localizeHTTPError(w, r, http.StatusMethodNotAllowed, "error.http.method_not_allowed")
 		return
 	}
 
@@ -32,11 +32,11 @@ func (h *handler) handleAppCampaigns(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.ensureCampaignClients(r.Context()); err != nil {
-		renderAppCampaignsListPageWithAppName(w, r, h.resolvedAppName(), []*statev1.Campaign{})
+		renderAppCampaignsListPage(w, r, h.pageContext(w, r), []*statev1.Campaign{})
 		return
 	}
 	if h.campaignClient == nil || h.campaignAccess == nil {
-		renderAppCampaignsListPageWithAppName(w, r, h.resolvedAppName(), []*statev1.Campaign{})
+		renderAppCampaignsListPage(w, r, h.pageContext(w, r), []*statev1.Campaign{})
 		return
 	}
 
@@ -51,7 +51,7 @@ func (h *handler) handleAppCampaigns(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil || strings.TrimSpace(userID) == "" {
-		renderAppCampaignsListPageWithAppName(w, r, h.resolvedAppName(), []*statev1.Campaign{})
+		renderAppCampaignsListPage(w, r, h.pageContext(w, r), []*statev1.Campaign{})
 		return
 	}
 
@@ -61,7 +61,7 @@ func (h *handler) handleAppCampaigns(w http.ResponseWriter, r *http.Request) {
 		h.renderErrorPage(w, r, http.StatusBadGateway, "Campaigns unavailable", "failed to list campaigns")
 		return
 	}
-	renderAppCampaignsListPageWithAppName(w, r, h.resolvedAppName(), campaigns)
+	renderAppCampaignsListPage(w, r, h.pageContext(w, r), campaigns)
 }
 
 func (h *handler) handleAppCampaignCreate(w http.ResponseWriter, r *http.Request) {
@@ -73,12 +73,12 @@ func (h *handler) handleAppCampaignCreate(w http.ResponseWriter, r *http.Request
 			http.Redirect(w, r, "/auth/login", http.StatusFound)
 			return
 		}
-		renderAppCampaignCreatePageWithAppName(w, r, h.resolvedAppName())
+		renderAppCampaignCreatePage(w, r, h.pageContext(w, r))
 		return
 	}
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", "GET, POST")
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		localizeHTTPError(w, r, http.StatusMethodNotAllowed, "error.http.method_not_allowed")
 		return
 	}
 
@@ -204,10 +204,10 @@ func (h *handler) ensureCampaignClients(ctx context.Context) error {
 }
 
 func renderAppCampaignsPage(w http.ResponseWriter, r *http.Request, campaigns []*statev1.Campaign) {
-	renderAppCampaignsListPageWithAppName(w, r, "", campaigns)
+	renderAppCampaignsListPage(w, r, webtemplates.PageContext{}, campaigns)
 }
 
-func renderAppCampaignsListPageWithAppName(w http.ResponseWriter, r *http.Request, appName string, campaigns []*statev1.Campaign) {
+func renderAppCampaignsListPage(w http.ResponseWriter, r *http.Request, page webtemplates.PageContext, campaigns []*statev1.Campaign) {
 	// renderAppCampaignsListPageWithAppName maps the list of campaign read models into
 	// links that become the canonical campaign navigation point for this boundary.
 	normalized := make([]webtemplates.CampaignListItem, 0, len(campaigns))
@@ -223,38 +223,38 @@ func renderAppCampaignsListPageWithAppName(w http.ResponseWriter, r *http.Reques
 		normalized = append(normalized, webtemplates.CampaignListItem{
 			ID:               campaignID,
 			Name:             name,
-			System:           formatWebCampaignSystem(campaign.GetSystem()),
-			GMMode:           formatWebCampaignGmMode(campaign.GetGmMode()),
+			System:           formatWebCampaignSystem(page.Loc, campaign.GetSystem()),
+			GMMode:           formatWebCampaignGmMode(page.Loc, campaign.GetGmMode()),
 			ParticipantCount: strconv.FormatInt(int64(campaign.GetParticipantCount()), 10),
 			CharacterCount:   strconv.FormatInt(int64(campaign.GetCharacterCount()), 10),
 			CreatedDate:      formatCampaignCreatedDate(campaign.GetCreatedAt()),
 		})
 	}
 	writeGameContentType(w)
-	if err := webtemplates.CampaignsListPage(appName, normalized).Render(r.Context(), w); err != nil {
-		http.Error(w, "failed to render campaigns list page", http.StatusInternalServerError)
+	if err := webtemplates.CampaignsListPage(page, normalized).Render(r.Context(), w); err != nil {
+		localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.failed_to_render_campaigns_list_page")
 	}
 }
 
-func formatWebCampaignSystem(system commonv1.GameSystem) string {
+func formatWebCampaignSystem(loc webtemplates.Localizer, system commonv1.GameSystem) string {
 	switch system {
 	case commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART:
-		return "Daggerheart"
+		return webtemplates.T(loc, "game.create.field_system_value_daggerheart")
 	default:
-		return "Unspecified"
+		return webtemplates.T(loc, "game.campaign.system_unspecified")
 	}
 }
 
-func formatWebCampaignGmMode(mode statev1.GmMode) string {
+func formatWebCampaignGmMode(loc webtemplates.Localizer, mode statev1.GmMode) string {
 	switch mode {
 	case statev1.GmMode_HUMAN:
-		return "Human"
+		return webtemplates.T(loc, "game.create.field_gm_mode_human")
 	case statev1.GmMode_AI:
-		return "AI"
+		return webtemplates.T(loc, "game.create.field_gm_mode_ai")
 	case statev1.GmMode_HYBRID:
-		return "Hybrid"
+		return webtemplates.T(loc, "game.create.field_gm_mode_hybrid")
 	default:
-		return "Unspecified"
+		return webtemplates.T(loc, "game.campaign.gm_mode_unspecified")
 	}
 }
 
@@ -265,16 +265,16 @@ func formatCampaignCreatedDate(createdAt *timestamppb.Timestamp) string {
 	return createdAt.AsTime().Format("2006-01-02")
 }
 
-func renderAppCampaignCreatePage(w http.ResponseWriter, r *http.Request) {
-	renderAppCampaignCreatePageWithAppName(w, r, "")
+func renderAppCampaignCreatePage(w http.ResponseWriter, r *http.Request, page webtemplates.PageContext) {
+	renderAppCampaignCreatePageWithContext(w, r, page)
 }
 
-func renderAppCampaignCreatePageWithAppName(w http.ResponseWriter, r *http.Request, appName string) {
+func renderAppCampaignCreatePageWithContext(w http.ResponseWriter, r *http.Request, page webtemplates.PageContext) {
 	// renderAppCampaignCreatePageWithAppName renders the campaign creation form used by
 	// the create flow.
 	writeGameContentType(w)
-	if err := webtemplates.CampaignCreatePage(appName).Render(r.Context(), w); err != nil {
-		http.Error(w, "failed to render campaign create page", http.StatusInternalServerError)
+	if err := webtemplates.CampaignCreatePage(page).Render(r.Context(), w); err != nil {
+		localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.failed_to_render_campaign_create_page")
 	}
 }
 

@@ -14,7 +14,7 @@ func (h *handler) handleAppCampaignSessions(w http.ResponseWriter, r *http.Reque
 	// participants can reason about current play context.
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		localizeHTTPError(w, r, http.StatusMethodNotAllowed, "error.http.method_not_allowed")
 		return
 	}
 	participant, ok := h.requireCampaignActor(w, r, campaignID)
@@ -36,7 +36,7 @@ func (h *handler) handleAppCampaignSessions(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	renderAppCampaignSessionsPageWithAppName(w, r, h.resolvedAppName(), campaignID, resp.GetSessions(), canManageSessions)
+	renderAppCampaignSessionsPage(w, r, h.pageContext(w, r), campaignID, resp.GetSessions(), canManageSessions)
 }
 
 func (h *handler) handleAppCampaignSessionDetail(w http.ResponseWriter, r *http.Request, campaignID string, sessionID string) {
@@ -44,7 +44,7 @@ func (h *handler) handleAppCampaignSessionDetail(w http.ResponseWriter, r *http.
 	// read model for the campaign workspace.
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		localizeHTTPError(w, r, http.StatusMethodNotAllowed, "error.http.method_not_allowed")
 		return
 	}
 	if _, ok := h.requireCampaignActor(w, r, campaignID); !ok {
@@ -74,7 +74,7 @@ func (h *handler) handleAppCampaignSessionDetail(w http.ResponseWriter, r *http.
 		return
 	}
 
-	renderAppCampaignSessionDetailPageWithAppName(w, r, h.resolvedAppName(), campaignID, resp.GetSession())
+	renderAppCampaignSessionDetailPage(w, r, h.pageContext(w, r), campaignID, resp.GetSession())
 }
 
 func (h *handler) handleAppCampaignSessionStart(w http.ResponseWriter, r *http.Request, campaignID string) {
@@ -82,7 +82,7 @@ func (h *handler) handleAppCampaignSessionStart(w http.ResponseWriter, r *http.R
 	// and requires manager/owner permission.
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		localizeHTTPError(w, r, http.StatusMethodNotAllowed, "error.http.method_not_allowed")
 		return
 	}
 	actor, ok := h.requireCampaignActor(w, r, campaignID)
@@ -126,7 +126,7 @@ func (h *handler) handleAppCampaignSessionEnd(w http.ResponseWriter, r *http.Req
 	// authorization checks are satisfied.
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		localizeHTTPError(w, r, http.StatusMethodNotAllowed, "error.http.method_not_allowed")
 		return
 	}
 	actor, ok := h.requireCampaignActor(w, r, campaignID)
@@ -169,11 +169,11 @@ func canManageCampaignSessions(access statev1.CampaignAccess) bool {
 	return access == statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER || access == statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER
 }
 
-func renderAppCampaignSessionsPage(w http.ResponseWriter, r *http.Request, campaignID string, sessions []*statev1.Session, canManageSessions bool) {
-	renderAppCampaignSessionsPageWithAppName(w, r, "", campaignID, sessions, canManageSessions)
+func renderAppCampaignSessionsPage(w http.ResponseWriter, r *http.Request, page webtemplates.PageContext, campaignID string, sessions []*statev1.Session, canManageSessions bool) {
+	renderAppCampaignSessionsPageWithContext(w, r, page, campaignID, sessions, canManageSessions)
 }
 
-func renderAppCampaignSessionsPageWithAppName(w http.ResponseWriter, r *http.Request, appName string, campaignID string, sessions []*statev1.Session, canManageSessions bool) {
+func renderAppCampaignSessionsPageWithContext(w http.ResponseWriter, r *http.Request, page webtemplates.PageContext, campaignID string, sessions []*statev1.Session, canManageSessions bool) {
 	// renderAppCampaignSessionsPage maps session models to a navigable list and
 	// conditionally exposes end actions only for managers/owners.
 	campaignID = strings.TrimSpace(campaignID)
@@ -194,16 +194,16 @@ func renderAppCampaignSessionsPageWithAppName(w http.ResponseWriter, r *http.Req
 		})
 	}
 	writeGameContentType(w)
-	if err := webtemplates.SessionsListPage(appName, campaignID, canManageSessions, sessionItems).Render(r.Context(), w); err != nil {
-		http.Error(w, "failed to render sessions page", http.StatusInternalServerError)
+	if err := webtemplates.SessionsListPage(page, campaignID, canManageSessions, sessionItems).Render(r.Context(), w); err != nil {
+		localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.failed_to_render_sessions_page")
 	}
 }
 
-func renderAppCampaignSessionDetailPage(w http.ResponseWriter, r *http.Request, campaignID string, session *statev1.Session) {
-	renderAppCampaignSessionDetailPageWithAppName(w, r, "", campaignID, session)
+func renderAppCampaignSessionDetailPage(w http.ResponseWriter, r *http.Request, page webtemplates.PageContext, campaignID string, session *statev1.Session) {
+	renderAppCampaignSessionDetailPageWithContext(w, r, page, campaignID, session)
 }
 
-func renderAppCampaignSessionDetailPageWithAppName(w http.ResponseWriter, r *http.Request, appName string, campaignID string, session *statev1.Session) {
+func renderAppCampaignSessionDetailPageWithContext(w http.ResponseWriter, r *http.Request, page webtemplates.PageContext, campaignID string, session *statev1.Session) {
 	// renderAppCampaignSessionDetailPage renders the canonical read surface for one
 	// game session and links back into the session list.
 	if session == nil {
@@ -219,21 +219,21 @@ func renderAppCampaignSessionDetailPageWithAppName(w http.ResponseWriter, r *htt
 		CampaignID: campaignID,
 		ID:         sessionID,
 		Name:       sessionName,
-		Status:     sessionStatusLabel(session.GetStatus()),
+		Status:     sessionStatusLabel(page.Loc, session.GetStatus()),
 	}
 	writeGameContentType(w)
-	if err := webtemplates.SessionDetailPage(appName, detail).Render(r.Context(), w); err != nil {
-		http.Error(w, "failed to render session detail page", http.StatusInternalServerError)
+	if err := webtemplates.SessionDetailPage(page, detail).Render(r.Context(), w); err != nil {
+		localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.failed_to_render_session_detail_page")
 	}
 }
 
-func sessionStatusLabel(status statev1.SessionStatus) string {
+func sessionStatusLabel(loc webtemplates.Localizer, status statev1.SessionStatus) string {
 	switch status {
 	case statev1.SessionStatus_SESSION_ACTIVE:
-		return "active"
+		return webtemplates.T(loc, "game.session_status.active")
 	case statev1.SessionStatus_SESSION_ENDED:
-		return "ended"
+		return webtemplates.T(loc, "game.session_status.ended")
 	default:
-		return "unspecified"
+		return webtemplates.T(loc, "game.session_status.unspecified")
 	}
 }

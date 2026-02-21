@@ -11,6 +11,7 @@ import (
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -306,7 +307,7 @@ func TestAppCampaignInviteRevokeParticipantCallsRevokeInvite(t *testing.T) {
 func TestRenderAppCampaignInvitesPageHidesWriteActionsWithoutManageAccess(t *testing.T) {
 	w := httptest.NewRecorder()
 
-	renderAppCampaignInvitesPage(w, httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/invites", nil), "camp-123", []*statev1.Invite{
+	renderAppCampaignInvitesPage(w, httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/invites", nil), webtemplates.PageContext{}, "camp-123", []*statev1.Invite{
 		{Id: "inv-1", CampaignId: "camp-123", RecipientUserId: "user-456"},
 	}, false)
 
@@ -322,7 +323,7 @@ func TestRenderAppCampaignInvitesPageHidesWriteActionsWithoutManageAccess(t *tes
 func TestRenderAppCampaignInvitesPageSkipsRevokeForMissingInviteID(t *testing.T) {
 	w := httptest.NewRecorder()
 
-	renderAppCampaignInvitesPage(w, httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/invites", nil), "camp-123", []*statev1.Invite{
+	renderAppCampaignInvitesPage(w, httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/invites", nil), webtemplates.PageContext{}, "camp-123", []*statev1.Invite{
 		{CampaignId: "camp-123", RecipientUserId: "user-456"},
 	}, true)
 

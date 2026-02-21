@@ -2,16 +2,28 @@ package templates
 
 import sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
 
-// AuthLayout wraps auth/public pages in the shared HTML shell.
-templ AuthLayout(title string, lang string) {
-	@sharedtemplates.AuthLayout(title, lang, "landing-body auth-body", "auth") {
+// ShellLayout wraps auth/public pages in the shared HTML shell.
+templ ShellLayout(title string, lang string) {
+	@ShellLayoutWithLocalizer(title, lang, nil) {
 		{ children... }
 	}
 }
 
-// GameLayout wraps game pages in the shared HTML shell.
-templ GameLayout(title string, lang string) {
-	@sharedtemplates.AuthLayout(title, lang, "landing-body game-body", "game") {
+templ ShellLayoutWithLocalizer(title string, lang string, loc Localizer) {
+	@sharedtemplates.ShellLayoutWithLocalizer(title, lang, loc) {
+		{ children... }
+	}
+}
+
+// ChromeLayout wraps game pages in the shared HTML chrome.
+templ ChromeLayout(title string, lang string, appName string) {
+	@ChromeLayoutWithLocalizer(title, lang, appName, nil) {
+		{ children... }
+	}
+}
+
+templ ChromeLayoutWithLocalizer(title string, lang string, appName string, loc Localizer) {
+	@sharedtemplates.AppChromeLayoutWithLocalizer(title, lang, appName, loc) {
 		{ children... }
 	}
 }

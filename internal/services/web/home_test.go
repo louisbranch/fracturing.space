@@ -102,7 +102,7 @@ func TestAppRootRendersAuthenticatedDashboard(t *testing.T) {
 	if !strings.Contains(body, "Test App") {
 		t.Fatalf("body should include app name for dashboard branding")
 	}
-	if !strings.Contains(body, "Welcome, Alice") {
-		t.Fatalf("body should include user greeting")
+	if !strings.Contains(body, "/auth/logout") {
+		t.Fatalf("body should include sign out form")
 	}
 }

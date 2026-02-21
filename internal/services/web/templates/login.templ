@@ -12,7 +12,7 @@ type LoginParams struct {
 
 // LoginPage renders the passkey sign-in / registration page.
 templ LoginPage(params LoginParams) {
-	@AuthLayout(T(params.Loc, "title.login", params.AppName), params.Lang) {
+	@ShellLayout(T(params.Loc, "title.login", params.AppName), params.Lang) {
 		<main class="flex justify-center px-5 py-12">
 			<div class="w-full max-w-xl grid gap-8">
 				<header class="grid gap-3">
@@ -37,7 +37,7 @@ templ LoginPage(params LoginParams) {
 							<button type="button" class="btn btn-primary" id="passkey-register" data-pending-id={ params.PendingID }>{ T(params.Loc, "login.create_passkey") }</button>
 						</form>
 						<div class="divider">{ T(params.Loc, "login.divider") }</div>
-						<button type="button" class="btn btn-secondary btn-outline" id="passkey-login" data-pending-id={ params.PendingID }>{ T(params.Loc, "login.sign_in_passkey") }</button>
+						<button type="button" class="btn btn-outline" id="passkey-login" data-pending-id={ params.PendingID }>{ T(params.Loc, "login.sign_in_passkey") }</button>
 					</div>
 				</div>
 			</div>
@@ -162,7 +162,7 @@ templ loginScript() {
 				body: JSON.stringify({pending_id: pendingId}),
 			});
 			if (!response.ok) {
-				throw new Error(i18n.loginStartError || "Unable to start passkey login.");
+				throw new Error(i18n.loginStartError || "");
 			}
 			return response.json();
 		}
@@ -178,7 +178,7 @@ templ loginScript() {
 				}),
 			});
 			if (!response.ok) {
-				throw new Error(i18n.loginFinishError || "Unable to finish passkey login.");
+				throw new Error(i18n.loginFinishError || "");
 			}
 			return response.json();
 		}
@@ -193,7 +193,7 @@ templ loginScript() {
 				}),
 			});
 			if (!response.ok) {
-				throw new Error(i18n.registerStartError || "An error occurred creating your account. If you already have an account, use Sign In With Passkey below.");
+				throw new Error(i18n.registerStartError || "");
 			}
 			return response.json();
 		}
@@ -210,7 +210,7 @@ templ loginScript() {
 				}),
 			});
 			if (!response.ok) {
-				throw new Error(i18n.registerFinishError || "Unable to finish passkey registration.");
+				throw new Error(i18n.registerFinishError || "");
 			}
 			return response.json();
 		}
@@ -226,47 +226,47 @@ templ loginScript() {
 			}
 		}
 
-		if (passkeyButton && window.PublicKeyCredential) {
-			passkeyButton.addEventListener("click", async () => {
-				passkeyError.hidden = true;
-				const pendingId = passkeyButton.dataset.pendingId;
-				if (!pendingId) {
-					showPasskeyError(i18n.missingSession || "Missing login session.");
-					return;
+				if (passkeyButton && window.PublicKeyCredential) {
+					passkeyButton.addEventListener("click", async () => {
+						passkeyError.hidden = true;
+						const pendingId = passkeyButton.dataset.pendingId;
+						if (!pendingId) {
+							showPasskeyError(i18n.missingSession || "");
+							return;
+						}
+						try {
+							await performPasskeyLogin(pendingId);
+						} catch (err) {
+							showPasskeyError(err.message || i18n.passkeyFailed || "");
+						}
+					});
 				}
-				try {
-					await performPasskeyLogin(pendingId);
-				} catch (err) {
-					showPasskeyError(err.message || i18n.passkeyFailed || "Passkey login failed.");
-				}
-			});
-		}
 
-		if (registerButton && window.PublicKeyCredential) {
-				registerButton.addEventListener("click", async () => {
+				if (registerButton && window.PublicKeyCredential) {
+						registerButton.addEventListener("click", async () => {
 				registerError.hidden = true;
 				registerSuccess.hidden = true;
 				const pendingId = registerButton.dataset.pendingId || "";
-				const email = registerEmail ? registerEmail.value.trim() : "";
-				if (!email) {
-					showRegisterError(i18n.emailRequired || "Email is required.");
-					return;
-				}
+						const email = registerEmail ? registerEmail.value.trim() : "";
+						if (!email) {
+							showRegisterError(i18n.emailRequired || "");
+							return;
+						}
 				try {
 					const start = await startPasskeyRegister(email, pendingId);
 					const publicKey = normalizeCreationOptions(start.public_key.publicKey);
 					const credential = await navigator.credentials.create({publicKey});
 					const credentialJSON = credentialToJSON(credential);
 					await finishPasskeyRegister(start.session_id, start.user_id, credentialJSON, pendingId);
-					if (pendingId) {
-						await performPasskeyLogin(pendingId);
-						return;
-					}
-					showRegisterSuccess(i18n.passkeyCreated || "Passkey created. You can now sign in.");
-				} catch (err) {
-					showRegisterError(err.message || i18n.registerFailed || "Passkey registration failed.");
+							if (pendingId) {
+								await performPasskeyLogin(pendingId);
+								return;
+							}
+							showRegisterSuccess(i18n.passkeyCreated || "");
+						} catch (err) {
+							showRegisterError(err.message || i18n.registerFailed || "");
+						}
+					});
 				}
-			});
-		}
 	</script>
 }

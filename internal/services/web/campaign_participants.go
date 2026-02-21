@@ -14,7 +14,7 @@ func (h *handler) handleAppCampaignParticipants(w http.ResponseWriter, r *http.R
 	// explicit campaign membership is verified.
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		localizeHTTPError(w, r, http.StatusMethodNotAllowed, "error.http.method_not_allowed")
 		return
 	}
 	participant, ok := h.requireCampaignActor(w, r, campaignID)
@@ -36,7 +36,7 @@ func (h *handler) handleAppCampaignParticipants(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	renderAppCampaignParticipantsPageWithAppName(w, r, h.resolvedAppName(), campaignID, resp.GetParticipants(), canManageParticipants)
+	renderAppCampaignParticipantsPageWithContext(w, r, h.pageContext(w, r), campaignID, resp.GetParticipants(), canManageParticipants)
 }
 
 func (h *handler) handleAppCampaignParticipantUpdate(w http.ResponseWriter, r *http.Request, campaignID string) {
@@ -44,7 +44,7 @@ func (h *handler) handleAppCampaignParticipantUpdate(w http.ResponseWriter, r *h
 	// for managers and owners only, preserving campaign governance semantics.
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		localizeHTTPError(w, r, http.StatusMethodNotAllowed, "error.http.method_not_allowed")
 		return
 	}
 	actingParticipant, ok := h.requireCampaignActor(w, r, campaignID)
@@ -180,11 +180,11 @@ func participantControllerFormValue(controller statev1.Controller) string {
 	return "human"
 }
 
-func renderAppCampaignParticipantsPage(w http.ResponseWriter, r *http.Request, campaignID string, participants []*statev1.Participant, canManageParticipants bool) {
-	renderAppCampaignParticipantsPageWithAppName(w, r, "", campaignID, participants, canManageParticipants)
+func renderAppCampaignParticipantsPage(w http.ResponseWriter, r *http.Request, page webtemplates.PageContext, campaignID string, participants []*statev1.Participant, canManageParticipants bool) {
+	renderAppCampaignParticipantsPageWithContext(w, r, page, campaignID, participants, canManageParticipants)
 }
 
-func renderAppCampaignParticipantsPageWithAppName(w http.ResponseWriter, r *http.Request, appName string, campaignID string, participants []*statev1.Participant, canManageParticipants bool) {
+func renderAppCampaignParticipantsPageWithContext(w http.ResponseWriter, r *http.Request, page webtemplates.PageContext, campaignID string, participants []*statev1.Participant, canManageParticipants bool) {
 	// renderAppCampaignParticipantsPage translates participant domain objects into the
 	// management controls available at this campaign membership level.
 	campaignID = strings.TrimSpace(campaignID)
@@ -216,7 +216,7 @@ func renderAppCampaignParticipantsPageWithAppName(w http.ResponseWriter, r *http
 		})
 	}
 	writeGameContentType(w)
-	if err := webtemplates.CampaignParticipantsPage(appName, campaignID, canManageParticipants, participantItems).Render(r.Context(), w); err != nil {
-		http.Error(w, "failed to render participants page", http.StatusInternalServerError)
+	if err := webtemplates.CampaignParticipantsPage(page, campaignID, canManageParticipants, participantItems).Render(r.Context(), w); err != nil {
+		localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.failed_to_render_participants_page")
 	}
 }

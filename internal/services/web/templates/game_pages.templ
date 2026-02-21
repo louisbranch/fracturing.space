@@ -1,12 +1,5 @@
 package templates
 
-import (
-	"strings"
-
-	sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
-	"github.com/louisbranch/fracturing.space/internal/platform/branding"
-)
-
 // CampaignListItem models one campaign row in the campaigns list.
 type CampaignListItem struct {
 	ID               string
@@ -86,59 +79,41 @@ type UserInviteItem struct {
 	ParticipantID string
 }
 
-func normalizedGameAppName(appName string) string {
-	appName = strings.TrimSpace(appName)
-	if appName == "" {
-		return branding.AppName
-	}
-	return appName
-}
-
-templ GamePageShell(appName string, title string, lang string) {
-	@sharedtemplates.AuthLayout(title, lang, "landing-body game-body", "game") {
-		<nav class="navbar bg-base-200 fixed top-0 w-full z-50">
-			<div class="navbar-start w-auto">
-				<h3 class="text-lg font-bold"><a href="/">{ normalizedGameAppName(appName) }</a></h3>
-			</div>
-			<div class="navbar-end w-full justify-end gap-3">
-				<form method="POST" action="/auth/logout">
-					<button type="submit" class="btn btn-ghost btn-sm">Sign out</button>
-				</form>
-			</div>
-		</nav>
+templ GamePageShell(page PageContext, title string) {
+	@ChromeLayoutWithLocalizer(title, page.Lang, page.AppName, page.Loc) {
 		<div class="max-w-screen-xl mx-auto px-4 pt-24" id="main">
-			<main aria-label="Game" class="p-4">
+			<main aria-label={ T(page.Loc, "game.aria_label") } class="p-4">
 				{ children... }
 			</main>
 		</div>
 	}
 }
 
-templ CampaignsListPage(appName string, campaigns []CampaignListItem) {
-	@GamePageShell(appName, "Campaigns", "en") {
-		<h1>Campaigns</h1>
+templ CampaignsListPage(page PageContext, campaigns []CampaignListItem) {
+	@GamePageShell(page, T(page.Loc, "game.campaigns.title")) {
+		<h1>{ T(page.Loc, "game.campaigns.heading") }</h1>
 		<div class="card bg-base-200">
 			<div class="card-body">
 				<div class="flex flex-wrap items-center justify-between gap-3">
-					<h2 class="card-title">Campaigns</h2>
-					<a class="btn btn-primary btn-sm" href="/campaigns/create">Start a new Campaign</a>
+					<h2 class="card-title">{ T(page.Loc, "game.campaigns.title") }</h2>
+					<a class="btn btn-primary btn-sm" href="/campaigns/create">{ T(page.Loc, "game.campaigns.start_new") }</a>
 				</div>
 				<div class="overflow-x-auto">
 					<table class="table table-zebra">
 						<thead>
 							<tr>
-								<th>Campaign</th>
-								<th>System</th>
-								<th>GM Mode</th>
-								<th>Participants</th>
-								<th>Characters</th>
-								<th>Created</th>
+								<th>{ T(page.Loc, "game.campaigns.table.campaign") }</th>
+								<th>{ T(page.Loc, "game.campaigns.table.system") }</th>
+								<th>{ T(page.Loc, "game.campaigns.table.gm_mode") }</th>
+								<th>{ T(page.Loc, "game.campaigns.table.participants") }</th>
+								<th>{ T(page.Loc, "game.campaigns.table.characters") }</th>
+								<th>{ T(page.Loc, "game.campaigns.table.created") }</th>
 							</tr>
 						</thead>
 						<tbody>
 							if len(campaigns) == 0 {
 								<tr>
-									<td colspan="6">No campaigns yet.</td>
+									<td colspan="6">{ T(page.Loc, "game.campaigns.empty") }</td>
 								</tr>
 							}
 							for _, campaign := range campaigns {
@@ -165,50 +140,50 @@ templ CampaignsListPage(appName string, campaigns []CampaignListItem) {
 	}
 }
 
-templ CampaignCreatePage(appName string) {
-	@GamePageShell(appName, "Campaigns", "en") {
-		<h1>Campaigns</h1>
+templ CampaignCreatePage(page PageContext) {
+	@GamePageShell(page, T(page.Loc, "game.create.title")) {
+		<h1>{ T(page.Loc, "game.create.heading") }</h1>
 		<div class="card bg-base-200">
 			<div class="card-body">
 				<form method="post" action="/campaigns/create" class="space-y-4">
 					<div class="form-control">
 						<label class="label">
-							<span class="label-text">Campaign Name</span>
+							<span class="label-text">{ T(page.Loc, "game.create.field_name") }</span>
 						</label>
-						<input type="text" name="name" placeholder="E.g.: Autumn Twilight" required class="input input-bordered w-full">
+						<input type="text" name="name" placeholder={ T(page.Loc, "game.create.placeholder_name") } required class="input input-bordered w-full">
 					</div>
 					<div class="form-control">
 						<label class="label">
-							<span class="label-text">Game System</span>
+							<span class="label-text">{ T(page.Loc, "game.create.field_system") }</span>
 						</label>
 						<select name="system" required class="select select-bordered w-full">
-							<option value="daggerheart" selected>Daggerheart</option>
+							<option value="daggerheart" selected>{ T(page.Loc, "game.create.field_system_value_daggerheart") }</option>
 						</select>
 					</div>
 					<div class="form-control">
 						<label class="label">
-							<span class="label-text">GM Mode</span>
+							<span class="label-text">{ T(page.Loc, "game.create.field_gm_mode") }</span>
 						</label>
 						<select name="gm_mode" required class="select select-bordered w-full">
-							<option value="human" selected>Human</option>
-							<option value="ai">AI</option>
-							<option value="hybrid">Hybrid</option>
+							<option value="human" selected>{ T(page.Loc, "game.create.field_gm_mode_human") }</option>
+							<option value="ai">{ T(page.Loc, "game.create.field_gm_mode_ai") }</option>
+							<option value="hybrid">{ T(page.Loc, "game.create.field_gm_mode_hybrid") }</option>
 						</select>
 					</div>
 					<div class="form-control">
 						<label class="label">
-							<span class="label-text">Participant Name</span>
+							<span class="label-text">{ T(page.Loc, "game.create.field_participant_name") }</span>
 						</label>
-						<input type="text" name="creator_display_name" placeholder="E.g.: Tracy" class="input input-bordered w-full">
+						<input type="text" name="creator_display_name" placeholder={ T(page.Loc, "game.create.placeholder_participant_name") } class="input input-bordered w-full">
 					</div>
 					<div class="form-control">
 						<label class="label">
-							<span class="label-text">Theme Prompt</span>
+							<span class="label-text">{ T(page.Loc, "game.create.field_theme_prompt") }</span>
 						</label>
-						<textarea name="theme_prompt" rows="4" placeholder="E.g.: The struggle between good and evil amid the rediscovery of faith and hope in a world fallen into darkness." class="textarea textarea-bordered w-full"></textarea>
+						<textarea name="theme_prompt" rows="4" placeholder={ T(page.Loc, "game.create.placeholder_theme_prompt") } class="textarea textarea-bordered w-full"></textarea>
 					</div>
 					<div class="card-actions justify-end">
-						<button class="btn btn-primary" type="submit">Create Campaign</button>
+						<button class="btn btn-primary" type="submit">{ T(page.Loc, "game.create.submit") }</button>
 					</div>
 				</form>
 			</div>
@@ -216,21 +191,21 @@ templ CampaignCreatePage(appName string) {
 	}
 }
 
-templ SessionsListPage(appName string, campaignID string, canManage bool, sessions []SessionListItem) {
-	@GamePageShell(appName, "Sessions", "en") {
-		<h1>Sessions</h1>
+templ SessionsListPage(page PageContext, campaignID string, canManage bool, sessions []SessionListItem) {
+	@GamePageShell(page, T(page.Loc, "game.sessions.title")) {
+		<h1>{ T(page.Loc, "game.sessions.heading") }</h1>
 		if canManage {
 			<div class="card bg-base-200">
 				<div class="card-body">
 					<form method="post" action={ "/campaigns/" + campaignID + "/sessions/start" } class="space-y-4">
 						<div class="form-control">
 							<label class="label">
-								<span class="label-text">Session Name</span>
+								<span class="label-text">{ T(page.Loc, "game.sessions.field_name") }</span>
 							</label>
-							<input type="text" name="name" placeholder="session name" class="input input-bordered w-full">
+							<input type="text" name="name" placeholder={ T(page.Loc, "game.sessions.placeholder_name") } class="input input-bordered w-full">
 						</div>
 						<div class="card-actions justify-end">
-							<button class="btn btn-primary btn-sm" type="submit">Start Session</button>
+							<button class="btn btn-primary btn-sm" type="submit">{ T(page.Loc, "game.sessions.start") }</button>
 						</div>
 					</form>
 				</div>
@@ -247,7 +222,7 @@ templ SessionsListPage(appName string, campaignID string, canManage bool, sessio
 					if canManage && session.IsActive && session.ID != "" {
 						<form method="post" action={ "/campaigns/" + campaignID + "/sessions/end" }>
 							<input type="hidden" name="session_id" value={ session.ID }>
-							<button class="btn btn-outline btn-error btn-xs" type="submit">End Session</button>
+							<button class="btn btn-outline btn-error btn-xs" type="submit">{ T(page.Loc, "game.sessions.end") }</button>
 						</form>
 					}
 				</li>
@@ -256,20 +231,20 @@ templ SessionsListPage(appName string, campaignID string, canManage bool, sessio
 	}
 }
 
-templ SessionDetailPage(appName string, detail SessionDetail) {
-	@GamePageShell(appName, "Session", "en") {
+templ SessionDetailPage(page PageContext, detail SessionDetail) {
+	@GamePageShell(page, T(page.Loc, "game.session_detail.title")) {
 		<h1>{ detail.Name }</h1>
 		if detail.ID != "" {
-			<p>Session ID: { detail.ID }</p>
+			<p>{ T(page.Loc, "game.session_detail.label_id") }: { detail.ID }</p>
 		}
-		<p>Status: { detail.Status }</p>
-		<p><a href={ "/campaigns/" + detail.CampaignID + "/sessions" }>Back to Sessions</a></p>
+		<p>{ T(page.Loc, "game.session_detail.label_status") }: { detail.Status }</p>
+		<p><a href={ "/campaigns/" + detail.CampaignID + "/sessions" }>{ T(page.Loc, "game.session_detail.back_to_sessions") }</a></p>
 	}
 }
 
-templ CampaignParticipantsPage(appName string, campaignID string, canManage bool, participants []ParticipantListItem) {
-	@GamePageShell(appName, "Participants", "en") {
-		<h1>Participants</h1>
+templ CampaignParticipantsPage(page PageContext, campaignID string, canManage bool, participants []ParticipantListItem) {
+	@GamePageShell(page, T(page.Loc, "game.participants.title")) {
+		<h1>{ T(page.Loc, "game.participants.heading") }</h1>
 		<ul>
 			for _, participant := range participants {
 				<li>{ participant.Name }
@@ -278,62 +253,62 @@ templ CampaignParticipantsPage(appName string, campaignID string, canManage bool
 							<input type="hidden" name="participant_id" value={ participant.ID }>
 							<div class="form-control">
 								<label class="label">
-									<span class="label-text">Campaign Access</span>
+									<span class="label-text">{ T(page.Loc, "game.participants.field_access") }</span>
 								</label>
 								<select name="campaign_access" class="select select-bordered w-full">
 									if participant.MemberSelected {
-										<option value="member" selected>member</option>
+										<option value="member" selected>{ T(page.Loc, "game.participants.value.member") }</option>
 									} else {
-										<option value="member">member</option>
+										<option value="member">{ T(page.Loc, "game.participants.value.member") }</option>
 									}
 									if participant.ManagerSelected {
-										<option value="manager" selected>manager</option>
+										<option value="manager" selected>{ T(page.Loc, "game.participants.value.manager") }</option>
 									} else {
-										<option value="manager">manager</option>
+										<option value="manager">{ T(page.Loc, "game.participants.value.manager") }</option>
 									}
 									if participant.OwnerSelected {
-										<option value="owner" selected>owner</option>
+										<option value="owner" selected>{ T(page.Loc, "game.participants.value.owner") }</option>
 									} else {
-										<option value="owner">owner</option>
+										<option value="owner">{ T(page.Loc, "game.participants.value.owner") }</option>
 									}
 								</select>
 							</div>
 							<div class="form-control">
 								<label class="label">
-									<span class="label-text">Role</span>
+									<span class="label-text">{ T(page.Loc, "game.participants.field_role") }</span>
 								</label>
 								<select name="role" class="select select-bordered w-full">
 									if participant.GMSelected {
-										<option value="gm" selected>gm</option>
+										<option value="gm" selected>{ T(page.Loc, "game.participants.value.gm") }</option>
 									} else {
-										<option value="gm">gm</option>
+										<option value="gm">{ T(page.Loc, "game.participants.value.gm") }</option>
 									}
 									if participant.PlayerSelected {
-										<option value="player" selected>player</option>
+										<option value="player" selected>{ T(page.Loc, "game.participants.value.player") }</option>
 									} else {
-										<option value="player">player</option>
+										<option value="player">{ T(page.Loc, "game.participants.value.player") }</option>
 									}
 								</select>
 							</div>
 							<div class="form-control">
 								<label class="label">
-									<span class="label-text">Controller</span>
+									<span class="label-text">{ T(page.Loc, "game.participants.field_controller") }</span>
 								</label>
 								<select name="controller" class="select select-bordered w-full">
 									if participant.HumanSelected {
-										<option value="human" selected>human</option>
+										<option value="human" selected>{ T(page.Loc, "game.participants.value.human") }</option>
 									} else {
-										<option value="human">human</option>
+										<option value="human">{ T(page.Loc, "game.participants.value.human") }</option>
 									}
 									if participant.AISelected {
-										<option value="ai" selected>ai</option>
+										<option value="ai" selected>{ T(page.Loc, "game.participants.value_ai") }</option>
 									} else {
-										<option value="ai">ai</option>
+										<option value="ai">{ T(page.Loc, "game.participants.value_ai") }</option>
 									}
 								</select>
 							</div>
 							<div class="card-actions justify-start">
-								<button class="btn btn-soft btn-sm" type="submit">Update Access</button>
+								<button class="btn btn-soft btn-sm" type="submit">{ T(page.Loc, "game.participants.submit_update") }</button>
 							</div>
 						</form>
 					}
@@ -343,30 +318,30 @@ templ CampaignParticipantsPage(appName string, campaignID string, canManage bool
 	}
 }
 
-templ CampaignCharactersPage(appName string, campaignID string, canManage bool, characters []CharacterListItem) {
-	@GamePageShell(appName, "Characters", "en") {
-		<h1>Characters</h1>
+templ CampaignCharactersPage(page PageContext, campaignID string, canManage bool, characters []CharacterListItem) {
+	@GamePageShell(page, T(page.Loc, "game.characters.title")) {
+		<h1>{ T(page.Loc, "game.characters.heading") }</h1>
 		if canManage {
 			<div class="card bg-base-200">
 				<div class="card-body">
 					<form method="post" action={ "/campaigns/" + campaignID + "/characters/create" } class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
 						<div class="form-control">
 							<label class="label">
-								<span class="label-text">Character Name</span>
+								<span class="label-text">{ T(page.Loc, "game.characters.field_name") }</span>
 							</label>
-							<input type="text" name="name" placeholder="character name" required class="input input-bordered w-full">
+							<input type="text" name="name" placeholder={ T(page.Loc, "game.characters.placeholder_name") } class="input input-bordered w-full">
 						</div>
 						<div class="form-control">
 							<label class="label">
-								<span class="label-text">Kind</span>
+								<span class="label-text">{ T(page.Loc, "game.characters.field_kind") }</span>
 							</label>
 							<select name="kind" class="select select-bordered w-full">
-								<option value="pc">pc</option>
-								<option value="npc">npc</option>
+								<option value="pc">{ T(page.Loc, "game.characters.value_pc") }</option>
+								<option value="npc">{ T(page.Loc, "game.characters.value_npc") }</option>
 							</select>
 						</div>
 						<div class="card-actions justify-end">
-							<button class="btn btn-primary btn-sm" type="submit">Create Character</button>
+							<button class="btn btn-primary btn-sm" type="submit">{ T(page.Loc, "game.characters.submit_create") }</button>
 						</div>
 					</form>
 				</div>
@@ -390,17 +365,17 @@ templ CampaignCharactersPage(appName string, campaignID string, canManage bool, 
 							}
 							<select name="kind" class="select select-bordered w-full">
 								if character.PCSelected {
-									<option value="pc" selected>pc</option>
+									<option value="pc" selected>{ T(page.Loc, "game.characters.value_pc") }</option>
 								} else {
-									<option value="pc">pc</option>
+									<option value="pc">{ T(page.Loc, "game.characters.value_pc") }</option>
 								}
 								if character.NPCSelected {
-									<option value="npc" selected>npc</option>
+									<option value="npc" selected>{ T(page.Loc, "game.characters.value_npc") }</option>
 								} else {
-									<option value="npc">npc</option>
+									<option value="npc">{ T(page.Loc, "game.characters.value_npc") }</option>
 								}
 							</select>
-							<button class="btn btn-soft btn-sm" type="submit">Update Character</button>
+							<button class="btn btn-soft btn-sm" type="submit">{ T(page.Loc, "game.characters.submit_update") }</button>
 						</form>
 						<form method="post" action={ "/campaigns/" + campaignID + "/characters/control" }>
 							<input type="hidden" name="character_id" value={ character.ID }>
@@ -413,7 +388,7 @@ templ CampaignCharactersPage(appName string, campaignID string, canManage bool, 
 									}
 								}
 							</select>
-							<button class="btn btn-soft btn-sm" type="submit">Set Controller</button>
+							<button class="btn btn-soft btn-sm" type="submit">{ T(page.Loc, "game.characters.submit_set_controller") }</button>
 						</form>
 					}
 				</li>
@@ -422,38 +397,38 @@ templ CampaignCharactersPage(appName string, campaignID string, canManage bool, 
 	}
 }
 
-templ CharacterDetailPage(appName string, character CharacterDetail) {
-	@GamePageShell(appName, "Character", "en") {
+templ CharacterDetailPage(page PageContext, character CharacterDetail) {
+	@GamePageShell(page, T(page.Loc, "game.character_detail.title")) {
 		<h1>{ character.Name }</h1>
 		if character.ID != "" {
-			<p>Character ID: { character.ID }</p>
+			<p>{ T(page.Loc, "game.character_detail.label_id") }: { character.ID }</p>
 		}
-		<p>Kind: { character.Kind }</p>
-		<p><a href={ "/campaigns/" + character.CampaignID + "/characters" }>Back to Characters</a></p>
+		<p>{ T(page.Loc, "game.character_detail.label_kind") }: { character.Kind }</p>
+		<p><a href={ "/campaigns/" + character.CampaignID + "/characters" }>{ T(page.Loc, "game.character_detail.back_to_characters") }</a></p>
 	}
 }
 
-templ CampaignInvitesPage(appName string, campaignID string, canManage bool, invites []CampaignInviteItem) {
-	@GamePageShell(appName, "Campaign Invites", "en") {
-		<h1>Campaign Invites</h1>
+templ CampaignInvitesPage(page PageContext, campaignID string, canManage bool, invites []CampaignInviteItem) {
+	@GamePageShell(page, T(page.Loc, "game.campaign_invites.title")) {
+		<h1>{ T(page.Loc, "game.campaign_invites.heading") }</h1>
 		if canManage {
 			<div class="card bg-base-200">
 				<div class="card-body">
 					<form method="post" action={ "/campaigns/" + campaignID + "/invites/create" } class="grid grid-cols-1 md:grid-cols-3 gap-4">
 						<div class="form-control">
 							<label class="label">
-								<span class="label-text">Participant ID</span>
+								<span class="label-text">{ T(page.Loc, "game.campaign_invites.field_participant_id") }</span>
 							</label>
-							<input type="text" name="participant_id" placeholder="participant id" required class="input input-bordered w-full">
+							<input type="text" name="participant_id" placeholder={ T(page.Loc, "game.campaign_invites.placeholder_participant_id") } required class="input input-bordered w-full">
 						</div>
 						<div class="form-control">
 							<label class="label">
-								<span class="label-text">Recipient User ID</span>
+								<span class="label-text">{ T(page.Loc, "game.campaign_invites.field_recipient_user_id") }</span>
 							</label>
-							<input type="text" name="recipient_user_id" placeholder="recipient user id" class="input input-bordered w-full">
+							<input type="text" name="recipient_user_id" placeholder={ T(page.Loc, "game.campaign_invites.placeholder_recipient_user_id") } class="input input-bordered w-full">
 						</div>
 						<div class="card-actions justify-end">
-							<button class="btn btn-primary btn-sm" type="submit">Create Invite</button>
+							<button class="btn btn-primary btn-sm" type="submit">{ T(page.Loc, "game.campaign_invites.submit_create") }</button>
 						</div>
 					</form>
 				</div>
@@ -465,7 +440,7 @@ templ CampaignInvitesPage(appName string, campaignID string, canManage bool, inv
 					if canManage && invite.ID != "" {
 						<form method="post" action={ "/campaigns/" + campaignID + "/invites/revoke" }>
 							<input type="hidden" name="invite_id" value={ invite.ID }>
-							<button class="btn btn-soft btn-sm" type="submit">Revoke</button>
+							<button class="btn btn-soft btn-sm" type="submit">{ T(page.Loc, "game.campaign_invites.submit_revoke") }</button>
 						</form>
 					}
 				</li>
@@ -474,9 +449,9 @@ templ CampaignInvitesPage(appName string, campaignID string, canManage bool, inv
 	}
 }
 
-templ UserInvitesPage(appName string, invites []UserInviteItem) {
-	@GamePageShell(appName, "My Invites", "en") {
-		<h1>My Invites</h1>
+templ UserInvitesPage(page PageContext, invites []UserInviteItem) {
+	@GamePageShell(page, T(page.Loc, "game.my_invites.title")) {
+		<h1>{ T(page.Loc, "game.my_invites.heading") }</h1>
 		<ul>
 			for _, invite := range invites {
 				<li>{ invite.Label }
@@ -485,7 +460,7 @@ templ UserInvitesPage(appName string, invites []UserInviteItem) {
 							<input type="hidden" name="campaign_id" value={ invite.CampaignID }>
 							<input type="hidden" name="invite_id" value={ invite.InviteID }>
 							<input type="hidden" name="participant_id" value={ invite.ParticipantID }>
-							<button class="btn btn-primary btn-sm" type="submit">Claim</button>
+							<button class="btn btn-primary btn-sm" type="submit">{ T(page.Loc, "game.my_invites.submit_claim") }</button>
 						</form>
 					}
 				</li>

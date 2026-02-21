@@ -15,7 +15,7 @@ func (h *handler) handleAppCampaignCharacters(w http.ResponseWriter, r *http.Req
 	// membership and capability checks pass.
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		localizeHTTPError(w, r, http.StatusMethodNotAllowed, "error.http.method_not_allowed")
 		return
 	}
 	actingParticipant, ok := h.requireCampaignActor(w, r, campaignID)
@@ -49,7 +49,7 @@ func (h *handler) handleAppCampaignCharacters(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	renderAppCampaignCharactersPageWithAppName(w, r, h.resolvedAppName(), campaignID, resp.GetCharacters(), canManageCharacters, controlParticipants)
+	renderAppCampaignCharactersPage(w, r, h.pageContext(w, r), campaignID, resp.GetCharacters(), canManageCharacters, controlParticipants)
 }
 
 func (h *handler) handleAppCampaignCharacterDetail(w http.ResponseWriter, r *http.Request, campaignID string, characterID string) {
@@ -57,7 +57,7 @@ func (h *handler) handleAppCampaignCharacterDetail(w http.ResponseWriter, r *htt
 	// detailed editing from the campaign context.
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		localizeHTTPError(w, r, http.StatusMethodNotAllowed, "error.http.method_not_allowed")
 		return
 	}
 	if _, ok := h.requireCampaignActor(w, r, campaignID); !ok {
@@ -87,7 +87,7 @@ func (h *handler) handleAppCampaignCharacterDetail(w http.ResponseWriter, r *htt
 		return
 	}
 
-	renderAppCampaignCharacterDetailPageWithAppName(w, r, h.resolvedAppName(), campaignID, resp.GetCharacter())
+	renderAppCampaignCharacterDetailPage(w, r, h.pageContext(w, r), campaignID, resp.GetCharacter())
 }
 
 func (h *handler) handleAppCampaignCharacterCreate(w http.ResponseWriter, r *http.Request, campaignID string) {
@@ -95,7 +95,7 @@ func (h *handler) handleAppCampaignCharacterCreate(w http.ResponseWriter, r *htt
 	// caller before creating a new character aggregate.
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		localizeHTTPError(w, r, http.StatusMethodNotAllowed, "error.http.method_not_allowed")
 		return
 	}
 	actingParticipant, ok := h.requireCampaignActor(w, r, campaignID)
@@ -145,7 +145,7 @@ func (h *handler) handleAppCampaignCharacterUpdate(w http.ResponseWriter, r *htt
 	// preserving idempotent form-to-domain conversions for name and kind.
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		localizeHTTPError(w, r, http.StatusMethodNotAllowed, "error.http.method_not_allowed")
 		return
 	}
 	actingParticipant, ok := h.requireCampaignActor(w, r, campaignID)
@@ -208,7 +208,7 @@ func (h *handler) handleAppCampaignCharacterControl(w http.ResponseWriter, r *ht
 	// actions can be routed to the correct participant at the session layer.
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		localizeHTTPError(w, r, http.StatusMethodNotAllowed, "error.http.method_not_allowed")
 		return
 	}
 	actingParticipant, ok := h.requireCampaignActor(w, r, campaignID)
@@ -285,11 +285,11 @@ func participantControlFormLabel(participant *statev1.Participant) string {
 	return label
 }
 
-func renderAppCampaignCharactersPage(w http.ResponseWriter, r *http.Request, campaignID string, characters []*statev1.Character, canManageCharacters bool, controlParticipants []*statev1.Participant) {
-	renderAppCampaignCharactersPageWithAppName(w, r, "", campaignID, characters, canManageCharacters, controlParticipants)
+func renderAppCampaignCharactersPage(w http.ResponseWriter, r *http.Request, page webtemplates.PageContext, campaignID string, characters []*statev1.Character, canManageCharacters bool, controlParticipants []*statev1.Participant) {
+	renderAppCampaignCharactersPageWithContext(w, r, page, campaignID, characters, canManageCharacters, controlParticipants)
 }
 
-func renderAppCampaignCharactersPageWithAppName(w http.ResponseWriter, r *http.Request, appName string, campaignID string, characters []*statev1.Character, canManageCharacters bool, controlParticipants []*statev1.Participant) {
+func renderAppCampaignCharactersPageWithContext(w http.ResponseWriter, r *http.Request, page webtemplates.PageContext, campaignID string, characters []*statev1.Character, canManageCharacters bool, controlParticipants []*statev1.Participant) {
 	// renderAppCampaignCharactersPage keeps the write controls tied to current
 	// campaign access level so members cannot reach management operations.
 	campaignID = strings.TrimSpace(campaignID)
@@ -313,7 +313,7 @@ func renderAppCampaignCharactersPageWithAppName(w http.ResponseWriter, r *http.R
 		controlOptions := make([]webtemplates.CharacterControlOption, 0, len(controlParticipants)+1)
 		controlOptions = append(controlOptions, webtemplates.CharacterControlOption{
 			ID:       "",
-			Label:    "unassigned",
+			Label:    webtemplates.T(page.Loc, "game.participants.value_unassigned"),
 			Selected: currentParticipantID == "",
 		})
 		for _, participant := range controlParticipants {
@@ -348,16 +348,16 @@ func renderAppCampaignCharactersPageWithAppName(w http.ResponseWriter, r *http.R
 		})
 	}
 	writeGameContentType(w)
-	if err := webtemplates.CampaignCharactersPage(appName, campaignID, canManageCharacters, characterItems).Render(r.Context(), w); err != nil {
-		http.Error(w, "failed to render characters page", http.StatusInternalServerError)
+	if err := webtemplates.CampaignCharactersPage(page, campaignID, canManageCharacters, characterItems).Render(r.Context(), w); err != nil {
+		localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.failed_to_render_characters_page")
 	}
 }
 
-func renderAppCampaignCharacterDetailPage(w http.ResponseWriter, r *http.Request, campaignID string, character *statev1.Character) {
-	renderAppCampaignCharacterDetailPageWithAppName(w, r, "", campaignID, character)
+func renderAppCampaignCharacterDetailPage(w http.ResponseWriter, r *http.Request, page webtemplates.PageContext, campaignID string, character *statev1.Character) {
+	renderAppCampaignCharacterDetailPageWithContext(w, r, page, campaignID, character)
 }
 
-func renderAppCampaignCharacterDetailPageWithAppName(w http.ResponseWriter, r *http.Request, appName string, campaignID string, character *statev1.Character) {
+func renderAppCampaignCharacterDetailPageWithContext(w http.ResponseWriter, r *http.Request, page webtemplates.PageContext, campaignID string, character *statev1.Character) {
 	// renderAppCampaignCharacterDetailPage provides the stable read surface for a
 	// single character without mutating state.
 	if character == nil {
@@ -373,21 +373,21 @@ func renderAppCampaignCharacterDetailPageWithAppName(w http.ResponseWriter, r *h
 		CampaignID: campaignID,
 		ID:         characterID,
 		Name:       characterName,
-		Kind:       characterKindLabel(character.GetKind()),
+		Kind:       characterKindLabel(page.Loc, character.GetKind()),
 	}
 	writeGameContentType(w)
-	if err := webtemplates.CharacterDetailPage(appName, detail).Render(r.Context(), w); err != nil {
-		http.Error(w, "failed to render character detail page", http.StatusInternalServerError)
+	if err := webtemplates.CharacterDetailPage(page, detail).Render(r.Context(), w); err != nil {
+		localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.failed_to_render_character_detail_page")
 	}
 }
 
-func characterKindLabel(kind statev1.CharacterKind) string {
+func characterKindLabel(loc webtemplates.Localizer, kind statev1.CharacterKind) string {
 	switch kind {
 	case statev1.CharacterKind_PC:
-		return "pc"
+		return webtemplates.T(loc, "game.character_kind.pc")
 	case statev1.CharacterKind_NPC:
-		return "npc"
+		return webtemplates.T(loc, "game.character_kind.npc")
 	default:
-		return "unspecified"
+		return webtemplates.T(loc, "game.character_detail.kind_unspecified")
 	}
 }
