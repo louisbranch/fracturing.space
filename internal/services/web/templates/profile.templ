@@ -1,0 +1,46 @@
+package templates
+
+// ProfileFormState represents pre-filled profile form values.
+type ProfileFormState struct {
+	Name          string
+	LocaleOptions []LanguageOption
+}
+
+templ ProfilePage(page PageContext, state ProfileFormState) {
+	@Layout(LayoutOptionsForPage(page, "layout.profile", true)) {
+		<div class="card bg-base-200 max-w-xl">
+			<div class="card-body">
+				<form method="post" action="/profile" class="space-y-4">
+					<div class="form-control">
+						<label class="label">
+							<span class="label-text">{ T(page.Loc, "web.profile.field_name") }</span>
+						</label>
+						<input
+							type="text"
+							name="name"
+							value={ state.Name }
+							class="input input-bordered w-full"
+						>
+					</div>
+					<div class="form-control">
+						<label class="label">
+							<span class="label-text">{ T(page.Loc, "web.profile.field_locale") }</span>
+						</label>
+						<select name="locale" class="select select-bordered w-full">
+							for _, option := range state.LocaleOptions {
+								if option.Active {
+									<option value={ option.Tag } selected>{ option.Label }</option>
+								} else {
+									<option value={ option.Tag }>{ option.Label }</option>
+								}
+							}
+						</select>
+					</div>
+					<div class="card-actions justify-end">
+						<button class="btn btn-primary" type="submit">{ T(page.Loc, "web.profile.submit") }</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	}
+}

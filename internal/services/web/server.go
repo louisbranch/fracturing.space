@@ -70,6 +70,7 @@ type Server struct {
 type handler struct {
 	config              Config
 	authClient          authv1.AuthServiceClient
+	accountClient       authv1.AccountServiceClient
 	sessions            *sessionStore
 	pendingFlows        *pendingFlowStore
 	cacheStore          webstorage.Store
@@ -88,6 +89,7 @@ type handler struct {
 type handlerDependencies struct {
 	campaignAccess    campaignAccessChecker
 	cacheStore        webstorage.Store
+	accountClient     authv1.AccountServiceClient
 	campaignClient    statev1.CampaignServiceClient
 	eventClient       statev1.EventServiceClient
 	sessionClient     statev1.SessionServiceClient
@@ -98,8 +100,9 @@ type handlerDependencies struct {
 
 // authGRPCClients holds the auth clients created during web startup.
 type authGRPCClients struct {
-	conn       *grpc.ClientConn
-	authClient authv1.AuthServiceClient
+	conn          *grpc.ClientConn
+	authClient    authv1.AuthServiceClient
+	accountClient authv1.AccountServiceClient
 }
 
 // gameGRPCClients holds the game clients used by the web service.
@@ -160,7 +163,7 @@ func (h *handler) handleAppRoot(w http.ResponseWriter, r *http.Request) {
 			UserAvatarURL: page.UserAvatarURL,
 			CurrentPath:   page.CurrentPath,
 			Loc:           page.Loc,
-		}), composeHTMXTitle(page.Loc, "dashboard.title")); err != nil {
+		}), composeHTMXTitleForPage(page, "dashboard.title")); err != nil {
 			log.Printf("web: failed to render dashboard page: %v", err)
 			localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.web_handler_unavailable")
 			return
@@ -172,7 +175,7 @@ func (h *handler) handleAppRoot(w http.ResponseWriter, r *http.Request) {
 	if strings.TrimSpace(h.config.OAuthClientID) != "" {
 		params.SignInURL = "/auth/login"
 	}
-	if err := h.writePage(w, r, webtemplates.LandingPage(page, appName, params), composeHTMXTitle(page.Loc, "title.landing")); err != nil {
+	if err := h.writePage(w, r, webtemplates.LandingPage(page, appName, params), composeHTMXTitleForPage(page, "title.landing")); err != nil {
 		log.Printf("web: failed to render landing page: %v", err)
 		localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.web_handler_unavailable")
 	}
@@ -209,6 +212,7 @@ func NewHandlerWithCampaignAccess(config Config, authClient authv1.AuthServiceCl
 	h := &handler{
 		config:            config,
 		authClient:        authClient,
+		accountClient:     deps.accountClient,
 		sessions:          newSessionStore(),
 		pendingFlows:      newPendingFlowStore(),
 		cacheStore:        deps.cacheStore,
@@ -229,6 +233,7 @@ func NewHandlerWithCampaignAccess(config Config, authClient authv1.AuthServiceCl
 	h.registerPublicRoutes(publicMux, h.resolvedAppName())
 
 	rootMux.Handle("/dashboard", gameMux)
+	rootMux.Handle("/profile", gameMux)
 	rootMux.Handle("/campaigns", gameMux)
 	rootMux.Handle("/campaigns/", gameMux)
 	rootMux.Handle("/invites", gameMux)
@@ -240,6 +245,7 @@ func NewHandlerWithCampaignAccess(config Config, authClient authv1.AuthServiceCl
 
 func (h *handler) registerGameRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/dashboard", h.handleAppHome)
+	mux.HandleFunc("/profile", h.handleAppProfile)
 	mux.HandleFunc("/campaigns", h.handleAppCampaigns)
 	mux.HandleFunc("/campaigns/create", h.handleAppCampaignCreate)
 	mux.HandleFunc("/campaigns/", h.handleAppCampaignDetail)
@@ -293,7 +299,12 @@ func (h *handler) registerPublicRoutes(mux *http.ServeMux, appName string) {
 			Lang:       lang,
 			Loc:        printer,
 		}
-		if err := h.writePage(w, r, webtemplates.LoginPage(params), composeHTMXTitle(printer, "title.login")); err != nil {
+		loginPage := webtemplates.PageContext{
+			Lang:    lang,
+			Loc:     printer,
+			AppName: appName,
+		}
+		if err := h.writePage(w, r, webtemplates.LoginPage(params), composeHTMXTitleForPage(loginPage, "title.login")); err != nil {
 			log.Printf("web: failed to render login page: %v", err)
 			localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.web_handler_unavailable")
 			return
@@ -344,6 +355,7 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 
 	var authConn *grpc.ClientConn
 	var authClient authv1.AuthServiceClient
+	var accountClient authv1.AccountServiceClient
 	if strings.TrimSpace(config.AuthAddr) != "" {
 		clients, err := dialAuthGRPC(ctx, config)
 		if err != nil {
@@ -354,6 +366,7 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 		}
 		authConn = clients.conn
 		authClient = clients.authClient
+		accountClient = clients.accountClient
 	}
 
 	var gameConn *grpc.ClientConn
@@ -381,6 +394,7 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 	handler, err := NewHandlerWithCampaignAccess(config, authClient, handlerDependencies{
 		campaignAccess:    campaignAccess,
 		cacheStore:        cacheStore,
+		accountClient:     accountClient,
 		campaignClient:    campaignClient,
 		eventClient:       eventClient,
 		sessionClient:     sessionClient,
@@ -549,8 +563,9 @@ func dialAuthGRPC(ctx context.Context, config Config) (authGRPCClients, error) {
 		return authGRPCClients{}, fmt.Errorf("dial auth gRPC %s: %w", authAddr, err)
 	}
 	return authGRPCClients{
-		conn:       conn,
-		authClient: authv1.NewAuthServiceClient(conn),
+		conn:          conn,
+		authClient:    authv1.NewAuthServiceClient(conn),
+		accountClient: authv1.NewAccountServiceClient(conn),
 	}, nil
 }
 
@@ -850,7 +865,16 @@ func (h *handler) handleMagicLink(w http.ResponseWriter, r *http.Request) {
 func (h *handler) renderMagicPage(w http.ResponseWriter, r *http.Request, status int, params webtemplates.MagicParams) {
 	writeGameContentType(w)
 	w.WriteHeader(status)
-	if err := h.writePage(w, r, webtemplates.MagicPage(params), composeHTMXTitle(nil, params.Title)); err != nil {
+	if err := h.writePage(
+		w,
+		r,
+		webtemplates.MagicPage(params),
+		composeHTMXTitleForPage(webtemplates.PageContext{
+			Lang:    params.Lang,
+			Loc:     params.Loc,
+			AppName: h.resolvedAppName(),
+		}, params.Title),
+	); err != nil {
 		log.Printf("web: failed to render magic page: %v", err)
 		localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.web_handler_unavailable")
 	}

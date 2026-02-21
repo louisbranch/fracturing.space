@@ -108,6 +108,10 @@ func composeHTMXTitle(loc webtemplates.Localizer, title string, args ...any) str
 	return sharedhtmx.TitleTag(sharedtemplates.ComposePageTitle(webtemplates.T(loc, title, args...)))
 }
 
+func composeHTMXTitleForPage(page webtemplates.PageContext, title string, args ...any) string {
+	return composeHTMXTitle(page.Loc, title, args...)
+}
+
 func writeGameContentType(w http.ResponseWriter) {
 	w.Header().Set("Content-Type", gamePageContentType)
 }

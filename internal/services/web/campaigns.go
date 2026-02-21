@@ -259,7 +259,7 @@ func renderAppCampaignsListPageWithConfig(w http.ResponseWriter, r *http.Request
 			CharacterCount:   strconv.FormatInt(int64(campaign.GetCharacterCount()), 10),
 		})
 	}
-	if err := writePage(w, r, webtemplates.CampaignsListPage(page, normalized), composeHTMXTitle(page.Loc, "game.campaigns.title")); err != nil {
+	if err := writePage(w, r, webtemplates.CampaignsListPage(page, normalized), composeHTMXTitleForPage(page, "game.campaigns.title")); err != nil {
 		localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.failed_to_render_campaigns_list_page")
 	}
 }
@@ -346,7 +346,7 @@ func renderAppCampaignCreatePage(w http.ResponseWriter, r *http.Request, page we
 func renderAppCampaignCreatePageWithContext(w http.ResponseWriter, r *http.Request, page webtemplates.PageContext) {
 	// renderAppCampaignCreatePageWithAppName renders the campaign creation form used by
 	// the create flow.
-	if err := writePage(w, r, webtemplates.CampaignCreatePage(page), composeHTMXTitle(page.Loc, "game.create.title")); err != nil {
+	if err := writePage(w, r, webtemplates.CampaignCreatePage(page), composeHTMXTitleForPage(page, "game.create.title")); err != nil {
 		localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.failed_to_render_campaign_create_page")
 	}
 }
