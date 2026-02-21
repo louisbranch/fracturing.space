@@ -9,8 +9,13 @@ import (
 
 // CampaignListItem models one campaign row in the campaigns list.
 type CampaignListItem struct {
-	ID   string
-	Name string
+	ID               string
+	Name             string
+	System           string
+	GMMode           string
+	ParticipantCount string
+	CharacterCount   string
+	CreatedDate      string
 }
 
 // SessionListItem models one session row in the sessions list.
@@ -112,32 +117,102 @@ templ GamePageShell(appName string, title string, lang string) {
 templ CampaignsListPage(appName string, campaigns []CampaignListItem) {
 	@GamePageShell(appName, "Campaigns", "en") {
 		<h1>Campaigns</h1>
-		<p><a href="/campaigns/create"><button type="button">Start a new Campaign</button></a></p>
-		<ul>
-			for _, campaign := range campaigns {
-				<li>
-					if campaign.ID != "" {
-						<a href={ "/campaigns/" + campaign.ID }>{ campaign.Name }</a>
-					} else {
-						{ campaign.Name }
-					}
-				</li>
-			}
-		</ul>
+		<div class="card bg-base-200">
+			<div class="card-body">
+				<div class="flex flex-wrap items-center justify-between gap-3">
+					<h2 class="card-title">Campaigns</h2>
+					<a class="btn btn-primary btn-sm" href="/campaigns/create">Start a new Campaign</a>
+				</div>
+				<div class="overflow-x-auto">
+					<table class="table table-zebra">
+						<thead>
+							<tr>
+								<th>Campaign</th>
+								<th>System</th>
+								<th>GM Mode</th>
+								<th>Participants</th>
+								<th>Characters</th>
+								<th>Created</th>
+							</tr>
+						</thead>
+						<tbody>
+							if len(campaigns) == 0 {
+								<tr>
+									<td colspan="6">No campaigns yet.</td>
+								</tr>
+							}
+							for _, campaign := range campaigns {
+								<tr>
+									<td>
+										if campaign.ID != "" {
+											<a href={ "/campaigns/" + campaign.ID }>{ campaign.Name }</a>
+										} else {
+											{ campaign.Name }
+										}
+									</td>
+									<td>{ campaign.System }</td>
+									<td>{ campaign.GMMode }</td>
+									<td>{ campaign.ParticipantCount }</td>
+									<td>{ campaign.CharacterCount }</td>
+									<td>{ campaign.CreatedDate }</td>
+								</tr>
+							}
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</div>
 	}
 }
 
 templ CampaignCreatePage(appName string) {
 	@GamePageShell(appName, "Campaigns", "en") {
 		<h1>Campaigns</h1>
-		<form method="post" action="/campaigns/create">
-			<label>Campaign Name <input type="text" name="name" placeholder="campaign name" required></label>
-			<label>Game System <select name="system"><option value="daggerheart" selected>Daggerheart</option></select></label>
-			<label>GM Mode <select name="gm_mode"><option value="human" selected>Human</option><option value="ai">AI</option><option value="hybrid">Hybrid</option></select></label>
-			<label>Creator Display Name <input type="text" name="creator_display_name" placeholder="display name"></label>
-			<label>Theme Prompt <textarea name="theme_prompt" rows="4" placeholder="theme prompt"></textarea></label>
-			<button type="submit">Create Campaign</button>
-		</form>
+		<div class="card bg-base-200">
+			<div class="card-body">
+				<form method="post" action="/campaigns/create" class="space-y-4">
+					<div class="form-control">
+						<label class="label">
+							<span class="label-text">Campaign Name</span>
+						</label>
+						<input type="text" name="name" placeholder="E.g.: Autumn Twilight" required class="input input-bordered w-full">
+					</div>
+					<div class="form-control">
+						<label class="label">
+							<span class="label-text">Game System</span>
+						</label>
+						<select name="system" required class="select select-bordered w-full">
+							<option value="daggerheart" selected>Daggerheart</option>
+						</select>
+					</div>
+					<div class="form-control">
+						<label class="label">
+							<span class="label-text">GM Mode</span>
+						</label>
+						<select name="gm_mode" required class="select select-bordered w-full">
+							<option value="human" selected>Human</option>
+							<option value="ai">AI</option>
+							<option value="hybrid">Hybrid</option>
+						</select>
+					</div>
+					<div class="form-control">
+						<label class="label">
+							<span class="label-text">Participant Name</span>
+						</label>
+						<input type="text" name="creator_display_name" placeholder="E.g.: Tracy" class="input input-bordered w-full">
+					</div>
+					<div class="form-control">
+						<label class="label">
+							<span class="label-text">Theme Prompt</span>
+						</label>
+						<textarea name="theme_prompt" rows="4" placeholder="E.g.: The struggle between good and evil amid the rediscovery of faith and hope in a world fallen into darkness." class="textarea textarea-bordered w-full"></textarea>
+					</div>
+					<div class="card-actions justify-end">
+						<button class="btn btn-primary" type="submit">Create Campaign</button>
+					</div>
+				</form>
+			</div>
+		</div>
 	}
 }
 
@@ -145,10 +220,21 @@ templ SessionsListPage(appName string, campaignID string, canManage bool, sessio
 	@GamePageShell(appName, "Sessions", "en") {
 		<h1>Sessions</h1>
 		if canManage {
-			<form method="post" action={ "/campaigns/" + campaignID + "/sessions/start" }>
-				<input type="text" name="name" placeholder="session name">
-				<button type="submit">Start Session</button>
-			</form>
+			<div class="card bg-base-200">
+				<div class="card-body">
+					<form method="post" action={ "/campaigns/" + campaignID + "/sessions/start" } class="space-y-4">
+						<div class="form-control">
+							<label class="label">
+								<span class="label-text">Session Name</span>
+							</label>
+							<input type="text" name="name" placeholder="session name" class="input input-bordered w-full">
+						</div>
+						<div class="card-actions justify-end">
+							<button class="btn btn-primary btn-sm" type="submit">Start Session</button>
+						</div>
+					</form>
+				</div>
+			</div>
 		}
 		<ul>
 			for _, session := range sessions {
@@ -161,7 +247,7 @@ templ SessionsListPage(appName string, campaignID string, canManage bool, sessio
 					if canManage && session.IsActive && session.ID != "" {
 						<form method="post" action={ "/campaigns/" + campaignID + "/sessions/end" }>
 							<input type="hidden" name="session_id" value={ session.ID }>
-							<button type="submit">End Session</button>
+							<button class="btn btn-outline btn-error btn-xs" type="submit">End Session</button>
 						</form>
 					}
 				</li>
@@ -188,50 +274,67 @@ templ CampaignParticipantsPage(appName string, campaignID string, canManage bool
 			for _, participant := range participants {
 				<li>{ participant.Name }
 					if canManage && participant.ID != "" {
-						<form method="post" action={ "/campaigns/" + campaignID + "/participants/update" }>
+						<form method="post" action={ "/campaigns/" + campaignID + "/participants/update" } class="space-y-3 pt-3">
 							<input type="hidden" name="participant_id" value={ participant.ID }>
-							<select name="campaign_access">
-								if participant.MemberSelected {
-									<option value="member" selected>member</option>
-								} else {
-									<option value="member">member</option>
-								}
-								if participant.ManagerSelected {
-									<option value="manager" selected>manager</option>
-								} else {
-									<option value="manager">manager</option>
-								}
-								if participant.OwnerSelected {
-									<option value="owner" selected>owner</option>
-								} else {
-									<option value="owner">owner</option>
-								}
-							</select>
-							<select name="role">
-								if participant.GMSelected {
-									<option value="gm" selected>gm</option>
-								} else {
-									<option value="gm">gm</option>
-								}
-								if participant.PlayerSelected {
-									<option value="player" selected>player</option>
-								} else {
-									<option value="player">player</option>
-								}
-							</select>
-							<select name="controller">
-								if participant.HumanSelected {
-									<option value="human" selected>human</option>
-								} else {
-									<option value="human">human</option>
-								}
-								if participant.AISelected {
-									<option value="ai" selected>ai</option>
-								} else {
-									<option value="ai">ai</option>
-								}
-							</select>
-							<button type="submit">Update Access</button>
+							<div class="form-control">
+								<label class="label">
+									<span class="label-text">Campaign Access</span>
+								</label>
+								<select name="campaign_access" class="select select-bordered w-full">
+									if participant.MemberSelected {
+										<option value="member" selected>member</option>
+									} else {
+										<option value="member">member</option>
+									}
+									if participant.ManagerSelected {
+										<option value="manager" selected>manager</option>
+									} else {
+										<option value="manager">manager</option>
+									}
+									if participant.OwnerSelected {
+										<option value="owner" selected>owner</option>
+									} else {
+										<option value="owner">owner</option>
+									}
+								</select>
+							</div>
+							<div class="form-control">
+								<label class="label">
+									<span class="label-text">Role</span>
+								</label>
+								<select name="role" class="select select-bordered w-full">
+									if participant.GMSelected {
+										<option value="gm" selected>gm</option>
+									} else {
+										<option value="gm">gm</option>
+									}
+									if participant.PlayerSelected {
+										<option value="player" selected>player</option>
+									} else {
+										<option value="player">player</option>
+									}
+								</select>
+							</div>
+							<div class="form-control">
+								<label class="label">
+									<span class="label-text">Controller</span>
+								</label>
+								<select name="controller" class="select select-bordered w-full">
+									if participant.HumanSelected {
+										<option value="human" selected>human</option>
+									} else {
+										<option value="human">human</option>
+									}
+									if participant.AISelected {
+										<option value="ai" selected>ai</option>
+									} else {
+										<option value="ai">ai</option>
+									}
+								</select>
+							</div>
+							<div class="card-actions justify-start">
+								<button class="btn btn-soft btn-sm" type="submit">Update Access</button>
+							</div>
 						</form>
 					}
 				</li>
@@ -244,14 +347,30 @@ templ CampaignCharactersPage(appName string, campaignID string, canManage bool, 
 	@GamePageShell(appName, "Characters", "en") {
 		<h1>Characters</h1>
 		if canManage {
-			<form method="post" action={ "/campaigns/" + campaignID + "/characters/create" }>
-				<input type="text" name="name" placeholder="character name" required>
-				<select name="kind">
-					<option value="pc">pc</option>
-					<option value="npc">npc</option>
-				</select>
-				<button type="submit">Create Character</button>
-			</form>
+			<div class="card bg-base-200">
+				<div class="card-body">
+					<form method="post" action={ "/campaigns/" + campaignID + "/characters/create" } class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+						<div class="form-control">
+							<label class="label">
+								<span class="label-text">Character Name</span>
+							</label>
+							<input type="text" name="name" placeholder="character name" required class="input input-bordered w-full">
+						</div>
+						<div class="form-control">
+							<label class="label">
+								<span class="label-text">Kind</span>
+							</label>
+							<select name="kind" class="select select-bordered w-full">
+								<option value="pc">pc</option>
+								<option value="npc">npc</option>
+							</select>
+						</div>
+						<div class="card-actions justify-end">
+							<button class="btn btn-primary btn-sm" type="submit">Create Character</button>
+						</div>
+					</form>
+				</div>
+			</div>
 		}
 		<ul>
 			for _, character := range characters {
@@ -265,11 +384,11 @@ templ CampaignCharactersPage(appName string, campaignID string, canManage bool, 
 						<form method="post" action={ "/campaigns/" + campaignID + "/characters/update" }>
 							<input type="hidden" name="character_id" value={ character.ID }>
 							if character.EditableName != "" {
-								<input type="text" name="name" value={ character.EditableName }>
+								<input type="text" name="name" value={ character.EditableName } class="input input-bordered w-full">
 							} else {
-								<input type="text" name="name" value="" placeholder={ character.DisplayName }>
+								<input type="text" name="name" value="" placeholder={ character.DisplayName } class="input input-bordered w-full">
 							}
-							<select name="kind">
+							<select name="kind" class="select select-bordered w-full">
 								if character.PCSelected {
 									<option value="pc" selected>pc</option>
 								} else {
@@ -281,11 +400,11 @@ templ CampaignCharactersPage(appName string, campaignID string, canManage bool, 
 									<option value="npc">npc</option>
 								}
 							</select>
-							<button type="submit">Update Character</button>
+							<button class="btn btn-soft btn-sm" type="submit">Update Character</button>
 						</form>
 						<form method="post" action={ "/campaigns/" + campaignID + "/characters/control" }>
 							<input type="hidden" name="character_id" value={ character.ID }>
-							<select name="participant_id">
+							<select name="participant_id" class="select select-bordered w-full">
 								for _, participant := range character.ControlOptions {
 									if participant.Selected {
 										<option value={ participant.ID } selected>{ participant.Label }</option>
@@ -294,7 +413,7 @@ templ CampaignCharactersPage(appName string, campaignID string, canManage bool, 
 									}
 								}
 							</select>
-							<button type="submit">Set Controller</button>
+							<button class="btn btn-soft btn-sm" type="submit">Set Controller</button>
 						</form>
 					}
 				</li>
@@ -318,11 +437,27 @@ templ CampaignInvitesPage(appName string, campaignID string, canManage bool, inv
 	@GamePageShell(appName, "Campaign Invites", "en") {
 		<h1>Campaign Invites</h1>
 		if canManage {
-			<form method="post" action={ "/campaigns/" + campaignID + "/invites/create" }>
-				<input type="text" name="participant_id" placeholder="participant id" required>
-				<input type="text" name="recipient_user_id" placeholder="recipient user id">
-				<button type="submit">Create Invite</button>
-			</form>
+			<div class="card bg-base-200">
+				<div class="card-body">
+					<form method="post" action={ "/campaigns/" + campaignID + "/invites/create" } class="grid grid-cols-1 md:grid-cols-3 gap-4">
+						<div class="form-control">
+							<label class="label">
+								<span class="label-text">Participant ID</span>
+							</label>
+							<input type="text" name="participant_id" placeholder="participant id" required class="input input-bordered w-full">
+						</div>
+						<div class="form-control">
+							<label class="label">
+								<span class="label-text">Recipient User ID</span>
+							</label>
+							<input type="text" name="recipient_user_id" placeholder="recipient user id" class="input input-bordered w-full">
+						</div>
+						<div class="card-actions justify-end">
+							<button class="btn btn-primary btn-sm" type="submit">Create Invite</button>
+						</div>
+					</form>
+				</div>
+			</div>
 		}
 		<ul>
 			for _, invite := range invites {
@@ -330,7 +465,7 @@ templ CampaignInvitesPage(appName string, campaignID string, canManage bool, inv
 					if canManage && invite.ID != "" {
 						<form method="post" action={ "/campaigns/" + campaignID + "/invites/revoke" }>
 							<input type="hidden" name="invite_id" value={ invite.ID }>
-							<button type="submit">Revoke</button>
+							<button class="btn btn-soft btn-sm" type="submit">Revoke</button>
 						</form>
 					}
 				</li>
@@ -350,7 +485,7 @@ templ UserInvitesPage(appName string, invites []UserInviteItem) {
 							<input type="hidden" name="campaign_id" value={ invite.CampaignID }>
 							<input type="hidden" name="invite_id" value={ invite.InviteID }>
 							<input type="hidden" name="participant_id" value={ invite.ParticipantID }>
-							<button type="submit">Claim</button>
+							<button class="btn btn-primary btn-sm" type="submit">Claim</button>
 						</form>
 					}
 				</li>

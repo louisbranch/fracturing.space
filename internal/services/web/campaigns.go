@@ -5,18 +5,20 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func (h *handler) handleAppCampaigns(w http.ResponseWriter, r *http.Request) {
 	// Campaign list is the web entrypoint into the campaign read model and is
-	// intentionally participant-only to keep campaign listing scoped by active
-	// participant identity.
+	// intentionally user-scoped so each campaign user can view all relevant
+	// entries regardless of active participant context.
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -39,7 +41,7 @@ func (h *handler) handleAppCampaigns(w http.ResponseWriter, r *http.Request) {
 	}
 
 	requestCtx := r.Context()
-	participantID, err := h.sessionParticipantID(requestCtx, sess.accessToken)
+	userID, err := h.sessionUserID(requestCtx, sess.accessToken)
 	listCampaigns := func(ctx context.Context) ([]*statev1.Campaign, error) {
 		resp, err := h.campaignClient.ListCampaigns(ctx, &statev1.ListCampaignsRequest{})
 		if err != nil {
@@ -48,12 +50,12 @@ func (h *handler) handleAppCampaigns(w http.ResponseWriter, r *http.Request) {
 		return resp.GetCampaigns(), nil
 	}
 
-	if err != nil || strings.TrimSpace(participantID) == "" {
+	if err != nil || strings.TrimSpace(userID) == "" {
 		renderAppCampaignsListPageWithAppName(w, r, h.resolvedAppName(), []*statev1.Campaign{})
 		return
 	}
 
-	requestCtx = grpcauthctx.WithParticipantID(requestCtx, participantID)
+	requestCtx = grpcauthctx.WithUserID(requestCtx, userID)
 	campaigns, err := listCampaigns(requestCtx)
 	if err != nil {
 		h.renderErrorPage(w, r, http.StatusBadGateway, "Campaigns unavailable", "failed to list campaigns")
@@ -169,17 +171,6 @@ func (h *handler) sessionUserID(ctx context.Context, accessToken string) (string
 	return svc.introspectUserID(ctx, accessToken)
 }
 
-func (h *handler) sessionParticipantID(ctx context.Context, accessToken string) (string, error) {
-	if h == nil || h.campaignAccess == nil {
-		return "", errors.New("campaign access checker is not configured")
-	}
-	svc, ok := h.campaignAccess.(*campaignAccessService)
-	if !ok {
-		return "", errors.New("campaign access checker does not support participant introspection")
-	}
-	return svc.introspectParticipantID(ctx, accessToken)
-}
-
 func (h *handler) ensureCampaignClients(ctx context.Context) error {
 	if h == nil {
 		return errors.New("web handler is not configured")
@@ -230,14 +221,48 @@ func renderAppCampaignsListPageWithAppName(w http.ResponseWriter, r *http.Reques
 			name = campaignID
 		}
 		normalized = append(normalized, webtemplates.CampaignListItem{
-			ID:   campaignID,
-			Name: name,
+			ID:               campaignID,
+			Name:             name,
+			System:           formatWebCampaignSystem(campaign.GetSystem()),
+			GMMode:           formatWebCampaignGmMode(campaign.GetGmMode()),
+			ParticipantCount: strconv.FormatInt(int64(campaign.GetParticipantCount()), 10),
+			CharacterCount:   strconv.FormatInt(int64(campaign.GetCharacterCount()), 10),
+			CreatedDate:      formatCampaignCreatedDate(campaign.GetCreatedAt()),
 		})
 	}
 	writeGameContentType(w)
 	if err := webtemplates.CampaignsListPage(appName, normalized).Render(r.Context(), w); err != nil {
 		http.Error(w, "failed to render campaigns list page", http.StatusInternalServerError)
 	}
+}
+
+func formatWebCampaignSystem(system commonv1.GameSystem) string {
+	switch system {
+	case commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART:
+		return "Daggerheart"
+	default:
+		return "Unspecified"
+	}
+}
+
+func formatWebCampaignGmMode(mode statev1.GmMode) string {
+	switch mode {
+	case statev1.GmMode_HUMAN:
+		return "Human"
+	case statev1.GmMode_AI:
+		return "AI"
+	case statev1.GmMode_HYBRID:
+		return "Hybrid"
+	default:
+		return "Unspecified"
+	}
+}
+
+func formatCampaignCreatedDate(createdAt *timestamppb.Timestamp) string {
+	if createdAt == nil {
+		return ""
+	}
+	return createdAt.AsTime().Format("2006-01-02")
 }
 
 func renderAppCampaignCreatePage(w http.ResponseWriter, r *http.Request) {

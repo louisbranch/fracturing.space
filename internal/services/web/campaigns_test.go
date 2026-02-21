@@ -259,9 +259,8 @@ func TestAppCampaignsPageRendersUserScopedCampaigns(t *testing.T) {
 		}
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(introspectResponse{
-			Active:        true,
-			UserID:        "user-123",
-			ParticipantID: "part-123",
+			Active: true,
+			UserID: "user-123",
 		})
 	}))
 	t.Cleanup(authServer.Close)
@@ -323,12 +322,16 @@ func TestAppCampaignsPageRendersUserScopedCampaigns(t *testing.T) {
 		t.Fatalf("expected list view to not render the create form")
 	}
 	participantIDs := campaignClient.listMetadata.Get(grpcmeta.ParticipantIDHeader)
-	if len(participantIDs) != 1 || participantIDs[0] != "part-123" {
-		t.Fatalf("metadata %s = %v, want [part-123]", grpcmeta.ParticipantIDHeader, participantIDs)
+	if len(participantIDs) != 0 {
+		t.Fatalf("metadata %s = %v, want []", grpcmeta.ParticipantIDHeader, participantIDs)
+	}
+	userIDs := campaignClient.listMetadata.Get(grpcmeta.UserIDHeader)
+	if len(userIDs) != 1 || userIDs[0] != "user-123" {
+		t.Fatalf("metadata %s = %v, want [user-123]", grpcmeta.UserIDHeader, userIDs)
 	}
 }
 
-func TestAppCampaignsPageReturnsEmptyListWhenParticipantScopeHasNoCampaigns(t *testing.T) {
+func TestAppCampaignsPageReturnsEmptyListWhenUserScopeHasNoCampaigns(t *testing.T) {
 	introspectCalls := 0
 	authServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		introspectCalls++
@@ -337,9 +340,8 @@ func TestAppCampaignsPageReturnsEmptyListWhenParticipantScopeHasNoCampaigns(t *t
 		}
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(introspectResponse{
-			Active:        true,
-			UserID:        "user-123",
-			ParticipantID: "part-stale",
+			Active: true,
+			UserID: "user-123",
 		})
 	}))
 	t.Cleanup(authServer.Close)
@@ -375,24 +377,28 @@ func TestAppCampaignsPageReturnsEmptyListWhenParticipantScopeHasNoCampaigns(t *t
 	}
 	body := w.Body.String()
 	if strings.Contains(body, "Campaign One") {
-		t.Fatalf("expected no campaign items when participant scope is empty")
+		t.Fatalf("expected no campaign items when user scope is empty")
 	}
 	if strings.Contains(body, "Campaign Two") {
-		t.Fatalf("expected no campaign items when participant scope is empty")
+		t.Fatalf("expected no campaign items when user scope is empty")
 	}
 	if campaignClient.listCalls != 1 {
 		t.Fatalf("list calls = %d, want %d", campaignClient.listCalls, 1)
 	}
 	participantIDs := campaignClient.listMetadataByCall[0].Get(grpcmeta.ParticipantIDHeader)
-	if len(participantIDs) != 1 || participantIDs[0] != "part-stale" {
-		t.Fatalf("metadata %s = %v, want [part-stale]", grpcmeta.ParticipantIDHeader, participantIDs)
+	if len(participantIDs) != 0 {
+		t.Fatalf("metadata %s = %v, want []", grpcmeta.ParticipantIDHeader, participantIDs)
+	}
+	userIDs := campaignClient.listMetadataByCall[0].Get(grpcmeta.UserIDHeader)
+	if len(userIDs) != 1 || userIDs[0] != "user-123" {
+		t.Fatalf("metadata %s = %v, want [user-123]", grpcmeta.UserIDHeader, userIDs)
 	}
 	if introspectCalls != 1 {
 		t.Fatalf("introspect calls = %d, want %d", introspectCalls, 1)
 	}
 }
 
-func TestAppCampaignsPageRendersEmptyListWhenParticipantIdentityUnavailable(t *testing.T) {
+func TestAppCampaignsPageRendersEmptyListWhenUserIdentityUnavailable(t *testing.T) {
 	h := &handler{
 		config:         Config{AuthBaseURL: "http://auth.local"},
 		sessions:       newSessionStore(),
@@ -415,10 +421,10 @@ func TestAppCampaignsPageRendersEmptyListWhenParticipantIdentityUnavailable(t *t
 		t.Fatalf("expected empty list action in response")
 	}
 	if strings.Contains(body, "Campaigns unavailable") {
-		t.Fatalf("expected campaign list route to avoid service-unavailable when participant identity is missing")
+		t.Fatalf("expected campaign list route to avoid service-unavailable when user identity is missing")
 	}
 	if strings.Contains(body, "Campaign One") || strings.Contains(body, "Campaign Two") {
-		t.Fatalf("expected list to be empty when participant identity is missing")
+		t.Fatalf("expected list to be empty when user identity is missing")
 	}
 }
 
@@ -429,8 +435,8 @@ func TestAppCampaignsPageRendersEmptyListWhenCampaignServiceUnavailable(t *testi
 		}
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(introspectResponse{
-			Active:        true,
-			ParticipantID: "part-123",
+			Active: true,
+			UserID: "user-123",
 		})
 	}))
 	t.Cleanup(authServer.Close)
