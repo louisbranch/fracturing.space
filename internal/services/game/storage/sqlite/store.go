@@ -5793,59 +5793,17 @@ func (s *Store) ListEventsPage(ctx context.Context, req storage.ListEventsPageRe
 		req.PageSize = 200
 	}
 
-	// Build the base WHERE clause
-	whereClause := "campaign_id = ?"
-	params := []any{req.CampaignID}
-
-	// Add cursor condition if paginating
-	// The cursor direction directly determines the comparison operator:
-	// - Forward (fwd): seq > cursor
-	// - Backward (bwd): seq < cursor
-	// The Descending flag only affects ORDER BY, not the cursor comparison.
-	// The event_service.go is responsible for choosing the right cursor direction
-	// based on both the sort order and whether we're going to next/prev page.
-	if req.CursorSeq > 0 {
-		if req.CursorDir == "bwd" {
-			whereClause += " AND seq < ?"
-		} else {
-			whereClause += " AND seq > ?"
-		}
-		params = append(params, req.CursorSeq)
-	}
-
-	// Add filter clause if provided
-	if req.FilterClause != "" {
-		whereClause += " AND " + req.FilterClause
-		params = append(params, req.FilterParams...)
-	}
-
-	// Determine sort order
-	orderClause := "ORDER BY seq ASC"
-	if req.Descending {
-		orderClause = "ORDER BY seq DESC"
-	}
-	// For "previous page" navigation, temporarily reverse the sort to fetch
-	// items nearest to the cursor first, then reverse the results afterward.
-	if req.CursorReverse {
-		if req.Descending {
-			orderClause = "ORDER BY seq ASC"
-		} else {
-			orderClause = "ORDER BY seq DESC"
-		}
-	}
-
-	// Fetch one extra row to detect if there are more pages
-	limitClause := fmt.Sprintf("LIMIT %d", req.PageSize+1)
+	plan := buildListEventsPageSQLPlan(req)
 
 	// Build and execute the query
 	query := fmt.Sprintf(
 		"SELECT campaign_id, seq, event_hash, prev_event_hash, chain_hash, signature_key_id, event_signature, timestamp, event_type, session_id, request_id, invocation_id, actor_type, actor_id, entity_type, entity_id, system_id, system_version, correlation_id, causation_id, payload_json FROM events WHERE %s %s %s",
-		whereClause,
-		orderClause,
-		limitClause,
+		plan.whereClause,
+		plan.orderClause,
+		plan.limitClause,
 	)
 
-	rows, err := s.sqlDB.QueryContext(ctx, query, params...)
+	rows, err := s.sqlDB.QueryContext(ctx, query, plan.params...)
 	if err != nil {
 		return storage.ListEventsPageResult{}, fmt.Errorf("query events: %w", err)
 	}
@@ -5903,17 +5861,9 @@ func (s *Store) ListEventsPage(ctx context.Context, req storage.ListEventsPageRe
 		}
 	}
 
-	// Build count query for total
-	countWhereClause := "campaign_id = ?"
-	countParams := []any{req.CampaignID}
-	if req.FilterClause != "" {
-		countWhereClause += " AND " + req.FilterClause
-		countParams = append(countParams, req.FilterParams...)
-	}
-
-	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM events WHERE %s", countWhereClause)
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM events WHERE %s", plan.countWhereClause)
 	var totalCount int
-	if err := s.sqlDB.QueryRowContext(ctx, countQuery, countParams...).Scan(&totalCount); err != nil {
+	if err := s.sqlDB.QueryRowContext(ctx, countQuery, plan.countParams...).Scan(&totalCount); err != nil {
 		return storage.ListEventsPageResult{}, fmt.Errorf("count events: %w", err)
 	}
 

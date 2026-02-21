@@ -236,6 +236,8 @@ type StatisticsStore interface {
 type ListEventsPageRequest struct {
 	// CampaignID scopes the query to a specific campaign (required).
 	CampaignID string
+	// AfterSeq returns only events with seq greater than this value.
+	AfterSeq uint64
 	// PageSize is the maximum number of events to return (default: 50, max: 200).
 	PageSize int
 	// CursorSeq is the sequence number to paginate from (0 for first page).

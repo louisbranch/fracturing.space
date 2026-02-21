@@ -99,6 +99,7 @@ func TestAppCampaignCharacterControlRedirectsUnauthenticatedToLogin(t *testing.T
 type fakeWebCharacterClient struct {
 	response   *statev1.ListCharactersResponse
 	lastReq    *statev1.ListCharactersRequest
+	listCalls  int
 	sheetReq   *statev1.GetCharacterSheetRequest
 	sheetResp  *statev1.GetCharacterSheetResponse
 	createReq  *statev1.CreateCharacterRequest
@@ -137,11 +138,96 @@ func (f *fakeWebCharacterClient) DeleteCharacter(context.Context, *statev1.Delet
 }
 
 func (f *fakeWebCharacterClient) ListCharacters(_ context.Context, req *statev1.ListCharactersRequest, _ ...grpc.CallOption) (*statev1.ListCharactersResponse, error) {
+	f.listCalls++
 	f.lastReq = req
 	if f.response != nil {
 		return f.response, nil
 	}
 	return &statev1.ListCharactersResponse{}, nil
+}
+
+func TestAppCampaignCharactersPageCachesCharactersAndControlParticipants(t *testing.T) {
+	authServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/introspect" {
+			t.Fatalf("path = %q, want %q", r.URL.Path, "/introspect")
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(introspectResponse{Active: true, UserID: "Alice"})
+	}))
+	t.Cleanup(authServer.Close)
+
+	cacheStore := newFakeWebCacheStore()
+	participantClient := &fakeWebParticipantClient{
+		pages: map[string]*statev1.ListParticipantsResponse{
+			"": {
+				Participants: []*statev1.Participant{
+					{
+						Id:             "part-manager",
+						CampaignId:     "camp-123",
+						UserId:         "Alice",
+						CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER,
+					},
+					{
+						Id:             "part-player",
+						CampaignId:     "camp-123",
+						UserId:         "Bob",
+						CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_MEMBER,
+					},
+				},
+			},
+		},
+	}
+	characterClient := &fakeWebCharacterClient{
+		response: &statev1.ListCharactersResponse{
+			Characters: []*statev1.Character{
+				{Id: "char-1", CampaignId: "camp-123", Name: "Mira"},
+			},
+		},
+	}
+	h := &handler{
+		config: Config{
+			AuthBaseURL:         authServer.URL,
+			OAuthResourceSecret: "secret-1",
+		},
+		sessions:          newSessionStore(),
+		pendingFlows:      newPendingFlowStore(),
+		participantClient: participantClient,
+		characterClient:   characterClient,
+		cacheStore:        cacheStore,
+		campaignAccess: &campaignAccessService{
+			authBaseURL:         authServer.URL,
+			oauthResourceSecret: "secret-1",
+			httpClient:          authServer.Client(),
+			participantClient:   participantClient,
+		},
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+
+	req1 := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/characters", nil)
+	req1.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w1 := httptest.NewRecorder()
+	h.handleAppCampaignDetail(w1, req1)
+	if w1.Code != http.StatusOK {
+		t.Fatalf("first status = %d, want %d", w1.Code, http.StatusOK)
+	}
+
+	req2 := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/characters", nil)
+	req2.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w2 := httptest.NewRecorder()
+	h.handleAppCampaignDetail(w2, req2)
+	if w2.Code != http.StatusOK {
+		t.Fatalf("second status = %d, want %d", w2.Code, http.StatusOK)
+	}
+
+	if characterClient.listCalls != 1 {
+		t.Fatalf("list characters calls = %d, want %d", characterClient.listCalls, 1)
+	}
+	if len(participantClient.calls) != 3 {
+		t.Fatalf("list participants calls = %d, want %d", len(participantClient.calls), 3)
+	}
+	if cacheStore.putCalls == 0 {
+		t.Fatalf("expected cache store put calls")
+	}
 }
 
 func (f *fakeWebCharacterClient) SetDefaultControl(ctx context.Context, req *statev1.SetDefaultControlRequest, _ ...grpc.CallOption) (*statev1.SetDefaultControlResponse, error) {

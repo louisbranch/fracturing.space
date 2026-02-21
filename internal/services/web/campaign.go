@@ -37,6 +37,14 @@ func (h *handler) campaignDisplayName(ctx context.Context, campaignID string) st
 	if cached := h.cachedCampaignName(campaignID); cached != "" {
 		return cached
 	}
+	if cachedCampaign, ok := h.cachedCampaign(ctx, campaignID); ok {
+		name := strings.TrimSpace(cachedCampaign.GetName())
+		if name == "" {
+			return campaignID
+		}
+		h.setCampaignNameCache(campaignID, name)
+		return name
+	}
 	if h == nil || h.campaignClient == nil {
 		return campaignID
 	}
@@ -58,6 +66,7 @@ func (h *handler) campaignDisplayName(ctx context.Context, campaignID string) st
 	if name == "" {
 		return campaignID
 	}
+	h.setCampaignCache(ctx, resp.GetCampaign())
 	h.setCampaignNameCache(campaignID, name)
 	return name
 }

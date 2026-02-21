@@ -2,6 +2,7 @@ package game
 
 import (
 	"context"
+	"strconv"
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
@@ -23,6 +24,21 @@ const (
 type EventService struct {
 	campaignv1.UnimplementedEventServiceServer
 	stores Stores
+}
+
+type normalizedListEventsRequest struct {
+	campaignID      string
+	pageSize        int
+	orderBy         string
+	descending      bool
+	filterStr       string
+	afterSeq        uint64
+	paginationScope string
+	filterClause    string
+	filterParams    []any
+	cursorSeq       uint64
+	cursorDir       string
+	cursorReverse   bool
 }
 
 // NewEventService creates an EventService with the provided stores.
@@ -48,82 +64,25 @@ func (s *EventService) AppendEvent(ctx context.Context, in *campaignv1.AppendEve
 
 // ListEvents returns a paginated, filtered, and sorted list of events for a campaign.
 func (s *EventService) ListEvents(ctx context.Context, in *campaignv1.ListEventsRequest) (*campaignv1.ListEventsResponse, error) {
-	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "request is required")
-	}
-
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign_id is required")
-	}
-
-	pageSize := pagination.ClampPageSize(in.GetPageSize(), pagination.PageSizeConfig{
-		Default: defaultListEventsPageSize,
-		Max:     maxListEventsPageSize,
-	})
-
-	orderBy, err := pagination.NormalizeOrderBy(strings.TrimSpace(in.GetOrderBy()), pagination.OrderByConfig{
-		Default: "seq",
-		Allowed: []string{"seq", "seq desc"},
-	})
+	normalized, err := normalizeListEventsRequest(in)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid order_by: %s (must be 'seq' or 'seq desc')", strings.TrimSpace(in.GetOrderBy()))
-	}
-	descending := orderBy == "seq desc"
-
-	// Parse filter
-	filterStr := strings.TrimSpace(in.GetFilter())
-	var filterClause string
-	var filterParams []any
-	if filterStr != "" {
-		cond, err := filter.ParseEventFilter(filterStr)
-		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "invalid filter: %v", err)
-		}
-		filterClause = cond.Clause
-		filterParams = cond.Params
-	}
-
-	// Parse cursor
-	var cursorSeq uint64
-	var cursorDir string
-	var cursorReverse bool
-	pageToken := strings.TrimSpace(in.GetPageToken())
-	if pageToken != "" {
-		c, err := pagination.Decode(pageToken)
-		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "invalid page_token: %v", err)
-		}
-		// Validate filter hasn't changed
-		if err := pagination.ValidateFilterHash(c, filterStr); err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "page_token invalid: %v", err)
-		}
-		// Validate order_by hasn't changed
-		if err := pagination.ValidateOrderHash(c, orderBy); err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "page_token invalid: %v", err)
-		}
-		seqValue, err := pagination.ValueUint(c, "seq")
-		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "page_token invalid: %v", err)
-		}
-		cursorSeq = seqValue
-		cursorDir = string(c.Dir)
-		cursorReverse = c.Reverse
+		return nil, err
 	}
 
 	// Build request
-	req := storage.ListEventsPageRequest{
-		CampaignID:    campaignID,
-		PageSize:      pageSize,
-		CursorSeq:     cursorSeq,
-		CursorDir:     cursorDir,
-		CursorReverse: cursorReverse,
-		Descending:    descending,
-		FilterClause:  filterClause,
-		FilterParams:  filterParams,
+	storeReq := storage.ListEventsPageRequest{
+		CampaignID:    normalized.campaignID,
+		AfterSeq:      normalized.afterSeq,
+		PageSize:      normalized.pageSize,
+		CursorSeq:     normalized.cursorSeq,
+		CursorDir:     normalized.cursorDir,
+		CursorReverse: normalized.cursorReverse,
+		Descending:    normalized.descending,
+		FilterClause:  normalized.filterClause,
+		FilterParams:  normalized.filterParams,
 	}
 
-	result, err := s.stores.Event.ListEventsPage(ctx, req)
+	result, err := s.stores.Event.ListEventsPage(ctx, storeReq)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "list events: %v", err)
 	}
@@ -144,9 +103,9 @@ func (s *EventService) ListEvents(ctx context.Context, in *campaignv1.ListEvents
 			lastSeq := result.Events[len(result.Events)-1].Seq
 			nextCursor := pagination.NewNextPageCursor(
 				[]pagination.CursorValue{pagination.UintValue("seq", lastSeq)},
-				descending,
-				filterStr,
-				orderBy,
+				normalized.descending,
+				normalized.paginationScope,
+				normalized.orderBy,
 			)
 			token, err := pagination.Encode(nextCursor)
 			if err == nil {
@@ -157,9 +116,9 @@ func (s *EventService) ListEvents(ctx context.Context, in *campaignv1.ListEvents
 			firstSeq := result.Events[0].Seq
 			prevCursor := pagination.NewPrevPageCursor(
 				[]pagination.CursorValue{pagination.UintValue("seq", firstSeq)},
-				descending,
-				filterStr,
-				orderBy,
+				normalized.descending,
+				normalized.paginationScope,
+				normalized.orderBy,
 			)
 			token, err := pagination.Encode(prevCursor)
 			if err == nil {
@@ -169,6 +128,85 @@ func (s *EventService) ListEvents(ctx context.Context, in *campaignv1.ListEvents
 	}
 
 	return response, nil
+}
+
+func normalizeListEventsRequest(in *campaignv1.ListEventsRequest) (normalizedListEventsRequest, error) {
+	if in == nil {
+		return normalizedListEventsRequest{}, status.Error(codes.InvalidArgument, "request is required")
+	}
+
+	campaignID := strings.TrimSpace(in.GetCampaignId())
+	if campaignID == "" {
+		return normalizedListEventsRequest{}, status.Error(codes.InvalidArgument, "campaign_id is required")
+	}
+
+	pageSize := pagination.ClampPageSize(in.GetPageSize(), pagination.PageSizeConfig{
+		Default: defaultListEventsPageSize,
+		Max:     maxListEventsPageSize,
+	})
+
+	orderBy, err := pagination.NormalizeOrderBy(strings.TrimSpace(in.GetOrderBy()), pagination.OrderByConfig{
+		Default: "seq",
+		Allowed: []string{"seq", "seq desc"},
+	})
+	if err != nil {
+		return normalizedListEventsRequest{}, status.Errorf(codes.InvalidArgument, "invalid order_by: %s (must be 'seq' or 'seq desc')", strings.TrimSpace(in.GetOrderBy()))
+	}
+	descending := orderBy == "seq desc"
+
+	filterStr := strings.TrimSpace(in.GetFilter())
+	afterSeq := in.GetAfterSeq()
+	paginationScope := filterStr + "|after_seq=" + strconv.FormatUint(afterSeq, 10)
+
+	var filterClause string
+	var filterParams []any
+	if filterStr != "" {
+		cond, err := filter.ParseEventFilter(filterStr)
+		if err != nil {
+			return normalizedListEventsRequest{}, status.Errorf(codes.InvalidArgument, "invalid filter: %v", err)
+		}
+		filterClause = cond.Clause
+		filterParams = cond.Params
+	}
+
+	var cursorSeq uint64
+	var cursorDir string
+	var cursorReverse bool
+	pageToken := strings.TrimSpace(in.GetPageToken())
+	if pageToken != "" {
+		c, err := pagination.Decode(pageToken)
+		if err != nil {
+			return normalizedListEventsRequest{}, status.Errorf(codes.InvalidArgument, "invalid page_token: %v", err)
+		}
+		if err := pagination.ValidateFilterHash(c, paginationScope); err != nil {
+			return normalizedListEventsRequest{}, status.Errorf(codes.InvalidArgument, "page_token invalid: %v", err)
+		}
+		if err := pagination.ValidateOrderHash(c, orderBy); err != nil {
+			return normalizedListEventsRequest{}, status.Errorf(codes.InvalidArgument, "page_token invalid: %v", err)
+		}
+		seqValue, err := pagination.ValueUint(c, "seq")
+		if err != nil {
+			return normalizedListEventsRequest{}, status.Errorf(codes.InvalidArgument, "page_token invalid: %v", err)
+		}
+		cursorSeq = seqValue
+		cursorDir = string(c.Dir)
+		cursorReverse = c.Reverse
+	}
+
+	return normalizedListEventsRequest{
+		campaignID:      campaignID,
+		pageSize:        pageSize,
+		orderBy:         orderBy,
+		descending:      descending,
+		filterStr:       filterStr,
+		afterSeq:        afterSeq,
+		paginationScope: paginationScope,
+		filterClause:    filterClause,
+		filterParams:    filterParams,
+		cursorSeq:       cursorSeq,
+		cursorDir:       cursorDir,
+		cursorReverse:   cursorReverse,
+	}, nil
 }
 
 // eventToProto converts a domain event to a proto Event message.

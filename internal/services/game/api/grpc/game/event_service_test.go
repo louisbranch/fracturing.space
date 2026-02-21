@@ -19,6 +19,29 @@ func TestListEvents_NilRequest(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
+func TestNormalizeListEventsRequestDefaultsAndScope(t *testing.T) {
+	req, err := normalizeListEventsRequest(&campaignv1.ListEventsRequest{
+		CampaignId: " c1 ",
+		Filter:     " type = \"session.started\" ",
+		AfterSeq:   7,
+	})
+	if err != nil {
+		t.Fatalf("normalize list events request: %v", err)
+	}
+	if req.campaignID != "c1" {
+		t.Fatalf("campaign id = %q, want %q", req.campaignID, "c1")
+	}
+	if req.pageSize != defaultListEventsPageSize {
+		t.Fatalf("page size = %d, want %d", req.pageSize, defaultListEventsPageSize)
+	}
+	if req.orderBy != "seq" {
+		t.Fatalf("order by = %q, want %q", req.orderBy, "seq")
+	}
+	if req.paginationScope != "type = \"session.started\"|after_seq=7" {
+		t.Fatalf("pagination scope = %q, want %q", req.paginationScope, "type = \"session.started\"|after_seq=7")
+	}
+}
+
 func TestListEvents_MissingCampaignId(t *testing.T) {
 	eventStore := newFakeEventStore()
 	svc := NewEventService(Stores{Event: eventStore})
@@ -108,6 +131,39 @@ func TestListEvents_TokenWithChangedOrderBy(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
+func TestListEvents_TokenWithChangedAfterSeq(t *testing.T) {
+	eventStore := newFakeEventStore()
+	now := time.Now().UTC()
+	eventStore.events["c1"] = []event.Event{
+		{CampaignID: "c1", Seq: 1, Type: event.Type("e1"), Timestamp: now},
+		{CampaignID: "c1", Seq: 2, Type: event.Type("e2"), Timestamp: now},
+		{CampaignID: "c1", Seq: 3, Type: event.Type("e3"), Timestamp: now},
+		{CampaignID: "c1", Seq: 4, Type: event.Type("e4"), Timestamp: now},
+		{CampaignID: "c1", Seq: 5, Type: event.Type("e5"), Timestamp: now},
+	}
+	svc := NewEventService(Stores{Event: eventStore})
+
+	firstResp, err := svc.ListEvents(context.Background(), &campaignv1.ListEventsRequest{
+		CampaignId: "c1",
+		PageSize:   2,
+		AfterSeq:   2,
+	})
+	if err != nil {
+		t.Fatalf("first list events: %v", err)
+	}
+	if firstResp.GetNextPageToken() == "" {
+		t.Fatalf("expected next page token")
+	}
+
+	_, err = svc.ListEvents(context.Background(), &campaignv1.ListEventsRequest{
+		CampaignId: "c1",
+		PageSize:   2,
+		AfterSeq:   1,
+		PageToken:  firstResp.GetNextPageToken(),
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
 func TestListEvents_EmptyResult(t *testing.T) {
 	eventStore := newFakeEventStore()
 	svc := NewEventService(Stores{Event: eventStore})
@@ -123,6 +179,34 @@ func TestListEvents_EmptyResult(t *testing.T) {
 	}
 	if resp.NextPageToken != "" {
 		t.Errorf("expected no next page token, got %q", resp.NextPageToken)
+	}
+}
+
+func TestListEvents_AfterSeqFiltersResults(t *testing.T) {
+	eventStore := newFakeEventStore()
+	now := time.Now().UTC()
+
+	eventStore.events["c1"] = []event.Event{
+		{CampaignID: "c1", Seq: 1, Type: event.Type("e1"), Timestamp: now},
+		{CampaignID: "c1", Seq: 2, Type: event.Type("e2"), Timestamp: now},
+		{CampaignID: "c1", Seq: 3, Type: event.Type("e3"), Timestamp: now},
+		{CampaignID: "c1", Seq: 4, Type: event.Type("e4"), Timestamp: now},
+		{CampaignID: "c1", Seq: 5, Type: event.Type("e5"), Timestamp: now},
+	}
+
+	svc := NewEventService(Stores{Event: eventStore})
+	resp, err := svc.ListEvents(context.Background(), &campaignv1.ListEventsRequest{
+		CampaignId: "c1",
+		AfterSeq:   3,
+	})
+	if err != nil {
+		t.Fatalf("list events: %v", err)
+	}
+	if len(resp.Events) != 2 {
+		t.Fatalf("events = %d, want %d", len(resp.Events), 2)
+	}
+	if resp.Events[0].Seq != 4 || resp.Events[1].Seq != 5 {
+		t.Fatalf("event seqs = [%d,%d], want [%d,%d]", resp.Events[0].Seq, resp.Events[1].Seq, 4, 5)
 	}
 }
 

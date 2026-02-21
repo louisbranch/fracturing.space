@@ -29,27 +29,43 @@ func (h *handler) handleAppCampaignCharacters(w http.ResponseWriter, r *http.Req
 	canManageCharacters := canManageCampaignCharacters(actingParticipant.GetCampaignAccess())
 	controlParticipants := []*statev1.Participant(nil)
 	if canManageCharacters {
-		resp, err := h.participantClient.ListParticipants(r.Context(), &statev1.ListParticipantsRequest{
+		if h.participantClient == nil {
+			h.renderErrorPage(w, r, http.StatusServiceUnavailable, "Characters unavailable", "participant service client is not configured")
+			return
+		}
+		if cachedParticipants, ok := h.cachedCampaignParticipants(r.Context(), campaignID); ok {
+			controlParticipants = cachedParticipants
+		} else {
+			resp, err := h.participantClient.ListParticipants(r.Context(), &statev1.ListParticipantsRequest{
+				CampaignId: campaignID,
+				PageSize:   10,
+			})
+			if err != nil {
+				h.renderErrorPage(w, r, http.StatusBadGateway, "Characters unavailable", "failed to list participants")
+				return
+			}
+			controlParticipants = resp.GetParticipants()
+			h.setCampaignParticipantsCache(r.Context(), campaignID, controlParticipants)
+		}
+	}
+
+	characters := []*statev1.Character(nil)
+	if cachedCharacters, ok := h.cachedCampaignCharacters(r.Context(), campaignID); ok {
+		characters = cachedCharacters
+	} else {
+		resp, err := h.characterClient.ListCharacters(r.Context(), &statev1.ListCharactersRequest{
 			CampaignId: campaignID,
 			PageSize:   10,
 		})
 		if err != nil {
-			h.renderErrorPage(w, r, http.StatusBadGateway, "Characters unavailable", "failed to list participants")
+			h.renderErrorPage(w, r, http.StatusBadGateway, "Characters unavailable", "failed to list characters")
 			return
 		}
-		controlParticipants = resp.GetParticipants()
+		characters = resp.GetCharacters()
+		h.setCampaignCharactersCache(r.Context(), campaignID, characters)
 	}
 
-	resp, err := h.characterClient.ListCharacters(r.Context(), &statev1.ListCharactersRequest{
-		CampaignId: campaignID,
-		PageSize:   10,
-	})
-	if err != nil {
-		h.renderErrorPage(w, r, http.StatusBadGateway, "Characters unavailable", "failed to list characters")
-		return
-	}
-
-	renderAppCampaignCharactersPage(w, r, h.pageContextForCampaign(w, r, campaignID), campaignID, resp.GetCharacters(), canManageCharacters, controlParticipants)
+	renderAppCampaignCharactersPage(w, r, h.pageContextForCampaign(w, r, campaignID), campaignID, characters, canManageCharacters, controlParticipants)
 }
 
 func (h *handler) handleAppCampaignCharacterDetail(w http.ResponseWriter, r *http.Request, campaignID string, characterID string) {
