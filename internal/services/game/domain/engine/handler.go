@@ -3,7 +3,6 @@ package engine
 import (
 	"context"
 	"errors"
-	"fmt"
 	"reflect"
 	"time"
 
@@ -18,8 +17,6 @@ var (
 	ErrCommandRegistryRequired = errors.New("command registry is required")
 	// ErrCommandMustMutate indicates a command returned no mutations.
 	ErrCommandMustMutate = errors.New("command must emit at least one event")
-	// ErrSystemEventNoMutation indicates a system event did not mutate state.
-	ErrSystemEventNoMutation = errors.New("system event must mutate state")
 	// ErrDeciderRequired indicates a missing decider.
 	ErrDeciderRequired = errors.New("decider is required")
 	// ErrGateStateLoaderRequired indicates a missing gate state loader.
@@ -174,6 +171,8 @@ func (h Handler) prepareExecution(ctx context.Context, cmd command.Command) (com
 	}
 	decision := h.Decider.Decide(state, cmd, now)
 	if len(decision.Rejections) == 0 && len(decision.Events) == 0 {
+		// FIXME(telemetry): emit metric for command decider no-op outcomes (no events, no rejections)
+		// once domain/write model counters are wired.
 		return command.Command{}, nil, command.Decision{}, ErrCommandMustMutate
 	}
 	if h.Applier != nil && len(decision.Events) > 0 {
@@ -181,15 +180,6 @@ func (h Handler) prepareExecution(ctx context.Context, cmd command.Command) (com
 			stateAfter, err := h.Applier.Apply(state, evt)
 			if err != nil {
 				return command.Command{}, nil, command.Decision{}, err
-			}
-			if evt.SystemID != "" {
-				before, err := cloneState(state)
-				if err != nil {
-					return command.Command{}, nil, command.Decision{}, err
-				}
-				if reflect.DeepEqual(before, stateAfter) {
-					return command.Command{}, nil, command.Decision{}, fmt.Errorf("%w: %s", ErrSystemEventNoMutation, evt.Type)
-				}
 			}
 			state = stateAfter
 		}

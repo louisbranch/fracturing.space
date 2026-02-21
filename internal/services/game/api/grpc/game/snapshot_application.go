@@ -148,6 +148,17 @@ func (a snapshotApplication) PatchCharacterState(ctx context.Context, campaignID
 			lifeStateBefore = daggerheart.LifeStateAlive
 		}
 		lifeStateAfter := lifeState
+		characterStateUnchanged := hpBefore == hp &&
+			hopeBefore == hope &&
+			hopeMaxBefore == hopeMax &&
+			stressBefore == stress &&
+			armorBefore == armor &&
+			lifeStateBefore == lifeStateAfter
+		if !conditionPatch && characterStateUnchanged {
+			// FIXME(telemetry): track no-op character_state patch requests that skip domain commands.
+			return characterID, dhState, nil
+		}
+
 		payload := daggerheart.CharacterStatePatchedPayload{
 			CharacterID:     characterID,
 			HPBefore:        &hpBefore,
@@ -301,6 +312,20 @@ func (a snapshotApplication) UpdateSnapshotState(ctx context.Context, campaignID
 		gmFear := int(dhUpdate.GetGmFear())
 		if gmFear < daggerheart.GMFearMin || gmFear > daggerheart.GMFearMax {
 			return storage.DaggerheartSnapshot{}, status.Errorf(codes.InvalidArgument, "gm_fear %d exceeds range %d..%d", gmFear, daggerheart.GMFearMin, daggerheart.GMFearMax)
+		}
+		existingSnap, err := a.stores.Daggerheart.GetDaggerheartSnapshot(ctx, campaignID)
+		if err != nil && !errors.Is(err, storage.ErrNotFound) {
+			return storage.DaggerheartSnapshot{}, status.Errorf(codes.Internal, "load existing daggerheart snapshot: %v", err)
+		}
+		if errors.Is(err, storage.ErrNotFound) {
+			existingSnap = storage.DaggerheartSnapshot{
+				CampaignID: campaignID,
+				GMFear:     daggerheart.GMFearDefault,
+			}
+		}
+		if existingSnap.GMFear == gmFear {
+			// FIXME(telemetry): count snapshot updates that are idempotent (no state change).
+			return existingSnap, nil
 		}
 
 		actorID := grpcmeta.ParticipantIDFromContext(ctx)

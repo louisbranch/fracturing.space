@@ -366,7 +366,7 @@ func TestExecute_FailsWhenDeciderReturnsNoEventsWithoutRejections(t *testing.T) 
 	}
 }
 
-func TestExecute_FailsWhenSystemEventDoesNotMutateState(t *testing.T) {
+func TestExecute_AllowsSystemEventWithNoMutation(t *testing.T) {
 	cmdRegistry := command.NewRegistry()
 	if err := cmdRegistry.Register(command.Definition{
 		Type:  command.Type("sys.test.noop"),
@@ -406,11 +406,8 @@ func TestExecute_FailsWhenSystemEventDoesNotMutateState(t *testing.T) {
 		SystemID:      "system.test",
 		SystemVersion: "1.0.0",
 	})
-	if err == nil {
-		t.Fatal("expected error")
-	}
-	if !errors.Is(err, ErrSystemEventNoMutation) {
-		t.Fatalf("expected ErrSystemEventNoMutation, got %v", err)
+	if err != nil {
+		t.Fatalf("execute: %v", err)
 	}
 }
 
