@@ -10,18 +10,30 @@ import (
 )
 
 const getAccountProfile = `-- name: GetAccountProfile :one
-SELECT user_id, name, locale, created_at, updated_at
+SELECT user_id, name, locale, avatar_set_id, avatar_asset_id, created_at, updated_at
 FROM account_profiles
 WHERE user_id = ?
 `
 
-func (q *Queries) GetAccountProfile(ctx context.Context, userID string) (AccountProfile, error) {
+type GetAccountProfileRow struct {
+	UserID        string `json:"user_id"`
+	Name          string `json:"name"`
+	Locale        string `json:"locale"`
+	AvatarSetID   string `json:"avatar_set_id"`
+	AvatarAssetID string `json:"avatar_asset_id"`
+	CreatedAt     int64  `json:"created_at"`
+	UpdatedAt     int64  `json:"updated_at"`
+}
+
+func (q *Queries) GetAccountProfile(ctx context.Context, userID string) (GetAccountProfileRow, error) {
 	row := q.db.QueryRowContext(ctx, getAccountProfile, userID)
-	var i AccountProfile
+	var i GetAccountProfileRow
 	err := row.Scan(
 		&i.UserID,
 		&i.Name,
 		&i.Locale,
+		&i.AvatarSetID,
+		&i.AvatarAssetID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -30,20 +42,24 @@ func (q *Queries) GetAccountProfile(ctx context.Context, userID string) (Account
 
 const putAccountProfile = `-- name: PutAccountProfile :exec
 INSERT INTO account_profiles (
-    user_id, name, locale, created_at, updated_at
-) VALUES (?, ?, ?, ?, ?)
+    user_id, name, locale, avatar_set_id, avatar_asset_id, created_at, updated_at
+) VALUES (?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(user_id) DO UPDATE SET
     name = excluded.name,
     locale = excluded.locale,
+    avatar_set_id = excluded.avatar_set_id,
+    avatar_asset_id = excluded.avatar_asset_id,
     updated_at = excluded.updated_at
 `
 
 type PutAccountProfileParams struct {
-	UserID    string `json:"user_id"`
-	Name      string `json:"name"`
-	Locale    string `json:"locale"`
-	CreatedAt int64  `json:"created_at"`
-	UpdatedAt int64  `json:"updated_at"`
+	UserID        string `json:"user_id"`
+	Name          string `json:"name"`
+	Locale        string `json:"locale"`
+	AvatarSetID   string `json:"avatar_set_id"`
+	AvatarAssetID string `json:"avatar_asset_id"`
+	CreatedAt     int64  `json:"created_at"`
+	UpdatedAt     int64  `json:"updated_at"`
 }
 
 func (q *Queries) PutAccountProfile(ctx context.Context, arg PutAccountProfileParams) error {
@@ -51,6 +67,8 @@ func (q *Queries) PutAccountProfile(ctx context.Context, arg PutAccountProfilePa
 		arg.UserID,
 		arg.Name,
 		arg.Locale,
+		arg.AvatarSetID,
+		arg.AvatarAssetID,
 		arg.CreatedAt,
 		arg.UpdatedAt,
 	)

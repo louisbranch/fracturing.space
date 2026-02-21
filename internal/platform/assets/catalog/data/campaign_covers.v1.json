@@ -1,0 +1,33 @@
+{
+  "id": "campaign-covers-v1",
+  "default_set": "campaign_cover_set_v1",
+  "sets": [
+    {
+      "id": "campaign_cover_set_v1",
+      "asset_ids": [
+        "abandoned_castle_courtyard",
+        "ancient_forest_shrine",
+        "arcane_observatory",
+        "arcane_ruins",
+        "broken_tower",
+        "cliffside_monastery",
+        "coastal_cliffs",
+        "crystal_cavern",
+        "cursed_farmlands",
+        "deserted_harbour",
+        "dwarven_gate",
+        "enchanted_meadow",
+        "forgotten_battlefield",
+        "frozen_keep",
+        "hidden_waterfall_sanctuary",
+        "mountain_pass",
+        "roadside_tavern",
+        "royal_capital_skyline",
+        "sunken_temple",
+        "unholy_swamp"
+      ]
+    }
+  ],
+  "set_aliases": {},
+  "asset_aliases": {}
+}

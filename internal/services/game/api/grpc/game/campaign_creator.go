@@ -333,7 +333,7 @@ func (c campaignApplication) RestoreCampaign(ctx context.Context, campaignID str
 	return storage.CampaignRecord{}, status.Error(codes.Internal, "domain engine is not configured")
 }
 
-func (c campaignApplication) SetCampaignCover(ctx context.Context, campaignID, coverAssetID string) (storage.CampaignRecord, error) {
+func (c campaignApplication) SetCampaignCover(ctx context.Context, campaignID, coverAssetID, coverSetID string) (storage.CampaignRecord, error) {
 	campaignRecord, err := c.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
 		return storage.CampaignRecord{}, err
@@ -349,11 +349,11 @@ func (c campaignApplication) SetCampaignCover(ctx context.Context, campaignID, c
 			actorType = command.ActorTypeParticipant
 		}
 
-		payload := campaign.UpdatePayload{
-			Fields: map[string]string{
-				"cover_asset_id": coverAssetID,
-			},
+		fields := map[string]string{"cover_asset_id": coverAssetID}
+		if strings.TrimSpace(coverSetID) != "" {
+			fields["cover_set_id"] = strings.TrimSpace(coverSetID)
 		}
+		payload := campaign.UpdatePayload{Fields: fields}
 		payloadJSON, err := json.Marshal(payload)
 		if err != nil {
 			return storage.CampaignRecord{}, status.Errorf(codes.Internal, "encode payload: %v", err)

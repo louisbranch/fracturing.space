@@ -20,7 +20,6 @@ type Campaign struct {
 	ParticipantCount int64          `json:"participant_count"`
 	CharacterCount   int64          `json:"character_count"`
 	ThemePrompt      string         `json:"theme_prompt"`
-	CoverAssetID     string         `json:"cover_asset_id"`
 	ParentCampaignID sql.NullString `json:"parent_campaign_id"`
 	ForkEventSeq     sql.NullInt64  `json:"fork_event_seq"`
 	OriginCampaignID sql.NullString `json:"origin_campaign_id"`
@@ -28,6 +27,8 @@ type Campaign struct {
 	UpdatedAt        int64          `json:"updated_at"`
 	CompletedAt      sql.NullInt64  `json:"completed_at"`
 	ArchivedAt       sql.NullInt64  `json:"archived_at"`
+	CoverAssetID     string         `json:"cover_asset_id"`
+	CoverSetID       string         `json:"cover_set_id"`
 }
 
 type CampaignActiveSession struct {
@@ -44,6 +45,8 @@ type Character struct {
 	Notes                   string         `json:"notes"`
 	CreatedAt               int64          `json:"created_at"`
 	UpdatedAt               int64          `json:"updated_at"`
+	AvatarSetID             string         `json:"avatar_set_id"`
+	AvatarAssetID           string         `json:"avatar_asset_id"`
 }
 
 type DaggerheartAdversary struct {
@@ -353,12 +356,14 @@ type Participant struct {
 	CampaignID     string `json:"campaign_id"`
 	ID             string `json:"id"`
 	UserID         string `json:"user_id"`
-	Name           string `json:"name"`
+	DisplayName    string `json:"display_name"`
 	Role           string `json:"role"`
 	Controller     string `json:"controller"`
 	CampaignAccess string `json:"campaign_access"`
 	CreatedAt      int64  `json:"created_at"`
 	UpdatedAt      int64  `json:"updated_at"`
+	AvatarSetID    string `json:"avatar_set_id"`
+	AvatarAssetID  string `json:"avatar_asset_id"`
 }
 
 type ParticipantClaim struct {
@@ -366,6 +371,24 @@ type ParticipantClaim struct {
 	UserID        string `json:"user_id"`
 	ParticipantID string `json:"participant_id"`
 	ClaimedAt     int64  `json:"claimed_at"`
+}
+
+type ProjectionApplyCheckpoint struct {
+	CampaignID string `json:"campaign_id"`
+	Seq        int64  `json:"seq"`
+	EventType  string `json:"event_type"`
+	AppliedAt  int64  `json:"applied_at"`
+}
+
+type ProjectionApplyOutbox struct {
+	CampaignID    string `json:"campaign_id"`
+	Seq           int64  `json:"seq"`
+	EventType     string `json:"event_type"`
+	Status        string `json:"status"`
+	AttemptCount  int64  `json:"attempt_count"`
+	NextAttemptAt int64  `json:"next_attempt_at"`
+	LastError     string `json:"last_error"`
+	UpdatedAt     int64  `json:"updated_at"`
 }
 
 type Session struct {

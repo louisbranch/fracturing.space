@@ -17,6 +17,8 @@ func Fold(state State, evt event.Event) State {
 		state.Name = payload.Name
 		state.Kind = payload.Kind
 		state.Notes = payload.Notes
+		state.AvatarSetID = payload.AvatarSetID
+		state.AvatarAssetID = payload.AvatarAssetID
 	}
 	if evt.Type == eventTypeUpdated {
 		var payload UpdatePayload
@@ -34,6 +36,10 @@ func Fold(state State, evt event.Event) State {
 				state.Notes = value
 			case "participant_id":
 				state.ParticipantID = value
+			case "avatar_set_id":
+				state.AvatarSetID = value
+			case "avatar_asset_id":
+				state.AvatarAssetID = value
 			}
 		}
 	}

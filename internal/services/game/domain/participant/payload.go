@@ -8,6 +8,8 @@ type JoinPayload struct {
 	Role           string `json:"role"`
 	Controller     string `json:"controller"`
 	CampaignAccess string `json:"campaign_access"`
+	AvatarSetID    string `json:"avatar_set_id,omitempty"`
+	AvatarAssetID  string `json:"avatar_asset_id,omitempty"`
 }
 
 // UpdatePayload captures the payload for participant.update commands and participant.updated events.

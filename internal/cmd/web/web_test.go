@@ -29,6 +29,12 @@ func TestParseConfigDefaults(t *testing.T) {
 	if cfg.CacheDBPath != "data/web-cache.db" {
 		t.Fatalf("expected default cache db path, got %q", cfg.CacheDBPath)
 	}
+	if cfg.AssetVersion != "v1" {
+		t.Fatalf("expected default asset version, got %q", cfg.AssetVersion)
+	}
+	if cfg.AssetBaseURL != "" {
+		t.Fatalf("expected empty default asset base url, got %q", cfg.AssetBaseURL)
+	}
 }
 
 func TestParseConfigOverrides(t *testing.T) {
@@ -39,6 +45,8 @@ func TestParseConfigOverrides(t *testing.T) {
 		"-auth-addr", "auth:9000",
 		"-game-addr", "game:9001",
 		"-cache-db-path", "/tmp/web-cache.db",
+		"-asset-base-url", "https://assets.test",
+		"-asset-version", "v9",
 	})
 	if err != nil {
 		t.Fatalf("parse config: %v", err)
@@ -57,5 +65,11 @@ func TestParseConfigOverrides(t *testing.T) {
 	}
 	if cfg.CacheDBPath != "/tmp/web-cache.db" {
 		t.Fatalf("expected overridden cache db path, got %q", cfg.CacheDBPath)
+	}
+	if cfg.AssetBaseURL != "https://assets.test" {
+		t.Fatalf("expected overridden asset base url, got %q", cfg.AssetBaseURL)
+	}
+	if cfg.AssetVersion != "v9" {
+		t.Fatalf("expected overridden asset version, got %q", cfg.AssetVersion)
 	}
 }

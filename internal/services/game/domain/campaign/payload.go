@@ -10,6 +10,7 @@ type CreatePayload struct {
 	AccessPolicy string `json:"access_policy,omitempty"`
 	ThemePrompt  string `json:"theme_prompt,omitempty"`
 	CoverAssetID string `json:"cover_asset_id,omitempty"`
+	CoverSetID   string `json:"cover_set_id,omitempty"`
 }
 
 // UpdatePayload captures the payload for campaign.update commands and campaign.updated events.

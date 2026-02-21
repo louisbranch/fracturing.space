@@ -13,18 +13,22 @@ var ErrEmptyUserID = errors.New("user id is required")
 
 // Profile captures display/profile metadata for a user account.
 type Profile struct {
-	UserID    string
-	Name      string
-	Locale    commonv1.Locale
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	UserID        string
+	Name          string
+	Locale        commonv1.Locale
+	AvatarSetID   string
+	AvatarAssetID string
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 // ProfileInput is the mutable payload used to create or update a profile.
 type ProfileInput struct {
-	UserID string
-	Name   string
-	Locale commonv1.Locale
+	UserID        string
+	Name          string
+	Locale        commonv1.Locale
+	AvatarSetID   string
+	AvatarAssetID string
 }
 
 // NormalizeProfileInput trims strings and normalizes locale.
@@ -32,6 +36,8 @@ func NormalizeProfileInput(input ProfileInput) ProfileInput {
 	input.UserID = strings.TrimSpace(input.UserID)
 	input.Name = strings.TrimSpace(input.Name)
 	input.Locale = i18n.NormalizeLocale(input.Locale)
+	input.AvatarSetID = strings.TrimSpace(input.AvatarSetID)
+	input.AvatarAssetID = strings.TrimSpace(input.AvatarAssetID)
 	return input
 }
 
@@ -41,6 +47,14 @@ func NewProfile(input ProfileInput, now func() time.Time) (Profile, error) {
 	if normalized.UserID == "" {
 		return Profile{}, ErrEmptyUserID
 	}
+	avatarSetID, avatarAssetID, err := resolveProfileAvatarSelection(
+		normalized.UserID,
+		normalized.AvatarSetID,
+		normalized.AvatarAssetID,
+	)
+	if err != nil {
+		return Profile{}, err
+	}
 
 	if now == nil {
 		now = time.Now
@@ -48,10 +62,12 @@ func NewProfile(input ProfileInput, now func() time.Time) (Profile, error) {
 	nowUTC := func() time.Time { return now().UTC() }
 
 	return Profile{
-		UserID:    normalized.UserID,
-		Name:      normalized.Name,
-		Locale:    normalized.Locale,
-		CreatedAt: nowUTC(),
-		UpdatedAt: nowUTC(),
+		UserID:        normalized.UserID,
+		Name:          normalized.Name,
+		Locale:        normalized.Locale,
+		AvatarSetID:   avatarSetID,
+		AvatarAssetID: avatarAssetID,
+		CreatedAt:     nowUTC(),
+		UpdatedAt:     nowUTC(),
 	}, nil
 }

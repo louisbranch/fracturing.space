@@ -82,3 +82,20 @@ See [seeding](seeding.md) for `make seed` and generator options.
 ## Configuration
 
 See [configuration](configuration.md) for the full environment variable reference.
+
+For external image hosting (recommended for campaign covers and avatars), set:
+
+- `FRACTURING_SPACE_ASSET_BASE_URL` (for example `https://cdn.example.com/assets`)
+- `FRACTURING_SPACE_ASSET_VERSION` (for example `v1`)
+
+Upload helper:
+
+```sh
+scripts/upload-assets.sh \
+  --source-dir ./assets/campaign-covers \
+  --bucket-url s3://fracturing-space-assets \
+  --version v1 \
+  --domain campaign-covers \
+  --set-id campaign_cover_set_v1 \
+  --ext png
+```

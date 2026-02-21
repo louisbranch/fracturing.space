@@ -170,11 +170,13 @@ func (s *Store) PutAccountProfile(ctx context.Context, profile storage.AccountPr
 	}
 
 	return s.q.PutAccountProfile(ctx, db.PutAccountProfileParams{
-		UserID:    profile.UserID,
-		Name:      profile.Name,
-		Locale:    platformi18n.LocaleString(profile.Locale),
-		CreatedAt: toMillis(profile.CreatedAt),
-		UpdatedAt: toMillis(profile.UpdatedAt),
+		UserID:        profile.UserID,
+		Name:          profile.Name,
+		Locale:        platformi18n.LocaleString(profile.Locale),
+		AvatarSetID:   profile.AvatarSetID,
+		AvatarAssetID: profile.AvatarAssetID,
+		CreatedAt:     toMillis(profile.CreatedAt),
+		UpdatedAt:     toMillis(profile.UpdatedAt),
 	})
 }
 
@@ -308,18 +310,20 @@ func dbUserToDomain(id string, email string, createdAt int64, updatedAt int64) u
 	}
 }
 
-func dbAccountProfileToDomain(row db.AccountProfile) (storage.AccountProfile, error) {
+func dbAccountProfileToDomain(row db.GetAccountProfileRow) (storage.AccountProfile, error) {
 	parsedLocale := platformi18n.DefaultLocale()
 	if locale, ok := platformi18n.ParseLocale(row.Locale); ok {
 		parsedLocale = locale
 	}
 
 	return storage.AccountProfile{
-		UserID:    row.UserID,
-		Name:      row.Name,
-		Locale:    parsedLocale,
-		CreatedAt: fromMillis(row.CreatedAt),
-		UpdatedAt: fromMillis(row.UpdatedAt),
+		UserID:        row.UserID,
+		Name:          row.Name,
+		Locale:        parsedLocale,
+		AvatarSetID:   row.AvatarSetID,
+		AvatarAssetID: row.AvatarAssetID,
+		CreatedAt:     fromMillis(row.CreatedAt),
+		UpdatedAt:     fromMillis(row.UpdatedAt),
 	}, nil
 }
 

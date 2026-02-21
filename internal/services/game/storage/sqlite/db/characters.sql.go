@@ -26,7 +26,7 @@ func (q *Queries) DeleteCharacter(ctx context.Context, arg DeleteCharacterParams
 }
 
 const getCharacter = `-- name: GetCharacter :one
-SELECT campaign_id, id, controller_participant_id, name, kind, notes, created_at, updated_at FROM characters WHERE campaign_id = ? AND id = ?
+SELECT campaign_id, id, controller_participant_id, name, kind, notes, created_at, updated_at, avatar_set_id, avatar_asset_id FROM characters WHERE campaign_id = ? AND id = ?
 `
 
 type GetCharacterParams struct {
@@ -46,12 +46,14 @@ func (q *Queries) GetCharacter(ctx context.Context, arg GetCharacterParams) (Cha
 		&i.Notes,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AvatarSetID,
+		&i.AvatarAssetID,
 	)
 	return i, err
 }
 
 const listCharactersByCampaign = `-- name: ListCharactersByCampaign :many
-SELECT campaign_id, id, controller_participant_id, name, kind, notes, created_at, updated_at FROM characters
+SELECT campaign_id, id, controller_participant_id, name, kind, notes, created_at, updated_at, avatar_set_id, avatar_asset_id FROM characters
 WHERE campaign_id = ?
 ORDER BY id
 `
@@ -74,6 +76,8 @@ func (q *Queries) ListCharactersByCampaign(ctx context.Context, campaignID strin
 			&i.Notes,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.AvatarSetID,
+			&i.AvatarAssetID,
 		); err != nil {
 			return nil, err
 		}
@@ -89,7 +93,7 @@ func (q *Queries) ListCharactersByCampaign(ctx context.Context, campaignID strin
 }
 
 const listCharactersByCampaignPaged = `-- name: ListCharactersByCampaignPaged :many
-SELECT campaign_id, id, controller_participant_id, name, kind, notes, created_at, updated_at FROM characters
+SELECT campaign_id, id, controller_participant_id, name, kind, notes, created_at, updated_at, avatar_set_id, avatar_asset_id FROM characters
 WHERE campaign_id = ? AND id > ?
 ORDER BY id
 LIMIT ?
@@ -119,6 +123,8 @@ func (q *Queries) ListCharactersByCampaignPaged(ctx context.Context, arg ListCha
 			&i.Notes,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.AvatarSetID,
+			&i.AvatarAssetID,
 		); err != nil {
 			return nil, err
 		}
@@ -134,7 +140,7 @@ func (q *Queries) ListCharactersByCampaignPaged(ctx context.Context, arg ListCha
 }
 
 const listCharactersByCampaignPagedFirst = `-- name: ListCharactersByCampaignPagedFirst :many
-SELECT campaign_id, id, controller_participant_id, name, kind, notes, created_at, updated_at FROM characters
+SELECT campaign_id, id, controller_participant_id, name, kind, notes, created_at, updated_at, avatar_set_id, avatar_asset_id FROM characters
 WHERE campaign_id = ?
 ORDER BY id
 LIMIT ?
@@ -163,6 +169,8 @@ func (q *Queries) ListCharactersByCampaignPagedFirst(ctx context.Context, arg Li
 			&i.Notes,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.AvatarSetID,
+			&i.AvatarAssetID,
 		); err != nil {
 			return nil, err
 		}
@@ -179,13 +187,15 @@ func (q *Queries) ListCharactersByCampaignPagedFirst(ctx context.Context, arg Li
 
 const putCharacter = `-- name: PutCharacter :exec
 INSERT INTO characters (
-    campaign_id, id, controller_participant_id, name, kind, notes, created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    campaign_id, id, controller_participant_id, name, kind, notes, avatar_set_id, avatar_asset_id, created_at, updated_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(campaign_id, id) DO UPDATE SET
     controller_participant_id = excluded.controller_participant_id,
     name = excluded.name,
     kind = excluded.kind,
     notes = excluded.notes,
+    avatar_set_id = excluded.avatar_set_id,
+    avatar_asset_id = excluded.avatar_asset_id,
     updated_at = excluded.updated_at
 `
 
@@ -196,6 +206,8 @@ type PutCharacterParams struct {
 	Name                    string         `json:"name"`
 	Kind                    string         `json:"kind"`
 	Notes                   string         `json:"notes"`
+	AvatarSetID             string         `json:"avatar_set_id"`
+	AvatarAssetID           string         `json:"avatar_asset_id"`
 	CreatedAt               int64          `json:"created_at"`
 	UpdatedAt               int64          `json:"updated_at"`
 }
@@ -208,6 +220,8 @@ func (q *Queries) PutCharacter(ctx context.Context, arg PutCharacterParams) erro
 		arg.Name,
 		arg.Kind,
 		arg.Notes,
+		arg.AvatarSetID,
+		arg.AvatarAssetID,
 		arg.CreatedAt,
 		arg.UpdatedAt,
 	)

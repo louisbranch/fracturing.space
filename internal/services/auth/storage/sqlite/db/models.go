@@ -9,11 +9,13 @@ import (
 )
 
 type AccountProfile struct {
-	UserID    string `json:"user_id"`
-	Name      string `json:"name"`
-	Locale    string `json:"locale"`
-	CreatedAt int64  `json:"created_at"`
-	UpdatedAt int64  `json:"updated_at"`
+	UserID        string `json:"user_id"`
+	Name          string `json:"name"`
+	Locale        string `json:"locale"`
+	CreatedAt     int64  `json:"created_at"`
+	UpdatedAt     int64  `json:"updated_at"`
+	AvatarSetID   string `json:"avatar_set_id"`
+	AvatarAssetID string `json:"avatar_asset_id"`
 }
 
 type MagicLink struct {

@@ -33,13 +33,15 @@ var subStaticFS = func() (fs.FS, error) {
 
 // Config defines the inputs for the web login server.
 type Config struct {
-	HTTPAddr        string
-	AuthBaseURL     string
-	AuthAddr        string
-	GameAddr        string
-	CacheDBPath     string
-	AppName         string
-	GRPCDialTimeout time.Duration
+	HTTPAddr             string
+	AuthBaseURL          string
+	AuthAddr             string
+	GameAddr             string
+	CacheDBPath          string
+	AssetBaseURL         string
+	AssetManifestVersion string
+	AppName              string
+	GRPCDialTimeout      time.Duration
 	// OAuthClientID is the first-party OAuth client ID for web login.
 	OAuthClientID string
 	// CallbackURL is the public URL for the OAuth callback endpoint.

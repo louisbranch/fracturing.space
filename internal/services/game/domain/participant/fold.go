@@ -19,6 +19,8 @@ func Fold(state State, evt event.Event) State {
 		state.Role = payload.Role
 		state.Controller = payload.Controller
 		state.CampaignAccess = payload.CampaignAccess
+		state.AvatarSetID = payload.AvatarSetID
+		state.AvatarAssetID = payload.AvatarAssetID
 	}
 	if evt.Type == eventTypeUpdated {
 		var payload UpdatePayload
@@ -38,6 +40,10 @@ func Fold(state State, evt event.Event) State {
 				state.Controller = value
 			case "campaign_access":
 				state.CampaignAccess = value
+			case "avatar_set_id":
+				state.AvatarSetID = value
+			case "avatar_asset_id":
+				state.AvatarAssetID = value
 			}
 		}
 	}

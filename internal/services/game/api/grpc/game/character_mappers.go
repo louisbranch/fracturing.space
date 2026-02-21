@@ -13,13 +13,15 @@ import (
 // Character proto conversion helpers.
 func characterToProto(ch storage.CharacterRecord) *campaignv1.Character {
 	pb := &campaignv1.Character{
-		Id:         ch.ID,
-		CampaignId: ch.CampaignID,
-		Name:       ch.Name,
-		Kind:       characterKindToProto(ch.Kind),
-		Notes:      ch.Notes,
-		CreatedAt:  timestamppb.New(ch.CreatedAt),
-		UpdatedAt:  timestamppb.New(ch.UpdatedAt),
+		Id:            ch.ID,
+		CampaignId:    ch.CampaignID,
+		Name:          ch.Name,
+		Kind:          characterKindToProto(ch.Kind),
+		Notes:         ch.Notes,
+		AvatarSetId:   ch.AvatarSetID,
+		AvatarAssetId: ch.AvatarAssetID,
+		CreatedAt:     timestamppb.New(ch.CreatedAt),
+		UpdatedAt:     timestamppb.New(ch.UpdatedAt),
 	}
 	if strings.TrimSpace(ch.ParticipantID) != "" {
 		pb.ParticipantId = wrapperspb.String(ch.ParticipantID)

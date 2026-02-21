@@ -485,7 +485,8 @@ func (q *Queries) GetDaggerheartCharacterSheet(ctx context.Context, arg GetDagge
 
 const getDaggerheartCharacterState = `-- name: GetDaggerheartCharacterState :one
 
-SELECT campaign_id, character_id, hp, hope, hope_max, stress, armor, conditions_json, temporary_armor_json, life_state FROM daggerheart_character_states
+SELECT campaign_id, character_id, hp, hope, hope_max, stress, armor, conditions_json, temporary_armor_json, life_state
+FROM daggerheart_character_states
 WHERE campaign_id = ? AND character_id = ?
 `
 
@@ -1029,15 +1030,27 @@ FROM daggerheart_character_states
 WHERE campaign_id = ?
 `
 
-func (q *Queries) ListDaggerheartCharacterStates(ctx context.Context, campaignID string) ([]DaggerheartCharacterState, error) {
+type ListDaggerheartCharacterStatesRow struct {
+	CampaignID     string `json:"campaign_id"`
+	CharacterID    string `json:"character_id"`
+	Hp             int64  `json:"hp"`
+	Hope           int64  `json:"hope"`
+	HopeMax        int64  `json:"hope_max"`
+	Stress         int64  `json:"stress"`
+	Armor          int64  `json:"armor"`
+	ConditionsJson string `json:"conditions_json"`
+	LifeState      string `json:"life_state"`
+}
+
+func (q *Queries) ListDaggerheartCharacterStates(ctx context.Context, campaignID string) ([]ListDaggerheartCharacterStatesRow, error) {
 	rows, err := q.db.QueryContext(ctx, listDaggerheartCharacterStates, campaignID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []DaggerheartCharacterState{}
+	items := []ListDaggerheartCharacterStatesRow{}
 	for rows.Next() {
-		var i DaggerheartCharacterState
+		var i ListDaggerheartCharacterStatesRow
 		if err := rows.Scan(
 			&i.CampaignID,
 			&i.CharacterID,

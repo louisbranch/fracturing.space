@@ -83,6 +83,8 @@ This is the full environment variable reference. For setup steps, see
 - `FRACTURING_SPACE_WEB_OAUTH_CLIENT_ID`: first-party OAuth client ID used by the web server. Default: `fracturing-space`.
 - `FRACTURING_SPACE_WEB_CALLBACK_URL`: public OAuth callback URL (e.g., `http://localhost:8080/auth/callback`).
 - `FRACTURING_SPACE_WEB_AUTH_TOKEN_URL`: internal auth token endpoint for server-to-server code exchange. Defaults to `{AuthBaseURL}/token`.
+- `FRACTURING_SPACE_ASSET_BASE_URL`: external base URL for campaign cover and avatar assets (object storage/CDN origin).
+- `FRACTURING_SPACE_ASSET_VERSION`: version prefix for generated asset keys. Default: `v1`.
 
 ### Docker + Caddy (Compose defaults)
 
@@ -151,13 +153,16 @@ The web login server (`cmd/web`) accepts the following flags:
 - `-http-addr`: HTTP server address. Default: `localhost:8086`
 - `-auth-base-url`: external auth base URL used in login redirects.
 - `-auth-addr`: auth server address. Default: `localhost:8083`
+- `-asset-base-url`: external base URL used for image asset delivery.
+- `-asset-version`: version prefix used when building external asset keys.
 
 ### Address Overrides
 
 The web login server accepts flags for HTTP address and auth endpoints. If
 `FRACTURING_SPACE_WEB_HTTP_ADDR`, `FRACTURING_SPACE_WEB_AUTH_BASE_URL`, or
 `FRACTURING_SPACE_WEB_AUTH_ADDR` are set, they provide defaults when the matching flag
-is omitted. Command-line flags take precedence over env values.
+is omitted. Asset URL defaults come from `FRACTURING_SPACE_ASSET_BASE_URL` and
+`FRACTURING_SPACE_ASSET_VERSION`. Command-line flags take precedence over env values.
 
 ## AI Service Configuration
 

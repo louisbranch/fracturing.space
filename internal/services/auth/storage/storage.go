@@ -21,11 +21,13 @@ type UserStore interface {
 
 // AccountProfile represents one row of user profile metadata.
 type AccountProfile struct {
-	UserID    string
-	Name      string
-	Locale    commonv1.Locale
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	UserID        string
+	Name          string
+	Locale        commonv1.Locale
+	AvatarSetID   string
+	AvatarAssetID string
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 // AccountProfileStore persists per-user profile metadata.

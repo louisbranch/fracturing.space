@@ -31,6 +31,7 @@ const (
 	rejectionCodeCampaignStatusTransition   = "CAMPAIGN_INVALID_STATUS_TRANSITION"
 	rejectionCodeCampaignUpdateFieldInvalid = "CAMPAIGN_UPDATE_FIELD_INVALID"
 	rejectionCodeCampaignCoverAssetInvalid  = "CAMPAIGN_COVER_ASSET_INVALID"
+	rejectionCodeCampaignCoverSetInvalid    = "CAMPAIGN_COVER_SET_INVALID"
 )
 
 // Decide returns the decision for a campaign command against current state.
@@ -76,10 +77,22 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		if coverAssetID == "" {
 			coverAssetID = defaultCampaignCoverAssetID(cmd.CampaignID)
 		}
-		if !isCampaignCoverAssetID(coverAssetID) {
+		normalizedCoverAssetID, ok := normalizeCampaignCoverAssetID(coverAssetID)
+		if !ok {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeCampaignCoverAssetInvalid,
 				Message: "campaign cover asset is invalid",
+			})
+		}
+		coverSetID := strings.TrimSpace(payload.CoverSetID)
+		if coverSetID == "" {
+			coverSetID = defaultCampaignCoverSetID
+		}
+		normalizedCoverSetID, ok := normalizeCampaignCoverSetID(coverSetID)
+		if !ok {
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodeCampaignCoverSetInvalid,
+				Message: "campaign cover set is invalid",
 			})
 		}
 
@@ -91,7 +104,8 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			Intent:       strings.TrimSpace(payload.Intent),
 			AccessPolicy: strings.TrimSpace(payload.AccessPolicy),
 			ThemePrompt:  payload.ThemePrompt,
-			CoverAssetID: coverAssetID,
+			CoverAssetID: normalizedCoverAssetID,
+			CoverSetID:   normalizedCoverSetID,
 		}
 		payloadJSON, _ := json.Marshal(normalizedPayload)
 
@@ -164,14 +178,23 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			case "theme_prompt":
 				normalizedFields[key] = strings.TrimSpace(value)
 			case "cover_asset_id":
-				coverAssetID := strings.TrimSpace(value)
-				if !isCampaignCoverAssetID(coverAssetID) {
+				normalizedCoverAssetID, ok := normalizeCampaignCoverAssetID(value)
+				if !ok {
 					return command.Reject(command.Rejection{
 						Code:    rejectionCodeCampaignCoverAssetInvalid,
 						Message: "campaign cover asset is invalid",
 					})
 				}
-				normalizedFields[key] = coverAssetID
+				normalizedFields[key] = normalizedCoverAssetID
+			case "cover_set_id":
+				normalizedCoverSetID, ok := normalizeCampaignCoverSetID(value)
+				if !ok {
+					return command.Reject(command.Rejection{
+						Code:    rejectionCodeCampaignCoverSetInvalid,
+						Message: "campaign cover set is invalid",
+					})
+				}
+				normalizedFields[key] = normalizedCoverSetID
 			default:
 				return command.Reject(command.Rejection{
 					Code:    rejectionCodeCampaignUpdateFieldInvalid,
