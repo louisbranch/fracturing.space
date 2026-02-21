@@ -1,0 +1,22 @@
+services:
+  devcontainer:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      target: base
+      args:
+        GO_VERSION: ${GO_VERSION:-1.26.0}
+    command: sleep infinity
+    working_dir: /workspace
+    volumes:
+      - ..:/workspace
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+      - "8082:8082"
+      - "8083:8083"
+      - "8084:8084"
+      - "8086:8086"
+      - "8087:8087"
+    networks:
+      - internal
