@@ -1,0 +1,39 @@
+package templates
+
+import sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
+
+// AIKeyRow is one AI key row rendered in settings.
+type AIKeyRow struct {
+	ID        string
+	Label     string
+	Provider  string
+	Status    string
+	CreatedAt string
+	RevokedAt string
+	CanRevoke bool
+}
+
+// AIKeysPageState captures form and listing state for the AI keys page.
+type AIKeysPageState struct {
+	FormLabel    string
+	FormProvider string
+	ErrorMessage string
+	Keys         []AIKeyRow
+}
+
+// SettingsLayoutOptions returns layout options for the root settings page.
+func SettingsLayoutOptions(page PageContext) LayoutOptions {
+	options := LayoutOptionsForPage(page, "layout.settings", true)
+	options.CustomBreadcrumbs = []sharedtemplates.BreadcrumbItem{}
+	return options
+}
+
+// SettingsAIKeysLayoutOptions returns layout options for the AI keys settings page.
+func SettingsAIKeysLayoutOptions(page PageContext) LayoutOptions {
+	options := LayoutOptionsForPage(page, "layout.settings_ai_keys", true)
+	options.CustomBreadcrumbs = []sharedtemplates.BreadcrumbItem{
+		{Label: T(page.Loc, "layout.settings"), URL: "/settings"},
+		{Label: T(page.Loc, "layout.settings_ai_keys"), URL: ""},
+	}
+	return options
+}

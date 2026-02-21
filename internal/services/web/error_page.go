@@ -59,6 +59,8 @@ var errorPageTitleTextKeys = map[string]string{
 	"Session action unavailable":     "error.web.title.session_action_unavailable",
 	"Session unavailable":            "error.web.title.session_unavailable",
 	"Sessions unavailable":           "error.web.title.sessions_unavailable",
+	"AI keys unavailable":            "error.web.title.ai_keys_unavailable",
+	"AI key action unavailable":      "error.web.title.ai_key_action_unavailable",
 }
 
 var errorPageMessageTextKeys = map[string]string{
@@ -133,4 +135,9 @@ var errorPageMessageTextKeys = map[string]string{
 	"session service client is not configured":                "error.web.message.session_service_client_is_not_configured",
 	"failed to end session":                                   "error.web.message.failed_to_end_session",
 	"failed to start session":                                 "error.web.message.failed_to_start_session",
+	"credential service client is not configured":             "error.web.message.credential_service_client_is_not_configured",
+	"failed to list ai keys":                                  "error.web.message.failed_to_list_ai_keys",
+	"failed to parse ai key form":                             "error.web.message.failed_to_parse_ai_key_form",
+	"failed to revoke ai key":                                 "error.web.message.failed_to_revoke_ai_key",
+	"ai key id is required":                                   "error.web.message.ai_key_id_is_required",
 }

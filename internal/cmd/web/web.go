@@ -20,6 +20,7 @@ type Config struct {
 	AuthBaseURL         string        `env:"FRACTURING_SPACE_WEB_AUTH_BASE_URL"       envDefault:"http://localhost:8084"`
 	AuthAddr            string        `env:"FRACTURING_SPACE_WEB_AUTH_ADDR"           envDefault:"localhost:8083"`
 	GameAddr            string        `env:"FRACTURING_SPACE_GAME_ADDR"              envDefault:"localhost:8080"`
+	AIAddr              string        `env:"FRACTURING_SPACE_AI_ADDR"`
 	CacheDBPath         string        `env:"FRACTURING_SPACE_WEB_CACHE_DB_PATH"      envDefault:"data/web-cache.db"`
 	AssetBaseURL        string        `env:"FRACTURING_SPACE_ASSET_BASE_URL"`
 	AssetVersion        string        `env:"FRACTURING_SPACE_ASSET_VERSION"           envDefault:"v1"`
@@ -45,6 +46,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	fs.StringVar(&cfg.AuthBaseURL, "auth-base-url", cfg.AuthBaseURL, "Auth service HTTP base URL")
 	fs.StringVar(&cfg.AuthAddr, "auth-addr", cfg.AuthAddr, "Auth service gRPC address")
 	fs.StringVar(&cfg.GameAddr, "game-addr", cfg.GameAddr, "Game service gRPC address")
+	fs.StringVar(&cfg.AIAddr, "ai-addr", cfg.AIAddr, "AI service gRPC address")
 	fs.StringVar(&cfg.CacheDBPath, "cache-db-path", cfg.CacheDBPath, "Web cache SQLite path")
 	fs.StringVar(&cfg.AssetBaseURL, "asset-base-url", cfg.AssetBaseURL, "Asset base URL for image delivery")
 	fs.StringVar(&cfg.AssetVersion, "asset-version", cfg.AssetVersion, "Version prefix for external asset keys")
@@ -74,6 +76,7 @@ func Run(ctx context.Context, cfg Config) error {
 		AuthBaseURL:          cfg.AuthBaseURL,
 		AuthAddr:             cfg.AuthAddr,
 		GameAddr:             cfg.GameAddr,
+		AIAddr:               cfg.AIAddr,
 		CacheDBPath:          cfg.CacheDBPath,
 		AssetBaseURL:         cfg.AssetBaseURL,
 		AssetManifestVersion: cfg.AssetVersion,

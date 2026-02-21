@@ -1,0 +1,130 @@
+package templates
+
+templ SettingsPage(page PageContext) {
+	@Layout(SettingsLayoutOptions(page)) {
+		<div class="grid gap-6 lg:grid-cols-[16rem_1fr]">
+			<aside class="h-fit">
+				<ul class="menu bg-base-200 rounded-box w-full">
+					<li class="menu-title"><span>{ T(page.Loc, "layout.settings") }</span></li>
+					<li>
+						<a
+							href="/settings/ai-keys"
+							hx-get="/settings/ai-keys"
+							hx-target="#main"
+							hx-swap="innerHTML"
+							hx-push-url="true"
+						>{ T(page.Loc, "web.settings.ai_keys.link") }</a>
+					</li>
+				</ul>
+			</aside>
+			<section class="card bg-base-200">
+				<div class="card-body">
+					<h2 class="card-title">{ T(page.Loc, "layout.settings") }</h2>
+					<p>{ T(page.Loc, "web.settings.select_prompt") }</p>
+				</div>
+			</section>
+		</div>
+	}
+}
+
+templ AIKeysPage(page PageContext, state AIKeysPageState) {
+	@Layout(SettingsAIKeysLayoutOptions(page)) {
+		<div class="grid gap-6 lg:grid-cols-[16rem_1fr]">
+			<aside class="h-fit">
+				<ul class="menu bg-base-200 rounded-box w-full">
+					<li class="menu-title"><span>{ T(page.Loc, "layout.settings") }</span></li>
+					<li>
+						<a
+							class="menu-active"
+							href="/settings/ai-keys"
+							hx-get="/settings/ai-keys"
+							hx-target="#main"
+							hx-swap="innerHTML"
+							hx-push-url="true"
+						>{ T(page.Loc, "web.settings.ai_keys.link") }</a>
+					</li>
+				</ul>
+			</aside>
+			<section class="space-y-6">
+				<div class="card bg-base-200">
+					<div class="card-body">
+						<h2 class="card-title">{ T(page.Loc, "web.settings.ai_keys.add_title") }</h2>
+						if state.ErrorMessage != "" {
+							<div class="alert alert-error">{ state.ErrorMessage }</div>
+						}
+						<form method="post" action="/settings/ai-keys" class="space-y-4">
+							<div class="form-control">
+								<label class="label">
+									<span class="label-text">{ T(page.Loc, "web.settings.ai_keys.field_provider") }</span>
+								</label>
+								<input class="input input-bordered w-full" type="text" value={ state.FormProvider } disabled>
+							</div>
+							<div class="form-control">
+								<label class="label">
+									<span class="label-text">{ T(page.Loc, "web.settings.ai_keys.field_label") }</span>
+								</label>
+								<input class="input input-bordered w-full" type="text" name="label" value={ state.FormLabel } required>
+							</div>
+							<div class="form-control">
+								<label class="label">
+									<span class="label-text">{ T(page.Loc, "web.settings.ai_keys.field_secret") }</span>
+								</label>
+								<input class="input input-bordered w-full" type="password" name="secret" required>
+							</div>
+							<div class="card-actions justify-end">
+								<button class="btn btn-primary" type="submit">{ T(page.Loc, "web.settings.ai_keys.submit_add") }</button>
+							</div>
+						</form>
+					</div>
+				</div>
+				<div class="card bg-base-200">
+					<div class="card-body">
+						<h2 class="card-title">{ T(page.Loc, "web.settings.ai_keys.list_title") }</h2>
+						if len(state.Keys) == 0 {
+							<div class="text-sm opacity-80">{ T(page.Loc, "web.settings.ai_keys.empty") }</div>
+						} else {
+							<div class="overflow-x-auto">
+								<table class="table table-zebra">
+									<thead>
+										<tr>
+											<th>{ T(page.Loc, "web.settings.ai_keys.table.label") }</th>
+											<th>{ T(page.Loc, "web.settings.ai_keys.table.provider") }</th>
+											<th>{ T(page.Loc, "web.settings.ai_keys.table.status") }</th>
+											<th>{ T(page.Loc, "web.settings.ai_keys.table.created") }</th>
+											<th>{ T(page.Loc, "web.settings.ai_keys.table.revoked") }</th>
+											<th>{ T(page.Loc, "web.settings.ai_keys.table.actions") }</th>
+										</tr>
+									</thead>
+									<tbody>
+										for _, row := range state.Keys {
+											<tr>
+												<td>{ row.Label }</td>
+												<td>{ row.Provider }</td>
+												<td>{ row.Status }</td>
+												<td>{ row.CreatedAt }</td>
+												<td>{ row.RevokedAt }</td>
+												<td>
+													if row.CanRevoke {
+														<form method="post" action={ "/settings/ai-keys/" + row.ID + "/revoke" }>
+															<button
+																class="btn btn-error btn-xs"
+																type="submit"
+																onclick={ templ.JSUnsafeFuncCall("return " + templ.SafeScriptInline("confirm", T(page.Loc, "web.settings.ai_keys.confirm_revoke"))) }
+															>{ T(page.Loc, "web.settings.ai_keys.revoke") }</button>
+														</form>
+													} else {
+														<span class="opacity-60">-</span>
+													}
+												</td>
+											</tr>
+										}
+									</tbody>
+								</table>
+							</div>
+						}
+					</div>
+				</div>
+			</section>
+		</div>
+	}
+}
