@@ -287,9 +287,17 @@ func TestListEvents_ASC_Pagination(t *testing.T) {
 	}
 }
 
+func appendEventScopeContext(scope string) context.Context {
+	return metadata.NewIncomingContext(
+		context.Background(),
+		metadata.Pairs(appendEventScopeHeader, scope),
+	)
+}
+
 func TestAppendEvent_UsesDomainEngineForActionEvents(t *testing.T) {
 	eventStore := newFakeEventStore()
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	ctx := appendEventScopeContext(appendEventScopeMaintenance)
 
 	cases := []struct {
 		name        string
@@ -337,7 +345,7 @@ func TestAppendEvent_UsesDomainEngineForActionEvents(t *testing.T) {
 	svc := NewEventService(Stores{Event: eventStore, Domain: domain})
 
 	for _, tc := range cases {
-		_, err := svc.AppendEvent(context.Background(), &campaignv1.AppendEventRequest{
+		_, err := svc.AppendEvent(ctx, &campaignv1.AppendEventRequest{
 			CampaignId:  "c1",
 			Type:        tc.eventType,
 			ActorType:   "system",
@@ -363,12 +371,28 @@ func TestAppendEvent_UsesDomainEngineForActionEvents(t *testing.T) {
 	}
 }
 
+func TestAppendEvent_RequiresMaintenanceOrAdminScope(t *testing.T) {
+	eventStore := newFakeEventStore()
+	svc := NewEventService(Stores{Event: eventStore})
+
+	_, err := svc.AppendEvent(context.Background(), &campaignv1.AppendEventRequest{
+		CampaignId:  "c1",
+		Type:        "story.note_added",
+		ActorType:   "system",
+		EntityType:  "note",
+		EntityId:    "note-1",
+		PayloadJson: []byte(`{"content":"note"}`),
+	})
+	assertStatusCode(t, err, codes.PermissionDenied)
+}
+
 func TestAppendEvent_RejectsUnmappedTypeWithDomain(t *testing.T) {
 	eventStore := newFakeEventStore()
 	domain := &fakeDomainEngine{store: eventStore}
 	svc := NewEventService(Stores{Event: eventStore, Domain: domain})
+	ctx := appendEventScopeContext(appendEventScopeMaintenance)
 
-	_, err := svc.AppendEvent(context.Background(), &campaignv1.AppendEventRequest{
+	_, err := svc.AppendEvent(ctx, &campaignv1.AppendEventRequest{
 		CampaignId:  "c1",
 		Type:        "campaign.created",
 		ActorType:   "system",
@@ -387,8 +411,9 @@ func TestAppendEvent_DirectAppendRequiresCompatibilityMode(t *testing.T) {
 
 	eventStore := newFakeEventStore()
 	svc := NewEventService(Stores{Event: eventStore})
+	ctx := appendEventScopeContext(appendEventScopeMaintenance)
 
-	_, err := svc.AppendEvent(context.Background(), &campaignv1.AppendEventRequest{
+	_, err := svc.AppendEvent(ctx, &campaignv1.AppendEventRequest{
 		CampaignId:  "c1",
 		Type:        "story.note_added",
 		ActorType:   "system",
@@ -408,8 +433,9 @@ func TestAppendEvent_DirectAppendAllowedWhenCompatibilityModeEnabled(t *testing.
 
 	eventStore := newFakeEventStore()
 	svc := NewEventService(Stores{Event: eventStore})
+	ctx := appendEventScopeContext(appendEventScopeMaintenance)
 
-	resp, err := svc.AppendEvent(context.Background(), &campaignv1.AppendEventRequest{
+	resp, err := svc.AppendEvent(ctx, &campaignv1.AppendEventRequest{
 		CampaignId:  "c1",
 		Type:        "story.note_added",
 		ActorType:   "system",
@@ -428,6 +454,7 @@ func TestAppendEvent_DirectAppendAllowedWhenCompatibilityModeEnabled(t *testing.
 func TestAppendEvent_ReturnsRequestedMappedEventWhenDomainEmitsMultipleEvents(t *testing.T) {
 	eventStore := newFakeEventStore()
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	ctx := appendEventScopeContext(appendEventScopeMaintenance)
 	domain := &fakeDomainEngine{
 		store: eventStore,
 		resultsByType: map[command.Type]engine.Result{
@@ -459,7 +486,7 @@ func TestAppendEvent_ReturnsRequestedMappedEventWhenDomainEmitsMultipleEvents(t 
 	}
 	svc := NewEventService(Stores{Event: eventStore, Domain: domain})
 
-	resp, err := svc.AppendEvent(context.Background(), &campaignv1.AppendEventRequest{
+	resp, err := svc.AppendEvent(ctx, &campaignv1.AppendEventRequest{
 		CampaignId:  "c1",
 		Type:        "action.outcome_applied",
 		ActorType:   "system",

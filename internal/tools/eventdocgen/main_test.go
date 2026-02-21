@@ -152,7 +152,7 @@ func TestRenderCatalog(t *testing.T) {
 		},
 	}
 	emitters := map[string][]string{
-		"TypeFoo": {"internal/emit.go:12"},
+		"action.foo": {"internal/emit.go:12"},
 	}
 	output, err := renderCatalog([]packageDefs{defs}, emitters)
 	if err != nil {
@@ -175,6 +175,77 @@ func TestRenderCatalog(t *testing.T) {
 		"`UnusedPayload`",
 		"Emitters:",
 		"`internal/emit.go:12`",
+	}
+	for _, check := range checks {
+		if !strings.Contains(output, check) {
+			t.Fatalf("expected output to contain %q", check)
+		}
+	}
+}
+
+func TestRenderCatalog_UsesEventValueEmitterAndPayloadMapping(t *testing.T) {
+	packages := []packageDefs{
+		{
+			Events: []eventDef{
+				{
+					Owner:     "Core",
+					Name:      "eventTypeCreated",
+					Value:     "campaign.created",
+					DefinedAt: "internal/services/game/domain/campaign/decider.go:20",
+					Payload:   "CreatePayload",
+				},
+			},
+			Payloads: map[string]payloadDef{
+				"CreatePayload": {
+					Owner:     "Core",
+					Name:      "CreatePayload",
+					DefinedAt: "internal/services/game/domain/campaign/payload.go:4",
+					Fields: []payloadField{
+						{Name: "Name", Type: "string", JSONTag: "json:\"name\""},
+					},
+				},
+			},
+		},
+		{
+			Events: []eventDef{
+				{
+					Owner:     "Core",
+					Name:      "eventTypeCreated",
+					Value:     "invite.created",
+					DefinedAt: "internal/services/game/domain/invite/decider.go:17",
+					Payload:   "CreatePayload",
+				},
+			},
+			Payloads: map[string]payloadDef{
+				"CreatePayload": {
+					Owner:     "Core",
+					Name:      "CreatePayload",
+					DefinedAt: "internal/services/game/domain/invite/payload.go:4",
+					Fields: []payloadField{
+						{Name: "InviteID", Type: "string", JSONTag: "json:\"invite_id\""},
+					},
+				},
+			},
+		},
+	}
+
+	emitters := map[string][]string{
+		"campaign.created": {"internal/services/game/domain/campaign/decider.go:100"},
+		"invite.created":   {"internal/services/game/domain/invite/decider.go:69"},
+	}
+
+	output, err := renderCatalog(packages, emitters)
+	if err != nil {
+		t.Fatalf("renderCatalog returned error: %v", err)
+	}
+
+	checks := []string{
+		"| `campaign.created` | `campaign` | `created` | `eventTypeCreated` | `CreatePayload` | 1 |",
+		"| `invite.created` | `invite` | `created` | `eventTypeCreated` | `CreatePayload` | 1 |",
+		"- Payload: `CreatePayload` (`internal/services/game/domain/campaign/payload.go:4`)",
+		"- Payload: `CreatePayload` (`internal/services/game/domain/invite/payload.go:4`)",
+		"| `Name` | `name` | `string` | yes |",
+		"| `InviteID` | `invite_id` | `string` | yes |",
 	}
 	for _, check := range checks {
 		if !strings.Contains(output, check) {

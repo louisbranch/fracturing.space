@@ -16,7 +16,7 @@ func TestScenarioMissingMechanicTimelineCoverage(t *testing.T) {
 	missingMechanicsDoc := filepath.Join(repoRoot, "docs", "project", "scenario-missing-mechanics.md")
 	timelineDoc := filepath.Join(repoRoot, "docs", "project", "daggerheart-event-timeline-contract.md")
 
-	markerScenarios, err := loadMarkedScenarioFiles(scenarioDir, "-- Missing Mechanic:")
+	markerScenarios, err := loadMarkedScenarioFiles(scenarioDir, "-- Missing DSL:")
 	if err != nil {
 		t.Fatalf("load marker scenarios: %v", err)
 	}

@@ -12,10 +12,17 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
 var compatibilityAppendEnabled atomic.Bool
+
+const (
+	appendEventScopeHeader      = "x-fracturing-space-append-event-scope"
+	appendEventScopeMaintenance = "maintenance"
+	appendEventScopeAdmin       = "admin"
+)
 
 type eventApplication struct {
 	stores Stores
@@ -32,6 +39,9 @@ func SetCompatibilityAppendEnabled(enabled bool) {
 }
 
 func (a eventApplication) AppendEvent(ctx context.Context, in *campaignv1.AppendEventRequest) (event.Event, error) {
+	if !appendEventScopeAllowed(ctx) {
+		return event.Event{}, status.Error(codes.PermissionDenied, "append event is restricted to maintenance/admin scope")
+	}
 	input := event.Event{
 		CampaignID:   in.GetCampaignId(),
 		Timestamp:    time.Now().UTC(),
@@ -95,6 +105,23 @@ func (a eventApplication) AppendEvent(ctx context.Context, in *campaignv1.Append
 	}
 
 	return stored, nil
+}
+
+func appendEventScopeAllowed(ctx context.Context) bool {
+	if ctx == nil {
+		return false
+	}
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return false
+	}
+	scope := strings.ToLower(strings.TrimSpace(grpcmeta.FirstMetadataValue(md, appendEventScopeHeader)))
+	switch scope {
+	case appendEventScopeMaintenance, appendEventScopeAdmin:
+		return true
+	default:
+		return false
+	}
 }
 
 func isEventValidationError(err error) bool {

@@ -11,6 +11,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -46,10 +47,11 @@ func runEventListTests(t *testing.T, grpcAddr string, authAddr string) {
 	}
 	campaignID := createResp.Campaign.Id
 	lastSeq := requireEventTypesAfterSeq(t, ctx, eventClient, campaignID, 0, "campaign.created")
+	appendCtx := metadata.NewOutgoingContext(ctx, metadata.Pairs("x-fracturing-space-append-event-scope", "maintenance"))
 
 	// Append events to the campaign journal.
 	for i := 0; i < 3; i++ {
-		if _, err := eventClient.AppendEvent(ctx, &statev1.AppendEventRequest{
+		if _, err := eventClient.AppendEvent(appendCtx, &statev1.AppendEventRequest{
 			CampaignId:  campaignID,
 			Type:        "story.note_added",
 			ActorType:   "system",
@@ -60,7 +62,7 @@ func runEventListTests(t *testing.T, grpcAddr string, authAddr string) {
 			t.Fatalf("append note event %d: %v", i, err)
 		}
 		lastSeq = requireEventTypesAfterSeq(t, ctx, eventClient, campaignID, lastSeq, "story.note_added")
-		if _, err := eventClient.AppendEvent(ctx, &statev1.AppendEventRequest{
+		if _, err := eventClient.AppendEvent(appendCtx, &statev1.AppendEventRequest{
 			CampaignId:  campaignID,
 			Type:        "action.roll_resolved",
 			ActorType:   "system",

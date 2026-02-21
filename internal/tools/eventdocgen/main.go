@@ -108,22 +108,16 @@ func main() {
 		definitions = append(definitions, definitionsForPackage)
 	}
 
-	emitters, err := scanEmitters(filepath.Join(root, "internal/services/game"), root)
+	valueByConstant := buildEventValueLookup(definitions)
+	emitterValues, err := scanEmitterValues(filepath.Join(root, "internal/services/game"), root, valueByConstant)
 	if err != nil {
 		fatal(err)
 	}
-
-	content, err := renderCatalog(definitions, emitters)
+	content, err := renderCatalog(definitions, emitterValues)
 	if err != nil {
 		fatal(err)
 	}
 	if err := writeOutput(catalogOutput, content, "catalog"); err != nil {
-		fatal(err)
-	}
-
-	valueByConstant := buildEventValueLookup(definitions)
-	emitterValues, err := scanEmitterValues(filepath.Join(root, "internal/services/game"), root, valueByConstant)
-	if err != nil {
 		fatal(err)
 	}
 	appliers, err := scanAppliers(filepath.Join(root, "internal/services/game"), root, valueByConstant)
@@ -1353,6 +1347,7 @@ func parseJSONTag(jsonTag, fieldName string) (string, bool) {
 }
 
 func renderCatalog(packages []packageDefs, emitters map[string][]string) (string, error) {
+	payloadByEventValue := buildPayloadByEventValue(packages)
 	packages = mergePackageDefsByOwner(packages)
 	var buf bytes.Buffer
 	buf.WriteString("---\n")
@@ -1379,13 +1374,10 @@ func renderCatalog(packages []packageDefs, emitters map[string][]string) (string
 		buf.WriteString("| --- | --- | --- | --- | --- | --- |\n")
 		for _, evt := range pkg.Events {
 			namespace, eventName := splitEventValue(evt.Value)
-			payloadName := strings.TrimSpace(evt.Payload)
-			if payloadName == "" {
-				payloadName = payloadNameForEvent(evt.Name, evt.Owner)
-			}
+			payload, hasPayload := resolveCatalogPayload(evt, pkg, payloadByEventValue)
 			payloadLabel := "not found"
-			if _, ok := pkg.Payloads[payloadName]; ok {
-				payloadLabel = fmt.Sprintf("`%s`", payloadName)
+			if hasPayload {
+				payloadLabel = fmt.Sprintf("`%s`", payload.Name)
 			}
 			buf.WriteString(fmt.Sprintf(
 				"| `%s` | `%s` | `%s` | `%s` | %s | %d |\n",
@@ -1394,7 +1386,7 @@ func renderCatalog(packages []packageDefs, emitters map[string][]string) (string
 				eventName,
 				evt.Name,
 				payloadLabel,
-				len(emitters[evt.Name]),
+				len(emitters[evt.Value]),
 			))
 		}
 		buf.WriteString("\n")
@@ -1402,13 +1394,9 @@ func renderCatalog(packages []packageDefs, emitters map[string][]string) (string
 		usedPayloads := make(map[string]struct{})
 		currentNamespace := ""
 		for _, evt := range pkg.Events {
-			payloadName := strings.TrimSpace(evt.Payload)
-			if payloadName == "" {
-				payloadName = payloadNameForEvent(evt.Name, evt.Owner)
-			}
-			payload, hasPayload := pkg.Payloads[payloadName]
+			payload, hasPayload := resolveCatalogPayload(evt, pkg, payloadByEventValue)
 			if hasPayload {
-				usedPayloads[payloadName] = struct{}{}
+				usedPayloads[payload.Name] = struct{}{}
 			}
 
 			namespace, _ := splitEventValue(evt.Value)
@@ -1444,7 +1432,7 @@ func renderCatalog(packages []packageDefs, emitters map[string][]string) (string
 			} else {
 				buf.WriteString("- Payload: not found\n")
 			}
-			if locations, ok := emitters[evt.Name]; ok && len(locations) > 0 {
+			if locations, ok := emitters[evt.Value]; ok && len(locations) > 0 {
 				buf.WriteString("- Emitters:\n")
 				for _, location := range locations {
 					buf.WriteString(fmt.Sprintf("  - `%s`\n", location))
@@ -1464,6 +1452,40 @@ func renderCatalog(packages []packageDefs, emitters map[string][]string) (string
 	}
 
 	return buf.String(), nil
+}
+
+func resolveCatalogPayload(evt eventDef, pkg packageDefs, payloadByEventValue map[string]payloadDef) (payloadDef, bool) {
+	if payload, ok := payloadByEventValue[strings.TrimSpace(evt.Value)]; ok {
+		return payload, true
+	}
+	payloadName := strings.TrimSpace(evt.Payload)
+	if payloadName == "" {
+		payloadName = payloadNameForEvent(evt.Name, evt.Owner)
+	}
+	payload, ok := pkg.Payloads[payloadName]
+	return payload, ok
+}
+
+func buildPayloadByEventValue(packages []packageDefs) map[string]payloadDef {
+	byEvent := make(map[string]payloadDef)
+	for _, pkg := range packages {
+		for _, evt := range pkg.Events {
+			eventValue := strings.TrimSpace(evt.Value)
+			if eventValue == "" {
+				continue
+			}
+			payloadName := strings.TrimSpace(evt.Payload)
+			if payloadName == "" {
+				payloadName = payloadNameForEvent(evt.Name, evt.Owner)
+			}
+			payload, ok := pkg.Payloads[payloadName]
+			if !ok {
+				continue
+			}
+			byEvent[eventValue] = payload
+		}
+	}
+	return byEvent
 }
 
 func renderUsageMap(packages []packageDefs, emitters map[string][]string, appliers map[string][]string) (string, error) {

@@ -24,6 +24,7 @@ const (
 	rejectionCodeRollSeqRequired                   = "ROLL_SEQ_REQUIRED"
 	rejectionCodeOutcomeAlreadyApplied             = "OUTCOME_ALREADY_APPLIED"
 	rejectionCodeOutcomeEffectSystemOwnedForbidden = "OUTCOME_EFFECT_SYSTEM_OWNED_FORBIDDEN"
+	rejectionCodeOutcomeEffectTypeForbidden        = "OUTCOME_EFFECT_TYPE_FORBIDDEN"
 )
 
 // Decide returns the decision for an action command against current state.
@@ -74,6 +75,12 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeOutcomeEffectSystemOwnedForbidden,
 				Message: "core action.outcome.apply cannot emit system-owned effects",
+			})
+		}
+		if hasDisallowedCoreOutcomeEffect(payload.PreEffects) || hasDisallowedCoreOutcomeEffect(payload.PostEffects) {
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodeOutcomeEffectTypeForbidden,
+				Message: "core action.outcome.apply effect type is not allowed",
 			})
 		}
 		if _, alreadyApplied := state.AppliedOutcomes[payload.RollSeq]; alreadyApplied {
@@ -187,4 +194,22 @@ func hasSystemOwnedOutcomeEffect(effects []OutcomeAppliedEffect) bool {
 		}
 	}
 	return false
+}
+
+func hasDisallowedCoreOutcomeEffect(effects []OutcomeAppliedEffect) bool {
+	for _, effect := range effects {
+		if !isAllowedCoreOutcomeEffectType(effect.Type) {
+			return true
+		}
+	}
+	return false
+}
+
+func isAllowedCoreOutcomeEffectType(effectType string) bool {
+	switch strings.TrimSpace(effectType) {
+	case "session.gate_opened", "session.spotlight_set":
+		return true
+	default:
+		return false
+	}
 }
