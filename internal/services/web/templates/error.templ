@@ -7,7 +7,7 @@ templ ErrorPage(page PageContext, title string, message string) {
 			@errorPageContent(page, title, message)
 		}
 	} else {
-		@ShellLayoutWithLocalizer(title, page.Lang, page.Loc) {
+		@ShellLayout(title, page.Lang, page.Loc) {
 			@errorPageContent(page, title, message)
 		}
 	}
