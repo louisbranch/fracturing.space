@@ -21,7 +21,8 @@ services:
       TMPDIR: /workspace/.tmp/go-build
       GOCACHE: /workspace/.tmp/go-cache
       GOPATH: /workspace/.tmp/go
-      GOMODCACHE: /workspace/.tmp/go/pkg/mod
+      GOMODCACHE: /tmp/go-modcache
+      GOFLAGS: -modcacherw
     ports:
       - "8080:8080"
       - "8081:8081"

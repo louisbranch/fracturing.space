@@ -39,6 +39,18 @@ make up    # start devcontainer + watchers (or re-start watchers if already insi
 make down  # stop watchers + stop devcontainer (or just stop watchers if run inside container)
 ```
 
+Ownership note:
+
+- `make up` forwards your host UID/GID to compose (`DEVCONTAINER_UID`/`DEVCONTAINER_GID`) so files created under `.tmp/` and `data/` stay removable without `sudo`.
+- Devcontainer `HOME` is `/home/vscode`, so tool state like `.config/go/telemetry` stays out of the workspace.
+- Go module cache lives in container `/tmp/go-modcache` (not workspace), and `GOFLAGS=-modcacherw` is set in devcontainer flows.
+- You can override explicitly before startup, for example: `DEVCONTAINER_UID=1001 DEVCONTAINER_GID=1001 make up`.
+- If you already have stale root-owned artifacts from older runs, repair once with:
+
+```sh
+sudo chown -R "$(id -u):$(id -g)" .tmp data
+```
+
 Watcher logs:
 
 - `.tmp/dev/game.log`
