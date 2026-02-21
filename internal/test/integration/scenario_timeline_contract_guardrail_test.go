@@ -84,3 +84,28 @@ func TestDaggerheartTimelineTypesAreRegistered(t *testing.T) {
 		}
 	}
 }
+
+func TestRegisteredDaggerheartTimelineTypesAreDocumented(t *testing.T) {
+	repoRoot := integrationRepoRoot(t)
+	timelineDoc := filepath.Join(repoRoot, "docs", "project", "daggerheart-event-timeline-contract.md")
+
+	commandTypes, eventTypes, err := loadTimelineCommandAndEventTypes(timelineDoc)
+	if err != nil {
+		t.Fatalf("load timeline command/event types: %v", err)
+	}
+
+	registries, err := engine.BuildRegistries(daggerheart.NewModule())
+	if err != nil {
+		t.Fatalf("build registries: %v", err)
+	}
+
+	missingCommands := missingDaggerheartTimelineCommandTypes(commandTypes, registries.Commands.ListDefinitions())
+	if len(missingCommands) > 0 {
+		t.Fatalf("registered timeline-tracked command types missing from timeline contract doc: %v", missingCommands)
+	}
+
+	missingEvents := missingDaggerheartTimelineEventTypes(eventTypes, registries.Events.ListDefinitions())
+	if len(missingEvents) > 0 {
+		t.Fatalf("registered timeline-tracked event types missing from timeline contract doc: %v", missingEvents)
+	}
+}

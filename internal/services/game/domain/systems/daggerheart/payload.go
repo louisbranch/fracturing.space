@@ -94,15 +94,16 @@ type RestCharacterStatePatch struct {
 
 // RestTakePayload captures the payload for sys.daggerheart.rest.take commands.
 type RestTakePayload struct {
-	RestType         string                    `json:"rest_type"`
-	Interrupted      bool                      `json:"interrupted"`
-	GMFearBefore     int                       `json:"gm_fear_before"`
-	GMFearAfter      int                       `json:"gm_fear_after"`
-	ShortRestsBefore int                       `json:"short_rests_before"`
-	ShortRestsAfter  int                       `json:"short_rests_after"`
-	RefreshRest      bool                      `json:"refresh_rest"`
-	RefreshLongRest  bool                      `json:"refresh_long_rest"`
-	CharacterStates  []RestCharacterStatePatch `json:"character_states,omitempty"`
+	RestType          string                    `json:"rest_type"`
+	Interrupted       bool                      `json:"interrupted"`
+	GMFearBefore      int                       `json:"gm_fear_before"`
+	GMFearAfter       int                       `json:"gm_fear_after"`
+	ShortRestsBefore  int                       `json:"short_rests_before"`
+	ShortRestsAfter   int                       `json:"short_rests_after"`
+	RefreshRest       bool                      `json:"refresh_rest"`
+	RefreshLongRest   bool                      `json:"refresh_long_rest"`
+	LongTermCountdown *CountdownUpdatePayload   `json:"long_term_countdown,omitempty"`
+	CharacterStates   []RestCharacterStatePatch `json:"character_states,omitempty"`
 }
 
 // RestTakenPayload captures the payload for sys.daggerheart.rest_taken events.

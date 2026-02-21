@@ -9,8 +9,12 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"testing"
+
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 )
 
 var timelineTypePattern = regexp.MustCompile(`[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+`)
@@ -243,5 +247,73 @@ func TestValidateTimelineCoverageForMarkers_AllowsZeroMarkedScenarios(t *testing
 	}
 	if err := validateTimelineCoverageForMarkers(map[string]struct{}{}, indexRows, timelineRowIDs); err != nil {
 		t.Fatalf("validate timeline coverage for empty markers: %v", err)
+	}
+}
+
+func missingDaggerheartTimelineCommandTypes(documented map[string]struct{}, definitions []command.Definition) []string {
+	missing := make([]string, 0)
+	for _, definition := range definitions {
+		commandType := strings.TrimSpace(string(definition.Type))
+		if !isDaggerheartTimelineTrackedCommandType(commandType) {
+			continue
+		}
+		if _, ok := documented[commandType]; ok {
+			continue
+		}
+		missing = append(missing, commandType)
+	}
+	sort.Strings(missing)
+	return missing
+}
+
+func missingDaggerheartTimelineEventTypes(documented map[string]struct{}, definitions []event.Definition) []string {
+	missing := make([]string, 0)
+	for _, definition := range definitions {
+		eventType := strings.TrimSpace(string(definition.Type))
+		if !isDaggerheartTimelineTrackedEventType(eventType) {
+			continue
+		}
+		if _, ok := documented[eventType]; ok {
+			continue
+		}
+		missing = append(missing, eventType)
+	}
+	sort.Strings(missing)
+	return missing
+}
+
+func isDaggerheartTimelineTrackedCommandType(commandType string) bool {
+	if strings.HasPrefix(commandType, "sys.daggerheart.") {
+		return true
+	}
+	switch commandType {
+	case
+		"action.roll.resolve",
+		"action.outcome.apply",
+		"action.outcome.reject",
+		"session.gate_open",
+		"session.spotlight_set",
+		"story.note.add":
+		return true
+	default:
+		return false
+	}
+}
+
+func isDaggerheartTimelineTrackedEventType(eventType string) bool {
+	if strings.HasPrefix(eventType, "sys.daggerheart.") {
+		return true
+	}
+	switch eventType {
+	case
+		"action.roll_resolved",
+		"action.outcome_applied",
+		"action.outcome_rejected",
+		"session.gate_opened",
+		"session.spotlight_set",
+		"story.note_added":
+		return true
+	default:
+		return false
 	}
 }

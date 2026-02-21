@@ -72,7 +72,7 @@ func TestDecideGMFearSet_EmitsGMFearChanged(t *testing.T) {
 	}
 }
 
-func TestDecideGMFearSet_IgnoresLegacyActionType(t *testing.T) {
+func TestDecideGMFearSet_RejectsLegacyActionType(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
 		CampaignID:    "camp-1",
@@ -85,11 +85,59 @@ func TestDecideGMFearSet_IgnoresLegacyActionType(t *testing.T) {
 	}
 
 	decision := Decider{}.Decide(SnapshotState{GMFear: 2}, cmd, func() time.Time { return now })
-	if len(decision.Rejections) != 0 {
-		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
-	}
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != rejectionCodeCommandTypeUnsupported {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeCommandTypeUnsupported)
+	}
+}
+
+func TestDecideUnsupportedCommandRejected(t *testing.T) {
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	cmd := command.Command{
+		CampaignID:    "camp-1",
+		Type:          command.Type("sys.daggerheart.unknown.command"),
+		ActorType:     command.ActorTypeSystem,
+		SystemID:      SystemID,
+		SystemVersion: SystemVersion,
+		PayloadJSON:   []byte(`{}`),
+	}
+
+	decision := Decider{}.Decide(SnapshotState{}, cmd, func() time.Time { return now })
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != rejectionCodeCommandTypeUnsupported {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeCommandTypeUnsupported)
+	}
+}
+
+func TestDecideRegisteredCommandsDoNotReturnEmptyDecision(t *testing.T) {
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	for _, tc := range commandValidationCases() {
+		actorType := tc.actorType
+		if actorType == "" {
+			actorType = command.ActorTypeSystem
+		}
+		decision := Decider{}.Decide(SnapshotState{}, command.Command{
+			CampaignID:    "camp-1",
+			Type:          tc.typ,
+			ActorType:     actorType,
+			ActorID:       tc.actorID,
+			SystemID:      SystemID,
+			SystemVersion: SystemVersion,
+			PayloadJSON:   []byte(tc.validPayload),
+		}, func() time.Time { return now })
+		if len(decision.Events) == 0 && len(decision.Rejections) == 0 {
+			t.Fatalf("registered command %s returned empty decision", tc.typ)
+		}
 	}
 }
 
@@ -654,6 +702,105 @@ func TestDecideRestTake_EmitsRestTaken(t *testing.T) {
 	}
 	if payload.RefreshLongRest {
 		t.Fatal("expected refresh_long_rest false")
+	}
+}
+
+func TestDecideRestTake_WithLongTermCountdown_EmitsCountdownUpdated(t *testing.T) {
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	cmd := command.Command{
+		CampaignID:    "camp-1",
+		Type:          command.Type("sys.daggerheart.rest.take"),
+		ActorType:     command.ActorTypeSystem,
+		SystemID:      SystemID,
+		SystemVersion: SystemVersion,
+		EntityType:    "session",
+		EntityID:      "camp-1",
+		PayloadJSON:   []byte(`{"rest_type":"long","interrupted":false,"gm_fear_before":1,"gm_fear_after":2,"short_rests_before":1,"short_rests_after":0,"refresh_rest":true,"refresh_long_rest":true,"long_term_countdown":{"countdown_id":"cd-1","before":2,"after":3,"delta":1,"looped":false,"reason":"long_rest"}}`),
+	}
+
+	decision := Decider{}.Decide(nil, cmd, func() time.Time { return now })
+	if len(decision.Rejections) != 0 {
+		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
+	}
+	if len(decision.Events) != 2 {
+		t.Fatalf("expected 2 events, got %d", len(decision.Events))
+	}
+
+	restEvent := decision.Events[0]
+	if restEvent.Type != event.Type("sys.daggerheart.rest_taken") {
+		t.Fatalf("first event type = %s, want %s", restEvent.Type, "sys.daggerheart.rest_taken")
+	}
+	countdownEvent := decision.Events[1]
+	if countdownEvent.Type != event.Type("sys.daggerheart.countdown_updated") {
+		t.Fatalf("second event type = %s, want %s", countdownEvent.Type, "sys.daggerheart.countdown_updated")
+	}
+	if countdownEvent.EntityType != "countdown" {
+		t.Fatalf("countdown event entity type = %s, want %s", countdownEvent.EntityType, "countdown")
+	}
+	if countdownEvent.EntityID != "cd-1" {
+		t.Fatalf("countdown event entity id = %s, want %s", countdownEvent.EntityID, "cd-1")
+	}
+}
+
+func TestDecideRestTake_WithLongTermCountdown_BeforeMismatchRejected(t *testing.T) {
+	cmd := command.Command{
+		CampaignID:    "camp-1",
+		Type:          command.Type("sys.daggerheart.rest.take"),
+		ActorType:     command.ActorTypeSystem,
+		SystemID:      SystemID,
+		SystemVersion: SystemVersion,
+		EntityType:    "session",
+		EntityID:      "camp-1",
+		PayloadJSON:   []byte(`{"rest_type":"long","interrupted":false,"gm_fear_before":1,"gm_fear_after":2,"short_rests_before":1,"short_rests_after":0,"refresh_rest":true,"refresh_long_rest":true,"long_term_countdown":{"countdown_id":"cd-1","before":2,"after":3,"delta":1,"looped":false,"reason":"long_rest"}}`),
+	}
+
+	state := SnapshotState{
+		CampaignID: "camp-1",
+		CountdownStates: map[string]CountdownState{
+			"cd-1": {CountdownID: "cd-1", Current: 1, Max: 4, Direction: "increase", Looping: false},
+		},
+	}
+
+	decision := Decider{}.Decide(state, cmd, nil)
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != rejectionCodeCountdownBeforeMismatch {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeCountdownBeforeMismatch)
+	}
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+}
+
+func TestDecideRestTake_WithLongTermCountdown_UnchangedRejected(t *testing.T) {
+	cmd := command.Command{
+		CampaignID:    "camp-1",
+		Type:          command.Type("sys.daggerheart.rest.take"),
+		ActorType:     command.ActorTypeSystem,
+		SystemID:      SystemID,
+		SystemVersion: SystemVersion,
+		EntityType:    "session",
+		EntityID:      "camp-1",
+		PayloadJSON:   []byte(`{"rest_type":"long","interrupted":false,"gm_fear_before":1,"gm_fear_after":2,"short_rests_before":1,"short_rests_after":0,"refresh_rest":true,"refresh_long_rest":true,"long_term_countdown":{"countdown_id":"cd-1","before":3,"after":3,"delta":1,"looped":false,"reason":"long_rest"}}`),
+	}
+
+	state := SnapshotState{
+		CampaignID: "camp-1",
+		CountdownStates: map[string]CountdownState{
+			"cd-1": {CountdownID: "cd-1", Current: 3, Max: 4, Direction: "increase", Looping: true},
+		},
+	}
+
+	decision := Decider{}.Decide(state, cmd, nil)
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != rejectionCodeCountdownUpdateNoMutation {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeCountdownUpdateNoMutation)
+	}
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
 }
 

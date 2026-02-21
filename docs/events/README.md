@@ -6,8 +6,22 @@ nav_order: 4
 
 # Event Catalog Generator
 
-## Regenerating the catalog
-Run the generator from the repo root:
+This folder is the contract surface for runtime-registered command/event types.
+Treat generated files here as canonical for exact type names, payload schemas,
+and emitter/applier references.
+
+## What lives here
+
+- [command-catalog.md](command-catalog.md): command definitions from runtime
+  registries.
+- [event-catalog.md](event-catalog.md): event definitions and payload mappings
+  from runtime registries.
+- [usage-map.md](usage-map.md): emitter/applier cross-reference generated from
+  source scanning.
+
+## Regenerating catalogs
+
+Run from repo root:
 
 ```bash
 go run ./internal/tools/eventdocgen
@@ -18,38 +32,23 @@ This writes:
 - the [event catalog](event-catalog.md) using core and Daggerheart event definitions
 - the [event usage map](usage-map.md) using emitter/applier scanner output
 
-## Event naming and addressing policy
-
-### Naming
-
-- Use lowercase ASCII event/command types.
-- Core command type shape: `<bounded_context>.<entity>.<verb>`.
-- Core event type shape: `<bounded_context>.<entity>_<verb_past>`.
-- System command/event type shape: `sys.<system_id>.<domain>.<verb_or_verb_past>`.
-- System type versioning belongs in `system_version`, not in the type string.
-- Daggerheart system types are sys-only (`sys.daggerheart.*`); legacy
-  `action.*` system aliases are removed.
-
-### Addressing and identity
-
-- Authoritative ordering identity is `campaign_id + seq`.
-- Trace fields: `request_id`, `invocation_id`, `correlation_id`,
-  `causation_id`.
-- Mutating events require `entity_type` and `entity_id` unless explicitly
-  exempted by registry policy.
-- System-owned events require `system_id` and `system_version`.
-
-## Source of truth
+## Canonical boundaries
 
 - Runtime event append/validation uses
   `internal/services/game/domain/event` registries.
+- Runtime command validation/decision uses
+  `internal/services/game/domain/command` registries.
 - Generated files in this folder are artifacts of the generator and should
   not be edited manually.
-- The generator sources runtime command and event type declarations from
-  core domain and system runtime registries.
+- Author conceptual intent and invariants in project docs, not duplicated
+  type/payload inventories:
+  - [Event-driven system](../project/event-driven-system.md)
+  - [Game systems architecture](../project/game-systems.md)
+  - [Daggerheart event timeline contract](../project/daggerheart-event-timeline-contract.md)
 
 ## CI check
-The Go tests workflow regenerates docs and fails if either generated file is out of date:
-- [command catalog](command-catalog.md)
-- [event catalog](event-catalog.md)
-- [event usage map](usage-map.md)
+
+Generated docs are checked by:
+
+- `make event-catalog-check`
+- `make integration` (includes `event-catalog-check`)

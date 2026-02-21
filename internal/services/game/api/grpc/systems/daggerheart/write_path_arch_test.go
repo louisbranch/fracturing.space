@@ -5,6 +5,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"os"
 	"path/filepath"
 	"runtime"
 	"sort"
@@ -14,8 +15,13 @@ import (
 )
 
 func TestDaggerheartHandlersUseSharedDomainWriteHelper(t *testing.T) {
+	files, err := daggerheartArchScanFiles(t)
+	if err != nil {
+		t.Fatalf("load architecture scan files: %v", err)
+	}
+
 	var violations []string
-	for _, filename := range []string{"actions.go", "adversaries.go"} {
+	for _, filename := range files {
 		sourcePath := localSourcePath(t, filename)
 		domainAliases, err := findDomainStoreAliases(sourcePath)
 		if err != nil {
@@ -42,8 +48,13 @@ func TestDaggerheartHandlersUseSharedDomainWriteHelper(t *testing.T) {
 }
 
 func TestDaggerheartHandlersDoNotInlineApplyEvents(t *testing.T) {
+	files, err := daggerheartArchScanFiles(t)
+	if err != nil {
+		t.Fatalf("load architecture scan files: %v", err)
+	}
+
 	var violations []string
-	for _, filename := range []string{"actions.go", "adversaries.go"} {
+	for _, filename := range files {
 		sourcePath := localSourcePath(t, filename)
 		lines, err := findCallLines(sourcePath, func(callPath string, _ *ast.CallExpr) bool {
 			return strings.HasSuffix(callPath, ".Apply")
@@ -58,58 +69,51 @@ func TestDaggerheartHandlersDoNotInlineApplyEvents(t *testing.T) {
 }
 
 func TestDaggerheartHandlersNoDirectStorageMutationBypass(t *testing.T) {
-	tests := []struct {
-		name               string
-		filename           string
-		disallowedCalls    []string
-		disallowedLiterals []string
-	}{
-		{
-			name:     "actions",
-			filename: "actions.go",
-			disallowedCalls: []string{
-				"s.stores.Event.AppendEvent",
-			},
-			disallowedLiterals: []string{
-				"action.outcome_rejected",
-				"story.note_added",
-			},
-		},
-		{
-			name:     "adversaries",
-			filename: "adversaries.go",
-			disallowedCalls: []string{
-				"s.stores.Event.AppendEvent",
-			},
+	files, err := daggerheartArchScanFiles(t)
+	if err != nil {
+		t.Fatalf("load architecture scan files: %v", err)
+	}
+
+	literalPolicies := map[string][]string{
+		"actions.go": {
+			"action.outcome_rejected",
+			"story.note_added",
 		},
 	}
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			sourcePath := localSourcePath(t, tc.filename)
-
+	for _, filename := range files {
+		t.Run(strings.TrimSuffix(filename, ".go"), func(t *testing.T) {
+			sourcePath := localSourcePath(t, filename)
 			callLines, err := findCallLines(sourcePath, func(callPath string, _ *ast.CallExpr) bool {
-				for _, disallowed := range tc.disallowedCalls {
-					if callPath == disallowed {
-						return true
-					}
+				if callPath == "s.stores.Event.AppendEvent" {
+					return true
 				}
 				return hasDisallowedStoreMutationCall(callPath)
 			})
 			if err != nil {
-				t.Fatalf("scan calls in %s: %v", tc.filename, err)
+				t.Fatalf("scan calls in %s: %v", filename, err)
 			}
 
-			literalLines, err := findStringLiteralLines(sourcePath, tc.disallowedLiterals)
+			literalLines, err := findStringLiteralLines(sourcePath, literalPolicies[filename])
 			if err != nil {
-				t.Fatalf("scan literals in %s: %v", tc.filename, err)
+				t.Fatalf("scan literals in %s: %v", filename, err)
 			}
 
 			var violations []string
-			violations = append(violations, linesWithFile(tc.filename, callLines)...)
-			violations = append(violations, linesWithFile(tc.filename, literalLines)...)
-			assertNoViolations(t, fmt.Sprintf("%s contains write-path bypass patterns", tc.filename), violations)
+			violations = append(violations, linesWithFile(filename, callLines)...)
+			violations = append(violations, linesWithFile(filename, literalLines)...)
+			assertNoViolations(t, fmt.Sprintf("%s contains write-path bypass patterns", filename), violations)
 		})
+	}
+}
+
+func TestDaggerheartArchScanIncludesNonLegacyFiles(t *testing.T) {
+	files, err := daggerheartArchScanFiles(t)
+	if err != nil {
+		t.Fatalf("load architecture scan files: %v", err)
+	}
+	if !containsFile(files, "conditions.go") {
+		t.Fatal("expected architecture scan to include conditions.go")
 	}
 }
 
@@ -120,6 +124,32 @@ func localSourcePath(t *testing.T, filename string) string {
 		t.Fatal("resolve current file path")
 	}
 	return filepath.Join(filepath.Dir(thisFile), filename)
+}
+
+func daggerheartArchScanFiles(t *testing.T) ([]string, error) {
+	t.Helper()
+	_, thisFile, _, ok := runtime.Caller(0)
+	if !ok {
+		return nil, fmt.Errorf("resolve current file path")
+	}
+	dir := filepath.Dir(thisFile)
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, fmt.Errorf("read daggerheart directory: %w", err)
+	}
+	files := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		if filepath.Ext(name) != ".go" || strings.HasSuffix(name, "_test.go") {
+			continue
+		}
+		files = append(files, name)
+	}
+	sort.Strings(files)
+	return files, nil
 }
 
 func findCallLines(path string, disallowed func(callPath string, call *ast.CallExpr) bool) ([]int, error) {
@@ -249,6 +279,15 @@ func linesWithFile(filename string, lines []int) []string {
 		out = append(out, fmt.Sprintf("%s:%d", filename, line))
 	}
 	return out
+}
+
+func containsFile(files []string, target string) bool {
+	for _, file := range files {
+		if file == target {
+			return true
+		}
+	}
+	return false
 }
 
 func assertNoViolations(t *testing.T, message string, violations []string) {

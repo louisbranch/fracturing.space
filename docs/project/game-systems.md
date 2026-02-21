@@ -10,6 +10,8 @@ This document explains how a game system extends the shared event-driven core.
 For the command-to-event-to-projection lifecycle, read
 [Event-driven system](event-driven-system.md) first.
 For the high-level design checklist, see [systems checklist](systems.md).
+For exact runtime-registered command/event contracts, use generated docs in
+[`docs/events/`](../events/index.md).
 
 ## Design goals
 
@@ -169,7 +171,8 @@ Create `internal/services/game/domain/systems/{system}/adapter.go` implementing
   errors.
 - New system event types are documented in both:
   - command/event runtime registrations
-  - generated event catalogs generated from runtime registries.
+  - generated event docs in `docs/events/` (`command-catalog.md`,
+    `event-catalog.md`, `usage-map.md`).
 - New code path is exercised with at least one happy-path and one rejection/edge-case
   test for each new command and event pairing.
 
