@@ -9,7 +9,7 @@ templ Layout(title string, activePage string, loc Localizer, page PageContext) {
 		<head>
 			<meta charset="utf-8">
 			<meta name="viewport" content="width=device-width, initial-scale=1">
-			<title>{sharedtemplates.ComposePageTitle(title)}</title>
+			<title>{ ComposeAdminPageTitle(title) }</title>
 			<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
 			<link href="https://cdn.jsdelivr.net/npm/daisyui@5.5.18" rel="stylesheet" type="text/css" integrity="sha384-ww1btmC3Ah3rEb6jt/coOxyQ9JYMoxQpFSB/bxdE20ZYMK4kWSb+TwcgbHR/GFCq" crossorigin="anonymous"/>
 			<link href="https://cdn.jsdelivr.net/npm/daisyui@5.5.18/theme/dim.css" rel="stylesheet" type="text/css" integrity="sha384-xpSgL8CP56CuCvJwgKtoJawFcAe9gqR7VZQ99ss8l/QMdVjBbIPvXnOZDOsJdTds" crossorigin="anonymous">

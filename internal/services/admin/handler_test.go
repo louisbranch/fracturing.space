@@ -38,6 +38,7 @@ func TestWebPageRendering(t *testing.T) {
 		name        string
 		path        string
 		htmx        bool
+		htmxTitle   string
 		contains    []string
 		notContains []string
 	}{
@@ -65,15 +66,15 @@ func TestWebPageRendering(t *testing.T) {
 			},
 		},
 		{
-			name: "campaigns htmx",
-			path: "/campaigns",
-			htmx: true,
+			name:      "campaigns htmx",
+			path:      "/campaigns",
+			htmx:      true,
+			htmxTitle: "<title>Campaigns - Admin | " + branding.AppName + "</title>",
 			contains: []string{
 				"<h2>Campaigns</h2>",
 			},
 			notContains: []string{
 				"<!doctype html>",
-				branding.AppName,
 				"<html",
 				"/campaigns/create",
 			},
@@ -88,15 +89,15 @@ func TestWebPageRendering(t *testing.T) {
 			},
 		},
 		{
-			name: "systems htmx",
-			path: "/systems",
-			htmx: true,
+			name:      "systems htmx",
+			path:      "/systems",
+			htmx:      true,
+			htmxTitle: "<title>Systems - Admin | " + branding.AppName + "</title>",
 			contains: []string{
 				"<h2>Systems</h2>",
 			},
 			notContains: []string{
 				"<!doctype html>",
-				branding.AppName,
 				"<html",
 			},
 		},
@@ -110,15 +111,15 @@ func TestWebPageRendering(t *testing.T) {
 			},
 		},
 		{
-			name: "catalog htmx",
-			path: "/catalog",
-			htmx: true,
+			name:      "catalog htmx",
+			path:      "/catalog",
+			htmx:      true,
+			htmxTitle: "<title>Catalog - Admin | " + branding.AppName + "</title>",
 			contains: []string{
 				"<h2>Catalog</h2>",
 			},
 			notContains: []string{
 				"<!doctype html>",
-				branding.AppName,
 				"<html",
 			},
 		},
@@ -132,15 +133,15 @@ func TestWebPageRendering(t *testing.T) {
 			},
 		},
 		{
-			name: "icons htmx",
-			path: "/icons",
-			htmx: true,
+			name:      "icons htmx",
+			path:      "/icons",
+			htmx:      true,
+			htmxTitle: "<title>Icons - Admin | " + branding.AppName + "</title>",
 			contains: []string{
 				"<h2>Icons</h2>",
 			},
 			notContains: []string{
 				"<!doctype html>",
-				branding.AppName,
 				"<html",
 			},
 		},
@@ -158,16 +159,16 @@ func TestWebPageRendering(t *testing.T) {
 			},
 		},
 		{
-			name: "scenarios htmx",
-			path: "/scenarios",
-			htmx: true,
+			name:      "scenarios htmx",
+			path:      "/scenarios",
+			htmx:      true,
+			htmxTitle: "<title>Scenarios - Admin | " + branding.AppName + "</title>",
 			contains: []string{
 				"<h2>Scenarios</h2>",
 				"Cheat Sheet",
 			},
 			notContains: []string{
 				"<!doctype html>",
-				branding.AppName,
 				"<html",
 				"Lua Script",
 			},
@@ -185,15 +186,15 @@ func TestWebPageRendering(t *testing.T) {
 			},
 		},
 		{
-			name: "scenario events htmx",
-			path: "/scenarios/camp-123/events",
-			htmx: true,
+			name:      "scenario events htmx",
+			path:      "/scenarios/camp-123/events",
+			htmx:      true,
+			htmxTitle: "<title>Scenarios - Admin | " + branding.AppName + "</title>",
 			contains: []string{
 				"<h2>Scenarios</h2>",
 			},
 			notContains: []string{
 				"<!doctype html>",
-				branding.AppName,
 				"<html",
 				"<h3>Events</h3>",
 			},
@@ -209,16 +210,16 @@ func TestWebPageRendering(t *testing.T) {
 			},
 		},
 		{
-			name: "campaign detail htmx",
-			path: "/campaigns/camp-123",
-			htmx: true,
+			name:      "campaign detail htmx",
+			path:      "/campaigns/camp-123",
+			htmx:      true,
+			htmxTitle: "<title>Campaign - Admin | " + branding.AppName + "</title>",
 			contains: []string{
 				"Campaign service unavailable.",
 				"<h2>Campaign</h2>",
 			},
 			notContains: []string{
 				"<!doctype html>",
-				branding.AppName,
 				"<html",
 			},
 		},
@@ -238,6 +239,9 @@ func TestWebPageRendering(t *testing.T) {
 			}
 
 			body := recorder.Body.String()
+			if tc.htmx {
+				assertContains(t, body, tc.htmxTitle)
+			}
 			for _, expected := range tc.contains {
 				assertContains(t, body, expected)
 			}
@@ -1272,8 +1276,8 @@ func TestAdminPageTitleUsesPipeSuffixConvention(t *testing.T) {
 		t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
 	}
 	body := recorder.Body.String()
-	assertContains(t, body, "<title>Campaigns | "+branding.AppName+"</title>")
-	assertNotContains(t, body, "Campaigns - "+branding.AppName+" | "+branding.AppName)
+	assertContains(t, body, "<title>Campaigns - Admin | "+branding.AppName+"</title>")
+	assertNotContains(t, body, "Campaigns | Admin "+branding.AppName+" | "+branding.AppName)
 }
 
 func TestAdminBreadcrumbsRenderViaSharedTemplate(t *testing.T) {

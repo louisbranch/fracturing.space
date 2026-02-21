@@ -52,7 +52,7 @@ func Layout(title string, activePage string, loc Localizer, page PageContext) te
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var3 string
-		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(sharedtemplates.ComposePageTitle(title))
+		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(ComposeAdminPageTitle(title))
 		if templ_7745c5c3_Err != nil {
 			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/layout.templ`, Line: 12, Col: 50}
 		}

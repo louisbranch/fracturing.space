@@ -5,6 +5,7 @@ import (
 	"context"
 	"embed"
 	"fmt"
+	"html"
 	"io"
 	"io/fs"
 	"log"
@@ -357,7 +358,13 @@ func (h *Handler) handleScenarios(w http.ResponseWriter, r *http.Request) {
 		view.Script = defaultScenarioScript()
 	}
 	pageCtx := h.pageContext(lang, loc, r)
-	renderPage(w, r, templates.ScenariosPage(view, loc), templates.ScenariosFullPage(view, pageCtx))
+	renderPage(
+		w,
+		r,
+		templates.ScenariosPage(view, loc),
+		templates.ScenariosFullPage(view, pageCtx),
+		htmxLocalizedPageTitle(loc, "title.scenarios", templates.AppName()),
+	)
 }
 
 func defaultScenarioScript() string {
@@ -460,7 +467,13 @@ func (h *Handler) handleScenarioRun(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) renderScenarioResponse(w http.ResponseWriter, r *http.Request, view templates.ScenarioPageView, loc *message.Printer, lang string) {
 	pageCtx := h.pageContext(lang, loc, r)
-	renderPage(w, r, templates.ScenarioScriptPanel(view, loc), templates.ScenariosFullPage(view, pageCtx))
+	renderPage(
+		w,
+		r,
+		templates.ScenarioScriptPanel(view, loc),
+		templates.ScenariosFullPage(view, pageCtx),
+		htmxLocalizedPageTitle(loc, "title.scenarios", templates.AppName()),
+	)
 }
 
 func (h *Handler) handleScenarioEvents(w http.ResponseWriter, r *http.Request, campaignID string) {
@@ -468,7 +481,13 @@ func (h *Handler) handleScenarioEvents(w http.ResponseWriter, r *http.Request, c
 	view := h.buildScenarioEventsView(r, campaignID, loc)
 
 	pageCtx := h.pageContext(lang, loc, r)
-	renderPage(w, r, templates.ScenarioEventsPage(view, loc), templates.ScenarioEventsFullPage(view, pageCtx))
+	renderPage(
+		w,
+		r,
+		templates.ScenarioEventsPage(view, loc),
+		templates.ScenarioEventsFullPage(view, pageCtx),
+		htmxLocalizedPageTitle(loc, "title.scenarios", templates.AppName()),
+	)
 }
 
 func (h *Handler) handleScenarioEventsTable(w http.ResponseWriter, r *http.Request, campaignID string) {
@@ -795,7 +814,13 @@ func (h *Handler) handleUsersPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	renderPage(w, r, templates.UsersPage(view, loc), templates.UsersFullPage(view, pageCtx))
+	renderPage(
+		w,
+		r,
+		templates.UsersPage(view, loc),
+		templates.UsersFullPage(view, pageCtx),
+		htmxLocalizedPageTitle(loc, "title.users", templates.AppName()),
+	)
 }
 
 // handleUserLookup redirects the get-user form to the detail page.
@@ -813,7 +838,13 @@ func (h *Handler) handleUserLookup(w http.ResponseWriter, r *http.Request) {
 	userID := strings.TrimSpace(r.URL.Query().Get("user_id"))
 	if userID == "" {
 		view.Message = loc.Sprintf("error.user_id_required")
-		renderPage(w, r, templates.UsersPage(view, loc), templates.UsersFullPage(view, pageCtx))
+		renderPage(
+			w,
+			r,
+			templates.UsersPage(view, loc),
+			templates.UsersFullPage(view, pageCtx),
+			htmxLocalizedPageTitle(loc, "title.users", templates.AppName()),
+		)
 		return
 	}
 
@@ -1227,21 +1258,39 @@ func (h *Handler) handleCampaignsTable(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) handleCampaignsPage(w http.ResponseWriter, r *http.Request) {
 	loc, lang := h.localizer(w, r)
 	pageCtx := h.pageContext(lang, loc, r)
-	renderPage(w, r, templates.CampaignsPage(loc), templates.CampaignsFullPage(pageCtx))
+	renderPage(
+		w,
+		r,
+		templates.CampaignsPage(loc),
+		templates.CampaignsFullPage(pageCtx),
+		htmxLocalizedPageTitle(loc, "title.campaigns", templates.AppName()),
+	)
 }
 
 // handleSystemsPage renders the systems page fragment or full layout.
 func (h *Handler) handleSystemsPage(w http.ResponseWriter, r *http.Request) {
 	loc, lang := h.localizer(w, r)
 	pageCtx := h.pageContext(lang, loc, r)
-	renderPage(w, r, templates.SystemsPage(loc), templates.SystemsFullPage(pageCtx))
+	renderPage(
+		w,
+		r,
+		templates.SystemsPage(loc),
+		templates.SystemsFullPage(pageCtx),
+		htmxLocalizedPageTitle(loc, "title.systems", templates.AppName()),
+	)
 }
 
 // handleIconsPage renders the icons page fragment or full layout.
 func (h *Handler) handleIconsPage(w http.ResponseWriter, r *http.Request) {
 	loc, lang := h.localizer(w, r)
 	pageCtx := h.pageContext(lang, loc, r)
-	renderPage(w, r, templates.IconsPage(loc), templates.IconsFullPage(pageCtx))
+	renderPage(
+		w,
+		r,
+		templates.IconsPage(loc),
+		templates.IconsFullPage(pageCtx),
+		htmxLocalizedPageTitle(loc, "title.icons", templates.AppName()),
+	)
 }
 
 // handleCatalogPage renders the catalog page fragment or full layout.
@@ -1254,7 +1303,13 @@ func (h *Handler) handleCatalogPage(w http.ResponseWriter, r *http.Request) {
 	loc, lang := h.localizer(w, r)
 	pageCtx := h.pageContext(lang, loc, r)
 	sectionID := templates.DefaultDaggerheartCatalogSection()
-	renderPage(w, r, templates.CatalogPage(sectionID, loc), templates.CatalogFullPage(sectionID, pageCtx))
+	renderPage(
+		w,
+		r,
+		templates.CatalogPage(sectionID, loc),
+		templates.CatalogFullPage(sectionID, pageCtx),
+		htmxLocalizedPageTitle(loc, "title.catalog", templates.AppName()),
+	)
 }
 
 // handleCatalogRoutes dispatches catalog section routes.
@@ -1291,7 +1346,13 @@ func (h *Handler) handleCatalogRoutes(w http.ResponseWriter, r *http.Request) {
 		}
 		loc, lang := h.localizer(w, r)
 		pageCtx := h.pageContext(lang, loc, r)
-		renderPage(w, r, templates.CatalogSectionPanel(sectionID, loc), templates.CatalogFullPage(sectionID, pageCtx))
+		renderPage(
+			w,
+			r,
+			templates.CatalogSectionPanel(sectionID, loc),
+			templates.CatalogFullPage(sectionID, pageCtx),
+			htmxLocalizedPageTitle(loc, "title.catalog", templates.AppName()),
+		)
 		return
 	}
 	http.NotFound(w, r)
@@ -1577,7 +1638,13 @@ func (h *Handler) handleCatalogSectionDetail(w http.ResponseWriter, r *http.Requ
 			Message:   loc.Sprintf("catalog.error.service_unavailable"),
 			BackURL:   "/catalog/daggerheart/" + sectionID,
 		}
-		renderPage(w, r, templates.CatalogDetailPanel(view, loc), templates.CatalogFullPageWithContent(sectionID, templates.CatalogDetailPanel(view, loc), pageCtx))
+		renderPage(
+			w,
+			r,
+			templates.CatalogDetailPanel(view, loc),
+			templates.CatalogFullPageWithContent(sectionID, templates.CatalogDetailPanel(view, loc), pageCtx),
+			htmxLocalizedPageTitle(loc, "title.catalog", templates.AppName()),
+		)
 		return
 	}
 
@@ -1639,7 +1706,13 @@ func (h *Handler) handleCatalogSectionDetail(w http.ResponseWriter, r *http.Requ
 		view.BackURL = "/catalog/daggerheart/" + sectionID
 	}
 
-	renderPage(w, r, templates.CatalogDetailPanel(view, loc), templates.CatalogFullPageWithContent(sectionID, templates.CatalogDetailPanel(view, loc), pageCtx))
+	renderPage(
+		w,
+		r,
+		templates.CatalogDetailPanel(view, loc),
+		templates.CatalogFullPageWithContent(sectionID, templates.CatalogDetailPanel(view, loc), pageCtx),
+		htmxLocalizedPageTitle(loc, "title.catalog", templates.AppName()),
+	)
 }
 
 // handleSystemsTable renders the systems table via HTMX.
@@ -1862,7 +1935,13 @@ func (h *Handler) handleSessionsList(w http.ResponseWriter, r *http.Request, cam
 	loc, lang := h.localizer(w, r)
 	campaignName := getCampaignName(h, r, campaignID, loc)
 	pageCtx := h.pageContext(lang, loc, r)
-	renderPage(w, r, templates.SessionsListPage(campaignID, campaignName, loc), templates.SessionsListFullPage(campaignID, campaignName, pageCtx))
+	renderPage(
+		w,
+		r,
+		templates.SessionsListPage(campaignID, campaignName, loc),
+		templates.SessionsListFullPage(campaignID, campaignName, pageCtx),
+		htmxLocalizedPageTitle(loc, "title.sessions", templates.AppName()),
+	)
 }
 
 // handleSessionsTable renders the sessions table via HTMX.
@@ -1905,7 +1984,13 @@ func (h *Handler) renderCampaignTable(w http.ResponseWriter, r *http.Request, ro
 // renderCampaignDetail renders the campaign detail fragment or full layout.
 func (h *Handler) renderCampaignDetail(w http.ResponseWriter, r *http.Request, detail templates.CampaignDetail, message string, lang string, loc *message.Printer) {
 	pageCtx := h.pageContext(lang, loc, r)
-	renderPage(w, r, templates.CampaignDetailPage(detail, message, loc), templates.CampaignDetailFullPage(detail, message, pageCtx))
+	renderPage(
+		w,
+		r,
+		templates.CampaignDetailPage(detail, message, loc),
+		templates.CampaignDetailFullPage(detail, message, pageCtx),
+		htmxLocalizedPageTitle(loc, "title.campaign", templates.AppName()),
+	)
 }
 
 // renderSystemsTable renders a systems table with optional rows and message.
@@ -1921,7 +2006,13 @@ func (h *Handler) renderIconsTable(w http.ResponseWriter, r *http.Request, rows 
 // renderSystemDetail renders the system detail fragment or full layout.
 func (h *Handler) renderSystemDetail(w http.ResponseWriter, r *http.Request, detail templates.SystemDetail, message string, lang string, loc *message.Printer) {
 	pageCtx := h.pageContext(lang, loc, r)
-	renderPage(w, r, templates.SystemDetailPage(detail, message, loc), templates.SystemDetailFullPage(detail, message, pageCtx))
+	renderPage(
+		w,
+		r,
+		templates.SystemDetailPage(detail, message, loc),
+		templates.SystemDetailFullPage(detail, message, pageCtx),
+		htmxLocalizedPageTitle(loc, "title.system", templates.AppName()),
+	)
 }
 
 // renderCampaignSessions renders the session list fragment.
@@ -1935,7 +2026,13 @@ func (h *Handler) renderUsersTable(w http.ResponseWriter, r *http.Request, rows 
 }
 
 func (h *Handler) renderUserDetail(w http.ResponseWriter, r *http.Request, view templates.UserDetailPageView, pageCtx templates.PageContext, loc *message.Printer, activePage string) {
-	renderPage(w, r, templates.UserDetailPage(view, activePage, loc), templates.UserDetailFullPage(view, activePage, pageCtx))
+	renderPage(
+		w,
+		r,
+		templates.UserDetailPage(view, activePage, loc),
+		templates.UserDetailFullPage(view, activePage, pageCtx),
+		htmxLocalizedPageTitle(loc, "title.user", templates.AppName()),
+	)
 }
 
 func (h *Handler) redirectToUserDetail(w http.ResponseWriter, r *http.Request, userID string) {
@@ -2098,10 +2195,83 @@ func splitPathParts(path string) []string {
 	return parts
 }
 
+type htmxResponseBuffer struct {
+	header      http.Header
+	statusCode  int
+	body        bytes.Buffer
+	headerWrote bool
+}
+
+func newHTMXResponseBuffer() *htmxResponseBuffer {
+	return &htmxResponseBuffer{
+		header:     make(http.Header),
+		statusCode: http.StatusOK,
+	}
+}
+
+func (w *htmxResponseBuffer) Header() http.Header {
+	return w.header
+}
+
+func (w *htmxResponseBuffer) WriteHeader(status int) {
+	if w.headerWrote {
+		return
+	}
+	w.headerWrote = true
+	w.statusCode = status
+}
+
+func (w *htmxResponseBuffer) Write(body []byte) (int, error) {
+	return w.body.Write(body)
+}
+
+func htmxDefaultPageTitle() string {
+	return "<title>Admin | " + templates.AppName() + "</title>"
+}
+
+func htmxLocalizedPageTitle(loc *message.Printer, title string, args ...any) string {
+	if loc == nil {
+		return htmxDefaultPageTitle()
+	}
+	return "<title>" + html.EscapeString(templates.ComposeAdminPageTitle(templates.T(loc, title, args...))) + "</title>"
+}
+
+func addHTMXTitleIfMissing(responseBody []byte, title string) []byte {
+	bodyLower := strings.ToLower(string(responseBody))
+	if strings.Contains(bodyLower, "<title") {
+		return responseBody
+	}
+	if strings.TrimSpace(title) == "" {
+		title = htmxDefaultPageTitle()
+	}
+	return append([]byte(title), responseBody...)
+}
+
+func copyHeaders(dst, src http.Header) {
+	for key, values := range src {
+		for _, value := range values {
+			dst.Add(key, value)
+		}
+	}
+}
+
 // renderPage picks the HTMX fragment or full layout without duplicating handler flow.
-func renderPage(w http.ResponseWriter, r *http.Request, fragment templ.Component, full templ.Component) {
+func renderPage(w http.ResponseWriter, r *http.Request, fragment templ.Component, full templ.Component, htmxTitle string) {
 	if isHTMXRequest(r) {
-		templ.Handler(fragment).ServeHTTP(w, r)
+		capture := newHTMXResponseBuffer()
+		templ.Handler(fragment).ServeHTTP(capture, r)
+
+		body := addHTMXTitleIfMissing(capture.body.Bytes(), htmxTitle)
+		copyHeaders(w.Header(), capture.Header())
+		if !capture.headerWrote {
+			capture.statusCode = http.StatusOK
+		}
+		if capture.statusCode != http.StatusOK {
+			w.WriteHeader(capture.statusCode)
+		}
+		if _, err := w.Write(body); err != nil {
+			log.Printf("admin: failed to write HTMX response: %v", err)
+		}
 		return
 	}
 	templ.Handler(full).ServeHTTP(w, r)
@@ -3157,7 +3327,13 @@ func (h *Handler) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 	loc, lang := h.localizer(w, r)
 	pageCtx := h.pageContext(lang, loc, r)
-	renderPage(w, r, templates.DashboardPage(loc), templates.DashboardFullPage(pageCtx))
+	renderPage(
+		w,
+		r,
+		templates.DashboardPage(loc),
+		templates.DashboardFullPage(pageCtx),
+		htmxLocalizedPageTitle(loc, "title.dashboard", templates.AppName()),
+	)
 }
 
 // handleDashboardContent loads and renders the dashboard statistics and recent activity.
@@ -3407,7 +3583,13 @@ func (h *Handler) handleCharactersList(w http.ResponseWriter, r *http.Request, c
 	loc, lang := h.localizer(w, r)
 	campaignName := getCampaignName(h, r, campaignID, loc)
 	pageCtx := h.pageContext(lang, loc, r)
-	renderPage(w, r, templates.CharactersListPage(campaignID, campaignName, loc), templates.CharactersListFullPage(campaignID, campaignName, pageCtx))
+	renderPage(
+		w,
+		r,
+		templates.CharactersListPage(campaignID, campaignName, loc),
+		templates.CharactersListFullPage(campaignID, campaignName, pageCtx),
+		htmxLocalizedPageTitle(loc, "title.characters", templates.AppName()),
+	)
 }
 
 // handleCharactersTable renders the characters table.
@@ -3546,7 +3728,13 @@ func (h *Handler) renderCharacterSheet(w http.ResponseWriter, r *http.Request, c
 
 	sheet := buildCharacterSheet(campaignID, campaignName, character, recentEvents, controller, loc)
 	pageCtx := h.pageContext(lang, loc, r)
-	renderPage(w, r, templates.CharacterSheetPage(sheet, activePage, loc), templates.CharacterSheetFullPage(sheet, activePage, pageCtx))
+	renderPage(
+		w,
+		r,
+		templates.CharacterSheetPage(sheet, activePage, loc),
+		templates.CharacterSheetFullPage(sheet, activePage, pageCtx),
+		htmxLocalizedPageTitle(loc, "title.character_sheet", sheet.Character.GetName(), templates.AppName()),
+	)
 }
 
 // renderCharactersTable renders the characters table component.
@@ -3640,7 +3828,13 @@ func (h *Handler) handleParticipantsList(w http.ResponseWriter, r *http.Request,
 	loc, lang := h.localizer(w, r)
 	campaignName := getCampaignName(h, r, campaignID, loc)
 	pageCtx := h.pageContext(lang, loc, r)
-	renderPage(w, r, templates.ParticipantsListPage(campaignID, campaignName, loc), templates.ParticipantsListFullPage(campaignID, campaignName, pageCtx))
+	renderPage(
+		w,
+		r,
+		templates.ParticipantsListPage(campaignID, campaignName, loc),
+		templates.ParticipantsListFullPage(campaignID, campaignName, pageCtx),
+		htmxLocalizedPageTitle(loc, "title.participants", templates.AppName()),
+	)
 }
 
 // handleParticipantsTable renders the participants table.
@@ -3679,7 +3873,13 @@ func (h *Handler) handleInvitesList(w http.ResponseWriter, r *http.Request, camp
 	loc, lang := h.localizer(w, r)
 	campaignName := getCampaignName(h, r, campaignID, loc)
 	pageCtx := h.pageContext(lang, loc, r)
-	renderPage(w, r, templates.InvitesListPage(campaignID, campaignName, loc), templates.InvitesListFullPage(campaignID, campaignName, pageCtx))
+	renderPage(
+		w,
+		r,
+		templates.InvitesListPage(campaignID, campaignName, loc),
+		templates.InvitesListFullPage(campaignID, campaignName, pageCtx),
+		htmxLocalizedPageTitle(loc, "title.invites", templates.AppName()),
+	)
 }
 
 // handleInvitesTable renders the invites table.
@@ -3962,7 +4162,13 @@ func (h *Handler) handleSessionDetail(w http.ResponseWriter, r *http.Request, ca
 
 	detail := buildSessionDetail(campaignID, campaignName, session, eventCount, loc)
 	pageCtx := h.pageContext(lang, loc, r)
-	renderPage(w, r, templates.SessionDetailPage(detail, loc), templates.SessionDetailFullPage(detail, pageCtx))
+	renderPage(
+		w,
+		r,
+		templates.SessionDetailPage(detail, loc),
+		templates.SessionDetailFullPage(detail, pageCtx),
+		htmxLocalizedPageTitle(loc, "title.session", detail.Name, templates.AppName()),
+	)
 }
 
 // handleSessionEvents renders the session events via HTMX.
@@ -4052,7 +4258,13 @@ func (h *Handler) handleEventLog(w http.ResponseWriter, r *http.Request, campaig
 		PrevToken:    prevToken,
 	}
 	pageCtx := h.pageContext(lang, loc, r)
-	renderPage(w, r, templates.EventLogPage(view, loc), templates.EventLogFullPage(view, pageCtx))
+	renderPage(
+		w,
+		r,
+		templates.EventLogPage(view, loc),
+		templates.EventLogFullPage(view, pageCtx),
+		htmxLocalizedPageTitle(loc, "title.events", templates.AppName()),
+	)
 }
 
 // handleEventLogTable renders the event log table via HTMX.
