@@ -744,17 +744,17 @@ func TestNewServerWithContextRequiresContext(t *testing.T) {
 }
 
 func TestDialAuthGRPCNilAddr(t *testing.T) {
-	conn, client, err := dialAuthGRPC(context.Background(), Config{})
+	clients, err := dialAuthGRPC(context.Background(), Config{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if conn != nil || client != nil {
+	if clients.conn != nil || clients.authClient != nil {
 		t.Fatalf("expected nil conn and client")
 	}
 }
 
 func TestDialAuthGRPCNilContextReturnsError(t *testing.T) {
-	_, _, err := dialAuthGRPC(nil, Config{
+	_, err := dialAuthGRPC(nil, Config{
 		AuthAddr: "127.0.0.1:1",
 	})
 	if err == nil {
@@ -769,24 +769,24 @@ func TestDialAuthGRPCSuccess(t *testing.T) {
 	listener, server := startGRPCServer(t)
 	defer server.Stop()
 
-	conn, client, err := dialAuthGRPC(context.Background(), Config{
+	clients, err := dialAuthGRPC(context.Background(), Config{
 		AuthAddr:        listener.Addr().String(),
 		GRPCDialTimeout: 2 * time.Second,
 	})
 	if err != nil {
 		t.Fatalf("dial: %v", err)
 	}
-	if conn == nil || client == nil {
+	if clients.conn == nil || clients.authClient == nil {
 		t.Fatalf("expected conn and client")
 	}
-	_ = conn.Close()
+	_ = clients.conn.Close()
 }
 
 func TestDialAuthGRPCDialError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
-	_, _, err := dialAuthGRPC(ctx, Config{
+	_, err := dialAuthGRPC(ctx, Config{
 		AuthAddr:        "127.0.0.1:1",
 		GRPCDialTimeout: 50 * time.Millisecond,
 	})
@@ -805,7 +805,7 @@ func TestDialAuthGRPCHealthError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
 
-	_, _, err := dialAuthGRPC(ctx, Config{
+	_, err := dialAuthGRPC(ctx, Config{
 		AuthAddr:        listener.Addr().String(),
 		GRPCDialTimeout: 100 * time.Millisecond,
 	})
@@ -818,17 +818,17 @@ func TestDialAuthGRPCHealthError(t *testing.T) {
 }
 
 func TestDialGameGRPCNilAddr(t *testing.T) {
-	conn, participantClient, campaignClient, eventClient, sessionClient, characterClient, inviteClient, err := dialGameGRPC(context.Background(), Config{})
+	clients, err := dialGameGRPC(context.Background(), Config{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if conn != nil || participantClient != nil || campaignClient != nil || eventClient != nil || sessionClient != nil || characterClient != nil || inviteClient != nil {
+	if clients.conn != nil || clients.participantClient != nil || clients.campaignClient != nil || clients.eventClient != nil || clients.sessionClient != nil || clients.characterClient != nil || clients.inviteClient != nil {
 		t.Fatalf("expected nil connection and clients")
 	}
 }
 
 func TestDialGameGRPCNilContextReturnsError(t *testing.T) {
-	_, _, _, _, _, _, _, err := dialGameGRPC(nil, Config{
+	_, err := dialGameGRPC(nil, Config{
 		GameAddr: "127.0.0.1:1",
 	})
 	if err == nil {
@@ -843,17 +843,17 @@ func TestDialGameGRPCSuccessIncludesEventClient(t *testing.T) {
 	listener, server := startGRPCServer(t)
 	defer server.Stop()
 
-	conn, participantClient, campaignClient, eventClient, sessionClient, characterClient, inviteClient, err := dialGameGRPC(context.Background(), Config{
+	clients, err := dialGameGRPC(context.Background(), Config{
 		GameAddr:        listener.Addr().String(),
 		GRPCDialTimeout: 2 * time.Second,
 	})
 	if err != nil {
 		t.Fatalf("dial: %v", err)
 	}
-	if conn == nil || participantClient == nil || campaignClient == nil || eventClient == nil || sessionClient == nil || characterClient == nil || inviteClient == nil {
+	if clients.conn == nil || clients.participantClient == nil || clients.campaignClient == nil || clients.eventClient == nil || clients.sessionClient == nil || clients.characterClient == nil || clients.inviteClient == nil {
 		t.Fatalf("expected all game service clients")
 	}
-	_ = conn.Close()
+	_ = clients.conn.Close()
 }
 
 func TestBuildAuthConsentURL(t *testing.T) {

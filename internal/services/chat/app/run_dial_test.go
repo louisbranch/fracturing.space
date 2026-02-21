@@ -46,30 +46,30 @@ func TestRunStartsAndStopsOnCancel(t *testing.T) {
 }
 
 func TestDialGameGRPCEmptyAddr(t *testing.T) {
-	conn, client, err := dialGameGRPC(context.Background(), Config{})
+	clients, err := dialGameGRPC(context.Background(), Config{})
 	if err != nil {
 		t.Fatalf("dialGameGRPC returned error: %v", err)
 	}
-	if conn != nil {
+	if clients.conn != nil {
 		t.Fatal("expected nil conn when game addr is empty")
 	}
-	if client != nil {
+	if clients.participantClient != nil {
 		t.Fatal("expected nil participant client when game addr is empty")
 	}
 }
 
 func TestDialGameGRPCReturnsErrorWhenUnreachable(t *testing.T) {
-	conn, client, err := dialGameGRPC(context.Background(), Config{
+	clients, err := dialGameGRPC(context.Background(), Config{
 		GameAddr:        "127.0.0.1:1",
 		GRPCDialTimeout: 50 * time.Millisecond,
 	})
 	if err == nil {
 		t.Fatal("expected dial error")
 	}
-	if conn != nil {
+	if clients.conn != nil {
 		t.Fatal("expected nil conn on dial error")
 	}
-	if client != nil {
+	if clients.participantClient != nil {
 		t.Fatal("expected nil client on dial error")
 	}
 }
@@ -100,20 +100,20 @@ func TestDialGameGRPCSuccess(t *testing.T) {
 		}
 	})
 
-	conn, client, err := dialGameGRPC(context.Background(), Config{
+	clients, err := dialGameGRPC(context.Background(), Config{
 		GameAddr:        listener.Addr().String(),
 		GRPCDialTimeout: time.Second,
 	})
 	if err != nil {
 		t.Fatalf("dialGameGRPC: %v", err)
 	}
-	if conn == nil {
+	if clients.conn == nil {
 		t.Fatal("expected conn")
 	}
-	if client == nil {
+	if clients.participantClient == nil {
 		t.Fatal("expected participant client")
 	}
-	if closeErr := conn.Close(); closeErr != nil {
+	if closeErr := clients.conn.Close(); closeErr != nil {
 		t.Fatalf("close conn: %v", closeErr)
 	}
 }

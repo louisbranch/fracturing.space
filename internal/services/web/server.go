@@ -93,6 +93,23 @@ type handlerDependencies struct {
 	inviteClient      statev1.InviteServiceClient
 }
 
+// authGRPCClients holds the auth clients created during web startup.
+type authGRPCClients struct {
+	conn       *grpc.ClientConn
+	authClient authv1.AuthServiceClient
+}
+
+// gameGRPCClients holds the game clients used by the web service.
+type gameGRPCClients struct {
+	conn              *grpc.ClientConn
+	participantClient statev1.ParticipantServiceClient
+	campaignClient    statev1.CampaignServiceClient
+	eventClient       statev1.EventServiceClient
+	sessionClient     statev1.SessionServiceClient
+	characterClient   statev1.CharacterServiceClient
+	inviteClient      statev1.InviteServiceClient
+}
+
 // localizer resolves the request locale, optionally persists a cookie,
 // and returns a message printer with the resolved language tag string.
 func localizer(w http.ResponseWriter, r *http.Request) (*message.Printer, string) {
@@ -317,15 +334,15 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 	var authConn *grpc.ClientConn
 	var authClient authv1.AuthServiceClient
 	if strings.TrimSpace(config.AuthAddr) != "" {
-		conn, client, err := dialAuthGRPC(ctx, config)
+		clients, err := dialAuthGRPC(ctx, config)
 		if err != nil {
 			if cacheStore != nil {
 				_ = cacheStore.Close()
 			}
 			return nil, fmt.Errorf("dial auth grpc: %w", err)
 		}
-		authConn = conn
-		authClient = client
+		authConn = clients.conn
+		authClient = clients.authClient
 	}
 
 	var gameConn *grpc.ClientConn
@@ -336,17 +353,17 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 	var characterClient statev1.CharacterServiceClient
 	var inviteClient statev1.InviteServiceClient
 	if strings.TrimSpace(config.GameAddr) != "" {
-		conn, participantServiceClient, campaignServiceClient, eventServiceClient, sessionServiceClient, characterServiceClient, inviteServiceClient, err := dialGameGRPC(ctx, config)
+		clients, err := dialGameGRPC(ctx, config)
 		if err != nil {
 			log.Printf("game gRPC dial failed, campaign access checks disabled: %v", err)
 		} else {
-			gameConn = conn
-			participantClient = participantServiceClient
-			campaignClient = campaignServiceClient
-			eventClient = eventServiceClient
-			sessionClient = sessionServiceClient
-			characterClient = characterServiceClient
-			inviteClient = inviteServiceClient
+			gameConn = clients.conn
+			participantClient = clients.participantClient
+			campaignClient = clients.campaignClient
+			eventClient = clients.eventClient
+			sessionClient = clients.sessionClient
+			characterClient = clients.characterClient
+			inviteClient = clients.inviteClient
 		}
 	}
 	campaignAccess := newCampaignAccessChecker(config, participantClient)
@@ -479,13 +496,13 @@ func buildAuthConsentURL(base string, pendingID string) string {
 // dialAuthGRPC returns a client for auth-backed login/registration operations.
 // Auth transport is optional in degraded startup modes so the web package can
 // still stand up with limited capability.
-func dialAuthGRPC(ctx context.Context, config Config) (*grpc.ClientConn, authv1.AuthServiceClient, error) {
+func dialAuthGRPC(ctx context.Context, config Config) (authGRPCClients, error) {
 	authAddr := strings.TrimSpace(config.AuthAddr)
 	if authAddr == "" {
-		return nil, nil, nil
+		return authGRPCClients{}, nil
 	}
 	if ctx == nil {
-		return nil, nil, errors.New("context is required")
+		return authGRPCClients{}, errors.New("context is required")
 	}
 	if config.GRPCDialTimeout <= 0 {
 		config.GRPCDialTimeout = timeouts.GRPCDial
@@ -505,26 +522,28 @@ func dialAuthGRPC(ctx context.Context, config Config) (*grpc.ClientConn, authv1.
 		var dialErr *platformgrpc.DialError
 		if errors.As(err, &dialErr) {
 			if dialErr.Stage == platformgrpc.DialStageHealth {
-				return nil, nil, fmt.Errorf("auth gRPC health check failed for %s: %w", authAddr, dialErr.Err)
+				return authGRPCClients{}, fmt.Errorf("auth gRPC health check failed for %s: %w", authAddr, dialErr.Err)
 			}
-			return nil, nil, fmt.Errorf("dial auth gRPC %s: %w", authAddr, dialErr.Err)
+			return authGRPCClients{}, fmt.Errorf("dial auth gRPC %s: %w", authAddr, dialErr.Err)
 		}
-		return nil, nil, fmt.Errorf("dial auth gRPC %s: %w", authAddr, err)
+		return authGRPCClients{}, fmt.Errorf("dial auth gRPC %s: %w", authAddr, err)
 	}
-	client := authv1.NewAuthServiceClient(conn)
-	return conn, client, nil
+	return authGRPCClients{
+		conn:       conn,
+		authClient: authv1.NewAuthServiceClient(conn),
+	}, nil
 }
 
 // dialGameGRPC returns clients for campaign/character/session/invite operations.
 // This dependency is optional by design so campaign routes can degrade gracefully
 // during partial service outages.
-func dialGameGRPC(ctx context.Context, config Config) (*grpc.ClientConn, statev1.ParticipantServiceClient, statev1.CampaignServiceClient, statev1.EventServiceClient, statev1.SessionServiceClient, statev1.CharacterServiceClient, statev1.InviteServiceClient, error) {
+func dialGameGRPC(ctx context.Context, config Config) (gameGRPCClients, error) {
 	gameAddr := strings.TrimSpace(config.GameAddr)
 	if gameAddr == "" {
-		return nil, nil, nil, nil, nil, nil, nil, nil
+		return gameGRPCClients{}, nil
 	}
 	if ctx == nil {
-		return nil, nil, nil, nil, nil, nil, nil, errors.New("context is required")
+		return gameGRPCClients{}, errors.New("context is required")
 	}
 	if config.GRPCDialTimeout <= 0 {
 		config.GRPCDialTimeout = timeouts.GRPCDial
@@ -544,19 +563,21 @@ func dialGameGRPC(ctx context.Context, config Config) (*grpc.ClientConn, statev1
 		var dialErr *platformgrpc.DialError
 		if errors.As(err, &dialErr) {
 			if dialErr.Stage == platformgrpc.DialStageHealth {
-				return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("game gRPC health check failed for %s: %w", gameAddr, dialErr.Err)
+				return gameGRPCClients{}, fmt.Errorf("game gRPC health check failed for %s: %w", gameAddr, dialErr.Err)
 			}
-			return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("dial game gRPC %s: %w", gameAddr, dialErr.Err)
+			return gameGRPCClients{}, fmt.Errorf("dial game gRPC %s: %w", gameAddr, dialErr.Err)
 		}
-		return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("dial game gRPC %s: %w", gameAddr, err)
+		return gameGRPCClients{}, fmt.Errorf("dial game gRPC %s: %w", gameAddr, err)
 	}
-	participantClient := statev1.NewParticipantServiceClient(conn)
-	campaignClient := statev1.NewCampaignServiceClient(conn)
-	eventClient := statev1.NewEventServiceClient(conn)
-	sessionClient := statev1.NewSessionServiceClient(conn)
-	characterClient := statev1.NewCharacterServiceClient(conn)
-	inviteClient := statev1.NewInviteServiceClient(conn)
-	return conn, participantClient, campaignClient, eventClient, sessionClient, characterClient, inviteClient, nil
+	return gameGRPCClients{
+		conn:              conn,
+		participantClient: statev1.NewParticipantServiceClient(conn),
+		campaignClient:    statev1.NewCampaignServiceClient(conn),
+		eventClient:       statev1.NewEventServiceClient(conn),
+		sessionClient:     statev1.NewSessionServiceClient(conn),
+		characterClient:   statev1.NewCharacterServiceClient(conn),
+		inviteClient:      statev1.NewInviteServiceClient(conn),
+	}, nil
 }
 
 // handlePasskeyLoginStart begins a passkey authentication round trip and returns

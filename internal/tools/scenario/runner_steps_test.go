@@ -17,10 +17,17 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
+type testEnvFixture struct {
+	env               scenarioEnv
+	eventClient       *fakeEventClient
+	sessionClient     *fakeSessionClient
+	daggerheartClient *fakeDaggerheartClient
+}
+
 // --- helpers ---
 
 // testEnv returns a scenarioEnv wired to all fakes with reasonable defaults.
-func testEnv() (scenarioEnv, *fakeEventClient, *fakeSessionClient, *fakeDaggerheartClient) {
+func testEnv() testEnvFixture {
 	eventClient := &fakeEventClient{}
 	sessionClient := &fakeSessionClient{
 		startSession: func(_ context.Context, req *gamev1.StartSessionRequest, _ ...grpc.CallOption) (*gamev1.StartSessionResponse, error) {
@@ -84,7 +91,12 @@ func testEnv() (scenarioEnv, *fakeEventClient, *fakeSessionClient, *fakeDaggerhe
 		},
 		daggerheartClient: dhClient,
 	}
-	return env, eventClient, sessionClient, dhClient
+	return testEnvFixture{
+		env:               env,
+		eventClient:       eventClient,
+		sessionClient:     sessionClient,
+		daggerheartClient: dhClient,
+	}
 }
 
 // testState returns a scenarioState with an active campaign and session.
@@ -404,7 +416,8 @@ func TestSetDefaultControlRequestWithoutParticipant(t *testing.T) {
 // --- runStep dispatch tests ---
 
 func TestRunStepUnknown(t *testing.T) {
-	env, _, _, _ := testEnv()
+	fixture := testEnv()
+	env := fixture.env
 	runner := quietRunner(env)
 	state := testState()
 	err := runner.runStep(context.Background(), state, Step{Kind: "bogus"})
@@ -414,7 +427,8 @@ func TestRunStepUnknown(t *testing.T) {
 }
 
 func TestRunStepDispatchCampaign(t *testing.T) {
-	env, _, _, _ := testEnv()
+	fixture := testEnv()
+	env := fixture.env
 	runner := quietRunner(env)
 	state := &scenarioState{} // no campaign yet
 	err := runner.runStep(context.Background(), state, Step{
@@ -432,7 +446,8 @@ func TestRunStepDispatchCampaign(t *testing.T) {
 // --- campaign step edge cases ---
 
 func TestRunCampaignStepDuplicate(t *testing.T) {
-	env, _, _, _ := testEnv()
+	fixture := testEnv()
+	env := fixture.env
 	runner := quietRunner(env)
 	state := testState() // already has campaign
 	err := runner.runCampaignStep(context.Background(), state, Step{
@@ -445,7 +460,8 @@ func TestRunCampaignStepDuplicate(t *testing.T) {
 }
 
 func TestRunCampaignStepMissingName(t *testing.T) {
-	env, _, _, _ := testEnv()
+	fixture := testEnv()
+	env := fixture.env
 	runner := quietRunner(env)
 	state := &scenarioState{}
 	err := runner.runCampaignStep(context.Background(), state, Step{
@@ -460,7 +476,8 @@ func TestRunCampaignStepMissingName(t *testing.T) {
 // --- participant step ---
 
 func TestRunParticipantStepMissingCampaign(t *testing.T) {
-	env, _, _, _ := testEnv()
+	fixture := testEnv()
+	env := fixture.env
 	runner := quietRunner(env)
 	state := &scenarioState{participants: map[string]string{}}
 	err := runner.runParticipantStep(context.Background(), state, Step{
@@ -473,7 +490,8 @@ func TestRunParticipantStepMissingCampaign(t *testing.T) {
 }
 
 func TestRunParticipantStepMissingName(t *testing.T) {
-	env, _, _, _ := testEnv()
+	fixture := testEnv()
+	env := fixture.env
 	runner := quietRunner(env)
 	state := testState()
 	err := runner.runParticipantStep(context.Background(), state, Step{
@@ -487,7 +505,8 @@ func TestRunParticipantStepMissingName(t *testing.T) {
 
 func TestRunParticipantStepWithGMRole(t *testing.T) {
 	var gotRequest *gamev1.CreateParticipantRequest
-	env, _, _, _ := testEnv()
+	fixture := testEnv()
+	env := fixture.env
 	env.participantClient = &fakeParticipantClient{
 		create: func(_ context.Context, req *gamev1.CreateParticipantRequest, _ ...grpc.CallOption) (*gamev1.CreateParticipantResponse, error) {
 			gotRequest = req
@@ -516,7 +535,8 @@ func TestRunParticipantStepWithGMRole(t *testing.T) {
 // --- session steps ---
 
 func TestRunStartSessionStep(t *testing.T) {
-	env, _, _, _ := testEnv()
+	fixture := testEnv()
+	env := fixture.env
 	runner := quietRunner(env)
 	state := testState()
 	state.sessionID = "" // no session yet
@@ -533,7 +553,8 @@ func TestRunStartSessionStep(t *testing.T) {
 }
 
 func TestRunStartSessionStepRequiresCampaign(t *testing.T) {
-	env, _, _, _ := testEnv()
+	fixture := testEnv()
+	env := fixture.env
 	runner := quietRunner(env)
 	state := &scenarioState{}
 	err := runner.runStartSessionStep(context.Background(), state, Step{
@@ -546,7 +567,8 @@ func TestRunStartSessionStepRequiresCampaign(t *testing.T) {
 }
 
 func TestRunEndSessionStep(t *testing.T) {
-	env, _, _, _ := testEnv()
+	fixture := testEnv()
+	env := fixture.env
 	runner := quietRunner(env)
 	state := testState()
 	err := runner.runEndSessionStep(context.Background(), state)
@@ -559,7 +581,8 @@ func TestRunEndSessionStep(t *testing.T) {
 }
 
 func TestRunEndSessionStepRequiresSession(t *testing.T) {
-	env, _, _, _ := testEnv()
+	fixture := testEnv()
+	env := fixture.env
 	runner := quietRunner(env)
 	state := testState()
 	state.sessionID = ""
@@ -572,7 +595,8 @@ func TestRunEndSessionStepRequiresSession(t *testing.T) {
 // --- character step ---
 
 func TestRunCharacterStepBasic(t *testing.T) {
-	env, _, _, _ := testEnv()
+	fixture := testEnv()
+	env := fixture.env
 	runner := quietRunner(env)
 	state := testState()
 	err := runner.runCharacterStep(context.Background(), state, Step{
@@ -588,7 +612,8 @@ func TestRunCharacterStepBasic(t *testing.T) {
 }
 
 func TestRunCharacterStepMissingCampaign(t *testing.T) {
-	env, _, _, _ := testEnv()
+	fixture := testEnv()
+	env := fixture.env
 	runner := quietRunner(env)
 	state := &scenarioState{actors: map[string]string{}}
 	err := runner.runCharacterStep(context.Background(), state, Step{
@@ -601,7 +626,8 @@ func TestRunCharacterStepMissingCampaign(t *testing.T) {
 }
 
 func TestRunCharacterStepMissingName(t *testing.T) {
-	env, _, _, _ := testEnv()
+	fixture := testEnv()
+	env := fixture.env
 	runner := quietRunner(env)
 	state := testState()
 	err := runner.runCharacterStep(context.Background(), state, Step{
@@ -616,7 +642,8 @@ func TestRunCharacterStepMissingName(t *testing.T) {
 // --- prefab step ---
 
 func TestRunPrefabStep(t *testing.T) {
-	env, _, _, _ := testEnv()
+	fixture := testEnv()
+	env := fixture.env
 	runner := quietRunner(env)
 	state := testState()
 	err := runner.runPrefabStep(context.Background(), state, Step{
@@ -632,7 +659,8 @@ func TestRunPrefabStep(t *testing.T) {
 }
 
 func TestRunPrefabStepMissingName(t *testing.T) {
-	env, _, _, _ := testEnv()
+	fixture := testEnv()
+	env := fixture.env
 	runner := quietRunner(env)
 	state := testState()
 	err := runner.runPrefabStep(context.Background(), state, Step{
@@ -647,7 +675,8 @@ func TestRunPrefabStepMissingName(t *testing.T) {
 // --- adversary step ---
 
 func TestRunAdversaryStep(t *testing.T) {
-	env, _, _, dhClient := testEnv()
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
 	dhClient.createAdversary = func(_ context.Context, req *daggerheartv1.DaggerheartCreateAdversaryRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartCreateAdversaryResponse, error) {
 		return &daggerheartv1.DaggerheartCreateAdversaryResponse{
 			Adversary: &daggerheartv1.DaggerheartAdversary{Id: "adv-1"},
@@ -668,7 +697,8 @@ func TestRunAdversaryStep(t *testing.T) {
 }
 
 func TestRunAdversaryStepMissingName(t *testing.T) {
-	env, _, _, _ := testEnv()
+	fixture := testEnv()
+	env := fixture.env
 	runner := quietRunner(env)
 	state := testState()
 	err := runner.runAdversaryStep(context.Background(), state, Step{
@@ -683,7 +713,8 @@ func TestRunAdversaryStepMissingName(t *testing.T) {
 // --- gm_fear step ---
 
 func TestRunGMFearStep(t *testing.T) {
-	env, _, _, _ := testEnv()
+	fixture := testEnv()
+	env := fixture.env
 	env.snapshotClient = &fakeSnapshotClient{
 		updateSnapshot: func(_ context.Context, _ *gamev1.UpdateSnapshotStateRequest, _ ...grpc.CallOption) (*gamev1.UpdateSnapshotStateResponse, error) {
 			return &gamev1.UpdateSnapshotStateResponse{}, nil
@@ -713,7 +744,8 @@ func TestRunGMFearStep(t *testing.T) {
 }
 
 func TestRunGMFearStepMissingValue(t *testing.T) {
-	env, _, _, _ := testEnv()
+	fixture := testEnv()
+	env := fixture.env
 	runner := quietRunner(env)
 	state := testState()
 	err := runner.runGMFearStep(context.Background(), state, Step{
@@ -728,7 +760,8 @@ func TestRunGMFearStepMissingValue(t *testing.T) {
 // --- countdown steps ---
 
 func TestRunCountdownCreateStep(t *testing.T) {
-	env, _, _, dhClient := testEnv()
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
 	dhClient.createCountdown = func(_ context.Context, req *daggerheartv1.DaggerheartCreateCountdownRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartCreateCountdownResponse, error) {
 		return &daggerheartv1.DaggerheartCreateCountdownResponse{
 			Countdown: &daggerheartv1.DaggerheartCountdown{CountdownId: "cd-1"},
@@ -749,7 +782,8 @@ func TestRunCountdownCreateStep(t *testing.T) {
 }
 
 func TestRunCountdownUpdateStep(t *testing.T) {
-	env, _, _, dhClient := testEnv()
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
 	dhClient.updateCountdown = func(_ context.Context, _ *daggerheartv1.DaggerheartUpdateCountdownRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartUpdateCountdownResponse, error) {
 		return &daggerheartv1.DaggerheartUpdateCountdownResponse{}, nil
 	}
@@ -766,7 +800,8 @@ func TestRunCountdownUpdateStep(t *testing.T) {
 }
 
 func TestRunCountdownDeleteStep(t *testing.T) {
-	env, _, _, dhClient := testEnv()
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
 	dhClient.deleteCountdown = func(_ context.Context, _ *daggerheartv1.DaggerheartDeleteCountdownRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartDeleteCountdownResponse, error) {
 		return &daggerheartv1.DaggerheartDeleteCountdownResponse{}, nil
 	}
@@ -788,7 +823,8 @@ func TestRunCountdownDeleteStep(t *testing.T) {
 // --- mitigate_damage step ---
 
 func TestRunMitigateDamageStep(t *testing.T) {
-	env, _, _, _ := testEnv()
+	fixture := testEnv()
+	env := fixture.env
 	env.snapshotClient = &fakeSnapshotClient{
 		patchState: func(_ context.Context, _ *gamev1.PatchCharacterStateRequest, _ ...grpc.CallOption) (*gamev1.PatchCharacterStateResponse, error) {
 			return &gamev1.PatchCharacterStateResponse{}, nil
@@ -807,7 +843,8 @@ func TestRunMitigateDamageStep(t *testing.T) {
 }
 
 func TestRunMitigateDamageStepZeroArmor(t *testing.T) {
-	env, _, _, _ := testEnv()
+	fixture := testEnv()
+	env := fixture.env
 	runner := quietRunner(env)
 	state := testState()
 	state.actors["Frodo"] = "char-frodo"
@@ -824,7 +861,8 @@ func TestRunMitigateDamageStepZeroArmor(t *testing.T) {
 // --- action_roll step ---
 
 func TestRunActionRollStep(t *testing.T) {
-	env, _, _, dhClient := testEnv()
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
 	var request *daggerheartv1.SessionActionRollRequest
 	dhClient.sessionActionRoll = func(_ context.Context, req *daggerheartv1.SessionActionRollRequest, _ ...grpc.CallOption) (*daggerheartv1.SessionActionRollResponse, error) {
 		request = req
@@ -859,7 +897,8 @@ func TestRunActionRollStep(t *testing.T) {
 }
 
 func TestRunActionRollStepForwardsFlatModifier(t *testing.T) {
-	env, _, _, dhClient := testEnv()
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
 	var request *daggerheartv1.SessionActionRollRequest
 	dhClient.sessionActionRoll = func(_ context.Context, req *daggerheartv1.SessionActionRollRequest, _ ...grpc.CallOption) (*daggerheartv1.SessionActionRollResponse, error) {
 		request = req
@@ -894,7 +933,8 @@ func TestRunActionRollStepForwardsFlatModifier(t *testing.T) {
 }
 
 func TestRunActionRollStepMissingActor(t *testing.T) {
-	env, _, _, _ := testEnv()
+	fixture := testEnv()
+	env := fixture.env
 	runner := quietRunner(env)
 	state := testState()
 	err := runner.runActionRollStep(context.Background(), state, Step{
@@ -909,7 +949,8 @@ func TestRunActionRollStepMissingActor(t *testing.T) {
 // --- reaction_roll step ---
 
 func TestRunReactionRollStep(t *testing.T) {
-	env, _, _, dhClient := testEnv()
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
 	var request *daggerheartv1.SessionActionRollRequest
 	dhClient.sessionActionRoll = func(_ context.Context, req *daggerheartv1.SessionActionRollRequest, _ ...grpc.CallOption) (*daggerheartv1.SessionActionRollResponse, error) {
 		if req.GetRollKind() != daggerheartv1.RollKind_ROLL_KIND_REACTION {
@@ -945,7 +986,8 @@ func TestRunReactionRollStep(t *testing.T) {
 }
 
 func TestRunReactionRollStepForwardsFlatModifier(t *testing.T) {
-	env, _, _, dhClient := testEnv()
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
 	var request *daggerheartv1.SessionActionRollRequest
 	dhClient.sessionActionRoll = func(_ context.Context, req *daggerheartv1.SessionActionRollRequest, _ ...grpc.CallOption) (*daggerheartv1.SessionActionRollResponse, error) {
 		request = req
@@ -978,7 +1020,8 @@ func TestRunReactionRollStepForwardsFlatModifier(t *testing.T) {
 }
 
 func TestRunReactionStep(t *testing.T) {
-	env, _, _, dhClient := testEnv()
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
 	var request *daggerheartv1.SessionReactionFlowRequest
 	dhClient.sessionReactionFlow = func(_ context.Context, req *daggerheartv1.SessionReactionFlowRequest, _ ...grpc.CallOption) (*daggerheartv1.SessionReactionFlowResponse, error) {
 		request = req
@@ -1020,7 +1063,8 @@ func TestRunReactionStep(t *testing.T) {
 // --- damage_roll step ---
 
 func TestRunDamageRollStep(t *testing.T) {
-	env, _, _, dhClient := testEnv()
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
 	dhClient.sessionDamageRoll = func(_ context.Context, _ *daggerheartv1.SessionDamageRollRequest, _ ...grpc.CallOption) (*daggerheartv1.SessionDamageRollResponse, error) {
 		return &daggerheartv1.SessionDamageRollResponse{RollSeq: 77}, nil
 	}
@@ -1042,7 +1086,8 @@ func TestRunDamageRollStep(t *testing.T) {
 // --- adversary_attack_roll step ---
 
 func TestRunAdversaryAttackRollStep(t *testing.T) {
-	env, _, _, dhClient := testEnv()
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
 	dhClient.sessionAdversaryAttackRoll = func(_ context.Context, _ *daggerheartv1.SessionAdversaryAttackRollRequest, _ ...grpc.CallOption) (*daggerheartv1.SessionAdversaryAttackRollResponse, error) {
 		return &daggerheartv1.SessionAdversaryAttackRollResponse{RollSeq: 88}, nil
 	}
@@ -1064,7 +1109,8 @@ func TestRunAdversaryAttackRollStep(t *testing.T) {
 // --- apply_roll_outcome step ---
 
 func TestRunApplyRollOutcomeStep(t *testing.T) {
-	env, _, _, dhClient := testEnv()
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
 	dhClient.applyRollOutcome = func(_ context.Context, req *daggerheartv1.ApplyRollOutcomeRequest, _ ...grpc.CallOption) (*daggerheartv1.ApplyRollOutcomeResponse, error) {
 		return &daggerheartv1.ApplyRollOutcomeResponse{}, nil
 	}
@@ -1081,7 +1127,8 @@ func TestRunApplyRollOutcomeStep(t *testing.T) {
 }
 
 func TestRunApplyRollOutcomeStepMissingRollSeq(t *testing.T) {
-	env, _, _, _ := testEnv()
+	fixture := testEnv()
+	env := fixture.env
 	runner := quietRunner(env)
 	state := testState()
 	state.lastRollSeq = 0
@@ -1095,7 +1142,8 @@ func TestRunApplyRollOutcomeStepMissingRollSeq(t *testing.T) {
 }
 
 func TestRunApplyRollOutcomeStepRunsSuccessBranch(t *testing.T) {
-	env, _, sessionClient, dhClient := testEnv()
+	fixture := testEnv()
+	env, sessionClient, dhClient := fixture.env, fixture.sessionClient, fixture.daggerheartClient
 	var cleared bool
 	sessionClient.clearSpotlight = func(_ context.Context, _ *gamev1.ClearSessionSpotlightRequest, _ ...grpc.CallOption) (*gamev1.ClearSessionSpotlightResponse, error) {
 		cleared = true
@@ -1128,7 +1176,8 @@ func TestRunApplyRollOutcomeStepRunsSuccessBranch(t *testing.T) {
 }
 
 func TestRunApplyRollOutcomeStepRunsFailureBranchForFailureResult(t *testing.T) {
-	env, _, sessionClient, dhClient := testEnv()
+	fixture := testEnv()
+	env, sessionClient, dhClient := fixture.env, fixture.sessionClient, fixture.daggerheartClient
 	var cleared bool
 	sessionClient.clearSpotlight = func(_ context.Context, _ *gamev1.ClearSessionSpotlightRequest, _ ...grpc.CallOption) (*gamev1.ClearSessionSpotlightResponse, error) {
 		cleared = true
@@ -1161,7 +1210,8 @@ func TestRunApplyRollOutcomeStepRunsFailureBranchForFailureResult(t *testing.T) 
 }
 
 func TestRunApplyRollOutcomeStepInvalidBranchSkipsApply(t *testing.T) {
-	env, _, _, dhClient := testEnv()
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
 	called := false
 	dhClient.applyRollOutcome = func(_ context.Context, req *daggerheartv1.ApplyRollOutcomeRequest, _ ...grpc.CallOption) (*daggerheartv1.ApplyRollOutcomeResponse, error) {
 		called = true
@@ -1191,7 +1241,8 @@ func TestRunApplyRollOutcomeStepInvalidBranchSkipsApply(t *testing.T) {
 }
 
 func TestRunApplyRollOutcomeStepRunsFailureHopeBranchForFailureHopeResult(t *testing.T) {
-	env, _, sessionClient, dhClient := testEnv()
+	fixture := testEnv()
+	env, sessionClient, dhClient := fixture.env, fixture.sessionClient, fixture.daggerheartClient
 	var cleared bool
 	sessionClient.clearSpotlight = func(_ context.Context, _ *gamev1.ClearSessionSpotlightRequest, _ ...grpc.CallOption) (*gamev1.ClearSessionSpotlightResponse, error) {
 		cleared = true
@@ -1226,7 +1277,8 @@ func TestRunApplyRollOutcomeStepRunsFailureHopeBranchForFailureHopeResult(t *tes
 }
 
 func TestRunApplyRollOutcomeStepMissingOutcomeMetadata(t *testing.T) {
-	env, _, _, dhClient := testEnv()
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
 	dhClient.applyRollOutcome = func(_ context.Context, req *daggerheartv1.ApplyRollOutcomeRequest, _ ...grpc.CallOption) (*daggerheartv1.ApplyRollOutcomeResponse, error) {
 		return &daggerheartv1.ApplyRollOutcomeResponse{}, nil
 	}
@@ -1249,7 +1301,8 @@ func TestRunApplyRollOutcomeStepMissingOutcomeMetadata(t *testing.T) {
 // --- apply_attack_outcome step ---
 
 func TestRunApplyAttackOutcomeStep(t *testing.T) {
-	env, _, _, dhClient := testEnv()
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
 	dhClient.applyAttackOutcome = func(_ context.Context, _ *daggerheartv1.DaggerheartApplyAttackOutcomeRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyAttackOutcomeResponse, error) {
 		return &daggerheartv1.DaggerheartApplyAttackOutcomeResponse{}, nil
 	}
@@ -1267,7 +1320,8 @@ func TestRunApplyAttackOutcomeStep(t *testing.T) {
 }
 
 func TestRunApplyAttackOutcomeStepMissingTargets(t *testing.T) {
-	env, _, _, _ := testEnv()
+	fixture := testEnv()
+	env := fixture.env
 	runner := quietRunner(env)
 	state := testState()
 	state.lastRollSeq = 42
@@ -1283,7 +1337,8 @@ func TestRunApplyAttackOutcomeStepMissingTargets(t *testing.T) {
 // --- apply_adversary_attack_outcome step ---
 
 func TestRunApplyAdversaryAttackOutcomeStep(t *testing.T) {
-	env, _, _, dhClient := testEnv()
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
 	dhClient.applyAdversaryAttackOutcome = func(_ context.Context, _ *daggerheartv1.DaggerheartApplyAdversaryAttackOutcomeRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyAdversaryAttackOutcomeResponse, error) {
 		return &daggerheartv1.DaggerheartApplyAdversaryAttackOutcomeResponse{}, nil
 	}
@@ -1301,7 +1356,8 @@ func TestRunApplyAdversaryAttackOutcomeStep(t *testing.T) {
 }
 
 func TestRunApplyAdversaryAttackOutcomeStepMissingRollSeq(t *testing.T) {
-	env, _, _, _ := testEnv()
+	fixture := testEnv()
+	env := fixture.env
 	runner := quietRunner(env)
 	state := testState()
 	err := runner.runApplyAdversaryAttackOutcomeStep(context.Background(), state, Step{
@@ -1316,7 +1372,8 @@ func TestRunApplyAdversaryAttackOutcomeStepMissingRollSeq(t *testing.T) {
 // --- apply_reaction_outcome step ---
 
 func TestRunApplyReactionOutcomeStep(t *testing.T) {
-	env, _, _, dhClient := testEnv()
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
 	dhClient.applyReactionOutcome = func(_ context.Context, _ *daggerheartv1.DaggerheartApplyReactionOutcomeRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyReactionOutcomeResponse, error) {
 		return &daggerheartv1.DaggerheartApplyReactionOutcomeResponse{}, nil
 	}
@@ -1333,7 +1390,8 @@ func TestRunApplyReactionOutcomeStep(t *testing.T) {
 }
 
 func TestRunApplyReactionOutcomeStepRunsOutcomeBranch(t *testing.T) {
-	env, _, sessionClient, dhClient := testEnv()
+	fixture := testEnv()
+	env, sessionClient, dhClient := fixture.env, fixture.sessionClient, fixture.daggerheartClient
 	var spotlightCleared bool
 	sessionClient.clearSpotlight = func(_ context.Context, _ *gamev1.ClearSessionSpotlightRequest, _ ...grpc.CallOption) (*gamev1.ClearSessionSpotlightResponse, error) {
 		spotlightCleared = true
@@ -1364,7 +1422,8 @@ func TestRunApplyReactionOutcomeStepRunsOutcomeBranch(t *testing.T) {
 }
 
 func TestRunApplyReactionOutcomeStepRunsFearSubbranchForFailureFearResult(t *testing.T) {
-	env, _, sessionClient, dhClient := testEnv()
+	fixture := testEnv()
+	env, sessionClient, dhClient := fixture.env, fixture.sessionClient, fixture.daggerheartClient
 	var cleared bool
 	sessionClient.clearSpotlight = func(_ context.Context, _ *gamev1.ClearSessionSpotlightRequest, _ ...grpc.CallOption) (*gamev1.ClearSessionSpotlightResponse, error) {
 		cleared = true
@@ -1398,7 +1457,8 @@ func TestRunApplyReactionOutcomeStepRunsFearSubbranchForFailureFearResult(t *tes
 }
 
 func TestRunApplyReactionOutcomeStepInvalidBranchSkipsApply(t *testing.T) {
-	env, _, _, dhClient := testEnv()
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
 	called := false
 	dhClient.applyReactionOutcome = func(_ context.Context, req *daggerheartv1.DaggerheartApplyReactionOutcomeRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyReactionOutcomeResponse, error) {
 		called = true
@@ -1428,7 +1488,8 @@ func TestRunApplyReactionOutcomeStepInvalidBranchSkipsApply(t *testing.T) {
 // --- gm_spend_fear step ---
 
 func TestRunGMSpendFearStep(t *testing.T) {
-	env, _, _, dhClient := testEnv()
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
 	dhClient.applyGmMove = func(_ context.Context, req *daggerheartv1.DaggerheartApplyGmMoveRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyGmMoveResponse, error) {
 		return &daggerheartv1.DaggerheartApplyGmMoveResponse{GmFearAfter: 1}, nil
 	}
@@ -1448,7 +1509,8 @@ func TestRunGMSpendFearStep(t *testing.T) {
 }
 
 func TestRunGMSpendFearStepZeroAmount(t *testing.T) {
-	env, _, _, dhClient := testEnv()
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
 	dhClient.applyGmMove = func(_ context.Context, req *daggerheartv1.DaggerheartApplyGmMoveRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyGmMoveResponse, error) {
 		return &daggerheartv1.DaggerheartApplyGmMoveResponse{GmFearAfter: 3}, nil
 	}
@@ -1467,7 +1529,8 @@ func TestRunGMSpendFearStepZeroAmount(t *testing.T) {
 // --- set_spotlight step ---
 
 func TestRunSetSpotlightStepGM(t *testing.T) {
-	env, _, _, _ := testEnv()
+	fixture := testEnv()
+	env := fixture.env
 	runner := quietRunner(env)
 	state := testState()
 	err := runner.runSetSpotlightStep(context.Background(), state, Step{
@@ -1480,7 +1543,8 @@ func TestRunSetSpotlightStepGM(t *testing.T) {
 }
 
 func TestRunSetSpotlightStepCharacter(t *testing.T) {
-	env, _, _, _ := testEnv()
+	fixture := testEnv()
+	env := fixture.env
 	runner := quietRunner(env)
 	state := testState()
 	state.actors["Frodo"] = "char-frodo"
@@ -1496,7 +1560,8 @@ func TestRunSetSpotlightStepCharacter(t *testing.T) {
 // --- clear_spotlight step ---
 
 func TestRunClearSpotlightStep(t *testing.T) {
-	env, _, _, _ := testEnv()
+	fixture := testEnv()
+	env := fixture.env
 	runner := quietRunner(env)
 	state := testState()
 	err := runner.runClearSpotlightStep(context.Background(), state, Step{
@@ -1511,7 +1576,8 @@ func TestRunClearSpotlightStep(t *testing.T) {
 // --- apply_condition step ---
 
 func TestRunApplyConditionStep(t *testing.T) {
-	env, _, _, dhClient := testEnv()
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
 	dhClient.applyConditions = func(_ context.Context, _ *daggerheartv1.DaggerheartApplyConditionsRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyConditionsResponse, error) {
 		return &daggerheartv1.DaggerheartApplyConditionsResponse{}, nil
 	}
@@ -1528,7 +1594,8 @@ func TestRunApplyConditionStep(t *testing.T) {
 }
 
 func TestRunApplyConditionStepMissingTarget(t *testing.T) {
-	env, _, _, _ := testEnv()
+	fixture := testEnv()
+	env := fixture.env
 	runner := quietRunner(env)
 	state := testState()
 	err := runner.runApplyConditionStep(context.Background(), state, Step{
@@ -1541,7 +1608,8 @@ func TestRunApplyConditionStepMissingTarget(t *testing.T) {
 }
 
 func TestRunApplyConditionStepMissingActions(t *testing.T) {
-	env, _, _, _ := testEnv()
+	fixture := testEnv()
+	env := fixture.env
 	runner := quietRunner(env)
 	state := testState()
 	state.actors["Frodo"] = "char-frodo"
@@ -1557,7 +1625,8 @@ func TestRunApplyConditionStepMissingActions(t *testing.T) {
 // --- rest step ---
 
 func TestRunRestStep(t *testing.T) {
-	env, _, _, dhClient := testEnv()
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
 	dhClient.applyRest = func(_ context.Context, _ *daggerheartv1.DaggerheartApplyRestRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyRestResponse, error) {
 		return &daggerheartv1.DaggerheartApplyRestResponse{}, nil
 	}
@@ -1574,7 +1643,8 @@ func TestRunRestStep(t *testing.T) {
 }
 
 func TestRunRestStepMissingType(t *testing.T) {
-	env, _, _, _ := testEnv()
+	fixture := testEnv()
+	env := fixture.env
 	runner := quietRunner(env)
 	state := testState()
 	err := runner.runRestStep(context.Background(), state, Step{
@@ -1589,7 +1659,8 @@ func TestRunRestStepMissingType(t *testing.T) {
 // --- downtime_move step ---
 
 func TestRunDowntimeMoveStep(t *testing.T) {
-	env, _, _, dhClient := testEnv()
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
 	dhClient.applyDowntimeMove = func(_ context.Context, _ *daggerheartv1.DaggerheartApplyDowntimeMoveRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyDowntimeMoveResponse, error) {
 		return &daggerheartv1.DaggerheartApplyDowntimeMoveResponse{}, nil
 	}
@@ -1608,7 +1679,8 @@ func TestRunDowntimeMoveStep(t *testing.T) {
 // --- death_move step ---
 
 func TestRunDeathMoveStep(t *testing.T) {
-	env, _, _, dhClient := testEnv()
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
 	dhClient.applyDeathMove = func(_ context.Context, _ *daggerheartv1.DaggerheartApplyDeathMoveRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyDeathMoveResponse, error) {
 		return &daggerheartv1.DaggerheartApplyDeathMoveResponse{}, nil
 	}
@@ -1625,7 +1697,8 @@ func TestRunDeathMoveStep(t *testing.T) {
 }
 
 func TestRunDeathMoveStepMissingTarget(t *testing.T) {
-	env, _, _, _ := testEnv()
+	fixture := testEnv()
+	env := fixture.env
 	runner := quietRunner(env)
 	state := testState()
 	err := runner.runDeathMoveStep(context.Background(), state, Step{
@@ -1640,7 +1713,8 @@ func TestRunDeathMoveStepMissingTarget(t *testing.T) {
 // --- blaze_of_glory step ---
 
 func TestRunBlazeOfGloryStep(t *testing.T) {
-	env, _, _, dhClient := testEnv()
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
 	dhClient.resolveBlazeOfGlory = func(_ context.Context, _ *daggerheartv1.DaggerheartResolveBlazeOfGloryRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartResolveBlazeOfGloryResponse, error) {
 		return &daggerheartv1.DaggerheartResolveBlazeOfGloryResponse{}, nil
 	}
@@ -1659,7 +1733,8 @@ func TestRunBlazeOfGloryStep(t *testing.T) {
 // --- swap_loadout step ---
 
 func TestRunSwapLoadoutStep(t *testing.T) {
-	env, _, _, dhClient := testEnv()
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
 	dhClient.swapLoadout = func(_ context.Context, _ *daggerheartv1.DaggerheartSwapLoadoutRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartSwapLoadoutResponse, error) {
 		return &daggerheartv1.DaggerheartSwapLoadoutResponse{}, nil
 	}
@@ -1676,7 +1751,8 @@ func TestRunSwapLoadoutStep(t *testing.T) {
 }
 
 func TestRunSwapLoadoutStepMissingTarget(t *testing.T) {
-	env, _, _, _ := testEnv()
+	fixture := testEnv()
+	env := fixture.env
 	runner := quietRunner(env)
 	state := testState()
 	err := runner.runSwapLoadoutStep(context.Background(), state, Step{
@@ -1689,7 +1765,8 @@ func TestRunSwapLoadoutStepMissingTarget(t *testing.T) {
 }
 
 func TestRunSwapLoadoutStepMissingCardID(t *testing.T) {
-	env, _, _, _ := testEnv()
+	fixture := testEnv()
+	env := fixture.env
 	runner := quietRunner(env)
 	state := testState()
 	state.actors["Frodo"] = "char-frodo"
@@ -1705,7 +1782,8 @@ func TestRunSwapLoadoutStepMissingCardID(t *testing.T) {
 // --- RunScenario integration ---
 
 func TestRunScenarioNil(t *testing.T) {
-	env, _, _, _ := testEnv()
+	fixture := testEnv()
+	env := fixture.env
 	runner := quietRunner(env)
 	err := runner.RunScenario(context.Background(), nil)
 	if err == nil || !strings.Contains(err.Error(), "scenario is required") {
@@ -1714,7 +1792,8 @@ func TestRunScenarioNil(t *testing.T) {
 }
 
 func TestRunScenarioStepError(t *testing.T) {
-	env, _, _, _ := testEnv()
+	fixture := testEnv()
+	env := fixture.env
 	runner := quietRunner(env)
 	err := runner.RunScenario(context.Background(), &Scenario{
 		Name: "test",
@@ -1728,7 +1807,8 @@ func TestRunScenarioStepError(t *testing.T) {
 }
 
 func TestRunScenarioCampaignAndSession(t *testing.T) {
-	env, _, _, _ := testEnv()
+	fixture := testEnv()
+	env := fixture.env
 	runner := quietRunner(env)
 	runner.verbose = true
 	runner.logger = log.New(io.Discard, "", 0)
@@ -2105,7 +2185,8 @@ func TestHelperFunctions(t *testing.T) {
 
 // Test newTestRunner constructor
 func TestNewTestRunner(t *testing.T) {
-	env, _, _, _ := testEnv()
+	fixture := testEnv()
+	env := fixture.env
 	runner := newTestRunner(env)
 	if runner.auth == nil {
 		t.Fatal("expected auth")
