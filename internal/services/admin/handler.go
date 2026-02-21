@@ -1346,11 +1346,15 @@ func (h *Handler) handleCatalogRoutes(w http.ResponseWriter, r *http.Request) {
 		}
 		loc, lang := h.localizer(w, r)
 		pageCtx := h.pageContext(lang, loc, r)
+		var full templ.Component
+		if !isHTMXRequest(r) {
+			full = templates.CatalogFullPage(sectionID, pageCtx)
+		}
 		renderPage(
 			w,
 			r,
 			templates.CatalogSectionPanel(sectionID, loc),
-			templates.CatalogFullPage(sectionID, pageCtx),
+			full,
 			htmxLocalizedPageTitle(loc, "title.catalog", templates.AppName()),
 		)
 		return
@@ -1638,11 +1642,15 @@ func (h *Handler) handleCatalogSectionDetail(w http.ResponseWriter, r *http.Requ
 			Message:   loc.Sprintf("catalog.error.service_unavailable"),
 			BackURL:   "/catalog/daggerheart/" + sectionID,
 		}
+		full := templates.CatalogFullPageWithContent(sectionID, templates.CatalogDetailPanel(view, loc), pageCtx)
+		if isHTMXRequest(r) {
+			full = nil
+		}
 		renderPage(
 			w,
 			r,
 			templates.CatalogDetailPanel(view, loc),
-			templates.CatalogFullPageWithContent(sectionID, templates.CatalogDetailPanel(view, loc), pageCtx),
+			full,
 			htmxLocalizedPageTitle(loc, "title.catalog", templates.AppName()),
 		)
 		return
@@ -1706,11 +1714,15 @@ func (h *Handler) handleCatalogSectionDetail(w http.ResponseWriter, r *http.Requ
 		view.BackURL = "/catalog/daggerheart/" + sectionID
 	}
 
+	var full templ.Component
+	if !isHTMXRequest(r) {
+		full = templates.CatalogFullPageWithContent(sectionID, templates.CatalogDetailPanel(view, loc), pageCtx)
+	}
 	renderPage(
 		w,
 		r,
 		templates.CatalogDetailPanel(view, loc),
-		templates.CatalogFullPageWithContent(sectionID, templates.CatalogDetailPanel(view, loc), pageCtx),
+		full,
 		htmxLocalizedPageTitle(loc, "title.catalog", templates.AppName()),
 	)
 }
@@ -2203,7 +2215,7 @@ func htmxLocalizedPageTitle(loc *message.Printer, title string, args ...any) str
 	return sharedhtmx.TitleTag(templates.ComposeAdminPageTitle(templates.T(loc, title, args...)))
 }
 
-// renderPage picks the HTMX fragment or full layout without duplicating handler flow.
+// renderPage renders page components with consistent HTMX and non-HTMX behavior.
 func renderPage(w http.ResponseWriter, r *http.Request, fragment templ.Component, full templ.Component, htmxTitle string) {
 	sharedhtmx.RenderPage(w, r, fragment, full, htmxTitle)
 }

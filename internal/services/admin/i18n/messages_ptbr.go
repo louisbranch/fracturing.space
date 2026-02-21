@@ -37,6 +37,7 @@ func init() {
 		"nav.language":                              "Idioma",
 		"nav.lang_en":                               "EN",
 		"nav.lang_pt_br":                            "PT-BR",
+		"layout.sign_out":                           "Sair",
 		"dashboard.heading":                         "Painel",
 		"dashboard.loading":                         "Carregando painel...",
 		"dashboard.recent_activity":                 "Atividade recente",

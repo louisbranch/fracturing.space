@@ -3,7 +3,7 @@ package templates
 // ErrorPage renders a standard web error page using the shared layout shell.
 templ ErrorPage(page PageContext, title string, message string) {
 	if isGamePagePath(page.CurrentPath) {
-		@ChromeLayout(title, page.Lang, page.AppName, page.Loc, page.CurrentPath, page.CampaignName) {
+		@Layout(title, page.Lang, page.AppName, page.Loc, page.CurrentPath, page.CampaignName) {
 			@errorPageContent(page, title, message)
 		}
 	} else {
@@ -16,7 +16,7 @@ templ ErrorPage(page PageContext, title string, message string) {
 templ errorPageContent(page PageContext, title string, message string) {
 	<main class="landing-shell">
 		<section class="landing-hero">
-			<h1>{ title }</h1>
+			<h2>{ title }</h2>
 			<p class="hero-tagline">{ message }</p>
 			<div class="mt-4">
 				<a class="btn btn-primary" href="/">{ T(page.Loc, "error.back_to_home") }</a>

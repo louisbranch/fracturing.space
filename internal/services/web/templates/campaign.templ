@@ -2,7 +2,7 @@ package templates
 
 // CampaignPage renders the campaign chat shell for Phase 1.1.
 templ CampaignPage(page PageContext, campaignID string, campaignName string) {
-	@ChromeLayout(campaignName, page.Lang, page.AppName, page.Loc, page.CurrentPath, page.CampaignName) {
+	@Layout(campaignName, page.Lang, page.AppName, page.Loc, page.CurrentPath, page.CampaignName) {
 		<div
 			data-campaign-id={ campaignID }
 			data-chat-invalid-id={ T(page.Loc, "campaign.chat.invalid_id") }
@@ -17,10 +17,9 @@ templ CampaignPage(page PageContext, campaignID string, campaignName string) {
 			data-chat-error-prefix={ T(page.Loc, "campaign.chat.error_prefix") }
 			data-chat-unable-to-send={ T(page.Loc, "campaign.chat.unable_to_send") }
 			data-chat-disconnected-retrying={ T(page.Loc, "campaign.chat.disconnected_retrying") }>
-			<h2>{ campaignName }</h2>
       <div class="card border border-base-300 bg-base-100 mb-4">
         <div class="card-body gap-3">
-          <h2 class="card-title m-0">{ T(page.Loc, "campaign.shell_workspace") }</h2>
+          <h3 class="card-title m-0">{ T(page.Loc, "campaign.shell_workspace") }</h3>
           <div class="flex flex-wrap gap-2">
             <a class="btn btn-sm btn-outline" href={ "/campaigns/" + campaignID + "/sessions" }>{ T(page.Loc, "campaign.shell.sessions") }</a>
             <a class="btn btn-sm btn-outline" href={ "/campaigns/" + campaignID + "/participants" }>{ T(page.Loc, "campaign.shell.participants") }</a>
@@ -32,7 +31,7 @@ templ CampaignPage(page PageContext, campaignID string, campaignName string) {
       <div class="card border border-base-300 bg-base-100">
         <div class="card-body gap-4">
           <div class="flex items-center justify-between gap-4">
-            <h2 class="card-title m-0">{ T(page.Loc, "campaign.shell_chat") }</h2>
+            <h3 class="card-title m-0">{ T(page.Loc, "campaign.shell_chat") }</h3>
             <span id="chat-status" class="text-sm opacity-70">{ T(page.Loc, "campaign.shell_connecting") }</span>
           </div>
           <div id="chat-messages" class="h-80 overflow-y-auto rounded border border-base-300 p-3 text-sm"></div>

@@ -12,6 +12,15 @@ type Localizer interface {
 	Sprintf(key message.Reference, args ...any) string
 }
 
+type ChromeLayoutOptions struct {
+	Theme       string
+	DataLayout  string
+	MainAria    string
+	Nav         templ.Component
+	HeadExtras  templ.Component
+	BodyScripts templ.Component
+}
+
 // T returns a translated string or the key when no localizer is available.
 func T(loc Localizer, key message.Reference, args ...any) string {
 	if loc == nil {
@@ -38,6 +47,17 @@ func ComposePageTitle(title string) string {
 	}
 }
 
+func pageHeadingFromTitle(title string, appName string) string {
+	heading := strings.TrimSpace(title)
+	appName = strings.TrimSpace(appName)
+	if appName != "" {
+		heading = strings.TrimSpace(strings.TrimSuffix(heading, " | "+appName))
+		heading = strings.TrimSpace(strings.TrimSuffix(heading, " - "+appName))
+	}
+	heading = strings.TrimSpace(strings.TrimSuffix(heading, " - Admin"))
+	return heading
+}
+
 templ pageHead(title string, loc Localizer) {
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
@@ -46,7 +66,6 @@ templ pageHead(title string, loc Localizer) {
 	<link href="https://cdn.jsdelivr.net/npm/daisyui@5.5.18" rel="stylesheet" type="text/css" integrity="sha384-ww1btmC3Ah3rEb6jt/coOxyQ9JYMoxQpFSB/bxdE20ZYMK4kWSb+TwcgbHR/GFCq" crossorigin="anonymous"/>
 	<link href="https://cdn.jsdelivr.net/npm/daisyui@5.5.18/theme/retro.css" rel="stylesheet" type="text/css" crossorigin="anonymous">
 	<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.1.18" integrity="sha384-WrpyCFNrMmN/IC7KmMNiXxIouXEFpoDIuJ2P+ys++uYEzegAW2MSl+X6Unsahaij" crossorigin="anonymous"></script>
-	<link rel="stylesheet" href="/static/landing.css">
 }
 
 templ ShellLayout(title string, lang string, loc Localizer) {
@@ -54,6 +73,7 @@ templ ShellLayout(title string, lang string, loc Localizer) {
 	<html lang={ lang } data-theme="retro">
 		<head>
 			@pageHead(title, loc)
+			<link rel="stylesheet" href="/static/shell.css">
 		</head>
 		<body class="landing-body" data-layout="auth">
 			@LucideSprite()
@@ -62,33 +82,129 @@ templ ShellLayout(title string, lang string, loc Localizer) {
 	</html>
 }
 
-templ AppChromeLayout(title string, lang string, appName string, loc Localizer, breadcrumbs []BreadcrumbItem) {
+
+templ AppChromeLayout(title string, lang string, appName string, loc Localizer, breadcrumbs []BreadcrumbItem, options ChromeLayoutOptions) {
 	<!DOCTYPE html>
-	<html lang={ lang } data-theme="retro">
+	<html lang={ lang } data-theme={ chromeTheme(options) }>
 		<head>
 			@pageHead(title, loc)
-		</head>
-		<body data-layout="game">
-				@LucideSprite()
-			<nav class="navbar bg-base-200 fixed top-0 w-full z-50">
-				<div class="navbar-start w-auto">
-					<h1 class="text-lg font-bold">
-						<a href="/">{ appName }</a>
-					</h1>
-				</div>
-				<div class="navbar-end w-full justify-end gap-3">
-					<a href="/campaigns" class="btn btn-ghost btn-sm">{ T(loc, "game.campaigns.title") }</a>
-				<form method="POST" action="/auth/logout">
-					<button type="submit" class="btn btn-ghost btn-sm">{ T(loc, "layout.sign_out") }</button>
-				</form>
-			</div>
-		</nav>
-		<main class="max-w-screen-xl mx-auto px-4 pt-24" id="main" aria-label={ T(loc, "game.aria_label") }>
-			if len(breadcrumbs) > 0 {
-				@Breadcrumbs(breadcrumbs, false)
+			<link rel="stylesheet" href="/static/theme.css">
+			if options.HeadExtras == nil {
+				<script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js" integrity="sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2XoQrxeTUQyRjrOnlCoYta87iKBWq3EsdM2" crossorigin="anonymous"></script>
 			}
-			{ children... }
-		</main>
-	</body>
+			if options.HeadExtras != nil {
+				@options.HeadExtras
+			}
+		</head>
+		<body data-layout={ chromeDataLayout(options) }>
+				@LucideSprite()
+			if options.Nav != nil {
+				@options.Nav
+			} else {
+				<nav class="navbar bg-base-200 fixed top-0 w-full z-50">
+					<div class="navbar-start w-auto">
+						<a href="/" id="nav-logo" class="text-lg font-bold">
+							{ appName }
+						</a>
+					</div>
+				<div class="navbar-end w-full justify-end gap-3">
+						<a
+							href="/"
+							hx-get="/"
+							hx-target="#main"
+							hx-swap="innerHTML"
+							hx-push-url="true"
+							data-nav-item="true"
+							class="btn btn-ghost btn-sm"
+						>{ T(loc, "dashboard.title") }</a>
+						<a
+							href="/campaigns"
+							hx-get="/campaigns"
+							hx-target="#main"
+							hx-swap="innerHTML"
+							hx-push-url="true"
+							data-nav-item="true"
+							class="btn btn-ghost btn-sm"
+						>{ T(loc, "game.campaigns.title") }</a>
+					<form method="POST" action="/auth/logout">
+						<button type="submit" class="btn btn-ghost btn-sm">{ T(loc, "layout.sign_out") }</button>
+					</form>
+				</div>
+				</nav>
+			}
+			<main class="max-w-screen-xl mx-auto px-4 pt-20" id="main" aria-label={ chromeMainAria(loc, options) }>
+				if len(breadcrumbs) > 0 {
+					@Breadcrumbs(breadcrumbs, false)
+				}
+				<h1 class="mb-5">{ pageHeadingFromTitle(title, appName) }</h1>
+				{ children... }
+			</main>
+			<script>
+				function syncChromeNavActiveLinks() {
+					var currentPath = window.location.pathname;
+					var links = document.querySelectorAll("a[data-nav-item]");
+					if (!links.length) {
+						return;
+					}
+				links.forEach(function(link) {
+					var href = link.getAttribute("href");
+					link.classList.remove("active");
+					link.classList.remove("menu-active");
+					link.classList.remove("btn-active");
+					if (!href) {
+						return;
+					}
+						var target;
+						try {
+							target = new URL(href, window.location.origin);
+						} catch (err) {
+							return;
+						}
+					var shouldBeActive = currentPath === target.pathname;
+					if (!shouldBeActive && target.pathname !== "/") {
+						shouldBeActive = currentPath.indexOf(target.pathname + "/") === 0;
+					}
+
+					if (link.classList.contains("btn")) {
+						link.classList.toggle("btn-active", shouldBeActive);
+					} else {
+						link.classList.toggle("menu-active", shouldBeActive);
+					}
+				});
+			}
+				syncChromeNavActiveLinks();
+				document.addEventListener("DOMContentLoaded", syncChromeNavActiveLinks);
+				window.addEventListener("popstate", syncChromeNavActiveLinks);
+				document.addEventListener("htmx:afterSwap", syncChromeNavActiveLinks);
+				document.addEventListener("htmx:afterSettle", syncChromeNavActiveLinks);
+			</script>
+			if options.BodyScripts != nil {
+				@options.BodyScripts
+			}
+		</body>
 	</html>
+}
+
+func chromeTheme(options ChromeLayoutOptions) string {
+	theme := strings.TrimSpace(options.Theme)
+	if theme == "" {
+		return "retro"
+	}
+	return theme
+}
+
+func chromeDataLayout(options ChromeLayoutOptions) string {
+	dataLayout := strings.TrimSpace(options.DataLayout)
+	if dataLayout == "" {
+		return "game"
+	}
+	return dataLayout
+}
+
+func chromeMainAria(loc Localizer, options ChromeLayoutOptions) string {
+	mainAria := strings.TrimSpace(options.MainAria)
+	if mainAria == "" {
+		return T(loc, "game.aria_label")
+	}
+	return mainAria
 }

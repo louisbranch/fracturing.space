@@ -170,8 +170,8 @@ func TestAdminHTMXIntegration(t *testing.T) {
 
 		// The HTMX fragment returns the sessions page with a loading placeholder
 		assertHTMLContains(t, body,
-			"Session Test Campaign",
-			"<h3>Sessions</h3>",
+			"<title>Sessions - Admin | "+branding.AppName+"</title>",
+			"/sessions/table",
 		)
 		assertHTMLNotContains(t, body, "<!doctype html>", "<!DOCTYPE html>")
 	})
@@ -212,7 +212,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		assertHTMLContains(t, body,
 			"<!doctype html>",
 			branding.AppName,
-			"<h2>Dashboard</h2>",
+			"<h1>Dashboard</h1>",
 		)
 	})
 
@@ -223,7 +223,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 			t.Fatalf("expected status 200, got %d", status)
 		}
 
-		assertHTMLContains(t, body, "<h2>Dashboard</h2>")
+		assertHTMLContains(t, body, "<title>Dashboard - Admin | "+branding.AppName+"</title>")
 		assertHTMLNotContains(t, body, "<!doctype html>", "<!DOCTYPE html>")
 	})
 
@@ -296,7 +296,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		assertHTMLContains(t, body,
 			"<!doctype html>",
 			branding.AppName,
-			"<h3>Sessions</h3>",
+			"<h1>Sessions</h1>",
 		)
 	})
 
@@ -396,8 +396,8 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		assertHTMLContains(t, body,
 			"<!doctype html>",
 			branding.AppName,
-			"<h3>Session Info</h3>",
-			"<h3>Event Timeline</h3>",
+			"<h2>Session Info</h2>",
+			"<h2>Event Timeline</h2>",
 		)
 	})
 
@@ -428,8 +428,8 @@ func TestAdminHTMXIntegration(t *testing.T) {
 
 		assertHTMLContains(t, body,
 			"HTMX Session Detail",
-			"<h3>Session Info</h3>",
-			"<h3>Event Timeline</h3>",
+			"<h2>Session Info</h2>",
+			"<h2>Event Timeline</h2>",
 		)
 		assertHTMLNotContains(t, body, "<!doctype html>", "<!DOCTYPE html>")
 	})
@@ -500,7 +500,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		assertHTMLContains(t, body,
 			"<!doctype html>",
 			branding.AppName,
-			"<h3>Characters</h3>",
+			"<h1>Characters</h1>",
 		)
 	})
 
@@ -522,8 +522,8 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		}
 
 		assertHTMLContains(t, body,
-			"Characters HTMX Test Campaign",
-			"<h3>Characters</h3>",
+			"<title>Characters - Admin | "+branding.AppName+"</title>",
+			"/characters/table",
 		)
 		assertHTMLNotContains(t, body, "<!doctype html>", "<!DOCTYPE html>")
 	})
@@ -625,7 +625,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		assertHTMLContains(t, body,
 			"<!doctype html>",
 			branding.AppName,
-			"<h3>Character Info</h3>",
+			"<h2>Character Info</h2>",
 		)
 	})
 
@@ -658,7 +658,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 
 		assertHTMLContains(t, body,
 			"HTMX Sheet Character",
-			"<h3>Character Info</h3>",
+			"<h2>Character Info</h2>",
 		)
 		assertHTMLNotContains(t, body, "<!doctype html>", "<!DOCTYPE html>")
 	})
@@ -699,7 +699,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		assertHTMLContains(t, body,
 			"<!doctype html>",
 			branding.AppName,
-			"<h3>Participants</h3>",
+			"<h1>Participants</h1>",
 		)
 	})
 
@@ -721,8 +721,8 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		}
 
 		assertHTMLContains(t, body,
-			"Participants HTMX Test Campaign",
-			"<h3>Participants</h3>",
+			"<title>Participants - Admin | "+branding.AppName+"</title>",
+			"/participants/table",
 		)
 		assertHTMLNotContains(t, body, "<!doctype html>", "<!DOCTYPE html>")
 	})
@@ -830,7 +830,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		assertHTMLContains(t, body,
 			"<!doctype html>",
 			branding.AppName,
-			"<h3>Event Log</h3>",
+			"<h2>Event Log</h2>",
 		)
 	})
 
@@ -852,7 +852,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		}
 
 		assertHTMLContains(t, body,
-			"<h3>Event Log</h3>",
+			"<h2>Event Log</h2>",
 			"Event Type",
 		)
 		assertHTMLNotContains(t, body, "<!doctype html>", "<!DOCTYPE html>")

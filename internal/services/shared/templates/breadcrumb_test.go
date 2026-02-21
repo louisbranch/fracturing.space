@@ -120,7 +120,7 @@ func TestBuildPathBreadcrumbsForWeb(t *testing.T) {
 	}
 }
 
-func TestBuildPathBreadcrumbsForWebWithCampaignNames(t *testing.T) {
+func TestBuildPathBreadcrumbsForWebCampaignLabels(t *testing.T) {
 	tests := []struct {
 		name          string
 		path          string
@@ -134,7 +134,6 @@ func TestBuildPathBreadcrumbsForWebWithCampaignNames(t *testing.T) {
 				"camp-1": "The Guildhouse",
 			},
 			expected: []BreadcrumbItem{
-				{Label: "Dashboard", URL: "/"},
 				{Label: "Campaigns", URL: "/campaigns"},
 				{Label: "The Guildhouse", URL: "/campaigns/camp-1"},
 				{Label: "Sessions"},
@@ -145,10 +144,20 @@ func TestBuildPathBreadcrumbsForWebWithCampaignNames(t *testing.T) {
 	for _, tc := range tests {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			got := BuildPathBreadcrumbsForWebWithCampaignNames(tc.path, breadcrumbLocalizer{}, tc.campaignNames)
+			got := BuildPathBreadcrumbsForWeb(tc.path, breadcrumbLocalizer{}, tc.campaignNames)
 			if !reflect.DeepEqual(got, tc.expected) {
-				t.Fatalf("BuildPathBreadcrumbsForWebWithCampaignNames(%q) = %#v, expected %#v", tc.path, got, tc.expected)
+				t.Fatalf("BuildPathBreadcrumbsForWeb(%q) = %#v, expected %#v", tc.path, got, tc.expected)
 			}
 		})
+	}
+}
+
+func TestBuildPathBreadcrumbsForWebOmitsDashboardRoot(t *testing.T) {
+	got := BuildPathBreadcrumbsForWeb("/campaigns/camp-1/sessions", breadcrumbLocalizer{})
+	if len(got) == 0 {
+		t.Fatalf("BuildPathBreadcrumbsForWeb(%q) returned empty trail", "/campaigns/camp-1/sessions")
+	}
+	if got[0].Label == "Dashboard" {
+		t.Fatalf("BuildPathBreadcrumbsForWeb(%q) should not start with Dashboard, got %#v", "/campaigns/camp-1/sessions", got)
 	}
 }

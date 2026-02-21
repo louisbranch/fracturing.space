@@ -12,8 +12,8 @@ type DashboardPageParams struct {
 
 // DashboardPage renders the logged-in shell with shared web layout and an empty main area.
 templ DashboardPage(params DashboardPageParams) {
-	@ChromeLayout(T(params.Loc, "dashboard.title"), params.Lang, params.AppName, params.Loc, params.CurrentPath, params.CampaignName) {
-		<div class="max-w-screen-xl mx-auto px-4 pt-24" id="main">
+	@Layout(T(params.Loc, "dashboard.title"), params.Lang, params.AppName, params.Loc, params.CurrentPath, params.CampaignName) {
+		<div class="max-w-screen-xl mx-auto px-4 pt-20" id="main">
 			<main aria-label={ T(params.Loc, "dashboard.title") } class="p-4"></main>
 		</div>
 	}

@@ -22,8 +22,7 @@ func init() {
 
 	// Login page
 	message.SetString(lang, "title.login", "Sign In")
-	message.SetString(lang, "login.heading", "Sign in to continue")
-	message.SetString(lang, "login.requesting_access", "%s is requesting access to your account.")
+	message.SetString(lang, "login.heading", "Sign in to %s")
 	message.SetString(lang, "login.card_title", "Account Access")
 	message.SetString(lang, "login.card_subtitle", "Create an account or sign in with a passkey.")
 	message.SetString(lang, "login.email", "Email")

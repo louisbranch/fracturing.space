@@ -9,20 +9,21 @@ templ CampaignsFullPage(page PageContext) {
 
 // CampaignsPage renders the campaigns page content.
 templ CampaignsPage(loc Localizer) {
-	@PageHeader(PageHeading{Title: T(loc, "campaigns.heading")})
 	@CampaignsLoading(loc)
 }
 
 // CampaignCreateFullPage renders the campaign create page in the base layout.
 templ CampaignCreateFullPage(view CampaignCreatePageView, page PageContext) {
-	@Layout(T(page.Loc, "title.campaign_create", AppName()), "Campaigns", page.Loc, page) {
+	@Layout(T(page.Loc, "title.campaign_create", AppName()), "Campaigns", page.Loc, page, []Breadcrumb{
+		{Label: T(page.Loc, "nav.campaigns"), URL: "/campaigns"},
+		{Label: T(page.Loc, "campaigns.create.heading"), URL: ""},
+	}...) {
 		@CampaignCreatePage(view, page.Loc)
 	}
 }
 
 // CampaignCreatePage renders the campaign creation form.
 templ CampaignCreatePage(view CampaignCreatePageView, loc Localizer) {
-	@PageHeader(PageHeading{Breadcrumbs: []Breadcrumb{{T(loc, "nav.campaigns"), "/campaigns"}, {T(loc, "campaigns.create.heading"), ""}}, Title: T(loc, "campaigns.create.heading")})
 	if view.Impersonation != nil {
 		<p class="opacity-60">{T(loc, "campaigns.create.impersonation", ImpersonationLabel(view.Impersonation))}</p>
 	}
@@ -141,10 +142,8 @@ templ CampaignsTable(rows []CampaignRow, message string, loc Localizer) {
 // CampaignDetailPage renders a single campaign with sub navigation.
 templ CampaignDetailPage(detail CampaignDetail, message string, loc Localizer) {
 	if message != "" {
-		@PageHeader(PageHeading{Breadcrumbs: []Breadcrumb{{T(loc, "nav.campaigns"), "/campaigns"}, {T(loc, "campaigns.detail.heading"), ""}}, Title: T(loc, "campaigns.detail.heading")})
 		<p>{message}</p>
 	} else {
-		@PageHeader(PageHeading{Breadcrumbs: []Breadcrumb{{T(loc, "nav.campaigns"), "/campaigns"}, {detail.Name, ""}}, Title: detail.Name})
 		@CampaignSubNav(detail.ID, "overview", loc) {
 			@CampaignOverviewTab(detail, loc)
 		}
@@ -155,7 +154,7 @@ templ CampaignDetailPage(detail CampaignDetail, message string, loc Localizer) {
 templ CampaignOverviewTab(detail CampaignDetail, loc Localizer) {
 	<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 		<div>
-			<h3>{T(loc, "campaigns.detail.info")}</h3>
+			<h2>{T(loc, "campaigns.detail.info")}</h2>
 			<table class="table table-zebra">
 				<tbody>
 					<tr><td><strong>{T(loc, "campaigns.detail.id")}</strong></td><td><code>{detail.ID}</code></td></tr>
@@ -169,7 +168,7 @@ templ CampaignOverviewTab(detail CampaignDetail, loc Localizer) {
 			</table>
 		</div>
 		<div>
-			<h3>{T(loc, "campaigns.detail.quick_stats")}</h3>
+			<h2>{T(loc, "campaigns.detail.quick_stats")}</h2>
 			<div class="grid grid-cols-2 gap-4">
 				@StatCard(T(loc, "campaigns.table.participants"), detail.ParticipantCount, "")
 				@StatCard(T(loc, "campaigns.table.characters"), detail.CharacterCount, "")
@@ -217,7 +216,10 @@ templ CampaignSessionsList(rows []CampaignSessionRow, message string, loc Locali
 
 // CampaignDetailFullPage renders campaign detail content in the base layout.
 templ CampaignDetailFullPage(detail CampaignDetail, message string, page PageContext) {
-	@Layout(T(page.Loc, "title.campaign", AppName()), "Campaigns", page.Loc, page) {
+	@Layout(T(page.Loc, "title.campaign", AppName()), "Campaigns", page.Loc, page, []Breadcrumb{
+		{Label: T(page.Loc, "nav.campaigns"), URL: "/campaigns"},
+		{Label: detail.Name, URL: ""},
+	}...) {
 		@CampaignDetailPage(detail, message, page.Loc)
 	}
 }

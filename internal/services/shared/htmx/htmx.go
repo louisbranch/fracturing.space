@@ -93,16 +93,25 @@ func copyHeaders(dst, src http.Header) {
 // If fragment is nil, full is used for both paths.
 func RenderPage(w http.ResponseWriter, r *http.Request, fragment templ.Component, full templ.Component, htmxTitle string) {
 	if IsHTMXRequest(r) {
-		if fragment == nil {
-			fragment = full
+		target := fragment
+		captureFromFull := full != nil
+		if captureFromFull {
+			target = full
 		}
-		if fragment == nil {
+		if target == nil {
 			return
 		}
 		capture := newResponseBuffer()
-		templ.Handler(fragment).ServeHTTP(capture, r)
+		templ.Handler(target).ServeHTTP(capture, r)
 
-		body := addHTMXTitleIfMissing(capture.body.Bytes(), htmxTitle)
+		body := capture.body.Bytes()
+		if captureFromFull {
+			if mainContent, ok := extractMainContent(body); ok {
+				body = mainContent
+			}
+		}
+
+		body = addHTMXTitleIfMissing(body, htmxTitle)
 		copyHeaders(w.Header(), capture.Header())
 		if !capture.headerWrote {
 			capture.statusCode = http.StatusOK
@@ -121,4 +130,21 @@ func RenderPage(w http.ResponseWriter, r *http.Request, fragment templ.Component
 		return
 	}
 	templ.Handler(full).ServeHTTP(w, r)
+}
+
+func extractMainContent(body []byte) ([]byte, bool) {
+	start := bytes.Index(body, []byte("<main"))
+	if start < 0 {
+		return nil, false
+	}
+	openClose := bytes.Index(body[start:], []byte(">"))
+	if openClose < 0 {
+		return nil, false
+	}
+	contentStart := start + openClose + 1
+	end := bytes.Index(body[contentStart:], []byte("</main>"))
+	if end < 0 {
+		return nil, false
+	}
+	return body[contentStart : contentStart+end], true
 }

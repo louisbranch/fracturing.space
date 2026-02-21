@@ -9,7 +9,6 @@ templ SystemsFullPage(page PageContext) {
 
 // SystemsPage renders the systems page content.
 templ SystemsPage(loc Localizer) {
-	@PageHeader(PageHeading{Title: T(loc, "systems.heading")})
 	@SystemsLoading(loc)
 }
 
@@ -60,7 +59,10 @@ templ SystemsTable(rows []SystemRow, message string, loc Localizer) {
 
 // SystemDetailFullPage renders system detail content in the base layout.
 templ SystemDetailFullPage(detail SystemDetail, message string, page PageContext) {
-	@Layout(T(page.Loc, "title.system", AppName()), "Systems", page.Loc, page) {
+	@Layout(T(page.Loc, "title.system", AppName()), "Systems", page.Loc, page, []Breadcrumb{
+		{Label: T(page.Loc, "nav.systems"), URL: "/systems"},
+		{Label: detail.Name, URL: ""},
+	}...) {
 		@SystemDetailPage(detail, message, page.Loc)
 	}
 }
@@ -68,10 +70,8 @@ templ SystemDetailFullPage(detail SystemDetail, message string, page PageContext
 // SystemDetailPage renders a single system detail page.
 templ SystemDetailPage(detail SystemDetail, message string, loc Localizer) {
 	if message != "" {
-		@PageHeader(PageHeading{Breadcrumbs: []Breadcrumb{{T(loc, "nav.systems"), "/systems"}, {T(loc, "systems.detail.heading"), ""}}, Title: T(loc, "systems.detail.heading")})
 		<p>{message}</p>
 	} else {
-		@PageHeader(PageHeading{Breadcrumbs: []Breadcrumb{{T(loc, "nav.systems"), "/systems"}, {detail.Name, ""}}, Title: detail.Name})
 		<table class="table table-zebra">
 			<tbody>
 				<tr><td><strong>{T(loc, "systems.detail.id")}</strong></td><td><code>{detail.ID}</code></td></tr>

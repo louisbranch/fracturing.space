@@ -1,5 +1,7 @@
 package templates
 
+import sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
+
 // CampaignListItem models one campaign row in the campaigns list.
 type CampaignListItem struct {
 	ID               string
@@ -79,14 +81,13 @@ type UserInviteItem struct {
 }
 
 templ GamePageShell(page PageContext, title string) {
-	@ChromeLayout(title, page.Lang, page.AppName, page.Loc, page.CurrentPath, page.CampaignName) {
+	@Layout(title, page.Lang, page.AppName, page.Loc, page.CurrentPath, page.CampaignName) {
       { children... }
 	}
 }
 
 templ CampaignsListPage(page PageContext, campaigns []CampaignListItem) {
-	@GamePageShell(page, T(page.Loc, "game.campaigns.title")) {
-		<h2>{ T(page.Loc, "game.campaigns.heading") }</h2>
+	@Layout(T(page.Loc, "game.campaigns.title"), page.Lang, page.AppName, page.Loc, page.CurrentPath, page.CampaignName, []sharedtemplates.BreadcrumbItem{}...) {
 		<div class="flex flex-wrap items-center justify-end gap-3">
 			<a class="btn btn-primary btn-sm" href="/campaigns/create">{ T(page.Loc, "game.campaigns.start_new") }</a>
 		</div>
@@ -115,11 +116,11 @@ templ CampaignsListPage(page PageContext, campaigns []CampaignListItem) {
 					</figure>
 					<div class="card-body">
 						<h2 class="card-title">
-							if campaign.ID != "" {
-								<a href={ "/campaigns/" + campaign.ID }>{ campaign.Name }</a>
-							} else {
-								{ campaign.Name }
-							}
+								if campaign.ID != "" {
+									<a href={ "/campaigns/" + campaign.ID }>{ campaign.Name }</a>
+								} else {
+									{ campaign.Name }
+								}
 						</h2>
 						if campaign.Theme != "" {
 							<p class="text-sm opacity-70">{ campaign.Theme }</p>
@@ -137,7 +138,6 @@ templ CampaignsListPage(page PageContext, campaigns []CampaignListItem) {
 
 templ CampaignCreatePage(page PageContext) {
 	@GamePageShell(page, T(page.Loc, "game.create.title")) {
-		<h2>{ T(page.Loc, "game.create.heading") }</h2>
 		<div class="card bg-base-200">
 			<div class="card-body">
 				<form method="post" action="/campaigns/create" class="space-y-4">
@@ -188,7 +188,6 @@ templ CampaignCreatePage(page PageContext) {
 
 templ SessionsListPage(page PageContext, campaignID string, canManage bool, sessions []SessionListItem) {
 	@GamePageShell(page, T(page.Loc, "game.sessions.title")) {
-		<h2>{ T(page.Loc, "game.sessions.heading") }</h2>
 		if canManage {
 			<div class="card bg-base-200">
 				<div class="card-body">
@@ -239,7 +238,6 @@ templ SessionDetailPage(page PageContext, detail SessionDetail) {
 
 templ CampaignParticipantsPage(page PageContext, campaignID string, canManage bool, participants []ParticipantListItem) {
 	@GamePageShell(page, T(page.Loc, "game.participants.title")) {
-		<h2>{ T(page.Loc, "game.participants.heading") }</h2>
 		<ul>
 			for _, participant := range participants {
 				<li>{ participant.Name }
@@ -315,7 +313,6 @@ templ CampaignParticipantsPage(page PageContext, campaignID string, canManage bo
 
 templ CampaignCharactersPage(page PageContext, campaignID string, canManage bool, characters []CharacterListItem) {
 	@GamePageShell(page, T(page.Loc, "game.characters.title")) {
-		<h2>{ T(page.Loc, "game.characters.heading") }</h2>
 		if canManage {
 			<div class="card bg-base-200">
 				<div class="card-body">
@@ -405,7 +402,6 @@ templ CharacterDetailPage(page PageContext, character CharacterDetail) {
 
 templ CampaignInvitesPage(page PageContext, campaignID string, canManage bool, invites []CampaignInviteItem) {
 	@GamePageShell(page, T(page.Loc, "game.campaign_invites.title")) {
-		<h2>{ T(page.Loc, "game.campaign_invites.heading") }</h2>
 		if canManage {
 			<div class="card bg-base-200">
 				<div class="card-body">
@@ -446,7 +442,6 @@ templ CampaignInvitesPage(page PageContext, campaignID string, canManage bool, i
 
 templ UserInvitesPage(page PageContext, invites []UserInviteItem) {
 	@GamePageShell(page, T(page.Loc, "game.my_invites.title")) {
-		<h2>{ T(page.Loc, "game.my_invites.heading") }</h2>
 		<ul>
 			for _, invite := range invites {
 				<li>{ invite.Label }

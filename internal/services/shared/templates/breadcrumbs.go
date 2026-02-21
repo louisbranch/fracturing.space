@@ -175,22 +175,17 @@ func defaultSegmentLabel(segment string, fullPath string, loc Localizer) string 
 	return segment
 }
 
-func BuildPathBreadcrumbsForWeb(path string, loc Localizer) []BreadcrumbItem {
+func BuildPathBreadcrumbsForWeb(path string, loc Localizer, campaignNames ...map[string]string) []BreadcrumbItem {
 	if strings.TrimSpace(path) == "/dashboard" {
 		return []BreadcrumbItem{}
 	}
-	return BuildPathBreadcrumbs(path, loc)
-}
-
-func BuildPathBreadcrumbsForWebWithCampaignNames(path string, loc Localizer, campaignNames map[string]string) []BreadcrumbItem {
-	if strings.TrimSpace(path) == "/dashboard" {
-		return []BreadcrumbItem{}
+	var withCampaignNames map[string]string
+	if len(campaignNames) > 0 {
+		withCampaignNames = campaignNames[0]
 	}
 	return BuildPathBreadcrumbsWithOptions(path, loc, PathBreadcrumbOptions{
-		IncludeRoot:     true,
-		RootPath:        "/",
-		RootLabel:       "dashboard.title",
+		IncludeRoot:     false,
 		LabelForSegment: gamePathSegmentLabel,
-		CampaignNames:   campaignNames,
+		CampaignNames:   withCampaignNames,
 	})
 }

@@ -40,13 +40,27 @@ func TestComposePageTitleSupportsAdminSuffix(t *testing.T) {
 	}
 }
 
+func TestPageHeadingFromTitleStripsBrandAndAdminSuffix(t *testing.T) {
+	got := pageHeadingFromTitle("Campaigns - Admin | "+branding.AppName, branding.AppName)
+	if got != "Campaigns" {
+		t.Fatalf("pageHeadingFromTitle = %q, want %q", got, "Campaigns")
+	}
+}
+
+func TestPageHeadingFromTitleUsesBaseTitleWhenAlreadyRaw(t *testing.T) {
+	got := pageHeadingFromTitle("Campaigns", branding.AppName)
+	if got != "Campaigns" {
+		t.Fatalf("pageHeadingFromTitle = %q, want %q", got, "Campaigns")
+	}
+}
+
 func TestAppChromeLayoutSupportsCustomBreadcrumbs(t *testing.T) {
 	breadcrumbs := []BreadcrumbItem{
 		{Label: "Dashboard", URL: "/"},
 		{Label: "Custom"},
 	}
 	var b strings.Builder
-	err := AppChromeLayout("Campaigns", "en-US", branding.AppName, breadcrumbLocalizer{}, breadcrumbs).Render(context.Background(), &b)
+	err := AppChromeLayout("Campaigns", "en-US", branding.AppName, breadcrumbLocalizer{}, breadcrumbs, ChromeLayoutOptions{}).Render(context.Background(), &b)
 	if err != nil {
 		t.Fatalf("AppChromeLayout() = %v", err)
 	}

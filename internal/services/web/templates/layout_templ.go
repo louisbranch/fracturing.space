@@ -60,8 +60,8 @@ func ShellLayout(title string, lang string, loc Localizer) templ.Component {
 	})
 }
 
-// ChromeLayout wraps game pages in the shared HTML chrome.
-func ChromeLayout(title string, lang string, appName string, loc Localizer, currentPath string, campaignName string, customBreadcrumbs ...sharedtemplates.BreadcrumbItem) templ.Component {
+// Layout wraps game pages in the shared HTML chrome.
+func Layout(title string, lang string, appName string, loc Localizer, currentPath string, campaignName string, customBreadcrumbs ...sharedtemplates.BreadcrumbItem) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -82,7 +82,7 @@ func ChromeLayout(title string, lang string, appName string, loc Localizer, curr
 			templ_7745c5c3_Var3 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		if len(customBreadcrumbs) > 0 {
+		if customBreadcrumbs != nil {
 			templ_7745c5c3_Var4 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 				templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 				templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
@@ -101,7 +101,9 @@ func ChromeLayout(title string, lang string, appName string, loc Localizer, curr
 				}
 				return nil
 			})
-			templ_7745c5c3_Err = sharedtemplates.AppChromeLayout(title, lang, appName, loc, customBreadcrumbs).Render(templ.WithChildren(ctx, templ_7745c5c3_Var4), templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = sharedtemplates.AppChromeLayout(title, lang, appName, loc, customBreadcrumbs, sharedtemplates.ChromeLayoutOptions{
+				MainAria: sharedtemplates.T(loc, "game.aria_label"),
+			}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var4), templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -124,7 +126,9 @@ func ChromeLayout(title string, lang string, appName string, loc Localizer, curr
 				}
 				return nil
 			})
-			templ_7745c5c3_Err = sharedtemplates.AppChromeLayout(title, lang, appName, loc, sharedtemplates.BuildPathBreadcrumbsForWebWithCampaignNames(currentPath, loc, campaignNamesForPath(currentPath, campaignName))).Render(templ.WithChildren(ctx, templ_7745c5c3_Var5), templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = sharedtemplates.AppChromeLayout(title, lang, appName, loc, sharedtemplates.BuildPathBreadcrumbsForWeb(currentPath, loc, campaignNamesForPath(currentPath, campaignName)), sharedtemplates.ChromeLayoutOptions{
+				MainAria: sharedtemplates.T(loc, "game.aria_label"),
+			}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var5), templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
