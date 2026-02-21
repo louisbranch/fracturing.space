@@ -8,8 +8,11 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
+
+var timelineTypePattern = regexp.MustCompile(`[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+`)
 
 func loadMarkedScenarioFiles(scenarioDir, marker string) (map[string]struct{}, error) {
 	out := make(map[string]struct{})
@@ -116,6 +119,54 @@ func loadTimelineRowIDs(docPath string) (map[string]struct{}, error) {
 	return rows, nil
 }
 
+func loadTimelineCommandAndEventTypes(docPath string) (map[string]struct{}, map[string]struct{}, error) {
+	file, err := os.Open(docPath)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer file.Close()
+
+	commandTypes := make(map[string]struct{})
+	eventTypes := make(map[string]struct{})
+	commandColumn := -1
+	eventColumn := -1
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		cells := markdownCells(scanner.Text())
+		if len(cells) == 0 {
+			continue
+		}
+
+		if commandIdx, eventIdx, ok := commandEventHeaderColumns(cells); ok {
+			commandColumn = commandIdx
+			eventColumn = eventIdx
+			continue
+		}
+		if commandColumn < 0 || eventColumn < 0 {
+			continue
+		}
+		if isMarkdownSeparatorRow(cells) {
+			continue
+		}
+		if commandColumn >= len(cells) || eventColumn >= len(cells) {
+			continue
+		}
+
+		for _, commandType := range timelineTypePattern.FindAllString(cells[commandColumn], -1) {
+			commandTypes[commandType] = struct{}{}
+		}
+		for _, eventType := range timelineTypePattern.FindAllString(cells[eventColumn], -1) {
+			eventTypes[eventType] = struct{}{}
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, nil, err
+	}
+
+	return commandTypes, eventTypes, nil
+}
+
 func markdownCells(line string) []string {
 	trimmed := strings.TrimSpace(line)
 	if !strings.HasPrefix(trimmed, "|") || !strings.HasSuffix(trimmed, "|") {
@@ -130,4 +181,37 @@ func markdownCells(line string) []string {
 		cells = append(cells, strings.TrimSpace(raw[i]))
 	}
 	return cells
+}
+
+func commandEventHeaderColumns(cells []string) (int, int, bool) {
+	commandColumn := -1
+	eventColumn := -1
+	for i, cell := range cells {
+		header := strings.TrimSpace(strings.Trim(cell, "`"))
+		switch header {
+		case "Command Type(s)":
+			commandColumn = i
+		case "Emitted Event Type(s)":
+			eventColumn = i
+		}
+	}
+	return commandColumn, eventColumn, commandColumn >= 0 && eventColumn >= 0
+}
+
+func isMarkdownSeparatorRow(cells []string) bool {
+	if len(cells) == 0 {
+		return false
+	}
+	for _, cell := range cells {
+		trimmed := strings.TrimSpace(cell)
+		if trimmed == "" {
+			return false
+		}
+		for _, r := range trimmed {
+			if r != '-' && r != ':' {
+				return false
+			}
+		}
+	}
+	return true
 }

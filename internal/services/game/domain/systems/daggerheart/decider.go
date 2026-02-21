@@ -53,6 +53,8 @@ const (
 	rejectionCodeConditionChangeRemoveMissing    = "CONDITION_CHANGE_REMOVE_MISSING"
 	rejectionCodeCountdownUpdateNoMutation       = "COUNTDOWN_UPDATE_NO_MUTATION"
 	rejectionCodeCountdownBeforeMismatch         = "COUNTDOWN_BEFORE_MISMATCH"
+	rejectionCodeDamageBeforeMismatch            = "DAMAGE_BEFORE_MISMATCH"
+	rejectionCodeAdversaryDamageBeforeMismatch   = "ADVERSARY_DAMAGE_BEFORE_MISMATCH"
 	rejectionCodeAdversaryConditionNoMutation    = "ADVERSARY_CONDITION_NO_MUTATION"
 	rejectionCodeAdversaryConditionRemoveMissing = "ADVERSARY_CONDITION_REMOVE_MISSING"
 	rejectionCodeAdversaryCreateNoMutation       = "ADVERSARY_CREATE_NO_MUTATION"
@@ -465,6 +467,22 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 	case commandTypeDamageApply:
 		var payload DamageApplyPayload
 		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if hasSnapshot {
+			if character, ok := snapshotCharacterState(snapshotState, payload.CharacterID); ok {
+				if payload.HpBefore != nil && character.HP != *payload.HpBefore {
+					return command.Reject(command.Rejection{
+						Code:    rejectionCodeDamageBeforeMismatch,
+						Message: "damage before does not match current state",
+					})
+				}
+				if payload.ArmorBefore != nil && character.Armor != *payload.ArmorBefore {
+					return command.Reject(command.Rejection{
+						Code:    rejectionCodeDamageBeforeMismatch,
+						Message: "damage before does not match current state",
+					})
+				}
+			}
+		}
 		if now == nil {
 			now = time.Now
 		}
@@ -498,6 +516,22 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 	case commandTypeAdversaryDamageApply:
 		var payload AdversaryDamageApplyPayload
 		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if hasSnapshot {
+			if adversary, ok := snapshotAdversaryState(snapshotState, payload.AdversaryID); ok {
+				if payload.HpBefore != nil && adversary.HP != *payload.HpBefore {
+					return command.Reject(command.Rejection{
+						Code:    rejectionCodeAdversaryDamageBeforeMismatch,
+						Message: "adversary damage before does not match current state",
+					})
+				}
+				if payload.ArmorBefore != nil && adversary.Armor != *payload.ArmorBefore {
+					return command.Reject(command.Rejection{
+						Code:    rejectionCodeAdversaryDamageBeforeMismatch,
+						Message: "adversary damage before does not match current state",
+					})
+				}
+			}
+		}
 		if now == nil {
 			now = time.Now
 		}

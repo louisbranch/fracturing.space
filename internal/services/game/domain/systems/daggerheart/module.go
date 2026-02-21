@@ -334,6 +334,9 @@ func validateDamageApplyPayload(raw json.RawMessage) error {
 	if !hasDamagePatchMutation(payload.HpBefore, payload.HpAfter, payload.ArmorBefore, payload.ArmorAfter) {
 		return errors.New("damage apply must change hp or armor")
 	}
+	if err := validateDamageAdapterInvariants(payload); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -357,6 +360,32 @@ func validateAdversaryDamageApplyPayload(raw json.RawMessage) error {
 
 func validateAdversaryDamageAppliedPayload(raw json.RawMessage) error {
 	return validateAdversaryDamageApplyPayload(raw)
+}
+
+func validateDamageAdapterInvariants(payload DamageApplyPayload) error {
+	if payload.ArmorSpent < 0 || payload.ArmorSpent > ArmorMaxCap {
+		return fmt.Errorf("armor_spent must be in range 0..%d", ArmorMaxCap)
+	}
+	if payload.Marks < 0 || payload.Marks > 4 {
+		return errors.New("marks must be in range 0..4")
+	}
+	if payload.RollSeq != nil && *payload.RollSeq == 0 {
+		return errors.New("roll_seq must be positive")
+	}
+	if severity := strings.TrimSpace(payload.Severity); severity != "" {
+		switch severity {
+		case "none", "minor", "major", "severe", "massive":
+			// allowed
+		default:
+			return errors.New("severity must be one of none, minor, major, severe, massive")
+		}
+	}
+	for _, id := range payload.SourceCharacterIDs {
+		if strings.TrimSpace(id) == "" {
+			return errors.New("source_character_ids must not contain empty values")
+		}
+	}
+	return nil
 }
 
 func validateDowntimeMoveApplyPayload(raw json.RawMessage) error {

@@ -36,33 +36,6 @@ func testSystemEvent() event.Event {
 	}
 }
 
-func TestApplyEmittedEventSkipsWhenInlineApplyDisabled(t *testing.T) {
-	SetInlineProjectionApplyEnabled(false)
-	t.Cleanup(func() { SetInlineProjectionApplyEnabled(true) })
-
-	applier := &fakeEventApplier{err: errors.New("should not be called")}
-	svc := &DaggerheartService{}
-	if err := svc.applyEmittedEvent(context.Background(), applier, testSystemEvent(), "apply test event"); err != nil {
-		t.Fatalf("expected no error with inline apply disabled, got %v", err)
-	}
-	if applier.calls != 0 {
-		t.Fatalf("apply calls = %d, want 0", applier.calls)
-	}
-}
-
-func TestApplyEmittedEventAppliesWhenInlineApplyEnabled(t *testing.T) {
-	SetInlineProjectionApplyEnabled(true)
-
-	applier := &fakeEventApplier{}
-	svc := &DaggerheartService{}
-	if err := svc.applyEmittedEvent(context.Background(), applier, testSystemEvent(), "apply test event"); err != nil {
-		t.Fatalf("apply emitted event: %v", err)
-	}
-	if applier.calls != 1 {
-		t.Fatalf("apply calls = %d, want 1", applier.calls)
-	}
-}
-
 type fakeDomainExecutor struct {
 	result engine.Result
 	err    error
@@ -126,6 +99,65 @@ func TestExecuteAndApplyDomainCommandSkipsApplyWhenInlineDisabled(t *testing.T) 
 	}
 	if applier.calls != 0 {
 		t.Fatalf("apply calls = %d, want 0", applier.calls)
+	}
+}
+
+func TestExecuteAndApplyDomainCommandAppliesWhenInlineEnabled(t *testing.T) {
+	SetInlineProjectionApplyEnabled(true)
+
+	applier := &fakeEventApplier{}
+	svc := &DaggerheartService{
+		stores: Stores{
+			Domain: fakeDomainExecutor{
+				result: engine.Result{
+					Decision: command.Decision{Events: []event.Event{testSystemEvent()}},
+				},
+			},
+		},
+	}
+
+	_, err := svc.executeAndApplyDomainCommand(
+		context.Background(),
+		command.Command{CampaignID: "camp-1", Type: command.Type("sys.daggerheart.gm_fear.set")},
+		applier,
+		domainCommandApplyOptions{requireEvents: true, missingEventMsg: "missing events"},
+	)
+	if err != nil {
+		t.Fatalf("execute and apply with inline enabled: %v", err)
+	}
+	if applier.calls != 1 {
+		t.Fatalf("apply calls = %d, want 1", applier.calls)
+	}
+}
+
+func TestExecuteAndApplyDomainCommandReturnsApplyErrorWhenInlineEnabled(t *testing.T) {
+	SetInlineProjectionApplyEnabled(true)
+
+	applier := &fakeEventApplier{err: errors.New("boom")}
+	svc := &DaggerheartService{
+		stores: Stores{
+			Domain: fakeDomainExecutor{
+				result: engine.Result{
+					Decision: command.Decision{Events: []event.Event{testSystemEvent()}},
+				},
+			},
+		},
+	}
+
+	_, err := svc.executeAndApplyDomainCommand(
+		context.Background(),
+		command.Command{CampaignID: "camp-1", Type: command.Type("sys.daggerheart.gm_fear.set")},
+		applier,
+		domainCommandApplyOptions{requireEvents: true, missingEventMsg: "missing events"},
+	)
+	if err == nil {
+		t.Fatal("expected apply error")
+	}
+	if status.Code(err) != codes.Internal {
+		t.Fatalf("status code = %s, want %s", status.Code(err), codes.Internal)
+	}
+	if !strings.Contains(err.Error(), "apply event") {
+		t.Fatalf("error = %v, want apply event prefix", err)
 	}
 }
 

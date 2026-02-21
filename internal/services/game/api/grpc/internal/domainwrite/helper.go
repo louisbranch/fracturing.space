@@ -2,12 +2,25 @@ package domainwrite
 
 import (
 	"context"
+	"sync"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/manifest"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+)
+
+var (
+	inlineApplyIntentIndexOnce sync.Once
+	inlineApplyIntentIndex     map[event.Type]event.Intent
+	// Conservative fallback for journal-only events if intent index bootstrap
+	// cannot resolve a type (for example, transient registry build issues).
+	inlineApplyAuditOnlyFallback = map[event.Type]struct{}{
+		event.Type("action.outcome_rejected"): {},
+		event.Type("story.note_added"):        {},
+	}
 )
 
 // Executor executes a domain command and returns the domain result.
@@ -69,20 +82,35 @@ func ExecuteAndApply(
 	return result, nil
 }
 
-// ShouldApplyProjectionInline enforces request-path inline-apply policy.
-//
-// Action roll/outcome records and story notes are journal-only and are not
-// projected via projection.Applier in request handlers.
+// ShouldApplyProjectionInline enforces request-path inline-apply policy using
+// event registry intent metadata.
 func ShouldApplyProjectionInline(evt event.Event) bool {
-	switch evt.Type {
-	case event.Type("action.roll_resolved"),
-		event.Type("action.outcome_applied"),
-		event.Type("action.outcome_rejected"),
-		event.Type("story.note_added"):
-		return false
-	default:
-		return true
+	if intent, ok := inlineApplyEventIntent(evt.Type); ok {
+		return intent != event.IntentAuditOnly
 	}
+	_, auditOnly := inlineApplyAuditOnlyFallback[evt.Type]
+	return !auditOnly
+}
+
+func inlineApplyEventIntent(eventType event.Type) (event.Intent, bool) {
+	inlineApplyIntentIndexOnce.Do(func() {
+		inlineApplyIntentIndex = buildInlineApplyIntentIndex()
+	})
+	intent, ok := inlineApplyIntentIndex[eventType]
+	return intent, ok
+}
+
+func buildInlineApplyIntentIndex() map[event.Type]event.Intent {
+	registries, err := engine.BuildRegistries(systemmanifest.Modules()...)
+	if err != nil {
+		return nil
+	}
+	definitions := registries.Events.ListDefinitions()
+	index := make(map[event.Type]event.Intent, len(definitions))
+	for _, definition := range definitions {
+		index[definition.Type] = definition.Intent
+	}
+	return index
 }
 
 func normalizeOptions(options Options) Options {
