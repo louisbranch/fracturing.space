@@ -432,16 +432,46 @@ func (s *DaggerheartService) ApplyRest(ctx context.Context, in *pb.DaggerheartAp
 	shortBefore := currentSnap.ConsecutiveShortRests
 	shortAfter := outcome.State.ConsecutiveShortRests
 	longTermCountdownID := strings.TrimSpace(in.Rest.GetLongTermCountdownId())
+	var longTermCountdown *daggerheart.CountdownUpdatePayload
+	if outcome.AdvanceCountdown && longTermCountdownID != "" {
+		storedCountdown, err := s.stores.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, longTermCountdownID)
+		if err != nil {
+			return nil, handleDomainError(err)
+		}
+		countdown := daggerheart.Countdown{
+			CampaignID: storedCountdown.CampaignID,
+			ID:         storedCountdown.CountdownID,
+			Name:       storedCountdown.Name,
+			Kind:       storedCountdown.Kind,
+			Current:    storedCountdown.Current,
+			Max:        storedCountdown.Max,
+			Direction:  storedCountdown.Direction,
+			Looping:    storedCountdown.Looping,
+		}
+		update, err := daggerheart.ApplyCountdownUpdate(countdown, 1, nil)
+		if err != nil {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+		longTermCountdown = &daggerheart.CountdownUpdatePayload{
+			CountdownID: longTermCountdownID,
+			Before:      update.Before,
+			After:       update.After,
+			Delta:       update.Delta,
+			Looped:      update.Looped,
+			Reason:      "long_rest",
+		}
+	}
 
 	payload := daggerheart.RestTakePayload{
-		RestType:         daggerheartRestTypeToString(restType),
-		Interrupted:      in.Rest.Interrupted,
-		GMFearBefore:     gmFearBefore,
-		GMFearAfter:      gmFearAfter,
-		ShortRestsBefore: shortBefore,
-		ShortRestsAfter:  shortAfter,
-		RefreshRest:      outcome.RefreshRest,
-		RefreshLongRest:  outcome.RefreshLongRest,
+		RestType:          daggerheartRestTypeToString(restType),
+		Interrupted:       in.Rest.Interrupted,
+		GMFearBefore:      gmFearBefore,
+		GMFearAfter:       gmFearAfter,
+		ShortRestsBefore:  shortBefore,
+		ShortRestsAfter:   shortAfter,
+		RefreshRest:       outcome.RefreshRest,
+		RefreshLongRest:   outcome.RefreshLongRest,
+		LongTermCountdown: longTermCountdown,
 	}
 	characterIDs := make([]string, len(in.GetCharacterIds()))
 	copy(characterIDs, in.GetCharacterIds())
@@ -483,18 +513,6 @@ func (s *DaggerheartService) ApplyRest(ctx context.Context, in *pb.DaggerheartAp
 	})
 	if err != nil {
 		return nil, err
-	}
-
-	if outcome.AdvanceCountdown && longTermCountdownID != "" {
-		if _, err := s.UpdateCountdown(ctx, &pb.DaggerheartUpdateCountdownRequest{
-			CampaignId:  campaignID,
-			SessionId:   sessionID,
-			CountdownId: longTermCountdownID,
-			Delta:       1,
-			Reason:      "long_rest",
-		}); err != nil {
-			return nil, err
-		}
 	}
 
 	updatedSnap, err := s.stores.Daggerheart.GetDaggerheartSnapshot(ctx, campaignID)

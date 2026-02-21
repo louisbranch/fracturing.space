@@ -37,6 +37,9 @@ Review gate:
 
 1. No implementation PR should close a mechanic gap without a corresponding timeline entry/update.
 2. If command/event mapping is unclear, resolve that ambiguity in docs before code.
+3. Keep command/event mapping canonical in
+   `daggerheart-event-timeline-contract.md`; this document tracks gap inventory
+   and row-ID linkage only.
 
 ## Priority Timeline Mapping Index
 

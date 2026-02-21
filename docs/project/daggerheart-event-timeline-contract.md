@@ -12,6 +12,13 @@ This document maps high-traffic Daggerheart mechanics onto the canonical write p
 
 Use this as the onboarding contract for new mechanics and for review of existing paths.
 
+This document is intentional/mechanic mapping guidance, not a generated type
+inventory. For exact payload fields and emitter references, use:
+
+- [Event catalog](../events/event-catalog.md)
+- [Command catalog](../events/command-catalog.md)
+- [Usage map](../events/usage-map.md)
+
 ## Command/Event Timeline Map
 
 | Mechanic | Command Type(s) | Emitted Event Type(s) | Projection Targets | Apply policy notes | Required invariants |
@@ -24,7 +31,7 @@ Use this as the onboarding contract for new mechanics and for review of existing
 | Session gate for GM consequence | `session.gate_open`, `session.spotlight_set` | `session.gate_opened`, `session.spotlight_set` | Session gate + spotlight projections | Inline apply mode-controlled | One open gate at a time; request/session correlation |
 | Character damage apply | `sys.daggerheart.damage.apply` | `sys.daggerheart.damage_applied` | Daggerheart character HP/armor | Inline apply mode-controlled | Campaign system is Daggerheart; damage payload valid; emits event |
 | Adversary damage apply | `sys.daggerheart.adversary_damage.apply` | `sys.daggerheart.adversary_damage_applied` | Daggerheart adversary HP/armor | Inline apply mode-controlled | Adversary exists in session; payload valid; emits event |
-| Rest | `sys.daggerheart.rest.take` | `sys.daggerheart.rest_taken` | Daggerheart snapshot and targeted character state | Inline apply mode-controlled | Rest type valid; campaign/session mutate gates pass |
+| Rest | `sys.daggerheart.rest.take` | `sys.daggerheart.rest_taken`, optional `sys.daggerheart.countdown_updated` (when `long_term_countdown` is present) | Daggerheart snapshot and targeted character state, plus long-term countdown state | Inline apply mode-controlled | Rest type valid; campaign/session mutate gates pass; rest + optional countdown update emit atomically from one command decision |
 | Downtime move | `sys.daggerheart.downtime_move.apply` | `sys.daggerheart.downtime_move_applied` | Daggerheart character state | Inline apply mode-controlled | Move is valid; resulting resource bounds valid |
 | Temporary armor apply | `sys.daggerheart.character_temporary_armor.apply` | `sys.daggerheart.character_temporary_armor_applied` | Daggerheart temporary armor buckets and armor totals | Inline apply mode-controlled | Source/duration/amount validation; emits event |
 | Loadout swap and associated resource mutation | `sys.daggerheart.loadout.swap`, `sys.daggerheart.stress.spend` | `sys.daggerheart.loadout_swapped`, `sys.daggerheart.character_state_patched` | Daggerheart character loadout-facing stress/state | Inline apply mode-controlled for Daggerheart events | Recall cost bounds; stress spend consistency |

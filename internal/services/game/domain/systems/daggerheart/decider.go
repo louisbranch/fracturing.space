@@ -59,6 +59,7 @@ const (
 	rejectionCodeAdversaryConditionNoMutation    = "ADVERSARY_CONDITION_NO_MUTATION"
 	rejectionCodeAdversaryConditionRemoveMissing = "ADVERSARY_CONDITION_REMOVE_MISSING"
 	rejectionCodeAdversaryCreateNoMutation       = "ADVERSARY_CREATE_NO_MUTATION"
+	rejectionCodeCommandTypeUnsupported          = "COMMAND_TYPE_UNSUPPORTED"
 )
 
 // Decider handles Daggerheart system commands.
@@ -318,12 +319,19 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 			now = time.Now
 		}
 		payload.RestType = strings.TrimSpace(payload.RestType)
+		if payload.LongTermCountdown != nil {
+			if rejection := countdownUpdateSnapshotRejection(snapshotState, *payload.LongTermCountdown); rejection != nil {
+				return command.Reject(*rejection)
+			}
+			payload.LongTermCountdown.CountdownID = strings.TrimSpace(payload.LongTermCountdown.CountdownID)
+			payload.LongTermCountdown.Reason = strings.TrimSpace(payload.LongTermCountdown.Reason)
+		}
 		payloadJSON, _ := json.Marshal(payload)
 		entityID := strings.TrimSpace(cmd.EntityID)
 		if entityID == "" {
 			entityID = cmd.CampaignID
 		}
-		evt := event.Event{
+		restEvent := event.Event{
 			CampaignID:    cmd.CampaignID,
 			Type:          eventTypeRestTaken,
 			Timestamp:     now().UTC(),
@@ -341,7 +349,30 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 			PayloadJSON:   payloadJSON,
 		}
 
-		return command.Accept(evt)
+		if payload.LongTermCountdown == nil {
+			return command.Accept(restEvent)
+		}
+		countdownPayload := *payload.LongTermCountdown
+		countdownPayloadJSON, _ := json.Marshal(countdownPayload)
+		countdownEvent := event.Event{
+			CampaignID:    cmd.CampaignID,
+			Type:          eventTypeCountdownUpdated,
+			Timestamp:     now().UTC(),
+			ActorType:     event.ActorType(cmd.ActorType),
+			ActorID:       cmd.ActorID,
+			SessionID:     cmd.SessionID,
+			RequestID:     cmd.RequestID,
+			InvocationID:  cmd.InvocationID,
+			EntityType:    "countdown",
+			EntityID:      countdownPayload.CountdownID,
+			SystemID:      SystemID,
+			SystemVersion: SystemVersion,
+			CorrelationID: cmd.CorrelationID,
+			CausationID:   cmd.CausationID,
+			PayloadJSON:   countdownPayloadJSON,
+		}
+
+		return command.Accept(restEvent, countdownEvent)
 	case commandTypeCountdownCreate:
 		var payload CountdownCreatePayload
 		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
@@ -383,18 +414,8 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 	case commandTypeCountdownUpdate:
 		var payload CountdownUpdatePayload
 		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
-		if countdown, hasCountdown := snapshotCountdownState(snapshotState, payload.CountdownID); hasCountdown && payload.Before != countdown.Current {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeCountdownBeforeMismatch,
-				Message: "countdown before does not match current state",
-			})
-		}
-		if isCountdownUpdateNoMutation(snapshotState, payload) {
-			// FIXME(telemetry): metric for idempotent countdown updates.
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeCountdownUpdateNoMutation,
-				Message: "countdown update is unchanged",
-			})
+		if rejection := countdownUpdateSnapshotRejection(snapshotState, payload); rejection != nil {
+			return command.Reject(*rejection)
 		}
 		if now == nil {
 			now = time.Now
@@ -790,7 +811,10 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 
 		return command.Accept(evt)
 	default:
-		return command.Decision{}
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeCommandTypeUnsupported,
+			Message: "command type is not supported by daggerheart decider",
+		})
 	}
 }
 
@@ -855,6 +879,23 @@ func isCountdownUpdateNoMutation(snapshot SnapshotState, payload CountdownUpdate
 		return false
 	}
 	return true
+}
+
+func countdownUpdateSnapshotRejection(snapshot SnapshotState, payload CountdownUpdatePayload) *command.Rejection {
+	if countdown, hasCountdown := snapshotCountdownState(snapshot, payload.CountdownID); hasCountdown && payload.Before != countdown.Current {
+		return &command.Rejection{
+			Code:    rejectionCodeCountdownBeforeMismatch,
+			Message: "countdown before does not match current state",
+		}
+	}
+	if isCountdownUpdateNoMutation(snapshot, payload) {
+		// FIXME(telemetry): metric for idempotent countdown updates.
+		return &command.Rejection{
+			Code:    rejectionCodeCountdownUpdateNoMutation,
+			Message: "countdown update is unchanged",
+		}
+	}
+	return nil
 }
 
 func isAdversaryConditionChangeNoMutation(snapshot SnapshotState, payload AdversaryConditionChangePayload) bool {

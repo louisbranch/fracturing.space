@@ -6,12 +6,16 @@ has_children: true
 
 # Events
 
-Catalogs, usage maps, and regeneration notes for the event system.
+Generated command/event contract artifacts and navigation for the event system.
 
-For the end-to-end command/event/projection lifecycle, see
-[Event-driven system](../project/event-driven-system.md).
+Read order:
 
-- Event catalog: [event-catalog.md](event-catalog.md)
-- Command catalog: [command-catalog.md](command-catalog.md)
-- Event usage map: [usage-map.md](usage-map.md)
-- Event catalog generator: [README.md](README.md)
+1. [Event catalog](event-catalog.md) for event types and payload schemas.
+2. [Command catalog](command-catalog.md) for command definitions and validators.
+3. [Event usage map](usage-map.md) for emitter/applier wiring.
+4. [Generator and maintenance notes](README.md).
+
+For lifecycle semantics, invariants, and replay model, see:
+
+- [Event-driven system](../project/event-driven-system.md)
+- [Game systems architecture](../project/game-systems.md)

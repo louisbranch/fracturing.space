@@ -13,14 +13,9 @@ import (
 )
 
 var (
+	inlineApplyIntentIndexMu   sync.Mutex
 	inlineApplyIntentIndexOnce sync.Once
 	inlineApplyIntentIndex     map[event.Type]event.Intent
-	// Conservative fallback for journal-only events if intent index bootstrap
-	// cannot resolve a type (for example, transient registry build issues).
-	inlineApplyAuditOnlyFallback = map[event.Type]struct{}{
-		event.Type("action.outcome_rejected"): {},
-		event.Type("story.note_added"):        {},
-	}
 )
 
 // Executor executes a domain command and returns the domain result.
@@ -88,14 +83,24 @@ func ShouldApplyProjectionInline(evt event.Event) bool {
 	if intent, ok := inlineApplyEventIntent(evt.Type); ok {
 		return intent != event.IntentAuditOnly
 	}
-	_, auditOnly := inlineApplyAuditOnlyFallback[evt.Type]
-	return !auditOnly
+	// Fail closed when intent cannot be resolved; this avoids mutating
+	// projections inline under degraded registry bootstrap conditions.
+	return false
 }
 
 func inlineApplyEventIntent(eventType event.Type) (event.Intent, bool) {
-	inlineApplyIntentIndexOnce.Do(func() {
-		inlineApplyIntentIndex = buildInlineApplyIntentIndex()
-	})
+	inlineApplyIntentIndexMu.Lock()
+	defer inlineApplyIntentIndexMu.Unlock()
+	if inlineApplyIntentIndex == nil {
+		inlineApplyIntentIndexOnce.Do(func() {
+			inlineApplyIntentIndex = buildInlineApplyIntentIndex()
+		})
+		if inlineApplyIntentIndex == nil {
+			// Retry bootstrap on subsequent calls if registry build failed.
+			inlineApplyIntentIndexOnce = sync.Once{}
+			return "", false
+		}
+	}
 	intent, ok := inlineApplyIntentIndex[eventType]
 	return intent, ok
 }

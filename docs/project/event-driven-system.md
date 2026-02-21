@@ -10,6 +10,12 @@ This document is the canonical guide to how game-domain writes work.
 If you are new to the codebase, read this before changing command handlers,
 event payloads, or projection code.
 
+For exact command/event contract details generated from runtime registries, use:
+
+- [Events: event catalog](../events/event-catalog.md)
+- [Events: command catalog](../events/command-catalog.md)
+- [Events: usage map](../events/usage-map.md)
+
 ## Why this model exists
 
 The game service is event-sourced:
@@ -377,60 +383,21 @@ sequenceDiagram
 
 ## For game-system developers
 
-System modules plug into command/event routing through `domain/system`.
+Use this document for shared write-path invariants and replay semantics.
+For system implementation workflow and checklist details, use
+[Game systems architecture](game-systems.md).
 
-Module interface:
-
-- `ID()` and `Version()`
-- `RegisterCommands(registry *command.Registry)`
-- `RegisterEvents(registry *event.Registry)`
-- `Decider()`
-- `Projector()`
-- `StateFactory()`
-
-Reference implementation:
-
-- `internal/services/game/domain/systems/daggerheart/module.go`
-
-Minimum checklist for a new system:
-
-1. Define stable `system_id` + `system_version`.
-2. Register all system-owned command types with payload validators.
-3. Register all system-owned event types with payload validators.
-4. Implement decider that emits system-owned events.
-5. Implement projector for replay/aggregate routing.
-6. Implement projection adapter for persistent system tables.
-7. Ensure all system command/event envelopes include `system_id/system_version`.
-
-### System-owned command routing diagram
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant SH as System gRPC Handler
-    participant ENG as Domain Engine
-    participant SR as system.Registry
-    participant MOD as System Module Decider
-    participant ES as Event Store
-    participant AD as System Projection Adapter
-
-    SH->>ENG: Execute(system-owned command)
-    ENG->>SR: RouteCommand(system_id, system_version)
-    SR->>MOD: Decider().Decide(...)
-    MOD-->>ENG: Decision(system-owned events)
-    ENG->>ES: AppendEvent(events with system metadata)
-    ES-->>ENG: stored events
-    SH->>AD: Apply(system-owned events)
-    AD-->>SH: system projection updated
-```
+For Daggerheart mechanic-level mappings, use
+[Daggerheart event timeline contract](daggerheart-event-timeline-contract.md).
 
 ## Known gaps and improvement backlog
 
 These are current documentation or architecture pain points worth improving.
 
 1. Duplicate event-model surface:
-   - `internal/services/game/domain/event` is runtime canonical.
-   - Improvement: keep catalogs generated from runtime registries only.
+   - Risk: authored docs may restate generated contract details and drift.
+   - Improvement: keep exact type/payload/emitter inventories only in
+     generated event docs under `docs/events/`.
 2. Event append and projection apply are not one DB transaction:
    - Event append is authoritative; projection apply happens after emit in
      application handlers.

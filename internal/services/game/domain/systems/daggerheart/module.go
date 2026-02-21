@@ -250,6 +250,11 @@ func validateRestTakePayload(raw json.RawMessage) error {
 	if strings.TrimSpace(payload.RestType) == "" {
 		return errors.New("rest_type is required")
 	}
+	if payload.LongTermCountdown != nil {
+		if err := validateRestLongTermCountdownPayload(*payload.LongTermCountdown); err != nil {
+			return err
+		}
+	}
 	if !hasRestTakeMutation(payload) {
 		return errors.New("rest.take must change at least one field")
 	}
@@ -608,7 +613,8 @@ func hasRestTakeMutation(payload RestTakePayload) bool {
 	if payload.GMFearBefore != payload.GMFearAfter ||
 		payload.ShortRestsBefore != payload.ShortRestsAfter ||
 		payload.RefreshRest ||
-		payload.RefreshLongRest {
+		payload.RefreshLongRest ||
+		payload.LongTermCountdown != nil {
 		return true
 	}
 	for _, patch := range payload.CharacterStates {
@@ -617,6 +623,16 @@ func hasRestTakeMutation(payload RestTakePayload) bool {
 		}
 	}
 	return false
+}
+
+func validateRestLongTermCountdownPayload(payload CountdownUpdatePayload) error {
+	if strings.TrimSpace(payload.CountdownID) == "" {
+		return errors.New("long_term_countdown.countdown_id is required")
+	}
+	if payload.Before == payload.After && payload.Delta == 0 {
+		return errors.New("long_term_countdown must change value")
+	}
+	return nil
 }
 
 func hasDamagePatchMutation(hpBefore, hpAfter, armorBefore, armorAfter *int) bool {
