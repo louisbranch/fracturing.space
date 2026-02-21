@@ -409,42 +409,18 @@ func applyAdversaryUpdated(state *SnapshotState, payload AdversaryUpdatePayload)
 	adversaryState := state.AdversaryStates[adversaryID]
 	adversaryState.CampaignID = state.CampaignID
 	adversaryState.AdversaryID = adversaryID
-	if payload.Name != "" {
-		adversaryState.Name = payload.Name
-	}
-	if payload.Kind != "" {
-		adversaryState.Kind = payload.Kind
-	}
-	if payload.SessionID != "" {
-		adversaryState.SessionID = payload.SessionID
-	}
-	if payload.Notes != "" {
-		adversaryState.Notes = payload.Notes
-	}
-	if payload.HP != 0 {
-		adversaryState.HP = payload.HP
-	}
-	if payload.HPMax != 0 {
-		adversaryState.HPMax = payload.HPMax
-	}
-	if payload.Stress != 0 {
-		adversaryState.Stress = payload.Stress
-	}
-	if payload.StressMax != 0 {
-		adversaryState.StressMax = payload.StressMax
-	}
-	if payload.Evasion != 0 {
-		adversaryState.Evasion = payload.Evasion
-	}
-	if payload.Major != 0 {
-		adversaryState.Major = payload.Major
-	}
-	if payload.Severe != 0 {
-		adversaryState.Severe = payload.Severe
-	}
-	if payload.Armor != 0 {
-		adversaryState.Armor = payload.Armor
-	}
+	adversaryState.Name = payload.Name
+	adversaryState.Kind = payload.Kind
+	adversaryState.SessionID = payload.SessionID
+	adversaryState.Notes = payload.Notes
+	adversaryState.HP = payload.HP
+	adversaryState.HPMax = payload.HPMax
+	adversaryState.Stress = payload.Stress
+	adversaryState.StressMax = payload.StressMax
+	adversaryState.Evasion = payload.Evasion
+	adversaryState.Major = payload.Major
+	adversaryState.Severe = payload.Severe
+	adversaryState.Armor = payload.Armor
 	if state.AdversaryStates == nil {
 		state.AdversaryStates = make(map[string]AdversaryState)
 	}

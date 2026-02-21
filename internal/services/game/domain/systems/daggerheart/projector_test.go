@@ -86,6 +86,96 @@ func TestProjectorApplyCharacterStatePatched_StoresCharacterState(t *testing.T) 
 	}
 }
 
+func TestProjectorApplyAdversaryUpdated_AppliesZeroAndEmptyValues(t *testing.T) {
+	projector := Projector{}
+	state := SnapshotState{
+		CampaignID: "camp-1",
+		AdversaryStates: map[string]AdversaryState{
+			"adv-1": {
+				CampaignID:  "camp-1",
+				AdversaryID: "adv-1",
+				Name:        "Goblin",
+				Kind:        "bruiser",
+				SessionID:   "sess-1",
+				Notes:       "old notes",
+				HP:          6,
+				HPMax:       8,
+				Stress:      3,
+				StressMax:   3,
+				Evasion:     2,
+				Major:       2,
+				Severe:      3,
+				Armor:       1,
+			},
+		},
+	}
+
+	payload, err := json.Marshal(AdversaryUpdatedPayload{
+		AdversaryID: "adv-1",
+		Name:        "Goblin",
+		Kind:        "",
+		SessionID:   "",
+		Notes:       "",
+		HP:          0,
+		HPMax:       8,
+		Stress:      0,
+		StressMax:   3,
+		Evasion:     0,
+		Major:       0,
+		Severe:      0,
+		Armor:       0,
+	})
+	if err != nil {
+		t.Fatalf("marshal payload: %v", err)
+	}
+
+	updated, err := projector.Apply(state, event.Event{
+		CampaignID:    "camp-1",
+		Type:          eventTypeAdversaryUpdated,
+		SystemID:      SystemID,
+		SystemVersion: SystemVersion,
+		PayloadJSON:   payload,
+	})
+	if err != nil {
+		t.Fatalf("apply event: %v", err)
+	}
+	snapshot, ok := updated.(SnapshotState)
+	if !ok {
+		t.Fatalf("expected SnapshotState, got %T", updated)
+	}
+	adversary, ok := snapshot.AdversaryStates["adv-1"]
+	if !ok {
+		t.Fatal("expected adversary state")
+	}
+	if adversary.Kind != "" {
+		t.Fatalf("kind = %q, want empty", adversary.Kind)
+	}
+	if adversary.SessionID != "" {
+		t.Fatalf("session id = %q, want empty", adversary.SessionID)
+	}
+	if adversary.Notes != "" {
+		t.Fatalf("notes = %q, want empty", adversary.Notes)
+	}
+	if adversary.HP != 0 {
+		t.Fatalf("hp = %d, want 0", adversary.HP)
+	}
+	if adversary.Stress != 0 {
+		t.Fatalf("stress = %d, want 0", adversary.Stress)
+	}
+	if adversary.Evasion != 0 {
+		t.Fatalf("evasion = %d, want 0", adversary.Evasion)
+	}
+	if adversary.Major != 0 {
+		t.Fatalf("major = %d, want 0", adversary.Major)
+	}
+	if adversary.Severe != 0 {
+		t.Fatalf("severe = %d, want 0", adversary.Severe)
+	}
+	if adversary.Armor != 0 {
+		t.Fatalf("armor = %d, want 0", adversary.Armor)
+	}
+}
+
 func TestProjectorApplyHandlesAllRegisteredEvents(t *testing.T) {
 	projector := Projector{}
 	for _, def := range daggerheartEventDefinitions {

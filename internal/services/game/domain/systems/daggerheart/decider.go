@@ -45,14 +45,17 @@ const (
 	eventTypeAdversaryUpdated               event.Type   = "sys.daggerheart.adversary_updated"
 	eventTypeAdversaryDeleted               event.Type   = "sys.daggerheart.adversary_deleted"
 
-	rejectionCodeGMFearAfterRequired           = "GM_FEAR_AFTER_REQUIRED"
-	rejectionCodeGMFearOutOfRange              = "GM_FEAR_AFTER_OUT_OF_RANGE"
-	rejectionCodeGMFearUnchanged               = "GM_FEAR_UNCHANGED"
-	rejectionCodeCharacterStatePatchNoMutation = "CHARACTER_STATE_PATCH_NO_MUTATION"
-	rejectionCodeConditionChangeNoMutation     = "CONDITION_CHANGE_NO_MUTATION"
-	rejectionCodeCountdownUpdateNoMutation     = "COUNTDOWN_UPDATE_NO_MUTATION"
-	rejectionCodeAdversaryConditionNoMutation  = "ADVERSARY_CONDITION_NO_MUTATION"
-	rejectionCodeAdversaryCreateNoMutation     = "ADVERSARY_CREATE_NO_MUTATION"
+	rejectionCodeGMFearAfterRequired             = "GM_FEAR_AFTER_REQUIRED"
+	rejectionCodeGMFearOutOfRange                = "GM_FEAR_AFTER_OUT_OF_RANGE"
+	rejectionCodeGMFearUnchanged                 = "GM_FEAR_UNCHANGED"
+	rejectionCodeCharacterStatePatchNoMutation   = "CHARACTER_STATE_PATCH_NO_MUTATION"
+	rejectionCodeConditionChangeNoMutation       = "CONDITION_CHANGE_NO_MUTATION"
+	rejectionCodeConditionChangeRemoveMissing    = "CONDITION_CHANGE_REMOVE_MISSING"
+	rejectionCodeCountdownUpdateNoMutation       = "COUNTDOWN_UPDATE_NO_MUTATION"
+	rejectionCodeCountdownBeforeMismatch         = "COUNTDOWN_BEFORE_MISMATCH"
+	rejectionCodeAdversaryConditionNoMutation    = "ADVERSARY_CONDITION_NO_MUTATION"
+	rejectionCodeAdversaryConditionRemoveMissing = "ADVERSARY_CONDITION_REMOVE_MISSING"
+	rejectionCodeAdversaryCreateNoMutation       = "ADVERSARY_CREATE_NO_MUTATION"
 )
 
 // Decider handles Daggerheart system commands.
@@ -159,6 +162,12 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 	case commandTypeConditionChange:
 		var payload ConditionChangePayload
 		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if hasMissingCharacterConditionRemovals(snapshotState, payload) {
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodeConditionChangeRemoveMissing,
+				Message: "condition remove requires an existing condition",
+			})
+		}
 		if isConditionChangeNoMutation(snapshotState, payload) {
 			// FIXME(telemetry): metric for idempotent character condition changes.
 			return command.Reject(command.Rejection{
@@ -371,6 +380,12 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 	case commandTypeCountdownUpdate:
 		var payload CountdownUpdatePayload
 		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if countdown, hasCountdown := snapshotCountdownState(snapshotState, payload.CountdownID); hasCountdown && payload.Before != countdown.Current {
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodeCountdownBeforeMismatch,
+				Message: "countdown before does not match current state",
+			})
+		}
 		if isCountdownUpdateNoMutation(snapshotState, payload) {
 			// FIXME(telemetry): metric for idempotent countdown updates.
 			return command.Reject(command.Rejection{
@@ -582,6 +597,12 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 	case commandTypeAdversaryConditionChange:
 		var payload AdversaryConditionChangePayload
 		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if hasMissingAdversaryConditionRemovals(snapshotState, payload) {
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodeAdversaryConditionRemoveMissing,
+				Message: "adversary condition remove requires an existing condition",
+			})
+		}
 		if isAdversaryConditionChangeNoMutation(snapshotState, payload) {
 			// FIXME(telemetry): metric for idempotent adversary condition changes.
 			return command.Reject(command.Rejection{
@@ -810,6 +831,50 @@ func isAdversaryConditionChangeNoMutation(snapshot SnapshotState, payload Advers
 		return false
 	}
 	return ConditionsEqual(current, after)
+}
+
+func hasMissingCharacterConditionRemovals(snapshot SnapshotState, payload ConditionChangePayload) bool {
+	if len(payload.Removed) == 0 {
+		return false
+	}
+	character, hasCharacter := snapshotCharacterState(snapshot, payload.CharacterID)
+	if !hasCharacter {
+		return false
+	}
+	return hasMissingConditionRemovals(character.Conditions, payload.Removed)
+}
+
+func hasMissingAdversaryConditionRemovals(snapshot SnapshotState, payload AdversaryConditionChangePayload) bool {
+	if len(payload.Removed) == 0 {
+		return false
+	}
+	adversary, hasAdversary := snapshotAdversaryState(snapshot, payload.AdversaryID)
+	if !hasAdversary {
+		return false
+	}
+	return hasMissingConditionRemovals(adversary.Conditions, payload.Removed)
+}
+
+func hasMissingConditionRemovals(current, removed []string) bool {
+	normalizedCurrent, err := NormalizeConditions(current)
+	if err != nil {
+		return false
+	}
+	normalizedRemoved, err := NormalizeConditions(removed)
+	if err != nil {
+		return false
+	}
+
+	currentSet := make(map[string]struct{}, len(normalizedCurrent))
+	for _, value := range normalizedCurrent {
+		currentSet[value] = struct{}{}
+	}
+	for _, value := range normalizedRemoved {
+		if _, ok := currentSet[value]; !ok {
+			return true
+		}
+	}
+	return false
 }
 
 func isAdversaryCreateNoMutation(snapshot SnapshotState, payload AdversaryCreatePayload) bool {
