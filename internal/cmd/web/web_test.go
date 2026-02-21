@@ -26,6 +26,9 @@ func TestParseConfigDefaults(t *testing.T) {
 	if cfg.GameAddr != "localhost:8080" {
 		t.Fatalf("expected default game addr, got %q", cfg.GameAddr)
 	}
+	if cfg.AIAddr != "" {
+		t.Fatalf("expected default ai addr to be empty, got %q", cfg.AIAddr)
+	}
 	if cfg.CacheDBPath != "data/web-cache.db" {
 		t.Fatalf("expected default cache db path, got %q", cfg.CacheDBPath)
 	}
@@ -44,6 +47,7 @@ func TestParseConfigOverrides(t *testing.T) {
 		"-auth-base-url", "http://auth.test",
 		"-auth-addr", "auth:9000",
 		"-game-addr", "game:9001",
+		"-ai-addr", "ai:9002",
 		"-cache-db-path", "/tmp/web-cache.db",
 		"-asset-base-url", "https://assets.test",
 		"-asset-version", "v9",
@@ -62,6 +66,9 @@ func TestParseConfigOverrides(t *testing.T) {
 	}
 	if cfg.GameAddr != "game:9001" {
 		t.Fatalf("expected overridden game addr, got %q", cfg.GameAddr)
+	}
+	if cfg.AIAddr != "ai:9002" {
+		t.Fatalf("expected overridden ai addr, got %q", cfg.AIAddr)
 	}
 	if cfg.CacheDBPath != "/tmp/web-cache.db" {
 		t.Fatalf("expected overridden cache db path, got %q", cfg.CacheDBPath)

@@ -157,6 +157,14 @@ templ AppChromeLayout(options AppChromeLayoutOptions) {
 								hx-push-url="true"
 								class="btn btn-ghost btn-sm w-full justify-start"
 							>{ T(options.Loc, "layout.profile") }</a>
+							<a
+								href="/settings"
+								hx-get="/settings"
+								hx-target="#main"
+								hx-swap="innerHTML"
+								hx-push-url="true"
+								class="btn btn-ghost btn-sm w-full justify-start"
+							>{ T(options.Loc, "layout.settings") }</a>
 							<form method="POST" action="/auth/logout">
 								<button type="submit" class="btn btn-ghost btn-sm w-full justify-start">
 									{ T(options.Loc, "layout.sign_out") }

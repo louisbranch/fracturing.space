@@ -27,6 +27,9 @@ func isGamePagePath(path string) bool {
 	if path == "/profile" {
 		return true
 	}
+	if path == "/settings" || strings.HasPrefix(path, "/settings/") {
+		return true
+	}
 	if path == "/campaigns" || strings.HasPrefix(path, "/campaigns/") {
 		return true
 	}

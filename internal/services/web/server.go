@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
@@ -37,6 +38,7 @@ type Config struct {
 	AuthBaseURL          string
 	AuthAddr             string
 	GameAddr             string
+	AIAddr               string
 	CacheDBPath          string
 	AssetBaseURL         string
 	AssetManifestVersion string
@@ -60,6 +62,7 @@ type Server struct {
 	httpServer                     *http.Server
 	authConn                       *grpc.ClientConn
 	gameConn                       *grpc.ClientConn
+	aiConn                         *grpc.ClientConn
 	cacheStore                     *websqlite.Store
 	cacheInvalidationDone          chan struct{}
 	cacheInvalidationStop          context.CancelFunc
@@ -71,6 +74,7 @@ type handler struct {
 	config              Config
 	authClient          authv1.AuthServiceClient
 	accountClient       authv1.AccountServiceClient
+	credentialClient    aiv1.CredentialServiceClient
 	sessions            *sessionStore
 	pendingFlows        *pendingFlowStore
 	cacheStore          webstorage.Store
@@ -90,6 +94,7 @@ type handlerDependencies struct {
 	campaignAccess    campaignAccessChecker
 	cacheStore        webstorage.Store
 	accountClient     authv1.AccountServiceClient
+	credentialClient  aiv1.CredentialServiceClient
 	campaignClient    statev1.CampaignServiceClient
 	eventClient       statev1.EventServiceClient
 	sessionClient     statev1.SessionServiceClient
@@ -114,6 +119,12 @@ type gameGRPCClients struct {
 	sessionClient     statev1.SessionServiceClient
 	characterClient   statev1.CharacterServiceClient
 	inviteClient      statev1.InviteServiceClient
+}
+
+// aiGRPCClients holds AI clients used by the web service.
+type aiGRPCClients struct {
+	conn             *grpc.ClientConn
+	credentialClient aiv1.CredentialServiceClient
 }
 
 // localizer resolves the request locale, optionally persists a cookie,
@@ -217,6 +228,7 @@ func NewHandlerWithCampaignAccess(config Config, authClient authv1.AuthServiceCl
 		config:            config,
 		authClient:        authClient,
 		accountClient:     deps.accountClient,
+		credentialClient:  deps.credentialClient,
 		sessions:          newSessionStore(sessionPersistence),
 		pendingFlows:      newPendingFlowStore(),
 		cacheStore:        deps.cacheStore,
@@ -238,6 +250,8 @@ func NewHandlerWithCampaignAccess(config Config, authClient authv1.AuthServiceCl
 
 	rootMux.Handle("/dashboard", gameMux)
 	rootMux.Handle("/profile", gameMux)
+	rootMux.Handle("/settings", gameMux)
+	rootMux.Handle("/settings/", gameMux)
 	rootMux.Handle("/campaigns", gameMux)
 	rootMux.Handle("/campaigns/", gameMux)
 	rootMux.Handle("/invites", gameMux)
@@ -250,6 +264,8 @@ func NewHandlerWithCampaignAccess(config Config, authClient authv1.AuthServiceCl
 func (h *handler) registerGameRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/dashboard", h.handleAppHome)
 	mux.HandleFunc("/profile", h.handleAppProfile)
+	mux.HandleFunc("/settings", h.handleAppSettings)
+	mux.HandleFunc("/settings/", h.handleAppSettingsRoutes)
 	mux.HandleFunc("/campaigns", h.handleAppCampaigns)
 	mux.HandleFunc("/campaigns/create", h.handleAppCampaignCreate)
 	mux.HandleFunc("/campaigns/", h.handleAppCampaignDetail)
@@ -394,11 +410,23 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 			inviteClient = clients.inviteClient
 		}
 	}
+	var aiConn *grpc.ClientConn
+	var credentialClient aiv1.CredentialServiceClient
+	if strings.TrimSpace(config.AIAddr) != "" {
+		clients, err := dialAIGRPC(ctx, config)
+		if err != nil {
+			log.Printf("ai gRPC dial failed, settings ai keys disabled: %v", err)
+		} else {
+			aiConn = clients.conn
+			credentialClient = clients.credentialClient
+		}
+	}
 	campaignAccess := newCampaignAccessChecker(config, participantClient)
 	handler, err := NewHandlerWithCampaignAccess(config, authClient, handlerDependencies{
 		campaignAccess:    campaignAccess,
 		cacheStore:        cacheStore,
 		accountClient:     accountClient,
+		credentialClient:  credentialClient,
 		campaignClient:    campaignClient,
 		eventClient:       eventClient,
 		sessionClient:     sessionClient,
@@ -426,6 +454,7 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 		httpServer:                     httpServer,
 		authConn:                       authConn,
 		gameConn:                       gameConn,
+		aiConn:                         aiConn,
 		cacheStore:                     cacheStore,
 		cacheInvalidationDone:          invalidationDone,
 		cacheInvalidationStop:          invalidationStop,
@@ -494,6 +523,11 @@ func (s *Server) Close() {
 	if s.gameConn != nil {
 		if err := s.gameConn.Close(); err != nil {
 			log.Printf("close game gRPC connection: %v", err)
+		}
+	}
+	if s.aiConn != nil {
+		if err := s.aiConn.Close(); err != nil {
+			log.Printf("close ai gRPC connection: %v", err)
 		}
 	}
 	if s.cacheStore != nil {
@@ -616,6 +650,45 @@ func dialGameGRPC(ctx context.Context, config Config) (gameGRPCClients, error) {
 		sessionClient:     statev1.NewSessionServiceClient(conn),
 		characterClient:   statev1.NewCharacterServiceClient(conn),
 		inviteClient:      statev1.NewInviteServiceClient(conn),
+	}, nil
+}
+
+// dialAIGRPC returns clients for settings-owned AI key operations.
+func dialAIGRPC(ctx context.Context, config Config) (aiGRPCClients, error) {
+	aiAddr := strings.TrimSpace(config.AIAddr)
+	if aiAddr == "" {
+		return aiGRPCClients{}, nil
+	}
+	if ctx == nil {
+		return aiGRPCClients{}, errors.New("context is required")
+	}
+	if config.GRPCDialTimeout <= 0 {
+		config.GRPCDialTimeout = timeouts.GRPCDial
+	}
+	logf := func(format string, args ...any) {
+		log.Printf("ai %s", fmt.Sprintf(format, args...))
+	}
+	conn, err := platformgrpc.DialWithHealth(
+		ctx,
+		nil,
+		aiAddr,
+		config.GRPCDialTimeout,
+		logf,
+		platformgrpc.DefaultClientDialOptions()...,
+	)
+	if err != nil {
+		var dialErr *platformgrpc.DialError
+		if errors.As(err, &dialErr) {
+			if dialErr.Stage == platformgrpc.DialStageHealth {
+				return aiGRPCClients{}, fmt.Errorf("ai gRPC health check failed for %s: %w", aiAddr, dialErr.Err)
+			}
+			return aiGRPCClients{}, fmt.Errorf("dial ai gRPC %s: %w", aiAddr, dialErr.Err)
+		}
+		return aiGRPCClients{}, fmt.Errorf("dial ai gRPC %s: %w", aiAddr, err)
+	}
+	return aiGRPCClients{
+		conn:             conn,
+		credentialClient: aiv1.NewCredentialServiceClient(conn),
 	}, nil
 }
 
