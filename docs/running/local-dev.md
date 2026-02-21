@@ -11,7 +11,7 @@ nav_order: 2
 - Option A (devcontainer):
 - Docker Engine/Desktop with Compose v2.
 - Devcontainer-capable editor integration (for example, VS Code Dev Containers extension).
-- First-run network access in devcontainer to download Go modules and install `air`.
+- First-run network access in devcontainer to download Go modules.
 - Option B (host-only): Go 1.26.0, protoc (until binaries are published), and Make
 
 ## Option A: Devcontainer (recommended)
@@ -24,19 +24,19 @@ Reopen in Container
 The devcontainer setup is defined in `.devcontainer/devcontainer.json` and starts a
 watch-based runtime automatically after attach.
 
-- `postCreateCommand` installs `air` (live-reload watcher for Go).
+- `postCreateCommand` verifies required watcher tooling is available.
 - `postStartCommand` launches `.devcontainer/scripts/watch-services.sh`.
 - The watcher script initializes `.env` from `.env.local.example` when missing.
 - The watcher script also generates join-grant keys when they are missing.
 
-No manual `make run` or repeated `docker compose up` is needed for day-to-day edits.
+No manual multi-process `go run` orchestration or repeated `docker compose up` is needed for day-to-day edits.
 Each restart still compiles, but only through Go build cache and only when files change.
 
-Watcher controls:
+Lifecycle controls:
 
 ```sh
-make up    # start watchers (or re-start if needed)
-make down  # stop watchers
+make up    # start devcontainer + watchers (or re-start watchers if already inside container)
+make down  # stop watchers + stop devcontainer (or just stop watchers if run inside container)
 ```
 
 Watcher logs:
@@ -48,23 +48,29 @@ Watcher logs:
 - `.tmp/dev/web.log`
 - `.tmp/dev/watch-services.log`
 
-Stop watchers:
+Stop runtime:
 
 ```sh
 make down
 ```
 
-## Option B: Host machine (existing flow)
+## Option B: Host machine (manual)
 
 ```sh
-make run
+go run ./cmd/game
+go run ./cmd/auth
+go run ./cmd/mcp
+go run ./cmd/admin
+go run ./cmd/web
 ```
 
-`make run` reads environment variables from `.env`; if `.env` does not exist, it is
-initialized from the file specified by `$ENV_EXAMPLE` (defaulting to `.env.local.example`).
+For host-only manual startup, initialize `.env` first (for example from `.env.local.example`)
+and export join-grant keys when missing:
 
-`make run` starts the game server, auth service, MCP bridge, and admin dashboard.
-It also generates dev join-grant keys if they are missing.
+```sh
+eval "$(go run ./cmd/join-grant-key)"
+export FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY
+```
 
 ## Default endpoints
 

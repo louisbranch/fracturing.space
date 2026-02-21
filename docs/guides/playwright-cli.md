@@ -39,7 +39,7 @@ npx -y @playwright/cli@0.1.0 install
 - Devcontainer deps for this repo workflow:
 - Docker Engine/Desktop with Compose v2.
 - Devcontainer-capable editor integration (for example, VS Code Dev Containers extension).
-- First-run network access in devcontainer to download Go modules and install `air`.
+- First-run network access in devcontainer to download Go modules.
 
 - Start services (long-running) and seed demo data:
 

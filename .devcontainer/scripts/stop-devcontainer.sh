@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$root_dir"
+repo_name="$(basename "$root_dir")"
+
+if [[ -f "/.dockerenv" ]]; then
+  bash .devcontainer/scripts/stop-watch-services.sh
+  exit 0
+fi
+
+docker compose -f .devcontainer/docker-compose.devcontainer.yml -f docker-compose.yml exec -T devcontainer bash -lc "set -euo pipefail; if [ -d /workspace/${repo_name} ]; then cd /workspace/${repo_name}; else cd /workspace; fi; if [ ! -f .devcontainer/scripts/stop-watch-services.sh ]; then exit 0; fi; bash .devcontainer/scripts/stop-watch-services.sh" >/dev/null 2>&1 || true
+docker compose -f .devcontainer/docker-compose.devcontainer.yml -f docker-compose.yml down
