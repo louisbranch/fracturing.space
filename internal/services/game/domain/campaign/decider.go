@@ -30,6 +30,7 @@ const (
 	rejectionCodeCampaignStatusInvalid      = "CAMPAIGN_INVALID_STATUS"
 	rejectionCodeCampaignStatusTransition   = "CAMPAIGN_INVALID_STATUS_TRANSITION"
 	rejectionCodeCampaignUpdateFieldInvalid = "CAMPAIGN_UPDATE_FIELD_INVALID"
+	rejectionCodeCampaignCoverAssetInvalid  = "CAMPAIGN_COVER_ASSET_INVALID"
 )
 
 // Decide returns the decision for a campaign command against current state.
@@ -71,6 +72,16 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		if now == nil {
 			now = time.Now
 		}
+		coverAssetID := strings.TrimSpace(payload.CoverAssetID)
+		if coverAssetID == "" {
+			coverAssetID = defaultCampaignCoverAssetID(cmd.CampaignID)
+		}
+		if !isCampaignCoverAssetID(coverAssetID) {
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodeCampaignCoverAssetInvalid,
+				Message: "campaign cover asset is invalid",
+			})
+		}
 
 		normalizedPayload := CreatePayload{
 			Name:         normalizedName,
@@ -80,6 +91,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			Intent:       strings.TrimSpace(payload.Intent),
 			AccessPolicy: strings.TrimSpace(payload.AccessPolicy),
 			ThemePrompt:  payload.ThemePrompt,
+			CoverAssetID: coverAssetID,
 		}
 		payloadJSON, _ := json.Marshal(normalizedPayload)
 
@@ -151,6 +163,15 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 				normalizedFields[key] = trimmed
 			case "theme_prompt":
 				normalizedFields[key] = strings.TrimSpace(value)
+			case "cover_asset_id":
+				coverAssetID := strings.TrimSpace(value)
+				if !isCampaignCoverAssetID(coverAssetID) {
+					return command.Reject(command.Rejection{
+						Code:    rejectionCodeCampaignCoverAssetInvalid,
+						Message: "campaign cover asset is invalid",
+					})
+				}
+				normalizedFields[key] = coverAssetID
 			default:
 				return command.Reject(command.Rejection{
 					Code:    rejectionCodeCampaignUpdateFieldInvalid,

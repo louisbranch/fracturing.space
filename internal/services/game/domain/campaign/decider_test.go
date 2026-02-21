@@ -86,6 +86,81 @@ func TestDecideCampaignCreate_NormalizesPayloadValues(t *testing.T) {
 	}
 }
 
+func TestDecideCampaignCreate_DefaultCoverAssetAssigned(t *testing.T) {
+	cmd := command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("campaign.create"),
+		ActorType:   command.ActorTypeSystem,
+		PayloadJSON: []byte(`{"name":"Sunfall","game_system":"GAME_SYSTEM_DAGGERHEART","gm_mode":"GM_MODE_HUMAN"}`),
+	}
+
+	decision := Decide(State{}, cmd, nil)
+	if len(decision.Rejections) != 0 {
+		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
+	}
+	if len(decision.Events) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(decision.Events))
+	}
+
+	var payload CreatePayload
+	if err := json.Unmarshal(decision.Events[0].PayloadJSON, &payload); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+	if payload.CoverAssetID == "" {
+		t.Fatal("expected cover_asset_id to be assigned")
+	}
+}
+
+func TestDecideCampaignCreate_DefaultCoverAssetDeterministic(t *testing.T) {
+	cmd := command.Command{
+		CampaignID:  "camp-deterministic",
+		Type:        command.Type("campaign.create"),
+		ActorType:   command.ActorTypeSystem,
+		PayloadJSON: []byte(`{"name":"Sunfall","game_system":"GAME_SYSTEM_DAGGERHEART","gm_mode":"GM_MODE_HUMAN"}`),
+	}
+
+	first := Decide(State{}, cmd, nil)
+	second := Decide(State{}, cmd, nil)
+	if len(first.Events) != 1 || len(second.Events) != 1 {
+		t.Fatal("expected one event per decision")
+	}
+
+	var firstPayload CreatePayload
+	if err := json.Unmarshal(first.Events[0].PayloadJSON, &firstPayload); err != nil {
+		t.Fatalf("decode first payload: %v", err)
+	}
+	var secondPayload CreatePayload
+	if err := json.Unmarshal(second.Events[0].PayloadJSON, &secondPayload); err != nil {
+		t.Fatalf("decode second payload: %v", err)
+	}
+	if firstPayload.CoverAssetID == "" {
+		t.Fatal("expected non-empty default cover asset id")
+	}
+	if firstPayload.CoverAssetID != secondPayload.CoverAssetID {
+		t.Fatalf("cover asset ids differ: %q vs %q", firstPayload.CoverAssetID, secondPayload.CoverAssetID)
+	}
+}
+
+func TestDecideCampaignCreate_InvalidCoverAssetRejected(t *testing.T) {
+	cmd := command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("campaign.create"),
+		ActorType:   command.ActorTypeSystem,
+		PayloadJSON: []byte(`{"name":"Sunfall","game_system":"GAME_SYSTEM_DAGGERHEART","gm_mode":"GM_MODE_HUMAN","cover_asset_id":"unknown-cover"}`),
+	}
+
+	decision := Decide(State{}, cmd, nil)
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != rejectionCodeCampaignCoverAssetInvalid {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeCampaignCoverAssetInvalid)
+	}
+}
+
 func TestDecideCampaignCreate_IncludesMetadata(t *testing.T) {
 	cmd := command.Command{
 		CampaignID:  "camp-1",
@@ -298,6 +373,51 @@ func TestDecideCampaignUpdate_EmitsCampaignUpdatedEvent(t *testing.T) {
 	}
 	if payload.Fields["theme_prompt"] != "new theme" {
 		t.Fatalf("payload theme_prompt = %s, want %s", payload.Fields["theme_prompt"], "new theme")
+	}
+}
+
+func TestDecideCampaignUpdate_UpdatesCoverAssetID(t *testing.T) {
+	cmd := command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("campaign.update"),
+		ActorType:   command.ActorTypeSystem,
+		PayloadJSON: []byte(`{"fields":{"cover_asset_id":"  abandoned_castle_courtyard  "}}`),
+	}
+
+	decision := Decide(State{Created: true, Status: StatusDraft}, cmd, nil)
+	if len(decision.Rejections) != 0 {
+		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
+	}
+	if len(decision.Events) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(decision.Events))
+	}
+
+	var payload updatePayload
+	if err := json.Unmarshal(decision.Events[0].PayloadJSON, &payload); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+	if payload.Fields["cover_asset_id"] != "abandoned_castle_courtyard" {
+		t.Fatalf("payload cover_asset_id = %s, want %s", payload.Fields["cover_asset_id"], "abandoned_castle_courtyard")
+	}
+}
+
+func TestDecideCampaignUpdate_InvalidCoverAssetIDRejected(t *testing.T) {
+	cmd := command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("campaign.update"),
+		ActorType:   command.ActorTypeSystem,
+		PayloadJSON: []byte(`{"fields":{"cover_asset_id":"unknown-cover"}}`),
+	}
+
+	decision := Decide(State{Created: true, Status: StatusDraft}, cmd, nil)
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != rejectionCodeCampaignCoverAssetInvalid {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeCampaignCoverAssetInvalid)
 	}
 }
 

@@ -32,6 +32,7 @@ func TestCampaignPutGet(t *testing.T) {
 		ParticipantCount: 1,
 		CharacterCount:   2,
 		ThemePrompt:      "Drowned ruins",
+		CoverAssetID:     "camp-cover-05",
 		CreatedAt:        now,
 		UpdatedAt:        now.Add(30 * time.Minute),
 		CompletedAt:      &completed,
@@ -74,6 +75,9 @@ func TestCampaignPutGet(t *testing.T) {
 	}
 	if got.System != expected.System || got.Status != expected.Status || got.GmMode != expected.GmMode {
 		t.Fatalf("expected campaign metadata to match")
+	}
+	if got.CoverAssetID != expected.CoverAssetID {
+		t.Fatalf("expected campaign cover asset id to match")
 	}
 	if got.Locale != expected.Locale {
 		t.Fatalf("expected campaign locale to match")

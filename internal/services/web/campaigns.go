@@ -230,6 +230,7 @@ func renderAppCampaignsListPage(w http.ResponseWriter, r *http.Request, page web
 		normalized = append(normalized, webtemplates.CampaignListItem{
 			ID:               campaignID,
 			Name:             name,
+			CoverImageURL:    campaignCoverImageURL(campaign.GetCoverAssetId()),
 			System:           formatWebCampaignSystem(page.Loc, campaign.GetSystem()),
 			GMMode:           formatWebCampaignGmMode(page.Loc, campaign.GetGmMode()),
 			ParticipantCount: strconv.FormatInt(int64(campaign.GetParticipantCount()), 10),
@@ -240,6 +241,16 @@ func renderAppCampaignsListPage(w http.ResponseWriter, r *http.Request, page web
 	if err := writePage(w, r, webtemplates.CampaignsListPage(page, normalized), composeHTMXTitle(page.Loc, "game.campaigns.title")); err != nil {
 		localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.failed_to_render_campaigns_list_page")
 	}
+}
+
+const defaultCampaignCoverAssetID = "abandoned_castle_courtyard"
+
+func campaignCoverImageURL(coverAssetID string) string {
+	resolvedCoverAssetID := strings.TrimSpace(coverAssetID)
+	if resolvedCoverAssetID == "" {
+		resolvedCoverAssetID = defaultCampaignCoverAssetID
+	}
+	return "/static/campaign-covers/" + url.PathEscape(resolvedCoverAssetID) + ".png"
 }
 
 func formatWebCampaignSystem(loc webtemplates.Localizer, system commonv1.GameSystem) string {

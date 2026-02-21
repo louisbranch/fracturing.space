@@ -20,6 +20,7 @@ type Campaign struct {
 	ParticipantCount int64          `json:"participant_count"`
 	CharacterCount   int64          `json:"character_count"`
 	ThemePrompt      string         `json:"theme_prompt"`
+	CoverAssetID     string         `json:"cover_asset_id"`
 	ParentCampaignID sql.NullString `json:"parent_campaign_id"`
 	ForkEventSeq     sql.NullInt64  `json:"fork_event_seq"`
 	OriginCampaignID sql.NullString `json:"origin_campaign_id"`

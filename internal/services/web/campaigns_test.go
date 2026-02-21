@@ -160,6 +160,10 @@ func (*fakeWebCampaignClient) RestoreCampaign(context.Context, *statev1.RestoreC
 	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
+func (*fakeWebCampaignClient) SetCampaignCover(context.Context, *statev1.SetCampaignCoverRequest, ...grpc.CallOption) (*statev1.SetCampaignCoverResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented")
+}
+
 func TestAppCampaignsPageRedirectsToLoginWhenUnauthenticated(t *testing.T) {
 	h := &handler{
 		config:       Config{AuthBaseURL: "http://auth.local"},
@@ -381,7 +385,7 @@ func TestAppCampaignsPageRendersUserScopedCampaigns(t *testing.T) {
 	campaignClient := &fakeWebCampaignClient{
 		response: &statev1.ListCampaignsResponse{
 			Campaigns: []*statev1.Campaign{
-				{Id: "camp-1", Name: "Campaign One"},
+				{Id: "camp-1", Name: "Campaign One", CoverAssetId: "abandoned_castle_courtyard"},
 				{Id: "camp-2", Name: "Campaign Two"},
 			},
 		},
@@ -421,6 +425,9 @@ func TestAppCampaignsPageRendersUserScopedCampaigns(t *testing.T) {
 	if !strings.Contains(body, "Campaign Two") {
 		t.Fatalf("expected campaign two in response")
 	}
+	if !strings.Contains(body, "/static/campaign-covers/abandoned_castle_courtyard.png") {
+		t.Fatalf("expected campaign cover image URL in response")
+	}
 	campOneIdx := strings.Index(body, "/campaigns/camp-1")
 	if campOneIdx == -1 {
 		t.Fatalf("expected campaign detail link for camp-1 in response")
@@ -441,6 +448,48 @@ func TestAppCampaignsPageRendersUserScopedCampaigns(t *testing.T) {
 	userIDs := campaignClient.listMetadata.Get(grpcmeta.UserIDHeader)
 	if len(userIDs) != 1 || userIDs[0] != "user-123" {
 		t.Fatalf("metadata %s = %v, want [user-123]", grpcmeta.UserIDHeader, userIDs)
+	}
+}
+
+func TestCampaignCoverImageURL_DefaultsToFirstPNGAsset(t *testing.T) {
+	got := campaignCoverImageURL("")
+	want := "/static/campaign-covers/abandoned_castle_courtyard.png"
+	if got != want {
+		t.Fatalf("campaignCoverImageURL(\"\") = %q, want %q", got, want)
+	}
+}
+
+func TestCampaignCoverAssetsEmbeddedIncludesConfiguredPNGs(t *testing.T) {
+	coverAssetIDs := []string{
+		"abandoned_castle_courtyard",
+		"ancient_forest_shrine",
+		"arcane_observatory",
+		"arcane_ruins",
+		"broken_tower",
+		"cliffside_monastery",
+		"coastal_cliffs",
+		"crystal_cavern",
+		"cursed_farmlands",
+		"deserted_harbour",
+		"dwarven_gate",
+		"enchanted_meadow",
+		"forgotten_battlefield",
+		"frozen_keep",
+		"hidden_waterfall_sanctuary",
+		"moutain_pass",
+		"roadside_tavern",
+		"royal_capital_skyline",
+		"sunken_temple",
+		"unholy_swamp",
+	}
+
+	for _, coverAssetID := range coverAssetIDs {
+		path := "static/campaign-covers/" + coverAssetID + ".png"
+		file, err := assetsFS.Open(path)
+		if err != nil {
+			t.Fatalf("open embedded cover %q: %v", path, err)
+		}
+		_ = file.Close()
 	}
 }
 

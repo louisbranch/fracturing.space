@@ -2,6 +2,7 @@ package game
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
@@ -1004,6 +1005,68 @@ func TestRestoreCampaign_UsesDomainEngine(t *testing.T) {
 	}
 	if domain.lastCommand.Type != command.Type("campaign.restore") {
 		t.Fatalf("command type = %s, want %s", domain.lastCommand.Type, "campaign.restore")
+	}
+}
+
+func TestSetCampaignCover_NilRequest(t *testing.T) {
+	svc := NewCampaignService(Stores{})
+	_, err := svc.SetCampaignCover(context.Background(), nil)
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestSetCampaignCover_Success(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	eventStore := newFakeEventStore()
+	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+		ID:           "c1",
+		Name:         "Test Campaign",
+		Status:       campaign.StatusActive,
+		CoverAssetID: "camp-cover-01",
+		System:       commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		GmMode:       campaign.GmModeHuman,
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, result: engine.Result{
+		Decision: command.Accept(event.Event{
+			CampaignID:  "c1",
+			Type:        event.Type("campaign.updated"),
+			Timestamp:   now,
+			ActorType:   event.ActorTypeSystem,
+			EntityType:  "campaign",
+			EntityID:    "c1",
+			PayloadJSON: []byte(`{"fields":{"cover_asset_id":"camp-cover-04"}}`),
+		}),
+	}}
+
+	svc := &CampaignService{
+		stores: Stores{Campaign: campaignStore, Event: eventStore, Domain: domain},
+		clock:  fixedClock(now),
+	}
+
+	resp, err := svc.SetCampaignCover(context.Background(), &statev1.SetCampaignCoverRequest{
+		CampaignId:   "c1",
+		CoverAssetId: "camp-cover-04",
+	})
+	if err != nil {
+		t.Fatalf("SetCampaignCover returned error: %v", err)
+	}
+	if resp.GetCampaign().GetCoverAssetId() != "camp-cover-04" {
+		t.Fatalf("campaign cover asset id = %q, want %q", resp.GetCampaign().GetCoverAssetId(), "camp-cover-04")
+	}
+	if domain.calls != 1 {
+		t.Fatalf("expected domain to be called once, got %d", domain.calls)
+	}
+	if domain.lastCommand.Type != command.Type("campaign.update") {
+		t.Fatalf("command type = %s, want %s", domain.lastCommand.Type, "campaign.update")
+	}
+
+	var payload campaign.UpdatePayload
+	if err := json.Unmarshal(domain.lastCommand.PayloadJSON, &payload); err != nil {
+		t.Fatalf("decode command payload: %v", err)
+	}
+	if payload.Fields["cover_asset_id"] != "camp-cover-04" {
+		t.Fatalf("cover_asset_id command field = %q, want %q", payload.Fields["cover_asset_id"], "camp-cover-04")
 	}
 }
 

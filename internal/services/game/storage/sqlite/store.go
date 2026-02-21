@@ -308,6 +308,7 @@ func (s *Store) Put(ctx context.Context, c storage.CampaignRecord) error {
 		ParticipantCount: int64(c.ParticipantCount),
 		CharacterCount:   int64(c.CharacterCount),
 		ThemePrompt:      c.ThemePrompt,
+		CoverAssetID:     c.CoverAssetID,
 		CreatedAt:        toMillis(c.CreatedAt),
 		UpdatedAt:        toMillis(c.UpdatedAt),
 		CompletedAt:      completedAt,
@@ -2230,6 +2231,7 @@ type campaignRowData struct {
 	ParticipantCount int64
 	CharacterCount   int64
 	ThemePrompt      string
+	CoverAssetID     string
 	CreatedAt        int64
 	UpdatedAt        int64
 	CompletedAt      sql.NullInt64
@@ -2253,6 +2255,7 @@ func campaignRowDataToDomain(row campaignRowData) (storage.CampaignRecord, error
 		ParticipantCount: int(row.ParticipantCount),
 		CharacterCount:   int(row.CharacterCount),
 		ThemePrompt:      row.ThemePrompt,
+		CoverAssetID:     row.CoverAssetID,
 		CreatedAt:        fromMillis(row.CreatedAt),
 		UpdatedAt:        fromMillis(row.UpdatedAt),
 	}
@@ -2275,6 +2278,7 @@ func dbGetCampaignRowToDomain(row db.GetCampaignRow) (storage.CampaignRecord, er
 		ParticipantCount: row.ParticipantCount,
 		CharacterCount:   row.CharacterCount,
 		ThemePrompt:      row.ThemePrompt,
+		CoverAssetID:     row.CoverAssetID,
 		CreatedAt:        row.CreatedAt,
 		UpdatedAt:        row.UpdatedAt,
 		CompletedAt:      row.CompletedAt,
@@ -2295,6 +2299,7 @@ func dbListCampaignsRowToDomain(row db.ListCampaignsRow) (storage.CampaignRecord
 		ParticipantCount: row.ParticipantCount,
 		CharacterCount:   row.CharacterCount,
 		ThemePrompt:      row.ThemePrompt,
+		CoverAssetID:     row.CoverAssetID,
 		CreatedAt:        row.CreatedAt,
 		UpdatedAt:        row.UpdatedAt,
 		CompletedAt:      row.CompletedAt,
@@ -2314,6 +2319,7 @@ func dbListAllCampaignsRowToDomain(row db.ListAllCampaignsRow) (storage.Campaign
 		ParticipantCount: row.ParticipantCount,
 		CharacterCount:   row.CharacterCount,
 		ThemePrompt:      row.ThemePrompt,
+		CoverAssetID:     row.CoverAssetID,
 		CreatedAt:        row.CreatedAt,
 		UpdatedAt:        row.UpdatedAt,
 		CompletedAt:      row.CompletedAt,

@@ -46,6 +46,10 @@ func (f *fakeCampaignClient) RestoreCampaign(context.Context, *gamev1.RestoreCam
 	return nil, unimplemented("RestoreCampaign")
 }
 
+func (f *fakeCampaignClient) SetCampaignCover(context.Context, *gamev1.SetCampaignCoverRequest, ...grpc.CallOption) (*gamev1.SetCampaignCoverResponse, error) {
+	return nil, unimplemented("SetCampaignCover")
+}
+
 type fakeParticipantClient struct {
 	create func(context.Context, *gamev1.CreateParticipantRequest, ...grpc.CallOption) (*gamev1.CreateParticipantResponse, error)
 }

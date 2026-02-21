@@ -4,6 +4,7 @@ package templates
 type CampaignListItem struct {
 	ID               string
 	Name             string
+	CoverImageURL    string
 	System           string
 	GMMode           string
 	ParticipantCount string
@@ -119,11 +120,18 @@ templ CampaignsListPage(page PageContext, campaigns []CampaignListItem) {
 							for _, campaign := range campaigns {
 								<tr>
 									<td>
-										if campaign.ID != "" {
-											<a href={ "/campaigns/" + campaign.ID }>{ campaign.Name }</a>
-										} else {
-											{ campaign.Name }
-										}
+										<div class="flex items-center gap-3">
+											if campaign.CoverImageURL != "" {
+												<img src={ campaign.CoverImageURL } alt={ campaign.Name + " cover" } class="w-10 h-10 rounded object-cover border border-base-300"/>
+											}
+											<div>
+												if campaign.ID != "" {
+													<a href={ "/campaigns/" + campaign.ID }>{ campaign.Name }</a>
+												} else {
+													{ campaign.Name }
+												}
+											</div>
+										</div>
 									</td>
 									<td>{ campaign.System }</td>
 									<td>{ campaign.GMMode }</td>

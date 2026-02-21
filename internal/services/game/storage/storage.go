@@ -37,6 +37,7 @@ type CampaignRecord struct {
 	ParticipantCount int
 	CharacterCount   int
 	ThemePrompt      string
+	CoverAssetID     string
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
 	CompletedAt      *time.Time
