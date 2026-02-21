@@ -18,6 +18,23 @@ SRD annotations added 2026-02-17 against Daggerheart SRD 1.0 (September 2025).
 
 CRB annotations updated 2026-02-17 against Daggerheart Core Rulebook (May 2025, 415 pages).
 
+## Event Timeline Contract Requirement
+
+Before implementing or adjusting any missing mechanic in this document, define its
+evented write-path mapping first.
+
+Required mapping:
+
+`mechanic -> command type(s) -> emitted event type(s) -> projection targets -> invariants`
+
+For Daggerheart mechanics, use:
+[Daggerheart Event Timeline Contract](daggerheart-event-timeline-contract.md).
+
+Review gate:
+
+1. No implementation PR should close a mechanic gap without a corresponding timeline entry/update.
+2. If command/event mapping is unclear, resolve that ambiguity in docs before code.
+
 ## Glossary of Common Mechanics
 
 Use these definitions to interpret repeated terms in the gaps list without re-reading the Core Rulebook (CRB).

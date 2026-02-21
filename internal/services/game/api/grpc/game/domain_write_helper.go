@@ -2,6 +2,7 @@ package game
 
 import (
 	"context"
+	"sync/atomic"
 
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -12,6 +13,12 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+var inlineProjectionApplyEnabled atomic.Bool
+
+func init() {
+	inlineProjectionApplyEnabled.Store(true)
+}
+
 type domainCommandApplyOptions struct {
 	requireEvents     bool
 	missingEventMsg   string
@@ -20,6 +27,12 @@ type domainCommandApplyOptions struct {
 	rejectErr         func(string) error
 	executeErrMessage string
 	applyErrMessage   string
+}
+
+// SetInlineProjectionApplyEnabled controls whether request-path helpers apply
+// emitted domain events to projections inline.
+func SetInlineProjectionApplyEnabled(enabled bool) {
+	inlineProjectionApplyEnabled.Store(enabled)
 }
 
 func executeAndApplyDomainCommand(
@@ -45,8 +58,10 @@ func executeAndApplyDomainCommand(
 	if options.requireEvents && len(result.Decision.Events) == 0 {
 		return engine.Result{}, status.Error(codes.Internal, options.missingEventMsg)
 	}
-	if err := applyDomainDecisionEvents(ctx, applier, result.Decision.Events, options.applyErr); err != nil {
-		return engine.Result{}, err
+	if inlineProjectionApplyEnabled.Load() {
+		if err := applyDomainDecisionEvents(ctx, applier, result.Decision.Events, options.applyErr); err != nil {
+			return engine.Result{}, err
+		}
 	}
 
 	return result, nil

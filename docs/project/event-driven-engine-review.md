@@ -236,3 +236,22 @@ Recommendation:
 2. High/M: handler replay/validation simplification.
 3. Medium/M: shared execute-and-apply helper across handlers.
 4. Medium-L: registry intent metadata and complete legacy event package removal.
+
+## Status Update (2026-02-18)
+
+The hardening work completed after this review materially reduced bypass risk in
+request handlers for Daggerheart paths:
+
+1. Shared execute-and-apply orchestration is now the standard mutating path.
+2. Architecture guard tests enforce common anti-bypass patterns in Daggerheart handlers.
+3. Request-path `RollOutcomeStore` shortcut wiring was removed from gRPC store injection.
+
+Remaining review objective still open:
+
+1. Onboarding clarity for new system authors via explicit mechanic-to-event timeline
+   documentation and review checklists.
+
+This is addressed by:
+
+- [Game systems](game-systems.md) timeline requirement section.
+- [Daggerheart Event Timeline Contract](daggerheart-event-timeline-contract.md).

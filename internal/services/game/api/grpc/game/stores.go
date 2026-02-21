@@ -22,7 +22,6 @@ type Stores struct {
 	Event              storage.EventStore
 	Telemetry          storage.TelemetryStore
 	Statistics         storage.StatisticsStore
-	Outcome            storage.RollOutcomeStore
 	Snapshot           storage.SnapshotStore
 	CampaignFork       storage.CampaignForkStore
 	DaggerheartContent storage.DaggerheartContentStore
@@ -87,9 +86,6 @@ func (s Stores) Validate() error {
 	}
 	if s.Statistics == nil {
 		missing = append(missing, "Statistics")
-	}
-	if s.Outcome == nil {
-		missing = append(missing, "Outcome")
 	}
 	if s.Snapshot == nil {
 		missing = append(missing, "Snapshot")
