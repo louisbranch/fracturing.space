@@ -11,7 +11,7 @@ services:
       context: .
       target: game
       args:
-        GO_VERSION: ${GO_VERSION:-1.25.6}
+        GO_VERSION: ${GO_VERSION:-1.26.0}
     image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/game:${FRACTURING_SPACE_IMAGE_TAG:-dev}"
     depends_on:
       init-data:
@@ -40,7 +40,7 @@ services:
       context: .
       target: auth
       args:
-        GO_VERSION: ${GO_VERSION:-1.25.6}
+        GO_VERSION: ${GO_VERSION:-1.26.0}
     image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/auth:${FRACTURING_SPACE_IMAGE_TAG:-dev}"
     depends_on:
       init-data:
@@ -75,7 +75,7 @@ services:
       context: .
       target: mcp
       args:
-        GO_VERSION: ${GO_VERSION:-1.25.6}
+        GO_VERSION: ${GO_VERSION:-1.26.0}
     image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/mcp:${FRACTURING_SPACE_IMAGE_TAG:-dev}"
     depends_on:
       - game
@@ -96,7 +96,7 @@ services:
       context: .
       target: admin
       args:
-        GO_VERSION: ${GO_VERSION:-1.25.6}
+        GO_VERSION: ${GO_VERSION:-1.26.0}
     image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/admin:${FRACTURING_SPACE_IMAGE_TAG:-dev}"
     depends_on:
       - game
@@ -124,7 +124,7 @@ services:
       context: .
       target: web
       args:
-        GO_VERSION: ${GO_VERSION:-1.25.6}
+        GO_VERSION: ${GO_VERSION:-1.26.0}
     image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/web:${FRACTURING_SPACE_IMAGE_TAG:-dev}"
     depends_on:
       - auth
@@ -150,7 +150,7 @@ services:
       context: .
       target: chat
       args:
-        GO_VERSION: ${GO_VERSION:-1.25.6}
+        GO_VERSION: ${GO_VERSION:-1.26.0}
     image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/chat:${FRACTURING_SPACE_IMAGE_TAG:-dev}"
     depends_on:
       init-data:
@@ -205,7 +205,7 @@ services:
       context: .
       target: base
       args:
-        GO_VERSION: ${GO_VERSION:-1.25.6}
+        GO_VERSION: ${GO_VERSION:-1.26.0}
     image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/seed:${FRACTURING_SPACE_IMAGE_TAG:-dev}"
     profiles:
       - tools
@@ -223,7 +223,7 @@ services:
       context: .
       target: base
       args:
-        GO_VERSION: ${GO_VERSION:-1.25.6}
+        GO_VERSION: ${GO_VERSION:-1.26.0}
     image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/scenario:${FRACTURING_SPACE_IMAGE_TAG:-dev}"
     profiles:
       - tools
@@ -240,7 +240,7 @@ services:
       context: .
       target: base
       args:
-        GO_VERSION: ${GO_VERSION:-1.25.6}
+        GO_VERSION: ${GO_VERSION:-1.26.0}
     image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/maintenance:${FRACTURING_SPACE_IMAGE_TAG:-dev}"
     profiles:
       - tools
@@ -263,7 +263,7 @@ services:
       context: .
       target: base
       args:
-        GO_VERSION: ${GO_VERSION:-1.25.6}
+        GO_VERSION: ${GO_VERSION:-1.26.0}
     image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/catalog-importer:${FRACTURING_SPACE_IMAGE_TAG:-dev}"
     profiles:
       - tools
@@ -281,7 +281,7 @@ services:
       context: .
       target: base
       args:
-        GO_VERSION: ${GO_VERSION:-1.25.6}
+        GO_VERSION: ${GO_VERSION:-1.26.0}
     image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/join-grant-key:${FRACTURING_SPACE_IMAGE_TAG:-dev}"
     profiles:
       - tools
@@ -293,7 +293,7 @@ services:
       context: .
       target: base
       args:
-        GO_VERSION: ${GO_VERSION:-1.25.6}
+        GO_VERSION: ${GO_VERSION:-1.26.0}
     image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/hmac-key:${FRACTURING_SPACE_IMAGE_TAG:-dev}"
     profiles:
       - tools

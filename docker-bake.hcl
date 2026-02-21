@@ -1,5 +1,5 @@
 variable "GO_VERSION" {
-  default = "1.25.6"
+  default = "1.26.0"
 }
 
 variable "GAME_IMAGE" {

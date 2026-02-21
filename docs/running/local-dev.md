@@ -8,7 +8,7 @@ nav_order: 2
 
 ## Prerequisites
 
-- Go 1.25.6
+- Go 1.26.0
 - protoc (until binaries are published)
 - Make
 
