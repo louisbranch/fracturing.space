@@ -1,6 +1,11 @@
 ARG GO_VERSION=1.26.0
 FROM golang:${GO_VERSION} AS base
 
+ARG DEVCONTAINER_UID=1000
+ARG DEVCONTAINER_GID=1000
+RUN groupadd --gid "${DEVCONTAINER_GID}" vscode \
+  && useradd --uid "${DEVCONTAINER_UID}" --gid "${DEVCONTAINER_GID}" --create-home --shell /bin/bash vscode
+
 WORKDIR /src
 
 COPY go.mod go.sum ./

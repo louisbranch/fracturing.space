@@ -6,10 +6,14 @@ cd "$root_dir"
 
 mkdir -p .tmp/go-build .tmp/go-cache .tmp/go-modcache .tmp/dev .tmp/dev/bin .tmp/dev/air
 export TMPDIR="$root_dir/.tmp/go-build"
-export PATH="/usr/local/go/bin:$PATH"
-export PATH="$(go env GOPATH)/bin:$PATH"
+export HOME="${HOME:-/workspace}"
+export GOPATH="${GOPATH:-/workspace/.tmp/go}"
+export GOMODCACHE="${GOMODCACHE:-/workspace/.tmp/go/pkg/mod}"
+export GOCACHE="${GOCACHE:-$root_dir/.tmp/go-cache}"
+export PATH="/usr/local/go/bin:/go/bin:/root/go/bin:${GOPATH%/}/bin:$PATH"
+mkdir -p "$GOCACHE" "$GOMODCACHE" "${GOPATH%/}/bin"
 
-if ! command -v air >/dev/null 2>&1; then
+if ! command -v air >/dev/null 2>&1 && [[ ! -x /go/bin/air && ! -x /root/go/bin/air && ! -x "${GOPATH%/}/bin/air" ]]; then
   echo "air is not installed in the devcontainer image; rebuild with make up" >&2
   exit 1
 fi
