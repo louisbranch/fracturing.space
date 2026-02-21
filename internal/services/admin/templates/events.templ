@@ -4,7 +4,7 @@ import "fmt"
 
 // EventLogFullPage renders the event log in the base layout.
 templ EventLogFullPage(view EventLogView, page PageContext) {
-	@Layout(T(page.Loc, "title.events", AppName()), "Campaigns", page) {
+	@Layout(T(page.Loc, "title.events", AppName()), "Campaigns", page.Loc, page) {
 		@EventLogPage(view, page.Loc)
 	}
 }

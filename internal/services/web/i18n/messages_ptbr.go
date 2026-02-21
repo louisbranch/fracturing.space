@@ -9,7 +9,7 @@ func init() {
 	lang := language.MustParse("pt-BR")
 
 	// Landing page
-	message.SetString(lang, "title.landing", "%s | Motor de IA para RPG de código aberto")
+	message.SetString(lang, "title.landing", "Motor de IA para RPG de código aberto")
 	message.SetString(lang, "landing.tagline", "Motor de código aberto, autoritativo no servidor, para campanhas de RPG de mesa determinísticas e mestres de jogo com IA.")
 	message.SetString(lang, "landing.signed_in_as", "Conectado como")
 	message.SetString(lang, "landing.sign_out", "Sair")
@@ -21,7 +21,7 @@ func init() {
 	message.SetString(lang, "meta.description", "Motor de código aberto, autoritativo no servidor, para campanhas de RPG de mesa determinísticas e mestres de jogo com IA.")
 
 	// Login page
-	message.SetString(lang, "title.login", "%s | Entrar")
+	message.SetString(lang, "title.login", "Entrar")
 	message.SetString(lang, "login.heading", "Faça login para continuar")
 	message.SetString(lang, "login.requesting_access", "%s está solicitando acesso à sua conta.")
 	message.SetString(lang, "login.card_title", "Acesso à Conta")
@@ -231,8 +231,8 @@ func init() {
 	message.SetString(lang, "game.campaign.system_unspecified", "Não especificado")
 
 	// Campaign create page
-	message.SetString(lang, "game.create.title", "Campanhas")
-	message.SetString(lang, "game.create.heading", "Campanhas")
+	message.SetString(lang, "game.create.title", "Criar campanha")
+	message.SetString(lang, "game.create.heading", "Criar campanha")
 	message.SetString(lang, "game.create.field_name", "Nome da campanha")
 	message.SetString(lang, "game.create.field_system", "Sistema")
 	message.SetString(lang, "game.create.field_gm_mode", "Modo de GM")

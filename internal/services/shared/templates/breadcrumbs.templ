@@ -1,0 +1,27 @@
+package templates
+
+// Breadcrumbs renders a breadcrumb trail from given breadcrumb items.
+// If useHTMX is true, items with URLs become HTMX-powered links.
+templ Breadcrumbs(items []BreadcrumbItem, useHTMX bool) {
+	<div class="breadcrumbs text-sm">
+		<ul>
+			for _, item := range items {
+				if item.URL != "" {
+					<li>
+						<a
+							href={ templ.SafeURL(item.URL) }
+							if useHTMX {
+								hx-get={ templ.SafeURL(item.URL) }
+								hx-target="#main"
+								hx-swap="innerHTML"
+								hx-push-url="true"
+							}
+						>{ item.Label }</a>
+					</li>
+				} else {
+					<li>{ item.Label }</li>
+				}
+			}
+		</ul>
+	</div>
+}

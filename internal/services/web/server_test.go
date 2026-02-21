@@ -65,6 +65,9 @@ func TestLoginHandlerRendersForm(t *testing.T) {
 	if !strings.Contains(body, "Test Client") {
 		t.Fatalf("expected client name in body")
 	}
+	if !strings.Contains(body, "<title>Sign In | "+branding.AppName+"</title>") {
+		t.Fatalf("expected title suffix on login page")
+	}
 	if !strings.Contains(body, `data-layout="auth"`) {
 		t.Fatalf("expected auth layout marker in login page")
 	}
@@ -81,6 +84,9 @@ func TestLandingPageRenders(t *testing.T) {
 	body := w.Body.String()
 	if !strings.Contains(body, branding.AppName) {
 		t.Fatalf("expected app name in body")
+	}
+	if !strings.Contains(body, "<title>Open source AI GM engine | "+branding.AppName+"</title>") {
+		t.Fatalf("expected title suffix on landing page")
 	}
 	if !strings.Contains(body, "Open-source, server-authoritative engine") {
 		t.Fatalf("expected hero tagline in body")

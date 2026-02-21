@@ -2,7 +2,7 @@ package templates
 
 // CharactersListFullPage renders the characters list in the base layout.
 templ CharactersListFullPage(campaignID string, campaignName string, page PageContext) {
-	@Layout(T(page.Loc, "title.characters", AppName()), "Campaigns", page) {
+	@Layout(T(page.Loc, "title.characters", AppName()), "Campaigns", page.Loc, page) {
 		@CharactersListPage(campaignID, campaignName, page.Loc)
 	}
 }
@@ -53,7 +53,7 @@ templ CharactersTable(rows []CharacterRow, message string, loc Localizer) {
 
 // CharacterSheetFullPage renders the character sheet in the base layout.
 templ CharacterSheetFullPage(sheet CharacterSheetView, activePage string, page PageContext) {
-	@Layout(T(page.Loc, "title.character_sheet", sheet.Character.GetName(), AppName()), "Campaigns", page) {
+	@Layout(T(page.Loc, "title.character_sheet", sheet.Character.GetName(), AppName()), "Campaigns", page.Loc, page) {
 		@CharacterSheetPage(sheet, activePage, page.Loc)
 	}
 }

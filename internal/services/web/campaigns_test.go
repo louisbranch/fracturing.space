@@ -12,6 +12,7 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/platform/branding"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -262,6 +263,33 @@ func TestAppCampaignCreateGetUsesConfiguredAppNameInShell(t *testing.T) {
 	body := w.Body.String()
 	if !strings.Contains(body, "Custom Realm") {
 		t.Fatalf("expected configured app name in game shell")
+	}
+}
+
+func TestAppCampaignCreateGetUsesCreateCampaignTitle(t *testing.T) {
+	campaignClient := &fakeWebCampaignClient{}
+	h := &handler{
+		config:         Config{AuthBaseURL: "http://auth.local"},
+		sessions:       newSessionStore(),
+		pendingFlows:   newPendingFlowStore(),
+		campaignClient: campaignClient,
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	req := httptest.NewRequest(http.MethodGet, "/campaigns/create", nil)
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+
+	h.handleAppCampaignCreate(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "<h1>Create Campaign</h1>") {
+		t.Fatalf("expected create campaign heading in body")
+	}
+	if !strings.Contains(body, "<title>Create Campaign | "+branding.AppName+"</title>") {
+		t.Fatalf("expected create campaign page title suffix")
 	}
 }
 

@@ -3,6 +3,8 @@ package templates
 import (
 	"net/url"
 	"strings"
+
+	sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
 )
 
 // PageHeading holds header metadata for pages.
@@ -17,13 +19,7 @@ type PageHeading struct {
 	ActionLabel string
 }
 
-// Breadcrumb represents a single breadcrumb item.
-type Breadcrumb struct {
-	// Label is the visible label.
-	Label string
-	// URL is the optional navigation target.
-	URL string
-}
+type Breadcrumb = sharedtemplates.BreadcrumbItem
 
 // AppendQueryParam appends a single query parameter to a URL.
 func AppendQueryParam(baseURL string, key string, value string) string {

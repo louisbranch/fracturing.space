@@ -2,7 +2,7 @@ package templates
 
 // CampaignPage renders the campaign chat shell for Phase 1.1.
 templ CampaignPage(page PageContext, campaignID string, campaignName string) {
-	@ChromeLayoutWithLocalizer(campaignName+" | "+page.AppName, page.Lang, page.AppName, page.Loc) {
+	@ChromeLayout(campaignName, page.Lang, page.AppName, page.Loc, page.CurrentPath, page.CampaignName) {
 		<main
 			data-campaign-id={ campaignID }
 			data-chat-invalid-id={ T(page.Loc, "campaign.chat.invalid_id") }

@@ -2,7 +2,7 @@ package templates
 
 // CampaignsFullPage renders campaigns content in the base layout.
 templ CampaignsFullPage(page PageContext) {
-	@Layout(T(page.Loc, "title.campaigns", AppName()), "Campaigns", page) {
+	@Layout(T(page.Loc, "title.campaigns", AppName()), "Campaigns", page.Loc, page) {
 		@CampaignsPage(page.Loc)
 	}
 }
@@ -15,7 +15,7 @@ templ CampaignsPage(loc Localizer) {
 
 // CampaignCreateFullPage renders the campaign create page in the base layout.
 templ CampaignCreateFullPage(view CampaignCreatePageView, page PageContext) {
-	@Layout(T(page.Loc, "title.campaign_create", AppName()), "Campaigns", page) {
+	@Layout(T(page.Loc, "title.campaign_create", AppName()), "Campaigns", page.Loc, page) {
 		@CampaignCreatePage(view, page.Loc)
 	}
 }
@@ -217,7 +217,7 @@ templ CampaignSessionsList(rows []CampaignSessionRow, message string, loc Locali
 
 // CampaignDetailFullPage renders campaign detail content in the base layout.
 templ CampaignDetailFullPage(detail CampaignDetail, message string, page PageContext) {
-	@Layout(T(page.Loc, "title.campaign", AppName()), "Campaigns", page) {
+	@Layout(T(page.Loc, "title.campaign", AppName()), "Campaigns", page.Loc, page) {
 		@CampaignDetailPage(detail, message, page.Loc)
 	}
 }

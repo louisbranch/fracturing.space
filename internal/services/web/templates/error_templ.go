@@ -51,7 +51,7 @@ func ErrorPage(page PageContext, title string, message string) templ.Component {
 				}
 				return nil
 			})
-			templ_7745c5c3_Err = ChromeLayoutWithLocalizer(title+" | "+page.AppName, page.Lang, page.AppName, page.Loc).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = ChromeLayout(title, page.Lang, page.AppName, page.Loc, page.CurrentPath, page.CampaignName).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -74,7 +74,7 @@ func ErrorPage(page PageContext, title string, message string) templ.Component {
 				}
 				return nil
 			})
-			templ_7745c5c3_Err = ShellLayoutWithLocalizer(title+" | "+page.AppName, page.Lang, page.Loc).Render(templ.WithChildren(ctx, templ_7745c5c3_Var3), templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = ShellLayoutWithLocalizer(title, page.Lang, page.Loc).Render(templ.WithChildren(ctx, templ_7745c5c3_Var3), templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

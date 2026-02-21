@@ -9,7 +9,7 @@ func init() {
 	lang := language.English
 
 	// Landing page
-	message.SetString(lang, "title.landing", "%s | Open source AI GM engine")
+	message.SetString(lang, "title.landing", "Open source AI GM engine")
 	message.SetString(lang, "landing.tagline", "Open-source, server-authoritative engine for deterministic tabletop RPG campaigns and AI game masters.")
 	message.SetString(lang, "landing.signed_in_as", "Signed in as")
 	message.SetString(lang, "landing.sign_out", "Sign out")
@@ -21,7 +21,7 @@ func init() {
 	message.SetString(lang, "meta.description", "Open-source, server-authoritative engine for deterministic tabletop RPG campaigns and AI game masters.")
 
 	// Login page
-	message.SetString(lang, "title.login", "%s | Sign In")
+	message.SetString(lang, "title.login", "Sign In")
 	message.SetString(lang, "login.heading", "Sign in to continue")
 	message.SetString(lang, "login.requesting_access", "%s is requesting access to your account.")
 	message.SetString(lang, "login.card_title", "Account Access")
@@ -231,8 +231,8 @@ func init() {
 	message.SetString(lang, "game.campaign.system_unspecified", "Unspecified")
 
 	// Campaign create page
-	message.SetString(lang, "game.create.title", "Campaigns")
-	message.SetString(lang, "game.create.heading", "Campaigns")
+	message.SetString(lang, "game.create.title", "Create Campaign")
+	message.SetString(lang, "game.create.heading", "Create Campaign")
 	message.SetString(lang, "game.create.field_name", "Campaign Name")
 	message.SetString(lang, "game.create.field_system", "Game System")
 	message.SetString(lang, "game.create.field_gm_mode", "GM Mode")

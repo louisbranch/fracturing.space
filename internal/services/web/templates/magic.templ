@@ -9,12 +9,13 @@ type MagicParams struct {
 	Success   bool
 	LinkURL   string
 	LinkLabel string
+	Loc       Localizer
 	Lang      string
 }
 
 // MagicPage renders the magic-link verification result page.
 templ MagicPage(params MagicParams) {
-	@ShellLayout(params.Title + " - " + params.AppName, params.Lang) {
+	@ShellLayout(params.Title, params.Lang, params.Loc) {
 		<main class="flex justify-center px-5 py-12">
 			<div class="w-full max-w-xl grid gap-8">
 				<header class="grid gap-3">

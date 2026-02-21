@@ -2,7 +2,7 @@ package templates
 
 // DashboardFullPage renders the dashboard in the base layout.
 templ DashboardFullPage(page PageContext) {
-	@Layout(T(page.Loc, "title.dashboard", AppName()), "Dashboard", page) {
+	@Layout(T(page.Loc, "title.dashboard", AppName()), "Dashboard", page.Loc, page) {
 		@DashboardPage(page.Loc)
 	}
 }

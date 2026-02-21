@@ -43,7 +43,7 @@ func (h *handler) handleAppCampaignInvites(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	renderAppCampaignInvitesPageWithContext(w, r, h.pageContext(w, r), campaignID, resp.GetInvites(), inviteActor.canManageInvites)
+	renderAppCampaignInvitesPageWithContext(w, r, h.pageContextForCampaign(w, r, campaignID), campaignID, resp.GetInvites(), inviteActor.canManageInvites)
 }
 
 func (h *handler) handleAppCampaignInviteCreate(w http.ResponseWriter, r *http.Request, campaignID string) {

@@ -50,7 +50,7 @@ func CampaignsFullPage(page PageContext) templ.Component {
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = Layout(T(page.Loc, "title.campaigns", AppName()), "Campaigns", page).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = Layout(T(page.Loc, "title.campaigns", AppName()), "Campaigns", page.Loc, page).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -132,7 +132,7 @@ func CampaignCreateFullPage(view CampaignCreatePageView, page PageContext) templ
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = Layout(T(page.Loc, "title.campaign_create", AppName()), "Campaigns", page).Render(templ.WithChildren(ctx, templ_7745c5c3_Var5), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = Layout(T(page.Loc, "title.campaign_create", AppName()), "Campaigns", page.Loc, page).Render(templ.WithChildren(ctx, templ_7745c5c3_Var5), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -1174,7 +1174,7 @@ func CampaignDetailFullPage(detail CampaignDetail, message string, page PageCont
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = Layout(T(page.Loc, "title.campaign", AppName()), "Campaigns", page).Render(templ.WithChildren(ctx, templ_7745c5c3_Var60), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = Layout(T(page.Loc, "title.campaign", AppName()), "Campaigns", page.Loc, page).Render(templ.WithChildren(ctx, templ_7745c5c3_Var60), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

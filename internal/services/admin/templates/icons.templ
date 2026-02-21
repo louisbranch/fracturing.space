@@ -4,7 +4,7 @@ import sharedtemplates "github.com/louisbranch/fracturing.space/internal/service
 
 // IconsFullPage renders icon catalog content in the base layout.
 templ IconsFullPage(page PageContext) {
-	@Layout(T(page.Loc, "title.icons", AppName()), "Icons", page) {
+	@Layout(T(page.Loc, "title.icons", AppName()), "Icons", page.Loc, page) {
 		@IconsPage(page.Loc)
 	}
 }

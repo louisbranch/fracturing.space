@@ -2,7 +2,7 @@ package templates
 
 // ParticipantsListFullPage renders the participants list in the base layout.
 templ ParticipantsListFullPage(campaignID string, campaignName string, page PageContext) {
-	@Layout(T(page.Loc, "title.participants", AppName()), "Campaigns", page) {
+	@Layout(T(page.Loc, "title.participants", AppName()), "Campaigns", page.Loc, page) {
 		@ParticipantsListPage(campaignID, campaignName, page.Loc)
 	}
 }

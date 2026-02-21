@@ -1261,6 +1261,37 @@ func TestCampaignCreateRouteIsUnavailableInAdmin(t *testing.T) {
 	}
 }
 
+func TestAdminPageTitleUsesPipeSuffixConvention(t *testing.T) {
+	handler := NewHandler(nil)
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns", nil)
+	recorder := httptest.NewRecorder()
+
+	handler.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
+	}
+	body := recorder.Body.String()
+	assertContains(t, body, "<title>Campaigns | "+branding.AppName+"</title>")
+	assertNotContains(t, body, "Campaigns - "+branding.AppName+" | "+branding.AppName)
+}
+
+func TestAdminBreadcrumbsRenderViaSharedTemplate(t *testing.T) {
+	handler := NewHandler(nil)
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-123", nil)
+	recorder := httptest.NewRecorder()
+
+	handler.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
+	}
+	body := recorder.Body.String()
+	assertContains(t, body, `<div class="breadcrumbs text-sm"><ul>`)
+	assertContains(t, body, `href="/campaigns"`)
+	assertContains(t, body, `>Campaign</li>`)
+}
+
 func TestImpersonationFlow(t *testing.T) {
 	user := &authv1.User{Id: "user-1", Email: "Test User"}
 	authClient := &testAuthClient{user: user}

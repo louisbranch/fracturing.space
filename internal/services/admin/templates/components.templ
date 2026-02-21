@@ -3,7 +3,7 @@ package templates
 import sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
 
 // TopNav renders the top navigation bar using DaisyUI navbar.
-templ TopNav(activePage string, page PageContext) {
+templ TopNav(activePage string, page PageContext, loc Localizer) {
 	<nav class="navbar bg-base-200 fixed top-0 w-full z-50">
 		<div class="navbar-start w-auto">
 			<h3 class="text-lg font-bold"><a href="/">{AppName()}</a></h3>
@@ -20,7 +20,7 @@ templ TopNav(activePage string, page PageContext) {
 						if activePage == "Dashboard" {
 							class="active"
 						}
-					>{T(page.Loc, "nav.dashboard")}</a>
+					>{T(loc, "nav.dashboard")}</a>
 				</li>
 				<li>
 					<a
@@ -32,7 +32,7 @@ templ TopNav(activePage string, page PageContext) {
 						if activePage == "Systems" {
 							class="active"
 						}
-					>{T(page.Loc, "nav.systems")}</a>
+					>{T(loc, "nav.systems")}</a>
 				</li>
 				<li>
 					<a
@@ -44,7 +44,7 @@ templ TopNav(activePage string, page PageContext) {
 						if activePage == "Catalog" {
 							class="active"
 						}
-					>{T(page.Loc, "nav.catalog")}</a>
+					>{T(loc, "nav.catalog")}</a>
 				</li>
 				<li>
 					<a
@@ -56,7 +56,7 @@ templ TopNav(activePage string, page PageContext) {
 						if activePage == "Icons" {
 							class="active"
 						}
-					>{T(page.Loc, "nav.icons")}</a>
+					>{T(loc, "nav.icons")}</a>
 				</li>
 				<li>
 					<a
@@ -68,7 +68,7 @@ templ TopNav(activePage string, page PageContext) {
 						if activePage == "Scenarios" {
 							class="active"
 						}
-					>{T(page.Loc, "nav.scenarios")}</a>
+					>{T(loc, "nav.scenarios")}</a>
 				</li>
 				<li>
 					<a
@@ -80,7 +80,7 @@ templ TopNav(activePage string, page PageContext) {
 						if activePage == "Users" {
 							class="active"
 						}
-					>{T(page.Loc, "nav.users")}</a>
+					>{T(loc, "nav.users")}</a>
 				</li>
 				<li>
 					<a
@@ -92,19 +92,19 @@ templ TopNav(activePage string, page PageContext) {
 						if activePage == "Campaigns" {
 							class="active"
 						}
-					>{T(page.Loc, "nav.campaigns")}</a>
+					>{T(loc, "nav.campaigns")}</a>
 				</li>
 			</ul>
 			if page.Impersonation != nil {
-				<span class="badge badge-secondary ml-2">{T(page.Loc, "impersonation.badge")}</span>
+				<span class="badge badge-secondary ml-2">{T(loc, "impersonation.badge")}</span>
 				<span class="ml-1">{ImpersonationLabel(page.Impersonation)}</span>
 			}
 		<div class="dropdown dropdown-hover dropdown-end">
 			<div tabindex="0" role="button" class="btn btn-ghost btn-sm hover:bg-neutral">
-				{ActiveLanguageLabel(page)}
+				{ActiveLanguageLabel(page, loc)}
 			</div>
 			<ul tabindex="0" class="dropdown-content menu menu-sm rounded-box z-10 w-20 shadow">
-				for _, option := range LanguageOptions(page) {
+					for _, option := range LanguageOptions(page, loc) {
 					<li>
 						<a
 							href={ templ.SafeURL(LanguageURL(page, option.Tag)) }
@@ -134,7 +134,7 @@ templ TopNav(activePage string, page PageContext) {
 							if activePage == "Dashboard" {
 								class="active"
 							}
-						>{T(page.Loc, "nav.dashboard")}</a>
+					>{T(loc, "nav.dashboard")}</a>
 					</li>
 					<li>
 						<a
@@ -146,7 +146,7 @@ templ TopNav(activePage string, page PageContext) {
 							if activePage == "Systems" {
 								class="active"
 							}
-						>{T(page.Loc, "nav.systems")}</a>
+					>{T(loc, "nav.systems")}</a>
 					</li>
 					<li>
 						<a
@@ -158,7 +158,7 @@ templ TopNav(activePage string, page PageContext) {
 							if activePage == "Catalog" {
 								class="active"
 							}
-						>{T(page.Loc, "nav.catalog")}</a>
+					>{T(loc, "nav.catalog")}</a>
 					</li>
 					<li>
 						<a
@@ -170,7 +170,7 @@ templ TopNav(activePage string, page PageContext) {
 							if activePage == "Icons" {
 								class="active"
 							}
-						>{T(page.Loc, "nav.icons")}</a>
+					>{T(loc, "nav.icons")}</a>
 					</li>
 					<li>
 						<a
@@ -182,7 +182,7 @@ templ TopNav(activePage string, page PageContext) {
 							if activePage == "Scenarios" {
 								class="active"
 							}
-						>{T(page.Loc, "nav.scenarios")}</a>
+					>{T(loc, "nav.scenarios")}</a>
 					</li>
 					<li>
 						<a
@@ -194,7 +194,7 @@ templ TopNav(activePage string, page PageContext) {
 							if activePage == "Users" {
 								class="active"
 							}
-						>{T(page.Loc, "nav.users")}</a>
+					>{T(loc, "nav.users")}</a>
 					</li>
 					<li>
 						<a
@@ -206,17 +206,17 @@ templ TopNav(activePage string, page PageContext) {
 							if activePage == "Campaigns" {
 								class="active"
 							}
-						>{T(page.Loc, "nav.campaigns")}</a>
+					>{T(loc, "nav.campaigns")}</a>
 					</li>
 					if page.Impersonation != nil {
 						<li class="menu-title">
-							<span class="badge badge-secondary">{T(page.Loc, "impersonation.badge")}</span>
+							<span class="badge badge-secondary">{T(loc, "impersonation.badge")}</span>
 							<span>{ImpersonationLabel(page.Impersonation)}</span>
 						</li>
 					}
 					<li>
 						<span>
-							for _, option := range LanguageOptions(page) {
+							for _, option := range LanguageOptions(page, loc) {
 								<a
 									href={ templ.SafeURL(LanguageURL(page, option.Tag)) }
 									data-lang={ option.Tag }
@@ -413,7 +413,7 @@ templ characterTabInput(campaignID string, characterID string, page string, acti
 // heading, and action button.
 templ PageHeader(h PageHeading) {
 	if len(h.Breadcrumbs) > 0 {
-		@Breadcrumbs(h.Breadcrumbs)
+		@sharedtemplates.Breadcrumbs(h.Breadcrumbs, true)
 	}
 	<h2>{h.Title}</h2>
 	if h.ActionURL != "" {
@@ -426,30 +426,6 @@ templ PageHeader(h PageHeading) {
 			hx-push-url="true"
 		>{h.ActionLabel}</a>
 	}
-}
-
-// Breadcrumbs renders a DaisyUI breadcrumb trail from the given items.
-// The last item is rendered as plain text; all others as HTMX-enhanced links.
-templ Breadcrumbs(items []Breadcrumb) {
-	<div class="breadcrumbs text-sm">
-		<ul>
-			for _, item := range items {
-				if item.URL != "" {
-					<li>
-						<a
-							href={ templ.SafeURL(item.URL) }
-							hx-get={ item.URL }
-							hx-target="#main"
-							hx-swap="innerHTML"
-							hx-push-url="true"
-						>{item.Label}</a>
-					</li>
-				} else {
-					<li>{item.Label}</li>
-				}
-			}
-		</ul>
-	</div>
 }
 
 // LazyLoad renders an HTMX placeholder that loads content on page render.

@@ -80,7 +80,7 @@ type UserInviteItem struct {
 }
 
 templ GamePageShell(page PageContext, title string) {
-	@ChromeLayoutWithLocalizer(title, page.Lang, page.AppName, page.Loc) {
+	@ChromeLayout(title, page.Lang, page.AppName, page.Loc, page.CurrentPath, page.CampaignName) {
 		<div class="max-w-screen-xl mx-auto px-4 pt-24" id="main">
 			<main aria-label={ T(page.Loc, "game.aria_label") } class="p-4">
 				{ children... }

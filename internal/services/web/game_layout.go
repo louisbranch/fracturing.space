@@ -32,6 +32,12 @@ func (h *handler) pageContext(w http.ResponseWriter, r *http.Request) webtemplat
 	}
 }
 
+func (h *handler) pageContextForCampaign(w http.ResponseWriter, r *http.Request, campaignID string) webtemplates.PageContext {
+	page := h.pageContext(w, r)
+	page.CampaignName = h.campaignDisplayName(r.Context(), campaignID)
+	return page
+}
+
 func writeGameContentType(w http.ResponseWriter) {
 	w.Header().Set("Content-Type", gamePageContentType)
 }
