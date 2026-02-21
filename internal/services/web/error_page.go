@@ -1,9 +1,9 @@
 package web
 
 import (
+	"log"
 	"net/http"
 
-	"github.com/a-h/templ"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
@@ -13,8 +13,17 @@ func (h *handler) renderErrorPage(w http.ResponseWriter, r *http.Request, status
 	page := h.pageContext(w, r)
 	localizedTitle := localizeErrorPageText(page.Loc, title, errorPageTitleTextKeys)
 	localizedMessage := localizeErrorPageText(page.Loc, message, errorPageMessageTextKeys)
+	writeGameContentType(w)
 	w.WriteHeader(status)
-	templ.Handler(webtemplates.ErrorPage(page, localizedTitle, localizedMessage)).ServeHTTP(w, r)
+	if err := h.writePage(
+		w,
+		r,
+		webtemplates.ErrorPage(page, localizedTitle, localizedMessage),
+		composeHTMXTitle(nil, localizedTitle),
+	); err != nil {
+		log.Printf("web: failed to render error page: %v", err)
+		localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.web_handler_unavailable")
+	}
 }
 
 func localizeErrorPageText(loc webtemplates.Localizer, raw string, keyMap map[string]string) string {

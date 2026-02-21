@@ -221,8 +221,7 @@ func renderAppCampaignParticipantsPageWithContext(w http.ResponseWriter, r *http
 			AISelected:      controllerValue == "ai",
 		})
 	}
-	writeGameContentType(w)
-	if err := webtemplates.CampaignParticipantsPage(page, campaignID, canManageParticipants, participantItems).Render(r.Context(), w); err != nil {
+	if err := writePage(w, r, webtemplates.CampaignParticipantsPage(page, campaignID, canManageParticipants, participantItems), composeHTMXTitle(page.Loc, "game.participants.title")); err != nil {
 		localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.failed_to_render_participants_page")
 	}
 }

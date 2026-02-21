@@ -1,6 +1,9 @@
 package web
 
 import (
+	"context"
+	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -183,4 +186,63 @@ func TestGameLayoutBreadcrumbsUseCampaignName(t *testing.T) {
 	if strings.Contains(body, `">camp-1</a>`) {
 		t.Fatalf("expected campaign ID to be replaced by campaign name in breadcrumb")
 	}
+}
+
+func TestWritePageReturnsErrorWhenComponentMissing(t *testing.T) {
+	t.Parallel()
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/test", nil)
+
+	err := writePage(w, r, nil, "")
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	if !errors.Is(err, errNoWebPageComponent) {
+		t.Fatalf("expected errNoWebPageComponent, got %v", err)
+	}
+}
+
+func TestWritePageReturnsFullPageWithoutHTMXTitle(t *testing.T) {
+	t.Parallel()
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/test", nil)
+
+	component := stubComponent{content: "<main>full</main>"}
+	if err := writePage(w, r, component, "<title>Injected Title</title>"); err != nil {
+		t.Fatalf("writePage() = %v", err)
+	}
+	if got := w.Body.String(); got != "<main>full</main>" {
+		t.Fatalf("response body = %q, want %q", got, "<main>full</main>")
+	}
+	if got := w.Header().Get("Content-Type"); got != "text/html; charset=utf-8" {
+		t.Fatalf("Content-Type = %q, want %q", got, "text/html; charset=utf-8")
+	}
+}
+
+func TestWritePageInjectsTitleForHTMXRequests(t *testing.T) {
+	t.Parallel()
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/test", nil)
+	r.Header.Set("HX-Request", "true")
+
+	component := stubComponent{content: "<main>fragment</main>"}
+	if err := writePage(w, r, component, "<title>Injected Title</title>"); err != nil {
+		t.Fatalf("writePage() = %v", err)
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "<title>Injected Title</title>") {
+		t.Fatalf("expected injected title in HTMX response, got %q", body)
+	}
+	if !strings.HasSuffix(body, "<main>fragment</main>") {
+		t.Fatalf("expected rendered fragment body in HTMX response, got %q", body)
+	}
+}
+
+type stubComponent struct {
+	content string
+}
+
+func (s stubComponent) Render(_ context.Context, w io.Writer) error {
+	_, err := w.Write([]byte(s.content))
+	return err
 }

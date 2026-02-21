@@ -2,11 +2,11 @@ package web
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/a-h/templ"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
@@ -26,7 +26,10 @@ func (h *handler) renderCampaignPage(w http.ResponseWriter, r *http.Request, cam
 	if campaignName == "" {
 		campaignName = strings.TrimSpace(campaignID)
 	}
-	templ.Handler(webtemplates.CampaignPage(page, campaignID, campaignName)).ServeHTTP(w, r)
+	if err := h.writePage(w, r, webtemplates.CampaignPage(page, campaignID, campaignName), ""); err != nil {
+		log.Printf("web: failed to render campaign page: %v", err)
+		localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.web_handler_unavailable")
+	}
 }
 
 func (h *handler) campaignDisplayName(ctx context.Context, campaignID string) string {
