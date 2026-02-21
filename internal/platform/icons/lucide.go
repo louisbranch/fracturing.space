@@ -38,6 +38,7 @@ var lucideIconNames = map[commonv1.IconId]string{
 	commonv1.IconId_ICON_ID_LOOT:        "coins",
 	commonv1.IconId_ICON_ID_ADVERSARY:   "venetian-mask",
 	commonv1.IconId_ICON_ID_ENVIRONMENT: "map",
+	commonv1.IconId_ICON_ID_ANIMAL:      "paw-print",
 }
 
 // LucideName returns the Lucide icon name for a core icon identifier.

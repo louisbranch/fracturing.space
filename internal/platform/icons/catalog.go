@@ -169,6 +169,11 @@ var catalog = []Definition{
 		Name:        "Environment",
 		Description: "Environments and scenes.",
 	},
+	{
+		ID:          commonv1.IconId_ICON_ID_ANIMAL,
+		Name:        "Animal",
+		Description: "animal encounters",
+	},
 }
 
 // Catalog returns a copy of the icon catalog definitions.

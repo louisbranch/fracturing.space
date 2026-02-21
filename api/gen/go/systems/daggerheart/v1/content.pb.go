@@ -181,6 +181,7 @@ const (
 	DaggerheartItemRarity_DAGGERHEART_ITEM_RARITY_UNCOMMON    DaggerheartItemRarity = 2
 	DaggerheartItemRarity_DAGGERHEART_ITEM_RARITY_RARE        DaggerheartItemRarity = 3
 	DaggerheartItemRarity_DAGGERHEART_ITEM_RARITY_UNIQUE      DaggerheartItemRarity = 4
+	DaggerheartItemRarity_DAGGERHEART_ITEM_RARITY_LEGENDARY   DaggerheartItemRarity = 5
 )
 
 // Enum value maps for DaggerheartItemRarity.
@@ -191,6 +192,7 @@ var (
 		2: "DAGGERHEART_ITEM_RARITY_UNCOMMON",
 		3: "DAGGERHEART_ITEM_RARITY_RARE",
 		4: "DAGGERHEART_ITEM_RARITY_UNIQUE",
+		5: "DAGGERHEART_ITEM_RARITY_LEGENDARY",
 	}
 	DaggerheartItemRarity_value = map[string]int32{
 		"DAGGERHEART_ITEM_RARITY_UNSPECIFIED": 0,
@@ -198,6 +200,7 @@ var (
 		"DAGGERHEART_ITEM_RARITY_UNCOMMON":    2,
 		"DAGGERHEART_ITEM_RARITY_RARE":        3,
 		"DAGGERHEART_ITEM_RARITY_UNIQUE":      4,
+		"DAGGERHEART_ITEM_RARITY_LEGENDARY":   5,
 	}
 )
 
@@ -6614,13 +6617,14 @@ const file_systems_daggerheart_v1_content_proto_rawDesc = "" +
 	"\x19DaggerheartWeaponCategory\x12+\n" +
 	"'DAGGERHEART_WEAPON_CATEGORY_UNSPECIFIED\x10\x00\x12'\n" +
 	"#DAGGERHEART_WEAPON_CATEGORY_PRIMARY\x10\x01\x12)\n" +
-	"%DAGGERHEART_WEAPON_CATEGORY_SECONDARY\x10\x02*\xd0\x01\n" +
+	"%DAGGERHEART_WEAPON_CATEGORY_SECONDARY\x10\x02*\xf7\x01\n" +
 	"\x15DaggerheartItemRarity\x12'\n" +
 	"#DAGGERHEART_ITEM_RARITY_UNSPECIFIED\x10\x00\x12\"\n" +
 	"\x1eDAGGERHEART_ITEM_RARITY_COMMON\x10\x01\x12$\n" +
 	" DAGGERHEART_ITEM_RARITY_UNCOMMON\x10\x02\x12 \n" +
 	"\x1cDAGGERHEART_ITEM_RARITY_RARE\x10\x03\x12\"\n" +
-	"\x1eDAGGERHEART_ITEM_RARITY_UNIQUE\x10\x04*\xab\x01\n" +
+	"\x1eDAGGERHEART_ITEM_RARITY_UNIQUE\x10\x04\x12%\n" +
+	"!DAGGERHEART_ITEM_RARITY_LEGENDARY\x10\x05*\xab\x01\n" +
 	"\x13DaggerheartItemKind\x12%\n" +
 	"!DAGGERHEART_ITEM_KIND_UNSPECIFIED\x10\x00\x12$\n" +
 	" DAGGERHEART_ITEM_KIND_CONSUMABLE\x10\x01\x12#\n" +

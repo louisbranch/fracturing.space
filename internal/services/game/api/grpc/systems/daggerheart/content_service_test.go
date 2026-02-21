@@ -600,6 +600,9 @@ func TestContentKindMappingsExtended(t *testing.T) {
 	if itemRarityToProto("unique") != pb.DaggerheartItemRarity_DAGGERHEART_ITEM_RARITY_UNIQUE {
 		t.Fatal("expected unique item rarity")
 	}
+	if itemRarityToProto("legendary") != pb.DaggerheartItemRarity_DAGGERHEART_ITEM_RARITY_LEGENDARY {
+		t.Fatal("expected legendary item rarity")
+	}
 	if itemRarityToProto("unknown") != pb.DaggerheartItemRarity_DAGGERHEART_ITEM_RARITY_UNSPECIFIED {
 		t.Fatal("expected unspecified item rarity")
 	}
