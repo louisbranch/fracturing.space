@@ -14,6 +14,7 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqlitemigrate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"

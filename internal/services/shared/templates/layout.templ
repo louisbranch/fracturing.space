@@ -50,10 +50,6 @@ templ pageHead(title string, loc Localizer) {
 }
 
 templ ShellLayout(title string, lang string, loc Localizer) {
-	@ShellLayoutWithLocalizer(title, lang, loc)
-}
-
-templ ShellLayoutWithLocalizer(title string, lang string, loc Localizer) {
 	<!DOCTYPE html>
 	<html lang={ lang } data-theme="retro">
 		<head>
@@ -66,65 +62,33 @@ templ ShellLayoutWithLocalizer(title string, lang string, loc Localizer) {
 	</html>
 }
 
-templ ChromeLayout(title string, lang string, loc Localizer) {
-	@AppChromeLayoutWithLocalizer(title, lang, branding.AppName, loc)
-}
-
-templ ChromeLayoutWithPath(title string, lang string, loc Localizer, currentPath string) {
-	@AppChromeLayoutWithLocalizerAndPath(title, lang, branding.AppName, loc, currentPath)
-}
-
-templ ChromeBreadcrumbs(currentPath string, loc Localizer) {
-	if len(BuildPathBreadcrumbsForWeb(currentPath, loc)) > 0 {
-		<div class="max-w-screen-xl mx-auto px-4 pb-2 pt-20">
-			@Breadcrumbs(BuildPathBreadcrumbsForWeb(currentPath, loc), false)
-		</div>
-	}
-}
-
-templ ChromeBreadcrumbsWithCampaignNames(currentPath string, loc Localizer, campaignNames map[string]string) {
-	if len(BuildPathBreadcrumbsForWebWithCampaignNames(currentPath, loc, campaignNames)) > 0 {
-		<div class="max-w-screen-xl mx-auto px-4 pb-2 pt-20">
-			@Breadcrumbs(BuildPathBreadcrumbsForWebWithCampaignNames(currentPath, loc, campaignNames), false)
-		</div>
-	}
-}
-
-templ AppChromeLayoutWithLocalizer(title string, lang string, appName string, loc Localizer) {
-	@AppChromeLayoutWithLocalizerAndPath(title, lang, appName, loc, "")
-}
-
-templ AppChromeLayoutWithLocalizerAndPath(title string, lang string, appName string, loc Localizer, currentPath string) {
-	@AppChromeLayoutWithLocalizerAndPathAndCampaignNames(title, lang, appName, loc, currentPath, nil)
-}
-
-templ AppChromeLayoutWithLocalizerAndPathAndCampaignNames(title string, lang string, appName string, loc Localizer, currentPath string, campaignNames map[string]string) {
+templ AppChromeLayout(title string, lang string, appName string, loc Localizer, breadcrumbs []BreadcrumbItem) {
 	<!DOCTYPE html>
 	<html lang={ lang } data-theme="retro">
 		<head>
 			@pageHead(title, loc)
 		</head>
 		<body data-layout="game">
-			@LucideSprite()
+				@LucideSprite()
 			<nav class="navbar bg-base-200 fixed top-0 w-full z-50">
 				<div class="navbar-start w-auto">
-					<h3 class="text-lg font-bold">
+					<h1 class="text-lg font-bold">
 						<a href="/">{ appName }</a>
-					</h3>
+					</h1>
 				</div>
 				<div class="navbar-end w-full justify-end gap-3">
 					<a href="/campaigns" class="btn btn-ghost btn-sm">{ T(loc, "game.campaigns.title") }</a>
-					<form method="POST" action="/auth/logout">
-						<button type="submit" class="btn btn-ghost btn-sm">{ T(loc, "layout.sign_out") }</button>
-					</form>
-				</div>
-			</nav>
-			@ChromeBreadcrumbsWithCampaignNames(currentPath, loc, campaignNames)
+				<form method="POST" action="/auth/logout">
+					<button type="submit" class="btn btn-ghost btn-sm">{ T(loc, "layout.sign_out") }</button>
+				</form>
+			</div>
+		</nav>
+		<main class="max-w-screen-xl mx-auto px-4 pt-24" id="main" aria-label={ T(loc, "game.aria_label") }>
+			if len(breadcrumbs) > 0 {
+				@Breadcrumbs(breadcrumbs, false)
+			}
 			{ children... }
-		</body>
+		</main>
+	</body>
 	</html>
-}
-
-templ AppChromeLayout(title string, lang string, appName string, loc Localizer) {
-	@AppChromeLayoutWithLocalizer(title, lang, appName, loc)
 }

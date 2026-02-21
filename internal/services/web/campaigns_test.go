@@ -361,7 +361,7 @@ func TestAppCampaignCreateGetUsesCreateCampaignTitle(t *testing.T) {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
 	}
 	body := w.Body.String()
-	if !strings.Contains(body, "<h1>Create Campaign</h1>") {
+	if !strings.Contains(body, "<h2>Create Campaign</h2>") {
 		t.Fatalf("expected create campaign heading in body")
 	}
 	if !strings.Contains(body, "<title>Create Campaign | "+branding.AppName+"</title>") {

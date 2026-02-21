@@ -20,11 +20,9 @@ templ DashboardLoading(loc Localizer) {
 
 // DashboardContent renders the main dashboard content.
 templ DashboardContent(stats DashboardStats, activities []ActivityEvent, loc Localizer) {
-	<div>
-		@DashboardStatsCards(stats, loc)
-		<h3>{T(loc, "dashboard.recent_activity")}</h3>
-		@RecentActivityFeed(activities, loc)
-	</div>
+  @DashboardStatsCards(stats, loc)
+  <h3>{T(loc, "dashboard.recent_activity")}</h3>
+  @RecentActivityFeed(activities, loc)
 }
 
 // DashboardStatsCards renders the stat cards grid using Tailwind grid.

@@ -4,20 +4,20 @@ import sharedtemplates "github.com/louisbranch/fracturing.space/internal/service
 
 // ShellLayout wraps auth/public pages in the shared HTML shell.
 templ ShellLayout(title string, lang string, loc Localizer) {
-	@ShellLayoutWithLocalizer(title, lang, loc) {
-		{ children... }
-	}
-}
-
-templ ShellLayoutWithLocalizer(title string, lang string, loc Localizer) {
-	@sharedtemplates.ShellLayoutWithLocalizer(title, lang, loc) {
+	@sharedtemplates.ShellLayout(title, lang, loc) {
 		{ children... }
 	}
 }
 
 // ChromeLayout wraps game pages in the shared HTML chrome.
-templ ChromeLayout(title string, lang string, appName string, loc Localizer, currentPath string, campaignName string) {
-	@sharedtemplates.AppChromeLayoutWithLocalizerAndPathAndCampaignNames(title, lang, appName, loc, currentPath, campaignNamesForPath(currentPath, campaignName)) {
-		{ children... }
+templ ChromeLayout(title string, lang string, appName string, loc Localizer, currentPath string, campaignName string, customBreadcrumbs ...sharedtemplates.BreadcrumbItem) {
+	if len(customBreadcrumbs) > 0 {
+		@sharedtemplates.AppChromeLayout(title, lang, appName, loc, customBreadcrumbs) {
+			{ children... }
+		}
+	} else {
+		@sharedtemplates.AppChromeLayout(title, lang, appName, loc, sharedtemplates.BuildPathBreadcrumbsForWebWithCampaignNames(currentPath, loc, campaignNamesForPath(currentPath, campaignName))) {
+			{ children... }
+		}
 	}
 }
