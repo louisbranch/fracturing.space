@@ -2,7 +2,7 @@ package templates
 
 // SystemsFullPage renders systems content in the base layout.
 templ SystemsFullPage(page PageContext) {
-	@Layout(T(page.Loc, "title.systems", AppName()), "Systems", page) {
+	@Layout(T(page.Loc, "title.systems", AppName()), "Systems", page.Loc, page) {
 		@SystemsPage(page.Loc)
 	}
 }
@@ -60,7 +60,7 @@ templ SystemsTable(rows []SystemRow, message string, loc Localizer) {
 
 // SystemDetailFullPage renders system detail content in the base layout.
 templ SystemDetailFullPage(detail SystemDetail, message string, page PageContext) {
-	@Layout(T(page.Loc, "title.system", AppName()), "Systems", page) {
+	@Layout(T(page.Loc, "title.system", AppName()), "Systems", page.Loc, page) {
 		@SystemDetailPage(detail, message, page.Loc)
 	}
 }

@@ -99,7 +99,7 @@ func TestLanguageURL(t *testing.T) {
 func TestActiveLanguageLabel(t *testing.T) {
 	t.Run("nil localizer uses fallback", func(t *testing.T) {
 		page := PageContext{Lang: "en-US"}
-		label := ActiveLanguageLabel(page)
+		label := ActiveLanguageLabel(page, nil)
 		// Should return something (either the key or localized label)
 		_ = label
 	})
@@ -109,7 +109,7 @@ func TestActiveLanguageLabel(t *testing.T) {
 			Lang: "en-US",
 			Loc:  langFakeLocalizer{},
 		}
-		label := ActiveLanguageLabel(page)
+		label := ActiveLanguageLabel(page, page.Loc)
 		if label == "" {
 			t.Error("expected non-empty label")
 		}
@@ -120,7 +120,7 @@ func TestActiveLanguageLabel(t *testing.T) {
 			Lang: "ja-JP",
 			Loc:  langFakeLocalizer{},
 		}
-		label := ActiveLanguageLabel(page)
+		label := ActiveLanguageLabel(page, page.Loc)
 		if label == "" {
 			t.Error("expected non-empty label from fallback")
 		}
@@ -132,7 +132,7 @@ func TestLanguageOptions(t *testing.T) {
 		Lang: "en-US",
 		Loc:  langFakeLocalizer{},
 	}
-	options := LanguageOptions(page)
+	options := LanguageOptions(page, page.Loc)
 	if len(options) == 0 {
 		t.Fatal("expected at least one option")
 	}

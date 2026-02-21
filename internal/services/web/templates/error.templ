@@ -3,11 +3,11 @@ package templates
 // ErrorPage renders a standard web error page using the shared layout shell.
 templ ErrorPage(page PageContext, title string, message string) {
 	if isGamePagePath(page.CurrentPath) {
-		@ChromeLayoutWithLocalizer(title+" | "+page.AppName, page.Lang, page.AppName, page.Loc) {
+		@ChromeLayout(title, page.Lang, page.AppName, page.Loc, page.CurrentPath, page.CampaignName) {
 			@errorPageContent(page, title, message)
 		}
 	} else {
-		@ShellLayoutWithLocalizer(title+" | "+page.AppName, page.Lang, page.Loc) {
+		@ShellLayoutWithLocalizer(title, page.Lang, page.Loc) {
 			@errorPageContent(page, title, message)
 		}
 	}

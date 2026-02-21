@@ -4,7 +4,7 @@ import "strconv"
 
 // SessionsListFullPage renders the sessions list in the base layout.
 templ SessionsListFullPage(campaignID string, campaignName string, page PageContext) {
-	@Layout(T(page.Loc, "title.sessions", AppName()), "Campaigns", page) {
+	@Layout(T(page.Loc, "title.sessions", AppName()), "Campaigns", page.Loc, page) {
 		@SessionsListPage(campaignID, campaignName, page.Loc)
 	}
 }
@@ -25,7 +25,7 @@ templ SessionsLoading(campaignID string, loc Localizer) {
 
 // SessionDetailFullPage renders the session detail in the base layout.
 templ SessionDetailFullPage(session SessionDetail, page PageContext) {
-	@Layout(T(page.Loc, "title.session", session.Name, AppName()), "Campaigns", page) {
+	@Layout(T(page.Loc, "title.session", session.Name, AppName()), "Campaigns", page.Loc, page) {
 		@SessionDetailPage(session, page.Loc)
 	}
 }

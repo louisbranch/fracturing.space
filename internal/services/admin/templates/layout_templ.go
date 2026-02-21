@@ -13,7 +13,7 @@ import (
 )
 
 // Layout wraps content in the base HTML shell with top navigation.
-func Layout(title string, activePage string, page PageContext) templ.Component {
+func Layout(title string, activePage string, loc Localizer, page PageContext) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -52,9 +52,9 @@ func Layout(title string, activePage string, page PageContext) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var3 string
-		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(title)
+		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(sharedtemplates.ComposePageTitle(title))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/layout.templ`, Line: 12, Col: 16}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/layout.templ`, Line: 12, Col: 50}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
@@ -68,7 +68,7 @@ func Layout(title string, activePage string, page PageContext) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = TopNav(activePage, page).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = TopNav(activePage, page, loc).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -80,7 +80,7 @@ func Layout(title string, activePage string, page PageContext) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</div><script>\n\t\t\t\t// Make table rows with links in first cell clickable\n\t\t\t\tfunction initClickableRows() {\n\t\t\t\t\tdocument.querySelectorAll('tbody tr').forEach(function(row) {\n\t\t\t\t\t\tvar link = row.querySelector('td:first-child a');\n\t\t\t\t\t\tif (link && !row.hasAttribute('data-href')) {\n\t\t\t\t\t\t\trow.setAttribute('data-href', link.getAttribute('href'));\n\t\t\t\t\t\t\trow.addEventListener('click', function(e) {\n\t\t\t\t\t\t\t\tif (e.target.tagName !== 'A') {\n\t\t\t\t\t\t\t\t\tlink.click();\n\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t});\n\t\t\t\t\t\t}\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t\tfunction updateLanguageLinks() {\n\t\t\t\t\tvar links = document.querySelectorAll('[data-lang]');\n\t\t\t\t\tif (!links.length) {\n\t\t\t\t\t\treturn;\n\t\t\t\t\t}\n\t\t\t\t\tvar current = new URL(window.location.href);\n\t\t\t\t\tlinks.forEach(function(link) {\n\t\t\t\t\t\tvar lang = link.getAttribute('data-lang');\n\t\t\t\t\t\tif (!lang) {\n\t\t\t\t\t\t\treturn;\n\t\t\t\t\t\t}\n\t\t\t\t\t\tvar next = new URL(current);\n\t\t\t\t\t\tnext.searchParams.set('lang', lang);\n\t\t\t\t\t\tlink.setAttribute('href', next.pathname + next.search + next.hash);\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t\tdocument.addEventListener('DOMContentLoaded', initClickableRows);\n\t\t\t\tdocument.addEventListener('DOMContentLoaded', updateLanguageLinks);\n\t\t\t\tdocument.addEventListener('htmx:afterSwap', initClickableRows);\n\t\t\t\tdocument.addEventListener('htmx:afterSwap', updateLanguageLinks);\n\t\t\t</script></body></html>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</div><script>\n\t\t\t// Make table rows with links in first cell clickable\n\t\t\tfunction initClickableRows() {\n\t\t\t\t\tdocument.querySelectorAll('tbody tr').forEach(function(row) {\n\t\t\t\t\t\tvar link = row.querySelector('td:first-child a');\n\t\t\t\t\t\tif (link && !row.hasAttribute('data-href')) {\n\t\t\t\t\t\t\trow.setAttribute('data-href', link.getAttribute('href'));\n\t\t\t\t\t\t\trow.addEventListener('click', function(e) {\n\t\t\t\t\t\t\t\tif (e.target.tagName !== 'A') {\n\t\t\t\t\t\t\t\t\tlink.click();\n\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t});\n\t\t\t\t\t\t}\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t\tfunction updateLanguageLinks() {\n\t\t\t\t\tvar links = document.querySelectorAll('[data-lang]');\n\t\t\t\t\tif (!links.length) {\n\t\t\t\t\t\treturn;\n\t\t\t\t\t}\n\t\t\t\t\tvar current = new URL(window.location.href);\n\t\t\t\t\tlinks.forEach(function(link) {\n\t\t\t\t\t\tvar lang = link.getAttribute('data-lang');\n\t\t\t\t\t\tif (!lang) {\n\t\t\t\t\t\t\treturn;\n\t\t\t\t\t\t}\n\t\t\t\t\t\tvar next = new URL(current);\n\t\t\t\t\t\tnext.searchParams.set('lang', lang);\n\t\t\t\t\t\tlink.setAttribute('href', next.pathname + next.search + next.hash);\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t\tdocument.addEventListener('DOMContentLoaded', initClickableRows);\n\t\t\t\tdocument.addEventListener('DOMContentLoaded', updateLanguageLinks);\n\t\t\t\tdocument.addEventListener('htmx:afterSwap', initClickableRows);\n\t\t\t\tdocument.addEventListener('htmx:afterSwap', updateLanguageLinks);\n\t\t</script></body></html>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

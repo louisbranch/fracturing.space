@@ -21,8 +21,8 @@ type campaignNameCache struct {
 // renderCampaignPage renders the shared campaign shell once access has been
 // verified by route-level auth and campaign membership checks.
 func (h *handler) renderCampaignPage(w http.ResponseWriter, r *http.Request, campaignID string) {
-	page := h.pageContext(w, r)
-	campaignName := h.campaignDisplayName(r.Context(), campaignID)
+	page := h.pageContextForCampaign(w, r, campaignID)
+	campaignName := page.CampaignName
 	if campaignName == "" {
 		campaignName = strings.TrimSpace(campaignID)
 	}

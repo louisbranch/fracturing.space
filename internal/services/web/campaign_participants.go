@@ -36,7 +36,7 @@ func (h *handler) handleAppCampaignParticipants(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	renderAppCampaignParticipantsPageWithContext(w, r, h.pageContext(w, r), campaignID, resp.GetParticipants(), canManageParticipants)
+	renderAppCampaignParticipantsPageWithContext(w, r, h.pageContextForCampaign(w, r, campaignID), campaignID, resp.GetParticipants(), canManageParticipants)
 }
 
 func (h *handler) handleAppCampaignParticipantUpdate(w http.ResponseWriter, r *http.Request, campaignID string) {

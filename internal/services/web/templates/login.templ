@@ -12,7 +12,7 @@ type LoginParams struct {
 
 // LoginPage renders the passkey sign-in / registration page.
 templ LoginPage(params LoginParams) {
-	@ShellLayout(T(params.Loc, "title.login", params.AppName), params.Lang) {
+	@ShellLayout(T(params.Loc, "title.login"), params.Lang, params.Loc) {
 		<main class="flex justify-center px-5 py-12">
 			<div class="w-full max-w-xl grid gap-8">
 				<header class="grid gap-3">

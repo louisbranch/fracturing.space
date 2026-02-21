@@ -126,10 +126,11 @@ func (h *handler) handleAppRoot(w http.ResponseWriter, r *http.Request) {
 			userLabel = webtemplates.T(page.Loc, "web.dashboard.user_name_fallback")
 		}
 		templ.Handler(webtemplates.DashboardPage(webtemplates.DashboardPageParams{
-			AppName:  appName,
-			Lang:     page.Lang,
-			UserName: userLabel,
-			Loc:      page.Loc,
+			AppName:     appName,
+			Lang:        page.Lang,
+			UserName:    userLabel,
+			CurrentPath: page.CurrentPath,
+			Loc:         page.Loc,
 		})).ServeHTTP(w, r)
 		return
 	}
@@ -688,6 +689,7 @@ func (h *handler) handleMagicLink(w http.ResponseWriter, r *http.Request) {
 			Title:   printer.Sprintf("magic.unavailable.title"),
 			Message: printer.Sprintf("magic.unavailable.message"),
 			Detail:  printer.Sprintf("magic.unavailable.detail"),
+			Loc:     printer,
 			Success: false,
 			Lang:    lang,
 		})
@@ -701,6 +703,7 @@ func (h *handler) handleMagicLink(w http.ResponseWriter, r *http.Request) {
 			Title:   printer.Sprintf("magic.missing.title"),
 			Message: printer.Sprintf("magic.missing.message"),
 			Detail:  printer.Sprintf("magic.missing.detail"),
+			Loc:     printer,
 			Success: false,
 			Lang:    lang,
 		})
@@ -714,6 +717,7 @@ func (h *handler) handleMagicLink(w http.ResponseWriter, r *http.Request) {
 			Title:   printer.Sprintf("magic.invalid.title"),
 			Message: printer.Sprintf("magic.invalid.message"),
 			Detail:  printer.Sprintf("magic.invalid.detail"),
+			Loc:     printer,
 			Success: false,
 			Lang:    lang,
 		})
@@ -730,6 +734,7 @@ func (h *handler) handleMagicLink(w http.ResponseWriter, r *http.Request) {
 		Title:     printer.Sprintf("magic.verified.title"),
 		Message:   printer.Sprintf("magic.verified.message"),
 		Detail:    printer.Sprintf("magic.verified.detail"),
+		Loc:       printer,
 		Success:   true,
 		LinkURL:   "/",
 		LinkLabel: printer.Sprintf("magic.verified.link"),

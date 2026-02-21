@@ -2,7 +2,7 @@ package templates
 
 // InvitesListFullPage renders the invites list in the base layout.
 templ InvitesListFullPage(campaignID string, campaignName string, page PageContext) {
-	@Layout(T(page.Loc, "title.invites", AppName()), "Campaigns", page) {
+	@Layout(T(page.Loc, "title.invites", AppName()), "Campaigns", page.Loc, page) {
 		@InvitesListPage(campaignID, campaignName, page.Loc)
 	}
 }

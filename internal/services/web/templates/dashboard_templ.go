@@ -12,10 +12,12 @@ import (
 
 // DashboardPageParams controls values used by the authenticated layout shell.
 type DashboardPageParams struct {
-	AppName  string
-	Lang     string
-	UserName string
-	Loc      Localizer
+	AppName      string
+	Lang         string
+	UserName     string
+	CurrentPath  string
+	CampaignName string
+	Loc          Localizer
 }
 
 // DashboardPage renders the logged-in shell with shared web layout and an empty main area.
@@ -59,7 +61,7 @@ func DashboardPage(params DashboardPageParams) templ.Component {
 			var templ_7745c5c3_Var3 string
 			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(T(params.Loc, "dashboard.title"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/dashboard.templ`, Line: 15, Col: 54}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/dashboard.templ`, Line: 17, Col: 54}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 			if templ_7745c5c3_Err != nil {
@@ -71,7 +73,7 @@ func DashboardPage(params DashboardPageParams) templ.Component {
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = ChromeLayoutWithLocalizer(T(params.Loc, "dashboard.title")+" - "+params.AppName, params.Lang, params.AppName, params.Loc).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = ChromeLayout(T(params.Loc, "dashboard.title"), params.Lang, params.AppName, params.Loc, params.CurrentPath, params.CampaignName).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

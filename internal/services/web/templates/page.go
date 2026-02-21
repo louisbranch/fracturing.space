@@ -1,6 +1,8 @@
 package templates
 
-import "strings"
+import (
+	"strings"
+)
 
 // PageContext provides shared layout context for pages.
 type PageContext struct {
@@ -8,6 +10,7 @@ type PageContext struct {
 	Loc          Localizer
 	CurrentPath  string
 	CurrentQuery string
+	CampaignName string
 	AppName      string
 }
 

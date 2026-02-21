@@ -7,7 +7,7 @@ import (
 
 // ScenariosFullPage renders the scenarios page in the base layout.
 templ ScenariosFullPage(view ScenarioPageView, page PageContext) {
-	@Layout(T(page.Loc, "title.scenarios", AppName()), "Scenarios", page) {
+	@Layout(T(page.Loc, "title.scenarios", AppName()), "Scenarios", page.Loc, page) {
 		@ScenariosPage(view, page.Loc)
 	}
 }
@@ -255,7 +255,7 @@ templ ScenarioTimelineIcon(iconID commonv1.IconId) {
 
 // ScenarioEventsFullPage renders scenario events in the base layout.
 templ ScenarioEventsFullPage(view ScenarioEventsView, page PageContext) {
-	@Layout(T(page.Loc, "title.scenarios", AppName()), "Scenarios", page) {
+	@Layout(T(page.Loc, "title.scenarios", AppName()), "Scenarios", page.Loc, page) {
 		@ScenarioEventsPage(view, page.Loc)
 	}
 }

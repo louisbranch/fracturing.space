@@ -13,7 +13,7 @@ templ CatalogFullPage(activeSection string, page PageContext) {
 
 // CatalogFullPageWithContent renders the catalog content with a custom panel.
 templ CatalogFullPageWithContent(activeSection string, content templ.Component, page PageContext) {
-	@Layout(T(page.Loc, "title.catalog", AppName()), "Catalog", page) {
+	@Layout(T(page.Loc, "title.catalog", AppName()), "Catalog", page.Loc, page) {
 		@CatalogPageWithContent(activeSection, content, page.Loc)
 	}
 }

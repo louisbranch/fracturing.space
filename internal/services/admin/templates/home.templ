@@ -2,7 +2,7 @@ package templates
 
 // Home renders the base landing page (redirects to dashboard).
 templ Home(page PageContext) {
-	@Layout(T(page.Loc, "title.home", AppName()), "Dashboard", page) {
+	@Layout(T(page.Loc, "title.home", AppName()), "Dashboard", page.Loc, page) {
 		@DashboardPage(page.Loc)
 	}
 }

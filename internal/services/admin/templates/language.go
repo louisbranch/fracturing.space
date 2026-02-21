@@ -17,13 +17,13 @@ type LanguageOption struct {
 }
 
 // LanguageOptions returns supported language options with active selection.
-func LanguageOptions(page PageContext) []LanguageOption {
+func LanguageOptions(page PageContext, loc Localizer) []LanguageOption {
 	options := make([]LanguageOption, 0, len(admini18n.Supported()))
 	activeTag := normalizeTag(page.Lang)
 	for _, tag := range admini18n.Supported() {
 		options = append(options, LanguageOption{
 			Tag:    tag.String(),
-			Label:  languageLabel(page.Loc, tag),
+			Label:  languageLabel(loc, tag),
 			Active: tag == activeTag,
 		})
 	}
@@ -31,13 +31,13 @@ func LanguageOptions(page PageContext) []LanguageOption {
 }
 
 // ActiveLanguageLabel returns the label for the active language selection.
-func ActiveLanguageLabel(page PageContext) string {
-	for _, option := range LanguageOptions(page) {
+func ActiveLanguageLabel(page PageContext, loc Localizer) string {
+	for _, option := range LanguageOptions(page, loc) {
 		if option.Active {
 			return option.Label
 		}
 	}
-	options := LanguageOptions(page)
+	options := LanguageOptions(page, loc)
 	if len(options) == 0 {
 		return ""
 	}

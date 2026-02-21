@@ -2,15 +2,17 @@ package templates
 
 // DashboardPageParams controls values used by the authenticated layout shell.
 type DashboardPageParams struct {
-	AppName  string
-	Lang     string
-	UserName string
-	Loc      Localizer
+	AppName      string
+	Lang         string
+	UserName     string
+	CurrentPath string
+	CampaignName string
+	Loc          Localizer
 }
 
 // DashboardPage renders the logged-in shell with shared web layout and an empty main area.
 templ DashboardPage(params DashboardPageParams) {
-	@ChromeLayoutWithLocalizer(T(params.Loc, "dashboard.title")+" - "+params.AppName, params.Lang, params.AppName, params.Loc) {
+	@ChromeLayout(T(params.Loc, "dashboard.title"), params.Lang, params.AppName, params.Loc, params.CurrentPath, params.CampaignName) {
 		<div class="max-w-screen-xl mx-auto px-4 pt-24" id="main">
 			<main aria-label={ T(params.Loc, "dashboard.title") } class="p-4"></main>
 		</div>

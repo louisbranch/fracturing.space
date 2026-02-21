@@ -36,7 +36,7 @@ func (h *handler) handleAppCampaignSessions(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	renderAppCampaignSessionsPage(w, r, h.pageContext(w, r), campaignID, resp.GetSessions(), canManageSessions)
+	renderAppCampaignSessionsPage(w, r, h.pageContextForCampaign(w, r, campaignID), campaignID, resp.GetSessions(), canManageSessions)
 }
 
 func (h *handler) handleAppCampaignSessionDetail(w http.ResponseWriter, r *http.Request, campaignID string, sessionID string) {
@@ -74,7 +74,7 @@ func (h *handler) handleAppCampaignSessionDetail(w http.ResponseWriter, r *http.
 		return
 	}
 
-	renderAppCampaignSessionDetailPage(w, r, h.pageContext(w, r), campaignID, resp.GetSession())
+	renderAppCampaignSessionDetailPage(w, r, h.pageContextForCampaign(w, r, campaignID), campaignID, resp.GetSession())
 }
 
 func (h *handler) handleAppCampaignSessionStart(w http.ResponseWriter, r *http.Request, campaignID string) {

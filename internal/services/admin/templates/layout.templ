@@ -3,13 +3,13 @@ package templates
 import sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
 
 // Layout wraps content in the base HTML shell with top navigation.
-templ Layout(title string, activePage string, page PageContext) {
+templ Layout(title string, activePage string, loc Localizer, page PageContext) {
 	<!DOCTYPE html>
 	<html lang={ page.Lang } data-theme="dim">
 		<head>
 			<meta charset="utf-8">
 			<meta name="viewport" content="width=device-width, initial-scale=1">
-			<title>{title}</title>
+			<title>{sharedtemplates.ComposePageTitle(title)}</title>
 			<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
 			<link href="https://cdn.jsdelivr.net/npm/daisyui@5.5.18" rel="stylesheet" type="text/css" integrity="sha384-ww1btmC3Ah3rEb6jt/coOxyQ9JYMoxQpFSB/bxdE20ZYMK4kWSb+TwcgbHR/GFCq" crossorigin="anonymous"/>
 			<link href="https://cdn.jsdelivr.net/npm/daisyui@5.5.18/theme/dim.css" rel="stylesheet" type="text/css" integrity="sha384-xpSgL8CP56CuCvJwgKtoJawFcAe9gqR7VZQ99ss8l/QMdVjBbIPvXnOZDOsJdTds" crossorigin="anonymous">
@@ -19,13 +19,13 @@ templ Layout(title string, activePage string, page PageContext) {
 		</head>
 		<body>
 			@sharedtemplates.LucideSprite()
-			@TopNav(activePage, page)
+			@TopNav(activePage, page, loc)
 			<div class="max-w-screen-xl mx-auto px-4 pt-24" id="main">
 				{ children... }
 			</div>
-			<script>
-				// Make table rows with links in first cell clickable
-				function initClickableRows() {
+		<script>
+			// Make table rows with links in first cell clickable
+			function initClickableRows() {
 					document.querySelectorAll('tbody tr').forEach(function(row) {
 						var link = row.querySelector('td:first-child a');
 						if (link && !row.hasAttribute('data-href')) {
@@ -58,7 +58,7 @@ templ Layout(title string, activePage string, page PageContext) {
 				document.addEventListener('DOMContentLoaded', updateLanguageLinks);
 				document.addEventListener('htmx:afterSwap', initClickableRows);
 				document.addEventListener('htmx:afterSwap', updateLanguageLinks);
-			</script>
-		</body>
-	</html>
+		</script>
+	</body>
+</html>
 }

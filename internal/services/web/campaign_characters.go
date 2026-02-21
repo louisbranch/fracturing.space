@@ -49,7 +49,7 @@ func (h *handler) handleAppCampaignCharacters(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	renderAppCampaignCharactersPage(w, r, h.pageContext(w, r), campaignID, resp.GetCharacters(), canManageCharacters, controlParticipants)
+	renderAppCampaignCharactersPage(w, r, h.pageContextForCampaign(w, r, campaignID), campaignID, resp.GetCharacters(), canManageCharacters, controlParticipants)
 }
 
 func (h *handler) handleAppCampaignCharacterDetail(w http.ResponseWriter, r *http.Request, campaignID string, characterID string) {
@@ -87,7 +87,7 @@ func (h *handler) handleAppCampaignCharacterDetail(w http.ResponseWriter, r *htt
 		return
 	}
 
-	renderAppCampaignCharacterDetailPage(w, r, h.pageContext(w, r), campaignID, resp.GetCharacter())
+	renderAppCampaignCharacterDetailPage(w, r, h.pageContextForCampaign(w, r, campaignID), campaignID, resp.GetCharacter())
 }
 
 func (h *handler) handleAppCampaignCharacterCreate(w http.ResponseWriter, r *http.Request, campaignID string) {
