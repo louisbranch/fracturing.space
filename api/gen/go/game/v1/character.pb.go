@@ -429,8 +429,10 @@ type UpdateCharacterRequest struct {
 	AvatarSetId *wrapperspb.StringValue `protobuf:"bytes,6,opt,name=avatar_set_id,json=avatarSetId,proto3" json:"avatar_set_id,omitempty"`
 	// Optional updated avatar asset identifier.
 	AvatarAssetId *wrapperspb.StringValue `protobuf:"bytes,7,opt,name=avatar_asset_id,json=avatarAssetId,proto3" json:"avatar_asset_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// Optional updated owner participant identifier (ownership transfer).
+	OwnerParticipantId *wrapperspb.StringValue `protobuf:"bytes,8,opt,name=owner_participant_id,json=ownerParticipantId,proto3" json:"owner_participant_id,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *UpdateCharacterRequest) Reset() {
@@ -508,6 +510,13 @@ func (x *UpdateCharacterRequest) GetAvatarSetId() *wrapperspb.StringValue {
 func (x *UpdateCharacterRequest) GetAvatarAssetId() *wrapperspb.StringValue {
 	if x != nil {
 		return x.AvatarAssetId
+	}
+	return nil
+}
+
+func (x *UpdateCharacterRequest) GetOwnerParticipantId() *wrapperspb.StringValue {
+	if x != nil {
+		return x.OwnerParticipantId
 	}
 	return nil
 }
@@ -1305,7 +1314,7 @@ var file_game_v1_character_proto_rawDesc = string([]byte{
 	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x30, 0x0a, 0x09, 0x63, 0x68, 0x61, 0x72, 0x61,
 	0x63, 0x74, 0x65, 0x72, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x12, 0x2e, 0x67, 0x61, 0x6d,
 	0x65, 0x2e, 0x76, 0x31, 0x2e, 0x43, 0x68, 0x61, 0x72, 0x61, 0x63, 0x74, 0x65, 0x72, 0x52, 0x09,
-	0x63, 0x68, 0x61, 0x72, 0x61, 0x63, 0x74, 0x65, 0x72, 0x22, 0xf6, 0x02, 0x0a, 0x16, 0x55, 0x70,
+	0x63, 0x68, 0x61, 0x72, 0x61, 0x63, 0x74, 0x65, 0x72, 0x22, 0xc6, 0x03, 0x0a, 0x16, 0x55, 0x70,
 	0x64, 0x61, 0x74, 0x65, 0x43, 0x68, 0x61, 0x72, 0x61, 0x63, 0x74, 0x65, 0x72, 0x52, 0x65, 0x71,
 	0x75, 0x65, 0x73, 0x74, 0x12, 0x1f, 0x0a, 0x0b, 0x63, 0x61, 0x6d, 0x70, 0x61, 0x69, 0x67, 0x6e,
 	0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0a, 0x63, 0x61, 0x6d, 0x70, 0x61,
@@ -1329,6 +1338,11 @@ var file_game_v1_character_proto_rawDesc = string([]byte{
 	0x07, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1c, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70,
 	0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x53, 0x74, 0x72, 0x69, 0x6e, 0x67, 0x56, 0x61,
 	0x6c, 0x75, 0x65, 0x52, 0x0d, 0x61, 0x76, 0x61, 0x74, 0x61, 0x72, 0x41, 0x73, 0x73, 0x65, 0x74,
+	0x49, 0x64, 0x12, 0x4e, 0x0a, 0x14, 0x6f, 0x77, 0x6e, 0x65, 0x72, 0x5f, 0x70, 0x61, 0x72, 0x74,
+	0x69, 0x63, 0x69, 0x70, 0x61, 0x6e, 0x74, 0x5f, 0x69, 0x64, 0x18, 0x08, 0x20, 0x01, 0x28, 0x0b,
+	0x32, 0x1c, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62,
+	0x75, 0x66, 0x2e, 0x53, 0x74, 0x72, 0x69, 0x6e, 0x67, 0x56, 0x61, 0x6c, 0x75, 0x65, 0x52, 0x12,
+	0x6f, 0x77, 0x6e, 0x65, 0x72, 0x50, 0x61, 0x72, 0x74, 0x69, 0x63, 0x69, 0x70, 0x61, 0x6e, 0x74,
 	0x49, 0x64, 0x22, 0x4b, 0x0a, 0x17, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x43, 0x68, 0x61, 0x72,
 	0x61, 0x63, 0x74, 0x65, 0x72, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x30, 0x0a,
 	0x09, 0x63, 0x68, 0x61, 0x72, 0x61, 0x63, 0x74, 0x65, 0x72, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b,
@@ -1532,36 +1546,37 @@ var file_game_v1_character_proto_depIdxs = []int32{
 	18, // 9: game.v1.UpdateCharacterRequest.notes:type_name -> google.protobuf.StringValue
 	18, // 10: game.v1.UpdateCharacterRequest.avatar_set_id:type_name -> google.protobuf.StringValue
 	18, // 11: game.v1.UpdateCharacterRequest.avatar_asset_id:type_name -> google.protobuf.StringValue
-	1,  // 12: game.v1.UpdateCharacterResponse.character:type_name -> game.v1.Character
-	1,  // 13: game.v1.DeleteCharacterResponse.character:type_name -> game.v1.Character
-	1,  // 14: game.v1.ListCharactersResponse.characters:type_name -> game.v1.Character
-	18, // 15: game.v1.SetDefaultControlRequest.participant_id:type_name -> google.protobuf.StringValue
-	18, // 16: game.v1.SetDefaultControlResponse.participant_id:type_name -> google.protobuf.StringValue
-	1,  // 17: game.v1.GetCharacterSheetResponse.character:type_name -> game.v1.Character
-	2,  // 18: game.v1.GetCharacterSheetResponse.profile:type_name -> game.v1.CharacterProfile
-	17, // 19: game.v1.GetCharacterSheetResponse.state:type_name -> game.v1.CharacterState
-	20, // 20: game.v1.PatchCharacterProfileRequest.daggerheart:type_name -> systems.daggerheart.v1.DaggerheartProfile
-	2,  // 21: game.v1.PatchCharacterProfileResponse.profile:type_name -> game.v1.CharacterProfile
-	21, // 22: game.v1.CharacterState.daggerheart:type_name -> systems.daggerheart.v1.DaggerheartCharacterState
-	3,  // 23: game.v1.CharacterService.CreateCharacter:input_type -> game.v1.CreateCharacterRequest
-	5,  // 24: game.v1.CharacterService.UpdateCharacter:input_type -> game.v1.UpdateCharacterRequest
-	7,  // 25: game.v1.CharacterService.DeleteCharacter:input_type -> game.v1.DeleteCharacterRequest
-	9,  // 26: game.v1.CharacterService.ListCharacters:input_type -> game.v1.ListCharactersRequest
-	11, // 27: game.v1.CharacterService.SetDefaultControl:input_type -> game.v1.SetDefaultControlRequest
-	13, // 28: game.v1.CharacterService.GetCharacterSheet:input_type -> game.v1.GetCharacterSheetRequest
-	15, // 29: game.v1.CharacterService.PatchCharacterProfile:input_type -> game.v1.PatchCharacterProfileRequest
-	4,  // 30: game.v1.CharacterService.CreateCharacter:output_type -> game.v1.CreateCharacterResponse
-	6,  // 31: game.v1.CharacterService.UpdateCharacter:output_type -> game.v1.UpdateCharacterResponse
-	8,  // 32: game.v1.CharacterService.DeleteCharacter:output_type -> game.v1.DeleteCharacterResponse
-	10, // 33: game.v1.CharacterService.ListCharacters:output_type -> game.v1.ListCharactersResponse
-	12, // 34: game.v1.CharacterService.SetDefaultControl:output_type -> game.v1.SetDefaultControlResponse
-	14, // 35: game.v1.CharacterService.GetCharacterSheet:output_type -> game.v1.GetCharacterSheetResponse
-	16, // 36: game.v1.CharacterService.PatchCharacterProfile:output_type -> game.v1.PatchCharacterProfileResponse
-	30, // [30:37] is the sub-list for method output_type
-	23, // [23:30] is the sub-list for method input_type
-	23, // [23:23] is the sub-list for extension type_name
-	23, // [23:23] is the sub-list for extension extendee
-	0,  // [0:23] is the sub-list for field type_name
+	18, // 12: game.v1.UpdateCharacterRequest.owner_participant_id:type_name -> google.protobuf.StringValue
+	1,  // 13: game.v1.UpdateCharacterResponse.character:type_name -> game.v1.Character
+	1,  // 14: game.v1.DeleteCharacterResponse.character:type_name -> game.v1.Character
+	1,  // 15: game.v1.ListCharactersResponse.characters:type_name -> game.v1.Character
+	18, // 16: game.v1.SetDefaultControlRequest.participant_id:type_name -> google.protobuf.StringValue
+	18, // 17: game.v1.SetDefaultControlResponse.participant_id:type_name -> google.protobuf.StringValue
+	1,  // 18: game.v1.GetCharacterSheetResponse.character:type_name -> game.v1.Character
+	2,  // 19: game.v1.GetCharacterSheetResponse.profile:type_name -> game.v1.CharacterProfile
+	17, // 20: game.v1.GetCharacterSheetResponse.state:type_name -> game.v1.CharacterState
+	20, // 21: game.v1.PatchCharacterProfileRequest.daggerheart:type_name -> systems.daggerheart.v1.DaggerheartProfile
+	2,  // 22: game.v1.PatchCharacterProfileResponse.profile:type_name -> game.v1.CharacterProfile
+	21, // 23: game.v1.CharacterState.daggerheart:type_name -> systems.daggerheart.v1.DaggerheartCharacterState
+	3,  // 24: game.v1.CharacterService.CreateCharacter:input_type -> game.v1.CreateCharacterRequest
+	5,  // 25: game.v1.CharacterService.UpdateCharacter:input_type -> game.v1.UpdateCharacterRequest
+	7,  // 26: game.v1.CharacterService.DeleteCharacter:input_type -> game.v1.DeleteCharacterRequest
+	9,  // 27: game.v1.CharacterService.ListCharacters:input_type -> game.v1.ListCharactersRequest
+	11, // 28: game.v1.CharacterService.SetDefaultControl:input_type -> game.v1.SetDefaultControlRequest
+	13, // 29: game.v1.CharacterService.GetCharacterSheet:input_type -> game.v1.GetCharacterSheetRequest
+	15, // 30: game.v1.CharacterService.PatchCharacterProfile:input_type -> game.v1.PatchCharacterProfileRequest
+	4,  // 31: game.v1.CharacterService.CreateCharacter:output_type -> game.v1.CreateCharacterResponse
+	6,  // 32: game.v1.CharacterService.UpdateCharacter:output_type -> game.v1.UpdateCharacterResponse
+	8,  // 33: game.v1.CharacterService.DeleteCharacter:output_type -> game.v1.DeleteCharacterResponse
+	10, // 34: game.v1.CharacterService.ListCharacters:output_type -> game.v1.ListCharactersResponse
+	12, // 35: game.v1.CharacterService.SetDefaultControl:output_type -> game.v1.SetDefaultControlResponse
+	14, // 36: game.v1.CharacterService.GetCharacterSheet:output_type -> game.v1.GetCharacterSheetResponse
+	16, // 37: game.v1.CharacterService.PatchCharacterProfile:output_type -> game.v1.PatchCharacterProfileResponse
+	31, // [31:38] is the sub-list for method output_type
+	24, // [24:31] is the sub-list for method input_type
+	24, // [24:24] is the sub-list for extension type_name
+	24, // [24:24] is the sub-list for extension extendee
+	0,  // [0:24] is the sub-list for field type_name
 }
 
 func init() { file_game_v1_character_proto_init() }

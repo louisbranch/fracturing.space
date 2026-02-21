@@ -69,11 +69,8 @@ func (s *CampaignService) CreateCampaign(ctx context.Context, in *campaignv1.Cre
 }
 
 // ListCampaigns returns a page of campaign metadata records.
-// The web path needs a participant-scoped view quickly, so we filter by caller
-// membership before sending a response and keep policy/intent checks explicit in
-// later security work that is shared with MCP and future clients.
-// The current behavior prefers caller participant_id when present and falls back to
-// user_id for backward compatibility.
+// Admin override requests are allowed to enumerate campaigns without participant scope.
+// Non-admin calls remain participant/user scoped and only return member campaigns.
 func (s *CampaignService) ListCampaigns(ctx context.Context, in *campaignv1.ListCampaignsRequest) (*campaignv1.ListCampaignsResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "list campaigns request is required")
@@ -84,32 +81,45 @@ func (s *CampaignService) ListCampaigns(ctx context.Context, in *campaignv1.List
 		Max:     maxListCampaignsPageSize,
 	})
 
-	// TODO: Apply access policy/intent gates for campaign listing.
-	// Without this, user-scoped filtering should not be interpreted as a full
-	// authorization decision for all clients and request contexts.
-	// This is intentionally a membership-first filter until role/intent policy
-	// evaluation is completed at a common boundary.
 	participantID := strings.TrimSpace(grpcmeta.ParticipantIDFromContext(ctx))
 	userID := strings.TrimSpace(grpcmeta.UserIDFromContext(ctx))
+	overrideReason, overrideRequested := adminOverrideFromContext(ctx)
 
-	campaignRecords := make([]storage.CampaignRecord, 0, pageSize)
-	nextPageToken := ""
-	var err error
-	if participantID != "" && s.stores.Participant == nil {
-		return nil, status.Error(codes.Internal, "participant store is not configured")
-	}
-	if participantID == "" && userID != "" && s.stores.Participant == nil {
-		return nil, status.Error(codes.Internal, "participant store is not configured")
-	}
-
-	if participantID == "" && userID == "" {
+	if overrideRequested {
+		if overrideReason == "" {
+			err := status.Error(codes.PermissionDenied, "admin override reason is required")
+			emitAuthzDecisionTelemetry(ctx, s.stores.Telemetry, "", policyActionReadCampaign, authzDecisionDeny, authzReasonDenyOverrideReasonRequired, storage.ParticipantRecord{}, err, nil)
+			return nil, err
+		}
+		emitAuthzDecisionTelemetry(ctx, s.stores.Telemetry, "", policyActionReadCampaign, authzDecisionAllow, authzReasonAllowAdminOverride, storage.ParticipantRecord{}, nil, nil)
 		page, err := s.stores.Campaign.List(ctx, pageSize, in.GetPageToken())
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "list campaigns: %v", err)
 		}
-		campaignRecords = page.Campaigns
-		nextPageToken = page.NextPageToken
-	} else if participantID != "" {
+		response := &campaignv1.ListCampaignsResponse{NextPageToken: page.NextPageToken}
+		if len(page.Campaigns) == 0 {
+			return response, nil
+		}
+		response.Campaigns = make([]*campaignv1.Campaign, 0, len(page.Campaigns))
+		for _, c := range page.Campaigns {
+			response.Campaigns = append(response.Campaigns, campaignToProto(c))
+		}
+		return response, nil
+	}
+
+	if participantID == "" && userID == "" {
+		err := status.Error(codes.PermissionDenied, "missing participant identity")
+		emitAuthzDecisionTelemetry(ctx, s.stores.Telemetry, "", policyActionReadCampaign, authzDecisionDeny, authzReasonDenyMissingIdentity, storage.ParticipantRecord{}, err, nil)
+		return nil, err
+	}
+	if s.stores.Participant == nil {
+		return nil, status.Error(codes.Internal, "participant store is not configured")
+	}
+
+	campaignRecords := make([]storage.CampaignRecord, 0, pageSize)
+	nextPageToken := ""
+	var err error
+	if participantID != "" {
 		campaignRecords, nextPageToken, err = s.listCampaignsForParticipant(ctx, participantID, pageSize, in.GetPageToken())
 	} else {
 		campaignRecords, nextPageToken, err = s.listCampaignsForUser(ctx, userID, pageSize, in.GetPageToken())
@@ -139,50 +149,7 @@ func (s *CampaignService) listCampaignsForUser(ctx context.Context, userID strin
 	if err != nil {
 		return nil, "", status.Errorf(codes.Internal, "list campaign IDs by user: %v", err)
 	}
-	if len(campaignIDs) == 0 {
-		return nil, "", nil
-	}
-
-	start := 0
-	if pageToken != "" {
-		for idx, campaignID := range campaignIDs {
-			if strings.TrimSpace(campaignID) == pageToken {
-				start = idx + 1
-				break
-			}
-		}
-	}
-	if start < 0 || start >= len(campaignIDs) {
-		start = 0
-	}
-
-	end := start + pageSize
-	if end > len(campaignIDs) {
-		end = len(campaignIDs)
-	}
-
-	campaignRecords := make([]storage.CampaignRecord, 0, end-start)
-	for _, campaignID := range campaignIDs[start:end] {
-		campaignID = strings.TrimSpace(campaignID)
-		if campaignID == "" {
-			continue
-		}
-		record, err := s.stores.Campaign.Get(ctx, campaignID)
-		if err != nil {
-			if errors.Is(err, storage.ErrNotFound) {
-				continue
-			}
-			return nil, "", status.Errorf(codes.Internal, "get campaign: %v", err)
-		}
-		campaignRecords = append(campaignRecords, record)
-	}
-
-	nextPageToken := ""
-	if end < len(campaignIDs) && end > 0 {
-		nextPageToken = campaignIDs[end-1]
-	}
-
-	return campaignRecords, nextPageToken, nil
+	return s.listCampaignsByIDs(ctx, campaignIDs, pageSize, pageToken)
 }
 
 func (s *CampaignService) listCampaignsForParticipant(ctx context.Context, participantID string, pageSize int, pageToken string) ([]storage.CampaignRecord, string, error) {
@@ -191,6 +158,12 @@ func (s *CampaignService) listCampaignsForParticipant(ctx context.Context, parti
 	if err != nil {
 		return nil, "", status.Errorf(codes.Internal, "list campaign IDs by participant: %v", err)
 	}
+	return s.listCampaignsByIDs(ctx, campaignIDs, pageSize, pageToken)
+}
+
+// listCampaignsByIDs paginates a pre-resolved list of campaign IDs and fetches
+// the corresponding records, skipping any that have been deleted.
+func (s *CampaignService) listCampaignsByIDs(ctx context.Context, campaignIDs []string, pageSize int, pageToken string) ([]storage.CampaignRecord, string, error) {
 	if len(campaignIDs) == 0 {
 		return nil, "", nil
 	}
@@ -238,11 +211,8 @@ func (s *CampaignService) listCampaignsForParticipant(ctx context.Context, parti
 }
 
 // GetCampaign returns a campaign metadata record by ID.
-// The domain layer enforces lifecycle validity, while broader policy/intent checks
-// are deferred to dedicated access gates so one read model can serve all transport
-// surfaces (gRPC, MCP, and web).
-// Lifecycle validation is enforced at domain level now; broader access-policy checks
-// (gating by intent/role) are intentionally still pending.
+// Lifecycle validation and read-policy checks are enforced so one read model
+// can serve all transport surfaces (gRPC, MCP, and web).
 func (s *CampaignService) GetCampaign(ctx context.Context, in *campaignv1.GetCampaignRequest) (*campaignv1.GetCampaignResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "get campaign request is required")
@@ -257,13 +227,11 @@ func (s *CampaignService) GetCampaign(ctx context.Context, in *campaignv1.GetCam
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
-	// TODO: Apply access policy/intent gates for campaign read.
-	// Until policy checks are wired in, clients can retrieve campaign metadata
-	// after record fetch and domain-state validation only.
-	// Treat this endpoint as a domain-integrity boundary, not a full authorization
-	// boundary, until policy checks are centralized.
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpRead); err != nil {
 		return nil, handleDomainError(err)
+	}
+	if err := requireReadPolicy(ctx, s.stores, c); err != nil {
+		return nil, err
 	}
 
 	return &campaignv1.GetCampaignResponse{

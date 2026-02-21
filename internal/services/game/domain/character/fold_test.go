@@ -10,7 +10,7 @@ func TestFoldCharacterCreatedSetsFields(t *testing.T) {
 	state := State{}
 	updated, err := Fold(state, event.Event{
 		Type:        event.Type("character.created"),
-		PayloadJSON: []byte(`{"character_id":"char-1","name":"Aria","kind":"pc","notes":"notes"}`),
+		PayloadJSON: []byte(`{"character_id":"char-1","owner_participant_id":"p-owner","name":"Aria","kind":"pc","notes":"notes"}`),
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -29,6 +29,9 @@ func TestFoldCharacterCreatedSetsFields(t *testing.T) {
 	}
 	if updated.Notes != "notes" {
 		t.Fatalf("notes = %s, want %s", updated.Notes, "notes")
+	}
+	if updated.OwnerParticipantID != "p-owner" {
+		t.Fatalf("owner participant id = %s, want %s", updated.OwnerParticipantID, "p-owner")
 	}
 }
 
@@ -52,6 +55,20 @@ func TestFoldCharacterUpdatedSetsFields(t *testing.T) {
 	}
 	if updated.ParticipantID != "p-1" {
 		t.Fatalf("participant id = %s, want %s", updated.ParticipantID, "p-1")
+	}
+}
+
+func TestFoldCharacterUpdatedSetsOwnerParticipantID(t *testing.T) {
+	state := State{Created: true, CharacterID: "char-1", OwnerParticipantID: "p-1"}
+	updated, err := Fold(state, event.Event{
+		Type:        event.Type("character.updated"),
+		PayloadJSON: []byte(`{"character_id":"char-1","fields":{"owner_participant_id":"p-2"}}`),
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if updated.OwnerParticipantID != "p-2" {
+		t.Fatalf("owner participant id = %s, want %s", updated.OwnerParticipantID, "p-2")
 	}
 }
 

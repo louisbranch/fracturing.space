@@ -22,10 +22,13 @@ type fakeCampaignClient struct {
 	getErr      error
 	endResp     *statev1.EndCampaignResponse
 	endErr      error
+	endCtx      context.Context
 	archiveResp *statev1.ArchiveCampaignResponse
 	archiveErr  error
+	archiveCtx  context.Context
 	restoreResp *statev1.RestoreCampaignResponse
 	restoreErr  error
+	restoreCtx  context.Context
 }
 
 func (f *fakeCampaignClient) CreateCampaign(_ context.Context, _ *statev1.CreateCampaignRequest, _ ...grpc.CallOption) (*statev1.CreateCampaignResponse, error) {
@@ -40,15 +43,18 @@ func (f *fakeCampaignClient) GetCampaign(_ context.Context, _ *statev1.GetCampai
 	return f.getResp, f.getErr
 }
 
-func (f *fakeCampaignClient) EndCampaign(_ context.Context, _ *statev1.EndCampaignRequest, _ ...grpc.CallOption) (*statev1.EndCampaignResponse, error) {
+func (f *fakeCampaignClient) EndCampaign(ctx context.Context, _ *statev1.EndCampaignRequest, _ ...grpc.CallOption) (*statev1.EndCampaignResponse, error) {
+	f.endCtx = ctx
 	return f.endResp, f.endErr
 }
 
-func (f *fakeCampaignClient) ArchiveCampaign(_ context.Context, _ *statev1.ArchiveCampaignRequest, _ ...grpc.CallOption) (*statev1.ArchiveCampaignResponse, error) {
+func (f *fakeCampaignClient) ArchiveCampaign(ctx context.Context, _ *statev1.ArchiveCampaignRequest, _ ...grpc.CallOption) (*statev1.ArchiveCampaignResponse, error) {
+	f.archiveCtx = ctx
 	return f.archiveResp, f.archiveErr
 }
 
-func (f *fakeCampaignClient) RestoreCampaign(_ context.Context, _ *statev1.RestoreCampaignRequest, _ ...grpc.CallOption) (*statev1.RestoreCampaignResponse, error) {
+func (f *fakeCampaignClient) RestoreCampaign(ctx context.Context, _ *statev1.RestoreCampaignRequest, _ ...grpc.CallOption) (*statev1.RestoreCampaignResponse, error) {
+	f.restoreCtx = ctx
 	return f.restoreResp, f.restoreErr
 }
 
@@ -58,15 +64,18 @@ type fakeSessionClient struct {
 
 	startResp *statev1.StartSessionResponse
 	startErr  error
+	startCtx  context.Context
 	listResp  *statev1.ListSessionsResponse
 	listErr   error
 	getResp   *statev1.GetSessionResponse
 	getErr    error
 	endResp   *statev1.EndSessionResponse
 	endErr    error
+	endCtx    context.Context
 }
 
-func (f *fakeSessionClient) StartSession(_ context.Context, _ *statev1.StartSessionRequest, _ ...grpc.CallOption) (*statev1.StartSessionResponse, error) {
+func (f *fakeSessionClient) StartSession(ctx context.Context, _ *statev1.StartSessionRequest, _ ...grpc.CallOption) (*statev1.StartSessionResponse, error) {
+	f.startCtx = ctx
 	return f.startResp, f.startErr
 }
 
@@ -78,7 +87,8 @@ func (f *fakeSessionClient) GetSession(_ context.Context, _ *statev1.GetSessionR
 	return f.getResp, f.getErr
 }
 
-func (f *fakeSessionClient) EndSession(_ context.Context, _ *statev1.EndSessionRequest, _ ...grpc.CallOption) (*statev1.EndSessionResponse, error) {
+func (f *fakeSessionClient) EndSession(ctx context.Context, _ *statev1.EndSessionRequest, _ ...grpc.CallOption) (*statev1.EndSessionResponse, error) {
+	f.endCtx = ctx
 	return f.endResp, f.endErr
 }
 
@@ -124,29 +134,37 @@ type fakeCharacterClient struct {
 
 	createResp  *statev1.CreateCharacterResponse
 	createErr   error
+	createCtx   context.Context
 	updateResp  *statev1.UpdateCharacterResponse
 	updateErr   error
+	updateCtx   context.Context
 	deleteResp  *statev1.DeleteCharacterResponse
 	deleteErr   error
+	deleteCtx   context.Context
 	listResp    *statev1.ListCharactersResponse
 	listErr     error
 	controlResp *statev1.SetDefaultControlResponse
 	controlErr  error
+	controlCtx  context.Context
 	sheetResp   *statev1.GetCharacterSheetResponse
 	sheetErr    error
 	profileResp *statev1.PatchCharacterProfileResponse
 	profileErr  error
+	profileCtx  context.Context
 }
 
-func (f *fakeCharacterClient) CreateCharacter(_ context.Context, _ *statev1.CreateCharacterRequest, _ ...grpc.CallOption) (*statev1.CreateCharacterResponse, error) {
+func (f *fakeCharacterClient) CreateCharacter(ctx context.Context, _ *statev1.CreateCharacterRequest, _ ...grpc.CallOption) (*statev1.CreateCharacterResponse, error) {
+	f.createCtx = ctx
 	return f.createResp, f.createErr
 }
 
-func (f *fakeCharacterClient) UpdateCharacter(_ context.Context, _ *statev1.UpdateCharacterRequest, _ ...grpc.CallOption) (*statev1.UpdateCharacterResponse, error) {
+func (f *fakeCharacterClient) UpdateCharacter(ctx context.Context, _ *statev1.UpdateCharacterRequest, _ ...grpc.CallOption) (*statev1.UpdateCharacterResponse, error) {
+	f.updateCtx = ctx
 	return f.updateResp, f.updateErr
 }
 
-func (f *fakeCharacterClient) DeleteCharacter(_ context.Context, _ *statev1.DeleteCharacterRequest, _ ...grpc.CallOption) (*statev1.DeleteCharacterResponse, error) {
+func (f *fakeCharacterClient) DeleteCharacter(ctx context.Context, _ *statev1.DeleteCharacterRequest, _ ...grpc.CallOption) (*statev1.DeleteCharacterResponse, error) {
+	f.deleteCtx = ctx
 	return f.deleteResp, f.deleteErr
 }
 
@@ -154,7 +172,8 @@ func (f *fakeCharacterClient) ListCharacters(_ context.Context, _ *statev1.ListC
 	return f.listResp, f.listErr
 }
 
-func (f *fakeCharacterClient) SetDefaultControl(_ context.Context, _ *statev1.SetDefaultControlRequest, _ ...grpc.CallOption) (*statev1.SetDefaultControlResponse, error) {
+func (f *fakeCharacterClient) SetDefaultControl(ctx context.Context, _ *statev1.SetDefaultControlRequest, _ ...grpc.CallOption) (*statev1.SetDefaultControlResponse, error) {
+	f.controlCtx = ctx
 	return f.controlResp, f.controlErr
 }
 
@@ -162,7 +181,8 @@ func (f *fakeCharacterClient) GetCharacterSheet(_ context.Context, _ *statev1.Ge
 	return f.sheetResp, f.sheetErr
 }
 
-func (f *fakeCharacterClient) PatchCharacterProfile(_ context.Context, _ *statev1.PatchCharacterProfileRequest, _ ...grpc.CallOption) (*statev1.PatchCharacterProfileResponse, error) {
+func (f *fakeCharacterClient) PatchCharacterProfile(ctx context.Context, _ *statev1.PatchCharacterProfileRequest, _ ...grpc.CallOption) (*statev1.PatchCharacterProfileResponse, error) {
+	f.profileCtx = ctx
 	return f.profileResp, f.profileErr
 }
 

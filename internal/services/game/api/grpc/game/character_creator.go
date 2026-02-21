@@ -37,7 +37,7 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 	if err != nil {
 		return storage.CharacterRecord{}, err
 	}
-	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpRead); err != nil {
+	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return storage.CharacterRecord{}, err
 	}
 
@@ -50,13 +50,20 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 		return storage.CharacterRecord{}, apperrors.New(apperrors.CodeCharacterInvalidKind, "character kind is required")
 	}
 	notes := strings.TrimSpace(in.GetNotes())
+	policyActor, err := requirePolicyActor(ctx, c.stores, policyActionManageCharacters, campaignRecord)
+	if err != nil {
+		return storage.CharacterRecord{}, err
+	}
 
 	characterID, err := c.idGenerator()
 	if err != nil {
 		return storage.CharacterRecord{}, status.Errorf(codes.Internal, "generate character id: %v", err)
 	}
 
-	actorID := grpcmeta.ParticipantIDFromContext(ctx)
+	actorID := strings.TrimSpace(grpcmeta.ParticipantIDFromContext(ctx))
+	if actorID == "" {
+		actorID = strings.TrimSpace(policyActor.ID)
+	}
 	avatarSetID := strings.TrimSpace(in.GetAvatarSetId())
 	avatarAssetID := strings.TrimSpace(in.GetAvatarAssetId())
 	if actorID != "" && avatarSetID == "" && avatarAssetID == "" && c.stores.Participant != nil {
@@ -72,12 +79,13 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 		return storage.CharacterRecord{}, status.Error(codes.Internal, "domain engine is not configured")
 	}
 	payload := character.CreatePayload{
-		CharacterID:   characterID,
-		Name:          name,
-		Kind:          in.GetKind().String(),
-		Notes:         notes,
-		AvatarSetID:   avatarSetID,
-		AvatarAssetID: avatarAssetID,
+		CharacterID:        characterID,
+		OwnerParticipantID: strings.TrimSpace(policyActor.ID),
+		Name:               name,
+		Kind:               in.GetKind().String(),
+		Notes:              notes,
+		AvatarSetID:        avatarSetID,
+		AvatarAssetID:      avatarAssetID,
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -289,11 +297,48 @@ func (c characterApplication) UpdateCharacter(ctx context.Context, campaignID st
 		ch.AvatarAssetID = trimmed
 		fields["avatar_asset_id"] = trimmed
 	}
+	transferOwnershipRequested := false
+	if ownerParticipantID := in.GetOwnerParticipantId(); ownerParticipantID != nil {
+		trimmed := strings.TrimSpace(ownerParticipantID.GetValue())
+		if trimmed == "" {
+			return storage.CharacterRecord{}, status.Error(codes.InvalidArgument, "owner_participant_id must not be empty")
+		}
+		if c.stores.Participant == nil {
+			return storage.CharacterRecord{}, status.Error(codes.Internal, "participant store is not configured")
+		}
+		if _, err := c.stores.Participant.GetParticipant(ctx, campaignID, trimmed); err != nil {
+			return storage.CharacterRecord{}, err
+		}
+		fields["owner_participant_id"] = trimmed
+		transferOwnershipRequested = true
+	}
 	if len(fields) == 0 {
 		return storage.CharacterRecord{}, status.Error(codes.InvalidArgument, "at least one field must be provided")
 	}
 
-	actorID := grpcmeta.ParticipantIDFromContext(ctx)
+	var policyActor storage.ParticipantRecord
+	if transferOwnershipRequested {
+		policyActor, err = requirePolicyActor(ctx, c.stores, policyActionManageCampaign, campaignRecord)
+		if err != nil {
+			return storage.CharacterRecord{}, err
+		}
+	} else {
+		policyActor, err = requireCharacterMutationPolicy(
+			ctx,
+			c.stores,
+			campaignRecord,
+			characterID,
+			"",
+		)
+		if err != nil {
+			return storage.CharacterRecord{}, err
+		}
+	}
+
+	actorID := strings.TrimSpace(grpcmeta.ParticipantIDFromContext(ctx))
+	if actorID == "" {
+		actorID = strings.TrimSpace(policyActor.ID)
+	}
 	applier := c.stores.Applier()
 	if c.stores.Domain == nil {
 		return storage.CharacterRecord{}, status.Error(codes.Internal, "domain engine is not configured")
@@ -366,8 +411,21 @@ func (c characterApplication) DeleteCharacter(ctx context.Context, campaignID st
 	if err != nil {
 		return storage.CharacterRecord{}, err
 	}
+	policyActor, err := requireCharacterMutationPolicy(
+		ctx,
+		c.stores,
+		campaignRecord,
+		characterID,
+		"",
+	)
+	if err != nil {
+		return storage.CharacterRecord{}, err
+	}
 
-	actorID := grpcmeta.ParticipantIDFromContext(ctx)
+	actorID := strings.TrimSpace(grpcmeta.ParticipantIDFromContext(ctx))
+	if actorID == "" {
+		actorID = strings.TrimSpace(policyActor.ID)
+	}
 	reason := strings.TrimSpace(in.GetReason())
 	applier := c.stores.Applier()
 	if c.stores.Domain == nil {
@@ -413,7 +471,8 @@ func (c characterApplication) DeleteCharacter(ctx context.Context, campaignID st
 }
 
 func (c characterApplication) SetDefaultControl(ctx context.Context, campaignID string, in *campaignv1.SetDefaultControlRequest) (string, string, error) {
-	if _, err := c.stores.Campaign.Get(ctx, campaignID); err != nil {
+	campaignRecord, err := c.stores.Campaign.Get(ctx, campaignID)
+	if err != nil {
 		return "", "", err
 	}
 
@@ -437,8 +496,10 @@ func (c characterApplication) SetDefaultControl(ctx context.Context, campaignID 
 			return "", "", err
 		}
 	}
+	if err := requirePolicy(ctx, c.stores, policyActionManageParticipants, campaignRecord); err != nil {
+		return "", "", err
+	}
 
-	actorID := grpcmeta.ParticipantIDFromContext(ctx)
 	applier := c.stores.Applier()
 	if c.stores.Domain == nil {
 		return "", "", status.Error(codes.Internal, "domain engine is not configured")
@@ -454,10 +515,7 @@ func (c characterApplication) SetDefaultControl(ctx context.Context, campaignID 
 		return "", "", status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
 
-	actorType := command.ActorTypeSystem
-	if actorID != "" {
-		actorType = command.ActorTypeParticipant
-	}
+	actorID, actorType := resolveCommandActor(ctx)
 	_, err = executeAndApplyDomainCommand(
 		ctx,
 		c.stores.Domain,
@@ -488,6 +546,14 @@ func (c characterApplication) PatchCharacterProfile(ctx context.Context, campaig
 	characterID := strings.TrimSpace(in.GetCharacterId())
 	if characterID == "" {
 		return "", storage.DaggerheartCharacterProfile{}, status.Error(codes.InvalidArgument, "character id is required")
+	}
+
+	campaignRecord, err := c.stores.Campaign.Get(ctx, campaignID)
+	if err != nil {
+		return "", storage.DaggerheartCharacterProfile{}, err
+	}
+	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
+		return "", storage.DaggerheartCharacterProfile{}, err
 	}
 
 	dhProfile, err := c.stores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
@@ -705,7 +771,20 @@ func (c characterApplication) PatchCharacterProfile(ctx context.Context, campaig
 			"experiences":      experiencesPayload,
 		},
 	}
-	actorID := grpcmeta.ParticipantIDFromContext(ctx)
+	policyActor, err := requireCharacterMutationPolicy(
+		ctx,
+		c.stores,
+		campaignRecord,
+		characterID,
+		"",
+	)
+	if err != nil {
+		return "", storage.DaggerheartCharacterProfile{}, err
+	}
+	actorID := strings.TrimSpace(grpcmeta.ParticipantIDFromContext(ctx))
+	if actorID == "" {
+		actorID = strings.TrimSpace(policyActor.ID)
+	}
 	applier := c.stores.Applier()
 	if c.stores.Domain == nil {
 		return "", storage.DaggerheartCharacterProfile{}, status.Error(codes.Internal, "domain engine is not configured")

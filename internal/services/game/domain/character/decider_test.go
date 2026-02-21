@@ -64,6 +64,34 @@ func TestDecideCharacterCreate_EmitsCharacterCreatedEvent(t *testing.T) {
 	}
 }
 
+func TestDecideCharacterCreate_NormalizesOwnerParticipantID(t *testing.T) {
+	now := time.Date(2026, 2, 20, 0, 0, 0, 0, time.UTC)
+	cmd := command.Command{
+		CampaignID: "camp-1",
+		Type:       command.Type("character.create"),
+		ActorType:  command.ActorTypeParticipant,
+		PayloadJSON: []byte(
+			`{"character_id":"char-1","owner_participant_id":"  part-1  ","name":"Aria","kind":"PC"}`,
+		),
+	}
+
+	decision := Decide(State{}, cmd, func() time.Time { return now })
+	if len(decision.Rejections) != 0 {
+		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
+	}
+	if len(decision.Events) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(decision.Events))
+	}
+
+	var payload CreatePayload
+	if err := json.Unmarshal(decision.Events[0].PayloadJSON, &payload); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+	if payload.OwnerParticipantID != "part-1" {
+		t.Fatalf("owner participant id = %q, want %q", payload.OwnerParticipantID, "part-1")
+	}
+}
+
 func TestDecideCharacterCreate_MissingCharacterIDRejected(t *testing.T) {
 	cmd := command.Command{
 		CampaignID:  "camp-1",
@@ -190,6 +218,52 @@ func TestDecideCharacterUpdate_EmitsCharacterUpdatedEvent(t *testing.T) {
 	}
 	if payload.Fields["participant_id"] != "p-1" {
 		t.Fatalf("payload participant id = %s, want %s", payload.Fields["participant_id"], "p-1")
+	}
+}
+
+func TestDecideCharacterUpdate_NormalizesOwnerParticipantID(t *testing.T) {
+	now := time.Date(2026, 2, 20, 0, 0, 0, 0, time.UTC)
+	cmd := command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("character.update"),
+		ActorType:   command.ActorTypeParticipant,
+		PayloadJSON: []byte(`{"character_id":"char-1","fields":{"owner_participant_id":"  part-2  "}}`),
+	}
+
+	decision := Decide(State{Created: true, OwnerParticipantID: "part-1"}, cmd, func() time.Time { return now })
+	if len(decision.Rejections) != 0 {
+		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
+	}
+	if len(decision.Events) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(decision.Events))
+	}
+
+	var payload UpdatePayload
+	if err := json.Unmarshal(decision.Events[0].PayloadJSON, &payload); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+	if payload.Fields["owner_participant_id"] != "part-2" {
+		t.Fatalf("owner participant id = %q, want %q", payload.Fields["owner_participant_id"], "part-2")
+	}
+}
+
+func TestDecideCharacterUpdate_EmptyOwnerParticipantIDRejected(t *testing.T) {
+	cmd := command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("character.update"),
+		ActorType:   command.ActorTypeParticipant,
+		PayloadJSON: []byte(`{"character_id":"char-1","fields":{"owner_participant_id":"  "}}`),
+	}
+
+	decision := Decide(State{Created: true, OwnerParticipantID: "part-1"}, cmd, nil)
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != rejectionCodeCharacterOwnerParticipantID {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeCharacterOwnerParticipantID)
 	}
 }
 

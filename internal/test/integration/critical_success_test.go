@@ -57,8 +57,8 @@ func TestDaggerheartActionRollCriticalEffects(t *testing.T) {
 	}
 	campaignID := createCampaign.GetCampaign().GetId()
 
-	characterID := createCharacter(t, ctx, characterClient, campaignID, "Critical Hero")
-	patchDaggerheartProfile(t, ctx, characterClient, campaignID, characterID)
+	characterID := createCharacter(t, ctxWithUser, characterClient, campaignID, "Critical Hero")
+	patchDaggerheartProfile(t, ctxWithUser, characterClient, campaignID, characterID)
 
 	_, err = snapshotClient.PatchCharacterState(ctx, &gamev1.PatchCharacterStateRequest{
 		CampaignId:  campaignID,
@@ -75,7 +75,7 @@ func TestDaggerheartActionRollCriticalEffects(t *testing.T) {
 		t.Fatalf("patch character state: %v", err)
 	}
 
-	startSession, err := sessionClient.StartSession(ctx, &gamev1.StartSessionRequest{
+	startSession, err := sessionClient.StartSession(ctxWithUser, &gamev1.StartSessionRequest{
 		CampaignId: campaignID,
 		Name:       "Critical Session",
 	})
@@ -170,13 +170,13 @@ func TestDaggerheartAttackFlowCriticalDamageBonus(t *testing.T) {
 	}
 	campaignID := createCampaign.GetCampaign().GetId()
 
-	attacker := createCharacter(t, ctx, characterClient, campaignID, "Critical Attacker")
-	target := createCharacter(t, ctx, characterClient, campaignID, "Critical Target")
+	attacker := createCharacter(t, ctxWithUser, characterClient, campaignID, "Critical Attacker")
+	target := createCharacter(t, ctxWithUser, characterClient, campaignID, "Critical Target")
 
-	patchDaggerheartProfile(t, ctx, characterClient, campaignID, attacker)
-	patchDaggerheartProfile(t, ctx, characterClient, campaignID, target)
+	patchDaggerheartProfile(t, ctxWithUser, characterClient, campaignID, attacker)
+	patchDaggerheartProfile(t, ctxWithUser, characterClient, campaignID, target)
 
-	startSession, err := sessionClient.StartSession(ctx, &gamev1.StartSessionRequest{
+	startSession, err := sessionClient.StartSession(ctxWithUser, &gamev1.StartSessionRequest{
 		CampaignId: campaignID,
 		Name:       "Critical Attack Session",
 	})

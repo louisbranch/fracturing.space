@@ -68,9 +68,9 @@ func TestSessionSpotlightLifecycle(t *testing.T) {
 	}
 	campaignID := createCampaign.GetCampaign().GetId()
 
-	characterID := createCharacter(t, ctx, characterClient, campaignID, "Spotlight Hero")
+	characterID := createCharacter(t, ctxWithUser, characterClient, campaignID, "Spotlight Hero")
 
-	startSession, err := sessionClient.StartSession(ctx, &gamev1.StartSessionRequest{
+	startSession, err := sessionClient.StartSession(ctxWithUser, &gamev1.StartSessionRequest{
 		CampaignId: campaignID,
 		Name:       "Spotlight Session",
 	})
@@ -82,7 +82,7 @@ func TestSessionSpotlightLifecycle(t *testing.T) {
 	}
 	sessionID := startSession.GetSession().GetId()
 
-	setResp, err := sessionClient.SetSessionSpotlight(ctx, &gamev1.SetSessionSpotlightRequest{
+	setResp, err := sessionClient.SetSessionSpotlight(ctxWithUser, &gamev1.SetSessionSpotlightRequest{
 		CampaignId:  campaignID,
 		SessionId:   sessionID,
 		Type:        gamev1.SessionSpotlightType_SESSION_SPOTLIGHT_TYPE_CHARACTER,
@@ -98,7 +98,7 @@ func TestSessionSpotlightLifecycle(t *testing.T) {
 		t.Fatalf("spotlight character id = %q, want %q", setResp.GetSpotlight().GetCharacterId(), characterID)
 	}
 
-	getResp, err := sessionClient.GetSessionSpotlight(ctx, &gamev1.GetSessionSpotlightRequest{
+	getResp, err := sessionClient.GetSessionSpotlight(ctxWithUser, &gamev1.GetSessionSpotlightRequest{
 		CampaignId: campaignID,
 		SessionId:  sessionID,
 	})
@@ -112,7 +112,7 @@ func TestSessionSpotlightLifecycle(t *testing.T) {
 		t.Fatalf("spotlight character id = %q, want %q", getResp.GetSpotlight().GetCharacterId(), characterID)
 	}
 
-	_, err = sessionClient.ClearSessionSpotlight(ctx, &gamev1.ClearSessionSpotlightRequest{
+	_, err = sessionClient.ClearSessionSpotlight(ctxWithUser, &gamev1.ClearSessionSpotlightRequest{
 		CampaignId: campaignID,
 		SessionId:  sessionID,
 		Reason:     "scene shift",
@@ -121,7 +121,7 @@ func TestSessionSpotlightLifecycle(t *testing.T) {
 		t.Fatalf("clear spotlight: %v", err)
 	}
 
-	_, err = sessionClient.GetSessionSpotlight(ctx, &gamev1.GetSessionSpotlightRequest{
+	_, err = sessionClient.GetSessionSpotlight(ctxWithUser, &gamev1.GetSessionSpotlightRequest{
 		CampaignId: campaignID,
 		SessionId:  sessionID,
 	})
@@ -178,10 +178,10 @@ func TestGmConsequenceOpensGateAndSpotlight(t *testing.T) {
 	}
 	campaignID := createCampaign.GetCampaign().GetId()
 
-	characterID := createCharacter(t, ctx, characterClient, campaignID, "Consequence Hero")
-	patchDaggerheartProfile(t, ctx, characterClient, campaignID, characterID)
+	characterID := createCharacter(t, ctxWithUser, characterClient, campaignID, "Consequence Hero")
+	patchDaggerheartProfile(t, ctxWithUser, characterClient, campaignID, characterID)
 
-	startSession, err := sessionClient.StartSession(ctx, &gamev1.StartSessionRequest{
+	startSession, err := sessionClient.StartSession(ctxWithUser, &gamev1.StartSessionRequest{
 		CampaignId: campaignID,
 		Name:       "Consequence Session",
 	})

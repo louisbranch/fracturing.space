@@ -9,7 +9,7 @@ import (
 )
 
 func TestNewOutgoingContext(t *testing.T) {
-	t.Run("attaches request ID", func(t *testing.T) {
+	t.Run("attaches request ID without admin override", func(t *testing.T) {
 		ctx, meta, err := NewOutgoingContext(context.Background(), "")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -24,6 +24,13 @@ func TestNewOutgoingContext(t *testing.T) {
 		}
 		if got := md.Get(grpcmeta.RequestIDHeader); len(got) == 0 || got[0] != meta.RequestID {
 			t.Errorf("expected request ID %q in metadata, got %v", meta.RequestID, got)
+		}
+		// Admin override is handled by connection-level interceptors, not per-call.
+		if got := md.Get(grpcmeta.PlatformRoleHeader); len(got) != 0 {
+			t.Errorf("expected no platform role in per-call metadata, got %v", got)
+		}
+		if got := md.Get(grpcmeta.AuthzOverrideReasonHeader); len(got) != 0 {
+			t.Errorf("expected no override reason in per-call metadata, got %v", got)
 		}
 	})
 

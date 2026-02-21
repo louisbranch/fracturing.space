@@ -98,12 +98,12 @@ func TestAppCampaignInvitesPageParticipantRendersInvites(t *testing.T) {
 	if inviteClient.listInvitesReq.GetCampaignId() != "camp-123" {
 		t.Fatalf("campaign_id = %q, want %q", inviteClient.listInvitesReq.GetCampaignId(), "camp-123")
 	}
-	participantIDs := inviteClient.listInvitesMD.Get(grpcmeta.ParticipantIDHeader)
-	if len(participantIDs) != 1 || participantIDs[0] != "part-owner" {
-		t.Fatalf("metadata %s = %v, want [part-owner]", grpcmeta.ParticipantIDHeader, participantIDs)
+	userIDs := inviteClient.listInvitesMD.Get(grpcmeta.UserIDHeader)
+	if len(userIDs) != 1 || userIDs[0] != "user-123" {
+		t.Fatalf("metadata %s = %v, want [user-123]", grpcmeta.UserIDHeader, userIDs)
 	}
-	if len(participantClient.calls) != 1 {
-		t.Fatalf("list participants calls = %d, want %d", len(participantClient.calls), 1)
+	if len(participantClient.calls) != 0 {
+		t.Fatalf("list participants calls = %d, want %d", len(participantClient.calls), 0)
 	}
 	body := w.Body.String()
 	if !strings.Contains(body, "inv-1") {
@@ -364,11 +364,7 @@ func TestAppCampaignInvitesPageMemberCannotManageInvites(t *testing.T) {
 		},
 	}
 	inviteClient := &fakeWebInviteClient{
-		listInvitesResp: &statev1.ListInvitesResponse{
-			Invites: []*statev1.Invite{
-				{Id: "inv-1", CampaignId: "camp-123", RecipientUserId: "user-999"},
-			},
-		},
+		listInvitesErr: status.Error(codes.PermissionDenied, "not allowed"),
 	}
 	h := &handler{
 		config: Config{
@@ -396,12 +392,12 @@ func TestAppCampaignInvitesPageMemberCannotManageInvites(t *testing.T) {
 	if w.Code != http.StatusForbidden {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusForbidden)
 	}
-	if inviteClient.listInvitesReq != nil {
-		t.Fatalf("expected ListInvites not to be called for member")
+	if inviteClient.listInvitesReq == nil {
+		t.Fatalf("expected ListInvites to be called for member")
 	}
 }
 
-func TestAppCampaignInvitesPageIgnoresNilParticipantsInLookup(t *testing.T) {
+func TestAppCampaignInvitesPageDoesNotRequireParticipantLookup(t *testing.T) {
 	authServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/introspect" {
 			t.Fatalf("path = %q, want %q", r.URL.Path, "/introspect")
@@ -464,6 +460,9 @@ func TestAppCampaignInvitesPageIgnoresNilParticipantsInLookup(t *testing.T) {
 	}
 	if inviteClient.listInvitesReq == nil {
 		t.Fatalf("expected ListInvites request to be captured")
+	}
+	if len(participantClient.calls) != 0 {
+		t.Fatalf("list participants calls = %d, want %d", len(participantClient.calls), 0)
 	}
 }
 

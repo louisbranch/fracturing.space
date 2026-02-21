@@ -28,6 +28,7 @@ const (
 	rejectionCodeCharacterNotCreated         = "CHARACTER_NOT_CREATED"
 	rejectionCodeCharacterUpdateEmpty        = "CHARACTER_UPDATE_EMPTY"
 	rejectionCodeCharacterUpdateFieldInvalid = "CHARACTER_UPDATE_FIELD_INVALID"
+	rejectionCodeCharacterOwnerParticipantID = "CHARACTER_OWNER_PARTICIPANT_ID_REQUIRED"
 )
 
 // Decide returns the decision for a character command against current state.
@@ -66,6 +67,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			})
 		}
 		notes := strings.TrimSpace(payload.Notes)
+		ownerParticipantID := strings.TrimSpace(payload.OwnerParticipantID)
 		avatarSetID, avatarAssetID, err := resolveCharacterAvatarSelection(
 			characterID,
 			payload.AvatarSetID,
@@ -79,12 +81,13 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		}
 
 		normalizedPayload := CreatePayload{
-			CharacterID:   characterID,
-			Name:          name,
-			Kind:          kind,
-			Notes:         notes,
-			AvatarSetID:   avatarSetID,
-			AvatarAssetID: avatarAssetID,
+			CharacterID:        characterID,
+			OwnerParticipantID: ownerParticipantID,
+			Name:               name,
+			Kind:               kind,
+			Notes:              notes,
+			AvatarSetID:        avatarSetID,
+			AvatarAssetID:      avatarAssetID,
 		}
 		payloadJSON, _ := json.Marshal(normalizedPayload)
 		evt := command.NewEvent(cmd, EventTypeCreated, "character", characterID, payloadJSON, now().UTC())
@@ -141,6 +144,15 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 				normalizedFields[key] = strings.TrimSpace(value)
 			case "participant_id":
 				normalizedFields[key] = strings.TrimSpace(value)
+			case "owner_participant_id":
+				trimmed := strings.TrimSpace(value)
+				if trimmed == "" {
+					return command.Reject(command.Rejection{
+						Code:    rejectionCodeCharacterOwnerParticipantID,
+						Message: "owner participant id is required",
+					})
+				}
+				normalizedFields[key] = trimmed
 			case "avatar_set_id":
 			case "avatar_asset_id":
 			default:

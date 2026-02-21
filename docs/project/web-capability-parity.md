@@ -80,9 +80,11 @@ Current game APIs have mixed scoping enforcement:
 - `ListCampaigns` is user-scoped when `x-fracturing-space-user-id` is present.
 - `ListPendingInvitesForUser` and `ClaimInvite` require `x-fracturing-space-user-id`.
 - Invite management APIs (`ListInvites`, `CreateInvite`, `RevokeInvite`) require `x-fracturing-space-participant-id` with manager/owner access.
+- Campaign/session/participant/invite/character write mutations are now server-authorized in game service by centralized policy helpers (including owner-aware character mutation rules).
+- Write-path authorization decisions are emitted as telemetry (`telemetry.authz.decision`) for allow/deny auditing.
 - Most campaign read APIs (`GetCampaign`, `ListSessions`, `ListParticipants`, `ListCharacters`) are not yet consistently user-scoped by metadata and still rely on caller-side route guards.
 
-Until read-side authorization is fully centralized in game service, web must keep campaign membership checks at the web route layer.
+Until read-side authorization is fully centralized in game service, web must keep campaign membership checks at the web route layer for campaign reads.
 
 ## Proposed Web Information Architecture
 

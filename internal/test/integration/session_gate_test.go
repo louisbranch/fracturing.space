@@ -57,10 +57,10 @@ func TestSessionGateBlocksDaggerheartActions(t *testing.T) {
 	}
 	campaignID := createCampaign.GetCampaign().GetId()
 
-	characterID := createCharacter(t, ctx, characterClient, campaignID, "Gate Hero")
-	patchDaggerheartProfile(t, ctx, characterClient, campaignID, characterID)
+	characterID := createCharacter(t, ctxWithUser, characterClient, campaignID, "Gate Hero")
+	patchDaggerheartProfile(t, ctxWithUser, characterClient, campaignID, characterID)
 
-	startSession, err := sessionClient.StartSession(ctx, &gamev1.StartSessionRequest{
+	startSession, err := sessionClient.StartSession(ctxWithUser, &gamev1.StartSessionRequest{
 		CampaignId: campaignID,
 		Name:       "Gate Session",
 	})
@@ -74,7 +74,7 @@ func TestSessionGateBlocksDaggerheartActions(t *testing.T) {
 	sessionCtx := withSessionID(ctx, sessionID)
 
 	gateID := "gate-block-1"
-	openResp, err := sessionClient.OpenSessionGate(ctx, &gamev1.OpenSessionGateRequest{
+	openResp, err := sessionClient.OpenSessionGate(ctxWithUser, &gamev1.OpenSessionGateRequest{
 		CampaignId: campaignID,
 		SessionId:  sessionID,
 		GateType:   "spotlight",
@@ -108,7 +108,7 @@ func TestSessionGateBlocksDaggerheartActions(t *testing.T) {
 		t.Fatalf("expected gate id in error, got %q", st.Message())
 	}
 
-	_, err = sessionClient.ResolveSessionGate(ctx, &gamev1.ResolveSessionGateRequest{
+	_, err = sessionClient.ResolveSessionGate(ctxWithUser, &gamev1.ResolveSessionGateRequest{
 		CampaignId: campaignID,
 		SessionId:  sessionID,
 		GateId:     gateID,

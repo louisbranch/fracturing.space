@@ -29,6 +29,8 @@ type fakeWebCampaignClient struct {
 	getCalls            int
 	listMetadata        metadata.MD
 	listMetadataByCall  []metadata.MD
+	getReq              *statev1.GetCampaignRequest
+	getMetadata         metadata.MD
 	listResponsesByCall []*statev1.ListCampaignsResponse
 	getResponse         *statev1.GetCampaignResponse
 	getError            error
@@ -135,8 +137,11 @@ func (f *fakeWebCampaignClient) CreateCampaign(ctx context.Context, req *statev1
 	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
-func (f *fakeWebCampaignClient) GetCampaign(_ context.Context, _ *statev1.GetCampaignRequest, _ ...grpc.CallOption) (*statev1.GetCampaignResponse, error) {
+func (f *fakeWebCampaignClient) GetCampaign(ctx context.Context, req *statev1.GetCampaignRequest, _ ...grpc.CallOption) (*statev1.GetCampaignResponse, error) {
 	f.getCalls++
+	md, _ := metadata.FromOutgoingContext(ctx)
+	f.getMetadata = md
+	f.getReq = req
 	if f == nil {
 		return nil, status.Error(codes.Unimplemented, "not implemented")
 	}

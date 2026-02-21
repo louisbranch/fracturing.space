@@ -127,7 +127,7 @@ func (a snapshotApplication) PatchCharacterState(ctx context.Context, campaignID
 			lifeState = daggerheart.LifeStateAlive
 		}
 
-		actorID := grpcmeta.ParticipantIDFromContext(ctx)
+		actorID := strings.TrimSpace(grpcmeta.ParticipantIDFromContext(ctx))
 		actorType := event.ActorTypeSystem
 		if actorID != "" {
 			actorType = event.ActorTypeGM
@@ -328,7 +328,7 @@ func (a snapshotApplication) UpdateSnapshotState(ctx context.Context, campaignID
 			return existingSnap, nil
 		}
 
-		actorID := grpcmeta.ParticipantIDFromContext(ctx)
+		actorID := strings.TrimSpace(grpcmeta.ParticipantIDFromContext(ctx))
 		applier := a.stores.Applier()
 		requestID := grpcmeta.RequestIDFromContext(ctx)
 		invocationID := grpcmeta.InvocationIDFromContext(ctx)

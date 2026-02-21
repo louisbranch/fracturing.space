@@ -21,7 +21,9 @@ type State struct {
 	AvatarSetID string
 	// AvatarAssetID identifies the avatar image within AvatarSetID.
 	AvatarAssetID string
-	// ParticipantID links ownership/ownership intent.
+	// OwnerParticipantID is the governance owner participant for mutation authority.
+	OwnerParticipantID string
+	// ParticipantID stores controller assignment for operational gameplay control.
 	ParticipantID string
 	// SystemProfile carries system-specific structured data for mechanics systems.
 	SystemProfile map[string]any

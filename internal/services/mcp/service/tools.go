@@ -32,17 +32,17 @@ func registerCampaignTools(
 	mcp.AddTool(mcpServer, domain.ParticipantCreateTool(), domain.ParticipantCreateHandler(participantClient, getContext, notify))
 	mcp.AddTool(mcpServer, domain.ParticipantUpdateTool(), domain.ParticipantUpdateHandler(participantClient, getContext, notify))
 	mcp.AddTool(mcpServer, domain.ParticipantDeleteTool(), domain.ParticipantDeleteHandler(participantClient, getContext, notify))
-	mcp.AddTool(mcpServer, domain.CharacterCreateTool(), domain.CharacterCreateHandler(characterClient, notify))
-	mcp.AddTool(mcpServer, domain.CharacterUpdateTool(), domain.CharacterUpdateHandler(characterClient, notify))
-	mcp.AddTool(mcpServer, domain.CharacterDeleteTool(), domain.CharacterDeleteHandler(characterClient, notify))
-	mcp.AddTool(mcpServer, domain.CharacterControlSetTool(), domain.CharacterControlSetHandler(characterClient, notify))
+	mcp.AddTool(mcpServer, domain.CharacterCreateTool(), domain.CharacterCreateHandler(characterClient, getContext, notify))
+	mcp.AddTool(mcpServer, domain.CharacterUpdateTool(), domain.CharacterUpdateHandler(characterClient, getContext, notify))
+	mcp.AddTool(mcpServer, domain.CharacterDeleteTool(), domain.CharacterDeleteHandler(characterClient, getContext, notify))
+	mcp.AddTool(mcpServer, domain.CharacterControlSetTool(), domain.CharacterControlSetHandler(characterClient, getContext, notify))
 	mcp.AddTool(mcpServer, domain.CharacterSheetGetTool(), domain.CharacterSheetGetHandler(characterClient, getContext))
 	mcp.AddTool(mcpServer, domain.CharacterProfilePatchTool(), domain.CharacterProfilePatchHandler(characterClient, getContext, notify))
 	mcp.AddTool(mcpServer, domain.CharacterStatePatchTool(), domain.CharacterStatePatchHandler(snapshotClient, getContext, notify))
 }
 
 func registerSessionTools(mcpServer *mcp.Server, client statev1.SessionServiceClient, getContext func() domain.Context, notify domain.ResourceUpdateNotifier) {
-	mcp.AddTool(mcpServer, domain.SessionStartTool(), domain.SessionStartHandler(client, notify))
+	mcp.AddTool(mcpServer, domain.SessionStartTool(), domain.SessionStartHandler(client, getContext, notify))
 	mcp.AddTool(mcpServer, domain.SessionEndTool(), domain.SessionEndHandler(client, getContext, notify))
 }
 

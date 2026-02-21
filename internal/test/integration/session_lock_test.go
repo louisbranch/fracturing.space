@@ -50,7 +50,7 @@ func runSessionLockTests(t *testing.T, grpcAddr string, authAddr string) {
 	if createResp == nil || createResp.Campaign == nil || createResp.Campaign.Id == "" {
 		t.Fatal("expected campaign response")
 	}
-	participantsResp, err := participantClient.ListParticipants(ctx, &statev1.ListParticipantsRequest{
+	participantsResp, err := participantClient.ListParticipants(ctxWithUser, &statev1.ListParticipantsRequest{
 		CampaignId: createResp.Campaign.Id,
 	})
 	if err != nil {
@@ -61,7 +61,7 @@ func runSessionLockTests(t *testing.T, grpcAddr string, authAddr string) {
 	}
 	ownerID := participantsResp.Participants[0].Id
 	participantCtx := metadata.NewOutgoingContext(ctx, metadata.Pairs(grpcmeta.ParticipantIDHeader, ownerID))
-	startResp, err := sessionClient.StartSession(ctx, &statev1.StartSessionRequest{
+	startResp, err := sessionClient.StartSession(participantCtx, &statev1.StartSessionRequest{
 		CampaignId: createResp.Campaign.Id,
 		Name:       "Session 1",
 	})
@@ -95,7 +95,7 @@ func runSessionLockTests(t *testing.T, grpcAddr string, authAddr string) {
 		t.Fatalf("expected active session id in message, got %q", st.Message())
 	}
 
-	endResp, err := sessionClient.EndSession(ctx, &statev1.EndSessionRequest{
+	endResp, err := sessionClient.EndSession(participantCtx, &statev1.EndSessionRequest{
 		CampaignId: createResp.Campaign.Id,
 		SessionId:  startResp.Session.Id,
 	})
@@ -123,7 +123,7 @@ func runSessionLockTests(t *testing.T, grpcAddr string, authAddr string) {
 	if createParticipantResp == nil || createParticipantResp.Participant == nil || createParticipantResp.Participant.Id == "" {
 		t.Fatal("expected participant response after end session")
 	}
-	_, err = participantClient.ListParticipants(ctx, &statev1.ListParticipantsRequest{
+	_, err = participantClient.ListParticipants(ctxWithUser, &statev1.ListParticipantsRequest{
 		CampaignId: createResp.Campaign.Id,
 	})
 	if err != nil {

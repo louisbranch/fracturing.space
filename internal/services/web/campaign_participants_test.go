@@ -88,8 +88,8 @@ func TestAppCampaignParticipantsPageParticipantRendersParticipants(t *testing.T)
 	if w.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
 	}
-	if len(participantClient.calls) != 2 {
-		t.Fatalf("ListParticipants calls = %d, want 2", len(participantClient.calls))
+	if len(participantClient.calls) != 1 {
+		t.Fatalf("ListParticipants calls = %d, want 1", len(participantClient.calls))
 	}
 	if participantClient.calls[0].GetCampaignId() != "camp-123" {
 		t.Fatalf("campaign_id = %q, want %q", participantClient.calls[0].GetCampaignId(), "camp-123")
@@ -100,6 +100,67 @@ func TestAppCampaignParticipantsPageParticipantRendersParticipants(t *testing.T)
 	}
 	if !strings.Contains(body, "Bob") {
 		t.Fatalf("expected Bob in response body")
+	}
+}
+
+func TestAppCampaignParticipantsPagePropagatesUserMetadataToParticipantReads(t *testing.T) {
+	authServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/introspect" {
+			t.Fatalf("path = %q, want %q", r.URL.Path, "/introspect")
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(introspectResponse{Active: true, UserID: "user-123"})
+	}))
+	t.Cleanup(authServer.Close)
+	participantClient := &fakeWebParticipantClient{
+		pages: map[string]*statev1.ListParticipantsResponse{
+			"": {
+				Participants: []*statev1.Participant{
+					{
+						Id:             "part-1",
+						CampaignId:     "camp-123",
+						UserId:         "user-123",
+						Name:           "Alice",
+						CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_MEMBER,
+					},
+					{Id: "part-2", CampaignId: "camp-123", UserId: "user-456", Name: "Bob"},
+				},
+			},
+		},
+	}
+	h := &handler{
+		config: Config{
+			AuthBaseURL:         authServer.URL,
+			OAuthResourceSecret: "secret-1",
+		},
+		sessions:          newSessionStore(),
+		pendingFlows:      newPendingFlowStore(),
+		participantClient: participantClient,
+		campaignAccess: &campaignAccessService{
+			authBaseURL:         authServer.URL,
+			oauthResourceSecret: "secret-1",
+			httpClient:          authServer.Client(),
+			participantClient:   participantClient,
+		},
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/participants", nil)
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+
+	h.handleAppCampaignDetail(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	if len(participantClient.listMDByCall) == 0 {
+		t.Fatalf("expected participant list metadata to be captured")
+	}
+	for i, md := range participantClient.listMDByCall {
+		userIDs := md.Get(grpcmeta.UserIDHeader)
+		if len(userIDs) != 1 || userIDs[0] != "user-123" {
+			t.Fatalf("call %d metadata %s = %v, want [user-123]", i+1, grpcmeta.UserIDHeader, userIDs)
+		}
 	}
 }
 
@@ -169,8 +230,8 @@ func TestAppCampaignParticipantsPageCachesCampaignParticipants(t *testing.T) {
 		t.Fatalf("expected campaign name in cached response body")
 	}
 
-	if len(participantClient.calls) != 3 {
-		t.Fatalf("ListParticipants calls = %d, want %d", len(participantClient.calls), 3)
+	if len(participantClient.calls) != 1 {
+		t.Fatalf("ListParticipants calls = %d, want %d", len(participantClient.calls), 1)
 	}
 	if cacheStore.putCalls == 0 {
 		t.Fatalf("expected cache store put calls")

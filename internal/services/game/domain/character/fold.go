@@ -18,6 +18,7 @@ func Fold(state State, evt event.Event) (State, error) {
 			return state, fmt.Errorf("character fold %s: %w", evt.Type, err)
 		}
 		state.CharacterID = payload.CharacterID
+		state.OwnerParticipantID = payload.OwnerParticipantID
 		state.Name = payload.Name
 		state.Kind = payload.Kind
 		state.Notes = payload.Notes
@@ -42,6 +43,8 @@ func Fold(state State, evt event.Event) (State, error) {
 				state.Notes = value
 			case "participant_id":
 				state.ParticipantID = value
+			case "owner_participant_id":
+				state.OwnerParticipantID = value
 			case "avatar_set_id":
 				state.AvatarSetID = value
 			case "avatar_asset_id":

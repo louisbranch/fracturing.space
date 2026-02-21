@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 
+	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	sharedroute "github.com/louisbranch/fracturing.space/internal/services/shared/route"
 )
 
@@ -94,9 +95,23 @@ func (h *handler) handleAppCampaignDetail(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if _, ok := h.requireCampaignActor(w, r, campaignID); !ok {
+	readCtx, _, ok := h.campaignReadContext(w, r, "Campaign unavailable")
+	if !ok {
 		return
 	}
 
-	h.renderCampaignPage(w, r, campaignID)
+	if h.campaignClient != nil {
+		resp, err := h.campaignClient.GetCampaign(readCtx, &statev1.GetCampaignRequest{CampaignId: campaignID})
+		if err != nil {
+			h.renderErrorPage(w, r, grpcErrorHTTPStatus(err, http.StatusBadGateway), "Campaign unavailable", "failed to load campaign")
+			return
+		}
+		if resp == nil || resp.GetCampaign() == nil {
+			h.renderErrorPage(w, r, http.StatusNotFound, "Campaign unavailable", "campaign not found")
+			return
+		}
+		h.setCampaignCache(readCtx, resp.GetCampaign())
+	}
+
+	h.renderCampaignPage(w, r.WithContext(readCtx), campaignID)
 }

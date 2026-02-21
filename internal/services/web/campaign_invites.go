@@ -12,34 +12,29 @@ import (
 )
 
 func (h *handler) handleAppCampaignInvites(w http.ResponseWriter, r *http.Request, campaignID string) {
-	// handleAppCampaignInvites lists invites for a campaign after an actor-level
-	// membership lookup, ensuring only authorized members view sensitive flows.
+	// handleAppCampaignInvites lists invites for a campaign and relies on
+	// game-service policy to enforce manager/owner-only visibility.
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)
 		localizeHTTPError(w, r, http.StatusMethodNotAllowed, "error.http.method_not_allowed")
 		return
 	}
-	actor, ok := h.requireCampaignActor(w, r, campaignID)
+	readCtx, userID, ok := h.campaignReadContext(w, r, "Invites unavailable")
 	if !ok {
 		return
 	}
-	inviteActor := h.campaignInviteActorFromParticipant(actor)
-	if inviteActor == nil || !inviteActor.canManageInvites {
-		h.renderErrorPage(w, r, http.StatusForbidden, "Access denied", "manager or owner access required for invite access")
-		return
-	}
+	readReq := r.WithContext(readCtx)
 	if h.inviteClient == nil {
 		h.renderErrorPage(w, r, http.StatusServiceUnavailable, "Invites unavailable", "campaign invite service is not configured")
 		return
 	}
 
-	ctx := grpcauthctx.WithParticipantID(r.Context(), inviteActor.participantID)
-	if invites, ok := h.cachedCampaignInvites(ctx, campaignID); ok {
-		renderAppCampaignInvitesPageWithContext(w, r, h.pageContextForCampaign(w, r, campaignID), campaignID, invites, inviteActor.canManageInvites)
+	if invites, ok := h.cachedCampaignInvites(readCtx, campaignID, userID); ok {
+		renderAppCampaignInvitesPageWithContext(w, readReq, h.pageContextForCampaign(w, readReq, campaignID), campaignID, invites, true)
 		return
 	}
 
-	resp, err := h.inviteClient.ListInvites(ctx, &statev1.ListInvitesRequest{
+	resp, err := h.inviteClient.ListInvites(readCtx, &statev1.ListInvitesRequest{
 		CampaignId: campaignID,
 		PageSize:   10,
 	})
@@ -49,8 +44,8 @@ func (h *handler) handleAppCampaignInvites(w http.ResponseWriter, r *http.Reques
 	}
 
 	invites := resp.GetInvites()
-	h.setCampaignInvitesCache(ctx, campaignID, invites)
-	renderAppCampaignInvitesPageWithContext(w, r, h.pageContextForCampaign(w, r, campaignID), campaignID, invites, inviteActor.canManageInvites)
+	h.setCampaignInvitesCache(readCtx, campaignID, userID, invites)
+	renderAppCampaignInvitesPageWithContext(w, readReq, h.pageContextForCampaign(w, readReq, campaignID), campaignID, invites, true)
 }
 
 func (h *handler) handleAppCampaignInviteCreate(w http.ResponseWriter, r *http.Request, campaignID string) {
@@ -171,7 +166,20 @@ func (h *handler) campaignParticipant(ctx context.Context, campaignID string, se
 	if err != nil {
 		return nil, err
 	}
+	userID = strings.TrimSpace(userID)
 	if userID == "" {
+		return nil, nil
+	}
+	return h.campaignParticipantByUserID(grpcauthctx.WithUserID(ctx, userID), campaignID, userID)
+}
+
+func (h *handler) campaignParticipantByUserID(ctx context.Context, campaignID string, userID string) (*statev1.Participant, error) {
+	if h == nil || h.participantClient == nil {
+		return nil, errors.New("participant client is not configured")
+	}
+	campaignID = strings.TrimSpace(campaignID)
+	userID = strings.TrimSpace(userID)
+	if campaignID == "" || userID == "" {
 		return nil, nil
 	}
 

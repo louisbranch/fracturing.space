@@ -618,7 +618,7 @@ func CampaignEndHandler(client statev1.CampaignServiceClient, getContext func() 
 			return nil, CampaignStatusResult{}, fmt.Errorf("campaign_id is required")
 		}
 
-		callCtx, callMeta, err := NewOutgoingContext(callContext.RunCtx, callContext.InvocationID)
+		callCtx, callMeta, err := NewOutgoingContextWithContext(callContext.RunCtx, callContext.InvocationID, callContext.MCPContext)
 		if err != nil {
 			return nil, CampaignStatusResult{}, fmt.Errorf("create request metadata: %w", err)
 		}
@@ -663,7 +663,7 @@ func CampaignArchiveHandler(client statev1.CampaignServiceClient, getContext fun
 			return nil, CampaignStatusResult{}, fmt.Errorf("campaign_id is required")
 		}
 
-		callCtx, callMeta, err := NewOutgoingContext(callContext.RunCtx, callContext.InvocationID)
+		callCtx, callMeta, err := NewOutgoingContextWithContext(callContext.RunCtx, callContext.InvocationID, callContext.MCPContext)
 		if err != nil {
 			return nil, CampaignStatusResult{}, fmt.Errorf("create request metadata: %w", err)
 		}
@@ -708,7 +708,7 @@ func CampaignRestoreHandler(client statev1.CampaignServiceClient, getContext fun
 			return nil, CampaignStatusResult{}, fmt.Errorf("campaign_id is required")
 		}
 
-		callCtx, callMeta, err := NewOutgoingContext(callContext.RunCtx, callContext.InvocationID)
+		callCtx, callMeta, err := NewOutgoingContextWithContext(callContext.RunCtx, callContext.InvocationID, callContext.MCPContext)
 		if err != nil {
 			return nil, CampaignStatusResult{}, fmt.Errorf("create request metadata: %w", err)
 		}
@@ -1195,15 +1195,15 @@ func controllerToString(controller statev1.Controller) string {
 }
 
 // CharacterCreateHandler executes a character creation request.
-func CharacterCreateHandler(client statev1.CharacterServiceClient, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[CharacterCreateInput, CharacterCreateResult] {
+func CharacterCreateHandler(client statev1.CharacterServiceClient, getContext func() Context, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[CharacterCreateInput, CharacterCreateResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input CharacterCreateInput) (*mcp.CallToolResult, CharacterCreateResult, error) {
-		callContext, err := newToolInvocationContext(ctx, nil)
+		callContext, err := newToolInvocationContext(ctx, getContext)
 		if err != nil {
 			return nil, CharacterCreateResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
 		defer callContext.Cancel()
 
-		callCtx, callMeta, err := NewOutgoingContext(callContext.RunCtx, callContext.InvocationID)
+		callCtx, callMeta, err := NewOutgoingContextWithContext(callContext.RunCtx, callContext.InvocationID, callContext.MCPContext)
 		if err != nil {
 			return nil, CharacterCreateResult{}, fmt.Errorf("create request metadata: %w", err)
 		}
@@ -1248,15 +1248,15 @@ func CharacterCreateHandler(client statev1.CharacterServiceClient, notify Resour
 }
 
 // CharacterUpdateHandler executes a character update request.
-func CharacterUpdateHandler(client statev1.CharacterServiceClient, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[CharacterUpdateInput, CharacterUpdateResult] {
+func CharacterUpdateHandler(client statev1.CharacterServiceClient, getContext func() Context, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[CharacterUpdateInput, CharacterUpdateResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input CharacterUpdateInput) (*mcp.CallToolResult, CharacterUpdateResult, error) {
-		callContext, err := newToolInvocationContext(ctx, nil)
+		callContext, err := newToolInvocationContext(ctx, getContext)
 		if err != nil {
 			return nil, CharacterUpdateResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
 		defer callContext.Cancel()
 
-		callCtx, callMeta, err := NewOutgoingContext(callContext.RunCtx, callContext.InvocationID)
+		callCtx, callMeta, err := NewOutgoingContextWithContext(callContext.RunCtx, callContext.InvocationID, callContext.MCPContext)
 		if err != nil {
 			return nil, CharacterUpdateResult{}, fmt.Errorf("create request metadata: %w", err)
 		}
@@ -1321,15 +1321,15 @@ func CharacterUpdateHandler(client statev1.CharacterServiceClient, notify Resour
 }
 
 // CharacterDeleteHandler executes a character delete request.
-func CharacterDeleteHandler(client statev1.CharacterServiceClient, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[CharacterDeleteInput, CharacterDeleteResult] {
+func CharacterDeleteHandler(client statev1.CharacterServiceClient, getContext func() Context, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[CharacterDeleteInput, CharacterDeleteResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input CharacterDeleteInput) (*mcp.CallToolResult, CharacterDeleteResult, error) {
-		callContext, err := newToolInvocationContext(ctx, nil)
+		callContext, err := newToolInvocationContext(ctx, getContext)
 		if err != nil {
 			return nil, CharacterDeleteResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
 		defer callContext.Cancel()
 
-		callCtx, callMeta, err := NewOutgoingContext(callContext.RunCtx, callContext.InvocationID)
+		callCtx, callMeta, err := NewOutgoingContextWithContext(callContext.RunCtx, callContext.InvocationID, callContext.MCPContext)
 		if err != nil {
 			return nil, CharacterDeleteResult{}, fmt.Errorf("create request metadata: %w", err)
 		}
@@ -1401,15 +1401,15 @@ func characterKindToString(kind statev1.CharacterKind) string {
 }
 
 // CharacterControlSetHandler executes a character control set request.
-func CharacterControlSetHandler(client statev1.CharacterServiceClient, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[CharacterControlSetInput, CharacterControlSetResult] {
+func CharacterControlSetHandler(client statev1.CharacterServiceClient, getContext func() Context, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[CharacterControlSetInput, CharacterControlSetResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input CharacterControlSetInput) (*mcp.CallToolResult, CharacterControlSetResult, error) {
-		callContext, err := newToolInvocationContext(ctx, nil)
+		callContext, err := newToolInvocationContext(ctx, getContext)
 		if err != nil {
 			return nil, CharacterControlSetResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
 		defer callContext.Cancel()
 
-		callCtx, callMeta, err := NewOutgoingContext(callContext.RunCtx, callContext.InvocationID)
+		callCtx, callMeta, err := NewOutgoingContextWithContext(callContext.RunCtx, callContext.InvocationID, callContext.MCPContext)
 		if err != nil {
 			return nil, CharacterControlSetResult{}, fmt.Errorf("create request metadata: %w", err)
 		}
@@ -1515,7 +1515,7 @@ func CharacterProfilePatchHandler(client statev1.CharacterServiceClient, getCont
 			return nil, CharacterProfilePatchResult{}, fmt.Errorf("campaign context is required")
 		}
 
-		callCtx, callMeta, err := NewOutgoingContext(callContext.RunCtx, callContext.InvocationID)
+		callCtx, callMeta, err := NewOutgoingContextWithContext(callContext.RunCtx, callContext.InvocationID, callContext.MCPContext)
 		if err != nil {
 			return nil, CharacterProfilePatchResult{}, fmt.Errorf("create request metadata: %w", err)
 		}

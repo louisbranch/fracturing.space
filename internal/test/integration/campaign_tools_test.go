@@ -103,6 +103,11 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 			t.Fatalf("campaign_create failed: %+v", campaignResult)
 		}
 		campaignOutput := decodeStructuredContent[domain.CampaignCreateResult](t, campaignResult.StructuredContent)
+		participants := readParticipantList(t, suite.client, campaignOutput.ID)
+		if len(participants.Participants) == 0 {
+			t.Fatal("expected owner participant")
+		}
+		setContext(t, suite.client, campaignOutput.ID, participants.Participants[0].ID)
 
 		// Test creating a PC character
 		characterParams := &mcp.CallToolParams{
@@ -191,6 +196,11 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 			t.Fatalf("campaign_create failed: %+v", campaignResult)
 		}
 		campaignOutput := decodeStructuredContent[domain.CampaignCreateResult](t, campaignResult.StructuredContent)
+		participants := readParticipantList(t, suite.client, campaignOutput.ID)
+		if len(participants.Participants) == 0 {
+			t.Fatal("expected owner participant")
+		}
+		setContext(t, suite.client, campaignOutput.ID, participants.Participants[0].ID)
 
 		// Create a character
 		characterParams := &mcp.CallToolParams{
@@ -234,7 +244,7 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 			t.Fatalf("expected empty participant id, got %q", gmControlOutput.ParticipantID)
 		}
 
-		participants := readParticipantList(t, suite.client, campaignOutput.ID)
+		participants = readParticipantList(t, suite.client, campaignOutput.ID)
 		if len(participants.Participants) == 0 {
 			t.Fatal("expected owner participant")
 		}
@@ -305,6 +315,7 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 			t.Fatalf("campaign_create failed: %+v", campaignResult)
 		}
 		campaignOutput := decodeStructuredContent[domain.CampaignCreateResult](t, campaignResult.StructuredContent)
+		setContext(t, suite.client, campaignOutput.ID, campaignOutput.OwnerParticipantID)
 
 		startSessionParams := &mcp.CallToolParams{
 			Name: "session_start",

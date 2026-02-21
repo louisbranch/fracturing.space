@@ -99,8 +99,10 @@ func TestAppCampaignCharacterControlRedirectsUnauthenticatedToLogin(t *testing.T
 type fakeWebCharacterClient struct {
 	response   *statev1.ListCharactersResponse
 	lastReq    *statev1.ListCharactersRequest
+	listMD     metadata.MD
 	listCalls  int
 	sheetReq   *statev1.GetCharacterSheetRequest
+	sheetMD    metadata.MD
 	sheetResp  *statev1.GetCharacterSheetResponse
 	createReq  *statev1.CreateCharacterRequest
 	createMD   metadata.MD
@@ -137,8 +139,10 @@ func (f *fakeWebCharacterClient) DeleteCharacter(context.Context, *statev1.Delet
 	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
-func (f *fakeWebCharacterClient) ListCharacters(_ context.Context, req *statev1.ListCharactersRequest, _ ...grpc.CallOption) (*statev1.ListCharactersResponse, error) {
+func (f *fakeWebCharacterClient) ListCharacters(ctx context.Context, req *statev1.ListCharactersRequest, _ ...grpc.CallOption) (*statev1.ListCharactersResponse, error) {
 	f.listCalls++
+	md, _ := metadata.FromOutgoingContext(ctx)
+	f.listMD = md
 	f.lastReq = req
 	if f.response != nil {
 		return f.response, nil
@@ -240,7 +244,9 @@ func (f *fakeWebCharacterClient) SetDefaultControl(ctx context.Context, req *sta
 	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
-func (f *fakeWebCharacterClient) GetCharacterSheet(_ context.Context, req *statev1.GetCharacterSheetRequest, _ ...grpc.CallOption) (*statev1.GetCharacterSheetResponse, error) {
+func (f *fakeWebCharacterClient) GetCharacterSheet(ctx context.Context, req *statev1.GetCharacterSheetRequest, _ ...grpc.CallOption) (*statev1.GetCharacterSheetResponse, error) {
+	md, _ := metadata.FromOutgoingContext(ctx)
+	f.sheetMD = md
 	f.sheetReq = req
 	if f.sheetResp != nil {
 		return f.sheetResp, nil
@@ -327,6 +333,68 @@ func TestAppCampaignCharactersPageParticipantRendersCharacters(t *testing.T) {
 	}
 }
 
+func TestAppCampaignCharactersPagePropagatesUserMetadataToCharacterRead(t *testing.T) {
+	authServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/introspect" {
+			t.Fatalf("path = %q, want %q", r.URL.Path, "/introspect")
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(introspectResponse{Active: true, UserID: "Alice"})
+	}))
+	t.Cleanup(authServer.Close)
+	participantClient := &fakeWebParticipantClient{
+		pages: map[string]*statev1.ListParticipantsResponse{
+			"": {
+				Participants: []*statev1.Participant{
+					{
+						Id:             "part-manager",
+						CampaignId:     "camp-123",
+						UserId:         "Alice",
+						CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER,
+					},
+				},
+			},
+		},
+	}
+	characterClient := &fakeWebCharacterClient{
+		response: &statev1.ListCharactersResponse{
+			Characters: []*statev1.Character{
+				{Id: "char-1", CampaignId: "camp-123", Name: "Mira"},
+			},
+		},
+	}
+	h := &handler{
+		config: Config{
+			AuthBaseURL:         authServer.URL,
+			OAuthResourceSecret: "secret-1",
+		},
+		sessions:          newSessionStore(),
+		pendingFlows:      newPendingFlowStore(),
+		participantClient: participantClient,
+		campaignAccess: &campaignAccessService{
+			authBaseURL:         authServer.URL,
+			oauthResourceSecret: "secret-1",
+			httpClient:          authServer.Client(),
+			participantClient:   participantClient,
+		},
+		characterClient: characterClient,
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/characters", nil)
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+
+	h.handleAppCampaignDetail(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	userIDs := characterClient.listMD.Get(grpcmeta.UserIDHeader)
+	if len(userIDs) != 1 || userIDs[0] != "Alice" {
+		t.Fatalf("metadata %s = %v, want [Alice]", grpcmeta.UserIDHeader, userIDs)
+	}
+}
+
 func TestAppCampaignCharacterDetailParticipantRendersCharacter(t *testing.T) {
 	authServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/introspect" {
@@ -398,6 +466,71 @@ func TestAppCampaignCharacterDetailParticipantRendersCharacter(t *testing.T) {
 	body := w.Body.String()
 	if !strings.Contains(body, "Mira") {
 		t.Fatalf("expected character name in response body")
+	}
+}
+
+func TestAppCampaignCharacterDetailPropagatesUserMetadataToCharacterRead(t *testing.T) {
+	authServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/introspect" {
+			t.Fatalf("path = %q, want %q", r.URL.Path, "/introspect")
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(introspectResponse{Active: true, UserID: "Alice"})
+	}))
+	t.Cleanup(authServer.Close)
+	participantClient := &fakeWebParticipantClient{
+		pages: map[string]*statev1.ListParticipantsResponse{
+			"": {
+				Participants: []*statev1.Participant{
+					{
+						Id:             "part-manager",
+						CampaignId:     "camp-123",
+						UserId:         "Alice",
+						CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER,
+					},
+				},
+			},
+		},
+	}
+	characterClient := &fakeWebCharacterClient{
+		sheetResp: &statev1.GetCharacterSheetResponse{
+			Character: &statev1.Character{
+				Id:         "char-1",
+				CampaignId: "camp-123",
+				Name:       "Mira",
+				Kind:       statev1.CharacterKind_PC,
+			},
+		},
+	}
+	h := &handler{
+		config: Config{
+			AuthBaseURL:         authServer.URL,
+			OAuthResourceSecret: "secret-1",
+		},
+		sessions:          newSessionStore(),
+		pendingFlows:      newPendingFlowStore(),
+		participantClient: participantClient,
+		campaignAccess: &campaignAccessService{
+			authBaseURL:         authServer.URL,
+			oauthResourceSecret: "secret-1",
+			httpClient:          authServer.Client(),
+			participantClient:   participantClient,
+		},
+		characterClient: characterClient,
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/characters/char-1", nil)
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+
+	h.handleAppCampaignDetail(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	userIDs := characterClient.sheetMD.Get(grpcmeta.UserIDHeader)
+	if len(userIDs) != 1 || userIDs[0] != "Alice" {
+		t.Fatalf("metadata %s = %v, want [Alice]", grpcmeta.UserIDHeader, userIDs)
 	}
 }
 

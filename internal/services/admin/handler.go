@@ -26,13 +26,12 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/templates"
-	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	sharedhtmx "github.com/louisbranch/fracturing.space/internal/services/shared/htmx"
 	sharedroute "github.com/louisbranch/fracturing.space/internal/services/shared/route"
 	"github.com/louisbranch/fracturing.space/internal/tools/scenario"
 	"golang.org/x/text/message"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
@@ -141,6 +140,19 @@ func (h *Handler) pageContext(lang string, loc *message.Printer, r *http.Request
 		CurrentPath:  path,
 		CurrentQuery: query,
 	}
+}
+
+// gameGRPCCallContext creates a bounded game RPC context with user identity.
+// Admin override is injected by connection-level interceptors, not per-call.
+func (h *Handler) gameGRPCCallContext(parent context.Context) (context.Context, context.CancelFunc) {
+	if parent == nil {
+		parent = context.Background()
+	}
+	ctx, cancel := context.WithTimeout(parent, grpcRequestTimeout)
+	if userID := strings.TrimSpace(requestctx.UserIDFromContext(parent)); userID != "" {
+		ctx = grpcauthctx.WithUserID(ctx, userID)
+	}
+	return ctx, cancel
 }
 
 func withStaticMime(next http.Handler) http.Handler {
@@ -399,7 +411,7 @@ func (h *Handler) handleScenarioEventsTable(w http.ResponseWriter, r *http.Reque
 	pageToken := r.URL.Query().Get("page_token")
 
 	if eventClient := h.eventClient(); eventClient != nil {
-		ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
+		ctx, cancel := h.gameGRPCCallContext(r.Context())
 		defer cancel()
 
 		filterExpr := buildEventFilterExpression(filters)
@@ -456,7 +468,7 @@ func (h *Handler) buildScenarioEventsView(r *http.Request, campaignID string, lo
 	pageToken := r.URL.Query().Get("page_token")
 
 	if eventClient := h.eventClient(); eventClient != nil {
-		ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
+		ctx, cancel := h.gameGRPCCallContext(r.Context())
 		defer cancel()
 
 		filterExpr := buildEventFilterExpression(filters)
@@ -501,7 +513,7 @@ func (h *Handler) buildScenarioTimelineView(r *http.Request, campaignID string, 
 	pageToken := r.URL.Query().Get("page_token")
 
 	if eventClient := h.eventClient(); eventClient != nil {
-		ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
+		ctx, cancel := h.gameGRPCCallContext(r.Context())
 		defer cancel()
 
 		resp, err := eventClient.ListTimelineEntries(ctx, &statev1.ListTimelineEntriesRequest{
@@ -746,7 +758,7 @@ func (h *Handler) handleUserDetailTab(w http.ResponseWriter, r *http.Request, us
 		view.Message = message
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
+	ctx, cancel := h.gameGRPCCallContext(r.Context())
 	defer cancel()
 
 	detail, message := h.loadUserDetail(ctx, userID, loc)
@@ -796,7 +808,7 @@ func (h *Handler) handleMagicLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
+	ctx, cancel := h.gameGRPCCallContext(r.Context())
 	defer cancel()
 	response, err := client.GenerateMagicLink(ctx, &authv1.GenerateMagicLinkRequest{
 		UserId: userID,
@@ -834,7 +846,7 @@ func (h *Handler) handleUsersTable(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
+	ctx, cancel := h.gameGRPCCallContext(r.Context())
 	defer cancel()
 
 	response, err := client.ListUsers(ctx, &authv1.ListUsersRequest{PageSize: 50})
@@ -863,15 +875,8 @@ func (h *Handler) handleCampaignsTable(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
+	ctx, cancel := h.gameGRPCCallContext(r.Context())
 	defer cancel()
-	userID := strings.TrimSpace(requestctx.UserIDFromContext(r.Context()))
-	if userID != "" {
-		md, _ := metadata.FromOutgoingContext(ctx)
-		md = md.Copy()
-		md.Set(grpcmeta.UserIDHeader, userID)
-		ctx = metadata.NewOutgoingContext(ctx, md)
-	}
 
 	response, err := campaignClient.ListCampaigns(ctx, &statev1.ListCampaignsRequest{})
 	if err != nil {
@@ -1016,7 +1021,7 @@ func (h *Handler) handleCatalogSectionTable(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
+	ctx, cancel := h.gameGRPCCallContext(r.Context())
 	defer cancel()
 
 	pageToken := r.URL.Query().Get("page_token")
@@ -1292,7 +1297,7 @@ func (h *Handler) handleCatalogSectionDetail(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
+	ctx, cancel := h.gameGRPCCallContext(r.Context())
 	defer cancel()
 
 	locale := localeFromTag(lang)
@@ -1372,7 +1377,7 @@ func (h *Handler) handleSystemsTable(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
+	ctx, cancel := h.gameGRPCCallContext(r.Context())
 	defer cancel()
 
 	response, err := client.ListGameSystems(ctx, &statev1.ListGameSystemsRequest{})
@@ -1428,7 +1433,7 @@ func (h *Handler) handleSystemDetail(w http.ResponseWriter, r *http.Request, sys
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
+	ctx, cancel := h.gameGRPCCallContext(r.Context())
 	defer cancel()
 
 	version := strings.TrimSpace(r.URL.Query().Get("version"))
@@ -1558,7 +1563,7 @@ func (h *Handler) handleCampaignDetail(w http.ResponseWriter, r *http.Request, c
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
+	ctx, cancel := h.gameGRPCCallContext(r.Context())
 	defer cancel()
 
 	response, err := campaignClient.GetCampaign(ctx, &statev1.GetCampaignRequest{CampaignId: campaignID})
@@ -1601,7 +1606,7 @@ func (h *Handler) handleSessionsTable(w http.ResponseWriter, r *http.Request, ca
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
+	ctx, cancel := h.gameGRPCCallContext(r.Context())
 	defer cancel()
 
 	response, err := sessionClient.ListSessions(ctx, &statev1.ListSessionsRequest{
@@ -2901,7 +2906,7 @@ func (h *Handler) handleDashboard(w http.ResponseWriter, r *http.Request) {
 
 // handleDashboardContent loads and renders the dashboard statistics and recent activity.
 func (h *Handler) handleDashboardContent(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
+	ctx, cancel := h.gameGRPCCallContext(r.Context())
 	defer cancel()
 	loc, _ := h.localizer(w, r)
 
@@ -3164,7 +3169,7 @@ func (h *Handler) handleCharactersTable(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
+	ctx, cancel := h.gameGRPCCallContext(r.Context())
 	defer cancel()
 
 	// Get characters
@@ -3221,7 +3226,7 @@ func (h *Handler) renderCharacterSheet(w http.ResponseWriter, r *http.Request, c
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
+	ctx, cancel := h.gameGRPCCallContext(r.Context())
 	defer cancel()
 
 	response, err := characterClient.GetCharacterSheet(ctx, &statev1.GetCharacterSheetRequest{
@@ -3375,7 +3380,7 @@ func getCampaignName(h *Handler, r *http.Request, campaignID string, loc *messag
 		return loc.Sprintf("label.campaign")
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
+	ctx, cancel := h.gameGRPCCallContext(r.Context())
 	defer cancel()
 
 	response, err := campaignClient.GetCampaign(ctx, &statev1.GetCampaignRequest{CampaignId: campaignID})
@@ -3409,7 +3414,7 @@ func (h *Handler) handleParticipantsTable(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
+	ctx, cancel := h.gameGRPCCallContext(r.Context())
 	defer cancel()
 
 	response, err := participantClient.ListParticipants(ctx, &statev1.ListParticipantsRequest{
@@ -3454,7 +3459,7 @@ func (h *Handler) handleInvitesTable(w http.ResponseWriter, r *http.Request, cam
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
+	ctx, cancel := h.gameGRPCCallContext(r.Context())
 	defer cancel()
 
 	response, err := inviteClient.ListInvites(ctx, &statev1.ListInvitesRequest{
@@ -3640,7 +3645,7 @@ func (h *Handler) handleSessionDetail(w http.ResponseWriter, r *http.Request, ca
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
+	ctx, cancel := h.gameGRPCCallContext(r.Context())
 	defer cancel()
 
 	// Get session details
@@ -3695,7 +3700,7 @@ func (h *Handler) handleSessionEvents(w http.ResponseWriter, r *http.Request, ca
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
+	ctx, cancel := h.gameGRPCCallContext(r.Context())
 	defer cancel()
 
 	pageToken := r.URL.Query().Get("page_token")
@@ -3744,7 +3749,7 @@ func (h *Handler) handleEventLog(w http.ResponseWriter, r *http.Request, campaig
 	var nextToken, prevToken string
 
 	if eventClient := h.eventClient(); eventClient != nil {
-		ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
+		ctx, cancel := h.gameGRPCCallContext(r.Context())
 		defer cancel()
 
 		filterExpr := buildEventFilterExpression(filters)
@@ -3791,7 +3796,7 @@ func (h *Handler) handleEventLogTable(w http.ResponseWriter, r *http.Request, ca
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
+	ctx, cancel := h.gameGRPCCallContext(r.Context())
 	defer cancel()
 
 	filters := parseEventFilters(r)
@@ -4026,7 +4031,7 @@ func getSessionName(h *Handler, r *http.Request, campaignID, sessionID string, l
 		return loc.Sprintf("label.session")
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
+	ctx, cancel := h.gameGRPCCallContext(r.Context())
 	defer cancel()
 
 	response, err := sessionClient.GetSession(ctx, &statev1.GetSessionRequest{

@@ -36,6 +36,9 @@ func (a sessionApplication) StartSession(ctx context.Context, campaignID string,
 	if err != nil {
 		return storage.SessionRecord{}, err
 	}
+	if err := requirePolicy(ctx, a.stores, policyActionManageSessions, c); err != nil {
+		return storage.SessionRecord{}, err
+	}
 
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionStart); err != nil {
 		return storage.SessionRecord{}, err
@@ -66,11 +69,7 @@ func (a sessionApplication) StartSession(ctx context.Context, campaignID string,
 	if a.stores.Domain == nil {
 		return storage.SessionRecord{}, status.Error(codes.Internal, "domain engine is not configured")
 	}
-	actorID := grpcmeta.ParticipantIDFromContext(ctx)
-	actorType := command.ActorTypeSystem
-	if actorID != "" {
-		actorType = command.ActorTypeParticipant
-	}
+	actorID, actorType := resolveCommandActor(ctx)
 	if c.Status == campaign.StatusDraft {
 		payload := campaign.UpdatePayload{Fields: map[string]string{"status": "active"}}
 		payloadJSON, err := json.Marshal(payload)
@@ -148,7 +147,11 @@ func (a sessionApplication) EndSession(ctx context.Context, campaignID string, i
 		return storage.SessionRecord{}, status.Error(codes.InvalidArgument, "session id is required")
 	}
 
-	if _, err := a.stores.Campaign.Get(ctx, campaignID); err != nil {
+	c, err := a.stores.Campaign.Get(ctx, campaignID)
+	if err != nil {
+		return storage.SessionRecord{}, err
+	}
+	if err := requirePolicy(ctx, a.stores, policyActionManageSessions, c); err != nil {
 		return storage.SessionRecord{}, err
 	}
 
@@ -168,11 +171,7 @@ func (a sessionApplication) EndSession(ctx context.Context, campaignID string, i
 		return storage.SessionRecord{}, status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
 
-	actorID := grpcmeta.ParticipantIDFromContext(ctx)
-	actorType := command.ActorTypeSystem
-	if actorID != "" {
-		actorType = command.ActorTypeParticipant
-	}
+	actorID, actorType := resolveCommandActor(ctx)
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
@@ -221,6 +220,9 @@ func (a sessionApplication) OpenSessionGate(ctx context.Context, campaignID stri
 	if err != nil {
 		return storage.SessionGate{}, err
 	}
+	if err := requirePolicy(ctx, a.stores, policyActionManageSessions, c); err != nil {
+		return storage.SessionGate{}, err
+	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
 		return storage.SessionGate{}, err
 	}
@@ -264,11 +266,7 @@ func (a sessionApplication) OpenSessionGate(ctx context.Context, campaignID stri
 		return storage.SessionGate{}, status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
 
-	actorID := grpcmeta.ParticipantIDFromContext(ctx)
-	actorType := command.ActorTypeSystem
-	if actorID != "" {
-		actorType = command.ActorTypeParticipant
-	}
+	actorID, actorType := resolveCommandActor(ctx)
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
@@ -312,7 +310,11 @@ func (a sessionApplication) ResolveSessionGate(ctx context.Context, campaignID s
 		return storage.SessionGate{}, status.Error(codes.InvalidArgument, "gate id is required")
 	}
 
-	if _, err := a.stores.Campaign.Get(ctx, campaignID); err != nil {
+	c, err := a.stores.Campaign.Get(ctx, campaignID)
+	if err != nil {
+		return storage.SessionGate{}, err
+	}
+	if err := requirePolicy(ctx, a.stores, policyActionManageSessions, c); err != nil {
 		return storage.SessionGate{}, err
 	}
 	if _, err := a.stores.Session.GetSession(ctx, campaignID, sessionID); err != nil {
@@ -344,11 +346,7 @@ func (a sessionApplication) ResolveSessionGate(ctx context.Context, campaignID s
 		return storage.SessionGate{}, status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
 
-	actorID := grpcmeta.ParticipantIDFromContext(ctx)
-	actorType := command.ActorTypeSystem
-	if actorID != "" {
-		actorType = command.ActorTypeParticipant
-	}
+	actorID, actorType := resolveCommandActor(ctx)
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
@@ -392,7 +390,11 @@ func (a sessionApplication) AbandonSessionGate(ctx context.Context, campaignID s
 		return storage.SessionGate{}, status.Error(codes.InvalidArgument, "gate id is required")
 	}
 
-	if _, err := a.stores.Campaign.Get(ctx, campaignID); err != nil {
+	c, err := a.stores.Campaign.Get(ctx, campaignID)
+	if err != nil {
+		return storage.SessionGate{}, err
+	}
+	if err := requirePolicy(ctx, a.stores, policyActionManageSessions, c); err != nil {
 		return storage.SessionGate{}, err
 	}
 	if _, err := a.stores.Session.GetSession(ctx, campaignID, sessionID); err != nil {
@@ -418,11 +420,7 @@ func (a sessionApplication) AbandonSessionGate(ctx context.Context, campaignID s
 		return storage.SessionGate{}, status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
 
-	actorID := grpcmeta.ParticipantIDFromContext(ctx)
-	actorType := command.ActorTypeSystem
-	if actorID != "" {
-		actorType = command.ActorTypeParticipant
-	}
+	actorID, actorType := resolveCommandActor(ctx)
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
@@ -474,6 +472,9 @@ func (a sessionApplication) SetSessionSpotlight(ctx context.Context, campaignID 
 	if err != nil {
 		return storage.SessionSpotlight{}, err
 	}
+	if err := requirePolicy(ctx, a.stores, policyActionManageSessions, c); err != nil {
+		return storage.SessionSpotlight{}, err
+	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
 		return storage.SessionSpotlight{}, err
 	}
@@ -496,11 +497,7 @@ func (a sessionApplication) SetSessionSpotlight(ctx context.Context, campaignID 
 		return storage.SessionSpotlight{}, status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
 
-	actorID := grpcmeta.ParticipantIDFromContext(ctx)
-	actorType := command.ActorTypeSystem
-	if actorID != "" {
-		actorType = command.ActorTypeParticipant
-	}
+	actorID, actorType := resolveCommandActor(ctx)
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
@@ -542,7 +539,11 @@ func (a sessionApplication) ClearSessionSpotlight(ctx context.Context, campaignI
 	}
 	reason := strings.TrimSpace(in.GetReason())
 
-	if _, err := a.stores.Campaign.Get(ctx, campaignID); err != nil {
+	c, err := a.stores.Campaign.Get(ctx, campaignID)
+	if err != nil {
+		return storage.SessionSpotlight{}, err
+	}
+	if err := requirePolicy(ctx, a.stores, policyActionManageSessions, c); err != nil {
 		return storage.SessionSpotlight{}, err
 	}
 	if _, err := a.stores.Session.GetSession(ctx, campaignID, sessionID); err != nil {
@@ -562,11 +563,7 @@ func (a sessionApplication) ClearSessionSpotlight(ctx context.Context, campaignI
 		return storage.SessionSpotlight{}, status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
 
-	actorID := grpcmeta.ParticipantIDFromContext(ctx)
-	actorType := command.ActorTypeSystem
-	if actorID != "" {
-		actorType = command.ActorTypeParticipant
-	}
+	actorID, actorType := resolveCommandActor(ctx)
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
