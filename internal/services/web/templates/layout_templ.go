@@ -12,6 +12,19 @@ import (
 	sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
 )
 
+type LayoutOptions struct {
+	Title                string
+	Lang                 string
+	AppName              string
+	Loc                  Localizer
+	CurrentPath          string
+	CampaignName         string
+	UserName             string
+	UserAvatarURL        string
+	CustomBreadcrumbs    []sharedtemplates.BreadcrumbItem
+	UseCustomBreadcrumbs bool
+}
+
 // ShellLayout wraps auth/public pages in the shared HTML shell.
 func ShellLayout(title string, lang string, loc Localizer) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
@@ -61,7 +74,7 @@ func ShellLayout(title string, lang string, loc Localizer) templ.Component {
 }
 
 // Layout wraps game pages in the shared HTML chrome.
-func Layout(title string, lang string, appName string, loc Localizer, currentPath string, campaignName string, customBreadcrumbs ...sharedtemplates.BreadcrumbItem) templ.Component {
+func Layout(options LayoutOptions) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -82,7 +95,7 @@ func Layout(title string, lang string, appName string, loc Localizer, currentPat
 			templ_7745c5c3_Var3 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		if customBreadcrumbs != nil {
+		if options.UseCustomBreadcrumbs {
 			templ_7745c5c3_Var4 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 				templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 				templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
@@ -101,8 +114,17 @@ func Layout(title string, lang string, appName string, loc Localizer, currentPat
 				}
 				return nil
 			})
-			templ_7745c5c3_Err = sharedtemplates.AppChromeLayout(title, lang, appName, loc, customBreadcrumbs, sharedtemplates.ChromeLayoutOptions{
-				MainAria: sharedtemplates.T(loc, "game.aria_label"),
+			templ_7745c5c3_Err = sharedtemplates.AppChromeLayout(sharedtemplates.AppChromeLayoutOptions{
+				Title:       options.Title,
+				Lang:        options.Lang,
+				AppName:     options.AppName,
+				Loc:         options.Loc,
+				Breadcrumbs: options.CustomBreadcrumbs,
+				ChromeOptions: sharedtemplates.ChromeLayoutOptions{
+					MainAria:      sharedtemplates.T(options.Loc, "game.aria_label"),
+					UserName:      options.UserName,
+					UserAvatarURL: options.UserAvatarURL,
+				},
 			}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var4), templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
@@ -126,8 +148,17 @@ func Layout(title string, lang string, appName string, loc Localizer, currentPat
 				}
 				return nil
 			})
-			templ_7745c5c3_Err = sharedtemplates.AppChromeLayout(title, lang, appName, loc, sharedtemplates.BuildPathBreadcrumbsForWeb(currentPath, loc, campaignNamesForPath(currentPath, campaignName)), sharedtemplates.ChromeLayoutOptions{
-				MainAria: sharedtemplates.T(loc, "game.aria_label"),
+			templ_7745c5c3_Err = sharedtemplates.AppChromeLayout(sharedtemplates.AppChromeLayoutOptions{
+				Title:       options.Title,
+				Lang:        options.Lang,
+				AppName:     options.AppName,
+				Loc:         options.Loc,
+				Breadcrumbs: sharedtemplates.BuildPathBreadcrumbsForWeb(options.CurrentPath, options.Loc, campaignNamesForPath(options.CurrentPath, options.CampaignName)),
+				ChromeOptions: sharedtemplates.ChromeLayoutOptions{
+					MainAria:      sharedtemplates.T(options.Loc, "game.aria_label"),
+					UserName:      options.UserName,
+					UserAvatarURL: options.UserAvatarURL,
+				},
 			}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var5), templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err

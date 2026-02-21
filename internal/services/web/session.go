@@ -20,6 +20,12 @@ type session struct {
 	accessToken string
 	displayName string
 	expiresAt   time.Time
+
+	mu                     sync.RWMutex
+	cachedUserID           string
+	cachedUserIDResolved   bool
+	cachedUserAvatarURL    string
+	cachedUserAvatarCached bool
 }
 
 // sessionStore stores ephemeral web sessions for this process.
@@ -34,6 +40,52 @@ type sessionStore struct {
 // newSessionStore creates the in-memory cache for authenticated sessions.
 func newSessionStore() *sessionStore {
 	return &sessionStore{sessions: make(map[string]*session)}
+}
+
+// cachedUserID resolves from session-local cache when available.
+func (s *session) cachedUserIDValue() (string, bool) {
+	if s == nil {
+		return "", false
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if !s.cachedUserIDResolved {
+		return "", false
+	}
+	return s.cachedUserID, true
+}
+
+func (s *session) setCachedUserID(userID string) {
+	if s == nil {
+		return
+	}
+	s.mu.Lock()
+	s.cachedUserID = userID
+	s.cachedUserIDResolved = true
+	s.mu.Unlock()
+}
+
+// cachedUserAvatarURL resolves the cached avatar URL for this session.
+func (s *session) cachedUserAvatar() (string, bool) {
+	if s == nil {
+		return "", false
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if !s.cachedUserAvatarCached {
+		return "", false
+	}
+	return s.cachedUserAvatarURL, true
+}
+
+func (s *session) setCachedUserAvatar(avatarURL string) {
+	if s == nil {
+		return
+	}
+	s.mu.Lock()
+	s.cachedUserAvatarURL = avatarURL
+	s.cachedUserAvatarCached = true
+	s.mu.Unlock()
 }
 
 // create stores a new web session and returns an opaque session identifier.

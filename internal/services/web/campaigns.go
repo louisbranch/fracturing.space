@@ -42,7 +42,7 @@ func (h *handler) handleAppCampaigns(w http.ResponseWriter, r *http.Request) {
 	}
 
 	requestCtx := r.Context()
-	userID, err := h.sessionUserID(requestCtx, sess.accessToken)
+	userID, err := h.sessionUserIDForSession(requestCtx, sess)
 	listCampaigns := func(ctx context.Context) ([]*statev1.Campaign, error) {
 		resp, err := h.campaignClient.ListCampaigns(ctx, &statev1.ListCampaignsRequest{})
 		if err != nil {
@@ -135,7 +135,7 @@ func (h *handler) handleAppCampaignCreate(w http.ResponseWriter, r *http.Request
 		creatorDisplayName = strings.TrimSpace(sess.displayName)
 	}
 
-	userID, err := h.sessionUserID(r.Context(), sess.accessToken)
+	userID, err := h.sessionUserIDForSession(r.Context(), sess)
 	if err != nil {
 		h.renderErrorPage(w, r, http.StatusBadGateway, "Campaign create unavailable", "failed to resolve current user")
 		return
@@ -176,6 +176,24 @@ func (h *handler) sessionUserID(ctx context.Context, accessToken string) (string
 		return "", errors.New("campaign access checker does not support user introspection")
 	}
 	return svc.introspectUserID(ctx, accessToken)
+}
+
+func (h *handler) sessionUserIDForSession(ctx context.Context, sess *session) (string, error) {
+	if sess == nil {
+		return "", errors.New("session is not available")
+	}
+	userID, ok := sess.cachedUserIDValue()
+	if ok {
+		return userID, nil
+	}
+
+	resolvedID, err := h.sessionUserID(ctx, sess.accessToken)
+	if err != nil {
+		return "", err
+	}
+	resolvedID = strings.TrimSpace(resolvedID)
+	sess.setCachedUserID(resolvedID)
+	return resolvedID, nil
 }
 
 func (h *handler) ensureCampaignClients(ctx context.Context) error {

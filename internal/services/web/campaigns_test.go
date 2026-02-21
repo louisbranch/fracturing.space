@@ -253,8 +253,8 @@ func TestAppCampaignCreateGetRendersFormWithoutListingCampaigns(t *testing.T) {
 	if campaignClient.listCalls != 0 {
 		t.Fatalf("list calls = %d, want %d", campaignClient.listCalls, 0)
 	}
-	if introspectCalls != 0 {
-		t.Fatalf("introspect calls = %d, want %d", introspectCalls, 0)
+	if introspectCalls != 1 {
+		t.Fatalf("introspect calls = %d, want %d", introspectCalls, 1)
 	}
 }
 

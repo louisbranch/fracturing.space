@@ -161,13 +161,13 @@ func (h *handler) campaignInviteActorFromParticipant(participant *statev1.Partic
 	}
 }
 
-func (h *handler) campaignParticipant(ctx context.Context, campaignID string, accessToken string) (*statev1.Participant, error) {
+func (h *handler) campaignParticipant(ctx context.Context, campaignID string, sess *session) (*statev1.Participant, error) {
 	// campaignParticipant maps an access token to the participant record in the
 	// campaign, with pagination across participant pages if needed.
 	if h == nil || h.participantClient == nil {
 		return nil, errors.New("participant client is not configured")
 	}
-	userID, err := h.sessionUserID(ctx, accessToken)
+	userID, err := h.sessionUserIDForSession(ctx, sess)
 	if err != nil {
 		return nil, err
 	}

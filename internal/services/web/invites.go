@@ -30,7 +30,7 @@ func (h *handler) handleAppInvites(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, err := h.sessionUserID(r.Context(), sess.accessToken)
+	userID, err := h.sessionUserIDForSession(r.Context(), sess)
 	if err != nil {
 		h.renderErrorPage(w, r, http.StatusBadGateway, "Invites unavailable", "failed to resolve current user")
 		return
@@ -82,7 +82,7 @@ func (h *handler) handleAppInviteClaim(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, err := h.sessionUserID(r.Context(), sess.accessToken)
+	userID, err := h.sessionUserIDForSession(r.Context(), sess)
 	if err != nil {
 		h.renderErrorPage(w, r, http.StatusBadGateway, "Invite claim unavailable", "failed to resolve current user")
 		return

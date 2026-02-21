@@ -153,16 +153,13 @@ func (h *handler) handleAppRoot(w http.ResponseWriter, r *http.Request) {
 	page.AppName = appName
 
 	if sess := sessionFromRequest(r, h.sessions); sess != nil {
-		userLabel := strings.TrimSpace(sess.displayName)
-		if userLabel == "" {
-			userLabel = webtemplates.T(page.Loc, "web.dashboard.user_name_fallback")
-		}
 		if err := h.writePage(w, r, webtemplates.DashboardPage(webtemplates.DashboardPageParams{
-			AppName:     appName,
-			Lang:        page.Lang,
-			UserName:    userLabel,
-			CurrentPath: page.CurrentPath,
-			Loc:         page.Loc,
+			AppName:       appName,
+			Lang:          page.Lang,
+			UserName:      page.UserName,
+			UserAvatarURL: page.UserAvatarURL,
+			CurrentPath:   page.CurrentPath,
+			Loc:           page.Loc,
 		}), composeHTMXTitle(page.Loc, "dashboard.title")); err != nil {
 			log.Printf("web: failed to render dashboard page: %v", err)
 			localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.web_handler_unavailable")
