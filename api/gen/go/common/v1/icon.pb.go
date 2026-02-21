@@ -58,6 +58,7 @@ const (
 	IconId_ICON_ID_LOOT        IconId = 29
 	IconId_ICON_ID_ADVERSARY   IconId = 30
 	IconId_ICON_ID_ENVIRONMENT IconId = 31
+	IconId_ICON_ID_ANIMAL      IconId = 32
 )
 
 // Enum value maps for IconId.
@@ -95,6 +96,7 @@ var (
 		29: "ICON_ID_LOOT",
 		30: "ICON_ID_ADVERSARY",
 		31: "ICON_ID_ENVIRONMENT",
+		32: "ICON_ID_ANIMAL",
 	}
 	IconId_value = map[string]int32{
 		"ICON_ID_UNSPECIFIED": 0,
@@ -129,6 +131,7 @@ var (
 		"ICON_ID_LOOT":        29,
 		"ICON_ID_ADVERSARY":   30,
 		"ICON_ID_ENVIRONMENT": 31,
+		"ICON_ID_ANIMAL":      32,
 	}
 )
 
@@ -163,7 +166,7 @@ var File_common_v1_icon_proto protoreflect.FileDescriptor
 
 const file_common_v1_icon_proto_rawDesc = "" +
 	"\n" +
-	"\x14common/v1/icon.proto\x12\tcommon.v1*\xa2\x05\n" +
+	"\x14common/v1/icon.proto\x12\tcommon.v1*\xb6\x05\n" +
 	"\x06IconId\x12\x17\n" +
 	"\x13ICON_ID_UNSPECIFIED\x10\x00\x12\x13\n" +
 	"\x0fICON_ID_GENERIC\x10\x01\x12\x14\n" +
@@ -198,7 +201,8 @@ const file_common_v1_icon_proto_rawDesc = "" +
 	"\fICON_ID_ITEM\x10\x1c\x12\x10\n" +
 	"\fICON_ID_LOOT\x10\x1d\x12\x15\n" +
 	"\x11ICON_ID_ADVERSARY\x10\x1e\x12\x17\n" +
-	"\x13ICON_ID_ENVIRONMENT\x10\x1fBGZEgithub.com/louisbranch/fracturing.space/api/gen/go/common/v1;commonv1b\x06proto3"
+	"\x13ICON_ID_ENVIRONMENT\x10\x1f\x12\x12\n" +
+	"\x0eICON_ID_ANIMAL\x10 BGZEgithub.com/louisbranch/fracturing.space/api/gen/go/common/v1;commonv1b\x06proto3"
 
 var (
 	file_common_v1_icon_proto_rawDescOnce sync.Once

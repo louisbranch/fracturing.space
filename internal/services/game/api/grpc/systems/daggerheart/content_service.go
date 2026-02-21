@@ -2108,6 +2108,8 @@ func itemRarityToProto(kind string) pb.DaggerheartItemRarity {
 		return pb.DaggerheartItemRarity_DAGGERHEART_ITEM_RARITY_RARE
 	case "unique":
 		return pb.DaggerheartItemRarity_DAGGERHEART_ITEM_RARITY_UNIQUE
+	case "legendary":
+		return pb.DaggerheartItemRarity_DAGGERHEART_ITEM_RARITY_LEGENDARY
 	default:
 		return pb.DaggerheartItemRarity_DAGGERHEART_ITEM_RARITY_UNSPECIFIED
 	}

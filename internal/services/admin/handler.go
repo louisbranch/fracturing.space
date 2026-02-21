@@ -1395,7 +1395,7 @@ func (h *Handler) handleCatalogSectionTable(w http.ResponseWriter, r *http.Reque
 		resp, err := contentClient.ListDomainCards(ctx, &daggerheartv1.ListDaggerheartDomainCardsRequest{
 			PageSize:  catalogListPageSize,
 			PageToken: pageToken,
-			OrderBy:   "name",
+			OrderBy:   "level",
 			Locale:    locale,
 		})
 		if err != nil {
@@ -1455,7 +1455,7 @@ func (h *Handler) handleCatalogSectionTable(w http.ResponseWriter, r *http.Reque
 		resp, err := contentClient.ListLootEntries(ctx, &daggerheartv1.ListDaggerheartLootEntriesRequest{
 			PageSize:  catalogListPageSize,
 			PageToken: pageToken,
-			OrderBy:   "name",
+			OrderBy:   "roll",
 			Locale:    locale,
 		})
 		if err != nil {
