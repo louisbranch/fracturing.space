@@ -8,6 +8,7 @@ type PageContext struct {
 	Loc          Localizer
 	CurrentPath  string
 	CurrentQuery string
+	AppName      string
 }
 
 func isGamePagePath(path string) bool {

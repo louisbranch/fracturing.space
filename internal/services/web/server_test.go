@@ -15,6 +15,7 @@ import (
 	"time"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
+	"github.com/louisbranch/fracturing.space/internal/platform/branding"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/health"
@@ -78,7 +79,7 @@ func TestLandingPageRenders(t *testing.T) {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
 	}
 	body := w.Body.String()
-	if !strings.Contains(body, "Fracturing.Space") {
+	if !strings.Contains(body, branding.AppName) {
 		t.Fatalf("expected app name in body")
 	}
 	if !strings.Contains(body, "Open-source, server-authoritative engine") {

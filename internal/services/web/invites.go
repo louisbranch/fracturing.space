@@ -16,7 +16,7 @@ func (h *handler) handleAppInvites(w http.ResponseWriter, r *http.Request) {
 	// keeps user identity as the primary partition for this page.
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		localizeHTTPError(w, r, http.StatusMethodNotAllowed, "error.http.method_not_allowed")
 		return
 	}
 
@@ -49,7 +49,7 @@ func (h *handler) handleAppInvites(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	renderAppInvitesPageWithAppName(w, r, h.resolvedAppName(), resp.GetInvites())
+	renderAppInvitesPageWithContext(w, r, h.pageContext(w, r), resp.GetInvites())
 }
 
 func (h *handler) handleAppInviteClaim(w http.ResponseWriter, r *http.Request) {
@@ -57,7 +57,7 @@ func (h *handler) handleAppInviteClaim(w http.ResponseWriter, r *http.Request) {
 	// campaign membership for the authenticated user.
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		localizeHTTPError(w, r, http.StatusMethodNotAllowed, "error.http.method_not_allowed")
 		return
 	}
 
@@ -123,10 +123,10 @@ func (h *handler) handleAppInviteClaim(w http.ResponseWriter, r *http.Request) {
 }
 
 func renderAppInvitesPage(w http.ResponseWriter, r *http.Request, invites []*statev1.PendingUserInvite) {
-	renderAppInvitesPageWithAppName(w, r, "", invites)
+	renderAppInvitesPageWithContext(w, r, webtemplates.PageContext{}, invites)
 }
 
-func renderAppInvitesPageWithAppName(w http.ResponseWriter, r *http.Request, appName string, invites []*statev1.PendingUserInvite) {
+func renderAppInvitesPageWithContext(w http.ResponseWriter, r *http.Request, page webtemplates.PageContext, invites []*statev1.PendingUserInvite) {
 	// renderAppInvitesPage maps pending user invites into the minimal claimable
 	// list the web surface exposes.
 	mapped := make([]webtemplates.UserInviteItem, 0, len(invites))
@@ -151,7 +151,8 @@ func renderAppInvitesPageWithAppName(w http.ResponseWriter, r *http.Request, app
 			inviteID = strings.TrimSpace(invite.GetId())
 		}
 
-		participantName := "Unknown participant"
+		unknownParticipantLabel := webtemplates.T(page.Loc, "game.invite_item.unknown_participant")
+		participantName := unknownParticipantLabel
 		participantID := ""
 		if participant != nil {
 			participantName = strings.TrimSpace(participant.GetName())
@@ -164,13 +165,13 @@ func renderAppInvitesPageWithAppName(w http.ResponseWriter, r *http.Request, app
 			campaignName = inviteCampaignID
 		}
 		if campaignName == "" {
-			campaignName = "Unknown campaign"
+			campaignName = webtemplates.T(page.Loc, "game.invite_item.unknown_campaign")
 		}
 		if campaignID == "" {
 			campaignID = inviteCampaignID
 		}
 		if participantName == "" {
-			participantName = "Unknown participant"
+			participantName = unknownParticipantLabel
 		}
 		label := campaignName + " - " + participantName
 		mapped = append(mapped, webtemplates.UserInviteItem{
@@ -181,7 +182,7 @@ func renderAppInvitesPageWithAppName(w http.ResponseWriter, r *http.Request, app
 		})
 	}
 	writeGameContentType(w)
-	if err := webtemplates.UserInvitesPage(appName, mapped).Render(r.Context(), w); err != nil {
-		http.Error(w, "failed to render invites page", http.StatusInternalServerError)
+	if err := webtemplates.UserInvitesPage(page, mapped).Render(r.Context(), w); err != nil {
+		localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.failed_to_render_invites_page")
 	}
 }

@@ -16,7 +16,6 @@ import (
 	"github.com/a-h/templ"
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	"github.com/louisbranch/fracturing.space/internal/platform/branding"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/i18n"
@@ -58,17 +57,19 @@ type Server struct {
 }
 
 type handler struct {
-	config            Config
-	authClient        authv1.AuthServiceClient
-	sessions          *sessionStore
-	pendingFlows      *pendingFlowStore
-	clientInitMu      sync.Mutex
-	campaignClient    statev1.CampaignServiceClient
-	sessionClient     statev1.SessionServiceClient
-	participantClient statev1.ParticipantServiceClient
-	characterClient   statev1.CharacterServiceClient
-	inviteClient      statev1.InviteServiceClient
-	campaignAccess    campaignAccessChecker
+	config              Config
+	authClient          authv1.AuthServiceClient
+	sessions            *sessionStore
+	pendingFlows        *pendingFlowStore
+	clientInitMu        sync.Mutex
+	campaignNameCacheMu sync.RWMutex
+	campaignNameCache   map[string]campaignNameCache
+	campaignClient      statev1.CampaignServiceClient
+	sessionClient       statev1.SessionServiceClient
+	participantClient   statev1.ParticipantServiceClient
+	characterClient     statev1.CharacterServiceClient
+	inviteClient        statev1.InviteServiceClient
+	campaignAccess      campaignAccessChecker
 }
 
 type handlerDependencies struct {
@@ -111,36 +112,28 @@ func (h *handler) handleAppRoot(w http.ResponseWriter, r *http.Request) {
 	}
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		localizeHTTPError(w, r, http.StatusMethodNotAllowed, "error.http.method_not_allowed")
 		return
 	}
 
-	printer, lang := localizer(w, r)
-
-	appName := strings.TrimSpace(h.config.AppName)
-	if appName == "" {
-		appName = branding.AppName
-	}
+	appName := h.resolvedAppName()
+	page := h.pageContext(w, r)
+	page.AppName = appName
 
 	if sess := sessionFromRequest(r, h.sessions); sess != nil {
 		userLabel := strings.TrimSpace(sess.displayName)
 		if userLabel == "" {
-			userLabel = "User"
+			userLabel = webtemplates.T(page.Loc, "web.dashboard.user_name_fallback")
 		}
 		templ.Handler(webtemplates.DashboardPage(webtemplates.DashboardPageParams{
 			AppName:  appName,
-			Lang:     lang,
+			Lang:     page.Lang,
 			UserName: userLabel,
+			Loc:      page.Loc,
 		})).ServeHTTP(w, r)
 		return
 	}
 
-	page := webtemplates.PageContext{
-		Lang:         lang,
-		Loc:          printer,
-		CurrentPath:  r.URL.Path,
-		CurrentQuery: r.URL.RawQuery,
-	}
 	params := webtemplates.LandingParams{}
 	if strings.TrimSpace(h.config.OAuthClientID) != "" {
 		params.SignInURL = "/auth/login"
@@ -156,7 +149,7 @@ func NewHandler(config Config, authClient authv1.AuthServiceClient) http.Handler
 	handler, err := NewHandlerWithCampaignAccess(config, authClient, handlerDependencies{})
 	if err != nil {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			http.Error(w, "web handler unavailable", http.StatusInternalServerError)
+			localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.web_handler_unavailable")
 		})
 	}
 	return handler
@@ -176,15 +169,12 @@ func NewHandlerWithCampaignAccess(config Config, authClient authv1.AuthServiceCl
 		),
 	)
 
-	appName := strings.TrimSpace(config.AppName)
-	if appName == "" {
-		appName = branding.AppName
-	}
 	h := &handler{
 		config:            config,
 		authClient:        authClient,
 		sessions:          newSessionStore(),
 		pendingFlows:      newPendingFlowStore(),
+		campaignNameCache: make(map[string]campaignNameCache),
 		campaignClient:    deps.campaignClient,
 		sessionClient:     deps.sessionClient,
 		participantClient: deps.participantClient,
@@ -197,7 +187,7 @@ func NewHandlerWithCampaignAccess(config Config, authClient authv1.AuthServiceCl
 	h.registerGameRoutes(gameMux)
 
 	publicMux := http.NewServeMux()
-	h.registerPublicRoutes(publicMux, appName)
+	h.registerPublicRoutes(publicMux, h.resolvedAppName())
 
 	rootMux.Handle("/dashboard", gameMux)
 	rootMux.Handle("/campaigns", gameMux)
@@ -230,9 +220,11 @@ func (h *handler) registerPublicRoutes(mux *http.ServeMux, appName string) {
 
 	mux.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			localizeHTTPError(w, r, http.StatusMethodNotAllowed, "error.http.method_not_allowed")
 			return
 		}
+
+		printer, lang := localizer(w, r)
 
 		pendingID := strings.TrimSpace(r.URL.Query().Get("pending_id"))
 		if pendingID == "" {
@@ -240,7 +232,7 @@ func (h *handler) registerPublicRoutes(mux *http.ServeMux, appName string) {
 				http.Redirect(w, r, "/auth/login", http.StatusFound)
 				return
 			}
-			http.Error(w, "pending_id is required", http.StatusBadRequest)
+			localizeHTTPError(w, r, http.StatusBadRequest, "error.http.pending_id_is_required")
 			return
 		}
 		clientID := strings.TrimSpace(r.URL.Query().Get("client_id"))
@@ -250,11 +242,10 @@ func (h *handler) registerPublicRoutes(mux *http.ServeMux, appName string) {
 			if clientID != "" {
 				clientName = clientID
 			} else {
-				clientName = "Unknown Client"
+				clientName = webtemplates.T(printer, "web.login.unknown_client")
 			}
 		}
 
-		printer, lang := localizer(w, r)
 		params := webtemplates.LoginParams{
 			AppName:    appName,
 			PendingID:  pendingID,
@@ -508,11 +499,11 @@ func dialGameGRPC(ctx context.Context, config Config) (*grpc.ClientConn, statev1
 // the credential challenge expected by browser/WebAuth clients.
 func (h *handler) handlePasskeyLoginStart(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		localizeHTTPError(w, r, http.StatusMethodNotAllowed, "error.http.method_not_allowed")
 		return
 	}
 	if h == nil || h.authClient == nil {
-		http.Error(w, "auth client not configured", http.StatusInternalServerError)
+		localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.auth_client_not_configured")
 		return
 	}
 
@@ -520,17 +511,17 @@ func (h *handler) handlePasskeyLoginStart(w http.ResponseWriter, r *http.Request
 		PendingID string `json:"pending_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		http.Error(w, "invalid json body", http.StatusBadRequest)
+		localizeHTTPError(w, r, http.StatusBadRequest, "error.http.invalid_json_body")
 		return
 	}
 	if strings.TrimSpace(payload.PendingID) == "" {
-		http.Error(w, "pending_id is required", http.StatusBadRequest)
+		localizeHTTPError(w, r, http.StatusBadRequest, "error.http.pending_id_is_required")
 		return
 	}
 
 	resp, err := h.authClient.BeginPasskeyLogin(r.Context(), &authv1.BeginPasskeyLoginRequest{})
 	if err != nil {
-		http.Error(w, "failed to start passkey login", http.StatusBadRequest)
+		localizeHTTPError(w, r, http.StatusBadRequest, "error.http.failed_to_start_passkey_login")
 		return
 	}
 
@@ -544,11 +535,11 @@ func (h *handler) handlePasskeyLoginStart(w http.ResponseWriter, r *http.Request
 // to the consent flow via the shared pending transaction state.
 func (h *handler) handlePasskeyLoginFinish(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		localizeHTTPError(w, r, http.StatusMethodNotAllowed, "error.http.method_not_allowed")
 		return
 	}
 	if h == nil || h.authClient == nil {
-		http.Error(w, "auth client not configured", http.StatusInternalServerError)
+		localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.auth_client_not_configured")
 		return
 	}
 
@@ -558,19 +549,19 @@ func (h *handler) handlePasskeyLoginFinish(w http.ResponseWriter, r *http.Reques
 		Credential json.RawMessage `json:"credential"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		http.Error(w, "invalid json body", http.StatusBadRequest)
+		localizeHTTPError(w, r, http.StatusBadRequest, "error.http.invalid_json_body")
 		return
 	}
 	if strings.TrimSpace(payload.PendingID) == "" {
-		http.Error(w, "pending_id is required", http.StatusBadRequest)
+		localizeHTTPError(w, r, http.StatusBadRequest, "error.http.pending_id_is_required")
 		return
 	}
 	if strings.TrimSpace(payload.SessionID) == "" {
-		http.Error(w, "session_id is required", http.StatusBadRequest)
+		localizeHTTPError(w, r, http.StatusBadRequest, "error.http.session_id_is_required")
 		return
 	}
 	if len(payload.Credential) == 0 {
-		http.Error(w, "credential is required", http.StatusBadRequest)
+		localizeHTTPError(w, r, http.StatusBadRequest, "error.http.credential_is_required")
 		return
 	}
 
@@ -580,7 +571,7 @@ func (h *handler) handlePasskeyLoginFinish(w http.ResponseWriter, r *http.Reques
 		PendingId:              payload.PendingID,
 	})
 	if err != nil {
-		http.Error(w, "failed to finish passkey login", http.StatusBadRequest)
+		localizeHTTPError(w, r, http.StatusBadRequest, "error.http.failed_to_finish_passkey_login")
 		return
 	}
 
@@ -592,11 +583,11 @@ func (h *handler) handlePasskeyLoginFinish(w http.ResponseWriter, r *http.Reques
 // onboard a new WebAuth identity without leaving the current auth flow.
 func (h *handler) handlePasskeyRegisterStart(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		localizeHTTPError(w, r, http.StatusMethodNotAllowed, "error.http.method_not_allowed")
 		return
 	}
 	if h == nil || h.authClient == nil {
-		http.Error(w, "auth client not configured", http.StatusInternalServerError)
+		localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.auth_client_not_configured")
 		return
 	}
 
@@ -605,23 +596,23 @@ func (h *handler) handlePasskeyRegisterStart(w http.ResponseWriter, r *http.Requ
 		PendingID string `json:"pending_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		http.Error(w, "invalid json body", http.StatusBadRequest)
+		localizeHTTPError(w, r, http.StatusBadRequest, "error.http.invalid_json_body")
 		return
 	}
 	if strings.TrimSpace(payload.Email) == "" {
-		http.Error(w, "email is required", http.StatusBadRequest)
+		localizeHTTPError(w, r, http.StatusBadRequest, "error.http.email_is_required")
 		return
 	}
 
 	createResp, err := h.authClient.CreateUser(r.Context(), &authv1.CreateUserRequest{Email: payload.Email})
 	if err != nil || createResp.GetUser() == nil {
-		http.Error(w, "failed to create user", http.StatusBadRequest)
+		localizeHTTPError(w, r, http.StatusBadRequest, "error.http.failed_to_create_user")
 		return
 	}
 
 	beginResp, err := h.authClient.BeginPasskeyRegistration(r.Context(), &authv1.BeginPasskeyRegistrationRequest{UserId: createResp.GetUser().GetId()})
 	if err != nil {
-		http.Error(w, "failed to start passkey registration", http.StatusBadRequest)
+		localizeHTTPError(w, r, http.StatusBadRequest, "error.http.failed_to_start_passkey_registration")
 		return
 	}
 
@@ -637,11 +628,11 @@ func (h *handler) handlePasskeyRegisterStart(w http.ResponseWriter, r *http.Requ
 // newly created participant binding identifiers for client continuation.
 func (h *handler) handlePasskeyRegisterFinish(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		localizeHTTPError(w, r, http.StatusMethodNotAllowed, "error.http.method_not_allowed")
 		return
 	}
 	if h == nil || h.authClient == nil {
-		http.Error(w, "auth client not configured", http.StatusInternalServerError)
+		localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.auth_client_not_configured")
 		return
 	}
 
@@ -652,19 +643,19 @@ func (h *handler) handlePasskeyRegisterFinish(w http.ResponseWriter, r *http.Req
 		Credential json.RawMessage `json:"credential"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		http.Error(w, "invalid json body", http.StatusBadRequest)
+		localizeHTTPError(w, r, http.StatusBadRequest, "error.http.invalid_json_body")
 		return
 	}
 	if strings.TrimSpace(payload.SessionID) == "" {
-		http.Error(w, "session_id is required", http.StatusBadRequest)
+		localizeHTTPError(w, r, http.StatusBadRequest, "error.http.session_id_is_required")
 		return
 	}
 	if strings.TrimSpace(payload.UserID) == "" {
-		http.Error(w, "user_id is required", http.StatusBadRequest)
+		localizeHTTPError(w, r, http.StatusBadRequest, "error.http.user_id_is_required")
 		return
 	}
 	if len(payload.Credential) == 0 {
-		http.Error(w, "credential is required", http.StatusBadRequest)
+		localizeHTTPError(w, r, http.StatusBadRequest, "error.http.credential_is_required")
 		return
 	}
 
@@ -673,7 +664,7 @@ func (h *handler) handlePasskeyRegisterFinish(w http.ResponseWriter, r *http.Req
 		CredentialResponseJson: payload.Credential,
 	})
 	if err != nil {
-		http.Error(w, "failed to finish passkey registration", http.StatusBadRequest)
+		localizeHTTPError(w, r, http.StatusBadRequest, "error.http.failed_to_finish_passkey_registration")
 		return
 	}
 
@@ -687,13 +678,13 @@ func (h *handler) handlePasskeyRegisterFinish(w http.ResponseWriter, r *http.Req
 // normal consent redirect path.
 func (h *handler) handleMagicLink(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		localizeHTTPError(w, r, http.StatusMethodNotAllowed, "error.http.method_not_allowed")
 		return
 	}
 	printer, lang := localizer(w, r)
 	if h == nil || h.authClient == nil {
 		renderMagicPage(w, r, http.StatusInternalServerError, webtemplates.MagicParams{
-			AppName: branding.AppName,
+			AppName: h.resolvedAppName(),
 			Title:   printer.Sprintf("magic.unavailable.title"),
 			Message: printer.Sprintf("magic.unavailable.message"),
 			Detail:  printer.Sprintf("magic.unavailable.detail"),
@@ -706,7 +697,7 @@ func (h *handler) handleMagicLink(w http.ResponseWriter, r *http.Request) {
 	token := strings.TrimSpace(r.URL.Query().Get("token"))
 	if token == "" {
 		renderMagicPage(w, r, http.StatusBadRequest, webtemplates.MagicParams{
-			AppName: branding.AppName,
+			AppName: h.resolvedAppName(),
 			Title:   printer.Sprintf("magic.missing.title"),
 			Message: printer.Sprintf("magic.missing.message"),
 			Detail:  printer.Sprintf("magic.missing.detail"),
@@ -719,7 +710,7 @@ func (h *handler) handleMagicLink(w http.ResponseWriter, r *http.Request) {
 	resp, err := h.authClient.ConsumeMagicLink(r.Context(), &authv1.ConsumeMagicLinkRequest{Token: token})
 	if err != nil {
 		renderMagicPage(w, r, http.StatusBadRequest, webtemplates.MagicParams{
-			AppName: branding.AppName,
+			AppName: h.resolvedAppName(),
 			Title:   printer.Sprintf("magic.invalid.title"),
 			Message: printer.Sprintf("magic.invalid.message"),
 			Detail:  printer.Sprintf("magic.invalid.detail"),
@@ -735,7 +726,7 @@ func (h *handler) handleMagicLink(w http.ResponseWriter, r *http.Request) {
 	}
 
 	renderMagicPage(w, r, http.StatusOK, webtemplates.MagicParams{
-		AppName:   branding.AppName,
+		AppName:   h.resolvedAppName(),
 		Title:     printer.Sprintf("magic.verified.title"),
 		Message:   printer.Sprintf("magic.verified.message"),
 		Detail:    printer.Sprintf("magic.verified.detail"),
@@ -756,13 +747,13 @@ func renderMagicPage(w http.ResponseWriter, r *http.Request, status int, params 
 // with state and challenge that ties browser and token exchange together.
 func (h *handler) handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		localizeHTTPError(w, r, http.StatusMethodNotAllowed, "error.http.method_not_allowed")
 		return
 	}
 
 	verifier, err := generateCodeVerifier()
 	if err != nil {
-		http.Error(w, "failed to generate PKCE verifier", http.StatusInternalServerError)
+		localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.failed_to_generate_pkce_verifier")
 		return
 	}
 	challenge := computeS256Challenge(verifier)
@@ -771,7 +762,7 @@ func (h *handler) handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 	authorizeURL := strings.TrimRight(strings.TrimSpace(h.config.AuthBaseURL), "/") + "/authorize"
 	redirectURL, err := url.Parse(authorizeURL)
 	if err != nil {
-		http.Error(w, "invalid auth base url", http.StatusInternalServerError)
+		localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.invalid_auth_base_url")
 		return
 	}
 	q := redirectURL.Query()
@@ -790,7 +781,7 @@ func (h *handler) handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 // web session that subsequent web handlers can reuse for campaign membership checks.
 func (h *handler) handleAuthCallback(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		localizeHTTPError(w, r, http.StatusMethodNotAllowed, "error.http.method_not_allowed")
 		return
 	}
 
@@ -798,13 +789,13 @@ func (h *handler) handleAuthCallback(w http.ResponseWriter, r *http.Request) {
 	state := strings.TrimSpace(r.URL.Query().Get("state"))
 
 	if code == "" || state == "" {
-		http.Error(w, "missing code or state", http.StatusBadRequest)
+		localizeHTTPError(w, r, http.StatusBadRequest, "error.http.missing_code_or_state")
 		return
 	}
 
 	flow := h.pendingFlows.consume(state)
 	if flow == nil {
-		http.Error(w, "invalid or expired state", http.StatusBadRequest)
+		localizeHTTPError(w, r, http.StatusBadRequest, "error.http.invalid_or_expired_state")
 		return
 	}
 
@@ -823,13 +814,13 @@ func (h *handler) handleAuthCallback(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := http.PostForm(tokenURL, form)
 	if err != nil {
-		http.Error(w, "token exchange failed", http.StatusBadGateway)
+		localizeHTTPError(w, r, http.StatusBadGateway, "error.http.token_exchange_failed")
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		http.Error(w, "token exchange returned "+resp.Status, http.StatusBadGateway)
+		localizeHTTPError(w, r, http.StatusBadGateway, "error.http.token_exchange_returned", resp.Status)
 		return
 	}
 
@@ -838,12 +829,12 @@ func (h *handler) handleAuthCallback(w http.ResponseWriter, r *http.Request) {
 		ExpiresIn   int64  `json:"expires_in"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&tokenResp); err != nil {
-		http.Error(w, "failed to decode token response", http.StatusBadGateway)
+		localizeHTTPError(w, r, http.StatusBadGateway, "error.http.failed_to_decode_token_response")
 		return
 	}
 
 	if tokenResp.AccessToken == "" {
-		http.Error(w, "empty access token", http.StatusBadGateway)
+		localizeHTTPError(w, r, http.StatusBadGateway, "error.http.empty_access_token")
 		return
 	}
 
@@ -858,7 +849,7 @@ func (h *handler) handleAuthCallback(w http.ResponseWriter, r *http.Request) {
 // avoid mixed-session conditions across web and auth-aware siblings.
 func (h *handler) handleAuthLogout(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		localizeHTTPError(w, r, http.StatusMethodNotAllowed, "error.http.method_not_allowed")
 		return
 	}
 

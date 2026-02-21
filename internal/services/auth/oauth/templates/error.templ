@@ -9,7 +9,7 @@ type ErrorPageParams struct {
 }
 
 templ ErrorPage(params ErrorPageParams) {
-	@sharedtemplates.AuthLayout("OAuth Error - "+params.AppName, "en", "landing-body", "") {
+	@sharedtemplates.ShellLayoutWithLocalizer("OAuth Error - "+params.AppName, "en", nil) {
 		<main class="oauth-shell">
 			<div class="oauth-header">
 				<h1>{ params.AppName }</h1>

@@ -134,7 +134,7 @@ func ConsentPage(params ConsentPageParams) templ.Component {
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = sharedtemplates.AuthLayout("Authorize - "+params.AppName, "en", "landing-body", "").Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = sharedtemplates.ShellLayoutWithLocalizer("Authorize - "+params.AppName, "en", nil).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
@@ -48,7 +49,7 @@ func TestGameRenderersUseGameLayoutMarker(t *testing.T) {
 		{
 			name: "sessions",
 			render: func(w *httptest.ResponseRecorder) {
-				renderAppCampaignSessionsPage(w, httptest.NewRequest(http.MethodGet, "/campaigns/camp-1/sessions", nil), "camp-1", []*statev1.Session{
+				renderAppCampaignSessionsPage(w, httptest.NewRequest(http.MethodGet, "/campaigns/camp-1/sessions", nil), webtemplates.PageContext{}, "camp-1", []*statev1.Session{
 					{Id: "sess-1", Name: "Session One", Status: statev1.SessionStatus_SESSION_ACTIVE},
 				}, true)
 			},
@@ -56,7 +57,7 @@ func TestGameRenderersUseGameLayoutMarker(t *testing.T) {
 		{
 			name: "session detail",
 			render: func(w *httptest.ResponseRecorder) {
-				renderAppCampaignSessionDetailPage(w, httptest.NewRequest(http.MethodGet, "/campaigns/camp-1/sessions/sess-1", nil), "camp-1", &statev1.Session{
+				renderAppCampaignSessionDetailPage(w, httptest.NewRequest(http.MethodGet, "/campaigns/camp-1/sessions/sess-1", nil), webtemplates.PageContext{}, "camp-1", &statev1.Session{
 					Id:     "sess-1",
 					Name:   "Session One",
 					Status: statev1.SessionStatus_SESSION_ACTIVE,
@@ -66,7 +67,7 @@ func TestGameRenderersUseGameLayoutMarker(t *testing.T) {
 		{
 			name: "participants",
 			render: func(w *httptest.ResponseRecorder) {
-				renderAppCampaignParticipantsPage(w, httptest.NewRequest(http.MethodGet, "/campaigns/camp-1/participants", nil), "camp-1", []*statev1.Participant{
+				renderAppCampaignParticipantsPage(w, httptest.NewRequest(http.MethodGet, "/campaigns/camp-1/participants", nil), webtemplates.PageContext{}, "camp-1", []*statev1.Participant{
 					{Id: "part-1", Name: "Alice"},
 				}, true)
 			},
@@ -74,7 +75,7 @@ func TestGameRenderersUseGameLayoutMarker(t *testing.T) {
 		{
 			name: "characters",
 			render: func(w *httptest.ResponseRecorder) {
-				renderAppCampaignCharactersPage(w, httptest.NewRequest(http.MethodGet, "/campaigns/camp-1/characters", nil), "camp-1", []*statev1.Character{
+				renderAppCampaignCharactersPage(w, httptest.NewRequest(http.MethodGet, "/campaigns/camp-1/characters", nil), webtemplates.PageContext{}, "camp-1", []*statev1.Character{
 					{Id: "char-1", Name: "Mira", Kind: statev1.CharacterKind_PC},
 				}, true, []*statev1.Participant{
 					{Id: "part-1", Name: "Alice"},
@@ -84,7 +85,7 @@ func TestGameRenderersUseGameLayoutMarker(t *testing.T) {
 		{
 			name: "character detail",
 			render: func(w *httptest.ResponseRecorder) {
-				renderAppCampaignCharacterDetailPage(w, httptest.NewRequest(http.MethodGet, "/campaigns/camp-1/characters/char-1", nil), "camp-1", &statev1.Character{
+				renderAppCampaignCharacterDetailPage(w, httptest.NewRequest(http.MethodGet, "/campaigns/camp-1/characters/char-1", nil), webtemplates.PageContext{}, "camp-1", &statev1.Character{
 					Id:            "char-1",
 					Name:          "Mira",
 					Kind:          statev1.CharacterKind_PC,
@@ -95,7 +96,7 @@ func TestGameRenderersUseGameLayoutMarker(t *testing.T) {
 		{
 			name: "campaign invites",
 			render: func(w *httptest.ResponseRecorder) {
-				renderAppCampaignInvitesPage(w, httptest.NewRequest(http.MethodGet, "/campaigns/camp-1/invites", nil), "camp-1", []*statev1.Invite{
+				renderAppCampaignInvitesPage(w, httptest.NewRequest(http.MethodGet, "/campaigns/camp-1/invites", nil), webtemplates.PageContext{}, "camp-1", []*statev1.Invite{
 					{Id: "inv-1", RecipientUserId: "user-2"},
 				}, true)
 			},

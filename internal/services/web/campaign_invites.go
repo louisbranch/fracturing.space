@@ -16,7 +16,7 @@ func (h *handler) handleAppCampaignInvites(w http.ResponseWriter, r *http.Reques
 	// membership lookup, ensuring only authorized members view sensitive flows.
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		localizeHTTPError(w, r, http.StatusMethodNotAllowed, "error.http.method_not_allowed")
 		return
 	}
 	actor, ok := h.requireCampaignActor(w, r, campaignID)
@@ -43,7 +43,7 @@ func (h *handler) handleAppCampaignInvites(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	renderAppCampaignInvitesPageWithAppName(w, r, h.resolvedAppName(), campaignID, resp.GetInvites(), inviteActor.canManageInvites)
+	renderAppCampaignInvitesPageWithContext(w, r, h.pageContext(w, r), campaignID, resp.GetInvites(), inviteActor.canManageInvites)
 }
 
 func (h *handler) handleAppCampaignInviteCreate(w http.ResponseWriter, r *http.Request, campaignID string) {
@@ -51,7 +51,7 @@ func (h *handler) handleAppCampaignInviteCreate(w http.ResponseWriter, r *http.R
 	// the selected target participant.
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		localizeHTTPError(w, r, http.StatusMethodNotAllowed, "error.http.method_not_allowed")
 		return
 	}
 	actor, ok := h.requireCampaignActor(w, r, campaignID)
@@ -97,7 +97,7 @@ func (h *handler) handleAppCampaignInviteRevoke(w http.ResponseWriter, r *http.R
 	// pending membership path for the campaign.
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		localizeHTTPError(w, r, http.StatusMethodNotAllowed, "error.http.method_not_allowed")
 		return
 	}
 	actor, ok := h.requireCampaignActor(w, r, campaignID)
@@ -199,14 +199,20 @@ func canManageCampaignInvites(access statev1.CampaignAccess) bool {
 	return access == statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER || access == statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER
 }
 
-func renderAppCampaignInvitesPage(w http.ResponseWriter, r *http.Request, campaignID string, invites []*statev1.Invite, canManageInvites bool) {
-	renderAppCampaignInvitesPageWithAppName(w, r, "", campaignID, invites, canManageInvites)
+func renderAppCampaignInvitesPage(w http.ResponseWriter, r *http.Request, page webtemplates.PageContext, campaignID string, invites []*statev1.Invite, canManageInvites bool) {
+	renderAppCampaignInvitesPageWithContext(w, r, page, campaignID, invites, canManageInvites)
 }
 
-func renderAppCampaignInvitesPageWithAppName(w http.ResponseWriter, r *http.Request, appName string, campaignID string, invites []*statev1.Invite, canManageInvites bool) {
+func renderAppCampaignInvitesPageWithContext(w http.ResponseWriter, r *http.Request, page webtemplates.PageContext, campaignID string, invites []*statev1.Invite, canManageInvites bool) {
 	// renderAppCampaignInvitesPage exposes write controls only to managed roles.
 	campaignID = strings.TrimSpace(campaignID)
 	inviteItems := make([]webtemplates.CampaignInviteItem, 0, len(invites))
+	unknownInviteID := "unknown-invite"
+	unknownRecipient := "unknown-recipient"
+	if page.Loc != nil {
+		unknownInviteID = webtemplates.T(page.Loc, "game.campaign_invite.unknown_id")
+		unknownRecipient = webtemplates.T(page.Loc, "game.campaign_invite.unknown_recipient")
+	}
 	for _, invite := range invites {
 		if invite == nil {
 			continue
@@ -214,11 +220,11 @@ func renderAppCampaignInvitesPageWithAppName(w http.ResponseWriter, r *http.Requ
 		inviteID := strings.TrimSpace(invite.GetId())
 		displayInviteID := inviteID
 		if displayInviteID == "" {
-			displayInviteID = "unknown-invite"
+			displayInviteID = unknownInviteID
 		}
 		recipient := strings.TrimSpace(invite.GetRecipientUserId())
 		if recipient == "" {
-			recipient = "unknown-recipient"
+			recipient = unknownRecipient
 		}
 		inviteItems = append(inviteItems, webtemplates.CampaignInviteItem{
 			ID:    inviteID,
@@ -226,7 +232,7 @@ func renderAppCampaignInvitesPageWithAppName(w http.ResponseWriter, r *http.Requ
 		})
 	}
 	writeGameContentType(w)
-	if err := webtemplates.CampaignInvitesPage(appName, campaignID, canManageInvites, inviteItems).Render(r.Context(), w); err != nil {
-		http.Error(w, "failed to render campaign invites page", http.StatusInternalServerError)
+	if err := webtemplates.CampaignInvitesPage(page, campaignID, canManageInvites, inviteItems).Render(r.Context(), w); err != nil {
+		localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.failed_to_render_campaign_invites_page")
 	}
 }

@@ -1,0 +1,83 @@
+package templates
+
+import (
+	"golang.org/x/text/message"
+
+	"github.com/louisbranch/fracturing.space/internal/platform/branding"
+)
+
+type Localizer interface {
+	Sprintf(key message.Reference, args ...any) string
+}
+
+// T returns a translated string or the key when no localizer is available.
+func T(loc Localizer, key message.Reference, args ...any) string {
+	if loc == nil {
+		if keyString, ok := key.(string); ok {
+			return keyString
+		}
+		return ""
+	}
+	return loc.Sprintf(key, args...)
+}
+
+templ pageHead(title string, loc Localizer) {
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>{ title }</title>
+	<meta name="description" content={ T(loc, "layout.meta_description") }>
+	<link href="https://cdn.jsdelivr.net/npm/daisyui@5.5.18" rel="stylesheet" type="text/css" integrity="sha384-ww1btmC3Ah3rEb6jt/coOxyQ9JYMoxQpFSB/bxdE20ZYMK4kWSb+TwcgbHR/GFCq" crossorigin="anonymous"/>
+	<link href="https://cdn.jsdelivr.net/npm/daisyui@5.5.18/theme/retro.css" rel="stylesheet" type="text/css" crossorigin="anonymous">
+	<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.1.18" integrity="sha384-WrpyCFNrMmN/IC7KmMNiXxIouXEFpoDIuJ2P+ys++uYEzegAW2MSl+X6Unsahaij" crossorigin="anonymous"></script>
+	<link rel="stylesheet" href="/static/landing.css">
+}
+
+templ ShellLayout(title string, lang string) {
+	@ShellLayoutWithLocalizer(title, lang, nil)
+}
+
+templ ShellLayoutWithLocalizer(title string, lang string, loc Localizer) {
+	<!DOCTYPE html>
+	<html lang={ lang } data-theme="retro">
+		<head>
+			@pageHead(title, loc)
+		</head>
+		<body class="landing-body" data-layout="auth">
+			@LucideSprite()
+			{ children... }
+		</body>
+	</html>
+}
+
+templ ChromeLayout(title string, lang string) {
+	@AppChromeLayoutWithLocalizer(title, lang, branding.AppName, nil)
+}
+
+templ AppChromeLayoutWithLocalizer(title string, lang string, appName string, loc Localizer) {
+	<!DOCTYPE html>
+	<html lang={ lang } data-theme="retro">
+		<head>
+			@pageHead(title, loc)
+		</head>
+		<body data-layout="game">
+			@LucideSprite()
+			<nav class="navbar bg-base-200 fixed top-0 w-full z-50">
+				<div class="navbar-start w-auto">
+					<h3 class="text-lg font-bold">
+						<a href="/">{ appName }</a>
+					</h3>
+				</div>
+				<div class="navbar-end w-full justify-end gap-3">
+					<form method="POST" action="/auth/logout">
+						<button type="submit" class="btn btn-ghost btn-sm">{ T(loc, "layout.sign_out") }</button>
+					</form>
+				</div>
+			</nav>
+			{ children... }
+		</body>
+	</html>
+}
+
+templ AppChromeLayout(title string, lang string, appName string) {
+	@AppChromeLayoutWithLocalizer(title, lang, appName, nil)
+}

@@ -1,5 +1,5 @@
 (function () {
-  var root = document.querySelector(".landing-shell[data-campaign-id]");
+  var root = document.querySelector("[data-campaign-id]");
   if (!root) {
     return;
   }
@@ -12,6 +12,20 @@
   var sendBtn = document.getElementById("chat-send");
   var socket = null;
   var lastSequenceID = 0;
+  var chatText = {
+    invalidId: root.dataset.chatInvalidId || "",
+    connecting: root.dataset.chatConnecting || "",
+    unavailable: root.dataset.chatChatUnavailable || "",
+    wsSetupFailed: root.dataset.chatWsSetupFailed || "",
+    connected: root.dataset.chatConnected || "",
+    invalidFrame: root.dataset.chatInvalidFrame || "",
+    joined: root.dataset.chatJoined || "",
+    participant: root.dataset.chatParticipant || "",
+    requestFailed: root.dataset.chatRequestFailed || "",
+    errorPrefix: root.dataset.chatErrorPrefix || "",
+    unableToSend: root.dataset.chatUnableToSend || "",
+    disconnectedRetrying: root.dataset.chatDisconnectedRetrying || ""
+  };
 
   function randomID(prefix) {
     if (window.crypto && typeof window.crypto.randomUUID === "function") {
@@ -72,14 +86,14 @@
 
   function connect() {
     if (!campaignID) {
-      setStatus("invalid campaign id", true);
+      setStatus(chatText.invalidId, true);
       return;
     }
     if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
       return;
     }
 
-    setStatus("connecting...", false);
+    setStatus(chatText.connecting, false);
     if (sendBtn) {
       sendBtn.disabled = true;
     }
@@ -87,13 +101,13 @@
     try {
       socket = new WebSocket(wsURL());
     } catch (err) {
-      setStatus("chat unavailable", true);
-      appendLine("", "WebSocket setup failed.", true);
+      setStatus(chatText.unavailable, true);
+      appendLine("", chatText.wsSetupFailed, true);
       return;
     }
 
     socket.addEventListener("open", function () {
-      setStatus("connected", false);
+      setStatus(chatText.connected, false);
       if (sendBtn) {
         sendBtn.disabled = false;
       }
@@ -108,7 +122,7 @@
       try {
         frame = JSON.parse(event.data);
       } catch (err) {
-        appendLine("", "Invalid frame from chat service.", true);
+        appendLine("", chatText.invalidFrame, true);
         return;
       }
 
@@ -117,7 +131,7 @@
         if (latest > lastSequenceID) {
           lastSequenceID = latest;
         }
-        appendLine("", "Joined campaign room.", true);
+        appendLine("", chatText.joined, true);
         return;
       }
 
@@ -127,7 +141,7 @@
         if (sequence > lastSequenceID) {
           lastSequenceID = sequence;
         }
-        var author = (((message || {}).actor || {}).name) || "participant";
+        var author = (((message || {}).actor || {}).name) || chatText.participant;
         appendLine(author, String(message.body || ""), false);
         return;
       }
@@ -135,18 +149,18 @@
       if (frame.type === "chat.error") {
         var errObj = ((frame || {}).payload || {}).error || {};
         var code = errObj.code || "UNKNOWN";
-        var text = errObj.message || "Request failed.";
-        setStatus("error: " + code, true);
+        var text = errObj.message || chatText.requestFailed;
+        setStatus(chatText.errorPrefix + ": " + code, true);
         appendLine("", text + " (" + code + ")", true);
       }
     });
 
     socket.addEventListener("error", function () {
-      setStatus("chat unavailable", true);
+      setStatus(chatText.unavailable, true);
     });
 
     socket.addEventListener("close", function () {
-      setStatus("disconnected, retrying...", true);
+      setStatus(chatText.disconnectedRetrying, true);
       if (sendBtn) {
         sendBtn.disabled = true;
       }
@@ -169,7 +183,7 @@
         body: body
       });
       if (!ok) {
-        appendLine("", "Unable to send while disconnected.", true);
+        appendLine("", chatText.unableToSend, true);
         return;
       }
       inputEl.value = "";
