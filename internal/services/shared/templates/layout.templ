@@ -148,11 +148,21 @@ templ AppChromeLayout(options AppChromeLayoutOptions) {
 									/>
 								</div>
 							</button>
-							<form method="POST" action="/auth/logout" class="dropdown-content bg-base-100 rounded-box z-[1] mt-3 w-40 p-2 shadow">
+						<div class="dropdown-content bg-base-100 rounded-box z-[1] mt-3 w-40 p-2 shadow">
+							<a
+								href="/profile"
+								hx-get="/profile"
+								hx-target="#main"
+								hx-swap="innerHTML"
+								hx-push-url="true"
+								class="btn btn-ghost btn-sm w-full justify-start"
+							>{ T(options.Loc, "layout.profile") }</a>
+							<form method="POST" action="/auth/logout">
 								<button type="submit" class="btn btn-ghost btn-sm w-full justify-start">
 									{ T(options.Loc, "layout.sign_out") }
 								</button>
 							</form>
+						</div>
 						</div>
 					} else {
 						<form method="POST" action="/auth/logout">

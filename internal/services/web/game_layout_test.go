@@ -13,8 +13,18 @@ import (
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
+	"golang.org/x/text/message"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
+
+type fakeHTMXLocalizer struct{}
+
+func (fakeHTMXLocalizer) Sprintf(key message.Reference, _ ...any) string {
+	if s, ok := key.(string); ok {
+		return "localized:" + s
+	}
+	return ""
+}
 
 func TestWriteGameContentType(t *testing.T) {
 	w := httptest.NewRecorder()
@@ -235,6 +245,23 @@ func TestWritePageInjectsTitleForHTMXRequests(t *testing.T) {
 	}
 	if !strings.HasSuffix(body, "fragment") {
 		t.Fatalf("expected rendered fragment body in HTMX response, got %q", body)
+	}
+}
+
+func TestComposeHTMXTitleForPageUsesLocalizedTitle(t *testing.T) {
+	page := webtemplates.PageContext{
+		Loc: fakeHTMXLocalizer{},
+	}
+	got := composeHTMXTitleForPage(page, "layout.profile")
+
+	if got == "" {
+		t.Fatal("expected non-empty htmx title")
+	}
+	if !strings.HasPrefix(got, "<title>") || !strings.HasSuffix(got, "</title>") {
+		t.Fatalf("expected composed title tag, got %q", got)
+	}
+	if !strings.Contains(got, "localized:layout.profile | "+branding.AppName) {
+		t.Fatalf("expected composed title to use composed localized title, got %q", got)
 	}
 }
 

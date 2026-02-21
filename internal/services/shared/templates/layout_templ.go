@@ -360,61 +360,74 @@ func AppChromeLayout(options AppChromeLayoutOptions) templ.Component {
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "\" class=\"rounded-full\"></div></button><form method=\"POST\" action=\"/auth/logout\" class=\"dropdown-content bg-base-100 rounded-box z-[1] mt-3 w-40 p-2 shadow\"><button type=\"submit\" class=\"btn btn-ghost btn-sm w-full justify-start\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "\" class=\"rounded-full\"></div></button><div class=\"dropdown-content bg-base-100 rounded-box z-[1] mt-3 w-40 p-2 shadow\"><a href=\"/profile\" hx-get=\"/profile\" hx-target=\"#main\" hx-swap=\"innerHTML\" hx-push-url=\"true\" class=\"btn btn-ghost btn-sm w-full justify-start\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var15 string
-				templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(T(options.Loc, "layout.sign_out"))
+				templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(T(options.Loc, "layout.profile"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 153, Col: 44}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 159, Col: 43}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "</button></form></div>")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-			} else {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "<form method=\"POST\" action=\"/auth/logout\"><button type=\"submit\" class=\"btn btn-ghost btn-sm\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "</a><form method=\"POST\" action=\"/auth/logout\"><button type=\"submit\" class=\"btn btn-ghost btn-sm w-full justify-start\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var16 string
 				templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(T(options.Loc, "layout.sign_out"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 159, Col: 93}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 161, Col: 44}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "</button></form>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "</button></form></div></div>")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+			} else {
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "<form method=\"POST\" action=\"/auth/logout\"><button type=\"submit\" class=\"btn btn-ghost btn-sm\">")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				var templ_7745c5c3_Var17 string
+				templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(T(options.Loc, "layout.sign_out"))
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 167, Col: 93}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "</button></form>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "</div></nav>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "</div></nav>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "<main class=\"max-w-screen-xl mx-auto px-4 pt-20\" id=\"main\" aria-label=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "<main class=\"max-w-screen-xl mx-auto px-4 pt-20\" id=\"main\" aria-label=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var17 string
-		templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(chromeMainAria(options.Loc, options.ChromeOptions))
+		var templ_7745c5c3_Var18 string
+		templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(chromeMainAria(options.Loc, options.ChromeOptions))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 165, Col: 125}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 173, Col: 125}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -424,20 +437,20 @@ func AppChromeLayout(options AppChromeLayoutOptions) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "<h1 class=\"mb-5\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "<h1 class=\"mb-5\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var18 string
-		templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(pageHeadingFromTitle(options.Title, options.AppName))
+		var templ_7745c5c3_Var19 string
+		templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(pageHeadingFromTitle(options.Title, options.AppName))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 169, Col: 75}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 177, Col: 75}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "</h1>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "</h1>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -445,7 +458,7 @@ func AppChromeLayout(options AppChromeLayoutOptions) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "</main><script>\n\t\t\t\tfunction syncChromeNavActiveLinks() {\n\t\t\t\t\tvar currentPath = window.location.pathname;\n\t\t\t\t\tvar links = document.querySelectorAll(\"a[data-nav-item]\");\n\t\t\t\t\tif (!links.length) {\n\t\t\t\t\t\treturn;\n\t\t\t\t\t}\n\t\t\t\tlinks.forEach(function(link) {\n\t\t\t\t\tvar href = link.getAttribute(\"href\");\n\t\t\t\t\tlink.classList.remove(\"active\");\n\t\t\t\t\tlink.classList.remove(\"menu-active\");\n\t\t\t\t\tlink.classList.remove(\"btn-active\");\n\t\t\t\t\tif (!href) {\n\t\t\t\t\t\treturn;\n\t\t\t\t\t}\n\t\t\t\t\t\tvar target;\n\t\t\t\t\t\ttry {\n\t\t\t\t\t\t\ttarget = new URL(href, window.location.origin);\n\t\t\t\t\t\t} catch (err) {\n\t\t\t\t\t\t\treturn;\n\t\t\t\t\t\t}\n\t\t\t\t\tvar shouldBeActive = currentPath === target.pathname;\n\t\t\t\t\tif (!shouldBeActive && target.pathname !== \"/\") {\n\t\t\t\t\t\tshouldBeActive = currentPath.indexOf(target.pathname + \"/\") === 0;\n\t\t\t\t\t}\n\n\t\t\t\t\tif (link.classList.contains(\"btn\")) {\n\t\t\t\t\t\tlink.classList.toggle(\"btn-active\", shouldBeActive);\n\t\t\t\t\t} else {\n\t\t\t\t\t\tlink.classList.toggle(\"menu-active\", shouldBeActive);\n\t\t\t\t\t}\n\t\t\t\t});\n\t\t\t}\n\t\t\t\tsyncChromeNavActiveLinks();\n\t\t\t\tdocument.addEventListener(\"DOMContentLoaded\", syncChromeNavActiveLinks);\n\t\t\t\twindow.addEventListener(\"popstate\", syncChromeNavActiveLinks);\n\t\t\t\tdocument.addEventListener(\"htmx:afterSwap\", syncChromeNavActiveLinks);\n\t\t\t\tdocument.addEventListener(\"htmx:afterSettle\", syncChromeNavActiveLinks);\n\t\t\t</script>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "</main><script>\n\t\t\t\tfunction syncChromeNavActiveLinks() {\n\t\t\t\t\tvar currentPath = window.location.pathname;\n\t\t\t\t\tvar links = document.querySelectorAll(\"a[data-nav-item]\");\n\t\t\t\t\tif (!links.length) {\n\t\t\t\t\t\treturn;\n\t\t\t\t\t}\n\t\t\t\tlinks.forEach(function(link) {\n\t\t\t\t\tvar href = link.getAttribute(\"href\");\n\t\t\t\t\tlink.classList.remove(\"active\");\n\t\t\t\t\tlink.classList.remove(\"menu-active\");\n\t\t\t\t\tlink.classList.remove(\"btn-active\");\n\t\t\t\t\tif (!href) {\n\t\t\t\t\t\treturn;\n\t\t\t\t\t}\n\t\t\t\t\t\tvar target;\n\t\t\t\t\t\ttry {\n\t\t\t\t\t\t\ttarget = new URL(href, window.location.origin);\n\t\t\t\t\t\t} catch (err) {\n\t\t\t\t\t\t\treturn;\n\t\t\t\t\t\t}\n\t\t\t\t\tvar shouldBeActive = currentPath === target.pathname;\n\t\t\t\t\tif (!shouldBeActive && target.pathname !== \"/\") {\n\t\t\t\t\t\tshouldBeActive = currentPath.indexOf(target.pathname + \"/\") === 0;\n\t\t\t\t\t}\n\n\t\t\t\t\tif (link.classList.contains(\"btn\")) {\n\t\t\t\t\t\tlink.classList.toggle(\"btn-active\", shouldBeActive);\n\t\t\t\t\t} else {\n\t\t\t\t\t\tlink.classList.toggle(\"menu-active\", shouldBeActive);\n\t\t\t\t\t}\n\t\t\t\t});\n\t\t\t}\n\t\t\t\tsyncChromeNavActiveLinks();\n\t\t\t\tdocument.addEventListener(\"DOMContentLoaded\", syncChromeNavActiveLinks);\n\t\t\t\twindow.addEventListener(\"popstate\", syncChromeNavActiveLinks);\n\t\t\t\tdocument.addEventListener(\"htmx:afterSwap\", syncChromeNavActiveLinks);\n\t\t\t\tdocument.addEventListener(\"htmx:afterSettle\", syncChromeNavActiveLinks);\n\t\t\t</script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -455,7 +468,7 @@ func AppChromeLayout(options AppChromeLayoutOptions) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "</body></html>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "</body></html>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

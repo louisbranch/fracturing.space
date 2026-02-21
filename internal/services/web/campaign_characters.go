@@ -363,7 +363,7 @@ func renderAppCampaignCharactersPageWithContext(w http.ResponseWriter, r *http.R
 			ControlOptions: controlOptions,
 		})
 	}
-	if err := writePage(w, r, webtemplates.CampaignCharactersPage(page, campaignID, canManageCharacters, characterItems), composeHTMXTitle(page.Loc, "game.characters.title")); err != nil {
+	if err := writePage(w, r, webtemplates.CampaignCharactersPage(page, campaignID, canManageCharacters, characterItems), composeHTMXTitleForPage(page, "game.characters.title")); err != nil {
 		localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.failed_to_render_characters_page")
 	}
 }
@@ -390,7 +390,7 @@ func renderAppCampaignCharacterDetailPageWithContext(w http.ResponseWriter, r *h
 		Name:       characterName,
 		Kind:       characterKindLabel(page.Loc, character.GetKind()),
 	}
-	if err := writePage(w, r, webtemplates.CharacterDetailPage(page, detail), composeHTMXTitle(page.Loc, "game.character_detail.title")); err != nil {
+	if err := writePage(w, r, webtemplates.CharacterDetailPage(page, detail), composeHTMXTitleForPage(page, "game.character_detail.title")); err != nil {
 		localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.failed_to_render_character_detail_page")
 	}
 }

@@ -238,7 +238,7 @@ func renderAppCampaignInvitesPageWithContext(w http.ResponseWriter, r *http.Requ
 			Label: displayInviteID + " - " + recipient,
 		})
 	}
-	if err := writePage(w, r, webtemplates.CampaignInvitesPage(page, campaignID, canManageInvites, inviteItems), composeHTMXTitle(page.Loc, "game.campaign_invites.title")); err != nil {
+	if err := writePage(w, r, webtemplates.CampaignInvitesPage(page, campaignID, canManageInvites, inviteItems), composeHTMXTitleForPage(page, "game.campaign_invites.title")); err != nil {
 		localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.failed_to_render_campaign_invites_page")
 	}
 }
