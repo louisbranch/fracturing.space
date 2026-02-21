@@ -898,12 +898,45 @@ func parseImportAliases(file *ast.File) map[string]string {
 	return aliases
 }
 
+// modulePathByRoot caches the module path read from go.mod for each root directory.
+var modulePathByRoot = make(map[string]string)
+
+// defaultModulePath is the fallback when go.mod cannot be read from root.
+const defaultModulePath = "github.com/louisbranch/fracturing.space"
+
+// resolveModulePath reads the module path from go.mod in the given root directory,
+// falling back to the default project module path when go.mod is absent.
+func resolveModulePath(root string) string {
+	if cached, ok := modulePathByRoot[root]; ok {
+		return cached
+	}
+	data, err := os.ReadFile(filepath.Join(root, "go.mod"))
+	if err != nil {
+		modulePathByRoot[root] = defaultModulePath
+		return defaultModulePath
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "module ") {
+			modulePath := strings.TrimSpace(strings.TrimPrefix(line, "module"))
+			modulePathByRoot[root] = modulePath
+			return modulePath
+		}
+	}
+	modulePathByRoot[root] = defaultModulePath
+	return defaultModulePath
+}
+
 func resolveImportDir(importPath, root string) string {
-	const modulePath = "github.com/louisbranch/fracturing.space/"
-	if !strings.HasPrefix(importPath, modulePath) {
+	modulePath := resolveModulePath(root)
+	if modulePath == "" {
 		return ""
 	}
-	relPath := strings.TrimPrefix(importPath, modulePath)
+	prefix := modulePath + "/"
+	if !strings.HasPrefix(importPath, prefix) {
+		return ""
+	}
+	relPath := strings.TrimPrefix(importPath, prefix)
 	candidate := filepath.Join(root, filepath.FromSlash(relPath))
 	if _, err := os.Stat(candidate); err != nil {
 		return ""
@@ -1161,37 +1194,49 @@ func scanEmitterValues(dir, root string, valueByConstant map[string]string) (map
 			return fmt.Errorf("parse %s: %w", path, err)
 		}
 		fileLookup := buildLocalConstLookup(file, valueByConstant)
+		importAliases := parseImportAliases(file)
 		relPath, _ := filepath.Rel(root, path)
 		relPath = filepath.ToSlash(relPath)
 		ast.Inspect(file, func(node ast.Node) bool {
-			lit, ok := node.(*ast.CompositeLit)
-			if !ok {
-				return true
-			}
-			selector, ok := lit.Type.(*ast.SelectorExpr)
-			if !ok {
-				return true
-			}
-			ident, ok := selector.X.(*ast.Ident)
-			if !ok || ident.Name != "event" || selector.Sel.Name != "Event" {
-				return true
-			}
-			for _, elt := range lit.Elts {
-				kv, ok := elt.(*ast.KeyValueExpr)
+			// Match event.Event{Type: <eventType>, ...} struct literals.
+			if lit, ok := node.(*ast.CompositeLit); ok {
+				selector, ok := lit.Type.(*ast.SelectorExpr)
 				if !ok {
-					continue
+					return true
 				}
-				key, ok := kv.Key.(*ast.Ident)
-				if !ok || key.Name != "Type" {
-					continue
+				ident, ok := selector.X.(*ast.Ident)
+				if !ok || ident.Name != "event" || selector.Sel.Name != "Event" {
+					return true
 				}
-				value := eventValueFromExpr(kv.Value, fileLookup)
-				if value == "" {
-					continue
+				for _, elt := range lit.Elts {
+					kv, ok := elt.(*ast.KeyValueExpr)
+					if !ok {
+						continue
+					}
+					key, ok := kv.Key.(*ast.Ident)
+					if !ok || key.Name != "Type" {
+						continue
+					}
+					value := resolveEventValue(kv.Value, fileLookup, importAliases, root)
+					if value == "" {
+						continue
+					}
+					pos := fset.Position(kv.Value.Pos())
+					location := fmt.Sprintf("%s:%d", relPath, pos.Line)
+					emitters[value] = append(emitters[value], location)
 				}
-				pos := fset.Position(kv.Value.Pos())
-				location := fmt.Sprintf("%s:%d", relPath, pos.Line)
-				emitters[value] = append(emitters[value], location)
+				return true
+			}
+			// Match command.NewEvent(cmd, <eventType>, ...) calls.
+			if call, ok := node.(*ast.CallExpr); ok {
+				if isCommandNewEventCall(call) && len(call.Args) >= 2 {
+					value := resolveEventValue(call.Args[1], fileLookup, importAliases, root)
+					if value != "" {
+						pos := fset.Position(call.Args[1].Pos())
+						location := fmt.Sprintf("%s:%d", relPath, pos.Line)
+						emitters[value] = append(emitters[value], location)
+					}
+				}
 			}
 			return true
 		})
@@ -1223,6 +1268,7 @@ func scanAppliers(dir, root string, valueByConstant map[string]string) (map[stri
 			return fmt.Errorf("parse %s: %w", path, err)
 		}
 		fileLookup := buildLocalConstLookup(file, valueByConstant)
+		importAliases := parseImportAliases(file)
 		relPath, _ := filepath.Rel(root, path)
 		relPath = filepath.ToSlash(relPath)
 		ast.Inspect(file, func(node ast.Node) bool {
@@ -1241,7 +1287,7 @@ func scanAppliers(dir, root string, valueByConstant map[string]string) (map[stri
 						continue
 					}
 					for _, expr := range caseClause.List {
-						value := eventValueFromExpr(expr, fileLookup)
+						value := resolveEventValue(expr, fileLookup, importAliases, root)
 						if value == "" {
 							continue
 						}
@@ -1270,6 +1316,31 @@ func switchesOnEventType(tag ast.Expr) bool {
 		return false
 	}
 	return selector.Sel != nil && selector.Sel.Name == "Type"
+}
+
+// isCommandNewEventCall returns true when the call expression is command.NewEvent(...).
+func isCommandNewEventCall(call *ast.CallExpr) bool {
+	sel, ok := call.Fun.(*ast.SelectorExpr)
+	if !ok {
+		return false
+	}
+	ident, ok := sel.X.(*ast.Ident)
+	if !ok {
+		return false
+	}
+	return ident.Name == "command" && sel.Sel.Name == "NewEvent"
+}
+
+// resolveEventValue resolves an event value expression, preferring precise
+// cross-package resolution for qualified selectors (e.g. campaign.EventTypeCreated)
+// to avoid collisions when multiple packages export the same constant name.
+func resolveEventValue(expr ast.Expr, fileLookup map[string]string, importAliases map[string]string, root string) string {
+	if sel, ok := expr.(*ast.SelectorExpr); ok {
+		if v, ok := constFromSelector(sel, importAliases, root); ok {
+			return v
+		}
+	}
+	return eventValueFromExpr(expr, fileLookup)
 }
 
 func eventValueFromExpr(expr ast.Expr, valueByConstant map[string]string) string {

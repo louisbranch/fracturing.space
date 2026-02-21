@@ -2,17 +2,21 @@ package participant
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 )
 
-// Fold applies an event to participant state.
-func Fold(state State, evt event.Event) State {
-	if evt.Type == eventTypeJoined {
+// Fold applies an event to participant state. It returns an error if a
+// recognized event carries a payload that cannot be unmarshalled.
+func Fold(state State, evt event.Event) (State, error) {
+	if evt.Type == EventTypeJoined {
 		state.Joined = true
 		state.Left = false
 		var payload JoinPayload
-		_ = json.Unmarshal(evt.PayloadJSON, &payload)
+		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+			return state, fmt.Errorf("participant fold %s: %w", evt.Type, err)
+		}
 		state.ParticipantID = payload.ParticipantID
 		state.UserID = payload.UserID
 		state.Name = payload.Name
@@ -22,9 +26,11 @@ func Fold(state State, evt event.Event) State {
 		state.AvatarSetID = payload.AvatarSetID
 		state.AvatarAssetID = payload.AvatarAssetID
 	}
-	if evt.Type == eventTypeUpdated {
+	if evt.Type == EventTypeUpdated {
 		var payload UpdatePayload
-		_ = json.Unmarshal(evt.PayloadJSON, &payload)
+		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+			return state, fmt.Errorf("participant fold %s: %w", evt.Type, err)
+		}
 		if payload.ParticipantID != "" {
 			state.ParticipantID = payload.ParticipantID
 		}
@@ -47,38 +53,46 @@ func Fold(state State, evt event.Event) State {
 			}
 		}
 	}
-	if evt.Type == eventTypeLeft {
+	if evt.Type == EventTypeLeft {
 		state.Left = true
 		state.Joined = false
 		var payload LeavePayload
-		_ = json.Unmarshal(evt.PayloadJSON, &payload)
+		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+			return state, fmt.Errorf("participant fold %s: %w", evt.Type, err)
+		}
 		if payload.ParticipantID != "" {
 			state.ParticipantID = payload.ParticipantID
 		}
 	}
-	if evt.Type == eventTypeBound {
+	if evt.Type == EventTypeBound {
 		var payload BindPayload
-		_ = json.Unmarshal(evt.PayloadJSON, &payload)
+		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+			return state, fmt.Errorf("participant fold %s: %w", evt.Type, err)
+		}
 		if payload.ParticipantID != "" {
 			state.ParticipantID = payload.ParticipantID
 		}
 		state.UserID = payload.UserID
 	}
-	if evt.Type == eventTypeUnbound {
+	if evt.Type == EventTypeUnbound {
 		var payload UnbindPayload
-		_ = json.Unmarshal(evt.PayloadJSON, &payload)
+		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+			return state, fmt.Errorf("participant fold %s: %w", evt.Type, err)
+		}
 		if payload.ParticipantID != "" {
 			state.ParticipantID = payload.ParticipantID
 		}
 		state.UserID = ""
 	}
-	if evt.Type == eventTypeSeatReassigned || evt.Type == eventTypeSeatReassignedLegacy {
+	if evt.Type == EventTypeSeatReassigned || evt.Type == EventTypeSeatReassignedLegacy {
 		var payload SeatReassignPayload
-		_ = json.Unmarshal(evt.PayloadJSON, &payload)
+		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+			return state, fmt.Errorf("participant fold %s: %w", evt.Type, err)
+		}
 		if payload.ParticipantID != "" {
 			state.ParticipantID = payload.ParticipantID
 		}
 		state.UserID = payload.UserID
 	}
-	return state
+	return state, nil
 }

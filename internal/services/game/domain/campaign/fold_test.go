@@ -8,7 +8,13 @@ import (
 
 func TestFoldCampaignCreatedSetsCreated(t *testing.T) {
 	state := State{}
-	updated := Fold(state, event.Event{Type: event.Type("campaign.created")})
+	updated, err := Fold(state, event.Event{
+		Type:        event.Type("campaign.created"),
+		PayloadJSON: []byte(`{}`),
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if !updated.Created {
 		t.Fatal("expected state to be marked created")
 	}
@@ -16,10 +22,13 @@ func TestFoldCampaignCreatedSetsCreated(t *testing.T) {
 
 func TestFoldCampaignCreatedSetsFields(t *testing.T) {
 	state := State{}
-	updated := Fold(state, event.Event{
+	updated, err := Fold(state, event.Event{
 		Type:        event.Type("campaign.created"),
 		PayloadJSON: []byte(`{"name":"Sunfall","game_system":"daggerheart","gm_mode":"human","cover_asset_id":"camp-cover-03"}`),
 	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if updated.Name != "Sunfall" {
 		t.Fatalf("name = %s, want %s", updated.Name, "Sunfall")
 	}
@@ -34,12 +43,26 @@ func TestFoldCampaignCreatedSetsFields(t *testing.T) {
 	}
 }
 
+func TestFoldCampaignCreated_ReturnsErrorOnCorruptPayload(t *testing.T) {
+	state := State{}
+	_, err := Fold(state, event.Event{
+		Type:        EventTypeCreated,
+		PayloadJSON: []byte(`{corrupt`),
+	})
+	if err == nil {
+		t.Fatal("expected error for corrupt payload")
+	}
+}
+
 func TestFoldCampaignUpdatedSetsFields(t *testing.T) {
 	state := State{Created: true, Status: StatusDraft, Name: "Old", ThemePrompt: "Old theme", CoverAssetID: "camp-cover-01"}
-	updated := Fold(state, event.Event{
+	updated, err := Fold(state, event.Event{
 		Type:        event.Type("campaign.updated"),
 		PayloadJSON: []byte(`{"fields":{"name":"Sunfall","status":"active","theme_prompt":"New theme","cover_asset_id":"camp-cover-04"}}`),
 	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if updated.Name != "Sunfall" {
 		t.Fatalf("name = %s, want %s", updated.Name, "Sunfall")
 	}

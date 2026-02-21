@@ -7,13 +7,14 @@ import (
 	"strings"
 
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -23,58 +24,61 @@ import (
 // query use-cases: every event that changes campaign/world state in the domain
 // gets mirrored here according to projection semantics.
 func (a Applier) Apply(ctx context.Context, evt event.Event) error {
+	if a.Events != nil {
+		evt.Type = a.Events.Resolve(evt.Type)
+	}
 	switch evt.Type {
-	case event.Type("campaign.created"):
+	case campaign.EventTypeCreated:
 		return a.applyCampaignCreated(ctx, evt)
-	case event.Type("campaign.updated"):
+	case campaign.EventTypeUpdated:
 		return a.applyCampaignUpdated(ctx, evt)
-	case event.Type("campaign.forked"):
+	case campaign.EventTypeForked:
 		return a.applyCampaignForked(ctx, evt)
-	case event.Type("participant.joined"):
+	case participant.EventTypeJoined:
 		return a.applyParticipantJoined(ctx, evt)
-	case event.Type("participant.updated"):
+	case participant.EventTypeUpdated:
 		return a.applyParticipantUpdated(ctx, evt)
-	case event.Type("participant.left"):
+	case participant.EventTypeLeft:
 		return a.applyParticipantLeft(ctx, evt)
-	case event.Type("participant.bound"):
+	case participant.EventTypeBound:
 		return a.applyParticipantBound(ctx, evt)
-	case event.Type("participant.unbound"):
+	case participant.EventTypeUnbound:
 		return a.applyParticipantUnbound(ctx, evt)
-	case event.Type("seat.reassigned"), event.Type("participant.seat_reassigned"):
+	case participant.EventTypeSeatReassigned:
 		return a.applySeatReassigned(ctx, evt)
-	case event.Type("character.created"):
+	case character.EventTypeCreated:
 		return a.applyCharacterCreated(ctx, evt)
-	case event.Type("character.updated"):
+	case character.EventTypeUpdated:
 		return a.applyCharacterUpdated(ctx, evt)
-	case event.Type("character.deleted"):
+	case character.EventTypeDeleted:
 		return a.applyCharacterDeleted(ctx, evt)
-	case event.Type("character.profile_updated"):
+	case character.EventTypeProfileUpdated:
 		return a.applyCharacterProfileUpdated(ctx, evt)
-	case event.Type("invite.created"):
+	case invite.EventTypeCreated:
 		return a.applyInviteCreated(ctx, evt)
-	case event.Type("invite.claimed"):
+	case invite.EventTypeClaimed:
 		return a.applyInviteClaimed(ctx, evt)
-	case event.Type("invite.revoked"):
+	case invite.EventTypeRevoked:
 		return a.applyInviteRevoked(ctx, evt)
-	case event.Type("invite.updated"):
+	case invite.EventTypeUpdated:
 		return a.applyInviteUpdated(ctx, evt)
-	case event.Type("session.started"):
+	case session.EventTypeStarted:
 		return a.applySessionStarted(ctx, evt)
-	case event.Type("session.ended"):
+	case session.EventTypeEnded:
 		return a.applySessionEnded(ctx, evt)
-	case event.Type("session.gate_opened"):
+	case session.EventTypeGateOpened:
 		return a.applySessionGateOpened(ctx, evt)
-	case event.Type("session.gate_resolved"):
+	case session.EventTypeGateResolved:
 		return a.applySessionGateResolved(ctx, evt)
-	case event.Type("session.gate_abandoned"):
+	case session.EventTypeGateAbandoned:
 		return a.applySessionGateAbandoned(ctx, evt)
-	case event.Type("session.spotlight_set"):
+	case session.EventTypeSpotlightSet:
 		return a.applySessionSpotlightSet(ctx, evt)
-	case event.Type("session.spotlight_cleared"):
+	case session.EventTypeSpotlightCleared:
 		return a.applySessionSpotlightCleared(ctx, evt)
-	case event.Type("action.roll_resolved"):
+	case action.EventTypeRollResolved:
 		return a.applyActionRollResolved(ctx, evt)
-	case event.Type("action.outcome_applied"):
+	case action.EventTypeOutcomeApplied:
 		return a.applyActionOutcomeApplied(ctx, evt)
 	default:
 		if strings.TrimSpace(evt.SystemID) != "" {
@@ -752,8 +756,8 @@ func (a Applier) applyCharacterDeleted(ctx context.Context, evt event.Event) err
 }
 
 func (a Applier) applyCharacterProfileUpdated(ctx context.Context, evt event.Event) error {
-	if a.Daggerheart == nil {
-		return fmt.Errorf("daggerheart store is not configured")
+	if a.Adapters == nil {
+		return fmt.Errorf("system adapters are not configured")
 	}
 	if strings.TrimSpace(evt.CampaignID) == "" {
 		return fmt.Errorf("campaign id is required")
@@ -773,79 +777,32 @@ func (a Applier) applyCharacterProfileUpdated(ctx context.Context, evt event.Eve
 	if payload.SystemProfile == nil {
 		return nil
 	}
-	profileData, ok := payload.SystemProfile["daggerheart"]
-	if !ok {
-		return nil
-	}
-	rawProfile, err := json.Marshal(profileData)
-	if err != nil {
-		return fmt.Errorf("marshal daggerheart profile payload: %w", err)
-	}
-	var dhProfile daggerheartProfilePayload
-	if err := json.Unmarshal(rawProfile, &dhProfile); err != nil {
-		return fmt.Errorf("decode daggerheart profile payload: %w", err)
-	}
-	experiences := make([]daggerheart.Experience, 0, len(dhProfile.Experiences))
-	for _, experience := range dhProfile.Experiences {
-		experiences = append(experiences, daggerheart.Experience{
-			Name:     experience.Name,
-			Modifier: experience.Modifier,
-		})
-	}
-	experienceStorage := make([]storage.DaggerheartExperience, 0, len(dhProfile.Experiences))
-	for _, experience := range dhProfile.Experiences {
-		experienceStorage = append(experienceStorage, storage.DaggerheartExperience{
-			Name:     experience.Name,
-			Modifier: experience.Modifier,
-		})
-	}
-	level := dhProfile.Level
-	if level == 0 {
-		level = daggerheart.PCLevelDefault
-	}
-	if err := daggerheart.ValidateProfile(
-		level,
-		dhProfile.HpMax,
-		dhProfile.StressMax,
-		dhProfile.Evasion,
-		dhProfile.MajorThreshold,
-		dhProfile.SevereThreshold,
-		dhProfile.Proficiency,
-		dhProfile.ArmorScore,
-		dhProfile.ArmorMax,
-		daggerheart.Traits{
-			Agility:   dhProfile.Agility,
-			Strength:  dhProfile.Strength,
-			Finesse:   dhProfile.Finesse,
-			Instinct:  dhProfile.Instinct,
-			Presence:  dhProfile.Presence,
-			Knowledge: dhProfile.Knowledge,
-		},
-		experiences,
-	); err != nil {
-		return fmt.Errorf("validate daggerheart profile payload: %w", err)
-	}
 
-	return a.Daggerheart.PutDaggerheartCharacterProfile(ctx, storage.DaggerheartCharacterProfile{
-		CampaignID:      evt.CampaignID,
-		CharacterID:     characterID,
-		Level:           level,
-		HpMax:           dhProfile.HpMax,
-		StressMax:       dhProfile.StressMax,
-		Evasion:         dhProfile.Evasion,
-		MajorThreshold:  dhProfile.MajorThreshold,
-		SevereThreshold: dhProfile.SevereThreshold,
-		Proficiency:     dhProfile.Proficiency,
-		ArmorScore:      dhProfile.ArmorScore,
-		ArmorMax:        dhProfile.ArmorMax,
-		Experiences:     experienceStorage,
-		Agility:         dhProfile.Agility,
-		Strength:        dhProfile.Strength,
-		Finesse:         dhProfile.Finesse,
-		Instinct:        dhProfile.Instinct,
-		Presence:        dhProfile.Presence,
-		Knowledge:       dhProfile.Knowledge,
-	})
+	for systemName, profileData := range payload.SystemProfile {
+		gameSystem, err := parseGameSystem(systemName)
+		if err != nil {
+			// Skip unrecognized system names for forward compatibility.
+			continue
+		}
+		adapter := a.Adapters.Get(gameSystem, "")
+		if adapter == nil {
+			// Skip systems without a registered adapter; a future replay
+			// will pick them up once the adapter is configured.
+			continue
+		}
+		profileAdapter, ok := adapter.(systems.ProfileAdapter)
+		if !ok {
+			continue
+		}
+		rawProfile, err := json.Marshal(profileData)
+		if err != nil {
+			return fmt.Errorf("marshal %s profile payload: %w", systemName, err)
+		}
+		if err := profileAdapter.ApplyProfile(ctx, evt.CampaignID, characterID, rawProfile); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (a Applier) applyInviteCreated(ctx context.Context, evt event.Event) error {

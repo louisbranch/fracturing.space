@@ -1342,3 +1342,87 @@ func TestScanAppliers(t *testing.T) {
 		t.Fatalf("expected one applier for session.started, got %d", len(appliers["session.started"]))
 	}
 }
+
+// TestScanAppliers_QualifiedSelector verifies that package-qualified selectors
+// (e.g. campaign.EventTypeCreated vs character.EventTypeCreated) resolve to
+// distinct event values even when the constant names collide.
+func TestScanAppliers_QualifiedSelector(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "go.mod"), []byte("module example.com/test"), 0o644); err != nil {
+		t.Fatalf("write go.mod: %v", err)
+	}
+
+	// Create two packages that export the same constant name with different values.
+	pkgA := filepath.Join(root, "pkga")
+	pkgB := filepath.Join(root, "pkgb")
+	if err := os.MkdirAll(pkgA, 0o755); err != nil {
+		t.Fatalf("mkdir pkga: %v", err)
+	}
+	if err := os.MkdirAll(pkgB, 0o755); err != nil {
+		t.Fatalf("mkdir pkgb: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(pkgA, "types.go"), []byte(strings.Join([]string{
+		"package pkga",
+		"",
+		"type Type string",
+		"const EventTypeCreated Type = \"a.created\"",
+	}, "\n")), 0o644); err != nil {
+		t.Fatalf("write pkga: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(pkgB, "types.go"), []byte(strings.Join([]string{
+		"package pkgb",
+		"",
+		"type Type string",
+		"const EventTypeCreated Type = \"b.created\"",
+	}, "\n")), 0o644); err != nil {
+		t.Fatalf("write pkgb: %v", err)
+	}
+
+	// Create an applier file that uses both qualified selectors.
+	applierDir := filepath.Join(root, "applier")
+	if err := os.MkdirAll(applierDir, 0o755); err != nil {
+		t.Fatalf("mkdir applier: %v", err)
+	}
+	applierSrc := strings.Join([]string{
+		"package applier",
+		"",
+		"import (",
+		"\t\"example.com/test/pkga\"",
+		"\t\"example.com/test/pkgb\"",
+		")",
+		"",
+		"type Event struct{ Type string }",
+		"",
+		"func Apply(evt Event) error {",
+		"\tswitch evt.Type {",
+		"\tcase pkga.EventTypeCreated:",
+		"\t\treturn nil",
+		"\tcase pkgb.EventTypeCreated:",
+		"\t\treturn nil",
+		"\tdefault:",
+		"\t\treturn nil",
+		"\t}",
+		"}",
+	}, "\n")
+	if err := os.WriteFile(filepath.Join(applierDir, "apply.go"), []byte(applierSrc), 0o644); err != nil {
+		t.Fatalf("write apply.go: %v", err)
+	}
+
+	// The global lookup has both constants with the same unqualified name.
+	// Last write wins, so one value is lost — this is the bug.
+	lookup := map[string]string{
+		"EventTypeCreated": "b.created", // collision: only one value survives
+	}
+
+	appliers, err := scanAppliers(applierDir, root, lookup)
+	if err != nil {
+		t.Fatalf("scanAppliers: %v", err)
+	}
+
+	if len(appliers["a.created"]) != 1 {
+		t.Fatalf("expected 1 applier for a.created, got %d (values: %v)", len(appliers["a.created"]), appliers["a.created"])
+	}
+	if len(appliers["b.created"]) != 1 {
+		t.Fatalf("expected 1 applier for b.created, got %d", len(appliers["b.created"]))
+	}
+}

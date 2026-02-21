@@ -40,28 +40,28 @@ func RegisterEvents(registry *event.Registry) error {
 	}
 	definitions := []event.Definition{
 		{
-			Type:            eventTypeRollResolved,
+			Type:            EventTypeRollResolved,
 			Owner:           event.OwnerCore,
 			Addressing:      event.AddressingPolicyEntityTarget,
 			ValidatePayload: validateRollResolvePayload,
 			Intent:          event.IntentProjectionAndReplay,
 		},
 		{
-			Type:            eventTypeOutcomeApplied,
+			Type:            EventTypeOutcomeApplied,
 			Owner:           event.OwnerCore,
 			Addressing:      event.AddressingPolicyEntityTarget,
 			ValidatePayload: validateOutcomeApplyPayload,
 			Intent:          event.IntentProjectionAndReplay,
 		},
 		{
-			Type:            eventTypeOutcomeRejected,
+			Type:            EventTypeOutcomeRejected,
 			Owner:           event.OwnerCore,
 			Addressing:      event.AddressingPolicyEntityTarget,
 			ValidatePayload: validateOutcomeRejectPayload,
 			Intent:          event.IntentAuditOnly,
 		},
 		{
-			Type:            eventTypeNoteAdded,
+			Type:            EventTypeNoteAdded,
 			Owner:           event.OwnerCore,
 			Addressing:      event.AddressingPolicyEntityTarget,
 			ValidatePayload: validateNoteAddPayload,

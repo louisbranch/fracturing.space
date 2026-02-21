@@ -2,17 +2,21 @@ package character
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 )
 
-// Fold applies an event to character state.
-func Fold(state State, evt event.Event) State {
-	if evt.Type == eventTypeCreated {
+// Fold applies an event to character state. It returns an error if a recognized
+// event carries a payload that cannot be unmarshalled.
+func Fold(state State, evt event.Event) (State, error) {
+	if evt.Type == EventTypeCreated {
 		state.Created = true
 		state.Deleted = false
 		var payload CreatePayload
-		_ = json.Unmarshal(evt.PayloadJSON, &payload)
+		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+			return state, fmt.Errorf("character fold %s: %w", evt.Type, err)
+		}
 		state.CharacterID = payload.CharacterID
 		state.Name = payload.Name
 		state.Kind = payload.Kind
@@ -20,9 +24,11 @@ func Fold(state State, evt event.Event) State {
 		state.AvatarSetID = payload.AvatarSetID
 		state.AvatarAssetID = payload.AvatarAssetID
 	}
-	if evt.Type == eventTypeUpdated {
+	if evt.Type == EventTypeUpdated {
 		var payload UpdatePayload
-		_ = json.Unmarshal(evt.PayloadJSON, &payload)
+		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+			return state, fmt.Errorf("character fold %s: %w", evt.Type, err)
+		}
 		if payload.CharacterID != "" {
 			state.CharacterID = payload.CharacterID
 		}
@@ -43,21 +49,25 @@ func Fold(state State, evt event.Event) State {
 			}
 		}
 	}
-	if evt.Type == eventTypeDeleted {
+	if evt.Type == EventTypeDeleted {
 		state.Deleted = true
 		var payload DeletePayload
-		_ = json.Unmarshal(evt.PayloadJSON, &payload)
+		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+			return state, fmt.Errorf("character fold %s: %w", evt.Type, err)
+		}
 		if payload.CharacterID != "" {
 			state.CharacterID = payload.CharacterID
 		}
 	}
-	if evt.Type == eventTypeProfileUpdated {
+	if evt.Type == EventTypeProfileUpdated {
 		var payload ProfileUpdatePayload
-		_ = json.Unmarshal(evt.PayloadJSON, &payload)
+		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+			return state, fmt.Errorf("character fold %s: %w", evt.Type, err)
+		}
 		if payload.CharacterID != "" {
 			state.CharacterID = payload.CharacterID
 		}
 		state.SystemProfile = payload.SystemProfile
 	}
-	return state
+	return state, nil
 }

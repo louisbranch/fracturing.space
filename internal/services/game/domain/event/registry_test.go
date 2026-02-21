@@ -372,3 +372,54 @@ func TestRegistryValidateForAppend_PayloadValidatorUsesCanonicalJSON(t *testing.
 		t.Fatalf("validate event: %v", err)
 	}
 }
+
+func TestRegistryRegisterAlias_ResolvesDeprecatedToCanonical(t *testing.T) {
+	registry := NewRegistry()
+	if err := registry.Register(Definition{
+		Type:  Type("participant.seat_reassigned"),
+		Owner: OwnerCore,
+	}); err != nil {
+		t.Fatalf("register type: %v", err)
+	}
+	if err := registry.RegisterAlias(Type("seat.reassigned"), Type("participant.seat_reassigned")); err != nil {
+		t.Fatalf("register alias: %v", err)
+	}
+
+	got := registry.Resolve(Type("seat.reassigned"))
+	if got != Type("participant.seat_reassigned") {
+		t.Fatalf("Resolve(seat.reassigned) = %s, want participant.seat_reassigned", got)
+	}
+}
+
+func TestRegistryResolve_ReturnsInputWhenNoAlias(t *testing.T) {
+	registry := NewRegistry()
+	got := registry.Resolve(Type("campaign.created"))
+	if got != Type("campaign.created") {
+		t.Fatalf("Resolve(campaign.created) = %s, want campaign.created", got)
+	}
+}
+
+func TestRegistryRegisterAlias_RejectsUnknownCanonical(t *testing.T) {
+	registry := NewRegistry()
+	err := registry.RegisterAlias(Type("old.type"), Type("new.type"))
+	if err == nil {
+		t.Fatal("expected error for unknown canonical type")
+	}
+}
+
+func TestRegistryRegisterAlias_RejectsDuplicateAlias(t *testing.T) {
+	registry := NewRegistry()
+	if err := registry.Register(Definition{
+		Type:  Type("participant.seat_reassigned"),
+		Owner: OwnerCore,
+	}); err != nil {
+		t.Fatalf("register type: %v", err)
+	}
+	if err := registry.RegisterAlias(Type("seat.reassigned"), Type("participant.seat_reassigned")); err != nil {
+		t.Fatalf("register first alias: %v", err)
+	}
+	err := registry.RegisterAlias(Type("seat.reassigned"), Type("participant.seat_reassigned"))
+	if err == nil {
+		t.Fatal("expected error for duplicate alias")
+	}
+}

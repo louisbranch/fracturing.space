@@ -245,7 +245,7 @@ func TestBuildProjectionApplyOutboxApplySkipsDuplicateSeq(t *testing.T) {
 		t.Fatalf("seed campaign: %v", err)
 	}
 
-	apply := buildProjectionApplyOutboxApply(store)
+	apply := buildProjectionApplyOutboxApply(store, nil)
 	if apply == nil {
 		t.Fatal("expected projection apply callback")
 	}

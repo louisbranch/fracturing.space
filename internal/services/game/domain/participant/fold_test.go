@@ -8,10 +8,13 @@ import (
 
 func TestFoldParticipantJoinedSetsFields(t *testing.T) {
 	state := State{}
-	updated := Fold(state, event.Event{
+	updated, err := Fold(state, event.Event{
 		Type:        event.Type("participant.joined"),
 		PayloadJSON: []byte(`{"participant_id":"p-1","user_id":"u-1","name":"Alice","role":"player","controller":"human","campaign_access":"member"}`),
 	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if !updated.Joined {
 		t.Fatal("expected participant to be joined")
 	}
@@ -37,10 +40,13 @@ func TestFoldParticipantJoinedSetsFields(t *testing.T) {
 
 func TestFoldParticipantUpdatedSetsFields(t *testing.T) {
 	state := State{Joined: true, ParticipantID: "p-1", Name: "Old", Role: "gm"}
-	updated := Fold(state, event.Event{
+	updated, err := Fold(state, event.Event{
 		Type:        event.Type("participant.updated"),
 		PayloadJSON: []byte(`{"participant_id":"p-1","fields":{"name":"Alice","role":"player","controller":"human","campaign_access":"member"}}`),
 	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if updated.Name != "Alice" {
 		t.Fatalf("display name = %s, want %s", updated.Name, "Alice")
 	}
@@ -57,10 +63,13 @@ func TestFoldParticipantUpdatedSetsFields(t *testing.T) {
 
 func TestFoldParticipantLeftMarksLeft(t *testing.T) {
 	state := State{Joined: true, ParticipantID: "p-1"}
-	updated := Fold(state, event.Event{
+	updated, err := Fold(state, event.Event{
 		Type:        event.Type("participant.left"),
 		PayloadJSON: []byte(`{"participant_id":"p-1","reason":"done"}`),
 	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if updated.Joined {
 		t.Fatal("expected participant to be marked not joined")
 	}
@@ -71,10 +80,13 @@ func TestFoldParticipantLeftMarksLeft(t *testing.T) {
 
 func TestFoldParticipantBoundSetsUserID(t *testing.T) {
 	state := State{Joined: true, ParticipantID: "p-1"}
-	updated := Fold(state, event.Event{
+	updated, err := Fold(state, event.Event{
 		Type:        event.Type("participant.bound"),
 		PayloadJSON: []byte(`{"participant_id":"p-1","user_id":"u-2"}`),
 	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if updated.UserID != "u-2" {
 		t.Fatalf("user id = %s, want %s", updated.UserID, "u-2")
 	}
@@ -82,10 +94,13 @@ func TestFoldParticipantBoundSetsUserID(t *testing.T) {
 
 func TestFoldParticipantUnboundClearsUserID(t *testing.T) {
 	state := State{Joined: true, ParticipantID: "p-1", UserID: "u-1"}
-	updated := Fold(state, event.Event{
+	updated, err := Fold(state, event.Event{
 		Type:        event.Type("participant.unbound"),
 		PayloadJSON: []byte(`{"participant_id":"p-1","user_id":"u-1"}`),
 	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if updated.UserID != "" {
 		t.Fatalf("user id = %s, want %s", updated.UserID, "")
 	}
@@ -99,10 +114,13 @@ func TestFoldSeatReassignedUpdatesUserID(t *testing.T) {
 	}
 	for _, eventType := range eventTypes {
 		t.Run(string(eventType), func(t *testing.T) {
-			updated := Fold(state, event.Event{
+			updated, err := Fold(state, event.Event{
 				Type:        eventType,
 				PayloadJSON: []byte(`{"participant_id":"p-1","prior_user_id":"u-1","user_id":"u-2"}`),
 			})
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
 			if updated.UserID != "u-2" {
 				t.Fatalf("user id = %s, want %s", updated.UserID, "u-2")
 			}

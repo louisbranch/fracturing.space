@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/core/naming"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
@@ -69,6 +70,10 @@ func BuildRegistries(modules ...system.Module) (Registries, error) {
 		return Registries{}, err
 	}
 
+	if err := eventRegistry.RegisterAlias(participant.EventTypeSeatReassignedLegacy, participant.EventTypeSeatReassigned); err != nil {
+		return Registries{}, err
+	}
+
 	for _, module := range modules {
 		if err := systemRegistry.Register(module); err != nil {
 			return Registries{}, err
@@ -103,7 +108,7 @@ func validateModuleSystemTypePrefixes(
 	events []event.Definition,
 ) error {
 	moduleID := strings.TrimSpace(module.ID())
-	namespace := systemNamespace(moduleID)
+	namespace := naming.NormalizeSystemNamespace(moduleID)
 	if namespace == "" {
 		return fmt.Errorf("system module id is required for naming validation")
 	}
@@ -155,31 +160,4 @@ func eventTypeSet(definitions []event.Definition) map[event.Type]struct{} {
 		result[definition.Type] = struct{}{}
 	}
 	return result
-}
-
-func systemNamespace(moduleID string) string {
-	trimmed := strings.TrimSpace(moduleID)
-	if trimmed == "" {
-		return ""
-	}
-	const legacyPrefix = "GAME_SYSTEM_"
-	if len(trimmed) > len(legacyPrefix) && strings.EqualFold(trimmed[:len(legacyPrefix)], legacyPrefix) {
-		trimmed = trimmed[len(legacyPrefix):]
-	}
-	normalized := strings.ToLower(trimmed)
-	var b strings.Builder
-	b.Grow(len(normalized))
-	lastUnderscore := false
-	for _, r := range normalized {
-		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
-			b.WriteRune(r)
-			lastUnderscore = false
-			continue
-		}
-		if !lastUnderscore {
-			b.WriteByte('_')
-			lastUnderscore = true
-		}
-	}
-	return strings.Trim(b.String(), "_")
 }

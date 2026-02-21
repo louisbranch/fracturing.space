@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	coreencoding "github.com/louisbranch/fracturing.space/internal/services/game/core/encoding"
+	"github.com/louisbranch/fracturing.space/internal/services/game/core/naming"
 )
 
 var (
@@ -176,8 +177,8 @@ func (r *Registry) ValidateForDecision(cmd Command) (Command, error) {
 		if cmd.SystemID == "" || cmd.SystemVersion == "" {
 			return Command{}, ErrSystemMetadataRequired
 		}
-		if expectedSystemNamespace, ok := systemNamespaceFromType(string(cmd.Type)); ok {
-			if normalizeSystemNamespace(cmd.SystemID) != expectedSystemNamespace {
+		if expectedSystemNamespace, ok := naming.NamespaceFromType(string(cmd.Type)); ok {
+			if naming.NormalizeSystemNamespace(cmd.SystemID) != expectedSystemNamespace {
 				return Command{}, fmt.Errorf(
 					"%w: type %s expects %s, got %s",
 					ErrSystemTypeNamespaceMismatch,
@@ -254,39 +255,4 @@ func (r *Registry) ListDefinitions() []Definition {
 		return string(definitions[i].Type) < string(definitions[j].Type)
 	})
 	return definitions
-}
-
-func systemNamespaceFromType(typeName string) (string, bool) {
-	parts := strings.Split(strings.TrimSpace(typeName), ".")
-	if len(parts) < 3 || parts[0] != "sys" {
-		return "", false
-	}
-	return strings.TrimSpace(parts[1]), true
-}
-
-func normalizeSystemNamespace(systemID string) string {
-	trimmed := strings.TrimSpace(systemID)
-	if trimmed == "" {
-		return ""
-	}
-	const legacyPrefix = "GAME_SYSTEM_"
-	if len(trimmed) > len(legacyPrefix) && strings.EqualFold(trimmed[:len(legacyPrefix)], legacyPrefix) {
-		trimmed = trimmed[len(legacyPrefix):]
-	}
-	normalized := strings.ToLower(trimmed)
-	var b strings.Builder
-	b.Grow(len(normalized))
-	lastUnderscore := false
-	for _, r := range normalized {
-		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
-			b.WriteRune(r)
-			lastUnderscore = false
-			continue
-		}
-		if !lastUnderscore {
-			b.WriteByte('_')
-			lastUnderscore = true
-		}
-	}
-	return strings.Trim(b.String(), "_")
 }

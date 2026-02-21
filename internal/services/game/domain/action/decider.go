@@ -15,10 +15,10 @@ const (
 	commandTypeOutcomeReject command.Type = "action.outcome.reject"
 	commandTypeNoteAdd       command.Type = "story.note.add"
 
-	eventTypeRollResolved    event.Type = "action.roll_resolved"
-	eventTypeOutcomeApplied  event.Type = "action.outcome_applied"
-	eventTypeOutcomeRejected event.Type = "action.outcome_rejected"
-	eventTypeNoteAdded       event.Type = "story.note_added"
+	EventTypeRollResolved    event.Type = "action.roll_resolved"
+	EventTypeOutcomeApplied  event.Type = "action.outcome_applied"
+	EventTypeOutcomeRejected event.Type = "action.outcome_rejected"
+	EventTypeNoteAdded       event.Type = "story.note_added"
 
 	rejectionCodeRequestIDRequired                 = "REQUEST_ID_REQUIRED"
 	rejectionCodeRollSeqRequired                   = "ROLL_SEQ_REQUIRED"
@@ -54,7 +54,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 				Message: "roll_seq must be greater than zero",
 			})
 		}
-		return acceptActionEvent(cmd, now, eventTypeRollResolved, "roll", requestID, payload)
+		return acceptActionEvent(cmd, now, EventTypeRollResolved, "roll", requestID, payload)
 	case commandTypeOutcomeApply:
 		var payload OutcomeApplyPayload
 		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
@@ -97,7 +97,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		postEffects := payload.PostEffects
 		payload.PreEffects = nil
 		payload.PostEffects = nil
-		outcomeEvent := acceptActionEvent(cmd, now, eventTypeOutcomeApplied, "outcome", requestID, payload).Events
+		outcomeEvent := acceptActionEvent(cmd, now, EventTypeOutcomeApplied, "outcome", requestID, payload).Events
 		events = append(events, outcomeEvent...)
 
 		for _, effect := range postEffects {
@@ -120,11 +120,11 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 				Message: "roll_seq must be greater than zero",
 			})
 		}
-		return acceptActionEvent(cmd, now, eventTypeOutcomeRejected, "outcome", requestID, payload)
+		return acceptActionEvent(cmd, now, EventTypeOutcomeRejected, "outcome", requestID, payload)
 	case commandTypeNoteAdd:
 		var payload NoteAddPayload
 		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
-		return acceptActionEvent(cmd, now, eventTypeNoteAdded, "note", cmd.EntityID, payload)
+		return acceptActionEvent(cmd, now, EventTypeNoteAdded, "note", cmd.EntityID, payload)
 	default:
 		return command.Reject(command.Rejection{
 			Code:    "COMMAND_TYPE_UNSUPPORTED",
@@ -139,23 +139,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 // specific systems add new action shapes.
 func acceptActionEvent(cmd command.Command, now func() time.Time, eventType event.Type, entityType, entityID string, payload any) command.Decision {
 	payloadJSON, _ := json.Marshal(payload)
-	evt := event.Event{
-		CampaignID:    cmd.CampaignID,
-		Type:          eventType,
-		Timestamp:     now().UTC(),
-		ActorType:     event.ActorType(cmd.ActorType),
-		ActorID:       cmd.ActorID,
-		SessionID:     cmd.SessionID,
-		RequestID:     cmd.RequestID,
-		InvocationID:  cmd.InvocationID,
-		EntityType:    entityType,
-		EntityID:      entityID,
-		SystemID:      cmd.SystemID,
-		SystemVersion: cmd.SystemVersion,
-		CorrelationID: cmd.CorrelationID,
-		CausationID:   cmd.CausationID,
-		PayloadJSON:   payloadJSON,
-	}
+	evt := command.NewEvent(cmd, eventType, entityType, entityID, payloadJSON, now().UTC())
 
 	return command.Accept(evt)
 }
@@ -165,23 +149,17 @@ func buildOutcomeEffectEvent(cmd command.Command, now func() time.Time, effect O
 	if len(payloadJSON) == 0 {
 		payloadJSON = []byte("{}")
 	}
-	return event.Event{
-		CampaignID:    cmd.CampaignID,
-		Type:          event.Type(strings.TrimSpace(effect.Type)),
-		Timestamp:     now().UTC(),
-		ActorType:     event.ActorType(cmd.ActorType),
-		ActorID:       cmd.ActorID,
-		SessionID:     cmd.SessionID,
-		RequestID:     cmd.RequestID,
-		InvocationID:  cmd.InvocationID,
-		EntityType:    strings.TrimSpace(effect.EntityType),
-		EntityID:      strings.TrimSpace(effect.EntityID),
-		SystemID:      strings.TrimSpace(effect.SystemID),
-		SystemVersion: strings.TrimSpace(effect.SystemVersion),
-		CorrelationID: cmd.CorrelationID,
-		CausationID:   cmd.CausationID,
-		PayloadJSON:   payloadJSON,
-	}
+	evt := command.NewEvent(
+		cmd,
+		event.Type(strings.TrimSpace(effect.Type)),
+		strings.TrimSpace(effect.EntityType),
+		strings.TrimSpace(effect.EntityID),
+		payloadJSON,
+		now().UTC(),
+	)
+	evt.SystemID = strings.TrimSpace(effect.SystemID)
+	evt.SystemVersion = strings.TrimSpace(effect.SystemVersion)
+	return evt
 }
 
 func hasSystemOwnedOutcomeEffect(effects []OutcomeAppliedEffect) bool {

@@ -47,7 +47,7 @@ func RegisterEvents(registry *event.Registry) error {
 		return errors.New("event registry is required")
 	}
 	if err := registry.Register(event.Definition{
-		Type:            eventTypeCreated,
+		Type:            EventTypeCreated,
 		Owner:           event.OwnerCore,
 		Addressing:      event.AddressingPolicyEntityTarget,
 		ValidatePayload: validateCreatePayload,
@@ -55,7 +55,7 @@ func RegisterEvents(registry *event.Registry) error {
 		return err
 	}
 	if err := registry.Register(event.Definition{
-		Type:            eventTypeUpdated,
+		Type:            EventTypeUpdated,
 		Owner:           event.OwnerCore,
 		Addressing:      event.AddressingPolicyEntityTarget,
 		ValidatePayload: validateUpdatePayload,
@@ -63,7 +63,7 @@ func RegisterEvents(registry *event.Registry) error {
 		return err
 	}
 	if err := registry.Register(event.Definition{
-		Type:            eventTypeDeleted,
+		Type:            EventTypeDeleted,
 		Owner:           event.OwnerCore,
 		Addressing:      event.AddressingPolicyEntityTarget,
 		ValidatePayload: validateDeletePayload,
@@ -71,7 +71,7 @@ func RegisterEvents(registry *event.Registry) error {
 		return err
 	}
 	return registry.Register(event.Definition{
-		Type:            eventTypeProfileUpdated,
+		Type:            EventTypeProfileUpdated,
 		Owner:           event.OwnerCore,
 		Addressing:      event.AddressingPolicyEntityTarget,
 		ValidatePayload: validateProfileUpdatePayload,

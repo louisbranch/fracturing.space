@@ -30,7 +30,7 @@ func TestStoresApplier(t *testing.T) {
 	if applier.SessionSpotlight == nil {
 		t.Error("expected SessionSpotlight to be set")
 	}
-	if applier.Daggerheart == nil {
-		t.Error("expected Daggerheart to be set")
+	if applier.Adapters == nil {
+		t.Error("expected Adapters to be set")
 	}
 }

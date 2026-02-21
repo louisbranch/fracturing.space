@@ -301,6 +301,13 @@ func NewWithAddr(addr string) (*Server, error) {
 	daggerheartservice.SetInlineProjectionApplyEnabled(projectionApplyOutboxMode != projectionApplyModeOutboxApplyOnly)
 	log.Printf("projection apply mode = %s", projectionApplyOutboxMode)
 
+	projectionRegistries, err := engine.BuildRegistries(registeredSystemModules()...)
+	if err != nil {
+		_ = listener.Close()
+		bundle.Close()
+		return nil, fmt.Errorf("build projection registries: %w", err)
+	}
+
 	return &Server{
 		listener:                                 listener,
 		grpcServer:                               grpcServer,
@@ -308,12 +315,12 @@ func NewWithAddr(addr string) (*Server, error) {
 		stores:                                   bundle,
 		authConn:                                 authConn,
 		projectionApplyOutboxWorkerEnabled:       enableApplyWorker,
-		projectionApplyOutboxApply:               buildProjectionApplyOutboxApply(bundle.projections),
+		projectionApplyOutboxApply:               buildProjectionApplyOutboxApply(bundle.projections, projectionRegistries.Events),
 		projectionApplyOutboxShadowWorkerEnabled: enableShadowWorker,
 	}, nil
 }
 
-func buildProjectionApplyOutboxApply(projectionStore *storagesqlite.Store) func(context.Context, event.Event) error {
+func buildProjectionApplyOutboxApply(projectionStore *storagesqlite.Store, eventRegistry *event.Registry) func(context.Context, event.Event) error {
 	if projectionStore == nil {
 		return nil
 	}
@@ -323,10 +330,10 @@ func buildProjectionApplyOutboxApply(projectionStore *storagesqlite.Store) func(
 			evt,
 			func(applyCtx context.Context, applyEvt event.Event, txStore *storagesqlite.Store) error {
 				txApplier := projection.Applier{
+					Events:           eventRegistry,
 					Campaign:         txStore,
 					Character:        txStore,
 					CampaignFork:     txStore,
-					Daggerheart:      txStore,
 					ClaimIndex:       txStore,
 					Invite:           txStore,
 					Participant:      txStore,

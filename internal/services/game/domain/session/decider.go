@@ -17,13 +17,13 @@ const (
 	commandTypeGateAbandon    command.Type = "session.gate_abandon"
 	commandTypeSpotlightSet   command.Type = "session.spotlight_set"
 	commandTypeSpotlightClear command.Type = "session.spotlight_clear"
-	eventTypeStarted          event.Type   = "session.started"
-	eventTypeEnded            event.Type   = "session.ended"
-	eventTypeGateOpened       event.Type   = "session.gate_opened"
-	eventTypeGateResolved     event.Type   = "session.gate_resolved"
-	eventTypeGateAbandoned    event.Type   = "session.gate_abandoned"
-	eventTypeSpotlightSet     event.Type   = "session.spotlight_set"
-	eventTypeSpotlightCleared event.Type   = "session.spotlight_cleared"
+	EventTypeStarted          event.Type   = "session.started"
+	EventTypeEnded            event.Type   = "session.ended"
+	EventTypeGateOpened       event.Type   = "session.gate_opened"
+	EventTypeGateResolved     event.Type   = "session.gate_resolved"
+	EventTypeGateAbandoned    event.Type   = "session.gate_abandoned"
+	EventTypeSpotlightSet     event.Type   = "session.spotlight_set"
+	EventTypeSpotlightCleared event.Type   = "session.spotlight_cleared"
 
 	rejectionCodeSessionIDRequired            = "SESSION_ID_REQUIRED"
 	rejectionCodeSessionAlreadyStarted        = "SESSION_ALREADY_STARTED"
@@ -62,21 +62,8 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 
 		normalizedPayload := StartPayload{SessionID: sessionID, SessionName: sessionName}
 		payloadJSON, _ := json.Marshal(normalizedPayload)
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeStarted,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     sessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "session",
-			EntityID:      sessionID,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
+		evt := command.NewEvent(cmd, EventTypeStarted, "session", sessionID, payloadJSON, now().UTC())
+		evt.SessionID = sessionID
 
 		return command.Accept(evt)
 	}
@@ -103,21 +90,8 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 
 		normalizedPayload := EndPayload{SessionID: sessionID}
 		payloadJSON, _ := json.Marshal(normalizedPayload)
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeEnded,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     sessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "session",
-			EntityID:      sessionID,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
+		evt := command.NewEvent(cmd, EventTypeEnded, "session", sessionID, payloadJSON, now().UTC())
+		evt.SessionID = sessionID
 
 		return command.Accept(evt)
 	}
@@ -146,21 +120,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 
 		normalizedPayload := GateOpenedPayload{GateID: gateID, GateType: gateType, Reason: reason, Metadata: payload.Metadata}
 		payloadJSON, _ := json.Marshal(normalizedPayload)
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeGateOpened,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "session_gate",
-			EntityID:      gateID,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
+		evt := command.NewEvent(cmd, EventTypeGateOpened, "session_gate", gateID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
 	}
@@ -182,21 +142,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 
 		normalizedPayload := GateResolvedPayload{GateID: gateID, Decision: decision, Resolution: payload.Resolution}
 		payloadJSON, _ := json.Marshal(normalizedPayload)
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeGateResolved,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "session_gate",
-			EntityID:      gateID,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
+		evt := command.NewEvent(cmd, EventTypeGateResolved, "session_gate", gateID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
 	}
@@ -218,21 +164,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 
 		normalizedPayload := GateAbandonedPayload{GateID: gateID, Reason: reason}
 		payloadJSON, _ := json.Marshal(normalizedPayload)
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeGateAbandoned,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "session_gate",
-			EntityID:      gateID,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
+		evt := command.NewEvent(cmd, EventTypeGateAbandoned, "session_gate", gateID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
 	}
@@ -254,21 +186,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 
 		normalizedPayload := SpotlightSetPayload{SpotlightType: spotlightType, CharacterID: characterID}
 		payloadJSON, _ := json.Marshal(normalizedPayload)
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeSpotlightSet,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "session",
-			EntityID:      cmd.SessionID,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
+		evt := command.NewEvent(cmd, EventTypeSpotlightSet, "session", cmd.SessionID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
 	}
@@ -283,21 +201,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 
 		normalizedPayload := SpotlightClearedPayload{Reason: reason}
 		payloadJSON, _ := json.Marshal(normalizedPayload)
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeSpotlightCleared,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "session",
-			EntityID:      cmd.SessionID,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
+		evt := command.NewEvent(cmd, EventTypeSpotlightCleared, "session", cmd.SessionID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
 	}

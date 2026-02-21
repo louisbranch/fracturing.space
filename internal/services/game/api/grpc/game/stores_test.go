@@ -87,8 +87,8 @@ func TestStoresApplier(t *testing.T) {
 	if applier.Invite == nil {
 		t.Error("expected Invite to be set")
 	}
-	if applier.Daggerheart == nil {
-		t.Error("expected Daggerheart to be set")
+	if applier.Adapters == nil {
+		t.Error("expected Adapters to be set")
 	}
 	if applier.Session == nil {
 		t.Error("expected Session to be set")

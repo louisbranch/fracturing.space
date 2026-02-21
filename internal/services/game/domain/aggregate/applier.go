@@ -36,9 +36,23 @@ func (a Applier) Apply(state any, evt event.Event) (any, error) {
 		current = *existingPtr
 	}
 
-	current.Campaign = campaign.Fold(current.Campaign, evt)
-	current.Session = session.Fold(current.Session, evt)
-	current.Action = action.Fold(current.Action, evt)
+	campaignState, err := campaign.Fold(current.Campaign, evt)
+	if err != nil {
+		return current, err
+	}
+	current.Campaign = campaignState
+
+	sessionState, err := session.Fold(current.Session, evt)
+	if err != nil {
+		return current, err
+	}
+	current.Session = sessionState
+
+	actionState, err := action.Fold(current.Action, evt)
+	if err != nil {
+		return current, err
+	}
+	current.Action = actionState
 
 	if evt.SystemID != "" || evt.SystemVersion != "" {
 		if current.Systems == nil {
@@ -76,27 +90,36 @@ func (a Applier) Apply(state any, evt event.Event) (any, error) {
 			if current.Participants == nil {
 				current.Participants = make(map[string]participant.State)
 			}
-			participantState := current.Participants[evt.EntityID]
-			participantState = participant.Fold(participantState, evt)
-			current.Participants[evt.EntityID] = participantState
+			pState := current.Participants[evt.EntityID]
+			pState, err := participant.Fold(pState, evt)
+			if err != nil {
+				return current, err
+			}
+			current.Participants[evt.EntityID] = pState
 		}
 	case "character":
 		if evt.EntityID != "" {
 			if current.Characters == nil {
 				current.Characters = make(map[string]character.State)
 			}
-			characterState := current.Characters[evt.EntityID]
-			characterState = character.Fold(characterState, evt)
-			current.Characters[evt.EntityID] = characterState
+			cState := current.Characters[evt.EntityID]
+			cState, err := character.Fold(cState, evt)
+			if err != nil {
+				return current, err
+			}
+			current.Characters[evt.EntityID] = cState
 		}
 	case "invite":
 		if evt.EntityID != "" {
 			if current.Invites == nil {
 				current.Invites = make(map[string]invite.State)
 			}
-			inviteState := current.Invites[evt.EntityID]
-			inviteState = invite.Fold(inviteState, evt)
-			current.Invites[evt.EntityID] = inviteState
+			iState := current.Invites[evt.EntityID]
+			iState, err := invite.Fold(iState, evt)
+			if err != nil {
+				return current, err
+			}
+			current.Invites[evt.EntityID] = iState
 		}
 	}
 

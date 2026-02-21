@@ -20,17 +20,22 @@ func TestApplyProjectionRequiredCoreEventsAreHandled(t *testing.T) {
 		t.Fatalf("build registries: %v", err)
 	}
 
+	coreAdapters := systems.NewAdapterRegistry()
+	if err := coreAdapters.Register(daggerheartsys.NewAdapter(newProjectionDaggerheartStore())); err != nil {
+		t.Fatalf("register daggerheart adapter: %v", err)
+	}
 	applier := Applier{
+		Events:           registries.Events,
 		Campaign:         newProjectionCampaignStore(),
 		Character:        newFakeCharacterStore(),
 		CampaignFork:     newFakeCampaignForkStore(),
-		Daggerheart:      newProjectionDaggerheartStore(),
 		ClaimIndex:       newFakeClaimIndexStore(),
 		Invite:           newFakeInviteStore(),
 		Participant:      newProjectionParticipantStore(),
 		Session:          &fakeSessionStore{},
 		SessionGate:      newFakeSessionGateStore(),
 		SessionSpotlight: newFakeSessionSpotlightStore(),
+		Adapters:         coreAdapters,
 	}
 
 	for _, def := range registries.Events.ListDefinitions() {
@@ -60,8 +65,7 @@ func TestApplyProjectionRequiredSystemEventsAreHandled(t *testing.T) {
 	}
 
 	applier := Applier{
-		Daggerheart: newProjectionDaggerheartStore(),
-		Adapters:    adapters,
+		Adapters: adapters,
 	}
 
 	for _, def := range registries.Events.ListDefinitions() {

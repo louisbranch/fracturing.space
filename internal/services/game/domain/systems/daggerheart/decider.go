@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 )
 
 const (
@@ -28,22 +27,6 @@ const (
 	commandTypeAdversaryCreate              command.Type = "sys.daggerheart.adversary.create"
 	commandTypeAdversaryUpdate              command.Type = "sys.daggerheart.adversary.update"
 	commandTypeAdversaryDelete              command.Type = "sys.daggerheart.adversary.delete"
-	eventTypeGMFearChanged                  event.Type   = "sys.daggerheart.gm_fear_changed"
-	eventTypeCharacterStatePatched          event.Type   = "sys.daggerheart.character_state_patched"
-	eventTypeConditionChanged               event.Type   = "sys.daggerheart.condition_changed"
-	eventTypeLoadoutSwapped                 event.Type   = "sys.daggerheart.loadout_swapped"
-	eventTypeRestTaken                      event.Type   = "sys.daggerheart.rest_taken"
-	eventTypeCountdownCreated               event.Type   = "sys.daggerheart.countdown_created"
-	eventTypeCountdownUpdated               event.Type   = "sys.daggerheart.countdown_updated"
-	eventTypeCountdownDeleted               event.Type   = "sys.daggerheart.countdown_deleted"
-	eventTypeDamageApplied                  event.Type   = "sys.daggerheart.damage_applied"
-	eventTypeAdversaryDamageApplied         event.Type   = "sys.daggerheart.adversary_damage_applied"
-	eventTypeDowntimeMoveApplied            event.Type   = "sys.daggerheart.downtime_move_applied"
-	eventTypeCharacterTemporaryArmorApplied event.Type   = "sys.daggerheart.character_temporary_armor_applied"
-	eventTypeAdversaryConditionChanged      event.Type   = "sys.daggerheart.adversary_condition_changed"
-	eventTypeAdversaryCreated               event.Type   = "sys.daggerheart.adversary_created"
-	eventTypeAdversaryUpdated               event.Type   = "sys.daggerheart.adversary_updated"
-	eventTypeAdversaryDeleted               event.Type   = "sys.daggerheart.adversary_deleted"
 
 	rejectionCodeGMFearAfterRequired             = "GM_FEAR_AFTER_REQUIRED"
 	rejectionCodeGMFearOutOfRange                = "GM_FEAR_AFTER_OUT_OF_RANGE"
@@ -106,23 +89,7 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 			Reason: strings.TrimSpace(payload.Reason),
 		}
 		payloadJSON, _ := json.Marshal(changed)
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeGMFearChanged,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "campaign",
-			EntityID:      cmd.CampaignID,
-			SystemID:      SystemID,
-			SystemVersion: SystemVersion,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
+		evt := command.NewEvent(cmd, EventTypeGMFearChanged, "campaign", cmd.CampaignID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
 	case commandTypeCharacterStatePatch:
@@ -144,23 +111,7 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 		if entityID == "" {
 			entityID = payload.CharacterID
 		}
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeCharacterStatePatched,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "character",
-			EntityID:      entityID,
-			SystemID:      SystemID,
-			SystemVersion: SystemVersion,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
+		evt := command.NewEvent(cmd, EventTypeCharacterStatePatched, "character", entityID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
 	case commandTypeConditionChange:
@@ -189,23 +140,7 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 		if entityID == "" {
 			entityID = payload.CharacterID
 		}
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeConditionChanged,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "character",
-			EntityID:      entityID,
-			SystemID:      SystemID,
-			SystemVersion: SystemVersion,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
+		evt := command.NewEvent(cmd, EventTypeConditionChanged, "character", entityID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
 	case commandTypeHopeSpend:
@@ -224,23 +159,7 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 		if entityID == "" {
 			entityID = payload.CharacterID
 		}
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeCharacterStatePatched,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "character",
-			EntityID:      entityID,
-			SystemID:      SystemID,
-			SystemVersion: SystemVersion,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
+		evt := command.NewEvent(cmd, EventTypeCharacterStatePatched, "character", entityID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
 	case commandTypeStressSpend:
@@ -259,23 +178,7 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 		if entityID == "" {
 			entityID = payload.CharacterID
 		}
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeCharacterStatePatched,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "character",
-			EntityID:      entityID,
-			SystemID:      SystemID,
-			SystemVersion: SystemVersion,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
+		evt := command.NewEvent(cmd, EventTypeCharacterStatePatched, "character", entityID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
 	case commandTypeLoadoutSwap:
@@ -293,23 +196,7 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 		if entityID == "" {
 			entityID = payload.CharacterID
 		}
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeLoadoutSwapped,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "character",
-			EntityID:      entityID,
-			SystemID:      SystemID,
-			SystemVersion: SystemVersion,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
+		evt := command.NewEvent(cmd, EventTypeLoadoutSwapped, "character", entityID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
 	case commandTypeRestTake:
@@ -331,46 +218,14 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 		if entityID == "" {
 			entityID = cmd.CampaignID
 		}
-		restEvent := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeRestTaken,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "session",
-			EntityID:      entityID,
-			SystemID:      SystemID,
-			SystemVersion: SystemVersion,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
+		restEvent := command.NewEvent(cmd, EventTypeRestTaken, "session", entityID, payloadJSON, now().UTC())
 
 		if payload.LongTermCountdown == nil {
 			return command.Accept(restEvent)
 		}
 		countdownPayload := *payload.LongTermCountdown
 		countdownPayloadJSON, _ := json.Marshal(countdownPayload)
-		countdownEvent := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeCountdownUpdated,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "countdown",
-			EntityID:      countdownPayload.CountdownID,
-			SystemID:      SystemID,
-			SystemVersion: SystemVersion,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   countdownPayloadJSON,
-		}
+		countdownEvent := command.NewEvent(cmd, EventTypeCountdownUpdated, "countdown", countdownPayload.CountdownID, countdownPayloadJSON, now().UTC())
 
 		return command.Accept(restEvent, countdownEvent)
 	case commandTypeCountdownCreate:
@@ -392,23 +247,7 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 		if entityID == "" {
 			entityID = payload.CountdownID
 		}
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeCountdownCreated,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    entityType,
-			EntityID:      entityID,
-			SystemID:      SystemID,
-			SystemVersion: SystemVersion,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
+		evt := command.NewEvent(cmd, EventTypeCountdownCreated, entityType, entityID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
 	case commandTypeCountdownUpdate:
@@ -431,23 +270,7 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 		if entityID == "" {
 			entityID = payload.CountdownID
 		}
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeCountdownUpdated,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    entityType,
-			EntityID:      entityID,
-			SystemID:      SystemID,
-			SystemVersion: SystemVersion,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
+		evt := command.NewEvent(cmd, EventTypeCountdownUpdated, entityType, entityID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
 	case commandTypeCountdownDelete:
@@ -467,23 +290,7 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 		if entityID == "" {
 			entityID = payload.CountdownID
 		}
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeCountdownDeleted,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    entityType,
-			EntityID:      entityID,
-			SystemID:      SystemID,
-			SystemVersion: SystemVersion,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
+		evt := command.NewEvent(cmd, EventTypeCountdownDeleted, entityType, entityID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
 	case commandTypeDamageApply:
@@ -522,23 +329,7 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 		if entityID == "" {
 			entityID = payload.CharacterID
 		}
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeDamageApplied,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "character",
-			EntityID:      entityID,
-			SystemID:      SystemID,
-			SystemVersion: SystemVersion,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
+		evt := command.NewEvent(cmd, EventTypeDamageApplied, "character", entityID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
 	case commandTypeAdversaryDamageApply:
@@ -571,23 +362,7 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 		if entityID == "" {
 			entityID = payload.AdversaryID
 		}
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeAdversaryDamageApplied,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "adversary",
-			EntityID:      entityID,
-			SystemID:      SystemID,
-			SystemVersion: SystemVersion,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
+		evt := command.NewEvent(cmd, EventTypeAdversaryDamageApplied, "adversary", entityID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
 	case commandTypeDowntimeMoveApply:
@@ -603,23 +378,7 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 		if entityID == "" {
 			entityID = payload.CharacterID
 		}
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeDowntimeMoveApplied,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "character",
-			EntityID:      entityID,
-			SystemID:      SystemID,
-			SystemVersion: SystemVersion,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
+		evt := command.NewEvent(cmd, EventTypeDowntimeMoveApplied, "character", entityID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
 	case commandTypeCharacterTemporaryArmorApply:
@@ -637,23 +396,7 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 		if entityID == "" {
 			entityID = payload.CharacterID
 		}
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeCharacterTemporaryArmorApplied,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "character",
-			EntityID:      entityID,
-			SystemID:      SystemID,
-			SystemVersion: SystemVersion,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
+		evt := command.NewEvent(cmd, EventTypeCharacterTemporaryArmorApplied, "character", entityID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
 	case commandTypeAdversaryConditionChange:
@@ -682,23 +425,7 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 		if entityID == "" {
 			entityID = payload.AdversaryID
 		}
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeAdversaryConditionChanged,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "adversary",
-			EntityID:      entityID,
-			SystemID:      SystemID,
-			SystemVersion: SystemVersion,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
+		evt := command.NewEvent(cmd, EventTypeAdversaryConditionChanged, "adversary", entityID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
 	case commandTypeAdversaryCreate:
@@ -724,23 +451,7 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 		if entityID == "" {
 			entityID = payload.AdversaryID
 		}
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeAdversaryCreated,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "adversary",
-			EntityID:      entityID,
-			SystemID:      SystemID,
-			SystemVersion: SystemVersion,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
+		evt := command.NewEvent(cmd, EventTypeAdversaryCreated, "adversary", entityID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
 	case commandTypeAdversaryUpdate:
@@ -759,23 +470,7 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 		if entityID == "" {
 			entityID = payload.AdversaryID
 		}
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeAdversaryUpdated,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "adversary",
-			EntityID:      entityID,
-			SystemID:      SystemID,
-			SystemVersion: SystemVersion,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
+		evt := command.NewEvent(cmd, EventTypeAdversaryUpdated, "adversary", entityID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
 	case commandTypeAdversaryDelete:
@@ -791,23 +486,7 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 		if entityID == "" {
 			entityID = payload.AdversaryID
 		}
-		evt := event.Event{
-			CampaignID:    cmd.CampaignID,
-			Type:          eventTypeAdversaryDeleted,
-			Timestamp:     now().UTC(),
-			ActorType:     event.ActorType(cmd.ActorType),
-			ActorID:       cmd.ActorID,
-			SessionID:     cmd.SessionID,
-			RequestID:     cmd.RequestID,
-			InvocationID:  cmd.InvocationID,
-			EntityType:    "adversary",
-			EntityID:      entityID,
-			SystemID:      SystemID,
-			SystemVersion: SystemVersion,
-			CorrelationID: cmd.CorrelationID,
-			CausationID:   cmd.CausationID,
-			PayloadJSON:   payloadJSON,
-		}
+		evt := command.NewEvent(cmd, EventTypeAdversaryDeleted, "adversary", entityID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
 	default:

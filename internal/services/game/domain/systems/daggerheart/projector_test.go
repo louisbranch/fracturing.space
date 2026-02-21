@@ -56,7 +56,7 @@ func TestProjectorApplyCharacterStatePatched_StoresCharacterState(t *testing.T) 
 
 	updated, err := projector.Apply(SnapshotState{CampaignID: "camp-1"}, event.Event{
 		CampaignID:    "camp-1",
-		Type:          eventTypeCharacterStatePatched,
+		Type:          EventTypeCharacterStatePatched,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
 		PayloadJSON:   payload,
@@ -108,7 +108,7 @@ func TestProjectorApplyCharacterStatePatched_DoesNotMutateFromBeforeOnly(t *test
 		},
 	}, event.Event{
 		CampaignID:    "camp-1",
-		Type:          eventTypeCharacterStatePatched,
+		Type:          EventTypeCharacterStatePatched,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
 		PayloadJSON:   payload,
@@ -174,7 +174,7 @@ func TestProjectorApplyAdversaryUpdated_AppliesZeroAndEmptyValues(t *testing.T) 
 
 	updated, err := projector.Apply(state, event.Event{
 		CampaignID:    "camp-1",
-		Type:          eventTypeAdversaryUpdated,
+		Type:          EventTypeAdversaryUpdated,
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
 		PayloadJSON:   payload,
@@ -224,7 +224,7 @@ func TestProjectorApplyHandlesAllRegisteredEvents(t *testing.T) {
 	for _, def := range daggerheartEventDefinitions {
 		t.Run(string(def.Type), func(t *testing.T) {
 			payloadJSON := []byte(`{}`)
-			if def.Type == eventTypeGMFearChanged {
+			if def.Type == EventTypeGMFearChanged {
 				payload, err := json.Marshal(GMFearChangedPayload{Before: 1, After: 2})
 				if err != nil {
 					t.Fatalf("marshal payload: %v", err)

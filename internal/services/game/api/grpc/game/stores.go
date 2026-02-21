@@ -36,7 +36,6 @@ func (s Stores) Applier() projection.Applier {
 		Campaign:         s.Campaign,
 		Character:        s.Character,
 		CampaignFork:     s.CampaignFork,
-		Daggerheart:      s.Daggerheart,
 		ClaimIndex:       s.ClaimIndex,
 		Invite:           s.Invite,
 		Participant:      s.Participant,

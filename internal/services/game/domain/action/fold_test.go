@@ -18,11 +18,14 @@ func TestFold_RollResolvedMutatesCausalReplayState(t *testing.T) {
 		t.Fatalf("marshal payload: %v", err)
 	}
 
-	updated := Fold(state, event.Event{
-		Type:        eventTypeRollResolved,
+	updated, err := Fold(state, event.Event{
+		Type:        EventTypeRollResolved,
 		SessionID:   "sess-1",
 		PayloadJSON: payloadJSON,
 	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if _, ok := updated.Rolls[42]; !ok {
 		t.Fatal("expected roll state for roll seq 42")
 	}
@@ -41,10 +44,13 @@ func TestFold_OutcomeAppliedMutatesCausalReplayState(t *testing.T) {
 		t.Fatalf("marshal payload: %v", err)
 	}
 
-	updated := Fold(state, event.Event{
-		Type:        eventTypeOutcomeApplied,
+	updated, err := Fold(state, event.Event{
+		Type:        EventTypeOutcomeApplied,
 		PayloadJSON: payloadJSON,
 	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if _, ok := updated.AppliedOutcomes[99]; !ok {
 		t.Fatal("expected applied outcome for roll seq 99")
 	}
@@ -59,7 +65,10 @@ func TestFold_NonCausalEventsDoNotMutateCausalReplayState(t *testing.T) {
 			7: {},
 		},
 	}
-	unchanged := Fold(base, event.Event{Type: eventTypeOutcomeRejected, PayloadJSON: []byte(`{"roll_seq":7}`)})
+	unchanged, err := Fold(base, event.Event{Type: EventTypeOutcomeRejected, PayloadJSON: []byte(`{"roll_seq":7}`)})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if len(unchanged.Rolls) != 1 {
 		t.Fatalf("rolls size = %d, want 1", len(unchanged.Rolls))
 	}
@@ -67,7 +76,10 @@ func TestFold_NonCausalEventsDoNotMutateCausalReplayState(t *testing.T) {
 		t.Fatalf("applied outcomes size = %d, want 1", len(unchanged.AppliedOutcomes))
 	}
 
-	unchanged = Fold(base, event.Event{Type: eventTypeNoteAdded, PayloadJSON: []byte(`{"content":"note"}`)})
+	unchanged, err = Fold(base, event.Event{Type: EventTypeNoteAdded, PayloadJSON: []byte(`{"content":"note"}`)})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if len(unchanged.Rolls) != 1 {
 		t.Fatalf("rolls size = %d, want 1", len(unchanged.Rolls))
 	}

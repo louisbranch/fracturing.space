@@ -403,7 +403,7 @@ func newProjectionApplier(campaignStore *projectionCampaignStore, daggerheartSto
 	if err := registry.Register(daggerheart.NewAdapter(daggerheartStore)); err != nil {
 		panic(err)
 	}
-	return Applier{Campaign: campaignStore, Daggerheart: daggerheartStore, Adapters: registry}
+	return Applier{Campaign: campaignStore, Adapters: registry}
 }
 
 func (s *projectionDaggerheartStore) PutDaggerheartCharacterProfile(_ context.Context, profile storage.DaggerheartCharacterProfile) error {

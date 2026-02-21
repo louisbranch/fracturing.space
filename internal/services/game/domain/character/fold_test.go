@@ -8,10 +8,13 @@ import (
 
 func TestFoldCharacterCreatedSetsFields(t *testing.T) {
 	state := State{}
-	updated := Fold(state, event.Event{
+	updated, err := Fold(state, event.Event{
 		Type:        event.Type("character.created"),
 		PayloadJSON: []byte(`{"character_id":"char-1","name":"Aria","kind":"pc","notes":"notes"}`),
 	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if !updated.Created {
 		t.Fatal("expected character to be created")
 	}
@@ -31,10 +34,13 @@ func TestFoldCharacterCreatedSetsFields(t *testing.T) {
 
 func TestFoldCharacterUpdatedSetsFields(t *testing.T) {
 	state := State{Created: true, CharacterID: "char-1", Name: "Old"}
-	updated := Fold(state, event.Event{
+	updated, err := Fold(state, event.Event{
 		Type:        event.Type("character.updated"),
 		PayloadJSON: []byte(`{"character_id":"char-1","fields":{"name":"Aria","kind":"npc","notes":"new notes","participant_id":"p-1"}}`),
 	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if updated.Name != "Aria" {
 		t.Fatalf("name = %s, want %s", updated.Name, "Aria")
 	}
@@ -51,10 +57,13 @@ func TestFoldCharacterUpdatedSetsFields(t *testing.T) {
 
 func TestFoldCharacterDeletedMarksDeleted(t *testing.T) {
 	state := State{Created: true, CharacterID: "char-1"}
-	updated := Fold(state, event.Event{
+	updated, err := Fold(state, event.Event{
 		Type:        event.Type("character.deleted"),
 		PayloadJSON: []byte(`{"character_id":"char-1"}`),
 	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if !updated.Deleted {
 		t.Fatal("expected character to be marked deleted")
 	}
@@ -62,10 +71,13 @@ func TestFoldCharacterDeletedMarksDeleted(t *testing.T) {
 
 func TestFoldCharacterCreatedClearsDeleted(t *testing.T) {
 	state := State{Deleted: true}
-	updated := Fold(state, event.Event{
+	updated, err := Fold(state, event.Event{
 		Type:        event.Type("character.created"),
 		PayloadJSON: []byte(`{"character_id":"char-1","name":"Aria","kind":"pc"}`),
 	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if updated.Deleted {
 		t.Fatal("expected deleted flag to be cleared")
 	}
@@ -73,10 +85,13 @@ func TestFoldCharacterCreatedClearsDeleted(t *testing.T) {
 
 func TestFoldProfileUpdatedSetsSystemProfile(t *testing.T) {
 	state := State{Created: true}
-	updated := Fold(state, event.Event{
+	updated, err := Fold(state, event.Event{
 		Type:        event.Type("character.profile_updated"),
 		PayloadJSON: []byte(`{"character_id":"char-1","system_profile":{"daggerheart":{"level":2}}}`),
 	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if updated.SystemProfile == nil {
 		t.Fatal("expected system profile to be set")
 	}
