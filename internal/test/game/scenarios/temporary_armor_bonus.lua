@@ -1,6 +1,5 @@
 local scene = Scenario.new("temporary_armor_bonus")
 
--- Echo the temporary armor bonus example tied to a rest.
 scene:campaign{
   name = "Temporary Armor Bonus",
   system = "DAGGERHEART",
@@ -10,14 +9,49 @@ scene:campaign{
 
 scene:pc("Gandalf", { armor = 3 })
 
--- Gandalf gains temporary armor until the next rest.
 scene:start_session("Armor Bonus")
 
--- Example: Gandalf's Armor Score increases by 2, then resets on rest.
--- Missing DSL: apply temporary armor bonus and clear Armor Slots on rest.
-scene:rest{ type = "short", party_size = 1 }
+scene:temporary_armor{
+  target = "Gandalf",
+  source = "ritual",
+  duration = "short_rest",
+  amount = 2,
+  source_id = "blessing:1",
+  expect_target = "Gandalf",
+  expect_armor_delta = 2,
+}
 
--- Close the session after the rest clears temporary armor.
+scene:rest{
+  type = "short",
+  party_size = 1,
+  expect_target = "Gandalf",
+  expect_armor_delta = 0,
+}
+
+scene:downtime_move{
+  target = "Gandalf",
+  move = "repair_all_armor",
+  expect_target = "Gandalf",
+  expect_armor_delta = -2,
+}
+
+scene:temporary_armor{
+  target = "Gandalf",
+  source = "warding",
+  duration = "long_rest",
+  amount = 2,
+  source_id = "long:1",
+  expect_target = "Gandalf",
+  expect_armor_delta = 2,
+}
+
+scene:rest{
+  type = "long",
+  party_size = 1,
+  expect_target = "Gandalf",
+  expect_armor_delta = -2,
+}
+
 scene:end_session()
 
 return scene

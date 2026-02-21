@@ -485,7 +485,7 @@ func (q *Queries) GetDaggerheartCharacterSheet(ctx context.Context, arg GetDagge
 
 const getDaggerheartCharacterState = `-- name: GetDaggerheartCharacterState :one
 
-SELECT campaign_id, character_id, hp, hope, hope_max, stress, armor, conditions_json, life_state FROM daggerheart_character_states
+SELECT campaign_id, character_id, hp, hope, hope_max, stress, armor, conditions_json, temporary_armor_json, life_state FROM daggerheart_character_states
 WHERE campaign_id = ? AND character_id = ?
 `
 
@@ -507,6 +507,7 @@ func (q *Queries) GetDaggerheartCharacterState(ctx context.Context, arg GetDagge
 		&i.Stress,
 		&i.Armor,
 		&i.ConditionsJson,
+		&i.TemporaryArmorJson,
 		&i.LifeState,
 	)
 	return i, err
@@ -1923,8 +1924,8 @@ func (q *Queries) PutDaggerheartCharacterProfile(ctx context.Context, arg PutDag
 
 const putDaggerheartCharacterState = `-- name: PutDaggerheartCharacterState :exec
 INSERT INTO daggerheart_character_states (
-    campaign_id, character_id, hp, hope, hope_max, stress, armor, conditions_json, life_state
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    campaign_id, character_id, hp, hope, hope_max, stress, armor, conditions_json, temporary_armor_json, life_state
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(campaign_id, character_id) DO UPDATE SET
     hp = excluded.hp,
     hope = excluded.hope,
@@ -1932,19 +1933,21 @@ ON CONFLICT(campaign_id, character_id) DO UPDATE SET
     stress = excluded.stress,
     armor = excluded.armor,
     conditions_json = excluded.conditions_json,
+    temporary_armor_json = excluded.temporary_armor_json,
     life_state = excluded.life_state
 `
 
 type PutDaggerheartCharacterStateParams struct {
-	CampaignID     string `json:"campaign_id"`
-	CharacterID    string `json:"character_id"`
-	Hp             int64  `json:"hp"`
-	Hope           int64  `json:"hope"`
-	HopeMax        int64  `json:"hope_max"`
-	Stress         int64  `json:"stress"`
-	Armor          int64  `json:"armor"`
-	ConditionsJson string `json:"conditions_json"`
-	LifeState      string `json:"life_state"`
+	CampaignID         string `json:"campaign_id"`
+	CharacterID        string `json:"character_id"`
+	Hp                 int64  `json:"hp"`
+	Hope               int64  `json:"hope"`
+	HopeMax            int64  `json:"hope_max"`
+	Stress             int64  `json:"stress"`
+	Armor              int64  `json:"armor"`
+	ConditionsJson     string `json:"conditions_json"`
+	TemporaryArmorJson string `json:"temporary_armor_json"`
+	LifeState          string `json:"life_state"`
 }
 
 func (q *Queries) PutDaggerheartCharacterState(ctx context.Context, arg PutDaggerheartCharacterStateParams) error {
@@ -1957,6 +1960,7 @@ func (q *Queries) PutDaggerheartCharacterState(ctx context.Context, arg PutDagge
 		arg.Stress,
 		arg.Armor,
 		arg.ConditionsJson,
+		arg.TemporaryArmorJson,
 		arg.LifeState,
 	)
 	return err
@@ -2516,20 +2520,21 @@ func (q *Queries) PutDaggerheartWeapon(ctx context.Context, arg PutDaggerheartWe
 
 const updateDaggerheartCharacterState = `-- name: UpdateDaggerheartCharacterState :exec
 UPDATE daggerheart_character_states
-SET hp = ?, hope = ?, hope_max = ?, stress = ?, armor = ?, conditions_json = ?, life_state = ?
+SET hp = ?, hope = ?, hope_max = ?, stress = ?, armor = ?, conditions_json = ?, temporary_armor_json = ?, life_state = ?
 WHERE campaign_id = ? AND character_id = ?
 `
 
 type UpdateDaggerheartCharacterStateParams struct {
-	Hp             int64  `json:"hp"`
-	Hope           int64  `json:"hope"`
-	HopeMax        int64  `json:"hope_max"`
-	Stress         int64  `json:"stress"`
-	Armor          int64  `json:"armor"`
-	ConditionsJson string `json:"conditions_json"`
-	LifeState      string `json:"life_state"`
-	CampaignID     string `json:"campaign_id"`
-	CharacterID    string `json:"character_id"`
+	Hp                 int64  `json:"hp"`
+	Hope               int64  `json:"hope"`
+	HopeMax            int64  `json:"hope_max"`
+	Stress             int64  `json:"stress"`
+	Armor              int64  `json:"armor"`
+	ConditionsJson     string `json:"conditions_json"`
+	TemporaryArmorJson string `json:"temporary_armor_json"`
+	LifeState          string `json:"life_state"`
+	CampaignID         string `json:"campaign_id"`
+	CharacterID        string `json:"character_id"`
 }
 
 func (q *Queries) UpdateDaggerheartCharacterState(ctx context.Context, arg UpdateDaggerheartCharacterStateParams) error {
@@ -2540,6 +2545,7 @@ func (q *Queries) UpdateDaggerheartCharacterState(ctx context.Context, arg Updat
 		arg.Stress,
 		arg.Armor,
 		arg.ConditionsJson,
+		arg.TemporaryArmorJson,
 		arg.LifeState,
 		arg.CampaignID,
 		arg.CharacterID,

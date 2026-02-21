@@ -108,6 +108,18 @@ type RestTakePayload struct {
 // RestTakenPayload captures the payload for sys.daggerheart.rest_taken events.
 type RestTakenPayload = RestTakePayload
 
+// CharacterTemporaryArmorApplyPayload captures the payload for sys.daggerheart.character_temporary_armor.apply commands.
+type CharacterTemporaryArmorApplyPayload struct {
+	CharacterID string `json:"character_id"`
+	Source      string `json:"source"`
+	Duration    string `json:"duration"`
+	Amount      int    `json:"amount"`
+	SourceID    string `json:"source_id,omitempty"`
+}
+
+// CharacterTemporaryArmorAppliedPayload captures the payload for sys.daggerheart.character_temporary_armor_applied events.
+type CharacterTemporaryArmorAppliedPayload = CharacterTemporaryArmorApplyPayload
+
 // RollRngInfo captures RNG metadata for roll events.
 type RollRngInfo struct {
 	SeedUsed   uint64 `json:"seed_used"`

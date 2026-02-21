@@ -249,6 +249,7 @@ type fakeDaggerheartClient struct {
 	rollDice                    func(context.Context, *daggerheartv1.RollDiceRequest, ...grpc.CallOption) (*daggerheartv1.RollDiceResponse, error)
 	applyDamage                 func(context.Context, *daggerheartv1.DaggerheartApplyDamageRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyDamageResponse, error)
 	applyAdversaryDamage        func(context.Context, *daggerheartv1.DaggerheartApplyAdversaryDamageRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyAdversaryDamageResponse, error)
+	applyTemporaryArmor         func(context.Context, *daggerheartv1.DaggerheartApplyTemporaryArmorRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyTemporaryArmorResponse, error)
 	applyRest                   func(context.Context, *daggerheartv1.DaggerheartApplyRestRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyRestResponse, error)
 	applyDowntimeMove           func(context.Context, *daggerheartv1.DaggerheartApplyDowntimeMoveRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyDowntimeMoveResponse, error)
 	swapLoadout                 func(context.Context, *daggerheartv1.DaggerheartSwapLoadoutRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartSwapLoadoutResponse, error)
@@ -321,6 +322,13 @@ func (f *fakeDaggerheartClient) ApplyAdversaryDamage(ctx context.Context, in *da
 		return f.applyAdversaryDamage(ctx, in, opts...)
 	}
 	return nil, unimplemented("ApplyAdversaryDamage")
+}
+
+func (f *fakeDaggerheartClient) ApplyTemporaryArmor(ctx context.Context, in *daggerheartv1.DaggerheartApplyTemporaryArmorRequest, opts ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyTemporaryArmorResponse, error) {
+	if f.applyTemporaryArmor != nil {
+		return f.applyTemporaryArmor(ctx, in, opts...)
+	}
+	return nil, unimplemented("ApplyTemporaryArmor")
 }
 
 func (f *fakeDaggerheartClient) ApplyRest(ctx context.Context, in *daggerheartv1.DaggerheartApplyRestRequest, opts ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyRestResponse, error) {

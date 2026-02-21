@@ -30,6 +30,14 @@ type SnapshotState struct {
 	CountdownStates map[string]CountdownState
 }
 
+// TemporaryArmorBucket tracks temporary armor contributions on a character.
+type TemporaryArmorBucket struct {
+	Source   string `json:"source"`
+	Duration string `json:"duration"`
+	SourceID string `json:"source_id,omitempty"`
+	Amount   int    `json:"amount"`
+}
+
 // CharacterState captures Daggerheart character state.
 type CharacterState struct {
 	CampaignID  string
@@ -43,6 +51,7 @@ type CharacterState struct {
 	StressMax   int
 	Armor       int
 	ArmorMax    int
+	ArmorBonus  []TemporaryArmorBucket
 	LifeState   string
 	Conditions  []string
 }

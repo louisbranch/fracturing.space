@@ -2836,6 +2836,10 @@ func (s *Store) PutDaggerheartCharacterState(ctx context.Context, state storage.
 	if err != nil {
 		return fmt.Errorf("encode conditions: %w", err)
 	}
+	temporaryArmorJSON, err := json.Marshal(state.TemporaryArmor)
+	if err != nil {
+		return fmt.Errorf("encode temporary armor: %w", err)
+	}
 
 	hopeMax := state.HopeMax
 	if hopeMax == 0 {
@@ -2848,15 +2852,16 @@ func (s *Store) PutDaggerheartCharacterState(ctx context.Context, state storage.
 	}
 
 	return s.q.PutDaggerheartCharacterState(ctx, db.PutDaggerheartCharacterStateParams{
-		CampaignID:     state.CampaignID,
-		CharacterID:    state.CharacterID,
-		Hp:             int64(state.Hp),
-		Hope:           int64(state.Hope),
-		HopeMax:        int64(hopeMax),
-		Stress:         int64(state.Stress),
-		Armor:          int64(state.Armor),
-		ConditionsJson: string(conditionsJSON),
-		LifeState:      lifeState,
+		CampaignID:         state.CampaignID,
+		CharacterID:        state.CharacterID,
+		Hp:                 int64(state.Hp),
+		Hope:               int64(state.Hope),
+		HopeMax:            int64(hopeMax),
+		Stress:             int64(state.Stress),
+		Armor:              int64(state.Armor),
+		ConditionsJson:     string(conditionsJSON),
+		TemporaryArmorJson: string(temporaryArmorJSON),
+		LifeState:          lifeState,
 	})
 }
 
@@ -2892,6 +2897,12 @@ func (s *Store) GetDaggerheartCharacterState(ctx context.Context, campaignID, ch
 			return storage.DaggerheartCharacterState{}, fmt.Errorf("decode conditions: %w", err)
 		}
 	}
+	var temporaryArmor []storage.DaggerheartTemporaryArmor
+	if row.TemporaryArmorJson != "" {
+		if err := json.Unmarshal([]byte(row.TemporaryArmorJson), &temporaryArmor); err != nil {
+			return storage.DaggerheartCharacterState{}, fmt.Errorf("decode temporary armor: %w", err)
+		}
+	}
 
 	lifeState := row.LifeState
 	if strings.TrimSpace(lifeState) == "" {
@@ -2899,15 +2910,16 @@ func (s *Store) GetDaggerheartCharacterState(ctx context.Context, campaignID, ch
 	}
 
 	return storage.DaggerheartCharacterState{
-		CampaignID:  row.CampaignID,
-		CharacterID: row.CharacterID,
-		Hp:          int(row.Hp),
-		Hope:        int(row.Hope),
-		HopeMax:     int(row.HopeMax),
-		Stress:      int(row.Stress),
-		Armor:       int(row.Armor),
-		Conditions:  conditions,
-		LifeState:   lifeState,
+		CampaignID:     row.CampaignID,
+		CharacterID:    row.CharacterID,
+		Hp:             int(row.Hp),
+		Hope:           int(row.Hope),
+		HopeMax:        int(row.HopeMax),
+		Stress:         int(row.Stress),
+		Armor:          int(row.Armor),
+		TemporaryArmor: temporaryArmor,
+		Conditions:     conditions,
+		LifeState:      lifeState,
 	}, nil
 }
 

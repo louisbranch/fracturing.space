@@ -135,15 +135,16 @@ type DaggerheartCharacterProfile struct {
 }
 
 type DaggerheartCharacterState struct {
-	CampaignID     string `json:"campaign_id"`
-	CharacterID    string `json:"character_id"`
-	Hp             int64  `json:"hp"`
-	Hope           int64  `json:"hope"`
-	HopeMax        int64  `json:"hope_max"`
-	Stress         int64  `json:"stress"`
-	Armor          int64  `json:"armor"`
-	ConditionsJson string `json:"conditions_json"`
-	LifeState      string `json:"life_state"`
+	CampaignID         string `json:"campaign_id"`
+	CharacterID        string `json:"character_id"`
+	Hp                 int64  `json:"hp"`
+	Hope               int64  `json:"hope"`
+	HopeMax            int64  `json:"hope_max"`
+	Stress             int64  `json:"stress"`
+	Armor              int64  `json:"armor"`
+	ConditionsJson     string `json:"conditions_json"`
+	TemporaryArmorJson string `json:"temporary_armor_json"`
+	LifeState          string `json:"life_state"`
 }
 
 type DaggerheartClass struct {

@@ -480,15 +480,24 @@ type DaggerheartExperience struct {
 
 // DaggerheartCharacterState stores Daggerheart combat state needed by outcome workflows.
 type DaggerheartCharacterState struct {
-	CampaignID  string
-	CharacterID string
-	Hp          int
-	Hope        int
-	HopeMax     int
-	Stress      int
-	Armor       int
-	Conditions  []string
-	LifeState   string
+	CampaignID     string
+	CharacterID    string
+	Hp             int
+	Hope           int
+	HopeMax        int
+	Stress         int
+	Armor          int
+	Conditions     []string
+	TemporaryArmor []DaggerheartTemporaryArmor
+	LifeState      string
+}
+
+// DaggerheartTemporaryArmor stores a tracked temporary-armor bucket.
+type DaggerheartTemporaryArmor struct {
+	Source   string
+	Duration string
+	SourceID string
+	Amount   int
 }
 
 // DaggerheartSnapshot stores campaign-level Daggerheart state used during replay.

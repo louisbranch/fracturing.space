@@ -320,6 +320,7 @@ var scenarioMethods = []lua.RegistryFunction{
 	{Name: "tag_team", Function: scenarioTagTeam},
 	{Name: "rest", Function: scenarioRest},
 	{Name: "downtime_move", Function: scenarioDowntimeMove},
+	{Name: "temporary_armor", Function: scenarioTemporaryArmor},
 	{Name: "death_move", Function: scenarioDeathMove},
 	{Name: "blaze_of_glory", Function: scenarioBlazeOfGlory},
 	{Name: "swap_loadout", Function: scenarioSwapLoadout},
@@ -514,6 +515,14 @@ func scenarioDowntimeMove(state *lua.State) int {
 	lua.CheckType(state, 2, lua.TypeTable)
 	data := tableToMap(state, 2)
 	appendStep(scenario, "downtime_move", data)
+	return 0
+}
+
+func scenarioTemporaryArmor(state *lua.State) int {
+	scenario := checkScenario(state)
+	lua.CheckType(state, 2, lua.TypeTable)
+	data := tableToMap(state, 2)
+	appendStep(scenario, "temporary_armor", data)
 	return 0
 }
 

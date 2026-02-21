@@ -461,6 +461,18 @@ func (s *DaggerheartService) ApplyRest(ctx context.Context, in *pb.DaggerheartAp
 		RefreshRest:      outcome.RefreshRest,
 		RefreshLongRest:  outcome.RefreshLongRest,
 	}
+	characterIDs := make([]string, len(in.GetCharacterIds()))
+	copy(characterIDs, in.GetCharacterIds())
+	payload.CharacterStates = make([]daggerheart.RestCharacterStatePatch, 0, len(characterIDs))
+	for _, characterID := range characterIDs {
+		characterID = strings.TrimSpace(characterID)
+		if characterID == "" {
+			continue
+		}
+		payload.CharacterStates = append(payload.CharacterStates, daggerheart.RestCharacterStatePatch{
+			CharacterID: characterID,
+		})
+	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
@@ -517,8 +529,8 @@ func (s *DaggerheartService) ApplyRest(ctx context.Context, in *pb.DaggerheartAp
 		return nil, status.Errorf(codes.Internal, "load daggerheart snapshot: %v", err)
 	}
 
-	entries := make([]*pb.DaggerheartCharacterStateEntry, 0, len(in.CharacterIds))
-	for _, id := range in.CharacterIds {
+	entries := make([]*pb.DaggerheartCharacterStateEntry, 0, len(characterIDs))
+	for _, id := range characterIDs {
 		if strings.TrimSpace(id) == "" {
 			continue
 		}
@@ -685,6 +697,114 @@ func (s *DaggerheartService) ApplyDowntimeMove(ctx context.Context, in *pb.Dagge
 		return nil, status.Errorf(codes.Internal, "load daggerheart state: %v", err)
 	}
 	return &pb.DaggerheartApplyDowntimeMoveResponse{
+		CharacterId: characterID,
+		State:       daggerheartStateToProto(updated),
+	}, nil
+}
+
+func (s *DaggerheartService) ApplyTemporaryArmor(ctx context.Context, in *pb.DaggerheartApplyTemporaryArmorRequest) (*pb.DaggerheartApplyTemporaryArmorResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "apply temporary armor request is required")
+	}
+	if s.stores.Campaign == nil {
+		return nil, status.Error(codes.Internal, "campaign store is not configured")
+	}
+	if s.stores.Daggerheart == nil {
+		return nil, status.Error(codes.Internal, "daggerheart store is not configured")
+	}
+	if s.stores.Event == nil {
+		return nil, status.Error(codes.Internal, "event store is not configured")
+	}
+
+	campaignID := strings.TrimSpace(in.GetCampaignId())
+	if campaignID == "" {
+		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	}
+	characterID := strings.TrimSpace(in.GetCharacterId())
+	if characterID == "" {
+		return nil, status.Error(codes.InvalidArgument, "character id is required")
+	}
+
+	c, err := s.stores.Campaign.Get(ctx, campaignID)
+	if err != nil {
+		return nil, handleDomainError(err)
+	}
+	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpCampaignMutate); err != nil {
+		return nil, handleDomainError(err)
+	}
+	if c.System != commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART {
+		return nil, status.Error(codes.FailedPrecondition, "campaign system does not support daggerheart temporary armor")
+	}
+
+	sessionID := strings.TrimSpace(grpcmeta.SessionIDFromContext(ctx))
+	if sessionID == "" {
+		return nil, status.Error(codes.InvalidArgument, "session id is required")
+	}
+	if err := s.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
+		return nil, err
+	}
+
+	if in.Armor == nil {
+		return nil, status.Error(codes.InvalidArgument, "armor is required")
+	}
+	if _, err := s.stores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID); err != nil {
+		return nil, handleDomainError(err)
+	}
+	if _, err := s.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID); err != nil {
+		return nil, handleDomainError(err)
+	}
+
+	payload := daggerheart.CharacterTemporaryArmorApplyPayload{
+		CharacterID: characterID,
+		Source:      strings.TrimSpace(in.Armor.GetSource()),
+		Duration:    strings.TrimSpace(in.Armor.GetDuration()),
+		Amount:      int(in.Armor.GetAmount()),
+		SourceID:    strings.TrimSpace(in.Armor.GetSourceId()),
+	}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
+	}
+
+	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
+	requestID := grpcmeta.RequestIDFromContext(ctx)
+	invocationID := grpcmeta.InvocationIDFromContext(ctx)
+	if s.stores.Domain == nil {
+		return nil, status.Error(codes.Internal, "domain engine is not configured")
+	}
+	domainResult, err := s.stores.Domain.Execute(ctx, command.Command{
+		CampaignID:    campaignID,
+		Type:          command.Type("sys.daggerheart.character_temporary_armor.apply"),
+		ActorType:     command.ActorTypeSystem,
+		SessionID:     sessionID,
+		RequestID:     requestID,
+		InvocationID:  invocationID,
+		EntityType:    "character",
+		EntityID:      characterID,
+		SystemID:      daggerheart.SystemID,
+		SystemVersion: daggerheart.SystemVersion,
+		PayloadJSON:   payloadJSON,
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "execute domain command: %v", err)
+	}
+	if len(domainResult.Decision.Rejections) > 0 {
+		return nil, status.Error(codes.FailedPrecondition, domainResult.Decision.Rejections[0].Message)
+	}
+	if len(domainResult.Decision.Events) == 0 {
+		return nil, status.Error(codes.Internal, "temporary armor apply did not emit an event")
+	}
+	for _, evt := range domainResult.Decision.Events {
+		if err := adapter.Apply(ctx, evt); err != nil {
+			return nil, status.Errorf(codes.Internal, "apply temporary armor event: %v", err)
+		}
+	}
+
+	updated, err := s.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "load daggerheart state: %v", err)
+	}
+	return &pb.DaggerheartApplyTemporaryArmorResponse{
 		CharacterId: characterID,
 		State:       daggerheartStateToProto(updated),
 	}, nil
@@ -5135,14 +5255,25 @@ func daggerheartDowntimeMoveToString(m daggerheart.DowntimeMove) string {
 }
 
 func daggerheartStateToProto(state storage.DaggerheartCharacterState) *pb.DaggerheartCharacterState {
+	temporaryArmorBuckets := make([]*pb.DaggerheartTemporaryArmorBucket, 0, len(state.TemporaryArmor))
+	for _, bucket := range state.TemporaryArmor {
+		temporaryArmorBuckets = append(temporaryArmorBuckets, &pb.DaggerheartTemporaryArmorBucket{
+			Source:   bucket.Source,
+			Duration: bucket.Duration,
+			SourceId: bucket.SourceID,
+			Amount:   int32(bucket.Amount),
+		})
+	}
+
 	return &pb.DaggerheartCharacterState{
-		Hp:         int32(state.Hp),
-		Hope:       int32(state.Hope),
-		HopeMax:    int32(state.HopeMax),
-		Stress:     int32(state.Stress),
-		Armor:      int32(state.Armor),
-		Conditions: daggerheartConditionsToProto(state.Conditions),
-		LifeState:  daggerheartLifeStateToProto(state.LifeState),
+		Hp:                    int32(state.Hp),
+		Hope:                  int32(state.Hope),
+		HopeMax:               int32(state.HopeMax),
+		Stress:                int32(state.Stress),
+		Armor:                 int32(state.Armor),
+		Conditions:            daggerheartConditionsToProto(state.Conditions),
+		TemporaryArmorBuckets: temporaryArmorBuckets,
+		LifeState:             daggerheartLifeStateToProto(state.LifeState),
 	}
 }
 

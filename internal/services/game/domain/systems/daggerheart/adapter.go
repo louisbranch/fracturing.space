@@ -42,6 +42,8 @@ func (a *Adapter) Apply(ctx context.Context, evt event.Event) error {
 		return a.applyDamageApplied(ctx, evt)
 	case EventTypeRestTaken:
 		return a.applyRestTaken(ctx, evt)
+	case EventTypeCharacterTemporaryArmorApplied:
+		return a.applyCharacterTemporaryArmorApplied(ctx, evt)
 	case EventTypeDowntimeMoveApplied:
 		return a.applyDowntimeMoveApplied(ctx, evt)
 	case EventTypeLoadoutSwapped:
@@ -139,9 +141,47 @@ func (a *Adapter) applyRestTaken(ctx context.Context, evt event.Event) error {
 		if strings.TrimSpace(patch.CharacterID) == "" {
 			return fmt.Errorf("character_id is required")
 		}
-		if err := a.applyStatePatch(ctx, evt.CampaignID, patch.CharacterID, nil, patch.HopeAfter, nil, patch.StressAfter, patch.ArmorAfter, nil); err != nil {
+		characterID := strings.TrimSpace(patch.CharacterID)
+		if payload.RefreshRest || payload.RefreshLongRest {
+			if err := a.clearRestTemporaryArmor(ctx, evt.CampaignID, characterID, payload.RefreshRest, payload.RefreshLongRest); err != nil {
+				return err
+			}
+		}
+		if err := a.applyStatePatch(ctx, evt.CampaignID, characterID, nil, patch.HopeAfter, nil, patch.StressAfter, patch.ArmorAfter, nil); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func (a *Adapter) clearRestTemporaryArmor(ctx context.Context, campaignID, characterID string, clearShortRest bool, clearLongRest bool) error {
+	state, err := a.store.GetDaggerheartCharacterState(ctx, campaignID, characterID)
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return nil
+		}
+		return fmt.Errorf("get daggerheart character state: %w", err)
+	}
+
+	domainState, err := a.characterStateFromStorage(ctx, state)
+	if err != nil {
+		return err
+	}
+	removed := 0
+	if clearShortRest {
+		removed += domainState.ClearTemporaryArmorByDuration("short_rest")
+	}
+	if clearLongRest {
+		removed += domainState.ClearTemporaryArmorByDuration("long_rest")
+	}
+	if removed == 0 {
+		return nil
+	}
+
+	domainState.SetArmor(domainState.ResourceCap(ResourceArmor))
+	state = storageDaggerheartCharacterStateFromDomain(&domainState)
+	if err := a.store.PutDaggerheartCharacterState(ctx, state); err != nil {
+		return fmt.Errorf("put daggerheart character state: %w", err)
 	}
 	return nil
 }
@@ -154,7 +194,72 @@ func (a *Adapter) applyDowntimeMoveApplied(ctx context.Context, evt event.Event)
 	if strings.TrimSpace(payload.CharacterID) == "" {
 		return fmt.Errorf("character_id is required")
 	}
+	if strings.TrimSpace(payload.Move) == "repair_all_armor" {
+		state, err := a.store.GetDaggerheartCharacterState(ctx, evt.CampaignID, payload.CharacterID)
+		if err != nil {
+			if errors.Is(err, storage.ErrNotFound) {
+				return a.applyStatePatch(ctx, evt.CampaignID, payload.CharacterID, nil, payload.HopeAfter, nil, payload.StressAfter, payload.ArmorAfter, nil)
+			}
+			return fmt.Errorf("get daggerheart character state: %w", err)
+		}
+		domainState, err := a.characterStateFromStorage(ctx, state)
+		if err != nil {
+			return err
+		}
+		removed := domainState.ClearTemporaryArmorByDuration("short_rest")
+		if removed > 0 {
+			storageState := storageDaggerheartCharacterStateFromDomain(&domainState)
+			if payload.ArmorAfter == nil {
+				payload.ArmorAfter = &storageState.Armor
+			}
+			if err := a.store.PutDaggerheartCharacterState(ctx, storageState); err != nil {
+				return fmt.Errorf("put daggerheart character state: %w", err)
+			}
+		}
+		if payload.ArmorAfter == nil {
+			// Ensure repair_all_armor always re-hydrates armor from source state.
+			payload.ArmorAfter = &state.Armor
+		}
+	}
 	return a.applyStatePatch(ctx, evt.CampaignID, payload.CharacterID, nil, payload.HopeAfter, nil, payload.StressAfter, payload.ArmorAfter, nil)
+}
+
+func (a *Adapter) applyCharacterTemporaryArmorApplied(ctx context.Context, evt event.Event) error {
+	var payload CharacterTemporaryArmorAppliedPayload
+	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+		return fmt.Errorf("decode sys.daggerheart.character_temporary_armor_applied payload: %w", err)
+	}
+	characterID := strings.TrimSpace(payload.CharacterID)
+	if characterID == "" {
+		return fmt.Errorf("character_id is required")
+	}
+
+	state, err := a.store.GetDaggerheartCharacterState(ctx, evt.CampaignID, characterID)
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			state = storage.DaggerheartCharacterState{CampaignID: evt.CampaignID, CharacterID: characterID}
+		} else {
+			return fmt.Errorf("get daggerheart character state: %w", err)
+		}
+	}
+
+	domainState, err := a.characterStateFromStorage(ctx, state)
+	if err != nil {
+		return err
+	}
+	domainState.ApplyTemporaryArmor(TemporaryArmorBucket{
+		Source:   strings.TrimSpace(payload.Source),
+		Duration: strings.TrimSpace(payload.Duration),
+		SourceID: strings.TrimSpace(payload.SourceID),
+		Amount:   payload.Amount,
+	})
+	domainState.LifeState = strings.TrimSpace(domainState.LifeState)
+	if domainState.LifeState == "" {
+		domainState.LifeState = LifeStateAlive
+	}
+	state = storageDaggerheartCharacterStateFromDomain(&domainState)
+
+	return a.store.PutDaggerheartCharacterState(ctx, state)
 }
 
 func (a *Adapter) applyLoadoutSwapped(ctx context.Context, evt event.Event) error {
@@ -500,6 +605,80 @@ func (a *Adapter) applyAdversaryDeleted(ctx context.Context, evt event.Event) er
 		return fmt.Errorf("adversary_id is required")
 	}
 	return a.store.DeleteDaggerheartAdversary(ctx, evt.CampaignID, adversaryID)
+}
+
+func daggerheartCharacterStateFromStorage(state storage.DaggerheartCharacterState, armorMax int) CharacterState {
+	domainState := NewCharacterState(CharacterStateConfig{
+		CampaignID:  state.CampaignID,
+		CharacterID: state.CharacterID,
+		HP:          state.Hp,
+		HPMax:       HPMaxCap,
+		Hope:        state.Hope,
+		HopeMax:     state.HopeMax,
+		Stress:      state.Stress,
+		StressMax:   StressMaxCap,
+		Armor:       state.Armor,
+		ArmorMax:    armorMax,
+		LifeState:   state.LifeState,
+	})
+	domainState.Conditions = append([]string(nil), state.Conditions...)
+	domainState.ArmorBonus = make([]TemporaryArmorBucket, 0, len(state.TemporaryArmor))
+	for _, bucket := range state.TemporaryArmor {
+		domainState.ArmorBonus = append(domainState.ArmorBonus, TemporaryArmorBucket{
+			Source:   strings.TrimSpace(bucket.Source),
+			Duration: strings.TrimSpace(bucket.Duration),
+			SourceID: strings.TrimSpace(bucket.SourceID),
+			Amount:   bucket.Amount,
+		})
+	}
+	if strings.TrimSpace(domainState.LifeState) == "" {
+		domainState.LifeState = LifeStateAlive
+	}
+	return *domainState
+}
+
+func (a *Adapter) characterStateFromStorage(ctx context.Context, state storage.DaggerheartCharacterState) (CharacterState, error) {
+	armorMax := state.Armor
+	if strings.TrimSpace(state.CampaignID) == "" || strings.TrimSpace(state.CharacterID) == "" {
+		return daggerheartCharacterStateFromStorage(state, armorMax), nil
+	}
+
+	profile, err := a.store.GetDaggerheartCharacterProfile(ctx, state.CampaignID, state.CharacterID)
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return daggerheartCharacterStateFromStorage(state, armorMax), nil
+		}
+		return CharacterState{}, fmt.Errorf("get daggerheart character profile: %w", err)
+	}
+	armorMax = profile.ArmorMax
+	return daggerheartCharacterStateFromStorage(state, armorMax), nil
+}
+
+func storageDaggerheartCharacterStateFromDomain(state *CharacterState) storage.DaggerheartCharacterState {
+	if state == nil {
+		return storage.DaggerheartCharacterState{}
+	}
+	temporaryArmor := make([]storage.DaggerheartTemporaryArmor, 0, len(state.ArmorBonus))
+	for _, bucket := range state.ArmorBonus {
+		temporaryArmor = append(temporaryArmor, storage.DaggerheartTemporaryArmor{
+			Source:   strings.TrimSpace(bucket.Source),
+			Duration: strings.TrimSpace(bucket.Duration),
+			SourceID: strings.TrimSpace(bucket.SourceID),
+			Amount:   bucket.Amount,
+		})
+	}
+	return storage.DaggerheartCharacterState{
+		CampaignID:     strings.TrimSpace(state.CampaignID),
+		CharacterID:    strings.TrimSpace(state.CharacterID),
+		Hp:             state.HP,
+		Hope:           state.Hope,
+		HopeMax:        state.HopeMax,
+		Stress:         state.Stress,
+		Armor:          state.Armor,
+		Conditions:     append([]string(nil), state.Conditions...),
+		TemporaryArmor: temporaryArmor,
+		LifeState:      state.LifeState,
+	}
 }
 
 func (a *Adapter) applyStatePatch(ctx context.Context, campaignID, characterID string, hpAfter, hopeAfter, hopeMaxAfter, stressAfter, armorAfter *int, lifeStateAfter *string) error {

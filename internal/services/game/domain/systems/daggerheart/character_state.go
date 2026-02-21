@@ -2,6 +2,7 @@ package daggerheart
 
 import (
 	"fmt"
+	"strings"
 
 	domainerrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 )
@@ -107,12 +108,78 @@ func (s *CharacterState) GainResource(name string, amount int) (before, after in
 		return result.StressBefore, result.StressAfter, nil
 	case ResourceArmor:
 		before = s.Armor
-		after = min(s.Armor+amount, s.ArmorMax)
+		after = min(s.Armor+amount, s.ResourceCap(ResourceArmor))
 		s.Armor = after
 		return before, after, nil
 	default:
 		return 0, 0, unknownResourceError(name)
 	}
+}
+
+// ApplyTemporaryArmor adds or replaces a temporary armor tracker and applies the
+// immediate armor gain from that source.
+func (s *CharacterState) ApplyTemporaryArmor(bucket TemporaryArmorBucket) {
+	bucket.Source = strings.TrimSpace(bucket.Source)
+	bucket.Duration = strings.TrimSpace(bucket.Duration)
+	bucket.SourceID = strings.TrimSpace(bucket.SourceID)
+	bucket.Amount = max(bucket.Amount, 0)
+	if bucket.Source == "" || bucket.Duration == "" || bucket.Amount <= 0 {
+		return
+	}
+
+	for i, existing := range s.ArmorBonus {
+		existing.Source = strings.TrimSpace(existing.Source)
+		existing.Duration = strings.TrimSpace(existing.Duration)
+		existing.SourceID = strings.TrimSpace(existing.SourceID)
+		if existing.Source == bucket.Source && existing.Duration == bucket.Duration && existing.SourceID == bucket.SourceID {
+			existingAmount := existing.Amount
+			if existingAmount < 0 {
+				existingAmount = 0
+			}
+			s.ArmorBonus[i].Amount = bucket.Amount
+			s.SetArmor(s.Armor - existingAmount + bucket.Amount)
+			return
+		}
+	}
+
+	s.ArmorBonus = append(s.ArmorBonus, bucket)
+	s.SetArmor(s.Armor + bucket.Amount)
+}
+
+// ClearTemporaryArmorByDuration removes temporary armor buckets for the given
+// duration and reduces current armor by the removed amount.
+// It returns the removed total amount.
+func (s *CharacterState) ClearTemporaryArmorByDuration(duration string) int {
+	duration = strings.TrimSpace(duration)
+	if len(s.ArmorBonus) == 0 {
+		return 0
+	}
+
+	kept := make([]TemporaryArmorBucket, 0, len(s.ArmorBonus))
+	removed := 0
+	for _, bucket := range s.ArmorBonus {
+		if bucket.Duration == duration {
+			removed += bucket.Amount
+			continue
+		}
+		kept = append(kept, bucket)
+	}
+	if removed > 0 {
+		s.ArmorBonus = kept
+		s.SetArmor(s.Armor - removed)
+	}
+	return removed
+}
+
+// TemporaryArmorAmount returns the sum of all active temporary armor bonuses.
+func (s *CharacterState) TemporaryArmorAmount() int {
+	total := 0
+	for _, bucket := range s.ArmorBonus {
+		if bucket.Amount > 0 {
+			total += bucket.Amount
+		}
+	}
+	return total
 }
 
 // StressGainResult captures stress overflow results.
@@ -214,7 +281,7 @@ func (s *CharacterState) ResourceCap(name string) int {
 	case ResourceStress:
 		return s.StressMax
 	case ResourceArmor:
-		return s.ArmorMax
+		return s.ArmorMax + s.TemporaryArmorAmount()
 	default:
 		return 0
 	}
@@ -245,7 +312,7 @@ func (s *CharacterState) SetStress(value int) {
 
 // SetArmor sets a bounded armor value.
 func (s *CharacterState) SetArmor(value int) {
-	s.Armor = clamp(value, 0, s.ArmorMax)
+	s.Armor = clamp(value, 0, s.ResourceCap(ResourceArmor))
 }
 
 func clampCharacterConfig(cfg CharacterStateConfig) CharacterStateConfig {

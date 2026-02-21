@@ -44,6 +44,9 @@ service DaggerheartService {
   // Apply a downtime move (system-specific).
   rpc ApplyDowntimeMove(DaggerheartApplyDowntimeMoveRequest) returns (DaggerheartApplyDowntimeMoveResponse);
 
+  // Apply temporary armor to a character (system-specific).
+  rpc ApplyTemporaryArmor(DaggerheartApplyTemporaryArmorRequest) returns (DaggerheartApplyTemporaryArmorResponse);
+
   // Swap a loadout card (system-specific).
   rpc SwapLoadout(DaggerheartSwapLoadoutRequest) returns (DaggerheartSwapLoadoutResponse);
 
@@ -175,6 +178,24 @@ message DaggerheartApplyDowntimeMoveRequest {
 }
 
 message DaggerheartApplyDowntimeMoveResponse {
+  string character_id = 1;
+  DaggerheartCharacterState state = 2;
+}
+
+message DaggerheartTemporaryArmor {
+  string source = 1;
+  string duration = 2;
+  int32 amount = 3;
+  string source_id = 4;
+}
+
+message DaggerheartApplyTemporaryArmorRequest {
+  string campaign_id = 1;
+  string character_id = 2;
+  DaggerheartTemporaryArmor armor = 3;
+}
+
+message DaggerheartApplyTemporaryArmorResponse {
   string character_id = 1;
   DaggerheartCharacterState state = 2;
 }
