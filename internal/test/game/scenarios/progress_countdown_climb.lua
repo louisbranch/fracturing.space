@@ -18,9 +18,20 @@ scene:start_session("Whitecrest Ascent")
 scene:countdown_create{ name = "Whitecrest Ascent", kind = "progress", current = 3, max = 3, direction = "decrease" }
 
 -- Sam succeeds with Fear, advancing the climb despite consequences.
--- Missing DSL: tick countdown by result tier and award Hope/Fear changes.
-scene:action_roll{ actor = "Sam", trait = "agility", difficulty = 12, outcome = "fear" }
-scene:countdown_update{ name = "Whitecrest Ascent", delta = -1, reason = "climb" }
+-- Partial mapping: dynamic tier-based countdown updates are explicit.
+-- Missing DSL: branch-level no-op steps for failure tiers with no advancement.
+scene:action_roll{ actor = "Sam", trait = "agility", difficulty = 12, outcome = "success_fear" }
+scene:apply_roll_outcome{
+  on_critical = {
+    {kind = "countdown_update", name = "Whitecrest Ascent", delta = -3, reason = "critical_ascent"},
+  },
+  on_success_hope = {
+    {kind = "countdown_update", name = "Whitecrest Ascent", delta = -2, reason = "strong_ascent"},
+  },
+  on_success_fear = {
+    {kind = "countdown_update", name = "Whitecrest Ascent", delta = -1, reason = "steady_ascent"},
+  },
+}
 
 -- Close the session after the ascent advances.
 scene:end_session()

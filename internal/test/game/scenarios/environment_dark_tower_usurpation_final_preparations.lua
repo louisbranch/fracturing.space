@@ -14,8 +14,9 @@ scene:adversary("Saruman")
 -- The usurper's ritual begins when the environment takes spotlight.
 scene:start_session("Final Preparations")
 
--- Missing DSL: set fear cap to 15 and activate long-term countdown (8).
+-- Fear-cap override (15) remains unresolved in this fixture.
 scene:countdown_create{ name = "Saruman Ritual", kind = "long_term", current = 0, max = 8, direction = "increase" }
+scene:countdown_update{ name = "Saruman Ritual", delta = 1, reason = "long_term_tick" }
 
 scene:end_session()
 

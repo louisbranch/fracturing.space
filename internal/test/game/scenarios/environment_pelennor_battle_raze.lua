@@ -12,9 +12,10 @@ scene:pc("Frodo")
 
 -- The battle escalates with fire or abduction.
 scene:start_session("Raze and Pillage")
+scene:gm_fear(1)
 
--- Missing DSL: apply narrative escalation and objective shifts.
-scene:gm_spend_fear(0):spotlight("Battlefield")
+-- Narrative branch selection and objective shifts remain unresolved.
+scene:gm_spend_fear(1):spotlight("Battlefield")
 
 scene:end_session()
 

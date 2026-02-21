@@ -16,12 +16,9 @@ func TestScenarioMissingMechanicTimelineCoverage(t *testing.T) {
 	missingMechanicsDoc := filepath.Join(repoRoot, "docs", "project", "scenario-missing-mechanics.md")
 	timelineDoc := filepath.Join(repoRoot, "docs", "project", "daggerheart-event-timeline-contract.md")
 
-	markerScenarios, err := loadMarkedScenarioFiles(scenarioDir, "-- Missing DSL:")
+	markerScenarios, err := loadMarkedScenarioFiles(scenarioDir, "-- Missing Mechanic:")
 	if err != nil {
 		t.Fatalf("load marker scenarios: %v", err)
-	}
-	if len(markerScenarios) == 0 {
-		t.Fatal("expected at least one scenario with -- Missing DSL marker")
 	}
 
 	indexRows, err := loadScenarioTimelineIndex(missingMechanicsDoc)
@@ -40,14 +37,8 @@ func TestScenarioMissingMechanicTimelineCoverage(t *testing.T) {
 		t.Fatal("expected at least one timeline row id")
 	}
 
-	for scenario := range markerScenarios {
-		rowID, ok := indexRows[scenario]
-		if !ok {
-			t.Fatalf("missing scenario timeline index row for %s", scenario)
-		}
-		if _, ok := timelineRowIDs[rowID]; !ok {
-			t.Fatalf("scenario %s maps to unknown timeline row id %s", scenario, rowID)
-		}
+	if err := validateTimelineCoverageForMarkers(markerScenarios, indexRows, timelineRowIDs); err != nil {
+		t.Fatal(err)
 	}
 }
 

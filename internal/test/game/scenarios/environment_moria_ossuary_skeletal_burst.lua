@@ -13,8 +13,15 @@ scene:pc("Frodo")
 -- The ossuary detonates around the party.
 scene:start_session("Skeletal Burst")
 
--- Missing DSL: apply reaction roll and 4d8+8 damage on failure.
-scene:reaction_roll{ actor = "Frodo", trait = "agility", difficulty = 19, outcome = "fear" }
+scene:group_reaction{
+  targets = {"Frodo"},
+  trait = "agility",
+  difficulty = 19,
+  outcome = "fear",
+  damage = 24,
+  damage_type = "physical",
+  source = "skeletal_burst"
+}
 
 scene:end_session()
 

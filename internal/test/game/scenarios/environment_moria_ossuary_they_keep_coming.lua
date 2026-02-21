@@ -16,8 +16,9 @@ scene:adversary("Uruk-hai")
 scene:start_session("They Just Keep Coming")
 scene:gm_fear(1)
 
--- Missing DSL: summon 1d6 rotted zombies, two perfected, or a legion.
-scene:gm_spend_fear(1):spotlight("Orc Rabble")
+scene:adversary("Rotted Zombie Reinforcement")
+-- Branch choice (rotted/perfected/legion) remains unresolved in this fixture.
+scene:gm_spend_fear(1):spotlight("Rotted Zombie Reinforcement")
 
 scene:end_session()
 

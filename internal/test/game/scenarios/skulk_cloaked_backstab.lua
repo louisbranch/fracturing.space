@@ -15,9 +15,17 @@ scene:adversary("Orc Stalker")
 scene:start_session("Cloaked Backstab")
 
 -- Example: Cloaked grants Hidden; Backstab replaces damage on advantaged hit.
--- Missing DSL: apply Hidden and swap in 1d6+6 damage on advantage.
+-- Partial mapping: Hidden application and advantaged attack are represented.
+-- Missing DSL: backstab damage replacement (1d6+6) and Hidden-clear-on-attack lifecycle.
 scene:apply_condition{ target = "Orc Stalker", add = { "HIDDEN" }, source = "cloaked" }
-scene:adversary_attack{ actor = "Orc Stalker", target = "Frodo", difficulty = 0, damage_type = "physical" }
+scene:adversary_attack{
+  actor = "Orc Stalker",
+  target = "Frodo",
+  difficulty = 0,
+  advantage = 1,
+  damage_type = "physical",
+  damage_dice = { { sides = 6, count = 1 } }
+}
 
 scene:end_session()
 

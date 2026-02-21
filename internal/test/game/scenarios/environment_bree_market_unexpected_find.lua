@@ -13,9 +13,10 @@ scene:npc("Bilbo")
 
 -- A merchant reveals a rare or desired item.
 scene:start_session("Unexpected Find")
+scene:gm_fear(1)
 
--- Missing DSL: introduce a quest item and its non-gold cost.
-scene:gm_spend_fear(0):spotlight("Bilbo")
+-- Quest-item payload and non-gold cost semantics remain unresolved.
+scene:gm_spend_fear(1):spotlight("Bilbo")
 
 scene:end_session()
 

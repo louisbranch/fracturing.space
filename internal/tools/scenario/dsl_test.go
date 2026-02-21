@@ -193,6 +193,62 @@ return scene
 	}
 }
 
+func TestScenarioAdversaryReactionCreatesStep(t *testing.T) {
+	path := writeScenarioFixture(t, `-- Setup
+local scene = Scenario.new("adversary_reaction")
+scene:campaign({name = "Test", system = "DAGGERHEART"})
+
+-- Trigger a reactive adversary effect and cooldown toggle.
+scene:adversary_reaction({actor = "Saruman", target = "Frodo", damage = 7, damage_type = "magic", cooldown_note = "warding_sphere:cooldown"})
+
+return scene
+`)
+
+	scenario, err := LoadScenarioFromFile(path)
+	if err != nil {
+		t.Fatalf("load scenario: %v", err)
+	}
+	if len(scenario.Steps) != 2 {
+		t.Fatalf("steps = %d, want %d", len(scenario.Steps), 2)
+	}
+
+	step := scenario.Steps[1]
+	if step.Kind != "adversary_reaction" {
+		t.Fatalf("step kind = %q, want %q", step.Kind, "adversary_reaction")
+	}
+	if step.Args["actor"] != "Saruman" {
+		t.Fatalf("actor = %v, want Saruman", step.Args["actor"])
+	}
+	if step.Args["target"] != "Frodo" {
+		t.Fatalf("target = %v, want Frodo", step.Args["target"])
+	}
+}
+
+func TestScenarioGroupReactionCreatesStep(t *testing.T) {
+	path := writeScenarioFixture(t, `-- Setup
+local scene = Scenario.new("group_reaction")
+scene:campaign({name = "Test", system = "DAGGERHEART"})
+
+-- Roll reactions for multiple targets and apply failure-only effects.
+scene:group_reaction({targets = {"Frodo", "Sam"}, trait = "agility", difficulty = 15, failure_conditions = {"VULNERABLE"}, source = "snowblind_trap"})
+
+return scene
+`)
+
+	scenario, err := LoadScenarioFromFile(path)
+	if err != nil {
+		t.Fatalf("load scenario: %v", err)
+	}
+	if len(scenario.Steps) != 2 {
+		t.Fatalf("steps = %d, want %d", len(scenario.Steps), 2)
+	}
+
+	step := scenario.Steps[1]
+	if step.Kind != "group_reaction" {
+		t.Fatalf("step kind = %q, want %q", step.Kind, "group_reaction")
+	}
+}
+
 func TestValidateScenarioCommentsRequiresCommentForSceneBlock(t *testing.T) {
 	path := writeScenarioFixture(t, `local scene = Scenario.new("no-comment")
 scene:campaign({name = "Test", system = "DAGGERHEART"})

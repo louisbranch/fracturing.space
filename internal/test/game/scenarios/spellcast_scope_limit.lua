@@ -13,7 +13,8 @@ scene:pc("Gandalf")
 -- A spellcast roll should be disallowed if the effect isn't on a spell.
 scene:start_session("Scope Limit")
 
--- Missing DSL: reject a Spellcast roll that attempts an out-of-scope effect.
+-- Partial mapping: spellcast roll timeline is represented.
+-- Missing DSL: explicit action/outcome rejection for out-of-scope effects.
 scene:action_roll{ actor = "Gandalf", trait = "spellcast", difficulty = 0, outcome = "fear" }
 
 scene:end_session()

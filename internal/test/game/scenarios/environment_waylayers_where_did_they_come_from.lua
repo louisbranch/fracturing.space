@@ -16,8 +16,14 @@ scene:start_session("Ambusher Reaction")
 scene:gm_fear(2)
 
 -- Example: lose 2 Fear and grant advantage on the first attack roll.
--- Missing DSL: apply the fear loss and advantage to the first strike.
 scene:gm_spend_fear(2):spotlight("Orc Waylayers")
+scene:adversary_attack{
+  actor = "Orc Waylayers",
+  target = "Frodo",
+  difficulty = 0,
+  advantage = 1,
+  damage_type = "physical"
+}
 
 scene:end_session()
 

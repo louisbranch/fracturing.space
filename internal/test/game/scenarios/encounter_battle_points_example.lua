@@ -1,6 +1,7 @@
 local scene = Scenario.new("encounter_battle_points_example")
 
 -- Summarize the battle point budgeting example for encounter prep.
+-- Clarification-gated fixture (P31): encounter budgeting remains prep-time guidance.
 scene:campaign{
   name = "Encounter Battle Points Example",
   system = "DAGGERHEART",

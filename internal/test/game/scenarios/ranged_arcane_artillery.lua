@@ -17,8 +17,16 @@ scene:start_session("Arcane Artillery")
 scene:gm_fear(1)
 
 -- Example: all targets roll Agility or take 2d12 magic damage (half on success).
--- Missing DSL: apply scene-wide reaction rolls and half damage on success.
 scene:gm_spend_fear(1):spotlight("Saruman")
+scene:group_reaction{
+  targets = {"Frodo", "Sam"},
+  trait = "agility",
+  difficulty = 15,
+  damage = 12,
+  damage_type = "magic",
+  half_damage_on_success = true,
+  source = "arcane_artillery"
+}
 
 scene:end_session()
 

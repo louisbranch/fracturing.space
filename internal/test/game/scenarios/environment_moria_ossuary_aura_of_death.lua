@@ -13,9 +13,10 @@ scene:adversary("Uruk-hai")
 
 -- The aura restores undead HP and Stress.
 scene:start_session("Aura of Death")
+scene:gm_fear(1)
 
--- Missing DSL: roll d4 and distribute healing across undead.
-scene:gm_spend_fear(0):spotlight("Uruk-hai")
+-- Healing distribution across undead remains unresolved.
+scene:gm_spend_fear(1):spotlight("Uruk-hai")
 
 scene:end_session()
 

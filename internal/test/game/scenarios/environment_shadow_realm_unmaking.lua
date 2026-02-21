@@ -17,6 +17,7 @@ scene:gm_fear(1)
 -- Missing DSL: apply direct damage on failure and stress on success.
 scene:gm_spend_fear(1):spotlight("Shadow Realm")
 scene:reaction_roll{ actor = "Frodo", trait = "strength", difficulty = 20, outcome = "fear" }
+scene:apply_reaction_outcome{}
 
 scene:end_session()
 

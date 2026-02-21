@@ -1,6 +1,7 @@
 local scene = Scenario.new("companion_experience_stress_clear")
 
 -- Model the companion experience that clears 1 Stress on return.
+-- Clarification-gated fixture (P31): companion experience completion semantics are unresolved.
 scene:campaign{
   name = "Companion Experience Stress Clear",
   system = "DAGGERHEART",

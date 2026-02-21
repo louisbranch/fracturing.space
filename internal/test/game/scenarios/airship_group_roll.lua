@@ -16,14 +16,15 @@ scene:pc("Gandalf")
 scene:start_session("Airship Crisis")
 
 -- Example: the GM calls for a group roll to keep the airship flying.
--- Missing DSL: map individual outcomes to a shared consequence.
+-- Partial mapping: explicit leader/supporter outcomes drive the shared branch.
 scene:group_action{
   leader = "Sam",
   leader_trait = "presence",
   difficulty = 14,
+  outcome = "hope",
   supporters = {
-    { name = "Frodo", trait = "agility" },
-    { name = "Gandalf", trait = "instinct" }
+    { name = "Frodo", trait = "agility", outcome = "hope" },
+    { name = "Gandalf", trait = "instinct", outcome = "fear" }
   }
 }
 

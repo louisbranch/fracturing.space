@@ -14,8 +14,13 @@ scene:adversary("Ranger of the North")
 -- The hunter marks Stress to gain advantage on their next attack.
 scene:start_session("Steady Aim")
 
--- Missing DSL: apply stress spend and advantage die.
-scene:adversary_attack{ actor = "Ranger of the North", target = "Frodo", difficulty = 0, damage_type = "physical" }
+scene:adversary_attack{
+  actor = "Ranger of the North",
+  target = "Frodo",
+  difficulty = 0,
+  stress_for_advantage = 1,
+  damage_type = "physical"
+}
 
 scene:end_session()
 

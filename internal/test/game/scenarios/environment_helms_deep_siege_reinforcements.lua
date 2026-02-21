@@ -14,9 +14,11 @@ scene:adversary("Uruk-hai Minions")
 
 -- New forces arrive within Far range.
 scene:start_session("Reinforcements")
+scene:gm_fear(1)
 
--- Missing DSL: spawn adversaries based on party size and spotlight the knight.
-scene:gm_spend_fear(0):spotlight("Gondor Knight")
+scene:adversary("Uruk-hai Reinforcement")
+-- Party-size scaling and range placement remain unresolved in this fixture.
+scene:gm_spend_fear(1):spotlight("Gondor Knight")
 
 scene:end_session()
 

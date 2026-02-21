@@ -13,10 +13,11 @@ scene:npc("Bilbo")
 
 -- A stranger reveals themselves from a shaded booth.
 scene:start_session("Bilbo")
+scene:gm_fear(1)
 
 -- Example: introduce a hidden NPC without requiring a roll.
--- Missing DSL: model the narrative reveal and its hooks.
-scene:gm_spend_fear(0):spotlight("Bilbo")
+-- Narrative reveal hooks remain unresolved.
+scene:gm_spend_fear(1):spotlight("Bilbo")
 
 scene:end_session()
 

@@ -16,6 +16,11 @@ This is the full environment variable reference. For setup steps, see
 - `FRACTURING_SPACE_GAME_EVENTS_DB_PATH`: event journal SQLite path. Default: `data/game-events.db`.
 - `FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH`: projections SQLite path. Default: `data/game-projections.db`.
 - `FRACTURING_SPACE_GAME_CONTENT_DB_PATH`: content SQLite path. Default: `data/game-content.db`.
+- `FRACTURING_SPACE_GAME_DOMAIN_ENABLED`: enable domain-engine write path. Default: `true`.
+- `FRACTURING_SPACE_GAME_COMPATIBILITY_APPEND_ENABLED`: allow direct compatibility `EventService.AppendEvent` fallback when domain is disabled. Default: `false`.
+- `FRACTURING_SPACE_GAME_PROJECTION_APPLY_OUTBOX_ENABLED`: enqueue projection-apply outbox rows on append. Default: `false`.
+- `FRACTURING_SPACE_GAME_PROJECTION_APPLY_OUTBOX_SHADOW_WORKER_ENABLED`: enable outbox shadow worker (requires outbox enabled). Default: `false`.
+- `FRACTURING_SPACE_GAME_PROJECTION_APPLY_OUTBOX_WORKER_ENABLED`: enable outbox apply worker (requires outbox enabled). Default: `false`.
 - `FRACTURING_SPACE_GAME_EVENT_HMAC_KEY`: root secret used to sign event chain hashes. Required. Generate with `go run ./cmd/hmac-key`.
 - `FRACTURING_SPACE_GAME_EVENT_HMAC_KEYS`: optional comma-separated key ring (`key_id=secret`).
 - `FRACTURING_SPACE_GAME_EVENT_HMAC_KEY_ID`: active key id when using the key ring. Default: `v1`.

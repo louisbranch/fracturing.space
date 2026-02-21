@@ -13,8 +13,9 @@ scene:pc("Frodo")
 -- A handful of gold buys advantage on a Presence roll.
 scene:start_session("Tip the Scales")
 
--- Missing DSL: spend gold and apply advantage die.
-scene:action_roll{ actor = "Frodo", trait = "presence", difficulty = 10, outcome = "hope" }
+-- Gold spend semantics remain unresolved in this fixture.
+scene:action_roll{ actor = "Frodo", trait = "presence", difficulty = 10, outcome = "hope", advantage = 1 }
+scene:apply_roll_outcome{}
 
 scene:end_session()
 

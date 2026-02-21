@@ -14,8 +14,17 @@ scene:adversary("Fell Beast")
 -- Ranged attacks suffer disadvantage outside Very Close range.
 scene:start_session("Reflective Scales")
 
--- Missing DSL: apply disadvantage to attacks beyond Very Close range.
-scene:attack{ actor = "Frodo", target = "Fell Beast", trait = "instinct", difficulty = 0, outcome = "hope", damage_type = "physical" }
+-- Partial mapping: explicit disadvantage is represented on the attack roll.
+-- Missing DSL: range-band state to gate disadvantage only beyond Very Close.
+scene:attack{
+  actor = "Frodo",
+  target = "Fell Beast",
+  trait = "instinct",
+  difficulty = 0,
+  disadvantage = 1,
+  outcome = "hope",
+  damage_type = "physical"
+}
 
 scene:end_session()
 

@@ -16,8 +16,15 @@ scene:start_session("Surprise")
 scene:gm_fear(2)
 
 -- Example: gain 2 Fear and immediately spotlight an ambusher.
--- Missing DSL: award Fear to the GM and shift spotlight.
 scene:gm_spend_fear(2):spotlight("Orc Waylayers")
+-- Fear-gain source remains unresolved; model immediate advantaged opening strike.
+scene:adversary_attack{
+  actor = "Orc Waylayers",
+  target = "Frodo",
+  difficulty = 0,
+  advantage = 1,
+  damage_type = "physical"
+}
 
 scene:end_session()
 

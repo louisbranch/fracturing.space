@@ -18,7 +18,9 @@ scene:start_session("Wrong Place, Wrong Time")
 scene:gm_fear(1)
 
 -- Example: spend Fear to introduce a robber group at Close range.
--- Missing DSL: spawn multiple adversaries based on party size.
+scene:adversary("Orc Lackey Reinforcement 1")
+scene:adversary("Orc Lackey Reinforcement 2")
+-- Party-size scaling and exact range placement remain unresolved.
 scene:gm_spend_fear(1):spotlight("Orc Captain")
 
 scene:end_session()

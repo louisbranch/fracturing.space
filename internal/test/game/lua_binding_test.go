@@ -312,11 +312,13 @@ var scenarioMethods = []lua.RegistryFunction{
 	{Name: "multi_attack", Function: scenarioMultiAttack},
 	{Name: "combined_damage", Function: scenarioCombinedDamage},
 	{Name: "adversary_attack", Function: scenarioAdversaryAttack},
+	{Name: "adversary_update", Function: scenarioAdversaryUpdate},
 	{Name: "apply_condition", Function: scenarioApplyCondition},
 	{Name: "gm_spend_fear", Function: scenarioGMSpendFear},
 	{Name: "set_spotlight", Function: scenarioSetSpotlight},
 	{Name: "clear_spotlight", Function: scenarioClearSpotlight},
 	{Name: "group_action", Function: scenarioGroupAction},
+	{Name: "group_reaction", Function: scenarioGroupReaction},
 	{Name: "tag_team", Function: scenarioTagTeam},
 	{Name: "rest", Function: scenarioRest},
 	{Name: "downtime_move", Function: scenarioDowntimeMove},
@@ -478,6 +480,14 @@ func scenarioAdversaryAttack(state *lua.State) int {
 	return 0
 }
 
+func scenarioAdversaryUpdate(state *lua.State) int {
+	scenario := checkScenario(state)
+	lua.CheckType(state, 2, lua.TypeTable)
+	data := tableToMap(state, 2)
+	appendStep(scenario, "adversary_update", data)
+	return 0
+}
+
 func scenarioApplyCondition(state *lua.State) int {
 	scenario := checkScenario(state)
 	lua.CheckType(state, 2, lua.TypeTable)
@@ -491,6 +501,14 @@ func scenarioGroupAction(state *lua.State) int {
 	lua.CheckType(state, 2, lua.TypeTable)
 	data := tableToMap(state, 2)
 	appendStep(scenario, "group_action", data)
+	return 0
+}
+
+func scenarioGroupReaction(state *lua.State) int {
+	scenario := checkScenario(state)
+	lua.CheckType(state, 2, lua.TypeTable)
+	data := tableToMap(state, 2)
+	appendStep(scenario, "group_reaction", data)
 	return 0
 }
 

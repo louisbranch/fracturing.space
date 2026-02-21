@@ -397,6 +397,30 @@ func TestLoadServerEnvDomainEnabled(t *testing.T) {
 	}
 }
 
+func TestLoadServerEnvCompatibilityAppendDefaults(t *testing.T) {
+	key := "FRACTURING_SPACE_GAME_COMPATIBILITY_APPEND_ENABLED"
+	if val, ok := os.LookupEnv(key); ok {
+		t.Cleanup(func() { _ = os.Setenv(key, val) })
+	} else {
+		t.Cleanup(func() { _ = os.Unsetenv(key) })
+	}
+	_ = os.Unsetenv(key)
+
+	cfg := loadServerEnv()
+	if cfg.CompatibilityAppendEnabled {
+		t.Fatal("expected compatibility append to be disabled by default")
+	}
+}
+
+func TestLoadServerEnvCompatibilityAppendEnabled(t *testing.T) {
+	t.Setenv("FRACTURING_SPACE_GAME_COMPATIBILITY_APPEND_ENABLED", "true")
+
+	cfg := loadServerEnv()
+	if !cfg.CompatibilityAppendEnabled {
+		t.Fatal("expected compatibility append to be enabled")
+	}
+}
+
 func TestLoadServerEnvProjectionApplyOutboxDefaults(t *testing.T) {
 	key := "FRACTURING_SPACE_GAME_PROJECTION_APPLY_OUTBOX_ENABLED"
 	if val, ok := os.LookupEnv(key); ok {

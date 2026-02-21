@@ -14,11 +14,21 @@ scene:pc("Frodo")
 scene:start_session("Fear Move")
 scene:gm_fear(2)
 
-scene:action_roll{ actor = "Frodo", trait = "instinct", difficulty = 12, outcome = "fear" }
+scene:countdown_create{ name = "Looming Shadow", kind = "consequence", current = 0, max = 4, direction = "increase" }
+scene:action_roll{ actor = "Frodo", trait = "instinct", difficulty = 12, outcome = "success_fear" }
 
 -- Example: the GM spends fear to introduce a looming shadow.
--- Missing DSL: encode the narrative fear move effect.
-scene:gm_spend_fear(1):spotlight("Frodo")
+-- Partial mapping: fear spend plus deterministic pressure and condition effects.
+-- Missing DSL: richer scene-wide separation effects from improvised fear moves.
+scene:apply_roll_outcome{
+  on_success_fear = {
+    {kind = "gm_spend_fear", amount = 1, target = "Frodo", description = "looming_shadow_overtakes_path"},
+    {kind = "countdown_update", name = "Looming Shadow", delta = 1, reason = "shadow_closes_in"},
+    {kind = "apply_condition", target = "Frodo", add = {"VULNERABLE"}, source = "looming_shadow"},
+    {kind = "set_spotlight", type = "gm"},
+  },
+}
+scene:set_spotlight{ target = "Frodo" }
 
 -- Close the session after the fear move.
 scene:end_session()

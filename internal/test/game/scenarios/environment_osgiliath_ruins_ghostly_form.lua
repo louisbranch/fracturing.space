@@ -14,7 +14,8 @@ scene:adversary("Barrow Wight")
 -- Ghosts resist physical damage and phase through walls by marking Stress.
 scene:start_session("Ghostly Form")
 
--- Missing DSL: apply physical resistance and stress-based movement.
+-- Physical resistance modeling remains unresolved in this fixture.
+scene:adversary_update{ target = "Barrow Wight", stress_delta = 1, notes = "phase_through_walls" }
 scene:adversary_attack{ actor = "Barrow Wight", target = "Frodo", difficulty = 0, damage_type = "physical" }
 
 scene:end_session()

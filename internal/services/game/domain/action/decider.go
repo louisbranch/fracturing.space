@@ -2,6 +2,7 @@ package action
 
 import (
 	"encoding/json"
+	"strings"
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -18,6 +19,10 @@ const (
 	eventTypeOutcomeApplied  event.Type = "action.outcome_applied"
 	eventTypeOutcomeRejected event.Type = "action.outcome_rejected"
 	eventTypeNoteAdded       event.Type = "story.note_added"
+
+	rejectionCodeRequestIDRequired     = "REQUEST_ID_REQUIRED"
+	rejectionCodeRollSeqRequired       = "ROLL_SEQ_REQUIRED"
+	rejectionCodeOutcomeAlreadyApplied = "OUTCOME_ALREADY_APPLIED"
 )
 
 // Decide returns the decision for an action command against current state.
@@ -34,15 +39,60 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 	case commandTypeRollResolve:
 		var payload RollResolvePayload
 		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
-		return acceptActionEvent(cmd, now, eventTypeRollResolved, "roll", payload.RequestID, payload)
+		requestID := strings.TrimSpace(payload.RequestID)
+		if requestID == "" {
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodeRequestIDRequired,
+				Message: "request_id is required",
+			})
+		}
+		if payload.RollSeq == 0 {
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodeRollSeqRequired,
+				Message: "roll_seq must be greater than zero",
+			})
+		}
+		return acceptActionEvent(cmd, now, eventTypeRollResolved, "roll", requestID, payload)
 	case commandTypeOutcomeApply:
 		var payload OutcomeApplyPayload
 		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
-		return acceptActionEvent(cmd, now, eventTypeOutcomeApplied, "outcome", payload.RequestID, payload)
+		requestID := strings.TrimSpace(payload.RequestID)
+		if requestID == "" {
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodeRequestIDRequired,
+				Message: "request_id is required",
+			})
+		}
+		if payload.RollSeq == 0 {
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodeRollSeqRequired,
+				Message: "roll_seq must be greater than zero",
+			})
+		}
+		if _, alreadyApplied := state.AppliedOutcomes[payload.RollSeq]; alreadyApplied {
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodeOutcomeAlreadyApplied,
+				Message: ErrOutcomeAlreadyApplied.Error(),
+			})
+		}
+		return acceptActionEvent(cmd, now, eventTypeOutcomeApplied, "outcome", requestID, payload)
 	case commandTypeOutcomeReject:
 		var payload OutcomeRejectPayload
 		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
-		return acceptActionEvent(cmd, now, eventTypeOutcomeRejected, "outcome", payload.RequestID, payload)
+		requestID := strings.TrimSpace(payload.RequestID)
+		if requestID == "" {
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodeRequestIDRequired,
+				Message: "request_id is required",
+			})
+		}
+		if payload.RollSeq == 0 {
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodeRollSeqRequired,
+				Message: "roll_seq must be greater than zero",
+			})
+		}
+		return acceptActionEvent(cmd, now, eventTypeOutcomeRejected, "outcome", requestID, payload)
 	case commandTypeNoteAdd:
 		var payload NoteAddPayload
 		_ = json.Unmarshal(cmd.PayloadJSON, &payload)

@@ -14,9 +14,11 @@ scene:adversary("Uruk-hai Minions")
 
 -- A fresh force joins the fight.
 scene:start_session("Reinforcements")
+scene:gm_fear(1)
 
--- Missing DSL: spawn new adversaries and spotlight the knight.
-scene:gm_spend_fear(0):spotlight("Gondor Knight")
+scene:adversary("Uruk-hai Vanguard")
+-- Exact reinforcement composition remains unresolved in this fixture.
+scene:gm_spend_fear(1):spotlight("Gondor Knight")
 
 scene:end_session()
 

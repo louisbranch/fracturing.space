@@ -16,9 +16,10 @@ scene:adversary("Shadow Wraith")
 scene:start_session("Summoning")
 
 -- Example: countdown ticks down when PCs roll with Fear.
--- Missing DSL: tie Fear outcomes to countdown ticks and summon on trigger.
+-- Summon-on-trigger spawn behavior remains unresolved in this fixture.
 scene:countdown_create{ name = "Summon Demon", kind = "consequence", current = 0, max = 6, direction = "increase" }
 scene:action_roll{ actor = "Frodo", trait = "instinct", difficulty = 14, outcome = "fear" }
+scene:countdown_update{ name = "Summon Demon", delta = 1, reason = "fear_outcome" }
 
 scene:end_session()
 

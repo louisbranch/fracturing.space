@@ -13,8 +13,8 @@ scene:pc("Frodo")
 -- Court etiquette hampers dissenting actions.
 scene:start_session("All Roads Lead Here")
 
--- Missing DSL: apply disadvantage to nonconforming Presence rolls.
-scene:action_roll{ actor = "Frodo", trait = "presence", difficulty = 20, outcome = "fear" }
+scene:action_roll{ actor = "Frodo", trait = "presence", difficulty = 20, outcome = "fear", disadvantage = 1 }
+scene:apply_roll_outcome{}
 
 scene:end_session()
 

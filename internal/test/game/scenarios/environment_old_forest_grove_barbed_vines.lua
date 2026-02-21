@@ -14,9 +14,17 @@ scene:pc("Frodo")
 scene:start_session("Barbed Vines")
 
 -- Example: Agility reaction or take damage and become Restrained.
--- Missing DSL: apply damage, Restrained condition, and escape checks.
-scene:reaction_roll{ actor = "Frodo", trait = "agility", difficulty = 11, outcome = "fear" }
-scene:apply_condition{ target = "Frodo", add = { "RESTRAINED" }, source = "barbed_vines" }
+-- Escape checks after becoming Restrained remain unresolved in this fixture.
+scene:group_reaction{
+  targets = {"Frodo"},
+  trait = "agility",
+  difficulty = 11,
+  outcome = "fear",
+  damage = 8,
+  damage_type = "physical",
+  failure_conditions = {"RESTRAINED"},
+  source = "barbed_vines"
+}
 
 scene:end_session()
 

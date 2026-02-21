@@ -8,6 +8,7 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -260,6 +261,127 @@ func TestForkCampaign_ReplaysEvents_CopyParticipantsFalse(t *testing.T) {
 	}
 	if metadata.ForkEventSeq != 6 {
 		t.Fatalf("ForkEventSeq = %d, want 6", metadata.ForkEventSeq)
+	}
+}
+
+func TestForkCampaign_CopiesAuditOnlyEventsWithoutProjectionApplyFailure(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2025, 2, 3, 11, 0, 0, 0, time.UTC)
+
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	characterStore := newFakeCharacterStore()
+	dhStore := newFakeDaggerheartStore()
+	eventStore := newFakeEventStore()
+	forkStore := newFakeCampaignForkStore()
+
+	campaignStore.campaigns["source"] = storage.CampaignRecord{
+		ID:          "source",
+		Name:        "Source Campaign",
+		Status:      campaign.StatusActive,
+		System:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		GmMode:      campaign.GmModeHuman,
+		ThemePrompt: "theme",
+	}
+
+	appendEvent(t, eventStore, event.Event{
+		CampaignID: "source",
+		Timestamp:  now.Add(-2 * time.Hour),
+		Type:       event.Type("campaign.created"),
+		EntityType: "campaign",
+		EntityID:   "source",
+		PayloadJSON: mustJSON(t, campaign.CreatePayload{
+			Name:        "Source Campaign",
+			GameSystem:  commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART.String(),
+			GmMode:      statev1.GmMode_HUMAN.String(),
+			ThemePrompt: "theme",
+		}),
+	})
+	appendEvent(t, eventStore, event.Event{
+		CampaignID: "source",
+		Timestamp:  now.Add(-90 * time.Minute),
+		Type:       event.Type("story.note_added"),
+		EntityType: "note",
+		EntityID:   "note-1",
+		PayloadJSON: mustJSON(t, action.NoteAddPayload{
+			Content: "Fork note",
+		}),
+	})
+
+	createdPayload := campaign.CreatePayload{
+		Name:        "Forked Campaign",
+		GameSystem:  commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART.String(),
+		GmMode:      statev1.GmMode_HUMAN.String(),
+		ThemePrompt: "theme",
+	}
+	createdJSON, err := json.Marshal(createdPayload)
+	if err != nil {
+		t.Fatalf("encode created payload: %v", err)
+	}
+	forkedPayload := campaign.ForkPayload{
+		ParentCampaignID: "source",
+		ForkEventSeq:     2,
+		OriginCampaignID: "source",
+		CopyParticipants: false,
+	}
+	forkedJSON, err := json.Marshal(forkedPayload)
+	if err != nil {
+		t.Fatalf("encode fork payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("campaign.create"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "fork-1",
+				Type:        event.Type("campaign.created"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				EntityType:  "campaign",
+				EntityID:    "fork-1",
+				PayloadJSON: createdJSON,
+			}),
+		},
+		command.Type("campaign.fork"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "fork-1",
+				Type:        event.Type("campaign.forked"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				EntityType:  "campaign",
+				EntityID:    "fork-1",
+				PayloadJSON: forkedJSON,
+			}),
+		},
+	}}
+
+	svc := &ForkService{
+		stores: Stores{
+			Campaign:     campaignStore,
+			Participant:  participantStore,
+			Character:    characterStore,
+			Daggerheart:  dhStore,
+			Event:        eventStore,
+			CampaignFork: forkStore,
+			Domain:       domain,
+		},
+		clock:       fixedClock(now),
+		idGenerator: fixedIDGenerator("fork-1"),
+	}
+
+	if _, err := svc.ForkCampaign(ctx, &statev1.ForkCampaignRequest{
+		SourceCampaignId: "source",
+		NewCampaignName:  "Forked Campaign",
+		CopyParticipants: false,
+	}); err != nil {
+		t.Fatalf("ForkCampaign returned error: %v", err)
+	}
+
+	forkedEvents := eventStore.events["fork-1"]
+	if len(forkedEvents) != 3 {
+		t.Fatalf("expected 3 forked events, got %d", len(forkedEvents))
+	}
+	if forkedEvents[2].Type != event.Type("story.note_added") {
+		t.Fatalf("event[2] type = %s, want %s", forkedEvents[2].Type, event.Type("story.note_added"))
 	}
 }
 

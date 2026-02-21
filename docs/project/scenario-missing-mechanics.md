@@ -12,7 +12,7 @@ This document tracks mechanics gaps discovered while running the scenario suite.
 
 Mechanics inventory reflects the first full scenario run after disabling comment validation.
 
-Last reconciled against current `-- Missing DSL` markers on 2026-02-16.
+Last reconciled against current `-- Missing Mechanic` markers on 2026-02-16.
 
 SRD annotations added 2026-02-17 against Daggerheart SRD 1.0 (September 2025).
 

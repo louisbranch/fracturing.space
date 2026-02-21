@@ -13,9 +13,19 @@ scene:pc("Gandalf")
 -- The ash periodically forces reaction rolls.
 scene:start_session("Choking Ash")
 
--- Missing DSL: loop countdown and apply direct damage with half on success.
+-- Loop countdown progression remains unresolved in this fixture.
 scene:countdown_create{ name = "Choking Ash", kind = "loop", current = 0, max = 4, direction = "increase" }
-scene:reaction_roll{ actor = "Gandalf", trait = "strength", difficulty = 16, outcome = "fear" }
+scene:group_reaction{
+  targets = {"Gandalf"},
+  trait = "strength",
+  difficulty = 16,
+  outcome = "fear",
+  damage = 12,
+  damage_type = "magic",
+  direct = true,
+  half_damage_on_success = true,
+  source = "choking_ash"
+}
 
 scene:end_session()
 

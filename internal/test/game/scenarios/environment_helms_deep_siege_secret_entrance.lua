@@ -15,6 +15,7 @@ scene:start_session("Secret Entrance")
 
 -- Missing DSL: reveal a secret route with Instinct/Knowledge success.
 scene:action_roll{ actor = "Frodo", trait = "instinct", difficulty = 17, outcome = "hope" }
+scene:apply_roll_outcome{}
 
 scene:end_session()
 

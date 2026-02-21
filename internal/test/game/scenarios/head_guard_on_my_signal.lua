@@ -16,8 +16,17 @@ scene:adversary("Gondor Archers")
 scene:start_session("On My Signal")
 
 -- Example: reaction starts a countdown for coordinated archer fire.
--- Missing DSL: apply advantage to archer attacks while the countdown runs.
+-- Partial mapping: explicit countdown tick and advantaged archer volley are represented.
+-- Missing DSL: automatic trigger of countdown ticks from qualifying PC attack outcomes.
 scene:countdown_create{ name = "On My Signal", kind = "consequence", current = 0, max = 3, direction = "increase" }
+scene:countdown_update{ name = "On My Signal", delta = 1, reason = "pc_attack_trigger" }
+scene:adversary_attack{
+  actor = "Gondor Archers",
+  target = "Frodo",
+  difficulty = 10,
+  advantage = 1,
+  damage_type = "physical"
+}
 
 scene:end_session()
 

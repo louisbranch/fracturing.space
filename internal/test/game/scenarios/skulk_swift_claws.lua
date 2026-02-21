@@ -15,8 +15,16 @@ scene:adversary("Fell Beast")
 scene:start_session("Swift Claws")
 
 -- Example: on hit, deal 2d10+5 and force a Strength reaction to avoid knockback.
--- Missing DSL: apply movement, stress spend, and knockback.
-scene:adversary_attack{ actor = "Fell Beast", target = "Frodo", difficulty = 0, damage_type = "physical" }
+-- Partial mapping: stress-for-advantage and attack damage dice are represented.
+-- Missing DSL: explicit movement and knockback branch metadata.
+scene:adversary_attack{
+  actor = "Fell Beast",
+  target = "Frodo",
+  difficulty = 0,
+  stress_for_advantage = 1,
+  damage_type = "physical",
+  damage_dice = { { sides = 10, count = 2 } }
+}
 
 scene:end_session()
 

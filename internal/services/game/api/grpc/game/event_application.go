@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
@@ -14,12 +15,20 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+var compatibilityAppendEnabled atomic.Bool
+
 type eventApplication struct {
 	stores Stores
 }
 
 func newEventApplication(service *EventService) eventApplication {
 	return eventApplication{stores: service.stores}
+}
+
+// SetCompatibilityAppendEnabled toggles direct event-store append in
+// EventService.AppendEvent when the domain engine is not configured.
+func SetCompatibilityAppendEnabled(enabled bool) {
+	compatibilityAppendEnabled.Store(enabled)
 }
 
 func (a eventApplication) AppendEvent(ctx context.Context, in *campaignv1.AppendEventRequest) (event.Event, error) {
@@ -38,17 +47,10 @@ func (a eventApplication) AppendEvent(ctx context.Context, in *campaignv1.Append
 	}
 	if a.stores.Domain != nil {
 		if cmdType, ok := domainCommandTypeForEvent(input.Type); ok {
-			actorType := command.ActorTypeSystem
-			switch input.ActorType {
-			case event.ActorTypeParticipant:
-				actorType = command.ActorTypeParticipant
-			case event.ActorTypeGM:
-				actorType = command.ActorTypeGM
-			}
 			result, err := a.stores.Domain.Execute(ctx, command.Command{
 				CampaignID:   input.CampaignID,
 				Type:         cmdType,
-				ActorType:    actorType,
+				ActorType:    commandActorTypeForEventActor(input.ActorType),
 				ActorID:      input.ActorID,
 				SessionID:    input.SessionID,
 				RequestID:    input.RequestID,
@@ -69,6 +71,10 @@ func (a eventApplication) AppendEvent(ctx context.Context, in *campaignv1.Append
 			return result.Decision.Events[0], nil
 		}
 		return event.Event{}, status.Error(codes.FailedPrecondition, "event type is not supported for append")
+	}
+
+	if !compatibilityAppendEnabled.Load() {
+		return event.Event{}, status.Error(codes.FailedPrecondition, "append event compatibility mode is disabled")
 	}
 
 	stored, err := a.stores.Event.AppendEvent(ctx, input)
@@ -94,17 +100,28 @@ func isEventValidationError(err error) bool {
 		errors.Is(err, event.ErrStorageFieldsSet)
 }
 
+var compatibilityEventCommandMap = map[event.Type]command.Type{
+	event.Type("story.note_added"):        command.Type("story.note.add"),
+	event.Type("action.roll_resolved"):    command.Type("action.roll.resolve"),
+	event.Type("action.outcome_applied"):  command.Type("action.outcome.apply"),
+	event.Type("action.outcome_rejected"): command.Type("action.outcome.reject"),
+}
+
 func domainCommandTypeForEvent(eventType event.Type) (command.Type, bool) {
-	switch eventType {
-	case event.Type("story.note_added"):
-		return command.Type("story.note.add"), true
-	case event.Type("action.roll_resolved"):
-		return command.Type("action.roll.resolve"), true
-	case event.Type("action.outcome_applied"):
-		return command.Type("action.outcome.apply"), true
-	case event.Type("action.outcome_rejected"):
-		return command.Type("action.outcome.reject"), true
-	default:
+	cmdType, ok := compatibilityEventCommandMap[eventType]
+	if !ok {
 		return "", false
+	}
+	return cmdType, true
+}
+
+func commandActorTypeForEventActor(actorType event.ActorType) command.ActorType {
+	switch actorType {
+	case event.ActorTypeParticipant:
+		return command.ActorTypeParticipant
+	case event.ActorTypeGM:
+		return command.ActorTypeGM
+	default:
+		return command.ActorTypeSystem
 	}
 }

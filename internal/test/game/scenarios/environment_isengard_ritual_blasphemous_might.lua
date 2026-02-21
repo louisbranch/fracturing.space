@@ -13,9 +13,10 @@ scene:adversary("Nazgul")
 
 -- The GM imbues a cultist, granting attack advantage or extra damage.
 scene:start_session("Blasphemous Might")
+scene:gm_fear(1)
 
--- Missing DSL: apply advantage, bonus damage, or Relentless feature.
-scene:gm_spend_fear(0):spotlight("Nazgul")
+-- Advantage/bonus-damage/Relentless branch selection remains unresolved.
+scene:gm_spend_fear(1):spotlight("Nazgul")
 
 scene:end_session()
 

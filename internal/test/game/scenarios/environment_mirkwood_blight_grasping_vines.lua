@@ -13,9 +13,15 @@ scene:pc("Gandalf")
 -- Vines whip out and bind a target.
 scene:start_session("Grasping Vines")
 
--- Missing DSL: apply Restrained + Vulnerable, escape roll damage, and Hope loss.
-scene:reaction_roll{ actor = "Gandalf", trait = "agility", difficulty = 16, outcome = "fear" }
-scene:apply_condition{ target = "Gandalf", add = { "RESTRAINED", "VULNERABLE" }, source = "grasping_vines" }
+-- Escape-roll follow-up damage and Hope loss remain unresolved in this fixture.
+scene:group_reaction{
+  targets = {"Gandalf"},
+  trait = "agility",
+  difficulty = 16,
+  outcome = "fear",
+  failure_conditions = {"RESTRAINED", "VULNERABLE"},
+  source = "grasping_vines"
+}
 
 scene:end_session()
 

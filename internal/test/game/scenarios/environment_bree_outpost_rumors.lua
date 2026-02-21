@@ -14,8 +14,9 @@ scene:pc("Frodo")
 scene:start_session("Rumors Abound")
 
 -- Example: outcomes determine number and relevance of rumors.
--- Missing DSL: map outcome to rumor selection and stress on failure.
+-- Rumor selection fanout and failure-stress branch remain unresolved.
 scene:action_roll{ actor = "Frodo", trait = "presence", difficulty = 12, outcome = "hope" }
+scene:apply_roll_outcome{}
 
 scene:end_session()
 

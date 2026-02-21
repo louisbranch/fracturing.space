@@ -17,7 +17,8 @@ scene:start_session("Bramble Ambush")
 scene:gm_fear(1)
 
 -- Example: spotlight up to 1d4 allies and grant Hidden.
--- Missing DSL: move allies to cover and apply Hidden until they attack.
+-- Partial mapping: fear spend + Hidden application are represented.
+-- Missing DSL: ally reposition metadata and explicit outcome-journal linkage.
 scene:gm_spend_fear(1):spotlight("Mirkwood Warden")
 scene:apply_condition{ target = "Mirkwood Archer", add = { "HIDDEN" }, source = "into_bramble" }
 

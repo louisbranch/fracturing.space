@@ -13,10 +13,11 @@ scene:npc("Elrond")
 
 -- A new figure arrives with work or a personal connection.
 scene:start_session("Someone Comes to Town")
+scene:gm_fear(1)
 
 -- Example: introduce a significant NPC as an environment action.
--- Missing DSL: model the NPC hook and immediate agenda.
-scene:gm_spend_fear(0):spotlight("Elrond")
+-- NPC hook payload and immediate agenda remain unresolved.
+scene:gm_spend_fear(1):spotlight("Elrond")
 
 scene:end_session()
 

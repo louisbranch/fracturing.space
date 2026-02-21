@@ -12,9 +12,11 @@ scene:pc("Frodo")
 
 -- Siege weapons grind down defenses.
 scene:start_session("Siege Weapons")
+scene:gm_fear(1)
 
--- Missing DSL: activate consequence countdown and shift to Helms Deep Siege.
 scene:countdown_create{ name = "Breach the Walls", kind = "consequence", current = 0, max = 6, direction = "increase" }
+scene:countdown_update{ name = "Breach the Walls", delta = 1, reason = "siege_weapon_strike" }
+scene:gm_spend_fear(1):spotlight("Helms Deep Siege")
 
 scene:end_session()
 

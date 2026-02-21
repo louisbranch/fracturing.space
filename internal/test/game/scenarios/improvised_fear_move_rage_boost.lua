@@ -16,8 +16,19 @@ scene:start_session("Rage Boost")
 scene:gm_fear(2)
 
 -- Example: the adversary flies into a rage for the remainder of the scene.
--- Missing DSL: apply a temporary damage bonus feature.
-scene:gm_spend_fear(1):spotlight("Uruk-hai Brute")
+-- Partial mapping: fear spend, temporary power marker, and boosted strike are explicit.
+-- Missing DSL: first-class temporary damage bonus duration semantics.
+scene:gm_spend_fear(1):spotlight("Uruk-hai Brute", { description = "rage_boost_empowerment" })
+scene:adversary_update{ target = "Uruk-hai Brute", stress_delta = 1, notes = "rage_damage_bonus_active" }
+scene:adversary_attack{
+  actor = "Uruk-hai Brute",
+  target = "Frodo",
+  difficulty = 0,
+  attack_modifier = 2,
+  damage_dice = {{count = 2, sides = 8}},
+  damage_type = "physical"
+}
+scene:set_spotlight{ target = "Frodo" }
 
 -- Close the session after the fear move.
 scene:end_session()

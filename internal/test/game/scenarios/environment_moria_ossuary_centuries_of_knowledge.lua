@@ -15,6 +15,7 @@ scene:start_session("Centuries of Knowledge")
 
 -- Missing DSL: map outcome to lore details.
 scene:action_roll{ actor = "Frodo", trait = "knowledge", difficulty = 19, outcome = "hope" }
+scene:apply_roll_outcome{}
 
 scene:end_session()
 

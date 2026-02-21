@@ -16,8 +16,10 @@ scene:start_session("Patient Hunter")
 scene:gm_fear(1)
 
 -- Example: summon the Warg within Close range and immediately spotlight it.
--- Missing DSL: place the adversary and trigger its action.
-scene:gm_spend_fear(1):spotlight("Warg")
+scene:adversary("Warg Hunter")
+-- Range placement remains unresolved in this fixture.
+scene:gm_spend_fear(1):spotlight("Warg Hunter")
+scene:adversary_attack{ actor = "Warg Hunter", target = "Frodo", difficulty = 0, damage_type = "physical" }
 
 scene:end_session()
 

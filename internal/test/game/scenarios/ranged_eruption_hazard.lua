@@ -16,8 +16,17 @@ scene:start_session("Eruption")
 scene:gm_fear(1)
 
 -- Example: targets roll Agility 14 or take 2d10 damage and are moved.
--- Missing DSL: apply area hazard, reaction roll, and forced movement.
 scene:gm_spend_fear(1):spotlight("Saruman")
+scene:group_reaction{
+  targets = {"Frodo"},
+  trait = "agility",
+  difficulty = 14,
+  damage = 10,
+  damage_type = "physical",
+  half_damage_on_success = true,
+  source = "eruption_hazard"
+}
+-- Missing DSL: forced movement/range-band reposition metadata per target.
 
 scene:end_session()
 

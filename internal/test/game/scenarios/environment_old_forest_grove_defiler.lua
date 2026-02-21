@@ -16,8 +16,9 @@ scene:start_session("Defiler")
 scene:gm_fear(1)
 
 -- Example: spend Fear to summon an elemental that immediately takes spotlight.
--- Missing DSL: spawn the elemental near a chosen PC and shift spotlight.
-scene:gm_spend_fear(1):spotlight("Shadow Wraith")
+scene:adversary("Chaos Elemental")
+-- Chosen-PC proximity semantics remain unresolved in this fixture.
+scene:gm_spend_fear(1):spotlight("Chaos Elemental")
 
 scene:end_session()
 

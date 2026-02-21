@@ -52,7 +52,7 @@ type scenarioState struct {
 func TestScenarioScripts(t *testing.T) {
 	grpcAddr, authAddr, stopServer := startGRPCServer(t)
 	defer stopServer()
-	userID := createAuthUser(t, authAddr, "Scenario GM")
+	userID := createAuthUser(t, authAddr, "scenario-gm@example.com")
 
 	conn, err := grpc.NewClient(
 		grpcAddr,
@@ -148,6 +148,8 @@ func runStep(t *testing.T, env scenarioEnv, state *scenarioState, step Step) {
 		runGMFearStep(t, ctx, env, state, step)
 	case "reaction":
 		runReactionStep(t, ctx, env, state, step)
+	case "group_reaction":
+		runGroupReactionStep(t, ctx, env, state, step)
 	case "gm_spend_fear":
 		runGMSpendFearStep(t, ctx, env, state, step)
 	case "set_spotlight":
@@ -178,6 +180,8 @@ func runStep(t *testing.T, env scenarioEnv, state *scenarioState, step Step) {
 		runCombinedDamageStep(t, ctx, env, state, step)
 	case "adversary_attack":
 		runAdversaryAttackStep(t, ctx, env, state, step)
+	case "adversary_update":
+		runAdversaryUpdateStep(t, ctx, env, state, step)
 	case "swap_loadout":
 		runSwapLoadoutStep(t, ctx, env, state, step)
 	case "countdown_create":
@@ -416,8 +420,86 @@ func runReactionStep(t *testing.T, ctx context.Context, env scenarioEnv, state *
 		t.Fatal("expected reaction action roll")
 	}
 	state.lastRollSeq = response.GetActionRoll().GetRollSeq()
-	requireEventTypesAfterSeq(t, ctx, env, state, before, event.TypeOutcomeApplied)
+	requireEventTypesAfterSeq(t, ctx, env, state, before, event.TypeRollResolved)
 	assertExpectedDeltas(t, ctx, env, state, expectedSpec, expectedBefore)
+}
+
+func runGroupReactionStep(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, step Step) {
+	ensureSession(t, ctx, env, state)
+	targetNames := uniqueNonEmptyStrings(readStringSlice(step.Args, "targets"))
+	if len(targetNames) == 0 {
+		t.Fatal("group_reaction requires targets")
+	}
+	trait := optionalString(step.Args, "trait", "instinct")
+	difficulty := optionalInt(step.Args, "difficulty", 10)
+	baseSeed := optionalInt(step.Args, "seed", 0)
+	failureConditions := readStringSlice(step.Args, "failure_conditions")
+	failureSource := optionalString(step.Args, "source", "group_reaction")
+	damageAmount := optionalInt(step.Args, "damage", 0)
+	if damageAmount < 0 {
+		t.Fatal("group_reaction damage must be non-negative")
+	}
+	halfDamageOnSuccess := optionalBool(step.Args, "half_damage_on_success", false)
+	damageSource := optionalString(step.Args, "damage_source", failureSource)
+
+	for index, targetName := range targetNames {
+		rollArgs := map[string]any{
+			"actor":      targetName,
+			"trait":      trait,
+			"difficulty": difficulty,
+		}
+		if modifiersRaw, ok := step.Args["modifiers"]; ok {
+			rollArgs["modifiers"] = modifiersRaw
+		}
+		if outcome := optionalString(step.Args, "outcome", ""); outcome != "" {
+			rollArgs["outcome"] = outcome
+		}
+		if baseSeed > 0 {
+			rollArgs["seed"] = baseSeed + index
+		}
+		runReactionRollStep(t, ctx, env, state, Step{Kind: "reaction_roll", Args: rollArgs})
+
+		rollSeq := state.lastRollSeq
+		runApplyReactionOutcomeStep(t, ctx, env, state, Step{
+			Kind: "apply_reaction_outcome",
+			Args: map[string]any{"roll_seq": int(rollSeq)},
+		})
+
+		rollPayload := findRollResolvedPayload(t, ctx, env, state, 0, rollSeq)
+		success := isRollOutcomeSuccess(rollPayload.Outcome)
+		if !success && len(failureConditions) > 0 {
+			add := make([]any, 0, len(failureConditions))
+			for _, condition := range failureConditions {
+				add = append(add, condition)
+			}
+			runApplyConditionStep(t, ctx, env, state, Step{
+				Kind: "apply_condition",
+				Args: map[string]any{
+					"target": targetName,
+					"add":    add,
+					"source": failureSource,
+				},
+			})
+		}
+
+		appliedDamage := damageAmount
+		if success && halfDamageOnSuccess {
+			appliedDamage = appliedDamage / 2
+		}
+		if appliedDamage <= 0 {
+			continue
+		}
+		beforeDamage := latestSeq(t, ctx, env, state)
+		_, err := env.daggerheartClient.ApplyDamage(withSessionID(ctx, state.sessionID), &daggerheartv1.DaggerheartApplyDamageRequest{
+			CampaignId:  state.campaignID,
+			CharacterId: actorID(t, state, targetName),
+			Damage:      buildDamageRequest(step.Args, "", damageSource, int32(appliedDamage)),
+		})
+		if err != nil {
+			t.Fatalf("group_reaction apply damage: %v", err)
+		}
+		requireEventTypesAfterSeq(t, ctx, env, state, beforeDamage, daggerheart.EventTypeDamageApplied)
+	}
 }
 
 func runGMSpendFearStep(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, step Step) {
@@ -631,7 +713,7 @@ func runGroupActionStep(t *testing.T, ctx context.Context, env scenarioEnv, stat
 	if err != nil {
 		t.Fatalf("group_action: %v", err)
 	}
-	requireEventTypesAfterSeq(t, ctx, env, state, before, event.TypeOutcomeApplied)
+	requireEventTypesAfterSeq(t, ctx, env, state, before, event.TypeRollResolved)
 	assertExpectedDeltas(t, ctx, env, state, expectedSpec, expectedBefore)
 }
 
@@ -693,7 +775,7 @@ func runTagTeamStep(t *testing.T, ctx context.Context, env scenarioEnv, state *s
 	if err != nil {
 		t.Fatalf("tag_team: %v", err)
 	}
-	requireEventTypesAfterSeq(t, ctx, env, state, before, event.TypeOutcomeApplied)
+	requireEventTypesAfterSeq(t, ctx, env, state, before, event.TypeRollResolved)
 	if response != nil {
 		assertExpectedOutcome(t, ctx, env, state, before, response.GetSelectedRollSeq(), step.Args)
 		assertExpectedComplication(t, response.GetSelectedOutcome(), step.Args)
@@ -877,7 +959,7 @@ func runDeathMoveStep(t *testing.T, ctx context.Context, env scenarioEnv, state 
 	if err != nil {
 		t.Fatalf("death_move: %v", err)
 	}
-	requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeDeathMoveResolved)
+	requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeCharacterStatePatched)
 	assertExpectedDeathMove(t, response, step.Args)
 	assertExpectedDeltas(t, ctx, env, state, expectedSpec, expectedBefore)
 }
@@ -898,7 +980,7 @@ func runBlazeOfGloryStep(t *testing.T, ctx context.Context, env scenarioEnv, sta
 	if err != nil {
 		t.Fatalf("blaze_of_glory: %v", err)
 	}
-	requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeBlazeOfGloryResolved, event.TypeCharacterDeleted)
+	requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeCharacterStatePatched, event.TypeCharacterDeleted)
 }
 
 func runAttackStep(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, step Step) {
@@ -1004,7 +1086,7 @@ func runAttackStep(t *testing.T, ctx context.Context, env scenarioEnv, state *sc
 	if err != nil {
 		t.Fatalf("attack outcome: %v", err)
 	}
-	requireEventTypesAfterSeq(t, ctx, env, state, before, event.TypeOutcomeApplied)
+	requireEventTypesAfterSeq(t, ctx, env, state, before, event.TypeRollResolved)
 
 	if attackOutcome.GetResult() != nil && attackOutcome.GetResult().GetSuccess() {
 		dice := buildDamageDice(step.Args)
@@ -1333,7 +1415,7 @@ func runAdversaryAttackStep(t *testing.T, ctx context.Context, env scenarioEnv, 
 	if err != nil {
 		t.Fatalf("adversary attack flow: %v", err)
 	}
-	requireEventTypesAfterSeq(t, ctx, env, state, before, event.TypeOutcomeApplied)
+	requireEventTypesAfterSeq(t, ctx, env, state, before, event.TypeRollResolved)
 	if response.GetDamageApplied() != nil {
 		requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeDamageApplied)
 		assertDamageFlags(t, ctx, env, state, before, targetCharacterID, step.Args)
@@ -1347,6 +1429,58 @@ func runAdversaryAttackStep(t *testing.T, ctx context.Context, env scenarioEnv, 
 		}
 	}
 	assertExpectedDeltas(t, ctx, env, state, expectedSpec, expectedBefore)
+}
+
+func runAdversaryUpdateStep(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, step Step) {
+	ensureCampaign(t, state)
+	name := requiredString(step.Args, "target")
+	if name == "" {
+		t.Fatal("adversary_update target is required")
+	}
+	adversaryID := adversaryID(t, state, name)
+
+	evasion, hasEvasion := readInt(step.Args, "evasion")
+	evasionDelta, hasEvasionDelta := readInt(step.Args, "evasion_delta")
+	stress, hasStress := readInt(step.Args, "stress")
+	stressDelta, hasStressDelta := readInt(step.Args, "stress_delta")
+	notes := optionalString(step.Args, "notes", "")
+
+	if !hasEvasion && !hasEvasionDelta && !hasStress && !hasStressDelta && strings.TrimSpace(notes) == "" {
+		t.Fatal("adversary_update requires evasion, evasion_delta, stress, stress_delta, or notes")
+	}
+	if hasEvasion && hasEvasionDelta {
+		t.Fatal("adversary_update cannot set both evasion and evasion_delta")
+	}
+	if hasStress && hasStressDelta {
+		t.Fatal("adversary_update cannot set both stress and stress_delta")
+	}
+
+	current := getAdversary(t, ctx, env, state, adversaryID)
+	request := &daggerheartv1.DaggerheartUpdateAdversaryRequest{
+		CampaignId:  state.campaignID,
+		AdversaryId: adversaryID,
+	}
+
+	if hasEvasion {
+		request.Evasion = wrapperspb.Int32(int32(evasion))
+	} else if hasEvasionDelta {
+		request.Evasion = wrapperspb.Int32(current.GetEvasion() + int32(evasionDelta))
+	}
+	if hasStress {
+		request.Stress = wrapperspb.Int32(int32(stress))
+	} else if hasStressDelta {
+		request.Stress = wrapperspb.Int32(current.GetStress() + int32(stressDelta))
+	}
+	if strings.TrimSpace(notes) != "" {
+		request.Notes = wrapperspb.String(notes)
+	}
+
+	before := latestSeq(t, ctx, env, state)
+	_, err := env.daggerheartClient.UpdateAdversary(ctx, request)
+	if err != nil {
+		t.Fatalf("adversary_update: %v", err)
+	}
+	requireEventTypesAfterSeq(t, ctx, env, state, before, daggerheart.EventTypeAdversaryUpdated)
 }
 
 func runSwapLoadoutStep(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, step Step) {
@@ -2109,11 +2243,30 @@ func matchesOutcomeHint(result daggerheartdomain.ActionResult, hint string) bool
 			result.Outcome == daggerheartdomain.OutcomeFailureWithHope
 	case "critical":
 		return result.IsCrit
+	case "on_crit":
+		return result.IsCrit
+	case "success_hope":
+		return result.Outcome == daggerheartdomain.OutcomeSuccessWithHope
+	case "success_fear":
+		return result.Outcome == daggerheartdomain.OutcomeSuccessWithFear
+	case "failure_fear":
+		return result.Outcome == daggerheartdomain.OutcomeFailureWithFear
 	case "failure_hope":
 		return result.Outcome == daggerheartdomain.OutcomeFailureWithHope
 	default:
 		return false
 	}
+}
+
+func isRollOutcomeSuccess(outcome string) bool {
+	normalized := strings.ToUpper(strings.TrimSpace(outcome))
+	if normalized == "" {
+		return false
+	}
+	if strings.Contains(normalized, "FAILURE") {
+		return false
+	}
+	return strings.Contains(normalized, "SUCCESS") || strings.Contains(normalized, "CRITICAL")
 }
 
 func assertExpectedOutcome(

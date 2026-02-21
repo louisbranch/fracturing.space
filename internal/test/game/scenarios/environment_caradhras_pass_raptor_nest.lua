@@ -13,9 +13,12 @@ scene:adversary("Great Eagles")
 
 -- The PCs enter a hunting ground and predators appear.
 scene:start_session("Raptor Nest")
+scene:gm_fear(1)
 
--- Missing DSL: spawn two eagles at Very Far range.
-scene:gm_spend_fear(0):spotlight("Great Eagles")
+scene:adversary("Great Eagle Scout 1")
+scene:adversary("Great Eagle Scout 2")
+-- Range placement semantics remain unresolved in this fixture.
+scene:gm_spend_fear(1):spotlight("Great Eagle Scout 1")
 
 scene:end_session()
 

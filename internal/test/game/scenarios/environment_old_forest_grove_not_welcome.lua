@@ -15,9 +15,12 @@ scene:adversary("Ent Saplings")
 
 -- The grove guardians appear to challenge the party.
 scene:start_session("Not Welcome")
+scene:gm_fear(1)
 
 -- Missing DSL: spawn adversaries equal to party size and shift spotlight.
-scene:gm_spend_fear(0):spotlight("Ent Warden")
+scene:adversary("Ent Sapling Reinforcement")
+-- Party-size scaling and exact guardian mix remain unresolved.
+scene:gm_spend_fear(1):spotlight("Ent Warden")
 
 scene:end_session()
 

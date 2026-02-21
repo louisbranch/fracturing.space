@@ -15,6 +15,7 @@ scene:start_session("Divine Blessing")
 
 -- Missing DSL: spend 2 Hope to refresh a limited-use ability.
 scene:action_roll{ actor = "Frodo", trait = "presence", difficulty = 20, outcome = "critical" }
+scene:apply_roll_outcome{}
 
 scene:end_session()
 

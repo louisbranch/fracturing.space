@@ -15,8 +15,9 @@ scene:adversary("Orc Raider")
 -- An ally steps in to take a hit meant for the leader.
 scene:start_session("Complete the Ritual")
 
--- Missing DSL: redirect an attack to the ally by marking Stress.
-scene:attack{ actor = "Frodo", target = "Saruman", trait = "instinct", difficulty = 0, outcome = "hope", damage_type = "physical" }
+-- Trigger timing/eligibility for the redirect remains unresolved.
+scene:adversary_update{ target = "Orc Raider", stress_delta = 1, notes = "protect_ritual_leader" }
+scene:attack{ actor = "Frodo", target = "Orc Raider", trait = "instinct", difficulty = 0, outcome = "hope", damage_type = "physical" }
 
 scene:end_session()
 

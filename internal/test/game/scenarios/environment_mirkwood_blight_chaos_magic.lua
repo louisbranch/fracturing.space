@@ -15,6 +15,7 @@ scene:start_session("Chaos Magic Locus")
 
 -- Missing DSL: roll two Fear dice and take the higher on Spellcast.
 scene:action_roll{ actor = "Gandalf", trait = "spellcast", difficulty = 16, outcome = "fear" }
+scene:apply_roll_outcome{}
 
 scene:end_session()
 

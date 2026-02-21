@@ -13,10 +13,11 @@ scene:npc("Rangers")
 
 -- Another adventuring party competes for the same leads.
 scene:start_session("Rangers")
+scene:gm_fear(1)
 
 -- Example: establish a rival party with a personal connection.
--- Missing DSL: represent rivalry hooks and competitive pressures.
-scene:gm_spend_fear(0):spotlight("Rangers")
+-- Rivalry hooks and competitive-pressure persistence remain unresolved.
+scene:gm_spend_fear(1):spotlight("Rangers")
 
 scene:end_session()
 

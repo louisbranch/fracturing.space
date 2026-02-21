@@ -13,8 +13,9 @@ scene:pc("Gandalf")
 -- The party studies the corrupted tree.
 scene:start_session("Indigo Flame")
 
--- Missing DSL: map outcome to number of details and stress for extra clue.
+-- Story-detail fanout and optional stress-for-extra-clue remain unresolved.
 scene:action_roll{ actor = "Gandalf", trait = "knowledge", difficulty = 16, outcome = "hope" }
+scene:apply_roll_outcome{}
 
 scene:end_session()
 

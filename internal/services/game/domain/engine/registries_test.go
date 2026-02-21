@@ -153,7 +153,7 @@ func TestBuildRegistries_RegistersAction(t *testing.T) {
 		Type:        command.Type("action.roll.resolve"),
 		ActorType:   command.ActorTypeSystem,
 		SessionID:   "sess-1",
-		PayloadJSON: []byte(`{"request_id":"req-1"}`),
+		PayloadJSON: []byte(`{"request_id":"req-1","roll_seq":1}`),
 	})
 	if err != nil {
 		t.Fatalf("validate action command: %v", err)
@@ -167,7 +167,7 @@ func TestBuildRegistries_RegistersAction(t *testing.T) {
 		SessionID:   "sess-1",
 		EntityType:  "roll",
 		EntityID:    "req-1",
-		PayloadJSON: []byte(`{"request_id":"req-1"}`),
+		PayloadJSON: []byte(`{"request_id":"req-1","roll_seq":1}`),
 	})
 	if err != nil {
 		t.Fatalf("validate action event: %v", err)

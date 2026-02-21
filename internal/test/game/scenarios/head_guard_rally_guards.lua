@@ -17,7 +17,8 @@ scene:start_session("Rally Guards")
 scene:gm_fear(2)
 
 -- Example: spend 2 Fear to spotlight the head guard and allies.
--- Missing DSL: model the Rally Guards action effect.
+-- Partial mapping: exact fear spend plus bounded spotlight fanout are explicit.
+-- Missing DSL: automatic ally-count expansion from adversary topology.
 scene:gm_spend_fear(2):spotlight("Gondor Captain")
 
 scene:end_session()
