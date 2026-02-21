@@ -188,3 +188,33 @@ func TestDecideActionCommands_RejectsSystemOwnedOutcomeEffects(t *testing.T) {
 		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, "OUTCOME_EFFECT_SYSTEM_OWNED_FORBIDDEN")
 	}
 }
+
+func TestDecideActionCommands_RejectsDisallowedCoreOutcomeEffects(t *testing.T) {
+	decision := Decide(State{}, command.Command{
+		CampaignID: "camp-1",
+		Type:       command.Type("action.outcome.apply"),
+		ActorType:  command.ActorTypeSystem,
+		PayloadJSON: []byte(`{
+			"request_id":"req-5",
+			"roll_seq":5,
+			"post_effects":[
+				{
+					"type":"campaign.created",
+					"entity_type":"campaign",
+					"entity_id":"camp-1",
+					"payload_json":{"name":"not-allowed"}
+				}
+			]
+		}`),
+	}, time.Now)
+
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != "OUTCOME_EFFECT_TYPE_FORBIDDEN" {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, "OUTCOME_EFFECT_TYPE_FORBIDDEN")
+	}
+}

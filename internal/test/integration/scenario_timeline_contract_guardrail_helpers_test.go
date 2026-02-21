@@ -226,6 +226,9 @@ func validateTimelineCoverageForMarkers(
 	indexRows map[string]string,
 	timelineRowIDs map[string]struct{},
 ) error {
+	if len(markerScenarios) == 0 {
+		return fmt.Errorf("expected at least one marked scenario")
+	}
 	for scenario := range markerScenarios {
 		rowID, ok := indexRows[scenario]
 		if !ok {
@@ -238,15 +241,15 @@ func validateTimelineCoverageForMarkers(
 	return nil
 }
 
-func TestValidateTimelineCoverageForMarkers_AllowsZeroMarkedScenarios(t *testing.T) {
+func TestValidateTimelineCoverageForMarkers_RequiresMarkedScenarios(t *testing.T) {
 	indexRows := map[string]string{
 		"any-scenario": "P1",
 	}
 	timelineRowIDs := map[string]struct{}{
 		"P1": {},
 	}
-	if err := validateTimelineCoverageForMarkers(map[string]struct{}{}, indexRows, timelineRowIDs); err != nil {
-		t.Fatalf("validate timeline coverage for empty markers: %v", err)
+	if err := validateTimelineCoverageForMarkers(map[string]struct{}{}, indexRows, timelineRowIDs); err == nil {
+		t.Fatal("expected error for empty marker set")
 	}
 }
 

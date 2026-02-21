@@ -58,6 +58,14 @@ Invariants:
 - Session-side follow-up effects (for example gate open + spotlight set) remain
   core-owned post-effects on `action.outcome.apply`.
 
+### Known Gap: Consequence Atomicity
+
+- `ApplyRollOutcome` currently applies consequence commands in sequence.
+- If a later consequence command fails, earlier applied consequences remain.
+- The behavior is replay-safe, but not atomic across the full consequence set.
+- Follow-up design should define transactionality or compensation semantics,
+  including checkpoint finalization guarantees after partial failures.
+
 ## Priority Missing-Mechanic Timeline Mappings
 
 Use these row IDs in `scenario-missing-mechanics.md` while backfilling the full
