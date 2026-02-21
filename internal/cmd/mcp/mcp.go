@@ -4,8 +4,11 @@ package mcp
 import (
 	"context"
 	"flag"
+	"log"
+	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/config"
+	"github.com/louisbranch/fracturing.space/internal/platform/otel"
 	mcpapp "github.com/louisbranch/fracturing.space/internal/services/mcp/app"
 )
 
@@ -34,5 +37,17 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 
 // Run starts the MCP protocol adapter.
 func Run(ctx context.Context, cfg Config) error {
+	shutdown, err := otel.Setup(ctx, "mcp")
+	if err != nil {
+		return err
+	}
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := shutdown(shutdownCtx); err != nil {
+			log.Printf("otel shutdown: %v", err)
+		}
+	}()
+
 	return mcpapp.Run(ctx, cfg.Addr, cfg.HTTPAddr, cfg.Transport)
 }

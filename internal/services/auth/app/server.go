@@ -17,6 +17,7 @@ import (
 	authservice "github.com/louisbranch/fracturing.space/internal/services/auth/api/grpc/auth"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/oauth"
 	authsqlite "github.com/louisbranch/fracturing.space/internal/services/auth/storage/sqlite"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	grpc_health_v1 "google.golang.org/grpc/health/grpc_health_v1"
@@ -91,7 +92,9 @@ func New(port int, httpAddr string) (*Server, error) {
 		httpServer = &http.Server{Handler: mux}
 	}
 
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(
+		grpc.StatsHandler(otelgrpc.NewServerHandler()),
+	)
 	authService := authservice.NewAuthService(store, store, oauthStore)
 	statisticsService := authservice.NewStatisticsService(store)
 	healthServer := health.NewServer()

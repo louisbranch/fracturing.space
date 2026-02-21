@@ -5,10 +5,12 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/config"
+	"github.com/louisbranch/fracturing.space/internal/platform/otel"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	"github.com/louisbranch/fracturing.space/internal/services/admin"
 )
@@ -46,6 +48,18 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 
 // Run creates the admin control-plane and starts it for the current process.
 func Run(ctx context.Context, cfg Config) error {
+	shutdown, err := otel.Setup(ctx, "admin")
+	if err != nil {
+		return err
+	}
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := shutdown(shutdownCtx); err != nil {
+			log.Printf("otel shutdown: %v", err)
+		}
+	}()
+
 	var authCfg *admin.AuthConfig
 	if strings.TrimSpace(cfg.AuthIntrospectURL) != "" && strings.TrimSpace(cfg.LoginURL) != "" {
 		authCfg = &admin.AuthConfig{
