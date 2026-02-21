@@ -1,6 +1,7 @@
 package web
 
 import (
+	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -9,25 +10,17 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
-func TestWriteGamePageStartAndEnd(t *testing.T) {
+func TestWriteGameContentType(t *testing.T) {
 	w := httptest.NewRecorder()
 
-	writeGamePageStart(w, "Test Shell", "Test App")
-	writeGamePageEnd(w)
+	writeGameContentType(w)
 
 	if got := w.Header().Get("Content-Type"); got != "text/html; charset=utf-8" {
 		t.Fatalf("Content-Type = %q, want %q", got, "text/html; charset=utf-8")
 	}
-	body := w.Body.String()
-	if !strings.Contains(body, `<title>Test Shell</title>`) {
-		t.Fatalf("expected title in game shell")
-	}
-	if !strings.Contains(body, `data-layout="game"`) {
-		t.Fatalf("expected game layout marker in game shell")
-	}
 }
 
-func TestRawGameRenderersUseGameLayoutMarker(t *testing.T) {
+func TestGameRenderersUseGameLayoutMarker(t *testing.T) {
 	tests := []struct {
 		name   string
 		render func(*httptest.ResponseRecorder)
@@ -35,7 +28,7 @@ func TestRawGameRenderersUseGameLayoutMarker(t *testing.T) {
 		{
 			name: "campaigns",
 			render: func(w *httptest.ResponseRecorder) {
-				renderAppCampaignsPage(w, []*statev1.Campaign{
+				renderAppCampaignsPage(w, httptest.NewRequest(http.MethodGet, "/campaigns", nil), []*statev1.Campaign{
 					{Id: "camp-1", Name: "Campaign One"},
 				})
 			},
@@ -43,7 +36,7 @@ func TestRawGameRenderersUseGameLayoutMarker(t *testing.T) {
 		{
 			name: "invites",
 			render: func(w *httptest.ResponseRecorder) {
-				renderAppInvitesPage(w, []*statev1.PendingUserInvite{
+				renderAppInvitesPage(w, httptest.NewRequest(http.MethodGet, "/invites", nil), []*statev1.PendingUserInvite{
 					{
 						Campaign:    &statev1.Campaign{Id: "camp-1", Name: "Campaign One"},
 						Participant: &statev1.Participant{Id: "part-1", Name: "Alice"},
@@ -55,7 +48,7 @@ func TestRawGameRenderersUseGameLayoutMarker(t *testing.T) {
 		{
 			name: "sessions",
 			render: func(w *httptest.ResponseRecorder) {
-				renderAppCampaignSessionsPage(w, "camp-1", []*statev1.Session{
+				renderAppCampaignSessionsPage(w, httptest.NewRequest(http.MethodGet, "/campaigns/camp-1/sessions", nil), "camp-1", []*statev1.Session{
 					{Id: "sess-1", Name: "Session One", Status: statev1.SessionStatus_SESSION_ACTIVE},
 				}, true)
 			},
@@ -63,7 +56,7 @@ func TestRawGameRenderersUseGameLayoutMarker(t *testing.T) {
 		{
 			name: "session detail",
 			render: func(w *httptest.ResponseRecorder) {
-				renderAppCampaignSessionDetailPage(w, "camp-1", &statev1.Session{
+				renderAppCampaignSessionDetailPage(w, httptest.NewRequest(http.MethodGet, "/campaigns/camp-1/sessions/sess-1", nil), "camp-1", &statev1.Session{
 					Id:     "sess-1",
 					Name:   "Session One",
 					Status: statev1.SessionStatus_SESSION_ACTIVE,
@@ -73,7 +66,7 @@ func TestRawGameRenderersUseGameLayoutMarker(t *testing.T) {
 		{
 			name: "participants",
 			render: func(w *httptest.ResponseRecorder) {
-				renderAppCampaignParticipantsPage(w, "camp-1", []*statev1.Participant{
+				renderAppCampaignParticipantsPage(w, httptest.NewRequest(http.MethodGet, "/campaigns/camp-1/participants", nil), "camp-1", []*statev1.Participant{
 					{Id: "part-1", Name: "Alice"},
 				}, true)
 			},
@@ -81,7 +74,7 @@ func TestRawGameRenderersUseGameLayoutMarker(t *testing.T) {
 		{
 			name: "characters",
 			render: func(w *httptest.ResponseRecorder) {
-				renderAppCampaignCharactersPage(w, "camp-1", []*statev1.Character{
+				renderAppCampaignCharactersPage(w, httptest.NewRequest(http.MethodGet, "/campaigns/camp-1/characters", nil), "camp-1", []*statev1.Character{
 					{Id: "char-1", Name: "Mira", Kind: statev1.CharacterKind_PC},
 				}, true, []*statev1.Participant{
 					{Id: "part-1", Name: "Alice"},
@@ -91,7 +84,7 @@ func TestRawGameRenderersUseGameLayoutMarker(t *testing.T) {
 		{
 			name: "character detail",
 			render: func(w *httptest.ResponseRecorder) {
-				renderAppCampaignCharacterDetailPage(w, "camp-1", &statev1.Character{
+				renderAppCampaignCharacterDetailPage(w, httptest.NewRequest(http.MethodGet, "/campaigns/camp-1/characters/char-1", nil), "camp-1", &statev1.Character{
 					Id:            "char-1",
 					Name:          "Mira",
 					Kind:          statev1.CharacterKind_PC,
@@ -102,7 +95,7 @@ func TestRawGameRenderersUseGameLayoutMarker(t *testing.T) {
 		{
 			name: "campaign invites",
 			render: func(w *httptest.ResponseRecorder) {
-				renderAppCampaignInvitesPage(w, "camp-1", []*statev1.Invite{
+				renderAppCampaignInvitesPage(w, httptest.NewRequest(http.MethodGet, "/campaigns/camp-1/invites", nil), "camp-1", []*statev1.Invite{
 					{Id: "inv-1", RecipientUserId: "user-2"},
 				}, true)
 			},
@@ -112,11 +105,15 @@ func TestRawGameRenderersUseGameLayoutMarker(t *testing.T) {
 	for _, tc := range tests {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			w := httptest.NewRecorder()
 			tc.render(w)
 			body := w.Body.String()
 			if !strings.Contains(body, `data-layout="game"`) {
 				t.Fatalf("expected game layout marker in %s renderer output", tc.name)
+			}
+			if got := w.Header().Get("Content-Type"); got != "text/html; charset=utf-8" {
+				t.Fatalf("Content-Type = %q, want %q", got, "text/html; charset=utf-8")
 			}
 		})
 	}

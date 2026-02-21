@@ -3,13 +3,12 @@ package web
 import (
 	"context"
 	"errors"
-	"html"
-	"io"
 	"net/http"
 	"strings"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
+	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
 func (h *handler) handleAppCampaignInvites(w http.ResponseWriter, r *http.Request, campaignID string) {
@@ -44,7 +43,7 @@ func (h *handler) handleAppCampaignInvites(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	renderAppCampaignInvitesPageWithAppName(w, h.resolvedAppName(), campaignID, resp.GetInvites(), inviteActor.canManageInvites)
+	renderAppCampaignInvitesPageWithAppName(w, r, h.resolvedAppName(), campaignID, resp.GetInvites(), inviteActor.canManageInvites)
 }
 
 func (h *handler) handleAppCampaignInviteCreate(w http.ResponseWriter, r *http.Request, campaignID string) {
@@ -200,19 +199,14 @@ func canManageCampaignInvites(access statev1.CampaignAccess) bool {
 	return access == statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER || access == statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER
 }
 
-func renderAppCampaignInvitesPage(w http.ResponseWriter, campaignID string, invites []*statev1.Invite, canManageInvites bool) {
-	renderAppCampaignInvitesPageWithAppName(w, "", campaignID, invites, canManageInvites)
+func renderAppCampaignInvitesPage(w http.ResponseWriter, r *http.Request, campaignID string, invites []*statev1.Invite, canManageInvites bool) {
+	renderAppCampaignInvitesPageWithAppName(w, r, "", campaignID, invites, canManageInvites)
 }
 
-func renderAppCampaignInvitesPageWithAppName(w http.ResponseWriter, appName string, campaignID string, invites []*statev1.Invite, canManageInvites bool) {
+func renderAppCampaignInvitesPageWithAppName(w http.ResponseWriter, r *http.Request, appName string, campaignID string, invites []*statev1.Invite, canManageInvites bool) {
 	// renderAppCampaignInvitesPage exposes write controls only to managed roles.
-	writeGamePageStart(w, "Campaign Invites", appName)
-	escapedCampaignID := html.EscapeString(campaignID)
-	_, _ = io.WriteString(w, "<h1>Campaign Invites</h1>")
-	if canManageInvites {
-		_, _ = io.WriteString(w, "<form method=\"post\" action=\"/campaigns/"+escapedCampaignID+"/invites/create\"><input type=\"text\" name=\"participant_id\" placeholder=\"participant id\" required><input type=\"text\" name=\"recipient_user_id\" placeholder=\"recipient user id\"><button type=\"submit\">Create Invite</button></form>")
-	}
-	_, _ = io.WriteString(w, "<ul>")
+	campaignID = strings.TrimSpace(campaignID)
+	inviteItems := make([]webtemplates.CampaignInviteItem, 0, len(invites))
 	for _, invite := range invites {
 		if invite == nil {
 			continue
@@ -226,12 +220,13 @@ func renderAppCampaignInvitesPageWithAppName(w http.ResponseWriter, appName stri
 		if recipient == "" {
 			recipient = "unknown-recipient"
 		}
-		_, _ = io.WriteString(w, "<li>"+html.EscapeString(displayInviteID+" - "+recipient))
-		if canManageInvites && inviteID != "" {
-			_, _ = io.WriteString(w, "<form method=\"post\" action=\"/campaigns/"+escapedCampaignID+"/invites/revoke\"><input type=\"hidden\" name=\"invite_id\" value=\""+html.EscapeString(inviteID)+"\"><button type=\"submit\">Revoke</button></form>")
-		}
-		_, _ = io.WriteString(w, "</li>")
+		inviteItems = append(inviteItems, webtemplates.CampaignInviteItem{
+			ID:    inviteID,
+			Label: displayInviteID + " - " + recipient,
+		})
 	}
-	_, _ = io.WriteString(w, "</ul>")
-	writeGamePageEnd(w)
+	writeGameContentType(w)
+	if err := webtemplates.CampaignInvitesPage(appName, campaignID, canManageInvites, inviteItems).Render(r.Context(), w); err != nil {
+		http.Error(w, "failed to render campaign invites page", http.StatusInternalServerError)
+	}
 }
