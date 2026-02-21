@@ -2,8 +2,7 @@ package templates
 
 // UsersPageView provides data for the users page.
 type UsersPageView struct {
-	Message       string
-	Impersonation *ImpersonationView
+	Message string
 }
 
 // UserFormCardView provides data for a reusable user form card.
@@ -24,7 +23,6 @@ type UserFormCardView struct {
 type UserDetailPageView struct {
 	Message            string
 	Detail             *UserDetail
-	Impersonation      *ImpersonationView
 	MagicLinkURL       string
 	MagicLinkEmail     string
 	MagicLinkExpiresAt string

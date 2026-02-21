@@ -23,20 +23,13 @@ templ UserDetailPage(view UserDetailPageView, activePage string, loc Localizer) 
 		<p class="opacity-60">{view.Message}</p>
 	}
 	if view.Detail != nil {
-		if view.Impersonation != nil {
-			<p class="opacity-60">{T(loc, "users.impersonation.active", ImpersonationLabel(view.Impersonation))}</p>
-			<form method="post" action="/users/logout">
-				<input type="hidden" name="user_id" value={view.Detail.ID}>
-				<button class="btn btn-soft btn-sm" type="submit">{T(loc, "users.logout.submit")}</button>
-			</form>
-		}
 		if activePage == "invites" {
 			@UserSubNav(view.Detail.ID, "invites", loc) {
 				@UserPendingInvitesTab(*view.Detail, loc)
 			}
 		} else {
 			@UserSubNav(view.Detail.ID, "details", loc) {
-				@UserDetailCard(*view.Detail, view.Impersonation, loc)
+				@UserDetailCard(*view.Detail, loc)
 				<div class="mt-6">
 					<h2>{T(loc, "users.magic.heading")}</h2>
 					<form method="post" action="/users/magic-link">
@@ -73,18 +66,6 @@ templ UserDetailPage(view UserDetailPageView, activePage string, loc Localizer) 
 templ UsersPage(view UsersPageView, loc Localizer) {
 	<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 		@UserFormCard(UserFormCardView{
-			Title:       T(loc, "users.create.heading"),
-			Action:      "/users/create",
-			Method:      "post",
-			FieldLabel:  T(loc, "users.create.email"),
-			FieldName:   "email",
-			FieldValue:  "",
-			FieldType:   "email",
-			Placeholder: "",
-			Required:    true,
-			ButtonLabel: T(loc, "users.create.submit"),
-		})
-		@UserFormCard(UserFormCardView{
 			Title:       T(loc, "users.get.heading"),
 			Action:      "/users/lookup",
 			Method:      "get",
@@ -99,12 +80,6 @@ templ UsersPage(view UsersPageView, loc Localizer) {
 	</div>
 	if view.Message != "" {
 		<p class="opacity-60">{view.Message}</p>
-	}
-	if view.Impersonation != nil {
-		<p class="opacity-60">{T(loc, "users.impersonation.active", ImpersonationLabel(view.Impersonation))}</p>
-		<form method="post" action="/users/logout">
-			<button class="btn btn-soft btn-sm" type="submit">{T(loc, "users.logout.submit")}</button>
-		</form>
 	}
 	<h2>{T(loc, "users.list.heading")}</h2>
 	@UsersLoading(loc)
@@ -177,15 +152,8 @@ templ UsersTable(rows []UserRow, message string, loc Localizer) {
 }
 
 // UserDetailCard renders a single user detail table.
-templ UserDetailCard(detail UserDetail, impersonation *ImpersonationView, loc Localizer) {
+templ UserDetailCard(detail UserDetail, loc Localizer) {
 	<h2>{T(loc, "users.detail.heading")}</h2>
-	<form method="post" action="/users/impersonate">
-		<input type="hidden" name="user_id" value={detail.ID}>
-		<button class="btn btn-soft" type="submit">{T(loc, "users.impersonate.submit")}</button>
-		if impersonation != nil && impersonation.UserID == detail.ID {
-			<span class="badge badge-success">{T(loc, "users.impersonate.active")}</span>
-		}
-	</form>
 	<table class="table table-zebra">
 		<tbody>
 			<tr><td><strong>{T(loc, "users.detail.id")}</strong></td><td><code>{detail.ID}</code></td></tr>

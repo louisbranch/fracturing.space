@@ -24,25 +24,18 @@ templ CampaignCreateFullPage(view CampaignCreatePageView, page PageContext) {
 
 // CampaignCreatePage renders the campaign creation form.
 templ CampaignCreatePage(view CampaignCreatePageView, loc Localizer) {
-	if view.Impersonation != nil {
-		<p class="opacity-60">{T(loc, "campaigns.create.impersonation", ImpersonationLabel(view.Impersonation))}</p>
-	}
 	if view.Message != "" {
 		<p class="opacity-60">{view.Message}</p>
 	}
 	<div class="card bg-base-200">
 		<div class="card-body">
 			<form method="post" action="/campaigns/create" class="space-y-4">
-				if view.Impersonation != nil {
-					<input type="hidden" name="user_id" value={view.Impersonation.UserID}>
-				} else {
-					<div class="form-control">
-						<label class="label">
-							<span class="label-text">{T(loc, "campaigns.create.user_id")}</span>
-						</label>
-						<input type="text" name="user_id" required value={view.UserID} class="input input-bordered w-full">
-					</div>
-				}
+				<div class="form-control">
+					<label class="label">
+						<span class="label-text">{T(loc, "campaigns.create.user_id")}</span>
+					</label>
+					<input type="text" name="user_id" required value={view.UserID} class="input input-bordered w-full">
+				</div>
 				<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
 					<div class="form-control">
 						<label class="label">

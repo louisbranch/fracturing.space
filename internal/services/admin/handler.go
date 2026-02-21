@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"embed"
-	"fmt"
 	"io"
 	"io/fs"
 	"log"
@@ -23,7 +22,6 @@ import (
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	platformicons "github.com/louisbranch/fracturing.space/internal/platform/icons"
-	"github.com/louisbranch/fracturing.space/internal/platform/id"
 	"github.com/louisbranch/fracturing.space/internal/platform/requestctx"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/i18n"
@@ -56,12 +54,6 @@ const (
 	catalogListPageSize = 25
 	// catalogDescriptionLimit caps the number of characters shown in catalog tables.
 	catalogDescriptionLimit = 80
-	// impersonationCookieName stores the active impersonation session ID.
-	impersonationCookieName = "fs-impersonation-session"
-	// impersonationSessionTTL controls how long impersonation sessions stay valid.
-	impersonationSessionTTL = 24 * time.Hour
-	// impersonationCleanupInterval controls how often expired sessions are purged.
-	impersonationCleanupInterval = 30 * time.Minute
 	// maxScenarioScriptSize caps scenario scripts to limit resource usage.
 	maxScenarioScriptSize = 100 * 1024
 	// scenarioTempDirEnv configures the temp directory for scenario scripts.
@@ -94,7 +86,6 @@ type GRPCClientProvider interface {
 // Handler routes admin dashboard requests.
 type Handler struct {
 	clientProvider GRPCClientProvider
-	impersonation  *impersonationStore
 	// gameClientInitMu serializes on-demand game client bootstrap attempts.
 	gameClientInitMu sync.Mutex
 	// gameClientEnsureInProgress tracks whether a background game bootstrap is running.
@@ -102,74 +93,6 @@ type Handler struct {
 	grpcAddr                 string
 	authConfig               *AuthConfig
 	introspector             TokenIntrospector
-}
-
-type impersonationSession struct {
-	userID    string
-	name      string
-	expiresAt time.Time
-}
-
-type impersonationStore struct {
-	mu          sync.RWMutex
-	sessions    map[string]impersonationSession
-	lastCleanup time.Time
-}
-
-func newImpersonationStore() *impersonationStore {
-	return &impersonationStore{sessions: make(map[string]impersonationSession)}
-}
-
-func (s *impersonationStore) Get(sessionID string) (impersonationSession, bool) {
-	if s == nil {
-		return impersonationSession{}, false
-	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	now := time.Now()
-	s.cleanupLocked(now)
-	session, ok := s.sessions[sessionID]
-	if !ok {
-		return impersonationSession{}, false
-	}
-	if now.After(session.expiresAt) {
-		delete(s.sessions, sessionID)
-		return impersonationSession{}, false
-	}
-	return session, true
-}
-
-func (s *impersonationStore) Set(sessionID string, session impersonationSession) {
-	if s == nil {
-		return
-	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	now := time.Now()
-	s.cleanupLocked(now)
-	session.expiresAt = now.Add(impersonationSessionTTL)
-	s.sessions[sessionID] = session
-}
-
-func (s *impersonationStore) Delete(sessionID string) {
-	if s == nil {
-		return
-	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	delete(s.sessions, sessionID)
-}
-
-func (s *impersonationStore) cleanupLocked(now time.Time) {
-	if now.Sub(s.lastCleanup) < impersonationCleanupInterval {
-		return
-	}
-	for key, session := range s.sessions {
-		if now.After(session.expiresAt) {
-			delete(s.sessions, key)
-		}
-	}
-	s.lastCleanup = now
 }
 
 // NewHandler builds the HTTP handler for the admin server (no auth).
@@ -183,7 +106,6 @@ func NewHandler(clientProvider GRPCClientProvider) http.Handler {
 func NewHandlerWithConfig(clientProvider GRPCClientProvider, grpcAddr string, authCfg *AuthConfig) http.Handler {
 	handler := &Handler{
 		clientProvider: clientProvider,
-		impersonation:  newImpersonationStore(),
 		grpcAddr:       strings.TrimSpace(grpcAddr),
 		authConfig:     authCfg,
 	}
@@ -214,11 +136,10 @@ func (h *Handler) pageContext(lang string, loc *message.Printer, r *http.Request
 		query = r.URL.RawQuery
 	}
 	return templates.PageContext{
-		Lang:          lang,
-		Loc:           loc,
-		CurrentPath:   path,
-		CurrentQuery:  query,
-		Impersonation: h.impersonationView(r),
+		Lang:         lang,
+		Loc:          loc,
+		CurrentPath:  path,
+		CurrentQuery: query,
 	}
 }
 
@@ -265,34 +186,12 @@ func (h *Handler) routes() http.Handler {
 	mux.Handle("/users", http.HandlerFunc(h.handleUsersPage))
 	mux.Handle("/users/table", http.HandlerFunc(h.handleUsersTable))
 	mux.Handle("/users/lookup", http.HandlerFunc(h.handleUserLookup))
-	mux.Handle("/users/create", http.HandlerFunc(h.handleCreateUser))
+	mux.Handle("/users/create", http.NotFoundHandler())
 	mux.Handle("/users/magic-link", http.HandlerFunc(h.handleMagicLink))
-	mux.Handle("/users/impersonate", http.HandlerFunc(h.handleImpersonateUser))
-	mux.Handle("/users/logout", http.HandlerFunc(h.handleLogout))
 	mux.Handle("/users/", http.HandlerFunc(h.handleUserRoutes))
 	mux.Handle("/scenarios", http.HandlerFunc(h.handleScenarios))
 	mux.Handle("/scenarios/", http.HandlerFunc(h.handleScenarioRoutes))
-	return h.withImpersonation(mux)
-}
-
-func (h *Handler) withImpersonation(next http.Handler) http.Handler {
-	if h == nil || next == nil {
-		return next
-	}
-	// withImpersonation injects the selected impersonation user ID so downstream
-	// handlers inherit authorization checks in the same shape as direct users.
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		userID := strings.TrimSpace(requestctx.UserIDFromContext(r.Context()))
-		impersonation := h.currentImpersonation(r)
-		if impersonation != nil && impersonation.userID != "" {
-			userID = strings.TrimSpace(impersonation.userID)
-		}
-		if userID != "" {
-			ctx := metadata.AppendToOutgoingContext(r.Context(), grpcmeta.UserIDHeader, userID)
-			r = r.WithContext(ctx)
-		}
-		next.ServeHTTP(w, r)
-	})
+	return mux
 }
 
 // withGameClientBootstrap ensures game clients are initialized lazily from the admin handler context.
@@ -704,43 +603,6 @@ func parseScenarioCampaignID(logs string) string {
 	return ""
 }
 
-func (h *Handler) impersonationView(r *http.Request) *templates.ImpersonationView {
-	impersonation := h.currentImpersonation(r)
-	if impersonation == nil {
-		return nil
-	}
-	return &templates.ImpersonationView{
-		UserID: impersonation.userID,
-		Name:   impersonation.name,
-	}
-}
-
-func (h *Handler) currentImpersonation(r *http.Request) *impersonationSession {
-	if h == nil || h.impersonation == nil {
-		return nil
-	}
-	sessionID := impersonationSessionID(r)
-	if sessionID == "" {
-		return nil
-	}
-	session, ok := h.impersonation.Get(sessionID)
-	if !ok {
-		return nil
-	}
-	return &session
-}
-
-func impersonationSessionID(r *http.Request) string {
-	if r == nil {
-		return ""
-	}
-	cookie, err := r.Cookie(impersonationCookieName)
-	if err != nil {
-		return ""
-	}
-	return strings.TrimSpace(cookie.Value)
-}
-
 func requireSameOrigin(w http.ResponseWriter, r *http.Request, loc *message.Printer) bool {
 	if r == nil {
 		http.Error(w, loc.Sprintf("error.csrf_invalid"), http.StatusForbidden)
@@ -795,15 +657,11 @@ func requestScheme(r *http.Request) string {
 	return "http"
 }
 
-func isHTTPS(r *http.Request) bool {
-	return requestScheme(r) == "https"
-}
-
 // handleUsersPage renders the users page.
 func (h *Handler) handleUsersPage(w http.ResponseWriter, r *http.Request) {
 	loc, lang := h.localizer(w, r)
 	pageCtx := h.pageContext(lang, loc, r)
-	view := templates.UsersPageView{Impersonation: pageCtx.Impersonation}
+	view := templates.UsersPageView{}
 
 	if message := strings.TrimSpace(r.URL.Query().Get("message")); message != "" {
 		view.Message = message
@@ -833,7 +691,7 @@ func (h *Handler) handleUserLookup(w http.ResponseWriter, r *http.Request) {
 
 	loc, lang := h.localizer(w, r)
 	pageCtx := h.pageContext(lang, loc, r)
-	view := templates.UsersPageView{Impersonation: pageCtx.Impersonation}
+	view := templates.UsersPageView{}
 
 	userID := strings.TrimSpace(r.URL.Query().Get("user_id"))
 	if userID == "" {
@@ -882,7 +740,7 @@ func (h *Handler) handleUserInvites(w http.ResponseWriter, r *http.Request, user
 func (h *Handler) handleUserDetailTab(w http.ResponseWriter, r *http.Request, userID, tab string) {
 	loc, lang := h.localizer(w, r)
 	pageCtx := h.pageContext(lang, loc, r)
-	view := templates.UserDetailPageView{Impersonation: pageCtx.Impersonation}
+	view := templates.UserDetailPageView{}
 
 	if message := strings.TrimSpace(r.URL.Query().Get("message")); message != "" {
 		view.Message = message
@@ -897,78 +755,9 @@ func (h *Handler) handleUserDetailTab(w http.ResponseWriter, r *http.Request, us
 		view.Message = message
 	}
 
-	h.populateUserInvitesIfImpersonating(ctx, view.Detail, view.Impersonation, loc)
+	h.populateUserInvites(ctx, view.Detail, loc)
 
 	h.renderUserDetail(w, r, view, pageCtx, loc, tab)
-}
-
-// handleCreateUser creates a user from a form submission.
-func (h *Handler) handleCreateUser(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		w.Header().Set("Allow", http.MethodPost)
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	loc, lang := h.localizer(w, r)
-	pageCtx := h.pageContext(lang, loc, r)
-	view := templates.UsersPageView{Impersonation: pageCtx.Impersonation}
-
-	if err := r.ParseForm(); err != nil {
-		view.Message = loc.Sprintf("error.user_create_invalid")
-		templ.Handler(templates.UsersFullPage(view, pageCtx)).ServeHTTP(w, r)
-		return
-	}
-
-	email := strings.TrimSpace(r.FormValue("email"))
-	if email == "" {
-		view.Message = loc.Sprintf("error.user_email_required")
-		templ.Handler(templates.UsersFullPage(view, pageCtx)).ServeHTTP(w, r)
-		return
-	}
-
-	client := h.authClient()
-	if client == nil {
-		view.Message = loc.Sprintf("error.user_service_unavailable")
-		templ.Handler(templates.UsersFullPage(view, pageCtx)).ServeHTTP(w, r)
-		return
-	}
-
-	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
-	defer cancel()
-
-	locale := localeFromTag(lang)
-	response, err := client.CreateUser(ctx, &authv1.CreateUserRequest{
-		Email: email,
-	})
-	if err != nil || response.GetUser() == nil {
-		log.Printf("create user: %v", err)
-		view.Message = loc.Sprintf("error.user_create_failed")
-		templ.Handler(templates.UsersFullPage(view, pageCtx)).ServeHTTP(w, r)
-		return
-	}
-	if accountClient := h.accountClient(); accountClient != nil {
-		if _, err := accountClient.UpdateProfile(ctx, &authv1.UpdateProfileRequest{
-			UserId: response.GetUser().GetId(),
-			Locale: locale,
-		}); err != nil {
-			log.Printf("create user profile: %v", err)
-		}
-	} else {
-		log.Printf("create user profile: account client unavailable")
-	}
-
-	created := response.GetUser()
-	redirectURL := "/users/" + created.GetId()
-	message := loc.Sprintf("users.create.success")
-	redirectURL = redirectURL + "?message=" + url.QueryEscape(message)
-	if isHTMXRequest(r) {
-		w.Header().Set("Location", redirectURL)
-		w.Header().Set("HX-Redirect", redirectURL)
-		w.WriteHeader(http.StatusSeeOther)
-		return
-	}
-	http.Redirect(w, r, redirectURL, http.StatusSeeOther)
 }
 
 // handleMagicLink generates a magic link for a user email.
@@ -981,7 +770,7 @@ func (h *Handler) handleMagicLink(w http.ResponseWriter, r *http.Request) {
 
 	loc, lang := h.localizer(w, r)
 	pageCtx := h.pageContext(lang, loc, r)
-	view := templates.UserDetailPageView{Impersonation: pageCtx.Impersonation}
+	view := templates.UserDetailPageView{}
 	if !requireSameOrigin(w, r, loc) {
 		return
 	}
@@ -1036,153 +825,6 @@ func (h *Handler) handleMagicLink(w http.ResponseWriter, r *http.Request) {
 	h.renderUserDetail(w, r, view, pageCtx, loc, "details")
 }
 
-// handleImpersonateUser creates an impersonation session for a user.
-func (h *Handler) handleImpersonateUser(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		w.Header().Set("Allow", http.MethodPost)
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	loc, lang := h.localizer(w, r)
-	pageCtx := h.pageContext(lang, loc, r)
-	view := templates.UserDetailPageView{Impersonation: pageCtx.Impersonation}
-	if !requireSameOrigin(w, r, loc) {
-		return
-	}
-
-	if err := r.ParseForm(); err != nil {
-		view.Message = loc.Sprintf("error.user_impersonate_invalid")
-		h.renderUserDetail(w, r, view, pageCtx, loc, "details")
-		return
-	}
-
-	userID := strings.TrimSpace(r.FormValue("user_id"))
-	if userID == "" {
-		view.Message = loc.Sprintf("error.user_id_required")
-		h.renderUserDetail(w, r, view, pageCtx, loc, "details")
-		return
-	}
-
-	client := h.authClient()
-	if client == nil {
-		view.Message = loc.Sprintf("error.user_service_unavailable")
-		h.renderUserDetail(w, r, view, pageCtx, loc, "details")
-		return
-	}
-
-	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
-	defer cancel()
-
-	response, err := client.GetUser(ctx, &authv1.GetUserRequest{UserId: userID})
-	if err != nil || response.GetUser() == nil {
-		log.Printf("get user for impersonation: %v", err)
-		view.Message = loc.Sprintf("error.user_not_found")
-		h.renderUserDetail(w, r, view, pageCtx, loc, "details")
-		return
-	}
-
-	user := response.GetUser()
-	if sessionID := impersonationSessionID(r); sessionID != "" {
-		if h.impersonation != nil {
-			h.impersonation.Delete(sessionID)
-		}
-	}
-	sessionID, err := id.NewID()
-	if err != nil {
-		log.Printf("impersonation session id: %v", err)
-		view.Message = loc.Sprintf("error.user_impersonate_failed")
-		h.renderUserDetail(w, r, view, pageCtx, loc, "details")
-		return
-	}
-
-	if h.impersonation != nil {
-		h.impersonation.Set(sessionID, impersonationSession{
-			userID: user.GetId(),
-			name:   user.GetEmail(),
-		})
-	}
-
-	http.SetCookie(w, &http.Cookie{
-		Name:     impersonationCookieName,
-		Value:    sessionID,
-		Path:     "/",
-		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
-		Secure:   isHTTPS(r),
-	})
-
-	view.Detail = buildUserDetail(user)
-	view.Impersonation = &templates.ImpersonationView{
-		UserID: user.GetId(),
-		Name:   user.GetEmail(),
-	}
-	invitesCtx, invitesCancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
-	defer invitesCancel()
-	h.populateUserInvitesIfImpersonating(invitesCtx, view.Detail, view.Impersonation, loc)
-	pageCtx.Impersonation = view.Impersonation
-	label := strings.TrimSpace(user.GetEmail())
-	if label == "" {
-		label = user.GetId()
-	}
-	view.Message = loc.Sprintf("users.impersonate.success", label)
-
-	h.renderUserDetail(w, r, view, pageCtx, loc, "details")
-}
-
-// handleLogout clears the current impersonation session.
-func (h *Handler) handleLogout(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		w.Header().Set("Allow", http.MethodPost)
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	loc, lang := h.localizer(w, r)
-	pageCtx := h.pageContext(lang, loc, r)
-	view := templates.UserDetailPageView{}
-	if !requireSameOrigin(w, r, loc) {
-		return
-	}
-
-	if sessionID := impersonationSessionID(r); sessionID != "" {
-		if h.impersonation != nil {
-			h.impersonation.Delete(sessionID)
-		}
-	}
-
-	http.SetCookie(w, &http.Cookie{
-		Name:     impersonationCookieName,
-		Value:    "",
-		Path:     "/",
-		MaxAge:   -1,
-		Expires:  time.Unix(0, 0),
-		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
-		Secure:   isHTTPS(r),
-	})
-
-	view.Message = loc.Sprintf("users.logout.success")
-	pageCtx.Impersonation = nil
-
-	if err := r.ParseForm(); err == nil {
-		if userID := strings.TrimSpace(r.FormValue("user_id")); userID != "" {
-			ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
-			defer cancel()
-			detail, message := h.loadUserDetail(ctx, userID, loc)
-			view.Detail = detail
-			if message != "" && view.Message == "" {
-				view.Message = message
-			}
-			h.populateUserInvitesIfImpersonating(ctx, view.Detail, view.Impersonation, loc)
-			h.renderUserDetail(w, r, view, pageCtx, loc, "details")
-			return
-		}
-	}
-
-	templ.Handler(templates.UsersFullPage(templates.UsersPageView{Message: view.Message}, pageCtx)).ServeHTTP(w, r)
-}
-
 // handleUsersTable renders the users table via HTMX.
 func (h *Handler) handleUsersTable(w http.ResponseWriter, r *http.Request) {
 	loc, _ := h.localizer(w, r)
@@ -1223,13 +865,7 @@ func (h *Handler) handleCampaignsTable(w http.ResponseWriter, r *http.Request) {
 
 	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
 	defer cancel()
-	userID := ""
-	if impersonation := h.currentImpersonation(r); impersonation != nil {
-		userID = strings.TrimSpace(impersonation.userID)
-	}
-	if userID == "" {
-		userID = strings.TrimSpace(requestctx.UserIDFromContext(r.Context()))
-	}
+	userID := strings.TrimSpace(requestctx.UserIDFromContext(r.Context()))
 	if userID != "" {
 		md, _ := metadata.FromOutgoingContext(ctx)
 		md = md.Copy()
@@ -3010,22 +2646,6 @@ func (h *Handler) populateUserInvites(ctx context.Context, detail *templates.Use
 	detail.PendingInvitesMessage = message
 }
 
-func (h *Handler) populateUserInvitesIfImpersonating(ctx context.Context, detail *templates.UserDetail, impersonation *templates.ImpersonationView, loc *message.Printer) {
-	if detail == nil {
-		return
-	}
-	if impersonation == nil || strings.TrimSpace(impersonation.UserID) == "" || impersonation.UserID != detail.ID {
-		detail.PendingInvites = nil
-		detail.PendingInvitesMessage = loc.Sprintf("users.invites.require_impersonation")
-		return
-	}
-	md, _ := metadata.FromOutgoingContext(ctx)
-	md = md.Copy()
-	md.Set(grpcmeta.UserIDHeader, impersonation.UserID)
-	ctx = metadata.NewOutgoingContext(ctx, md)
-	h.populateUserInvites(ctx, detail, loc)
-}
-
 func (h *Handler) listPendingInvitesForUser(ctx context.Context, userID string, loc *message.Printer) ([]templates.InviteRow, string) {
 	userID = strings.TrimSpace(userID)
 	if userID == "" {
@@ -3837,19 +3457,6 @@ func (h *Handler) handleInvitesTable(w http.ResponseWriter, r *http.Request, cam
 	ctx, cancel := context.WithTimeout(r.Context(), grpcRequestTimeout)
 	defer cancel()
 
-	if impersonation := h.currentImpersonation(r); impersonation != nil {
-		participantID, err := h.resolveParticipantIDForUser(ctx, campaignID, impersonation.userID)
-		if err != nil {
-			log.Printf("resolve participant for invites: %v", err)
-		}
-		if participantID != "" {
-			md, _ := metadata.FromOutgoingContext(ctx)
-			md = md.Copy()
-			md.Set(grpcmeta.ParticipantIDHeader, participantID)
-			ctx = metadata.NewOutgoingContext(ctx, md)
-		}
-	}
-
 	response, err := inviteClient.ListInvites(ctx, &statev1.ListInvitesRequest{
 		CampaignId: campaignID,
 		PageSize:   inviteListPageSize,
@@ -3909,41 +3516,6 @@ func (h *Handler) handleInvitesTable(w http.ResponseWriter, r *http.Request, cam
 
 	rows := buildInviteRows(invites, participantNames, recipientNames, loc)
 	h.renderInvitesTable(w, r, rows, "", loc)
-}
-
-func (h *Handler) resolveParticipantIDForUser(ctx context.Context, campaignID, userID string) (string, error) {
-	userID = strings.TrimSpace(userID)
-	if userID == "" {
-		return "", nil
-	}
-	participantClient := h.participantClient()
-	if participantClient == nil {
-		return "", fmt.Errorf("participant client unavailable")
-	}
-	pageToken := ""
-	for {
-		resp, err := participantClient.ListParticipants(ctx, &statev1.ListParticipantsRequest{
-			CampaignId: campaignID,
-			PageSize:   100,
-			PageToken:  pageToken,
-		})
-		if err != nil {
-			return "", err
-		}
-		for _, participant := range resp.GetParticipants() {
-			if participant == nil {
-				continue
-			}
-			if strings.TrimSpace(participant.GetUserId()) == userID {
-				return participant.GetId(), nil
-			}
-		}
-		pageToken = strings.TrimSpace(resp.GetNextPageToken())
-		if pageToken == "" {
-			break
-		}
-	}
-	return "", nil
 }
 
 // renderInvitesTable renders the invites table component.
