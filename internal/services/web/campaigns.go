@@ -56,11 +56,17 @@ func (h *handler) handleAppCampaigns(w http.ResponseWriter, r *http.Request) {
 	}
 
 	requestCtx = grpcauthctx.WithUserID(requestCtx, userID)
+	if campaigns, ok := h.cachedUserCampaigns(requestCtx, userID); ok {
+		renderAppCampaignsListPage(w, r, h.pageContext(w, r), campaigns)
+		return
+	}
+
 	campaigns, err := listCampaigns(requestCtx)
 	if err != nil {
 		h.renderErrorPage(w, r, http.StatusBadGateway, "Campaigns unavailable", "failed to list campaigns")
 		return
 	}
+	h.setUserCampaignsCache(requestCtx, userID, campaigns)
 	renderAppCampaignsListPage(w, r, h.pageContext(w, r), campaigns)
 }
 
@@ -186,7 +192,7 @@ func (h *handler) ensureCampaignClients(ctx context.Context) error {
 		return nil
 	}
 
-	_, participantClient, campaignClient, sessionClient, characterClient, inviteClient, err := dialGameGRPC(ctx, h.config)
+	_, participantClient, campaignClient, eventClient, sessionClient, characterClient, inviteClient, err := dialGameGRPC(ctx, h.config)
 	if err != nil {
 		return err
 	}
@@ -196,6 +202,7 @@ func (h *handler) ensureCampaignClients(ctx context.Context) error {
 
 	h.participantClient = participantClient
 	h.campaignClient = campaignClient
+	h.eventClient = eventClient
 	h.sessionClient = sessionClient
 	h.characterClient = characterClient
 	h.inviteClient = inviteClient

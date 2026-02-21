@@ -968,12 +968,20 @@ func (s *fakeEventStore) ListEventsPage(_ context.Context, req storage.ListEvent
 		}
 	}
 
+	base := make([]event.Event, 0, len(sorted))
+	for _, e := range sorted {
+		if req.AfterSeq > 0 && e.Seq <= req.AfterSeq {
+			continue
+		}
+		base = append(base, e)
+	}
+
 	// Apply cursor filter
 	// The cursor direction directly determines the comparison:
 	// - Forward (fwd): seq > cursor
 	// - Backward (bwd): seq < cursor
 	var filtered []event.Event
-	for _, e := range sorted {
+	for _, e := range base {
 		if req.CursorSeq > 0 {
 			if req.CursorDir == "bwd" {
 				if e.Seq >= req.CursorSeq {
@@ -1024,7 +1032,7 @@ func (s *fakeEventStore) ListEventsPage(_ context.Context, req storage.ListEvent
 		Events:      result,
 		HasNextPage: hasNextPage,
 		HasPrevPage: hasPrevPage,
-		TotalCount:  len(events),
+		TotalCount:  len(base),
 	}, nil
 }
 

@@ -26,6 +26,10 @@ func (h *handler) handleAppCampaignParticipants(w http.ResponseWriter, r *http.R
 		return
 	}
 	canManageParticipants := canManageCampaignParticipants(participant.GetCampaignAccess())
+	if participants, ok := h.cachedCampaignParticipants(r.Context(), campaignID); ok {
+		renderAppCampaignParticipantsPageWithContext(w, r, h.pageContextForCampaign(w, r, campaignID), campaignID, participants, canManageParticipants)
+		return
+	}
 
 	resp, err := h.participantClient.ListParticipants(r.Context(), &statev1.ListParticipantsRequest{
 		CampaignId: campaignID,
@@ -36,7 +40,9 @@ func (h *handler) handleAppCampaignParticipants(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	renderAppCampaignParticipantsPageWithContext(w, r, h.pageContextForCampaign(w, r, campaignID), campaignID, resp.GetParticipants(), canManageParticipants)
+	participants := resp.GetParticipants()
+	h.setCampaignParticipantsCache(r.Context(), campaignID, participants)
+	renderAppCampaignParticipantsPageWithContext(w, r, h.pageContextForCampaign(w, r, campaignID), campaignID, participants, canManageParticipants)
 }
 
 func (h *handler) handleAppCampaignParticipantUpdate(w http.ResponseWriter, r *http.Request, campaignID string) {

@@ -9,6 +9,8 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -19,6 +21,8 @@ import (
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/i18n"
+	webstorage "github.com/louisbranch/fracturing.space/internal/services/web/storage"
+	websqlite "github.com/louisbranch/fracturing.space/internal/services/web/storage/sqlite"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 	"golang.org/x/text/message"
 	"google.golang.org/grpc"
@@ -34,6 +38,7 @@ type Config struct {
 	AuthBaseURL     string
 	AuthAddr        string
 	GameAddr        string
+	CacheDBPath     string
 	AppName         string
 	GRPCDialTimeout time.Duration
 	// OAuthClientID is the first-party OAuth client ID for web login.
@@ -50,10 +55,13 @@ type Config struct {
 
 // Server hosts the web login HTTP server.
 type Server struct {
-	httpAddr   string
-	httpServer *http.Server
-	authConn   *grpc.ClientConn
-	gameConn   *grpc.ClientConn
+	httpAddr              string
+	httpServer            *http.Server
+	authConn              *grpc.ClientConn
+	gameConn              *grpc.ClientConn
+	cacheStore            *websqlite.Store
+	cacheInvalidationDone chan struct{}
+	cacheInvalidationStop context.CancelFunc
 }
 
 type handler struct {
@@ -61,10 +69,12 @@ type handler struct {
 	authClient          authv1.AuthServiceClient
 	sessions            *sessionStore
 	pendingFlows        *pendingFlowStore
+	cacheStore          webstorage.Store
 	clientInitMu        sync.Mutex
 	campaignNameCacheMu sync.RWMutex
 	campaignNameCache   map[string]campaignNameCache
 	campaignClient      statev1.CampaignServiceClient
+	eventClient         statev1.EventServiceClient
 	sessionClient       statev1.SessionServiceClient
 	participantClient   statev1.ParticipantServiceClient
 	characterClient     statev1.CharacterServiceClient
@@ -74,7 +84,9 @@ type handler struct {
 
 type handlerDependencies struct {
 	campaignAccess    campaignAccessChecker
+	cacheStore        webstorage.Store
 	campaignClient    statev1.CampaignServiceClient
+	eventClient       statev1.EventServiceClient
 	sessionClient     statev1.SessionServiceClient
 	participantClient statev1.ParticipantServiceClient
 	characterClient   statev1.CharacterServiceClient
@@ -175,8 +187,10 @@ func NewHandlerWithCampaignAccess(config Config, authClient authv1.AuthServiceCl
 		authClient:        authClient,
 		sessions:          newSessionStore(),
 		pendingFlows:      newPendingFlowStore(),
+		cacheStore:        deps.cacheStore,
 		campaignNameCache: make(map[string]campaignNameCache),
 		campaignClient:    deps.campaignClient,
+		eventClient:       deps.eventClient,
 		sessionClient:     deps.sessionClient,
 		participantClient: deps.participantClient,
 		characterClient:   deps.characterClient,
@@ -295,11 +309,19 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 		config.GRPCDialTimeout = timeouts.GRPCDial
 	}
 
+	cacheStore, err := openWebCacheStore(config.CacheDBPath)
+	if err != nil {
+		return nil, err
+	}
+
 	var authConn *grpc.ClientConn
 	var authClient authv1.AuthServiceClient
 	if strings.TrimSpace(config.AuthAddr) != "" {
 		conn, client, err := dialAuthGRPC(ctx, config)
 		if err != nil {
+			if cacheStore != nil {
+				_ = cacheStore.Close()
+			}
 			return nil, fmt.Errorf("dial auth grpc: %w", err)
 		}
 		authConn = conn
@@ -309,17 +331,19 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 	var gameConn *grpc.ClientConn
 	var participantClient statev1.ParticipantServiceClient
 	var campaignClient statev1.CampaignServiceClient
+	var eventClient statev1.EventServiceClient
 	var sessionClient statev1.SessionServiceClient
 	var characterClient statev1.CharacterServiceClient
 	var inviteClient statev1.InviteServiceClient
 	if strings.TrimSpace(config.GameAddr) != "" {
-		conn, participantServiceClient, campaignServiceClient, sessionServiceClient, characterServiceClient, inviteServiceClient, err := dialGameGRPC(ctx, config)
+		conn, participantServiceClient, campaignServiceClient, eventServiceClient, sessionServiceClient, characterServiceClient, inviteServiceClient, err := dialGameGRPC(ctx, config)
 		if err != nil {
 			log.Printf("game gRPC dial failed, campaign access checks disabled: %v", err)
 		} else {
 			gameConn = conn
 			participantClient = participantServiceClient
 			campaignClient = campaignServiceClient
+			eventClient = eventServiceClient
 			sessionClient = sessionServiceClient
 			characterClient = characterServiceClient
 			inviteClient = inviteServiceClient
@@ -328,13 +352,18 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 	campaignAccess := newCampaignAccessChecker(config, participantClient)
 	handler, err := NewHandlerWithCampaignAccess(config, authClient, handlerDependencies{
 		campaignAccess:    campaignAccess,
+		cacheStore:        cacheStore,
 		campaignClient:    campaignClient,
+		eventClient:       eventClient,
 		sessionClient:     sessionClient,
 		participantClient: participantClient,
 		characterClient:   characterClient,
 		inviteClient:      inviteClient,
 	})
 	if err != nil {
+		if cacheStore != nil {
+			_ = cacheStore.Close()
+		}
 		return nil, fmt.Errorf("build handler: %w", err)
 	}
 	httpServer := &http.Server{
@@ -343,11 +372,16 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 		ReadHeaderTimeout: timeouts.ReadHeader,
 	}
 
+	invalidationStop, invalidationDone := startCacheInvalidationWorker(cacheStore, eventClient)
+
 	return &Server{
-		httpAddr:   httpAddr,
-		httpServer: httpServer,
-		authConn:   authConn,
-		gameConn:   gameConn,
+		httpAddr:              httpAddr,
+		httpServer:            httpServer,
+		authConn:              authConn,
+		gameConn:              gameConn,
+		cacheStore:            cacheStore,
+		cacheInvalidationDone: invalidationDone,
+		cacheInvalidationStop: invalidationStop,
 	}, nil
 }
 
@@ -391,6 +425,12 @@ func (s *Server) Close() {
 	if s == nil {
 		return
 	}
+	if s.cacheInvalidationStop != nil {
+		s.cacheInvalidationStop()
+	}
+	if s.cacheInvalidationDone != nil {
+		<-s.cacheInvalidationDone
+	}
 	if s.authConn != nil {
 		if err := s.authConn.Close(); err != nil {
 			log.Printf("close auth gRPC connection: %v", err)
@@ -401,6 +441,28 @@ func (s *Server) Close() {
 			log.Printf("close game gRPC connection: %v", err)
 		}
 	}
+	if s.cacheStore != nil {
+		if err := s.cacheStore.Close(); err != nil {
+			log.Printf("close web cache store: %v", err)
+		}
+	}
+}
+
+func openWebCacheStore(path string) (*websqlite.Store, error) {
+	path = strings.TrimSpace(path)
+	if path == "" {
+		return nil, nil
+	}
+	if dir := filepath.Dir(path); dir != "." {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return nil, fmt.Errorf("create web cache dir: %w", err)
+		}
+	}
+	store, err := websqlite.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("open web cache sqlite store: %w", err)
+	}
+	return store, nil
 }
 
 // buildAuthConsentURL resolves the post-magic-link consent callback.
@@ -456,13 +518,13 @@ func dialAuthGRPC(ctx context.Context, config Config) (*grpc.ClientConn, authv1.
 // dialGameGRPC returns clients for campaign/character/session/invite operations.
 // This dependency is optional by design so campaign routes can degrade gracefully
 // during partial service outages.
-func dialGameGRPC(ctx context.Context, config Config) (*grpc.ClientConn, statev1.ParticipantServiceClient, statev1.CampaignServiceClient, statev1.SessionServiceClient, statev1.CharacterServiceClient, statev1.InviteServiceClient, error) {
+func dialGameGRPC(ctx context.Context, config Config) (*grpc.ClientConn, statev1.ParticipantServiceClient, statev1.CampaignServiceClient, statev1.EventServiceClient, statev1.SessionServiceClient, statev1.CharacterServiceClient, statev1.InviteServiceClient, error) {
 	gameAddr := strings.TrimSpace(config.GameAddr)
 	if gameAddr == "" {
-		return nil, nil, nil, nil, nil, nil, nil
+		return nil, nil, nil, nil, nil, nil, nil, nil
 	}
 	if ctx == nil {
-		return nil, nil, nil, nil, nil, nil, errors.New("context is required")
+		return nil, nil, nil, nil, nil, nil, nil, errors.New("context is required")
 	}
 	if config.GRPCDialTimeout <= 0 {
 		config.GRPCDialTimeout = timeouts.GRPCDial
@@ -482,18 +544,19 @@ func dialGameGRPC(ctx context.Context, config Config) (*grpc.ClientConn, statev1
 		var dialErr *platformgrpc.DialError
 		if errors.As(err, &dialErr) {
 			if dialErr.Stage == platformgrpc.DialStageHealth {
-				return nil, nil, nil, nil, nil, nil, fmt.Errorf("game gRPC health check failed for %s: %w", gameAddr, dialErr.Err)
+				return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("game gRPC health check failed for %s: %w", gameAddr, dialErr.Err)
 			}
-			return nil, nil, nil, nil, nil, nil, fmt.Errorf("dial game gRPC %s: %w", gameAddr, dialErr.Err)
+			return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("dial game gRPC %s: %w", gameAddr, dialErr.Err)
 		}
-		return nil, nil, nil, nil, nil, nil, fmt.Errorf("dial game gRPC %s: %w", gameAddr, err)
+		return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("dial game gRPC %s: %w", gameAddr, err)
 	}
 	participantClient := statev1.NewParticipantServiceClient(conn)
 	campaignClient := statev1.NewCampaignServiceClient(conn)
+	eventClient := statev1.NewEventServiceClient(conn)
 	sessionClient := statev1.NewSessionServiceClient(conn)
 	characterClient := statev1.NewCharacterServiceClient(conn)
 	inviteClient := statev1.NewInviteServiceClient(conn)
-	return conn, participantClient, campaignClient, sessionClient, characterClient, inviteClient, nil
+	return conn, participantClient, campaignClient, eventClient, sessionClient, characterClient, inviteClient, nil
 }
 
 // handlePasskeyLoginStart begins a passkey authentication round trip and returns

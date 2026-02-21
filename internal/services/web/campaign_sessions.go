@@ -26,6 +26,10 @@ func (h *handler) handleAppCampaignSessions(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	canManageSessions := canManageCampaignSessions(participant.GetCampaignAccess())
+	if sessions, ok := h.cachedCampaignSessions(r.Context(), campaignID); ok {
+		renderAppCampaignSessionsPage(w, r, h.pageContextForCampaign(w, r, campaignID), campaignID, sessions, canManageSessions)
+		return
+	}
 
 	resp, err := h.sessionClient.ListSessions(r.Context(), &statev1.ListSessionsRequest{
 		CampaignId: campaignID,
@@ -36,7 +40,9 @@ func (h *handler) handleAppCampaignSessions(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	renderAppCampaignSessionsPage(w, r, h.pageContextForCampaign(w, r, campaignID), campaignID, resp.GetSessions(), canManageSessions)
+	sessions := resp.GetSessions()
+	h.setCampaignSessionsCache(r.Context(), campaignID, sessions)
+	renderAppCampaignSessionsPage(w, r, h.pageContextForCampaign(w, r, campaignID), campaignID, sessions, canManageSessions)
 }
 
 func (h *handler) handleAppCampaignSessionDetail(w http.ResponseWriter, r *http.Request, campaignID string, sessionID string) {

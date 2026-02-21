@@ -343,6 +343,76 @@ func TestListEventsPage(t *testing.T) {
 	}
 }
 
+func TestListEventsPageAfterSeq(t *testing.T) {
+	store := openTestEventsStore(t)
+	campaignID := "camp-after-seq"
+
+	for i := 0; i < 5; i++ {
+		evt := testEvent(campaignID, event.Type("campaign.created"), "")
+		evt.Timestamp = time.Date(2026, 2, 3, 12, i, 0, 0, time.UTC)
+		if _, err := store.AppendEvent(context.Background(), evt); err != nil {
+			t.Fatalf("append event %d: %v", i+1, err)
+		}
+	}
+
+	result, err := store.ListEventsPage(context.Background(), storage.ListEventsPageRequest{
+		CampaignID: campaignID,
+		AfterSeq:   3,
+		PageSize:   10,
+	})
+	if err != nil {
+		t.Fatalf("list events page: %v", err)
+	}
+	if len(result.Events) != 2 {
+		t.Fatalf("events = %d, want %d", len(result.Events), 2)
+	}
+	if result.Events[0].Seq != 4 || result.Events[1].Seq != 5 {
+		t.Fatalf("event seqs = [%d,%d], want [%d,%d]", result.Events[0].Seq, result.Events[1].Seq, 4, 5)
+	}
+	if result.TotalCount != 2 {
+		t.Fatalf("total count = %d, want %d", result.TotalCount, 2)
+	}
+	if result.HasNextPage {
+		t.Fatalf("has next page = true, want false")
+	}
+}
+
+func TestBuildListEventsPageSQLPlanBuildsExpectedClauses(t *testing.T) {
+	plan := buildListEventsPageSQLPlan(storage.ListEventsPageRequest{
+		CampaignID:    "camp-plan",
+		AfterSeq:      5,
+		PageSize:      25,
+		CursorSeq:     10,
+		CursorDir:     "bwd",
+		CursorReverse: true,
+		Descending:    true,
+		FilterClause:  "session_id = ?",
+		FilterParams:  []any{"sess-1"},
+	})
+
+	if plan.whereClause != "campaign_id = ? AND seq > ? AND seq < ? AND session_id = ?" {
+		t.Fatalf("where clause = %q", plan.whereClause)
+	}
+	if plan.orderClause != "ORDER BY seq ASC" {
+		t.Fatalf("order clause = %q, want %q", plan.orderClause, "ORDER BY seq ASC")
+	}
+	if plan.limitClause != "LIMIT 26" {
+		t.Fatalf("limit clause = %q, want %q", plan.limitClause, "LIMIT 26")
+	}
+	if len(plan.params) != 4 {
+		t.Fatalf("params = %d, want %d", len(plan.params), 4)
+	}
+	if plan.params[0] != "camp-plan" || plan.params[1] != uint64(5) || plan.params[2] != uint64(10) || plan.params[3] != "sess-1" {
+		t.Fatalf("params = %v", plan.params)
+	}
+	if plan.countWhereClause != "campaign_id = ? AND seq > ? AND session_id = ?" {
+		t.Fatalf("count where clause = %q", plan.countWhereClause)
+	}
+	if len(plan.countParams) != 3 {
+		t.Fatalf("count params = %d, want %d", len(plan.countParams), 3)
+	}
+}
+
 func TestVerifyEventIntegrity(t *testing.T) {
 	store := openTestEventsStore(t)
 	campaignID := "camp-verify"

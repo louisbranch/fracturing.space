@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -672,6 +674,28 @@ func TestNewServerRequiresAuthBaseURL(t *testing.T) {
 	}
 }
 
+func TestNewServerOpensCacheStoreWhenConfigured(t *testing.T) {
+	cachePath := filepath.Join(t.TempDir(), "web-cache.db")
+	server, err := NewServer(Config{
+		HTTPAddr:    "127.0.0.1:0",
+		AuthBaseURL: "http://auth.local",
+		CacheDBPath: cachePath,
+		AuthAddr:    "",
+		GameAddr:    "",
+	})
+	if err != nil {
+		t.Fatalf("new server: %v", err)
+	}
+	t.Cleanup(server.Close)
+
+	if server.cacheStore == nil {
+		t.Fatalf("expected cache store to be configured")
+	}
+	if _, err := os.Stat(cachePath); err != nil {
+		t.Fatalf("stat cache db path: %v", err)
+	}
+}
+
 func TestNewHandlerWithCampaignAccessStaticAssetsFailure(t *testing.T) {
 	origSubStaticFS := subStaticFS
 	subStaticFS = func() (fs.FS, error) {
@@ -793,6 +817,45 @@ func TestDialAuthGRPCHealthError(t *testing.T) {
 	}
 }
 
+func TestDialGameGRPCNilAddr(t *testing.T) {
+	conn, participantClient, campaignClient, eventClient, sessionClient, characterClient, inviteClient, err := dialGameGRPC(context.Background(), Config{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if conn != nil || participantClient != nil || campaignClient != nil || eventClient != nil || sessionClient != nil || characterClient != nil || inviteClient != nil {
+		t.Fatalf("expected nil connection and clients")
+	}
+}
+
+func TestDialGameGRPCNilContextReturnsError(t *testing.T) {
+	_, _, _, _, _, _, _, err := dialGameGRPC(nil, Config{
+		GameAddr: "127.0.0.1:1",
+	})
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	if !strings.Contains(err.Error(), "context is required") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestDialGameGRPCSuccessIncludesEventClient(t *testing.T) {
+	listener, server := startGRPCServer(t)
+	defer server.Stop()
+
+	conn, participantClient, campaignClient, eventClient, sessionClient, characterClient, inviteClient, err := dialGameGRPC(context.Background(), Config{
+		GameAddr:        listener.Addr().String(),
+		GRPCDialTimeout: 2 * time.Second,
+	})
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	if conn == nil || participantClient == nil || campaignClient == nil || eventClient == nil || sessionClient == nil || characterClient == nil || inviteClient == nil {
+		t.Fatalf("expected all game service clients")
+	}
+	_ = conn.Close()
+}
+
 func TestBuildAuthConsentURL(t *testing.T) {
 	cases := []struct {
 		name      string
@@ -857,6 +920,24 @@ func TestNewServerSuccessAndClose(t *testing.T) {
 		t.Fatalf("new server: %v", err)
 	}
 	webServer.Close()
+}
+
+func TestServerCloseStopsCacheInvalidationWorker(t *testing.T) {
+	done := make(chan struct{})
+	stopped := false
+	server := &Server{
+		cacheInvalidationDone: done,
+		cacheInvalidationStop: func() {
+			stopped = true
+			close(done)
+		},
+	}
+
+	server.Close()
+
+	if !stopped {
+		t.Fatalf("expected cache invalidation stop to be called")
+	}
 }
 
 func TestListenAndServeShutsDown(t *testing.T) {

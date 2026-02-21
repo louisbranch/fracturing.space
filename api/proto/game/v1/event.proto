@@ -39,6 +39,9 @@ message ListEventsRequest {
   //   ts >= timestamp("2024-01-15T00:00:00Z")
   //   session_id = "sess_123" AND type = "action.outcome_applied"
   string filter = 5;
+
+  // Returns only events with seq strictly greater than this value.
+  uint64 after_seq = 6;
 }
 
 // ListEventsResponse contains the paginated event results.

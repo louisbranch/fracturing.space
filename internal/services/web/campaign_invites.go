@@ -34,6 +34,11 @@ func (h *handler) handleAppCampaignInvites(w http.ResponseWriter, r *http.Reques
 	}
 
 	ctx := grpcauthctx.WithParticipantID(r.Context(), inviteActor.participantID)
+	if invites, ok := h.cachedCampaignInvites(ctx, campaignID); ok {
+		renderAppCampaignInvitesPageWithContext(w, r, h.pageContextForCampaign(w, r, campaignID), campaignID, invites, inviteActor.canManageInvites)
+		return
+	}
+
 	resp, err := h.inviteClient.ListInvites(ctx, &statev1.ListInvitesRequest{
 		CampaignId: campaignID,
 		PageSize:   10,
@@ -43,7 +48,9 @@ func (h *handler) handleAppCampaignInvites(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	renderAppCampaignInvitesPageWithContext(w, r, h.pageContextForCampaign(w, r, campaignID), campaignID, resp.GetInvites(), inviteActor.canManageInvites)
+	invites := resp.GetInvites()
+	h.setCampaignInvitesCache(ctx, campaignID, invites)
+	renderAppCampaignInvitesPageWithContext(w, r, h.pageContextForCampaign(w, r, campaignID), campaignID, invites, inviteActor.canManageInvites)
 }
 
 func (h *handler) handleAppCampaignInviteCreate(w http.ResponseWriter, r *http.Request, campaignID string) {

@@ -26,11 +26,20 @@ func TestParseConfigDefaults(t *testing.T) {
 	if cfg.GameAddr != "localhost:8080" {
 		t.Fatalf("expected default game addr, got %q", cfg.GameAddr)
 	}
+	if cfg.CacheDBPath != "data/web-cache.db" {
+		t.Fatalf("expected default cache db path, got %q", cfg.CacheDBPath)
+	}
 }
 
 func TestParseConfigOverrides(t *testing.T) {
 	fs := flag.NewFlagSet("web", flag.ContinueOnError)
-	cfg, err := ParseConfig(fs, []string{"-http-addr", "127.0.0.1:9999", "-auth-base-url", "http://auth.test", "-auth-addr", "auth:9000", "-game-addr", "game:9001"})
+	cfg, err := ParseConfig(fs, []string{
+		"-http-addr", "127.0.0.1:9999",
+		"-auth-base-url", "http://auth.test",
+		"-auth-addr", "auth:9000",
+		"-game-addr", "game:9001",
+		"-cache-db-path", "/tmp/web-cache.db",
+	})
 	if err != nil {
 		t.Fatalf("parse config: %v", err)
 	}
@@ -45,5 +54,8 @@ func TestParseConfigOverrides(t *testing.T) {
 	}
 	if cfg.GameAddr != "game:9001" {
 		t.Fatalf("expected overridden game addr, got %q", cfg.GameAddr)
+	}
+	if cfg.CacheDBPath != "/tmp/web-cache.db" {
+		t.Fatalf("expected overridden cache db path, got %q", cfg.CacheDBPath)
 	}
 }

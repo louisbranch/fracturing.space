@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/branding"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	webstorage "github.com/louisbranch/fracturing.space/internal/services/web/storage"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -32,6 +34,76 @@ type fakeWebCampaignClient struct {
 	createReq           *statev1.CreateCampaignRequest
 	createMetadata      metadata.MD
 	createResp          *statev1.CreateCampaignResponse
+}
+
+type fakeWebCacheStore struct {
+	mu       sync.Mutex
+	entries  map[string]webstorage.CacheEntry
+	cursors  map[string]webstorage.CampaignEventCursor
+	getCalls int
+	putCalls int
+}
+
+func newFakeWebCacheStore() *fakeWebCacheStore {
+	return &fakeWebCacheStore{
+		entries: make(map[string]webstorage.CacheEntry),
+		cursors: make(map[string]webstorage.CampaignEventCursor),
+	}
+}
+
+func (f *fakeWebCacheStore) Close() error {
+	return nil
+}
+
+func (f *fakeWebCacheStore) GetCacheEntry(_ context.Context, cacheKey string) (webstorage.CacheEntry, bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.getCalls++
+	entry, ok := f.entries[cacheKey]
+	return entry, ok, nil
+}
+
+func (f *fakeWebCacheStore) PutCacheEntry(_ context.Context, entry webstorage.CacheEntry) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.putCalls++
+	f.entries[entry.CacheKey] = entry
+	return nil
+}
+
+func (f *fakeWebCacheStore) DeleteCacheEntry(_ context.Context, cacheKey string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	delete(f.entries, cacheKey)
+	return nil
+}
+
+func (f *fakeWebCacheStore) ListTrackedCampaignIDs(_ context.Context) ([]string, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	ids := make([]string, 0, len(f.cursors))
+	for campaignID := range f.cursors {
+		ids = append(ids, campaignID)
+	}
+	return ids, nil
+}
+
+func (f *fakeWebCacheStore) GetCampaignEventCursor(_ context.Context, campaignID string) (webstorage.CampaignEventCursor, bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	cursor, ok := f.cursors[campaignID]
+	return cursor, ok, nil
+}
+
+func (f *fakeWebCacheStore) PutCampaignEventCursor(_ context.Context, cursor webstorage.CampaignEventCursor) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.cursors[cursor.CampaignID] = cursor
+	return nil
+}
+
+func (f *fakeWebCacheStore) MarkCampaignScopeStale(context.Context, string, string, uint64, time.Time) error {
+	return nil
 }
 
 func (f *fakeWebCampaignClient) ListCampaigns(ctx context.Context, _ *statev1.ListCampaignsRequest, _ ...grpc.CallOption) (*statev1.ListCampaignsResponse, error) {
@@ -701,5 +773,112 @@ func TestCampaignDisplayNameCachesValues(t *testing.T) {
 	}
 	if campaignClient.getCalls != 1 {
 		t.Fatalf("get calls = %d, want %d", campaignClient.getCalls, 1)
+	}
+}
+
+func TestAppCampaignsPageCachesUserScopedCampaigns(t *testing.T) {
+	authServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/introspect" {
+			t.Fatalf("path = %q, want %q", r.URL.Path, "/introspect")
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(introspectResponse{
+			Active: true,
+			UserID: "user-123",
+		})
+	}))
+	t.Cleanup(authServer.Close)
+
+	cacheStore := newFakeWebCacheStore()
+	campaignClient := &fakeWebCampaignClient{
+		response: &statev1.ListCampaignsResponse{
+			Campaigns: []*statev1.Campaign{
+				{Id: "camp-1", Name: "Campaign One"},
+			},
+		},
+	}
+	h := &handler{
+		config: Config{
+			AuthBaseURL:         authServer.URL,
+			OAuthResourceSecret: "secret-1",
+		},
+		sessions:       newSessionStore(),
+		pendingFlows:   newPendingFlowStore(),
+		campaignClient: campaignClient,
+		cacheStore:     cacheStore,
+		campaignAccess: &campaignAccessService{
+			authBaseURL:         authServer.URL,
+			oauthResourceSecret: "secret-1",
+			httpClient:          authServer.Client(),
+		},
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+
+	req1 := httptest.NewRequest(http.MethodGet, "/campaigns", nil)
+	req1.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w1 := httptest.NewRecorder()
+	h.handleAppCampaigns(w1, req1)
+
+	if w1.Code != http.StatusOK {
+		t.Fatalf("first status = %d, want %d", w1.Code, http.StatusOK)
+	}
+	if !strings.Contains(w1.Body.String(), "Campaign One") {
+		t.Fatalf("expected campaign name on first render")
+	}
+
+	req2 := httptest.NewRequest(http.MethodGet, "/campaigns", nil)
+	req2.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w2 := httptest.NewRecorder()
+	h.handleAppCampaigns(w2, req2)
+
+	if w2.Code != http.StatusOK {
+		t.Fatalf("second status = %d, want %d", w2.Code, http.StatusOK)
+	}
+	if !strings.Contains(w2.Body.String(), "Campaign One") {
+		t.Fatalf("expected campaign name on second render")
+	}
+	if campaignClient.listCalls != 1 {
+		t.Fatalf("list calls = %d, want %d", campaignClient.listCalls, 1)
+	}
+	if cacheStore.putCalls == 0 {
+		t.Fatalf("expected cache store put calls")
+	}
+}
+
+func TestCampaignDisplayNameUsesPersistentCache(t *testing.T) {
+	cacheStore := newFakeWebCacheStore()
+	campaignClient := &fakeWebCampaignClient{
+		getResponse: &statev1.GetCampaignResponse{
+			Campaign: &statev1.Campaign{
+				Id:   "camp-123",
+				Name: "Campaign One",
+			},
+		},
+	}
+
+	h := &handler{
+		cacheStore:        cacheStore,
+		campaignNameCache: make(map[string]campaignNameCache),
+		campaignClient:    campaignClient,
+	}
+
+	first := h.campaignDisplayName(context.Background(), "camp-123")
+	if first != "Campaign One" {
+		t.Fatalf("first name = %q, want %q", first, "Campaign One")
+	}
+	if campaignClient.getCalls != 1 {
+		t.Fatalf("first get calls = %d, want %d", campaignClient.getCalls, 1)
+	}
+
+	h.campaignNameCache = make(map[string]campaignNameCache)
+	campaignClient.getResponse = nil
+	campaignClient.getError = status.Error(codes.Internal, "upstream failure")
+
+	second := h.campaignDisplayName(context.Background(), "camp-123")
+	if second != "Campaign One" {
+		t.Fatalf("second name = %q, want %q", second, "Campaign One")
+	}
+	if campaignClient.getCalls != 1 {
+		t.Fatalf("second get calls = %d, want %d", campaignClient.getCalls, 1)
 	}
 }

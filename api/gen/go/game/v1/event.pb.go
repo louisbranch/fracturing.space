@@ -43,7 +43,9 @@ type ListEventsRequest struct {
 	//	type = "action.roll_resolved"
 	//	ts >= timestamp("2024-01-15T00:00:00Z")
 	//	session_id = "sess_123" AND type = "action.outcome_applied"
-	Filter        string `protobuf:"bytes,5,opt,name=filter,proto3" json:"filter,omitempty"`
+	Filter string `protobuf:"bytes,5,opt,name=filter,proto3" json:"filter,omitempty"`
+	// Returns only events with seq strictly greater than this value.
+	AfterSeq      uint64 `protobuf:"varint,6,opt,name=after_seq,json=afterSeq,proto3" json:"after_seq,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -111,6 +113,13 @@ func (x *ListEventsRequest) GetFilter() string {
 		return x.Filter
 	}
 	return ""
+}
+
+func (x *ListEventsRequest) GetAfterSeq() uint64 {
+	if x != nil {
+		return x.AfterSeq
+	}
+	return 0
 }
 
 // ListEventsResponse contains the paginated event results.
@@ -889,7 +898,7 @@ var File_game_v1_event_proto protoreflect.FileDescriptor
 
 const file_game_v1_event_proto_rawDesc = "" +
 	"\n" +
-	"\x13game/v1/event.proto\x12\agame.v1\x1a\x14common/v1/icon.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xa3\x01\n" +
+	"\x13game/v1/event.proto\x12\agame.v1\x1a\x14common/v1/icon.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc0\x01\n" +
 	"\x11ListEventsRequest\x12\x1f\n" +
 	"\vcampaign_id\x18\x01 \x01(\tR\n" +
 	"campaignId\x12\x1b\n" +
@@ -897,7 +906,8 @@ const file_game_v1_event_proto_rawDesc = "" +
 	"\n" +
 	"page_token\x18\x03 \x01(\tR\tpageToken\x12\x19\n" +
 	"\border_by\x18\x04 \x01(\tR\aorderBy\x12\x16\n" +
-	"\x06filter\x18\x05 \x01(\tR\x06filter\"\xb3\x01\n" +
+	"\x06filter\x18\x05 \x01(\tR\x06filter\x12\x1b\n" +
+	"\tafter_seq\x18\x06 \x01(\x04R\bafterSeq\"\xb3\x01\n" +
 	"\x12ListEventsResponse\x12&\n" +
 	"\x06events\x18\x01 \x03(\v2\x0e.game.v1.EventR\x06events\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12.\n" +

@@ -79,18 +79,19 @@ func TestAppCampaignSessionEndRedirectsUnauthenticatedToLogin(t *testing.T) {
 }
 
 type fakeWebSessionClient struct {
-	response *statev1.ListSessionsResponse
-	lastReq  *statev1.ListSessionsRequest
-	getReq   *statev1.GetSessionRequest
-	getRes   *statev1.GetSessionResponse
-	startReq *statev1.StartSessionRequest
-	startMD  metadata.MD
-	startRes *statev1.StartSessionResponse
-	startErr error
-	endReq   *statev1.EndSessionRequest
-	endMD    metadata.MD
-	endRes   *statev1.EndSessionResponse
-	endErr   error
+	response  *statev1.ListSessionsResponse
+	lastReq   *statev1.ListSessionsRequest
+	listCalls int
+	getReq    *statev1.GetSessionRequest
+	getRes    *statev1.GetSessionResponse
+	startReq  *statev1.StartSessionRequest
+	startMD   metadata.MD
+	startRes  *statev1.StartSessionResponse
+	startErr  error
+	endReq    *statev1.EndSessionRequest
+	endMD     metadata.MD
+	endRes    *statev1.EndSessionResponse
+	endErr    error
 }
 
 func (f *fakeWebSessionClient) StartSession(ctx context.Context, req *statev1.StartSessionRequest, _ ...grpc.CallOption) (*statev1.StartSessionResponse, error) {
@@ -107,11 +108,98 @@ func (f *fakeWebSessionClient) StartSession(ctx context.Context, req *statev1.St
 }
 
 func (f *fakeWebSessionClient) ListSessions(_ context.Context, req *statev1.ListSessionsRequest, _ ...grpc.CallOption) (*statev1.ListSessionsResponse, error) {
+	f.listCalls++
 	f.lastReq = req
 	if f.response != nil {
 		return f.response, nil
 	}
 	return &statev1.ListSessionsResponse{}, nil
+}
+
+func TestAppCampaignSessionsPageCachesCampaignSessions(t *testing.T) {
+	authServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/introspect" {
+			t.Fatalf("path = %q, want %q", r.URL.Path, "/introspect")
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(introspectResponse{Active: true, UserID: "Alice"})
+	}))
+	t.Cleanup(authServer.Close)
+
+	cacheStore := newFakeWebCacheStore()
+	participantClient := &fakeWebParticipantClient{
+		pages: map[string]*statev1.ListParticipantsResponse{
+			"": {
+				Participants: []*statev1.Participant{
+					{
+						Id:             "part-gm",
+						CampaignId:     "camp-123",
+						UserId:         "Alice",
+						CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER,
+					},
+				},
+			},
+		},
+	}
+	sessionClient := &fakeWebSessionClient{
+		response: &statev1.ListSessionsResponse{
+			Sessions: []*statev1.Session{
+				{Id: "sess-1", CampaignId: "camp-123", Name: "Session One"},
+			},
+		},
+	}
+	h := &handler{
+		config: Config{
+			AuthBaseURL:         authServer.URL,
+			OAuthResourceSecret: "secret-1",
+		},
+		sessions:          newSessionStore(),
+		pendingFlows:      newPendingFlowStore(),
+		participantClient: participantClient,
+		sessionClient:     sessionClient,
+		cacheStore:        cacheStore,
+		campaignClient: &fakeWebCampaignClient{
+			getResponse: &statev1.GetCampaignResponse{
+				Campaign: &statev1.Campaign{
+					Id:   "camp-123",
+					Name: "Campaign One",
+				},
+			},
+		},
+		campaignAccess: &campaignAccessService{
+			authBaseURL:         authServer.URL,
+			oauthResourceSecret: "secret-1",
+			httpClient:          authServer.Client(),
+			participantClient:   participantClient,
+		},
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+
+	req1 := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/sessions", nil)
+	req1.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w1 := httptest.NewRecorder()
+	h.handleAppCampaignDetail(w1, req1)
+	if w1.Code != http.StatusOK {
+		t.Fatalf("first status = %d, want %d", w1.Code, http.StatusOK)
+	}
+
+	req2 := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/sessions", nil)
+	req2.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w2 := httptest.NewRecorder()
+	h.handleAppCampaignDetail(w2, req2)
+	if w2.Code != http.StatusOK {
+		t.Fatalf("second status = %d, want %d", w2.Code, http.StatusOK)
+	}
+	if !strings.Contains(w2.Body.String(), "Campaign One") {
+		t.Fatalf("expected campaign name in cached response body")
+	}
+
+	if sessionClient.listCalls != 1 {
+		t.Fatalf("list sessions calls = %d, want %d", sessionClient.listCalls, 1)
+	}
+	if cacheStore.putCalls == 0 {
+		t.Fatalf("expected cache store put calls")
+	}
 }
 
 func (f *fakeWebSessionClient) GetSession(_ context.Context, req *statev1.GetSessionRequest, _ ...grpc.CallOption) (*statev1.GetSessionResponse, error) {
