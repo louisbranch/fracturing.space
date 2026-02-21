@@ -68,7 +68,6 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 		return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "generate campaign id: %v", err)
 	}
 
-	actorID := grpcmeta.ParticipantIDFromContext(ctx)
 	applier := c.stores.Applier()
 	if c.stores.Domain == nil {
 		return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Error(codes.Internal, "domain engine is not configured")
@@ -87,10 +86,7 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 		return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
 
-	actorType := command.ActorTypeSystem
-	if actorID != "" {
-		actorType = command.ActorTypeParticipant
-	}
+	actorID, actorType := resolveCommandActor(ctx)
 	_, err = executeAndApplyDomainCommand(
 		ctx,
 		c.stores.Domain,
@@ -198,6 +194,9 @@ func (c campaignApplication) EndCampaign(ctx context.Context, campaignID string)
 	if err != nil {
 		return storage.CampaignRecord{}, err
 	}
+	if err := requirePolicy(ctx, c.stores, policyActionManageCampaign, campaignRecord); err != nil {
+		return storage.CampaignRecord{}, err
+	}
 
 	if err := ensureNoActiveSession(ctx, c.stores.Session, campaignID); err != nil {
 		return storage.CampaignRecord{}, err
@@ -205,45 +204,43 @@ func (c campaignApplication) EndCampaign(ctx context.Context, campaignID string)
 	if err := validateCampaignStatusTransition(campaignRecord, campaign.StatusCompleted); err != nil {
 		return storage.CampaignRecord{}, err
 	}
-	if c.stores.Domain != nil {
-		actorID := grpcmeta.ParticipantIDFromContext(ctx)
-		actorType := command.ActorTypeSystem
-		if actorID != "" {
-			actorType = command.ActorTypeParticipant
-		}
-		_, err = executeAndApplyDomainCommand(
-			ctx,
-			c.stores.Domain,
-			c.stores.Applier(),
-			command.Command{
-				CampaignID:   campaignID,
-				Type:         command.Type("campaign.end"),
-				ActorType:    actorType,
-				ActorID:      actorID,
-				RequestID:    grpcmeta.RequestIDFromContext(ctx),
-				InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-				EntityType:   "campaign",
-				EntityID:     campaignID,
-			},
-			domainCommandApplyOptions{},
-		)
-		if err != nil {
-			return storage.CampaignRecord{}, err
-		}
-		updated, err := c.stores.Campaign.Get(ctx, campaignID)
-		if err != nil {
-			return storage.CampaignRecord{}, status.Errorf(codes.Internal, "load campaign: %v", err)
-		}
-
-		return updated, nil
+	if c.stores.Domain == nil {
+		return storage.CampaignRecord{}, status.Error(codes.Internal, "domain engine is not configured")
+	}
+	actorID, actorType := resolveCommandActor(ctx)
+	_, err = executeAndApplyDomainCommand(
+		ctx,
+		c.stores.Domain,
+		c.stores.Applier(),
+		command.Command{
+			CampaignID:   campaignID,
+			Type:         command.Type("campaign.end"),
+			ActorType:    actorType,
+			ActorID:      actorID,
+			RequestID:    grpcmeta.RequestIDFromContext(ctx),
+			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+			EntityType:   "campaign",
+			EntityID:     campaignID,
+		},
+		domainCommandApplyOptions{},
+	)
+	if err != nil {
+		return storage.CampaignRecord{}, err
+	}
+	updated, err := c.stores.Campaign.Get(ctx, campaignID)
+	if err != nil {
+		return storage.CampaignRecord{}, status.Errorf(codes.Internal, "load campaign: %v", err)
 	}
 
-	return storage.CampaignRecord{}, status.Error(codes.Internal, "domain engine is not configured")
+	return updated, nil
 }
 
 func (c campaignApplication) ArchiveCampaign(ctx context.Context, campaignID string) (storage.CampaignRecord, error) {
 	campaignRecord, err := c.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
+		return storage.CampaignRecord{}, err
+	}
+	if err := requirePolicy(ctx, c.stores, policyActionManageCampaign, campaignRecord); err != nil {
 		return storage.CampaignRecord{}, err
 	}
 
@@ -253,40 +250,35 @@ func (c campaignApplication) ArchiveCampaign(ctx context.Context, campaignID str
 	if err := validateCampaignStatusTransition(campaignRecord, campaign.StatusArchived); err != nil {
 		return storage.CampaignRecord{}, err
 	}
-	if c.stores.Domain != nil {
-		actorID := grpcmeta.ParticipantIDFromContext(ctx)
-		actorType := command.ActorTypeSystem
-		if actorID != "" {
-			actorType = command.ActorTypeParticipant
-		}
-		_, err = executeAndApplyDomainCommand(
-			ctx,
-			c.stores.Domain,
-			c.stores.Applier(),
-			command.Command{
-				CampaignID:   campaignID,
-				Type:         command.Type("campaign.archive"),
-				ActorType:    actorType,
-				ActorID:      actorID,
-				RequestID:    grpcmeta.RequestIDFromContext(ctx),
-				InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-				EntityType:   "campaign",
-				EntityID:     campaignID,
-			},
-			domainCommandApplyOptions{},
-		)
-		if err != nil {
-			return storage.CampaignRecord{}, err
-		}
-		updated, err := c.stores.Campaign.Get(ctx, campaignID)
-		if err != nil {
-			return storage.CampaignRecord{}, status.Errorf(codes.Internal, "load campaign: %v", err)
-		}
-
-		return updated, nil
+	if c.stores.Domain == nil {
+		return storage.CampaignRecord{}, status.Error(codes.Internal, "domain engine is not configured")
+	}
+	actorID, actorType := resolveCommandActor(ctx)
+	_, err = executeAndApplyDomainCommand(
+		ctx,
+		c.stores.Domain,
+		c.stores.Applier(),
+		command.Command{
+			CampaignID:   campaignID,
+			Type:         command.Type("campaign.archive"),
+			ActorType:    actorType,
+			ActorID:      actorID,
+			RequestID:    grpcmeta.RequestIDFromContext(ctx),
+			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+			EntityType:   "campaign",
+			EntityID:     campaignID,
+		},
+		domainCommandApplyOptions{},
+	)
+	if err != nil {
+		return storage.CampaignRecord{}, err
+	}
+	updated, err := c.stores.Campaign.Get(ctx, campaignID)
+	if err != nil {
+		return storage.CampaignRecord{}, status.Errorf(codes.Internal, "load campaign: %v", err)
 	}
 
-	return storage.CampaignRecord{}, status.Error(codes.Internal, "domain engine is not configured")
+	return updated, nil
 }
 
 func (c campaignApplication) RestoreCampaign(ctx context.Context, campaignID string) (storage.CampaignRecord, error) {
@@ -294,43 +286,41 @@ func (c campaignApplication) RestoreCampaign(ctx context.Context, campaignID str
 	if err != nil {
 		return storage.CampaignRecord{}, err
 	}
+	if err := requirePolicy(ctx, c.stores, policyActionManageCampaign, campaignRecord); err != nil {
+		return storage.CampaignRecord{}, err
+	}
 	if err := validateCampaignStatusTransition(campaignRecord, campaign.StatusDraft); err != nil {
 		return storage.CampaignRecord{}, err
 	}
-	if c.stores.Domain != nil {
-		actorID := grpcmeta.ParticipantIDFromContext(ctx)
-		actorType := command.ActorTypeSystem
-		if actorID != "" {
-			actorType = command.ActorTypeParticipant
-		}
-		_, err = executeAndApplyDomainCommand(
-			ctx,
-			c.stores.Domain,
-			c.stores.Applier(),
-			command.Command{
-				CampaignID:   campaignID,
-				Type:         command.Type("campaign.restore"),
-				ActorType:    actorType,
-				ActorID:      actorID,
-				RequestID:    grpcmeta.RequestIDFromContext(ctx),
-				InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-				EntityType:   "campaign",
-				EntityID:     campaignID,
-			},
-			domainCommandApplyOptions{},
-		)
-		if err != nil {
-			return storage.CampaignRecord{}, err
-		}
-		updated, err := c.stores.Campaign.Get(ctx, campaignID)
-		if err != nil {
-			return storage.CampaignRecord{}, status.Errorf(codes.Internal, "load campaign: %v", err)
-		}
-
-		return updated, nil
+	if c.stores.Domain == nil {
+		return storage.CampaignRecord{}, status.Error(codes.Internal, "domain engine is not configured")
+	}
+	actorID, actorType := resolveCommandActor(ctx)
+	_, err = executeAndApplyDomainCommand(
+		ctx,
+		c.stores.Domain,
+		c.stores.Applier(),
+		command.Command{
+			CampaignID:   campaignID,
+			Type:         command.Type("campaign.restore"),
+			ActorType:    actorType,
+			ActorID:      actorID,
+			RequestID:    grpcmeta.RequestIDFromContext(ctx),
+			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+			EntityType:   "campaign",
+			EntityID:     campaignID,
+		},
+		domainCommandApplyOptions{},
+	)
+	if err != nil {
+		return storage.CampaignRecord{}, err
+	}
+	updated, err := c.stores.Campaign.Get(ctx, campaignID)
+	if err != nil {
+		return storage.CampaignRecord{}, status.Errorf(codes.Internal, "load campaign: %v", err)
 	}
 
-	return storage.CampaignRecord{}, status.Error(codes.Internal, "domain engine is not configured")
+	return updated, nil
 }
 
 func (c campaignApplication) SetCampaignCover(ctx context.Context, campaignID, coverAssetID, coverSetID string) (storage.CampaignRecord, error) {
@@ -338,56 +328,54 @@ func (c campaignApplication) SetCampaignCover(ctx context.Context, campaignID, c
 	if err != nil {
 		return storage.CampaignRecord{}, err
 	}
+	if err := requirePolicy(ctx, c.stores, policyActionManageCampaign, campaignRecord); err != nil {
+		return storage.CampaignRecord{}, err
+	}
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return storage.CampaignRecord{}, err
 	}
 
-	if c.stores.Domain != nil {
-		actorID := grpcmeta.ParticipantIDFromContext(ctx)
-		actorType := command.ActorTypeSystem
-		if actorID != "" {
-			actorType = command.ActorTypeParticipant
-		}
+	if c.stores.Domain == nil {
+		return storage.CampaignRecord{}, status.Error(codes.Internal, "domain engine is not configured")
+	}
+	actorID, actorType := resolveCommandActor(ctx)
 
-		fields := map[string]string{"cover_asset_id": coverAssetID}
-		if strings.TrimSpace(coverSetID) != "" {
-			fields["cover_set_id"] = strings.TrimSpace(coverSetID)
-		}
-		payload := campaign.UpdatePayload{Fields: fields}
-		payloadJSON, err := json.Marshal(payload)
-		if err != nil {
-			return storage.CampaignRecord{}, status.Errorf(codes.Internal, "encode payload: %v", err)
-		}
-
-		_, err = executeAndApplyDomainCommand(
-			ctx,
-			c.stores.Domain,
-			c.stores.Applier(),
-			command.Command{
-				CampaignID:   campaignID,
-				Type:         command.Type("campaign.update"),
-				ActorType:    actorType,
-				ActorID:      actorID,
-				RequestID:    grpcmeta.RequestIDFromContext(ctx),
-				InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-				EntityType:   "campaign",
-				EntityID:     campaignID,
-				PayloadJSON:  payloadJSON,
-			},
-			domainCommandApplyOptions{},
-		)
-		if err != nil {
-			return storage.CampaignRecord{}, err
-		}
-
-		updated, err := c.stores.Campaign.Get(ctx, campaignID)
-		if err != nil {
-			return storage.CampaignRecord{}, status.Errorf(codes.Internal, "load campaign: %v", err)
-		}
-		return updated, nil
+	fields := map[string]string{"cover_asset_id": coverAssetID}
+	if strings.TrimSpace(coverSetID) != "" {
+		fields["cover_set_id"] = strings.TrimSpace(coverSetID)
+	}
+	payload := campaign.UpdatePayload{Fields: fields}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		return storage.CampaignRecord{}, status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
 
-	return storage.CampaignRecord{}, status.Error(codes.Internal, "domain engine is not configured")
+	_, err = executeAndApplyDomainCommand(
+		ctx,
+		c.stores.Domain,
+		c.stores.Applier(),
+		command.Command{
+			CampaignID:   campaignID,
+			Type:         command.Type("campaign.update"),
+			ActorType:    actorType,
+			ActorID:      actorID,
+			RequestID:    grpcmeta.RequestIDFromContext(ctx),
+			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+			EntityType:   "campaign",
+			EntityID:     campaignID,
+			PayloadJSON:  payloadJSON,
+		},
+		domainCommandApplyOptions{},
+	)
+	if err != nil {
+		return storage.CampaignRecord{}, err
+	}
+
+	updated, err := c.stores.Campaign.Get(ctx, campaignID)
+	if err != nil {
+		return storage.CampaignRecord{}, status.Errorf(codes.Internal, "load campaign: %v", err)
+	}
+	return updated, nil
 }
 
 // validateCampaignStatusTransition ensures the target status is allowed from the current state.

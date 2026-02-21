@@ -17,6 +17,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	"github.com/louisbranch/fracturing.space/internal/services/mcp/conformance"
 	"github.com/louisbranch/fracturing.space/internal/services/mcp/domain"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -26,6 +27,8 @@ import (
 const (
 	// serverVersion identifies the MCP server version.
 	serverVersion = "0.1.0"
+	// mcpAuthzOverrideReason records why MCP uses platform override metadata.
+	mcpAuthzOverrideReason = "mcp_service"
 )
 
 // serverName identifies this MCP server to clients.
@@ -321,13 +324,18 @@ func dialGameGRPC(ctx context.Context, addr string) (*grpc.ClientConn, error) {
 	logf := func(format string, args ...any) {
 		log.Printf("game %s", fmt.Sprintf(format, args...))
 	}
+	dialOpts := append(
+		platformgrpc.DefaultClientDialOptions(),
+		grpc.WithChainUnaryInterceptor(grpcauthctx.AdminOverrideUnaryClientInterceptor(mcpAuthzOverrideReason)),
+		grpc.WithChainStreamInterceptor(grpcauthctx.AdminOverrideStreamClientInterceptor(mcpAuthzOverrideReason)),
+	)
 	conn, err := platformgrpc.DialWithHealth(
 		ctx,
 		nil,
 		addr,
 		timeouts.GRPCDial,
 		logf,
-		platformgrpc.DefaultClientDialOptions()...,
+		dialOpts...,
 	)
 	if err != nil {
 		var dialErr *platformgrpc.DialError
@@ -344,7 +352,12 @@ func dialGameGRPC(ctx context.Context, addr string) (*grpc.ClientConn, error) {
 
 // newGRPCConn connects to the game server shared by MCP services.
 func newGRPCConn(addr string) (*grpc.ClientConn, error) {
-	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(
+		addr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithChainUnaryInterceptor(grpcauthctx.AdminOverrideUnaryClientInterceptor(mcpAuthzOverrideReason)),
+		grpc.WithChainStreamInterceptor(grpcauthctx.AdminOverrideStreamClientInterceptor(mcpAuthzOverrideReason)),
+	)
 	if err != nil {
 		return nil, err
 	}

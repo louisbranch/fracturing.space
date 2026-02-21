@@ -62,7 +62,6 @@ func (c participantApplication) CreateParticipant(ctx context.Context, campaignI
 		return storage.ParticipantRecord{}, status.Errorf(codes.Internal, "generate participant id: %v", err)
 	}
 
-	actorID := grpcmeta.ParticipantIDFromContext(ctx)
 	applier := c.stores.Applier()
 	if c.stores.Domain == nil {
 		return storage.ParticipantRecord{}, status.Error(codes.Internal, "domain engine is not configured")
@@ -82,10 +81,7 @@ func (c participantApplication) CreateParticipant(ctx context.Context, campaignI
 		return storage.ParticipantRecord{}, status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
 
-	actorType := command.ActorTypeSystem
-	if actorID != "" {
-		actorType = command.ActorTypeParticipant
-	}
+	actorID, actorType := resolveCommandActor(ctx)
 	_, err = executeAndApplyDomainCommand(
 		ctx,
 		c.stores.Domain,
@@ -191,7 +187,6 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 		return storage.ParticipantRecord{}, status.Error(codes.InvalidArgument, "at least one field must be provided")
 	}
 
-	actorID := grpcmeta.ParticipantIDFromContext(ctx)
 	applier := c.stores.Applier()
 	if c.stores.Domain == nil {
 		return storage.ParticipantRecord{}, status.Error(codes.Internal, "domain engine is not configured")
@@ -213,10 +208,7 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 		return storage.ParticipantRecord{}, status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
 
-	actorType := command.ActorTypeSystem
-	if actorID != "" {
-		actorType = command.ActorTypeParticipant
-	}
+	actorID, actorType := resolveCommandActor(ctx)
 	_, err = executeAndApplyDomainCommand(
 		ctx,
 		c.stores.Domain,
@@ -256,6 +248,9 @@ func (c participantApplication) DeleteParticipant(ctx context.Context, campaignI
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return storage.ParticipantRecord{}, err
 	}
+	if err := requirePolicy(ctx, c.stores, policyActionManageParticipants, campaignRecord); err != nil {
+		return storage.ParticipantRecord{}, err
+	}
 
 	participantID := strings.TrimSpace(in.GetParticipantId())
 	if participantID == "" {
@@ -266,8 +261,10 @@ func (c participantApplication) DeleteParticipant(ctx context.Context, campaignI
 	if err != nil {
 		return storage.ParticipantRecord{}, err
 	}
+	if err := ensureParticipantHasNoOwnedCharacters(ctx, c.stores.Event, campaignID, participantID); err != nil {
+		return storage.ParticipantRecord{}, err
+	}
 
-	actorID := grpcmeta.ParticipantIDFromContext(ctx)
 	reason := strings.TrimSpace(in.GetReason())
 	applier := c.stores.Applier()
 	if c.stores.Domain == nil {
@@ -282,10 +279,7 @@ func (c participantApplication) DeleteParticipant(ctx context.Context, campaignI
 		return storage.ParticipantRecord{}, status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
 
-	actorType := command.ActorTypeSystem
-	if actorID != "" {
-		actorType = command.ActorTypeParticipant
-	}
+	actorID, actorType := resolveCommandActor(ctx)
 	_, err = executeAndApplyDomainCommand(
 		ctx,
 		c.stores.Domain,
@@ -310,4 +304,28 @@ func (c participantApplication) DeleteParticipant(ctx context.Context, campaignI
 	}
 
 	return current, nil
+}
+
+// ensureParticipantHasNoOwnedCharacters replays the event journal and returns
+// an error if any non-deleted character is currently owned by participantID.
+func ensureParticipantHasNoOwnedCharacters(ctx context.Context, events storage.EventStore, campaignID, participantID string) error {
+	participantID = strings.TrimSpace(participantID)
+	if participantID == "" {
+		return status.Error(codes.InvalidArgument, "participant id is required")
+	}
+
+	ownership, err := replayCharacterOwnership(ctx, events, campaignID)
+	if err != nil {
+		return err
+	}
+
+	for _, state := range ownership {
+		if state.deleted {
+			continue
+		}
+		if state.ownerParticipantID == participantID {
+			return status.Error(codes.FailedPrecondition, "participant owns active characters; transfer ownership first")
+		}
+	}
+	return nil
 }

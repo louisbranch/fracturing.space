@@ -81,8 +81,10 @@ func TestAppCampaignSessionEndRedirectsUnauthenticatedToLogin(t *testing.T) {
 type fakeWebSessionClient struct {
 	response  *statev1.ListSessionsResponse
 	lastReq   *statev1.ListSessionsRequest
+	listMD    metadata.MD
 	listCalls int
 	getReq    *statev1.GetSessionRequest
+	getMD     metadata.MD
 	getRes    *statev1.GetSessionResponse
 	startReq  *statev1.StartSessionRequest
 	startMD   metadata.MD
@@ -107,8 +109,10 @@ func (f *fakeWebSessionClient) StartSession(ctx context.Context, req *statev1.St
 	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
-func (f *fakeWebSessionClient) ListSessions(_ context.Context, req *statev1.ListSessionsRequest, _ ...grpc.CallOption) (*statev1.ListSessionsResponse, error) {
+func (f *fakeWebSessionClient) ListSessions(ctx context.Context, req *statev1.ListSessionsRequest, _ ...grpc.CallOption) (*statev1.ListSessionsResponse, error) {
 	f.listCalls++
+	md, _ := metadata.FromOutgoingContext(ctx)
+	f.listMD = md
 	f.lastReq = req
 	if f.response != nil {
 		return f.response, nil
@@ -202,7 +206,9 @@ func TestAppCampaignSessionsPageCachesCampaignSessions(t *testing.T) {
 	}
 }
 
-func (f *fakeWebSessionClient) GetSession(_ context.Context, req *statev1.GetSessionRequest, _ ...grpc.CallOption) (*statev1.GetSessionResponse, error) {
+func (f *fakeWebSessionClient) GetSession(ctx context.Context, req *statev1.GetSessionRequest, _ ...grpc.CallOption) (*statev1.GetSessionResponse, error) {
+	md, _ := metadata.FromOutgoingContext(ctx)
+	f.getMD = md
 	f.getReq = req
 	if f.getRes != nil {
 		return f.getRes, nil
@@ -322,6 +328,68 @@ func TestAppCampaignSessionsPageParticipantRendersSessions(t *testing.T) {
 	}
 }
 
+func TestAppCampaignSessionsPagePropagatesUserMetadataToSessionRead(t *testing.T) {
+	authServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/introspect" {
+			t.Fatalf("path = %q, want %q", r.URL.Path, "/introspect")
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(introspectResponse{Active: true, UserID: "Alice"})
+	}))
+	t.Cleanup(authServer.Close)
+	participantClient := &fakeWebParticipantClient{
+		pages: map[string]*statev1.ListParticipantsResponse{
+			"": {
+				Participants: []*statev1.Participant{
+					{
+						Id:             "part-gm",
+						CampaignId:     "camp-123",
+						UserId:         "Alice",
+						CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER,
+					},
+				},
+			},
+		},
+	}
+	sessionClient := &fakeWebSessionClient{
+		response: &statev1.ListSessionsResponse{
+			Sessions: []*statev1.Session{
+				{Id: "sess-1", CampaignId: "camp-123", Name: "Session One"},
+			},
+		},
+	}
+	h := &handler{
+		config: Config{
+			AuthBaseURL:         authServer.URL,
+			OAuthResourceSecret: "secret-1",
+		},
+		sessions:          newSessionStore(),
+		pendingFlows:      newPendingFlowStore(),
+		participantClient: participantClient,
+		campaignAccess: &campaignAccessService{
+			authBaseURL:         authServer.URL,
+			oauthResourceSecret: "secret-1",
+			httpClient:          authServer.Client(),
+			participantClient:   participantClient,
+		},
+		sessionClient: sessionClient,
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/sessions", nil)
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+
+	h.handleAppCampaignDetail(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	userIDs := sessionClient.listMD.Get(grpcmeta.UserIDHeader)
+	if len(userIDs) != 1 || userIDs[0] != "Alice" {
+		t.Fatalf("metadata %s = %v, want [Alice]", grpcmeta.UserIDHeader, userIDs)
+	}
+}
+
 func TestAppCampaignSessionDetailParticipantRendersSession(t *testing.T) {
 	authServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/introspect" {
@@ -393,6 +461,70 @@ func TestAppCampaignSessionDetailParticipantRendersSession(t *testing.T) {
 	body := w.Body.String()
 	if !strings.Contains(body, "Session One") {
 		t.Fatalf("expected session name in response body")
+	}
+}
+
+func TestAppCampaignSessionDetailPropagatesUserMetadataToSessionRead(t *testing.T) {
+	authServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/introspect" {
+			t.Fatalf("path = %q, want %q", r.URL.Path, "/introspect")
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(introspectResponse{Active: true, UserID: "Alice"})
+	}))
+	t.Cleanup(authServer.Close)
+	participantClient := &fakeWebParticipantClient{
+		pages: map[string]*statev1.ListParticipantsResponse{
+			"": {
+				Participants: []*statev1.Participant{
+					{
+						Id:             "part-gm",
+						CampaignId:     "camp-123",
+						UserId:         "Alice",
+						CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER,
+					},
+				},
+			},
+		},
+	}
+	sessionClient := &fakeWebSessionClient{
+		getRes: &statev1.GetSessionResponse{
+			Session: &statev1.Session{
+				Id:         "sess-1",
+				CampaignId: "camp-123",
+				Name:       "Session One",
+			},
+		},
+	}
+	h := &handler{
+		config: Config{
+			AuthBaseURL:         authServer.URL,
+			OAuthResourceSecret: "secret-1",
+		},
+		sessions:          newSessionStore(),
+		pendingFlows:      newPendingFlowStore(),
+		participantClient: participantClient,
+		campaignAccess: &campaignAccessService{
+			authBaseURL:         authServer.URL,
+			oauthResourceSecret: "secret-1",
+			httpClient:          authServer.Client(),
+			participantClient:   participantClient,
+		},
+		sessionClient: sessionClient,
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/sessions/sess-1", nil)
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+
+	h.handleAppCampaignDetail(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	userIDs := sessionClient.getMD.Get(grpcmeta.UserIDHeader)
+	if len(userIDs) != 1 || userIDs[0] != "Alice" {
+		t.Fatalf("metadata %s = %v, want [Alice]", grpcmeta.UserIDHeader, userIDs)
 	}
 }
 

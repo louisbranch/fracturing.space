@@ -78,7 +78,6 @@ func (a forkApplication) ForkCampaign(ctx context.Context, sourceCampaignID stri
 		return storage.CampaignRecord{}, nil, 0, err
 	}
 
-	actorID := grpcmeta.ParticipantIDFromContext(ctx)
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
 
@@ -103,10 +102,7 @@ func (a forkApplication) ForkCampaign(ctx context.Context, sourceCampaignID stri
 	if a.stores.Domain == nil {
 		return storage.CampaignRecord{}, nil, 0, status.Error(codes.Internal, "domain engine is not configured")
 	}
-	actorType := command.ActorTypeSystem
-	if actorID != "" {
-		actorType = command.ActorTypeParticipant
-	}
+	actorID, actorType := resolveCommandActor(ctx)
 	_, err = executeAndApplyDomainCommand(
 		ctx,
 		a.stores.Domain,

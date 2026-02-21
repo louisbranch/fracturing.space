@@ -13,6 +13,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/metadata"
 )
@@ -31,12 +32,13 @@ func TestCreateCharacter_InheritsActorParticipantAvatarWhenAvatarNotProvided(t *
 	}
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
 		"part-1": {
-			ID:            "part-1",
-			CampaignID:    "c1",
-			Name:          "Alice",
-			AvatarSetID:   "avatar_set_v1",
-			AvatarAssetID: "007",
-			CreatedAt:     now,
+			ID:             "part-1",
+			CampaignID:     "c1",
+			Name:           "Alice",
+			CampaignAccess: participant.CampaignAccessMember,
+			AvatarSetID:    "avatar_set_v1",
+			AvatarAssetID:  "007",
+			CreatedAt:      now,
 		},
 	}
 

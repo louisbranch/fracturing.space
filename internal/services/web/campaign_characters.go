@@ -18,54 +18,63 @@ func (h *handler) handleAppCampaignCharacters(w http.ResponseWriter, r *http.Req
 		localizeHTTPError(w, r, http.StatusMethodNotAllowed, "error.http.method_not_allowed")
 		return
 	}
-	actingParticipant, ok := h.requireCampaignActor(w, r, campaignID)
+	readCtx, userID, ok := h.campaignReadContext(w, r, "Characters unavailable")
 	if !ok {
 		return
 	}
+	readReq := r.WithContext(readCtx)
 	if h.characterClient == nil {
 		h.renderErrorPage(w, r, http.StatusServiceUnavailable, "Characters unavailable", "character service client is not configured")
 		return
 	}
-	canManageCharacters := canManageCampaignCharacters(actingParticipant.GetCampaignAccess())
+	canManageCharacters := false
+	actingParticipant, err := h.campaignParticipantByUserID(readCtx, campaignID, userID)
+	if err != nil {
+		h.renderErrorPage(w, r, http.StatusBadGateway, "Characters unavailable", "failed to resolve campaign participant")
+		return
+	}
+	if actingParticipant != nil {
+		canManageCharacters = canManageCampaignCharacters(actingParticipant.GetCampaignAccess())
+	}
 	controlParticipants := []*statev1.Participant(nil)
 	if canManageCharacters {
 		if h.participantClient == nil {
 			h.renderErrorPage(w, r, http.StatusServiceUnavailable, "Characters unavailable", "participant service client is not configured")
 			return
 		}
-		if cachedParticipants, ok := h.cachedCampaignParticipants(r.Context(), campaignID); ok {
+		if cachedParticipants, ok := h.cachedCampaignParticipants(readCtx, campaignID); ok {
 			controlParticipants = cachedParticipants
 		} else {
-			resp, err := h.participantClient.ListParticipants(r.Context(), &statev1.ListParticipantsRequest{
+			resp, err := h.participantClient.ListParticipants(readCtx, &statev1.ListParticipantsRequest{
 				CampaignId: campaignID,
 				PageSize:   10,
 			})
 			if err != nil {
-				h.renderErrorPage(w, r, http.StatusBadGateway, "Characters unavailable", "failed to list participants")
+				h.renderErrorPage(w, r, grpcErrorHTTPStatus(err, http.StatusBadGateway), "Characters unavailable", "failed to list participants")
 				return
 			}
 			controlParticipants = resp.GetParticipants()
-			h.setCampaignParticipantsCache(r.Context(), campaignID, controlParticipants)
+			h.setCampaignParticipantsCache(readCtx, campaignID, controlParticipants)
 		}
 	}
 
 	characters := []*statev1.Character(nil)
-	if cachedCharacters, ok := h.cachedCampaignCharacters(r.Context(), campaignID); ok {
+	if cachedCharacters, ok := h.cachedCampaignCharacters(readCtx, campaignID); ok {
 		characters = cachedCharacters
 	} else {
-		resp, err := h.characterClient.ListCharacters(r.Context(), &statev1.ListCharactersRequest{
+		resp, err := h.characterClient.ListCharacters(readCtx, &statev1.ListCharactersRequest{
 			CampaignId: campaignID,
 			PageSize:   10,
 		})
 		if err != nil {
-			h.renderErrorPage(w, r, http.StatusBadGateway, "Characters unavailable", "failed to list characters")
+			h.renderErrorPage(w, r, grpcErrorHTTPStatus(err, http.StatusBadGateway), "Characters unavailable", "failed to list characters")
 			return
 		}
 		characters = resp.GetCharacters()
-		h.setCampaignCharactersCache(r.Context(), campaignID, characters)
+		h.setCampaignCharactersCache(readCtx, campaignID, characters)
 	}
 
-	renderAppCampaignCharactersPage(w, r, h.pageContextForCampaign(w, r, campaignID), campaignID, characters, canManageCharacters, controlParticipants)
+	renderAppCampaignCharactersPage(w, readReq, h.pageContextForCampaign(w, readReq, campaignID), campaignID, characters, canManageCharacters, controlParticipants)
 }
 
 func (h *handler) handleAppCampaignCharacterDetail(w http.ResponseWriter, r *http.Request, campaignID string, characterID string) {
@@ -76,9 +85,11 @@ func (h *handler) handleAppCampaignCharacterDetail(w http.ResponseWriter, r *htt
 		localizeHTTPError(w, r, http.StatusMethodNotAllowed, "error.http.method_not_allowed")
 		return
 	}
-	if _, ok := h.requireCampaignActor(w, r, campaignID); !ok {
+	readCtx, _, ok := h.campaignReadContext(w, r, "Character unavailable")
+	if !ok {
 		return
 	}
+	readReq := r.WithContext(readCtx)
 	if h.characterClient == nil {
 		h.renderErrorPage(w, r, http.StatusServiceUnavailable, "Character unavailable", "character service client is not configured")
 		return
@@ -90,12 +101,12 @@ func (h *handler) handleAppCampaignCharacterDetail(w http.ResponseWriter, r *htt
 		return
 	}
 
-	resp, err := h.characterClient.GetCharacterSheet(r.Context(), &statev1.GetCharacterSheetRequest{
+	resp, err := h.characterClient.GetCharacterSheet(readCtx, &statev1.GetCharacterSheetRequest{
 		CampaignId:  campaignID,
 		CharacterId: characterID,
 	})
 	if err != nil {
-		h.renderErrorPage(w, r, http.StatusBadGateway, "Character unavailable", "failed to load character")
+		h.renderErrorPage(w, r, grpcErrorHTTPStatus(err, http.StatusBadGateway), "Character unavailable", "failed to load character")
 		return
 	}
 	if resp.GetCharacter() == nil {
@@ -103,7 +114,7 @@ func (h *handler) handleAppCampaignCharacterDetail(w http.ResponseWriter, r *htt
 		return
 	}
 
-	renderAppCampaignCharacterDetailPage(w, r, h.pageContextForCampaign(w, r, campaignID), campaignID, resp.GetCharacter())
+	renderAppCampaignCharacterDetailPage(w, readReq, h.pageContextForCampaign(w, readReq, campaignID), campaignID, resp.GetCharacter())
 }
 
 func (h *handler) handleAppCampaignCharacterCreate(w http.ResponseWriter, r *http.Request, campaignID string) {

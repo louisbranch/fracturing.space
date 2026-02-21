@@ -17,32 +17,34 @@ func (h *handler) handleAppCampaignParticipants(w http.ResponseWriter, r *http.R
 		localizeHTTPError(w, r, http.StatusMethodNotAllowed, "error.http.method_not_allowed")
 		return
 	}
-	participant, ok := h.requireCampaignActor(w, r, campaignID)
+	readCtx, userID, ok := h.campaignReadContext(w, r, "Participants unavailable")
 	if !ok {
 		return
 	}
+	readReq := r.WithContext(readCtx)
 	if h.participantClient == nil {
 		h.renderErrorPage(w, r, http.StatusServiceUnavailable, "Participants unavailable", "participant service client is not configured")
 		return
 	}
-	canManageParticipants := canManageCampaignParticipants(participant.GetCampaignAccess())
-	if participants, ok := h.cachedCampaignParticipants(r.Context(), campaignID); ok {
-		renderAppCampaignParticipantsPageWithContext(w, r, h.pageContextForCampaign(w, r, campaignID), campaignID, participants, canManageParticipants)
+	if participants, ok := h.cachedCampaignParticipants(readCtx, campaignID); ok {
+		canManageParticipants := canManageCampaignParticipants(campaignAccessForUser(participants, userID))
+		renderAppCampaignParticipantsPageWithContext(w, readReq, h.pageContextForCampaign(w, readReq, campaignID), campaignID, participants, canManageParticipants)
 		return
 	}
 
-	resp, err := h.participantClient.ListParticipants(r.Context(), &statev1.ListParticipantsRequest{
+	resp, err := h.participantClient.ListParticipants(readCtx, &statev1.ListParticipantsRequest{
 		CampaignId: campaignID,
 		PageSize:   10,
 	})
 	if err != nil {
-		h.renderErrorPage(w, r, http.StatusBadGateway, "Participants unavailable", "failed to list participants")
+		h.renderErrorPage(w, r, grpcErrorHTTPStatus(err, http.StatusBadGateway), "Participants unavailable", "failed to list participants")
 		return
 	}
 
 	participants := resp.GetParticipants()
-	h.setCampaignParticipantsCache(r.Context(), campaignID, participants)
-	renderAppCampaignParticipantsPageWithContext(w, r, h.pageContextForCampaign(w, r, campaignID), campaignID, participants, canManageParticipants)
+	h.setCampaignParticipantsCache(readCtx, campaignID, participants)
+	canManageParticipants := canManageCampaignParticipants(campaignAccessForUser(participants, userID))
+	renderAppCampaignParticipantsPageWithContext(w, readReq, h.pageContextForCampaign(w, readReq, campaignID), campaignID, participants, canManageParticipants)
 }
 
 func (h *handler) handleAppCampaignParticipantUpdate(w http.ResponseWriter, r *http.Request, campaignID string) {
@@ -124,6 +126,22 @@ func (h *handler) handleAppCampaignParticipantUpdate(w http.ResponseWriter, r *h
 
 func canManageCampaignParticipants(access statev1.CampaignAccess) bool {
 	return access == statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER || access == statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER
+}
+
+func campaignAccessForUser(participants []*statev1.Participant, userID string) statev1.CampaignAccess {
+	userID = strings.TrimSpace(userID)
+	if userID == "" {
+		return statev1.CampaignAccess_CAMPAIGN_ACCESS_UNSPECIFIED
+	}
+	for _, participant := range participants {
+		if participant == nil {
+			continue
+		}
+		if strings.TrimSpace(participant.GetUserId()) == userID {
+			return participant.GetCampaignAccess()
+		}
+	}
+	return statev1.CampaignAccess_CAMPAIGN_ACCESS_UNSPECIFIED
 }
 
 func parseCampaignAccessFormValue(raw string) (statev1.CampaignAccess, bool) {

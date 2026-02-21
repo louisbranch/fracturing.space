@@ -17,32 +17,41 @@ func (h *handler) handleAppCampaignSessions(w http.ResponseWriter, r *http.Reque
 		localizeHTTPError(w, r, http.StatusMethodNotAllowed, "error.http.method_not_allowed")
 		return
 	}
-	participant, ok := h.requireCampaignActor(w, r, campaignID)
+	readCtx, userID, ok := h.campaignReadContext(w, r, "Sessions unavailable")
 	if !ok {
 		return
 	}
+	readReq := r.WithContext(readCtx)
 	if h.sessionClient == nil {
 		h.renderErrorPage(w, r, http.StatusServiceUnavailable, "Sessions unavailable", "session service client is not configured")
 		return
 	}
-	canManageSessions := canManageCampaignSessions(participant.GetCampaignAccess())
-	if sessions, ok := h.cachedCampaignSessions(r.Context(), campaignID); ok {
-		renderAppCampaignSessionsPage(w, r, h.pageContextForCampaign(w, r, campaignID), campaignID, sessions, canManageSessions)
+	canManageSessions := false
+	participant, err := h.campaignParticipantByUserID(readCtx, campaignID, userID)
+	if err != nil {
+		h.renderErrorPage(w, r, http.StatusBadGateway, "Sessions unavailable", "failed to resolve campaign participant")
+		return
+	}
+	if participant != nil {
+		canManageSessions = canManageCampaignSessions(participant.GetCampaignAccess())
+	}
+	if sessions, ok := h.cachedCampaignSessions(readCtx, campaignID); ok {
+		renderAppCampaignSessionsPage(w, readReq, h.pageContextForCampaign(w, readReq, campaignID), campaignID, sessions, canManageSessions)
 		return
 	}
 
-	resp, err := h.sessionClient.ListSessions(r.Context(), &statev1.ListSessionsRequest{
+	resp, err := h.sessionClient.ListSessions(readCtx, &statev1.ListSessionsRequest{
 		CampaignId: campaignID,
 		PageSize:   10,
 	})
 	if err != nil {
-		h.renderErrorPage(w, r, http.StatusBadGateway, "Sessions unavailable", "failed to list sessions")
+		h.renderErrorPage(w, r, grpcErrorHTTPStatus(err, http.StatusBadGateway), "Sessions unavailable", "failed to list sessions")
 		return
 	}
 
 	sessions := resp.GetSessions()
-	h.setCampaignSessionsCache(r.Context(), campaignID, sessions)
-	renderAppCampaignSessionsPage(w, r, h.pageContextForCampaign(w, r, campaignID), campaignID, sessions, canManageSessions)
+	h.setCampaignSessionsCache(readCtx, campaignID, sessions)
+	renderAppCampaignSessionsPage(w, readReq, h.pageContextForCampaign(w, readReq, campaignID), campaignID, sessions, canManageSessions)
 }
 
 func (h *handler) handleAppCampaignSessionDetail(w http.ResponseWriter, r *http.Request, campaignID string, sessionID string) {
@@ -53,9 +62,11 @@ func (h *handler) handleAppCampaignSessionDetail(w http.ResponseWriter, r *http.
 		localizeHTTPError(w, r, http.StatusMethodNotAllowed, "error.http.method_not_allowed")
 		return
 	}
-	if _, ok := h.requireCampaignActor(w, r, campaignID); !ok {
+	readCtx, _, ok := h.campaignReadContext(w, r, "Session unavailable")
+	if !ok {
 		return
 	}
+	readReq := r.WithContext(readCtx)
 	if h.sessionClient == nil {
 		h.renderErrorPage(w, r, http.StatusServiceUnavailable, "Session unavailable", "session service client is not configured")
 		return
@@ -67,12 +78,12 @@ func (h *handler) handleAppCampaignSessionDetail(w http.ResponseWriter, r *http.
 		return
 	}
 
-	resp, err := h.sessionClient.GetSession(r.Context(), &statev1.GetSessionRequest{
+	resp, err := h.sessionClient.GetSession(readCtx, &statev1.GetSessionRequest{
 		CampaignId: campaignID,
 		SessionId:  sessionID,
 	})
 	if err != nil {
-		h.renderErrorPage(w, r, http.StatusBadGateway, "Session unavailable", "failed to load session")
+		h.renderErrorPage(w, r, grpcErrorHTTPStatus(err, http.StatusBadGateway), "Session unavailable", "failed to load session")
 		return
 	}
 	if resp.GetSession() == nil {
@@ -80,7 +91,7 @@ func (h *handler) handleAppCampaignSessionDetail(w http.ResponseWriter, r *http.
 		return
 	}
 
-	renderAppCampaignSessionDetailPage(w, r, h.pageContextForCampaign(w, r, campaignID), campaignID, resp.GetSession())
+	renderAppCampaignSessionDetailPage(w, readReq, h.pageContextForCampaign(w, readReq, campaignID), campaignID, resp.GetSession())
 }
 
 func (h *handler) handleAppCampaignSessionStart(w http.ResponseWriter, r *http.Request, campaignID string) {

@@ -192,6 +192,34 @@ func TestAppCampaignInvitesPageCachesCampaignInvites(t *testing.T) {
 	}
 }
 
+func TestCampaignInvitesCacheIsolatesByUser(t *testing.T) {
+	cacheStore := newFakeWebCacheStore()
+	h := &handler{cacheStore: cacheStore}
+
+	ctx := context.Background()
+	invites := []*statev1.Invite{
+		{Id: "inv-1", CampaignId: "camp-1", RecipientUserId: "recipient-1"},
+	}
+
+	// Cache invites for user-A.
+	h.setCampaignInvitesCache(ctx, "camp-1", "user-A", invites)
+
+	// User-A should get a cache hit.
+	got, ok := h.cachedCampaignInvites(ctx, "camp-1", "user-A")
+	if !ok {
+		t.Fatal("expected cache hit for user-A")
+	}
+	if len(got) != 1 || got[0].GetId() != "inv-1" {
+		t.Fatalf("user-A cached invites = %v, want [inv-1]", got)
+	}
+
+	// User-B should get a cache miss — invites are policy-scoped.
+	_, ok = h.cachedCampaignInvites(ctx, "camp-1", "user-B")
+	if ok {
+		t.Fatal("expected cache miss for user-B, got hit")
+	}
+}
+
 func (f *fakeWebInviteClient) ListPendingInvites(context.Context, *statev1.ListPendingInvitesRequest, ...grpc.CallOption) (*statev1.ListPendingInvitesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "not implemented")
 }

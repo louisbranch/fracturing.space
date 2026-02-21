@@ -24,6 +24,24 @@
       }
     },
     {
+      "name": "owner_participant_read",
+      "action": "read_resource",
+      "uri": "campaign://{{campaign_id}}/participants",
+      "capture": {
+        "owner_id": "result.contents[0].text|json.participants[0].id"
+      }
+    },
+    {
+      "name": "set_context_owner",
+      "action": "tool_call",
+      "tool": "set_context",
+      "args": {
+        "campaign_id": {"ref": "campaign_id"},
+        "participant_id": {"ref": "owner_id"}
+      },
+      "expect": "none"
+    },
+    {
       "name": "session_start",
       "action": "tool_call",
       "tool": "session_start",

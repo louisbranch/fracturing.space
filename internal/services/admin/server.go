@@ -19,6 +19,7 @@ import (
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	adminsqlite "github.com/louisbranch/fracturing.space/internal/services/admin/storage/sqlite"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	"google.golang.org/grpc"
 )
 
@@ -41,6 +42,9 @@ const defaultGRPCRetryDelay = 500 * time.Millisecond
 
 // maxGRPCRetryDelay caps the backoff between gRPC dial attempts.
 const maxGRPCRetryDelay = 10 * time.Second
+
+// adminAuthzOverrideReason records why admin service uses platform override.
+const adminAuthzOverrideReason = "admin_dashboard"
 
 // Config defines the inputs for the admin operator process.
 //
@@ -438,13 +442,18 @@ func dialGameGRPC(ctx context.Context, config Config) (gameGRPCClients, error) {
 	logf := func(format string, args ...any) {
 		log.Printf("admin game %s", fmt.Sprintf(format, args...))
 	}
+	dialOpts := append(
+		platformgrpc.DefaultClientDialOptions(),
+		grpc.WithChainUnaryInterceptor(grpcauthctx.AdminOverrideUnaryClientInterceptor(adminAuthzOverrideReason)),
+		grpc.WithChainStreamInterceptor(grpcauthctx.AdminOverrideStreamClientInterceptor(adminAuthzOverrideReason)),
+	)
 	conn, err := platformgrpc.DialWithHealth(
 		ctx,
 		nil,
 		grpcAddr,
 		config.GRPCDialTimeout,
 		logf,
-		platformgrpc.DefaultClientDialOptions()...,
+		dialOpts...,
 	)
 	if err != nil {
 		var dialErr *platformgrpc.DialError

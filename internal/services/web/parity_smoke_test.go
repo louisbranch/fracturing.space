@@ -53,6 +53,9 @@ func TestAppSignedInWorkspaceJourneySmoke(t *testing.T) {
 				{Id: "camp-123", Name: "Skyfall"},
 			},
 		},
+		getResponse: &statev1.GetCampaignResponse{
+			Campaign: &statev1.Campaign{Id: "camp-123", Name: "Skyfall"},
+		},
 	}
 	sessionClient := &fakeWebSessionClient{
 		response: &statev1.ListSessionsResponse{

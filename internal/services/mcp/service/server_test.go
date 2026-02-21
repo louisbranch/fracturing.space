@@ -2308,7 +2308,7 @@ func TestParticipantCreateHandlerRejectsEmptyResponse(t *testing.T) {
 // TestCharacterCreateHandlerReturnsClientError ensures gRPC errors are returned as tool errors.
 func TestCharacterCreateHandlerReturnsClientError(t *testing.T) {
 	client := &fakeCharacterClient{createCharacterErr: errors.New("boom")}
-	handler := domain.CharacterCreateHandler(client, nil)
+	handler := domain.CharacterCreateHandler(client, nil, nil)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.CharacterCreateInput{
 		CampaignID: "camp-123",
@@ -2338,7 +2338,7 @@ func TestCharacterCreateHandlerMapsRequestAndResponse(t *testing.T) {
 			UpdatedAt:  timestamppb.New(now.Add(time.Hour)),
 		},
 	}}
-	result, output, err := domain.CharacterCreateHandler(client, nil)(
+	result, output, err := domain.CharacterCreateHandler(client, nil, nil)(
 		context.Background(),
 		&mcp.CallToolRequest{},
 		domain.CharacterCreateInput{
@@ -2404,7 +2404,7 @@ func TestCharacterCreateHandlerOptionalNotes(t *testing.T) {
 			UpdatedAt:  timestamppb.New(now),
 		},
 	}}
-	result, output, err := domain.CharacterCreateHandler(client, nil)(
+	result, output, err := domain.CharacterCreateHandler(client, nil, nil)(
 		context.Background(),
 		&mcp.CallToolRequest{},
 		domain.CharacterCreateInput{
@@ -2432,7 +2432,7 @@ func TestCharacterCreateHandlerOptionalNotes(t *testing.T) {
 // TestCharacterCreateHandlerRejectsEmptyResponse ensures nil responses are rejected.
 func TestCharacterCreateHandlerRejectsEmptyResponse(t *testing.T) {
 	client := &fakeCharacterClient{}
-	handler := domain.CharacterCreateHandler(client, nil)
+	handler := domain.CharacterCreateHandler(client, nil, nil)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.CharacterCreateInput{
 		CampaignID: "camp-123",
@@ -2450,7 +2450,7 @@ func TestCharacterCreateHandlerRejectsEmptyResponse(t *testing.T) {
 // TestCharacterControlSetHandlerReturnsClientError ensures gRPC errors are returned as tool errors.
 func TestCharacterControlSetHandlerReturnsClientError(t *testing.T) {
 	client := &fakeCharacterClient{setDefaultControlErr: errors.New("boom")}
-	handler := domain.CharacterControlSetHandler(client, nil)
+	handler := domain.CharacterControlSetHandler(client, nil, nil)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.CharacterControlSetInput{
 		CampaignID:    "camp-123",
@@ -2472,7 +2472,7 @@ func TestCharacterControlSetHandlerMapsRequestAndResponseUnassigned(t *testing.T
 		CharacterId:   "character-456",
 		ParticipantId: wrapperspb.String(""),
 	}}
-	result, output, err := domain.CharacterControlSetHandler(client, nil)(
+	result, output, err := domain.CharacterControlSetHandler(client, nil, nil)(
 		context.Background(),
 		&mcp.CallToolRequest{},
 		domain.CharacterControlSetInput{
@@ -2516,7 +2516,7 @@ func TestCharacterControlSetHandlerMapsRequestAndResponseParticipant(t *testing.
 		CharacterId:   "character-456",
 		ParticipantId: wrapperspb.String(participantID),
 	}}
-	result, output, err := domain.CharacterControlSetHandler(client, nil)(
+	result, output, err := domain.CharacterControlSetHandler(client, nil, nil)(
 		context.Background(),
 		&mcp.CallToolRequest{},
 		domain.CharacterControlSetInput{
@@ -2555,7 +2555,7 @@ func TestCharacterControlSetHandlerMapsRequestAndResponseParticipant(t *testing.
 // TestCharacterControlSetHandlerRejectsEmptyResponse ensures nil responses are rejected.
 func TestCharacterControlSetHandlerRejectsEmptyResponse(t *testing.T) {
 	client := &fakeCharacterClient{}
-	handler := domain.CharacterControlSetHandler(client, nil)
+	handler := domain.CharacterControlSetHandler(client, nil, nil)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.CharacterControlSetInput{
 		CampaignID:    "camp-123",
@@ -2573,7 +2573,7 @@ func TestCharacterControlSetHandlerRejectsEmptyResponse(t *testing.T) {
 // TestSessionStartHandlerReturnsClientError ensures gRPC errors are returned as tool errors.
 func TestSessionStartHandlerReturnsClientError(t *testing.T) {
 	client := &fakeSessionClient{err: errors.New("boom")}
-	handler := domain.SessionStartHandler(client, nil)
+	handler := domain.SessionStartHandler(client, nil, nil)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.SessionStartInput{
 		CampaignID: "camp-123",
@@ -2600,7 +2600,7 @@ func TestSessionStartHandlerMapsRequestAndResponse(t *testing.T) {
 			UpdatedAt:  timestamppb.New(now.Add(time.Hour)),
 		},
 	}}
-	result, output, err := domain.SessionStartHandler(client, nil)(
+	result, output, err := domain.SessionStartHandler(client, nil, nil)(
 		context.Background(),
 		&mcp.CallToolRequest{},
 		domain.SessionStartInput{
@@ -2654,7 +2654,7 @@ func TestSessionStartHandlerOptionalName(t *testing.T) {
 			UpdatedAt:  timestamppb.New(now),
 		},
 	}}
-	result, output, err := domain.SessionStartHandler(client, nil)(
+	result, output, err := domain.SessionStartHandler(client, nil, nil)(
 		context.Background(),
 		&mcp.CallToolRequest{},
 		domain.SessionStartInput{
@@ -2683,7 +2683,7 @@ func TestSessionStartHandlerOptionalName(t *testing.T) {
 // TestSessionStartHandlerRejectsEmptyResponse ensures nil responses are rejected.
 func TestSessionStartHandlerRejectsEmptyResponse(t *testing.T) {
 	client := &fakeSessionClient{}
-	handler := domain.SessionStartHandler(client, nil)
+	handler := domain.SessionStartHandler(client, nil, nil)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.SessionStartInput{
 		CampaignID: "camp-123",
@@ -2712,7 +2712,7 @@ func TestSessionStartHandlerMapsEndedAt(t *testing.T) {
 			EndedAt:    timestamppb.New(endedAt),
 		},
 	}}
-	result, output, err := domain.SessionStartHandler(client, nil)(
+	result, output, err := domain.SessionStartHandler(client, nil, nil)(
 		context.Background(),
 		&mcp.CallToolRequest{},
 		domain.SessionStartInput{

@@ -566,6 +566,26 @@ func TestUpdateParticipant_CampaignAccess(t *testing.T) {
 	}
 }
 
+func TestDeleteParticipant_DeniesMemberWithoutManageAccess(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	eventStore := newFakeEventStore()
+
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive, ParticipantCount: 2}
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+		"member-1": {ID: "member-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessMember},
+		"p1":       {ID: "p1", CampaignID: "c1", Name: "Player One", Role: participant.RolePlayer, CampaignAccess: participant.CampaignAccessMember},
+	}
+
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore})
+	ctx := contextWithParticipantID("member-1")
+	_, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
+		CampaignId:    "c1",
+		ParticipantId: "p1",
+	})
+	assertStatusCode(t, err, codes.PermissionDenied)
+}
+
 func TestDeleteParticipant_Success(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
@@ -620,6 +640,255 @@ func TestDeleteParticipant_Success(t *testing.T) {
 	}
 	if eventStore.events["c1"][0].Type != event.Type("participant.left") {
 		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.Type("participant.left"))
+	}
+}
+
+func TestDeleteParticipant_DeniesWhenParticipantOwnsCharacter(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	eventStore := newFakeEventStore()
+	now := time.Date(2026, 2, 20, 19, 0, 0, 0, time.UTC)
+
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive, ParticipantCount: 2}
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+		"p1":      {ID: "p1", CampaignID: "c1", Name: "Player One", Role: participant.RolePlayer, CampaignAccess: participant.CampaignAccessMember},
+	}
+	eventStore.events["c1"] = []event.Event{
+		{
+			Seq:         1,
+			CampaignID:  "c1",
+			Type:        event.Type("character.created"),
+			Timestamp:   now,
+			ActorType:   event.ActorTypeParticipant,
+			ActorID:     "p1",
+			EntityType:  "character",
+			EntityID:    "ch-1",
+			PayloadJSON: []byte(`{"character_id":"ch-1","name":"Hero","kind":"pc","owner_participant_id":"p1"}`),
+		},
+	}
+	eventStore.nextSeq["c1"] = 2
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.leave"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("participant.left"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeParticipant,
+				ActorID:     "owner-1",
+				EntityType:  "participant",
+				EntityID:    "p1",
+				PayloadJSON: []byte(`{"participant_id":"p1","reason":"left"}`),
+			}),
+		},
+	}}
+
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Domain: domain})
+	ctx := contextWithParticipantID("owner-1")
+	_, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
+		CampaignId:    "c1",
+		ParticipantId: "p1",
+		Reason:        "left",
+	})
+	assertStatusCode(t, err, codes.FailedPrecondition)
+	if domain.calls != 0 {
+		t.Fatalf("domain calls = %d, want 0", domain.calls)
+	}
+}
+
+func TestDeleteParticipant_DeniesWhenParticipantOwnsCharacterFromActorFallback(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	eventStore := newFakeEventStore()
+	now := time.Date(2026, 2, 20, 19, 5, 0, 0, time.UTC)
+
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive, ParticipantCount: 2}
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+		"p1":      {ID: "p1", CampaignID: "c1", Name: "Player One", Role: participant.RolePlayer, CampaignAccess: participant.CampaignAccessMember},
+	}
+	eventStore.events["c1"] = []event.Event{
+		{
+			Seq:         1,
+			CampaignID:  "c1",
+			Type:        event.Type("character.created"),
+			Timestamp:   now,
+			ActorType:   event.ActorTypeParticipant,
+			ActorID:     "p1",
+			EntityType:  "character",
+			EntityID:    "ch-1",
+			PayloadJSON: []byte(`{"character_id":"ch-1","name":"Hero","kind":"pc"}`),
+		},
+	}
+	eventStore.nextSeq["c1"] = 2
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.leave"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("participant.left"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeParticipant,
+				ActorID:     "owner-1",
+				EntityType:  "participant",
+				EntityID:    "p1",
+				PayloadJSON: []byte(`{"participant_id":"p1","reason":"left"}`),
+			}),
+		},
+	}}
+
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Domain: domain})
+	ctx := contextWithParticipantID("owner-1")
+	_, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
+		CampaignId:    "c1",
+		ParticipantId: "p1",
+		Reason:        "left",
+	})
+	assertStatusCode(t, err, codes.FailedPrecondition)
+	if domain.calls != 0 {
+		t.Fatalf("domain calls = %d, want 0", domain.calls)
+	}
+}
+
+func TestDeleteParticipant_AllowsWhenOwnedCharacterAlreadyDeleted(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	eventStore := newFakeEventStore()
+	now := time.Date(2026, 2, 20, 19, 10, 0, 0, time.UTC)
+
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive, ParticipantCount: 2}
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+		"p1":      {ID: "p1", CampaignID: "c1", Name: "Player One", Role: participant.RolePlayer, CampaignAccess: participant.CampaignAccessMember},
+	}
+	eventStore.events["c1"] = []event.Event{
+		{
+			Seq:         1,
+			CampaignID:  "c1",
+			Type:        event.Type("character.created"),
+			Timestamp:   now,
+			ActorType:   event.ActorTypeParticipant,
+			ActorID:     "p1",
+			EntityType:  "character",
+			EntityID:    "ch-1",
+			PayloadJSON: []byte(`{"character_id":"ch-1","name":"Hero","kind":"pc","owner_participant_id":"p1"}`),
+		},
+		{
+			Seq:         2,
+			CampaignID:  "c1",
+			Type:        event.Type("character.deleted"),
+			Timestamp:   now.Add(time.Minute),
+			ActorType:   event.ActorTypeParticipant,
+			ActorID:     "p1",
+			EntityType:  "character",
+			EntityID:    "ch-1",
+			PayloadJSON: []byte(`{"character_id":"ch-1","reason":"retired"}`),
+		},
+	}
+	eventStore.nextSeq["c1"] = 3
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.leave"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("participant.left"),
+				Timestamp:   now.Add(2 * time.Minute),
+				ActorType:   event.ActorTypeParticipant,
+				ActorID:     "owner-1",
+				EntityType:  "participant",
+				EntityID:    "p1",
+				PayloadJSON: []byte(`{"participant_id":"p1","reason":"left"}`),
+			}),
+		},
+	}}
+
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Domain: domain})
+	ctx := contextWithParticipantID("owner-1")
+	resp, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
+		CampaignId:    "c1",
+		ParticipantId: "p1",
+		Reason:        "left",
+	})
+	if err != nil {
+		t.Fatalf("DeleteParticipant returned error: %v", err)
+	}
+	if resp.GetParticipant().GetId() != "p1" {
+		t.Fatalf("participant id = %q, want %q", resp.GetParticipant().GetId(), "p1")
+	}
+	if domain.calls != 1 {
+		t.Fatalf("domain calls = %d, want 1", domain.calls)
+	}
+}
+
+func TestDeleteParticipant_AllowsWhenCharacterOwnershipTransferredAway(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	eventStore := newFakeEventStore()
+	now := time.Date(2026, 2, 20, 19, 25, 0, 0, time.UTC)
+
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive, ParticipantCount: 3}
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+		"p1":      {ID: "p1", CampaignID: "c1", Name: "Player One", Role: participant.RolePlayer, CampaignAccess: participant.CampaignAccessMember},
+		"p2":      {ID: "p2", CampaignID: "c1", Name: "Player Two", Role: participant.RolePlayer, CampaignAccess: participant.CampaignAccessMember},
+	}
+	eventStore.events["c1"] = []event.Event{
+		{
+			Seq:         1,
+			CampaignID:  "c1",
+			Type:        event.Type("character.created"),
+			Timestamp:   now,
+			ActorType:   event.ActorTypeParticipant,
+			ActorID:     "p1",
+			EntityType:  "character",
+			EntityID:    "ch-1",
+			PayloadJSON: []byte(`{"character_id":"ch-1","name":"Hero","kind":"pc","owner_participant_id":"p1"}`),
+		},
+		{
+			Seq:         2,
+			CampaignID:  "c1",
+			Type:        event.Type("character.updated"),
+			Timestamp:   now.Add(time.Minute),
+			ActorType:   event.ActorTypeParticipant,
+			ActorID:     "owner-1",
+			EntityType:  "character",
+			EntityID:    "ch-1",
+			PayloadJSON: []byte(`{"character_id":"ch-1","fields":{"owner_participant_id":"p2"}}`),
+		},
+	}
+	eventStore.nextSeq["c1"] = 3
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.leave"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("participant.left"),
+				Timestamp:   now.Add(2 * time.Minute),
+				ActorType:   event.ActorTypeParticipant,
+				ActorID:     "owner-1",
+				EntityType:  "participant",
+				EntityID:    "p1",
+				PayloadJSON: []byte(`{"participant_id":"p1","reason":"left"}`),
+			}),
+		},
+	}}
+
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Domain: domain})
+	ctx := contextWithParticipantID("owner-1")
+	resp, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
+		CampaignId:    "c1",
+		ParticipantId: "p1",
+		Reason:        "left",
+	})
+	if err != nil {
+		t.Fatalf("DeleteParticipant returned error: %v", err)
+	}
+	if resp.GetParticipant().GetId() != "p1" {
+		t.Fatalf("participant id = %q, want %q", resp.GetParticipant().GetId(), "p1")
+	}
+	if domain.calls != 1 {
+		t.Fatalf("domain calls = %d, want 1", domain.calls)
 	}
 }
 
@@ -739,6 +1008,29 @@ func TestListParticipants_CampaignNotFound(t *testing.T) {
 	assertStatusCode(t, err, codes.NotFound)
 }
 
+func TestListParticipants_DeniesMissingIdentity(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+		ID:     "c1",
+		Status: campaign.StatusActive,
+	}
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+		"p1": {
+			ID:             "p1",
+			CampaignID:     "c1",
+			UserID:         "user-1",
+			Name:           "GM",
+			Role:           participant.RoleGM,
+			CampaignAccess: participant.CampaignAccessMember,
+		},
+	}
+
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore})
+	_, err := svc.ListParticipants(context.Background(), &statev1.ListParticipantsRequest{CampaignId: "c1"})
+	assertStatusCode(t, err, codes.PermissionDenied)
+}
+
 func TestListParticipants_CampaignArchivedAllowed(t *testing.T) {
 	// ListParticipants uses CampaignOpRead which is allowed for all campaign statuses,
 	// including archived campaigns. This allows viewing historical campaign participants.
@@ -751,11 +1043,18 @@ func TestListParticipants_CampaignArchivedAllowed(t *testing.T) {
 		Status: campaign.StatusArchived,
 	}
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
-		"p1": {ID: "p1", CampaignID: "c1", Name: "GM", Role: participant.RoleGM, CreatedAt: now},
+		"p1": {
+			ID:             "p1",
+			CampaignID:     "c1",
+			Name:           "GM",
+			Role:           participant.RoleGM,
+			CampaignAccess: participant.CampaignAccessMember,
+			CreatedAt:      now,
+		},
 	}
 
 	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore})
-	resp, err := svc.ListParticipants(context.Background(), &statev1.ListParticipantsRequest{CampaignId: "c1"})
+	resp, err := svc.ListParticipants(contextWithParticipantID("p1"), &statev1.ListParticipantsRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("ListParticipants returned error: %v", err)
 	}
@@ -764,22 +1063,26 @@ func TestListParticipants_CampaignArchivedAllowed(t *testing.T) {
 	}
 }
 
-func TestListParticipants_EmptyList(t *testing.T) {
+func TestListParticipants_DeniesNonMember(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
 		Status: campaign.StatusActive,
 	}
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+		"p1": {
+			ID:             "p1",
+			CampaignID:     "c1",
+			Name:           "GM",
+			Role:           participant.RoleGM,
+			CampaignAccess: participant.CampaignAccessMember,
+		},
+	}
 
 	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore})
-	resp, err := svc.ListParticipants(context.Background(), &statev1.ListParticipantsRequest{CampaignId: "c1"})
-	if err != nil {
-		t.Fatalf("ListParticipants returned error: %v", err)
-	}
-	if len(resp.Participants) != 0 {
-		t.Errorf("ListParticipants returned %d participants, want 0", len(resp.Participants))
-	}
+	_, err := svc.ListParticipants(contextWithParticipantID("outsider-1"), &statev1.ListParticipantsRequest{CampaignId: "c1"})
+	assertStatusCode(t, err, codes.PermissionDenied)
 }
 
 func TestListParticipants_WithParticipants(t *testing.T) {
@@ -792,12 +1095,26 @@ func TestListParticipants_WithParticipants(t *testing.T) {
 		Status: campaign.StatusActive,
 	}
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
-		"p1": {ID: "p1", CampaignID: "c1", Name: "GM", Role: participant.RoleGM, CreatedAt: now},
-		"p2": {ID: "p2", CampaignID: "c1", Name: "Player 1", Role: participant.RolePlayer, CreatedAt: now},
+		"p1": {
+			ID:             "p1",
+			CampaignID:     "c1",
+			Name:           "GM",
+			Role:           participant.RoleGM,
+			CampaignAccess: participant.CampaignAccessMember,
+			CreatedAt:      now,
+		},
+		"p2": {
+			ID:             "p2",
+			CampaignID:     "c1",
+			Name:           "Player 1",
+			Role:           participant.RolePlayer,
+			CampaignAccess: participant.CampaignAccessMember,
+			CreatedAt:      now,
+		},
 	}
 
 	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore})
-	resp, err := svc.ListParticipants(context.Background(), &statev1.ListParticipantsRequest{CampaignId: "c1"})
+	resp, err := svc.ListParticipants(contextWithParticipantID("p1"), &statev1.ListParticipantsRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("ListParticipants returned error: %v", err)
 	}
@@ -836,6 +1153,28 @@ func TestGetParticipant_CampaignNotFound(t *testing.T) {
 	assertStatusCode(t, err, codes.NotFound)
 }
 
+func TestGetParticipant_DeniesMissingIdentity(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+		ID:     "c1",
+		Status: campaign.StatusActive,
+	}
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+		"p1": {
+			ID:             "p1",
+			CampaignID:     "c1",
+			Name:           "GM",
+			Role:           participant.RoleGM,
+			CampaignAccess: participant.CampaignAccessMember,
+		},
+	}
+
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore})
+	_, err := svc.GetParticipant(context.Background(), &statev1.GetParticipantRequest{CampaignId: "c1", ParticipantId: "p1"})
+	assertStatusCode(t, err, codes.PermissionDenied)
+}
+
 func TestGetParticipant_ParticipantNotFound(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
@@ -843,9 +1182,18 @@ func TestGetParticipant_ParticipantNotFound(t *testing.T) {
 		ID:     "c1",
 		Status: campaign.StatusActive,
 	}
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+		"p1": {
+			ID:             "p1",
+			CampaignID:     "c1",
+			Name:           "GM",
+			Role:           participant.RoleGM,
+			CampaignAccess: participant.CampaignAccessMember,
+		},
+	}
 
 	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore})
-	_, err := svc.GetParticipant(context.Background(), &statev1.GetParticipantRequest{CampaignId: "c1", ParticipantId: "nonexistent"})
+	_, err := svc.GetParticipant(contextWithParticipantID("p1"), &statev1.GetParticipantRequest{CampaignId: "c1", ParticipantId: "nonexistent"})
 	assertStatusCode(t, err, codes.NotFound)
 }
 
@@ -860,18 +1208,19 @@ func TestGetParticipant_Success(t *testing.T) {
 	}
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
 		"p1": {
-			ID:         "p1",
-			CampaignID: "c1",
-			Name:       "Game Master",
-			Role:       participant.RoleGM,
-			Controller: participant.ControllerAI,
-			CreatedAt:  now,
-			UpdatedAt:  now,
+			ID:             "p1",
+			CampaignID:     "c1",
+			Name:           "Game Master",
+			Role:           participant.RoleGM,
+			Controller:     participant.ControllerAI,
+			CampaignAccess: participant.CampaignAccessMember,
+			CreatedAt:      now,
+			UpdatedAt:      now,
 		},
 	}
 
 	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore})
-	resp, err := svc.GetParticipant(context.Background(), &statev1.GetParticipantRequest{CampaignId: "c1", ParticipantId: "p1"})
+	resp, err := svc.GetParticipant(contextWithParticipantID("p1"), &statev1.GetParticipantRequest{CampaignId: "c1", ParticipantId: "p1"})
 	if err != nil {
 		t.Fatalf("GetParticipant returned error: %v", err)
 	}

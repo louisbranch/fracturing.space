@@ -9,6 +9,7 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -70,9 +71,15 @@ func (s *SessionService) ListSessions(ctx context.Context, in *campaignv1.ListSe
 	if campaignID == "" {
 		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
 	}
-	_, err := s.stores.Campaign.Get(ctx, campaignID)
+	campaignRecord, err := s.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
 		return nil, handleDomainError(err)
+	}
+	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpRead); err != nil {
+		return nil, handleDomainError(err)
+	}
+	if err := requireReadPolicy(ctx, s.stores, campaignRecord); err != nil {
+		return nil, err
 	}
 
 	pageSize := pagination.ClampPageSize(in.GetPageSize(), pagination.PageSizeConfig{
@@ -116,9 +123,15 @@ func (s *SessionService) GetSession(ctx context.Context, in *campaignv1.GetSessi
 		return nil, status.Error(codes.InvalidArgument, "session id is required")
 	}
 
-	_, err := s.stores.Campaign.Get(ctx, campaignID)
+	campaignRecord, err := s.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
 		return nil, handleDomainError(err)
+	}
+	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpRead); err != nil {
+		return nil, handleDomainError(err)
+	}
+	if err := requireReadPolicy(ctx, s.stores, campaignRecord); err != nil {
+		return nil, err
 	}
 
 	sess, err := s.stores.Session.GetSession(ctx, campaignID, sessionID)
@@ -249,8 +262,15 @@ func (s *SessionService) GetSessionSpotlight(ctx context.Context, in *campaignv1
 		return nil, status.Error(codes.InvalidArgument, "session id is required")
 	}
 
-	if _, err := s.stores.Campaign.Get(ctx, campaignID); err != nil {
+	campaignRecord, err := s.stores.Campaign.Get(ctx, campaignID)
+	if err != nil {
 		return nil, handleDomainError(err)
+	}
+	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpRead); err != nil {
+		return nil, handleDomainError(err)
+	}
+	if err := requireReadPolicy(ctx, s.stores, campaignRecord); err != nil {
+		return nil, err
 	}
 	if _, err := s.stores.Session.GetSession(ctx, campaignID, sessionID); err != nil {
 		return nil, handleDomainError(err)

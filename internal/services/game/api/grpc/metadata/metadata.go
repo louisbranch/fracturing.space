@@ -39,6 +39,15 @@ const CampaignIDHeader = "x-fracturing-space-campaign-id"
 // Useful for scoped event and telemetry reads under an active session.
 const SessionIDHeader = "x-fracturing-space-session-id"
 
+// PlatformRoleHeader is the gRPC metadata key for platform-level roles.
+const PlatformRoleHeader = "x-fracturing-space-platform-role"
+
+// AuthzOverrideReasonHeader is the metadata key for admin override reason text.
+const AuthzOverrideReasonHeader = "x-fracturing-space-authz-override-reason"
+
+// PlatformRoleAdmin identifies platform administrators.
+const PlatformRoleAdmin = "ADMIN"
+
 // contextKey stores metadata values in context.
 type contextKey string
 

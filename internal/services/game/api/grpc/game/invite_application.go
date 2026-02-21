@@ -83,8 +83,6 @@ func (a inviteApplication) CreateInvite(ctx context.Context, campaignID string, 
 
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
-	actorID := grpcmeta.ParticipantIDFromContext(ctx)
-
 	applier := a.stores.Applier()
 	if a.stores.Domain == nil {
 		return storage.InviteRecord{}, status.Error(codes.Internal, "domain engine is not configured")
@@ -99,10 +97,7 @@ func (a inviteApplication) CreateInvite(ctx context.Context, campaignID string, 
 	if err != nil {
 		return storage.InviteRecord{}, status.Errorf(codes.Internal, "encode invite payload: %v", err)
 	}
-	actorType := command.ActorTypeSystem
-	if actorID != "" {
-		actorType = command.ActorTypeParticipant
-	}
+	actorID, actorType := resolveCommandActor(ctx)
 	_, err = executeAndApplyDomainCommand(
 		ctx,
 		a.stores.Domain,
@@ -235,8 +230,6 @@ func (a inviteApplication) ClaimInvite(ctx context.Context, campaignID string, i
 
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
-	actorID := grpcmeta.ParticipantIDFromContext(ctx)
-
 	applier := a.stores.Applier()
 	if a.stores.Domain == nil {
 		return storage.InviteRecord{}, storage.ParticipantRecord{}, status.Error(codes.Internal, "domain engine is not configured")
@@ -250,10 +243,7 @@ func (a inviteApplication) ClaimInvite(ctx context.Context, campaignID string, i
 		return storage.InviteRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "encode participant payload: %v", err)
 	}
 
-	actorType := command.ActorTypeSystem
-	if actorID != "" {
-		actorType = command.ActorTypeParticipant
-	}
+	actorID, actorType := resolveCommandActor(ctx)
 	_, err = executeAndApplyDomainCommand(
 		ctx,
 		a.stores.Domain,
@@ -352,8 +342,6 @@ func (a inviteApplication) RevokeInvite(ctx context.Context, in *campaignv1.Revo
 
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
-	actorID := grpcmeta.ParticipantIDFromContext(ctx)
-
 	applier := a.stores.Applier()
 	if a.stores.Domain == nil {
 		return storage.InviteRecord{}, status.Error(codes.Internal, "domain engine is not configured")
@@ -363,10 +351,7 @@ func (a inviteApplication) RevokeInvite(ctx context.Context, in *campaignv1.Revo
 	if err != nil {
 		return storage.InviteRecord{}, status.Errorf(codes.Internal, "encode invite payload: %v", err)
 	}
-	actorType := command.ActorTypeSystem
-	if actorID != "" {
-		actorType = command.ActorTypeParticipant
-	}
+	actorID, actorType := resolveCommandActor(ctx)
 	_, err = executeAndApplyDomainCommand(
 		ctx,
 		a.stores.Domain,

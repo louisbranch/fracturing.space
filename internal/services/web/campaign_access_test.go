@@ -17,18 +17,27 @@ import (
 )
 
 type fakeWebParticipantClient struct {
-	pages      map[string]*statev1.ListParticipantsResponse
-	err        error
-	calls      []*statev1.ListParticipantsRequest
-	updateReq  *statev1.UpdateParticipantRequest
-	updateMD   metadata.MD
-	updateResp *statev1.UpdateParticipantResponse
-	updateErr  error
+	pages        map[string]*statev1.ListParticipantsResponse
+	err          error
+	calls        []*statev1.ListParticipantsRequest
+	listMD       metadata.MD
+	listMDByCall []metadata.MD
+	updateReq    *statev1.UpdateParticipantRequest
+	updateMD     metadata.MD
+	updateResp   *statev1.UpdateParticipantResponse
+	updateErr    error
 }
 
-func (f *fakeWebParticipantClient) ListParticipants(_ context.Context, req *statev1.ListParticipantsRequest, _ ...grpc.CallOption) (*statev1.ListParticipantsResponse, error) {
+func (f *fakeWebParticipantClient) ListParticipants(ctx context.Context, req *statev1.ListParticipantsRequest, _ ...grpc.CallOption) (*statev1.ListParticipantsResponse, error) {
 	if f.err != nil {
 		return nil, f.err
+	}
+	md, _ := metadata.FromOutgoingContext(ctx)
+	f.listMD = md
+	if len(f.listMDByCall) < len(f.calls)+1 {
+		f.listMDByCall = append(f.listMDByCall, md)
+	} else {
+		f.listMDByCall[len(f.calls)] = md
 	}
 	cloned := *req
 	f.calls = append(f.calls, &cloned)

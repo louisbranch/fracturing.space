@@ -111,6 +111,9 @@ message UpdateCharacterRequest {
 
   // Optional updated avatar asset identifier.
   google.protobuf.StringValue avatar_asset_id = 7;
+
+  // Optional updated owner participant identifier (ownership transfer).
+  google.protobuf.StringValue owner_participant_id = 8;
 }
 
 message UpdateCharacterResponse {

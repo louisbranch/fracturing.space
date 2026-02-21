@@ -123,6 +123,9 @@ func (s *CharacterService) ListCharacters(ctx context.Context, in *campaignv1.Li
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpRead); err != nil {
 		return nil, handleDomainError(err)
 	}
+	if err := requireReadPolicy(ctx, s.stores, c); err != nil {
+		return nil, err
+	}
 
 	pageSize := pagination.ClampPageSize(in.GetPageSize(), pagination.PageSizeConfig{
 		Default: defaultListCharactersPageSize,
@@ -190,6 +193,11 @@ func (s *CharacterService) GetCharacterSheet(ctx context.Context, in *campaignv1
 		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
 	}
 
+	characterID := strings.TrimSpace(in.GetCharacterId())
+	if characterID == "" {
+		return nil, status.Error(codes.InvalidArgument, "character id is required")
+	}
+
 	c, err := s.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
 		return nil, handleDomainError(err)
@@ -197,10 +205,8 @@ func (s *CharacterService) GetCharacterSheet(ctx context.Context, in *campaignv1
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpRead); err != nil {
 		return nil, handleDomainError(err)
 	}
-
-	characterID := strings.TrimSpace(in.GetCharacterId())
-	if characterID == "" {
-		return nil, status.Error(codes.InvalidArgument, "character id is required")
+	if err := requireReadPolicy(ctx, s.stores, c); err != nil {
+		return nil, err
 	}
 
 	ch, err := s.stores.Character.GetCharacter(ctx, campaignID, characterID)

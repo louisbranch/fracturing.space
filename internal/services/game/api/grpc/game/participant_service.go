@@ -119,6 +119,9 @@ func (s *ParticipantService) ListParticipants(ctx context.Context, in *campaignv
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpRead); err != nil {
 		return nil, handleDomainError(err)
 	}
+	if err := requireReadPolicy(ctx, s.stores, c); err != nil {
+		return nil, err
+	}
 
 	pageSize := pagination.ClampPageSize(in.GetPageSize(), pagination.PageSizeConfig{
 		Default: defaultListParticipantsPageSize,
@@ -167,6 +170,9 @@ func (s *ParticipantService) GetParticipant(ctx context.Context, in *campaignv1.
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpRead); err != nil {
 		return nil, handleDomainError(err)
+	}
+	if err := requireReadPolicy(ctx, s.stores, c); err != nil {
+		return nil, err
 	}
 
 	p, err := s.stores.Participant.GetParticipant(ctx, campaignID, participantID)

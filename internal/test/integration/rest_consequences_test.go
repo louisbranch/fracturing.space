@@ -55,7 +55,7 @@ func TestDaggerheartRestConsequences(t *testing.T) {
 	}
 	campaignID := createCampaign.GetCampaign().GetId()
 
-	startSession, err := sessionClient.StartSession(ctx, &gamev1.StartSessionRequest{
+	startSession, err := sessionClient.StartSession(ctxWithUser, &gamev1.StartSessionRequest{
 		CampaignId: campaignID,
 		Name:       "Rest Session",
 	})

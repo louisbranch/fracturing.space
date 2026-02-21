@@ -44,8 +44,8 @@ func campaignCharactersCacheKey(campaignID string) string {
 	return "campaign_characters:id:" + strings.TrimSpace(campaignID)
 }
 
-func campaignInvitesCacheKey(campaignID string) string {
-	return "campaign_invites:id:" + strings.TrimSpace(campaignID)
+func campaignInvitesCacheKey(campaignID, userID string) string {
+	return "campaign_invites:id:" + strings.TrimSpace(campaignID) + ":user:" + strings.TrimSpace(userID)
 }
 
 func (h *handler) cachedUserCampaigns(ctx context.Context, userID string) ([]*statev1.Campaign, bool) {
@@ -360,19 +360,20 @@ func (h *handler) setCampaignCharactersCache(ctx context.Context, campaignID str
 	})
 }
 
-func (h *handler) cachedCampaignInvites(ctx context.Context, campaignID string) ([]*statev1.Invite, bool) {
+func (h *handler) cachedCampaignInvites(ctx context.Context, campaignID, userID string) ([]*statev1.Invite, bool) {
 	if h == nil || h.cacheStore == nil {
 		return nil, false
 	}
 	campaignID = strings.TrimSpace(campaignID)
-	if campaignID == "" {
+	userID = strings.TrimSpace(userID)
+	if campaignID == "" || userID == "" {
 		return nil, false
 	}
 	if ctx == nil {
 		ctx = context.Background()
 	}
 
-	key := campaignInvitesCacheKey(campaignID)
+	key := campaignInvitesCacheKey(campaignID, userID)
 	entry, ok, err := h.cacheStore.GetCacheEntry(ctx, key)
 	if err != nil || !ok {
 		return nil, false
@@ -393,12 +394,13 @@ func (h *handler) cachedCampaignInvites(ctx context.Context, campaignID string) 
 	return resp.GetInvites(), true
 }
 
-func (h *handler) setCampaignInvitesCache(ctx context.Context, campaignID string, invites []*statev1.Invite) {
+func (h *handler) setCampaignInvitesCache(ctx context.Context, campaignID, userID string, invites []*statev1.Invite) {
 	if h == nil || h.cacheStore == nil {
 		return
 	}
 	campaignID = strings.TrimSpace(campaignID)
-	if campaignID == "" {
+	userID = strings.TrimSpace(userID)
+	if campaignID == "" || userID == "" {
 		return
 	}
 	if ctx == nil {
@@ -411,9 +413,10 @@ func (h *handler) setCampaignInvitesCache(ctx context.Context, campaignID string
 	}
 	now := time.Now().UTC()
 	_ = h.cacheStore.PutCacheEntry(ctx, webstorage.CacheEntry{
-		CacheKey:     campaignInvitesCacheKey(campaignID),
+		CacheKey:     campaignInvitesCacheKey(campaignID, userID),
 		Scope:        cacheScopeCampaignInvites,
 		CampaignID:   campaignID,
+		UserID:       userID,
 		PayloadBytes: payload,
 		Stale:        false,
 		CheckedAt:    now,

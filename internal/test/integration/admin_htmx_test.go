@@ -239,7 +239,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		}
 		campaignID := createResp.Campaign.Id
 
-		_, err = sessionClient.StartSession(ctx, &statev1.StartSessionRequest{
+		_, err = sessionClient.StartSession(ctxWithUser, &statev1.StartSessionRequest{
 			CampaignId: campaignID,
 			Name:       "Dashboard Test Session",
 		})
@@ -332,7 +332,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		}
 		campaignID := createResp.Campaign.Id
 
-		_, err = sessionClient.StartSession(ctx, &statev1.StartSessionRequest{
+		_, err = sessionClient.StartSession(ctxWithUser, &statev1.StartSessionRequest{
 			CampaignId: campaignID,
 			Name:       "Test Session Alpha",
 		})
@@ -363,7 +363,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		}
 		campaignID := createResp.Campaign.Id
 
-		sessionResp, err := sessionClient.StartSession(ctx, &statev1.StartSessionRequest{
+		sessionResp, err := sessionClient.StartSession(ctxWithUser, &statev1.StartSessionRequest{
 			CampaignId: campaignID,
 			Name:       "Detail Session Test",
 		})
@@ -411,7 +411,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 			t.Fatalf("create campaign: %v", err)
 		}
 		campaignID := createResp.Campaign.Id
-		sessionResp, err := sessionClient.StartSession(ctx, &statev1.StartSessionRequest{
+		sessionResp, err := sessionClient.StartSession(ctxWithUser, &statev1.StartSessionRequest{
 			CampaignId: campaignID,
 			Name:       "HTMX Session Detail",
 		})
@@ -445,7 +445,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		}
 		campaignID := createResp.Campaign.Id
 
-		sessionResp, err := sessionClient.StartSession(ctx, &statev1.StartSessionRequest{
+		sessionResp, err := sessionClient.StartSession(ctxWithUser, &statev1.StartSessionRequest{
 			CampaignId: campaignID,
 			Name:       "Events Test Session",
 		})
@@ -560,7 +560,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		}
 		campaignID := createResp.Campaign.Id
 
-		_, err = characterClient.CreateCharacter(ctx, &statev1.CreateCharacterRequest{
+		_, err = characterClient.CreateCharacter(ctxWithUser, &statev1.CreateCharacterRequest{
 			CampaignId: campaignID,
 			Name:       "Test Hero Alpha",
 			Kind:       statev1.CharacterKind_PC,
@@ -591,7 +591,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 			t.Fatalf("create campaign: %v", err)
 		}
 		campaignID := createResp.Campaign.Id
-		charResp, err := characterClient.CreateCharacter(ctx, &statev1.CreateCharacterRequest{
+		charResp, err := characterClient.CreateCharacter(ctxWithUser, &statev1.CreateCharacterRequest{
 			CampaignId: campaignID,
 			Name:       "Sheet Test Character",
 			Kind:       statev1.CharacterKind_PC,
@@ -640,7 +640,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		}
 		campaignID := createResp.Campaign.Id
 
-		charResp, err := characterClient.CreateCharacter(ctx, &statev1.CreateCharacterRequest{
+		charResp, err := characterClient.CreateCharacter(ctxWithUser, &statev1.CreateCharacterRequest{
 			CampaignId: campaignID,
 			Name:       "HTMX Sheet Character",
 			Kind:       statev1.CharacterKind_NPC,
@@ -762,7 +762,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		}
 		campaignID := createResp.Campaign.Id
 
-		listResp, err := participantClient.ListParticipants(ctx, &statev1.ListParticipantsRequest{CampaignId: campaignID})
+		listResp, err := participantClient.ListParticipants(ctxWithUser, &statev1.ListParticipantsRequest{CampaignId: campaignID})
 		if err != nil {
 			t.Fatalf("list participants: %v", err)
 		}
@@ -870,7 +870,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		campaignID := createResp.Campaign.Id
 
 		// Start a session to generate events
-		_, err = sessionClient.StartSession(ctx, &statev1.StartSessionRequest{
+		_, err = sessionClient.StartSession(ctxWithUser, &statev1.StartSessionRequest{
 			CampaignId: campaignID,
 			Name:       "Event Generation Session",
 		})

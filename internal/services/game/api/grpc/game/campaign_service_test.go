@@ -15,6 +15,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -81,6 +82,18 @@ func (s *orderedCampaignStore) List(_ context.Context, pageSize int, pageToken s
 		page.NextPageToken = s.campaigns[end-1].ID
 	}
 	return page, nil
+}
+
+func ownerParticipantStore(campaignID string) *fakeParticipantStore {
+	store := newFakeParticipantStore()
+	store.participants[campaignID] = map[string]storage.ParticipantRecord{
+		"owner-1": {
+			ID:             "owner-1",
+			CampaignID:     campaignID,
+			CampaignAccess: participant.CampaignAccessOwner,
+		},
+	}
+	return store
 }
 
 func TestCreateCampaign_NilRequest(t *testing.T) {
@@ -352,21 +365,54 @@ func TestListCampaigns_NilRequest(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
-func TestListCampaigns_EmptyList(t *testing.T) {
+func TestListCampaigns_DeniesMissingIdentity(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
-	svc := NewCampaignService(Stores{Campaign: campaignStore})
+	participantStore := newFakeParticipantStore()
+	svc := NewCampaignService(Stores{Campaign: campaignStore, Participant: participantStore})
 
 	resp, err := svc.ListCampaigns(context.Background(), &statev1.ListCampaignsRequest{})
-	if err != nil {
-		t.Fatalf("ListCampaigns returned error: %v", err)
+	if status.Code(err) != codes.PermissionDenied {
+		t.Fatalf("status code = %v, want %v", status.Code(err), codes.PermissionDenied)
 	}
-	if len(resp.Campaigns) != 0 {
-		t.Errorf("ListCampaigns returned %d campaigns, want 0", len(resp.Campaigns))
+	if resp != nil {
+		t.Fatalf("expected nil response, got %+v", resp)
 	}
 }
 
-func TestListCampaigns_WithCampaigns(t *testing.T) {
+func TestListCampaigns_AllowsAdminOverride(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
+	now := time.Now().UTC()
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Name: "Campaign One", Status: campaign.StatusActive, GmMode: campaign.GmModeHuman, CreatedAt: now}
+	campaignStore.campaigns["c2"] = storage.CampaignRecord{ID: "c2", Name: "Campaign Two", Status: campaign.StatusDraft, GmMode: campaign.GmModeAI, CreatedAt: now}
+	svc := NewCampaignService(Stores{Campaign: campaignStore})
+
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
+		grpcmeta.PlatformRoleHeader, grpcmeta.PlatformRoleAdmin,
+		grpcmeta.AuthzOverrideReasonHeader, "admin_dashboard",
+	))
+	resp, err := svc.ListCampaigns(ctx, &statev1.ListCampaignsRequest{})
+	if err != nil {
+		t.Fatalf("ListCampaigns returned error: %v", err)
+	}
+	if len(resp.Campaigns) != 2 {
+		t.Fatalf("ListCampaigns returned %d campaigns, want 2", len(resp.Campaigns))
+	}
+}
+
+func TestListCampaigns_DeniesAdminOverrideWithoutReason(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	svc := NewCampaignService(Stores{Campaign: campaignStore})
+
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
+		grpcmeta.PlatformRoleHeader, grpcmeta.PlatformRoleAdmin,
+	))
+	_, err := svc.ListCampaigns(ctx, &statev1.ListCampaignsRequest{})
+	assertStatusCode(t, err, codes.PermissionDenied)
+}
+
+func TestListCampaigns_WithParticipantIdentity(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
 	now := time.Now().UTC()
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
@@ -383,15 +429,24 @@ func TestListCampaigns_WithCampaigns(t *testing.T) {
 		GmMode:    campaign.GmModeAI,
 		CreatedAt: now,
 	}
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+		"participant-1": {ID: "participant-1", CampaignID: "c1", UserID: "user-1", Name: "Alice"},
+	}
+	participantStore.participants["c2"] = map[string]storage.ParticipantRecord{
+		"participant-1": {ID: "participant-1", CampaignID: "c2", UserID: "user-1", Name: "Alice"},
+	}
 
-	svc := NewCampaignService(Stores{Campaign: campaignStore})
+	svc := NewCampaignService(Stores{Campaign: campaignStore, Participant: participantStore})
 
-	resp, err := svc.ListCampaigns(context.Background(), &statev1.ListCampaignsRequest{})
+	resp, err := svc.ListCampaigns(contextWithParticipantID("participant-1"), &statev1.ListCampaignsRequest{})
 	if err != nil {
 		t.Fatalf("ListCampaigns returned error: %v", err)
 	}
 	if len(resp.Campaigns) != 2 {
 		t.Errorf("ListCampaigns returned %d campaigns, want 2", len(resp.Campaigns))
+	}
+	if participantStore.listCampaignIDsByParticipantCalls != 1 {
+		t.Fatalf("ListCampaignIDsByParticipant calls = %d, want 1", participantStore.listCampaignIDsByParticipantCalls)
 	}
 }
 
@@ -519,8 +574,9 @@ func TestGetCampaign_NotFound(t *testing.T) {
 	assertStatusCode(t, err, codes.NotFound)
 }
 
-func TestGetCampaign_Success(t *testing.T) {
+func TestGetCampaign_DeniesMissingIdentity(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
 	now := time.Now().UTC()
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{
 		ID:        "c1",
@@ -531,9 +587,53 @@ func TestGetCampaign_Success(t *testing.T) {
 		CreatedAt: now,
 	}
 
-	svc := NewCampaignService(Stores{Campaign: campaignStore})
+	svc := NewCampaignService(Stores{Campaign: campaignStore, Participant: participantStore})
+	_, err := svc.GetCampaign(context.Background(), &statev1.GetCampaignRequest{CampaignId: "c1"})
+	assertStatusCode(t, err, codes.PermissionDenied)
+}
 
-	resp, err := svc.GetCampaign(context.Background(), &statev1.GetCampaignRequest{CampaignId: "c1"})
+func TestGetCampaign_DeniesNonMember(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	now := time.Now().UTC()
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+		ID:        "c1",
+		Name:      "Test Campaign",
+		System:    commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		Status:    campaign.StatusDraft,
+		GmMode:    campaign.GmModeHuman,
+		CreatedAt: now,
+	}
+
+	svc := NewCampaignService(Stores{Campaign: campaignStore, Participant: participantStore})
+	_, err := svc.GetCampaign(contextWithParticipantID("outsider-1"), &statev1.GetCampaignRequest{CampaignId: "c1"})
+	assertStatusCode(t, err, codes.PermissionDenied)
+}
+
+func TestGetCampaign_Success(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	now := time.Now().UTC()
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+		ID:        "c1",
+		Name:      "Test Campaign",
+		System:    commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		Status:    campaign.StatusDraft,
+		GmMode:    campaign.GmModeHuman,
+		CreatedAt: now,
+	}
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+		"participant-1": {
+			ID:             "participant-1",
+			CampaignID:     "c1",
+			UserID:         "user-1",
+			CampaignAccess: participant.CampaignAccessMember,
+		},
+	}
+
+	svc := NewCampaignService(Stores{Campaign: campaignStore, Participant: participantStore})
+
+	resp, err := svc.GetCampaign(contextWithParticipantID("participant-1"), &statev1.GetCampaignRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("GetCampaign returned error: %v", err)
 	}
@@ -545,6 +645,37 @@ func TestGetCampaign_Success(t *testing.T) {
 	}
 	if resp.Campaign.Name != "Test Campaign" {
 		t.Errorf("Campaign Name = %q, want %q", resp.Campaign.Name, "Test Campaign")
+	}
+}
+
+func TestGetCampaign_SuccessByUserIDFallback(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	now := time.Now().UTC()
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+		ID:        "c1",
+		Name:      "Test Campaign",
+		System:    commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		Status:    campaign.StatusDraft,
+		GmMode:    campaign.GmModeHuman,
+		CreatedAt: now,
+	}
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+		"participant-1": {
+			ID:             "participant-1",
+			CampaignID:     "c1",
+			UserID:         "user-1",
+			CampaignAccess: participant.CampaignAccessMember,
+		},
+	}
+
+	svc := NewCampaignService(Stores{Campaign: campaignStore, Participant: participantStore})
+	resp, err := svc.GetCampaign(contextWithUserID("user-1"), &statev1.GetCampaignRequest{CampaignId: "c1"})
+	if err != nil {
+		t.Fatalf("GetCampaign returned error: %v", err)
+	}
+	if resp.Campaign == nil || resp.Campaign.GetId() != "c1" {
+		t.Fatalf("campaign = %+v, want id c1", resp.Campaign)
 	}
 }
 
@@ -576,6 +707,7 @@ func TestEndCampaign_ActiveSessionBlocks(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
 	eventStore := newFakeEventStore()
+	participantStore := ownerParticipantStore("c1")
 	now := time.Now().UTC()
 
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{
@@ -590,8 +722,8 @@ func TestEndCampaign_ActiveSessionBlocks(t *testing.T) {
 	}
 	sessionStore.activeSession["c1"] = "s1"
 
-	svc := NewCampaignService(Stores{Campaign: campaignStore, Session: sessionStore, Event: eventStore})
-	_, err := svc.EndCampaign(context.Background(), &statev1.EndCampaignRequest{CampaignId: "c1"})
+	svc := NewCampaignService(Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore, Event: eventStore})
+	_, err := svc.EndCampaign(contextWithParticipantID("owner-1"), &statev1.EndCampaignRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.FailedPrecondition)
 }
 
@@ -599,6 +731,7 @@ func TestEndCampaign_DraftStatusDisallowed(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
 	eventStore := newFakeEventStore()
+	participantStore := ownerParticipantStore("c1")
 
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
@@ -608,19 +741,64 @@ func TestEndCampaign_DraftStatusDisallowed(t *testing.T) {
 		GmMode: campaign.GmModeHuman,
 	}
 
-	svc := NewCampaignService(Stores{Campaign: campaignStore, Session: sessionStore, Event: eventStore})
-	_, err := svc.EndCampaign(context.Background(), &statev1.EndCampaignRequest{CampaignId: "c1"})
+	svc := NewCampaignService(Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore, Event: eventStore})
+	_, err := svc.EndCampaign(contextWithParticipantID("owner-1"), &statev1.EndCampaignRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.FailedPrecondition)
+}
+
+func TestEndCampaign_DeniesManagerAccess(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	sessionStore := newFakeSessionStore()
+	eventStore := newFakeEventStore()
+	participantStore := newFakeParticipantStore()
+	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
+
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+		ID:     "c1",
+		Status: campaign.StatusActive,
+	}
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+		"manager-1": {
+			ID:             "manager-1",
+			CampaignID:     "c1",
+			CampaignAccess: "manager",
+		},
+	}
+	domain := &fakeDomainEngine{store: eventStore, result: engine.Result{
+		Decision: command.Accept(event.Event{
+			CampaignID:  "c1",
+			Type:        event.Type("campaign.updated"),
+			Timestamp:   now,
+			EntityType:  "campaign",
+			EntityID:    "c1",
+			PayloadJSON: []byte(`{"fields":{"status":"completed"}}`),
+		}),
+	}}
+
+	svc := &CampaignService{
+		stores: Stores{
+			Campaign:    campaignStore,
+			Session:     sessionStore,
+			Participant: participantStore,
+			Event:       eventStore,
+			Domain:      domain,
+		},
+		clock: fixedClock(now),
+	}
+
+	_, err := svc.EndCampaign(contextWithParticipantID("manager-1"), &statev1.EndCampaignRequest{CampaignId: "c1"})
+	assertStatusCode(t, err, codes.PermissionDenied)
 }
 
 func TestEndCampaign_RequiresDomainEngine(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	eventStore := newFakeEventStore()
 	sessionStore := newFakeSessionStore()
+	participantStore := ownerParticipantStore("c1")
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
 
-	svc := NewCampaignService(Stores{Campaign: campaignStore, Event: eventStore, Session: sessionStore})
-	_, err := svc.EndCampaign(context.Background(), &statev1.EndCampaignRequest{CampaignId: "c1"})
+	svc := NewCampaignService(Stores{Campaign: campaignStore, Event: eventStore, Session: sessionStore, Participant: participantStore})
+	_, err := svc.EndCampaign(contextWithParticipantID("owner-1"), &statev1.EndCampaignRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.Internal)
 }
 
@@ -628,6 +806,7 @@ func TestEndCampaign_Success(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
 	eventStore := newFakeEventStore()
+	participantStore := ownerParticipantStore("c1")
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{
@@ -650,12 +829,12 @@ func TestEndCampaign_Success(t *testing.T) {
 	}}
 
 	svc := &CampaignService{
-		stores:      Stores{Campaign: campaignStore, Session: sessionStore, Event: eventStore, Domain: domain},
+		stores:      Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore, Event: eventStore, Domain: domain},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("campaign-123"),
 	}
 
-	resp, err := svc.EndCampaign(context.Background(), &statev1.EndCampaignRequest{CampaignId: "c1"})
+	resp, err := svc.EndCampaign(contextWithParticipantID("owner-1"), &statev1.EndCampaignRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("EndCampaign returned error: %v", err)
 	}
@@ -683,6 +862,7 @@ func TestEndCampaign_UsesDomainEngine(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
 	eventStore := newFakeEventStore()
+	participantStore := ownerParticipantStore("c1")
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{
@@ -706,11 +886,11 @@ func TestEndCampaign_UsesDomainEngine(t *testing.T) {
 	}}
 
 	svc := &CampaignService{
-		stores: Stores{Campaign: campaignStore, Session: sessionStore, Event: eventStore, Domain: domain},
+		stores: Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore, Event: eventStore, Domain: domain},
 		clock:  fixedClock(now),
 	}
 
-	_, err := svc.EndCampaign(context.Background(), &statev1.EndCampaignRequest{CampaignId: "c1"})
+	_, err := svc.EndCampaign(contextWithParticipantID("owner-1"), &statev1.EndCampaignRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("EndCampaign returned error: %v", err)
 	}
@@ -750,6 +930,7 @@ func TestArchiveCampaign_ActiveSessionBlocks(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
 	eventStore := newFakeEventStore()
+	participantStore := ownerParticipantStore("c1")
 	now := time.Now().UTC()
 
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{
@@ -761,8 +942,8 @@ func TestArchiveCampaign_ActiveSessionBlocks(t *testing.T) {
 	}
 	sessionStore.activeSession["c1"] = "s1"
 
-	svc := NewCampaignService(Stores{Campaign: campaignStore, Session: sessionStore, Event: eventStore})
-	_, err := svc.ArchiveCampaign(context.Background(), &statev1.ArchiveCampaignRequest{CampaignId: "c1"})
+	svc := NewCampaignService(Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore, Event: eventStore})
+	_, err := svc.ArchiveCampaign(contextWithParticipantID("owner-1"), &statev1.ArchiveCampaignRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.FailedPrecondition)
 }
 
@@ -770,10 +951,11 @@ func TestArchiveCampaign_RequiresDomainEngine(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	eventStore := newFakeEventStore()
 	sessionStore := newFakeSessionStore()
+	participantStore := ownerParticipantStore("c1")
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
 
-	svc := NewCampaignService(Stores{Campaign: campaignStore, Event: eventStore, Session: sessionStore})
-	_, err := svc.ArchiveCampaign(context.Background(), &statev1.ArchiveCampaignRequest{CampaignId: "c1"})
+	svc := NewCampaignService(Stores{Campaign: campaignStore, Event: eventStore, Session: sessionStore, Participant: participantStore})
+	_, err := svc.ArchiveCampaign(contextWithParticipantID("owner-1"), &statev1.ArchiveCampaignRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.Internal)
 }
 
@@ -781,6 +963,7 @@ func TestArchiveCampaign_Success(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
 	eventStore := newFakeEventStore()
+	participantStore := ownerParticipantStore("c1")
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{
@@ -803,12 +986,12 @@ func TestArchiveCampaign_Success(t *testing.T) {
 	}}
 
 	svc := &CampaignService{
-		stores:      Stores{Campaign: campaignStore, Session: sessionStore, Event: eventStore, Domain: domain},
+		stores:      Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore, Event: eventStore, Domain: domain},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("campaign-123"),
 	}
 
-	resp, err := svc.ArchiveCampaign(context.Background(), &statev1.ArchiveCampaignRequest{CampaignId: "c1"})
+	resp, err := svc.ArchiveCampaign(contextWithParticipantID("owner-1"), &statev1.ArchiveCampaignRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("ArchiveCampaign returned error: %v", err)
 	}
@@ -830,6 +1013,7 @@ func TestArchiveCampaign_UsesDomainEngine(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
 	eventStore := newFakeEventStore()
+	participantStore := ownerParticipantStore("c1")
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{
@@ -853,11 +1037,11 @@ func TestArchiveCampaign_UsesDomainEngine(t *testing.T) {
 	}}
 
 	svc := &CampaignService{
-		stores: Stores{Campaign: campaignStore, Session: sessionStore, Event: eventStore, Domain: domain},
+		stores: Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore, Event: eventStore, Domain: domain},
 		clock:  fixedClock(now),
 	}
 
-	_, err := svc.ArchiveCampaign(context.Background(), &statev1.ArchiveCampaignRequest{CampaignId: "c1"})
+	_, err := svc.ArchiveCampaign(contextWithParticipantID("owner-1"), &statev1.ArchiveCampaignRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("ArchiveCampaign returned error: %v", err)
 	}
@@ -894,29 +1078,32 @@ func TestRestoreCampaign_NotFound(t *testing.T) {
 func TestRestoreCampaign_NotArchivedDisallowed(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	eventStore := newFakeEventStore()
+	participantStore := ownerParticipantStore("c1")
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
 		Status: campaign.StatusActive,
 	}
 
-	svc := NewCampaignService(Stores{Campaign: campaignStore, Event: eventStore})
-	_, err := svc.RestoreCampaign(context.Background(), &statev1.RestoreCampaignRequest{CampaignId: "c1"})
+	svc := NewCampaignService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore})
+	_, err := svc.RestoreCampaign(contextWithParticipantID("owner-1"), &statev1.RestoreCampaignRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.FailedPrecondition)
 }
 
 func TestRestoreCampaign_RequiresDomainEngine(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	eventStore := newFakeEventStore()
+	participantStore := ownerParticipantStore("c1")
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusArchived}
 
-	svc := NewCampaignService(Stores{Campaign: campaignStore, Event: eventStore})
-	_, err := svc.RestoreCampaign(context.Background(), &statev1.RestoreCampaignRequest{CampaignId: "c1"})
+	svc := NewCampaignService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore})
+	_, err := svc.RestoreCampaign(contextWithParticipantID("owner-1"), &statev1.RestoreCampaignRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.Internal)
 }
 
 func TestRestoreCampaign_Success(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	eventStore := newFakeEventStore()
+	participantStore := ownerParticipantStore("c1")
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 	archivedAt := now.Add(-24 * time.Hour)
 
@@ -941,12 +1128,12 @@ func TestRestoreCampaign_Success(t *testing.T) {
 	}}
 
 	svc := &CampaignService{
-		stores:      Stores{Campaign: campaignStore, Event: eventStore, Domain: domain},
+		stores:      Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Domain: domain},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("campaign-123"),
 	}
 
-	resp, err := svc.RestoreCampaign(context.Background(), &statev1.RestoreCampaignRequest{CampaignId: "c1"})
+	resp, err := svc.RestoreCampaign(contextWithParticipantID("owner-1"), &statev1.RestoreCampaignRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("RestoreCampaign returned error: %v", err)
 	}
@@ -967,6 +1154,7 @@ func TestRestoreCampaign_Success(t *testing.T) {
 func TestRestoreCampaign_UsesDomainEngine(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	eventStore := newFakeEventStore()
+	participantStore := ownerParticipantStore("c1")
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 	archivedAt := now.Add(-24 * time.Hour)
 
@@ -992,11 +1180,11 @@ func TestRestoreCampaign_UsesDomainEngine(t *testing.T) {
 	}}
 
 	svc := &CampaignService{
-		stores: Stores{Campaign: campaignStore, Event: eventStore, Domain: domain},
+		stores: Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Domain: domain},
 		clock:  fixedClock(now),
 	}
 
-	_, err := svc.RestoreCampaign(context.Background(), &statev1.RestoreCampaignRequest{CampaignId: "c1"})
+	_, err := svc.RestoreCampaign(contextWithParticipantID("owner-1"), &statev1.RestoreCampaignRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("RestoreCampaign returned error: %v", err)
 	}
@@ -1017,6 +1205,7 @@ func TestSetCampaignCover_NilRequest(t *testing.T) {
 func TestSetCampaignCover_Success(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	eventStore := newFakeEventStore()
+	participantStore := ownerParticipantStore("c1")
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{
 		ID:           "c1",
@@ -1040,11 +1229,11 @@ func TestSetCampaignCover_Success(t *testing.T) {
 	}}
 
 	svc := &CampaignService{
-		stores: Stores{Campaign: campaignStore, Event: eventStore, Domain: domain},
+		stores: Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Domain: domain},
 		clock:  fixedClock(now),
 	}
 
-	resp, err := svc.SetCampaignCover(context.Background(), &statev1.SetCampaignCoverRequest{
+	resp, err := svc.SetCampaignCover(contextWithParticipantID("owner-1"), &statev1.SetCampaignCoverRequest{
 		CampaignId:   "c1",
 		CoverAssetId: "camp-cover-04",
 	})

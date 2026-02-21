@@ -11,10 +11,23 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 )
+
+func sessionManagerParticipantStore(campaignID string) *fakeParticipantStore {
+	store := newFakeParticipantStore()
+	store.participants[campaignID] = map[string]storage.ParticipantRecord{
+		"manager-1": {
+			ID:             "manager-1",
+			CampaignID:     campaignID,
+			CampaignAccess: participant.CampaignAccessManager,
+		},
+	}
+	return store
+}
 
 func TestStartSession_NilRequest(t *testing.T) {
 	svc := NewSessionService(Stores{})
@@ -43,20 +56,22 @@ func TestStartSession_CampaignNotFound(t *testing.T) {
 func TestStartSession_CampaignArchivedDisallowed(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
+	participantStore := sessionManagerParticipantStore("c1")
 	eventStore := newFakeEventStore()
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
 		Status: campaign.StatusArchived,
 	}
 
-	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore, Event: eventStore})
-	_, err := svc.StartSession(context.Background(), &statev1.StartSessionRequest{CampaignId: "c1"})
+	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore, Event: eventStore})
+	_, err := svc.StartSession(contextWithParticipantID("manager-1"), &statev1.StartSessionRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.FailedPrecondition)
 }
 
 func TestStartSession_ActiveSessionExists(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
+	participantStore := sessionManagerParticipantStore("c1")
 	eventStore := newFakeEventStore()
 	now := time.Now().UTC()
 
@@ -69,26 +84,28 @@ func TestStartSession_ActiveSessionExists(t *testing.T) {
 	}
 	sessionStore.activeSession["c1"] = "s1"
 
-	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore, Event: eventStore})
-	_, err := svc.StartSession(context.Background(), &statev1.StartSessionRequest{CampaignId: "c1"})
+	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore, Event: eventStore})
+	_, err := svc.StartSession(contextWithParticipantID("manager-1"), &statev1.StartSessionRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.FailedPrecondition)
 }
 
 func TestStartSession_RequiresDomainEngine(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
+	participantStore := sessionManagerParticipantStore("c1")
 	eventStore := newFakeEventStore()
 
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusDraft}
 
-	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore, Event: eventStore})
-	_, err := svc.StartSession(context.Background(), &statev1.StartSessionRequest{CampaignId: "c1"})
+	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore, Event: eventStore})
+	_, err := svc.StartSession(contextWithParticipantID("manager-1"), &statev1.StartSessionRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.Internal)
 }
 
 func TestStartSession_Success_ActivatesDraftCampaign(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
+	participantStore := sessionManagerParticipantStore("c1")
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
@@ -126,12 +143,12 @@ func TestStartSession_Success_ActivatesDraftCampaign(t *testing.T) {
 	}}
 
 	svc := &SessionService{
-		stores:      Stores{Campaign: campaignStore, Session: sessionStore, Event: eventStore, Domain: domain},
+		stores:      Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore, Event: eventStore, Domain: domain},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("session-123"),
 	}
 
-	resp, err := svc.StartSession(context.Background(), &statev1.StartSessionRequest{
+	resp, err := svc.StartSession(contextWithParticipantID("manager-1"), &statev1.StartSessionRequest{
 		CampaignId: "c1",
 		Name:       "First Session",
 	})
@@ -167,6 +184,7 @@ func TestStartSession_Success_ActivatesDraftCampaign(t *testing.T) {
 func TestStartSession_Success_AlreadyActive(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
+	participantStore := sessionManagerParticipantStore("c1")
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
@@ -188,12 +206,12 @@ func TestStartSession_Success_AlreadyActive(t *testing.T) {
 	}}
 
 	svc := &SessionService{
-		stores:      Stores{Campaign: campaignStore, Session: sessionStore, Event: eventStore, Domain: domain},
+		stores:      Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore, Event: eventStore, Domain: domain},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("session-123"),
 	}
 
-	resp, err := svc.StartSession(context.Background(), &statev1.StartSessionRequest{CampaignId: "c1"})
+	resp, err := svc.StartSession(contextWithParticipantID("manager-1"), &statev1.StartSessionRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("StartSession returned error: %v", err)
 	}
@@ -211,6 +229,7 @@ func TestStartSession_Success_AlreadyActive(t *testing.T) {
 func TestStartSession_UsesDomainEngine(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
+	participantStore := sessionManagerParticipantStore("c1")
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
@@ -234,16 +253,17 @@ func TestStartSession_UsesDomainEngine(t *testing.T) {
 
 	svc := &SessionService{
 		stores: Stores{
-			Campaign: campaignStore,
-			Session:  sessionStore,
-			Event:    eventStore,
-			Domain:   domain,
+			Campaign:    campaignStore,
+			Session:     sessionStore,
+			Participant: participantStore,
+			Event:       eventStore,
+			Domain:      domain,
 		},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("session-123"),
 	}
 
-	_, err := svc.StartSession(context.Background(), &statev1.StartSessionRequest{
+	_, err := svc.StartSession(contextWithParticipantID("manager-1"), &statev1.StartSessionRequest{
 		CampaignId: "c1",
 		Name:       "First Session",
 	})
@@ -280,10 +300,25 @@ func TestListSessions_CampaignNotFound(t *testing.T) {
 	assertStatusCode(t, err, codes.NotFound)
 }
 
+func TestListSessions_DeniesMissingIdentity(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	sessionStore := newFakeSessionStore()
+	participantStore := sessionManagerParticipantStore("c1")
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+		ID:     "c1",
+		Status: campaign.StatusActive,
+	}
+
+	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore})
+	_, err := svc.ListSessions(context.Background(), &statev1.ListSessionsRequest{CampaignId: "c1"})
+	assertStatusCode(t, err, codes.PermissionDenied)
+}
+
 func TestSetSessionSpotlight_Success(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
 	spotlightStore := newFakeSessionSpotlightStore()
+	participantStore := sessionManagerParticipantStore("c1")
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 2, 1, 12, 0, 0, 0, time.UTC)
 
@@ -309,13 +344,14 @@ func TestSetSessionSpotlight_Success(t *testing.T) {
 			Campaign:         campaignStore,
 			Session:          sessionStore,
 			SessionSpotlight: spotlightStore,
+			Participant:      participantStore,
 			Event:            eventStore,
 			Domain:           domain,
 		},
 		clock: fixedClock(now),
 	}
 
-	resp, err := svc.SetSessionSpotlight(context.Background(), &statev1.SetSessionSpotlightRequest{
+	resp, err := svc.SetSessionSpotlight(contextWithParticipantID("manager-1"), &statev1.SetSessionSpotlightRequest{
 		CampaignId:  "c1",
 		SessionId:   "s1",
 		Type:        statev1.SessionSpotlightType_SESSION_SPOTLIGHT_TYPE_CHARACTER,
@@ -342,6 +378,7 @@ func TestSetSessionSpotlight_RequiresDomainEngine(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
 	spotlightStore := newFakeSessionSpotlightStore()
+	participantStore := sessionManagerParticipantStore("c1")
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 2, 1, 12, 0, 0, 0, time.UTC)
 
@@ -350,8 +387,8 @@ func TestSetSessionSpotlight_RequiresDomainEngine(t *testing.T) {
 		"s1": {ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now, UpdatedAt: now},
 	}
 
-	svc := &SessionService{stores: Stores{Campaign: campaignStore, Session: sessionStore, SessionSpotlight: spotlightStore, Event: eventStore}}
-	_, err := svc.SetSessionSpotlight(context.Background(), &statev1.SetSessionSpotlightRequest{
+	svc := &SessionService{stores: Stores{Campaign: campaignStore, Session: sessionStore, SessionSpotlight: spotlightStore, Participant: participantStore, Event: eventStore}}
+	_, err := svc.SetSessionSpotlight(contextWithParticipantID("manager-1"), &statev1.SetSessionSpotlightRequest{
 		CampaignId:  "c1",
 		SessionId:   "s1",
 		Type:        statev1.SessionSpotlightType_SESSION_SPOTLIGHT_TYPE_CHARACTER,
@@ -364,6 +401,7 @@ func TestSetSessionSpotlight_UsesDomainEngine(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
 	spotlightStore := newFakeSessionSpotlightStore()
+	participantStore := sessionManagerParticipantStore("c1")
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 2, 1, 12, 0, 0, 0, time.UTC)
 
@@ -390,13 +428,14 @@ func TestSetSessionSpotlight_UsesDomainEngine(t *testing.T) {
 			Campaign:         campaignStore,
 			Session:          sessionStore,
 			SessionSpotlight: spotlightStore,
+			Participant:      participantStore,
 			Event:            eventStore,
 			Domain:           domain,
 		},
 		clock: fixedClock(now),
 	}
 
-	_, err := svc.SetSessionSpotlight(context.Background(), &statev1.SetSessionSpotlightRequest{
+	_, err := svc.SetSessionSpotlight(contextWithParticipantID("manager-1"), &statev1.SetSessionSpotlightRequest{
 		CampaignId:  "c1",
 		SessionId:   "s1",
 		Type:        statev1.SessionSpotlightType_SESSION_SPOTLIGHT_TYPE_CHARACTER,
@@ -455,6 +494,7 @@ func TestGetSessionSpotlight_Success(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
 	spotlightStore := newFakeSessionSpotlightStore()
+	participantStore := sessionManagerParticipantStore("c1")
 
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
 	sessionStore.sessions["c1"] = map[string]storage.SessionRecord{
@@ -473,9 +513,10 @@ func TestGetSessionSpotlight_Success(t *testing.T) {
 		Campaign:         campaignStore,
 		Session:          sessionStore,
 		SessionSpotlight: spotlightStore,
+		Participant:      participantStore,
 	})
 
-	resp, err := svc.GetSessionSpotlight(context.Background(), &statev1.GetSessionSpotlightRequest{
+	resp, err := svc.GetSessionSpotlight(contextWithParticipantID("manager-1"), &statev1.GetSessionSpotlightRequest{
 		CampaignId: "c1",
 		SessionId:  "s1",
 	})
@@ -494,6 +535,7 @@ func TestClearSessionSpotlight_Success(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
 	spotlightStore := newFakeSessionSpotlightStore()
+	participantStore := sessionManagerParticipantStore("c1")
 	eventStore := newFakeEventStore()
 
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
@@ -526,11 +568,12 @@ func TestClearSessionSpotlight_Success(t *testing.T) {
 		Campaign:         campaignStore,
 		Session:          sessionStore,
 		SessionSpotlight: spotlightStore,
+		Participant:      participantStore,
 		Event:            eventStore,
 		Domain:           domain,
 	})
 
-	resp, err := svc.ClearSessionSpotlight(context.Background(), &statev1.ClearSessionSpotlightRequest{
+	resp, err := svc.ClearSessionSpotlight(contextWithParticipantID("manager-1"), &statev1.ClearSessionSpotlightRequest{
 		CampaignId: "c1",
 		SessionId:  "s1",
 		Reason:     "scene shift",
@@ -553,6 +596,7 @@ func TestClearSessionSpotlight_RequiresDomainEngine(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
 	spotlightStore := newFakeSessionSpotlightStore()
+	participantStore := sessionManagerParticipantStore("c1")
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 2, 1, 12, 0, 0, 0, time.UTC)
 
@@ -567,8 +611,8 @@ func TestClearSessionSpotlight_RequiresDomainEngine(t *testing.T) {
 		},
 	}
 
-	svc := &SessionService{stores: Stores{Campaign: campaignStore, Session: sessionStore, SessionSpotlight: spotlightStore, Event: eventStore}}
-	_, err := svc.ClearSessionSpotlight(context.Background(), &statev1.ClearSessionSpotlightRequest{
+	svc := &SessionService{stores: Stores{Campaign: campaignStore, Session: sessionStore, SessionSpotlight: spotlightStore, Participant: participantStore, Event: eventStore}}
+	_, err := svc.ClearSessionSpotlight(contextWithParticipantID("manager-1"), &statev1.ClearSessionSpotlightRequest{
 		CampaignId: "c1", SessionId: "s1", Reason: "break",
 	})
 	assertStatusCode(t, err, codes.Internal)
@@ -578,6 +622,7 @@ func TestClearSessionSpotlight_UsesDomainEngine(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
 	spotlightStore := newFakeSessionSpotlightStore()
+	participantStore := sessionManagerParticipantStore("c1")
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 2, 1, 12, 0, 0, 0, time.UTC)
 
@@ -612,13 +657,14 @@ func TestClearSessionSpotlight_UsesDomainEngine(t *testing.T) {
 			Campaign:         campaignStore,
 			Session:          sessionStore,
 			SessionSpotlight: spotlightStore,
+			Participant:      participantStore,
 			Event:            eventStore,
 			Domain:           domain,
 		},
 		clock: fixedClock(now),
 	}
 
-	_, err := svc.ClearSessionSpotlight(context.Background(), &statev1.ClearSessionSpotlightRequest{
+	_, err := svc.ClearSessionSpotlight(contextWithParticipantID("manager-1"), &statev1.ClearSessionSpotlightRequest{
 		CampaignId: "c1",
 		SessionId:  "s1",
 		Reason:     "scene shift",
@@ -637,13 +683,14 @@ func TestClearSessionSpotlight_UsesDomainEngine(t *testing.T) {
 func TestListSessions_EmptyList(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
+	participantStore := sessionManagerParticipantStore("c1")
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
 		Status: campaign.StatusActive,
 	}
 
-	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore})
-	resp, err := svc.ListSessions(context.Background(), &statev1.ListSessionsRequest{CampaignId: "c1"})
+	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore})
+	resp, err := svc.ListSessions(contextWithParticipantID("manager-1"), &statev1.ListSessionsRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("ListSessions returned error: %v", err)
 	}
@@ -655,6 +702,7 @@ func TestListSessions_EmptyList(t *testing.T) {
 func TestListSessions_WithSessions(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
+	participantStore := sessionManagerParticipantStore("c1")
 	now := time.Now().UTC()
 
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{
@@ -666,8 +714,8 @@ func TestListSessions_WithSessions(t *testing.T) {
 		"s2": {ID: "s2", CampaignID: "c1", Status: session.StatusActive, StartedAt: now},
 	}
 
-	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore})
-	resp, err := svc.ListSessions(context.Background(), &statev1.ListSessionsRequest{CampaignId: "c1"})
+	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore})
+	resp, err := svc.ListSessions(contextWithParticipantID("manager-1"), &statev1.ListSessionsRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("ListSessions returned error: %v", err)
 	}
@@ -706,19 +754,32 @@ func TestGetSession_CampaignNotFound(t *testing.T) {
 	assertStatusCode(t, err, codes.NotFound)
 }
 
+func TestGetSession_DeniesMissingIdentity(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	sessionStore := newFakeSessionStore()
+	participantStore := sessionManagerParticipantStore("c1")
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+
+	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore})
+	_, err := svc.GetSession(context.Background(), &statev1.GetSessionRequest{CampaignId: "c1", SessionId: "s1"})
+	assertStatusCode(t, err, codes.PermissionDenied)
+}
+
 func TestGetSession_SessionNotFound(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
+	participantStore := sessionManagerParticipantStore("c1")
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
 
-	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore})
-	_, err := svc.GetSession(context.Background(), &statev1.GetSessionRequest{CampaignId: "c1", SessionId: "s1"})
+	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore})
+	_, err := svc.GetSession(contextWithParticipantID("manager-1"), &statev1.GetSessionRequest{CampaignId: "c1", SessionId: "s1"})
 	assertStatusCode(t, err, codes.NotFound)
 }
 
 func TestGetSession_Success(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
+	participantStore := sessionManagerParticipantStore("c1")
 	now := time.Now().UTC()
 
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
@@ -726,8 +787,8 @@ func TestGetSession_Success(t *testing.T) {
 		"s1": {ID: "s1", CampaignID: "c1", Name: "Test Session", Status: session.StatusActive, StartedAt: now},
 	}
 
-	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore})
-	resp, err := svc.GetSession(context.Background(), &statev1.GetSessionRequest{CampaignId: "c1", SessionId: "s1"})
+	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore})
+	resp, err := svc.GetSession(contextWithParticipantID("manager-1"), &statev1.GetSessionRequest{CampaignId: "c1", SessionId: "s1"})
 	if err != nil {
 		t.Fatalf("GetSession returned error: %v", err)
 	}
@@ -778,17 +839,51 @@ func TestEndSession_CampaignNotFound(t *testing.T) {
 func TestEndSession_SessionNotFound(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
+	participantStore := sessionManagerParticipantStore("c1")
 	eventStore := newFakeEventStore()
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
 
-	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore, Event: eventStore})
-	_, err := svc.EndSession(context.Background(), &statev1.EndSessionRequest{CampaignId: "c1", SessionId: "s1"})
+	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore, Event: eventStore})
+	_, err := svc.EndSession(contextWithParticipantID("manager-1"), &statev1.EndSessionRequest{CampaignId: "c1", SessionId: "s1"})
 	assertStatusCode(t, err, codes.NotFound)
+}
+
+func TestEndSession_DeniesMemberAccess(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	sessionStore := newFakeSessionStore()
+	participantStore := newFakeParticipantStore()
+	eventStore := newFakeEventStore()
+	now := time.Now().UTC()
+
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	sessionStore.sessions["c1"] = map[string]storage.SessionRecord{
+		"s1": {ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now},
+	}
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+		"member-1": {
+			ID:             "member-1",
+			CampaignID:     "c1",
+			CampaignAccess: participant.CampaignAccessMember,
+		},
+	}
+
+	svc := NewSessionService(Stores{
+		Campaign:    campaignStore,
+		Session:     sessionStore,
+		Participant: participantStore,
+		Event:       eventStore,
+	})
+	_, err := svc.EndSession(contextWithParticipantID("member-1"), &statev1.EndSessionRequest{
+		CampaignId: "c1",
+		SessionId:  "s1",
+	})
+	assertStatusCode(t, err, codes.PermissionDenied)
 }
 
 func TestEndSession_RequiresDomainEngine(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
+	participantStore := sessionManagerParticipantStore("c1")
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
@@ -798,14 +893,15 @@ func TestEndSession_RequiresDomainEngine(t *testing.T) {
 	}
 	sessionStore.activeSession["c1"] = "s1"
 
-	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore, Event: eventStore})
-	_, err := svc.EndSession(context.Background(), &statev1.EndSessionRequest{CampaignId: "c1", SessionId: "s1"})
+	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore, Event: eventStore})
+	_, err := svc.EndSession(contextWithParticipantID("manager-1"), &statev1.EndSessionRequest{CampaignId: "c1", SessionId: "s1"})
 	assertStatusCode(t, err, codes.Internal)
 }
 
 func TestEndSession_Success(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
+	participantStore := sessionManagerParticipantStore("c1")
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
@@ -828,12 +924,12 @@ func TestEndSession_Success(t *testing.T) {
 	}}
 
 	svc := &SessionService{
-		stores:      Stores{Campaign: campaignStore, Session: sessionStore, Event: eventStore, Domain: domain},
+		stores:      Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore, Event: eventStore, Domain: domain},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("session-123"),
 	}
 
-	resp, err := svc.EndSession(context.Background(), &statev1.EndSessionRequest{CampaignId: "c1", SessionId: "s1"})
+	resp, err := svc.EndSession(contextWithParticipantID("manager-1"), &statev1.EndSessionRequest{CampaignId: "c1", SessionId: "s1"})
 	if err != nil {
 		t.Fatalf("EndSession returned error: %v", err)
 	}
@@ -854,6 +950,7 @@ func TestEndSession_Success(t *testing.T) {
 func TestEndSession_UsesDomainEngine(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
+	participantStore := sessionManagerParticipantStore("c1")
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
@@ -878,15 +975,16 @@ func TestEndSession_UsesDomainEngine(t *testing.T) {
 
 	svc := &SessionService{
 		stores: Stores{
-			Campaign: campaignStore,
-			Session:  sessionStore,
-			Event:    eventStore,
-			Domain:   domain,
+			Campaign:    campaignStore,
+			Session:     sessionStore,
+			Participant: participantStore,
+			Event:       eventStore,
+			Domain:      domain,
 		},
 		clock: fixedClock(now),
 	}
 
-	_, err := svc.EndSession(context.Background(), &statev1.EndSessionRequest{CampaignId: "c1", SessionId: "s1"})
+	_, err := svc.EndSession(contextWithParticipantID("manager-1"), &statev1.EndSessionRequest{CampaignId: "c1", SessionId: "s1"})
 	if err != nil {
 		t.Fatalf("EndSession returned error: %v", err)
 	}
@@ -956,10 +1054,49 @@ func TestAbandonSessionGate_CampaignNotFound(t *testing.T) {
 	assertStatusCode(t, err, codes.NotFound)
 }
 
+func TestAbandonSessionGate_DeniesMemberAccess(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	sessionStore := newFakeSessionStore()
+	gateStore := newFakeSessionGateStore()
+	participantStore := newFakeParticipantStore()
+	eventStore := newFakeEventStore()
+	now := time.Now().UTC()
+
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	sessionStore.sessions["c1"] = map[string]storage.SessionRecord{
+		"s1": {ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now, UpdatedAt: now},
+	}
+	gateStore.gates["c1:s1:g1"] = storage.SessionGate{
+		CampaignID: "c1", SessionID: "s1", GateID: "g1",
+		GateType: "decision", Status: session.GateStatusOpen,
+		CreatedAt: now,
+	}
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+		"member-1": {
+			ID:             "member-1",
+			CampaignID:     "c1",
+			CampaignAccess: participant.CampaignAccessMember,
+		},
+	}
+
+	svc := NewSessionService(Stores{
+		Campaign:    campaignStore,
+		Session:     sessionStore,
+		SessionGate: gateStore,
+		Participant: participantStore,
+		Event:       eventStore,
+	})
+	_, err := svc.AbandonSessionGate(contextWithParticipantID("member-1"), &statev1.AbandonSessionGateRequest{
+		CampaignId: "c1", SessionId: "s1", GateId: "g1",
+	})
+	assertStatusCode(t, err, codes.PermissionDenied)
+}
+
 func TestAbandonSessionGate_AlreadyAbandoned(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
 	gateStore := newFakeSessionGateStore()
+	participantStore := sessionManagerParticipantStore("c1")
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 2, 1, 12, 0, 0, 0, time.UTC)
 
@@ -978,12 +1115,13 @@ func TestAbandonSessionGate_AlreadyAbandoned(t *testing.T) {
 			Campaign:    campaignStore,
 			Session:     sessionStore,
 			SessionGate: gateStore,
+			Participant: participantStore,
 			Event:       eventStore,
 		},
 		clock: fixedClock(now),
 	}
 
-	resp, err := svc.AbandonSessionGate(context.Background(), &statev1.AbandonSessionGateRequest{
+	resp, err := svc.AbandonSessionGate(contextWithParticipantID("manager-1"), &statev1.AbandonSessionGateRequest{
 		CampaignId: "c1", SessionId: "s1", GateId: "g1",
 	})
 	if err != nil {
@@ -1004,6 +1142,7 @@ func TestAbandonSessionGate_Success(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
 	gateStore := newFakeSessionGateStore()
+	participantStore := newFakeParticipantStore()
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 2, 1, 12, 0, 0, 0, time.UTC)
 
@@ -1015,6 +1154,13 @@ func TestAbandonSessionGate_Success(t *testing.T) {
 		CampaignID: "c1", SessionID: "s1", GateID: "g1",
 		GateType: "decision", Status: session.GateStatusOpen,
 		CreatedAt: now,
+	}
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+		"part-1": {
+			ID:             "part-1",
+			CampaignID:     "c1",
+			CampaignAccess: participant.CampaignAccessManager,
+		},
 	}
 	domain := &fakeDomainEngine{store: eventStore, result: engine.Result{
 		Decision: command.Accept(event.Event{
@@ -1035,6 +1181,7 @@ func TestAbandonSessionGate_Success(t *testing.T) {
 			Campaign:    campaignStore,
 			Session:     sessionStore,
 			SessionGate: gateStore,
+			Participant: participantStore,
 			Event:       eventStore,
 			Domain:      domain,
 		},
@@ -1063,6 +1210,7 @@ func TestAbandonSessionGate_RequiresDomainEngine(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
 	gateStore := newFakeSessionGateStore()
+	participantStore := sessionManagerParticipantStore("c1")
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 2, 1, 12, 0, 0, 0, time.UTC)
 
@@ -1076,8 +1224,8 @@ func TestAbandonSessionGate_RequiresDomainEngine(t *testing.T) {
 		CreatedAt: now,
 	}
 
-	svc := &SessionService{stores: Stores{Campaign: campaignStore, Session: sessionStore, SessionGate: gateStore, Event: eventStore}}
-	_, err := svc.AbandonSessionGate(context.Background(), &statev1.AbandonSessionGateRequest{
+	svc := &SessionService{stores: Stores{Campaign: campaignStore, Session: sessionStore, SessionGate: gateStore, Participant: participantStore, Event: eventStore}}
+	_, err := svc.AbandonSessionGate(contextWithParticipantID("manager-1"), &statev1.AbandonSessionGateRequest{
 		CampaignId: "c1", SessionId: "s1", GateId: "g1",
 	})
 	assertStatusCode(t, err, codes.Internal)
@@ -1087,6 +1235,7 @@ func TestOpenSessionGate_UsesDomainEngine(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
 	gateStore := newFakeSessionGateStore()
+	participantStore := sessionManagerParticipantStore("c1")
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 2, 1, 12, 0, 0, 0, time.UTC)
 
@@ -1113,13 +1262,14 @@ func TestOpenSessionGate_UsesDomainEngine(t *testing.T) {
 			Campaign:    campaignStore,
 			Session:     sessionStore,
 			SessionGate: gateStore,
+			Participant: participantStore,
 			Event:       eventStore,
 			Domain:      domain,
 		},
 		clock: fixedClock(now),
 	}
 
-	_, err := svc.OpenSessionGate(context.Background(), &statev1.OpenSessionGateRequest{
+	_, err := svc.OpenSessionGate(contextWithParticipantID("manager-1"), &statev1.OpenSessionGateRequest{
 		CampaignId: "c1",
 		SessionId:  "s1",
 		GateType:   "spotlight",
@@ -1140,6 +1290,7 @@ func TestResolveSessionGate_UsesDomainEngine(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
 	gateStore := newFakeSessionGateStore()
+	participantStore := sessionManagerParticipantStore("c1")
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 2, 1, 12, 0, 0, 0, time.UTC)
 
@@ -1171,13 +1322,14 @@ func TestResolveSessionGate_UsesDomainEngine(t *testing.T) {
 			Campaign:    campaignStore,
 			Session:     sessionStore,
 			SessionGate: gateStore,
+			Participant: participantStore,
 			Event:       eventStore,
 			Domain:      domain,
 		},
 		clock: fixedClock(now),
 	}
 
-	_, err := svc.ResolveSessionGate(context.Background(), &statev1.ResolveSessionGateRequest{
+	_, err := svc.ResolveSessionGate(contextWithParticipantID("manager-1"), &statev1.ResolveSessionGateRequest{
 		CampaignId: "c1",
 		SessionId:  "s1",
 		GateId:     "g1",
@@ -1198,6 +1350,7 @@ func TestAbandonSessionGate_UsesDomainEngine(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
 	gateStore := newFakeSessionGateStore()
+	participantStore := sessionManagerParticipantStore("c1")
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 2, 1, 12, 0, 0, 0, time.UTC)
 
@@ -1229,13 +1382,14 @@ func TestAbandonSessionGate_UsesDomainEngine(t *testing.T) {
 			Campaign:    campaignStore,
 			Session:     sessionStore,
 			SessionGate: gateStore,
+			Participant: participantStore,
 			Event:       eventStore,
 			Domain:      domain,
 		},
 		clock: fixedClock(now),
 	}
 
-	_, err := svc.AbandonSessionGate(context.Background(), &statev1.AbandonSessionGateRequest{
+	_, err := svc.AbandonSessionGate(contextWithParticipantID("manager-1"), &statev1.AbandonSessionGateRequest{
 		CampaignId: "c1",
 		SessionId:  "s1",
 		GateId:     "g1",
@@ -1280,6 +1434,39 @@ func TestGetSessionSpotlight_MissingSessionId(t *testing.T) {
 		CampaignId: "c1",
 	})
 	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestGetSessionSpotlight_DeniesMissingIdentity(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	sessionStore := newFakeSessionStore()
+	spotlightStore := newFakeSessionSpotlightStore()
+	participantStore := sessionManagerParticipantStore("c1")
+
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	sessionStore.sessions["c1"] = map[string]storage.SessionRecord{
+		"s1": {ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: time.Now()},
+	}
+	spotlightStore.spotlights["c1"] = map[string]storage.SessionSpotlight{
+		"s1": {
+			CampaignID:    "c1",
+			SessionID:     "s1",
+			SpotlightType: session.SpotlightTypeGM,
+			UpdatedAt:     time.Now(),
+		},
+	}
+
+	svc := NewSessionService(Stores{
+		Campaign:         campaignStore,
+		Session:          sessionStore,
+		SessionSpotlight: spotlightStore,
+		Participant:      participantStore,
+	})
+
+	_, err := svc.GetSessionSpotlight(context.Background(), &statev1.GetSessionSpotlightRequest{
+		CampaignId: "c1",
+		SessionId:  "s1",
+	})
+	assertStatusCode(t, err, codes.PermissionDenied)
 }
 
 func TestSetSessionSpotlight_NilRequest(t *testing.T) {
@@ -1333,6 +1520,7 @@ func TestSetSessionSpotlight_InvalidType(t *testing.T) {
 func TestSetSessionSpotlight_SessionNotActive(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
+	participantStore := sessionManagerParticipantStore("c1")
 	now := time.Now().UTC()
 
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
@@ -1345,9 +1533,10 @@ func TestSetSessionSpotlight_SessionNotActive(t *testing.T) {
 		Campaign:         campaignStore,
 		Session:          sessionStore,
 		SessionSpotlight: newFakeSessionSpotlightStore(),
+		Participant:      participantStore,
 		Event:            newFakeEventStore(),
 	})
-	_, err := svc.SetSessionSpotlight(context.Background(), &statev1.SetSessionSpotlightRequest{
+	_, err := svc.SetSessionSpotlight(contextWithParticipantID("manager-1"), &statev1.SetSessionSpotlightRequest{
 		CampaignId: "c1", SessionId: "s1",
 		Type: statev1.SessionSpotlightType_SESSION_SPOTLIGHT_TYPE_GM,
 	})
@@ -1389,6 +1578,7 @@ func TestClearSessionSpotlight_MissingSessionId(t *testing.T) {
 func TestEndSession_AlreadyEnded(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
+	participantStore := sessionManagerParticipantStore("c1")
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 	endedAt := now.Add(-1 * time.Hour)
@@ -1399,12 +1589,12 @@ func TestEndSession_AlreadyEnded(t *testing.T) {
 	}
 
 	svc := &SessionService{
-		stores:      Stores{Campaign: campaignStore, Session: sessionStore, Event: eventStore},
+		stores:      Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore, Event: eventStore},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("session-123"),
 	}
 
-	resp, err := svc.EndSession(context.Background(), &statev1.EndSessionRequest{CampaignId: "c1", SessionId: "s1"})
+	resp, err := svc.EndSession(contextWithParticipantID("manager-1"), &statev1.EndSessionRequest{CampaignId: "c1", SessionId: "s1"})
 	if err != nil {
 		t.Fatalf("EndSession returned error: %v", err)
 	}

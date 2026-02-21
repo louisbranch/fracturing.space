@@ -50,7 +50,7 @@ func runParticipantUserLinkTests(t *testing.T, grpcAddr string, authAddr string)
 		t.Fatal("expected campaign response")
 	}
 
-	participantsResp, err := participantClient.ListParticipants(ctx, &statev1.ListParticipantsRequest{
+	participantsResp, err := participantClient.ListParticipants(ctxWithUser, &statev1.ListParticipantsRequest{
 		CampaignId: createResp.Campaign.Id,
 	})
 	if err != nil {

@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
@@ -133,6 +135,30 @@ func TestCampaignEndHandler(t *testing.T) {
 			t.Fatal("expected error for missing campaign_id")
 		}
 	})
+
+	t.Run("forwards participant_id from context", func(t *testing.T) {
+		client := &fakeCampaignClient{
+			endResp: &statev1.EndCampaignResponse{
+				Campaign: testCampaign("c1", "X", statev1.CampaignStatus_COMPLETED),
+			},
+		}
+		getCtx := func() Context {
+			return Context{CampaignID: "c1", ParticipantID: "part-owner"}
+		}
+		handler := CampaignEndHandler(client, getCtx, nil)
+		_, _, err := handler(context.Background(), nil, CampaignStatusChangeInput{})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		md, ok := metadata.FromOutgoingContext(client.endCtx)
+		if !ok {
+			t.Fatal("expected outgoing metadata")
+		}
+		participantIDs := md.Get(grpcmeta.ParticipantIDHeader)
+		if len(participantIDs) != 1 || participantIDs[0] != "part-owner" {
+			t.Fatalf("participant metadata = %v, want [part-owner]", participantIDs)
+		}
+	})
 }
 
 func TestCampaignArchiveHandler(t *testing.T) {
@@ -230,7 +256,7 @@ func TestSessionStartHandler(t *testing.T) {
 				Session: testSession("s1", "c1", "Session 1", statev1.SessionStatus_SESSION_ACTIVE),
 			},
 		}
-		handler := SessionStartHandler(client, nil)
+		handler := SessionStartHandler(client, nil, nil)
 		_, result, err := handler(context.Background(), nil, SessionStartInput{CampaignID: "c1", Name: "Session 1"})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -247,7 +273,7 @@ func TestSessionStartHandler(t *testing.T) {
 		client := &fakeSessionClient{
 			startErr: fmt.Errorf("error"),
 		}
-		handler := SessionStartHandler(client, nil)
+		handler := SessionStartHandler(client, nil, nil)
 		_, _, err := handler(context.Background(), nil, SessionStartInput{CampaignID: "c1"})
 		if err == nil {
 			t.Fatal("expected error")
@@ -258,10 +284,34 @@ func TestSessionStartHandler(t *testing.T) {
 		client := &fakeSessionClient{
 			startResp: &statev1.StartSessionResponse{},
 		}
-		handler := SessionStartHandler(client, nil)
+		handler := SessionStartHandler(client, nil, nil)
 		_, _, err := handler(context.Background(), nil, SessionStartInput{CampaignID: "c1"})
 		if err == nil {
 			t.Fatal("expected error for nil session in response")
+		}
+	})
+
+	t.Run("forwards participant_id from context", func(t *testing.T) {
+		client := &fakeSessionClient{
+			startResp: &statev1.StartSessionResponse{
+				Session: testSession("s1", "c1", "Session 1", statev1.SessionStatus_SESSION_ACTIVE),
+			},
+		}
+		getCtx := func() Context {
+			return Context{CampaignID: "c1", ParticipantID: "part-manager"}
+		}
+		handler := SessionStartHandler(client, getCtx, nil)
+		_, _, err := handler(context.Background(), nil, SessionStartInput{CampaignID: "c1", Name: "Session 1"})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		md, ok := metadata.FromOutgoingContext(client.startCtx)
+		if !ok {
+			t.Fatal("expected outgoing metadata")
+		}
+		participantIDs := md.Get(grpcmeta.ParticipantIDHeader)
+		if len(participantIDs) != 1 || participantIDs[0] != "part-manager" {
+			t.Fatalf("participant metadata = %v, want [part-manager]", participantIDs)
 		}
 	})
 }
@@ -294,6 +344,30 @@ func TestSessionEndHandler(t *testing.T) {
 		_, _, err := handler(context.Background(), nil, SessionEndInput{})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("forwards participant_id from context", func(t *testing.T) {
+		client := &fakeSessionClient{
+			endResp: &statev1.EndSessionResponse{
+				Session: testSession("s1", "c1", "Session 1", statev1.SessionStatus_SESSION_ENDED),
+			},
+		}
+		getCtx := func() Context {
+			return Context{CampaignID: "c1", SessionID: "s1", ParticipantID: "part-manager"}
+		}
+		handler := SessionEndHandler(client, getCtx, nil)
+		_, _, err := handler(context.Background(), nil, SessionEndInput{})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		md, ok := metadata.FromOutgoingContext(client.endCtx)
+		if !ok {
+			t.Fatal("expected outgoing metadata")
+		}
+		participantIDs := md.Get(grpcmeta.ParticipantIDHeader)
+		if len(participantIDs) != 1 || participantIDs[0] != "part-manager" {
+			t.Fatalf("participant metadata = %v, want [part-manager]", participantIDs)
 		}
 	})
 
@@ -492,7 +566,7 @@ func TestCharacterCreateHandler(t *testing.T) {
 				Character: testCharacter("ch1", "c1", "Hero", statev1.CharacterKind_PC),
 			},
 		}
-		handler := CharacterCreateHandler(client, nil)
+		handler := CharacterCreateHandler(client, nil, nil)
 		_, result, err := handler(context.Background(), nil, CharacterCreateInput{
 			CampaignID: "c1", Name: "Hero", Kind: "PC",
 		})
@@ -506,7 +580,7 @@ func TestCharacterCreateHandler(t *testing.T) {
 
 	t.Run("gRPC error", func(t *testing.T) {
 		client := &fakeCharacterClient{createErr: fmt.Errorf("error")}
-		handler := CharacterCreateHandler(client, nil)
+		handler := CharacterCreateHandler(client, nil, nil)
 		_, _, err := handler(context.Background(), nil, CharacterCreateInput{CampaignID: "c1", Name: "X", Kind: "PC"})
 		if err == nil {
 			t.Fatal("expected error")
@@ -515,7 +589,7 @@ func TestCharacterCreateHandler(t *testing.T) {
 
 	t.Run("nil response", func(t *testing.T) {
 		client := &fakeCharacterClient{createResp: &statev1.CreateCharacterResponse{}}
-		handler := CharacterCreateHandler(client, nil)
+		handler := CharacterCreateHandler(client, nil, nil)
 		_, _, err := handler(context.Background(), nil, CharacterCreateInput{CampaignID: "c1", Name: "X", Kind: "PC"})
 		if err == nil {
 			t.Fatal("expected error for nil character in response")
@@ -531,7 +605,7 @@ func TestCharacterUpdateHandler(t *testing.T) {
 				Character: testCharacter("ch1", "c1", "Updated", statev1.CharacterKind_PC),
 			},
 		}
-		handler := CharacterUpdateHandler(client, nil)
+		handler := CharacterUpdateHandler(client, nil, nil)
 		_, result, err := handler(context.Background(), nil, CharacterUpdateInput{
 			CampaignID: "c1", CharacterID: "ch1", Name: &name,
 		})
@@ -545,7 +619,7 @@ func TestCharacterUpdateHandler(t *testing.T) {
 
 	t.Run("missing campaign_id", func(t *testing.T) {
 		name := "X"
-		handler := CharacterUpdateHandler(&fakeCharacterClient{}, nil)
+		handler := CharacterUpdateHandler(&fakeCharacterClient{}, nil, nil)
 		_, _, err := handler(context.Background(), nil, CharacterUpdateInput{CharacterID: "ch1", Name: &name})
 		if err == nil {
 			t.Fatal("expected error")
@@ -554,7 +628,7 @@ func TestCharacterUpdateHandler(t *testing.T) {
 
 	t.Run("missing character_id", func(t *testing.T) {
 		name := "X"
-		handler := CharacterUpdateHandler(&fakeCharacterClient{}, nil)
+		handler := CharacterUpdateHandler(&fakeCharacterClient{}, nil, nil)
 		_, _, err := handler(context.Background(), nil, CharacterUpdateInput{CampaignID: "c1", Name: &name})
 		if err == nil {
 			t.Fatal("expected error")
@@ -562,7 +636,7 @@ func TestCharacterUpdateHandler(t *testing.T) {
 	})
 
 	t.Run("no fields provided", func(t *testing.T) {
-		handler := CharacterUpdateHandler(&fakeCharacterClient{}, nil)
+		handler := CharacterUpdateHandler(&fakeCharacterClient{}, nil, nil)
 		_, _, err := handler(context.Background(), nil, CharacterUpdateInput{CampaignID: "c1", CharacterID: "ch1"})
 		if err == nil {
 			t.Fatal("expected error for no fields")
@@ -571,7 +645,7 @@ func TestCharacterUpdateHandler(t *testing.T) {
 
 	t.Run("invalid kind", func(t *testing.T) {
 		kind := "INVALID"
-		handler := CharacterUpdateHandler(&fakeCharacterClient{}, nil)
+		handler := CharacterUpdateHandler(&fakeCharacterClient{}, nil, nil)
 		_, _, err := handler(context.Background(), nil, CharacterUpdateInput{
 			CampaignID: "c1", CharacterID: "ch1", Kind: &kind,
 		})
@@ -588,7 +662,7 @@ func TestCharacterDeleteHandler(t *testing.T) {
 				Character: testCharacter("ch1", "c1", "Hero", statev1.CharacterKind_PC),
 			},
 		}
-		handler := CharacterDeleteHandler(client, nil)
+		handler := CharacterDeleteHandler(client, nil, nil)
 		_, result, err := handler(context.Background(), nil, CharacterDeleteInput{
 			CampaignID: "c1", CharacterID: "ch1",
 		})
@@ -601,7 +675,7 @@ func TestCharacterDeleteHandler(t *testing.T) {
 	})
 
 	t.Run("missing campaign_id", func(t *testing.T) {
-		handler := CharacterDeleteHandler(&fakeCharacterClient{}, nil)
+		handler := CharacterDeleteHandler(&fakeCharacterClient{}, nil, nil)
 		_, _, err := handler(context.Background(), nil, CharacterDeleteInput{CharacterID: "ch1"})
 		if err == nil {
 			t.Fatal("expected error")
@@ -609,7 +683,7 @@ func TestCharacterDeleteHandler(t *testing.T) {
 	})
 
 	t.Run("missing character_id", func(t *testing.T) {
-		handler := CharacterDeleteHandler(&fakeCharacterClient{}, nil)
+		handler := CharacterDeleteHandler(&fakeCharacterClient{}, nil, nil)
 		_, _, err := handler(context.Background(), nil, CharacterDeleteInput{CampaignID: "c1"})
 		if err == nil {
 			t.Fatal("expected error")
@@ -626,7 +700,7 @@ func TestCharacterControlSetHandler(t *testing.T) {
 				ParticipantId: wrapperspb.String("p1"),
 			},
 		}
-		handler := CharacterControlSetHandler(client, nil)
+		handler := CharacterControlSetHandler(client, nil, nil)
 		_, result, err := handler(context.Background(), nil, CharacterControlSetInput{
 			CampaignID: "c1", CharacterID: "ch1", ParticipantID: "p1",
 		})
@@ -640,7 +714,7 @@ func TestCharacterControlSetHandler(t *testing.T) {
 
 	t.Run("gRPC error", func(t *testing.T) {
 		client := &fakeCharacterClient{controlErr: fmt.Errorf("error")}
-		handler := CharacterControlSetHandler(client, nil)
+		handler := CharacterControlSetHandler(client, nil, nil)
 		_, _, err := handler(context.Background(), nil, CharacterControlSetInput{CampaignID: "c1", CharacterID: "ch1"})
 		if err == nil {
 			t.Fatal("expected error")
@@ -649,7 +723,7 @@ func TestCharacterControlSetHandler(t *testing.T) {
 
 	t.Run("nil response", func(t *testing.T) {
 		client := &fakeCharacterClient{}
-		handler := CharacterControlSetHandler(client, nil)
+		handler := CharacterControlSetHandler(client, nil, nil)
 		_, _, err := handler(context.Background(), nil, CharacterControlSetInput{CampaignID: "c1", CharacterID: "ch1"})
 		if err == nil {
 			t.Fatal("expected error for nil response")
@@ -663,7 +737,7 @@ func TestCharacterControlSetHandler(t *testing.T) {
 				CharacterId: "ch1",
 			},
 		}
-		handler := CharacterControlSetHandler(client, nil)
+		handler := CharacterControlSetHandler(client, nil, nil)
 		_, result, err := handler(context.Background(), nil, CharacterControlSetInput{
 			CampaignID: "c1", CharacterID: "ch1",
 		})
@@ -1047,6 +1121,34 @@ func TestCharacterProfilePatchHandler(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})
+
+	t.Run("forwards participant_id from context", func(t *testing.T) {
+		hp := 25
+		client := &fakeCharacterClient{
+			profileResp: &statev1.PatchCharacterProfileResponse{
+				Profile: &statev1.CharacterProfile{CharacterId: "ch1"},
+			},
+		}
+		getCtx := func() Context {
+			return Context{CampaignID: "c1", ParticipantID: "part-member"}
+		}
+		handler := CharacterProfilePatchHandler(client, getCtx, nil)
+		_, _, err := handler(context.Background(), nil, CharacterProfilePatchInput{
+			CharacterID: "ch1",
+			HpMax:       &hp,
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		md, ok := metadata.FromOutgoingContext(client.profileCtx)
+		if !ok {
+			t.Fatal("expected outgoing metadata")
+		}
+		participantIDs := md.Get(grpcmeta.ParticipantIDHeader)
+		if len(participantIDs) != 1 || participantIDs[0] != "part-member" {
+			t.Fatalf("participant metadata = %v, want [part-member]", participantIDs)
+		}
+	})
 }
 
 func TestCharacterStatePatchHandler(t *testing.T) {
@@ -1167,7 +1269,7 @@ func TestCharacterUpdateHandler_EdgeCases(t *testing.T) {
 	t.Run("gRPC error", func(t *testing.T) {
 		name := "X"
 		client := &fakeCharacterClient{updateErr: fmt.Errorf("error")}
-		handler := CharacterUpdateHandler(client, nil)
+		handler := CharacterUpdateHandler(client, nil, nil)
 		_, _, err := handler(context.Background(), nil, CharacterUpdateInput{CampaignID: "c1", CharacterID: "ch1", Name: &name})
 		if err == nil {
 			t.Fatal("expected error")
@@ -1177,7 +1279,7 @@ func TestCharacterUpdateHandler_EdgeCases(t *testing.T) {
 	t.Run("nil response", func(t *testing.T) {
 		name := "X"
 		client := &fakeCharacterClient{updateResp: &statev1.UpdateCharacterResponse{}}
-		handler := CharacterUpdateHandler(client, nil)
+		handler := CharacterUpdateHandler(client, nil, nil)
 		_, _, err := handler(context.Background(), nil, CharacterUpdateInput{CampaignID: "c1", CharacterID: "ch1", Name: &name})
 		if err == nil {
 			t.Fatal("expected error for nil character in response")
@@ -1191,7 +1293,7 @@ func TestCharacterUpdateHandler_EdgeCases(t *testing.T) {
 				Character: testCharacter("ch1", "c1", "Villain", statev1.CharacterKind_NPC),
 			},
 		}
-		handler := CharacterUpdateHandler(client, nil)
+		handler := CharacterUpdateHandler(client, nil, nil)
 		_, result, err := handler(context.Background(), nil, CharacterUpdateInput{CampaignID: "c1", CharacterID: "ch1", Kind: &kind})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -1208,7 +1310,7 @@ func TestCharacterUpdateHandler_EdgeCases(t *testing.T) {
 				Character: testCharacter("ch1", "c1", "Hero", statev1.CharacterKind_PC),
 			},
 		}
-		handler := CharacterUpdateHandler(client, nil)
+		handler := CharacterUpdateHandler(client, nil, nil)
 		_, _, err := handler(context.Background(), nil, CharacterUpdateInput{CampaignID: "c1", CharacterID: "ch1", Notes: &notes})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -1219,7 +1321,7 @@ func TestCharacterUpdateHandler_EdgeCases(t *testing.T) {
 func TestCharacterDeleteHandler_EdgeCases(t *testing.T) {
 	t.Run("gRPC error", func(t *testing.T) {
 		client := &fakeCharacterClient{deleteErr: fmt.Errorf("error")}
-		handler := CharacterDeleteHandler(client, nil)
+		handler := CharacterDeleteHandler(client, nil, nil)
 		_, _, err := handler(context.Background(), nil, CharacterDeleteInput{CampaignID: "c1", CharacterID: "ch1"})
 		if err == nil {
 			t.Fatal("expected error")
@@ -1228,7 +1330,7 @@ func TestCharacterDeleteHandler_EdgeCases(t *testing.T) {
 
 	t.Run("nil response", func(t *testing.T) {
 		client := &fakeCharacterClient{deleteResp: &statev1.DeleteCharacterResponse{}}
-		handler := CharacterDeleteHandler(client, nil)
+		handler := CharacterDeleteHandler(client, nil, nil)
 		_, _, err := handler(context.Background(), nil, CharacterDeleteInput{CampaignID: "c1", CharacterID: "ch1"})
 		if err == nil {
 			t.Fatal("expected error for nil character in response")
