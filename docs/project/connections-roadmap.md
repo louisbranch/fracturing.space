@@ -24,13 +24,20 @@ Missing behavior is a clear, bounded domain for user-to-user discovery and conne
 Use a dedicated `connections` service boundary (not `people`).
 
 - Canonical entity term remains `User`.
-- `auth` remains authn/authz focused.
-- `connections` owns discovery and relationship metadata.
+- `auth` remains authN/authZ focused (proof of identity and access artifacts).
+- `connections` owns social/discovery and relationship metadata.
+
+Boundary rubric:
+
+1. AuthN/authZ artifacts belong to `auth`.
+2. User discovery/recognition/relationship artifacts belong to `connections`.
+3. Private account preferences are not social artifacts and do not belong to
+   `connections` by default.
 
 ### Ownership Split
 
-- `auth`: user identity, passkeys, sessions, OAuth, join grant issuance.
-- `connections`: contact graph, connection request lifecycle, username/profile (future phases), connection links (future phases).
+- `auth`: user identity, passkeys, sessions, OAuth, join grant issuance, and private account settings on the user record (for example locale).
+- `connections`: contact graph and social identity fields (`username`, `name`, `avatar_set_id`, `avatar_asset_id`, `bio`), plus future connection request lifecycle and connection links.
 - `game`: invite lifecycle and campaign seat claim enforcement.
 - `notifications`: inbox intents and delivery status.
 - `web`: UX orchestration across service APIs.
@@ -105,7 +112,7 @@ Status:
 - Invite `@username` resolution is implemented in `web` before submit to `game`.
 - Settings username claim/update flow is implemented in `web`.
 
-## Phase 3 (Next): Public Profile
+## Phase 3 (In Progress): Public Profile
 
 ### Scope
 
@@ -118,6 +125,14 @@ Users can verify identity context before connecting/inviting.
 
 Detailed phase spec:
 [Connections Phase 3: Public Profile Surface and Username Verification](connections-phase3-public-profile.md)
+
+Status:
+
+- Public profile APIs and storage are implemented in `connections`.
+- Web invite verification context via `LookupPublicProfile` is implemented.
+- Remaining: owner-managed web settings flow for public profile write/read.
+- Execution details and remaining milestones live in:
+  [Connections Execution Spec](connections-execution-spec.md)
 
 ## Phase 4 (Planned): Contact Link Permalink
 

@@ -25,11 +25,12 @@ message UsernameRecord {
 // PublicProfileRecord stores one user-managed profile for username verification.
 message PublicProfileRecord {
   string user_id = 1;
-  string display_name = 2;
-  string avatar_url = 3;
-  string bio = 4;
-  google.protobuf.Timestamp created_at = 5;
-  google.protobuf.Timestamp updated_at = 6;
+  string name = 2;
+  string avatar_set_id = 3;
+  string avatar_asset_id = 4;
+  string bio = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
 }
 
 message AddContactRequest {
@@ -91,9 +92,10 @@ message LookupUsernameResponse {
 
 message SetPublicProfileRequest {
   string user_id = 1;
-  string display_name = 2;
-  string avatar_url = 3;
-  string bio = 4;
+  string name = 2;
+  string avatar_set_id = 3;
+  string avatar_asset_id = 4;
+  string bio = 5;
 }
 
 message SetPublicProfileResponse {

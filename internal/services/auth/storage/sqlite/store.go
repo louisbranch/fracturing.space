@@ -139,6 +139,7 @@ func (s *Store) PutUser(ctx context.Context, u user.User) error {
 
 	if err := qtx.PutUser(ctx, db.PutUserParams{
 		ID:        u.ID,
+		Locale:    platformi18n.LocaleString(platformi18n.NormalizeLocale(u.Locale)),
 		CreatedAt: toMillis(u.CreatedAt),
 		UpdatedAt: toMillis(u.UpdatedAt),
 	}); err != nil {
@@ -187,6 +188,7 @@ func (s *Store) PutUserWithIntegrationOutboxEvent(ctx context.Context, u user.Us
 	qtx := s.q.WithTx(tx)
 	if err := qtx.PutUser(ctx, db.PutUserParams{
 		ID:        u.ID,
+		Locale:    platformi18n.LocaleString(platformi18n.NormalizeLocale(u.Locale)),
 		CreatedAt: toMillis(u.CreatedAt),
 		UpdatedAt: toMillis(u.UpdatedAt),
 	}); err != nil {
@@ -282,7 +284,7 @@ func (s *Store) GetUser(ctx context.Context, userID string) (user.User, error) {
 		return user.User{}, fmt.Errorf("get user: %w", err)
 	}
 
-	return dbUserToDomain(row.ID, row.Email, row.CreatedAt, row.UpdatedAt), nil
+	return dbUserToDomain(row.ID, row.Email, row.Locale, row.CreatedAt, row.UpdatedAt), nil
 }
 
 // ListUsers returns a page of user records.
@@ -310,7 +312,7 @@ func (s *Store) ListUsers(ctx context.Context, pageSize int, pageToken string) (
 				page.NextPageToken = rows[pageSize-1].ID
 				break
 			}
-			page.Users = append(page.Users, dbUserToDomain(row.ID, row.Email, row.CreatedAt, row.UpdatedAt))
+			page.Users = append(page.Users, dbUserToDomain(row.ID, row.Email, row.Locale, row.CreatedAt, row.UpdatedAt))
 		}
 	default:
 		rows, err := s.q.ListUsersPaged(ctx, db.ListUsersPagedParams{
@@ -325,7 +327,7 @@ func (s *Store) ListUsers(ctx context.Context, pageSize int, pageToken string) (
 				page.NextPageToken = rows[pageSize-1].ID
 				break
 			}
-			page.Users = append(page.Users, dbUserToDomain(row.ID, row.Email, row.CreatedAt, row.UpdatedAt))
+			page.Users = append(page.Users, dbUserToDomain(row.ID, row.Email, row.Locale, row.CreatedAt, row.UpdatedAt))
 		}
 	}
 
@@ -491,10 +493,16 @@ func (s *Store) GetAuthStatistics(ctx context.Context, since *time.Time) (storag
 	return storage.AuthStatistics{UserCount: count}, nil
 }
 
-func dbUserToDomain(id string, email string, createdAt int64, updatedAt int64) user.User {
+func dbUserToDomain(id string, email string, locale string, createdAt int64, updatedAt int64) user.User {
+	parsedLocale := platformi18n.DefaultLocale()
+	if parsed, ok := platformi18n.ParseLocale(locale); ok {
+		parsedLocale = parsed
+	}
+
 	return user.User{
 		ID:        id,
 		Email:     email,
+		Locale:    parsedLocale,
 		CreatedAt: fromMillis(createdAt),
 		UpdatedAt: fromMillis(updatedAt),
 	}

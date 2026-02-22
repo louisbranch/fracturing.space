@@ -139,10 +139,11 @@ func TestServer_SetAndLookupPublicProfileRoundTrip(t *testing.T) {
 	}
 
 	_, err = client.SetPublicProfile(context.Background(), &connectionsv1.SetPublicProfileRequest{
-		UserId:      "user-1",
-		DisplayName: "Alice",
-		AvatarUrl:   "https://cdn.example.com/avatar/alice.png",
-		Bio:         "Campaign manager",
+		UserId:        "user-1",
+		Name:          "Alice",
+		AvatarSetId:   "avatar_set_v1",
+		AvatarAssetId: "001",
+		Bio:           "Campaign manager",
 	})
 	if err != nil {
 		t.Fatalf("set public profile: %v", err)
@@ -154,8 +155,8 @@ func TestServer_SetAndLookupPublicProfileRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get public profile: %v", err)
 	}
-	if got := getResp.GetPublicProfileRecord().GetDisplayName(); got != "Alice" {
-		t.Fatalf("display_name = %q, want Alice", got)
+	if got := getResp.GetPublicProfileRecord().GetName(); got != "Alice" {
+		t.Fatalf("name = %q, want Alice", got)
 	}
 
 	lookupResp, err := client.LookupPublicProfile(context.Background(), &connectionsv1.LookupPublicProfileRequest{

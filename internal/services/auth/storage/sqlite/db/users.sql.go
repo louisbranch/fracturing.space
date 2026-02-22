@@ -10,7 +10,7 @@ import (
 )
 
 const getUser = `-- name: GetUser :one
-SELECT users.id, user_emails.email, users.created_at, users.updated_at
+SELECT users.id, user_emails.email, users.locale, users.created_at, users.updated_at
 FROM users
 JOIN user_emails
     ON users.id = user_emails.user_id
@@ -21,6 +21,7 @@ WHERE users.id = ?
 type GetUserRow struct {
 	ID        string `json:"id"`
 	Email     string `json:"email"`
+	Locale    string `json:"locale"`
 	CreatedAt int64  `json:"created_at"`
 	UpdatedAt int64  `json:"updated_at"`
 }
@@ -31,6 +32,7 @@ func (q *Queries) GetUser(ctx context.Context, id string) (GetUserRow, error) {
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
+		&i.Locale,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -38,7 +40,7 @@ func (q *Queries) GetUser(ctx context.Context, id string) (GetUserRow, error) {
 }
 
 const listUsersPaged = `-- name: ListUsersPaged :many
-SELECT users.id, user_emails.email, users.created_at, users.updated_at
+SELECT users.id, user_emails.email, users.locale, users.created_at, users.updated_at
 FROM users
 JOIN user_emails
     ON users.id = user_emails.user_id
@@ -56,6 +58,7 @@ type ListUsersPagedParams struct {
 type ListUsersPagedRow struct {
 	ID        string `json:"id"`
 	Email     string `json:"email"`
+	Locale    string `json:"locale"`
 	CreatedAt int64  `json:"created_at"`
 	UpdatedAt int64  `json:"updated_at"`
 }
@@ -72,6 +75,7 @@ func (q *Queries) ListUsersPaged(ctx context.Context, arg ListUsersPagedParams) 
 		if err := rows.Scan(
 			&i.ID,
 			&i.Email,
+			&i.Locale,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -89,7 +93,7 @@ func (q *Queries) ListUsersPaged(ctx context.Context, arg ListUsersPagedParams) 
 }
 
 const listUsersPagedFirst = `-- name: ListUsersPagedFirst :many
-SELECT users.id, user_emails.email, users.created_at, users.updated_at
+SELECT users.id, user_emails.email, users.locale, users.created_at, users.updated_at
 FROM users
 JOIN user_emails
     ON users.id = user_emails.user_id
@@ -101,6 +105,7 @@ LIMIT ?
 type ListUsersPagedFirstRow struct {
 	ID        string `json:"id"`
 	Email     string `json:"email"`
+	Locale    string `json:"locale"`
 	CreatedAt int64  `json:"created_at"`
 	UpdatedAt int64  `json:"updated_at"`
 }
@@ -117,6 +122,7 @@ func (q *Queries) ListUsersPagedFirst(ctx context.Context, limit int64) ([]ListU
 		if err := rows.Scan(
 			&i.ID,
 			&i.Email,
+			&i.Locale,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -135,19 +141,26 @@ func (q *Queries) ListUsersPagedFirst(ctx context.Context, limit int64) ([]ListU
 
 const putUser = `-- name: PutUser :exec
 INSERT INTO users (
-    id, created_at, updated_at
-) VALUES (?, ?, ?)
+    id, locale, created_at, updated_at
+) VALUES (?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
+    locale = excluded.locale,
     updated_at = excluded.updated_at
 `
 
 type PutUserParams struct {
 	ID        string `json:"id"`
+	Locale    string `json:"locale"`
 	CreatedAt int64  `json:"created_at"`
 	UpdatedAt int64  `json:"updated_at"`
 }
 
 func (q *Queries) PutUser(ctx context.Context, arg PutUserParams) error {
-	_, err := q.db.ExecContext(ctx, putUser, arg.ID, arg.CreatedAt, arg.UpdatedAt)
+	_, err := q.db.ExecContext(ctx, putUser,
+		arg.ID,
+		arg.Locale,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+	)
 	return err
 }
