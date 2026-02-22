@@ -361,6 +361,18 @@ func TestCatalogTablesAndDetails(t *testing.T) {
 	}
 }
 
+func TestCatalogInvalidSectionReturnsNotFound(t *testing.T) {
+	handler := NewHandler(nil)
+
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/catalog/daggerheart/not-a-real-section", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected status %d, got %d", http.StatusNotFound, rec.Code)
+	}
+}
+
 func TestSystemsTableRendersDefaultBadge(t *testing.T) {
 	systemClient := &testSystemClient{
 		listResponse: &statev1.ListGameSystemsResponse{

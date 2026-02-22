@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -16,11 +15,10 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/config"
-	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
+	admingrpcdial "github.com/louisbranch/fracturing.space/internal/services/admin/integration/grpcdial"
+	adminstorage "github.com/louisbranch/fracturing.space/internal/services/admin/integration/storage"
 	adminsqlite "github.com/louisbranch/fracturing.space/internal/services/admin/storage/sqlite"
-	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
-	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcdial"
 	"google.golang.org/grpc"
 )
 
@@ -37,12 +35,6 @@ func loadAdminServerEnv() adminServerEnv {
 	}
 	return cfg
 }
-
-// defaultGRPCRetryDelay sets the initial wait time between gRPC dial attempts.
-const defaultGRPCRetryDelay = 500 * time.Millisecond
-
-// maxGRPCRetryDelay caps the backoff between gRPC dial attempts.
-const maxGRPCRetryDelay = 10 * time.Second
 
 // adminAuthzOverrideReason records why admin service uses platform override.
 const adminAuthzOverrideReason = "admin_dashboard"
@@ -417,94 +409,41 @@ func (s *Server) Close() {
 }
 
 func openAdminStore(path string) (*adminsqlite.Store, error) {
-	if dir := filepath.Dir(path); dir != "." {
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			return nil, fmt.Errorf("create storage dir: %w", err)
-		}
-	}
-
-	store, err := adminsqlite.Open(path)
-	if err != nil {
-		return nil, fmt.Errorf("open admin sqlite store: %w", err)
-	}
-	return store, nil
+	return adminstorage.OpenStore(path)
 }
 
 // dialGRPC connects to the game server and returns a client.
 func dialGameGRPC(ctx context.Context, config Config) (gameGRPCClients, error) {
-	grpcAddr := strings.TrimSpace(config.GRPCAddr)
-	if grpcAddr == "" {
-		return gameGRPCClients{}, nil
-	}
-	if ctx == nil {
-		ctx = context.Background()
-	}
-
-	logf := func(format string, args ...any) {
-		log.Printf("admin game %s", fmt.Sprintf(format, args...))
-	}
-	dialOpts := append(
-		platformgrpc.DefaultClientDialOptions(),
-		grpc.WithChainUnaryInterceptor(grpcauthctx.AdminOverrideUnaryClientInterceptor(adminAuthzOverrideReason)),
-		grpc.WithChainStreamInterceptor(grpcauthctx.AdminOverrideStreamClientInterceptor(adminAuthzOverrideReason)),
-	)
-	conn, err := grpcdial.DialWithHealth(
-		ctx,
-		grpcAddr,
-		config.GRPCDialTimeout,
-		"admin game",
-		logf,
-		dialOpts...,
-	)
+	clients, err := admingrpcdial.DialGame(ctx, config.GRPCAddr, config.GRPCDialTimeout, adminAuthzOverrideReason)
 	if err != nil {
 		return gameGRPCClients{}, err
 	}
-
 	return gameGRPCClients{
-		conn:              conn,
-		daggerheartClient: daggerheartv1.NewDaggerheartServiceClient(conn),
-		contentClient:     daggerheartv1.NewDaggerheartContentServiceClient(conn),
-		campaignClient:    statev1.NewCampaignServiceClient(conn),
-		sessionClient:     statev1.NewSessionServiceClient(conn),
-		characterClient:   statev1.NewCharacterServiceClient(conn),
-		participantClient: statev1.NewParticipantServiceClient(conn),
-		inviteClient:      statev1.NewInviteServiceClient(conn),
-		snapshotClient:    statev1.NewSnapshotServiceClient(conn),
-		eventClient:       statev1.NewEventServiceClient(conn),
-		statisticsClient:  statev1.NewStatisticsServiceClient(conn),
-		systemClient:      statev1.NewSystemServiceClient(conn),
+		conn:              clients.Conn,
+		daggerheartClient: clients.DaggerheartClient,
+		contentClient:     clients.ContentClient,
+		campaignClient:    clients.CampaignClient,
+		sessionClient:     clients.SessionClient,
+		characterClient:   clients.CharacterClient,
+		participantClient: clients.ParticipantClient,
+		inviteClient:      clients.InviteClient,
+		snapshotClient:    clients.SnapshotClient,
+		eventClient:       clients.EventClient,
+		statisticsClient:  clients.StatisticsClient,
+		systemClient:      clients.SystemClient,
 	}, nil
 }
 
 // dialAuthGRPC connects to the auth server and returns a client.
 func dialAuthGRPC(ctx context.Context, config Config) (authGRPCClients, error) {
-	authAddr := strings.TrimSpace(config.AuthAddr)
-	if authAddr == "" {
-		return authGRPCClients{}, nil
-	}
-	if ctx == nil {
-		ctx = context.Background()
-	}
-
-	logf := func(format string, args ...any) {
-		log.Printf("admin auth %s", fmt.Sprintf(format, args...))
-	}
-	conn, err := grpcdial.DialWithHealth(
-		ctx,
-		authAddr,
-		config.GRPCDialTimeout,
-		"admin auth",
-		logf,
-		platformgrpc.DefaultClientDialOptions()...,
-	)
+	clients, err := admingrpcdial.DialAuth(ctx, config.AuthAddr, config.GRPCDialTimeout)
 	if err != nil {
 		return authGRPCClients{}, err
 	}
-
 	return authGRPCClients{
-		conn:          conn,
-		authClient:    authv1.NewAuthServiceClient(conn),
-		accountClient: authv1.NewAccountServiceClient(conn),
+		conn:          clients.Conn,
+		authClient:    clients.AuthClient,
+		accountClient: clients.AccountClient,
 	}, nil
 }
 
@@ -566,35 +505,5 @@ func connectGRPCWithRetry(
 	successLogFormat string,
 	failureLogFormat string,
 ) {
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	retryDelay := defaultGRPCRetryDelay
-	for {
-		if ctx.Err() != nil {
-			return
-		}
-		if hasConnection() {
-			return
-		}
-		err := connect(ctx)
-		if err == nil {
-			log.Printf(successLogFormat, address)
-			return
-		}
-		log.Printf(failureLogFormat, err)
-		timer := time.NewTimer(retryDelay)
-		select {
-		case <-timer.C:
-		case <-ctx.Done():
-			timer.Stop()
-			return
-		}
-		if retryDelay < maxGRPCRetryDelay {
-			retryDelay *= 2
-			if retryDelay > maxGRPCRetryDelay {
-				retryDelay = maxGRPCRetryDelay
-			}
-		}
-	}
+	admingrpcdial.ConnectWithRetry(ctx, address, hasConnection, connect, successLogFormat, failureLogFormat)
 }

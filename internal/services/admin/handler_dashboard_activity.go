@@ -11,12 +11,13 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
+	routepath "github.com/louisbranch/fracturing.space/internal/services/admin/routepath"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/templates"
 	"golang.org/x/text/message"
 )
 
 func (h *Handler) handleDashboard(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
+	if r.URL.Path != routepath.Root {
 		http.NotFound(w, r)
 		return
 	}
@@ -906,7 +907,7 @@ func (h *Handler) handleEventLogTable(w http.ResponseWriter, r *http.Request, ca
 		TotalCount:   eventsResp.GetTotalSize(),
 	}
 
-	if pushURL := eventFilterPushURL("/campaigns/"+campaignID+"/events", filters, pageToken); pushURL != "" {
+	if pushURL := eventFilterPushURL(routepath.CampaignEvents(campaignID), filters, pageToken); pushURL != "" {
 		w.Header().Set("HX-Push-Url", pushURL)
 	}
 

@@ -182,7 +182,8 @@ The primary service boundaries are:
 
 - **Game service** (`internal/services/game/`): Canonical rules and campaign state; gRPC APIs under `internal/services/game/api/grpc/`; owns the game database.
 - **MCP service** (`internal/services/mcp/`): JSON-RPC adapter for the MCP protocol; forwards to the game service and does not own rules or state.
-- **Admin service** (`internal/services/admin/`): HTTP admin dashboard; renders UI and calls the game service for data.
+- **Admin service** (`internal/services/admin/`): HTTP admin dashboard; renders UI and calls the game/auth services for operator workflows.
+  - Internal boundaries: route modules under `internal/services/admin/module/*`, canonical paths under `internal/services/admin/routepath`, transport wiring under `internal/services/admin/transport/httpmux`, and startup integration seams under `internal/services/admin/integration/*`.
 - **Web service** (`internal/services/web/`): Browser-facing BFF for end-user flows.
   - Public/auth/discovery surface: `/`, `/login`, `/auth/*`, `/magic`, `/passkeys/*`, `/u/{username}`, `/discover`, `/discover/campaigns/{campaignID}`.
   - Authenticated surface: canonical `/app/*` routes (`/app/campaigns`, `/app/campaigns/{id}/*`, `/app/invites`, `/app/notifications`, `/app/profile`, `/app/settings/*`) with OAuth-required startup contract.

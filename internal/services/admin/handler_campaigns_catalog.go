@@ -10,8 +10,9 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	platformicons "github.com/louisbranch/fracturing.space/internal/platform/icons"
+	catalogmodule "github.com/louisbranch/fracturing.space/internal/services/admin/module/catalog"
+	routepath "github.com/louisbranch/fracturing.space/internal/services/admin/routepath"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/templates"
-	sharedroute "github.com/louisbranch/fracturing.space/internal/services/shared/route"
 	"golang.org/x/text/message"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -103,54 +104,20 @@ func (h *Handler) handleCatalogPage(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
-// handleCatalogRoutes dispatches catalog section routes.
-func (h *Handler) handleCatalogRoutes(w http.ResponseWriter, r *http.Request) {
-	if sharedroute.RedirectTrailingSlash(w, r) {
-		return
+func (h *Handler) handleCatalogSection(w http.ResponseWriter, r *http.Request, sectionID string) {
+	loc, lang := h.localizer(w, r)
+	pageCtx := h.pageContext(lang, loc, r)
+	var full templ.Component
+	if !isHTMXRequest(r) {
+		full = templates.CatalogFullPage(sectionID, pageCtx)
 	}
-	path := strings.TrimPrefix(r.URL.Path, "/catalog/")
-	parts := splitPathParts(path)
-	if len(parts) == 3 && parts[0] == "daggerheart" && parts[2] == "table" {
-		sectionID := strings.TrimSpace(parts[1])
-		if !templates.IsDaggerheartCatalogSection(sectionID) {
-			http.NotFound(w, r)
-			return
-		}
-		h.handleCatalogSectionTable(w, r, sectionID)
-		return
-	}
-	if len(parts) == 3 && parts[0] == "daggerheart" {
-		sectionID := strings.TrimSpace(parts[1])
-		entryID := strings.TrimSpace(parts[2])
-		if !templates.IsDaggerheartCatalogSection(sectionID) || entryID == "" {
-			http.NotFound(w, r)
-			return
-		}
-		h.handleCatalogSectionDetail(w, r, sectionID, entryID)
-		return
-	}
-	if len(parts) == 2 && parts[0] == "daggerheart" {
-		sectionID := strings.TrimSpace(parts[1])
-		if !templates.IsDaggerheartCatalogSection(sectionID) {
-			http.NotFound(w, r)
-			return
-		}
-		loc, lang := h.localizer(w, r)
-		pageCtx := h.pageContext(lang, loc, r)
-		var full templ.Component
-		if !isHTMXRequest(r) {
-			full = templates.CatalogFullPage(sectionID, pageCtx)
-		}
-		renderPage(
-			w,
-			r,
-			templates.CatalogSectionPanel(sectionID, loc),
-			full,
-			htmxLocalizedPageTitle(loc, "title.catalog", templates.AppName()),
-		)
-		return
-	}
-	http.NotFound(w, r)
+	renderPage(
+		w,
+		r,
+		templates.CatalogSectionPanel(sectionID, loc),
+		full,
+		htmxLocalizedPageTitle(loc, "title.catalog", templates.AppName()),
+	)
 }
 
 func (h *Handler) handleCatalogSectionTable(w http.ResponseWriter, r *http.Request, sectionID string) {
@@ -160,8 +127,8 @@ func (h *Handler) handleCatalogSectionTable(w http.ResponseWriter, r *http.Reque
 		SectionID:   sectionID,
 		Columns:     columns,
 		Message:     loc.Sprintf("catalog.loading"),
-		HrefBaseURL: "/catalog/daggerheart/" + sectionID,
-		HTMXBaseURL: "/catalog/daggerheart/" + sectionID + "/table",
+		HrefBaseURL: routepath.CatalogSection(catalogmodule.DaggerheartSystemID, sectionID),
+		HTMXBaseURL: routepath.CatalogSectionTable(catalogmodule.DaggerheartSystemID, sectionID),
 	}
 
 	contentClient := h.daggerheartContentClient()
@@ -431,7 +398,7 @@ func (h *Handler) handleCatalogSectionDetail(w http.ResponseWriter, r *http.Requ
 			SectionID: sectionID,
 			Title:     templates.DaggerheartCatalogSectionLabel(loc, sectionID),
 			Message:   loc.Sprintf("catalog.error.service_unavailable"),
-			BackURL:   "/catalog/daggerheart/" + sectionID,
+			BackURL:   routepath.CatalogSection(catalogmodule.DaggerheartSystemID, sectionID),
 		}
 		full := templates.CatalogFullPageWithContent(sectionID, templates.CatalogDetailPanel(view, loc), pageCtx)
 		if isHTMXRequest(r) {
@@ -451,7 +418,10 @@ func (h *Handler) handleCatalogSectionDetail(w http.ResponseWriter, r *http.Requ
 	defer cancel()
 
 	locale := localeFromTag(lang)
-	view := templates.CatalogDetailView{SectionID: sectionID, BackURL: "/catalog/daggerheart/" + sectionID}
+	view := templates.CatalogDetailView{
+		SectionID: sectionID,
+		BackURL:   routepath.CatalogSection(catalogmodule.DaggerheartSystemID, sectionID),
+	}
 
 	switch sectionID {
 	case templates.CatalogSectionClasses:
@@ -502,7 +472,7 @@ func (h *Handler) handleCatalogSectionDetail(w http.ResponseWriter, r *http.Requ
 	default:
 		view.Title = templates.DaggerheartCatalogSectionLabel(loc, sectionID)
 		view.Message = loc.Sprintf("catalog.error.not_found")
-		view.BackURL = "/catalog/daggerheart/" + sectionID
+		view.BackURL = routepath.CatalogSection(catalogmodule.DaggerheartSystemID, sectionID)
 	}
 
 	var full templ.Component
@@ -560,20 +530,6 @@ func (h *Handler) handleIconsTable(w http.ResponseWriter, r *http.Request) {
 	h.renderIconsTable(w, r, rows, "", loc)
 }
 
-// handleSystemRoutes dispatches the system detail route.
-func (h *Handler) handleSystemRoutes(w http.ResponseWriter, r *http.Request) {
-	if sharedroute.RedirectTrailingSlash(w, r) {
-		return
-	}
-	systemPath := strings.TrimPrefix(r.URL.Path, "/systems/")
-	parts := splitPathParts(systemPath)
-	if len(parts) == 1 && strings.TrimSpace(parts[0]) != "" {
-		h.handleSystemDetail(w, r, parts[0])
-		return
-	}
-	http.NotFound(w, r)
-}
-
 // handleSystemDetail renders the system detail page.
 func (h *Handler) handleSystemDetail(w http.ResponseWriter, r *http.Request, systemID string) {
 	loc, lang := h.localizer(w, r)
@@ -612,96 +568,6 @@ func (h *Handler) handleSystemDetail(w http.ResponseWriter, r *http.Request, sys
 
 	detail := buildSystemDetail(response.GetSystem(), loc)
 	h.renderSystemDetail(w, r, detail, "", lang, loc)
-}
-
-// handleCampaignRoutes dispatches detail and session subroutes.
-func (h *Handler) handleCampaignRoutes(w http.ResponseWriter, r *http.Request) {
-	if sharedroute.RedirectTrailingSlash(w, r) {
-		return
-	}
-	campaignPath := strings.TrimPrefix(r.URL.Path, "/campaigns/")
-	parts := splitPathParts(campaignPath)
-	if len(parts) == 1 && strings.EqualFold(parts[0], "create") {
-		http.NotFound(w, r)
-		return
-	}
-
-	// /campaigns/{id}/characters
-	if len(parts) == 2 && parts[1] == "characters" {
-		h.handleCharactersList(w, r, parts[0])
-		return
-	}
-	// /campaigns/{id}/characters/table
-	if len(parts) == 3 && parts[1] == "characters" && parts[2] == "table" {
-		h.handleCharactersTable(w, r, parts[0])
-		return
-	}
-	// /campaigns/{id}/characters/{characterId}
-	if len(parts) == 3 && parts[1] == "characters" {
-		h.handleCharacterSheet(w, r, parts[0], parts[2])
-		return
-	}
-	// /campaigns/{id}/characters/{characterId}/activity
-	if len(parts) == 4 && parts[1] == "characters" && parts[3] == "activity" {
-		h.handleCharacterActivity(w, r, parts[0], parts[2])
-		return
-	}
-	// /campaigns/{id}/participants
-	if len(parts) == 2 && parts[1] == "participants" {
-		h.handleParticipantsList(w, r, parts[0])
-		return
-	}
-	// /campaigns/{id}/participants/table
-	if len(parts) == 3 && parts[1] == "participants" && parts[2] == "table" {
-		h.handleParticipantsTable(w, r, parts[0])
-		return
-	}
-	// /campaigns/{id}/invites
-	if len(parts) == 2 && parts[1] == "invites" {
-		h.handleInvitesList(w, r, parts[0])
-		return
-	}
-	// /campaigns/{id}/invites/table
-	if len(parts) == 3 && parts[1] == "invites" && parts[2] == "table" {
-		h.handleInvitesTable(w, r, parts[0])
-		return
-	}
-	// /campaigns/{id}/sessions
-	if len(parts) == 2 && strings.TrimSpace(parts[0]) != "" && parts[1] == "sessions" {
-		h.handleSessionsList(w, r, parts[0])
-		return
-	}
-	// /campaigns/{id}/sessions/table
-	if len(parts) == 3 && parts[1] == "sessions" && parts[2] == "table" {
-		h.handleSessionsTable(w, r, parts[0])
-		return
-	}
-	// /campaigns/{id}/sessions/{sessionId}
-	if len(parts) == 3 && parts[1] == "sessions" {
-		h.handleSessionDetail(w, r, parts[0], parts[2])
-		return
-	}
-	// /campaigns/{id}/sessions/{sessionId}/events
-	if len(parts) == 4 && parts[1] == "sessions" && parts[3] == "events" {
-		h.handleSessionEvents(w, r, parts[0], parts[2])
-		return
-	}
-	// /campaigns/{id}/events
-	if len(parts) == 2 && parts[1] == "events" {
-		h.handleEventLog(w, r, parts[0])
-		return
-	}
-	// /campaigns/{id}/events/table (HTMX fragment)
-	if len(parts) == 3 && parts[1] == "events" && parts[2] == "table" {
-		h.handleEventLogTable(w, r, parts[0])
-		return
-	}
-	// /campaigns/{id}
-	if len(parts) == 1 && strings.TrimSpace(parts[0]) != "" {
-		h.handleCampaignDetail(w, r, parts[0])
-		return
-	}
-	http.NotFound(w, r)
 }
 
 // handleCampaignDetail renders the single-campaign detail content.

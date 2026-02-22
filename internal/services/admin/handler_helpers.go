@@ -12,6 +12,7 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	platformicons "github.com/louisbranch/fracturing.space/internal/platform/icons"
+	routepath "github.com/louisbranch/fracturing.space/internal/services/admin/routepath"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/templates"
 	"golang.org/x/text/message"
 	"google.golang.org/grpc/codes"
@@ -36,7 +37,7 @@ func (h *Handler) redirectToUserDetail(w http.ResponseWriter, r *http.Request, u
 		http.NotFound(w, r)
 		return
 	}
-	redirectURL := "/users/" + userID
+	redirectURL := routepath.UserDetail(userID)
 	if isHTMXRequest(r) {
 		w.Header().Set("Location", redirectURL)
 		w.Header().Set("HX-Redirect", redirectURL)
@@ -100,7 +101,7 @@ func buildSystemRows(systemsList []*statev1.GameSystemInfo, loc *message.Printer
 		if system == nil {
 			continue
 		}
-		detailURL := "/systems/" + system.GetId().String()
+		detailURL := routepath.System(system.GetId().String())
 		version := strings.TrimSpace(system.GetVersion())
 		if version != "" {
 			detailURL = detailURL + "?version=" + url.QueryEscape(version)
@@ -741,7 +742,7 @@ func buildCatalogEnvironmentDetail(sectionID, entryID string, entry *daggerheart
 func catalogRow(sectionID, entryID, name string, cells []string) templates.CatalogTableRow {
 	return templates.CatalogTableRow{
 		Primary:   catalogPrimaryLabel(name, entryID),
-		DetailURL: "/catalog/daggerheart/" + sectionID + "/" + entryID,
+		DetailURL: routepath.CatalogEntry("daggerheart", sectionID, entryID),
 		Cells:     cells,
 	}
 }
@@ -780,7 +781,7 @@ func catalogDetailView(sectionID, entryID, title string, fields []templates.Cata
 		Fields:    fields,
 		Message:   message,
 		RawJSON:   formatProtoJSON(raw),
-		BackURL:   "/catalog/daggerheart/" + sectionID,
+		BackURL:   routepath.CatalogSection("daggerheart", sectionID),
 	}
 }
 
