@@ -120,14 +120,14 @@ func TestAppNotificationsPageRendersNewestFirstWithUnreadStateAndRelativeTime(t 
 				{
 					Id:        "notif-old",
 					Topic:     "Welcome to Fracturing Space",
-					Source:    "onboarding",
+					Source:    notificationsv1.NotificationSource_NOTIFICATION_SOURCE_SYSTEM,
 					CreatedAt: timestamppb.New(oldCreatedAt),
 					ReadAt:    timestamppb.New(readAt),
 				},
 				{
 					Id:        "notif-new",
 					Topic:     "Campaign invite accepted",
-					Source:    "campaign",
+					Source:    notificationsv1.NotificationSource_NOTIFICATION_SOURCE_SYSTEM,
 					CreatedAt: timestamppb.New(newCreatedAt),
 				},
 			},

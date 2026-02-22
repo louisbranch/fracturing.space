@@ -56,7 +56,7 @@ func TestServer_CreateListAndMarkReadRoundTrip(t *testing.T) {
 		Topic:           "campaign.invite",
 		PayloadJson:     `{"invite_id":"inv-1"}`,
 		DedupeKey:       "invite:inv-1",
-		Source:          "game",
+		Source:          notificationsv1.NotificationSource_NOTIFICATION_SOURCE_SYSTEM,
 	})
 	if err != nil {
 		t.Fatalf("create notification intent: %v", err)
@@ -70,7 +70,7 @@ func TestServer_CreateListAndMarkReadRoundTrip(t *testing.T) {
 		Topic:           "campaign.invite",
 		PayloadJson:     `{"invite_id":"inv-1"}`,
 		DedupeKey:       "invite:inv-1",
-		Source:          "game",
+		Source:          notificationsv1.NotificationSource_NOTIFICATION_SOURCE_SYSTEM,
 	})
 	if err != nil {
 		t.Fatalf("create dedupe notification intent: %v", err)

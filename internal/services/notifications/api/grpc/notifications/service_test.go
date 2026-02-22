@@ -25,7 +25,7 @@ func TestCreateNotificationIntent_Success(t *testing.T) {
 			Topic:           "campaign.invite",
 			PayloadJSON:     `{"invite_id":"inv-1"}`,
 			DedupeKey:       "invite:inv-1",
-			Source:          "game",
+			Source:          "system",
 			CreatedAt:       now,
 			UpdatedAt:       now,
 		},
@@ -37,13 +37,16 @@ func TestCreateNotificationIntent_Success(t *testing.T) {
 		Topic:           "campaign.invite",
 		PayloadJson:     `{"invite_id":"inv-1"}`,
 		DedupeKey:       "invite:inv-1",
-		Source:          "game",
+		Source:          notificationsv1.NotificationSource_NOTIFICATION_SOURCE_SYSTEM,
 	})
 	if err != nil {
 		t.Fatalf("create notification intent: %v", err)
 	}
 	if resp.GetNotification().GetId() != "notif-1" {
 		t.Fatalf("notification.id = %q, want %q", resp.GetNotification().GetId(), "notif-1")
+	}
+	if fake.lastCreate.Source != "system" {
+		t.Fatalf("domain source = %q, want %q", fake.lastCreate.Source, "system")
 	}
 }
 
@@ -70,7 +73,7 @@ func TestListNotifications_UsesCallerIdentity(t *testing.T) {
 					Topic:           "session.update",
 					PayloadJSON:     `{"session_id":"sess-1"}`,
 					DedupeKey:       "session:sess-1",
-					Source:          "game",
+					Source:          "system",
 					CreatedAt:       now,
 					UpdatedAt:       now,
 				},

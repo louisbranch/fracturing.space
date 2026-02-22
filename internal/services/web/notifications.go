@@ -124,10 +124,7 @@ func toNotificationListItems(loc webtemplates.Localizer, notifications []*notifi
 		if topic == "" {
 			topic = webtemplates.T(loc, "game.notifications.topic_unknown")
 		}
-		source := strings.TrimSpace(notification.GetSource())
-		if source == "" {
-			source = webtemplates.T(loc, "game.notifications.source_unknown")
-		}
+		source := notificationSourceLabel(loc, notification.GetSource())
 
 		items = append(items, sortableItem{
 			NotificationListItem: webtemplates.NotificationListItem{
@@ -155,6 +152,15 @@ func toNotificationListItems(loc webtemplates.Localizer, notifications []*notifi
 		normalized = append(normalized, item.NotificationListItem)
 	}
 	return normalized
+}
+
+func notificationSourceLabel(loc webtemplates.Localizer, source notificationsv1.NotificationSource) string {
+	switch source {
+	case notificationsv1.NotificationSource_NOTIFICATION_SOURCE_SYSTEM:
+		return "system"
+	default:
+		return webtemplates.T(loc, "game.notifications.source_unknown")
+	}
 }
 
 func toSafeProtoTime(value *timestamppb.Timestamp) time.Time {
