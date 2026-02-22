@@ -264,6 +264,307 @@ func TestListUsersContextError(t *testing.T) {
 	}
 }
 
+func TestContactRoundTripAndOwnerScoping(t *testing.T) {
+	store := openTempStore(t)
+	now := time.Date(2026, 2, 21, 20, 40, 0, 0, time.UTC)
+
+	for i, u := range []user.User{
+		{ID: "user-1", Email: "user1@example.com", CreatedAt: now, UpdatedAt: now},
+		{ID: "user-2", Email: "user2@example.com", CreatedAt: now, UpdatedAt: now},
+		{ID: "user-3", Email: "user3@example.com", CreatedAt: now, UpdatedAt: now},
+		{ID: "user-4", Email: "user4@example.com", CreatedAt: now, UpdatedAt: now},
+	} {
+		if err := store.PutUser(context.Background(), u); err != nil {
+			t.Fatalf("put user %d: %v", i+1, err)
+		}
+	}
+
+	if err := store.PutContact(context.Background(), storage.Contact{
+		OwnerUserID:   "user-1",
+		ContactUserID: "user-2",
+		CreatedAt:     now,
+		UpdatedAt:     now,
+	}); err != nil {
+		t.Fatalf("put contact 1->2: %v", err)
+	}
+	if err := store.PutContact(context.Background(), storage.Contact{
+		OwnerUserID:   "user-1",
+		ContactUserID: "user-3",
+		CreatedAt:     now,
+		UpdatedAt:     now,
+	}); err != nil {
+		t.Fatalf("put contact 1->3: %v", err)
+	}
+	if err := store.PutContact(context.Background(), storage.Contact{
+		OwnerUserID:   "user-2",
+		ContactUserID: "user-1",
+		CreatedAt:     now,
+		UpdatedAt:     now,
+	}); err != nil {
+		t.Fatalf("put contact 2->1: %v", err)
+	}
+
+	page, err := store.ListContacts(context.Background(), "user-1", 10, "")
+	if err != nil {
+		t.Fatalf("list contacts: %v", err)
+	}
+	if len(page.Contacts) != 2 {
+		t.Fatalf("contacts len = %d, want 2", len(page.Contacts))
+	}
+	for _, contact := range page.Contacts {
+		if contact.OwnerUserID != "user-1" {
+			t.Fatalf("owner_user_id = %q, want user-1", contact.OwnerUserID)
+		}
+	}
+}
+
+func TestGetContact(t *testing.T) {
+	store := openTempStore(t)
+	now := time.Date(2026, 2, 21, 20, 40, 0, 0, time.UTC)
+
+	for _, u := range []user.User{
+		{ID: "user-1", Email: "user1@example.com", CreatedAt: now, UpdatedAt: now},
+		{ID: "user-2", Email: "user2@example.com", CreatedAt: now, UpdatedAt: now},
+	} {
+		if err := store.PutUser(context.Background(), u); err != nil {
+			t.Fatalf("put user %s: %v", u.ID, err)
+		}
+	}
+	if err := store.PutContact(context.Background(), storage.Contact{
+		OwnerUserID:   "user-1",
+		ContactUserID: "user-2",
+		CreatedAt:     now,
+		UpdatedAt:     now,
+	}); err != nil {
+		t.Fatalf("put contact: %v", err)
+	}
+
+	got, err := store.GetContact(context.Background(), "user-1", "user-2")
+	if err != nil {
+		t.Fatalf("get contact: %v", err)
+	}
+	if got.OwnerUserID != "user-1" || got.ContactUserID != "user-2" {
+		t.Fatalf("unexpected contact: %+v", got)
+	}
+}
+
+func TestGetContactNotFound(t *testing.T) {
+	store := openTempStore(t)
+
+	_, err := store.GetContact(context.Background(), "user-1", "user-2")
+	if err == nil {
+		t.Fatal("expected not found error")
+	}
+	if !errors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("expected storage.ErrNotFound, got %v", err)
+	}
+}
+
+func TestPutContactIdempotent(t *testing.T) {
+	store := openTempStore(t)
+	now := time.Date(2026, 2, 21, 20, 41, 0, 0, time.UTC)
+	later := now.Add(5 * time.Minute)
+
+	if err := store.PutUser(context.Background(), user.User{ID: "user-1", Email: "user1@example.com", CreatedAt: now, UpdatedAt: now}); err != nil {
+		t.Fatalf("put user-1: %v", err)
+	}
+	if err := store.PutUser(context.Background(), user.User{ID: "user-2", Email: "user2@example.com", CreatedAt: now, UpdatedAt: now}); err != nil {
+		t.Fatalf("put user-2: %v", err)
+	}
+
+	if err := store.PutContact(context.Background(), storage.Contact{
+		OwnerUserID:   "user-1",
+		ContactUserID: "user-2",
+		CreatedAt:     now,
+		UpdatedAt:     now,
+	}); err != nil {
+		t.Fatalf("put contact: %v", err)
+	}
+	if err := store.PutContact(context.Background(), storage.Contact{
+		OwnerUserID:   "user-1",
+		ContactUserID: "user-2",
+		CreatedAt:     later,
+		UpdatedAt:     later,
+	}); err != nil {
+		t.Fatalf("put contact again: %v", err)
+	}
+
+	page, err := store.ListContacts(context.Background(), "user-1", 10, "")
+	if err != nil {
+		t.Fatalf("list contacts: %v", err)
+	}
+	if len(page.Contacts) != 1 {
+		t.Fatalf("contacts len = %d, want 1", len(page.Contacts))
+	}
+	if !page.Contacts[0].CreatedAt.Equal(now) {
+		t.Fatalf("created_at = %v, want %v", page.Contacts[0].CreatedAt, now)
+	}
+	if !page.Contacts[0].UpdatedAt.Equal(later) {
+		t.Fatalf("updated_at = %v, want %v", page.Contacts[0].UpdatedAt, later)
+	}
+}
+
+func TestDeleteContactIdempotent(t *testing.T) {
+	store := openTempStore(t)
+	now := time.Date(2026, 2, 21, 20, 42, 0, 0, time.UTC)
+
+	if err := store.PutUser(context.Background(), user.User{ID: "user-1", Email: "user1@example.com", CreatedAt: now, UpdatedAt: now}); err != nil {
+		t.Fatalf("put user-1: %v", err)
+	}
+	if err := store.PutUser(context.Background(), user.User{ID: "user-2", Email: "user2@example.com", CreatedAt: now, UpdatedAt: now}); err != nil {
+		t.Fatalf("put user-2: %v", err)
+	}
+	if err := store.PutContact(context.Background(), storage.Contact{
+		OwnerUserID:   "user-1",
+		ContactUserID: "user-2",
+		CreatedAt:     now,
+		UpdatedAt:     now,
+	}); err != nil {
+		t.Fatalf("put contact: %v", err)
+	}
+
+	for i := 0; i < 2; i++ {
+		if err := store.DeleteContact(context.Background(), "user-1", "user-2"); err != nil {
+			t.Fatalf("delete contact %d: %v", i+1, err)
+		}
+	}
+
+	page, err := store.ListContacts(context.Background(), "user-1", 10, "")
+	if err != nil {
+		t.Fatalf("list contacts: %v", err)
+	}
+	if len(page.Contacts) != 0 {
+		t.Fatalf("contacts len = %d, want 0", len(page.Contacts))
+	}
+}
+
+func TestListContactsPagination(t *testing.T) {
+	store := openTempStore(t)
+	now := time.Date(2026, 2, 21, 20, 43, 0, 0, time.UTC)
+
+	owner := user.User{ID: "user-1", Email: "user1@example.com", CreatedAt: now, UpdatedAt: now}
+	if err := store.PutUser(context.Background(), owner); err != nil {
+		t.Fatalf("put owner: %v", err)
+	}
+	for _, id := range []string{"user-2", "user-3", "user-4"} {
+		if err := store.PutUser(context.Background(), user.User{
+			ID:        id,
+			Email:     id + "@example.com",
+			CreatedAt: now,
+			UpdatedAt: now,
+		}); err != nil {
+			t.Fatalf("put contact user %s: %v", id, err)
+		}
+		if err := store.PutContact(context.Background(), storage.Contact{
+			OwnerUserID:   "user-1",
+			ContactUserID: id,
+			CreatedAt:     now,
+			UpdatedAt:     now,
+		}); err != nil {
+			t.Fatalf("put contact %s: %v", id, err)
+		}
+	}
+
+	first, err := store.ListContacts(context.Background(), "user-1", 2, "")
+	if err != nil {
+		t.Fatalf("list first page: %v", err)
+	}
+	if len(first.Contacts) != 2 {
+		t.Fatalf("first page contacts len = %d, want 2", len(first.Contacts))
+	}
+	if first.NextPageToken == "" {
+		t.Fatal("expected next page token")
+	}
+
+	second, err := store.ListContacts(context.Background(), "user-1", 2, first.NextPageToken)
+	if err != nil {
+		t.Fatalf("list second page: %v", err)
+	}
+	if len(second.Contacts) != 1 {
+		t.Fatalf("second page contacts len = %d, want 1", len(second.Contacts))
+	}
+	if second.NextPageToken != "" {
+		t.Fatalf("next page token = %q, want empty", second.NextPageToken)
+	}
+}
+
+func TestPutContactValidationErrors(t *testing.T) {
+	store := openTempStore(t)
+	now := time.Date(2026, 2, 21, 20, 44, 0, 0, time.UTC)
+
+	if err := store.PutUser(context.Background(), user.User{ID: "user-1", Email: "user1@example.com", CreatedAt: now, UpdatedAt: now}); err != nil {
+		t.Fatalf("put user-1: %v", err)
+	}
+	if err := store.PutUser(context.Background(), user.User{ID: "user-2", Email: "user2@example.com", CreatedAt: now, UpdatedAt: now}); err != nil {
+		t.Fatalf("put user-2: %v", err)
+	}
+
+	cases := []struct {
+		name    string
+		contact storage.Contact
+	}{
+		{
+			name: "missing owner",
+			contact: storage.Contact{
+				OwnerUserID:   " ",
+				ContactUserID: "user-2",
+				CreatedAt:     now,
+				UpdatedAt:     now,
+			},
+		},
+		{
+			name: "missing contact",
+			contact: storage.Contact{
+				OwnerUserID:   "user-1",
+				ContactUserID: " ",
+				CreatedAt:     now,
+				UpdatedAt:     now,
+			},
+		},
+		{
+			name: "self contact",
+			contact: storage.Contact{
+				OwnerUserID:   "user-1",
+				ContactUserID: "user-1",
+				CreatedAt:     now,
+				UpdatedAt:     now,
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			err := store.PutContact(context.Background(), tc.contact)
+			if err == nil {
+				t.Fatal("expected validation error")
+			}
+		})
+	}
+}
+
+func TestListContactsValidationErrors(t *testing.T) {
+	store := openTempStore(t)
+
+	if _, err := store.ListContacts(context.Background(), " ", 10, ""); err == nil {
+		t.Fatal("expected error for missing owner user id")
+	}
+	if _, err := store.ListContacts(context.Background(), "user-1", 0, ""); err == nil {
+		t.Fatal("expected error for invalid page size")
+	}
+}
+
+func TestListContactsContextError(t *testing.T) {
+	store := openTempStore(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err := store.ListContacts(ctx, "user-1", 10, "")
+	if err == nil {
+		t.Fatal("expected context error")
+	}
+}
+
 func TestGetAuthStatisticsSince(t *testing.T) {
 	store := openTempStore(t)
 

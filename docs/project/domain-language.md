@@ -17,6 +17,7 @@ here drives how we name packages, APIs, and documentation.
 - **Email**: Optional contact record linked to a user, supporting multiple or zero emails.
 - **Passkey**: Primary authentication credential; users may register multiple passkeys.
 - **Magic link**: Single-use recovery token issued to an email address.
+- **Contact**: Owner-scoped quick-access link from one user to another for invite and discovery UX. Contacts are identity metadata, not campaign events.
 
 ### Campaign (Repository)
 

@@ -1078,6 +1078,18 @@ func (f *fakeAuthClient) ListUsers(ctx context.Context, req *authv1.ListUsersReq
 	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
 }
 
+func (f *fakeAuthClient) AddContact(ctx context.Context, req *authv1.AddContactRequest, opts ...grpc.CallOption) (*authv1.AddContactResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
+}
+
+func (f *fakeAuthClient) RemoveContact(ctx context.Context, req *authv1.RemoveContactRequest, opts ...grpc.CallOption) (*authv1.RemoveContactResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
+}
+
+func (f *fakeAuthClient) ListContacts(ctx context.Context, req *authv1.ListContactsRequest, opts ...grpc.CallOption) (*authv1.ListContactsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
+}
+
 func (f *fakeAuthClient) BeginPasskeyRegistration(ctx context.Context, req *authv1.BeginPasskeyRegistrationRequest, opts ...grpc.CallOption) (*authv1.BeginPasskeyRegistrationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
 }

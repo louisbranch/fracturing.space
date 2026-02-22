@@ -278,6 +278,142 @@ func (s *Store) ListUsers(ctx context.Context, pageSize int, pageToken string) (
 	return page, nil
 }
 
+// PutContact stores one owner-scoped quick-lookup relationship.
+func (s *Store) PutContact(ctx context.Context, contact storage.Contact) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if s == nil || s.sqlDB == nil {
+		return fmt.Errorf("storage is not configured")
+	}
+	ownerUserID := strings.TrimSpace(contact.OwnerUserID)
+	contactUserID := strings.TrimSpace(contact.ContactUserID)
+	if ownerUserID == "" {
+		return fmt.Errorf("owner user id is required")
+	}
+	if contactUserID == "" {
+		return fmt.Errorf("contact user id is required")
+	}
+	if ownerUserID == contactUserID {
+		return fmt.Errorf("contact user id must differ from owner user id")
+	}
+
+	return s.q.PutContact(ctx, db.PutContactParams{
+		OwnerUserID:   ownerUserID,
+		ContactUserID: contactUserID,
+		CreatedAt:     toMillis(contact.CreatedAt),
+		UpdatedAt:     toMillis(contact.UpdatedAt),
+	})
+}
+
+// GetContact fetches one owner-scoped contact.
+func (s *Store) GetContact(ctx context.Context, ownerUserID string, contactUserID string) (storage.Contact, error) {
+	if err := ctx.Err(); err != nil {
+		return storage.Contact{}, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return storage.Contact{}, fmt.Errorf("storage is not configured")
+	}
+	ownerUserID = strings.TrimSpace(ownerUserID)
+	contactUserID = strings.TrimSpace(contactUserID)
+	if ownerUserID == "" {
+		return storage.Contact{}, fmt.Errorf("owner user id is required")
+	}
+	if contactUserID == "" {
+		return storage.Contact{}, fmt.Errorf("contact user id is required")
+	}
+
+	row, err := s.q.GetContact(ctx, db.GetContactParams{
+		OwnerUserID:   ownerUserID,
+		ContactUserID: contactUserID,
+	})
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return storage.Contact{}, storage.ErrNotFound
+		}
+		return storage.Contact{}, fmt.Errorf("get contact: %w", err)
+	}
+
+	return dbContactToDomain(row), nil
+}
+
+// DeleteContact removes one owner-scoped contact.
+func (s *Store) DeleteContact(ctx context.Context, ownerUserID string, contactUserID string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if s == nil || s.sqlDB == nil {
+		return fmt.Errorf("storage is not configured")
+	}
+	ownerUserID = strings.TrimSpace(ownerUserID)
+	contactUserID = strings.TrimSpace(contactUserID)
+	if ownerUserID == "" {
+		return fmt.Errorf("owner user id is required")
+	}
+	if contactUserID == "" {
+		return fmt.Errorf("contact user id is required")
+	}
+
+	return s.q.DeleteContact(ctx, db.DeleteContactParams{
+		OwnerUserID:   ownerUserID,
+		ContactUserID: contactUserID,
+	})
+}
+
+// ListContacts returns one cursor page of owner-scoped contacts.
+func (s *Store) ListContacts(ctx context.Context, ownerUserID string, pageSize int, pageToken string) (storage.ContactPage, error) {
+	if err := ctx.Err(); err != nil {
+		return storage.ContactPage{}, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return storage.ContactPage{}, fmt.Errorf("storage is not configured")
+	}
+	ownerUserID = strings.TrimSpace(ownerUserID)
+	if ownerUserID == "" {
+		return storage.ContactPage{}, fmt.Errorf("owner user id is required")
+	}
+	if pageSize <= 0 {
+		return storage.ContactPage{}, fmt.Errorf("page size must be greater than zero")
+	}
+
+	page := storage.ContactPage{Contacts: make([]storage.Contact, 0, pageSize)}
+	switch {
+	case pageToken == "":
+		rows, err := s.q.ListContactsPagedFirst(ctx, db.ListContactsPagedFirstParams{
+			OwnerUserID: ownerUserID,
+			Limit:       int64(pageSize + 1),
+		})
+		if err != nil {
+			return storage.ContactPage{}, fmt.Errorf("list contacts: %w", err)
+		}
+		for i, row := range rows {
+			if i >= pageSize {
+				page.NextPageToken = rows[pageSize-1].ContactUserID
+				break
+			}
+			page.Contacts = append(page.Contacts, dbContactToDomain(row))
+		}
+	default:
+		rows, err := s.q.ListContactsPaged(ctx, db.ListContactsPagedParams{
+			OwnerUserID:   ownerUserID,
+			ContactUserID: pageToken,
+			Limit:         int64(pageSize + 1),
+		})
+		if err != nil {
+			return storage.ContactPage{}, fmt.Errorf("list contacts: %w", err)
+		}
+		for i, row := range rows {
+			if i >= pageSize {
+				page.NextPageToken = rows[pageSize-1].ContactUserID
+				break
+			}
+			page.Contacts = append(page.Contacts, dbContactToDomain(row))
+		}
+	}
+
+	return page, nil
+}
+
 // GetAuthStatistics returns aggregate counts across auth data.
 func (s *Store) GetAuthStatistics(ctx context.Context, since *time.Time) (storage.AuthStatistics, error) {
 	if err := ctx.Err(); err != nil {
@@ -307,6 +443,15 @@ func dbUserToDomain(id string, email string, createdAt int64, updatedAt int64) u
 		Email:     email,
 		CreatedAt: fromMillis(createdAt),
 		UpdatedAt: fromMillis(updatedAt),
+	}
+}
+
+func dbContactToDomain(row db.UserContact) storage.Contact {
+	return storage.Contact{
+		OwnerUserID:   row.OwnerUserID,
+		ContactUserID: row.ContactUserID,
+		CreatedAt:     fromMillis(row.CreatedAt),
+		UpdatedAt:     fromMillis(row.UpdatedAt),
 	}
 }
 
@@ -752,3 +897,4 @@ var _ storage.StatisticsStore = (*Store)(nil)
 var _ storage.PasskeyStore = (*Store)(nil)
 var _ storage.EmailStore = (*Store)(nil)
 var _ storage.MagicLinkStore = (*Store)(nil)
+var _ storage.ContactStore = (*Store)(nil)

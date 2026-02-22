@@ -42,6 +42,28 @@ type UserPage struct {
 	NextPageToken string
 }
 
+// Contact represents one owner-scoped quick-lookup relationship.
+type Contact struct {
+	OwnerUserID   string
+	ContactUserID string
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+}
+
+// ContactPage is a cursor page of contacts.
+type ContactPage struct {
+	Contacts      []Contact
+	NextPageToken string
+}
+
+// ContactStore persists owner-scoped user contacts.
+type ContactStore interface {
+	PutContact(ctx context.Context, contact Contact) error
+	GetContact(ctx context.Context, ownerUserID string, contactUserID string) (Contact, error)
+	DeleteContact(ctx context.Context, ownerUserID string, contactUserID string) error
+	ListContacts(ctx context.Context, ownerUserID string, pageSize int, pageToken string) (ContactPage, error)
+}
+
 // PasskeyCredential stores a WebAuthn credential record linked to a user identity.
 type PasskeyCredential struct {
 	CredentialID   string

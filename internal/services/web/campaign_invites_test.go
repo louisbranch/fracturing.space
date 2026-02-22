@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -9,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
@@ -304,6 +306,159 @@ func TestAppCampaignInviteRevokeParticipantCallsRevokeInvite(t *testing.T) {
 	}
 }
 
+func TestAppCampaignInvitesPageRendersContactOptions(t *testing.T) {
+	authServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/introspect" {
+			t.Fatalf("path = %q, want %q", r.URL.Path, "/introspect")
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(introspectResponse{
+			Active: true,
+			UserID: "user-123",
+		})
+	}))
+	t.Cleanup(authServer.Close)
+
+	participantClient := &fakeWebParticipantClient{
+		pages: map[string]*statev1.ListParticipantsResponse{
+			"": {
+				Participants: []*statev1.Participant{
+					{
+						Id:             "part-owner",
+						CampaignId:     "camp-123",
+						UserId:         "user-123",
+						CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER,
+					},
+				},
+			},
+		},
+	}
+	inviteClient := &fakeWebInviteClient{
+		listInvitesResp: &statev1.ListInvitesResponse{
+			Invites: []*statev1.Invite{},
+		},
+	}
+	authClient := &fakeAuthClient{
+		listContactsResp: &authv1.ListContactsResponse{
+			Contacts: []*authv1.Contact{
+				{OwnerUserId: "user-123", ContactUserId: "user-777"},
+			},
+		},
+	}
+
+	h := &handler{
+		config: Config{
+			AuthBaseURL:         authServer.URL,
+			OAuthResourceSecret: "secret-1",
+		},
+		authClient:        authClient,
+		sessions:          newSessionStore(),
+		pendingFlows:      newPendingFlowStore(),
+		participantClient: participantClient,
+		inviteClient:      inviteClient,
+		campaignAccess: &campaignAccessService{
+			authBaseURL:         authServer.URL,
+			oauthResourceSecret: "secret-1",
+			httpClient:          authServer.Client(),
+			participantClient:   participantClient,
+		},
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/invites", nil)
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+
+	h.handleAppCampaignDetail(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	if authClient.listContactsReq == nil {
+		t.Fatal("expected ListContacts request")
+	}
+	if authClient.listContactsReq.GetOwnerUserId() != "user-123" {
+		t.Fatalf("owner_user_id = %q, want user-123", authClient.listContactsReq.GetOwnerUserId())
+	}
+	if !strings.Contains(w.Body.String(), "value=\"user-777\"") {
+		t.Fatalf("expected contact option in response body")
+	}
+}
+
+func TestAppCampaignInvitesPageUsesCachedParticipantsForContactOptions(t *testing.T) {
+	authServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/introspect" {
+			t.Fatalf("path = %q, want %q", r.URL.Path, "/introspect")
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(introspectResponse{
+			Active: true,
+			UserID: "user-123",
+		})
+	}))
+	t.Cleanup(authServer.Close)
+
+	cacheStore := newFakeWebCacheStore()
+	participantClient := &fakeWebParticipantClient{
+		pages: map[string]*statev1.ListParticipantsResponse{
+			"": {
+				Participants: []*statev1.Participant{
+					{
+						Id:             "part-owner",
+						CampaignId:     "camp-123",
+						UserId:         "user-123",
+						CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER,
+					},
+				},
+			},
+		},
+	}
+	inviteClient := &fakeWebInviteClient{
+		listInvitesResp: &statev1.ListInvitesResponse{Invites: []*statev1.Invite{}},
+	}
+	authClient := &fakeAuthClient{
+		listContactsResp: &authv1.ListContactsResponse{
+			Contacts: []*authv1.Contact{
+				{OwnerUserId: "user-123", ContactUserId: "user-777"},
+			},
+		},
+	}
+
+	h := &handler{
+		config: Config{
+			AuthBaseURL:         authServer.URL,
+			OAuthResourceSecret: "secret-1",
+		},
+		authClient:        authClient,
+		cacheStore:        cacheStore,
+		sessions:          newSessionStore(),
+		pendingFlows:      newPendingFlowStore(),
+		participantClient: participantClient,
+		inviteClient:      inviteClient,
+		campaignAccess: &campaignAccessService{
+			authBaseURL:         authServer.URL,
+			oauthResourceSecret: "secret-1",
+			httpClient:          authServer.Client(),
+			participantClient:   participantClient,
+		},
+	}
+	h.setCampaignParticipantsCache(context.Background(), "camp-123", []*statev1.Participant{
+		{Id: "part-owner", CampaignId: "camp-123", UserId: "user-123", CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER},
+	})
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/invites", nil)
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+
+	h.handleAppCampaignDetail(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	if len(participantClient.calls) != 0 {
+		t.Fatalf("list participants calls = %d, want 0", len(participantClient.calls))
+	}
+}
+
 func TestRenderAppCampaignInvitesPageHidesWriteActionsWithoutManageAccess(t *testing.T) {
 	w := httptest.NewRecorder()
 
@@ -333,6 +488,155 @@ func TestRenderAppCampaignInvitesPageSkipsRevokeForMissingInviteID(t *testing.T)
 	}
 	if strings.Contains(body, "/campaigns/camp-123/invites/revoke") {
 		t.Fatalf("expected revoke invite form to be hidden for missing invite id")
+	}
+}
+
+func TestBuildInviteContactOptionsFiltersParticipantsAndPendingInvites(t *testing.T) {
+	options := buildInviteContactOptions(
+		[]*authv1.Contact{
+			{OwnerUserId: "user-1", ContactUserId: "user-200"},
+			{OwnerUserId: "user-1", ContactUserId: "user-300"},
+			{OwnerUserId: "user-1", ContactUserId: "user-400"},
+		},
+		[]*statev1.Participant{
+			{UserId: "user-200"},
+		},
+		[]*statev1.Invite{
+			{RecipientUserId: "user-300", Status: statev1.InviteStatus_PENDING},
+			{RecipientUserId: "user-500", Status: statev1.InviteStatus_CLAIMED},
+		},
+	)
+
+	if len(options) != 1 {
+		t.Fatalf("options len = %d, want 1", len(options))
+	}
+	if options[0].UserID != "user-400" {
+		t.Fatalf("user_id = %q, want user-400", options[0].UserID)
+	}
+}
+
+func TestListAllContactsRejectsRepeatedPageToken(t *testing.T) {
+	h := &handler{
+		authClient: &fakeAuthClient{
+			listContactsPages: map[string]*authv1.ListContactsResponse{
+				"": {
+					Contacts:      []*authv1.Contact{{OwnerUserId: "user-1", ContactUserId: "user-2"}},
+					NextPageToken: "loop",
+				},
+				"loop": {
+					Contacts:      []*authv1.Contact{{OwnerUserId: "user-1", ContactUserId: "user-3"}},
+					NextPageToken: "loop",
+				},
+			},
+		},
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer cancel()
+	_, err := h.listAllContacts(ctx, "user-1")
+	if err == nil {
+		t.Fatal("expected error for repeated page token")
+	}
+	if !strings.Contains(err.Error(), "repeated page token") {
+		t.Fatalf("error = %v, want repeated page token", err)
+	}
+}
+
+func TestListAllContactsPaginates(t *testing.T) {
+	h := &handler{
+		authClient: &fakeAuthClient{
+			listContactsPages: map[string]*authv1.ListContactsResponse{
+				"": {
+					Contacts:      []*authv1.Contact{{OwnerUserId: "user-1", ContactUserId: "user-2"}},
+					NextPageToken: "next",
+				},
+				"next": {
+					Contacts: []*authv1.Contact{{OwnerUserId: "user-1", ContactUserId: "user-3"}},
+				},
+			},
+		},
+	}
+
+	contacts, err := h.listAllContacts(context.Background(), "user-1")
+	if err != nil {
+		t.Fatalf("list all contacts: %v", err)
+	}
+	if len(contacts) != 2 {
+		t.Fatalf("contacts len = %d, want 2", len(contacts))
+	}
+	if got := contacts[0].GetContactUserId(); got != "user-2" {
+		t.Fatalf("contact[0] = %q, want user-2", got)
+	}
+	if got := contacts[1].GetContactUserId(); got != "user-3" {
+		t.Fatalf("contact[1] = %q, want user-3", got)
+	}
+}
+
+func TestListAllCampaignParticipantsRejectsRepeatedPageToken(t *testing.T) {
+	h := &handler{
+		participantClient: &fakeWebParticipantClient{
+			pages: map[string]*statev1.ListParticipantsResponse{
+				"": {
+					Participants:  []*statev1.Participant{{Id: "part-1", UserId: "user-1"}},
+					NextPageToken: "loop",
+				},
+				"loop": {
+					Participants:  []*statev1.Participant{{Id: "part-2", UserId: "user-2"}},
+					NextPageToken: "loop",
+				},
+			},
+		},
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer cancel()
+	_, err := h.listAllCampaignParticipants(ctx, "camp-1")
+	if err == nil {
+		t.Fatal("expected error for repeated page token")
+	}
+	if !strings.Contains(err.Error(), "repeated page token") {
+		t.Fatalf("error = %v, want repeated page token", err)
+	}
+}
+
+func TestListAllCampaignParticipantsPaginatesAndCaches(t *testing.T) {
+	cacheStore := newFakeWebCacheStore()
+	participantClient := &fakeWebParticipantClient{
+		pages: map[string]*statev1.ListParticipantsResponse{
+			"": {
+				Participants:  []*statev1.Participant{{Id: "part-1", UserId: "user-1"}},
+				NextPageToken: "next",
+			},
+			"next": {
+				Participants: []*statev1.Participant{{Id: "part-2", UserId: "user-2"}},
+			},
+		},
+	}
+	h := &handler{
+		cacheStore:        cacheStore,
+		participantClient: participantClient,
+	}
+
+	first, err := h.listAllCampaignParticipants(context.Background(), "camp-1")
+	if err != nil {
+		t.Fatalf("first list participants: %v", err)
+	}
+	if len(first) != 2 {
+		t.Fatalf("participants len = %d, want 2", len(first))
+	}
+	if len(participantClient.calls) != 2 {
+		t.Fatalf("participant calls = %d, want 2", len(participantClient.calls))
+	}
+
+	second, err := h.listAllCampaignParticipants(context.Background(), "camp-1")
+	if err != nil {
+		t.Fatalf("second list participants: %v", err)
+	}
+	if len(second) != 2 {
+		t.Fatalf("cached participants len = %d, want 2", len(second))
+	}
+	if len(participantClient.calls) != 2 {
+		t.Fatalf("participant calls after cache = %d, want 2", len(participantClient.calls))
 	}
 }
 

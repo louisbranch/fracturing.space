@@ -3,9 +3,13 @@ package web
 import (
 	"context"
 	"errors"
+	"fmt"
+	"log"
 	"net/http"
+	"sort"
 	"strings"
 
+	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
@@ -29,23 +33,32 @@ func (h *handler) handleAppCampaignInvites(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if invites, ok := h.cachedCampaignInvites(readCtx, campaignID, userID); ok {
-		renderAppCampaignInvitesPageWithContext(w, readReq, h.pageContextForCampaign(w, readReq, campaignID), campaignID, invites, true)
-		return
+	var invites []*statev1.Invite
+	if cachedInvites, ok := h.cachedCampaignInvites(readCtx, campaignID, userID); ok {
+		invites = cachedInvites
+	} else {
+		resp, err := h.inviteClient.ListInvites(readCtx, &statev1.ListInvitesRequest{
+			CampaignId: campaignID,
+			PageSize:   10,
+		})
+		if err != nil {
+			h.renderErrorPage(w, r, grpcErrorHTTPStatus(err, http.StatusBadGateway), "Invites unavailable", "failed to list campaign invites")
+			return
+		}
+		invites = resp.GetInvites()
+		h.setCampaignInvitesCache(readCtx, campaignID, userID, invites)
 	}
 
-	resp, err := h.inviteClient.ListInvites(readCtx, &statev1.ListInvitesRequest{
-		CampaignId: campaignID,
-		PageSize:   10,
-	})
-	if err != nil {
-		h.renderErrorPage(w, r, grpcErrorHTTPStatus(err, http.StatusBadGateway), "Invites unavailable", "failed to list campaign invites")
-		return
-	}
-
-	invites := resp.GetInvites()
-	h.setCampaignInvitesCache(readCtx, campaignID, userID, invites)
-	renderAppCampaignInvitesPageWithContext(w, readReq, h.pageContextForCampaign(w, readReq, campaignID), campaignID, invites, true)
+	contactOptions := h.listInviteContactOptions(readCtx, campaignID, userID, invites)
+	renderAppCampaignInvitesPageWithContextAndContacts(
+		w,
+		readReq,
+		h.pageContextForCampaign(w, readReq, campaignID),
+		campaignID,
+		invites,
+		contactOptions,
+		true,
+	)
 }
 
 func (h *handler) handleAppCampaignInviteCreate(w http.ResponseWriter, r *http.Request, campaignID string) {
@@ -215,10 +228,14 @@ func canManageCampaignInvites(access statev1.CampaignAccess) bool {
 }
 
 func renderAppCampaignInvitesPage(w http.ResponseWriter, r *http.Request, page webtemplates.PageContext, campaignID string, invites []*statev1.Invite, canManageInvites bool) {
-	renderAppCampaignInvitesPageWithContext(w, r, page, campaignID, invites, canManageInvites)
+	renderAppCampaignInvitesPageWithContextAndContacts(w, r, page, campaignID, invites, nil, canManageInvites)
 }
 
 func renderAppCampaignInvitesPageWithContext(w http.ResponseWriter, r *http.Request, page webtemplates.PageContext, campaignID string, invites []*statev1.Invite, canManageInvites bool) {
+	renderAppCampaignInvitesPageWithContextAndContacts(w, r, page, campaignID, invites, nil, canManageInvites)
+}
+
+func renderAppCampaignInvitesPageWithContextAndContacts(w http.ResponseWriter, r *http.Request, page webtemplates.PageContext, campaignID string, invites []*statev1.Invite, contacts []webtemplates.CampaignInviteContactOption, canManageInvites bool) {
 	// renderAppCampaignInvitesPage exposes write controls only to managed roles.
 	campaignID = strings.TrimSpace(campaignID)
 	inviteItems := make([]webtemplates.CampaignInviteItem, 0, len(invites))
@@ -246,7 +263,155 @@ func renderAppCampaignInvitesPageWithContext(w http.ResponseWriter, r *http.Requ
 			Label: displayInviteID + " - " + recipient,
 		})
 	}
-	if err := writePage(w, r, webtemplates.CampaignInvitesPage(page, campaignID, canManageInvites, inviteItems), composeHTMXTitleForPage(page, "game.campaign_invites.title")); err != nil {
+	if err := writePage(w, r, webtemplates.CampaignInvitesPage(page, campaignID, canManageInvites, inviteItems, contacts), composeHTMXTitleForPage(page, "game.campaign_invites.title")); err != nil {
 		localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.failed_to_render_campaign_invites_page")
 	}
+}
+
+func (h *handler) listInviteContactOptions(ctx context.Context, campaignID string, ownerUserID string, invites []*statev1.Invite) []webtemplates.CampaignInviteContactOption {
+	if h == nil || h.authClient == nil || h.participantClient == nil {
+		return nil
+	}
+	ownerUserID = strings.TrimSpace(ownerUserID)
+	if ownerUserID == "" {
+		return nil
+	}
+
+	contacts, err := h.listAllContacts(ctx, ownerUserID)
+	if err != nil {
+		log.Printf("web: list invite contacts failed: %v", err)
+		return nil
+	}
+	if len(contacts) == 0 {
+		return nil
+	}
+
+	participants, err := h.listAllCampaignParticipants(ctx, campaignID)
+	if err != nil {
+		log.Printf("web: list campaign participants for contact options failed: %v", err)
+		return nil
+	}
+	return buildInviteContactOptions(contacts, participants, invites)
+}
+
+func (h *handler) listAllContacts(ctx context.Context, ownerUserID string) ([]*authv1.Contact, error) {
+	ownerUserID = strings.TrimSpace(ownerUserID)
+	if ownerUserID == "" {
+		return nil, nil
+	}
+	pageToken := ""
+	seenTokens := make(map[string]struct{})
+	contacts := make([]*authv1.Contact, 0)
+	for {
+		resp, err := h.authClient.ListContacts(ctx, &authv1.ListContactsRequest{
+			OwnerUserId: ownerUserID,
+			PageSize:    50,
+			PageToken:   pageToken,
+		})
+		if err != nil {
+			return nil, err
+		}
+		contacts = append(contacts, resp.GetContacts()...)
+		nextToken := strings.TrimSpace(resp.GetNextPageToken())
+		if nextToken == "" {
+			break
+		}
+		if _, ok := seenTokens[nextToken]; ok {
+			return nil, fmt.Errorf("list contacts: repeated page token %q", nextToken)
+		}
+		seenTokens[nextToken] = struct{}{}
+		pageToken = nextToken
+	}
+	return contacts, nil
+}
+
+func (h *handler) listAllCampaignParticipants(ctx context.Context, campaignID string) ([]*statev1.Participant, error) {
+	campaignID = strings.TrimSpace(campaignID)
+	if campaignID == "" {
+		return nil, nil
+	}
+	if cached, ok := h.cachedCampaignParticipants(ctx, campaignID); ok {
+		return cached, nil
+	}
+	pageToken := ""
+	seenTokens := make(map[string]struct{})
+	participants := make([]*statev1.Participant, 0)
+	for {
+		resp, err := h.participantClient.ListParticipants(ctx, &statev1.ListParticipantsRequest{
+			CampaignId: campaignID,
+			PageSize:   10,
+			PageToken:  pageToken,
+		})
+		if err != nil {
+			return nil, err
+		}
+		participants = append(participants, resp.GetParticipants()...)
+		nextToken := strings.TrimSpace(resp.GetNextPageToken())
+		if nextToken == "" {
+			break
+		}
+		if _, ok := seenTokens[nextToken]; ok {
+			return nil, fmt.Errorf("list participants: repeated page token %q", nextToken)
+		}
+		seenTokens[nextToken] = struct{}{}
+		pageToken = nextToken
+	}
+	h.setCampaignParticipantsCache(ctx, campaignID, participants)
+	return participants, nil
+}
+
+func buildInviteContactOptions(contacts []*authv1.Contact, participants []*statev1.Participant, invites []*statev1.Invite) []webtemplates.CampaignInviteContactOption {
+	participantUsers := make(map[string]struct{})
+	for _, participant := range participants {
+		if participant == nil {
+			continue
+		}
+		userID := strings.TrimSpace(participant.GetUserId())
+		if userID == "" {
+			continue
+		}
+		participantUsers[userID] = struct{}{}
+	}
+
+	pendingInviteRecipients := make(map[string]struct{})
+	for _, invite := range invites {
+		if invite == nil || invite.GetStatus() != statev1.InviteStatus_PENDING {
+			continue
+		}
+		recipientUserID := strings.TrimSpace(invite.GetRecipientUserId())
+		if recipientUserID == "" {
+			continue
+		}
+		pendingInviteRecipients[recipientUserID] = struct{}{}
+	}
+
+	options := make([]webtemplates.CampaignInviteContactOption, 0, len(contacts))
+	seen := make(map[string]struct{})
+	for _, contact := range contacts {
+		if contact == nil {
+			continue
+		}
+		userID := strings.TrimSpace(contact.GetContactUserId())
+		if userID == "" {
+			continue
+		}
+		if _, ok := seen[userID]; ok {
+			continue
+		}
+		if _, ok := participantUsers[userID]; ok {
+			continue
+		}
+		if _, ok := pendingInviteRecipients[userID]; ok {
+			continue
+		}
+		seen[userID] = struct{}{}
+		options = append(options, webtemplates.CampaignInviteContactOption{
+			UserID: userID,
+			Label:  userID,
+		})
+	}
+	sort.Slice(options, func(i int, j int) bool {
+		return options[i].UserID < options[j].UserID
+	})
+	return options
 }
