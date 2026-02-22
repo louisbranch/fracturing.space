@@ -33,6 +33,16 @@ func RegisterCommands(registry *command.Registry) error {
 	return nil
 }
 
+// EmittableEventTypes returns all event types the action decider can emit.
+func EmittableEventTypes() []event.Type {
+	return []event.Type{
+		EventTypeRollResolved,
+		EventTypeOutcomeApplied,
+		EventTypeOutcomeRejected,
+		EventTypeNoteAdded,
+	}
+}
+
 // RegisterEvents registers action events with the shared registry.
 func RegisterEvents(registry *event.Registry) error {
 	if registry == nil {

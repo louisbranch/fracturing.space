@@ -74,6 +74,10 @@ func BuildRegistries(modules ...system.Module) (Registries, error) {
 		return Registries{}, err
 	}
 
+	if err := validateCoreEmittableEventTypes(eventRegistry); err != nil {
+		return Registries{}, err
+	}
+
 	for _, module := range modules {
 		if err := systemRegistry.Register(module); err != nil {
 			return Registries{}, err
@@ -89,6 +93,13 @@ func BuildRegistries(modules ...system.Module) (Registries, error) {
 		if err := validateModuleSystemTypePrefixes(module, beforeCommands, beforeEvents, commandRegistry.ListDefinitions(), eventRegistry.ListDefinitions()); err != nil {
 			return Registries{}, err
 		}
+		if err := validateEmittableEventTypes(module, eventRegistry); err != nil {
+			return Registries{}, err
+		}
+	}
+
+	if err := ValidateFoldCoverage(eventRegistry); err != nil {
+		return Registries{}, err
 	}
 
 	return Registries{
@@ -160,4 +171,92 @@ func eventTypeSet(definitions []event.Definition) map[event.Type]struct{} {
 		result[definition.Type] = struct{}{}
 	}
 	return result
+}
+
+// validateCoreEmittableEventTypes ensures every event type a core domain
+// decider declares as emittable is registered in the event registry.
+func validateCoreEmittableEventTypes(events *event.Registry) error {
+	var missing []string
+	for _, types := range [][]event.Type{
+		campaign.EmittableEventTypes(),
+		session.EmittableEventTypes(),
+		action.EmittableEventTypes(),
+		character.EmittableEventTypes(),
+		participant.EmittableEventTypes(),
+		invite.EmittableEventTypes(),
+	} {
+		for _, t := range types {
+			if _, ok := events.Definition(t); !ok {
+				missing = append(missing, string(t))
+			}
+		}
+	}
+	if len(missing) > 0 {
+		return fmt.Errorf("core emittable event types not in registry: %s",
+			strings.Join(missing, ", "))
+	}
+	return nil
+}
+
+// validateEmittableEventTypes ensures every event type a module declares as
+// emittable is registered in the event registry. This catches missing
+// RegisterEvents calls at startup instead of at runtime when a code path fires.
+func validateEmittableEventTypes(module system.Module, events *event.Registry) error {
+	emittable := module.EmittableEventTypes()
+	if len(emittable) == 0 {
+		return nil
+	}
+	var missing []string
+	for _, t := range emittable {
+		if _, ok := events.Definition(t); !ok {
+			missing = append(missing, string(t))
+		}
+	}
+	if len(missing) > 0 {
+		return fmt.Errorf("system module %s declares emittable event types not in registry: %s",
+			module.ID(), strings.Join(missing, ", "))
+	}
+	return nil
+}
+
+// ValidateFoldCoverage verifies that every core IntentProjectionAndReplay event
+// has a fold handler declared via FoldHandledTypes in the domain packages.
+//
+// This is a startup-time safety check: if a developer adds a new event with
+// IntentProjectionAndReplay and forgets the fold case, the server refuses to start.
+func ValidateFoldCoverage(events *event.Registry) error {
+	if events == nil {
+		return fmt.Errorf("event registry is required for fold coverage validation")
+	}
+
+	handled := make(map[event.Type]struct{})
+	for _, types := range [][]event.Type{
+		campaign.FoldHandledTypes(),
+		session.FoldHandledTypes(),
+		action.FoldHandledTypes(),
+		character.FoldHandledTypes(),
+		participant.FoldHandledTypes(),
+		invite.FoldHandledTypes(),
+	} {
+		for _, t := range types {
+			handled[t] = struct{}{}
+		}
+	}
+
+	var missing []string
+	for _, def := range events.ListDefinitions() {
+		if def.Owner != event.OwnerCore {
+			continue
+		}
+		if def.Intent != event.IntentProjectionAndReplay {
+			continue
+		}
+		if _, ok := handled[def.Type]; !ok {
+			missing = append(missing, string(def.Type))
+		}
+	}
+	if len(missing) > 0 {
+		return fmt.Errorf("core projection-and-replay events missing fold handlers: %s", strings.Join(missing, ", "))
+	}
+	return nil
 }

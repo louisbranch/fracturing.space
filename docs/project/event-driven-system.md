@@ -120,7 +120,7 @@ Flow:
 4. Current aggregate state is replay-loaded (`engine.ReplayStateLoader`).
 5. Decider returns `command.Decision` (events and/or rejections).
 6. `event.Registry.ValidateForAppend` validates each emitted event.
-7. Event store appends each event and assigns `seq/hash/chain/signature`.
+7. Event store batch-appends all decision events atomically and assigns `seq/hash/chain/signature`.
 8. Application layer applies emitted events to projection stores.
 9. Replay checkpoints and command-replay snapshots are advanced as events are processed.
 
@@ -149,8 +149,10 @@ sequenceDiagram
         loop each emitted event
             ENG->>ER: ValidateForAppend(event)
             ER-->>ENG: normalized event
-            ENG->>ES: AppendEvent(event)
-            ES-->>ENG: stored event(seq/hash/signature)
+        end
+        ENG->>ES: BatchAppendEvents(events)
+        ES-->>ENG: stored events(seq/hash/signature)
+        loop each stored event
             API->>PR: Apply(stored event)
             PR-->>API: projection updated
         end
@@ -400,7 +402,9 @@ These are current documentation or architecture pain points worth improving.
      generated event docs under `docs/events/`.
 2. Event append and projection apply are not one DB transaction:
    - Event append is authoritative; projection apply happens after emit in
-     application handlers.
+     application handlers. All events from a single command decision are
+     appended atomically via `BatchAppendEvents`, so partial-decision writes
+     cannot occur.
    - Improvement: document an explicit projection-repair runbook and consider a
      durable projection work queue/outbox.
 3. Two similarly named system registries:

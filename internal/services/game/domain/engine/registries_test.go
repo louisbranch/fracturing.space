@@ -26,6 +26,9 @@ func (fakeModule) RegisterEvents(registry *event.Registry) error {
 		Owner: event.OwnerSystem,
 	})
 }
+func (fakeModule) EmittableEventTypes() []event.Type {
+	return []event.Type{event.Type("sys.system_1.action.tested")}
+}
 func (fakeModule) Decider() system.Decider           { return nil }
 func (fakeModule) Projector() system.Projector       { return nil }
 func (fakeModule) StateFactory() system.StateFactory { return nil }
@@ -50,6 +53,9 @@ func (m syntheticModule) RegisterEvents(registry *event.Registry) error {
 		Type:  m.eventType,
 		Owner: event.OwnerSystem,
 	})
+}
+func (m syntheticModule) EmittableEventTypes() []event.Type {
+	return []event.Type{m.eventType}
 }
 func (m syntheticModule) Decider() system.Decider           { return nil }
 func (m syntheticModule) Projector() system.Projector       { return nil }
@@ -220,6 +226,113 @@ func TestBuildRegistries_SyntheticModulesDetectTypeCollision(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "already registered") {
 		t.Fatalf("expected duplicate registration error, got %v", err)
+	}
+}
+
+func TestValidateFoldCoverage_CoreProjectionEventsHaveFoldHandlers(t *testing.T) {
+	registries, err := BuildRegistries()
+	if err != nil {
+		t.Fatalf("build registries: %v", err)
+	}
+
+	if err := ValidateFoldCoverage(registries.Events); err != nil {
+		t.Fatalf("fold coverage validation failed: %v", err)
+	}
+}
+
+func TestValidateFoldCoverage_ReturnsErrorForMissingHandler(t *testing.T) {
+	eventRegistry := event.NewRegistry()
+	// Register a core projection-and-replay event with no fold handler.
+	if err := eventRegistry.Register(event.Definition{
+		Type:   event.Type("test.unhandled"),
+		Owner:  event.OwnerCore,
+		Intent: event.IntentProjectionAndReplay,
+	}); err != nil {
+		t.Fatalf("register event: %v", err)
+	}
+
+	err := ValidateFoldCoverage(eventRegistry)
+	if err == nil {
+		t.Fatal("expected error for unhandled projection event")
+	}
+	if !strings.Contains(err.Error(), "test.unhandled") {
+		t.Fatalf("expected error to mention test.unhandled, got %v", err)
+	}
+}
+
+func TestValidateFoldCoverage_IgnoresAuditOnlyEvents(t *testing.T) {
+	eventRegistry := event.NewRegistry()
+	// Register a core audit-only event — should not require a fold handler.
+	if err := eventRegistry.Register(event.Definition{
+		Type:   event.Type("test.audit_only"),
+		Owner:  event.OwnerCore,
+		Intent: event.IntentAuditOnly,
+	}); err != nil {
+		t.Fatalf("register event: %v", err)
+	}
+
+	if err := ValidateFoldCoverage(eventRegistry); err != nil {
+		t.Fatalf("expected no error for audit-only event, got: %v", err)
+	}
+}
+
+func TestValidateFoldCoverage_IgnoresSystemEvents(t *testing.T) {
+	eventRegistry := event.NewRegistry()
+	// Register a system event — fold coverage for system events is the
+	// responsibility of the module projector, not core fold functions.
+	if err := eventRegistry.Register(event.Definition{
+		Type:   event.Type("sys.test.some_event"),
+		Owner:  event.OwnerSystem,
+		Intent: event.IntentProjectionAndReplay,
+	}); err != nil {
+		t.Fatalf("register event: %v", err)
+	}
+
+	if err := ValidateFoldCoverage(eventRegistry); err != nil {
+		t.Fatalf("expected no error for system event, got: %v", err)
+	}
+}
+
+type unregisteredEmitModule struct {
+	syntheticModule
+	extraEmittable event.Type
+}
+
+func (m unregisteredEmitModule) EmittableEventTypes() []event.Type {
+	return []event.Type{m.eventType, m.extraEmittable}
+}
+
+func TestBuildRegistries_ValidatesEmittableEventTypes(t *testing.T) {
+	mod := unregisteredEmitModule{
+		syntheticModule: syntheticModule{
+			id:          "GAME_SYSTEM_ALPHA",
+			version:     "v1",
+			commandType: command.Type("sys.alpha.action.attack.resolve"),
+			eventType:   event.Type("sys.alpha.action.attack_resolved"),
+		},
+		extraEmittable: event.Type("sys.alpha.action.not_registered"),
+	}
+
+	_, err := BuildRegistries(mod)
+	if err == nil {
+		t.Fatal("expected error for unregistered emittable event type")
+	}
+	if !strings.Contains(err.Error(), "sys.alpha.action.not_registered") {
+		t.Fatalf("expected error to mention unregistered type, got: %v", err)
+	}
+}
+
+func TestBuildRegistries_PassesWhenEmittableEventsAllRegistered(t *testing.T) {
+	mod := syntheticModule{
+		id:          "GAME_SYSTEM_ALPHA",
+		version:     "v1",
+		commandType: command.Type("sys.alpha.action.attack.resolve"),
+		eventType:   event.Type("sys.alpha.action.attack_resolved"),
+	}
+
+	_, err := BuildRegistries(mod)
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
 	}
 }
 

@@ -19,6 +19,9 @@ import (
 // each event type updates exactly one aggregate slice and is replayed
 // identically whether during request execution or historical reconstruction.
 type Applier struct {
+	// Events provides event definitions so the applier can skip audit-only
+	// events that do not affect aggregate state.
+	Events *event.Registry
 	// SystemRegistry routes system events to their module-specific projector.
 	SystemRegistry *system.Registry
 }
@@ -29,6 +32,20 @@ type Applier struct {
 // transitions remain visible in one place per subdomain and replay behavior matches
 // request-time behavior.
 func (a Applier) Apply(state any, evt event.Event) (any, error) {
+	// Skip audit-only events: they do not affect aggregate state and should
+	// not be passed to fold functions.
+	if a.Events != nil {
+		if def, ok := a.Events.Definition(evt.Type); ok && def.Intent == event.IntentAuditOnly {
+			if existing, ok := state.(State); ok {
+				return existing, nil
+			}
+			if existingPtr, ok := state.(*State); ok && existingPtr != nil {
+				return *existingPtr, nil
+			}
+			return State{}, nil
+		}
+	}
+
 	current := State{}
 	if existing, ok := state.(State); ok {
 		current = existing

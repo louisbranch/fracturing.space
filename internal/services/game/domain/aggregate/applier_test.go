@@ -3,6 +3,7 @@ package aggregate
 import (
 	"testing"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/system"
@@ -63,6 +64,7 @@ func (fakeSystemModule) ID() string                                 { return "sy
 func (fakeSystemModule) Version() string                            { return "v1" }
 func (fakeSystemModule) RegisterCommands(_ *command.Registry) error { return nil }
 func (fakeSystemModule) RegisterEvents(_ *event.Registry) error     { return nil }
+func (fakeSystemModule) EmittableEventTypes() []event.Type          { return nil }
 func (fakeSystemModule) Decider() system.Decider                    { return nil }
 func (fakeSystemModule) Projector() system.Projector                { return fakeSystemProjector{} }
 func (fakeSystemModule) StateFactory() system.StateFactory          { return nil }
@@ -121,6 +123,35 @@ func TestApplierApply_PropagatesFoldError(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("expected error for corrupt payload")
+	}
+}
+
+func TestApplierApply_SkipsAuditOnlyEvents(t *testing.T) {
+	registry := event.NewRegistry()
+	if err := registry.Register(event.Definition{
+		Type:   event.Type("test.audit_event"),
+		Owner:  event.OwnerCore,
+		Intent: event.IntentAuditOnly,
+	}); err != nil {
+		t.Fatalf("register event: %v", err)
+	}
+	applier := Applier{Events: registry}
+	state := State{Campaign: campaign.State{Name: "unchanged"}}
+
+	result, err := applier.Apply(state, event.Event{
+		Type:        event.Type("test.audit_event"),
+		PayloadJSON: []byte(`{}`),
+	})
+	if err != nil {
+		t.Fatalf("apply audit-only event: %v", err)
+	}
+	updated, ok := result.(State)
+	if !ok {
+		t.Fatal("expected State result")
+	}
+	// Audit-only event should not modify state.
+	if updated.Campaign.Name != "unchanged" {
+		t.Fatalf("campaign name = %s, want unchanged", updated.Campaign.Name)
 	}
 }
 

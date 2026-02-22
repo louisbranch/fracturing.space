@@ -7,6 +7,19 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 )
 
+// FoldHandledTypes returns the event types handled by the session fold function.
+func FoldHandledTypes() []event.Type {
+	return []event.Type{
+		EventTypeStarted,
+		EventTypeEnded,
+		EventTypeGateOpened,
+		EventTypeGateResolved,
+		EventTypeGateAbandoned,
+		EventTypeSpotlightSet,
+		EventTypeSpotlightCleared,
+	}
+}
+
 // Fold applies an event to session state. It returns an error if a recognized
 // event carries a payload that cannot be unmarshalled.
 //

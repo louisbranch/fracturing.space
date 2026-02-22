@@ -54,3 +54,28 @@ func (a JournalAdapter) Append(ctx context.Context, evt event.Event) (event.Even
 	}
 	return stored, nil
 }
+
+// BatchAppend atomically appends all events from a single command decision.
+//
+// If the underlying store supports BatchAppendEvents the call is atomic;
+// otherwise it falls back to sequential individual appends.
+func (a JournalAdapter) BatchAppend(ctx context.Context, events []event.Event) ([]event.Event, error) {
+	if a.store == nil {
+		return nil, errJournalEventStoreRequired
+	}
+	type batchAppender interface {
+		BatchAppendEvents(ctx context.Context, events []event.Event) ([]event.Event, error)
+	}
+	if ba, ok := a.store.(batchAppender); ok {
+		return ba.BatchAppendEvents(ctx, events)
+	}
+	stored := make([]event.Event, 0, len(events))
+	for _, evt := range events {
+		s, err := a.store.AppendEvent(ctx, evt)
+		if err != nil {
+			return nil, err
+		}
+		stored = append(stored, s)
+	}
+	return stored, nil
+}

@@ -81,6 +81,19 @@ func RegisterCommands(registry *command.Registry) error {
 	})
 }
 
+// EmittableEventTypes returns all event types the session decider can emit.
+func EmittableEventTypes() []event.Type {
+	return []event.Type{
+		EventTypeStarted,
+		EventTypeEnded,
+		EventTypeGateOpened,
+		EventTypeGateResolved,
+		EventTypeGateAbandoned,
+		EventTypeSpotlightSet,
+		EventTypeSpotlightCleared,
+	}
+}
+
 // RegisterEvents registers session events with the shared registry.
 func RegisterEvents(registry *event.Registry) error {
 	if registry == nil {

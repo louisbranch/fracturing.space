@@ -7,6 +7,16 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 )
 
+// FoldHandledTypes returns the event types handled by the character fold function.
+func FoldHandledTypes() []event.Type {
+	return []event.Type{
+		EventTypeCreated,
+		EventTypeUpdated,
+		EventTypeDeleted,
+		EventTypeProfileUpdated,
+	}
+}
+
 // Fold applies an event to character state. It returns an error if a recognized
 // event carries a payload that cannot be unmarshalled.
 func Fold(state State, evt event.Event) (State, error) {

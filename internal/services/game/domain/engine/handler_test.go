@@ -54,6 +54,18 @@ func (f *fakeJournal) Append(_ context.Context, evt event.Event) (event.Event, e
 	return stored, nil
 }
 
+func (f *fakeJournal) BatchAppend(_ context.Context, events []event.Event) ([]event.Event, error) {
+	stored := make([]event.Event, len(events))
+	for i, evt := range events {
+		f.nextSeq++
+		stored[i] = evt
+		stored[i].Seq = f.nextSeq
+		stored[i].Hash = fmt.Sprintf("hash-%d", f.nextSeq)
+		f.last = stored[i]
+	}
+	return stored, nil
+}
+
 type fakeCheckpointStore struct {
 	last  replay.Checkpoint
 	calls int
@@ -463,10 +475,41 @@ func TestExecute_AllowsMutatingSystemEvent(t *testing.T) {
 	}
 }
 
+type batchTrackingJournal struct {
+	appendCalls      int
+	batchAppendCalls int
+	nextSeq          uint64
+}
+
+func (j *batchTrackingJournal) Append(_ context.Context, evt event.Event) (event.Event, error) {
+	j.appendCalls++
+	j.nextSeq++
+	stored := evt
+	stored.Seq = j.nextSeq
+	stored.Hash = fmt.Sprintf("hash-%d", j.nextSeq)
+	return stored, nil
+}
+
+func (j *batchTrackingJournal) BatchAppend(_ context.Context, events []event.Event) ([]event.Event, error) {
+	j.batchAppendCalls++
+	stored := make([]event.Event, len(events))
+	for i, evt := range events {
+		j.nextSeq++
+		stored[i] = evt
+		stored[i].Seq = j.nextSeq
+		stored[i].Hash = fmt.Sprintf("hash-%d", j.nextSeq)
+	}
+	return stored, nil
+}
+
 type failingJournal struct{}
 
 func (failingJournal) Append(_ context.Context, _ event.Event) (event.Event, error) {
 	return event.Event{}, errors.New("journal unavailable")
+}
+
+func (failingJournal) BatchAppend(_ context.Context, _ []event.Event) ([]event.Event, error) {
+	return nil, errors.New("journal unavailable")
 }
 
 type spyApplier struct {
@@ -553,5 +596,54 @@ func TestExecute_SavesCheckpointWithValidatedCampaignID(t *testing.T) {
 	}
 	if checkpoints.last.CampaignID != "camp-1" {
 		t.Fatalf("checkpoint campaign id = %q, want %q", checkpoints.last.CampaignID, "camp-1")
+	}
+}
+
+func TestHandle_BatchAppendsAllEventsAtOnce(t *testing.T) {
+	cmdRegistry := command.NewRegistry()
+	if err := cmdRegistry.Register(command.Definition{
+		Type:  command.Type("action.test"),
+		Owner: command.OwnerCore,
+	}); err != nil {
+		t.Fatalf("register command: %v", err)
+	}
+	eventRegistry := event.NewRegistry()
+	if err := eventRegistry.Register(event.Definition{
+		Type:  event.Type("action.tested"),
+		Owner: event.OwnerCore,
+	}); err != nil {
+		t.Fatalf("register event: %v", err)
+	}
+
+	journal := &batchTrackingJournal{}
+	handler := Handler{
+		Commands: cmdRegistry,
+		Events:   eventRegistry,
+		Journal:  journal,
+		Decider: fixedDecider{decision: command.Decision{Events: []event.Event{
+			{CampaignID: "camp-1", Type: event.Type("action.tested"), Timestamp: time.Unix(0, 0).UTC(), ActorType: event.ActorTypeSystem, PayloadJSON: []byte(`{"a":1}`)},
+			{CampaignID: "camp-1", Type: event.Type("action.tested"), Timestamp: time.Unix(1, 0).UTC(), ActorType: event.ActorTypeSystem, PayloadJSON: []byte(`{"a":2}`)},
+		}}},
+	}
+
+	decision, err := handler.Handle(context.Background(), command.Command{
+		CampaignID: "camp-1",
+		Type:       command.Type("action.test"),
+		ActorType:  command.ActorTypeSystem,
+	})
+	if err != nil {
+		t.Fatalf("handle: %v", err)
+	}
+	if len(decision.Events) != 2 {
+		t.Fatalf("expected 2 events, got %d", len(decision.Events))
+	}
+	if journal.batchAppendCalls != 1 {
+		t.Fatalf("batch append calls = %d, want 1", journal.batchAppendCalls)
+	}
+	if journal.appendCalls != 0 {
+		t.Fatalf("individual append calls = %d, want 0", journal.appendCalls)
+	}
+	if decision.Events[0].Seq != 1 || decision.Events[1].Seq != 2 {
+		t.Fatalf("event seqs = [%d, %d], want [1, 2]", decision.Events[0].Seq, decision.Events[1].Seq)
 	}
 }
