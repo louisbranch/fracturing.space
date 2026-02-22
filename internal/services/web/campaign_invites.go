@@ -184,8 +184,9 @@ func (h *handler) lookupInviteRecipientVerification(ctx context.Context, recipie
 		verification.Username = username
 	}
 	if profile := resp.GetPublicProfileRecord(); profile != nil {
-		verification.DisplayName = strings.TrimSpace(profile.GetDisplayName())
-		verification.AvatarURL = strings.TrimSpace(profile.GetAvatarUrl())
+		verification.Name = strings.TrimSpace(profile.GetName())
+		verification.AvatarSetID = strings.TrimSpace(profile.GetAvatarSetId())
+		verification.AvatarAssetID = strings.TrimSpace(profile.GetAvatarAssetId())
 		verification.Bio = strings.TrimSpace(profile.GetBio())
 	}
 	return verification, nil

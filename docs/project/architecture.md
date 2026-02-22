@@ -108,8 +108,9 @@ Entry point: `cmd/game`
 
 ### Auth server
 
-The auth server hosts the auth gRPC API for identity data (users) and future
-authentication flows.
+The auth server hosts authN/authZ APIs for identity proofs and access artifacts
+(users, credentials, sessions, token issuance/verification, recovery flows). It
+does not own social/discovery profile and relationship metadata.
 
 Entry point: `cmd/auth`
 
@@ -122,8 +123,8 @@ Entry point: `cmd/ai`
 
 ### Connections server
 
-The connections server hosts user-directed contact APIs used for discovery and
-invite targeting workflows.
+The connections server hosts social/discovery APIs (contacts, usernames, public
+profile metadata) used for discovery and invite targeting workflows.
 
 Entry point: `cmd/connections`
 
@@ -182,8 +183,8 @@ The primary service boundaries are:
 - **Game service** (`internal/services/game/`): Canonical rules and campaign state; gRPC APIs under `internal/services/game/api/grpc/`; owns the game database.
 - **MCP service** (`internal/services/mcp/`): JSON-RPC adapter for the MCP protocol; forwards to the game service and does not own rules or state.
 - **Admin service** (`internal/services/admin/`): HTTP admin dashboard; renders UI and calls the game service for data.
-- **Auth service** (`internal/services/auth/`): Authentication domain logic and gRPC API surface; owns the auth database.
-- **Connections service** (`internal/services/connections/`): Directed user contact APIs and connection metadata; owns the connections database.
+- **Auth service** (`internal/services/auth/`): AuthN/authZ domain logic and gRPC API surface (identity proof and access artifacts); owns the auth database.
+- **Connections service** (`internal/services/connections/`): Social/discovery domain logic and gRPC API surface (contacts, usernames, public profile metadata); owns the connections database.
 - **Listing service** (`internal/services/listing/`): Public campaign listing metadata APIs; owns the listing database.
 - **AI service** (`internal/services/ai/`): AI credential and agent domain logic + gRPC API surface; owns the AI database.
 

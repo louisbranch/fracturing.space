@@ -6,11 +6,25 @@ nav_order: 19
 
 # Connections Phase 3: Public Profile Surface and Username Verification
 
+## Implementation Status
+
+As of 2026-02-22, Phase 3 is partially implemented:
+
+- `connections.v1.ConnectionsService` exposes `SetPublicProfile`,
+  `GetPublicProfile`, and `LookupPublicProfile`.
+- Public profile storage/migration in `connections` is implemented.
+- Web invite verification flow reads `LookupPublicProfile`.
+- Remaining: owner-managed web settings flow for profile write/read.
+
+Execution details for remaining work:
+[Connections Execution Spec](connections-execution-spec.md)
+
 ## Purpose
 
-Define an implementation-ready specification for the next `connections` phase:
+Define an implementation-ready specification for this `connections` phase:
 
-- owner-managed public profile fields (`display_name`, `avatar_url`, `bio`),
+- owner-managed public profile fields (`name`, `avatar_set_id`,
+  `avatar_asset_id`, `bio`),
 - lookup of public profile context by username,
 - web invite verification context for `@username` targeting.
 
@@ -41,7 +55,7 @@ Out of scope:
 Boundary ownership remains:
 
 - `connections`: usernames, public profile metadata, directed contacts.
-- `auth`: identity authority, authn/authz, sessions, OAuth.
+- `auth`: authN/authZ primitives (identity proofs, sessions, OAuth, access artifacts), not social discovery metadata.
 - `game`: invite lifecycle and seat claim enforcement.
 - `web`: user-facing composition of `connections` and `game` APIs.
 
@@ -54,8 +68,9 @@ Phase 3 does not move invite authority into `connections`.
 A public profile record is metadata owned by `connections`:
 
 - `user_id` (profile owner),
-- `display_name`,
-- `avatar_url`,
+- `name`,
+- `avatar_set_id`,
+- `avatar_asset_id`,
 - `bio`,
 - `created_at`,
 - `updated_at`.
@@ -73,19 +88,19 @@ Invariants:
 
 `SetPublicProfile` field rules:
 
-- `display_name`: required after trimming, max 64 chars.
-- `avatar_url`: optional; max 512 chars; when set must be absolute `http://` or
-  `https://` URL.
+- `name`: required after trimming, max 64 chars.
+- `avatar_set_id` and `avatar_asset_id`: optional as a pair; when either is set,
+  both must be set and must resolve to a valid user-avatar selection.
 - `bio`: optional; max 280 chars.
 
 Validation failures return `invalid_argument`.
 
-## API Surface (Planning)
+## API Surface
 
 Additions to `connections.v1.ConnectionsService`:
 
 - `SetPublicProfile`
-  - request: `user_id`, `display_name`, `avatar_url`, `bio`
+  - request: `user_id`, `name`, `avatar_set_id`, `avatar_asset_id`, `bio`
   - behavior: create or update one owner's public profile record
   - response: `PublicProfileRecord`
 - `GetPublicProfile`
@@ -100,7 +115,8 @@ Additions to `connections.v1.ConnectionsService`:
 Recommended shared message:
 
 - `PublicProfileRecord`
-  - `user_id`, `display_name`, `avatar_url`, `bio`, `created_at`, `updated_at`
+  - `user_id`, `name`, `avatar_set_id`, `avatar_asset_id`, `bio`, `created_at`,
+    `updated_at`
 
 Compatibility notes:
 
@@ -132,8 +148,9 @@ Lookup semantics:
 Phase 3 migration adds a `public_profiles` table in `connections` storage:
 
 - `user_id TEXT PRIMARY KEY`
-- `display_name TEXT NOT NULL`
-- `avatar_url TEXT NOT NULL DEFAULT ''`
+- `name TEXT NOT NULL`
+- `avatar_set_id TEXT NOT NULL DEFAULT ''`
+- `avatar_asset_id TEXT NOT NULL DEFAULT ''`
 - `bio TEXT NOT NULL DEFAULT ''`
 - `created_at INTEGER NOT NULL`
 - `updated_at INTEGER NOT NULL`

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
+	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/user"
 	invite "github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
@@ -105,6 +106,9 @@ func TestCreateUser_Success(t *testing.T) {
 	if resp.GetUser().GetEmail() != "alice@example.com" {
 		t.Fatalf("expected normalized email, got %q", resp.GetUser().GetEmail())
 	}
+	if resp.GetUser().GetLocale() != commonv1.Locale_LOCALE_EN_US {
+		t.Fatalf("expected default locale en-US, got %v", resp.GetUser().GetLocale())
+	}
 }
 
 func TestCreateUser_EnqueuesSignupCompletedOutbox(t *testing.T) {
@@ -131,6 +135,32 @@ func TestCreateUser_EnqueuesSignupCompletedOutbox(t *testing.T) {
 	}
 	if event.DedupeKey != "signup_completed:user:user-123:v1" {
 		t.Fatalf("outbox dedupe key = %q, want %q", event.DedupeKey, "signup_completed:user:user-123:v1")
+	}
+}
+
+func TestCreateUser_UsesRequestedLocale(t *testing.T) {
+	store := newFakeUserStore()
+	svc := NewAuthService(store, nil, nil)
+	fixedTime := time.Date(2026, 2, 21, 18, 0, 0, 0, time.UTC)
+	svc.clock = func() time.Time { return fixedTime }
+	svc.idGenerator = func() (string, error) { return "user-123", nil }
+
+	resp, err := svc.CreateUser(context.Background(), &authv1.CreateUserRequest{
+		Email:  "Alice@example.com",
+		Locale: commonv1.Locale_LOCALE_PT_BR,
+	})
+	if err != nil {
+		t.Fatalf("create user: %v", err)
+	}
+	if got := resp.GetUser().GetLocale(); got != commonv1.Locale_LOCALE_PT_BR {
+		t.Fatalf("locale = %v, want %v", got, commonv1.Locale_LOCALE_PT_BR)
+	}
+	stored, ok := store.users["user-123"]
+	if !ok {
+		t.Fatal("expected user to be stored")
+	}
+	if got := stored.Locale; got != commonv1.Locale_LOCALE_PT_BR {
+		t.Fatalf("stored locale = %v, want %v", got, commonv1.Locale_LOCALE_PT_BR)
 	}
 }
 

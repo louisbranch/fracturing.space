@@ -83,12 +83,13 @@ type CampaignInviteContactOption struct {
 
 // CampaignInviteVerification models resolved username verification context.
 type CampaignInviteVerification struct {
-	HasResult   bool
-	Username    string
-	UserID      string
-	DisplayName string
-	AvatarURL   string
-	Bio         string
+	HasResult     bool
+	Username      string
+	UserID        string
+	Name          string
+	AvatarSetID   string
+	AvatarAssetID string
+	Bio           string
 }
 
 // UserInviteItem models one pending invite row for the current user.
@@ -589,11 +590,14 @@ templ CampaignInvitesPage(page PageContext, campaignID string, canManage bool, i
 						<h3 class="card-title">{ T(page.Loc, "game.campaign_invites.verify_result_title") }</h3>
 						<p>{ T(page.Loc, "game.campaign_invites.verify_result_username") }: @{ verification.Username }</p>
 						<p>{ T(page.Loc, "game.campaign_invites.verify_result_user_id") }: { verification.UserID }</p>
-						if verification.DisplayName != "" {
-							<p>{ T(page.Loc, "game.campaign_invites.verify_result_display_name") }: { verification.DisplayName }</p>
+						if verification.Name != "" {
+							<p>{ T(page.Loc, "game.campaign_invites.verify_result_name") }: { verification.Name }</p>
 						}
-						if verification.AvatarURL != "" {
-							<p>{ T(page.Loc, "game.campaign_invites.verify_result_avatar_url") }: { verification.AvatarURL }</p>
+						if verification.AvatarSetID != "" {
+							<p>{ T(page.Loc, "game.campaign_invites.verify_result_avatar_set_id") }: { verification.AvatarSetID }</p>
+						}
+						if verification.AvatarAssetID != "" {
+							<p>{ T(page.Loc, "game.campaign_invites.verify_result_avatar_asset_id") }: { verification.AvatarAssetID }</p>
 						}
 						if verification.Bio != "" {
 							<p>{ T(page.Loc, "game.campaign_invites.verify_result_bio") }: { verification.Bio }</p>

@@ -37,12 +37,13 @@ type UsernameRecord struct {
 
 // PublicProfileRecord stores one public profile for user identity verification.
 type PublicProfileRecord struct {
-	UserID      string
-	DisplayName string
-	AvatarURL   string
-	Bio         string
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	UserID        string
+	Name          string
+	AvatarSetID   string
+	AvatarAssetID string
+	Bio           string
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 // ContactStore persists owner-scoped directed contact relationships.

@@ -2,49 +2,62 @@
 package profile
 
 import (
+	"errors"
 	"fmt"
-	"net/url"
 	"strings"
 	"unicode/utf8"
+
+	assetcatalog "github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
 )
 
 const (
-	maxDisplayNameLength = 64
-	maxAvatarURLLength   = 512
-	maxBioLength         = 280
+	maxNameLength = 64
+	maxBioLength  = 280
 )
 
 // Normalized stores validated profile field values.
 type Normalized struct {
-	DisplayName string
-	AvatarURL   string
-	Bio         string
+	Name          string
+	AvatarSetID   string
+	AvatarAssetID string
+	Bio           string
 }
 
+var publicProfileAvatarManifest = assetcatalog.AvatarManifest()
+
 // Normalize validates and trims user-supplied public profile values.
-func Normalize(displayName string, avatarURL string, bio string) (Normalized, error) {
-	displayName = strings.TrimSpace(displayName)
-	if displayName == "" {
-		return Normalized{}, fmt.Errorf("display name is required")
+func Normalize(userID string, name string, avatarSetID string, avatarAssetID string, bio string) (Normalized, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return Normalized{}, fmt.Errorf("name is required")
 	}
-	if utf8.RuneCountInString(displayName) > maxDisplayNameLength {
-		return Normalized{}, fmt.Errorf("display name must be at most %d characters", maxDisplayNameLength)
+	if utf8.RuneCountInString(name) > maxNameLength {
+		return Normalized{}, fmt.Errorf("name must be at most %d characters", maxNameLength)
 	}
 
-	avatarURL = strings.TrimSpace(avatarURL)
-	if len(avatarURL) > maxAvatarURLLength {
-		return Normalized{}, fmt.Errorf("avatar url must be at most %d characters", maxAvatarURLLength)
+	avatarSetID = strings.TrimSpace(avatarSetID)
+	avatarAssetID = strings.TrimSpace(avatarAssetID)
+	if (avatarSetID == "") != (avatarAssetID == "") {
+		return Normalized{}, fmt.Errorf("avatar set and avatar asset must be provided together")
 	}
-	if avatarURL != "" {
-		parsed, err := url.Parse(avatarURL)
-		if err != nil || !parsed.IsAbs() {
-			return Normalized{}, fmt.Errorf("avatar url must be an absolute URL")
+	if avatarSetID != "" {
+		resolvedSetID, resolvedAssetID, err := publicProfileAvatarManifest.ResolveSelection(assetcatalog.SelectionInput{
+			EntityType: "user",
+			EntityID:   strings.TrimSpace(userID),
+			SetID:      avatarSetID,
+			AssetID:    avatarAssetID,
+		})
+		switch {
+		case err == nil:
+			avatarSetID = resolvedSetID
+			avatarAssetID = resolvedAssetID
+		case errors.Is(err, assetcatalog.ErrSetNotFound):
+			return Normalized{}, fmt.Errorf("avatar set is invalid")
+		case errors.Is(err, assetcatalog.ErrAssetInvalid):
+			return Normalized{}, fmt.Errorf("avatar asset is invalid")
+		default:
+			return Normalized{}, err
 		}
-		scheme := strings.ToLower(parsed.Scheme)
-		if scheme != "http" && scheme != "https" {
-			return Normalized{}, fmt.Errorf("avatar url scheme must be http or https")
-		}
-		avatarURL = parsed.String()
 	}
 
 	bio = strings.TrimSpace(bio)
@@ -53,8 +66,9 @@ func Normalize(displayName string, avatarURL string, bio string) (Normalized, er
 	}
 
 	return Normalized{
-		DisplayName: displayName,
-		AvatarURL:   avatarURL,
-		Bio:         bio,
+		Name:          name,
+		AvatarSetID:   avatarSetID,
+		AvatarAssetID: avatarAssetID,
+		Bio:           bio,
 	}, nil
 }

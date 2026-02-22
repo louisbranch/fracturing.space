@@ -2,6 +2,7 @@
 
 CREATE TABLE users (
     id TEXT PRIMARY KEY,
+    locale TEXT NOT NULL,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
 );

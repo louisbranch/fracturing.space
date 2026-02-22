@@ -390,11 +390,12 @@ func (s *Store) PutPublicProfile(ctx context.Context, profile storage.PublicProf
 	if userID == "" {
 		return fmt.Errorf("user id is required")
 	}
-	displayName := strings.TrimSpace(profile.DisplayName)
-	if displayName == "" {
-		return fmt.Errorf("display name is required")
+	name := strings.TrimSpace(profile.Name)
+	if name == "" {
+		return fmt.Errorf("name is required")
 	}
-	avatarURL := strings.TrimSpace(profile.AvatarURL)
+	avatarSetID := strings.TrimSpace(profile.AvatarSetID)
+	avatarAssetID := strings.TrimSpace(profile.AvatarAssetID)
 	bio := strings.TrimSpace(profile.Bio)
 	createdAt := profile.CreatedAt.UTC()
 	updatedAt := profile.UpdatedAt.UTC()
@@ -412,16 +413,18 @@ func (s *Store) PutPublicProfile(ctx context.Context, profile storage.PublicProf
 
 	_, err := s.sqlDB.ExecContext(
 		ctx,
-		`INSERT INTO public_profiles (user_id, display_name, avatar_url, bio, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?)
+		`INSERT INTO public_profiles (user_id, name, avatar_set_id, avatar_asset_id, bio, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?)
 		 ON CONFLICT(user_id) DO UPDATE SET
-		   display_name = excluded.display_name,
-		   avatar_url = excluded.avatar_url,
+		   name = excluded.name,
+		   avatar_set_id = excluded.avatar_set_id,
+		   avatar_asset_id = excluded.avatar_asset_id,
 		   bio = excluded.bio,
 		   updated_at = excluded.updated_at`,
 		userID,
-		displayName,
-		avatarURL,
+		name,
+		avatarSetID,
+		avatarAssetID,
 		bio,
 		toMillis(createdAt),
 		toMillis(updatedAt),
@@ -447,7 +450,7 @@ func (s *Store) GetPublicProfileByUserID(ctx context.Context, userID string) (st
 
 	row := s.sqlDB.QueryRowContext(
 		ctx,
-		`SELECT user_id, display_name, avatar_url, bio, created_at, updated_at
+		`SELECT user_id, name, avatar_set_id, avatar_asset_id, bio, created_at, updated_at
 		 FROM public_profiles
 		 WHERE user_id = ?`,
 		userID,
@@ -455,7 +458,7 @@ func (s *Store) GetPublicProfileByUserID(ctx context.Context, userID string) (st
 	var record storage.PublicProfileRecord
 	var createdAt int64
 	var updatedAt int64
-	err := row.Scan(&record.UserID, &record.DisplayName, &record.AvatarURL, &record.Bio, &createdAt, &updatedAt)
+	err := row.Scan(&record.UserID, &record.Name, &record.AvatarSetID, &record.AvatarAssetID, &record.Bio, &createdAt, &updatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return storage.PublicProfileRecord{}, storage.ErrNotFound

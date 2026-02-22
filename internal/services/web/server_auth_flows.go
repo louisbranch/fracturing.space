@@ -137,19 +137,13 @@ func (h *handler) handlePasskeyRegisterStart(w http.ResponseWriter, r *http.Requ
 		resolvedLocale = parsedLocale
 	}
 
-	createResp, err := h.authClient.CreateUser(r.Context(), &authv1.CreateUserRequest{Email: payload.Email})
+	createResp, err := h.authClient.CreateUser(r.Context(), &authv1.CreateUserRequest{
+		Email:  payload.Email,
+		Locale: resolvedLocale,
+	})
 	if err != nil || createResp.GetUser() == nil {
 		localizeHTTPError(w, r, http.StatusBadRequest, "error.http.failed_to_create_user")
 		return
-	}
-	if h.accountClient != nil {
-		_, err = h.accountClient.UpdateProfile(r.Context(), &authv1.UpdateProfileRequest{
-			UserId: createResp.GetUser().GetId(),
-			Locale: resolvedLocale,
-		})
-		if err != nil {
-			log.Printf("web: continue passkey registration despite profile locale update failure for user %q: %v", createResp.GetUser().GetId(), err)
-		}
 	}
 
 	beginResp, err := h.authClient.BeginPasskeyRegistration(r.Context(), &authv1.BeginPasskeyRegistrationRequest{UserId: createResp.GetUser().GetId()})

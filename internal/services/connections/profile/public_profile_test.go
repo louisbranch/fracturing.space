@@ -6,45 +6,47 @@ import (
 )
 
 func TestNormalize_ValidInput(t *testing.T) {
-	got, err := Normalize("  Alice  ", "https://cdn.example.com/avatar.png", "  Campaign manager  ")
+	got, err := Normalize("user-1", "  Alice  ", "avatar_set_v1", "001", "  Campaign manager  ")
 	if err != nil {
 		t.Fatalf("normalize: %v", err)
 	}
-	if got.DisplayName != "Alice" {
-		t.Fatalf("display_name = %q, want Alice", got.DisplayName)
+	if got.Name != "Alice" {
+		t.Fatalf("name = %q, want Alice", got.Name)
 	}
-	if got.AvatarURL != "https://cdn.example.com/avatar.png" {
-		t.Fatalf("avatar_url = %q, want https://cdn.example.com/avatar.png", got.AvatarURL)
+	if got.AvatarSetID != "avatar_set_v1" {
+		t.Fatalf("avatar_set_id = %q, want avatar_set_v1", got.AvatarSetID)
+	}
+	if got.AvatarAssetID != "001" {
+		t.Fatalf("avatar_asset_id = %q, want 001", got.AvatarAssetID)
 	}
 	if got.Bio != "Campaign manager" {
 		t.Fatalf("bio = %q, want Campaign manager", got.Bio)
 	}
 }
 
-func TestNormalize_DisplayNameTooLongReturnsError(t *testing.T) {
-	_, err := Normalize(strings.Repeat("a", maxDisplayNameLength+1), "", "")
+func TestNormalize_NameTooLongReturnsError(t *testing.T) {
+	_, err := Normalize("user-1", strings.Repeat("a", maxNameLength+1), "", "", "")
 	if err == nil {
-		t.Fatal("expected display_name length validation error")
+		t.Fatal("expected name length validation error")
 	}
 }
 
-func TestNormalize_AvatarURLRequiresHTTPOrHTTPS(t *testing.T) {
-	_, err := Normalize("Alice", "ftp://cdn.example.com/avatar.png", "")
+func TestNormalize_AvatarRequiresPair(t *testing.T) {
+	_, err := Normalize("user-1", "Alice", "avatar_set_v1", "", "")
 	if err == nil {
-		t.Fatal("expected avatar_url scheme validation error")
+		t.Fatal("expected avatar pair validation error")
 	}
 }
 
-func TestNormalize_AvatarURLTooLongReturnsError(t *testing.T) {
-	avatarURL := "https://cdn.example.com/" + strings.Repeat("a", maxAvatarURLLength)
-	_, err := Normalize("Alice", avatarURL, "")
+func TestNormalize_InvalidAvatarSetReturnsError(t *testing.T) {
+	_, err := Normalize("user-1", "Alice", "missing", "001", "")
 	if err == nil {
-		t.Fatal("expected avatar_url length validation error")
+		t.Fatal("expected avatar set validation error")
 	}
 }
 
 func TestNormalize_BioTooLongReturnsError(t *testing.T) {
-	_, err := Normalize("Alice", "", strings.Repeat("a", maxBioLength+1))
+	_, err := Normalize("user-1", "Alice", "", "", strings.Repeat("a", maxBioLength+1))
 	if err == nil {
 		t.Fatal("expected bio length validation error")
 	}

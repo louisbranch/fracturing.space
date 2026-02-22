@@ -279,12 +279,13 @@ func TestPublicProfileRoundTrip(t *testing.T) {
 
 	now := time.Date(2026, time.February, 22, 19, 0, 0, 0, time.UTC)
 	if err := store.PutPublicProfile(context.Background(), storage.PublicProfileRecord{
-		UserID:      "user-1",
-		DisplayName: "Alice",
-		AvatarURL:   "https://cdn.example.com/avatar/alice.png",
-		Bio:         "Campaign manager",
-		CreatedAt:   now,
-		UpdatedAt:   now,
+		UserID:        "user-1",
+		Name:          "Alice",
+		AvatarSetID:   "avatar_set_v1",
+		AvatarAssetID: "001",
+		Bio:           "Campaign manager",
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}); err != nil {
 		t.Fatalf("put public profile: %v", err)
 	}
@@ -296,11 +297,14 @@ func TestPublicProfileRoundTrip(t *testing.T) {
 	if got.UserID != "user-1" {
 		t.Fatalf("user_id = %q, want user-1", got.UserID)
 	}
-	if got.DisplayName != "Alice" {
-		t.Fatalf("display_name = %q, want Alice", got.DisplayName)
+	if got.Name != "Alice" {
+		t.Fatalf("name = %q, want Alice", got.Name)
 	}
-	if got.AvatarURL != "https://cdn.example.com/avatar/alice.png" {
-		t.Fatalf("avatar_url = %q, want https://cdn.example.com/avatar/alice.png", got.AvatarURL)
+	if got.AvatarSetID != "avatar_set_v1" {
+		t.Fatalf("avatar_set_id = %q, want avatar_set_v1", got.AvatarSetID)
+	}
+	if got.AvatarAssetID != "001" {
+		t.Fatalf("avatar_asset_id = %q, want 001", got.AvatarAssetID)
 	}
 	if got.Bio != "Campaign manager" {
 		t.Fatalf("bio = %q, want Campaign manager", got.Bio)

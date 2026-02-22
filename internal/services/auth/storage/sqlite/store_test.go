@@ -91,6 +91,7 @@ func TestPutGetUserRoundTrip(t *testing.T) {
 	input := user.User{
 		ID:        "user-1",
 		Email:     "testuser",
+		Locale:    commonv1.Locale_LOCALE_PT_BR,
 		CreatedAt: created,
 		UpdatedAt: updated,
 	}
@@ -105,6 +106,34 @@ func TestPutGetUserRoundTrip(t *testing.T) {
 	}
 	if got.ID != input.ID || got.Email != input.Email {
 		t.Fatalf("unexpected user: %+v", got)
+	}
+	if got.Locale != commonv1.Locale_LOCALE_PT_BR {
+		t.Fatalf("locale = %v, want %v", got.Locale, commonv1.Locale_LOCALE_PT_BR)
+	}
+}
+
+func TestPutUserDefaultsLocaleWhenUnset(t *testing.T) {
+	store := openTempStore(t)
+
+	now := time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC)
+	input := user.User{
+		ID:        "user-1",
+		Email:     "testuser",
+		Locale:    commonv1.Locale_LOCALE_UNSPECIFIED,
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+
+	if err := store.PutUser(context.Background(), input); err != nil {
+		t.Fatalf("put user: %v", err)
+	}
+
+	got, err := store.GetUser(context.Background(), "user-1")
+	if err != nil {
+		t.Fatalf("get user: %v", err)
+	}
+	if got.Locale != commonv1.Locale_LOCALE_EN_US {
+		t.Fatalf("locale = %v, want %v", got.Locale, commonv1.Locale_LOCALE_EN_US)
 	}
 }
 

@@ -370,10 +370,11 @@ func TestAppCampaignInviteCreateParticipantVerifyUsernameRendersVerificationCont
 				Username: "alice",
 			},
 			PublicProfileRecord: &connectionsv1.PublicProfileRecord{
-				UserId:      "user-456",
-				DisplayName: "Alice Verified",
-				AvatarUrl:   "https://cdn.example.com/avatar/alice.png",
-				Bio:         "GM",
+				UserId:        "user-456",
+				Name:          "Alice Verified",
+				AvatarSetId:   "avatar_set_v1",
+				AvatarAssetId: "001",
+				Bio:           "GM",
 			},
 		},
 	}

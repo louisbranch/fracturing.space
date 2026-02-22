@@ -145,3 +145,77 @@ func TestUpdateProfile_MapsProfileStorageErrors(t *testing.T) {
 	})
 	assertStatusCode(t, err, codes.FailedPrecondition)
 }
+
+func TestGetProfile_WorksWithoutProfileStore(t *testing.T) {
+	userStore := newFakeUserStore()
+	userStore.users["user-1"] = user.User{
+		ID:     "user-1",
+		Email:  "alice",
+		Locale: commonv1.Locale_LOCALE_PT_BR,
+	}
+
+	svc := NewAccountService(nil, userStore)
+	resp, err := svc.GetProfile(context.Background(), &authv1.GetProfileRequest{UserId: "user-1"})
+	if err != nil {
+		t.Fatalf("get profile without profile store: %v", err)
+	}
+	if resp.GetProfile() == nil {
+		t.Fatal("expected profile response")
+	}
+}
+
+func TestUpdateProfile_WorksWithoutProfileStore(t *testing.T) {
+	userStore := newFakeUserStore()
+	userStore.users["user-1"] = user.User{
+		ID:     "user-1",
+		Email:  "alice",
+		Locale: commonv1.Locale_LOCALE_EN_US,
+	}
+
+	svc := NewAccountService(nil, userStore)
+	resp, err := svc.UpdateProfile(context.Background(), &authv1.UpdateProfileRequest{
+		UserId: "user-1",
+		Locale: commonv1.Locale_LOCALE_PT_BR,
+	})
+	if err != nil {
+		t.Fatalf("update profile without profile store: %v", err)
+	}
+	if resp.GetProfile() == nil {
+		t.Fatal("expected profile response")
+	}
+	if got := resp.GetProfile().GetLocale(); got != commonv1.Locale_LOCALE_PT_BR {
+		t.Fatalf("locale = %v, want %v", got, commonv1.Locale_LOCALE_PT_BR)
+	}
+	stored, ok := userStore.users["user-1"]
+	if !ok {
+		t.Fatal("expected updated user in store")
+	}
+	if got := stored.Locale; got != commonv1.Locale_LOCALE_PT_BR {
+		t.Fatalf("stored locale = %v, want %v", got, commonv1.Locale_LOCALE_PT_BR)
+	}
+}
+
+func TestGetProfile_UsesLocaleFromUserRecordWhenProfileExists(t *testing.T) {
+	userStore := newFakeUserStore()
+	userStore.users["user-1"] = user.User{
+		ID:     "user-1",
+		Email:  "alice",
+		Locale: commonv1.Locale_LOCALE_PT_BR,
+	}
+	profileStore := newFakeAccountProfileStore()
+	profileStore.profiles["user-1"] = storage.AccountProfile{
+		UserID:      "user-1",
+		Name:        "Alice",
+		Locale:      commonv1.Locale_LOCALE_EN_US,
+		AvatarSetID: "avatar_set_v1",
+	}
+
+	svc := NewAccountService(profileStore, userStore)
+	resp, err := svc.GetProfile(context.Background(), &authv1.GetProfileRequest{UserId: "user-1"})
+	if err != nil {
+		t.Fatalf("get profile: %v", err)
+	}
+	if got := resp.GetProfile().GetLocale(); got != commonv1.Locale_LOCALE_PT_BR {
+		t.Fatalf("locale = %v, want %v", got, commonv1.Locale_LOCALE_PT_BR)
+	}
+}

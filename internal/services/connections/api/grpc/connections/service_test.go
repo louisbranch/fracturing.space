@@ -199,10 +199,11 @@ func TestSetPublicProfile_SuccessAndLookupByUsername(t *testing.T) {
 	}
 
 	setResp, err := svc.SetPublicProfile(context.Background(), &connectionsv1.SetPublicProfileRequest{
-		UserId:      "user-1",
-		DisplayName: "Alice",
-		AvatarUrl:   "https://cdn.example.com/avatar/alice.png",
-		Bio:         "Campaign manager",
+		UserId:        "user-1",
+		Name:          "Alice",
+		AvatarSetId:   "avatar_set_v1",
+		AvatarAssetId: "001",
+		Bio:           "Campaign manager",
 	})
 	if err != nil {
 		t.Fatalf("set public profile: %v", err)
@@ -217,8 +218,8 @@ func TestSetPublicProfile_SuccessAndLookupByUsername(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get public profile: %v", err)
 	}
-	if got := getResp.GetPublicProfileRecord().GetDisplayName(); got != "Alice" {
-		t.Fatalf("display_name = %q, want Alice", got)
+	if got := getResp.GetPublicProfileRecord().GetName(); got != "Alice" {
+		t.Fatalf("name = %q, want Alice", got)
 	}
 
 	lookupResp, err := svc.LookupPublicProfile(context.Background(), &connectionsv1.LookupPublicProfileRequest{
@@ -240,10 +241,11 @@ func TestSetPublicProfile_InvalidAvatarReturnsInvalidArgument(t *testing.T) {
 	svc := NewService(store)
 
 	_, err := svc.SetPublicProfile(context.Background(), &connectionsv1.SetPublicProfileRequest{
-		UserId:      "user-1",
-		DisplayName: "Alice",
-		AvatarUrl:   "not-a-url",
-		Bio:         "Campaign manager",
+		UserId:        "user-1",
+		Name:          "Alice",
+		AvatarSetId:   "missing-set",
+		AvatarAssetId: "001",
+		Bio:           "Campaign manager",
 	})
 	if status.Code(err) != codes.InvalidArgument {
 		t.Fatalf("code = %v, want %v", status.Code(err), codes.InvalidArgument)
@@ -435,9 +437,9 @@ func (s *fakeContactStore) PutPublicProfile(_ context.Context, profile storage.P
 	if userID == "" {
 		return errors.New("user id is required")
 	}
-	displayName := strings.TrimSpace(profile.DisplayName)
-	if displayName == "" {
-		return errors.New("display name is required")
+	name := strings.TrimSpace(profile.Name)
+	if name == "" {
+		return errors.New("name is required")
 	}
 	if existing, ok := s.publicProfiles[userID]; ok {
 		profile.CreatedAt = existing.CreatedAt
@@ -449,12 +451,13 @@ func (s *fakeContactStore) PutPublicProfile(_ context.Context, profile storage.P
 		profile.UpdatedAt = profile.CreatedAt
 	}
 	s.publicProfiles[userID] = storage.PublicProfileRecord{
-		UserID:      userID,
-		DisplayName: displayName,
-		AvatarURL:   strings.TrimSpace(profile.AvatarURL),
-		Bio:         strings.TrimSpace(profile.Bio),
-		CreatedAt:   profile.CreatedAt,
-		UpdatedAt:   profile.UpdatedAt,
+		UserID:        userID,
+		Name:          name,
+		AvatarSetID:   strings.TrimSpace(profile.AvatarSetID),
+		AvatarAssetID: strings.TrimSpace(profile.AvatarAssetID),
+		Bio:           strings.TrimSpace(profile.Bio),
+		CreatedAt:     profile.CreatedAt,
+		UpdatedAt:     profile.UpdatedAt,
 	}
 	return nil
 }

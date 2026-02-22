@@ -396,7 +396,7 @@ func TestPasskeyRegisterStartSuccess(t *testing.T) {
 	}
 }
 
-func TestPasskeyRegisterStartPersistsLocaleToProfile(t *testing.T) {
+func TestPasskeyRegisterStartDoesNotWriteLocaleViaAccountProfile(t *testing.T) {
 	fakeAuth := &fakeAuthClient{
 		createUserResp: &authv1.CreateUserResponse{
 			User: &authv1.User{Id: "user-1", Email: "alpha@example.com"},
@@ -426,14 +426,8 @@ func TestPasskeyRegisterStartPersistsLocaleToProfile(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
 	}
-	if fakeAccount.lastUpdateReq == nil {
-		t.Fatal("expected UpdateProfile call to persist locale")
-	}
-	if got := strings.TrimSpace(fakeAccount.lastUpdateReq.GetUserId()); got != "user-1" {
-		t.Fatalf("UpdateProfile user_id = %q, want %q", got, "user-1")
-	}
-	if got := fakeAccount.lastUpdateReq.GetLocale(); got != commonv1.Locale_LOCALE_PT_BR {
-		t.Fatalf("UpdateProfile locale = %v, want %v", got, commonv1.Locale_LOCALE_PT_BR)
+	if fakeAccount.lastUpdateReq != nil {
+		t.Fatalf("unexpected UpdateProfile call: %+v", fakeAccount.lastUpdateReq)
 	}
 }
 
@@ -470,7 +464,7 @@ func TestPasskeyRegisterStartRejectsInvalidLocale(t *testing.T) {
 	}
 }
 
-func TestPasskeyRegisterStartContinuesWhenLocalePersistenceFails(t *testing.T) {
+func TestPasskeyRegisterStartIgnoresAccountProfileClient(t *testing.T) {
 	fakeAuth := &fakeAuthClient{
 		createUserResp: &authv1.CreateUserResponse{
 			User: &authv1.User{Id: "user-1", Email: "alpha@example.com"},
@@ -502,8 +496,8 @@ func TestPasskeyRegisterStartContinuesWhenLocalePersistenceFails(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
 	}
-	if fakeAccount.lastUpdateReq == nil {
-		t.Fatal("expected UpdateProfile call to persist locale")
+	if fakeAccount.lastUpdateReq != nil {
+		t.Fatalf("unexpected UpdateProfile call: %+v", fakeAccount.lastUpdateReq)
 	}
 	var payload map[string]any
 	if err := json.Unmarshal(w.Body.Bytes(), &payload); err != nil {
@@ -511,6 +505,42 @@ func TestPasskeyRegisterStartContinuesWhenLocalePersistenceFails(t *testing.T) {
 	}
 	if payload["session_id"] != "session-1" {
 		t.Fatalf("session_id = %v", payload["session_id"])
+	}
+}
+
+func TestPasskeyRegisterStartPassesLocaleToCreateUser(t *testing.T) {
+	fakeAuth := &fakeAuthClient{
+		createUserResp: &authv1.CreateUserResponse{
+			User: &authv1.User{Id: "user-1", Email: "alpha@example.com"},
+		},
+		beginRegResp: &authv1.BeginPasskeyRegistrationResponse{
+			SessionId:                     "session-1",
+			CredentialCreationOptionsJson: []byte(`{"challenge":"test","user":{"id":"user"}}`),
+		},
+	}
+	h := &handler{
+		config:       Config{AuthBaseURL: "http://auth.local"},
+		authClient:   fakeAuth,
+		sessions:     newSessionStore(),
+		pendingFlows: newPendingFlowStore(),
+	}
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/passkeys/register/start",
+		bytes.NewBufferString(`{"email":"alpha@example.com","locale":"pt-BR"}`),
+	)
+	w := httptest.NewRecorder()
+
+	h.handlePasskeyRegisterStart(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	if fakeAuth.createUserReq == nil {
+		t.Fatal("expected CreateUser request")
+	}
+	if got := fakeAuth.createUserReq.GetLocale(); got != commonv1.Locale_LOCALE_PT_BR {
+		t.Fatalf("locale = %v, want %v", got, commonv1.Locale_LOCALE_PT_BR)
 	}
 }
 
@@ -1321,12 +1351,14 @@ type fakeAuthClient struct {
 	beginLoginResp   *authv1.BeginPasskeyLoginResponse
 	finishLoginResp  *authv1.FinishPasskeyLoginResponse
 	createUserResp   *authv1.CreateUserResponse
+	createUserReq    *authv1.CreateUserRequest
 	beginRegResp     *authv1.BeginPasskeyRegistrationResponse
 	finishRegResp    *authv1.FinishPasskeyRegistrationResponse
 	consumeMagicResp *authv1.ConsumeMagicLinkResponse
 }
 
 func (f *fakeAuthClient) CreateUser(ctx context.Context, req *authv1.CreateUserRequest, opts ...grpc.CallOption) (*authv1.CreateUserResponse, error) {
+	f.createUserReq = req
 	if f.createUserResp != nil {
 		return f.createUserResp, nil
 	}

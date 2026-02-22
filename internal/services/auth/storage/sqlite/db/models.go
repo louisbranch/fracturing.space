@@ -18,6 +18,22 @@ type AccountProfile struct {
 	AvatarAssetID string `json:"avatar_asset_id"`
 }
 
+type AuthIntegrationOutbox struct {
+	ID             string        `json:"id"`
+	EventType      string        `json:"event_type"`
+	PayloadJson    string        `json:"payload_json"`
+	DedupeKey      string        `json:"dedupe_key"`
+	Status         string        `json:"status"`
+	AttemptCount   int64         `json:"attempt_count"`
+	NextAttemptAt  int64         `json:"next_attempt_at"`
+	LeaseOwner     string        `json:"lease_owner"`
+	LeaseExpiresAt sql.NullInt64 `json:"lease_expires_at"`
+	LastError      string        `json:"last_error"`
+	ProcessedAt    sql.NullInt64 `json:"processed_at"`
+	CreatedAt      int64         `json:"created_at"`
+	UpdatedAt      int64         `json:"updated_at"`
+}
+
 type MagicLink struct {
 	Token     string         `json:"token"`
 	UserID    string         `json:"user_id"`
@@ -110,6 +126,7 @@ type PasskeySession struct {
 
 type User struct {
 	ID        string `json:"id"`
+	Locale    string `json:"locale"`
 	CreatedAt int64  `json:"created_at"`
 	UpdatedAt int64  `json:"updated_at"`
 }

@@ -247,7 +247,7 @@ func (s *Service) SetPublicProfile(ctx context.Context, in *connectionsv1.SetPub
 	if userID == "" {
 		return nil, status.Error(codes.InvalidArgument, "user id is required")
 	}
-	normalized, err := profileutil.Normalize(in.GetDisplayName(), in.GetAvatarUrl(), in.GetBio())
+	normalized, err := profileutil.Normalize(userID, in.GetName(), in.GetAvatarSetId(), in.GetAvatarAssetId(), in.GetBio())
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "public profile is invalid: %v", err)
 	}
@@ -257,12 +257,13 @@ func (s *Service) SetPublicProfile(ctx context.Context, in *connectionsv1.SetPub
 		now = s.clock()
 	}
 	if err := s.store.PutPublicProfile(ctx, storage.PublicProfileRecord{
-		UserID:      userID,
-		DisplayName: normalized.DisplayName,
-		AvatarURL:   normalized.AvatarURL,
-		Bio:         normalized.Bio,
-		CreatedAt:   now,
-		UpdatedAt:   now,
+		UserID:        userID,
+		Name:          normalized.Name,
+		AvatarSetID:   normalized.AvatarSetID,
+		AvatarAssetID: normalized.AvatarAssetID,
+		Bio:           normalized.Bio,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}); err != nil {
 		return nil, status.Errorf(codes.Internal, "set public profile: %v", err)
 	}
@@ -355,11 +356,12 @@ func usernameToProto(username storage.UsernameRecord) *connectionsv1.UsernameRec
 
 func publicProfileToProto(profile storage.PublicProfileRecord) *connectionsv1.PublicProfileRecord {
 	return &connectionsv1.PublicProfileRecord{
-		UserId:      profile.UserID,
-		DisplayName: profile.DisplayName,
-		AvatarUrl:   profile.AvatarURL,
-		Bio:         profile.Bio,
-		CreatedAt:   timestamppb.New(profile.CreatedAt),
-		UpdatedAt:   timestamppb.New(profile.UpdatedAt),
+		UserId:        profile.UserID,
+		Name:          profile.Name,
+		AvatarSetId:   profile.AvatarSetID,
+		AvatarAssetId: profile.AvatarAssetID,
+		Bio:           profile.Bio,
+		CreatedAt:     timestamppb.New(profile.CreatedAt),
+		UpdatedAt:     timestamppb.New(profile.UpdatedAt),
 	}
 }

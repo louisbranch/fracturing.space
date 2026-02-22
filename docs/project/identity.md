@@ -7,10 +7,12 @@ nav_order: 9
 # Identity and Recovery
 
 This document captures the identity model and recovery flows for authentication.
+It defines `auth` ownership, not social/discovery ownership.
 
 ## Identity Model
 
 - **User**: Core identity record. A user is defined by an email.
+- **User locale**: Private account preference stored on the user record.
 - **Email**: Canonical identity value used across auth, admin, and game surfaces.
 - **Additional emails**: Planned as a future extension, but out of scope for this change.
 - **Passkey**: Primary authentication credential. Users can register multiple passkeys.
@@ -23,9 +25,26 @@ This document captures the identity model and recovery flows for authentication.
 
 ## Service Boundaries
 
-- **Auth service**: Source of truth for users, emails, passkeys, magic links, and OAuth issuance.
+- **Auth service**: Source of truth for authN/authZ primitives: users, emails,
+  passkeys, magic links, sessions, and OAuth issuance/verification.
+- **Connections service**: Source of truth for social/discovery identity
+  metadata and relationships (usernames, public profile, contacts).
 - **Web service**: Hosts login and recovery UX, calls auth gRPC for verification and storage.
 - **Admin service**: Generates magic links for operators (display-only, not emailed).
+
+Boundary rule:
+
+1. If a field proves identity or grants/denies access, it belongs to `auth`.
+2. If a field helps users find or verify another user socially, it belongs to
+   `connections`.
+3. Account preferences (for example locale) are not social/discovery fields.
+
+Applied examples:
+
+- `locale` -> `auth` user record
+- `name` -> `connections`
+- `avatar_set_id` -> `connections`
+- `avatar_asset_id` -> `connections`
 
 ## UX Flow (Web)
 
@@ -38,3 +57,5 @@ This document captures the identity model and recovery flows for authentication.
 
 - Email is the canonical identity during this release.
 - Additional email support is planned but out of scope.
+- For connections-specific ownership and execution milestones, see
+  [Connections Execution Spec](connections-execution-spec.md).

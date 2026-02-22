@@ -4,6 +4,8 @@ import (
 	"errors"
 	"testing"
 	"time"
+
+	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 )
 
 func TestCreateUserDefaults(t *testing.T) {
@@ -46,8 +48,24 @@ func TestCreateUserNormalizesInput(t *testing.T) {
 	if created.Email != "alice@example.com" {
 		t.Fatalf("expected lowercased trimmed email, got %q", created.Email)
 	}
+	if created.Locale != commonv1.Locale_LOCALE_EN_US {
+		t.Fatalf("expected normalized default locale, got %v", created.Locale)
+	}
 	if !created.CreatedAt.Equal(fixedTime) || !created.UpdatedAt.Equal(fixedTime) {
 		t.Fatalf("expected timestamps to match fixed time")
+	}
+}
+
+func TestNormalizeCreateUserInputNormalizesLocale(t *testing.T) {
+	normalized, err := NormalizeCreateUserInput(CreateUserInput{
+		Email:  "alice@example.com",
+		Locale: commonv1.Locale_LOCALE_UNSPECIFIED,
+	})
+	if err != nil {
+		t.Fatalf("normalize: %v", err)
+	}
+	if normalized.Locale != commonv1.Locale_LOCALE_EN_US {
+		t.Fatalf("locale = %v, want %v", normalized.Locale, commonv1.Locale_LOCALE_EN_US)
 	}
 }
 
