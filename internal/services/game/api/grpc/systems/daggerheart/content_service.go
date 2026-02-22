@@ -17,6 +17,22 @@ const (
 	maxListDaggerheartContentPageSize     = 200
 )
 
+type contentListRequestInput interface {
+	GetPageSize() int32
+	GetPageToken() string
+	GetOrderBy() string
+	GetFilter() string
+}
+
+func newContentListRequest(in contentListRequestInput) contentListRequest {
+	return contentListRequest{
+		PageSize:  in.GetPageSize(),
+		PageToken: in.GetPageToken(),
+		OrderBy:   in.GetOrderBy(),
+		Filter:    in.GetFilter(),
+	}
+}
+
 // DaggerheartContentService implements the Daggerheart content gRPC API.
 type DaggerheartContentService struct {
 	pb.UnimplementedDaggerheartContentServiceServer
@@ -182,12 +198,7 @@ func (s *DaggerheartContentService) ListClasses(ctx context.Context, in *pb.List
 	if err != nil {
 		return nil, err
 	}
-	classes, page, err := listContentEntries(ctx, store, contentListRequest{
-		PageSize:  in.GetPageSize(),
-		PageToken: in.GetPageToken(),
-		OrderBy:   in.GetOrderBy(),
-		Filter:    in.GetFilter(),
-	}, in.GetLocale(), classDescriptor)
+	classes, page, err := listContentEntries(ctx, store, newContentListRequest(in), in.GetLocale(), classDescriptor)
 	if err != nil {
 		return nil, err
 	}
@@ -229,12 +240,7 @@ func (s *DaggerheartContentService) ListSubclasses(ctx context.Context, in *pb.L
 	if err != nil {
 		return nil, err
 	}
-	subclasses, page, err := listContentEntries(ctx, store, contentListRequest{
-		PageSize:  in.GetPageSize(),
-		PageToken: in.GetPageToken(),
-		OrderBy:   in.GetOrderBy(),
-		Filter:    in.GetFilter(),
-	}, in.GetLocale(), subclassDescriptor)
+	subclasses, page, err := listContentEntries(ctx, store, newContentListRequest(in), in.GetLocale(), subclassDescriptor)
 	if err != nil {
 		return nil, err
 	}
@@ -276,12 +282,7 @@ func (s *DaggerheartContentService) ListHeritages(ctx context.Context, in *pb.Li
 	if err != nil {
 		return nil, err
 	}
-	heritages, page, err := listContentEntries(ctx, store, contentListRequest{
-		PageSize:  in.GetPageSize(),
-		PageToken: in.GetPageToken(),
-		OrderBy:   in.GetOrderBy(),
-		Filter:    in.GetFilter(),
-	}, in.GetLocale(), heritageDescriptor)
+	heritages, page, err := listContentEntries(ctx, store, newContentListRequest(in), in.GetLocale(), heritageDescriptor)
 	if err != nil {
 		return nil, err
 	}
@@ -323,12 +324,7 @@ func (s *DaggerheartContentService) ListExperiences(ctx context.Context, in *pb.
 	if err != nil {
 		return nil, err
 	}
-	experiences, page, err := listContentEntries(ctx, store, contentListRequest{
-		PageSize:  in.GetPageSize(),
-		PageToken: in.GetPageToken(),
-		OrderBy:   in.GetOrderBy(),
-		Filter:    in.GetFilter(),
-	}, in.GetLocale(), experienceDescriptor)
+	experiences, page, err := listContentEntries(ctx, store, newContentListRequest(in), in.GetLocale(), experienceDescriptor)
 	if err != nil {
 		return nil, err
 	}
@@ -371,12 +367,7 @@ func (s *DaggerheartContentService) ListAdversaries(ctx context.Context, in *pb.
 		return nil, err
 	}
 
-	adversaries, page, err := listContentEntries(ctx, store, contentListRequest{
-		PageSize:  in.GetPageSize(),
-		PageToken: in.GetPageToken(),
-		OrderBy:   in.GetOrderBy(),
-		Filter:    in.GetFilter(),
-	}, in.GetLocale(), adversaryDescriptor)
+	adversaries, page, err := listContentEntries(ctx, store, newContentListRequest(in), in.GetLocale(), adversaryDescriptor)
 	if err != nil {
 		return nil, err
 	}
@@ -419,12 +410,7 @@ func (s *DaggerheartContentService) ListBeastforms(ctx context.Context, in *pb.L
 		return nil, err
 	}
 
-	beastforms, page, err := listContentEntries(ctx, store, contentListRequest{
-		PageSize:  in.GetPageSize(),
-		PageToken: in.GetPageToken(),
-		OrderBy:   in.GetOrderBy(),
-		Filter:    in.GetFilter(),
-	}, in.GetLocale(), beastformDescriptor)
+	beastforms, page, err := listContentEntries(ctx, store, newContentListRequest(in), in.GetLocale(), beastformDescriptor)
 	if err != nil {
 		return nil, err
 	}
@@ -467,12 +453,7 @@ func (s *DaggerheartContentService) ListCompanionExperiences(ctx context.Context
 		return nil, err
 	}
 
-	experiences, page, err := listContentEntries(ctx, store, contentListRequest{
-		PageSize:  in.GetPageSize(),
-		PageToken: in.GetPageToken(),
-		OrderBy:   in.GetOrderBy(),
-		Filter:    in.GetFilter(),
-	}, in.GetLocale(), companionExperienceDescriptor)
+	experiences, page, err := listContentEntries(ctx, store, newContentListRequest(in), in.GetLocale(), companionExperienceDescriptor)
 	if err != nil {
 		return nil, err
 	}
@@ -515,12 +496,7 @@ func (s *DaggerheartContentService) ListLootEntries(ctx context.Context, in *pb.
 		return nil, err
 	}
 
-	entries, page, err := listContentEntries(ctx, store, contentListRequest{
-		PageSize:  in.GetPageSize(),
-		PageToken: in.GetPageToken(),
-		OrderBy:   in.GetOrderBy(),
-		Filter:    in.GetFilter(),
-	}, in.GetLocale(), lootEntryDescriptor)
+	entries, page, err := listContentEntries(ctx, store, newContentListRequest(in), in.GetLocale(), lootEntryDescriptor)
 	if err != nil {
 		return nil, err
 	}
@@ -563,12 +539,7 @@ func (s *DaggerheartContentService) ListDamageTypes(ctx context.Context, in *pb.
 		return nil, err
 	}
 
-	entries, page, err := listContentEntries(ctx, store, contentListRequest{
-		PageSize:  in.GetPageSize(),
-		PageToken: in.GetPageToken(),
-		OrderBy:   in.GetOrderBy(),
-		Filter:    in.GetFilter(),
-	}, in.GetLocale(), damageTypeDescriptor)
+	entries, page, err := listContentEntries(ctx, store, newContentListRequest(in), in.GetLocale(), damageTypeDescriptor)
 	if err != nil {
 		return nil, err
 	}
@@ -611,12 +582,7 @@ func (s *DaggerheartContentService) ListDomains(ctx context.Context, in *pb.List
 		return nil, err
 	}
 
-	domains, page, err := listContentEntries(ctx, store, contentListRequest{
-		PageSize:  in.GetPageSize(),
-		PageToken: in.GetPageToken(),
-		OrderBy:   in.GetOrderBy(),
-		Filter:    in.GetFilter(),
-	}, in.GetLocale(), domainDescriptor)
+	domains, page, err := listContentEntries(ctx, store, newContentListRequest(in), in.GetLocale(), domainDescriptor)
 	if err != nil {
 		return nil, err
 	}
@@ -660,13 +626,9 @@ func (s *DaggerheartContentService) ListDomainCards(ctx context.Context, in *pb.
 	}
 
 	domainID := strings.TrimSpace(in.GetDomainId())
-	cards, page, err := listContentEntries(ctx, store, contentListRequest{
-		PageSize:  in.GetPageSize(),
-		PageToken: in.GetPageToken(),
-		OrderBy:   in.GetOrderBy(),
-		Filter:    in.GetFilter(),
-		DomainID:  domainID,
-	}, in.GetLocale(), domainCardDescriptor)
+	req := newContentListRequest(in)
+	req.DomainID = domainID
+	cards, page, err := listContentEntries(ctx, store, req, in.GetLocale(), domainCardDescriptor)
 	if err != nil {
 		return nil, err
 	}
@@ -709,12 +671,7 @@ func (s *DaggerheartContentService) ListWeapons(ctx context.Context, in *pb.List
 		return nil, err
 	}
 
-	weapons, page, err := listContentEntries(ctx, store, contentListRequest{
-		PageSize:  in.GetPageSize(),
-		PageToken: in.GetPageToken(),
-		OrderBy:   in.GetOrderBy(),
-		Filter:    in.GetFilter(),
-	}, in.GetLocale(), weaponDescriptor)
+	weapons, page, err := listContentEntries(ctx, store, newContentListRequest(in), in.GetLocale(), weaponDescriptor)
 	if err != nil {
 		return nil, err
 	}
@@ -757,12 +714,7 @@ func (s *DaggerheartContentService) ListArmor(ctx context.Context, in *pb.ListDa
 		return nil, err
 	}
 
-	armor, page, err := listContentEntries(ctx, store, contentListRequest{
-		PageSize:  in.GetPageSize(),
-		PageToken: in.GetPageToken(),
-		OrderBy:   in.GetOrderBy(),
-		Filter:    in.GetFilter(),
-	}, in.GetLocale(), armorDescriptor)
+	armor, page, err := listContentEntries(ctx, store, newContentListRequest(in), in.GetLocale(), armorDescriptor)
 	if err != nil {
 		return nil, err
 	}
@@ -805,12 +757,7 @@ func (s *DaggerheartContentService) ListItems(ctx context.Context, in *pb.ListDa
 		return nil, err
 	}
 
-	items, page, err := listContentEntries(ctx, store, contentListRequest{
-		PageSize:  in.GetPageSize(),
-		PageToken: in.GetPageToken(),
-		OrderBy:   in.GetOrderBy(),
-		Filter:    in.GetFilter(),
-	}, in.GetLocale(), itemDescriptor)
+	items, page, err := listContentEntries(ctx, store, newContentListRequest(in), in.GetLocale(), itemDescriptor)
 	if err != nil {
 		return nil, err
 	}
@@ -853,12 +800,7 @@ func (s *DaggerheartContentService) ListEnvironments(ctx context.Context, in *pb
 		return nil, err
 	}
 
-	items, page, err := listContentEntries(ctx, store, contentListRequest{
-		PageSize:  in.GetPageSize(),
-		PageToken: in.GetPageToken(),
-		OrderBy:   in.GetOrderBy(),
-		Filter:    in.GetFilter(),
-	}, in.GetLocale(), environmentDescriptor)
+	items, page, err := listContentEntries(ctx, store, newContentListRequest(in), in.GetLocale(), environmentDescriptor)
 	if err != nil {
 		return nil, err
 	}
