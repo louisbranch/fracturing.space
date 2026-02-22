@@ -14,14 +14,14 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	gamegrpc "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -79,15 +79,15 @@ func (f fakeGameSystem) Name() string {
 	return "fake-system"
 }
 
-func (f fakeGameSystem) RegistryMetadata() systems.RegistryMetadata {
-	return systems.RegistryMetadata{}
+func (f fakeGameSystem) RegistryMetadata() bridge.RegistryMetadata {
+	return bridge.RegistryMetadata{}
 }
 
-func (f fakeGameSystem) StateFactory() systems.StateFactory {
+func (f fakeGameSystem) StateFactory() bridge.StateFactory {
 	return nil
 }
 
-func (f fakeGameSystem) OutcomeApplier() systems.OutcomeApplier {
+func (f fakeGameSystem) OutcomeApplier() bridge.OutcomeApplier {
 	return nil
 }
 
@@ -1208,14 +1208,14 @@ func TestValidateSystemRegistrationParity(t *testing.T) {
 		modules := []module.Module{
 			fakeSystemModule{id: "DAGGERHEART", version: "v1"},
 		}
-		registry := systems.NewRegistry()
+		registry := bridge.NewRegistry()
 		if err := registry.Register(fakeGameSystem{
 			id:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 			version: "v1",
 		}); err != nil {
 			t.Fatalf("register metadata system: %v", err)
 		}
-		adapters := systems.NewAdapterRegistry()
+		adapters := bridge.NewAdapterRegistry()
 		if err := adapters.Register(fakeSystemAdapter{
 			id:      "DAGGERHEART",
 			version: "v1",
@@ -1231,14 +1231,14 @@ func TestValidateSystemRegistrationParity(t *testing.T) {
 		modules := []module.Module{
 			fakeSystemModule{id: "DAGGERHEART", version: "v1"},
 		}
-		registry := systems.NewRegistry()
+		registry := bridge.NewRegistry()
 		if err := registry.Register(fakeGameSystem{
 			id:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 			version: "v1",
 		}); err != nil {
 			t.Fatalf("register metadata system: %v", err)
 		}
-		adapters := systems.NewAdapterRegistry()
+		adapters := bridge.NewAdapterRegistry()
 
 		err := validateSystemRegistrationParity(modules, registry, adapters)
 		if err == nil {
@@ -1250,14 +1250,14 @@ func TestValidateSystemRegistrationParity(t *testing.T) {
 	})
 
 	t.Run("metadata without module", func(t *testing.T) {
-		registry := systems.NewRegistry()
+		registry := bridge.NewRegistry()
 		if err := registry.Register(fakeGameSystem{
 			id:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 			version: "v1",
 		}); err != nil {
 			t.Fatalf("register metadata system: %v", err)
 		}
-		adapters := systems.NewAdapterRegistry()
+		adapters := bridge.NewAdapterRegistry()
 		if err := adapters.Register(fakeSystemAdapter{
 			id:      "DAGGERHEART",
 			version: "v1",

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 )
 
 // TestRegisteredHandlerTypes_MatchesProjectionHandledTypes verifies that the
@@ -49,9 +49,9 @@ func TestRegisteredHandlerTypes_MatchesProjectionHandledTypes(t *testing.T) {
 }
 
 // TestHandlerRegistry_AllEntriesHaveApply verifies that every entry in the
-// handler registry has a non-nil apply function.
+// core router has a non-nil apply function.
 func TestHandlerRegistry_AllEntriesHaveApply(t *testing.T) {
-	for et, h := range handlers {
+	for et, h := range coreRouter.handlers {
 		if h.apply == nil {
 			t.Errorf("handler for %s has nil apply function", et)
 		}
@@ -68,7 +68,7 @@ func TestCheckMissingStores_AllPresent(t *testing.T) {
 		Session:          &fakeSessionStore{},
 		SessionGate:      newFakeSessionGateStore(),
 		SessionSpotlight: newFakeSessionSpotlightStore(),
-		Adapters:         systems.NewAdapterRegistry(),
+		Adapters:         bridge.NewAdapterRegistry(),
 	}
 	missing := checkMissingStores(needCampaign|needCharacter|needParticipant, applier)
 	if len(missing) > 0 {
@@ -110,7 +110,7 @@ func TestValidateStorePreconditions_PassesWhenAllConfigured(t *testing.T) {
 		Session:          &fakeSessionStore{},
 		SessionGate:      newFakeSessionGateStore(),
 		SessionSpotlight: newFakeSessionSpotlightStore(),
-		Adapters:         systems.NewAdapterRegistry(),
+		Adapters:         bridge.NewAdapterRegistry(),
 	}
 	if err := applier.ValidateStorePreconditions(); err != nil {
 		t.Fatalf("expected no error, got: %v", err)

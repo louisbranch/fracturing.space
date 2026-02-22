@@ -35,7 +35,7 @@ When adding or changing registrations:
 1. Add or update the domain tool/resource definitions and handlers.
 2. Keep each module registration function narrow and deterministic; module ownership should stay obvious in `newMCPRegistrationModules`.
 3. Use focused tests to verify module registration counts and isolation (`TestMCPRegistrationModules`, `TestMCPRegistrationModulesAreIsolated`).
-4. For game-system onboarding, confirm the system manifest descriptors in `internal/services/game/domain/systems/manifest` and run the catalog/system validation checks during startup (`ValidateEmbeddedCatalogManifests`, system registration parity tests) before touching transport wiring.
+4. For game-system onboarding, confirm the system manifest descriptors in `internal/services/game/domain/bridge/manifest` and run the catalog/system validation checks during startup (`ValidateEmbeddedCatalogManifests`, system registration parity tests) before touching transport wiring.
 
 For resolver decision-path helpers used by command projection writes, see
 `internal/services/game/api/grpc/internal/domainwrite/helper.go`, which now exposes

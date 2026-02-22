@@ -97,7 +97,7 @@ func main() {
 		{dir: filepath.Join(root, "internal/services/game/domain/participant"), owner: "Core"},
 		{dir: filepath.Join(root, "internal/services/game/domain/session"), owner: "Core"},
 		{dir: filepath.Join(root, "internal/services/game/domain/action"), owner: "Core"},
-		{dir: filepath.Join(root, "internal/services/game/domain/systems/daggerheart"), owner: "Daggerheart"},
+		{dir: filepath.Join(root, "internal/services/game/domain/bridge/daggerheart"), owner: "Daggerheart"},
 	}
 	definitions := make([]packageDefs, 0, len(eventPackageGroups))
 	for _, pkg := range eventPackageGroups {
@@ -143,7 +143,7 @@ func main() {
 			{dir: filepath.Join(root, "internal/services/game/domain/participant"), owner: "Core"},
 			{dir: filepath.Join(root, "internal/services/game/domain/invite"), owner: "Core"},
 			{dir: filepath.Join(root, "internal/services/game/domain/character"), owner: "Core"},
-			{dir: filepath.Join(root, "internal/services/game/domain/systems/daggerheart"), owner: "System"},
+			{dir: filepath.Join(root, "internal/services/game/domain/bridge/daggerheart"), owner: "System"},
 		}
 		commandMap := make(map[string]commandDef)
 		for _, pkg := range commandPackages {

@@ -6,19 +6,15 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
-func (a Applier) applyCharacterCreated(ctx context.Context, evt event.Event) error {
+func (a Applier) applyCharacterCreated(ctx context.Context, evt event.Event, payload character.CreatePayload) error {
 	characterID := strings.TrimSpace(evt.EntityID)
 
-	var payload character.CreatePayload
-	if err := decodePayload(evt.PayloadJSON, &payload, "character.created"); err != nil {
-		return err
-	}
 	if payload.CharacterID != "" && strings.TrimSpace(payload.CharacterID) != characterID {
 		return fmt.Errorf("character_id mismatch")
 	}
@@ -66,13 +62,9 @@ func (a Applier) applyCharacterCreated(ctx context.Context, evt event.Event) err
 	return a.Campaign.Put(ctx, campaignRecord)
 }
 
-func (a Applier) applyCharacterUpdated(ctx context.Context, evt event.Event) error {
+func (a Applier) applyCharacterUpdated(ctx context.Context, evt event.Event, payload character.UpdatePayload) error {
 	characterID := strings.TrimSpace(evt.EntityID)
 
-	var payload character.UpdatePayload
-	if err := decodePayload(evt.PayloadJSON, &payload, "character.updated"); err != nil {
-		return err
-	}
 	if payload.CharacterID != "" && strings.TrimSpace(payload.CharacterID) != characterID {
 		return fmt.Errorf("character_id mismatch")
 	}
@@ -130,13 +122,9 @@ func (a Applier) applyCharacterUpdated(ctx context.Context, evt event.Event) err
 	return a.Campaign.Put(ctx, campaignRecord)
 }
 
-func (a Applier) applyCharacterDeleted(ctx context.Context, evt event.Event) error {
+func (a Applier) applyCharacterDeleted(ctx context.Context, evt event.Event, payload character.DeletePayload) error {
 	characterID := strings.TrimSpace(evt.EntityID)
 
-	var payload character.DeletePayload
-	if err := decodePayload(evt.PayloadJSON, &payload, "character.deleted"); err != nil {
-		return err
-	}
 	if payload.CharacterID != "" && strings.TrimSpace(payload.CharacterID) != characterID {
 		return fmt.Errorf("character_id mismatch")
 	}
@@ -163,13 +151,9 @@ func (a Applier) applyCharacterDeleted(ctx context.Context, evt event.Event) err
 	return a.Campaign.Put(ctx, campaignRecord)
 }
 
-func (a Applier) applyCharacterProfileUpdated(ctx context.Context, evt event.Event) error {
+func (a Applier) applyCharacterProfileUpdated(ctx context.Context, evt event.Event, payload character.ProfileUpdatePayload) error {
 	characterID := strings.TrimSpace(evt.EntityID)
 
-	var payload character.ProfileUpdatePayload
-	if err := decodePayload(evt.PayloadJSON, &payload, "character.profile_updated"); err != nil {
-		return err
-	}
 	if payload.CharacterID != "" && strings.TrimSpace(payload.CharacterID) != characterID {
 		return fmt.Errorf("character_id mismatch")
 	}
@@ -184,7 +168,7 @@ func (a Applier) applyCharacterProfileUpdated(ctx context.Context, evt event.Eve
 			// will pick them up once the adapter is configured.
 			continue
 		}
-		profileAdapter, ok := adapter.(systems.ProfileAdapter)
+		profileAdapter, ok := adapter.(bridge.ProfileAdapter)
 		if !ok {
 			continue
 		}

@@ -12,10 +12,10 @@ import (
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/random"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
+	daggerheartdomain "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/domain"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
-	daggerheartdomain "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/domain"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	domainbridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
+	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	domainsystem "github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
-	domainsystems "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
-	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/manifest"
 )
 
 var (
@@ -30,7 +30,7 @@ func registeredSystemModules() []domainsystem.Module {
 //
 // The metadata side is the contract-level source of truth for system names and
 // versions before runtime adapters are loaded.
-func registeredMetadataSystems() []domainsystems.GameSystem {
+func registeredMetadataSystems() []domainbridge.GameSystem {
 	return systemmanifest.MetadataSystems()
 }
 
@@ -39,7 +39,7 @@ func registeredMetadataSystems() []domainsystems.GameSystem {
 // If a module is missing from either metadata or adapters (or vice versa), the
 // server refuses startup because command execution and read-model projection would
 // diverge by system.
-func validateSystemRegistrationParity(modules []domainsystem.Module, metadata *domainsystems.Registry, adapters *domainsystems.AdapterRegistry) error {
+func validateSystemRegistrationParity(modules []domainsystem.Module, metadata *domainbridge.Registry, adapters *domainbridge.AdapterRegistry) error {
 	if metadata == nil {
 		return errSystemMetadataRegistryRequired
 	}

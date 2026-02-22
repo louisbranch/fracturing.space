@@ -664,7 +664,7 @@ func TestMainGeneratesCatalogAndUsageMap(t *testing.T) {
 		}
 	}
 
-	daggerheartDir := filepath.Join(root, "internal", "services", "game", "domain", "systems", "daggerheart")
+	daggerheartDir := filepath.Join(root, "internal", "services", "game", "domain", "bridge", "daggerheart")
 	if err := os.MkdirAll(daggerheartDir, 0o755); err != nil {
 		t.Fatalf("mkdir daggerheart dir: %v", err)
 	}

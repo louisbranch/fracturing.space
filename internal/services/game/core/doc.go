@@ -9,7 +9,7 @@
 //
 // Game-system-specific mechanics (like Daggerheart's Duality dice, D&D 5e's
 // advantage/disadvantage, or Vampire's success-counting pools) are built on
-// top of these primitives in the internal/services/game/domain/systems/ packages.
+// top of these primitives in the internal/services/game/domain/bridge/ packages.
 //
 // # Design Philosophy
 //

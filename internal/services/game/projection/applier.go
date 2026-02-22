@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -36,7 +36,7 @@ type Applier struct {
 	SessionSpotlight storage.SessionSpotlightStore
 	// Adapters holds extension-specific projection hooks including
 	// system event application and character profile updates.
-	Adapters *systems.AdapterRegistry
+	Adapters *bridge.AdapterRegistry
 	// Watermarks tracks per-campaign projection progress so startup can
 	// detect and repair gaps. When nil, watermark tracking is disabled.
 	Watermarks storage.ProjectionWatermarkStore
@@ -72,16 +72,13 @@ func (a Applier) Apply(ctx context.Context, evt event.Event) error {
 	return nil
 }
 
-// routeEvent dispatches a single event to the appropriate projection handler
-// using the handler registry map. Core event types are looked up in the
-// registry; events with a non-empty SystemID fall through to the system adapter
-// path; anything else is rejected.
+// routeEvent dispatches a single event to the appropriate projection handler.
+// Core event types are routed through the CoreRouter (which checks store/ID
+// preconditions and auto-unmarshals payloads). Events with a non-empty SystemID
+// fall through to the system adapter path; anything else is rejected.
 func (a Applier) routeEvent(ctx context.Context, evt event.Event) error {
-	if h, ok := handlers[evt.Type]; ok {
-		if err := a.validatePreconditions(h, evt); err != nil {
-			return err
-		}
-		return h.apply(a, ctx, evt)
+	if _, ok := coreRouter.handlers[evt.Type]; ok {
+		return coreRouter.Route(a, ctx, evt)
 	}
 	// ValidateForAppend guarantees SystemID and SystemVersion are trimmed,
 	// so a simple non-empty check matches the aggregate folder's routing

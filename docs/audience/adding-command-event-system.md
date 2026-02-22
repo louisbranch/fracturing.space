@@ -27,7 +27,7 @@ Use this sequence for first-time contributions to avoid routing or registry regr
 
 ## Add a new game system module
 
-1. Implement the system module wiring in `internal/services/game/domain/systems/<system>/`.
+1. Implement the system module wiring in `internal/services/game/domain/bridge/<system>/`.
 2. Register the module in:
    - `internal/services/game/app/system_registration.go`
    - `internal/services/game/domain/system/registry.go` integration points

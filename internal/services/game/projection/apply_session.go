@@ -10,11 +10,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
-func (a Applier) applySessionStarted(ctx context.Context, evt event.Event) error {
-	var payload session.StartPayload
-	if err := decodePayload(evt.PayloadJSON, &payload, "session.started"); err != nil {
-		return err
-	}
+func (a Applier) applySessionStarted(ctx context.Context, evt event.Event, payload session.StartPayload) error {
 	sessionID := strings.TrimSpace(payload.SessionID)
 	if sessionID == "" {
 		sessionID = strings.TrimSpace(evt.EntityID)
@@ -36,11 +32,7 @@ func (a Applier) applySessionStarted(ctx context.Context, evt event.Event) error
 	})
 }
 
-func (a Applier) applySessionEnded(ctx context.Context, evt event.Event) error {
-	var payload session.EndPayload
-	if err := decodePayload(evt.PayloadJSON, &payload, "session.ended"); err != nil {
-		return err
-	}
+func (a Applier) applySessionEnded(ctx context.Context, evt event.Event, payload session.EndPayload) error {
 	sessionID := strings.TrimSpace(payload.SessionID)
 	if sessionID == "" {
 		sessionID = strings.TrimSpace(evt.EntityID)
@@ -56,11 +48,7 @@ func (a Applier) applySessionEnded(ctx context.Context, evt event.Event) error {
 	return err
 }
 
-func (a Applier) applySessionGateOpened(ctx context.Context, evt event.Event) error {
-	var payload session.GateOpenedPayload
-	if err := decodePayload(evt.PayloadJSON, &payload, "session.gate_opened"); err != nil {
-		return err
-	}
+func (a Applier) applySessionGateOpened(ctx context.Context, evt event.Event, payload session.GateOpenedPayload) error {
 	gateID := strings.TrimSpace(payload.GateID)
 	if gateID == "" {
 		gateID = strings.TrimSpace(evt.EntityID)
@@ -95,11 +83,7 @@ func (a Applier) applySessionGateOpened(ctx context.Context, evt event.Event) er
 	})
 }
 
-func (a Applier) applySessionGateResolved(ctx context.Context, evt event.Event) error {
-	var payload session.GateResolvedPayload
-	if err := decodePayload(evt.PayloadJSON, &payload, "session.gate_resolved"); err != nil {
-		return err
-	}
+func (a Applier) applySessionGateResolved(ctx context.Context, evt event.Event, payload session.GateResolvedPayload) error {
 	gateID := strings.TrimSpace(payload.GateID)
 	if gateID == "" {
 		gateID = strings.TrimSpace(evt.EntityID)
@@ -127,11 +111,7 @@ func (a Applier) applySessionGateResolved(ctx context.Context, evt event.Event) 
 	return a.SessionGate.PutSessionGate(ctx, gate)
 }
 
-func (a Applier) applySessionGateAbandoned(ctx context.Context, evt event.Event) error {
-	var payload session.GateAbandonedPayload
-	if err := decodePayload(evt.PayloadJSON, &payload, "session.gate_abandoned"); err != nil {
-		return err
-	}
+func (a Applier) applySessionGateAbandoned(ctx context.Context, evt event.Event, payload session.GateAbandonedPayload) error {
 	gateID := strings.TrimSpace(payload.GateID)
 	if gateID == "" {
 		gateID = strings.TrimSpace(evt.EntityID)
@@ -159,11 +139,7 @@ func (a Applier) applySessionGateAbandoned(ctx context.Context, evt event.Event)
 	return a.SessionGate.PutSessionGate(ctx, gate)
 }
 
-func (a Applier) applySessionSpotlightSet(ctx context.Context, evt event.Event) error {
-	var payload session.SpotlightSetPayload
-	if err := decodePayload(evt.PayloadJSON, &payload, "session.spotlight_set"); err != nil {
-		return err
-	}
+func (a Applier) applySessionSpotlightSet(ctx context.Context, evt event.Event, payload session.SpotlightSetPayload) error {
 	spotlightType, err := session.NormalizeSpotlightType(payload.SpotlightType)
 	if err != nil {
 		return err

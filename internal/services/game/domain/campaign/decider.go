@@ -12,12 +12,12 @@ import (
 )
 
 const (
-	commandTypeCreate  command.Type = "campaign.create"
-	commandTypeUpdate  command.Type = "campaign.update"
-	commandTypeFork    command.Type = "campaign.fork"
-	commandTypeEnd     command.Type = "campaign.end"
-	commandTypeArchive command.Type = "campaign.archive"
-	commandTypeRestore command.Type = "campaign.restore"
+	CommandTypeCreate  command.Type = "campaign.create"
+	CommandTypeUpdate  command.Type = "campaign.update"
+	CommandTypeFork    command.Type = "campaign.fork"
+	CommandTypeEnd     command.Type = "campaign.end"
+	CommandTypeArchive command.Type = "campaign.archive"
+	CommandTypeRestore command.Type = "campaign.restore"
 	EventTypeCreated   event.Type   = "campaign.created"
 	EventTypeUpdated   event.Type   = "campaign.updated"
 	EventTypeForked    event.Type   = "campaign.forked"
@@ -44,7 +44,7 @@ const (
 // to reproduce the same campaign state.
 func Decide(state State, cmd command.Command, now func() time.Time) command.Decision {
 	switch cmd.Type {
-	case commandTypeCreate:
+	case CommandTypeCreate:
 		if state.Created {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeCampaignAlreadyExists,
@@ -122,7 +122,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 
 		return command.Accept(evt)
 
-	case commandTypeUpdate:
+	case CommandTypeUpdate:
 		if !state.Created {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeCampaignNotCreated,
@@ -211,7 +211,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 
 		return command.Accept(evt)
 
-	case commandTypeFork:
+	case CommandTypeFork:
 		if !state.Created {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeCampaignNotCreated,
@@ -235,7 +235,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 
 		return command.Accept(evt)
 
-	case commandTypeEnd, commandTypeArchive, commandTypeRestore:
+	case CommandTypeEnd, CommandTypeArchive, CommandTypeRestore:
 		targetStatus, _ := statusCommandTarget(cmd.Type)
 		if !state.Created {
 			return command.Reject(command.Rejection{
@@ -277,11 +277,11 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 // in every handler and keeps command intent readable.
 func statusCommandTarget(cmdType command.Type) (Status, bool) {
 	switch cmdType {
-	case commandTypeEnd:
+	case CommandTypeEnd:
 		return StatusCompleted, true
-	case commandTypeArchive:
+	case CommandTypeArchive:
 		return StatusArchived, true
-	case commandTypeRestore:
+	case CommandTypeRestore:
 		return StatusDraft, true
 	default:
 		return "", false

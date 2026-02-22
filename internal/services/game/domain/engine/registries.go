@@ -7,11 +7,11 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/naming"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 )
 
 // Registries bundles the command/event/system registries.
@@ -72,6 +72,10 @@ func BuildRegistries(modules ...module.Module) (Registries, error) {
 	}
 
 	if err := ValidateDeciderCommandCoverage(systemRegistry, commandRegistry); err != nil {
+		return Registries{}, err
+	}
+
+	if err := ValidateCoreDeciderCommandCoverage(commandRegistry); err != nil {
 		return Registries{}, err
 	}
 
@@ -265,7 +269,7 @@ func ValidateFoldCoverage(events *event.Registry) error {
 func ValidateProjectionRegistries(
 	events *event.Registry,
 	modules *module.Registry,
-	adapters *systems.AdapterRegistry,
+	adapters *bridge.AdapterRegistry,
 	projectionHandledTypes []event.Type,
 ) error {
 	if err := ValidateProjectionCoverage(events, projectionHandledTypes); err != nil {
@@ -279,6 +283,71 @@ func ValidateProjectionRegistries(
 	}
 	if err := ValidateAdapterEventCoverage(modules, adapters, events); err != nil {
 		return fmt.Errorf("validate adapter event coverage: %w", err)
+	}
+	// Collect core domain projection declarations for alignment check.
+	var coreProjectionDeclared []event.Type
+	for _, domain := range CoreDomains() {
+		if domain.ProjectionHandledTypes != nil {
+			coreProjectionDeclared = append(coreProjectionDeclared, domain.ProjectionHandledTypes()...)
+		}
+	}
+	if err := ValidateCoreProjectionDeclarations(events, coreProjectionDeclared); err != nil {
+		return fmt.Errorf("validate core projection declarations: %w", err)
+	}
+	return nil
+}
+
+// ValidateCoreProjectionDeclarations verifies that every core event with
+// IntentProjectionAndReplay is declared by some CoreDomain's
+// ProjectionHandledTypes, and conversely that every declared type is
+// registered with projection intent. This ensures domain packages stay
+// aligned with the projection router.
+func ValidateCoreProjectionDeclarations(events *event.Registry, declared []event.Type) error {
+	if events == nil {
+		return fmt.Errorf("event registry is required for core projection declaration validation")
+	}
+
+	declaredSet := make(map[event.Type]struct{}, len(declared))
+	for _, t := range declared {
+		declaredSet[t] = struct{}{}
+	}
+
+	// Forward check: every core projection-and-replay event must be declared.
+	registered := make(map[event.Type]struct{})
+	var missing []string
+	for _, def := range events.ListDefinitions() {
+		if def.Owner != event.OwnerCore {
+			continue
+		}
+		if def.Intent != event.IntentProjectionAndReplay {
+			continue
+		}
+		registered[def.Type] = struct{}{}
+		if _, ok := declaredSet[def.Type]; !ok {
+			// Check if the registry resolves it via alias.
+			if resolved := events.Resolve(def.Type); resolved != def.Type {
+				if _, ok := declaredSet[resolved]; ok {
+					continue
+				}
+			}
+			missing = append(missing, string(def.Type))
+		}
+	}
+	if len(missing) > 0 {
+		return fmt.Errorf("core projection events missing domain ProjectionHandledTypes declarations: %s",
+			strings.Join(missing, ", "))
+	}
+
+	// Reverse check: every declared type must be a registered projection event.
+	var stale []string
+	for _, t := range declared {
+		if _, ok := registered[t]; !ok {
+			stale = append(stale, string(t))
+		}
+	}
+	if len(stale) > 0 {
+		return fmt.Errorf("stale core ProjectionHandledTypes declarations without registration: %s",
+			strings.Join(stale, ", "))
 	}
 	return nil
 }
@@ -456,7 +525,7 @@ func ValidateDeciderCommandCoverage(modules *module.Registry, commands *command.
 // event types with IntentProjectionAndReplay are handled by the corresponding
 // system adapter. This catches the case where a module declares/registers/emits
 // events but no adapter handler exists, causing runtime errors.
-func ValidateAdapterEventCoverage(modules *module.Registry, adapters *systems.AdapterRegistry, events *event.Registry) error {
+func ValidateAdapterEventCoverage(modules *module.Registry, adapters *bridge.AdapterRegistry, events *event.Registry) error {
 	if modules == nil || adapters == nil || events == nil {
 		return fmt.Errorf("module registry, adapter registry, and event registry are required")
 	}
@@ -542,34 +611,41 @@ func ValidateNoProjectionHandlersForNonProjectionEvents(events *event.Registry, 
 	return nil
 }
 
-// entityKeyedDomains returns the core domains whose fold types require entity
-// addressing (EntityID != "" guard in the aggregate folder). Adding a new
-// entity-keyed domain here ensures ValidateEntityKeyedAddressing catches
-// missing AddressingPolicyEntityTarget at startup.
-func entityKeyedDomains() []CoreDomain {
-	var keyed []CoreDomain
-	for _, d := range CoreDomains() {
-		switch d.Name() {
-		case "participant", "character", "invite":
-			keyed = append(keyed, d)
-		}
-	}
-	return keyed
-}
-
-// ValidateEntityKeyedAddressing verifies that every entity-keyed fold type
-// (participant, character, invite) has AddressingPolicyEntityTarget in its
-// event definition. This catches the case where a developer registers an
-// entity-keyed event but forgets to set addressing policy, causing the
-// aggregate folder to silently skip the fold when EntityID is empty.
+// ValidateEntityKeyedAddressing verifies addressing consistency within each
+// core domain. A domain is entity-keyed when ANY of its registered
+// FoldHandledTypes have AddressingPolicyEntityTarget. Once identified as
+// entity-keyed, ALL fold types in that domain must have the same policy.
+//
+// Deriving entity-keyed status from the registry eliminates the hardcoded
+// name switch that required manual updates when adding a new entity-keyed
+// domain.
 func ValidateEntityKeyedAddressing(events *event.Registry) error {
 	if events == nil {
 		return fmt.Errorf("event registry is required for entity-keyed addressing validation")
 	}
 
 	var missing []string
-	for _, domain := range entityKeyedDomains() {
-		for _, t := range domain.FoldHandledTypes() {
+	for _, domain := range CoreDomains() {
+		types := domain.FoldHandledTypes()
+
+		// Check if any registered fold type uses entity addressing.
+		hasEntityAddressing := false
+		for _, t := range types {
+			def, ok := events.Definition(t)
+			if !ok {
+				continue
+			}
+			if def.Addressing == event.AddressingPolicyEntityTarget {
+				hasEntityAddressing = true
+				break
+			}
+		}
+		if !hasEntityAddressing {
+			continue
+		}
+
+		// Domain is entity-keyed — every registered fold type must use entity addressing.
+		for _, t := range types {
 			def, ok := events.Definition(t)
 			if !ok {
 				continue
@@ -627,6 +703,130 @@ func ValidateStateFactoryDeterminism(modules *module.Registry) error {
 		if !reflect.DeepEqual(firstChar, secondChar) {
 			return fmt.Errorf("state factory determinism check failed for %s: NewCharacterState returned different results", label)
 		}
+	}
+	return nil
+}
+
+// ValidateSystemRouterDefinitionParity verifies that every type in a system
+// module's Folder.FoldHandledTypes() and the corresponding adapter's
+// HandledTypes() has a matching entry in the module's EmittableEventTypes()
+// with the appropriate intent. A handler registered for a type that the module
+// does not declare as emittable is dead code that will never fire at runtime.
+func ValidateSystemRouterDefinitionParity(
+	modules *module.Registry,
+	adapters *bridge.AdapterRegistry,
+	events *event.Registry,
+) error {
+	if modules == nil || adapters == nil || events == nil {
+		return fmt.Errorf("module, adapter, and event registries are required")
+	}
+
+	var orphaned []string
+
+	for _, mod := range modules.List() {
+		// Build set of emittable types with replay intent for fold parity.
+		emittableReplay := make(map[event.Type]struct{})
+		emittableProjection := make(map[event.Type]struct{})
+		for _, t := range mod.EmittableEventTypes() {
+			def, ok := events.Definition(t)
+			if !ok {
+				continue
+			}
+			if def.Intent == event.IntentProjectionAndReplay || def.Intent == event.IntentReplayOnly {
+				emittableReplay[t] = struct{}{}
+			}
+			if def.Intent == event.IntentProjectionAndReplay {
+				emittableProjection[t] = struct{}{}
+			}
+		}
+
+		// Check fold handlers against emittable replay set.
+		if folder := mod.Folder(); folder != nil {
+			for _, t := range folder.FoldHandledTypes() {
+				if _, ok := emittableReplay[t]; !ok {
+					orphaned = append(orphaned, string(t)+" (fold)")
+				}
+			}
+		}
+	}
+
+	// Check adapter handlers against emittable projection set.
+	for _, adapter := range adapters.Adapters() {
+		mod := modules.Get(adapter.ID(), adapter.Version())
+		if mod == nil {
+			continue
+		}
+		emittableProjection := make(map[event.Type]struct{})
+		for _, t := range mod.EmittableEventTypes() {
+			def, ok := events.Definition(t)
+			if !ok {
+				continue
+			}
+			if def.Intent == event.IntentProjectionAndReplay {
+				emittableProjection[t] = struct{}{}
+			}
+		}
+		for _, t := range adapter.HandledTypes() {
+			if _, ok := emittableProjection[t]; !ok {
+				orphaned = append(orphaned, string(t)+" (adapter)")
+			}
+		}
+	}
+
+	if len(orphaned) > 0 {
+		return fmt.Errorf("system router handlers for types not in EmittableEventTypes: %s",
+			strings.Join(orphaned, ", "))
+	}
+	return nil
+}
+
+// ValidateCoreDeciderCommandCoverage verifies that every core-owned command
+// type in the command registry is claimed by some CoreDomain's
+// DeciderHandledCommands, and conversely that every declared handler has a
+// matching registration. This is the core-domain counterpart of
+// ValidateDeciderCommandCoverage for system modules.
+func ValidateCoreDeciderCommandCoverage(commands *command.Registry) error {
+	if commands == nil {
+		return fmt.Errorf("command registry is required for core decider coverage validation")
+	}
+
+	// Collect all types each core domain declares its decider handles.
+	declared := make(map[command.Type]struct{})
+	for _, domain := range CoreDomains() {
+		if domain.DeciderHandledCommands == nil {
+			continue
+		}
+		for _, t := range domain.DeciderHandledCommands() {
+			declared[t] = struct{}{}
+		}
+	}
+
+	// Forward check: every registered core command must be in declared set.
+	registered := make(map[command.Type]struct{})
+	var missing []string
+	for _, def := range commands.ListDefinitions() {
+		if def.Owner != command.OwnerCore {
+			continue
+		}
+		registered[def.Type] = struct{}{}
+		if _, ok := declared[def.Type]; !ok {
+			missing = append(missing, string(def.Type))
+		}
+	}
+	if len(missing) > 0 {
+		return fmt.Errorf("core commands missing decider handlers: %s", strings.Join(missing, ", "))
+	}
+
+	// Reverse check: every declared handler must have a registration.
+	var stale []string
+	for t := range declared {
+		if _, ok := registered[t]; !ok {
+			stale = append(stale, string(t))
+		}
+	}
+	if len(stale) > 0 {
+		return fmt.Errorf("stale core decider handler declarations without registration: %s",
+			strings.Join(stale, ", "))
 	}
 	return nil
 }

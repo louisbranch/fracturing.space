@@ -6,7 +6,7 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"google.golang.org/grpc/codes"
 )
 
@@ -14,7 +14,7 @@ type testRegistrySystem struct {
 	id       commonv1.GameSystem
 	version  string
 	name     string
-	metadata systems.RegistryMetadata
+	metadata bridge.RegistryMetadata
 }
 
 func (t *testRegistrySystem) ID() commonv1.GameSystem {
@@ -29,25 +29,25 @@ func (t *testRegistrySystem) Name() string {
 	return t.name
 }
 
-func (t *testRegistrySystem) RegistryMetadata() systems.RegistryMetadata {
+func (t *testRegistrySystem) RegistryMetadata() bridge.RegistryMetadata {
 	return t.metadata
 }
 
-func (t *testRegistrySystem) StateFactory() systems.StateFactory {
+func (t *testRegistrySystem) StateFactory() bridge.StateFactory {
 	return nil
 }
 
-func (t *testRegistrySystem) OutcomeApplier() systems.OutcomeApplier {
+func (t *testRegistrySystem) OutcomeApplier() bridge.OutcomeApplier {
 	return nil
 }
 
 func TestListGameSystems_Defaults(t *testing.T) {
-	registry := systems.NewRegistry()
+	registry := bridge.NewRegistry()
 	if err := registry.Register(&testRegistrySystem{
 		id:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 		version: "1.0.0",
 		name:    "Daggerheart",
-		metadata: systems.RegistryMetadata{
+		metadata: bridge.RegistryMetadata{
 			ImplementationStage: commonv1.GameSystemImplementationStage_GAME_SYSTEM_IMPLEMENTATION_STAGE_PARTIAL,
 			OperationalStatus:   commonv1.GameSystemOperationalStatus_GAME_SYSTEM_OPERATIONAL_STATUS_OPERATIONAL,
 			AccessLevel:         commonv1.GameSystemAccessLevel_GAME_SYSTEM_ACCESS_LEVEL_BETA,
@@ -60,7 +60,7 @@ func TestListGameSystems_Defaults(t *testing.T) {
 		id:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 		version: "1.1.0",
 		name:    "Daggerheart",
-		metadata: systems.RegistryMetadata{
+		metadata: bridge.RegistryMetadata{
 			ImplementationStage: commonv1.GameSystemImplementationStage_GAME_SYSTEM_IMPLEMENTATION_STAGE_PARTIAL,
 			OperationalStatus:   commonv1.GameSystemOperationalStatus_GAME_SYSTEM_OPERATIONAL_STATUS_OPERATIONAL,
 			AccessLevel:         commonv1.GameSystemAccessLevel_GAME_SYSTEM_ACCESS_LEVEL_BETA,
@@ -93,12 +93,12 @@ func TestListGameSystems_Defaults(t *testing.T) {
 }
 
 func TestGetGameSystem_DefaultVersion(t *testing.T) {
-	registry := systems.NewRegistry()
+	registry := bridge.NewRegistry()
 	if err := registry.Register(&testRegistrySystem{
 		id:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 		version: "1.0.0",
 		name:    "Daggerheart",
-		metadata: systems.RegistryMetadata{
+		metadata: bridge.RegistryMetadata{
 			ImplementationStage: commonv1.GameSystemImplementationStage_GAME_SYSTEM_IMPLEMENTATION_STAGE_PARTIAL,
 			OperationalStatus:   commonv1.GameSystemOperationalStatus_GAME_SYSTEM_OPERATIONAL_STATUS_OPERATIONAL,
 			AccessLevel:         commonv1.GameSystemAccessLevel_GAME_SYSTEM_ACCESS_LEVEL_BETA,
@@ -110,7 +110,7 @@ func TestGetGameSystem_DefaultVersion(t *testing.T) {
 		id:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 		version: "1.1.0",
 		name:    "Daggerheart",
-		metadata: systems.RegistryMetadata{
+		metadata: bridge.RegistryMetadata{
 			ImplementationStage: commonv1.GameSystemImplementationStage_GAME_SYSTEM_IMPLEMENTATION_STAGE_PARTIAL,
 			OperationalStatus:   commonv1.GameSystemOperationalStatus_GAME_SYSTEM_OPERATIONAL_STATUS_OPERATIONAL,
 			AccessLevel:         commonv1.GameSystemAccessLevel_GAME_SYSTEM_ACCESS_LEVEL_BETA,
@@ -133,7 +133,7 @@ func TestGetGameSystem_DefaultVersion(t *testing.T) {
 }
 
 func TestGetGameSystem_NotFound(t *testing.T) {
-	registry := systems.NewRegistry()
+	registry := bridge.NewRegistry()
 	svc := NewSystemService(registry)
 	_, err := svc.GetGameSystem(context.Background(), &gamev1.GetGameSystemRequest{Id: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART})
 	assertStatusCode(t, err, codes.NotFound)

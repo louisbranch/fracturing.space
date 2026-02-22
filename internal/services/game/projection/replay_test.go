@@ -9,11 +9,11 @@ import (
 	"time"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
-	systems "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -409,7 +409,7 @@ func newProjectionDaggerheartStore() *projectionDaggerheartStore {
 }
 
 func newProjectionApplier(campaignStore *projectionCampaignStore, daggerheartStore *projectionDaggerheartStore) Applier {
-	registry := systems.NewAdapterRegistry()
+	registry := bridge.NewAdapterRegistry()
 	if err := registry.Register(daggerheart.NewAdapter(daggerheartStore)); err != nil {
 		panic(err)
 	}

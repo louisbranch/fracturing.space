@@ -12,7 +12,7 @@ Fracturing.Space is split into four layers:
 
 - **Transport layer**: Game server (`cmd/game`) + Auth server (`cmd/auth`) + Connections server (`cmd/connections`) + AI server (`cmd/ai`) + MCP bridge (`cmd/mcp`) + Admin dashboard (`cmd/admin`)
 - **Platform layer**: Shared infrastructure (`internal/platform/`)
-- **Domain layer**: Core domain packages (`internal/services/game/domain/{campaign,participant,character,invite,session,action,...}`) + game systems (`internal/services/game/domain/systems/`)
+- **Domain layer**: Core domain packages (`internal/services/game/domain/{campaign,participant,character,invite,session,action,...}`) + game systems (`internal/services/game/domain/bridge/`)
 - **Storage layer**: SQLite persistence (`data/game-events.db`, `data/game-projections.db`, `data/game-content.db`, `data/auth.db`, `data/connections.db`, `data/listing.db`, `data/admin.db`, `data/ai.db`)
 
 The MCP server is a thin adapter that forwards requests to the game services.
@@ -31,10 +31,10 @@ For the canonical event-driven write model, see
 
 ## Game System Architecture
 
-Fracturing.Space supports multiple tabletop RPG systems through a pluggable architecture. Each game system is a plugin under `internal/services/game/domain/systems/`:
+Fracturing.Space supports multiple tabletop RPG systems through a pluggable architecture. Each game system is a plugin under `internal/services/game/domain/bridge/`:
 
 ```
-internal/services/game/domain/systems/
+internal/services/game/domain/bridge/
 ├── adapter_registry.go  # Projection adapter routing by system + version
 ├── registry_bridge.go   # API-facing game-system metadata registry
 └── daggerheart/         # Daggerheart implementation
@@ -62,7 +62,7 @@ Campaign data is organized into three tiers by change frequency:
 |-------|-------------|---------|----------|
 | **Core campaign state** | `campaign/`, `participant/`, `character/`, `invite/` | Setup + lifecycle | Name, status, seats, characters, invites |
 | **Session gameplay** | `session/`, `action/` | During play | Active session, spotlight/gates, action resolution |
-| **Derived projections** | `projection/`, `domain/systems/*/adapter.go` | Rebuilt/apply-time | Query models and system extension state |
+| **Derived projections** | `projection/`, `domain/bridge/*/adapter.go` | Rebuilt/apply-time | Query models and system extension state |
 
 This model uses an event-sourced architecture where the event journal is the
 source of truth and projections/snapshots are derived views.
@@ -138,7 +138,7 @@ Entry point: `cmd/mcp`
 
 ### Domain packages
 
-Game system mechanics live in `internal/services/game/domain/systems/` (e.g., `internal/services/game/domain/systems/daggerheart/`).
+Game system mechanics live in `internal/services/game/domain/bridge/` (e.g., `internal/services/game/domain/bridge/daggerheart/`).
 Core domain behavior lives in top-level domain packages such as
 `internal/services/game/domain/campaign/`,
 `internal/services/game/domain/participant/`,

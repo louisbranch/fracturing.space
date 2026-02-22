@@ -15,30 +15,30 @@ func RegisterCommands(registry *command.Registry) error {
 		return errors.New("command registry is required")
 	}
 	if err := registry.Register(command.Definition{
-		Type:            commandTypeCreate,
+		Type:            CommandTypeCreate,
 		Owner:           command.OwnerCore,
 		ValidatePayload: validateCreatePayload,
 	}); err != nil {
 		return err
 	}
 	if err := registry.Register(command.Definition{
-		Type:            commandTypeUpdate,
+		Type:            CommandTypeUpdate,
 		Owner:           command.OwnerCore,
 		ValidatePayload: validateUpdatePayload,
 	}); err != nil {
 		return err
 	}
 	if err := registry.Register(command.Definition{
-		Type:            commandTypeFork,
+		Type:            CommandTypeFork,
 		Owner:           command.OwnerCore,
 		ValidatePayload: validateForkPayload,
 	}); err != nil {
 		return err
 	}
 	statusCommands := []command.Type{
-		commandTypeEnd,
-		commandTypeArchive,
-		commandTypeRestore,
+		CommandTypeEnd,
+		CommandTypeArchive,
+		CommandTypeRestore,
 	}
 	for _, cmdType := range statusCommands {
 		if err := registry.Register(command.Definition{
@@ -54,6 +54,28 @@ func RegisterCommands(registry *command.Registry) error {
 
 // EmittableEventTypes returns all event types the campaign decider can emit.
 func EmittableEventTypes() []event.Type {
+	return []event.Type{
+		EventTypeCreated,
+		EventTypeUpdated,
+		EventTypeForked,
+	}
+}
+
+// DeciderHandledCommands returns all command types the campaign decider handles.
+func DeciderHandledCommands() []command.Type {
+	return []command.Type{
+		CommandTypeCreate,
+		CommandTypeUpdate,
+		CommandTypeFork,
+		CommandTypeEnd,
+		CommandTypeArchive,
+		CommandTypeRestore,
+	}
+}
+
+// ProjectionHandledTypes returns the campaign event types that require
+// projection handlers (IntentProjectionAndReplay).
+func ProjectionHandledTypes() []event.Type {
 	return []event.Type{
 		EventTypeCreated,
 		EventTypeUpdated,

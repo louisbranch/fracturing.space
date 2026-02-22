@@ -6,7 +6,9 @@ import (
 	"testing"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	domainbridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
+	domainsystem "github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -145,6 +147,72 @@ func TestAdapterRegistrySkipsNilStoreViaClosureGuard(t *testing.T) {
 	adapter := registry.Get(daggerheart.SystemID, daggerheart.SystemVersion)
 	if adapter != nil {
 		t.Fatal("expected no adapter when store is nil")
+	}
+}
+
+func TestValidateSystemDescriptors_PassesForBuiltIns(t *testing.T) {
+	if err := ValidateSystemDescriptors(); err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+}
+
+func TestValidateSystemDescriptors_RejectsNilBuildModule(t *testing.T) {
+	orig := builtInSystems
+	builtInSystems = []SystemDescriptor{{
+		ID:                  "test",
+		Version:             "v1",
+		BuildModule:         nil,
+		BuildMetadataSystem: func() domainbridge.GameSystem { return nil },
+		BuildAdapter:        func(ProjectionStores) domainbridge.Adapter { return nil },
+	}}
+	defer func() { builtInSystems = orig }()
+
+	err := ValidateSystemDescriptors()
+	if err == nil {
+		t.Fatal("expected error for nil BuildModule")
+	}
+	if !strings.Contains(err.Error(), "BuildModule") {
+		t.Fatalf("expected error to mention BuildModule, got: %v", err)
+	}
+}
+
+func TestValidateSystemDescriptors_RejectsNilBuildMetadataSystem(t *testing.T) {
+	orig := builtInSystems
+	builtInSystems = []SystemDescriptor{{
+		ID:                  "test",
+		Version:             "v1",
+		BuildModule:         func() domainsystem.Module { return nil },
+		BuildMetadataSystem: nil,
+		BuildAdapter:        func(ProjectionStores) domainbridge.Adapter { return nil },
+	}}
+	defer func() { builtInSystems = orig }()
+
+	err := ValidateSystemDescriptors()
+	if err == nil {
+		t.Fatal("expected error for nil BuildMetadataSystem")
+	}
+	if !strings.Contains(err.Error(), "BuildMetadataSystem") {
+		t.Fatalf("expected error to mention BuildMetadataSystem, got: %v", err)
+	}
+}
+
+func TestValidateSystemDescriptors_RejectsNilBuildAdapter(t *testing.T) {
+	orig := builtInSystems
+	builtInSystems = []SystemDescriptor{{
+		ID:                  "test",
+		Version:             "v1",
+		BuildModule:         func() domainsystem.Module { return nil },
+		BuildMetadataSystem: func() domainbridge.GameSystem { return nil },
+		BuildAdapter:        nil,
+	}}
+	defer func() { builtInSystems = orig }()
+
+	err := ValidateSystemDescriptors()
+	if err == nil {
+		t.Fatal("expected error for nil BuildAdapter")
+	}
+	if !strings.Contains(err.Error(), "BuildAdapter") {
+		t.Fatalf("expected error to mention BuildAdapter, got: %v", err)
 	}
 }
 

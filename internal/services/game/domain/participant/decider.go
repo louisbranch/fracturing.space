@@ -11,13 +11,13 @@ import (
 )
 
 const (
-	commandTypeJoin               command.Type = "participant.join"
-	commandTypeUpdate             command.Type = "participant.update"
-	commandTypeLeave              command.Type = "participant.leave"
-	commandTypeBind               command.Type = "participant.bind"
-	commandTypeUnbind             command.Type = "participant.unbind"
-	commandTypeSeatReassign       command.Type = "participant.seat.reassign"
-	commandTypeSeatReassignLegacy command.Type = "seat.reassign"
+	CommandTypeJoin               command.Type = "participant.join"
+	CommandTypeUpdate             command.Type = "participant.update"
+	CommandTypeLeave              command.Type = "participant.leave"
+	CommandTypeBind               command.Type = "participant.bind"
+	CommandTypeUnbind             command.Type = "participant.unbind"
+	CommandTypeSeatReassign       command.Type = "participant.seat.reassign"
+	CommandTypeSeatReassignLegacy command.Type = "seat.reassign"
 	EventTypeJoined               event.Type   = "participant.joined"
 	EventTypeUpdated              event.Type   = "participant.updated"
 	EventTypeLeft                 event.Type   = "participant.left"
@@ -48,7 +48,7 @@ const (
 // events rather than mutating shared storage directly.
 func Decide(state State, cmd command.Command, now func() time.Time) command.Decision {
 	switch cmd.Type {
-	case commandTypeJoin:
+	case CommandTypeJoin:
 		if state.Joined {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeParticipantAlreadyJoined,
@@ -134,7 +134,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 
 		return command.Accept(evt)
 
-	case commandTypeUpdate:
+	case CommandTypeUpdate:
 		if !state.Joined || state.Left {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeParticipantNotJoined,
@@ -258,7 +258,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 
 		return command.Accept(evt)
 
-	case commandTypeLeave:
+	case CommandTypeLeave:
 		if !state.Joined || state.Left {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeParticipantNotJoined,
@@ -290,7 +290,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 
 		return command.Accept(evt)
 
-	case commandTypeBind:
+	case CommandTypeBind:
 		if !state.Joined || state.Left {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeParticipantNotJoined,
@@ -328,7 +328,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 
 		return command.Accept(evt)
 
-	case commandTypeUnbind:
+	case CommandTypeUnbind:
 		if !state.Joined || state.Left {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeParticipantNotJoined,
@@ -367,7 +367,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 
 		return command.Accept(evt)
 
-	case commandTypeSeatReassign, commandTypeSeatReassignLegacy:
+	case CommandTypeSeatReassign, CommandTypeSeatReassignLegacy:
 		if !state.Joined || state.Left {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeParticipantNotJoined,

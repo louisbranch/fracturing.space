@@ -2,7 +2,7 @@ package daggerheart
 
 import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 )
 
 // RegistrySystem describes Daggerheart in the game-system metadata registry.
@@ -29,8 +29,8 @@ func (r *RegistrySystem) Name() string {
 }
 
 // RegistryMetadata returns rollout and availability metadata.
-func (r *RegistrySystem) RegistryMetadata() systems.RegistryMetadata {
-	return systems.RegistryMetadata{
+func (r *RegistrySystem) RegistryMetadata() bridge.RegistryMetadata {
+	return bridge.RegistryMetadata{
 		ImplementationStage: commonv1.GameSystemImplementationStage_GAME_SYSTEM_IMPLEMENTATION_STAGE_PARTIAL,
 		OperationalStatus:   commonv1.GameSystemOperationalStatus_GAME_SYSTEM_OPERATIONAL_STATUS_OPERATIONAL,
 		AccessLevel:         commonv1.GameSystemAccessLevel_GAME_SYSTEM_ACCESS_LEVEL_BETA,
@@ -39,13 +39,13 @@ func (r *RegistrySystem) RegistryMetadata() systems.RegistryMetadata {
 }
 
 // StateFactory returns nil until SystemService metadata is backed by state APIs.
-func (r *RegistrySystem) StateFactory() systems.StateFactory {
+func (r *RegistrySystem) StateFactory() bridge.StateFactory {
 	return nil
 }
 
 // OutcomeApplier returns nil until metadata wiring includes outcome application.
-func (r *RegistrySystem) OutcomeApplier() systems.OutcomeApplier {
+func (r *RegistrySystem) OutcomeApplier() bridge.OutcomeApplier {
 	return nil
 }
 
-var _ systems.GameSystem = (*RegistrySystem)(nil)
+var _ bridge.GameSystem = (*RegistrySystem)(nil)

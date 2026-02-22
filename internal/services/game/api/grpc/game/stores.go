@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
@@ -43,7 +43,7 @@ type Stores struct {
 	Events *event.Registry
 
 	// adapters is built eagerly during Validate and cached for Applier.
-	adapters *systems.AdapterRegistry
+	adapters *bridge.AdapterRegistry
 }
 
 // Applier returns a projection Applier wired to the stores in this bundle.

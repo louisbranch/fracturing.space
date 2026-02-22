@@ -22,7 +22,7 @@ func TestDecideParticipantJoin_DefaultAvatarUsesUserIDWhenPresent(t *testing.T) 
 	for _, participantID := range []string{"p-1", "p-2", "p-3", "p-4", "p-5"} {
 		cmd := command.Command{
 			CampaignID: "camp-1",
-			Type:       commandTypeJoin,
+			Type:       CommandTypeJoin,
 			ActorType:  command.ActorTypeSystem,
 			PayloadJSON: []byte(fmt.Sprintf(
 				`{"participant_id":"%s","user_id":"user-42","name":"Alice","role":"PLAYER"}`,

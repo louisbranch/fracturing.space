@@ -53,7 +53,7 @@ use the Make targets documented in [integration tests](docs/running/integration-
 | Character definitions | `internal/services/game/domain/character/` |
 | Persistent gameplay state | `internal/services/game/domain/action/`, `internal/services/game/projection/` |
 | Session mechanics | `internal/services/game/domain/session/` |
-| Game-system-specific rules | `internal/services/game/domain/systems/{system}/` |
+| Game-system-specific rules | `internal/services/game/domain/bridge/{system}/` |
 | Generic dice mechanics | `internal/services/game/core/dice/` |
 | gRPC API endpoints | `internal/services/game/api/grpc/` |
 | MCP tools/resources | `internal/services/mcp/domain/` |
@@ -63,8 +63,8 @@ use the Make targets documented in [integration tests](docs/running/integration-
 ## Adding a New Game System
 
 1. Add enum value to `api/proto/common/v1/game_system.proto`
-2. Create `internal/services/game/domain/systems/{name}/` with domain logic
-3. Implement `systems.GameSystem` interface
+2. Create `internal/services/game/domain/bridge/{name}/` with domain logic
+3. Implement `bridge.GameSystem` interface
 4. Create protos in `api/proto/systems/{name}/v1/`
 5. Create gRPC service in `internal/services/game/api/grpc/systems/{name}/`
 6. Register MCP tools/resources in `internal/services/mcp/domain/`

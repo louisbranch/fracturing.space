@@ -14,49 +14,49 @@ func RegisterCommands(registry *command.Registry) error {
 		return errors.New("command registry is required")
 	}
 	if err := registry.Register(command.Definition{
-		Type:            commandTypeJoin,
+		Type:            CommandTypeJoin,
 		Owner:           command.OwnerCore,
 		ValidatePayload: validateJoinPayload,
 	}); err != nil {
 		return err
 	}
 	if err := registry.Register(command.Definition{
-		Type:            commandTypeUpdate,
+		Type:            CommandTypeUpdate,
 		Owner:           command.OwnerCore,
 		ValidatePayload: validateUpdatePayload,
 	}); err != nil {
 		return err
 	}
 	if err := registry.Register(command.Definition{
-		Type:            commandTypeLeave,
+		Type:            CommandTypeLeave,
 		Owner:           command.OwnerCore,
 		ValidatePayload: validateLeavePayload,
 	}); err != nil {
 		return err
 	}
 	if err := registry.Register(command.Definition{
-		Type:            commandTypeBind,
+		Type:            CommandTypeBind,
 		Owner:           command.OwnerCore,
 		ValidatePayload: validateBindPayload,
 	}); err != nil {
 		return err
 	}
 	if err := registry.Register(command.Definition{
-		Type:            commandTypeUnbind,
+		Type:            CommandTypeUnbind,
 		Owner:           command.OwnerCore,
 		ValidatePayload: validateUnbindPayload,
 	}); err != nil {
 		return err
 	}
 	if err := registry.Register(command.Definition{
-		Type:            commandTypeSeatReassignLegacy,
+		Type:            CommandTypeSeatReassignLegacy,
 		Owner:           command.OwnerCore,
 		ValidatePayload: validateSeatReassignPayload,
 	}); err != nil {
 		return err
 	}
 	if err := registry.Register(command.Definition{
-		Type:            commandTypeSeatReassign,
+		Type:            CommandTypeSeatReassign,
 		Owner:           command.OwnerCore,
 		ValidatePayload: validateSeatReassignPayload,
 	}); err != nil {
@@ -67,6 +67,32 @@ func RegisterCommands(registry *command.Registry) error {
 
 // EmittableEventTypes returns all event types the participant decider can emit.
 func EmittableEventTypes() []event.Type {
+	return []event.Type{
+		EventTypeJoined,
+		EventTypeUpdated,
+		EventTypeLeft,
+		EventTypeBound,
+		EventTypeUnbound,
+		EventTypeSeatReassigned,
+	}
+}
+
+// DeciderHandledCommands returns all command types the participant decider handles.
+func DeciderHandledCommands() []command.Type {
+	return []command.Type{
+		CommandTypeJoin,
+		CommandTypeUpdate,
+		CommandTypeLeave,
+		CommandTypeBind,
+		CommandTypeUnbind,
+		CommandTypeSeatReassign,
+		CommandTypeSeatReassignLegacy,
+	}
+}
+
+// ProjectionHandledTypes returns the participant event types that require
+// projection handlers (IntentProjectionAndReplay).
+func ProjectionHandledTypes() []event.Type {
 	return []event.Type{
 		EventTypeJoined,
 		EventTypeUpdated,

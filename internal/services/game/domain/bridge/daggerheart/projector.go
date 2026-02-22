@@ -21,11 +21,11 @@ func NewFolder() *Folder {
 }
 
 // FoldHandledTypes returns the event types this folder's Fold handles.
-// Derived from daggerheartEventDefinitions so the list stays in sync with the
-// authoritative registration slice. Used by ValidateSystemFoldCoverage to
-// verify every emittable event type has a fold handler.
+// Delegates to the router so the list reflects actual HandleFold registrations
+// rather than event definitions. If a developer adds an event definition but
+// forgets HandleFold, startup validation catches it immediately.
 func (f *Folder) FoldHandledTypes() []event.Type {
-	return eventTypesWithReplayIntent()
+	return f.router.FoldHandledTypes()
 }
 
 // Fold folds a Daggerheart event into system state. It delegates to the

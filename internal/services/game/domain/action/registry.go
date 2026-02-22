@@ -20,10 +20,10 @@ func RegisterCommands(registry *command.Registry) error {
 		return errors.New("command registry is required")
 	}
 	definitions := []command.Definition{
-		{Type: commandTypeRollResolve, Owner: command.OwnerCore, ValidatePayload: validateRollResolvePayload},
-		{Type: commandTypeOutcomeApply, Owner: command.OwnerCore, ValidatePayload: validateOutcomeApplyPayload},
-		{Type: commandTypeOutcomeReject, Owner: command.OwnerCore, ValidatePayload: validateOutcomeRejectPayload},
-		{Type: commandTypeNoteAdd, Owner: command.OwnerCore, ValidatePayload: validateNoteAddPayload},
+		{Type: CommandTypeRollResolve, Owner: command.OwnerCore, ValidatePayload: validateRollResolvePayload},
+		{Type: CommandTypeOutcomeApply, Owner: command.OwnerCore, ValidatePayload: validateOutcomeApplyPayload},
+		{Type: CommandTypeOutcomeReject, Owner: command.OwnerCore, ValidatePayload: validateOutcomeRejectPayload},
+		{Type: CommandTypeNoteAdd, Owner: command.OwnerCore, ValidatePayload: validateNoteAddPayload},
 	}
 	for _, definition := range definitions {
 		if err := registry.Register(definition); err != nil {
@@ -41,6 +41,22 @@ func EmittableEventTypes() []event.Type {
 		EventTypeOutcomeRejected,
 		EventTypeNoteAdded,
 	}
+}
+
+// DeciderHandledCommands returns all command types the action decider handles.
+func DeciderHandledCommands() []command.Type {
+	return []command.Type{
+		CommandTypeRollResolve,
+		CommandTypeOutcomeApply,
+		CommandTypeOutcomeReject,
+		CommandTypeNoteAdd,
+	}
+}
+
+// ProjectionHandledTypes returns action event types that require projection
+// handlers. Action events are replay-only or audit-only, so this returns nil.
+func ProjectionHandledTypes() []event.Type {
+	return nil
 }
 
 // RegisterEvents registers action events with the shared registry.

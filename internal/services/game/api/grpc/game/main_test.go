@@ -4,8 +4,8 @@ import (
 	"os"
 	"testing"
 
+	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
-	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/manifest"
 )
 
 func TestMain(m *testing.M) {

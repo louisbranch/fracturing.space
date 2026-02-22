@@ -10,10 +10,10 @@ import (
 )
 
 const (
-	commandTypeRollResolve   command.Type = "action.roll.resolve"
-	commandTypeOutcomeApply  command.Type = "action.outcome.apply"
-	commandTypeOutcomeReject command.Type = "action.outcome.reject"
-	commandTypeNoteAdd       command.Type = "story.note.add"
+	CommandTypeRollResolve   command.Type = "action.roll.resolve"
+	CommandTypeOutcomeApply  command.Type = "action.outcome.apply"
+	CommandTypeOutcomeReject command.Type = "action.outcome.reject"
+	CommandTypeNoteAdd       command.Type = "story.note.add"
 
 	EventTypeRollResolved    event.Type = "action.roll_resolved"
 	EventTypeOutcomeApplied  event.Type = "action.outcome_applied"
@@ -38,7 +38,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 	}
 
 	switch cmd.Type {
-	case commandTypeRollResolve:
+	case CommandTypeRollResolve:
 		var payload RollResolvePayload
 		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
 		requestID := strings.TrimSpace(payload.RequestID)
@@ -55,7 +55,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			})
 		}
 		return acceptActionEvent(cmd, now, EventTypeRollResolved, "roll", requestID, payload)
-	case commandTypeOutcomeApply:
+	case CommandTypeOutcomeApply:
 		var payload OutcomeApplyPayload
 		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
 		requestID := strings.TrimSpace(payload.RequestID)
@@ -104,7 +104,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			events = append(events, buildOutcomeEffectEvent(cmd, now, effect))
 		}
 		return command.Accept(events...)
-	case commandTypeOutcomeReject:
+	case CommandTypeOutcomeReject:
 		var payload OutcomeRejectPayload
 		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
 		requestID := strings.TrimSpace(payload.RequestID)
@@ -121,7 +121,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			})
 		}
 		return acceptActionEvent(cmd, now, EventTypeOutcomeRejected, "outcome", requestID, payload)
-	case commandTypeNoteAdd:
+	case CommandTypeNoteAdd:
 		var payload NoteAddPayload
 		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
 		return acceptActionEvent(cmd, now, EventTypeNoteAdded, "note", cmd.EntityID, payload)

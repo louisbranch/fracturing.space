@@ -12,13 +12,13 @@ import (
 )
 
 const (
-	commandTypeStart          command.Type = "session.start"
-	commandTypeEnd            command.Type = "session.end"
-	commandTypeGateOpen       command.Type = "session.gate_open"
-	commandTypeGateResolve    command.Type = "session.gate_resolve"
-	commandTypeGateAbandon    command.Type = "session.gate_abandon"
-	commandTypeSpotlightSet   command.Type = "session.spotlight_set"
-	commandTypeSpotlightClear command.Type = "session.spotlight_clear"
+	CommandTypeStart          command.Type = "session.start"
+	CommandTypeEnd            command.Type = "session.end"
+	CommandTypeGateOpen       command.Type = "session.gate_open"
+	CommandTypeGateResolve    command.Type = "session.gate_resolve"
+	CommandTypeGateAbandon    command.Type = "session.gate_abandon"
+	CommandTypeSpotlightSet   command.Type = "session.spotlight_set"
+	CommandTypeSpotlightClear command.Type = "session.spotlight_clear"
 	EventTypeStarted          event.Type   = "session.started"
 	EventTypeEnded            event.Type   = "session.ended"
 	EventTypeGateOpened       event.Type   = "session.gate_opened"
@@ -42,7 +42,7 @@ const (
 // imperative side effects.
 func Decide(state State, cmd command.Command, now func() time.Time) command.Decision {
 	switch cmd.Type {
-	case commandTypeStart:
+	case CommandTypeStart:
 		if state.Started {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeSessionAlreadyStarted,
@@ -72,7 +72,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 
 		return command.Accept(evt)
 
-	case commandTypeEnd:
+	case CommandTypeEnd:
 		if !state.Started {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeSessionNotStarted,
@@ -101,7 +101,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 
 		return command.Accept(evt)
 
-	case commandTypeGateOpen:
+	case CommandTypeGateOpen:
 		var payload GateOpenedPayload
 		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
 			return command.Reject(command.Rejection{Code: "PAYLOAD_DECODE_FAILED", Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err)})
@@ -131,7 +131,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 
 		return command.Accept(evt)
 
-	case commandTypeGateResolve:
+	case CommandTypeGateResolve:
 		return module.DecideFunc(
 			cmd,
 			EventTypeGateResolved,
@@ -153,7 +153,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			now,
 		)
 
-	case commandTypeGateAbandon:
+	case CommandTypeGateAbandon:
 		return module.DecideFunc(
 			cmd,
 			EventTypeGateAbandoned,
@@ -175,7 +175,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			now,
 		)
 
-	case commandTypeSpotlightSet:
+	case CommandTypeSpotlightSet:
 		var payload SpotlightSetPayload
 		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
 			return command.Reject(command.Rejection{Code: "PAYLOAD_DECODE_FAILED", Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err)})
@@ -198,7 +198,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 
 		return command.Accept(evt)
 
-	case commandTypeSpotlightClear:
+	case CommandTypeSpotlightClear:
 		return module.DecideFunc(
 			cmd,
 			EventTypeSpotlightCleared,
