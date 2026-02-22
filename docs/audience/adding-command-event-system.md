@@ -49,3 +49,9 @@ Use this sequence for first-time contributions to avoid routing or registry regr
 - `make integration`
 - `make event-catalog-check`
 - `make docs-path-check`
+
+## Next docs
+
+- Conceptual write-path rules: [../project/event-driven-system.md](../project/event-driven-system.md)
+- System extension architecture: [../project/game-systems.md](../project/game-systems.md)
+- Generated command/event contracts: [../events/index.md](../events/index.md)

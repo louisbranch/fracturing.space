@@ -11,9 +11,11 @@ It defines `auth` ownership, not social/discovery ownership.
 
 ## Identity Model
 
-- **User**: Core identity record. A user is defined by an email.
+- **User**: Core identity record keyed by user ID. In the current auth flow,
+  creating and persisting a user requires a primary email.
 - **User locale**: Private account preference stored on the user record.
-- **Email**: Canonical identity value used across auth, admin, and game surfaces.
+- **Email**: Required primary contact and recovery identifier for user records in
+  this release.
 - **Additional emails**: Planned as a future extension, but out of scope for this change.
 - **Passkey**: Primary authentication credential. Users can register multiple passkeys.
 
@@ -57,7 +59,8 @@ Applied examples:
 
 ## Notes
 
-- Email is the canonical identity during this release.
+- User identity is canonical; a primary email is currently required at user
+  creation and remains the primary recovery/contact channel in this release.
 - Additional email support is planned but out of scope.
 - For connections-specific ownership and execution milestones, see
   [Connections Execution Spec](connections-execution-spec.md).

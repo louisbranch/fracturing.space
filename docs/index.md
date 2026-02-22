@@ -9,29 +9,34 @@ Fracturing.Space is a server-authoritative, event-sourced engine for tabletop RP
 
 ## Start here
 
-- [Quickstart (Docker)](running/quickstart.md)
-- [Local development (Go)](running/local-dev.md)
-- [Configuration reference](running/configuration.md)
+Choose the path that matches your immediate goal:
 
-Not sure where to start? Use the [audience guides](audience/index.md).
+- I want to contribute code/docs: [Contributors](audience/contributors.md)
+- I want to run the stack quickly: [Quickstart (Docker)](running/quickstart.md)
+- I want local Go development: [Local development (Go)](running/local-dev.md)
+- I want MCP/client integration details: [Clients and tooling](audience/clients.md)
+- I am designing/extending systems: [System designers](audience/system-designers.md)
 
-## By audience
+## New contributor quick path
 
-### Audience guides
+1. Run one setup path: [quickstart](running/quickstart.md) or [local development](running/local-dev.md).
+2. Follow [contributor onboarding](audience/contributors.md).
+3. Pick a first target from [contributor map](audience/contributor-map.md).
+4. Run checks from [CONTRIBUTING.md](../CONTRIBUTING.md).
 
-- [Contributors](audience/contributors.md)
-- [Operators](audience/operators.md)
-- [Clients and tooling](audience/clients.md)
-- [System designers](audience/system-designers.md)
+## Documentation classes
 
-### Deep dives
+- Canonical: required for current contributor workflows and runtime behavior.
+- Roadmap: active future-facing design/specification work.
+- Historical: completed implementation notes kept only when they still add decision value.
+
+Gateway pages prioritize Canonical docs. For Roadmap pages, start from the subsystem entrypoint in [project index](project/index.md).
+
+## Canonical deep dives (open only when needed)
 
 - [Project overview](project/overview.md)
 - [Architecture](project/architecture.md)
 - [Domain language](project/domain-language.md)
-- [User connections roadmap](project/connections-roadmap.md)
-- [Connections execution spec](project/connections-execution-spec.md)
-- [AI provider access](project/ai-provider-access.md)
-- [AI campaign assignment (phase 4)](project/ai-campaign-assignment-phase4.md)
-- [Event replay and snapshots](project/event-replay.md)
+- [Event-driven system](project/event-driven-system.md)
+- [Game systems architecture](project/game-systems.md)
 - [Testing policy](project/testing-coverage.md)

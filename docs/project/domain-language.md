@@ -13,11 +13,14 @@ here drives how we name packages, APIs, and documentation.
 
 ### Identity
 
-- **User**: Core identity record, independent of any email address.
-- **Email**: Optional contact record linked to a user, supporting multiple or zero emails.
+- **User**: Core identity record keyed by user ID.
+- **Email**: Primary contact/recovery record linked to a user. In the current
+  auth implementation, user creation requires one primary email.
 - **Passkey**: Primary authentication credential; users may register multiple passkeys.
 - **Magic link**: Single-use recovery token issued to an email address.
 - **Contact**: Owner-scoped quick-access link from one user to another for invite and discovery UX. Contacts are identity metadata, not campaign events.
+
+Auth flow and recovery boundaries are documented in [Identity and Recovery](identity.md).
 
 ### Campaign (Repository)
 

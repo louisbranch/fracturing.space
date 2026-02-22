@@ -8,9 +8,17 @@ nav_order: 4
 
 For adding or extending a game system and mechanics.
 
-Start here:
+## First action
 
-- [Systems checklist (design scope)](../project/systems.md)
-- [Game systems architecture](../project/game-systems.md)
+- Design checklist: [Systems checklist](../project/systems.md)
+- Implementation architecture: [Game systems architecture](../project/game-systems.md)
+- Write-path semantics: [Event-driven system](../project/event-driven-system.md)
+
+## Adjacent references
+
 - [Event replay and snapshots](../project/event-replay.md)
 - [Domain language](../project/domain-language.md)
+
+## Next step
+
+Map your change to concrete files/tests with [Contributor map](contributor-map.md) before implementation.

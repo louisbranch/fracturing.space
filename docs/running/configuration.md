@@ -6,8 +6,11 @@ nav_order: 5
 
 # Configuration
 
-This is the full environment variable reference. For setup steps, see
-[quickstart](quickstart.md) or [local development](local-dev.md).
+This is the canonical runtime configuration reference for contributor and
+operator workflows. Other docs should link here instead of restating defaults.
+
+For setup steps, see [quickstart](quickstart.md) or
+[local development](local-dev.md).
 
 ## Environment variables
 
@@ -35,8 +38,21 @@ This is the full environment variable reference. For setup steps, see
 - `FRACTURING_SPACE_OAUTH_LOGIN_REDIRECTS`: comma-separated list of allowed login redirect URLs.
 - `FRACTURING_SPACE_OAUTH_CLIENTS`: JSON array of registered OAuth clients.
 - `FRACTURING_SPACE_OAUTH_RESOURCE_SECRET`: shared secret for resource introspection.
+- `FRACTURING_SPACE_OAUTH_TOKEN_TTL`: OAuth access-token TTL. Default: `1h`.
+- `FRACTURING_SPACE_OAUTH_CODE_TTL`: OAuth authorization-code TTL. Default: `10m`.
+- `FRACTURING_SPACE_OAUTH_PENDING_TTL`: pending authorization TTL for browser login handoff. Default: `15m`.
 - `FRACTURING_SPACE_OAUTH_FIRST_PARTY_CLIENT_ID`: client ID for the first-party web login client. When set (along with redirect URI), registers a trusted OAuth client that skips the consent screen. Default: unset.
 - `FRACTURING_SPACE_OAUTH_FIRST_PARTY_REDIRECT_URI`: redirect URI for the first-party web login client. Required together with the client ID.
+- `FRACTURING_SPACE_OAUTH_GOOGLE_CLIENT_ID`: Google OAuth client ID.
+- `FRACTURING_SPACE_OAUTH_GOOGLE_CLIENT_SECRET`: Google OAuth client secret.
+- `FRACTURING_SPACE_OAUTH_GOOGLE_REDIRECT_URI`: Google OAuth redirect URI.
+- `FRACTURING_SPACE_OAUTH_GOOGLE_SCOPES`: comma-separated Google scopes. Default when provider is configured but unset: `openid,email,profile`.
+- `FRACTURING_SPACE_OAUTH_GITHUB_CLIENT_ID`: GitHub OAuth client ID.
+- `FRACTURING_SPACE_OAUTH_GITHUB_CLIENT_SECRET`: GitHub OAuth client secret.
+- `FRACTURING_SPACE_OAUTH_GITHUB_REDIRECT_URI`: GitHub OAuth redirect URI.
+- `FRACTURING_SPACE_OAUTH_GITHUB_SCOPES`: comma-separated GitHub scopes. Default when provider is configured but unset: `read:user,user:email`.
+- `FRACTURING_SPACE_MAGIC_LINK_BASE_URL`: magic-link base URL. Default: `http://localhost:8086/magic`.
+- `FRACTURING_SPACE_MAGIC_LINK_TTL`: magic-link TTL. Default: `15m`.
 
 ### AI
 
@@ -70,8 +86,11 @@ This is the full environment variable reference. For setup steps, see
 
 - `FRACTURING_SPACE_WEBAUTHN_RP_ID`: WebAuthn relying party ID (the domain the user sees). Default: `localhost`.
 - `FRACTURING_SPACE_WEBAUTHN_RP_DISPLAY_NAME`: display name shown during passkey prompts. Defaults to the app name.
-- `FRACTURING_SPACE_WEBAUTHN_RP_ORIGINS`: comma-separated list of allowed WebAuthn origins. Default: `http://localhost:8080`.
+- `FRACTURING_SPACE_WEBAUTHN_RP_ORIGINS`: comma-separated list of allowed WebAuthn origins. Runtime default: `http://localhost:8086`.
 - `FRACTURING_SPACE_WEBAUTHN_SESSION_TTL`: passkey session TTL. Default: `5m`.
+
+For web-login-first local flows, many contributors set
+`FRACTURING_SPACE_WEBAUTHN_RP_ORIGINS=http://localhost:8080` in `.env`.
 
 ### Join grants
 

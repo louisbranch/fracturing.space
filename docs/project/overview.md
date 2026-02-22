@@ -6,24 +6,21 @@ nav_order: 1
 
 # Project Overview
 
+Canonical orientation page for the current system model.
+
 ## Read this first
 
-- Event model and write flow: [Event-driven system](event-driven-system.md)
-- Replay and recovery: [Event replay](event-replay.md)
-- System extension model: [Game systems](game-systems.md)
-- Cross-service background orchestration: [Worker Service Topology](worker-service-topology.md)
-- Authorization model and permission matrix: [Campaign Authorization Model](campaign-authorization-model.md)
-- Authorization audit and telemetry contract: [Campaign Authorization Audit and Telemetry](campaign-authorization-audit.md)
-- Phased user discovery/contact boundary plan: [User Connections Roadmap](connections-roadmap.md)
+1. [Architecture](architecture.md)
+2. [Domain language](domain-language.md)
+3. [Event-driven system](event-driven-system.md)
 
-## New mechanic onboarding path
+## If you are changing X, read Y
 
-Use this sequence when adding or reviewing mechanics:
-
-1. System author contract and write-path rules: [Game systems](game-systems.md)
-2. Daggerheart mechanic-to-event mapping baseline: [Daggerheart Event Timeline Contract](daggerheart-event-timeline-contract.md)
-3. Open scenario/mechanics gaps that need mapping before implementation: [Scenario Missing Mechanics](scenario-missing-mechanics.md)
-4. Event payload authority and mutation semantics: [Event payload change policy](event-payload-change-policy.md)
+- Replay/snapshots/recovery behavior: [Event replay](event-replay.md)
+- Game-system extension mechanics: [Game systems](game-systems.md)
+- Worker orchestration behavior: [Worker Service Topology](worker-service-topology.md)
+- Authorization semantics: [Campaign Authorization Model](campaign-authorization-model.md)
+- Connections roadmap work: [User Connections Roadmap](connections-roadmap.md)
 
 ## What it is
 

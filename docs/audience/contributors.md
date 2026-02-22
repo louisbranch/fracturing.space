@@ -6,19 +6,32 @@ nav_order: 1
 
 # Contributors
 
-For developers adding features, fixing bugs, or improving docs.
+Canonical onboarding path for developers adding features, fixing bugs, or improving docs.
 
-Start here:
+## Start here
 
 - [Quickstart (Docker)](../running/quickstart.md)
 - [Local development (Go)](../running/local-dev.md)
-- [Seeding demo data](../running/seeding.md)
-- [Integration tests](../running/integration-tests.md)
-- Contributing guide: `../../CONTRIBUTING.md`
+- [Contributing guide](../../CONTRIBUTING.md)
+- [Documentation quality checks](../guides/docs-quality-checks.md)
 
-When you need context:
+## First contribution path
+
+1. Choose one runtime path (Docker or local Go).
+2. Verify baseline checks:
+   - `make test`
+   - `make integration`
+3. Pick an edit target from [Contributor map](contributor-map.md).
+4. Run area-specific tests plus docs checks before opening a PR.
+
+## Common workflows
+
+- [Integration tests](../running/integration-tests.md)
+- [Seeding demo data](../running/seeding.md)
+- [Contributor map (where to edit for X)](contributor-map.md)
+
+## Architecture context (only when needed)
 
 - [Project overview](../project/overview.md)
 - [Architecture](../project/architecture.md)
 - [Domain language](../project/domain-language.md)
-- [Contributor map (where to edit for X)](contributor-map.md)

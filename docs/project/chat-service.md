@@ -6,6 +6,15 @@ nav_order: 12
 
 # Chat Service Specification
 
+As of 2026-02-22, this page is an active roadmap/spec artifact and should be
+opened only for chat subsystem work.
+
+Canonical runtime context for this spec:
+
+- [Architecture](architecture.md)
+- [Event-driven system](event-driven-system.md)
+- [Domain language](domain-language.md)
+
 ## Purpose
 
 Define the chat subsystem architecture before implementation so the team can

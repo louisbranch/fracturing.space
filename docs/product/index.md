@@ -6,7 +6,9 @@ has_children: true
 
 # Product
 
-Product requirements and implementation tracking.
+Product requirements and active product-scoped specs.
 
 - Daggerheart PRD: [daggerheart-PRD.md](daggerheart-PRD.md)
-- Daggerheart progress implementation: [daggerheart-progress-implementation.md](daggerheart-progress-implementation.md)
+
+Historical implementation notes are retained under `docs/notes/` and are not
+promoted on onboarding indexes.
