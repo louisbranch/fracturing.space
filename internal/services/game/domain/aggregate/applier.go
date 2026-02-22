@@ -65,16 +65,14 @@ func (a *Folder) FoldDispatchedTypes() []event.Type {
 // transitions remain visible in one place per subdomain and replay behavior matches
 // request-time behavior.
 func (a *Folder) Fold(state any, evt event.Event) (any, error) {
-	// Skip audit-only events: they do not affect aggregate state and should
-	// not be passed to fold functions.
-	if a.Events != nil {
-		if def, ok := a.Events.Definition(evt.Type); ok && def.Intent == event.IntentAuditOnly {
-			current, err := AssertState[State](state)
-			if err != nil {
-				return State{}, err
-			}
-			return current, nil
+	// Skip events that should not be folded into aggregate state (e.g.
+	// audit-only events). ShouldFold centralizes the intent contract.
+	if a.Events != nil && !a.Events.ShouldFold(evt.Type) {
+		current, err := AssertState[State](state)
+		if err != nil {
+			return State{}, err
 		}
+		return current, nil
 	}
 
 	a.initFoldIndex()

@@ -467,3 +467,114 @@ func TestRegistryRegisterAlias_RejectsDuplicateAlias(t *testing.T) {
 		t.Fatal("expected error for duplicate alias")
 	}
 }
+
+func TestRegistryMissingPayloadValidators_ReportsNonAuditWithoutValidator(t *testing.T) {
+	registry := NewRegistry()
+	// Non-audit event without validator — should be reported.
+	if err := registry.Register(Definition{
+		Type:  "ev.no_validator",
+		Owner: OwnerCore,
+	}); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+	// Audit event without validator — should NOT be reported.
+	if err := registry.Register(Definition{
+		Type:   "ev.audit",
+		Owner:  OwnerCore,
+		Intent: IntentAuditOnly,
+	}); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+	// Non-audit event WITH validator — should NOT be reported.
+	if err := registry.Register(Definition{
+		Type:            "ev.has_validator",
+		Owner:           OwnerCore,
+		ValidatePayload: func(json.RawMessage) error { return nil },
+	}); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	missing := registry.MissingPayloadValidators()
+	if len(missing) != 1 {
+		t.Fatalf("MissingPayloadValidators() returned %d types, want 1: %v", len(missing), missing)
+	}
+	if missing[0] != "ev.no_validator" {
+		t.Fatalf("missing[0] = %s, want ev.no_validator", missing[0])
+	}
+}
+
+func TestRegistryMissingPayloadValidators_EmptyForFullCoverage(t *testing.T) {
+	registry := NewRegistry()
+	if err := registry.Register(Definition{
+		Type:            "ev.validated",
+		Owner:           OwnerCore,
+		ValidatePayload: func(json.RawMessage) error { return nil },
+	}); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	missing := registry.MissingPayloadValidators()
+	if len(missing) != 0 {
+		t.Fatalf("MissingPayloadValidators() returned %d types, want 0", len(missing))
+	}
+}
+
+func TestRegistryShouldFold(t *testing.T) {
+	registry := NewRegistry()
+	for _, def := range []Definition{
+		{Type: "ev.projected", Owner: OwnerCore, Intent: IntentProjectionAndReplay},
+		{Type: "ev.replay", Owner: OwnerCore, Intent: IntentReplayOnly},
+		{Type: "ev.audit", Owner: OwnerCore, Intent: IntentAuditOnly},
+	} {
+		if err := registry.Register(def); err != nil {
+			t.Fatalf("register %s: %v", def.Type, err)
+		}
+	}
+
+	tests := []struct {
+		eventType Type
+		want      bool
+	}{
+		{"ev.projected", true},
+		{"ev.replay", true},
+		{"ev.audit", false},
+		{"ev.unknown", true}, // unknown types default to foldable
+	}
+	for _, tt := range tests {
+		t.Run(string(tt.eventType), func(t *testing.T) {
+			if got := registry.ShouldFold(tt.eventType); got != tt.want {
+				t.Fatalf("ShouldFold(%s) = %v, want %v", tt.eventType, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestRegistryShouldProject(t *testing.T) {
+	registry := NewRegistry()
+	for _, def := range []Definition{
+		{Type: "ev.projected", Owner: OwnerCore, Intent: IntentProjectionAndReplay},
+		{Type: "ev.replay", Owner: OwnerCore, Intent: IntentReplayOnly},
+		{Type: "ev.audit", Owner: OwnerCore, Intent: IntentAuditOnly},
+	} {
+		if err := registry.Register(def); err != nil {
+			t.Fatalf("register %s: %v", def.Type, err)
+		}
+	}
+
+	tests := []struct {
+		eventType Type
+		want      bool
+	}{
+		{"ev.projected", true},
+		{"ev.replay", false},
+		{"ev.audit", false},
+		{"ev.unknown", true}, // unknown types default to projectable
+	}
+	for _, tt := range tests {
+		t.Run(string(tt.eventType), func(t *testing.T) {
+			if got := registry.ShouldProject(tt.eventType); got != tt.want {
+				t.Fatalf("ShouldProject(%s) = %v, want %v", tt.eventType, got, tt.want)
+			}
+		})
+	}
+}

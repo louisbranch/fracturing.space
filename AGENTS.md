@@ -4,7 +4,7 @@ Single source of agent directives and project context.
 
 ## Preflight
 
-- At the start of a session, verify you are not on `main` with `git branch --show-current`; if you are on `main`, stop, and ask for instructions.
+- At the start of a session, verify you are not on `main` with `git branch --show-current`; if you are on `main`, stop, and ask for instructions. Do not create new branches.
 
 ## ExecPlans
 

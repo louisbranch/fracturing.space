@@ -32,7 +32,7 @@ func ReplaySnapshot(ctx context.Context, eventStore storage.EventStore, applier 
 	return ReplayCampaignWith(ctx, eventStore, applier, campaignID, ReplayOptions{
 		UntilSeq: untilSeq,
 		Filter: func(evt event.Event) bool {
-			return strings.TrimSpace(evt.SystemID) != ""
+			return evt.SystemID != ""
 		},
 	})
 }
@@ -59,8 +59,18 @@ func ReplayCampaignWith(ctx context.Context, eventStore storage.EventStore, appl
 			return lastSeq, nil
 		}
 		for _, evt := range events {
+			if err := ctx.Err(); err != nil {
+				return lastSeq, err
+			}
 			if options.UntilSeq > 0 && evt.Seq > options.UntilSeq {
 				return lastSeq, nil
+			}
+			// Detect journal gaps: projection replay must see every event
+			// in order. A missing sequence indicates storage corruption or
+			// a non-contiguous ListEvents result.
+			expectedSeq := lastSeq + 1
+			if evt.Seq != expectedSeq {
+				return lastSeq, fmt.Errorf("projection replay sequence gap: expected %d got %d", expectedSeq, evt.Seq)
 			}
 			lastSeq = evt.Seq
 			if options.Filter != nil && !options.Filter(evt) {
