@@ -7,6 +7,7 @@ PROTO_FILES := \
 	$(wildcard $(PROTO_DIR)/auth/v1/*.proto) \
 	$(wildcard $(PROTO_DIR)/ai/v1/*.proto) \
 	$(wildcard $(PROTO_DIR)/game/v1/*.proto) \
+	$(wildcard $(PROTO_DIR)/notifications/v1/*.proto) \
 	$(wildcard $(PROTO_DIR)/systems/daggerheart/v1/*.proto)
 
 .PHONY: all proto clean up down cover cover-treemap test test-unit test-changed integration scenario scenario-missing-doc-check templ-generate event-catalog-check docs-path-check fmt fmt-check catalog-importer bootstrap bootstrap-prod setup-hooks

@@ -17,15 +17,16 @@ const defaultOTelShutdownTimeout = 5 * time.Second
 
 // Service identifiers for command startup telemetry and CLI naming consistency.
 const (
-	ServiceAdmin    = "admin"
-	ServiceAI       = "ai"
-	ServiceAuth     = "auth"
-	ServiceChat     = "chat"
-	ServiceGame     = "game"
-	ServiceMCP      = "mcp"
-	ServiceScenario = "scenario"
-	ServiceSeed     = "seed"
-	ServiceWeb      = "web"
+	ServiceAdmin         = "admin"
+	ServiceAI            = "ai"
+	ServiceAuth          = "auth"
+	ServiceChat          = "chat"
+	ServiceGame          = "game"
+	ServiceMCP           = "mcp"
+	ServiceNotifications = "notifications"
+	ServiceScenario      = "scenario"
+	ServiceSeed          = "seed"
+	ServiceWeb           = "web"
 )
 
 // RunOptions controls shared entrypoint behavior for service commands.
