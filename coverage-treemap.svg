@@ -20,14 +20,14 @@
 
 
 <g>
-	<rect x="843.317509" y="520.041945" width="94.228054" height="91.958055" style="fill: rgb(77, 175, 91);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
+	<rect x="843.317509" y="520.041945" width="94.228054" height="91.958055" style="fill: rgb(78, 175, 91);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
 	
 <text 
 	data-notex="1" 
 	text-anchor="start"
 	transform="translate(851.317509,535.641945) scale(0.582054)"
 	style="font-family: Open Sans, verdana, arial, sans-serif !important; font-size: 12px; fill: rgb(0, 0, 0); fill-opacity: 1.00; white-space: pre;" 
-	data-math="N">platform 83.9%</text>
+	data-math="N">platform 83.8%</text>
 		
 </g>
 
@@ -91,7 +91,7 @@
 
 
 <g>
-	<rect x="889.024953" y="541.641945" width="40.520609" height="16.725831" style="fill: rgb(4, 115, 61);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
+	<rect x="889.024953" y="541.641945" width="40.520609" height="16.725831" style="fill: rgb(6, 119, 63);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
 	
 </g>
 
@@ -637,7 +637,7 @@
 
 
 <g>
-	<rect x="268.991873" y="328.854519" width="205.787906" height="170.319327" style="fill: rgb(77, 175, 91);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
+	<rect x="268.991873" y="328.854519" width="205.787906" height="170.319327" style="fill: rgb(76, 175, 91);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
 	
 <text 
 	data-notex="1" 
@@ -2389,14 +2389,14 @@
 
 
 <g>
-	<rect x="284.991873" y="372.054519" width="87.113870" height="53.467563" style="fill: rgb(97, 187, 97);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
+	<rect x="284.991873" y="372.054519" width="87.113870" height="53.467563" style="fill: rgb(97, 186, 97);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
 	
 <text 
 	data-notex="1" 
 	text-anchor="start"
 	transform="translate(292.991873,387.654519) scale(0.352747)"
 	style="font-family: Open Sans, verdana, arial, sans-serif !important; font-size: 12px; fill: rgb(0, 0, 0); fill-opacity: 1.00; white-space: pre;" 
-	data-math="N">store_events.go 80.7%</text>
+	data-math="N">store_events.go 80.8%</text>
 		
 </g>
 
