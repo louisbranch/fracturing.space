@@ -6,6 +6,7 @@ x-fracturing-space-discovery:
   auth_grpc_addr: auth:8083
   auth_http_addr: auth:8084
   chat_http_addr: chat:8086
+  connections_grpc_addr: connections:8090
   game_grpc_addr: game:8082
   jaeger_http_addr: jaeger:16686
   mcp_http_addr: mcp:8085

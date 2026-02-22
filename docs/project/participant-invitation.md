@@ -13,7 +13,7 @@ This document describes the current invitation flow and data records for campaig
 - Participants are campaign-scoped seats; seats may be unclaimed.
 - Invites are seat-targeted and reference a participant seat.
 - Invites may optionally target a specific user via recipient_user_id.
-- Contacts (friendship shortcuts) are auth-owned identity metadata used for recipient discovery; they do not change invite authority or claim semantics.
+- Contacts (friendship shortcuts) are connections-owned identity metadata used for recipient discovery; they do not change invite authority or claim semantics.
 - Join grants are signed tokens issued by the auth service to authorize a specific user to claim a specific invite.
 - Game service owns invites, seats, and enforcement; auth service owns identity and join grant issuance.
 

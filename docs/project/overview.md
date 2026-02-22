@@ -14,6 +14,7 @@ nav_order: 1
 - Cross-service background orchestration: [Worker Service Topology](worker-service-topology.md)
 - Authorization model and permission matrix: [Campaign Authorization Model](campaign-authorization-model.md)
 - Authorization audit and telemetry contract: [Campaign Authorization Audit and Telemetry](campaign-authorization-audit.md)
+- Phased user discovery/contact boundary plan: [User Connections Roadmap](connections-roadmap.md)
 
 ## New mechanic onboarding path
 

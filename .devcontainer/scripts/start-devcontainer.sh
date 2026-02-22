@@ -35,6 +35,7 @@ wait_for_services_ready() {
   local services=(
     "game"
     "auth"
+    "connections"
     "ai"
     "notifications"
     "mcp"
@@ -47,6 +48,7 @@ wait_for_services_ready() {
   local markers=(
     "game server listening at"
     "auth server listening at"
+    "connections server listening at"
     "ai server listening at"
     "notifications server listening at"
     "Starting MCP HTTP server"

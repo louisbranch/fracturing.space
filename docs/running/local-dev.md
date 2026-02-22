@@ -29,8 +29,8 @@ watch-based runtime automatically after attach.
 - The watcher script initializes `.env` from `.env.local.example` when missing.
 - The watcher script also generates join-grant keys when they are missing.
 
-The default watcher set starts `game`, `auth`, `ai`, `notifications`, `worker`,
-`mcp`, `admin`, `chat`, and `web`.
+The default watcher set starts `game`, `auth`, `connections`, `ai`,
+`notifications`, `worker`, `mcp`, `admin`, `chat`, and `web`.
 
 No manual multi-process `go run` orchestration or repeated `docker compose up` is needed for day-to-day edits.
 Each restart still compiles, but only through Go build cache and only when files change.
@@ -58,6 +58,7 @@ Watcher logs:
 
 - `.tmp/dev/game.log`
 - `.tmp/dev/auth.log`
+- `.tmp/dev/connections.log`
 - `.tmp/dev/mcp.log`
 - `.tmp/dev/admin.log`
 - `.tmp/dev/chat.log`
@@ -78,6 +79,7 @@ make down
 ```sh
 go run ./cmd/game
 go run ./cmd/auth
+go run ./cmd/connections
 go run ./cmd/notifications
 go run ./cmd/worker
 go run ./cmd/mcp
@@ -107,6 +109,7 @@ AES key (16/24/32 bytes) before startup.
 - Game gRPC: `localhost:8082`
 - Auth gRPC: `localhost:8083`
 - Auth HTTP: `http://localhost:8084`
+- Connections gRPC: `localhost:8090`
 - MCP HTTP: `http://localhost:8085/mcp/health`
 - Admin: `http://localhost:8081`
 - Chat: `http://localhost:8086`

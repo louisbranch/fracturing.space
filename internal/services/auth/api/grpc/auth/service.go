@@ -23,8 +23,6 @@ import (
 const (
 	defaultListUsersPageSize = 10
 	maxListUsersPageSize     = 50
-	defaultListContactsSize  = 10
-	maxListContactsSize      = 50
 )
 
 // AuthService implements the auth.v1.AuthService gRPC API.
@@ -34,7 +32,6 @@ const (
 type AuthService struct {
 	authv1.UnimplementedAuthServiceServer
 	store              storage.UserStore
-	contactStore       storage.ContactStore
 	passkeyStore       storage.PasskeyStore
 	emailStore         storage.EmailStore
 	magicLinkStore     storage.MagicLinkStore
@@ -63,7 +60,6 @@ func NewAuthService(store storage.UserStore, passkeyStore storage.PasskeyStore, 
 	})
 	var emailStore storage.EmailStore
 	var magicLinkStore storage.MagicLinkStore
-	var contactStore storage.ContactStore
 	if store != nil {
 		if typed, ok := store.(storage.EmailStore); ok {
 			emailStore = typed
@@ -71,13 +67,9 @@ func NewAuthService(store storage.UserStore, passkeyStore storage.PasskeyStore, 
 		if typed, ok := store.(storage.MagicLinkStore); ok {
 			magicLinkStore = typed
 		}
-		if typed, ok := store.(storage.ContactStore); ok {
-			contactStore = typed
-		}
 	}
 	return &AuthService{
 		store:              store,
-		contactStore:       contactStore,
 		passkeyStore:       passkeyStore,
 		emailStore:         emailStore,
 		magicLinkStore:     magicLinkStore,
@@ -188,139 +180,12 @@ func (s *AuthService) ListUsers(ctx context.Context, in *authv1.ListUsersRequest
 	return response, nil
 }
 
-// AddContact adds one owner-scoped user contact.
-func (s *AuthService) AddContact(ctx context.Context, in *authv1.AddContactRequest) (*authv1.AddContactResponse, error) {
-	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "add contact request is required")
-	}
-	if s.store == nil || s.contactStore == nil {
-		return nil, status.Error(codes.Internal, "contact store is not configured")
-	}
-
-	ownerUserID := strings.TrimSpace(in.GetOwnerUserId())
-	contactUserID := strings.TrimSpace(in.GetContactUserId())
-	if ownerUserID == "" {
-		return nil, status.Error(codes.InvalidArgument, "owner user id is required")
-	}
-	if contactUserID == "" {
-		return nil, status.Error(codes.InvalidArgument, "contact user id is required")
-	}
-	if ownerUserID == contactUserID {
-		return nil, status.Error(codes.InvalidArgument, "contact user id must differ from owner user id")
-	}
-
-	if _, err := s.store.GetUser(ctx, ownerUserID); err != nil {
-		return nil, handleDomainError(err)
-	}
-	if _, err := s.store.GetUser(ctx, contactUserID); err != nil {
-		return nil, handleDomainError(err)
-	}
-
-	now := time.Now()
-	if s.clock != nil {
-		now = s.clock()
-	}
-
-	contact := storage.Contact{
-		OwnerUserID:   ownerUserID,
-		ContactUserID: contactUserID,
-		CreatedAt:     now,
-		UpdatedAt:     now,
-	}
-	if err := s.contactStore.PutContact(ctx, contact); err != nil {
-		return nil, status.Errorf(codes.Internal, "add contact: %v", err)
-	}
-	persisted, err := s.contactStore.GetContact(ctx, ownerUserID, contactUserID)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "add contact: %v", err)
-	}
-
-	return &authv1.AddContactResponse{Contact: contactToProto(persisted)}, nil
-}
-
-// RemoveContact removes one owner-scoped user contact.
-func (s *AuthService) RemoveContact(ctx context.Context, in *authv1.RemoveContactRequest) (*authv1.RemoveContactResponse, error) {
-	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "remove contact request is required")
-	}
-	if s.store == nil || s.contactStore == nil {
-		return nil, status.Error(codes.Internal, "contact store is not configured")
-	}
-
-	ownerUserID := strings.TrimSpace(in.GetOwnerUserId())
-	contactUserID := strings.TrimSpace(in.GetContactUserId())
-	if ownerUserID == "" {
-		return nil, status.Error(codes.InvalidArgument, "owner user id is required")
-	}
-	if contactUserID == "" {
-		return nil, status.Error(codes.InvalidArgument, "contact user id is required")
-	}
-	if ownerUserID == contactUserID {
-		return nil, status.Error(codes.InvalidArgument, "contact user id must differ from owner user id")
-	}
-
-	if _, err := s.store.GetUser(ctx, ownerUserID); err != nil {
-		return nil, handleDomainError(err)
-	}
-
-	if err := s.contactStore.DeleteContact(ctx, ownerUserID, contactUserID); err != nil {
-		return nil, status.Errorf(codes.Internal, "remove contact: %v", err)
-	}
-	return &authv1.RemoveContactResponse{}, nil
-}
-
-// ListContacts returns owner-scoped contacts.
-func (s *AuthService) ListContacts(ctx context.Context, in *authv1.ListContactsRequest) (*authv1.ListContactsResponse, error) {
-	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "list contacts request is required")
-	}
-	if s.store == nil || s.contactStore == nil {
-		return nil, status.Error(codes.Internal, "contact store is not configured")
-	}
-
-	ownerUserID := strings.TrimSpace(in.GetOwnerUserId())
-	if ownerUserID == "" {
-		return nil, status.Error(codes.InvalidArgument, "owner user id is required")
-	}
-	if _, err := s.store.GetUser(ctx, ownerUserID); err != nil {
-		return nil, handleDomainError(err)
-	}
-
-	pageSize := pagination.ClampPageSize(in.GetPageSize(), pagination.PageSizeConfig{
-		Default: defaultListContactsSize,
-		Max:     maxListContactsSize,
-	})
-	page, err := s.contactStore.ListContacts(ctx, ownerUserID, pageSize, in.GetPageToken())
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list contacts: %v", err)
-	}
-
-	response := &authv1.ListContactsResponse{NextPageToken: page.NextPageToken}
-	if len(page.Contacts) == 0 {
-		return response, nil
-	}
-	response.Contacts = make([]*authv1.Contact, 0, len(page.Contacts))
-	for _, contact := range page.Contacts {
-		response.Contacts = append(response.Contacts, contactToProto(contact))
-	}
-	return response, nil
-}
-
 func userToProto(u user.User) *authv1.User {
 	return &authv1.User{
 		Id:        u.ID,
 		Email:     u.Email,
 		CreatedAt: timestamppb.New(u.CreatedAt),
 		UpdatedAt: timestamppb.New(u.UpdatedAt),
-	}
-}
-
-func contactToProto(contact storage.Contact) *authv1.Contact {
-	return &authv1.Contact{
-		OwnerUserId:   contact.OwnerUserID,
-		ContactUserId: contact.ContactUserID,
-		CreatedAt:     timestamppb.New(contact.CreatedAt),
-		UpdatedAt:     timestamppb.New(contact.UpdatedAt),
 	}
 }
 

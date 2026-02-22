@@ -1029,18 +1029,6 @@ func (c *testAuthClient) AckIntegrationOutboxEvent(ctx context.Context, in *auth
 	return nil, status.Error(codes.Unimplemented, "not implemented in test auth client")
 }
 
-func (c *testAuthClient) AddContact(ctx context.Context, in *authv1.AddContactRequest, opts ...grpc.CallOption) (*authv1.AddContactResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
-}
-
-func (c *testAuthClient) RemoveContact(ctx context.Context, in *authv1.RemoveContactRequest, opts ...grpc.CallOption) (*authv1.RemoveContactResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
-}
-
-func (c *testAuthClient) ListContacts(ctx context.Context, in *authv1.ListContactsRequest, opts ...grpc.CallOption) (*authv1.ListContactsResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
-}
-
 func (c *testAuthClient) ListUserEmails(ctx context.Context, in *authv1.ListUserEmailsRequest, opts ...grpc.CallOption) (*authv1.ListUserEmailsResponse, error) {
 	if c.listUserEmailsErr != nil {
 		return nil, c.listUserEmailsErr

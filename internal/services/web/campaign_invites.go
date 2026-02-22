@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
+	connectionsv1 "github.com/louisbranch/fracturing.space/api/gen/go/connections/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
@@ -269,7 +269,7 @@ func renderAppCampaignInvitesPageWithContextAndContacts(w http.ResponseWriter, r
 }
 
 func (h *handler) listInviteContactOptions(ctx context.Context, campaignID string, ownerUserID string, invites []*statev1.Invite) []webtemplates.CampaignInviteContactOption {
-	if h == nil || h.authClient == nil || h.participantClient == nil {
+	if h == nil || h.connectionsClient == nil || h.participantClient == nil {
 		return nil
 	}
 	ownerUserID = strings.TrimSpace(ownerUserID)
@@ -294,16 +294,16 @@ func (h *handler) listInviteContactOptions(ctx context.Context, campaignID strin
 	return buildInviteContactOptions(contacts, participants, invites)
 }
 
-func (h *handler) listAllContacts(ctx context.Context, ownerUserID string) ([]*authv1.Contact, error) {
+func (h *handler) listAllContacts(ctx context.Context, ownerUserID string) ([]*connectionsv1.Contact, error) {
 	ownerUserID = strings.TrimSpace(ownerUserID)
 	if ownerUserID == "" {
 		return nil, nil
 	}
 	pageToken := ""
 	seenTokens := make(map[string]struct{})
-	contacts := make([]*authv1.Contact, 0)
+	contacts := make([]*connectionsv1.Contact, 0)
 	for {
-		resp, err := h.authClient.ListContacts(ctx, &authv1.ListContactsRequest{
+		resp, err := h.connectionsClient.ListContacts(ctx, &connectionsv1.ListContactsRequest{
 			OwnerUserId: ownerUserID,
 			PageSize:    50,
 			PageToken:   pageToken,
@@ -360,7 +360,7 @@ func (h *handler) listAllCampaignParticipants(ctx context.Context, campaignID st
 	return participants, nil
 }
 
-func buildInviteContactOptions(contacts []*authv1.Contact, participants []*statev1.Participant, invites []*statev1.Invite) []webtemplates.CampaignInviteContactOption {
+func buildInviteContactOptions(contacts []*connectionsv1.Contact, participants []*statev1.Participant, invites []*statev1.Invite) []webtemplates.CampaignInviteContactOption {
 	participantUsers := make(map[string]struct{})
 	for _, participant := range participants {
 		if participant == nil {
