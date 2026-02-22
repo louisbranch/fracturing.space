@@ -86,6 +86,20 @@ func BuildRegistries(modules ...module.Module) (Registries, error) {
 		return Registries{}, err
 	}
 
+	// Collect all fold handled types (core + system) for intent-guard validation.
+	var allFoldHandled []event.Type
+	for _, domain := range CoreDomains() {
+		allFoldHandled = append(allFoldHandled, domain.FoldHandledTypes()...)
+	}
+	for _, mod := range modules {
+		if folder := mod.Folder(); folder != nil {
+			allFoldHandled = append(allFoldHandled, folder.FoldHandledTypes()...)
+		}
+	}
+	if err := ValidateNoFoldHandlersForAuditOnlyEvents(eventRegistry, allFoldHandled); err != nil {
+		return Registries{}, err
+	}
+
 	return Registries{
 		Commands: commandRegistry,
 		Events:   eventRegistry,
@@ -404,6 +418,58 @@ func ValidateAdapterEventCoverage(modules *module.Registry, adapters *systems.Ad
 	}
 	if len(missing) > 0 {
 		return fmt.Errorf("system emittable events missing adapter handlers: %s", strings.Join(missing, ", "))
+	}
+	return nil
+}
+
+// ValidateNoFoldHandlersForAuditOnlyEvents verifies that no fold handler
+// exists for an event with IntentAuditOnly. Such a handler would be dead
+// code — the aggregate folder skips audit-only events at runtime, so a
+// handler would never execute.
+func ValidateNoFoldHandlersForAuditOnlyEvents(events *event.Registry, foldHandled []event.Type) error {
+	if events == nil {
+		return fmt.Errorf("event registry is required for audit-only fold guard")
+	}
+
+	var dead []string
+	for _, t := range foldHandled {
+		def, ok := events.Definition(t)
+		if !ok {
+			continue
+		}
+		if def.Intent == event.IntentAuditOnly {
+			dead = append(dead, string(t))
+		}
+	}
+	if len(dead) > 0 {
+		return fmt.Errorf("fold handlers registered for audit-only events (dead code): %s",
+			strings.Join(dead, ", "))
+	}
+	return nil
+}
+
+// ValidateNoProjectionHandlersForNonProjectionEvents verifies that no
+// projection handler exists for an event with IntentAuditOnly or
+// IntentReplayOnly. Such handlers would be dead code — the projection
+// applier skips non-projection events at runtime.
+func ValidateNoProjectionHandlersForNonProjectionEvents(events *event.Registry, projectionHandled []event.Type) error {
+	if events == nil {
+		return fmt.Errorf("event registry is required for projection intent guard")
+	}
+
+	var dead []string
+	for _, t := range projectionHandled {
+		def, ok := events.Definition(t)
+		if !ok {
+			continue
+		}
+		if def.Intent == event.IntentAuditOnly || def.Intent == event.IntentReplayOnly {
+			dead = append(dead, string(t))
+		}
+	}
+	if len(dead) > 0 {
+		return fmt.Errorf("projection handlers registered for non-projection events (dead code): %s",
+			strings.Join(dead, ", "))
 	}
 	return nil
 }

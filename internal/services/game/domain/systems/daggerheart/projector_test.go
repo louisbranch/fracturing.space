@@ -17,7 +17,7 @@ func TestFolderApplyGMFearChanged_UpdatesState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal payload: %v", err)
 	}
-	updated, err := projector.Apply(state, event.Event{
+	updated, err := projector.Fold(state, event.Event{
 		CampaignID:    "camp-1",
 		Type:          event.Type("sys.daggerheart.gm_fear_changed"),
 		SystemID:      SystemID,
@@ -56,7 +56,7 @@ func TestFolderApplyCharacterStatePatched_StoresCharacterState(t *testing.T) {
 		t.Fatalf("marshal payload: %v", err)
 	}
 
-	updated, err := projector.Apply(SnapshotState{CampaignID: "camp-1"}, event.Event{
+	updated, err := projector.Fold(SnapshotState{CampaignID: "camp-1"}, event.Event{
 		CampaignID:    "camp-1",
 		Type:          EventTypeCharacterStatePatched,
 		SystemID:      SystemID,
@@ -99,7 +99,7 @@ func TestFolderApplyCharacterStatePatched_DoesNotMutateFromBeforeOnly(t *testing
 		t.Fatalf("marshal payload: %v", err)
 	}
 
-	updated, err := projector.Apply(SnapshotState{
+	updated, err := projector.Fold(SnapshotState{
 		CampaignID: "camp-1",
 		CharacterStates: map[string]CharacterState{
 			"char-1": {
@@ -174,7 +174,7 @@ func TestFolderApplyAdversaryUpdated_AppliesZeroAndEmptyValues(t *testing.T) {
 		t.Fatalf("marshal payload: %v", err)
 	}
 
-	updated, err := projector.Apply(state, event.Event{
+	updated, err := projector.Fold(state, event.Event{
 		CampaignID:    "camp-1",
 		Type:          EventTypeAdversaryUpdated,
 		SystemID:      SystemID,
@@ -234,7 +234,7 @@ func TestFolderApplyHandlesAllRegisteredEvents(t *testing.T) {
 				payloadJSON = payload
 			}
 
-			updated, err := projector.Apply(SnapshotState{CampaignID: "camp-1", GMFear: 1}, event.Event{
+			updated, err := projector.Fold(SnapshotState{CampaignID: "camp-1", GMFear: 1}, event.Event{
 				CampaignID:    "camp-1",
 				Type:          def.Type,
 				SystemID:      SystemID,
@@ -264,7 +264,7 @@ func TestFolderApply_RejectsAggregateState(t *testing.T) {
 			},
 		},
 	}
-	_, err := folder.Apply(aggState, event.Event{
+	_, err := folder.Fold(aggState, event.Event{
 		CampaignID:    "camp-1",
 		Type:          EventTypeGMFearChanged,
 		SystemID:      SystemID,
@@ -278,7 +278,7 @@ func TestFolderApply_RejectsAggregateState(t *testing.T) {
 
 func TestFolderApplyUnknownEventReturnsError(t *testing.T) {
 	projector := Folder{}
-	_, err := projector.Apply(SnapshotState{CampaignID: "camp-1"}, event.Event{
+	_, err := projector.Fold(SnapshotState{CampaignID: "camp-1"}, event.Event{
 		CampaignID:    "camp-1",
 		Type:          event.Type("sys.daggerheart.unknown"),
 		SystemID:      SystemID,

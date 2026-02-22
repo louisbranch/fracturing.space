@@ -84,8 +84,12 @@ func buildSystemRegistry() (*systems.Registry, error) {
 // registries. This is a startup-time safety check that ensures every core
 // projection-and-replay event has a handler.
 func buildProjectionRegistries(registries engine.Registries) (*event.Registry, error) {
-	if err := engine.ValidateProjectionCoverage(registries.Events, projection.ProjectionHandledTypes()); err != nil {
+	handledTypes := projection.ProjectionHandledTypes()
+	if err := engine.ValidateProjectionCoverage(registries.Events, handledTypes); err != nil {
 		return nil, fmt.Errorf("validate projection coverage: %w", err)
+	}
+	if err := engine.ValidateNoProjectionHandlersForNonProjectionEvents(registries.Events, handledTypes); err != nil {
+		return nil, fmt.Errorf("validate projection intent guard: %w", err)
 	}
 	return registries.Events, nil
 }

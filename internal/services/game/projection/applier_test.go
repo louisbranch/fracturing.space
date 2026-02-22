@@ -129,8 +129,8 @@ type fakeAdapter struct {
 	called bool
 }
 
-func (a *fakeAdapter) ID() commonv1.GameSystem {
-	return commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART
+func (a *fakeAdapter) ID() string {
+	return "daggerheart"
 }
 
 func (a *fakeAdapter) Version() string {
@@ -649,7 +649,7 @@ func TestParseGameSystem(t *testing.T) {
 
 func TestApplySystemEvent_MissingAdapters(t *testing.T) {
 	ctx := context.Background()
-	evt := testevent.Event{Type: testevent.Type("system.custom"), SystemID: "GAME_SYSTEM_DAGGERHEART", PayloadJSON: []byte("{}")}
+	evt := testevent.Event{Type: testevent.Type("system.custom"), SystemID: "daggerheart", PayloadJSON: []byte("{}")}
 	if err := (Applier{}).Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing adapters")
 	}
@@ -659,7 +659,7 @@ func TestApplySystemEvent_UnknownAdapter(t *testing.T) {
 	ctx := context.Background()
 	registry := systems.NewAdapterRegistry()
 	applier := Applier{Adapters: registry}
-	evt := testevent.Event{Type: testevent.Type("system.custom"), SystemID: "GAME_SYSTEM_DAGGERHEART", PayloadJSON: []byte("{}")}
+	evt := testevent.Event{Type: testevent.Type("system.custom"), SystemID: "daggerheart", PayloadJSON: []byte("{}")}
 	// No adapter registered for daggerheart in this registry, should error
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing adapter")
@@ -732,7 +732,7 @@ func TestApplySystemEvent_UsesAdapter(t *testing.T) {
 
 	evt := testevent.Event{
 		Type:          testevent.Type("system.custom"),
-		SystemID:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART.String(),
+		SystemID:      "daggerheart",
 		SystemVersion: "",
 		PayloadJSON:   []byte("{}"),
 	}

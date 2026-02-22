@@ -158,6 +158,17 @@ Responsibilities:
 - register system-owned event definitions
 - provide decider/folder/state-factory implementations
 
+#### System state lifecycle
+
+When the aggregate folder encounters the first event for a given
+`(system_id, system_version)` pair, it calls `StateFactory.NewSnapshotState`
+to seed the initial system state. All subsequent events for the same key
+fold into that state. System authors don't need to manually initialize
+state — the aggregate folder handles lazy creation.
+
+`NewSnapshotState` must be deterministic: given the same `campaign_id`, it
+must return the same initial state, because replay depends on this guarantee.
+
 ### 3. Define payload contracts and validation
 
 - Add payload structs for command/event types.
@@ -248,7 +259,7 @@ Use Daggerheart as the baseline for structure and naming.
 |---|---|
 | Module wiring | `internal/services/game/domain/systems/daggerheart/module.go` |
 | Command decisions | `internal/services/game/domain/systems/daggerheart/decider.go` |
-| Replay folder | `internal/services/game/domain/systems/daggerheart/projector.go` |
+| Replay folder (Fold method) | `internal/services/game/domain/systems/daggerheart/projector.go` |
 | Projection adapter | `internal/services/game/domain/systems/daggerheart/adapter.go` |
 | Event type constants | `internal/services/game/domain/systems/daggerheart/event_types.go` |
 | Payload contracts | `internal/services/game/domain/systems/daggerheart/payload.go` |

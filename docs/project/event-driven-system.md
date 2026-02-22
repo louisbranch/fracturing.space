@@ -409,12 +409,14 @@ fix.
 | `system module <id> declares emittable event types not in registry: <type>` | A system module's `EmittableEventTypes()` includes a type not registered in `RegisterEvents`. | Add the missing `event.Definition` in the module's `RegisterEvents` method. |
 | `core replay events missing fold handlers: <type>` | A core event with `IntentProjectionAndReplay` or `IntentReplayOnly` has no entry in any core domain's `FoldHandledTypes()`. | Add the event type to the appropriate domain's `FoldHandledTypes()` and add a case in its `Fold` function. |
 | `core projection-and-replay events missing projection handlers: <type>` | A core event with `IntentProjectionAndReplay` has no entry in the projection applier's handled types. | Add the event type to `ProjectionHandledTypes()` in `projection/applier_domain.go` and add a case in `Apply`. |
-| `system emittable events missing folder fold handlers: <type>` | A system module emits an event with replay intent but its folder's `FoldHandledTypes()` does not include it. | Add the event type to the folder's `FoldHandledTypes()` and add a case in its `Apply` method. |
+| `system emittable events missing folder fold handlers: <type>` | A system module emits an event with replay intent but its folder's `FoldHandledTypes()` does not include it. | Add the event type to the folder's `FoldHandledTypes()` and add a case in its `Fold` method. |
 | `system emittable events missing adapter handlers: <type>` | A system module emits an `IntentProjectionAndReplay` event but no system adapter handles it. | Add the event type to the adapter's `HandledTypes()` and add a case in its `Apply` method. |
 | `system commands missing decider handlers: <type>` | A system module registers a command type but the module's decider does not list it in `DeciderHandledCommands()`. | Add the command type to the decider's `DeciderHandledCommands()` and add a case in its `Decide` method. |
 | `system module <id> command <type> must use sys.<id>.* prefix` | A system-owned command type does not follow the `sys.<system_id>.*` naming convention. | Rename the command type constant to use the required prefix. |
 | `system module <id> event <type> must use sys.<id>.* prefix` | A system-owned event type does not follow the `sys.<system_id>.*` naming convention. | Rename the event type constant to use the required prefix. |
 | `entity-keyed fold types missing AddressingPolicyEntityTarget: <type>` | An entity-keyed domain (participant, character, invite) has a fold type without `AddressingPolicyEntityTarget` addressing. | Set `Addressing: event.AddressingPolicyEntityTarget` in the event definition. |
+| `fold handlers registered for audit-only events (dead code): <type>` | A fold handler exists for an `IntentAuditOnly` event. The aggregate folder skips audit-only events, so the handler is dead code. | Remove the fold handler or change the event's intent to `IntentReplayOnly` or `IntentProjectionAndReplay`. |
+| `projection handlers registered for non-projection events (dead code): <type>` | A projection handler exists for an `IntentAuditOnly` or `IntentReplayOnly` event. The projection applier skips these events. | Remove the projection handler or change the event's intent to `IntentProjectionAndReplay`. |
 | `projection stores not configured: <store>` | The projection applier is missing a required store dependency. | Ensure all stores are wired in the `projection.Applier` constructor. |
 
 All validators run before the server accepts traffic. Fix the reported type,
@@ -449,8 +451,8 @@ These are current documentation or architecture pain points worth improving.
    - `aggregate.Folder.Fold`: folds events into in-memory aggregate state.
    - `engine.Folder.Fold`: the write-handler interface; during live execution
      it folds state, while the projection applier runs in the application layer.
-   - `module.Folder.Apply`: system-module fold entrypoint invoked by aggregate
-     fold routing.
+   - `module.Folder.Fold`: system-module fold entrypoint invoked by aggregate
+     fold routing. Renamed from `Apply` in the anti-pattern cleanup.
    - `ErrPostPersistApplyFailed` refers to the *aggregate fold* step in
      `Handler.prepareExecution`, not the projection apply.
 4. Two similarly named system registries:

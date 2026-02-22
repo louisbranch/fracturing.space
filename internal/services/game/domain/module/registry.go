@@ -35,13 +35,13 @@ type Decider interface {
 
 // Folder folds system-owned events into system state.
 //
-// FoldHandledTypes declares which event types the Apply method handles, enabling
+// FoldHandledTypes declares which event types the Fold method handles, enabling
 // ValidateSystemFoldCoverage to verify at startup that every emittable event
 // type with replay intent has a corresponding fold handler.
-// Named "Folder" (not "Projector") because it performs a pure state fold,
-// not a side-effecting projection write.
+// Named "Folder" (not "Applier") because it performs a pure state fold,
+// not a side-effecting projection write (projection.Applier.Apply).
 type Folder interface {
-	Apply(state any, evt event.Event) (any, error)
+	Fold(state any, evt event.Event) (any, error)
 	FoldHandledTypes() []event.Type
 }
 
@@ -54,6 +54,18 @@ type CommandTyper interface {
 }
 
 // StateFactory creates initial system-specific state instances.
+//
+// The aggregate folder calls NewSnapshotState lazily: on the first system
+// event for a given (SystemID, SystemVersion) key, the folder looks up the
+// module, and if no state exists yet for that key, it calls
+// NewSnapshotState to seed the initial value. Subsequent events for the
+// same key fold into the already-initialized state.
+//
+// NewCharacterState is called when a character profile is created or
+// updated through the system profile adapter.
+//
+// Implementations must be deterministic: given the same inputs they must
+// return the same state, because replay depends on this guarantee.
 type StateFactory interface {
 	NewCharacterState(campaignID, characterID, kind string) (any, error)
 	NewSnapshotState(campaignID string) (any, error)
@@ -146,7 +158,7 @@ func RouteEvent(registry *Registry, state any, evt event.Event) (any, error) {
 	if folder == nil {
 		return nil, ErrFolderRequired
 	}
-	return folder.Apply(state, evt)
+	return folder.Fold(state, evt)
 }
 
 // Register adds a system module to the registry.

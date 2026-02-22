@@ -14,25 +14,25 @@ import (
 type TypedFolder[S any] struct {
 	// Assert converts the untyped state to S, returning an error on mismatch.
 	Assert func(any) (S, error)
-	// Fold applies an event to the typed state.
-	Fold func(S, event.Event) (S, error)
+	// FoldFn applies an event to the typed state.
+	FoldFn func(S, event.Event) (S, error)
 	// Types declares which event types this folder handles.
 	Types func() []event.Type
 }
 
-// Apply satisfies Folder by asserting state to S, folding, and returning as any.
-func (p TypedFolder[S]) Apply(state any, evt event.Event) (any, error) {
+// Fold satisfies Folder by asserting state to S, folding, and returning as any.
+func (p TypedFolder[S]) Fold(state any, evt event.Event) (any, error) {
 	if p.Assert == nil {
 		return nil, fmt.Errorf("typed folder: Assert function is nil")
 	}
-	if p.Fold == nil {
-		return nil, fmt.Errorf("typed folder: Fold function is nil")
+	if p.FoldFn == nil {
+		return nil, fmt.Errorf("typed folder: FoldFn function is nil")
 	}
 	s, err := p.Assert(state)
 	if err != nil {
 		return nil, err
 	}
-	return p.Fold(s, evt)
+	return p.FoldFn(s, evt)
 }
 
 // FoldHandledTypes satisfies Folder by delegating to the Types function.

@@ -29,13 +29,13 @@ func TestRebindAdapterRegistrySwapsStores(t *testing.T) {
 		t.Fatalf("rebind adapter registry: %v", err)
 	}
 
-	adapter := rebound.Get(commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART, daggerheart.SystemVersion)
+	adapter := rebound.Get(daggerheart.SystemID, daggerheart.SystemVersion)
 	if adapter == nil {
 		t.Fatal("expected daggerheart adapter in rebound registry")
 	}
 
 	// Base registry should still have its own adapter (not affected by rebind).
-	origAdapter := base.Get(commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART, daggerheart.SystemVersion)
+	origAdapter := base.Get(daggerheart.SystemID, daggerheart.SystemVersion)
 	if origAdapter == nil {
 		t.Fatal("expected adapter to remain in base registry")
 	}
@@ -86,7 +86,7 @@ func TestAdapterRegistryRegistersDaggerheart(t *testing.T) {
 		t.Fatalf("build adapter registry: %v", err)
 	}
 
-	adapter := registry.Get(commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART, daggerheart.SystemVersion)
+	adapter := registry.Get(daggerheart.SystemID, daggerheart.SystemVersion)
 	if adapter == nil {
 		t.Fatal("expected daggerheart adapter to be registered")
 	}
@@ -126,14 +126,11 @@ func TestModulesHaveCorrespondingAdapters(t *testing.T) {
 	}
 
 	for _, module := range modules {
-		systemID, ok := parseGameSystemID(module.ID())
-		if !ok {
-			t.Fatalf("unknown module id %q", module.ID())
-		}
+		moduleID := strings.TrimSpace(module.ID())
 		version := strings.TrimSpace(module.Version())
-		adapter := registry.Get(systemID, version)
+		adapter := registry.Get(moduleID, version)
 		if adapter == nil {
-			t.Errorf("module %s@%s has no corresponding adapter in AdapterRegistry", module.ID(), version)
+			t.Errorf("module %s@%s has no corresponding adapter in AdapterRegistry", moduleID, version)
 		}
 	}
 }
@@ -145,7 +142,7 @@ func TestAdapterRegistrySkipsNilStoreViaClosureGuard(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error with nil store, got: %v", err)
 	}
-	adapter := registry.Get(commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART, daggerheart.SystemVersion)
+	adapter := registry.Get(daggerheart.SystemID, daggerheart.SystemVersion)
 	if adapter != nil {
 		t.Fatal("expected no adapter when store is nil")
 	}

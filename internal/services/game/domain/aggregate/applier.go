@@ -104,6 +104,12 @@ func (a *Folder) Fold(state any, evt event.Event) (any, error) {
 		key := module.Key{ID: evt.SystemID, Version: evt.SystemVersion}
 		systemState := current.Systems[key]
 		mod := registry.Get(evt.SystemID, evt.SystemVersion)
+
+		// Lazy initialization: the first event for a (SystemID, SystemVersion)
+		// pair triggers NewSnapshotState to seed the initial system state.
+		// All subsequent events for the same key fold into this state. System
+		// authors implement StateFactory.NewSnapshotState to provide their
+		// zero-value state (see module.StateFactory for the lifecycle contract).
 		if mod != nil && systemState == nil {
 			if factory := mod.StateFactory(); factory != nil {
 				seed, err := factory.NewSnapshotState(evt.CampaignID)

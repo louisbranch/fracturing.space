@@ -178,12 +178,7 @@ func (a Applier) applyCharacterProfileUpdated(ctx context.Context, evt event.Eve
 	}
 
 	for systemName, profileData := range payload.SystemProfile {
-		gameSystem, err := parseGameSystem(systemName)
-		if err != nil {
-			// Skip unrecognized system names for forward compatibility.
-			continue
-		}
-		adapter := a.Adapters.Get(gameSystem, "")
+		adapter := a.Adapters.Get(systemName, "")
 		if adapter == nil {
 			// Skip systems without a registered adapter; a future replay
 			// will pick them up once the adapter is configured.

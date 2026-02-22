@@ -78,7 +78,7 @@ func TestCreateCharacter_InheritsActorParticipantAvatarWhenAvatarNotProvided(t *
 					ActorID:       "part-1",
 					EntityType:    "character",
 					EntityID:      "char-123",
-					SystemID:      "GAME_SYSTEM_DAGGERHEART",
+					SystemID:      "daggerheart",
 					SystemVersion: "1.0.0",
 					PayloadJSON:   []byte(`{"character_id":"char-123","hp_after":6}`),
 				}),

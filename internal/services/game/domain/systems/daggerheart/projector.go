@@ -11,7 +11,7 @@ import (
 // Folder folds Daggerheart system events into snapshot state.
 type Folder struct{}
 
-// FoldHandledTypes returns the event types this folder's Apply handles.
+// FoldHandledTypes returns the event types this folder's Fold handles.
 // Derived from daggerheartEventDefinitions so the list stays in sync with the
 // authoritative registration slice. Used by ValidateSystemFoldCoverage to
 // verify every emittable event type has a fold handler.
@@ -19,8 +19,8 @@ func (Folder) FoldHandledTypes() []event.Type {
 	return eventTypesWithReplayIntent()
 }
 
-// Apply folds a Daggerheart event into state.
-func (Folder) Apply(state any, evt event.Event) (any, error) {
+// Fold folds a Daggerheart event into system state.
+func (Folder) Fold(state any, evt event.Event) (any, error) {
 	var fearPayload GMFearChangedPayload
 	current, ok := snapshotFromState(state)
 	if !ok && state != nil {
