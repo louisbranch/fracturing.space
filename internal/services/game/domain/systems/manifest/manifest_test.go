@@ -59,6 +59,30 @@ func TestAdapterRegistryRegistersDaggerheart(t *testing.T) {
 	}
 }
 
+func TestModulesHaveCorrespondingAdapters(t *testing.T) {
+	modules := Modules()
+	if len(modules) == 0 {
+		t.Fatal("expected at least one registered module")
+	}
+
+	// Build adapter registry with all stores populated so adapters register.
+	registry := AdapterRegistry(ProjectionStores{
+		Daggerheart: fakeDaggerheartStore{},
+	})
+
+	for _, module := range modules {
+		systemID, ok := parseGameSystemID(module.ID())
+		if !ok {
+			t.Fatalf("unknown module id %q", module.ID())
+		}
+		version := strings.TrimSpace(module.Version())
+		adapter := registry.Get(systemID, version)
+		if adapter == nil {
+			t.Errorf("module %s@%s has no corresponding adapter in AdapterRegistry", module.ID(), version)
+		}
+	}
+}
+
 func parseGameSystemID(raw string) (commonv1.GameSystem, bool) {
 	trimmed := strings.TrimSpace(raw)
 	if trimmed == "" {

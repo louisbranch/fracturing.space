@@ -45,6 +45,10 @@ func (f fakeSystemModule) RegisterEvents(*event.Registry) error {
 	return nil
 }
 
+func (f fakeSystemModule) EmittableEventTypes() []event.Type {
+	return nil
+}
+
 func (f fakeSystemModule) Decider() system.Decider {
 	return nil
 }

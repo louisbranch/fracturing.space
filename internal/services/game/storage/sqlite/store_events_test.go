@@ -501,6 +501,124 @@ func TestAppendEventMultipleCampaigns(t *testing.T) {
 	}
 }
 
+func TestBatchAppendEvents_AtomicMultiEvent(t *testing.T) {
+	store := openTestEventsStore(t)
+	campaignID := "camp-batch"
+
+	events := make([]event.Event, 3)
+	for i := range events {
+		events[i] = testEvent(campaignID, event.Type("campaign.created"), "")
+		events[i].Timestamp = time.Date(2026, 2, 3, 12, i, 0, 0, time.UTC)
+	}
+
+	stored, err := store.BatchAppendEvents(context.Background(), events)
+	if err != nil {
+		t.Fatalf("batch append: %v", err)
+	}
+	if len(stored) != 3 {
+		t.Fatalf("expected 3 stored events, got %d", len(stored))
+	}
+
+	// Verify sequential sequence numbers.
+	for i, s := range stored {
+		expected := uint64(i + 1)
+		if s.Seq != expected {
+			t.Fatalf("event %d seq = %d, want %d", i, s.Seq, expected)
+		}
+		if s.Hash == "" {
+			t.Fatalf("event %d has empty hash", i)
+		}
+		if s.ChainHash == "" {
+			t.Fatalf("event %d has empty chain hash", i)
+		}
+		if s.Signature == "" {
+			t.Fatalf("event %d has empty signature", i)
+		}
+	}
+
+	// Verify chain integrity: first event has empty PrevHash, subsequent link back.
+	if stored[0].PrevHash != "" {
+		t.Fatalf("first event prev hash should be empty, got %q", stored[0].PrevHash)
+	}
+	for i := 1; i < len(stored); i++ {
+		if stored[i].PrevHash != stored[i-1].ChainHash {
+			t.Fatalf("event %d PrevHash = %q, want event %d ChainHash = %q",
+				i, stored[i].PrevHash, i-1, stored[i-1].ChainHash)
+		}
+	}
+
+	// Verify all events are readable after the batch.
+	listed, err := store.ListEvents(context.Background(), campaignID, 0, 10)
+	if err != nil {
+		t.Fatalf("list events: %v", err)
+	}
+	if len(listed) != 3 {
+		t.Fatalf("expected 3 listed events, got %d", len(listed))
+	}
+
+	// Verify integrity across the chain.
+	if err := store.VerifyEventIntegrity(context.Background()); err != nil {
+		t.Fatalf("verify integrity: %v", err)
+	}
+}
+
+func TestBatchAppendEvents_ChainsWithExistingEvents(t *testing.T) {
+	store := openTestEventsStore(t)
+	campaignID := "camp-batch-chain"
+
+	// Append one event individually first.
+	first, err := store.AppendEvent(context.Background(), testEvent(campaignID, event.Type("campaign.created"), ""))
+	if err != nil {
+		t.Fatalf("append first: %v", err)
+	}
+	if first.Seq != 1 {
+		t.Fatalf("first seq = %d, want 1", first.Seq)
+	}
+
+	// Batch append two more events.
+	batch := []event.Event{
+		testEvent(campaignID, event.Type("campaign.created"), ""),
+		testEvent(campaignID, event.Type("campaign.created"), ""),
+	}
+	batch[0].Timestamp = time.Date(2026, 2, 3, 12, 1, 0, 0, time.UTC)
+	batch[1].Timestamp = time.Date(2026, 2, 3, 12, 2, 0, 0, time.UTC)
+
+	stored, err := store.BatchAppendEvents(context.Background(), batch)
+	if err != nil {
+		t.Fatalf("batch append: %v", err)
+	}
+	if len(stored) != 2 {
+		t.Fatalf("expected 2 stored events, got %d", len(stored))
+	}
+	if stored[0].Seq != 2 || stored[1].Seq != 3 {
+		t.Fatalf("seqs = [%d, %d], want [2, 3]", stored[0].Seq, stored[1].Seq)
+	}
+
+	// Second event chains to the first (individually appended) event.
+	if stored[0].PrevHash != first.ChainHash {
+		t.Fatalf("batch event 0 PrevHash should link to first event's ChainHash")
+	}
+	// Third event chains to the second.
+	if stored[1].PrevHash != stored[0].ChainHash {
+		t.Fatalf("batch event 1 PrevHash should link to batch event 0 ChainHash")
+	}
+
+	if err := store.VerifyEventIntegrity(context.Background()); err != nil {
+		t.Fatalf("verify integrity: %v", err)
+	}
+}
+
+func TestBatchAppendEvents_EmptySlice(t *testing.T) {
+	store := openTestEventsStore(t)
+	stored, err := store.BatchAppendEvents(context.Background(), nil)
+	if err != nil {
+		t.Fatalf("batch append empty: %v", err)
+	}
+	if len(stored) != 0 {
+		t.Fatalf("expected 0 stored events, got %d", len(stored))
+	}
+}
+
 func TestAppendEventFieldRoundTrip(t *testing.T) {
 	store := openTestEventsStore(t)
 

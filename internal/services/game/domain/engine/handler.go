@@ -41,8 +41,11 @@ type StateLoader interface {
 // EventJournal appends events to the journal.
 //
 // Appending here is the persistence boundary for the write model.
+// BatchAppend guarantees that all events from a single command decision are
+// persisted atomically in one transaction.
 type EventJournal interface {
 	Append(ctx context.Context, evt event.Event) (event.Event, error)
+	BatchAppend(ctx context.Context, events []event.Event) ([]event.Event, error)
 }
 
 // Applier folds events into state.
@@ -188,13 +191,9 @@ func (h Handler) prepareExecution(ctx context.Context, cmd command.Command) (com
 		decision.Events = validated
 	}
 	if h.Journal != nil && len(decision.Events) > 0 {
-		stored := make([]event.Event, 0, len(decision.Events))
-		for _, evt := range decision.Events {
-			appended, err := h.Journal.Append(ctx, evt)
-			if err != nil {
-				return command.Command{}, nil, command.Decision{}, err
-			}
-			stored = append(stored, appended)
+		stored, err := h.Journal.BatchAppend(ctx, decision.Events)
+		if err != nil {
+			return command.Command{}, nil, command.Decision{}, err
 		}
 		decision.Events = stored
 	}

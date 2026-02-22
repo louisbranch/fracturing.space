@@ -90,6 +90,15 @@ func (m *Module) RegisterCommands(registry *command.Registry) error {
 	return nil
 }
 
+// EmittableEventTypes returns all event types the Daggerheart decider can emit.
+func (m *Module) EmittableEventTypes() []event.Type {
+	types := make([]event.Type, len(daggerheartEventDefinitions))
+	for i, def := range daggerheartEventDefinitions {
+		types[i] = def.Type
+	}
+	return types
+}
+
 // RegisterEvents registers Daggerheart system events.
 func (m *Module) RegisterEvents(registry *event.Registry) error {
 	if registry == nil {

@@ -149,6 +149,155 @@ func (s *Store) AppendEvent(ctx context.Context, evt event.Event) (event.Event, 
 	return evt, nil
 }
 
+// BatchAppendEvents atomically appends multiple events in a single transaction.
+//
+// All events must belong to the same campaign. Sequence numbers are allocated
+// contiguously, and chain hashes link each event to its predecessor — including
+// the last previously stored event for the first item in the batch.
+func (s *Store) BatchAppendEvents(ctx context.Context, events []event.Event) ([]event.Event, error) {
+	if len(events) == 0 {
+		return nil, nil
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return nil, fmt.Errorf("storage is not configured")
+	}
+	if s.eventRegistry == nil {
+		return nil, fmt.Errorf("event registry is required")
+	}
+	if s.keyring == nil {
+		return nil, fmt.Errorf("event integrity keyring is required")
+	}
+
+	// Validate all events before opening a transaction.
+	validated := make([]event.Event, len(events))
+	for i, evt := range events {
+		v, err := s.eventRegistry.ValidateForAppend(evt)
+		if err != nil {
+			return nil, fmt.Errorf("event %d: %w", i, err)
+		}
+		if v.Timestamp.IsZero() {
+			v.Timestamp = time.Now().UTC()
+		}
+		v.Timestamp = v.Timestamp.UTC().Truncate(time.Millisecond)
+		validated[i] = v
+	}
+
+	campaignID := validated[0].CampaignID
+
+	tx, err := s.sqlDB.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback()
+
+	qtx := s.q.WithTx(tx)
+
+	if err := qtx.InitEventSeq(ctx, campaignID); err != nil {
+		return nil, fmt.Errorf("init event seq: %w", err)
+	}
+
+	baseSeq, err := qtx.GetEventSeq(ctx, campaignID)
+	if err != nil {
+		return nil, fmt.Errorf("get event seq: %w", err)
+	}
+
+	// Load previous chain hash for linking the first event in the batch.
+	prevChainHash := ""
+	if baseSeq > 1 {
+		prevRow, err := qtx.GetEventBySeq(ctx, db.GetEventBySeqParams{
+			CampaignID: campaignID,
+			Seq:        baseSeq - 1,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("load previous event: %w", err)
+		}
+		prevChainHash = prevRow.ChainHash
+	}
+
+	stored := make([]event.Event, len(validated))
+	for i, evt := range validated {
+		evt.Seq = uint64(baseSeq) + uint64(i)
+
+		hash, err := integrity.EventHash(evt)
+		if err != nil {
+			return nil, fmt.Errorf("event %d hash: %w", i, err)
+		}
+		if strings.TrimSpace(hash) == "" {
+			return nil, fmt.Errorf("event %d: hash is empty", i)
+		}
+		evt.Hash = hash
+
+		chainHash, err := integrity.ChainHash(evt, prevChainHash)
+		if err != nil {
+			return nil, fmt.Errorf("event %d chain hash: %w", i, err)
+		}
+		if strings.TrimSpace(chainHash) == "" {
+			return nil, fmt.Errorf("event %d: chain hash is empty", i)
+		}
+
+		signature, keyID, err := s.keyring.SignChainHash(evt.CampaignID, chainHash)
+		if err != nil {
+			return nil, fmt.Errorf("event %d sign: %w", i, err)
+		}
+
+		evt.PrevHash = prevChainHash
+		evt.ChainHash = chainHash
+		evt.Signature = signature
+		evt.SignatureKeyID = keyID
+
+		if err := qtx.AppendEvent(ctx, db.AppendEventParams{
+			CampaignID:     evt.CampaignID,
+			Seq:            int64(evt.Seq),
+			EventHash:      evt.Hash,
+			PrevEventHash:  prevChainHash,
+			ChainHash:      chainHash,
+			SignatureKeyID: keyID,
+			EventSignature: signature,
+			Timestamp:      toMillis(evt.Timestamp),
+			EventType:      string(evt.Type),
+			SessionID:      evt.SessionID,
+			RequestID:      evt.RequestID,
+			InvocationID:   evt.InvocationID,
+			ActorType:      string(evt.ActorType),
+			ActorID:        evt.ActorID,
+			EntityType:     evt.EntityType,
+			EntityID:       evt.EntityID,
+			SystemID:       evt.SystemID,
+			SystemVersion:  evt.SystemVersion,
+			CorrelationID:  evt.CorrelationID,
+			CausationID:    evt.CausationID,
+			PayloadJson:    evt.PayloadJSON,
+		}); err != nil {
+			return nil, fmt.Errorf("append event %d: %w", i, err)
+		}
+
+		if err := s.enqueueProjectionApplyOutbox(ctx, tx, evt); err != nil {
+			return nil, err
+		}
+
+		prevChainHash = chainHash
+		stored[i] = evt
+	}
+
+	// Advance the sequence counter to account for all appended events.
+	nextSeq := int64(baseSeq) + int64(len(events))
+	if _, err := tx.ExecContext(ctx,
+		"UPDATE event_seq SET next_seq = ? WHERE campaign_id = ?",
+		nextSeq, campaignID,
+	); err != nil {
+		return nil, fmt.Errorf("update event seq: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("commit: %w", err)
+	}
+
+	return stored, nil
+}
+
 func (s *Store) enqueueProjectionApplyOutbox(ctx context.Context, tx *sql.Tx, evt event.Event) error {
 	if !s.projectionApplyOutboxEnabled {
 		return nil

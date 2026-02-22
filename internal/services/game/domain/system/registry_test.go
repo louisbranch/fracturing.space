@@ -33,6 +33,10 @@ func (m stubModule) RegisterEvents(*event.Registry) error {
 	return nil
 }
 
+func (m stubModule) EmittableEventTypes() []event.Type {
+	return nil
+}
+
 func (m stubModule) Decider() Decider {
 	return m.decider
 }

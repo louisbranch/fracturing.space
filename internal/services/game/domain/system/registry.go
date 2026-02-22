@@ -50,6 +50,10 @@ type Module interface {
 	Version() string
 	RegisterCommands(registry *command.Registry) error
 	RegisterEvents(registry *event.Registry) error
+	// EmittableEventTypes returns all event types this module's decider can emit.
+	// BuildRegistries validates that every declared type is registered in the
+	// event registry, catching missing registrations at startup.
+	EmittableEventTypes() []event.Type
 	Decider() Decider
 	Projector() Projector
 	StateFactory() StateFactory

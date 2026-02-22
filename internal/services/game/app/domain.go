@@ -59,7 +59,10 @@ func buildDomainEngine(eventStore storage.EventStore) (gamegrpc.Domain, error) {
 	}
 
 	checkpoints := checkpoint.NewMemory()
-	applier := aggregate.Applier{SystemRegistry: registries.Systems}
+	applier := aggregate.Applier{
+		Events:         registries.Events,
+		SystemRegistry: registries.Systems,
+	}
 	stateLoader := engine.ReplayStateLoader{
 		Events:       gamegrpc.NewEventStoreAdapter(eventStore),
 		Checkpoints:  checkpoints,

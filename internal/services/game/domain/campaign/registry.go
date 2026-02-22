@@ -52,6 +52,15 @@ func RegisterCommands(registry *command.Registry) error {
 	return nil
 }
 
+// EmittableEventTypes returns all event types the campaign decider can emit.
+func EmittableEventTypes() []event.Type {
+	return []event.Type{
+		EventTypeCreated,
+		EventTypeUpdated,
+		EventTypeForked,
+	}
+}
+
 // RegisterEvents registers campaign events with the shared registry.
 func RegisterEvents(registry *event.Registry) error {
 	if registry == nil {

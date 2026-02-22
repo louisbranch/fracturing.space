@@ -8,6 +8,17 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 )
 
+// FoldHandledTypes returns the event types handled by the campaign fold function.
+// This is used by fold coverage validation to ensure every projection-required event
+// has a corresponding fold handler.
+func FoldHandledTypes() []event.Type {
+	return []event.Type{
+		EventTypeCreated,
+		EventTypeUpdated,
+		EventTypeForked,
+	}
+}
+
 // Fold applies an event to campaign state. It returns an error if a recognized
 // event carries a payload that cannot be unmarshalled.
 func Fold(state State, evt event.Event) (State, error) {
@@ -44,5 +55,8 @@ func Fold(state State, evt event.Event) (State, error) {
 			}
 		}
 	}
+	// EventTypeForked is projection-only: fork lineage metadata does not affect
+	// campaign aggregate state but is acknowledged here so fold coverage
+	// validation knows the event was deliberately considered.
 	return state, nil
 }

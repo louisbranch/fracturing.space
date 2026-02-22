@@ -65,6 +65,18 @@ func RegisterCommands(registry *command.Registry) error {
 	return nil
 }
 
+// EmittableEventTypes returns all event types the participant decider can emit.
+func EmittableEventTypes() []event.Type {
+	return []event.Type{
+		EventTypeJoined,
+		EventTypeUpdated,
+		EventTypeLeft,
+		EventTypeBound,
+		EventTypeUnbound,
+		EventTypeSeatReassigned,
+	}
+}
+
 // RegisterEvents registers participant events with the shared registry.
 func RegisterEvents(registry *event.Registry) error {
 	if registry == nil {

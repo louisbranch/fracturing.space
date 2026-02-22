@@ -41,6 +41,16 @@ func RegisterCommands(registry *command.Registry) error {
 	})
 }
 
+// EmittableEventTypes returns all event types the character decider can emit.
+func EmittableEventTypes() []event.Type {
+	return []event.Type{
+		EventTypeCreated,
+		EventTypeUpdated,
+		EventTypeDeleted,
+		EventTypeProfileUpdated,
+	}
+}
+
 // RegisterEvents registers character events with the shared registry.
 func RegisterEvents(registry *event.Registry) error {
 	if registry == nil {
