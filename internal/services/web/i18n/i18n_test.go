@@ -4,6 +4,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	_ "github.com/louisbranch/fracturing.space/internal/services/notifications/render"
+	"golang.org/x/text/language"
 )
 
 func TestResolveTagPrecedence(t *testing.T) {
@@ -100,5 +103,39 @@ func TestSetLanguageCookie(t *testing.T) {
 	}
 	if cookie.SameSite != http.SameSiteLaxMode {
 		t.Fatalf("expected SameSite=Lax, got %v", cookie.SameSite)
+	}
+}
+
+func TestNotificationRendererMessageKeys(t *testing.T) {
+	t.Parallel()
+
+	type keyCheck struct {
+		key  string
+		args []any
+	}
+	checks := []keyCheck{
+		{key: "notification.generic.title"},
+		{key: "notification.generic.body"},
+		{key: "notification.generic.email_subject"},
+		{key: "notification.signup_method.passkey"},
+		{key: "notification.signup_method.magic_link"},
+		{key: "notification.signup_method.unknown"},
+		{key: "notification.onboarding_welcome.title"},
+		{key: "notification.onboarding_welcome.body", args: []any{"passkey"}},
+		{key: "notification.onboarding_welcome.email_subject"},
+		{key: "notification.onboarding_welcome.email_body", args: []any{"passkey"}},
+	}
+
+	for _, tag := range []language.Tag{language.AmericanEnglish, language.MustParse("pt-BR")} {
+		printer := Printer(tag)
+		for _, check := range checks {
+			got := printer.Sprintf(check.key, check.args...)
+			if got == "" {
+				t.Fatalf("tag %s key %q returned empty string", tag, check.key)
+			}
+			if got == check.key {
+				t.Fatalf("tag %s key %q is missing translation", tag, check.key)
+			}
+		}
 	}
 }

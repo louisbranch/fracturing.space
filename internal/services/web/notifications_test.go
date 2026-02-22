@@ -11,6 +11,8 @@ import (
 
 	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/i18n"
+	"golang.org/x/text/language"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -109,6 +111,48 @@ func TestAppNotificationsPageRedirectsUnauthenticatedToLogin(t *testing.T) {
 	}
 }
 
+func TestToNotificationListItems_UnknownTopicAndUnknownSignupUseSafeRenderedBody(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 2, 22, 0, 0, 0, 0, time.UTC)
+	items := toNotificationListItems(webi18n.Printer(language.AmericanEnglish), []*notificationsv1.Notification{
+		{
+			Id:          "notif-signup-unknown",
+			Topic:       "auth.onboarding.welcome",
+			PayloadJson: `{"signup_method":"oauth"}`,
+			Source:      notificationsv1.NotificationSource_NOTIFICATION_SOURCE_SYSTEM,
+			CreatedAt:   timestamppb.New(now.Add(2 * time.Minute)),
+		},
+		{
+			Id:          "notif-topic-unknown",
+			Topic:       "unknown.topic.slug",
+			PayloadJson: `{"foo":"bar"}`,
+			Source:      notificationsv1.NotificationSource_NOTIFICATION_SOURCE_SYSTEM,
+			CreatedAt:   timestamppb.New(now.Add(1 * time.Minute)),
+		},
+	}, now)
+
+	if got := len(items); got != 2 {
+		t.Fatalf("items = %d, want 2", got)
+	}
+	if items[0].Topic != "Welcome to Fracturing Space" {
+		t.Fatalf("items[0].Topic = %q, want %q", items[0].Topic, "Welcome to Fracturing Space")
+	}
+	if items[0].BodyText != "Your account is ready. Sign-in method: another method." {
+		t.Fatalf("items[0].BodyText = %q, want safe unknown-signup label", items[0].BodyText)
+	}
+	if strings.Contains(items[0].BodyText, "oauth") {
+		t.Fatalf("items[0].BodyText = %q, expected raw signup method to stay hidden", items[0].BodyText)
+	}
+
+	if items[1].Topic != "Notification" {
+		t.Fatalf("items[1].Topic = %q, want %q", items[1].Topic, "Notification")
+	}
+	if items[1].BodyText != "You have a new notification." {
+		t.Fatalf("items[1].BodyText = %q, want generic unknown-topic copy", items[1].BodyText)
+	}
+}
+
 func TestAppNotificationsPageRendersNewestFirstWithUnreadStateAndRelativeTime(t *testing.T) {
 	now := time.Date(2026, 2, 21, 22, 0, 0, 0, time.UTC)
 	oldCreatedAt := now.Add(-2 * time.Hour)
@@ -119,18 +163,19 @@ func TestAppNotificationsPageRendersNewestFirstWithUnreadStateAndRelativeTime(t 
 		listResp: &notificationsv1.ListNotificationsResponse{
 			Notifications: []*notificationsv1.Notification{
 				{
-					Id:        "notif-old",
-					Topic:     "Welcome to Fracturing Space",
-					Source:    notificationsv1.NotificationSource_NOTIFICATION_SOURCE_SYSTEM,
-					CreatedAt: timestamppb.New(oldCreatedAt),
-					ReadAt:    timestamppb.New(readAt),
+					Id:          "notif-old",
+					Topic:       "auth.onboarding.welcome.v1",
+					Source:      notificationsv1.NotificationSource_NOTIFICATION_SOURCE_SYSTEM,
+					CreatedAt:   timestamppb.New(oldCreatedAt),
+					ReadAt:      timestamppb.New(readAt),
+					PayloadJson: `{"signup_method":"magic_link"}`,
 				},
 				{
 					Id:          "notif-new",
-					Topic:       "Campaign invite accepted",
+					Topic:       "auth.onboarding.welcome",
 					Source:      notificationsv1.NotificationSource_NOTIFICATION_SOURCE_SYSTEM,
 					CreatedAt:   timestamppb.New(newCreatedAt),
-					PayloadJson: `{"event_type":"campaign.invite.accepted"}`,
+					PayloadJson: `{"signup_method":"passkey"}`,
 				},
 			},
 		},
@@ -195,16 +240,13 @@ func TestAppNotificationsPageRendersNewestFirstWithUnreadStateAndRelativeTime(t 
 	if !strings.Contains(body, `data-notifications-filter="all"`) {
 		t.Fatalf("expected all filter state marker")
 	}
-	if !strings.Contains(body, "Campaign invite accepted") {
-		t.Fatalf("expected newest notification topic in response")
-	}
 	if !strings.Contains(body, "Welcome to Fracturing Space") {
-		t.Fatalf("expected oldest notification topic in response")
+		t.Fatalf("expected localized notification title in response")
 	}
-	newIdx := strings.Index(body, "Campaign invite accepted")
-	oldIdx := strings.Index(body, "Welcome to Fracturing Space")
+	newIdx := strings.Index(body, `data-notification-id="notif-new"`)
+	oldIdx := strings.Index(body, `data-notification-id="notif-old"`)
 	if newIdx < 0 || oldIdx < 0 {
-		t.Fatalf("expected both notification topics in rendered output")
+		t.Fatalf("expected both notification ids in rendered output")
 	}
 	if newIdx > oldIdx {
 		t.Fatalf("expected newer notification to render first")
@@ -247,8 +289,11 @@ func TestAppNotificationsPageRendersNewestFirstWithUnreadStateAndRelativeTime(t 
 	if !strings.Contains(body, `data-notification-selected="true"`) {
 		t.Fatalf("expected selected row marker")
 	}
-	if !strings.Contains(body, "event_type") {
-		t.Fatalf("expected payload fallback content in detail pane")
+	if !strings.Contains(body, "Your account is ready. Sign-in method: passkey.") {
+		t.Fatalf("expected localized onboarding detail body")
+	}
+	if strings.Contains(body, "\"signup_method\"") {
+		t.Fatalf("expected payload JSON keys to stay hidden from end-user copy")
 	}
 	if !strings.Contains(body, `class="text-sm opacity-80">System</p>`) {
 		t.Fatalf("expected localized source label in detail pane")
@@ -258,6 +303,66 @@ func TestAppNotificationsPageRendersNewestFirstWithUnreadStateAndRelativeTime(t 
 	}
 	if !strings.Contains(body, "ago</time>") {
 		t.Fatalf("expected relative time in \"... ago\" format")
+	}
+}
+
+func TestAppNotificationsPageRendersLocalizedNotificationCopyInsteadOfArtifactValues(t *testing.T) {
+	now := time.Date(2026, 2, 21, 22, 0, 0, 0, time.UTC)
+	createdAt := now.Add(-10 * time.Minute)
+
+	fakeClient := &fakeWebNotificationClient{
+		listResp: &notificationsv1.ListNotificationsResponse{
+			Notifications: []*notificationsv1.Notification{
+				{
+					Id:          "notif-welcome",
+					Topic:       "auth.onboarding.welcome",
+					Source:      notificationsv1.NotificationSource_NOTIFICATION_SOURCE_SYSTEM,
+					CreatedAt:   timestamppb.New(createdAt),
+					PayloadJson: `{"signup_method":"passkey","event_type":"auth.signup_completed"}`,
+				},
+			},
+		},
+	}
+
+	h := &handler{
+		config:             Config{AuthBaseURL: "http://auth.local"},
+		sessions:           newSessionStore(),
+		pendingFlows:       newPendingFlowStore(),
+		notificationClient: fakeClient,
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	sess := h.sessions.get(sessionID, "token-1")
+	sess.cachedUserID = "user-1"
+	sess.cachedUserIDResolved = true
+
+	originalNow := notificationsNow
+	notificationsNow = func() time.Time { return now }
+	t.Cleanup(func() {
+		notificationsNow = originalNow
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/notifications?filter=all&selected=notif-welcome", nil)
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+
+	h.handleAppNotifications(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+
+	body := w.Body.String()
+	if !strings.Contains(body, "Welcome to Fracturing Space") {
+		t.Fatalf("expected localized onboarding title")
+	}
+	if !strings.Contains(body, "Your account is ready. Sign-in method: passkey.") {
+		t.Fatalf("expected localized onboarding detail body")
+	}
+	if strings.Contains(body, "auth.onboarding.welcome") {
+		t.Fatalf("expected artifact topic slug to stay hidden from end-user copy")
+	}
+	if strings.Contains(body, "\"signup_method\"") {
+		t.Fatalf("expected payload JSON keys to stay hidden from end-user copy")
 	}
 }
 
@@ -327,18 +432,18 @@ func TestAppNotificationsPageDefaultsToUnreadFilterAndSelectsNewestUnread(t *tes
 			Notifications: []*notificationsv1.Notification{
 				{
 					Id:          "notif-old",
-					Topic:       "Already read",
+					Topic:       "auth.onboarding.welcome.v1",
 					Source:      notificationsv1.NotificationSource_NOTIFICATION_SOURCE_SYSTEM,
 					CreatedAt:   timestamppb.New(oldCreatedAt),
 					ReadAt:      timestamppb.New(readAt),
-					PayloadJson: `{"foo":"bar"}`,
+					PayloadJson: `{"signup_method":"magic_link"}`,
 				},
 				{
 					Id:          "notif-new",
-					Topic:       "Newest unread",
+					Topic:       "auth.onboarding.welcome",
 					Source:      notificationsv1.NotificationSource_NOTIFICATION_SOURCE_SYSTEM,
 					CreatedAt:   timestamppb.New(newCreatedAt),
-					PayloadJson: `{"event_type":"auth.signup_completed"}`,
+					PayloadJson: `{"signup_method":"passkey"}`,
 				},
 			},
 		},
@@ -374,7 +479,7 @@ func TestAppNotificationsPageDefaultsToUnreadFilterAndSelectsNewestUnread(t *tes
 	if !strings.Contains(body, `data-notifications-filter="unread"`) {
 		t.Fatalf("expected unread filter to be default")
 	}
-	if strings.Contains(body, "Already read") {
+	if strings.Contains(body, `data-notification-id="notif-old"`) {
 		t.Fatalf("expected read-only row to be hidden under unread filter")
 	}
 	if !strings.Contains(body, `data-notification-id="notif-new"`) {
@@ -383,7 +488,7 @@ func TestAppNotificationsPageDefaultsToUnreadFilterAndSelectsNewestUnread(t *tes
 	if !strings.Contains(body, `data-notification-selected="true"`) {
 		t.Fatalf("expected selected unread row marker")
 	}
-	if !strings.Contains(body, "Newest unread") {
+	if !strings.Contains(body, "Your account is ready. Sign-in method: passkey.") {
 		t.Fatalf("expected selected unread detail content")
 	}
 	if fakeClient.markReq == nil {
@@ -456,18 +561,18 @@ func TestAppNotificationsPageSelectsExplicitNotificationInAllFilter(t *testing.T
 			Notifications: []*notificationsv1.Notification{
 				{
 					Id:          "notif-old",
-					Topic:       "Old read message",
+					Topic:       "auth.onboarding.welcome.v1",
 					Source:      notificationsv1.NotificationSource_NOTIFICATION_SOURCE_SYSTEM,
 					CreatedAt:   timestamppb.New(oldCreatedAt),
 					ReadAt:      timestamppb.New(readAt),
-					PayloadJson: `{"event_type":"old"}`,
+					PayloadJson: `{"signup_method":"magic_link"}`,
 				},
 				{
 					Id:          "notif-new",
-					Topic:       "New unread message",
+					Topic:       "auth.onboarding.welcome",
 					Source:      notificationsv1.NotificationSource_NOTIFICATION_SOURCE_SYSTEM,
 					CreatedAt:   timestamppb.New(newCreatedAt),
-					PayloadJson: `{"event_type":"new"}`,
+					PayloadJson: `{"signup_method":"passkey"}`,
 				},
 			},
 		},
@@ -509,7 +614,7 @@ func TestAppNotificationsPageSelectsExplicitNotificationInAllFilter(t *testing.T
 	if !strings.Contains(body, `data-notification-selected="true"`) {
 		t.Fatalf("expected selected row marker")
 	}
-	if !strings.Contains(body, "Old read message") {
+	if !strings.Contains(body, "Your account is ready. Sign-in method: magic link.") {
 		t.Fatalf("expected explicit selected detail content")
 	}
 }

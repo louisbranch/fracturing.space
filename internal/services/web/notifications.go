@@ -2,7 +2,6 @@ package web
 
 import (
 	"context"
-	"encoding/json"
 	"log"
 	"net/http"
 	"net/url"
@@ -11,6 +10,7 @@ import (
 	"time"
 
 	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
+	notificationsrender "github.com/louisbranch/fracturing.space/internal/services/notifications/render"
 	sharedroute "github.com/louisbranch/fracturing.space/internal/services/shared/route"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -158,7 +158,13 @@ func toNotificationListItems(loc webtemplates.Localizer, notifications []*notifi
 			createdAt = now
 		}
 		id := strings.TrimSpace(notification.GetId())
-		topic := strings.TrimSpace(notification.GetTopic())
+		rendered := notificationsrender.Render(loc, notificationsrender.Input{
+			Topic:       notification.GetTopic(),
+			PayloadJSON: strings.TrimSpace(notification.GetPayloadJson()),
+			Channel:     notificationsrender.ChannelInApp,
+		})
+
+		topic := strings.TrimSpace(rendered.Title)
 		if topic == "" {
 			topic = webtemplates.T(loc, "game.notifications.topic_unknown")
 		}
@@ -173,7 +179,7 @@ func toNotificationListItems(loc webtemplates.Localizer, notifications []*notifi
 				CreatedAtISO:      createdAt.Format(time.RFC3339),
 				CreatedAtText:     formatNotificationRelativeTime(loc, now, createdAt),
 				CreatedAtAbsolute: formatNotificationAbsoluteTime(createdAt),
-				Payload:           strings.TrimSpace(notification.GetPayloadJson()),
+				BodyText:          strings.TrimSpace(rendered.BodyText),
 				Unread:            notification.GetReadAt() == nil,
 			},
 			createdAt: createdAt,
@@ -234,7 +240,7 @@ func toNotificationsPageState(loc webtemplates.Localizer, items []webtemplates.N
 
 	if selectedIndex >= 0 && selectedIndex < len(filteredItems) {
 		selected := filteredItems[selectedIndex]
-		detailBody := notificationDetailBody(loc, selected.Payload)
+		detailBody := notificationDetailText(loc, selected.BodyText)
 		state.Detail = webtemplates.NotificationDetail{
 			HasSelection:      true,
 			Topic:             selected.Topic,
@@ -311,21 +317,12 @@ func notificationsListURL(query notificationPageQuery) string {
 	return "/notifications?" + values.Encode()
 }
 
-func notificationDetailBody(loc webtemplates.Localizer, payload string) string {
-	payload = strings.TrimSpace(payload)
-	if payload == "" || payload == "{}" {
+func notificationDetailText(loc webtemplates.Localizer, bodyText string) string {
+	bodyText = strings.TrimSpace(bodyText)
+	if bodyText == "" {
 		return webtemplates.T(loc, "game.notifications.detail_empty")
 	}
-
-	var value any
-	if err := json.Unmarshal([]byte(payload), &value); err != nil {
-		return payload
-	}
-	prettyPayload, err := json.MarshalIndent(value, "", "  ")
-	if err != nil {
-		return payload
-	}
-	return string(prettyPayload)
+	return bodyText
 }
 
 func formatNotificationAbsoluteTime(createdAt time.Time) string {

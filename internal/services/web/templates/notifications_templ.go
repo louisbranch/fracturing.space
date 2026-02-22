@@ -19,7 +19,7 @@ type NotificationListItem struct {
 	CreatedAtISO      string
 	CreatedAtText     string
 	CreatedAtAbsolute string
-	Payload           string
+	BodyText          string
 	ActionURL         string
 	Selected          bool
 	Unread            bool
