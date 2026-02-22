@@ -20,9 +20,10 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	NotificationService_CreateNotificationIntent_FullMethodName = "/notifications.v1.NotificationService/CreateNotificationIntent"
-	NotificationService_ListNotifications_FullMethodName        = "/notifications.v1.NotificationService/ListNotifications"
-	NotificationService_MarkNotificationRead_FullMethodName     = "/notifications.v1.NotificationService/MarkNotificationRead"
+	NotificationService_CreateNotificationIntent_FullMethodName    = "/notifications.v1.NotificationService/CreateNotificationIntent"
+	NotificationService_ListNotifications_FullMethodName           = "/notifications.v1.NotificationService/ListNotifications"
+	NotificationService_GetUnreadNotificationStatus_FullMethodName = "/notifications.v1.NotificationService/GetUnreadNotificationStatus"
+	NotificationService_MarkNotificationRead_FullMethodName        = "/notifications.v1.NotificationService/MarkNotificationRead"
 )
 
 // NotificationServiceClient is the client API for NotificationService service.
@@ -35,6 +36,8 @@ type NotificationServiceClient interface {
 	CreateNotificationIntent(ctx context.Context, in *CreateNotificationIntentRequest, opts ...grpc.CallOption) (*CreateNotificationIntentResponse, error)
 	// ListNotifications returns notifications visible to the caller.
 	ListNotifications(ctx context.Context, in *ListNotificationsRequest, opts ...grpc.CallOption) (*ListNotificationsResponse, error)
+	// GetUnreadNotificationStatus returns unread-inbox status for the caller.
+	GetUnreadNotificationStatus(ctx context.Context, in *GetUnreadNotificationStatusRequest, opts ...grpc.CallOption) (*GetUnreadNotificationStatusResponse, error)
 	// MarkNotificationRead acknowledges one notification for the caller.
 	MarkNotificationRead(ctx context.Context, in *MarkNotificationReadRequest, opts ...grpc.CallOption) (*MarkNotificationReadResponse, error)
 }
@@ -67,6 +70,16 @@ func (c *notificationServiceClient) ListNotifications(ctx context.Context, in *L
 	return out, nil
 }
 
+func (c *notificationServiceClient) GetUnreadNotificationStatus(ctx context.Context, in *GetUnreadNotificationStatusRequest, opts ...grpc.CallOption) (*GetUnreadNotificationStatusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetUnreadNotificationStatusResponse)
+	err := c.cc.Invoke(ctx, NotificationService_GetUnreadNotificationStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *notificationServiceClient) MarkNotificationRead(ctx context.Context, in *MarkNotificationReadRequest, opts ...grpc.CallOption) (*MarkNotificationReadResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(MarkNotificationReadResponse)
@@ -87,6 +100,8 @@ type NotificationServiceServer interface {
 	CreateNotificationIntent(context.Context, *CreateNotificationIntentRequest) (*CreateNotificationIntentResponse, error)
 	// ListNotifications returns notifications visible to the caller.
 	ListNotifications(context.Context, *ListNotificationsRequest) (*ListNotificationsResponse, error)
+	// GetUnreadNotificationStatus returns unread-inbox status for the caller.
+	GetUnreadNotificationStatus(context.Context, *GetUnreadNotificationStatusRequest) (*GetUnreadNotificationStatusResponse, error)
 	// MarkNotificationRead acknowledges one notification for the caller.
 	MarkNotificationRead(context.Context, *MarkNotificationReadRequest) (*MarkNotificationReadResponse, error)
 	mustEmbedUnimplementedNotificationServiceServer()
@@ -104,6 +119,9 @@ func (UnimplementedNotificationServiceServer) CreateNotificationIntent(context.C
 }
 func (UnimplementedNotificationServiceServer) ListNotifications(context.Context, *ListNotificationsRequest) (*ListNotificationsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListNotifications not implemented")
+}
+func (UnimplementedNotificationServiceServer) GetUnreadNotificationStatus(context.Context, *GetUnreadNotificationStatusRequest) (*GetUnreadNotificationStatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetUnreadNotificationStatus not implemented")
 }
 func (UnimplementedNotificationServiceServer) MarkNotificationRead(context.Context, *MarkNotificationReadRequest) (*MarkNotificationReadResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method MarkNotificationRead not implemented")
@@ -165,6 +183,24 @@ func _NotificationService_ListNotifications_Handler(srv interface{}, ctx context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _NotificationService_GetUnreadNotificationStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetUnreadNotificationStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NotificationServiceServer).GetUnreadNotificationStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: NotificationService_GetUnreadNotificationStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NotificationServiceServer).GetUnreadNotificationStatus(ctx, req.(*GetUnreadNotificationStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _NotificationService_MarkNotificationRead_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(MarkNotificationReadRequest)
 	if err := dec(in); err != nil {
@@ -197,6 +233,10 @@ var NotificationService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListNotifications",
 			Handler:    _NotificationService_ListNotifications_Handler,
+		},
+		{
+			MethodName: "GetUnreadNotificationStatus",
+			Handler:    _NotificationService_GetUnreadNotificationStatus_Handler,
 		},
 		{
 			MethodName: "MarkNotificationRead",

@@ -36,9 +36,11 @@ wait_for_services_ready() {
     "game"
     "auth"
     "ai"
+    "notifications"
     "mcp"
     "admin"
     "chat"
+    "worker"
     "web"
   )
 
@@ -46,9 +48,11 @@ wait_for_services_ready() {
     "game server listening at"
     "auth server listening at"
     "ai server listening at"
+    "notifications server listening at"
     "Starting MCP HTTP server"
     "admin listening on"
     "chat server listening on"
+    "worker server listening at"
     "web login listening on"
   )
 

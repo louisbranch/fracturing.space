@@ -153,6 +153,8 @@ func gamePathSegmentLabel(segment string, fullPath string, loc Localizer) string
 			return T(loc, "game.my_invites.title")
 		}
 		return T(loc, "game.campaign_invites.title")
+	case "notifications":
+		return T(loc, "game.notifications.title")
 	case "create":
 		return T(loc, "game.create.title")
 	case "sessions":

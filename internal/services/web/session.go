@@ -33,13 +33,16 @@ type session struct {
 	expiresAt              time.Time
 	accessTokenFingerprint string
 
-	mu                     sync.RWMutex
-	cachedUserID           string
-	cachedUserIDResolved   bool
-	cachedUserAvatarURL    string
-	cachedUserAvatarCached bool
-	cachedUserLocaleTag    string
-	cachedUserLocaleCached bool
+	mu                                    sync.RWMutex
+	cachedUserID                          string
+	cachedUserIDResolved                  bool
+	cachedUserAvatarURL                   string
+	cachedUserAvatarCached                bool
+	cachedUserLocaleTag                   string
+	cachedUserLocaleCached                bool
+	cachedHasUnreadNotifications          bool
+	cachedHasUnreadNotificationsCached    bool
+	cachedHasUnreadNotificationsCheckedAt time.Time
 }
 
 // sessionStore keeps a process-local cache of active sessions and optionally reads
@@ -135,6 +138,54 @@ func (s *session) setCachedUserLocale(locale string) {
 	s.mu.Lock()
 	s.cachedUserLocaleTag = strings.TrimSpace(locale)
 	s.cachedUserLocaleCached = true
+	s.mu.Unlock()
+}
+
+func (s *session) cachedUnreadNotifications(maxAge time.Duration) (bool, bool) {
+	if s == nil {
+		return false, false
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if !s.cachedHasUnreadNotificationsCached {
+		return false, false
+	}
+	if maxAge > 0 {
+		if s.cachedHasUnreadNotificationsCheckedAt.IsZero() {
+			return false, false
+		}
+		if time.Since(s.cachedHasUnreadNotificationsCheckedAt) > maxAge {
+			return false, false
+		}
+	}
+	return s.cachedHasUnreadNotifications, true
+}
+
+func (s *session) setCachedUnreadNotifications(hasUnread bool) {
+	if s == nil {
+		return
+	}
+	s.mu.Lock()
+	s.cachedHasUnreadNotifications = hasUnread
+	s.cachedHasUnreadNotificationsCached = true
+	s.cachedHasUnreadNotificationsCheckedAt = time.Now()
+	s.mu.Unlock()
+}
+
+func (s *session) clearCachedUnreadNotifications() {
+	if s == nil {
+		return
+	}
+	s.mu.Lock()
+	if s.cachedHasUnreadNotificationsCached {
+		// Preserve last known state for stale fallback while forcing a fresh probe.
+		s.cachedHasUnreadNotificationsCheckedAt = time.Time{}
+		s.mu.Unlock()
+		return
+	}
+	s.cachedHasUnreadNotifications = false
+	s.cachedHasUnreadNotificationsCached = false
+	s.cachedHasUnreadNotificationsCheckedAt = time.Time{}
 	s.mu.Unlock()
 }
 

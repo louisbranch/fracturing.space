@@ -105,6 +105,77 @@ func TestPutGetListNotificationsAndMarkRead(t *testing.T) {
 	}
 }
 
+func TestCountUnreadNotificationsByRecipient(t *testing.T) {
+	t.Parallel()
+
+	store := openTempStore(t)
+	now := time.Date(2026, 2, 21, 21, 8, 0, 0, time.UTC)
+
+	for _, input := range []storage.NotificationRecord{
+		{
+			ID:              "notif-1",
+			RecipientUserID: "user-1",
+			Topic:           "campaign.invite",
+			PayloadJSON:     "{}",
+			DedupeKey:       "invite:1",
+			Source:          "game",
+			CreatedAt:       now,
+			UpdatedAt:       now,
+		},
+		{
+			ID:              "notif-2",
+			RecipientUserID: "user-1",
+			Topic:           "session.update",
+			PayloadJSON:     "{}",
+			DedupeKey:       "session:1",
+			Source:          "game",
+			CreatedAt:       now.Add(time.Minute),
+			UpdatedAt:       now.Add(time.Minute),
+		},
+		{
+			ID:              "notif-3",
+			RecipientUserID: "user-2",
+			Topic:           "campaign.invite",
+			PayloadJSON:     "{}",
+			DedupeKey:       "invite:2",
+			Source:          "game",
+			CreatedAt:       now.Add(2 * time.Minute),
+			UpdatedAt:       now.Add(2 * time.Minute),
+		},
+	} {
+		if err := store.PutNotification(context.Background(), input); err != nil {
+			t.Fatalf("put notification %s: %v", input.ID, err)
+		}
+	}
+	if _, err := store.MarkNotificationRead(context.Background(), "user-1", "notif-2", now.Add(3*time.Minute)); err != nil {
+		t.Fatalf("mark read: %v", err)
+	}
+
+	userOneUnread, err := store.CountUnreadNotificationsByRecipient(context.Background(), "user-1")
+	if err != nil {
+		t.Fatalf("count unread for user-1: %v", err)
+	}
+	if userOneUnread != 1 {
+		t.Fatalf("user-1 unread = %d, want 1", userOneUnread)
+	}
+
+	userTwoUnread, err := store.CountUnreadNotificationsByRecipient(context.Background(), "user-2")
+	if err != nil {
+		t.Fatalf("count unread for user-2: %v", err)
+	}
+	if userTwoUnread != 1 {
+		t.Fatalf("user-2 unread = %d, want 1", userTwoUnread)
+	}
+
+	missingUnread, err := store.CountUnreadNotificationsByRecipient(context.Background(), "user-missing")
+	if err != nil {
+		t.Fatalf("count unread for missing user: %v", err)
+	}
+	if missingUnread != 0 {
+		t.Fatalf("user-missing unread = %d, want 0", missingUnread)
+	}
+}
+
 func TestPutNotificationRejectsRecipientDedupeConflicts(t *testing.T) {
 	t.Parallel()
 

@@ -76,6 +76,11 @@ export FRACTURING_SPACE_CHAT_HTTP_ADDR="${FRACTURING_SPACE_CHAT_HTTP_ADDR:-0.0.0
 export FRACTURING_SPACE_AI_PORT="${FRACTURING_SPACE_AI_PORT:-8087}"
 export FRACTURING_SPACE_AI_ADDR="${FRACTURING_SPACE_AI_ADDR:-localhost:8087}"
 export FRACTURING_SPACE_AI_DB_PATH="${FRACTURING_SPACE_AI_DB_PATH:-data/ai.db}"
+export FRACTURING_SPACE_NOTIFICATIONS_PORT="${FRACTURING_SPACE_NOTIFICATIONS_PORT:-8088}"
+export FRACTURING_SPACE_NOTIFICATIONS_ADDR="${FRACTURING_SPACE_NOTIFICATIONS_ADDR:-localhost:8088}"
+export FRACTURING_SPACE_WORKER_PORT="${FRACTURING_SPACE_WORKER_PORT:-8089}"
+export FRACTURING_SPACE_WORKER_AUTH_ADDR="${FRACTURING_SPACE_WORKER_AUTH_ADDR:-localhost:8083}"
+export FRACTURING_SPACE_WORKER_NOTIFICATIONS_ADDR="${FRACTURING_SPACE_WORKER_NOTIFICATIONS_ADDR:-localhost:8088}"
 
 pids=()
 
@@ -139,10 +144,15 @@ trap cleanup EXIT INT TERM
 start_service game FRACTURING_SPACE_GAME_ADDR=
 start_service auth
 start_service ai
+start_service notifications
 wait_for_service_log_marker "game" "game server listening at"
+wait_for_service_log_marker "auth" "auth server listening at"
+wait_for_service_log_marker "ai" "ai server listening at"
+wait_for_service_log_marker "notifications" "notifications server listening at"
 start_service mcp
 start_service admin
 start_service chat
+start_service worker
 start_service web
 
 wait -n "${pids[@]}"

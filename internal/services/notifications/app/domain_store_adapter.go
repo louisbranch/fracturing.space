@@ -111,6 +111,17 @@ func (a *domainStoreAdapter) ListNotificationsByRecipient(ctx context.Context, r
 	return result, nil
 }
 
+func (a *domainStoreAdapter) CountUnreadNotificationsByRecipient(ctx context.Context, recipientUserID string) (int, error) {
+	if a == nil || a.notificationStore == nil {
+		return 0, domain.ErrStoreNotConfigured
+	}
+	unreadCount, err := a.notificationStore.CountUnreadNotificationsByRecipient(ctx, recipientUserID)
+	if err != nil {
+		return 0, mapStorageError(err)
+	}
+	return unreadCount, nil
+}
+
 func (a *domainStoreAdapter) MarkNotificationRead(ctx context.Context, recipientUserID string, notificationID string, readAt time.Time) (domain.Notification, error) {
 	if a == nil || a.notificationStore == nil {
 		return domain.Notification{}, domain.ErrStoreNotConfigured

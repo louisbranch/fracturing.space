@@ -6,16 +6,17 @@ import (
 
 // PageContext provides shared layout context for pages.
 type PageContext struct {
-	Lang                  string
-	Loc                   Localizer
-	CurrentPath           string
-	CurrentQuery          string
-	ChatFallbackPort      string
-	CampaignName          string
-	CampaignCoverImageURL string
-	UserName              string
-	UserAvatarURL         string
-	AppName               string
+	Lang                   string
+	Loc                    Localizer
+	CurrentPath            string
+	CurrentQuery           string
+	ChatFallbackPort       string
+	CampaignName           string
+	CampaignCoverImageURL  string
+	UserName               string
+	UserAvatarURL          string
+	HasUnreadNotifications bool
+	AppName                string
 }
 
 func isGamePagePath(path string) bool {
@@ -36,6 +37,9 @@ func isGamePagePath(path string) bool {
 		return true
 	}
 	if path == "/invites" || strings.HasPrefix(path, "/invites/") {
+		return true
+	}
+	if path == "/notifications" || strings.HasPrefix(path, "/notifications/") {
 		return true
 	}
 	return false

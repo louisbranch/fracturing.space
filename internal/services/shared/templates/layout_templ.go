@@ -24,17 +24,18 @@ const defaultTheme = "abyss"
 const defaultThemeStylesheet = "https://cdn.jsdelivr.net/npm/daisyui@5.5.18/theme/" + defaultTheme + ".css"
 
 type ChromeLayoutOptions struct {
-	Theme         string
-	DataLayout    string
-	MainAria      string
-	MainStyle     string
-	MainClass     string
-	Nav           templ.Component
-	HeadExtras    templ.Component
-	BodyScripts   templ.Component
-	SideMenu      templ.Component
-	UserName      string
-	UserAvatarURL string
+	Theme                  string
+	DataLayout             string
+	MainAria               string
+	MainStyle              string
+	MainClass              string
+	Nav                    templ.Component
+	HeadExtras             templ.Component
+	BodyScripts            templ.Component
+	SideMenu               templ.Component
+	UserName               string
+	UserAvatarURL          string
+	HasUnreadNotifications bool
 }
 
 type AppChromeLayoutOptions struct {
@@ -128,7 +129,7 @@ func pageHead(title string, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(ComposePageTitle(title))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 100, Col: 33}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 101, Col: 33}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -141,7 +142,7 @@ func pageHead(title string, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "layout.meta_description"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 101, Col: 69}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 102, Col: 69}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
@@ -154,7 +155,7 @@ func pageHead(title string, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var4 templ.SafeURL
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinURLErrs(defaultThemeStylesheet)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 103, Col: 36}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 104, Col: 36}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -196,7 +197,7 @@ func ShellLayout(title string, lang string, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var6 string
 		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(lang)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 109, Col: 18}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 110, Col: 18}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {
@@ -209,7 +210,7 @@ func ShellLayout(title string, lang string, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(defaultTheme)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 109, Col: 46}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 110, Col: 46}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {
@@ -271,7 +272,7 @@ func AppChromeLayout(options AppChromeLayoutOptions) templ.Component {
 		var templ_7745c5c3_Var9 string
 		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(options.Lang)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 123, Col: 26}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 124, Col: 26}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 		if templ_7745c5c3_Err != nil {
@@ -284,7 +285,7 @@ func AppChromeLayout(options AppChromeLayoutOptions) templ.Component {
 		var templ_7745c5c3_Var10 string
 		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(chromeTheme(options.ChromeOptions))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 123, Col: 76}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 124, Col: 76}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 		if templ_7745c5c3_Err != nil {
@@ -321,7 +322,7 @@ func AppChromeLayout(options AppChromeLayoutOptions) templ.Component {
 		var templ_7745c5c3_Var11 string
 		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(chromeDataLayout(options.ChromeOptions))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 134, Col: 98}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 135, Col: 98}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 		if templ_7745c5c3_Err != nil {
@@ -348,7 +349,7 @@ func AppChromeLayout(options AppChromeLayoutOptions) templ.Component {
 			var templ_7745c5c3_Var12 string
 			templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(options.AppName)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 142, Col: 24}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 143, Col: 24}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 			if templ_7745c5c3_Err != nil {
@@ -361,7 +362,7 @@ func AppChromeLayout(options AppChromeLayoutOptions) templ.Component {
 			var templ_7745c5c3_Var13 string
 			templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(T(options.Loc, "dashboard.title"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 154, Col: 42}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 155, Col: 42}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 			if templ_7745c5c3_Err != nil {
@@ -374,44 +375,85 @@ func AppChromeLayout(options AppChromeLayoutOptions) templ.Component {
 			var templ_7745c5c3_Var14 string
 			templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(T(options.Loc, "game.campaigns.title"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 163, Col: 47}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 164, Col: 47}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "</a> ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "</a> <a href=\"/notifications\" hx-get=\"/notifications\" hx-target=\"#main\" hx-swap=\"innerHTML\" hx-push-url=\"true\" data-nav-item=\"true\" class=\"btn btn-ghost btn-circle\" aria-label=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var15 string
+			templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(T(options.Loc, "game.notifications.title"))
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 173, Col: 62}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "\" title=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var16 string
+			templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(T(options.Loc, "game.notifications.title"))
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 174, Col: 57}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			if options.ChromeOptions.HasUnreadNotifications {
+				templ_7745c5c3_Err = LucideIconID(commonv1.IconId_ICON_ID_NOTIFICATION_UNREAD, "size-5").Render(ctx, templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+			} else {
+				templ_7745c5c3_Err = LucideIconID(commonv1.IconId_ICON_ID_NOTIFICATION, "size-5").Render(ctx, templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "</a> ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			if strings.TrimSpace(options.ChromeOptions.UserAvatarURL) != "" {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "<div class=\"dropdown dropdown-end\"><button type=\"button\" class=\"btn btn-ghost btn-circle avatar\"><div class=\"w-10 rounded-full\"><img src=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "<div class=\"dropdown dropdown-end\"><button type=\"button\" class=\"btn btn-ghost btn-circle avatar\"><div class=\"w-10 rounded-full\"><img src=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var15 string
-				templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(options.ChromeOptions.UserAvatarURL)
+				var templ_7745c5c3_Var17 string
+				templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(options.ChromeOptions.UserAvatarURL)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 169, Col: 52}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 187, Col: 52}
 				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "\" alt=\"")
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var16 string
-				templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(options.ChromeOptions.UserName)
-				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 170, Col: 47}
-				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "\" alt=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "\" class=\"rounded-full\"></div></button><div class=\"dropdown-content bg-base-100 rounded-box z-[1] mt-3 w-40 p-2 shadow\"><a href=\"/profile\" hx-get=\"/profile\" hx-target=\"#main\" hx-swap=\"innerHTML\" hx-push-url=\"true\" class=\"btn btn-ghost btn-sm w-full justify-start\">")
+				var templ_7745c5c3_Var18 string
+				templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(options.ChromeOptions.UserName)
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 188, Col: 47}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "\" class=\"rounded-full\"></div></button><div class=\"dropdown-content bg-base-100 rounded-box z-[1] mt-3 w-40 p-2 shadow\"><a href=\"/profile\" hx-get=\"/profile\" hx-target=\"#main\" hx-swap=\"innerHTML\" hx-push-url=\"true\" class=\"btn btn-ghost btn-sm w-full justify-start\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -419,16 +461,16 @@ func AppChromeLayout(options AppChromeLayoutOptions) templ.Component {
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var17 string
-				templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(T(options.Loc, "layout.profile"))
+				var templ_7745c5c3_Var19 string
+				templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(T(options.Loc, "layout.profile"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 185, Col: 44}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 203, Col: 44}
 				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "</a> <a href=\"/settings\" hx-get=\"/settings\" hx-target=\"#main\" hx-swap=\"innerHTML\" hx-push-url=\"true\" class=\"btn btn-ghost btn-sm w-full justify-start\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "</a> <a href=\"/settings\" hx-get=\"/settings\" hx-target=\"#main\" hx-swap=\"innerHTML\" hx-push-url=\"true\" class=\"btn btn-ghost btn-sm w-full justify-start\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -436,148 +478,148 @@ func AppChromeLayout(options AppChromeLayoutOptions) templ.Component {
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var18 string
-				templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(T(options.Loc, "layout.settings"))
-				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 196, Col: 45}
-				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "</a><form method=\"POST\" action=\"/auth/logout\"><button type=\"submit\" class=\"btn btn-ghost btn-sm w-full justify-start\">")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				templ_7745c5c3_Err = LucideIconID(commonv1.IconId_ICON_ID_LOG_OUT, "size-4 me-2").Render(ctx, templ_7745c5c3_Buffer)
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				var templ_7745c5c3_Var19 string
-				templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(T(options.Loc, "layout.sign_out"))
-				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 201, Col: 46}
-				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "</button></form></div></div>")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-			} else {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "<form method=\"POST\" action=\"/auth/logout\"><button type=\"submit\" class=\"btn btn-ghost btn-sm justify-start\">")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				templ_7745c5c3_Err = LucideIconID(commonv1.IconId_ICON_ID_LOG_OUT, "size-4 me-2").Render(ctx, templ_7745c5c3_Buffer)
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
 				var templ_7745c5c3_Var20 string
-				templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(T(options.Loc, "layout.sign_out"))
+				templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(T(options.Loc, "layout.settings"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 210, Col: 44}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 214, Col: 45}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "</button></form>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "</a><form method=\"POST\" action=\"/auth/logout\"><button type=\"submit\" class=\"btn btn-ghost btn-sm w-full justify-start\">")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = LucideIconID(commonv1.IconId_ICON_ID_LOG_OUT, "size-4 me-2").Render(ctx, templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				var templ_7745c5c3_Var21 string
+				templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinStringErrs(T(options.Loc, "layout.sign_out"))
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 219, Col: 46}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "</button></form></div></div>")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+			} else {
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "<form method=\"POST\" action=\"/auth/logout\"><button type=\"submit\" class=\"btn btn-ghost btn-sm justify-start\">")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = LucideIconID(commonv1.IconId_ICON_ID_LOG_OUT, "size-4 me-2").Render(ctx, templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				var templ_7745c5c3_Var22 string
+				templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(T(options.Loc, "layout.sign_out"))
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 228, Col: 44}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "</button></form>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "</div></nav>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "</div></nav>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		var templ_7745c5c3_Var21 = []any{chromeMainClassFromStyle(options.ChromeOptions.MainStyle, options.ChromeOptions.MainClass)}
-		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var21...)
+		var templ_7745c5c3_Var23 = []any{chromeMainClassFromStyle(options.ChromeOptions.MainStyle, options.ChromeOptions.MainClass)}
+		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var23...)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "<main class=\"")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var22 string
-		templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var21).String())
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 1, Col: 0}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "\" style=\"")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var23 string
-		templ_7745c5c3_Var23, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(options.ChromeOptions.MainStyle)
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 219, Col: 43}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "\" data-default-style=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, "<main class=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var24 string
-		templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinStringErrs(options.ChromeOptions.MainStyle)
+		templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var23).String())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 220, Col: 56}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 1, Col: 0}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var24))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, "\" id=\"main\" data-default-class=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, "\" style=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var25 string
-		templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs(chromeMainClassFromStyle(options.ChromeOptions.MainStyle, options.ChromeOptions.MainClass))
+		templ_7745c5c3_Var25, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(options.ChromeOptions.MainStyle)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 222, Col: 115}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 237, Col: 43}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, "\" data-fallback-class=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "\" data-default-style=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var26 string
-		templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinStringErrs(chromeMainClassFromStyle("", ""))
+		templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinStringErrs(options.ChromeOptions.MainStyle)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 223, Col: 58}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 238, Col: 56}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var26))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "\" aria-label=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "\" id=\"main\" data-default-class=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var27 string
-		templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(chromeMainAria(options.Loc, options.ChromeOptions))
+		templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(chromeMainClassFromStyle(options.ChromeOptions.MainStyle, options.ChromeOptions.MainClass))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 224, Col: 67}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 240, Col: 115}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var27))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, "\" data-fallback-class=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var28 string
+		templ_7745c5c3_Var28, templ_7745c5c3_Err = templ.JoinStringErrs(chromeMainClassFromStyle("", ""))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 241, Col: 58}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var28))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, "\" aria-label=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var29 string
+		templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.JoinStringErrs(chromeMainAria(options.Loc, options.ChromeOptions))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 242, Col: 67}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var29))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -587,25 +629,25 @@ func AppChromeLayout(options AppChromeLayoutOptions) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, "<h1 class=\"mb-5\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, "<h1 class=\"mb-5\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var28 string
-		templ_7745c5c3_Var28, templ_7745c5c3_Err = templ.JoinStringErrs(pageHeadingFromTitle(options.Title, options.AppName))
+		var templ_7745c5c3_Var30 string
+		templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.JoinStringErrs(pageHeadingFromTitle(options.Title, options.AppName))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 229, Col: 74}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 247, Col: 74}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var28))
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var30))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, "</h1>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 41, "</h1>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if options.ChromeOptions.SideMenu != nil {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "<div class=\"grid gap-6 lg:grid-cols-[16rem_1fr]\"><aside class=\"h-fit\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 42, "<div class=\"grid gap-6 lg:grid-cols-[16rem_1fr]\"><aside class=\"h-fit\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -613,7 +655,7 @@ func AppChromeLayout(options AppChromeLayoutOptions) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, "</aside>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 43, "</aside>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -621,7 +663,7 @@ func AppChromeLayout(options AppChromeLayoutOptions) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 41, "</div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 44, "</div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -631,7 +673,7 @@ func AppChromeLayout(options AppChromeLayoutOptions) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 42, "</main><script>\n\t\t\tfunction chromeCurrentPath(pathname) {\n\t\t\t\tif (!pathname) {\n\t\t\t\t\treturn window.location.pathname || \"/\";\n\t\t\t\t}\n\t\t\t\tif (typeof pathname === \"object\") {\n\t\t\t\t\tif (pathname instanceof URL && pathname.pathname) {\n\t\t\t\t\t\treturn pathname.pathname;\n\t\t\t\t\t}\n\t\t\t\t\tif (typeof pathname.pathname === \"string\") {\n\t\t\t\t\t\treturn pathname.pathname;\n\t\t\t\t\t}\n\t\t\t\t\tpathname = String(pathname);\n\t\t\t\t}\n\t\t\t\tif (typeof pathname !== \"string\" || pathname.charAt(0) !== \"/\") {\n\t\t\t\t\ttry {\n\t\t\t\t\t\treturn new URL(pathname, window.location.origin).pathname;\n\t\t\t\t\t} catch (err) {\n\t\t\t\t\t\treturn window.location.pathname || \"/\";\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t\treturn pathname;\n\t\t\t}\n\n\t\t\tfunction syncChromeNavActiveLinks(currentPath) {\n\t\t\t\tcurrentPath = chromeCurrentPath(currentPath);\n\t\t\t\tvar links = document.querySelectorAll(\"a[data-nav-item]\");\n\t\t\t\tif (!links.length) {\n\t\t\t\t\treturn;\n\t\t\t\t}\n\t\t\t\tlinks.forEach(function(link) {\n\t\t\t\t\tvar href = link.getAttribute(\"href\");\n\t\t\t\t\tlink.classList.remove(\"active\");\n\t\t\t\t\tlink.classList.remove(\"menu-active\");\n\t\t\t\t\tlink.classList.remove(\"btn-active\");\n\t\t\t\t\tif (!href) {\n\t\t\t\t\t\treturn;\n\t\t\t\t\t}\n\t\t\t\t\tvar target;\n\t\t\t\t\ttry {\n\t\t\t\t\t\ttarget = new URL(href, window.location.origin);\n\t\t\t\t\t} catch (err) {\n\t\t\t\t\t\treturn;\n\t\t\t\t\t}\n\t\t\t\t\tvar shouldBeActive = currentPath === target.pathname;\n\t\t\t\t\tif (!shouldBeActive && target.pathname !== \"/\") {\n\t\t\t\t\t\tshouldBeActive = currentPath.indexOf(target.pathname + \"/\") === 0;\n\t\t\t\t\t}\n\n\t\t\t\t\tif (link.classList.contains(\"btn\")) {\n\t\t\t\t\t\tlink.classList.toggle(\"btn-active\", shouldBeActive);\n\t\t\t\t\t} else {\n\t\t\t\t\t\tlink.classList.toggle(\"menu-active\", shouldBeActive);\n\t\t\t\t\t}\n\t\t\t\t});\n\t\t\t}\n\n\t\t\tvar campaignWorkspaceRoutePattern = /^\\/campaigns\\/(?!create(?:\\/|$))[^/]+(?:\\/|$)/;\n\t\t\tvar campaignMainCoverClass = \"w-full max-w-none px-0 pt-20 flex-1\";\n\t\t\tvar fallbackMainClass = \"w-full max-w-none px-4 pt-20 flex-1\";\n\n\t\t\tfunction mainFallbackClass(main) {\n\t\t\t\tif (!main) {\n\t\t\t\t\treturn fallbackMainClass;\n\t\t\t\t}\n\t\t\t\tvar fromDom = main.getAttribute(\"data-fallback-class\");\n\t\t\t\tif (fromDom) {\n\t\t\t\t\treturn fromDom;\n\t\t\t\t}\n\t\t\t\treturn fallbackMainClass;\n\t\t\t}\n\n\t\t\tfunction mainDefaultClass(main) {\n\t\t\t\tif (!main) {\n\t\t\t\t\treturn fallbackMainClass;\n\t\t\t\t}\n\t\t\t\tvar fromDom = main.getAttribute(\"data-default-class\");\n\t\t\t\tif (fromDom) {\n\t\t\t\t\treturn fromDom;\n\t\t\t\t}\n\t\t\t\treturn mainFallbackClass(main);\n\t\t\t}\n\n\t\t\tfunction isCampaignWorkspaceRoute(pathname) {\n\t\t\t\treturn campaignWorkspaceRoutePattern.test(chromeCurrentPath(pathname));\n\t\t\t}\n\n\t\t\tfunction campaignMainContainerClass(mainStyle, extraClass, defaultClass, main) {\n\t\t\t\tvar baseClass = defaultClass || mainFallbackClass(main);\n\t\t\t\tif (mainStyle) {\n\t\t\t\t\tbaseClass = campaignMainCoverClass;\n\t\t\t\t}\n\t\t\t\tif (extraClass) {\n\t\t\t\t\tbaseClass = baseClass + \" \" + extraClass;\n\t\t\t\t}\n\t\t\t\treturn baseClass;\n\t\t\t}\n\n\t\t\tfunction campaignMainMetadata(main) {\n\t\t\t\tvar metadata = main.querySelector(\"[data-campaign-main-style]\");\n\t\t\t\tif (!metadata) {\n\t\t\t\t\treturn null;\n\t\t\t\t}\n\n\t\t\t\treturn {\n\t\t\t\t\tstyle: metadata.getAttribute(\"data-campaign-main-style\") || \"\",\n\t\t\t\t\textraClass: metadata.getAttribute(\"data-campaign-main-extra-class\") || \"\",\n\t\t\t\t};\n\t\t\t}\n\n\t\t\tfunction isCampaignMainStyle(style) {\n\t\t\t\treturn (\n\t\t\t\t\ttypeof style === \"string\" &&\n\t\t\t\t\tstyle.indexOf(\"background-image: linear-gradient(to bottom\") === 0\n\t\t\t\t);\n\t\t\t}\n\n\t\t\tfunction syncCampaignMainState(main) {\n\t\t\t\tvar metadata = campaignMainMetadata(main);\n\t\t\t\tvar style = \"\";\n\t\t\t\tvar extraClass = \"\";\n\t\t\t\tvar defaultClass = mainDefaultClass(main);\n\n\t\t\t\tif (metadata) {\n\t\t\t\t\tstyle = metadata.style;\n\t\t\t\t\textraClass = metadata.extraClass;\n\t\t\t\t}\n\t\t\t\tif (!style) {\n\t\t\t\t\tstyle = main.getAttribute(\"data-default-style\") || \"\";\n\t\t\t\t}\n\n\t\t\t\tmain.setAttribute(\"style\", style);\n\t\t\t\tmain.className = campaignMainContainerClass(style, extraClass, defaultClass, main);\n\t\t\t}\n\n\t\t\tfunction syncChromeMainStateForRoute(currentPath) {\n\t\t\t\tvar main = document.getElementById(\"main\");\n\t\t\t\tif (!main) {\n\t\t\t\t\treturn;\n\t\t\t\t}\n\n\t\t\t\tif (isCampaignWorkspaceRoute(currentPath)) {\n\t\t\t\t\tsyncCampaignMainState(main);\n\t\t\t\t\treturn;\n\t\t\t\t}\n\n\t\t\t\tvar defaultStyle = main.getAttribute(\"data-default-style\") || \"\";\n\t\t\t\tvar defaultClass = mainDefaultClass(main);\n\n\t\t\t\tif (isCampaignMainStyle(defaultStyle)) {\n\t\t\t\t\tmain.removeAttribute(\"style\");\n\t\t\t\t\tdefaultClass = mainFallbackClass(main);\n\t\t\t\t} else {\n\t\t\t\t\tif (defaultStyle) {\n\t\t\t\t\t\tmain.setAttribute(\"style\", defaultStyle);\n\t\t\t\t\t} else {\n\t\t\t\t\t\tmain.removeAttribute(\"style\");\n\t\t\t\t\t}\n\t\t\t\t}\n\n\t\t\t\tif (main.className !== defaultClass) {\n\t\t\t\t\tmain.className = defaultClass;\n\t\t\t\t}\n\t\t\t}\n\n\t\t\tfunction syncChromePathFromHtmxDetail(detail) {\n\t\t\t\tif (!detail) {\n\t\t\t\t\treturn null;\n\t\t\t\t}\n\t\t\t\tif (detail.pathInfo && detail.pathInfo.requestPath) {\n\t\t\t\t\treturn detail.pathInfo.requestPath;\n\t\t\t\t}\n\t\t\t\tif (detail.requestConfig && detail.requestConfig.path) {\n\t\t\t\t\treturn detail.requestConfig.path;\n\t\t\t\t}\n\t\t\t\tif (detail.elt && typeof detail.elt.getAttribute === \"function\") {\n\t\t\t\t\tvar href = detail.elt.getAttribute(\"href\") || detail.elt.getAttribute(\"hx-get\");\n\t\t\t\t\tif (href) {\n\t\t\t\t\t\treturn href;\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t\tif (detail.xhr && detail.xhr.responseURL) {\n\t\t\t\t\treturn detail.xhr.responseURL;\n\t\t\t\t}\n\t\t\t\treturn null;\n\t\t\t}\n\n\t\t\tfunction syncChromeState(currentPath) {\n\t\t\t\tsyncChromeNavActiveLinks(currentPath);\n\t\t\t\tsyncChromeMainStateForRoute(currentPath);\n\t\t\t}\n\n\t\t\tsyncChromeState();\n\t\t\tdocument.addEventListener(\"DOMContentLoaded\", function() {\n\t\t\t\tsyncChromeState();\n\t\t\t});\n\t\t\twindow.addEventListener(\"popstate\", function() {\n\t\t\t\tsyncChromeState();\n\t\t\t});\n\t\t\tdocument.addEventListener(\"htmx:beforeSwap\", function(event) {\n\t\t\t\tvar nextPath = syncChromePathFromHtmxDetail(event && event.detail);\n\t\t\t\tif (isCampaignWorkspaceRoute(nextPath)) {\n\t\t\t\t\treturn;\n\t\t\t\t}\n\t\t\t\tsyncChromeState(nextPath);\n\t\t\t});\n\t\t\tdocument.addEventListener(\"htmx:afterSwap\", function(event) {\n\t\t\t\tsyncChromeState(syncChromePathFromHtmxDetail(event && event.detail));\n\t\t\t});\n\t\t\tdocument.addEventListener(\"htmx:afterSettle\", function(event) {\n\t\t\t\tsyncChromeState(syncChromePathFromHtmxDetail(event && event.detail));\n\t\t\t});\n\t\t</script>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 45, "</main><script>\n\t\t\tfunction chromeCurrentPath(pathname) {\n\t\t\t\tif (!pathname) {\n\t\t\t\t\treturn window.location.pathname || \"/\";\n\t\t\t\t}\n\t\t\t\tif (typeof pathname === \"object\") {\n\t\t\t\t\tif (pathname instanceof URL && pathname.pathname) {\n\t\t\t\t\t\treturn pathname.pathname;\n\t\t\t\t\t}\n\t\t\t\t\tif (typeof pathname.pathname === \"string\") {\n\t\t\t\t\t\treturn pathname.pathname;\n\t\t\t\t\t}\n\t\t\t\t\tpathname = String(pathname);\n\t\t\t\t}\n\t\t\t\tif (typeof pathname !== \"string\" || pathname.charAt(0) !== \"/\") {\n\t\t\t\t\ttry {\n\t\t\t\t\t\treturn new URL(pathname, window.location.origin).pathname;\n\t\t\t\t\t} catch (err) {\n\t\t\t\t\t\treturn window.location.pathname || \"/\";\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t\treturn pathname;\n\t\t\t}\n\n\t\t\tfunction syncChromeNavActiveLinks(currentPath) {\n\t\t\t\tcurrentPath = chromeCurrentPath(currentPath);\n\t\t\t\tvar links = document.querySelectorAll(\"a[data-nav-item]\");\n\t\t\t\tif (!links.length) {\n\t\t\t\t\treturn;\n\t\t\t\t}\n\t\t\t\tlinks.forEach(function(link) {\n\t\t\t\t\tvar href = link.getAttribute(\"href\");\n\t\t\t\t\tlink.classList.remove(\"active\");\n\t\t\t\t\tlink.classList.remove(\"menu-active\");\n\t\t\t\t\tlink.classList.remove(\"btn-active\");\n\t\t\t\t\tif (!href) {\n\t\t\t\t\t\treturn;\n\t\t\t\t\t}\n\t\t\t\t\tvar target;\n\t\t\t\t\ttry {\n\t\t\t\t\t\ttarget = new URL(href, window.location.origin);\n\t\t\t\t\t} catch (err) {\n\t\t\t\t\t\treturn;\n\t\t\t\t\t}\n\t\t\t\t\tvar shouldBeActive = currentPath === target.pathname;\n\t\t\t\t\tif (!shouldBeActive && target.pathname !== \"/\") {\n\t\t\t\t\t\tshouldBeActive = currentPath.indexOf(target.pathname + \"/\") === 0;\n\t\t\t\t\t}\n\n\t\t\t\t\tif (link.classList.contains(\"btn\")) {\n\t\t\t\t\t\tlink.classList.toggle(\"btn-active\", shouldBeActive);\n\t\t\t\t\t} else {\n\t\t\t\t\t\tlink.classList.toggle(\"menu-active\", shouldBeActive);\n\t\t\t\t\t}\n\t\t\t\t});\n\t\t\t}\n\n\t\t\tvar campaignWorkspaceRoutePattern = /^\\/campaigns\\/(?!create(?:\\/|$))[^/]+(?:\\/|$)/;\n\t\t\tvar campaignMainCoverClass = \"w-full max-w-none px-0 pt-20 flex-1\";\n\t\t\tvar fallbackMainClass = \"w-full max-w-none px-4 pt-20 flex-1\";\n\n\t\t\tfunction mainFallbackClass(main) {\n\t\t\t\tif (!main) {\n\t\t\t\t\treturn fallbackMainClass;\n\t\t\t\t}\n\t\t\t\tvar fromDom = main.getAttribute(\"data-fallback-class\");\n\t\t\t\tif (fromDom) {\n\t\t\t\t\treturn fromDom;\n\t\t\t\t}\n\t\t\t\treturn fallbackMainClass;\n\t\t\t}\n\n\t\t\tfunction mainDefaultClass(main) {\n\t\t\t\tif (!main) {\n\t\t\t\t\treturn fallbackMainClass;\n\t\t\t\t}\n\t\t\t\tvar fromDom = main.getAttribute(\"data-default-class\");\n\t\t\t\tif (fromDom) {\n\t\t\t\t\treturn fromDom;\n\t\t\t\t}\n\t\t\t\treturn mainFallbackClass(main);\n\t\t\t}\n\n\t\t\tfunction isCampaignWorkspaceRoute(pathname) {\n\t\t\t\treturn campaignWorkspaceRoutePattern.test(chromeCurrentPath(pathname));\n\t\t\t}\n\n\t\t\tfunction campaignMainContainerClass(mainStyle, extraClass, defaultClass, main) {\n\t\t\t\tvar baseClass = defaultClass || mainFallbackClass(main);\n\t\t\t\tif (mainStyle) {\n\t\t\t\t\tbaseClass = campaignMainCoverClass;\n\t\t\t\t}\n\t\t\t\tif (extraClass) {\n\t\t\t\t\tbaseClass = baseClass + \" \" + extraClass;\n\t\t\t\t}\n\t\t\t\treturn baseClass;\n\t\t\t}\n\n\t\t\tfunction campaignMainMetadata(main) {\n\t\t\t\tvar metadata = main.querySelector(\"[data-campaign-main-style]\");\n\t\t\t\tif (!metadata) {\n\t\t\t\t\treturn null;\n\t\t\t\t}\n\n\t\t\t\treturn {\n\t\t\t\t\tstyle: metadata.getAttribute(\"data-campaign-main-style\") || \"\",\n\t\t\t\t\textraClass: metadata.getAttribute(\"data-campaign-main-extra-class\") || \"\",\n\t\t\t\t};\n\t\t\t}\n\n\t\t\tfunction isCampaignMainStyle(style) {\n\t\t\t\treturn (\n\t\t\t\t\ttypeof style === \"string\" &&\n\t\t\t\t\tstyle.indexOf(\"background-image: linear-gradient(to bottom\") === 0\n\t\t\t\t);\n\t\t\t}\n\n\t\t\tfunction syncCampaignMainState(main) {\n\t\t\t\tvar metadata = campaignMainMetadata(main);\n\t\t\t\tvar style = \"\";\n\t\t\t\tvar extraClass = \"\";\n\t\t\t\tvar defaultClass = mainDefaultClass(main);\n\n\t\t\t\tif (metadata) {\n\t\t\t\t\tstyle = metadata.style;\n\t\t\t\t\textraClass = metadata.extraClass;\n\t\t\t\t}\n\t\t\t\tif (!style) {\n\t\t\t\t\tstyle = main.getAttribute(\"data-default-style\") || \"\";\n\t\t\t\t}\n\n\t\t\t\tmain.setAttribute(\"style\", style);\n\t\t\t\tmain.className = campaignMainContainerClass(style, extraClass, defaultClass, main);\n\t\t\t}\n\n\t\t\tfunction syncChromeMainStateForRoute(currentPath) {\n\t\t\t\tvar main = document.getElementById(\"main\");\n\t\t\t\tif (!main) {\n\t\t\t\t\treturn;\n\t\t\t\t}\n\n\t\t\t\tif (isCampaignWorkspaceRoute(currentPath)) {\n\t\t\t\t\tsyncCampaignMainState(main);\n\t\t\t\t\treturn;\n\t\t\t\t}\n\n\t\t\t\tvar defaultStyle = main.getAttribute(\"data-default-style\") || \"\";\n\t\t\t\tvar defaultClass = mainDefaultClass(main);\n\n\t\t\t\tif (isCampaignMainStyle(defaultStyle)) {\n\t\t\t\t\tmain.removeAttribute(\"style\");\n\t\t\t\t\tdefaultClass = mainFallbackClass(main);\n\t\t\t\t} else {\n\t\t\t\t\tif (defaultStyle) {\n\t\t\t\t\t\tmain.setAttribute(\"style\", defaultStyle);\n\t\t\t\t\t} else {\n\t\t\t\t\t\tmain.removeAttribute(\"style\");\n\t\t\t\t\t}\n\t\t\t\t}\n\n\t\t\t\tif (main.className !== defaultClass) {\n\t\t\t\t\tmain.className = defaultClass;\n\t\t\t\t}\n\t\t\t}\n\n\t\t\tfunction syncChromePathFromHtmxDetail(detail) {\n\t\t\t\tif (!detail) {\n\t\t\t\t\treturn null;\n\t\t\t\t}\n\t\t\t\tif (detail.pathInfo && detail.pathInfo.requestPath) {\n\t\t\t\t\treturn detail.pathInfo.requestPath;\n\t\t\t\t}\n\t\t\t\tif (detail.requestConfig && detail.requestConfig.path) {\n\t\t\t\t\treturn detail.requestConfig.path;\n\t\t\t\t}\n\t\t\t\tif (detail.elt && typeof detail.elt.getAttribute === \"function\") {\n\t\t\t\t\tvar href = detail.elt.getAttribute(\"href\") || detail.elt.getAttribute(\"hx-get\");\n\t\t\t\t\tif (href) {\n\t\t\t\t\t\treturn href;\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t\tif (detail.xhr && detail.xhr.responseURL) {\n\t\t\t\t\treturn detail.xhr.responseURL;\n\t\t\t\t}\n\t\t\t\treturn null;\n\t\t\t}\n\n\t\t\tfunction syncChromeState(currentPath) {\n\t\t\t\tsyncChromeNavActiveLinks(currentPath);\n\t\t\t\tsyncChromeMainStateForRoute(currentPath);\n\t\t\t}\n\n\t\t\tsyncChromeState();\n\t\t\tdocument.addEventListener(\"DOMContentLoaded\", function() {\n\t\t\t\tsyncChromeState();\n\t\t\t});\n\t\t\twindow.addEventListener(\"popstate\", function() {\n\t\t\t\tsyncChromeState();\n\t\t\t});\n\t\t\tdocument.addEventListener(\"htmx:beforeSwap\", function(event) {\n\t\t\t\tvar nextPath = syncChromePathFromHtmxDetail(event && event.detail);\n\t\t\t\tif (isCampaignWorkspaceRoute(nextPath)) {\n\t\t\t\t\treturn;\n\t\t\t\t}\n\t\t\t\tsyncChromeState(nextPath);\n\t\t\t});\n\t\t\tdocument.addEventListener(\"htmx:afterSwap\", function(event) {\n\t\t\t\tsyncChromeState(syncChromePathFromHtmxDetail(event && event.detail));\n\t\t\t});\n\t\t\tdocument.addEventListener(\"htmx:afterSettle\", function(event) {\n\t\t\t\tsyncChromeState(syncChromePathFromHtmxDetail(event && event.detail));\n\t\t\t});\n\t\t</script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -641,7 +683,7 @@ func AppChromeLayout(options AppChromeLayoutOptions) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 43, "</body></html>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 46, "</body></html>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

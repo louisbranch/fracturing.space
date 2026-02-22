@@ -16,6 +16,7 @@ import (
 type domainService interface {
 	CreateIntent(ctx context.Context, input domain.CreateIntentInput) (domain.Notification, error)
 	ListInbox(ctx context.Context, input domain.ListInboxInput) (domain.NotificationPage, error)
+	GetUnreadStatus(ctx context.Context, input domain.GetUnreadStatusInput) (domain.UnreadStatus, error)
 	MarkRead(ctx context.Context, input domain.MarkReadInput) (domain.Notification, error)
 }
 
@@ -85,6 +86,32 @@ func (s *Service) ListNotifications(ctx context.Context, in *notificationsv1.Lis
 		resp.Notifications = append(resp.Notifications, notificationToProto(notification))
 	}
 	return resp, nil
+}
+
+// GetUnreadNotificationStatus returns unread-inbox status for the caller.
+func (s *Service) GetUnreadNotificationStatus(ctx context.Context, in *notificationsv1.GetUnreadNotificationStatusRequest) (*notificationsv1.GetUnreadNotificationStatusResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "get unread notification status request is required")
+	}
+	if s == nil || s.domain == nil {
+		return nil, status.Error(codes.Internal, "notifications domain service is not configured")
+	}
+
+	userID := strings.TrimSpace(grpcmeta.UserIDFromContext(ctx))
+	if userID == "" {
+		return nil, status.Error(codes.PermissionDenied, "missing user identity")
+	}
+
+	unreadStatus, err := s.domain.GetUnreadStatus(ctx, domain.GetUnreadStatusInput{
+		RecipientUserID: userID,
+	})
+	if err != nil {
+		return nil, mapDomainError(err)
+	}
+	return &notificationsv1.GetUnreadNotificationStatusResponse{
+		HasUnread:   unreadStatus.HasUnread,
+		UnreadCount: int32(unreadStatus.UnreadCount),
+	}, nil
 }
 
 // MarkNotificationRead marks one caller-owned notification as read.

@@ -190,6 +190,16 @@ var catalog = []Definition{
 		Description: "Campaign invitations and membership requests.",
 	},
 	{
+		ID:          commonv1.IconId_ICON_ID_NOTIFICATION,
+		Name:        "Notification",
+		Description: "Inbox notifications and update alerts.",
+	},
+	{
+		ID:          commonv1.IconId_ICON_ID_NOTIFICATION_UNREAD,
+		Name:        "Notification Unread",
+		Description: "Unread inbox notifications requiring attention.",
+	},
+	{
 		ID:          commonv1.IconId_ICON_ID_AI,
 		Name:        "AI",
 		Description: "AI key management and integrations.",

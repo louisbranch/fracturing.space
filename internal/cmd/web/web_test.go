@@ -29,6 +29,9 @@ func TestParseConfigDefaults(t *testing.T) {
 	if cfg.GameAddr != "localhost:8082" {
 		t.Fatalf("expected default game addr, got %q", cfg.GameAddr)
 	}
+	if cfg.NotificationsAddr != "localhost:8088" {
+		t.Fatalf("expected default notifications addr, got %q", cfg.NotificationsAddr)
+	}
 	if cfg.AIAddr != "" {
 		t.Fatalf("expected default ai addr to be empty, got %q", cfg.AIAddr)
 	}
@@ -51,6 +54,7 @@ func TestParseConfigOverrides(t *testing.T) {
 		"-auth-base-url", "http://auth.test",
 		"-auth-addr", "auth:9000",
 		"-game-addr", "game:9001",
+		"-notifications-addr", "notifications:9003",
 		"-ai-addr", "ai:9002",
 		"-cache-db-path", "/tmp/web-cache.db",
 		"-asset-base-url", "https://assets.test",
@@ -73,6 +77,9 @@ func TestParseConfigOverrides(t *testing.T) {
 	}
 	if cfg.GameAddr != "game:9001" {
 		t.Fatalf("expected overridden game addr, got %q", cfg.GameAddr)
+	}
+	if cfg.NotificationsAddr != "notifications:9003" {
+		t.Fatalf("expected overridden notifications addr, got %q", cfg.NotificationsAddr)
 	}
 	if cfg.AIAddr != "ai:9002" {
 		t.Fatalf("expected overridden ai addr, got %q", cfg.AIAddr)

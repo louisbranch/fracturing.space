@@ -18,6 +18,7 @@ import (
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
@@ -40,6 +41,7 @@ type Config struct {
 	AuthBaseURL          string
 	AuthAddr             string
 	GameAddr             string
+	NotificationsAddr    string
 	AIAddr               string
 	CacheDBPath          string
 	AssetBaseURL         string
@@ -64,6 +66,7 @@ type Server struct {
 	httpServer                     *http.Server
 	authConn                       *grpc.ClientConn
 	gameConn                       *grpc.ClientConn
+	notificationsConn              *grpc.ClientConn
 	aiConn                         *grpc.ClientConn
 	cacheStore                     *websqlite.Store
 	cacheInvalidationDone          chan struct{}
@@ -89,20 +92,22 @@ type handler struct {
 	participantClient   statev1.ParticipantServiceClient
 	characterClient     statev1.CharacterServiceClient
 	inviteClient        statev1.InviteServiceClient
+	notificationClient  notificationsv1.NotificationServiceClient
 	campaignAccess      campaignAccessChecker
 }
 
 type handlerDependencies struct {
-	campaignAccess    campaignAccessChecker
-	cacheStore        webstorage.Store
-	accountClient     authv1.AccountServiceClient
-	credentialClient  aiv1.CredentialServiceClient
-	campaignClient    statev1.CampaignServiceClient
-	eventClient       statev1.EventServiceClient
-	sessionClient     statev1.SessionServiceClient
-	participantClient statev1.ParticipantServiceClient
-	characterClient   statev1.CharacterServiceClient
-	inviteClient      statev1.InviteServiceClient
+	campaignAccess     campaignAccessChecker
+	cacheStore         webstorage.Store
+	accountClient      authv1.AccountServiceClient
+	credentialClient   aiv1.CredentialServiceClient
+	campaignClient     statev1.CampaignServiceClient
+	eventClient        statev1.EventServiceClient
+	sessionClient      statev1.SessionServiceClient
+	participantClient  statev1.ParticipantServiceClient
+	characterClient    statev1.CharacterServiceClient
+	inviteClient       statev1.InviteServiceClient
+	notificationClient notificationsv1.NotificationServiceClient
 }
 
 // authGRPCClients holds the auth clients created during web startup.
@@ -127,6 +132,12 @@ type gameGRPCClients struct {
 type aiGRPCClients struct {
 	conn             *grpc.ClientConn
 	credentialClient aiv1.CredentialServiceClient
+}
+
+// notificationsGRPCClients holds notifications clients used by the web service.
+type notificationsGRPCClients struct {
+	conn               *grpc.ClientConn
+	notificationClient notificationsv1.NotificationServiceClient
 }
 
 // localizer resolves the request locale, optionally persists a cookie,
@@ -170,12 +181,13 @@ func (h *handler) handleAppRoot(w http.ResponseWriter, r *http.Request) {
 
 	if sess := sessionFromRequest(r, h.sessions); sess != nil {
 		if err := h.writePage(w, r, webtemplates.DashboardPage(webtemplates.DashboardPageParams{
-			AppName:       appName,
-			Lang:          page.Lang,
-			UserName:      page.UserName,
-			UserAvatarURL: page.UserAvatarURL,
-			CurrentPath:   page.CurrentPath,
-			Loc:           page.Loc,
+			AppName:                appName,
+			Lang:                   page.Lang,
+			UserName:               page.UserName,
+			UserAvatarURL:          page.UserAvatarURL,
+			HasUnreadNotifications: page.HasUnreadNotifications,
+			CurrentPath:            page.CurrentPath,
+			Loc:                    page.Loc,
 		}), composeHTMXTitleForPage(page, "dashboard.title")); err != nil {
 			log.Printf("web: failed to render dashboard page: %v", err)
 			localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.web_handler_unavailable")
@@ -227,21 +239,22 @@ func NewHandlerWithCampaignAccess(config Config, authClient authv1.AuthServiceCl
 	)
 
 	h := &handler{
-		config:            config,
-		authClient:        authClient,
-		accountClient:     deps.accountClient,
-		credentialClient:  deps.credentialClient,
-		sessions:          newSessionStore(sessionPersistence),
-		pendingFlows:      newPendingFlowStore(),
-		cacheStore:        deps.cacheStore,
-		campaignNameCache: make(map[string]campaignNameCache),
-		campaignClient:    deps.campaignClient,
-		eventClient:       deps.eventClient,
-		sessionClient:     deps.sessionClient,
-		participantClient: deps.participantClient,
-		characterClient:   deps.characterClient,
-		inviteClient:      deps.inviteClient,
-		campaignAccess:    deps.campaignAccess,
+		config:             config,
+		authClient:         authClient,
+		accountClient:      deps.accountClient,
+		credentialClient:   deps.credentialClient,
+		sessions:           newSessionStore(sessionPersistence),
+		pendingFlows:       newPendingFlowStore(),
+		cacheStore:         deps.cacheStore,
+		campaignNameCache:  make(map[string]campaignNameCache),
+		campaignClient:     deps.campaignClient,
+		eventClient:        deps.eventClient,
+		sessionClient:      deps.sessionClient,
+		participantClient:  deps.participantClient,
+		characterClient:    deps.characterClient,
+		inviteClient:       deps.inviteClient,
+		notificationClient: deps.notificationClient,
+		campaignAccess:     deps.campaignAccess,
 	}
 
 	gameMux := http.NewServeMux()
@@ -258,6 +271,8 @@ func NewHandlerWithCampaignAccess(config Config, authClient authv1.AuthServiceCl
 	rootMux.Handle("/campaigns/", gameMux)
 	rootMux.Handle("/invites", gameMux)
 	rootMux.Handle("/invites/", gameMux)
+	rootMux.Handle("/notifications", gameMux)
+	rootMux.Handle("/notifications/", gameMux)
 	rootMux.Handle("/", publicMux)
 
 	return rootMux, nil
@@ -273,6 +288,8 @@ func (h *handler) registerGameRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/campaigns/", h.handleAppCampaignDetail)
 	mux.HandleFunc("/invites", h.handleAppInvites)
 	mux.HandleFunc("/invites/claim", h.handleAppInviteClaim)
+	mux.HandleFunc("/notifications", h.handleAppNotifications)
+	mux.HandleFunc("/notifications/", h.handleAppNotificationsRoutes)
 }
 
 func (h *handler) registerPublicRoutes(mux *http.ServeMux, appName string) {
@@ -414,6 +431,17 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 			inviteClient = clients.inviteClient
 		}
 	}
+	var notificationsConn *grpc.ClientConn
+	var notificationClient notificationsv1.NotificationServiceClient
+	if strings.TrimSpace(config.NotificationsAddr) != "" {
+		clients, err := dialNotificationsGRPC(ctx, config)
+		if err != nil {
+			log.Printf("notifications gRPC dial failed, notifications routes disabled: %v", err)
+		} else {
+			notificationsConn = clients.conn
+			notificationClient = clients.notificationClient
+		}
+	}
 	var aiConn *grpc.ClientConn
 	var credentialClient aiv1.CredentialServiceClient
 	if strings.TrimSpace(config.AIAddr) != "" {
@@ -427,16 +455,17 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 	}
 	campaignAccess := newCampaignAccessChecker(config, participantClient)
 	handler, err := NewHandlerWithCampaignAccess(config, authClient, handlerDependencies{
-		campaignAccess:    campaignAccess,
-		cacheStore:        cacheStore,
-		accountClient:     accountClient,
-		credentialClient:  credentialClient,
-		campaignClient:    campaignClient,
-		eventClient:       eventClient,
-		sessionClient:     sessionClient,
-		participantClient: participantClient,
-		characterClient:   characterClient,
-		inviteClient:      inviteClient,
+		campaignAccess:     campaignAccess,
+		cacheStore:         cacheStore,
+		accountClient:      accountClient,
+		credentialClient:   credentialClient,
+		campaignClient:     campaignClient,
+		eventClient:        eventClient,
+		sessionClient:      sessionClient,
+		participantClient:  participantClient,
+		characterClient:    characterClient,
+		inviteClient:       inviteClient,
+		notificationClient: notificationClient,
 	})
 	if err != nil {
 		if cacheStore != nil {
@@ -458,6 +487,7 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 		httpServer:                     httpServer,
 		authConn:                       authConn,
 		gameConn:                       gameConn,
+		notificationsConn:              notificationsConn,
 		aiConn:                         aiConn,
 		cacheStore:                     cacheStore,
 		cacheInvalidationDone:          invalidationDone,
@@ -527,6 +557,11 @@ func (s *Server) Close() {
 	if s.gameConn != nil {
 		if err := s.gameConn.Close(); err != nil {
 			log.Printf("close game gRPC connection: %v", err)
+		}
+	}
+	if s.notificationsConn != nil {
+		if err := s.notificationsConn.Close(); err != nil {
+			log.Printf("close notifications gRPC connection: %v", err)
 		}
 	}
 	if s.aiConn != nil {
@@ -693,6 +728,45 @@ func dialAIGRPC(ctx context.Context, config Config) (aiGRPCClients, error) {
 	return aiGRPCClients{
 		conn:             conn,
 		credentialClient: aiv1.NewCredentialServiceClient(conn),
+	}, nil
+}
+
+// dialNotificationsGRPC returns clients for inbox notifications operations.
+func dialNotificationsGRPC(ctx context.Context, config Config) (notificationsGRPCClients, error) {
+	notificationsAddr := strings.TrimSpace(config.NotificationsAddr)
+	if notificationsAddr == "" {
+		return notificationsGRPCClients{}, nil
+	}
+	if ctx == nil {
+		return notificationsGRPCClients{}, errors.New("context is required")
+	}
+	if config.GRPCDialTimeout <= 0 {
+		config.GRPCDialTimeout = timeouts.GRPCDial
+	}
+	logf := func(format string, args ...any) {
+		log.Printf("notifications %s", fmt.Sprintf(format, args...))
+	}
+	conn, err := platformgrpc.DialWithHealth(
+		ctx,
+		nil,
+		notificationsAddr,
+		config.GRPCDialTimeout,
+		logf,
+		platformgrpc.DefaultClientDialOptions()...,
+	)
+	if err != nil {
+		var dialErr *platformgrpc.DialError
+		if errors.As(err, &dialErr) {
+			if dialErr.Stage == platformgrpc.DialStageHealth {
+				return notificationsGRPCClients{}, fmt.Errorf("notifications gRPC health check failed for %s: %w", notificationsAddr, dialErr.Err)
+			}
+			return notificationsGRPCClients{}, fmt.Errorf("dial notifications gRPC %s: %w", notificationsAddr, dialErr.Err)
+		}
+		return notificationsGRPCClients{}, fmt.Errorf("dial notifications gRPC %s: %w", notificationsAddr, err)
+	}
+	return notificationsGRPCClients{
+		conn:               conn,
+		notificationClient: notificationsv1.NewNotificationServiceClient(conn),
 	}, nil
 }
 

@@ -52,6 +52,12 @@ type NotificationPage struct {
 	NextPageToken string
 }
 
+// UnreadStatus captures recipient unread-inbox status.
+type UnreadStatus struct {
+	HasUnread   bool
+	UnreadCount int
+}
+
 // CreateIntentInput describes one producer notification request.
 type CreateIntentInput struct {
 	RecipientUserID string
@@ -68,6 +74,11 @@ type ListInboxInput struct {
 	PageToken       string
 }
 
+// GetUnreadStatusInput identifies a recipient unread-status lookup.
+type GetUnreadStatusInput struct {
+	RecipientUserID string
+}
+
 // MarkReadInput identifies one recipient notification to acknowledge.
 type MarkReadInput struct {
 	RecipientUserID string
@@ -79,6 +90,7 @@ type Store interface {
 	GetNotificationByRecipientAndDedupeKey(ctx context.Context, recipientUserID string, dedupeKey string) (Notification, error)
 	PutNotification(ctx context.Context, notification Notification) error
 	ListNotificationsByRecipient(ctx context.Context, recipientUserID string, pageSize int, pageToken string) (NotificationPage, error)
+	CountUnreadNotificationsByRecipient(ctx context.Context, recipientUserID string) (int, error)
 	MarkNotificationRead(ctx context.Context, recipientUserID string, notificationID string, readAt time.Time) (Notification, error)
 }
 
@@ -179,6 +191,28 @@ func (s *Service) ListInbox(ctx context.Context, input ListInboxInput) (Notifica
 		pageSize = maxPageSize
 	}
 	return s.store.ListNotificationsByRecipient(ctx, recipientUserID, pageSize, strings.TrimSpace(input.PageToken))
+}
+
+// GetUnreadStatus returns unread-inbox status for one recipient.
+func (s *Service) GetUnreadStatus(ctx context.Context, input GetUnreadStatusInput) (UnreadStatus, error) {
+	if s == nil || s.store == nil {
+		return UnreadStatus{}, ErrStoreNotConfigured
+	}
+	recipientUserID := strings.TrimSpace(input.RecipientUserID)
+	if recipientUserID == "" {
+		return UnreadStatus{}, ErrRecipientUserIDRequired
+	}
+	unreadCount, err := s.store.CountUnreadNotificationsByRecipient(ctx, recipientUserID)
+	if err != nil {
+		return UnreadStatus{}, err
+	}
+	if unreadCount < 0 {
+		unreadCount = 0
+	}
+	return UnreadStatus{
+		HasUnread:   unreadCount > 0,
+		UnreadCount: unreadCount,
+	}, nil
 }
 
 // MarkRead marks one recipient notification as read.

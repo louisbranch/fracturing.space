@@ -12,9 +12,11 @@ import (
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/branding"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/i18n"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 	"golang.org/x/text/message"
@@ -140,6 +142,170 @@ func TestPageContextLanguageCookieWriteIsDeduped(t *testing.T) {
 
 	if got := w.Header().Values("Set-Cookie"); len(got) != 0 {
 		t.Fatalf("Set-Cookie = %q, want no locale cookie rewrite", got)
+	}
+}
+
+func TestPageContextIncludesUnreadNotificationsState(t *testing.T) {
+	fakeNotifications := &fakeWebNotificationClient{
+		unreadResp: &notificationsv1.GetUnreadNotificationStatusResponse{
+			HasUnread:   true,
+			UnreadCount: 1,
+		},
+	}
+
+	h := &handler{
+		config:             Config{AuthBaseURL: "http://auth.local"},
+		sessions:           newSessionStore(),
+		pendingFlows:       newPendingFlowStore(),
+		notificationClient: fakeNotifications,
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	sess := h.sessions.get(sessionID, "token-1")
+	sess.cachedUserID = "user-1"
+	sess.cachedUserIDResolved = true
+
+	req := httptest.NewRequest(http.MethodGet, "/campaigns", nil)
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+
+	page := h.pageContext(w, req)
+	if !page.HasUnreadNotifications {
+		t.Fatalf("HasUnreadNotifications = false, want true")
+	}
+	if fakeNotifications.unreadReq == nil {
+		t.Fatal("expected GetUnreadNotificationStatus call")
+	}
+	if fakeNotifications.listCalls != 0 {
+		t.Fatalf("list calls = %d, want 0 for unread probe path", fakeNotifications.listCalls)
+	}
+	userIDs := fakeNotifications.unreadMD.Get(grpcmeta.UserIDHeader)
+	if len(userIDs) != 1 || userIDs[0] != "user-1" {
+		t.Fatalf("metadata %s = %v, want [user-1]", grpcmeta.UserIDHeader, userIDs)
+	}
+}
+
+func TestPageContextUnreadNotificationsUsesFreshSessionCache(t *testing.T) {
+	fakeNotifications := &fakeWebNotificationClient{
+		unreadErr: errors.New("probe should be skipped when cache is fresh"),
+	}
+	h := &handler{
+		config:             Config{AuthBaseURL: "http://auth.local"},
+		sessions:           newSessionStore(),
+		pendingFlows:       newPendingFlowStore(),
+		notificationClient: fakeNotifications,
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	sess := h.sessions.get(sessionID, "token-1")
+	sess.cachedUserID = "user-1"
+	sess.cachedUserIDResolved = true
+	sess.cachedHasUnreadNotifications = true
+	sess.cachedHasUnreadNotificationsCached = true
+	sess.cachedHasUnreadNotificationsCheckedAt = time.Now()
+
+	req := httptest.NewRequest(http.MethodGet, "/campaigns", nil)
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+
+	page := h.pageContext(w, req)
+	if !page.HasUnreadNotifications {
+		t.Fatalf("HasUnreadNotifications = false, want true")
+	}
+	if fakeNotifications.unreadCalls != 0 {
+		t.Fatalf("unread status calls = %d, want 0", fakeNotifications.unreadCalls)
+	}
+}
+
+func TestPageContextUnreadNotificationsFallsBackToStaleCacheOnProbeError(t *testing.T) {
+	fakeNotifications := &fakeWebNotificationClient{
+		unreadErr: errors.New("temporary probe failure"),
+	}
+	h := &handler{
+		config:             Config{AuthBaseURL: "http://auth.local"},
+		sessions:           newSessionStore(),
+		pendingFlows:       newPendingFlowStore(),
+		notificationClient: fakeNotifications,
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	sess := h.sessions.get(sessionID, "token-1")
+	sess.cachedUserID = "user-1"
+	sess.cachedUserIDResolved = true
+	sess.cachedHasUnreadNotifications = true
+	sess.cachedHasUnreadNotificationsCached = true
+	sess.cachedHasUnreadNotificationsCheckedAt = time.Now().Add(-unreadNotificationProbeTTL - time.Second)
+
+	req := httptest.NewRequest(http.MethodGet, "/campaigns", nil)
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+
+	page := h.pageContext(w, req)
+	if !page.HasUnreadNotifications {
+		t.Fatalf("HasUnreadNotifications = false, want stale cached true state")
+	}
+	if fakeNotifications.unreadCalls != 1 {
+		t.Fatalf("unread status calls = %d, want 1", fakeNotifications.unreadCalls)
+	}
+}
+
+func TestPageContextUnreadNotificationsProbeUsesDeadline(t *testing.T) {
+	fakeNotifications := &fakeWebNotificationClient{
+		unreadResp: &notificationsv1.GetUnreadNotificationStatusResponse{},
+	}
+	h := &handler{
+		config:             Config{AuthBaseURL: "http://auth.local"},
+		sessions:           newSessionStore(),
+		pendingFlows:       newPendingFlowStore(),
+		notificationClient: fakeNotifications,
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	sess := h.sessions.get(sessionID, "token-1")
+	sess.cachedUserID = "user-1"
+	sess.cachedUserIDResolved = true
+
+	req := httptest.NewRequest(http.MethodGet, "/campaigns", nil)
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+
+	_ = h.pageContext(w, req)
+	if !fakeNotifications.unreadHasDeadline {
+		t.Fatalf("expected unread probe to use bounded timeout context")
+	}
+}
+
+func TestPageContextUnreadNotificationsRefreshesExpiredCache(t *testing.T) {
+	fakeNotifications := &fakeWebNotificationClient{
+		unreadResp: &notificationsv1.GetUnreadNotificationStatusResponse{
+			HasUnread:   true,
+			UnreadCount: 1,
+		},
+	}
+	h := &handler{
+		config:             Config{AuthBaseURL: "http://auth.local"},
+		sessions:           newSessionStore(),
+		pendingFlows:       newPendingFlowStore(),
+		notificationClient: fakeNotifications,
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	sess := h.sessions.get(sessionID, "token-1")
+	sess.cachedUserID = "user-1"
+	sess.cachedUserIDResolved = true
+	sess.cachedHasUnreadNotifications = false
+	sess.cachedHasUnreadNotificationsCached = true
+	oldCheck := time.Now().Add(-unreadNotificationProbeTTL - time.Second)
+	sess.cachedHasUnreadNotificationsCheckedAt = oldCheck
+
+	req := httptest.NewRequest(http.MethodGet, "/campaigns", nil)
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+
+	page := h.pageContext(w, req)
+	if !page.HasUnreadNotifications {
+		t.Fatalf("HasUnreadNotifications = false, want true after refresh")
+	}
+	if fakeNotifications.unreadCalls != 1 {
+		t.Fatalf("unread status calls = %d, want 1", fakeNotifications.unreadCalls)
+	}
+	if !sess.cachedHasUnreadNotificationsCheckedAt.After(oldCheck) {
+		t.Fatalf("cached check time = %v, want after %v", sess.cachedHasUnreadNotificationsCheckedAt, oldCheck)
 	}
 }
 

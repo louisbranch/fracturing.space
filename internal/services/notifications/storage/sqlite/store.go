@@ -233,6 +233,30 @@ LIMIT ?
 	return collectNotificationPage(rows, pageSize)
 }
 
+// CountUnreadNotificationsByRecipient returns unread inbox count for one recipient.
+func (s *Store) CountUnreadNotificationsByRecipient(ctx context.Context, recipientUserID string) (int, error) {
+	if err := ctx.Err(); err != nil {
+		return 0, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return 0, fmt.Errorf("storage is not configured")
+	}
+	recipientUserID = strings.TrimSpace(recipientUserID)
+	if recipientUserID == "" {
+		return 0, fmt.Errorf("recipient user id is required")
+	}
+
+	var unreadCount int
+	if err := s.sqlDB.QueryRowContext(ctx, `
+SELECT COUNT(1)
+FROM notifications
+WHERE recipient_user_id = ? AND read_at IS NULL
+`, recipientUserID).Scan(&unreadCount); err != nil {
+		return 0, fmt.Errorf("count unread notifications: %w", err)
+	}
+	return unreadCount, nil
+}
+
 // MarkNotificationRead marks one notification row as read for a recipient.
 func (s *Store) MarkNotificationRead(ctx context.Context, recipientUserID string, notificationID string, readAt time.Time) (storage.NotificationRecord, error) {
 	if err := ctx.Err(); err != nil {

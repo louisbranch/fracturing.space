@@ -7,12 +7,15 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/a-h/templ"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
 	"github.com/louisbranch/fracturing.space/internal/platform/branding"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	sharedhtmx "github.com/louisbranch/fracturing.space/internal/services/shared/htmx"
 	sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
 	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/i18n"
@@ -20,6 +23,8 @@ import (
 )
 
 const gamePageContentType = "text/html; charset=utf-8"
+const unreadNotificationProbeTTL = 20 * time.Second
+const unreadNotificationProbeTimeout = 350 * time.Millisecond
 
 var errNoWebPageComponent = errors.New("web: no page component provided")
 
@@ -63,6 +68,7 @@ func (h *handler) pageContext(w http.ResponseWriter, r *http.Request) webtemplat
 			page.UserName = webtemplates.T(page.Loc, "web.dashboard.user_name_fallback")
 		}
 		page.UserAvatarURL = h.pageContextUserAvatar(r.Context(), sess)
+		page.HasUnreadNotifications = h.pageContextHasUnreadNotifications(r.Context(), sess)
 	}
 
 	return page
@@ -176,6 +182,60 @@ func (h *handler) pageContextUserAvatar(ctx context.Context, sess *session) stri
 	avatarURL := avatarImageURL(h.config, catalog.AvatarRoleUser, userID, "", "")
 	sess.setCachedUserAvatar(avatarURL)
 	return avatarURL
+}
+
+func (h *handler) pageContextHasUnreadNotifications(ctx context.Context, sess *session) bool {
+	if h == nil || sess == nil || h.notificationClient == nil {
+		return false
+	}
+
+	if hasUnread, ok := sess.cachedUnreadNotifications(unreadNotificationProbeTTL); ok {
+		return hasUnread
+	}
+
+	userID, err := h.sessionUserIDForSession(ctx, sess)
+	if err != nil {
+		return staleUnreadStateOrDefault(sess)
+	}
+	userID = strings.TrimSpace(userID)
+	if userID == "" {
+		return staleUnreadStateOrDefault(sess)
+	}
+
+	probeCtx, cancel := context.WithTimeout(ctx, unreadNotificationProbeTimeout)
+	defer cancel()
+
+	resp, err := h.notificationClient.GetUnreadNotificationStatus(grpcauthctx.WithUserID(probeCtx, userID), &notificationsv1.GetUnreadNotificationStatusRequest{})
+	if err != nil {
+		return staleUnreadStateOrDefault(sess)
+	}
+
+	hasUnread := resp.GetHasUnread() || resp.GetUnreadCount() > 0
+	sess.setCachedUnreadNotifications(hasUnread)
+	return hasUnread
+}
+
+func staleUnreadStateOrDefault(sess *session) bool {
+	if sess == nil {
+		return false
+	}
+	hasUnread, ok := sess.cachedUnreadNotifications(0)
+	if !ok {
+		return false
+	}
+	return hasUnread
+}
+
+func hasUnreadNotifications(notifications []*notificationsv1.Notification) bool {
+	for _, notification := range notifications {
+		if notification == nil {
+			continue
+		}
+		if notification.GetReadAt() == nil {
+			return true
+		}
+	}
+	return false
 }
 
 func (h *handler) pageContextForCampaign(w http.ResponseWriter, r *http.Request, campaignID string) webtemplates.PageContext {

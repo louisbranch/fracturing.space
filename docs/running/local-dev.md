@@ -29,14 +29,8 @@ watch-based runtime automatically after attach.
 - The watcher script initializes `.env` from `.env.local.example` when missing.
 - The watcher script also generates join-grant keys when they are missing.
 
-The default watcher set starts `game`, `auth`, `ai`, `mcp`, `admin`, `chat`,
-and `web`. To exercise onboarding welcome flow end-to-end, start notifications
-and worker in separate terminals:
-
-```sh
-go run ./cmd/notifications
-go run ./cmd/worker
-```
+The default watcher set starts `game`, `auth`, `ai`, `notifications`, `worker`,
+`mcp`, `admin`, `chat`, and `web`.
 
 No manual multi-process `go run` orchestration or repeated `docker compose up` is needed for day-to-day edits.
 Each restart still compiles, but only through Go build cache and only when files change.
@@ -68,6 +62,8 @@ Watcher logs:
 - `.tmp/dev/admin.log`
 - `.tmp/dev/chat.log`
 - `.tmp/dev/ai.log`
+- `.tmp/dev/notifications.log`
+- `.tmp/dev/worker.log`
 - `.tmp/dev/web.log`
 - `.tmp/dev/watch-services.log`
 
