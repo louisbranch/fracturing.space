@@ -7,6 +7,19 @@ templ SettingsMenu(page PageContext) {
 	<ul class="menu bg-base-200 rounded-box w-full">
 		<li>
 			<a
+				class={ settingsMenuLinkClass(page.CurrentPath, "/settings/username") }
+				href="/settings/username"
+				hx-get="/settings/username"
+				hx-target="#main"
+				hx-swap="innerHTML"
+				hx-push-url="true"
+				>
+				@sharedtemplates.LucideIconID(commonv1.IconId_ICON_ID_PROFILE, "size-4 me-2")
+				{ T(page.Loc, "web.settings.username.link") }
+			</a>
+		</li>
+		<li>
+			<a
 				class={ settingsMenuLinkClass(page.CurrentPath, "/settings/ai-keys") }
 				href="/settings/ai-keys"
 				hx-get="/settings/ai-keys"
@@ -27,6 +40,32 @@ templ SettingsPage(page PageContext) {
 			<div class="card-body">
 				<h2 class="card-title">{ T(page.Loc, "layout.settings") }</h2>
 				<p>{ T(page.Loc, "web.settings.select_prompt") }</p>
+			</div>
+		</section>
+	}
+}
+
+templ UsernameSettingsPage(page PageContext, state UsernameSettingsPageState) {
+	@Layout(SettingsUsernameLayoutOptions(page)) {
+		<section class="space-y-4">
+			<div class="card bg-base-200">
+				<div class="card-body">
+					<h2 class="card-title">{ T(page.Loc, "web.settings.username.title") }</h2>
+					if state.ErrorMessage != "" {
+						<div class="alert alert-error">{ state.ErrorMessage }</div>
+					}
+					<form method="post" action="/settings/username" class="space-y-4">
+						<div class="form-control">
+							<label class="label">
+								<span class="label-text">{ T(page.Loc, "web.settings.username.field_username") }</span>
+							</label>
+							<input class="input input-bordered w-full" type="text" name="username" value={ state.Username } placeholder={ T(page.Loc, "web.settings.username.placeholder_username") }>
+						</div>
+						<div class="card-actions justify-end">
+							<button class="btn btn-primary" type="submit">{ T(page.Loc, "web.settings.username.submit_save") }</button>
+						</div>
+					</form>
+				</div>
 			</div>
 		</section>
 	}

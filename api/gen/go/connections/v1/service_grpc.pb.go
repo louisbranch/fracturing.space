@@ -20,12 +20,15 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ConnectionsService_AddContact_FullMethodName     = "/connections.v1.ConnectionsService/AddContact"
-	ConnectionsService_RemoveContact_FullMethodName  = "/connections.v1.ConnectionsService/RemoveContact"
-	ConnectionsService_ListContacts_FullMethodName   = "/connections.v1.ConnectionsService/ListContacts"
-	ConnectionsService_SetUsername_FullMethodName    = "/connections.v1.ConnectionsService/SetUsername"
-	ConnectionsService_GetUsername_FullMethodName    = "/connections.v1.ConnectionsService/GetUsername"
-	ConnectionsService_LookupUsername_FullMethodName = "/connections.v1.ConnectionsService/LookupUsername"
+	ConnectionsService_AddContact_FullMethodName          = "/connections.v1.ConnectionsService/AddContact"
+	ConnectionsService_RemoveContact_FullMethodName       = "/connections.v1.ConnectionsService/RemoveContact"
+	ConnectionsService_ListContacts_FullMethodName        = "/connections.v1.ConnectionsService/ListContacts"
+	ConnectionsService_SetUsername_FullMethodName         = "/connections.v1.ConnectionsService/SetUsername"
+	ConnectionsService_GetUsername_FullMethodName         = "/connections.v1.ConnectionsService/GetUsername"
+	ConnectionsService_LookupUsername_FullMethodName      = "/connections.v1.ConnectionsService/LookupUsername"
+	ConnectionsService_SetPublicProfile_FullMethodName    = "/connections.v1.ConnectionsService/SetPublicProfile"
+	ConnectionsService_GetPublicProfile_FullMethodName    = "/connections.v1.ConnectionsService/GetPublicProfile"
+	ConnectionsService_LookupPublicProfile_FullMethodName = "/connections.v1.ConnectionsService/LookupPublicProfile"
 )
 
 // ConnectionsServiceClient is the client API for ConnectionsService service.
@@ -40,6 +43,9 @@ type ConnectionsServiceClient interface {
 	SetUsername(ctx context.Context, in *SetUsernameRequest, opts ...grpc.CallOption) (*SetUsernameResponse, error)
 	GetUsername(ctx context.Context, in *GetUsernameRequest, opts ...grpc.CallOption) (*GetUsernameResponse, error)
 	LookupUsername(ctx context.Context, in *LookupUsernameRequest, opts ...grpc.CallOption) (*LookupUsernameResponse, error)
+	SetPublicProfile(ctx context.Context, in *SetPublicProfileRequest, opts ...grpc.CallOption) (*SetPublicProfileResponse, error)
+	GetPublicProfile(ctx context.Context, in *GetPublicProfileRequest, opts ...grpc.CallOption) (*GetPublicProfileResponse, error)
+	LookupPublicProfile(ctx context.Context, in *LookupPublicProfileRequest, opts ...grpc.CallOption) (*LookupPublicProfileResponse, error)
 }
 
 type connectionsServiceClient struct {
@@ -110,6 +116,36 @@ func (c *connectionsServiceClient) LookupUsername(ctx context.Context, in *Looku
 	return out, nil
 }
 
+func (c *connectionsServiceClient) SetPublicProfile(ctx context.Context, in *SetPublicProfileRequest, opts ...grpc.CallOption) (*SetPublicProfileResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetPublicProfileResponse)
+	err := c.cc.Invoke(ctx, ConnectionsService_SetPublicProfile_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *connectionsServiceClient) GetPublicProfile(ctx context.Context, in *GetPublicProfileRequest, opts ...grpc.CallOption) (*GetPublicProfileResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetPublicProfileResponse)
+	err := c.cc.Invoke(ctx, ConnectionsService_GetPublicProfile_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *connectionsServiceClient) LookupPublicProfile(ctx context.Context, in *LookupPublicProfileRequest, opts ...grpc.CallOption) (*LookupPublicProfileResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(LookupPublicProfileResponse)
+	err := c.cc.Invoke(ctx, ConnectionsService_LookupPublicProfile_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ConnectionsServiceServer is the server API for ConnectionsService service.
 // All implementations must embed UnimplementedConnectionsServiceServer
 // for forward compatibility.
@@ -122,6 +158,9 @@ type ConnectionsServiceServer interface {
 	SetUsername(context.Context, *SetUsernameRequest) (*SetUsernameResponse, error)
 	GetUsername(context.Context, *GetUsernameRequest) (*GetUsernameResponse, error)
 	LookupUsername(context.Context, *LookupUsernameRequest) (*LookupUsernameResponse, error)
+	SetPublicProfile(context.Context, *SetPublicProfileRequest) (*SetPublicProfileResponse, error)
+	GetPublicProfile(context.Context, *GetPublicProfileRequest) (*GetPublicProfileResponse, error)
+	LookupPublicProfile(context.Context, *LookupPublicProfileRequest) (*LookupPublicProfileResponse, error)
 	mustEmbedUnimplementedConnectionsServiceServer()
 }
 
@@ -149,6 +188,15 @@ func (UnimplementedConnectionsServiceServer) GetUsername(context.Context, *GetUs
 }
 func (UnimplementedConnectionsServiceServer) LookupUsername(context.Context, *LookupUsernameRequest) (*LookupUsernameResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LookupUsername not implemented")
+}
+func (UnimplementedConnectionsServiceServer) SetPublicProfile(context.Context, *SetPublicProfileRequest) (*SetPublicProfileResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetPublicProfile not implemented")
+}
+func (UnimplementedConnectionsServiceServer) GetPublicProfile(context.Context, *GetPublicProfileRequest) (*GetPublicProfileResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPublicProfile not implemented")
+}
+func (UnimplementedConnectionsServiceServer) LookupPublicProfile(context.Context, *LookupPublicProfileRequest) (*LookupPublicProfileResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LookupPublicProfile not implemented")
 }
 func (UnimplementedConnectionsServiceServer) mustEmbedUnimplementedConnectionsServiceServer() {}
 func (UnimplementedConnectionsServiceServer) testEmbeddedByValue()                            {}
@@ -279,6 +327,60 @@ func _ConnectionsService_LookupUsername_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ConnectionsService_SetPublicProfile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetPublicProfileRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConnectionsServiceServer).SetPublicProfile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ConnectionsService_SetPublicProfile_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConnectionsServiceServer).SetPublicProfile(ctx, req.(*SetPublicProfileRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ConnectionsService_GetPublicProfile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPublicProfileRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConnectionsServiceServer).GetPublicProfile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ConnectionsService_GetPublicProfile_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConnectionsServiceServer).GetPublicProfile(ctx, req.(*GetPublicProfileRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ConnectionsService_LookupPublicProfile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LookupPublicProfileRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConnectionsServiceServer).LookupPublicProfile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ConnectionsService_LookupPublicProfile_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConnectionsServiceServer).LookupPublicProfile(ctx, req.(*LookupPublicProfileRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ConnectionsService_ServiceDesc is the grpc.ServiceDesc for ConnectionsService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -309,6 +411,18 @@ var ConnectionsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "LookupUsername",
 			Handler:    _ConnectionsService_LookupUsername_Handler,
+		},
+		{
+			MethodName: "SetPublicProfile",
+			Handler:    _ConnectionsService_SetPublicProfile_Handler,
+		},
+		{
+			MethodName: "GetPublicProfile",
+			Handler:    _ConnectionsService_GetPublicProfile_Handler,
+		},
+		{
+			MethodName: "LookupPublicProfile",
+			Handler:    _ConnectionsService_LookupPublicProfile_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

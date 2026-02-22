@@ -378,6 +378,95 @@ func (s *Store) GetUsernameByUsername(ctx context.Context, username string) (sto
 	return record, nil
 }
 
+// PutPublicProfile upserts one public profile record for a user.
+func (s *Store) PutPublicProfile(ctx context.Context, profile storage.PublicProfileRecord) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if s == nil || s.sqlDB == nil {
+		return fmt.Errorf("storage is not configured")
+	}
+	userID := strings.TrimSpace(profile.UserID)
+	if userID == "" {
+		return fmt.Errorf("user id is required")
+	}
+	displayName := strings.TrimSpace(profile.DisplayName)
+	if displayName == "" {
+		return fmt.Errorf("display name is required")
+	}
+	avatarURL := strings.TrimSpace(profile.AvatarURL)
+	bio := strings.TrimSpace(profile.Bio)
+	createdAt := profile.CreatedAt.UTC()
+	updatedAt := profile.UpdatedAt.UTC()
+	if createdAt.IsZero() && updatedAt.IsZero() {
+		createdAt = time.Now().UTC()
+		updatedAt = createdAt
+	} else {
+		if createdAt.IsZero() {
+			createdAt = updatedAt
+		}
+		if updatedAt.IsZero() {
+			updatedAt = createdAt
+		}
+	}
+
+	_, err := s.sqlDB.ExecContext(
+		ctx,
+		`INSERT INTO public_profiles (user_id, display_name, avatar_url, bio, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?)
+		 ON CONFLICT(user_id) DO UPDATE SET
+		   display_name = excluded.display_name,
+		   avatar_url = excluded.avatar_url,
+		   bio = excluded.bio,
+		   updated_at = excluded.updated_at`,
+		userID,
+		displayName,
+		avatarURL,
+		bio,
+		toMillis(createdAt),
+		toMillis(updatedAt),
+	)
+	if err != nil {
+		return fmt.Errorf("put public profile: %w", err)
+	}
+	return nil
+}
+
+// GetPublicProfileByUserID returns one public profile by owner user ID.
+func (s *Store) GetPublicProfileByUserID(ctx context.Context, userID string) (storage.PublicProfileRecord, error) {
+	if err := ctx.Err(); err != nil {
+		return storage.PublicProfileRecord{}, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return storage.PublicProfileRecord{}, fmt.Errorf("storage is not configured")
+	}
+	userID = strings.TrimSpace(userID)
+	if userID == "" {
+		return storage.PublicProfileRecord{}, fmt.Errorf("user id is required")
+	}
+
+	row := s.sqlDB.QueryRowContext(
+		ctx,
+		`SELECT user_id, display_name, avatar_url, bio, created_at, updated_at
+		 FROM public_profiles
+		 WHERE user_id = ?`,
+		userID,
+	)
+	var record storage.PublicProfileRecord
+	var createdAt int64
+	var updatedAt int64
+	err := row.Scan(&record.UserID, &record.DisplayName, &record.AvatarURL, &record.Bio, &createdAt, &updatedAt)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return storage.PublicProfileRecord{}, storage.ErrNotFound
+		}
+		return storage.PublicProfileRecord{}, fmt.Errorf("get public profile by user id: %w", err)
+	}
+	record.CreatedAt = fromMillis(createdAt)
+	record.UpdatedAt = fromMillis(updatedAt)
+	return record, nil
+}
+
 // isUsernameUniqueViolation reports whether a username uniqueness constraint failed.
 func isUsernameUniqueViolation(err error) bool {
 	if err == nil {
@@ -397,3 +486,4 @@ func isUsernameUniqueViolation(err error) bool {
 
 var _ storage.ContactStore = (*Store)(nil)
 var _ storage.UsernameStore = (*Store)(nil)
+var _ storage.ProfileStore = (*Store)(nil)

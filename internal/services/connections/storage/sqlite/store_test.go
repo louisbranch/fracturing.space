@@ -269,3 +269,52 @@ func TestUsernameGetNotFound(t *testing.T) {
 		t.Fatalf("get by username err = %v, want %v", err, storage.ErrNotFound)
 	}
 }
+
+func TestPublicProfileRoundTrip(t *testing.T) {
+	store, err := Open(t.TempDir() + "/connections.db")
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer store.Close()
+
+	now := time.Date(2026, time.February, 22, 19, 0, 0, 0, time.UTC)
+	if err := store.PutPublicProfile(context.Background(), storage.PublicProfileRecord{
+		UserID:      "user-1",
+		DisplayName: "Alice",
+		AvatarURL:   "https://cdn.example.com/avatar/alice.png",
+		Bio:         "Campaign manager",
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	}); err != nil {
+		t.Fatalf("put public profile: %v", err)
+	}
+
+	got, err := store.GetPublicProfileByUserID(context.Background(), "user-1")
+	if err != nil {
+		t.Fatalf("get public profile: %v", err)
+	}
+	if got.UserID != "user-1" {
+		t.Fatalf("user_id = %q, want user-1", got.UserID)
+	}
+	if got.DisplayName != "Alice" {
+		t.Fatalf("display_name = %q, want Alice", got.DisplayName)
+	}
+	if got.AvatarURL != "https://cdn.example.com/avatar/alice.png" {
+		t.Fatalf("avatar_url = %q, want https://cdn.example.com/avatar/alice.png", got.AvatarURL)
+	}
+	if got.Bio != "Campaign manager" {
+		t.Fatalf("bio = %q, want Campaign manager", got.Bio)
+	}
+}
+
+func TestPublicProfileGetNotFound(t *testing.T) {
+	store, err := Open(t.TempDir() + "/connections.db")
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer store.Close()
+
+	if _, err := store.GetPublicProfileByUserID(context.Background(), "missing-user"); !errors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("get public profile err = %v, want %v", err, storage.ErrNotFound)
+	}
+}

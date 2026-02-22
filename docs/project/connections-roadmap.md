@@ -35,7 +35,7 @@ Use a dedicated `connections` service boundary (not `people`).
 - `notifications`: inbox intents and delivery status.
 - `web`: UX orchestration across service APIs.
 
-## Phase 1 (Current Scope): Stand Up `connections` + Migrate Contacts
+## Phase 1 (Completed): Stand Up `connections` + Migrate Contacts
 
 ### Goals
 
@@ -84,7 +84,7 @@ Clean-slate move with no compatibility bridge:
 - No regression in campaign invite flow.
 - `auth` no longer exposes or owns contact behavior.
 
-## Phase 2: Username (Deferred)
+## Phase 2 (Implemented): Username
 
 ### Scope
 
@@ -99,7 +99,13 @@ A user can find another user by username without needing internal user IDs.
 Detailed phase spec:
 [Connections Phase 2: Username Claim and Lookup](connections-phase2-username.md)
 
-## Phase 3: Public Profile (Deferred)
+Status:
+
+- Username claim/update and lookup APIs are implemented in `connections`.
+- Invite `@username` resolution is implemented in `web` before submit to `game`.
+- Settings username claim/update flow is implemented in `web`.
+
+## Phase 3 (Next): Public Profile
 
 ### Scope
 
@@ -110,7 +116,10 @@ Detailed phase spec:
 
 Users can verify identity context before connecting/inviting.
 
-## Phase 4: Contact Link Permalink (Deferred)
+Detailed phase spec:
+[Connections Phase 3: Public Profile Surface and Username Verification](connections-phase3-public-profile.md)
+
+## Phase 4 (Planned): Contact Link Permalink
 
 ### Scope
 

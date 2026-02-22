@@ -81,6 +81,16 @@ type CampaignInviteContactOption struct {
 	Label  string
 }
 
+// CampaignInviteVerification models resolved username verification context.
+type CampaignInviteVerification struct {
+	HasResult   bool
+	Username    string
+	UserID      string
+	DisplayName string
+	AvatarURL   string
+	Bio         string
+}
+
 // UserInviteItem models one pending invite row for the current user.
 type UserInviteItem struct {
 	Label         string
@@ -545,7 +555,7 @@ templ CharacterDetailPage(page PageContext, character CharacterDetail) {
 	}
 }
 
-templ CampaignInvitesPage(page PageContext, campaignID string, canManage bool, invites []CampaignInviteItem, contacts []CampaignInviteContactOption) {
+templ CampaignInvitesPage(page PageContext, campaignID string, canManage bool, invites []CampaignInviteItem, contacts []CampaignInviteContactOption, verification CampaignInviteVerification) {
 	@GamePageShell(page, T(page.Loc, "game.campaign_invites.title")) {
 		if canManage {
 			<form method="post" action={ "/campaigns/" + campaignID + "/invites/create" } class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -569,9 +579,28 @@ templ CampaignInvitesPage(page PageContext, campaignID string, canManage bool, i
 					</datalist>
 				</div>
 				<div class="col-span-full flex justify-end">
+					<button class="btn btn-soft btn-sm" type="submit" name="action" value="verify">{ T(page.Loc, "game.campaign_invites.submit_verify_username") }</button>
 					<button class="btn btn-primary btn-sm" type="submit">{ T(page.Loc, "game.campaign_invites.submit_create") }</button>
 				</div>
 			</form>
+			if verification.HasResult {
+				<div class="card bg-base-200">
+					<div class="card-body">
+						<h3 class="card-title">{ T(page.Loc, "game.campaign_invites.verify_result_title") }</h3>
+						<p>{ T(page.Loc, "game.campaign_invites.verify_result_username") }: @{ verification.Username }</p>
+						<p>{ T(page.Loc, "game.campaign_invites.verify_result_user_id") }: { verification.UserID }</p>
+						if verification.DisplayName != "" {
+							<p>{ T(page.Loc, "game.campaign_invites.verify_result_display_name") }: { verification.DisplayName }</p>
+						}
+						if verification.AvatarURL != "" {
+							<p>{ T(page.Loc, "game.campaign_invites.verify_result_avatar_url") }: { verification.AvatarURL }</p>
+						}
+						if verification.Bio != "" {
+							<p>{ T(page.Loc, "game.campaign_invites.verify_result_bio") }: { verification.Bio }</p>
+						}
+					</div>
+				</div>
+			}
 		}
 		<ul>
 			for _, invite := range invites {

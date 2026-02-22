@@ -12,6 +12,7 @@ import (
 	"time"
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
+	connectionsv1 "github.com/louisbranch/fracturing.space/api/gen/go/connections/v1"
 	"golang.org/x/text/message"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -58,6 +59,163 @@ func TestAppSettingsPageRendersForAuthenticatedUser(t *testing.T) {
 	}
 	if !strings.Contains(body, `class="menu bg-base-200 rounded-box w-full"`) {
 		t.Fatalf("body should include sidebar menu, got %q", body)
+	}
+}
+
+func TestAppSettingsUsernamePageLoadsCurrentUsername(t *testing.T) {
+	connectionsClient := &fakeConnectionsClient{
+		getUsernameResp: &connectionsv1.GetUsernameResponse{
+			UsernameRecord: &connectionsv1.UsernameRecord{
+				UserId:   "user-1",
+				Username: "alice_one",
+			},
+		},
+	}
+	h := &handler{
+		config:            Config{AuthBaseURL: "http://auth.local"},
+		sessions:          newSessionStore(),
+		pendingFlows:      newPendingFlowStore(),
+		connectionsClient: connectionsClient,
+		campaignNameCache: map[string]campaignNameCache{},
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	sess := h.sessions.get(sessionID, "token-1")
+	sess.cachedUserID = "user-1"
+	sess.cachedUserIDResolved = true
+
+	req := httptest.NewRequest(http.MethodGet, "/settings/username", nil)
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+
+	h.handleAppSettingsRoutes(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	if connectionsClient.getUsernameReq == nil {
+		t.Fatal("expected GetUsername request")
+	}
+	if got := connectionsClient.getUsernameReq.GetUserId(); got != "user-1" {
+		t.Fatalf("get username user_id = %q, want user-1", got)
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "alice_one") {
+		t.Fatalf("body should include username value, got %q", body)
+	}
+}
+
+func TestAppSettingsUsernamePageLocalizesCopy(t *testing.T) {
+	connectionsClient := &fakeConnectionsClient{
+		getUsernameErr: status.Error(codes.NotFound, "username not found"),
+	}
+	h := &handler{
+		config:            Config{AuthBaseURL: "http://auth.local"},
+		sessions:          newSessionStore(),
+		pendingFlows:      newPendingFlowStore(),
+		connectionsClient: connectionsClient,
+		campaignNameCache: map[string]campaignNameCache{},
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	sess := h.sessions.get(sessionID, "token-1")
+	sess.cachedUserID = "user-1"
+	sess.cachedUserIDResolved = true
+
+	req := httptest.NewRequest(http.MethodGet, "/settings/username?lang=pt-BR", nil)
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+
+	h.handleAppSettingsRoutes(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "Nome de usuário") {
+		t.Fatalf("expected localized username copy in response, got %q", body)
+	}
+}
+
+func TestAppSettingsUsernameUpdateSavesUsernameAndRedirects(t *testing.T) {
+	connectionsClient := &fakeConnectionsClient{
+		setUsernameResp: &connectionsv1.SetUsernameResponse{
+			UsernameRecord: &connectionsv1.UsernameRecord{
+				UserId:   "user-1",
+				Username: "alice_two",
+			},
+		},
+	}
+	h := &handler{
+		config:            Config{AuthBaseURL: "http://auth.local"},
+		sessions:          newSessionStore(),
+		pendingFlows:      newPendingFlowStore(),
+		connectionsClient: connectionsClient,
+		campaignNameCache: map[string]campaignNameCache{},
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	sess := h.sessions.get(sessionID, "token-1")
+	sess.cachedUserID = "user-1"
+	sess.cachedUserIDResolved = true
+
+	form := url.Values{}
+	form.Set("username", "Alice_Two")
+	req := httptest.NewRequest(http.MethodPost, "/settings/username", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+
+	h.handleAppSettingsRoutes(w, req)
+
+	if w.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusFound)
+	}
+	if location := w.Header().Get("Location"); location != "/settings/username" {
+		t.Fatalf("location = %q, want %q", location, "/settings/username")
+	}
+	if connectionsClient.setUsernameReq == nil {
+		t.Fatal("expected SetUsername request")
+	}
+	if got := connectionsClient.setUsernameReq.GetUserId(); got != "user-1" {
+		t.Fatalf("set username user_id = %q, want user-1", got)
+	}
+	if got := connectionsClient.setUsernameReq.GetUsername(); got != "Alice_Two" {
+		t.Fatalf("set username value = %q, want Alice_Two", got)
+	}
+}
+
+func TestAppSettingsUsernameUpdateInvalidUsernameRendersValidationError(t *testing.T) {
+	connectionsClient := &fakeConnectionsClient{
+		setUsernameErr: status.Error(codes.InvalidArgument, "username is invalid"),
+	}
+	h := &handler{
+		config:            Config{AuthBaseURL: "http://auth.local"},
+		sessions:          newSessionStore(),
+		pendingFlows:      newPendingFlowStore(),
+		connectionsClient: connectionsClient,
+		campaignNameCache: map[string]campaignNameCache{},
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	sess := h.sessions.get(sessionID, "token-1")
+	sess.cachedUserID = "user-1"
+	sess.cachedUserIDResolved = true
+
+	form := url.Values{}
+	form.Set("username", "bad username")
+	req := httptest.NewRequest(http.MethodPost, "/settings/username", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+
+	h.handleAppSettingsRoutes(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+	if connectionsClient.setUsernameReq == nil {
+		t.Fatal("expected SetUsername request")
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "username is invalid") {
+		t.Fatalf("response body missing validation message: %q", body)
 	}
 }
 

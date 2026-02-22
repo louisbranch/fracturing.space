@@ -6,9 +6,11 @@ import (
 	"strings"
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
+	connectionsv1 "github.com/louisbranch/fracturing.space/api/gen/go/connections/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	sharedroute "github.com/louisbranch/fracturing.space/internal/services/shared/route"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -42,6 +44,10 @@ func (h *handler) handleAppSettingsRoutes(w http.ResponseWriter, r *http.Request
 
 	path := strings.TrimPrefix(r.URL.Path, "/settings/")
 	parts := splitSettingsPathParts(path)
+	if len(parts) == 1 && parts[0] == "username" {
+		h.handleAppUsernameSettings(w, r)
+		return
+	}
 	if len(parts) == 1 && parts[0] == "ai-keys" {
 		h.handleAppAIKeys(w, r)
 		return
@@ -64,6 +70,93 @@ func splitSettingsPathParts(path string) []string {
 		parts = append(parts, part)
 	}
 	return parts
+}
+
+func (h *handler) handleAppUsernameSettings(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		h.handleAppUsernameSettingsGet(w, r)
+	case http.MethodPost:
+		h.handleAppUsernameSettingsPost(w, r)
+	default:
+		w.Header().Set("Allow", http.MethodGet+", "+http.MethodPost)
+		localizeHTTPError(w, r, http.StatusMethodNotAllowed, "error.http.method_not_allowed")
+	}
+}
+
+func (h *handler) handleAppUsernameSettingsGet(w http.ResponseWriter, r *http.Request) {
+	sess := sessionFromRequest(r, h.sessions)
+	if sess == nil {
+		http.Redirect(w, r, "/auth/login", http.StatusFound)
+		return
+	}
+	page := h.pageContext(w, r)
+	if h.connectionsClient == nil {
+		writeUsernameSettingsPage(w, r, page, webtemplates.UsernameSettingsPageState{
+			ErrorMessage: webtemplates.T(page.Loc, "web.settings.username.error_connections_unavailable"),
+		}, http.StatusOK)
+		return
+	}
+	userID, ok := h.resolveSettingsUserID(w, r, sess, "Username settings unavailable")
+	if !ok {
+		return
+	}
+
+	ctx := grpcauthctx.WithUserID(r.Context(), userID)
+	resp, err := h.connectionsClient.GetUsername(ctx, &connectionsv1.GetUsernameRequest{UserId: userID})
+	if err != nil {
+		if status.Code(err) != codes.NotFound {
+			h.renderErrorPage(w, r, grpcErrorHTTPStatus(err, http.StatusBadGateway), "Username settings unavailable", "failed to load username")
+			return
+		}
+	}
+	state := webtemplates.UsernameSettingsPageState{}
+	if resp != nil && resp.GetUsernameRecord() != nil {
+		state.Username = strings.TrimSpace(resp.GetUsernameRecord().GetUsername())
+	}
+	writeUsernameSettingsPage(w, r, page, state, http.StatusOK)
+}
+
+func (h *handler) handleAppUsernameSettingsPost(w http.ResponseWriter, r *http.Request) {
+	sess := sessionFromRequest(r, h.sessions)
+	if sess == nil {
+		http.Redirect(w, r, "/auth/login", http.StatusFound)
+		return
+	}
+	if h.connectionsClient == nil {
+		h.renderErrorPage(w, r, http.StatusServiceUnavailable, "Username settings unavailable", "connections service is not configured")
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		h.renderErrorPage(w, r, http.StatusBadRequest, "Username settings unavailable", "failed to parse username form")
+		return
+	}
+	page := h.pageContext(w, r)
+	username := strings.TrimSpace(r.FormValue("username"))
+	if username == "" {
+		writeUsernameSettingsPage(w, r, page, webtemplates.UsernameSettingsPageState{
+			ErrorMessage: webtemplates.T(page.Loc, "web.settings.username.error_required"),
+		}, http.StatusBadRequest)
+		return
+	}
+	userID, ok := h.resolveSettingsUserID(w, r, sess, "Username settings unavailable")
+	if !ok {
+		return
+	}
+	ctx := grpcauthctx.WithUserID(r.Context(), userID)
+	_, err := h.connectionsClient.SetUsername(ctx, &connectionsv1.SetUsernameRequest{
+		UserId:   userID,
+		Username: username,
+	})
+	if err != nil {
+		statusCode := grpcErrorHTTPStatus(err, http.StatusBadGateway)
+		writeUsernameSettingsPage(w, r, page, webtemplates.UsernameSettingsPageState{
+			Username:     username,
+			ErrorMessage: grpcErrorMessage(err, webtemplates.T(page.Loc, "web.settings.username.error_save_failed")),
+		}, statusCode)
+		return
+	}
+	http.Redirect(w, r, "/settings/username", http.StatusFound)
 }
 
 func (h *handler) handleAppAIKeys(w http.ResponseWriter, r *http.Request) {
@@ -220,6 +313,14 @@ func renderAIKeysPage(w http.ResponseWriter, r *http.Request, page webtemplates.
 	writeGameContentType(w)
 	w.WriteHeader(statusCode)
 	if err := writePage(w, r, webtemplates.AIKeysPage(page, state), composeHTMXTitleForPage(page, "layout.settings_ai_keys")); err != nil {
+		localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.web_handler_unavailable")
+	}
+}
+
+func writeUsernameSettingsPage(w http.ResponseWriter, r *http.Request, page webtemplates.PageContext, state webtemplates.UsernameSettingsPageState, statusCode int) {
+	writeGameContentType(w)
+	w.WriteHeader(statusCode)
+	if err := writePage(w, r, webtemplates.UsernameSettingsPage(page, state), composeHTMXTitleForPage(page, "layout.settings_username")); err != nil {
 		localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.web_handler_unavailable")
 	}
 }

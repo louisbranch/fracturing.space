@@ -35,6 +35,16 @@ type UsernameRecord struct {
 	UpdatedAt time.Time
 }
 
+// PublicProfileRecord stores one public profile for user identity verification.
+type PublicProfileRecord struct {
+	UserID      string
+	DisplayName string
+	AvatarURL   string
+	Bio         string
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
 // ContactStore persists owner-scoped directed contact relationships.
 type ContactStore interface {
 	PutContact(ctx context.Context, contact Contact) error
@@ -48,4 +58,10 @@ type UsernameStore interface {
 	PutUsername(ctx context.Context, username UsernameRecord) error
 	GetUsernameByUserID(ctx context.Context, userID string) (UsernameRecord, error)
 	GetUsernameByUsername(ctx context.Context, username string) (UsernameRecord, error)
+}
+
+// ProfileStore persists public profile records.
+type ProfileStore interface {
+	PutPublicProfile(ctx context.Context, profile PublicProfileRecord) error
+	GetPublicProfileByUserID(ctx context.Context, userID string) (PublicProfileRecord, error)
 }

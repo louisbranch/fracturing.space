@@ -22,6 +22,16 @@ message UsernameRecord {
   google.protobuf.Timestamp updated_at = 4;
 }
 
+// PublicProfileRecord stores one user-managed profile for username verification.
+message PublicProfileRecord {
+  string user_id = 1;
+  string display_name = 2;
+  string avatar_url = 3;
+  string bio = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
 message AddContactRequest {
   string owner_user_id = 1;
   string contact_user_id = 2;
@@ -79,6 +89,34 @@ message LookupUsernameResponse {
   UsernameRecord username_record = 1;
 }
 
+message SetPublicProfileRequest {
+  string user_id = 1;
+  string display_name = 2;
+  string avatar_url = 3;
+  string bio = 4;
+}
+
+message SetPublicProfileResponse {
+  PublicProfileRecord public_profile_record = 1;
+}
+
+message GetPublicProfileRequest {
+  string user_id = 1;
+}
+
+message GetPublicProfileResponse {
+  PublicProfileRecord public_profile_record = 1;
+}
+
+message LookupPublicProfileRequest {
+  string username = 1;
+}
+
+message LookupPublicProfileResponse {
+  UsernameRecord username_record = 1;
+  PublicProfileRecord public_profile_record = 2;
+}
+
 // ConnectionsService manages directed contact relationships between users.
 service ConnectionsService {
   rpc AddContact(AddContactRequest) returns (AddContactResponse);
@@ -87,4 +125,7 @@ service ConnectionsService {
   rpc SetUsername(SetUsernameRequest) returns (SetUsernameResponse);
   rpc GetUsername(GetUsernameRequest) returns (GetUsernameResponse);
   rpc LookupUsername(LookupUsernameRequest) returns (LookupUsernameResponse);
+  rpc SetPublicProfile(SetPublicProfileRequest) returns (SetPublicProfileResponse);
+  rpc GetPublicProfile(GetPublicProfileRequest) returns (GetPublicProfileResponse);
+  rpc LookupPublicProfile(LookupPublicProfileRequest) returns (LookupPublicProfileResponse);
 }
