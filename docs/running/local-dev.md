@@ -124,7 +124,7 @@ See [seeding](seeding.md) for `make seed` and generator options.
 
 ## Configuration
 
-See [configuration](configuration.md) for the full environment variable reference.
+See [configuration](configuration.md) for the canonical runtime variable reference.
 
 For external image hosting (recommended for campaign covers and avatars), set:
 

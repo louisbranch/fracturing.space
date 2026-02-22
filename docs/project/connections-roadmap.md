@@ -6,6 +6,15 @@ nav_order: 17
 
 # User Connections Roadmap
 
+As of 2026-02-22, this page is an active roadmap artifact (not a canonical
+onboarding entrypoint).
+
+Canonical runtime context for this roadmap:
+
+- [Architecture](architecture.md)
+- [Domain language](domain-language.md)
+- [Identity and Recovery](identity.md)
+
 ## Purpose
 
 Define a phased path for user discovery and contact UX while keeping `auth` focused on authentication and authorization.

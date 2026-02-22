@@ -6,6 +6,15 @@ nav_order: 13
 
 # Chat Phase 1 WebSocket API Contract
 
+As of 2026-02-22, this page is a phase-specific roadmap contract for chat
+transport work.
+
+Canonical runtime context for this contract:
+
+- [Architecture](architecture.md)
+- [Event-driven system](event-driven-system.md)
+- [Chat service specification](chat-service.md)
+
 ## Purpose
 
 Define the implementation-ready WebSocket contract for Phase 1 of chat:

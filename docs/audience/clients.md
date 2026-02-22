@@ -8,13 +8,16 @@ nav_order: 3
 
 For building clients, bots, or MCP integrations.
 
-Start here:
+## First action
 
-- [MCP tools and resources](../reference/mcp.md)
-- [Quickstart (Docker)](../running/quickstart.md)
-- [Local development (Go)](../running/local-dev.md)
-- [Configuration reference (MCP + OAuth)](../running/configuration.md)
+- Protocol and tool surface: [MCP tools and resources](../reference/mcp.md)
+- Runtime setup: [Quickstart (Docker)](../running/quickstart.md) or [Local development (Go)](../running/local-dev.md)
+- Runtime defaults: [Configuration reference](../running/configuration.md)
 
-Also useful:
+## Useful source locations
 
 - gRPC proto definitions: `../../api/proto`
+
+## Next step
+
+When changing MCP behavior, follow the contributor routing in [Contributor map](contributor-map.md) and run MCP-focused tests.

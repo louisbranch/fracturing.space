@@ -35,11 +35,13 @@ make seed
 Using Compose:
 
 ```bash
+COMPOSE="docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml"
+
 # Terminal 1: Start the game + auth services
-docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml up -d game auth
+$COMPOSE up -d game auth
 
 # Terminal 2: Run seeding commands
-docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml --profile tools run --rm seed
+$COMPOSE --profile tools run --rm seed
 ```
 
 ## Catalog Content Import
@@ -53,7 +55,8 @@ make catalog-importer
 Compose:
 
 ```bash
-docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml --profile tools run --rm catalog-importer
+COMPOSE="docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml"
+$COMPOSE --profile tools run --rm catalog-importer
 ```
 
 ### CLI Options
@@ -77,8 +80,9 @@ make seed-fresh  # Reset DB and reseed
 Compose:
 
 ```bash
-docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml --profile tools run --rm seed
-docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml --profile tools run --rm seed -- -scenario example
+COMPOSE="docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml"
+$COMPOSE --profile tools run --rm seed
+$COMPOSE --profile tools run --rm seed -- -scenario example
 ```
 
 ### CLI Options
@@ -108,8 +112,9 @@ make seed-generate-fresh   # Reset DB and generate demo data
 Compose:
 
 ```bash
-docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml --profile tools run --rm seed -- -generate -preset=demo -v
-docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml --profile tools run --rm seed -- -generate -preset=variety -v
+COMPOSE="docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml"
+$COMPOSE --profile tools run --rm seed -- -generate -preset=demo -v
+$COMPOSE --profile tools run --rm seed -- -generate -preset=variety -v
 ```
 
 ### CLI Options

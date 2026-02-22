@@ -33,11 +33,13 @@ go run ./cmd/scenario -scenario internal/test/game/scenarios/basic_flow.lua
 Using Compose:
 
 ```bash
+COMPOSE="docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml"
+
 # Terminal 1: Start the game service
-docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml up -d game
+$COMPOSE up -d game
 
 # Terminal 2: Run a scenario
-docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml --profile tools run --rm scenario -- -scenario internal/test/game/scenarios/basic_flow.lua
+$COMPOSE --profile tools run --rm scenario -- -scenario internal/test/game/scenarios/basic_flow.lua
 ```
 
 ## CLI Options

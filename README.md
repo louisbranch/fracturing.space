@@ -15,24 +15,40 @@ Fracturing.Space is built for tables experimenting with AI GMs or mixed human/AI
 Requires Docker + Docker Compose.
 
 ```sh
-docker compose up --build
+make bootstrap
 ```
 
 Open `http://localhost:8080`.
 
 This uses dev-only join-grant keys baked into `docker-compose.yml`. Replace them for any real deployment.
 
-Service URLs and Docker Compose details: [docs/running/docker-compose.md](docs/running/docker-compose.md).
+Service URLs, explicit compose commands, and runtime variants:
+
+- [docs/running/quickstart.md](docs/running/quickstart.md)
+- [docs/running/docker-compose.md](docs/running/docker-compose.md)
+- [docs/running/local-dev.md](docs/running/local-dev.md)
+
+## New contributor path
+
+Recommended first path:
+
+1. Start at [docs/index.md](docs/index.md).
+2. Follow [docs/audience/contributors.md](docs/audience/contributors.md).
+3. Pick a first edit target from [docs/audience/contributor-map.md](docs/audience/contributor-map.md).
+4. Apply contribution workflow checks in [CONTRIBUTING.md](CONTRIBUTING.md).
+
+If you are evaluating architecture before coding, start with [docs/project/overview.md](docs/project/overview.md) and then return to the contributor path above.
 
 ## Docs map
 
 - Docs home: [docs/index.md](docs/index.md)
-- Audience guides: [docs/audience/index.md](docs/audience/index.md)
-- Contributors: [docs/audience/contributors.md](docs/audience/contributors.md)
-- Operators: [docs/audience/operators.md](docs/audience/operators.md)
-- Clients and tooling: [docs/audience/clients.md](docs/audience/clients.md)
-- System designers: [docs/audience/system-designers.md](docs/audience/system-designers.md)
-- Project overview: [docs/project/overview.md](docs/project/overview.md)
+- Audience routing: [docs/audience/index.md](docs/audience/index.md)
+- Running and setup: [docs/running/index.md](docs/running/index.md)
+- Project architecture and domain docs: [docs/project/index.md](docs/project/index.md)
+
+## Documentation lifecycle
+
+Contributor entrypoints prioritize canonical docs. Roadmap and phase-specific design docs are still available from subsystem indexes and are intended for active scoped work.
 
 ## Project status
 

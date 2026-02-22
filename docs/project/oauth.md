@@ -54,39 +54,21 @@ The MCP HTTP server advertises its authorization server and includes
 
 ## Configuration (Env)
 
-Auth service:
+Authoritative defaults live in
+[running/configuration.md](../running/configuration.md).
 
-- `FRACTURING_SPACE_AUTH_HTTP_ADDR` (default `localhost:8084`): HTTP listen address for OAuth endpoints.
-- `FRACTURING_SPACE_OAUTH_ISSUER`: Issuer base URL for OAuth metadata (should match the auth HTTP base URL).
-- `FRACTURING_SPACE_OAUTH_RESOURCE_SECRET`: Shared secret required by `/introspect`.
-- `FRACTURING_SPACE_OAUTH_CLIENTS`: JSON array of OAuth clients (id, redirect URIs, name, auth method).
-- `FRACTURING_SPACE_OAUTH_LOGIN_REDIRECTS`: Comma-separated allowlist for external provider redirect URIs.
-- `FRACTURING_SPACE_OAUTH_LOGIN_UI_URL`: Web login URL used by `/authorize` to redirect to the login UX.
-- `FRACTURING_SPACE_OAUTH_GOOGLE_CLIENT_ID`: Google OAuth client ID.
-- `FRACTURING_SPACE_OAUTH_GOOGLE_CLIENT_SECRET`: Google OAuth client secret.
-- `FRACTURING_SPACE_OAUTH_GOOGLE_REDIRECT_URI`: Redirect URI registered with Google.
-- `FRACTURING_SPACE_OAUTH_GOOGLE_SCOPES`: Comma-separated scopes for Google OAuth (defaults to `openid,email,profile`).
-- `FRACTURING_SPACE_OAUTH_GITHUB_CLIENT_ID`: GitHub OAuth client ID.
-- `FRACTURING_SPACE_OAUTH_GITHUB_CLIENT_SECRET`: GitHub OAuth client secret.
-- `FRACTURING_SPACE_OAUTH_GITHUB_REDIRECT_URI`: Redirect URI registered with GitHub.
-- `FRACTURING_SPACE_OAUTH_GITHUB_SCOPES`: Comma-separated scopes for GitHub OAuth (defaults to `read:user,user:email`).
-- `FRACTURING_SPACE_WEBAUTHN_RP_ID`: Relying party ID for passkeys (defaults to `localhost`).
-- `FRACTURING_SPACE_WEBAUTHN_RP_DISPLAY_NAME`: Relying party display name (defaults to app name).
-- `FRACTURING_SPACE_WEBAUTHN_RP_ORIGINS`: Comma-separated WebAuthn origins (defaults to `http://localhost:8086`).
-- `FRACTURING_SPACE_WEBAUTHN_SESSION_TTL`: Passkey session TTL (defaults to `5m`).
-- `FRACTURING_SPACE_MAGIC_LINK_BASE_URL`: Base URL for magic links (defaults to `http://localhost:8086/magic`).
-- `FRACTURING_SPACE_MAGIC_LINK_TTL`: Magic link TTL (defaults to `15m`).
+Use this page for OAuth behavior and ownership semantics, not duplicated default
+inventories.
 
-MCP service:
+Critical wiring values to verify in all OAuth deployments:
 
-- `FRACTURING_SPACE_MCP_OAUTH_ISSUER`: Auth server issuer used for introspection (expected to match `FRACTURING_SPACE_OAUTH_ISSUER`).
-- `FRACTURING_SPACE_MCP_OAUTH_RESOURCE_SECRET`: Shared secret presented to `/introspect`.
+- `FRACTURING_SPACE_OAUTH_ISSUER` (auth-server issuer metadata)
+- `FRACTURING_SPACE_OAUTH_RESOURCE_SECRET` (auth introspection secret)
+- `FRACTURING_SPACE_MCP_OAUTH_ISSUER` (MCP introspection issuer target)
+- `FRACTURING_SPACE_MCP_OAUTH_RESOURCE_SECRET` (MCP introspection secret)
 
-Web login service:
-
-- `FRACTURING_SPACE_WEB_HTTP_ADDR` (default `localhost:8080`): HTTP listen address for login UX.
-- `FRACTURING_SPACE_WEB_AUTH_BASE_URL` (default `http://localhost:8084`): Auth HTTP base URL for posting login form data.
-- `FRACTURING_SPACE_WEB_AUTH_ADDR` (default `auth:8083`): Auth gRPC address for passkey flows.
+For provider login, passkey, and magic-link variables, use the canonical
+configuration page above.
 
 ## Example OAuth Client Config (JSON)
 

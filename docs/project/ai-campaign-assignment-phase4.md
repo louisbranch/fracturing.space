@@ -6,6 +6,15 @@ nav_order: 16
 
 # Game Service Phase 4: Campaign AI Assignment
 
+As of 2026-02-22, this page is an active roadmap/spec artifact and should be
+used only for AI assignment scoped work.
+
+Canonical runtime context for this spec:
+
+- [Architecture](architecture.md)
+- [Event-driven system](event-driven-system.md)
+- [AI Provider Access and Campaign Assignment](ai-provider-access.md)
+
 ## Purpose
 
 Define an implementation-ready specification for assigning one AI agent to a
