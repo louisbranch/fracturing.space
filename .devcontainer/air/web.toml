@@ -5,7 +5,7 @@ tmp_dir = ".tmp/dev/air/web"
 cmd = "go build -o .tmp/dev/bin/web ./cmd/web"
 bin = ".tmp/dev/bin/web"
 delay = 300
-include_ext = ["go", "tpl", "tmpl", "html", "sql", "yaml", "yml", "json"]
+include_ext = ["go", "js", "tpl", "tmpl", "html", "sql", "yaml", "yml", "json"]
 exclude_dir = [".git", ".tmp", "api/gen", "data"]
 
 [log]

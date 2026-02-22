@@ -10,6 +10,7 @@ type PageContext struct {
 	Loc                   Localizer
 	CurrentPath           string
 	CurrentQuery          string
+	ChatFallbackPort      string
 	CampaignName          string
 	CampaignCoverImageURL string
 	UserName              string

@@ -15,7 +15,7 @@ import (
 
 // Config holds scenario command configuration.
 type Config struct {
-	GRPCAddr         string        `env:"FRACTURING_SPACE_GAME_ADDR"               envDefault:"localhost:8080"`
+	GRPCAddr         string        `env:"FRACTURING_SPACE_GAME_ADDR"               envDefault:"localhost:8082"`
 	Scenario         string        `env:"FRACTURING_SPACE_SCENARIO_FILE"`
 	Assertions       bool          `env:"FRACTURING_SPACE_SCENARIO_ASSERT"         envDefault:"true"`
 	Verbose          bool          `env:"FRACTURING_SPACE_SCENARIO_VERBOSE"`

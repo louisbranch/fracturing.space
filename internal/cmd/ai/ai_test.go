@@ -11,8 +11,8 @@ func TestParseConfigDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse config: %v", err)
 	}
-	if cfg.Port != 8088 {
-		t.Fatalf("expected default port 8088, got %d", cfg.Port)
+	if cfg.Port != 8087 {
+		t.Fatalf("expected default port 8087, got %d", cfg.Port)
 	}
 }
 

@@ -11,8 +11,8 @@ import (
 
 // Config holds MCP command configuration.
 type Config struct {
-	Addr      string `env:"FRACTURING_SPACE_GAME_ADDR"     envDefault:"localhost:8080"`
-	HTTPAddr  string `env:"FRACTURING_SPACE_MCP_HTTP_ADDR" envDefault:"localhost:8081"`
+	Addr      string `env:"FRACTURING_SPACE_GAME_ADDR"     envDefault:"localhost:8082"`
+	HTTPAddr  string `env:"FRACTURING_SPACE_MCP_HTTP_ADDR" envDefault:"localhost:8085"`
 	Transport string `env:"FRACTURING_SPACE_MCP_TRANSPORT" envDefault:"stdio"`
 }
 

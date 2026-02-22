@@ -17,6 +17,7 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	"golang.org/x/net/websocket"
 	gogrpc "google.golang.org/grpc"
 )
@@ -456,7 +457,7 @@ func (a *campaignAuthorizer) ResolveJoinWelcome(ctx context.Context, campaignID 
 	var activeSession *statev1.Session
 	if a.sessionClient != nil {
 		var err error
-		activeSession, err = a.findActiveSession(ctx, campaignID)
+		activeSession, err = a.findActiveSession(ctx, campaignID, userID)
 		if err != nil && !errors.Is(err, errCampaignSessionInactive) {
 			return joinWelcome{}, err
 		}
@@ -478,7 +479,7 @@ func (a *campaignAuthorizer) ResolveJoinWelcome(ctx context.Context, campaignID 
 	campaignName := campaignID
 	locale := commonv1.Locale_LOCALE_EN_US
 	if a.campaignClient != nil {
-		callCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+		callCtx, cancel := context.WithTimeout(grpcauthctx.WithUserID(ctx, userID), 3*time.Second)
 		resp, err := a.campaignClient.GetCampaign(callCtx, &statev1.GetCampaignRequest{CampaignId: campaignID})
 		cancel()
 		if err != nil {
@@ -513,13 +514,13 @@ func (a *campaignAuthorizer) ResolveJoinWelcome(ctx context.Context, campaignID 
 	}, nil
 }
 
-func (a *campaignAuthorizer) findActiveSession(ctx context.Context, campaignID string) (*statev1.Session, error) {
+func (a *campaignAuthorizer) findActiveSession(ctx context.Context, campaignID string, userID string) (*statev1.Session, error) {
 	if a == nil || a.sessionClient == nil {
 		return nil, errors.New("session client is not configured")
 	}
 	pageToken := ""
 	for {
-		callCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+		callCtx, cancel := context.WithTimeout(grpcauthctx.WithUserID(ctx, userID), 3*time.Second)
 		resp, err := a.sessionClient.ListSessions(callCtx, &statev1.ListSessionsRequest{
 			CampaignId: campaignID,
 			PageSize:   10,
@@ -548,7 +549,7 @@ func (a *campaignAuthorizer) findParticipantByUserID(ctx context.Context, campai
 	}
 	pageToken := ""
 	for {
-		callCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+		callCtx, cancel := context.WithTimeout(grpcauthctx.WithUserID(ctx, userID), 3*time.Second)
 		resp, err := a.participantClient.ListParticipants(callCtx, &statev1.ListParticipantsRequest{
 			CampaignId: campaignID,
 			PageSize:   100,
@@ -611,12 +612,18 @@ func newHandler(authorizer wsAuthorizer, requireAuth bool, ensureCampaignUpdateS
 
 			accessToken := accessTokenFromRequest(r)
 			if accessToken == "" {
+				log.Printf("chat: websocket unauthorized: missing fs_token for host=%q remote=%s path=%q", r.Host, r.RemoteAddr, r.URL.Path)
 				http.Error(w, "authentication required", http.StatusUnauthorized)
 				return
 			}
 
 			userID, err := authorizer.Authenticate(r.Context(), accessToken)
 			if err != nil || strings.TrimSpace(userID) == "" {
+				if err != nil {
+					log.Printf("chat: websocket unauthorized: auth introspection failed for host=%q remote=%s path=%q err=%v", r.Host, r.RemoteAddr, r.URL.Path, err)
+				} else {
+					log.Printf("chat: websocket unauthorized: empty user id after auth for host=%q remote=%s path=%q", r.Host, r.RemoteAddr, r.URL.Path)
+				}
 				http.Error(w, "authentication required", http.StatusUnauthorized)
 				return
 			}
@@ -743,13 +750,16 @@ func handleJoinFrame(ctx context.Context, session *wsSession, hub *roomHub, auth
 		resolved, err := provider.ResolveJoinWelcome(ctx, campaignID, session.userID)
 		if err != nil {
 			if errors.Is(err, errCampaignParticipantRequired) {
+				log.Printf("chat: campaign participant required for user=%q campaign=%q", session.userID, campaignID)
 				_ = writeWSError(session.peer, frame.RequestID, "FORBIDDEN", "participant access required for campaign")
 				return
 			}
 			if errors.Is(err, errCampaignSessionInactive) {
+				log.Printf("chat: campaign has no active session for user=%q campaign=%q", session.userID, campaignID)
 				_ = writeWSError(session.peer, frame.RequestID, "FAILED_PRECONDITION", "campaign session is not active")
 				return
 			}
+			log.Printf("chat: failed to resolve campaign context user=%q campaign=%q err=%v", session.userID, campaignID, err)
 			_ = writeWSError(session.peer, frame.RequestID, "UNAVAILABLE", "campaign context lookup unavailable")
 			return
 		}
@@ -758,9 +768,11 @@ func handleJoinFrame(ctx context.Context, session *wsSession, hub *roomHub, auth
 		allowed, err := authorizer.IsCampaignParticipant(ctx, campaignID, session.userID)
 		if err != nil {
 			if errors.Is(err, errCampaignSessionInactive) {
+				log.Printf("chat: campaign session inactive during membership check for user=%q campaign=%q", session.userID, campaignID)
 				_ = writeWSError(session.peer, frame.RequestID, "FAILED_PRECONDITION", "campaign session is not active")
 				return
 			}
+			log.Printf("chat: campaign membership check failed user=%q campaign=%q err=%v", session.userID, campaignID, err)
 			_ = writeWSError(session.peer, frame.RequestID, "UNAVAILABLE", "campaign membership verification unavailable")
 			return
 		}

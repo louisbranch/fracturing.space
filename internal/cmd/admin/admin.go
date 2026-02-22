@@ -15,8 +15,8 @@ import (
 
 // Config holds the admin command configuration.
 type Config struct {
-	HTTPAddr            string        `env:"FRACTURING_SPACE_ADMIN_ADDR"                    envDefault:":8082"`
-	GRPCAddr            string        `env:"FRACTURING_SPACE_GAME_ADDR"                     envDefault:"localhost:8080"`
+	HTTPAddr            string        `env:"FRACTURING_SPACE_ADMIN_ADDR"                    envDefault:":8081"`
+	GRPCAddr            string        `env:"FRACTURING_SPACE_GAME_ADDR"                     envDefault:"localhost:8082"`
 	AuthAddr            string        `env:"FRACTURING_SPACE_AUTH_ADDR"                     envDefault:"localhost:8083"`
 	GRPCDialTimeout     time.Duration `env:"FRACTURING_SPACE_ADMIN_DIAL_TIMEOUT"             envDefault:"2s"`
 	AuthIntrospectURL   string        `env:"FRACTURING_SPACE_ADMIN_AUTH_INTROSPECT_URL"`

@@ -11,7 +11,7 @@ import (
 
 // Config holds AI command configuration.
 type Config struct {
-	Port int `env:"FRACTURING_SPACE_AI_PORT" envDefault:"8088"`
+	Port int `env:"FRACTURING_SPACE_AI_PORT" envDefault:"8087"`
 }
 
 // ParseConfig parses environment and flags into a Config.

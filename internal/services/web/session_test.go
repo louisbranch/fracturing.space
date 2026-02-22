@@ -406,6 +406,73 @@ func TestSetTokenCookieDomainPrefix(t *testing.T) {
 	}
 }
 
+func TestTokenCookieDomainForRequest(t *testing.T) {
+	tests := []struct {
+		name         string
+		configDomain string
+		requestHost  string
+		want         string
+	}{
+		{
+			name:         "empty config uses localhost for localhost host",
+			configDomain: "",
+			requestHost:  "localhost:8080",
+			want:         "localhost",
+		},
+		{
+			name:         "empty config uses localhost for localhost subdomain",
+			configDomain: "",
+			requestHost:  "chat.localhost",
+			want:         "localhost",
+		},
+		{
+			name:         "empty config uses localhost for loopback IPv4",
+			configDomain: "",
+			requestHost:  "127.0.0.1:8086",
+			want:         "localhost",
+		},
+		{
+			name:         "empty config uses localhost for loopback IPv6",
+			configDomain: "",
+			requestHost:  "[::1]:8086",
+			want:         "localhost",
+		},
+		{
+			name:         "empty config empty when host is not local",
+			configDomain: "",
+			requestHost:  "example.com",
+			want:         "",
+		},
+		{
+			name:         "configured domain for parent domain match",
+			configDomain: "Example.Com",
+			requestHost:  "chat.example.com:8080",
+			want:         "example.com",
+		},
+		{
+			name:         "configured domain for exact match",
+			configDomain: "example.com",
+			requestHost:  "example.com",
+			want:         "example.com",
+		},
+		{
+			name:         "configured domain mismatch",
+			configDomain: "example.com",
+			requestHost:  "localhost:8080",
+			want:         "",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			domain := tokenCookieDomainForRequest(tc.configDomain, tc.requestHost)
+			if domain != tc.want {
+				t.Fatalf("tokenCookieDomainForRequest(%q, %q) = %q, want %q", tc.configDomain, tc.requestHost, domain, tc.want)
+			}
+		})
+	}
+}
+
 func TestClearTokenCookie(t *testing.T) {
 	w := httptest.NewRecorder()
 	clearTokenCookie(w, "example.com")

@@ -16,7 +16,8 @@ templ CampaignPage(page PageContext, campaignID string, campaignName string) {
 			data-chat-request-failed={ T(page.Loc, "campaign.chat.request_failed") }
 			data-chat-error-prefix={ T(page.Loc, "campaign.chat.error_prefix") }
 			data-chat-unable-to-send={ T(page.Loc, "campaign.chat.unable_to_send") }
-			data-chat-disconnected-retrying={ T(page.Loc, "campaign.chat.disconnected_retrying") }>
+			data-chat-disconnected-retrying={ T(page.Loc, "campaign.chat.disconnected_retrying") }
+			data-chat-fallback-port={ page.ChatFallbackPort }>
 			<div class="space-y-4">
 				<div class="flex items-center justify-between gap-4">
 					<h3 class="text-lg font-semibold">{ T(page.Loc, "campaign.shell_chat") }</h3>

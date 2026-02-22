@@ -35,6 +35,7 @@ var subStaticFS = func() (fs.FS, error) {
 // Config defines the inputs for the web login server.
 type Config struct {
 	HTTPAddr             string
+	ChatHTTPAddr         string
 	AuthBaseURL          string
 	AuthAddr             string
 	GameAddr             string
@@ -1055,7 +1056,8 @@ func (h *handler) handleAuthCallback(w http.ResponseWriter, r *http.Request) {
 	expiry := time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second)
 	sessionID := h.sessions.create(tokenResp.AccessToken, "", expiry)
 	setSessionCookie(w, sessionID)
-	setTokenCookie(w, tokenResp.AccessToken, h.config.Domain, int(tokenResp.ExpiresIn))
+	tokenCookieDomain := tokenCookieDomainForRequest(h.config.Domain, r.Host)
+	setTokenCookie(w, tokenResp.AccessToken, tokenCookieDomain, int(tokenResp.ExpiresIn))
 	http.Redirect(w, r, "/", http.StatusFound)
 }
 
@@ -1071,7 +1073,11 @@ func (h *handler) handleAuthLogout(w http.ResponseWriter, r *http.Request) {
 		h.sessions.delete(cookie.Value)
 	}
 	clearSessionCookie(w)
-	clearTokenCookie(w, h.config.Domain)
+	tokenCookieDomain := tokenCookieDomainForRequest(h.config.Domain, r.Host)
+	clearTokenCookie(w, tokenCookieDomain)
+	if tokenCookieDomain != h.config.Domain {
+		clearTokenCookie(w, h.config.Domain)
+	}
 	http.Redirect(w, r, "/", http.StatusFound)
 }
 

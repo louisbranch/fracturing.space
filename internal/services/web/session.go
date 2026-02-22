@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"log"
+	"net"
 	"net/http"
 	"strings"
 	"sync"
@@ -372,6 +373,57 @@ func clearTokenCookie(w http.ResponseWriter, domain string) {
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 	})
+}
+
+// tokenCookieDomainForRequest chooses a token cookie domain only when the request
+// host belongs to the configured domain; otherwise it returns empty to keep the
+// cookie host-only.
+func tokenCookieDomainForRequest(configDomain, requestHost string) string {
+	configDomain = strings.TrimSpace(configDomain)
+	if configDomain == "" {
+		if isLoopbackCookieHost(requestHost) {
+			return "localhost"
+		}
+		return ""
+	}
+	configDomain = strings.ToLower(strings.TrimPrefix(configDomain, "."))
+
+	requestHost = strings.TrimSpace(requestHost)
+	if requestHost == "" {
+		return configDomain
+	}
+	parsedHost, _, err := net.SplitHostPort(requestHost)
+	if err == nil {
+		requestHost = parsedHost
+	}
+	requestHost = strings.ToLower(strings.Trim(requestHost, "[]"))
+
+	if requestHost == configDomain {
+		return configDomain
+	}
+	if strings.HasSuffix(requestHost, "."+configDomain) {
+		return configDomain
+	}
+	return ""
+}
+
+func isLoopbackCookieHost(requestHost string) bool {
+	host := strings.TrimSpace(requestHost)
+	if host == "" {
+		return false
+	}
+	if parsedHost, _, err := net.SplitHostPort(host); err == nil {
+		host = parsedHost
+	}
+	host = strings.ToLower(strings.Trim(host, "[]"))
+	switch host {
+	case "localhost", "127.0.0.1", "::1":
+		return true
+	}
+	if strings.HasSuffix(host, ".localhost") {
+		return true
+	}
+	return false
 }
 
 func sessionAccessTokenFingerprint(accessToken string) string {
