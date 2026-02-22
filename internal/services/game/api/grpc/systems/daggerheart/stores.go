@@ -8,7 +8,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
-	daggerheartsystem "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
@@ -67,11 +67,11 @@ func (s *Stores) Validate() error {
 		return fmt.Errorf("stores not configured: %s", strings.Join(missing, ", "))
 	}
 
-	adapters := systems.NewAdapterRegistry()
-	if s.Daggerheart != nil {
-		if err := adapters.Register(daggerheartsystem.NewAdapter(s.Daggerheart)); err != nil {
-			return fmt.Errorf("register daggerheart adapter: %w", err)
-		}
+	adapters, err := systemmanifest.AdapterRegistry(systemmanifest.ProjectionStores{
+		Daggerheart: s.Daggerheart,
+	})
+	if err != nil {
+		return fmt.Errorf("build adapter registry: %w", err)
 	}
 	s.adapters = adapters
 	return nil
@@ -105,11 +105,12 @@ func (s Stores) Applier() projection.Applier {
 func (s Stores) TryApplier() (projection.Applier, error) {
 	adapters := s.adapters
 	if adapters == nil {
-		adapters = systems.NewAdapterRegistry()
-		if s.Daggerheart != nil {
-			if err := adapters.Register(daggerheartsystem.NewAdapter(s.Daggerheart)); err != nil {
-				return projection.Applier{}, fmt.Errorf("register daggerheart adapter: %w", err)
-			}
+		var err error
+		adapters, err = systemmanifest.AdapterRegistry(systemmanifest.ProjectionStores{
+			Daggerheart: s.Daggerheart,
+		})
+		if err != nil {
+			return projection.Applier{}, fmt.Errorf("build adapter registry: %w", err)
 		}
 	}
 	return projection.Applier{

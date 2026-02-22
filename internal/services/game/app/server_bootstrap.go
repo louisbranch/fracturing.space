@@ -82,14 +82,12 @@ func buildSystemRegistry() (*systems.Registry, error) {
 
 // buildProjectionRegistries validates projection coverage using pre-built
 // registries. This is a startup-time safety check that ensures every core
-// projection-and-replay event has a handler.
-func buildProjectionRegistries(registries engine.Registries) (*event.Registry, error) {
+// projection-and-replay event has a handler, no dead projection handlers
+// exist, and every system-emittable event has an adapter handler.
+func buildProjectionRegistries(registries engine.Registries, adapters *systems.AdapterRegistry) (*event.Registry, error) {
 	handledTypes := projection.ProjectionHandledTypes()
-	if err := engine.ValidateProjectionCoverage(registries.Events, handledTypes); err != nil {
-		return nil, fmt.Errorf("validate projection coverage: %w", err)
-	}
-	if err := engine.ValidateNoProjectionHandlersForNonProjectionEvents(registries.Events, handledTypes); err != nil {
-		return nil, fmt.Errorf("validate projection intent guard: %w", err)
+	if err := engine.ValidateProjectionRegistries(registries.Events, registries.Systems, adapters, handledTypes); err != nil {
+		return nil, err
 	}
 	return registries.Events, nil
 }

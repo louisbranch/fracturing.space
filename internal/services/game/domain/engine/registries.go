@@ -260,6 +260,27 @@ func ValidateFoldCoverage(events *event.Registry) error {
 	return nil
 }
 
+// ValidateProjectionRegistries bundles the three projection coverage validators
+// into a single call so that all startup paths (server, maintenance CLI, replay)
+// run the same checks without scattering calls across bootstrap functions.
+func ValidateProjectionRegistries(
+	events *event.Registry,
+	modules *module.Registry,
+	adapters *systems.AdapterRegistry,
+	projectionHandledTypes []event.Type,
+) error {
+	if err := ValidateProjectionCoverage(events, projectionHandledTypes); err != nil {
+		return fmt.Errorf("validate projection coverage: %w", err)
+	}
+	if err := ValidateNoProjectionHandlersForNonProjectionEvents(events, projectionHandledTypes); err != nil {
+		return fmt.Errorf("validate projection intent guard: %w", err)
+	}
+	if err := ValidateAdapterEventCoverage(modules, adapters, events); err != nil {
+		return fmt.Errorf("validate adapter event coverage: %w", err)
+	}
+	return nil
+}
+
 // ValidateProjectionCoverage verifies that every core IntentProjectionAndReplay
 // event has a projection handler declared via ProjectionHandledTypes.
 //

@@ -891,6 +891,116 @@ func (f *nonDeterministicCharacterFactory) NewCharacterState(_, _, _ string) (an
 	return map[string]int{"hp": f.calls}, nil
 }
 
+func TestValidateProjectionRegistries_PassesWithCurrentDomains(t *testing.T) {
+	registries, err := BuildRegistries(fakeModule{})
+	if err != nil {
+		t.Fatalf("build registries: %v", err)
+	}
+	handledTypes := []event.Type{
+		// Provide all core projection-and-replay events by pulling them from
+		// the current domains — same approach used by projection.ProjectionHandledTypes().
+	}
+	for _, domain := range CoreDomains() {
+		for _, def := range registries.Events.ListDefinitions() {
+			if def.Owner != event.OwnerCore || def.Intent != event.IntentProjectionAndReplay {
+				continue
+			}
+			// Include only types that match domain fold (to keep it simple, include all core projection types).
+			_ = domain
+			handledTypes = append(handledTypes, def.Type)
+			break
+		}
+	}
+	// Use the real projection handled types for a realistic test.
+	handledTypes = projectionHandledTypesFromRegistry(registries.Events)
+
+	adapters := buildFakeAdapterRegistry(t, []event.Type{
+		event.Type("sys.system_1.action.tested"),
+	})
+
+	err = ValidateProjectionRegistries(registries.Events, registries.Systems, adapters, handledTypes)
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+}
+
+func TestValidateProjectionRegistries_FailsOnMissingProjectionHandler(t *testing.T) {
+	eventRegistry := event.NewRegistry()
+	if err := eventRegistry.Register(event.Definition{
+		Type:   event.Type("test.unhandled_projection"),
+		Owner:  event.OwnerCore,
+		Intent: event.IntentProjectionAndReplay,
+	}); err != nil {
+		t.Fatalf("register event: %v", err)
+	}
+
+	moduleRegistry := module.NewRegistry()
+	adapters := systems.NewAdapterRegistry()
+
+	err := ValidateProjectionRegistries(eventRegistry, moduleRegistry, adapters, nil)
+	if err == nil {
+		t.Fatal("expected error for unhandled projection event")
+	}
+	if !strings.Contains(err.Error(), "test.unhandled_projection") {
+		t.Fatalf("expected error to mention unhandled type, got: %v", err)
+	}
+}
+
+func TestValidateProjectionRegistries_FailsOnDeadProjectionHandler(t *testing.T) {
+	eventRegistry := event.NewRegistry()
+	if err := eventRegistry.Register(event.Definition{
+		Type:   event.Type("test.audit_event"),
+		Owner:  event.OwnerCore,
+		Intent: event.IntentAuditOnly,
+	}); err != nil {
+		t.Fatalf("register event: %v", err)
+	}
+
+	moduleRegistry := module.NewRegistry()
+	adapters := systems.NewAdapterRegistry()
+
+	// Projection handler registered for an audit-only event — dead code.
+	projectionHandled := []event.Type{event.Type("test.audit_event")}
+	err := ValidateProjectionRegistries(eventRegistry, moduleRegistry, adapters, projectionHandled)
+	if err == nil {
+		t.Fatal("expected error for dead projection handler")
+	}
+	if !strings.Contains(err.Error(), "test.audit_event") {
+		t.Fatalf("expected error to mention type, got: %v", err)
+	}
+}
+
+func TestValidateProjectionRegistries_FailsOnMissingAdapterHandler(t *testing.T) {
+	registries, err := BuildRegistries(fakeModule{})
+	if err != nil {
+		t.Fatalf("build registries: %v", err)
+	}
+
+	// Module emits sys.system_1.action.tested but adapter handles nothing.
+	adapters := buildFakeAdapterRegistry(t, nil)
+	handledTypes := projectionHandledTypesFromRegistry(registries.Events)
+
+	err = ValidateProjectionRegistries(registries.Events, registries.Systems, adapters, handledTypes)
+	if err == nil {
+		t.Fatal("expected error for uncovered adapter event")
+	}
+	if !strings.Contains(err.Error(), "sys.system_1.action.tested") {
+		t.Fatalf("expected error to mention uncovered type, got: %v", err)
+	}
+}
+
+// projectionHandledTypesFromRegistry returns all core projection-and-replay types
+// from the event registry, simulating a complete projection handler set.
+func projectionHandledTypesFromRegistry(events *event.Registry) []event.Type {
+	var types []event.Type
+	for _, def := range events.ListDefinitions() {
+		if def.Owner == event.OwnerCore && def.Intent == event.IntentProjectionAndReplay {
+			types = append(types, def.Type)
+		}
+	}
+	return types
+}
+
 func TestBuildRegistries_SyntheticModuleRejectsLegacyActionPrefix(t *testing.T) {
 	legacy := syntheticModule{
 		id:          "GAME_SYSTEM_ALPHA",

@@ -3,7 +3,6 @@ package server
 import (
 	"errors"
 	"net"
-	"strings"
 	"testing"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -46,9 +45,6 @@ func TestNormalizeServerBootstrapConfigDefaults(t *testing.T) {
 	if cfg.validateSystemRegistration == nil {
 		t.Fatal("expected default validateSystemRegistration")
 	}
-	if cfg.validateAdapterEventCoverage == nil {
-		t.Fatal("expected default validateAdapterEventCoverage")
-	}
 	if cfg.dialAuthGRPC == nil {
 		t.Fatal("expected default dialAuthGRPC")
 	}
@@ -66,19 +62,6 @@ func TestNormalizeServerBootstrapConfigDefaults(t *testing.T) {
 	}
 	if cfg.buildProjectionApplyOutboxApply == nil {
 		t.Fatal("expected default buildProjectionApplyOutboxApply")
-	}
-}
-
-func TestNormalizeServerBootstrapConfigDefaultAdapterEventCoverageSeam(t *testing.T) {
-	// Verify the default seam calls engine.ValidateAdapterEventCoverage
-	// by exercising it with nil arguments, which produces a specific error.
-	cfg := normalizeServerBootstrapConfig(serverBootstrapConfig{})
-	err := cfg.validateAdapterEventCoverage(nil, nil, nil)
-	if err == nil {
-		t.Fatal("expected error from nil registries")
-	}
-	if got := err.Error(); !strings.Contains(got, "module registry") {
-		t.Fatalf("expected default seam to produce adapter coverage registry error, got: %v", got)
 	}
 }
 

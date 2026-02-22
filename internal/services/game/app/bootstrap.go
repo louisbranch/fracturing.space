@@ -38,12 +38,11 @@ type serverBootstrapConfig struct {
 	configureDomain                 func(serverEnv, *gamegrpc.Stores, engine.Registries) error
 	buildSystemRegistry             func() (*systems.Registry, error)
 	validateSystemRegistration      func([]module.Module, *systems.Registry, *systems.AdapterRegistry) error
-	validateAdapterEventCoverage    func(*module.Registry, *systems.AdapterRegistry, *event.Registry) error
 	dialAuthGRPC                    func(context.Context, string) (authGRPCClients, error)
 	newGRPCServer                   func(*storageBundle) *grpc.Server
 	newHealthServer                 func() *health.Server
 	resolveProjectionApplyModes     func(serverEnv) (bool, bool, string, error)
-	buildProjectionRegistries       func(engine.Registries) (*event.Registry, error)
+	buildProjectionRegistries       func(engine.Registries, *systems.AdapterRegistry) (*event.Registry, error)
 	buildProjectionApplyOutboxApply func(*storagesqlite.Store, *event.Registry) func(context.Context, event.Event) error
 }
 
@@ -91,9 +90,6 @@ func normalizeServerBootstrapConfig(cfg serverBootstrapConfig) serverBootstrapCo
 	}
 	if cfg.validateSystemRegistration == nil {
 		cfg.validateSystemRegistration = validateSystemRegistrationParity
-	}
-	if cfg.validateAdapterEventCoverage == nil {
-		cfg.validateAdapterEventCoverage = engine.ValidateAdapterEventCoverage
 	}
 	if cfg.dialAuthGRPC == nil {
 		cfg.dialAuthGRPC = dialAuthGRPC
@@ -195,10 +191,6 @@ func (b *serverBootstrap) NewWithAddr(addr string) (server *Server, err error) {
 	if err := b.config.validateSystemRegistration(registeredSystemModules(), systemRegistry, applier.Adapters); err != nil {
 		return nil, fmt.Errorf("validate system parity: %w", err)
 	}
-	if err := b.config.validateAdapterEventCoverage(registries.Systems, applier.Adapters, registries.Events); err != nil {
-		return nil, fmt.Errorf("validate adapter event coverage: %w", err)
-	}
-
 	authClients, err := b.config.dialAuthGRPC(context.Background(), srvEnv.AuthAddr)
 	if err != nil {
 		return nil, err
@@ -227,7 +219,7 @@ func (b *serverBootstrap) NewWithAddr(addr string) (server *Server, err error) {
 	daggerheartservice.SetInlineProjectionApplyEnabled(projectionApplyMode != projectionApplyModeOutboxApplyOnly)
 	log.Printf("projection apply mode = %s", projectionApplyMode)
 
-	projectionRegistries, err := b.config.buildProjectionRegistries(registries)
+	projectionRegistries, err := b.config.buildProjectionRegistries(registries, applier.Adapters)
 	if err != nil {
 		return nil, fmt.Errorf("build projection registries: %w", err)
 	}
