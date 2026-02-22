@@ -215,11 +215,12 @@ func Layout(options LayoutOptions) templ.Component {
 				return nil
 			})
 			templ_7745c5c3_Err = sharedtemplates.AppChromeLayout(sharedtemplates.AppChromeLayoutOptions{
-				Title:       options.Title,
-				Lang:        options.Lang,
-				AppName:     options.AppName,
-				Loc:         options.Loc,
-				Breadcrumbs: options.CustomBreadcrumbs,
+				Title:         options.Title,
+				Lang:          options.Lang,
+				AppName:       options.AppName,
+				Loc:           options.Loc,
+				Breadcrumbs:   options.CustomBreadcrumbs,
+				HeadingAction: options.HeadingAction,
 				ChromeOptions: sharedtemplates.ChromeLayoutOptions{
 					MainAria:               sharedtemplates.T(options.Loc, "game.aria_label"),
 					UserName:               options.UserName,
@@ -253,11 +254,12 @@ func Layout(options LayoutOptions) templ.Component {
 				return nil
 			})
 			templ_7745c5c3_Err = sharedtemplates.AppChromeLayout(sharedtemplates.AppChromeLayoutOptions{
-				Title:       options.Title,
-				Lang:        options.Lang,
-				AppName:     options.AppName,
-				Loc:         options.Loc,
-				Breadcrumbs: sharedtemplates.BuildPathBreadcrumbsForWeb(options.CurrentPath, options.Loc, campaignNamesForPath(options.CurrentPath, options.CampaignName)),
+				Title:         options.Title,
+				Lang:          options.Lang,
+				AppName:       options.AppName,
+				Loc:           options.Loc,
+				Breadcrumbs:   sharedtemplates.BuildPathBreadcrumbsForWeb(options.CurrentPath, options.Loc, campaignNamesForPath(options.CurrentPath, options.CampaignName)),
+				HeadingAction: options.HeadingAction,
 				ChromeOptions: sharedtemplates.ChromeLayoutOptions{
 					MainAria:               sharedtemplates.T(options.Loc, "game.aria_label"),
 					UserName:               options.UserName,

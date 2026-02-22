@@ -21,6 +21,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type fakeWebCampaignClient struct {
@@ -483,6 +484,65 @@ func TestAppCampaignsPageRendersUserScopedCampaigns(t *testing.T) {
 	}
 }
 
+func TestAppCampaignsPageOrdersCampaignsNewestFirst(t *testing.T) {
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/campaigns", nil)
+	renderAppCampaignsPage(w, req, []*statev1.Campaign{
+		{
+			Id:        "camp-old",
+			Name:      "Older Campaign",
+			CreatedAt: timestamppb.New(time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC)),
+		},
+		{
+			Id:        "camp-new",
+			Name:      "Newer Campaign",
+			CreatedAt: timestamppb.New(time.Date(2025, 2, 3, 0, 0, 0, 0, time.UTC)),
+		},
+	})
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	body := w.Body.String()
+	newerIdx := strings.Index(body, `href="/campaigns/camp-new"`)
+	olderIdx := strings.Index(body, `href="/campaigns/camp-old"`)
+	if newerIdx == -1 || olderIdx == -1 {
+		t.Fatalf("expected both campaigns in response")
+	}
+	if newerIdx > olderIdx {
+		t.Fatalf("expected newer campaign to render before older campaign")
+	}
+}
+
+func TestCampaignsListPageRendersCreateButtonInHeadingRow(t *testing.T) {
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/campaigns", nil)
+	renderAppCampaignsPage(w, req, []*statev1.Campaign{
+		{Id: "camp-1", Name: "Campaign One"},
+	})
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+
+	body := w.Body.String()
+	headingRowIdx := strings.Index(body, `class="mb-5 flex items-center justify-between gap-3"`)
+	if headingRowIdx == -1 {
+		t.Fatalf("expected chrome heading row with flex alignment, got %q", body)
+	}
+	buttonIdx := strings.Index(body, `href="/campaigns/create"`)
+	if buttonIdx == -1 {
+		t.Fatalf("expected create campaign button in output")
+	}
+	gridIdx := strings.Index(body, `class="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4"`)
+	if gridIdx == -1 {
+		t.Fatalf("expected campaigns grid in output")
+	}
+	if !(headingRowIdx < buttonIdx && buttonIdx < gridIdx) {
+		t.Fatalf("expected create campaign button inside heading row before campaigns grid")
+	}
+}
+
 func TestTruncateCampaignTheme(t *testing.T) {
 	longTheme := strings.Repeat("x", campaignThemePromptLimit+1)
 	if got := truncateCampaignTheme(longTheme); got != strings.Repeat("x", campaignThemePromptLimit)+"..." {
@@ -754,6 +814,69 @@ func TestAppCampaignCreateCallsCreateCampaignAndRedirects(t *testing.T) {
 	userIDs := campaignClient.createMetadata.Get(grpcmeta.UserIDHeader)
 	if len(userIDs) != 1 || userIDs[0] != "user-123" {
 		t.Fatalf("metadata %s = %v, want [user-123]", grpcmeta.UserIDHeader, userIDs)
+	}
+}
+
+func TestAppCampaignCreateExpiresUserCampaignListCache(t *testing.T) {
+	authServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/introspect" {
+			t.Fatalf("path = %q, want %q", r.URL.Path, "/introspect")
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(introspectResponse{
+			Active: true,
+			UserID: "user-123",
+		})
+	}))
+	t.Cleanup(authServer.Close)
+
+	cacheStore := newFakeWebCacheStore()
+	cacheKey := campaignListCacheKey("user-123")
+	cacheStore.entries[cacheKey] = webstorage.CacheEntry{
+		CacheKey:     cacheKey,
+		Scope:        cacheScopeCampaignSummary,
+		UserID:       "user-123",
+		PayloadBytes: []byte("cached"),
+		ExpiresAt:    time.Now().Add(time.Minute),
+	}
+
+	campaignClient := &fakeWebCampaignClient{
+		createResp: &statev1.CreateCampaignResponse{
+			Campaign: &statev1.Campaign{Id: "camp-777", Name: "New Campaign"},
+		},
+	}
+	h := &handler{
+		config: Config{
+			AuthBaseURL:         authServer.URL,
+			OAuthResourceSecret: "secret-1",
+		},
+		sessions:       newSessionStore(),
+		pendingFlows:   newPendingFlowStore(),
+		cacheStore:     cacheStore,
+		campaignClient: campaignClient,
+		campaignAccess: &campaignAccessService{
+			authBaseURL:         authServer.URL,
+			oauthResourceSecret: "secret-1",
+			httpClient:          authServer.Client(),
+		},
+	}
+
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	form := url.Values{
+		"name": {"New Campaign"},
+	}
+	req := httptest.NewRequest(http.MethodPost, "/campaigns/create", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+
+	h.handleAppCampaignCreate(w, req)
+
+	if w.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusFound)
+	}
+	if _, ok := cacheStore.entries[cacheKey]; ok {
+		t.Fatalf("expected campaigns cache entry %q to be removed after campaign creation", cacheKey)
 	}
 }
 

@@ -18,6 +18,7 @@ type LayoutOptions struct {
 	UserName               string
 	UserAvatarURL          string
 	HasUnreadNotifications bool
+	HeadingAction          templ.Component
 	ChromeMenu             templ.Component
 	CustomBreadcrumbs      []sharedtemplates.BreadcrumbItem
 	UseCustomBreadcrumbs   bool

@@ -109,6 +109,20 @@ func (h *handler) setUserCampaignsCache(ctx context.Context, userID string, camp
 	})
 }
 
+func (h *handler) expireUserCampaignsCache(ctx context.Context, userID string) {
+	if h == nil || h.cacheStore == nil {
+		return
+	}
+	userID = strings.TrimSpace(userID)
+	if userID == "" {
+		return
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	_ = h.cacheStore.DeleteCacheEntry(ctx, campaignListCacheKey(userID))
+}
+
 func (h *handler) cachedCampaign(ctx context.Context, campaignID string) (*statev1.Campaign, bool) {
 	if h == nil || h.cacheStore == nil {
 		return nil, false
