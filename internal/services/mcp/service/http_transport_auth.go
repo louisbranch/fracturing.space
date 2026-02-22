@@ -2,145 +2,12 @@ package service
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"log"
-	"net"
 	"net/http"
-	"net/url"
 	"strings"
 )
-
-// validateLocalRequest enforces host access to mitigate DNS rebinding.
-// It checks Host and Origin headers against allowed hosts per MCP guidance so
-// remote web pages cannot reach local MCP servers via rebinding.
-// This is the transport-side "network guardrail" before we have richer auth.
-func (t *HTTPTransport) validateLocalRequest(r *http.Request) error {
-	if r == nil {
-		return fmt.Errorf("invalid request")
-	}
-
-	if !t.isAllowedHostHeader(r.Host) {
-		return fmt.Errorf("invalid host")
-	}
-
-	origin := strings.TrimSpace(r.Header.Get("Origin"))
-	if origin == "" {
-		return nil
-	}
-
-	parsed, err := url.Parse(origin)
-	if err != nil {
-		return fmt.Errorf("invalid origin")
-	}
-
-	originHost := parsed.Host
-	if originHost == "" {
-		return fmt.Errorf("invalid origin")
-	}
-
-	if !t.isAllowedHostHeader(originHost) {
-		return fmt.Errorf("invalid origin")
-	}
-
-	return nil
-}
-
-// isAllowedHostHeader reports whether a Host/Origin header resolves to an allowed host.
-// The default posture is local-only unless explicit hosts are configured.
-func (t *HTTPTransport) isAllowedHostHeader(host string) bool {
-	resolvedHost, ok := normalizeHost(host)
-	if !ok {
-		return false
-	}
-
-	if isLoopbackHost(resolvedHost) {
-		return true
-	}
-
-	allowed := t.allowedHosts
-	if len(allowed) == 0 {
-		return false
-	}
-
-	_, ok = allowed[strings.ToLower(resolvedHost)]
-	return ok
-}
-
-// isLoopbackHost reports whether a host resolves to loopback.
-// It is intentionally strict: only explicit local loopback hosts pass by default.
-func isLoopbackHost(host string) bool {
-	host = strings.ToLower(strings.TrimSpace(host))
-	switch host {
-	case "localhost", "127.0.0.1", "::1":
-		return true
-	default:
-		return false
-	}
-}
-
-// parseAllowedHosts parses allowed hosts from env-loaded values.
-func parseAllowedHosts(hosts []string) map[string]struct{} {
-	result := make(map[string]struct{}, len(hosts))
-	for _, entry := range hosts {
-		trimmed := strings.TrimSpace(entry)
-		if trimmed == "" {
-			continue
-		}
-		result[strings.ToLower(trimmed)] = struct{}{}
-	}
-	return result
-}
-
-// normalizeHost extracts the hostname portion from Host/Origin headers.
-func normalizeHost(host string) (string, bool) {
-	host = strings.TrimSpace(host)
-	if host == "" {
-		return "", false
-	}
-
-	if strings.HasPrefix(host, "[") {
-		if splitHost, _, err := net.SplitHostPort(host); err == nil {
-			return splitHost, true
-		}
-		if strings.HasSuffix(host, "]") {
-			return strings.TrimSuffix(strings.TrimPrefix(host, "["), "]"), true
-		}
-		return "", false
-	}
-
-	if strings.Count(host, ":") > 1 {
-		return host, true
-	}
-
-	if strings.Contains(host, ":") {
-		splitHost, _, err := net.SplitHostPort(host)
-		if err != nil {
-			return "", false
-		}
-		return splitHost, true
-	}
-
-	return host, true
-}
-
-// handleHealth handles GET /mcp/health for health checks.
-func (t *HTTPTransport) handleHealth(w http.ResponseWriter, r *http.Request) {
-	if err := t.validateLocalRequest(r); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	if _, err := w.Write([]byte("OK")); err != nil {
-		log.Printf("Failed to write health response: %v", err)
-	}
-}
 
 type oauthAuth struct {
 	issuer         string
@@ -179,34 +46,97 @@ func loadOAuthAuthFromEnv(raw mcpHTTPEnv) *oauthAuth {
 // This keeps transport behavior explicit at the boundary while allowing local
 // deployments to skip token validation without changing handler wiring.
 func (t *HTTPTransport) authorizeRequest(w http.ResponseWriter, r *http.Request) bool {
-	if t.oauth == nil {
-		return true
-	}
-	authHeader := r.Header.Get("Authorization")
-	if !strings.HasPrefix(authHeader, "Bearer ") {
-		t.writeUnauthorized(w, r, "authorization required")
+	if err := t.rateLimitRequest(r); err != nil {
+		http.Error(w, err.Error(), http.StatusTooManyRequests)
 		return false
 	}
 
-	token := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer "))
-	if token == "" {
-		t.writeUnauthorized(w, r, "authorization required")
-		return false
-	}
-	active, err := t.oauth.validateToken(r.Context(), token)
-	if err != nil {
+	if err := t.authorize(r); err != nil {
 		if errors.Is(err, errOAuthResourceSecretMissing) {
 			http.Error(w, "oauth introspection misconfigured", http.StatusInternalServerError)
 			return false
 		}
-		t.writeUnauthorized(w, r, "invalid access token")
-		return false
-	}
-	if !active {
-		t.writeUnauthorized(w, r, "invalid access token")
+		t.writeUnauthorized(w, r, err.Error())
 		return false
 	}
 	return true
+}
+
+func (t *HTTPTransport) rateLimitRequest(r *http.Request) error {
+	if t == nil || t.rateLimiter == nil {
+		return nil
+	}
+	return t.rateLimiter.Allow(r)
+}
+
+func (t *HTTPTransport) authorize(r *http.Request) error {
+	if t == nil {
+		return nil
+	}
+	if t.requestAuthz != nil {
+		return t.requestAuthz.Authorize(r)
+	}
+	return (&hybridRequestAuthorizer{
+		apiToken: t.apiToken,
+		oauth:    t.oauth,
+	}).Authorize(r)
+}
+
+type hybridRequestAuthorizer struct {
+	apiToken string
+	oauth    *oauthAuth
+}
+
+func (a *hybridRequestAuthorizer) Authorize(r *http.Request) error {
+	if a == nil {
+		return nil
+	}
+
+	authHeader := strings.TrimSpace(r.Header.Get("Authorization"))
+	apiToken := extractBearerToken(authHeader)
+	if apiToken != "" && a.apiToken != "" {
+		if subtle.ConstantTimeCompare([]byte(apiToken), []byte(a.apiToken)) == 1 {
+			return nil
+		}
+	}
+
+	if a.oauth == nil {
+		if a.apiToken == "" {
+			return nil
+		}
+		return errors.New("authorization required")
+	}
+
+	if authHeader == "" {
+		return errors.New("authorization required")
+	}
+	if !strings.HasPrefix(authHeader, "Bearer ") {
+		return errors.New("authorization required")
+	}
+	token := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer "))
+	if token == "" {
+		return errors.New("authorization required")
+	}
+
+	active, err := a.oauth.validateToken(r.Context(), token)
+	if err != nil {
+		if errors.Is(err, errOAuthResourceSecretMissing) {
+			return err
+		}
+		return errors.New("invalid access token")
+	}
+	if !active {
+		return errors.New("invalid access token")
+	}
+	return nil
+}
+
+func extractBearerToken(authHeader string) string {
+	authHeader = strings.TrimSpace(authHeader)
+	if !strings.HasPrefix(authHeader, "Bearer ") {
+		return ""
+	}
+	return strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer "))
 }
 
 // handleProtectedResourceMetadata publishes oauth protected-resource metadata for

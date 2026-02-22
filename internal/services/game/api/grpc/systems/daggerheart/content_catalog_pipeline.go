@@ -1,18 +1,21 @@
 package daggerheart
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+)
 
 type contentCatalogStep struct {
 	name string
-	run  func() error
+	run  func(context.Context) error
 }
 
-func runContentCatalogSteps(steps []contentCatalogStep) error {
+func runContentCatalogSteps(ctx context.Context, steps []contentCatalogStep) error {
 	for _, step := range steps {
 		if step.run == nil {
 			continue
 		}
-		if err := step.run(); err != nil {
+		if err := step.run(ctx); err != nil {
 			return fmt.Errorf("%s: %w", step.name, err)
 		}
 	}
