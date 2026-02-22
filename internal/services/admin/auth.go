@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/requestctx"
+	routepath "github.com/louisbranch/fracturing.space/internal/services/admin/routepath"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/authctx"
 )
 
@@ -55,7 +56,7 @@ func requireAuth(next http.Handler, introspector TokenIntrospector, loginURL str
 
 // isAuthExempt returns true for paths that should bypass authentication.
 func isAuthExempt(path string) bool {
-	return strings.HasPrefix(path, "/static/")
+	return strings.HasPrefix(path, routepath.StaticPrefix)
 }
 
 // TokenIntrospector validates an OAuth access token via introspection.

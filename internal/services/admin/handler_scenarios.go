@@ -13,8 +13,8 @@ import (
 
 	"github.com/a-h/templ"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	routepath "github.com/louisbranch/fracturing.space/internal/services/admin/routepath"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/templates"
-	sharedroute "github.com/louisbranch/fracturing.space/internal/services/shared/route"
 	"github.com/louisbranch/fracturing.space/internal/tools/scenario"
 	"golang.org/x/text/message"
 )
@@ -60,30 +60,6 @@ func shouldPrefillScenarioScript(r *http.Request) bool {
 		return true
 	}
 	return r.URL.Query().Get("prefill") == "1"
-}
-
-// handleScenarioRoutes dispatches scenario subroutes.
-func (h *Handler) handleScenarioRoutes(w http.ResponseWriter, r *http.Request) {
-	if sharedroute.RedirectTrailingSlash(w, r) {
-		return
-	}
-	scenarioPath := strings.TrimPrefix(r.URL.Path, "/scenarios/")
-	parts := splitPathParts(scenarioPath)
-
-	if len(parts) == 2 && parts[1] == "events" {
-		h.handleScenarioEvents(w, r, parts[0])
-		return
-	}
-	if len(parts) == 3 && parts[1] == "events" && parts[2] == "table" {
-		h.handleScenarioEventsTable(w, r, parts[0])
-		return
-	}
-	if len(parts) == 3 && parts[1] == "timeline" && parts[2] == "table" {
-		h.handleScenarioTimelineTable(w, r, parts[0])
-		return
-	}
-
-	http.NotFound(w, r)
 }
 
 func (h *Handler) handleScenarioRun(w http.ResponseWriter, r *http.Request) {
@@ -211,7 +187,7 @@ func (h *Handler) handleScenarioEventsTable(w http.ResponseWriter, r *http.Reque
 		Message:    message,
 	}
 
-	if pushURL := eventFilterPushURL("/scenarios/"+campaignID+"/events", filters, pageToken); pushURL != "" {
+	if pushURL := eventFilterPushURL(routepath.ScenarioEvents(campaignID), filters, pageToken); pushURL != "" {
 		w.Header().Set("HX-Push-Url", pushURL)
 	}
 

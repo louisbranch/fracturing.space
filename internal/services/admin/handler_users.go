@@ -7,7 +7,6 @@ import (
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/templates"
-	sharedroute "github.com/louisbranch/fracturing.space/internal/services/shared/route"
 )
 
 func (h *Handler) handleUsersPage(w http.ResponseWriter, r *http.Request) {
@@ -59,24 +58,6 @@ func (h *Handler) handleUserLookup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.redirectToUserDetail(w, r, userID)
-}
-
-// handleUserRoutes dispatches the user detail route.
-func (h *Handler) handleUserRoutes(w http.ResponseWriter, r *http.Request) {
-	if sharedroute.RedirectTrailingSlash(w, r) {
-		return
-	}
-	userPath := strings.TrimPrefix(r.URL.Path, "/users/")
-	parts := splitPathParts(userPath)
-	if len(parts) == 2 && parts[1] == "invites" {
-		h.handleUserInvites(w, r, parts[0])
-		return
-	}
-	if len(parts) == 1 && strings.TrimSpace(parts[0]) != "" {
-		h.handleUserDetail(w, r, parts[0])
-		return
-	}
-	http.NotFound(w, r)
 }
 
 // handleUserDetail renders the single-user detail page.

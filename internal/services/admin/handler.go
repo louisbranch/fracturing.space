@@ -15,7 +15,15 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/platform/requestctx"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/i18n"
+	campaignsmodule "github.com/louisbranch/fracturing.space/internal/services/admin/module/campaigns"
+	catalogmodule "github.com/louisbranch/fracturing.space/internal/services/admin/module/catalog"
+	dashboardmodule "github.com/louisbranch/fracturing.space/internal/services/admin/module/dashboard"
+	iconsmodule "github.com/louisbranch/fracturing.space/internal/services/admin/module/icons"
+	scenariosmodule "github.com/louisbranch/fracturing.space/internal/services/admin/module/scenarios"
+	systemsmodule "github.com/louisbranch/fracturing.space/internal/services/admin/module/systems"
+	usersmodule "github.com/louisbranch/fracturing.space/internal/services/admin/module/users"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/templates"
+	httpmux "github.com/louisbranch/fracturing.space/internal/services/admin/transport/httpmux"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	"golang.org/x/text/message"
 )
@@ -153,39 +161,24 @@ func withStaticMime(next http.Handler) http.Handler {
 
 // routes wires the HTTP routes for the admin handler.
 func (h *Handler) routes() http.Handler {
-	mux := http.NewServeMux()
+	rootMux := http.NewServeMux()
+	adminMux := http.NewServeMux()
 	staticFS, err := resolveStaticFS()
 	if err == nil {
-		mux.Handle(
-			"/static/",
-			withStaticMime(
-				http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))),
-			),
-		)
+		httpmux.MountStatic(rootMux, staticFS, withStaticMime)
 	} else {
 		log.Printf("admin: failed to initialize static assets: %v", err)
 	}
-	mux.Handle("/", http.HandlerFunc(h.handleDashboard))
-	mux.Handle("/dashboard/content", http.HandlerFunc(h.handleDashboardContent))
-	mux.Handle("/campaigns", http.HandlerFunc(h.handleCampaignsPage))
-	mux.Handle("/campaigns/table", http.HandlerFunc(h.handleCampaignsTable))
-	mux.Handle("/campaigns/", http.HandlerFunc(h.handleCampaignRoutes))
-	mux.Handle("/systems", http.HandlerFunc(h.handleSystemsPage))
-	mux.Handle("/systems/table", http.HandlerFunc(h.handleSystemsTable))
-	mux.Handle("/systems/", http.HandlerFunc(h.handleSystemRoutes))
-	mux.Handle("/catalog", http.HandlerFunc(h.handleCatalogPage))
-	mux.Handle("/catalog/", http.HandlerFunc(h.handleCatalogRoutes))
-	mux.Handle("/icons", http.HandlerFunc(h.handleIconsPage))
-	mux.Handle("/icons/table", http.HandlerFunc(h.handleIconsTable))
-	mux.Handle("/users", http.HandlerFunc(h.handleUsersPage))
-	mux.Handle("/users/table", http.HandlerFunc(h.handleUsersTable))
-	mux.Handle("/users/lookup", http.HandlerFunc(h.handleUserLookup))
-	mux.Handle("/users/create", http.NotFoundHandler())
-	mux.Handle("/users/magic-link", http.HandlerFunc(h.handleMagicLink))
-	mux.Handle("/users/", http.HandlerFunc(h.handleUserRoutes))
-	mux.Handle("/scenarios", http.HandlerFunc(h.handleScenarios))
-	mux.Handle("/scenarios/", http.HandlerFunc(h.handleScenarioRoutes))
-	return mux
+	dashboardmodule.RegisterRoutes(adminMux, newDashboardModuleService(h))
+	campaignsmodule.RegisterRoutes(adminMux, newCampaignsModuleService(h))
+	systemsmodule.RegisterRoutes(adminMux, newSystemsModuleService(h))
+	catalogmodule.RegisterRoutes(adminMux, newCatalogModuleService(h))
+	iconsmodule.RegisterRoutes(adminMux, newIconsModuleService(h))
+	usersmodule.RegisterRoutes(adminMux, newUsersModuleService(h))
+	scenariosmodule.RegisterRoutes(adminMux, newScenariosModuleService(h))
+
+	httpmux.MountAdminRoutes(rootMux, adminMux)
+	return rootMux
 }
 
 // withGameClientBootstrap ensures game clients are initialized lazily from the admin handler context.
