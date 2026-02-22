@@ -8,7 +8,7 @@ cutover behavior keeps `/campaigns/{id}` canonical.
 
 ## Preconditions
 
-- Web service running on port 8086 (standalone, no auth service required)
+- Web service running on port 8080 (standalone, no auth service required)
 - OAuth client ID configured so the Sign in link and `/login` route are registered
 
 ## Automation

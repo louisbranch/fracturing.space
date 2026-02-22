@@ -38,13 +38,17 @@ FROM base AS build-chat
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/chat ./cmd/chat
 
+FROM base AS build-ai
+
+RUN CGO_ENABLED=0 GOOS=linux go build -o /out/ai ./cmd/ai
+
 FROM gcr.io/distroless/static-debian12:nonroot AS game
 
 WORKDIR /app
 
 COPY --from=build-game /out/game /app/game
 
-EXPOSE 8080
+EXPOSE 8082
 
 ENTRYPOINT ["/app/game"]
 
@@ -54,7 +58,7 @@ WORKDIR /app
 
 COPY --from=build-mcp /out/mcp /app/mcp
 
-EXPOSE 8081
+EXPOSE 8085
 
 ENTRYPOINT ["/app/mcp"]
 
@@ -64,7 +68,7 @@ WORKDIR /app
 
 COPY --from=build-admin /out/admin /app/admin
 
-EXPOSE 8082
+EXPOSE 8081
 
 ENTRYPOINT ["/app/admin"]
 
@@ -84,7 +88,7 @@ WORKDIR /app
 
 COPY --from=build-web /out/web /app/web
 
-EXPOSE 8086
+EXPOSE 8080
 
 ENTRYPOINT ["/app/web"]
 
@@ -94,6 +98,16 @@ WORKDIR /app
 
 COPY --from=build-chat /out/chat /app/chat
 
-EXPOSE 8087
+EXPOSE 8086
 
 ENTRYPOINT ["/app/chat"]
+
+FROM gcr.io/distroless/static-debian12:nonroot AS ai
+
+WORKDIR /app
+
+COPY --from=build-ai /out/ai /app/ai
+
+EXPOSE 8087
+
+ENTRYPOINT ["/app/ai"]

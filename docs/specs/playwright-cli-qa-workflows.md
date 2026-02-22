@@ -44,7 +44,7 @@ EOF
 
 ## Environment variables
 
-- `BASE_URL` (default `http://localhost:8082`)
+- `BASE_URL` (default `http://localhost:8081`)
 - `PLAYWRIGHT_OPEN_ARGS` (example: `--headed`)
 - `ARTIFACT_ROOT` (default `artifacts/playwright`)
 - `FLOW_NAME` (defaults to spec filename without `.md`)

@@ -57,6 +57,8 @@ Watcher logs:
 - `.tmp/dev/auth.log`
 - `.tmp/dev/mcp.log`
 - `.tmp/dev/admin.log`
+- `.tmp/dev/chat.log`
+- `.tmp/dev/ai.log`
 - `.tmp/dev/web.log`
 - `.tmp/dev/watch-services.log`
 
@@ -73,6 +75,8 @@ go run ./cmd/game
 go run ./cmd/auth
 go run ./cmd/mcp
 go run ./cmd/admin
+go run ./cmd/chat
+go run ./cmd/ai
 go run ./cmd/web
 ```
 
@@ -80,18 +84,27 @@ For host-only manual startup, initialize `.env` first (for example from `.env.lo
 and export join-grant keys when missing:
 
 ```sh
+cp .env.local.example .env  # if .env does not exist yet
+set -a
+. ./.env
+set +a
 eval "$(go run ./cmd/join-grant-key)"
 export FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY
 ```
 
+If you run `cmd/ai`, set `FRACTURING_SPACE_AI_ENCRYPTION_KEY` to a base64-encoded
+AES key (16/24/32 bytes) before startup.
+
 ## Default endpoints
 
-- Game gRPC: `localhost:8080`
+- Game gRPC: `localhost:8082`
 - Auth gRPC: `localhost:8083`
 - Auth HTTP: `http://localhost:8084`
-- MCP (stdio): process stdin/stdout
-- Admin: `http://localhost:8082`
-- Web login: `http://localhost:8086/login`
+- MCP HTTP: `http://localhost:8085/mcp/health`
+- Admin: `http://localhost:8081`
+- Chat: `http://localhost:8086`
+- AI gRPC: `localhost:8087`
+- Web login: `http://localhost:8080/login`
 
 ## Demo data
 
