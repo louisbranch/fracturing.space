@@ -26,7 +26,8 @@ func (s *fakeEventStore) ListEvents(_ context.Context, _ string, afterSeq uint64
 }
 
 type fakeCheckpointStore struct {
-	seq uint64
+	seq       uint64
+	saveCalls int
 }
 
 func (s *fakeCheckpointStore) Get(_ context.Context, _ string) (Checkpoint, error) {
@@ -40,6 +41,7 @@ func (s *fakeCheckpointStore) Save(_ context.Context, checkpoint Checkpoint) err
 	if checkpoint.CampaignID == "" {
 		return errors.New("campaign id required")
 	}
+	s.saveCalls++
 	s.seq = checkpoint.LastSeq
 	return nil
 }
@@ -51,6 +53,69 @@ type recordingApplier struct {
 func (a *recordingApplier) Apply(state any, evt event.Event) (any, error) {
 	a.seqs = append(a.seqs, evt.Seq)
 	return state, nil
+}
+
+// cancelingApplier cancels the context after a given number of Apply calls.
+type cancelingApplier struct {
+	cancel      context.CancelFunc
+	cancelAfter int
+	calls       int
+}
+
+func (a *cancelingApplier) Apply(state any, _ event.Event) (any, error) {
+	a.calls++
+	if a.calls >= a.cancelAfter {
+		a.cancel()
+	}
+	return state, nil
+}
+
+func TestReplay_CheckpointInterval(t *testing.T) {
+	events := make([]event.Event, 10)
+	for i := range events {
+		events[i] = event.Event{CampaignID: "camp-1", Seq: uint64(i + 1)}
+	}
+	store := &fakeEventStore{events: events}
+	checkpoints := &fakeCheckpointStore{}
+	applier := &recordingApplier{}
+
+	result, err := Replay(context.Background(), store, checkpoints, applier, "camp-1", "state", Options{
+		CheckpointInterval: 3,
+	})
+	if err != nil {
+		t.Fatalf("replay: %v", err)
+	}
+	if result.Applied != 10 {
+		t.Fatalf("applied = %d, want 10", result.Applied)
+	}
+	// With interval=3 over 10 events: saves at 3, 6, 9, and final at 10 = 4 saves.
+	if checkpoints.saveCalls != 4 {
+		t.Fatalf("checkpoint save calls = %d, want 4", checkpoints.saveCalls)
+	}
+	if checkpoints.seq != 10 {
+		t.Fatalf("checkpoint seq = %d, want 10", checkpoints.seq)
+	}
+}
+
+func TestReplay_RespectsContextCancellation(t *testing.T) {
+	events := make([]event.Event, 100)
+	for i := range events {
+		events[i] = event.Event{CampaignID: "camp-1", Seq: uint64(i + 1)}
+	}
+	store := &fakeEventStore{events: events}
+	checkpoints := &fakeCheckpointStore{}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	// cancelingApplier cancels context after 5 events.
+	applier := &cancelingApplier{cancel: cancel, cancelAfter: 5}
+
+	_, err := Replay(ctx, store, checkpoints, applier, "camp-1", "state", Options{})
+	if err == nil {
+		t.Fatal("expected context cancellation error")
+	}
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected context.Canceled, got %v", err)
+	}
 }
 
 func TestReplay_UsesCheckpoint(t *testing.T) {

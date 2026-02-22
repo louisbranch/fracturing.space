@@ -101,6 +101,65 @@ func (a *systemMutationApplier) Apply(_ any, _ event.Event) (any, error) {
 	return nil, nil
 }
 
+func TestNewHandler_RequiresCommands(t *testing.T) {
+	_, err := NewHandler(HandlerConfig{
+		Events:  event.NewRegistry(),
+		Journal: &fakeJournal{},
+		Decider: fixedDecider{},
+	})
+	if !errors.Is(err, ErrCommandRegistryRequired) {
+		t.Fatalf("expected ErrCommandRegistryRequired, got %v", err)
+	}
+}
+
+func TestNewHandler_RequiresEvents(t *testing.T) {
+	_, err := NewHandler(HandlerConfig{
+		Commands: command.NewRegistry(),
+		Journal:  &fakeJournal{},
+		Decider:  fixedDecider{},
+	})
+	if !errors.Is(err, ErrEventRegistryRequired) {
+		t.Fatalf("expected ErrEventRegistryRequired, got %v", err)
+	}
+}
+
+func TestNewHandler_RequiresJournal(t *testing.T) {
+	_, err := NewHandler(HandlerConfig{
+		Commands: command.NewRegistry(),
+		Events:   event.NewRegistry(),
+		Decider:  fixedDecider{},
+	})
+	if !errors.Is(err, ErrJournalRequired) {
+		t.Fatalf("expected ErrJournalRequired, got %v", err)
+	}
+}
+
+func TestNewHandler_RequiresDecider(t *testing.T) {
+	_, err := NewHandler(HandlerConfig{
+		Commands: command.NewRegistry(),
+		Events:   event.NewRegistry(),
+		Journal:  &fakeJournal{},
+	})
+	if !errors.Is(err, ErrDeciderRequired) {
+		t.Fatalf("expected ErrDeciderRequired, got %v", err)
+	}
+}
+
+func TestNewHandler_AcceptsMinimalConfig(t *testing.T) {
+	h, err := NewHandler(HandlerConfig{
+		Commands: command.NewRegistry(),
+		Events:   event.NewRegistry(),
+		Journal:  &fakeJournal{},
+		Decider:  fixedDecider{},
+	})
+	if err != nil {
+		t.Fatalf("NewHandler: %v", err)
+	}
+	if h.Commands == nil || h.Events == nil || h.Journal == nil || h.Decider == nil {
+		t.Fatal("expected all required fields set")
+	}
+}
+
 func TestHandle_RejectsWhenGateOpen(t *testing.T) {
 	registry := command.NewRegistry()
 	if err := registry.Register(command.Definition{
@@ -472,6 +531,62 @@ func TestExecute_AllowsMutatingSystemEvent(t *testing.T) {
 	}
 	if mutated["mutated"] != 1 {
 		t.Fatalf("expected mutated state marker, got %v", mutated["mutated"])
+	}
+}
+
+type failingApplier struct {
+	err error
+}
+
+func (f failingApplier) Apply(_ any, _ event.Event) (any, error) {
+	return nil, f.err
+}
+
+func TestExecute_WrapsPostPersistApplyFailure(t *testing.T) {
+	cmdRegistry := command.NewRegistry()
+	if err := cmdRegistry.Register(command.Definition{
+		Type:  command.Type("action.test"),
+		Owner: command.OwnerCore,
+	}); err != nil {
+		t.Fatalf("register command: %v", err)
+	}
+	eventRegistry := event.NewRegistry()
+	if err := eventRegistry.Register(event.Definition{
+		Type:  event.Type("action.tested"),
+		Owner: event.OwnerCore,
+	}); err != nil {
+		t.Fatalf("register event: %v", err)
+	}
+
+	journal := &fakeJournal{}
+	handler := Handler{
+		Commands: cmdRegistry,
+		Events:   eventRegistry,
+		Journal:  journal,
+		Decider: fixedDecider{decision: command.Accept(event.Event{
+			CampaignID:  "camp-1",
+			Type:        event.Type("action.tested"),
+			Timestamp:   time.Unix(0, 0).UTC(),
+			ActorType:   event.ActorTypeSystem,
+			PayloadJSON: []byte(`{"ok":true}`),
+		})},
+		Applier: failingApplier{err: errors.New("apply boom")},
+	}
+
+	_, err := handler.Execute(context.Background(), command.Command{
+		CampaignID: "camp-1",
+		Type:       command.Type("action.test"),
+		ActorType:  command.ActorTypeSystem,
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !errors.Is(err, ErrPostPersistApplyFailed) {
+		t.Fatalf("expected ErrPostPersistApplyFailed, got %v", err)
+	}
+	// The journal should have persisted the event despite the apply failure.
+	if journal.last.Seq != 1 {
+		t.Fatalf("journal seq = %d, want 1 (event should be persisted)", journal.last.Seq)
 	}
 }
 

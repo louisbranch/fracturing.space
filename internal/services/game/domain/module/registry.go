@@ -38,6 +38,14 @@ type Projector interface {
 	Apply(state any, evt event.Event) (any, error)
 }
 
+// FoldTyper is an optional interface for projectors that declare which event
+// types their Apply method handles. When a projector implements FoldTyper,
+// ValidateSystemFoldCoverage can verify that every emittable event type with
+// replay intent has a corresponding fold handler.
+type FoldTyper interface {
+	FoldHandledTypes() []event.Type
+}
+
 // StateFactory creates initial system-specific state instances.
 type StateFactory interface {
 	NewCharacterState(campaignID, characterID, kind string) (any, error)

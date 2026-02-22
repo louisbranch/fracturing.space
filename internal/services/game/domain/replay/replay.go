@@ -57,6 +57,10 @@ type Options struct {
 	AfterSeq uint64
 	UntilSeq uint64
 	PageSize int
+	// CheckpointInterval controls how often checkpoints are saved during replay.
+	// When 0 (default), a checkpoint is saved after every event. When positive,
+	// checkpoints are saved every N events plus once at the end.
+	CheckpointInterval int
 }
 
 // Result captures replay outcomes and the new cursor for checkpoint updates.
@@ -105,16 +109,33 @@ func Replay(ctx context.Context, store EventStore, checkpoints CheckpointStore, 
 	}
 
 	result := Result{State: state, LastSeq: lastSeq}
+	sinceCheckpoint := 0
+	saveCheckpoint := func() error {
+		if sinceCheckpoint == 0 {
+			return nil
+		}
+		if err := checkpoints.Save(ctx, Checkpoint{CampaignID: campaignID, LastSeq: result.LastSeq, UpdatedAt: time.Now().UTC()}); err != nil {
+			return err
+		}
+		sinceCheckpoint = 0
+		return nil
+	}
 	for {
 		events, err := store.ListEvents(ctx, campaignID, result.LastSeq, pageSize)
 		if err != nil {
 			return result, err
 		}
 		if len(events) == 0 {
-			return result, nil
+			break
 		}
 		for _, evt := range events {
+			if err := ctx.Err(); err != nil {
+				return result, err
+			}
 			if options.UntilSeq > 0 && evt.Seq > options.UntilSeq {
+				if err := saveCheckpoint(); err != nil {
+					return result, err
+				}
 				return result, nil
 			}
 			expectedSeq := result.LastSeq + 1
@@ -128,9 +149,18 @@ func Replay(ctx context.Context, store EventStore, checkpoints CheckpointStore, 
 			result.State = nextState
 			result.LastSeq = evt.Seq
 			result.Applied++
-			if err := checkpoints.Save(ctx, Checkpoint{CampaignID: campaignID, LastSeq: result.LastSeq, UpdatedAt: time.Now().UTC()}); err != nil {
-				return result, err
+			sinceCheckpoint++
+			if options.CheckpointInterval <= 0 || sinceCheckpoint >= options.CheckpointInterval {
+				if err := saveCheckpoint(); err != nil {
+					return result, err
+				}
 			}
 		}
 	}
+	// Final checkpoint ensures the last-applied seq is always persisted,
+	// even when the total event count is not a multiple of the interval.
+	if err := saveCheckpoint(); err != nil {
+		return result, err
+	}
+	return result, nil
 }

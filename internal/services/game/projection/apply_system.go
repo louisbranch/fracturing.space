@@ -19,9 +19,9 @@ func (a Applier) applySystemEvent(ctx context.Context, evt event.Event) error {
 	if err != nil {
 		return err
 	}
-	adapter := a.Adapters.Get(gameSystem, evt.SystemVersion)
-	if adapter == nil {
-		return fmt.Errorf("system adapter not found for %s (%s)", evt.SystemID, evt.SystemVersion)
+	adapter, err := a.Adapters.GetRequired(gameSystem, evt.SystemVersion)
+	if err != nil {
+		return err
 	}
 	return adapter.Apply(ctx, evt)
 }
