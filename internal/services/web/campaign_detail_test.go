@@ -159,8 +159,8 @@ func TestAppCampaignDetailPageParticipantRendersCampaign(t *testing.T) {
 	if !strings.Contains(body, chatMenuLink) {
 		t.Fatalf("expected chat menu link to be active on campaign root")
 	}
-	if strings.Count(body, `class="card-title m-0"`) != 1 {
-		t.Fatalf("expected chat page card title once, got %d", strings.Count(body, `class="card-title m-0"`))
+	if strings.Count(body, `h3 class="text-lg font-semibold"`) != 1 {
+		t.Fatalf("expected chat page title header once, got %d", strings.Count(body, `h3 class="text-lg font-semibold"`))
 	}
 }
 

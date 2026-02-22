@@ -40,6 +40,11 @@ var catalog = []Definition{
 		Description: "Character creation and updates.",
 	},
 	{
+		ID:          commonv1.IconId_ICON_ID_PROFILE,
+		Name:        "Profile",
+		Description: "Profile links and account-facing identity actions.",
+	},
+	{
 		ID:          commonv1.IconId_ICON_ID_GM,
 		Name:        "GM",
 		Description: "Game master actions and GM-facing events.",
@@ -178,6 +183,16 @@ var catalog = []Definition{
 		ID:          commonv1.IconId_ICON_ID_KEY,
 		Name:        "Key",
 		Description: "Secret or API key actions.",
+	},
+	{
+		ID:          commonv1.IconId_ICON_ID_INVITES,
+		Name:        "Invites",
+		Description: "Campaign invitations and membership requests.",
+	},
+	{
+		ID:          commonv1.IconId_ICON_ID_AI,
+		Name:        "AI",
+		Description: "AI key management and integrations.",
 	},
 	{
 		ID:          commonv1.IconId_ICON_ID_LOG_OUT,

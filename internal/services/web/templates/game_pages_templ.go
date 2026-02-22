@@ -427,7 +427,7 @@ func CampaignWorkspaceMenu(page PageContext, campaignID string, activeSection st
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = sharedtemplates.LucideIconID(commonv1.IconId_ICON_ID_KEY, "size-4 me-2").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = sharedtemplates.LucideIconID(commonv1.IconId_ICON_ID_INVITES, "size-4 me-2").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
