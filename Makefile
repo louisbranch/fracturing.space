@@ -122,6 +122,12 @@ seed-variety: ## Generate variety of campaigns across all statuses
 seed-generate-fresh: ## Reset DB and generate demo data
 	rm -f data/game-events.db data/game-projections.db && $(MAKE) seed-generate
 
+seed-local: ## Apply declarative local-dev seed manifest (idempotent)
+	go run ./cmd/seed -manifest=internal/tools/seed/manifests/local-dev.json -v
+
+seed-local-fresh: ## Reset DB + seed state, then apply declarative local-dev manifest
+	rm -f data/game-events.db data/game-projections.db .tmp/seed-state/local-dev.state.json && $(MAKE) seed-local
+
 catalog-importer: ## Import Daggerheart catalog content
 	go run ./cmd/catalog-importer -dir internal/tools/importer/content/daggerheart/v1
 

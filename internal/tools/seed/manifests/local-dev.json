@@ -1,0 +1,191 @@
+{
+  "name": "local-dev",
+  "users": [
+    {
+      "key": "alice",
+      "email": "alice.seed@example.com",
+      "locale": "LOCALE_EN_US",
+      "public_profile": {
+        "username": "alice_seed",
+        "name": "Alice Vale",
+        "bio": "Writes dramatic hooks and runs dangerous ruins."
+      },
+      "contacts": [
+        "bob",
+        "carol"
+      ]
+    },
+    {
+      "key": "bob",
+      "email": "bob.seed@example.com",
+      "locale": "LOCALE_EN_US",
+      "public_profile": {
+        "username": "bob_seed",
+        "name": "Bob Fen",
+        "bio": "Plays tacticians and maps every tunnel."
+      },
+      "contacts": [
+        "alice",
+        "dan"
+      ]
+    },
+    {
+      "key": "carol",
+      "email": "carol.seed@example.com",
+      "locale": "LOCALE_EN_US",
+      "public_profile": {
+        "username": "carol_seed",
+        "name": "Carol Ash",
+        "bio": "Leans into weird magic and risky bargains."
+      },
+      "contacts": [
+        "alice"
+      ]
+    },
+    {
+      "key": "dan",
+      "email": "dan.seed@example.com",
+      "locale": "LOCALE_EN_US",
+      "public_profile": {
+        "username": "dan_seed",
+        "name": "Dan Moor",
+        "bio": "Builds support characters and tracks supplies."
+      },
+      "contacts": [
+        "bob"
+      ]
+    }
+  ],
+  "campaigns": [
+    {
+      "key": "crimson_vale",
+      "owner_user_key": "alice",
+      "name": "The Crimson Vale",
+      "system": "DAGGERHEART",
+      "gm_mode": "HUMAN",
+      "intent": "STARTER",
+      "access_policy": "PUBLIC",
+      "theme_prompt": "A cursed valley where old wards fail and the red moon never fades.",
+      "participants": [
+        {
+          "key": "bob_player",
+          "user_key": "bob",
+          "name": "Bob",
+          "role": "PLAYER",
+          "controller": "HUMAN"
+        },
+        {
+          "key": "carol_player",
+          "user_key": "carol",
+          "name": "Carol",
+          "role": "PLAYER",
+          "controller": "HUMAN"
+        }
+      ],
+      "characters": [
+        {
+          "key": "theron",
+          "name": "Theron Blackwood",
+          "kind": "PC",
+          "notes": "Former sentinel who returned to close the gate he once opened.",
+          "controller_participant_key": "bob_player"
+        },
+        {
+          "key": "lyra",
+          "name": "Lyra Whisperwind",
+          "kind": "PC",
+          "notes": "Archivist of forbidden songs and keeper of the vale map.",
+          "controller_participant_key": "carol_player"
+        },
+        {
+          "key": "scarlet_warden",
+          "name": "The Scarlet Warden",
+          "kind": "NPC",
+          "notes": "Bound guardian who marks trespassers with living sigils."
+        }
+      ],
+      "sessions": [
+        {
+          "key": "s1",
+          "name": "Session 1: The Descent",
+          "status": "SESSION_ENDED"
+        },
+        {
+          "key": "s2",
+          "name": "Session 2: Moonfall Watch",
+          "status": "SESSION_ACTIVE"
+        }
+      ]
+    },
+    {
+      "key": "glass_harbor",
+      "owner_user_key": "bob",
+      "name": "Echoes of Glass Harbor",
+      "system": "DAGGERHEART",
+      "gm_mode": "HYBRID",
+      "intent": "STANDARD",
+      "access_policy": "PRIVATE",
+      "theme_prompt": "Smugglers, storm shrines, and debts carved into mirrored stone.",
+      "participants": [
+        {
+          "key": "alice_player",
+          "user_key": "alice",
+          "name": "Alice",
+          "role": "PLAYER",
+          "controller": "HUMAN"
+        },
+        {
+          "key": "dan_player",
+          "user_key": "dan",
+          "name": "Dan",
+          "role": "PLAYER",
+          "controller": "HUMAN"
+        }
+      ],
+      "characters": [
+        {
+          "key": "mira",
+          "name": "Mira Tideborn",
+          "kind": "PC",
+          "notes": "Weather-reader who bargains with drowned spirits.",
+          "controller_participant_key": "alice_player"
+        },
+        {
+          "key": "orrin",
+          "name": "Orrin Pike",
+          "kind": "PC",
+          "notes": "Ex-quartermaster chasing a vanished convoy.",
+          "controller_participant_key": "dan_player"
+        }
+      ],
+      "sessions": [
+        {
+          "key": "harbor_s1",
+          "name": "Session 1: Broken Lighthouse",
+          "status": "SESSION_ACTIVE"
+        }
+      ]
+    }
+  ],
+  "forks": [
+    {
+      "key": "crimson_vale_alt",
+      "source_campaign_key": "crimson_vale",
+      "owner_user_key": "carol",
+      "new_campaign_name": "The Crimson Vale: Ashfall Branch",
+      "copy_participants": true
+    }
+  ],
+  "listings": [
+    {
+      "campaign_key": "crimson_vale",
+      "title": "The Crimson Vale",
+      "description": "A public starter campaign focused on mystery and escalating supernatural threats.",
+      "recommended_participants_min": 3,
+      "recommended_participants_max": 5,
+      "difficulty_tier": "CAMPAIGN_DIFFICULTY_TIER_BEGINNER",
+      "expected_duration_label": "2-4 sessions",
+      "system": "GAME_SYSTEM_DAGGERHEART"
+    }
+  ]
+}
