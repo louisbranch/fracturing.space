@@ -243,6 +243,25 @@ func TestRegistryRegister_DefaultsIntentToProjectionAndReplay(t *testing.T) {
 	}
 }
 
+func TestRegistryRegister_AcceptsIntentReplayOnly(t *testing.T) {
+	registry := NewRegistry()
+	err := registry.Register(Definition{
+		Type:   Type("action.test_replay"),
+		Owner:  OwnerCore,
+		Intent: IntentReplayOnly,
+	})
+	if err != nil {
+		t.Fatalf("expected IntentReplayOnly to be accepted, got: %v", err)
+	}
+	def, ok := registry.Definition(Type("action.test_replay"))
+	if !ok {
+		t.Fatal("expected definition to be found")
+	}
+	if def.Intent != IntentReplayOnly {
+		t.Fatalf("intent = %s, want %s", def.Intent, IntentReplayOnly)
+	}
+}
+
 func TestRegistryRegister_InvalidIntent(t *testing.T) {
 	registry := NewRegistry()
 	if err := registry.Register(Definition{
@@ -370,6 +389,31 @@ func TestRegistryValidateForAppend_PayloadValidatorUsesCanonicalJSON(t *testing.
 	_, err := registry.ValidateForAppend(evt)
 	if err != nil {
 		t.Fatalf("validate event: %v", err)
+	}
+}
+
+func TestRegistryValidateForAppend_RejectsZeroTimestamp(t *testing.T) {
+	registry := NewRegistry()
+	if err := registry.Register(Definition{
+		Type:  Type("campaign.created"),
+		Owner: OwnerCore,
+	}); err != nil {
+		t.Fatalf("register type: %v", err)
+	}
+
+	evt := Event{
+		CampaignID:  "camp-1",
+		Type:        Type("campaign.created"),
+		ActorType:   ActorTypeSystem,
+		PayloadJSON: []byte("{}"),
+	}
+
+	_, err := registry.ValidateForAppend(evt)
+	if err == nil {
+		t.Fatal("expected error for zero timestamp")
+	}
+	if !errors.Is(err, ErrTimestampRequired) {
+		t.Fatalf("expected ErrTimestampRequired, got %v", err)
 	}
 }
 

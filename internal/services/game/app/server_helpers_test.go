@@ -16,9 +16,10 @@ import (
 	gamegrpc "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/system"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -49,15 +50,15 @@ func (f fakeSystemModule) EmittableEventTypes() []event.Type {
 	return nil
 }
 
-func (f fakeSystemModule) Decider() system.Decider {
+func (f fakeSystemModule) Decider() module.Decider {
 	return nil
 }
 
-func (f fakeSystemModule) Projector() system.Projector {
+func (f fakeSystemModule) Projector() module.Projector {
 	return nil
 }
 
-func (f fakeSystemModule) StateFactory() system.StateFactory {
+func (f fakeSystemModule) StateFactory() module.StateFactory {
 	return nil
 }
 
@@ -109,6 +110,10 @@ func (f fakeSystemAdapter) Apply(context.Context, event.Event) error {
 
 func (f fakeSystemAdapter) Snapshot(context.Context, string) (any, error) {
 	return nil, nil
+}
+
+func (f fakeSystemAdapter) HandledTypes() []event.Type {
+	return nil
 }
 
 type fakeProjectionOutboxShadowProcessor struct {
@@ -295,7 +300,12 @@ func TestOpenEventStoreRequiresKey(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "events.db")
 	t.Setenv("FRACTURING_SPACE_GAME_EVENT_HMAC_KEY", "")
 
-	if _, err := openEventStore(path, false); err == nil {
+	registries, err := engine.BuildRegistries(registeredSystemModules()...)
+	if err != nil {
+		t.Fatalf("build registries: %v", err)
+	}
+
+	if _, err := openEventStore(path, false, registries.Events); err == nil {
 		t.Fatal("expected error when HMAC key is missing")
 	}
 }
@@ -304,7 +314,12 @@ func TestOpenEventStoreSuccess(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "events.db")
 	t.Setenv("FRACTURING_SPACE_GAME_EVENT_HMAC_KEY", "test-key")
 
-	store, err := openEventStore(path, false)
+	registries, err := engine.BuildRegistries(registeredSystemModules()...)
+	if err != nil {
+		t.Fatalf("build registries: %v", err)
+	}
+
+	store, err := openEventStore(path, false, registries.Events)
 	if err != nil {
 		t.Fatalf("open event store: %v", err)
 	}
@@ -317,7 +332,12 @@ func TestOpenEventStoreProjectionOutboxEnabledEnqueuesOnAppend(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "events.db")
 	t.Setenv("FRACTURING_SPACE_GAME_EVENT_HMAC_KEY", "test-key")
 
-	store, err := openEventStore(path, true)
+	registries, err := engine.BuildRegistries(registeredSystemModules()...)
+	if err != nil {
+		t.Fatalf("build registries: %v", err)
+	}
+
+	store, err := openEventStore(path, true, registries.Events)
 	if err != nil {
 		t.Fatalf("open event store: %v", err)
 	}
@@ -364,7 +384,12 @@ func TestOpenEventStoreProjectionOutboxDisabledSkipsAppendEnqueue(t *testing.T) 
 	path := filepath.Join(t.TempDir(), "events.db")
 	t.Setenv("FRACTURING_SPACE_GAME_EVENT_HMAC_KEY", "test-key")
 
-	store, err := openEventStore(path, false)
+	registries, err := engine.BuildRegistries(registeredSystemModules()...)
+	if err != nil {
+		t.Fatalf("build registries: %v", err)
+	}
+
+	store, err := openEventStore(path, false, registries.Events)
 	if err != nil {
 		t.Fatalf("open event store: %v", err)
 	}
@@ -411,12 +436,17 @@ func TestOpenStorageBundleSuccess(t *testing.T) {
 	base := t.TempDir()
 	t.Setenv("FRACTURING_SPACE_GAME_EVENT_HMAC_KEY", "test-key")
 
+	registries, err := engine.BuildRegistries(registeredSystemModules()...)
+	if err != nil {
+		t.Fatalf("build registries: %v", err)
+	}
+
 	srvEnv := serverEnv{
 		EventsDBPath:      filepath.Join(base, "events.db"),
 		ProjectionsDBPath: filepath.Join(base, "projections.db"),
 		ContentDBPath:     filepath.Join(base, "content.db"),
 	}
-	bundle, err := openStorageBundle(srvEnv)
+	bundle, err := openStorageBundle(srvEnv, registries.Events)
 	if err != nil {
 		t.Fatalf("open storage bundle: %v", err)
 	}
@@ -426,6 +456,11 @@ func TestOpenStorageBundleSuccess(t *testing.T) {
 func TestOpenStorageBundleProjectionFailure(t *testing.T) {
 	base := t.TempDir()
 	t.Setenv("FRACTURING_SPACE_GAME_EVENT_HMAC_KEY", "test-key")
+
+	registries, err := engine.BuildRegistries(registeredSystemModules()...)
+	if err != nil {
+		t.Fatalf("build registries: %v", err)
+	}
 
 	// Point projections at a file (not a directory) to force failure.
 	blocker := filepath.Join(base, "blocker")
@@ -438,7 +473,7 @@ func TestOpenStorageBundleProjectionFailure(t *testing.T) {
 		ProjectionsDBPath: filepath.Join(blocker, "projections.db"),
 		ContentDBPath:     filepath.Join(base, "content.db"),
 	}
-	if _, err := openStorageBundle(srvEnv); err == nil {
+	if _, err := openStorageBundle(srvEnv, registries.Events); err == nil {
 		t.Fatal("expected error when projection store fails to open")
 	}
 }
@@ -912,7 +947,12 @@ func TestStartProjectionApplyOutboxWorkerProcessesRowsWhenEnabled(t *testing.T) 
 	path := filepath.Join(t.TempDir(), "events.db")
 	t.Setenv("FRACTURING_SPACE_GAME_EVENT_HMAC_KEY", "test-key")
 
-	store, err := openEventStore(path, true)
+	registries, err := engine.BuildRegistries(registeredSystemModules()...)
+	if err != nil {
+		t.Fatalf("build registries: %v", err)
+	}
+
+	store, err := openEventStore(path, true, registries.Events)
 	if err != nil {
 		t.Fatalf("open event store: %v", err)
 	}
@@ -985,7 +1025,12 @@ func TestStartProjectionApplyOutboxShadowWorkerProcessesRowsWhenEnabled(t *testi
 	path := filepath.Join(t.TempDir(), "events.db")
 	t.Setenv("FRACTURING_SPACE_GAME_EVENT_HMAC_KEY", "test-key")
 
-	store, err := openEventStore(path, true)
+	registries, err := engine.BuildRegistries(registeredSystemModules()...)
+	if err != nil {
+		t.Fatalf("build registries: %v", err)
+	}
+
+	store, err := openEventStore(path, true, registries.Events)
 	if err != nil {
 		t.Fatalf("open event store: %v", err)
 	}
@@ -1040,7 +1085,11 @@ func TestStartProjectionApplyOutboxShadowWorkerProcessesRowsWhenEnabled(t *testi
 
 func TestBuildDomainEngine_SpotlightSet(t *testing.T) {
 	store := newFakeDomainEventStore()
-	engine, err := buildDomainEngine(store)
+	registries, err := engine.BuildRegistries(registeredSystemModules()...)
+	if err != nil {
+		t.Fatalf("build registries: %v", err)
+	}
+	domainEngine, err := buildDomainEngine(store, registries)
 	if err != nil {
 		t.Fatalf("build domain engine: %v", err)
 	}
@@ -1054,7 +1103,7 @@ func TestBuildDomainEngine_SpotlightSet(t *testing.T) {
 		PayloadJSON: []byte(`{"spotlight_type":"character","character_id":"char-1"}`),
 	}
 
-	result, err := engine.Execute(context.Background(), cmd)
+	result, err := domainEngine.Execute(context.Background(), cmd)
 	if err != nil {
 		t.Fatalf("execute command: %v", err)
 	}
@@ -1071,7 +1120,11 @@ func TestBuildDomainEngine_SpotlightSet(t *testing.T) {
 
 func TestBuildDomainEngine_CampaignCreate(t *testing.T) {
 	store := newFakeDomainEventStore()
-	engine, err := buildDomainEngine(store)
+	registries, err := engine.BuildRegistries(registeredSystemModules()...)
+	if err != nil {
+		t.Fatalf("build registries: %v", err)
+	}
+	domainEngine, err := buildDomainEngine(store, registries)
 	if err != nil {
 		t.Fatalf("build domain engine: %v", err)
 	}
@@ -1084,7 +1137,7 @@ func TestBuildDomainEngine_CampaignCreate(t *testing.T) {
 		PayloadJSON: []byte(`{"name":"Test Campaign","game_system":"daggerheart","gm_mode":"human"}`),
 	}
 
-	result, err := engine.Execute(context.Background(), cmd)
+	result, err := domainEngine.Execute(context.Background(), cmd)
 	if err != nil {
 		t.Fatalf("execute command: %v", err)
 	}
@@ -1101,7 +1154,11 @@ func TestBuildDomainEngine_CampaignCreate(t *testing.T) {
 
 func TestBuildDomainEngine_SystemCommand(t *testing.T) {
 	store := newFakeDomainEventStore()
-	engine, err := buildDomainEngine(store)
+	registries, err := engine.BuildRegistries(registeredSystemModules()...)
+	if err != nil {
+		t.Fatalf("build registries: %v", err)
+	}
+	domainEngine, err := buildDomainEngine(store, registries)
 	if err != nil {
 		t.Fatalf("build domain engine: %v", err)
 	}
@@ -1116,7 +1173,7 @@ func TestBuildDomainEngine_SystemCommand(t *testing.T) {
 		PayloadJSON:   []byte(`{"after":2}`),
 	}
 
-	result, err := engine.Execute(context.Background(), cmd)
+	result, err := domainEngine.Execute(context.Background(), cmd)
 	if err != nil {
 		t.Fatalf("execute command: %v", err)
 	}
@@ -1133,7 +1190,7 @@ func TestBuildDomainEngine_SystemCommand(t *testing.T) {
 
 func TestValidateSystemRegistrationParity(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		modules := []system.Module{
+		modules := []module.Module{
 			fakeSystemModule{id: "DAGGERHEART", version: "v1"},
 		}
 		registry := systems.NewRegistry()
@@ -1156,7 +1213,7 @@ func TestValidateSystemRegistrationParity(t *testing.T) {
 	})
 
 	t.Run("missing adapter", func(t *testing.T) {
-		modules := []system.Module{
+		modules := []module.Module{
 			fakeSystemModule{id: "DAGGERHEART", version: "v1"},
 		}
 		registry := systems.NewRegistry()
@@ -1205,7 +1262,11 @@ func TestValidateSystemRegistrationParity(t *testing.T) {
 
 func TestBuildDomainEngine_ReusesCheckpointedStateForReplay(t *testing.T) {
 	store := newFakeDomainEventStore()
-	engine, err := buildDomainEngine(store)
+	registries, err := engine.BuildRegistries(registeredSystemModules()...)
+	if err != nil {
+		t.Fatalf("build registries: %v", err)
+	}
+	domainEngine, err := buildDomainEngine(store, registries)
 	if err != nil {
 		t.Fatalf("build domain engine: %v", err)
 	}
@@ -1217,7 +1278,7 @@ func TestBuildDomainEngine_ReusesCheckpointedStateForReplay(t *testing.T) {
 		EntityID:    "c1",
 		PayloadJSON: []byte(`{"name":"Test Campaign","game_system":"daggerheart","gm_mode":"human"}`),
 	}
-	createResult, err := engine.Execute(context.Background(), createCmd)
+	createResult, err := domainEngine.Execute(context.Background(), createCmd)
 	if err != nil {
 		t.Fatalf("execute campaign.create: %v", err)
 	}
@@ -1232,7 +1293,7 @@ func TestBuildDomainEngine_ReusesCheckpointedStateForReplay(t *testing.T) {
 		EntityID:    "c1",
 		PayloadJSON: []byte(`{"fields":{"status":"active"}}`),
 	}
-	updateResult, err := engine.Execute(context.Background(), updateCmd)
+	updateResult, err := domainEngine.Execute(context.Background(), updateCmd)
 	if err != nil {
 		t.Fatalf("execute campaign.update: %v", err)
 	}
@@ -1255,7 +1316,12 @@ func TestConfigureDomainEnabled_SetsDomain(t *testing.T) {
 	store := newFakeDomainEventStore()
 	stores := gamegrpc.Stores{Event: store}
 
-	if err := configureDomain(serverEnv{DomainEnabled: true}, &stores); err != nil {
+	registries, err := engine.BuildRegistries(registeredSystemModules()...)
+	if err != nil {
+		t.Fatalf("build registries: %v", err)
+	}
+
+	if err := configureDomain(serverEnv{DomainEnabled: true}, &stores, registries); err != nil {
 		t.Fatalf("configure domain: %v", err)
 	}
 	if stores.Domain == nil {
@@ -1340,4 +1406,16 @@ func (s *fakeDomainEventStore) GetLatestEventSeq(_ context.Context, campaignID s
 
 func (s *fakeDomainEventStore) ListEventsPage(_ context.Context, _ storage.ListEventsPageRequest) (storage.ListEventsPageResult, error) {
 	return storage.ListEventsPageResult{}, nil
+}
+
+func (s *fakeDomainEventStore) BatchAppendEvents(_ context.Context, events []event.Event) ([]event.Event, error) {
+	stored := make([]event.Event, 0, len(events))
+	for _, evt := range events {
+		result, err := s.AppendEvent(context.Background(), evt)
+		if err != nil {
+			return nil, err
+		}
+		stored = append(stored, result)
+	}
+	return stored, nil
 }

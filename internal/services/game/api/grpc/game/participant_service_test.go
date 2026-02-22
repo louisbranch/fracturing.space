@@ -632,8 +632,9 @@ func TestDeleteParticipant_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("campaign not found: %v", err)
 	}
-	if updatedCampaign.ParticipantCount != 0 {
-		t.Errorf("ParticipantCount = %d, want 0", updatedCampaign.ParticipantCount)
+	// Count is derived from actual store records (owner-1 remains).
+	if updatedCampaign.ParticipantCount != 1 {
+		t.Errorf("ParticipantCount = %d, want 1", updatedCampaign.ParticipantCount)
 	}
 	if got := len(eventStore.events["c1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)
@@ -981,8 +982,9 @@ func TestDeleteParticipant_UsesDomainEngine(t *testing.T) {
 	if err != nil {
 		t.Fatalf("campaign not found: %v", err)
 	}
-	if updatedCampaign.ParticipantCount != 0 {
-		t.Fatalf("ParticipantCount = %d, want 0", updatedCampaign.ParticipantCount)
+	// Count is derived from actual store records (owner-1 remains).
+	if updatedCampaign.ParticipantCount != 1 {
+		t.Fatalf("ParticipantCount = %d, want 1", updatedCampaign.ParticipantCount)
 	}
 }
 

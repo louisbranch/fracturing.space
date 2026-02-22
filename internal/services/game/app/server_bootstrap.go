@@ -33,14 +33,22 @@ func buildProjectionApplyOutboxApply(projectionStore *storagesqlite.Store, event
 	if projectionStore == nil {
 		return nil
 	}
+	// Build a base adapter registry once at closure creation. Per-transaction
+	// callbacks rebind it with the transaction-scoped store so each adapter
+	// operates within the exactly-once transaction boundary.
+	baseAdapters, err := systemmanifest.AdapterRegistry(systemmanifest.ProjectionStores{Daggerheart: projectionStore})
+	if err != nil {
+		log.Printf("build base adapter registry: %v", err)
+		return nil
+	}
 	return func(ctx context.Context, evt event.Event) error {
 		_, err := projectionStore.ApplyProjectionEventExactlyOnce(
 			ctx,
 			evt,
 			func(applyCtx context.Context, applyEvt event.Event, txStore *storagesqlite.Store) error {
-				systemAdapters, err := systemmanifest.AdapterRegistry(systemmanifest.ProjectionStores{Daggerheart: txStore})
+				systemAdapters, err := systemmanifest.RebindAdapterRegistry(baseAdapters, systemmanifest.ProjectionStores{Daggerheart: txStore})
 				if err != nil {
-					return fmt.Errorf("build projection system adapter registry: %w", err)
+					return fmt.Errorf("rebind projection system adapter registry: %w", err)
 				}
 				txApplier := projection.Applier{
 					Events:           eventRegistry,
@@ -72,10 +80,19 @@ func buildSystemRegistry() (*systems.Registry, error) {
 	return registry, nil
 }
 
-// closeResources releases every handle created at server startup.
-// Addr returns the listener address for the game server.
-func openStorageBundle(srvEnv serverEnv) (*storageBundle, error) {
-	eventStore, err := openEventStore(srvEnv.EventsDBPath, srvEnv.ProjectionApplyOutboxEnabled)
+// buildProjectionRegistries validates projection coverage using pre-built
+// registries. This is a startup-time safety check that ensures every core
+// projection-and-replay event has a handler.
+func buildProjectionRegistries(registries engine.Registries) (*event.Registry, error) {
+	if err := engine.ValidateProjectionCoverage(registries.Events, projection.ProjectionHandledTypes()); err != nil {
+		return nil, fmt.Errorf("validate projection coverage: %w", err)
+	}
+	return registries.Events, nil
+}
+
+// openStorageBundle opens event, projection, and content databases.
+func openStorageBundle(srvEnv serverEnv, eventRegistry *event.Registry) (*storageBundle, error) {
+	eventStore, err := openEventStore(srvEnv.EventsDBPath, srvEnv.ProjectionApplyOutboxEnabled, eventRegistry)
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +147,7 @@ func dialAuthGRPC(ctx context.Context, authAddr string) (authGRPCClients, error)
 }
 
 // openEventStore opens the immutable event store and verifies chain integrity on boot.
-func openEventStore(path string, projectionApplyOutboxEnabled bool) (*storagesqlite.Store, error) {
+func openEventStore(path string, projectionApplyOutboxEnabled bool, eventRegistry *event.Registry) (*storagesqlite.Store, error) {
 	if err := ensureDir(path); err != nil {
 		return nil, err
 	}
@@ -138,14 +155,10 @@ func openEventStore(path string, projectionApplyOutboxEnabled bool) (*storagesql
 	if err != nil {
 		return nil, err
 	}
-	registries, err := engine.BuildRegistries(registeredSystemModules()...)
-	if err != nil {
-		return nil, fmt.Errorf("build registries: %w", err)
-	}
 	store, err := storagesqlite.OpenEvents(
 		path,
 		keyring,
-		registries.Events,
+		eventRegistry,
 		storagesqlite.WithProjectionApplyOutboxEnabled(projectionApplyOutboxEnabled),
 	)
 	if err != nil {
@@ -180,6 +193,22 @@ func openContentStore(path string) (*storagesqlite.Store, error) {
 		return nil, fmt.Errorf("open content store: %w", err)
 	}
 	return store, nil
+}
+
+// repairProjectionGaps detects and auto-repairs projection gaps on startup by
+// replaying missing events from the journal into the projection applier.
+func repairProjectionGaps(bundle *storageBundle, applier projection.Applier) {
+	if bundle == nil || bundle.projections == nil || bundle.events == nil {
+		return
+	}
+	results, err := projection.RepairProjectionGaps(context.Background(), bundle.projections, bundle.events, applier)
+	if err != nil {
+		log.Printf("projection gap repair: %v", err)
+		return
+	}
+	for _, r := range results {
+		log.Printf("projection gap repaired: campaign %s replayed %d events", r.CampaignID, r.EventsReplayed)
+	}
 }
 
 // ensureDir creates parent paths for sqlite files so startup can create DB files.

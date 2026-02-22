@@ -1,14 +1,39 @@
 package aggregate
 
 import (
+	"fmt"
+
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/system"
 )
+
+// AssertState extracts a typed value from an any-typed state parameter.
+// It accepts T, *T (dereferencing non-nil pointers), and nil (returning the zero
+// value). Any other type returns a descriptive error so callers get compile-time-like
+// feedback about state boundaries.
+func AssertState[T any](state any) (T, error) {
+	if state == nil {
+		var zero T
+		return zero, nil
+	}
+	if v, ok := state.(T); ok {
+		return v, nil
+	}
+	if p, ok := state.(*T); ok {
+		if p != nil {
+			return *p, nil
+		}
+		var zero T
+		return zero, nil
+	}
+	var zero T
+	return zero, fmt.Errorf("expected %T, got %T", zero, state)
+}
 
 // State captures aggregate core domain state.
 //
@@ -37,5 +62,5 @@ type State struct {
 	// Invites stores compact invite lifecycle state keyed by invite ID.
 	Invites map[string]invite.State
 	// Systems stores per-game-system runtime state keyed by system module key.
-	Systems map[system.Key]any
+	Systems map[module.Key]any
 }

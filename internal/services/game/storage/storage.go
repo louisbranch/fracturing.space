@@ -96,13 +96,19 @@ type SessionRecord struct {
 	EndedAt    *time.Time
 }
 
-// CampaignStore owns the campaign-level projection used by list/detail screens and
-// status transitions.
-type CampaignStore interface {
-	Put(ctx context.Context, c CampaignRecord) error
+// CampaignReader provides read-only access to campaign projections.
+type CampaignReader interface {
 	Get(ctx context.Context, id string) (CampaignRecord, error)
 	// List returns a page of campaign records starting after the page token.
 	List(ctx context.Context, pageSize int, pageToken string) (CampaignPage, error)
+}
+
+// CampaignStore owns the campaign-level projection used by list/detail screens and
+// status transitions. Projection handlers use the full interface; read-only consumers
+// should prefer CampaignReader.
+type CampaignStore interface {
+	CampaignReader
+	Put(ctx context.Context, c CampaignRecord) error
 }
 
 // CampaignPage describes a page of campaign records.
@@ -111,11 +117,11 @@ type CampaignPage struct {
 	NextPageToken string
 }
 
-// ParticipantStore owns membership read state, including seat ownership and ordering.
-type ParticipantStore interface {
-	PutParticipant(ctx context.Context, p ParticipantRecord) error
+// ParticipantReader provides read-only access to participant projections.
+type ParticipantReader interface {
 	GetParticipant(ctx context.Context, campaignID, participantID string) (ParticipantRecord, error)
-	DeleteParticipant(ctx context.Context, campaignID, participantID string) error
+	// CountParticipants returns the number of participants for a campaign.
+	CountParticipants(ctx context.Context, campaignID string) (int, error)
 	// ListParticipantsByCampaign returns all participants for a campaign.
 	ListParticipantsByCampaign(ctx context.Context, campaignID string) ([]ParticipantRecord, error)
 	// ListCampaignIDsByUser returns campaign IDs for a participant user.
@@ -126,19 +132,35 @@ type ParticipantStore interface {
 	ListParticipants(ctx context.Context, campaignID string, pageSize int, pageToken string) (ParticipantPage, error)
 }
 
+// ParticipantStore owns membership read state, including seat ownership and ordering.
+// Projection handlers use the full interface; read-only consumers should prefer
+// ParticipantReader.
+type ParticipantStore interface {
+	ParticipantReader
+	PutParticipant(ctx context.Context, p ParticipantRecord) error
+	DeleteParticipant(ctx context.Context, campaignID, participantID string) error
+}
+
 // ParticipantPage describes a page of participant records.
 type ParticipantPage struct {
 	Participants  []ParticipantRecord
 	NextPageToken string
 }
 
-// InviteStore owns invite lifecycle read data (created/claimed/revoked flows).
-type InviteStore interface {
-	PutInvite(ctx context.Context, inv InviteRecord) error
+// InviteReader provides read-only access to invite projections.
+type InviteReader interface {
 	GetInvite(ctx context.Context, inviteID string) (InviteRecord, error)
 	ListInvites(ctx context.Context, campaignID string, recipientUserID string, status invite.Status, pageSize int, pageToken string) (InvitePage, error)
 	ListPendingInvites(ctx context.Context, campaignID string, pageSize int, pageToken string) (InvitePage, error)
 	ListPendingInvitesForRecipient(ctx context.Context, userID string, pageSize int, pageToken string) (InvitePage, error)
+}
+
+// InviteStore owns invite lifecycle read data (created/claimed/revoked flows).
+// Projection handlers use the full interface; read-only consumers should prefer
+// InviteReader.
+type InviteStore interface {
+	InviteReader
+	PutInvite(ctx context.Context, inv InviteRecord) error
 	UpdateInviteStatus(ctx context.Context, inviteID string, status invite.Status, updatedAt time.Time) error
 }
 
@@ -148,13 +170,22 @@ type InvitePage struct {
 	NextPageToken string
 }
 
-// CharacterStore owns character listing and identity metadata for campaign views.
-type CharacterStore interface {
-	PutCharacter(ctx context.Context, c CharacterRecord) error
+// CharacterReader provides read-only access to character projections.
+type CharacterReader interface {
 	GetCharacter(ctx context.Context, campaignID, characterID string) (CharacterRecord, error)
-	DeleteCharacter(ctx context.Context, campaignID, characterID string) error
+	// CountCharacters returns the number of characters for a campaign.
+	CountCharacters(ctx context.Context, campaignID string) (int, error)
 	// ListCharacters returns a page of character records for a campaign starting after the page token.
 	ListCharacters(ctx context.Context, campaignID string, pageSize int, pageToken string) (CharacterPage, error)
+}
+
+// CharacterStore owns character listing and identity metadata for campaign views.
+// Projection handlers use the full interface; read-only consumers should prefer
+// CharacterReader.
+type CharacterStore interface {
+	CharacterReader
+	PutCharacter(ctx context.Context, c CharacterRecord) error
+	DeleteCharacter(ctx context.Context, campaignID, characterID string) error
 }
 
 // CharacterPage describes a page of character records.
@@ -163,14 +194,8 @@ type CharacterPage struct {
 	NextPageToken string
 }
 
-// SessionStore owns active/completed session state used by replay, API, and CLI flows.
-type SessionStore interface {
-	// PutSession atomically stores a session and sets it as the active session for the campaign.
-	// Returns ErrActiveSessionExists if an active session already exists for the campaign.
-	PutSession(ctx context.Context, s SessionRecord) error
-	// EndSession marks a session as ended and clears it as active for the campaign.
-	// The boolean return value reports whether the session transitioned to ENDED.
-	EndSession(ctx context.Context, campaignID, sessionID string, endedAt time.Time) (SessionRecord, bool, error)
+// SessionReader provides read-only access to session projections.
+type SessionReader interface {
 	// GetSession retrieves a session by campaign ID and session ID.
 	GetSession(ctx context.Context, campaignID, sessionID string) (SessionRecord, error)
 	// GetActiveSession retrieves the active session for a campaign, if one exists.
@@ -178,6 +203,19 @@ type SessionStore interface {
 	GetActiveSession(ctx context.Context, campaignID string) (SessionRecord, error)
 	// ListSessions returns a page of session records for a campaign starting after the page token.
 	ListSessions(ctx context.Context, campaignID string, pageSize int, pageToken string) (SessionPage, error)
+}
+
+// SessionStore owns active/completed session state used by replay, API, and CLI flows.
+// Projection handlers use the full interface; read-only consumers should prefer
+// SessionReader.
+type SessionStore interface {
+	SessionReader
+	// PutSession atomically stores a session and sets it as the active session for the campaign.
+	// Returns ErrActiveSessionExists if an active session already exists for the campaign.
+	PutSession(ctx context.Context, s SessionRecord) error
+	// EndSession marks a session as ended and clears it as active for the campaign.
+	// The boolean return value reports whether the session transitioned to ENDED.
+	EndSession(ctx context.Context, campaignID, sessionID string, endedAt time.Time) (SessionRecord, bool, error)
 }
 
 // EventStore owns the event stream boundary that drives replay and command
@@ -297,13 +335,20 @@ type SessionGate struct {
 }
 
 // SessionGateStore persists gate state for the same lifecycle rules the game engine enforces.
-type SessionGateStore interface {
-	// PutSessionGate stores a gate record.
-	PutSessionGate(ctx context.Context, gate SessionGate) error
+// SessionGateReader provides read-only access to session gate projections.
+type SessionGateReader interface {
 	// GetSessionGate retrieves a gate by id.
 	GetSessionGate(ctx context.Context, campaignID, sessionID, gateID string) (SessionGate, error)
 	// GetOpenSessionGate retrieves the currently open gate for a session.
 	GetOpenSessionGate(ctx context.Context, campaignID, sessionID string) (SessionGate, error)
+}
+
+// SessionGateStore owns session gate lifecycle state. Projection handlers use
+// the full interface; read-only consumers should prefer SessionGateReader.
+type SessionGateStore interface {
+	SessionGateReader
+	// PutSessionGate stores a gate record.
+	PutSessionGate(ctx context.Context, gate SessionGate) error
 }
 
 // SessionSpotlight captures spotlight turn ownership so clients can read turn-order intent.
@@ -318,11 +363,18 @@ type SessionSpotlight struct {
 }
 
 // SessionSpotlightStore persists current spotlight state for session-facing APIs.
-type SessionSpotlightStore interface {
-	// PutSessionSpotlight stores the current spotlight for a session.
-	PutSessionSpotlight(ctx context.Context, spotlight SessionSpotlight) error
+// SessionSpotlightReader provides read-only access to session spotlight projections.
+type SessionSpotlightReader interface {
 	// GetSessionSpotlight retrieves the current spotlight for a session.
 	GetSessionSpotlight(ctx context.Context, campaignID, sessionID string) (SessionSpotlight, error)
+}
+
+// SessionSpotlightStore owns session spotlight turn state. Projection handlers use
+// the full interface; read-only consumers should prefer SessionSpotlightReader.
+type SessionSpotlightStore interface {
+	SessionSpotlightReader
+	// PutSessionSpotlight stores the current spotlight for a session.
+	PutSessionSpotlight(ctx context.Context, spotlight SessionSpotlight) error
 	// ClearSessionSpotlight removes the spotlight for a session.
 	ClearSessionSpotlight(ctx context.Context, campaignID, sessionID string) error
 }
@@ -384,6 +436,27 @@ type CampaignForkStore interface {
 	SetCampaignForkMetadata(ctx context.Context, campaignID string, metadata ForkMetadata) error
 }
 
+// ProjectionWatermark tracks the highest event sequence successfully applied
+// to projections for a given campaign. Comparing watermarks against the event
+// journal high-water mark reveals projection gaps that need repair.
+type ProjectionWatermark struct {
+	CampaignID string
+	AppliedSeq uint64
+	UpdatedAt  time.Time
+}
+
+// ProjectionWatermarkStore tracks per-campaign projection application progress
+// so startup can detect and repair gaps between the event journal and projections.
+type ProjectionWatermarkStore interface {
+	// GetProjectionWatermark returns the watermark for a campaign.
+	// Returns ErrNotFound if no watermark exists.
+	GetProjectionWatermark(ctx context.Context, campaignID string) (ProjectionWatermark, error)
+	// SaveProjectionWatermark upserts the watermark for a campaign.
+	SaveProjectionWatermark(ctx context.Context, wm ProjectionWatermark) error
+	// ListProjectionWatermarks returns all watermarks, typically for startup gap detection.
+	ListProjectionWatermarks(ctx context.Context) ([]ProjectionWatermark, error)
+}
+
 // ProjectionStore groups read-model-oriented stores consumed by APIs and queries.
 type ProjectionStore interface {
 	CampaignStore
@@ -396,6 +469,7 @@ type ProjectionStore interface {
 	SnapshotStore
 	CampaignForkStore
 	StatisticsStore
+	ProjectionWatermarkStore
 }
 
 // Store is a composite interface for all persistence concerns used across event

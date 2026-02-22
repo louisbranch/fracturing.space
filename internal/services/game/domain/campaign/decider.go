@@ -2,6 +2,7 @@ package campaign
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"time"
 
@@ -32,6 +33,8 @@ const (
 	rejectionCodeCampaignUpdateFieldInvalid = "CAMPAIGN_UPDATE_FIELD_INVALID"
 	rejectionCodeCampaignCoverAssetInvalid  = "CAMPAIGN_COVER_ASSET_INVALID"
 	rejectionCodeCampaignCoverSetInvalid    = "CAMPAIGN_COVER_SET_INVALID"
+	rejectionCodeCommandTypeUnsupported     = "COMMAND_TYPE_UNSUPPORTED"
+	rejectionCodePayloadDecodeFailed        = "PAYLOAD_DECODE_FAILED"
 )
 
 // Decide returns the decision for a campaign command against current state.
@@ -40,7 +43,8 @@ const (
 // enforces legal transitions, and emits immutable events that can be replayed
 // to reproduce the same campaign state.
 func Decide(state State, cmd command.Command, now func() time.Time) command.Decision {
-	if cmd.Type == commandTypeCreate {
+	switch cmd.Type {
+	case commandTypeCreate:
 		if state.Created {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeCampaignAlreadyExists,
@@ -48,7 +52,12 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			})
 		}
 		var payload CreatePayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodePayloadDecodeFailed,
+				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+			})
+		}
 		normalizedName := strings.TrimSpace(payload.Name)
 		if normalizedName == "" {
 			return command.Reject(command.Rejection{
@@ -112,9 +121,8 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		evt := command.NewEvent(cmd, EventTypeCreated, "campaign", cmd.CampaignID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
-	}
 
-	if cmd.Type == commandTypeUpdate {
+	case commandTypeUpdate:
 		if !state.Created {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeCampaignNotCreated,
@@ -122,7 +130,12 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			})
 		}
 		var payload UpdatePayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodePayloadDecodeFailed,
+				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+			})
+		}
 		if len(payload.Fields) == 0 {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeCampaignUpdateEmpty,
@@ -197,9 +210,8 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		evt := command.NewEvent(cmd, EventTypeUpdated, "campaign", cmd.CampaignID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
-	}
 
-	if cmd.Type == commandTypeFork {
+	case commandTypeFork:
 		if !state.Created {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeCampaignNotCreated,
@@ -207,7 +219,12 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			})
 		}
 		var payload ForkPayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodePayloadDecodeFailed,
+				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+			})
+		}
 		payload.ParentCampaignID = strings.TrimSpace(payload.ParentCampaignID)
 		payload.OriginCampaignID = strings.TrimSpace(payload.OriginCampaignID)
 		if now == nil {
@@ -217,9 +234,9 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		evt := command.NewEvent(cmd, EventTypeForked, "campaign", cmd.CampaignID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
-	}
 
-	if targetStatus, ok := statusCommandTarget(cmd.Type); ok {
+	case commandTypeEnd, commandTypeArchive, commandTypeRestore:
+		targetStatus, _ := statusCommandTarget(cmd.Type)
 		if !state.Created {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeCampaignNotCreated,
@@ -245,9 +262,13 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		evt := command.NewEvent(cmd, EventTypeUpdated, "campaign", cmd.CampaignID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
-	}
 
-	return command.Decision{}
+	default:
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeCommandTypeUnsupported,
+			Message: fmt.Sprintf("command type %s is not supported by campaign decider", cmd.Type),
+		})
+	}
 }
 
 // statusCommandTarget maps lifecycle command names to their destination status.

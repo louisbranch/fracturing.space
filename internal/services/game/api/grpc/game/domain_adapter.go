@@ -3,6 +3,7 @@ package game
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -57,8 +58,9 @@ func (a JournalAdapter) Append(ctx context.Context, evt event.Event) (event.Even
 
 // BatchAppend atomically appends all events from a single command decision.
 //
-// If the underlying store supports BatchAppendEvents the call is atomic;
-// otherwise it falls back to sequential individual appends.
+// The underlying store must implement BatchAppendEvents for atomic semantics.
+// A sequential fallback was removed because partial failure mid-batch would
+// persist a partial decision with chain hashes that bind permanently.
 func (a JournalAdapter) BatchAppend(ctx context.Context, events []event.Event) ([]event.Event, error) {
 	if a.store == nil {
 		return nil, errJournalEventStoreRequired
@@ -66,16 +68,9 @@ func (a JournalAdapter) BatchAppend(ctx context.Context, events []event.Event) (
 	type batchAppender interface {
 		BatchAppendEvents(ctx context.Context, events []event.Event) ([]event.Event, error)
 	}
-	if ba, ok := a.store.(batchAppender); ok {
-		return ba.BatchAppendEvents(ctx, events)
+	ba, ok := a.store.(batchAppender)
+	if !ok {
+		return nil, fmt.Errorf("batch append not supported by underlying store")
 	}
-	stored := make([]event.Event, 0, len(events))
-	for _, evt := range events {
-		s, err := a.store.AppendEvent(ctx, evt)
-		if err != nil {
-			return nil, err
-		}
-		stored = append(stored, s)
-	}
-	return stored, nil
+	return ba.BatchAppendEvents(ctx, events)
 }

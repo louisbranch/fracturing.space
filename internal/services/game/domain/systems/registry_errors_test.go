@@ -30,6 +30,10 @@ func (t *testAdapter) Snapshot(context.Context, string) (any, error) {
 	return nil, nil
 }
 
+func (t *testAdapter) HandledTypes() []event.Type {
+	return nil
+}
+
 type testGameSystem struct {
 	id      commonv1.GameSystem
 	version string

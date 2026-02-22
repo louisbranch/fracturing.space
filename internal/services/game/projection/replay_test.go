@@ -364,6 +364,16 @@ func (s *projectionParticipantStore) DeleteParticipant(_ context.Context, campai
 	return nil
 }
 
+func (s *projectionParticipantStore) CountParticipants(_ context.Context, campaignID string) (int, error) {
+	count := 0
+	for key := range s.participants {
+		if strings.HasPrefix(key, campaignID+":") {
+			count++
+		}
+	}
+	return count, nil
+}
+
 func (s *projectionParticipantStore) ListParticipantsByCampaign(context.Context, string) ([]storage.ParticipantRecord, error) {
 	return nil, nil
 }

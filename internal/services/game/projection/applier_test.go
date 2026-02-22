@@ -146,6 +146,10 @@ func (a *fakeAdapter) Snapshot(context.Context, string) (any, error) {
 	return nil, errors.New("not implemented")
 }
 
+func (a *fakeAdapter) HandledTypes() []event.Type {
+	return nil
+}
+
 // testEventRegistry builds a fully-wired event registry with aliases for test
 // appliers that need to resolve legacy event types.
 func testEventRegistry(t *testing.T) *event.Registry {
@@ -699,7 +703,10 @@ func TestApplySessionEnded_MissingCampaignID(t *testing.T) {
 func TestEnsureTimestamp(t *testing.T) {
 	// Non-zero timestamp should be converted to UTC
 	ts := time.Date(2026, 1, 1, 12, 0, 0, 0, time.FixedZone("EST", -5*3600))
-	result := ensureTimestamp(ts)
+	result, err := ensureTimestamp(ts)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if !result.Equal(ts) {
 		t.Fatalf("expected equal time, got %v", result)
 	}
@@ -707,12 +714,10 @@ func TestEnsureTimestamp(t *testing.T) {
 		t.Fatalf("expected UTC, got %v", result.Location())
 	}
 
-	// Zero timestamp should return current time (approximately)
-	before := time.Now().UTC()
-	result = ensureTimestamp(time.Time{})
-	after := time.Now().UTC()
-	if result.Before(before) || result.After(after) {
-		t.Fatalf("expected current time, got %v (before=%v, after=%v)", result, before, after)
+	// Zero timestamp should return an error for replay determinism
+	_, err = ensureTimestamp(time.Time{})
+	if err == nil {
+		t.Fatal("expected error for zero timestamp")
 	}
 }
 
@@ -996,6 +1001,16 @@ func (s *fakeCharacterStore) DeleteCharacter(_ context.Context, campaignID, char
 	return nil
 }
 
+func (s *fakeCharacterStore) CountCharacters(_ context.Context, campaignID string) (int, error) {
+	count := 0
+	for key := range s.characters {
+		if strings.HasPrefix(key, campaignID+":") {
+			count++
+		}
+	}
+	return count, nil
+}
+
 func (s *fakeCharacterStore) ListCharacters(context.Context, string, int, string) (storage.CharacterPage, error) {
 	return storage.CharacterPage{}, nil
 }
@@ -1169,8 +1184,9 @@ func TestApplyParticipantLeft(t *testing.T) {
 		t.Fatal("expected participant to be deleted")
 	}
 	c, _ := cStore.Get(ctx, "camp-1")
-	if c.ParticipantCount != 2 {
-		t.Fatalf("ParticipantCount = %d, want 2", c.ParticipantCount)
+	// Count is derived from actual store records (0 remaining), not arithmetic.
+	if c.ParticipantCount != 0 {
+		t.Fatalf("ParticipantCount = %d, want 0", c.ParticipantCount)
 	}
 }
 
@@ -1366,7 +1382,7 @@ func TestApplyCharacterCreated(t *testing.T) {
 	ctx := context.Background()
 	charStore := newFakeCharacterStore()
 	cStore := newProjectionCampaignStore()
-	cStore.campaigns["camp-1"] = storage.CampaignRecord{ID: "camp-1", CharacterCount: 1}
+	cStore.campaigns["camp-1"] = storage.CampaignRecord{ID: "camp-1", CharacterCount: 0}
 	applier := Applier{Character: charStore, Campaign: cStore}
 
 	payload := testevent.CharacterCreatedPayload{Name: "Aragorn", Kind: "PC", Notes: "A ranger"}
@@ -1388,8 +1404,35 @@ func TestApplyCharacterCreated(t *testing.T) {
 		t.Fatalf("Kind = %v, want PC", ch.Kind)
 	}
 	c, _ := cStore.Get(ctx, "camp-1")
-	if c.CharacterCount != 2 {
-		t.Fatalf("CharacterCount = %d, want 2", c.CharacterCount)
+	// Count is derived from actual store records (1 character created).
+	if c.CharacterCount != 1 {
+		t.Fatalf("CharacterCount = %d, want 1", c.CharacterCount)
+	}
+}
+
+func TestApplyCharacterCreated_IdempotentCount(t *testing.T) {
+	ctx := context.Background()
+	charStore := newFakeCharacterStore()
+	cStore := newProjectionCampaignStore()
+	cStore.campaigns["camp-1"] = storage.CampaignRecord{ID: "camp-1", CharacterCount: 0}
+	applier := Applier{Character: charStore, Campaign: cStore}
+
+	payload := testevent.CharacterCreatedPayload{Name: "Aragorn", Kind: "PC"}
+	data, _ := json.Marshal(payload)
+	stamp := time.Date(2026, 2, 11, 17, 30, 0, 0, time.UTC)
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: testevent.TypeCharacterCreated, PayloadJSON: data, Timestamp: stamp}
+
+	// Apply the same event twice (idempotent replay).
+	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
+		t.Fatalf("first apply: %v", err)
+	}
+	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
+		t.Fatalf("second apply: %v", err)
+	}
+
+	c, _ := cStore.Get(ctx, "camp-1")
+	if c.CharacterCount != 1 {
+		t.Fatalf("CharacterCount = %d, want 1 (idempotent)", c.CharacterCount)
 	}
 }
 
@@ -1497,8 +1540,9 @@ func TestApplyCharacterDeleted(t *testing.T) {
 		t.Fatal("expected character to be deleted")
 	}
 	c, _ := cStore.Get(ctx, "camp-1")
-	if c.CharacterCount != 2 {
-		t.Fatalf("CharacterCount = %d, want 2", c.CharacterCount)
+	// Count is derived from actual store records (0 remaining), not arithmetic.
+	if c.CharacterCount != 0 {
+		t.Fatalf("CharacterCount = %d, want 0", c.CharacterCount)
 	}
 }
 
@@ -1718,6 +1762,7 @@ func TestApplySessionGateOpened_FallbackEntityID(t *testing.T) {
 	evt := testevent.Event{
 		CampaignID: "camp-1", SessionID: "sess-1", EntityID: "gate-fallback",
 		Type: testevent.TypeSessionGateOpened, PayloadJSON: data,
+		Timestamp: time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC),
 	}
 
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
@@ -2049,6 +2094,35 @@ func TestApplyParticipantJoined(t *testing.T) {
 	c, _ := campaignStore.Get(ctx, "camp-1")
 	if c.ParticipantCount != 1 {
 		t.Fatalf("ParticipantCount = %d, want 1", c.ParticipantCount)
+	}
+}
+
+func TestApplyParticipantJoined_IdempotentCount(t *testing.T) {
+	ctx := context.Background()
+	participantStore := newProjectionParticipantStore()
+	campaignStore := newProjectionCampaignStore()
+	campaignStore.campaigns["camp-1"] = storage.CampaignRecord{ID: "camp-1", ParticipantCount: 0}
+	applier := Applier{Participant: participantStore, Campaign: campaignStore}
+
+	payload := testevent.ParticipantJoinedPayload{
+		UserID: "user-1", Name: "Alice", Role: "player",
+		Controller: "human", CampaignAccess: "member",
+	}
+	data, _ := json.Marshal(payload)
+	stamp := time.Date(2026, 2, 11, 10, 0, 0, 0, time.UTC)
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantJoined, PayloadJSON: data, Timestamp: stamp}
+
+	// Apply the same event twice (idempotent replay).
+	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
+		t.Fatalf("first apply: %v", err)
+	}
+	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
+		t.Fatalf("second apply: %v", err)
+	}
+
+	c, _ := campaignStore.Get(ctx, "camp-1")
+	if c.ParticipantCount != 1 {
+		t.Fatalf("ParticipantCount = %d, want 1 (idempotent)", c.ParticipantCount)
 	}
 }
 
@@ -2527,7 +2601,7 @@ func TestApplyParticipantLeft_ZeroCount(t *testing.T) {
 	campaignStore := newProjectionCampaignStore()
 	campaignStore.campaigns["camp-1"] = storage.CampaignRecord{ID: "camp-1", ParticipantCount: 0}
 	applier := Applier{Participant: participantStore, Campaign: campaignStore}
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantLeft, PayloadJSON: []byte("{}")}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantLeft, PayloadJSON: []byte("{}"), Timestamp: time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
 		t.Fatalf("apply: %v", err)
 	}
@@ -2598,7 +2672,7 @@ func TestApplyParticipantUnbound_NilClaimIndex(t *testing.T) {
 	applier := Applier{Participant: participantStore, Campaign: campaignStore}
 	payload := testevent.ParticipantUnboundPayload{}
 	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantUnbound, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantUnbound, PayloadJSON: data, Timestamp: time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
 		t.Fatalf("apply: %v", err)
 	}
@@ -2711,7 +2785,7 @@ func TestApplyCharacterDeleted_ZeroCount(t *testing.T) {
 	campaignStore := newProjectionCampaignStore()
 	campaignStore.campaigns["camp-1"] = storage.CampaignRecord{ID: "camp-1", CharacterCount: 0}
 	applier := Applier{Character: charStore, Campaign: campaignStore}
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: testevent.TypeCharacterDeleted, PayloadJSON: []byte("{}")}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: testevent.TypeCharacterDeleted, PayloadJSON: []byte("{}"), Timestamp: time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
 		t.Fatalf("apply: %v", err)
 	}
@@ -2901,7 +2975,7 @@ func TestApplySessionGateResolved_EntityIDFallback(t *testing.T) {
 	applier := Applier{SessionGate: gateStore}
 	payload := testevent.SessionGateResolvedPayload{Decision: "approve"}
 	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "camp-1", SessionID: "sess-1", EntityID: "gate-1", Type: testevent.TypeSessionGateResolved, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", SessionID: "sess-1", EntityID: "gate-1", Type: testevent.TypeSessionGateResolved, PayloadJSON: data, Timestamp: time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
 		t.Fatalf("apply: %v", err)
 	}
@@ -2930,7 +3004,7 @@ func TestApplySessionGateAbandoned_EntityIDFallback(t *testing.T) {
 	applier := Applier{SessionGate: gateStore}
 	payload := testevent.SessionGateAbandonedPayload{Reason: "timeout"}
 	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "camp-1", SessionID: "sess-1", EntityID: "gate-1", Type: testevent.TypeSessionGateAbandoned, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", SessionID: "sess-1", EntityID: "gate-1", Type: testevent.TypeSessionGateAbandoned, PayloadJSON: data, Timestamp: time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
 		t.Fatalf("apply: %v", err)
 	}
@@ -3180,7 +3254,7 @@ func TestApplyParticipantBound_WithClaimIndex(t *testing.T) {
 	applier := Applier{Participant: participantStore, Campaign: campaignStore, ClaimIndex: claimStore}
 	payload := testevent.ParticipantBoundPayload{UserID: "u1"}
 	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantBound, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantBound, PayloadJSON: data, Timestamp: time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
 		t.Fatalf("apply: %v", err)
 	}
@@ -3201,7 +3275,7 @@ func TestApplyParticipantUnbound_WithClaimIndex(t *testing.T) {
 	applier := Applier{Participant: participantStore, Campaign: campaignStore, ClaimIndex: claimStore}
 	payload := testevent.ParticipantUnboundPayload{UserID: "u1"}
 	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantUnbound, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantUnbound, PayloadJSON: data, Timestamp: time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
 		t.Fatalf("apply: %v", err)
 	}
@@ -3281,5 +3355,161 @@ func TestMarshalOptionalMap(t *testing.T) {
 	}
 	if result == nil {
 		t.Fatal("expected non-nil result")
+	}
+}
+
+// fakeWatermarkStore records calls to SaveProjectionWatermark.
+type fakeWatermarkStore struct {
+	watermarks map[string]storage.ProjectionWatermark
+}
+
+func newFakeWatermarkStore() *fakeWatermarkStore {
+	return &fakeWatermarkStore{watermarks: make(map[string]storage.ProjectionWatermark)}
+}
+
+func (s *fakeWatermarkStore) GetProjectionWatermark(_ context.Context, campaignID string) (storage.ProjectionWatermark, error) {
+	wm, ok := s.watermarks[campaignID]
+	if !ok {
+		return storage.ProjectionWatermark{}, storage.ErrNotFound
+	}
+	return wm, nil
+}
+
+func (s *fakeWatermarkStore) SaveProjectionWatermark(_ context.Context, wm storage.ProjectionWatermark) error {
+	s.watermarks[wm.CampaignID] = wm
+	return nil
+}
+
+func (s *fakeWatermarkStore) ListProjectionWatermarks(_ context.Context) ([]storage.ProjectionWatermark, error) {
+	var out []storage.ProjectionWatermark
+	for _, wm := range s.watermarks {
+		out = append(out, wm)
+	}
+	return out, nil
+}
+
+func TestApply_SavesWatermarkOnSuccess(t *testing.T) {
+	ctx := context.Background()
+	campaignStore := newProjectionCampaignStore()
+	watermarks := newFakeWatermarkStore()
+
+	applier := Applier{
+		Campaign:   campaignStore,
+		Watermarks: watermarks,
+	}
+
+	payload := testevent.CampaignCreatedPayload{
+		Name:       "Test",
+		GameSystem: "DAGGERHEART",
+		GmMode:     "HUMAN",
+	}
+	data, _ := json.Marshal(payload)
+	stamp := time.Date(2026, 2, 10, 12, 0, 0, 0, time.UTC)
+	evt := testevent.Event{
+		CampaignID:  "camp-1",
+		EntityID:    "camp-1",
+		Type:        testevent.TypeCampaignCreated,
+		PayloadJSON: data,
+		Timestamp:   stamp,
+		Seq:         5,
+	}
+
+	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+
+	wm, err := watermarks.GetProjectionWatermark(ctx, "camp-1")
+	if err != nil {
+		t.Fatalf("get watermark: %v", err)
+	}
+	if wm.AppliedSeq != 5 {
+		t.Fatalf("applied_seq = %d, want 5", wm.AppliedSeq)
+	}
+}
+
+func TestApply_SkipsWatermarkWhenNil(t *testing.T) {
+	ctx := context.Background()
+	campaignStore := newProjectionCampaignStore()
+
+	// No watermarks store configured — should not panic.
+	applier := Applier{Campaign: campaignStore}
+
+	payload := testevent.CampaignCreatedPayload{
+		Name:       "Test",
+		GameSystem: "DAGGERHEART",
+		GmMode:     "HUMAN",
+	}
+	data, _ := json.Marshal(payload)
+	stamp := time.Date(2026, 2, 10, 12, 0, 0, 0, time.UTC)
+	evt := testevent.Event{
+		CampaignID:  "camp-1",
+		EntityID:    "camp-1",
+		Type:        testevent.TypeCampaignCreated,
+		PayloadJSON: data,
+		Timestamp:   stamp,
+		Seq:         5,
+	}
+
+	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+}
+
+func TestApply_SkipsWatermarkForZeroSeq(t *testing.T) {
+	ctx := context.Background()
+	campaignStore := newProjectionCampaignStore()
+	watermarks := newFakeWatermarkStore()
+
+	applier := Applier{
+		Campaign:   campaignStore,
+		Watermarks: watermarks,
+	}
+
+	payload := testevent.CampaignCreatedPayload{
+		Name:       "Test",
+		GameSystem: "DAGGERHEART",
+		GmMode:     "HUMAN",
+	}
+	data, _ := json.Marshal(payload)
+	evt := testevent.Event{
+		CampaignID:  "camp-1",
+		EntityID:    "camp-1",
+		Type:        testevent.TypeCampaignCreated,
+		PayloadJSON: data,
+		Timestamp:   time.Date(2026, 2, 10, 12, 0, 0, 0, time.UTC),
+		Seq:         0, // no seq — should not save watermark
+	}
+
+	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+
+	_, err := watermarks.GetProjectionWatermark(ctx, "camp-1")
+	if !errors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("expected ErrNotFound for zero-seq, got %v", err)
+	}
+}
+
+func TestEnsureTimestamp_ZeroReturnsError(t *testing.T) {
+	_, err := ensureTimestamp(time.Time{})
+	if err == nil {
+		t.Fatal("expected error for zero timestamp")
+	}
+	if !strings.Contains(err.Error(), "timestamp") {
+		t.Fatalf("error should mention timestamp, got: %v", err)
+	}
+}
+
+func TestEnsureTimestamp_NonZeroReturnsUTC(t *testing.T) {
+	ts := time.Date(2025, 1, 1, 12, 0, 0, 0, time.FixedZone("EST", -5*60*60))
+	got, err := ensureTimestamp(ts)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got.Location() != time.UTC {
+		t.Fatalf("expected UTC, got %v", got.Location())
+	}
+	if !got.Equal(ts) {
+		t.Fatalf("time mismatch: got %v, want %v", got, ts)
 	}
 }

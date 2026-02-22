@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
-	domainsystem "github.com/louisbranch/fracturing.space/internal/services/game/domain/system"
+	domainsystem "github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	domainsystems "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/manifest"
 )

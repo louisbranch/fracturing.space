@@ -13,6 +13,9 @@ func TestStoresApplier(t *testing.T) {
 		Daggerheart:      &fakeDaggerheartStore{},
 		Event:            &fakeEventStore{},
 	}
+	if err := s.Validate(); err != nil {
+		t.Fatalf("validate stores: %v", err)
+	}
 	applier := s.Applier()
 
 	if applier.Campaign == nil {

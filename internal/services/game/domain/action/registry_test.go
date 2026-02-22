@@ -300,11 +300,11 @@ func TestRegisterEvents_IntentContracts(t *testing.T) {
 		intents[definition.Type] = definition.Intent
 	}
 
-	if intents[event.Type("action.roll_resolved")] != event.IntentProjectionAndReplay {
-		t.Fatalf("action.roll_resolved intent = %s, want %s", intents[event.Type("action.roll_resolved")], event.IntentProjectionAndReplay)
+	if intents[event.Type("action.roll_resolved")] != event.IntentReplayOnly {
+		t.Fatalf("action.roll_resolved intent = %s, want %s", intents[event.Type("action.roll_resolved")], event.IntentReplayOnly)
 	}
-	if intents[event.Type("action.outcome_applied")] != event.IntentProjectionAndReplay {
-		t.Fatalf("action.outcome_applied intent = %s, want %s", intents[event.Type("action.outcome_applied")], event.IntentProjectionAndReplay)
+	if intents[event.Type("action.outcome_applied")] != event.IntentReplayOnly {
+		t.Fatalf("action.outcome_applied intent = %s, want %s", intents[event.Type("action.outcome_applied")], event.IntentReplayOnly)
 	}
 	if intents[event.Type("action.outcome_rejected")] != event.IntentAuditOnly {
 		t.Fatalf("action.outcome_rejected intent = %s, want %s", intents[event.Type("action.outcome_rejected")], event.IntentAuditOnly)

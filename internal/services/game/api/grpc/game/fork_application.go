@@ -9,7 +9,6 @@ import (
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -221,7 +220,7 @@ func (a forkApplication) copyForkEvents(ctx context.Context, sourceCampaignID, f
 			if err != nil {
 				return lastEventAt, fmt.Errorf("append forked event: %w", err)
 			}
-			if inlineProjectionApplyEnabled.Load() && domainwrite.ShouldApplyProjectionInline(stored) {
+			if inlineProjectionApplyEnabled.Load() && intentFilter(stored) {
 				if err := applier.Apply(ctx, stored); err != nil {
 					return lastEventAt, fmt.Errorf("apply forked event: %w", err)
 				}

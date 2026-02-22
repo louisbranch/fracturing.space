@@ -35,6 +35,8 @@ var (
 	ErrSystemTypeNamespaceMismatch = errors.New("system id must match event type namespace")
 	// ErrPayloadInvalid indicates malformed payload JSON.
 	ErrPayloadInvalid = errors.New("payload json must be valid")
+	// ErrTimestampRequired indicates a missing or zero event timestamp.
+	ErrTimestampRequired = errors.New("event timestamp is required")
 	// ErrStorageFieldsSet indicates storage-assigned fields were pre-set.
 	ErrStorageFieldsSet = errors.New("storage-assigned fields must be empty")
 )
@@ -116,13 +118,18 @@ type Definition struct {
 
 // Intent declares what the runtime should do when the event is replayed.
 //
-// - ProjectionAndReplay means the event must be folded into state and projected.
-// - AuditOnly means handlers may ignore the event at projection/runtime edges.
+//   - ProjectionAndReplay means the event must be folded into state and projected.
+//   - ReplayOnly means the event must be folded into aggregate state but has no
+//     projection handler (e.g. intermediate action envelopes that affect command
+//     invariants but do not materialize a read model).
+//   - AuditOnly means handlers may ignore the event at projection/runtime edges.
 type Intent string
 
 const (
 	// IntentProjectionAndReplay indicates the event should be applied during replay and projection.
 	IntentProjectionAndReplay Intent = "projection_and_replay"
+	// IntentReplayOnly indicates the event affects aggregate state but not projections.
+	IntentReplayOnly Intent = "replay_only"
 	// IntentAuditOnly indicates the event is observability-only.
 	IntentAuditOnly Intent = "audit_only"
 )
@@ -172,7 +179,7 @@ func (r *Registry) Register(def Definition) error {
 		def.Intent = IntentProjectionAndReplay
 	}
 	switch def.Intent {
-	case IntentProjectionAndReplay, IntentAuditOnly:
+	case IntentProjectionAndReplay, IntentReplayOnly, IntentAuditOnly:
 		// allowed
 	default:
 		return fmt.Errorf("event intent is invalid")
@@ -211,6 +218,10 @@ func (r *Registry) ValidateForAppend(evt Event) (Event, error) {
 	evt.CampaignID = strings.TrimSpace(evt.CampaignID)
 	if evt.CampaignID == "" {
 		return Event{}, ErrCampaignIDRequired
+	}
+
+	if evt.Timestamp.IsZero() {
+		return Event{}, ErrTimestampRequired
 	}
 
 	evt.Type = Type(strings.TrimSpace(string(evt.Type)))

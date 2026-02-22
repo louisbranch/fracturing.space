@@ -8,14 +8,14 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/system"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 )
 
 // Module wires Daggerheart system behavior into the runtime.
 type Module struct {
-	decider   system.Decider
-	projector system.Projector
-	factory   system.StateFactory
+	decider   module.Decider
+	projector module.Projector
+	factory   module.StateFactory
 }
 
 // NewModule creates a Daggerheart system module.
@@ -113,17 +113,17 @@ func (m *Module) RegisterEvents(registry *event.Registry) error {
 }
 
 // Decider returns the system decider.
-func (m *Module) Decider() system.Decider {
+func (m *Module) Decider() module.Decider {
 	return m.decider
 }
 
 // Projector returns the system projector.
-func (m *Module) Projector() system.Projector {
+func (m *Module) Projector() module.Projector {
 	return m.projector
 }
 
 // StateFactory returns the state factory.
-func (m *Module) StateFactory() system.StateFactory {
+func (m *Module) StateFactory() module.StateFactory {
 	return m.factory
 }
 
@@ -684,4 +684,4 @@ func abs(value int) int {
 	return value
 }
 
-var _ system.Module = (*Module)(nil)
+var _ module.Module = (*Module)(nil)

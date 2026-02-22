@@ -1,13 +1,16 @@
 package engine
 
 import (
+	"context"
 	"strings"
 	"testing"
 	"time"
 
+	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/system"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 )
 
 type fakeModule struct{}
@@ -29,9 +32,9 @@ func (fakeModule) RegisterEvents(registry *event.Registry) error {
 func (fakeModule) EmittableEventTypes() []event.Type {
 	return []event.Type{event.Type("sys.system_1.action.tested")}
 }
-func (fakeModule) Decider() system.Decider           { return nil }
-func (fakeModule) Projector() system.Projector       { return nil }
-func (fakeModule) StateFactory() system.StateFactory { return nil }
+func (fakeModule) Decider() module.Decider           { return nil }
+func (fakeModule) Projector() module.Projector       { return nil }
+func (fakeModule) StateFactory() module.StateFactory { return nil }
 
 type syntheticModule struct {
 	id          string
@@ -57,9 +60,9 @@ func (m syntheticModule) RegisterEvents(registry *event.Registry) error {
 func (m syntheticModule) EmittableEventTypes() []event.Type {
 	return []event.Type{m.eventType}
 }
-func (m syntheticModule) Decider() system.Decider           { return nil }
-func (m syntheticModule) Projector() system.Projector       { return nil }
-func (m syntheticModule) StateFactory() system.StateFactory { return nil }
+func (m syntheticModule) Decider() module.Decider           { return nil }
+func (m syntheticModule) Projector() module.Projector       { return nil }
+func (m syntheticModule) StateFactory() module.StateFactory { return nil }
 
 func TestBuildRegistries_RegistersCoreAndSystem(t *testing.T) {
 	registries, err := BuildRegistries(fakeModule{})
@@ -291,6 +294,164 @@ func TestValidateFoldCoverage_IgnoresSystemEvents(t *testing.T) {
 	if err := ValidateFoldCoverage(eventRegistry); err != nil {
 		t.Fatalf("expected no error for system event, got: %v", err)
 	}
+}
+
+func TestValidateProjectionCoverage_ReturnsErrorForMissingHandler(t *testing.T) {
+	eventRegistry := event.NewRegistry()
+	if err := eventRegistry.Register(event.Definition{
+		Type:   event.Type("test.unhandled_projection"),
+		Owner:  event.OwnerCore,
+		Intent: event.IntentProjectionAndReplay,
+	}); err != nil {
+		t.Fatalf("register event: %v", err)
+	}
+
+	// Pass an empty handled-types list so the unhandled event is detected.
+	err := ValidateProjectionCoverage(eventRegistry, nil)
+	if err == nil {
+		t.Fatal("expected error for unhandled projection event")
+	}
+	if !strings.Contains(err.Error(), "test.unhandled_projection") {
+		t.Fatalf("expected error to mention test.unhandled_projection, got %v", err)
+	}
+}
+
+func TestValidateProjectionCoverage_PassesWhenHandled(t *testing.T) {
+	eventRegistry := event.NewRegistry()
+	if err := eventRegistry.Register(event.Definition{
+		Type:   event.Type("test.handled"),
+		Owner:  event.OwnerCore,
+		Intent: event.IntentProjectionAndReplay,
+	}); err != nil {
+		t.Fatalf("register event: %v", err)
+	}
+
+	err := ValidateProjectionCoverage(eventRegistry, []event.Type{event.Type("test.handled")})
+	if err != nil {
+		t.Fatalf("expected no error when handler exists, got: %v", err)
+	}
+}
+
+func TestValidateFoldCoverage_RequiresHandlerForReplayOnlyEvents(t *testing.T) {
+	eventRegistry := event.NewRegistry()
+	if err := eventRegistry.Register(event.Definition{
+		Type:   event.Type("test.replay_only"),
+		Owner:  event.OwnerCore,
+		Intent: event.IntentReplayOnly,
+	}); err != nil {
+		t.Fatalf("register event: %v", err)
+	}
+
+	err := ValidateFoldCoverage(eventRegistry)
+	if err == nil {
+		t.Fatal("expected error for unhandled replay-only event")
+	}
+	if !strings.Contains(err.Error(), "test.replay_only") {
+		t.Fatalf("expected error to mention test.replay_only, got %v", err)
+	}
+}
+
+func TestValidateProjectionCoverage_IgnoresReplayOnlyEvents(t *testing.T) {
+	eventRegistry := event.NewRegistry()
+	if err := eventRegistry.Register(event.Definition{
+		Type:   event.Type("test.replay_only"),
+		Owner:  event.OwnerCore,
+		Intent: event.IntentReplayOnly,
+	}); err != nil {
+		t.Fatalf("register event: %v", err)
+	}
+
+	// No projection handler provided, but should pass because replay-only
+	// events don't need projection handlers.
+	if err := ValidateProjectionCoverage(eventRegistry, nil); err != nil {
+		t.Fatalf("expected no error for replay-only event, got: %v", err)
+	}
+}
+
+func TestValidateProjectionCoverage_IgnoresAuditOnlyEvents(t *testing.T) {
+	eventRegistry := event.NewRegistry()
+	if err := eventRegistry.Register(event.Definition{
+		Type:   event.Type("test.audit_only"),
+		Owner:  event.OwnerCore,
+		Intent: event.IntentAuditOnly,
+	}); err != nil {
+		t.Fatalf("register event: %v", err)
+	}
+
+	if err := ValidateProjectionCoverage(eventRegistry, nil); err != nil {
+		t.Fatalf("expected no error for audit-only event, got: %v", err)
+	}
+}
+
+func TestValidateProjectionCoverage_IgnoresSystemEvents(t *testing.T) {
+	eventRegistry := event.NewRegistry()
+	if err := eventRegistry.Register(event.Definition{
+		Type:   event.Type("sys.test.some_event"),
+		Owner:  event.OwnerSystem,
+		Intent: event.IntentProjectionAndReplay,
+	}); err != nil {
+		t.Fatalf("register event: %v", err)
+	}
+
+	if err := ValidateProjectionCoverage(eventRegistry, nil); err != nil {
+		t.Fatalf("expected no error for system event, got: %v", err)
+	}
+}
+
+func TestValidateAdapterEventCoverage_PassesWhenAllCovered(t *testing.T) {
+	registries, err := BuildRegistries(fakeModule{})
+	if err != nil {
+		t.Fatalf("build registries: %v", err)
+	}
+	adapters := buildFakeAdapterRegistry(t, []event.Type{
+		event.Type("sys.system_1.action.tested"),
+	})
+
+	if err := ValidateAdapterEventCoverage(registries.Systems, adapters, registries.Events); err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+}
+
+func TestValidateAdapterEventCoverage_FailsOnMissingHandler(t *testing.T) {
+	registries, err := BuildRegistries(fakeModule{})
+	if err != nil {
+		t.Fatalf("build registries: %v", err)
+	}
+	// Adapter handles zero types — module emits one.
+	adapters := buildFakeAdapterRegistry(t, nil)
+
+	err = ValidateAdapterEventCoverage(registries.Systems, adapters, registries.Events)
+	if err == nil {
+		t.Fatal("expected error for uncovered emittable event type")
+	}
+	if !strings.Contains(err.Error(), "sys.system_1.action.tested") {
+		t.Fatalf("expected error to mention uncovered type, got: %v", err)
+	}
+}
+
+type fakeAdapterForCoverage struct {
+	id           commonv1.GameSystem
+	version      string
+	handledTypes []event.Type
+}
+
+func (a fakeAdapterForCoverage) ID() commonv1.GameSystem                           { return a.id }
+func (a fakeAdapterForCoverage) Version() string                                   { return a.version }
+func (a fakeAdapterForCoverage) Apply(_ context.Context, _ event.Event) error      { return nil }
+func (a fakeAdapterForCoverage) Snapshot(_ context.Context, _ string) (any, error) { return nil, nil }
+func (a fakeAdapterForCoverage) HandledTypes() []event.Type                        { return a.handledTypes }
+
+func buildFakeAdapterRegistry(t *testing.T, handledTypes []event.Type) *systems.AdapterRegistry {
+	t.Helper()
+	registry := systems.NewAdapterRegistry()
+	if err := registry.Register(fakeAdapterForCoverage{
+		id:           commonv1.GameSystem(999),
+		version:      "v1",
+		handledTypes: handledTypes,
+	}); err != nil {
+		t.Fatalf("register fake adapter: %v", err)
+	}
+	return registry
 }
 
 type unregisteredEmitModule struct {

@@ -70,6 +70,9 @@ func validStores() Stores {
 
 func TestStoresApplier(t *testing.T) {
 	s := validStores()
+	if err := s.Validate(); err != nil {
+		t.Fatalf("validate stores: %v", err)
+	}
 	applier := s.Applier()
 
 	if applier.Campaign == nil {

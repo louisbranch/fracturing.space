@@ -492,6 +492,27 @@ func (s *Store) ListParticipants(ctx context.Context, campaignID string, pageSiz
 	return page, nil
 }
 
+// CountParticipants returns the number of participants for a campaign.
+func (s *Store) CountParticipants(ctx context.Context, campaignID string) (int, error) {
+	if err := ctx.Err(); err != nil {
+		return 0, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return 0, fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(campaignID) == "" {
+		return 0, fmt.Errorf("campaign id is required")
+	}
+	var count int64
+	err := s.sqlDB.QueryRowContext(ctx,
+		"SELECT COUNT(*) FROM participants WHERE campaign_id = ?", campaignID,
+	).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("count participants: %w", err)
+	}
+	return int(count), nil
+}
+
 // Invite methods
 
 // PutInvite persists an invite record.
@@ -867,6 +888,27 @@ func (s *Store) ListCharacters(ctx context.Context, campaignID string, pageSize 
 	}
 
 	return page, nil
+}
+
+// CountCharacters returns the number of characters for a campaign.
+func (s *Store) CountCharacters(ctx context.Context, campaignID string) (int, error) {
+	if err := ctx.Err(); err != nil {
+		return 0, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return 0, fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(campaignID) == "" {
+		return 0, fmt.Errorf("campaign id is required")
+	}
+	var count int64
+	err := s.sqlDB.QueryRowContext(ctx,
+		"SELECT COUNT(*) FROM characters WHERE campaign_id = ?", campaignID,
+	).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("count characters: %w", err)
+	}
+	return int(count), nil
 }
 
 // Session methods

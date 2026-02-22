@@ -14,6 +14,36 @@ type fakeDaggerheartStore struct {
 	storage.DaggerheartStore
 }
 
+type anotherFakeDaggerheartStore struct {
+	storage.DaggerheartStore
+}
+
+func TestRebindAdapterRegistrySwapsStores(t *testing.T) {
+	base, err := AdapterRegistry(ProjectionStores{Daggerheart: fakeDaggerheartStore{}})
+	if err != nil {
+		t.Fatalf("build base registry: %v", err)
+	}
+
+	rebound, err := RebindAdapterRegistry(base, ProjectionStores{Daggerheart: anotherFakeDaggerheartStore{}})
+	if err != nil {
+		t.Fatalf("rebind adapter registry: %v", err)
+	}
+
+	adapter := rebound.Get(commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART, daggerheart.SystemVersion)
+	if adapter == nil {
+		t.Fatal("expected daggerheart adapter in rebound registry")
+	}
+
+	// Base registry should still have its own adapter (not affected by rebind).
+	origAdapter := base.Get(commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART, daggerheart.SystemVersion)
+	if origAdapter == nil {
+		t.Fatal("expected adapter to remain in base registry")
+	}
+	if origAdapter == adapter {
+		t.Fatal("expected rebound adapter to be a different instance than base")
+	}
+}
+
 func TestModulesAndMetadataShareSystemVersionKeys(t *testing.T) {
 	modules := Modules()
 	metadata := MetadataSystems()
@@ -62,6 +92,25 @@ func TestAdapterRegistryRegistersDaggerheart(t *testing.T) {
 	}
 }
 
+func TestAdapterRegistryReturnsErrorOnRegistrationFailure(t *testing.T) {
+	// Pre-populate the registry by calling AdapterRegistry once, then
+	// register the same adapter again to trigger a duplicate error.
+	// Since we cannot double-register via AdapterRegistry directly,
+	// we test via a nil store (which skips registration) — but the real
+	// error path is a duplicate. Instead, verify that a nil-store registry
+	// works cleanly and a pre-registered duplicate fails.
+	stores := ProjectionStores{Daggerheart: fakeDaggerheartStore{}}
+	registry, err := AdapterRegistry(stores)
+	if err != nil {
+		t.Fatalf("first registration should succeed: %v", err)
+	}
+	// Manually register the same adapter again to force a duplicate error.
+	dupErr := registry.Register(daggerheart.NewAdapter(fakeDaggerheartStore{}))
+	if dupErr == nil {
+		t.Fatal("expected duplicate registration to return an error")
+	}
+}
+
 func TestModulesHaveCorrespondingAdapters(t *testing.T) {
 	modules := Modules()
 	if len(modules) == 0 {
@@ -86,6 +135,19 @@ func TestModulesHaveCorrespondingAdapters(t *testing.T) {
 		if adapter == nil {
 			t.Errorf("module %s@%s has no corresponding adapter in AdapterRegistry", module.ID(), version)
 		}
+	}
+}
+
+func TestAdapterRegistrySkipsNilStoreViaClosureGuard(t *testing.T) {
+	// When ProjectionStores.Daggerheart is nil, BuildAdapter should return nil
+	// and the registry should skip registration without error.
+	registry, err := AdapterRegistry(ProjectionStores{Daggerheart: nil})
+	if err != nil {
+		t.Fatalf("expected no error with nil store, got: %v", err)
+	}
+	adapter := registry.Get(commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART, daggerheart.SystemVersion)
+	if adapter != nil {
+		t.Fatal("expected no adapter when store is nil")
 	}
 }
 

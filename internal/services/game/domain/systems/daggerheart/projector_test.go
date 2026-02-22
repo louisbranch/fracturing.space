@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 )
 
 func TestProjectorApplyGMFearChanged_UpdatesState(t *testing.T) {
@@ -246,6 +248,31 @@ func TestProjectorApplyHandlesAllRegisteredEvents(t *testing.T) {
 				t.Fatalf("expected SnapshotState, got %T", updated)
 			}
 		})
+	}
+}
+
+func TestProjectorApply_RejectsAggregateState(t *testing.T) {
+	// System projectors should only receive their own state type, not the
+	// full aggregate.State. The aggregate applier extracts the system-specific
+	// state before calling RouteEvent.
+	projector := Projector{}
+	aggState := aggregate.State{
+		Systems: map[module.Key]any{
+			{ID: SystemID, Version: SystemVersion}: SnapshotState{
+				CampaignID: "camp-1",
+				GMFear:     3,
+			},
+		},
+	}
+	_, err := projector.Apply(aggState, event.Event{
+		CampaignID:    "camp-1",
+		Type:          EventTypeGMFearChanged,
+		SystemID:      SystemID,
+		SystemVersion: SystemVersion,
+		PayloadJSON:   []byte(`{"before":3,"after":5}`),
+	})
+	if err == nil {
+		t.Fatal("expected error when passing aggregate.State to projector")
 	}
 }
 

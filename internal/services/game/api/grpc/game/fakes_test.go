@@ -335,6 +335,14 @@ func (s *fakeParticipantStore) ListParticipants(_ context.Context, campaignID st
 	}, nil
 }
 
+func (s *fakeParticipantStore) CountParticipants(_ context.Context, campaignID string) (int, error) {
+	byID, ok := s.participants[campaignID]
+	if !ok {
+		return 0, nil
+	}
+	return len(byID), nil
+}
+
 // fakeCharacterStore is a test double for storage.CharacterStore.
 type fakeCharacterStore struct {
 	characters map[string]map[string]storage.CharacterRecord // campaignID -> characterID -> Character
@@ -407,6 +415,14 @@ func (s *fakeCharacterStore) ListCharacters(_ context.Context, campaignID string
 		Characters:    result,
 		NextPageToken: "",
 	}, nil
+}
+
+func (s *fakeCharacterStore) CountCharacters(_ context.Context, campaignID string) (int, error) {
+	byID, ok := s.characters[campaignID]
+	if !ok {
+		return 0, nil
+	}
+	return len(byID), nil
 }
 
 // fakeDaggerheartStore is a test double for storage.DaggerheartStore.
