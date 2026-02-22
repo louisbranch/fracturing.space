@@ -2,19 +2,6 @@ package templates
 
 import sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
 
-type LayoutOptions struct {
-	Title           string
-	Lang            string
-	AppName         string
-	Loc             Localizer
-	CurrentPath     string
-	CampaignName    string
-	UserName        string
-	UserAvatarURL   string
-	CustomBreadcrumbs []sharedtemplates.BreadcrumbItem
-	UseCustomBreadcrumbs bool
-}
-
 // ShellLayout wraps auth/public pages in the shared HTML shell.
 templ ShellLayout(title string, lang string, loc Localizer) {
 	@sharedtemplates.ShellLayout(title, lang, loc) {
@@ -35,6 +22,9 @@ templ Layout(options LayoutOptions) {
 				MainAria:      sharedtemplates.T(options.Loc, "game.aria_label"),
 				UserName:      options.UserName,
 				UserAvatarURL: options.UserAvatarURL,
+				SideMenu:      options.ChromeMenu,
+				MainStyle:     options.MainStyle,
+				MainClass:     options.MainClass,
 			},
 		}) {
 			{ children... }
@@ -50,6 +40,9 @@ templ Layout(options LayoutOptions) {
 				MainAria:      sharedtemplates.T(options.Loc, "game.aria_label"),
 				UserName:      options.UserName,
 				UserAvatarURL: options.UserAvatarURL,
+				SideMenu:      options.ChromeMenu,
+				MainStyle:     options.MainStyle,
+				MainClass:     options.MainClass,
 			},
 		}) {
 			{ children... }

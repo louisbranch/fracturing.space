@@ -1,6 +1,9 @@
 package templates
 
+import "strings"
+
 import sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
+import commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 
 // CampaignListItem models one campaign row in the campaigns list.
 type CampaignListItem struct {
@@ -80,20 +83,135 @@ type UserInviteItem struct {
 	ParticipantID string
 }
 
+templ CampaignWorkspaceMenu(page PageContext, campaignID string, activeSection string) {
+	<ul class="menu bg-base-200 rounded-box w-full">
+		<li class="menu-title"><span>{ T(page.Loc, "campaign.shell_workspace") }</span></li>
+		<li>
+			<a
+				class={ campaignWorkspaceLinkClass(activeSection, "chat") }
+				href={ "/campaigns/" + campaignID }
+				hx-get={ "/campaigns/" + campaignID }
+				hx-target="#main"
+				hx-swap="innerHTML"
+				hx-push-url="true"
+			>
+				@sharedtemplates.LucideIconID(commonv1.IconId_ICON_ID_CHAT, "size-4 me-2")
+				{ T(page.Loc, "campaign.shell_chat") }
+			</a>
+		</li>
+		<li>
+			<a
+				class={ campaignWorkspaceLinkClass(activeSection, "sessions") }
+				href={ "/campaigns/" + campaignID + "/sessions" }
+				hx-get={ "/campaigns/" + campaignID + "/sessions" }
+				hx-target="#main"
+				hx-swap="innerHTML"
+				hx-push-url="true"
+			>
+				@sharedtemplates.LucideIconID(commonv1.IconId_ICON_ID_SESSION, "size-4 me-2")
+				{ T(page.Loc, "campaign.shell.sessions") }
+			</a>
+		</li>
+		<li>
+			<a
+				class={ campaignWorkspaceLinkClass(activeSection, "participants") }
+				href={ "/campaigns/" + campaignID + "/participants" }
+				hx-get={ "/campaigns/" + campaignID + "/participants" }
+				hx-target="#main"
+				hx-swap="innerHTML"
+				hx-push-url="true"
+			>
+				@sharedtemplates.LucideIconID(commonv1.IconId_ICON_ID_PARTICIPANT, "size-4 me-2")
+				{ T(page.Loc, "campaign.shell.participants") }
+			</a>
+		</li>
+		<li>
+			<a
+				class={ campaignWorkspaceLinkClass(activeSection, "characters") }
+				href={ "/campaigns/" + campaignID + "/characters" }
+				hx-get={ "/campaigns/" + campaignID + "/characters" }
+				hx-target="#main"
+				hx-swap="innerHTML"
+				hx-push-url="true"
+			>
+				@sharedtemplates.LucideIconID(commonv1.IconId_ICON_ID_CHARACTER, "size-4 me-2")
+				{ T(page.Loc, "campaign.shell.characters") }
+			</a>
+		</li>
+		<li>
+			<a
+				class={ campaignWorkspaceLinkClass(activeSection, "invites") }
+				href={ "/campaigns/" + campaignID + "/invites" }
+				hx-get={ "/campaigns/" + campaignID + "/invites" }
+				hx-target="#main"
+				hx-swap="innerHTML"
+				hx-push-url="true"
+			>
+				@sharedtemplates.LucideIconID(commonv1.IconId_ICON_ID_KEY, "size-4 me-2")
+				{ T(page.Loc, "campaign.shell.invites") }
+			</a>
+		</li>
+	</ul>
+}
+
 templ GamePageShell(page PageContext, title string) {
-	@Layout(LayoutOptions{
-		Title:            title,
-		Lang:             page.Lang,
-		AppName:          page.AppName,
-		Loc:              page.Loc,
-		CurrentPath:      page.CurrentPath,
-		CampaignName:     page.CampaignName,
-		UserName:         page.UserName,
-		UserAvatarURL:    page.UserAvatarURL,
-		UseCustomBreadcrumbs: false,
-	}) {
-      { children... }
+	if campaignID, activeSection, hasWorkspaceMenu := campaignWorkspaceInfo(page.CurrentPath); hasWorkspaceMenu {
+		@Layout(LayoutOptions{
+			Title:                title,
+			Lang:                 page.Lang,
+			AppName:              page.AppName,
+			Loc:                  page.Loc,
+			CurrentPath:          page.CurrentPath,
+			CampaignName:         page.CampaignName,
+			MainStyle:            campaignMainStyle(page.CampaignCoverImageURL),
+			MainClass:            campaignMainClass(page.CampaignCoverImageURL),
+			UserName:             page.UserName,
+			UserAvatarURL:        page.UserAvatarURL,
+			ChromeMenu:           CampaignWorkspaceMenu(page, campaignID, activeSection),
+			UseCustomBreadcrumbs:  false,
+		}) {
+		<section class="space-y-4">
+			<div
+				data-campaign-main-style={ campaignMainStyle(page.CampaignCoverImageURL) }
+				data-campaign-main-extra-class={ campaignMainClass(page.CampaignCoverImageURL) }
+				class="sr-only"
+				aria-hidden="true"
+			></div>
+			{ children... }
+		</section>
+		}
+	} else {
+		@Layout(LayoutOptions{
+			Title:                title,
+			Lang:                 page.Lang,
+			AppName:              page.AppName,
+			Loc:                  page.Loc,
+			CurrentPath:          page.CurrentPath,
+			CampaignName:         page.CampaignName,
+			UserName:             page.UserName,
+			UserAvatarURL:        page.UserAvatarURL,
+			UseCustomBreadcrumbs:  false,
+		}) {
+		{ children... }
+		}
 	}
+}
+
+func campaignMainStyle(coverImageURL string) string {
+	coverImageURL = strings.TrimSpace(coverImageURL)
+	if coverImageURL == "" {
+		return ""
+	}
+	safeCoverImageURL := strings.ReplaceAll(coverImageURL, "\"", "\\\"")
+	return "background-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.55)), url(\"" + safeCoverImageURL + "\"); background-size: cover; background-position: center; background-repeat: no-repeat;"
+}
+
+func campaignMainClass(coverImageURL string) string {
+	coverImageURL = strings.TrimSpace(coverImageURL)
+	if coverImageURL == "" {
+		return ""
+	}
+	return "px-4"
 }
 
 templ CampaignsListPage(page PageContext, campaigns []CampaignListItem) {

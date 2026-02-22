@@ -32,6 +32,40 @@ func (h *handler) renderCampaignPage(w http.ResponseWriter, r *http.Request, cam
 	}
 }
 
+func (h *handler) campaignCoverImage(ctx context.Context, campaignID string) string {
+	campaignID = strings.TrimSpace(campaignID)
+	config := Config{}
+	if h != nil {
+		config = h.config
+	}
+	if campaignID == "" {
+		return campaignCoverImageURL(config, "", "", "")
+	}
+	if h == nil {
+		return campaignCoverImageURL(config, campaignID, "", "")
+	}
+
+	if cachedCampaign, ok := h.cachedCampaign(ctx, campaignID); ok {
+		return campaignCoverImageURL(config, campaignID, cachedCampaign.GetCoverSetId(), cachedCampaign.GetCoverAssetId())
+	}
+	if h.campaignClient == nil {
+		return campaignCoverImageURL(config, campaignID, "", "")
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	resp, err := h.campaignClient.GetCampaign(ctx, &statev1.GetCampaignRequest{
+		CampaignId: campaignID,
+	})
+	if err != nil || resp == nil || resp.GetCampaign() == nil {
+		return campaignCoverImageURL(config, campaignID, "", "")
+	}
+	h.setCampaignCache(ctx, resp.GetCampaign())
+	campaign := resp.GetCampaign()
+	return campaignCoverImageURL(config, campaignID, campaign.GetCoverSetId(), campaign.GetCoverAssetId())
+}
+
 func (h *handler) campaignDisplayName(ctx context.Context, campaignID string) string {
 	campaignID = strings.TrimSpace(campaignID)
 	if campaignID == "" {

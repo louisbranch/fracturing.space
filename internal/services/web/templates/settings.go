@@ -25,6 +25,7 @@ type AIKeysPageState struct {
 func SettingsLayoutOptions(page PageContext) LayoutOptions {
 	options := LayoutOptionsForPage(page, "layout.settings", true)
 	options.CustomBreadcrumbs = []sharedtemplates.BreadcrumbItem{}
+	options.ChromeMenu = SettingsMenu(page)
 	return options
 }
 
@@ -35,5 +36,6 @@ func SettingsAIKeysLayoutOptions(page PageContext) LayoutOptions {
 		{Label: T(page.Loc, "layout.settings"), URL: "/settings"},
 		{Label: T(page.Loc, "layout.settings_ai_keys"), URL: ""},
 	}
+	options.ChromeMenu = SettingsMenu(page)
 	return options
 }

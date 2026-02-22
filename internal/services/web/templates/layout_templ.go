@@ -12,19 +12,6 @@ import (
 	sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
 )
 
-type LayoutOptions struct {
-	Title                string
-	Lang                 string
-	AppName              string
-	Loc                  Localizer
-	CurrentPath          string
-	CampaignName         string
-	UserName             string
-	UserAvatarURL        string
-	CustomBreadcrumbs    []sharedtemplates.BreadcrumbItem
-	UseCustomBreadcrumbs bool
-}
-
 // ShellLayout wraps auth/public pages in the shared HTML shell.
 func ShellLayout(title string, lang string, loc Localizer) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
@@ -124,6 +111,9 @@ func Layout(options LayoutOptions) templ.Component {
 					MainAria:      sharedtemplates.T(options.Loc, "game.aria_label"),
 					UserName:      options.UserName,
 					UserAvatarURL: options.UserAvatarURL,
+					SideMenu:      options.ChromeMenu,
+					MainStyle:     options.MainStyle,
+					MainClass:     options.MainClass,
 				},
 			}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var4), templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
@@ -158,6 +148,9 @@ func Layout(options LayoutOptions) templ.Component {
 					MainAria:      sharedtemplates.T(options.Loc, "game.aria_label"),
 					UserName:      options.UserName,
 					UserAvatarURL: options.UserAvatarURL,
+					SideMenu:      options.ChromeMenu,
+					MainStyle:     options.MainStyle,
+					MainClass:     options.MainClass,
 				},
 			}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var5), templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {

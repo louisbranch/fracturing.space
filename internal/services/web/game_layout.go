@@ -82,6 +82,7 @@ func (h *handler) pageContextUserAvatar(ctx context.Context, sess *session) stri
 func (h *handler) pageContextForCampaign(w http.ResponseWriter, r *http.Request, campaignID string) webtemplates.PageContext {
 	page := h.pageContext(w, r)
 	page.CampaignName = h.campaignDisplayName(r.Context(), campaignID)
+	page.CampaignCoverImageURL = h.campaignCoverImage(r.Context(), campaignID)
 	return page
 }
 

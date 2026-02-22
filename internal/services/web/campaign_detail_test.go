@@ -155,6 +155,13 @@ func TestAppCampaignDetailPageParticipantRendersCampaign(t *testing.T) {
 	if !strings.Contains(body, "/campaigns/camp-123/invites") {
 		t.Fatalf("expected invites link in body")
 	}
+	chatMenuLink := `<a class="menu-active" href="/campaigns/camp-123" hx-get="/campaigns/camp-123"`
+	if !strings.Contains(body, chatMenuLink) {
+		t.Fatalf("expected chat menu link to be active on campaign root")
+	}
+	if strings.Count(body, `class="card-title m-0"`) != 1 {
+		t.Fatalf("expected chat page card title once, got %d", strings.Count(body, `class="card-title m-0"`))
+	}
 }
 
 func TestAppCampaignDetailPagePropagatesUserMetadataToCampaignRead(t *testing.T) {

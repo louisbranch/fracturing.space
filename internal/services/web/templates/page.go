@@ -6,14 +6,15 @@ import (
 
 // PageContext provides shared layout context for pages.
 type PageContext struct {
-	Lang          string
-	Loc           Localizer
-	CurrentPath   string
-	CurrentQuery  string
-	CampaignName  string
-	UserName      string
-	UserAvatarURL string
-	AppName       string
+	Lang                  string
+	Loc                   Localizer
+	CurrentPath           string
+	CurrentQuery          string
+	CampaignName          string
+	CampaignCoverImageURL string
+	UserName              string
+	UserAvatarURL         string
+	AppName               string
 }
 
 func isGamePagePath(path string) bool {
