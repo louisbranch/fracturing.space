@@ -9,10 +9,10 @@
 // This boundary is what lets new game systems be added without changing the
 // core campaign/session/participant command flow.
 //
-// Compare with the sibling package domain/systems, which provides the
+// Compare with the sibling package domain/bridge, which provides the
 // projection-side adapter registry and the API metadata bridge (proto enum
 // mapping). The two packages collaborate but own different concerns:
 //
 //   - module.Registry  — write-path module routing (commands → decider, events → projector)
-//   - systems.AdapterRegistry — projection-side adapters for system-specific read models
+//   - bridge.AdapterRegistry — projection-side adapters for system-specific read models
 package module

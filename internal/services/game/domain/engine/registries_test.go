@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 )
 
 // noopValidator is a payload validator that always succeeds. Used by test
@@ -93,6 +93,12 @@ func TestCoreDomains_AllSixRegistered(t *testing.T) {
 		}
 		if d.FoldHandledTypes == nil {
 			t.Fatalf("domain %s has nil FoldHandledTypes", name)
+		}
+		if d.DeciderHandledCommands == nil {
+			t.Fatalf("domain %s has nil DeciderHandledCommands", name)
+		}
+		if d.ProjectionHandledTypes == nil {
+			t.Fatalf("domain %s has nil ProjectionHandledTypes", name)
 		}
 	}
 }
@@ -474,9 +480,9 @@ func (a fakeAdapterForCoverage) Apply(_ context.Context, _ event.Event) error   
 func (a fakeAdapterForCoverage) Snapshot(_ context.Context, _ string) (any, error) { return nil, nil }
 func (a fakeAdapterForCoverage) HandledTypes() []event.Type                        { return a.handledTypes }
 
-func buildFakeAdapterRegistry(t *testing.T, handledTypes []event.Type) *systems.AdapterRegistry {
+func buildFakeAdapterRegistry(t *testing.T, handledTypes []event.Type) *bridge.AdapterRegistry {
 	t.Helper()
-	registry := systems.NewAdapterRegistry()
+	registry := bridge.NewAdapterRegistry()
 	if err := registry.Register(fakeAdapterForCoverage{
 		id:           "system-1",
 		version:      "v1",
@@ -577,14 +583,26 @@ func TestValidateEntityKeyedAddressing_PassesWithCurrentDomains(t *testing.T) {
 
 func TestValidateEntityKeyedAddressing_RejectsMissingPolicy(t *testing.T) {
 	eventRegistry := event.NewRegistry()
-	// Register a participant event without AddressingPolicyEntityTarget.
-	if err := eventRegistry.Register(event.Definition{
-		Type:       event.Type("participant.joined"),
-		Owner:      event.OwnerCore,
-		Intent:     event.IntentProjectionAndReplay,
-		Addressing: event.AddressingPolicyNone,
-	}); err != nil {
-		t.Fatalf("register event: %v", err)
+	// Register participant events: most with entity addressing, one without.
+	// The domain is detected as entity-keyed because at least one type has
+	// entity addressing, so the inconsistent type triggers an error.
+	participantTypes := []event.Type{
+		"participant.joined", "participant.updated", "participant.left",
+		"participant.bound", "participant.unbound", "participant.seat_reassigned",
+	}
+	for i, et := range participantTypes {
+		addressing := event.AddressingPolicyEntityTarget
+		if i == 0 {
+			addressing = event.AddressingPolicyNone // the inconsistent one
+		}
+		if err := eventRegistry.Register(event.Definition{
+			Type:       et,
+			Owner:      event.OwnerCore,
+			Intent:     event.IntentProjectionAndReplay,
+			Addressing: addressing,
+		}); err != nil {
+			t.Fatalf("register event %s: %v", et, err)
+		}
 	}
 
 	err := ValidateEntityKeyedAddressing(eventRegistry)
@@ -942,7 +960,7 @@ func TestValidateProjectionRegistries_FailsOnMissingProjectionHandler(t *testing
 	}
 
 	moduleRegistry := module.NewRegistry()
-	adapters := systems.NewAdapterRegistry()
+	adapters := bridge.NewAdapterRegistry()
 
 	err := ValidateProjectionRegistries(eventRegistry, moduleRegistry, adapters, nil)
 	if err == nil {
@@ -964,7 +982,7 @@ func TestValidateProjectionRegistries_FailsOnDeadProjectionHandler(t *testing.T)
 	}
 
 	moduleRegistry := module.NewRegistry()
-	adapters := systems.NewAdapterRegistry()
+	adapters := bridge.NewAdapterRegistry()
 
 	// Projection handler registered for an audit-only event — dead code.
 	projectionHandled := []event.Type{event.Type("test.audit_event")}
@@ -1268,3 +1286,289 @@ func (m *noValidatorModule) EmittableEventTypes() []event.Type {
 func (m *noValidatorModule) Decider() module.Decider           { return nil }
 func (m *noValidatorModule) Folder() module.Folder             { return nil }
 func (m *noValidatorModule) StateFactory() module.StateFactory { return nil }
+
+// --- Router-definition parity tests ---
+
+func TestValidateSystemRouterDefinitionParity_PassesWhenAligned(t *testing.T) {
+	registry := module.NewRegistry()
+	evTypes := []event.Type{"sys.system_1.ev1", "sys.system_1.ev2"}
+	mod := &fakeModuleWithFoldAndAdapterTypes{
+		id:             "system-1",
+		version:        "v1",
+		emittable:      evTypes,
+		foldHandled:    evTypes,
+		adapterHandled: evTypes,
+	}
+	if err := registry.Register(mod); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	eventRegistry := event.NewRegistry()
+	for _, et := range evTypes {
+		if err := eventRegistry.Register(event.Definition{
+			Type:            et,
+			Owner:           event.OwnerSystem,
+			Intent:          event.IntentProjectionAndReplay,
+			ValidatePayload: noopValidator,
+		}); err != nil {
+			t.Fatalf("register event: %v", err)
+		}
+	}
+
+	adapters := buildFakeAdapterRegistryWithTypes(t, "system-1", "v1", evTypes)
+
+	if err := ValidateSystemRouterDefinitionParity(registry, adapters, eventRegistry); err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+}
+
+func TestValidateSystemRouterDefinitionParity_FailsOnOrphanedFoldHandler(t *testing.T) {
+	registry := module.NewRegistry()
+	emittable := []event.Type{"sys.system_1.ev1"}
+	mod := &fakeModuleWithFoldAndAdapterTypes{
+		id:             "system-1",
+		version:        "v1",
+		emittable:      emittable,
+		foldHandled:    []event.Type{"sys.system_1.ev1", "sys.system_1.ev_orphan"},
+		adapterHandled: emittable,
+	}
+	if err := registry.Register(mod); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	eventRegistry := event.NewRegistry()
+	for _, et := range emittable {
+		if err := eventRegistry.Register(event.Definition{
+			Type:            et,
+			Owner:           event.OwnerSystem,
+			Intent:          event.IntentProjectionAndReplay,
+			ValidatePayload: noopValidator,
+		}); err != nil {
+			t.Fatalf("register event: %v", err)
+		}
+	}
+
+	adapters := buildFakeAdapterRegistryWithTypes(t, "system-1", "v1", emittable)
+
+	err := ValidateSystemRouterDefinitionParity(registry, adapters, eventRegistry)
+	if err == nil {
+		t.Fatal("expected error for orphaned fold handler")
+	}
+	if !strings.Contains(err.Error(), "sys.system_1.ev_orphan") {
+		t.Fatalf("expected error to mention orphaned type, got: %v", err)
+	}
+}
+
+func TestValidateSystemRouterDefinitionParity_FailsOnOrphanedAdapterHandler(t *testing.T) {
+	registry := module.NewRegistry()
+	emittable := []event.Type{"sys.system_1.ev1"}
+	mod := &fakeModuleWithFoldAndAdapterTypes{
+		id:             "system-1",
+		version:        "v1",
+		emittable:      emittable,
+		foldHandled:    emittable,
+		adapterHandled: []event.Type{"sys.system_1.ev1", "sys.system_1.ev_orphan"},
+	}
+	if err := registry.Register(mod); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	eventRegistry := event.NewRegistry()
+	for _, et := range emittable {
+		if err := eventRegistry.Register(event.Definition{
+			Type:            et,
+			Owner:           event.OwnerSystem,
+			Intent:          event.IntentProjectionAndReplay,
+			ValidatePayload: noopValidator,
+		}); err != nil {
+			t.Fatalf("register event: %v", err)
+		}
+	}
+
+	adapters := buildFakeAdapterRegistryWithTypes(t, "system-1", "v1",
+		[]event.Type{"sys.system_1.ev1", "sys.system_1.ev_orphan"})
+
+	err := ValidateSystemRouterDefinitionParity(registry, adapters, eventRegistry)
+	if err == nil {
+		t.Fatal("expected error for orphaned adapter handler")
+	}
+	if !strings.Contains(err.Error(), "sys.system_1.ev_orphan") {
+		t.Fatalf("expected error to mention orphaned type, got: %v", err)
+	}
+}
+
+// fakeModuleWithFoldAndAdapterTypes provides both fold and adapter handled types.
+type fakeModuleWithFoldAndAdapterTypes struct {
+	id             string
+	version        string
+	emittable      []event.Type
+	foldHandled    []event.Type
+	adapterHandled []event.Type
+}
+
+func (m *fakeModuleWithFoldAndAdapterTypes) ID() string                                 { return m.id }
+func (m *fakeModuleWithFoldAndAdapterTypes) Version() string                            { return m.version }
+func (m *fakeModuleWithFoldAndAdapterTypes) RegisterCommands(_ *command.Registry) error { return nil }
+func (m *fakeModuleWithFoldAndAdapterTypes) RegisterEvents(_ *event.Registry) error     { return nil }
+func (m *fakeModuleWithFoldAndAdapterTypes) EmittableEventTypes() []event.Type {
+	return m.emittable
+}
+func (m *fakeModuleWithFoldAndAdapterTypes) Decider() module.Decider { return nil }
+func (m *fakeModuleWithFoldAndAdapterTypes) Folder() module.Folder {
+	return &fakeFolderWithFoldTypes{handled: m.foldHandled}
+}
+func (m *fakeModuleWithFoldAndAdapterTypes) StateFactory() module.StateFactory { return nil }
+
+func buildFakeAdapterRegistryWithTypes(t *testing.T, id, version string, handledTypes []event.Type) *bridge.AdapterRegistry {
+	t.Helper()
+	registry := bridge.NewAdapterRegistry()
+	if err := registry.Register(fakeAdapterForCoverage{
+		id:           id,
+		version:      version,
+		handledTypes: handledTypes,
+	}); err != nil {
+		t.Fatalf("register fake adapter: %v", err)
+	}
+	return registry
+}
+
+// --- Core decider command coverage tests ---
+
+func TestValidateCoreDeciderCommandCoverage_PassesWithCurrentDomains(t *testing.T) {
+	registries, err := BuildRegistries()
+	if err != nil {
+		t.Fatalf("build registries: %v", err)
+	}
+	if err := ValidateCoreDeciderCommandCoverage(registries.Commands); err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+}
+
+func TestValidateCoreDeciderCommandCoverage_FailsOnMissingHandler(t *testing.T) {
+	cmdRegistry := command.NewRegistry()
+	// Register a core command that no domain's DeciderHandledCommands claims.
+	if err := cmdRegistry.Register(command.Definition{
+		Type:  command.Type("test.unhandled_core_cmd"),
+		Owner: command.OwnerCore,
+	}); err != nil {
+		t.Fatalf("register command: %v", err)
+	}
+
+	err := ValidateCoreDeciderCommandCoverage(cmdRegistry)
+	if err == nil {
+		t.Fatal("expected error for core command without decider handler")
+	}
+	if !strings.Contains(err.Error(), "test.unhandled_core_cmd") {
+		t.Fatalf("expected error to mention unhandled type, got: %v", err)
+	}
+}
+
+func TestValidateCoreDeciderCommandCoverage_IgnoresSystemCommands(t *testing.T) {
+	registries, err := BuildRegistries()
+	if err != nil {
+		t.Fatalf("build registries: %v", err)
+	}
+	// Add an extra system command — should be ignored by core coverage check.
+	if err := registries.Commands.Register(command.Definition{
+		Type:  command.Type("sys.test.some_cmd"),
+		Owner: command.OwnerSystem,
+	}); err != nil {
+		t.Fatalf("register command: %v", err)
+	}
+
+	if err := ValidateCoreDeciderCommandCoverage(registries.Commands); err != nil {
+		t.Fatalf("expected no error for system command, got: %v", err)
+	}
+}
+
+func TestValidateCoreDeciderCommandCoverage_FailsOnStaleDeclaredCommand(t *testing.T) {
+	// Build full registries so all core commands are registered, then check
+	// that a domain declaring a command NOT in the registry triggers an error.
+	// This is tested indirectly — if a domain's DeciderHandledCommands includes
+	// a type not registered in the command registry, the reverse check catches it.
+	cmdRegistry := command.NewRegistry()
+
+	err := ValidateCoreDeciderCommandCoverage(cmdRegistry)
+	if err == nil {
+		t.Fatal("expected error for declared command types not in registry")
+	}
+	if !strings.Contains(err.Error(), "stale") {
+		t.Fatalf("expected error to mention stale, got: %v", err)
+	}
+}
+
+// --- Core projection declaration tests ---
+
+func TestValidateCoreProjectionDeclarations_PassesWithCurrentDomains(t *testing.T) {
+	registries, err := BuildRegistries()
+	if err != nil {
+		t.Fatalf("build registries: %v", err)
+	}
+	// Collect all projection handled types from domain declarations.
+	var declared []event.Type
+	for _, domain := range CoreDomains() {
+		if domain.ProjectionHandledTypes != nil {
+			declared = append(declared, domain.ProjectionHandledTypes()...)
+		}
+	}
+	if err := ValidateCoreProjectionDeclarations(registries.Events, declared); err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+}
+
+func TestValidateCoreProjectionDeclarations_FailsOnMissingProjectionHandler(t *testing.T) {
+	eventRegistry := event.NewRegistry()
+	if err := eventRegistry.Register(event.Definition{
+		Type:   event.Type("test.needs_projection"),
+		Owner:  event.OwnerCore,
+		Intent: event.IntentProjectionAndReplay,
+	}); err != nil {
+		t.Fatalf("register event: %v", err)
+	}
+
+	// No domain declares this type — forward check should fail.
+	err := ValidateCoreProjectionDeclarations(eventRegistry, nil)
+	if err == nil {
+		t.Fatal("expected error for undeclared projection event")
+	}
+	if !strings.Contains(err.Error(), "test.needs_projection") {
+		t.Fatalf("expected error to mention undeclared type, got: %v", err)
+	}
+}
+
+func TestValidateCoreProjectionDeclarations_FailsOnStaleDeclaredType(t *testing.T) {
+	eventRegistry := event.NewRegistry()
+	// Declared but not in registry → stale.
+	declared := []event.Type{event.Type("test.stale_declared")}
+
+	err := ValidateCoreProjectionDeclarations(eventRegistry, declared)
+	if err == nil {
+		t.Fatal("expected error for stale declared type")
+	}
+	if !strings.Contains(err.Error(), "stale") {
+		t.Fatalf("expected error to mention stale, got: %v", err)
+	}
+}
+
+func TestValidateCoreProjectionDeclarations_IgnoresNonProjectionEvents(t *testing.T) {
+	eventRegistry := event.NewRegistry()
+	if err := eventRegistry.Register(event.Definition{
+		Type:   event.Type("test.replay_only"),
+		Owner:  event.OwnerCore,
+		Intent: event.IntentReplayOnly,
+	}); err != nil {
+		t.Fatalf("register event: %v", err)
+	}
+	if err := eventRegistry.Register(event.Definition{
+		Type:   event.Type("test.audit_only"),
+		Owner:  event.OwnerCore,
+		Intent: event.IntentAuditOnly,
+	}); err != nil {
+		t.Fatalf("register event: %v", err)
+	}
+
+	// No declarations needed for non-projection events.
+	if err := ValidateCoreProjectionDeclarations(eventRegistry, nil); err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+}

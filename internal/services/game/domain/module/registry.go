@@ -66,6 +66,12 @@ type CommandTyper interface {
 //
 // Implementations must be deterministic: given the same inputs they must
 // return the same state, because replay depends on this guarantee.
+//
+// NOTE: This is the write-path StateFactory (returns untyped `any`).
+// The API-bridge StateFactory in domain/bridge returns typed handlers
+// (CharacterStateHandler, SnapshotStateHandler). Daggerheart only implements
+// this module variant; the bridge variant is used by the API layer to
+// provide resource/damage abstractions.
 type StateFactory interface {
 	NewCharacterState(campaignID, characterID, kind string) (any, error)
 	NewSnapshotState(campaignID string) (any, error)

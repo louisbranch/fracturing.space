@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
+	daggerheartsys "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
-	daggerheartsys "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 )
 
 func TestApplyProjectionRequiredCoreEventsAreHandled(t *testing.T) {
@@ -20,7 +20,7 @@ func TestApplyProjectionRequiredCoreEventsAreHandled(t *testing.T) {
 		t.Fatalf("build registries: %v", err)
 	}
 
-	coreAdapters := systems.NewAdapterRegistry()
+	coreAdapters := bridge.NewAdapterRegistry()
 	if err := coreAdapters.Register(daggerheartsys.NewAdapter(newProjectionDaggerheartStore())); err != nil {
 		t.Fatalf("register daggerheart adapter: %v", err)
 	}
@@ -59,7 +59,7 @@ func TestApplyProjectionRequiredSystemEventsAreHandled(t *testing.T) {
 		t.Fatalf("build registries: %v", err)
 	}
 
-	adapters := systems.NewAdapterRegistry()
+	adapters := bridge.NewAdapterRegistry()
 	if err := adapters.Register(daggerheartsys.NewAdapter(newProjectionDaggerheartStore())); err != nil {
 		t.Fatalf("register daggerheart adapter: %v", err)
 	}

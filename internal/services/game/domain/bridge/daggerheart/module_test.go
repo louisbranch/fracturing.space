@@ -69,60 +69,46 @@ func eventValidationCases() []eventValidationCase {
 	}
 }
 
-func TestFoldHandledTypes_DerivedFromEventDefinitions(t *testing.T) {
+func TestFoldHandledTypes_DerivedFromRouter(t *testing.T) {
 	folder := NewFolder()
 	foldTypes := folder.FoldHandledTypes()
 
-	// Build expected set from daggerheartEventDefinitions with replay intent.
-	expected := make(map[event.Type]struct{})
-	for _, def := range daggerheartEventDefinitions {
-		if def.Intent == event.IntentProjectionAndReplay || def.Intent == event.IntentReplayOnly {
-			expected[def.Type] = struct{}{}
-		}
+	// FoldHandledTypes must match the router's registrations — not the event
+	// definitions. This ensures a missing HandleFold registration is caught by
+	// startup validators instead of silently passing validation.
+	routerTypes := folder.router.FoldHandledTypes()
+	if len(foldTypes) != len(routerTypes) {
+		t.Fatalf("FoldHandledTypes() len = %d, router len = %d", len(foldTypes), len(routerTypes))
 	}
-
-	seen := make(map[event.Type]struct{})
+	routerSet := make(map[event.Type]struct{}, len(routerTypes))
+	for _, rt := range routerTypes {
+		routerSet[rt] = struct{}{}
+	}
 	for _, ft := range foldTypes {
-		if _, dup := seen[ft]; dup {
-			t.Fatalf("FoldHandledTypes() contains duplicate type %s", ft)
-		}
-		seen[ft] = struct{}{}
-		if _, ok := expected[ft]; !ok {
-			t.Errorf("FoldHandledTypes() contains %s which is not in daggerheartEventDefinitions with replay intent", ft)
-		}
-	}
-	for typ := range expected {
-		if _, ok := seen[typ]; !ok {
-			t.Errorf("FoldHandledTypes() is missing type %s from daggerheartEventDefinitions", typ)
+		if _, ok := routerSet[ft]; !ok {
+			t.Errorf("FoldHandledTypes() contains %s which is not in router registrations", ft)
 		}
 	}
 }
 
-func TestAdapterHandledTypes_DerivedFromEventDefinitions(t *testing.T) {
-	adapter := &Adapter{}
+func TestAdapterHandledTypes_DerivedFromRouter(t *testing.T) {
+	adapter := NewAdapter(nil)
 	handledTypes := adapter.HandledTypes()
 
-	// Build expected set from daggerheartEventDefinitions with projection intent.
-	expected := make(map[event.Type]struct{})
-	for _, def := range daggerheartEventDefinitions {
-		if def.Intent == event.IntentProjectionAndReplay {
-			expected[def.Type] = struct{}{}
-		}
+	// HandledTypes must match the router's registrations — not the event
+	// definitions. This ensures a missing HandleAdapter registration is caught
+	// by startup validators instead of silently passing validation.
+	routerTypes := adapter.router.HandledTypes()
+	if len(handledTypes) != len(routerTypes) {
+		t.Fatalf("HandledTypes() len = %d, router len = %d", len(handledTypes), len(routerTypes))
 	}
-
-	seen := make(map[event.Type]struct{})
+	routerSet := make(map[event.Type]struct{}, len(routerTypes))
+	for _, rt := range routerTypes {
+		routerSet[rt] = struct{}{}
+	}
 	for _, ht := range handledTypes {
-		if _, dup := seen[ht]; dup {
-			t.Fatalf("HandledTypes() contains duplicate type %s", ht)
-		}
-		seen[ht] = struct{}{}
-		if _, ok := expected[ht]; !ok {
-			t.Errorf("HandledTypes() contains %s which is not in daggerheartEventDefinitions with projection intent", ht)
-		}
-	}
-	for typ := range expected {
-		if _, ok := seen[typ]; !ok {
-			t.Errorf("HandledTypes() is missing type %s from daggerheartEventDefinitions", typ)
+		if _, ok := routerSet[ht]; !ok {
+			t.Errorf("HandledTypes() contains %s which is not in router registrations", ht)
 		}
 	}
 }

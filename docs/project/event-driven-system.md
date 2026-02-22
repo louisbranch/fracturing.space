@@ -320,8 +320,8 @@ Core projection dispatch:
 
 System projection adapter surface:
 
-- `internal/services/game/domain/systems/adapter_registry.go`
-- Daggerheart example: `internal/services/game/domain/systems/daggerheart/adapter.go`
+- `internal/services/game/domain/bridge/adapter_registry.go`
+- Daggerheart example: `internal/services/game/domain/bridge/daggerheart/adapter.go`
 
 Consistency model:
 
@@ -457,5 +457,5 @@ These are current documentation or architecture pain points worth improving.
      `Handler.prepareExecution`, not the projection apply.
 4. Two similarly named system registries:
    - `domain/system.Registry` (module command/event routing) and
-     `domain/systems.Registry` (API/system metadata bridge) can be confused.
+     `domain/bridge.Registry` (API/system metadata bridge) can be confused.
    - Improvement: clarify names or collapse responsibilities.

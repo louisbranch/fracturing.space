@@ -12,10 +12,10 @@ import (
 )
 
 const (
-	commandTypeCreate command.Type = "invite.create"
-	commandTypeClaim  command.Type = "invite.claim"
-	commandTypeRevoke command.Type = "invite.revoke"
-	commandTypeUpdate command.Type = "invite.update"
+	CommandTypeCreate command.Type = "invite.create"
+	CommandTypeClaim  command.Type = "invite.claim"
+	CommandTypeRevoke command.Type = "invite.revoke"
+	CommandTypeUpdate command.Type = "invite.update"
 	EventTypeCreated  event.Type   = "invite.created"
 	EventTypeClaimed  event.Type   = "invite.claimed"
 	EventTypeRevoked  event.Type   = "invite.revoked"
@@ -41,7 +41,7 @@ const (
 // and replayed for investigation or migration.
 func Decide(state State, cmd command.Command, now func() time.Time) command.Decision {
 	switch cmd.Type {
-	case commandTypeCreate:
+	case CommandTypeCreate:
 		if state.Created {
 			return command.Reject(command.Rejection{Code: rejectionCodeInviteAlreadyExists, Message: "invite already exists"})
 		}
@@ -71,7 +71,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		payloadJSON, _ := json.Marshal(normalizedPayload)
 		return command.Accept(command.NewEvent(cmd, EventTypeCreated, "invite", inviteID, payloadJSON, now().UTC()))
 
-	case commandTypeClaim:
+	case CommandTypeClaim:
 		if !state.Created {
 			return command.Reject(command.Rejection{Code: rejectionCodeInviteNotCreated, Message: "invite not created"})
 		}
@@ -111,7 +111,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		payloadJSON, _ := json.Marshal(normalizedPayload)
 		return command.Accept(command.NewEvent(cmd, EventTypeClaimed, "invite", inviteID, payloadJSON, now().UTC()))
 
-	case commandTypeRevoke:
+	case CommandTypeRevoke:
 		if !state.Created {
 			return command.Reject(command.Rejection{Code: rejectionCodeInviteNotCreated, Message: "invite not created"})
 		}
@@ -135,7 +135,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			now,
 		)
 
-	case commandTypeUpdate:
+	case CommandTypeUpdate:
 		if !state.Created {
 			return command.Reject(command.Rejection{Code: rejectionCodeInviteNotCreated, Message: "invite not created"})
 		}

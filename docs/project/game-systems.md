@@ -77,8 +77,8 @@ type Module interface {
 
 Locations:
 
-- `internal/services/game/domain/systems/registry_bridge.go`
-- `internal/services/game/domain/systems/adapter_registry.go`
+- `internal/services/game/domain/bridge/registry_bridge.go`
+- `internal/services/game/domain/bridge/adapter_registry.go`
 
 Used for:
 
@@ -110,25 +110,39 @@ SystemDescriptor (manifest/manifest.go)
 │   ├── Decider()         → command decisions
 │   └── Folder()          → aggregate fold / replay
 │
-├── BuildMetadataSystem() → systems.Registry      (API metadata bridge)
+├── BuildMetadataSystem() → bridge.Registry      (API metadata bridge)
 │   └── Maps system_id + version to protobuf enum for transport layers
 │
-└── BuildAdapter()        → systems.AdapterRegistry (read-path projections)
+└── BuildAdapter()        → bridge.AdapterRegistry (read-path projections)
     └── Applies system events to denormalized projection tables
 ```
 
 - **`module.Registry`** (`domain/module/registry.go`): Routes system commands to
   deciders and system events to folders. Used by the domain engine write-path
   and the replay pipeline.
-- **`systems.Registry`** (`domain/systems/registry_bridge.go`): Maps
+- **`bridge.Registry`** (`domain/bridge/registry_bridge.go`): Maps
   `system_id` + `system_version` to protobuf `GameSystem` enums. Used by gRPC
   and MCP transport layers to expose system metadata.
-- **`systems.AdapterRegistry`** (`domain/systems/adapter_registry.go`): Routes
+- **`bridge.AdapterRegistry`** (`domain/bridge/adapter_registry.go`): Routes
   system-owned events to projection adapters that write to system-specific read
   tables. Used by `projection.Applier.applySystemEvent`.
 
 When adding a new system, register all three surfaces from one
 `SystemDescriptor` so they stay aligned.
+
+### StateFactory: two interfaces, different layers
+
+The codebase has two `StateFactory` interfaces that serve different layers:
+
+| Interface | Package | Returns | Used by |
+|---|---|---|---|
+| `module.StateFactory` | `domain/module` | `(any, error)` | Write-path aggregate fold / replay |
+| `bridge.StateFactory` | `domain/bridge` | Typed handlers (`CharacterStateHandler`, `SnapshotStateHandler`) | API bridge (gRPC/MCP transport) |
+
+New systems typically implement only the `module.StateFactory` variant. The
+`bridge.StateFactory` is satisfied by the metadata/registry system
+implementation (e.g. `DaggerheartRegistrySystem`) which wraps domain state
+behind the resource/damage abstractions the API layer needs.
 
 ## Where systems plug in
 
@@ -151,7 +165,7 @@ Server wiring entrypoints:
 
 ### 2. Implement a domain module
 
-Create `internal/services/game/domain/systems/{system}/module.go` that
+Create `internal/services/game/domain/bridge/{system}/module.go` that
 implements `system.Module`.
 
 Responsibilities:
@@ -212,13 +226,13 @@ Pass your module to `engine.BuildRegistries(...)` in
 ### 5. Register system entry metadata centrally
 
 In addition to engine registration, add or verify your system metadata and adapter
-construction entry in `internal/services/game/domain/systems/manifest/manifest.go` so
+construction entry in `internal/services/game/domain/bridge/manifest/manifest.go` so
 `Modules()`, `MetadataSystems()`, and `AdapterRegistry(...)` stay aligned.
 Prefer this file as your first newcomer onboarding step when adding a system.
 
 ### 6. Implement system projection adapter
 
-Create `internal/services/game/domain/systems/{system}/adapter.go` implementing
+Create `internal/services/game/domain/bridge/{system}/adapter.go` implementing
 `systems.Adapter`, then register it in
 `internal/services/game/api/grpc/game/system_adapters.go`.
 
@@ -286,12 +300,12 @@ Use Daggerheart as the baseline for structure and naming.
 
 | Concern | Location |
 |---|---|
-| Module wiring | `internal/services/game/domain/systems/daggerheart/module.go` |
-| Command decisions | `internal/services/game/domain/systems/daggerheart/decider.go` |
-| Replay folder (Fold method) | `internal/services/game/domain/systems/daggerheart/projector.go` |
-| Projection adapter | `internal/services/game/domain/systems/daggerheart/adapter.go` |
-| Event type constants | `internal/services/game/domain/systems/daggerheart/event_types.go` |
-| Payload contracts | `internal/services/game/domain/systems/daggerheart/payload.go` |
+| Module wiring | `internal/services/game/domain/bridge/daggerheart/module.go` |
+| Command decisions | `internal/services/game/domain/bridge/daggerheart/decider.go` |
+| Replay folder (Fold method) | `internal/services/game/domain/bridge/daggerheart/projector.go` |
+| Projection adapter | `internal/services/game/domain/bridge/daggerheart/adapter.go` |
+| Event type constants | `internal/services/game/domain/bridge/daggerheart/event_types.go` |
+| Payload contracts | `internal/services/game/domain/bridge/daggerheart/payload.go` |
 | gRPC system handlers | `internal/services/game/api/grpc/systems/daggerheart/` |
 
 ## Consistency expectations for system authors

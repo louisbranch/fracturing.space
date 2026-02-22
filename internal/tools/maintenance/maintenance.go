@@ -19,10 +19,10 @@ import (
 	"time"
 
 	"github.com/caarlos0/env/v11"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
+	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
-	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/integrity"

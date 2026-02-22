@@ -1,8 +1,8 @@
 package commandbuild
 
 import (
+	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
-	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 )
 
 // CoreInput describes a command envelope for core domain commands.

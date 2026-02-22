@@ -9,6 +9,8 @@ import (
 	"time"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
+	daggerheartsys "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
@@ -16,8 +18,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
-	daggerheartsys "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection/testevent"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
@@ -657,7 +657,7 @@ func TestApplySystemEvent_MissingAdapters(t *testing.T) {
 
 func TestApplySystemEvent_UnknownAdapter(t *testing.T) {
 	ctx := context.Background()
-	registry := systems.NewAdapterRegistry()
+	registry := bridge.NewAdapterRegistry()
 	applier := Applier{Adapters: registry}
 	evt := testevent.Event{Type: testevent.Type("system.custom"), SystemID: "daggerheart", PayloadJSON: []byte("{}")}
 	// No adapter registered for daggerheart in this registry, should error
@@ -724,7 +724,7 @@ func TestEnsureTimestamp(t *testing.T) {
 func TestApplySystemEvent_UsesAdapter(t *testing.T) {
 	ctx := context.Background()
 	adapter := &fakeAdapter{}
-	registry := systems.NewAdapterRegistry()
+	registry := bridge.NewAdapterRegistry()
 	if err := registry.Register(adapter); err != nil {
 		t.Fatalf("register adapter: %v", err)
 	}
@@ -748,7 +748,7 @@ func TestApplySystemEvent_UsesAdapter(t *testing.T) {
 func TestApplySystemEvent_UsesDaggerheartAdapterForSysPrefixedEventType(t *testing.T) {
 	ctx := context.Background()
 	daggerheartStore := newProjectionDaggerheartStore()
-	registry := systems.NewAdapterRegistry()
+	registry := bridge.NewAdapterRegistry()
 	if err := registry.Register(daggerheartsys.NewAdapter(daggerheartStore)); err != nil {
 		t.Fatalf("register adapter: %v", err)
 	}
@@ -1570,7 +1570,7 @@ func TestApplyCharacterDeleted_MissingEntityID(t *testing.T) {
 func TestApplyProfileUpdated(t *testing.T) {
 	ctx := context.Background()
 	dhStore := newProjectionDaggerheartStore()
-	adapters := systems.NewAdapterRegistry()
+	adapters := bridge.NewAdapterRegistry()
 	_ = adapters.Register(daggerheartsys.NewAdapter(dhStore))
 	applier := Applier{Adapters: adapters}
 
@@ -1618,7 +1618,7 @@ func TestApplyProfileUpdated(t *testing.T) {
 
 func TestApplyProfileUpdated_NilSystemProfile(t *testing.T) {
 	ctx := context.Background()
-	adapters := systems.NewAdapterRegistry()
+	adapters := bridge.NewAdapterRegistry()
 	applier := Applier{Adapters: adapters}
 
 	payload := testevent.ProfileUpdatedPayload{SystemProfile: nil}
@@ -1632,7 +1632,7 @@ func TestApplyProfileUpdated_NilSystemProfile(t *testing.T) {
 
 func TestApplyProfileUpdated_UnknownSystemSkipped(t *testing.T) {
 	ctx := context.Background()
-	adapters := systems.NewAdapterRegistry()
+	adapters := bridge.NewAdapterRegistry()
 	applier := Applier{Adapters: adapters}
 
 	payload := testevent.ProfileUpdatedPayload{SystemProfile: map[string]any{"other": "data"}}
@@ -1647,7 +1647,7 @@ func TestApplyProfileUpdated_UnknownSystemSkipped(t *testing.T) {
 func TestApplyProfileUpdated_RoutedThroughAdapter(t *testing.T) {
 	ctx := context.Background()
 	dhStore := newProjectionDaggerheartStore()
-	adapters := systems.NewAdapterRegistry()
+	adapters := bridge.NewAdapterRegistry()
 	if err := adapters.Register(daggerheartsys.NewAdapter(dhStore)); err != nil {
 		t.Fatalf("register adapter: %v", err)
 	}
@@ -1705,7 +1705,7 @@ func TestApplyProfileUpdated_MissingEntityID(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.ProfileUpdatedPayload{SystemProfile: map[string]any{"daggerheart": map[string]any{}}})
 	evt := testevent.Event{CampaignID: "camp-1", EntityID: "", Type: testevent.TypeProfileUpdated, PayloadJSON: data}
-	adapters := systems.NewAdapterRegistry()
+	adapters := bridge.NewAdapterRegistry()
 	_ = adapters.Register(daggerheartsys.NewAdapter(newProjectionDaggerheartStore()))
 	applier := Applier{Adapters: adapters}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
@@ -2798,7 +2798,7 @@ func TestApplyCharacterDeleted_ZeroCount(t *testing.T) {
 // --- applyProfileUpdated missing branches ---
 
 func TestApplyProfileUpdated_MissingCampaignID(t *testing.T) {
-	adapters := systems.NewAdapterRegistry()
+	adapters := bridge.NewAdapterRegistry()
 	_ = adapters.Register(daggerheartsys.NewAdapter(newProjectionDaggerheartStore()))
 	applier := Applier{Adapters: adapters}
 	evt := testevent.Event{CampaignID: "  ", EntityID: "char-1", Type: testevent.TypeProfileUpdated, PayloadJSON: []byte("{}")}
@@ -2808,7 +2808,7 @@ func TestApplyProfileUpdated_MissingCampaignID(t *testing.T) {
 }
 
 func TestApplyProfileUpdated_InvalidJSON(t *testing.T) {
-	adapters := systems.NewAdapterRegistry()
+	adapters := bridge.NewAdapterRegistry()
 	_ = adapters.Register(daggerheartsys.NewAdapter(newProjectionDaggerheartStore()))
 	applier := Applier{Adapters: adapters}
 	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: testevent.TypeProfileUpdated, PayloadJSON: []byte("{")}
@@ -2862,7 +2862,7 @@ func TestApply_UnhandledCoreEventReturnsError(t *testing.T) {
 // --- applySystemEvent missing branches ---
 
 func TestApplySystemEvent_MissingSystemID(t *testing.T) {
-	registry := systems.NewAdapterRegistry()
+	registry := bridge.NewAdapterRegistry()
 	if err := registry.Register(&fakeAdapter{}); err != nil {
 		t.Fatalf("register adapter: %v", err)
 	}
@@ -2875,7 +2875,7 @@ func TestApplySystemEvent_MissingSystemID(t *testing.T) {
 }
 
 func TestApplySystemEvent_InvalidGameSystem(t *testing.T) {
-	registry := systems.NewAdapterRegistry()
+	registry := bridge.NewAdapterRegistry()
 	if err := registry.Register(&fakeAdapter{}); err != nil {
 		t.Fatalf("register adapter: %v", err)
 	}
@@ -2887,7 +2887,7 @@ func TestApplySystemEvent_InvalidGameSystem(t *testing.T) {
 }
 
 func TestApplySystemEvent_UnhandledSystemEventReturnsError(t *testing.T) {
-	registry := systems.NewAdapterRegistry()
+	registry := bridge.NewAdapterRegistry()
 	if err := registry.Register(daggerheartsys.NewAdapter(newProjectionDaggerheartStore())); err != nil {
 		t.Fatalf("register adapter: %v", err)
 	}
@@ -3287,7 +3287,7 @@ func TestApplyParticipantUnbound_WithClaimIndex(t *testing.T) {
 // --- applyProfileUpdated validation profile branch ---
 
 func TestApplyProfileUpdated_InvalidProfileData(t *testing.T) {
-	adapters := systems.NewAdapterRegistry()
+	adapters := bridge.NewAdapterRegistry()
 	_ = adapters.Register(daggerheartsys.NewAdapter(newProjectionDaggerheartStore()))
 	applier := Applier{Adapters: adapters}
 	payload := map[string]any{"system_profile": map[string]any{"daggerheart": "not-an-object"}}
@@ -3301,7 +3301,7 @@ func TestApplyProfileUpdated_InvalidProfileData(t *testing.T) {
 func TestApplyProfileUpdated_DefaultLevel(t *testing.T) {
 	ctx := context.Background()
 	daggerheartStore := newProjectionDaggerheartStore()
-	adapters := systems.NewAdapterRegistry()
+	adapters := bridge.NewAdapterRegistry()
 	_ = adapters.Register(daggerheartsys.NewAdapter(daggerheartStore))
 	applier := Applier{Adapters: adapters}
 	payload := map[string]any{

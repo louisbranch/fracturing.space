@@ -14,7 +14,7 @@ import (
 
 func TestCoreDeciderRoutesInviteCommands(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
-	decider := coreDecider{}
+	decider := engine.CoreDecider{}
 	state := aggregate.State{
 		Invites: map[string]invite.State{
 			"inv-1": {Created: true, Status: "pending"},
@@ -42,7 +42,7 @@ func TestCoreDeciderRoutesInviteCommands(t *testing.T) {
 
 func TestCoreDeciderRoutesActionCommands(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
-	decider := coreDecider{}
+	decider := engine.CoreDecider{}
 
 	decision := decider.Decide(aggregate.State{}, command.Command{
 		CampaignID:  "camp-1",
@@ -63,7 +63,7 @@ func TestCoreDeciderRoutesActionCommands(t *testing.T) {
 }
 
 func TestCoreDeciderRejectsUnsupportedCommandType(t *testing.T) {
-	decider := coreDecider{}
+	decider := engine.CoreDecider{}
 	decision := decider.Decide(aggregate.State{}, command.Command{
 		CampaignID: "camp-1",
 		Type:       command.Type("story.scene.start"),
@@ -81,13 +81,13 @@ func TestCoreDeciderRejectsUnsupportedCommandType(t *testing.T) {
 	}
 }
 
-func TestBuildCoreRouteTable_RejectsMissingCoreRoute(t *testing.T) {
+func TestNewCoreDecider_RejectsMissingCoreRoute(t *testing.T) {
 	definitions := []command.Definition{
 		{Type: command.Type("campaign.create"), Owner: command.OwnerCore},
 		{Type: command.Type("story.scene.start"), Owner: command.OwnerCore},
 	}
 
-	_, err := buildCoreRouteTable(definitions)
+	_, err := engine.NewCoreDecider(nil, definitions)
 	if err == nil {
 		t.Fatal("expected error for missing core route")
 	}
@@ -96,40 +96,42 @@ func TestBuildCoreRouteTable_RejectsMissingCoreRoute(t *testing.T) {
 	}
 }
 
-func TestBuildCoreRouteTable_IncludesRegisteredCoreRoutes(t *testing.T) {
-	// Build definitions from all static routes plus one system command.
-	static := staticCoreCommandRoutes()
-	definitions := make([]command.Definition, 0, len(static)+1)
-	for cmdType := range static {
-		definitions = append(definitions, command.Definition{Type: cmdType, Owner: command.OwnerCore})
-	}
-	definitions = append(definitions, command.Definition{
-		Type: command.Type("sys.alpha.action.attack.resolve"), Owner: command.OwnerSystem,
-	})
-
-	routes, err := buildCoreRouteTable(definitions)
+func TestNewCoreDecider_IncludesRegisteredCoreRoutes(t *testing.T) {
+	registries, err := engine.BuildRegistries(registeredSystemModules()...)
 	if err != nil {
-		t.Fatalf("build core route table: %v", err)
+		t.Fatalf("build registries: %v", err)
 	}
-	// All static core routes should be present.
-	for cmdType := range static {
-		if _, ok := routes[cmdType]; !ok {
-			t.Fatalf("expected route for %s", cmdType)
+	definitions := registries.Commands.ListDefinitions()
+
+	decider, err := engine.NewCoreDecider(registries.Systems, definitions)
+	if err != nil {
+		t.Fatalf("build core decider: %v", err)
+	}
+
+	// Verify the decider routes a known core command (it should not reject with
+	// COMMAND_TYPE_UNSUPPORTED — domain-level rejections are acceptable since
+	// we're only testing routing, not business logic).
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	decision := decider.Decide(aggregate.State{}, command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("campaign.create"),
+		ActorType:   command.ActorTypeSystem,
+		PayloadJSON: []byte(`{}`),
+	}, func() time.Time { return now })
+	for _, r := range decision.Rejections {
+		if r.Code == "COMMAND_TYPE_UNSUPPORTED" {
+			t.Fatalf("campaign.create should be routed, got COMMAND_TYPE_UNSUPPORTED")
 		}
-	}
-	// System command should not be in core table.
-	if _, ok := routes[command.Type("sys.alpha.action.attack.resolve")]; ok {
-		t.Fatal("did not expect system command route in core table")
 	}
 }
 
-func TestBuildCoreRouteTable_RejectsStaleStaticRoute(t *testing.T) {
-	// Pass only a subset of static routes — the missing ones should be detected.
+func TestNewCoreDecider_RejectsStaleStaticRoute(t *testing.T) {
+	// Pass only a subset of core routes — the missing ones should be detected.
 	definitions := []command.Definition{
 		{Type: command.Type("campaign.create"), Owner: command.OwnerCore},
 	}
 
-	_, err := buildCoreRouteTable(definitions)
+	_, err := engine.NewCoreDecider(nil, definitions)
 	if err == nil {
 		t.Fatal("expected error for stale static route")
 	}
@@ -138,24 +140,16 @@ func TestBuildCoreRouteTable_RejectsStaleStaticRoute(t *testing.T) {
 	}
 }
 
-func TestBuildCoreRouteTable_StaticRoutesMatchCoreRegistry(t *testing.T) {
+func TestNewCoreDecider_StaticRoutesMatchCoreRegistry(t *testing.T) {
 	registries, err := engine.BuildRegistries(registeredSystemModules()...)
 	if err != nil {
 		t.Fatalf("build registries: %v", err)
 	}
-	definitions := registries.Commands.ListDefinitions()
-	routes := staticCoreCommandRoutes()
 
-	for commandType := range routes {
-		found := false
-		for _, definition := range definitions {
-			if definition.Type == commandType && definition.Owner == command.OwnerCore {
-				found = true
-				break
-			}
-		}
-		if !found {
-			t.Fatalf("static route %s is missing from core command registry", commandType)
-		}
+	// NewCoreDecider validates forward and reverse alignment between routes
+	// and registered definitions — so just verifying it succeeds is enough.
+	_, err = engine.NewCoreDecider(registries.Systems, registries.Commands.ListDefinitions())
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
 	}
 }

@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 )
 
 func TestScenarioMissingMechanicTimelineCoverage(t *testing.T) {

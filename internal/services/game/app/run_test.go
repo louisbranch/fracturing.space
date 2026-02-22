@@ -14,7 +14,7 @@ import (
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	authserver "github.com/louisbranch/fracturing.space/internal/services/auth/app"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	grpc_health_v1 "google.golang.org/grpc/health/grpc_health_v1"

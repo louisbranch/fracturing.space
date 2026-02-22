@@ -18,12 +18,7 @@ func ProjectionHandledTypes() []event.Type {
 	return registeredHandlerTypes()
 }
 
-func (a Applier) applyCampaignCreated(ctx context.Context, evt event.Event) error {
-	var payload campaign.CreatePayload
-	if err := decodePayload(evt.PayloadJSON, &payload, "campaign.created"); err != nil {
-		return err
-	}
-
+func (a Applier) applyCampaignCreated(ctx context.Context, evt event.Event, payload campaign.CreatePayload) error {
 	system, err := parseGameSystem(payload.GameSystem)
 	if err != nil {
 		return err
@@ -76,11 +71,7 @@ func (a Applier) applyCampaignCreated(ctx context.Context, evt event.Event) erro
 	})
 }
 
-func (a Applier) applyCampaignUpdated(ctx context.Context, evt event.Event) error {
-	var payload campaign.UpdatePayload
-	if err := decodePayload(evt.PayloadJSON, &payload, "campaign.updated"); err != nil {
-		return err
-	}
+func (a Applier) applyCampaignUpdated(ctx context.Context, evt event.Event, payload campaign.UpdatePayload) error {
 	if len(payload.Fields) == 0 {
 		return nil
 	}
@@ -130,11 +121,7 @@ func (a Applier) applyCampaignUpdated(ctx context.Context, evt event.Event) erro
 	return a.Campaign.Put(ctx, updated)
 }
 
-func (a Applier) applyCampaignForked(ctx context.Context, evt event.Event) error {
-	var payload campaign.ForkPayload
-	if err := decodePayload(evt.PayloadJSON, &payload, "campaign.forked"); err != nil {
-		return err
-	}
+func (a Applier) applyCampaignForked(ctx context.Context, evt event.Event, payload campaign.ForkPayload) error {
 	return a.CampaignFork.SetCampaignForkMetadata(ctx, evt.CampaignID, storage.ForkMetadata{
 		ParentCampaignID: payload.ParentCampaignID,
 		ForkEventSeq:     payload.ForkEventSeq,

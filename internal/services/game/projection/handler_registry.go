@@ -1,7 +1,6 @@
 package projection
 
 import (
-	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -42,59 +41,65 @@ const (
 	// nil checks and skip claim logic when the store is nil.
 )
 
-// handlerEntry declares the preconditions and apply function for one event type.
+// handlerEntry declares preconditions for validatePreconditions. Used by the
+// CoreRouter for store/ID checks before handler dispatch.
 type handlerEntry struct {
 	stores storeRequirement
 	ids    idRequirement
-	apply  func(Applier, context.Context, event.Event) error
 }
 
-// handlers maps each core projection event type to its handler entry.
-var handlers = map[event.Type]handlerEntry{
+// coreRouter is the package-level router that dispatches core projection events.
+var coreRouter = buildCoreRouter()
+
+// buildCoreRouter constructs the core projection router with all handler
+// registrations. This replaces the former handlers map with typed dispatch
+// via HandleProjection/HandleProjectionRaw.
+func buildCoreRouter() *CoreRouter {
+	r := NewCoreRouter()
+
 	// campaign
-	campaign.EventTypeCreated: {stores: needCampaign, ids: requireEntityID, apply: Applier.applyCampaignCreated},
-	campaign.EventTypeUpdated: {stores: needCampaign, ids: requireCampaignID, apply: Applier.applyCampaignUpdated},
-	campaign.EventTypeForked:  {stores: needCampaignFork, ids: requireCampaignID, apply: Applier.applyCampaignForked},
+	HandleProjection(r, campaign.EventTypeCreated, needCampaign, requireEntityID, Applier.applyCampaignCreated)
+	HandleProjection(r, campaign.EventTypeUpdated, needCampaign, requireCampaignID, Applier.applyCampaignUpdated)
+	HandleProjection(r, campaign.EventTypeForked, needCampaignFork, requireCampaignID, Applier.applyCampaignForked)
 
 	// participant
-	participant.EventTypeJoined:         {stores: needParticipant | needCampaign, ids: requireCampaignID | requireEntityID, apply: Applier.applyParticipantJoined},
-	participant.EventTypeUpdated:        {stores: needParticipant | needCampaign, ids: requireCampaignID | requireEntityID, apply: Applier.applyParticipantUpdated},
-	participant.EventTypeLeft:           {stores: needParticipant | needCampaign, ids: requireCampaignID | requireEntityID, apply: Applier.applyParticipantLeft},
-	participant.EventTypeBound:          {stores: needParticipant | needCampaign, ids: requireCampaignID | requireEntityID, apply: Applier.applyParticipantBound},
-	participant.EventTypeUnbound:        {stores: needParticipant | needCampaign, ids: requireCampaignID | requireEntityID, apply: Applier.applyParticipantUnbound},
-	participant.EventTypeSeatReassigned: {stores: needParticipant | needCampaign, ids: requireCampaignID | requireEntityID, apply: Applier.applySeatReassigned},
+	HandleProjection(r, participant.EventTypeJoined, needParticipant|needCampaign, requireCampaignID|requireEntityID, Applier.applyParticipantJoined)
+	HandleProjection(r, participant.EventTypeUpdated, needParticipant|needCampaign, requireCampaignID|requireEntityID, Applier.applyParticipantUpdated)
+	HandleProjectionRaw(r, participant.EventTypeLeft, needParticipant|needCampaign, requireCampaignID|requireEntityID, Applier.applyParticipantLeft)
+	HandleProjection(r, participant.EventTypeBound, needParticipant|needCampaign, requireCampaignID|requireEntityID, Applier.applyParticipantBound)
+	HandleProjection(r, participant.EventTypeUnbound, needParticipant|needCampaign, requireCampaignID|requireEntityID, Applier.applyParticipantUnbound)
+	HandleProjection(r, participant.EventTypeSeatReassigned, needParticipant|needCampaign, requireCampaignID|requireEntityID, Applier.applySeatReassigned)
 
 	// character
-	character.EventTypeCreated:        {stores: needCharacter | needCampaign, ids: requireCampaignID | requireEntityID, apply: Applier.applyCharacterCreated},
-	character.EventTypeUpdated:        {stores: needCharacter | needCampaign, ids: requireCampaignID | requireEntityID, apply: Applier.applyCharacterUpdated},
-	character.EventTypeDeleted:        {stores: needCharacter | needCampaign, ids: requireCampaignID | requireEntityID, apply: Applier.applyCharacterDeleted},
-	character.EventTypeProfileUpdated: {stores: needAdapters, ids: requireCampaignID | requireEntityID, apply: Applier.applyCharacterProfileUpdated},
+	HandleProjection(r, character.EventTypeCreated, needCharacter|needCampaign, requireCampaignID|requireEntityID, Applier.applyCharacterCreated)
+	HandleProjection(r, character.EventTypeUpdated, needCharacter|needCampaign, requireCampaignID|requireEntityID, Applier.applyCharacterUpdated)
+	HandleProjection(r, character.EventTypeDeleted, needCharacter|needCampaign, requireCampaignID|requireEntityID, Applier.applyCharacterDeleted)
+	HandleProjection(r, character.EventTypeProfileUpdated, needAdapters, requireCampaignID|requireEntityID, Applier.applyCharacterProfileUpdated)
 
 	// invite — InviteID comes from payload with EntityID fallback for created/updated.
-	invite.EventTypeCreated: {stores: needInvite | needCampaign, ids: requireCampaignID, apply: Applier.applyInviteCreated},
-	invite.EventTypeClaimed: {stores: needInvite | needCampaign, ids: requireCampaignID | requireEntityID, apply: Applier.applyInviteClaimed},
-	invite.EventTypeRevoked: {stores: needInvite | needCampaign, ids: requireCampaignID | requireEntityID, apply: Applier.applyInviteRevoked},
-	invite.EventTypeUpdated: {stores: needInvite, ids: 0, apply: Applier.applyInviteUpdated},
+	HandleProjection(r, invite.EventTypeCreated, needInvite|needCampaign, requireCampaignID, Applier.applyInviteCreated)
+	HandleProjection(r, invite.EventTypeClaimed, needInvite|needCampaign, requireCampaignID|requireEntityID, Applier.applyInviteClaimed)
+	HandleProjection(r, invite.EventTypeRevoked, needInvite|needCampaign, requireCampaignID|requireEntityID, Applier.applyInviteRevoked)
+	HandleProjection(r, invite.EventTypeUpdated, needInvite, 0, Applier.applyInviteUpdated)
 
 	// session — SessionID from payload with EntityID fallback, so EntityID
 	// is not a hard envelope requirement for started/ended.
-	session.EventTypeStarted: {stores: needSession, ids: requireCampaignID, apply: Applier.applySessionStarted},
-	session.EventTypeEnded:   {stores: needSession, ids: requireCampaignID, apply: Applier.applySessionEnded},
+	HandleProjection(r, session.EventTypeStarted, needSession, requireCampaignID, Applier.applySessionStarted)
+	HandleProjection(r, session.EventTypeEnded, needSession, requireCampaignID, Applier.applySessionEnded)
 	// Gate handlers derive GateID from payload with EntityID fallback.
-	session.EventTypeGateOpened:       {stores: needSessionGate, ids: requireCampaignID | requireSessionID, apply: Applier.applySessionGateOpened},
-	session.EventTypeGateResolved:     {stores: needSessionGate, ids: requireCampaignID | requireSessionID, apply: Applier.applySessionGateResolved},
-	session.EventTypeGateAbandoned:    {stores: needSessionGate, ids: requireCampaignID | requireSessionID, apply: Applier.applySessionGateAbandoned},
-	session.EventTypeSpotlightSet:     {stores: needSessionSpotlight, ids: requireSessionID, apply: Applier.applySessionSpotlightSet},
-	session.EventTypeSpotlightCleared: {stores: needSessionSpotlight, ids: requireSessionID, apply: Applier.applySessionSpotlightCleared},
+	HandleProjection(r, session.EventTypeGateOpened, needSessionGate, requireCampaignID|requireSessionID, Applier.applySessionGateOpened)
+	HandleProjection(r, session.EventTypeGateResolved, needSessionGate, requireCampaignID|requireSessionID, Applier.applySessionGateResolved)
+	HandleProjection(r, session.EventTypeGateAbandoned, needSessionGate, requireCampaignID|requireSessionID, Applier.applySessionGateAbandoned)
+	HandleProjection(r, session.EventTypeSpotlightSet, needSessionSpotlight, requireSessionID, Applier.applySessionSpotlightSet)
+	HandleProjectionRaw(r, session.EventTypeSpotlightCleared, needSessionSpotlight, requireSessionID, Applier.applySessionSpotlightCleared)
+
+	return r
 }
 
 // registeredHandlerTypes returns the sorted list of event types in the handler
-// registry. Used by ProjectionHandledTypes to derive the list from the map.
+// registry. Used by ProjectionHandledTypes to derive the list from the router.
 func registeredHandlerTypes() []event.Type {
-	types := make([]event.Type, 0, len(handlers))
-	for t := range handlers {
-		types = append(types, t)
-	}
+	types := coreRouter.HandledTypes()
 	sort.Slice(types, func(i, j int) bool {
 		return string(types[i]) < string(types[j])
 	})
@@ -140,9 +145,9 @@ func checkMissingStores(required storeRequirement, a Applier) []string {
 // fast on misconfiguration instead of discovering nil stores at runtime when the
 // first event of a given type arrives.
 func (a Applier) ValidateStorePreconditions() error {
-	// Collect the union of all store requirements across handlers.
+	// Collect the union of all store requirements across router entries.
 	var required storeRequirement
-	for _, h := range handlers {
+	for _, h := range coreRouter.handlers {
 		required |= h.stores
 	}
 

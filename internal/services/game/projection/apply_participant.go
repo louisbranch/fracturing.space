@@ -10,13 +10,8 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
-func (a Applier) applyParticipantJoined(ctx context.Context, evt event.Event) error {
+func (a Applier) applyParticipantJoined(ctx context.Context, evt event.Event, payload participant.JoinPayload) error {
 	participantID := strings.TrimSpace(evt.EntityID)
-
-	var payload participant.JoinPayload
-	if err := decodePayload(evt.PayloadJSON, &payload, "participant.joined"); err != nil {
-		return err
-	}
 
 	role, err := parseParticipantRole(payload.Role)
 	if err != nil {
@@ -70,13 +65,9 @@ func (a Applier) applyParticipantJoined(ctx context.Context, evt event.Event) er
 	return a.Campaign.Put(ctx, campaignRecord)
 }
 
-func (a Applier) applyParticipantUpdated(ctx context.Context, evt event.Event) error {
+func (a Applier) applyParticipantUpdated(ctx context.Context, evt event.Event, payload participant.UpdatePayload) error {
 	participantID := strings.TrimSpace(evt.EntityID)
 
-	var payload participant.UpdatePayload
-	if err := decodePayload(evt.PayloadJSON, &payload, "participant.updated"); err != nil {
-		return err
-	}
 	if len(payload.Fields) == 0 {
 		return nil
 	}
@@ -166,13 +157,9 @@ func (a Applier) applyParticipantLeft(ctx context.Context, evt event.Event) erro
 	return a.Campaign.Put(ctx, campaignRecord)
 }
 
-func (a Applier) applyParticipantBound(ctx context.Context, evt event.Event) error {
+func (a Applier) applyParticipantBound(ctx context.Context, evt event.Event, payload participant.BindPayload) error {
 	participantID := strings.TrimSpace(evt.EntityID)
 
-	var payload participant.BindPayload
-	if err := decodePayload(evt.PayloadJSON, &payload, "participant.bound"); err != nil {
-		return err
-	}
 	userID := strings.TrimSpace(payload.UserID)
 	if userID == "" {
 		return fmt.Errorf("participant.bound user_id is required")
@@ -210,13 +197,9 @@ func (a Applier) applyParticipantBound(ctx context.Context, evt event.Event) err
 	return a.Campaign.Put(ctx, campaignRecord)
 }
 
-func (a Applier) applyParticipantUnbound(ctx context.Context, evt event.Event) error {
+func (a Applier) applyParticipantUnbound(ctx context.Context, evt event.Event, payload participant.UnbindPayload) error {
 	participantID := strings.TrimSpace(evt.EntityID)
 
-	var payload participant.UnbindPayload
-	if err := decodePayload(evt.PayloadJSON, &payload, "participant.unbound"); err != nil {
-		return err
-	}
 	requestedUserID := strings.TrimSpace(payload.UserID)
 
 	current, err := a.Participant.GetParticipant(ctx, evt.CampaignID, participantID)
@@ -255,13 +238,9 @@ func (a Applier) applyParticipantUnbound(ctx context.Context, evt event.Event) e
 	return a.Campaign.Put(ctx, campaignRecord)
 }
 
-func (a Applier) applySeatReassigned(ctx context.Context, evt event.Event) error {
+func (a Applier) applySeatReassigned(ctx context.Context, evt event.Event, payload participant.SeatReassignPayload) error {
 	participantID := strings.TrimSpace(evt.EntityID)
 
-	var payload participant.SeatReassignPayload
-	if err := decodePayload(evt.PayloadJSON, &payload, "participant.seat_reassigned"); err != nil {
-		return err
-	}
 	newUserID := strings.TrimSpace(payload.UserID)
 	if newUserID == "" {
 		return fmt.Errorf("seat.reassigned user_id is required")

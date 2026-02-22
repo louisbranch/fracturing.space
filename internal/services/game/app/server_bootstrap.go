@@ -11,10 +11,10 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
+	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
-	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/integrity"
 	storagesqlite "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite"
@@ -70,8 +70,8 @@ func buildProjectionApplyOutboxApply(projectionStore *storagesqlite.Store, event
 	}
 }
 
-func buildSystemRegistry() (*systems.Registry, error) {
-	registry := systems.NewRegistry()
+func buildSystemRegistry() (*bridge.Registry, error) {
+	registry := bridge.NewRegistry()
 	for _, gameSystem := range registeredMetadataSystems() {
 		if err := registry.Register(gameSystem); err != nil {
 			return nil, fmt.Errorf("register system %s@%s: %w", gameSystem.ID(), gameSystem.Version(), err)
@@ -84,7 +84,7 @@ func buildSystemRegistry() (*systems.Registry, error) {
 // registries. This is a startup-time safety check that ensures every core
 // projection-and-replay event has a handler, no dead projection handlers
 // exist, and every system-emittable event has an adapter handler.
-func buildProjectionRegistries(registries engine.Registries, adapters *systems.AdapterRegistry) (*event.Registry, error) {
+func buildProjectionRegistries(registries engine.Registries, adapters *bridge.AdapterRegistry) (*event.Registry, error) {
 	handledTypes := projection.ProjectionHandledTypes()
 	if err := engine.ValidateProjectionRegistries(registries.Events, registries.Systems, adapters, handledTypes); err != nil {
 		return nil, err

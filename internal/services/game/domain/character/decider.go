@@ -11,10 +11,10 @@ import (
 )
 
 const (
-	commandTypeCreate        command.Type = "character.create"
-	commandTypeUpdate        command.Type = "character.update"
-	commandTypeDelete        command.Type = "character.delete"
-	commandTypeProfileUpdate command.Type = "character.profile_update"
+	CommandTypeCreate        command.Type = "character.create"
+	CommandTypeUpdate        command.Type = "character.update"
+	CommandTypeDelete        command.Type = "character.delete"
+	CommandTypeProfileUpdate command.Type = "character.profile_update"
 	EventTypeCreated         event.Type   = "character.created"
 	EventTypeUpdated         event.Type   = "character.updated"
 	EventTypeDeleted         event.Type   = "character.deleted"
@@ -38,7 +38,7 @@ const (
 // can be replayed and projected consistently across tools and clients.
 func Decide(state State, cmd command.Command, now func() time.Time) command.Decision {
 	switch cmd.Type {
-	case commandTypeCreate:
+	case CommandTypeCreate:
 		if state.Created {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeCharacterAlreadyExists,
@@ -101,7 +101,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 
 		return command.Accept(evt)
 
-	case commandTypeUpdate:
+	case CommandTypeUpdate:
 		if !state.Created || state.Deleted {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeCharacterNotCreated,
@@ -211,7 +211,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 
 		return command.Accept(evt)
 
-	case commandTypeDelete:
+	case CommandTypeDelete:
 		if !state.Created || state.Deleted {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeCharacterNotCreated,
@@ -243,7 +243,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 
 		return command.Accept(evt)
 
-	case commandTypeProfileUpdate:
+	case CommandTypeProfileUpdate:
 		if !state.Created || state.Deleted {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeCharacterNotCreated,

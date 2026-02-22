@@ -14,21 +14,21 @@ func RegisterCommands(registry *command.Registry) error {
 		return errors.New("command registry is required")
 	}
 	if err := registry.Register(command.Definition{
-		Type:            commandTypeStart,
+		Type:            CommandTypeStart,
 		Owner:           command.OwnerCore,
 		ValidatePayload: validateStartPayload,
 	}); err != nil {
 		return err
 	}
 	if err := registry.Register(command.Definition{
-		Type:            commandTypeEnd,
+		Type:            CommandTypeEnd,
 		Owner:           command.OwnerCore,
 		ValidatePayload: validateEndPayload,
 	}); err != nil {
 		return err
 	}
 	if err := registry.Register(command.Definition{
-		Type:            commandTypeGateOpen,
+		Type:            CommandTypeGateOpen,
 		Owner:           command.OwnerCore,
 		ValidatePayload: validateGateOpenedPayload,
 		Gate: command.GatePolicy{
@@ -38,7 +38,7 @@ func RegisterCommands(registry *command.Registry) error {
 		return err
 	}
 	if err := registry.Register(command.Definition{
-		Type:            commandTypeGateResolve,
+		Type:            CommandTypeGateResolve,
 		Owner:           command.OwnerCore,
 		ValidatePayload: validateGateResolvedPayload,
 		Gate: command.GatePolicy{
@@ -49,7 +49,7 @@ func RegisterCommands(registry *command.Registry) error {
 		return err
 	}
 	if err := registry.Register(command.Definition{
-		Type:            commandTypeGateAbandon,
+		Type:            CommandTypeGateAbandon,
 		Owner:           command.OwnerCore,
 		ValidatePayload: validateGateAbandonedPayload,
 		Gate: command.GatePolicy{
@@ -60,7 +60,7 @@ func RegisterCommands(registry *command.Registry) error {
 		return err
 	}
 	if err := registry.Register(command.Definition{
-		Type:            commandTypeSpotlightSet,
+		Type:            CommandTypeSpotlightSet,
 		Owner:           command.OwnerCore,
 		ValidatePayload: validateSpotlightSetPayload,
 		Gate: command.GatePolicy{
@@ -71,7 +71,7 @@ func RegisterCommands(registry *command.Registry) error {
 		return err
 	}
 	return registry.Register(command.Definition{
-		Type:            commandTypeSpotlightClear,
+		Type:            CommandTypeSpotlightClear,
 		Owner:           command.OwnerCore,
 		ValidatePayload: validateSpotlightClearedPayload,
 		Gate: command.GatePolicy{
@@ -83,6 +83,33 @@ func RegisterCommands(registry *command.Registry) error {
 
 // EmittableEventTypes returns all event types the session decider can emit.
 func EmittableEventTypes() []event.Type {
+	return []event.Type{
+		EventTypeStarted,
+		EventTypeEnded,
+		EventTypeGateOpened,
+		EventTypeGateResolved,
+		EventTypeGateAbandoned,
+		EventTypeSpotlightSet,
+		EventTypeSpotlightCleared,
+	}
+}
+
+// DeciderHandledCommands returns all command types the session decider handles.
+func DeciderHandledCommands() []command.Type {
+	return []command.Type{
+		CommandTypeStart,
+		CommandTypeEnd,
+		CommandTypeGateOpen,
+		CommandTypeGateResolve,
+		CommandTypeGateAbandon,
+		CommandTypeSpotlightSet,
+		CommandTypeSpotlightClear,
+	}
+}
+
+// ProjectionHandledTypes returns the session event types that require
+// projection handlers (IntentProjectionAndReplay).
+func ProjectionHandledTypes() []event.Type {
 	return []event.Type{
 		EventTypeStarted,
 		EventTypeEnded,

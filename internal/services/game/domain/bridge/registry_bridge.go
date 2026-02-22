@@ -1,4 +1,4 @@
-package systems
+package bridge
 
 import (
 	"context"
@@ -108,7 +108,14 @@ type SnapshotStateHandler interface {
 	CampaignID() string
 }
 
-// StateFactory creates system-specific state instances.
+// StateFactory creates system-specific state instances for the API bridge.
+// Returns typed handlers (CharacterStateHandler, SnapshotStateHandler) so the
+// API layer can invoke resource/damage abstractions without type assertions.
+//
+// NOTE: This is the API-bridge StateFactory. The write-path StateFactory in
+// domain/module returns untyped `any` for the aggregate fold path. Systems
+// typically implement only the module variant; this interface is satisfied by
+// the metadata/registry system implementation (e.g. DaggerheartRegistrySystem).
 type StateFactory interface {
 	// NewCharacterState creates initial character state for the given character.
 	NewCharacterState(campaignID, characterID string, kind CharacterKind) (CharacterStateHandler, error)
@@ -265,10 +272,6 @@ func (r *Registry) List() []GameSystem {
 	}
 	return result
 }
-
-// DefaultRegistry is the global game system registry.
-// Systems should register themselves via init() functions.
-var DefaultRegistry = NewRegistry()
 
 // RollRequest represents a generic roll request that systems can implement.
 type RollRequest struct {

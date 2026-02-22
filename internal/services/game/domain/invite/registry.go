@@ -14,28 +14,28 @@ func RegisterCommands(registry *command.Registry) error {
 		return errors.New("command registry is required")
 	}
 	if err := registry.Register(command.Definition{
-		Type:            commandTypeCreate,
+		Type:            CommandTypeCreate,
 		Owner:           command.OwnerCore,
 		ValidatePayload: validateCreatePayload,
 	}); err != nil {
 		return err
 	}
 	if err := registry.Register(command.Definition{
-		Type:            commandTypeClaim,
+		Type:            CommandTypeClaim,
 		Owner:           command.OwnerCore,
 		ValidatePayload: validateClaimPayload,
 	}); err != nil {
 		return err
 	}
 	if err := registry.Register(command.Definition{
-		Type:            commandTypeRevoke,
+		Type:            CommandTypeRevoke,
 		Owner:           command.OwnerCore,
 		ValidatePayload: validateRevokePayload,
 	}); err != nil {
 		return err
 	}
 	return registry.Register(command.Definition{
-		Type:            commandTypeUpdate,
+		Type:            CommandTypeUpdate,
 		Owner:           command.OwnerCore,
 		ValidatePayload: validateUpdatePayload,
 	})
@@ -43,6 +43,27 @@ func RegisterCommands(registry *command.Registry) error {
 
 // EmittableEventTypes returns all event types the invite decider can emit.
 func EmittableEventTypes() []event.Type {
+	return []event.Type{
+		EventTypeCreated,
+		EventTypeClaimed,
+		EventTypeRevoked,
+		EventTypeUpdated,
+	}
+}
+
+// DeciderHandledCommands returns all command types the invite decider handles.
+func DeciderHandledCommands() []command.Type {
+	return []command.Type{
+		CommandTypeCreate,
+		CommandTypeClaim,
+		CommandTypeRevoke,
+		CommandTypeUpdate,
+	}
+}
+
+// ProjectionHandledTypes returns the invite event types that require
+// projection handlers (IntentProjectionAndReplay).
+func ProjectionHandledTypes() []event.Type {
 	return []event.Type{
 		EventTypeCreated,
 		EventTypeClaimed,

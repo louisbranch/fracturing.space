@@ -7,7 +7,7 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -15,15 +15,15 @@ import (
 // SystemService implements the game.v1.SystemService gRPC API.
 type SystemService struct {
 	gamev1.UnimplementedSystemServiceServer
-	registry *systems.Registry
+	registry *bridge.Registry
 }
 
 // NewSystemService creates a SystemService backed by the registry.
-func NewSystemService(registry *systems.Registry) *SystemService {
+func NewSystemService(registry *bridge.Registry) *SystemService {
 	return &SystemService{registry: registry}
 }
 
-// ListGameSystems returns all registered game systems.
+// ListGameSystems returns all registered game bridge.
 func (s *SystemService) ListGameSystems(ctx context.Context, in *gamev1.ListGameSystemsRequest) (*gamev1.ListGameSystemsResponse, error) {
 	_ = ctx
 	if in == nil {
@@ -85,7 +85,7 @@ func (s *SystemService) GetGameSystem(ctx context.Context, in *gamev1.GetGameSys
 	}, nil
 }
 
-func systemToProto(system systems.GameSystem, defaultVersion string) *gamev1.GameSystemInfo {
+func systemToProto(system bridge.GameSystem, defaultVersion string) *gamev1.GameSystemInfo {
 	metadata := system.RegistryMetadata()
 	version := strings.TrimSpace(system.Version())
 	return &gamev1.GameSystemInfo{

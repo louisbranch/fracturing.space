@@ -3,7 +3,7 @@ package daggerheart
 import (
 	"testing"
 
-	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/manifest"
+	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 )
 
 func TestStoresApplier(t *testing.T) {

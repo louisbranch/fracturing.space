@@ -10,11 +10,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
-func (a Applier) applyInviteCreated(ctx context.Context, evt event.Event) error {
-	var payload invite.CreatePayload
-	if err := decodePayload(evt.PayloadJSON, &payload, "invite.created"); err != nil {
-		return err
-	}
+func (a Applier) applyInviteCreated(ctx context.Context, evt event.Event, payload invite.CreatePayload) error {
 	inviteID := strings.TrimSpace(payload.InviteID)
 	if inviteID == "" {
 		inviteID = strings.TrimSpace(evt.EntityID)
@@ -59,13 +55,9 @@ func (a Applier) applyInviteCreated(ctx context.Context, evt event.Event) error 
 	return a.Campaign.Put(ctx, campaignRecord)
 }
 
-func (a Applier) applyInviteClaimed(ctx context.Context, evt event.Event) error {
+func (a Applier) applyInviteClaimed(ctx context.Context, evt event.Event, payload invite.ClaimPayload) error {
 	inviteID := strings.TrimSpace(evt.EntityID)
 
-	var payload invite.ClaimPayload
-	if err := decodePayload(evt.PayloadJSON, &payload, "invite.claimed"); err != nil {
-		return err
-	}
 	if payload.InviteID != "" && strings.TrimSpace(payload.InviteID) != inviteID {
 		return fmt.Errorf("invite.claimed invite_id mismatch")
 	}
@@ -87,13 +79,9 @@ func (a Applier) applyInviteClaimed(ctx context.Context, evt event.Event) error 
 	return a.Campaign.Put(ctx, campaignRecord)
 }
 
-func (a Applier) applyInviteRevoked(ctx context.Context, evt event.Event) error {
+func (a Applier) applyInviteRevoked(ctx context.Context, evt event.Event, payload invite.RevokePayload) error {
 	inviteID := strings.TrimSpace(evt.EntityID)
 
-	var payload invite.RevokePayload
-	if err := decodePayload(evt.PayloadJSON, &payload, "invite.revoked"); err != nil {
-		return err
-	}
 	if payload.InviteID != "" && strings.TrimSpace(payload.InviteID) != inviteID {
 		return fmt.Errorf("invite.revoked invite_id mismatch")
 	}
@@ -115,11 +103,7 @@ func (a Applier) applyInviteRevoked(ctx context.Context, evt event.Event) error 
 	return a.Campaign.Put(ctx, campaignRecord)
 }
 
-func (a Applier) applyInviteUpdated(ctx context.Context, evt event.Event) error {
-	var payload invite.UpdatePayload
-	if err := decodePayload(evt.PayloadJSON, &payload, "invite.updated"); err != nil {
-		return err
-	}
+func (a Applier) applyInviteUpdated(ctx context.Context, evt event.Event, payload invite.UpdatePayload) error {
 	inviteID := strings.TrimSpace(payload.InviteID)
 	if inviteID == "" {
 		inviteID = strings.TrimSpace(evt.EntityID)

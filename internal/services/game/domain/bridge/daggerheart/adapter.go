@@ -35,10 +35,11 @@ func (a *Adapter) Version() string {
 }
 
 // HandledTypes returns the event types this adapter's Apply handles.
-// Derived from daggerheartEventDefinitions so the list stays in sync with the
-// authoritative registration slice.
+// Delegates to the router so the list reflects actual HandleAdapter registrations
+// rather than event definitions. If a developer adds an event definition but
+// forgets HandleAdapter, startup validation catches it immediately.
 func (a *Adapter) HandledTypes() []event.Type {
-	return eventTypesWithProjectionIntent()
+	return a.router.HandledTypes()
 }
 
 // Apply applies a system-specific event to Daggerheart projections.

@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
+	domainbridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	domainsystem "github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
-	domainsystems "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -22,11 +22,11 @@ type SystemDescriptor struct {
 	ID                  string
 	Version             string
 	BuildModule         func() domainsystem.Module
-	BuildMetadataSystem func() domainsystems.GameSystem
+	BuildMetadataSystem func() domainbridge.GameSystem
 	// BuildAdapter receives the full ProjectionStores so each system can extract
 	// the store it needs. Return nil to skip adapter registration (e.g. when the
 	// required store is absent).
-	BuildAdapter func(ProjectionStores) domainsystems.Adapter
+	BuildAdapter func(ProjectionStores) domainbridge.Adapter
 }
 
 var builtInSystems = []SystemDescriptor{
@@ -34,14 +34,33 @@ var builtInSystems = []SystemDescriptor{
 		ID:                  daggerheart.SystemID,
 		Version:             strings.TrimSpace(daggerheart.SystemVersion),
 		BuildModule:         func() domainsystem.Module { return daggerheart.NewModule() },
-		BuildMetadataSystem: func() domainsystems.GameSystem { return daggerheart.NewRegistrySystem() },
-		BuildAdapter: func(stores ProjectionStores) domainsystems.Adapter {
+		BuildMetadataSystem: func() domainbridge.GameSystem { return daggerheart.NewRegistrySystem() },
+		BuildAdapter: func(stores ProjectionStores) domainbridge.Adapter {
 			if stores.Daggerheart == nil {
 				return nil
 			}
 			return daggerheart.NewAdapter(stores.Daggerheart)
 		},
 	},
+}
+
+// ValidateSystemDescriptors verifies that every built-in system descriptor
+// has non-nil builders. A nil builder causes silent degradation at runtime
+// instead of a clear startup failure.
+func ValidateSystemDescriptors() error {
+	for _, d := range builtInSystems {
+		label := d.ID + "@" + d.Version
+		if d.BuildModule == nil {
+			return fmt.Errorf("system %s has nil BuildModule", label)
+		}
+		if d.BuildMetadataSystem == nil {
+			return fmt.Errorf("system %s has nil BuildMetadataSystem", label)
+		}
+		if d.BuildAdapter == nil {
+			return fmt.Errorf("system %s has nil BuildAdapter", label)
+		}
+	}
+	return nil
 }
 
 // SystemDescriptors returns the list of built-in system descriptors.
@@ -69,9 +88,9 @@ func Modules() []domainsystem.Module {
 }
 
 // MetadataSystems returns all built-in system metadata entries.
-func MetadataSystems() []domainsystems.GameSystem {
+func MetadataSystems() []domainbridge.GameSystem {
 	descriptors := SystemDescriptors()
-	systemsList := make([]domainsystems.GameSystem, 0, len(descriptors))
+	systemsList := make([]domainbridge.GameSystem, 0, len(descriptors))
 	for _, descriptor := range descriptors {
 		if descriptor.BuildMetadataSystem == nil {
 			continue
@@ -86,7 +105,7 @@ func MetadataSystems() []domainsystems.GameSystem {
 // AdapterRegistry returns a registry populated with built-in system adapters.
 // It returns an error if any adapter registration fails, turning silent runtime
 // failures into startup failures.
-func AdapterRegistry(stores ProjectionStores) (*domainsystems.AdapterRegistry, error) {
+func AdapterRegistry(stores ProjectionStores) (*domainbridge.AdapterRegistry, error) {
 	return buildAdapterRegistry(stores)
 }
 
@@ -96,7 +115,7 @@ func AdapterRegistry(stores ProjectionStores) (*domainsystems.AdapterRegistry, e
 // accepted (and validated as non-nil) to make call sites explicit about the
 // intended pattern: build a base registry once at startup, then rebind
 // per-transaction with transaction-scoped stores.
-func RebindAdapterRegistry(base *domainsystems.AdapterRegistry, stores ProjectionStores) (*domainsystems.AdapterRegistry, error) {
+func RebindAdapterRegistry(base *domainbridge.AdapterRegistry, stores ProjectionStores) (*domainbridge.AdapterRegistry, error) {
 	if base == nil {
 		return nil, fmt.Errorf("base adapter registry is required for rebinding")
 	}
@@ -104,8 +123,8 @@ func RebindAdapterRegistry(base *domainsystems.AdapterRegistry, stores Projectio
 }
 
 // buildAdapterRegistry constructs an adapter registry from system descriptors.
-func buildAdapterRegistry(stores ProjectionStores) (*domainsystems.AdapterRegistry, error) {
-	registry := domainsystems.NewAdapterRegistry()
+func buildAdapterRegistry(stores ProjectionStores) (*domainbridge.AdapterRegistry, error) {
+	registry := domainbridge.NewAdapterRegistry()
 	for _, descriptor := range SystemDescriptors() {
 		if descriptor.BuildAdapter == nil {
 			continue

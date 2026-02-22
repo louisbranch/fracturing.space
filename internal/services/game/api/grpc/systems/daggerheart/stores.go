@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
+	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
-	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
@@ -31,7 +31,7 @@ type Stores struct {
 	Domain             Domain
 
 	// adapters is built eagerly during Validate and cached for Applier.
-	adapters *systems.AdapterRegistry
+	adapters *bridge.AdapterRegistry
 }
 
 // Validate checks that Daggerheart gameplay service dependencies are configured

@@ -11,16 +11,18 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 )
 
-// CoreDomain bundles the four registration hooks that every core domain
+// CoreDomain bundles the registration hooks that every core domain
 // package exports. Adding a new core domain means creating a CoreDomain
 // entry in CoreDomains() and wiring its fold function in the aggregate
 // applier — the compiler and startup validators catch the rest.
 type CoreDomain struct {
-	name                string
-	RegisterCommands    func(*command.Registry) error
-	RegisterEvents      func(*event.Registry) error
-	EmittableEventTypes func() []event.Type
-	FoldHandledTypes    func() []event.Type
+	name                   string
+	RegisterCommands       func(*command.Registry) error
+	RegisterEvents         func(*event.Registry) error
+	EmittableEventTypes    func() []event.Type
+	FoldHandledTypes       func() []event.Type
+	DeciderHandledCommands func() []command.Type
+	ProjectionHandledTypes func() []event.Type
 }
 
 // Name returns a human-readable label for error messages and diagnostics.
@@ -32,46 +34,58 @@ func (d CoreDomain) Name() string { return d.name }
 func CoreDomains() []CoreDomain {
 	return []CoreDomain{
 		{
-			name:                "campaign",
-			RegisterCommands:    campaign.RegisterCommands,
-			RegisterEvents:      campaign.RegisterEvents,
-			EmittableEventTypes: campaign.EmittableEventTypes,
-			FoldHandledTypes:    campaign.FoldHandledTypes,
+			name:                   "campaign",
+			RegisterCommands:       campaign.RegisterCommands,
+			RegisterEvents:         campaign.RegisterEvents,
+			EmittableEventTypes:    campaign.EmittableEventTypes,
+			FoldHandledTypes:       campaign.FoldHandledTypes,
+			DeciderHandledCommands: campaign.DeciderHandledCommands,
+			ProjectionHandledTypes: campaign.ProjectionHandledTypes,
 		},
 		{
-			name:                "action",
-			RegisterCommands:    action.RegisterCommands,
-			RegisterEvents:      action.RegisterEvents,
-			EmittableEventTypes: action.EmittableEventTypes,
-			FoldHandledTypes:    action.FoldHandledTypes,
+			name:                   "action",
+			RegisterCommands:       action.RegisterCommands,
+			RegisterEvents:         action.RegisterEvents,
+			EmittableEventTypes:    action.EmittableEventTypes,
+			FoldHandledTypes:       action.FoldHandledTypes,
+			DeciderHandledCommands: action.DeciderHandledCommands,
+			ProjectionHandledTypes: action.ProjectionHandledTypes,
 		},
 		{
-			name:                "session",
-			RegisterCommands:    session.RegisterCommands,
-			RegisterEvents:      session.RegisterEvents,
-			EmittableEventTypes: session.EmittableEventTypes,
-			FoldHandledTypes:    session.FoldHandledTypes,
+			name:                   "session",
+			RegisterCommands:       session.RegisterCommands,
+			RegisterEvents:         session.RegisterEvents,
+			EmittableEventTypes:    session.EmittableEventTypes,
+			FoldHandledTypes:       session.FoldHandledTypes,
+			DeciderHandledCommands: session.DeciderHandledCommands,
+			ProjectionHandledTypes: session.ProjectionHandledTypes,
 		},
 		{
-			name:                "participant",
-			RegisterCommands:    participant.RegisterCommands,
-			RegisterEvents:      participant.RegisterEvents,
-			EmittableEventTypes: participant.EmittableEventTypes,
-			FoldHandledTypes:    participant.FoldHandledTypes,
+			name:                   "participant",
+			RegisterCommands:       participant.RegisterCommands,
+			RegisterEvents:         participant.RegisterEvents,
+			EmittableEventTypes:    participant.EmittableEventTypes,
+			FoldHandledTypes:       participant.FoldHandledTypes,
+			DeciderHandledCommands: participant.DeciderHandledCommands,
+			ProjectionHandledTypes: participant.ProjectionHandledTypes,
 		},
 		{
-			name:                "invite",
-			RegisterCommands:    invite.RegisterCommands,
-			RegisterEvents:      invite.RegisterEvents,
-			EmittableEventTypes: invite.EmittableEventTypes,
-			FoldHandledTypes:    invite.FoldHandledTypes,
+			name:                   "invite",
+			RegisterCommands:       invite.RegisterCommands,
+			RegisterEvents:         invite.RegisterEvents,
+			EmittableEventTypes:    invite.EmittableEventTypes,
+			FoldHandledTypes:       invite.FoldHandledTypes,
+			DeciderHandledCommands: invite.DeciderHandledCommands,
+			ProjectionHandledTypes: invite.ProjectionHandledTypes,
 		},
 		{
-			name:                "character",
-			RegisterCommands:    character.RegisterCommands,
-			RegisterEvents:      character.RegisterEvents,
-			EmittableEventTypes: character.EmittableEventTypes,
-			FoldHandledTypes:    character.FoldHandledTypes,
+			name:                   "character",
+			RegisterCommands:       character.RegisterCommands,
+			RegisterEvents:         character.RegisterEvents,
+			EmittableEventTypes:    character.EmittableEventTypes,
+			FoldHandledTypes:       character.FoldHandledTypes,
+			DeciderHandledCommands: character.DeciderHandledCommands,
+			ProjectionHandledTypes: character.ProjectionHandledTypes,
 		},
 	}
 }

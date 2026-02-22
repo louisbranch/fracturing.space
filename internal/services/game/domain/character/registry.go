@@ -14,28 +14,28 @@ func RegisterCommands(registry *command.Registry) error {
 		return errors.New("command registry is required")
 	}
 	if err := registry.Register(command.Definition{
-		Type:            commandTypeCreate,
+		Type:            CommandTypeCreate,
 		Owner:           command.OwnerCore,
 		ValidatePayload: validateCreatePayload,
 	}); err != nil {
 		return err
 	}
 	if err := registry.Register(command.Definition{
-		Type:            commandTypeUpdate,
+		Type:            CommandTypeUpdate,
 		Owner:           command.OwnerCore,
 		ValidatePayload: validateUpdatePayload,
 	}); err != nil {
 		return err
 	}
 	if err := registry.Register(command.Definition{
-		Type:            commandTypeDelete,
+		Type:            CommandTypeDelete,
 		Owner:           command.OwnerCore,
 		ValidatePayload: validateDeletePayload,
 	}); err != nil {
 		return err
 	}
 	return registry.Register(command.Definition{
-		Type:            commandTypeProfileUpdate,
+		Type:            CommandTypeProfileUpdate,
 		Owner:           command.OwnerCore,
 		ValidatePayload: validateProfileUpdatePayload,
 	})
@@ -43,6 +43,27 @@ func RegisterCommands(registry *command.Registry) error {
 
 // EmittableEventTypes returns all event types the character decider can emit.
 func EmittableEventTypes() []event.Type {
+	return []event.Type{
+		EventTypeCreated,
+		EventTypeUpdated,
+		EventTypeDeleted,
+		EventTypeProfileUpdated,
+	}
+}
+
+// DeciderHandledCommands returns all command types the character decider handles.
+func DeciderHandledCommands() []command.Type {
+	return []command.Type{
+		CommandTypeCreate,
+		CommandTypeUpdate,
+		CommandTypeDelete,
+		CommandTypeProfileUpdate,
+	}
+}
+
+// ProjectionHandledTypes returns the character event types that require
+// projection handlers (IntentProjectionAndReplay).
+func ProjectionHandledTypes() []event.Type {
 	return []event.Type{
 		EventTypeCreated,
 		EventTypeUpdated,

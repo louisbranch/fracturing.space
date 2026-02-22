@@ -14,10 +14,10 @@ import (
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	daggerheartservice "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/random"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 	storagesqlite "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
@@ -36,13 +36,13 @@ type serverBootstrapConfig struct {
 	listen                          func(network, address string) (net.Listener, error)
 	openStorageBundle               storageBundleOpener
 	configureDomain                 func(serverEnv, *gamegrpc.Stores, engine.Registries) error
-	buildSystemRegistry             func() (*systems.Registry, error)
-	validateSystemRegistration      func([]module.Module, *systems.Registry, *systems.AdapterRegistry) error
+	buildSystemRegistry             func() (*bridge.Registry, error)
+	validateSystemRegistration      func([]module.Module, *bridge.Registry, *bridge.AdapterRegistry) error
 	dialAuthGRPC                    func(context.Context, string) (authGRPCClients, error)
 	newGRPCServer                   func(*storageBundle) *grpc.Server
 	newHealthServer                 func() *health.Server
 	resolveProjectionApplyModes     func(serverEnv) (bool, bool, string, error)
-	buildProjectionRegistries       func(engine.Registries, *systems.AdapterRegistry) (*event.Registry, error)
+	buildProjectionRegistries       func(engine.Registries, *bridge.AdapterRegistry) (*event.Registry, error)
 	buildProjectionApplyOutboxApply func(*storagesqlite.Store, *event.Registry) func(context.Context, event.Event) error
 }
 
@@ -247,7 +247,7 @@ func (b *serverBootstrap) registerServices(
 	grpcServer *grpc.Server, healthServer *health.Server,
 	stores gamegrpc.Stores,
 	bundle *storageBundle, authClient authv1.AuthServiceClient,
-	systemRegistry *systems.Registry,
+	systemRegistry *bridge.Registry,
 ) error {
 	daggerheartStores := daggerheartservice.Stores{
 		Campaign:           bundle.projections,
