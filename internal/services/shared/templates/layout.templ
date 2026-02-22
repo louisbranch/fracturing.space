@@ -82,6 +82,9 @@ func chromeMainClassFromStyle(mainStyle, mainClass string) string {
 	mainClass = strings.TrimSpace(mainClass)
 
 	baseClasses := "max-w-screen-xl mx-auto px-4 pt-20 flex-1"
+	if strings.Contains(mainClass, "max-w-none") {
+		baseClasses = "w-full max-w-none px-4 pt-20 flex-1"
+	}
 	if mainStyle != "" {
 		baseClasses = "w-full max-w-none px-0 pt-20 flex-1"
 	}
@@ -217,6 +220,7 @@ templ AppChromeLayout(options AppChromeLayoutOptions) {
 				data-default-style={ options.ChromeOptions.MainStyle }
 				id="main"
 				data-default-class={ chromeMainClassFromStyle(options.ChromeOptions.MainStyle, options.ChromeOptions.MainClass) }
+				data-fallback-class={ chromeMainClassFromStyle("", "") }
 				aria-label={ chromeMainAria(options.Loc, options.ChromeOptions) }
 			>
 				if len(options.Breadcrumbs) > 0 {
@@ -292,15 +296,37 @@ templ AppChromeLayout(options AppChromeLayoutOptions) {
 			}
 
 			var campaignWorkspaceRoutePattern = /^\/campaigns\/(?!create(?:\/|$))[^/]+(?:\/|$)/;
-			var fallbackMainClass = "max-w-screen-xl mx-auto px-4 pt-20 flex-1";
 			var campaignMainCoverClass = "w-full max-w-none px-0 pt-20 flex-1";
+			var fallbackMainClass = "w-full max-w-none px-4 pt-20 flex-1";
+
+			function mainFallbackClass(main) {
+				if (!main) {
+					return fallbackMainClass;
+				}
+				var fromDom = main.getAttribute("data-fallback-class");
+				if (fromDom) {
+					return fromDom;
+				}
+				return fallbackMainClass;
+			}
+
+			function mainDefaultClass(main) {
+				if (!main) {
+					return fallbackMainClass;
+				}
+				var fromDom = main.getAttribute("data-default-class");
+				if (fromDom) {
+					return fromDom;
+				}
+				return mainFallbackClass(main);
+			}
 
 			function isCampaignWorkspaceRoute(pathname) {
 				return campaignWorkspaceRoutePattern.test(chromeCurrentPath(pathname));
 			}
 
-			function campaignMainContainerClass(mainStyle, extraClass) {
-				var baseClass = fallbackMainClass;
+			function campaignMainContainerClass(mainStyle, extraClass, defaultClass, main) {
+				var baseClass = defaultClass || mainFallbackClass(main);
 				if (mainStyle) {
 					baseClass = campaignMainCoverClass;
 				}
@@ -333,6 +359,7 @@ templ AppChromeLayout(options AppChromeLayoutOptions) {
 				var metadata = campaignMainMetadata(main);
 				var style = "";
 				var extraClass = "";
+				var defaultClass = mainDefaultClass(main);
 
 				if (metadata) {
 					style = metadata.style;
@@ -343,7 +370,7 @@ templ AppChromeLayout(options AppChromeLayoutOptions) {
 				}
 
 				main.setAttribute("style", style);
-				main.className = campaignMainContainerClass(style, extraClass);
+				main.className = campaignMainContainerClass(style, extraClass, defaultClass, main);
 			}
 
 			function syncChromeMainStateForRoute(currentPath) {
@@ -358,11 +385,11 @@ templ AppChromeLayout(options AppChromeLayoutOptions) {
 				}
 
 				var defaultStyle = main.getAttribute("data-default-style") || "";
-				var defaultClass = main.getAttribute("data-default-class") || fallbackMainClass;
+				var defaultClass = mainDefaultClass(main);
 
 				if (isCampaignMainStyle(defaultStyle)) {
 					main.removeAttribute("style");
-					defaultClass = fallbackMainClass;
+					defaultClass = mainFallbackClass(main);
 				} else {
 					if (defaultStyle) {
 						main.setAttribute("style", defaultStyle);
