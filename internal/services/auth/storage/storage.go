@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/user"
 )
@@ -19,49 +18,10 @@ type UserStore interface {
 	ListUsers(ctx context.Context, pageSize int, pageToken string) (UserPage, error)
 }
 
-// AccountProfile represents one row of user profile metadata.
-type AccountProfile struct {
-	UserID        string
-	Name          string
-	Locale        commonv1.Locale
-	AvatarSetID   string
-	AvatarAssetID string
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
-}
-
-// AccountProfileStore persists per-user profile metadata.
-type AccountProfileStore interface {
-	PutAccountProfile(ctx context.Context, profile AccountProfile) error
-	GetAccountProfile(ctx context.Context, userID string) (AccountProfile, error)
-}
-
 // UserPage is a cursor page of users for admin-facing browsing and audits.
 type UserPage struct {
 	Users         []user.User
 	NextPageToken string
-}
-
-// Contact represents one owner-scoped quick-lookup relationship.
-type Contact struct {
-	OwnerUserID   string
-	ContactUserID string
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
-}
-
-// ContactPage is a cursor page of contacts.
-type ContactPage struct {
-	Contacts      []Contact
-	NextPageToken string
-}
-
-// ContactStore persists owner-scoped user contacts.
-type ContactStore interface {
-	PutContact(ctx context.Context, contact Contact) error
-	GetContact(ctx context.Context, ownerUserID string, contactUserID string) (Contact, error)
-	DeleteContact(ctx context.Context, ownerUserID string, contactUserID string) error
-	ListContacts(ctx context.Context, ownerUserID string, pageSize int, pageToken string) (ContactPage, error)
 }
 
 // PasskeyCredential stores a WebAuthn credential record linked to a user identity.

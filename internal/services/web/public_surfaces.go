@@ -59,7 +59,7 @@ func (h *handler) handlePublicProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	profileRecord := resp.GetUserProfileRecord()
+	profileRecord := resp.GetUserProfile()
 	if profileRecord == nil {
 		http.NotFound(w, r)
 		return

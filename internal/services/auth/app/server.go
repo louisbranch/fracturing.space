@@ -97,7 +97,7 @@ func New(port int, httpAddr string) (*Server, error) {
 	)
 	authService := authservice.NewAuthService(store, store, oauthStore)
 	statisticsService := authservice.NewStatisticsService(store)
-	accountService := authservice.NewAccountService(store, store)
+	accountService := authservice.NewAccountService(store)
 	healthServer := health.NewServer()
 	authv1.RegisterAuthServiceServer(grpcServer, authService)
 	authv1.RegisterStatisticsServiceServer(grpcServer, statisticsService)

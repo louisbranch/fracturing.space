@@ -66,10 +66,10 @@ func TestServer_UserProfileRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("set user profile: %v", err)
 	}
-	if setResp.GetUserProfileRecord() == nil {
+	if setResp.GetUserProfile() == nil {
 		t.Fatal("expected user profile record from set user profile")
 	}
-	if got := setResp.GetUserProfileRecord().GetUsername(); got != "alice_one" {
+	if got := setResp.GetUserProfile().GetUsername(); got != "alice_one" {
 		t.Fatalf("set username = %q, want alice_one", got)
 	}
 
@@ -79,7 +79,7 @@ func TestServer_UserProfileRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get user profile: %v", err)
 	}
-	if got := getResp.GetUserProfileRecord().GetName(); got != "Alice" {
+	if got := getResp.GetUserProfile().GetName(); got != "Alice" {
 		t.Fatalf("name = %q, want Alice", got)
 	}
 
@@ -89,10 +89,10 @@ func TestServer_UserProfileRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("lookup user profile: %v", err)
 	}
-	if got := lookupResp.GetUserProfileRecord().GetUserId(); got != "user-1" {
+	if got := lookupResp.GetUserProfile().GetUserId(); got != "user-1" {
 		t.Fatalf("lookup user_id = %q, want user-1", got)
 	}
-	if got := lookupResp.GetUserProfileRecord().GetBio(); got != "Campaign manager" {
+	if got := lookupResp.GetUserProfile().GetBio(); got != "Campaign manager" {
 		t.Fatalf("lookup bio = %q, want Campaign manager", got)
 	}
 }
@@ -140,10 +140,7 @@ func newConnectionsClientForTest(t *testing.T) connectionsv1.ConnectionsServiceC
 	t.Helper()
 
 	dbPath := t.TempDir() + "/connections.db"
-	authDBPath := t.TempDir() + "/auth.db"
 	t.Setenv("FRACTURING_SPACE_CONNECTIONS_DB_PATH", dbPath)
-	t.Setenv("FRACTURING_SPACE_AUTH_DB_PATH", authDBPath)
-	t.Setenv("FRACTURING_SPACE_CONNECTIONS_MIGRATE_AUTH_CONTACTS", "false")
 
 	srv, err := NewWithAddr("127.0.0.1:0")
 	if err != nil {

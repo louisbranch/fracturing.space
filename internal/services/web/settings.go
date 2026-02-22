@@ -92,8 +92,8 @@ func (h *handler) handleAppUserProfileSettingsGet(w http.ResponseWriter, r *http
 		}
 	}
 	state := webtemplates.UserProfileSettingsPageState{}
-	if resp != nil && resp.GetUserProfileRecord() != nil {
-		record := resp.GetUserProfileRecord()
+	if resp != nil && resp.GetUserProfile() != nil {
+		record := resp.GetUserProfile()
 		state.Username = strings.TrimSpace(record.GetUsername())
 		state.Name = strings.TrimSpace(record.GetName())
 		state.AvatarSetID = strings.TrimSpace(record.GetAvatarSetId())

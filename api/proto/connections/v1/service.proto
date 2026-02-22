@@ -14,8 +14,8 @@ message Contact {
   google.protobuf.Timestamp updated_at = 4;
 }
 
-// UserProfileRecord stores one social/discovery profile for a user.
-message UserProfileRecord {
+// UserProfile stores one social/discovery profile for a user.
+message UserProfile {
   string user_id = 1;
   string username = 2;
   string name = 3;
@@ -68,7 +68,7 @@ message SetUserProfileRequest {
 }
 
 message SetUserProfileResponse {
-  UserProfileRecord user_profile_record = 1;
+  UserProfile user_profile = 1;
 }
 
 message GetUserProfileRequest {
@@ -76,7 +76,7 @@ message GetUserProfileRequest {
 }
 
 message GetUserProfileResponse {
-  UserProfileRecord user_profile_record = 1;
+  UserProfile user_profile = 1;
 }
 
 message LookupUserProfileRequest {
@@ -84,7 +84,7 @@ message LookupUserProfileRequest {
 }
 
 message LookupUserProfileResponse {
-  UserProfileRecord user_profile_record = 1;
+  UserProfile user_profile = 1;
 }
 
 // ConnectionsService manages directed contact relationships between users.

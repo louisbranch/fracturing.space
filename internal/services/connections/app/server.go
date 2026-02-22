@@ -3,7 +3,6 @@ package server
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"log"
@@ -11,12 +10,10 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	connectionsv1 "github.com/louisbranch/fracturing.space/api/gen/go/connections/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/config"
 	connectionsservice "github.com/louisbranch/fracturing.space/internal/services/connections/api/grpc/connections"
-	connectionsstorage "github.com/louisbranch/fracturing.space/internal/services/connections/storage"
 	connectionssqlite "github.com/louisbranch/fracturing.space/internal/services/connections/storage/sqlite"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
@@ -25,9 +22,7 @@ import (
 )
 
 type serverEnv struct {
-	DBPath          string `env:"FRACTURING_SPACE_CONNECTIONS_DB_PATH"`
-	AuthDBPath      string `env:"FRACTURING_SPACE_AUTH_DB_PATH"`
-	MigrateAuthData string `env:"FRACTURING_SPACE_CONNECTIONS_MIGRATE_AUTH_CONTACTS"`
+	DBPath string `env:"FRACTURING_SPACE_CONNECTIONS_DB_PATH"`
 }
 
 func loadServerEnv() serverEnv {
@@ -35,12 +30,6 @@ func loadServerEnv() serverEnv {
 	_ = config.ParseEnv(&cfg)
 	if strings.TrimSpace(cfg.DBPath) == "" {
 		cfg.DBPath = filepath.Join("data", "connections.db")
-	}
-	if strings.TrimSpace(cfg.AuthDBPath) == "" {
-		cfg.AuthDBPath = filepath.Join("data", "auth.db")
-	}
-	if strings.TrimSpace(cfg.MigrateAuthData) == "" {
-		cfg.MigrateAuthData = "true"
 	}
 	return cfg
 }
@@ -69,13 +58,6 @@ func NewWithAddr(addr string) (*Server, error) {
 	if err != nil {
 		_ = listener.Close()
 		return nil, err
-	}
-	if parseBoolEnv(srvEnv.MigrateAuthData) {
-		if err := migrateContactsFromAuth(context.Background(), srvEnv.AuthDBPath, store); err != nil {
-			_ = listener.Close()
-			_ = store.Close()
-			return nil, fmt.Errorf("migrate contacts from auth: %w", err)
-		}
 	}
 
 	grpcServer := grpc.NewServer(grpc.StatsHandler(otelgrpc.NewServerHandler()))
@@ -178,74 +160,4 @@ func openConnectionsStore(path string) (*connectionssqlite.Store, error) {
 		return nil, fmt.Errorf("open connections sqlite store: %w", err)
 	}
 	return store, nil
-}
-
-func parseBoolEnv(value string) bool {
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "1", "true", "yes", "on":
-		return true
-	default:
-		return false
-	}
-}
-
-func migrateContactsFromAuth(ctx context.Context, authDBPath string, destination connectionsstorage.ContactStore) error {
-	if strings.TrimSpace(authDBPath) == "" || destination == nil {
-		return nil
-	}
-	if _, err := os.Stat(authDBPath); err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return nil
-		}
-		return fmt.Errorf("stat auth db: %w", err)
-	}
-
-	authDB, err := sql.Open("sqlite", filepath.Clean(authDBPath)+"?_foreign_keys=ON&_busy_timeout=5000")
-	if err != nil {
-		return fmt.Errorf("open auth db: %w", err)
-	}
-	defer func() { _ = authDB.Close() }()
-
-	if err := authDB.PingContext(ctx); err != nil {
-		return fmt.Errorf("ping auth db: %w", err)
-	}
-
-	// `user_contacts` may be absent in fresh auth schemas after clean-slate cutover.
-	rows, err := authDB.QueryContext(
-		ctx,
-		`SELECT owner_user_id, contact_user_id, created_at, updated_at
-		 FROM user_contacts`,
-	)
-	if err != nil {
-		if strings.Contains(strings.ToLower(err.Error()), "no such table") {
-			return nil
-		}
-		return fmt.Errorf("query auth user_contacts: %w", err)
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var (
-			ownerUserID   string
-			contactUserID string
-			createdAtMS   int64
-			updatedAtMS   int64
-		)
-		if err := rows.Scan(&ownerUserID, &contactUserID, &createdAtMS, &updatedAtMS); err != nil {
-			return fmt.Errorf("scan auth user_contacts row: %w", err)
-		}
-		contact := connectionsstorage.Contact{
-			OwnerUserID:   strings.TrimSpace(ownerUserID),
-			ContactUserID: strings.TrimSpace(contactUserID),
-			CreatedAt:     time.UnixMilli(createdAtMS).UTC(),
-			UpdatedAt:     time.UnixMilli(updatedAtMS).UTC(),
-		}
-		if err := destination.PutContact(ctx, contact); err != nil {
-			return fmt.Errorf("persist migrated contact %s->%s: %w", contact.OwnerUserID, contact.ContactUserID, err)
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return fmt.Errorf("iterate auth user_contacts rows: %w", err)
-	}
-	return nil
 }

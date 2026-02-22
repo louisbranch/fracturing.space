@@ -65,7 +65,7 @@ func TestAppSettingsPageRendersForAuthenticatedUser(t *testing.T) {
 func TestAppSettingsUsernamePageLoadsCurrentUsername(t *testing.T) {
 	connectionsClient := &fakeConnectionsClient{
 		getUserProfileResp: &connectionsv1.GetUserProfileResponse{
-			UserProfileRecord: &connectionsv1.UserProfileRecord{
+			UserProfile: &connectionsv1.UserProfile{
 				UserId:   "user-1",
 				Username: "alice_one",
 				Name:     "Alice",
@@ -139,7 +139,7 @@ func TestAppSettingsUsernamePageLocalizesCopy(t *testing.T) {
 func TestAppSettingsUsernameUpdateSavesUsernameAndRedirects(t *testing.T) {
 	connectionsClient := &fakeConnectionsClient{
 		setUserProfileResp: &connectionsv1.SetUserProfileResponse{
-			UserProfileRecord: &connectionsv1.UserProfileRecord{
+			UserProfile: &connectionsv1.UserProfile{
 				UserId:   "user-1",
 				Username: "alice_two",
 				Name:     "Alice Two",

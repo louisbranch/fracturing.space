@@ -167,7 +167,7 @@ func (s *Service) SetUserProfile(ctx context.Context, in *connectionsv1.SetUserP
 	if s.clock != nil {
 		now = s.clock()
 	}
-	if err := s.store.PutUserProfile(ctx, storage.UserProfileRecord{
+	if err := s.store.PutUserProfile(ctx, storage.UserProfile{
 		UserID:        userID,
 		Username:      canonicalUsername,
 		Name:          normalized.Name,
@@ -190,7 +190,7 @@ func (s *Service) SetUserProfile(ctx context.Context, in *connectionsv1.SetUserP
 		return nil, status.Errorf(codes.Internal, "set user profile: %v", err)
 	}
 	return &connectionsv1.SetUserProfileResponse{
-		UserProfileRecord: userProfileToProto(record),
+		UserProfile: userProfileToProto(record),
 	}, nil
 }
 
@@ -214,7 +214,7 @@ func (s *Service) GetUserProfile(ctx context.Context, in *connectionsv1.GetUserP
 		return nil, status.Errorf(codes.Internal, "get user profile: %v", err)
 	}
 	return &connectionsv1.GetUserProfileResponse{
-		UserProfileRecord: userProfileToProto(record),
+		UserProfile: userProfileToProto(record),
 	}, nil
 }
 
@@ -238,7 +238,7 @@ func (s *Service) LookupUserProfile(ctx context.Context, in *connectionsv1.Looku
 		return nil, status.Errorf(codes.Internal, "lookup user profile: %v", err)
 	}
 	return &connectionsv1.LookupUserProfileResponse{
-		UserProfileRecord: userProfileToProto(record),
+		UserProfile: userProfileToProto(record),
 	}, nil
 }
 
@@ -251,8 +251,8 @@ func contactToProto(contact storage.Contact) *connectionsv1.Contact {
 	}
 }
 
-func userProfileToProto(profile storage.UserProfileRecord) *connectionsv1.UserProfileRecord {
-	return &connectionsv1.UserProfileRecord{
+func userProfileToProto(profile storage.UserProfile) *connectionsv1.UserProfile {
+	return &connectionsv1.UserProfile{
 		UserId:        profile.UserID,
 		Username:      profile.Username,
 		Name:          profile.Name,

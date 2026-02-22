@@ -19,7 +19,6 @@ import (
 )
 
 type accountProfileView struct {
-	Name   string
 	Locale commonv1.Locale
 }
 
@@ -62,14 +61,10 @@ func (h *handler) handleAppProfileGet(w http.ResponseWriter, r *http.Request, se
 		h.renderErrorPage(w, r, http.StatusBadGateway, "Profile unavailable", "failed to load profile")
 		return
 	}
-	page := h.pageContext(w, r)
-	if strings.TrimSpace(profileResp.Name) == "" {
-		profileResp.Name = page.UserName
-	}
 	locale := profileResp.Locale
 	locale = platformi18n.NormalizeLocale(locale)
 
-	renderAppProfilePage(w, r, page, profileResp.Name, locale)
+	renderAppProfilePage(w, r, h.pageContext(w, r), locale)
 }
 
 func (h *handler) handleAppProfilePost(w http.ResponseWriter, r *http.Request, sess *session) {
@@ -88,7 +83,6 @@ func (h *handler) handleAppProfilePost(w http.ResponseWriter, r *http.Request, s
 		return
 	}
 
-	name := strings.TrimSpace(r.FormValue("name"))
 	locale := strings.TrimSpace(r.FormValue("locale"))
 	parsedLocale, ok := platformi18n.ParseLocale(locale)
 	if !ok {
@@ -98,7 +92,6 @@ func (h *handler) handleAppProfilePost(w http.ResponseWriter, r *http.Request, s
 
 	_, err = h.accountClient.UpdateProfile(requestCtx, &authv1.UpdateProfileRequest{
 		UserId: userID,
-		Name:   name,
 		Locale: parsedLocale,
 	})
 	if err != nil {
@@ -151,12 +144,11 @@ func (h *handler) resolveProfileUserIDFromToken(ctx context.Context, accessToken
 	return strings.TrimSpace(resp.UserID), nil
 }
 
-func renderAppProfilePage(w http.ResponseWriter, r *http.Request, page webtemplates.PageContext, name string, locale commonv1.Locale) {
+func renderAppProfilePage(w http.ResponseWriter, r *http.Request, page webtemplates.PageContext, locale commonv1.Locale) {
 	if err := writePage(
 		w,
 		r,
 		webtemplates.ProfilePage(page, webtemplates.ProfileFormState{
-			Name:          strings.TrimSpace(name),
 			LocaleOptions: profileLocaleOptions(page, locale),
 		}),
 		composeHTMXTitleForPage(page, "layout.profile"),
@@ -175,7 +167,6 @@ func (h *handler) fetchAccountProfile(ctx context.Context, userID string) (*acco
 	}
 	profile := &accountProfileView{}
 	if resp != nil && resp.GetProfile() != nil {
-		profile.Name = resp.GetProfile().GetName()
 		profile.Locale = resp.GetProfile().GetLocale()
 	}
 	return profile, nil

@@ -168,7 +168,7 @@ func (h *handler) lookupInviteRecipientVerification(ctx context.Context, recipie
 	if err != nil {
 		return webtemplates.CampaignInviteVerification{}, err
 	}
-	profileRecord := resp.GetUserProfileRecord()
+	profileRecord := resp.GetUserProfile()
 	if profileRecord == nil {
 		return webtemplates.CampaignInviteVerification{}, status.Error(codes.NotFound, "username not found")
 	}
@@ -212,7 +212,7 @@ func (h *handler) resolveInviteRecipientUserID(ctx context.Context, recipientUse
 	if err != nil {
 		return "", err
 	}
-	record := resp.GetUserProfileRecord()
+	record := resp.GetUserProfile()
 	if record == nil {
 		return "", status.Error(codes.NotFound, "username not found")
 	}

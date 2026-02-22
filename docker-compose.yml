@@ -80,13 +80,9 @@ services:
     depends_on:
       init-data:
         condition: service_completed_successfully
-      auth:
-        condition: service_started
     environment:
       FRACTURING_SPACE_CONNECTIONS_PORT: 8090
       FRACTURING_SPACE_CONNECTIONS_DB_PATH: /data/connections.db
-      FRACTURING_SPACE_CONNECTIONS_MIGRATE_AUTH_CONTACTS: ${FRACTURING_SPACE_CONNECTIONS_MIGRATE_AUTH_CONTACTS:-true}
-      FRACTURING_SPACE_AUTH_DB_PATH: /data/auth.db
       FRACTURING_SPACE_OTEL_ENDPOINT: ${FRACTURING_SPACE_OTEL_ENDPOINT:-http://jaeger:4318}
     volumes:
       - fracturing-space-data:/data

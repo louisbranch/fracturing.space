@@ -82,7 +82,7 @@ Primary usage:
 
 1. No shared write ownership for the same field across services.
 2. `auth` does not write `connections` profile records.
-3. `connections` does not write `auth` account profile records.
+3. `connections` does not write `auth` private preference fields (for example `locale`).
 4. `locale` remains a private account setting owned by `auth`.
 5. Social/discovery profile identity fields are owned by `connections`.
 6. Web composes services at read time instead of write-through syncing.
@@ -90,7 +90,7 @@ Primary usage:
 
 ## Composition Rules in Web
 
-1. `/profile` remains private account settings backed by auth-owned user data.
+1. `/app/profile` remains private account settings backed by auth-owned locale data only.
 2. `/settings/user-profile` is backed by `connections` unified profile APIs.
 3. Invite verification uses `connections.LookupUserProfile`.
 4. No implicit cross-service replication on save actions.
