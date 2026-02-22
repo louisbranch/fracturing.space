@@ -84,87 +84,62 @@ func (r mcpServerRegistrationAdapter) AddResource(resource *mcp.Resource, handle
 	r.server.AddResource(resource, handler)
 }
 
-func addMCPTool(server *mcp.Server, tool *mcp.Tool, handler any) error {
-	switch h := handler.(type) {
-	case mcp.ToolHandlerFor[domain.ActionRollInput, domain.ActionRollResult]:
-		mcp.AddTool(server, tool, h)
-		return nil
-	case mcp.ToolHandlerFor[domain.DualityExplainInput, domain.DualityExplainResult]:
-		mcp.AddTool(server, tool, h)
-		return nil
-	case mcp.ToolHandlerFor[domain.DualityOutcomeInput, domain.DualityOutcomeResult]:
-		mcp.AddTool(server, tool, h)
-		return nil
-	case mcp.ToolHandlerFor[domain.DualityProbabilityInput, domain.DualityProbabilityResult]:
-		mcp.AddTool(server, tool, h)
-		return nil
-	case mcp.ToolHandlerFor[domain.RulesVersionInput, domain.RulesVersionResult]:
-		mcp.AddTool(server, tool, h)
-		return nil
-	case mcp.ToolHandlerFor[domain.RollDiceInput, domain.RollDiceResult]:
-		mcp.AddTool(server, tool, h)
-		return nil
-	case mcp.ToolHandlerFor[domain.CampaignCreateInput, domain.CampaignCreateResult]:
-		mcp.AddTool(server, tool, h)
-		return nil
-	case mcp.ToolHandlerFor[domain.CampaignStatusChangeInput, domain.CampaignStatusResult]:
-		mcp.AddTool(server, tool, h)
-		return nil
-	case mcp.ToolHandlerFor[domain.ParticipantCreateInput, domain.ParticipantCreateResult]:
-		mcp.AddTool(server, tool, h)
-		return nil
-	case mcp.ToolHandlerFor[domain.ParticipantUpdateInput, domain.ParticipantUpdateResult]:
-		mcp.AddTool(server, tool, h)
-		return nil
-	case mcp.ToolHandlerFor[domain.ParticipantDeleteInput, domain.ParticipantDeleteResult]:
-		mcp.AddTool(server, tool, h)
-		return nil
-	case mcp.ToolHandlerFor[domain.CharacterCreateInput, domain.CharacterCreateResult]:
-		mcp.AddTool(server, tool, h)
-		return nil
-	case mcp.ToolHandlerFor[domain.CharacterUpdateInput, domain.CharacterUpdateResult]:
-		mcp.AddTool(server, tool, h)
-		return nil
-	case mcp.ToolHandlerFor[domain.CharacterDeleteInput, domain.CharacterDeleteResult]:
-		mcp.AddTool(server, tool, h)
-		return nil
-	case mcp.ToolHandlerFor[domain.CharacterControlSetInput, domain.CharacterControlSetResult]:
-		mcp.AddTool(server, tool, h)
-		return nil
-	case mcp.ToolHandlerFor[domain.CharacterSheetGetInput, domain.CharacterSheetGetResult]:
-		mcp.AddTool(server, tool, h)
-		return nil
-	case mcp.ToolHandlerFor[domain.CharacterProfilePatchInput, domain.CharacterProfilePatchResult]:
-		mcp.AddTool(server, tool, h)
-		return nil
-	case mcp.ToolHandlerFor[domain.CharacterStatePatchInput, domain.CharacterStatePatchResult]:
-		mcp.AddTool(server, tool, h)
-		return nil
-	case mcp.ToolHandlerFor[domain.SessionStartInput, domain.SessionStartResult]:
-		mcp.AddTool(server, tool, h)
-		return nil
-	case mcp.ToolHandlerFor[domain.SessionEndInput, domain.SessionEndResult]:
-		mcp.AddTool(server, tool, h)
-		return nil
-	case mcp.ToolHandlerFor[domain.EventListInput, domain.EventListResult]:
-		mcp.AddTool(server, tool, h)
-		return nil
-	case mcp.ToolHandlerFor[domain.CampaignForkInput, domain.CampaignForkResult]:
-		mcp.AddTool(server, tool, h)
-		return nil
-	case mcp.ToolHandlerFor[domain.CampaignLineageInput, domain.CampaignLineageResult]:
-		mcp.AddTool(server, tool, h)
-		return nil
-	case mcp.ToolHandlerFor[domain.SetContextInput, domain.SetContextResult]:
-		mcp.AddTool(server, tool, h)
-		return nil
-	default:
-		toolName := "<nil>"
-		if tool != nil {
-			toolName = tool.Name
-		}
-		return fmt.Errorf("mcp registration adapter does not support handler type %T for tool %q", handler, toolName)
+type mcpToolRegistrar struct {
+	matches func(any) bool
+	add     func(*mcp.Server, *mcp.Tool, any)
+}
+
+func newMCPToolRegistrar[I any, O any]() mcpToolRegistrar {
+	return mcpToolRegistrar{
+		matches: func(handler any) bool {
+			_, ok := handler.(mcp.ToolHandlerFor[I, O])
+			return ok
+		},
+		add: func(server *mcp.Server, tool *mcp.Tool, handler any) {
+			mcp.AddTool(server, tool, handler.(mcp.ToolHandlerFor[I, O]))
+		},
 	}
+}
+
+var mcpToolRegistrars = []mcpToolRegistrar{
+	newMCPToolRegistrar[domain.ActionRollInput, domain.ActionRollResult](),
+	newMCPToolRegistrar[domain.DualityExplainInput, domain.DualityExplainResult](),
+	newMCPToolRegistrar[domain.DualityOutcomeInput, domain.DualityOutcomeResult](),
+	newMCPToolRegistrar[domain.DualityProbabilityInput, domain.DualityProbabilityResult](),
+	newMCPToolRegistrar[domain.RulesVersionInput, domain.RulesVersionResult](),
+	newMCPToolRegistrar[domain.RollDiceInput, domain.RollDiceResult](),
+	newMCPToolRegistrar[domain.CampaignCreateInput, domain.CampaignCreateResult](),
+	newMCPToolRegistrar[domain.CampaignStatusChangeInput, domain.CampaignStatusResult](),
+	newMCPToolRegistrar[domain.ParticipantCreateInput, domain.ParticipantCreateResult](),
+	newMCPToolRegistrar[domain.ParticipantUpdateInput, domain.ParticipantUpdateResult](),
+	newMCPToolRegistrar[domain.ParticipantDeleteInput, domain.ParticipantDeleteResult](),
+	newMCPToolRegistrar[domain.CharacterCreateInput, domain.CharacterCreateResult](),
+	newMCPToolRegistrar[domain.CharacterUpdateInput, domain.CharacterUpdateResult](),
+	newMCPToolRegistrar[domain.CharacterDeleteInput, domain.CharacterDeleteResult](),
+	newMCPToolRegistrar[domain.CharacterControlSetInput, domain.CharacterControlSetResult](),
+	newMCPToolRegistrar[domain.CharacterSheetGetInput, domain.CharacterSheetGetResult](),
+	newMCPToolRegistrar[domain.CharacterProfilePatchInput, domain.CharacterProfilePatchResult](),
+	newMCPToolRegistrar[domain.CharacterStatePatchInput, domain.CharacterStatePatchResult](),
+	newMCPToolRegistrar[domain.SessionStartInput, domain.SessionStartResult](),
+	newMCPToolRegistrar[domain.SessionEndInput, domain.SessionEndResult](),
+	newMCPToolRegistrar[domain.EventListInput, domain.EventListResult](),
+	newMCPToolRegistrar[domain.CampaignForkInput, domain.CampaignForkResult](),
+	newMCPToolRegistrar[domain.CampaignLineageInput, domain.CampaignLineageResult](),
+	newMCPToolRegistrar[domain.SetContextInput, domain.SetContextResult](),
+}
+
+func addMCPTool(server *mcp.Server, tool *mcp.Tool, handler any) error {
+	for _, registrar := range mcpToolRegistrars {
+		if registrar.matches(handler) {
+			registrar.add(server, tool, handler)
+			return nil
+		}
+	}
+	toolName := "<nil>"
+	if tool != nil {
+		toolName = tool.Name
+	}
+	return fmt.Errorf("mcp registration adapter does not support handler type %T for tool %q", handler, toolName)
 }
 
 func newMCPRegistrationModules(

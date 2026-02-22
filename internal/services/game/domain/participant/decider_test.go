@@ -788,3 +788,30 @@ func TestDecide_MalformedJoinPayloadRejected(t *testing.T) {
 		t.Fatalf("rejection code = %s, want PAYLOAD_DECODE_FAILED", decision.Rejections[0].Code)
 	}
 }
+
+func TestParticipantDecisionHandlersCoverSupportedCommands(t *testing.T) {
+	expected := []command.Type{
+		CommandTypeJoin,
+		CommandTypeUpdate,
+		CommandTypeLeave,
+		CommandTypeBind,
+		CommandTypeUnbind,
+		CommandTypeSeatReassign,
+		CommandTypeSeatReassignLegacy,
+	}
+	if len(participantDecisionHandlers) != len(expected) {
+		t.Fatalf("handler count = %d, expected count = %d", len(participantDecisionHandlers), len(expected))
+	}
+	expectedSet := make(map[command.Type]struct{}, len(expected))
+	for _, cmdType := range expected {
+		expectedSet[cmdType] = struct{}{}
+		if _, ok := participantDecisionHandlers[cmdType]; !ok {
+			t.Fatalf("missing handler for command %s", cmdType)
+		}
+	}
+	for cmdType := range participantDecisionHandlers {
+		if _, ok := expectedSet[cmdType]; !ok {
+			t.Fatalf("unexpected handler for command %s", cmdType)
+		}
+	}
+}

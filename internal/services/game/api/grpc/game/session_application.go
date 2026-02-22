@@ -8,9 +8,9 @@ import (
 	"time"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -80,7 +80,7 @@ func (a sessionApplication) StartSession(ctx context.Context, campaignID string,
 			ctx,
 			a.stores.Domain,
 			applier,
-			command.Command{
+			commandbuild.Core(commandbuild.CoreInput{
 				CampaignID:   campaignID,
 				Type:         commandTypeCampaignUpdate,
 				ActorType:    actorType,
@@ -90,7 +90,7 @@ func (a sessionApplication) StartSession(ctx context.Context, campaignID string,
 				EntityType:   "campaign",
 				EntityID:     campaignID,
 				PayloadJSON:  payloadJSON,
-			},
+			}),
 			domainCommandApplyOptions{
 				requireEvents:   true,
 				missingEventMsg: "campaign.update did not emit an event",
@@ -113,7 +113,7 @@ func (a sessionApplication) StartSession(ctx context.Context, campaignID string,
 		ctx,
 		a.stores.Domain,
 		applier,
-		command.Command{
+		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeSessionStart,
 			ActorType:    actorType,
@@ -124,7 +124,7 @@ func (a sessionApplication) StartSession(ctx context.Context, campaignID string,
 			EntityType:   "session",
 			EntityID:     sessionID,
 			PayloadJSON:  payloadJSON,
-		},
+		}),
 		domainCommandApplyOptions{
 			requireEvents:   true,
 			missingEventMsg: "session.start did not emit an event",
@@ -177,7 +177,7 @@ func (a sessionApplication) EndSession(ctx context.Context, campaignID string, i
 		ctx,
 		a.stores.Domain,
 		a.stores.Applier(),
-		command.Command{
+		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeSessionEnd,
 			ActorType:    actorType,
@@ -188,7 +188,7 @@ func (a sessionApplication) EndSession(ctx context.Context, campaignID string, i
 			EntityType:   "session",
 			EntityID:     sessionID,
 			PayloadJSON:  payloadJSON,
-		},
+		}),
 		domainCommandApplyOptions{
 			requireEvents:   true,
 			missingEventMsg: "session.end did not emit an event",
@@ -272,7 +272,7 @@ func (a sessionApplication) OpenSessionGate(ctx context.Context, campaignID stri
 		ctx,
 		a.stores.Domain,
 		a.stores.Applier(),
-		command.Command{
+		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeSessionGateOpen,
 			ActorType:    actorType,
@@ -283,7 +283,7 @@ func (a sessionApplication) OpenSessionGate(ctx context.Context, campaignID stri
 			EntityType:   "session_gate",
 			EntityID:     gateID,
 			PayloadJSON:  payloadJSON,
-		},
+		}),
 		domainCommandApplyOptions{
 			requireEvents:   true,
 			missingEventMsg: "session.gate_open did not emit an event",
@@ -352,7 +352,7 @@ func (a sessionApplication) ResolveSessionGate(ctx context.Context, campaignID s
 		ctx,
 		a.stores.Domain,
 		a.stores.Applier(),
-		command.Command{
+		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeSessionGateResolve,
 			ActorType:    actorType,
@@ -363,7 +363,7 @@ func (a sessionApplication) ResolveSessionGate(ctx context.Context, campaignID s
 			EntityType:   "session_gate",
 			EntityID:     gateID,
 			PayloadJSON:  payloadJSON,
-		},
+		}),
 		domainCommandApplyOptions{
 			requireEvents:   true,
 			missingEventMsg: "session.gate_resolve did not emit an event",
@@ -426,7 +426,7 @@ func (a sessionApplication) AbandonSessionGate(ctx context.Context, campaignID s
 		ctx,
 		a.stores.Domain,
 		a.stores.Applier(),
-		command.Command{
+		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeSessionGateAbandon,
 			ActorType:    actorType,
@@ -437,7 +437,7 @@ func (a sessionApplication) AbandonSessionGate(ctx context.Context, campaignID s
 			EntityType:   "session_gate",
 			EntityID:     gateID,
 			PayloadJSON:  payloadJSON,
-		},
+		}),
 		domainCommandApplyOptions{
 			requireEvents:   true,
 			missingEventMsg: "session.gate_abandon did not emit an event",
@@ -503,7 +503,7 @@ func (a sessionApplication) SetSessionSpotlight(ctx context.Context, campaignID 
 		ctx,
 		a.stores.Domain,
 		a.stores.Applier(),
-		command.Command{
+		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeSessionSpotlightSet,
 			ActorType:    actorType,
@@ -514,7 +514,7 @@ func (a sessionApplication) SetSessionSpotlight(ctx context.Context, campaignID 
 			EntityType:   "session",
 			EntityID:     sessionID,
 			PayloadJSON:  payloadJSON,
-		},
+		}),
 		domainCommandApplyOptions{
 			applyErr:        domainApplyErrorWithCodePreserve("apply event"),
 			requireEvents:   true,
@@ -569,7 +569,7 @@ func (a sessionApplication) ClearSessionSpotlight(ctx context.Context, campaignI
 		ctx,
 		a.stores.Domain,
 		a.stores.Applier(),
-		command.Command{
+		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeSessionSpotlightClear,
 			ActorType:    actorType,
@@ -580,7 +580,7 @@ func (a sessionApplication) ClearSessionSpotlight(ctx context.Context, campaignI
 			EntityType:   "session",
 			EntityID:     sessionID,
 			PayloadJSON:  payloadJSON,
-		},
+		}),
 		domainCommandApplyOptions{
 			applyErr:        domainApplyErrorWithCodePreserve("apply event"),
 			requireEvents:   true,
