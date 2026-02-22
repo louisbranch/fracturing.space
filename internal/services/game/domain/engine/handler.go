@@ -3,6 +3,7 @@ package engine
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -18,8 +19,17 @@ var (
 	ErrCommandMustMutate = errors.New("command must emit at least one event")
 	// ErrDeciderRequired indicates a missing decider.
 	ErrDeciderRequired = errors.New("decider is required")
+	// ErrEventRegistryRequired indicates a missing event registry.
+	ErrEventRegistryRequired = errors.New("event registry is required")
+	// ErrJournalRequired indicates a missing event journal.
+	ErrJournalRequired = errors.New("event journal is required")
 	// ErrGateStateLoaderRequired indicates a missing gate state loader.
 	ErrGateStateLoaderRequired = errors.New("gate state loader is required")
+	// ErrPostPersistApplyFailed indicates that events were persisted to the
+	// journal but the in-memory apply step failed. Callers should use
+	// errors.Is to detect this condition and recover via replay rather than
+	// retrying the command, which would create duplicates.
+	ErrPostPersistApplyFailed = errors.New("post-persist apply failed")
 )
 
 // GateStateLoader loads session state for gate checks.
@@ -84,6 +94,53 @@ type Handler struct {
 	Decider         Decider
 	Applier         Applier
 	Now             func() time.Time
+}
+
+// HandlerConfig holds the dependencies for constructing a Handler.
+type HandlerConfig struct {
+	Commands        *command.Registry
+	Events          *event.Registry
+	Journal         EventJournal
+	Checkpoints     replay.CheckpointStore
+	Snapshots       StateSnapshotStore
+	Gate            DecisionGate
+	GateStateLoader GateStateLoader
+	StateLoader     StateLoader
+	Decider         Decider
+	Applier         Applier
+	Now             func() time.Time
+}
+
+// NewHandler validates required dependencies and returns a configured Handler.
+// Use this constructor in production wiring to catch missing dependencies at
+// startup rather than at first request. The Handler struct remains exported
+// for test flexibility where only a subset of fields is needed.
+func NewHandler(cfg HandlerConfig) (Handler, error) {
+	if cfg.Commands == nil {
+		return Handler{}, ErrCommandRegistryRequired
+	}
+	if cfg.Events == nil {
+		return Handler{}, ErrEventRegistryRequired
+	}
+	if cfg.Journal == nil {
+		return Handler{}, ErrJournalRequired
+	}
+	if cfg.Decider == nil {
+		return Handler{}, ErrDeciderRequired
+	}
+	return Handler{
+		Commands:        cfg.Commands,
+		Events:          cfg.Events,
+		Journal:         cfg.Journal,
+		Checkpoints:     cfg.Checkpoints,
+		Snapshots:       cfg.Snapshots,
+		Gate:            cfg.Gate,
+		GateStateLoader: cfg.GateStateLoader,
+		StateLoader:     cfg.StateLoader,
+		Decider:         cfg.Decider,
+		Applier:         cfg.Applier,
+		Now:             cfg.Now,
+	}, nil
 }
 
 // Result captures execution outcomes.
@@ -198,9 +255,13 @@ func (h Handler) prepareExecution(ctx context.Context, cmd command.Command) (com
 		decision.Events = stored
 	}
 	if h.Applier != nil && len(decision.Events) > 0 {
+		journalPersisted := h.Journal != nil
 		for _, evt := range decision.Events {
 			stateAfter, err := h.Applier.Apply(state, evt)
 			if err != nil {
+				if journalPersisted {
+					return command.Command{}, nil, command.Decision{}, fmt.Errorf("%w: %w", ErrPostPersistApplyFailed, err)
+				}
 				return command.Command{}, nil, command.Decision{}, err
 			}
 			state = stateAfter

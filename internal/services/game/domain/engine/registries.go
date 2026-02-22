@@ -5,15 +5,10 @@ import (
 	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/naming"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 )
 
@@ -33,42 +28,13 @@ func BuildRegistries(modules ...module.Module) (Registries, error) {
 	eventRegistry := event.NewRegistry()
 	systemRegistry := module.NewRegistry()
 
-	if err := campaign.RegisterCommands(commandRegistry); err != nil {
-		return Registries{}, err
-	}
-	if err := action.RegisterCommands(commandRegistry); err != nil {
-		return Registries{}, err
-	}
-	if err := session.RegisterCommands(commandRegistry); err != nil {
-		return Registries{}, err
-	}
-	if err := participant.RegisterCommands(commandRegistry); err != nil {
-		return Registries{}, err
-	}
-	if err := invite.RegisterCommands(commandRegistry); err != nil {
-		return Registries{}, err
-	}
-	if err := character.RegisterCommands(commandRegistry); err != nil {
-		return Registries{}, err
-	}
-
-	if err := campaign.RegisterEvents(eventRegistry); err != nil {
-		return Registries{}, err
-	}
-	if err := action.RegisterEvents(eventRegistry); err != nil {
-		return Registries{}, err
-	}
-	if err := session.RegisterEvents(eventRegistry); err != nil {
-		return Registries{}, err
-	}
-	if err := participant.RegisterEvents(eventRegistry); err != nil {
-		return Registries{}, err
-	}
-	if err := invite.RegisterEvents(eventRegistry); err != nil {
-		return Registries{}, err
-	}
-	if err := character.RegisterEvents(eventRegistry); err != nil {
-		return Registries{}, err
+	for _, domain := range CoreDomains() {
+		if err := domain.RegisterCommands(commandRegistry); err != nil {
+			return Registries{}, fmt.Errorf("register %s commands: %w", domain.Name(), err)
+		}
+		if err := domain.RegisterEvents(eventRegistry); err != nil {
+			return Registries{}, fmt.Errorf("register %s events: %w", domain.Name(), err)
+		}
 	}
 
 	if err := eventRegistry.RegisterAlias(participant.EventTypeSeatReassignedLegacy, participant.EventTypeSeatReassigned); err != nil {
@@ -97,6 +63,10 @@ func BuildRegistries(modules ...module.Module) (Registries, error) {
 		if err := validateEmittableEventTypes(mod, eventRegistry); err != nil {
 			return Registries{}, err
 		}
+	}
+
+	if err := ValidateSystemFoldCoverage(systemRegistry, eventRegistry); err != nil {
+		return Registries{}, err
 	}
 
 	if err := ValidateFoldCoverage(eventRegistry); err != nil {
@@ -178,15 +148,8 @@ func eventTypeSet(definitions []event.Definition) map[event.Type]struct{} {
 // decider declares as emittable is registered in the event registry.
 func validateCoreEmittableEventTypes(events *event.Registry) error {
 	var missing []string
-	for _, types := range [][]event.Type{
-		campaign.EmittableEventTypes(),
-		session.EmittableEventTypes(),
-		action.EmittableEventTypes(),
-		character.EmittableEventTypes(),
-		participant.EmittableEventTypes(),
-		invite.EmittableEventTypes(),
-	} {
-		for _, t := range types {
+	for _, domain := range CoreDomains() {
+		for _, t := range domain.EmittableEventTypes() {
 			if _, ok := events.Definition(t); !ok {
 				missing = append(missing, string(t))
 			}
@@ -232,15 +195,8 @@ func ValidateFoldCoverage(events *event.Registry) error {
 	}
 
 	handled := make(map[event.Type]struct{})
-	for _, types := range [][]event.Type{
-		campaign.FoldHandledTypes(),
-		session.FoldHandledTypes(),
-		action.FoldHandledTypes(),
-		character.FoldHandledTypes(),
-		participant.FoldHandledTypes(),
-		invite.FoldHandledTypes(),
-	} {
-		for _, t := range types {
+	for _, domain := range CoreDomains() {
+		for _, t := range domain.FoldHandledTypes() {
 			handled[t] = struct{}{}
 		}
 	}
@@ -301,6 +257,52 @@ func ValidateProjectionCoverage(events *event.Registry, handledTypes []event.Typ
 	}
 	if len(missing) > 0 {
 		return fmt.Errorf("core projection-and-replay events missing projection handlers: %s", strings.Join(missing, ", "))
+	}
+	return nil
+}
+
+// ValidateSystemFoldCoverage verifies that every system module's emittable
+// event types with IntentProjectionAndReplay or IntentReplayOnly are handled
+// by the module's projector. This is the system-event counterpart of
+// ValidateFoldCoverage, which covers core domains.
+//
+// Only modules whose projector implements module.FoldTyper are checked.
+// Modules that don't declare fold types are silently skipped for backward
+// compatibility.
+func ValidateSystemFoldCoverage(modules *module.Registry, events *event.Registry) error {
+	if modules == nil || events == nil {
+		return fmt.Errorf("module registry and event registry are required")
+	}
+
+	var missing []string
+	for _, mod := range modules.List() {
+		projector := mod.Projector()
+		if projector == nil {
+			continue
+		}
+		typer, ok := projector.(module.FoldTyper)
+		if !ok {
+			continue
+		}
+		handled := make(map[event.Type]struct{})
+		for _, t := range typer.FoldHandledTypes() {
+			handled[t] = struct{}{}
+		}
+		for _, t := range mod.EmittableEventTypes() {
+			def, ok := events.Definition(t)
+			if !ok {
+				continue
+			}
+			if def.Intent != event.IntentProjectionAndReplay && def.Intent != event.IntentReplayOnly {
+				continue
+			}
+			if _, ok := handled[t]; !ok {
+				missing = append(missing, string(t))
+			}
+		}
+	}
+	if len(missing) > 0 {
+		return fmt.Errorf("system emittable events missing projector fold handlers: %s", strings.Join(missing, ", "))
 	}
 	return nil
 }

@@ -64,6 +64,33 @@ func (m syntheticModule) Decider() module.Decider           { return nil }
 func (m syntheticModule) Projector() module.Projector       { return nil }
 func (m syntheticModule) StateFactory() module.StateFactory { return nil }
 
+func TestCoreDomains_AllSixRegistered(t *testing.T) {
+	domains := CoreDomains()
+	if len(domains) != 6 {
+		t.Fatalf("CoreDomains() = %d, want 6", len(domains))
+	}
+	seen := make(map[string]bool)
+	for _, d := range domains {
+		name := d.Name()
+		if seen[name] {
+			t.Fatalf("duplicate core domain: %s", name)
+		}
+		seen[name] = true
+		if d.RegisterCommands == nil {
+			t.Fatalf("domain %s has nil RegisterCommands", name)
+		}
+		if d.RegisterEvents == nil {
+			t.Fatalf("domain %s has nil RegisterEvents", name)
+		}
+		if d.EmittableEventTypes == nil {
+			t.Fatalf("domain %s has nil EmittableEventTypes", name)
+		}
+		if d.FoldHandledTypes == nil {
+			t.Fatalf("domain %s has nil FoldHandledTypes", name)
+		}
+	}
+}
+
 func TestBuildRegistries_RegistersCoreAndSystem(t *testing.T) {
 	registries, err := BuildRegistries(fakeModule{})
 	if err != nil {
@@ -452,6 +479,120 @@ func buildFakeAdapterRegistry(t *testing.T, handledTypes []event.Type) *systems.
 		t.Fatalf("register fake adapter: %v", err)
 	}
 	return registry
+}
+
+func TestValidateSystemFoldCoverage_PassesWhenAllCovered(t *testing.T) {
+	registry := module.NewRegistry()
+	mod := &fakeModuleWithFoldTypes{
+		id:          "system-1",
+		version:     "v1",
+		emittable:   []event.Type{"sys.system_1.ev1", "sys.system_1.ev2"},
+		foldHandled: []event.Type{"sys.system_1.ev1", "sys.system_1.ev2"},
+	}
+	if err := registry.Register(mod); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	eventRegistry := event.NewRegistry()
+	for _, t2 := range mod.emittable {
+		if err := eventRegistry.Register(event.Definition{
+			Type:   t2,
+			Owner:  event.OwnerSystem,
+			Intent: event.IntentProjectionAndReplay,
+		}); err != nil {
+			t.Fatalf("register event: %v", err)
+		}
+	}
+
+	if err := ValidateSystemFoldCoverage(registry, eventRegistry); err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+}
+
+func TestValidateSystemFoldCoverage_FailsOnMissingHandler(t *testing.T) {
+	registry := module.NewRegistry()
+	mod := &fakeModuleWithFoldTypes{
+		id:        "system-1",
+		version:   "v1",
+		emittable: []event.Type{"sys.system_1.ev1", "sys.system_1.ev2"},
+		// projector only handles ev1, not ev2
+		foldHandled: []event.Type{"sys.system_1.ev1"},
+	}
+	if err := registry.Register(mod); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	eventRegistry := event.NewRegistry()
+	for _, t2 := range mod.emittable {
+		if err := eventRegistry.Register(event.Definition{
+			Type:   t2,
+			Owner:  event.OwnerSystem,
+			Intent: event.IntentProjectionAndReplay,
+		}); err != nil {
+			t.Fatalf("register event: %v", err)
+		}
+	}
+
+	err := ValidateSystemFoldCoverage(registry, eventRegistry)
+	if err == nil {
+		t.Fatal("expected error for uncovered fold event")
+	}
+	if !strings.Contains(err.Error(), "sys.system_1.ev2") {
+		t.Fatalf("expected error to mention uncovered type, got: %v", err)
+	}
+}
+
+func TestValidateSystemFoldCoverage_SkipsModulesWithoutFoldTyper(t *testing.T) {
+	registry := module.NewRegistry()
+	// fakeModule does NOT implement FoldTyper — should be skipped.
+	if err := registry.Register(fakeModule{}); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	eventRegistry := event.NewRegistry()
+	if err := eventRegistry.Register(event.Definition{
+		Type:   event.Type("sys.system_1.action.tested"),
+		Owner:  event.OwnerSystem,
+		Intent: event.IntentProjectionAndReplay,
+	}); err != nil {
+		t.Fatalf("register event: %v", err)
+	}
+
+	// Should pass — the module doesn't declare fold types.
+	if err := ValidateSystemFoldCoverage(registry, eventRegistry); err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+}
+
+// fakeModuleWithFoldTypes is a test module whose projector implements FoldTyper.
+type fakeModuleWithFoldTypes struct {
+	id          string
+	version     string
+	emittable   []event.Type
+	foldHandled []event.Type
+}
+
+func (m *fakeModuleWithFoldTypes) ID() string                                 { return m.id }
+func (m *fakeModuleWithFoldTypes) Version() string                            { return m.version }
+func (m *fakeModuleWithFoldTypes) RegisterCommands(_ *command.Registry) error { return nil }
+func (m *fakeModuleWithFoldTypes) RegisterEvents(_ *event.Registry) error     { return nil }
+func (m *fakeModuleWithFoldTypes) EmittableEventTypes() []event.Type          { return m.emittable }
+func (m *fakeModuleWithFoldTypes) Decider() module.Decider                    { return nil }
+func (m *fakeModuleWithFoldTypes) Projector() module.Projector {
+	return &fakeProjectorWithFoldTypes{handled: m.foldHandled}
+}
+func (m *fakeModuleWithFoldTypes) StateFactory() module.StateFactory { return nil }
+
+type fakeProjectorWithFoldTypes struct {
+	handled []event.Type
+}
+
+func (p *fakeProjectorWithFoldTypes) Apply(state any, _ event.Event) (any, error) {
+	return state, nil
+}
+
+func (p *fakeProjectorWithFoldTypes) FoldHandledTypes() []event.Type {
+	return p.handled
 }
 
 type unregisteredEmitModule struct {

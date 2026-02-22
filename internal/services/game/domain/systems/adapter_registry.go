@@ -54,6 +54,8 @@ var (
 	ErrAdapterVersionRequired = errors.New("adapter version is required")
 	// ErrAdapterAlreadyRegistered indicates adapter registration duplicated ID+version.
 	ErrAdapterAlreadyRegistered = errors.New("adapter already registered")
+	// ErrAdapterNotFound indicates no adapter is registered for the requested system+version.
+	ErrAdapterNotFound = errors.New("adapter not found")
 )
 
 // NewAdapterRegistry creates a new system adapter registry.
@@ -103,7 +105,8 @@ func (r *AdapterRegistry) Adapters() []Adapter {
 	return adapters
 }
 
-// Get returns the adapter for the system + version.
+// Get returns the adapter for the system + version, or nil when not found.
+// Use GetRequired when the caller cannot proceed without an adapter.
 func (r *AdapterRegistry) Get(id commonv1.GameSystem, version string) Adapter {
 	if r == nil {
 		return nil
@@ -118,4 +121,18 @@ func (r *AdapterRegistry) Get(id commonv1.GameSystem, version string) Adapter {
 		return nil
 	}
 	return r.adapters[systemKey{ID: id, Version: resolved}]
+}
+
+// GetRequired returns the adapter for the system + version, or a typed error
+// when no adapter is registered. Use this on paths where a missing adapter
+// indicates a configuration bug (e.g., system event projection routing).
+func (r *AdapterRegistry) GetRequired(id commonv1.GameSystem, version string) (Adapter, error) {
+	if r == nil {
+		return nil, ErrAdapterRegistryNil
+	}
+	adapter := r.Get(id, version)
+	if adapter == nil {
+		return nil, fmt.Errorf("%w: system %s version %q", ErrAdapterNotFound, id, version)
+	}
+	return adapter, nil
 }

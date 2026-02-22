@@ -52,150 +52,40 @@ type handlerEntry struct {
 // handlers maps each core projection event type to its handler entry.
 var handlers = map[event.Type]handlerEntry{
 	// campaign
-	campaign.EventTypeCreated: {
-		stores: needCampaign,
-		ids:    requireEntityID,
-		apply:  func(a Applier, ctx context.Context, evt event.Event) error { return a.applyCampaignCreated(ctx, evt) },
-	},
-	campaign.EventTypeUpdated: {
-		stores: needCampaign,
-		ids:    requireCampaignID,
-		apply:  func(a Applier, ctx context.Context, evt event.Event) error { return a.applyCampaignUpdated(ctx, evt) },
-	},
-	campaign.EventTypeForked: {
-		stores: needCampaignFork,
-		ids:    requireCampaignID,
-		apply:  func(a Applier, ctx context.Context, evt event.Event) error { return a.applyCampaignForked(ctx, evt) },
-	},
+	campaign.EventTypeCreated: {stores: needCampaign, ids: requireEntityID, apply: Applier.applyCampaignCreated},
+	campaign.EventTypeUpdated: {stores: needCampaign, ids: requireCampaignID, apply: Applier.applyCampaignUpdated},
+	campaign.EventTypeForked:  {stores: needCampaignFork, ids: requireCampaignID, apply: Applier.applyCampaignForked},
 
 	// participant
-	participant.EventTypeJoined: {
-		stores: needParticipant | needCampaign,
-		ids:    requireCampaignID | requireEntityID,
-		apply:  func(a Applier, ctx context.Context, evt event.Event) error { return a.applyParticipantJoined(ctx, evt) },
-	},
-	participant.EventTypeUpdated: {
-		stores: needParticipant | needCampaign,
-		ids:    requireCampaignID | requireEntityID,
-		apply: func(a Applier, ctx context.Context, evt event.Event) error {
-			return a.applyParticipantUpdated(ctx, evt)
-		},
-	},
-	participant.EventTypeLeft: {
-		stores: needParticipant | needCampaign,
-		ids:    requireCampaignID | requireEntityID,
-		apply:  func(a Applier, ctx context.Context, evt event.Event) error { return a.applyParticipantLeft(ctx, evt) },
-	},
-	participant.EventTypeBound: {
-		stores: needParticipant | needCampaign,
-		ids:    requireCampaignID | requireEntityID,
-		apply:  func(a Applier, ctx context.Context, evt event.Event) error { return a.applyParticipantBound(ctx, evt) },
-	},
-	participant.EventTypeUnbound: {
-		stores: needParticipant | needCampaign,
-		ids:    requireCampaignID | requireEntityID,
-		apply: func(a Applier, ctx context.Context, evt event.Event) error {
-			return a.applyParticipantUnbound(ctx, evt)
-		},
-	},
-	participant.EventTypeSeatReassigned: {
-		stores: needParticipant | needCampaign,
-		ids:    requireCampaignID | requireEntityID,
-		apply:  func(a Applier, ctx context.Context, evt event.Event) error { return a.applySeatReassigned(ctx, evt) },
-	},
+	participant.EventTypeJoined:         {stores: needParticipant | needCampaign, ids: requireCampaignID | requireEntityID, apply: Applier.applyParticipantJoined},
+	participant.EventTypeUpdated:        {stores: needParticipant | needCampaign, ids: requireCampaignID | requireEntityID, apply: Applier.applyParticipantUpdated},
+	participant.EventTypeLeft:           {stores: needParticipant | needCampaign, ids: requireCampaignID | requireEntityID, apply: Applier.applyParticipantLeft},
+	participant.EventTypeBound:          {stores: needParticipant | needCampaign, ids: requireCampaignID | requireEntityID, apply: Applier.applyParticipantBound},
+	participant.EventTypeUnbound:        {stores: needParticipant | needCampaign, ids: requireCampaignID | requireEntityID, apply: Applier.applyParticipantUnbound},
+	participant.EventTypeSeatReassigned: {stores: needParticipant | needCampaign, ids: requireCampaignID | requireEntityID, apply: Applier.applySeatReassigned},
 
 	// character
-	character.EventTypeCreated: {
-		stores: needCharacter | needCampaign,
-		ids:    requireCampaignID | requireEntityID,
-		apply:  func(a Applier, ctx context.Context, evt event.Event) error { return a.applyCharacterCreated(ctx, evt) },
-	},
-	character.EventTypeUpdated: {
-		stores: needCharacter | needCampaign,
-		ids:    requireCampaignID | requireEntityID,
-		apply:  func(a Applier, ctx context.Context, evt event.Event) error { return a.applyCharacterUpdated(ctx, evt) },
-	},
-	character.EventTypeDeleted: {
-		stores: needCharacter | needCampaign,
-		ids:    requireCampaignID | requireEntityID,
-		apply:  func(a Applier, ctx context.Context, evt event.Event) error { return a.applyCharacterDeleted(ctx, evt) },
-	},
-	character.EventTypeProfileUpdated: {
-		stores: needAdapters,
-		ids:    requireCampaignID | requireEntityID,
-		apply: func(a Applier, ctx context.Context, evt event.Event) error {
-			return a.applyCharacterProfileUpdated(ctx, evt)
-		},
-	},
+	character.EventTypeCreated:        {stores: needCharacter | needCampaign, ids: requireCampaignID | requireEntityID, apply: Applier.applyCharacterCreated},
+	character.EventTypeUpdated:        {stores: needCharacter | needCampaign, ids: requireCampaignID | requireEntityID, apply: Applier.applyCharacterUpdated},
+	character.EventTypeDeleted:        {stores: needCharacter | needCampaign, ids: requireCampaignID | requireEntityID, apply: Applier.applyCharacterDeleted},
+	character.EventTypeProfileUpdated: {stores: needAdapters, ids: requireCampaignID | requireEntityID, apply: Applier.applyCharacterProfileUpdated},
 
 	// invite — InviteID comes from payload with EntityID fallback for created/updated.
-	invite.EventTypeCreated: {
-		stores: needInvite | needCampaign,
-		ids:    requireCampaignID,
-		apply:  func(a Applier, ctx context.Context, evt event.Event) error { return a.applyInviteCreated(ctx, evt) },
-	},
-	invite.EventTypeClaimed: {
-		stores: needInvite | needCampaign,
-		ids:    requireCampaignID | requireEntityID,
-		apply:  func(a Applier, ctx context.Context, evt event.Event) error { return a.applyInviteClaimed(ctx, evt) },
-	},
-	invite.EventTypeRevoked: {
-		stores: needInvite | needCampaign,
-		ids:    requireCampaignID | requireEntityID,
-		apply:  func(a Applier, ctx context.Context, evt event.Event) error { return a.applyInviteRevoked(ctx, evt) },
-	},
-	invite.EventTypeUpdated: {
-		stores: needInvite,
-		ids:    0,
-		apply:  func(a Applier, ctx context.Context, evt event.Event) error { return a.applyInviteUpdated(ctx, evt) },
-	},
+	invite.EventTypeCreated: {stores: needInvite | needCampaign, ids: requireCampaignID, apply: Applier.applyInviteCreated},
+	invite.EventTypeClaimed: {stores: needInvite | needCampaign, ids: requireCampaignID | requireEntityID, apply: Applier.applyInviteClaimed},
+	invite.EventTypeRevoked: {stores: needInvite | needCampaign, ids: requireCampaignID | requireEntityID, apply: Applier.applyInviteRevoked},
+	invite.EventTypeUpdated: {stores: needInvite, ids: 0, apply: Applier.applyInviteUpdated},
 
 	// session — SessionID from payload with EntityID fallback, so EntityID
 	// is not a hard envelope requirement for started/ended.
-	session.EventTypeStarted: {
-		stores: needSession,
-		ids:    requireCampaignID,
-		apply:  func(a Applier, ctx context.Context, evt event.Event) error { return a.applySessionStarted(ctx, evt) },
-	},
-	session.EventTypeEnded: {
-		stores: needSession,
-		ids:    requireCampaignID,
-		apply:  func(a Applier, ctx context.Context, evt event.Event) error { return a.applySessionEnded(ctx, evt) },
-	},
+	session.EventTypeStarted: {stores: needSession, ids: requireCampaignID, apply: Applier.applySessionStarted},
+	session.EventTypeEnded:   {stores: needSession, ids: requireCampaignID, apply: Applier.applySessionEnded},
 	// Gate handlers derive GateID from payload with EntityID fallback.
-	session.EventTypeGateOpened: {
-		stores: needSessionGate,
-		ids:    requireCampaignID | requireSessionID,
-		apply:  func(a Applier, ctx context.Context, evt event.Event) error { return a.applySessionGateOpened(ctx, evt) },
-	},
-	session.EventTypeGateResolved: {
-		stores: needSessionGate,
-		ids:    requireCampaignID | requireSessionID,
-		apply: func(a Applier, ctx context.Context, evt event.Event) error {
-			return a.applySessionGateResolved(ctx, evt)
-		},
-	},
-	session.EventTypeGateAbandoned: {
-		stores: needSessionGate,
-		ids:    requireCampaignID | requireSessionID,
-		apply: func(a Applier, ctx context.Context, evt event.Event) error {
-			return a.applySessionGateAbandoned(ctx, evt)
-		},
-	},
-	session.EventTypeSpotlightSet: {
-		stores: needSessionSpotlight,
-		ids:    requireSessionID,
-		apply: func(a Applier, ctx context.Context, evt event.Event) error {
-			return a.applySessionSpotlightSet(ctx, evt)
-		},
-	},
-	session.EventTypeSpotlightCleared: {
-		stores: needSessionSpotlight,
-		ids:    requireSessionID,
-		apply: func(a Applier, ctx context.Context, evt event.Event) error {
-			return a.applySessionSpotlightCleared(ctx, evt)
-		},
-	},
+	session.EventTypeGateOpened:       {stores: needSessionGate, ids: requireCampaignID | requireSessionID, apply: Applier.applySessionGateOpened},
+	session.EventTypeGateResolved:     {stores: needSessionGate, ids: requireCampaignID | requireSessionID, apply: Applier.applySessionGateResolved},
+	session.EventTypeGateAbandoned:    {stores: needSessionGate, ids: requireCampaignID | requireSessionID, apply: Applier.applySessionGateAbandoned},
+	session.EventTypeSpotlightSet:     {stores: needSessionSpotlight, ids: requireSessionID, apply: Applier.applySessionSpotlightSet},
+	session.EventTypeSpotlightCleared: {stores: needSessionSpotlight, ids: requireSessionID, apply: Applier.applySessionSpotlightCleared},
 }
 
 // registeredHandlerTypes returns the sorted list of event types in the handler

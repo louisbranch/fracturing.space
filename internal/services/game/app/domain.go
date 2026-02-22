@@ -66,7 +66,7 @@ func buildDomainEngine(eventStore storage.EventStore, registries engine.Registri
 		Applier:      applier,
 		StateFactory: func() any { return aggregate.State{} },
 	}
-	return engine.Handler{
+	return engine.NewHandler(engine.HandlerConfig{
 		Commands:        registries.Commands,
 		Events:          registries.Events,
 		Journal:         gamegrpc.NewJournalAdapter(eventStore),
@@ -77,7 +77,7 @@ func buildDomainEngine(eventStore storage.EventStore, registries engine.Registri
 		StateLoader:     stateLoader,
 		Decider:         coreDecider{Systems: registries.Systems, routes: routes},
 		Applier:         applier,
-	}, nil
+	})
 }
 
 // coreDecider is the top-level decider for core (non-system) commands.

@@ -1,6 +1,7 @@
 package projection
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -39,6 +40,55 @@ type Applier struct {
 	// Watermarks tracks per-campaign projection progress so startup can
 	// detect and repair gaps. When nil, watermark tracking is disabled.
 	Watermarks storage.ProjectionWatermarkStore
+}
+
+// Apply routes domain events into denormalized read-model stores.
+//
+// The projection layer is the reason projections remain current for APIs and
+// query use-cases: every event that changes campaign/world state in the domain
+// gets mirrored here according to projection semantics.
+func (a Applier) Apply(ctx context.Context, evt event.Event) error {
+	if a.Events != nil {
+		resolved := a.Events.Resolve(evt.Type)
+		evt.Type = resolved
+		// Skip audit-only and replay-only events — they do not affect read-model
+		// state and must not reach the default error case.  The aggregate applier
+		// has a similar guard; adding it here makes the projection applier
+		// self-guarding.
+		if def, ok := a.Events.Definition(resolved); ok && (def.Intent == event.IntentAuditOnly || def.Intent == event.IntentReplayOnly) {
+			return nil
+		}
+	}
+	if err := a.routeEvent(ctx, evt); err != nil {
+		return err
+	}
+	if a.Watermarks != nil && evt.Seq > 0 && strings.TrimSpace(evt.CampaignID) != "" {
+		if err := a.Watermarks.SaveProjectionWatermark(ctx, storage.ProjectionWatermark{
+			CampaignID: evt.CampaignID,
+			AppliedSeq: evt.Seq,
+			UpdatedAt:  time.Now().UTC(),
+		}); err != nil {
+			return fmt.Errorf("save projection watermark: %w", err)
+		}
+	}
+	return nil
+}
+
+// routeEvent dispatches a single event to the appropriate projection handler
+// using the handler registry map. Core event types are looked up in the
+// registry; events with a non-empty SystemID fall through to the system adapter
+// path; anything else is rejected.
+func (a Applier) routeEvent(ctx context.Context, evt event.Event) error {
+	if h, ok := handlers[evt.Type]; ok {
+		if err := a.validatePreconditions(h, evt); err != nil {
+			return err
+		}
+		return h.apply(a, ctx, evt)
+	}
+	if strings.TrimSpace(evt.SystemID) != "" {
+		return a.applySystemEvent(ctx, evt)
+	}
+	return fmt.Errorf("unhandled projection event type: %s", evt.Type)
 }
 
 // ensureTimestamp normalizes timestamps to UTC and rejects zero values to
