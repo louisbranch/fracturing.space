@@ -60,10 +60,8 @@ Event definitions now include intent to make projection behavior explicit:
 
 - `IntentProjectionAndReplay`: event must be handled in both replay (aggregate
   fold) and projection paths. Most domain events use this intent.
-- `IntentReplayOnly`: event affects aggregate state during replay but does NOT
-  write to projection stores. Use this for events that update fold state (e.g.
-  internal counters or derived aggregate fields) without needing a corresponding
-  projection record.
+- `IntentReplayOnly`: event affects aggregate fold state during replay but does
+  not write to projection stores.
 - `IntentAuditOnly`: event is not projected and is not folded into aggregate
   state. Treated as audit/observability only.
 
@@ -232,6 +230,8 @@ Recommended module registration contract:
 - Register all emitted system event types with the same intent you want downstream
   consumers to enforce.
 - Use `IntentProjectionAndReplay` for events that must impact projection state.
+- Use `IntentReplayOnly` for events that affect aggregate fold state during
+  command replay but do not need projection handlers.
 - Use `IntentAuditOnly` only when intentional by design (for example, internal
   counters or outbox/telemetry-only events).
 
@@ -420,6 +420,14 @@ fix.
 All validators run before the server accepts traffic. Fix the reported type,
 then restart. Run `make integration` to verify all validators pass.
 
+Intent-to-validator mapping:
+
+- `IntentProjectionAndReplay`: checked by fold coverage, projection coverage,
+  and adapter event coverage validators.
+- `IntentReplayOnly`: checked by fold coverage only (no projection or adapter
+  handler required).
+- `IntentAuditOnly`: skipped by all coverage validators.
+
 ## Known gaps and improvement backlog
 
 These are current documentation or architecture pain points worth improving.
@@ -438,14 +446,13 @@ These are current documentation or architecture pain points worth improving.
 3. "Apply" vs "Fold" naming (resolved):
    - `projection.Applier.Apply`: writes to denormalized read-model stores
      (projection tables). Errors here are recoverable via replay.
-   - `aggregate.Folder.Apply` / system `module.Folder.Apply`: folds events into
-     in-memory aggregate state. Errors here are domain-level (unmarshal, etc).
-   - `engine.Folder.Apply`: the write-handler interface; during live execution
+   - `aggregate.Folder.Fold`: folds events into in-memory aggregate state.
+   - `engine.Folder.Fold`: the write-handler interface; during live execution
      it folds state, while the projection applier runs in the application layer.
+   - `module.Folder.Apply`: system-module fold entrypoint invoked by aggregate
+     fold routing.
    - `ErrPostPersistApplyFailed` refers to the *aggregate fold* step in
      `Handler.prepareExecution`, not the projection apply.
-   - The fold-semantic types now use `Folder` naming to distinguish from the
-     side-effecting `projection.Applier`.
 4. Two similarly named system registries:
    - `domain/system.Registry` (module command/event routing) and
      `domain/systems.Registry` (API/system metadata bridge) can be confused.

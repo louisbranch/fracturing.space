@@ -50,19 +50,19 @@ type recordingApplier struct {
 	seqs []uint64
 }
 
-func (a *recordingApplier) Apply(state any, evt event.Event) (any, error) {
+func (a *recordingApplier) Fold(state any, evt event.Event) (any, error) {
 	a.seqs = append(a.seqs, evt.Seq)
 	return state, nil
 }
 
-// cancelingApplier cancels the context after a given number of Apply calls.
+// cancelingApplier cancels the context after a given number of Fold calls.
 type cancelingApplier struct {
 	cancel      context.CancelFunc
 	cancelAfter int
 	calls       int
 }
 
-func (a *cancelingApplier) Apply(state any, _ event.Event) (any, error) {
+func (a *cancelingApplier) Fold(state any, _ event.Event) (any, error) {
 	a.calls++
 	if a.calls >= a.cancelAfter {
 		a.cancel()

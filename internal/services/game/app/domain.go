@@ -63,7 +63,7 @@ func buildDomainEngine(eventStore storage.EventStore, registries engine.Registri
 		Events:       gamegrpc.NewEventStoreAdapter(eventStore),
 		Checkpoints:  checkpoints,
 		Snapshots:    checkpoints,
-		Applier:      folder,
+		Folder:       folder,
 		StateFactory: func() any { return aggregate.State{} },
 	}
 	return engine.NewHandler(engine.HandlerConfig{
