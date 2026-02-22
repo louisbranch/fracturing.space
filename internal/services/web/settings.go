@@ -9,7 +9,7 @@ import (
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	connectionsv1 "github.com/louisbranch/fracturing.space/api/gen/go/connections/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
-	sharedroute "github.com/louisbranch/fracturing.space/internal/services/shared/route"
+	settingsmodule "github.com/louisbranch/fracturing.space/internal/services/web/module/settings"
 	routepath "github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 	"google.golang.org/grpc/codes"
@@ -45,38 +45,12 @@ func (h *handler) handleAppSettings(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) handleAppSettingsRoutes(w http.ResponseWriter, r *http.Request) {
-	if sharedroute.RedirectTrailingSlash(w, r) {
-		return
-	}
-
-	path := strings.TrimPrefix(r.URL.Path, routepath.AppSettingsPrefix)
-	parts := splitSettingsPathParts(path)
-	if len(parts) == 1 && parts[0] == "user-profile" {
-		h.handleAppUserProfileSettings(w, r)
-		return
-	}
-	if len(parts) == 1 && parts[0] == "ai-keys" {
-		h.handleAppAIKeys(w, r)
-		return
-	}
-	if len(parts) == 3 && parts[0] == "ai-keys" && parts[2] == "revoke" {
-		h.handleAppAIKeyRevoke(w, r, parts[1])
-		return
-	}
-	http.NotFound(w, r)
-}
-
-func splitSettingsPathParts(path string) []string {
-	rawParts := strings.Split(strings.TrimSpace(path), "/")
-	parts := make([]string, 0, len(rawParts))
-	for _, part := range rawParts {
-		part = strings.TrimSpace(part)
-		if part == "" {
-			continue
-		}
-		parts = append(parts, part)
-	}
-	return parts
+	settingsmodule.HandleSettingsSubpath(w, r, settingsmodule.NewService(settingsmodule.Handlers{
+		Settings:            h.handleAppSettings,
+		UserProfileSettings: h.handleAppUserProfileSettings,
+		AIKeys:              h.handleAppAIKeys,
+		AIKeyRevoke:         h.handleAppAIKeyRevoke,
+	}))
 }
 
 func (h *handler) handleAppUserProfileSettings(w http.ResponseWriter, r *http.Request) {

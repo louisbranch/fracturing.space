@@ -11,7 +11,7 @@ import (
 
 	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	notificationsrender "github.com/louisbranch/fracturing.space/internal/services/notifications/render"
-	sharedroute "github.com/louisbranch/fracturing.space/internal/services/shared/route"
+	notificationsmodule "github.com/louisbranch/fracturing.space/internal/services/web/module/notifications"
 	routepath "github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -69,17 +69,10 @@ func (h *handler) handleAppNotifications(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *handler) handleAppNotificationsRoutes(w http.ResponseWriter, r *http.Request) {
-	if sharedroute.RedirectTrailingSlash(w, r) {
-		return
-	}
-
-	notificationID := strings.TrimSpace(strings.TrimPrefix(r.URL.Path, routepath.AppNotificationsPrefix))
-	if notificationID == "" || strings.Contains(notificationID, "/") {
-		http.NotFound(w, r)
-		return
-	}
-
-	h.handleAppNotificationOpen(w, r, notificationID)
+	notificationsmodule.HandleNotificationSubpath(w, r, notificationsmodule.NewService(notificationsmodule.Handlers{
+		Notifications:    h.handleAppNotifications,
+		NotificationOpen: h.handleAppNotificationOpen,
+	}))
 }
 
 func (h *handler) handleAppNotificationOpen(w http.ResponseWriter, r *http.Request, notificationID string) {

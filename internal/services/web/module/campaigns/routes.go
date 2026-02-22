@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	sharedroute "github.com/louisbranch/fracturing.space/internal/services/shared/route"
+	moduleruntime "github.com/louisbranch/fracturing.space/internal/services/web/module/runtime"
 	routepath "github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
@@ -184,6 +185,35 @@ type Service interface {
 	HandleCampaignInviteRevoke(w http.ResponseWriter, r *http.Request, campaignID string)
 }
 
+// DetailRouteKind identifies the campaign detail surface requested by path.
+type DetailRouteKind string
+
+const (
+	DetailOverview          DetailRouteKind = "overview"
+	DetailSessions          DetailRouteKind = "sessions"
+	DetailSessionStart      DetailRouteKind = "session_start"
+	DetailSessionEnd        DetailRouteKind = "session_end"
+	DetailSession           DetailRouteKind = "session"
+	DetailParticipants      DetailRouteKind = "participants"
+	DetailParticipantUpdate DetailRouteKind = "participant_update"
+	DetailCharacters        DetailRouteKind = "characters"
+	DetailCharacterCreate   DetailRouteKind = "character_create"
+	DetailCharacterUpdate   DetailRouteKind = "character_update"
+	DetailCharacterControl  DetailRouteKind = "character_control"
+	DetailCharacter         DetailRouteKind = "character"
+	DetailInvites           DetailRouteKind = "invites"
+	DetailInviteCreate      DetailRouteKind = "invite_create"
+	DetailInviteRevoke      DetailRouteKind = "invite_revoke"
+)
+
+// DetailRoute is the typed parsed representation of a campaign detail path.
+type DetailRoute struct {
+	CampaignID  string
+	Kind        DetailRouteKind
+	SessionID   string
+	CharacterID string
+}
+
 // RegisterRoutes wires campaign workspace routes into the provided mux.
 func RegisterRoutes(mux *http.ServeMux, service Service) {
 	if mux == nil || service == nil {
@@ -205,22 +235,109 @@ func HandleCampaignDetailPath(w http.ResponseWriter, r *http.Request, service Se
 	if sharedroute.RedirectTrailingSlash(w, r) {
 		return
 	}
-
-	path := strings.TrimPrefix(r.URL.Path, routepath.AppCampaignsPrefix)
-	if path == "" || strings.HasPrefix(path, "/") || strings.Contains(path, "//") {
+	parts, ok := parseCampaignDetailParts(r.URL.Path)
+	if !ok {
 		http.NotFound(w, r)
 		return
-	}
-	rawParts := strings.Split(path, "/")
-	parts := make([]string, 0, len(rawParts))
-	for _, part := range rawParts {
-		part = strings.TrimSpace(part)
-		if part == "" {
-			continue
-		}
-		parts = append(parts, part)
 	}
 	if !dispatchCampaignDetailPath(service, w, r, parts) {
 		http.NotFound(w, r)
 	}
+}
+
+// ParseDetailRoute parses a campaign detail URL path into a typed route.
+func ParseDetailRoute(path string) (DetailRoute, bool) {
+	parts, ok := parseCampaignDetailParts(path)
+	if !ok {
+		return DetailRoute{}, false
+	}
+	route := DetailRoute{
+		CampaignID: parts[0],
+		Kind:       DetailOverview,
+	}
+	if len(parts) == 1 {
+		return route, true
+	}
+
+	switch parts[1] {
+	case "sessions":
+		if len(parts) == 2 {
+			route.Kind = DetailSessions
+			return route, true
+		}
+		if len(parts) == 3 && parts[2] == "start" {
+			route.Kind = DetailSessionStart
+			return route, true
+		}
+		if len(parts) == 3 && parts[2] == "end" {
+			route.Kind = DetailSessionEnd
+			return route, true
+		}
+		if len(parts) == 3 {
+			route.Kind = DetailSession
+			route.SessionID = parts[2]
+			return route, route.SessionID != ""
+		}
+	case "participants":
+		if len(parts) == 2 {
+			route.Kind = DetailParticipants
+			return route, true
+		}
+		if len(parts) == 3 && parts[2] == "update" {
+			route.Kind = DetailParticipantUpdate
+			return route, true
+		}
+	case "characters":
+		if len(parts) == 2 {
+			route.Kind = DetailCharacters
+			return route, true
+		}
+		if len(parts) == 3 && parts[2] == "create" {
+			route.Kind = DetailCharacterCreate
+			return route, true
+		}
+		if len(parts) == 3 && parts[2] == "update" {
+			route.Kind = DetailCharacterUpdate
+			return route, true
+		}
+		if len(parts) == 3 && parts[2] == "control" {
+			route.Kind = DetailCharacterControl
+			return route, true
+		}
+		if len(parts) == 3 {
+			route.Kind = DetailCharacter
+			route.CharacterID = parts[2]
+			return route, route.CharacterID != ""
+		}
+	case "invites":
+		if len(parts) == 2 {
+			route.Kind = DetailInvites
+			return route, true
+		}
+		if len(parts) == 3 && parts[2] == "create" {
+			route.Kind = DetailInviteCreate
+			return route, true
+		}
+		if len(parts) == 3 && parts[2] == "revoke" {
+			route.Kind = DetailInviteRevoke
+			return route, true
+		}
+	}
+
+	return DetailRoute{}, false
+}
+
+func parseCampaignDetailParts(path string) ([]string, bool) {
+	path = strings.TrimPrefix(path, routepath.AppCampaignsPrefix)
+	if path == "" || strings.HasPrefix(path, "/") || strings.Contains(path, "//") {
+		return nil, false
+	}
+	parts := moduleruntime.SplitParts(path)
+	if len(parts) == 0 {
+		return nil, false
+	}
+	if parts[0] == "" {
+		return nil, false
+	}
+	return parts, true
 }

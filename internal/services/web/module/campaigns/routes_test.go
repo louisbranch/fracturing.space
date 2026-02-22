@@ -241,3 +241,50 @@ func TestDispatchCampaignDetailPathPrefersMostSpecificMatch(t *testing.T) {
 		t.Fatalf("called = %q, want %q", called, "specific")
 	}
 }
+
+func TestParseDetailRoute(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		path       string
+		wantOK     bool
+		wantKind   DetailRouteKind
+		wantCampID string
+		wantSessID string
+		wantCharID string
+	}{
+		{name: "overview", path: "/app/campaigns/camp-1", wantOK: true, wantKind: DetailOverview, wantCampID: "camp-1"},
+		{name: "sessions", path: "/app/campaigns/camp-1/sessions", wantOK: true, wantKind: DetailSessions, wantCampID: "camp-1"},
+		{name: "session detail", path: "/app/campaigns/camp-1/sessions/s-1", wantOK: true, wantKind: DetailSession, wantCampID: "camp-1", wantSessID: "s-1"},
+		{name: "character detail", path: "/app/campaigns/camp-1/characters/ch-1", wantOK: true, wantKind: DetailCharacter, wantCampID: "camp-1", wantCharID: "ch-1"},
+		{name: "invalid missing id", path: "/app/campaigns//sessions", wantOK: false},
+		{name: "invalid unknown section", path: "/app/campaigns/camp-1/unknown", wantOK: false},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			route, ok := ParseDetailRoute(tc.path)
+			if ok != tc.wantOK {
+				t.Fatalf("ok = %v, want %v", ok, tc.wantOK)
+			}
+			if !ok {
+				return
+			}
+			if route.Kind != tc.wantKind {
+				t.Fatalf("Kind = %q, want %q", route.Kind, tc.wantKind)
+			}
+			if route.CampaignID != tc.wantCampID {
+				t.Fatalf("CampaignID = %q, want %q", route.CampaignID, tc.wantCampID)
+			}
+			if route.SessionID != tc.wantSessID {
+				t.Fatalf("SessionID = %q, want %q", route.SessionID, tc.wantSessID)
+			}
+			if route.CharacterID != tc.wantCharID {
+				t.Fatalf("CharacterID = %q, want %q", route.CharacterID, tc.wantCharID)
+			}
+		})
+	}
+}
