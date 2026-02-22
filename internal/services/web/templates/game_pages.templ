@@ -225,23 +225,25 @@ func campaignMainClass(coverImageURL string) string {
 	return "px-4"
 }
 
+templ CampaignsHeadingAction(page PageContext) {
+	<a class="btn btn-primary btn-sm" href="/campaigns/create">{ T(page.Loc, "game.campaigns.start_new") }</a>
+}
+
 templ CampaignsListPage(page PageContext, campaigns []CampaignListItem) {
 	@Layout(LayoutOptions{
-		Title:               T(page.Loc, "game.campaigns.title"),
-		Lang:                page.Lang,
-		AppName:             page.AppName,
-		Loc:                 page.Loc,
-		CurrentPath:         page.CurrentPath,
-		CampaignName:        page.CampaignName,
-		UserName:            page.UserName,
-		UserAvatarURL:       page.UserAvatarURL,
+		Title:                  T(page.Loc, "game.campaigns.title"),
+		Lang:                   page.Lang,
+		AppName:                page.AppName,
+		Loc:                    page.Loc,
+		CurrentPath:            page.CurrentPath,
+		CampaignName:           page.CampaignName,
+		UserName:               page.UserName,
+		UserAvatarURL:          page.UserAvatarURL,
 		HasUnreadNotifications: page.HasUnreadNotifications,
+		HeadingAction:          CampaignsHeadingAction(page),
 		CustomBreadcrumbs:    []sharedtemplates.BreadcrumbItem{},
 		UseCustomBreadcrumbs: true,
 	}) {
-		<div class="flex flex-wrap items-center justify-end gap-3">
-			<a class="btn btn-primary btn-sm" href="/campaigns/create">{ T(page.Loc, "game.campaigns.start_new") }</a>
-		</div>
 		<div class="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
 			if len(campaigns) == 0 {
 				<p>{ T(page.Loc, "game.campaigns.empty") }</p>

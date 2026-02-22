@@ -2,9 +2,11 @@ package templates
 
 import (
 	"context"
+	"io"
 	"strings"
 	"testing"
 
+	"github.com/a-h/templ"
 	"github.com/louisbranch/fracturing.space/internal/platform/branding"
 )
 
@@ -206,5 +208,39 @@ func TestAppChromeLayoutRendersUnreadNotificationBellDot(t *testing.T) {
 	got := b.String()
 	if !strings.Contains(got, `href="#lucide-bell-dot"`) {
 		t.Fatalf("expected bell-dot icon when unread notifications exist, got %q", got)
+	}
+}
+
+func TestChromeMainClassFromStyleDefaultDoesNotCenter(t *testing.T) {
+	got := chromeMainClassFromStyle("", "")
+	if strings.Contains(got, "mx-auto") {
+		t.Fatalf("expected default chrome main class to omit mx-auto, got %q", got)
+	}
+}
+
+func TestAppChromeLayoutRendersHeadingActionOnSameLine(t *testing.T) {
+	var b strings.Builder
+	err := AppChromeLayout(AppChromeLayoutOptions{
+		Title:   "Campaigns",
+		Lang:    "en-US",
+		AppName: branding.AppName,
+		Loc:     breadcrumbLocalizer{},
+		HeadingAction: templ.ComponentFunc(func(_ context.Context, w io.Writer) error {
+			_, err := io.WriteString(w, `<a id="heading-action-test" class="btn btn-primary btn-sm" href="/campaigns/create">Start</a>`)
+			return err
+		}),
+	}).Render(context.Background(), &b)
+	if err != nil {
+		t.Fatalf("AppChromeLayout() = %v", err)
+	}
+	got := b.String()
+	if !strings.Contains(got, `class="mb-5 flex items-center justify-between gap-3"`) {
+		t.Fatalf("expected heading row flex container, got %q", got)
+	}
+	if !strings.Contains(got, `<h1 class="mb-0">Campaigns</h1>`) {
+		t.Fatalf("expected heading text in same-row h1, got %q", got)
+	}
+	if !strings.Contains(got, `id="heading-action-test"`) {
+		t.Fatalf("expected custom heading action component in output, got %q", got)
 	}
 }

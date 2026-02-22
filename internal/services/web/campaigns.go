@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -163,6 +164,7 @@ func (h *handler) handleAppCampaignCreate(w http.ResponseWriter, r *http.Request
 		h.renderErrorPage(w, r, http.StatusBadGateway, "Campaign create unavailable", "created campaign id was empty")
 		return
 	}
+	h.expireUserCampaignsCache(ctx, userID)
 
 	http.Redirect(w, r, "/campaigns/"+url.PathEscape(campaignID), http.StatusFound)
 }
@@ -240,8 +242,13 @@ func renderAppCampaignsListPage(w http.ResponseWriter, r *http.Request, page web
 func renderAppCampaignsListPageWithConfig(w http.ResponseWriter, r *http.Request, page webtemplates.PageContext, config Config, campaigns []*statev1.Campaign) {
 	// renderAppCampaignsListPageWithAppName maps the list of campaign read models into
 	// links that become the canonical campaign navigation point for this boundary.
-	normalized := make([]webtemplates.CampaignListItem, 0, len(campaigns))
-	for _, campaign := range campaigns {
+	sortedCampaigns := append([]*statev1.Campaign(nil), campaigns...)
+	sort.SliceStable(sortedCampaigns, func(i, j int) bool {
+		return campaignCreatedAtUnixNano(sortedCampaigns[i]) > campaignCreatedAtUnixNano(sortedCampaigns[j])
+	})
+
+	normalized := make([]webtemplates.CampaignListItem, 0, len(sortedCampaigns))
+	for _, campaign := range sortedCampaigns {
 		if campaign == nil {
 			continue
 		}
@@ -262,6 +269,13 @@ func renderAppCampaignsListPageWithConfig(w http.ResponseWriter, r *http.Request
 	if err := writePage(w, r, webtemplates.CampaignsListPage(page, normalized), composeHTMXTitleForPage(page, "game.campaigns.title")); err != nil {
 		localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.failed_to_render_campaigns_list_page")
 	}
+}
+
+func campaignCreatedAtUnixNano(campaign *statev1.Campaign) int64 {
+	if campaign == nil || campaign.GetCreatedAt() == nil {
+		return 0
+	}
+	return campaign.GetCreatedAt().AsTime().UTC().UnixNano()
 }
 
 const (

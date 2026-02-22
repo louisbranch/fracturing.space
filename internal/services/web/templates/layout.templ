@@ -37,11 +37,12 @@ templ ShellLayout(title string, page PageContext) {
 templ Layout(options LayoutOptions) {
 	if options.UseCustomBreadcrumbs {
 		@sharedtemplates.AppChromeLayout(sharedtemplates.AppChromeLayoutOptions{
-			Title:      options.Title,
-			Lang:       options.Lang,
-			AppName:    options.AppName,
-			Loc:        options.Loc,
-			Breadcrumbs: options.CustomBreadcrumbs,
+			Title:         options.Title,
+			Lang:          options.Lang,
+			AppName:       options.AppName,
+			Loc:           options.Loc,
+			Breadcrumbs:   options.CustomBreadcrumbs,
+			HeadingAction: options.HeadingAction,
 			ChromeOptions: sharedtemplates.ChromeLayoutOptions{
 				MainAria:               sharedtemplates.T(options.Loc, "game.aria_label"),
 				UserName:               options.UserName,
@@ -56,11 +57,12 @@ templ Layout(options LayoutOptions) {
 		}
 	} else {
 		@sharedtemplates.AppChromeLayout(sharedtemplates.AppChromeLayoutOptions{
-			Title:      options.Title,
-			Lang:       options.Lang,
-			AppName:    options.AppName,
-			Loc:        options.Loc,
-			Breadcrumbs: sharedtemplates.BuildPathBreadcrumbsForWeb(options.CurrentPath, options.Loc, campaignNamesForPath(options.CurrentPath, options.CampaignName)),
+			Title:         options.Title,
+			Lang:          options.Lang,
+			AppName:       options.AppName,
+			Loc:           options.Loc,
+			Breadcrumbs:   sharedtemplates.BuildPathBreadcrumbsForWeb(options.CurrentPath, options.Loc, campaignNamesForPath(options.CurrentPath, options.CampaignName)),
+			HeadingAction: options.HeadingAction,
 			ChromeOptions: sharedtemplates.ChromeLayoutOptions{
 				MainAria:               sharedtemplates.T(options.Loc, "game.aria_label"),
 				UserName:               options.UserName,
