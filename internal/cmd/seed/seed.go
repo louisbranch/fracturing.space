@@ -13,6 +13,7 @@ import (
 	"time"
 
 	entrypoint "github.com/louisbranch/fracturing.space/internal/platform/cmd"
+	"github.com/louisbranch/fracturing.space/internal/platform/discovery"
 	"github.com/louisbranch/fracturing.space/internal/tools/seed"
 	"github.com/louisbranch/fracturing.space/internal/tools/seed/generator"
 )
@@ -30,7 +31,8 @@ type Config struct {
 
 // seedEnv holds env-tagged fields for the seed command.
 type seedEnv struct {
-	AuthAddr string        `env:"FRACTURING_SPACE_AUTH_ADDR"    envDefault:"localhost:8083"`
+	GameAddr string        `env:"FRACTURING_SPACE_GAME_ADDR"`
+	AuthAddr string        `env:"FRACTURING_SPACE_AUTH_ADDR"`
 	Timeout  time.Duration `env:"FRACTURING_SPACE_SEED_TIMEOUT" envDefault:"10m"`
 }
 
@@ -42,7 +44,8 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	}
 
 	seedCfg := seed.DefaultConfig()
-	seedCfg.AuthAddr = se.AuthAddr
+	seedCfg.GRPCAddr = discovery.OrDefaultGRPCAddr(se.GameAddr, discovery.ServiceGame)
+	seedCfg.AuthAddr = discovery.OrDefaultGRPCAddr(se.AuthAddr, discovery.ServiceAuth)
 	timeout := se.Timeout
 	var list bool
 	var generate bool

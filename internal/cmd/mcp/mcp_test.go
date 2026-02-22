@@ -11,7 +11,7 @@ func TestParseConfigDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse config: %v", err)
 	}
-	if cfg.Addr != "localhost:8082" {
+	if cfg.Addr != "game:8082" {
 		t.Fatalf("expected default addr, got %q", cfg.Addr)
 	}
 	if cfg.HTTPAddr != "localhost:8085" {

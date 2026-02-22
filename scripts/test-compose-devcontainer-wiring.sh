@@ -34,8 +34,16 @@ if ! rg -n "FRACTURING_SPACE_GAME_PORT: 8082" docker-compose.yml >/dev/null; the
   echo "expected game to listen on :8082 in compose" >&2
   exit 1
 fi
-if ! rg -n "FRACTURING_SPACE_GAME_ADDR: game:8082" docker-compose.yml >/dev/null; then
-  echo "expected compose dependencies to target game:8082" >&2
+if rg -n "FRACTURING_SPACE_GAME_ADDR: game:8082" docker-compose.yml >/dev/null; then
+  echo "expected compose to use convention defaults for game discovery (no hardcoded FRACTURING_SPACE_GAME_ADDR)" >&2
+  exit 1
+fi
+if rg -n "FRACTURING_SPACE_AUTH_ADDR: auth:8083" docker-compose.yml >/dev/null; then
+  echo "expected compose to use convention defaults for auth discovery (no hardcoded FRACTURING_SPACE_AUTH_ADDR)" >&2
+  exit 1
+fi
+if rg -n "FRACTURING_SPACE_WORKER_AUTH_ADDR: auth:8083" docker-compose.yml >/dev/null; then
+  echo "expected worker auth dependency to rely on discovery defaults" >&2
   exit 1
 fi
 
@@ -54,6 +62,14 @@ if ! grep -Fq "FRACTURING_SPACE_AI_PORT: \${FRACTURING_SPACE_AI_PORT:-8087}" doc
 fi
 if ! grep -Fq "FRACTURING_SPACE_AI_ENCRYPTION_KEY: \${FRACTURING_SPACE_AI_ENCRYPTION_KEY?FRACTURING_SPACE_AI_ENCRYPTION_KEY must be set}" docker-compose.yml; then
   echo "expected compose to require explicit FRACTURING_SPACE_AI_ENCRYPTION_KEY" >&2
+  exit 1
+fi
+if ! rg -n "Caddyfile.routes.generated:/etc/caddy/Caddyfile.routes.generated:ro" docker-compose.yml >/dev/null; then
+  echo "expected caddy to mount generated routes file" >&2
+  exit 1
+fi
+if ! rg -n "^import Caddyfile.routes.generated$" Caddyfile >/dev/null; then
+  echo "expected Caddyfile to import generated routes" >&2
   exit 1
 fi
 

@@ -84,9 +84,9 @@ MCP service:
 
 Web login service:
 
-- `FRACTURING_SPACE_WEB_HTTP_ADDR` (default `localhost:8086`): HTTP listen address for login UX.
+- `FRACTURING_SPACE_WEB_HTTP_ADDR` (default `localhost:8080`): HTTP listen address for login UX.
 - `FRACTURING_SPACE_WEB_AUTH_BASE_URL` (default `http://localhost:8084`): Auth HTTP base URL for posting login form data.
-- `FRACTURING_SPACE_WEB_AUTH_ADDR` (default `localhost:8083`): Auth gRPC address for passkey flows.
+- `FRACTURING_SPACE_WEB_AUTH_ADDR` (default `auth:8083`): Auth gRPC address for passkey flows.
 
 ## Example OAuth Client Config (JSON)
 
@@ -100,4 +100,3 @@ Web login service:
   }
 ]
 ```
-

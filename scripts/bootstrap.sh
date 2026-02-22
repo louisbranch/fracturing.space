@@ -15,7 +15,11 @@ fi
 if [[ -n "${COMPOSE_CMD:-}" ]]; then
   read -r -a compose_cmd <<< "${COMPOSE_CMD}"
 else
-  compose_cmd=(docker compose)
+  compose_cmd=(
+    docker compose
+    -f docker-compose.yml
+    -f topology/generated/docker-compose.discovery.generated.yml
+  )
 fi
 
 get_env_value() {

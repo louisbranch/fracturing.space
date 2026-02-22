@@ -502,6 +502,21 @@ func TestLoadServerEnvDomainEnabledDefaults(t *testing.T) {
 	}
 }
 
+func TestLoadServerEnvAuthAddrDefaultsToServiceDNS(t *testing.T) {
+	key := "FRACTURING_SPACE_AUTH_ADDR"
+	if val, ok := os.LookupEnv(key); ok {
+		t.Cleanup(func() { _ = os.Setenv(key, val) })
+	} else {
+		t.Cleanup(func() { _ = os.Unsetenv(key) })
+	}
+	_ = os.Unsetenv(key)
+
+	cfg := loadServerEnv()
+	if cfg.AuthAddr != "auth:8083" {
+		t.Fatalf("auth addr = %q, want %q", cfg.AuthAddr, "auth:8083")
+	}
+}
+
 func TestLoadServerEnvDomainEnabled(t *testing.T) {
 	t.Setenv("FRACTURING_SPACE_GAME_DOMAIN_ENABLED", "true")
 

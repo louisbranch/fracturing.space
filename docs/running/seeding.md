@@ -36,10 +36,10 @@ Using Compose:
 
 ```bash
 # Terminal 1: Start the game + auth services
-docker compose up -d game auth
+docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml up -d game auth
 
 # Terminal 2: Run seeding commands
-docker compose --profile tools run --rm seed
+docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml --profile tools run --rm seed
 ```
 
 ## Catalog Content Import
@@ -53,7 +53,7 @@ make catalog-importer
 Compose:
 
 ```bash
-docker compose --profile tools run --rm catalog-importer
+docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml --profile tools run --rm catalog-importer
 ```
 
 ### CLI Options
@@ -77,16 +77,16 @@ make seed-fresh  # Reset DB and reseed
 Compose:
 
 ```bash
-docker compose --profile tools run --rm seed
-docker compose --profile tools run --rm seed -- -scenario example
+docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml --profile tools run --rm seed
+docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml --profile tools run --rm seed -- -scenario example
 ```
 
 ### CLI Options
 
 | Flag | Description | Default |
 |------|-------------|---------|
-| `-grpc-addr` | game server address | `localhost:8080` |
-| `-auth-addr` | auth server address (uses `FRACTURING_SPACE_AUTH_ADDR` when set) | `localhost:8083` |
+| `-grpc-addr` | game server address | `game:8082` |
+| `-auth-addr` | auth server address (uses `FRACTURING_SPACE_AUTH_ADDR` when set) | `auth:8083` |
 | `-scenario` | Run specific scenario | all |
 | `-list` | List available scenarios | - |
 | `-v` | Verbose output | false |
@@ -108,8 +108,8 @@ make seed-generate-fresh   # Reset DB and generate demo data
 Compose:
 
 ```bash
-docker compose --profile tools run --rm seed -- -generate -preset=demo -v
-docker compose --profile tools run --rm seed -- -generate -preset=variety -v
+docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml --profile tools run --rm seed -- -generate -preset=demo -v
+docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml --profile tools run --rm seed -- -generate -preset=variety -v
 ```
 
 ### CLI Options
@@ -120,8 +120,8 @@ docker compose --profile tools run --rm seed -- -generate -preset=variety -v
 | `-preset` | Generation preset | `demo` |
 | `-campaigns` | Override number of campaigns | preset default |
 | `-seed` | RNG seed for reproducibility (0 = random) | 0 |
-| `-grpc-addr` | game server address | `localhost:8080` |
-| `-auth-addr` | auth server address (uses `FRACTURING_SPACE_AUTH_ADDR` when set) | `localhost:8083` |
+| `-grpc-addr` | game server address | `game:8082` |
+| `-auth-addr` | auth server address (uses `FRACTURING_SPACE_AUTH_ADDR` when set) | `auth:8083` |
 | `-v` | Verbose output | false |
 
 ### Presets

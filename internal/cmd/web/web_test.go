@@ -20,20 +20,20 @@ func TestParseConfigDefaults(t *testing.T) {
 	if cfg.AuthBaseURL != "http://localhost:8084" {
 		t.Fatalf("expected default auth base url, got %q", cfg.AuthBaseURL)
 	}
-	if cfg.AuthAddr != "localhost:8083" {
+	if cfg.AuthAddr != "auth:8083" {
 		t.Fatalf("expected default auth addr, got %q", cfg.AuthAddr)
 	}
 	if cfg.OAuthClientID != "fracturing-space" {
 		t.Fatalf("expected default oauth client id, got %q", cfg.OAuthClientID)
 	}
-	if cfg.GameAddr != "localhost:8082" {
+	if cfg.GameAddr != "game:8082" {
 		t.Fatalf("expected default game addr, got %q", cfg.GameAddr)
 	}
-	if cfg.NotificationsAddr != "localhost:8088" {
+	if cfg.NotificationsAddr != "notifications:8088" {
 		t.Fatalf("expected default notifications addr, got %q", cfg.NotificationsAddr)
 	}
 	if cfg.AIAddr != "" {
-		t.Fatalf("expected default ai addr to be empty, got %q", cfg.AIAddr)
+		t.Fatalf("expected empty default ai addr, got %q", cfg.AIAddr)
 	}
 	if cfg.CacheDBPath != "data/web-cache.db" {
 		t.Fatalf("expected default cache db path, got %q", cfg.CacheDBPath)

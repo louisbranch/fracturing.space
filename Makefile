@@ -10,7 +10,7 @@ PROTO_FILES := \
 	$(wildcard $(PROTO_DIR)/notifications/v1/*.proto) \
 	$(wildcard $(PROTO_DIR)/systems/daggerheart/v1/*.proto)
 
-.PHONY: all proto clean up down cover cover-treemap test test-unit test-changed integration scenario scenario-missing-doc-check templ-generate event-catalog-check docs-path-check fmt fmt-check catalog-importer bootstrap bootstrap-prod setup-hooks
+.PHONY: all proto clean up down cover cover-treemap test test-unit test-changed integration scenario scenario-missing-doc-check templ-generate event-catalog-check topology-generate topology-check docs-path-check fmt fmt-check catalog-importer bootstrap bootstrap-prod setup-hooks
 
 all: proto
 
@@ -81,6 +81,7 @@ test-changed:
 
 integration:
 	$(MAKE) event-catalog-check
+	$(MAKE) topology-check
 	go test -tags=integration ./...
 
 scenario:
@@ -94,6 +95,12 @@ docs-path-check:
 
 event-catalog-check:
 	@bash -euo pipefail -c 'go run ./internal/tools/eventdocgen >/dev/null 2>&1; git diff --exit-code -- docs/events/event-catalog.md docs/events/usage-map.md docs/events/command-catalog.md'
+
+topology-generate:
+	go run ./internal/tools/topologygen
+
+topology-check:
+	go run ./internal/tools/topologygen -check
 
 seed: ## Seed the local database with demo data (static fixtures)
 	go run ./cmd/seed -v

@@ -6,12 +6,13 @@ import (
 	"flag"
 
 	entrypoint "github.com/louisbranch/fracturing.space/internal/platform/cmd"
+	"github.com/louisbranch/fracturing.space/internal/platform/discovery"
 	mcpapp "github.com/louisbranch/fracturing.space/internal/services/mcp/app"
 )
 
 // Config holds MCP command configuration.
 type Config struct {
-	Addr      string `env:"FRACTURING_SPACE_GAME_ADDR"     envDefault:"localhost:8082"`
+	Addr      string `env:"FRACTURING_SPACE_GAME_ADDR"`
 	HTTPAddr  string `env:"FRACTURING_SPACE_MCP_HTTP_ADDR" envDefault:"localhost:8085"`
 	Transport string `env:"FRACTURING_SPACE_MCP_TRANSPORT" envDefault:"stdio"`
 }
@@ -22,6 +23,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	if err := entrypoint.ParseConfig(&cfg); err != nil {
 		return Config{}, err
 	}
+	cfg.Addr = discovery.OrDefaultGRPCAddr(cfg.Addr, discovery.ServiceGame)
 
 	fs.StringVar(&cfg.Addr, "addr", cfg.Addr, "game server address")
 	fs.StringVar(&cfg.HTTPAddr, "http-addr", cfg.HTTPAddr, "HTTP server address (for HTTP transport)")

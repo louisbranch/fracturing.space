@@ -5,10 +5,12 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
 	entrypoint "github.com/louisbranch/fracturing.space/internal/platform/cmd"
+	"github.com/louisbranch/fracturing.space/internal/platform/discovery"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	"github.com/louisbranch/fracturing.space/internal/services/web"
 )
@@ -18,9 +20,9 @@ type Config struct {
 	HTTPAddr            string        `env:"FRACTURING_SPACE_WEB_HTTP_ADDR"           envDefault:"localhost:8080"`
 	ChatHTTPAddr        string        `env:"FRACTURING_SPACE_CHAT_HTTP_ADDR"         envDefault:"localhost:8086"`
 	AuthBaseURL         string        `env:"FRACTURING_SPACE_WEB_AUTH_BASE_URL"       envDefault:"http://localhost:8084"`
-	AuthAddr            string        `env:"FRACTURING_SPACE_WEB_AUTH_ADDR"           envDefault:"localhost:8083"`
-	GameAddr            string        `env:"FRACTURING_SPACE_GAME_ADDR"              envDefault:"localhost:8082"`
-	NotificationsAddr   string        `env:"FRACTURING_SPACE_NOTIFICATIONS_ADDR"     envDefault:"localhost:8088"`
+	AuthAddr            string        `env:"FRACTURING_SPACE_WEB_AUTH_ADDR"`
+	GameAddr            string        `env:"FRACTURING_SPACE_GAME_ADDR"`
+	NotificationsAddr   string        `env:"FRACTURING_SPACE_NOTIFICATIONS_ADDR"`
 	AIAddr              string        `env:"FRACTURING_SPACE_AI_ADDR"`
 	CacheDBPath         string        `env:"FRACTURING_SPACE_WEB_CACHE_DB_PATH"      envDefault:"data/web-cache.db"`
 	AssetBaseURL        string        `env:"FRACTURING_SPACE_ASSET_BASE_URL"`
@@ -42,6 +44,10 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	if cfg.GRPCDialTimeout <= 0 {
 		cfg.GRPCDialTimeout = timeouts.GRPCDial
 	}
+	cfg.AuthAddr = discovery.OrDefaultGRPCAddr(cfg.AuthAddr, discovery.ServiceAuth)
+	cfg.GameAddr = discovery.OrDefaultGRPCAddr(cfg.GameAddr, discovery.ServiceGame)
+	cfg.NotificationsAddr = discovery.OrDefaultGRPCAddr(cfg.NotificationsAddr, discovery.ServiceNotifications)
+	cfg.AIAddr = strings.TrimSpace(cfg.AIAddr)
 
 	fs.StringVar(&cfg.HTTPAddr, "http-addr", cfg.HTTPAddr, "HTTP listen address")
 	fs.StringVar(&cfg.ChatHTTPAddr, "chat-http-addr", cfg.ChatHTTPAddr, "Chat HTTP listen address")

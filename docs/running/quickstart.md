@@ -9,7 +9,7 @@ nav_order: 1
 Requires Docker + Docker Compose.
 
 ```sh
-docker compose up --build
+docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml up --build
 ```
 
 For a minimal-intervention bootstrap that creates `.env`, generates missing keys, and starts the stack:
@@ -28,4 +28,4 @@ If you want the Go dev workflow instead, see [local-dev.md](local-dev.md).
 Notes:
 
 - Dev-only join-grant keys are baked into `docker-compose.yml`. Replace for real deployments.
-- Stop with `Ctrl+C`. To remove volumes: `docker compose down -v`.
+- Stop with `Ctrl+C`. To remove volumes: `docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml down -v`.

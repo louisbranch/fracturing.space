@@ -10,6 +10,25 @@ nav_order: 3
 
 For the one-line command, see [quickstart](quickstart.md).
 
+Compose commands should include both the base file and generated topology discovery file:
+
+```sh
+docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml up -d
+```
+
+Compose + Caddy topology is catalog-driven:
+
+- Source of truth: `topology/services.json`
+- Generated Caddy routes: `Caddyfile.routes.generated`
+- Generated Compose discovery artifact: `topology/generated/docker-compose.discovery.generated.yml`
+
+After topology edits, regenerate and validate:
+
+```sh
+make topology-generate
+make topology-check
+```
+
 ## Local routes
 
 - Web login: `http://localhost:8080`
@@ -41,13 +60,13 @@ For production, see [production](production.md).
 Compose exposes CLI tools under the `tools` profile:
 
 ```sh
-docker compose --profile tools run --rm hmac-key
-docker compose --profile tools run --rm join-grant-key
-docker compose --profile tools run --rm seed
-docker compose --profile tools run --rm seed -- -generate -preset=variety -v
-docker compose --profile tools run --rm scenario -- -scenario internal/test/game/scenarios/basic_flow.lua
-docker compose --profile tools run --rm maintenance -- -campaign-id <id> -validate
-docker compose --profile tools run --rm catalog-importer
+docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml --profile tools run --rm hmac-key
+docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml --profile tools run --rm join-grant-key
+docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml --profile tools run --rm seed
+docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml --profile tools run --rm seed -- -generate -preset=variety -v
+docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml --profile tools run --rm scenario -- -scenario internal/test/game/scenarios/basic_flow.lua
+docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml --profile tools run --rm maintenance -- -campaign-id <id> -validate
+docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml --profile tools run --rm catalog-importer
 ```
 
 ## Volumes
@@ -55,5 +74,5 @@ docker compose --profile tools run --rm catalog-importer
 Compose uses named volumes for SQLite data stores. To remove them:
 
 ```sh
-docker compose down -v
+docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml down -v
 ```

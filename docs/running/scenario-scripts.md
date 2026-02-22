@@ -34,17 +34,17 @@ Using Compose:
 
 ```bash
 # Terminal 1: Start the game service
-docker compose up -d game
+docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml up -d game
 
 # Terminal 2: Run a scenario
-docker compose --profile tools run --rm scenario -- -scenario internal/test/game/scenarios/basic_flow.lua
+docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml --profile tools run --rm scenario -- -scenario internal/test/game/scenarios/basic_flow.lua
 ```
 
 ## CLI Options
 
 | Flag | Description | Default |
 |------|-------------|---------|
-| `-grpc-addr` | game server address | `localhost:8080` |
+| `-grpc-addr` | game server address | `game:8082` |
 | `-scenario` | path to scenario lua file | (required) |
 | `-assert` | enable assertions (disable to log expectations) | `true` |
 | `-verbose` | enable verbose logging | `false` |

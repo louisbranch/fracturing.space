@@ -27,3 +27,18 @@ func TestParseConfig_ParsesDefaultsAndFlags(t *testing.T) {
 		t.Fatalf("max attempts = %d, want 3", cfg.MaxAttempts)
 	}
 }
+
+func TestParseConfig_DefaultDiscoveryAddresses(t *testing.T) {
+	fs := flag.NewFlagSet("worker", flag.ContinueOnError)
+
+	cfg, err := ParseConfig(fs, nil)
+	if err != nil {
+		t.Fatalf("parse config: %v", err)
+	}
+	if cfg.AuthAddr != "auth:8083" {
+		t.Fatalf("auth addr = %q, want %q", cfg.AuthAddr, "auth:8083")
+	}
+	if cfg.NotificationsAddr != "notifications:8088" {
+		t.Fatalf("notifications addr = %q, want %q", cfg.NotificationsAddr, "notifications:8088")
+	}
+}
